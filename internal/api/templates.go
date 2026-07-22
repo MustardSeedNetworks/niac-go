@@ -42,20 +42,6 @@ func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
 	// Extract template name from path: /api/v1/templates/{name}
 	name := strings.TrimPrefix(r.URL.Path, "/api/v1/templates/")
 
-	// Handle /api/v1/templates/use separately. Applying a template is
-	// gated behind the config_templates feature; listing / reading /
-	// deleting templates stays open.
-	if name == "use" {
-		if s.license != nil && !s.license.HasFeature("config_templates") {
-			s.writeFeatureGate(w, r, "config_templates",
-				"Applying a config template requires the Pro tier. "+
-					"Start a 14-day Pro trial with `niac license trial`.")
-			return
-		}
-		s.handleTemplateUse(w, r)
-		return
-	}
-
 	if name == "" {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Template name required", nil)
 		return
@@ -120,11 +106,6 @@ func (s *Server) handleTemplateContent(w http.ResponseWriter, r *http.Request, n
 
 // handleTemplateUse handles POST /api/v1/templates/use.
 func (s *Server) handleTemplateUse(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-		return
-	}
-
 	req, err := parseUseTemplateRequest(r)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", err.Error(), nil)

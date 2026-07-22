@@ -217,9 +217,17 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			csrf:    true,
 		},
 		{
+			path:    "/api/v1/templates/use",
+			handler: s.handleTemplateUse,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+			feature: "config_templates",
+		},
+		{
 			path:    "/api/v1/templates/",
 			handler: s.handleTemplateByName,
-			methods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+			methods: []string{http.MethodGet, http.MethodDelete},
 			rl:      rlWrite,
 			csrf:    true,
 		},
