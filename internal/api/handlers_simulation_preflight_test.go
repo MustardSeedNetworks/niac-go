@@ -12,12 +12,12 @@ import (
 )
 
 type preflightDaemon struct {
-	request           SimulationRequest
-	report            fabric.Report
-	err               error
-	startErr          error
-	started           bool
-	routedLabsAllowed bool
+	request      SimulationRequest
+	report       fabric.Report
+	err          error
+	startErr     error
+	started      bool
+	entitlements SimulationEntitlements
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
@@ -52,9 +52,9 @@ func TestHandleSimulationPreflightReturnsManagedPathValidationError(t *testing.T
 	}
 }
 
-func (d *preflightDaemon) StartSimulation(_ SimulationRequest, routedLabsAllowed bool) error {
-	d.routedLabsAllowed = routedLabsAllowed
-	if len(d.report.Topology.Networks) > 0 && !routedLabsAllowed {
+func (d *preflightDaemon) StartSimulation(_ SimulationRequest, entitlements SimulationEntitlements) error {
+	d.entitlements = entitlements
+	if len(d.report.Topology.Networks) > 0 && !entitlements.RoutedLabs {
 		return ErrRoutedLabsLicenseRequired
 	}
 	d.started = true
@@ -127,6 +127,29 @@ func TestHandleSimulationStartFailsClosedWithoutLicenseManager(t *testing.T) {
 
 	if rec.Code != http.StatusPaymentRequired || daemon.started {
 		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
+	}
+}
+
+func TestHandleSimulationStartRequiresUnlimitedDevicesFeature(t *testing.T) {
+	daemon := &preflightDaemon{startErr: ErrUnlimitedDevicesLicenseRequired}
+	server := &Server{daemon: daemon, license: freshManager(t)}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusPaymentRequired)
+	}
+	var response FeatureGateResponse
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.RequiredFeature != "unlimited_devices" {
+		t.Fatalf("required feature = %q", response.RequiredFeature)
 	}
 }
 

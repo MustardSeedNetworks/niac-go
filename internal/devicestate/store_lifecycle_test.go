@@ -14,6 +14,7 @@ func TestReloadRestoresStartupConfiguration(t *testing.T) {
 	store.ReloadStartup()
 
 	assertDeviceState(t, store, "edge-1", true)
+	assertLastInterfaceTransition(t, store, false, true)
 }
 
 func TestCheckpointRestoresNamedRunningConfiguration(t *testing.T) {
@@ -26,6 +27,13 @@ func TestCheckpointRestoresNamedRunningConfiguration(t *testing.T) {
 		t.Fatalf("RestoreCheckpoint() error = %v", err)
 	}
 	assertDeviceState(t, store, "branch-1", false)
+	events := store.Events()
+	last := events[len(events)-1]
+	if last.Kind != devicestate.EventInterfaceUpdated || last.Target != "Gi0/1" ||
+		last.PreviousInterface == nil || !last.PreviousInterface.OperUp ||
+		last.Interface == nil || last.Interface.OperUp {
+		t.Fatalf("restored interface event = %#v", last)
+	}
 	if err := store.RestoreCheckpoint("missing"); !errors.Is(err, devicestate.ErrCheckpointNotFound) {
 		t.Fatalf("RestoreCheckpoint(missing) error = %v", err)
 	}
@@ -49,6 +57,7 @@ func TestResetRestoresAuthoredConfigurationForRunningAndStartup(t *testing.T) {
 
 	store.ResetAuthored()
 	assertDeviceState(t, store, "edge-1", true)
+	assertLastInterfaceTransition(t, store, false, true)
 	mutateDevice(t, store, "temporary", false)
 	store.ReloadStartup()
 	assertDeviceState(t, store, "edge-1", true)
@@ -71,6 +80,7 @@ func TestConfigurationChangesEmitOrderedEvents(t *testing.T) {
 		devicestate.EventStartupReloaded,
 		devicestate.EventStartupErased,
 		devicestate.EventAuthoredReset,
+		devicestate.EventInterfaceUpdated,
 	}
 	if len(events) != len(want) {
 		t.Fatalf("events = %#v, want %d events", events, len(want))
@@ -115,5 +125,15 @@ func assertDeviceState(t *testing.T, store *devicestate.Store, hostname string, 
 	snapshot := store.Snapshot()
 	if snapshot.Identity.Hostname != hostname || snapshot.Network.Interfaces[0].AdminUp != interfaceUp {
 		t.Fatalf("state = %#v, want hostname %q interface up %t", snapshot, hostname, interfaceUp)
+	}
+}
+
+func assertLastInterfaceTransition(t *testing.T, store *devicestate.Store, from, to bool) {
+	t.Helper()
+	events := store.Events()
+	last := events[len(events)-1]
+	if last.Kind != devicestate.EventInterfaceUpdated || last.PreviousInterface == nil ||
+		last.PreviousInterface.OperUp != from || last.Interface == nil || last.Interface.OperUp != to {
+		t.Fatalf("last event = %#v, want interface transition %t -> %t", last, from, to)
 	}
 }

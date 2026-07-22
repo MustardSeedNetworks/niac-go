@@ -109,8 +109,10 @@ func (s *SSHServer) serveChannel(channel ssh.Channel, requests <-chan *ssh.Reque
 	defer channel.Close()
 	for request := range requests {
 		switch request.Type {
-		case "pty-req", "window-change", "env":
+		case "env":
 			_ = request.Reply(true, nil)
+		case "pty-req", "window-change":
+			_ = request.Reply(false, nil)
 		case "shell":
 			_ = request.Reply(true, nil)
 			s.serveShell(channel)

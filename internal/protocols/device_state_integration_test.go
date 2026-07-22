@@ -65,7 +65,7 @@ func TestConfigureFabricSeedsAuthoritativeNetworkState(t *testing.T) {
 	cfg := &config.Config{Devices: []config.Device{{
 		Name: "edge-1",
 		Interfaces: []config.Interface{{
-			Name: "Gi0/1", AdminStatus: "down", OperStatus: "down", Description: "WAN", VLANs: []int{200},
+			Name: "Gi0/1", AdminStatus: "down", Description: "WAN", VLANs: []int{200},
 		}},
 	}}}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))

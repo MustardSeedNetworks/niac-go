@@ -346,7 +346,7 @@ type SimulationStatus struct {
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
-	StartSimulation(req SimulationRequest, routedLabsAllowed bool) error
+	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
 	StopSimulation() error
 	GetStatus() SimulationStatus
 }
@@ -361,6 +361,7 @@ type Server struct {
 	lastAlert         uint64
 	alertMu           sync.RWMutex
 	configMu          sync.RWMutex
+	configMutationMu  sync.Mutex
 	daemon            DaemonController
 	captureController CaptureController
 	startTime         time.Time

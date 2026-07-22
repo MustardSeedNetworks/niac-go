@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -215,6 +216,13 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
+	if !s.authorizeConfigReplacement(w, r, newCfg) {
+		return
+	}
+
 	if !s.applyAndSaveConfig(w, r, newCfg, content) {
 		return
 	}
@@ -227,6 +235,26 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.writeJSON(w, doc)
+}
+
+func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
+	switch err := ValidateConfigEntitlements(cfg, s.simulationEntitlements()); {
+	case errors.Is(err, ErrRoutedLabsLicenseRequired):
+		s.writeFeatureGate(w, r, "routed_labs",
+			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
+		s.writeFeatureGate(w, r, "unlimited_devices",
+			"This configuration exceeds the Free tier device cap. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
+		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
+			"Configuration exceeds the maximum supported device count", nil)
+	case err != nil:
+		writeError(w, r, http.StatusInternalServerError, "config_authorization_failed",
+			"Failed to authorize configuration", nil)
+	default:
+		return true
+	}
+	return false
 }
 
 func (s *Server) parseConfigUpdateRequest(w http.ResponseWriter, r *http.Request) (string, bool) {

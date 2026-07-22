@@ -63,6 +63,39 @@ func TestDeviceCreate_Blocks402AtFreeTierCap(t *testing.T) {
 	}
 }
 
+func TestDeviceCreate_CountsSegmentDevicesAtFreeTierCap(t *testing.T) {
+	s := newGateTestServerWithDevices(t, nil, 0)
+	s.cfg.Config.Segments = []config.Segment{{
+		Tag: 10, Devices: make([]config.Device, FreeTierDeviceCount),
+	}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices", nil)
+
+	_, err := s.validateDeviceCreatePreconditions(w, r, "new-device")
+
+	if err == nil || w.Code != http.StatusPaymentRequired {
+		t.Fatalf("result = (%v, %d), want validation error and 402", err, w.Code)
+	}
+}
+
+func TestDeviceCreate_RejectsAppendToSegmentedConfig(t *testing.T) {
+	s := newGateTestServerWithDevices(t, nil, 0)
+	s.cfg.Config.Segments = []config.Segment{{
+		Tag: 10, Devices: []config.Device{{Name: "existing"}},
+	}}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices", nil)
+
+	_, err := s.validateDeviceCreatePreconditions(w, r, "new-device")
+
+	if err == nil || w.Code != http.StatusConflict {
+		t.Fatalf("result = (%v, %d), want validation error and 409", err, w.Code)
+	}
+	if s.cfg.Config.DeviceCount() != 1 || len(s.cfg.Config.Devices) != 0 {
+		t.Fatalf("segmented config mutated: %#v", s.cfg.Config)
+	}
+}
+
 func TestDeviceCreate_AllowsBelowFreeTierCap(t *testing.T) {
 	t.Parallel()
 	mgr := freshManager(t)
