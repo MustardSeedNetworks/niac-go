@@ -271,7 +271,22 @@ func formatSyslog(hostname string, event devicestate.Event) string {
 		`[niac version="%d" kind="%s" target="%s"]`,
 		event.Version, syslogEscape(string(event.Kind)), syslogEscape(event.Target),
 	)
-	return fmt.Sprintf("<133>1 %s %s niac - CONFIG %s configuration state changed", timestamp, hostname, data)
+	return fmt.Sprintf(
+		"<133>1 %s %s niac - CONFIG %s configuration state changed",
+		timestamp, syslogHostname(hostname), data,
+	)
+}
+
+func syslogHostname(hostname string) string {
+	if len(hostname) == 0 || len(hostname) > 255 {
+		return "-"
+	}
+	for index := range len(hostname) {
+		if hostname[index] < 33 || hostname[index] > 126 {
+			return "-"
+		}
+	}
+	return hostname
 }
 
 func syslogEscape(value string) string {

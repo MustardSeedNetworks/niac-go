@@ -110,7 +110,7 @@ func (h *sshTCPHandler) openSession(
 	tcp *layers.TCP,
 	device *config.Device,
 ) {
-	if existing := h.session(key); existing != nil {
+	if existing := h.retransmittableSession(key); existing != nil {
 		h.retransmitOldest(existing)
 		return
 	}
@@ -149,6 +149,31 @@ func (h *sshTCPHandler) openSession(
 	h.sessions[key] = session
 	h.mu.Unlock()
 	_ = h.sendSegment(session, nil, true, false)
+}
+
+func (h *sshTCPHandler) retransmittableSession(key string) *sshTCPSession {
+	h.mu.Lock()
+	session := h.sessions[key]
+	if session == nil {
+		h.mu.Unlock()
+		return nil
+	}
+	session.mu.Lock()
+	if h.now().Sub(session.lastActivity) < sshSessionIdleTimeout {
+		session.mu.Unlock()
+		h.mu.Unlock()
+		return session
+	}
+	session.closed = true
+	if session.retransmitTimer != nil {
+		session.retransmitTimer.Stop()
+		session.retransmitTimer = nil
+	}
+	delete(h.sessions, key)
+	session.mu.Unlock()
+	h.mu.Unlock()
+	_ = session.connection.Close()
+	return nil
 }
 
 func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {

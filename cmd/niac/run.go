@@ -93,6 +93,9 @@ func runSimulation(
 
 	// Dry run mode - just validate
 	if options.dryRun {
+		if entitlementErr := validateStoredSimulationConfig(cfg, loadFeatureChecker); entitlementErr != nil {
+			return entitlementErr
+		}
 		logging.Successf("✓ Configuration valid: %s", configFile)
 		logging.Infof("  Interface: %s", interfaceName)
 		logging.Infof("  Devices: %d", len(cfg.Devices))

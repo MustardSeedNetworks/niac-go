@@ -69,6 +69,33 @@ func TestSSHTCPHandlerExpiresIdleSessionsBeforeApplyingLimit(t *testing.T) {
 	}
 }
 
+func TestSSHTCPHandlerReplacesIdleSessionForReusedSYN(t *testing.T) {
+	now := time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)
+	connection := virtualtcp.NewPacketConn(
+		"10.0.0.1:22", "10.0.0.2:40000",
+		func(context.Context, []byte) error { return nil },
+	)
+	handler := &sshTCPHandler{
+		sessions: map[string]*sshTCPSession{
+			"client": {connection: connection, lastActivity: now.Add(-sshSessionIdleTimeout)},
+		},
+		now: func() time.Time { return now },
+	}
+
+	if session := handler.retransmittableSession("client"); session != nil {
+		t.Fatal("retransmittableSession() returned an idle session")
+	}
+	if _, exists := handler.sessions["client"]; exists {
+		t.Fatal("idle session remained registered")
+	}
+	if _, err := connection.Write([]byte("closed")); err == nil {
+		t.Fatal("idle connection remained open")
+	}
+	if reserved, _ := handler.reserveSession("client"); !reserved {
+		t.Fatal("reused tuple could not reserve a fresh session")
+	}
+}
+
 func TestSSHTCPHandlerAcknowledgesRetransmissionWithoutRedelivery(t *testing.T) {
 	stack := &Stack{sendQueue: make(chan *Packet, 2)}
 	handler := &sshTCPHandler{stack: stack, now: time.Now}

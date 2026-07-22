@@ -432,7 +432,7 @@ func NewServer(cfg ServerConfig) *Server {
 	}
 	// License manager initialization is best-effort for Free-tier operation.
 	// Paid feature gates must treat a nil manager as unavailable and fail closed.
-	if lm, lmErr := license.NewManager(); lmErr == nil {
+	if lm, lmErr := license.NewRuntimeManager(); lmErr == nil {
 		srv.license = lm
 	} else {
 		slog.Warn("[API] license manager init failed; paid feature gates unavailable",
