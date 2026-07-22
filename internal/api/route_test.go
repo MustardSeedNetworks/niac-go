@@ -58,6 +58,13 @@ func TestRoutePolicyManifest(t *testing.T) {
 	}
 }
 
+func TestTemplateUseRoutePolicy(t *testing.T) {
+	use, ok := fetchRouteManifest(t)["/api/v1/templates/use"]
+	if !ok || use.Feature != "config_templates" || !use.CSRF || !use.RateLimited {
+		t.Errorf("/api/v1/templates/use policy = %+v, want config_templates+csrf+rateLimited", use)
+	}
+}
+
 // TestRoutePolicyManifestMethodAndBody verifies the ADR-0002 parity additions:
 // every route reports a non-zero body cap and its accepted methods, upload /
 // replay routes carry the larger PCAP cap (not the 1MB default), and method-
