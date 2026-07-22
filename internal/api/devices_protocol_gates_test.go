@@ -38,7 +38,7 @@ func TestRequireDeviceProtocolFeatures_AllowsPlainDevice(t *testing.T) {
 	}
 }
 
-func TestRequireDeviceProtocolFeatures_NilLicenseAllowsAll(t *testing.T) {
+func TestRequireDeviceProtocolFeatures_NilLicenseFailsClosed(t *testing.T) {
 	t.Parallel()
 	s := newProtoGateServer(t, nil)
 
@@ -51,8 +51,11 @@ func TestRequireDeviceProtocolFeatures_NilLicenseAllowsAll(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 
-	if !s.requireDeviceProtocolFeatures(w, req, dev) {
-		t.Fatalf("nil license should allow all; status=%d", w.Code)
+	if s.requireDeviceProtocolFeatures(w, req, dev) {
+		t.Fatal("nil license allowed paid protocols")
+	}
+	if w.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want 402", w.Code)
 	}
 }
 

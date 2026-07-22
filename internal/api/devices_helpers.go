@@ -30,10 +30,8 @@ func (s *Server) validateDeviceCreatePreconditions(
 	}
 
 	// Free-tier soft cap. Pro licenses carry the "unlimited_devices"
-	// feature and skip this gate. A nil license manager (dev / test
-	// builds) is treated as license-disabled and allows up to the
-	// hard ceiling.
-	if s.license != nil && !s.license.HasFeature("unlimited_devices") &&
+	// feature and skip this gate. A nil manager cannot establish that grant.
+	if (s.license == nil || !s.license.HasFeature("unlimited_devices")) &&
 		len(cfg.Devices) >= FreeTierDeviceCount {
 		s.writeFeatureGate(w, r, "unlimited_devices",
 			fmt.Sprintf("Free tier supports up to %d devices. "+

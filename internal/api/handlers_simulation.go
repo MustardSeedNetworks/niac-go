@@ -7,6 +7,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
+// ErrRoutedLabsLicenseRequired indicates that a routed configuration was
+// rejected inside the simulation start transaction.
+var ErrRoutedLabsLicenseRequired = errors.New("routed virtual labs require a license grant")
+
 func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
 		http.Error(
@@ -73,8 +77,15 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 			"Simulation request validation failed", validationErrors)
 		return
 	}
-
-	if err := s.daemon.StartSimulation(req); err != nil {
+	routedLabsAllowed := s.license != nil && s.license.HasFeature("routed_labs")
+	if err := s.daemon.StartSimulation(req, routedLabsAllowed); err != nil {
+		if errors.Is(err, ErrRoutedLabsLicenseRequired) {
+			s.writeFeatureGate(
+				w, r, "routed_labs",
+				"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage,
+			)
+			return
+		}
 		if writeManagedConfigPathError(w, r, err) {
 			return
 		}

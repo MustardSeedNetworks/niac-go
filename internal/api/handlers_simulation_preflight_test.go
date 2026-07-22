@@ -12,10 +12,12 @@ import (
 )
 
 type preflightDaemon struct {
-	request  SimulationRequest
-	report   fabric.Report
-	err      error
-	startErr error
+	request           SimulationRequest
+	report            fabric.Report
+	err               error
+	startErr          error
+	started           bool
+	routedLabsAllowed bool
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
@@ -50,9 +52,16 @@ func TestHandleSimulationPreflightReturnsManagedPathValidationError(t *testing.T
 	}
 }
 
-func (d *preflightDaemon) StartSimulation(SimulationRequest) error { return d.startErr }
-func (*preflightDaemon) StopSimulation() error                     { return nil }
-func (*preflightDaemon) GetStatus() SimulationStatus               { return SimulationStatus{} }
+func (d *preflightDaemon) StartSimulation(_ SimulationRequest, routedLabsAllowed bool) error {
+	d.routedLabsAllowed = routedLabsAllowed
+	if len(d.report.Topology.Networks) > 0 && !routedLabsAllowed {
+		return ErrRoutedLabsLicenseRequired
+	}
+	d.started = true
+	return d.startErr
+}
+func (*preflightDaemon) StopSimulation() error       { return nil }
+func (*preflightDaemon) GetStatus() SimulationStatus { return SimulationStatus{} }
 
 func TestHandleSimulationStartReturnsManagedPathValidationError(t *testing.T) {
 	server := &Server{daemon: &preflightDaemon{startErr: config.ErrPathOutsideManagedRoots}}
@@ -75,6 +84,71 @@ func TestHandleSimulationStartReturnsManagedPathValidationError(t *testing.T) {
 	}
 	if response.Error != "validation_failed" {
 		t.Fatalf("response = %#v", response)
+	}
+}
+
+func TestHandleSimulationStartRequiresRoutedLabsFeature(t *testing.T) {
+	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
+		Networks: []fabric.Network{{Name: "access"}},
+	}}}
+	server := &Server{daemon: daemon, license: freshManager(t)}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired || daemon.started {
+		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
+	}
+	var response FeatureGateResponse
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.RequiredFeature != "routed_labs" {
+		t.Fatalf("required feature = %q", response.RequiredFeature)
+	}
+}
+
+func TestHandleSimulationStartFailsClosedWithoutLicenseManager(t *testing.T) {
+	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
+		Networks: []fabric.Network{{Name: "access"}},
+	}}}
+	server := &Server{daemon: daemon}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired || daemon.started {
+		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
+	}
+}
+
+func TestHandleSimulationStartAllowsRoutedLabsTrial(t *testing.T) {
+	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
+		Networks: []fabric.Network{{Name: "access"}},
+	}}}
+	manager := freshManager(t)
+	if result := manager.StartTrial(); !result.Success {
+		t.Fatalf("StartTrial() = %#v", result)
+	}
+	server := &Server{daemon: daemon, license: manager}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusCreated || !daemon.started {
+		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
 	}
 }
 

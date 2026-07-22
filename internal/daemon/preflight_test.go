@@ -91,10 +91,25 @@ func TestStartSimulationRecompilesUnsafeRoutedRequest(t *testing.T) {
 	d := routedPolicyDaemon()
 	req := routedRequest(0)
 
-	err := d.StartSimulation(req)
+	err := d.StartSimulation(req, true)
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	}
+}
+
+func TestStartSimulationRejectsRoutedConfigInsideLockedTransaction(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+	d := routedPolicyDaemon()
+
+	err := d.StartSimulation(routedRequest(2), false)
+
+	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
+		t.Fatalf("StartSimulation() error = %v, want ErrRoutedLabsLicenseRequired", err)
+	}
+	if d.simulation != nil {
+		t.Fatal("unlicensed routed configuration changed simulation state")
 	}
 }
 
@@ -117,7 +132,7 @@ devices:
 `,
 	}
 
-	err := d.StartSimulation(req)
+	err := d.StartSimulation(req, true)
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
@@ -131,7 +146,7 @@ func TestUnsafeReplacementLeavesRunningSimulationIntact(t *testing.T) {
 	d := routedPolicyDaemon()
 	d.simulation = running
 
-	err := d.StartSimulation(routedRequest(0))
+	err := d.StartSimulation(routedRequest(0), true)
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
@@ -153,7 +168,7 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 	d := routedPolicyDaemon()
 	d.simulation = &Simulation{Interface: "eth0"}
 
-	err := d.StartSimulation(routedRequest(0))
+	err := d.StartSimulation(routedRequest(0), true)
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
