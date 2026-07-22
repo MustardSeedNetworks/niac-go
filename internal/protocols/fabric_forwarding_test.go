@@ -3,6 +3,8 @@ package protocols
 import (
 	"bytes"
 	"net"
+	"net/netip"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicecli"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -34,6 +38,102 @@ func TestFabricRoutesInternalTargetThroughAttachmentRouter(t *testing.T) {
 	}
 	if !stack.deviceOwnsIPv4(targets[0], net.ParseIP("10.20.0.10")) {
 		t.Fatal("resolved fabric endpoint must own its interface address")
+	}
+}
+
+func TestCLIShutdownChangesFabricDelivery(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	server := &cfg.Devices[1]
+	session := devicecli.NewSession(stack.deviceStates[server])
+	for _, command := range []string{"enable", "configure terminal", "interface eth0", "shutdown"} {
+		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
+			t.Fatalf("%q response = %#v", command, response)
+		}
+	}
+	pkt := NewPacket(64)
+	pkt.PutDestMAC(routerMAC)
+
+	targets := stack.ipHandler.getTargetDevices(
+		&layers.IPv4{DstIP: net.ParseIP("10.20.0.10")}, pkt, 1, 0,
+	)
+	if targets != nil {
+		t.Fatalf("targets = %#v, want nil for shut interface", targets)
+	}
+}
+
+func TestCLIShutdownStopsAttachmentARP(t *testing.T) {
+	cfg, topology, _ := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	router := &cfg.Devices[0]
+	session := devicecli.NewSession(stack.deviceStates[router])
+	for _, command := range []string{"enable", "configure terminal", "interface outside", "shutdown"} {
+		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
+			t.Fatalf("%q response = %#v", command, response)
+		}
+	}
+
+	if device, ok := stack.fabric.resolveARP(net.ParseIP("10.10.200.1")); ok {
+		t.Fatalf("resolveARP() = %q after shutdown", device.Name)
+	}
+}
+
+func TestCLIAddressChangeMovesFabricDelivery(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	server := &cfg.Devices[1]
+	session := devicecli.NewSession(stack.deviceStates[server])
+	for _, command := range []string{
+		"enable", "configure terminal", "interface eth0", "ip address 10.20.0.20/24",
+	} {
+		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
+			t.Fatalf("%q response = %#v", command, response)
+		}
+	}
+	pkt := NewPacket(64)
+	pkt.PutDestMAC(routerMAC)
+
+	oldTargets := stack.ipHandler.getTargetDevices(
+		&layers.IPv4{DstIP: net.ParseIP("10.20.0.10")}, pkt, 1, 0,
+	)
+	newTargets := stack.ipHandler.getTargetDevices(
+		&layers.IPv4{DstIP: net.ParseIP("10.20.0.20")}, pkt, 1, 0,
+	)
+	if oldTargets != nil || len(newTargets) != 1 || newTargets[0] != server {
+		t.Fatalf("old targets = %#v new targets = %#v", oldTargets, newTargets)
+	}
+}
+
+func TestCLIStaticRouteChangesFabricDelivery(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	router := &cfg.Devices[0]
+	routerState := stack.deviceStates[router]
+	network := routerState.Snapshot().Network
+	network.Routes = nil
+	routerState.ReplaceNetwork(network)
+	pkt := NewPacket(64)
+	pkt.PutDestMAC(routerMAC)
+	destination := &layers.IPv4{DstIP: net.ParseIP("10.20.0.10")}
+	if targets := stack.ipHandler.getTargetDevices(destination, pkt, 1, 0); targets != nil {
+		t.Fatalf("targets before route = %#v", targets)
+	}
+
+	session := devicecli.NewSession(routerState)
+	for _, command := range []string{
+		"enable", "configure terminal", "ip route 10.20.0.0/24 10.10.200.2 inside",
+	} {
+		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
+			t.Fatalf("%q response = %#v", command, response)
+		}
+	}
+	targets := stack.ipHandler.getTargetDevices(destination, pkt, 1, 0)
+	if len(targets) != 1 || targets[0] != &cfg.Devices[1] {
+		t.Fatalf("targets after route = %#v", targets)
 	}
 }
 
@@ -324,13 +424,21 @@ func TestFabricRoutesTCPRepliesWithGatewayMAC(t *testing.T) {
 		port    layers.TCPPort
 		wantSYN bool
 		wantRST bool
+		ssh     bool
 	}{
 		{name: "HTTP SYN-ACK", port: TCPPortHTTP, wantSYN: true},
+		{name: "SSH SYN-ACK", port: TCPPortSSH, wantSYN: true, ssh: true},
 		{name: "closed-port RST", port: 12345, wantRST: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, topology, routerMAC := forwardingFixture(t)
+			if tt.ssh {
+				t.Setenv("NIAC_TEST_SSH_PASSWORD", "test-password")
+				cfg.Devices[1].SSHConfig = &config.SSHConfig{
+					Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
+				}
+			}
 			stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 			stack.ConfigureFabric(topology)
 			testerMAC := mustForwardingMAC(t, "02:00:00:00:00:fe")
@@ -637,6 +745,43 @@ func forwardingFixture(t *testing.T) (*config.Config, *fabric.Topology, net.Hard
 		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
 	}
 	return cfg, &report.Topology, routerMAC
+}
+
+func TestFabricResolutionUsesCurrentAttachmentAddress(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	router := &cfg.Devices[0]
+	if err := stack.deviceStates[router].UpdateInterface(
+		"outside", func(iface devicestate.Interface) (devicestate.Interface, error) {
+			iface.Address = netip.MustParsePrefix("10.10.200.2/24")
+			return iface, nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	resolution, found := stack.fabric.resolveIPv4(netip.MustParseAddr("10.20.0.10"), routerMAC)
+	if !found || resolution.firstHopIP != netip.MustParseAddr("10.10.200.2") {
+		t.Fatalf("resolution = %#v, want current attachment address", resolution)
+	}
+}
+
+func TestFabricResolutionRejectsAttachmentWithoutCurrentAddress(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	router := &cfg.Devices[0]
+	if err := stack.deviceStates[router].UpdateInterface(
+		"outside", func(iface devicestate.Interface) (devicestate.Interface, error) {
+			iface.Address = netip.Prefix{}
+			return iface, nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if resolution, found := stack.fabric.resolveIPv4(netip.MustParseAddr("10.20.0.10"), routerMAC); found {
+		t.Fatalf("resolution = %#v, want no route without a current attachment address", resolution)
+	}
 }
 
 func mustForwardingMAC(t *testing.T, value string) net.HardwareAddr {

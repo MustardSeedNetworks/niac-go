@@ -6,6 +6,7 @@ import (
 	"net/netip"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
@@ -16,19 +17,27 @@ type fabricRuntime struct {
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
 	attachmentRouters []fabricRouter
 	attachmentDHCP    *config.Device
+	deviceStates      map[*config.Device]*devicestate.Store
 }
 
 type fabricEndpoint struct {
-	device  *config.Device
-	network string
-	mac     net.HardwareAddr
+	device        *config.Device
+	interfaceName string
+	network       string
+	mac           net.HardwareAddr
 }
 
 type fabricRouter struct {
-	device       *config.Device
-	attachmentIP netip.Addr
-	mac          net.HardwareAddr
-	routes       []netip.Prefix
+	device              *config.Device
+	attachmentIP        netip.Addr
+	attachmentInterface string
+	mac                 net.HardwareAddr
+	routes              []fabricRoute
+}
+
+type fabricRoute struct {
+	destination netip.Prefix
+	via         string
 }
 
 type fabricResolution struct {
@@ -91,7 +100,8 @@ func (r *fabricRuntime) indexInterfaces(interfaces []fabric.Interface) {
 			continue
 		}
 		r.interfacesByAddr[iface.Address.Addr()] = fabricEndpoint{
-			device: device, network: iface.Network, mac: cloneMAC(device.MACAddress),
+			device: device, interfaceName: iface.Name,
+			network: iface.Network, mac: cloneMAC(device.MACAddress),
 		}
 	}
 }
@@ -104,7 +114,8 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 			continue
 		}
 		router := &fabricRouter{
-			device: device, attachmentIP: iface.Address.Addr(), mac: cloneMAC(device.MACAddress),
+			device: device, attachmentIP: iface.Address.Addr(), attachmentInterface: iface.Name,
+			mac: cloneMAC(device.MACAddress),
 		}
 		routers[iface.Device] = router
 		r.attachmentRouters = append(r.attachmentRouters, *router)
@@ -112,12 +123,12 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 	for _, route := range topology.Routes {
 		router := routers[route.Device]
 		if router != nil {
-			router.routes = append(router.routes, route.Destination)
+			router.routes = append(router.routes, fabricRoute{destination: route.Destination, via: route.Via})
 		}
 	}
 	for i := range r.attachmentRouters {
 		if router := routers[r.attachmentRouters[i].device.Name]; router != nil {
-			r.attachmentRouters[i].routes = append([]netip.Prefix(nil), router.routes...)
+			r.attachmentRouters[i].routes = append([]fabricRoute(nil), router.routes...)
 		}
 	}
 }
@@ -126,8 +137,11 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 	if r == nil || !dst.Is4() {
 		return fabricResolution{}, false
 	}
-	endpoint, exists := r.interfacesByAddr[dst]
+	endpoint, exists := r.endpointForAddress(dst)
 	if !exists {
+		return fabricResolution{}, false
+	}
+	if !r.interfaceAvailable(endpoint.device, endpoint.interfaceName) {
 		return fabricResolution{}, false
 	}
 	if endpoint.network == r.attachmentNetwork {
@@ -140,10 +154,27 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 	if router == nil {
 		return fabricResolution{}, false
 	}
+	firstHopIP, found := r.interfaceAddress(router.device, router.attachmentInterface, router.attachmentIP)
+	if !found {
+		return fabricResolution{}, false
+	}
 	return fabricResolution{
 		device: endpoint.device, replySourceMAC: cloneMAC(router.mac), routed: true,
-		firstHopIP: router.attachmentIP, firstHopMAC: cloneMAC(router.mac), firstHopDevice: router.device,
+		firstHopIP:  firstHopIP,
+		firstHopMAC: cloneMAC(router.mac), firstHopDevice: router.device,
 	}, true
+}
+
+func (r *fabricRuntime) interfaceAddress(device *config.Device, name string, fallback netip.Addr) (netip.Addr, bool) {
+	if state := r.deviceStates[device]; state != nil {
+		for _, iface := range state.Snapshot().Network.Interfaces {
+			if iface.Name == name {
+				return iface.Address.Addr(), iface.Address.IsValid()
+			}
+		}
+		return netip.Addr{}, false
+	}
+	return fallback, fallback.IsValid()
 }
 
 func (r *fabricRuntime) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
@@ -151,7 +182,7 @@ func (r *fabricRuntime) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
 	if !ok {
 		return false
 	}
-	endpoint, exists := r.interfacesByAddr[addr.Unmap()]
+	endpoint, exists := r.endpointForAddress(addr.Unmap())
 	return exists && endpoint.device == device
 }
 
@@ -160,11 +191,31 @@ func (r *fabricRuntime) resolveARP(ip net.IP) (*config.Device, bool) {
 	if !ok {
 		return nil, false
 	}
-	endpoint, exists := r.interfacesByAddr[addr.Unmap()]
-	if !exists || endpoint.network != r.attachmentNetwork {
+	endpoint, exists := r.endpointForAddress(addr.Unmap())
+	if !exists || endpoint.network != r.attachmentNetwork ||
+		!r.interfaceAvailable(endpoint.device, endpoint.interfaceName) {
 		return nil, false
 	}
 	return endpoint.device, true
+}
+
+func (r *fabricRuntime) endpointForAddress(address netip.Addr) (fabricEndpoint, bool) {
+	if r.deviceStates == nil {
+		endpoint, found := r.interfacesByAddr[address]
+		return endpoint, found
+	}
+	for _, endpoint := range r.interfacesByAddr {
+		state := r.deviceStates[endpoint.device]
+		if state == nil {
+			continue
+		}
+		for _, iface := range state.Snapshot().Network.Interfaces {
+			if iface.Name == endpoint.interfaceName && iface.Address.IsValid() && iface.Address.Addr() == address {
+				return endpoint, true
+			}
+		}
+	}
+	return fabricEndpoint{}, false
 }
 
 func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) *fabricRouter {
@@ -172,17 +223,56 @@ func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) *f
 	var best *fabricRouter
 	for i := range r.attachmentRouters {
 		router := &r.attachmentRouters[i]
-		if !bytes.Equal(router.mac, ingressMAC) {
+		if !bytes.Equal(router.mac, ingressMAC) || !r.interfaceAvailable(router.device, router.attachmentInterface) {
 			continue
 		}
-		for _, route := range router.routes {
-			if route.Contains(dst) && route.Bits() > bestBits {
-				bestBits = route.Bits()
+		for _, route := range r.routesFor(router) {
+			if !r.interfaceAvailable(router.device, route.via) {
+				continue
+			}
+			if route.destination.Contains(dst) && route.destination.Bits() > bestBits {
+				bestBits = route.destination.Bits()
 				best = router
 			}
 		}
 	}
 	return best
+}
+
+func (r *fabricRuntime) routesFor(router *fabricRouter) []fabricRoute {
+	if r.deviceStates == nil {
+		return router.routes
+	}
+	state := r.deviceStates[router.device]
+	if state == nil {
+		return nil
+	}
+	routes := state.Snapshot().Network.Routes
+	result := make([]fabricRoute, 0, len(routes))
+	for _, route := range routes {
+		result = append(result, fabricRoute{destination: route.Destination, via: route.Via})
+	}
+	return result
+}
+
+func (r *fabricRuntime) bindDeviceStates(states map[*config.Device]*devicestate.Store) {
+	r.deviceStates = states
+}
+
+func (r *fabricRuntime) interfaceAvailable(device *config.Device, name string) bool {
+	if r.deviceStates == nil {
+		return true
+	}
+	state := r.deviceStates[device]
+	if state == nil {
+		return false
+	}
+	for _, iface := range state.Snapshot().Network.Interfaces {
+		if iface.Name == name {
+			return iface.AdminUp && iface.OperUp
+		}
+	}
+	return false
 }
 
 func cloneMAC(mac net.HardwareAddr) net.HardwareAddr {

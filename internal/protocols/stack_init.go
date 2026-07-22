@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 func (s *Stack) AddPacketObserver(obs PacketObserver) {
@@ -105,6 +106,9 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 
 // resetDeviceState resets all device-related state.
 func (s *Stack) resetDeviceState() {
+	if s.notifications != nil {
+		s.notifications.Reset()
+	}
 	if s.devices == nil {
 		s.devices = NewDeviceTable()
 	} else {
@@ -118,6 +122,7 @@ func (s *Stack) resetDeviceState() {
 	s.segmentTables = nil
 
 	s.snmpAgents = make(map[*config.Device]*snmpAgentGroup)
+	s.deviceStates = make(map[*config.Device]*devicestate.Store)
 
 	if s.dhcpHandler != nil {
 		s.dhcpHandler.Reset()
@@ -130,15 +135,20 @@ func (s *Stack) resetDeviceState() {
 	if s.dnsHandler != nil {
 		s.dnsHandler.Reset()
 	}
+	if s.tcpHandler != nil {
+		s.tcpHandler.ssh.Reset()
+	}
 }
 
 // registerDevice registers a single device with all relevant handlers,
 // targeting the stack's single flat device table (the no-segments path).
 func (s *Stack) registerDevice(device *config.Device) {
+	s.registerDeviceState(device)
 	s.registerDeviceAddresses(device, s.devices)
 	s.registerDeviceFeatures(device, s.devices)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device))
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)
@@ -154,10 +164,12 @@ func (s *Stack) registerDevice(device *config.Device) {
 // by *config.Device pointer, not by table, so it coexists safely across
 // segments even when two segments reuse the same IP.
 func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable) {
+	s.registerDeviceState(device)
 	s.registerDeviceAddresses(device, table)
 	s.registerDeviceFeatures(device, table)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device))
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)

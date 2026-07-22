@@ -8,11 +8,13 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 // Default OID constants.
@@ -35,15 +37,18 @@ const (
 
 // Agent represents an SNMP agent instance for a device.
 type Agent struct {
-	device        *config.Device
-	mib           *MIB
-	community     string
-	startTime     time.Time
-	debugLevel    int
-	logger        *slog.Logger
-	mu            sync.RWMutex
-	stats         snmpStats
-	protocolStats *ProtocolTelemetry
+	device          *config.Device
+	mib             *MIB
+	community       string
+	startTime       time.Time
+	debugLevel      int
+	logger          *slog.Logger
+	mu              sync.RWMutex
+	stats           snmpStats
+	protocolStats   *ProtocolTelemetry
+	deviceState     *devicestate.Store
+	stateMIBVersion atomic.Uint64
+	stateIPOIDs     map[string]struct{}
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.
@@ -334,6 +339,7 @@ func isSynthesizedTopologyOID(oid string) bool {
 
 // HandleGet processes an SNMP GET request.
 func (a *Agent) HandleGet(oid string) (*OIDValue, error) {
+	a.syncDeviceStateMIBs()
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -351,6 +357,7 @@ func (a *Agent) HandleGet(oid string) (*OIDValue, error) {
 
 // HandleGetNext processes an SNMP GET-NEXT request.
 func (a *Agent) HandleGetNext(oid string) (string, *OIDValue, error) {
+	a.syncDeviceStateMIBs()
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -388,6 +395,7 @@ const MaxBulkResponseBytes = 1400
 
 // HandleGetBulk processes an SNMP GET-BULK request.
 func (a *Agent) HandleGetBulk(oid string, maxRepetitions int) ([]OIDResult, error) {
+	a.syncDeviceStateMIBs()
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
