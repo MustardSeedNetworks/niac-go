@@ -532,9 +532,10 @@ Generated pages:
 - `niac-init.1` - Init wizard
 - `niac-completion.1` - Shell completion
 
-## Legacy Mode
+## Direct Invocation Mode
 
-NIAC maintains backward compatibility with the original command-line interface.
+The original positional command form remains available in the current pre-1.0
+binary. It is not a compatibility guarantee for future pre-1.0 releases.
 
 ```bash
 niac <interface> <config-file> [flags]
@@ -748,7 +749,6 @@ niac my-config.yaml  # Uses environment defaults
 
 ## See Also
 
-- [Configuration Reference](CONFIG_REFERENCE.md)
-- [Template Guide](TEMPLATES.md)
+- [Configuration schema](schemas/niac.schema.json)
 - [Examples](../examples/)
 - [Troubleshooting](TROUBLESHOOTING.md)
