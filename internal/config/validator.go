@@ -135,8 +135,12 @@ func (v *Validator) validateSNMPCommunity(device *Device, prefix string) {
 	if configured && strings.TrimSpace(cfg.Community) == "" {
 		v.addError(prefix+".snmp_agent.community", "SNMPv1/v2c requires an explicit community")
 	}
-	seen := make(map[string]struct{}, len(cfg.AddMibs))
-	for i, mib := range cfg.AddMibs {
+	v.validateSNMPAddMibs(cfg.AddMibs, prefix)
+}
+
+func (v *Validator) validateSNMPAddMibs(mibs []AddMib, prefix string) {
+	seen := make(map[string]struct{}, len(mibs))
+	for i, mib := range mibs {
 		oid := strings.TrimPrefix(strings.TrimSpace(mib.OID), ".")
 		if !isValidOIDText(oid) {
 			v.addError(
