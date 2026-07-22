@@ -57,11 +57,6 @@ func trapsToYAML(cfg *TrapConfig) *converter.TrapsConfig {
 	return &converter.TrapsConfig{
 		Enabled: cfg.Enabled, Receivers: cfg.Receivers, Community: cfg.Community,
 		ColdStart: triggerToYAML(cfg.ColdStart), LinkState: linkStateToYAML(cfg.LinkState),
-		AuthenticationFailure: triggerToYAML(cfg.AuthenticationFailure),
-		HighCPU: thresholdToYAML(
-			cfg.HighCPU,
-		), HighMemory: thresholdToYAML(cfg.HighMemory),
-		InterfaceErrors: thresholdToYAML(cfg.InterfaceErrors),
 	}
 }
 
@@ -80,15 +75,6 @@ func linkStateToYAML(cfg *LinkStateTrapConfig) *converter.LinkStateTrapConfig {
 		Enabled:  cfg.Enabled,
 		LinkDown: cfg.LinkDown,
 		LinkUp:   cfg.LinkUp,
-	}
-}
-
-func thresholdToYAML(cfg *ThresholdTrapConfig) *converter.ThresholdTrapConfig {
-	if cfg == nil {
-		return nil
-	}
-	return &converter.ThresholdTrapConfig{
-		Enabled: cfg.Enabled, Threshold: cfg.Threshold, Interval: cfg.Interval,
 	}
 }
 
@@ -242,6 +228,20 @@ func osFingerprintToYAML(cfg *OSFingerprintConfig) *converter.OSFingerprintConfi
 	}
 	out := converter.OSFingerprintConfig(*cfg)
 	return &out
+}
+
+func sshToYAML(cfg *SSHConfig) *converter.SSHConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.SSHConfig{Enabled: cfg.Enabled, Username: cfg.Username, PasswordEnv: cfg.PasswordEnv}
+}
+
+func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.SyslogConfig{Enabled: cfg.Enabled, Receivers: append([]string(nil), cfg.Receivers...)}
 }
 
 func iperf3ToYAML(cfg *IPerf3Config) *converter.IPerf3Config {

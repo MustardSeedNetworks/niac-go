@@ -59,6 +59,20 @@ func parseOSFingerprintConfig(yamlOSFP *converter.OSFingerprintConfig) *OSFinger
 	return osFP
 }
 
+func parseSSHConfig(source *converter.SSHConfig) *SSHConfig {
+	if source == nil {
+		return nil
+	}
+	return &SSHConfig{Enabled: source.Enabled, Username: source.Username, PasswordEnv: source.PasswordEnv}
+}
+
+func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
+	if source == nil {
+		return nil
+	}
+	return &SyslogConfig{Enabled: source.Enabled, Receivers: append([]string(nil), source.Receivers...)}
+}
+
 // parseReflectorConfig parses NetAlly UDP reflector configuration from YAML.
 // A non-nil result enables the reflector on the device.
 func parseReflectorConfig(yamlReflector *converter.ReflectorConfig) *ReflectorConfig {
@@ -342,12 +356,11 @@ func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) *TrapConfig {
 	}
 
 	parseSNMPTriggerTraps(trapsCfg, yamlTraps)
-	parseSNMPThresholdTraps(trapsCfg, yamlTraps)
 
 	return trapsCfg
 }
 
-// parseSNMPTriggerTraps parses ColdStart, LinkState, and AuthenticationFailure trap configs.
+// parseSNMPTriggerTraps parses cold-start and link-state trap configs.
 func parseSNMPTriggerTraps(trapsCfg *TrapConfig, yamlTraps *converter.TrapsConfig) {
 	if yamlTraps.ColdStart != nil {
 		trapsCfg.ColdStart = &TrapTriggerConfig{
@@ -362,53 +375,6 @@ func parseSNMPTriggerTraps(trapsCfg *TrapConfig, yamlTraps *converter.TrapsConfi
 			LinkUp:   yamlTraps.LinkState.LinkUp,
 		}
 	}
-
-	if yamlTraps.AuthenticationFailure != nil {
-		trapsCfg.AuthenticationFailure = &TrapTriggerConfig{
-			Enabled: yamlTraps.AuthenticationFailure.Enabled, OnStartup: yamlTraps.AuthenticationFailure.OnStartup,
-		}
-	}
-}
-
-// parseSNMPThresholdTraps parses HighCPU, HighMemory, and InterfaceErrors trap configs.
-func parseSNMPThresholdTraps(trapsCfg *TrapConfig, yamlTraps *converter.TrapsConfig) {
-	if yamlTraps.HighCPU != nil {
-		trapsCfg.HighCPU = parseThresholdTrap(
-			yamlTraps.HighCPU, DefaultHighCPUThreshold, DefaultTrapCheckInterval,
-		)
-	}
-
-	if yamlTraps.HighMemory != nil {
-		trapsCfg.HighMemory = parseThresholdTrap(
-			yamlTraps.HighMemory, DefaultHighMemoryThreshold, DefaultTrapCheckInterval,
-		)
-	}
-
-	if yamlTraps.InterfaceErrors != nil {
-		trapsCfg.InterfaceErrors = parseThresholdTrap(
-			yamlTraps.InterfaceErrors, DefaultInterfaceErrorThreshold, DefaultInterfaceErrorInterval,
-		)
-	}
-}
-
-// parseThresholdTrap parses a threshold-based trap config with defaults.
-func parseThresholdTrap(
-	yaml *converter.ThresholdTrapConfig,
-	defaultThreshold, defaultInterval int,
-) *ThresholdTrapConfig {
-	cfg := &ThresholdTrapConfig{
-		Enabled: yaml.Enabled, Threshold: yaml.Threshold, Interval: yaml.Interval,
-	}
-
-	if cfg.Threshold == 0 {
-		cfg.Threshold = defaultThreshold
-	}
-
-	if cfg.Interval == 0 {
-		cfg.Interval = defaultInterval
-	}
-
-	return cfg
 }
 
 // parseDHCPConfig parses DHCP configuration from YAML.

@@ -39,14 +39,13 @@ devices:
         enabled: true
         receivers:
           - "10.0.0.100:162"
-        high_memory:
+        cold_start:
           enabled: true
-          threshold: 90
-          interval: 300
-        high_disk:
+          on_startup: true
+        link_state:
           enabled: true
-          threshold: 85
-          interval: 600
+          link_down: true
+          link_up: true
 
     # DHCP Server
     dhcp:

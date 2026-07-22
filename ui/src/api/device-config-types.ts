@@ -73,7 +73,6 @@ export type {
   NetBIOSNodeType,
   NetBIOSService,
   SNMPAgent,
-  ThresholdTrapConfig,
   TrapConfig,
   TrapTriggerConfig,
 } from './service-protocol-types';
@@ -113,8 +112,18 @@ export interface Device {
   traffic?: TrafficConfig;
   ttl?: TTLConfig;
   osFingerprint?: OSFingerprintConfig;
+  ssh?: SSHConfig;
+  syslog?: SyslogConfig;
   iperf3?: IPerf3Config;
 }
+
+export type SSHConfig =
+  | { enabled: false; username?: never; passwordEnv?: never }
+  | { enabled: true; username: string; passwordEnv: string };
+
+export type SyslogConfig =
+  | { enabled: false; receivers?: never }
+  | { enabled: true; receivers: [string, ...string[]] };
 
 export interface DeviceInterface {
   name: string;

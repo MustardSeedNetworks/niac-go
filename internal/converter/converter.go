@@ -7,8 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -204,6 +208,13 @@ func ValidateConfig(config *Config) error {
 			return err
 		}
 	}
+	for segmentIndex, segment := range config.Segments {
+		for deviceIndex, device := range segment.Devices {
+			if err := validateDeviceConfig(device, deviceIndex); err != nil {
+				return fmt.Errorf("segment %d: %w", segmentIndex, err)
+			}
+		}
+	}
 
 	// If capture playbacks specified, validate them
 	for i, playback := range config.CapturePlaybacks {
@@ -223,6 +234,12 @@ func validateDeviceConfig(device Device, index int) error {
 	if device.MAC != "" && vendor != "" {
 		return fmt.Errorf("%w: device %d", ErrDeviceMACSourceConflict, index)
 	}
+	if err := validateSSHConfig(device.SSH); err != nil {
+		return fmt.Errorf("device %d: %w", index, err)
+	}
+	if err := validateSyslogConfig(device.Syslog); err != nil {
+		return fmt.Errorf("device %d: %w", index, err)
+	}
 	if device.SnmpAgent == nil {
 		return nil
 	}
@@ -236,6 +253,53 @@ func validateDeviceConfig(device Device, index int) error {
 	}
 
 	return nil
+}
+
+func validateSSHConfig(config *SSHConfig) error {
+	if config == nil || !config.Enabled {
+		return nil
+	}
+	if strings.TrimSpace(config.Username) == "" {
+		return errors.New("ssh.username is required when SSH is enabled")
+	}
+	valid, _ := regexp.MatchString(`^[A-Za-z_][A-Za-z0-9_]*$`, config.PasswordEnv)
+	if !valid {
+		return errors.New("ssh.password_env must name an environment variable when SSH is enabled")
+	}
+	return nil
+}
+
+func validateSyslogConfig(config *SyslogConfig) error {
+	if config == nil || !config.Enabled {
+		return nil
+	}
+	if len(config.Receivers) == 0 {
+		return errors.New("syslog.receivers is required when SYSLOG is enabled")
+	}
+	for _, receiver := range config.Receivers {
+		host, port, err := net.SplitHostPort(receiver)
+		address, addressErr := netip.ParseAddr(host)
+		if err != nil || addressErr != nil || !address.Is4() {
+			return fmt.Errorf("invalid SYSLOG receiver %q", receiver)
+		}
+		value, err := strconv.ParseUint(port, 10, 16)
+		if !validPortSyntax(port) || err != nil || value == 0 {
+			return fmt.Errorf("invalid SYSLOG receiver port in %q", receiver)
+		}
+	}
+	return nil
+}
+
+func validPortSyntax(port string) bool {
+	if len(port) == 0 || len(port) > 5 || port[0] == '0' {
+		return false
+	}
+	for _, character := range port {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // PrintSummary prints a summary of the config.

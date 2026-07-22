@@ -103,7 +103,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 			Traps: &TrapConfig{
 				Enabled: true, Receivers: []string{"10.254.200.50:162"}, Community: "traps",
 				ColdStart: &TrapTriggerConfig{Enabled: true, OnStartup: true},
-				HighCPU:   &ThresholdTrapConfig{Enabled: true, Threshold: 90, Interval: 60},
+				LinkState: &LinkStateTrapConfig{Enabled: true, LinkDown: true, LinkUp: true},
 			},
 		},
 		DHCPConfig: &DHCPConfig{
@@ -198,6 +198,10 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 			TTL:       255,
 			SSHBanner: "SSH-2.0-Cisco",
 		},
+		SSHConfig: &SSHConfig{
+			Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
+		},
+		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
 		TrunkPorts: []TrunkPort{{
@@ -237,7 +241,7 @@ func assertAuthoredRoutedDevice(t *testing.T, device *converter.Device, walk str
 		t.Fatalf("route = %#v", device.Routes[0])
 	}
 	if device.SnmpAgent.Community != "NetAllyDemo" || device.SnmpAgent.WalkFile != walk ||
-		device.SnmpAgent.Traps.HighCPU.Threshold != 90 {
+		!device.SnmpAgent.Traps.LinkState.LinkDown {
 		t.Fatalf("SNMP = %#v", device.SnmpAgent)
 	}
 	if device.Dhcp.PoolStart != "10.254.200.100" || device.DNS.ForwardRecords[0].TTL != 300 {
@@ -259,7 +263,8 @@ func assertAuthoredProtocols(t *testing.T, device *converter.Device) {
 	if device.Snmpv3.Users[0].AuthProtocol != "sha256" || device.HTTP.Endpoints[0].Path != "/" ||
 		device.Ftp.Users[0].Username != "demo" || device.Icmp.TTL != 64 ||
 		device.Icmpv6.RouterAdvertisement.PrefixInfo[0].Prefix != "2001:db8:200::" ||
-		device.Dhcpv6.Pools[0].Network != "2001:db8:200::/64" || device.Netbios.Names[0].Suffix != "32" {
+		device.Dhcpv6.Pools[0].Network != "2001:db8:200::/64" || device.Netbios.Names[0].Suffix != "32" ||
+		device.SSH.Username != "admin" || device.SSH.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
 		t.Fatalf("protocol surface lost: %#v", device)
 	}
 }
@@ -284,9 +289,51 @@ func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 		device.HTTPConfig.Endpoints[0].Body != "ok" {
 		t.Fatalf("protocol round trip lost: %#v", device)
 	}
+	if device.SSHConfig == nil || device.SSHConfig.Username != "admin" ||
+		device.SSHConfig.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
+		t.Fatalf("SSH round trip lost: %#v", device.SSHConfig)
+	}
+	if device.SyslogConfig == nil || len(device.SyslogConfig.Receivers) != 1 ||
+		device.SyslogConfig.Receivers[0] != "192.0.2.50:514" {
+		t.Fatalf("SYSLOG round trip lost: %#v", device.SyslogConfig)
+	}
 	if device.ICMPv6Config.RouterAdvertisement.PrefixInfo[0].Prefix.String() != "2001:db8:200::" ||
 		device.DHCPv6Config.Pools[0].Network != "2001:db8:200::/64" || device.NetBIOSConfig.Names[0].Suffix != 32 {
 		t.Fatalf("IPv6 or NetBIOS round trip lost: %#v", device)
+	}
+}
+
+func TestLoadYAMLBytesValidatesManagementServices(t *testing.T) {
+	tests := []struct {
+		name    string
+		service string
+	}{
+		{name: "ssh missing password reference", service: "ssh:\n      enabled: true\n      username: admin"},
+		{name: "syslog invalid receiver", service: "syslog:\n      enabled: true\n      receivers: [not-an-address]"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := "devices:\n  - name: edge-1\n    type: router\n    mac: '02:00:00:00:00:01'\n    " + tt.service + "\n"
+			if _, err := LoadYAMLBytes([]byte(yaml)); err == nil {
+				t.Fatal("LoadYAMLBytes() accepted invalid management service")
+			}
+		})
+	}
+}
+
+func TestLoadYAMLBytesValidatesSegmentManagementServices(t *testing.T) {
+	yaml := `segments:
+  - tag: untagged
+    devices:
+      - name: edge-1
+        type: router
+        mac: "02:00:00:00:00:01"
+        ssh:
+          enabled: true
+          username: admin
+`
+	if _, err := LoadYAMLBytes([]byte(yaml)); err == nil {
+		t.Fatal("LoadYAMLBytes() accepted invalid segment SSH service")
 	}
 }
 

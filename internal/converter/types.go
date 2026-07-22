@@ -3,6 +3,7 @@ package converter
 import (
 	"errors"
 
+	"github.com/invopop/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -138,9 +139,11 @@ type Device struct {
 	Icmpv6        *Icmpv6Config        `yaml:"icmpv6,omitempty"`
 	Dhcpv6        *Dhcpv6Config        `yaml:"dhcpv6,omitempty"`
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
-	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`         // v1.25.0
-	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`      // v0.94.0 — NetAlly UDP reflector endpoint
-	Interfaces    []Interface          `yaml:"interfaces,omitempty"`     // Device interface metadata
+	SSH           *SSHConfig           `yaml:"ssh,omitempty"`
+	Syslog        *SyslogConfig        `yaml:"syslog,omitempty"`
+	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`     // v1.25.0
+	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`  // v0.94.0 — NetAlly UDP reflector endpoint
+	Interfaces    []Interface          `yaml:"interfaces,omitempty"` // Device interface metadata
 	Routes        []Route              `yaml:"routes,omitempty"         validate:"omitempty,dive"`
 	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`   // v1.23.0 — topology link declarations
 	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"` // v1.23.0 — LAG bundling
@@ -150,6 +153,50 @@ type Device struct {
 	// device list. Keys are author-defined; consumers treat unknown
 	// keys as informational.
 	Properties map[string]string `yaml:"properties,omitempty"`
+}
+
+// SSHConfig enables authenticated vendor-like command sessions.
+type SSHConfig struct {
+	Enabled     bool   `yaml:"enabled"`
+	Username    string `yaml:"username,omitempty"`
+	PasswordEnv string `yaml:"password_env,omitempty" jsonschema:"pattern=^[A-Za-z_][A-Za-z0-9_]*$"`
+}
+
+// JSONSchemaExtend requires SSH credentials only when the service is enabled.
+func (SSHConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
+	addEnabledRequirements(schema, "username", "password_env")
+	username, found := schema.Properties.Get("username")
+	if found {
+		username.Pattern = `.*\S.*`
+	}
+}
+
+// SyslogConfig sends configuration-state messages to RFC 5424 collectors.
+type SyslogConfig struct {
+	Enabled   bool     `yaml:"enabled"`
+	Receivers []string `yaml:"receivers,omitempty"`
+}
+
+// JSONSchemaExtend requires collectors only when SYSLOG is enabled.
+func (SyslogConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
+	addEnabledRequirements(schema, "receivers")
+	receivers, found := schema.Properties.Get("receivers")
+	if found {
+		minimum := uint64(1)
+		receivers.MinItems = &minimum
+		octet := `(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])`
+		port := `(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])`
+		receivers.Items.Pattern = `^(?:` + octet + `\.){3}` + octet + `:` + port + `$`
+	}
+}
+
+func addEnabledRequirements(schema *jsonschema.Schema, required ...string) {
+	properties := jsonschema.NewProperties()
+	properties.Set("enabled", &jsonschema.Schema{Const: true})
+	schema.AllOf = append(schema.AllOf, &jsonschema.Schema{
+		If:   &jsonschema.Schema{Properties: properties, Required: []string{"enabled"}},
+		Then: &jsonschema.Schema{Required: required},
+	})
 }
 
 // Interface represents configured metadata for a device interface.
@@ -528,15 +575,11 @@ type Dhcpv6Pool struct {
 
 // TrapsConfig represents SNMP trap configuration (v1.6.0).
 type TrapsConfig struct {
-	Enabled               bool                 `yaml:"enabled,omitempty"`
-	Receivers             []string             `yaml:"receivers,omitempty"`
-	Community             string               `yaml:"community,omitempty"` // SNMP community string
-	ColdStart             *TrapTriggerConfig   `yaml:"cold_start,omitempty"`
-	LinkState             *LinkStateTrapConfig `yaml:"link_state,omitempty"`
-	AuthenticationFailure *TrapTriggerConfig   `yaml:"authentication_failure,omitempty"`
-	HighCPU               *ThresholdTrapConfig `yaml:"high_cpu,omitempty"`
-	HighMemory            *ThresholdTrapConfig `yaml:"high_memory,omitempty"`
-	InterfaceErrors       *ThresholdTrapConfig `yaml:"interface_errors,omitempty"`
+	Enabled   bool                 `yaml:"enabled,omitempty"`
+	Receivers []string             `yaml:"receivers,omitempty"`
+	Community string               `yaml:"community,omitempty"` // SNMP community string
+	ColdStart *TrapTriggerConfig   `yaml:"cold_start,omitempty"`
+	LinkState *LinkStateTrapConfig `yaml:"link_state,omitempty"`
 }
 
 // TrapTriggerConfig configures a simple trap trigger.
@@ -550,13 +593,6 @@ type LinkStateTrapConfig struct {
 	Enabled  bool `yaml:"enabled,omitempty"`
 	LinkDown bool `yaml:"link_down,omitempty"`
 	LinkUp   bool `yaml:"link_up,omitempty"`
-}
-
-// ThresholdTrapConfig configures threshold-based traps.
-type ThresholdTrapConfig struct {
-	Enabled   bool `yaml:"enabled,omitempty"`
-	Threshold int  `yaml:"threshold,omitempty"` // threshold value
-	Interval  int  `yaml:"interval,omitempty"`  // check interval in seconds
 }
 
 // Parser handles parsing Java DSL format.

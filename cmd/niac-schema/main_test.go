@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"encoding/json"
+	"regexp"
 	"testing"
 
 	"github.com/invopop/jsonschema"
@@ -44,6 +45,30 @@ func TestSchemaContainsConfig(t *testing.T) {
 		if _, ok := schema.Definitions[def]; !ok {
 			t.Errorf("schema missing $def %q (got %d defs total: %v)",
 				def, len(schema.Definitions), defKeys(schema.Definitions))
+		}
+	}
+}
+
+func TestSchemaRestrictsSyslogReceivers(t *testing.T) {
+	reflector := &jsonschema.Reflector{AllowAdditionalProperties: false, Anonymous: true}
+	reflector.FieldNameTag = "yaml"
+	schema := reflector.Reflect(&converter.Config{})
+	syslog := schema.Definitions["SyslogConfig"]
+	receivers, found := syslog.Properties.Get("receivers")
+	if !found || receivers.Items == nil {
+		t.Fatal("SyslogConfig receivers schema is missing")
+	}
+	pattern := regexp.MustCompile(receivers.Items.Pattern)
+	for _, valid := range []string{"192.0.2.10:514", "255.255.255.255:65535"} {
+		if !pattern.MatchString(valid) {
+			t.Errorf("receiver pattern rejected %q", valid)
+		}
+	}
+	for _, invalid := range []string{
+		"999.999.999.999:514", "001.002.003.004:514", "192.0.2.1:0", "192.0.2.1:0514", "192.0.2.1:65536",
+	} {
+		if pattern.MatchString(invalid) {
+			t.Errorf("receiver pattern accepted %q", invalid)
 		}
 	}
 }
