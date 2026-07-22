@@ -181,10 +181,6 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 			return
 		}
 
-		if !s.requireDeviceProtocolFeatures(w, r, updatedDevice) {
-			return
-		}
-
 		newCfg.Devices[deviceIdx] = *updatedDevice
 	} else {
 		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
@@ -201,6 +197,15 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 
 			return
 		}
+	}
+	updatedDevice := &newCfg.Devices[deviceIdx]
+	if !s.requireDeviceProtocolFeatures(w, r, updatedDevice) {
+		return
+	}
+	if validationErr := config.ValidateDeviceManagementRequirements(updatedDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		return
 	}
 
 	if err := s.saveConfig(&newCfg); err != nil {
@@ -411,6 +416,11 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 	// Clone device
 	clonedDevice := cloneDevice(sourceDevice, req.NewHostname, req.NewIP, req.NewMAC)
 	if !s.requireDeviceProtocolFeatures(w, r, clonedDevice) {
+		return
+	}
+	if validationErr := config.ValidateDeviceManagementRequirements(clonedDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
 		return
 	}
 

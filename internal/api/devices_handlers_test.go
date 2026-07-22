@@ -563,6 +563,39 @@ func TestHandleDeviceUpdateInvalidInterface(t *testing.T) {
 	}
 }
 
+func TestHandleDeviceUpdateRejectsUnlicensedSSH(t *testing.T) {
+	t.Setenv("NIAC_TEST_SSH_PASSWORD", "secret")
+	server := newDeviceTestServer(t)
+	body := `{"ssh":{"enabled":true,"username":"admin","passwordEnv":"NIAC_TEST_SSH_PASSWORD"}}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusPaymentRequired, rec.Body.String())
+	}
+	if server.currentConfig().Devices[0].SSHConfig != nil {
+		t.Fatal("rejected SSH update changed the saved configuration")
+	}
+}
+
+func TestHandleDeviceUpdateRejectsInvalidSyslog(t *testing.T) {
+	server := newDeviceTestServer(t)
+	body := `{"syslog":{"enabled":true,"receivers":["192.0.2.50"]}}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+	if server.currentConfig().Devices[0].SyslogConfig != nil {
+		t.Fatal("rejected SYSLOG update changed the saved configuration")
+	}
+}
+
 func TestHandleDeviceCloneSuccess(t *testing.T) {
 	server := newDeviceTestServer(t)
 
@@ -904,6 +937,40 @@ func TestCreateDeviceFromRequestPersistsSNMPOverlay(t *testing.T) {
 	}
 }
 
+func TestDeviceCRUDPersistsManagementConfiguration(t *testing.T) {
+	dev, err := createDeviceFromRequest(DeviceCreateRequest{
+		Hostname: "edge-1",
+		SSH: &SSHConfigRequest{
+			Enabled: true, Username: " admin ", PasswordEnv: " NIAC_TEST_SSH_PASSWORD ",
+		},
+		Syslog: &SyslogConfigRequest{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
+	})
+	if err != nil {
+		t.Fatalf("createDeviceFromRequest: %v", err)
+	}
+	if dev.SSHConfig == nil || dev.SSHConfig.Username != "admin" ||
+		dev.SSHConfig.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
+		t.Fatalf("SSH config not persisted: %+v", dev.SSHConfig)
+	}
+	if dev.SyslogConfig == nil || len(dev.SyslogConfig.Receivers) != 1 {
+		t.Fatalf("SYSLOG config not persisted: %+v", dev.SyslogConfig)
+	}
+
+	err = applyPartialDeviceUpdate(dev, DeviceUpdateRequest{
+		SSH:    &SSHConfigRequest{Enabled: false},
+		Syslog: &SyslogConfigRequest{Enabled: true, Receivers: []string{"198.51.100.50:514"}},
+	})
+	if err != nil {
+		t.Fatalf("applyPartialDeviceUpdate: %v", err)
+	}
+	if dev.SSHConfig == nil || dev.SSHConfig.Enabled {
+		t.Fatalf("SSH update not persisted: %+v", dev.SSHConfig)
+	}
+	if got := dev.SyslogConfig.Receivers[0]; got != "198.51.100.50:514" {
+		t.Fatalf("SYSLOG receiver = %q", got)
+	}
+}
+
 func TestCollectDeviceProtocols(t *testing.T) {
 	t.Run("no protocols", func(t *testing.T) {
 		dev := &config.Device{Name: "test"}
@@ -986,6 +1053,10 @@ func TestDeviceToResponseWithDetails(t *testing.T) {
 		SNMPConfig: config.SNMPConfig{Community: "public", SysName: "router1"},
 		LLDPConfig: &config.LLDPConfig{Enabled: true, TTL: 120},
 		CDPConfig:  &config.CDPConfig{Enabled: true, Platform: "cisco"},
+		SSHConfig: &config.SSHConfig{
+			Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
+		},
+		SyslogConfig: &config.SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 	}
 
 	resp := deviceToResponse(dev, true, false)
@@ -998,6 +1069,12 @@ func TestDeviceToResponseWithDetails(t *testing.T) {
 	}
 	if resp.CDP == nil {
 		t.Error("CDP should not be nil")
+	}
+	if resp.SSH == nil || resp.SSH.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
+		t.Fatalf("SSH = %+v", resp.SSH)
+	}
+	if resp.Syslog == nil || len(resp.Syslog.Receivers) != 1 {
+		t.Fatalf("SYSLOG = %+v", resp.Syslog)
 	}
 }
 

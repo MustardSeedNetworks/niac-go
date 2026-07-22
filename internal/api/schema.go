@@ -211,6 +211,8 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"http":           buildHTTPSchema(&maxPort),
 		"ftp":            buildFTPSchema(),
 		"netbios":        buildNetBIOSSchema(&maxTTL),
+		"ssh":            buildSSHSchema(),
+		"syslog":         buildSyslogSchema(),
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),
 		"dhcpv6":         buildDHCPv6Schema(),

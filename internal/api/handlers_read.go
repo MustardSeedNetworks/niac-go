@@ -252,6 +252,12 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 		writeError(w, r, http.StatusInternalServerError, "config_authorization_failed",
 			"Failed to authorize configuration", nil)
 	default:
+		if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
+			writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
+				"Configuration runtime requirements are not met",
+				[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: runtimeErr.Error()}})
+			return false
+		}
 		return true
 	}
 	return false

@@ -150,6 +150,11 @@ func (s *Server) createAndSaveDevice(
 	if !s.requireDeviceProtocolFeatures(w, r, newDevice) {
 		return nil, errValidationFailed
 	}
+	if validationErr := config.ValidateDeviceManagementRequirements(newDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		return nil, validationErr
+	}
 
 	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
@@ -217,6 +222,7 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 	if req.SNMPAgent != nil {
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
+	applyManagementRequests(dev, req.SSH, req.Syslog)
 
 	return nil
 }
@@ -232,6 +238,24 @@ func applySNMPAgentRequest(dst *config.SNMPConfig, src *SNMPAgentRequest) {
 	dst.AddMibs = make([]config.AddMib, 0, len(src.AddMibs))
 	for _, mib := range src.AddMibs {
 		dst.AddMibs = append(dst.AddMibs, config.AddMib{OID: mib.OID, Type: mib.Type, Value: mib.Value})
+	}
+}
+
+func applyManagementRequests(
+	dev *config.Device,
+	ssh *SSHConfigRequest,
+	syslog *SyslogConfigRequest,
+) {
+	if ssh != nil {
+		dev.SSHConfig = &config.SSHConfig{
+			Enabled: ssh.Enabled, Username: strings.TrimSpace(ssh.Username),
+			PasswordEnv: strings.TrimSpace(ssh.PasswordEnv),
+		}
+	}
+	if syslog != nil {
+		dev.SyslogConfig = &config.SyslogConfig{
+			Enabled: syslog.Enabled, Receivers: append([]string(nil), syslog.Receivers...),
+		}
 	}
 }
 
@@ -356,6 +380,7 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 	if req.SNMPAgent != nil {
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
+	applyManagementRequests(dev, req.SSH, req.Syslog)
 
 	if req.RawYAML != "" {
 		parsed, err := parseDeviceFromYAML(req.RawYAML, req.Hostname)

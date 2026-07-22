@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
@@ -156,6 +157,26 @@ segments:
 
 	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
 		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired", err)
+	}
+}
+
+func TestLoadAuthorizedSimulationConfigRejectsMissingSSHPassword(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: `
+devices:
+  - name: edge
+    type: router
+    mac: 02:00:00:00:00:01
+    ips: [192.0.2.1]
+    ssh:
+      enabled: true
+      username: admin
+      password_env: NIAC_MISSING_SSH_PASSWORD
+`}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, fullSimulationEntitlements())
+
+	if !errors.Is(err, config.ErrSSHPasswordUnavailable) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want SSH password requirement", err)
 	}
 }
 

@@ -562,6 +562,9 @@ func loadAuthorizedSimulationConfig(
 	if entitlementErr := api.ValidateConfigEntitlements(cfg, entitlements); entitlementErr != nil {
 		return nil, "", entitlementErr
 	}
+	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
+		return nil, "", runtimeErr
+	}
 	return cfg, configPath, nil
 }
 

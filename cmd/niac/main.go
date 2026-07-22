@@ -628,7 +628,10 @@ func validateSimulationConfig(cfg *config.Config, checker featureChecker) error 
 		entitlements.RoutedLabs = checker.HasFeature("routed_labs")
 		entitlements.UnlimitedDevices = checker.HasFeature("unlimited_devices")
 	}
-	return api.ValidateConfigEntitlements(cfg, entitlements)
+	if err := api.ValidateConfigEntitlements(cfg, entitlements); err != nil {
+		return err
+	}
+	return config.ValidateRuntimeRequirements(cfg)
 }
 
 // runNormalMode runs NIAC in normal (non-interactive) mode.

@@ -1,6 +1,8 @@
 package protocols
 
 import (
+	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -32,12 +34,80 @@ func (s *Stack) deviceHostname(device *config.Device) string {
 }
 
 func (s *Stack) configureDeviceStates(topology *fabric.Topology) {
-	if topology == nil {
-		return
-	}
 	for device, state := range s.deviceStates {
+		if topology == nil {
+			state.ReplaceNetwork(flatDeviceNetworkState(device))
+			continue
+		}
 		state.ReplaceNetwork(deviceNetworkState(topology, device))
 	}
+}
+
+func flatDeviceNetworkState(device *config.Device) devicestate.Network {
+	interfaces := make([]devicestate.Interface, 0, max(len(device.Interfaces), len(device.IPAddresses)))
+	routes := make([]devicestate.Route, 0, len(device.Routes)+len(device.IPAddresses))
+	for index, authored := range device.Interfaces {
+		address := parseFlatPrefix(authored.Address)
+		if !address.IsValid() && index < len(device.IPAddresses) {
+			address = deviceIPPrefix(device.IPAddresses[index])
+		}
+		interfaces = append(interfaces, flatDeviceInterfaceState(authored, address))
+		if address.IsValid() {
+			routes = append(routes, connectedRoute(address, authored.Name))
+		}
+	}
+	for index := len(device.Interfaces); index < len(device.IPAddresses); index++ {
+		address := deviceIPPrefix(device.IPAddresses[index])
+		if !address.IsValid() {
+			continue
+		}
+		name := fmt.Sprintf("eth%d", index)
+		if index == 0 {
+			name = "Management"
+		}
+		interfaces = append(interfaces, flatDeviceInterfaceState(config.Interface{Name: name}, address))
+		routes = append(routes, connectedRoute(address, name))
+	}
+	for _, authored := range device.Routes {
+		destination := parseFlatPrefix(authored.Destination)
+		if !destination.IsValid() {
+			continue
+		}
+		route := devicestate.Route{Destination: destination, Via: authored.Via}
+		if authored.NextHop != "" {
+			route.NextHop, _ = netip.ParseAddr(authored.NextHop)
+		}
+		routes = append(routes, route)
+	}
+
+	return devicestate.Network{Interfaces: interfaces, Routes: routes}
+}
+
+func flatDeviceInterfaceState(authored config.Interface, address netip.Prefix) devicestate.Interface {
+	adminUp := statusUp(authored.AdminStatus)
+	carrierUp := statusUp(authored.OperStatus)
+	return devicestate.Interface{
+		Name: authored.Name, Network: authored.Network, Address: address,
+		Description: authored.Description, VLANs: authored.VLANs,
+		AdminUp: adminUp, OperUp: adminUp && carrierUp, CarrierUp: carrierUp,
+	}
+}
+
+func parseFlatPrefix(value string) netip.Prefix {
+	prefix, _ := netip.ParsePrefix(strings.TrimSpace(value))
+	return prefix
+}
+
+func deviceIPPrefix(value []byte) netip.Prefix {
+	address, ok := netip.AddrFromSlice(value)
+	if !ok {
+		return netip.Prefix{}
+	}
+	return netip.PrefixFrom(address.Unmap(), address.Unmap().BitLen())
+}
+
+func connectedRoute(address netip.Prefix, via string) devicestate.Route {
+	return devicestate.Route{Destination: address.Masked(), Via: via, Connected: true}
 }
 
 func deviceNetworkState(topology *fabric.Topology, device *config.Device) devicestate.Network {

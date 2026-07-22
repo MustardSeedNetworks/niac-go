@@ -294,3 +294,36 @@ func buildNetBIOSSchema(_ *float64) *SchemaProperty {
 		},
 	}
 }
+
+func buildSSHSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "SSH Command Service",
+		Description: "Authenticated command access for the simulated device",
+		Properties: map[string]*SchemaProperty{
+			"enabled":  {Type: "boolean", Title: "Enable SSH", Default: false},
+			"username": {Type: "string", Title: "Username"},
+			"passwordEnv": {
+				Type: "string", Title: "Password Environment Variable",
+				Pattern: `^[A-Za-z_][A-Za-z0-9_]*$`,
+			},
+		},
+		Required: []string{"enabled"},
+	}
+}
+
+func buildSyslogSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "SYSLOG Output",
+		Description: "Configuration-state messages sent to RFC 5424 collectors",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable SYSLOG", Default: false},
+			"receivers": {
+				Type: "array", Title: "Receivers",
+				Items: &SchemaProperty{
+					Type: "string", Pattern: `^(?:[0-9]{1,3}\.){3}[0-9]{1,3}:[1-9][0-9]{0,4}$`,
+				},
+			},
+		},
+		Required: []string{"enabled"},
+	}
+}
