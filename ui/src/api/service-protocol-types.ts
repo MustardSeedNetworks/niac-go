@@ -54,10 +54,6 @@ export interface TrapConfig {
   community?: string;
   coldStart?: TrapTriggerConfig;
   linkState?: LinkStateTrapConfig;
-  authenticationFailure?: TrapTriggerConfig;
-  highCpu?: ThresholdTrapConfig;
-  highMemory?: ThresholdTrapConfig;
-  interfaceErrors?: ThresholdTrapConfig;
 }
 
 export interface TrapTriggerConfig {
@@ -69,12 +65,6 @@ export interface LinkStateTrapConfig {
   enabled: boolean;
   linkDown?: boolean;
   linkUp?: boolean;
-}
-
-export interface ThresholdTrapConfig {
-  enabled: boolean;
-  threshold?: number;
-  interval?: number;
 }
 
 // ============================================================================
