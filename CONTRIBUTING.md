@@ -86,12 +86,14 @@ local scripts to create release tags, GitHub releases, or server deployments.
 
 ## Releasing
 
-Release Please tags releases from `main`. The release pipeline supports a
-dry-run mode so you can validate end-to-end without publishing assets:
+Release Please tags releases from `main`. By default, a manual release-workflow
+dispatch builds a snapshot so you can validate end-to-end without publishing or
+signing assets. The `provenance_only` input is reserved for backfilling signed
+provenance on an existing release.
 
 ```sh
-# Dry-run on the current branch (default dry_run=true).
-gh workflow run release.yml --ref my-branch -f dry_run=true
+# Snapshot the current branch.
+gh workflow run release.yml --ref my-branch
 
 # Watch progress
 gh run watch
