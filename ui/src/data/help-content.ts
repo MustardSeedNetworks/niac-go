@@ -295,7 +295,7 @@ const deviceItems: HelpItem[] = [
     category: 'devices',
     summary: 'Simulates an L3 router with full discovery and management protocols.',
     techDesc:
-      'A router persona enables ARP, ICMPv4/v6, LLDP (capabilities: bridge, router), CDP (capabilities: Router, Switch, IGMP), and SNMP by default. Typical configs add multiple IPs to model multiple subnets and enable trap-emission for high CPU/memory.',
+      'A router persona enables ARP, ICMPv4/v6, LLDP (capabilities: bridge, router), CDP (capabilities: Router, Switch, IGMP), and SNMP by default. Typical configs add multiple IPs to model multiple subnets and enable cold-start or link-state notifications.',
     laymanDesc:
       'The "router" type tells NIAC to act like a Cisco-style routing box — it shows up in LLDP and CDP as a router, answers pings on every configured IP, and responds to SNMP polls for the standard router OIDs.',
     whenToUse:
@@ -462,9 +462,9 @@ const deviceItems: HelpItem[] = [
     name: 'Server',
     standard: 'NIAC device persona',
     category: 'devices',
-    summary: 'A general-purpose host with HTTP, SSH banner, and optional SNMP.',
+    summary: 'A general-purpose host with HTTP, SNMP, and configurable stateful SSH.',
     techDesc:
-      'Server persona enables ARP, ICMP, optional HTTP (with custom endpoints), and SNMP with host-style sysDescr. STP and CDP are disabled by default. Common adds: DNS server, FTP banner, NetBIOS for Windows-flavored hosts.',
+      'Server persona enables ARP, ICMP, optional HTTP (with custom endpoints), and SNMP with host-style sysDescr. Stateful SSH is available only when `devices[].ssh.enabled`, `username`, and `password_env` are configured. STP and CDP are disabled by default. Common adds: DNS server, FTP banner, NetBIOS for Windows-flavored hosts.',
     laymanDesc:
       'The "server" type makes NIAC act like a Linux or Windows server: pings work, HTTP answers, and management tooling sees a host — not a bridge or router.',
     whenToUse:
@@ -3703,7 +3703,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-trap-receivers',
     question: 'Can NIAC send SNMP traps?',
     answer:
-      'Yes. Configure `devices[].snmp.traps.enabled: true` and list receivers under `devices[].snmp.traps.receivers: ["10.0.0.100:162"]`. Add trap-condition blocks (`high_cpu`, `high_memory`, etc.) with thresholds and intervals. NIAC will emit traps whenever the configured (or injected) condition crosses the threshold.',
+      'Yes. Configure `devices[].snmp_agent.traps.enabled: true` and list receivers. A cold-start notification requires `cold_start.enabled` and `cold_start.on_startup`; link notifications require `link_state.enabled`, the matching `link_up` or `link_down` flag, and an operational-state transition.',
     tags: ['snmp', 'traps'],
   },
   {

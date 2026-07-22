@@ -185,7 +185,7 @@ type Device struct {
 - Three-level validation (error, warning, info)
 - Device validation (names, types, MAC/IP duplicates)
 - Protocol-specific validation (19 protocols)
-- SNMP trap validation (thresholds, receivers)
+- SNMP trap validation (receivers and supported state triggers)
 - DNS record validation
 - DHCPv4/v6 pool validation (PoolStart, PoolEnd added in v1.19.0)
 
@@ -271,11 +271,9 @@ type Agent struct {
 **Walk File Format**: Standard `snmpwalk` output
 
 **Trap Generation** (v1.6.0+):
-- Event-based traps: coldStart, linkUp, linkDown, authenticationFailure
-- Threshold-based traps: highCPU, highMemory, interfaceErrors
-- Multiple trap receivers with configurable thresholds (0-100%)
-- Configurable community strings (default: "public")
-- Integration with error injection system
+- State-based traps: coldStart, linkUp, and linkDown
+- Multiple trap receivers
+- Configurable trap community string (default: "public")
 
 ---
 
@@ -546,9 +544,10 @@ devices:
       traps:
         enabled: true
         receivers: ["192.168.1.10:162"]
-        high_cpu:
+        link_state:
           enabled: true
-          threshold: 80
+          link_down: true
+          link_up: true
 ```
 
 ### Security: Path Validation
@@ -617,7 +616,7 @@ if state := stateManager.GetError("192.168.1.1", "eth0", errors.ErrorTypeCPU); s
 1. **Main goroutine**: CLI, config loading, signal handling
 2. **Packet capture goroutine**: `engine.StartCapture()` - one per interface
 3. **Protocol ticker goroutines**: LLDP/CDP advertisements (one per device)
-4. **SNMP trap goroutines**: Threshold checking (one per device with traps)
+4. **Management event dispatcher**: Coalesced state-change wakeups with lossless event-log replay
 5. **TUI goroutine**: Bubble Tea event loop (interactive mode only)
 
 ### Thread Safety
