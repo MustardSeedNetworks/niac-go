@@ -11,6 +11,7 @@ type Interface struct {
 	VLANs       []int
 	AdminUp     bool
 	OperUp      bool
+	CarrierUp   bool
 }
 
 // Route is one route installed in a simulated device's forwarding table.
