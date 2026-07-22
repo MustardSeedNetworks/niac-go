@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"bytes"
+	"net"
 	"net/netip"
 	"testing"
 
@@ -78,6 +79,45 @@ func TestConfigureFabricSeedsAuthoritativeNetworkState(t *testing.T) {
 	iface := snapshot.Network.Interfaces[0]
 	if iface.AdminUp || iface.OperUp || iface.Description != "WAN" || iface.VLANs[0] != 200 {
 		t.Fatalf("interface state = %#v", iface)
+	}
+}
+
+func TestFlatConfigSeedsAuthoritativeNetworkState(t *testing.T) {
+	cfg := &config.Config{Devices: []config.Device{{
+		Name: "edge-1", IPAddresses: []net.IP{net.ParseIP("192.0.2.10")},
+		Routes: []config.Route{{Destination: "198.51.100.0/24", Via: "Management", NextHop: "192.0.2.1"}},
+	}}}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+
+	snapshot := stack.deviceStates[&cfg.Devices[0]].Snapshot()
+	if len(snapshot.Network.Interfaces) != 1 || len(snapshot.Network.Routes) != 2 {
+		t.Fatalf("network state = %#v", snapshot.Network)
+	}
+	if got := snapshot.Network.Interfaces[0]; got.Name != "Management" || got.Address.String() != "192.0.2.10/32" {
+		t.Fatalf("interface state = %#v", got)
+	}
+	if got := snapshot.Network.Routes[1]; got.Destination.String() != "198.51.100.0/24" ||
+		got.NextHop.String() != "192.0.2.1" {
+		t.Fatalf("static route = %#v", got)
+	}
+}
+
+func TestFlatConfigReloadReseedsAuthoritativeNetworkState(t *testing.T) {
+	cfg := &config.Config{Devices: []config.Device{{
+		Name: "edge-1", IPAddresses: []net.IP{net.ParseIP("192.0.2.10")},
+	}}}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	replacement := &config.Config{Devices: []config.Device{{
+		Name: "edge-2", IPAddresses: []net.IP{net.ParseIP("198.51.100.20")},
+	}}}
+
+	if err := stack.ReloadConfig(replacement); err != nil {
+		t.Fatalf("ReloadConfig() error = %v", err)
+	}
+	snapshot := stack.deviceStates[&replacement.Devices[0]].Snapshot()
+	if len(snapshot.Network.Interfaces) != 1 ||
+		snapshot.Network.Interfaces[0].Address.String() != "198.51.100.20/32" {
+		t.Fatalf("network state = %#v", snapshot.Network)
 	}
 }
 

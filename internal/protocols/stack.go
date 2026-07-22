@@ -242,6 +242,7 @@ func newStack(
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
+	stack.configureDeviceStates(nil)
 
 	return stack
 }
@@ -472,6 +473,8 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 		if s.fabric.attachmentDHCP != nil {
 			s.configureDHCPServer(s.fabric.attachmentDHCP)
 		}
+	} else {
+		s.configureDeviceStates(nil)
 	}
 
 	if s.neighbors != nil {

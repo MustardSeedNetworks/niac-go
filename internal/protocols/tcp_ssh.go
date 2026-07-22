@@ -3,6 +3,7 @@ package protocols
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
@@ -124,6 +125,7 @@ func (h *sshTCPHandler) openSession(
 	}
 	server, err := h.server(device)
 	if err != nil {
+		slog.Error("SSH session initialization failed", "device", device.Name, "error", err)
 		h.releaseReservation(key)
 		h.stack.tcpHandler.sendRST(packet, ip, tcp, []*config.Device{device})
 		return

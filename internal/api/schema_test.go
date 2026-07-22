@@ -49,7 +49,9 @@ func TestBuildDeviceSchema(t *testing.T) {
 	}
 
 	// Check protocol properties exist
-	protoProps := []string{"snmpAgent", "lldp", "cdp", "stp", "dhcp", "dns", "http", "ftp", "netbios"}
+	protoProps := []string{
+		"snmpAgent", "lldp", "cdp", "stp", "dhcp", "dns", "http", "ftp", "netbios", "ssh", "syslog",
+	}
 	for _, prop := range protoProps {
 		if _, ok := schema.Properties[prop]; !ok {
 			t.Errorf("missing protocol property: %s", prop)
@@ -130,7 +132,7 @@ func TestBuildProtocolSchemaProperties(t *testing.T) {
 		"snmpAgent", "lldp", "cdp", "edp", "fdp", "stp",
 		"dhcp", "dns", "http", "ftp", "netbios",
 		"icmp", "icmpv6", "dhcpv6", "traffic", "ttl",
-		"os_fingerprint", "iperf3", "reflector",
+		"os_fingerprint", "ssh", "syslog", "iperf3", "reflector",
 	}
 
 	for _, proto := range expectedProtocols {
