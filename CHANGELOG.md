@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.6...v0.94.7) (2026-07-22)
+
+
+### Features
+
+* expose SNMP parity overlays in device editor ([#1020](https://github.com/MustardSeedNetworks/niac-go/issues/1020)) ([0824653](https://github.com/MustardSeedNetworks/niac-go/commit/0824653953262bdac9f573f190eadd369d4b6553))
+
 ## [0.94.6](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.5...v0.94.6) (2026-07-21)
 
 
