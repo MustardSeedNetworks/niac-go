@@ -1,9 +1,11 @@
 # Project audit — 2026-05-07
 
+> Archived point-in-time audit. Current work is tracked in GitHub issues and
+> the active pre-1.0 roadmap.
+
 Sweep of the entire repo for best-practice gaps, defects, wiring issues,
-and enhancement opportunities. Companion to
-[SURFACE_MATRIX.md](./SURFACE_MATRIX.md) and
-[CONFIG_COVERAGE.md](./CONFIG_COVERAGE.md).
+and enhancement opportunities. The original companion documents were
+`SURFACE_MATRIX.md` and `CONFIG_COVERAGE.md`; neither remains active.
 
 This is a **point-in-time snapshot.** Items marked **fixed in this PR**
 land alongside this doc; everything else is recorded as a follow-up so

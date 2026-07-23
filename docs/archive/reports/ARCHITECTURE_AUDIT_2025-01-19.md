@@ -1,5 +1,8 @@
 # Seed / Stem / NIAC Architecture Audit Report
 
+> Archived point-in-time audit. Its licensing, platform, and implementation
+> claims are historical and are not an active backlog.
+
 **Date:** 2025-01-19
 **Auditor:** Claude (Opus 4.5)
 **Role:** Senior Platform Architect, DevOps Lead, Documentation Systems Auditor

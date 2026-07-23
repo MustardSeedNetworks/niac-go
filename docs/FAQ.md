@@ -455,7 +455,9 @@ See `CONTRIBUTING.md` for detailed guidelines.
 
 ### Is there commercial support?
 
-NIAC-Go is open source (MIT license). For commercial support or custom development, contact the maintainers through GitHub.
+NIAC is source-available under the Business Source License 1.1. Free supports
+up to 10 simulated devices; Pro licensing and commercial support are available
+through Mustard Seed Networks.
 
 ### How often is NIAC-Go updated?
 
