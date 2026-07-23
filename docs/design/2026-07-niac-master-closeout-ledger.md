@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `eb41e196` after the #1067 merge
+**Baseline:** `main` at `e8c91940` after the #1071 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -34,7 +34,7 @@ Update it when work merges or a disposition changes.
 | #1032 browser authentication | High | Needs reproduction | Stage 2 after HTTPS |
 | #1033 live static-route validation | High | Needs reproduction | Stage 3 |
 | #1034 routed Runtime Control | High | Needs reproduction | Stage 3 |
-| #1035 nested path containment | High | Needs reproduction | Stage 2 first |
+| #1035 nested path containment | High | Delivered in #1071 | Stage 2 evidence retained |
 | #1036 Packet Inspector SSE envelope | High | Needs reproduction | Stage 4 |
 | #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
 | #1041 bounded UDP proxy | High | Needs reproduction | Stage 2 |
