@@ -60,7 +60,7 @@ Update it when work merges or a disposition changes.
 
 ## Defect-register reconciliation
 
-These entries still require a current-v0.94.10 disposition. Do not create a
+These entries still require a current-v0.94.11 disposition. Do not create a
 new issue until reproduction confirms that the contract remains open.
 
 | Finding | Current evidence | Candidate disposition |
@@ -96,8 +96,6 @@ new issue until reproduction confirms that the contract remains open.
 | Defect-hunting plan/register | Active evidence source; close after reconciliation |
 | [Local-plan intake](2026-07-local-plan-intake.md) | Five local plans reconciled; catalog, stale UI references, replay accounting/positioning, cruft, and optional gates remain |
 | Multi-VLAN epic #882 | Reconcile delivered architecture in Stage 7 |
-| Library issue #905 | Fix unsafe default; gate curation separately |
-| License issue #911 | External counsel decision required |
 | Fleet-drift epic #1004 | Reconcile Renovate/foundation delivery and remaining shared CI |
 
 ## Stage 0 exit checklist

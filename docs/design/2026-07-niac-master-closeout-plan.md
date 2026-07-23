@@ -150,8 +150,6 @@ is reproducible.
 | [Local-plan intake](2026-07-local-plan-intake.md) | Resolve every nearest-switch, UI, modernization, cruft/duplication, and replay-positioning item recorded there |
 | Multi-VLAN epic #882 | Reconcile delivered architecture; issue only the actual remaining UI/catalog/acceptance work |
 | Fleet-drift epic #1004 | Record delivered Renovate/foundation work; finish or separately track shared CI and doc alignment |
-| Library issue #905 | Fix the broken/phone-home default; gate content curation as a separate product decision |
-| License issue #911 | Obtain counsel decision; merge approved wording or close with the decision |
 
 Exit gate: every non-archived plan has a final status and no local-only active
 work remains.
