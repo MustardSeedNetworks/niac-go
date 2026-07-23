@@ -132,8 +132,12 @@ describe('i18n parity — en/es key sets', () => {
     it(`${ns}: identical key sets in en and es`, () => {
       const enK = new Set(flatKeyPaths(en));
       const esK = new Set(flatKeyPaths(es));
-      const enOnly = [...enK].filter((k) => !esK.has(k)).sort();
-      const esOnly = [...esK].filter((k) => !enK.has(k)).sort();
+      const enOnly = [...enK]
+        .filter((k) => !esK.has(k))
+        .sort((left, right) => left.localeCompare(right));
+      const esOnly = [...esK]
+        .filter((k) => !enK.has(k))
+        .sort((left, right) => left.localeCompare(right));
       expect(enOnly, 'keys present in en but missing in es').toEqual([]);
       expect(esOnly, 'keys present in es but missing in en').toEqual([]);
     });
