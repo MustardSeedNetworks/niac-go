@@ -24,8 +24,8 @@ Update it when work merges or a disposition changes.
 | --- | --- | --- |
 | Primary `docs/master-plan-closeout` | Clean; PR #1064 | Owns plan and ledger only |
 | `fix/https-only-contract` | Clean; PR #1063 | Owns #1037; do not duplicate listener work |
-| `fix/fault-telemetry` | Clean; base landed as #1059 | Preserve follow-ups `72d2aca5` and `55aae24f`; rebase into a focused follow-up PR |
-| `fix/free-tier-contract` | Clean; base landed as #1062 | Preserve `e1dc2b2c`; rebase into a focused wording PR |
+| `fix/fault-telemetry` | Clean; all patches landed in squash #1059 | Eligible for local cleanup after final verification |
+| `fix/free-tier-contract` | Clean; all patches landed in squash #1062 | Eligible for local cleanup after final verification |
 
 ## Epic #1053 implementation queue
 
@@ -101,7 +101,7 @@ new issue until reproduction confirms that the contract remains open.
 
 - [x] One master plan and ledger exist.
 - [x] Current worktrees have explicit owners.
-- [x] Hidden follow-up commits are identified and preserved.
+- [x] Former follow-up commits are confirmed present in merged squash commits.
 - [ ] v0.94.10 release artifacts and provenance are verified.
 - [ ] PR #1064 is merged.
 - [ ] PR #1063 is merged or explicitly handed off.
