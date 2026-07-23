@@ -1,0 +1,64 @@
+#!/usr/bin/env sh
+
+FAILED=0
+
+EXPECTED_NODE=$(cat .nvmrc)
+EXPECTED_NPM=$(sed -n 's/.*"packageManager": "npm@\([^"]*\)".*/\1/p' package.json)
+
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo "❌ Node.js and npm are required for frontend checks."
+  exit 1
+fi
+
+ACTUAL_NODE=$(node --version)
+ACTUAL_NPM=$(npm --version)
+if [ "$ACTUAL_NODE" != "v$EXPECTED_NODE" ] || [ "$ACTUAL_NPM" != "$EXPECTED_NPM" ]; then
+  echo "❌ Frontend toolchain mismatch."
+  echo "   Required: Node.js v$EXPECTED_NODE, npm $EXPECTED_NPM"
+  echo "   Current:  Node.js $ACTUAL_NODE, npm $ACTUAL_NPM"
+  exit 1
+fi
+
+if [ ! -d "ui/node_modules" ]; then
+  echo "❌ Frontend dependencies not installed. Run: cd ui && npm ci"
+  exit 1
+fi
+
+cd ui || exit 1
+
+UI_FILES=$(printf '%s\n' "$STAGED_TS_FILES" | grep '^ui/' | sed 's|^ui/||' || true)
+if [ -n "$UI_FILES" ]; then
+  echo "Running Biome lint..."
+  BIOME_FAILED=0
+  while IFS= read -r UI_FILE; do
+    if ! ./node_modules/.bin/biome check --no-errors-on-unmatched "$UI_FILE" 2>/dev/null; then
+      BIOME_FAILED=1
+    fi
+  done <<EOF
+$UI_FILES
+EOF
+  if [ "$BIOME_FAILED" -ne 0 ]; then
+    echo "❌ Biome check failed! Run: npm run lint:fix"
+    FAILED=1
+  else
+    echo "✓ Biome check passed"
+  fi
+fi
+
+echo "Running TypeScript check..."
+if ! sh ../.husky/run-tailed npm run typecheck; then
+  echo "❌ TypeScript errors!"
+  FAILED=1
+else
+  echo "✓ TypeScript check passed"
+fi
+
+echo "Running frontend tests..."
+if ! sh ../.husky/run-tailed npm run test; then
+  echo "❌ Frontend tests failed!"
+  FAILED=1
+else
+  echo "✓ Frontend tests passed"
+fi
+
+exit "$FAILED"
