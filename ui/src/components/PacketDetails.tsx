@@ -101,6 +101,20 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
       {/* Protocol dissection tree */}
       <ProtocolTree packet={packet} onFieldSelect={onFieldSelect} />
 
+      {packet.ingressNetwork && (
+        <div className="mt-content rounded-lg bg-bg-base/50 pad-sm border border-surface-border">
+          <DetailRow label={t('packets.inspector.ingressNetwork')} value={packet.ingressNetwork} />
+          <DetailRow label={t('packets.inspector.routeDecision')} value={packet.routeDecision} />
+          <DetailRow label={t('packets.inspector.hop')} value={packet.hop} mono={true} />
+          <DetailRow label={t('packets.inspector.egressNetwork')} value={packet.egressNetwork} />
+          <DetailRow label={t('packets.inspector.physicalVlan')} value={packet.physicalVlan} />
+          <DetailRow
+            label={t('packets.inspector.egressRejectionReason')}
+            value={packet.egressRejectionReason}
+          />
+        </div>
+      )}
+
       {/* Summary */}
       {packet.summary && (
         <div className="mt-heading pt-2 border-t border-surface-border">
