@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `185a180e` after the v0.94.11 release merge
+**Baseline:** `main` at `eb41e196` after the #1067 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -17,19 +17,15 @@ Update it when work merges or a disposition changes.
 | v0.94.10 core artifacts | Verified | Release workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
 | v0.94.10-v0.94.11 content packages | Integrity metadata missing | Tracked by accepted medium defect #1068 |
 | v0.94.11 core artifacts | Verified | Workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
-| Master plan PR #1064 | Draft; rebased on current `main` | Complete review, mark ready, and merge |
+| Master plan PR #1064 | Merged | Execute and maintain this ledger from `main` |
 | Next release after v0.94.11 | Blocked by #1068 | Add content-package integrity metadata before publication |
 
 ## Worktree ownership
 
 | Worktree | State | Disposition |
 | --- | --- | --- |
-| Primary `docs/master-plan-closeout` | Clean; PR #1064 | Owns plan and ledger only |
-| `fix/precommit-fail-closed` | Clean; draft PR #1067 | Corrected body-lint rerun passed; stale failed context still blocks |
-| `fix/https-only-contract` | Merged in #1063 | Eligible for local cleanup after final verification |
-| `docs/pre1-closeout` | Merged in #1065 | Eligible for local cleanup after final verification |
-| `fix/fault-telemetry` | Clean; all patches landed in squash #1059 | Eligible for local cleanup after final verification |
-| `fix/free-tier-contract` | Clean; all patches landed in squash #1062 | Eligible for local cleanup after final verification |
+| Primary checkout | Stage 0 coordinator | Uses scoped branches for ledger and reproduction work |
+| Detached `niac-release-review` | Preserved at v0.94.11 | Separate release context; do not remove without owner confirmation |
 
 ## Epic #1053 implementation queue
 
@@ -55,7 +51,7 @@ Update it when work merges or a disposition changes.
 | #1048 offline PCAP access | Medium | Needs reproduction | Stage 4 |
 | #1049 capture-exit recovery | Medium | Needs reproduction | Stage 4 |
 | #1052 i18next migration | Medium | Accepted | Stage 4 |
-| #1057 fail-closed hooks | Medium | Draft PR #1067 | Stage 0 prerequisite active |
+| #1057 fail-closed hooks | Medium | Delivered in #1067 | Stage 0 prerequisite complete |
 | #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
 
 ## Defect-register reconciliation
@@ -105,9 +101,9 @@ new issue until reproduction confirms that the contract remains open.
 - [x] Former follow-up commits are confirmed present in merged squash commits.
 - [x] v0.94.10 core artifacts are verified; content integrity is tracked in #1068.
 - [x] v0.94.11 publication is complete and its core artifacts are verified.
-- [ ] PR #1064 is merged.
+- [x] PR #1064 is merged.
 - [x] PR #1063 is merged or explicitly handed off.
-- [ ] PR #1067 is merged before defect reproductions begin.
+- [x] PR #1067 is merged before defect reproductions begin.
 - [ ] Every #1053 `needs-info` issue has a current reproduction.
 - [ ] Unique high/medium prose-only findings have accepted GitHub issues.
 - [ ] Duplicate findings are marked absorbed.
