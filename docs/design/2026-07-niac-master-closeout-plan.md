@@ -28,7 +28,7 @@ must be reconciled, not parallel backlogs.
 | 2 | Epic #1053 and its remediation plan/execution guide | High/medium implementation |
 | 3 | Routed virtual-lab plan | Phase 7 hardware acceptance and Phase 8 boundary |
 | 4 | Pre-1.0 roadmap | Release boundary |
-| 5 | Defect register and local plans | Findings to absorb, verify, or retire |
+| 5 | Defect register and [local-plan intake](2026-07-local-plan-intake.md) | Findings to absorb, verify, or retire |
 | 6 | `docs/archive/**` | Historical evidence only; never an active backlog |
 
 ## Stage 0: Establish one accurate ledger
@@ -40,26 +40,21 @@ Track current ownership and disposition in the
 2. Reconcile the three existing worktrees before overlapping edits:
    `fix/https-only-contract`, `fix/fault-telemetry`, and
    `fix/free-tier-contract`.
-3. Map every open GitHub issue, defect-register entry, and local-plan item to
+3. Complete #1057 so failed frontend commands cannot produce trusted-looking
+   reproduction evidence.
+4. Map every open GitHub issue, defect-register entry, and local-plan item to
    one owner and one disposition.
-4. Reproduce all #1053 defects still labeled `status: needs-info`; accept,
+5. Reproduce all #1053 defects still labeled `status: needs-info`; accept,
    correct, or close them with evidence.
-5. Create GitHub issues for unique unresolved high/medium defect-register
+6. Create GitHub issues for unique unresolved high/medium defect-register
    findings that are not already represented by #1053.
-6. Mark duplicate findings as absorbed instead of fixing the same contract
+7. Mark duplicate findings as absorbed instead of fixing the same contract
    twice.
 
 Exit gate: no high or medium finding exists only in prose, and no work item has
 two implementation owners.
 
-## Stage 1: Repair the evidence gate
-
-Complete #1057 first:
-
-- Enforce the repository-pinned Node and npm versions.
-- Propagate every failed child command.
-- Print success only after a zero exit.
-- Prove the hook blocks a deliberately failing frontend command.
+## Stage 1: Extend the evidence gate
 
 Verify the already-started v0.94.11 publication, then close #1068 before the
 following release. Retain browser traces for Chromium, WebKit, Firefox,
@@ -152,13 +147,11 @@ is reproducible.
 | Plan or issue | Required disposition |
 | --- | --- |
 | Defect-hunting plan/register | Close delivered findings; move unique debt to issues; archive the working register |
-| Nearest-switch plan | Close after catalog and CyberScope evidence |
+| [Local-plan intake](2026-07-local-plan-intake.md) | Resolve every nearest-switch, UI, modernization, cruft/duplication, and replay-positioning item recorded there |
 | Multi-VLAN epic #882 | Reconcile delivered architecture; issue only the actual remaining UI/catalog/acceptance work |
 | Fleet-drift epic #1004 | Record delivered Renovate/foundation work; finish or separately track shared CI and doc alignment |
 | Library issue #905 | Fix the broken/phone-home default; gate content curation as a separate product decision |
 | License issue #911 | Obtain counsel decision; merge approved wording or close with the decision |
-| UI architecture plan | Re-audit correctness items; absorb defects; retire low-value parity and speculative UI work |
-| Modernization plan | Re-baseline landed `os.Root` work; approve only changes with measurable security, reliability, or maintenance value |
 
 Exit gate: every non-archived plan has a final status and no local-only active
 work remains.
@@ -174,7 +167,7 @@ for:
 3. IPv6 forwarding and DHCPv6 relay.
 4. Route policy and simulated ACLs.
 5. Multiple external attachments with a separate threat model.
-6. Replay expansion, React Compiler, TanStack Query, and remaining UI parity.
+6. Replay, Inspector, and remaining UI parity expansion.
 
 For each, record **build**, **reshape smaller**, or **retire**, then create a
 bounded implementation plan only for approved work.

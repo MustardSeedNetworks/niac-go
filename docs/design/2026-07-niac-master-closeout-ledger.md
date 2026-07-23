@@ -55,7 +55,7 @@ Update it when work merges or a disposition changes.
 | #1048 offline PCAP access | Medium | Needs reproduction | Stage 4 |
 | #1049 capture-exit recovery | Medium | Needs reproduction | Stage 4 |
 | #1052 i18next migration | Medium | Accepted | Stage 4 |
-| #1057 fail-closed hooks | Medium | Draft PR #1067 | Stage 1 active |
+| #1057 fail-closed hooks | Medium | Draft PR #1067 | Stage 0 prerequisite active |
 | #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
 
 ## Defect-register reconciliation
@@ -94,9 +94,7 @@ new issue until reproduction confirms that the contract remains open.
 | Routed virtual-lab plan | Phases 0-6 delivered; Phase 7 acceptance active |
 | Remediation plan/execution guide | Active implementation queue under #1053 |
 | Defect-hunting plan/register | Active evidence source; close after reconciliation |
-| Nearest-switch local plan | NIAC synthesis delivered; catalog/live evidence remains |
-| UI architecture local plan | Re-audit after #1053; absorb or retire each item |
-| Modernization local plan | Deferred to Stage 8 gates |
+| [Local-plan intake](2026-07-local-plan-intake.md) | Five local plans reconciled; catalog, stale UI references, replay accounting/positioning, cruft, and optional gates remain |
 | Multi-VLAN epic #882 | Reconcile delivered architecture in Stage 7 |
 | Library issue #905 | Fix unsafe default; gate curation separately |
 | License issue #911 | External counsel decision required |
@@ -111,6 +109,7 @@ new issue until reproduction confirms that the contract remains open.
 - [x] v0.94.11 publication is complete and its core artifacts are verified.
 - [ ] PR #1064 is merged.
 - [x] PR #1063 is merged or explicitly handed off.
+- [ ] PR #1067 is merged before defect reproductions begin.
 - [ ] Every #1053 `needs-info` issue has a current reproduction.
 - [ ] Unique high/medium prose-only findings have accepted GitHub issues.
 - [ ] Duplicate findings are marked absorbed.
