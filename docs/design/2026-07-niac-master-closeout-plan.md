@@ -67,9 +67,11 @@ Exit gate: later work can rely on local and CI results without masked failures.
 Treat #1037 as delivered by PR #1063, then complete remediation Wave 1 in
 this order:
 
-1. #1035 nested configuration containment.
-2. #1041 bounded UDP proxy resources and shutdown.
-3. #1032 secure browser authentication for SPA, REST, and SSE.
+1. [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2)
+   concurrency-stable hardware fingerprinting.
+2. #1035 nested configuration containment.
+3. #1041 bounded UDP proxy resources and shutdown.
+4. #1032 secure browser authentication for SPA, REST, and SSE.
 
 Run adversarial path, plaintext-listener, overload, cancellation,
 credential-leak, authorization, and browser tests before merging.
@@ -82,9 +84,10 @@ resource-bounded, and unable to escape managed roots.
 Complete remediation Wave 2 after the fault-telemetry worktree lands or has an
 explicit handoff:
 
-- #1033, #1034, #1038, #1039, #1042, #1045, #1046, and #1047.
-- Reconcile unresolved NIAC-DEF-008, 013, 015, 019, 021, 025, 027, 028, and
-  029; create issues for unique contracts and absorb true duplicates.
+- #1033, #1034, #1038, #1039, #1042, #1045, #1046, #1047, and
+  #1075-#1081.
+- Use the completed defect-register dispositions in the master ledger; do not
+  create duplicate owners for the absorbed findings.
 - Keep the stack-owned state authoritative for CLI, forwarding, SNMP,
   topology, discovery, counters, and notifications.
 

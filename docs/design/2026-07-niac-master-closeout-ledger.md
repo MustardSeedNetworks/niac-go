@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `16ac84b3` after the #1073 merge
+**Baseline:** `main` at `ee44d48c` after the #1074 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -24,7 +24,7 @@ Update it when work merges or a disposition changes.
 
 | Worktree | State | Disposition |
 | --- | --- | --- |
-| Primary checkout | Stage 0 coordinator | Uses scoped branches for ledger and reproduction work |
+| Primary checkout | Stage 0 complete; Stage 1 next | Uses scoped branches for release-integrity work |
 | Detached `niac-release-review` | Preserved at v0.94.11 | Separate release context; do not remove without owner confirmation |
 
 ## Epic #1053 implementation queue
@@ -40,6 +40,8 @@ Update it when work merges or a disposition changes.
 | #1041 bounded UDP proxy | High | Reproduced and accepted | Stage 2 next |
 | #1042 off-link notifications | High | Reproduced and accepted | Stage 3 after fault handoff |
 | #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
+| #1075 transactional simulation replacement | High | Reproduced and accepted | Stage 3 |
+| [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) fingerprint stability | High | Reproduced and tracked in foundation | Stage 2 shared dependency |
 | #1038 duplicate segment tags | Medium | Reproduced and accepted | Stage 3 |
 | #1039 stale API topology | Medium | Reproduced and accepted | Stage 3 |
 | #1040 missing stats publisher | Medium | Reproduced and accepted | Stage 4 |
@@ -53,33 +55,39 @@ Update it when work merges or a disposition changes.
 | #1052 i18next migration | Medium | Accepted | Stage 4 |
 | #1057 fail-closed hooks | Medium | Delivered in #1067 | Stage 0 prerequisite complete |
 | #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
+| #1076 IPv4 checksum/source validation | Medium | Reproduced and accepted | Stage 3 |
+| #1077 stack lifecycle contract | Medium | Reproduced and accepted | Stage 3 |
+| #1078 DHCP compiler validation | Medium | Reproduced and accepted | Stage 3 |
+| #1079 immutable catalog sync | Medium | Reproduced and accepted | Stage 3 |
+| #1080 active-simulation recovery | Medium | Reproduced and accepted | Stage 3 |
+| #1081 preflight interface parity | Medium | Reproduced and accepted | Stage 3 |
 
 ## Defect-register reconciliation
 
-These entries still require a current-v0.94.11 disposition. Do not create a
-new issue until reproduction confirms that the contract remains open.
+Every high or medium entry now has a current disposition. Findings that share
+one root cause and acceptance contract are absorbed into the linked issue.
 
-| Finding | Current evidence | Candidate disposition |
+| Finding | Current evidence | Disposition |
 | --- | --- | --- |
-| NIAC-DEF-001 | Fix landed; full/live gate pending | Absorb into Stage 5/6 acceptance |
-| NIAC-DEF-002 | Fix landed; direct-mode gate pending | Absorb into Stage 5 |
-| NIAC-DEF-008 | Partial next-hop fix | Reproduce with #1033 |
-| NIAC-DEF-013 | Transactional replacement code-confirmed | Create unique high issue if current |
-| NIAC-DEF-015 | Runtime Control code-confirmed | Absorb into #1034 |
-| NIAC-DEF-017 | Lockfile fixed; full gate pending | Absorb into Stage 6 |
-| NIAC-DEF-019 | IPv4 input validation code-confirmed | Create unique medium issue if current |
-| NIAC-DEF-021 | Stack channel lifecycle code-confirmed | Create unique medium issue if current |
-| NIAC-DEF-025 | DHCP validation code-confirmed | Create unique medium issue if current |
-| NIAC-DEF-027 | Catalog sync integrity code-confirmed | Create unique medium issue if current |
-| NIAC-DEF-028 | Restart recovery code-confirmed | Create unique medium issue if current |
-| NIAC-DEF-029 | Preflight/interface parity code-confirmed | Reproduce with #1034 |
+| NIAC-DEF-001 | Root cause fixed | Absorbed into Stage 5/6 full and live acceptance |
+| NIAC-DEF-002 | Root cause fixed | Absorbed into Stage 5 direct-mode hardware acceptance |
+| NIAC-DEF-008 | Partial next-hop fix | Absorbed into accepted high #1033 |
+| NIAC-DEF-013 | Transactional replacement reproduced | Accepted high #1075 |
+| NIAC-DEF-015 | Runtime Control bypass reproduced | Absorbed into accepted high #1034 |
+| NIAC-DEF-017 | Lockfile fixed | Absorbed into Stage 6 full security acceptance |
+| NIAC-DEF-019 | Checksum/source validation reproduced; fragments fixed | Accepted medium #1076 |
+| NIAC-DEF-021 | One-shot stack lifecycle reproduced | Accepted medium #1077 |
+| NIAC-DEF-025 | Remaining DHCP validation gaps reproduced | Accepted medium #1078 |
+| NIAC-DEF-027 | Mutable catalog sync reproduced | Accepted medium #1079 |
+| NIAC-DEF-028 | Missing restart recovery reproduced | Accepted medium #1080 |
+| NIAC-DEF-029 | Preflight/interface parity reproduced | Accepted medium #1081 |
 | NIAC-DEF-031 | Darwin link warning reproduced | Retain as low maintenance debt |
 | NIAC-DEF-032 | UI chunk warning reproduced | Retain as low maintenance debt |
-| NIAC-DEF-035 | Fix landed; live gate pending | Absorb into Stage 5 |
-| NIAC-DEF-036 | Catalog rebuilt; live gate pending | Absorb into Stage 5 |
-| NIAC-DEF-037 | Deprecated extractor reproduced | Absorb into #1052 |
-| NIAC-DEF-038 | Foundation fingerprint race reproduced | Verify foundation status; create high issue if current |
-| NIAC-DEF-046 | MIB-II work landed; live gate pending | Absorb into Stage 5/6 acceptance |
+| NIAC-DEF-035 | Root cause fixed | Absorbed into Stage 5 route-MIB live acceptance |
+| NIAC-DEF-036 | Catalog rebuilt | Absorbed into Stage 5 routed live acceptance |
+| NIAC-DEF-037 | Deprecated extractor reproduced | Absorbed into accepted medium #1052 |
+| NIAC-DEF-038 | Foundation fingerprint race reproduced | Tracked as high in [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) |
+| NIAC-DEF-046 | MIB-II work landed | Absorbed into Stage 5/6 CyberScope acceptance |
 | NIAC-DEF-050 | Markdown backlog reproduced | Retain as low maintenance debt |
 
 ## Remaining plan registry
@@ -105,5 +113,5 @@ new issue until reproduction confirms that the contract remains open.
 - [x] PR #1063 is merged or explicitly handed off.
 - [x] PR #1067 is merged before defect reproductions begin.
 - [x] Every open #1053 `needs-info` issue has a current reproduction and accepted disposition.
-- [ ] Unique high/medium prose-only findings have accepted GitHub issues.
-- [ ] Duplicate findings are marked absorbed.
+- [x] Unique high/medium prose-only findings have accepted GitHub issues.
+- [x] Duplicate findings are marked absorbed.
