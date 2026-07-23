@@ -28,7 +28,7 @@ type FeatureMeta struct {
 func featureMeta() map[string]FeatureMeta {
 	return map[string]FeatureMeta{
 		"unlimited_devices": {
-			Label:       "Unlimited Devices",
+			Label:       "Expanded Device Capacity",
 			Description: "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.",
 		},
 		"routed_labs": {

@@ -37,6 +37,9 @@ func TestUnlimitedDevicesDescriptionStatesDeviceScaleContract(t *testing.T) {
 	const contract = "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000."
 	for _, feature := range license.FeatureCatalog() {
 		if feature.ID == "unlimited_devices" {
+			if feature.Label != "Expanded Device Capacity" {
+				t.Fatalf("label = %q, want expanded capacity wording", feature.Label)
+			}
 			if !strings.Contains(feature.Description, contract) {
 				t.Fatalf("description = %q, want device scale contract %q", feature.Description, contract)
 			}
