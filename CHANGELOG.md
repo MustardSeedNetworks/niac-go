@@ -5,6 +5,31 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.7...v0.94.8) (2026-07-23)
+
+
+### Features
+
+* add routed lab observability ([#1031](https://github.com/MustardSeedNetworks/niac-go/issues/1031)) ([4e5202b](https://github.com/MustardSeedNetworks/niac-go/commit/4e5202ba91ec61e8e64240253e976ed732fc0ca0))
+* add stateful device CLI and packet-backed SSH ([#1028](https://github.com/MustardSeedNetworks/niac-go/issues/1028)) ([565bacd](https://github.com/MustardSeedNetworks/niac-go/commit/565bacd0f87ade17eb6ff15c814debd41cd3f98b))
+
+
+### Bug Fixes
+
+* **api:** declare template-use license gate ([#1023](https://github.com/MustardSeedNetworks/niac-go/issues/1023)) ([edfcd83](https://github.com/MustardSeedNetworks/niac-go/commit/edfcd83d0de6c134af854c2a712394c8cd6fdd9e))
+* **release:** make manual dispatch snapshot-only ([#1027](https://github.com/MustardSeedNetworks/niac-go/issues/1027)) ([bd91a9f](https://github.com/MustardSeedNetworks/niac-go/commit/bd91a9fefad2fa131ebb33b3de415de556815c52))
+
+
+### Documentation
+
+* define pre-1.0 stabilization contract ([#1025](https://github.com/MustardSeedNetworks/niac-go/issues/1025)) ([fac8229](https://github.com/MustardSeedNetworks/niac-go/commit/fac82292a16ede00bbb61c8338db838d72c4be99))
+
+
+### Miscellaneous
+
+* align release CI toolchain ([#1026](https://github.com/MustardSeedNetworks/niac-go/issues/1026)) ([ebe050a](https://github.com/MustardSeedNetworks/niac-go/commit/ebe050a0c0c14eebd69fc0c004834639870b1d91))
+* **deps:** refresh release and build tooling ([#1050](https://github.com/MustardSeedNetworks/niac-go/issues/1050)) ([d448016](https://github.com/MustardSeedNetworks/niac-go/commit/d448016cb7eac61e8b4a42a8ff8e29d893809aba))
+
 ## [0.94.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.6...v0.94.7) (2026-07-22)
 
 
