@@ -2,7 +2,6 @@ package devicecli
 
 import (
 	"bufio"
-	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
 	"fmt"
@@ -56,11 +55,10 @@ func NewSSHServer(
 }
 
 func passwordCallback(credentials Credentials) func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
-	expectedPassword := sha256.Sum256([]byte(credentials.Password))
+	expectedPassword := []byte(credentials.Password)
 	return func(metadata ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
 		usernameMatch := subtle.ConstantTimeCompare([]byte(metadata.User()), []byte(credentials.Username))
-		passwordDigest := sha256.Sum256(password)
-		passwordMatch := subtle.ConstantTimeCompare(passwordDigest[:], expectedPassword[:])
+		passwordMatch := subtle.ConstantTimeCompare(password, expectedPassword)
 		if usernameMatch&passwordMatch != 1 {
 			return nil, errors.New("authentication failed")
 		}
