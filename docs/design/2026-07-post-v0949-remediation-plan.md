@@ -16,9 +16,10 @@ first-class NIAC web clients. Replace deprecated translation extraction
 tooling and restore a trustworthy local quality gate. Preserve the HTTPS-only,
 authorization, release, and routed-isolation contracts while the work lands.
 
-This is remediation, not a feature expansion. Each issue must be fixed at its
-root cause, receive regression coverage, and pass the repository's full quality
-and security gates.
+This is remediation, not a feature expansion. Each confirmed issue must be
+fixed at its root cause, receive regression coverage, and pass the repository's
+full quality and security gates. A finding invalidated by current evidence is
+closed with that evidence instead of receiving unnecessary implementation.
 
 ## Browser support contract
 
@@ -62,7 +63,6 @@ automated matrix because it provides independent engine coverage.
 | [#1038](https://github.com/MustardSeedNetworks/niac-go/issues/1038) | Duplicate segment tags are rejected, never silently overwritten | Parser and compiler validation tests |
 | [#1039](https://github.com/MustardSeedNetworks/niac-go/issues/1039) | API topology reflects CLI mutation and simulation stop | State-to-topology lifecycle tests |
 | [#1040](https://github.com/MustardSeedNetworks/niac-go/issues/1040) | Stats SSE publishes current authoritative counters | Hub publication and browser rendering tests |
-| [#1043](https://github.com/MustardSeedNetworks/niac-go/issues/1043) | Partial server startup rolls back every listener | Failure-injection lifecycle tests |
 | [#1044](https://github.com/MustardSeedNetworks/niac-go/issues/1044) | SSH idle timeout applies to established sessions | Deterministic connection timeout tests |
 | [#1045](https://github.com/MustardSeedNetworks/niac-go/issues/1045) | SNMP transport tables project authoritative runtime state | State/SNMP parity tests and CyberScope walk |
 | [#1046](https://github.com/MustardSeedNetworks/niac-go/issues/1046) | Programmatic segment paths fail explicitly when unresolved | Loader error propagation tests |
@@ -71,6 +71,9 @@ automated matrix because it provides independent engine coverage.
 | [#1049](https://github.com/MustardSeedNetworks/niac-go/issues/1049) | Unexpected capture exit clears daemon running state | Process-exit lifecycle tests |
 | [#1052](https://github.com/MustardSeedNetworks/niac-go/issues/1052) | Translation extraction uses the maintained `i18next-cli` on the pinned Node/npm toolchain | Catalog fixtures, migration parity, and a non-mutating CI gate |
 | [#1057](https://github.com/MustardSeedNetworks/niac-go/issues/1057) | Local hooks cannot report success after a failed frontend command or under the wrong Node/npm toolchain | Hook regression tests and exact toolchain validation |
+
+#1043 is closed without implementation because the single-listener HTTPS
+architecture removed the reported partial-start failure mode.
 
 ## Cross-cutting release work
 
@@ -103,7 +106,7 @@ steps, and PR strategy are in the
 | 1 | Security boundaries, HTTPS-only enforcement, UDP bounds, and UI authentication |
 | 2 | Routed behavior, authoritative state, SNMP, topology, and notifications |
 | 3 | SSE, packet capture, offline PCAP, and first-class browser journeys |
-| 4 | Server/SSH lifecycle and the `i18next-cli` migration |
+| 4 | SSH lifecycle and the `i18next-cli` migration |
 | 5 | Integrated review, lab/browser acceptance, and release candidate |
 
 ## Estimates
@@ -118,9 +121,9 @@ approve browser prompts.
 | Wave 1 security and authentication | 6-9 hours | 1-2 hours of CI |
 | Wave 2 routed/state correctness | 10-16 hours | 3-6 hours of Link-Live/CyberScope lab time |
 | Wave 3 streaming/capture/browser support | 10-15 hours | 3-6 hours of browser and CI runs |
-| Wave 4 lifecycle and i18next-cli migration | 7-11 hours | 1-2 hours of CI |
+| Wave 4 lifecycle and i18next-cli migration | 5-9 hours | 1-2 hours of CI |
 | Wave 5 integrated review | 4-6 hours | 3-5 hours of CI and lab runs |
-| **Total** | **41-64 hours** | **12-23 hours**, partly parallel |
+| **Total** | **39-62 hours** | **12-23 hours**, partly parallel |
 
 With stable lab and browser access, plan on roughly five to eight working days
 of elapsed engineering time. Security findings may increase that range if their
@@ -129,7 +132,8 @@ reproductions expose a broader shared-state or transport correction.
 ## Definition of complete
 
 - All issues linked from [#1053](https://github.com/MustardSeedNetworks/niac-go/issues/1053)
-  are closed with merged regression-tested fixes.
+  are closed with merged regression-tested fixes or an evidence-backed
+  disposition showing that the reported failure mode no longer exists.
 - Chrome, Edge, and Safari evidence is release-blocking and retained.
 - Firefox compatibility and Brave smoke evidence are recorded.
 - Link-Live/CyberScope routed, SNMP, and notification acceptance passes.

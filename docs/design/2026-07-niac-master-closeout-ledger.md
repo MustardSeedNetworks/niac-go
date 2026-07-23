@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `e8c91940` after the #1071 merge
+**Baseline:** `main` at `16ac84b3` after the #1073 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -32,24 +32,24 @@ Update it when work merges or a disposition changes.
 | Issue | Priority | Current state | Stage or owner |
 | --- | --- | --- | --- |
 | #1032 browser authentication | High | Reproduced and accepted | Stage 2 after #1041 |
-| #1033 live static-route validation | High | Needs reproduction | Stage 3 |
-| #1034 routed Runtime Control | High | Needs reproduction | Stage 3 |
+| #1033 live static-route validation | High | Reproduced and accepted | Stage 3 |
+| #1034 routed Runtime Control | High | Reproduced and accepted | Stage 3 |
 | #1035 nested path containment | High | Delivered in #1071 | Stage 2 evidence retained |
-| #1036 Packet Inspector SSE envelope | High | Needs reproduction | Stage 4 |
+| #1036 Packet Inspector SSE envelope | High | Reproduced and accepted | Stage 4 |
 | #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
 | #1041 bounded UDP proxy | High | Reproduced and accepted | Stage 2 next |
-| #1042 off-link notifications | High | Needs reproduction | Stage 3 after fault handoff |
+| #1042 off-link notifications | High | Reproduced and accepted | Stage 3 after fault handoff |
 | #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
-| #1038 duplicate segment tags | Medium | Needs reproduction | Stage 3 |
-| #1039 stale API topology | Medium | Needs reproduction | Stage 3 |
-| #1040 missing stats publisher | Medium | Needs reproduction | Stage 4 |
-| #1043 partial server startup | Medium | Needs reproduction | Stage 4 |
-| #1044 SSH idle expiry | Medium | Needs reproduction | Stage 4 |
-| #1045 SNMP transport state | Medium | Needs reproduction | Stage 3 |
-| #1046 unresolved ConfigPath | Medium | Needs reproduction | Stage 3 |
-| #1047 TTL accounting | Medium | Needs reproduction | Stage 3 |
-| #1048 offline PCAP access | Medium | Needs reproduction | Stage 4 |
-| #1049 capture-exit recovery | Medium | Needs reproduction | Stage 4 |
+| #1038 duplicate segment tags | Medium | Reproduced and accepted | Stage 3 |
+| #1039 stale API topology | Medium | Reproduced and accepted | Stage 3 |
+| #1040 missing stats publisher | Medium | Reproduced and accepted | Stage 4 |
+| #1043 partial server startup | Medium | Closed; obsolete after single-listener migration | No implementation required |
+| #1044 SSH idle expiry | Medium | Reproduced and accepted | Stage 4 |
+| #1045 SNMP transport state | Medium | Reproduced and accepted | Stage 3 |
+| #1046 unresolved ConfigPath | Medium | Reproduced and accepted | Stage 3 |
+| #1047 TTL accounting | Medium | Reproduced and accepted | Stage 3 |
+| #1048 offline PCAP access | Medium | Reproduced and accepted | Stage 4 |
+| #1049 capture-exit recovery | Medium | Reproduced and accepted | Stage 4 |
 | #1052 i18next migration | Medium | Accepted | Stage 4 |
 | #1057 fail-closed hooks | Medium | Delivered in #1067 | Stage 0 prerequisite complete |
 | #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
@@ -104,6 +104,6 @@ new issue until reproduction confirms that the contract remains open.
 - [x] PR #1064 is merged.
 - [x] PR #1063 is merged or explicitly handed off.
 - [x] PR #1067 is merged before defect reproductions begin.
-- [ ] Every #1053 `needs-info` issue has a current reproduction.
+- [x] Every open #1053 `needs-info` issue has a current reproduction and accepted disposition.
 - [ ] Unique high/medium prose-only findings have accepted GitHub issues.
 - [ ] Duplicate findings are marked absorbed.

@@ -101,7 +101,8 @@ Complete remediation Waves 3 and 4:
 
 - #1036 and #1040: production SSE envelopes and statistics publication.
 - #1048 and #1049: offline PCAP access and capture-exit recovery.
-- #1043 and #1044: transactional server startup and SSH expiry.
+- #1044: deterministic SSH idle expiry. #1043 is closed because the
+  single-listener HTTPS architecture removed its partial-start failure mode.
 - #1051: Chrome, Edge, and Safari first-class release gates; Firefox
   compatibility and Brave best-effort smoke evidence.
 - #1052: fixture-first migration from `i18next-parser` to `i18next-cli`
