@@ -297,13 +297,13 @@ jobs:
 
       - name: Install Syft (SBOM) inside container
         env:
-          SYFT_VERSION: "1.46.0"
-          # SHA-256 of syft_1.46.0_linux_amd64.tar.gz from the upstream
-          # syft_1.46.0_checksums.txt. Rotate this together with
+          SYFT_VERSION: "1.49.0"
+          # SHA-256 of syft_1.49.0_linux_amd64.tar.gz from the upstream
+          # syft_1.49.0_checksums.txt. Rotate this together with
           # SYFT_VERSION on upgrade. Mirrors the pinned+checksummed gitleaks
           # install pattern in ci.yml — never pipe an installer script
           # straight to a shell.
-          SYFT_SHA256: "d654f678b709eb53c393d38519d5ed7d2e57205529404018614cfefa0fb2b5ca"
+          SYFT_SHA256: "7aa2f03ee92739cf643279ba3990548b9925d4e22cae13f46831ee62821147fe"
         # Container run steps default to `sh` (dash), which rejects
         # `set -o pipefail`; force bash (present in goreleaser-cross).
         shell: bash
@@ -320,10 +320,16 @@ jobs:
           rm -f /tmp/syft.tar.gz /tmp/syft
 
       - name: Install Cosign inside container
+        env:
+          COSIGN_VERSION: "v3.1.2"
+          COSIGN_SHA256: "f7622ed3cf22e55e1ae6377c080979ff77a22da9981c11df222a2e444991e7cf"
+        shell: bash
         run: |
-          COSIGN_VERSION=v2.4.1
-          curl -sSfL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
-          chmod +x /usr/local/bin/cosign
+          set -euo pipefail
+          curl -sSfL -o /tmp/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+          echo "${COSIGN_SHA256}  /tmp/cosign" | sha256sum -c -
+          install -m 0755 /tmp/cosign /usr/local/bin/cosign
+          rm -f /tmp/cosign
 
       - name: Install GitHub CLI inside container
         if: ${{ github.event_name == 'push' }}
