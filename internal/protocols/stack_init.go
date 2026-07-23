@@ -2,9 +2,11 @@ package protocols
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 func (s *Stack) AddPacketObserver(obs PacketObserver) {
@@ -94,7 +96,7 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 
 		for i := range seg.Devices {
 			device := &seg.Devices[i]
-			s.registerSegmentDevice(device, segTable)
+			s.registerSegmentDevice(device, segTable, seg.Tag)
 		}
 
 		s.applySNMPAddrMappings(seg.Devices, segTable)
@@ -105,6 +107,9 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 
 // resetDeviceState resets all device-related state.
 func (s *Stack) resetDeviceState() {
+	if s.notifications != nil {
+		s.notifications.Reset()
+	}
 	if s.devices == nil {
 		s.devices = NewDeviceTable()
 	} else {
@@ -118,6 +123,14 @@ func (s *Stack) resetDeviceState() {
 	s.segmentTables = nil
 
 	s.snmpAgents = make(map[*config.Device]*snmpAgentGroup)
+	for _, store := range s.deviceStates {
+		store.SetChangeObserver(nil)
+	}
+	s.deviceStates = make(map[*config.Device]*devicestate.Store)
+	s.stateIPv4Mu.Lock()
+	s.stateIPv4 = make(map[*DeviceTable]map[netip.Addr][]*config.Device)
+	s.stateDeviceIPv4 = make(map[*config.Device]deviceIPv4Index)
+	s.stateIPv4Mu.Unlock()
 
 	if s.dhcpHandler != nil {
 		s.dhcpHandler.Reset()
@@ -130,15 +143,20 @@ func (s *Stack) resetDeviceState() {
 	if s.dnsHandler != nil {
 		s.dnsHandler.Reset()
 	}
+	if s.tcpHandler != nil {
+		s.tcpHandler.ssh.Reset()
+	}
 }
 
 // registerDevice registers a single device with all relevant handlers,
 // targeting the stack's single flat device table (the no-segments path).
 func (s *Stack) registerDevice(device *config.Device) {
+	s.registerDeviceState(device, s.devices)
 	s.registerDeviceAddresses(device, s.devices)
 	s.registerDeviceFeatures(device, s.devices)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), device.VLAN)
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)
@@ -153,11 +171,13 @@ func (s *Stack) registerDevice(device *config.Device) {
 // behind in s.devices. The remaining handler state (DHCP, SNMP, DNS) is keyed
 // by *config.Device pointer, not by table, so it coexists safely across
 // segments even when two segments reuse the same IP.
-func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable) {
+func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable, vlan int) {
+	s.registerDeviceState(device, table)
 	s.registerDeviceAddresses(device, table)
 	s.registerDeviceFeatures(device, table)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), vlan)
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)
@@ -204,7 +224,8 @@ func (s *Stack) configureDHCPServer(device *config.Device) {
 		serverIP = device.IPAddresses[0]
 	}
 
-	s.dhcpHandler.SetServerConfig(
+	s.dhcpHandler.setServerConfig(
+		device,
 		serverIP,
 		device.DHCPConfig.Router,
 		device.DHCPConfig.DomainNameServer,

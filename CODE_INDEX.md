@@ -39,6 +39,17 @@ parallel implementation. It is intentionally organized by purpose.
 | IP and route MIB synthesis | `internal/protocols/snmp/mib_ip.go` | MIB-II addresses, routes, ARP, and explicit next-hop identity |
 | Per-device MIB-II and interface telemetry | `internal/protocols/stack_protocol_telemetry.go` + `internal/protocols/snmp/protocol_telemetry.go` | One atomic event source per simulated device and authored interface, shared by its SNMP agents; protocol, IF-MIB, IF-X, and bridge counters advance from packet events |
 
+## Stateful device management
+
+| Capability | Canonical location | Notes |
+| --- | --- | --- |
+| Authoritative mutable device state | `internal/devicestate` + `internal/protocols/stack_device_state.go` | The stack owns one concurrency-safe store per simulated device; management protocols consume that shared store rather than owning mutable copies |
+| IOS-like command profile | `internal/devicecli` | Stateful command modes, help, operational rendering, configuration mutations, running/startup/checkpoint lifecycle, and explicit configuration events |
+| Virtual TCP byte streams | `internal/virtualtcp` | Buffered in-memory and packet-backed `net.Conn` implementations used by simulated stream protocols |
+| Simulated SSH transport | `internal/devicecli/ssh_server.go` + `internal/protocols/tcp_ssh.go` | Explicit per-device credentials, isolated command sessions, and SSH termination through the virtual IPv4/TCP packet path |
+| Shared-state SNMP projection | `internal/protocols/snmp/device_state*.go` | Dynamic hostname, discovery identity, interface status/alias, IP address, and route values derived from authoritative state |
+| State notification output | `internal/protocols/state_notifications.go` | Authoritative transitions drive RFC 5424 SYSLOG plus SNMPv2c coldStart/linkUp/linkDown notifications; nonfunctional synthetic threshold traps are not part of the schema |
+
 ## Simulation lifecycle API
 
 | Capability | Canonical location | Notes |

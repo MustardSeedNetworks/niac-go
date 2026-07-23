@@ -424,6 +424,8 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 
 	// Handle OS Fingerprint configuration
 	device.OSFingerprintConfig = parseOSFingerprintConfig(yamlDevice.OSFingerprint)
+	device.SSHConfig = parseSSHConfig(yamlDevice.SSH)
+	device.SyslogConfig = parseSyslogConfig(yamlDevice.Syslog)
 
 	// Handle iPerf3 configuration
 	device.IPerf3 = parseIPerf3Config(yamlDevice.IPerf3)

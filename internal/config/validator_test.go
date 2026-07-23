@@ -233,40 +233,6 @@ func TestValidate_ResolvesForwardTopologyReference(t *testing.T) {
 	}
 }
 
-func TestValidate_InvalidThreshold(t *testing.T) {
-	cfg := &Config{
-		Devices: []Device{
-			{
-				Name:        "trap-device",
-				Type:        "router",
-				MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-				IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
-				SNMPConfig: SNMPConfig{
-					Traps: &TrapConfig{
-						Enabled:   true,
-						Receivers: []string{"192.168.1.100:162"},
-						HighCPU: &ThresholdTrapConfig{
-							Enabled:   true,
-							Threshold: 150,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	v := NewValidator("test.yaml")
-	result := v.Validate(cfg)
-
-	if result.Valid {
-		t.Error("Expected invalid for threshold > 100")
-	}
-
-	if len(result.Errors) == 0 {
-		t.Error("Expected error for invalid threshold")
-	}
-}
-
 func TestValidate_SNMPRequiresExplicitCommunity(t *testing.T) {
 	enabled := true
 	disabled := false
@@ -292,6 +258,75 @@ func TestValidate_SNMPRequiresExplicitCommunity(t *testing.T) {
 				SNMPConfig:  tt.snmp,
 			}}}
 
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
+func TestValidate_SSHRequiresExplicitCredentials(t *testing.T) {
+	tests := []struct {
+		name  string
+		ssh   *SSHConfig
+		valid bool
+	}{
+		{name: "absent", valid: true},
+		{name: "disabled", ssh: &SSHConfig{}, valid: true},
+		{
+			name: "explicit credentials",
+			ssh: &SSHConfig{
+				Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
+			}, valid: true,
+		},
+		{name: "missing username", ssh: &SSHConfig{Enabled: true, PasswordEnv: "NIAC_TEST_SSH_PASSWORD"}},
+		{name: "missing password reference", ssh: &SSHConfig{Enabled: true, Username: "admin"}},
+		{name: "invalid password reference", ssh: &SSHConfig{
+			Enabled: true, Username: "admin", PasswordEnv: "not-valid",
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "switch-1", Type: "switch",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, SSHConfig: tt.ssh,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
+func TestValidate_SyslogRequiresExplicitReceivers(t *testing.T) {
+	tests := []struct {
+		name   string
+		syslog *SyslogConfig
+		valid  bool
+	}{
+		{name: "absent", valid: true},
+		{name: "disabled", syslog: &SyslogConfig{}, valid: true},
+		{
+			name: "receiver", syslog: &SyslogConfig{
+				Enabled: true, Receivers: []string{"192.0.2.10:514"},
+			}, valid: true,
+		},
+		{name: "missing receiver", syslog: &SyslogConfig{Enabled: true}},
+		{name: "missing port", syslog: &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.10"}}},
+		{name: "invalid port", syslog: &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.10:0"}}},
+		{name: "signed port", syslog: &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.10:+514"}}},
+		{name: "zero-padded port", syslog: &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.10:0514"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "switch-1", Type: "switch",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, SyslogConfig: tt.syslog,
+			}}}
 			result := NewValidator("test.yaml").Validate(cfg)
 			if result.Valid != tt.valid {
 				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)

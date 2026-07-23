@@ -41,7 +41,6 @@ func (s *Server) handleTemplates(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
 	// Extract template name from path: /api/v1/templates/{name}
 	name := strings.TrimPrefix(r.URL.Path, "/api/v1/templates/")
-
 	if name == "" {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Template name required", nil)
 		return

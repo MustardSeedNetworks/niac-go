@@ -243,8 +243,8 @@ func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
 		info += fmt.Sprintf("MAC:%s ", device.MACAddress.String())
 
 		// Add IP addresses
-		if len(device.IPAddresses) > 0 {
-			info += fmt.Sprintf("IP:%s ", device.IPAddresses[0].String())
+		if address := h.stack.firstStateIPAddress(device); address != nil {
+			info += fmt.Sprintf("IP:%s ", address.String())
 		}
 
 		// Add device type

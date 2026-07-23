@@ -124,6 +124,9 @@ func (s *Server) handleDeviceCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
 	cfg, err := s.validateDeviceCreatePreconditions(w, r, req.Hostname)
 	if err != nil {
 		return // Error already written
@@ -150,6 +153,9 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
@@ -175,10 +181,6 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 			return
 		}
 
-		if !s.requireDeviceProtocolFeatures(w, r, updatedDevice) {
-			return
-		}
-
 		newCfg.Devices[deviceIdx] = *updatedDevice
 	} else {
 		if err := applyPartialDeviceUpdate(&newCfg.Devices[deviceIdx], req); err != nil {
@@ -195,6 +197,15 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 
 			return
 		}
+	}
+	updatedDevice := &newCfg.Devices[deviceIdx]
+	if !s.requireDeviceProtocolFeatures(w, r, updatedDevice) {
+		return
+	}
+	if validationErr := config.ValidateDeviceManagementRequirements(updatedDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		return
 	}
 
 	if err := s.saveConfig(&newCfg); err != nil {
@@ -233,6 +244,9 @@ func removeDeviceByHostname(devices []config.Device, hostname string) ([]config.
 
 // handleDeviceDelete deletes a single device.
 func (s *Server) handleDeviceDelete(w http.ResponseWriter, r *http.Request, hostname string) {
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
@@ -292,6 +306,9 @@ func (s *Server) handleDeviceBatchDelete(w http.ResponseWriter, r *http.Request)
 
 		return
 	}
+
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
 
 	cfg := s.currentConfig()
 	if cfg == nil {
@@ -366,18 +383,15 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 		return
 	}
 
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
 	cfg := s.currentConfig()
 	if cfg == nil {
 		writeError(w, r, http.StatusNotFound, "config_not_found", "No configuration loaded", nil)
-
 		return
 	}
-
-	// SECURITY FIX #173: Enforce device count limit
-	if len(cfg.Devices) >= MaxDeviceCount {
-		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
-			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-
+	if err := s.validateDeviceAddition(w, r, cfg, req.NewHostname); err != nil {
 		return
 	}
 
@@ -399,18 +413,16 @@ func (s *Server) handleDeviceClone(w http.ResponseWriter, r *http.Request, hostn
 		return
 	}
 
-	// Check if new hostname already exists
-	for _, dev := range cfg.Devices {
-		if dev.Name == req.NewHostname {
-			writeError(w, r, http.StatusConflict, "device_exists",
-				fmt.Sprintf("Device '%s' already exists", req.NewHostname), nil)
-
-			return
-		}
-	}
-
 	// Clone device
 	clonedDevice := cloneDevice(sourceDevice, req.NewHostname, req.NewIP, req.NewMAC)
+	if !s.requireDeviceProtocolFeatures(w, r, clonedDevice) {
+		return
+	}
+	if validationErr := config.ValidateDeviceManagementRequirements(clonedDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		return
+	}
 
 	// Add to config and save
 	newCfg := *deepCopyConfig(cfg)

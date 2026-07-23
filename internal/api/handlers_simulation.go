@@ -7,6 +7,61 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
+var (
+	// ErrRoutedLabsLicenseRequired indicates that a routed or SSH configuration
+	// was rejected inside the simulation start transaction.
+	ErrRoutedLabsLicenseRequired = errors.New("routed virtual labs require a license grant")
+	// ErrUnlimitedDevicesLicenseRequired indicates that a config exceeds the Free device cap.
+	ErrUnlimitedDevicesLicenseRequired = errors.New("device count requires an unlimited devices grant")
+	// ErrSimulationDeviceLimitExceeded indicates that a config exceeds NIAC's absolute device ceiling.
+	ErrSimulationDeviceLimitExceeded = errors.New("simulation exceeds the absolute device limit")
+)
+
+// SimulationEntitlements captures paid grants evaluated for one atomic start.
+type SimulationEntitlements struct {
+	RoutedLabs       bool
+	UnlimitedDevices bool
+}
+
+// ValidateConfigEntitlements applies the license and absolute-size policy used
+// by both simulation starts and whole-config replacement.
+func ValidateConfigEntitlements(cfg *config.Config, entitlements SimulationEntitlements) error {
+	if cfg.DeviceCount() > MaxDeviceCount {
+		return ErrSimulationDeviceLimitExceeded
+	}
+	if cfg.DeviceCount() > FreeTierDeviceCount && !entitlements.UnlimitedDevices {
+		return ErrUnlimitedDevicesLicenseRequired
+	}
+	if configRequiresRoutedLabs(cfg) && !entitlements.RoutedLabs {
+		return ErrRoutedLabsLicenseRequired
+	}
+	return nil
+}
+
+func configRequiresRoutedLabs(cfg *config.Config) bool {
+	if len(cfg.Networks) > 0 || len(cfg.Attachments) > 0 {
+		return true
+	}
+	for _, segment := range cfg.NormalizedSegments() {
+		for index := range segment.Devices {
+			ssh := segment.Devices[index].SSHConfig
+			if ssh != nil && ssh.Enabled {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Server) simulationEntitlements() SimulationEntitlements {
+	entitlements := SimulationEntitlements{}
+	if s.license != nil {
+		entitlements.RoutedLabs = s.license.HasFeature("routed_labs")
+		entitlements.UnlimitedDevices = s.license.HasFeature("unlimited_devices")
+	}
+	return entitlements
+}
+
 func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
 		http.Error(
@@ -73,22 +128,38 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 			"Simulation request validation failed", validationErrors)
 		return
 	}
-
-	if err := s.daemon.StartSimulation(req); err != nil {
-		if writeManagedConfigPathError(w, r, err) {
-			return
-		}
-		// SECURITY: Don't leak internal error details to the client, but
-		// log them server-side so the daemon log can be used to diagnose
-		// why a start failed (config parse, capture engine, walk file…).
-		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error", err)
-		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
-			"Failed to start simulation", nil)
+	entitlements := s.simulationEntitlements()
+	if err := s.daemon.StartSimulation(req, entitlements); err != nil {
+		s.handleSimulationStartError(w, r, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	s.writeJSON(w, s.daemon.GetStatus())
+}
+
+func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrRoutedLabsLicenseRequired):
+		s.writeFeatureGate(w, r, "routed_labs",
+			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
+		s.writeFeatureGate(w, r, "unlimited_devices",
+			"This simulation exceeds the Free tier device cap. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
+		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
+			"Simulation exceeds the maximum supported device count", nil)
+	case errors.Is(err, config.ErrSSHPasswordUnavailable):
+		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
+			"Configuration runtime requirements are not met",
+			[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: err.Error()}})
+	case writeManagedConfigPathError(w, r, err):
+	default:
+		// SECURITY: Keep internal start failures in the daemon log, not the response.
+		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation")
+		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
+			"Failed to start simulation", nil)
+	}
 }
 
 func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err error) bool {

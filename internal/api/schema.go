@@ -55,7 +55,7 @@ const (
 
 // SchemaProperty represents a JSON Schema property definition.
 type SchemaProperty struct {
-	Type        string                     `json:"type"`
+	Type        string                     `json:"type,omitempty"`
 	Title       string                     `json:"title,omitempty"`
 	Description string                     `json:"description,omitempty"`
 	Default     any                        `json:"default,omitempty"`
@@ -63,6 +63,7 @@ type SchemaProperty struct {
 	EnumNames   []string                   `json:"enumNames,omitempty"`
 	Minimum     *float64                   `json:"minimum,omitempty"`
 	Maximum     *float64                   `json:"maximum,omitempty"`
+	MinItems    *int                       `json:"minItems,omitempty"`
 	MinLength   *int                       `json:"minLength,omitempty"`
 	MaxLength   *int                       `json:"maxLength,omitempty"`
 	Pattern     string                     `json:"pattern,omitempty"`
@@ -70,6 +71,10 @@ type SchemaProperty struct {
 	Items       *SchemaProperty            `json:"items,omitempty"`
 	Properties  map[string]*SchemaProperty `json:"properties,omitempty"`
 	Required    []string                   `json:"required,omitempty"`
+	Const       any                        `json:"const,omitempty"`
+	AllOf       []*SchemaProperty          `json:"allOf,omitempty"`
+	If          *SchemaProperty            `json:"if,omitempty"`
+	Then        *SchemaProperty            `json:"then,omitempty"`
 	// UI hints for form rendering
 	UIWidget      string `json:"ui:widget,omitempty"`
 	UIHelp        string `json:"ui:help,omitempty"`
@@ -211,6 +216,8 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"http":           buildHTTPSchema(&maxPort),
 		"ftp":            buildFTPSchema(),
 		"netbios":        buildNetBIOSSchema(&maxTTL),
+		"ssh":            buildSSHSchema(),
+		"syslog":         buildSyslogSchema(),
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),
 		"dhcpv6":         buildDHCPv6Schema(),

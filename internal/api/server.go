@@ -346,7 +346,7 @@ type SimulationStatus struct {
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
-	StartSimulation(req SimulationRequest) error
+	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
 	StopSimulation() error
 	GetStatus() SimulationStatus
 }
@@ -361,6 +361,7 @@ type Server struct {
 	lastAlert         uint64
 	alertMu           sync.RWMutex
 	configMu          sync.RWMutex
+	configMutationMu  sync.Mutex
 	daemon            DaemonController
 	captureController CaptureController
 	startTime         time.Time
@@ -429,14 +430,12 @@ func NewServer(cfg ServerConfig) *Server {
 		tokens:        initialTokenStore(cfg),
 		pcapCache:     capture.NewCache(),
 	}
-	// License manager is best-effort: failure to initialise leaves
-	// srv.license == nil, which the requireFeature middleware treats as
-	// "license disabled" so dev / test builds keep working without
-	// forcing a license setup.
-	if lm, lmErr := license.NewManager(); lmErr == nil {
+	// License manager initialization is best-effort for Free-tier operation.
+	// Paid feature gates must treat a nil manager as unavailable and fail closed.
+	if lm, lmErr := license.NewRuntimeManager(); lmErr == nil {
 		srv.license = lm
 	} else {
-		slog.Warn("[API] license manager init failed; feature gates will allow all",
+		slog.Warn("[API] license manager init failed; paid feature gates unavailable",
 			"error", lmErr)
 	}
 	return srv

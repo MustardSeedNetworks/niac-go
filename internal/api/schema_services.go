@@ -294,3 +294,55 @@ func buildNetBIOSSchema(_ *float64) *SchemaProperty {
 		},
 	}
 }
+
+func buildSSHSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "SSH Command Service",
+		Description: "Authenticated command access for the simulated device",
+		Properties: map[string]*SchemaProperty{
+			"enabled":  {Type: "boolean", Title: "Enable SSH", Default: false},
+			"username": {Type: "string", Title: "Username"},
+			"passwordEnv": {
+				Type: "string", Title: "Password Environment Variable",
+				Pattern: `^[A-Za-z_][A-Za-z0-9_]*$`,
+			},
+		},
+		Required: []string{"enabled"},
+		AllOf: []*SchemaProperty{{
+			If: &SchemaProperty{Properties: map[string]*SchemaProperty{
+				"enabled": {Const: true},
+			}},
+			Then: &SchemaProperty{Required: []string{"username", "passwordEnv"}},
+		}},
+	}
+}
+
+func buildSyslogSchema() *SchemaProperty {
+	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
+		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +
+		`(?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})$`
+	minReceivers := 1
+	return &SchemaProperty{
+		Type: "object", Title: "SYSLOG Output",
+		Description: "Configuration-state messages sent to RFC 5424 collectors",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable SYSLOG", Default: false},
+			"receivers": {
+				Type: "array", Title: "Receivers",
+				Items: &SchemaProperty{Type: "string", Pattern: receiverPattern},
+			},
+		},
+		Required: []string{"enabled"},
+		AllOf: []*SchemaProperty{{
+			If: &SchemaProperty{Properties: map[string]*SchemaProperty{
+				"enabled": {Const: true},
+			}},
+			Then: &SchemaProperty{
+				Required: []string{"receivers"},
+				Properties: map[string]*SchemaProperty{
+					"receivers": {MinItems: &minReceivers},
+				},
+			},
+		}},
+	}
+}

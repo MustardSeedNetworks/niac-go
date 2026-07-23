@@ -849,26 +849,11 @@ devices:
         # Event-based traps
         cold_start:
           enabled: true
-        link_up:
+          on_startup: true
+        link_state:
           enabled: true
-        link_down:
-          enabled: true
-        authentication_failure:
-          enabled: true
-
-        # Threshold-based traps
-        high_cpu:
-          enabled: true
-          threshold: 80  # Percentage
-        high_memory:
-          enabled: true
-          threshold: 85  # Percentage
-        high_disk:
-          enabled: true
-          threshold: 90  # Percentage
-        interface_errors:
-          enabled: true
-          threshold: 1000  # Error count
+          link_down: true
+          link_up: true
 ```
 
 #### Fields
@@ -935,8 +920,36 @@ snmptrapd -f -Lo
 - Use separate communities for read-only and traps
 - Populate all system MIB fields (sysname, sysdescr, etc.)
 - Configure multiple trap receivers for redundancy
-- Set appropriate thresholds for threshold-based traps
+- Enable only the cold-start and link-state notifications the lab needs
 - Use walk files to simulate real device OIDs
+
+### SSH Device Management
+
+NIAC can terminate SSH on a simulated device address and expose an IOS-like
+command session backed by that device's authoritative state. Configure a
+username and the name of the environment variable that supplies the password:
+
+```yaml
+devices:
+  - name: edge-router
+    ssh:
+      enabled: true
+      username: "admin"
+      password_env: "NIAC_EDGE_ROUTER_PASSWORD"
+```
+
+Set `NIAC_EDGE_ROUTER_PASSWORD` in the environment that launches NIAC, or in
+the NIAC service environment, then start or restart NIAC. From a client shell,
+connect with `ssh -T admin@10.10.200.1`. The first command profile uses the
+client terminal's line handling and does not allocate a remote PTY.
+
+The first command set includes interface status and addressing, static routes,
+hostname and VLAN state, running/startup configuration, checkpoints, reload,
+and configuration-event inspection. Each command updates shared device state:
+hostname changes feed discovery and SNMP, interface and route changes feed
+forwarding and SNMP, and enabled SYSLOG receives every state transition. An
+operational interface transition also emits an enabled linkUp or linkDown SNMP
+notification. The command profile does not execute a vendor image.
 
 ## Protocol Combinations
 
@@ -1052,7 +1065,7 @@ See: `examples/combinations/wireless-controller.yaml`
 
 2. **Limit SNMP walk files** to necessary OIDs
 3. **Use RSTP instead of STP** for faster convergence
-4. **Configure appropriate trap thresholds** to avoid alert fatigue
+4. **Enable only required cold-start and link-state traps** to avoid alert fatigue
 
 ### Monitoring and Troubleshooting
 

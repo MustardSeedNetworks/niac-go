@@ -143,8 +143,19 @@ func (dt *DeviceTable) AllDevices() []*config.Device {
 	defer dt.mu.RUnlock()
 
 	devices := make([]*config.Device, 0, len(dt.byMAC))
+	seen := make(map[*config.Device]struct{})
 	for _, device := range dt.byMAC {
 		devices = append(devices, device)
+		seen[device] = struct{}{}
+	}
+	for _, matches := range dt.byIP {
+		for _, device := range matches {
+			if _, exists := seen[device]; exists {
+				continue
+			}
+			devices = append(devices, device)
+			seen[device] = struct{}{}
+		}
 	}
 
 	return devices

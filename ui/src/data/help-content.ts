@@ -214,7 +214,7 @@ visualization in the web UI that derives links from LLDP/CDP neighbor entries.`,
 subcommands cover the full lifecycle: \`init\`/\`generate\`/\`template\` for
 creating configs, \`validate\` for checking them, \`daemon\`/\`run\`/\`interactive\`
 for executing simulations, \`status\`/\`monitor\`/\`logs\`/\`dump\` for observing a
-running daemon, \`inject\` for fault injection, \`neighbors\` for the LLDP/CDP
+running daemon, \`neighbors\` for the LLDP/CDP
 table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
 \`topology\`/\`service\`/\`man\`/\`completion\` for housekeeping.`,
     items: [
@@ -229,7 +229,6 @@ table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
       'cmd-monitor',
       'cmd-logs',
       'cmd-dump',
-      'cmd-inject',
       'cmd-neighbors',
       'cmd-analyze-pcap',
       'cmd-analyze-walk',
@@ -263,8 +262,8 @@ finds. Both are read-only by default.`,
     fullName: 'Error Injection',
     summary: 'Make a simulated device misbehave to test monitoring tooling.',
     description: `Error injection lets you push a running simulated device into a
-faulted state without restarting the daemon. The \`niac inject\` command talks
-to the daemon over its IPC socket and tells it to set per-device counters
+faulted state without restarting the daemon. The interactive TUI and Web UI
+set per-device counters
 (FCS errors, packet discards, interface errors) or per-device thresholds
 (high CPU, high memory, high disk, high utilization) to specified values.
 The simulated SNMP agent then reflects those values, so a monitoring tool
@@ -295,7 +294,7 @@ const deviceItems: HelpItem[] = [
     category: 'devices',
     summary: 'Simulates an L3 router with full discovery and management protocols.',
     techDesc:
-      'A router persona enables ARP, ICMPv4/v6, LLDP (capabilities: bridge, router), CDP (capabilities: Router, Switch, IGMP), and SNMP by default. Typical configs add multiple IPs to model multiple subnets and enable trap-emission for high CPU/memory.',
+      'A router persona enables ARP, ICMPv4/v6, LLDP (capabilities: bridge, router), CDP (capabilities: Router, Switch, IGMP), and SNMP by default. Typical configs add multiple IPs to model multiple subnets and enable cold-start or link-state notifications.',
     laymanDesc:
       'The "router" type tells NIAC to act like a Cisco-style routing box — it shows up in LLDP and CDP as a router, answers pings on every configured IP, and responds to SNMP polls for the standard router OIDs.',
     whenToUse:
@@ -462,9 +461,9 @@ const deviceItems: HelpItem[] = [
     name: 'Server',
     standard: 'NIAC device persona',
     category: 'devices',
-    summary: 'A general-purpose host with HTTP, SSH banner, and optional SNMP.',
+    summary: 'A general-purpose host with HTTP, SNMP, and configurable stateful SSH.',
     techDesc:
-      'Server persona enables ARP, ICMP, optional HTTP (with custom endpoints), and SNMP with host-style sysDescr. STP and CDP are disabled by default. Common adds: DNS server, FTP banner, NetBIOS for Windows-flavored hosts.',
+      'Server persona enables ARP, ICMP, optional HTTP (with custom endpoints), and SNMP with host-style sysDescr. Stateful SSH is available only when `devices[].ssh.enabled`, `username`, and `password_env` are configured. STP and CDP are disabled by default. Common adds: DNS server, FTP banner, NetBIOS for Windows-flavored hosts.',
     laymanDesc:
       'The "server" type makes NIAC act like a Linux or Windows server: pings work, HTTP answers, and management tooling sees a host — not a bridge or router.',
     whenToUse:
@@ -2388,77 +2387,6 @@ const commandItems: HelpItem[] = [
     seeAlso: ['cmd-analyze-pcap'],
   },
   {
-    id: 'cmd-inject',
-    name: 'niac inject',
-    standard: 'niac CLI',
-    category: 'commands',
-    summary: 'Inject error conditions on a simulated device.',
-    techDesc:
-      'Sends an injection request over the daemon IPC socket. Subcommands: bare `inject <device> <error-type> <value>` (set), `inject list` (show active), `inject clear` (remove). Value is 0-100 (percentage or count, depending on error type). 0 clears.',
-    laymanDesc:
-      'Tell a simulated device to start reporting an error — high CPU, FCS errors, link discards, etc. — without restarting it.',
-    whenToUse: 'Validating that monitoring tooling fires alerts.',
-    whenNotToUse: 'You want a static "bad" config — set the value in YAML instead.',
-    parameters: [
-      {
-        name: 'device',
-        flag: '<positional>',
-        type: 'string',
-        defaultValue: '',
-        required: true,
-        techDesc: 'Device name from the running config.',
-        laymanDesc: 'Which simulated device to break.',
-        example: 'router-1',
-      },
-      {
-        name: 'error-type',
-        flag: '<positional>',
-        type: 'string',
-        defaultValue: '',
-        required: true,
-        techDesc:
-          'fcs_errors | packet_discards | interface_errors | high_cpu | high_memory | high_disk | high_utilization.',
-        laymanDesc: 'What kind of error to inject.',
-        example: 'high_cpu',
-      },
-      {
-        name: 'value',
-        flag: '<positional>',
-        type: 'integer (0-100)',
-        defaultValue: '',
-        required: true,
-        techDesc: '0 = clear; 1-100 = percentage / count.',
-        laymanDesc: 'How "bad" — 0 means stop, 100 means max.',
-        example: '85',
-      },
-    ],
-    configFields: [],
-    metrics: [],
-    examples: [
-      {
-        desc: 'Simulate high CPU on switch-2',
-        command: 'niac inject switch-2 high_cpu 85',
-      },
-      {
-        desc: 'Inject 50% FCS errors',
-        command: 'niac inject router-1 fcs_errors 50',
-      },
-      {
-        desc: 'Clear all injections',
-        command: 'niac inject clear --all',
-      },
-      {
-        desc: 'List active injections',
-        command: 'niac inject list',
-      },
-    ],
-    tips: [
-      'Each injection bumps the SNMP counter polled by your NMS — verify by snmpwalking the device.',
-      'Combine multiple injections to model compound faults (high CPU AND high memory).',
-    ],
-    seeAlso: ['err-cpu', 'err-fcs', 'err-discards', 'err-iferrors'],
-  },
-  {
     id: 'cmd-neighbors',
     name: 'niac neighbors',
     standard: 'niac CLI',
@@ -2816,7 +2744,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-fcs',
     name: 'FCS Errors',
-    standard: 'niac inject fcs_errors',
+    standard: 'TUI/Web FCS error injection',
     category: 'errors',
     summary: 'Frame Check Sequence (CRC) error counter.',
     techDesc:
@@ -2838,20 +2766,20 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject 50% FCS errors',
-        command: 'niac inject router-1 fcs_errors 50',
+        command: 'Traffic > Error Injection > router-1 > FCS errors > 50',
       },
       {
         desc: 'Clear',
-        command: 'niac inject router-1 fcs_errors 0',
+        command: 'Traffic > Error Injection > router-1 > FCS errors > Clear',
       },
     ],
     tips: ['Pair with `high_utilization` to mimic a saturating link that’s also breaking.'],
-    seeAlso: ['cmd-inject', 'err-discards'],
+    seeAlso: ['err-discards'],
   },
   {
     id: 'err-discards',
     name: 'Packet Discards',
-    standard: 'niac inject packet_discards',
+    standard: 'TUI/Web packet-discard injection',
     category: 'errors',
     summary: 'Input/output packet discard counter.',
     techDesc:
@@ -2879,16 +2807,16 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject discards',
-        command: 'niac inject switch-2 packet_discards 25',
+        command: 'Traffic > Error Injection > switch-2 > Packet discards > 25',
       },
     ],
     tips: ['Combine with iperf3 throughput claims to simulate realistic load + loss.'],
-    seeAlso: ['cmd-inject', 'err-fcs'],
+    seeAlso: ['err-fcs'],
   },
   {
     id: 'err-iferrors',
     name: 'Interface Errors',
-    standard: 'niac inject interface_errors',
+    standard: 'TUI/Web interface-error injection',
     category: 'errors',
     summary: 'Generic interface-error counter.',
     techDesc:
@@ -2902,7 +2830,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject',
-        command: 'niac inject router-1 interface_errors 15',
+        command: 'Traffic > Error Injection > router-1 > Interface errors > 15',
       },
     ],
     tips: [],
@@ -2911,7 +2839,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-cpu',
     name: 'High CPU',
-    standard: 'niac inject high_cpu',
+    standard: 'TUI/Web CPU injection',
     category: 'errors',
     summary: 'CPU-utilization gauge value.',
     techDesc:
@@ -2933,16 +2861,16 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: '85% CPU',
-        command: 'niac inject router-1 high_cpu 85',
+        command: 'Traffic > Error Injection > router-1 > CPU > 85',
       },
     ],
     tips: ['Many NMS systems trigger only above 80%; test both above and below your threshold.'],
-    seeAlso: ['err-memory', 'cmd-inject'],
+    seeAlso: ['err-memory'],
   },
   {
     id: 'err-memory',
     name: 'High Memory',
-    standard: 'niac inject high_memory',
+    standard: 'TUI/Web memory injection',
     category: 'errors',
     summary: 'Memory-utilization gauge.',
     techDesc:
@@ -2956,7 +2884,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: '92% memory',
-        command: 'niac inject server-1 high_memory 92',
+        command: 'Traffic > Error Injection > server-1 > Memory > 92',
       },
     ],
     tips: [],
@@ -2965,7 +2893,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-disk',
     name: 'High Disk',
-    standard: 'niac inject high_disk',
+    standard: 'TUI/Web disk injection',
     category: 'errors',
     summary: 'Disk-utilization gauge.',
     techDesc:
@@ -2979,7 +2907,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: '95% disk',
-        command: 'niac inject server-1 high_disk 95',
+        command: 'Traffic > Error Injection > server-1 > Disk > 95',
       },
     ],
     tips: [],
@@ -2988,7 +2916,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-util',
     name: 'High Utilization',
-    standard: 'niac inject high_utilization',
+    standard: 'TUI/Web utilization injection',
     category: 'errors',
     summary: 'Interface-bandwidth-utilization gauge.',
     techDesc:
@@ -3002,7 +2930,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: '90% link utilization',
-        command: 'niac inject switch-2 high_utilization 90',
+        command: 'Traffic > Error Injection > switch-2 > Utilization > 90',
       },
     ],
     tips: ['Combine with `packet_discards` to mimic a saturating-link congestion scenario.'],
@@ -3534,7 +3462,8 @@ export const glossary: GlossaryEntry[] = [
   },
   {
     term: 'Error injection',
-    definition: 'Forcing a simulated device into a faulted state at runtime via `niac inject`.',
+    definition:
+      'Forcing a simulated device into a faulted state at runtime through the TUI or Web UI.',
     category: 'niac',
   },
   {
@@ -3654,7 +3583,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-inject-packet-loss',
     question: 'How do I inject packet loss?',
     answer:
-      'Use `niac inject <device> packet_discards <0-100>` against a running daemon. The simulated device’s ifInDiscards / ifOutDiscards counters increment at the injected rate, so monitoring tooling sees realistic packet drops. To clear, run the same command with value 0, or `niac inject clear --device <name>`.',
+      'Open Error Injection in `niac interactive` or the Web UI traffic page, choose the device, and set Packet Discards from 0 to 100. The simulated device’s ifInDiscards / ifOutDiscards counters increment at that rate so monitoring tooling sees realistic packet drops. Use the same panel’s clear action to stop it.',
     tags: ['inject', 'loss', 'errors'],
   },
   {
@@ -3703,7 +3632,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-trap-receivers',
     question: 'Can NIAC send SNMP traps?',
     answer:
-      'Yes. Configure `devices[].snmp.traps.enabled: true` and list receivers under `devices[].snmp.traps.receivers: ["10.0.0.100:162"]`. Add trap-condition blocks (`high_cpu`, `high_memory`, etc.) with thresholds and intervals. NIAC will emit traps whenever the configured (or injected) condition crosses the threshold.',
+      'Yes. Configure `devices[].snmp_agent.traps.enabled: true` and list receivers. A cold-start notification requires `cold_start.enabled` and `cold_start.on_startup`; link notifications require `link_state.enabled`, the matching `link_up` or `link_down` flag, and an operational-state transition.',
     tags: ['snmp', 'traps'],
   },
   {

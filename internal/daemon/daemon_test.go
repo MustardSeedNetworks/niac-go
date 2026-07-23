@@ -13,6 +13,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
+func fullSimulationEntitlements() api.SimulationEntitlements {
+	return api.SimulationEntitlements{RoutedLabs: true, UnlimitedDevices: true}
+}
+
 // loopbackInterface returns the loopback interface name for the current OS.
 func loopbackInterface() string {
 	if runtime.GOOS == "darwin" {
@@ -118,7 +122,7 @@ devices:
 		ConfigData: configData,
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err != nil {
 		t.Fatalf("Failed to start simulation: %v", err)
 	}
@@ -181,7 +185,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 		ConfigData: "devices: []",
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for nonexistent interface")
 	}
@@ -196,7 +200,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 		ConfigData: "invalid: yaml: syntax: [[[",
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for invalid config")
 	}
@@ -207,7 +211,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 		// No ConfigData or ConfigPath
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for missing config")
 	}
@@ -299,7 +303,7 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 		ConfigData: largeConfig,
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for config exceeding size limit")
 	}
@@ -567,7 +571,7 @@ devices:
 			ConfigData: configData,
 		}
 
-		startErr := daemon.StartSimulation(req)
+		startErr := daemon.StartSimulation(req, fullSimulationEntitlements())
 		if startErr != nil {
 			t.Fatalf("Cycle %d: Failed to start simulation: %v", i, startErr)
 		}

@@ -256,7 +256,7 @@ func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 	frame = append(frame, h.buildSystemCapabilitiesTLV(device)...)
 
 	// Management Address TLV (if device has IP address)
-	if len(device.IPAddresses) > 0 {
+	if h.stack.firstStateIPAddress(device) != nil {
 		frame = append(frame, h.buildManagementAddressTLV(device)...)
 	}
 
@@ -284,8 +284,8 @@ func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 		case config.ChassisIDTypeNetworkAddress:
 			subtype = byte(LLDPChassisIDSubtypeNetworkAddress)
 
-			if len(device.IPAddresses) > 0 {
-				chassisID = device.IPAddresses[0]
+			if address := h.stack.firstStateIPAddress(device); address != nil {
+				chassisID = address
 			} else {
 				chassisID = device.MACAddress
 			}
@@ -382,7 +382,7 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 
 // buildSystemNameTLV builds the System Name TLV.
 func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
-	name := []byte(device.Name)
+	name := []byte(h.stack.deviceHostname(device))
 
 	length := min(len(name), lldpMaxTLVLength) // clamped to 9-bit max
 	if length == 0 {
@@ -459,12 +459,10 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 
 // buildManagementAddressTLV builds the Management Address TLV.
 func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
-	if len(device.IPAddresses) == 0 {
+	ip := h.stack.firstStateIPAddress(device)
+	if ip == nil {
 		return nil
 	}
-
-	// Use first IP address
-	ip := device.IPAddresses[0]
 
 	// Determine address subtype (IPv4 or IPv6)
 	var (

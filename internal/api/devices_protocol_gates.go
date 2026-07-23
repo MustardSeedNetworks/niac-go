@@ -35,6 +35,12 @@ type protocolFeatureCheck struct {
 func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 	return []protocolFeatureCheck{
 		{
+			feature: "routed_labs",
+			present: func(d *config.Device) bool {
+				return d != nil && d.SSHConfig != nil && d.SSHConfig.Enabled
+			},
+		},
+		{
 			feature: "stp",
 			present: func(d *config.Device) bool { return d != nil && d.STPConfig != nil },
 		},
@@ -63,19 +69,18 @@ func gatedDeviceProtocolChecks() []protocolFeatureCheck {
 
 // requireDeviceProtocolFeatures returns false (and writes a 402
 // FeatureGateResponse) when the device's protocol set includes a
-// protocol the active license doesn't cover. Nil license manager
-// = pass (dev / test builds).
+// protocol the active license doesn't cover. A nil manager fails closed.
 func (s *Server) requireDeviceProtocolFeatures(
 	w http.ResponseWriter, r *http.Request, dev *config.Device,
 ) bool {
-	if s.license == nil || dev == nil {
+	if dev == nil {
 		return true
 	}
 	for _, chk := range gatedDeviceProtocolChecks() {
 		if !chk.present(dev) {
 			continue
 		}
-		if !s.license.HasFeature(chk.feature) {
+		if s.license == nil || !s.license.HasFeature(chk.feature) {
 			s.writeFeatureGate(w, r, chk.feature,
 				"This device uses "+chk.feature+
 					", which requires the Pro tier. "+

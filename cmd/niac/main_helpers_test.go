@@ -1,8 +1,13 @@
 package main
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/stats"
 )
 
@@ -107,16 +112,45 @@ func TestPrintUsageSubfunctions(t *testing.T) {
 // TestBuildReloadFunc tests reload function builder.
 func TestBuildReloadFunc(t *testing.T) {
 	t.Run("empty config file returns nil", func(t *testing.T) {
-		fn := buildReloadFunc(nil, "", nil)
+		fn := buildReloadFunc(nil, "", nil, nil)
 		if fn != nil {
 			t.Error("Expected nil for empty config file")
 		}
 	})
 
 	t.Run("nil stack returns nil", func(t *testing.T) {
-		fn := buildReloadFunc(nil, "config.yaml", nil)
+		fn := buildReloadFunc(nil, "config.yaml", nil, nil)
 		if fn != nil {
 			t.Error("Expected nil for nil stack")
+		}
+	})
+
+	t.Run("paid configuration is rejected before reload", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		content := []byte(`devices:
+  - name: edge-router
+    mac: "02:00:00:00:00:01"
+    ips: ["192.0.2.1"]
+    ssh:
+      enabled: true
+      username: admin
+      password_env: NIAC_TEST_SSH_PASSWORD
+`)
+		if err := os.WriteFile(path, content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		loads := 0
+		fn := buildReloadFunc(&protocols.Stack{}, path, nil, func() (featureChecker, error) {
+			loads++
+			return testFeatureChecker{}, nil
+		})
+		_, err := fn()
+		if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
+			t.Fatalf("reload error = %v, want routed-labs requirement", err)
+		}
+		_, _ = fn()
+		if loads != 2 {
+			t.Fatalf("license state loads = %d, want one per reload", loads)
 		}
 	})
 }

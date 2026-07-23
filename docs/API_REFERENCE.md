@@ -522,25 +522,11 @@ snmp_agent:
 
     cold_start:
       enabled: true
-    link_up:
+      on_startup: true
+    link_state:
       enabled: true
-    link_down:
-      enabled: true
-    authentication_failure:
-      enabled: true
-
-    high_cpu:
-      enabled: true
-      threshold: 80
-    high_memory:
-      enabled: true
-      threshold: 85
-    high_disk:
-      enabled: true
-      threshold: 90
-    interface_errors:
-      enabled: true
-      threshold: 1000
+      link_down: true
+      link_up: true
 ```
 
 #### Agent Fields
@@ -568,25 +554,43 @@ snmp_agent:
 
 | Trap | Fields | Description |
 |------|--------|-------------|
-| `cold_start` | enabled (bool) | Device startup |
-| `link_up` | enabled (bool) | Interface up |
-| `link_down` | enabled (bool) | Interface down |
-| `authentication_failure` | enabled (bool) | SNMP auth failure |
-
-#### Threshold-Based Traps
-
-| Trap | Fields | Description |
-|------|--------|-------------|
-| `high_cpu` | enabled (bool), threshold (int) | CPU usage > threshold % |
-| `high_memory` | enabled (bool), threshold (int) | Memory usage > threshold % |
-| `high_disk` | enabled (bool), threshold (int) | Disk usage > threshold % |
-| `interface_errors` | enabled (bool), threshold (int) | Interface errors > threshold |
+| `cold_start` | enabled, on_startup | Device initialization |
+| `link_state` | enabled, link_up, link_down | Authoritative interface state changes |
 
 #### Constraints
 
 - `community`: 1-255 characters
 - `receivers`: Format "IP:port" (e.g., "10.0.0.1:162")
-- `threshold`: 0-100 for percentages, 0+ for counts
+
+#### SYSLOG Configuration
+
+`syslog` is a device-level sibling of `snmp_agent`. State transitions are sent
+as RFC 5424 UDP records and include the same event version shown by
+`show configuration events`.
+
+```yaml
+syslog:
+  enabled: true
+  receivers:
+    - "10.100.0.100:514"
+```
+
+#### SSH Device Management
+
+`ssh` enables the stateful IOS-like command service on the simulated device's
+IPv4 addresses. The configuration stores only the name of an environment
+variable; NIAC reads the password from the process environment when the first
+session connects.
+
+```yaml
+ssh:
+  enabled: true
+  username: "admin"
+  password_env: "NIAC_EDGE_ROUTER_PASSWORD"
+```
+
+Set `NIAC_EDGE_ROUTER_PASSWORD` before starting NIAC. The variable must exist
+and contain a non-empty value. Do not put the password in YAML.
 
 ## Topology Configuration
 
@@ -764,15 +768,6 @@ traffic:
 | NetBIOS | workgroup | "WORKGROUP" |
 | NetBIOS | ttl | 300 seconds |
 
-### SNMP Trap Thresholds
-
-| Trap | Default Threshold |
-|------|-------------------|
-| high_cpu | 80% |
-| high_memory | 90% |
-| high_disk | 90% |
-| interface_errors | 100 errors |
-
 ### Traffic Patterns
 
 | Field | Default |
@@ -875,9 +870,10 @@ devices:
       traps:
         enabled: true
         receivers: ["10.100.0.100:162"]
-        high_cpu:
+        link_state:
           enabled: true
-          threshold: 80
+          link_down: true
+          link_up: true
 
     icmp:
       enabled: true
