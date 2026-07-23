@@ -53,9 +53,6 @@ func availableErrorTypes() []map[string]string {
 		{"type": "Packet Discards", "description": "Dropped packets (0-100)"},
 		{"type": "Interface Errors", "description": "Generic interface errors (0-100)"},
 		{"type": "High Utilization", "description": "Interface bandwidth saturation (0-100%)"},
-		{"type": "High CPU", "description": "Device CPU load (0-100%)"},
-		{"type": "High Memory", "description": "Device memory usage (0-100%)"},
-		{"type": "High Disk", "description": "Device disk usage (0-100%)"},
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	dot3StatsFCSErrors     = "1.3.6.1.2.1.10.7.2.1.3"
 	dot3StatsDuplexStatus  = "1.3.6.1.2.1.10.7.2.1.19"
 	interfaceStatusUp      = 1
 	interfaceStatusDown    = 2
@@ -195,6 +196,11 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 		{ifOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }},
 		{ifOutUcastPkts, func(s interfaceSnapshot) uint64 { return s.outUcast }},
 		{ifOutNUcastPkts, func(s interfaceSnapshot) uint64 { return s.outNUcast }},
+		{ifInDiscards, func(s interfaceSnapshot) uint64 { return s.inDiscards }},
+		{ifOutDiscards, func(s interfaceSnapshot) uint64 { return s.outDiscards }},
+		{ifInErrors, func(s interfaceSnapshot) uint64 { return s.inErrors }},
+		{ifOutErrors, func(s interfaceSnapshot) uint64 { return s.outErrors }},
+		{dot3StatsFCSErrors, func(s interfaceSnapshot) uint64 { return s.fcsErrors }},
 	}
 	for _, counter := range counters {
 		value := counter.value
@@ -206,9 +212,7 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 			}
 		})
 	}
-	for _, oid := range []string{
-		ifInDiscards, ifInErrors, ifInUnknownProtos, ifOutDiscards, ifOutErrors, ifOutQLen,
-	} {
+	for _, oid := range []string{ifInUnknownProtos, ifOutQLen} {
 		fullOID := oid + "." + idxStr
 		if a.mib.Get(fullOID) == nil {
 			a.mib.Set(fullOID, &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
