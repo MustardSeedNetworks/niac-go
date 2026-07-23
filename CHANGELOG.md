@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.10...v0.94.11) (2026-07-23)
+
+
+### Bug Fixes
+
+* **api:** enforce HTTPS-only listeners ([#1063](https://github.com/MustardSeedNetworks/niac-go/issues/1063)) ([24dda89](https://github.com/MustardSeedNetworks/niac-go/commit/24dda89dedb2ecccda84a290758ca0010a56e0c7))
+
+
+### Documentation
+
+* retire stale pre-1.0 claims ([#1065](https://github.com/MustardSeedNetworks/niac-go/issues/1065)) ([90ad10b](https://github.com/MustardSeedNetworks/niac-go/commit/90ad10b90e7f956061fb534ec68494752361688a))
+
 ## [0.94.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.9...v0.94.10) (2026-07-23)
 
 
