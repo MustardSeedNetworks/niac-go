@@ -6,12 +6,7 @@ import (
 )
 
 type serviceOptions struct {
-	apiListen             string
-	apiToken              string
-	metricsListen         string
-	storagePath           string
-	alertPacketsThreshold uint64
-	alertWebhook          string
+	storagePath string
 }
 
 func defaultStoragePath() string {

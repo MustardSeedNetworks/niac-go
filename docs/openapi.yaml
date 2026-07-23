@@ -36,8 +36,6 @@ servers:
     description: Installed loopback daemon with bearer authentication configured
   - url: https://niac.example.com/api/v1
     description: Production server (example)
-  - url: http://localhost:8080/api/v1
-    description: Explicit `niac run --web` mode; NIAC_API_TOKEN required
 
 security:
   - BearerAuth: []

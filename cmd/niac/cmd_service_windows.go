@@ -64,13 +64,9 @@ func (p *niacProgram) run() {
 
 	logging.InitColors(false)
 
-	listen := os.Getenv("NIAC_LISTEN")
+	listen := os.Getenv("NIAC_LISTEN_ADDR")
 	if listen == "" {
-		// Wave 1 default-secure: loopback bind so the gate does not trip
-		// when running without an API token. Operators who need external
-		// exposure should set NIAC_LISTEN explicitly and pair it with
-		// NIAC_API_TOKEN.
-		listen = "127.0.0.1:8080"
+		listen = "127.0.0.1:8445"
 	}
 
 	storagePath := os.Getenv("NIAC_STORAGE_PATH")
@@ -90,6 +86,7 @@ func (p *niacProgram) run() {
 		BuildTime:    p.info.date,
 		ReleaseTrain: p.info.releaseTrain,
 		UIBuildHash:  p.info.uiBuildHash,
+		CertDir:      defaultCertDir(),
 	})
 	if err != nil {
 		logging.Errorf("Failed to create daemon: %v", err)

@@ -40,30 +40,10 @@ func TestResolveServiceDefaults(t *testing.T) {
 
 func TestServiceOptionsStruct(t *testing.T) {
 	opts := &serviceOptions{
-		apiListen:             ":8080",
-		apiToken:              "secret-token",
-		metricsListen:         ":9090",
-		storagePath:           "/data/niac.db",
-		alertPacketsThreshold: 1000,
-		alertWebhook:          "https://webhook.example.com",
+		storagePath: "/data/niac.db",
 	}
 
-	if opts.apiListen != ":8080" {
-		t.Errorf("apiListen = %q, want %q", opts.apiListen, ":8080")
-	}
-	if opts.apiToken != "secret-token" {
-		t.Errorf("apiToken = %q, want %q", opts.apiToken, "secret-token")
-	}
-	if opts.metricsListen != ":9090" {
-		t.Errorf("metricsListen = %q, want %q", opts.metricsListen, ":9090")
-	}
 	if opts.storagePath != "/data/niac.db" {
 		t.Errorf("storagePath = %q, want %q", opts.storagePath, "/data/niac.db")
-	}
-	if opts.alertPacketsThreshold != 1000 {
-		t.Errorf("alertPacketsThreshold = %d, want %d", opts.alertPacketsThreshold, 1000)
-	}
-	if opts.alertWebhook != "https://webhook.example.com" {
-		t.Errorf("alertWebhook = %q, want %q", opts.alertWebhook, "https://webhook.example.com")
 	}
 }

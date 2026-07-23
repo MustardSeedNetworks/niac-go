@@ -6,10 +6,18 @@ package api
 // poke the Server.Start path with a tiny in-package fixture.
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"io"
 	"log/slog"
+	"net"
+	"net/http"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
@@ -111,6 +119,70 @@ func TestStart_NonLoopbackWithoutTokenRefused(t *testing.T) {
 	const wantSubst = "NIAC_API_TOKEN"
 	if !strings.Contains(err.Error(), wantSubst) {
 		t.Errorf("error must mention %q, got %q", wantSubst, err.Error())
+	}
+}
+
+func TestStartRequiresTLSAndRejectsPlaintext(t *testing.T) {
+	certDir := t.TempDir()
+	s := NewServer(ServerConfig{
+		Addr:                           "127.0.0.1:0",
+		CertDir:                        certDir,
+		SuppressUnauthenticatedWarning: true,
+	})
+	s.SetDaemonController(&nilDaemonController{})
+
+	if err := s.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := s.Shutdown(ctx); err != nil {
+			t.Errorf("Shutdown() error = %v", err)
+		}
+	})
+
+	certFile, _ := DefaultCertPaths(certDir)
+	certPEM, err := os.ReadFile(certFile)
+	if err != nil {
+		t.Fatalf("read generated certificate: %v", err)
+	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(certPEM) {
+		t.Fatal("generated certificate could not be added to root pool")
+	}
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+			RootCAs:    roots,
+		}},
+		Timeout: 2 * time.Second,
+	}
+	_, port, err := net.SplitHostPort(s.BoundAddr())
+	if err != nil {
+		t.Fatalf("split bound address: %v", err)
+	}
+	testAddr := net.JoinHostPort("localhost", port)
+
+	resp, err := client.Get("https://" + testAddr + "/health")
+	if err != nil {
+		t.Fatalf("HTTPS request failed: %v", err)
+	}
+	if _, copyErr := io.Copy(io.Discard, resp.Body); copyErr != nil {
+		t.Errorf("read HTTPS response: %v", copyErr)
+	}
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		t.Errorf("close HTTPS response: %v", closeErr)
+	}
+
+	plainClient := &http.Client{Timeout: 2 * time.Second}
+	plainResp, plainErr := plainClient.Get("http://" + testAddr + "/health")
+	if plainErr != nil {
+		return
+	}
+	defer plainResp.Body.Close()
+	if plainResp.StatusCode >= http.StatusOK && plainResp.StatusCode < http.StatusMultipleChoices {
+		t.Fatalf("plaintext HTTP request returned success status %d", plainResp.StatusCode)
 	}
 }
 

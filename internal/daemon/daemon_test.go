@@ -36,6 +36,7 @@ func TestDaemon_StartupShutdown(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -83,6 +84,7 @@ func TestDaemon_SimulationLifecycle(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -160,6 +162,7 @@ func TestDaemon_ErrorRecovery(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -231,6 +234,7 @@ func TestDaemon_ResourceCleanup(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -276,6 +280,7 @@ func TestDaemon_ConfigSizeValidation(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -320,6 +325,7 @@ func TestDaemon_StorageDisabled(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -534,6 +540,7 @@ func TestDaemon_MultipleStartStop(t *testing.T) {
 		Token:       "test-token-123",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)

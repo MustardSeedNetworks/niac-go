@@ -389,14 +389,14 @@ func TestNewRootCommand(t *testing.T) {
 	}
 
 	// Verify persistent flags
-	if root.PersistentFlags().Lookup("api-listen") == nil {
-		t.Error("Expected --api-listen persistent flag")
+	if root.PersistentFlags().Lookup("api-listen") != nil {
+		t.Error("obsolete --api-listen persistent flag must not be registered")
 	}
-	if root.PersistentFlags().Lookup("api-token") == nil {
-		t.Error("Expected --api-token persistent flag")
+	if root.PersistentFlags().Lookup("api-token") != nil {
+		t.Error("obsolete global --api-token persistent flag must not be registered")
 	}
-	if root.PersistentFlags().Lookup("metrics-listen") == nil {
-		t.Error("Expected --metrics-listen persistent flag")
+	if root.PersistentFlags().Lookup("metrics-listen") != nil {
+		t.Error("obsolete --metrics-listen persistent flag must not be registered")
 	}
 	if root.PersistentFlags().Lookup("storage-path") == nil {
 		t.Error("Expected --storage-path persistent flag")
@@ -448,11 +448,6 @@ func TestShouldUseLegacyCommand(t *testing.T) {
 		{name: "legacy verbose with value flag", args: []string{"--debug", "2", "en0", "config.yaml"}, want: true},
 		{name: "legacy informational flag", args: []string{"--list-interfaces"}, want: true},
 		{name: "cobra subcommand", args: []string{"run", "en0", "config.yaml"}, want: false},
-		{
-			name: "cobra persistent flag before subcommand",
-			args: []string{"--api-listen", ":8080", "run", "en0", "config.yaml"},
-			want: false,
-		},
 		{name: "help", args: []string{"help"}, want: false},
 		{name: "double dash compatibility", args: []string{"--", "--dry-run", "lo0", "config.yaml"}, want: false},
 		{name: "no args", args: nil, want: false},

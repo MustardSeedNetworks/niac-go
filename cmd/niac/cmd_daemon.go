@@ -19,13 +19,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
-// Daemon listen port defaults. The TLS port is the Wave 1 canonical for
-// niac (mirrors seed:8443 and stem:8444). HTTPS-only — the HTTP port
-// constant remains for the legacy `niac daemon --http` opt-out path so
-// existing deployment scripts keep working until they cut over to TLS.
 const (
 	daemonTLSPort         = 8445
-	daemonHTTPPort        = 8080
 	daemonDefaultListenIP = "127.0.0.1"
 )
 
@@ -35,9 +30,8 @@ type daemonOptions struct {
 	storagePath         string
 	webhookAllowedHosts []string
 	attachmentPolicies  []string
-	// Wave 1 (TLS-by-default) options.
-	certDir  string
-	apiToken string
+	certDir             string
+	apiToken            string
 	// Wave 2 (SIGHUP rotation + scoped tokens) options. tokenFile is the
 	// path to a 0o600 JSON file containing one or more {value, scope}
 	// pairs; preferred over apiToken / NIAC_API_TOKEN. SIGHUP re-reads
@@ -61,8 +55,7 @@ engine, allowing you to:
   - Switch between different configuration files
   - Manage multiple simulation sessions
 
-TLS is enabled by default and the daemon listens on 127.0.0.1:8445.
-The HTTP listener exists only as a 308 redirector. Binding to a
+The daemon serves HTTPS on 127.0.0.1:8445 by default. Binding to a
 non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
 NIAC_API_TOKEN or --api-token.`,
 		Example: `  # Default: HTTPS on 127.0.0.1:8445 (loopback only, no token needed)
@@ -89,7 +82,7 @@ NIAC_API_TOKEN or --api-token.`,
 	}
 
 	daemonCmd.Flags().
-		StringVar(&options.listen, "listen", "", "Address to listen on for API and web UI (default depends on --tls)")
+		StringVar(&options.listen, "listen", "", "Address to listen on for the HTTPS API and web UI (default: 127.0.0.1:8445)")
 	daemonCmd.Flags().
 		StringVar(&options.token, "token", "", "Bearer token for API authentication (DEPRECATED: use NIAC_API_TOKEN env var)")
 	if err := daemonCmd.Flags().MarkDeprecated("token",
@@ -105,8 +98,6 @@ NIAC_API_TOKEN or --api-token.`,
 		StringSliceVar(&options.attachmentPolicies, "attachment-policy", nil,
 			"Operator-approved routed attachment (repeatable): INTERFACE=direct or INTERFACE=access:VLAN")
 
-	// HTTPS is required, no opt-out. The HTTP listener exists only as a
-	// 308 redirector. No --tls or --http flags.
 	daemonCmd.Flags().
 		StringVar(&options.certDir, "cert-dir", "", "Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)")
 	daemonCmd.Flags().
@@ -129,9 +120,7 @@ func resolveDaemonTokenFile(o *daemonOptions) string {
 	return os.Getenv("NIAC_API_TOKEN_FILE")
 }
 
-// resolveDaemonListen returns the TLS listen address (HTTPS-only; no
-// opt-out is supported) and a true for the legacy tlsOn flag.
-func resolveDaemonListen(o *daemonOptions) (string, bool) {
+func resolveDaemonListen(o *daemonOptions) string {
 	listen := o.listen
 	if listen == "" {
 		listen = os.Getenv("NIAC_LISTEN_ADDR")
@@ -142,17 +131,16 @@ func resolveDaemonListen(o *daemonOptions) (string, bool) {
 	case !strings.Contains(listen, ":"):
 		listen = net.JoinHostPort(listen, strconv.Itoa(daemonTLSPort))
 	}
-	return listen, true
+	return listen
 }
 
 // resolveDaemonCertDir returns the cert-dir to use. Explicit --cert-dir
-// wins; otherwise NIAC_CERT_DIR; otherwise empty (api package picks
-// `certs/`).
+// wins; otherwise NIAC_CERT_DIR; otherwise the platform default.
 func resolveDaemonCertDir(o *daemonOptions) string {
 	if o.certDir != "" {
 		return o.certDir
 	}
-	return os.Getenv("NIAC_CERT_DIR")
+	return defaultCertDir()
 }
 
 // resolveDaemonAPIToken layers --api-token / NIAC_API_TOKEN / --token in
@@ -206,7 +194,7 @@ func parseAttachmentPolicies(values []string) ([]fabric.PhysicalAttachmentPolicy
 func runDaemon(options *daemonOptions, info versionInfo) error {
 	logging.InitColors(true)
 
-	listenAddr, tlsOn := resolveDaemonListen(options)
+	listenAddr := resolveDaemonListen(options)
 	token := resolveDaemonAPIToken(options)
 	tokenFile := resolveDaemonTokenFile(options)
 	certDir := resolveDaemonCertDir(options)
@@ -215,13 +203,8 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		return err
 	}
 
-	scheme := "http"
-	if tlsOn {
-		scheme = "https"
-	}
-
 	logging.Infof("Starting NIAC Daemon v%s", info.version)
-	logging.Infof("Web UI will be available at %s://%s", scheme, listenAddr)
+	logging.Infof("Web UI will be available at https://%s", listenAddr)
 	authEnabled := token != "" || tokenFile != ""
 	switch {
 	case tokenFile != "":
@@ -246,7 +229,6 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		ReleaseTrain:        info.releaseTrain,
 		UIBuildHash:         info.uiBuildHash,
 		WebhookAllowedHosts: options.webhookAllowedHosts,
-		EnableTLS:           tlsOn,
 		CertDir:             certDir,
 		AttachmentPolicies:  attachmentPolicies,
 	}

@@ -89,9 +89,9 @@ Write-Host "  Installing Windows service..."
 & "$InstallDir\$BinaryName" service install
 
 # Add firewall rule
-Write-Host "  Adding firewall rule for port 8080..."
+Write-Host "  Adding firewall rule for port 8445..."
 New-NetFirewallRule -DisplayName "NiAC Simulator" `
-    -Direction Inbound -Protocol TCP -LocalPort 8080 `
+    -Direction Inbound -Protocol TCP -LocalPort 8445 `
     -Action Allow -ErrorAction SilentlyContinue | Out-Null
 
 # Start service
@@ -100,7 +100,7 @@ Write-Host "  Starting service..."
 
 Write-Host ""
 Write-Host "Installation complete!" -ForegroundColor Green
-Write-Host "  Web UI: http://localhost:8080"
+Write-Host "  Web UI: https://localhost:8445"
 Write-Host "  Service: $ServiceName"
 Write-Host ""
 Write-Host "Commands:"

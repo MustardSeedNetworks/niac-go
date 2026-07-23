@@ -128,12 +128,8 @@ func formatFingerprint(digest []byte) string {
 	return string(out)
 }
 
-// activeCertPath returns the cert file path the server will use, or "" if
-// the server is running in HTTP mode.
+// activeCertPath returns the cert file path the server will use.
 func (s *Server) activeCertPath() string {
-	if !s.cfg.EnableTLS {
-		return ""
-	}
 	if s.cfg.CertFile != "" {
 		return s.cfg.CertFile
 	}

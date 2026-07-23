@@ -245,6 +245,7 @@ func TestStopSimulationLocked_NilFields(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -296,6 +297,7 @@ func TestStartSimulation_NonExistentConfigPath(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -335,6 +337,7 @@ func TestStartSimulation_ConfigDataExceedsSize(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -375,6 +378,7 @@ func TestStartSimulation_MissingConfigAndPath(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -414,6 +418,7 @@ func TestStartSimulation_InvalidInterface(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -453,6 +458,7 @@ func TestStartSimulation_InvalidConfigData(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: "disabled",
 		Version:     "test",
+		CertDir:     t.TempDir(),
 	}
 
 	daemon, err := NewDaemon(cfg)
@@ -514,6 +520,7 @@ func TestShutdown_WithStorage(t *testing.T) {
 		ListenAddr:  "127.0.0.1:0",
 		StoragePath: storagePath,
 		Version:     "test",
+		CertDir:     filepath.Join(tmpDir, "certs"),
 	}
 
 	daemon, err := NewDaemon(cfg)

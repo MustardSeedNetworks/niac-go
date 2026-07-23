@@ -5,7 +5,7 @@ import { defineConfig, loadEnv, type PluginOption } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const proxyTarget = env.VITE_DEV_API_PROXY || 'http://localhost:8080';
+  const proxyTarget = env.VITE_DEV_API_PROXY || 'https://localhost:8445';
   const analyze = env.ANALYZE === 'true';
 
   return {
@@ -98,6 +98,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: proxyTarget,
           changeOrigin: true,
+          secure: false,
         },
       },
     },

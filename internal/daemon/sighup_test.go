@@ -2,16 +2,20 @@ package daemon
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
 
@@ -38,12 +42,16 @@ func writeTokenFile(t *testing.T, dir, value, scope string) string {
 // status. csrf-token is the cheapest authed endpoint — it returns 200
 // unconditionally and does not require a simulation to be running, so
 // the status reliably reports auth outcome rather than handler state.
-func authedRequest(t *testing.T, addr, token string) int {
+func authedRequest(t *testing.T, client *http.Client, addr, token string) int {
 	t.Helper()
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		t.Fatalf("split bound address: %v", err)
+	}
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		fmt.Sprintf("http://%s/api/v1/csrf-token", addr),
+		fmt.Sprintf("https://localhost:%s/api/v1/csrf-token", port),
 		http.NoBody,
 	)
 	if err != nil {
@@ -52,7 +60,6 @@ func authedRequest(t *testing.T, addr, token string) int {
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("issue request: %v", err)
@@ -66,13 +73,15 @@ func authedRequest(t *testing.T, addr, token string) int {
 // loopback port with the supplied TokenFile. Returns the live daemon
 // and its bound address; registers a t.Cleanup so the test does not
 // need to remember to call Shutdown.
-func newRotationDaemon(t *testing.T, tokenFile string) (*Daemon, string) {
+func newRotationDaemon(t *testing.T, tokenFile string) (*Daemon, string, *http.Client) {
 	t.Helper()
+	certDir := t.TempDir()
 	cfg := Config{
 		ListenAddr:  "127.0.0.1:0",
 		TokenFile:   tokenFile,
 		StoragePath: filepath.Join(t.TempDir(), "rotation.db"),
 		Version:     "test",
+		CertDir:     certDir,
 	}
 	d, err := NewDaemon(cfg)
 	if err != nil {
@@ -92,7 +101,23 @@ func newRotationDaemon(t *testing.T, tokenFile string) (*Daemon, string) {
 	if addr == "" {
 		t.Fatal("apiServer.BoundAddr() returned empty string after Start")
 	}
-	return d, addr
+	certFile, _ := api.DefaultCertPaths(certDir)
+	certPEM, err := os.ReadFile(certFile)
+	if err != nil {
+		t.Fatalf("read generated certificate: %v", err)
+	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(certPEM) {
+		t.Fatal("generated certificate could not be added to root pool")
+	}
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+			RootCAs:    roots,
+		}},
+		Timeout: 5 * time.Second,
+	}
+	return d, addr, client
 }
 
 // TestDaemon_ReloadTokens_RotatesTokenFile is the integration test
@@ -115,12 +140,12 @@ func TestDaemon_ReloadTokens_RotatesTokenFile(t *testing.T) {
 	const rotatedToken = "rotated-rw-67890"
 
 	tokenPath := writeTokenFile(t, tmpDir, initialToken, "read-write")
-	d, addr := newRotationDaemon(t, tokenPath)
+	d, addr, client := newRotationDaemon(t, tokenPath)
 
-	if got := authedRequest(t, addr, initialToken); got != http.StatusOK {
+	if got := authedRequest(t, client, addr, initialToken); got != http.StatusOK {
 		t.Errorf("initial token: GET /api/v1/csrf-token = %d, want 200", got)
 	}
-	if got := authedRequest(t, addr, "not-a-real-token"); got != http.StatusUnauthorized {
+	if got := authedRequest(t, client, addr, "not-a-real-token"); got != http.StatusUnauthorized {
 		t.Errorf("bogus token: GET /api/v1/csrf-token = %d, want 401", got)
 	}
 
@@ -141,10 +166,10 @@ func TestDaemon_ReloadTokens_RotatesTokenFile(t *testing.T) {
 		t.Errorf("ReloadTokens returned count %d, want 1", count)
 	}
 
-	if got := authedRequest(t, addr, initialToken); got != http.StatusUnauthorized {
+	if got := authedRequest(t, client, addr, initialToken); got != http.StatusUnauthorized {
 		t.Errorf("rotated-out token: GET /api/v1/csrf-token = %d, want 401", got)
 	}
-	if got := authedRequest(t, addr, rotatedToken); got != http.StatusOK {
+	if got := authedRequest(t, client, addr, rotatedToken); got != http.StatusOK {
 		t.Errorf("rotated-in token: GET /api/v1/csrf-token = %d, want 200", got)
 	}
 }
@@ -163,9 +188,9 @@ func TestDaemon_ReloadTokens_PreservesPreviousTokensOnBadFile(t *testing.T) {
 	const originalToken = "kept-after-bad-reload"
 
 	tokenPath := writeTokenFile(t, tmpDir, originalToken, "read-write")
-	d, addr := newRotationDaemon(t, tokenPath)
+	d, addr, client := newRotationDaemon(t, tokenPath)
 
-	if got := authedRequest(t, addr, originalToken); got != http.StatusOK {
+	if got := authedRequest(t, client, addr, originalToken); got != http.StatusOK {
 		t.Fatalf("pre-reload sanity: GET /api/v1/csrf-token = %d, want 200", got)
 	}
 
@@ -180,7 +205,7 @@ func TestDaemon_ReloadTokens_PreservesPreviousTokensOnBadFile(t *testing.T) {
 		t.Errorf("ReloadTokens returned %v, want ErrTokenFileWorldReadable", err)
 	}
 
-	if got := authedRequest(t, addr, originalToken); got != http.StatusOK {
+	if got := authedRequest(t, client, addr, originalToken); got != http.StatusOK {
 		t.Errorf("post-failed-reload: GET /api/v1/csrf-token = %d, want 200 (prior token must still work)", got)
 	}
 }
