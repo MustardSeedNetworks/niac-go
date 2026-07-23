@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.9...v0.94.10) (2026-07-23)
+
+
+### Features
+
+* **faults:** make interface faults observable ([#1059](https://github.com/MustardSeedNetworks/niac-go/issues/1059)) ([bb5493f](https://github.com/MustardSeedNetworks/niac-go/commit/bb5493f5bc893000e86e614dc77e1585c3157ffb))
+
+
+### Bug Fixes
+
+* **license:** pin Free tier device contract ([#1062](https://github.com/MustardSeedNetworks/niac-go/issues/1062)) ([a4291a7](https://github.com/MustardSeedNetworks/niac-go/commit/a4291a7099b38796d96396e07ef5d8c6c9ca4100))
+
+
+### Documentation
+
+* expand v0.94.9 remediation plan ([#1060](https://github.com/MustardSeedNetworks/niac-go/issues/1060)) ([5babd60](https://github.com/MustardSeedNetworks/niac-go/commit/5babd600e4d812c9bf45e5a00d7d16ebd0775278))
+
 ## [0.94.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.8...v0.94.9) (2026-07-23)
 
 
