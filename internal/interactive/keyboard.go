@@ -129,7 +129,7 @@ func (m *model) handleNormalKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handlePageDown()
 	case keyEnter:
 		return m.handleEnterKey()
-	case "1", "2", "3", "4", "5", "6", "7":
+	case "1", "2", "3", "4":
 		return m.handleQuickErrorInjection(key)
 	}
 

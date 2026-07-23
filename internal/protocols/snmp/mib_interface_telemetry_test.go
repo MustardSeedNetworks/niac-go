@@ -52,6 +52,41 @@ func TestInterfaceAndBridgeCountersSharePacketTelemetry(t *testing.T) {
 	}
 }
 
+func TestInterfaceFaultCountersAreSNMPObservable(t *testing.T) {
+	device := createTestDevice()
+	device.Interfaces = []config.Interface{{
+		Name: "GigabitEthernet1/0/5", Address: "192.0.2.5/24",
+	}}
+	telemetry := NewProtocolTelemetry()
+	agent := NewAgentWithCommunityAndTelemetry(device, "public", 0, telemetry)
+	seedInterfaceIdentity(t, agent, "GigabitEthernet1/0/5", "10005", "5")
+	agent.refreshAuthoredInterfaceMIBs()
+
+	telemetry.RecordInterfaceCounters("GigabitEthernet1/0/5", InterfaceCounterDelta{
+		InOctets: 1_000, OutOctets: 800,
+		InDiscards: 2, OutDiscards: 3,
+		InErrors: 4, OutErrors: 5, FCSErrors: 6,
+	})
+
+	tests := []struct {
+		oid  string
+		want any
+	}{
+		{ifInOctets + ".10005", uint32(1_000)},
+		{ifHCInOctets + ".10005", uint64(1_000)},
+		{ifOutOctets + ".10005", uint32(800)},
+		{ifHCOutOctets + ".10005", uint64(800)},
+		{ifInDiscards + ".10005", uint32(2)},
+		{ifOutDiscards + ".10005", uint32(3)},
+		{ifInErrors + ".10005", uint32(4)},
+		{ifOutErrors + ".10005", uint32(5)},
+		{dot3StatsFCSErrors + ".10005", uint32(6)},
+	}
+	for _, test := range tests {
+		t.Run(test.oid, func(t *testing.T) { assertMIBValue(t, agent, test.oid, test.want) })
+	}
+}
+
 func TestAuthoredInterfaceProblemsCorrelateAcrossMIBs(t *testing.T) {
 	device := createTestDevice()
 	device.SNMPConfig.WalkFile = "switch.walk"

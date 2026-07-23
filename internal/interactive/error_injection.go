@@ -7,6 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 func (m *model) handleMenuSelection() {
@@ -26,14 +29,8 @@ func (m *model) handleMenuSelection() {
 		m.promptForValue(apperr.ErrorTypeInterface, "Enter interface error count (0-100): ")
 	case strings.Contains(selection, "High Utilization"):
 		m.promptForValue(apperr.ErrorTypeUtilization, "Enter utilization percentage (0-100): ")
-	case strings.Contains(selection, "High CPU"):
-		m.promptForValue(apperr.ErrorTypeCPU, "Enter CPU percentage (0-100): ")
-	case strings.Contains(selection, "High Memory"):
-		m.promptForValue(apperr.ErrorTypeMemory, "Enter memory percentage (0-100): ")
-	case strings.Contains(selection, "High Disk"):
-		m.promptForValue(apperr.ErrorTypeDisk, "Enter disk percentage (0-100): ")
 	case strings.Contains(selection, "Clear All"):
-		m.stateManager.ClearAll()
+		m.stack.ClearAllInterfaceFaults()
 		m.statusMessage = successStyle.Render("✓ All errors cleared")
 		m.statusIsError = false
 		m.errorsActive = 0
@@ -120,8 +117,7 @@ func getErrorTypeByIndex(index int) apperr.ErrorType {
 }
 
 func (m *model) injectError(errorType apperr.ErrorType, value int) {
-	// Inject error on currently selected device
-	if len(m.cfg.Devices) == 0 {
+	if len(m.cfg.Devices) == 0 || m.stack == nil {
 		m.statusMessage = errorStyle.Render("✗ No devices configured")
 		m.statusIsError = true
 		m.addDebugLog("ERROR: No devices configured for error injection")
@@ -136,12 +132,18 @@ func (m *model) injectError(errorType apperr.ErrorType, value int) {
 
 	device := m.cfg.Devices[m.selectedDeviceIdx]
 
-	deviceIP := "unknown"
-	if len(device.IPAddresses) > 0 {
-		deviceIP = device.IPAddresses[0].String()
+	deviceIP, interfaceName := faultTarget(device)
+	faultType, ok := interactiveFaultType(errorType)
+	if !ok || deviceIP == "" || interfaceName == "" {
+		m.statusMessage = errorStyle.Render("✗ Selected device has no fault target")
+		m.statusIsError = true
+		return
 	}
-
-	m.stateManager.SetError(deviceIP, "eth0", errorType, value)
+	if err := m.stack.SetInterfaceFault(deviceIP, interfaceName, faultType, value); err != nil {
+		m.statusMessage = errorStyle.Render("✗ " + err.Error())
+		m.statusIsError = true
+		return
+	}
 	m.statusMessage = successStyle.Render(
 		fmt.Sprintf("✓ Injected %s (%d%%) on %s", errorType, value, device.Name),
 	)
@@ -155,21 +157,23 @@ func (m *model) injectError(errorType apperr.ErrorType, value int) {
 
 // renderActiveErrors renders the active error injections section.
 func (m *model) renderActiveErrors(s *strings.Builder) {
-	activeStates := m.stateManager.GetAllStates()
-	if len(activeStates) == 0 {
+	if m.stack == nil {
+		return
+	}
+	active := m.stack.ActiveInterfaceFaults()
+	if len(active) == 0 {
 		return
 	}
 
 	s.WriteString(errorStyle.Render("⚠️  Active Error Injections:"))
 	s.WriteString("\n")
 
-	for _, state := range activeStates {
-		fmt.Fprintf(s, "  • %s on %s:%s (%d%%)\n",
-			state.ErrorType,
-			state.DeviceIP,
-			state.Interface,
-			state.Value,
-		)
+	for deviceIP, interfaces := range active {
+		for interfaceName, faults := range interfaces {
+			for faultType, value := range faults {
+				fmt.Fprintf(s, "  • %s on %s:%s (%d%%)\n", faultLabel(faultType), deviceIP, interfaceName, value)
+			}
+		}
 	}
 	s.WriteString("\n")
 }
@@ -239,7 +243,7 @@ func (m *model) renderMenu() string {
 	return menu.String()
 }
 
-// handleQuickErrorInjection handles number keys 1-7 for quick error injection.
+// handleQuickErrorInjection handles number keys 1-4 for quick error injection.
 func (m *model) handleQuickErrorInjection(key string) (tea.Model, tea.Cmd) {
 	if m.menuVisible || m.showHelp || m.showLogs || m.showStats {
 		return m, nil
@@ -253,9 +257,6 @@ func (m *model) handleQuickErrorInjection(key string) (tea.Model, tea.Cmd) {
 		"2": {apperr.ErrorTypeDiscards, "Enter packet discard rate (0-100): "},
 		"3": {apperr.ErrorTypeInterface, "Enter interface error count (0-100): "},
 		"4": {apperr.ErrorTypeUtilization, "Enter utilization percentage (0-100): "},
-		"5": {apperr.ErrorTypeCPU, "Enter CPU percentage (0-100): "},
-		"6": {apperr.ErrorTypeMemory, "Enter memory percentage (0-100): "},
-		"7": {apperr.ErrorTypeDisk, "Enter disk percentage (0-100): "},
 	}
 
 	if errInfo, ok := errorTypeMap[key]; ok {
@@ -267,11 +268,66 @@ func (m *model) handleQuickErrorInjection(key string) (tea.Model, tea.Cmd) {
 
 // handleClearErrors clears all error injections.
 func (m *model) handleClearErrors() (tea.Model, tea.Cmd) {
-	m.stateManager.ClearAll()
+	if m.stack != nil {
+		m.stack.ClearAllInterfaceFaults()
+	}
 	m.statusMessage = successStyle.Render("All error injections cleared")
 	m.statusIsError = false
 	m.errorsActive = 0
 	m.addDebugLog("All error injections cleared")
 
 	return m, nil
+}
+
+func interactiveFaultType(errorType apperr.ErrorType) (devicestate.FaultType, bool) {
+	switch errorType {
+	case apperr.ErrorTypeFCS:
+		return devicestate.FaultFCS, true
+	case apperr.ErrorTypeDiscards:
+		return devicestate.FaultDiscards, true
+	case apperr.ErrorTypeInterface:
+		return devicestate.FaultInterface, true
+	case apperr.ErrorTypeUtilization:
+		return devicestate.FaultUtilization, true
+	default:
+		return "", false
+	}
+}
+
+func faultTarget(device config.Device) (string, string) {
+	if len(device.IPAddresses) == 0 {
+		return "", ""
+	}
+	if len(device.Interfaces) == 0 {
+		return device.IPAddresses[0].String(), "Management"
+	}
+	return device.IPAddresses[0].String(), device.Interfaces[0].Name
+}
+
+func faultLabel(faultType devicestate.FaultType) string {
+	switch faultType {
+	case devicestate.FaultFCS:
+		return "FCS Errors"
+	case devicestate.FaultDiscards:
+		return "Packet Discards"
+	case devicestate.FaultInterface:
+		return "Interface Errors"
+	case devicestate.FaultUtilization:
+		return "High Utilization"
+	default:
+		return string(faultType)
+	}
+}
+
+func activeFaultCount(stack *protocols.Stack) int {
+	if stack == nil {
+		return 0
+	}
+	count := 0
+	for _, interfaces := range stack.ActiveInterfaceFaults() {
+		for _, faults := range interfaces {
+			count += len(faults)
+		}
+	}
+	return count
 }

@@ -91,8 +91,8 @@ func TestInterfaceConfig(t *testing.T) {
 
 func TestAllErrorTypes(t *testing.T) {
 	types := apperr.AllErrorTypes()
-	if len(types) != 7 {
-		t.Errorf("Expected 7 error types, got %d", len(types))
+	if len(types) != 4 {
+		t.Errorf("Expected 4 error types, got %d", len(types))
 	}
 
 	// Verify all expected types are present
@@ -101,9 +101,6 @@ func TestAllErrorTypes(t *testing.T) {
 		apperr.ErrorTypeDiscards:    false,
 		apperr.ErrorTypeInterface:   false,
 		apperr.ErrorTypeUtilization: false,
-		apperr.ErrorTypeCPU:         false,
-		apperr.ErrorTypeMemory:      false,
-		apperr.ErrorTypeDisk:        false,
 	}
 
 	for _, et := range types {

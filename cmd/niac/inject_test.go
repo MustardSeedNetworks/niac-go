@@ -16,17 +16,11 @@ func TestIsValidErrorType(t *testing.T) {
 		{"Packet Discards canonical", "Packet Discards", true},
 		{"Interface Errors canonical", "Interface Errors", true},
 		{"High Utilization canonical", "High Utilization", true},
-		{"High CPU canonical", "High CPU", true},
-		{"High Memory canonical", "High Memory", true},
-		{"High Disk canonical", "High Disk", true},
 		// Snake_case aliases
 		{"fcs_errors alias", "fcs_errors", true},
 		{"packet_discards alias", "packet_discards", true},
 		{"interface_errors alias", "interface_errors", true},
 		{"high_utilization alias", "high_utilization", true},
-		{"high_cpu alias", "high_cpu", true},
-		{"high_memory alias", "high_memory", true},
-		{"high_disk alias", "high_disk", true},
 		// Invalid types
 		{"empty string", "", false},
 		{"random string", "random", false},
@@ -56,12 +50,8 @@ func TestNormalizeErrorType(t *testing.T) {
 		{"packet_discards", "packet_discards", "Packet Discards"},
 		{"interface_errors", "interface_errors", "Interface Errors"},
 		{"high_utilization", "high_utilization", "High Utilization"},
-		{"high_cpu", "high_cpu", "High CPU"},
-		{"high_memory", "high_memory", "High Memory"},
-		{"high_disk", "high_disk", "High Disk"},
 		// Canonical names should pass through
 		{"FCS Errors passthrough", "FCS Errors", "FCS Errors"},
-		{"High CPU passthrough", "High CPU", "High CPU"},
 		// Unknown types should pass through
 		{"unknown passthrough", "unknown_type", "unknown_type"},
 	}
@@ -88,9 +78,6 @@ func TestValidErrorTypes(t *testing.T) {
 		"Packet Discards",
 		"Interface Errors",
 		"High Utilization",
-		"High CPU",
-		"High Memory",
-		"High Disk",
 	}
 
 	if len(types) != len(expectedTypes) {
@@ -127,9 +114,6 @@ func TestErrorTypeAliases(t *testing.T) {
 		"packet_discards":  "Packet Discards",
 		"interface_errors": "Interface Errors",
 		"high_utilization": "High Utilization",
-		"high_cpu":         "High CPU",
-		"high_memory":      "High Memory",
-		"high_disk":        "High Disk",
 	}
 
 	for alias, expected := range expectedAliases {

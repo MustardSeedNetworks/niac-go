@@ -57,9 +57,6 @@ ERROR TYPES (use either format):
   packet_discards / "Packet Discards"    Input/output packet discards
   interface_errors / "Interface Errors"  General interface errors
   high_utilization / "High Utilization"  High bandwidth utilization percentage
-  high_cpu / "High CPU"                  High CPU usage percentage
-  high_memory / "High Memory"            High memory usage percentage
-  high_disk / "High Disk"                High disk usage percentage
 
 VALUE:
   0-100   Percentage value for the error injection
@@ -68,8 +65,8 @@ VALUE:
 		Example: `  # Inject 50% FCS errors on router-1
   niac inject router-1 fcs_errors 50
 
-  # Simulate high CPU on switch-2
-  niac inject switch-2 high_cpu 85
+  # Simulate high link utilization on switch-2
+  niac inject switch-2 high_utilization 85
 
   # Clear injection by setting value to 0
   niac inject router-1 fcs_errors 0
@@ -394,9 +391,6 @@ func validErrorTypes() []string {
 		"Packet Discards",
 		"Interface Errors",
 		"High Utilization",
-		"High CPU",
-		"High Memory",
-		"High Disk",
 	}
 }
 
@@ -406,8 +400,5 @@ func errorTypeAliases() map[string]string {
 		"packet_discards":  "Packet Discards",
 		"interface_errors": "Interface Errors",
 		"high_utilization": "High Utilization",
-		"high_cpu":         "High CPU",
-		"high_memory":      "High Memory",
-		"high_disk":        "High Disk",
 	}
 }

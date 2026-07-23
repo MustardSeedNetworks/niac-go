@@ -1,8 +1,6 @@
 package snmp
 
 import (
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -10,10 +8,9 @@ import (
 )
 
 const (
-	protocolICMP         = 1
-	protocolTCP          = 6
-	protocolUDP          = 17
-	tcpAddressIndexParts = 10
+	protocolICMP = 1
+	protocolTCP  = 6
+	protocolUDP  = 17
 )
 
 // ProtocolEvent describes one valid IPv4 datagram delivered to or transmitted
@@ -46,19 +43,11 @@ type ProtocolTelemetry struct {
 	tcpFlows                                                                      *tcpFlowTracker
 	udpInDatagrams, udpNoPorts, udpOutDatagrams                                   atomic.Uint32
 	interfaces                                                                    sync.Map
+	faultMu                                                                       sync.Mutex
+	faultCounters                                                                 *faultCounterAccumulator
 	mibsMu                                                                        sync.Mutex
 	mibs                                                                          map[*MIB]struct{}
 	dynamicTCP                                                                    map[*MIB]map[string]struct{}
-}
-
-type interfaceTelemetry struct {
-	inOctets, inUcast, inNUcast, outOctets, outUcast, outNUcast atomic.Uint64
-	inBroadcast, outBroadcast                                   atomic.Uint64
-}
-
-type interfaceSnapshot struct {
-	inOctets, inUcast, inNUcast, outOctets, outUcast, outNUcast uint64
-	inBroadcast, outBroadcast                                   uint64
 }
 
 // NewProtocolTelemetry creates an empty per-device telemetry source.
@@ -103,74 +92,6 @@ func (t *ProtocolTelemetry) refreshTCPTable() {
 			mib.Set(oid, value)
 			t.dynamicTCP[mib][oid] = struct{}{}
 		}
-	}
-}
-
-func tcpAddressIndex(key tcpFlowKey) string {
-	parts := make([]string, 0, tcpAddressIndexParts)
-	parts = append(parts, strings.Split(key.localIP, ".")...)
-	parts = append(parts, strconv.Itoa(int(key.localPort)))
-	parts = append(parts, strings.Split(key.remoteIP, ".")...)
-	parts = append(parts, strconv.Itoa(int(key.remotePort)))
-	return strings.Join(parts, ".")
-}
-
-// RecordInterfaceInbound records a frame delivered through one authored interface.
-func (t *ProtocolTelemetry) RecordInterfaceInbound(name string, octets int, nonUnicast, broadcast bool) {
-	entry := t.interfaceEntry(name)
-	if entry == nil {
-		return
-	}
-	if octets > 0 {
-		entry.inOctets.Add(uint64(octets))
-	}
-	if nonUnicast {
-		entry.inNUcast.Add(1)
-		if broadcast {
-			entry.inBroadcast.Add(1)
-		}
-	} else {
-		entry.inUcast.Add(1)
-	}
-}
-
-// RecordInterfaceOutbound records a frame transmitted through one authored interface.
-func (t *ProtocolTelemetry) RecordInterfaceOutbound(name string, octets int, nonUnicast, broadcast bool) {
-	entry := t.interfaceEntry(name)
-	if entry == nil {
-		return
-	}
-	if octets > 0 {
-		entry.outOctets.Add(uint64(octets))
-	}
-	if nonUnicast {
-		entry.outNUcast.Add(1)
-		if broadcast {
-			entry.outBroadcast.Add(1)
-		}
-	} else {
-		entry.outUcast.Add(1)
-	}
-}
-
-func (t *ProtocolTelemetry) interfaceEntry(name string) *interfaceTelemetry {
-	if t == nil || name == "" {
-		return nil
-	}
-	entry, _ := t.interfaces.LoadOrStore(name, &interfaceTelemetry{})
-	result, _ := entry.(*interfaceTelemetry)
-	return result
-}
-
-func (t *ProtocolTelemetry) interfaceSnapshot(name string) interfaceSnapshot {
-	entry := t.interfaceEntry(name)
-	if entry == nil {
-		return interfaceSnapshot{}
-	}
-	return interfaceSnapshot{
-		inOctets: entry.inOctets.Load(), inUcast: entry.inUcast.Load(), inNUcast: entry.inNUcast.Load(),
-		outOctets: entry.outOctets.Load(), outUcast: entry.outUcast.Load(), outNUcast: entry.outNUcast.Load(),
-		inBroadcast: entry.inBroadcast.Load(), outBroadcast: entry.outBroadcast.Load(),
 	}
 }
 

@@ -34,9 +34,6 @@ func AllErrorTypes() []ErrorType {
 		ErrorTypeDiscards,
 		ErrorTypeInterface,
 		ErrorTypeUtilization,
-		ErrorTypeCPU,
-		ErrorTypeMemory,
-		ErrorTypeDisk,
 	}
 }
 

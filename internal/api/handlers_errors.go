@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
-	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // errorInjectionRequest represents a request to inject an error.
@@ -16,47 +18,12 @@ type errorInjectionRequest struct {
 
 // validate validates the error injection request fields.
 func (req *errorInjectionRequest) validate(w http.ResponseWriter, r *http.Request) bool {
-	if req.DeviceIP == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", "device_ip is required", nil)
-		return false
+	message := req.validationMessage()
+	if message == "" {
+		return true
 	}
-
-	if req.Interface == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", "interface is required", nil)
-		return false
-	}
-
-	if req.ErrorType == "" {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", "error_type is required", nil)
-		return false
-	}
-
-	if req.Value < 0 || req.Value > 100 {
-		writeError(
-			w,
-			r,
-			http.StatusBadRequest,
-			"validation_failed",
-			"value must be between 0 and 100",
-			nil,
-		)
-		return false
-	}
-
-	return true
-}
-
-// availableErrorTypes returns the list of available error types for injection.
-func availableErrorTypes() []map[string]string {
-	return []map[string]string{
-		{"type": "FCS Errors", "description": "Frame Check Sequence errors (0-100)"},
-		{"type": "Packet Discards", "description": "Dropped packets (0-100)"},
-		{"type": "Interface Errors", "description": "Generic interface errors (0-100)"},
-		{"type": "High Utilization", "description": "Interface bandwidth saturation (0-100%)"},
-		{"type": "High CPU", "description": "Device CPU load (0-100%)"},
-		{"type": "High Memory", "description": "Device memory usage (0-100%)"},
-		{"type": "High Disk", "description": "Device disk usage (0-100%)"},
-	}
+	writeError(w, r, http.StatusBadRequest, "validation_failed", message, nil)
+	return false
 }
 
 func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
@@ -69,25 +36,17 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errorMgr := stack.GetErrorManager()
-	if errorMgr == nil {
-		http.Error(w, "error manager not available", http.StatusServiceUnavailable)
-		return
-	}
-
 	switch r.Method {
 	case http.MethodGet:
 		s.writeJSON(w, map[string]any{
 			"available_types": availableErrorTypes(),
-			"active_errors":   errorMgr.GetAllStates(),
+			"active_errors":   stack.ActiveInterfaceFaults(),
+			"info":            "Fault injection updates SNMP interface counters",
 		})
-
 	case http.MethodPost, http.MethodPut:
-		s.handleErrorInjection(w, r, errorMgr)
-
+		s.handleErrorInjection(w, r, stack)
 	case http.MethodDelete:
-		s.handleErrorClear(w, r, errorMgr)
-
+		s.handleErrorClear(w, r, stack)
 	default:
 		w.Header().Set("Allow", "GET, POST, PUT, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -98,7 +57,7 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleErrorInjection(
 	w http.ResponseWriter,
 	r *http.Request,
-	errorMgr *apperr.StateManager,
+	stack *protocols.Stack,
 ) {
 	var req errorInjectionRequest
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
@@ -109,7 +68,15 @@ func (s *Server) handleErrorInjection(
 		return
 	}
 
-	errorMgr.SetError(req.DeviceIP, req.Interface, apperr.ErrorType(req.ErrorType), req.Value)
+	faultType, err := parseInterfaceFaultType(req.ErrorType)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", err.Error(), nil)
+		return
+	}
+	if err = stack.SetInterfaceFault(req.DeviceIP, req.Interface, faultType, req.Value); err != nil {
+		writeInterfaceFaultError(w, r, err)
+		return
+	}
 
 	s.writeJSON(w, map[string]any{
 		"success":   true,
@@ -125,7 +92,7 @@ func (s *Server) handleErrorInjection(
 func (s *Server) handleErrorClear(
 	w http.ResponseWriter,
 	r *http.Request,
-	errorMgr *apperr.StateManager,
+	stack *protocols.Stack,
 ) {
 	query := r.URL.Query()
 	deviceIP := query.Get("deviceIp")
@@ -133,10 +100,13 @@ func (s *Server) handleErrorClear(
 
 	switch {
 	case deviceIP == "" && iface == "":
-		errorMgr.ClearAll()
+		stack.ClearAllInterfaceFaults()
 		s.writeJSON(w, map[string]any{"success": true, "message": "all errors cleared"})
 	case deviceIP != "" && iface != "":
-		errorMgr.ClearError(deviceIP, iface)
+		if err := stack.ClearInterfaceFaults(deviceIP, iface); err != nil {
+			writeInterfaceFaultError(w, r, err)
+			return
+		}
 		s.writeJSON(
 			w,
 			map[string]any{
@@ -153,4 +123,17 @@ func (s *Server) handleErrorClear(
 			http.StatusBadRequest,
 		)
 	}
+}
+
+func writeInterfaceFaultError(w http.ResponseWriter, r *http.Request, err error) {
+	status := http.StatusBadRequest
+	code := "fault_invalid"
+	if errors.Is(err, protocols.ErrFaultDeviceNotFound) {
+		status, code = http.StatusNotFound, "device_not_found"
+	} else if errors.Is(err, protocols.ErrFaultDeviceAmbiguous) {
+		status, code = http.StatusConflict, "device_ambiguous"
+	} else if errors.Is(err, devicestate.ErrInterfaceNotFound) {
+		code = "interface_not_found"
+	}
+	writeError(w, r, status, code, err.Error(), nil)
 }

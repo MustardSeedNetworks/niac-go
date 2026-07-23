@@ -48,7 +48,7 @@ func (m *model) renderHelp() string {
 ║  [PgUp]  Page up in scrollable views                            ║
 ║  [PgDn]  Page down in scrollable views                          ║
 ║  [c]     Clear all error injections                             ║
-║  [1-7]   Quick error injection (FCS/Disc/If/Util/CPU/Mem/Disk) ║
+║  [1-4]   Quick error injection (FCS/Discards/Errors/Util)      ║
 ║  [q]     Quit application                                       ║
 ║                                                                  ║
 ║ Search Mode ([/]):                                               ║
@@ -71,9 +71,6 @@ func (m *model) renderHelp() string {
 ║  • Packet Discards   - Dropped packets rate (0-100)             ║
 ║  • Interface Errors  - General interface errors (0-100)         ║
 ║  • High Utilization  - Link utilization percentage (0-100)      ║
-║  • High CPU          - CPU usage percentage (0-100)             ║
-║  • High Memory       - Memory usage percentage (0-100)          ║
-║  • High Disk         - Disk usage percentage (0-100)            ║
 ╚══════════════════════════════════════════════════════════════════╝`
 }
 

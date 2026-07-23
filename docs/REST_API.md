@@ -124,35 +124,23 @@ NIAC supports runtime error injection for testing and simulation scenarios. The 
 {
   "available_types": [
     {
-      "type": "fcs_errors",
-      "description": "Frame Check Sequence errors (Layer 2 corruption)"
+      "type": "FCS Errors",
+      "description": "Frame Check Sequence errors (0-100)"
     },
     {
-      "type": "packet_discards",
-      "description": "Packets dropped due to buffer overflow"
+      "type": "Packet Discards",
+      "description": "Dropped packets (0-100)"
     },
     {
-      "type": "interface_errors",
-      "description": "Generic interface input/output errors"
+      "type": "Interface Errors",
+      "description": "Generic interface errors (0-100)"
     },
     {
-      "type": "high_utilization",
-      "description": "Interface bandwidth saturation"
-    },
-    {
-      "type": "high_cpu",
-      "description": "Elevated CPU usage on device"
-    },
-    {
-      "type": "high_memory",
-      "description": "Memory pressure on device"
-    },
-    {
-      "type": "high_disk",
-      "description": "Disk space exhaustion"
+      "type": "High Utilization",
+      "description": "Interface bandwidth saturation (0-100%)"
     }
   ],
-  "info": "Error injection allows testing monitoring and alerting systems",
+  "info": "Fault injection updates SNMP interface counters",
   "active_errors": {
     "192.168.1.1": {
       "GigabitEthernet0/1": {
@@ -168,23 +156,28 @@ NIAC supports runtime error injection for testing and simulation scenarios. The 
 
 ```json
 {
-  "device_ip": "192.168.1.1",
+  "deviceIp": "192.168.1.1",
   "interface": "GigabitEthernet0/1",
-  "error_type": "fcs_errors",
+  "errorType": "FCS Errors",
   "value": 50
 }
 ```
 
-The `value` field represents error severity (0-100), where:
-- 0 = No errors
-- 50 = Moderate error rate
-- 100 = Maximum error injection
+For FCS, discard, and interface errors, `value` is the counter increment rate
+per second. For utilization, it is the percentage of the authored interface
+speed applied to both input and output octet counters. Setting a fault to `0`
+clears only that fault type.
 
-`DELETE /api/v1/errors?device_ip=192.168.1.1&interface=GigabitEthernet0/1` clears all errors on a specific interface.
+`DELETE /api/v1/errors?deviceIp=192.168.1.1&interface=GigabitEthernet0/1` clears all errors on a specific interface.
 
 `DELETE /api/v1/errors` (no query parameters) clears all active error injections.
 
 Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays active errors in real-time and allows clearing individual interfaces or all errors at once.
+
+FCS faults increment `dot3StatsFCSErrors` and `ifInErrors`; packet discards
+increment `ifInDiscards` and `ifOutDiscards`; interface errors increment
+`ifInErrors` and `ifOutErrors`; utilization advances the 32-bit and 64-bit
+interface octet counters. All counters remain monotonic after a fault clears.
 
 ## Alerts
 

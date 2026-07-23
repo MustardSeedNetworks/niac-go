@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -51,7 +50,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyMsg(msg)
 	case tickMsg:
 		m.uptime = time.Since(m.startTime)
-		m.errorsActive = len(m.stateManager.GetAllStates())
+		m.errorsActive = activeFaultCount(m.stack)
 		m.refreshStats()
 
 		return m, tickCmd()
@@ -307,26 +306,19 @@ func RunWithConfigPath(
 		startTime = time.Now()
 	}
 
-	// Initialize state manager
-	stateManager := apperr.NewStateManager()
-
 	// Create menu items
 	menuItems := []string{
 		"1. Inject FCS Errors (custom value)",
 		"2. Inject Packet Discards (custom value)",
 		"3. Inject Interface Errors (custom value)",
 		"4. Inject High Utilization (custom value)",
-		"5. Inject High CPU (custom value)",
-		"6. Inject High Memory (custom value)",
-		"7. Inject High Disk (custom value)",
-		"8. Clear All Errors",
-		"9. Exit Menu",
+		"5. Clear All Errors",
+		"6. Exit Menu",
 	}
 
 	// Create model
 	m := model{
 		cfg:            cfg,
-		stateManager:   stateManager,
 		interfaceName:  interfaceName,
 		debugLevel:     debugLevel,
 		stack:          stack,

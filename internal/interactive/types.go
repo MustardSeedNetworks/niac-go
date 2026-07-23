@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
@@ -205,7 +204,6 @@ type stackStatsSnapshot struct {
 
 type model struct {
 	cfg           *config.Config
-	stateManager  *apperr.StateManager
 	interfaceName string
 	debugLevel    int
 	stack         *protocols.Stack
