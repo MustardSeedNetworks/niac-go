@@ -130,37 +130,36 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	}
 	entitlements := s.simulationEntitlements()
 	if err := s.daemon.StartSimulation(req, entitlements); err != nil {
-		if errors.Is(err, ErrRoutedLabsLicenseRequired) {
-			s.writeFeatureGate(
-				w, r, "routed_labs",
-				"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage,
-			)
-			return
-		}
-		if errors.Is(err, ErrUnlimitedDevicesLicenseRequired) {
-			s.writeFeatureGate(w, r, "unlimited_devices",
-				"This simulation exceeds the Free tier device cap. "+defaultUpgradeMessage)
-			return
-		}
-		if errors.Is(err, ErrSimulationDeviceLimitExceeded) {
-			writeError(w, r, http.StatusBadRequest, "device_limit_reached",
-				"Simulation exceeds the maximum supported device count", nil)
-			return
-		}
-		if writeManagedConfigPathError(w, r, err) {
-			return
-		}
-		// SECURITY: Don't leak internal error details to the client, but
-		// log them server-side so the daemon log can be used to diagnose
-		// why a start failed (config parse, capture engine, walk file…).
-		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error", err)
-		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
-			"Failed to start simulation", nil)
+		s.handleSimulationStartError(w, r, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	s.writeJSON(w, s.daemon.GetStatus())
+}
+
+func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrRoutedLabsLicenseRequired):
+		s.writeFeatureGate(w, r, "routed_labs",
+			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
+		s.writeFeatureGate(w, r, "unlimited_devices",
+			"This simulation exceeds the Free tier device cap. "+defaultUpgradeMessage)
+	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
+		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
+			"Simulation exceeds the maximum supported device count", nil)
+	case errors.Is(err, config.ErrSSHPasswordUnavailable):
+		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
+			"Configuration runtime requirements are not met",
+			[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: err.Error()}})
+	case writeManagedConfigPathError(w, r, err):
+	default:
+		// SECURITY: Keep internal start failures in the daemon log, not the response.
+		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
+			"Failed to start simulation", nil)
+	}
 }
 
 func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err error) bool {

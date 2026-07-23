@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -150,6 +151,33 @@ func TestHandleSimulationStartRequiresUnlimitedDevicesFeature(t *testing.T) {
 	}
 	if response.RequiredFeature != "unlimited_devices" {
 		t.Fatalf("required feature = %q", response.RequiredFeature)
+	}
+}
+
+func TestHandleSimulationStartRejectsMissingSSHPasswordAsRuntimeRequirement(t *testing.T) {
+	daemon := &preflightDaemon{startErr: fmt.Errorf(
+		"load simulation: %w: device %q requires %q",
+		config.ErrSSHPasswordUnavailable, "edge-1", "NIAC_EDGE_PASSWORD",
+	)}
+	server := &Server{daemon: daemon, license: freshManager(t)}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+	var response ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Error != "runtime_requirements_unmet" || len(response.Details) != 1 ||
+		response.Details[0].Field != "ssh.passwordEnv" {
+		t.Fatalf("response = %#v", response)
 	}
 }
 

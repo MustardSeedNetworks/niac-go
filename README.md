@@ -67,7 +67,7 @@ sudo ./niac daemon
 | `niac monitor` | Stream real-time stats |
 | `niac logs` | Stream simulation logs |
 | `niac dump` | Dump captured packets |
-| `niac inject <device> <error-type> <value>` | Inject errors on running devices |
+| `niac interactive <interface> <config>` | Run with interactive fault controls |
 | `niac neighbors [watch]` | LLDP/CDP neighbour table |
 | `niac analyze-pcap <file>` | Summarise a PCAP by protocol |
 | `niac analyze-walk <file>` | Extract relationships from an SNMP walk |

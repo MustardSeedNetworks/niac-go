@@ -200,20 +200,20 @@ func newStack(
 	bufferSize := DefaultQueueBufferSize
 
 	stack := &Stack{
-		capture:       captureEngine,
-		config:        cfg,
-		devices:       NewDeviceTable(),
-		sendQueue:     make(chan *Packet, bufferSize),
-		recvQueue:     make(chan *Packet, bufferSize),
-		stats:         &Statistics{},
-		stopChan:      make(chan struct{}),
-		debugConfig:   debugConfig,
-		snmpAgents:    make(map[*config.Device]*snmpAgentGroup),
-		neighbors:     newNeighborTable(),
-		errorManager:  apperr.NewStateManager(),
-		notifications: newStateNotificationManager(),
-		vlanMode:      configUsesVLANs(cfg),
+		capture:      captureEngine,
+		config:       cfg,
+		devices:      NewDeviceTable(),
+		sendQueue:    make(chan *Packet, bufferSize),
+		recvQueue:    make(chan *Packet, bufferSize),
+		stats:        &Statistics{},
+		stopChan:     make(chan struct{}),
+		debugConfig:  debugConfig,
+		snmpAgents:   make(map[*config.Device]*snmpAgentGroup),
+		neighbors:    newNeighborTable(),
+		errorManager: apperr.NewStateManager(),
+		vlanMode:     configUsesVLANs(cfg),
 	}
+	stack.notifications = newStateNotificationManager(stack)
 
 	// Create protocol handlers
 	stack.arpHandler = NewARPHandler(stack)
@@ -369,6 +369,7 @@ func (s *Stack) Stop() {
 	s.fdpHandler.Stop()
 
 	close(s.stopChan)
+	s.notifications.Reset()
 	s.wg.Wait()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -75,8 +76,12 @@ func (h *ARPHandler) HandlePacket(pkt *Packet) {
 	case layers.ARPRequest:
 		h.handleARPRequest(pkt, arp)
 	case layers.ARPReply:
-		// Could log/track replies if needed
 		h.stack.IncrementStat("arp_replies")
+		if address, found := netip.AddrFromSlice(arp.SourceProtAddress); found {
+			h.stack.notifications.observeNeighbor(
+				pkt.VLAN, address.Unmap(), net.HardwareAddr(arp.SourceHwAddress),
+			)
+		}
 
 		if debugLevel >= DebugLevelVerbose {
 			logger.Debug(

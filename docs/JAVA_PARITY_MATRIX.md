@@ -23,10 +23,10 @@ leave users worse off for the same baseline workflow.
 | Set debug level 0-3 | `-d<n>` | `--debug`, `--quiet`, `--verbose` | Debug level visible/cyclable in TUI | Protocol debug page and runtime/debug APIs | Covered |
 | Run without interactive controls | default Java run | `niac run` | Not applicable | Start simulation from `/runtime` | Covered |
 | Run with interactive error injection | `-i`, `--interactive` | `niac interactive` or `niac run --tui` | Interactive error injection panel/keys | Traffic/error injection page | Covered |
-| Inject common SNMP/interface errors during a live run | Java interactive menu | `niac inject ...` | Interactive error injection | `/traffic` error injection panel | Covered |
-| Clear one or all injected errors | Java interactive menu | `niac inject clear` | Clear active/all errors | Error injection panel clear actions | Covered |
+| Inject common SNMP/interface errors during a live run | Java interactive menu | Use `niac interactive` or the Web UI traffic page | Interactive error injection | `/traffic` error injection panel | Covered via TUI/Web |
+| Clear one or all injected errors | Java interactive menu | Use TUI/Web controls | Clear active/all errors | Error injection panel clear actions | Covered via TUI/Web |
 | Modify interface speed/duplex during a live run | Java interactive menu | `niac config interface set ...` updates speed/duplex/status metadata | Device Config Interfaces tab cycles speed/duplex/admin status | Device editor Interfaces section persists `interface_details`; API calls `ApplyConfig` after save | Covered |
-| Show active injected errors | Java interactive menu | `niac inject list`, `niac status` | Active errors panel | Error injection/status pages | Covered |
+| Show active injected errors | Java interactive menu | `niac status` | Active errors panel | Error injection/status pages | Covered |
 | List available adapters/interfaces | Java no-arg run prints adapters | `niac list interfaces` and legacy `niac --list-interfaces` | Runtime interface is shown after launch | `/runtime` and packet inspector use `/api/v1/interfaces` | Covered |
 | Show usage/help/version | Java `--help`, `--version`, usage on missing args, demo `help` | Cobra help/man/completion/version | Help panel/keys | Page help drawer | Covered |
 | Run named demo scenario | Demo wrapper `run <scenario>` | `niac run <iface> <scenario>` and `niac interactive <iface> <scenario>` resolve built-in templates or library networks | Template browser support | Template/config picker support | Covered |

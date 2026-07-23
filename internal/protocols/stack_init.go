@@ -96,7 +96,7 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 
 		for i := range seg.Devices {
 			device := &seg.Devices[i]
-			s.registerSegmentDevice(device, segTable)
+			s.registerSegmentDevice(device, segTable, seg.Tag)
 		}
 
 		s.applySNMPAddrMappings(seg.Devices, segTable)
@@ -156,7 +156,7 @@ func (s *Stack) registerDevice(device *config.Device) {
 	s.registerDeviceFeatures(device, s.devices)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
-	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device))
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), device.VLAN)
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)
@@ -171,13 +171,13 @@ func (s *Stack) registerDevice(device *config.Device) {
 // behind in s.devices. The remaining handler state (DHCP, SNMP, DNS) is keyed
 // by *config.Device pointer, not by table, so it coexists safely across
 // segments even when two segments reuse the same IP.
-func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable) {
+func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable, vlan int) {
 	s.registerDeviceState(device, table)
 	s.registerDeviceAddresses(device, table)
 	s.registerDeviceFeatures(device, table)
 	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
-	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device))
+	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), vlan)
 
 	if device.DNSConfig != nil {
 		s.dnsHandler.LoadDeviceDNSConfig(device)

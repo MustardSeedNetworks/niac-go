@@ -168,6 +168,77 @@ func TestSSHTCPHandlerIgnoresOutOfWindowFIN(t *testing.T) {
 	}
 }
 
+func TestSSHTCPHandlerDrainsPayloadAcceptedWithFIN(t *testing.T) {
+	stack := &Stack{sendQueue: make(chan *Packet, 1)}
+	handler := &sshTCPHandler{stack: stack, sessions: make(map[string]*sshTCPSession), now: time.Now}
+	connection := virtualtcp.NewPacketConn(
+		"10.0.0.1:22", "10.0.0.2:40000", func(context.Context, []byte) error { return nil },
+	)
+	session := &sshTCPSession{
+		key: "client", established: true, clientNext: 100, serverNext: 200, connection: connection,
+		sourceIP: net.ParseIP("10.0.0.1"), destinationIP: net.ParseIP("10.0.0.2"),
+		sourceMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 1}, destinationMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 2},
+		sourcePort: TCPPortSSH, destinationPort: 40000,
+	}
+	handler.sessions[session.key] = session
+	defer handler.closeSession(session.key)
+
+	handler.acceptSegment(session, &layers.TCP{
+		Seq: 100, FIN: true, BaseLayer: layers.BaseLayer{Payload: []byte("final-command")},
+	})
+
+	buffer := make([]byte, len("final-command"))
+	if _, err := io.ReadFull(connection, buffer); err != nil || string(buffer) != "final-command" {
+		t.Fatalf("ReadFull() = %q, %v", buffer, err)
+	}
+	if _, err := connection.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+		t.Fatalf("Read() after final payload = %v, want EOF", err)
+	}
+	if handler.session(session.key) == nil {
+		t.Fatal("client FIN closed the session before the server finished")
+	}
+	response := <-stack.sendQueue
+	packet := gopacket.NewPacket(response.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	tcp, _ := packet.Layer(layers.LayerTypeTCP).(*layers.TCP)
+	if tcp == nil || !tcp.ACK || tcp.FIN || tcp.Ack != 114 {
+		t.Fatalf("response TCP = %#v, want ACK 114 without FIN", tcp)
+	}
+}
+
+func TestSSHTCPHandlerWaitsForPeerFINAfterServerFINIsAcknowledged(t *testing.T) {
+	stack := &Stack{sendQueue: make(chan *Packet, 2)}
+	handler := &sshTCPHandler{stack: stack, sessions: make(map[string]*sshTCPSession), now: time.Now}
+	session := &sshTCPSession{
+		key: "client", established: true, clientNext: 100, serverNext: 200,
+		connection: virtualtcp.NewPacketConn(
+			"10.0.0.1:22", "10.0.0.2:40000", func(context.Context, []byte) error { return nil },
+		),
+		sourceIP: net.ParseIP("10.0.0.1"), destinationIP: net.ParseIP("10.0.0.2"),
+		sourceMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 1}, destinationMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 2},
+		sourcePort: TCPPortSSH, destinationPort: 40000,
+	}
+	handler.sessions[session.key] = session
+	defer handler.closeSession(session.key)
+
+	handler.finishServer(session)
+	<-stack.sendQueue
+	handler.acceptSegment(session, &layers.TCP{Seq: 100, Ack: 201, ACK: true})
+	if handler.session(session.key) == nil {
+		t.Fatal("ACK of server FIN removed session before peer FIN")
+	}
+
+	handler.acceptSegment(session, &layers.TCP{Seq: 100, Ack: 201, ACK: true, FIN: true})
+	if handler.session(session.key) != nil {
+		t.Fatal("session remained after both FINs were acknowledged")
+	}
+	response := <-stack.sendQueue
+	packet := gopacket.NewPacket(response.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	tcp, _ := packet.Layer(layers.LayerTypeTCP).(*layers.TCP)
+	if tcp == nil || !tcp.ACK || tcp.FIN || tcp.Ack != 101 {
+		t.Fatalf("peer FIN response = %#v, want final ACK 101", tcp)
+	}
+}
+
 func TestSSHTCPHandlerRetransmitsUnacknowledgedServerSegment(t *testing.T) {
 	stack := &Stack{sendQueue: make(chan *Packet, 2)}
 	handler := &sshTCPHandler{stack: stack, sessions: make(map[string]*sshTCPSession), now: time.Now}

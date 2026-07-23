@@ -228,7 +228,7 @@ export interface DeviceBatchDeleteResponse {
 // ============================================================================
 
 export interface JSONSchemaProperty {
-  type: string;
+  type?: string;
   title?: string;
   description?: string;
   default?: unknown;
@@ -236,6 +236,7 @@ export interface JSONSchemaProperty {
   enumNames?: string[];
   minimum?: number;
   maximum?: number;
+  minItems?: number;
   minLength?: number;
   maxLength?: number;
   pattern?: string;
@@ -243,6 +244,10 @@ export interface JSONSchemaProperty {
   items?: JSONSchemaProperty;
   properties?: Record<string, JSONSchemaProperty>;
   required?: string[];
+  const?: unknown;
+  allOf?: JSONSchemaProperty[];
+  if?: JSONSchemaProperty;
+  then?: JSONSchemaProperty;
   'ui:widget'?: string;
   'ui:help'?: string;
   'ui:placeholder'?: string;

@@ -3,6 +3,7 @@ package virtualtcp
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -23,9 +24,11 @@ type PacketConn struct {
 	inbound       chan []byte
 	emit          func(context.Context, []byte) error
 	done          chan struct{}
+	inboundDone   chan struct{}
 	writes        chan writeRequest
 	cancelEmit    context.CancelFunc
 	closeOnce     sync.Once
+	finishOnce    sync.Once
 	readMu        sync.Mutex
 	deliverMu     sync.Mutex
 	pending       []byte
@@ -37,7 +40,8 @@ func NewPacketConn(local, remote string, emit func(context.Context, []byte) erro
 	emitContext, cancelEmit := context.WithCancel(context.Background())
 	connection := &PacketConn{
 		local: address(local), remote: address(remote), inbound: make(chan []byte, streamBufferDepth),
-		emit: emit, done: make(chan struct{}), writes: make(chan writeRequest, streamBufferDepth),
+		emit: emit, done: make(chan struct{}), inboundDone: make(chan struct{}),
+		writes:     make(chan writeRequest, streamBufferDepth),
 		cancelEmit: cancelEmit,
 	}
 	go connection.runEmitter(emitContext)
@@ -51,6 +55,11 @@ func (c *PacketConn) Deliver(payload []byte) error {
 	select {
 	case <-c.done:
 		return net.ErrClosed
+	default:
+	}
+	select {
+	case <-c.inboundDone:
+		return io.ErrClosedPipe
 	default:
 	}
 	if len(payload) == 0 {
@@ -79,9 +88,20 @@ func (c *PacketConn) Read(destination []byte) (int, error) {
 		return 0, net.ErrClosed
 	default:
 	}
-	if len(c.pending) == 0 {
+	for len(c.pending) == 0 {
 		select {
 		case c.pending = <-c.inbound:
+			continue
+		default:
+		}
+		select {
+		case c.pending = <-c.inbound:
+		case <-c.inboundDone:
+			select {
+			case c.pending = <-c.inbound:
+			default:
+				return 0, io.EOF
+			}
 		case <-c.done:
 			return 0, net.ErrClosed
 		}
@@ -89,6 +109,14 @@ func (c *PacketConn) Read(destination []byte) (int, error) {
 	count := copy(destination, c.pending)
 	c.pending = c.pending[count:]
 	return count, nil
+}
+
+// FinishInbound marks the peer's send side closed while preserving payloads
+// already accepted by Deliver. Reads return EOF after draining them.
+func (c *PacketConn) FinishInbound() {
+	c.deliverMu.Lock()
+	c.finishOnce.Do(func() { close(c.inboundDone) })
+	c.deliverMu.Unlock()
 }
 
 // Write emits bytes as a simulated TCP payload.

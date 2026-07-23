@@ -7,7 +7,7 @@ func (s *Store) UpsertRoute(route Route) {
 
 	route.Destination = route.Destination.Masked()
 	for index, current := range s.running.network.Routes {
-		if current.Destination == route.Destination {
+		if !current.Connected && current.Destination == route.Destination {
 			s.running.network.Routes[index] = route
 			s.version++
 			s.recordEvent(EventRouteUpdated, route.Destination.String())

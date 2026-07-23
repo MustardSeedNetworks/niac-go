@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 )
 
@@ -66,6 +67,35 @@ func TestBuildDeviceSchema(t *testing.T) {
 	for _, def := range defTypes {
 		if _, ok := schema.Definitions[def]; !ok {
 			t.Errorf("missing definition: %s", def)
+		}
+	}
+}
+
+func TestBuildManagementSchemasMatchEnabledRuntimeRequirements(t *testing.T) {
+	ssh := buildSSHSchema()
+	if len(ssh.AllOf) != 1 || ssh.AllOf[0].Then == nil ||
+		len(ssh.AllOf[0].Then.Required) != 2 {
+		t.Fatalf("SSH conditional requirements = %#v", ssh.AllOf)
+	}
+
+	syslog := buildSyslogSchema()
+	if len(syslog.AllOf) != 1 || syslog.AllOf[0].Then == nil ||
+		len(syslog.AllOf[0].Then.Required) != 1 ||
+		syslog.AllOf[0].Then.Properties["receivers"].MinItems == nil ||
+		*syslog.AllOf[0].Then.Properties["receivers"].MinItems != 1 {
+		t.Fatalf("SYSLOG conditional requirements = %#v", syslog.AllOf)
+	}
+	pattern := regexp.MustCompile(syslog.Properties["receivers"].Items.Pattern)
+	for _, valid := range []string{"0.0.0.0:1", "192.0.2.10:514", "255.255.255.255:65535"} {
+		if !pattern.MatchString(valid) {
+			t.Errorf("receiver pattern rejected %q", valid)
+		}
+	}
+	for _, invalid := range []string{
+		"256.0.0.1:514", "192.0.2.10:0", "192.0.2.10:65536", "192.0.2.10:0514",
+	} {
+		if pattern.MatchString(invalid) {
+			t.Errorf("receiver pattern accepted %q", invalid)
 		}
 	}
 }

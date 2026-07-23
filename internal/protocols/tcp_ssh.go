@@ -52,6 +52,10 @@ type sshTCPSession struct {
 	lastActivity                time.Time
 	unacknowledged              []sshOutboundSegment
 	retransmitTimer             *time.Timer
+	serverFINPending            bool
+	serverFIN                   bool
+	serverFINAcknowledged       bool
+	clientFIN                   bool
 	closed                      bool
 }
 
@@ -182,7 +186,10 @@ func (h *sshTCPHandler) retransmittableSession(key string) *sshTCPSession {
 
 func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {
 	if tcp.ACK {
-		h.acknowledge(session, tcp.Ack)
+		if h.acknowledge(session, tcp.Ack) {
+			h.closeSessionIfCurrent(session.key, session)
+			return
+		}
 	}
 	session.mu.Lock()
 	session.lastActivity = h.now()
@@ -198,12 +205,13 @@ func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {
 	finAccepted := tcp.FIN && (payloadAccepted || len(tcp.Payload) == 0 && tcp.Seq == expectedSequence)
 	if finAccepted {
 		session.clientNext++
+		session.clientFIN = true
 	}
 	session.mu.Unlock()
 	if startServer {
 		go func() {
 			_ = session.server.ServeConn(session.connection)
-			h.closeSessionIfCurrent(session.key, session)
+			h.finishServer(session)
 		}()
 	}
 	if payloadAccepted {
@@ -212,12 +220,42 @@ func (h *sshTCPHandler) acceptSegment(session *sshTCPSession, tcp *layers.TCP) {
 			return
 		}
 	}
-	if len(tcp.Payload) > 0 || tcp.FIN && !finAccepted {
+	if len(tcp.Payload) > 0 || tcp.FIN {
 		_ = h.sendSegment(session, nil, false, false)
 	}
 	if finAccepted {
-		_ = h.sendSegment(session, nil, false, true)
-		h.closeSession(session.key)
+		session.connection.FinishInbound()
+		if h.sessionFinished(session) {
+			h.closeSessionIfCurrent(session.key, session)
+		}
+	}
+}
+
+func (h *sshTCPHandler) sessionFinished(session *sshTCPSession) bool {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+	return session.clientFIN && session.serverFINAcknowledged
+}
+
+func (h *sshTCPHandler) finishServer(session *sshTCPSession) {
+	session.mu.Lock()
+	if session.closed || session.serverFIN || session.serverFINPending {
+		session.mu.Unlock()
+		return
+	}
+	session.serverFINPending = true
+	session.mu.Unlock()
+	err := h.sendSegment(session, nil, false, true)
+	session.mu.Lock()
+	session.serverFINPending = false
+	session.serverFIN = err == nil
+	if session.serverFIN && len(session.unacknowledged) == 0 {
+		session.serverFINAcknowledged = true
+	}
+	finished := session.clientFIN && session.serverFINAcknowledged
+	session.mu.Unlock()
+	if err != nil || finished {
+		h.closeSessionIfCurrent(session.key, session)
 	}
 }
 
@@ -330,7 +368,7 @@ func (h *sshTCPHandler) transmitFrame(session *sshTCPSession, frame []byte) {
 	})
 }
 
-func (h *sshTCPHandler) acknowledge(session *sshTCPSession, acknowledgment uint32) {
+func (h *sshTCPHandler) acknowledge(session *sshTCPSession, acknowledgment uint32) bool {
 	session.mu.Lock()
 	removed := false
 	for len(session.unacknowledged) > 0 && acknowledgment >= session.unacknowledged[0].end {
@@ -342,7 +380,12 @@ func (h *sshTCPHandler) acknowledge(session *sshTCPSession, acknowledgment uint3
 		session.retransmitTimer = nil
 	}
 	h.scheduleRetransmitLocked(session)
+	if session.serverFIN && len(session.unacknowledged) == 0 {
+		session.serverFINAcknowledged = true
+	}
+	finished := session.clientFIN && session.serverFINAcknowledged
 	session.mu.Unlock()
+	return finished
 }
 
 func (h *sshTCPHandler) scheduleRetransmitLocked(session *sshTCPSession) {

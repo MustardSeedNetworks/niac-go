@@ -106,6 +106,24 @@ func TestPacketConnIgnoresEmptyDelivery(t *testing.T) {
 	assertRead(t, connection, "actual")
 }
 
+func TestPacketConnFinishInboundDrainsAcceptedPayloadBeforeEOF(t *testing.T) {
+	connection := virtualtcp.NewPacketConn(
+		"server", "client", func(context.Context, []byte) error { return nil },
+	)
+	defer connection.Close()
+	if err := connection.Deliver([]byte("final-command")); err != nil {
+		t.Fatalf("Deliver() error = %v", err)
+	}
+	connection.FinishInbound()
+	assertRead(t, connection, "final-command")
+	if _, err := connection.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+		t.Fatalf("Read() after drain error = %v, want EOF", err)
+	}
+	if err := connection.Deliver([]byte("late")); !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("Deliver() after FinishInbound error = %v, want io.ErrClosedPipe", err)
+	}
+}
+
 func TestConnectionsRejectOperationsAfterClose(t *testing.T) {
 	client, server := virtualtcp.Pipe("client", "server")
 	if _, err := server.Write([]byte("buffered")); err != nil {
