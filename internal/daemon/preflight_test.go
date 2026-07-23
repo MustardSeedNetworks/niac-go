@@ -192,6 +192,37 @@ func TestLoadAuthorizedSimulationConfigEnforcesFreeDeviceCap(t *testing.T) {
 	}
 }
 
+func TestLoadAuthorizedSegmentedConfigEnforcesDeviceEntitlements(t *testing.T) {
+	tests := []struct {
+		name         string
+		counts       []int
+		entitlements api.SimulationEntitlements
+		wantErr      error
+	}{
+		{name: "Free 10", counts: []int{4, 6}},
+		{
+			name: "Free 11", counts: []int{5, 6},
+			wantErr: api.ErrUnlimitedDevicesLicenseRequired,
+		},
+		{
+			name: "Pro 11", counts: []int{5, 6},
+			entitlements: fullSimulationEntitlements(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := api.SimulationRequest{
+				Interface: "eth0", ConfigData: segmentedSimulationConfig(test.counts...),
+			}
+			_, _, err := loadAuthorizedSimulationConfig(req, test.entitlements)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestLoadAuthorizedSimulationConfigEnforcesAbsoluteDeviceCap(t *testing.T) {
 	req := api.SimulationRequest{Interface: "eth0", ConfigData: simulationConfigWithDevices(
 		api.MaxDeviceCount + 1,
@@ -212,6 +243,27 @@ func simulationConfigWithDevices(count int) string {
 			"  - name: device-%d\n    type: host\n    mac: 02:00:00:%02x:%02x:%02x\n    ips: [\"198.18.%d.%d\"]\n",
 			index, index>>16, index>>8&0xff, index&0xff, index/254, index%254+1,
 		)
+	}
+	return content.String()
+}
+
+func segmentedSimulationConfig(counts ...int) string {
+	var content strings.Builder
+	content.WriteString("segments:\n")
+	deviceIndex := 0
+	for segmentIndex, count := range counts {
+		_, _ = fmt.Fprintf(&content, "  - tag: %d\n    devices:\n", segmentIndex+1)
+		for range count {
+			_, _ = fmt.Fprintf(&content,
+				"      - name: device-%d\n"+
+					"        type: host\n"+
+					"        mac: 02:00:00:%02x:%02x:%02x\n"+
+					"        ips: [\"198.18.%d.%d\"]\n",
+				deviceIndex, deviceIndex>>16, deviceIndex>>8&0xff, deviceIndex&0xff,
+				deviceIndex/254, deviceIndex%254+1,
+			)
+			deviceIndex++
+		}
 	}
 	return content.String()
 }

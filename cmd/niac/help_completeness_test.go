@@ -106,6 +106,18 @@ func TestCLIHelpCompleteness(t *testing.T) {
 	t.Fatalf("CLI help completeness gaps (%d):\n  %s", len(gaps), strings.Join(gaps, "\n  "))
 }
 
+func TestLicenseHelpStatesDeviceScaleContract(t *testing.T) {
+	root := buildFullRoot()
+	command, _, err := root.Find([]string{"license"})
+	if err != nil {
+		t.Fatalf("find license command: %v", err)
+	}
+	const contract = "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000."
+	if !strings.Contains(command.Long, contract) {
+		t.Fatalf("license help does not contain device scale contract %q", contract)
+	}
+}
+
 func walkCommands(c *cobra.Command, fn func(*cobra.Command)) {
 	fn(c)
 	for _, sub := range c.Commands() {

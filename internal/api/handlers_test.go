@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
@@ -238,6 +239,15 @@ func TestHandleConfigUpdateEnforcesEntitlementsBeforeApply(t *testing.T) {
 		_, _ = fmt.Fprintf(&oversized,
 			"  - name: device-%d\n    type: router\n    mac: 02:00:00:00:00:%02x\n", index, index)
 	}
+	var oversizedSegment bytes.Buffer
+	oversizedSegment.WriteString("segments:\n  - tag: 10\n    devices:\n")
+	for index := 0; index <= FreeTierDeviceCount; index++ {
+		_, _ = fmt.Fprintf(&oversizedSegment,
+			"      - name: device-%d\n        type: router\n        mac: 02:00:00:00:00:%02x\n",
+			index,
+			index,
+		)
+	}
 	tests := []struct {
 		name    string
 		content string
@@ -257,6 +267,10 @@ func TestHandleConfigUpdateEnforcesEntitlementsBeforeApply(t *testing.T) {
 			feature: "routed_labs",
 		},
 		{name: "Free device cap", content: oversized.String(), feature: "unlimited_devices"},
+		{
+			name: "segmented Free device cap", content: oversizedSegment.String(),
+			feature: "unlimited_devices",
+		},
 	}
 
 	for _, test := range tests {
@@ -286,6 +300,66 @@ func TestHandleConfigUpdateEnforcesEntitlementsBeforeApply(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleConfigUpdateAllowsSegmentedDeviceEntitlements(t *testing.T) {
+	tests := []struct {
+		name  string
+		count int
+		pro   bool
+	}{
+		{name: "Free 10", count: 10},
+		{name: "Pro 11", count: 11, pro: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server, _ := createTestServer(t)
+			if test.pro {
+				server.license = freshManager(t)
+				if result := server.license.StartTrial(); !result.Success {
+					t.Fatalf("StartTrial() = %#v", result)
+				}
+			}
+			applied := false
+			server.cfg.ApplyConfig = func(*config.Config) error {
+				applied = true
+				return nil
+			}
+			body, err := json.Marshal(map[string]string{
+				"content": segmentedConfigUpdate(test.count),
+			})
+			if err != nil {
+				t.Fatalf("marshal request: %v", err)
+			}
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPut, "/api/v1/config", bytes.NewReader(body))
+
+			server.handleConfig(recorder, request)
+
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200: %s", recorder.Code, recorder.Body.String())
+			}
+			if !applied {
+				t.Fatal("authorized segmented configuration did not reach ApplyConfig")
+			}
+		})
+	}
+}
+
+func segmentedConfigUpdate(count int) string {
+	var content strings.Builder
+	content.WriteString("segments:\n  - tag: 10\n    devices:\n")
+	for index := range count {
+		_, _ = fmt.Fprintf(&content,
+			"      - name: device-%d\n"+
+				"        type: router\n"+
+				"        mac: 02:00:00:00:00:%02x\n",
+			index,
+			index,
+		)
+	}
+	return content.String()
 }
 
 func TestHandleErrors(t *testing.T) {

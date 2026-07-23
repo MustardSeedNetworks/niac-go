@@ -58,3 +58,32 @@ func TestValidateStoredSimulationConfigUsesCurrentLicenseState(t *testing.T) {
 		t.Fatalf("license state loads = %d, want 1", loads)
 	}
 }
+
+func TestValidateSimulationConfigEnforcesDeviceTier(t *testing.T) {
+	tests := []struct {
+		name    string
+		count   int
+		checker testFeatureChecker
+		wantErr error
+	}{
+		{name: "Free 10", count: 10, checker: testFeatureChecker{}},
+		{
+			name: "Free 11", count: 11, checker: testFeatureChecker{},
+			wantErr: api.ErrUnlimitedDevicesLicenseRequired,
+		},
+		{
+			name: "Pro above Free cap", count: 11,
+			checker: testFeatureChecker{"unlimited_devices": true},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := &config.Config{Devices: make([]config.Device, test.count)}
+			err := validateSimulationConfig(cfg, test.checker)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("validateSimulationConfig() error = %v, want %v", err, test.wantErr)
+			}
+		})
+	}
+}

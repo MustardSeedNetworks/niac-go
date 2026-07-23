@@ -43,8 +43,7 @@ func (s *Server) validateDeviceAddition(
 	if (s.license == nil || !s.license.HasFeature("unlimited_devices")) &&
 		deviceCount >= FreeTierDeviceCount {
 		s.writeFeatureGate(w, r, "unlimited_devices",
-			fmt.Sprintf("Free tier supports up to %d devices. "+
-				"Upgrade to Pro for unlimited devices.", FreeTierDeviceCount))
+			deviceScaleContract+" "+defaultUpgradeMessage)
 		return errValidationFailed
 	}
 
