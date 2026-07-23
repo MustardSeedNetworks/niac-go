@@ -61,8 +61,9 @@ Complete #1057 first:
 - Print success only after a zero exit.
 - Prove the hook blocks a deliberately failing frontend command.
 
-Close #1068 before the next release. Then retain browser traces for Chromium,
-WebKit, Firefox, installed Chrome, installed Edge, and actual Safari.
+Verify the already-started v0.94.11 publication, then close #1068 before the
+following release. Retain browser traces for Chromium, WebKit, Firefox,
+installed Chrome, installed Edge, and actual Safari.
 
 Exit gate: later work can rely on local and CI results without masked failures.
 

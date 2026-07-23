@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `90ad10b9` after HTTPS and stale-document closeout
+**Baseline:** `main` at `185a180e` after the v0.94.11 release merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -15,9 +15,10 @@ Update it when work merges or a disposition changes.
 | Item | State | Next action |
 | --- | --- | --- |
 | v0.94.10 core artifacts | Verified | Release workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
-| v0.94.10 content packages | Integrity metadata missing | Fix accepted medium defect #1068 before the next release |
+| v0.94.10-v0.94.11 content packages | Integrity metadata missing | Tracked by accepted medium defect #1068 |
+| v0.94.11 core artifacts | Verified | Workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
 | Master plan PR #1064 | Draft; rebased on current `main` | Complete review, mark ready, and merge |
-| Latest published release | v0.94.10 | Preserve as the baseline with #1068 explicitly open |
+| Next release after v0.94.11 | Blocked by #1068 | Add content-package integrity metadata before publication |
 
 ## Worktree ownership
 
@@ -107,6 +108,7 @@ new issue until reproduction confirms that the contract remains open.
 - [x] Current worktrees have explicit owners.
 - [x] Former follow-up commits are confirmed present in merged squash commits.
 - [x] v0.94.10 core artifacts are verified; content integrity is tracked in #1068.
+- [x] v0.94.11 publication is complete and its core artifacts are verified.
 - [ ] PR #1064 is merged.
 - [x] PR #1063 is merged or explicitly handed off.
 - [ ] Every #1053 `needs-info` issue has a current reproduction.
