@@ -3,7 +3,7 @@ module github.com/MustardSeedNetworks/niac-go
 go 1.26.5
 
 require (
-	github.com/MustardSeedNetworks/foundation v0.2.0
+	github.com/MustardSeedNetworks/foundation v0.2.1
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
