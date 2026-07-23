@@ -296,11 +296,14 @@ jobs:
           path: windows-raw/
 
       - name: Download prebuilt niac-content packages
+        # Download before publication so transfer failures cannot leave a
+        # partial public release, but keep the files outside the checkout so
+        # GoReleaser's clean-worktree validation remains authoritative.
         if: needs.niac-content.outputs.has_content == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: niac-content-packages
-          path: content-packages/
+          path: ${{ runner.temp }}/niac-content-packages/
 
       - name: Install Syft (SBOM) inside container
         env:
@@ -407,7 +410,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          packages=(content-packages/*.deb content-packages/*.rpm)
+          packages=("${RUNNER_TEMP}"/niac-content-packages/*.deb "${RUNNER_TEMP}"/niac-content-packages/*.rpm)
           if [ "${#packages[@]}" -ne 2 ]; then
             echo "::error::expected one niac-content DEB and one RPM, found ${#packages[@]}"
             exit 1

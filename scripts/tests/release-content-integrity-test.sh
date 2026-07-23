@@ -84,6 +84,13 @@ if [ -z "$VERIFY_LINE" ] || [ -z "$HASH_LINE" ] || [ "$VERIFY_LINE" -ge "$HASH_L
   exit 1
 fi
 
+require_text "$GORELEASER_JOB" \
+  "path: \${{ runner.temp }}/niac-content-packages/" \
+  "content packages must be downloaded outside the repository checkout"
+require_text "$GORELEASER_JOB" \
+  "packages=(\"\${RUNNER_TEMP}\"/niac-content-packages/*.deb \"\${RUNNER_TEMP}\"/niac-content-packages/*.rpm)" \
+  "the core release must consume content packages from runner temporary storage"
+
 if grep -Fq "mode: append" "$CONTENT_CONFIG"; then
   echo "the content configuration must not retain an append-to-release path"
   exit 1
