@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,6 +54,69 @@ segments:
 
 	if segs[1].Tag != 300 || segs[1].Devices[0].Name != "demo2-r1" {
 		t.Errorf("tag-300 inline segment wrong: %+v", segs[1])
+	}
+}
+
+func TestLoadYAMLManagedConfinesSegmentConfigs(t *testing.T) {
+	base := t.TempDir()
+	managedRoot := filepath.Join(base, "networks")
+	if err := os.Mkdir(managedRoot, 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	childYAML := []byte(`
+devices:
+  - name: child
+    mac: "02:00:00:00:02:01"
+    ips: ["10.0.0.1"]
+`)
+	managedChild := filepath.Join(managedRoot, "child.yaml")
+	if err := os.WriteFile(managedChild, childYAML, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outsideChild := filepath.Join(base, "outside.yaml")
+	if err := os.WriteFile(outsideChild, childYAML, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	symlinkChild := filepath.Join(managedRoot, "escape.yaml")
+	if err := os.Symlink(outsideChild, symlinkChild); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		childPath string
+		wantErr   bool
+	}{
+		{name: "managed child", childPath: managedChild},
+		{name: "absolute escape", childPath: outsideChild, wantErr: true},
+		{name: "relative escape", childPath: "../outside.yaml", wantErr: true},
+		{name: "symlink escape", childPath: symlinkChild, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parent := filepath.Join(managedRoot, tt.name+".yaml")
+			parentYAML := fmt.Sprintf(`
+segments:
+  - tag: 200
+    config: %q
+`, tt.childPath)
+			if err := os.WriteFile(parent, []byte(parentYAML), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			_, _, err := LoadYAMLManaged(parent, []string{managedRoot})
+			if tt.wantErr {
+				if !errors.Is(err, ErrPathOutsideManagedRoots) {
+					t.Fatalf("LoadYAMLManaged() error = %v, want ErrPathOutsideManagedRoots", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadYAMLManaged() error = %v", err)
+			}
+		})
 	}
 }
 
