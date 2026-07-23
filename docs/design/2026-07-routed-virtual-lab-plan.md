@@ -1,6 +1,6 @@
 # Plan: Routed virtual labs behind one isolated attachment
 
-**Status:** In implementation — core Phases 0-5 complete; Phase 6 next
+**Status:** In implementation — core Phases 0-6 complete; Phase 7 next
 
 **Date:** 2026-07-20
 
@@ -16,7 +16,7 @@
 | 1 — compiler | Complete | Immutable topology compiler and validation tests |
 | 2-4 — fabric and IPv4 | Complete | Attachment-aware egress, scoped services, forwarding, fragmentation, ICMP, and routed response tests |
 | 5 — management plane | Core complete | Shared device state, first IOS-like CLI profile, packet-backed SSH, SNMP projection, configuration lifecycle, SYSLOG/SNMP state notifications, and Pro gate |
-| 6 — observability | Next | API/UI forwarding counters and packet-inspector route decisions remain |
+| 6 — observability | Complete | API/UI fabric topology and counters, packet route decisions, physical/virtual VLAN labels, and unsafe-attachment errors |
 | 7 — hardware acceptance | Pending | Reference eight-subnet lab and 24-hour isolation run remain |
 
 ## Outcome
