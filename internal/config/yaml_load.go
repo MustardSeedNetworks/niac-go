@@ -12,12 +12,28 @@ import (
 )
 
 func LoadYAML(filename string) (*Config, error) {
+	return loadYAML(filename, nil)
+}
+
+// LoadYAMLManaged loads a configuration while confining it and every nested
+// segment configuration to the supplied managed roots.
+func LoadYAMLManaged(filename string, roots []string) (*Config, string, error) {
+	managedPath, err := ResolveManagedConfigPath(filename, roots)
+	if err != nil {
+		return nil, "", err
+	}
+
+	cfg, err := loadYAML(managedPath, roots)
+	return cfg, managedPath, err
+}
+
+func loadYAML(filename string, roots []string) (*Config, error) {
 	yamlConfig, err := loadYAMLFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	return buildConfigFromYAML(yamlConfig, filepath.Dir(filepath.Clean(filename)))
+	return buildConfigFromYAML(yamlConfig, filepath.Dir(filepath.Clean(filename)), roots)
 }
 
 // LoadYAMLBytes builds a runtime config from in-memory YAML data.
@@ -27,7 +43,19 @@ func LoadYAMLBytes(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	return buildConfigFromYAML(yamlConfig, "")
+	return buildConfigFromYAML(yamlConfig, "", nil)
+}
+
+// LoadYAMLBytesManaged builds an in-memory configuration while resolving
+// nested segment configurations relative to configDir and confining them to
+// the supplied managed roots.
+func LoadYAMLBytesManaged(data []byte, configDir string, roots []string) (*Config, error) {
+	yamlConfig, err := loadYAMLBytes(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildConfigFromYAML(yamlConfig, configDir, roots)
 }
 
 // loadYAMLFile loads and validates a YAML configuration file.
@@ -58,7 +86,7 @@ func validateYAMLConfig(yamlConfig *converter.Config) (*converter.Config, error)
 	return yamlConfig, nil
 }
 
-func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Config, error) {
+func buildConfigFromYAML(yamlConfig *converter.Config, configDir string, roots []string) (*Config, error) {
 	var registry *oui.Registry
 	if usesVendorIdentity(yamlConfig) {
 		var err error
@@ -79,7 +107,7 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string) (*Confi
 		cfg.Devices = append(cfg.Devices, device)
 	}
 
-	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir, registry)
+	segments, err := buildSegments(yamlConfig, cfg.IncludePath, configDir, roots, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +139,7 @@ func usesVendorIdentity(cfg *converter.Config) bool {
 func buildSegments(
 	yamlConfig *converter.Config,
 	includePath, configDir string,
+	roots []string,
 	registry *oui.Registry,
 ) ([]Segment, error) {
 	if len(yamlConfig.Segments) == 0 {
@@ -124,7 +153,7 @@ func buildSegments(
 	segments := make([]Segment, 0, len(yamlConfig.Segments))
 
 	for _, ySeg := range yamlConfig.Segments {
-		seg, err := buildSegment(ySeg, includePath, configDir, registry)
+		seg, err := buildSegment(ySeg, includePath, configDir, roots, registry)
 		if err != nil {
 			return nil, err
 		}
@@ -138,6 +167,7 @@ func buildSegments(
 func buildSegment(
 	ySeg converter.Segment,
 	includePath, configDir string,
+	roots []string,
 	registry *oui.Registry,
 ) (Segment, error) {
 	tag, err := parseSegmentTag(string(ySeg.Tag))
@@ -155,7 +185,7 @@ func buildSegment(
 	seg := Segment{Tag: tag, ConfigPath: ySeg.Config}
 
 	if hasConfig {
-		return resolveSegmentConfig(seg, ySeg.Config, configDir)
+		return resolveSegmentConfig(seg, ySeg.Config, configDir, roots)
 	}
 
 	for _, yamlDevice := range ySeg.Devices {
@@ -174,12 +204,20 @@ func buildSegment(
 // its devices as the segment's device set. The path is relative to the parent
 // config's directory. A segment config that itself declares segments is
 // rejected — nesting demos is out of scope.
-func resolveSegmentConfig(seg Segment, path, configDir string) (Segment, error) {
+func resolveSegmentConfig(seg Segment, path, configDir string, roots []string) (Segment, error) {
 	if !filepath.IsAbs(path) && configDir != "" {
 		path = filepath.Join(configDir, path)
 	}
 
-	loaded, err := LoadYAML(path)
+	var (
+		loaded *Config
+		err    error
+	)
+	if len(roots) > 0 {
+		loaded, _, err = LoadYAMLManaged(path, roots)
+	} else {
+		loaded, err = LoadYAML(path)
+	}
 	if err != nil {
 		return Segment{}, fmt.Errorf("segment tag %d config %q: %w", seg.Tag, path, err)
 	}

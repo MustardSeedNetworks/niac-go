@@ -287,11 +287,11 @@ func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*confi
 		if templatePath == "" {
 			return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
 		}
-		cfg, err := config.Load(templatePath)
+		cfg, managedPath, err := config.LoadYAMLManaged(templatePath, simulationConfigRoots())
 		if err != nil {
 			return nil, "", fmt.Errorf("load template %q: %w", req.TemplateName, err)
 		}
-		return cfg, templatePath, nil
+		return cfg, managedPath, nil
 	case req.ConfigData != "":
 		if len(req.ConfigData) > maxSimulationConfigSize {
 			return nil, "", fmt.Errorf(
@@ -301,7 +301,15 @@ func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*confi
 				len(req.ConfigData),
 			)
 		}
-		cfg, err := config.LoadYAMLBytes([]byte(req.ConfigData))
+		configDir, err := inlineConfigDir()
+		if err != nil {
+			return nil, "", fmt.Errorf("load configuration: %w", err)
+		}
+		cfg, err := config.LoadYAMLBytesManaged(
+			[]byte(req.ConfigData),
+			configDir,
+			simulationConfigRoots(),
+		)
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
@@ -318,11 +326,8 @@ func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*confi
 		}
 		return cfg, path, nil
 	case req.ConfigPath != "":
-		managedPath, err := config.ResolveManagedConfigPath(req.ConfigPath, simulationConfigRoots())
-		if err != nil {
-			return nil, "", fmt.Errorf("load configuration: %w", err)
-		}
-		cfg, err := config.Load(managedPath)
+		roots := simulationConfigRoots()
+		cfg, managedPath, err := config.LoadYAMLManaged(req.ConfigPath, roots)
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
@@ -425,6 +430,25 @@ const inlineConfigName = "_running.inline.yaml"
 // daemon has a real configPath to operate on. Returns the absolute path
 // it was written to.
 func persistInlineConfig(content string) (string, error) {
+	cleanDir, dirErr := inlineConfigDir()
+	if dirErr != nil {
+		return "", dirErr
+	}
+	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
+		return "", fmt.Errorf("create configs dir: %w", err)
+	}
+	path := filepath.Join(cleanDir, inlineConfigName)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		return "", fmt.Errorf("write inline config: %w", err)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path, nil //nolint:nilerr // best-effort abs path; relative is fine too
+	}
+	return abs, nil
+}
+
+func inlineConfigDir() (string, error) {
 	rawDir := os.Getenv("NIAC_CONFIGS_DIR")
 	if rawDir == "" {
 		// Prefer $HOME/.niac/configs over CWD so daemon restarts find it.
@@ -442,18 +466,7 @@ func persistInlineConfig(content string) (string, error) {
 	if strings.Contains(cleanDir, "..") {
 		return "", fmt.Errorf("configs dir must not contain '..' components: %s", rawDir)
 	}
-	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
-		return "", fmt.Errorf("create configs dir: %w", err)
-	}
-	path := filepath.Join(cleanDir, inlineConfigName)
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-		return "", fmt.Errorf("write inline config: %w", err)
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return path, nil //nolint:nilerr // best-effort abs path; relative is fine too
-	}
-	return abs, nil
+	return cleanDir, nil
 }
 
 func e2eDryRunSimulation() bool {

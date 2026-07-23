@@ -71,6 +71,50 @@ func TestLoadSimulationConfigRestrictsPathsToManagedRoots(t *testing.T) {
 	}
 }
 
+func TestLoadSimulationConfigRestrictsInlineSegmentPathsToManagedRoots(t *testing.T) {
+	base := t.TempDir()
+	configsDir := filepath.Join(base, "configs")
+	if err := os.Mkdir(configsDir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("NIAC_LIBRARY_ROOT", filepath.Join(base, "library"))
+	t.Setenv("NIAC_CONFIGS_DIR", configsDir)
+
+	managed := writeManagedPathTestConfig(t, configsDir, "managed.yaml")
+	outside := writeManagedPathTestConfig(t, base, "outside.yaml")
+	escape := filepath.Join(configsDir, "escape.yaml")
+	if err := os.Symlink(outside, escape); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		childPath string
+		ok        bool
+	}{
+		{name: "managed absolute path", childPath: managed, ok: true},
+		{name: "absolute outside root", childPath: outside},
+		{name: "relative escape", childPath: "../outside.yaml"},
+		{name: "symlink escape", childPath: escape},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configData := "segments:\n  - tag: 200\n    config: " + tt.childPath + "\n"
+			_, _, err := loadSimulationConfig(api.SimulationRequest{ConfigData: configData}, false)
+			if tt.ok {
+				if err != nil {
+					t.Fatalf("loadSimulationConfig() error = %v", err)
+				}
+				return
+			}
+			if !errors.Is(err, config.ErrPathOutsideManagedRoots) {
+				t.Fatalf("error = %v, want ErrPathOutsideManagedRoots", err)
+			}
+		})
+	}
+}
+
 func writeManagedPathTestConfig(t *testing.T, dir, name string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
