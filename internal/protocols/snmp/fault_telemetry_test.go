@@ -189,6 +189,18 @@ func TestWalkBackedManagementFaultCountersPreserveBaseline(t *testing.T) {
 	if !agent.InterfaceFaultObservable("Management") {
 		t.Fatal("walk-backed Management interface is not observable")
 	}
+	if err := state.UpdateInterface(
+		"Management",
+		func(iface devicestate.Interface) (devicestate.Interface, error) {
+			iface.Address = netip.MustParsePrefix("192.0.2.2/24")
+			return iface, nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !agent.InterfaceFaultObservable("Management") {
+		t.Fatal("walk-backed Management interface lost observability after address change")
+	}
 	if err := state.SetInterfaceFault("Management", devicestate.FaultInterface, 5); err != nil {
 		t.Fatal(err)
 	}

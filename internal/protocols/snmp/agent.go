@@ -49,6 +49,8 @@ type Agent struct {
 	deviceState     *devicestate.Store
 	stateMIBVersion atomic.Uint64
 	stateIPOIDs     map[string]struct{}
+	walkFaultName   string
+	walkFaultIndex  string
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.

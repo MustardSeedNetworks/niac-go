@@ -232,7 +232,9 @@ func (a *Agent) registerWalkStateFaultCounters() {
 	if !ok {
 		return
 	}
-	a.registerFaultCountersWithBaseline(snapshot.Network.Interfaces[0].Name, index)
+	a.walkFaultName = snapshot.Network.Interfaces[0].Name
+	a.walkFaultIndex = index
+	a.registerFaultCountersWithBaseline(a.walkFaultName, index)
 }
 
 // InterfaceFaultObservable reports whether a fault on name has an IF-MIB counter surface.
@@ -247,6 +249,9 @@ func (a *Agent) InterfaceFaultObservable(name string) bool {
 func (a *Agent) walkStateFaultIndex(name string) (string, bool) {
 	if !a.hasWalkContent() || len(a.device.Interfaces) > 0 || a.deviceState == nil {
 		return "", false
+	}
+	if name == a.walkFaultName && a.walkFaultIndex != "" {
+		return a.walkFaultIndex, true
 	}
 	interfaces := a.deviceState.Snapshot().Network.Interfaces
 	if len(interfaces) != 1 || interfaces[0].Name != name {
