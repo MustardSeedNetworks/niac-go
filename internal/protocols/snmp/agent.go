@@ -49,6 +49,8 @@ type Agent struct {
 	deviceState     *devicestate.Store
 	stateMIBVersion atomic.Uint64
 	stateIPOIDs     map[string]struct{}
+	walkFaultName   string
+	walkFaultIndex  string
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.
@@ -231,7 +233,8 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		// captured device's name — otherwise every device sharing a walk collides
 		// under one name and a discovery tool merges them. sysDescr/location stay
 		// as the walk's authentic values.
-		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) || isLiveProtocolOID(entry.OID) {
+		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) ||
+			isLiveProtocolOID(entry.OID) {
 			skipped++
 
 			continue
@@ -253,6 +256,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.registerLiveMIBIIProtocolCounters()
 	a.refreshBridgePortCounters()
 	a.refreshAuthoredInterfaceMIBs()
+	a.registerWalkStateFaultCounters()
 	if a.ownsSynthesizedTopology() {
 		a.refreshAuthoredDiscoveryMIBs()
 	}
@@ -475,7 +479,10 @@ func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	if oid == snmpGroup+".30.0" {
 		enabled, ok := snmpInteger(value.Value)
 		if !ok || (enabled != authenticationTrapsOn && enabled != authenticationTrapsOff) {
-			return fmt.Errorf("%w: snmpEnableAuthenTraps must be enabled(1) or disabled(2)", ErrInvalidValue)
+			return fmt.Errorf(
+				"%w: snmpEnableAuthenTraps must be enabled(1) or disabled(2)",
+				ErrInvalidValue,
+			)
 		}
 		a.stats.enableAuthenTraps.Store(uint32(enabled))
 		return nil
@@ -544,7 +551,14 @@ func RedactCommunityString(community string) string {
 		return "**"
 	}
 
-	return string(community[0]) + strings.Repeat("*", len(community)-minRedactLen) + string(community[len(community)-1])
+	return string(
+		community[0],
+	) + strings.Repeat(
+		"*",
+		len(community)-minRedactLen,
+	) + string(
+		community[len(community)-1],
+	)
 }
 
 // ProcessPDU processes SNMP PDU variables and returns response variables
@@ -607,7 +621,9 @@ func (a *Agent) ProcessPDU(
 
 // ProcessRequest processes a v1/v2c request and derives the response status
 // required by the version's error model.
-func (a *Agent) ProcessRequest(request *gosnmp.SnmpPacket) ([]gosnmp.SnmpPDU, gosnmp.SNMPError, uint8) {
+func (a *Agent) ProcessRequest(
+	request *gosnmp.SnmpPacket,
+) ([]gosnmp.SnmpPDU, gosnmp.SNMPError, uint8) {
 	variables := a.ProcessPDU(
 		request.PDUType, request.Variables, int(request.NonRepeaters), request.MaxRepetitions,
 	)
@@ -695,7 +711,11 @@ func (a *Agent) processGetNextRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
 // (what a NetAlly CyberScope issues) unparseable: it reported a single interface
 // even though the agent served the whole table. All bindings share one datagram
 // byte budget so the response stays under the MTU.
-func (a *Agent) processGetBulk(vars []gosnmp.SnmpPDU, nonRepeaters, maxRepetitions int) []gosnmp.SnmpPDU {
+func (a *Agent) processGetBulk(
+	vars []gosnmp.SnmpPDU,
+	nonRepeaters, maxRepetitions int,
+) []gosnmp.SnmpPDU {
+	a.syncDeviceStateMIBs()
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 

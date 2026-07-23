@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -51,7 +50,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyMsg(msg)
 	case tickMsg:
 		m.uptime = time.Since(m.startTime)
-		m.errorsActive = len(m.stateManager.GetAllStates())
+		m.errorsActive = activeFaultCount(m.stack)
 		m.refreshStats()
 
 		return m, tickCmd()
@@ -275,40 +274,31 @@ func (m *model) closeAllOverlays() {
 	m.valueInputMode = false
 }
 
-// Run starts the interactive mode with the specified configuration.
-func Run(
-	interfaceName string,
-	cfg *config.Config,
-	debugConfig *logging.DebugConfig,
-	stack *protocols.Stack,
-	startTime time.Time,
-	reloadFunc func() (*config.Config, error),
-) error {
-	return RunWithConfigPath(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc, "")
+// Options configures the interactive simulator.
+type Options struct {
+	InterfaceName         string
+	Config                *config.Config
+	DebugConfig           *logging.DebugConfig
+	Stack                 *protocols.Stack
+	StartTime             time.Time
+	Reload                func() (*config.Config, error)
+	ConfigFilePath        string
+	FaultInjectionEnabled bool
 }
 
-// RunWithConfigPath starts the interactive mode with a config file path for editing.
-func RunWithConfigPath(
-	interfaceName string,
-	cfg *config.Config,
-	debugConfig *logging.DebugConfig,
-	stack *protocols.Stack,
-	startTime time.Time,
-	reloadFunc func() (*config.Config, error),
-	configFilePath string,
-) error {
+// Run starts the interactive mode with the specified configuration.
+func Run(options Options) error {
+	debugConfig := options.DebugConfig
 	if debugConfig == nil {
 		debugConfig = logging.NewDebugConfig(1)
 	}
 
 	debugLevel := debugConfig.GetGlobal()
 
+	startTime := options.StartTime
 	if startTime.IsZero() {
 		startTime = time.Now()
 	}
-
-	// Initialize state manager
-	stateManager := apperr.NewStateManager()
 
 	// Create menu items
 	menuItems := []string{
@@ -316,38 +306,35 @@ func RunWithConfigPath(
 		"2. Inject Packet Discards (custom value)",
 		"3. Inject Interface Errors (custom value)",
 		"4. Inject High Utilization (custom value)",
-		"5. Inject High CPU (custom value)",
-		"6. Inject High Memory (custom value)",
-		"7. Inject High Disk (custom value)",
-		"8. Clear All Errors",
-		"9. Exit Menu",
+		"5. Clear All Errors",
+		"6. Exit Menu",
 	}
 
 	// Create model
 	m := model{
-		cfg:            cfg,
-		stateManager:   stateManager,
-		interfaceName:  interfaceName,
-		debugLevel:     debugLevel,
-		stack:          stack,
-		reloadFunc:     reloadFunc,
-		menuItems:      menuItems,
-		startTime:      startTime,
-		configFilePath: configFilePath,
-		exportFormat:   formatJSON,
-		searchCategory: searchCategoryAll,
-		statusMessage:  "Press 'i' for menu, 'r' to reload config, 'h' for help",
-		debugLogs:      make([]string, 0, maxDebugLogs),
+		cfg:                   options.Config,
+		interfaceName:         options.InterfaceName,
+		debugLevel:            debugLevel,
+		stack:                 options.Stack,
+		reloadFunc:            options.Reload,
+		menuItems:             menuItems,
+		startTime:             startTime,
+		configFilePath:        options.ConfigFilePath,
+		faultInjectionEnabled: options.FaultInjectionEnabled,
+		exportFormat:          formatJSON,
+		searchCategory:        searchCategoryAll,
+		statusMessage:         "Press 'i' for menu, 'r' to reload config, 'h' for help",
+		debugLogs:             make([]string, 0, maxDebugLogs),
 	}
 
-	if stack != nil {
+	if options.Stack != nil {
 		m.refreshStats()
 	}
 
 	// Add initial log entry
-	m.addDebugLog("Started NIAC-Go interactive mode on " + interfaceName)
+	m.addDebugLog("Started NIAC-Go interactive mode on " + options.InterfaceName)
 	m.addDebugLog(fmt.Sprintf("Debug level: %d (%s)", debugLevel, getDebugLevelName(debugLevel)))
-	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(cfg.Devices)))
+	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(options.Config.Devices)))
 
 	// Start TUI
 	p := tea.NewProgram(&m, tea.WithAltScreen())

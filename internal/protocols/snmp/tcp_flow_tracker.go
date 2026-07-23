@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -10,8 +12,18 @@ const (
 	tcpFlowSynReceived
 	tcpFlowEstablished
 	tcpFlowCloseWait
+	tcpAddressIndexParts    = 10
 	tcpFlowHandshakeTimeout = 75 * time.Second
 )
+
+func tcpAddressIndex(key tcpFlowKey) string {
+	parts := make([]string, 0, tcpAddressIndexParts)
+	parts = append(parts, strings.Split(key.localIP, ".")...)
+	parts = append(parts, strconv.Itoa(int(key.localPort)))
+	parts = append(parts, strings.Split(key.remoteIP, ".")...)
+	parts = append(parts, strconv.Itoa(int(key.remotePort)))
+	return strings.Join(parts, ".")
+}
 
 type tcpFlowKey struct {
 	localIP, remoteIP     string
@@ -131,7 +143,12 @@ func (t *tcpFlowTracker) recordOutbound(
 
 func tcpEventKey(event ProtocolEvent, inbound bool) tcpFlowKey {
 	if inbound {
-		return tcpFlowKey{event.DestinationIP, event.SourceIP, event.DestinationPort, event.SourcePort}
+		return tcpFlowKey{
+			event.DestinationIP,
+			event.SourceIP,
+			event.DestinationPort,
+			event.SourcePort,
+		}
 	}
 	return tcpFlowKey{event.SourceIP, event.DestinationIP, event.SourcePort, event.DestinationPort}
 }

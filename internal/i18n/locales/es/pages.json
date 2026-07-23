@@ -373,6 +373,7 @@
     "page": {
       "errorInjectionTitle": "Inyección de errores",
       "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
+      "errorInjectionRequiresPro": "La inyección de errores requiere NIAC Pro.",
       "pcapReplayTitle": "Reproducción de PCAP",
       "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
       "recentRunsTitle": "Ejecuciones recientes",

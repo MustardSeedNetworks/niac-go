@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"time"
+
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -15,7 +17,11 @@ type AgentOptions struct {
 }
 
 // NewAgentWithState creates an agent that reads mutable values from state.
-func NewAgentWithState(device *config.Device, state *devicestate.Store, options AgentOptions) *Agent {
+func NewAgentWithState(
+	device *config.Device,
+	state *devicestate.Store,
+	options AgentOptions,
+) *Agent {
 	telemetry := options.Telemetry
 	if telemetry == nil {
 		telemetry = NewProtocolTelemetry()
@@ -56,6 +62,11 @@ func (a *Agent) syncDeviceStateMIBs() {
 		return
 	}
 	snapshot := a.deviceState.Snapshot()
+	a.protocolStats.AdvanceInterfaceFaults(
+		time.Now(),
+		snapshot.Faults,
+		authoredInterfaceSpeeds(a.device),
+	)
 	if snapshot.Version == a.stateMIBVersion.Load() {
 		return
 	}
@@ -67,6 +78,14 @@ func (a *Agent) syncDeviceStateMIBs() {
 	a.refreshDeviceStateInterfaceMIBs()
 	a.refreshDeviceStateIPMIBs(snapshot)
 	a.stateMIBVersion.Store(snapshot.Version)
+}
+
+func authoredInterfaceSpeeds(device *config.Device) map[string]int {
+	result := make(map[string]int, len(device.Interfaces))
+	for _, iface := range device.Interfaces {
+		result[iface.Name] = iface.Speed
+	}
+	return result
 }
 
 func (a *Agent) refreshDeviceStateInterfaceMIBs() {

@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
 )
 
 // Command represents an IPC command.
@@ -16,12 +14,6 @@ const (
 	CommandStatus Command = "status"
 	// CommandReload reloads the configuration.
 	CommandReload Command = "reload"
-	// CommandInject injects an error.
-	CommandInject Command = "inject"
-	// CommandList lists active error injections.
-	CommandList Command = "list"
-	// CommandClear clears error injections.
-	CommandClear Command = "clear"
 	// CommandShutdown gracefully shuts down the simulation.
 	CommandShutdown Command = "shutdown"
 	// CommandLogs subscribes to log stream.
@@ -78,15 +70,6 @@ type StatusData struct {
 	PacketsRX    uint64    `json:"packets_received"`
 	PacketsTX    uint64    `json:"packets_sent"`
 	ErrorsActive int       `json:"errors_active"`
-}
-
-// ErrorInjectionData contains error injection information.
-type ErrorInjectionData struct {
-	Device    string           `json:"device"`
-	Interface string           `json:"interface"`
-	ErrorType apperr.ErrorType `json:"error_type"`
-	Value     int              `json:"value"`
-	Injected  time.Time        `json:"injected_at"`
 }
 
 // PacketData contains captured packet information for hex dump display.

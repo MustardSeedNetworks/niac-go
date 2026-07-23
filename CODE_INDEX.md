@@ -44,6 +44,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Capability | Canonical location | Notes |
 | --- | --- | --- |
 | Authoritative mutable device state | `internal/devicestate` + `internal/protocols/stack_device_state.go` | The stack owns one concurrency-safe store per simulated device; management protocols consume that shared store rather than owning mutable copies |
+| Observable interface faults | `internal/devicestate/store_fault.go` + `internal/protocols/stack_fault.go` + `internal/protocols/snmp/fault_telemetry.go` | One stack-owned fault catalog and state source drives API/TUI controls plus monotonic IF-MIB, IF-X, and EtherLike-MIB counters |
 | IOS-like command profile | `internal/devicecli` | Stateful command modes, help, operational rendering, configuration mutations, running/startup/checkpoint lifecycle, and explicit configuration events |
 | Virtual TCP byte streams | `internal/virtualtcp` | Buffered in-memory and packet-backed `net.Conn` implementations used by simulated stream protocols |
 | Simulated SSH transport | `internal/devicecli/ssh_server.go` + `internal/protocols/tcp_ssh.go` | Explicit per-device credentials, isolated command sessions, and SSH termination through the virtual IPv4/TCP packet path |

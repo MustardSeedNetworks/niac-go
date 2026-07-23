@@ -20,6 +20,8 @@ const (
 	EventVLANUpdated        EventKind = "vlan.updated"
 	EventRouterUpdated      EventKind = "router.updated"
 	EventRouteUpdated       EventKind = "route.updated"
+	EventFaultUpdated       EventKind = "fault.updated"
+	EventFaultCleared       EventKind = "fault.cleared"
 )
 
 // Event records one committed state transition.

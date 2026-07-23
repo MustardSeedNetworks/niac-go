@@ -1,21 +1,24 @@
 # REST API & Web UI
 
-NIAC now exposes a lightweight REST API, Prometheus metrics endpoint, and bundled Web UI for day-to-day monitoring.
+NIAC exposes a REST API, Prometheus metrics endpoint, and bundled Web UI over its HTTPS daemon listener.
 
 ## Enabling the API
 
 ```bash
-niac --api-listen :8080 --api-token supersecret en0 config.yaml
+export NIAC_API_TOKEN="$(openssl rand -base64 32)"
+niac daemon
 ```
 
 Flags:
 
 | Flag | Description |
 |------|-------------|
-| `--api-listen` | Address for REST API & Web UI (e.g., `:8080`) |
-| `--api-token` | Optional bearer token required for requests |
-| `--metrics-listen` | Optional dedicated metrics listener |
-| `--storage-path` | BoltDB location for run history (default: `~/.niac/niac.db`, set to `disabled` to opt out) |
+| `--listen` | HTTPS address for REST API & Web UI (default: `127.0.0.1:8445`) |
+| `--api-token` | Daemon bearer token (prefer `NIAC_API_TOKEN`) |
+| `--cert-dir` | Directory containing the generated HTTPS certificate and key |
+| `--storage` | BoltDB location for run history (default: `~/.niac/niac.db`, set to `disabled` to opt out) |
+
+Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no separate metrics listener.
 
 ## Endpoints
 
@@ -42,7 +45,7 @@ Include `Authorization: Bearer <token>` or append `?token=<token>` when authenti
 
 ## Web UI
 
-Navigate to `http://host:8080/` and supply the API token. The interface displays:
+Navigate to `https://localhost:8445/`. A non-loopback listener requires an API token. The interface displays:
 
 - Live stats (packets, errors, device counts)
 - Device inventory table
@@ -124,40 +127,35 @@ NIAC supports runtime error injection for testing and simulation scenarios. The 
 {
   "available_types": [
     {
-      "type": "fcs_errors",
-      "description": "Frame Check Sequence errors (Layer 2 corruption)"
+      "type": "FCS Errors",
+      "description": "Frame Check Sequence errors (0-100)"
     },
     {
-      "type": "packet_discards",
-      "description": "Packets dropped due to buffer overflow"
+      "type": "Packet Discards",
+      "description": "Dropped packets (0-100)"
     },
     {
-      "type": "interface_errors",
-      "description": "Generic interface input/output errors"
+      "type": "Interface Errors",
+      "description": "Generic interface errors (0-100)"
     },
     {
-      "type": "high_utilization",
-      "description": "Interface bandwidth saturation"
-    },
-    {
-      "type": "high_cpu",
-      "description": "Elevated CPU usage on device"
-    },
-    {
-      "type": "high_memory",
-      "description": "Memory pressure on device"
-    },
-    {
-      "type": "high_disk",
-      "description": "Disk space exhaustion"
+      "type": "High Utilization",
+      "description": "Interface bandwidth saturation (0-100%)"
     }
   ],
-  "info": "Error injection allows testing monitoring and alerting systems",
+  "info": "Fault injection updates SNMP interface counters",
+  "targets": [
+    {
+      "device": "edge-switch",
+      "address": "192.168.1.1",
+      "interfaces": ["GigabitEthernet0/1"]
+    }
+  ],
   "active_errors": {
-    "192.168.1.1": {
+    "edge-switch": {
       "GigabitEthernet0/1": {
-        "fcs_errors": 50,
-        "packet_discards": 25
+        "FCS Errors": 50,
+        "Packet Discards": 25
       }
     }
   }
@@ -168,23 +166,29 @@ NIAC supports runtime error injection for testing and simulation scenarios. The 
 
 ```json
 {
-  "device_ip": "192.168.1.1",
+  "device": "edge-switch",
   "interface": "GigabitEthernet0/1",
-  "error_type": "fcs_errors",
+  "errorType": "FCS Errors",
   "value": 50
 }
 ```
 
-The `value` field represents error severity (0-100), where:
-- 0 = No errors
-- 50 = Moderate error rate
-- 100 = Maximum error injection
+For FCS, discard, and interface errors, `value` is the counter increment rate
+per second. For utilization, it is the percentage of the authored interface
+speed applied to both input and output octet counters. Setting a fault to `0`
+clears only that fault type.
 
-`DELETE /api/v1/errors?device_ip=192.168.1.1&interface=GigabitEthernet0/1` clears all errors on a specific interface.
+`DELETE /api/v1/errors?device=edge-switch&interface=GigabitEthernet0/1&errorType=FCS%20Errors`
+clears one fault. Omitting `errorType` clears every fault on that interface.
 
 `DELETE /api/v1/errors` (no query parameters) clears all active error injections.
 
 Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays active errors in real-time and allows clearing individual interfaces or all errors at once.
+
+FCS faults increment `dot3StatsFCSErrors` and `ifInErrors`; packet discards
+increment `ifInDiscards` and `ifOutDiscards`; interface errors increment
+`ifInErrors` and `ifOutErrors`; utilization advances the 32-bit and 64-bit
+interface octet counters. All counters remain monotonic after a fault clears.
 
 ## Alerts
 
@@ -207,8 +211,8 @@ NIAC-Go exposes comprehensive Prometheus-compatible metrics at `/metrics`. For c
 ### Quick Start
 
 ```bash
-# View raw metrics
-curl http://localhost:8080/metrics
+# Use -k only until the generated certificate is trusted.
+curl -k -H "Authorization: Bearer $NIAC_API_TOKEN" https://localhost:8445/metrics
 
 # Example metrics:
 # niac_packets_sent_total 15234

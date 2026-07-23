@@ -363,19 +363,20 @@ const staticPages: PageDef[] = [
     help: (
       <>
         <p>
-          Inject controlled errors (drops, delays, corruption) into the running simulation to test
-          how upstream tooling reacts. Drives <code>POST /api/v1/errors</code>.
+          Inject controlled interface counter faults into the running simulation to test how
+          upstream monitoring reacts. Drives <code>POST /api/v1/errors</code>.
         </p>
         <h4>Common faults</h4>
         <ul>
           <li>
-            <strong>Drop rate</strong> — percentage of packets to drop on the device's egress.
+            <strong>FCS errors</strong> — increments frame-check and inbound error counters.
           </li>
           <li>
-            <strong>Delay</strong> — extra latency in milliseconds.
+            <strong>Packet discards</strong> — increments inbound and outbound discard counters.
           </li>
           <li>
-            <strong>Corruption</strong> — flip random bits in the payload.
+            <strong>Utilization</strong> — advances octet counters at a percentage of interface
+            speed.
           </li>
         </ul>
         <p>Errors clear when you stop the simulation or use the clear action in this panel.</p>

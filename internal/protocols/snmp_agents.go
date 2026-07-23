@@ -56,7 +56,15 @@ func (g *snmpAgentGroup) interfaceIndex(name string) (int, bool) {
 	return g.baseAgent.InterfaceIndex(name)
 }
 
-func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLevel int) *snmp.Agent {
+func (g *snmpAgentGroup) interfaceFaultObservable(name string) bool {
+	return g != nil && g.baseAgent != nil && g.baseAgent.InterfaceFaultObservable(name)
+}
+
+func (g *snmpAgentGroup) Ensure(
+	community string,
+	device *config.Device,
+	debugLevel int,
+) *snmp.Agent {
 	if g == nil {
 		return nil
 	}

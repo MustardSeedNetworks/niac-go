@@ -257,7 +257,9 @@ func startProfilingServer(port int, debugLevel int) {
 			logging.Infof("  CPU profile:    http://%s/debug/pprof/profile?seconds=30", addr)
 			logging.Infof("  Heap profile:   http://%s/debug/pprof/heap", addr)
 			logging.Infof("  Goroutines:     http://%s/debug/pprof/goroutine", addr)
-			logging.Warningf("Profiling server is for local development only - do not expose publicly")
+			logging.Warningf(
+				"Profiling server is for local development only - do not expose publicly",
+			)
 			fmt.Fprintln(os.Stdout)
 		}
 
@@ -313,7 +315,10 @@ func printUsage() {
 	printUsageDebugLevels()
 	printUsageExamples()
 	printUsageProfiling()
-	fmt.Fprintln(os.Stdout, "For more information, see: https://github.com/MustardSeedNetworks/niac-go")
+	fmt.Fprintln(
+		os.Stdout,
+		"For more information, see: https://github.com/MustardSeedNetworks/niac-go",
+	)
 }
 
 func printUsageHeader() {
@@ -350,18 +355,30 @@ func printUsageOptions() {
 	fmt.Fprintln(os.Stdout, "        --stats-interval <n> Statistics update interval [default: 1s]")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Advanced:")
-	fmt.Fprintln(os.Stdout, "        --babble-interval <n>   Traffic generation interval [default: 60s]")
+	fmt.Fprintln(
+		os.Stdout,
+		"        --babble-interval <n>   Traffic generation interval [default: 60s]",
+	)
 	fmt.Fprintln(os.Stdout, "        --no-traffic            Disable background traffic generation")
 	fmt.Fprintln(os.Stdout, "        --snmp-community <str>  Default SNMP community string")
 	fmt.Fprintln(os.Stdout, "        --max-packet-size <n>   Maximum packet size [default: 1514]")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Performance Profiling:")
 	fmt.Fprintln(os.Stdout, "    -p, --profile            Enable pprof performance profiling")
-	fmt.Fprintln(os.Stdout, "        --profile-port <port>   Port for pprof HTTP server [default: 6060]")
+	fmt.Fprintln(
+		os.Stdout,
+		"        --profile-port <port>   Port for pprof HTTP server [default: 6060]",
+	)
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Statistics Export:")
-	fmt.Fprintln(os.Stdout, "        --export-stats-json <file>  Export runtime statistics to JSON file on exit")
-	fmt.Fprintln(os.Stdout, "        --export-stats-csv <file>   Export runtime statistics to CSV file on exit")
+	fmt.Fprintln(
+		os.Stdout,
+		"        --export-stats-json <file>  Export runtime statistics to JSON file on exit",
+	)
+	fmt.Fprintln(
+		os.Stdout,
+		"        --export-stats-csv <file>   Export runtime statistics to CSV file on exit",
+	)
 	fmt.Fprintln(os.Stdout)
 }
 
@@ -435,7 +452,10 @@ func printUsageProfiling() {
 	fmt.Fprintln(os.Stdout, "    http://localhost:6060/debug/pprof/goroutine - Goroutine profile")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Collect CPU profile (30 seconds):")
-	fmt.Fprintln(os.Stdout, "    curl http://localhost:6060/debug/pprof/profile?seconds=30 > cpu.prof")
+	fmt.Fprintln(
+		os.Stdout,
+		"    curl http://localhost:6060/debug/pprof/profile?seconds=30 > cpu.prof",
+	)
 	fmt.Fprintln(os.Stdout, "    go tool pprof cpu.prof")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Collect memory profile:")
@@ -443,7 +463,10 @@ func printUsageProfiling() {
 	fmt.Fprintln(os.Stdout, "    go tool pprof mem.prof")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Interactive profiling:")
-	fmt.Fprintln(os.Stdout, "    go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30")
+	fmt.Fprintln(
+		os.Stdout,
+		"    go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30",
+	)
 	fmt.Fprintln(os.Stdout, "    go tool pprof http://localhost:6060/debug/pprof/heap")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  WARNING: Profiling server binds to localhost only for security.")
@@ -466,9 +489,18 @@ func printDeviceList(configFile string) {
 	}
 
 	// Print table header
-	fmt.Fprintln(os.Stdout, "┌────────────────────┬─────────────────┬───────────────────┬──────────┬───────┐")
-	fmt.Fprintln(os.Stdout, "│ Name               │ IP Address      │ MAC Address       │ Type     │ SNMP  │")
-	fmt.Fprintln(os.Stdout, "├────────────────────┼─────────────────┼───────────────────┼──────────┼───────┤")
+	fmt.Fprintln(
+		os.Stdout,
+		"┌────────────────────┬─────────────────┬───────────────────┬──────────┬───────┐",
+	)
+	fmt.Fprintln(
+		os.Stdout,
+		"│ Name               │ IP Address      │ MAC Address       │ Type     │ SNMP  │",
+	)
+	fmt.Fprintln(
+		os.Stdout,
+		"├────────────────────┼─────────────────┼───────────────────┼──────────┼───────┤",
+	)
 
 	// Print devices
 	for _, device := range cfg.Devices {
@@ -504,7 +536,10 @@ func printDeviceList(configFile string) {
 			snmp)
 	}
 
-	fmt.Fprintln(os.Stdout, "└────────────────────┴─────────────────┴───────────────────┴──────────┴───────┘")
+	fmt.Fprintln(
+		os.Stdout,
+		"└────────────────────┴─────────────────┴───────────────────┴──────────┴───────┘",
+	)
 	fmt.Fprintf(os.Stdout, "\nTotal: %d device(s)\n", len(cfg.Devices))
 
 	// Count SNMP-enabled devices
@@ -652,7 +687,14 @@ func runNormalMode(
 	defer engine.Close()
 	defer stack.Stop()
 
-	servicesRuntime, err := startRuntimeServices(engine, stack, cfg, interfaceName, configFile, services)
+	servicesRuntime, err := startRuntimeServices(
+		engine,
+		stack,
+		cfg,
+		interfaceName,
+		configFile,
+		services,
+	)
 	if err != nil {
 		return err
 	}
@@ -683,7 +725,14 @@ func runInteractiveMode(
 		return err
 	}
 
-	servicesRuntime, err := startRuntimeServices(engine, stack, cfg, interfaceName, configFile, services)
+	servicesRuntime, err := startRuntimeServices(
+		engine,
+		stack,
+		cfg,
+		interfaceName,
+		configFile,
+		services,
+	)
 	if err != nil {
 		engine.Close()
 		stack.Stop()
@@ -699,7 +748,16 @@ func runInteractiveMode(
 	}()
 
 	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime, loadFeatureChecker)
-	if runErr := interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc); runErr != nil {
+	if runErr := interactive.Run(interactive.Options{
+		InterfaceName:         interfaceName,
+		Config:                cfg,
+		DebugConfig:           debugConfig,
+		Stack:                 stack,
+		StartTime:             startTime,
+		Reload:                reloadFunc,
+		ConfigFilePath:        configFile,
+		FaultInjectionEnabled: manager.HasFeature("error_injection"),
+	}); runErr != nil {
 		return fmt.Errorf("failed to run interactive mode: %w", runErr)
 	}
 	return nil
@@ -756,7 +814,11 @@ func configureDHCPForDevice(stack *protocols.Stack, device *config.Device) bool 
 }
 
 // configureDHCPv4Basic sets basic DHCPv4 server configuration.
-func configureDHCPv4Basic(handler *protocols.DHCPHandler, serverIP net.IP, dhcp *config.DHCPConfig) {
+func configureDHCPv4Basic(
+	handler *protocols.DHCPHandler,
+	serverIP net.IP,
+	dhcp *config.DHCPConfig,
+) {
 	hasBasicConfig := len(dhcp.DomainNameServer) > 0 || dhcp.Router != nil
 	if !hasBasicConfig {
 		return
@@ -963,16 +1025,52 @@ func printFinalStats(stack *protocols.Stack, uptime time.Duration) {
 	fmt.Fprintln(os.Stdout, "╠══════════════════════════════════════════════════════════════════╣")
 	fmt.Fprintf(os.Stdout, "║ Total Uptime:        %-43s ║\n", formatDuration(uptime))
 	fmt.Fprintln(os.Stdout, "║                                                                  ║")
-	fmt.Fprintf(os.Stdout, "║ Packets Received:    %-10d                                    ║\n", stats.PacketsReceived)
-	fmt.Fprintf(os.Stdout, "║ Packets Sent:        %-10d                                    ║\n", stats.PacketsSent)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ Packets Received:    %-10d                                    ║\n",
+		stats.PacketsReceived,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ Packets Sent:        %-10d                                    ║\n",
+		stats.PacketsSent,
+	)
 	fmt.Fprintln(os.Stdout, "║                                                                  ║")
-	fmt.Fprintf(os.Stdout, "║ ARP Requests:        %-10d                                    ║\n", stats.ARPRequests)
-	fmt.Fprintf(os.Stdout, "║ ARP Replies:         %-10d                                    ║\n", stats.ARPReplies)
-	fmt.Fprintf(os.Stdout, "║ ICMP Requests:       %-10d                                    ║\n", stats.ICMPRequests)
-	fmt.Fprintf(os.Stdout, "║ ICMP Replies:        %-10d                                    ║\n", stats.ICMPReplies)
-	fmt.Fprintf(os.Stdout, "║ DNS Queries:         %-10d                                    ║\n", stats.DNSQueries)
-	fmt.Fprintf(os.Stdout, "║ DHCP Requests:       %-10d                                    ║\n", stats.DHCPRequests)
-	fmt.Fprintf(os.Stdout, "║ Neighbors Learned:   %-10d                                    ║\n", neighbors)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ ARP Requests:        %-10d                                    ║\n",
+		stats.ARPRequests,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ ARP Replies:         %-10d                                    ║\n",
+		stats.ARPReplies,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ ICMP Requests:       %-10d                                    ║\n",
+		stats.ICMPRequests,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ ICMP Replies:        %-10d                                    ║\n",
+		stats.ICMPReplies,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ DNS Queries:         %-10d                                    ║\n",
+		stats.DNSQueries,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ DHCP Requests:       %-10d                                    ║\n",
+		stats.DHCPRequests,
+	)
+	fmt.Fprintf(
+		os.Stdout,
+		"║ Neighbors Learned:   %-10d                                    ║\n",
+		neighbors,
+	)
 	fmt.Fprintln(os.Stdout, "╚══════════════════════════════════════════════════════════════════╝")
 	fmt.Fprintln(os.Stdout)
 }

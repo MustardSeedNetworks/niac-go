@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -122,7 +121,6 @@ type Stack struct {
 	stateIPv4       map[*DeviceTable]map[netip.Addr][]*config.Device
 	stateDeviceIPv4 map[*config.Device]deviceIPv4Index
 	notifications   *stateNotificationManager
-	errorManager    *apperr.StateManager
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
@@ -202,18 +200,17 @@ func newStack(
 	bufferSize := DefaultQueueBufferSize
 
 	stack := &Stack{
-		capture:      captureEngine,
-		config:       cfg,
-		devices:      NewDeviceTable(),
-		sendQueue:    make(chan *Packet, bufferSize),
-		recvQueue:    make(chan *Packet, bufferSize),
-		stats:        &Statistics{},
-		stopChan:     make(chan struct{}),
-		debugConfig:  debugConfig,
-		snmpAgents:   make(map[*config.Device]*snmpAgentGroup),
-		neighbors:    newNeighborTable(),
-		errorManager: apperr.NewStateManager(),
-		vlanMode:     configUsesVLANs(cfg),
+		capture:     captureEngine,
+		config:      cfg,
+		devices:     NewDeviceTable(),
+		sendQueue:   make(chan *Packet, bufferSize),
+		recvQueue:   make(chan *Packet, bufferSize),
+		stats:       &Statistics{},
+		stopChan:    make(chan struct{}),
+		debugConfig: debugConfig,
+		snmpAgents:  make(map[*config.Device]*snmpAgentGroup),
+		neighbors:   newNeighborTable(),
+		vlanMode:    configUsesVLANs(cfg),
 	}
 	stack.notifications = newStateNotificationManager(stack)
 
@@ -598,11 +595,6 @@ func (s *Stack) GetNeighbors() []NeighborRecord {
 	}
 
 	return s.neighbors.list()
-}
-
-// GetErrorManager returns the error state manager.
-func (s *Stack) GetErrorManager() *apperr.StateManager {
-	return s.errorManager
 }
 
 // SetCaptureFilter sets a BPF filter on the underlying capture engine.

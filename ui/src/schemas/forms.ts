@@ -56,7 +56,7 @@ export type UploadTemplateFormFields = v.InferOutput<typeof UploadTemplateSchema
 
 /**
  * Error injection form: device + interface + error type + percentage value.
- * Used by ErrorInjectionPanel. The Go side validates the (deviceIp,
+ * Used by ErrorInjectionPanel. The Go side validates the (device,
  * interface, errorType) tuple against the simulation registry.
  */
 export const ErrorInjectionSchema = v.object({

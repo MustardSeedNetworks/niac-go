@@ -226,7 +226,12 @@ func TestDNSParsePTRName(t *testing.T) {
 		isV6   bool
 	}{
 		{"ipv4 valid", "1.0.0.10.in-addr.arpa", true, false},
-		{"ipv6 valid", "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.d.f.ip6.arpa", true, true},
+		{
+			"ipv6 valid",
+			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.d.f.ip6.arpa",
+			true,
+			true,
+		},
 		{"invalid suffix", "foo.bar.baz", false, false},
 		{"short ipv4", "1.0.in-addr.arpa", false, false},
 	}
@@ -892,7 +897,12 @@ func TestFTPDispatchCommands(t *testing.T) {
 		t.Run(tt.cmd, func(t *testing.T) {
 			result := h.dispatchFTPCommand(tt.cmd, "", false, nil)
 			if !strings.Contains(result, tt.contains) {
-				t.Errorf("dispatchFTPCommand(%s) = %q, want to contain %q", tt.cmd, result, tt.contains)
+				t.Errorf(
+					"dispatchFTPCommand(%s) = %q, want to contain %q",
+					tt.cmd,
+					result,
+					tt.contains,
+				)
 			}
 		})
 	}
@@ -1195,7 +1205,13 @@ func TestHTTPGenerateResponse(t *testing.T) {
 			Enabled:    true,
 			ServerName: "Custom/1.0",
 			Endpoints: []config.HTTPEndpoint{
-				{Path: "/custom", Method: "GET", StatusCode: 201, Body: "created", ContentType: "text/plain"},
+				{
+					Path:        "/custom",
+					Method:      "GET",
+					StatusCode:  201,
+					Body:        "created",
+					ContentType: "text/plain",
+				},
 			},
 		},
 	}
@@ -1276,7 +1292,11 @@ func TestNeighborTableDefaultTTL(t *testing.T) {
 		t.Fatal("expected 1 record")
 	}
 	if records[0].TTL != neighborDefaultTTLSeconds*time.Second {
-		t.Errorf("expected default TTL %v, got %v", neighborDefaultTTLSeconds*time.Second, records[0].TTL)
+		t.Errorf(
+			"expected default TTL %v, got %v",
+			neighborDefaultTTLSeconds*time.Second,
+			records[0].TTL,
+		)
 	}
 }
 
@@ -1367,7 +1387,16 @@ func TestCDPCapabilitiesToStrings(t *testing.T) {
 		t.Fatal("expected non-empty capabilities")
 	}
 
-	expected := []string{"router", "switch", "bridge", "host", "repeater", "phone", "remote", "igmp-filter"}
+	expected := []string{
+		"router",
+		"switch",
+		"bridge",
+		"host",
+		"repeater",
+		"phone",
+		"remote",
+		"igmp-filter",
+	}
 	for _, e := range expected {
 		found := slices.Contains(result, e)
 		if !found {
@@ -1419,8 +1448,16 @@ func TestStackSNMPEnabled(t *testing.T) {
 		{"walkfile without community", config.SNMPConfig{WalkFile: "walk.txt"}, false},
 		{"sysname without community", config.SNMPConfig{SysName: "sw1"}, false},
 		{"addmibs without community", config.SNMPConfig{AddMibs: []config.AddMib{{}}}, false},
-		{"fdb without community", config.SNMPConfig{Dot1DFdbTable: &config.FdbTableConfig{}}, false},
-		{"traps without community", config.SNMPConfig{Traps: &config.TrapConfig{Enabled: true}}, false},
+		{
+			"fdb without community",
+			config.SNMPConfig{Dot1DFdbTable: &config.FdbTableConfig{}},
+			false,
+		},
+		{
+			"traps without community",
+			config.SNMPConfig{Traps: &config.TrapConfig{Enabled: true}},
+			false,
+		},
 		{"traps disabled", config.SNMPConfig{Traps: &config.TrapConfig{Enabled: false}}, false},
 		{"explicitly disabled", config.SNMPConfig{Enabled: &disabled, Community: "public"}, false},
 	}
@@ -1528,7 +1565,22 @@ func TestHealthCheckGenerateLDAPResponse(t *testing.T) {
 	h := NewHealthCheckHandler(stack)
 
 	// Valid LDAP request with SEQUENCE tag, INTEGER for messageID
-	request := []byte{0x30, 0x0c, 0x02, 0x01, 0x05, 0x60, 0x07, 0x02, 0x01, 0x03, 0x04, 0x00, 0x80, 0x00}
+	request := []byte{
+		0x30,
+		0x0c,
+		0x02,
+		0x01,
+		0x05,
+		0x60,
+		0x07,
+		0x02,
+		0x01,
+		0x03,
+		0x04,
+		0x00,
+		0x80,
+		0x00,
+	}
 	resp := h.generateLDAPResponse(request, nil)
 	if resp == nil {
 		t.Fatal("expected non-nil LDAP response")
@@ -2645,7 +2697,13 @@ func TestDHCPv6BuildResponse(t *testing.T) {
 	}
 
 	// Info-only response
-	response := h.buildDHCPv6Response(DHCPv6Advertise, clientMsg, nil, &config.Device{Name: "d1"}, true)
+	response := h.buildDHCPv6Response(
+		DHCPv6Advertise,
+		clientMsg,
+		nil,
+		&config.Device{Name: "d1"},
+		true,
+	)
 	if response == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -2673,9 +2731,6 @@ func TestStackAccessors(t *testing.T) {
 	}
 	if stack.GetDebugConfig() == nil {
 		t.Error("expected non-nil debug config")
-	}
-	if stack.GetErrorManager() == nil {
-		t.Error("expected non-nil error manager")
 	}
 	level := stack.GetProtocolDebugLevel("stp")
 	if level != 0 {
@@ -2893,7 +2948,14 @@ func TestDHCPv6DispatchMessage(t *testing.T) {
 
 	// Test unknown type
 	msg.MessageType = 99
-	h.dispatchDHCPv6Message(msg, net.ParseIP("fd00::100"), net.ParseIP("fd00::1"), serverDev, 1, DebugLevelInfo)
+	h.dispatchDHCPv6Message(
+		msg,
+		net.ParseIP("fd00::100"),
+		net.ParseIP("fd00::1"),
+		serverDev,
+		1,
+		DebugLevelInfo,
+	)
 }
 
 // ---------- DHCP parseDHCPPacket tests ----------
