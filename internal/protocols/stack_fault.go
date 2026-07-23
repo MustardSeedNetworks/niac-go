@@ -122,7 +122,7 @@ func (s *Stack) InterfaceFaultTargets() []InterfaceFaultTarget {
 	return result
 }
 
-// InterfaceFaultTarget returns the first addressable interface from a device's current state.
+// InterfaceFaultTarget returns the first observable interface from a device's current state.
 func (s *Stack) InterfaceFaultTarget(device *config.Device) (string, string, bool) {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
@@ -131,9 +131,14 @@ func (s *Stack) InterfaceFaultTarget(device *config.Device) (string, string, boo
 		return "", "", false
 	}
 	for _, iface := range store.Snapshot().Network.Interfaces {
-		if iface.Address.IsValid() && s.snmpAgents[device].interfaceFaultObservable(iface.Name) {
-			return iface.Address.Addr().Unmap().String(), iface.Name, true
+		if !s.snmpAgents[device].interfaceFaultObservable(iface.Name) {
+			continue
 		}
+		address := ""
+		if iface.Address.IsValid() {
+			address = iface.Address.Addr().Unmap().String()
+		}
+		return address, iface.Name, true
 	}
 	return "", "", false
 }

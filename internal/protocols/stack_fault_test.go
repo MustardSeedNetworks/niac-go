@@ -127,6 +127,24 @@ func TestStackInterfaceFaultTargetUsesCurrentDeviceState(t *testing.T) {
 	}
 }
 
+func TestStackInterfaceFaultTargetAllowsUnnumberedInterface(t *testing.T) {
+	stack, device := newFaultTestStack()
+	if err := stack.deviceStates[device].UpdateInterface(
+		"Gi0/1",
+		func(iface devicestate.Interface) (devicestate.Interface, error) {
+			iface.Address = netip.Prefix{}
+			return iface, nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	address, interfaceName, ok := stack.InterfaceFaultTarget(device)
+	if !ok || address != "" || interfaceName != "Gi0/1" {
+		t.Fatalf("target = %q, %q, %t", address, interfaceName, ok)
+	}
+}
+
 func TestStackFaultTelemetryReachesSNMPCounters(t *testing.T) {
 	stack, device := newFaultTestStack()
 	group := stack.snmpAgents[device]
