@@ -109,8 +109,9 @@ test-frontend-quiet:
 		exit $$STATUS; \
 	fi
 
-test-hooks: ## Run repository hook regression tests
+test-hooks: ## Run repository script regression tests
 	@./scripts/tests/pre-commit-hook-test.sh
+	@./scripts/tests/release-content-integrity-test.sh
 
 # =============================================================================
 # E2E Tests
