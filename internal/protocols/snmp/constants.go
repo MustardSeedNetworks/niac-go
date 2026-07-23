@@ -2,6 +2,13 @@ package snmp
 
 // SNMP numeric constants used across the package.
 const (
+	// OIDColdStart identifies the standard coldStart notification.
+	OIDColdStart = ".1.3.6.1.6.3.1.1.5.1"
+	// OIDLinkDown identifies the standard linkDown notification.
+	OIDLinkDown = ".1.3.6.1.6.3.1.1.5.3"
+	// OIDLinkUp identifies the standard linkUp notification.
+	OIDLinkUp = ".1.3.6.1.6.3.1.1.5.4"
+
 	// OIDPartsMinPDU is the minimum OID parts for PDU validation.
 	OIDPartsMinPDU = 2
 	// OIDPartsMinV3 is the minimum parts for SNMPv3 validation.

@@ -52,7 +52,6 @@ func (s *Stack) receiveAndQueuePacket(buffer []byte) {
 		return
 	}
 
-	s.notifyObservers("rx", pkt)
 	s.queuePacket(pkt)
 }
 
@@ -92,6 +91,16 @@ func (s *Stack) queuePacket(pkt *Packet) {
 	select {
 	case s.recvQueue <- pkt:
 	default:
+		if s.fabric != nil {
+			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RejectionReason = "receive_queue_full"
+			s.stats.mu.Lock()
+			s.stats.FabricDrops++
+			s.stats.mu.Unlock()
+		}
+		s.notifyObservers("rx", pkt)
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
 			_, _ = fmt.Fprintln(os.Stdout, "Receive queue full, dropping packet")
 		}
@@ -118,6 +127,11 @@ func (s *Stack) decodeThread() {
 func (s *Stack) decodePacket(pkt *Packet) {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
+	defer s.notifyObservers("rx", pkt)
+	if s.fabric != nil {
+		pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+		pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+	}
 
 	// Defense in depth: a simulator is exposed to arbitrary, adversarial, and
 	// malformed traffic (discovery tools, scanners, fuzzers). A panic while
@@ -138,6 +152,11 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	}()
 
 	if s.fabric != nil && !s.fabric.acceptsFrame(pkt.VLAN, pkt.VLANTagged) {
+		pkt.fabricTrace.RouteDecision = "dropped"
+		pkt.fabricTrace.RejectionReason = "physical_vlan_rejected"
+		s.stats.mu.Lock()
+		s.stats.FabricDrops++
+		s.stats.mu.Unlock()
 		return
 	}
 
@@ -393,7 +412,19 @@ func (s *Stack) recordSendError(pkt *Packet, err error) {
 	}
 	s.stats.mu.Lock()
 	s.stats.Errors++
+	if s.fabric != nil {
+		s.stats.FabricDrops++
+		if pkt != nil {
+			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RejectionReason = "egress_rejected"
+		}
+	}
 	s.stats.mu.Unlock()
+	if s.fabric != nil && pkt != nil {
+		s.notifyObservers("tx", pkt)
+	}
 }
 
 // babbleThread generates periodic network traffic.
@@ -425,7 +456,7 @@ func (s *Stack) sendBabble(device *config.Device) {
 		return
 	}
 
-	srcIP := firstIPv4Address(device)
+	srcIP := s.firstStateIPv4Address(device)
 	if srcIP == nil {
 		return
 	}

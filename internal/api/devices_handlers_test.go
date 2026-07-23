@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
@@ -175,6 +177,107 @@ func TestHandleDeviceCreateDuplicate(t *testing.T) {
 
 	if rec.Code != http.StatusConflict {
 		t.Errorf("status = %d, want %d: %s", rec.Code, http.StatusConflict, rec.Body.String())
+	}
+}
+
+func TestHandleDeviceCreatePreservesSegmentedConfig(t *testing.T) {
+	server := newDeviceTestServer(t)
+	segmented := &config.Config{Segments: []config.Segment{{
+		Tag: 10,
+		Devices: []config.Device{{
+			Name: "segmented-router", Type: "router",
+			MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+		}},
+	}}}
+	if err := server.saveConfig(segmented); err != nil {
+		t.Fatalf("save segmented config: %v", err)
+	}
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices",
+		strings.NewReader(`{"hostname":"top-level","type":"router"}`))
+
+	server.handleDevicesV2(recorder, request)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409: %s", recorder.Code, recorder.Body.String())
+	}
+	saved, err := os.ReadFile(server.configPath())
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	persisted, err := config.LoadYAMLBytes(saved)
+	if err != nil {
+		t.Fatalf("saved segmented config became invalid: %v", err)
+	}
+	if persisted.DeviceCount() != 1 || len(persisted.Devices) != 0 {
+		t.Fatalf("saved segmented config mutated: %#v", persisted)
+	}
+}
+
+func TestHandleDeviceCreateSerializesFreeTierBoundary(t *testing.T) {
+	server := newDeviceTestServer(t)
+	cfg := deepCopyConfig(server.currentConfig())
+	for index := cfg.DeviceCount(); index < FreeTierDeviceCount-1; index++ {
+		cfg.Devices = append(cfg.Devices, config.Device{
+			Name:       fmt.Sprintf("device-%d", index),
+			Type:       "router",
+			MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, byte(index)},
+		})
+	}
+	if err := server.saveConfig(cfg); err != nil {
+		t.Fatalf("save boundary config: %v", err)
+	}
+
+	bodies := []string{
+		`{"hostname":"boundary-a","type":"router","mac":"AA:BB:CC:DD:EE:A1","ip":"10.0.0.101"}`,
+		`{"hostname":"boundary-b","type":"router","mac":"AA:BB:CC:DD:EE:B1","ip":"10.0.0.102"}`,
+	}
+	start := make(chan struct{})
+	results := make(chan int, len(bodies))
+	var group sync.WaitGroup
+	for _, body := range bodies {
+		group.Go(func() {
+			<-start
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(
+				http.MethodPost, "/api/v1/config/devices", strings.NewReader(body),
+			)
+			server.handleDevicesV2(recorder, request)
+			results <- recorder.Code
+		})
+	}
+	close(start)
+	group.Wait()
+	close(results)
+
+	created := 0
+	blocked := 0
+	for status := range results {
+		switch status {
+		case http.StatusCreated:
+			created++
+		case http.StatusPaymentRequired:
+			blocked++
+		default:
+			t.Fatalf("unexpected status %d", status)
+		}
+	}
+	if created != 1 || blocked != 1 {
+		t.Fatalf("created = %d, blocked = %d; want 1 each", created, blocked)
+	}
+	if count := server.currentConfig().DeviceCount(); count != FreeTierDeviceCount {
+		t.Fatalf("in-memory device count = %d, want %d", count, FreeTierDeviceCount)
+	}
+	saved, err := os.ReadFile(server.configPath())
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	persisted, err := config.LoadYAMLBytes(saved)
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	if count := persisted.DeviceCount(); count != FreeTierDeviceCount {
+		t.Fatalf("persisted device count = %d, want %d", count, FreeTierDeviceCount)
 	}
 }
 
@@ -460,6 +563,39 @@ func TestHandleDeviceUpdateInvalidInterface(t *testing.T) {
 	}
 }
 
+func TestHandleDeviceUpdateRejectsUnlicensedSSH(t *testing.T) {
+	t.Setenv("NIAC_TEST_SSH_PASSWORD", "secret")
+	server := newDeviceTestServer(t)
+	body := `{"ssh":{"enabled":true,"username":"admin","passwordEnv":"NIAC_TEST_SSH_PASSWORD"}}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusPaymentRequired, rec.Body.String())
+	}
+	if server.currentConfig().Devices[0].SSHConfig != nil {
+		t.Fatal("rejected SSH update changed the saved configuration")
+	}
+}
+
+func TestHandleDeviceUpdateRejectsInvalidSyslog(t *testing.T) {
+	server := newDeviceTestServer(t)
+	body := `{"syslog":{"enabled":true,"receivers":["192.0.2.50"]}}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/router1", strings.NewReader(body))
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+	if server.currentConfig().Devices[0].SyslogConfig != nil {
+		t.Fatal("rejected SYSLOG update changed the saved configuration")
+	}
+}
+
 func TestHandleDeviceCloneSuccess(t *testing.T) {
 	server := newDeviceTestServer(t)
 
@@ -481,6 +617,29 @@ func TestHandleDeviceCloneSuccess(t *testing.T) {
 	}
 }
 
+func TestHandleDeviceCloneRejectsPaidProtocolOnFree(t *testing.T) {
+	server := newDeviceTestServer(t)
+	server.cfg.Config.Devices[0].SSHConfig = &config.SSHConfig{Enabled: true}
+	body := `{"newHostname":"router1-clone","newIp":"10.0.0.5","newMac":"AA:BB:CC:DD:EE:01"}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(
+		http.MethodPost, "/api/v1/config/devices/router1/clone", strings.NewReader(body),
+	)
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusPaymentRequired {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusPaymentRequired, rec.Body.String())
+	}
+	var response FeatureGateResponse
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.RequiredFeature != "routed_labs" {
+		t.Fatalf("required feature = %q, want routed_labs", response.RequiredFeature)
+	}
+}
+
 func TestHandleDeviceCloneSourceNotFound(t *testing.T) {
 	server := newDeviceTestServer(t)
 
@@ -491,6 +650,22 @@ func TestHandleDeviceCloneSourceNotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestHandleDeviceCloneWithoutConfigReturnsNotFound(t *testing.T) {
+	server := newDeviceTestServer(t)
+	server.cfg.Config = nil
+	body := `{"newHostname":"clone1"}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(
+		http.MethodPost, "/api/v1/config/devices/router1/clone", strings.NewReader(body),
+	)
+
+	server.handleDevicesV2(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusNotFound, rec.Body.String())
 	}
 }
 
@@ -762,6 +937,40 @@ func TestCreateDeviceFromRequestPersistsSNMPOverlay(t *testing.T) {
 	}
 }
 
+func TestDeviceCRUDPersistsManagementConfiguration(t *testing.T) {
+	dev, err := createDeviceFromRequest(DeviceCreateRequest{
+		Hostname: "edge-1",
+		SSH: &SSHConfigRequest{
+			Enabled: true, Username: " admin ", PasswordEnv: " NIAC_TEST_SSH_PASSWORD ",
+		},
+		Syslog: &SyslogConfigRequest{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
+	})
+	if err != nil {
+		t.Fatalf("createDeviceFromRequest: %v", err)
+	}
+	if dev.SSHConfig == nil || dev.SSHConfig.Username != "admin" ||
+		dev.SSHConfig.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
+		t.Fatalf("SSH config not persisted: %+v", dev.SSHConfig)
+	}
+	if dev.SyslogConfig == nil || len(dev.SyslogConfig.Receivers) != 1 {
+		t.Fatalf("SYSLOG config not persisted: %+v", dev.SyslogConfig)
+	}
+
+	err = applyPartialDeviceUpdate(dev, DeviceUpdateRequest{
+		SSH:    &SSHConfigRequest{Enabled: false},
+		Syslog: &SyslogConfigRequest{Enabled: true, Receivers: []string{"198.51.100.50:514"}},
+	})
+	if err != nil {
+		t.Fatalf("applyPartialDeviceUpdate: %v", err)
+	}
+	if dev.SSHConfig == nil || dev.SSHConfig.Enabled {
+		t.Fatalf("SSH update not persisted: %+v", dev.SSHConfig)
+	}
+	if got := dev.SyslogConfig.Receivers[0]; got != "198.51.100.50:514" {
+		t.Fatalf("SYSLOG receiver = %q", got)
+	}
+}
+
 func TestCollectDeviceProtocols(t *testing.T) {
 	t.Run("no protocols", func(t *testing.T) {
 		dev := &config.Device{Name: "test"}
@@ -844,6 +1053,10 @@ func TestDeviceToResponseWithDetails(t *testing.T) {
 		SNMPConfig: config.SNMPConfig{Community: "public", SysName: "router1"},
 		LLDPConfig: &config.LLDPConfig{Enabled: true, TTL: 120},
 		CDPConfig:  &config.CDPConfig{Enabled: true, Platform: "cisco"},
+		SSHConfig: &config.SSHConfig{
+			Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
+		},
+		SyslogConfig: &config.SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 	}
 
 	resp := deviceToResponse(dev, true, false)
@@ -856,6 +1069,12 @@ func TestDeviceToResponseWithDetails(t *testing.T) {
 	}
 	if resp.CDP == nil {
 		t.Error("CDP should not be nil")
+	}
+	if resp.SSH == nil || resp.SSH.PasswordEnv != "NIAC_TEST_SSH_PASSWORD" {
+		t.Fatalf("SSH = %+v", resp.SSH)
+	}
+	if resp.Syslog == nil || len(resp.Syslog.Receivers) != 1 {
+		t.Fatalf("SYSLOG = %+v", resp.Syslog)
 	}
 }
 

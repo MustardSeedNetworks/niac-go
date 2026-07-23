@@ -49,7 +49,6 @@ func buildFullRoot() *cobra.Command {
 		func(r *cobra.Command, _ *serviceOptions) { addDaemonCommand(r, info) },
 		addDumpCommand,
 		addInitCommand,
-		addInjectCommand,
 		func(r *cobra.Command, _ *serviceOptions) { addInstallCACommand(r) },
 		addLicenseCommand,
 		addListCommand,

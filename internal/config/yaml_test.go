@@ -542,18 +542,6 @@ devices:
           enabled: true
           link_down: true
           link_up: true
-        high_cpu:
-          enabled: true
-          threshold: 80
-          interval: 300
-        high_memory:
-          enabled: true
-          threshold: 90
-          interval: 300
-        interface_errors:
-          enabled: true
-          threshold: 100
-          interval: 60
 `
 	tmpfile := createTempYAML(t, yaml)
 
@@ -599,73 +587,6 @@ devices:
 
 	if !traps.LinkState.LinkDown || !traps.LinkState.LinkUp {
 		t.Error("Expected link down and link up enabled")
-	}
-
-	// Test high CPU trap
-	if traps.HighCPU == nil {
-		t.Fatal("Expected high CPU config, got nil")
-	}
-
-	if traps.HighCPU.Threshold != 80 {
-		t.Errorf("Expected threshold 80, got %d", traps.HighCPU.Threshold)
-	}
-
-	if traps.HighCPU.Interval != 300 {
-		t.Errorf("Expected interval 300, got %d", traps.HighCPU.Interval)
-	}
-}
-
-// TestLoadYAML_TrapDefaults tests default values for trap config (v1.6.0).
-func TestLoadYAML_TrapDefaults(t *testing.T) {
-	yaml := `
-devices:
-  - name: trap-defaults
-    mac: "00:11:22:33:44:55"
-    ips:
-      - "192.168.1.1"
-    snmp_agent:
-      traps:
-        enabled: true
-        receivers:
-          - "192.168.1.100:162"
-        high_cpu:
-          enabled: true
-        high_memory:
-          enabled: true
-        interface_errors:
-          enabled: true
-`
-	tmpfile := createTempYAML(t, yaml)
-
-	defer func() { _ = os.Remove(tmpfile) }()
-
-	cfg, err := LoadYAML(tmpfile)
-	if err != nil {
-		t.Fatalf("LoadYAML failed: %v", err)
-	}
-
-	device := cfg.Devices[0]
-	traps := device.SNMPConfig.Traps
-
-	// Check defaults are applied
-	if traps.HighCPU.Threshold != 80 {
-		t.Errorf("Expected default CPU threshold 80, got %d", traps.HighCPU.Threshold)
-	}
-
-	if traps.HighCPU.Interval != 300 {
-		t.Errorf("Expected default CPU interval 300, got %d", traps.HighCPU.Interval)
-	}
-
-	if traps.HighMemory.Threshold != 90 {
-		t.Errorf("Expected default memory threshold 90, got %d", traps.HighMemory.Threshold)
-	}
-
-	if traps.InterfaceErrors.Threshold != 100 {
-		t.Errorf("Expected default error threshold 100, got %d", traps.InterfaceErrors.Threshold)
-	}
-
-	if traps.InterfaceErrors.Interval != 60 {
-		t.Errorf("Expected default error interval 60, got %d", traps.InterfaceErrors.Interval)
 	}
 }
 

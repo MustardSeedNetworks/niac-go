@@ -18,7 +18,7 @@ const safeReport: SimulationPreflightReport = {
       attachment: 'tester',
       interface: 'eth0',
       mode: 'access',
-      accessVlan: 200,
+      physicalVlan: 200,
       network: 'lab-access',
       wireTagged: false,
     },
@@ -80,6 +80,7 @@ describe('PreflightStep', () => {
     await user.click(screen.getByTestId('wizard-preflight-check'));
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('not found'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Unsafe physical attachment');
     expect(preflightSimulation).toHaveBeenCalledWith(
       expect.objectContaining({ attachmentMode: 'direct' }),
     );

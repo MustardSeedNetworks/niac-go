@@ -4,12 +4,15 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 type snmpAgentGroup struct {
 	agents    map[string]*snmp.Agent
 	telemetry *snmp.ProtocolTelemetry
+	state     *devicestate.Store
+	baseAgent *snmp.Agent
 	// v3 is the device's SNMPv3 authoritative engine (nil when v3 is disabled).
 	v3 *snmp.V3Engine
 	// v3Agent is the MIB-backing agent used to answer v3 scoped PDUs (the base
@@ -17,8 +20,12 @@ type snmpAgentGroup struct {
 	v3Agent *snmp.Agent
 }
 
-func newSnmpAgentGroup() *snmpAgentGroup {
-	return &snmpAgentGroup{agents: make(map[string]*snmp.Agent), telemetry: snmp.NewProtocolTelemetry()}
+func newSnmpAgentGroup(state *devicestate.Store) *snmpAgentGroup {
+	return &snmpAgentGroup{
+		agents:    make(map[string]*snmp.Agent),
+		telemetry: snmp.NewProtocolTelemetry(),
+		state:     state,
+	}
 }
 
 func (g *snmpAgentGroup) Get(community string) *snmp.Agent {
@@ -42,6 +49,13 @@ func (g *snmpAgentGroup) observer() *snmp.Agent {
 	return nil
 }
 
+func (g *snmpAgentGroup) interfaceIndex(name string) (int, bool) {
+	if g == nil || g.baseAgent == nil {
+		return 0, false
+	}
+	return g.baseAgent.InterfaceIndex(name)
+}
+
 func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLevel int) *snmp.Agent {
 	if g == nil {
 		return nil
@@ -56,7 +70,11 @@ func (g *snmpAgentGroup) Ensure(community string, device *config.Device, debugLe
 		return agent
 	}
 
-	agent := snmp.NewAgentWithCommunityAndTelemetry(device, community, debugLevel, g.telemetry)
+	agent := snmp.NewAgentWithState(device, g.state, snmp.AgentOptions{
+		Community:  community,
+		DebugLevel: debugLevel,
+		Telemetry:  g.telemetry,
+	})
 	g.agents[community] = agent
 
 	return agent

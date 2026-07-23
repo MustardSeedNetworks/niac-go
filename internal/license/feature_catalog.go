@@ -31,6 +31,10 @@ func featureMeta() map[string]FeatureMeta {
 			Label:       "Unlimited Devices",
 			Description: "Simulate more than the Free tier's device cap in a single config.",
 		},
+		"routed_labs": {
+			Label:       "Routed Virtual Labs",
+			Description: "Simulate routed IPv4 networks with stateful device management and SSH access.",
+		},
 		"netbios": {
 			Label:       "NetBIOS",
 			Description: "Respond to NetBIOS name service queries for legacy Windows discovery.",

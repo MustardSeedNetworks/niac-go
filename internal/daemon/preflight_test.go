@@ -2,11 +2,14 @@ package daemon
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
@@ -91,11 +94,126 @@ func TestStartSimulationRecompilesUnsafeRoutedRequest(t *testing.T) {
 	d := routedPolicyDaemon()
 	req := routedRequest(0)
 
-	err := d.StartSimulation(req)
+	err := d.StartSimulation(req, fullSimulationEntitlements())
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
 	}
+}
+
+func TestStartSimulationRejectsRoutedConfigInsideLockedTransaction(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+	d := routedPolicyDaemon()
+
+	err := d.StartSimulation(routedRequest(2), api.SimulationEntitlements{})
+
+	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
+		t.Fatalf("StartSimulation() error = %v, want ErrRoutedLabsLicenseRequired", err)
+	}
+	if d.simulation != nil {
+		t.Fatal("unlicensed routed configuration changed simulation state")
+	}
+}
+
+func TestStartSimulationRejectsUnlicensedSSHManagement(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: `
+devices:
+  - name: edge
+    type: router
+    mac: 02:00:00:00:00:01
+    ips:
+      - 192.0.2.1
+    ssh:
+      enabled: true
+      username: admin
+      password_env: NIAC_TEST_SSH_PASSWORD
+`}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
+
+	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired", err)
+	}
+}
+
+func TestStartSimulationRejectsUnlicensedSSHManagementInSegment(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: `
+segments:
+  - tag: 10
+    devices:
+      - name: edge
+        type: router
+        mac: 02:00:00:00:00:01
+        ips:
+          - 192.0.2.1
+        ssh:
+          enabled: true
+          username: admin
+          password_env: NIAC_TEST_SSH_PASSWORD
+`}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
+
+	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired", err)
+	}
+}
+
+func TestLoadAuthorizedSimulationConfigRejectsMissingSSHPassword(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: `
+devices:
+  - name: edge
+    type: router
+    mac: 02:00:00:00:00:01
+    ips: [192.0.2.1]
+    ssh:
+      enabled: true
+      username: admin
+      password_env: NIAC_MISSING_SSH_PASSWORD
+`}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, fullSimulationEntitlements())
+
+	if !errors.Is(err, config.ErrSSHPasswordUnavailable) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want SSH password requirement", err)
+	}
+}
+
+func TestLoadAuthorizedSimulationConfigEnforcesFreeDeviceCap(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: simulationConfigWithDevices(
+		api.FreeTierDeviceCount + 1,
+	)}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
+
+	if !errors.Is(err, api.ErrUnlimitedDevicesLicenseRequired) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrUnlimitedDevicesLicenseRequired", err)
+	}
+}
+
+func TestLoadAuthorizedSimulationConfigEnforcesAbsoluteDeviceCap(t *testing.T) {
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: simulationConfigWithDevices(
+		api.MaxDeviceCount + 1,
+	)}
+
+	_, _, err := loadAuthorizedSimulationConfig(req, fullSimulationEntitlements())
+
+	if !errors.Is(err, api.ErrSimulationDeviceLimitExceeded) {
+		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrSimulationDeviceLimitExceeded", err)
+	}
+}
+
+func simulationConfigWithDevices(count int) string {
+	var content strings.Builder
+	content.WriteString("devices:\n")
+	for index := range count {
+		_, _ = fmt.Fprintf(&content,
+			"  - name: device-%d\n    type: host\n    mac: 02:00:00:%02x:%02x:%02x\n    ips: [\"198.18.%d.%d\"]\n",
+			index, index>>16, index>>8&0xff, index&0xff, index/254, index%254+1,
+		)
+	}
+	return content.String()
 }
 
 func TestStartSimulationRejectsAttachmentWithoutRoutedNetworks(t *testing.T) {
@@ -117,7 +235,7 @@ devices:
 `,
 	}
 
-	err := d.StartSimulation(req)
+	err := d.StartSimulation(req, fullSimulationEntitlements())
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
@@ -131,7 +249,7 @@ func TestUnsafeReplacementLeavesRunningSimulationIntact(t *testing.T) {
 	d := routedPolicyDaemon()
 	d.simulation = running
 
-	err := d.StartSimulation(routedRequest(0))
+	err := d.StartSimulation(routedRequest(0), fullSimulationEntitlements())
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
@@ -153,7 +271,7 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 	d := routedPolicyDaemon()
 	d.simulation = &Simulation{Interface: "eth0"}
 
-	err := d.StartSimulation(routedRequest(0))
+	err := d.StartSimulation(routedRequest(0), fullSimulationEntitlements())
 
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)

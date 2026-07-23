@@ -79,17 +79,6 @@ const (
 	// DefaultSNMPCommunity is the default SNMP community string.
 	DefaultSNMPCommunity = "public"
 
-	// DefaultHighCPUThreshold is the default high CPU usage threshold in percent.
-	DefaultHighCPUThreshold = 80
-	// DefaultHighMemoryThreshold is the default high memory usage threshold in percent.
-	DefaultHighMemoryThreshold = 90
-	// DefaultInterfaceErrorThreshold is the default interface error threshold count.
-	DefaultInterfaceErrorThreshold = 100
-	// DefaultTrapCheckInterval is the default trap check interval in seconds.
-	DefaultTrapCheckInterval = 300
-	// DefaultInterfaceErrorInterval is the default interface error check interval in seconds.
-	DefaultInterfaceErrorInterval = 60
-
 	// DefaultDNSTTL is the default DNS TTL in seconds.
 	DefaultDNSTTL = 3600
 
@@ -270,11 +259,26 @@ type Device struct {
 	ICMPv6Config        *ICMPv6Config        // ICMPv6 configuration
 	DHCPv6Config        *DHCPv6Config        // DHCPv6 server configuration
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
+	SSHConfig           *SSHConfig           // authenticated vendor-like command service
+	SyslogConfig        *SyslogConfig        // configuration-state event output
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
 	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)
 	PortChannels        []PortChannel        // Port-channel/LAG configuration (v1.23.0)
 	TrunkPorts          []TrunkPort          // Trunk port configuration (v1.23.0)
 	Properties          map[string]string
+}
+
+// SSHConfig enables authenticated command access for a simulated device.
+type SSHConfig struct {
+	Enabled     bool
+	Username    string
+	PasswordEnv string
+}
+
+// SyslogConfig sends configuration-state messages to RFC 5424 collectors.
+type SyslogConfig struct {
+	Enabled   bool
+	Receivers []string
 }
 
 // OSFingerprintConfig represents OS fingerprinting configuration for device simulation.
@@ -622,15 +626,11 @@ type DHCPv6Pool struct {
 
 // TrapConfig holds SNMP trap configuration (v1.6.0).
 type TrapConfig struct {
-	Enabled               bool
-	Receivers             []string // Trap receiver addresses (IP:port format)
-	Community             string   // SNMP community string (default: "public")
-	ColdStart             *TrapTriggerConfig
-	LinkState             *LinkStateTrapConfig
-	AuthenticationFailure *TrapTriggerConfig
-	HighCPU               *ThresholdTrapConfig
-	HighMemory            *ThresholdTrapConfig
-	InterfaceErrors       *ThresholdTrapConfig
+	Enabled   bool
+	Receivers []string // Trap receiver addresses (IP:port format)
+	Community string   // SNMP community string (default: "public")
+	ColdStart *TrapTriggerConfig
+	LinkState *LinkStateTrapConfig
 }
 
 // TrapTriggerConfig configures a simple trap trigger.
@@ -644,13 +644,6 @@ type LinkStateTrapConfig struct {
 	Enabled  bool
 	LinkDown bool // Send trap on link down
 	LinkUp   bool // Send trap on link up
-}
-
-// ThresholdTrapConfig configures threshold-based traps.
-type ThresholdTrapConfig struct {
-	Enabled   bool
-	Threshold int // Threshold value (percent for CPU/Memory, count for errors)
-	Interval  int // Check interval in seconds
 }
 
 // PortChannel represents a port-channel (LAG/Link Aggregation Group) configuration (v1.23.0).

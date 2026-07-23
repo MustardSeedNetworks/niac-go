@@ -429,15 +429,34 @@ snmp_agent:
    ```yaml
    snmp_agent:
      traps:
-       high_cpu:
-         enabled: true  # Must be true
-         threshold: 80
+       link_state:
+         enabled: true
+         link_down: true
+         link_up: true
    ```
 
-4. **Inject errors to trigger traps:**
-   ```bash
-   sudo niac --interactive en0 config.yaml
-   # Press 'i' -> Select device -> Set High CPU to 85%
+4. **Configure and use the device CLI to shut or restore an interface.** The
+   password stays in the process environment, not in YAML:
+
+   ```yaml
+   devices:
+     - name: edge-router
+       ssh:
+         enabled: true
+         username: "admin"
+         password_env: "NIAC_EDGE_ROUTER_PASSWORD"
+   ```
+
+   Set `NIAC_EDGE_ROUTER_PASSWORD` in the NIAC process or service environment,
+   then start or restart NIAC. From a client shell:
+
+   ```text
+   ssh -T admin@10.10.200.1
+   # enable
+   # configure terminal
+   # interface Gi0/1
+   # shutdown
+   # no shutdown
    ```
 
 **Solution:**
@@ -447,9 +466,10 @@ snmp_agent:
     enabled: true
     receivers: ["10.100.0.100:162"]
     community: "trap-community"
-    high_cpu:
+    link_state:
       enabled: true
-      threshold: 80
+      link_down: true
+      link_up: true
 ```
 
 ### DHCP clients not receiving leases

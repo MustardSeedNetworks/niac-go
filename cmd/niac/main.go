@@ -17,9 +17,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/interactive"
+	"github.com/MustardSeedNetworks/niac-go/internal/license"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/stats"
@@ -94,7 +96,6 @@ func main() {
 		func(root *cobra.Command, _ *serviceOptions) { addDaemonCommand(root, info) },
 		addDumpCommand,
 		addInitCommand,
-		addInjectCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addInstallCACommand(root) },
 		addLicenseCommand,
 		addListCommand,
@@ -186,6 +187,10 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 
 	// Handle dry run mode
 	if flags.dryRun {
+		if entitlementErr := validateStoredSimulationConfig(cfg, loadFeatureChecker); entitlementErr != nil {
+			logging.Errorf("%v", entitlementErr)
+			exitWithStats(1, &flags, nil)
+		}
 		runDryRunValidation(configFile, interfaceName, cfg)
 		// runDryRunValidation calls os.Exit, so this line is unreachable
 	}
@@ -542,7 +547,11 @@ func startSimulation(
 	interfaceName string,
 	cfg *config.Config,
 	debugConfig *logging.DebugConfig,
+	checker featureChecker,
 ) (*capture.Engine, *protocols.Stack, time.Time, error) {
+	if err := validateSimulationConfig(cfg, checker); err != nil {
+		return nil, nil, time.Time{}, err
+	}
 	debugLevel := debugConfig.GetGlobal()
 
 	if debugLevel >= 1 {
@@ -594,6 +603,36 @@ func startSimulation(
 	return engine, stack, time.Now(), nil
 }
 
+type featureChecker interface {
+	HasFeature(string) bool
+}
+
+type featureCheckerLoader func() (featureChecker, error)
+
+func loadFeatureChecker() (featureChecker, error) {
+	return license.NewRuntimeManager()
+}
+
+func validateStoredSimulationConfig(cfg *config.Config, loadChecker featureCheckerLoader) error {
+	checker, err := loadChecker()
+	if err != nil {
+		return fmt.Errorf("load license state: %w", err)
+	}
+	return validateSimulationConfig(cfg, checker)
+}
+
+func validateSimulationConfig(cfg *config.Config, checker featureChecker) error {
+	entitlements := api.SimulationEntitlements{}
+	if checker != nil {
+		entitlements.RoutedLabs = checker.HasFeature("routed_labs")
+		entitlements.UnlimitedDevices = checker.HasFeature("unlimited_devices")
+	}
+	if err := api.ValidateConfigEntitlements(cfg, entitlements); err != nil {
+		return err
+	}
+	return config.ValidateRuntimeRequirements(cfg)
+}
+
 // runNormalMode runs NIAC in normal (non-interactive) mode.
 func runNormalMode(
 	interfaceName string,
@@ -602,7 +641,11 @@ func runNormalMode(
 	configFile string,
 	services *serviceOptions,
 ) error {
-	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
+	manager, err := loadFeatureChecker()
+	if err != nil {
+		return fmt.Errorf("load license state: %w", err)
+	}
+	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig, manager)
 	if err != nil {
 		return err
 	}
@@ -619,7 +662,7 @@ func runNormalMode(
 		}
 	}()
 
-	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime)
+	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime, loadFeatureChecker)
 	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime, reloadFunc)
 }
 
@@ -631,7 +674,11 @@ func runInteractiveMode(
 	configFile string,
 	services *serviceOptions,
 ) error {
-	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
+	manager, err := loadFeatureChecker()
+	if err != nil {
+		return fmt.Errorf("load license state: %w", err)
+	}
+	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig, manager)
 	if err != nil {
 		return err
 	}
@@ -651,7 +698,7 @@ func runInteractiveMode(
 		}
 	}()
 
-	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime)
+	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime, loadFeatureChecker)
 	if runErr := interactive.Run(interfaceName, cfg, debugConfig, stack, startTime, reloadFunc); runErr != nil {
 		return fmt.Errorf("failed to run interactive mode: %w", runErr)
 	}
@@ -934,6 +981,7 @@ func buildReloadFunc(
 	stack *protocols.Stack,
 	configFile string,
 	services *runtimeServices,
+	loadChecker featureCheckerLoader,
 ) func() (*config.Config, error) {
 	if configFile == "" || stack == nil {
 		return nil
@@ -946,6 +994,17 @@ func buildReloadFunc(
 		newCfg, loadErr := config.Load(abs)
 		if loadErr != nil {
 			return nil, fmt.Errorf("failed to load config: %w", loadErr)
+		}
+		var checker featureChecker
+		if loadChecker != nil {
+			loaded, loadCheckerErr := loadChecker()
+			if loadCheckerErr != nil {
+				return nil, fmt.Errorf("load license state: %w", loadCheckerErr)
+			}
+			checker = loaded
+		}
+		if entitlementErr := validateSimulationConfig(newCfg, checker); entitlementErr != nil {
+			return nil, entitlementErr
 		}
 		if services != nil {
 			if applyErr := services.applyConfig(newCfg); applyErr != nil {

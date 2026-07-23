@@ -44,13 +44,14 @@ const (
 // TCPHandler handles TCP packets.
 type TCPHandler struct {
 	stack *Stack
+	ssh   *sshTCPHandler
 }
 
 // NewTCPHandler creates a new TCP handler.
 func NewTCPHandler(stack *Stack) *TCPHandler {
-	return &TCPHandler{
-		stack: stack,
-	}
+	handler := &TCPHandler{stack: stack}
+	handler.ssh = newSSHTCPHandler(stack)
+	return handler
 }
 
 // HandlePacket processes a TCP packet over IPv4.
@@ -144,6 +145,8 @@ func (h *TCPHandler) routeToHandler(
 		}
 	case TCPPortHTTPS:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHTTPS, isSYNOnly, nil)
+	case TCPPortSSH:
+		h.ssh.HandlePacket(pkt, ipLayer, tcp, devices)
 	case TCPPortFTP:
 		h.handleFTP(pkt, ipLayer, tcp, devices, hasPayload)
 	case TCPPortLDAP, TCPPortLDAPS:
@@ -279,10 +282,13 @@ func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
 	if !ok {
 		return false
 	}
+	if ip.To4() == nil {
+		return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
+			return deviceIP.Equal(ip)
+		})
+	}
 
-	return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
-		return deviceIP.Equal(ip)
-	})
+	return h.stack.deviceOwnsIPv4(device, ip)
 }
 
 // lookupDestinationMAC looks up the MAC address for a destination IP, scoped
@@ -293,7 +299,7 @@ func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) [
 		return nil
 	}
 
-	srcDevice := h.stack.devicesFor(vlan).GetByIP(ip)
+	srcDevice := h.stack.devicesForStateIPv4(vlan, ip)
 	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
 		return srcDevice[0].MACAddress
 	}

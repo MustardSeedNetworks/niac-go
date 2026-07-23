@@ -112,6 +112,8 @@ func deviceToYAML(device *Device) converter.Device {
 		Icmpv6:        icmpv6ToYAML(device.ICMPv6Config),
 		Dhcpv6:        dhcpv6ToYAML(device.DHCPv6Config),
 		OSFingerprint: osFingerprintToYAML(device.OSFingerprintConfig),
+		SSH:           sshToYAML(device.SSHConfig),
+		Syslog:        syslogToYAML(device.SyslogConfig),
 		IPerf3:        iperf3ToYAML(device.IPerf3),
 		Reflector:     reflectorToYAML(device.ReflectorConfig),
 		Interfaces:    interfacesToYAML(device.Interfaces),

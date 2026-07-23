@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -80,7 +81,7 @@ func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []
 		h.stack.IncrementStat("icmp_requests")
 		h.handleEchoRequest(pkt, ipLayer, icmp, devices)
 	case layers.ICMPv4TypeAddressMaskRequest:
-		h.handleAddressMaskRequest(pkt, ipLayer, icmp)
+		h.handleAddressMaskRequest(pkt, ipLayer, icmp, devices)
 	case layers.ICMPv4TypeRouterSolicitation:
 		h.handleRouterSolicitation(pkt, ipLayer, icmp)
 	default:
@@ -96,43 +97,29 @@ func (h *ICMPHandler) handleAddressMaskRequest(
 	pkt *Packet,
 	ipLayer *layers.IPv4,
 	icmp *layers.ICMPv4,
+	devices []*config.Device,
 ) {
-	targets := h.getAddressMaskTargets(pkt, ipLayer)
-	if len(targets) == 0 {
-		return
-	}
-
 	dstIP := ipLayer.SrcIP
 	replyDstMAC := pkt.GetSourceMAC()
+	targetMAC := pkt.GetDestMAC()
+	l2Broadcast := frameIsBroadcast(pkt)
 
-	for _, device := range targets {
-		h.sendAddressMaskReply(device, dstIP, replyDstMAC, icmp)
-	}
-}
-
-// getAddressMaskTargets returns devices that should respond to address mask requests.
-func (h *ICMPHandler) getAddressMaskTargets(pkt *Packet, ipLayer *layers.IPv4) []*config.Device {
-	dstMAC := pkt.GetDestMAC()
-	isBroadcast := dstMAC != nil && dstMAC.String() == "ff:ff:ff:ff:ff:ff"
-
-	if !isBroadcast {
-		return h.stack.devicesFor(pkt.VLAN).GetByIP(ipLayer.DstIP)
-	}
-
-	var targets []*config.Device
-
-	for _, dev := range h.stack.devicesFor(pkt.VLAN).GetAll() {
-		if dev.ICMPConfig != nil && dev.ICMPConfig.AddressMaskReply != nil {
-			targets = append(targets, dev)
+	for _, device := range devices {
+		if !l2Broadcast && !bytes.Equal(device.MACAddress, targetMAC) {
+			continue
 		}
+		srcIP := ipLayer.DstIP
+		if !h.stack.deviceOwnsIPv4(device, srcIP) {
+			srcIP = h.stack.firstStateIPv4Address(device)
+		}
+		h.sendAddressMaskReply(device, srcIP, dstIP, replyDstMAC, icmp)
 	}
-
-	return targets
 }
 
 // sendAddressMaskReply sends an ICMP address mask reply from a device.
 func (h *ICMPHandler) sendAddressMaskReply(
 	device *config.Device,
+	srcIP net.IP,
 	dstIP net.IP,
 	replyDstMAC net.HardwareAddr,
 	icmp *layers.ICMPv4,
@@ -145,7 +132,6 @@ func (h *ICMPHandler) sendAddressMaskReply(
 		return
 	}
 
-	srcIP := firstIPv4Address(device)
 	if srcIP == nil {
 		return
 	}
@@ -189,7 +175,7 @@ func (h *ICMPHandler) handleRouterSolicitation(
 			continue
 		}
 
-		srcIP := firstIPv4Address(device)
+		srcIP := h.stack.firstStateIPv4Address(device)
 		if srcIP == nil || len(device.MACAddress) == 0 {
 			continue
 		}

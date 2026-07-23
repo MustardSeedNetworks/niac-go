@@ -318,10 +318,14 @@ func additionalIPStrings(dev *config.Device) []string {
 // value (idempotent — matches the resolution #4 stance that
 // retry-storm protection lives on the UI debounce, not the server).
 func (s *Server) attachWalkToDevice(hostname, relPath string) error {
-	if s.cfg.Config == nil {
+	s.configMutationMu.Lock()
+	defer s.configMutationMu.Unlock()
+
+	cfg := s.currentConfig()
+	if cfg == nil {
 		return errors.New("config not loaded")
 	}
-	newCfg := *deepCopyConfig(s.cfg.Config)
+	newCfg := *deepCopyConfig(cfg)
 	idx := findDeviceIndex(newCfg.Devices, hostname)
 	if idx < 0 {
 		return fmt.Errorf("device not found in current config: %s", hostname)

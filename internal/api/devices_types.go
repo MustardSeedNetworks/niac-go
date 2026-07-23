@@ -13,15 +13,17 @@ type DeviceResponse struct {
 	Protocols        []string                  `json:"protocols"`
 
 	// Protocol configurations (optional, included when requested)
-	SNMPAgent *SNMPAgentResponse `json:"snmpAgent,omitempty"`
-	CDP       *CDPResponse       `json:"cdp,omitempty"`
-	LLDP      *LLDPResponse      `json:"lldp,omitempty"`
-	DHCP      *DHCPResponse      `json:"dhcp,omitempty"`
-	DNS       *DNSResponse       `json:"dns,omitempty"`
-	HTTP      *HTTPResponse      `json:"http,omitempty"`
-	FTP       *FTPResponse       `json:"ftp,omitempty"`
-	NetBIOS   *NetBIOSResponse   `json:"netbios,omitempty"`
-	STP       *STPResponse       `json:"stp,omitempty"`
+	SNMPAgent *SNMPAgentResponse   `json:"snmpAgent,omitempty"`
+	CDP       *CDPResponse         `json:"cdp,omitempty"`
+	LLDP      *LLDPResponse        `json:"lldp,omitempty"`
+	DHCP      *DHCPResponse        `json:"dhcp,omitempty"`
+	DNS       *DNSResponse         `json:"dns,omitempty"`
+	HTTP      *HTTPResponse        `json:"http,omitempty"`
+	FTP       *FTPResponse         `json:"ftp,omitempty"`
+	NetBIOS   *NetBIOSResponse     `json:"netbios,omitempty"`
+	STP       *STPResponse         `json:"stp,omitempty"`
+	SSH       *SSHConfigRequest    `json:"ssh,omitempty"`
+	Syslog    *SyslogConfigRequest `json:"syslog,omitempty"`
 
 	// Raw YAML for advanced editing
 	RawYAML string `json:"rawYaml,omitempty"`
@@ -127,6 +129,19 @@ type STPResponse struct {
 	Priority uint16 `json:"priority,omitempty"`
 }
 
+// SSHConfigRequest is the SSH configuration accepted and returned by device CRUD.
+type SSHConfigRequest struct {
+	Enabled     bool   `json:"enabled"`
+	Username    string `json:"username,omitempty"`
+	PasswordEnv string `json:"passwordEnv,omitempty"`
+}
+
+// SyslogConfigRequest is the SYSLOG configuration accepted and returned by device CRUD.
+type SyslogConfigRequest struct {
+	Enabled   bool     `json:"enabled"`
+	Receivers []string `json:"receivers,omitempty"`
+}
+
 // DeviceInterfaceResponse represents configured metadata for a device interface.
 type DeviceInterfaceResponse struct {
 	Name        string `json:"name"`
@@ -160,6 +175,8 @@ type DeviceCreateRequest struct {
 	Template         string                  `json:"template,omitempty"` // Use template as base
 	RawYAML          string                  `json:"rawYaml,omitempty"`  // Advanced: full YAML
 	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
+	SSH              *SSHConfigRequest       `json:"ssh,omitempty"`
+	Syslog           *SyslogConfigRequest    `json:"syslog,omitempty"`
 }
 
 // DeviceUpdateRequest represents a request to update a device.
@@ -171,6 +188,8 @@ type DeviceUpdateRequest struct {
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	RawYAML          string                  `json:"rawYaml,omitempty"` // Full YAML for the device
 	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
+	SSH              *SSHConfigRequest       `json:"ssh,omitempty"`
+	Syslog           *SyslogConfigRequest    `json:"syslog,omitempty"`
 }
 
 // DeviceCloneRequest represents a request to clone a device.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/netip"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // createMinimalConfig creates a minimal config with one device for testing.
@@ -205,6 +209,33 @@ func TestGetStatus_WithSimulationAndConfig(t *testing.T) {
 	}
 }
 
+func TestGetStatusIncludesActiveFabric(t *testing.T) {
+	daemon, err := NewDaemon(Config{StoragePath: "disabled"})
+	if err != nil {
+		t.Fatalf("NewDaemon failed: %v", err)
+	}
+	cfg := createMinimalConfig(t)
+	topology := &fabric.Topology{
+		Binding: fabric.CompiledBinding{
+			Binding: fabric.Binding{Attachment: "tester", Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200},
+			Network: "access",
+		},
+		Networks: []fabric.Network{{Name: "access", Prefix: netip.MustParsePrefix("10.0.0.0/24"), VirtualVLAN: 20}},
+	}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	daemon.simulation = &Simulation{
+		Interface: "eth0", StartedAt: time.Now(), cfg: cfg, stack: stack, fabric: topology,
+	}
+
+	status := daemon.GetStatus()
+
+	if status.Fabric == nil || status.Fabric.Topology.Binding.AccessVLAN != 200 ||
+		status.Fabric.Topology.Networks[0].VirtualVLAN != 20 {
+		t.Fatalf("Fabric status = %#v", status.Fabric)
+	}
+}
+
 // TestStopSimulationLocked_NilFields tests stopSimulationLocked with partial simulation.
 func TestStopSimulationLocked_NilFields(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -288,7 +319,7 @@ func TestStartSimulation_NonExistentConfigPath(t *testing.T) {
 		ConfigPath: "/nonexistent/path/config.yaml",
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for nonexistent config file")
 	}
@@ -328,7 +359,7 @@ func TestStartSimulation_ConfigDataExceedsSize(t *testing.T) {
 		ConfigData: strings.Repeat("a", 11*1024*1024),
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for oversized config data")
 	}
@@ -367,7 +398,7 @@ func TestStartSimulation_MissingConfigAndPath(t *testing.T) {
 		// Both ConfigData and ConfigPath empty
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error when both config_path and config_data are empty")
 	}
@@ -406,7 +437,7 @@ func TestStartSimulation_InvalidInterface(t *testing.T) {
 		ConfigData: "devices: []",
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for nonexistent interface")
 	}
@@ -445,7 +476,7 @@ func TestStartSimulation_InvalidConfigData(t *testing.T) {
 		ConfigData: "{{{{invalid yaml",
 	}
 
-	err = daemon.StartSimulation(req)
+	err = daemon.StartSimulation(req, fullSimulationEntitlements())
 	if err == nil {
 		t.Error("Expected error for invalid YAML config")
 	}

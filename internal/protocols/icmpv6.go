@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"slices"
 	"sync/atomic"
@@ -137,7 +138,7 @@ func (h *ICMPv6Handler) HandlePacket(
 	case ICMPv6TypeNeighborSolicitation:
 		h.handleNeighborSolicitation(pkt, packet, ipv6Layer)
 	case ICMPv6TypeNeighborAdvertisement:
-		// Silently accept neighbor advertisements
+		h.observeNeighborAdvertisement(pkt, packet)
 	case ICMPv6TypeRouterSolicitation:
 		h.handleRouterSolicitation(pkt, packet, ipv6Layer)
 	case ICMPv6TypeRouterAdvertisement:
@@ -147,6 +148,19 @@ func (h *ICMPv6Handler) HandlePacket(
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Unhandled type: %d sn=%d\n", msgType, pkt.SerialNumber)
 		}
 	}
+}
+
+func (h *ICMPv6Handler) observeNeighborAdvertisement(pkt *Packet, packet gopacket.Packet) {
+	ethernet, _ := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	advertisement, _ := packet.Layer(layers.LayerTypeICMPv6NeighborAdvertisement).(*layers.ICMPv6NeighborAdvertisement)
+	if ethernet == nil || advertisement == nil {
+		return
+	}
+	target, ok := netip.AddrFromSlice(advertisement.TargetAddress)
+	if !ok || !target.Is6() {
+		return
+	}
+	h.stack.notifications.observeNeighbor(pkt.VLAN, target, ethernet.SrcMAC)
 }
 
 // handleEchoRequest responds to ICMPv6 Echo Request (ping6).

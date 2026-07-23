@@ -564,7 +564,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	}
 
 	// Get source MAC (scoped to the request's VLAN segment)
-	srcDevices := h.stack.devicesFor(vlan).GetByIP(ipLayer.SrcIP)
+	srcDevices := h.stack.devicesForStateIPv4(vlan, ipLayer.SrcIP)
 
 	var srcMAC []byte
 
@@ -662,7 +662,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 		return
 	}
 
-	srcDevices := h.stack.devicesFor(vlan).GetByIP(ipLayer.SrcIP)
+	srcDevices := h.stack.devicesForStateIPv4(vlan, ipLayer.SrcIP)
 
 	var srcMAC []byte
 

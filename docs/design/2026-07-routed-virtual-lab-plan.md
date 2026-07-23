@@ -1,12 +1,23 @@
 # Plan: Routed virtual labs behind one isolated attachment
 
-**Status:** Proposed
+**Status:** In implementation — core Phases 0-6 complete; Phase 7 next
 
 **Date:** 2026-07-20
 
 **Target:** Post-0.95 development
 
 **Related:** ADR 0008 multi-VLAN segment playback
+
+## Implementation progress
+
+| Phase | Status | Evidence |
+| --- | --- | --- |
+| 0 — contract | Complete | ADR 0009, routed schema, isolation and packet fixtures |
+| 1 — compiler | Complete | Immutable topology compiler and validation tests |
+| 2-4 — fabric and IPv4 | Complete | Attachment-aware egress, scoped services, forwarding, fragmentation, ICMP, and routed response tests |
+| 5 — management plane | Core complete | Shared device state, first IOS-like CLI profile, packet-backed SSH, SNMP projection, configuration lifecycle, SYSLOG/SNMP state notifications, and Pro gate |
+| 6 — observability | Complete | API/UI fabric topology and counters, packet route decisions, physical/virtual VLAN labels, and unsafe-attachment errors |
+| 7 — hardware acceptance | Pending | Reference eight-subnet lab and 24-hour isolation run remain |
 
 ## Outcome
 
@@ -275,7 +286,8 @@ NIAC should add the following after the forwarding foundation:
 2. **SSH device access**
    - An SSH connection to a simulated device IP terminates in NIAC's virtual TCP
      stack and is bridged to a vendor command profile.
-   - Initial profiles cover Cisco IOS-like, NX-OS-like, and JUNOS-like behavior.
+   - The initial profile covers Cisco IOS-like behavior. Vendor-specific
+     NX-OS-like and JUNOS-like profiles remain post-acceptance expansions.
    - Profiles describe supported commands and rendering; they do not claim to
      contain vendor software.
 
@@ -314,7 +326,8 @@ workflow before implementation.
 
 | Capability | NIAC decision | Reason |
 | --- | --- | --- |
-| SSH and vendor CLI profiles | Build after routed core | High-value device interaction without images |
+| SSH and first IOS-like CLI profile | Built | High-value device interaction without images |
+| Additional NX-OS-like and JUNOS-like profiles | Evaluate after operator acceptance | Expand only when a named workflow needs vendor-specific commands |
 | Cross-protocol shared state | Build as foundation | Prevents contradictory CLI, SNMP, and forwarding views |
 | Running/startup config and reset | Build | Required for reproducible labs and training |
 | SYSLOG and SNMP notifications | Build | Supports monitoring and failure demonstrations |
@@ -582,8 +595,10 @@ unreachable routes; MTU failure; asymmetric routing; and concurrent flows.
 - Make supported configuration commands change forwarding and management state.
 - Add running/startup configuration, save, reload, checkpoint, and reset.
 - Emit matching SYSLOG and SNMP notifications for state changes.
-- Add NX-OS-like and JUNOS-like profiles only after the IOS-like profile proves
-  the command/state boundary.
+
+Additional NX-OS-like and JUNOS-like profiles are post-acceptance expansions,
+not part of the Phase 5 exit gate. Add one only for a named workflow that the
+IOS-like profile cannot represent.
 
 **Tests:** command parser and mode transitions, SSH authentication and session
 isolation, concurrent configuration transactions, CLI-to-SNMP consistency,

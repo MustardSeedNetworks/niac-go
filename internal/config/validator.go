@@ -4,14 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
 // Sentinel errors for validation.
 var (
-	ErrThresholdOutOfRange  = errors.New("threshold must be between 0 and 100")
 	ErrInvalidIPAddressVal  = errors.New("invalid IP address")
 	ErrInvalidMACAddressVal = errors.New("invalid MAC address")
 	ErrInvalidPort          = errors.New("invalid port (must be 1-65535)")
@@ -113,6 +114,8 @@ func (v *Validator) validateDevice(
 	}
 
 	v.validateSNMPCommunity(device, prefix)
+	v.validateSSH(device, prefix)
+	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
 	v.validateTTLConfig(device, prefix)
@@ -120,6 +123,65 @@ func (v *Validator) validateDevice(
 	v.validateNetBIOSNames(device, prefix)
 	v.validatePortChannels(device, prefix)
 	v.validateTrunkPorts(device, prefix, knownNames)
+}
+
+func (v *Validator) validateSSH(device *Device, prefix string) {
+	if device.SSHConfig == nil || !device.SSHConfig.Enabled {
+		return
+	}
+	if strings.TrimSpace(device.SSHConfig.Username) == "" {
+		v.addError(prefix+".ssh.username", "SSH requires an explicit username")
+	}
+	if !validEnvironmentVariable(device.SSHConfig.PasswordEnv) {
+		v.addError(prefix+".ssh.password_env", "SSH requires a valid password environment variable")
+	}
+}
+
+func validEnvironmentVariable(name string) bool {
+	matched, _ := regexp.MatchString(`^[A-Za-z_][A-Za-z0-9_]*$`, name)
+	return matched
+}
+
+func (v *Validator) validateSyslog(device *Device, prefix string) {
+	if device.SyslogConfig == nil || !device.SyslogConfig.Enabled {
+		return
+	}
+	if len(device.SyslogConfig.Receivers) == 0 {
+		v.addError(prefix+".syslog.receivers", "SYSLOG requires at least one receiver")
+		return
+	}
+	for index, receiver := range device.SyslogConfig.Receivers {
+		v.validateUDPReceiver(receiver, fmt.Sprintf("%s.syslog.receivers[%d]", prefix, index), "SYSLOG")
+	}
+}
+
+func (v *Validator) validateUDPReceiver(receiver, path, protocol string) {
+	if receiver == "" {
+		v.addError(path, protocol+" receiver cannot be empty")
+		return
+	}
+	host, port, err := net.SplitHostPort(receiver)
+	address, addressErr := netip.ParseAddr(host)
+	if err != nil || addressErr != nil || !address.Is4() {
+		v.addError(path, "invalid "+protocol+" receiver: "+receiver)
+		return
+	}
+	value, err := strconv.ParseUint(port, 10, 16)
+	if !validPortSyntax(port) || err != nil || value == 0 {
+		v.addError(path, "invalid "+protocol+" receiver port: "+port)
+	}
+}
+
+func validPortSyntax(port string) bool {
+	if len(port) == 0 || len(port) > 5 || port[0] == '0' {
+		return false
+	}
+	for _, character := range port {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *Validator) validateSNMPCommunity(device *Device, prefix string) {
@@ -296,27 +358,9 @@ func (v *Validator) validateSNMPTraps(device *Device, prefix string) {
 	}
 
 	traps := device.SNMPConfig.Traps
-	trapPrefix := prefix + ".snmp.traps"
+	trapPrefix := prefix + ".snmp_agent.traps"
 
-	v.validateTrapThresholds(traps, trapPrefix)
 	v.validateTrapReceivers(traps.Receivers, trapPrefix)
-}
-
-// validateTrapThresholds validates SNMP trap threshold configurations.
-func (v *Validator) validateTrapThresholds(traps *TrapConfig, trapPrefix string) {
-	v.validateSingleThreshold(traps.HighCPU, trapPrefix+".high_cpu.threshold")
-	v.validateSingleThreshold(traps.HighMemory, trapPrefix+".high_memory.threshold")
-}
-
-// validateSingleThreshold validates a single threshold trap configuration.
-func (v *Validator) validateSingleThreshold(config *ThresholdTrapConfig, path string) {
-	if config == nil || config.Threshold <= 0 {
-		return
-	}
-
-	if err := v.validateThreshold(config.Threshold, path); err != nil {
-		v.addError(path, err.Error())
-	}
 }
 
 // validateTrapReceivers validates SNMP trap receiver addresses.
@@ -335,7 +379,7 @@ func (v *Validator) validateSingleTrapReceiver(receiver, path string) {
 		return
 	}
 
-	host, _, err := net.SplitHostPort(receiver)
+	host, port, err := net.SplitHostPort(receiver)
 	if err != nil {
 		if ip := net.ParseIP(receiver); ip == nil {
 			v.addError(path, "invalid trap receiver format: "+receiver)
@@ -346,6 +390,11 @@ func (v *Validator) validateSingleTrapReceiver(receiver, path string) {
 
 	if ip := net.ParseIP(host); ip == nil {
 		v.addError(path, "invalid IP in trap receiver: "+host)
+		return
+	}
+	value, err := strconv.ParseUint(port, 10, 16)
+	if !validPortSyntax(port) || err != nil || value == 0 {
+		v.addError(path, "invalid trap receiver port: "+port)
 	}
 }
 
@@ -393,15 +442,6 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
 		}
 	}
-}
-
-// validateThreshold validates a threshold value (0-100).
-func (v *Validator) validateThreshold(value int, _ string) error {
-	if value < 0 || value > 100 {
-		return fmt.Errorf("%w: got %d", ErrThresholdOutOfRange, value)
-	}
-
-	return nil
 }
 
 // Helper functions

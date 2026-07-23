@@ -13,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -2737,14 +2738,14 @@ func TestSNMPAgentGroupGet(t *testing.T) {
 		t.Error("expected nil for nil group")
 	}
 
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	if group.Get("public") != nil {
 		t.Error("expected nil for empty group")
 	}
 }
 
 func TestSNMPAgentGroupEnsure(t *testing.T) {
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	dev := &config.Device{Name: "d1"}
 
 	agent := group.Ensure("public", dev, 0)
@@ -2771,7 +2772,7 @@ func TestSNMPAgentGroupCommunities(t *testing.T) {
 		t.Error("expected nil for nil group")
 	}
 
-	group := newSnmpAgentGroup()
+	group := newSnmpAgentGroup(devicestate.NewStore(devicestate.Identity{Hostname: "d1"}))
 	dev := &config.Device{Name: "d1"}
 	group.Ensure("public", dev, 0)
 	group.Ensure("private", dev, 0)
@@ -3034,22 +3035,6 @@ func TestICMPv6ExtractEthernetLayer(t *testing.T) {
 	}
 	if ethResult.SrcMAC.String() != "aa:bb:cc:dd:ee:ff" {
 		t.Errorf("expected aa:bb:cc:dd:ee:ff, got %s", ethResult.SrcMAC)
-	}
-}
-
-// ---------- ICMP getAddressMaskTargets ----------
-
-func TestICMPGetAddressMaskTargets(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewICMPHandler(stack)
-
-	ipLayer := &layers.IPv4{SrcIP: net.ParseIP("10.0.0.1"), DstIP: net.ParseIP("10.0.0.2")}
-	pkt := &Packet{Buffer: make([]byte, 14), SerialNumber: 1}
-
-	targets := h.getAddressMaskTargets(pkt, ipLayer)
-	if targets == nil {
-		// May be nil if no devices match, which is fine for coverage
-		t.Log("no matching devices found (expected)")
 	}
 }
 

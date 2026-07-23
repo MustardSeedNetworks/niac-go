@@ -378,10 +378,7 @@ const staticPages: PageDef[] = [
             <strong>Corruption</strong> — flip random bits in the payload.
           </li>
         </ul>
-        <p>
-          Errors clear when you stop the simulation, or via <code>niac inject clear</code> on the
-          CLI.
-        </p>
+        <p>Errors clear when you stop the simulation or use the clear action in this panel.</p>
       </>
     ),
   },

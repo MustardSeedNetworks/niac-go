@@ -332,6 +332,7 @@ export interface SimulationStatus {
   deviceCount: number;
   startedAt?: string;
   uptimeSeconds: number;
+  fabric?: import('./fabric-types').SimulationFabricStatus;
 }
 
 /**

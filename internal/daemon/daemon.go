@@ -466,7 +466,7 @@ func e2eDryRunSimulation() bool {
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
+func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.SimulationEntitlements) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -475,7 +475,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadValidSimulationConfig(req, false)
+	cfg, configPath, err := loadAuthorizedSimulationConfig(req, entitlements)
 	if err != nil {
 		return err
 	}
@@ -549,6 +549,23 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	}
 
 	return nil
+}
+
+func loadAuthorizedSimulationConfig(
+	req api.SimulationRequest,
+	entitlements api.SimulationEntitlements,
+) (*config.Config, string, error) {
+	cfg, configPath, err := loadValidSimulationConfig(req, false)
+	if err != nil {
+		return nil, "", err
+	}
+	if entitlementErr := api.ValidateConfigEntitlements(cfg, entitlements); entitlementErr != nil {
+		return nil, "", entitlementErr
+	}
+	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
+		return nil, "", runtimeErr
+	}
+	return cfg, configPath, nil
 }
 
 // resolvePlaybackPath turns a (possibly relative) capture_playbacks file_name
@@ -669,7 +686,17 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 
 		status.UptimeSeconds = time.Since(d.simulation.StartedAt).Seconds()
 		if d.simulation.cfg != nil {
-			status.DeviceCount = len(d.simulation.cfg.Devices)
+			status.DeviceCount = d.simulation.cfg.DeviceCount()
+		}
+		if d.simulation.fabric != nil {
+			stats := d.simulation.stack.GetStats()
+			status.Fabric = &api.SimulationFabricStatus{
+				Topology:    *d.simulation.fabric,
+				Forwarded:   stats.FabricForwarded,
+				Drops:       stats.FabricDrops,
+				Received:    stats.PacketsReceived,
+				Transmitted: stats.PacketsSent,
+			}
 		}
 	}
 

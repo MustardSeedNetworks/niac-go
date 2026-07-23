@@ -21,6 +21,12 @@ export interface Packet {
   summary: string;
   rawData: string; // Hex encoded raw packet data
   headers?: Record<string, unknown>;
+  physicalVlan?: number;
+  ingressNetwork?: string;
+  routeDecision?: string;
+  hop?: string;
+  egressNetwork?: string;
+  egressRejectionReason?: string;
 }
 
 interface PacketListProps {

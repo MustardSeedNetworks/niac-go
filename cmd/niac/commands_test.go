@@ -252,35 +252,6 @@ func TestAddTopologyCommand(t *testing.T) {
 	}
 }
 
-func TestAddInjectCommand(t *testing.T) {
-	root, services := newTestRoot()
-	addInjectCommand(root, services)
-
-	cmd := findSubcommand(root, "inject")
-	if cmd == nil {
-		t.Fatal("Expected inject command to be registered")
-	}
-
-	listCmd := findSubcommand(cmd, "list")
-	if listCmd == nil {
-		t.Fatal("Expected inject list subcommand")
-	}
-	if listCmd.Flags().Lookup("json") == nil {
-		t.Error("Expected --json flag on list")
-	}
-
-	clearCmd := findSubcommand(cmd, "clear")
-	if clearCmd == nil {
-		t.Fatal("Expected inject clear subcommand")
-	}
-	if clearCmd.Flags().Lookup("device") == nil {
-		t.Error("Expected --device flag on clear")
-	}
-	if clearCmd.Flags().Lookup("all") == nil {
-		t.Error("Expected --all flag on clear")
-	}
-}
-
 func TestAddValidateCommand(t *testing.T) {
 	root, services := newTestRoot()
 	addValidateCommand(root, services)

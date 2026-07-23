@@ -73,7 +73,6 @@ export type {
   NetBIOSNodeType,
   NetBIOSService,
   SNMPAgent,
-  ThresholdTrapConfig,
   TrapConfig,
   TrapTriggerConfig,
 } from './service-protocol-types';
@@ -113,8 +112,18 @@ export interface Device {
   traffic?: TrafficConfig;
   ttl?: TTLConfig;
   osFingerprint?: OSFingerprintConfig;
+  ssh?: SSHConfig;
+  syslog?: SyslogConfig;
   iperf3?: IPerf3Config;
 }
+
+export type SSHConfig =
+  | { enabled: false; username?: never; passwordEnv?: never }
+  | { enabled: true; username: string; passwordEnv: string };
+
+export type SyslogConfig =
+  | { enabled: false; receivers?: never }
+  | { enabled: true; receivers: [string, ...string[]] };
 
 export interface DeviceInterface {
   name: string;
@@ -219,7 +228,7 @@ export interface DeviceBatchDeleteResponse {
 // ============================================================================
 
 export interface JSONSchemaProperty {
-  type: string;
+  type?: string;
   title?: string;
   description?: string;
   default?: unknown;
@@ -227,6 +236,7 @@ export interface JSONSchemaProperty {
   enumNames?: string[];
   minimum?: number;
   maximum?: number;
+  minItems?: number;
   minLength?: number;
   maxLength?: number;
   pattern?: string;
@@ -234,6 +244,10 @@ export interface JSONSchemaProperty {
   items?: JSONSchemaProperty;
   properties?: Record<string, JSONSchemaProperty>;
   required?: string[];
+  const?: unknown;
+  allOf?: JSONSchemaProperty[];
+  if?: JSONSchemaProperty;
+  then?: JSONSchemaProperty;
   'ui:widget'?: string;
   'ui:help'?: string;
   'ui:placeholder'?: string;

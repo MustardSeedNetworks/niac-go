@@ -334,19 +334,29 @@ type SimulationRequest struct {
 
 // SimulationStatus represents the current simulation status.
 type SimulationStatus struct {
-	Running       bool      `json:"running"`
-	Interface     string    `json:"interface,omitempty"`
-	ConfigPath    string    `json:"configPath,omitempty"`
-	ConfigName    string    `json:"configName,omitempty"`
-	DeviceCount   int       `json:"deviceCount"`
-	StartedAt     time.Time `json:"startedAt,omitzero"`
-	UptimeSeconds float64   `json:"uptimeSeconds"`
+	Running       bool                    `json:"running"`
+	Interface     string                  `json:"interface,omitempty"`
+	ConfigPath    string                  `json:"configPath,omitempty"`
+	ConfigName    string                  `json:"configName,omitempty"`
+	DeviceCount   int                     `json:"deviceCount"`
+	StartedAt     time.Time               `json:"startedAt,omitzero"`
+	UptimeSeconds float64                 `json:"uptimeSeconds"`
+	Fabric        *SimulationFabricStatus `json:"fabric,omitempty"`
+}
+
+// SimulationFabricStatus exposes the active routed topology and its live counters.
+type SimulationFabricStatus struct {
+	Topology    fabric.Topology `json:"topology"`
+	Forwarded   uint64          `json:"forwarded"`
+	Drops       uint64          `json:"drops"`
+	Received    uint64          `json:"received"`
+	Transmitted uint64          `json:"transmitted"`
 }
 
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
-	StartSimulation(req SimulationRequest) error
+	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
 	StopSimulation() error
 	GetStatus() SimulationStatus
 }
@@ -361,6 +371,7 @@ type Server struct {
 	lastAlert         uint64
 	alertMu           sync.RWMutex
 	configMu          sync.RWMutex
+	configMutationMu  sync.Mutex
 	daemon            DaemonController
 	captureController CaptureController
 	startTime         time.Time
@@ -429,14 +440,12 @@ func NewServer(cfg ServerConfig) *Server {
 		tokens:        initialTokenStore(cfg),
 		pcapCache:     capture.NewCache(),
 	}
-	// License manager is best-effort: failure to initialise leaves
-	// srv.license == nil, which the requireFeature middleware treats as
-	// "license disabled" so dev / test builds keep working without
-	// forcing a license setup.
-	if lm, lmErr := license.NewManager(); lmErr == nil {
+	// License manager initialization is best-effort for Free-tier operation.
+	// Paid feature gates must treat a nil manager as unavailable and fail closed.
+	if lm, lmErr := license.NewRuntimeManager(); lmErr == nil {
 		srv.license = lm
 	} else {
-		slog.Warn("[API] license manager init failed; feature gates will allow all",
+		slog.Warn("[API] license manager init failed; paid feature gates unavailable",
 			"error", lmErr)
 	}
 	return srv

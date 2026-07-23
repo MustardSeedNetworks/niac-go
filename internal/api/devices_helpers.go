@@ -22,32 +22,44 @@ func (s *Server) validateDeviceCreatePreconditions(
 		writeError(w, r, http.StatusBadRequest, "config_not_found", "No configuration loaded", nil)
 		return nil, errValidationFailed
 	}
+	if err := s.validateDeviceAddition(w, r, cfg, hostname); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
 
-	if len(cfg.Devices) >= MaxDeviceCount {
+func (s *Server) validateDeviceAddition(
+	w http.ResponseWriter, r *http.Request, cfg *config.Config, hostname string,
+) error {
+	deviceCount := cfg.DeviceCount()
+	if deviceCount >= MaxDeviceCount {
 		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
 			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
-		return nil, errValidationFailed
+		return errValidationFailed
 	}
 
 	// Free-tier soft cap. Pro licenses carry the "unlimited_devices"
-	// feature and skip this gate. A nil license manager (dev / test
-	// builds) is treated as license-disabled and allows up to the
-	// hard ceiling.
-	if s.license != nil && !s.license.HasFeature("unlimited_devices") &&
-		len(cfg.Devices) >= FreeTierDeviceCount {
+	// feature and skip this gate. A nil manager cannot establish that grant.
+	if (s.license == nil || !s.license.HasFeature("unlimited_devices")) &&
+		deviceCount >= FreeTierDeviceCount {
 		s.writeFeatureGate(w, r, "unlimited_devices",
 			fmt.Sprintf("Free tier supports up to %d devices. "+
 				"Upgrade to Pro for unlimited devices.", FreeTierDeviceCount))
-		return nil, errValidationFailed
+		return errValidationFailed
+	}
+
+	if len(cfg.Segments) > 0 {
+		writeError(w, r, http.StatusConflict, "segmented_config_requires_replacement",
+			"Devices in segmented configurations must be changed through whole-config replacement", nil)
+		return errValidationFailed
 	}
 
 	if deviceExists(cfg.Devices, hostname) {
 		writeError(w, r, http.StatusConflict, "device_exists",
 			fmt.Sprintf("Device '%s' already exists", hostname), nil)
-		return nil, errValidationFailed
+		return errValidationFailed
 	}
-
-	return cfg, nil
+	return nil
 }
 
 // deviceExists checks if a device with the given hostname exists.
@@ -138,6 +150,11 @@ func (s *Server) createAndSaveDevice(
 	if !s.requireDeviceProtocolFeatures(w, r, newDevice) {
 		return nil, errValidationFailed
 	}
+	if validationErr := config.ValidateDeviceManagementRequirements(newDevice); validationErr != nil {
+		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
+			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		return nil, validationErr
+	}
 
 	newCfg := *deepCopyConfig(cfg)
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
@@ -205,6 +222,7 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 	if req.SNMPAgent != nil {
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
+	applyManagementRequests(dev, req.SSH, req.Syslog)
 
 	return nil
 }
@@ -220,6 +238,24 @@ func applySNMPAgentRequest(dst *config.SNMPConfig, src *SNMPAgentRequest) {
 	dst.AddMibs = make([]config.AddMib, 0, len(src.AddMibs))
 	for _, mib := range src.AddMibs {
 		dst.AddMibs = append(dst.AddMibs, config.AddMib{OID: mib.OID, Type: mib.Type, Value: mib.Value})
+	}
+}
+
+func applyManagementRequests(
+	dev *config.Device,
+	ssh *SSHConfigRequest,
+	syslog *SyslogConfigRequest,
+) {
+	if ssh != nil {
+		dev.SSHConfig = &config.SSHConfig{
+			Enabled: ssh.Enabled, Username: strings.TrimSpace(ssh.Username),
+			PasswordEnv: strings.TrimSpace(ssh.PasswordEnv),
+		}
+	}
+	if syslog != nil {
+		dev.SyslogConfig = &config.SyslogConfig{
+			Enabled: syslog.Enabled, Receivers: append([]string(nil), syslog.Receivers...),
+		}
 	}
 }
 
@@ -344,6 +380,7 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 	if req.SNMPAgent != nil {
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
+	applyManagementRequests(dev, req.SSH, req.Syslog)
 
 	if req.RawYAML != "" {
 		parsed, err := parseDeviceFromYAML(req.RawYAML, req.Hostname)

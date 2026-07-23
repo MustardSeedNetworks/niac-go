@@ -45,6 +45,14 @@ func collectDeviceProtocols(dev *config.Device) []string {
 		protocols = append(protocols, "STP")
 	}
 
+	if dev.SSHConfig != nil && dev.SSHConfig.Enabled {
+		protocols = append(protocols, "SSH")
+	}
+
+	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {
+		protocols = append(protocols, "SYSLOG")
+	}
+
 	return protocols
 }
 
@@ -122,6 +130,28 @@ func populateProtocolDetails(resp *DeviceResponse, dev *config.Device) {
 	resp.FTP = buildFTPResponse(dev)
 	resp.NetBIOS = buildNetBIOSResponse(dev)
 	resp.STP = buildSTPResponse(dev)
+	resp.SSH = buildSSHConfigResponse(dev)
+	resp.Syslog = buildSyslogConfigResponse(dev)
+}
+
+func buildSSHConfigResponse(dev *config.Device) *SSHConfigRequest {
+	if dev.SSHConfig == nil {
+		return nil
+	}
+	return &SSHConfigRequest{
+		Enabled: dev.SSHConfig.Enabled, Username: dev.SSHConfig.Username,
+		PasswordEnv: dev.SSHConfig.PasswordEnv,
+	}
+}
+
+func buildSyslogConfigResponse(dev *config.Device) *SyslogConfigRequest {
+	if dev.SyslogConfig == nil {
+		return nil
+	}
+	return &SyslogConfigRequest{
+		Enabled:   dev.SyslogConfig.Enabled,
+		Receivers: append([]string(nil), dev.SyslogConfig.Receivers...),
+	}
 }
 
 func buildCDPResponse(dev *config.Device) *CDPResponse {

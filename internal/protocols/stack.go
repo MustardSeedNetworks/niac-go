@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"slices"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -113,9 +115,14 @@ type Stack struct {
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 
-	debugConfig  *logging.DebugConfig
-	snmpAgents   map[*config.Device]*snmpAgentGroup
-	errorManager *apperr.StateManager
+	debugConfig     *logging.DebugConfig
+	snmpAgents      map[*config.Device]*snmpAgentGroup
+	deviceStates    map[*config.Device]*devicestate.Store
+	stateIPv4Mu     sync.RWMutex
+	stateIPv4       map[*DeviceTable]map[netip.Addr][]*config.Device
+	stateDeviceIPv4 map[*config.Device]deviceIPv4Index
+	notifications   *stateNotificationManager
+	errorManager    *apperr.StateManager
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
@@ -156,6 +163,8 @@ type Statistics struct {
 	DHCPRequests    uint64
 	SNMPQueries     uint64
 	Errors          uint64
+	FabricForwarded uint64
+	FabricDrops     uint64
 }
 
 // NewStack creates a new protocol stack.
@@ -206,6 +215,7 @@ func newStack(
 		errorManager: apperr.NewStateManager(),
 		vlanMode:     configUsesVLANs(cfg),
 	}
+	stack.notifications = newStateNotificationManager(stack)
 
 	// Create protocol handlers
 	stack.arpHandler = NewARPHandler(stack)
@@ -238,16 +248,19 @@ func newStack(
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
+	stack.configureDeviceStates(nil)
 
 	return stack
 }
 
 // ConfigureFabric installs the immutable routed topology before the stack starts.
 func (s *Stack) ConfigureFabric(topology *fabric.Topology) {
+	s.configureDeviceStates(topology)
 	s.fabric = newFabricRuntime(topology, s.config)
 	if s.fabric == nil {
 		return
 	}
+	s.fabric.bindDeviceStates(s.deviceStates)
 	s.dhcpHandler = NewDHCPHandler(s)
 	if s.fabric.attachmentDHCP != nil {
 		s.configureDHCPServer(s.fabric.attachmentDHCP)
@@ -283,6 +296,13 @@ func (s *Stack) replyEthernet(pkt *Packet, device *config.Device) (replyEthernet
 }
 
 func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
+	address, ok := netip.AddrFromSlice(ip)
+	if !ok || !address.Unmap().Is4() {
+		return false
+	}
+	if owns, managed := s.stateDeviceOwnsIPv4(device, address.Unmap()); managed {
+		return owns
+	}
 	if s.fabric != nil {
 		return s.fabric.deviceOwnsIPv4(device, ip)
 	}
@@ -322,6 +342,8 @@ func (s *Stack) Start() error {
 
 	go s.babbleThread()
 
+	s.wg.Go(func() { s.notifications.Run(s.stopChan) })
+
 	// Start discovery protocol periodic advertisements
 	s.lldpHandler.Start()
 	s.cdpHandler.Start()
@@ -349,6 +371,7 @@ func (s *Stack) Stop() {
 	s.fdpHandler.Stop()
 
 	close(s.stopChan)
+	s.notifications.Reset()
 	s.wg.Wait()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
@@ -360,6 +383,16 @@ func (s *Stack) Send(pkt *Packet) {
 	select {
 	case s.sendQueue <- pkt:
 	default:
+		if s.fabric != nil && pkt != nil {
+			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RejectionReason = "send_queue_full"
+			s.stats.mu.Lock()
+			s.stats.FabricDrops++
+			s.stats.mu.Unlock()
+			s.notifyObservers("tx", pkt)
+		}
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
 			_, _ = fmt.Fprintln(os.Stdout, "Send queue full, dropping packet")
 		}
@@ -445,23 +478,27 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
 
-	var replacementFabric *fabricRuntime
+	var replacementTopology *fabric.Topology
 	if s.fabric != nil {
 		report := fabric.Compile(cfg, s.fabric.binding.Binding)
 		if !report.Safe {
 			return fmt.Errorf("%w: %v", ErrUnsafeFabricReload, report.Diagnostics)
 		}
-		replacementFabric = newFabricRuntime(&report.Topology, cfg)
+		replacementTopology = &report.Topology
 	}
 
 	s.initializeDevices(cfg)
 	s.vlanMode = configUsesVLANs(cfg)
-	if replacementFabric != nil {
-		s.fabric = replacementFabric
+	if replacementTopology != nil {
+		s.configureDeviceStates(replacementTopology)
+		s.fabric = newFabricRuntime(replacementTopology, cfg)
+		s.fabric.bindDeviceStates(s.deviceStates)
 		s.dhcpHandler = NewDHCPHandler(s)
 		if s.fabric.attachmentDHCP != nil {
 			s.configureDHCPServer(s.fabric.attachmentDHCP)
 		}
+	} else {
+		s.configureDeviceStates(nil)
 	}
 
 	if s.neighbors != nil {
@@ -492,6 +529,8 @@ func (s *Stack) GetStats() Statistics {
 		DHCPRequests:    s.stats.DHCPRequests,
 		SNMPQueries:     s.stats.SNMPQueries,
 		Errors:          s.stats.Errors,
+		FabricForwarded: s.stats.FabricForwarded,
+		FabricDrops:     s.stats.FabricDrops,
 	}
 }
 

@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { fetchConfig } from '../../api/client';
+import type { SimulationStatus } from '../../api/types';
 import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
 import { useErrorToast } from '../../hooks/useErrorToast';
@@ -13,14 +14,16 @@ import { H2, SmallText } from '../../ui/Typography';
 import { formatTime, formatUptime } from '../../utils/format';
 
 export interface RunningSimulationCardProps {
-  simStatus: {
-    interface?: string;
-    configName?: string;
-    configPath?: string;
-    deviceCount: number;
-    uptimeSeconds: number;
-    startedAt?: string;
-  };
+  simStatus: Pick<
+    SimulationStatus,
+    | 'interface'
+    | 'configName'
+    | 'configPath'
+    | 'deviceCount'
+    | 'uptimeSeconds'
+    | 'startedAt'
+    | 'fabric'
+  >;
   stopping: boolean;
   onStop: () => void;
   /** Success-only status text; failures are surfaced as toasts. */
@@ -97,6 +100,59 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
             helper={t('runtime.running.startedHelper')}
           />
         </div>
+
+        {simStatus.fabric && (
+          <div className="rounded-lg border border-surface-border bg-bg-base/40 pad-default stack">
+            <div className="flex flex-wrap gap-default text-sm text-text-secondary">
+              <span>
+                {t('runtime.fabric.attachment')}: {simStatus.fabric.topology.binding.attachment}
+              </span>
+              <span>
+                {t('runtime.fabric.physicalVlan')}:{' '}
+                {simStatus.fabric.topology.binding.physicalVlan ?? t('runtime.fabric.untagged')}
+              </span>
+              <span>
+                {t('runtime.fabric.forwarded')}: {simStatus.fabric.forwarded}
+              </span>
+              <span>
+                {t('runtime.fabric.drops')}: {simStatus.fabric.drops}
+              </span>
+              <span>
+                {t('runtime.fabric.received')}: {simStatus.fabric.received}
+              </span>
+              <span>
+                {t('runtime.fabric.transmitted')}: {simStatus.fabric.transmitted}
+              </span>
+            </div>
+            <div className="grid gap-default lg:grid-cols-2">
+              <div>
+                <SmallText className="text-text-muted uppercase">
+                  {t('runtime.fabric.virtualNetworks')}
+                </SmallText>
+                <ul className="mt-tight text-sm text-text-primary">
+                  {simStatus.fabric.topology.networks.map((network) => (
+                    <li key={network.name}>
+                      {network.name} · {network.prefix} · {t('runtime.fabric.virtualVlan')}:{' '}
+                      {network.virtualVlan ?? t('runtime.fabric.none')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <SmallText className="text-text-muted uppercase">
+                  {t('runtime.fabric.routes')}
+                </SmallText>
+                <ul className="mt-tight text-sm text-text-primary">
+                  {simStatus.fabric.topology.routes.map((route) => (
+                    <li key={`${route.device}-${route.destination}-${route.via}`}>
+                      {route.device}: {route.destination} → {route.via}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
         {message && <SmallText className="text-status-success">{message}</SmallText>}
 
