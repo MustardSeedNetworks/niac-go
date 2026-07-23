@@ -152,6 +152,13 @@ func TestHandleSimulationStartRequiresUnlimitedDevicesFeature(t *testing.T) {
 	if response.RequiredFeature != "unlimited_devices" {
 		t.Fatalf("required feature = %q", response.RequiredFeature)
 	}
+	if !strings.Contains(response.UpgradeMessage, deviceScaleContract) {
+		t.Fatalf(
+			"upgrade message = %q, want device scale contract %q",
+			response.UpgradeMessage,
+			deviceScaleContract,
+		)
+	}
 }
 
 func TestHandleSimulationStartRejectsMissingSSHPasswordAsRuntimeRequirement(t *testing.T) {

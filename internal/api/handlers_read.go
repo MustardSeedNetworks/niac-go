@@ -244,7 +244,7 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
 	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
 		s.writeFeatureGate(w, r, "unlimited_devices",
-			"This configuration exceeds the Free tier device cap. "+defaultUpgradeMessage)
+			deviceScaleContract+" "+defaultUpgradeMessage)
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Configuration exceeds the maximum supported device count", nil)

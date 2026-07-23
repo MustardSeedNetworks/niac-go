@@ -17,6 +17,9 @@ var (
 )
 
 const (
+	deviceScaleContract = "Free: up to 10 simulated devices; Pro removes tier soft cap; " +
+		"absolute ceiling 1000."
+
 	// MaxDeviceCount is the absolute device ceiling enforced for every
 	// tier as a resource-exhaustion guard (security fix #173). Pro
 	// licenses raise the soft cap to this value via the

@@ -68,6 +68,9 @@ export const LicensePage: FC = () => {
           </div>
         </CardHeader>
         <CardContent>
+          <p className="mb-comfortable text-sm text-text-secondary">
+            {t('license.deviceScaleContract')}
+          </p>
           <CardRow label={t('license.tier')} value={status.tier} status={tierStatus} />
           <CardRow
             label={t('license.activation')}

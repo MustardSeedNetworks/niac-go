@@ -29,7 +29,7 @@ func featureMeta() map[string]FeatureMeta {
 	return map[string]FeatureMeta{
 		"unlimited_devices": {
 			Label:       "Unlimited Devices",
-			Description: "Simulate more than the Free tier's device cap in a single config.",
+			Description: "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.",
 		},
 		"routed_labs": {
 			Label:       "Routed Virtual Labs",

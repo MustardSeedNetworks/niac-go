@@ -857,6 +857,7 @@
     "retry": "Reintentar",
     "devMode": "Compilación de desarrollo: la aplicación de licencia está desactivada, por lo que todas las funciones están disponibles y no se muestran avisos de actualización.",
     "currentTier": "Nivel actual",
+    "deviceScaleContract": "Free: hasta 10 dispositivos simulados; Pro elimina el límite flexible del nivel; límite absoluto de 1000.",
     "tier": "Nivel",
     "activation": "Activación",
     "activated": "Activada",

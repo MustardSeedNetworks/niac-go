@@ -14,10 +14,13 @@ func addLicenseCommand(root *cobra.Command, _ *serviceOptions) {
 		Use:   "license",
 		Short: "Manage license activation",
 		Long: `The license command handles offline license activation and status
-for NIAC. Without a license, NIAC runs in the Free tier (up to 10
-simulated devices, common protocols). NIAC Pro ($599/yr) unlocks:
+for NIAC.
 
-  • Unlimited simulated devices
+Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.
+
+NIAC Pro ($599/yr) unlocks:
+
+  • Simulations above the Free tier device cap
   • Advanced protocols: SNMPv3, NetBIOS, FTP, STP
   • Advanced IPv4/IPv6 stack features
   • Error injection (latency, loss, jitter, protocol faults)

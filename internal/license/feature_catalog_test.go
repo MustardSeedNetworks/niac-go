@@ -3,6 +3,7 @@
 package license_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/license"
@@ -30,6 +31,19 @@ func TestFeatureCatalogCoversProFeatures(t *testing.T) {
 			t.Errorf("feature %q has an empty Description", f.ID)
 		}
 	}
+}
+
+func TestUnlimitedDevicesDescriptionStatesDeviceScaleContract(t *testing.T) {
+	const contract = "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000."
+	for _, feature := range license.FeatureCatalog() {
+		if feature.ID == "unlimited_devices" {
+			if !strings.Contains(feature.Description, contract) {
+				t.Fatalf("description = %q, want device scale contract %q", feature.Description, contract)
+			}
+			return
+		}
+	}
+	t.Fatal("unlimited_devices feature missing")
 }
 
 // TestFeatureCatalogIsStable ensures FeatureCatalog() returns a deterministic,

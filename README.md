@@ -170,6 +170,8 @@ SLSA provenance to the GitHub release.
 
 ## License
 
+Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.
+
 [Business Source License 1.1](LICENSE) — free for non-commercial use;
 commercial use requires a license. Converts to Apache-2.0 on the change
 date stated in the LICENSE file. Matches the licensing on seed and stem.

@@ -67,6 +67,20 @@ function baseStatus(features: LicenseFeature[]): LicenseStatus {
 }
 
 describe('LicensePage', () => {
+  it('states the device scale contract', () => {
+    mockLicense.status = baseStatus([]);
+    mockLicense.loading = false;
+    mockLicense.error = null;
+
+    renderPage();
+
+    expect(
+      screen.getByText(
+        'Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('renders a granted feature by its human-readable label and description, not the raw ID', () => {
     mockLicense.status = baseStatus([bgpFeature]);
     mockLicense.loading = false;

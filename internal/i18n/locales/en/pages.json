@@ -857,6 +857,7 @@
     "retry": "Retry",
     "devMode": "Development build — license enforcement is off, so every feature is available and no upgrade prompts are shown.",
     "currentTier": "Current tier",
+    "deviceScaleContract": "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.",
     "tier": "Tier",
     "activation": "Activation",
     "activated": "Activated",
