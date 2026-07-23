@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `b2201f3d` after the v0.94.10 release PR merge
+**Baseline:** `main` at `90ad10b9` after HTTPS and stale-document closeout
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -14,16 +14,19 @@ Update it when work merges or a disposition changes.
 
 | Item | State | Next action |
 | --- | --- | --- |
-| v0.94.10 release PR #1061 | Merged; all PR checks passed | Verify tag, release workflow, assets, attestations, and signatures |
-| Master plan PR #1064 | Draft; CI running | Complete review, mark ready, merge, and update `main` |
-| Latest published release | v0.94.9 | Replace only after v0.94.10 publication is verified |
+| v0.94.10 core artifacts | Verified | Release workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
+| v0.94.10 content packages | Integrity metadata missing | Fix accepted medium defect #1068 before the next release |
+| Master plan PR #1064 | Draft; rebased on current `main` | Complete review, mark ready, and merge |
+| Latest published release | v0.94.10 | Preserve as the baseline with #1068 explicitly open |
 
 ## Worktree ownership
 
 | Worktree | State | Disposition |
 | --- | --- | --- |
 | Primary `docs/master-plan-closeout` | Clean; PR #1064 | Owns plan and ledger only |
-| `fix/https-only-contract` | Clean; PR #1063 | Owns #1037; do not duplicate listener work |
+| `fix/precommit-fail-closed` | Clean; draft PR #1067 | Corrected body-lint rerun passed; stale failed context still blocks |
+| `fix/https-only-contract` | Merged in #1063 | Eligible for local cleanup after final verification |
+| `docs/pre1-closeout` | Merged in #1065 | Eligible for local cleanup after final verification |
 | `fix/fault-telemetry` | Clean; all patches landed in squash #1059 | Eligible for local cleanup after final verification |
 | `fix/free-tier-contract` | Clean; all patches landed in squash #1062 | Eligible for local cleanup after final verification |
 
@@ -36,7 +39,7 @@ Update it when work merges or a disposition changes.
 | #1034 routed Runtime Control | High | Needs reproduction | Stage 3 |
 | #1035 nested path containment | High | Needs reproduction | Stage 2 first |
 | #1036 Packet Inspector SSE envelope | High | Needs reproduction | Stage 4 |
-| #1037 HTTPS-only listeners | High | PR #1063 open | HTTPS worktree |
+| #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
 | #1041 bounded UDP proxy | High | Needs reproduction | Stage 2 |
 | #1042 off-link notifications | High | Needs reproduction | Stage 3 after fault handoff |
 | #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
@@ -51,7 +54,8 @@ Update it when work merges or a disposition changes.
 | #1048 offline PCAP access | Medium | Needs reproduction | Stage 4 |
 | #1049 capture-exit recovery | Medium | Needs reproduction | Stage 4 |
 | #1052 i18next migration | Medium | Accepted | Stage 4 |
-| #1057 fail-closed hooks | Medium | Accepted | Stage 1 first |
+| #1057 fail-closed hooks | Medium | Draft PR #1067 | Stage 1 active |
+| #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
 
 ## Defect-register reconciliation
 
@@ -102,9 +106,9 @@ new issue until reproduction confirms that the contract remains open.
 - [x] One master plan and ledger exist.
 - [x] Current worktrees have explicit owners.
 - [x] Former follow-up commits are confirmed present in merged squash commits.
-- [ ] v0.94.10 release artifacts and provenance are verified.
+- [x] v0.94.10 core artifacts are verified; content integrity is tracked in #1068.
 - [ ] PR #1064 is merged.
-- [ ] PR #1063 is merged or explicitly handed off.
+- [x] PR #1063 is merged or explicitly handed off.
 - [ ] Every #1053 `needs-info` issue has a current reproduction.
 - [ ] Unique high/medium prose-only findings have accepted GitHub issues.
 - [ ] Duplicate findings are marked absorbed.

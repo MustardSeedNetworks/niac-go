@@ -61,19 +61,19 @@ Complete #1057 first:
 - Print success only after a zero exit.
 - Prove the hook blocks a deliberately failing frontend command.
 
-Then establish the browser baseline and retained traces for Chromium, WebKit,
-Firefox, installed Chrome, installed Edge, and actual Safari.
+Close #1068 before the next release. Then retain browser traces for Chromium,
+WebKit, Firefox, installed Chrome, installed Edge, and actual Safari.
 
 Exit gate: later work can rely on local and CI results without masked failures.
 
 ## Stage 2: Security and external boundaries
 
-Complete remediation Wave 1 in this order:
+Treat #1037 as delivered by PR #1063, then complete remediation Wave 1 in
+this order:
 
 1. #1035 nested configuration containment.
-2. #1037 HTTPS-only listeners, incorporating the existing HTTPS worktree.
-3. #1041 bounded UDP proxy resources and shutdown.
-4. #1032 secure browser authentication for SPA, REST, and SSE.
+2. #1041 bounded UDP proxy resources and shutdown.
+3. #1032 secure browser authentication for SPA, REST, and SSE.
 
 Run adversarial path, plaintext-listener, overload, cancellation,
 credential-leak, authorization, and browser tests before merging.
