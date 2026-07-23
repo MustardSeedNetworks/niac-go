@@ -1,6 +1,6 @@
 {
   "name": "niac-ui",
-  "version": "0.94.12",
+  "version": "0.94.13",
   "private": true,
   "type": "module",
   "engines": {
