@@ -15,8 +15,8 @@
 # somehow absent.
 #
 # meta: true → no Go build, this config only assembles the tarball into a
-# deb/rpm. On a real release it appends the packages to the existing GitHub
-# release created by the core `goreleaser` job (release.mode: append).
+# deb/rpm. The workflow passes those packages to the core release job, which
+# owns all publication and integrity metadata.
 #
 # Tested against goreleaser v2.x.
 # =============================================================================
@@ -71,20 +71,14 @@ nfpms:
         file_info:
           mode: 0o644
 
-# The core release owns checksums.txt; don't emit a second one that would
-# clobber it when appending to the same GitHub release.
+# The core release owns the final checksum manifest.
 checksum:
   disable: true
 
 release:
-  github:
-    owner: MustardSeedNetworks
-    name: niac-go
-  # Append to the release the core `goreleaser` job already created for this
-  # tag — never recreate or replace its artifacts.
-  mode: append
-  draft: false
-  prerelease: auto
+  # Content packages are an input to the core release job and must never
+  # create or mutate an SCM release independently.
+  disable: true
 
 # Don't regenerate release notes — the core job already set the body.
 changelog:

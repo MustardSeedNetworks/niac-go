@@ -100,7 +100,9 @@ jobs:
               - 'ui/vite.config.ts'
             hooks:
               - '.husky/**'
+              - '.goreleaser.content.yml'
               - 'scripts/tests/pre-commit-hook-test.sh'
+              - 'scripts/tests/release-content-integrity-test.sh'
 
   # ===========================================================================
   # Backend (Go)
@@ -538,6 +540,9 @@ jobs:
 
       - name: Test pre-commit hook
         run: ./scripts/tests/pre-commit-hook-test.sh
+
+      - name: Test release content integrity contract
+        run: ./scripts/tests/release-content-integrity-test.sh
 
       - name: Check for sensitive files
         run: |
