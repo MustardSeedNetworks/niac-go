@@ -163,6 +163,8 @@ type Statistics struct {
 	DHCPRequests    uint64
 	SNMPQueries     uint64
 	Errors          uint64
+	FabricForwarded uint64
+	FabricDrops     uint64
 }
 
 // NewStack creates a new protocol stack.
@@ -381,6 +383,16 @@ func (s *Stack) Send(pkt *Packet) {
 	select {
 	case s.sendQueue <- pkt:
 	default:
+		if s.fabric != nil && pkt != nil {
+			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RejectionReason = "send_queue_full"
+			s.stats.mu.Lock()
+			s.stats.FabricDrops++
+			s.stats.mu.Unlock()
+			s.notifyObservers("tx", pkt)
+		}
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
 			_, _ = fmt.Fprintln(os.Stdout, "Send queue full, dropping packet")
 		}
@@ -517,6 +529,8 @@ func (s *Stack) GetStats() Statistics {
 		DHCPRequests:    s.stats.DHCPRequests,
 		SNMPQueries:     s.stats.SNMPQueries,
 		Errors:          s.stats.Errors,
+		FabricForwarded: s.stats.FabricForwarded,
+		FabricDrops:     s.stats.FabricDrops,
 	}
 }
 

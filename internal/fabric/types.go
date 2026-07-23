@@ -50,7 +50,7 @@ type Binding struct {
 	Attachment     string         `json:"attachment"`
 	Interface      string         `json:"interface"`
 	Mode           AttachmentMode `json:"mode"`
-	AccessVLAN     uint16         `json:"accessVlan,omitempty"`
+	AccessVLAN     uint16         `json:"physicalVlan,omitempty"`
 	PolicyApproved bool           `json:"-"`
 }
 

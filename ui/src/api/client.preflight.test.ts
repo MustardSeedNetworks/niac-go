@@ -24,7 +24,7 @@ describe('simulation preflight client', () => {
                 attachment: 'tester',
                 interface: 'eth0',
                 mode: 'access',
-                accessVlan: 2,
+                physicalVlan: 2,
                 network: 'lab-access',
                 wireTagged: false,
               },
@@ -47,7 +47,7 @@ describe('simulation preflight client', () => {
     });
 
     expect(report.safe).toBe(true);
-    expect(report.topology.binding.accessVlan).toBe(2);
+    expect(report.topology.binding.physicalVlan).toBe(2);
     expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/simulation/preflight');
     expect(JSON.parse(mockFetch.mock.calls[1][1].body as string)).not.toHaveProperty('dedicated');
   });

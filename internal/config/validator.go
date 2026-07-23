@@ -379,7 +379,7 @@ func (v *Validator) validateSingleTrapReceiver(receiver, path string) {
 		return
 	}
 
-	host, _, err := net.SplitHostPort(receiver)
+	host, port, err := net.SplitHostPort(receiver)
 	if err != nil {
 		if ip := net.ParseIP(receiver); ip == nil {
 			v.addError(path, "invalid trap receiver format: "+receiver)
@@ -390,6 +390,11 @@ func (v *Validator) validateSingleTrapReceiver(receiver, path string) {
 
 	if ip := net.ParseIP(host); ip == nil {
 		v.addError(path, "invalid IP in trap receiver: "+host)
+		return
+	}
+	value, err := strconv.ParseUint(port, 10, 16)
+	if !validPortSyntax(port) || err != nil || value == 0 {
+		v.addError(path, "invalid trap receiver port: "+port)
 	}
 }
 
