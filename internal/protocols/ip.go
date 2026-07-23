@@ -112,24 +112,7 @@ func (h *IPHandler) getTargetDevices(
 	vlan int,
 ) []*config.Device {
 	if h.stack.fabric != nil {
-		if ip.DstIP.Equal(net.IPv4bcast) && h.stack.fabric.attachmentDHCP != nil {
-			return []*config.Device{h.stack.fabric.attachmentDHCP}
-		}
-		dst, ok := netip.AddrFromSlice(ip.DstIP)
-		if !ok {
-			return nil
-		}
-		resolution, resolved := h.stack.fabric.resolveIPv4(dst.Unmap(), pkt.GetDestMAC())
-		if !resolved {
-			return nil
-		}
-		pkt.fabricReplySourceMAC = cloneMAC(resolution.replySourceMAC)
-		if resolution.routed {
-			pkt.fabricFirstHopIP = net.IP(resolution.firstHopIP.AsSlice())
-			pkt.fabricFirstHopMAC = cloneMAC(resolution.firstHopMAC)
-			pkt.fabricFirstHopDevice = resolution.firstHopDevice
-		}
-		return []*config.Device{resolution.device}
+		return h.getFabricTarget(ip, pkt)
 	}
 	serialNum := pkt.SerialNumber
 	isBroadcast := ip.DstIP.Equal([]byte{255, 255, 255, 255})
@@ -148,6 +131,40 @@ func (h *IPHandler) getTargetDevices(
 	}
 
 	return devices
+}
+
+func (h *IPHandler) getFabricTarget(ip *layers.IPv4, pkt *Packet) []*config.Device {
+	if ip.DstIP.Equal(net.IPv4bcast) && h.stack.fabric.attachmentDHCP != nil {
+		return []*config.Device{h.stack.fabric.attachmentDHCP}
+	}
+	dst, ok := netip.AddrFromSlice(ip.DstIP)
+	if !ok {
+		return nil
+	}
+	resolution, resolved := h.stack.fabric.resolveIPv4(dst.Unmap(), pkt.GetDestMAC())
+	if !resolved {
+		pkt.fabricTrace.RouteDecision = "dropped"
+		pkt.fabricTrace.RejectionReason = "no_route"
+		h.stack.stats.mu.Lock()
+		h.stack.stats.FabricDrops++
+		h.stack.stats.mu.Unlock()
+		return nil
+	}
+	pkt.fabricReplySourceMAC = cloneMAC(resolution.replySourceMAC)
+	pkt.fabricTrace.EgressNetwork = resolution.egressNetwork
+	if !resolution.routed {
+		pkt.fabricTrace.RouteDecision = "local"
+		return []*config.Device{resolution.device}
+	}
+	pkt.fabricFirstHopIP = net.IP(resolution.firstHopIP.AsSlice())
+	pkt.fabricFirstHopMAC = cloneMAC(resolution.firstHopMAC)
+	pkt.fabricFirstHopDevice = resolution.firstHopDevice
+	pkt.fabricTrace.RouteDecision = "forwarded"
+	pkt.fabricTrace.Hop = resolution.firstHopDevice.Name + ":" + resolution.routeVia
+	h.stack.stats.mu.Lock()
+	h.stack.stats.FabricForwarded++
+	h.stack.stats.mu.Unlock()
+	return []*config.Device{resolution.device}
 }
 
 func (h *IPHandler) handleFabricTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {

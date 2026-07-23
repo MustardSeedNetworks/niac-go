@@ -105,6 +105,19 @@
       "downloadYamlTitle": "Descargue la configuración en ejecución como YAML (equivalente a niac config dump).",
       "downloadYaml": "Descargar YAML"
     },
+    "fabric": {
+      "attachment": "Conexión",
+      "physicalVlan": "VLAN física",
+      "virtualVlan": "VLAN virtual",
+      "virtualNetworks": "Redes virtuales",
+      "routes": "Rutas",
+      "forwarded": "Reenviados",
+      "drops": "Descartes",
+      "received": "Recibidos",
+      "transmitted": "Transmitidos",
+      "untagged": "sin etiqueta",
+      "none": "ninguna"
+    },
     "preview": {
       "selectedPrefix": "Seleccionado:",
       "previewOnly": "Solo vista previa — Inicie para lanzar",
@@ -148,6 +161,9 @@
       "vlanLabel": "VLAN de acceso (1–4094)",
       "requestError": "Falló la comprobación previa",
       "safe": "La topología y la conexión pasaron la comprobación para {{count}} redes virtuales. Verifica el aislamiento del host antes de conectar el probador.",
+      "physicalVlanSummary": "VLAN física: {{vlan}}. Las VLAN virtuales permanecen aisladas dentro de NIAC.",
+      "untagged": "sin etiqueta",
+      "unsafeTitle": "Conexión física insegura — el inicio de la simulación está bloqueado",
       "checkLabel": "Ejecutar comprobación",
       "startLabel": "Iniciar simulación"
     },
@@ -541,6 +557,12 @@
       "hexDumpLabel": "Volcado hexadecimal",
       "packetDetailsLabel": "Detalles del paquete",
       "summaryLabel": "Resumen",
+      "ingressNetwork": "Red de entrada",
+      "routeDecision": "Decisión de ruta",
+      "hop": "Salto",
+      "egressNetwork": "Red de salida",
+      "physicalVlan": "VLAN física",
+      "egressRejectionReason": "Rechazo de salida",
       "standaloneDescriptionPart1": "Capture una interfaz sin iniciar una simulación. Las tramas se transmiten al visor a continuación en cuanto llegan al cable. O",
       "standaloneStartSimLink": "inicie una simulación",
       "standaloneDescriptionPart2": "si quiere que NIAC también responda en el cable.",

@@ -5,7 +5,8 @@
  * full unfiltered packet buffer, ignoring whatever display filter the user
  * had dialed in. Export must write exactly the currently filtered packets.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../i18n'; // initialise i18next before the page renders (uses t('packets.inspector.*'))
@@ -71,25 +72,27 @@ describe('PacketInspectorPage — filtered export', () => {
     await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
 
     // Push one TCP and one UDP packet through the stream.
-    capturedOnMessage?.({
-      protocol: 'TCP',
-      sourceIp: '10.0.0.1',
-      destIp: '10.0.0.2',
-      sourcePort: 1234,
-      destPort: 80,
-      size: 64,
-      summary: 'tcp packet',
-      rawData: '00112233',
-    });
-    capturedOnMessage?.({
-      protocol: 'UDP',
-      sourceIp: '10.0.0.3',
-      destIp: '10.0.0.4',
-      sourcePort: 53,
-      destPort: 5353,
-      size: 32,
-      summary: 'udp packet',
-      rawData: 'aabbccdd',
+    await act(async () => {
+      capturedOnMessage?.({
+        protocol: 'TCP',
+        sourceIp: '10.0.0.1',
+        destIp: '10.0.0.2',
+        sourcePort: 1234,
+        destPort: 80,
+        size: 64,
+        summary: 'tcp packet',
+        rawData: '00112233',
+      });
+      capturedOnMessage?.({
+        protocol: 'UDP',
+        sourceIp: '10.0.0.3',
+        destIp: '10.0.0.4',
+        sourcePort: 53,
+        destPort: 5353,
+        size: 32,
+        summary: 'udp packet',
+        rawData: 'aabbccdd',
+      });
     });
 
     await waitFor(() => expect(screen.getByText('2 / 2 packets')).toBeInTheDocument());
@@ -119,5 +122,38 @@ describe('PacketInspectorPage — filtered export', () => {
 
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
+  });
+
+  it('shows routed-lab decisions from the packet stream', async () => {
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
+
+    await act(async () => {
+      capturedOnMessage?.({
+        protocol: 'IPv4',
+        source_ip: '10.10.200.50',
+        dest_ip: '10.20.0.10',
+        size: 64,
+        raw_data: '00112233',
+        ingress_network: 'access',
+        physical_vlan: 200,
+        route_decision: 'forwarded',
+        hop: 'edge:inside',
+        egress_network: 'servers',
+      });
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: /10\.10\.200\.50/ }));
+
+    expect(screen.getByText('Ingress network')).toBeInTheDocument();
+    expect(screen.getByText('access')).toBeInTheDocument();
+    expect(screen.getByText('forwarded')).toBeInTheDocument();
+    expect(screen.getByText('edge:inside')).toBeInTheDocument();
+    expect(screen.getByText('servers')).toBeInTheDocument();
+    expect(screen.getByText('200')).toBeInTheDocument();
   });
 });

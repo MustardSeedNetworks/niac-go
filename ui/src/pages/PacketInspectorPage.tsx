@@ -181,6 +181,22 @@ export const PacketInspectorPage: FC = () => {
           (incoming.payload as string) ||
           '',
         headers: incoming.headers as Record<string, unknown> | undefined,
+        physicalVlan:
+          (incoming.physicalVlan as number | undefined) ??
+          (incoming.physical_vlan as number | undefined),
+        ingressNetwork:
+          (incoming.ingressNetwork as string | undefined) ??
+          (incoming.ingress_network as string | undefined),
+        routeDecision:
+          (incoming.routeDecision as string | undefined) ??
+          (incoming.route_decision as string | undefined),
+        hop: incoming.hop as string | undefined,
+        egressNetwork:
+          (incoming.egressNetwork as string | undefined) ??
+          (incoming.egress_network as string | undefined),
+        egressRejectionReason:
+          (incoming.egressRejectionReason as string | undefined) ??
+          (incoming.egress_rejection_reason as string | undefined),
       };
 
       setPackets((prev) => {

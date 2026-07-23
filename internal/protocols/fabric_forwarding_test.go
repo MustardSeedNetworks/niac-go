@@ -39,6 +39,36 @@ func TestFabricRoutesInternalTargetThroughAttachmentRouter(t *testing.T) {
 	if !stack.deviceOwnsIPv4(targets[0], net.ParseIP("10.20.0.10")) {
 		t.Fatal("resolved fabric endpoint must own its interface address")
 	}
+	trace := pkt.FabricTrace()
+	if trace.RouteDecision != "forwarded" || trace.EgressNetwork != "internal" || trace.Hop != "edge:inside" {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	if got := stack.GetStats().FabricForwarded; got != 1 {
+		t.Fatalf("FabricForwarded = %d, want 1", got)
+	}
+}
+
+func TestFabricRecordsMissingRouteDrop(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	pkt := NewPacket(64)
+	pkt.PutDestMAC(routerMAC)
+
+	targets := stack.ipHandler.getTargetDevices(
+		&layers.IPv4{DstIP: net.ParseIP("10.99.0.10")}, pkt, 1, 0,
+	)
+
+	if targets != nil {
+		t.Fatalf("targets = %#v, want nil", targets)
+	}
+	trace := pkt.FabricTrace()
+	if trace.RouteDecision != "dropped" || trace.RejectionReason != "no_route" {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	if got := stack.GetStats().FabricDrops; got != 1 {
+		t.Fatalf("FabricDrops = %d, want 1", got)
+	}
 }
 
 func TestCLIShutdownChangesFabricDelivery(t *testing.T) {

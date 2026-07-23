@@ -361,6 +361,39 @@ func TestValidate_InvalidTrapReceiver(t *testing.T) {
 	}
 }
 
+func TestValidate_TrapReceiverPort(t *testing.T) {
+	tests := []struct {
+		name     string
+		receiver string
+		valid    bool
+	}{
+		{name: "valid", receiver: "192.0.2.10:162", valid: true},
+		{name: "nonnumeric", receiver: "192.0.2.10:abc"},
+		{name: "zero", receiver: "192.0.2.10:0"},
+		{name: "out of range", receiver: "192.0.2.10:65536"},
+		{name: "signed", receiver: "192.0.2.10:+162"},
+		{name: "zero padded", receiver: "192.0.2.10:0162"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "trap-device", Type: "router",
+				MACAddress:  net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+				IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+				SNMPConfig: SNMPConfig{
+					Community: "public",
+					Traps:     &TrapConfig{Enabled: true, Receivers: []string{tt.receiver}},
+				},
+			}}}
+
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
 func TestValidate_InvalidDNSRecord(t *testing.T) {
 	cfg := &Config{
 		Devices: []Device{

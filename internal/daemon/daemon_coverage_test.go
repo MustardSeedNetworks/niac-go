@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/netip"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // createMinimalConfig creates a minimal config with one device for testing.
@@ -202,6 +206,33 @@ func TestGetStatus_WithSimulationAndConfig(t *testing.T) {
 
 	if status.DeviceCount != 1 {
 		t.Errorf("Expected DeviceCount=1, got %d", status.DeviceCount)
+	}
+}
+
+func TestGetStatusIncludesActiveFabric(t *testing.T) {
+	daemon, err := NewDaemon(Config{StoragePath: "disabled"})
+	if err != nil {
+		t.Fatalf("NewDaemon failed: %v", err)
+	}
+	cfg := createMinimalConfig(t)
+	topology := &fabric.Topology{
+		Binding: fabric.CompiledBinding{
+			Binding: fabric.Binding{Attachment: "tester", Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200},
+			Network: "access",
+		},
+		Networks: []fabric.Network{{Name: "access", Prefix: netip.MustParsePrefix("10.0.0.0/24"), VirtualVLAN: 20}},
+	}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	daemon.simulation = &Simulation{
+		Interface: "eth0", StartedAt: time.Now(), cfg: cfg, stack: stack, fabric: topology,
+	}
+
+	status := daemon.GetStatus()
+
+	if status.Fabric == nil || status.Fabric.Topology.Binding.AccessVLAN != 200 ||
+		status.Fabric.Topology.Networks[0].VirtualVLAN != 20 {
+		t.Fatalf("Fabric status = %#v", status.Fabric)
 	}
 }
 
