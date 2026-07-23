@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { fetchHistory } from '../api/client';
 import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
+import { RequireFeature } from '../components/ui/RequireFeature';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useApiResource } from '../hooks/useApiResource';
@@ -37,7 +38,18 @@ export const TrafficInjectionPage: FC = () => {
           <H2>{t('traffic.page.errorInjectionTitle')}</H2>
           <P className="text-text-muted">{t('traffic.page.errorInjectionDescription')}</P>
         </div>
-        <ErrorInjectionPanel />
+        <RequireFeature
+          feature="error_injection"
+          fallback={
+            <Card>
+              <CardContent>
+                <P className="text-text-muted">{t('traffic.page.errorInjectionRequiresPro')}</P>
+              </CardContent>
+            </Card>
+          }
+        >
+          <ErrorInjectionPanel />
+        </RequireFeature>
       </div>
 
       {/* PCAP Replay */}

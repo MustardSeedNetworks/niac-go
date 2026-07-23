@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
@@ -76,17 +76,19 @@ func createTestModel() *model {
 				Type:        "router",
 				MACAddress:  mac,
 				IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+				SNMPConfig:  config.SNMPConfig{Community: "public"},
 			},
 		},
 	}
 
-	sm := apperr.NewStateManager()
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 
 	return &model{
-		cfg:           cfg,
-		stateManager:  sm,
-		interfaceName: "eth0",
-		debugLevel:    0,
+		cfg:                   cfg,
+		stack:                 stack,
+		interfaceName:         "eth0",
+		debugLevel:            0,
+		faultInjectionEnabled: true,
 		menuItems: []string{
 			"1. Inject FCS Errors (50%)",
 			"2. Inject Packet Discards (25%)",
@@ -260,8 +262,7 @@ func TestModel_Update_ClearErrors(t *testing.T) {
 	m := createTestModel()
 
 	// Inject some errors first
-	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
-	m.errorsActive = 1
+	m.injectError(devicestate.FaultFCS, 50)
 
 	// Press 'c' to clear errors
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
@@ -272,10 +273,8 @@ func TestModel_Update_ClearErrors(t *testing.T) {
 		t.Errorf("Expected 0 active errors, got %d", m.errorsActive)
 	}
 
-	// Verify state manager is cleared
-	states := m.stateManager.GetAllStates()
-	if len(states) != 0 {
-		t.Errorf("Expected 0 states in state manager, got %d", len(states))
+	if active := activeFaultCount(m.stack); active != 0 {
+		t.Errorf("Expected 0 active faults, got %d", active)
 	}
 }
 
@@ -328,7 +327,7 @@ func TestModel_InjectError(t *testing.T) {
 	initialActive := m.errorsActive
 
 	// Inject FCS error
-	m.injectError(apperr.ErrorTypeFCS, 50)
+	m.injectError(devicestate.FaultFCS, 50)
 
 	// Verify counters updated
 	if m.packetsInjected != initialInjected+1 {
@@ -339,18 +338,63 @@ func TestModel_InjectError(t *testing.T) {
 		t.Errorf("Expected errorsActive to increase by 1, got %d", m.errorsActive)
 	}
 
-	// Verify error was set in state manager
-	state := m.stateManager.GetError("192.168.1.1", "eth0")
-	if state == nil {
-		t.Fatal("Error state not set in state manager")
+	faults := m.stack.ActiveInterfaceFaults()["test-device"]["Management"]
+	if faults[devicestate.FaultFCS] != 50 {
+		t.Fatalf("active faults = %#v, want FCS=50", faults)
 	}
 
-	if state.ErrorType != apperr.ErrorTypeFCS {
-		t.Errorf("Expected error type %s, got %s", apperr.ErrorTypeFCS, state.ErrorType)
+	m.injectError(devicestate.FaultFCS, 25)
+	if m.errorsActive != initialActive+1 {
+		t.Fatalf("updated fault count = %d, want %d", m.errorsActive, initialActive+1)
+	}
+	m.injectError(devicestate.FaultFCS, 0)
+	if m.errorsActive != initialActive {
+		t.Fatalf("cleared fault count = %d, want %d", m.errorsActive, initialActive)
+	}
+}
+
+func TestModelInjectErrorUsesDeviceNameForSharedAddress(t *testing.T) {
+	m := createTestModel()
+	second := m.cfg.Devices[0]
+	second.Name = "test-device-2"
+	m.cfg.Devices = append(m.cfg.Devices, second)
+	m.stack = protocols.NewStack(nil, m.cfg, logging.NewDebugConfig(0))
+	m.selectedDeviceIdx = 1
+
+	m.injectError(devicestate.FaultFCS, 25)
+
+	active := m.stack.ActiveInterfaceFaults()
+	if active["test-device-2"]["Management"][devicestate.FaultFCS] != 25 {
+		t.Fatalf("active faults = %#v", active)
+	}
+}
+
+func TestModel_ErrorInjectionRequiresEntitlement(t *testing.T) {
+	m := createTestModel()
+	m.faultInjectionEnabled = false
+
+	m.injectError(devicestate.FaultFCS, 50)
+	if activeFaultCount(m.stack) != 0 {
+		t.Fatal("Free tier injected an interface fault")
+	}
+	if !m.statusIsError || !strings.Contains(m.statusMessage, "NIAC Pro") {
+		t.Fatalf("status = %q, want NIAC Pro entitlement error", m.statusMessage)
 	}
 
-	if state.Value != 50 {
-		t.Errorf("Expected error value 50, got %d", state.Value)
+	m.menuVisible = false
+	_, _ = m.handleMenuToggle()
+	if m.menuVisible {
+		t.Fatal("Free tier opened the error injection menu")
+	}
+
+	_, _ = m.handleQuickErrorInjection("1")
+	if m.valueInputMode {
+		t.Fatal("Free tier opened fault value input")
+	}
+
+	_, _ = m.handleClearErrors()
+	if !m.statusIsError || !strings.Contains(m.statusMessage, "NIAC Pro") {
+		t.Fatalf("clear status = %q, want NIAC Pro entitlement error", m.statusMessage)
 	}
 }
 
@@ -360,7 +404,7 @@ func TestModel_InjectError_NoDevices(t *testing.T) {
 	m.cfg.Devices = []config.Device{} // Clear devices
 
 	// Try to inject error
-	m.injectError(apperr.ErrorTypeFCS, 50)
+	m.injectError(devicestate.FaultFCS, 50)
 
 	// Should set error status
 	if !m.statusIsError {
@@ -368,8 +412,7 @@ func TestModel_InjectError_NoDevices(t *testing.T) {
 	}
 
 	// Verify no error was injected
-	states := m.stateManager.GetAllStates()
-	if len(states) != 0 {
+	if activeFaultCount(m.stack) != 0 {
 		t.Error("No errors should be injected when no devices configured")
 	}
 }
@@ -381,10 +424,10 @@ func TestModel_HandleMenuSelection(t *testing.T) {
 	tests := []struct {
 		name          string
 		selectedItem  int
-		expectedError apperr.ErrorType
+		expectedError devicestate.FaultType
 	}{
-		{"FCS Errors", 0, apperr.ErrorTypeFCS},
-		{"Packet Discards", 1, apperr.ErrorTypeDiscards},
+		{"FCS Errors", 0, devicestate.FaultFCS},
+		{"Packet Discards", 1, devicestate.FaultDiscards},
 	}
 
 	for _, tt := range tests {
@@ -416,8 +459,7 @@ func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 	m := createTestModel()
 
 	// Inject an error first
-	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
-	m.errorsActive = 1
+	m.injectError(devicestate.FaultFCS, 50)
 
 	// Select "Clear All Errors" (index 2 in our test menu)
 	m.selectedItem = 2
@@ -428,9 +470,8 @@ func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 		t.Errorf("Expected 0 active errors after clear, got %d", m.errorsActive)
 	}
 
-	states := m.stateManager.GetAllStates()
-	if len(states) != 0 {
-		t.Errorf("Expected 0 states after clear, got %d", len(states))
+	if active := activeFaultCount(m.stack); active != 0 {
+		t.Errorf("Expected 0 active faults after clear, got %d", active)
 	}
 }
 
@@ -669,7 +710,7 @@ func TestModel_TickUpdate(t *testing.T) {
 	m := createTestModel()
 
 	// Inject an error
-	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
+	m.injectError(devicestate.FaultFCS, 50)
 
 	// Set start time to past so uptime is measurable
 	m.startTime = time.Now().Add(-5 * time.Second)

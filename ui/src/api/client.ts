@@ -205,7 +205,7 @@ export const fetchDeviceEditorSchemas = () =>
   deduplicatedGet<DeviceEditorSchema[]>('/api/v1/device-schemas');
 
 export const injectError = (payload: {
-  deviceIp: string;
+  device: string;
   interface: string;
   errorType: string;
   value: number;
@@ -213,20 +213,21 @@ export const injectError = (payload: {
   requestJson<{
     success: boolean;
     message: string;
-    deviceIp: string;
+    device: string;
     interface: string;
     errorType: string;
     value: number;
   }>('/api/v1/errors', payload, { method: 'POST' });
 
-export const clearError = (deviceIp: string, iface: string) =>
+export const clearError = (device: string, iface: string, errorType: string) =>
   request<{
     success: boolean;
     message: string;
-    deviceIp: string;
+    device: string;
     interface: string;
+    errorType: string;
   }>(
-    `/api/v1/errors?deviceIp=${encodeURIComponent(deviceIp)}&interface=${encodeURIComponent(iface)}`,
+    `/api/v1/errors?device=${encodeURIComponent(device)}&interface=${encodeURIComponent(iface)}&errorType=${encodeURIComponent(errorType)}`,
     { method: 'DELETE' },
   );
 

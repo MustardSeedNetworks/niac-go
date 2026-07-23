@@ -91,7 +91,7 @@ Packages are loosely coupled. Mock interfaces for testing without real network a
 **Files**:
 - `main.go` - Program entry point (calls Execute())
 - `root.go` - Cobra root command and version info
-- `legacy.go` - Legacy CLI mode (backward compatibility)
+- `legacy.go` - Positional CLI mode
 - `validate.go` - Config validation command
 - `template.go` - Template management commands
 - `interactive.go` - Interactive TUI command
@@ -167,7 +167,7 @@ type Device struct {
 
 **Responsibilities**:
 - Load YAML configurations (primary format)
-- Load legacy .cfg files (backward compatibility)
+- Convert Java-DSL `.cfg` input to the canonical YAML model
 - Validate device configurations (Validator with 3 severity levels)
 - Resolve walk file paths (with security checks against path traversal)
 - Config comparison and diff operations
@@ -277,39 +277,26 @@ type Agent struct {
 
 ---
 
-### pkg/errors
-**Purpose**: Error injection for testing
+### Device Fault State
 
-**Key Types**:
-```go
-type StateManager struct {
-    states map[string]*ErrorState
-    mu sync.RWMutex
-}
+**Purpose**: Keep injected interface faults in the same authoritative state
+store used by management, forwarding, discovery, and SNMP.
 
-type ErrorState struct {
-    DeviceIP string
-    Interface string
-    ErrorType ErrorType
-    Value int // Percentage or count
-}
-```
-
-**Error Types**:
-- FCS Errors
-- Packet Discards
-- Interface Errors
-- High Utilization
-- High CPU
-- High Memory
-- High Disk
+Supported faults are FCS errors, packet discards, interface errors, and high
+utilization. Multiple fault types can be active on the same interface.
 
 **Flow**:
-1. User sets error via TUI: `stateManager.SetError(...)`
-2. SNMP handler checks: `stateManager.GetError(deviceIP, interface, ErrorTypeCPU)`
-3. SNMP response modified to show high CPU
 
-**File Reference**: `pkg/errors/state_manager.go`
+1. The API or TUI resolves a running device and authored interface.
+2. `devicestate.Store` records the fault and emits a state event.
+3. Shared per-device SNMP telemetry advances the corresponding IF-MIB,
+   IF-MIB-64, and EtherLike-MIB counters.
+4. Clearing a fault stops future increments without resetting accumulated
+   counters.
+
+**File References**: `internal/devicestate/store_fault.go`,
+`internal/protocols/stack_fault.go`, and
+`internal/protocols/snmp/fault_telemetry.go`.
 
 ---
 
@@ -320,7 +307,7 @@ type ErrorState struct {
 ```go
 type model struct {
     cfg *config.Config
-    stateManager *errors.StateManager
+    stack *protocols.Stack
     menuVisible bool
     menuItems []string
     selectedItem int
@@ -575,36 +562,28 @@ func validateWalkFilePath(basePath, walkFile, deviceName string) (string, error)
 
 ### Architecture
 
-```
-┌──────────────┐
-│ TUI (Bubble  │
-│    Tea)      │
-└──────┬───────┘
-       │
-       v
-┌──────────────┐
-│StateManager  │  Thread-safe map
-│(RWMutex)     │  map[deviceIP]ErrorState
-└──────┬───────┘
-       │
-       v
-┌──────────────┐
-│SNMP Handler  │  Checks state before response
-│              │  Modifies OIDs based on errors
-└──────────────┘
+```text
+Web UI / REST API / TUI
+          |
+          v
+protocols.Stack target validation
+          |
+          v
+devicestate.Store active interface faults
+          |
+          v
+shared SNMP ProtocolTelemetry counters
 ```
 
 ### Usage Example
 
 ```go
-// Set error (from TUI)
-stateManager.SetError("192.168.1.1", "eth0", errors.ErrorTypeCPU, 90)
-
-// Check error (in SNMP handler)
-if state := stateManager.GetError("192.168.1.1", "eth0", errors.ErrorTypeCPU); state != nil {
-    // Return OID value showing 90% CPU
-    return []byte{90}
-}
+err := stack.SetInterfaceFault(
+    "192.168.1.1",
+    "GigabitEthernet0/1",
+    devicestate.FaultFCS,
+    25,
+)
 ```
 
 ---
@@ -621,28 +600,10 @@ if state := stateManager.GetError("192.168.1.1", "eth0", errors.ErrorTypeCPU); s
 
 ### Thread Safety
 
-- **StateManager**: `sync.RWMutex` for error state
+- **Device state store**: `sync.RWMutex` for identity, network, routes, and faults
 - **DebugConfig**: `sync.RWMutex` for debug levels
 - **SNMP Agent**: `sync.RWMutex` for walk data
 - **Packet handlers**: Stateless, no shared state
-
-### Critical Section Example
-
-```go
-func (sm *StateManager) SetError(...) {
-    sm.mu.Lock()
-    defer sm.mu.Unlock()
-
-    sm.states[key] = &ErrorState{...}
-}
-
-func (sm *StateManager) GetError(...) *ErrorState {
-    sm.mu.RLock()
-    defer sm.mu.RUnlock()
-
-    return sm.states[key]
-}
-```
 
 ---
 

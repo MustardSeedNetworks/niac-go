@@ -65,6 +65,8 @@ type apiRoute struct {
 	admin bool
 	// feature requires a license feature via requireFeature. "" = none.
 	feature string
+	// featureWriteOnly leaves safe reads available while requiring feature for mutations.
+	featureWriteOnly bool
 }
 
 // methodGate rejects any method outside allowed with a 405 + Allow header,
@@ -116,7 +118,11 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 		h = s.methodGate(rt.methods, h)
 	}
 	if rt.feature != "" {
-		h = s.requireFeature(rt.feature, h)
+		if rt.featureWriteOnly {
+			h = s.requireFeatureForWrites(rt.feature, h)
+		} else {
+			h = s.requireFeature(rt.feature, h)
+		}
 	}
 	if rt.admin {
 		h = auth.AdminProtect(s.logger, getClientIP, simpleErr, h)
@@ -151,13 +157,14 @@ func (s *Server) registerAll(mux *http.ServeMux, routes []apiRoute) {
 // routePolicyView is the JSON projection of a route's policy for the
 // /__capabilities manifest (the handler func itself is not exposed).
 type routePolicyView struct {
-	Path         string   `json:"path"`
-	Methods      []string `json:"methods,omitempty"`
-	MaxBodyBytes int64    `json:"maxBodyBytes,omitempty"`
-	RateLimited  bool     `json:"rateLimited"`
-	CSRF         bool     `json:"csrf"`
-	Admin        bool     `json:"admin"`
-	Feature      string   `json:"feature,omitempty"`
+	Path             string   `json:"path"`
+	Methods          []string `json:"methods,omitempty"`
+	MaxBodyBytes     int64    `json:"maxBodyBytes,omitempty"`
+	RateLimited      bool     `json:"rateLimited"`
+	CSRF             bool     `json:"csrf"`
+	Admin            bool     `json:"admin"`
+	Feature          string   `json:"feature,omitempty"`
+	FeatureWriteOnly bool     `json:"featureWriteOnly,omitempty"`
 }
 
 // handleRoutePolicyManifest serves the route-policy manifest: every route
@@ -173,13 +180,14 @@ func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Reques
 	views := make([]routePolicyView, 0, len(s.routeManifest))
 	for _, rt := range s.routeManifest {
 		views = append(views, routePolicyView{
-			Path:         rt.path,
-			Methods:      rt.methods,
-			MaxBodyBytes: rt.maxBodyBytes,
-			RateLimited:  rt.rl != rlNone,
-			CSRF:         rt.csrf,
-			Admin:        rt.admin,
-			Feature:      rt.feature,
+			Path:             rt.path,
+			Methods:          rt.methods,
+			MaxBodyBytes:     rt.maxBodyBytes,
+			RateLimited:      rt.rl != rlNone,
+			CSRF:             rt.csrf,
+			Admin:            rt.admin,
+			Feature:          rt.feature,
+			FeatureWriteOnly: rt.featureWriteOnly,
 		})
 	}
 	s.writeJSON(w, views)

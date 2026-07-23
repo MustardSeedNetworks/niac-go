@@ -19,6 +19,7 @@ type Identity struct {
 type Snapshot struct {
 	Identity Identity
 	Network  Network
+	Faults   []InterfaceFault
 	Version  uint64
 }
 
@@ -36,6 +37,7 @@ type Store struct {
 	version        uint64
 	events         []Event
 	checkpoints    map[string]configuration
+	faults         map[interfaceFaultKey]InterfaceFault
 	changes        chan struct{}
 	changeSignal   chan<- struct{}
 	changeObserver func(Snapshot)
@@ -47,7 +49,9 @@ func NewStore(identity Identity) *Store {
 	initial := configuration{identity: identity}
 	return &Store{
 		running: initial, startup: initial, authored: initial, version: 1,
-		changes: make(chan struct{}, 1), now: time.Now,
+		faults: make(
+			map[interfaceFaultKey]InterfaceFault,
+		), changes: make(chan struct{}, 1), now: time.Now,
 	}
 }
 
@@ -87,7 +91,10 @@ func (s *Store) StartupSnapshot() Snapshot {
 }
 
 func (s *Store) snapshot(source configuration) Snapshot {
-	return Snapshot{Identity: source.identity, Network: cloneNetwork(source.network), Version: s.version}
+	return Snapshot{
+		Identity: source.identity, Network: cloneNetwork(source.network),
+		Faults: sortedInterfaceFaults(s.faults), Version: s.version,
+	}
 }
 
 // UpdateIdentity applies one atomic identity transaction.

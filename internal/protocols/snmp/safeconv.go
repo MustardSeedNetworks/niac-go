@@ -75,3 +75,7 @@ func safeUint32FromUint64(v uint64) uint32 {
 
 	return uint32(v)
 }
+
+func wrapCounter32(value uint64) uint32 {
+	return safeUint32FromUint64(value & math.MaxUint32)
+}

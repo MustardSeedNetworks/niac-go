@@ -263,20 +263,10 @@ finds. Both are read-only by default.`,
     summary: 'Make a simulated device misbehave to test monitoring tooling.',
     description: `Error injection lets you push a running simulated device into a
 faulted state without restarting the daemon. The interactive TUI and Web UI
-set per-device counters
-(FCS errors, packet discards, interface errors) or per-device thresholds
-(high CPU, high memory, high disk, high utilization) to specified values.
-The simulated SNMP agent then reflects those values, so a monitoring tool
-polling the device will see the fault.`,
-    items: [
-      'err-fcs',
-      'err-discards',
-      'err-iferrors',
-      'err-cpu',
-      'err-memory',
-      'err-disk',
-      'err-util',
-    ],
+set per-interface FCS errors, packet discards, interface errors, or utilization.
+The simulated SNMP agent advances the corresponding interface counters, so a
+monitoring tool polling the device will see the fault.`,
+    items: ['err-fcs', 'err-discards', 'err-iferrors', 'err-util'],
     whenToUse:
       'Validating that an NMS, SIEM, or alerting platform actually reacts to faults, without breaking real hardware.',
   },
@@ -1912,7 +1902,7 @@ const topologyItems: HelpItem[] = [
     examples: [
       {
         desc: 'Open the topology view',
-        command: '# open http://localhost:8080/topology in a browser',
+        command: '# open https://localhost:8445/topology in a browser',
       },
     ],
     tips: [
@@ -1934,50 +1924,50 @@ const commandItems: HelpItem[] = [
     category: 'commands',
     summary: 'Run NIAC as a long-lived background process with web UI.',
     techDesc:
-      'Starts the simulation runtime and the embedded web UI. The daemon owns the host interface, opens raw sockets, and exposes a REST + SSE API on `--api-listen`. Configuration is hot-reloadable via the web UI; the daemon itself doesn’t consume a YAML file at startup — it loads them on demand from the API.',
+      'Starts the simulation runtime and the embedded web UI. The daemon owns the host interface, opens raw sockets, and exposes a REST + SSE API over HTTPS on `--listen`. Configuration is hot-reloadable via the web UI; the daemon itself doesn’t consume a YAML file at startup — it loads them on demand from the API.',
     laymanDesc:
       'The "always on" mode. Start it once, then drive everything (start/stop simulations, edit configs, inject errors) from a browser.',
     whenToUse: 'Lab desktops, persistent test rigs, anything you want to leave running.',
     whenNotToUse: 'One-shot scripted scenarios — use `niac run`.',
     parameters: [
       {
-        name: 'API listen',
-        flag: '--api-listen',
+        name: 'HTTPS listen',
+        flag: '--listen',
         type: 'string (host:port)',
-        defaultValue: ':8080',
+        defaultValue: '127.0.0.1:8445',
         required: false,
-        techDesc: 'Address for the REST API and web UI.',
+        techDesc: 'HTTPS address for the REST API and web UI.',
         laymanDesc: 'Where the daemon listens for browser / API connections.',
-        example: '--api-listen :8080',
+        example: '--listen 0.0.0.0',
       },
       {
         name: 'API token',
-        flag: 'NIAC_API_TOKEN env',
+        flag: 'NIAC_API_TOKEN / --api-token',
         type: 'string',
         defaultValue: '',
         required: false,
         techDesc:
-          'Bearer token required for API access. Prefer env var; the deprecated `--api-token` flag leaks via `ps`.',
+          'Bearer token required for non-loopback listeners. Prefer the environment variable so the token is not exposed in the process list.',
         laymanDesc: 'A shared secret that protects the API from random LAN visitors.',
         example: 'NIAC_API_TOKEN=$(openssl rand -hex 32) niac daemon',
       },
       {
         name: 'Storage path',
-        flag: '--storage-path',
+        flag: '--storage',
         type: 'path',
         defaultValue: '~/.niac/niac.db',
         required: false,
-        techDesc: 'SQLite DB where run history is persisted.',
+        techDesc: 'BoltDB file where run history is persisted.',
         laymanDesc: 'Where the daemon stores history between restarts.',
-        example: '--storage-path /var/lib/niac/niac.db',
+        example: '--storage /var/lib/niac/niac.db',
       },
     ],
     configFields: [],
     metrics: [],
     examples: [
       {
-        desc: 'Local daemon on default port',
-        command: 'sudo NIAC_API_TOKEN=secret niac daemon',
+        desc: 'Local daemon on the default HTTPS listener',
+        command: 'niac daemon',
       },
       {
         desc: 'Run as a systemd service',
@@ -1985,7 +1975,7 @@ const commandItems: HelpItem[] = [
       },
     ],
     tips: [
-      'Always set NIAC_API_TOKEN — the daemon will run without it but the API is then unauthenticated.',
+      'Set NIAC_API_TOKEN before using a non-loopback listener; NIAC refuses an unauthenticated external bind.',
       'Use `niac dump` to grab a pcap from a running daemon without restarting.',
     ],
     seeAlso: ['cmd-run', 'cmd-monitor', 'cmd-status'],
@@ -2253,7 +2243,7 @@ const commandItems: HelpItem[] = [
       'Subscribes over IPC and prints stats every `--interval` (default 1s) in table / json / csv formats. Like `top` but for the NIAC simulation.',
     laymanDesc: 'Watch the simulation’s packet counters live.',
     whenToUse: 'Tailing a running daemon, scripting metric collection.',
-    whenNotToUse: 'You want long-term metrics — use Prometheus via `--metrics-listen`.',
+    whenNotToUse: 'You want long-term metrics — scrape `/metrics` from the HTTPS daemon.',
     parameters: [
       {
         name: 'Format',
@@ -2676,7 +2666,7 @@ const analysisItems: HelpItem[] = [
       },
       {
         desc: 'Web UI: Packets page → Analyze tab',
-        command: '# open http://localhost:8080/packets',
+        command: '# open https://localhost:8445/packets',
       },
     ],
     tips: ['The web UI Packets page can analyze recordings stored in the daemon’s capture buffer.'],
@@ -2703,7 +2693,7 @@ const analysisItems: HelpItem[] = [
       },
       {
         desc: 'Web UI → SNMP Walks',
-        command: '# open http://localhost:8080/walk-validator',
+        command: '# open https://localhost:8445/walk-validator',
       },
     ],
     tips: ['Web UI version also validates and auto-fixes malformed walk files.'],
@@ -2835,83 +2825,6 @@ const errorItems: HelpItem[] = [
     ],
     tips: [],
     seeAlso: ['err-fcs', 'err-discards'],
-  },
-  {
-    id: 'err-cpu',
-    name: 'High CPU',
-    standard: 'TUI/Web CPU injection',
-    category: 'errors',
-    summary: 'CPU-utilization gauge value.',
-    techDesc:
-      'Sets the simulated device’s CPU gauge to the given percentage. The value is reflected in SNMP polls of cpmCPUTotal5secRev (Cisco) and equivalents on other vendor MIBs.',
-    laymanDesc: 'Tells the device to pretend it’s overloaded.',
-    whenToUse: 'Drives CPU-threshold alerting tests.',
-    whenNotToUse:
-      'You actually want the niac process to peg CPU — this is just a counter, not a load generator.',
-    parameters: [],
-    configFields: [],
-    metrics: [
-      {
-        name: 'cpuLoad',
-        unit: '%',
-        goodRange: '< 80',
-        badMeaning: '> 80% sustained — control-plane saturation risk.',
-      },
-    ],
-    examples: [
-      {
-        desc: '85% CPU',
-        command: 'Traffic > Error Injection > router-1 > CPU > 85',
-      },
-    ],
-    tips: ['Many NMS systems trigger only above 80%; test both above and below your threshold.'],
-    seeAlso: ['err-memory'],
-  },
-  {
-    id: 'err-memory',
-    name: 'High Memory',
-    standard: 'TUI/Web memory injection',
-    category: 'errors',
-    summary: 'Memory-utilization gauge.',
-    techDesc:
-      'Sets the memory-utilization gauge polled by SNMP. Mirrors ciscoMemoryPoolUsed proportional to total.',
-    laymanDesc: 'Tells the device to pretend it’s low on memory.',
-    whenToUse: 'Memory-threshold alerting tests.',
-    whenNotToUse: 'You want real memory pressure — NIAC doesn’t allocate just because you asked.',
-    parameters: [],
-    configFields: [],
-    metrics: [],
-    examples: [
-      {
-        desc: '92% memory',
-        command: 'Traffic > Error Injection > server-1 > Memory > 92',
-      },
-    ],
-    tips: [],
-    seeAlso: ['err-cpu', 'err-disk'],
-  },
-  {
-    id: 'err-disk',
-    name: 'High Disk',
-    standard: 'TUI/Web disk injection',
-    category: 'errors',
-    summary: 'Disk-utilization gauge.',
-    techDesc:
-      'Reflects in hrStorageUsed / hrStorageAllocationUnits combination. Useful for tools that watch host-resource MIB for full disks.',
-    laymanDesc: 'Tells the simulated device its disk is full.',
-    whenToUse: 'Storage-alerting tests.',
-    whenNotToUse: 'Non-host-resource MIB consumers.',
-    parameters: [],
-    configFields: [],
-    metrics: [],
-    examples: [
-      {
-        desc: '95% disk',
-        command: 'Traffic > Error Injection > server-1 > Disk > 95',
-      },
-    ],
-    tips: [],
-    seeAlso: ['err-memory'],
   },
   {
     id: 'err-util',
@@ -3674,7 +3587,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-prometheus',
     question: 'How do I scrape NIAC metrics with Prometheus?',
     answer:
-      'Start the daemon with `--metrics-listen :9100` (or any host:port). NIAC exposes a Prometheus-format /metrics endpoint with per-protocol counters, per-device gauges, and runtime stats. Point your Prometheus scrape config at it.',
+      'NIAC exposes Prometheus-format metrics at `/metrics` on the daemon’s HTTPS listener, including per-protocol counters, per-device gauges, and runtime stats. Configure Prometheus for the daemon certificate and bearer token when authentication is enabled.',
     tags: ['prometheus', 'metrics', 'observability'],
   },
   {
@@ -3695,7 +3608,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-ports',
     question: 'What ports does NIAC use?',
     answer:
-      'On the wire, whichever simulated protocols are enabled (UDP/53 DNS, UDP/67-68 DHCP, UDP/137-138 NetBIOS, UDP/161-162 SNMP, TCP/21 FTP, TCP/80 HTTP, TCP/5201 iperf3, multicast for LLDP/CDP/STP). Host services: 8080 by default for the web UI / REST API, plus whatever you pass to `--metrics-listen` for Prometheus.',
+      'On the wire, whichever simulated protocols are enabled (UDP/53 DNS, UDP/67-68 DHCP, UDP/137-138 NetBIOS, UDP/161-162 SNMP, TCP/21 FTP, TCP/80 HTTP, TCP/5201 iperf3, multicast for LLDP/CDP/STP). The host HTTPS service uses 8445 by default for the web UI, REST API, SSE, and Prometheus metrics.',
     tags: ['ports', 'network'],
   },
   {

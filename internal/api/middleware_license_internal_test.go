@@ -140,3 +140,34 @@ func TestRequireFeature_NoLicenseReturnsFreeTier(t *testing.T) {
 			body.CurrentTier, license.TierFree.String())
 	}
 }
+
+func TestRequireFeatureForWritesAllowsReadsAndBlocksMutations(t *testing.T) {
+	t.Parallel()
+	s := newGateTestServer(t, freshManager(t))
+	for _, test := range []struct {
+		method string
+		want   int
+		called bool
+	}{
+		{method: http.MethodGet, want: http.StatusOK, called: true},
+		{method: http.MethodPost, want: http.StatusPaymentRequired},
+		{method: http.MethodDelete, want: http.StatusPaymentRequired},
+	} {
+		t.Run(test.method, func(t *testing.T) {
+			t.Parallel()
+			called := false
+			handler := s.requireFeatureForWrites("error_injection", nopHandler(&called))
+			recorder := httptest.NewRecorder()
+			handler(recorder, httptest.NewRequest(test.method, "/api/v1/errors", http.NoBody))
+			if recorder.Code != test.want || called != test.called {
+				t.Fatalf(
+					"status = %d, called = %t; want %d, %t",
+					recorder.Code,
+					called,
+					test.want,
+					test.called,
+				)
+			}
+		})
+	}
+}

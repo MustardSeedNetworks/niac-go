@@ -291,8 +291,13 @@ export interface ErrorType {
 export interface ErrorInjectionInfo {
   availableTypes: ErrorType[];
   info: string;
+  targets?: {
+    device: string;
+    address?: string;
+    interfaces: string[];
+  }[];
   activeErrors?: {
-    [deviceIp: string]: {
+    [device: string]: {
       [interfaceName: string]: {
         [errorType: string]: number;
       };

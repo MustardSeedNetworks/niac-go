@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	dot3StatsFCSErrors     = "1.3.6.1.2.1.10.7.2.1.3"
 	dot3StatsDuplexStatus  = "1.3.6.1.2.1.10.7.2.1.19"
 	interfaceStatusUp      = 1
 	interfaceStatusDown    = 2
@@ -195,6 +196,11 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 		{ifOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }},
 		{ifOutUcastPkts, func(s interfaceSnapshot) uint64 { return s.outUcast }},
 		{ifOutNUcastPkts, func(s interfaceSnapshot) uint64 { return s.outNUcast }},
+		{ifInDiscards, func(s interfaceSnapshot) uint64 { return s.inDiscards }},
+		{ifOutDiscards, func(s interfaceSnapshot) uint64 { return s.outDiscards }},
+		{ifInErrors, func(s interfaceSnapshot) uint64 { return s.inErrors }},
+		{ifOutErrors, func(s interfaceSnapshot) uint64 { return s.outErrors }},
+		{dot3StatsFCSErrors, func(s interfaceSnapshot) uint64 { return s.fcsErrors }},
 	}
 	for _, counter := range counters {
 		value := counter.value
@@ -202,18 +208,130 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 			snapshot := a.protocolStats.interfaceSnapshot(interfaceName)
 			return &OIDValue{
 				Type:  gosnmp.Counter32,
-				Value: safeUint32FromUint64(value(snapshot)),
+				Value: wrapCounter32(value(snapshot)),
 			}
 		})
 	}
-	for _, oid := range []string{
-		ifInDiscards, ifInErrors, ifInUnknownProtos, ifOutDiscards, ifOutErrors, ifOutQLen,
-	} {
+	for _, oid := range []string{ifInUnknownProtos, ifOutQLen} {
 		fullOID := oid + "." + idxStr
 		if a.mib.Get(fullOID) == nil {
 			a.mib.Set(fullOID, &OIDValue{Type: gosnmp.Counter32, Value: uint32(0)})
 		}
 	}
+}
+
+func (a *Agent) registerWalkStateFaultCounters() {
+	if !a.hasWalkContent() || len(a.device.Interfaces) > 0 || a.deviceState == nil {
+		return
+	}
+	snapshot := a.deviceState.Snapshot()
+	if len(snapshot.Network.Interfaces) == 0 {
+		return
+	}
+	index, ok := a.walkStateFaultIndex(snapshot.Network.Interfaces[0].Name)
+	if !ok {
+		return
+	}
+	a.registerFaultCountersWithBaseline(snapshot.Network.Interfaces[0].Name, index)
+}
+
+// InterfaceFaultObservable reports whether a fault on name has an IF-MIB counter surface.
+func (a *Agent) InterfaceFaultObservable(name string) bool {
+	if _, ok := a.InterfaceIndex(name); ok {
+		return true
+	}
+	_, ok := a.walkStateFaultIndex(name)
+	return ok
+}
+
+func (a *Agent) walkStateFaultIndex(name string) (string, bool) {
+	if !a.hasWalkContent() || len(a.device.Interfaces) > 0 || a.deviceState == nil {
+		return "", false
+	}
+	interfaces := a.deviceState.Snapshot().Network.Interfaces
+	if len(interfaces) != 1 || interfaces[0].Name != name {
+		return "", false
+	}
+	if index, ok := a.InterfaceIndex(name); ok {
+		return strconv.Itoa(index), true
+	}
+	if interfaces[0].Address.IsValid() {
+		address := interfaces[0].Address.Addr().Unmap().String()
+		index := oidCounterValue(a.mib.Get(ipAdEntIfIndex + "." + address))
+		if index > 0 {
+			return strconv.FormatUint(index, 10), true
+		}
+	}
+	return "", false
+}
+
+func (a *Agent) registerFaultCountersWithBaseline(interfaceName, index string) {
+	counters := []struct {
+		oid      string
+		value    func(interfaceSnapshot) uint64
+		snmpType gosnmp.Asn1BER
+	}{
+		{ifInOctets, func(s interfaceSnapshot) uint64 { return s.inOctets }, gosnmp.Counter32},
+		{ifOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }, gosnmp.Counter32},
+		{ifHCInOctets, func(s interfaceSnapshot) uint64 { return s.inOctets }, gosnmp.Counter64},
+		{ifHCOutOctets, func(s interfaceSnapshot) uint64 { return s.outOctets }, gosnmp.Counter64},
+		{ifInDiscards, func(s interfaceSnapshot) uint64 { return s.inDiscards }, gosnmp.Counter32},
+		{
+			ifOutDiscards,
+			func(s interfaceSnapshot) uint64 { return s.outDiscards },
+			gosnmp.Counter32,
+		},
+		{ifInErrors, func(s interfaceSnapshot) uint64 { return s.inErrors }, gosnmp.Counter32},
+		{ifOutErrors, func(s interfaceSnapshot) uint64 { return s.outErrors }, gosnmp.Counter32},
+		{
+			dot3StatsFCSErrors,
+			func(s interfaceSnapshot) uint64 { return s.fcsErrors },
+			gosnmp.Counter32,
+		},
+	}
+	for _, counter := range counters {
+		fullOID := counter.oid + "." + index
+		baseline := oidCounterValue(a.mib.Get(fullOID))
+		value := counter.value
+		snmpType := counter.snmpType
+		a.mib.SetDynamic(fullOID, func() *OIDValue {
+			result := baseline + value(a.protocolStats.interfaceSnapshot(interfaceName))
+			if snmpType == gosnmp.Counter64 {
+				return &OIDValue{Type: snmpType, Value: result}
+			}
+			return &OIDValue{
+				Type:  snmpType,
+				Value: wrapCounter32(result),
+			}
+		})
+	}
+}
+
+func oidCounterValue(value *OIDValue) uint64 {
+	if value == nil {
+		return 0
+	}
+	switch number := value.Value.(type) {
+	case uint:
+		return uint64(number)
+	case uint32:
+		return uint64(number)
+	case uint64:
+		return number
+	case int32:
+		if number > 0 {
+			return uint64(number)
+		}
+	case int:
+		if number > 0 {
+			return uint64(number)
+		}
+	case int64:
+		if number > 0 {
+			return uint64(number)
+		}
+	}
+	return 0
 }
 
 func (a *Agent) registerIfXTablePacketCounters(interfaceName, idxStr string) {
@@ -276,7 +394,7 @@ func (a *Agent) registerIfXTablePacketCounters(interfaceName, idxStr string) {
 		a.mib.SetDynamic(counter.oid+"."+idxStr, func() *OIDValue {
 			result := value(a.protocolStats.interfaceSnapshot(interfaceName))
 			if snmpType == gosnmp.Counter32 {
-				return &OIDValue{Type: snmpType, Value: safeUint32FromUint64(result)}
+				return &OIDValue{Type: snmpType, Value: wrapCounter32(result)}
 			}
 			return &OIDValue{Type: snmpType, Value: result}
 		})

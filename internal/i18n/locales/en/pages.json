@@ -54,7 +54,7 @@
     "errorPanel": {
       "title": "Error Injection Types",
       "tuiModeLabel": "TUI Mode:",
-      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-7 for quick injection).",
+      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-4 for quick injection).",
       "clickHint": "Select a type to inject it on the Traffic page."
     }
   },
@@ -373,6 +373,7 @@
     "page": {
       "errorInjectionTitle": "Error Injection",
       "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
+      "errorInjectionRequiresPro": "Error injection requires NIAC Pro.",
       "pcapReplayTitle": "PCAP Replay",
       "pcapReplayDescription": "Replay captured packet traffic with loop and timing controls for testing.",
       "recentRunsTitle": "Recent runs",

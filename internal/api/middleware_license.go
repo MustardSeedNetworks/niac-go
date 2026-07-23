@@ -82,3 +82,14 @@ func (s *Server) requireFeature(feature string, next http.HandlerFunc) http.Hand
 		s.writeFeatureGate(w, r, feature, "")
 	}
 }
+
+func (s *Server) requireFeatureForWrites(feature string, next http.HandlerFunc) http.HandlerFunc {
+	gated := s.requireFeature(feature, next)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			next(w, r)
+			return
+		}
+		gated(w, r)
+	}
+}

@@ -6,8 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // --- display_utils.go tests ---
@@ -89,7 +91,13 @@ func TestTruncateName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := truncateName(tt.input, tt.maxLen)
 			if got != tt.expected {
-				t.Errorf("truncateName(%q, %d) = %q, want %q", tt.input, tt.maxLen, got, tt.expected)
+				t.Errorf(
+					"truncateName(%q, %d) = %q, want %q",
+					tt.input,
+					tt.maxLen,
+					got,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -142,7 +150,13 @@ func TestHandleScrollInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx, sy, handled := handleScrollInput(tt.key, tt.selectedIdx, tt.scrollY, tt.listLen, tt.visibleRows)
+			idx, sy, handled := handleScrollInput(
+				tt.key,
+				tt.selectedIdx,
+				tt.scrollY,
+				tt.listLen,
+				tt.visibleRows,
+			)
 			if handled != tt.wantHandled {
 				t.Errorf("handled = %v, want %v", handled, tt.wantHandled)
 			}
@@ -162,26 +176,25 @@ func createDiffTestModel() *model {
 	mac1, _ := net.ParseMAC("00:11:22:33:44:55")
 	mac2, _ := net.ParseMAC("AA:BB:CC:DD:EE:FF")
 
-	return &model{
-		cfg: &config.Config{
-			Devices: []config.Device{
-				{
-					Name:        "router1",
-					Type:        "router",
-					MACAddress:  mac1,
-					IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
-				},
-				{
-					Name:        "switch1",
-					Type:        "switch",
-					MACAddress:  mac2,
-					IPAddresses: []net.IP{net.ParseIP("192.168.1.2")},
-				},
+	cfg := &config.Config{
+		Devices: []config.Device{
+			{
+				Name:        "router1",
+				Type:        "router",
+				MACAddress:  mac1,
+				IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+			},
+			{
+				Name:        "switch1",
+				Type:        "switch",
+				MACAddress:  mac2,
+				IPAddresses: []net.IP{net.ParseIP("192.168.1.2")},
 			},
 		},
-		stateManager: apperr.NewStateManager(),
-		debugLogs:    make([]string, 0, 100),
-		startTime:    time.Now(),
+	}
+	return &model{
+		cfg: cfg, stack: protocols.NewStack(nil, cfg, logging.NewDebugConfig(0)),
+		debugLogs: make([]string, 0, 100), startTime: time.Now(),
 	}
 }
 
@@ -786,7 +799,7 @@ func TestPerformSearch_Logs(t *testing.T) {
 
 func TestPerformSearch_ActiveErrors(t *testing.T) {
 	m := createTestModel()
-	m.stateManager.SetError("192.168.1.1", "eth0", apperr.ErrorTypeFCS, 50)
+	m.injectError(devicestate.FaultFCS, 50)
 	m.searchQuery = "fcs"
 	m.searchCategory = searchCategoryAll
 

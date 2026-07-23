@@ -156,15 +156,25 @@ func (m *model) searchLogs(query string) {
 
 // searchActiveErrors searches active error injections for matches.
 func (m *model) searchActiveErrors(query string) {
-	for _, state := range m.stateManager.GetAllStates() {
-		if strings.Contains(strings.ToLower(state.DeviceIP), query) ||
-			strings.Contains(strings.ToLower(string(state.ErrorType)), query) {
-			m.searchResults = append(m.searchResults, searchResult{
-				Category: "error",
-				Title:    fmt.Sprintf("%s on %s", state.ErrorType, state.DeviceIP),
-				Detail:   fmt.Sprintf("Interface: %s, Value: %d%%", state.Interface, state.Value),
-				Index:    -1,
-			})
+	if m.stack == nil {
+		return
+	}
+	for deviceIP, interfaces := range m.stack.ActiveInterfaceFaults() {
+		for interfaceName, faults := range interfaces {
+			for faultType, value := range faults {
+				label := faultLabel(faultType)
+				if strings.Contains(strings.ToLower(deviceIP+label), query) {
+					m.searchResults = append(m.searchResults, searchResult{
+						Category: "error", Title: fmt.Sprintf("%s on %s", label, deviceIP),
+						Detail: fmt.Sprintf(
+							"Interface: %s, Value: %s",
+							interfaceName,
+							faultValue(faultType, value),
+						),
+						Index: -1,
+					})
+				}
+			}
 		}
 	}
 }

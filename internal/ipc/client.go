@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"time"
 
-	apperr "github.com/MustardSeedNetworks/niac-go/internal/apperr"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
@@ -20,10 +19,6 @@ var (
 	ErrStatusCommandFailed    = errors.New("status command failed")
 	ErrMissingStatusData      = errors.New("response missing status data")
 	ErrReloadCommandFailed    = errors.New("reload command failed")
-	ErrInjectCommandFailed    = errors.New("inject command failed")
-	ErrListCommandFailed      = errors.New("list command failed")
-	ErrMissingInjectionsData  = errors.New("response missing injections data")
-	ErrClearCommandFailed     = errors.New("clear command failed")
 	ErrShutdownCommandFailed  = errors.New("shutdown command failed")
 	ErrDumpCommandFailed      = errors.New("dump command failed")
 	ErrMissingPacketsData     = errors.New("response missing packets data")
@@ -166,88 +161,6 @@ func (c *Client) Reload() error {
 
 	if !resp.Success {
 		return fmt.Errorf("%w: %s", ErrReloadCommandFailed, resp.Error)
-	}
-
-	return nil
-}
-
-// InjectError injects an error on the specified device.
-// The errorType should be one of the ErrorType constants (e.g., "FCS Errors", "Packet Discards").
-// The value represents the error rate or percentage depending on the error type.
-func (c *Client) InjectError(device, errorType string, value int) error {
-	args := map[string]any{
-		"device":     device,
-		"error_type": errorType,
-		"value":      value,
-	}
-
-	resp, err := c.SendCommand(CommandInject, args)
-	if err != nil {
-		return err
-	}
-
-	if !resp.Success {
-		return fmt.Errorf("%w: %s", ErrInjectCommandFailed, resp.Error)
-	}
-
-	return nil
-}
-
-// InjectErrorType is a convenience method that accepts an errors.ErrorType.
-func (c *Client) InjectErrorType(device string, errorType apperr.ErrorType, value int) error {
-	return c.InjectError(device, string(errorType), value)
-}
-
-// ListInjections returns a list of all active error injections.
-func (c *Client) ListInjections() ([]ErrorInjectionData, error) {
-	resp, err := c.SendCommand(CommandList, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if !resp.Success {
-		return nil, fmt.Errorf("%w: %s", ErrListCommandFailed, resp.Error)
-	}
-
-	// Extract injections from response data
-	injectionsData, ok := resp.Data["injections"]
-	if !ok {
-		return nil, ErrMissingInjectionsData
-	}
-
-	// Convert to slice of ErrorInjectionData
-	injectionsBytes, err := json.Marshal(injectionsData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal injections data: %w", err)
-	}
-
-	var injections []ErrorInjectionData
-	err = json.Unmarshal(injectionsBytes, &injections)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal injections data: %w", err)
-	}
-
-	return injections, nil
-}
-
-// ClearInjections clears error injections.
-// If device is empty, all injections are cleared.
-// If device is specified, only injections for that device are cleared.
-func (c *Client) ClearInjections(device string) error {
-	var args map[string]any
-	if device != "" {
-		args = map[string]any{
-			"device": device,
-		}
-	}
-
-	resp, err := c.SendCommand(CommandClear, args)
-	if err != nil {
-		return err
-	}
-
-	if !resp.Success {
-		return fmt.Errorf("%w: %s", ErrClearCommandFailed, resp.Error)
 	}
 
 	return nil

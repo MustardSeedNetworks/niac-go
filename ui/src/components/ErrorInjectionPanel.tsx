@@ -1,16 +1,9 @@
 import { valibotResolver } from '@hookform/resolvers/valibot';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import {
-  clearAllErrors,
-  clearError,
-  fetchDeviceInterfaces,
-  fetchDevices,
-  fetchErrorTypes,
-  injectError,
-} from '../api/client';
+import { clearAllErrors, clearError, fetchErrorTypes, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useApiResource } from '../hooks/useApiResource';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
@@ -23,7 +16,6 @@ import { getErrorMessage } from '../utils/format';
 
 export const ErrorInjectionPanel: FC = () => {
   const { t } = useTranslation('errors');
-  const { data: devices } = useApiResource(fetchDevices, []);
   const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
     intervalMs: 5000,
   });
@@ -50,30 +42,14 @@ export const ErrorInjectionPanel: FC = () => {
     mode: 'onBlur',
   });
   const selectedErrorType = watch('selectedErrorType');
-  const selectedDeviceIp = watch('selectedDevice');
-
-  // Error injection targets a device IP, but the per-device interfaces
-  // route is hostname-scoped — resolve the hostname from the device list
-  // already loaded above before fetching its interfaces.
-  const selectedDeviceHostname =
-    devices?.find((dev) => dev.ips?.[0] === selectedDeviceIp)?.name ?? '';
-
-  const { data: deviceInterfaces } = useApiResource(
-    useCallback(
-      () =>
-        selectedDeviceHostname
-          ? fetchDeviceInterfaces(selectedDeviceHostname)
-          : Promise.resolve([]),
-      [selectedDeviceHostname],
-    ),
-    [selectedDeviceHostname],
-  );
+  const selectedDevice = watch('selectedDevice');
+  const selectedTarget = errorInfo?.targets?.find((target) => target.device === selectedDevice);
 
   // The previously selected interface may not exist on a newly selected
   // device — clear it rather than silently submitting a stale value.
   useEffect(() => {
     setValue('selectedInterface', '');
-  }, [selectedDeviceHostname, setValue]);
+  }, [selectedDevice, setValue]);
 
   // The <select> options render once errorInfo resolves, after this form's
   // initial mount — so the uncontrolled defaultValues.selectedErrorType
@@ -105,7 +81,7 @@ export const ErrorInjectionPanel: FC = () => {
     setMessage(null);
     try {
       await injectError({
-        deviceIp: values.selectedDevice,
+        device: values.selectedDevice,
         interface: values.selectedInterface,
         errorType: values.selectedErrorType,
         value: values.errorValue,
@@ -137,13 +113,13 @@ export const ErrorInjectionPanel: FC = () => {
     }
   };
 
-  const handleClearSpecific = async (deviceIp: string, iface: string) => {
+  const handleClearSpecific = async (device: string, iface: string, errorType: string) => {
     setClearingBusy(true);
     try {
-      await clearError(deviceIp, iface);
+      await clearError(device, iface, errorType);
       setMessage({
         type: 'success',
-        text: t('injection.clearSpecificSuccess', { deviceIp, iface }),
+        text: t('injection.clearSpecificSuccess', { deviceIp: device, iface }),
       });
       refetchErrors();
     } catch (err: unknown) {
@@ -176,9 +152,10 @@ export const ErrorInjectionPanel: FC = () => {
                   className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info"
                 >
                   <option value="">{t('injection.deviceSelectPlaceholder')}</option>
-                  {devices?.map((dev) => (
-                    <option key={dev.name} value={dev.ips?.[0]}>
-                      {dev.name} ({dev.ips?.[0]})
+                  {errorInfo?.targets?.map((target) => (
+                    <option key={target.device} value={target.device}>
+                      {target.device}
+                      {target.address ? ` (${target.address})` : ''}
                     </option>
                   ))}
                 </select>
@@ -198,22 +175,21 @@ export const ErrorInjectionPanel: FC = () => {
                 <select
                   id="error-interface"
                   {...register('selectedInterface')}
-                  disabled={!selectedDeviceHostname || !deviceInterfaces?.length}
+                  disabled={!selectedTarget?.interfaces.length}
                   className="w-full px-3 py-row bg-bg-elevated border border-border-default rounded-md focus:outline-none focus:ring-2 focus:ring-status-info disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">{t('injection.interfaceSelectPlaceholder')}</option>
-                  {deviceInterfaces?.map((iface) => (
-                    <option key={iface.name} value={iface.name}>
-                      {iface.name}
-                      {iface.description ? ` (${iface.description})` : ''}
+                  {selectedTarget?.interfaces.map((iface) => (
+                    <option key={iface} value={iface}>
+                      {iface}
                     </option>
                   ))}
                 </select>
-                {!selectedDeviceHostname ? (
+                {!selectedDevice ? (
                   <SmallText className="text-text-muted mt-tight">
                     {t('injection.interfaceNoDeviceHint')}
                   </SmallText>
-                ) : deviceInterfaces && deviceInterfaces.length === 0 ? (
+                ) : selectedTarget && selectedTarget.interfaces.length === 0 ? (
                   <SmallText className="text-text-muted mt-tight">
                     {t('injection.interfaceNoneHint')}
                   </SmallText>
@@ -261,7 +237,12 @@ export const ErrorInjectionPanel: FC = () => {
               {/* Value Slider */}
               <div>
                 <label htmlFor="error-value" className="block text-sm font-medium mb-2">
-                  {t('injection.valueLabel', { value: errorValue })}
+                  {t('injection.valueLabel', {
+                    value:
+                      selectedErrorType === 'High Utilization'
+                        ? `${errorValue}%`
+                        : `${errorValue}/s`,
+                  })}
                 </label>
                 <input
                   id="error-value"
@@ -345,12 +326,14 @@ export const ErrorInjectionPanel: FC = () => {
                           <td className="py-row px-cell">{iface}</td>
                           <td className="py-row px-cell">{errorType}</td>
                           <td className="py-row px-cell">
-                            <Tag colorScheme="yellow">{value}%</Tag>
+                            <Tag colorScheme="yellow">
+                              {errorType === 'High Utilization' ? `${value}%` : `${value}/s`}
+                            </Tag>
                           </td>
                           <td className="py-row px-cell">
                             <button
                               type="button"
-                              onClick={() => handleClearSpecific(deviceIp, iface)}
+                              onClick={() => handleClearSpecific(deviceIp, iface, errorType)}
                               disabled={busy}
                               className="text-status-info hover:text-status-info text-sm"
                               aria-label={t('injection.clearOneAriaLabel', { deviceIp, iface })}

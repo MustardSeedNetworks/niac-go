@@ -8,20 +8,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DeviceInterface, DeviceSummary, ErrorInjectionInfo } from '../api/types';
+import type { ErrorInjectionInfo } from '../api/types';
 import '../i18n';
 import { ErrorInjectionPanel } from './ErrorInjectionPanel';
 
-const fetchDevices = vi.fn<() => Promise<DeviceSummary[]>>();
 const fetchErrorTypes = vi.fn<() => Promise<ErrorInjectionInfo>>();
-const fetchDeviceInterfaces = vi.fn<(hostname: string) => Promise<DeviceInterface[]>>();
+const clearError = vi.fn<(device: string, iface: string, errorType: string) => Promise<unknown>>();
 
 vi.mock('../api/client', () => ({
-  fetchDevices: () => fetchDevices(),
   fetchErrorTypes: () => fetchErrorTypes(),
-  fetchDeviceInterfaces: (hostname: string) => fetchDeviceInterfaces(hostname),
   injectError: vi.fn(),
-  clearError: vi.fn(),
+  clearError: (device: string, iface: string, errorType: string) =>
+    clearError(device, iface, errorType),
   clearAllErrors: vi.fn(),
 }));
 
@@ -31,23 +29,16 @@ const errorInfo: ErrorInjectionInfo = {
     { type: 'delay', description: 'Delay packets' },
   ],
   info: 'Inject errors on a device interface.',
+  targets: [
+    { device: 'sw-core', address: '10.0.0.1', interfaces: ['Gi0/1', 'Gi0/2'] },
+    { device: 'sw-edge', address: '10.0.0.2', interfaces: [] },
+  ],
 };
-
-const devices: DeviceSummary[] = [
-  { name: 'sw-core', type: 'switch', ips: ['10.0.0.1'], protocols: [] },
-  { name: 'sw-edge', type: 'switch', ips: ['10.0.0.2'], protocols: [] },
-];
-
-const swCoreInterfaces: DeviceInterface[] = [
-  { name: 'Gi0/1', description: 'uplink' },
-  { name: 'Gi0/2', description: '' },
-];
 
 describe('ErrorInjectionPanel', () => {
   beforeEach(() => {
-    fetchDevices.mockReset().mockResolvedValue([]);
     fetchErrorTypes.mockReset().mockResolvedValue(errorInfo);
-    fetchDeviceInterfaces.mockReset().mockResolvedValue([]);
+    clearError.mockReset().mockResolvedValue({});
   });
 
   it('preselects the error type from the ?errorType= query param', async () => {
@@ -73,8 +64,6 @@ describe('ErrorInjectionPanel', () => {
   });
 
   it('disables the interface dropdown with a hint until a device is selected', async () => {
-    fetchDevices.mockResolvedValue(devices);
-
     render(
       <MemoryRouter initialEntries={['/traffic']}>
         <ErrorInjectionPanel />
@@ -84,15 +73,9 @@ describe('ErrorInjectionPanel', () => {
     const interfaceSelect = (await screen.findByLabelText('Interface')) as HTMLSelectElement;
     expect(interfaceSelect.disabled).toBe(true);
     expect(await screen.findByText('Select a device first')).toBeInTheDocument();
-    expect(fetchDeviceInterfaces).not.toHaveBeenCalled();
   });
 
   it("renders the selected device's interfaces and sets selectedInterface on selection", async () => {
-    fetchDevices.mockResolvedValue(devices);
-    fetchDeviceInterfaces.mockImplementation((hostname: string) =>
-      Promise.resolve(hostname === 'sw-core' ? swCoreInterfaces : []),
-    );
-
     render(
       <MemoryRouter initialEntries={['/traffic']}>
         <ErrorInjectionPanel />
@@ -100,13 +83,11 @@ describe('ErrorInjectionPanel', () => {
     );
 
     const deviceSelect = (await screen.findByLabelText('Device')) as HTMLSelectElement;
-    fireEvent.change(deviceSelect, { target: { value: '10.0.0.1' } });
-
-    await waitFor(() => expect(fetchDeviceInterfaces).toHaveBeenCalledWith('sw-core'));
+    fireEvent.change(deviceSelect, { target: { value: 'sw-core' } });
 
     const interfaceSelect = (await screen.findByLabelText('Interface')) as HTMLSelectElement;
     await waitFor(() => expect(interfaceSelect.disabled).toBe(false));
-    expect(screen.getByRole('option', { name: 'Gi0/1 (uplink)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Gi0/1' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Gi0/2' })).toBeInTheDocument();
 
     fireEvent.change(interfaceSelect, { target: { value: 'Gi0/2' } });
@@ -114,9 +95,6 @@ describe('ErrorInjectionPanel', () => {
   });
 
   it('shows a "no interfaces" hint for a known device with none configured', async () => {
-    fetchDevices.mockResolvedValue(devices);
-    fetchDeviceInterfaces.mockResolvedValue([]);
-
     render(
       <MemoryRouter initialEntries={['/traffic']}>
         <ErrorInjectionPanel />
@@ -124,11 +102,31 @@ describe('ErrorInjectionPanel', () => {
     );
 
     const deviceSelect = (await screen.findByLabelText('Device')) as HTMLSelectElement;
-    fireEvent.change(deviceSelect, { target: { value: '10.0.0.2' } });
+    fireEvent.change(deviceSelect, { target: { value: 'sw-edge' } });
 
-    await waitFor(() => expect(fetchDeviceInterfaces).toHaveBeenCalledWith('sw-edge'));
     expect(await screen.findByText('This device has no configured interfaces')).toBeInTheDocument();
     const interfaceSelect = (await screen.findByLabelText('Interface')) as HTMLSelectElement;
     expect(interfaceSelect.disabled).toBe(true);
+  });
+
+  it('clears only the selected active fault', async () => {
+    fetchErrorTypes.mockResolvedValue({
+      ...errorInfo,
+      activeErrors: {
+        'sw-core': {
+          'Gi0/1': { 'FCS Errors': 25, 'Packet Discards': 40 },
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/traffic']}>
+        <ErrorInjectionPanel />
+      </MemoryRouter>,
+    );
+
+    const clearButtons = await screen.findAllByRole('button', { name: /Clear error on/ });
+    fireEvent.click(clearButtons[0]);
+    await waitFor(() => expect(clearError).toHaveBeenCalledWith('sw-core', 'Gi0/1', 'FCS Errors'));
   });
 });
