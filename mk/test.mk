@@ -11,7 +11,7 @@
 # =============================================================================
 
 .PHONY: test test-all test-backend test-backend-quiet test-frontend test-frontend-quiet \
-        test-e2e test-e2e-ui test-e2e-install test-coverage
+        test-hooks test-e2e test-e2e-ui test-e2e-install test-coverage
 
 # =============================================================================
 # Main Test Targets
@@ -19,27 +19,31 @@
 
 test: ## Run unit tests (backend + frontend)
 	@printf "$(BOLD)$(CYAN)┌─ Unit Tests ─────────────────────────────────────────────────────────────────┐$(RESET)\n"
-	@printf "$(CYAN)│$(RESET) $(BOLD)[1/2]$(RESET) Backend (Go)                                                          $(CYAN)│$(RESET)\n"
+	@printf "$(CYAN)│$(RESET) $(BOLD)[1/3]$(RESET) Backend (Go)                                                          $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-backend)
 	@$(MAKE) --no-print-directory test-backend-quiet
 	$(call timer-end,test-backend,Backend tests)
-	@printf "$(CYAN)│$(RESET) $(BOLD)[2/2]$(RESET) Frontend (Vitest)                                                      $(CYAN)│$(RESET)\n"
+	@printf "$(CYAN)│$(RESET) $(BOLD)[2/3]$(RESET) Frontend (Vitest)                                                      $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-frontend)
 	@$(MAKE) --no-print-directory test-frontend-quiet
 	$(call timer-end,test-frontend,Frontend tests)
+	@printf "$(CYAN)│$(RESET) $(BOLD)[3/3]$(RESET) Repository hooks                                                      $(CYAN)│$(RESET)\n"
+	@$(MAKE) --no-print-directory test-hooks
 	@printf "$(CYAN)└──────────────────────────────────────────────────────────────────────────────┘$(RESET)\n"
 
 test-all: ## Run ALL tests (unit + E2E)
 	@printf "$(BOLD)$(CYAN)┌─ Full Test Suite ────────────────────────────────────────────────────────────┐$(RESET)\n"
-	@printf "$(CYAN)│$(RESET) $(BOLD)[1/3]$(RESET) Backend unit tests                                                    $(CYAN)│$(RESET)\n"
+	@printf "$(CYAN)│$(RESET) $(BOLD)[1/4]$(RESET) Backend unit tests                                                    $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-backend)
 	@$(MAKE) --no-print-directory test-backend-quiet
 	$(call timer-end,test-backend,Backend tests)
-	@printf "$(CYAN)│$(RESET) $(BOLD)[2/3]$(RESET) Frontend unit tests                                                   $(CYAN)│$(RESET)\n"
+	@printf "$(CYAN)│$(RESET) $(BOLD)[2/4]$(RESET) Frontend unit tests                                                   $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-frontend)
 	@$(MAKE) --no-print-directory test-frontend-quiet
 	$(call timer-end,test-frontend,Frontend tests)
-	@printf "$(CYAN)│$(RESET) $(BOLD)[3/3]$(RESET) E2E tests (Playwright)                                                $(CYAN)│$(RESET)\n"
+	@printf "$(CYAN)│$(RESET) $(BOLD)[3/4]$(RESET) Repository hooks                                                      $(CYAN)│$(RESET)\n"
+	@$(MAKE) --no-print-directory test-hooks
+	@printf "$(CYAN)│$(RESET) $(BOLD)[4/4]$(RESET) E2E tests (Playwright)                                                $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-e2e)
 	@$(MAKE) --no-print-directory test-e2e
 	$(call timer-end,test-e2e,E2E tests)
@@ -104,6 +108,9 @@ test-frontend-quiet:
 		echo "$$OUTPUT" | tail -60; \
 		exit $$STATUS; \
 	fi
+
+test-hooks: ## Run repository hook regression tests
+	@./scripts/tests/pre-commit-hook-test.sh
 
 # =============================================================================
 # E2E Tests

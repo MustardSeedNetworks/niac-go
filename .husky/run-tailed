@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+OUTPUT_FILE=$(mktemp)
+trap 'rm -f "$OUTPUT_FILE"' EXIT HUP INT TERM
+
+"$@" >"$OUTPUT_FILE" 2>&1
+STATUS=$?
+tail -10 "$OUTPUT_FILE"
+
+exit "$STATUS"

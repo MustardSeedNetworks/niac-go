@@ -53,6 +53,7 @@ jobs:
       workflows: ${{ steps.filter.outputs.workflows }}
       schema: ${{ steps.filter.outputs.schema }}
       https: ${{ steps.filter.outputs.https }}
+      hooks: ${{ steps.filter.outputs.hooks }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
@@ -97,6 +98,9 @@ jobs:
               - 'scripts/check-https-only.sh'
               - 'tests/smoke/run_smoke_tests.sh'
               - 'ui/vite.config.ts'
+            hooks:
+              - '.husky/**'
+              - 'scripts/tests/pre-commit-hook-test.sh'
 
   # ===========================================================================
   # Backend (Go)
@@ -523,7 +527,7 @@ jobs:
     name: Quality Checks
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.hooks == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -531,6 +535,9 @@ jobs:
         run: |
           chmod +x scripts/check-file-size.sh
           ./scripts/check-file-size.sh
+
+      - name: Test pre-commit hook
+        run: ./scripts/tests/pre-commit-hook-test.sh
 
       - name: Check for sensitive files
         run: |

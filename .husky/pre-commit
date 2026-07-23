@@ -61,62 +61,8 @@ if [ -n "$STAGED_GO_FILES" ]; then
   echo "│ 2/6 Go Backend Checks                │"
   echo "└──────────────────────────────────────┘"
 
-  # Find golangci-lint
-  GOLANGCI_LINT=""
-  if command -v golangci-lint >/dev/null 2>&1; then
-    GOLANGCI_LINT="golangci-lint"
-  elif [ -x "$HOME/go/bin/golangci-lint" ]; then
-    GOLANGCI_LINT="$HOME/go/bin/golangci-lint"
-  elif [ -x "$(go env GOPATH)/bin/golangci-lint" ]; then
-    GOLANGCI_LINT="$(go env GOPATH)/bin/golangci-lint"
-  fi
-
-  # Go formatting check
-  echo "Checking go fmt..."
-  GOFMT_OUTPUT=$(gofmt -l $STAGED_GO_FILES 2>/dev/null || true)
-  if [ -n "$GOFMT_OUTPUT" ]; then
-    echo "❌ Go formatting issues:"
-    echo "$GOFMT_OUTPUT"
-    echo "Run: gofmt -w <files>"
+  if ! STAGED_GO_FILES="$STAGED_GO_FILES" sh .husky/check-go; then
     FAILED=1
-  else
-    echo "✓ Go formatting OK"
-  fi
-
-  # Go linting
-  if [ -n "$GOLANGCI_LINT" ]; then
-    echo "Running golangci-lint..."
-    if ! $GOLANGCI_LINT run --new-from-rev=HEAD~1 2>/dev/null; then
-      echo "❌ Go linting failed!"
-      FAILED=1
-    else
-      echo "✓ Go linting passed"
-    fi
-  else
-    echo "⚠ golangci-lint not installed, skipping"
-  fi
-
-  # Go security check (gosec) - only scan staged files
-  if command -v gosec >/dev/null 2>&1; then
-    echo "Running gosec security scan..."
-    # Only scan staged Go files, not entire codebase (golangci-lint already covers full gosec)
-    if ! gosec -quiet $STAGED_GO_FILES 2>/dev/null; then
-      echo "❌ Security issues found in staged files!"
-      FAILED=1
-    else
-      echo "✓ Security scan passed"
-    fi
-  else
-    echo "⚠ gosec not installed, skipping security scan"
-  fi
-
-  # Go tests (short mode)
-  echo "Running Go tests..."
-  if ! go test -short -race ./... 2>&1 | tail -10; then
-    echo "❌ Go tests failed!"
-    FAILED=1
-  else
-    echo "✓ Go tests passed"
   fi
 fi
 
@@ -129,50 +75,8 @@ if [ -n "$STAGED_UI_FILES" ]; then
   echo "│ 3/6 Frontend Checks (Biome)          │"
   echo "└──────────────────────────────────────┘"
 
-  if [ ! -d "ui/node_modules" ]; then
-    echo "❌ Frontend dependencies not installed. Run: cd ui && npm ci"
+  if ! STAGED_TS_FILES="$STAGED_TS_FILES" sh .husky/check-frontend; then
     FAILED=1
-  else
-    cd ui
-
-    # Biome lint and format check
-    if [ -f "node_modules/.bin/biome" ] || command -v biome >/dev/null 2>&1; then
-      echo "Running Biome lint..."
-
-      # Get ui-relative paths for staged files
-      UI_FILES=$(echo "$STAGED_TS_FILES" | grep '^ui/' | sed 's|^ui/||' || true)
-
-      if [ -n "$UI_FILES" ]; then
-        if ! npx biome check --no-errors-on-unmatched $UI_FILES 2>/dev/null; then
-          echo "❌ Biome check failed! Run: npm run lint:fix"
-          FAILED=1
-        else
-          echo "✓ Biome check passed"
-        fi
-      fi
-    else
-      echo "⚠ Biome not installed, skipping lint"
-    fi
-
-    # TypeScript check
-    echo "Running TypeScript check..."
-    if ! npx tsc --noEmit 2>&1 | tail -10; then
-      echo "❌ TypeScript errors!"
-      FAILED=1
-    else
-      echo "✓ TypeScript check passed"
-    fi
-
-    # Frontend tests
-    echo "Running frontend tests..."
-    if ! npm test -- --passWithNoTests 2>&1 | tail -10; then
-      echo "❌ Frontend tests failed!"
-      FAILED=1
-    else
-      echo "✓ Frontend tests passed"
-    fi
-
-    cd ..
   fi
 fi
 
@@ -204,7 +108,15 @@ if [ -n "$STAGED_MD_FILES" ]; then
   # Use markdownlint if available
   if command -v markdownlint >/dev/null 2>&1; then
     echo "Running markdownlint..."
-    if ! markdownlint $STAGED_MD_FILES 2>/dev/null; then
+    MARKDOWN_FAILED=0
+    while IFS= read -r MARKDOWN_FILE; do
+      if ! markdownlint "$MARKDOWN_FILE" 2>/dev/null; then
+        MARKDOWN_FAILED=1
+      fi
+    done <<EOF
+$STAGED_MD_FILES
+EOF
+    if [ "$MARKDOWN_FAILED" -ne 0 ]; then
       echo "❌ Markdown issues found!"
       FAILED=1
     else

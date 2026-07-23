@@ -1,0 +1,74 @@
+#!/usr/bin/env sh
+
+FAILED=0
+
+GOLANGCI_LINT=""
+if command -v golangci-lint >/dev/null 2>&1; then
+  GOLANGCI_LINT="golangci-lint"
+elif [ -x "$HOME/go/bin/golangci-lint" ]; then
+  GOLANGCI_LINT="$HOME/go/bin/golangci-lint"
+elif [ -x "$(go env GOPATH)/bin/golangci-lint" ]; then
+  GOLANGCI_LINT="$(go env GOPATH)/bin/golangci-lint"
+fi
+
+echo "Checking go fmt..."
+GOFMT_OUTPUT=""
+while IFS= read -r GO_FILE; do
+  FILE_OUTPUT=$(gofmt -l "$GO_FILE" 2>/dev/null || true)
+  if [ -n "$FILE_OUTPUT" ]; then
+    GOFMT_OUTPUT="${GOFMT_OUTPUT}${GOFMT_OUTPUT:+
+}${FILE_OUTPUT}"
+  fi
+done <<EOF
+$STAGED_GO_FILES
+EOF
+if [ -n "$GOFMT_OUTPUT" ]; then
+  echo "❌ Go formatting issues:"
+  echo "$GOFMT_OUTPUT"
+  echo "Run: gofmt -w <files>"
+  FAILED=1
+else
+  echo "✓ Go formatting OK"
+fi
+
+if [ -n "$GOLANGCI_LINT" ]; then
+  echo "Running golangci-lint..."
+  if ! "$GOLANGCI_LINT" run --new-from-rev=HEAD~1 2>/dev/null; then
+    echo "❌ Go linting failed!"
+    FAILED=1
+  else
+    echo "✓ Go linting passed"
+  fi
+else
+  echo "⚠ golangci-lint not installed, skipping"
+fi
+
+if command -v gosec >/dev/null 2>&1; then
+  echo "Running gosec security scan..."
+  GOSEC_FAILED=0
+  while IFS= read -r GO_FILE; do
+    if ! gosec -quiet "$GO_FILE" 2>/dev/null; then
+      GOSEC_FAILED=1
+    fi
+  done <<EOF
+$STAGED_GO_FILES
+EOF
+  if [ "$GOSEC_FAILED" -ne 0 ]; then
+    echo "❌ Security issues found in staged files!"
+    FAILED=1
+  else
+    echo "✓ Security scan passed"
+  fi
+else
+  echo "⚠ gosec not installed, skipping security scan"
+fi
+
+echo "Running Go tests..."
+if ! sh .husky/run-tailed go test -short -race ./...; then
+  echo "❌ Go tests failed!"
+  FAILED=1
+else
+  echo "✓ Go tests passed"
+fi
+
+exit "$FAILED"
