@@ -165,7 +165,8 @@ curl -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats
 
 **Prometheus Metrics:**
 ```bash
-curl https://localhost:8445/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 ```
 
 ## Protocols

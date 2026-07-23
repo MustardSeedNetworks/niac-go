@@ -30,7 +30,8 @@ first generates its local certificate.
 
 ```bash
 # View raw metrics
-curl https://localhost:8445/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 
 # Example output:
 # HELP niac_packets_sent_total Total packets sent

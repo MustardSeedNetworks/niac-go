@@ -365,12 +365,16 @@ print("Replay completed")
 ### Prometheus Metrics Integration
 
 ```python
+import os
 import requests
 from prometheus_client.parser import text_string_to_metric_families
 
 def fetch_metrics():
     """Fetch and parse Prometheus metrics"""
-    response = requests.get("https://localhost:8445/metrics")
+    response = requests.get(
+        "https://localhost:8445/metrics",
+        headers={"Authorization": f"Bearer {os.environ['NIAC_API_TOKEN']}"},
+    )
     response.raise_for_status()
 
     for family in text_string_to_metric_families(response.text):

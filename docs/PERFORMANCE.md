@@ -201,7 +201,8 @@ sudo ethtool -K eth0 rx off tx off sg off tso off gso off gro off
 
 Prometheus metrics endpoint:
 ```bash
-curl https://localhost:8445/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 ```
 
 Key metrics:
