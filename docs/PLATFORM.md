@@ -170,13 +170,12 @@ Run as Administrator:
 
 ---
 
-## Architecture Support
+## Release Architecture Support
 
 | Architecture | Linux | macOS | Windows |
 |--------------|-------|-------|---------|
-| x86_64 (AMD64) | ✓ | ✓ | ✓ |
-| ARM64 | ✓ | ✓ (Apple Silicon) | - |
-| ARM32 | ✓ | - | - |
+| x86_64 (AMD64) | ✓ | - | ✓ |
+| ARM64 | ✓ | ✓ (Apple Silicon) | ✓ |
 
 ### Cross-Compilation
 
@@ -186,9 +185,6 @@ GOOS=linux GOARCH=amd64 go build -o niac-linux-amd64 ./cmd/niac
 
 # Linux ARM64
 GOOS=linux GOARCH=arm64 go build -o niac-linux-arm64 ./cmd/niac
-
-# macOS AMD64 (Intel)
-GOOS=darwin GOARCH=amd64 go build -o niac-darwin-amd64 ./cmd/niac
 
 # macOS ARM64 (Apple Silicon)
 GOOS=darwin GOARCH=arm64 go build -o niac-darwin-arm64 ./cmd/niac
@@ -232,9 +228,11 @@ All debug flags work across platforms:
 
 ## Release Artifacts
 
-GitHub builds release artifacts on native hosted runners for Linux, macOS, and
-Windows. Local machines should build the host binary for development; the
-release workflow owns the full cross-platform matrix.
+GitHub Actions owns every release build. GoReleaser Cross produces Linux and
+Apple Silicon macOS artifacts on Linux; native GitHub Windows runners produce
+the CGO-enabled Windows artifacts. Local builds are development-only, and Intel
+macOS is not a release target. GitHub Releases is the canonical distribution
+channel.
 
 ---
 
