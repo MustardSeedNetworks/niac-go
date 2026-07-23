@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.12](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.11...v0.94.12) (2026-07-23)
+
+
+### Bug Fixes
+
+* **config:** confine nested segment configurations ([#1071](https://github.com/MustardSeedNetworks/niac-go/issues/1071)) ([e8c9194](https://github.com/MustardSeedNetworks/niac-go/commit/e8c91940f43c9415086482b1bafe13e09f560798))
+* **release:** cover content packages with integrity metadata ([#1083](https://github.com/MustardSeedNetworks/niac-go/issues/1083)) ([eb4bd47](https://github.com/MustardSeedNetworks/niac-go/commit/eb4bd47863da7488e23bc5204ef93b5b407dfdd5))
+* **tooling:** fail pre-commit checks closed ([#1067](https://github.com/MustardSeedNetworks/niac-go/issues/1067)) ([eb41e19](https://github.com/MustardSeedNetworks/niac-go/commit/eb41e196be34f4c818ad6acb86b6df2b5f46b494))
+
+
+### Documentation
+
+* add NIAC master closeout plan ([#1064](https://github.com/MustardSeedNetworks/niac-go/issues/1064)) ([cd059b2](https://github.com/MustardSeedNetworks/niac-go/commit/cd059b2d4e58f7e3679006c4d9b36573bc8fdb39))
+* advance Stage 0 ledger ([#1070](https://github.com/MustardSeedNetworks/niac-go/issues/1070)) ([1864dc9](https://github.com/MustardSeedNetworks/niac-go/commit/1864dc968c1ac5155aed391d24b38317a82e4c46))
+* complete Stage 0 defect reconciliation ([#1082](https://github.com/MustardSeedNetworks/niac-go/issues/1082)) ([b0e1e18](https://github.com/MustardSeedNetworks/niac-go/commit/b0e1e18aca3184dca03c27bd21d94116cbed8080))
+* reconcile remaining remediation issues ([#1074](https://github.com/MustardSeedNetworks/niac-go/issues/1074)) ([ee44d48](https://github.com/MustardSeedNetworks/niac-go/commit/ee44d48c06e42072eee7a168ee3666d6b948b293))
+* record nested containment delivery ([#1072](https://github.com/MustardSeedNetworks/niac-go/issues/1072)) ([c83c4ca](https://github.com/MustardSeedNetworks/niac-go/commit/c83c4ca27a87186da7345e22af999d3aab63cc35))
+* record Stage 2 security reproductions ([#1073](https://github.com/MustardSeedNetworks/niac-go/issues/1073)) ([16ac84b](https://github.com/MustardSeedNetworks/niac-go/commit/16ac84b3119de7c765ecc6e2da2c15c9c6875976))
+
 ## [0.94.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.10...v0.94.11) (2026-07-23)
 
 
