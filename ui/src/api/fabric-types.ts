@@ -9,7 +9,7 @@ export interface FabricBinding {
   attachment: string;
   interface: string;
   mode: 'direct' | 'access';
-  accessVlan?: number;
+  physicalVlan?: number;
   network: string;
   wireTagged: boolean;
 }
@@ -58,4 +58,12 @@ export interface SimulationPreflightReport {
     dhcpScopes: FabricDhcpScope[];
   };
   diagnostics: FabricDiagnostic[];
+}
+
+export interface SimulationFabricStatus {
+  topology: SimulationPreflightReport['topology'];
+  forwarded: number;
+  drops: number;
+  received: number;
+  transmitted: number;
 }

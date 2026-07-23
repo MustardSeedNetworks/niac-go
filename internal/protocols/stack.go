@@ -163,6 +163,8 @@ type Statistics struct {
 	DHCPRequests    uint64
 	SNMPQueries     uint64
 	Errors          uint64
+	FabricForwarded uint64
+	FabricDrops     uint64
 }
 
 // NewStack creates a new protocol stack.
@@ -517,6 +519,8 @@ func (s *Stack) GetStats() Statistics {
 		DHCPRequests:    s.stats.DHCPRequests,
 		SNMPQueries:     s.stats.SNMPQueries,
 		Errors:          s.stats.Errors,
+		FabricForwarded: s.stats.FabricForwarded,
+		FabricDrops:     s.stats.FabricDrops,
 	}
 }
 

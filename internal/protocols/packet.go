@@ -26,6 +26,17 @@ type Packet struct {
 	fabricFirstHopIP     net.IP
 	fabricFirstHopMAC    net.HardwareAddr
 	fabricFirstHopDevice *config.Device
+	fabricTrace          FabricTrace
+}
+
+// FabricTrace describes the routed-lab decision made for one packet.
+type FabricTrace struct {
+	IngressNetwork  string
+	PhysicalVLAN    uint16
+	RouteDecision   string
+	Hop             string
+	EgressNetwork   string
+	RejectionReason string
 }
 
 // Constants for packet parsing.
@@ -69,6 +80,14 @@ func NewPacket(size int) *Packet {
 	}
 }
 
+// FabricTrace returns a copy of the packet's routed-lab decision metadata.
+func (p *Packet) FabricTrace() FabricTrace {
+	if p == nil {
+		return FabricTrace{}
+	}
+	return p.fabricTrace
+}
+
 // Clone creates a deep copy of the packet.
 func (p *Packet) Clone() *Packet {
 	clone := &Packet{
@@ -84,6 +103,7 @@ func (p *Packet) Clone() *Packet {
 		fabricFirstHopIP:     append(net.IP(nil), p.fabricFirstHopIP...),
 		fabricFirstHopMAC:    cloneMAC(p.fabricFirstHopMAC),
 		fabricFirstHopDevice: p.fabricFirstHopDevice,
+		fabricTrace:          p.fabricTrace,
 	}
 	copy(clone.Buffer, p.Buffer)
 

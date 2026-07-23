@@ -47,6 +47,8 @@ type fabricResolution struct {
 	firstHopIP     netip.Addr
 	firstHopMAC    net.HardwareAddr
 	firstHopDevice *config.Device
+	egressNetwork  string
+	routeVia       string
 }
 
 func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRuntime {
@@ -146,11 +148,11 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 	}
 	if endpoint.network == r.attachmentNetwork {
 		return fabricResolution{
-			device: endpoint.device, replySourceMAC: cloneMAC(endpoint.mac),
+			device: endpoint.device, replySourceMAC: cloneMAC(endpoint.mac), egressNetwork: endpoint.network,
 		}, true
 	}
 
-	router := r.routeFor(dst, ingressMAC)
+	router, route := r.routeFor(dst, ingressMAC)
 	if router == nil {
 		return fabricResolution{}, false
 	}
@@ -162,6 +164,7 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 		device: endpoint.device, replySourceMAC: cloneMAC(router.mac), routed: true,
 		firstHopIP:  firstHopIP,
 		firstHopMAC: cloneMAC(router.mac), firstHopDevice: router.device,
+		egressNetwork: endpoint.network, routeVia: route.via,
 	}, true
 }
 
@@ -218,9 +221,10 @@ func (r *fabricRuntime) endpointForAddress(address netip.Addr) (fabricEndpoint, 
 	return fabricEndpoint{}, false
 }
 
-func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) *fabricRouter {
+func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) (*fabricRouter, fabricRoute) {
 	bestBits := -1
 	var best *fabricRouter
+	var bestRoute fabricRoute
 	for i := range r.attachmentRouters {
 		router := &r.attachmentRouters[i]
 		if !bytes.Equal(router.mac, ingressMAC) || !r.interfaceAvailable(router.device, router.attachmentInterface) {
@@ -233,10 +237,11 @@ func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) *f
 			if route.destination.Contains(dst) && route.destination.Bits() > bestBits {
 				bestBits = route.destination.Bits()
 				best = router
+				bestRoute = route
 			}
 		}
 	}
-	return best
+	return best, bestRoute
 }
 
 func (r *fabricRuntime) routesFor(router *fabricRouter) []fabricRoute {

@@ -113,6 +113,28 @@ func TestRoutedEgressStripsStackedAndProviderTags(t *testing.T) {
 	}
 }
 
+func TestRoutedEgressRejectionIsObservable(t *testing.T) {
+	stack := newStack(&recordingCapture{}, &config.Config{}, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(&fabric.Topology{Binding: fabric.CompiledBinding{
+		Binding: fabric.Binding{Mode: fabric.ModeAccess, AccessVLAN: 200, PolicyApproved: true},
+	}})
+	observer := &recordingObserver{}
+	stack.AddPacketObserver(observer)
+
+	stack.sendPacket(&Packet{Buffer: []byte{0x01}, Length: 1})
+
+	if observer.pkt == nil {
+		t.Fatal("observer did not receive rejected packet")
+	}
+	trace := observer.pkt.FabricTrace()
+	if trace.RouteDecision != "dropped" || trace.RejectionReason != "egress_rejected" {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	if got := stack.GetStats().FabricDrops; got != 1 {
+		t.Fatalf("FabricDrops = %d, want 1", got)
+	}
+}
+
 func assertUntaggedFrame(t *testing.T, frame []byte) {
 	t.Helper()
 	if len(frame) < ethHeaderLen {
