@@ -14,6 +14,7 @@ NIAC is a source-available network device simulator distributed under the
 - [Monitoring](MONITORING.md)
 - [Configuration schema](schemas/niac.schema.json)
 - [Pre-1.0 roadmap](ROADMAP.md)
+- [Master closeout plan](design/2026-07-niac-master-closeout-plan.md)
 - [Compatibility policy](BREAKING_CHANGES.md)
 
 ## API Modes
