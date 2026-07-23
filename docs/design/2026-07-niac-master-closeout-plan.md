@@ -1,6 +1,6 @@
 # Plan: NIAC master closeout
 
-**Status:** Draft for owner review
+**Status:** Active
 
 **Date:** 2026-07-23
 
@@ -32,6 +32,9 @@ must be reconciled, not parallel backlogs.
 | 6 | `docs/archive/**` | Historical evidence only; never an active backlog |
 
 ## Stage 0: Establish one accurate ledger
+
+Track current ownership and disposition in the
+[master closeout ledger](2026-07-niac-master-closeout-ledger.md).
 
 1. Finish and verify the v0.94.10 release from the merged Free-tier contract.
 2. Reconcile the three existing worktrees before overlapping edits:
