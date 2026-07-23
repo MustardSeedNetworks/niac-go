@@ -135,6 +135,30 @@ func TestRoutedEgressRejectionIsObservable(t *testing.T) {
 	}
 }
 
+func TestRoutedSendQueueOverflowIsObservable(t *testing.T) {
+	stack := newStack(&recordingCapture{}, &config.Config{}, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(&fabric.Topology{Binding: fabric.CompiledBinding{
+		Binding: fabric.Binding{Mode: fabric.ModeAccess, AccessVLAN: 200, PolicyApproved: true},
+	}})
+	stack.sendQueue = make(chan *Packet, 1)
+	stack.Send(NewPacket(64))
+	observer := &recordingObserver{}
+	stack.AddPacketObserver(observer)
+
+	stack.Send(NewPacket(64))
+
+	if observer.pkt == nil {
+		t.Fatal("observer did not receive dropped packet")
+	}
+	trace := observer.pkt.FabricTrace()
+	if trace.RouteDecision != "dropped" || trace.RejectionReason != "send_queue_full" {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	if got := stack.GetStats().FabricDrops; got != 1 {
+		t.Fatalf("FabricDrops = %d, want 1", got)
+	}
+}
+
 func assertUntaggedFrame(t *testing.T, frame []byte) {
 	t.Helper()
 	if len(frame) < ethHeaderLen {
