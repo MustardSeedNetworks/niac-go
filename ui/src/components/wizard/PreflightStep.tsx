@@ -119,16 +119,34 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
           </SmallText>
         )}
         {report?.safe && (
-          <SmallText className="text-status-success" role="status">
-            {t('newSimWizard.preflight.safe', { count: report.topology.networks.length })}
-          </SmallText>
+          <div
+            className="rounded-lg border border-status-success/40 bg-status-success/10 pad-sm"
+            role="status"
+          >
+            <SmallText className="text-status-success">
+              {t('newSimWizard.preflight.safe', { count: report.topology.networks.length })}
+            </SmallText>
+            <SmallText className="mt-tight block text-text-secondary">
+              {t('newSimWizard.preflight.physicalVlanSummary', {
+                vlan: report.topology.binding.physicalVlan ?? t('newSimWizard.preflight.untagged'),
+              })}
+            </SmallText>
+          </div>
         )}
         {report && !report.safe && (
-          <ul className="list-disc pl-5 text-sm text-status-error" role="alert">
-            {report.diagnostics.map((diagnostic) => (
-              <li key={`${diagnostic.code}-${diagnostic.field}`}>{diagnostic.message}</li>
-            ))}
-          </ul>
+          <div
+            className="rounded-lg border-2 border-status-error bg-status-error/15 pad-default"
+            role="alert"
+          >
+            <p className="font-semibold text-status-error">
+              {t('newSimWizard.preflight.unsafeTitle')}
+            </p>
+            <ul className="mt-tight list-disc pl-5 text-sm text-status-error">
+              {report.diagnostics.map((diagnostic) => (
+                <li key={`${diagnostic.code}-${diagnostic.field}`}>{diagnostic.message}</li>
+              ))}
+            </ul>
+          </div>
         )}
         <div className="flex gap-default">
           <Button

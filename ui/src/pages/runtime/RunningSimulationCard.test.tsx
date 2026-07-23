@@ -71,4 +71,53 @@ describe('RunningSimulationCard', () => {
     expect(fetchConfig).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it('shows the physical attachment, virtual networks, routes, and counters', () => {
+    render(
+      <MemoryRouter>
+        <RunningSimulationCard
+          simStatus={{
+            ...simStatus,
+            fabric: {
+              topology: {
+                binding: {
+                  attachment: 'tester',
+                  interface: 'eth0',
+                  mode: 'access',
+                  physicalVlan: 200,
+                  network: 'access',
+                  wireTagged: false,
+                },
+                networks: [{ name: 'servers', prefix: '10.20.0.0/24', virtualVlan: 20 }],
+                interfaces: [],
+                routes: [
+                  {
+                    device: 'edge',
+                    destination: '10.20.0.0/24',
+                    via: 'inside',
+                    connected: true,
+                  },
+                ],
+                dhcpScopes: [],
+              },
+              forwarded: 12,
+              drops: 3,
+              received: 20,
+              transmitted: 10,
+            },
+          }}
+          stopping={false}
+          onStop={vi.fn()}
+          message={null}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Attachment: tester/)).toBeInTheDocument();
+    expect(screen.getByText(/Physical VLAN:.*200/)).toBeInTheDocument();
+    expect(screen.getByText(/Forwarded: 12/)).toBeInTheDocument();
+    expect(screen.getByText(/Drops: 3/)).toBeInTheDocument();
+    expect(screen.getByText(/servers.*10\.20\.0\.0\/24.*Virtual VLAN:.*20/)).toBeInTheDocument();
+    expect(screen.getByText(/edge:.*10\.20\.0\.0\/24.*inside/)).toBeInTheDocument();
+  });
 });

@@ -105,6 +105,19 @@
       "downloadYamlTitle": "Download the running config as YAML (the equivalent of niac config dump).",
       "downloadYaml": "Download YAML"
     },
+    "fabric": {
+      "attachment": "Attachment",
+      "physicalVlan": "Physical VLAN",
+      "virtualVlan": "Virtual VLAN",
+      "virtualNetworks": "Virtual networks",
+      "routes": "Routes",
+      "forwarded": "Forwarded",
+      "drops": "Drops",
+      "received": "Received",
+      "transmitted": "Transmitted",
+      "untagged": "untagged",
+      "none": "none"
+    },
     "preview": {
       "selectedPrefix": "Selected:",
       "previewOnly": "Preview only — Start to launch",
@@ -148,6 +161,9 @@
       "vlanLabel": "Access VLAN (1–4094)",
       "requestError": "Preflight failed",
       "safe": "Topology and binding preflight passed for {{count}} virtual networks. Verify host-side isolation before connecting the tester.",
+      "physicalVlanSummary": "Physical VLAN: {{vlan}}. Virtual VLANs remain isolated inside NIAC.",
+      "untagged": "untagged",
+      "unsafeTitle": "Unsafe physical attachment — simulation start is blocked",
       "checkLabel": "Run preflight",
       "startLabel": "Start simulation"
     },
@@ -541,6 +557,12 @@
       "hexDumpLabel": "Hex Dump",
       "packetDetailsLabel": "Packet Details",
       "summaryLabel": "Summary",
+      "ingressNetwork": "Ingress network",
+      "routeDecision": "Route decision",
+      "hop": "Hop",
+      "egressNetwork": "Egress network",
+      "physicalVlan": "Physical VLAN",
+      "egressRejectionReason": "Egress rejection",
       "standaloneDescriptionPart1": "Sniff an interface without starting a simulation. Frames stream into the viewer below as soon as they hit the wire. Or",
       "standaloneStartSimLink": "start a simulation",
       "standaloneDescriptionPart2": "if you want NIAC to also respond on the wire.",
