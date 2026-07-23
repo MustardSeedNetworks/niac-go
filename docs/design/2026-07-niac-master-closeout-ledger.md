@@ -31,13 +31,13 @@ Update it when work merges or a disposition changes.
 
 | Issue | Priority | Current state | Stage or owner |
 | --- | --- | --- | --- |
-| #1032 browser authentication | High | Needs reproduction | Stage 2 after HTTPS |
+| #1032 browser authentication | High | Reproduced and accepted | Stage 2 after #1041 |
 | #1033 live static-route validation | High | Needs reproduction | Stage 3 |
 | #1034 routed Runtime Control | High | Needs reproduction | Stage 3 |
 | #1035 nested path containment | High | Delivered in #1071 | Stage 2 evidence retained |
 | #1036 Packet Inspector SSE envelope | High | Needs reproduction | Stage 4 |
 | #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
-| #1041 bounded UDP proxy | High | Needs reproduction | Stage 2 |
+| #1041 bounded UDP proxy | High | Reproduced and accepted | Stage 2 next |
 | #1042 off-link notifications | High | Needs reproduction | Stage 3 after fault handoff |
 | #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
 | #1038 duplicate segment tags | Medium | Needs reproduction | Stage 3 |
