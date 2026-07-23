@@ -112,6 +112,17 @@ func packetToWire(direction string, pkt *protocols.Packet) map[string]any {
 	if pkt.VLAN >= 0 {
 		out["vlan"] = pkt.VLAN
 	}
+	trace := pkt.FabricTrace()
+	if trace.IngressNetwork != "" {
+		out["ingress_network"] = trace.IngressNetwork
+		if trace.PhysicalVLAN > 0 {
+			out["physical_vlan"] = trace.PhysicalVLAN
+		}
+		out["route_decision"] = trace.RouteDecision
+		out["hop"] = trace.Hop
+		out["egress_network"] = trace.EgressNetwork
+		out["egress_rejection_reason"] = trace.RejectionReason
+	}
 	enrichWithLayers(out, pkt.Buffer)
 	return out
 }
