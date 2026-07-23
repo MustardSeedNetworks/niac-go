@@ -13,14 +13,22 @@ This document provides practical examples for interacting with the NIAC-Go API u
 
 ## Authentication
 
-All API requests (except `/metrics`) require authentication via Bearer token:
+All API requests, including `/metrics`, require authentication via a bearer token:
 
 ```bash
 # Generate secure token
 export NIAC_API_TOKEN=$(openssl rand -base64 32)
 
-# Start API server
-sudo niac run config.yaml --api :8080
+# Start the HTTPS API server
+niac daemon &
+
+# Wait for first-run certificate generation, then trust it
+for _ in {1..30}; do
+  curl -skf https://localhost:8445/__version >/dev/null && break
+  sleep 1
+done
+curl -skf https://localhost:8445/__version >/dev/null
+sudo niac install-ca
 ```
 
 For state-changing operations (POST/PUT/PATCH/DELETE), you also need a CSRF token:
@@ -28,7 +36,7 @@ For state-changing operations (POST/PUT/PATCH/DELETE), you also need a CSRF toke
 ```bash
 # Get CSRF token
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 ```
 
 ## curl Examples
@@ -37,7 +45,7 @@ CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
 
 ```bash
 curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/stats | jq .
+  https://localhost:8445/api/v1/stats | jq .
 ```
 
 **Response:**
@@ -67,7 +75,7 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
 
 ```bash
 curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/devices | jq .
+  https://localhost:8445/api/v1/devices | jq .
 ```
 
 **Response:**
@@ -92,7 +100,7 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
 
 ```bash
 curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/config | jq .
+  https://localhost:8445/api/v1/config | jq .
 ```
 
 ### Update Configuration
@@ -100,7 +108,7 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
 ```bash
 # Get CSRF token first
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 
 # Update config
 curl -X PUT \
@@ -110,7 +118,7 @@ curl -X PUT \
   -d '{
     "content": "devices:\n  - name: router1\n    type: router\n    ip_addresses:\n      - 192.168.1.1"
   }' \
-  http://localhost:8080/api/v1/config
+  https://localhost:8445/api/v1/config
 ```
 
 ### Start PCAP Replay
@@ -118,7 +126,7 @@ curl -X PUT \
 ```bash
 # Get CSRF token
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 
 # Start replay from file
 curl -X POST \
@@ -130,7 +138,7 @@ curl -X POST \
     "speed": 1.0,
     "loop": false
   }' \
-  http://localhost:8080/api/v1/replay
+  https://localhost:8445/api/v1/replay
 ```
 
 ### Upload and Replay PCAP
@@ -141,7 +149,7 @@ PCAP_DATA=$(base64 -w 0 capture.pcap)
 
 # Get CSRF token
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 
 # Upload and replay
 curl -X POST \
@@ -153,26 +161,26 @@ curl -X POST \
     \"data\": \"$PCAP_DATA\",
     \"speed\": 1.0
   }" \
-  http://localhost:8080/api/v1/replay
+  https://localhost:8445/api/v1/replay
 ```
 
 ### Stop PCAP Replay
 
 ```bash
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 
 curl -X DELETE \
   -H "Authorization: Bearer $NIAC_API_TOKEN" \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
-  http://localhost:8080/api/v1/replay
+  https://localhost:8445/api/v1/replay
 ```
 
 ### Configure Alerts
 
 ```bash
 CSRF_TOKEN=$(curl -s -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  http://localhost:8080/api/v1/csrf-token | jq -r '.token')
+  https://localhost:8445/api/v1/csrf-token | jq -r '.token')
 
 curl -X PUT \
   -H "Authorization: Bearer $NIAC_API_TOKEN" \
@@ -182,7 +190,7 @@ curl -X PUT \
     "packets_threshold": 100000,
     "webhook_url": "http://alertmanager:9093/api/v1/alerts"
   }' \
-  http://localhost:8080/api/v1/alerts
+  https://localhost:8445/api/v1/alerts
 ```
 
 ## Python Examples
@@ -194,7 +202,7 @@ import requests
 import time
 
 # Configuration
-API_URL = "http://localhost:8080"
+API_URL = "https://localhost:8445"
 TOKEN = "your-api-token-here"
 
 headers = {
@@ -226,7 +234,7 @@ if __name__ == "__main__":
 ```python
 import requests
 
-API_URL = "http://localhost:8080"
+API_URL = "https://localhost:8445"
 TOKEN = "your-api-token-here"
 
 headers = {
@@ -283,7 +291,7 @@ import requests
 import base64
 import time
 
-API_URL = "http://localhost:8080"
+API_URL = "https://localhost:8445"
 TOKEN = "your-api-token-here"
 
 headers = {
@@ -357,12 +365,16 @@ print("Replay completed")
 ### Prometheus Metrics Integration
 
 ```python
+import os
 import requests
 from prometheus_client.parser import text_string_to_metric_families
 
 def fetch_metrics():
     """Fetch and parse Prometheus metrics"""
-    response = requests.get("http://localhost:9090/metrics")
+    response = requests.get(
+        "https://localhost:8445/metrics",
+        headers={"Authorization": f"Bearer {os.environ['NIAC_API_TOKEN']}"},
+    )
     response.raise_for_status()
 
     for family in text_string_to_metric_families(response.text):
@@ -377,7 +389,7 @@ fetch_metrics()
 ### Fetch API (Browser/Node.js)
 
 ```javascript
-const API_URL = 'http://localhost:8080';
+const API_URL = 'https://localhost:8445';
 const TOKEN = 'your-api-token-here';
 
 const headers = {
@@ -434,7 +446,7 @@ async function updateConfig(yamlContent) {
 const axios = require('axios');
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: 'https://localhost:8445',
   headers: {
     'Authorization': `Bearer ${process.env.NIAC_API_TOKEN}`
   }
@@ -506,7 +518,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	req, _ := http.NewRequest("GET", "http://localhost:8080/api/v1/stats", nil)
+	req, _ := http.NewRequest("GET", "https://localhost:8445/api/v1/stats", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{}
@@ -538,7 +550,7 @@ $headers = @{
     "Authorization" = "Bearer $token"
 }
 
-$stats = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/stats" -Headers $headers
+$stats = Invoke-RestMethod -Uri "https://localhost:8445/api/v1/stats" -Headers $headers
 Write-Host "Packets Sent: $($stats.stack.packets_sent)"
 Write-Host "Packets Received: $($stats.stack.packets_received)"
 Write-Host "Goroutines: $($stats.goroutines)"
@@ -553,7 +565,7 @@ $headers = @{
 }
 
 # Get CSRF token
-$csrfResponse = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/csrf-token" -Headers $headers
+$csrfResponse = Invoke-RestMethod -Uri "https://localhost:8445/api/v1/csrf-token" -Headers $headers
 $csrfToken = $csrfResponse.token
 
 # Update config
@@ -567,7 +579,7 @@ $body = @{
     content = $configContent
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/config" `
+Invoke-RestMethod -Uri "https://localhost:8445/api/v1/config" `
     -Method Put `
     -Headers $headersWithCsrf `
     -Body $body
@@ -606,7 +618,7 @@ When rate limited, you'll receive HTTP 429 with retry information in the `X-Requ
 All API responses include an `X-Request-ID` header for debugging:
 
 ```bash
-curl -v -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/stats 2>&1 | grep X-Request-ID
+curl -v -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats 2>&1 | grep X-Request-ID
 # X-Request-ID: a1b2c3d4e5f67890a1b2c3d4e5f67890
 ```
 

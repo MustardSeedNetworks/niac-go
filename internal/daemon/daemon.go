@@ -68,9 +68,6 @@ type Config struct {
 	// admin-managed set of hostnames. Empty = no allowlist (the existing
 	// private-IP / blocked-hostname filters still apply).
 	WebhookAllowedHosts []string
-	// EnableTLS controls whether the daemon's API listener serves HTTPS.
-	// Wave 1 default: true.
-	EnableTLS bool
 	// CertDir is the directory holding the self-signed cert+key when
 	// CertFile/KeyFile are not explicitly set.
 	CertDir string
@@ -153,7 +150,6 @@ func (d *Daemon) Start() error {
 		UIBuildHash:                    d.cfg.UIBuildHash,
 		Storage:                        d.storage,
 		WebhookAllowedHosts:            d.cfg.WebhookAllowedHosts,
-		EnableTLS:                      d.cfg.EnableTLS,
 		CertDir:                        d.cfg.CertDir,
 		CertFile:                       d.cfg.CertFile,
 		KeyFile:                        d.cfg.KeyFile,

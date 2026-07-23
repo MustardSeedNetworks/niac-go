@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,12 +15,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
-	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
 type runtimeServices struct {
 	storage       *storage.Storage
-	apiServer     *api.Server
 	stack         *protocols.Stack
 	engine        *capture.Engine
 	startTime     time.Time
@@ -46,48 +43,6 @@ func resolveAPIToken(cliToken string) string {
 	}
 
 	return cliToken
-}
-
-// initAPIServer creates and starts the API server with the given configuration.
-func (rs *runtimeServices) initAPIServer(
-	apiAddr, metricsAddr string,
-	stack *protocols.Stack,
-	cfg *config.Config,
-	interfaceName string,
-	services *serviceOptions,
-) error {
-	graph := topology.Build(cfg)
-	info := readVersionInfo()
-	cfgCopy := &api.ServerConfig{
-		Addr:         apiAddr,
-		MetricsAddr:  metricsAddr,
-		Token:        resolveAPIToken(services.apiToken),
-		Stack:        stack,
-		Config:       cfg,
-		ConfigPath:   rs.configPath,
-		Storage:      rs.storage,
-		Interface:    interfaceName,
-		Version:      info.version,
-		Commit:       info.commit,
-		BuildTime:    info.date,
-		ReleaseTrain: info.releaseTrain,
-		UIBuildHash:  info.uiBuildHash,
-		Topology:     graph,
-		Alert: api.AlertConfig{
-			PacketsThreshold: services.alertPacketsThreshold,
-			WebhookURL:       services.alertWebhook,
-		},
-		ApplyConfig: rs.applyConfig,
-		Replay:      rs.replay,
-	}
-
-	rs.apiServer = api.NewServer(*cfgCopy)
-
-	if startErr := rs.apiServer.Start(); startErr != nil {
-		return fmt.Errorf("start API server: %w", startErr)
-	}
-
-	return nil
 }
 
 func startRuntimeServices(
@@ -129,25 +84,6 @@ func startRuntimeServices(
 		rs.replay = newReplayController(engine, stack.GetDebugLevel())
 	}
 
-	apiAddr := services.apiListen
-	metricsAddr := services.metricsListen
-	if apiAddr == "" && metricsAddr != "" {
-		apiAddr = metricsAddr
-		metricsAddr = ""
-	}
-
-	if apiAddr == "" {
-		return rs, nil
-	}
-
-	if initErr := rs.initAPIServer(apiAddr, metricsAddr, stack, cfg, interfaceName, services); initErr != nil {
-		if rs.storage != nil {
-			_ = rs.storage.Close()
-		}
-
-		return nil, initErr
-	}
-
 	return rs, nil
 }
 
@@ -159,16 +95,6 @@ func (rs *runtimeServices) Stop() {
 		_, stopErr := rs.replay.Stop()
 		if stopErr != nil {
 			logger.Error("Error stopping replay during shutdown", "error", stopErr)
-		}
-	}
-
-	if rs.apiServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), shortTimeout*time.Second)
-		defer cancel()
-		// SECURITY FIX #106: Log API server shutdown errors
-		err := rs.apiServer.Shutdown(ctx)
-		if err != nil {
-			logger.Error("Error shutting down API server", "error", err)
 		}
 	}
 

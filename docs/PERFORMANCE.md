@@ -117,7 +117,7 @@ Rate limiter automatically cleans up stale entries every 5 minutes. For high-tra
 
 Monitor with:
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/stats | jq .goroutines
+curl -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats | jq .goroutines
 ```
 
 ### Goroutine Limits
@@ -129,7 +129,7 @@ Healthy goroutine counts:
 
 Check goroutines via API:
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/stats | jq .goroutines
+curl -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats | jq .goroutines
 ```
 
 ## CPU Optimization
@@ -201,7 +201,8 @@ sudo ethtool -K eth0 rx off tx off sg off tso off gso off gro off
 
 Prometheus metrics endpoint:
 ```bash
-curl http://localhost:9090/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 ```
 
 Key metrics:
@@ -248,7 +249,7 @@ niac test error-rate --duration 10s --devices 10
 sudo tcpreplay -i eth0 -M 10 test.pcap
 
 # Monitor processing rate
-watch -n 1 'curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/stats | jq .stack.packets_received'
+watch -n 1 'curl -s -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats | jq .stack.packets_received'
 ```
 
 ## Tuning by Use Case

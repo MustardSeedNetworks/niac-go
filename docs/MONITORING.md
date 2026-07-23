@@ -22,13 +22,16 @@ NIAC-Go exposes comprehensive metrics via a Prometheus-compatible `/metrics` end
 
 ## Prometheus Metrics
 
-The metrics endpoint is available at `http://localhost:8080/metrics` (or your configured API port).
+The metrics endpoint is available on the daemon's HTTPS listener at
+`https://localhost:8445/metrics`. Run `sudo niac install-ca` after the daemon
+first generates its local certificate.
 
 ### Quick Test
 
 ```bash
 # View raw metrics
-curl http://localhost:8080/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 
 # Example output:
 # HELP niac_packets_sent_total Total packets sent
@@ -72,13 +75,18 @@ global:
 
 scrape_configs:
   - job_name: 'niac-go'
+    scheme: https
+    authorization:
+      credentials_file: /path/to/niac-token
+    tls_config:
+      ca_file: /path/to/niac/certs/server.crt
     static_configs:
-      - targets: ['localhost:8080']
+      - targets: ['localhost:8445']
     metrics_path: '/metrics'
     scrape_interval: 5s
 ```
 
-**Important**: Make sure the `targets` address matches your NIAC-Go API server address.
+**Important**: Make sure the target, token file, and CA file match your NIAC daemon.
 
 ### 3. Start Prometheus
 
@@ -266,7 +274,7 @@ Configure via REST API:
 
 ```bash
 # Set alert threshold
-curl -X PUT http://localhost:8080/api/v1/alert \
+curl -X PUT https://localhost:8445/api/v1/alert \
   -H "Content-Type: application/json" \
   -d '{
     "packets_threshold": 100000,
@@ -274,10 +282,10 @@ curl -X PUT http://localhost:8080/api/v1/alert \
   }'
 
 # Get alert status
-curl http://localhost:8080/api/v1/alert
+curl https://localhost:8445/api/v1/alert
 
 # Disable alerts
-curl -X DELETE http://localhost:8080/api/v1/alert
+curl -X DELETE https://localhost:8445/api/v1/alert
 ```
 
 ## Useful Queries
@@ -325,7 +333,7 @@ niac --config devices.yml
 
 ### Prometheus shows target down
 
-1. Check NIAC-Go is running: `curl http://localhost:8080/api/v1/status`
+1. Check NIAC-Go is running: `curl https://localhost:8445/api/v1/status`
 2. Verify API port in `prometheus.yml` matches your configuration
 3. Check firewall rules
 

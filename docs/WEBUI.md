@@ -9,7 +9,14 @@ The NIAC-Go WebUI provides a web-based interface for monitoring and controlling 
 ### Starting the Daemon
 
 ```bash
-niac daemon
+niac daemon &
+# Wait for first-run certificate generation, then trust it
+for _ in {1..30}; do
+  curl -skf https://localhost:8445/__version >/dev/null && break
+  sleep 1
+done
+curl -skf https://localhost:8445/__version >/dev/null
+sudo niac install-ca
 # Open https://localhost:8445
 ```
 
@@ -146,7 +153,7 @@ Configure threshold-based alerting:
 ```bash
 # Export to GraphML
 curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8080/api/v1/topology/export?format=graphml" \
+  "https://localhost:8445/api/v1/topology/export?format=graphml" \
   -o topology.graphml
 ```
 
@@ -223,9 +230,9 @@ View recent protocol errors:
 **Symptoms:** "Failed to fetch" or connection errors
 
 **Solutions:**
-1. Verify API server is running: `curl http://localhost:8080/api/v1/version`
+1. Verify API server is running: `curl https://localhost:8445/api/v1/version`
 2. Check firewall rules
-3. Ensure correct port (default :8080)
+3. Ensure correct port (default :8445)
 4. Try localhost vs 127.0.0.1 vs machine IP
 
 ### Authentication Fails
@@ -418,7 +425,7 @@ server {
     ssl_certificate_key /etc/ssl/private/niac.key;
 
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass https://localhost:8445;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }

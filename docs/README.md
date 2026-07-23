@@ -22,10 +22,8 @@ The installed daemon is HTTPS-only and listens on `127.0.0.1:8445` by default.
 Its API base URL is `https://localhost:8445/api/v1/`; use `-k` only when testing
 with the generated self-signed development certificate.
 
-The ad-hoc `niac run <interface> <config> --web` mode is an explicit plaintext
-mode and defaults to port 8080. Because it binds all interfaces, set
-`NIAC_API_TOKEN` before enabling it. Examples that use
-`http://localhost:8080` apply only to that mode.
+NIAC exposes the API, Web UI, and Prometheus metrics only through the daemon's
+HTTPS listener. The `niac run` command does not open a network service.
 
 Authenticated requests use a bearer token. Mutating requests also require the
 CSRF token returned by `/api/v1/csrf-token`.

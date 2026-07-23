@@ -21,13 +21,25 @@ jobs:
 
       - name: Start NIAC simulation
         run: |
-          sudo niac run test-network.yaml --api :8080 &
+          NIAC_API_TOKEN=$(openssl rand -base64 32)
+          export NIAC_API_TOKEN
+          echo "NIAC_API_TOKEN=$NIAC_API_TOKEN" >> "$GITHUB_ENV"
+          niac daemon &
           echo $! > niac.pid
           sleep 5
+          CSRF_TOKEN=$(curl -sk \
+            -H "Authorization: Bearer $NIAC_API_TOKEN" \
+            https://localhost:8445/api/v1/csrf-token | jq -r '.token')
+          curl --fail-with-body -sk -X POST \
+            -H "Authorization: Bearer $NIAC_API_TOKEN" \
+            -H "X-CSRF-Token: $CSRF_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg configData "$(cat test-network.yaml)" \
+              '{interface:"eth0", configData:$configData}')" \
+            https://localhost:8445/api/v1/simulation
 
       - name: Run network tests
         run: |
-          export NIAC_API_TOKEN=$(openssl rand -base64 32)
           pytest tests/network_tests.py
 
       - name: Stop NIAC
@@ -42,13 +54,26 @@ jobs:
 network_tests:
   image: ubuntu:22.04
   before_script:
-    - apt-get update && apt-get install -y curl libpcap-dev
+    - apt-get update && apt-get install -y curl jq libpcap-dev
     - curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
     - mv niac /usr/local/bin/
     - setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
   script:
-    - niac run test-config.yaml --api :8080 &
+    - export NIAC_API_TOKEN=$(openssl rand -base64 32)
+    - niac daemon &
     - sleep 5
+    - |
+      CSRF_TOKEN=$(curl -sk \
+        -H "Authorization: Bearer $NIAC_API_TOKEN" \
+        https://localhost:8445/api/v1/csrf-token | jq -r '.token')
+      export CSRF_TOKEN
+      curl --fail-with-body -sk -X POST \
+        -H "Authorization: Bearer $NIAC_API_TOKEN" \
+        -H "X-CSRF-Token: $CSRF_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n --arg configData "$(cat test-config.yaml)" \
+          '{interface:"eth0", configData:$configData}')" \
+        https://localhost:8445/api/v1/simulation
     - python3 run_tests.py
     - kill $(pgrep niac)
 ```
@@ -64,21 +89,33 @@ pipeline {
                 sh '''
                     curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
                     sudo mv niac /usr/local/bin/
+                    sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
                 '''
             }
         }
         stage('Run Simulation') {
             steps {
                 sh '''
-                    sudo niac run config.yaml --api :8080 &
+                    openssl rand -base64 32 > niac-token
+                    NIAC_API_TOKEN=$(cat niac-token) niac daemon &
                     echo $! > niac.pid
                     sleep 5
+                    CSRF_TOKEN=$(curl -sk \
+                      -H "Authorization: Bearer $(cat niac-token)" \
+                      https://localhost:8445/api/v1/csrf-token | jq -r '.token')
+                    curl --fail-with-body -sk -X POST \
+                      -H "Authorization: Bearer $(cat niac-token)" \
+                      -H "X-CSRF-Token: $CSRF_TOKEN" \
+                      -H "Content-Type: application/json" \
+                      -d "$(jq -n --arg configData "$(cat config.yaml)" \
+                        '{interface:"eth0", configData:$configData}')" \
+                      https://localhost:8445/api/v1/simulation
                 '''
             }
         }
         stage('Test') {
             steps {
-                sh 'pytest tests/'
+                sh 'NIAC_API_TOKEN=$(cat niac-token) pytest tests/'
             }
         }
     }

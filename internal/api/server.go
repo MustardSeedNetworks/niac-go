@@ -32,7 +32,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
@@ -258,8 +257,7 @@ type ReplayManager interface {
 
 // ServerConfig defines API server options.
 type ServerConfig struct {
-	Addr        string
-	MetricsAddr string
+	Addr string
 	// Token is the legacy Wave 1 single bearer token. When non-empty and
 	// TokenFile is empty, the server seeds its tokenstore.TokenStore with this value
 	// at tokenstore.ScopeReadWrite (back-compat with the pre-Wave-2 contract).
@@ -282,11 +280,6 @@ type ServerConfig struct {
 	UIBuildHash  string
 	Topology     topology.Graph
 	Alert        AlertConfig
-	// EnableTLS controls whether the API listener uses HTTPS. When true,
-	// CertFile/KeyFile (or, when both are empty, the auto-generated
-	// self-signed pair under CertDir) are loaded and the listener serves
-	// TLS 1.3. See internal/api/tls.go.
-	EnableTLS bool
 	// CertDir is the directory the self-signed cert+key default to when
 	// CertFile and KeyFile are not explicitly set. Empty falls back to
 	// `certs/` relative to the working directory.
@@ -366,7 +359,6 @@ type Server struct {
 	cfg               ServerConfig
 	logger            *slog.Logger
 	httpServer        *http.Server
-	metricsServer     *http.Server
 	alertStop         chan struct{}
 	lastAlert         uint64
 	alertMu           sync.RWMutex
@@ -588,7 +580,7 @@ func (s *Server) BoundAddr() string {
 	return s.httpServer.Addr
 }
 
-// Start boots the HTTP listeners.
+// Start boots the HTTPS listener.
 func (s *Server) Start() error {
 	if err := s.checkStartupPreconditions(); err != nil {
 		return err
@@ -603,32 +595,13 @@ func (s *Server) Start() error {
 		}
 	}
 
-	if s.cfg.MetricsAddr != "" && s.cfg.MetricsAddr != s.cfg.Addr {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/metrics", s.recoverMiddleware(auth.Middleware(s.authDeps(), s.handleMetrics)))
-		s.metricsServer = newSecureHTTPServer(s.cfg.MetricsAddr, mux)
-
-		metricsLn, metricsAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.MetricsAddr)
-		if bindErr != nil {
-			return fmt.Errorf("metrics server bind: %w", bindErr)
-		}
-		s.metricsServer.Addr = metricsAddr
-
-		go func() {
-			if err := s.metricsServer.Serve(metricsLn); err != nil &&
-				!errors.Is(err, http.ErrServerClosed) {
-				s.logger.Error("Metrics server stopped", "error", err)
-			}
-		}()
-	}
-
 	s.startBackgroundTasks()
 	s.updateAlertConfig(s.cfg.Alert)
 
 	return nil
 }
 
-// Shutdown gracefully shuts down the API and metrics servers.
+// Shutdown gracefully shuts down the API server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.alertMu.Lock()
 
@@ -657,13 +630,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	var errs []error
-
-	if s.metricsServer != nil {
-		if err := s.metricsServer.Shutdown(ctx); err != nil {
-			s.logger.ErrorContext(ctx, "Error shutting down metrics server", "error", err)
-			errs = append(errs, err)
-		}
-	}
 
 	if s.httpServer != nil {
 		if err := s.httpServer.Shutdown(ctx); err != nil {
@@ -750,9 +716,7 @@ func (s *Server) warnIfUnauthenticated() {
 }
 
 // startAPIListener binds the API listener (with port-fallback per #69)
-// and serves either TLS or HTTP per configuration. The redirector is
-// started after the TLS listener so a redirect target exists before
-// the first client can hit :8044.
+// and serves TLS.
 func (s *Server) startAPIListener() error {
 	mux := http.NewServeMux()
 	s.registerAPIRoutes(mux)
@@ -774,30 +738,21 @@ func (s *Server) startAPIListener() error {
 	return nil
 }
 
-// serveAPI starts the API listener in TLS or HTTP mode. The TLS
-// branch resolves cert paths up front and closes the listener on
+// serveAPI starts the API listener in TLS mode. It resolves cert paths
+// up front and closes the listener on
 // resolution failure so we don't leak a half-bound socket back to
 // Start's error path.
 func (s *Server) serveAPI(ln net.Listener) error {
-	if s.cfg.EnableTLS {
-		certFile, keyFile, certErr := s.resolveTLSCertPaths()
-		if certErr != nil {
-			_ = ln.Close()
-			return fmt.Errorf("resolve TLS cert: %w", certErr)
-		}
-		s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
-		go func() {
-			if err := s.httpServer.ServeTLS(ln, certFile, keyFile); err != nil &&
-				!errors.Is(err, http.ErrServerClosed) {
-				s.logger.Error("API server (TLS) stopped", "error", err)
-			}
-		}()
-		return nil
+	certFile, keyFile, certErr := s.resolveTLSCertPaths()
+	if certErr != nil {
+		_ = ln.Close()
+		return fmt.Errorf("resolve TLS cert: %w", certErr)
 	}
+	s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
 	go func() {
-		if err := s.httpServer.Serve(ln); err != nil &&
+		if err := s.httpServer.ServeTLS(ln, certFile, keyFile); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("API server stopped", "error", err)
+			s.logger.Error("API server (TLS) stopped", "error", err)
 		}
 	}()
 	return nil

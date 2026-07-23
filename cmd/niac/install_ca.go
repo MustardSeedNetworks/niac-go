@@ -44,8 +44,7 @@ const (
 // --cert is not given. The lookup honors NIAC_CERT_DIR so an operator can
 // keep certs outside the working directory.
 func defaultInstallCAPath() string {
-	dir := os.Getenv("NIAC_CERT_DIR")
-	cert, _ := api.DefaultCertPaths(dir)
+	cert, _ := api.DefaultCertPaths(defaultCertDir())
 	return cert
 }
 

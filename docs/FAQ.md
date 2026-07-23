@@ -127,7 +127,7 @@ sudo niac run config.yaml
 sudo niac run config.yaml --debug 2
 
 # With API server
-sudo niac run config.yaml --api :8080 --api-token $(openssl rand -base64 32)
+niac daemon --api-token $(openssl rand -base64 32)
 ```
 
 ### How do I stop a running simulation?
@@ -160,12 +160,13 @@ sudo niac run config.yaml
 
 **API:**
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/stats
+curl -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats
 ```
 
 **Prometheus Metrics:**
 ```bash
-curl http://localhost:9090/metrics
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  https://localhost:8445/metrics
 ```
 
 ## Protocols
@@ -236,12 +237,12 @@ trap_config:
 Set an API token:
 ```bash
 export NIAC_API_TOKEN=$(openssl rand -base64 32)
-sudo niac run config.yaml --api :8080
+niac daemon
 ```
 
 Then include it in requests:
 ```bash
-curl -H "Authorization: Bearer $NIAC_API_TOKEN" http://localhost:8080/api/v1/stats
+curl -H "Authorization: Bearer $NIAC_API_TOKEN" https://localhost:8445/api/v1/stats
 ```
 
 ### What API endpoints are available?
@@ -281,7 +282,7 @@ scrape_configs:
 curl -X PUT -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"webhook_url":"http://alertmanager:9093/api/v1/alerts"}' \
-  http://localhost:8080/api/v1/alerts
+  https://localhost:8445/api/v1/alerts
 ```
 
 ## Troubleshooting
@@ -388,8 +389,8 @@ See `docs/PERFORMANCE.md` for detailed tuning guide. Quick tips:
 
 Start API server, then visit in browser:
 ```bash
-sudo niac run config.yaml --api :8080 --api-token $TOKEN
-# Visit: http://localhost:8080
+niac daemon --api-token $TOKEN
+# Visit: https://localhost:8445
 ```
 
 ### Why is the WebUI slow with many devices?
@@ -417,12 +418,12 @@ token = "your-api-token"
 headers = {"Authorization": f"Bearer {token}"}
 
 # Get stats
-stats = requests.get("http://localhost:8080/api/v1/stats", headers=headers).json()
+stats = requests.get("https://localhost:8445/api/v1/stats", headers=headers).json()
 print(f"Packets sent: {stats['stack']['packets_sent']}")
 
 # Update config
 new_config = {"content": open("new-config.yaml").read()}
-requests.put("http://localhost:8080/api/v1/config", json=new_config, headers=headers)
+requests.put("https://localhost:8445/api/v1/config", json=new_config, headers=headers)
 ```
 
 ### How do I deploy NIAC?

@@ -23,8 +23,8 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Configuration
-NIAC_PORT=8080
-NIAC_SCHEME="http"
+NIAC_PORT=8445
+NIAC_SCHEME="https"
 NIAC_HOST="localhost"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -101,7 +101,7 @@ assert_http_status() {
     TESTS_RUN=$((TESTS_RUN + 1))
 
     local status
-    status=$(curl -s $extra_args -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
+    status=$(curl -sk $extra_args -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
 
     if [[ "$status" == "$expected" ]]; then
         log_pass "$name (HTTP $status)"
@@ -121,7 +121,7 @@ assert_json_key() {
     TESTS_RUN=$((TESTS_RUN + 1))
 
     local body
-    body=$(curl -s "$url" 2>/dev/null)
+    body=$(curl -sk "$url" 2>/dev/null)
 
     if echo "$body" | grep -q "\"$key\""; then
         log_pass "$name"
@@ -242,7 +242,7 @@ test_api_endpoints() {
     local base_url="${NIAC_SCHEME}://${NIAC_HOST}:${NIAC_PORT}"
 
     # Check if service is reachable
-    if ! curl -s -o /dev/null "${base_url}/" 2>/dev/null; then
+    if ! curl -sk -o /dev/null "${base_url}/" 2>/dev/null; then
         skip_test "API endpoint tests" "Service not reachable at ${base_url}"
         return
     fi
@@ -261,7 +261,7 @@ test_api_endpoints() {
     # Stats returns 503 when no simulation is running (expected behavior)
     TESTS_RUN=$((TESTS_RUN + 1))
     local stats_status
-    stats_status=$(curl -s -o /dev/null -w "%{http_code}" "${base_url}/api/v1/stats" 2>/dev/null)
+    stats_status=$(curl -sk -o /dev/null -w "%{http_code}" "${base_url}/api/v1/stats" 2>/dev/null)
     if [[ "$stats_status" == "200" || "$stats_status" == "503" ]]; then
         log_pass "Stats endpoint responds (HTTP $stats_status)"
         TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -272,7 +272,7 @@ test_api_endpoints() {
 
     log_header "JSON Response Validation"
     local devices_body
-    devices_body=$(curl -s "${base_url}/api/v1/devices" 2>/dev/null)
+    devices_body=$(curl -sk "${base_url}/api/v1/devices" 2>/dev/null)
     TESTS_RUN=$((TESTS_RUN + 1))
     if echo "$devices_body" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
         log_pass "Devices endpoint returns valid JSON"
@@ -283,7 +283,7 @@ test_api_endpoints() {
     fi
 
     local version_body
-    version_body=$(curl -s "${base_url}/api/v1/version" 2>/dev/null)
+    version_body=$(curl -sk "${base_url}/api/v1/version" 2>/dev/null)
     TESTS_RUN=$((TESTS_RUN + 1))
     if echo "$version_body" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
         log_pass "Version endpoint returns valid JSON"
@@ -296,7 +296,7 @@ test_api_endpoints() {
     log_header "SPA Catch-All"
     # NiAC serves the SPA for unknown routes (returns 200 with HTML)
     local unknown_body
-    unknown_body=$(curl -s "${base_url}/api/v1/nonexistent" 2>/dev/null)
+    unknown_body=$(curl -sk "${base_url}/api/v1/nonexistent" 2>/dev/null)
     TESTS_RUN=$((TESTS_RUN + 1))
     if echo "$unknown_body" | grep -q "<!doctype html\|<html"; then
         log_pass "Unknown routes serve SPA (catch-all works)"
@@ -308,7 +308,7 @@ test_api_endpoints() {
 
     log_header "WebUI Assets"
     local html
-    html=$(curl -s "${base_url}/" 2>/dev/null)
+    html=$(curl -sk "${base_url}/" 2>/dev/null)
     assert_contains "$html" "html" "Root serves HTML document"
 }
 
@@ -355,21 +355,21 @@ test_concurrent_requests() {
 
     local base_url="${NIAC_SCHEME}://${NIAC_HOST}:${NIAC_PORT}"
 
-    if ! curl -s -o /dev/null "${base_url}/" 2>/dev/null; then
+    if ! curl -sk -o /dev/null "${base_url}/" 2>/dev/null; then
         skip_test "Concurrent requests" "Service not reachable"
         return
     fi
 
     # Send 20 concurrent requests
     for _ in $(seq 1 20); do
-        curl -s -o /dev/null "${base_url}/api/v1/version" &
+        curl -sk -o /dev/null "${base_url}/api/v1/version" &
     done
     wait
 
     # Verify service still responds
     TESTS_RUN=$((TESTS_RUN + 1))
     local status
-    status=$(curl -s -o /dev/null -w "%{http_code}" "${base_url}/api/v1/version" 2>/dev/null)
+    status=$(curl -sk -o /dev/null -w "%{http_code}" "${base_url}/api/v1/version" 2>/dev/null)
     if [[ "$status" == "200" ]]; then
         log_pass "Service stable after 20 concurrent requests"
         TESTS_PASSED=$((TESTS_PASSED + 1))

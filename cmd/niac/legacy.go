@@ -61,12 +61,7 @@ type legacyFlags struct {
 	debugSNMP    int
 
 	// Service / API flags
-	apiListen             string
-	apiToken              string
-	metricsListen         string
-	storagePath           string
-	alertPacketsThreshold uint64
-	alertWebhook          string
+	storagePath string
 }
 
 // defineLegacyFlags defines all command-line flags for legacy mode.
@@ -275,37 +270,7 @@ func defineDiscoveryProtocolDebugFlags(flagSet *flag.FlagSet, flags *legacyFlags
 }
 
 func defineServiceFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
-	flagSet.StringVar(
-		&flags.apiListen,
-		"api-listen",
-		"",
-		"Expose REST API and Web UI on this address (e.g., :8080)",
-	)
-	flagSet.StringVar(
-		&flags.apiToken,
-		"api-token",
-		"",
-		"Bearer token required for API/Web UI access",
-	)
-	flagSet.StringVar(
-		&flags.metricsListen,
-		"metrics-listen",
-		"",
-		"Expose Prometheus metrics on this address",
-	)
 	flagSet.StringVar(&flags.storagePath, "storage-path", "", "Path to NIAC run history database")
-	flagSet.Uint64Var(
-		&flags.alertPacketsThreshold,
-		"alert-packets-threshold",
-		0,
-		"Trigger alerts when total packet count exceeds this value",
-	)
-	flagSet.StringVar(
-		&flags.alertWebhook,
-		"alert-webhook",
-		"",
-		"Optional webhook URL to notify when alerts fire",
-	)
 }
 
 // processFlags applies flag transformations (verbose/quiet override) and validates flag values.
@@ -323,23 +288,8 @@ func processFlags(flags *legacyFlags) {
 }
 
 func applyLegacyServiceFlags(flags *legacyFlags, services *serviceOptions) {
-	if flags.apiListen != "" {
-		services.apiListen = flags.apiListen
-	}
-	if flags.apiToken != "" {
-		services.apiToken = flags.apiToken
-	}
-	if flags.metricsListen != "" {
-		services.metricsListen = flags.metricsListen
-	}
 	if flags.storagePath != "" {
 		services.storagePath = flags.storagePath
-	}
-	if flags.alertPacketsThreshold > 0 {
-		services.alertPacketsThreshold = flags.alertPacketsThreshold
-	}
-	if flags.alertWebhook != "" {
-		services.alertWebhook = flags.alertWebhook
 	}
 	if services.storagePath == "" {
 		services.storagePath = defaultStoragePath()

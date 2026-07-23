@@ -99,7 +99,7 @@ mkdir -p /usr/local/niac/data
 launchctl load -w /Library/LaunchDaemons/com.niac.plist 2>/dev/null || true
 
 echo "NiAC installed successfully."
-echo "Web UI: http://localhost:8080"
+echo "Web UI: https://localhost:8445"
 SCRIPT
 chmod 755 "$BUILD_DIR/scripts/postinstall"
 
