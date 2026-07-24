@@ -54,6 +54,7 @@ func (a *Agent) bindDeviceState(state *devicestate.Store) {
 	a.refreshDeviceStateInterfaceMIBs()
 	snapshot := state.Snapshot()
 	a.refreshDeviceStateIPMIBs(snapshot)
+	a.replaceTransportListeners(deviceStateIPv4Addresses(snapshot))
 	a.stateMIBVersion.Store(snapshot.Version)
 }
 
@@ -77,7 +78,18 @@ func (a *Agent) syncDeviceStateMIBs() {
 	}
 	a.refreshDeviceStateInterfaceMIBs()
 	a.refreshDeviceStateIPMIBs(snapshot)
+	a.replaceTransportListeners(deviceStateIPv4Addresses(snapshot))
 	a.stateMIBVersion.Store(snapshot.Version)
+}
+
+func deviceStateIPv4Addresses(snapshot devicestate.Snapshot) []string {
+	result := make([]string, 0, len(snapshot.Network.Interfaces))
+	for _, iface := range snapshot.Network.Interfaces {
+		if iface.Address.IsValid() && iface.Address.Addr().Is4() {
+			result = append(result, iface.Address.Addr().String())
+		}
+	}
+	return result
 }
 
 func authoredInterfaceSpeeds(device *config.Device) map[string]int {
