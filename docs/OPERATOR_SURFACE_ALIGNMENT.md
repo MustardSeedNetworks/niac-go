@@ -32,32 +32,10 @@ editor routes are registered explicitly in `ui/src/App.tsx`:
 - `/library/walks`
 - `/library/pcaps`
 
-Legacy URLs redirect intentionally:
+Pre-1.0 route aliases are not retained. Unknown or retired UI paths return to
+the dashboard through the wildcard route; documentation and tests use only the
+canonical paths above.
 
-- `/templates` -> `/runtime`
-- `/neighbors` -> `/topology`
-- `/analysis` -> `/traffic`
-- `/pcap-analyzer` -> `/packets`
-
-The production UI build and unit test suite pass after the current alignment
-work.
-
-## TUI Improvement Backlog
-
-Bubble Tea/Lipgloss remains the right TUI stack. Cobra is the CLI framework,
-not the TUI framework.
-
-Recommended next improvements:
-
-1. Add a TUI command palette so every major action is discoverable without
-   memorizing shortcuts.
-2. Add a persistent footer/status legend that changes per panel and shows the
-   valid keys for the current context.
-3. Convert config editing panels from display-first overlays into task-focused
-   flows: select device, edit interface, edit SNMP, preview diff, apply.
-4. Add explicit unsaved-change tracking for TUI config mutations and a save or
-   apply workflow instead of only mutating in-memory state.
-5. Add TUI/API parity checks in tests so a Web UI or CLI feature cannot land
-   without at least a TUI read/control path when it is an operator workflow.
-6. Add visual regression snapshots for key TUI screens once the layout is more
-   stable.
+There is no automatic CLI/TUI/Web symmetry requirement. A new surface is added
+only when a concrete operator workflow needs it and the product feature gate
+accepts its build and maintenance cost.

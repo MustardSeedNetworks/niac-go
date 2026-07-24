@@ -1,7 +1,7 @@
 import { Wrench } from 'lucide-react';
 import { memo, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
@@ -114,15 +114,6 @@ function AppShell() {
                   <DeviceEditorPageRef />
                 </PageWithErrorBoundary>
               }
-            />
-            {/* Back-compat for folded-in pages — bookmarks and copied URLs
-              continue to work after pages moved into their host sections. */}
-            <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
-            <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
-            <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
-            <Route
-              path="/pcap-analyzer"
-              element={<Navigate to="/packets?view=files" replace={true} />}
             />
             <Route path="*" element={<Navigate to="/" replace={true} />} />
           </Routes>

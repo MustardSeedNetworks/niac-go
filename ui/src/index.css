@@ -117,7 +117,7 @@
   /* ========================================
    * Module Accents — NIAC feature modules (canonical 2026-05-22).
    * Constant across light/dark. For icons, badges, and legend swatches
-   * only — never for card backgrounds. Mirrors Seed's roots/canopy/etc.
+   * only — never for card backgrounds.
    * pattern (5 distinct hues, not a mono-anchor ramp).
    * ======================================== */
   --color-module-topology: #4f46e5; /* Indigo-600 — network map (= brand anchor) */
@@ -257,14 +257,14 @@
   --color-brand-accent: #a5b4fc; /* Lighter sibling (niac-300 / indigo-300) — hover */
   --color-brand-gold: #d4a017; /* Mustard cross-brand accent (mustard-500) */
 
-  /* Surfaces — Botanical-earth: warm cream palette (canonical 2026-05-22) */
+  /* Warm neutral surfaces (canonical 2026-05-22) */
   --color-surface-base: #fbfaf5;
   --color-surface-raised: #ffffff;
   --color-surface-border: #e1d9c4;
   --color-surface-hover: #f3efe2;
   --color-surface-sunken: #e9e3ce;
 
-  /* Text — Botanical-earth (WCAG AA against warm cream surfaces) */
+  /* Text (WCAG AA against the light surfaces) */
   --color-text-primary: #1a2520;
   --color-text-secondary: #4a5650;
   --color-text-muted: #6b766f;
@@ -272,10 +272,10 @@
   --color-text-inverse: #ffffff;
 
   /* Status — canonical anchors, constant across modes (2026-05-22) */
-  --color-status-success: #4caf50; /* = seed-500 */
+  --color-status-success: #4caf50;
   --color-status-warning: #d4a017; /* = mustard-500 brand accent */
   --color-status-error: #ef4444; /* coral red */
-  --color-status-info: #1976d2; /* = stem-500 */
+  --color-status-info: #1976d2;
 
   color: var(--color-text-primary);
   background-color: var(--color-surface-base);
@@ -290,14 +290,14 @@
    * Lightening previously applied here violated the brand-constant rule
    * (canonical 2026-05-22). See :root block above. */
 
-  /* Surfaces — Botanical-earth: deep green-black palette (canonical 2026-05-22) */
+  /* Deep neutral surfaces (canonical 2026-05-22) */
   --color-surface-base: #0e1612;
   --color-surface-raised: #1a2520;
   --color-surface-border: #2b3a31;
   --color-surface-hover: #16201b;
   --color-surface-sunken: #1f2c25;
 
-  /* Text — Botanical-earth (WCAG AA against deep green-black surfaces) */
+  /* Text (WCAG AA against the dark surfaces) */
   --color-text-primary: #e8eee9;
   --color-text-secondary: #a3b1a7;
   --color-text-muted: #9aa297;
@@ -315,8 +315,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Inter", system-ui, sans-serif;
-  /* Botanical atmospheric: mustard + brand-primary radial gradients over surface.
-   * surface-base auto-flips light↔dark via :root/.dark var swap. */
+  /* Layered brand gradients over the light/dark surface token. */
   background:
     radial-gradient(
       1200px 600px at 80% -10%,

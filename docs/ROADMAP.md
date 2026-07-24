@@ -7,11 +7,11 @@ criterion below is complete and verified from a release-built artifact.
 
 - [ ] Validate the routed CyberScope scenario end to end, including DHCP,
   routed discovery, SNMP walks, and Link-Live observation.
-- [ ] Make injected interface faults observable through IF-MIB and EtherLike-MIB
+- [x] Make injected interface faults observable through IF-MIB and EtherLike-MIB
   counters while preserving monotonic counter behavior.
-- [ ] Verify the Free-tier ten-device runtime limit and keep product, API, UI,
+- [x] Verify the Free-tier ten-device runtime limit and keep product, API, UI,
   and operator documentation aligned with that contract.
-- [ ] Remove stale roadmap, compatibility, licensing, and deployment claims from
+- [x] Remove stale roadmap, compatibility, licensing, and deployment claims from
   active documentation and close superseded tracking issues.
 - [ ] Pass lint, formatting, unit, integration, browser, security, package,
   install, and deployment validation for the release candidate.

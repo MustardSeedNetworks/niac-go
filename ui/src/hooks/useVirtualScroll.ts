@@ -7,7 +7,7 @@ interface VirtualScrollOptions {
 }
 
 /**
- * FEATURE #126: Virtual scrolling hook for large lists
+ * Virtual scrolling hook for large lists.
  *
  * Renders only visible items plus overscan buffer for smooth scrolling.
  * Reduces DOM nodes and improves performance with 1000+ items.

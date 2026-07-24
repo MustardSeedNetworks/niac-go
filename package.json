@@ -1,8 +1,8 @@
 {
   "name": "niac",
-  "version": "2.10.0",
+  "version": "0.94.13",
   "private": true,
-  "description": "NIAC - Network Infrastructure Analysis & Capture - Mustard Seed Networks",
+  "description": "NIAC - Network In A Can device simulator - Mustard Seed Networks",
   "type": "module",
   "engines": {
     "node": "26.5.0",
@@ -24,11 +24,11 @@
     "build-storybook": "cd ui && npm run build-storybook"
   },
   "devDependencies": {
-    "@commitlint/cli": "21.2.0",
+    "@commitlint/cli": "21.2.1",
     "@commitlint/config-conventional": "21.2.0",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "husky": "9.1.7",
-    "lint-staged": "17.0.8",
-    "@typescript/native-preview": "7.0.0-dev.20260706.1"
+    "lint-staged": "17.2.0"
   },
   "lint-staged": {
     "ui/src/**/*.{ts,tsx}": "cd ui && npx biome check --write",

@@ -1,8 +1,7 @@
 # NIAC Defect-Hunting Baseline — 2026-07-21
 
-This record freezes the starting state for the audit in
-`defect-hunting-plan.md`. It is evidence only; dirty files listed here are not
-implicitly part of one change and must be attributed before a commit is made.
+> Historical baseline captured for the archived defect-hunting plan. It is not
+> a current repository-status report.
 
 ## Local NIAC worktree
 

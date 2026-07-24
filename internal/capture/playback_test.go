@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,6 +70,38 @@ func createTestPCAP(t *testing.T, packetCount int) string {
 	}
 
 	return pcapFile
+}
+
+func TestPlaybackEngineForEachPacketExcludesTruncatedTail(t *testing.T) {
+	pcapFile := createTestPCAP(t, 1)
+	file, err := os.OpenFile(pcapFile, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatalf("open PCAP for truncation: %v", err)
+	}
+
+	recordHeader := make([]byte, 16)
+	binary.LittleEndian.PutUint32(recordHeader[8:12], 64)
+	binary.LittleEndian.PutUint32(recordHeader[12:16], 64)
+	if _, err = file.Write(recordHeader); err != nil {
+		_ = file.Close()
+		t.Fatalf("append truncated record: %v", err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatalf("close truncated PCAP: %v", err)
+	}
+
+	playback := NewPlaybackEngine(nil, &config.CapturePlayback{FileName: pcapFile}, 0)
+	var packets int
+	err = playback.forEachPacket(func(PlaybackPacket) bool {
+		packets++
+		return false
+	})
+	if err != nil {
+		t.Fatalf("forEachPacket() error = %v, want valid-prefix replay", err)
+	}
+	if packets != 1 {
+		t.Fatalf("callback count = %d, want only the one complete packet", packets)
+	}
 }
 
 // TestNewPlaybackEngine tests playback engine creation.

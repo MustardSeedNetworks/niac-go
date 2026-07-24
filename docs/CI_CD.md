@@ -1,134 +1,75 @@
-# CI/CD Integration Examples
+# CI/CD Integration
 
-## GitHub Actions
+Use a published GitHub Release artifact when NIAC is a dependency of another
+pipeline. Do not rebuild an arbitrary branch and call it a released NIAC
+binary.
 
-```.github/workflows/test-with-niac.yml
-name: Network Tests
+## Acquire and verify
 
-on: [push, pull_request]
+1. Select an explicit NIAC release tag.
+2. Download the archive or native package for the runner architecture.
+3. Download `checksums.txt` and the asset’s `.cosign.bundle`.
+4. Verify the checksum and keyless signature.
+5. Verify the release provenance covers the asset.
+6. Record the tag and asset digest with the test result.
 
-jobs:
-  network-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+Asset names include the NIAC version, platform, and architecture. Enumerate the
+selected release rather than hard-coding a filename from an older release:
 
-      - name: Install NIAC-Go
-        run: |
-          curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
-          sudo mv niac /usr/local/bin/
-          sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
-
-      - name: Start NIAC simulation
-        run: |
-          NIAC_API_TOKEN=$(openssl rand -base64 32)
-          export NIAC_API_TOKEN
-          echo "NIAC_API_TOKEN=$NIAC_API_TOKEN" >> "$GITHUB_ENV"
-          niac daemon &
-          echo $! > niac.pid
-          sleep 5
-          CSRF_TOKEN=$(curl -sk \
-            -H "Authorization: Bearer $NIAC_API_TOKEN" \
-            https://localhost:8445/api/v1/csrf-token | jq -r '.token')
-          curl --fail-with-body -sk -X POST \
-            -H "Authorization: Bearer $NIAC_API_TOKEN" \
-            -H "X-CSRF-Token: $CSRF_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg configData "$(cat test-network.yaml)" \
-              '{interface:"eth0", configData:$configData}')" \
-            https://localhost:8445/api/v1/simulation
-
-      - name: Run network tests
-        run: |
-          pytest tests/network_tests.py
-
-      - name: Stop NIAC
-        if: always()
-        run: |
-          sudo kill $(cat niac.pid) || true
+```bash
+gh release view "$NIAC_VERSION" \
+  --repo MustardSeedNetworks/niac-go \
+  --json assets \
+  --jq '.assets[].name'
 ```
 
-## GitLab CI
+The complete release and integrity contract is in
+[DISTRIBUTION.md](DISTRIBUTION.md).
 
-```.gitlab-ci.yml
-network_tests:
-  image: ubuntu:22.04
-  before_script:
-    - apt-get update && apt-get install -y curl jq libpcap-dev
-    - curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
-    - mv niac /usr/local/bin/
-    - setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
-  script:
-    - export NIAC_API_TOKEN=$(openssl rand -base64 32)
-    - niac daemon &
-    - sleep 5
-    - |
-      CSRF_TOKEN=$(curl -sk \
-        -H "Authorization: Bearer $NIAC_API_TOKEN" \
-        https://localhost:8445/api/v1/csrf-token | jq -r '.token')
-      export CSRF_TOKEN
-      curl --fail-with-body -sk -X POST \
-        -H "Authorization: Bearer $NIAC_API_TOKEN" \
-        -H "X-CSRF-Token: $CSRF_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg configData "$(cat test-config.yaml)" \
-          '{interface:"eth0", configData:$configData}')" \
-        https://localhost:8445/api/v1/simulation
-    - python3 run_tests.py
-    - kill $(pgrep niac)
+## Runner requirements
+
+Linux runners need libpcap and permission to capture/inject packets. Prefer a
+dedicated self-hosted runner attached only to an isolated test network.
+Container-hosted shared runners generally cannot provide a truthful physical
+network acceptance result.
+
+For a daemon-driven test:
+
+```bash
+export NIAC_API_TOKEN="$(openssl rand -base64 32)"
+niac daemon --listen 127.0.0.1:8445 >niac.log 2>&1 &
+NIAC_PID=$!
+
+curl -sk --fail https://127.0.0.1:8445/__version
+
+# Run the pipeline's NIAC scenario here.
+
+kill "$NIAC_PID"
+wait "$NIAC_PID"
 ```
 
-## Jenkins Pipeline
+Use a trap in the real pipeline so the daemon and temporary configuration are
+cleaned up on failure. Never print the bearer token or place it in a URL.
 
-```groovy
-pipeline {
-    agent any
-    stages {
-        stage('Setup NIAC') {
-            steps {
-                sh '''
-                    curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-linux-x86_64.tar.gz | tar xz
-                    sudo mv niac /usr/local/bin/
-                    sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
-                '''
-            }
-        }
-        stage('Run Simulation') {
-            steps {
-                sh '''
-                    openssl rand -base64 32 > niac-token
-                    NIAC_API_TOKEN=$(cat niac-token) niac daemon &
-                    echo $! > niac.pid
-                    sleep 5
-                    CSRF_TOKEN=$(curl -sk \
-                      -H "Authorization: Bearer $(cat niac-token)" \
-                      https://localhost:8445/api/v1/csrf-token | jq -r '.token')
-                    curl --fail-with-body -sk -X POST \
-                      -H "Authorization: Bearer $(cat niac-token)" \
-                      -H "X-CSRF-Token: $CSRF_TOKEN" \
-                      -H "Content-Type: application/json" \
-                      -d "$(jq -n --arg configData "$(cat config.yaml)" \
-                        '{interface:"eth0", configData:$configData}')" \
-                      https://localhost:8445/api/v1/simulation
-                '''
-            }
-        }
-        stage('Test') {
-            steps {
-                sh 'NIAC_API_TOKEN=$(cat niac-token) pytest tests/'
-            }
-        }
-    }
-    post {
-        always {
-            sh 'sudo kill $(cat niac.pid) || true'
-        }
-    }
-}
-```
+## Acceptance levels
 
-## Release Builds
+| Level | Suitable runner | Evidence |
+| --- | --- | --- |
+| Config validation | Hosted or self-hosted | `niac validate`, schema, expected diagnostics |
+| API/browser integration | Hosted or self-hosted | HTTPS daemon, authenticated journey, logs |
+| Packet behavior | Privileged isolated runner | Capture, expected response frames, no leakage |
+| Release acceptance | Deployment hosts and lab | Package install, `/__version`, browser and observer evidence |
 
-Release builds run in GitHub Actions after release-please creates a `v*` tag.
-The release workflow builds native Linux, macOS, and Windows artifacts on their
-respective hosted runners and uploads the artifacts to the GitHub release.
+Engine-only browser tests and loopback packet tests do not replace actual
+Chrome/Edge/Safari or Link-Live/CyberScope acceptance.
+
+## Repository release flow
+
+NIAC’s own CI runs formatting, lint, unit/race, browser, security, schema, and
+build gates on pull requests. Release Please selects the version and opens the
+release pull request. Merging it creates the tag; the release workflow builds,
+signs, attests, and publishes artifacts.
+
+GitHub Actions is the only canonical release build environment. A local
+`make build` is required development evidence but is not a publishable release
+artifact.

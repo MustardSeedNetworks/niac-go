@@ -7,14 +7,14 @@
 
 import { renderHook } from '@testing-library/react';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>();
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -54,7 +54,7 @@ describe('useKeyboardShortcuts', () => {
     expect(second).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates the "g a" chord to /traffic, not the dead /analysis redirect', () => {
+  it('navigates the "g a" chord to the canonical /traffic route', () => {
     renderHook(() => useKeyboardShortcuts(vi.fn()), { wrapper });
 
     press('g');

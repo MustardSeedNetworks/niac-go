@@ -1,6 +1,6 @@
 # NIAC local-plan intake
 
-**Status:** Reconciled intake
+**Status:** Reconciled; live acceptance remains
 
 **Date:** 2026-07-23
 
@@ -47,16 +47,16 @@ Stage 5 owns this catalog and live-lab evidence.
   configuration, sanitize, content management, and upload progress. Commit
   `abbd929e` carries the BPF error work from closed PR #942.
 
-### Remaining disposition
+### Final disposition
 
-- Remove the stale `/pcap-analyzer` breadcrumb.
-- Replace the retired botanical reference in `themeModuleColors.ts`.
-- Retain Topology page extraction and spacing cleanup as low, opportunistic
-  maintenance debt unless touched by accepted work.
-- Feature-gate any still-missing MIB archive, template-apply, dump, or
-  packet-analysis parity instead of assuming CLI symmetry is valuable.
-
-Stage 7 owns these final dispositions.
+- Removed stale compatibility routes and breadcrumbs for `/pcap-analyzer`,
+  `/analysis`, `/templates`, and `/neighbors`.
+- Retired the botanical module-color references and stale feature-number
+  comments.
+- Topology page extraction and spacing cleanup remain low, opportunistic
+  maintenance debt.
+- Missing MIB archive, template-apply, dump, and packet-analysis parity are not
+  commitments. They require a concrete user need and feature gate.
 
 ## Modernization plan
 
@@ -75,14 +75,12 @@ Stage 7 owns these final dispositions.
 - `React.FC`, router, memoization, and sorting-style sweeps remain retired
   churn unless a new measured defect changes the decision.
 
-### Remaining disposition
+### Final disposition
 
-- Reverify malformed or truncated replay-packet accounting.
-- Feature-gate endpoint rewrite, VLAN rewrite, expanded throughput reporting,
-  and Inspector export/dissection work.
-
-Stage 7 owns the reliability check. Stage 8 owns feature and market gates for
-optional replay and Inspector expansion.
+- Regression coverage proves a truncated PCAP tail does not inflate replay
+  packet accounting.
+- Endpoint rewrite, VLAN rewrite, expanded throughput reporting, and Inspector
+  export/dissection remain optional expansion ideas and are not active plans.
 
 ## Cruft and duplication plan
 
@@ -95,26 +93,18 @@ optional replay and Inspector expansion.
 - Path containment findings are absorbed into #1035 and the delivered
   `os.Root` work; do not create a parallel security owner.
 
-### Remaining reconciliation
+### Final disposition
 
-- Reverify and remove dead scripts, config parsing exports, placeholders, and
-  stale comments, including `apply_history_changes.py` and the generated-types
-  placeholder.
-- Decide whether each unowned helper script is a supported tool or dead
-  migration residue, then wire or remove it.
-- Reverify duplicated OID, safe-conversion, packet-serialization, MAC-format,
-  and hex-format helpers; refactor only current duplication.
-- Reverify API dispatch, error-envelope, JSON-writing, and path-field
-  duplication without weakening the existing security wrappers.
-- Decide whether generated Go-to-TypeScript device types warrant a separate
-  epic; retire the empty placeholder if not.
-- Fold file naming and package extraction into accepted internal API work
-  instead of a rename-only sweep.
-- Make the file-size gate honest after triaging current red flags, or remove
-  it; do not preserve a non-blocking gate as false assurance.
-
-Stage 7 owns this maintenance reconciliation. Any unique high or medium defect
-must become an accepted issue before implementation.
+- Removed the dead history-rewrite and token-migration scripts, the empty
+  generated-types placeholder, and stale comments.
+- Reverified the recorded helper and API duplication findings against the
+  current capability index and lint results. No unique high or medium defect
+  remains; broad rename or abstraction sweeps are retired.
+- ADR-0001 now records that the YAML authoring schema is not a REST response
+  schema. REST TypeScript generation needs a real wire-contract source and a
+  separate accepted decision.
+- The file-size check now has a reviewed baseline and blocks new or growing
+  red-flag files. Its regression test proves both rejection paths.
 
 ## Replay positioning plan
 
@@ -125,21 +115,18 @@ must become an accepted issue before implementation.
 - The catalog, live responders, UI controls, and root-contained replay path are
   real product capabilities and may be described accurately.
 
-### Remaining positioning and capability work
+### Final disposition
 
-- Close the malformed/truncated replay accounting gate before making parity
-  claims.
-- Reconcile internal strategy and marketing documents so NIAC is described as
-  a test target, not a test instrument, and replay is represented without
-  displacing NIAC's simulator charter.
-- Correct protocol-count and CLI-surface claims against the shipping product.
-- Keep comparisons to tcpreplay bounded to delivered rate, loop, filtering,
-  timing, catalog, and interactivity behavior.
-- Feature-gate packet rewrite, VLAN rewrite, completion statistics, explicit
-  pcapng/nanosecond coverage, Inspector export, protocol-specific filters and
-  dissection, and conversation statistics.
-- Retire dual-interface bridging, line-rate acceleration, true TCP reassembly,
-  expert analysis, and broad Wireshark parity absent a concrete buyer need.
+- Active documentation now describes NIAC as a simulator and test target.
+  Replay claims are limited to delivered timing, rate, loop, filter, catalog,
+  and interactive behavior.
+- Protocol and operator-surface claims were corrected against the shipping
+  product.
+- Packet rewrite, VLAN rewrite, completion statistics, explicit
+  pcapng/nanosecond coverage, Inspector expansion, and protocol-specific
+  analysis require separate feature gates.
+- Dual-interface bridging, line-rate acceleration, true TCP reassembly, expert
+  analysis, and broad Wireshark parity are retired absent a concrete user need.
 
-Stage 7 owns truthful documentation alignment. Stage 8 owns optional capability
-and market decisions.
+The only remaining item from these local plans is nearest-switch live
+acceptance in routed-lab Phase 7.

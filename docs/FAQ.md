@@ -1,468 +1,180 @@
-# Frequently Asked Questions (FAQ)
+# NIAC FAQ
 
-## General Questions
+## What is NIAC?
 
-### What is NIAC-Go?
+NIAC is a source-available network-device simulator for lab, monitoring,
+discovery, and troubleshooting workflows. It responds as configurable devices
+over real network interfaces and supports routed labs, SNMP projections,
+device CLI/SSH behavior, packet capture analysis, and replay.
 
-NIAC-Go (Network In A Can - Go Edition) is a production-ready network device simulator that allows you to simulate routers, switches, servers, and other network devices for testing, development, and education purposes. It supports multiple protocols including ARP, ICMP, DNS, DHCP, HTTP, FTP, SNMP, LLDP, and CDP.
+## What are the system requirements?
 
-### Why was NIAC rewritten in Go?
+- A supported Linux, macOS, or Windows host.
+- A packet-capture driver: libpcap on Linux/macOS or Npcap on Windows.
+- Permission to capture and inject packets on the selected interface.
+- A current supported browser for the web UI.
 
-The original NIAC was written in Java. The Go rewrite provides:
-- **10x faster startup** (~5ms vs ~50ms)
-- **6.7x less memory** (~15MB vs ~100MB)
-- **77x faster error injection** (7.7M/sec vs ~100K/sec)
-- **Single binary deployment** (no JRE required)
-- Better concurrency with goroutines
-- Modern terminal UI with Bubbletea
+See [Platform Support](PLATFORM.md) and [Deployment](DEPLOYMENT.md).
 
-### What protocols are supported?
+## Why are elevated packet permissions required?
 
-- **Layer 2**: ARP, LLDP, CDP
-- **Layer 3**: ICMP (ping), IPv4, IPv6 (partial)
-- **Network Services**: DNS, DHCP (IPv4)
-- **Application**: HTTP, FTP, SNMP (v2c)
-- **Monitoring**: SNMP traps, statistics
+NIAC reads and writes Ethernet frames. Linux can grant the installed binary
+the required capabilities; macOS commonly requires elevated execution for
+capture; Windows uses Npcap permissions. Use the narrowest permissions that
+work for the lab host.
 
-### What are the system requirements?
+## How do I create and validate a configuration?
 
-- **OS**: Linux, macOS, Windows
-- **Go Version**: 1.25.4 or later (for building from source)
-- **Memory**: ~15-50MB depending on configuration
-- **Privileges**: Root/admin for packet capture (raw sockets)
-
-## Installation & Setup
-
-### How do I install NIAC-Go?
-
-**Option 1: Download binary from GitHub releases**
-```bash
-# Download latest release for your platform
-curl -L https://github.com/MustardSeedNetworks/niac-go/releases/latest/download/niac-$(uname -s)-$(uname -m).tar.gz | tar xz
-sudo mv niac /usr/local/bin/
-```
-
-**Option 2: Build from source**
-```bash
-git clone https://github.com/MustardSeedNetworks/niac-go.git
-cd niac-go
-go build -o niac ./cmd/niac
-sudo mv niac /usr/local/bin/
-```
-
-### Why do I need root/admin privileges?
-
-NIAC-Go uses raw sockets to send and receive packets at layer 2, which requires elevated privileges on most operating systems. You can run it with:
-- Linux: `sudo niac ...`
-- macOS: `sudo niac ...`
-- Windows: Run as Administrator
-
-### Can I run NIAC-Go without root?
-
-On Linux, you can grant specific capabilities to the binary:
-```bash
-sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
-```
-
-This allows packet capture without full root privileges.
-
-## Configuration
-
-### How do I create a configuration file?
-
-Use the interactive configuration wizard:
-```bash
-niac config wizard
-```
-
-Or start with an example:
-```bash
-# Copy example config
-cp examples/basic-router.yaml my-config.yaml
-
-# Edit with your favorite editor
-vim my-config.yaml
-```
-
-### What's the difference between YAML and JSON configs?
-
-NIAC-Go primarily uses YAML for human-readable configuration. JSON is supported for API interactions but YAML is recommended for file-based configs due to better readability and comment support.
-
-### How do I validate my configuration?
+Start from a shipped template or a YAML example, then validate it:
 
 ```bash
-niac config validate my-config.yaml
+niac template list
+niac template use minimal lab.yaml
+niac validate lab.yaml
 ```
 
-This checks for:
-- YAML syntax errors
-- Invalid IP addresses or MAC addresses
-- Missing required fields
-- Protocol-specific configuration issues
+The committed schema at `docs/schemas/niac.schema.json` provides editor
+completion and structural validation. Runtime validation remains authoritative.
 
-### Can I use environment variables in configs?
+## How do I start a simulation?
 
-Yes! Use environment variable substitution:
-```yaml
-devices:
-  - name: router-${ENVIRONMENT}
-    ip_addresses:
-      - ${ROUTER_IP}
-```
-
-Then run:
-```bash
-ENVIRONMENT=prod ROUTER_IP=192.168.1.1 niac run my-config.yaml
-```
-
-## Running & Operations
-
-### How do I start a simulation?
+For a headless run:
 
 ```bash
-# Basic usage
-sudo niac run config.yaml
-
-# With debug output
-sudo niac run config.yaml --debug 2
-
-# With API server
-niac daemon --api-token $(openssl rand -base64 32)
+sudo niac run eth0 lab.yaml
 ```
 
-### How do I stop a running simulation?
+For the HTTPS API and web UI:
 
-Press `Ctrl+C` or send SIGTERM:
 ```bash
-sudo kill -TERM $(pgrep niac)
-```
-
-NIAC-Go handles graceful shutdown, closing network interfaces and saving state.
-
-### Can I run multiple NIAC instances?
-
-Yes, but each must use a different network interface or run in different network namespaces. Example:
-```bash
-# Instance 1 on eth0
-sudo niac run config1.yaml --interface eth0
-
-# Instance 2 on eth1
-sudo niac run config2.yaml --interface eth1
-```
-
-### How do I monitor statistics?
-
-**TUI (Terminal UI):**
-```bash
-sudo niac run config.yaml
-# Press 's' for statistics view
-```
-
-**API:**
-```bash
-curl -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats
-```
-
-**Prometheus Metrics:**
-```bash
-curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
-  https://localhost:8445/metrics
-```
-
-## Protocols
-
-### How do I configure DNS responses?
-
-```yaml
-dns_config:
-  enabled: true
-  records:
-    - name: example.com
-      type: A
-      value: 192.168.1.100
-    - name: mail.example.com
-      type: MX
-      value: 10 mail.example.com
-```
-
-### How do I set up DHCP?
-
-```yaml
-dhcp_config:
-  enabled: true
-  pool_start: 192.168.1.100
-  pool_end: 192.168.1.200
-  subnet_mask: 255.255.255.0
-  router: 192.168.1.1
-  dns_servers:
-    - 8.8.8.8
-    - 8.8.4.4
-  lease_time: 86400  # 24 hours
-```
-
-### How do I load SNMP walk files?
-
-```yaml
-snmp_config:
-  community: public
-  walk_file: /path/to/device.walk
-```
-
-Walk files contain OID-value pairs. Create them with:
-```bash
-snmpwalk -v2c -c public real-device .1 > device.walk
-```
-
-### Can I simulate SNMP traps?
-
-Yes! Configure trap generation:
-```yaml
-trap_config:
-  enabled: true
-  receivers:
-    - 192.168.1.50:162
-  cold_start:
-    enabled: true
-    on_startup: true
-  link_state:
-    enabled: true
-    link_down: true
-    link_up: true
-```
-
-## API & Integration
-
-### How do I authenticate with the API?
-
-Set an API token:
-```bash
-export NIAC_API_TOKEN=$(openssl rand -base64 32)
 niac daemon
 ```
 
-Then include it in requests:
-```bash
-curl -H "Authorization: Bearer $NIAC_API_TOKEN" https://localhost:8445/api/v1/stats
-```
+Then open `https://localhost:8445`. Non-loopback listeners require an API
+token. Routed labs also require an operator-approved attachment policy; see
+[Deployment](DEPLOYMENT.md).
 
-### What API endpoints are available?
+## How do I stop a simulation?
 
-- `GET /api/v1/stats` - Statistics
-- `GET /api/v1/devices` - Device list
-- `GET /api/v1/config` - Current config
-- `PUT /api/v1/config` - Update config
-- `GET /api/v1/replay` - Replay status
-- `POST /api/v1/replay` - Start replay
-- `DELETE /api/v1/replay` - Stop replay
-- `GET /api/v1/csrf-token` - Get CSRF token
+Use Ctrl+C for a foreground CLI run. In daemon mode, stop the simulation from
+the web UI or API; stopping the daemon also releases active runtime resources.
 
-See `docs/API.md` for full documentation.
+## Can I run more than one NIAC instance?
 
-### Is there rate limiting?
+Yes, when each process uses a different capture/interface boundary, HTTPS
+listener, storage path, and managed content location. Avoid attaching two
+simulators to the same production-facing interface.
 
-Yes. The API enforces:
-- **100 requests/second per IP** (default)
-- **Burst of 200 requests**
+## How many devices can I simulate?
 
-Exceeding limits returns HTTP 429 (Too Many Requests).
+NIAC Free allows up to ten simulated devices across CLI, API, UI, import,
+template, configuration mutation, and runtime-start paths. NIAC Pro removes
+that tier soft cap. Every tier retains the absolute 1,000-device ceiling.
 
-### How do I integrate with monitoring systems?
+Practical capacity depends on enabled protocols, traffic rate, walk size,
+host resources, and the observer polling NIAC.
 
-**Prometheus:**
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'niac'
-    static_configs:
-      - targets: ['localhost:9090']
-```
+## Which protocols are supported?
 
-**Custom webhooks:**
-```bash
-curl -X PUT -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"webhook_url":"http://alertmanager:9093/api/v1/alerts"}' \
-  https://localhost:8445/api/v1/alerts
-```
+Run `niac help` and inspect the current schema/help drawer for the shipping
+surface. NIAC includes common discovery, addressing, management, service, and
+routing behavior. Documentation does not use a fixed protocol count because
+the set changes as implementations are added or retired.
 
-## Troubleshooting
+## How do SNMP walk files work?
 
-### Why am I getting "permission denied" errors?
+A sanitized walk can provide the baseline MIB identity and tables for a
+simulated device. Authoritative runtime state overlays dynamic values such as
+interface status, counters, addresses, routes, and topology. See
+[SNMP Walks](SNMP_WALKS.md).
 
-You need root/admin privileges for raw socket access:
-```bash
-sudo niac run config.yaml
-```
+## Are interface faults visible to monitoring tools?
 
-Or grant capabilities (Linux only):
-```bash
-sudo setcap cap_net_raw,cap_net_admin=eip /usr/local/bin/niac
-```
+Yes. Supported injected faults advance the corresponding IF-MIB, IF-X, and
+EtherLike-MIB counters while active. Clearing a fault stops new increments
+without resetting the monotonic counter value.
 
-### Why aren't my devices responding?
+## Can NIAC send notifications?
 
-Check:
-1. **Interface is up**: `ip link show eth0`
-2. **Firewall rules**: `sudo iptables -L`
-3. **IP addresses don't conflict**: Use different subnets
-4. **Debug output**: `sudo niac run config.yaml --debug 2`
+NIAC can emit configured SYSLOG and SNMP notifications for supported
+authoritative state transitions. Routed notification delivery follows the
+simulated forwarding path and is part of routed-lab acceptance.
 
-### How do I enable debug logging?
+## How is the API authenticated?
 
-Use the `--debug` flag with level 1-3:
-```bash
-# Level 1: Basic info
-sudo niac run config.yaml --debug 1
+Loopback-only development can run without a token. A non-loopback listener
+requires a bearer token or scoped token file. Mutating browser requests also
+require a per-session CSRF token. Destructive whole-configuration operations
+require admin authorization.
 
-# Level 2: Detailed (recommended)
-sudo niac run config.yaml --debug 2
+See [REST API](REST_API.md) and [API Reference](API_REFERENCE.md).
 
-# Level 3: Verbose (very detailed)
-sudo niac run config.yaml --debug 3
-```
+## Is the API rate-limited?
 
-Per-protocol debugging:
-```yaml
-debug:
-  dns: 3
-  dhcp: 2
-  http: 1
-```
+Yes. Authentication, write, file, and other sensitive route classes have
+declared limits. A rate-limit response uses HTTP 429 and includes the
+appropriate retry metadata.
 
-### Why is my PCAP replay not working?
+## Why is a device not responding?
 
-Check:
-1. **PCAP file is valid**: `tcpdump -r file.pcap | head`
-2. **File size under 100MB**: Larger files are rejected
-3. **Interface matches**: Ensure interface in PCAP exists
-4. **Replay engine available**: Not available in daemon mode
+Check, in order:
 
-### Memory usage keeps growing - is this a leak?
+1. the selected physical interface and link state;
+2. the attachment policy and VLAN mode for routed labs;
+3. configuration validation and preflight diagnostics;
+4. host firewall and packet-capture permissions;
+5. address, route, and protocol configuration;
+6. daemon logs and a packet capture on the attachment.
 
-Likely not. Check:
-- **Goroutine count**: `GET /api/v1/stats` shows goroutine count
-- **Rate limiter**: Automatically cleaned up every 5 minutes
-- **Statistics**: Growing counters are expected
+## Why is PCAP replay not starting?
 
-Enable goroutine profiling:
-```bash
-sudo niac run config.yaml --pprof :6060
-go tool pprof http://localhost:6060/debug/pprof/goroutine
-```
+Confirm the file is a valid classic PCAP or pcapng file inside an allowed
+managed root, the selected BPF filter compiles, and a capture engine is active.
+Malformed or truncated trailing records are excluded from replay accounting;
+the valid prefix is replayed.
 
-### How do I report a bug?
+## How do I inspect performance?
 
-1. Check existing issues: https://github.com/MustardSeedNetworks/niac-go/issues
-2. Gather information:
-   - NIAC-Go version: `niac version`
-   - OS and version: `uname -a`
-   - Configuration file (sanitized)
-   - Debug logs: `--debug 3`
-3. Create new issue with details
+Use `/metrics`, `/api/v1/stats`, and the benchmark suites in the repository.
+Legacy CLI profiling is available only when explicitly enabled and binds to
+loopback. See [Performance](PERFORMANCE.md), [Benchmarking](BENCHMARKING.md),
+and [Monitoring](MONITORING.md).
 
-## Performance
+## Which browsers are supported?
 
-### How many devices can I simulate?
+Chrome stable, Edge stable, and current Safari are first-class. Firefox is an
+automated independent-engine compatibility target. Brave receives a focused
+pre-release smoke test with default Shields. See [Web UI](WEBUI.md).
 
-Depends on resources, but typical limits:
-- **Small**: 10-50 devices on 2GB RAM
-- **Medium**: 50-200 devices on 4GB RAM
-- **Large**: 200-1000 devices on 8GB+ RAM
+## Why is the UI not updating?
 
-### How do I optimize performance?
+Check `/__version`; `uiBuildHash` must be non-empty. Confirm the simulation is
+still running and inspect the affected SSE or WebSocket request. The UI should
+reconnect and refresh authoritative state after an interruption.
 
-See `docs/PERFORMANCE.md` for detailed tuning guide. Quick tips:
-- Increase channel buffer sizes for high traffic
-- Use higher debug levels only when needed
-- Disable unused protocols
-- Use SSD for storage backend
+## Can I customize the UI?
 
-### What's the packet processing rate?
+The source lives in `ui/src`, but release binaries embed one supported UI and
+backend build. Make changes on a feature branch and use `make build`; do not
+copy a separate frontend distribution into the binary.
 
-- **Error injection**: 7.7M errors/second
-- **Packet processing**: ~100K packets/second (single core)
-- **ARP/ICMP**: ~50K requests/second
+## How do I deploy NIAC?
 
-## WebUI
+Use the signed, checksummed artifacts from GitHub Releases and follow
+[Deployment](DEPLOYMENT.md). GitHub Actions is the release build environment;
+local packages are development aids, not canonical release artifacts.
 
-### How do I access the WebUI?
+## How do I report a defect?
 
-Start API server, then visit in browser:
-```bash
-niac daemon --api-token $TOKEN
-# Visit: https://localhost:8445
-```
+Open a GitHub issue with:
 
-### Why is the WebUI slow with many devices?
+- NIAC version and `/__version` output;
+- operating system, architecture, and browser when relevant;
+- the smallest sanitized configuration or capture that reproduces it;
+- exact steps and expected/actual behavior;
+- relevant logs without credentials or customer identifiers.
 
-For 100+ devices, performance may degrade. Upcoming improvements:
-- Virtual scrolling (#126)
-- React re-render optimization (#125)
+## Where is the current roadmap?
 
-### Can I customize the WebUI?
-
-The WebUI is embedded in the binary. To customize:
-1. Clone repository
-2. Edit files in `web/` directory
-3. Rebuild: `go build -o niac ./cmd/niac`
-
-## Advanced Usage
-
-### Can I script NIAC-Go?
-
-Yes! Use the API:
-```python
-import requests
-
-token = "your-api-token"
-headers = {"Authorization": f"Bearer {token}"}
-
-# Get stats
-stats = requests.get("https://localhost:8445/api/v1/stats", headers=headers).json()
-print(f"Packets sent: {stats['stack']['packetsSent']}")
-
-# Update config
-new_config = {"content": open("new-config.yaml").read()}
-requests.put("https://localhost:8445/api/v1/config", json=new_config, headers=headers)
-```
-
-### How do I deploy NIAC?
-
-Use the native Linux, macOS, or Windows artifacts from GitHub Releases. See
-`docs/DEPLOYMENT.md` for platform-specific setup.
-
-### Can I use NIAC-Go in CI/CD?
-
-Yes! See `docs/CI-CD.md` for GitHub Actions, GitLab CI, and Jenkins examples.
-
-### How do I contribute?
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/my-feature`
-3. Make changes and add tests
-4. Run tests: `go test ./...`
-5. Submit pull request
-
-See `CONTRIBUTING.md` for detailed guidelines.
-
-## Support
-
-### Where can I get help?
-
-- **Documentation**: https://github.com/MustardSeedNetworks/niac-go/tree/main/docs
-- **Issues**: https://github.com/MustardSeedNetworks/niac-go/issues
-- **Discussions**: https://github.com/MustardSeedNetworks/niac-go/discussions
-
-### Is there commercial support?
-
-NIAC is source-available under the Business Source License 1.1. Free supports
-up to 10 simulated devices; Pro licensing and commercial support are available
-through Mustard Seed Networks.
-
-### How often is NIAC-Go updated?
-
-- **Security patches**: As needed (CRITICAL/HIGH issues)
-- **Feature releases**: Monthly minor versions
-- **Major releases**: 1-2 per year
-
-See `CHANGELOG.md` for release history.
+The active pre-1.0 exit criteria are in [ROADMAP.md](ROADMAP.md). Historical
+plans and reviews live under `docs/archive` and are not current commitments.

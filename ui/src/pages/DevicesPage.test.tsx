@@ -9,7 +9,7 @@
  *      to the existing "Copy name" button, so the name is actually usable.
  */
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { DevicesPage } from './DevicesPage';

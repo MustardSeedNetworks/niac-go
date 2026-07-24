@@ -59,11 +59,11 @@ describe('TierGate', () => {
 
   it('interpolates a custom requiredTier into the tooltip', () => {
     renderGate(
-      <TierGate feature="capture.export" requiredTier="Enterprise">
+      <TierGate feature="capture.export" requiredTier="Pro">
         <button type="button">Export</button>
       </TierGate>,
     );
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Requires the Enterprise tier');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Requires the Pro tier');
   });
 
   it('localizes the tooltip when the active language is Spanish', async () => {

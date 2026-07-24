@@ -1,6 +1,6 @@
 # Plan: v0.94.9 high/medium defect and browser remediation
 
-**Status:** Ready for implementation
+**Status:** Implementation complete; live acceptance pending
 
 **Date:** 2026-07-23
 
@@ -72,7 +72,7 @@ automated matrix because it provides independent engine coverage.
 | [#1052](https://github.com/MustardSeedNetworks/niac-go/issues/1052) | Translation extraction uses the maintained `i18next-cli` on the pinned Node/npm toolchain | Catalog fixtures, migration parity, and a non-mutating CI gate |
 | [#1057](https://github.com/MustardSeedNetworks/niac-go/issues/1057) | Local hooks cannot report success after a failed frontend command or under the wrong Node/npm toolchain | Hook regression tests and exact toolchain validation |
 
-#1043 is closed without implementation because the single-listener HTTPS
+Issue #1043 is closed without implementation because the single-listener HTTPS
 architecture removed the reported partial-start failure mode.
 
 ## Cross-cutting release work

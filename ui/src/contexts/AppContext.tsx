@@ -23,7 +23,7 @@ import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
 
 /**
- * FEATURE #133: Centralized state management using React Context
+ * Centralized state management using React Context.
  *
  * Provides shared application state to avoid prop drilling and
  * duplicate API calls. Memoized to prevent unnecessary re-renders.

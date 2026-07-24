@@ -2,8 +2,7 @@
  * Type Definitions
  *
  * Central exports for application types.
- * Re-exports from api/types.ts and generated types.
+ * API response contracts are maintained in api/types.ts.
  */
 
 export * from '../api/types';
-export * from './generated';
