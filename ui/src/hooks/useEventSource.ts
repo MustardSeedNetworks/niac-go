@@ -1,224 +1,185 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  buildRequestHeaders,
+  buildUrl,
+  notifyIfAuthenticationFailed,
+  parseApiError,
+} from '../api/requestCore';
 
-/**
- * Options for configuring the EventSource connection
- */
 export interface UseEventSourceOptions {
-  /** EventSource URL to connect to */
   url: string;
-  /** Callback when a message is received (after JSON parsing) */
   onMessage?: (data: unknown) => void;
-  /** Callback when connection is established */
   onConnect?: () => void;
-  /** Callback when connection is closed/errored */
   onDisconnect?: () => void;
-  /** Callback when an error occurs */
   onError?: (error: Event) => void;
-  /** Whether the connection is enabled (default: true) */
   enabled?: boolean;
 }
 
-/**
- * Result returned by the useEventSource hook
- */
 export interface UseEventSourceResult {
-  /** Last received data (JSON parsed) */
   data: unknown;
-  /** Whether the EventSource is currently connected */
   connected: boolean;
-  /** Last error event, if any */
   error: Event | null;
-  /** Manually close the connection */
   close: () => void;
-  /** Manually reconnect */
   reconnect: () => void;
 }
 
-/**
- * EventSource hook with auto-connect and JSON handling
- *
- * Benefits over WebSocket:
- * - Automatic reconnection built into browser API
- * - Simpler API (server → client only)
- * - Better proxy/CDN compatibility
- * - Works well with HTTP/2 multiplexing
- *
- * @param options - EventSource configuration options
- * @returns EventSource state and control methods
- *
- * @example
- * ```typescript
- * const { data, connected } = useEventSource({
- *   url: '/api/v1/stream/logs',
- *   onMessage: (data) => console.log('Received:', data),
- * });
- * ```
- */
+interface StreamCallbacks {
+  onOpen: () => void;
+  onMessage: (data: unknown) => void;
+}
+
+function parseEventRecord(record: string): unknown | undefined {
+  const lines = record.split(/\r\n|\r|\n/);
+  const event = lines
+    .find((line) => line.startsWith('event:'))
+    ?.slice(6)
+    .trim();
+  if (event && event !== 'message') return undefined;
+
+  const data = lines
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trimStart())
+    .join('\n');
+  if (!data) return undefined;
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
+  }
+}
+
+export async function consumeEventStream(
+  url: string,
+  signal: AbortSignal,
+  callbacks: StreamCallbacks,
+): Promise<void> {
+  const headers = await buildRequestHeaders(url, { method: 'GET' });
+  headers.set('Accept', 'text/event-stream');
+  const response = await fetch(buildUrl(url), {
+    headers,
+    credentials: 'same-origin',
+    signal,
+  });
+  if (!response.ok) {
+    notifyIfAuthenticationFailed(response.status);
+    throw parseApiError(await response.text(), response.status, response.statusText);
+  }
+  if (!response.body) {
+    throw new Error('Event stream response did not include a body');
+  }
+
+  callbacks.onOpen();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (!signal.aborted) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+
+    let boundary = buffer.search(/\r\n\r\n|\r\r|\n\n/);
+    while (boundary >= 0) {
+      const delimiter = buffer.slice(boundary).match(/^(\r\n\r\n|\r\r|\n\n)/)?.[0];
+      if (!delimiter) break;
+      const parsed = parseEventRecord(buffer.slice(0, boundary));
+      if (parsed !== undefined) callbacks.onMessage(parsed);
+      buffer = buffer.slice(boundary + delimiter.length);
+      boundary = buffer.search(/\r\n\r\n|\r\r|\n\n/);
+    }
+    if (done) break;
+  }
+}
+
 export function useEventSource(options: UseEventSourceOptions): UseEventSourceResult {
   const { url, onMessage, onConnect, onDisconnect, onError, enabled = true } = options;
-
   const [data, setData] = useState<unknown>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<Event | null>(null);
-
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
-
-  // Store callbacks in refs to avoid re-creating effects
-  const onMessageRef = useRef(onMessage);
-  const onConnectRef = useRef(onConnect);
-  const onDisconnectRef = useRef(onDisconnect);
-  const onErrorRef = useRef(onError);
+  const callbacksRef = useRef({ onMessage, onConnect, onDisconnect, onError });
 
   useEffect(() => {
-    onMessageRef.current = onMessage;
-  }, [onMessage]);
-  useEffect(() => {
-    onConnectRef.current = onConnect;
-  }, [onConnect]);
-  useEffect(() => {
-    onDisconnectRef.current = onDisconnect;
-  }, [onDisconnect]);
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
+    callbacksRef.current = { onMessage, onConnect, onDisconnect, onError };
+  }, [onMessage, onConnect, onDisconnect, onError]);
 
-  /**
-   * Connect to the EventSource
-   */
-  const connect = useCallback(() => {
-    if (!url || eventSourceRef.current) {
-      return;
-    }
-
-    try {
-      const es = new EventSource(url);
-      eventSourceRef.current = es;
-
-      es.onopen = () => {
-        if (!mountedRef.current) {
-          return;
-        }
-        setConnected(true);
-        setError(null);
-        onConnectRef.current?.();
-      };
-
-      es.onmessage = (event: MessageEvent) => {
-        if (!mountedRef.current) {
-          return;
-        }
-
-        try {
-          const parsedData = JSON.parse(event.data);
-          setData(parsedData);
-          onMessageRef.current?.(parsedData);
-        } catch {
-          // If JSON parsing fails, use raw data
-          setData(event.data);
-          onMessageRef.current?.(event.data);
-        }
-      };
-
-      es.onerror = (event: Event) => {
-        if (!mountedRef.current) {
-          return;
-        }
-
-        // EventSource automatically reconnects on error
-        // We just update state to reflect disconnection
-        setError(event);
-        setConnected(false);
-        onErrorRef.current?.(event);
-        onDisconnectRef.current?.();
-      };
-
-      // Handle custom 'connected' event from server
-      es.addEventListener('connected', () => {
-        // Event received - connection confirmed
-      });
-    } catch {
-      setError(new Event('error'));
-    }
-  }, [url]);
-
-  /**
-   * Close the EventSource connection
-   */
   const close = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-      setConnected(false);
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setConnected(false);
   }, []);
 
-  /**
-   * Manually reconnect
-   */
+  const connect = useCallback(() => {
+    if (!url || controllerRef.current) return;
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    void consumeEventStream(url, controller.signal, {
+      onOpen: () => {
+        if (!mountedRef.current || controller.signal.aborted) return;
+        setConnected(true);
+        setError(null);
+        callbacksRef.current.onConnect?.();
+      },
+      onMessage: (message) => {
+        if (!mountedRef.current || controller.signal.aborted) return;
+        setData(message);
+        callbacksRef.current.onMessage?.(message);
+      },
+    })
+      .catch(() => {
+        if (!mountedRef.current || controller.signal.aborted) return;
+        const event = new Event('error');
+        setError(event);
+        callbacksRef.current.onError?.(event);
+      })
+      .finally(() => {
+        if (controllerRef.current !== controller) return;
+        controllerRef.current = null;
+        if (!mountedRef.current || controller.signal.aborted) return;
+        setConnected(false);
+        callbacksRef.current.onDisconnect?.();
+        reconnectTimerRef.current = setTimeout(connect, 1_000);
+      });
+  }, [url]);
+
   const reconnect = useCallback(() => {
     close();
-    // Small delay before reconnecting
-    setTimeout(() => {
-      if (mountedRef.current && enabled) {
-        connect();
-      }
+    reconnectTimerRef.current = setTimeout(() => {
+      if (mountedRef.current && enabled) connect();
     }, 100);
   }, [close, connect, enabled]);
 
-  // Connect on mount, cleanup on unmount
   useEffect(() => {
     mountedRef.current = true;
-
-    if (enabled && url) {
-      connect();
-    }
-
+    if (enabled && url) connect();
     return () => {
       mountedRef.current = false;
       close();
     };
   }, [enabled, url, connect, close]);
 
-  return {
-    data,
-    connected,
-    error,
-    close,
-    reconnect,
-  };
+  return { data, connected, error, close, reconnect };
 }
 
-// ============================================================================
-// Specialized Stream Hooks
-// ============================================================================
-
-/**
- * Get the API base URL for streams
- */
 function getStreamBaseUrl(): string {
   return `${window.location.origin}/api/v1/stream`;
 }
 
-/**
- * Options for specialized stream hooks
- */
 export interface StreamHookOptions {
-  /** Callback when a message is received */
   onMessage?: (data: unknown) => void;
-  /** Callback when connection is established */
   onConnect?: () => void;
-  /** Callback when connection is closed */
   onDisconnect?: () => void;
-  /** Callback when an error occurs */
   onError?: (error: Event) => void;
-  /** Whether to auto-connect (default: true) */
   enabled?: boolean;
 }
 
-/**
- * Packet data structure from /api/v1/stream/packets
- */
 export interface PacketData {
   type: 'packet';
   timestamp: string;
@@ -232,23 +193,15 @@ export interface PacketData {
   };
 }
 
-/**
- * Hook for connecting to the packet stream
- */
 export function usePacketStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/packets` : '';
-
   return useEventSource({
-    url,
+    url: enabled ? `${getStreamBaseUrl()}/packets` : '',
     enabled,
     ...restOptions,
   });
 }
 
-/**
- * Log data structure from /api/v1/stream/logs
- */
 export interface LogData {
   type: 'log';
   timestamp: string;
@@ -256,15 +209,10 @@ export interface LogData {
   message: string;
 }
 
-/**
- * Hook for connecting to the log stream
- */
 export function useLogStream(options: StreamHookOptions = {}): UseEventSourceResult {
   const { enabled = true, ...restOptions } = options;
-  const url = enabled ? `${getStreamBaseUrl()}/logs` : '';
-
   return useEventSource({
-    url,
+    url: enabled ? `${getStreamBaseUrl()}/logs` : '',
     enabled,
     ...restOptions,
   });

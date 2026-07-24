@@ -31,8 +31,7 @@ test.describe('Dashboard', () => {
   test('should have quick access links', async ({ page }) => {
     // Check for navigation links to main pages
     const navLinks = page.locator('a, [role="link"]');
-    const count = await navLinks.count();
-    expect(count).toBeGreaterThan(0);
+    await expect(navLinks.first()).toBeVisible();
   });
 
   // Dropped: "should display device count or empty-state hint". It

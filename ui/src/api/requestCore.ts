@@ -17,6 +17,9 @@ import { ApiError, type ApiErrorDetail, NetworkError, TimeoutError } from './err
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 // API_TOKEN is only used in development mode to avoid embedding secrets in production bundles.
 const API_TOKEN = import.meta.env.DEV ? (import.meta.env.VITE_API_TOKEN ?? '') : '';
+export const AUTH_FAILURE_EVENT = 'niac:authentication-required';
+
+let runtimeAPIToken = '';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -82,6 +85,32 @@ const CSRF_TOKEN_PATH = '/api/v1/csrf-token';
 
 let csrfTokenPromise: Promise<string> | null = null;
 
+export function setRuntimeAPIToken(token: string) {
+  runtimeAPIToken = token;
+  csrfTokenPromise = null;
+}
+
+export function clearRuntimeAPIToken() {
+  runtimeAPIToken = '';
+  csrfTokenPromise = null;
+}
+
+function activeAPIToken() {
+  return runtimeAPIToken || API_TOKEN;
+}
+
+export function notifyAuthenticationRequired() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_FAILURE_EVENT));
+  }
+}
+
+export function notifyIfAuthenticationFailed(status: number) {
+  if (status === 401) {
+    notifyAuthenticationRequired();
+  }
+}
+
 interface RetryConfig {
   readonly maxRetries: number;
   readonly baseDelay: number;
@@ -105,8 +134,9 @@ async function fetchCSRFToken() {
   csrfTokenPromise = (async () => {
     const headers = new Headers();
     headers.set('Accept', 'application/json');
-    if (API_TOKEN) {
-      headers.set('Authorization', `Bearer ${API_TOKEN}`);
+    const token = activeAPIToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
     const response = await fetch(buildUrl(CSRF_TOKEN_PATH), {
@@ -114,6 +144,7 @@ async function fetchCSRFToken() {
       credentials: 'same-origin',
     });
     if (!response.ok) {
+      notifyIfAuthenticationFailed(response.status);
       const text = await response.text();
       throw new ApiError(text || response.statusText, response.status);
     }
@@ -147,14 +178,27 @@ function resetCSRFToken() {
 export async function buildRequestHeaders(path: string, init: RequestInit) {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  if (API_TOKEN) {
-    headers.set('Authorization', `Bearer ${API_TOKEN}`);
+  const token = activeAPIToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
   if (isStateChangingMethod(init.method) && path !== CSRF_TOKEN_PATH) {
     headers.set('X-Csrf-Token', await fetchCSRFToken());
   }
 
   return headers;
+}
+
+export async function validateRuntimeAuthentication() {
+  const path = '/api/v1/auth/scope';
+  const headers = await buildRequestHeaders(path, { method: 'GET' });
+  const response = await fetch(buildUrl(path), {
+    headers,
+    credentials: 'same-origin',
+  });
+  if (!response.ok) {
+    throw parseApiError(await response.text(), response.status, response.statusText);
+  }
 }
 
 /**
@@ -242,6 +286,7 @@ export async function request<T>(
           continue;
         }
         const text = await response.text();
+        notifyIfAuthenticationFailed(response.status);
         // If the server rejected a stale CSRF token (typically because the
         // daemon was restarted and rotated its in-memory secret), drop the
         // cached token and retry once. Without this the SPA would keep
@@ -336,6 +381,9 @@ export async function requestText(path: string, init: RequestInit = {}): Promise
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        notifyAuthenticationRequired();
+      }
       throw parseApiError(await response.text(), response.status, response.statusText);
     }
 

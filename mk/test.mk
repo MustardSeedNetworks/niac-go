@@ -124,6 +124,7 @@ test-e2e: build ## Build and run frontend E2E tests against the HTTPS daemon
 	echo "   📦 Running $$E2E_COUNT spec files..."
 	@echo ""
 	@cd $(UI_DIR) && npm run test:e2e
+	@cd $(UI_DIR) && npm run test:e2e:auth
 	@echo ""
 	@echo "✅ E2E tests complete"
 

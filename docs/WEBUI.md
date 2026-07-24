@@ -242,7 +242,7 @@ View recent protocol errors:
 **Solutions:**
 1. Verify `NIAC_API_TOKEN` is set correctly
 2. Check token was copied completely (no whitespace)
-3. Clear browser localStorage and re-enter token
+3. Reload the page and re-enter the token
 4. Check server logs for token mismatch
 
 ### CSRF Token Errors
@@ -253,7 +253,7 @@ View recent protocol errors:
 1. Refresh page to get new CSRF token
 2. Check browser console for errors
 3. Clear cache and reload
-4. Ensure cookies/localStorage enabled
+4. Ensure browser storage is available for non-sensitive UI preferences
 
 ### Slow Performance
 
@@ -396,7 +396,7 @@ Dark mode support is planned but not yet implemented. Current theme is light onl
 ### Authentication
 
 - API token required for all operations
-- Token stored in browser localStorage
+- Token kept only in the active tab's memory and cleared on page close or reload
 - No session management (stateless)
 - Token transmitted in Authorization header
 

@@ -4,6 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
+import { AuthGate } from './components/AuthGate';
 import { LicenseProvider } from './contexts/LicenseContext';
 import { ScopeProvider } from './contexts/ScopeContext';
 import { initThemeFromStorage } from './hooks/useTheme';
@@ -24,11 +25,13 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <LicenseProvider>
-        <ScopeProvider>
-          <App />
-        </ScopeProvider>
-      </LicenseProvider>
+      <AuthGate>
+        <LicenseProvider>
+          <ScopeProvider>
+            <App />
+          </ScopeProvider>
+        </LicenseProvider>
+      </AuthGate>
     </BrowserRouter>
   </StrictMode>,
 );

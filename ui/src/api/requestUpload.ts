@@ -2,6 +2,7 @@ import { ApiError, NetworkError, TimeoutError } from './errors';
 import {
   buildRequestHeaders,
   buildUrl,
+  notifyIfAuthenticationFailed,
   parseApiError,
   toCamelCase,
   toSnakeCase,
@@ -68,6 +69,7 @@ export function requestJsonWithProgress<T>(
             }
             return;
           }
+          notifyIfAuthenticationFailed(xhr.status);
           reject(parseApiError(xhr.responseText, xhr.status, xhr.statusText));
         };
 

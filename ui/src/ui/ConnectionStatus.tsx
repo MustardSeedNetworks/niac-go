@@ -1,4 +1,5 @@
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import { request } from '../api/requestCore';
 
 type Status = 'connected' | 'disconnected' | 'checking';
 
@@ -25,9 +26,9 @@ export const ConnectionStatus: FC = () => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-      const response = await fetch('/api/v1/version', { signal: controller.signal });
+      await request('/api/v1/version', { signal: controller.signal });
       clearTimeout(timeout);
-      setStatus(response.ok ? 'connected' : 'disconnected');
+      setStatus('connected');
     } catch {
       setStatus('disconnected');
     }

@@ -14,7 +14,8 @@ import (
 // CSRF, admin scope, license feature — in one canonical order so a route cannot
 // ship without it. scripts/check-route-policy.sh enforces this. Only the
 // unauthenticated introspection endpoints (/__version, /__capabilities) are
-// registered directly.
+// registered directly. The SPA shell is also public so it can collect a bearer
+// token in browser memory before calling the protected API.
 func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	// Unauthenticated introspection (no auth wrapper).
 	mux.HandleFunc("/__version", s.recoverMiddleware(s.handleBuildVersion))
@@ -36,12 +37,36 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	s.registerPcapRoutes(mux)
 	s.registerSSERoutes(mux)
 
-	// Metrics require auth (#172); the SPA is the authenticated catch-all.
+	// Metrics require auth (#172).
 	s.registerAll(mux, []apiRoute{
 		{path: "/metrics", handler: s.handleMetrics, methods: []string{http.MethodGet}},
-		// The SPA serves static assets only; HEAD is honored for asset probes.
-		{path: "/", handler: s.serveSPA(), methods: []string{http.MethodGet, http.MethodHead}},
+		{
+			path:    "/api/",
+			handler: s.handleAPINotFound,
+			methods: []string{
+				http.MethodGet,
+				http.MethodHead,
+				http.MethodPost,
+				http.MethodPut,
+				http.MethodPatch,
+				http.MethodDelete,
+				http.MethodOptions,
+			},
+		},
 	})
+
+	// Static assets contain no privileged data. Serving the shell without auth
+	// lets the browser prompt for a token; all data still comes from protected
+	// /api routes and the token never enters a URL.
+	mux.HandleFunc("/", s.recoverMiddleware(
+		withSecurityHeaders(
+			s.methodGate([]string{http.MethodGet, http.MethodHead}, s.serveSPA()),
+		),
+	))
+}
+
+func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
+	writeError(w, r, http.StatusNotFound, "not_found", "API endpoint not found", nil)
 }
 
 // registerWriteProtectedRoutes registers state-changing routes (write rate
