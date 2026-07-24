@@ -66,11 +66,8 @@ func segmentsToYAML(segments []Segment) []converter.Segment {
 		if segment.Tag == UntaggedTag {
 			tag = "untagged"
 		}
-		out[i] = converter.Segment{Tag: converter.VLANTag(tag)}
-		if segment.ConfigPath != "" {
-			out[i].Config = segment.ConfigPath
-		} else {
-			out[i].Devices = devicesToYAML(segment.Devices)
+		out[i] = converter.Segment{
+			Tag: converter.VLANTag(tag), Devices: devicesToYAML(segment.Devices),
 		}
 	}
 	return out

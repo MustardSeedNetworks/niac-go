@@ -129,13 +129,10 @@ type Route struct {
 // UntaggedTag is the Segment.Tag value for the native/untagged VLAN.
 const UntaggedTag = 0
 
-// Segment binds a device set to a VLAN tag for multi-VLAN playback (ADR 0008).
-// Each segment is served as an isolated network on its tag. Exactly one of
-// Devices (inline) or ConfigPath (a file resolved by the loader) is populated.
+// Segment binds a resolved device set to a VLAN tag for multi-VLAN playback.
 type Segment struct {
-	Tag        int      // UntaggedTag (0) for the native VLAN, else a VLAN id 1..4094
-	Devices    []Device // Inline device set for this segment
-	ConfigPath string   // Path to a config file for this segment (resolved by the loader)
+	Tag     int      // UntaggedTag (0) for the native VLAN, else a VLAN id 1..4094
+	Devices []Device // Resolved device set for this segment
 }
 
 // DeviceCount returns the total number of devices this config describes,

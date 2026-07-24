@@ -194,7 +194,7 @@ func buildSegment(
 		return Segment{}, fmt.Errorf("%w: tag %q", ErrSegmentDevicesXORConfig, ySeg.Tag)
 	}
 
-	seg := Segment{Tag: tag, ConfigPath: ySeg.Config}
+	seg := Segment{Tag: tag}
 
 	if hasConfig {
 		return resolveSegmentConfig(seg, ySeg.Config, configDir, roots)
@@ -265,7 +265,7 @@ func parseSegmentTag(tag string) (int, error) {
 
 func configHasDevices(segments []Segment) bool {
 	return slices.ContainsFunc(segments, func(seg Segment) bool {
-		return len(seg.Devices) > 0 || seg.ConfigPath != ""
+		return len(seg.Devices) > 0
 	})
 }
 

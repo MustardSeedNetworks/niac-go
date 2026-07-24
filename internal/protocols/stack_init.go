@@ -79,11 +79,8 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 // devicesFor can route a frame to the correct "demo" by VLAN tag, even when
 // two segments reuse the same IP addresses.
 //
-// Segments that only set ConfigPath (no inline Devices) are skipped for now —
-// resolving a segment config file is a separate slice — so their VLAN tag
-// ends up with no table and devicesFor(tag) returns nil for it, same as any
-// other unclaimed tag. Duplicate tags are also omitted as defense in depth;
-// configuration validation rejects them before normal stack construction.
+// Duplicate tags are omitted as defense in depth; configuration validation
+// rejects them before normal stack construction.
 func (s *Stack) initializeSegments(cfg *config.Config) {
 	s.segmentTables = make(map[int]*DeviceTable)
 	segments := cfg.NormalizedSegments()
@@ -91,10 +88,6 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 
 	for _, seg := range segments {
 		if _, duplicate := duplicateTags[seg.Tag]; duplicate {
-			continue
-		}
-		if len(seg.Devices) == 0 {
-			// TODO(slice-2): resolve ConfigPath via config.LoadYAML
 			continue
 		}
 
