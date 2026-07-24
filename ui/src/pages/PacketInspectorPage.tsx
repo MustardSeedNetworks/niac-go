@@ -34,7 +34,7 @@ import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useErrorToast } from '../hooks/useErrorToast';
-import { usePacketStream } from '../hooks/useEventSource';
+import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -153,19 +153,15 @@ export const PacketInspectorPage: FC = () => {
         return;
       }
 
-      // Validate incoming data is an object before casting
-      if (typeof data !== 'object' || data === null) {
-        return;
-      }
+      if (!isPacketStreamEvent(data)) return;
 
-      // Transform incoming data to Packet format
-      const incoming = data as Record<string, unknown>;
+      const incoming = data.data;
 
       // SSE payloads bypass the shared toCamelCase converter in client.ts,
       // so fall back to snake_case keys when the camelCase key is missing.
       const packet: Packet = {
         id: generatePacketId(),
-        timestamp: (incoming.timestamp as string) || new Date().toISOString(),
+        timestamp: (incoming.timestamp as string) || data.timestamp,
         protocol: (incoming.protocol as string) || 'Unknown',
         sourceIp: (incoming.sourceIp as string) || (incoming.source_ip as string) || 'Unknown',
         destIp: (incoming.destIp as string) || (incoming.dest_ip as string) || 'Unknown',

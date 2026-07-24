@@ -217,10 +217,10 @@ func (h *Hub) Broadcast(stream Stream, data any) {
 
 // BroadcastPacket sends a packet to all packet stream subscribers.
 func (h *Hub) BroadcastPacket(data any) {
-	h.Broadcast(StreamPackets, map[string]any{
-		"type":      "packet",
-		"data":      data,
-		"timestamp": time.Now().UTC(),
+	h.Broadcast(StreamPackets, PacketEvent{
+		Type:      "packet",
+		Data:      data,
+		Timestamp: time.Now().UTC(),
 	})
 }
 

@@ -180,17 +180,21 @@ export interface StreamHookOptions {
   enabled?: boolean;
 }
 
-export interface PacketData {
+export interface PacketStreamEvent {
   type: 'packet';
   timestamp: string;
-  data: {
-    sourceIp: string;
-    destIp: string;
-    protocol: string;
-    size: number;
-    payload?: string;
-    [key: string]: unknown;
-  };
+  data: Record<string, unknown>;
+}
+
+export function isPacketStreamEvent(value: unknown): value is PacketStreamEvent {
+  if (typeof value !== 'object' || value === null) return false;
+  const event = value as Record<string, unknown>;
+  return (
+    event.type === 'packet' &&
+    typeof event.timestamp === 'string' &&
+    typeof event.data === 'object' &&
+    event.data !== null
+  );
 }
 
 export function usePacketStream(options: StreamHookOptions = {}): UseEventSourceResult {

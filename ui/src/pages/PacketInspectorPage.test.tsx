@@ -28,12 +28,16 @@ vi.mock('../api/client', () => ({
 
 let capturedOnMessage: ((data: unknown) => void) | undefined;
 
-vi.mock('../hooks/useEventSource', () => ({
-  usePacketStream: (options: { onMessage?: (data: unknown) => void }) => {
-    capturedOnMessage = options.onMessage;
-    return { connected: true, reconnect: vi.fn() };
-  },
-}));
+vi.mock('../hooks/useEventSource', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../hooks/useEventSource')>();
+  return {
+    ...actual,
+    usePacketStream: (options: { onMessage?: (data: unknown) => void }) => {
+      capturedOnMessage = options.onMessage;
+      return { connected: true, reconnect: vi.fn() };
+    },
+  };
+});
 
 // The page consumes the shared sim-status poll via useSimulationStatus
 // (useAppState('simStatus') under an AppProvider). Mock the hook so this
@@ -74,24 +78,32 @@ describe('PacketInspectorPage — filtered export', () => {
     // Push one TCP and one UDP packet through the stream.
     await act(async () => {
       capturedOnMessage?.({
-        protocol: 'TCP',
-        sourceIp: '10.0.0.1',
-        destIp: '10.0.0.2',
-        sourcePort: 1234,
-        destPort: 80,
-        size: 64,
-        summary: 'tcp packet',
-        rawData: '00112233',
+        type: 'packet',
+        timestamp: '2026-07-24T12:00:00.000Z',
+        data: {
+          protocol: 'TCP',
+          sourceIp: '10.0.0.1',
+          destIp: '10.0.0.2',
+          sourcePort: 1234,
+          destPort: 80,
+          size: 64,
+          summary: 'tcp packet',
+          rawData: '00112233',
+        },
       });
       capturedOnMessage?.({
-        protocol: 'UDP',
-        sourceIp: '10.0.0.3',
-        destIp: '10.0.0.4',
-        sourcePort: 53,
-        destPort: 5353,
-        size: 32,
-        summary: 'udp packet',
-        rawData: 'aabbccdd',
+        type: 'packet',
+        timestamp: '2026-07-24T12:00:01.000Z',
+        data: {
+          protocol: 'UDP',
+          sourceIp: '10.0.0.3',
+          destIp: '10.0.0.4',
+          sourcePort: 53,
+          destPort: 5353,
+          size: 32,
+          summary: 'udp packet',
+          rawData: 'aabbccdd',
+        },
       });
     });
 
@@ -134,16 +146,20 @@ describe('PacketInspectorPage — filtered export', () => {
 
     await act(async () => {
       capturedOnMessage?.({
-        protocol: 'IPv4',
-        source_ip: '10.10.200.50',
-        dest_ip: '10.20.0.10',
-        size: 64,
-        raw_data: '00112233',
-        ingress_network: 'access',
-        physical_vlan: 200,
-        route_decision: 'forwarded',
-        hop: 'edge:inside',
-        egress_network: 'servers',
+        type: 'packet',
+        timestamp: '2026-07-24T12:00:00.000Z',
+        data: {
+          protocol: 'IPv4',
+          source_ip: '10.10.200.50',
+          dest_ip: '10.20.0.10',
+          size: 64,
+          raw_data: '00112233',
+          ingress_network: 'access',
+          physical_vlan: 200,
+          route_decision: 'forwarded',
+          hop: 'edge:inside',
+          egress_network: 'servers',
+        },
       });
     });
 
@@ -155,5 +171,36 @@ describe('PacketInspectorPage — filtered export', () => {
     expect(screen.getByText('edge:inside')).toBeInTheDocument();
     expect(screen.getByText('servers')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
+  });
+
+  it('reads packet fields from the exact SSE wire envelope', async () => {
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
+
+    await act(async () => {
+      capturedOnMessage?.({
+        type: 'packet',
+        timestamp: '2026-07-24T12:00:00.000Z',
+        data: {
+          protocol: 'TCP',
+          source_ip: '192.0.2.10',
+          dest_ip: '198.51.100.20',
+          source_port: 49152,
+          dest_port: 443,
+          size: 74,
+          summary: 'TCP 49152 → 443',
+          raw_data: '00112233',
+        },
+      });
+    });
+
+    expect(
+      await screen.findByRole('button', { name: /192\.0\.2\.10.*198\.51\.100\.20/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Unknown.*Unknown/)).not.toBeInTheDocument();
   });
 });
