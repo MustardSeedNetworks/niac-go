@@ -74,6 +74,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		return v.errors
 	}
 
+	v.validateSegmentTags(cfg.Segments)
 	for i := range cfg.Segments {
 		for j := range cfg.Segments[i].Devices {
 			knownDeviceNames[cfg.Segments[i].Devices[j].Name] = true
@@ -93,6 +94,37 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 	}
 
 	return v.errors
+}
+
+func (v *Validator) validateSegmentTags(segments []Segment) {
+	conflicts := DuplicateSegmentTags(segments)
+	reported := make(map[int]struct{}, len(conflicts))
+	for _, segment := range segments {
+		indices, duplicate := conflicts[segment.Tag]
+		if !duplicate {
+			continue
+		}
+		if _, done := reported[segment.Tag]; done {
+			continue
+		}
+		reported[segment.Tag] = struct{}{}
+		fields := make([]string, len(indices))
+		for index, location := range indices {
+			fields[index] = fmt.Sprintf("segments[%d].tag", location)
+		}
+		for index, field := range fields {
+			others := append([]string(nil), fields[:index]...)
+			others = append(others, fields[index+1:]...)
+			v.addError(
+				field,
+				fmt.Sprintf(
+					"duplicate segment tag %d also used by %s",
+					segment.Tag,
+					strings.Join(others, ", "),
+				),
+			)
+		}
+	}
 }
 
 // validateDevice validates a single device configuration.

@@ -60,6 +60,21 @@ func TestSegmentDemuxIsolatesReusedIP(t *testing.T) {
 	}
 }
 
+func TestSegmentDemuxFailsClosedForDuplicateTags(t *testing.T) {
+	cfg := &config.Config{
+		Segments: []config.Segment{
+			{Tag: 200, Devices: []config.Device{segDevice("first", "02:00:00:00:02:00", "10.0.0.1")}},
+			{Tag: 200, Devices: []config.Device{segDevice("second", "02:00:00:00:03:00", "10.0.0.2")}},
+		},
+	}
+
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+
+	if table := stack.devicesFor(200); table != nil {
+		t.Fatalf("devicesFor(200) = %#v, want no table for duplicate tag", table)
+	}
+}
+
 // TestFlatModeUnchanged: a config with no segments stays in flat mode —
 // devicesFor returns the single global table for every VLAN.
 func TestFlatModeUnchanged(t *testing.T) {

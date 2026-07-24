@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -186,6 +187,42 @@ segments:
 
 	if segs[1].Devices[0].Name != "evt" {
 		t.Errorf("segment 1 device = %q, want evt", segs[1].Devices[0].Name)
+	}
+}
+
+func TestSegmentsRejectDuplicateNormalizedTags(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		firstTag  string
+		secondTag string
+	}{
+		{name: "numeric", firstTag: "200", secondTag: "\"200\""},
+		{name: "untagged", firstTag: "untagged", secondTag: "UNTAGGED"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			yamlConfig := fmt.Sprintf(`
+segments:
+  - tag: %s
+    devices:
+      - name: first
+        mac: "02:00:00:00:00:01"
+        ips: ["10.0.0.1"]
+  - tag: %s
+    devices:
+      - name: second
+        mac: "02:00:00:00:00:02"
+        ips: ["10.0.0.2"]
+`, test.firstTag, test.secondTag)
+			_, err := LoadYAMLBytes([]byte(yamlConfig))
+			if !errors.Is(err, ErrDuplicateSegmentTag) {
+				t.Fatalf("LoadYAMLBytes() error = %v, want duplicate segment tag", err)
+			}
+			for _, location := range []string{"segments[0].tag", "segments[1].tag"} {
+				if !strings.Contains(err.Error(), location) {
+					t.Fatalf("LoadYAMLBytes() error = %q, want location %q", err, location)
+				}
+			}
+		})
 	}
 }
 
