@@ -19,49 +19,13 @@ import (
 )
 
 func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
-	// SECURITY FIX #161: Thread-safe access to all config fields
-	s.configMu.RLock()
-	stack := s.cfg.Stack
-	cfg := s.cfg.Config
-	iface := s.cfg.Interface
-	s.configMu.RUnlock()
-
-	if stack == nil {
+	payload, ok := s.currentStatsPayload()
+	if !ok {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
 
 		return
 	}
 
-	stats := stack.GetStats()
-
-	deviceCount := 0
-	if cfg != nil {
-		deviceCount = len(cfg.Devices)
-	}
-
-	// FEATURE #119: Include goroutine count for debugging and monitoring
-	goroutineCount := runtime.NumGoroutine()
-
-	payload := map[string]any{
-		"timestamp":    time.Now().UTC(),
-		"interface":    iface,
-		"version":      s.cfg.Version,
-		"device_count": deviceCount,
-		"goroutines":   goroutineCount, // FEATURE #119: Monitor goroutine count
-		"stack": map[string]uint64{
-			"packets_sent":             stats.PacketsSent,
-			"packets_received":         stats.PacketsReceived,
-			"arp_requests":             stats.ARPRequests,
-			"arp_replies":              stats.ARPReplies,
-			"icmp_requests":            stats.ICMPRequests,
-			"icmp_replies":             stats.ICMPReplies,
-			"dns_queries":              stats.DNSQueries,
-			"dhcp_requests":            stats.DHCPRequests,
-			"snmp_queries":             stats.SNMPQueries,
-			"errors":                   stats.Errors,
-			"udp_proxy_overload_drops": stats.UDPProxyOverloadDrops,
-		},
-	}
 	s.writeJSON(w, payload)
 }
 

@@ -95,8 +95,11 @@ func TestHandleStats(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if _, ok := response.Stack["udp_proxy_overload_drops"]; !ok {
-		t.Fatal("response missing udp_proxy_overload_drops")
+	if _, ok := response.Stack["udpProxyOverloadDrops"]; !ok {
+		t.Fatal("response missing udpProxyOverloadDrops")
+	}
+	if _, ok := response.Stack["udp_proxy_overload_drops"]; ok {
+		t.Fatal("response retained legacy snake_case stats key")
 	}
 }
 

@@ -25,6 +25,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/v1/stats` | Live packet counters, interface info, NIAC version |
+| `GET` | `/api/v1/stream/stats` | Server-sent live statistics stream |
 | `GET` | `/api/v1/devices` | Device inventory (type, IPs, enabled protocols) |
 | `GET` | `/api/v1/history` | Recent runs persisted to BoltDB |
 | `GET` | `/api/v1/config` | Active YAML config plus file metadata |
@@ -42,6 +43,10 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
 Include `Authorization: Bearer <token>` or append `?token=<token>` when authentication is enabled.
+
+The statistics stream publishes once per second while a simulation is active
+and at least one client is subscribed. Each `stats` event carries the same
+authoritative snapshot shape as `GET /api/v1/stats`.
 
 ## Web UI
 

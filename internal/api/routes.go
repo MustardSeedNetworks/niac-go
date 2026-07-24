@@ -415,6 +415,7 @@ func (s *Server) startBackgroundTasks() {
 
 	// Start SSE hub for real-time streaming
 	go s.sseHub.Run()
+	go s.startStatsPublisher(statsStreamInterval)
 	s.logger.Info("[SSE] Server-Sent Events hub started")
 
 	// Tee slog into the SSE hub so the Protocol Debug Console gets

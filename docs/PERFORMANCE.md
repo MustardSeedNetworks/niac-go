@@ -249,7 +249,7 @@ niac test error-rate --duration 10s --devices 10
 sudo tcpreplay -i eth0 -M 10 test.pcap
 
 # Monitor processing rate
-watch -n 1 'curl -s -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats | jq .stack.packets_received'
+watch -n 1 'curl -s -H "Authorization: Bearer $TOKEN" https://localhost:8445/api/v1/stats | jq .stack.packetsReceived'
 ```
 
 ## Tuning by Use Case
