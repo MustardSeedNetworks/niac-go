@@ -206,12 +206,26 @@ function AppearanceSection(): ReactElement {
   const { t } = useTranslation('settings');
   const { theme, setTheme, isDark, toggleTheme } = useTheme();
 
-  // The theme options' ids match the i18n keys under settings.appearance.*
-  // so the label is resolved per-render via t(`appearance.${id}`).
-  const options: Array<{ id: Theme; icon: ReactNode }> = [
-    { id: 'dark', icon: <Moon className="w-4 h-4" aria-hidden="true" /> },
-    { id: 'light', icon: <Sun className="w-4 h-4" aria-hidden="true" /> },
-    { id: 'system', icon: <Monitor className="w-4 h-4" aria-hidden="true" /> },
+  const options: Array<{
+    id: Theme;
+    labelKey: 'appearance.dark' | 'appearance.light' | 'appearance.system';
+    icon: ReactNode;
+  }> = [
+    {
+      id: 'dark',
+      labelKey: 'appearance.dark',
+      icon: <Moon className="w-4 h-4" aria-hidden="true" />,
+    },
+    {
+      id: 'light',
+      labelKey: 'appearance.light',
+      icon: <Sun className="w-4 h-4" aria-hidden="true" />,
+    },
+    {
+      id: 'system',
+      labelKey: 'appearance.system',
+      icon: <Monitor className="w-4 h-4" aria-hidden="true" />,
+    },
   ];
 
   return (
@@ -248,7 +262,7 @@ function AppearanceSection(): ReactElement {
                   selected ? 'text-text-primary' : 'text-text-muted',
                 )}
               >
-                {t(`appearance.${option.id}`)}
+                {t(option.labelKey)}
               </span>
             </button>
           );

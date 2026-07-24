@@ -223,7 +223,7 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
               label={t('packets.stats.totalBytes')}
               value={formatBytes(stats.totalBytes)}
               helper={t('packets.stats.totalBytesHelper', {
-                count: stats.totalBytes.toLocaleString(),
+                value: stats.totalBytes.toLocaleString(),
               })}
             />
             <StatBlock

@@ -1,0 +1,9 @@
+{
+  "dynamic": {
+    "alpha": "Alpha"
+  },
+  "greeting": "Hello {{name}}",
+  "items_one": "{{count}} item",
+  "items_other": "{{count}} items",
+  "welcome_formal": "Welcome"
+}

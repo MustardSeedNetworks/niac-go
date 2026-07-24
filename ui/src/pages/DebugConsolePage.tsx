@@ -291,7 +291,7 @@ export const DebugConsolePage: FC = () => {
           {/* Footer Info */}
           <div className="flex-between text-xs text-text-muted">
             <span>
-              {t('debug.bufferStatus', { count: logs.length, max: MAX_LOG_BUFFER })}
+              {t('debug.bufferStatus', { value: logs.length, max: MAX_LOG_BUFFER })}
               {logs.length >= MAX_LOG_BUFFER && ` ${t('debug.bufferOldestRemoved')}`}
             </span>
             <span>{t('debug.sseEndpointLabel')}</span>

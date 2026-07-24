@@ -93,6 +93,7 @@ const ConnectionStatus: FC<{
  */
 export const PacketInspectorPage: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const [view, setView] = useState<'live' | 'files'>('live');
   // The page streams from /api/v1/stream/packets, which the daemon
@@ -387,9 +388,7 @@ export const PacketInspectorPage: FC = () => {
                       )
                     }
                   >
-                    {isPaused
-                      ? t('buttons.resume', { ns: 'common' })
-                      : t('buttons.pause', { ns: 'common' })}
+                    {isPaused ? tCommon('buttons.resume') : tCommon('buttons.pause')}
                   </Button>
 
                   <Button
@@ -399,7 +398,7 @@ export const PacketInspectorPage: FC = () => {
                     leftIcon={<Trash2 className={iconSizes.md} />}
                     disabled={packets.length === 0}
                   >
-                    {t('buttons.clear', { ns: 'common' })}
+                    {tCommon('buttons.clear')}
                   </Button>
 
                   {captureRunning && !simRunning && (

@@ -26,9 +26,7 @@ type ConfigTab = 'templates' | 'configs' | 'upload';
 
 interface ConfigTabButton {
   id: ConfigTab;
-  // Label resolved per-render via t(`simulation.tab${id}`) so the static
-  // array stays language-agnostic.
-  labelKey: 'tabTemplates' | 'tabMyConfigs' | 'tabUpload';
+  labelKey: 'simulation.tabTemplates' | 'simulation.tabMyConfigs' | 'simulation.tabUpload';
   icon: ReactElement;
   source: ConfigSource;
 }
@@ -36,19 +34,19 @@ interface ConfigTabButton {
 const CONFIG_TABS: ConfigTabButton[] = [
   {
     id: 'templates',
-    labelKey: 'tabTemplates',
+    labelKey: 'simulation.tabTemplates',
     icon: <LayoutTemplate className="w-4 h-4" />,
     source: 'template',
   },
   {
     id: 'configs',
-    labelKey: 'tabMyConfigs',
+    labelKey: 'simulation.tabMyConfigs',
     icon: <FolderOpen className="w-4 h-4" />,
     source: 'userConfig',
   },
   {
     id: 'upload',
-    labelKey: 'tabUpload',
+    labelKey: 'simulation.tabUpload',
     icon: <FileUp className="w-4 h-4" />,
     source: 'upload',
   },
@@ -196,7 +194,7 @@ export function SimulationSection(): ReactElement {
               )}
             >
               {tab.icon}
-              <span className="hidden sm:inline">{t(`simulation.${tab.labelKey}`)}</span>
+              <span className="hidden sm:inline">{t(tab.labelKey)}</span>
             </button>
           ))}
         </div>

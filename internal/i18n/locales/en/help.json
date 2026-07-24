@@ -1,57 +1,57 @@
 {
   "drawer": {
-    "title": "Help",
+    "backdropAriaLabel": "Close help drawer",
     "closeAriaLabel": "Close help",
     "drawerAriaLabel": "Help",
-    "backdropAriaLabel": "Close help drawer",
+    "noResults": "No matches for \"{{query}}\"",
     "searchPlaceholder": "Search help...",
-    "noResults": "No matches for \"{{query}}\""
-  },
-  "tabs": {
-    "overview": "Overview",
-    "devices": "Devices",
-    "protocols": "Protocols",
-    "commands": "Commands",
-    "glossary": "Glossary",
-    "shortcuts": "Shortcuts",
-    "faq": "FAQ"
+    "title": "Help"
   },
   "footer": {
     "documentationLink": "Full documentation",
     "reportIssue": "Report an issue"
   },
   "itemCard": {
-    "technical": "Technical",
-    "plainEnglish": "Plain English",
-    "whenToUse": "When to use",
-    "whenNotToUse": "When not to use",
-    "parameters": "Parameters / flags",
-    "yamlFields": "YAML fields",
-    "metrics": "Metrics",
-    "metricGoodLabel": "good:",
-    "metricBadLabel": "bad:",
     "examples": "Examples",
+    "metricBadLabel": "bad:",
+    "metricGoodLabel": "good:",
+    "metrics": "Metrics",
+    "parameters": "Parameters / flags",
+    "plainEnglish": "Plain English",
+    "seeAlso": "See also",
+    "technical": "Technical",
     "tips": "Tips",
-    "seeAlso": "See also"
-  },
-  "overview": {
-    "whatNiacDoesTitle": "What NIAC does",
-    "whatNiacDoesBody": "NIAC (Network In A Can) simulates one or more network devices on a real host interface. It answers ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP and other protocols so a discovery tool, NMS, or monitoring platform sees the simulated devices as if they were physical hardware. Use it for tooling validation, training labs, and reproducer environments without standing up real gear.",
-    "categoriesTitle": "Help categories",
-    "categoriesEmpty": "No categories match your search.",
-    "categoryItems_one": "{{count}} item",
-    "categoryItems_other": "{{count}} items",
-    "webUiQuickRefTitle": "Web UI quick reference",
-    "featuresEmpty": "No features match your search."
+    "whenNotToUse": "When not to use",
+    "whenToUse": "When to use",
+    "yamlFields": "YAML fields"
   },
   "jargon": {
     "bpf": "A Berkeley Packet Filter (BPF) expression applied by the capture engine. Packets that don't match are dropped before capture — they never reach the buffer, unlike a display filter.",
-    "pcap": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
-    "oid": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
-    "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
     "fiveTuple": "A 5-tuple is the (protocol, source IP:port, destination IP:port) combination that uniquely identifies a TCP/UDP conversation.",
-    "netbiosNodeType": "The NetBIOS node type controls how a host resolves names: B-node broadcasts, P-node queries a name server directly, M-node broadcasts first then falls back to a server, and H-node queries the server first then falls back to broadcast.",
+    "librarySource": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally.",
     "msbrowse": "MSBROWSE is the special NetBIOS group name a host announces to volunteer as the local master browser, the host that maintains the network's list of shared machines.",
-    "librarySource": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally."
+    "netbiosNodeType": "The NetBIOS node type controls how a host resolves names: B-node broadcasts, P-node queries a name server directly, M-node broadcasts first then falls back to a server, and H-node queries the server first then falls back to broadcast.",
+    "oid": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
+    "pcap": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
+    "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses."
+  },
+  "overview": {
+    "categoriesEmpty": "No categories match your search.",
+    "categoriesTitle": "Help categories",
+    "categoryItems_one": "{{count}} item",
+    "categoryItems_other": "{{count}} items",
+    "featuresEmpty": "No features match your search.",
+    "webUiQuickRefTitle": "Web UI quick reference",
+    "whatNiacDoesBody": "NIAC (Network In A Can) simulates one or more network devices on a real host interface. It answers ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP and other protocols so a discovery tool, NMS, or monitoring platform sees the simulated devices as if they were physical hardware. Use it for tooling validation, training labs, and reproducer environments without standing up real gear.",
+    "whatNiacDoesTitle": "What NIAC does"
+  },
+  "tabs": {
+    "commands": "Commands",
+    "devices": "Devices",
+    "faq": "FAQ",
+    "glossary": "Glossary",
+    "overview": "Overview",
+    "protocols": "Protocols",
+    "shortcuts": "Shortcuts"
   }
 }

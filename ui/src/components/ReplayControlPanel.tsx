@@ -161,7 +161,7 @@ export const ReplayControlPanel: FC = () => {
                     replayStatus.rateMode !== 'timing' &&
                     ` • ${t('traffic.page.replayRateTag', { mode: replayStatus.rateMode })}`}
                   {(replayStatus.loopCount ?? 0) > 0 &&
-                    ` • ${t('traffic.page.replayLoopTag', { count: replayStatus.loopCount })}`}
+                    ` • ${t('traffic.page.replayLoopTag', { value: replayStatus.loopCount })}`}
                   {replayStatus.bpfFilter &&
                     ` • ${t('traffic.page.replayFilterTag', { filter: replayStatus.bpfFilter })}`}
                   {(replayStatus.passes ?? 0) > 1 &&

@@ -266,7 +266,7 @@ export const DashboardPage: FC = () => {
                       {formatTime(item.startedAt)}
                     </p>
                     <Tag colorScheme="gray" className="text-[10px]">
-                      {t('dashboard.recentRuns.deviceCountShort', { count: item.deviceCount })}
+                      {t('dashboard.recentRuns.deviceCountShort', { value: item.deviceCount })}
                     </Tag>
                   </div>
                   <p className="text-text-primary font-medium text-sm truncate">
@@ -275,12 +275,12 @@ export const DashboardPage: FC = () => {
                   <div className="flex gap-default mt-tight text-xs text-text-muted">
                     <span>
                       {t('dashboard.recentRuns.rxShort', {
-                        count: formatNumber(item.packetsReceived),
+                        value: formatNumber(item.packetsReceived),
                       })}
                     </span>
                     <span>
                       {t('dashboard.recentRuns.txShort', {
-                        count: formatNumber(item.packetsSent),
+                        value: formatNumber(item.packetsSent),
                       })}
                     </span>
                   </div>

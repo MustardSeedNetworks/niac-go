@@ -203,7 +203,7 @@ export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
         <div className="flex-between mb-2 pb-inline border-b border-surface-border">
           <div className="flex items-center gap-comfortable text-xs">
             <span className="text-text-muted">
-              {t('packets.stats.totalBytesHelper', { count: totalBytes })}
+              {t('packets.stats.totalBytesHelper', { value: totalBytes })}
             </span>
             <div className="flex items-center gap-compact">
               <span className="w-3 h-3 bg-status-info/30 rounded" />

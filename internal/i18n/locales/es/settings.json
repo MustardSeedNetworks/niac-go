@@ -2,7 +2,6 @@
   "drawer": {
     "title": "Configuración",
     "closeAriaLabel": "Cerrar configuración",
-    "drawerAriaLabel": "Configuración",
     "backdropAriaLabel": "Cerrar panel de configuración"
   },
   "tabs": {
@@ -59,37 +58,14 @@
     "connectionDescription": "Configure la conexión del backend",
     "backendUrl": "URL del backend",
     "backendUrlDescription": "Dirección del servidor backend de NIAC",
-    "websocket": "WebSocket",
     "websocketDescription": "Transmisión de eventos en tiempo real",
-    "connected": "Conectado",
-    "disconnected": "Desconectado",
-    "interfaceTypes": {
-      "ethernet": "Ethernet",
-      "wifi": "WiFi",
-      "loopback": "Loopback",
-      "bridge": "Puente",
-      "virtual": "Virtual",
-      "tunnel": "Túnel",
-      "other": "Otro"
-    }
+    "disconnected": "Desconectado"
   },
   "debug": {
-    "loggingTitle": "Registro",
-    "loggingDescription": "Configure el nivel de detalle de la salida de depuración",
-    "logLevel": "Nivel de registro",
-    "logLevelDescription": "Nivel de detalle de la salida en consola",
-    "levels": {
-      "error": "Error",
-      "warn": "Advertencia",
-      "info": "Información",
-      "debug": "Depuración"
-    },
     "devToolsTitle": "Herramientas de desarrollador",
     "devToolsDescription": "Funciones avanzadas de depuración",
     "debugConsole": "Consola de depuración",
-    "debugConsoleDescription": "Ver registros en vivo y ajustar el nivel de depuración",
-    "exportDiagnostics": "Exportar diagnósticos",
-    "exportDiagnosticsDescription": "Descargar información de depuración"
+    "debugConsoleDescription": "Ver registros en vivo y ajustar el nivel de depuración"
   },
   "about": {
     "applicationTitle": "Aplicación",
