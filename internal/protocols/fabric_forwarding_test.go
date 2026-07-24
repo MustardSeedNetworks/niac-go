@@ -71,6 +71,54 @@ func TestFabricRecordsMissingRouteDrop(t *testing.T) {
 	}
 }
 
+func TestFabricRejectsInvalidIPv4HeaderChecksum(t *testing.T) {
+	cfg, topology, routerMAC := forwardingFixture(t)
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(topology)
+	pkt := routedEchoRequest(t, mustForwardingMAC(t, "02:00:00:00:00:fe"), routerMAC)
+	pkt.Buffer[etherHeaderSize+10] ^= 0xff
+
+	stack.ipHandler.HandlePacket(pkt)
+
+	assertFabricIngressRejected(t, stack, pkt, fabricRejectionInvalidIPv4Checksum)
+}
+
+func TestFabricRejectsInvalidAttachmentIPv4Sources(t *testing.T) {
+	for _, source := range []string{"10.99.0.10", "10.10.200.0", "10.10.200.255", "0.0.0.0"} {
+		t.Run(source, func(t *testing.T) {
+			cfg, topology, routerMAC := forwardingFixture(t)
+			stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+			stack.ConfigureFabric(topology)
+			pkt := routedEchoRequestFrom(
+				t,
+				mustForwardingMAC(t, "02:00:00:00:00:fe"),
+				routerMAC,
+				source,
+			)
+
+			stack.ipHandler.HandlePacket(pkt)
+
+			assertFabricIngressRejected(t, stack, pkt, fabricRejectionAttachmentSource)
+		})
+	}
+}
+
+func assertFabricIngressRejected(t *testing.T, stack *Stack, pkt *Packet, reason string) {
+	t.Helper()
+	trace := pkt.FabricTrace()
+	if trace.RouteDecision != fabricRouteDecisionDropped || trace.RejectionReason != reason {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	if got := stack.GetStats().FabricDrops; got != 1 {
+		t.Fatalf("FabricDrops = %d, want 1", got)
+	}
+	select {
+	case response := <-stack.sendQueue:
+		t.Fatalf("rejected ingress produced response %#v", response)
+	default:
+	}
+}
+
 func TestCLIShutdownChangesFabricDelivery(t *testing.T) {
 	cfg, topology, routerMAC := forwardingFixture(t)
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
@@ -617,6 +665,35 @@ func TestFabricBindingsAcceptOnlyUntaggedFrames(t *testing.T) {
 
 func routedEchoRequest(t *testing.T, testerMAC, routerMAC net.HardwareAddr) *Packet {
 	return routedEchoRequestWithTTL(t, testerMAC, routerMAC, 64)
+}
+
+func routedEchoRequestFrom(
+	t *testing.T,
+	testerMAC net.HardwareAddr,
+	routerMAC net.HardwareAddr,
+	source string,
+) *Packet {
+	t.Helper()
+	buffer := gopacket.NewSerializeBuffer()
+	err := gopacket.SerializeLayers(buffer, gopacket.SerializeOptions{
+		FixLengths: true, ComputeChecksums: true,
+	},
+		&layers.Ethernet{SrcMAC: testerMAC, DstMAC: routerMAC, EthernetType: layers.EthernetTypeIPv4},
+		&layers.IPv4{
+			Version: 4, TTL: 64, Protocol: layers.IPProtocolICMPv4,
+			SrcIP: net.ParseIP(source), DstIP: net.ParseIP("10.20.0.10"),
+		},
+		&layers.ICMPv4{TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0), Id: 1},
+		gopacket.Payload([]byte("routed")),
+	)
+	if err != nil {
+		t.Fatalf("SerializeLayers(): %v", err)
+	}
+	pkt, err := ParsePacket(buffer.Bytes(), 1)
+	if err != nil {
+		t.Fatalf("ParsePacket(): %v", err)
+	}
+	return pkt
 }
 
 func routedEchoRequestWithTTL(
