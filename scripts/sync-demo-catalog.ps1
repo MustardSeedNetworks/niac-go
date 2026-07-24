@@ -12,33 +12,14 @@ function Require-Command {
     }
 }
 
-function Copy-Directory {
-    param(
-        [string]$Source,
-        [string]$Destination
-    )
-
-    if (-not (Test-Path -LiteralPath $Source -PathType Container)) {
-        throw "Expected catalog directory missing: $Source"
-    }
-
-    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-    Copy-Item -Path (Join-Path $Source "*") -Destination $Destination -Recurse -Force
-}
-
-function Get-RelativeFiles {
-    param([string]$Root)
-
-    if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
-        return @()
-    }
-
-    Get-ChildItem -LiteralPath $Root -File -Recurse | ForEach-Object {
-        $_.FullName.Substring($Root.Length).TrimStart("\", "/")
-    } | Sort-Object
+function Test-GitCheckout {
+    param([string]$Path)
+    git -C $Path rev-parse --is-inside-work-tree 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
 }
 
 Require-Command git
+Require-Command go
 
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $CatalogUrl = if ($env:NIAC_DEMO_CATALOG_URL) { $env:NIAC_DEMO_CATALOG_URL } else { "git@github.com:MustardSeedNetworks/niac-demo-catalog.git" }
@@ -48,57 +29,44 @@ $ExamplesDir = if ($env:NIAC_GO_EXAMPLES_DIR) { $env:NIAC_GO_EXAMPLES_DIR } else
 $Offline = $env:NIAC_DEMO_CATALOG_OFFLINE -eq "1"
 
 if ($Offline) {
-    if (-not (Test-Path -LiteralPath $CatalogDir -PathType Container)) {
-        throw "NIAC_DEMO_CATALOG_OFFLINE=1 but catalog directory does not exist: $CatalogDir"
+    if (-not (Test-GitCheckout $CatalogDir)) {
+        throw "Offline catalog must be a git checkout: $CatalogDir"
     }
-} elseif (Test-Path -LiteralPath (Join-Path $CatalogDir ".git") -PathType Container) {
+} elseif (Test-GitCheckout $CatalogDir) {
     git -C $CatalogDir fetch --depth 1 origin $CatalogRef
-    git -C $CatalogDir checkout --detach FETCH_HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Catalog fetch failed." }
 } else {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CatalogDir) | Out-Null
     git clone --filter=blob:none --no-checkout $CatalogUrl $CatalogDir
+    if ($LASTEXITCODE -ne 0) { throw "Catalog clone failed." }
     git -C $CatalogDir fetch --depth 1 origin $CatalogRef
-    git -C $CatalogDir checkout --detach FETCH_HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Catalog fetch failed." }
 }
 
-$Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("niac-go-demo-catalog-" + [System.Guid]::NewGuid())
-New-Item -ItemType Directory -Force -Path $Stage | Out-Null
+if (-not $Offline) {
+    git -C $CatalogDir checkout --detach FETCH_HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Catalog checkout failed." }
+}
 
+$Dirty = git -C $CatalogDir status --porcelain --untracked-files=normal
+if ($LASTEXITCODE -ne 0) { throw "Could not inspect the catalog checkout." }
+if ($Dirty) { throw "Catalog checkout has uncommitted content: $CatalogDir" }
+
+$SourceCommit = git -C $CatalogDir rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw "Could not resolve the catalog commit." }
+$SourceUrl = git -C $CatalogDir remote get-url origin
+if ($LASTEXITCODE -ne 0) { throw "Could not resolve the catalog origin URL." }
+$ModeValue = $Mode.ToLowerInvariant()
+
+Push-Location $ProjectRoot
 try {
-    Copy-Directory (Join-Path $CatalogDir "scenarios/go-yaml") $Stage
-    Copy-Directory (Join-Path $CatalogDir "walks/raw") (Join-Path $Stage "device_walks")
-    Copy-Directory (Join-Path $CatalogDir "walks/sanitized") (Join-Path $Stage "device_walks_sanitized")
-    Copy-Directory (Join-Path $CatalogDir "captures/shared") (Join-Path $Stage "captures")
-    Copy-Directory (Join-Path $CatalogDir "captures/go-extra") (Join-Path $Stage "pcaps")
-    Copy-Directory (Join-Path $CatalogDir "tools/walk-scripts/go") (Join-Path $Stage "walk_scripts")
-    $SharedRunDemo = Join-Path $CatalogDir "tools/walk-scripts/java/run_demo.sh"
-    if (Test-Path -LiteralPath $SharedRunDemo -PathType Leaf) {
-        Copy-Item -LiteralPath $SharedRunDemo -Destination (Join-Path $Stage "walk_scripts/run_demo.sh") -Force
-    }
-    Copy-Directory (Join-Path $CatalogDir "docs/imported/go-examples") $Stage
-
-    if ($Mode -eq "Sync") {
-        if (Test-Path -LiteralPath $ExamplesDir) {
-            Remove-Item -LiteralPath $ExamplesDir -Recurse -Force
-        }
-        New-Item -ItemType Directory -Force -Path $ExamplesDir | Out-Null
-        Copy-Item -Path (Join-Path $Stage "*") -Destination $ExamplesDir -Recurse -Force
-        Write-Host "OK: generated $ExamplesDir from the shared demo catalog."
-    } else {
-        $stageFiles = Get-RelativeFiles $Stage
-        $exampleFiles = Get-RelativeFiles $ExamplesDir
-        if (Compare-Object $stageFiles $exampleFiles) {
-            throw "$ExamplesDir does not match the shared demo catalog. Run scripts/sync-demo-catalog.ps1 -Mode Sync."
-        }
-        foreach ($relative in $stageFiles) {
-            $stageHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $Stage $relative)).Hash
-            $exampleHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ExamplesDir $relative)).Hash
-            if ($stageHash -ne $exampleHash) {
-                throw "File differs from shared demo catalog: $relative"
-            }
-        }
-        Write-Host "OK: $ExamplesDir matches the shared demo catalog."
-    }
+    go run ./cmd/niac-catalog-sync `
+        -mode $ModeValue `
+        -catalog-dir $CatalogDir `
+        -examples-dir $ExamplesDir `
+        -repository $SourceUrl `
+        -commit $SourceCommit
+    if ($LASTEXITCODE -ne 0) { throw "Catalog $Mode failed." }
 } finally {
-    Remove-Item -LiteralPath $Stage -Recurse -Force -ErrorAction SilentlyContinue
+    Pop-Location
 }

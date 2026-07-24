@@ -5,14 +5,14 @@ usage() {
   cat >&2 <<'USAGE'
 Usage: scripts/sync-demo-catalog.sh --sync|--check
 
-Generates the Go examples/ layout from MustardSeedNetworks/niac-demo-catalog.
+Generates and validates the Go examples/ layout from MustardSeedNetworks/niac-demo-catalog.
 
 Environment:
   NIAC_DEMO_CATALOG_URL      Catalog git URL.
   NIAC_DEMO_CATALOG_REF      Catalog branch, tag, or commit. Defaults to main.
   NIAC_DEMO_CATALOG_DIR      Existing catalog checkout. Defaults to .catalog/niac-demo-catalog.
   NIAC_GO_EXAMPLES_DIR       Generated output path. Defaults to examples.
-  NIAC_DEMO_CATALOG_OFFLINE  Set to 1 to require NIAC_DEMO_CATALOG_DIR and skip git fetch.
+  NIAC_DEMO_CATALOG_OFFLINE  Set to 1 to require a clean local catalog checkout and skip git fetch.
 USAGE
 }
 
@@ -41,23 +41,12 @@ require_command() {
   fi
 }
 
-copy_dir() {
-  local source="$1"
-  local destination="$2"
-
-  if [ ! -d "$source" ]; then
-    echo "ERROR: expected catalog directory missing: $source" >&2
-    exit 1
-  fi
-
-  mkdir -p "$destination"
-  rsync -a "$source"/ "$destination"/
-}
-
-require_command diff
 require_command git
-require_command mktemp
-require_command rsync
+require_command go
+
+is_git_checkout() {
+  git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -69,47 +58,34 @@ EXAMPLES_DIR="${NIAC_GO_EXAMPLES_DIR:-$PROJECT_ROOT/examples}"
 OFFLINE="${NIAC_DEMO_CATALOG_OFFLINE:-0}"
 
 if [ "$OFFLINE" = "1" ]; then
-  if [ ! -d "$CATALOG_DIR" ]; then
-    echo "ERROR: NIAC_DEMO_CATALOG_OFFLINE=1 but catalog directory does not exist: $CATALOG_DIR" >&2
+  if ! is_git_checkout "$CATALOG_DIR"; then
+    echo "ERROR: offline catalog must be a git checkout: $CATALOG_DIR" >&2
     exit 1
   fi
 else
-  if [ -d "$CATALOG_DIR/.git" ]; then
+  if is_git_checkout "$CATALOG_DIR"; then
     git -C "$CATALOG_DIR" fetch --depth 1 origin "$CATALOG_REF"
-    git -C "$CATALOG_DIR" checkout --detach FETCH_HEAD
   else
     mkdir -p "$(dirname "$CATALOG_DIR")"
     git clone --filter=blob:none --no-checkout "$CATALOG_URL" "$CATALOG_DIR"
     git -C "$CATALOG_DIR" fetch --depth 1 origin "$CATALOG_REF"
-    git -C "$CATALOG_DIR" checkout --detach FETCH_HEAD
   fi
+  git -C "$CATALOG_DIR" checkout --detach FETCH_HEAD
 fi
 
-STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
-
-copy_dir "$CATALOG_DIR/scenarios/go-yaml" "$STAGE"
-copy_dir "$CATALOG_DIR/walks/raw" "$STAGE/device_walks"
-copy_dir "$CATALOG_DIR/walks/sanitized" "$STAGE/device_walks_sanitized"
-copy_dir "$CATALOG_DIR/captures/shared" "$STAGE/captures"
-copy_dir "$CATALOG_DIR/captures/go-extra" "$STAGE/pcaps"
-copy_dir "$CATALOG_DIR/tools/walk-scripts/go" "$STAGE/walk_scripts"
-if [ -f "$CATALOG_DIR/tools/walk-scripts/java/run_demo.sh" ]; then
-  cp "$CATALOG_DIR/tools/walk-scripts/java/run_demo.sh" "$STAGE/walk_scripts/run_demo.sh"
+if [ -n "$(git -C "$CATALOG_DIR" status --porcelain --untracked-files=normal)" ]; then
+  echo "ERROR: catalog checkout has uncommitted content: $CATALOG_DIR" >&2
+  exit 1
 fi
-copy_dir "$CATALOG_DIR/docs/imported/go-examples" "$STAGE"
 
-case "$MODE" in
-  sync)
-    mkdir -p "$EXAMPLES_DIR"
-    rsync -a --delete "$STAGE"/ "$EXAMPLES_DIR"/
-    echo "OK: generated $EXAMPLES_DIR from the shared demo catalog."
-    ;;
-  check)
-    if ! diff -qr "$STAGE" "$EXAMPLES_DIR"; then
-      echo "ERROR: $EXAMPLES_DIR does not match the shared demo catalog. Run scripts/sync-demo-catalog.sh --sync." >&2
-      exit 1
-    fi
-    echo "OK: $EXAMPLES_DIR matches the shared demo catalog."
-    ;;
-esac
+SOURCE_COMMIT="$(git -C "$CATALOG_DIR" rev-parse HEAD)"
+SOURCE_URL="$(git -C "$CATALOG_DIR" remote get-url origin)"
+(
+  cd "$PROJECT_ROOT"
+  go run ./cmd/niac-catalog-sync \
+    -mode "$MODE" \
+    -catalog-dir "$CATALOG_DIR" \
+    -examples-dir "$EXAMPLES_DIR" \
+    -repository "$SOURCE_URL" \
+    -commit "$SOURCE_COMMIT"
+)

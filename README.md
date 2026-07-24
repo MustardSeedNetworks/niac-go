@@ -127,7 +127,9 @@ devices:
 ## Demo Assets
 
 Large example scenarios, walks, and captures are generated from the shared
-NIAC demo catalog instead of being committed to this repo:
+NIAC demo catalog instead of being committed to this repo. Generation records
+the immutable source commit and validates scenarios and walks before updating
+the local examples:
 
 ```bash
 ./scripts/sync-demo-catalog.sh --sync
