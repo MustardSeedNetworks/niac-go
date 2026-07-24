@@ -340,6 +340,144 @@ func TestCompileRejectsInvalidDHCPSemantics(t *testing.T) {
 			},
 			code: fabric.CodeDHCPAddressCollision,
 		},
+		{
+			name: "lease outside network",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP:   net.ParseIP("192.0.2.10"),
+					MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+				}}
+			},
+			code: fabric.CodeInvalidDHCPLease,
+		},
+		{
+			name: "lease uses reserved address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP:   net.ParseIP("10.10.200.255"),
+					MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+				}}
+			},
+			code: fabric.CodeInvalidDHCPLease,
+		},
+		{
+			name: "lease has invalid MAC",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP: net.ParseIP("10.10.200.50"), MACAddress: net.HardwareAddr{0x02},
+				}}
+			},
+			code: fabric.CodeInvalidDHCPLease,
+		},
+		{
+			name: "lease has invalid MAC mask",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP:   net.ParseIP("10.10.200.50"),
+					MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+					MACMask:    net.HardwareAddr{0xff},
+				}}
+			},
+			code: fabric.CodeInvalidDHCPLease,
+		},
+		{
+			name: "lease overlaps pool",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP:   net.ParseIP("10.10.200.210"),
+					MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+				}}
+			},
+			code: fabric.CodeDHCPAddressCollision,
+		},
+		{
+			name: "lease collides with interface",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+					ClientIP:   net.ParseIP("10.10.200.1"),
+					MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+				}}
+			},
+			code: fabric.CodeDHCPAddressCollision,
+		},
+		{
+			name: "duplicate lease address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{
+					{
+						ClientIP:   net.ParseIP("10.10.200.50"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+					},
+					{
+						ClientIP:   net.ParseIP("10.10.200.50"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x11},
+					},
+				}
+			},
+			code: fabric.CodeDHCPAddressCollision,
+		},
+		{
+			name: "duplicate lease MAC",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{
+					{
+						ClientIP:   net.ParseIP("10.10.200.50"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+					},
+					{
+						ClientIP:   net.ParseIP("10.10.200.51"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x10},
+					},
+				}
+			},
+			code: fabric.CodeDHCPAddressCollision,
+		},
+		{
+			name: "overlapping masked lease MAC",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{
+					{
+						ClientIP:   net.ParseIP("10.10.200.50"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0},
+						MACMask:    net.HardwareAddr{0xff, 0xff, 0xff, 0, 0, 0},
+					},
+					{
+						ClientIP:   net.ParseIP("10.10.200.51"),
+						MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+						MACMask:    net.HardwareAddr{0xff, 0xff, 0xff, 0, 0, 0},
+					},
+				}
+			},
+			code: fabric.CodeDHCPAddressCollision,
+		},
+		{
+			name: "invalid DNS server address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.DomainNameServer = []net.IP{nil}
+			},
+			code: fabric.CodeInvalidDHCPOption,
+		},
+		{
+			name: "IPv6 DNS server address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.DomainNameServer = []net.IP{net.ParseIP("2001:4860:4860::8888")}
+			},
+			code: fabric.CodeInvalidDHCPOption,
+		},
+		{
+			name: "server identifier outside network",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.ServerIdentifier = net.ParseIP("192.0.2.10")
+			},
+			code: fabric.CodeInvalidDHCPOption,
+		},
+		{
+			name: "next server uses reserved address",
+			mutate: func(cfg *config.Config) {
+				cfg.Devices[1].DHCPConfig.NextServerIP = net.ParseIP("10.10.200.0")
+			},
+			code: fabric.CodeInvalidDHCPOption,
+		},
 	}
 
 	for _, tt := range tests {
@@ -352,6 +490,23 @@ func TestCompileRejectsInvalidDHCPSemantics(t *testing.T) {
 			}
 			assertDiagnostic(t, report, tt.code)
 		})
+	}
+}
+
+func TestCompileAcceptsValidDHCPLeasesAndOptions(t *testing.T) {
+	cfg := referenceConfig()
+	cfg.Devices[1].DHCPConfig.ClientLeases = []config.DHCPLease{{
+		ClientIP:   net.ParseIP("10.10.200.50"),
+		MACAddress: net.HardwareAddr{0x02, 0, 0, 0, 0, 0x50},
+	}}
+	cfg.Devices[1].DHCPConfig.DomainNameServer = []net.IP{net.ParseIP("8.8.8.8")}
+	cfg.Devices[1].DHCPConfig.ServerIdentifier = net.ParseIP("10.10.200.2")
+	cfg.Devices[1].DHCPConfig.NextServerIP = net.ParseIP("10.10.200.1")
+
+	report := fabric.Compile(cfg, accessBinding())
+
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v, want safe DHCP configuration", report.Diagnostics)
 	}
 }
 

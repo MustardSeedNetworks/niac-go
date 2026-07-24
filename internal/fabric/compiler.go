@@ -12,11 +12,12 @@ import (
 // Compile validates and canonicalizes a routed scenario without side effects.
 func Compile(cfg *config.Config, binding Binding) Report {
 	compiler := scenarioCompiler{
-		cfg:       cfg,
-		binding:   binding,
-		networks:  make(map[string]Network),
-		devices:   make(map[string]struct{}),
-		addresses: make(map[netip.Addr]string),
+		cfg:                cfg,
+		binding:            binding,
+		networks:           make(map[string]Network),
+		devices:            make(map[string]struct{}),
+		addresses:          make(map[netip.Addr]string),
+		dhcpLeaseAddresses: make(map[netip.Addr]string),
 	}
 	compiler.compileBinding()
 	compiler.compileNetworks()
@@ -26,12 +27,14 @@ func Compile(cfg *config.Config, binding Binding) Report {
 }
 
 type scenarioCompiler struct {
-	cfg       *config.Config
-	binding   Binding
-	networks  map[string]Network
-	devices   map[string]struct{}
-	addresses map[netip.Addr]string
-	report    Report
+	cfg                *config.Config
+	binding            Binding
+	networks           map[string]Network
+	devices            map[string]struct{}
+	addresses          map[netip.Addr]string
+	dhcpLeaseAddresses map[netip.Addr]string
+	dhcpLeaseMACs      []dhcpLeaseMAC
+	report             Report
 }
 
 func (c *scenarioCompiler) compileBinding() {

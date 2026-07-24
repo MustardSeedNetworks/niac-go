@@ -42,6 +42,8 @@ const (
 	CodeDHCPPoolOutsideNetwork   DiagnosticCode = "dhcp_pool_outside_network"
 	CodeInvalidDHCPRange         DiagnosticCode = "invalid_dhcp_range"
 	CodeInvalidDHCPRouter        DiagnosticCode = "invalid_dhcp_router"
+	CodeInvalidDHCPLease         DiagnosticCode = "invalid_dhcp_lease"
+	CodeInvalidDHCPOption        DiagnosticCode = "invalid_dhcp_option"
 	CodeReservedDHCPAddress      DiagnosticCode = "reserved_dhcp_address"
 	CodeDHCPAddressCollision     DiagnosticCode = "dhcp_address_collision"
 )
