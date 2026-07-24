@@ -14,7 +14,7 @@
  * - Primary:        Indigo #4f46e5 (Tailwind indigo-600) - filled buttons, glows
  * - Primary-strong: Indigo #3730a3 (indigo-700) - text/links on light surfaces (AA)
  * - Primary-soft:   Indigo #a5b4fc (indigo-300) - text/links on dark surfaces (AA)
- * - Brand-gold:     Mustard #d4a017 - cross-brand accent, warning, focus, premium
+ * - Brand-gold:     Mustard #d4a017 - cross-brand accent, warning, focus
  *
  * STATUS COLORS (tied to brand; constant across modes):
  * - Success: #4caf50 (= seed-500)

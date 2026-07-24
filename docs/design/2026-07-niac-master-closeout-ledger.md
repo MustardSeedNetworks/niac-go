@@ -2,9 +2,9 @@
 
 **Status:** Active
 
-**Updated:** 2026-07-23
+**Updated:** 2026-07-24
 
-**Baseline:** `main` at `60d431e0` after the #1090 merge
+**Baseline:** `main` at `f95a4d7b` after the #1113 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -21,13 +21,13 @@ Update it when work merges or a disposition changes.
 | v0.94.13 | Verified | Core and content assets, checksums, Cosign bundles, SLSA attestations, and macOS artifact passed |
 | Master plan PR #1064 | Merged | Execute and maintain this ledger from `main` |
 | Content-package integrity #1068 | Delivered by #1083 and #1084 | Content artifacts now participate in the release handoff and integrity contract |
-| Release PR #1087 | Open and held | Accumulate the current remediation wave before publishing v0.94.14 |
+| Release PR #1087 | Open and held | Accumulate remediation, acceptance, and final review before publishing v0.94.14 |
 
 ## Worktree ownership
 
 | Worktree | State | Disposition |
 | --- | --- | --- |
-| Primary checkout | Stages 0-2 complete; Stage 3 next | Uses one scoped branch per root-cause contract |
+| Primary checkout | Stages 0-4 complete; Stages 5-7 active | Uses one scoped branch per root-cause contract |
 | Detached `niac-release-review` | Preserved at v0.94.11 | Separate release context; do not remove without owner confirmation |
 
 ## Epic #1053 implementation queue
@@ -35,35 +35,35 @@ Update it when work merges or a disposition changes.
 | Issue | Priority | Current state | Stage or owner |
 | --- | --- | --- | --- |
 | #1032 browser authentication | High | Delivered in #1090 | Stage 2 evidence retained |
-| #1033 live static-route validation | High | Reproduced and accepted | Stage 3 |
-| #1034 routed Runtime Control | High | Reproduced and accepted | Stage 3 |
+| #1033 live static-route validation | High | Delivered in #1092 | Stage 3 evidence retained |
+| #1034 routed Runtime Control | High | Delivered in #1098 | Stage 3 evidence retained |
 | #1035 nested path containment | High | Delivered in #1071 | Stage 2 evidence retained |
-| #1036 Packet Inspector SSE envelope | High | Reproduced and accepted | Stage 4 |
+| #1036 Packet Inspector SSE envelope | High | Delivered in #1108 | Stage 4 evidence retained |
 | #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
 | #1041 bounded UDP proxy | High | Delivered in #1088 | Stage 2 evidence retained |
-| #1042 off-link notifications | High | Reproduced and accepted | Stage 3 after fault handoff |
-| #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
-| #1075 transactional simulation replacement | High | Reproduced and accepted | Stage 3 |
+| #1042 off-link notifications | High | Delivered in #1101 | Stage 3 evidence retained |
+| #1051 first-class browsers | High | CI contract delivered in #1109; installed-browser evidence pending | Stage 5 acceptance |
+| #1075 transactional simulation replacement | High | Delivered in #1100 | Stage 3 evidence retained |
 | [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) fingerprint stability | High | Delivered in foundation#3 and NIAC #1086 | Foundation v0.2.1 |
-| #1038 duplicate segment tags | Medium | Reproduced and accepted | Stage 3 |
-| #1039 stale API topology | Medium | Reproduced and accepted | Stage 3 |
-| #1040 missing stats publisher | Medium | Reproduced and accepted | Stage 4 |
+| #1038 duplicate segment tags | Medium | Delivered in #1093 | Stage 3 evidence retained |
+| #1039 stale API topology | Medium | Delivered in #1102 | Stage 3 evidence retained |
+| #1040 missing stats publisher | Medium | Delivered in #1111 | Stage 4 evidence retained |
 | #1043 partial server startup | Medium | Closed; obsolete after single-listener migration | No implementation required |
-| #1044 SSH idle expiry | Medium | Reproduced and accepted | Stage 4 |
-| #1045 SNMP transport state | Medium | Reproduced and accepted | Stage 3 |
-| #1046 unresolved ConfigPath | Medium | Reproduced and accepted | Stage 3 |
-| #1047 TTL accounting | Medium | Reproduced and accepted | Stage 3 |
-| #1048 offline PCAP access | Medium | Reproduced and accepted | Stage 4 |
-| #1049 capture-exit recovery | Medium | Reproduced and accepted | Stage 4 |
+| #1044 SSH idle expiry | Medium | Delivered in #1112 | Stage 4 evidence retained |
+| #1045 SNMP transport state | Medium | Delivered in #1103 | Stage 3 evidence retained |
+| #1046 unresolved ConfigPath | Medium | Delivered in #1095 | Stage 3 evidence retained |
+| #1047 TTL accounting | Medium | Delivered in #1094 | Stage 3 evidence retained |
+| #1048 offline PCAP access | Medium | Delivered in #1110 | Stage 4 evidence retained |
+| #1049 capture-exit recovery | Medium | Delivered in #1113 | Stage 4 evidence retained |
 | #1052 i18next migration | Medium | Delivered in #1089 | Stage 4 evidence retained |
 | #1057 fail-closed hooks | Medium | Delivered in #1067 | Stage 0 prerequisite complete |
 | #1068 content-package integrity | Medium | Delivered in #1083 and #1084 | Verified by v0.94.13 |
-| #1076 IPv4 checksum/source validation | Medium | Reproduced and accepted | Stage 3 |
-| #1077 stack lifecycle contract | Medium | Reproduced and accepted | Stage 3 |
-| #1078 DHCP compiler validation | Medium | Reproduced and accepted | Stage 3 |
-| #1079 immutable catalog sync | Medium | Reproduced and accepted | Stage 3 |
-| #1080 active-simulation recovery | Medium | Reproduced and accepted | Stage 3 |
-| #1081 preflight interface parity | Medium | Reproduced and accepted | Stage 3 |
+| #1076 IPv4 checksum/source validation | Medium | Delivered in #1104 | Stage 3 evidence retained |
+| #1077 stack lifecycle contract | Medium | Delivered in #1105 | Stage 3 evidence retained |
+| #1078 DHCP compiler validation | Medium | Delivered in #1097 | Stage 3 evidence retained |
+| #1079 immutable catalog sync | Medium | Delivered in #1107 | Stage 3 evidence retained |
+| #1080 active-simulation recovery | Medium | Delivered in #1106 | Stage 3 evidence retained |
+| #1081 preflight interface parity | Medium | Delivered in #1096 | Stage 3 evidence retained |
 
 ## Defect-register reconciliation
 
@@ -97,13 +97,13 @@ one root cause and acceptance contract are absorbed into the linked issue.
 
 | Plan or issue | Current disposition |
 | --- | --- |
-| Pre-1.0 roadmap | Active acceptance boundary; Stage 6 |
+| Pre-1.0 roadmap | Entitlement implementation complete in #1114 when merged; live and release acceptance remain |
 | Routed virtual-lab plan | Phases 0-6 delivered; Phase 7 acceptance active |
 | Remediation plan/execution guide | Active implementation queue under #1053 |
-| Defect-hunting plan/register | Active evidence source; close after reconciliation |
-| [Local-plan intake](2026-07-local-plan-intake.md) | Five local plans reconciled; catalog, stale UI references, replay accounting/positioning, cruft, and optional gates remain |
-| Multi-VLAN epic #882 | Reconcile delivered architecture in Stage 7 |
-| Fleet-drift epic #1004 | Reconcile Renovate/foundation delivery and remaining shared CI |
+| Defect-hunting plan/register | Archived; high/medium findings reconciled into this ledger and #1053 |
+| [Local-plan intake](2026-07-local-plan-intake.md) | Maintenance and positioning reconciled; nearest-switch live acceptance remains |
+| Multi-VLAN acceptance #882 | Implementation delivered; tagged live evidence remains |
+| Fleet-drift epic #1004 | Closed; shared Renovate, foundation, and security gates delivered; product release pipelines remain intentionally local |
 
 ## Stage 0 exit checklist
 

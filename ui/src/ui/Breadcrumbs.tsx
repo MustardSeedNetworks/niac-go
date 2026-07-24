@@ -14,15 +14,11 @@ const ROUTE_LABELS: Record<string, string> = {
   '/devices': 'Running Devices',
   '/device-config': 'Device Library',
   '/topology': 'Topology',
-  '/analysis': 'Replay',
   '/automation': 'Alerts',
   '/traffic': 'Fault Injection',
   '/debug': 'Logs',
   '/packets': 'Packets',
-  '/templates': 'Templates',
   '/config-diff': 'Compare & Merge',
-  '/pcap-analyzer': 'PCAP Inspector',
-  '/neighbors': 'Neighbors',
   '/walk-validator': 'SNMP Walks',
 };
 

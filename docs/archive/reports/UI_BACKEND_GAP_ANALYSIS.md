@@ -1,4 +1,7 @@
-# UI/Backend Gap Analysis & Improvement Plan
+# Historical UI/Backend Gap Analysis & Improvement Plan
+
+> This is a completed planning snapshot. Current routes and capabilities are
+> documented in `docs/WEBUI.md` and `docs/OPERATOR_SURFACE_ALIGNMENT.md`.
 
 ## Overview
 

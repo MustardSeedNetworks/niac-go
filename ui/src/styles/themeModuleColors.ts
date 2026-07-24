@@ -7,10 +7,8 @@
  * across all modules; the module accent identifies the feature in icon /
  * chip form.
  *
- * The five accents are deliberately differentiated (not a mono-indigo ramp).
- * They mirror how Seed (Roots/Canopy/Shell/Sap/Harvest) and Stem (Reflector/
- * Benchmark/ServiceTest/TrafficGen/Measure/Certify) give each module its
- * own hue for visual scannability.
+ * The five accents are deliberately differentiated instead of using a
+ * single-color ramp, which keeps feature groups visually scannable.
  *
  * All values reference CSS variables in src/index.css `@theme`:
  *   --color-module-topology    Indigo-600 #4f46e5  (= brand anchor)

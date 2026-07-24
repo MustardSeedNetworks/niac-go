@@ -4,8 +4,8 @@
 
   // Globs to ignore
   "ignores": [
-    "node_modules/**",
-    "web/node_modules/**",
+    "**/node_modules/**",
+    "docs/archive/**",
     "build/**",
     "dist/**",
     "coverage/**",

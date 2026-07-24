@@ -1,9 +1,9 @@
 # NIAC Defect-Hunting Findings
 
-This is the working finding register for `defect-hunting-plan.md`. A finding is
-not closed by code inspection alone. Closure requires a failing reproduction,
-a root-cause fix, a regression test, and the applicable local/CT304 acceptance
-evidence.
+> Historical finding register. Current dispositions are in the
+> [master closeout ledger](../../design/2026-07-niac-master-closeout-ledger.md)
+> and GitHub issue #1053. This file is retained as audit evidence, not an active
+> backlog.
 
 ## Priority findings
 

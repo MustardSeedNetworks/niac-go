@@ -115,15 +115,6 @@ function AppShell() {
                 </PageWithErrorBoundary>
               }
             />
-            {/* Back-compat for folded-in pages — bookmarks and copied URLs
-              continue to work after pages moved into their host sections. */}
-            <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
-            <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
-            <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
-            <Route
-              path="/pcap-analyzer"
-              element={<Navigate to="/packets?view=files" replace={true} />}
-            />
             <Route path="*" element={<Navigate to="/" replace={true} />} />
           </Routes>
         </Suspense>

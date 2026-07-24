@@ -1,5 +1,9 @@
 # NIAC Defect-Hunting Plan
 
+> Historical execution plan. Its high and medium findings were reconciled into
+> the 2026-07 master closeout ledger and GitHub issue #1053. This file is
+> retained as audit evidence, not an active backlog.
+
 ## Objective
 
 Find and fix correctness, safety, interoperability, lifecycle, and usability defects across NIAC. The immediate acceptance target is a CyberScope discovery that reconstructs a routed multi-site network from NIAC's packet and management-plane responses without exposing the physical network.

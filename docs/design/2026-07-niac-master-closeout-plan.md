@@ -27,9 +27,9 @@ must be reconciled, not parallel backlogs.
 | 0: accurate ledger | Complete | #1064, #1067, and accepted GitHub dispositions |
 | 1: evidence gate | Complete | #1083, #1084, verified v0.94.13, and maintained browser/i18n gates |
 | 2: external boundaries | Complete | foundation#3/v0.2.1, #1071, #1086, #1088, and #1090 |
-| 3: routed authoritative state | Active | #1033, #1034, #1038, #1039, #1042, #1045-#1047, and #1075-#1081 |
-| 4: lifecycle and browsers | Active after Stage 3 | #1036, #1040, #1044, #1048, #1049, and #1051; #1052 delivered in #1089 |
-| 5-7: acceptance and plan retirement | Pending | Begin only after the implementation queues are green |
+| 3: routed authoritative state | Complete | #1092-#1098 and #1100-#1107 |
+| 4: lifecycle and browsers | Complete | #1108-#1113; browser CI contract in #1109; #1052 delivered in #1089 |
+| 5-7: acceptance and plan retirement | Active | Implementation is green; live browser/lab and release evidence remain |
 | 8: controlled expansion | Owner-approved OSPF only | Implement OSPF after Phase 7 passes; separately gate or retire the remaining expansion ideas |
 
 ## Source-of-truth hierarchy
@@ -162,7 +162,7 @@ is reproducible.
 
 | Plan or issue | Required disposition |
 | --- | --- |
-| Defect-hunting plan/register | Close delivered findings; move unique debt to issues; archive the working register |
+| Defect-hunting plan/register | Archived after high/medium findings were reconciled into the ledger and #1053 |
 | [Local-plan intake](2026-07-local-plan-intake.md) | Resolve every nearest-switch, UI, modernization, cruft/duplication, and replay-positioning item recorded there |
 | Multi-VLAN epic #882 | Reconcile delivered architecture; issue only the actual remaining UI/catalog/acceptance work |
 | Fleet-drift epic #1004 | Record delivered Renovate/foundation work; finish or separately track shared CI and doc alignment |
