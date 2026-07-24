@@ -13,8 +13,8 @@ const (
 )
 
 // NewSession creates an isolated user-mode command session.
-func NewSession(state *devicestate.Store) *Session {
-	return &Session{state: state, mode: ModeUser}
+func NewSession(state *devicestate.Store, validateRoute RouteValidator) *Session {
+	return &Session{state: state, validateRoute: validateRoute, mode: ModeUser}
 }
 
 // Mode returns the current command mode.

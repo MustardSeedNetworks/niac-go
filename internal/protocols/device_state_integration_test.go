@@ -158,7 +158,10 @@ func TestFlatCLIAddressAndShutdownChangePacketDelivery(t *testing.T) {
 	}}}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	device := &cfg.Devices[0]
-	session := devicecli.NewSession(stack.deviceStates[device])
+	session := devicecli.NewSession(
+		stack.deviceStates[device],
+		stack.staticRouteValidator(device),
+	)
 	for _, command := range []string{
 		"enable", "configure terminal", "interface Management", "ip address 192.0.2.20/32",
 	} {

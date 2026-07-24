@@ -40,13 +40,14 @@ func (s *Session) executeGlobal(fields []string) Response {
 func (s *Session) setStaticRoute(fields []string) Response {
 	destination, destinationErr := netip.ParsePrefix(fields[2])
 	nextHop, nextHopErr := netip.ParseAddr(fields[3])
+	route := devicestate.Route{
+		Destination: destination, Via: fields[4], NextHop: nextHop,
+	}
 	if destinationErr != nil || !destination.Addr().Is4() || nextHopErr != nil || !nextHop.Is4() ||
-		!hasInterface(s.state.Snapshot().Network.Interfaces, fields[4]) {
+		s.validateRoute == nil || !s.validateRoute(route) {
 		return Response{Output: "% Invalid static route"}
 	}
-	s.state.UpsertRoute(devicestate.Route{
-		Destination: destination, Via: fields[4], NextHop: nextHop,
-	})
+	s.state.UpsertRoute(route)
 	return Response{}
 }
 

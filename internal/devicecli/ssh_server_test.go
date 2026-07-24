@@ -128,7 +128,7 @@ func newSSHServer(t *testing.T, state *devicestate.Store) *devicecli.SSHServer {
 	}
 	server, err := devicecli.NewSSHServer(state, devicecli.Credentials{
 		Username: "admin", Password: "test-password",
-	}, hostSigner)
+	}, hostSigner, allowStaticRoute)
 	if err != nil {
 		t.Fatalf("NewSSHServer() error = %v", err)
 	}

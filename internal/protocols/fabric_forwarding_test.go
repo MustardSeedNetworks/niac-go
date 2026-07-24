@@ -76,7 +76,10 @@ func TestCLIShutdownChangesFabricDelivery(t *testing.T) {
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	stack.ConfigureFabric(topology)
 	server := &cfg.Devices[1]
-	session := devicecli.NewSession(stack.deviceStates[server])
+	session := devicecli.NewSession(
+		stack.deviceStates[server],
+		stack.staticRouteValidator(server),
+	)
 	for _, command := range []string{"enable", "configure terminal", "interface eth0", "shutdown"} {
 		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
 			t.Fatalf("%q response = %#v", command, response)
@@ -98,7 +101,10 @@ func TestCLIShutdownStopsAttachmentARP(t *testing.T) {
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	stack.ConfigureFabric(topology)
 	router := &cfg.Devices[0]
-	session := devicecli.NewSession(stack.deviceStates[router])
+	session := devicecli.NewSession(
+		stack.deviceStates[router],
+		stack.staticRouteValidator(router),
+	)
 	for _, command := range []string{"enable", "configure terminal", "interface outside", "shutdown"} {
 		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
 			t.Fatalf("%q response = %#v", command, response)
@@ -115,7 +121,10 @@ func TestCLIAddressChangeMovesFabricDelivery(t *testing.T) {
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	stack.ConfigureFabric(topology)
 	server := &cfg.Devices[1]
-	session := devicecli.NewSession(stack.deviceStates[server])
+	session := devicecli.NewSession(
+		stack.deviceStates[server],
+		stack.staticRouteValidator(server),
+	)
 	for _, command := range []string{
 		"enable", "configure terminal", "interface eth0", "ip address 10.20.0.20/24",
 	} {
@@ -153,17 +162,42 @@ func TestCLIStaticRouteChangesFabricDelivery(t *testing.T) {
 		t.Fatalf("targets before route = %#v", targets)
 	}
 
-	session := devicecli.NewSession(routerState)
-	for _, command := range []string{
-		"enable", "configure terminal", "ip route 10.20.0.0/24 10.10.200.2 inside",
-	} {
+	session := devicecli.NewSession(routerState, stack.staticRouteValidator(router))
+	for _, command := range []string{"enable", "configure terminal"} {
 		if response := session.Execute(command); strings.HasPrefix(response.Output, "%") {
 			t.Fatalf("%q response = %#v", command, response)
 		}
 	}
+	for _, command := range []string{
+		"ip route 10.20.0.1/24 10.20.0.10 inside",
+		"ip route 10.20.0.0/24 203.0.113.99 inside",
+		"ip route 10.20.0.0/24 10.20.0.99 inside",
+		"ip route 10.20.0.0/24 10.20.0.1 inside",
+	} {
+		if response := session.Execute(command); !strings.HasPrefix(response.Output, "%") {
+			t.Fatalf("%q response = %#v, want rejection", command, response)
+		}
+	}
+	const validRoute = "ip route 10.20.0.0/24 10.20.0.10 inside"
+	if response := session.Execute(validRoute); strings.HasPrefix(response.Output, "%") {
+		t.Fatalf("%q response = %#v", validRoute, response)
+	}
+	routes := routerState.Snapshot().Network.Routes
+	if len(routes) != 1 || routes[0].NextHop != netip.MustParseAddr("10.20.0.10") {
+		t.Fatalf("routes after mutation = %#v", routes)
+	}
 	targets := stack.ipHandler.getTargetDevices(destination, pkt, 1, 0)
 	if len(targets) != 1 || targets[0] != &cfg.Devices[1] {
 		t.Fatalf("targets after route = %#v", targets)
+	}
+
+	routerState.UpsertRoute(devicestate.Route{
+		Destination: netip.MustParsePrefix("10.20.0.0/24"),
+		Via:         "inside",
+		NextHop:     netip.MustParseAddr("10.20.0.99"),
+	})
+	if targets = stack.ipHandler.getTargetDevices(destination, pkt, 1, 0); targets != nil {
+		t.Fatalf("targets with unowned next hop = %#v, want nil", targets)
 	}
 }
 
