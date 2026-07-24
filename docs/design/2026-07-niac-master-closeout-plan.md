@@ -20,6 +20,18 @@ The high/medium remediation epic is the implementation queue. The routed-lab
 plan and pre-1.0 roadmap define acceptance. All other plans are inputs that
 must be reconciled, not parallel backlogs.
 
+## Execution progress
+
+| Stage | State | Evidence or next boundary |
+| --- | --- | --- |
+| 0: accurate ledger | Complete | #1064, #1067, and accepted GitHub dispositions |
+| 1: evidence gate | Complete | #1083, #1084, verified v0.94.13, and maintained browser/i18n gates |
+| 2: external boundaries | Complete | foundation#3/v0.2.1, #1071, #1086, #1088, and #1090 |
+| 3: routed authoritative state | Active | #1033, #1034, #1038, #1039, #1042, #1045-#1047, and #1075-#1081 |
+| 4: lifecycle and browsers | Active after Stage 3 | #1036, #1040, #1044, #1048, #1049, and #1051; #1052 delivered in #1089 |
+| 5-7: acceptance and plan retirement | Pending | Begin only after the implementation queues are green |
+| 8: controlled expansion | Owner-approved OSPF only | Implement OSPF after Phase 7 passes; separately gate or retire the remaining expansion ideas |
+
 ## Source-of-truth hierarchy
 
 | Rank | Source | Role |

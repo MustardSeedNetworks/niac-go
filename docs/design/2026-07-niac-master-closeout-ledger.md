@@ -4,7 +4,7 @@
 
 **Updated:** 2026-07-23
 
-**Baseline:** `main` at `ee44d48c` after the #1074 merge
+**Baseline:** `main` at `60d431e0` after the #1090 merge
 
 This ledger prevents duplicate ownership while the
 [master closeout plan](2026-07-niac-master-closeout-plan.md) is executed.
@@ -17,31 +17,34 @@ Update it when work merges or a disposition changes.
 | v0.94.10 core artifacts | Verified | Release workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
 | v0.94.10-v0.94.11 content packages | Integrity metadata missing | Tracked by accepted medium defect #1068 |
 | v0.94.11 core artifacts | Verified | Workflow, checksum, Cosign bundle, SLSA attestation, and macOS artifact passed |
+| v0.94.12 | Failed closed | Superseded without publication after the release-integrity gate rejected incomplete content metadata |
+| v0.94.13 | Verified | Core and content assets, checksums, Cosign bundles, SLSA attestations, and macOS artifact passed |
 | Master plan PR #1064 | Merged | Execute and maintain this ledger from `main` |
-| Next release after v0.94.11 | Blocked by #1068 | Add content-package integrity metadata before publication |
+| Content-package integrity #1068 | Delivered by #1083 and #1084 | Content artifacts now participate in the release handoff and integrity contract |
+| Release PR #1087 | Open and held | Accumulate the current remediation wave before publishing v0.94.14 |
 
 ## Worktree ownership
 
 | Worktree | State | Disposition |
 | --- | --- | --- |
-| Primary checkout | Stage 0 complete; Stage 1 next | Uses scoped branches for release-integrity work |
+| Primary checkout | Stages 0-2 complete; Stage 3 next | Uses one scoped branch per root-cause contract |
 | Detached `niac-release-review` | Preserved at v0.94.11 | Separate release context; do not remove without owner confirmation |
 
 ## Epic #1053 implementation queue
 
 | Issue | Priority | Current state | Stage or owner |
 | --- | --- | --- | --- |
-| #1032 browser authentication | High | Reproduced and accepted | Stage 2 after #1041 |
+| #1032 browser authentication | High | Delivered in #1090 | Stage 2 evidence retained |
 | #1033 live static-route validation | High | Reproduced and accepted | Stage 3 |
 | #1034 routed Runtime Control | High | Reproduced and accepted | Stage 3 |
 | #1035 nested path containment | High | Delivered in #1071 | Stage 2 evidence retained |
 | #1036 Packet Inspector SSE envelope | High | Reproduced and accepted | Stage 4 |
 | #1037 HTTPS-only listeners | High | Delivered in #1063 | Stage 2 evidence retained |
-| #1041 bounded UDP proxy | High | Reproduced and accepted | Stage 2 next |
+| #1041 bounded UDP proxy | High | Delivered in #1088 | Stage 2 evidence retained |
 | #1042 off-link notifications | High | Reproduced and accepted | Stage 3 after fault handoff |
 | #1051 first-class browsers | High | Accepted | Stages 1 and 4 |
 | #1075 transactional simulation replacement | High | Reproduced and accepted | Stage 3 |
-| [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) fingerprint stability | High | Reproduced and tracked in foundation | Stage 2 shared dependency |
+| [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) fingerprint stability | High | Delivered in foundation#3 and NIAC #1086 | Foundation v0.2.1 |
 | #1038 duplicate segment tags | Medium | Reproduced and accepted | Stage 3 |
 | #1039 stale API topology | Medium | Reproduced and accepted | Stage 3 |
 | #1040 missing stats publisher | Medium | Reproduced and accepted | Stage 4 |
@@ -52,9 +55,9 @@ Update it when work merges or a disposition changes.
 | #1047 TTL accounting | Medium | Reproduced and accepted | Stage 3 |
 | #1048 offline PCAP access | Medium | Reproduced and accepted | Stage 4 |
 | #1049 capture-exit recovery | Medium | Reproduced and accepted | Stage 4 |
-| #1052 i18next migration | Medium | Accepted | Stage 4 |
+| #1052 i18next migration | Medium | Delivered in #1089 | Stage 4 evidence retained |
 | #1057 fail-closed hooks | Medium | Delivered in #1067 | Stage 0 prerequisite complete |
-| #1068 content-package integrity | Medium | Accepted | Stage 1 before release |
+| #1068 content-package integrity | Medium | Delivered in #1083 and #1084 | Verified by v0.94.13 |
 | #1076 IPv4 checksum/source validation | Medium | Reproduced and accepted | Stage 3 |
 | #1077 stack lifecycle contract | Medium | Reproduced and accepted | Stage 3 |
 | #1078 DHCP compiler validation | Medium | Reproduced and accepted | Stage 3 |
@@ -85,8 +88,8 @@ one root cause and acceptance contract are absorbed into the linked issue.
 | NIAC-DEF-032 | UI chunk warning reproduced | Retain as low maintenance debt |
 | NIAC-DEF-035 | Root cause fixed | Absorbed into Stage 5 route-MIB live acceptance |
 | NIAC-DEF-036 | Catalog rebuilt | Absorbed into Stage 5 routed live acceptance |
-| NIAC-DEF-037 | Deprecated extractor reproduced | Absorbed into accepted medium #1052 |
-| NIAC-DEF-038 | Foundation fingerprint race reproduced | Tracked as high in [foundation#2](https://github.com/MustardSeedNetworks/foundation/issues/2) |
+| NIAC-DEF-037 | Deprecated extractor replaced | Delivered in #1089 |
+| NIAC-DEF-038 | Foundation fingerprint race fixed | Delivered in foundation#3, v0.2.1, and NIAC #1086 |
 | NIAC-DEF-046 | MIB-II work landed | Absorbed into Stage 5/6 CyberScope acceptance |
 | NIAC-DEF-050 | Markdown backlog reproduced | Retain as low maintenance debt |
 
