@@ -128,6 +128,50 @@ func TestCurrentTopology(t *testing.T) {
 	}
 }
 
+func TestCurrentTopologyReadsRuntimeStackProjection(t *testing.T) {
+	cfg := mustLoadConfig(t, baseConfigYAML)
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	server := &Server{
+		cfg: ServerConfig{
+			Stack:    stack,
+			Topology: topology.Build(cfg),
+		},
+		logger: slog.Default(),
+	}
+	updated := mustLoadConfig(t, updatedConfigYAML)
+	if err := stack.ReloadConfig(updated); err != nil {
+		t.Fatalf("ReloadConfig() error = %v", err)
+	}
+
+	got := server.currentTopology()
+	if len(got.Nodes) != 1 || got.Nodes[0].Name != "core2" {
+		t.Fatalf("currentTopology() = %#v", got)
+	}
+}
+
+func TestClearSimulationClearsAllSimulationState(t *testing.T) {
+	cfg := mustLoadConfig(t, baseConfigYAML)
+	server := &Server{
+		cfg: ServerConfig{
+			Stack:      protocols.NewStack(nil, cfg, logging.NewDebugConfig(0)),
+			Config:     cfg,
+			ConfigPath: "/tmp/active.yaml",
+			Interface:  "eth0",
+			Replay:     &stubReplay{},
+			Topology:   topology.Build(cfg),
+		},
+		logger: slog.Default(),
+	}
+
+	server.ClearSimulation()
+
+	if server.currentStack() != nil || server.currentConfig() != nil ||
+		server.configPath() != "" || server.currentInterface() != "" ||
+		server.cfg.Replay != nil || len(server.currentTopology().Nodes) != 0 {
+		t.Fatalf("simulation state was not cleared: %#v", server.cfg)
+	}
+}
+
 func TestReplaceConfig(t *testing.T) {
 	server := &Server{
 		cfg: ServerConfig{

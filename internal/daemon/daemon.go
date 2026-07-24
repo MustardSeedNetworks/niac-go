@@ -742,10 +742,14 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 		if d.simulation.cfg != nil {
 			status.DeviceCount = d.simulation.cfg.DeviceCount()
 		}
-		if d.simulation.fabric != nil {
+		if d.simulation.fabric != nil && d.simulation.stack != nil {
 			stats := d.simulation.stack.GetStats()
+			topology, ok := d.simulation.stack.RuntimeFabricTopology()
+			if !ok {
+				topology = *d.simulation.fabric
+			}
 			status.Fabric = &api.SimulationFabricStatus{
-				Topology:    *d.simulation.fabric,
+				Topology:    topology,
 				Forwarded:   stats.FabricForwarded,
 				Drops:       stats.FabricDrops,
 				Received:    stats.PacketsReceived,

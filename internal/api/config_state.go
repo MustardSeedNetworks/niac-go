@@ -119,9 +119,14 @@ func (s *Server) currentConfig() *config.Config {
 
 func (s *Server) currentTopology() topology.Graph {
 	s.configMu.RLock()
-	defer s.configMu.RUnlock()
+	stack := s.cfg.Stack
+	cached := s.cfg.Topology
+	s.configMu.RUnlock()
 
-	return s.cfg.Topology
+	if stack != nil {
+		return stack.RuntimeTopology()
+	}
+	return cached
 }
 
 func (s *Server) replaceConfig(cfg *config.Config) {

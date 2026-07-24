@@ -842,5 +842,8 @@ func (s *Server) ClearSimulation() {
 
 	s.cfg.Stack = nil
 	s.cfg.Config = nil
+	s.cfg.ConfigPath = ""
+	s.cfg.Interface = ""
 	s.cfg.Replay = nil
+	s.cfg.Topology = topology.Graph{}
 }
