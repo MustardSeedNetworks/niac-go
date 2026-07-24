@@ -214,6 +214,28 @@ func TestValidate_DetectsDuplicateIdentityAcrossSegments(t *testing.T) {
 	}
 }
 
+func TestValidate_DetectsDuplicateSegmentTags(t *testing.T) {
+	cfg := &Config{Segments: []Segment{
+		{Tag: UntaggedTag, ConfigPath: "first.yaml"},
+		{Tag: UntaggedTag, ConfigPath: "second.yaml"},
+	}}
+
+	result := NewValidator("segments.yaml").Validate(cfg)
+
+	if result.Valid {
+		t.Fatal("Validate() valid = true, want duplicate segment tag errors")
+	}
+	fields := make(map[string]bool)
+	for _, validationErr := range result.Errors {
+		fields[validationErr.Field] = true
+	}
+	for _, field := range []string{"segments[0].tag", "segments[1].tag"} {
+		if !fields[field] {
+			t.Fatalf("errors = %#v, want field %q", result.Errors, field)
+		}
+	}
+}
+
 func TestValidate_ResolvesForwardTopologyReference(t *testing.T) {
 	cfg := &Config{Devices: []Device{
 		{

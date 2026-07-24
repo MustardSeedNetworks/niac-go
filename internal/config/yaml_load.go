@@ -151,9 +151,25 @@ func buildSegments(
 	}
 
 	segments := make([]Segment, 0, len(yamlConfig.Segments))
+	segmentTags := make(map[int]int, len(yamlConfig.Segments))
 
-	for _, ySeg := range yamlConfig.Segments {
-		seg, err := buildSegment(ySeg, includePath, configDir, roots, registry)
+	for index, ySeg := range yamlConfig.Segments {
+		tag, err := parseSegmentTag(string(ySeg.Tag))
+		if err != nil {
+			return nil, err
+		}
+		if first, duplicate := segmentTags[tag]; duplicate {
+			return nil, fmt.Errorf(
+				"%w: segments[%d].tag and segments[%d].tag normalize to %d",
+				ErrDuplicateSegmentTag,
+				first,
+				index,
+				tag,
+			)
+		}
+		segmentTags[tag] = index
+
+		seg, err := buildSegment(ySeg, tag, includePath, configDir, roots, registry)
 		if err != nil {
 			return nil, err
 		}
@@ -166,15 +182,11 @@ func buildSegments(
 
 func buildSegment(
 	ySeg converter.Segment,
+	tag int,
 	includePath, configDir string,
 	roots []string,
 	registry *oui.Registry,
 ) (Segment, error) {
-	tag, err := parseSegmentTag(string(ySeg.Tag))
-	if err != nil {
-		return Segment{}, err
-	}
-
 	hasInline := len(ySeg.Devices) > 0
 	hasConfig := ySeg.Config != ""
 

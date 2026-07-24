@@ -13,6 +13,7 @@ var (
 	ErrSegmentsAndTopLevelDevices = errors.New("use either top-level devices or segments, not both")
 	ErrSegmentDevicesXORConfig    = errors.New("segment must set exactly one of devices or config")
 	ErrInvalidSegmentTag          = errors.New("invalid segment tag")
+	ErrDuplicateSegmentTag        = errors.New("duplicate segment tag")
 	ErrInvalidMapToIP             = errors.New("invalid map_to_ip")
 	ErrInvalidTTLIP               = errors.New("invalid ttl ip")
 	ErrInvalidTTLMask             = errors.New("invalid ttl mask")
@@ -164,6 +165,20 @@ func (c *Config) NormalizedSegments() []Segment {
 	}
 
 	return []Segment{{Tag: UntaggedTag, Devices: c.Devices}}
+}
+
+// DuplicateSegmentTags returns every tag mapped to its conflicting segment indices.
+func DuplicateSegmentTags(segments []Segment) map[int][]int {
+	indices := make(map[int][]int, len(segments))
+	for index, segment := range segments {
+		indices[segment.Tag] = append(indices[segment.Tag], index)
+	}
+	for tag, locations := range indices {
+		if len(locations) == 1 {
+			delete(indices, tag)
+		}
+	}
+	return indices
 }
 
 // RateMode selects how replay paces its packet sends. ScaleTime applies only
