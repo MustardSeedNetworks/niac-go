@@ -8,6 +8,40 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
+func TestAgentTransportTablesTrackSharedDeviceState(t *testing.T) {
+	device := createTestDevice()
+	device.SSHConfig = &config.SSHConfig{Enabled: true}
+	state := devicestate.NewStore(devicestate.Identity{Hostname: device.Name})
+	state.ReplaceNetwork(devicestate.Network{Interfaces: []devicestate.Interface{{
+		Name: "eth0", Address: netip.MustParsePrefix("192.0.2.10/24"),
+		AdminUp: true, OperUp: true,
+	}}})
+	agent := NewAgentWithState(device, state, AgentOptions{Community: "public"})
+
+	assertTransportListener(t, agent, tcpMIBRoot+".13.1.3.192.0.2.10.22.0.0.0.0.0")
+	assertTransportListener(t, agent, udpMIBRoot+".5.1.2.192.0.2.10.161")
+	if err := state.UpdateInterface("eth0", func(iface devicestate.Interface) (devicestate.Interface, error) {
+		iface.Address = netip.MustParsePrefix("192.0.2.20/24")
+		return iface, nil
+	}); err != nil {
+		t.Fatalf("UpdateInterface() error = %v", err)
+	}
+
+	assertTransportListener(t, agent, tcpMIBRoot+".13.1.3.192.0.2.20.22.0.0.0.0.0")
+	assertTransportListener(t, agent, udpMIBRoot+".5.1.2.192.0.2.20.161")
+	if agent.mib.Get(tcpMIBRoot+".13.1.3.192.0.2.10.22.0.0.0.0.0") != nil ||
+		agent.mib.Get(udpMIBRoot+".5.1.2.192.0.2.10.161") != nil {
+		t.Fatal("transport tables retained the previous runtime address")
+	}
+}
+
+func assertTransportListener(t *testing.T, agent *Agent, oid string) {
+	t.Helper()
+	if _, err := agent.HandleGet(oid); err != nil {
+		t.Fatalf("HandleGet(%q) error = %v", oid, err)
+	}
+}
+
 func TestAgentSysNameReadsSharedDeviceState(t *testing.T) {
 	device := &config.Device{Name: "configured-name"}
 	state := devicestate.NewStore(devicestate.Identity{Hostname: "edge-1"})

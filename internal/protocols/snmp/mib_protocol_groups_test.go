@@ -48,11 +48,12 @@ func TestMIBIIConfiguredListenerTables(t *testing.T) {
 	device.FTPConfig = &config.FTPConfig{Enabled: true}
 	device.NetBIOSConfig = &config.NetBIOSConfig{Enabled: true}
 	device.IPerf3 = &config.IPerf3Config{Enabled: true, Port: 5202}
+	device.SSHConfig = &config.SSHConfig{Enabled: true}
 	device.DHCPConfig = &config.DHCPConfig{}
 	device.DNSConfig = &config.DNSConfig{}
 	agent := NewAgent(device, 0)
 
-	for _, port := range []int{21, 80, 139, 5202} {
+	for _, port := range []int{21, 22, 80, 139, 5202} {
 		index := fmt.Sprintf("192.168.1.1.%d.0.0.0.0.0", port)
 		for column := 1; column <= 5; column++ {
 			oid := fmt.Sprintf("%s.13.1.%d.%s", tcpMIBRoot, column, index)
