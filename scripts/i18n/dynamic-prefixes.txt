@@ -107,7 +107,7 @@ help:footer.
 
 # pages.<key>.{label,title,description} — usePages() hook (in
 # pageRegistry.tsx) generates the route table via t(`${i18nKey}.label`)
-# / t(`${i18nKey}.title`) / t(`${i18nKey}.description`) for 13 pages.
+# / t(`${i18nKey}.title`) / t(`${i18nKey}.description`) for registered pages.
 # Same pattern for the `deviceEditor.{new,edit}{Label,Title,
 # Description}` six keys consumed by App.tsx's inline PageConfig.
 pages:dashboard.
@@ -124,6 +124,9 @@ pages:configDiff.
 pages:walkValidator.
 pages:libraryWalks.
 pages:libraryPcaps.
+pages:newSimWizard.
+pages:walkAnalyzer.
+pages:license.
 
 # protocols.filters.* / protocols.labels.* — discovery-protocol UI
 # (CDP/LLDP/EDP/FDP filtering chip + neighbor table) reads filter

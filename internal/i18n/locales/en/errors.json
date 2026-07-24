@@ -1,82 +1,82 @@
 {
-  "generic": {
-    "unknown": "An unknown error occurred",
-    "network": "Network error — check your connection",
-    "timeout": "Request timed out",
-    "notFound": "Not found",
-    "forbidden": "Permission denied",
-    "serverError": "Server error — please try again",
-    "invalidRequest": "Invalid request"
-  },
-  "license": {
-    "tierTooLow": "This feature requires the {{tier}} tier",
-    "upgradeHint": "Start a 14-day {{tier}} trial with `niac license trial`, or activate a {{tier}} key with `niac license activate -k <KEY>`.",
-    "tierGateTooltip": "Requires the {{tier}} tier",
-    "featureUnavailable": "{{feature}} is not available on your current tier",
-    "currentTier": "Current tier: {{tier}}",
-    "loading": "Checking license…"
-  },
-  "validation": {
-    "required": "This field is required",
-    "tooShort": "Must be at least {{min}} characters",
-    "tooLong": "Must be at most {{max}} characters",
-    "invalidFormat": "Invalid format",
-    "invalidIp": "Invalid IP address",
-    "invalidPort": "Invalid port number",
-    "invalidHostname": "Invalid hostname",
-    "invalidYaml": "Invalid YAML"
-  },
   "api": {
+    "deleteFailed": "Failed to delete item",
     "fetchFailed": "Failed to load data",
     "saveFailed": "Failed to save changes",
-    "deleteFailed": "Failed to delete item",
     "uploadFailed": "Failed to upload file"
   },
-  "simulation": {
-    "startFailed": "Failed to start simulation",
-    "stopFailed": "Failed to stop simulation",
-    "configInvalid": "Configuration is not valid",
-    "interfaceUnavailable": "Selected network interface is unavailable"
+  "generic": {
+    "forbidden": "Permission denied",
+    "invalidRequest": "Invalid request",
+    "network": "Network error — check your connection",
+    "notFound": "Not found",
+    "serverError": "Server error — please try again",
+    "timeout": "Request timed out",
+    "unknown": "An unknown error occurred"
+  },
+  "injection": {
+    "activeErrorsTitle": "Active Errors",
+    "clearAllButton": "Clear All Errors",
+    "clearAllConfirmLabel": "Clear All",
+    "clearAllConfirmMessage": "Are you sure you want to clear all injected errors? This action cannot be undone.",
+    "clearAllConfirmTitle": "Clear All Errors",
+    "clearAllFailed": "Failed to clear errors",
+    "clearAllSuccess": "All errors cleared",
+    "clearOneAriaLabel": "Clear error on {{deviceIp}} {{iface}}",
+    "clearOneButton": "Clear",
+    "clearSpecificFailed": "Failed to clear error",
+    "clearSpecificSuccess": "Cleared error on {{deviceIp}} {{iface}}",
+    "deviceLabel": "Device",
+    "deviceSelectPlaceholder": "Select device...",
+    "errorTypeLabel": "Error Type",
+    "errorTypeSelectPlaceholder": "Select error type...",
+    "injectButton": "Inject Error",
+    "injectFailed": "Failed to inject error",
+    "injectingButton": "Injecting...",
+    "injectSuccess": "Error injected successfully",
+    "interfaceLabel": "Interface",
+    "interfaceNoDeviceHint": "Select a device first",
+    "interfaceNoneHint": "This device has no configured interfaces",
+    "interfaceSelectPlaceholder": "Select interface...",
+    "tableHeaderActions": "Actions",
+    "tableHeaderDeviceIp": "Device",
+    "tableHeaderErrorType": "Error Type",
+    "tableHeaderInterface": "Interface",
+    "tableHeaderValue": "Value",
+    "valueHelper": "Counter faults use increments per second; utilization uses percent",
+    "valueLabel": "Value: {{value}}"
+  },
+  "license": {
+    "currentTier": "Current tier: {{tier}}",
+    "featureUnavailable": "{{feature}} is not available on your current tier",
+    "loading": "Checking license…",
+    "tierGateTooltip": "Requires the {{tier}} tier",
+    "tierTooLow": "This feature requires the {{tier}} tier",
+    "upgradeHint": "Start a 14-day {{tier}} trial with `niac license trial`, or activate a {{tier}} key with `niac license activate -k <KEY>`."
   },
   "packet": {
     "captureFailed": "Failed to start packet capture",
     "decodeFailed": "Failed to decode packet",
     "filterInvalid": "Capture filter is invalid"
   },
-  "walk": {
-    "validationFailed": "Validation failed",
-    "parseError": "Could not parse walk file"
+  "simulation": {
+    "configInvalid": "Configuration is not valid",
+    "interfaceUnavailable": "Selected network interface is unavailable",
+    "startFailed": "Failed to start simulation",
+    "stopFailed": "Failed to stop simulation"
   },
-  "injection": {
-    "deviceLabel": "Device",
-    "deviceSelectPlaceholder": "Select device...",
-    "interfaceLabel": "Interface",
-    "interfaceSelectPlaceholder": "Select interface...",
-    "interfaceNoDeviceHint": "Select a device first",
-    "interfaceNoneHint": "This device has no configured interfaces",
-    "errorTypeLabel": "Error Type",
-    "errorTypeSelectPlaceholder": "Select error type...",
-    "valueLabel": "Value: {{value}}",
-    "valueHelper": "Counter faults use increments per second; utilization uses percent",
-    "injectingButton": "Injecting...",
-    "injectButton": "Inject Error",
-    "injectSuccess": "Error injected successfully",
-    "injectFailed": "Failed to inject error",
-    "clearAllButton": "Clear All Errors",
-    "clearAllSuccess": "All errors cleared",
-    "clearAllFailed": "Failed to clear errors",
-    "clearSpecificSuccess": "Cleared error on {{deviceIp}} {{iface}}",
-    "clearSpecificFailed": "Failed to clear error",
-    "activeErrorsTitle": "Active Errors",
-    "tableHeaderDeviceIp": "Device",
-    "tableHeaderInterface": "Interface",
-    "tableHeaderErrorType": "Error Type",
-    "tableHeaderValue": "Value",
-    "tableHeaderActions": "Actions",
-    "clearOneAriaLabel": "Clear error on {{deviceIp}} {{iface}}",
-    "clearOneButton": "Clear",
-    "clearAllConfirmTitle": "Clear All Errors",
-    "clearAllConfirmMessage": "Are you sure you want to clear all injected errors? This action cannot be undone.",
-    "clearAllConfirmLabel": "Clear All"
+  "validation": {
+    "invalidFormat": "Invalid format",
+    "invalidHostname": "Invalid hostname",
+    "invalidIp": "Invalid IP address",
+    "invalidPort": "Invalid port number",
+    "invalidYaml": "Invalid YAML",
+    "required": "This field is required",
+    "tooLong": "Must be at most {{max}} characters",
+    "tooShort": "Must be at least {{min}} characters"
+  },
+  "walk": {
+    "parseError": "Could not parse walk file",
+    "validationFailed": "Validation failed"
   }
 }

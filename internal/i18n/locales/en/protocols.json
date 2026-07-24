@@ -1,40 +1,40 @@
 {
-  "labels": {
-    "discoveryProtocols": "Discovery Protocols",
-    "neighborTable": "Neighbor Table",
-    "neighbor": "Neighbor",
-    "neighbors": "Neighbors",
-    "noNeighbors": "No neighbors discovered yet",
-    "discoveryHint": "Adjacencies appear here once the simulated devices exchange {{protocols}} frames."
-  },
   "categories": {
-    "discovery": "Discovery",
-    "routing": "Routing",
     "addressing": "Addressing",
-    "monitoring": "Monitoring",
-    "transport": "Transport",
     "application": "Application",
+    "discovery": "Discovery",
     "management": "Management",
+    "monitoring": "Monitoring",
+    "routing": "Routing",
+    "switching": "Switching",
     "timing": "Timing",
-    "switching": "Switching"
+    "transport": "Transport"
   },
   "common": {
-    "request": "Request",
-    "response": "Response",
     "broadcast": "Broadcast",
-    "multicast": "Multicast",
-    "unicast": "Unicast",
+    "dst": "Destination",
     "frame": "Frame",
     "frames": "Frames",
+    "multicast": "Multicast",
     "packetCount": "{{count}} packet",
     "packetCount_plural": "{{count}} packets",
+    "protocolColumn": "Protocol",
+    "request": "Request",
+    "response": "Response",
     "src": "Source",
-    "dst": "Destination",
-    "protocolColumn": "Protocol"
+    "unicast": "Unicast"
   },
   "filters": {
-    "byProtocol": "Filter by protocol",
+    "allProtocols": "All protocols",
     "byDevice": "Filter by device",
-    "allProtocols": "All protocols"
+    "byProtocol": "Filter by protocol"
+  },
+  "labels": {
+    "discoveryHint": "Adjacencies appear here once the simulated devices exchange {{protocols}} frames.",
+    "discoveryProtocols": "Discovery Protocols",
+    "neighbor": "Neighbor",
+    "neighbors": "Neighbors",
+    "neighborTable": "Neighbor Table",
+    "noNeighbors": "No neighbors discovered yet"
   }
 }

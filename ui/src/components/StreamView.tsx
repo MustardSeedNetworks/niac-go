@@ -104,11 +104,11 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
             <SmallText className="text-text-muted">
               {tCommon('plurals.packetCount', { count: packets.length })} |{' '}
               <span className="text-status-info">
-                {t('packets.streamView.clientBytesLabel', { count: totalClientBytes })}
+                {t('packets.streamView.clientBytesLabel', { value: totalClientBytes })}
               </span>{' '}
               /{' '}
               <span className="text-status-error">
-                {t('packets.streamView.serverBytesLabel', { count: totalServerBytes })}
+                {t('packets.streamView.serverBytesLabel', { value: totalServerBytes })}
               </span>
             </SmallText>
           </div>
