@@ -670,8 +670,8 @@
       "uptimeLabel": "Uptime",
       "viewDevices": "View Devices"
     },
-    "startButtonLabel": "Start Simulation",
-    "startingLabel": "Starting…",
+    "reviewConnectionLabel": "Review connection",
+    "preparingConnectionLabel": "Preparing connection…",
     "startSimulationTitle": "Start Simulation",
     "startSuccess": "Simulation started successfully!",
     "startTitlePickConfig": "Pick a config below first",
