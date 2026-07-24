@@ -12,6 +12,7 @@ export default defineConfig({
   use: {
     ...baseConfig.use,
     baseURL: `https://127.0.0.1:${authPort}`,
+    ignoreHTTPSErrors: true,
     storageState: undefined,
   },
   webServer: {
