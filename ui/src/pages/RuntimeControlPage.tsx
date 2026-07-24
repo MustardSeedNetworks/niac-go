@@ -1,10 +1,11 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
-import type { LibraryNetwork, NetworkInterface, Template } from '../api/types';
+import type { LibraryNetwork, NetworkInterface, SimulationRequest, Template } from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
+import { PreflightStep } from '../components/wizard/PreflightStep';
 import { iconSizes } from '../constants/sizes';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
@@ -38,6 +39,11 @@ export const RuntimeControlPage: FC = () => {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [interfacesLoading, setInterfacesLoading] = useState(true);
   const [quickUploadFile, setQuickUploadFile] = useState<File | null>(null);
+  const [preparedRequest, setPreparedRequest] = useState<{
+    payload: SimulationRequest;
+    sequence: number;
+  } | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
@@ -45,6 +51,13 @@ export const RuntimeControlPage: FC = () => {
   // a page-level banner.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const showError = useErrorToast();
+  const requestSequence = useRef(0);
+
+  const invalidatePreparedRequest = useCallback(() => {
+    requestSequence.current += 1;
+    setPreparedRequest(null);
+    setPreparing(false);
+  }, []);
 
   // Hydrate the interface dropdown so the user can pick an interface inline
   // instead of having to open the Settings drawer.
@@ -70,8 +83,9 @@ export const RuntimeControlPage: FC = () => {
   const handleInterfaceChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setSimulationSettings({ selectedInterface: e.target.value });
+      invalidatePreparedRequest();
     },
-    [setSimulationSettings],
+    [invalidatePreparedRequest, setSimulationSettings],
   );
 
   const handleSelectTemplate = useCallback(
@@ -81,8 +95,9 @@ export const RuntimeControlPage: FC = () => {
         configName: template.name,
       });
       setQuickUploadFile(null);
+      invalidatePreparedRequest();
     },
-    [setSimulationSettings],
+    [invalidatePreparedRequest, setSimulationSettings],
   );
 
   const handleSelectUserConfig = useCallback(
@@ -92,13 +107,15 @@ export const RuntimeControlPage: FC = () => {
         configName: config.name,
       });
       setQuickUploadFile(null);
+      invalidatePreparedRequest();
     },
-    [setSimulationSettings],
+    [invalidatePreparedRequest, setSimulationSettings],
   );
 
   const handleUpload = useCallback(
     (file: File | null) => {
       setQuickUploadFile(file);
+      invalidatePreparedRequest();
       if (file) {
         // Picking an upload clears any previously-selected template / config so
         // the start handler doesn't get confused about which source wins.
@@ -109,14 +126,14 @@ export const RuntimeControlPage: FC = () => {
         setSuccessMessage(null);
       }
     },
-    [setSimulationSettings],
+    [invalidatePreparedRequest, setSimulationSettings],
   );
 
   const isDaemonMode = simStatus !== null;
   const hasValidConfig =
     simulationSettings.selectedInterface && (simulationSettings.configName || quickUploadFile);
 
-  const handleStart = useCallback(async () => {
+  const handlePrepare = useCallback(async () => {
     if (!simulationSettings.selectedInterface) {
       showError(new Error(t('runtime.errorNoInterface')));
       return;
@@ -127,7 +144,9 @@ export const RuntimeControlPage: FC = () => {
       return;
     }
 
-    setStarting(true);
+    const sequence = requestSequence.current + 1;
+    requestSequence.current = sequence;
+    setPreparing(true);
     setSuccessMessage(null);
 
     try {
@@ -157,21 +176,41 @@ export const RuntimeControlPage: FC = () => {
         configData = userConfigContent.content;
       }
 
-      await startSimulation({
-        interface: simulationSettings.selectedInterface,
-        configData: configData,
-        templateName: templateName,
+      if (requestSequence.current !== sequence) return;
+      setPreparedRequest({
+        payload: {
+          interface: simulationSettings.selectedInterface,
+          configData: configData,
+          templateName: templateName,
+        },
+        sequence,
       });
-
-      setSuccessMessage(t('runtime.startSuccess'));
-      refetchSimStatus();
-      setQuickUploadFile(null);
     } catch (err) {
+      if (requestSequence.current !== sequence) return;
       showError(err);
     } finally {
-      setStarting(false);
+      if (requestSequence.current === sequence) setPreparing(false);
     }
   }, [simulationSettings, quickUploadFile, showError, t]);
+
+  const handleStart = useCallback(
+    async (request: SimulationRequest) => {
+      setStarting(true);
+      setSuccessMessage(null);
+      try {
+        await startSimulation(request);
+        setSuccessMessage(t('runtime.startSuccess'));
+        refetchSimStatus();
+        setQuickUploadFile(null);
+        invalidatePreparedRequest();
+      } catch (err) {
+        showError(err);
+      } finally {
+        setStarting(false);
+      }
+    },
+    [invalidatePreparedRequest, refetchSimStatus, showError, t],
+  );
 
   const handleStopClick = useCallback(() => {
     setShowStopConfirm(true);
@@ -267,12 +306,12 @@ export const RuntimeControlPage: FC = () => {
                 <Button
                   tone="violet"
                   size="md"
-                  disabled={!hasValidConfig || starting}
-                  onClick={handleStart}
+                  disabled={!hasValidConfig || preparing || starting}
+                  onClick={handlePrepare}
                   leftIcon={<Activity className={iconSizes.md} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
-                    hasValidConfig && !starting
+                    hasValidConfig && !preparing && !starting
                       ? 'animate-pulse shadow-lg shadow-brand-primary/30'
                       : undefined
                   }
@@ -284,7 +323,9 @@ export const RuntimeControlPage: FC = () => {
                         : t('runtime.startTitleReady')
                   }
                 >
-                  {starting ? t('runtime.startingLabel') : t('runtime.startButtonLabel')}
+                  {preparing
+                    ? t('runtime.preparingConnectionLabel')
+                    : t('runtime.reviewConnectionLabel')}
                 </Button>
               </div>
             </div>
@@ -321,6 +362,15 @@ export const RuntimeControlPage: FC = () => {
                 source={quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null)}
                 name={quickUploadFile ? quickUploadFile.name : simulationSettings.configName}
                 uploadFile={quickUploadFile}
+              />
+            )}
+
+            {preparedRequest && (
+              <PreflightStep
+                key={preparedRequest.sequence}
+                request={preparedRequest.payload}
+                onStart={(request) => void handleStart(request)}
+                starting={starting}
               />
             )}
 
