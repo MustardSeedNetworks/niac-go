@@ -1,9 +1,12 @@
 package fabric
 
 import (
+	"bytes"
 	"fmt"
+	"maps"
 	"net"
 	"net/netip"
+	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -11,8 +14,15 @@ import (
 const (
 	bitsPerByte                     = 8
 	maxUsableEndpointPrefixLen      = 30
+	ethernetMACBytes                = 6
 	fullByteMask               byte = 0xff
 )
+
+type dhcpLeaseMAC struct {
+	address net.HardwareAddr
+	mask    net.HardwareAddr
+	device  string
+}
 
 func (c *scenarioCompiler) compileInterfaces(device *config.Device) map[string]Interface {
 	compiled := make(map[string]Interface)
@@ -192,29 +202,248 @@ func (c *scenarioCompiler) appendDHCPScope(device *config.Device, iface Interfac
 		)
 		return
 	}
+	if !c.validateDHCPOptions(device, network) {
+		return
+	}
+	if !c.validateDHCPPoolCollisions(device, iface, start, end) ||
+		!c.validateDHCPLeases(device, network, start, end) {
+		return
+	}
+	c.report.Topology.DHCPScopes = append(c.report.Topology.DHCPScopes, DHCPScope{
+		Device: device.Name, Network: iface.Network, Start: start, End: end, Router: router,
+	})
+}
+
+func (c *scenarioCompiler) validateDHCPPoolCollisions(
+	device *config.Device,
+	iface Interface,
+	start netip.Addr,
+	end netip.Addr,
+) bool {
+	field := "devices." + device.Name + ".dhcp"
 	for address, owner := range c.addresses {
 		if address.Compare(start) >= 0 && address.Compare(end) <= 0 {
 			c.add(
 				CodeDHCPAddressCollision,
-				"devices."+device.Name+".dhcp",
+				field,
 				fmt.Sprintf("DHCP pool contains an interface address assigned to device %s", owner),
 			)
-			return
+			return false
 		}
 	}
 	for _, scope := range c.report.Topology.DHCPScopes {
 		if scope.Network == iface.Network && start.Compare(scope.End) <= 0 && end.Compare(scope.Start) >= 0 {
 			c.add(
 				CodeDHCPAddressCollision,
-				"devices."+device.Name+".dhcp",
+				field,
 				fmt.Sprintf("DHCP pool overlaps the pool assigned to device %s", scope.Device),
 			)
-			return
+			return false
 		}
 	}
-	c.report.Topology.DHCPScopes = append(c.report.Topology.DHCPScopes, DHCPScope{
-		Device: device.Name, Network: iface.Network, Start: start, End: end, Router: router,
-	})
+	for address, owner := range c.dhcpLeaseAddresses {
+		if address.Compare(start) >= 0 && address.Compare(end) <= 0 {
+			c.add(
+				CodeDHCPAddressCollision,
+				field,
+				fmt.Sprintf("DHCP pool contains a lease address assigned by device %s", owner),
+			)
+			return false
+		}
+	}
+	return true
+}
+
+func (c *scenarioCompiler) validateDHCPOptions(device *config.Device, network Network) bool {
+	field := "devices." + device.Name + ".dhcp"
+	for index, server := range device.DHCPConfig.DomainNameServer {
+		address, ok := ipToAddr(server)
+		if !ok || !address.Is4() || !address.IsGlobalUnicast() {
+			c.add(
+				CodeInvalidDHCPOption,
+				fmt.Sprintf("%s.domain_name_server[%d]", field, index),
+				"DHCP DNS server must be a unicast IPv4 address",
+			)
+			return false
+		}
+	}
+	for _, option := range []struct {
+		name    string
+		address net.IP
+	}{
+		{name: "server_identifier", address: device.DHCPConfig.ServerIdentifier},
+		{name: "next_server_ip", address: device.DHCPConfig.NextServerIP},
+	} {
+		if option.address == nil {
+			continue
+		}
+		address, ok := ipToAddr(option.address)
+		if !ok || !address.Is4() || !network.Prefix.Contains(address) ||
+			isReservedEndpoint(network.Prefix, address) {
+			c.add(
+				CodeInvalidDHCPOption,
+				field+"."+option.name,
+				"DHCP server option must be a usable IPv4 address inside its network",
+			)
+			return false
+		}
+	}
+	return true
+}
+
+func (c *scenarioCompiler) validateDHCPLeases(
+	device *config.Device,
+	network Network,
+	poolStart netip.Addr,
+	poolEnd netip.Addr,
+) bool {
+	pendingAddresses := make(map[netip.Addr]string)
+	pendingMACs := make([]dhcpLeaseMAC, 0, len(device.DHCPConfig.ClientLeases))
+	for index, lease := range device.DHCPConfig.ClientLeases {
+		address, mac, ok := c.validateDHCPLease(
+			device,
+			lease,
+			index,
+			network,
+			poolStart,
+			poolEnd,
+			pendingAddresses,
+			pendingMACs,
+		)
+		if !ok {
+			return false
+		}
+		pendingAddresses[address] = device.Name
+		pendingMACs = append(pendingMACs, mac)
+	}
+	maps.Copy(c.dhcpLeaseAddresses, pendingAddresses)
+	c.dhcpLeaseMACs = append(c.dhcpLeaseMACs, pendingMACs...)
+	return true
+}
+
+func (c *scenarioCompiler) validateDHCPLease(
+	device *config.Device,
+	lease config.DHCPLease,
+	index int,
+	network Network,
+	poolStart netip.Addr,
+	poolEnd netip.Addr,
+	pendingAddresses map[netip.Addr]string,
+	pendingMACs []dhcpLeaseMAC,
+) (netip.Addr, dhcpLeaseMAC, bool) {
+	field := fmt.Sprintf("devices.%s.dhcp.client_leases[%d]", device.Name, index)
+	address, ok := ipToAddr(lease.ClientIP)
+	if !ok || !address.Is4() || !network.Prefix.Contains(address) ||
+		isReservedEndpoint(network.Prefix, address) || !validDHCPLeaseMAC(lease) {
+		c.add(CodeInvalidDHCPLease, field, "DHCP lease must use a usable network address and unicast MAC")
+		return netip.Addr{}, dhcpLeaseMAC{}, false
+	}
+	if !c.validateDHCPLeaseAddress(field, address, poolStart, poolEnd, pendingAddresses) {
+		return netip.Addr{}, dhcpLeaseMAC{}, false
+	}
+	if owner, exists := overlappingDHCPLeaseMAC(lease, c.dhcpLeaseMACs); exists {
+		c.add(
+			CodeDHCPAddressCollision,
+			field+".mac",
+			fmt.Sprintf("DHCP lease MAC overlaps an assignment by device %s", owner),
+		)
+		return netip.Addr{}, dhcpLeaseMAC{}, false
+	}
+	if owner, exists := overlappingDHCPLeaseMAC(lease, pendingMACs); exists {
+		c.add(
+			CodeDHCPAddressCollision,
+			field+".mac",
+			fmt.Sprintf("DHCP lease MAC overlaps an assignment by device %s", owner),
+		)
+		return netip.Addr{}, dhcpLeaseMAC{}, false
+	}
+	return address, dhcpLeaseMAC{
+		address: slices.Clone(lease.MACAddress),
+		mask:    slices.Clone(lease.MACMask),
+		device:  device.Name,
+	}, true
+}
+
+func (c *scenarioCompiler) validateDHCPLeaseAddress(
+	field string,
+	address netip.Addr,
+	poolStart netip.Addr,
+	poolEnd netip.Addr,
+	pendingAddresses map[netip.Addr]string,
+) bool {
+	if owner, exists := c.addresses[address]; exists {
+		c.add(
+			CodeDHCPAddressCollision,
+			field+".ip",
+			fmt.Sprintf("DHCP lease address is assigned to device %s", owner),
+		)
+		return false
+	}
+	if address.Compare(poolStart) >= 0 && address.Compare(poolEnd) <= 0 {
+		c.add(CodeDHCPAddressCollision, field+".ip", "DHCP lease address overlaps its dynamic pool")
+		return false
+	}
+	for _, scope := range c.report.Topology.DHCPScopes {
+		if address.Compare(scope.Start) >= 0 && address.Compare(scope.End) <= 0 {
+			c.add(
+				CodeDHCPAddressCollision,
+				field+".ip",
+				fmt.Sprintf("DHCP lease address overlaps the pool assigned to device %s", scope.Device),
+			)
+			return false
+		}
+	}
+	if owner, exists := c.dhcpLeaseAddresses[address]; exists {
+		c.add(
+			CodeDHCPAddressCollision,
+			field+".ip",
+			fmt.Sprintf("DHCP lease address is already assigned by device %s", owner),
+		)
+		return false
+	}
+	if owner, exists := pendingAddresses[address]; exists {
+		c.add(
+			CodeDHCPAddressCollision,
+			field+".ip",
+			fmt.Sprintf("DHCP lease address is already assigned by device %s", owner),
+		)
+		return false
+	}
+	return true
+}
+
+func validDHCPLeaseMAC(lease config.DHCPLease) bool {
+	if len(lease.MACAddress) != ethernetMACBytes || lease.MACAddress[0]&1 != 0 ||
+		bytes.Equal(lease.MACAddress, make(net.HardwareAddr, ethernetMACBytes)) {
+		return false
+	}
+	return len(lease.MACMask) == 0 || len(lease.MACMask) == ethernetMACBytes
+}
+
+func overlappingDHCPLeaseMAC(lease config.DHCPLease, assigned []dhcpLeaseMAC) (string, bool) {
+	for _, candidate := range assigned {
+		if dhcpLeaseMACsOverlap(lease.MACAddress, lease.MACMask, candidate.address, candidate.mask) {
+			return candidate.device, true
+		}
+	}
+	return "", false
+}
+
+func dhcpLeaseMACsOverlap(left, leftMask, right, rightMask net.HardwareAddr) bool {
+	for index := range ethernetMACBytes {
+		leftConstraint := fullByteMask
+		if len(leftMask) != 0 {
+			leftConstraint = leftMask[index]
+		}
+		rightConstraint := fullByteMask
+		if len(rightMask) != 0 {
+			rightConstraint = rightMask[index]
+		}
+		if (left[index]^right[index])&leftConstraint&rightConstraint != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func isReservedEndpoint(prefix netip.Prefix, address netip.Addr) bool {
