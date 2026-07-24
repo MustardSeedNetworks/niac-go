@@ -1,7 +1,7 @@
 import { Activity, Download, FileCog } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { fetchConfig } from '../../api/client';
 import type { SimulationStatus } from '../../api/types';
 import { StatBlock } from '../../components/StatBlock';

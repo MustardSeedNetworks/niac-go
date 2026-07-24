@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 
 export interface NavItem {

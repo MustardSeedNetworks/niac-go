@@ -1,5 +1,5 @@
 import type { FC, HTMLAttributes, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 /**
  * Typography primitives — one canonical class set per visual level so the

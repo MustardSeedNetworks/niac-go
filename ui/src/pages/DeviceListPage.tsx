@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
 import { DeviceBulkActions } from '../components/device-list/DeviceBulkActions';
 import { DeviceCardView } from '../components/device-list/DeviceCardView';

@@ -5,7 +5,7 @@
  * in MemoryRouter to inject a synthetic path.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { Breadcrumbs } from './Breadcrumbs';
 
 const meta: Meta<typeof Breadcrumbs> = {

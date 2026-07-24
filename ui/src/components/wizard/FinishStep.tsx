@@ -1,7 +1,7 @@
 import { PartyPopper, Save } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { fetchConfig, updateConfig } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
 import { useErrorToast } from '../../hooks/useErrorToast';

@@ -1,7 +1,7 @@
 import { Copy, Download, FileCode, Pencil, X } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { applyTemplate } from '../api/client';
 import type { Template, TemplateContent } from '../api/types';
 import { iconSizes } from '../constants/sizes';

@@ -9,7 +9,7 @@
  */
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useDeviceEditor } from './useDeviceEditor';
 
@@ -18,8 +18,8 @@ let mockLocation: { pathname: string; hash: string } = {
   pathname: '/device-config/new',
   hash: '',
 };
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>();
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
   return {
     ...actual,
     useNavigate: () => mockNavigate,

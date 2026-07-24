@@ -6,7 +6,7 @@
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Activity, Cog, Layers, Network, ScrollText, Sliders, Workflow } from 'lucide-react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { SidebarLayout, type SidebarNavGroup } from './Sidebar';
 
 const sampleGroups: SidebarNavGroup[] = [

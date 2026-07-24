@@ -1,7 +1,7 @@
 import { AlertCircle, Plus, Search, Server } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
