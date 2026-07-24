@@ -367,6 +367,9 @@ func loadValidSimulationConfig(
 
 // PreflightSimulation compiles a routed request without opening capture or changing runtime state.
 func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, error) {
+	if diagnostic := simulationInterfaceDiagnostic(req.Interface, e2eDryRunSimulation()); diagnostic != nil {
+		return fabric.Report{Diagnostics: []fabric.Diagnostic{*diagnostic}}, nil
+	}
 	cfg, _, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return fabric.Report{}, err
@@ -474,13 +477,24 @@ func e2eDryRunSimulation() bool {
 		strings.EqualFold(os.Getenv(e2eDryRunEnv), "true")
 }
 
+func simulationInterfaceDiagnostic(interfaceName string, dryRun bool) *fabric.Diagnostic {
+	if dryRun || capture.InterfaceExists(interfaceName) {
+		return nil
+	}
+	return &fabric.Diagnostic{
+		Code:    fabric.CodeHostInterfaceUnavailable,
+		Field:   "interface",
+		Message: "host interface does not exist",
+	}
+}
+
 // StartSimulation starts a new simulation.
 func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.SimulationEntitlements) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	dryRun := e2eDryRunSimulation()
-	if !dryRun && !capture.InterfaceExists(req.Interface) {
+	if simulationInterfaceDiagnostic(req.Interface, dryRun) != nil {
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 

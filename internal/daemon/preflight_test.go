@@ -3,17 +3,20 @@ package daemon
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
 func TestPreflightSimulationDoesNotPersistInlineConfig(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
 	dir := t.TempDir()
 	t.Setenv("NIAC_CONFIGS_DIR", dir)
 	d := routedPolicyDaemon()
@@ -29,6 +32,72 @@ func TestPreflightSimulationDoesNotPersistInlineConfig(t *testing.T) {
 	if _, err = os.Stat(filepath.Join(dir, inlineConfigName)); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("inline config stat error = %v, want not exist", err)
 	}
+}
+
+func TestPreflightSimulationValidatesHostInterface(t *testing.T) {
+	t.Run("nonexistent", func(t *testing.T) {
+		t.Setenv(e2eDryRunEnv, "")
+		d := routedPolicyDaemon()
+		req := routedRequest(2)
+		req.Interface = "definitely-missing-niac-interface"
+
+		report, err := d.PreflightSimulation(req)
+		if err != nil {
+			t.Fatalf("PreflightSimulation() error = %v", err)
+		}
+		if report.Safe || len(report.Diagnostics) != 1 ||
+			report.Diagnostics[0].Code != fabric.CodeHostInterfaceUnavailable {
+			t.Fatalf("report = %#v, want host-interface diagnostic", report)
+		}
+	})
+
+	t.Run("available", func(t *testing.T) {
+		t.Setenv(e2eDryRunEnv, "")
+		interfaceName := availableInterface(t)
+		d := routedPolicyDaemon()
+		d.cfg.AttachmentPolicies[0].Interface = interfaceName
+		req := routedRequest(2)
+		req.Interface = interfaceName
+
+		report, err := d.PreflightSimulation(req)
+		if err != nil {
+			t.Fatalf("PreflightSimulation() error = %v", err)
+		}
+		if !report.Safe {
+			t.Fatalf("report = %#v, want safe preflight", report)
+		}
+	})
+
+	t.Run("e2e dry run", func(t *testing.T) {
+		t.Setenv(e2eDryRunEnv, "true")
+		d := routedPolicyDaemon()
+		req := routedRequest(2)
+		req.Interface = "missing-e2e-interface"
+		d.cfg.AttachmentPolicies[0].Interface = req.Interface
+
+		report, err := d.PreflightSimulation(req)
+		if err != nil {
+			t.Fatalf("PreflightSimulation() error = %v", err)
+		}
+		if !report.Safe {
+			t.Fatalf("report = %#v, want dry-run interface exemption", report)
+		}
+	})
+}
+
+func availableInterface(t *testing.T) string {
+	t.Helper()
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("net.Interfaces() error = %v", err)
+	}
+	for _, iface := range interfaces {
+		if capture.InterfaceExists(iface.Name) {
+			return iface.Name
+		}
+	}
+	t.Fatal("no capture-capable host interfaces available")
+	return ""
 }
 
 func TestPhysicalAttachmentPolicyRequiresExactMatch(t *testing.T) {
@@ -338,6 +407,7 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 }
 
 func TestPreflightSimulationPreservesFlatScenarioWorkflow(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
 	d := &Daemon{}
 	req := api.SimulationRequest{
 		Interface: "eth0", Attachment: "tester", AttachmentMode: fabric.ModeAccess,
@@ -361,6 +431,7 @@ devices:
 }
 
 func TestPreflightSimulationRejectsDuplicateSegmentIdentity(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
 	d := &Daemon{}
 	req := api.SimulationRequest{Interface: "eth0", ConfigData: `
 segments:
