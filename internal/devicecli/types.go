@@ -21,9 +21,13 @@ type Response struct {
 	Close  bool
 }
 
+// RouteValidator approves one fully parsed static-route mutation.
+type RouteValidator func(devicestate.Route) bool
+
 // Session holds command mode and context for one connection.
 type Session struct {
 	state           *devicestate.Store
+	validateRoute   RouteValidator
 	mode            Mode
 	interfaceName   string
 	vlanID          int

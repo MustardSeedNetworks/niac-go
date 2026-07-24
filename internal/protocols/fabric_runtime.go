@@ -38,6 +38,8 @@ type fabricRouter struct {
 type fabricRoute struct {
 	destination netip.Prefix
 	via         string
+	nextHop     netip.Addr
+	connected   bool
 }
 
 type fabricResolution struct {
@@ -125,7 +127,12 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 	for _, route := range topology.Routes {
 		router := routers[route.Device]
 		if router != nil {
-			router.routes = append(router.routes, fabricRoute{destination: route.Destination, via: route.Via})
+			router.routes = append(router.routes, fabricRoute{
+				destination: route.Destination,
+				via:         route.Via,
+				nextHop:     route.NextHop,
+				connected:   route.Connected,
+			})
 		}
 	}
 	for i := range r.attachmentRouters {
@@ -231,10 +238,8 @@ func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) (*
 			continue
 		}
 		for _, route := range r.routesFor(router) {
-			if !r.interfaceAvailable(router.device, route.via) {
-				continue
-			}
-			if route.destination.Contains(dst) && route.destination.Bits() > bestBits {
+			if r.routeAvailable(router, route) &&
+				route.destination.Contains(dst) && route.destination.Bits() > bestBits {
 				bestBits = route.destination.Bits()
 				best = router
 				bestRoute = route
@@ -242,6 +247,26 @@ func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) (*
 		}
 	}
 	return best, bestRoute
+}
+
+func (r *fabricRuntime) routeAvailable(router *fabricRouter, route fabricRoute) bool {
+	if !r.interfaceAvailable(router.device, route.via) {
+		return false
+	}
+	if r.deviceStates != nil && !route.connected &&
+		!validateStaticRoute(r.deviceStates, router.device, devicestate.Route{
+			Destination: route.destination,
+			Via:         route.via,
+			NextHop:     route.nextHop,
+		}) {
+		return false
+	}
+	if route.connected {
+		return true
+	}
+	nextHop, exists := r.endpointForAddress(route.nextHop)
+	return exists && nextHop.device != router.device &&
+		r.interfaceAvailable(nextHop.device, nextHop.interfaceName)
 }
 
 func (r *fabricRuntime) routesFor(router *fabricRouter) []fabricRoute {
@@ -255,9 +280,61 @@ func (r *fabricRuntime) routesFor(router *fabricRouter) []fabricRoute {
 	routes := state.Snapshot().Network.Routes
 	result := make([]fabricRoute, 0, len(routes))
 	for _, route := range routes {
-		result = append(result, fabricRoute{destination: route.Destination, via: route.Via})
+		result = append(result, fabricRoute{
+			destination: route.Destination,
+			via:         route.Via,
+			nextHop:     route.NextHop,
+			connected:   route.Connected,
+		})
 	}
 	return result
+}
+
+func (s *Stack) staticRouteValidator(device *config.Device) func(devicestate.Route) bool {
+	return func(route devicestate.Route) bool {
+		return validateStaticRoute(s.deviceStates, device, route)
+	}
+}
+
+func validateStaticRoute(
+	states map[*config.Device]*devicestate.Store,
+	device *config.Device,
+	route devicestate.Route,
+) bool {
+	state := states[device]
+	if state == nil {
+		return false
+	}
+	interfaces := make(map[string]fabric.Interface)
+	for _, iface := range state.Snapshot().Network.Interfaces {
+		interfaces[iface.Name] = fabric.Interface{
+			Device: device.Name, Name: iface.Name, Network: iface.Network, Address: iface.Address,
+		}
+	}
+	owners := make(map[netip.Addr]string)
+	duplicates := make(map[netip.Addr]struct{})
+	for candidate, candidateState := range states {
+		for _, iface := range candidateState.Snapshot().Network.Interfaces {
+			if iface.Address.IsValid() {
+				address := iface.Address.Addr()
+				if _, exists := owners[address]; exists {
+					duplicates[address] = struct{}{}
+				}
+				owners[address] = candidate.Name
+			}
+		}
+	}
+	for address := range duplicates {
+		delete(owners, address)
+	}
+	_, diagnostic := fabric.ValidateStaticRoute(
+		fabric.StaticRouteSpec{
+			Device: device.Name, Destination: route.Destination.String(),
+			Via: route.Via, NextHop: route.NextHop.String(),
+		},
+		fabric.RouteValidationContext{Interfaces: interfaces, AddressOwners: owners},
+	)
+	return diagnostic == nil
 }
 
 func (r *fabricRuntime) bindDeviceStates(states map[*config.Device]*devicestate.Store) {

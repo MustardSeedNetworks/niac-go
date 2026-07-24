@@ -132,7 +132,7 @@ func TestSessionSaveReloadAndEraseLifecycle(t *testing.T) {
 		t.Fatal("reload did not restore saved shutdown state")
 	}
 
-	session = devicecli.NewSession(state)
+	session = devicecli.NewSession(state, allowStaticRoute)
 	assertCommand(t, session, "enable", "")
 	assertCommand(t, session, "write erase", "[OK]")
 	if response := session.Execute("reload"); !response.Close {
@@ -367,7 +367,11 @@ func newSession() (*devicecli.Session, *devicestate.Store) {
 			Destination: mustPrefix("10.0.0.0/24"), Via: "Gi0/1", Connected: true,
 		}},
 	})
-	return devicecli.NewSession(state), state
+	return devicecli.NewSession(state, allowStaticRoute), state
+}
+
+func allowStaticRoute(devicestate.Route) bool {
+	return true
 }
 
 func assertCommand(t *testing.T, session *devicecli.Session, command, want string) {

@@ -27,8 +27,9 @@ type Credentials struct {
 
 // SSHServer serves isolated command sessions over SSH byte streams.
 type SSHServer struct {
-	state  *devicestate.Store
-	config *ssh.ServerConfig
+	state         *devicestate.Store
+	validateRoute RouteValidator
+	config        *ssh.ServerConfig
 }
 
 // NewSSHServer creates an SSH transport with no default credentials.
@@ -36,9 +37,13 @@ func NewSSHServer(
 	state *devicestate.Store,
 	credentials Credentials,
 	hostSigner ssh.Signer,
+	validateRoute RouteValidator,
 ) (*SSHServer, error) {
 	if state == nil {
 		return nil, errors.New("device state is required")
+	}
+	if validateRoute == nil {
+		return nil, errors.New("route validator is required")
 	}
 	if credentials.Username == "" || credentials.Password == "" {
 		return nil, errors.New("SSH credentials are required")
@@ -51,7 +56,7 @@ func NewSSHServer(
 		MaxAuthTries:     maxSSHAuthAttempts,
 	}
 	config.AddHostKey(hostSigner)
-	return &SSHServer{state: state, config: config}, nil
+	return &SSHServer{state: state, validateRoute: validateRoute, config: config}, nil
 }
 
 func passwordCallback(credentials Credentials) func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
@@ -119,7 +124,7 @@ func (s *SSHServer) serveChannel(channel ssh.Channel, requests <-chan *ssh.Reque
 }
 
 func (s *SSHServer) serveShell(channel ssh.Channel) {
-	session := NewSession(s.state)
+	session := NewSession(s.state, s.validateRoute)
 	_, _ = channel.Write([]byte(session.Prompt()))
 	scanner := bufio.NewScanner(channel)
 	scanner.Buffer(nil, maxSSHCommandBytes)

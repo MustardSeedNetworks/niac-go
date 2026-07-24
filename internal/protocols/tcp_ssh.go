@@ -444,6 +444,7 @@ func (h *sshTCPHandler) server(device *config.Device) (*devicecli.SSHServer, err
 		h.stack.deviceStates[device],
 		devicecli.Credentials{Username: device.SSHConfig.Username, Password: password},
 		hostSigner,
+		h.stack.staticRouteValidator(device),
 	)
 	if err != nil {
 		return nil, err

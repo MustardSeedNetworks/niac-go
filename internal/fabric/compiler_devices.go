@@ -98,37 +98,18 @@ func (c *scenarioCompiler) compileInterface(
 func (c *scenarioCompiler) compileRoutes(device *config.Device, interfaces map[string]Interface) {
 	for i, source := range device.Routes {
 		field := fmt.Sprintf("devices[%s].routes[%d]", device.Name, i)
-		destination, err := parseCanonicalPrefix(source.Destination)
-		if err != nil {
-			c.add(CodeInvalidRoute, field+".destination", err.Error())
+		route, diagnostic := ValidateStaticRoute(
+			StaticRouteSpec{
+				Device: device.Name, Destination: source.Destination,
+				Via: source.Via, NextHop: source.NextHop,
+			},
+			RouteValidationContext{Interfaces: interfaces, AddressOwners: c.addresses},
+		)
+		if diagnostic != nil {
+			c.add(diagnostic.Code, field+"."+diagnostic.Field, diagnostic.Message)
 			continue
 		}
-		iface, exists := interfaces[source.Via]
-		if !exists {
-			c.add(CodeUnknownRouteInterface, field+".via", "route references an unknown interface")
-			continue
-		}
-		nextHop, err := netip.ParseAddr(source.NextHop)
-		if err != nil || !nextHop.Is4() {
-			c.add(CodeInvalidRouteNextHop, field+".next_hop", "next hop must be an IPv4 address")
-			continue
-		}
-		if !iface.Address.Masked().Contains(nextHop) || isReservedEndpoint(iface.Address.Masked(), nextHop) {
-			c.add(CodeRouteNextHopOffLink, field+".next_hop", "next hop must be a usable address on the egress network")
-			continue
-		}
-		owner, assigned := c.addresses[nextHop]
-		if !assigned {
-			c.add(CodeUnknownRouteNextHop, field+".next_hop", "next hop is not assigned to a configured peer")
-			continue
-		}
-		if owner == device.Name {
-			c.add(CodeRouteNextHopSelf, field+".next_hop", "next hop cannot belong to the routed device")
-			continue
-		}
-		c.report.Topology.Routes = append(c.report.Topology.Routes, Route{
-			Device: device.Name, Destination: destination, Via: source.Via, NextHop: nextHop,
-		})
+		c.report.Topology.Routes = append(c.report.Topology.Routes, route)
 	}
 }
 
