@@ -22,9 +22,9 @@ const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
  * - Replay functionality
  * - Network simulation
  *
- * Browsers: Chromium (covers Chrome + Edge) and WebKit (covers Safari).
- * Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, no other browsers
- * or viewports are supported.
+ * Engines: Chromium, WebKit, and Firefox. Installed Chrome and Edge channels
+ * use playwright.channels.config.ts; actual Safari remains a manual release
+ * candidate gate because Playwright controls WebKit rather than Safari.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -67,11 +67,6 @@ export default defineConfig({
     ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === 'true' || !process.env.CI,
   },
   projects: [
-    // Per msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md, only chromium
-    // (covers Chrome and Edge) and webkit (covers Safari) are supported.
-    // Firefox/mobile/tablet/visual projects were deleted in 2026q2 — they
-    // were configured but never run in CI, and the visual tier's macOS-only
-    // *-darwin.png snapshots couldn't work on Linux CI.
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
@@ -79,6 +74,10 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).

@@ -193,14 +193,28 @@ View recent protocol errors:
 
 ## Browser Support
 
-**Fully Supported:**
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
+| Support level | Browsers | Acceptance |
+| --- | --- | --- |
+| First-class | Chrome stable, Edge stable, Safari on the current supported macOS release | Critical journeys must pass; failures block release |
+| Compatibility | Firefox current | The Firefox engine suite must pass on relevant changes |
+| Best-effort | Brave current | Run the pre-release privacy smoke checklist; failures are tracked but block only when reproduced in Chrome or Edge |
 
-**Partially Supported:**
-- IE 11 (degraded experience)
+Every relevant pull request runs the critical journey suite in Playwright
+Chromium, WebKit, and Firefox. A weekly workflow and every release-candidate
+pull request run the same journeys in installed Chrome and Edge stable
+channels. WebKit is not treated as proof of Safari compatibility.
+
+Before approving a release candidate in actual Safari:
+
+1. Authenticate over HTTPS and confirm no bearer appears in the URL or browser storage.
+2. Navigate the dashboard, topology, runtime, packet inspector, and offline PCAP pages.
+3. Edit and validate a routed template; start, stop, and restart it.
+4. Confirm live topology/statistics updates and reconnect an interrupted SSE stream.
+5. Exercise packet inspection, downloads, clipboard actions, dialogs, and narrow-width layout.
+6. Record the Safari/macOS versions, result, and screenshots or failure trace in the release.
+
+Before release, repeat authentication, navigation, SSE reconnect, download,
+clipboard, and dialog smoke checks in Brave with default Shields enabled.
 
 ## Performance
 

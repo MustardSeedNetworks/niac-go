@@ -1,0 +1,90 @@
+name: First-Class Browser Channels
+
+on:
+  schedule:
+    - cron: "17 7 * * 1"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-channels:
+    name: Installed Chrome and Edge
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'release-please--')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Set up Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Install libpcap
+        run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build NIAC
+        run: make build
+
+      - name: Install Chrome and Edge channels
+        working-directory: ui
+        run: npx playwright install --with-deps chrome msedge
+
+      - name: Start NIAC
+        env:
+          NIAC_E2E_DRY_RUN_SIMULATION: "1"
+        run: |
+          nohup ./niac daemon --listen 127.0.0.1:8445 --storage disabled > browser-channels-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -skf https://127.0.0.1:8445/__version >/dev/null; then
+              exit 0
+            fi
+            echo "Waiting for NIAC (attempt $i of 30)"
+            sleep 2
+          done
+          cat browser-channels-server.log
+          exit 1
+
+      - name: Run installed browser journeys
+        working-directory: ui
+        env:
+          E2E_BASE_URL: https://127.0.0.1:8445
+          PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
+        run: npx playwright test --config=playwright.channels.config.ts
+
+      - name: Run installed browser authentication journeys
+        working-directory: ui
+        run: npx playwright test --config=playwright.channels.auth.config.ts
+
+      - name: Upload browser reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installed-browser-report
+          path: ui/playwright-report/
+          retention-days: 14
+
+      - name: Upload server log on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installed-browser-server-log
+          path: browser-channels-server.log
+          retention-days: 14
