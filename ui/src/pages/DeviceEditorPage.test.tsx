@@ -10,14 +10,14 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { DeviceEditorPage } from './DeviceEditorPage';
 
 const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>();
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -31,7 +31,7 @@ vi.mock('../api/client', () => ({
   updateDevice: vi.fn(),
   deleteDevice: vi.fn(),
   fetchConfigDevice: () => Promise.resolve({ device: null }),
-  fetchDeviceEditorSchema: () => Promise.resolve({ visibleSections: [] }),
+  fetchDeviceEditorSchema: () => Promise.resolve({ visibleSections: ['basic'] }),
 }));
 vi.mock('../api/library-client', () => ({
   fetchLibraryWalks: () => Promise.resolve([]),

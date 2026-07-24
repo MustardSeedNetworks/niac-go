@@ -13,7 +13,7 @@
  *   - a "Start a Simulation" quick action links to /runtime
  */
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ErrorInjectionInfo,

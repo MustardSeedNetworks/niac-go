@@ -1,7 +1,7 @@
 import { Wrench } from 'lucide-react';
 import { memo, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';

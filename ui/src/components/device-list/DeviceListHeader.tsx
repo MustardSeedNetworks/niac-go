@@ -1,7 +1,7 @@
 import { ChevronDown, Download, FileCode, Plus, RefreshCw, Server } from 'lucide-react';
 import { type FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';

@@ -11,7 +11,7 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Device, DeviceBatchDeleteResponse, DeviceListResponse } from '../api/types';
 import '../i18n';

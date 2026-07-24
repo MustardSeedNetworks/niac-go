@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
 import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';

@@ -1,4 +1,4 @@
-import type { useNavigate } from 'react-router-dom';
+import type { useNavigate } from 'react-router';
 import type { DeviceSummary } from '../../api/types';
 import type { TFunction } from '../../i18n';
 import type { ContextMenuItem } from './ContextMenu';
