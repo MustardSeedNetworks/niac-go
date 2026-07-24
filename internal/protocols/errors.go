@@ -48,6 +48,8 @@ var ErrUnsupportedSNMPVersion = errors.New("unsupported SNMP version")
 // Sentinel errors for Stack.
 var (
 	ErrStackAlreadyRunning = errors.New("stack already running")
+	ErrStackStopped        = errors.New("stack is stopped and cannot be reused")
+	ErrSendQueueFull       = errors.New("stack send queue is full")
 	ErrNilConfig           = errors.New("reload config: nil config")
 	ErrUnsafeFabricReload  = errors.New("reload config: unsafe routed topology")
 )

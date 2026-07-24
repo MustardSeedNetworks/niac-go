@@ -110,9 +110,12 @@ type Stack struct {
 	stats *Statistics
 
 	// Control
-	running  atomic.Bool
-	stopChan chan struct{}
-	wg       sync.WaitGroup
+	lifecycleMu sync.RWMutex
+	started     bool
+	running     atomic.Bool
+	stopped     bool
+	stopChan    chan struct{}
+	wg          sync.WaitGroup
 
 	debugConfig     *logging.DebugConfig
 	snmpAgents      map[*config.Device]*snmpAgentGroup
@@ -161,6 +164,7 @@ type Statistics struct {
 	DHCPRequests          uint64
 	SNMPQueries           uint64
 	Errors                uint64
+	RejectedSends         uint64
 	FabricForwarded       uint64
 	FabricDrops           uint64
 	UDPProxyOverloadDrops uint64
@@ -313,12 +317,19 @@ func (s *Stack) allowDHCP() bool {
 	return s.fabric == nil || s.fabric.attachmentDHCP != nil
 }
 
-// AddPacketObserver registers an observer for stack packet events.
-
+// Start begins a single-use protocol stack. A stopped stack cannot be restarted.
 func (s *Stack) Start() error {
-	if !s.running.CompareAndSwap(false, true) {
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+
+	if s.started {
+		if s.stopped {
+			return ErrStackStopped
+		}
 		return ErrStackAlreadyRunning
 	}
+	s.started = true
+	s.running.Store(true)
 
 	// Start receive thread
 	s.wg.Add(1)
@@ -356,11 +367,16 @@ func (s *Stack) Start() error {
 	return nil
 }
 
-// Stop stops the protocol stack.
+// Stop permanently transitions the protocol stack out of service.
 func (s *Stack) Stop() {
-	if !s.running.CompareAndSwap(true, false) {
+	s.lifecycleMu.Lock()
+	if !s.running.Load() {
+		s.lifecycleMu.Unlock()
 		return
 	}
+	s.running.Store(false)
+	s.stopped = true
+	s.lifecycleMu.Unlock()
 
 	// Stop discovery protocol handlers
 	s.lldpHandler.Stop()
@@ -378,10 +394,38 @@ func (s *Stack) Stop() {
 	}
 }
 
-func (s *Stack) Send(pkt *Packet) {
+func (s *Stack) Send(pkt *Packet) bool {
+	return s.send(pkt) == nil
+}
+
+func (s *Stack) send(pkt *Packet) error {
+	s.lifecycleMu.RLock()
+	if s.stopped {
+		s.lifecycleMu.RUnlock()
+		s.stats.mu.Lock()
+		s.stats.RejectedSends++
+		if s.fabric != nil {
+			s.stats.FabricDrops++
+		}
+		s.stats.mu.Unlock()
+		if s.fabric != nil && pkt != nil {
+			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
+			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
+			pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
+			pkt.fabricTrace.RejectionReason = "stack_stopped"
+			s.notifyObservers("tx", pkt)
+		}
+		return ErrStackStopped
+	}
 	select {
 	case s.sendQueue <- pkt:
+		s.lifecycleMu.RUnlock()
+		return nil
 	default:
+		s.lifecycleMu.RUnlock()
+		s.stats.mu.Lock()
+		s.stats.RejectedSends++
+		s.stats.mu.Unlock()
 		if s.fabric != nil && pkt != nil {
 			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
 			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
@@ -395,6 +439,7 @@ func (s *Stack) Send(pkt *Packet) {
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
 			_, _ = fmt.Fprintln(os.Stdout, "Send queue full, dropping packet")
 		}
+		return ErrSendQueueFull
 	}
 }
 
@@ -419,9 +464,7 @@ func (s *Stack) SendRawPacketVLAN(data []byte, vlan int) error {
 		VLAN:         vlan,
 	}
 
-	s.Send(pkt)
-
-	return nil
+	return s.send(pkt)
 }
 
 // GetDevices returns the device table.
@@ -528,6 +571,7 @@ func (s *Stack) GetStats() Statistics {
 		DHCPRequests:          s.stats.DHCPRequests,
 		SNMPQueries:           s.stats.SNMPQueries,
 		Errors:                s.stats.Errors,
+		RejectedSends:         s.stats.RejectedSends,
 		FabricForwarded:       s.stats.FabricForwarded,
 		FabricDrops:           s.stats.FabricDrops,
 		UDPProxyOverloadDrops: s.stats.UDPProxyOverloadDrops,
