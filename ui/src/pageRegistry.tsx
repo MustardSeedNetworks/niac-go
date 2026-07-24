@@ -127,6 +127,7 @@ type PageI18nKey =
 type PageDef = {
   path: string;
   i18nKey: PageI18nKey;
+  interpolation?: Record<string, string>;
   icon: LucideIcon;
   component: ComponentType;
   badge?: string;
@@ -301,6 +302,7 @@ const staticPages: PageDef[] = [
   {
     path: '/topology',
     i18nKey: 'topology',
+    interpolation: { protocols: 'CDP/LLDP/EDP/FDP' },
     icon: Network,
     component: TopologyPage,
     help: (
@@ -358,6 +360,7 @@ const staticPages: PageDef[] = [
   {
     path: '/traffic',
     i18nKey: 'traffic',
+    interpolation: { format: 'PCAP' },
     icon: Zap,
     component: TrafficInjectionPage,
     help: (
@@ -407,6 +410,7 @@ const staticPages: PageDef[] = [
   {
     path: '/packets',
     i18nKey: 'packets',
+    interpolation: { format: 'PCAP' },
     icon: FileBox,
     component: PacketInspectorPage,
     help: (
@@ -429,6 +433,7 @@ const staticPages: PageDef[] = [
   {
     path: '/config-diff',
     i18nKey: 'configDiff',
+    interpolation: { format: 'YAML' },
     icon: GitCompare,
     component: ConfigDiffPage,
     help: (
@@ -452,6 +457,7 @@ const staticPages: PageDef[] = [
   {
     path: '/walk-validator',
     i18nKey: 'walkValidator',
+    interpolation: { protocol: 'SNMP' },
     icon: ShieldCheck,
     component: WalkValidatorPage,
     help: (
@@ -513,6 +519,7 @@ const staticPages: PageDef[] = [
   {
     path: '/library/walks',
     i18nKey: 'libraryWalks',
+    interpolation: { protocol: 'SNMP' },
     icon: Database,
     component: LibraryWalksPage,
     help: (
@@ -533,6 +540,7 @@ const staticPages: PageDef[] = [
   {
     path: '/library/pcaps',
     i18nKey: 'libraryPcaps',
+    interpolation: { format: 'PCAP' },
     icon: FileBox,
     component: LibraryPcapsPage,
     help: (
@@ -586,9 +594,9 @@ export function usePages(): PageConfig[] {
     () =>
       staticPages.map((p) => ({
         path: p.path,
-        label: t(`${p.i18nKey}.label`),
-        title: t(`${p.i18nKey}.title`),
-        description: t(`${p.i18nKey}.description`),
+        label: t(`${p.i18nKey}.label`, p.interpolation),
+        title: t(`${p.i18nKey}.title`, p.interpolation),
+        description: t(`${p.i18nKey}.description`, p.interpolation),
         icon: p.icon,
         component: p.component,
         badge: p.badge,
