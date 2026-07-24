@@ -417,65 +417,66 @@ components:
           type: string
           format: date-time
           example: "2025-11-14T10:30:00Z"
-        uptime:
-          type: string
-          example: "2h15m30s"
         version:
           type: string
           example: "2.7.0"
         interface:
           type: string
           example: "eth0"
-        device_count:
+        deviceCount:
           type: integer
           example: 50
         goroutines:
           type: integer
           description: Current goroutine count for leak detection
           example: 127
-        packets_sent:
-          type: integer
-          format: int64
-          example: 1000000
-        packets_received:
-          type: integer
-          format: int64
-          example: 950000
-        errors:
-          type: integer
-          format: int64
-          example: 42
-        protocol_stats:
+        stack:
           type: object
           properties:
-            arp_requests:
+            packetsSent:
+              type: integer
+              format: int64
+              example: 1000000
+            packetsReceived:
+              type: integer
+              format: int64
+              example: 950000
+            arpRequests:
               type: integer
               format: int64
               example: 5000
-            arp_replies:
+            arpReplies:
               type: integer
               format: int64
               example: 4950
-            icmp_requests:
+            icmpRequests:
               type: integer
               format: int64
               example: 10000
-            icmp_replies:
+            icmpReplies:
               type: integer
               format: int64
               example: 9800
-            dns_queries:
+            dnsQueries:
               type: integer
               format: int64
               example: 2000
-            dhcp_requests:
+            dhcpRequests:
               type: integer
               format: int64
               example: 50
-            snmp_queries:
+            snmpQueries:
               type: integer
               format: int64
               example: 500
+            errors:
+              type: integer
+              format: int64
+              example: 42
+            udpProxyOverloadDrops:
+              type: integer
+              format: int64
+              example: 0
 
     Device:
       type: object
@@ -678,22 +679,22 @@ components:
     StatsResponse:
       value:
         timestamp: "2025-11-14T10:30:00Z"
-        uptime: "2h15m30s"
         version: "2.7.0"
         interface: "eth0"
-        device_count: 50
+        deviceCount: 50
         goroutines: 127
-        packets_sent: 1000000
-        packets_received: 950000
-        errors: 42
-        protocol_stats:
-          arp_requests: 5000
-          arp_replies: 4950
-          icmp_requests: 10000
-          icmp_replies: 9800
-          dns_queries: 2000
-          dhcp_requests: 50
-          snmp_queries: 500
+        stack:
+          packetsSent: 1000000
+          packetsReceived: 950000
+          arpRequests: 5000
+          arpReplies: 4950
+          icmpRequests: 10000
+          icmpReplies: 9800
+          dnsQueries: 2000
+          dhcpRequests: 50
+          snmpQueries: 500
+          errors: 42
+          udpProxyOverloadDrops: 0
 
     DeviceListResponse:
       value:

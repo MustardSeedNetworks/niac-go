@@ -54,18 +54,18 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
   "timestamp": "2025-11-14T12:34:56Z",
   "interface": "eth0",
   "version": "2.6.0",
-  "device_count": 5,
+  "deviceCount": 5,
   "goroutines": 42,
   "stack": {
-    "packets_sent": 12543,
-    "packets_received": 10234,
-    "arp_requests": 523,
-    "arp_replies": 498,
-    "icmp_requests": 1024,
-    "icmp_replies": 1019,
-    "dns_queries": 234,
-    "dhcp_requests": 45,
-    "snmp_queries": 89,
+    "packetsSent": 12543,
+    "packetsReceived": 10234,
+    "arpRequests": 523,
+    "arpReplies": 498,
+    "icmpRequests": 1024,
+    "icmpReplies": 1019,
+    "dnsQueries": 234,
+    "dhcpRequests": 45,
+    "snmpQueries": 89,
     "errors": 3
   }
 }
@@ -219,8 +219,8 @@ def main():
     """Monitor statistics every 5 seconds"""
     while True:
         stats = get_stats()
-        print(f"Packets: sent={stats['stack']['packets_sent']}, "
-              f"received={stats['stack']['packets_received']}, "
+        print(f"Packets: sent={stats['stack']['packetsSent']}, "
+              f"received={stats['stack']['packetsReceived']}, "
               f"errors={stats['stack']['errors']}, "
               f"goroutines={stats['goroutines']}")
         time.sleep(5)
@@ -432,7 +432,7 @@ async function updateConfig(yamlContent) {
 (async () => {
   try {
     const stats = await getStats();
-    console.log('Packets sent:', stats.stack.packets_sent);
+    console.log('Packets sent:', stats.stack.packetsSent);
     console.log('Goroutines:', stats.goroutines);
   } catch (error) {
     console.error('Error:', error);
@@ -502,11 +502,11 @@ type Stats struct {
 	Timestamp   string `json:"timestamp"`
 	Interface   string `json:"interface"`
 	Version     string `json:"version"`
-	DeviceCount int    `json:"device_count"`
+	DeviceCount int    `json:"deviceCount"`
 	Goroutines  int    `json:"goroutines"`
 	Stack       struct {
-		PacketsSent     uint64 `json:"packets_sent"`
-		PacketsReceived uint64 `json:"packets_received"`
+		PacketsSent     uint64 `json:"packetsSent"`
+		PacketsReceived uint64 `json:"packetsReceived"`
 		Errors          uint64 `json:"errors"`
 	} `json:"stack"`
 }
@@ -551,8 +551,8 @@ $headers = @{
 }
 
 $stats = Invoke-RestMethod -Uri "https://localhost:8445/api/v1/stats" -Headers $headers
-Write-Host "Packets Sent: $($stats.stack.packets_sent)"
-Write-Host "Packets Received: $($stats.stack.packets_received)"
+Write-Host "Packets Sent: $($stats.stack.packetsSent)"
+Write-Host "Packets Received: $($stats.stack.packetsReceived)"
 Write-Host "Goroutines: $($stats.goroutines)"
 ```
 

@@ -419,7 +419,7 @@ headers = {"Authorization": f"Bearer {token}"}
 
 # Get stats
 stats = requests.get("https://localhost:8445/api/v1/stats", headers=headers).json()
-print(f"Packets sent: {stats['stack']['packets_sent']}")
+print(f"Packets sent: {stats['stack']['packetsSent']}")
 
 # Update config
 new_config = {"content": open("new-config.yaml").read()}
