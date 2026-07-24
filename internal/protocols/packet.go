@@ -39,6 +39,12 @@ type FabricTrace struct {
 	RejectionReason string
 }
 
+const (
+	fabricRouteDecisionDropped   = "dropped"
+	fabricRouteDecisionForwarded = "forwarded"
+	fabricRejectionTTLExpired    = "ttl_expired"
+)
+
 // Constants for packet parsing.
 const (
 	SizeOfMac           = 6
