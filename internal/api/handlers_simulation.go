@@ -62,6 +62,11 @@ func (s *Server) simulationEntitlements() SimulationEntitlements {
 	return entitlements
 }
 
+// SimulationEntitlements returns the currently active simulation grants.
+func (s *Server) SimulationEntitlements() SimulationEntitlements {
+	return s.simulationEntitlements()
+}
+
 func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
 		http.Error(

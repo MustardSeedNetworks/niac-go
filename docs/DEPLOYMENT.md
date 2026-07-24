@@ -42,6 +42,22 @@ brew install libpcap
 The archive includes launchd helper files under `launchd/` for users who want
 NIAC to run as a service.
 
+## Daemon Simulation Recovery
+
+Daemon mode records the active simulation launch intent in
+`<data-root>/state/active-simulation.json`. A graceful service shutdown keeps
+this record, and the next daemon start restores the simulation only after the
+current license grants, attachment policy, host interface, configuration,
+runtime requirements, and routed preflight all pass.
+
+An explicit simulation stop removes the record. If recovery fails, NIAC keeps
+the API available, leaves the simulation stopped, and reports an actionable
+`recovery` object from `GET /api/v1/simulation`. Correct the reported condition
+or remove the named state file before restarting the daemon.
+
+Writes use a synchronized temporary file followed by an atomic replacement.
+An interrupted temporary write is ignored on the next start.
+
 ## Windows
 
 Download the Windows zip for your architecture from the GitHub release and add

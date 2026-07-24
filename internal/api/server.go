@@ -335,6 +335,14 @@ type SimulationStatus struct {
 	StartedAt     time.Time               `json:"startedAt,omitzero"`
 	UptimeSeconds float64                 `json:"uptimeSeconds"`
 	Fabric        *SimulationFabricStatus `json:"fabric,omitempty"`
+	Recovery      *SimulationRecovery     `json:"recovery,omitempty"`
+}
+
+// SimulationRecovery reports the most recent daemon restart recovery attempt.
+type SimulationRecovery struct {
+	State       string    `json:"state"`
+	Message     string    `json:"message"`
+	AttemptedAt time.Time `json:"attemptedAt"`
 }
 
 // SimulationFabricStatus exposes the active routed topology and its live counters.

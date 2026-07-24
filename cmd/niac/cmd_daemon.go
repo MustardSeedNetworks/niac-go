@@ -223,6 +223,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		Token:               token,
 		TokenFile:           tokenFile,
 		StoragePath:         options.storagePath,
+		RecoveryPath:        daemon.DefaultRecoveryPath(),
 		Version:             info.version,
 		Commit:              info.commit,
 		BuildTime:           info.date,
