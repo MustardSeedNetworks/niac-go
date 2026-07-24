@@ -49,16 +49,17 @@ func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
 		"device_count": deviceCount,
 		"goroutines":   goroutineCount, // FEATURE #119: Monitor goroutine count
 		"stack": map[string]uint64{
-			"packets_sent":     stats.PacketsSent,
-			"packets_received": stats.PacketsReceived,
-			"arp_requests":     stats.ARPRequests,
-			"arp_replies":      stats.ARPReplies,
-			"icmp_requests":    stats.ICMPRequests,
-			"icmp_replies":     stats.ICMPReplies,
-			"dns_queries":      stats.DNSQueries,
-			"dhcp_requests":    stats.DHCPRequests,
-			"snmp_queries":     stats.SNMPQueries,
-			"errors":           stats.Errors,
+			"packets_sent":             stats.PacketsSent,
+			"packets_received":         stats.PacketsReceived,
+			"arp_requests":             stats.ARPRequests,
+			"arp_replies":              stats.ARPReplies,
+			"icmp_requests":            stats.ICMPRequests,
+			"icmp_replies":             stats.ICMPReplies,
+			"dns_queries":              stats.DNSQueries,
+			"dhcp_requests":            stats.DHCPRequests,
+			"snmp_queries":             stats.SNMPQueries,
+			"errors":                   stats.Errors,
+			"udp_proxy_overload_drops": stats.UDPProxyOverloadDrops,
 		},
 	}
 	s.writeJSON(w, payload)

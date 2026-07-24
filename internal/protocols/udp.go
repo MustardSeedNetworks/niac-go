@@ -1,10 +1,13 @@
 package protocols
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"slices"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -28,6 +31,9 @@ const (
 	udpBroadcastOctet = 255  // Broadcast IP octet (255.255.255.255)
 	udpProxyTimeoutS  = 30   // Proxy timeout in seconds
 	udpProxyBufSize   = 1500 // Proxy buffer size (MTU)
+	// A fixed process-local limit prevents map_to_ip bursts from exhausting
+	// sockets and goroutines while keeping independent devices responsive.
+	udpProxyConcurrencyLimit = 64
 )
 
 // IP protocol constants for UDP handler.
@@ -60,13 +66,30 @@ const (
 
 // UDPHandler handles UDP packets.
 type UDPHandler struct {
-	stack *Stack
+	stack       *Stack
+	proxyCtx    context.Context
+	cancelProxy context.CancelFunc
+	proxySlots  chan struct{}
+	proxyWG     sync.WaitGroup
+	proxyMu     sync.Mutex
+	proxyConns  map[net.Conn]struct{}
+	stopped     bool
+	dial        func(context.Context, string) (net.Conn, error)
 }
 
 // NewUDPHandler creates a new UDP handler.
 func NewUDPHandler(stack *Stack) *UDPHandler {
+	ctx, cancel := context.WithCancel(context.Background())
+	dialer := &net.Dialer{}
 	return &UDPHandler{
-		stack: stack,
+		stack:       stack,
+		proxyCtx:    ctx,
+		cancelProxy: cancel,
+		proxySlots:  make(chan struct{}, udpProxyConcurrencyLimit),
+		proxyConns:  make(map[net.Conn]struct{}),
+		dial: func(ctx context.Context, address string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "udp", address)
+		},
 	}
 }
 
@@ -200,46 +223,136 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 		return
 	}
 
+	srcIP := ipLayer.DstIP.To4()
+	dstIP := ipLayer.SrcIP.To4()
+	if srcIP == nil || dstIP == nil {
+		return
+	}
+
+	request := udpProxyRequest{
+		address: net.JoinHostPort(device.MapToIP.String(), strconv.Itoa(int(udp.DstPort))),
+		payload: slices.Clone(udp.Payload),
+		srcIP:   slices.Clone(srcIP),
+		dstIP:   slices.Clone(dstIP),
+		srcPort: uint16(udp.DstPort),
+		dstPort: uint16(udp.SrcPort),
+		srcMAC:  slices.Clone(identity.source),
+		dstMAC:  slices.Clone(identity.destination),
+		vlan:    identity.vlan,
+	}
+	h.launchProxy(func(ctx context.Context) {
+		h.runProxy(ctx, request)
+	})
+}
+
+type udpProxyRequest struct {
+	address string
+	payload []byte
+	srcIP   []byte
+	dstIP   []byte
+	srcPort uint16
+	dstPort uint16
+	srcMAC  []byte
+	dstMAC  []byte
+	vlan    int
+}
+
+func (h *UDPHandler) launchProxy(work func(context.Context)) bool {
+	h.proxyMu.Lock()
+	if h.stopped {
+		h.proxyMu.Unlock()
+		return false
+	}
+	select {
+	case h.proxySlots <- struct{}{}:
+		h.proxyWG.Add(1)
+		h.proxyMu.Unlock()
+	default:
+		h.proxyMu.Unlock()
+		h.stack.recordUDPProxyOverloadDrop()
+		return false
+	}
+
 	go func() {
-		dstAddr := &net.UDPAddr{IP: device.MapToIP, Port: int(udp.DstPort)}
-
-		conn, err := net.DialUDP("udp", nil, dstAddr)
-		if err != nil {
-			return
-		}
-
-		defer func() { _ = conn.Close() }()
-
-		_ = conn.SetDeadline(time.Now().Add(udpProxyTimeoutS * time.Second))
-
-		_, writeErr := conn.Write(udp.Payload)
-		if writeErr != nil {
-			return
-		}
-
-		buf := make([]byte, udpProxyBufSize)
-
-		n, readErr := conn.Read(buf)
-		if readErr != nil || n <= 0 {
-			return
-		}
-
-		srcIP := ipLayer.DstIP.To4()
-		if srcIP == nil {
-			return
-		}
-
-		_ = h.SendUDP(
-			srcIP,
-			ipLayer.SrcIP.To4(),
-			uint16(udp.DstPort),
-			uint16(udp.SrcPort),
-			buf[:n],
-			[]byte(identity.source),
-			[]byte(identity.destination),
-			identity.vlan,
-		)
+		defer func() {
+			<-h.proxySlots
+			h.proxyWG.Done()
+		}()
+		work(h.proxyCtx)
 	}()
+	return true
+}
+
+func (h *UDPHandler) runProxy(ctx context.Context, request udpProxyRequest) {
+	conn, err := h.dial(ctx, request.address)
+	if err != nil || !h.trackProxyConn(conn) {
+		return
+	}
+	defer func() {
+		h.untrackProxyConn(conn)
+		_ = conn.Close()
+	}()
+
+	_ = conn.SetDeadline(time.Now().Add(udpProxyTimeoutS * time.Second))
+	if _, err = conn.Write(request.payload); err != nil {
+		return
+	}
+
+	buf := make([]byte, udpProxyBufSize)
+	n, err := conn.Read(buf)
+	if err != nil || n <= 0 {
+		return
+	}
+
+	_ = h.SendUDP(
+		request.srcIP,
+		request.dstIP,
+		request.srcPort,
+		request.dstPort,
+		buf[:n],
+		request.srcMAC,
+		request.dstMAC,
+		request.vlan,
+	)
+}
+
+func (h *UDPHandler) trackProxyConn(conn net.Conn) bool {
+	h.proxyMu.Lock()
+	defer h.proxyMu.Unlock()
+	if h.stopped {
+		_ = conn.Close()
+		return false
+	}
+	h.proxyConns[conn] = struct{}{}
+	return true
+}
+
+func (h *UDPHandler) untrackProxyConn(conn net.Conn) {
+	h.proxyMu.Lock()
+	delete(h.proxyConns, conn)
+	h.proxyMu.Unlock()
+}
+
+// Stop cancels proxy dialing, closes in-flight sockets, and waits for all
+// admitted work to release its slot.
+func (h *UDPHandler) Stop() {
+	h.proxyMu.Lock()
+	if h.stopped {
+		h.proxyMu.Unlock()
+		return
+	}
+	h.stopped = true
+	h.cancelProxy()
+	conns := make([]net.Conn, 0, len(h.proxyConns))
+	for conn := range h.proxyConns {
+		conns = append(conns, conn)
+	}
+	h.proxyMu.Unlock()
+
+	for _, conn := range conns {
+		_ = conn.Close()
+	}
+	h.proxyWG.Wait()
 }
 
 // SendUDP sends a UDP packet with a default (zero) ToS byte.

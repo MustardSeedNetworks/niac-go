@@ -43,6 +43,13 @@ func writeBasicMetrics(w io.Writer, stats *protocols.Statistics, deviceCount int
 	writePrometheusMetric(w, "niac_errors_total", "Total errors", "counter", stats.Errors)
 	writePrometheusMetric(
 		w,
+		"niac_udp_proxy_overload_drops_total",
+		"UDP map_to_ip packets dropped at the proxy concurrency limit",
+		"counter",
+		stats.UDPProxyOverloadDrops,
+	)
+	writePrometheusMetric(
+		w,
 		"niac_devices_total",
 		"Number of simulated devices",
 		"gauge",
