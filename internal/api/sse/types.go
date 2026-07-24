@@ -26,6 +26,7 @@ package sse
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -84,6 +85,13 @@ type Message struct {
 	Event string `json:"event,omitempty"` // Optional event type
 	Data  any    `json:"data"`
 	ID    string `json:"id,omitempty"` // Optional event ID for Last-Event-ID
+}
+
+// PacketEvent is the wire envelope sent by the packet stream.
+type PacketEvent struct {
+	Type      string    `json:"type"`
+	Data      any       `json:"data"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // Client is a single connected client's hub-side handle. The hub

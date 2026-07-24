@@ -1,6 +1,8 @@
 package sse
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -250,6 +252,52 @@ func TestSSEHubBroadcastToClients(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Error("did not receive broadcast message")
+	}
+}
+
+func TestSSEHubBroadcastPacketWireEnvelope(t *testing.T) {
+	hub := NewHub(Config{})
+	go hub.Run()
+	defer hub.Stop()
+
+	client := &Client{
+		hub:      hub,
+		send:     make(chan []byte, hub.config.BufferSize),
+		stream:   StreamPackets,
+		clientIP: "127.0.0.1",
+	}
+	hub.register <- client
+
+	hub.BroadcastPacket(map[string]any{
+		"protocol":  "TCP",
+		"source_ip": "192.0.2.10",
+	})
+
+	select {
+	case msg := <-client.send:
+		lines := bytes.Split(msg, []byte("\n"))
+		if len(lines) < 2 || !bytes.HasPrefix(lines[1], []byte("data: ")) {
+			t.Fatalf("unexpected SSE frame: %q", msg)
+		}
+		var event struct {
+			Type      string         `json:"type"`
+			Data      map[string]any `json:"data"`
+			Timestamp time.Time      `json:"timestamp"`
+		}
+		if err := json.Unmarshal(bytes.TrimPrefix(lines[1], []byte("data: ")), &event); err != nil {
+			t.Fatalf("decode packet event: %v", err)
+		}
+		if event.Type != "packet" {
+			t.Errorf("type = %q, want packet", event.Type)
+		}
+		if event.Data["protocol"] != "TCP" || event.Data["source_ip"] != "192.0.2.10" {
+			t.Errorf("data = %#v", event.Data)
+		}
+		if event.Timestamp.IsZero() {
+			t.Error("timestamp is zero")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("did not receive packet broadcast")
 	}
 }
 
