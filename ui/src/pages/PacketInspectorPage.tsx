@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   fetchCaptureStatus,
   fetchUsableInterfaces,
@@ -95,7 +95,8 @@ export const PacketInspectorPage: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
-  const [view, setView] = useState<'live' | 'files'>('live');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get('view') === 'files' ? 'files' : 'live';
   // The page streams from /api/v1/stream/packets, which the daemon
   // populates from either a running simulation OR a standalone capture
   // session. Polling both lets us pick whichever is producing traffic
@@ -296,19 +297,6 @@ export const PacketInspectorPage: FC = () => {
     return `${selectedPacket.sourceIp}:${selectedPacket.sourcePort ?? 0}`;
   }, [selectedPacket]);
 
-  if (!streamActive) {
-    return (
-      <StandaloneCaptureStarter
-        onStarted={() => {
-          // Force an immediate status refresh so the page transitions
-          // out of the empty state without waiting for the poll tick.
-          refetchCapture();
-        }}
-        navigateToSim={() => navigate('/runtime')}
-      />
-    );
-  }
-
   return (
     <div className="stack-xl">
       {/* Live / PCAP Files tab control */}
@@ -321,7 +309,7 @@ export const PacketInspectorPage: FC = () => {
           type="button"
           role="tab"
           aria-selected={view === 'live'}
-          onClick={() => setView('live')}
+          onClick={() => setSearchParams({}, { replace: true })}
           className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'live'
               ? 'bg-brand-primary/20 text-brand-accent'
@@ -335,7 +323,7 @@ export const PacketInspectorPage: FC = () => {
           type="button"
           role="tab"
           aria-selected={view === 'files'}
-          onClick={() => setView('files')}
+          onClick={() => setSearchParams({ view: 'files' }, { replace: true })}
           className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'files'
               ? 'bg-brand-primary/20 text-brand-accent'
@@ -350,8 +338,17 @@ export const PacketInspectorPage: FC = () => {
       {/* PCAP Files tab — renders the standalone analyzer */}
       {view === 'files' && <PcapAnalyzerPage />}
 
+      {view === 'live' && !streamActive && (
+        <StandaloneCaptureStarter
+          onStarted={() => {
+            refetchCapture();
+          }}
+          navigateToSim={() => navigate('/runtime')}
+        />
+      )}
+
       {/* Live capture content (everything below is the original page) */}
-      {view === 'live' && (
+      {view === 'live' && streamActive && (
         <>
           {/* Header with controls */}
           <Card className="border-surface-border bg-bg-surface/70">

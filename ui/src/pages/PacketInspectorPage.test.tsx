@@ -203,4 +203,34 @@ describe('PacketInspectorPage — filtered export', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Unknown.*Unknown/)).not.toBeInTheDocument();
   });
+
+  it('opens offline PCAP analysis when no live stream is active', async () => {
+    fetchCaptureStatus.mockResolvedValue({ running: false });
+
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'PCAP files' }));
+
+    expect(screen.getByText('Drag & drop PCAP file')).toBeInTheDocument();
+  });
+
+  it('opens a bookmarked offline PCAP view directly', async () => {
+    fetchCaptureStatus.mockResolvedValue({ running: false });
+
+    render(
+      <MemoryRouter initialEntries={['/packets?view=files']}>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Drag & drop PCAP file')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'PCAP files' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
 });
