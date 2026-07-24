@@ -43,6 +43,8 @@ type fabricRoute struct {
 	connected   bool
 }
 
+const ipv4PointToPointPrefixBits = 30
+
 type fabricResolution struct {
 	device         *config.Device
 	replySourceMAC net.HardwareAddr
@@ -100,6 +102,52 @@ func (r *fabricRuntime) acceptsFrame(vlan int, tagged bool) bool {
 	default:
 		return false
 	}
+}
+
+func (r *fabricRuntime) acceptsIPv4Source(sourceIP, destinationIP net.IP, protocol uint8) bool {
+	if r == nil {
+		return true
+	}
+	source, sourceOK := netip.AddrFromSlice(sourceIP)
+	destination, destinationOK := netip.AddrFromSlice(destinationIP)
+	if !sourceOK || !destinationOK {
+		return false
+	}
+	source = source.Unmap()
+	destination = destination.Unmap()
+	if source == netip.IPv4Unspecified() {
+		return protocol == IPProtocolUDP &&
+			destination == netip.AddrFrom4([4]byte{0xff, 0xff, 0xff, 0xff})
+	}
+	if !source.Is4() || source.IsMulticast() {
+		return false
+	}
+	for _, network := range r.topology.Networks {
+		if network.Name == r.attachmentNetwork {
+			return validAttachmentHost(network.Prefix, source)
+		}
+	}
+	return false
+}
+
+func validAttachmentHost(prefix netip.Prefix, address netip.Addr) bool {
+	if !prefix.IsValid() || !prefix.Addr().Is4() || !prefix.Contains(address) {
+		return false
+	}
+	if prefix.Bits() > ipv4PointToPointPrefixBits {
+		return true
+	}
+	network := prefix.Masked().Addr().As4()
+	host := address.As4()
+	if host == network {
+		return false
+	}
+	mask := net.CIDRMask(prefix.Bits(), address.BitLen())
+	broadcast := network
+	for index := range broadcast {
+		broadcast[index] |= ^mask[index]
+	}
+	return host != broadcast
 }
 
 func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {

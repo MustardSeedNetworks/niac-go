@@ -40,9 +40,11 @@ type FabricTrace struct {
 }
 
 const (
-	fabricRouteDecisionDropped   = "dropped"
-	fabricRouteDecisionForwarded = "forwarded"
-	fabricRejectionTTLExpired    = "ttl_expired"
+	fabricRouteDecisionDropped         = "dropped"
+	fabricRouteDecisionForwarded       = "forwarded"
+	fabricRejectionTTLExpired          = "ttl_expired"
+	fabricRejectionInvalidIPv4Checksum = "invalid_ipv4_checksum"
+	fabricRejectionAttachmentSource    = "attachment_source_rejected"
 )
 
 // Constants for packet parsing.

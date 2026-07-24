@@ -28,6 +28,7 @@ const (
 	ipIPv4Version = 4  // IPv4 version field
 	ipIPv4IHL     = 5  // IPv4 header length (5 = 20 bytes)
 	ipIPv4TTL     = 64 // IPv4 default TTL
+	ipv4IHLBytes  = 4
 )
 
 // IPHandler handles IP packets.
@@ -51,6 +52,10 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 
 	ip := h.parseIPv4Layer(pkt, debugLevel)
 	if ip == nil {
+		return
+	}
+	if h.stack.fabric != nil && !h.stack.fabric.acceptsIPv4Source(ip.SrcIP, ip.DstIP, uint8(ip.Protocol)) {
+		h.rejectFabricIngress(pkt, fabricRejectionAttachmentSource)
 		return
 	}
 
@@ -100,8 +105,25 @@ func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
 	if !ok {
 		return nil
 	}
+	headerLength := int(ip.IHL) * ipv4IHLBytes
+	if ip.IHL < ipIPv4IHL || len(ip.Contents) < headerLength ||
+		CalculateIPChecksum(ip.Contents[:headerLength]) != 0 {
+		h.rejectFabricIngress(pkt, fabricRejectionInvalidIPv4Checksum)
+		return nil
+	}
 
 	return ip
+}
+
+func (h *IPHandler) rejectFabricIngress(pkt *Packet, reason string) {
+	if h.stack.fabric == nil {
+		return
+	}
+	pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
+	pkt.fabricTrace.RejectionReason = reason
+	h.stack.stats.mu.Lock()
+	h.stack.stats.FabricDrops++
+	h.stack.stats.mu.Unlock()
 }
 
 // getTargetDevices returns devices that should receive this packet, scoped to
