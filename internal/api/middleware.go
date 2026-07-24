@@ -85,6 +85,13 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 }
 
+func withSecurityHeaders(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		addSecurityHeaders(w, r)
+		next(w, r)
+	}
+}
+
 // recoverMiddleware recovers from panics in HTTP handlers to prevent server crashes
 // SECURITY FIX #2.8.1: Add panic recovery to prevent single malformed request from crashing API.
 func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {

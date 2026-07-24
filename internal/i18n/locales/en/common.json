@@ -21,6 +21,17 @@
     "tagline": "Network protocol simulator and packet inspector",
     "title": "NIAC"
   },
+  "auth": {
+    "checking": "Checking access...",
+    "connect": "Connect",
+    "connectionFailed": "NIAC could not be reached. Check the daemon and try again.",
+    "description": "Enter the API token configured for this NIAC daemon.",
+    "invalidToken": "That API token was rejected.",
+    "memoryOnly": "The token is kept only in this tab's memory and is cleared when the page closes.",
+    "sessionExpired": "Your session is no longer authorized. Enter the API token again.",
+    "title": "Connect to NIAC",
+    "tokenLabel": "API token"
+  },
   "buttons": {
     "add": "Add",
     "apply": "Apply",

@@ -178,3 +178,45 @@ func TestMethodGateRejectsWrongMethod(t *testing.T) {
 		t.Errorf("Allow header = %q, want %q", allow, http.MethodGet)
 	}
 }
+
+func TestSPAIsPublicButAPIRemainsAuthenticated(t *testing.T) {
+	server, _, token := newTestServerWithAuth(t)
+	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
+	mux := http.NewServeMux()
+	server.registerAPIRoutes(mux)
+
+	spaReq := httptest.NewRequest(http.MethodGet, "https://niac.example/", nil)
+	spaRec := httptest.NewRecorder()
+	mux.ServeHTTP(spaRec, spaReq)
+	if spaRec.Code == http.StatusUnauthorized {
+		t.Fatal("GET / without bearer returned 401; the SPA cannot bootstrap its auth prompt")
+	}
+	for _, header := range []string{
+		"Content-Security-Policy",
+		"Strict-Transport-Security",
+		"X-Content-Type-Options",
+		"X-Frame-Options",
+	} {
+		if spaRec.Header().Get(header) == "" {
+			t.Errorf("GET / without bearer omitted %s", header)
+		}
+	}
+
+	apiReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/scope", nil)
+	apiRec := httptest.NewRecorder()
+	mux.ServeHTTP(apiRec, apiReq)
+	if apiRec.Code != http.StatusUnauthorized {
+		t.Fatalf("GET /api/v1/auth/scope without bearer: status = %d, want 401", apiRec.Code)
+	}
+
+	missingReq := httptest.NewRequest(http.MethodGet, "/api/v1/missing", nil)
+	missingReq.Header.Set("Authorization", "Bearer "+token)
+	missingRec := httptest.NewRecorder()
+	mux.ServeHTTP(missingRec, missingReq)
+	if missingRec.Code != http.StatusNotFound {
+		t.Fatalf("GET unknown /api path with bearer: status = %d, want 404", missingRec.Code)
+	}
+	if got := missingRec.Header().Get("Content-Type"); got != "application/json" {
+		t.Errorf("GET unknown /api path Content-Type = %q, want application/json", got)
+	}
+}

@@ -5,6 +5,17 @@
     "fullName": "Network In A Can",
     "tagline": "Simulador de protocolos de red e inspector de paquetes"
   },
+  "auth": {
+    "title": "Conectar a NIAC",
+    "description": "Introduzca el token de API configurado para este demonio NIAC.",
+    "tokenLabel": "Token de API",
+    "connect": "Conectar",
+    "checking": "Comprobando el acceso...",
+    "invalidToken": "Ese token de API fue rechazado.",
+    "connectionFailed": "No se pudo acceder a NIAC. Compruebe el demonio e inténtelo de nuevo.",
+    "sessionExpired": "Su sesión ya no está autorizada. Introduzca de nuevo el token de API.",
+    "memoryOnly": "El token se conserva solo en la memoria de esta pestaña y se borra al cerrar la página."
+  },
   "buttons": {
     "save": "Guardar",
     "cancel": "Cancelar",

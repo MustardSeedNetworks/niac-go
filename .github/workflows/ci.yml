@@ -858,6 +858,10 @@ jobs:
         # tablet/visual projects were deleted from playwright.config.ts.
         run: npx playwright test --reporter=html
 
+      - name: Run authenticated browser E2E tests
+        working-directory: ui
+        run: npm run test:e2e:auth
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
