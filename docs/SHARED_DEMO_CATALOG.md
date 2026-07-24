@@ -33,6 +33,17 @@ Check an existing generated `examples/` tree:
 .\scripts\sync-demo-catalog.ps1 -Mode Check
 ```
 
+Both wrappers resolve the selected ref to a clean, immutable Git commit and
+delegate generation to the same Go implementation. Before replacing or
+checking `examples/`, the generator validates every YAML scenario, routed
+attachment, and raw or sanitized SNMP walk. Invalid content fails without
+changing the existing examples.
+
+Each generated tree contains `catalog-source.json` with the catalog repository,
+resolved commit, and sorted SHA-256 digest for every generated file. This
+manifest makes the source revision reproducible and is included in drift
+checks.
+
 ## Generated Layout
 
 | Catalog path | Go generated path |
@@ -52,7 +63,7 @@ Check an existing generated `examples/` tree:
 - `NIAC_DEMO_CATALOG_REF`: catalog branch, tag, or commit. Defaults to `main`.
 - `NIAC_DEMO_CATALOG_DIR`: existing catalog checkout. Defaults to `.catalog/niac-demo-catalog`.
 - `NIAC_GO_EXAMPLES_DIR`: generated output path. Defaults to `examples`.
-- `NIAC_DEMO_CATALOG_OFFLINE=1`: require an existing local catalog and skip `git fetch`.
+- `NIAC_DEMO_CATALOG_OFFLINE=1`: require a clean local Git checkout and skip `git fetch`.
 
 Do not add shared demo assets directly to this repo. Add or update them in
 `niac-demo-catalog`, then regenerate `examples/`.
