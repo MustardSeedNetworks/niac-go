@@ -53,6 +53,12 @@ type fabricResolution struct {
 	routeVia       string
 }
 
+type fabricNotificationEgress struct {
+	device *config.Device
+	source netip.Addr
+	target netip.Addr
+}
+
 func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRuntime {
 	if topology == nil || cfg == nil {
 		return nil
@@ -173,6 +179,42 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 		firstHopMAC: cloneMAC(router.mac), firstHopDevice: router.device,
 		egressNetwork: endpoint.network, routeVia: route.via,
 	}, true
+}
+
+func (r *fabricRuntime) notificationEgress(
+	routerDevice *config.Device,
+	destination netip.Addr,
+) (fabricNotificationEgress, bool) {
+	if r == nil || routerDevice == nil || !destination.Is4() {
+		return fabricNotificationEgress{}, false
+	}
+	for i := range r.attachmentRouters {
+		router := &r.attachmentRouters[i]
+		if router.device != routerDevice ||
+			!r.interfaceAvailable(router.device, router.attachmentInterface) {
+			continue
+		}
+		for _, route := range r.routesFor(router) {
+			if !route.connected || route.via != router.attachmentInterface ||
+				!route.destination.Contains(destination) {
+				continue
+			}
+			source, found := r.interfaceAddress(
+				router.device,
+				router.attachmentInterface,
+				router.attachmentIP,
+			)
+			if !found {
+				return fabricNotificationEgress{}, false
+			}
+			return fabricNotificationEgress{
+				device: router.device,
+				source: source,
+				target: destination,
+			}, true
+		}
+	}
+	return fabricNotificationEgress{}, false
 }
 
 func (r *fabricRuntime) interfaceAddress(device *config.Device, name string, fallback netip.Addr) (netip.Addr, bool) {

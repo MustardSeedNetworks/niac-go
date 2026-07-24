@@ -279,6 +279,116 @@ func TestStackDatagramSenderUsesConfiguredNextHopForOffLinkReceiver(t *testing.T
 	}
 }
 
+func TestStackDatagramSenderRoutesThroughFabricToPhysicalCollector(t *testing.T) {
+	routerMAC := mustForwardingMAC(t, "02:00:00:00:00:01")
+	senderMAC := mustForwardingMAC(t, "02:00:00:00:00:10")
+	collectorMAC := mustForwardingMAC(t, "02:00:00:00:00:fe")
+	cfg := &config.Config{
+		Networks: []config.Network{
+			{Name: "attachment", Subnet: "10.10.200.0/24"},
+			{Name: "management", Subnet: "10.20.0.0/24"},
+		},
+		Attachments: []config.LogicalAttachment{{Name: "tester", Network: "attachment"}},
+		Devices: []config.Device{
+			{
+				Name: "edge", Type: "router", MACAddress: routerMAC,
+				Interfaces: []config.Interface{
+					{Name: "outside", Network: "attachment", Address: "10.10.200.1/24"},
+					{Name: "inside", Network: "management", Address: "10.20.0.1/24"},
+				},
+			},
+			{
+				Name: "sender", Type: "server", MACAddress: senderMAC,
+				Interfaces: []config.Interface{{
+					Name: "eth0", Network: "management", Address: "10.20.0.10/24",
+				}},
+				Routes: []config.Route{{
+					Destination: "0.0.0.0/0", Via: "eth0", NextHop: "10.20.0.1",
+				}},
+			},
+		},
+	}
+	report := fabric.Compile(cfg, fabric.Binding{
+		Attachment: "tester", Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200,
+		PolicyApproved: true,
+	})
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
+	}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(&report.Topology)
+	sender := &cfg.Devices[1]
+	datagrams := stack.notifications.sender.(*stackDatagramSender)
+	defer datagrams.reset()
+
+	if err := datagrams.Send(
+		sender, config.UntaggedTag, "10.10.200.100:514", syslogPort, []byte("event"),
+	); err != nil {
+		t.Fatalf("Send() error = %v", err)
+	}
+	probe := <-stack.sendQueue
+	assertPhysicalCollectorProbe(t, probe, routerMAC)
+
+	reply, err := serializeARPPacket(
+		&layers.Ethernet{
+			SrcMAC: collectorMAC, DstMAC: routerMAC, EthernetType: layers.EthernetTypeARP,
+		},
+		buildARPLayer(
+			layers.ARPReply, collectorMAC, net.ParseIP("10.10.200.100"),
+			routerMAC, net.ParseIP("10.10.200.1"),
+		),
+	)
+	if err != nil {
+		t.Fatalf("serialize collector ARP reply: %v", err)
+	}
+	stack.arpHandler.HandlePacket(&Packet{Buffer: reply, Length: len(reply), VLAN: config.UntaggedTag})
+
+	notification := <-stack.sendQueue
+	assertPhysicalCollectorNotification(t, notification, routerMAC, collectorMAC)
+	if got := stack.GetStats().FabricForwarded; got != 1 {
+		t.Fatalf("FabricForwarded = %d, want 1", got)
+	}
+}
+
+func assertPhysicalCollectorProbe(t *testing.T, probe *Packet, routerMAC net.HardwareAddr) {
+	t.Helper()
+	probePacket := gopacket.NewPacket(probe.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	probeEthernet, _ := probePacket.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	arpRequest, _ := probePacket.Layer(layers.LayerTypeARP).(*layers.ARP)
+	if probeEthernet == nil || arpRequest == nil ||
+		!bytes.Equal(probeEthernet.SrcMAC, routerMAC) ||
+		!net.IP(arpRequest.SourceProtAddress).Equal(net.ParseIP("10.10.200.1")) ||
+		!net.IP(arpRequest.DstProtAddress).Equal(net.ParseIP("10.10.200.100")) {
+		t.Fatalf("physical collector probe = ethernet %#v ARP %#v", probeEthernet, arpRequest)
+	}
+}
+
+func assertPhysicalCollectorNotification(
+	t *testing.T,
+	notification *Packet,
+	routerMAC net.HardwareAddr,
+	collectorMAC net.HardwareAddr,
+) {
+	t.Helper()
+	decoded := gopacket.NewPacket(notification.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	ethernet, _ := decoded.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	ipv4, _ := decoded.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+	udp, _ := decoded.Layer(layers.LayerTypeUDP).(*layers.UDP)
+	if ethernet == nil || ipv4 == nil || udp == nil ||
+		!bytes.Equal(ethernet.SrcMAC, routerMAC) ||
+		!bytes.Equal(ethernet.DstMAC, collectorMAC) ||
+		!ipv4.SrcIP.Equal(net.ParseIP("10.20.0.10")) ||
+		!ipv4.DstIP.Equal(net.ParseIP("10.10.200.100")) ||
+		ipv4.TTL != ipIPv4TTL-1 ||
+		string(udp.Payload) != "event" {
+		t.Fatalf("physical collector notification = ethernet %#v IPv4 %#v UDP %#v", ethernet, ipv4, udp)
+	}
+	if trace := notification.FabricTrace(); trace.RouteDecision != fabricRouteDecisionForwarded ||
+		trace.EgressNetwork != "attachment" {
+		t.Fatalf("notification FabricTrace() = %#v", trace)
+	}
+}
+
 func TestStackDatagramSenderResolvesPhysicalNextHopBeforeNotification(t *testing.T) {
 	device := notificationTestDevice()
 	device.VLAN = 200
