@@ -643,6 +643,7 @@
     "label": "Simulation",
     "noUsableInterfaces": "No usable interfaces",
     "pickConfigHint": "Pick one below — Start unlocks once you do",
+    "preparingConnectionLabel": "Preparing connection…",
     "preview": {
       "deviceCount_one": "{{count}} device will launch when Start is clicked.",
       "deviceCount_other": "{{count}} devices will launch when Start is clicked.",
@@ -654,6 +655,7 @@
       "previewOnly": "Preview only — Start to launch",
       "selectedPrefix": "Selected:"
     },
+    "reviewConnectionLabel": "Review connection",
     "running": {
       "active": "ACTIVE",
       "configHelper": "Configuration file",
@@ -670,8 +672,6 @@
       "uptimeLabel": "Uptime",
       "viewDevices": "View Devices"
     },
-    "reviewConnectionLabel": "Review connection",
-    "preparingConnectionLabel": "Preparing connection…",
     "startSimulationTitle": "Start Simulation",
     "startSuccess": "Simulation started successfully!",
     "startTitlePickConfig": "Pick a config below first",
