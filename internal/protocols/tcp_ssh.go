@@ -24,6 +24,7 @@ const (
 	sshSegmentPayloadLimit = 1200
 	sshMaxSessions         = 256
 	sshSessionIdleTimeout  = 5 * time.Minute
+	sshSessionCleanup      = time.Minute
 	sshRetransmitTimeout   = 500 * time.Millisecond
 	sshMaxRetransmits      = 4
 )
@@ -261,28 +262,20 @@ func (h *sshTCPHandler) finishServer(session *sshTCPSession) {
 
 func (h *sshTCPHandler) reserveSession(key string) (bool, bool) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	now := h.now()
-	for currentKey, session := range h.sessions {
-		if session == nil {
-			continue
-		}
-		session.mu.Lock()
-		stale := now.Sub(session.lastActivity) >= sshSessionIdleTimeout
-		session.mu.Unlock()
-		if stale {
-			h.close(session)
-			delete(h.sessions, currentKey)
-		}
-	}
+	expired := h.removeExpiredLocked(h.now())
 	if _, exists := h.sessions[key]; exists {
+		h.mu.Unlock()
+		h.closeAll(expired)
 		return false, false
 	}
 	if len(h.sessions) >= sshMaxSessions {
+		h.mu.Unlock()
+		h.closeAll(expired)
 		return false, true
 	}
 	h.sessions[key] = nil
+	h.mu.Unlock()
+	h.closeAll(expired)
 	return true, false
 }
 
@@ -455,8 +448,54 @@ func (h *sshTCPHandler) server(device *config.Device) (*devicecli.SSHServer, err
 
 func (h *sshTCPHandler) session(key string) *sshTCPSession {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.sessions[key]
+	session := h.sessions[key]
+	if session == nil {
+		h.mu.Unlock()
+		return nil
+	}
+	now := h.now()
+	session.mu.Lock()
+	if now.Sub(session.lastActivity) < sshSessionIdleTimeout {
+		session.lastActivity = now
+		session.mu.Unlock()
+		h.mu.Unlock()
+		return session
+	}
+	delete(h.sessions, key)
+	session.mu.Unlock()
+	h.mu.Unlock()
+	h.close(session)
+	return nil
+}
+
+func (h *sshTCPHandler) cleanupExpired() {
+	h.mu.Lock()
+	expired := h.removeExpiredLocked(h.now())
+	h.mu.Unlock()
+	h.closeAll(expired)
+}
+
+func (h *sshTCPHandler) removeExpiredLocked(now time.Time) []*sshTCPSession {
+	var expired []*sshTCPSession
+	for key, session := range h.sessions {
+		if session == nil {
+			continue
+		}
+		session.mu.Lock()
+		stale := now.Sub(session.lastActivity) >= sshSessionIdleTimeout
+		session.mu.Unlock()
+		if stale {
+			delete(h.sessions, key)
+			expired = append(expired, session)
+		}
+	}
+	return expired
+}
+
+func (h *sshTCPHandler) closeAll(sessions []*sshTCPSession) {
+	for _, session := range sessions {
+		h.close(session)
+	}
 }
 
 func (h *sshTCPHandler) closeSession(key string) {
