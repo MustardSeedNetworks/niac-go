@@ -12,6 +12,7 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/virtualtcp"
 )
 
@@ -93,6 +94,63 @@ func TestSSHTCPHandlerReplacesIdleSessionForReusedSYN(t *testing.T) {
 	}
 	if reserved, _ := handler.reserveSession("client"); !reserved {
 		t.Fatal("reused tuple could not reserve a fresh session")
+	}
+}
+
+func TestSSHTCPHandlerExpiresIdleSessionBeforeEstablishedTraffic(t *testing.T) {
+	now := time.Date(2026, time.July, 24, 12, 0, 0, 0, time.UTC)
+	ip := &layers.IPv4{SrcIP: net.ParseIP("10.0.0.2"), DstIP: net.ParseIP("10.0.0.1")}
+	tcp := &layers.TCP{SrcPort: 40000, DstPort: TCPPortSSH, ACK: true, Seq: 100, Ack: 200}
+	key := sshSessionKey(ip, tcp, 0)
+	connection := virtualtcp.NewPacketConn(
+		"10.0.0.1:22", "10.0.0.2:40000",
+		func(context.Context, []byte) error { return nil },
+	)
+	handler := &sshTCPHandler{
+		sessions: map[string]*sshTCPSession{
+			key: {
+				key: key, connection: connection, established: true,
+				lastActivity: now.Add(-sshSessionIdleTimeout),
+			},
+		},
+		now: func() time.Time { return now },
+	}
+
+	handler.HandlePacket(
+		&Packet{},
+		ip,
+		tcp,
+		[]*config.Device{{SSHConfig: &config.SSHConfig{Enabled: true}}},
+	)
+
+	if _, exists := handler.sessions[key]; exists {
+		t.Fatal("idle session remained after established ACK traffic")
+	}
+	if _, err := connection.Write([]byte("closed")); err == nil {
+		t.Fatal("idle connection remained open")
+	}
+}
+
+func TestSSHTCPHandlerCleanupExpiresAbandonedSessions(t *testing.T) {
+	now := time.Date(2026, time.July, 24, 12, 0, 0, 0, time.UTC)
+	connection := virtualtcp.NewPacketConn(
+		"10.0.0.1:22", "10.0.0.2:40000",
+		func(context.Context, []byte) error { return nil },
+	)
+	handler := &sshTCPHandler{
+		sessions: map[string]*sshTCPSession{
+			"abandoned": {connection: connection, lastActivity: now.Add(-sshSessionIdleTimeout)},
+		},
+		now: func() time.Time { return now },
+	}
+
+	handler.cleanupExpired()
+
+	if _, exists := handler.sessions["abandoned"]; exists {
+		t.Fatal("periodic cleanup retained an abandoned session")
+	}
+	if _, err := connection.Write([]byte("closed")); err == nil {
+		t.Fatal("abandoned connection remained open")
 	}
 }
 

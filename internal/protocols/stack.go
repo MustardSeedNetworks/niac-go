@@ -359,6 +359,7 @@ func (s *Stack) Start() error {
 	s.edpHandler.Start()
 	s.fdpHandler.Start()
 	s.startNeighborCleanupLoop()
+	s.startSessionCleanupLoop()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack started")
