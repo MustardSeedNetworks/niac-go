@@ -216,8 +216,8 @@ func TestValidate_DetectsDuplicateIdentityAcrossSegments(t *testing.T) {
 
 func TestValidate_DetectsDuplicateSegmentTags(t *testing.T) {
 	cfg := &Config{Segments: []Segment{
-		{Tag: UntaggedTag, ConfigPath: "first.yaml"},
-		{Tag: UntaggedTag, ConfigPath: "second.yaml"},
+		{Tag: UntaggedTag},
+		{Tag: UntaggedTag},
 	}}
 
 	result := NewValidator("segments.yaml").Validate(cfg)

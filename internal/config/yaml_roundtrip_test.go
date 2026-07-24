@@ -56,7 +56,9 @@ func TestMarshalConfigYAMLPreservesSegments(t *testing.T) {
 		{Tag: UntaggedTag, Devices: []Device{{
 			Name: "native", Type: "router", MACAddress: mustMAC(t, "02:00:00:00:00:01"),
 		}}},
-		{Tag: 200, ConfigPath: "site.yaml"},
+		{Tag: 200, Devices: []Device{{
+			Name: "site", Type: "switch", MACAddress: mustMAC(t, "02:00:00:00:00:02"),
+		}}},
 	}}
 
 	data, err := MarshalConfigYAML(cfg)
@@ -73,8 +75,8 @@ func TestMarshalConfigYAMLPreservesSegments(t *testing.T) {
 	if authored.Segments[0].Tag != "untagged" || len(authored.Segments[0].Devices) != 1 {
 		t.Fatalf("inline segment = %#v", authored.Segments[0])
 	}
-	if authored.Segments[1].Tag != "200" || authored.Segments[1].Config != "site.yaml" {
-		t.Fatalf("referenced segment = %#v", authored.Segments[1])
+	if authored.Segments[1].Tag != "200" || len(authored.Segments[1].Devices) != 1 {
+		t.Fatalf("resolved segment = %#v", authored.Segments[1])
 	}
 }
 

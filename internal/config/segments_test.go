@@ -7,6 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 // TestSegmentConfigPathResolution: a segment's `config:` file (a whole demo) is
@@ -55,6 +59,18 @@ segments:
 
 	if segs[1].Tag != 300 || segs[1].Devices[0].Name != "demo2-r1" {
 		t.Errorf("tag-300 inline segment wrong: %+v", segs[1])
+	}
+
+	data, err := MarshalConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("MarshalConfigYAML() error = %v", err)
+	}
+	var authored converter.Config
+	if err = yaml.Unmarshal(data, &authored); err != nil {
+		t.Fatalf("unmarshal serialized config: %v", err)
+	}
+	if authored.Segments[0].Config != "" || len(authored.Segments[0].Devices) != 1 {
+		t.Fatalf("resolved segment serialized as unresolved reference: %#v", authored.Segments[0])
 	}
 }
 
