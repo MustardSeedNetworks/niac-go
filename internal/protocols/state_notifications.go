@@ -44,9 +44,11 @@ type notificationNeighbor struct {
 }
 
 type pendingNotification struct {
-	device                      *config.Device
+	egressDevice                *config.Device
 	vlan                        int
 	source, destination         netip.Addr
+	neighborSource              netip.Addr
+	routed                      bool
 	sourcePort, destinationPort uint16
 	payload                     []byte
 }
@@ -94,17 +96,53 @@ func (s *stackDatagramSender) Send(
 	if !source.IsValid() || len(device.MACAddress) != SizeOfMac {
 		return fmt.Errorf("device %q has no active notification source for %s", device.Name, destination)
 	}
-	destinationMAC, err := s.notificationDestinationMAC(device, vlan, destination, target)
+	egressDevice, neighborSource, target, routed := s.notificationEgress(
+		device,
+		source,
+		destination,
+		target,
+		vlan,
+	)
+	destinationMAC, err := s.notificationDestinationMAC(egressDevice, vlan, destination, target)
 	if err != nil {
 		return err
 	}
 	if destinationMAC == nil {
 		return s.resolveNeighbor(pendingNotification{
-			device: device, vlan: vlan, source: source, destination: destination,
+			egressDevice: egressDevice, vlan: vlan,
+			source: source, destination: destination, neighborSource: neighborSource, routed: routed,
 			sourcePort: sourcePort, destinationPort: port, payload: append([]byte(nil), payload...),
 		}, target)
 	}
-	return s.emitNotification(device, vlan, source, destination, sourcePort, port, destinationMAC, payload)
+	return s.emitNotification(
+		egressDevice,
+		vlan,
+		source,
+		destination,
+		sourcePort,
+		port,
+		destinationMAC,
+		payload,
+		routed,
+	)
+}
+
+func (s *stackDatagramSender) notificationEgress(
+	device *config.Device,
+	source netip.Addr,
+	destination netip.Addr,
+	target netip.Addr,
+	vlan int,
+) (*config.Device, netip.Addr, netip.Addr, bool) {
+	if s.stack.fabric == nil {
+		return device, source, target, false
+	}
+	nextHop := s.notificationTargetDevice(vlan, target)
+	egress, found := s.stack.fabric.notificationEgress(nextHop, destination)
+	if !found {
+		return device, source, target, false
+	}
+	return egress.device, egress.source, egress.target, true
 }
 
 func (s *stackDatagramSender) notificationWireVLAN(vlan int) int {
@@ -292,7 +330,7 @@ func (s *stackDatagramSender) probeNeighbor(key notificationNeighborKey) {
 		slog.Warn("build notification neighbor probe", "target", key.address, "error", err)
 		return
 	}
-	s.queueFrame(notification.device, notification.vlan, frame)
+	s.queueFrame(notification.egressDevice, notification.vlan, frame)
 
 	s.mu.Lock()
 	if current := s.pending[key]; current == resolution {
@@ -309,17 +347,23 @@ func (s *stackDatagramSender) neighborProbeFrame(
 		zeroMAC := net.HardwareAddr{0, 0, 0, 0, 0, 0}
 		return serializeARPPacket(
 			&layers.Ethernet{
-				SrcMAC:       notification.device.MACAddress,
+				SrcMAC:       notification.egressDevice.MACAddress,
 				DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 				EthernetType: layers.EthernetTypeARP,
 			},
 			buildARPLayer(
-				layers.ARPRequest, notification.device.MACAddress, net.IP(notification.source.AsSlice()),
+				layers.ARPRequest,
+				notification.egressDevice.MACAddress,
+				net.IP(notification.neighborSource.AsSlice()),
 				zeroMAC, net.IP(target.AsSlice()),
 			),
 		)
 	}
-	return serializeNeighborSolicitation(notification.device.MACAddress, notification.source, target)
+	return serializeNeighborSolicitation(
+		notification.egressDevice.MACAddress,
+		notification.neighborSource,
+		target,
+	)
 }
 
 func serializeNeighborSolicitation(sourceMAC net.HardwareAddr, source, target netip.Addr) ([]byte, error) {
@@ -375,8 +419,15 @@ func (s *stackDatagramSender) observeNeighbor(vlan int, address netip.Addr, mac 
 	}
 	for _, notification := range resolution.notifications {
 		if err := s.emitNotification(
-			notification.device, notification.vlan, notification.source, notification.destination,
-			notification.sourcePort, notification.destinationPort, mac, notification.payload,
+			notification.egressDevice,
+			notification.vlan,
+			notification.source,
+			notification.destination,
+			notification.sourcePort,
+			notification.destinationPort,
+			mac,
+			notification.payload,
+			notification.routed,
 		); err != nil {
 			slog.Warn("send resolved management notification", "receiver", notification.destination, "error", err)
 		}
@@ -416,20 +467,25 @@ func (s *stackDatagramSender) notificationTargetDevice(vlan int, target netip.Ad
 }
 
 func (s *stackDatagramSender) emitNotification(
-	device *config.Device,
+	egressDevice *config.Device,
 	vlan int,
 	source, destination netip.Addr,
 	sourcePort, destinationPort uint16,
 	destinationMAC net.HardwareAddr,
 	payload []byte,
+	routed bool,
 ) error {
 	buffer := gopacket.NewSerializeBuffer()
 	udp := &layers.UDP{SrcPort: layers.UDPPort(sourcePort), DstPort: layers.UDPPort(destinationPort)}
 	var network serializableNetworkLayer
 	etherType := layers.EthernetTypeIPv4
 	if source.Is4() {
+		ttl := uint8(ipIPv4TTL)
+		if routed {
+			ttl--
+		}
 		network = &layers.IPv4{
-			Version: ipIPv4Version, IHL: ipIPv4IHL, TTL: ipIPv4TTL, Protocol: layers.IPProtocolUDP,
+			Version: ipIPv4Version, IHL: ipIPv4IHL, TTL: ttl, Protocol: layers.IPProtocolUDP,
 			SrcIP: source.AsSlice(), DstIP: destination.AsSlice(),
 		}
 	} else {
@@ -443,24 +499,37 @@ func (s *stackDatagramSender) emitNotification(
 		return fmt.Errorf("set notification checksum: %w", err)
 	}
 	err := gopacket.SerializeLayers(buffer, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
-		&layers.Ethernet{SrcMAC: device.MACAddress, DstMAC: destinationMAC, EthernetType: etherType},
+		&layers.Ethernet{SrcMAC: egressDevice.MACAddress, DstMAC: destinationMAC, EthernetType: etherType},
 		network, udp, gopacket.Payload(payload))
 	if err != nil {
 		return fmt.Errorf("serialize management notification: %w", err)
 	}
-	s.queueFrame(device, vlan, buffer.Bytes())
+	packet := s.framePacket(egressDevice, vlan, buffer.Bytes())
+	if routed {
+		packet.fabricTrace.PhysicalVLAN = s.stack.fabric.binding.AccessVLAN
+		packet.fabricTrace.RouteDecision = fabricRouteDecisionForwarded
+		packet.fabricTrace.EgressNetwork = s.stack.fabric.attachmentNetwork
+		s.stack.stats.mu.Lock()
+		s.stack.stats.FabricForwarded++
+		s.stack.stats.mu.Unlock()
+	}
+	s.stack.Send(packet)
 	return nil
 }
 
 func (s *stackDatagramSender) queueFrame(device *config.Device, vlan int, frame []byte) {
+	s.stack.Send(s.framePacket(device, vlan, frame))
+}
+
+func (s *stackDatagramSender) framePacket(device *config.Device, vlan int, frame []byte) *Packet {
 	s.stack.mu.Lock()
 	s.stack.serialNumber++
 	serial := s.stack.serialNumber
 	s.stack.mu.Unlock()
-	s.stack.Send(&Packet{
+	return &Packet{
 		Buffer: append([]byte(nil), frame...), Length: len(frame), SerialNumber: serial,
 		Device: device, VLAN: vlan,
-	})
+	}
 }
 
 type stateNotificationRegistration struct {
