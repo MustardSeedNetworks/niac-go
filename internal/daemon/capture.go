@@ -2,16 +2,25 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
+
+var errCaptureLoopExited = errors.New("capture loop exited unexpectedly")
+
+type captureEngine interface {
+	SetFilter(string) error
+	StartCaptureContext(context.Context, func(gopacket.Packet)) error
+	Close()
+}
 
 // standaloneCapture is the runtime state for a /api/v1/capture session.
 // Distinct from the Simulation type because no protocols.Stack is
@@ -23,9 +32,10 @@ type standaloneCapture struct {
 	iface     string
 	filter    string
 	startedAt time.Time
-	engine    *capture.Engine
+	engine    captureEngine
 	cancel    context.CancelFunc
 	packets   atomic.Uint64
+	stopOnce  sync.Once
 }
 
 // StartCapture spins up a capture session on req.Interface, optionally
@@ -44,11 +54,11 @@ func (d *Daemon) StartCapture(req api.CaptureRequest) error {
 		return api.ErrCaptureAlreadyRunning
 	}
 
-	if !capture.InterfaceExists(req.Interface) {
+	if !d.captureInterfaceExists(req.Interface) {
 		return fmt.Errorf("%w: %s", api.ErrCaptureInterfaceNotFound, req.Interface)
 	}
 
-	engine, err := capture.New(req.Interface, DefaultDebugLevel)
+	engine, err := d.newCaptureEngine(req.Interface, DefaultDebugLevel)
 	if err != nil {
 		return fmt.Errorf("create capture engine: %w", err)
 	}
@@ -69,6 +79,9 @@ func (d *Daemon) StartCapture(req api.CaptureRequest) error {
 		cancel:    cancel,
 	}
 
+	d.capture = session
+	d.captureLastError = ""
+
 	// Drive the capture in its own goroutine so the API call returns
 	// promptly. StartCaptureContext blocks until ctx is cancelled or
 	// the engine errors out, and invokes our handler synchronously
@@ -76,7 +89,6 @@ func (d *Daemon) StartCapture(req api.CaptureRequest) error {
 	// counter bump + non-blocking SSE broadcast.
 	go d.runStandaloneCapture(ctx, session)
 
-	d.capture = session
 	logging.Successf("✓ Standalone capture started on %s", req.Interface)
 	return nil
 }
@@ -94,8 +106,35 @@ func (d *Daemon) runStandaloneCapture(ctx context.Context, c *standaloneCapture)
 		}
 	}
 
-	if err := c.engine.StartCaptureContext(ctx, handler); err != nil && ctx.Err() == nil {
-		logging.Errorf("standalone capture loop exited with error: %v", err)
+	err := d.captureRunner(ctx, c.engine, handler)
+	if ctx.Err() != nil {
+		d.completeStandaloneCapture(c, nil)
+		return
+	}
+	if err == nil {
+		err = errCaptureLoopExited
+	}
+	d.completeStandaloneCapture(c, err)
+}
+
+func (d *Daemon) completeStandaloneCapture(session *standaloneCapture, terminalErr error) {
+	d.mu.Lock()
+	current := d.capture == session
+	if current {
+		session.stop()
+		d.capture = nil
+		if terminalErr != nil {
+			d.captureLastError = terminalErr.Error()
+		}
+	}
+	d.mu.Unlock()
+
+	if !current {
+		session.stop()
+		return
+	}
+	if terminalErr != nil {
+		logging.Errorf("standalone capture loop exited with error: %v", terminalErr)
 	}
 }
 
@@ -104,17 +143,23 @@ func (d *Daemon) runStandaloneCapture(ctx context.Context, c *standaloneCapture)
 func (d *Daemon) StopCapture() error {
 	d.mu.Lock()
 	session := d.capture
-	d.capture = nil
-	d.mu.Unlock()
-
 	if session == nil {
+		d.mu.Unlock()
 		return nil
 	}
 
-	session.cancel()
-	session.engine.Close()
+	session.stop()
+	d.capture = nil
+	d.mu.Unlock()
 	logging.Successf("✓ Standalone capture stopped on %s", session.iface)
 	return nil
+}
+
+func (c *standaloneCapture) stop() {
+	c.stopOnce.Do(func() {
+		c.cancel()
+		c.engine.Close()
+	})
 }
 
 // GetCaptureStatus returns a snapshot of the capture session. Safe to
@@ -125,7 +170,7 @@ func (d *Daemon) GetCaptureStatus() api.CaptureStatus {
 	defer d.mu.RUnlock()
 
 	if d.capture == nil {
-		return api.CaptureStatus{Running: false}
+		return api.CaptureStatus{Running: false, LastError: d.captureLastError}
 	}
 	return api.CaptureStatus{
 		Running:   true,
