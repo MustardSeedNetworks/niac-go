@@ -12,6 +12,7 @@ import (
 
 type fabricRuntime struct {
 	binding           fabric.CompiledBinding
+	topology          fabric.Topology
 	attachmentNetwork string
 	devicesByName     map[string]*config.Device
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
@@ -65,7 +66,14 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	}
 
 	runtime := &fabricRuntime{
-		binding:           topology.Binding,
+		binding: topology.Binding,
+		topology: fabric.Topology{
+			Binding:    topology.Binding,
+			Networks:   append([]fabric.Network(nil), topology.Networks...),
+			Interfaces: append([]fabric.Interface(nil), topology.Interfaces...),
+			Routes:     append([]fabric.Route(nil), topology.Routes...),
+			DHCPScopes: append([]fabric.DHCPScope(nil), topology.DHCPScopes...),
+		},
 		attachmentNetwork: topology.Binding.Network,
 		devicesByName:     make(map[string]*config.Device, len(cfg.Devices)),
 		interfacesByAddr:  make(map[netip.Addr]fabricEndpoint, len(topology.Interfaces)),
