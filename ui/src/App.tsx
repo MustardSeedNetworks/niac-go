@@ -120,7 +120,10 @@ function AppShell() {
             <Route path="/templates" element={<Navigate to="/runtime" replace={true} />} />
             <Route path="/neighbors" element={<Navigate to="/topology" replace={true} />} />
             <Route path="/analysis" element={<Navigate to="/traffic" replace={true} />} />
-            <Route path="/pcap-analyzer" element={<Navigate to="/packets" replace={true} />} />
+            <Route
+              path="/pcap-analyzer"
+              element={<Navigate to="/packets?view=files" replace={true} />}
+            />
             <Route path="*" element={<Navigate to="/" replace={true} />} />
           </Routes>
         </Suspense>
