@@ -70,6 +70,7 @@ jobs:
               - 'ui/**'
               - 'internal/i18n/locales/**'
               - 'scripts/i18n/**'
+              - '.lighthouserc.json'
             c:
               - 'src/**'
               - 'include/**'
