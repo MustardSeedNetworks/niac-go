@@ -203,6 +203,19 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
+	if !s.authorizeConfigEntitlements(w, r, cfg) {
+		return false
+	}
+	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
+		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
+			"Configuration runtime requirements are not met",
+			[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: runtimeErr.Error()}})
+		return false
+	}
+	return true
+}
+
+func (s *Server) authorizeConfigEntitlements(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
 	switch err := ValidateConfigEntitlements(cfg, s.simulationEntitlements()); {
 	case errors.Is(err, ErrRoutedLabsLicenseRequired):
 		s.writeFeatureGate(w, r, "routed_labs",
@@ -217,12 +230,6 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 		writeError(w, r, http.StatusInternalServerError, "config_authorization_failed",
 			"Failed to authorize configuration", nil)
 	default:
-		if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
-			writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
-				"Configuration runtime requirements are not met",
-				[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: runtimeErr.Error()}})
-			return false
-		}
 		return true
 	}
 	return false
