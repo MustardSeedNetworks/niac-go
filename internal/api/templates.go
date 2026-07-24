@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // UseTemplateRequest is the request to create a config from a template.
@@ -114,6 +115,16 @@ func (s *Server) handleTemplateUse(w http.ResponseWriter, r *http.Request) {
 	content, _, err := templates.Load(req.TemplateName)
 	if err != nil {
 		writeError(w, r, http.StatusNotFound, "not_found", err.Error(), nil)
+		return
+	}
+
+	cfg, err := config.LoadYAMLBytes(content)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "invalid_template",
+			"Template contains an invalid configuration", nil)
+		return
+	}
+	if !s.authorizeConfigEntitlements(w, r, cfg) {
 		return
 	}
 

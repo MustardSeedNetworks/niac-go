@@ -81,6 +81,9 @@ func (s *Server) handleConfigMerge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	merged := mergeConfigsByName(base, overlay)
+	if !s.authorizeConfigEntitlements(w, r, merged) {
+		return
+	}
 	yamlBytes, err := config.MarshalConfigYAML(merged)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "marshal_failed",
@@ -141,6 +144,9 @@ func (s *Server) handleConfigImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.authorizeConfigEntitlements(w, r, cfg) {
+		return
+	}
 	yamlBytes, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "marshal_failed",
