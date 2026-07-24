@@ -59,6 +59,7 @@ type Config struct {
 	// handler re-reads this path on each signal.
 	TokenFile    string
 	StoragePath  string
+	RecoveryPath string
 	Version      string
 	Commit       string
 	BuildTime    string
@@ -87,6 +88,7 @@ type Daemon struct {
 
 	mu         sync.RWMutex
 	simulation *Simulation
+	recovery   *api.SimulationRecovery
 	// startSimulation is injectable so replacement failure and cleanup are deterministic in tests.
 	startSimulation simulationStarter
 	// capture is the optional standalone packet-capture session that
@@ -193,6 +195,8 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("start API server: %w", err)
 	}
 
+	d.recoverActiveSimulation(d.apiServer.SimulationEntitlements())
+
 	return nil
 }
 
@@ -250,11 +254,14 @@ func (d *Daemon) TokenScopeCounts() (int, int, int) {
 
 // Shutdown gracefully shuts down the daemon.
 func (d *Daemon) Shutdown(ctx context.Context) error {
-	// Stop simulation if running
-	stopErr := d.StopSimulation()
-	if stopErr != nil {
-		logging.Errorf("Error stopping simulation: %v", stopErr)
+	// Preserve active launch intent across process and host restarts.
+	d.mu.Lock()
+	if d.simulation != nil {
+		if stopErr := d.stopSimulationLocked(false); stopErr != nil {
+			logging.Errorf("Error stopping simulation: %v", stopErr)
+		}
 	}
+	d.mu.Unlock()
 
 	// Stop standalone capture if running. StopCapture is idempotent so
 	// the no-capture case is a fast nil return.
@@ -549,6 +556,14 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 		replay:     resources.replay,
 		cancel:     resources.cancel,
 	}
+	intent := req
+	intent.ConfigPath = configPath
+	intent.ConfigData = ""
+	intent.TemplateName = ""
+	if persistErr := d.persistActiveSimulation(intent); persistErr != nil {
+		resources.stop()
+		return fmt.Errorf("persist active simulation: %w", persistErr)
+	}
 
 	active := d.simulation
 	d.simulation = replacement
@@ -683,12 +698,17 @@ func (d *Daemon) StopSimulation() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	return d.stopSimulationLocked()
+	return d.stopSimulationLocked(true)
 }
 
-func (d *Daemon) stopSimulationLocked() error {
+func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 	if d.simulation == nil {
 		return ErrNoSimulationRunning
+	}
+	if clearIntent {
+		if clearErr := d.clearActiveSimulation(); clearErr != nil {
+			return fmt.Errorf("clear active simulation: %w", clearErr)
+		}
 	}
 
 	sim := d.simulation
@@ -729,7 +749,8 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 	defer d.mu.RUnlock()
 
 	status := api.SimulationStatus{
-		Running: d.simulation != nil,
+		Running:  d.simulation != nil,
+		Recovery: d.recovery,
 	}
 
 	if d.simulation != nil {
