@@ -19,7 +19,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
-func TestFabricRoutesInternalTargetThroughAttachmentRouter(t *testing.T) {
+func TestFabricResolvesInternalTargetThroughAttachmentRouter(t *testing.T) {
 	cfg, topology, routerMAC := forwardingFixture(t)
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	stack.ConfigureFabric(topology)
@@ -40,11 +40,11 @@ func TestFabricRoutesInternalTargetThroughAttachmentRouter(t *testing.T) {
 		t.Fatal("resolved fabric endpoint must own its interface address")
 	}
 	trace := pkt.FabricTrace()
-	if trace.RouteDecision != "forwarded" || trace.EgressNetwork != "internal" || trace.Hop != "edge:inside" {
+	if trace.RouteDecision != "" || trace.EgressNetwork != "internal" || trace.Hop != "edge:inside" {
 		t.Fatalf("FabricTrace() = %#v", trace)
 	}
-	if got := stack.GetStats().FabricForwarded; got != 1 {
-		t.Fatalf("FabricForwarded = %d, want 1", got)
+	if got := stack.GetStats().FabricForwarded; got != 0 {
+		t.Fatalf("FabricForwarded = %d before dispatch, want 0", got)
 	}
 }
 
@@ -397,6 +397,18 @@ func TestFabricTTLExpiryUsesAttachmentRouterIdentity(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for routed ICMP time-exceeded")
+	}
+	trace := pkt.FabricTrace()
+	if trace.RouteDecision != "dropped" || trace.RejectionReason != "ttl_expired" {
+		t.Fatalf("FabricTrace() = %#v", trace)
+	}
+	stats := stack.GetStats()
+	if stats.FabricForwarded != 0 || stats.FabricDrops != 1 {
+		t.Fatalf(
+			"fabric counters = forwarded %d drops %d, want forwarded 0 drops 1",
+			stats.FabricForwarded,
+			stats.FabricDrops,
+		)
 	}
 }
 

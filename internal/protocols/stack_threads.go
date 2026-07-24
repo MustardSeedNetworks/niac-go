@@ -94,7 +94,7 @@ func (s *Stack) queuePacket(pkt *Packet) {
 		if s.fabric != nil {
 			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
 			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
-			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 			pkt.fabricTrace.RejectionReason = "receive_queue_full"
 			s.stats.mu.Lock()
 			s.stats.FabricDrops++
@@ -152,7 +152,7 @@ func (s *Stack) decodePacket(pkt *Packet) {
 	}()
 
 	if s.fabric != nil && !s.fabric.acceptsFrame(pkt.VLAN, pkt.VLANTagged) {
-		pkt.fabricTrace.RouteDecision = "dropped"
+		pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 		pkt.fabricTrace.RejectionReason = "physical_vlan_rejected"
 		s.stats.mu.Lock()
 		s.stats.FabricDrops++
@@ -417,7 +417,7 @@ func (s *Stack) recordSendError(pkt *Packet, err error) {
 		if pkt != nil {
 			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
 			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
-			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 			pkt.fabricTrace.RejectionReason = "egress_rejected"
 		}
 	}

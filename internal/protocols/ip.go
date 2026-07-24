@@ -74,6 +74,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	if h.handleFabricTTLTimeout(pkt, ip) {
 		return
 	}
+	h.recordFabricForwarded(pkt)
 
 	if len(pkt.fabricFirstHopIP) == 0 && h.shouldProcessTTL(ip, devices) && h.handleTTLTimeout(pkt, ip) {
 		return
@@ -143,7 +144,7 @@ func (h *IPHandler) getFabricTarget(ip *layers.IPv4, pkt *Packet) []*config.Devi
 	}
 	resolution, resolved := h.stack.fabric.resolveIPv4(dst.Unmap(), pkt.GetDestMAC())
 	if !resolved {
-		pkt.fabricTrace.RouteDecision = "dropped"
+		pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 		pkt.fabricTrace.RejectionReason = "no_route"
 		h.stack.stats.mu.Lock()
 		h.stack.stats.FabricDrops++
@@ -159,11 +160,7 @@ func (h *IPHandler) getFabricTarget(ip *layers.IPv4, pkt *Packet) []*config.Devi
 	pkt.fabricFirstHopIP = net.IP(resolution.firstHopIP.AsSlice())
 	pkt.fabricFirstHopMAC = cloneMAC(resolution.firstHopMAC)
 	pkt.fabricFirstHopDevice = resolution.firstHopDevice
-	pkt.fabricTrace.RouteDecision = "forwarded"
 	pkt.fabricTrace.Hop = resolution.firstHopDevice.Name + ":" + resolution.routeVia
-	h.stack.stats.mu.Lock()
-	h.stack.stats.FabricForwarded++
-	h.stack.stats.mu.Unlock()
 	return []*config.Device{resolution.device}
 }
 
@@ -171,11 +168,16 @@ func (h *IPHandler) handleFabricTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bo
 	if h.stack.fabric == nil || len(pkt.fabricFirstHopIP) == 0 || ipLayer.TTL > 1 {
 		return false
 	}
+	pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
+	pkt.fabricTrace.RejectionReason = fabricRejectionTTLExpired
+	h.stack.stats.mu.Lock()
+	h.stack.stats.FabricDrops++
+	h.stack.stats.mu.Unlock()
 	dstMAC := pkt.GetSourceMAC()
 	if len(dstMAC) == 0 || len(pkt.fabricFirstHopMAC) == 0 {
-		return false
+		return true
 	}
-	err := h.stack.icmpHandler.SendICMPTimeExceeded(
+	_ = h.stack.icmpHandler.SendICMPTimeExceeded(
 		pkt.fabricFirstHopIP,
 		ipLayer.SrcIP,
 		pkt.fabricFirstHopMAC,
@@ -184,7 +186,17 @@ func (h *IPHandler) handleFabricTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bo
 		pkt.fabricFirstHopDevice,
 		pkt.VLAN,
 	)
-	return err == nil
+	return true
+}
+
+func (h *IPHandler) recordFabricForwarded(pkt *Packet) {
+	if h.stack.fabric == nil || len(pkt.fabricFirstHopIP) == 0 {
+		return
+	}
+	pkt.fabricTrace.RouteDecision = fabricRouteDecisionForwarded
+	h.stack.stats.mu.Lock()
+	h.stack.stats.FabricForwarded++
+	h.stack.stats.mu.Unlock()
 }
 
 // shouldProcessTTL determines if TTL handling should be applied.

@@ -385,7 +385,7 @@ func (s *Stack) Send(pkt *Packet) {
 		if s.fabric != nil && pkt != nil {
 			pkt.fabricTrace.IngressNetwork = s.fabric.attachmentNetwork
 			pkt.fabricTrace.PhysicalVLAN = s.fabric.binding.AccessVLAN
-			pkt.fabricTrace.RouteDecision = "dropped"
+			pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 			pkt.fabricTrace.RejectionReason = "send_queue_full"
 			s.stats.mu.Lock()
 			s.stats.FabricDrops++
