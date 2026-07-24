@@ -350,6 +350,7 @@ export interface StandaloneCaptureStatus {
   interface?: string;
   filter?: string;
   startedAt?: string;
+  lastError?: string;
   packets: number;
 }
 

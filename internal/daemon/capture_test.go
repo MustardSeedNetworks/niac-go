@@ -3,8 +3,12 @@ package daemon
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
@@ -111,6 +115,124 @@ func TestGetCaptureStatus_NoSession(t *testing.T) {
 	}
 }
 
+func TestStandaloneCaptureUnexpectedExitClearsSessionAndAllowsRestart(t *testing.T) {
+	d := newTestDaemon(t)
+	d.captureInterfaceExists = func(string) bool { return true }
+	var engines []*fakeCaptureEngine
+	d.newCaptureEngine = func(string, int) (captureEngine, error) {
+		engine := &fakeCaptureEngine{}
+		engines = append(engines, engine)
+		return engine, nil
+	}
+	var runs atomic.Int32
+	d.captureRunner = func(
+		ctx context.Context,
+		_ captureEngine,
+		_ func(gopacket.Packet),
+	) error {
+		if runs.Add(1) == 1 {
+			return errors.New("packet source closed")
+		}
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	if err := d.StartCapture(api.CaptureRequest{Interface: "test0"}); err != nil {
+		t.Fatalf("first StartCapture() error = %v", err)
+	}
+	waitForCaptureStatus(t, d, false)
+
+	status := d.GetCaptureStatus()
+	if !strings.Contains(status.LastError, "packet source closed") {
+		t.Fatalf("LastError = %q, want terminal runner error", status.LastError)
+	}
+	if got := engines[0].closes.Load(); got != 1 {
+		t.Fatalf("failed engine Close() calls = %d, want 1", got)
+	}
+
+	if err := d.StartCapture(api.CaptureRequest{Interface: "test0"}); err != nil {
+		t.Fatalf("restart StartCapture() error = %v", err)
+	}
+	waitForCaptureStatus(t, d, true)
+	if status = d.GetCaptureStatus(); status.LastError != "" {
+		t.Fatalf("LastError after restart = %q, want cleared", status.LastError)
+	}
+	if err := d.StopCapture(); err != nil {
+		t.Fatalf("StopCapture() error = %v", err)
+	}
+	if got := engines[1].closes.Load(); got != 1 {
+		t.Fatalf("replacement engine Close() calls = %d, want 1", got)
+	}
+}
+
+func TestStandaloneCaptureOldRunnerCannotClearReplacement(t *testing.T) {
+	d := newTestDaemon(t)
+	d.captureInterfaceExists = func(string) bool { return true }
+	d.newCaptureEngine = func(string, int) (captureEngine, error) {
+		return &fakeCaptureEngine{}, nil
+	}
+	oldRelease := make(chan struct{})
+	var runs atomic.Int32
+	d.captureRunner = func(
+		ctx context.Context,
+		_ captureEngine,
+		_ func(gopacket.Packet),
+	) error {
+		if runs.Add(1) == 1 {
+			<-oldRelease
+			return errors.New("old capture failed")
+		}
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	if err := d.StartCapture(api.CaptureRequest{Interface: "old0"}); err != nil {
+		t.Fatalf("first StartCapture() error = %v", err)
+	}
+	if err := d.StopCapture(); err != nil {
+		t.Fatalf("StopCapture() error = %v", err)
+	}
+	if err := d.StartCapture(api.CaptureRequest{Interface: "new0"}); err != nil {
+		t.Fatalf("replacement StartCapture() error = %v", err)
+	}
+	close(oldRelease)
+	waitForCaptureStatus(t, d, true)
+
+	status := d.GetCaptureStatus()
+	if status.Interface != "new0" || status.LastError != "" {
+		t.Fatalf("replacement status = %#v", status)
+	}
+	if err := d.StopCapture(); err != nil {
+		t.Fatalf("replacement StopCapture() error = %v", err)
+	}
+}
+
+type fakeCaptureEngine struct {
+	closes atomic.Int32
+}
+
+func (f *fakeCaptureEngine) SetFilter(string) error { return nil }
+
+func (f *fakeCaptureEngine) StartCaptureContext(context.Context, func(gopacket.Packet)) error {
+	return nil
+}
+
+func (f *fakeCaptureEngine) Close() {
+	f.closes.Add(1)
+}
+
+func waitForCaptureStatus(t *testing.T, d *Daemon, running bool) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if d.GetCaptureStatus().Running == running {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("capture Running did not become %v", running)
+}
+
 // newTestDaemon builds a Daemon with the minimum scaffolding needed to
 // exercise StartCapture / StopCapture / GetCaptureStatus. Storage is
 // disabled and there's no API server attached — these tests only care
@@ -124,6 +246,3 @@ func newTestDaemon(t *testing.T) *Daemon {
 	}
 	return d
 }
-
-// silence the unused-import warning if a future cleanup drops context.
-var _ = context.Background

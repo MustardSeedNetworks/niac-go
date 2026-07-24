@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gopacket/gopacket"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -95,7 +97,11 @@ type Daemon struct {
 	// runs without a simulation. Mutually exclusive with simulation
 	// because both want exclusive ownership of the same libpcap
 	// interface handle; see internal/daemon/capture.go.
-	capture *standaloneCapture
+	capture                *standaloneCapture
+	captureLastError       string
+	captureInterfaceExists func(string) bool
+	newCaptureEngine       func(string, int) (captureEngine, error)
+	captureRunner          func(context.Context, captureEngine, func(gopacket.Packet)) error
 }
 
 // Simulation represents a running NIAC simulation.
@@ -130,8 +136,19 @@ type simulationStarter func(
 // NewDaemon creates a new daemon instance.
 func NewDaemon(cfg Config) (*Daemon, error) {
 	daemon := &Daemon{
-		cfg:             cfg,
-		startSimulation: startSimulationResources,
+		cfg:                    cfg,
+		startSimulation:        startSimulationResources,
+		captureInterfaceExists: capture.InterfaceExists,
+		newCaptureEngine: func(name string, debugLevel int) (captureEngine, error) {
+			return capture.New(name, debugLevel)
+		},
+		captureRunner: func(
+			ctx context.Context,
+			engine captureEngine,
+			handler func(gopacket.Packet),
+		) error {
+			return engine.StartCaptureContext(ctx, handler)
+		},
 	}
 
 	// Open storage if enabled
