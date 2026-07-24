@@ -150,19 +150,20 @@ type PacketObserver interface {
 
 // Statistics holds protocol statistics.
 type Statistics struct {
-	mu              sync.RWMutex
-	PacketsReceived uint64
-	PacketsSent     uint64
-	ARPRequests     uint64
-	ARPReplies      uint64
-	ICMPRequests    uint64
-	ICMPReplies     uint64
-	DNSQueries      uint64
-	DHCPRequests    uint64
-	SNMPQueries     uint64
-	Errors          uint64
-	FabricForwarded uint64
-	FabricDrops     uint64
+	mu                    sync.RWMutex
+	PacketsReceived       uint64
+	PacketsSent           uint64
+	ARPRequests           uint64
+	ARPReplies            uint64
+	ICMPRequests          uint64
+	ICMPReplies           uint64
+	DNSQueries            uint64
+	DHCPRequests          uint64
+	SNMPQueries           uint64
+	Errors                uint64
+	FabricForwarded       uint64
+	FabricDrops           uint64
+	UDPProxyOverloadDrops uint64
 }
 
 // NewStack creates a new protocol stack.
@@ -366,6 +367,7 @@ func (s *Stack) Stop() {
 	s.cdpHandler.Stop()
 	s.edpHandler.Stop()
 	s.fdpHandler.Stop()
+	s.udpHandler.Stop()
 
 	close(s.stopChan)
 	s.notifications.Reset()
@@ -516,19 +518,26 @@ func (s *Stack) GetStats() Statistics {
 
 	// Return copy of data without mutex
 	return Statistics{
-		PacketsReceived: s.stats.PacketsReceived,
-		PacketsSent:     s.stats.PacketsSent,
-		ARPRequests:     s.stats.ARPRequests,
-		ARPReplies:      s.stats.ARPReplies,
-		ICMPRequests:    s.stats.ICMPRequests,
-		ICMPReplies:     s.stats.ICMPReplies,
-		DNSQueries:      s.stats.DNSQueries,
-		DHCPRequests:    s.stats.DHCPRequests,
-		SNMPQueries:     s.stats.SNMPQueries,
-		Errors:          s.stats.Errors,
-		FabricForwarded: s.stats.FabricForwarded,
-		FabricDrops:     s.stats.FabricDrops,
+		PacketsReceived:       s.stats.PacketsReceived,
+		PacketsSent:           s.stats.PacketsSent,
+		ARPRequests:           s.stats.ARPRequests,
+		ARPReplies:            s.stats.ARPReplies,
+		ICMPRequests:          s.stats.ICMPRequests,
+		ICMPReplies:           s.stats.ICMPReplies,
+		DNSQueries:            s.stats.DNSQueries,
+		DHCPRequests:          s.stats.DHCPRequests,
+		SNMPQueries:           s.stats.SNMPQueries,
+		Errors:                s.stats.Errors,
+		FabricForwarded:       s.stats.FabricForwarded,
+		FabricDrops:           s.stats.FabricDrops,
+		UDPProxyOverloadDrops: s.stats.UDPProxyOverloadDrops,
 	}
+}
+
+func (s *Stack) recordUDPProxyOverloadDrop() {
+	s.stats.mu.Lock()
+	s.stats.UDPProxyOverloadDrops++
+	s.stats.mu.Unlock()
 }
 
 func (s *Stack) IncrementStat(stat string) {

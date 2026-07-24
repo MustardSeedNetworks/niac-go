@@ -179,6 +179,7 @@ The dashboard will display:
 | `niac_packets_received_total` | counter | Total packets received |
 | `niac_devices_total` | gauge | Number of simulated devices |
 | `niac_errors_total` | counter | Total errors |
+| `niac_udp_proxy_overload_drops_total` | counter | UDP `map_to_ip` packets dropped at the 64-operation proxy limit |
 
 ### Protocol-Specific Metrics
 
