@@ -87,6 +87,8 @@ type Daemon struct {
 
 	mu         sync.RWMutex
 	simulation *Simulation
+	// startSimulation is injectable so replacement failure and cleanup are deterministic in tests.
+	startSimulation simulationStarter
 	// capture is the optional standalone packet-capture session that
 	// runs without a simulation. Mutually exclusive with simulation
 	// because both want exclusive ownership of the same libpcap
@@ -109,10 +111,25 @@ type Simulation struct {
 	cancel context.CancelFunc
 }
 
+type simulationResources struct {
+	engine *capture.Engine
+	stack  *protocols.Stack
+	replay api.ReplayManager
+	cancel context.CancelFunc
+}
+
+type simulationStarter func(
+	string,
+	*config.Config,
+	*fabric.Topology,
+	bool,
+) (simulationResources, error)
+
 // NewDaemon creates a new daemon instance.
 func NewDaemon(cfg Config) (*Daemon, error) {
 	daemon := &Daemon{
-		cfg: cfg,
+		cfg:             cfg,
+		startSimulation: startSimulationResources,
 	}
 
 	// Open storage if enabled
@@ -507,59 +524,49 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 		return err
 	}
 	compiled := compiledFabric.topology
+	resources, err := d.startSimulation(req.Interface, cfg, compiled, dryRun)
+	if err != nil {
+		resources.stop()
+		return err
+	}
 	if req.ConfigData != "" {
 		configPath, err = persistInlineConfig(req.ConfigData)
 		if err != nil {
+			resources.stop()
 			return fmt.Errorf("persist inline config: %w", err)
 		}
 	}
-	if d.simulation != nil {
-		if stopErr := d.stopSimulationLocked(); stopErr != nil {
-			return fmt.Errorf("stop existing simulation: %w", stopErr)
-		}
-	}
 
-	var engine *capture.Engine
-	var cancel context.CancelFunc
-	var replay api.ReplayManager
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(DefaultDebugLevel))
-	stack.ConfigureFabric(compiled)
-
-	if !dryRun {
-		engine, stack, cancel, err = startSimulationStack(req.Interface, cfg, compiled)
-		if err != nil {
-			return err
-		}
-		replay = newReplayController(engine, stack.GetDebugLevel())
-	} else {
-		_, cancel = context.WithCancel(context.Background())
-	}
-
-	d.simulation = &Simulation{
+	replacement := &Simulation{
 		Interface:  req.Interface,
 		ConfigPath: configPath,
 		ConfigName: filepath.Base(configPath),
 		StartedAt:  time.Now(),
-		engine:     engine,
-		stack:      stack,
+		engine:     resources.engine,
+		stack:      resources.stack,
 		cfg:        cfg,
 		fabric:     compiled,
-		replay:     replay,
-		cancel:     cancel,
+		replay:     resources.replay,
+		cancel:     resources.cancel,
 	}
 
-	d.apiServer.UpdateSimulation(stack, cfg, configPath, req.Interface, replay)
+	active := d.simulation
+	d.simulation = replacement
+	d.apiServer.UpdateSimulation(resources.stack, cfg, configPath, req.Interface, resources.replay)
+	if active != nil {
+		d.stopSimulation(active)
+	}
 
 	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
 
 	// Auto-start PCAP playback if configured. The playback is best-effort —
 	// a failed playback start logs but doesn't fail the simulation, since
 	// the protocol stack is already up and serving devices.
-	if !dryRun && replay != nil &&
+	if !dryRun && resources.replay != nil &&
 		cfg.CapturePlayback != nil &&
 		strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
 		fileName := resolvePlaybackPath(cfg.CapturePlayback.FileName, configPath)
-		_, replayErr := replay.Start(api.ReplayRequest{
+		_, replayErr := resources.replay.Start(api.ReplayRequest{
 			File:   fileName,
 			LoopMs: cfg.CapturePlayback.LoopTime,
 			Scale:  cfg.CapturePlayback.ScaleTime,
@@ -572,6 +579,46 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 	}
 
 	return nil
+}
+
+func startSimulationResources(
+	iface string,
+	cfg *config.Config,
+	topology *fabric.Topology,
+	dryRun bool,
+) (simulationResources, error) {
+	if dryRun {
+		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(DefaultDebugLevel))
+		stack.ConfigureFabric(topology)
+		_, cancel := context.WithCancel(context.Background())
+		return simulationResources{stack: stack, cancel: cancel}, nil
+	}
+
+	engine, stack, cancel, err := startSimulationStack(iface, cfg, topology)
+	if err != nil {
+		return simulationResources{}, err
+	}
+	return simulationResources{
+		engine: engine,
+		stack:  stack,
+		replay: newReplayController(engine, stack.GetDebugLevel()),
+		cancel: cancel,
+	}, nil
+}
+
+func (resources simulationResources) stop() {
+	if resources.replay != nil {
+		_, _ = resources.replay.Stop()
+	}
+	if resources.cancel != nil {
+		resources.cancel()
+	}
+	if resources.stack != nil {
+		resources.stack.Stop()
+	}
+	if resources.engine != nil {
+		resources.engine.Close()
+	}
 }
 
 func loadAuthorizedSimulationConfig(
@@ -645,31 +692,25 @@ func (d *Daemon) stopSimulationLocked() error {
 	}
 
 	sim := d.simulation
+	d.simulation = nil
+	d.apiServer.ClearSimulation()
+	d.stopSimulation(sim)
 
-	// Stop replay if running
-	if sim.replay != nil {
-		_, _ = sim.replay.Stop()
-	}
+	logging.Infof("Simulation stopped")
 
-	// Cancel context first to signal shutdown
-	if sim.cancel != nil {
-		sim.cancel()
-	}
+	return nil
+}
 
-	// Stop stack
-	if sim.stack != nil {
-		sim.stack.Stop()
-	}
-
-	// Close engine
-	if sim.engine != nil {
-		sim.engine.Close()
-	}
-
-	// Save run history
-	if d.storage != nil && sim.stack != nil {
+func (d *Daemon) stopSimulation(sim *Simulation) {
+	simulationResources{
+		engine: sim.engine,
+		stack:  sim.stack,
+		replay: sim.replay,
+		cancel: sim.cancel,
+	}.stop()
+	if d.storage != nil && sim.stack != nil && sim.cfg != nil {
 		stats := sim.stack.GetStats()
-		record := storage.RunRecord{
+		_ = d.storage.AddRun(storage.RunRecord{
 			StartedAt:       sim.StartedAt,
 			Duration:        time.Since(sim.StartedAt),
 			Interface:       sim.Interface,
@@ -678,18 +719,8 @@ func (d *Daemon) stopSimulationLocked() error {
 			PacketsSent:     stats.PacketsSent,
 			PacketsReceived: stats.PacketsReceived,
 			Errors:          stats.Errors,
-		}
-		_ = d.storage.AddRun(record)
+		})
 	}
-
-	d.simulation = nil
-
-	// Clear simulation from API server
-	d.apiServer.ClearSimulation()
-
-	logging.Infof("Simulation stopped")
-
-	return nil
 }
 
 // GetStatus returns the current simulation status.
