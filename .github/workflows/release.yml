@@ -63,6 +63,12 @@ permissions:
   id-token: write # cosign keyless OIDC
   attestations: write
 
+env:
+  NPCAP_SDK_VERSION: "1.16"
+  # SHA-256 of npcap-sdk-1.16.zip. Upstream publishes no checksum file;
+  # rotate this together with the pinned version.
+  NPCAP_SDK_SHA256: "f0a8be7778ee3ae1b99bbbecb27a3ff0f6c111a4093f1c78c5c5a099607184db"
+
 jobs:
   # =========================================================================
   # UI build — done outside the goreleaser-cross container because that
@@ -108,6 +114,52 @@ jobs:
           retention-days: 1
           include-hidden-files: true
 
+  # Restore the default-branch cache seeded by cache-npcap-sdk.yml, or fetch
+  # and verify the pinned SDK once if that cache was evicted. The same-run
+  # cache then feeds both Windows builders. This keeps Windows ARM64 off
+  # npcap.com's unreliable TLS path without publishing the SDK as a
+  # downloadable workflow artifact.
+  prepare-npcap-sdk:
+    name: Prepare Npcap SDK
+    if: ${{ !inputs.provenance_only }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore checksum-keyed Npcap SDK cache
+        id: npcap-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: npcap-cache/npcap-sdk-${{ env.NPCAP_SDK_VERSION }}.zip
+          key: npcap-sdk-${{ env.NPCAP_SDK_VERSION }}-${{ env.NPCAP_SDK_SHA256 }}
+          enableCrossOsArchive: true
+
+      - name: Download Npcap SDK on cache miss
+        if: steps.npcap-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p npcap-cache
+          archive="npcap-cache/npcap-sdk-${NPCAP_SDK_VERSION}.zip"
+          if ! curl --fail --location --show-error \
+            --connect-timeout 30 --max-time 120 \
+            --output "$archive" \
+            "https://npcap.com/dist/npcap-sdk-${NPCAP_SDK_VERSION}.zip"; then
+            echo "::error::Npcap SDK cache miss and the official origin could not be reached"
+            exit 1
+          fi
+
+      - name: Verify Npcap SDK
+        run: |
+          set -euo pipefail
+          archive="npcap-cache/npcap-sdk-${NPCAP_SDK_VERSION}.zip"
+          echo "${NPCAP_SDK_SHA256}  ${archive}" | sha256sum -c -
+
+      - name: Save verified Npcap SDK cache
+        if: steps.npcap-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: npcap-cache/npcap-sdk-${{ env.NPCAP_SDK_VERSION }}.zip
+          key: npcap-sdk-${{ env.NPCAP_SDK_VERSION }}-${{ env.NPCAP_SDK_SHA256 }}
+          enableCrossOsArchive: true
+
   # =========================================================================
   # Windows build — native GitHub Windows runners, CGO_ENABLED=1 linked
   # against the Npcap SDK, so gopacket/pcap gets real packet-capture cgo on
@@ -134,7 +186,7 @@ jobs:
   build-windows:
     name: build windows/${{ matrix.goarch }}
     if: ${{ !inputs.provenance_only }}
-    needs: [build-ui]
+    needs: [build-ui, prepare-npcap-sdk]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -176,22 +228,28 @@ jobs:
           # /clangarm64 bin dir, or `go build` below can't find `go`.
           path-type: inherit
 
-      - name: Download + verify Npcap SDK
+      - name: Restore verified Npcap SDK cache
+        id: npcap-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: npcap-cache/npcap-sdk-${{ env.NPCAP_SDK_VERSION }}.zip
+          key: npcap-sdk-${{ env.NPCAP_SDK_VERSION }}-${{ env.NPCAP_SDK_SHA256 }}
+          enableCrossOsArchive: true
+
+      - name: Verify + unpack Npcap SDK
         shell: bash
         env:
-          NPCAP_SDK_VERSION: "1.16"
-          # SHA-256 of npcap-sdk-1.16.zip, computed locally from
-          # https://npcap.com/dist/npcap-sdk-1.16.zip (upstream publishes
-          # no checksum file). Rotate this together with the version.
-          NPCAP_SDK_SHA256: "f0a8be7778ee3ae1b99bbbecb27a3ff0f6c111a4093f1c78c5c5a099607184db"
+          NPCAP_CACHE_HIT: ${{ steps.npcap-cache.outputs.cache-hit }}
         run: |
           set -euo pipefail
-          curl -sSfL -o npcap-sdk.zip \
-            "https://npcap.com/dist/npcap-sdk-${NPCAP_SDK_VERSION}.zip"
-          echo "${NPCAP_SDK_SHA256}  npcap-sdk.zip" | sha256sum -c -
+          if [ "$NPCAP_CACHE_HIT" != "true" ]; then
+            echo "::error::Verified Npcap SDK cache was not available to the Windows builder"
+            exit 1
+          fi
+          archive="npcap-cache/npcap-sdk-${NPCAP_SDK_VERSION}.zip"
+          echo "${NPCAP_SDK_SHA256}  ${archive}" | sha256sum -c -
           mkdir -p "${RUNNER_TEMP}/npcap-sdk"
-          unzip -q npcap-sdk.zip -d "${RUNNER_TEMP}/npcap-sdk"
-          rm -f npcap-sdk.zip
+          unzip -q "$archive" -d "${RUNNER_TEMP}/npcap-sdk"
 
       - name: Build niac.exe (CGO + Npcap SDK)
         shell: msys2 {0}
