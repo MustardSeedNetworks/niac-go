@@ -138,10 +138,22 @@ func (s *Stack) peerResolver() snmp.PeerResolver {
 		}
 
 		return snmp.PeerIdentity{
-			MAC:     device.MACAddress,
-			Address: peerInterfaceAddress(device, interfaceName),
+			MAC:               device.MACAddress,
+			Address:           peerInterfaceAddress(device, interfaceName),
+			Type:              device.Type,
+			SystemDescription: peerSystemDescription(device),
 		}, true
 	}
+}
+
+func peerSystemDescription(device *config.Device) string {
+	if device.LLDPConfig != nil && device.LLDPConfig.SystemDescription != "" {
+		return device.LLDPConfig.SystemDescription
+	}
+	if device.SNMPConfig.SysDescr != "" {
+		return device.SNMPConfig.SysDescr
+	}
+	return device.Type + " " + device.Name
 }
 
 func peerInterfaceAddress(device *config.Device, interfaceName string) net.IP {

@@ -240,6 +240,7 @@ func (a *Agent) initializeNeighborMIBs() {
 
 	// Initialize BRIDGE-MIB (dot1dBridge - STP and FDB)
 	a.initializeBridgeMIB()
+	a.initializeQBridgeMIB()
 
 	// Initialize LLDP local system data
 	if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
@@ -271,4 +272,5 @@ func (a *Agent) refreshAuthoredDiscoveryMIBs() {
 	if a.device.CDPConfig != nil && a.device.CDPConfig.Enabled {
 		a.initializeCDPMIB()
 	}
+	a.initializeQBridgePVIDs()
 }

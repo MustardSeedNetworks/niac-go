@@ -19,14 +19,19 @@ const topoWalk = `.1.3.6.1.2.1.1.1.0 = STRING: "captured description"
 .1.0.8802.1.1.2.1.4.1.1.9.1.1 = STRING: "foreign-lldp-neighbor"
 .1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1 = STRING: "foreign-cdp-device"
 .1.3.6.1.2.1.17.4.3.1.2.1.2.3.4.5.6 = INTEGER: 5
+.1.3.6.1.2.1.17.7.1.2.1.1.2.210 = Gauge32: 1
+.1.3.6.1.2.1.17.7.1.2.2.1.2.210.1.2.3.4.5.6 = INTEGER: 5
+.1.3.6.1.2.1.17.7.1.4.5.1.1.9 = INTEGER: 220
 `
 
 func TestIsSynthesizedTopologyOID(t *testing.T) {
 	strip := []string{
-		"1.0.8802.1.1.2.1.4",                  // lldpRemoteSystemsData root
-		".1.0.8802.1.1.2.1.4.1.1.9.1.1",       // lldpRemTable entry (leading dot)
-		".1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1",   // cdpCacheTable entry
-		".1.3.6.1.2.1.17.4.3.1.2.1.2.3.4.5.6", // dot1dTpFdbTable entry
+		"1.0.8802.1.1.2.1.4",                          // lldpRemoteSystemsData root
+		".1.0.8802.1.1.2.1.4.1.1.9.1.1",               // lldpRemTable entry (leading dot)
+		".1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1",           // cdpCacheTable entry
+		".1.3.6.1.2.1.17.4.3.1.2.1.2.3.4.5.6",         // dot1dTpFdbTable entry
+		".1.3.6.1.2.1.17.7.1.2.1.1.2.210",             // dot1qFdbTable entry
+		".1.3.6.1.2.1.17.7.1.2.2.1.2.210.1.2.3.4.5.6", // dot1qTpFdbTable entry
 	}
 	keep := []string{
 		".1.3.6.1.2.1.2.2.1.2.1",      // ifDescr (device content)
@@ -71,6 +76,7 @@ func TestLoadWalkFileStripsTopologyWhenTrunkPortsDeclared(t *testing.T) {
 	const (
 		lldpRem = ".1.0.8802.1.1.2.1.4.1.1.9.1.1"
 		cdpCch  = ".1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1"
+		qFdb    = ".1.3.6.1.2.1.17.7.1.2.2.1.2.210.1.2.3.4.5.6"
 		ifDescr = ".1.3.6.1.2.1.2.2.1.2.1"
 	)
 
@@ -87,6 +93,12 @@ func TestLoadWalkFileStripsTopologyWhenTrunkPortsDeclared(t *testing.T) {
 	}
 	if v, _ := trunks.HandleGet(cdpCch); v != nil {
 		t.Errorf("with trunk_ports, walk CDP cache must be skipped, got %v", v.Value)
+	}
+	if v, _ := trunks.HandleGet(qFdb); v != nil {
+		t.Errorf("with trunk_ports, walk Q-BRIDGE FDB must be skipped, got %v", v.Value)
+	}
+	if v, _ := trunks.HandleGet(".1.3.6.1.2.1.17.7.1.4.5.1.1.9"); v == nil || v.Value != 220 {
+		t.Errorf("captured PVID outside authored ports must survive, got %v", v)
 	}
 	// Device content survives the strip.
 	if v, _ := trunks.HandleGet(ifDescr); v == nil {

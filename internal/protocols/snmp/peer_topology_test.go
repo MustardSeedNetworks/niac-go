@@ -76,6 +76,7 @@ func TestAuthoredDiscoveryUsesWalkInterfaceIdentityEndToEnd(t *testing.T) {
 	dev.CDPConfig = &config.CDPConfig{Enabled: true}
 	dev.TrunkPorts = []config.TrunkPort{{
 		Interface: "FastEthernet0/5", RemoteDevice: "PC01", RemoteInterface: "eth0",
+		VLANs: []int{200}, NativeVLAN: 200,
 	}}
 	dev.Interfaces = []config.Interface{{
 		Name: "FastEthernet0/5", Speed: 100, Duplex: "half", AdminStatus: "down",
@@ -103,6 +104,7 @@ func TestAuthoredDiscoveryUsesWalkInterfaceIdentityEndToEnd(t *testing.T) {
 	assertMIBValue(t, agent, cdpCacheTable+".1.6.10005.1", "PC01")
 	assertMIBValue(t, agent, dot1dBasePortIfIndex+".5", 10005)
 	assertMIBValue(t, agent, dot1dTpFdbPort+"."+macBytesToOIDIndex(pcMAC), 5)
+	assertMIBValue(t, agent, dot1qPVID+".5", 200)
 	assertMIBValue(t, agent, ifSpeed+".10005", 100000000)
 	assertMIBValue(t, agent, ifHighSpeed+".10005", 100)
 	assertMIBValue(t, agent, ifAdminStatus+".10005", 2)
@@ -122,7 +124,8 @@ func TestFDBOnlyAttachmentLearnsMACWithoutInventingNeighbor(t *testing.T) {
 	dev.CDPConfig = &config.CDPConfig{Enabled: true}
 	dev.Interfaces = []config.Interface{{Name: "FastEthernet0/5"}}
 	dev.TrunkPorts = []config.TrunkPort{{
-		Interface: "FastEthernet0/5", RemoteDevice: "PC01", RemoteInterface: "eth0", FDBOnly: true,
+		Interface: "FastEthernet0/5", RemoteDevice: "PC01", RemoteInterface: "eth0",
+		VLANs: []int{210}, NativeVLAN: 210, FDBOnly: true,
 	}}
 	agent := NewAgent(dev, 0)
 	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
@@ -132,12 +135,106 @@ func TestFDBOnlyAttachmentLearnsMACWithoutInventingNeighbor(t *testing.T) {
 
 	assertMIBValue(t, agent, lldpLocPortTable+".1.3.1", "FastEthernet0/5")
 	assertMIBValue(t, agent, dot1dTpFdbPort+"."+macBytesToOIDIndex(pcMAC), 1)
+	qBridgeIndex := "210." + macBytesToOIDIndex(pcMAC)
+	assertMIBValue(t, agent, dot1qTpFDBAddress+"."+qBridgeIndex, []byte(pcMAC))
+	assertMIBValue(t, agent, dot1qTpFDBPort+"."+qBridgeIndex, 1)
+	assertMIBValue(t, agent, dot1qTpFDBStatus+"."+qBridgeIndex, FDBStatusLearned)
+	assertMIBValue(t, agent, dot1qFDBDynamicCount+".210", uint32(1))
+	if got := agent.mib.Get(dot1qFDBDynamicCount + ".210").Type; got != gosnmp.Counter32 {
+		t.Fatalf("dot1qFdbDynamicCount type = %v, want Counter32", got)
+	}
+	assertMIBValue(t, agent, dot1qVlanFDBID+".0.210", uint32(210))
+	assertMIBValue(t, agent, dot1qPVID+".1", 210)
 	for _, prefix := range []string{lldpRemTable, cdpCacheTable} {
 		for _, oid := range agent.mib.AllOIDs() {
 			if strings.HasPrefix(oid, prefix+".") {
 				t.Fatalf("FDB-only host produced discovery neighbor %s", oid)
 			}
 		}
+	}
+}
+
+func TestQBridgeUsesDefaultNativeVLAN(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.Interfaces = []config.Interface{{Name: "FastEthernet0/5"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "FastEthernet0/5", RemoteDevice: "PC01",
+		VLANs: []int{200, 220}, FDBOnly: true,
+	}}
+	agent := NewAgent(dev, 0)
+	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: pcMAC}, true
+	})
+
+	qBridgeIndex := "1." + macBytesToOIDIndex(pcMAC)
+	assertMIBValue(t, agent, dot1qTpFDBPort+"."+qBridgeIndex, 1)
+	assertMIBValue(t, agent, dot1qVlanFDBID+".0.1", uint32(1))
+	assertMIBValue(t, agent, dot1qPVID+".1", 1)
+	if got := agent.mib.Get(dot1qMaxVlanID).Type; got != gosnmp.Integer {
+		t.Fatalf("dot1qMaxVlanId type = %v, want Integer", got)
+	}
+	if got := agent.mib.Get(dot1qPVID + ".1").Type; got != gosnmp.Gauge32 {
+		t.Fatalf("dot1qPVID type = %v, want Gauge32", got)
+	}
+}
+
+func TestSynthesizePeerTopologyPublishesResolvedLLDPIdentity(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	dev.Interfaces = []config.Interface{{Name: "TenGigabitEthernet1/0/1"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "TenGigabitEthernet1/0/1", RemoteDevice: "AP01",
+		RemoteInterface: "mGigabitEthernet0", VLANs: []int{200, 220}, NativeVLAN: 200,
+	}}
+	agent := NewAgent(dev, 0)
+	apMAC, _ := net.ParseMAC("aa:bb:cc:00:00:31")
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{
+			MAC: apMAC, Type: "access_point",
+			SystemDescription: "Cisco Wireless CW9178I Wi-Fi 7 access point",
+		}, true
+	})
+
+	row := "0.1.1"
+	assertMIBValue(t, agent, lldpRemTable+".1.4."+row, ChassisIDSubtypeMAC)
+	assertMIBValue(t, agent, lldpRemTable+".1.5."+row, []byte(apMAC))
+	assertMIBValue(
+		t,
+		agent,
+		lldpRemTable+".1.10."+row,
+		"Cisco Wireless CW9178I Wi-Fi 7 access point",
+	)
+	assertMIBValue(t, agent, lldpRemTable+".1.11."+row, []byte{0, CapabilityWLANAP})
+	assertMIBValue(t, agent, lldpRemTable+".1.12."+row, []byte{0, CapabilityWLANAP})
+}
+
+func TestLLDPPeerCapabilitiesCoverSupportedRoles(t *testing.T) {
+	tests := []struct {
+		deviceType string
+		want       byte
+	}{
+		{deviceType: "firewall", want: CapabilityRouterBridge},
+		{deviceType: "voip_phone", want: CapabilityTelephoneStation},
+	}
+	for _, tt := range tests {
+		t.Run(tt.deviceType, func(t *testing.T) {
+			dev := createTestDevice()
+			dev.Type = "switch"
+			dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+			dev.Interfaces = []config.Interface{{Name: "GigabitEthernet0/1"}}
+			dev.TrunkPorts = []config.TrunkPort{{
+				Interface: "GigabitEthernet0/1", RemoteDevice: "PEER",
+			}}
+			agent := NewAgent(dev, 0)
+			mac, _ := net.ParseMAC("aa:bb:cc:00:00:31")
+			agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+				return PeerIdentity{MAC: mac, Type: tt.deviceType}, true
+			})
+			assertMIBValue(t, agent, lldpRemTable+".1.11.0.1.1", []byte{0, tt.want})
+		})
 	}
 }
 

@@ -61,9 +61,11 @@ func safeUint32FromInt(v int) uint32 {
 // uptimeTicks converts a duration to SNMP timeticks (centiseconds).
 // SNMP timeticks are 32-bit values that wrap around by design.
 func uptimeTicks(d time.Duration) uint32 {
-	ms := d.Milliseconds() / CentisecsPerSec // centiseconds
-
-	return safeUint32(ms)
+	if d <= 0 {
+		return 0
+	}
+	tick := time.Duration(MillisecsPerCentisec) * time.Millisecond
+	return wrapCounter32(uint64(d / tick))
 }
 
 // safeUint32FromUint64 converts a uint64 to uint32 with bounds checking.

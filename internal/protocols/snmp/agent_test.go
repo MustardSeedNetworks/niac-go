@@ -142,6 +142,79 @@ func TestAgent_SystemMIB_DefaultValues(t *testing.T) {
 	}
 }
 
+func TestAgent_SystemIdentityMatchesDeviceRole(t *testing.T) {
+	tests := []struct {
+		name       string
+		deviceType string
+		vendor     string
+		objectID   string
+		services   int
+	}{
+		{
+			name: "cisco switch", deviceType: "switch", vendor: "cisco",
+			objectID: "1.3.6.1.4.1.9.1.1641", services: 2,
+		},
+		{
+			name: "cisco access point", deviceType: "access-point", vendor: "cisco",
+			objectID: "1.3.6.1.4.1.9.1.2659", services: 6,
+		},
+		{
+			name: "generic server", deviceType: "server", vendor: "dell",
+			objectID: "1.3.6.1.4.1.8072.3.2.10", services: 78,
+		},
+		{
+			name: "cisco voip phone", deviceType: "voip_phone", vendor: "cisco",
+			objectID: "1.3.6.1.4.1.9.1.404", services: 6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			device := createTestDevice()
+			device.Type = tt.deviceType
+			device.MACVendor = tt.vendor
+			agent := NewAgent(device, 0)
+
+			assertMIBValue(t, agent, "1.3.6.1.2.1.1.2.0", tt.objectID)
+			assertMIBValue(t, agent, "1.3.6.1.2.1.1.7.0", tt.services)
+		})
+	}
+}
+
+func TestAgent_DefaultUptimePredatesRecentRebootWindow(t *testing.T) {
+	device := createTestDevice()
+	agent := NewAgent(device, 0)
+
+	uptime := agent.mib.Get("1.3.6.1.2.1.1.3.0")
+	if uptime == nil {
+		t.Fatal("sysUpTime not initialized")
+	}
+	minimumTicks := uint32(minimumDefaultUptime / (10 * time.Millisecond))
+	if got := uptime.Value.(uint32); got < minimumTicks {
+		t.Fatalf("sysUpTime = %d, want at least %d", got, minimumTicks)
+	}
+}
+
+func TestAgent_AuthoredUptimeOverridesDefault(t *testing.T) {
+	device := createTestDevice()
+	device.Properties["uptimeSeconds"] = "86400"
+	agent := NewAgent(device, 0)
+
+	uptime := agent.mib.Get("1.3.6.1.2.1.1.3.0")
+	got := uptime.Value.(uint32)
+	const dayTicks = uint32(8_640_000)
+	if got < dayTicks || got > dayTicks+100 {
+		t.Fatalf("sysUpTime = %d, want approximately %d", got, dayTicks)
+	}
+}
+
+func TestUptimeTicksWrapsAtUint32(t *testing.T) {
+	overflow := time.Duration(Uint32Overflow) * 10 * time.Millisecond
+	if got := uptimeTicks(overflow + time.Second); got != 100 {
+		t.Fatalf("uptimeTicks after wrap = %d, want 100", got)
+	}
+}
+
 // TestAgent_SystemMIB_CustomProperties tests system MIB with custom properties.
 func TestAgent_SystemMIB_CustomProperties(t *testing.T) {
 	device := createTestDevice()
