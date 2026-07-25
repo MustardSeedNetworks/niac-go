@@ -166,11 +166,15 @@ devices:
     mac: "00:11:22:33:44:55"
     interfaces:
       - name: "Ethernet1/1"
+        type: "ethernet"
+        mtu: 9000
         speed: 1000
         duplex: "full"
         admin_status: "up"
         oper_status: "down"
         description: "uplink"
+        in_utilization: 12.5
+        out_utilization: 7.25
         vlans: [10, 20]
 `
 	tmpfile := createTempYAML(t, yaml)
@@ -191,6 +195,12 @@ devices:
 	if iface.Name != "Ethernet1/1" || iface.Speed != 1000 || iface.Duplex != "full" {
 		t.Fatalf("interface not loaded correctly: %+v", iface)
 	}
+	if iface.Type != "ethernet" || iface.MTU != 9000 {
+		t.Fatalf("interface type/MTU not loaded correctly: %+v", iface)
+	}
+	if iface.InUtilization != 12.5 || iface.OutUtilization != 7.25 {
+		t.Fatalf("interface utilization not loaded correctly: %+v", iface)
+	}
 	if iface.AdminStatus != "up" || iface.OperStatus != "down" || iface.Description != "uplink" {
 		t.Fatalf("interface status/description not loaded correctly: %+v", iface)
 	}
@@ -208,10 +218,14 @@ func TestMarshalConfigYAML_Interfaces(t *testing.T) {
 				MACAddress: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 				Interfaces: []Interface{
 					{
-						Name:        "Ethernet1/1",
-						Speed:       1000,
-						Duplex:      "full",
-						AdminStatus: "up",
+						Name:           "Ethernet1/1",
+						Type:           "ethernet",
+						MTU:            9000,
+						Speed:          1000,
+						Duplex:         "full",
+						AdminStatus:    "up",
+						InUtilization:  12.5,
+						OutUtilization: 7.25,
 					},
 				},
 			},
@@ -229,6 +243,38 @@ func TestMarshalConfigYAML_Interfaces(t *testing.T) {
 	iface := roundTrip.Devices[0].Interfaces[0]
 	if iface.Name != "Ethernet1/1" || iface.Speed != 1000 || iface.Duplex != "full" {
 		t.Fatalf("round-trip interface = %+v", iface)
+	}
+	if iface.Type != "ethernet" || iface.MTU != 9000 ||
+		iface.InUtilization != 12.5 || iface.OutUtilization != 7.25 {
+		t.Fatalf("round-trip interface realism = %+v", iface)
+	}
+}
+
+func TestLoadYAMLRejectsInvalidInterfaceRealism(t *testing.T) {
+	template := `
+devices:
+  - name: switch-a
+    type: switch
+    mac: "00:11:22:33:44:55"
+    interfaces:
+      - name: Ethernet1/1
+        %s
+`
+	for _, test := range []struct {
+		name  string
+		field string
+	}{
+		{name: "type", field: "type: serial"},
+		{name: "mtu", field: "mtu: 575"},
+		{name: "in utilization", field: "in_utilization: 101"},
+		{name: "out utilization", field: "out_utilization: -1"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			yaml := strings.Replace(template, "%s", test.field, 1)
+			if _, err := LoadYAMLBytes([]byte(yaml)); err == nil {
+				t.Fatalf("LoadYAMLBytes accepted invalid interface %s", test.field)
+			}
+		})
 	}
 }
 

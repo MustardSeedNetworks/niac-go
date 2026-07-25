@@ -219,11 +219,11 @@ func (a *Agent) registerDot1dTpPortEntry(portIdx int) {
 	a.mib.Set(dot1dTpPort+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: portIdx})
 	a.mib.Set(dot1dTpPortMaxInfo+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: DefaultMTU})
 	a.mib.SetDynamic(dot1dTpPortInFrames+"."+portStr, func() *OIDValue {
-		stats := a.protocolStats.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
+		stats := a.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
 		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.inUcast + stats.inNUcast)}
 	})
 	a.mib.SetDynamic(dot1dTpPortOutFrames+"."+portStr, func() *OIDValue {
-		stats := a.protocolStats.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
+		stats := a.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
 		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.outUcast + stats.outNUcast)}
 	})
 	a.mib.Set(

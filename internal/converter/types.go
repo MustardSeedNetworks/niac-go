@@ -141,9 +141,9 @@ type Device struct {
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
 	SSH           *SSHConfig           `yaml:"ssh,omitempty"`
 	Syslog        *SyslogConfig        `yaml:"syslog,omitempty"`
-	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`     // v1.25.0
-	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`  // v0.94.0 — NetAlly UDP reflector endpoint
-	Interfaces    []Interface          `yaml:"interfaces,omitempty"` // Device interface metadata
+	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`                                   // v1.25.0
+	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`                                // v0.94.0 — NetAlly UDP reflector endpoint
+	Interfaces    []Interface          `yaml:"interfaces,omitempty"     validate:"omitempty,dive"` // Device interface metadata
 	Routes        []Route              `yaml:"routes,omitempty"         validate:"omitempty,dive"`
 	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`   // v1.23.0 — topology link declarations
 	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"` // v1.23.0 — LAG bundling
@@ -201,15 +201,19 @@ func addEnabledRequirements(schema *jsonschema.Schema, required ...string) {
 
 // Interface represents configured metadata for a device interface.
 type Interface struct {
-	Name        string `yaml:"name"`
-	Network     string `yaml:"network,omitempty"`
-	Address     string `yaml:"address,omitempty"      validate:"omitempty,cidr"`
-	Speed       int    `yaml:"speed,omitempty"` // Mbps
-	Duplex      string `yaml:"duplex,omitempty"`
-	AdminStatus string `yaml:"admin_status,omitempty"`
-	OperStatus  string `yaml:"oper_status,omitempty"`
-	Description string `yaml:"description,omitempty"`
-	VLANs       []int  `yaml:"vlans,omitempty"`
+	Name           string  `yaml:"name"`
+	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet l2vlan loopback tunnel other"`
+	Network        string  `yaml:"network,omitempty"`
+	Address        string  `yaml:"address,omitempty"         validate:"omitempty,cidr"`
+	MTU            int     `yaml:"mtu,omitempty"             validate:"omitempty,gte=576,lte=65535"`
+	Speed          int     `yaml:"speed,omitempty"` // Mbps
+	Duplex         string  `yaml:"duplex,omitempty"          validate:"omitempty,oneof=full half"`
+	AdminStatus    string  `yaml:"admin_status,omitempty"    validate:"omitempty,oneof=up down testing"`
+	OperStatus     string  `yaml:"oper_status,omitempty"     validate:"omitempty,oneof=up down testing"`
+	Description    string  `yaml:"description,omitempty"`
+	InUtilization  float64 `yaml:"in_utilization,omitempty"  validate:"omitempty,gte=0,lte=100"`
+	OutUtilization float64 `yaml:"out_utilization,omitempty" validate:"omitempty,gte=0,lte=100"`
+	VLANs          []int   `yaml:"vlans,omitempty"`
 }
 
 // Route declares an IPv4 static route through a named device interface.

@@ -783,11 +783,17 @@
         "name": {
           "type": "string"
         },
+        "type": {
+          "type": "string"
+        },
         "network": {
           "type": "string"
         },
         "address": {
           "type": "string"
+        },
+        "mtu": {
+          "type": "integer"
         },
         "speed": {
           "type": "integer"
@@ -803,6 +809,12 @@
         },
         "description": {
           "type": "string"
+        },
+        "in_utilization": {
+          "type": "number"
+        },
+        "out_utilization": {
+          "type": "number"
         },
         "vlans": {
           "items": {

@@ -18,6 +18,15 @@ const (
 	interfaceStatusDown    = 2
 	interfaceStatusTesting = 3
 	duplexHalf             = 2
+	interfaceTypeOther     = 1
+	interfaceTypeEthernet  = 6
+	interfaceTypeLoopback  = 24
+	interfaceTypeTunnel    = 131
+	interfaceTypeL2VLAN    = 135
+	averageFrameOctets     = 900
+	bitsPerOctet           = 8
+	nonUnicastPacketRatio  = 20
+	broadcastPacketRatio   = 100
 )
 
 func (a *Agent) initializeIFMIB() {
@@ -78,6 +87,20 @@ func (a *Agent) refreshAuthoredInterfaceMIBs() {
 				Type: gosnmp.Gauge32, Value: safeUint32FromUint64(uint64(iface.Speed)),
 			})
 		}
+		if iface.MTU > 0 {
+			a.mib.Set(ifMtu+"."+index, &OIDValue{Type: gosnmp.Integer, Value: iface.MTU})
+		}
+		ifTypeValue := interfaceTypeFor(iface.Name, iface.Type)
+		a.mib.Set(ifType+"."+index, &OIDValue{Type: gosnmp.Integer, Value: ifTypeValue})
+		connector := TruthValueTrue
+		if ifTypeValue != interfaceTypeEthernet {
+			connector = TruthValueFalse
+			a.mib.Delete(dot3StatsDuplexStatus + "." + index)
+		}
+		a.mib.Set(
+			ifConnectorPresent+"."+index,
+			&OIDValue{Type: gosnmp.Integer, Value: connector},
+		)
 		if status := interfaceStatus(iface.AdminStatus); status != 0 {
 			a.mib.Set(ifAdminStatus+"."+index, &OIDValue{Type: gosnmp.Integer, Value: status})
 		}
@@ -92,20 +115,55 @@ func (a *Agent) refreshAuthoredInterfaceMIBs() {
 		}
 		a.registerIfTableCounters(iface.Name, index)
 		a.registerIfXTablePacketCounters(iface.Name, index)
-		switch strings.ToLower(iface.Duplex) {
-		case "half":
-			a.mib.Set(
-				dot3StatsDuplexStatus+"."+index,
-				&OIDValue{Type: gosnmp.Integer, Value: duplexHalf},
-			)
-		case "full":
-			a.mib.Set(
-				dot3StatsDuplexStatus+"."+index,
-				&OIDValue{Type: gosnmp.Integer, Value: DuplexFull},
-			)
+		if ifTypeValue == interfaceTypeEthernet {
+			switch strings.ToLower(iface.Duplex) {
+			case "half":
+				a.mib.Set(
+					dot3StatsDuplexStatus+"."+index,
+					&OIDValue{Type: gosnmp.Integer, Value: duplexHalf},
+				)
+			case "full":
+				a.mib.Set(
+					dot3StatsDuplexStatus+"."+index,
+					&OIDValue{Type: gosnmp.Integer, Value: DuplexFull},
+				)
+			}
 		}
 	}
 	a.refreshDeviceStateInterfaceMIBs()
+}
+
+func configuredInterfaceType(interfaceType string) int {
+	switch strings.ToLower(interfaceType) {
+	case "ethernet":
+		return interfaceTypeEthernet
+	case "l2vlan":
+		return interfaceTypeL2VLAN
+	case "loopback":
+		return interfaceTypeLoopback
+	case "tunnel":
+		return interfaceTypeTunnel
+	case "other":
+		return interfaceTypeOther
+	default:
+		return 0
+	}
+}
+
+func interfaceTypeFor(name, configured string) int {
+	if configuredType := configuredInterfaceType(configured); configuredType != 0 {
+		return configuredType
+	}
+	switch {
+	case strings.HasPrefix(strings.ToLower(name), "vlan"):
+		return interfaceTypeL2VLAN
+	case strings.HasPrefix(strings.ToLower(name), "loopback"):
+		return interfaceTypeLoopback
+	case strings.HasPrefix(strings.ToLower(name), "tunnel"):
+		return interfaceTypeTunnel
+	default:
+		return interfaceTypeEthernet
+	}
 }
 
 func interfaceStatus(status string) int {
@@ -128,6 +186,12 @@ func (a *Agent) createInterfaceEntry(ifIdx int, interfaceName, mac string, speed
 
 	// Register ifTable basic properties
 	a.registerIfTableBasicOIDs(ifIdx, idxStr, interfaceName, macBytes, speedBps)
+	if interfaceTypeFor(interfaceName, "") == interfaceTypeEthernet {
+		a.mib.Set(
+			dot3StatsDuplexStatus+"."+idxStr,
+			&OIDValue{Type: gosnmp.Integer, Value: DuplexFull},
+		)
+	}
 
 	// Register ifTable counters (dynamic traffic simulation)
 	a.registerIfTableCounters(interfaceName, idxStr)
@@ -150,8 +214,8 @@ func (a *Agent) registerIfTableBasicOIDs(
 	// ifDescr
 	a.mib.Set(ifDescr+"."+idxStr, &OIDValue{Type: gosnmp.OctetString, Value: interfaceName})
 
-	// ifType (6 = ethernetCsmacd)
-	a.mib.Set(ifType+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: EthernetCsmacdType})
+	interfaceType := interfaceTypeFor(interfaceName, "")
+	a.mib.Set(ifType+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: interfaceType})
 
 	// ifMtu
 	a.mib.Set(ifMtu+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: DefaultMTU})
@@ -165,6 +229,14 @@ func (a *Agent) registerIfTableBasicOIDs(
 
 	// ifPhysAddress (MAC)
 	a.mib.Set(ifPhysAddress+"."+idxStr, &OIDValue{Type: gosnmp.OctetString, Value: macBytes})
+	connector := TruthValueTrue
+	if interfaceType != interfaceTypeEthernet {
+		connector = TruthValueFalse
+	}
+	a.mib.Set(
+		ifConnectorPresent+"."+idxStr,
+		&OIDValue{Type: gosnmp.Integer, Value: connector},
+	)
 
 	// ifAdminStatus (1 = up)
 	a.mib.Set(ifAdminStatus+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: 1})
@@ -202,7 +274,7 @@ func (a *Agent) registerIfTableCounters(interfaceName, idxStr string) {
 	for _, counter := range counters {
 		value := counter.value
 		a.mib.SetDynamic(counter.oid+"."+idxStr, func() *OIDValue {
-			snapshot := a.protocolStats.interfaceSnapshot(interfaceName)
+			snapshot := a.interfaceSnapshot(interfaceName)
 			return &OIDValue{
 				Type:  gosnmp.Counter32,
 				Value: wrapCounter32(value(snapshot)),
@@ -297,7 +369,7 @@ func (a *Agent) registerFaultCountersWithBaseline(interfaceName, index string) {
 		value := counter.value
 		snmpType := counter.snmpType
 		a.mib.SetDynamic(fullOID, func() *OIDValue {
-			result := baseline + value(a.protocolStats.interfaceSnapshot(interfaceName))
+			result := baseline + value(a.interfaceSnapshot(interfaceName))
 			if snmpType == gosnmp.Counter64 {
 				return &OIDValue{Type: snmpType, Value: result}
 			}
@@ -394,7 +466,7 @@ func (a *Agent) registerIfXTablePacketCounters(interfaceName, idxStr string) {
 	for _, counter := range counters {
 		value, snmpType := counter.value, counter.snmpType
 		a.mib.SetDynamic(counter.oid+"."+idxStr, func() *OIDValue {
-			result := value(a.protocolStats.interfaceSnapshot(interfaceName))
+			result := value(a.interfaceSnapshot(interfaceName))
 			if snmpType == gosnmp.Counter32 {
 				return &OIDValue{Type: snmpType, Value: wrapCounter32(result)}
 			}

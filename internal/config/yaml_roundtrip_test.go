@@ -87,8 +87,9 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		Babble: true, VLAN: 200, Properties: map[string]string{"vendor": "Cisco"},
 		TTLConfig: &TTLConfig{TTL: 2, IP: net.ParseIP("10.240.0.1"), Mask: net.CIDRMask(24, 32)},
 		Interfaces: []Interface{{
-			Name: "Gi0/0", Network: "access", Address: "10.254.200.1/24", Speed: 1000,
-			Duplex: "full", AdminStatus: "up", OperStatus: "up", VLANs: []int{200},
+			Name: "Gi0/0", Type: "ethernet", Network: "access", Address: "10.254.200.1/24",
+			MTU: 9000, Speed: 1000, Duplex: "full", AdminStatus: "up", OperStatus: "up",
+			InUtilization: 12.5, OutUtilization: 7.25, VLANs: []int{200},
 		}},
 		Routes: []Route{{Destination: "10.240.0.0/16", Via: "Gi0/0", NextHop: "10.254.200.2"}},
 		SNMPConfig: SNMPConfig{

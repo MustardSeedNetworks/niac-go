@@ -61,15 +61,19 @@ func convertInterfaces(in []converter.Interface) []Interface {
 	out := make([]Interface, len(in))
 	for i, iface := range in {
 		out[i] = Interface{
-			Name:        iface.Name,
-			Network:     iface.Network,
-			Address:     iface.Address,
-			Speed:       iface.Speed,
-			Duplex:      iface.Duplex,
-			AdminStatus: iface.AdminStatus,
-			OperStatus:  iface.OperStatus,
-			Description: iface.Description,
-			VLANs:       iface.VLANs,
+			Name:           iface.Name,
+			Type:           iface.Type,
+			Network:        iface.Network,
+			Address:        iface.Address,
+			MTU:            iface.MTU,
+			Speed:          iface.Speed,
+			Duplex:         iface.Duplex,
+			AdminStatus:    iface.AdminStatus,
+			OperStatus:     iface.OperStatus,
+			Description:    iface.Description,
+			InUtilization:  iface.InUtilization,
+			OutUtilization: iface.OutUtilization,
+			VLANs:          iface.VLANs,
 		}
 	}
 	return out
