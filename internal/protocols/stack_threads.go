@@ -343,6 +343,10 @@ func (s *Stack) sendThread() {
 func (s *Stack) sendPacket(pkt *Packet) {
 	frame, wireVLAN, err := s.finalizeEgressFrame(pkt)
 	if err != nil {
+		if errors.Is(err, errDiscoveryOffAttachment) {
+			s.recordDiscoveryEgressDrop(pkt)
+			return
+		}
 		s.recordSendError(pkt, err)
 		return
 	}
@@ -383,6 +387,9 @@ func (s *Stack) sendPacket(pkt *Packet) {
 func (s *Stack) finalizeEgressFrame(pkt *Packet) ([]byte, int, error) {
 	if pkt == nil {
 		return nil, -1, errors.New("cannot transmit a nil packet")
+	}
+	if err := s.validateDiscoveryEgress(pkt); err != nil {
+		return nil, -1, err
 	}
 	length := pkt.Length
 	if length == 0 {
