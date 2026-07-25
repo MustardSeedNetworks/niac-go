@@ -60,8 +60,6 @@ func TestInterfaceFaultCountersAreSNMPObservable(t *testing.T) {
 	}}
 	telemetry := NewProtocolTelemetry()
 	agent := NewAgentWithCommunityAndTelemetry(device, "public", 0, telemetry)
-	seedInterfaceIdentity(t, agent, "GigabitEthernet1/0/5", "10005", "5")
-	agent.refreshAuthoredInterfaceMIBs()
 
 	telemetry.RecordInterfaceCounters("GigabitEthernet1/0/5", InterfaceCounterDelta{
 		InOctets: 1_000, OutOctets: 800,
@@ -73,15 +71,15 @@ func TestInterfaceFaultCountersAreSNMPObservable(t *testing.T) {
 		oid  string
 		want any
 	}{
-		{ifInOctets + ".10005", uint32(1_000)},
-		{ifHCInOctets + ".10005", uint64(1_000)},
-		{ifOutOctets + ".10005", uint32(800)},
-		{ifHCOutOctets + ".10005", uint64(800)},
-		{ifInDiscards + ".10005", uint32(2)},
-		{ifOutDiscards + ".10005", uint32(3)},
-		{ifInErrors + ".10005", uint32(4)},
-		{ifOutErrors + ".10005", uint32(5)},
-		{dot3StatsFCSErrors + ".10005", uint32(6)},
+		{ifInOctets + ".1", uint32(1_000)},
+		{ifHCInOctets + ".1", uint64(1_000)},
+		{ifOutOctets + ".1", uint32(800)},
+		{ifHCOutOctets + ".1", uint64(800)},
+		{ifInDiscards + ".1", uint32(2)},
+		{ifOutDiscards + ".1", uint32(3)},
+		{ifInErrors + ".1", uint32(4)},
+		{ifOutErrors + ".1", uint32(5)},
+		{dot3StatsFCSErrors + ".1", uint32(6)},
 	}
 	for _, test := range tests {
 		t.Run(test.oid, func(t *testing.T) { assertMIBValue(t, agent, test.oid, test.want) })

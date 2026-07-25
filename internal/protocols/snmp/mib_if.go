@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 const (
@@ -19,51 +21,46 @@ const (
 )
 
 func (a *Agent) initializeIFMIB() {
-	logger := slog.Default()
 	device := a.device
-	if device == nil {
+	if device == nil || a.hasWalkContent() {
 		return
 	}
-
-	// A capture walk carries the device's real interface table (ifIndex, names,
-	// counters). Synthesizing a second, sequential ifTable from trunk_ports on
-	// top of it duplicates interfaces under different indices — harmless when a
-	// device has one uplink, but it pollutes the interface list once downstream
-	// access ports are modelled. The walk owns IF-MIB; trunk_ports only drive the
-	// neighbour/forwarding topology (see initializeLLDPRemoteMIB, SynthesizePeerTopology).
-	if a.hasWalkContent() {
-		return
+	names := synthesizedInterfaceNames(device)
+	count := len(names)
+	if count == 0 {
+		count = 1
+		names = []string{"Management"}
 	}
-
-	// Count interfaces from trunk_ports
-	numInterfaces := len(device.TrunkPorts)
-	if numInterfaces == 0 {
-		// If no trunk ports, create at least one management interface
-		numInterfaces = 1
+	a.mib.Set(ifNumber, &OIDValue{Type: gosnmp.Integer, Value: count})
+	for index, name := range names {
+		a.createInterfaceEntry(index+1, name, device.MACAddress.String(), getInterfaceSpeed(name))
 	}
-
-	// ifNumber
-	a.mib.Set(ifNumber, &OIDValue{
-		Type:  gosnmp.Integer,
-		Value: numInterfaces,
-	})
-
-	// Create interface entries
-	if len(device.TrunkPorts) == 0 {
-		// Management interface only
-		a.createInterfaceEntry(1, "Management", device.MACAddress.String(), NanosPerSecond)
-	} else {
-		for idx, trunk := range device.TrunkPorts {
-			ifIdx := idx + 1
-			// Determine speed based on interface name
-			speed := getInterfaceSpeed(trunk.Interface)
-			a.createInterfaceEntry(ifIdx, trunk.Interface, device.MACAddress.String(), speed)
-		}
-	}
-
 	if a.debugLevel >= DebugLevelMinimum {
-		logger.Info("Initialized IF-MIB", "interfaces", numInterfaces, "device", device.Name)
+		slog.Default().Info("Initialized IF-MIB", "interfaces", count, "device", device.Name)
 	}
+}
+
+func synthesizedInterfaceNames(device *config.Device) []string {
+	seen := make(map[string]struct{}, len(device.TrunkPorts)+len(device.Interfaces))
+	names := make([]string, 0, len(seen))
+	for _, trunk := range device.TrunkPorts {
+		appendUniqueInterface(&names, seen, trunk.Interface)
+	}
+	for _, authored := range device.Interfaces {
+		appendUniqueInterface(&names, seen, authored.Name)
+	}
+	return names
+}
+
+func appendUniqueInterface(names *[]string, seen map[string]struct{}, name string) {
+	if name == "" {
+		return
+	}
+	if _, exists := seen[name]; exists {
+		return
+	}
+	seen[name] = struct{}{}
+	*names = append(*names, name)
 }
 
 func (a *Agent) refreshAuthoredInterfaceMIBs() {

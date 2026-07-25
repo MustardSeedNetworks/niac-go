@@ -91,10 +91,9 @@ func NewAgentWithCommunityAndTelemetry(
 	// Initialize standard MIB-II system objects
 	agent.initializeSystemMIB()
 	agent.initializeSNMPMIB()
-	agent.initializeMIBIIProtocolGroups()
-
-	// Initialize neighbor discovery MIBs (IF-MIB, LLDP-MIB, CDP-MIB)
 	agent.initializeNeighborMIBs()
+	agent.refreshAuthoredInterfaceMIBs()
+	agent.initializeMIBIIProtocolGroups()
 	agent.protocolStats.attachMIB(agent.mib)
 
 	return agent
