@@ -5,6 +5,57 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.14](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.13...v0.94.14) (2026-07-25)
+
+
+### Bug Fixes
+
+* **api:** enforce device limits on config generation ([#1114](https://github.com/MustardSeedNetworks/niac-go/issues/1114)) ([282beba](https://github.com/MustardSeedNetworks/niac-go/commit/282beba10a6043e7cf94e12d4575b302d8421107))
+* **api:** project live simulation topology ([#1102](https://github.com/MustardSeedNetworks/niac-go/issues/1102)) ([117dac8](https://github.com/MustardSeedNetworks/niac-go/commit/117dac84b89119962715e80c68e58c493ea37115))
+* **api:** publish authoritative stats stream ([#1111](https://github.com/MustardSeedNetworks/niac-go/issues/1111)) ([e5aefc4](https://github.com/MustardSeedNetworks/niac-go/commit/e5aefc4e566c16699facd238c180b18ae1f52db5))
+* **auth:** secure browser API sessions ([#1090](https://github.com/MustardSeedNetworks/niac-go/issues/1090)) ([60d431e](https://github.com/MustardSeedNetworks/niac-go/commit/60d431e087c35e7053ec0ea53cd89f9ad764ba2c))
+* **catalog:** enforce reproducible semantic sync ([#1107](https://github.com/MustardSeedNetworks/niac-go/issues/1107)) ([3eed7ad](https://github.com/MustardSeedNetworks/niac-go/commit/3eed7addd7569bd2ba66615188e07ae679eae6b2))
+* **ci:** stop grading private UI as crawlable ([#1122](https://github.com/MustardSeedNetworks/niac-go/issues/1122)) ([5b443cf](https://github.com/MustardSeedNetworks/niac-go/commit/5b443cf86578065848534a4a56cf2914b4deee9c))
+* **config:** reject duplicate segment tags ([#1093](https://github.com/MustardSeedNetworks/niac-go/issues/1093)) ([1916d87](https://github.com/MustardSeedNetworks/niac-go/commit/1916d8702c1b2f7651afe0dfc699fda6725f323f))
+* **config:** resolve segment references at load time ([#1095](https://github.com/MustardSeedNetworks/niac-go/issues/1095)) ([50fcaed](https://github.com/MustardSeedNetworks/niac-go/commit/50fcaed2e0d5a3a352fa486ca9e57566c26debcd))
+* **daemon:** recover active simulation after restart ([#1106](https://github.com/MustardSeedNetworks/niac-go/issues/1106)) ([8deada0](https://github.com/MustardSeedNetworks/niac-go/commit/8deada022b498307b19d66a1afd56090ceb12e44))
+* **daemon:** recover from capture loop exit ([#1113](https://github.com/MustardSeedNetworks/niac-go/issues/1113)) ([f95a4d7](https://github.com/MustardSeedNetworks/niac-go/commit/f95a4d7be7645de96d155054d7631def78405c5f))
+* **daemon:** replace simulations transactionally ([#1100](https://github.com/MustardSeedNetworks/niac-go/issues/1100)) ([f90e89b](https://github.com/MustardSeedNetworks/niac-go/commit/f90e89b853317ca20347e431a579d9e7c2a1145a))
+* **daemon:** validate interfaces during preflight ([#1096](https://github.com/MustardSeedNetworks/niac-go/issues/1096)) ([497d635](https://github.com/MustardSeedNetworks/niac-go/commit/497d63573b6322c65a2bc4772664428d720a458a))
+* **deps:** update foundation to v0.2.1 ([#1086](https://github.com/MustardSeedNetworks/niac-go/issues/1086)) ([694223b](https://github.com/MustardSeedNetworks/niac-go/commit/694223bc0e6fadbe7a3b41e7f626e6619d0541ad))
+* **fabric:** account TTL expiry as a drop ([#1094](https://github.com/MustardSeedNetworks/niac-go/issues/1094)) ([ba7a5f8](https://github.com/MustardSeedNetworks/niac-go/commit/ba7a5f8869f208741c242c3b537a33a0f3506297))
+* **fabric:** validate DHCP leases and options ([#1097](https://github.com/MustardSeedNetworks/niac-go/issues/1097)) ([965c17f](https://github.com/MustardSeedNetworks/niac-go/commit/965c17fefa7733f0821432145618ab25402033c9))
+* **fabric:** validate live static route next hops ([#1092](https://github.com/MustardSeedNetworks/niac-go/issues/1092)) ([08d4e5d](https://github.com/MustardSeedNetworks/niac-go/commit/08d4e5d34b03108273d78b0595e3c765d8f87fe5))
+* **i18n:** refresh runtime catalog extraction ([#1099](https://github.com/MustardSeedNetworks/niac-go/issues/1099)) ([50e0e87](https://github.com/MustardSeedNetworks/niac-go/commit/50e0e87c93764592568f29ac17ce7a27ed6a1094))
+* **protocols:** bound UDP proxy concurrency ([#1088](https://github.com/MustardSeedNetworks/niac-go/issues/1088)) ([56078ce](https://github.com/MustardSeedNetworks/niac-go/commit/56078ce220c086ba0682f569095e69efca343424))
+* **protocols:** confine routed discovery egress ([#1124](https://github.com/MustardSeedNetworks/niac-go/issues/1124)) ([26d71fa](https://github.com/MustardSeedNetworks/niac-go/commit/26d71fa542312608ed101dc54b60b9fefd641d7a))
+* **protocols:** enforce single-use stack lifecycle ([#1105](https://github.com/MustardSeedNetworks/niac-go/issues/1105)) ([ee1ac0b](https://github.com/MustardSeedNetworks/niac-go/commit/ee1ac0b5de8ba1d5f47ee1f9119539549c866256))
+* **protocols:** expire idle SSH sessions consistently ([#1112](https://github.com/MustardSeedNetworks/niac-go/issues/1112)) ([94d98ea](https://github.com/MustardSeedNetworks/niac-go/commit/94d98ea7295f58bd2d22120101d0a96c96c53b2b))
+* **protocols:** route notifications through fabric ([#1101](https://github.com/MustardSeedNetworks/niac-go/issues/1101)) ([89e4317](https://github.com/MustardSeedNetworks/niac-go/commit/89e43172793ef238a639b5defa7544d9cfe68335))
+* **protocols:** validate routed IPv4 ingress ([#1104](https://github.com/MustardSeedNetworks/niac-go/issues/1104)) ([6b466ba](https://github.com/MustardSeedNetworks/niac-go/commit/6b466bae443dbb8b8eca1465ac15e422c97d9e27))
+* **snmp:** advertise authored CDP peer addresses ([#1126](https://github.com/MustardSeedNetworks/niac-go/issues/1126)) ([6d704df](https://github.com/MustardSeedNetworks/niac-go/commit/6d704df71e99ac6ab441edc99d55135caa8f2ee9))
+* **snmp:** project runtime listener tables ([#1103](https://github.com/MustardSeedNetworks/niac-go/issues/1103)) ([5cb1c0f](https://github.com/MustardSeedNetworks/niac-go/commit/5cb1c0f33d9dba1596109d6178171580b31212a1))
+* **ui:** consume packet SSE envelope ([#1108](https://github.com/MustardSeedNetworks/niac-go/issues/1108)) ([6e5f273](https://github.com/MustardSeedNetworks/niac-go/commit/6e5f27325f907e22e3159064b93afb613ec74350))
+* **ui:** keep offline PCAP analysis accessible ([#1110](https://github.com/MustardSeedNetworks/niac-go/issues/1110)) ([8e12c02](https://github.com/MustardSeedNetworks/niac-go/commit/8e12c020bbbb1983fe1d1482abfa015bfecc77b6))
+* **ui:** preflight runtime simulation starts ([#1098](https://github.com/MustardSeedNetworks/niac-go/issues/1098)) ([d04c3f3](https://github.com/MustardSeedNetworks/niac-go/commit/d04c3f352a9b56c6ef3ef16322de9bad67847fff))
+* **ui:** resolve page metadata interpolation ([#1120](https://github.com/MustardSeedNetworks/niac-go/issues/1120)) ([084de53](https://github.com/MustardSeedNetworks/niac-go/commit/084de535321471371d8283b9df6a82ffcdd3bf95))
+
+
+### Documentation
+
+* **plan:** record stage two completion ([#1091](https://github.com/MustardSeedNetworks/niac-go/issues/1091)) ([78e6e55](https://github.com/MustardSeedNetworks/niac-go/commit/78e6e553a2512a5a7c9e7bc624640963b963f8f0))
+
+
+### Tests
+
+* **web:** enforce first-class browser matrix ([#1109](https://github.com/MustardSeedNetworks/niac-go/issues/1109)) ([a70385d](https://github.com/MustardSeedNetworks/niac-go/commit/a70385dc1687d0f5964cbb391146010dacfd7146))
+
+
+### Miscellaneous
+
+* **i18n:** migrate extraction to maintained cli ([#1089](https://github.com/MustardSeedNetworks/niac-go/issues/1089)) ([28587c2](https://github.com/MustardSeedNetworks/niac-go/commit/28587c2f8fef73a112427b3ff5f4d0b316407778))
+* reconcile pre-1.0 closeout plans ([#1116](https://github.com/MustardSeedNetworks/niac-go/issues/1116)) ([773679e](https://github.com/MustardSeedNetworks/niac-go/commit/773679e9a6a7e3beb6ebfa1a094810189894c442))
+
 ## [0.94.13](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.12...v0.94.13) (2026-07-23)
 
 
