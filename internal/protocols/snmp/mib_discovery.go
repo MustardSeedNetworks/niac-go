@@ -278,12 +278,6 @@ func (a *Agent) createCDPCacheEntry(
 		Value: 1,
 	})
 
-	// cdpCacheAddress (placeholder - would be remote device IP)
-	a.mib.Set(entryBase+".4."+indexStr, &OIDValue{
-		Type:  gosnmp.OctetString,
-		Value: []byte{10, 0, 0, 1}, // Placeholder IP
-	})
-
 	// cdpCacheVersion
 	version := cdp.SoftwareVersion
 	if version == "" {
