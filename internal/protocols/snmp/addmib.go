@@ -341,8 +341,5 @@ func castIntegral(asnType gosnmp.Asn1BER, value int64) any {
 }
 
 func (a *Agent) sysUpTimeTicks() uint32 {
-	uptime := time.Since(a.startTime)
-	ms := uptime.Milliseconds() / MillisecsPerCentisec
-
-	return safeUint32(ms)
+	return uptimeTicks(a.uptimeBase + time.Since(a.startTime))
 }

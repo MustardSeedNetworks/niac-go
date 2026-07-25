@@ -3,9 +3,11 @@ package snmp
 
 import (
 	"fmt"
+	"hash/crc32"
 	"log/slog"
 	"net"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,24 +17,22 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp/synth"
 )
 
-// Default OID constants.
 const (
-	// DefaultCiscoSysObjectID is the default sysObjectID for Cisco devices.
-	DefaultCiscoSysObjectID = "1.3.6.1.4.1.9.1.1"
-
 	// unknownPlaceholder is used as a fallback value when actual data is unavailable.
 	unknownPlaceholder = "Unknown"
+
+	minimumDefaultUptime = 30 * 24 * time.Hour
+	defaultUptimeSpread  = 330 * 24 * time.Hour
 )
 
 // Package-local aliases for exported constants.
 const (
-	millisecsPerCentisec = MillisecsPerCentisec
-	maxUint32            = MaxUint32Value
-	debugLevelVerbose    = DebugLevelVerbose
-	debugLevelDebug      = DebugLevelDebug
-	minRedactLen         = MinRedactLen
+	debugLevelVerbose = DebugLevelVerbose
+	debugLevelDebug   = DebugLevelDebug
+	minRedactLen      = MinRedactLen
 )
 
 // Agent represents an SNMP agent instance for a device.
@@ -41,6 +41,7 @@ type Agent struct {
 	mib             *MIB
 	community       string
 	startTime       time.Time
+	uptimeBase      time.Duration
 	debugLevel      int
 	logger          *slog.Logger
 	mu              sync.RWMutex
@@ -80,6 +81,7 @@ func NewAgentWithCommunityAndTelemetry(
 		mib:           NewMIB(),
 		community:     community,
 		startTime:     time.Now(),
+		uptimeBase:    simulatedUptimeBase(device),
 		debugLevel:    debugLevel,
 		logger:        slog.Default(),
 		protocolStats: telemetry,
@@ -101,6 +103,8 @@ func NewAgentWithCommunityAndTelemetry(
 
 // initializeSystemMIB initializes standard MIB-II system group OIDs.
 func (a *Agent) initializeSystemMIB() {
+	profile := systemProfile(a.device)
+
 	// sysDescr (1.3.6.1.2.1.1.1.0)
 	sysDescr := a.device.SNMPConfig.SysDescr
 	if sysDescr == "" {
@@ -118,7 +122,7 @@ func (a *Agent) initializeSystemMIB() {
 	// sysObjectID (1.3.6.1.2.1.1.2.0)
 	sysObjectID := a.device.Properties["sysObjectID"]
 	if sysObjectID == "" {
-		sysObjectID = DefaultCiscoSysObjectID // Default to generic Cisco
+		sysObjectID = profile.SysObjectID
 	}
 
 	a.mib.Set("1.3.6.1.2.1.1.2.0", &OIDValue{
@@ -128,17 +132,9 @@ func (a *Agent) initializeSystemMIB() {
 
 	// sysUpTime (1.3.6.1.2.1.1.3.0) - TimeTicks (hundredths of second)
 	a.mib.SetDynamic("1.3.6.1.2.1.1.3.0", func() *OIDValue {
-		uptime := time.Since(a.startTime)
-
-		ms := min(
-			// Convert to hundredths of second
-			uptime.Milliseconds()/millisecsPerCentisec, maxUint32)
-
-		timeticks := safeUint32(ms)
-
 		return &OIDValue{
 			Type:  gosnmp.TimeTicks,
-			Value: timeticks,
+			Value: a.sysUpTimeTicks(),
 		}
 	})
 
@@ -189,15 +185,81 @@ func (a *Agent) initializeSystemMIB() {
 	// Bit 2: internet (e.g., IP gateways)
 	// Bit 3: end-to-end  (e.g., IP hosts)
 	// Bit 6: application (e.g., mail relays)
-	sysServices := 72 // Typical for L3 device (bits 3 and 6)
 	a.mib.Set("1.3.6.1.2.1.1.7.0", &OIDValue{
 		Type:  gosnmp.Integer,
-		Value: sysServices,
+		Value: synth.SystemServices(profile.Type),
 	})
 
 	if a.debugLevel >= debugLevelVerbose {
 		a.logger.Debug("Initialized system MIB", "device", a.device.Name)
 	}
+}
+
+func systemProfile(device *config.Device) synth.Profile {
+	deviceType := synthDeviceType(device.Type)
+	profile, err := synth.Pick(synthVendor(device.MACVendor), deviceType)
+	if err == nil {
+		return profile
+	}
+
+	profile, _ = synth.Pick(synth.VendorGeneric, deviceType)
+	return profile
+}
+
+func synthVendor(vendor string) synth.Vendor {
+	switch strings.ToLower(strings.TrimSpace(vendor)) {
+	case "cisco", "cisco-ios":
+		return synth.VendorCiscoIOS
+	case "juniper", "junos":
+		return synth.VendorJunos
+	case "arista", "arista-eos":
+		return synth.VendorAristaEOS
+	case "aruba":
+		return synth.VendorAruba
+	case "extreme":
+		return synth.VendorExtreme
+	case "hp", "hpe":
+		return synth.VendorHP
+	default:
+		return synth.VendorGeneric
+	}
+}
+
+func synthDeviceType(deviceType string) synth.DeviceType {
+	switch strings.ToLower(strings.TrimSpace(deviceType)) {
+	case "switch":
+		return synth.TypeSwitch
+	case "router":
+		return synth.TypeRouter
+	case "firewall":
+		return synth.TypeFirewall
+	case "ap", "access-point", "access_point":
+		return synth.TypeAccessPoint
+	case "server":
+		return synth.TypeServer
+	case "printer":
+		return synth.TypePrinter
+	case "phone", "voip-phone", "voip_phone":
+		return synth.TypeVoIPPhone
+	default:
+		return synth.TypeHost
+	}
+}
+
+func simulatedUptimeBase(device *config.Device) time.Duration {
+	if device == nil {
+		return minimumDefaultUptime
+	}
+	if raw := strings.TrimSpace(device.Properties["uptimeSeconds"]); raw != "" {
+		seconds, err := strconv.ParseUint(raw, 10, 32)
+		if err == nil {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+
+	spreadSeconds := uint32(defaultUptimeSpread / time.Second)
+	offset := time.Duration(crc32.ChecksumIEEE([]byte(device.Name))%spreadSeconds) * time.Second
+	return minimumDefaultUptime + offset
 }
 
 // Reindex eagerly builds the agent's sorted OID index. Call after all MIB
@@ -325,13 +387,15 @@ func (a *Agent) ownsSynthesizedTopology() bool {
 
 // isSynthesizedTopologyOID reports whether oid falls under a MIB subtree that
 // trunk_ports synthesis owns — LLDP remote systems, CDP cache, and the bridge
-// forwarding DB — and so must not be loaded from a capture walk. Handles the
+// forwarding DBs — and so must not be loaded from a capture walk. Handles the
 // optional leading dot in walk OIDs.
 func isSynthesizedTopologyOID(oid string) bool {
 	prefixes := []string{
 		lldpRemoteSystemsData, // 1.0.8802.1.1.2.1.4 — LLDP-MIB neighbours
 		cdpCache,              // 1.3.6.1.4.1.9.9.23.1.2 — CDP cache neighbours
 		dot1dTpFdbTable,       // 1.3.6.1.2.1.17.4.3 — bridge MAC→port
+		dot1qFDBTable,         // 1.3.6.1.2.1.17.7.1.2.1 — VLAN FDB counters
+		dot1qTpFDBTable,       // 1.3.6.1.2.1.17.7.1.2.2 — VLAN MAC→port
 	}
 
 	trimmed := strings.TrimPrefix(oid, ".")

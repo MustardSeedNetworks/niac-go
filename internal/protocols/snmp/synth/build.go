@@ -96,14 +96,14 @@ func emitSystemGroup(buf *bytes.Buffer, p Profile, dev DeviceInput) {
 	emitString(buf, "1.3.6.1.2.1.1.4.0", "niac-baseline-synth")   // sysContact
 	emitString(buf, "1.3.6.1.2.1.1.5.0", dev.Hostname)            // sysName
 	emitString(buf, "1.3.6.1.2.1.1.6.0", "synthesised by niac")   // sysLocation
-	emitInteger(buf, "1.3.6.1.2.1.1.7.0", sysServicesFor(p.Type)) // sysServices
+	emitInteger(buf, "1.3.6.1.2.1.1.7.0", SystemServices(p.Type)) // sysServices
 }
 
-// sysServices is the bitmask of layers this device operates at.
+// SystemServices returns the sysServices bitmask for a simulated device type.
 // Bit 1=physical, 2=datalink, 4=internet, 8=end-to-end, 64=apps.
 // Switches operate at L2 (2). Routers + firewalls at L3 (4+2=6).
 // Hosts/servers/printers at L7 (64+8+4+2=78).
-func sysServicesFor(t DeviceType) int {
+func SystemServices(t DeviceType) int {
 	switch t {
 	case TypeSwitch:
 		return servicesL2

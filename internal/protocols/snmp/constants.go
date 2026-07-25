@@ -82,6 +82,8 @@ const (
 	CapabilityWLANAP = 0x08
 	// CapabilityStationOnly is the Station Only capability bitmask.
 	CapabilityStationOnly = 0x80
+	// CapabilityTelephoneStation is the Telephone + Station Only capability bitmask.
+	CapabilityTelephoneStation = 0xA0
 
 	// BERLenByteMask is the mask for length bytes count in BER.
 	BERLenByteMask = 7
@@ -112,6 +114,8 @@ const (
 
 	// ChassisIDSubtypeMAC is the LLDP chassis ID subtype for MAC address.
 	ChassisIDSubtypeMAC = 4
+	// ChassisIDSubtypeLocal is the LLDP chassis ID subtype for a locally assigned value.
+	ChassisIDSubtypeLocal = 7
 
 	// PortIDSubtypeInterfaceName is the LLDP port ID subtype for interface name.
 	PortIDSubtypeInterfaceName = 5

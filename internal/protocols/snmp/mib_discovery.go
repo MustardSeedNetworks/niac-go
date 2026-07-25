@@ -143,14 +143,13 @@ func (a *Agent) createLLDPRemoteEntry(timeMark, portNum, remIndex int, trunk con
 	indexStr := fmt.Sprintf("%d.%d.%d", timeMark, portNum, remIndex)
 	entryBase := lldpRemTable + ".1"
 
-	// lldpRemChassisIdSubtype (4 = macAddress)
+	// The fleet resolver replaces this temporary local identity with the
+	// remote MAC after every device has been loaded.
 	a.mib.Set(entryBase+".4."+indexStr, &OIDValue{
 		Type:  gosnmp.Integer,
-		Value: ChassisIDSubtypeMAC,
+		Value: ChassisIDSubtypeLocal,
 	})
 
-	// lldpRemChassisId - Use remote device name as chassis ID for now
-	// In a real implementation, we'd look up the remote device's MAC
 	a.mib.Set(entryBase+".5."+indexStr, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: trunk.RemoteDevice,

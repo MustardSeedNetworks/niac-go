@@ -8,13 +8,16 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // PeerIdentity contains the fleet-wide identity needed to synthesize discovery
 // and forwarding topology for a remote device.
 type PeerIdentity struct {
-	MAC     []byte
-	Address net.IP
+	MAC               []byte
+	Address           net.IP
+	Type              string
+	SystemDescription string
 }
 
 // PeerResolver returns the identity for a remote device and interface. The
@@ -54,21 +57,26 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 	// table. Sampling per-port would drift as we add rows below.
 	offset, hasOffset := a.basePortOffset()
 
-	cdpIndex := 0
-	for _, trunk := range a.device.TrunkPorts {
+	remoteIndex := 0
+	for portIndex, trunk := range a.device.TrunkPorts {
 		if trunk.RemoteDevice == "" {
 			continue
 		}
 
 		if !trunk.FDBOnly {
-			cdpIndex++
+			remoteIndex++
 		}
 		peer, ok := resolve(trunk.RemoteDevice, trunk.RemoteInterface)
 		if !ok {
 			continue
 		}
 
-		changed = a.setCDPPeerAddress(trunk, peer.Address, cdpIndex) || changed
+		changed = a.setPeerDiscoveryIdentity(
+			trunk,
+			peer,
+			portIndex+1,
+			remoteIndex,
+		) || changed
 
 		if trunk.Interface == "" || len(peer.MAC) == 0 {
 			continue
@@ -79,6 +87,9 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 		}
 
 		a.addLearnedFDBEntry(peer.MAC, bridgePort)
+		if vlan := forwardingVLAN(trunk); vlan > 0 {
+			a.addLearnedQBridgeFDBEntry(vlan, peer.MAC, bridgePort)
+		}
 
 		maxPort = max(maxPort, bridgePort)
 
@@ -94,7 +105,25 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 	}
 }
 
-func (a *Agent) setCDPPeerAddress(trunk config.TrunkPort, address net.IP, index int) bool {
+func (a *Agent) setPeerDiscoveryIdentity(
+	trunk config.TrunkPort,
+	peer PeerIdentity,
+	fallbackIfIndex, remoteIndex int,
+) bool {
+	if trunk.FDBOnly {
+		return false
+	}
+	ifIndex := a.discoveryIfIndex(trunk.Interface, fallbackIfIndex)
+	cdpChanged := a.setCDPPeerAddress(trunk, peer.Address, ifIndex, remoteIndex)
+	lldpChanged := a.setLLDPPeerIdentity(trunk, peer, ifIndex, remoteIndex)
+	return cdpChanged || lldpChanged
+}
+
+func (a *Agent) setCDPPeerAddress(
+	trunk config.TrunkPort,
+	address net.IP,
+	ifIndex, deviceIndex int,
+) bool {
 	if trunk.FDBOnly || a.device.CDPConfig == nil || !a.device.CDPConfig.Enabled {
 		return false
 	}
@@ -103,13 +132,48 @@ func (a *Agent) setCDPPeerAddress(trunk config.TrunkPort, address net.IP, index 
 		return false
 	}
 
-	ifIndex := a.discoveryIfIndex(trunk.Interface, index)
-	row := strconv.Itoa(ifIndex) + "." + strconv.Itoa(index)
+	row := strconv.Itoa(ifIndex) + "." + strconv.Itoa(deviceIndex)
 	a.mib.Set(cdpCacheTable+".1.4."+row, &OIDValue{
 		Type:  gosnmp.OctetString,
 		Value: []byte(ipv4),
 	})
 	return true
+}
+
+func (a *Agent) setLLDPPeerIdentity(
+	trunk config.TrunkPort,
+	peer PeerIdentity,
+	ifIndex, remoteIndex int,
+) bool {
+	if trunk.FDBOnly || a.device.LLDPConfig == nil || !a.device.LLDPConfig.Enabled ||
+		len(peer.MAC) == 0 {
+		return false
+	}
+
+	row := "0." + strconv.Itoa(ifIndex) + "." + strconv.Itoa(remoteIndex)
+	entry := lldpRemTable + ".1"
+	a.mib.Set(entry+".4."+row, &OIDValue{Type: gosnmp.Integer, Value: ChassisIDSubtypeMAC})
+	a.mib.Set(entry+".5."+row, &OIDValue{Type: gosnmp.OctetString, Value: peer.MAC})
+	if peer.SystemDescription != "" {
+		a.mib.Set(entry+".10."+row, &OIDValue{
+			Type: gosnmp.OctetString, Value: peer.SystemDescription,
+		})
+	}
+	capabilities := safeconv.Uint32(getCapabilitiesBitfield(peer.Type))
+	bits := []byte{
+		safeconv.ByteFromUint32(capabilities >> BitShiftByte),
+		safeconv.ByteFromUint32(capabilities),
+	}
+	a.mib.Set(entry+".11."+row, &OIDValue{Type: gosnmp.OctetString, Value: bits})
+	a.mib.Set(entry+".12."+row, &OIDValue{Type: gosnmp.OctetString, Value: bits})
+	return true
+}
+
+func forwardingVLAN(trunk config.TrunkPort) int {
+	if trunk.NativeVLAN > 0 {
+		return trunk.NativeVLAN
+	}
+	return 1
 }
 
 // bridgePortForInterface resolves an interface name (e.g. "FastEthernet0/5") to

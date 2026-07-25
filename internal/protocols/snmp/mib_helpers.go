@@ -61,12 +61,14 @@ func getCapabilitiesBitfield(deviceType string) int {
 	deviceTypeLower := strings.ToLower(deviceType)
 
 	switch deviceTypeLower {
-	case "router":
+	case "router", "firewall":
 		return CapabilityRouterBridge // Router + Bridge
 	case "switch":
 		return CapabilityBridge // Bridge
-	case "ap", "access-point":
+	case "ap", "access-point", "access_point":
 		return CapabilityWLANAP // WLAN AP
+	case "phone", "voip-phone", "voip_phone":
+		return CapabilityTelephoneStation // Telephone + Station Only
 	case "server", "host":
 		return CapabilityStationOnly // Station Only
 	default:
