@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.15](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.14...v0.94.15) (2026-07-25)
+
+
+### Bug Fixes
+
+* **snmp:** preserve authored physical identity ([#1128](https://github.com/MustardSeedNetworks/niac-go/issues/1128)) ([21b370d](https://github.com/MustardSeedNetworks/niac-go/commit/21b370d72cafd89c66fff345b38c72222a968611)), closes [#1127](https://github.com/MustardSeedNetworks/niac-go/issues/1127)
+
 ## [0.94.14](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.13...v0.94.14) (2026-07-25)
 
 
