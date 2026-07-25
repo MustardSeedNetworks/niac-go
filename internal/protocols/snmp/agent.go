@@ -256,6 +256,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.registerLiveMIBIIProtocolCounters()
 	a.refreshBridgePortCounters()
 	a.refreshAuthoredInterfaceMIBs()
+	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
 	if a.ownsSynthesizedTopology() {
 		a.refreshAuthoredDiscoveryMIBs()
