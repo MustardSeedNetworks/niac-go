@@ -383,15 +383,19 @@ type DNSRecord struct {
 
 // Interface represents a network interface on a device.
 type Interface struct {
-	Name        string
-	Network     string
-	Address     string
-	Speed       int // Mbps
-	Duplex      string
-	AdminStatus string // up, down
-	OperStatus  string // up, down, testing
-	Description string
-	VLANs       []int
+	Name           string
+	Type           string
+	Network        string
+	Address        string
+	MTU            int
+	Speed          int // Mbps
+	Duplex         string
+	AdminStatus    string // up, down, testing
+	OperStatus     string // up, down, testing
+	Description    string
+	InUtilization  float64 // percentage of interface capacity
+	OutUtilization float64 // percentage of interface capacity
+	VLANs          []int
 }
 
 // SNMPConfig holds SNMP configuration.
