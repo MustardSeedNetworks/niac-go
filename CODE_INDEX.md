@@ -34,8 +34,8 @@ parallel implementation. It is intentionally organized by purpose.
 | --- | --- | --- |
 | Walk parsing and validation | `internal/protocols/snmp/walk.go` + `walk_validator.go` | Shared net-snmp syntax, numeric bounds, continuation, and terminal-marker handling |
 | IF-MIB identity resolution | `internal/protocols/snmp/mib_if.go` + `peer_topology.go` | Authored interface metadata and every topology table resolve through the walk's real ifIndex |
-| LLDP/CDP synthesis | `internal/protocols/snmp/mib_discovery.go` | Infrastructure neighbor rows; `fdb_only` attachments are intentionally excluded |
-| Bridge/FDB synthesis | `internal/protocols/snmp/peer_topology.go` | MAC to bridge-port to ifIndex chain used for endpoint placement |
+| LLDP/CDP synthesis | `internal/protocols/snmp/mib_discovery.go` + `peer_topology.go` | Infrastructure neighbor rows with authored peer addresses; `fdb_only` attachments are intentionally excluded |
+| Bridge/FDB synthesis | `internal/protocols/snmp/peer_topology.go` | Fleet-resolved MAC to bridge-port to ifIndex chain used for endpoint placement |
 | IP and route MIB synthesis | `internal/protocols/snmp/mib_ip.go` | MIB-II addresses, routes, ARP, and explicit next-hop identity |
 | Per-device MIB-II and interface telemetry | `internal/protocols/stack_protocol_telemetry.go` + `internal/protocols/snmp/protocol_telemetry.go` | One atomic event source per simulated device and authored interface, shared by its SNMP agents; protocol, IF-MIB, IF-X, and bridge counters advance from packet events |
 

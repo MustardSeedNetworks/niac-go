@@ -37,11 +37,11 @@ func TestSynthesizePeerTopologyLearnsHostOnPort(t *testing.T) {
 	must(agent.SetOID(dot1dBasePortIfIndex+".5", &OIDValue{Type: gosnmp.Integer, Value: 10005}))
 
 	pc1MAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
-	resolve := func(name string) ([]byte, bool) {
+	resolve := func(name, _ string) (PeerIdentity, bool) {
 		if name == "PC01" {
-			return pc1MAC, true
+			return PeerIdentity{MAC: pc1MAC}, true
 		}
-		return nil, false // UNKNOWN-DEV is unresolvable
+		return PeerIdentity{}, false // UNKNOWN-DEV is unresolvable
 	}
 
 	agent.SynthesizePeerTopology(resolve)
@@ -94,7 +94,9 @@ func TestAuthoredDiscoveryUsesWalkInterfaceIdentityEndToEnd(t *testing.T) {
 		t.Fatalf("LoadWalkFile: %v", err)
 	}
 	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
-	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return pcMAC, true })
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: pcMAC}, true
+	})
 
 	assertMIBValue(t, agent, lldpLocPortTable+".1.3.10005", "FastEthernet0/5")
 	assertMIBValue(t, agent, lldpRemTable+".1.9.0.10005.1", "PC01")
@@ -124,7 +126,9 @@ func TestFDBOnlyAttachmentLearnsMACWithoutInventingNeighbor(t *testing.T) {
 	}}
 	agent := NewAgent(dev, 0)
 	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
-	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return pcMAC, true })
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: pcMAC}, true
+	})
 
 	assertMIBValue(t, agent, lldpLocPortTable+".1.3.1", "FastEthernet0/5")
 	assertMIBValue(t, agent, dot1dTpFdbPort+"."+macBytesToOIDIndex(pcMAC), 1)
@@ -174,7 +178,9 @@ func TestSynthesizePeerTopologyDerivesPortWhenWalkSparse(t *testing.T) {
 	}
 
 	mac, _ := net.ParseMAC("aa:bb:cc:00:00:77")
-	agent.SynthesizePeerTopology(func(string) ([]byte, bool) { return mac, true })
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: mac}, true
+	})
 
 	port := agent.mib.Get(dot1dTpFdbPort + "." + macBytesToOIDIndex(mac))
 	if port == nil || port.Value.(int) != 7 {

@@ -1,16 +1,26 @@
 package snmp
 
 import (
+	"net"
 	"strconv"
 	"strings"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
-// PeerMACResolver returns the MAC bytes for a device name, and whether it is
-// known. The stack builds it from the full config roster — an agent alone only
-// knows its own device.
-type PeerMACResolver func(deviceName string) ([]byte, bool)
+// PeerIdentity contains the fleet-wide identity needed to synthesize discovery
+// and forwarding topology for a remote device.
+type PeerIdentity struct {
+	MAC     []byte
+	Address net.IP
+}
+
+// PeerResolver returns the identity for a remote device and interface. The
+// stack builds it from the full config roster — an agent alone only knows its
+// own device.
+type PeerResolver func(deviceName, interfaceName string) (PeerIdentity, bool)
 
 // hasWalkContent reports whether this device is backed by a capture walk, which
 // then owns the IF-MIB / BRIDGE-MIB content that construction would otherwise
@@ -23,18 +33,16 @@ func (a *Agent) hasWalkContent() bool {
 	return a.device.SNMPConfig.WalkFile != "" || len(a.device.SNMPConfig.WalkFiles) > 0
 }
 
-// SynthesizePeerTopology fills in the bridge forwarding entries that let a
-// discovery tool answer "which switch/port is this host on" (NetAlly's Nearest
-// Switch). Construction seeds only a self FDB entry because a single agent does
-// not know its neighbours' MACs; here — after the fleet is loaded — each
-// trunk_port whose remote device resolves to a MAC becomes a learned FDB entry
-// on the port's bridge index, mapped through the walk's real ifIndex.
+// SynthesizePeerTopology fills the remote CDP address and bridge forwarding
+// entries that a discovery tool uses to identify and place connected devices.
+// A single agent does not know its neighbours' addresses or MACs; here — after
+// the fleet is loaded — each trunk_port resolves through the complete roster.
 //
 // Ports whose interface name is absent from the device's own walk (e.g. an
 // inter-switch uplink named for a chassis the walk doesn't model) are skipped:
 // those links already show via the CDP/LLDP neighbour tables; the FDB is for
 // attached hosts. Call after all MIB content is loaded, then Reindex.
-func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
+func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 	if a == nil || a.device == nil || resolve == nil {
 		return
 	}
@@ -46,22 +54,31 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 	// table. Sampling per-port would drift as we add rows below.
 	offset, hasOffset := a.basePortOffset()
 
+	cdpIndex := 0
 	for _, trunk := range a.device.TrunkPorts {
-		if trunk.RemoteDevice == "" || trunk.Interface == "" {
+		if trunk.RemoteDevice == "" {
 			continue
 		}
 
-		mac, ok := resolve(trunk.RemoteDevice)
-		if !ok || len(mac) == 0 {
+		if !trunk.FDBOnly {
+			cdpIndex++
+		}
+		peer, ok := resolve(trunk.RemoteDevice, trunk.RemoteInterface)
+		if !ok {
 			continue
 		}
 
+		changed = a.setCDPPeerAddress(trunk, peer.Address, cdpIndex) || changed
+
+		if trunk.Interface == "" || len(peer.MAC) == 0 {
+			continue
+		}
 		bridgePort, ok := a.bridgePortForInterface(trunk.Interface, offset, hasOffset)
 		if !ok {
 			continue
 		}
 
-		a.addLearnedFDBEntry(mac, bridgePort)
+		a.addLearnedFDBEntry(peer.MAC, bridgePort)
 
 		maxPort = max(maxPort, bridgePort)
 
@@ -75,6 +92,24 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerMACResolver) {
 		a.raiseBaseNumPorts(maxPort)
 		a.mib.Reindex()
 	}
+}
+
+func (a *Agent) setCDPPeerAddress(trunk config.TrunkPort, address net.IP, index int) bool {
+	if trunk.FDBOnly || a.device.CDPConfig == nil || !a.device.CDPConfig.Enabled {
+		return false
+	}
+	ipv4 := address.To4()
+	if ipv4 == nil {
+		return false
+	}
+
+	ifIndex := a.discoveryIfIndex(trunk.Interface, index)
+	row := strconv.Itoa(ifIndex) + "." + strconv.Itoa(index)
+	a.mib.Set(cdpCacheTable+".1.4."+row, &OIDValue{
+		Type:  gosnmp.OctetString,
+		Value: []byte(ipv4),
+	})
+	return true
 }
 
 // bridgePortForInterface resolves an interface name (e.g. "FastEthernet0/5") to

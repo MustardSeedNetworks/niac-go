@@ -85,9 +85,9 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	// fleet roster (a host MAC on the access port it hangs off) so a scanner can
 	// answer "nearest switch/port" for discovered hosts.
 	if !v2Enabled {
-		baseAgent.SynthesizePeerTopology(s.peerMACResolver())
+		baseAgent.SynthesizePeerTopology(s.peerResolver())
 	}
-	group.SynthesizePeerTopologyAll(s.peerMACResolver())
+	group.SynthesizePeerTopologyAll(s.peerResolver())
 
 	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
 	// Build the sorted OID indexes eagerly so the first GetNext of a discovery
@@ -120,24 +120,45 @@ func configuredWalkFiles(cfg config.SNMPConfig) []string {
 	return files
 }
 
-// peerMACResolver returns a lookup from device name to MAC over the whole config
-// roster. An SNMP agent knows only its own device, so cross-device MAC
-// resolution (for FDB / neighbour synthesis) has to come from the stack.
-func (s *Stack) peerMACResolver() snmp.PeerMACResolver {
-	byName := make(map[string][]byte, len(s.config.Devices))
+// peerResolver returns topology identity over the whole config roster. An SNMP
+// agent knows only its own device, so cross-device resolution has to come from
+// the stack.
+func (s *Stack) peerResolver() snmp.PeerResolver {
+	byName := make(map[string]*config.Device, len(s.config.Devices))
 
 	for i := range s.config.Devices {
 		dev := &s.config.Devices[i]
-		if len(dev.MACAddress) > 0 {
-			byName[dev.Name] = dev.MACAddress
+		byName[dev.Name] = dev
+	}
+
+	return func(name, interfaceName string) (snmp.PeerIdentity, bool) {
+		device, ok := byName[name]
+		if !ok {
+			return snmp.PeerIdentity{}, false
 		}
+
+		return snmp.PeerIdentity{
+			MAC:     device.MACAddress,
+			Address: peerInterfaceAddress(device, interfaceName),
+		}, true
+	}
+}
+
+func peerInterfaceAddress(device *config.Device, interfaceName string) net.IP {
+	for _, iface := range device.Interfaces {
+		if iface.Name != interfaceName {
+			continue
+		}
+		address, _, err := net.ParseCIDR(iface.Address)
+		if err == nil {
+			if ipv4 := address.To4(); ipv4 != nil {
+				return ipv4
+			}
+		}
+		break
 	}
 
-	return func(name string) ([]byte, bool) {
-		mac, ok := byName[name]
-
-		return mac, ok
-	}
+	return firstIPv4Address(device)
 }
 
 // initSNMPv3Engine builds and attaches the device's SNMPv3 authoritative

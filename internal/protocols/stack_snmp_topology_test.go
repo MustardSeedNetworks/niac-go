@@ -1,0 +1,63 @@
+package protocols
+
+import (
+	"bytes"
+	"net"
+	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+)
+
+func TestSNMPTopologyUsesAuthoredCDPPeerAddress(t *testing.T) {
+	cfg := &config.Config{Devices: []config.Device{
+		{
+			Name:        "LAB-EDGE-R1",
+			Type:        "router",
+			MACAddress:  mustTestMAC(t, "00:00:0c:ff:01:01"),
+			IPAddresses: []net.IP{net.ParseIP("10.254.200.1")},
+			Interfaces: []config.Interface{
+				{Name: "GigabitEthernet1/0/48", Address: "10.254.200.1/24"},
+				{Name: "GigabitEthernet1/0/1", Address: "203.0.113.1/30"},
+			},
+			SNMPConfig: config.SNMPConfig{Community: "NetAllyDemo"},
+			CDPConfig:  &config.CDPConfig{Enabled: true},
+			TrunkPorts: []config.TrunkPort{{
+				Interface:       "GigabitEthernet1/0/1",
+				RemoteDevice:    "INET-R1",
+				RemoteInterface: "GigabitEthernet1/0/1",
+			}},
+		},
+		{
+			Name:        "INET-R1",
+			Type:        "router",
+			MACAddress:  mustTestMAC(t, "00:00:0c:00:01:01"),
+			IPAddresses: []net.IP{net.ParseIP("203.0.113.2"), net.ParseIP("8.8.8.8")},
+			Interfaces: []config.Interface{{
+				Name: "GigabitEthernet1/0/1", Address: "203.0.113.2/30",
+			}},
+		},
+	}}
+
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	agent := stack.snmpAgents[&cfg.Devices[0]].baseAgent
+	value, err := agent.HandleGet("1.3.6.1.4.1.9.9.23.1.2.1.1.4.1.1")
+	if err != nil {
+		t.Fatalf("get cdpCacheAddress: %v", err)
+	}
+
+	want := net.ParseIP("203.0.113.2").To4()
+	got, ok := value.Value.([]byte)
+	if !ok || !bytes.Equal(got, want) {
+		t.Fatalf("cdpCacheAddress = %v, want %v", value.Value, want)
+	}
+}
+
+func mustTestMAC(t *testing.T, raw string) net.HardwareAddr {
+	t.Helper()
+	mac, err := net.ParseMAC(raw)
+	if err != nil {
+		t.Fatalf("parse MAC %q: %v", raw, err)
+	}
+	return mac
+}
