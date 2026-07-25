@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.17](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.16...v0.94.17) (2026-07-25)
+
+
+### Features
+
+* **snmp:** simulate realistic interface telemetry ([#1134](https://github.com/MustardSeedNetworks/niac-go/issues/1134)) ([77926ef](https://github.com/MustardSeedNetworks/niac-go/commit/77926eff92d07650459ead41111334b869271425))
+
 ## [0.94.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.15...v0.94.16) (2026-07-25)
 
 
