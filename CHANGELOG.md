@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.18](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.17...v0.94.18) (2026-07-25)
+
+
+### Bug Fixes
+
+* harden Npcap SDK release dependency ([#1137](https://github.com/MustardSeedNetworks/niac-go/issues/1137)) ([68d5875](https://github.com/MustardSeedNetworks/niac-go/commit/68d587514536e9406eb2d3fb38382c79d0c9686f))
+
 ## [0.94.17](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.16...v0.94.17) (2026-07-25)
 
 
