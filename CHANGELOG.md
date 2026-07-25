@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.15...v0.94.16) (2026-07-25)
+
+
+### Bug Fixes
+
+* **snmp:** merge authored interfaces into synthesized MIB ([#1130](https://github.com/MustardSeedNetworks/niac-go/issues/1130)) ([4ea8956](https://github.com/MustardSeedNetworks/niac-go/commit/4ea89568cfef2bf22ab9e27579ffaa40438fe249))
+
 ## [0.94.15](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.14...v0.94.15) (2026-07-25)
 
 
