@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.19](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.18...v0.94.19) (2026-07-25)
+
+
+### Bug Fixes
+
+* improve discovery topology fidelity ([#1139](https://github.com/MustardSeedNetworks/niac-go/issues/1139)) ([a2feb7d](https://github.com/MustardSeedNetworks/niac-go/commit/a2feb7d5630ed9d6c0704fe53fed176da6321b7d))
+
 ## [0.94.18](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.17...v0.94.18) (2026-07-25)
 
 
