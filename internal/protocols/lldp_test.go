@@ -1,6 +1,7 @@
 package protocols_test
 
 import (
+	"encoding/binary"
 	"net"
 	"testing"
 	"time"
@@ -9,6 +10,34 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
+
+func TestBuildSystemCapabilitiesTLV(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
+
+	for _, deviceType := range []string{"ap", "access-point", "access_point", "wireless-ap", "wireless_ap"} {
+		t.Run(deviceType, func(t *testing.T) {
+			tlv := handler.BuildSystemCapabilitiesTLV(&config.Device{Type: deviceType})
+			if got := binary.BigEndian.Uint16(tlv[2:4]); got != protocols.LLDPCapWLANAP|protocols.LLDPCapBridge {
+				t.Fatalf("advertised capabilities = %#x, want WLAN AP and bridge", got)
+			}
+			if got := binary.BigEndian.Uint16(tlv[4:6]); got != protocols.LLDPCapWLANAP {
+				t.Fatalf("enabled capabilities = %#x, want WLAN AP", got)
+			}
+		})
+	}
+}
+
+func TestLLDPDefaultEnabledForAccessPointTypes(t *testing.T) {
+	for _, deviceType := range []string{"ap", "access-point", "access_point", "wireless-ap", "wireless_ap"} {
+		t.Run(deviceType, func(t *testing.T) {
+			if !protocols.LLDPDefaultEnabledForType(deviceType) {
+				t.Fatal("LLDP should be enabled by default")
+			}
+		})
+	}
+}
 
 // TestNewLLDPHandler tests creating a new LLDP handler.
 func TestNewLLDPHandler(t *testing.T) {

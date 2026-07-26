@@ -116,7 +116,8 @@ type LLDPHandler struct {
 // configured.
 func lldpDefaultEnabledForType(deviceType string) bool {
 	switch strings.ToLower(deviceType) {
-	case "switch", "router", "access_point", "firewall", "voip_phone":
+	case "switch", "router", "ap", "access-point", "access_point",
+		"wireless-ap", "wireless_ap", "firewall", "voip_phone":
 		return true
 	default:
 		return false
@@ -428,14 +429,14 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 		enabled      uint16
 	)
 
-	switch device.Type {
+	switch strings.ToLower(device.Type) {
 	case "router":
 		capabilities = LLDPCapRouter | LLDPCapBridge
 		enabled = LLDPCapRouter
 	case "switch":
 		capabilities = LLDPCapBridge | LLDPCapRouter
 		enabled = LLDPCapBridge
-	case "ap", "wireless-ap":
+	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = LLDPCapWLANAP | LLDPCapBridge
 		enabled = LLDPCapWLANAP
 	case "phone", "voip-phone":

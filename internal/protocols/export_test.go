@@ -465,6 +465,16 @@ func (h *LLDPHandler) BuildSystemDescriptionTLV(device *config.Device) []byte {
 	return h.buildSystemDescriptionTLV(device)
 }
 
+// BuildSystemCapabilitiesTLV exposes buildSystemCapabilitiesTLV for testing.
+func (h *LLDPHandler) BuildSystemCapabilitiesTLV(device *config.Device) []byte {
+	return h.buildSystemCapabilitiesTLV(device)
+}
+
+// LLDPDefaultEnabledForType exposes lldpDefaultEnabledForType for testing.
+func LLDPDefaultEnabledForType(deviceType string) bool {
+	return lldpDefaultEnabledForType(deviceType)
+}
+
 // BuildEndTLV exposes buildEndTLV for testing.
 func (h *LLDPHandler) BuildEndTLV() []byte { return h.buildEndTLV() }
 

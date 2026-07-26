@@ -318,6 +318,8 @@ func TestBuildCapabilitiesTLV(t *testing.T) {
 		{"Router", "router", protocols.CDPCapRouter | protocols.CDPCapIGMPCapable},
 		{"Switch", "switch", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"AP", "ap", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
+		{"Access Point", "access-point", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
+		{"Access Point underscore", "access_point", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"Wireless AP", "wireless-ap", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"Phone", "phone", protocols.CDPCapPhone | protocols.CDPCapHost},
 		{"VoIP Phone", "voip-phone", protocols.CDPCapPhone | protocols.CDPCapHost},

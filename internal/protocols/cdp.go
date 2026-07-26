@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"log/slog"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -369,12 +370,12 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	// Determine capabilities based on device type
 	var capabilities uint32
 
-	switch device.Type {
+	switch strings.ToLower(device.Type) {
 	case deviceTypeRouter:
 		capabilities = CDPCapRouter | CDPCapIGMPCapable
 	case deviceTypeSwitch:
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
-	case "ap", "wireless-ap":
+	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
 	case "phone", "voip-phone":
 		capabilities = CDPCapPhone | CDPCapHost
