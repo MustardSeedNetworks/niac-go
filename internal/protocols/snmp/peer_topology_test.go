@@ -211,6 +211,29 @@ func TestSynthesizePeerTopologyPublishesResolvedLLDPIdentity(t *testing.T) {
 	assertMIBValue(t, agent, lldpRemTable+".1.12."+row, []byte{0, CapabilityWLANAP})
 }
 
+func TestSynthesizePeerTopologyDoesNotTurnAccessPointIntoBridge(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "access-point"
+	dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	dev.Interfaces = []config.Interface{{Name: "mGigabitEthernet0"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "mGigabitEthernet0", RemoteDevice: "ACCESS-SW01",
+		RemoteInterface: "TenGigabitEthernet1/0/1", NativeVLAN: 200,
+	}}
+	agent := NewAgent(dev, 0)
+	switchMAC, _ := net.ParseMAC("aa:bb:cc:00:00:41")
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: switchMAC, Type: "switch"}, true
+	})
+
+	assertMIBValue(t, agent, lldpRemTable+".1.9.0.1.1", "ACCESS-SW01")
+	for _, oid := range agent.mib.AllOIDs() {
+		if oid == dot1dBridge || strings.HasPrefix(oid, dot1dBridge+".") {
+			t.Fatalf("access point published bridge OID %s", oid)
+		}
+	}
+}
+
 func TestLLDPPeerCapabilitiesCoverSupportedRoles(t *testing.T) {
 	tests := []struct {
 		deviceType string

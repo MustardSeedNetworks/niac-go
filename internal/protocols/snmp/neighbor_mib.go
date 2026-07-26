@@ -238,9 +238,12 @@ func (a *Agent) initializeNeighborMIBs() {
 	// Initialize IP-MIB (IP address table, routing table)
 	a.initializeIPMIB()
 
-	// Initialize BRIDGE-MIB (dot1dBridge - STP and FDB)
-	a.initializeBridgeMIB()
-	a.initializeQBridgeMIB()
+	// Discovery managers use bridge tables as device-role evidence. Only bridge
+	// profiles synthesize them; authoritative walk data remains untouched.
+	if a.supportsSynthesizedBridgeMIB() {
+		a.initializeBridgeMIB()
+		a.initializeQBridgeMIB()
+	}
 
 	// Initialize LLDP local system data
 	if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
@@ -272,5 +275,7 @@ func (a *Agent) refreshAuthoredDiscoveryMIBs() {
 	if a.device.CDPConfig != nil && a.device.CDPConfig.Enabled {
 		a.initializeCDPMIB()
 	}
-	a.initializeQBridgePVIDs()
+	if a.supportsBridgeTopology() {
+		a.initializeQBridgePVIDs()
+	}
 }

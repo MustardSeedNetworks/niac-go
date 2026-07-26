@@ -78,6 +78,9 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 			remoteIndex,
 		) || changed
 
+		if !a.supportsBridgeTopology() {
+			continue
+		}
 		if trunk.Interface == "" || len(peer.MAC) == 0 {
 			continue
 		}
@@ -103,6 +106,15 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 		a.raiseBaseNumPorts(maxPort)
 		a.mib.Reindex()
 	}
+}
+
+func (a *Agent) supportsSynthesizedBridgeMIB() bool {
+	return a != nil && a.device != nil && systemProfile(a.device).IncludeBridge
+}
+
+func (a *Agent) supportsBridgeTopology() bool {
+	return a.supportsSynthesizedBridgeMIB() ||
+		(a.hasWalkContent() && a.mib.Get(dot1dBaseNumPorts) != nil)
 }
 
 func (a *Agent) setPeerDiscoveryIdentity(
