@@ -199,7 +199,7 @@ var profileTable = func() map[profileKey]Profile {
 	add(
 		VendorCiscoIOS,
 		TypeAccessPoint,
-		withFlags(cisco("Aironet 2802i", "2659", "Dot11Radio%d", defaultIfAP), false, false, true, false),
+		withFlags(cisco("Catalyst 9130AXI", "2877", "Dot11Radio%d", defaultIfAP), false, false, true, false),
 	)
 	add(
 		VendorCiscoIOS,

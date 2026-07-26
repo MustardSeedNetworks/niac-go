@@ -156,7 +156,7 @@ func TestAgent_SystemIdentityMatchesDeviceRole(t *testing.T) {
 		},
 		{
 			name: "cisco access point", deviceType: "access-point", vendor: "cisco",
-			objectID: "1.3.6.1.4.1.9.1.2659", services: 6,
+			objectID: "1.3.6.1.4.1.9.1.2877", services: 6,
 		},
 		{
 			name: "generic server", deviceType: "server", vendor: "dell",

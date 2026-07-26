@@ -115,6 +115,16 @@ func (g *snmpAgentGroup) SynthesizePeerTopologyAll(resolve snmp.PeerResolver) {
 	}
 }
 
+func (g *snmpAgentGroup) SynthesizeARPTableAll(bindings []snmp.ARPBinding) {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.SynthesizeARPTable(bindings)
+	}
+}
+
 func (g *snmpAgentGroup) Communities() []string {
 	if g == nil {
 		return nil

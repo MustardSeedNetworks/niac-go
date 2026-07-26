@@ -84,10 +84,13 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	// Now that the MIB is loaded, fill downstream bridge FDB entries from the
 	// fleet roster (a host MAC on the access port it hangs off) so a scanner can
 	// answer "nearest switch/port" for discovered hosts.
+	arpBindings := s.arpBindings()
 	if !v2Enabled {
 		baseAgent.SynthesizePeerTopology(s.peerResolver())
+		baseAgent.SynthesizeARPTable(arpBindings)
 	}
 	group.SynthesizePeerTopologyAll(s.peerResolver())
+	group.SynthesizeARPTableAll(arpBindings)
 
 	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
 	// Build the sorted OID indexes eagerly so the first GetNext of a discovery
