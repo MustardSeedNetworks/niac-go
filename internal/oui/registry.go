@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"slices"
 	"strings"
+	"sync"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
@@ -26,6 +26,16 @@ var (
 
 type prefix [3]byte
 
+type organization struct {
+	name       string
+	normalized string
+}
+
+type prefixMatch struct {
+	prefix prefix
+	found  bool
+}
+
 const (
 	prefixBytes     = 3
 	maxSuffix       = 0xffffff
@@ -35,7 +45,9 @@ const (
 
 // Registry indexes IEEE MA-L assignments by their 24-bit prefix.
 type Registry struct {
-	organizations map[prefix]string
+	organizations map[prefix]organization
+	matchMu       sync.RWMutex
+	matches       map[string]prefixMatch
 }
 
 // LoadEmbedded parses the IEEE snapshot shipped with NIAC.
@@ -45,12 +57,17 @@ func LoadEmbedded() (*Registry, error) {
 
 // Parse reads the public IEEE oui.txt format.
 func Parse(reader io.Reader) (*Registry, error) {
-	registry := &Registry{organizations: make(map[prefix]string)}
+	registry := &Registry{
+		organizations: make(map[prefix]organization),
+		matches:       make(map[string]prefixMatch),
+	}
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		parsedPrefix, organization, ok := parseLine(scanner.Text())
+		parsedPrefix, parsedOrganization, ok := parseLine(scanner.Text())
 		if ok {
-			registry.organizations[parsedPrefix] = organization
+			registry.organizations[parsedPrefix] = organization{
+				name: parsedOrganization, normalized: strings.ToLower(parsedOrganization),
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -64,8 +81,8 @@ func (r *Registry) Lookup(mac net.HardwareAddr) (string, bool) {
 	if len(mac) < prefixBytes {
 		return "", false
 	}
-	organization, ok := r.organizations[prefix{mac[0], mac[1], mac[2]}]
-	return organization, ok
+	entry, ok := r.organizations[prefix{mac[0], mac[1], mac[2]}]
+	return entry.name, ok
 }
 
 // Allocate returns a deterministic isolated-lab MAC for a vendor and suffix.
@@ -73,11 +90,10 @@ func (r *Registry) Allocate(vendor string, ordinal uint32) (net.HardwareAddr, er
 	if ordinal > maxSuffix {
 		return nil, ErrOrdinalRange
 	}
-	prefixes := r.matchingPrefixes(vendorSearch(vendor))
-	if len(prefixes) == 0 {
+	selected, found := r.matchingPrefix(vendorSearch(vendor))
+	if !found {
 		return nil, fmt.Errorf("%w: %s", ErrUnknownVendor, vendor)
 	}
-	selected := prefixes[0]
 	return net.HardwareAddr{
 		selected[0], selected[1], selected[2],
 		safeconv.ByteFromUint32(ordinal >> highByteShift),
@@ -86,15 +102,36 @@ func (r *Registry) Allocate(vendor string, ordinal uint32) (net.HardwareAddr, er
 	}, nil
 }
 
-func (r *Registry) matchingPrefixes(search string) []prefix {
-	matches := make([]prefix, 0)
+func (r *Registry) matchingPrefix(search string) (prefix, bool) {
+	r.matchMu.RLock()
+	match, cached := r.matches[search]
+	r.matchMu.RUnlock()
+	if cached {
+		return match.prefix, match.found
+	}
+
+	var selected prefix
+	found := false
 	for candidate, organization := range r.organizations {
-		if strings.Contains(strings.ToLower(organization), search) {
-			matches = append(matches, candidate)
+		if strings.Contains(organization.normalized, search) &&
+			(!found || comparePrefix(candidate, selected) < 0) {
+			selected = candidate
+			found = true
 		}
 	}
-	slices.SortFunc(matches, comparePrefix)
-	return matches
+
+	r.matchMu.Lock()
+	if r.matches == nil {
+		r.matches = make(map[string]prefixMatch)
+	}
+	if existing, ok := r.matches[search]; ok {
+		match = existing
+	} else {
+		match = prefixMatch{prefix: selected, found: found}
+		r.matches[search] = match
+	}
+	r.matchMu.Unlock()
+	return match.prefix, match.found
 }
 
 func parseLine(line string) (prefix, string, bool) {

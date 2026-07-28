@@ -3,6 +3,7 @@ package oui_test
 import (
 	"net"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/oui"
@@ -64,5 +65,52 @@ func TestAllocateRejectsUnknownVendor(t *testing.T) {
 	}
 	if _, err = registry.Allocate("not-a-vendor", 1); err == nil {
 		t.Fatal("Allocate() error = nil, want unknown vendor error")
+	}
+}
+
+func TestZeroRegistryRejectsVendorWithoutPanicking(t *testing.T) {
+	var registry oui.Registry
+	if _, err := registry.Allocate("cisco", 1); err == nil {
+		t.Fatal("Allocate() error = nil, want unknown vendor error")
+	}
+}
+
+func TestAllocateIsSafeForConcurrentReuse(t *testing.T) {
+	registry, err := oui.LoadEmbedded()
+	if err != nil {
+		t.Fatalf("LoadEmbedded() error = %v", err)
+	}
+
+	const allocations = 100
+	var waitGroup sync.WaitGroup
+	errors := make(chan error, allocations)
+	for index := range allocations {
+		waitGroup.Go(func() {
+			_, allocateErr := registry.Allocate("cisco", uint32(index))
+			errors <- allocateErr
+		})
+	}
+	waitGroup.Wait()
+	close(errors)
+	for allocateErr := range errors {
+		if allocateErr != nil {
+			t.Errorf("Allocate() error = %v", allocateErr)
+		}
+	}
+}
+
+func BenchmarkAllocateCachedVendor(b *testing.B) {
+	registry, err := oui.LoadEmbedded()
+	if err != nil {
+		b.Fatalf("LoadEmbedded() error = %v", err)
+	}
+	if _, err = registry.Allocate("cisco", 0); err != nil {
+		b.Fatalf("prime Allocate() error = %v", err)
+	}
+	b.ResetTimer()
+	for index := range b.N {
+		if _, err = registry.Allocate("cisco", uint32(index&0xffffff)); err != nil {
+			b.Fatalf("Allocate() error = %v", err)
+		}
 	}
 }
