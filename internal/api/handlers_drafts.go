@@ -51,6 +51,19 @@ func (s *Server) handleLibraryDraftByName(w http.ResponseWriter, r *http.Request
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Draft name required", nil)
 		return
 	}
+	if draftName, action, found := strings.Cut(name, "/"); found {
+		if action != "topology" || strings.Contains(draftName, "/") {
+			writeError(w, r, http.StatusNotFound, "not_found", "Draft operation not found", nil)
+			return
+		}
+		if r.Method != http.MethodPatch {
+			w.Header().Set("Allow", "PATCH")
+			writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+			return
+		}
+		s.handleLibraryDraftTopologyMutation(w, r, draftName)
+		return
+	}
 
 	switch r.Method {
 	case http.MethodGet:

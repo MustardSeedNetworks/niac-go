@@ -38,6 +38,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
+| `PATCH` | `/api/v1/library/drafts/{name}/topology` | Apply one revision-safe topology edit to an isolated draft |
 | `GET` | `/api/v1/version` | Version information |
 | `GET` | `/api/v1/errors` | Available error types and active error injections |
 | `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
@@ -62,6 +63,33 @@ Generation is side-effect free: it does not replace the active configuration,
 start a simulation, or save a draft. The returned `content` can be reviewed and
 then stored through the draft API. The generate route requires a read-write
 token, the `config_templates` entitlement, and a CSRF token.
+
+### Draft topology mutations
+
+`PATCH /api/v1/library/drafts/{name}/topology` applies one `add_device`,
+`connect`, `disconnect`, `move_device`, or `update_link` operation. Send the
+current quoted draft revision in `If-Match`; the response contains the updated
+draft and its new `ETag`. A stale revision returns `412 Precondition Failed`.
+
+Connections name both device/interface endpoints. NIAC refuses missing,
+non-physical, or already occupied ports and writes reciprocal `trunk_ports`
+records so the local and remote interface identities cannot drift. Link VLAN,
+native VLAN, and FDB-only properties are updated on both endpoints together.
+
+```json
+{
+  "operation": "connect",
+  "link": {
+    "source": { "device": "core-1", "interface": "Ethernet1/1" },
+    "target": { "device": "dist-1", "interface": "Ethernet1/49" },
+    "properties": { "vlans": [200, 210], "native_vlan": 200 }
+  }
+}
+```
+
+The route requires a read-write token, CSRF protection, and the normal draft
+entitlement checks. It replaces only the named draft; it does not apply or
+restart the running simulation.
 
 ## Web UI
 

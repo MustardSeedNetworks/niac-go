@@ -122,16 +122,16 @@ func abbreviateInterface(name string) string {
 	return name
 }
 
-// getInterfaceDetails retrieves speed, duplex, and status from interface map.
+// getInterfaceDetails retrieves presentation data from the authored interface.
 func getInterfaceDetails(
 	interfaceMap map[string]map[string]config.Interface,
 	deviceName, ifaceName string,
-) (int, string, string) {
+) (int, string, string, float64) {
 	const defaultStatus = "up"
 
 	iface, ok := interfaceMap[deviceName][ifaceName]
 	if !ok {
-		return 0, "", defaultStatus
+		return 0, "", defaultStatus, 0
 	}
 
 	status := defaultStatus
@@ -143,16 +143,15 @@ func getInterfaceDetails(
 		status = iface.OperStatus
 	}
 
-	return iface.Speed, iface.Duplex, status
+	return iface.Speed, iface.Duplex, status, max(iface.InUtilization, iface.OutUtilization)
 }
 
-// sortedPairKey returns a canonical "a|b" key where a < b so reverse
-// declarations of the same physical adjacency collapse to one entry.
-func sortedPairKey(a, b string) string {
-	if a <= b {
-		return a + "|" + b
+func sortedEndpointKey(a, aInterface, b, bInterface string) string {
+	left, right := a+"|"+aInterface, b+"|"+bInterface
+	if left <= right {
+		return left + "|" + right
 	}
-	return b + "|" + a
+	return right + "|" + left
 }
 
 // processTrunkPort creates a Link from a trunk port configuration.
@@ -161,7 +160,11 @@ func processTrunkPort(
 	deviceName string,
 	interfaceMap map[string]map[string]config.Interface,
 ) Link {
-	speed, duplex, status := getInterfaceDetails(interfaceMap, deviceName, trunk.Interface)
+	speed, duplex, status, utilization := getInterfaceDetails(
+		interfaceMap,
+		deviceName,
+		trunk.Interface,
+	)
 
 	return Link{
 		Source: deviceName,
@@ -179,7 +182,7 @@ func processTrunkPort(
 		Speed:           speed,
 		Duplex:          duplex,
 		Status:          status,
-		Utilization:     0.0,
+		Utilization:     utilization,
 	}
 }
 
@@ -188,8 +191,9 @@ func processTrunkPort(
 // Trunk links are inherently bidirectional — both switches declare a
 // trunk_port pointing at each other, so we'd otherwise emit two
 // Link entries for one physical wire and ReactFlow would draw
-// a second edge looping back around the cards. We dedupe via a
-// sorted-pair key so each physical adjacency yields exactly one link.
+// a second edge looping back around the cards. We dedupe via a canonical
+// endpoint key so reciprocal declarations collapse without hiding parallel
+// links between the same pair of devices.
 func Build(cfg *config.Config) Graph {
 	nodes := make(map[string]Node)
 	links := make([]Link, 0)
@@ -211,7 +215,12 @@ func Build(cfg *config.Config) Graph {
 			// collapse to one entry. First-seen direction wins so the
 			// Source/Target on the emitted link matches the device that
 			// declared the trunk_port we found first in the YAML.
-			pair := sortedPairKey(dev.Name, trunk.RemoteDevice)
+			pair := sortedEndpointKey(
+				dev.Name,
+				trunk.Interface,
+				trunk.RemoteDevice,
+				trunk.RemoteInterface,
+			)
 			if seenLinks[pair] {
 				continue
 			}
