@@ -434,16 +434,15 @@
   },
   "newSimWizard": {
     "backLabel": "Back",
-    "description": "Guided path to build a config, add devices, and start a simulation.",
+    "description": "Build and validate a saved draft before starting a simulation.",
     "devices": {
-      "help": "Add or edit devices for this simulation using the Device Library below."
+      "help": "Edit the saved draft. Changes here do not affect the running simulation.",
+      "saveLabel": "Save draft",
+      "savingLabel": "Saving…"
     },
     "finish": {
       "gotoRuntime": "Go to Simulation",
-      "help": "The simulation is already running on the config you built. Save it, then head to Simulation to monitor or stop it.",
-      "saved": "Configuration saved.",
-      "saveLabel": "Save configuration",
-      "savingLabel": "Saving…",
+      "help": "The simulation started from the validated draft. The saved draft remains available for future editing.",
       "title": "All set"
     },
     "label": "New Simulation",
@@ -482,7 +481,7 @@
       "help": "Pick a starting config below, or start empty and add devices in the next step.",
       "interfaceLabel": "Network interface",
       "startEmpty": "Start empty",
-      "startingLabel": "Starting…"
+      "startingLabel": "Preparing draft…"
     },
     "title": "New Simulation"
   },

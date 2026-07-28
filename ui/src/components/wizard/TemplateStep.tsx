@@ -20,11 +20,9 @@ interface TemplateStepProps {
 
 /**
  * Step 1 — pick a starting config (built-in template, saved config, local
- * upload, or blank) and the network interface the simulation will run on.
- * Composes the same `ConfigPicker` used on the Simulation page; the
- * interface picker mirrors `RuntimeControlPage`'s inline `<select>` since
- * the daemon requires an interface up front (there's no "load config
- * without starting" endpoint to defer it to a later step).
+ * upload, or blank) and the network interface the simulation will use after
+ * authoring and preflight. The selected content is copied into a revisioned
+ * draft; this step never changes the daemon's active configuration.
  */
 export const TemplateStep: FC<TemplateStepProps> = ({
   state,

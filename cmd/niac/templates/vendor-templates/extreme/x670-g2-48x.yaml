@@ -11,18 +11,23 @@ devices:
     ips:
       - "10.0.23.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "1"
+        type: ethernet
+        mtu: 1500
+        speed: 10000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "x670-g2-48x-01"
       system_description: "ExtremeXOS (X670G2-48x) version 31.7.1.4"
-      port_id: "1"
-      capabilities: ["bridge", "router"]
+      port_description: "1"
       ttl: 120
 
     edp:
@@ -30,15 +35,15 @@ devices:
       display_string: "x670-g2-48x-01"
       version_string: "ExtremeXOS 31.7.1.4"
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.1916.2.139"  # extremeSummitX670G2-48x
-      sys_descr: "ExtremeXOS (X670G2-48x) version 31.7.1.4"
-      sys_contact: "noc@example.com"
-      sys_location: "DC1 Aggregation"
+      sysdescr: "ExtremeXOS (X670G2-48x) version 31.7.1.4"
+      syscontact: "noc@example.com"
+      syslocation: "DC1 Aggregation"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.1916.2.139"
       vendor: "extreme"
       model: "X670-G2-48x"
       os: "EXOS"

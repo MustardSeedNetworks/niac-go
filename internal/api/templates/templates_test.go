@@ -1,11 +1,14 @@
 package templates
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 func TestSplitTags(t *testing.T) {
@@ -299,6 +302,106 @@ func TestScan(t *testing.T) {
 			t.Errorf("Scan missing %q in %v", want, names)
 		}
 	}
+}
+
+func TestShippedTemplatesAreValid(t *testing.T) {
+	templateRoot, err := filepath.Abs(filepath.Join("..", "..", "..", "cmd", "niac", "templates"))
+	if err != nil {
+		t.Fatalf("resolve shipped template path: %v", err)
+	}
+	templateList, err := Scan(templateRoot)
+	if err != nil {
+		t.Fatalf("scan shipped templates: %v", err)
+	}
+	if len(templateList) == 0 {
+		t.Fatal("no shipped templates found")
+	}
+	t.Setenv("NIAC_TEMPLATES_DIR", templateRoot)
+
+	validated, err := validateShippedTemplates(t, templateRoot)
+	if err != nil {
+		t.Fatalf("walk shipped templates: %v", err)
+	}
+	if validated != len(templateList) {
+		t.Fatalf("validated %d shipped templates, scan found %d", validated, len(templateList))
+	}
+}
+
+func validateShippedTemplates(t *testing.T, templateRoot string) (int, error) {
+	t.Helper()
+	validated := 0
+	err := filepath.WalkDir(templateRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		extension := strings.ToLower(filepath.Ext(path))
+		if entry.IsDir() || (extension != ".yaml" && extension != ".yml") {
+			return nil
+		}
+		validated++
+		name := strings.TrimSuffix(filepath.Base(path), extension)
+		t.Run(name, func(t *testing.T) { validateShippedTemplate(t, name, path) })
+		return nil
+	})
+	return validated, err
+}
+
+func validateShippedTemplate(t *testing.T, name, templatePath string) {
+	t.Helper()
+	content, loadedPath, err := Load(name)
+	if err != nil {
+		t.Fatalf("select shipped template: %v", err)
+	}
+	if loadedPath != templatePath {
+		t.Fatalf("selected %q, want %q", loadedPath, templatePath)
+	}
+	cfg, err := config.LoadYAMLBytes(content)
+	if err != nil {
+		t.Fatalf("parse selected template: %v", err)
+	}
+	result := config.NewValidator(templatePath).Validate(cfg)
+	if result.HasErrors() {
+		t.Fatal(result.Format())
+	}
+	assertShippedTemplateBehavior(t, templatePath, cfg)
+}
+
+func assertShippedTemplateBehavior(t *testing.T, templatePath string, cfg *config.Config) {
+	t.Helper()
+	expectedOID := expectedVendorObjectID(filepath.Base(templatePath))
+	if strings.Contains(templatePath, "vendor-templates") && expectedOID == "" {
+		t.Fatalf("vendor template %q has no expected sysObjectID", templatePath)
+	}
+	for _, device := range cfg.Devices {
+		if device.LLDPConfig != nil && device.LLDPConfig.PortDescription != "" {
+			if len(device.Interfaces) == 0 || device.Interfaces[0].Name != device.LLDPConfig.PortDescription {
+				t.Errorf("device %q does not preserve its LLDP interface identity", device.Name)
+			}
+		}
+		if expectedOID != "" && device.Properties["sysObjectID"] != expectedOID {
+			t.Errorf("vendor device %q sysObjectID = %q, want %q",
+				device.Name, device.Properties["sysObjectID"], expectedOID)
+		}
+	}
+}
+
+func expectedVendorObjectID(name string) string {
+	return map[string]string{
+		"cx-6300m-48g.yaml":      "1.3.6.1.4.1.47196.4.1.1.3.123",
+		"iap-505.yaml":           "1.3.6.1.4.1.14823.1.2.96",
+		"aironet-iw9165e.yaml":   "1.3.6.1.4.1.9.1.3120",
+		"asa-5525-x.yaml":        "1.3.6.1.4.1.9.1.1408",
+		"catalyst-9300-48p.yaml": "1.3.6.1.4.1.9.1.2697",
+		"isr-4451-x.yaml":        "1.3.6.1.4.1.9.1.1903",
+		"nexus-9336c-fx2.yaml":   "1.3.6.1.4.1.9.12.3.1.3.1411",
+		"x440-g2-48t.yaml":       "1.3.6.1.4.1.1916.2.140",
+		"x670-g2-48x.yaml":       "1.3.6.1.4.1.1916.2.139",
+		"procurve-2530-48.yaml":  "1.3.6.1.4.1.11.2.3.7.11.150",
+		"ex4300-48t.yaml":        "1.3.6.1.4.1.2636.1.1.1.2.71",
+		"mist-ap43.yaml":         "1.3.6.1.4.1.55538",
+		"mx204.yaml":             "1.3.6.1.4.1.2636.1.1.1.2.57",
+		"srx340.yaml":            "1.3.6.1.4.1.2636.1.1.1.2.92",
+	}[name]
 }
 
 func TestScan_MissingDirIsNotFatal(t *testing.T) {

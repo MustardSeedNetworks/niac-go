@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -183,6 +184,71 @@ func TestDraftCreateValidatesConfigAndEntitlementsBeforePersistence(t *testing.T
 	}
 	if _, err := lib.ReadDraft("too-large"); !errors.Is(err, library.ErrNotFound) {
 		t.Fatalf("unlicensed config persisted, ReadDraft() error = %v", err)
+	}
+}
+
+func TestDraftCreateFromTemplateMaterializesRelativeResources(t *testing.T) {
+	server, _ := newTestServer(t)
+	lib := attachDraftLibrary(t, server)
+	templateDir := t.TempDir()
+	t.Setenv("NIAC_TEMPLATES_DIR", templateDir)
+	walkPath := filepath.Join(templateDir, "switch.walk")
+	if err := os.WriteFile(walkPath, []byte("SNMPv2-MIB::sysName.0 = STRING: access-1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	templateYAML := `include_path: "."
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    snmp_agent:
+      community: "public"
+      walk_file: "switch.walk"
+`
+	if err := os.WriteFile(filepath.Join(templateDir, "relative.yaml"), []byte(templateYAML), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	server.handleLibraryDrafts(rec, draftRequest(
+		http.MethodPost,
+		"/api/v1/library/drafts",
+		`{"name":"from-template","templateName":"relative"}`,
+		"",
+	))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, body=%s", rec.Code, rec.Body.String())
+	}
+	draft, err := lib.ReadDraft("from-template")
+	if err != nil {
+		t.Fatalf("ReadDraft() error = %v", err)
+	}
+	resolvedTemplateDir, err := filepath.EvalSymlinks(templateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(draft.Content, "include_path: "+resolvedTemplateDir) {
+		t.Fatalf(
+			"materialized draft does not contain resolved include path %q:\n%s",
+			resolvedTemplateDir,
+			draft.Content,
+		)
+	}
+	resolvedWalkPath := filepath.Join(resolvedTemplateDir, filepath.Base(walkPath))
+	if !strings.Contains(draft.Content, resolvedWalkPath) {
+		t.Fatalf(
+			"materialized draft does not contain resolved walk path %q:\n%s",
+			resolvedWalkPath,
+			draft.Content,
+		)
+	}
+	if _, loadErr := config.LoadYAMLBytes([]byte(draft.Content)); loadErr != nil {
+		t.Fatalf("materialized draft is not independently loadable: %v", loadErr)
+	}
+	if _, loadErr := config.LoadYAMLBytesManaged(
+		[]byte(draft.Content), t.TempDir(), []string{templateDir},
+	); loadErr != nil {
+		t.Fatalf("materialized draft does not survive managed inline loading: %v", loadErr)
 	}
 }
 

@@ -12,39 +12,41 @@ devices:
       - "10.0.30.1"
       - "203.0.113.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 255
 
+    interfaces:
+      - name: "GigabitEthernet0/0/0"
+        type: ethernet
+        mtu: 1500
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "isr4451-edge-01"
       system_description: "Cisco IOS XE Software, ISR4451-X/K9, Version 17.9.4"
-      port_id: "GigabitEthernet0/0/0"
-      capabilities: ["router"]
+      port_description: "GigabitEthernet0/0/0"
       ttl: 120
 
     cdp:
       enabled: true
-      device_id: "isr4451-edge-01.local"
       platform: "cisco ISR4451-X/K9"
       software_version: "Cisco IOS XE Software, Version 17.09.04"
-      capabilities: ["Router", "IGMP"]
       port_id: "GigabitEthernet0/0/0"
-      duplex: "full"
-      ttl: 180
+      holdtime: 180
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.9.1.1903"  # ISR4451
-      sys_descr: "Cisco IOS Software [Cupertino], ISR Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.9.4"
-      sys_contact: "noc@example.com"
-      sys_location: "Branch Office 12"
+      sysdescr: "Cisco IOS Software [Cupertino], ISR Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.9.4"
+      syscontact: "noc@example.com"
+      syslocation: "Branch Office 12"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.9.1.1903"
       vendor: "cisco"
       model: "ISR4451-X/K9"
       os: "IOS-XE"

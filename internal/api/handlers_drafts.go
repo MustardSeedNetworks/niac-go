@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strings"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 type draftCreateRequest struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
+	Name         string `json:"name"`
+	Content      string `json:"content"`
+	TemplateName string `json:"templateName"`
 }
 
 type draftReplaceRequest struct {
@@ -76,17 +80,63 @@ func (s *Server) handleLibraryDraftCreate(w http.ResponseWriter, r *http.Request
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
-	if !s.validateDraftContent(w, r, req.Content) {
+	content, ok := s.prepareDraftContent(w, r, req)
+	if !ok {
 		return
 	}
 
-	draft, err := s.library.CreateDraft(req.Name, req.Content)
+	draft, err := s.library.CreateDraft(req.Name, content)
 	if err != nil {
 		s.writeDraftStoreError(w, r, "create", req.Name, err)
 		return
 	}
 	w.Header().Set("Location", "/api/v1/library/drafts/"+draft.Name)
 	s.writeDraft(w, http.StatusCreated, draft)
+}
+
+func (s *Server) prepareDraftContent(
+	w http.ResponseWriter, r *http.Request, req draftCreateRequest,
+) (string, bool) {
+	hasContent := strings.TrimSpace(req.Content) != ""
+	hasTemplate := strings.TrimSpace(req.TemplateName) != ""
+	if hasContent == hasTemplate {
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			"Exactly one of content or templateName is required", nil)
+		return "", false
+	}
+	if hasContent {
+		return req.Content, s.validateDraftContent(w, r, req.Content)
+	}
+
+	_, templatePath, err := templates.Load(req.TemplateName)
+	if err != nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "Template not found", nil)
+		return "", false
+	}
+	cfg, _, err := config.LoadYAMLManaged(templatePath, templates.Dirs())
+	if err != nil {
+		s.logger.ErrorContext(r.Context(), "[API] Draft template validation failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Template configuration is invalid", nil)
+		return "", false
+	}
+	if !s.authorizeConfigEntitlements(w, r, cfg) {
+		return "", false
+	}
+
+	// Loading resolves include_path and every SNMP resource to absolute paths.
+	// Preserve that resolved base when moving the YAML into draft storage so
+	// inline preflight can enforce that each resource remains inside it.
+	if cfg.CapturePlayback != nil && !filepath.IsAbs(cfg.CapturePlayback.FileName) {
+		cfg.CapturePlayback.FileName = filepath.Join(filepath.Dir(templatePath), cfg.CapturePlayback.FileName)
+	}
+	materialized, err := config.MarshalConfigYAML(cfg)
+	if err != nil {
+		s.logger.ErrorContext(r.Context(), "[API] Draft template materialization failed", "error", err)
+		writeError(w, r, http.StatusInternalServerError, "draft_materialization_failed",
+			"Failed to prepare template draft", nil)
+		return "", false
+	}
+	return string(materialized), true
 }
 
 func (s *Server) handleLibraryDraftRead(w http.ResponseWriter, r *http.Request, name string) {

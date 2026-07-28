@@ -1,59 +1,27 @@
 /**
  * FinishStep.test.tsx
  *
- * The wizard's Save action must go through the existing config-save
- * endpoint (`PUT /api/v1/config`, wrapped by `updateConfig`) — same one
- * the Devices page's YAML editor uses. No new save endpoint.
+ * The finish step confirms the saved draft used for the running simulation
+ * and hands the operator to runtime monitoring.
  */
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ConfigDocument } from '../../api/types';
+import { describe, expect, it } from 'vitest';
 import '../../i18n';
 import { FinishStep } from './FinishStep';
-
-const fetchConfig = vi.fn<() => Promise<ConfigDocument>>();
-const updateConfig = vi.fn<(payload: { content: string }) => Promise<ConfigDocument>>();
-
-vi.mock('../../api/client', () => ({
-  fetchConfig: () => fetchConfig(),
-  updateConfig: (payload: { content: string }) => updateConfig(payload),
-}));
-
-const doc: ConfigDocument = {
-  path: '/tmp/config.yaml',
-  filename: 'config.yaml',
-  modifiedAt: new Date().toISOString(),
-  sizeBytes: 42,
-  deviceCount: 0,
-  content: 'devices: []\n',
-};
 
 function renderStep() {
   return render(
     <MemoryRouter>
-      <FinishStep />
+      <FinishStep draftName="campus-draft" />
     </MemoryRouter>,
   );
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  fetchConfig.mockResolvedValue(doc);
-  updateConfig.mockResolvedValue(doc);
-});
-
 describe('FinishStep', () => {
-  it('calls the existing config-save endpoint on Save', async () => {
-    const user = userEvent.setup();
+  it('shows the saved draft used to start the simulation', () => {
     renderStep();
-
-    await user.click(screen.getByTestId('wizard-save-button'));
-
-    await waitFor(() => expect(updateConfig).toHaveBeenCalledTimes(1));
-    expect(updateConfig).toHaveBeenCalledWith({ content: doc.content });
-    expect(await screen.findByRole('status')).toHaveTextContent(/saved/i);
+    expect(screen.getByTestId('wizard-finish-draft-name')).toHaveTextContent('campus-draft');
   });
 
   it('links to the existing Simulation page', () => {

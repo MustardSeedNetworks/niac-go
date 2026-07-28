@@ -11,39 +11,41 @@ devices:
     ips:
       - "10.0.20.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 255
 
+    interfaces:
+      - name: "Ethernet1/1"
+        type: ethernet
+        mtu: 1500
+        speed: 100000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "n9k-9336c-01"
       system_description: "Cisco Nexus Operating System (NX-OS) Software, Version 10.2(5)"
-      port_id: "Ethernet1/1"
-      capabilities: ["bridge", "router"]
+      port_description: "Ethernet1/1"
       ttl: 120
 
     cdp:
       enabled: true
-      device_id: "n9k-9336c-01.local"
       platform: "N9K-C9336C-FX2"
       software_version: "Cisco Nexus OS, Version 10.2(5)"
-      capabilities: ["Switch", "Router", "IGMP"]
       port_id: "Ethernet1/1"
-      duplex: "full"
-      ttl: 180
+      holdtime: 180
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.9.12.3.1.3.1411"  # nexus9336C-FX2
-      sys_descr: "Cisco NX-OS(tm) n9000, Software (n9000-dk9), Version 10.2(5)"
-      sys_contact: "noc@example.com"
-      sys_location: "DC1 Spine"
+      sysdescr: "Cisco NX-OS(tm) n9000, Software (n9000-dk9), Version 10.2(5)"
+      syscontact: "noc@example.com"
+      syslocation: "DC1 Spine"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.9.12.3.1.3.1411"
       vendor: "cisco"
       model: "N9K-C9336C-FX2"
       os: "NX-OS"

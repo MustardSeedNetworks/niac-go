@@ -133,7 +133,7 @@
   "newSimWizard": {
     "label": "Nueva simulación",
     "title": "Nueva simulación",
-    "description": "Ruta guiada para construir una configuración, agregar dispositivos e iniciar una simulación.",
+    "description": "Construye y valida un borrador guardado antes de iniciar una simulación.",
     "steps": {
       "template": "Plantilla",
       "preflight": "Conexión",
@@ -149,7 +149,7 @@
       "startEmpty": "Empezar vacío",
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
       "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
-      "startingLabel": "Iniciando…"
+      "startingLabel": "Preparando borrador…"
     },
     "preflight": {
       "title": "Revisar conexión física",
@@ -169,7 +169,9 @@
       "startLabel": "Iniciar simulación"
     },
     "devices": {
-      "help": "Agrega o edita dispositivos para esta simulación usando la Biblioteca de dispositivos abajo."
+      "help": "Edita el borrador guardado. Los cambios aquí no afectan la simulación en ejecución.",
+      "saveLabel": "Guardar borrador",
+      "savingLabel": "Guardando…"
     },
     "protocols": {
       "title": "Protocolos",
@@ -177,10 +179,7 @@
     },
     "finish": {
       "title": "Todo listo",
-      "help": "La simulación ya está corriendo con la configuración que construiste. Guárdala y luego ve a Simulación para monitorearla o detenerla.",
-      "saveLabel": "Guardar configuración",
-      "savingLabel": "Guardando…",
-      "saved": "Configuración guardada.",
+      "help": "La simulación se inició desde el borrador validado. El borrador guardado permanece disponible para futuras ediciones.",
       "gotoRuntime": "Ir a Simulación"
     }
   },
