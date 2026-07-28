@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // Sentinel errors.
@@ -68,7 +69,9 @@ const (
 // every call to List or Read hits the filesystem so user-dropped files
 // appear immediately without an explicit watcher.
 type Library struct {
-	root string
+	root      string
+	draftRoot *os.Root
+	draftMu   sync.RWMutex
 }
 
 // DefaultRoot resolves the standard library root following:
@@ -116,10 +119,12 @@ func Open(root string) (*Library, error) {
 	}
 
 	if bootstrapErr := lib.bootstrapStarterPack(); bootstrapErr != nil {
+		_ = lib.draftRoot.Close()
 		return nil, fmt.Errorf("bootstrap starter pack: %w", bootstrapErr)
 	}
 
 	if bootstrapErr := lib.bootstrapWalks(); bootstrapErr != nil {
+		_ = lib.draftRoot.Close()
 		return nil, fmt.Errorf("bootstrap starter walks: %w", bootstrapErr)
 	}
 
@@ -141,12 +146,54 @@ func (l *Library) ensureLayout() error {
 	if err := os.MkdirAll(l.root, libraryDirMode); err != nil {
 		return fmt.Errorf("create library root %s: %w", l.root, err)
 	}
+	root, err := os.OpenRoot(l.root)
+	if err != nil {
+		return fmt.Errorf("open library root %s: %w", l.root, err)
+	}
+	defer func() { _ = root.Close() }()
+
 	for _, kind := range AllKinds() {
-		path := l.SubDir(kind)
-		if err := os.MkdirAll(path, libraryDirMode); err != nil {
-			return fmt.Errorf("create library subdir %s: %w", path, err)
+		if mkdirErr := root.MkdirAll(string(kind), libraryDirMode); mkdirErr != nil {
+			return fmt.Errorf("create library subdir %s: %w", l.SubDir(kind), mkdirErr)
 		}
 	}
+
+	info, statErr := root.Lstat(draftsDirName)
+	if errors.Is(statErr, os.ErrNotExist) {
+		if mkdirErr := root.Mkdir(draftsDirName, draftDirMode); mkdirErr != nil && !errors.Is(mkdirErr, os.ErrExist) {
+			return fmt.Errorf("create library drafts dir %s: %w", l.draftsDir(), mkdirErr)
+		}
+		info, statErr = root.Lstat(draftsDirName)
+	}
+	if statErr != nil {
+		return fmt.Errorf("inspect library drafts dir %s: %w", l.draftsDir(), statErr)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("library drafts path must be a real directory: %s", l.draftsDir())
+	}
+
+	draftRoot, openErr := root.OpenRoot(draftsDirName)
+	if openErr != nil {
+		return fmt.Errorf("open library drafts dir %s: %w", l.draftsDir(), openErr)
+	}
+	if chmodErr := draftRoot.Chmod(".", draftDirMode); chmodErr != nil {
+		_ = draftRoot.Close()
+		return fmt.Errorf("protect library drafts dir %s: %w", l.draftsDir(), chmodErr)
+	}
+	lockFile, lockErr := draftRoot.OpenFile(".lock", os.O_RDWR|os.O_CREATE, draftFileMode)
+	if lockErr != nil {
+		_ = draftRoot.Close()
+		return fmt.Errorf("create library draft lock: %w", lockErr)
+	}
+	if closeErr := lockFile.Close(); closeErr != nil {
+		_ = draftRoot.Close()
+		return fmt.Errorf("close library draft lock: %w", closeErr)
+	}
+	if chmodErr := draftRoot.Chmod(".lock", draftFileMode); chmodErr != nil {
+		_ = draftRoot.Close()
+		return fmt.Errorf("protect library draft lock: %w", chmodErr)
+	}
+	l.draftRoot = draftRoot
 	return nil
 }
 
