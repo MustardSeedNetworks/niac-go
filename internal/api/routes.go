@@ -195,7 +195,7 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 		{
 			path:    "/api/v1/library/drafts/",
 			handler: s.handleLibraryDraftByName,
-			methods: []string{http.MethodGet, http.MethodPut, http.MethodDelete},
+			methods: []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete},
 			rl:      rlWrite,
 			csrf:    true,
 		},

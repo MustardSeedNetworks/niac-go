@@ -22,7 +22,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Routed semantic compiler | `internal/fabric/compiler.go` | Pure config plus binding to immutable topology |
 | Routed device compilation | `internal/fabric/compiler_devices.go` | Interfaces, routes, and DHCP ownership |
 | Fabric domain and diagnostics | `internal/fabric/types.go` | Physical binding is distinct from virtual networks |
-| Device/link UI graph | `internal/topology/topology.go` | Projection only; not a forwarding compiler |
+| Device/link UI graph | `internal/topology/topology.go` | Projection only; preserves parallel endpoint pairs and authored interface telemetry, not a forwarding compiler |
 | Physical VLAN engines | `internal/protocols/stack_init.go` | ADR 0008 segments; not routed virtual networks |
 | Routed reply Ethernet identity | `internal/protocols/stack.go` | One source for gateway/device source MAC, requester destination MAC, and ingress VLAN |
 | Final wire egress policy | `internal/protocols/stack_threads.go` | Last enforcement point for direct/access untagged frames and observer-visible bytes |
@@ -60,6 +60,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Simulation request validation | `internal/api/validation.go` | Interface/config source boundary validation |
 | Simulation lifecycle handlers | `internal/api/handlers_simulation.go` | Strict decoder and standard error envelope |
 | Scenario generation API | `internal/api/handlers_scenario.go` | Licensed profile catalog and CSRF-protected deterministic generation boundary; generated YAML remains a draft input and does not mutate runtime |
+| Draft topology mutations | `internal/drafttopology` + `internal/api/handlers_draft_topology.go` | Typed add, connect, disconnect, move, and link-property edits; reciprocal peer ports and draft revisions remain authoritative |
 | Route security policy | `internal/api/routes.go` | Methods, rate limits, and CSRF are registered here |
 | Config preparation and start | `internal/daemon/daemon.go` | Preflight must not persist or open capture |
 

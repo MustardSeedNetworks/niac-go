@@ -237,6 +237,54 @@ func TestBuildTopology(t *testing.T) {
 	}
 }
 
+func TestBuildTopologyPreservesParallelLinksAndInterfaceUtilization(t *testing.T) {
+	cfg := &config.Config{Devices: []config.Device{
+		{
+			Name: "core-1", Type: "switch",
+			Interfaces: []config.Interface{
+				{
+					Name:           "Ethernet1/1",
+					Speed:          10000,
+					Duplex:         "full",
+					InUtilization:  24,
+					OutUtilization: 31,
+				},
+				{
+					Name:           "Ethernet1/2",
+					Speed:          10000,
+					Duplex:         "full",
+					InUtilization:  18,
+					OutUtilization: 27,
+				},
+			},
+			TrunkPorts: []config.TrunkPort{
+				{Interface: "Ethernet1/1", RemoteDevice: "dist-1", RemoteInterface: "Ethernet1/49"},
+				{Interface: "Ethernet1/2", RemoteDevice: "dist-1", RemoteInterface: "Ethernet1/50"},
+			},
+		},
+		{
+			Name: "dist-1", Type: "switch",
+			Interfaces: []config.Interface{{Name: "Ethernet1/49"}, {Name: "Ethernet1/50"}},
+			TrunkPorts: []config.TrunkPort{
+				{Interface: "Ethernet1/49", RemoteDevice: "core-1", RemoteInterface: "Ethernet1/1"},
+				{Interface: "Ethernet1/50", RemoteDevice: "core-1", RemoteInterface: "Ethernet1/2"},
+			},
+		},
+	}}
+
+	graph := Build(cfg)
+	if len(graph.Links) != 2 {
+		t.Fatalf("links count = %d, want 2 parallel physical links", len(graph.Links))
+	}
+	if graph.Links[0].Utilization != 31 || graph.Links[1].Utilization != 27 {
+		t.Fatalf(
+			"link utilization = %.1f, %.1f; want 31, 27",
+			graph.Links[0].Utilization,
+			graph.Links[1].Utilization,
+		)
+	}
+}
+
 func TestBuildTopologyEmptyConfig(t *testing.T) {
 	cfg := &config.Config{
 		Devices: []config.Device{},
@@ -332,7 +380,11 @@ func TestEscapeXML(t *testing.T) {
 		{name: "greater than", input: "a > b", want: "a &gt; b"},
 		{name: "double quote", input: `say "hello"`, want: "say &quot;hello&quot;"},
 		{name: "single quote", input: "it's", want: "it&apos;s"},
-		{name: "multiple special chars", input: `<tag attr="value">`, want: "&lt;tag attr=&quot;value&quot;&gt;"},
+		{
+			name:  "multiple special chars",
+			input: `<tag attr="value">`,
+			want:  "&lt;tag attr=&quot;value&quot;&gt;",
+		},
 		{name: "empty string", input: "", want: ""},
 	}
 
