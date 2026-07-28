@@ -13,6 +13,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Vendor-authored MAC identity | `internal/converter/types.go` + `internal/config/yaml_device.go` | `vendor` plus optional `mac_suffix` is resolved through the embedded IEEE registry while preserving the authored form on export |
 | Routed YAML adapters | `internal/config/yaml_fabric.go` | Converts authoring DTOs into runtime config |
 | Complete-config validation | `internal/config/validator.go` | Existing device validation; not routed semantics |
+| Deterministic scenario generation | `internal/scenario` | Typed sites and repeat controls produce validated portable YAML plus parity manifests; extend its role profiles and topology rules instead of adding fixture generators |
 
 ## Routed fabric and topology
 
@@ -58,6 +59,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Simulation request contract | `internal/api/server.go` | Shared start and preflight request fields |
 | Simulation request validation | `internal/api/validation.go` | Interface/config source boundary validation |
 | Simulation lifecycle handlers | `internal/api/handlers_simulation.go` | Strict decoder and standard error envelope |
+| Scenario generation API | `internal/api/handlers_scenario.go` | Licensed profile catalog and CSRF-protected deterministic generation boundary; generated YAML remains a draft input and does not mutate runtime |
 | Route security policy | `internal/api/routes.go` | Methods, rate limits, and CSRF are registered here |
 | Config preparation and start | `internal/daemon/daemon.go` | Preflight must not persist or open capture |
 
