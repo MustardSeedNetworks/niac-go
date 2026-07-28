@@ -173,6 +173,33 @@
       "saveLabel": "Guardar borrador",
       "savingLabel": "Guardando…"
     },
+    "fleet": {
+      "addSite": "Agregar sitio",
+      "attachmentName": "Nombre de conexión",
+      "counts": {
+        "accessPointsPerAccess": "AP Wi-Fi 7 por switch de acceso",
+        "accessSwitches": "Switches de acceso por sitio",
+        "coreSwitches": "Switches de núcleo por sitio",
+        "distributionSwitches": "Switches de distribución por sitio",
+        "firewalls": "Firewalls por sitio",
+        "serverSwitches": "Switches de servidores por sitio",
+        "siteWanRouters": "Pares redundantes de WAN, firewall y núcleo",
+        "wirelessControllers": "Controladores inalámbricos por sitio",
+        "workstationsPerAccess": "Estaciones cableadas por switch de acceso"
+      },
+      "domain": "Dominio DNS",
+      "help": "Comienza con el diseño empresarial validado y ajusta los sitios y las cantidades. NIAC asigna identidades, direcciones, puertos, VLAN, servicios y enlaces de forma coherente.",
+      "invalid": "Corrige los valores de la flota antes de continuar.",
+      "removeSite": "Quitar sitio",
+      "select": "Usar flota generada",
+      "selected": "Flota generada seleccionada",
+      "siteCode": "Código del sitio",
+      "siteLocation": "Ubicación",
+      "siteOctet": "Octeto de dirección",
+      "sites": "Sitios",
+      "snmpCommunity": "Comunidad SNMP",
+      "title": "Generar una flota multisitio"
+    },
     "protocols": {
       "title": "Protocolos",
       "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"

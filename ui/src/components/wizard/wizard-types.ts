@@ -1,3 +1,8 @@
+import {
+  enterpriseScenarioRequest,
+  isScenarioRequestValid,
+  type ScenarioGenerateRequest,
+} from '../../api/scenario-client';
 import type { LibraryNetwork, Template } from '../../api/types';
 
 /**
@@ -20,7 +25,7 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number];
  * equivalent — it's a one-line addition (a blank devices: [] skeleton)
  * so the wizard doesn't force a template pick.
  */
-export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty';
+export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty' | 'generated';
 
 /**
  * WizardState is held locally in the container. Draft content and its
@@ -33,6 +38,7 @@ export interface WizardState {
   template: Template | null;
   userConfig: LibraryNetwork | null;
   uploadFile: File | null;
+  fleetRequest: ScenarioGenerateRequest;
   selectedInterface: string;
   starting: boolean;
   saving: boolean;
@@ -44,6 +50,7 @@ export const initialWizardState: WizardState = {
   template: null,
   userConfig: null,
   uploadFile: null,
+  fleetRequest: enterpriseScenarioRequest(),
   selectedInterface: '',
   starting: false,
   saving: false,
@@ -56,5 +63,6 @@ export function isTemplateStepComplete(state: WizardState): boolean {
   if (state.source === 'template') return state.template !== null;
   if (state.source === 'userConfig') return state.userConfig !== null;
   if (state.source === 'upload') return state.uploadFile !== null;
+  if (state.source === 'generated') return isScenarioRequestValid(state.fleetRequest);
   return false;
 }

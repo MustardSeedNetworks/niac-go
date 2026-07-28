@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../api/library-client';
+import type { ScenarioGenerateRequest } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationStatus, Template } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
 import '../i18n';
@@ -47,6 +48,8 @@ const createScenarioDraftFromTemplate =
   vi.fn<(name: string, templateName: string) => Promise<ScenarioDraft>>();
 const replaceScenarioDraft =
   vi.fn<(name: string, revision: string, content: string) => Promise<ScenarioDraft>>();
+const generateScenario =
+  vi.fn<(request: ScenarioGenerateRequest) => Promise<{ content: string }>>();
 const emptyDraftContent = `devices:
   - name: new-device
     type: host
@@ -84,6 +87,14 @@ vi.mock('../api/library-client', () => ({
   replaceScenarioDraft: (name: string, revision: string, content: string) =>
     replaceScenarioDraft(name, revision, content),
 }));
+
+vi.mock('../api/scenario-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/scenario-client')>();
+  return {
+    ...actual,
+    generateScenario: (request: ScenarioGenerateRequest) => generateScenario(request),
+  };
+});
 
 vi.mock('../components/config/YamlEditor', () => ({
   YamlEditor: ({ value, onChange }: { value: string; onChange?: (value: string) => void }) => (
@@ -136,6 +147,7 @@ beforeEach(() => {
     modifiedAt: '2026-07-28T12:01:00Z',
     sizeBytes: 76,
   });
+  generateScenario.mockResolvedValue({ content: 'devices:\n  - name: COS-CORE-SW01\n' });
   startSimulation.mockResolvedValue({
     running: true,
     interface: 'lo0',
@@ -214,6 +226,31 @@ describe('NewSimulationWizardPage — step navigation', () => {
 
     await user.click(screen.getByTestId('wizard-back-button'));
     await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+  });
+
+  it('generates a validated fleet and saves it as an isolated draft', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.clear(screen.getByTestId('fleet-domain'));
+    await user.type(screen.getByTestId('fleet-domain'), 'customer.lab');
+    await user.click(screen.getByTestId('wizard-select-fleet'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(generateScenario).toHaveBeenCalledTimes(1));
+    expect(generateScenario).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'customer.lab',
+        sites: expect.arrayContaining([expect.objectContaining({ code: 'COS' })]),
+      }),
+    );
+    expect(createScenarioDraft).toHaveBeenCalledWith(
+      expect.stringMatching(/^scenario-/),
+      'devices:\n  - name: COS-CORE-SW01\n',
+    );
+    expect(startSimulation).not.toHaveBeenCalled();
   });
 
   it('saves dirty edits before Back and resumes the same draft for an unchanged source', async () => {
