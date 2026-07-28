@@ -213,7 +213,7 @@ devices:
 	server.handleLibraryDrafts(rec, draftRequest(
 		http.MethodPost,
 		"/api/v1/library/drafts",
-		`{"name":"from-template","template_name":"relative"}`,
+		`{"name":"from-template","templateName":"relative"}`,
 		"",
 	))
 	if rec.Code != http.StatusCreated {

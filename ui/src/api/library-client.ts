@@ -75,7 +75,11 @@ export const createScenarioDraft = (name: string, content: string) =>
   requestJson<ScenarioDraft>('/api/v1/library/drafts', { name, content }, { method: 'POST' });
 
 export const createScenarioDraftFromTemplate = (name: string, templateName: string) =>
-  requestJson<ScenarioDraft>('/api/v1/library/drafts', { name, templateName }, { method: 'POST' });
+  request<ScenarioDraft>('/api/v1/library/drafts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, templateName }),
+  });
 
 export const replaceScenarioDraft = (name: string, revision: string, content: string) =>
   requestJson<ScenarioDraft>(

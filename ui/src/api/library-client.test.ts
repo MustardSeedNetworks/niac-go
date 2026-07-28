@@ -116,7 +116,7 @@ describe('scenario draft client', () => {
       method: 'POST',
       body: JSON.stringify({
         name: 'switch-draft',
-        template_name: 'catalyst-9300-48p',
+        templateName: 'catalyst-9300-48p',
       }),
     });
   });
