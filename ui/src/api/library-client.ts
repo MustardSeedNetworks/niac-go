@@ -53,6 +53,43 @@ export const uploadLibraryNetwork = (payload: UploadLibraryNetworkRequest) =>
 export const deleteLibraryNetwork = (name: string) =>
   request<void>(`/api/v1/library/networks/${encodeURIComponent(name)}`, { method: 'DELETE' });
 
+export interface ScenarioDraftEntry {
+  name: string;
+  revision: string;
+  modifiedAt: string;
+  sizeBytes: number;
+}
+
+export interface ScenarioDraft extends ScenarioDraftEntry {
+  content: string;
+  format: 'yaml';
+}
+
+export const fetchScenarioDrafts = () =>
+  deduplicatedGet<ScenarioDraftEntry[]>('/api/v1/library/drafts');
+
+export const fetchScenarioDraft = (name: string) =>
+  request<ScenarioDraft>(`/api/v1/library/drafts/${encodeURIComponent(name)}`);
+
+export const createScenarioDraft = (name: string, content: string) =>
+  requestJson<ScenarioDraft>('/api/v1/library/drafts', { name, content }, { method: 'POST' });
+
+export const createScenarioDraftFromTemplate = (name: string, templateName: string) =>
+  requestJson<ScenarioDraft>('/api/v1/library/drafts', { name, templateName }, { method: 'POST' });
+
+export const replaceScenarioDraft = (name: string, revision: string, content: string) =>
+  requestJson<ScenarioDraft>(
+    `/api/v1/library/drafts/${encodeURIComponent(name)}`,
+    { content },
+    { method: 'PUT', headers: { 'If-Match': `"${revision}"` } },
+  );
+
+export const deleteScenarioDraft = (name: string, revision: string) =>
+  request<void>(`/api/v1/library/drafts/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    headers: { 'If-Match': `"${revision}"` },
+  });
+
 /**
  * Revert a library walk to its preserved pristine original, discarding
  * any edits made since the walk was first written. Backed by POST

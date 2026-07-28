@@ -1,18 +1,17 @@
 /**
  * NewSimulationWizardPage.test.tsx
  *
- * Covers the two behaviors called out in issue #958: step
- * navigation (Next/Back, Next disabled until step 1 is complete) and
- * that finishing the wizard's step 1 ("start empty" + interface) drives
- * the existing `startSimulation` endpoint — the materialise-then-start
- * seam that unlocks the embedded Devices step.
+ * Covers draft-first authoring: the picked source is saved as a revisioned
+ * draft, edits update that draft, and runtime does not start until the final
+ * preflight succeeds.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DeviceListResponse, LibraryNetwork, SimulationStatus, Template } from '../api/types';
+import type { ScenarioDraft } from '../api/library-client';
+import type { LibraryNetwork, SimulationStatus, Template } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
 import '../i18n';
 import { NewSimulationWizardPage } from './NewSimulationWizardPage';
@@ -43,7 +42,16 @@ const preflightSimulation = vi.fn();
 const fetchUsableInterfaces = vi.fn();
 const fetchTemplates = vi.fn<() => Promise<Template[]>>();
 const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
-const fetchConfigDevices = vi.fn<() => Promise<DeviceListResponse>>();
+const createScenarioDraft = vi.fn<(name: string, content: string) => Promise<ScenarioDraft>>();
+const createScenarioDraftFromTemplate =
+  vi.fn<(name: string, templateName: string) => Promise<ScenarioDraft>>();
+const replaceScenarioDraft =
+  vi.fn<(name: string, revision: string, content: string) => Promise<ScenarioDraft>>();
+const emptyDraftContent = `devices:
+  - name: new-device
+    type: host
+    mac: 02:00:00:00:00:01
+`;
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>();
@@ -63,7 +71,6 @@ vi.mock('../api/client', async (importOriginal) => {
     // Wizard-specific
     fetchUsableInterfaces: () => fetchUsableInterfaces(),
     fetchTemplates: () => fetchTemplates(),
-    fetchConfigDevices: () => fetchConfigDevices(),
     startSimulation: (payload: unknown) => startSimulation(payload),
     preflightSimulation: (payload: unknown) => preflightSimulation(payload),
   };
@@ -71,6 +78,21 @@ vi.mock('../api/client', async (importOriginal) => {
 
 vi.mock('../api/library-client', () => ({
   fetchLibraryNetworks: () => fetchLibraryNetworks(),
+  createScenarioDraft: (name: string, content: string) => createScenarioDraft(name, content),
+  createScenarioDraftFromTemplate: (name: string, templateName: string) =>
+    createScenarioDraftFromTemplate(name, templateName),
+  replaceScenarioDraft: (name: string, revision: string, content: string) =>
+    replaceScenarioDraft(name, revision, content),
+}));
+
+vi.mock('../components/config/YamlEditor', () => ({
+  YamlEditor: ({ value, onChange }: { value: string; onChange?: (value: string) => void }) => (
+    <textarea
+      data-testid="wizard-draft-editor"
+      value={value}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
+  ),
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -90,7 +112,30 @@ beforeEach(() => {
   });
   fetchTemplates.mockResolvedValue([]);
   fetchLibraryNetworks.mockResolvedValue([]);
-  fetchConfigDevices.mockResolvedValue({ devices: [], total: 0 });
+  createScenarioDraft.mockResolvedValue({
+    name: 'scenario-20260728-120000',
+    content: emptyDraftContent,
+    format: 'yaml',
+    revision: 'revision-1',
+    modifiedAt: '2026-07-28T12:00:00Z',
+    sizeBytes: emptyDraftContent.length,
+  });
+  createScenarioDraftFromTemplate.mockResolvedValue({
+    name: 'scenario-20260728-120000',
+    content: emptyDraftContent,
+    format: 'yaml',
+    revision: 'revision-1',
+    modifiedAt: '2026-07-28T12:00:00Z',
+    sizeBytes: emptyDraftContent.length,
+  });
+  replaceScenarioDraft.mockResolvedValue({
+    name: 'scenario-20260728-120000',
+    content: 'devices:\n  - name: edge-1\n    type: router\n    mac: 02:00:00:00:00:01\n',
+    format: 'yaml',
+    revision: 'revision-2',
+    modifiedAt: '2026-07-28T12:01:00Z',
+    sizeBytes: 76,
+  });
   startSimulation.mockResolvedValue({
     running: true,
     interface: 'lo0',
@@ -133,7 +178,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
   });
 
-  it('starts the simulation and advances to Devices, then Back returns to Connection', async () => {
+  it('creates and edits a draft without starting or changing the active runtime', async () => {
     const user = userEvent.setup();
     renderWizard();
 
@@ -142,8 +187,76 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
 
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    expect(createScenarioDraft).toHaveBeenCalledWith(
+      expect.stringMatching(/^scenario-/),
+      emptyDraftContent,
+    );
+    expect(startSimulation).not.toHaveBeenCalled();
+    expect(screen.getByTestId('wizard-draft-editor')).toHaveTextContent('new-device');
+
+    fireEvent.change(screen.getByTestId('wizard-draft-editor'), {
+      target: {
+        value: 'devices:\n  - name: edge-1\n    type: router\n    mac: 02:00:00:00:00:01\n',
+      },
+    });
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(replaceScenarioDraft).toHaveBeenCalledTimes(1));
+    expect(replaceScenarioDraft).toHaveBeenCalledWith(
+      'scenario-20260728-120000',
+      'revision-1',
+      expect.stringContaining('edge-1'),
+    );
+    expect(startSimulation).not.toHaveBeenCalled();
+
+    expect(screen.getByTestId('wizard-step-template')).toHaveAttribute('data-status', 'done');
+    expect(screen.getByTestId('wizard-step-protocols')).toHaveAttribute('data-status', 'active');
+
+    await user.click(screen.getByTestId('wizard-back-button'));
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+  });
+
+  it('saves dirty edits before Back and resumes the same draft for an unchanged source', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('wizard-draft-editor'), {
+      target: {
+        value: 'devices:\n  - name: edge-1\n    type: router\n    mac: 02:00:00:00:00:01\n',
+      },
+    });
+    await user.click(screen.getByTestId('wizard-back-button'));
+
+    await waitFor(() => expect(replaceScenarioDraft).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('wizard-interface-select')).toHaveValue('lo0');
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    expect(createScenarioDraft).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('wizard-draft-editor')).toHaveTextContent('edge-1');
+  });
+
+  it('starts only after draft review and a successful preflight', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
     await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
     expect(startSimulation).not.toHaveBeenCalled();
+
     await user.click(screen.getByTestId('wizard-preflight-check'));
     await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
     await user.click(screen.getByTestId('wizard-preflight-start'));
@@ -152,40 +265,54 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(startSimulation).toHaveBeenCalledWith(
       expect.objectContaining({
         interface: 'lo0',
+        configData: emptyDraftContent,
         attachmentMode: 'access',
         accessVlan: 200,
       }),
     );
-
-    await waitFor(() =>
-      expect(screen.getByTestId('wizard-step-devices-content')).toBeInTheDocument(),
+    expect(await screen.findByTestId('wizard-finish-draft-name')).toHaveTextContent(
+      'scenario-20260728-120000',
     );
-    expect(screen.getByTestId('wizard-step-template')).toHaveAttribute('data-status', 'done');
-    expect(screen.getByTestId('wizard-step-devices')).toHaveAttribute('data-status', 'active');
-
-    await user.click(screen.getByTestId('wizard-back-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
   });
 
-  it('returns from a failed preflight without losing the selected source or interface', async () => {
+  it('keeps the selected source and interface after a failed preflight and allows retry', async () => {
     const user = userEvent.setup();
-    preflightSimulation.mockRejectedValueOnce(new Error('connection rejected'));
+    preflightSimulation.mockRejectedValueOnce(new Error('preflight unavailable'));
     renderWizard();
 
     await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
-
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-preflight-check'));
-    expect(await screen.findByRole('alert')).toHaveTextContent('connection rejected');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('preflight unavailable');
+    expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
+
+    await user.click(screen.getByTestId('wizard-back-button'));
+    await user.click(screen.getByTestId('wizard-back-button'));
+    await user.click(screen.getByTestId('wizard-back-button'));
     await user.click(screen.getByTestId('wizard-back-button'));
 
     expect(await screen.findByTestId('wizard-interface-select')).toHaveValue('lo0');
+    expect(screen.getByTestId('wizard-start-empty')).toHaveClass('border-brand-accent');
     expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
-    await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    expect(createScenarioDraft).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(screen.getByTestId('wizard-preflight-check'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
+    expect(preflightSimulation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ interface: 'lo0', configData: emptyDraftContent }),
+    );
   });
 });

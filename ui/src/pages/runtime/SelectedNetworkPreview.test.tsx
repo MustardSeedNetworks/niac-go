@@ -53,4 +53,59 @@ describe('SelectedNetworkPreview', () => {
 
     expect(await screen.findByText('router1')).toBeInTheDocument();
   });
+
+  it('shows configured draft protocols without treating disabled services as active', async () => {
+    render(
+      <SelectedNetworkPreview
+        source="upload"
+        name="draft"
+        content={`devices:
+  - name: switch-1
+    type: switch
+    lldp:
+      enabled: true
+    http:
+      enabled: false
+    cdp:
+      advertise_interval: 30
+    dhcp:
+      pool_start: 192.0.2.10
+    reflector:
+      latency_ms: 2
+    netbios:
+      enabled: true
+`}
+        view="protocols"
+      />,
+    );
+
+    expect(await screen.findByText('switch-1')).toBeInTheDocument();
+    expect(screen.getByText('LLDP')).toBeInTheDocument();
+    expect(screen.getByText('DHCP')).toBeInTheDocument();
+    expect(screen.getByText('Reflector')).toBeInTheDocument();
+    expect(screen.getByText('NetBIOS')).toBeInTheDocument();
+    expect(screen.queryByText('HTTP')).not.toBeInTheDocument();
+    expect(screen.queryByText('CDP')).not.toBeInTheDocument();
+  });
+
+  it('includes devices nested under segments in the draft protocol view', async () => {
+    render(
+      <SelectedNetworkPreview
+        source="upload"
+        name="segmented-draft"
+        content={`segments:
+  - vlan: 200
+    devices:
+      - name: access-1
+        type: switch
+        lldp:
+          enabled: true
+`}
+        view="protocols"
+      />,
+    );
+
+    expect(await screen.findByText('access-1')).toBeInTheDocument();
+    expect(screen.getByText('LLDP')).toBeInTheDocument();
+  });
 });

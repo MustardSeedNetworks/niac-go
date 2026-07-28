@@ -7,10 +7,10 @@ import type { LibraryNetwork, Template } from '../../api/types';
  */
 export const WIZARD_STEPS = [
   'template',
-  'preflight',
   'devices',
   'protocols',
   'review',
+  'preflight',
   'finish',
 ] as const;
 export type WizardStepId = (typeof WIZARD_STEPS)[number];
@@ -23,11 +23,9 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number];
 export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty';
 
 /**
- * WizardState is held locally (useState) in the container — it never
- * touches the global ui-store. Once `configPath` is set the picked
- * config has been materialised as a real, safe (non-built-in) file. The
- * preflight step starts it only after the server accepts the physical
- * binding, which unlocks the existing device-editing surface.
+ * WizardState is held locally in the container. Draft content and its
+ * revision live beside this navigation/source state so authoring never
+ * changes the daemon's active configuration.
  */
 export interface WizardState {
   step: number;
@@ -36,7 +34,6 @@ export interface WizardState {
   userConfig: LibraryNetwork | null;
   uploadFile: File | null;
   selectedInterface: string;
-  configPath: string | null;
   starting: boolean;
   saving: boolean;
 }
@@ -48,7 +45,6 @@ export const initialWizardState: WizardState = {
   userConfig: null,
   uploadFile: null,
   selectedInterface: '',
-  configPath: null,
   starting: false,
   saving: false,
 };

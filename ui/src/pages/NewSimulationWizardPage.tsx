@@ -1,7 +1,13 @@
 import { type FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { applyTemplate, startSimulation } from '../api/client';
-import { fetchLibraryNetworkContent } from '../api/library-client';
+import { startSimulation } from '../api/client';
+import {
+  createScenarioDraft,
+  createScenarioDraftFromTemplate,
+  fetchLibraryNetworkContent,
+  replaceScenarioDraft,
+  type ScenarioDraft,
+} from '../api/library-client';
 import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
@@ -23,102 +29,116 @@ import { Card, CardContent } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 
-// Placeholder skeleton for the "start empty" source — the smallest valid
-// config the daemon will load. Not a reimplementation of `niac config
-// generate`; it's just the seed content for a config the wizard's
-// existing-component steps then build up.
 const EMPTY_CONFIG_YAML = `devices:
   - name: new-device
     type: host
     mac: 02:00:00:00:00:01
 `;
 
+function newDraftName(now = new Date()) {
+  return `scenario-${now.toISOString().replaceAll(/[-:.TZ]/g, '')}`;
+}
+
+function selectedSourceKey(state: WizardState) {
+  if (state.source === 'template' && state.template) return `template:${state.template.name}`;
+  if (state.source === 'userConfig' && state.userConfig) return `network:${state.userConfig.name}`;
+  if (state.source === 'upload' && state.uploadFile) {
+    return `upload:${state.uploadFile.name}:${state.uploadFile.size}:${state.uploadFile.lastModified}`;
+  }
+  return state.source === 'empty' ? 'empty' : null;
+}
+
 /**
- * NewSimulationWizard — a thin orchestration layer over existing pages
- * and endpoints (issue #958). It does not introduce any new backend route
- * or reimplement device/config editing; it sequences:
+ * NewSimulationWizard sequences draft authoring and runtime activation:
  *
  *   1. Template  — ConfigPicker (pick a template / saved config / upload / empty)
- *   2. Connection — server preflight of the logical and physical binding
- *   3. Devices   — the existing Device Library page (device CRUD)
- *   4. Protocols — the existing DeviceTable's Protocols column, read-only
- *   5. Review    — the existing SelectedNetworkPreview
- *   6. Finish    — the existing config-save endpoint, then hand off to
- *                  the existing Simulation page
- *
- * Device CRUD in this app only operates on the daemon's single active
- * config (`s.configPath()` server-side) — there's no "stage a draft
- * config" endpoint. Step 1 therefore materialises the picked source as
- * a real (non-built-in) config. Step 2 preflights and starts that config,
- * which unlocks the existing editing surfaces.
+ *   2. Devices   — edit and revision-save the isolated draft
+ *   3. Protocols — inspect identities and configured services
+ *   4. Review    — review the exact saved draft revision
+ *   5. Connection — preflight and start only after authoring is complete
+ *   6. Finish    — hand off to runtime monitoring
  */
 export const NewSimulationWizardPage: FC = () => {
   const { t } = useTranslation('pages');
   const { data: simStatus } = useSimulationStatus();
   const showError = useErrorToast();
   const [state, setState] = useState<WizardState>(initialWizardState);
-  const [preparedRequest, setPreparedRequest] = useState<SimulationRequest | null>(null);
+  const [draft, setDraft] = useState<ScenarioDraft | null>(null);
+  const [draftContent, setDraftContent] = useState('');
+  const [draftDirty, setDraftDirty] = useState(false);
+  const [draftSourceKey, setDraftSourceKey] = useState<string | null>(null);
 
   const steps = WIZARD_STEPS.map((id) => ({
     id,
     label: t(`newSimWizard.steps.${id}`),
   }));
 
-  const goBack = useCallback(() => {
-    setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
-  }, []);
-
   const prepareConfig = useCallback(async () => {
     setState((s) => ({ ...s, starting: true }));
     try {
-      let configPath: string | undefined;
-      let configData: string | undefined;
+      const sourceKey = selectedSourceKey(state);
+      if (draft && sourceKey === draftSourceKey) {
+        setDraftContent(draft.content);
+        setDraftDirty(false);
+        setState((s) => ({ ...s, step: 1, starting: false }));
+        return;
+      }
+
+      const draftName = newDraftName();
+      let created: ScenarioDraft;
 
       if (state.source === 'template' && state.template) {
-        // Copy the template into a new saved config first (existing
-        // "Save As" endpoint) instead of passing templateName straight to
-        // startSimulation — the latter points the daemon's active config
-        // path at the built-in template file itself, so any device edit
-        // in step 2 would overwrite the shipped template on disk.
-        const applied = await applyTemplate({ templateName: state.template.name });
-        configPath = applied.configPath;
+        created = await createScenarioDraftFromTemplate(draftName, state.template.name);
       } else if (state.source === 'userConfig' && state.userConfig) {
-        // Library networks aren't exposed as a filesystem path, so fetch
-        // the picked network's content and send it inline. The daemon
-        // persists inline config to its own _running.inline.yaml and
-        // points the active config path there, so step 2's device edits
-        // land on that copy rather than mutating the saved network.
-        const network = await fetchLibraryNetworkContent(state.userConfig.name);
-        configData = network.content;
+        const content = (await fetchLibraryNetworkContent(state.userConfig.name)).content;
+        created = await createScenarioDraft(draftName, content);
       } else if (state.source === 'upload' && state.uploadFile) {
-        configData = await fileToText(state.uploadFile);
+        created = await createScenarioDraft(draftName, await fileToText(state.uploadFile));
       } else if (state.source === 'empty') {
-        // Same inline path as above — the daemon materialises the blank
-        // skeleton to _running.inline.yaml, giving step 2 a real, editable
-        // active config without minting a persistent named entry.
-        configData = EMPTY_CONFIG_YAML;
+        created = await createScenarioDraft(draftName, EMPTY_CONFIG_YAML);
       } else {
         throw new Error(t('newSimWizard.template.errorNoSource'));
       }
 
-      setPreparedRequest({
-        interface: state.selectedInterface,
-        configPath,
-        configData,
-      });
-      setState((s) => ({ ...s, step: 1, configPath: configPath ?? null, starting: false }));
+      setDraft(created);
+      setDraftContent(created.content);
+      setDraftDirty(false);
+      setDraftSourceKey(sourceKey);
+      setState((s) => ({ ...s, step: 1, starting: false }));
     } catch (err) {
       showError(err);
       setState((s) => ({ ...s, starting: false }));
     }
-  }, [state, showError, t]);
+  }, [draft, draftSourceKey, state, showError, t]);
+
+  const saveDraft = useCallback(async () => {
+    if (!draft || !draftDirty) return true;
+    setState((s) => ({ ...s, saving: true }));
+    try {
+      const saved = await replaceScenarioDraft(draft.name, draft.revision, draftContent);
+      setDraft(saved);
+      setDraftContent(saved.content);
+      setDraftDirty(false);
+      return true;
+    } catch (err) {
+      showError(err);
+      return false;
+    } finally {
+      setState((s) => ({ ...s, saving: false }));
+    }
+  }, [draft, draftContent, draftDirty, showError]);
+
+  const goBack = useCallback(async () => {
+    if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
+    setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
+  }, [saveDraft, state.step]);
 
   const startPreparedSimulation = useCallback(
     async (request: SimulationRequest) => {
       setState((s) => ({ ...s, starting: true }));
       try {
         await startSimulation(request);
-        setState((s) => ({ ...s, step: 2, starting: false }));
+        setState((s) => ({ ...s, step: WIZARD_STEPS.indexOf('finish'), starting: false }));
       } catch (err) {
         showError(err);
         setState((s) => ({ ...s, starting: false }));
@@ -127,15 +147,18 @@ export const NewSimulationWizardPage: FC = () => {
     [showError],
   );
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback(async () => {
     if (state.step === 0) {
-      void prepareConfig();
+      await prepareConfig();
       return;
     }
+    if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.min(WIZARD_STEPS.length - 1, s.step + 1) }));
-  }, [state.step, prepareConfig]);
+  }, [state.step, prepareConfig, saveDraft]);
 
-  const canProceed = state.step === 0 ? isTemplateStepComplete(state) && !state.starting : true;
+  const currentStep = WIZARD_STEPS[state.step];
+  const canProceed =
+    state.step === 0 ? isTemplateStepComplete(state) && !state.starting : !state.saving;
 
   if (simStatus === null) {
     return (
@@ -198,33 +221,54 @@ export const NewSimulationWizardPage: FC = () => {
             }
           />
         )}
-        {state.step === 1 && preparedRequest && (
+        {currentStep === 'devices' && draft && (
+          <DevicesStep
+            draftName={draft.name}
+            content={draftContent}
+            dirty={draftDirty}
+            saving={state.saving}
+            onChange={(content) => {
+              setDraftContent(content);
+              setDraftDirty(content !== draft.content);
+            }}
+            onSave={() => void saveDraft()}
+          />
+        )}
+        {currentStep === 'protocols' && draft && (
+          <ProtocolsStep name={draft.name} content={draft.content} />
+        )}
+        {currentStep === 'review' && draft && (
+          <ReviewStep name={draft.name} content={draft.content} />
+        )}
+        {currentStep === 'preflight' && draft && (
           <PreflightStep
-            request={preparedRequest}
+            request={{ interface: state.selectedInterface, configData: draft.content }}
             onStart={(request) => void startPreparedSimulation(request)}
             starting={state.starting}
           />
         )}
-        {state.step === 2 && <DevicesStep />}
-        {state.step === 3 && <ProtocolsStep />}
-        {state.step === 4 && <ReviewStep />}
-        {state.step === 5 && <FinishStep />}
+        {currentStep === 'finish' && draft && <FinishStep draftName={draft.name} />}
       </div>
 
-      {state.step === 1 && (
+      {currentStep === 'preflight' && (
         <div className="flex justify-start">
-          <Button variant="outline" data-testid="wizard-back-button" onClick={goBack}>
+          <Button
+            variant="outline"
+            data-testid="wizard-back-button"
+            disabled={state.saving}
+            onClick={() => void goBack()}
+          >
             {t('newSimWizard.backLabel')}
           </Button>
         </div>
       )}
-      {state.step !== 1 && state.step < WIZARD_STEPS.length - 1 && (
+      {currentStep !== 'preflight' && currentStep !== 'finish' && (
         <div className="flex justify-between gap-default">
           <Button
             variant="outline"
             data-testid="wizard-back-button"
-            disabled={state.step === 0}
-            onClick={goBack}
+            disabled={state.step === 0 || state.saving}
+            onClick={() => void goBack()}
           >
             {t('newSimWizard.backLabel')}
           </Button>
@@ -232,18 +276,13 @@ export const NewSimulationWizardPage: FC = () => {
             tone="violet"
             data-testid="wizard-next-button"
             disabled={!canProceed}
-            onClick={goNext}
+            onClick={() => void goNext()}
           >
             {state.step === 0 && state.starting
               ? t('newSimWizard.template.startingLabel')
-              : t('newSimWizard.nextLabel')}
-          </Button>
-        </div>
-      )}
-      {state.step === WIZARD_STEPS.length - 1 && (
-        <div className="flex justify-start">
-          <Button variant="outline" data-testid="wizard-back-button" onClick={goBack}>
-            {t('newSimWizard.backLabel')}
+              : currentStep === 'devices' && state.saving
+                ? t('newSimWizard.devices.savingLabel')
+                : t('newSimWizard.nextLabel')}
           </Button>
         </div>
       )}

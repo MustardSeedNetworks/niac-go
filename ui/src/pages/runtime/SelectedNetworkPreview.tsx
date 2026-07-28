@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { fetchTemplateContent } from '../../api/client';
 import { fetchLibraryNetworkContent } from '../../api/library-client';
+import type { DeviceSummary } from '../../api/types';
+import { DeviceTable } from '../../components/DeviceTable';
 import { iconSizes } from '../../constants/sizes';
 import type { ConfigSource } from '../../stores/ui-store';
 import { Card, CardContent } from '../../ui/Card';
@@ -23,10 +25,8 @@ import { H2, SmallText } from '../../ui/Typography';
  *   content (raw YAML)   → skip the fetch entirely and preview it as-is
  *   source null          → render nothing
  *
- * The `content` prop lets NewSimulationWizard's Review step reuse this
- * component for a config that's already live on the daemon (not a
- * template/userConfig/upload) — it has the YAML in hand from `fetchConfig()`
- * and just needs the same device-summary rendering.
+ * The `content` prop lets the draft-first wizard preview saved content without
+ * reading or changing the daemon's active configuration.
  */
 interface DevicePreview {
   name: string;
@@ -42,6 +42,7 @@ interface SelectedNetworkPreviewProps {
   uploadFile?: File | null;
   /** Raw YAML to preview directly, bypassing the source-based fetch. */
   content?: string;
+  view?: 'identity' | 'protocols';
 }
 
 // The YAML on disk uses snake_case (snmp_agent, netbios_status, …) which
@@ -58,6 +59,7 @@ type ParsedDevice = {
 
 interface ParsedYaml {
   devices?: ParsedDevice[];
+  segments?: { devices?: ParsedDevice[] }[];
 }
 
 function typeIconFor(type: string) {
@@ -65,6 +67,10 @@ function typeIconFor(type: string) {
   if (t.includes('router') || t.includes('rtr') || t.includes('gateway')) return Router;
   if (t.includes('ap') || t.includes('wifi') || t.includes('wireless')) return Wifi;
   return Server;
+}
+
+function hasEnabledProperty(value: unknown): value is { enabled?: unknown } {
+  return typeof value === 'object' && value !== null && 'enabled' in value;
 }
 
 function summariseDevice(d: ParsedDevice): DevicePreview {
@@ -75,16 +81,42 @@ function summariseDevice(d: ParsedDevice): DevicePreview {
   // YAML keys are snake_case; loop instead of indexing each one so
   // useLiteralKeys + useNamingConvention don't fight over the field names.
   const services: string[] = [];
-  const serviceKeys: [string, string][] = [
-    ['snmp_agent', 'SNMP'],
+  const explicitlyEnabledServices: [string, string][] = [
+    ['snmpv3', 'SNMPv3'],
+    ['lldp', 'LLDP'],
+    ['cdp', 'CDP'],
+    ['edp', 'EDP'],
+    ['fdp', 'FDP'],
+    ['stp', 'STP'],
+    ['dhcpv6', 'DHCPv6'],
+    ['http', 'HTTP'],
+    ['ftp', 'FTP'],
+    ['netbios', 'NetBIOS'],
+    ['icmp', 'ICMP'],
+    ['icmpv6', 'ICMPv6'],
+    ['ssh', 'SSH'],
+    ['syslog', 'Syslog'],
+    ['iperf3', 'iPerf3'],
+  ];
+  for (const [key, label] of explicitlyEnabledServices) {
+    const value = d[key];
+    if (value === true || (hasEnabledProperty(value) && value.enabled === true)) {
+      services.push(label);
+    }
+  }
+
+  const presenceEnabledServices: [string, string][] = [
     ['dhcp', 'DHCP'],
     ['dns', 'DNS'],
-    ['http', 'HTTP'],
-    ['netbios_status', 'NetBIOS'],
-    ['icmp', 'ICMP'],
+    ['reflector', 'Reflector'],
   ];
-  for (const [key, label] of serviceKeys) {
-    if (d[key]) services.push(label);
+  for (const [key, label] of presenceEnabledServices) {
+    if (d[key] !== undefined && d[key] !== null && d[key] !== false) services.push(label);
+  }
+
+  const snmp = d.snmp_agent;
+  if (snmp && typeof snmp === 'object' && (!hasEnabledProperty(snmp) || snmp.enabled !== false)) {
+    services.push('SNMP');
   }
 
   return {
@@ -101,6 +133,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
   name,
   uploadFile,
   content,
+  view = 'identity',
 }) => {
   const { t } = useTranslation('pages');
   const [yamlText, setYamlText] = useState<string | null>(null);
@@ -155,11 +188,19 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     if (!yamlText) return { devices: [], parseError: null, parseErrorLine: null };
     try {
       const parsed = parseYaml(yamlText) as ParsedYaml;
-      if (!parsed?.devices || !Array.isArray(parsed.devices)) {
+      const devices = [
+        ...(Array.isArray(parsed?.devices) ? parsed.devices : []),
+        ...(Array.isArray(parsed?.segments)
+          ? parsed.segments.flatMap((segment) =>
+              Array.isArray(segment.devices) ? segment.devices : [],
+            )
+          : []),
+      ];
+      if (devices.length === 0) {
         return { devices: [], parseError: null, parseErrorLine: null };
       }
       return {
-        devices: parsed.devices.map(summariseDevice),
+        devices: devices.map(summariseDevice),
         parseError: null,
         parseErrorLine: null,
       };
@@ -182,9 +223,15 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
         <div className="flex items-baseline justify-between gap-default">
           <H2 className="flex items-center gap-compact text-lg">
             <Eye className={`${iconSizes.lg} text-brand-accent`} />
-            {t('runtime.preview.selectedPrefix')} {displayName}
+            {view === 'protocols'
+              ? t('newSimWizard.protocols.title')
+              : `${t('runtime.preview.selectedPrefix')} ${displayName}`}
           </H2>
-          <SmallText className="text-text-muted">{t('runtime.preview.previewOnly')}</SmallText>
+          <SmallText className="text-text-muted">
+            {view === 'protocols'
+              ? t('newSimWizard.protocols.subtitle')
+              : t('runtime.preview.previewOnly')}
+          </SmallText>
         </div>
 
         {loading && (
@@ -209,7 +256,7 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
           <SmallText className="text-text-muted italic">{t('runtime.preview.noDevices')}</SmallText>
         )}
 
-        {devices.length > 0 && (
+        {view === 'identity' && devices.length > 0 && (
           <ul className="grid grid-cols-1 gap-compact sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((d) => {
               const Icon = typeIconFor(d.type);
@@ -245,6 +292,18 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
               );
             })}
           </ul>
+        )}
+
+        {view === 'protocols' && devices.length > 0 && (
+          <DeviceTable
+            devices={devices.map<DeviceSummary>((device) => ({
+              name: device.name,
+              type: device.type,
+              ips: device.ips,
+              protocols: device.services,
+              ...(device.mac ? { mac: device.mac } : {}),
+            }))}
+          />
         )}
 
         {devices.length > 0 && (
