@@ -9,7 +9,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
-func TestSNMPTopologyUsesAuthoredCDPPeerAddress(t *testing.T) {
+func TestSNMPTopologyUsesRemoteCDPIdentity(t *testing.T) {
 	cfg := &config.Config{Devices: []config.Device{
 		{
 			Name:        "LAB-EDGE-R1",
@@ -33,6 +33,7 @@ func TestSNMPTopologyUsesAuthoredCDPPeerAddress(t *testing.T) {
 			Type:        "router",
 			MACAddress:  mustTestMAC(t, "00:00:0c:00:01:01"),
 			IPAddresses: []net.IP{net.ParseIP("203.0.113.2"), net.ParseIP("8.8.8.8")},
+			CDPConfig:   &config.CDPConfig{Enabled: true},
 			Interfaces: []config.Interface{{
 				Name: "GigabitEthernet1/0/1", Address: "203.0.113.2/30",
 			}},
@@ -41,15 +42,29 @@ func TestSNMPTopologyUsesAuthoredCDPPeerAddress(t *testing.T) {
 
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
 	agent := stack.snmpAgents[&cfg.Devices[0]].baseAgent
-	value, err := agent.HandleGet("1.3.6.1.4.1.9.9.23.1.2.1.1.4.1.1")
+	addressValue, err := agent.HandleGet("1.3.6.1.4.1.9.9.23.1.2.1.1.4.1.1")
 	if err != nil {
 		t.Fatalf("get cdpCacheAddress: %v", err)
 	}
 
 	want := net.ParseIP("203.0.113.2").To4()
-	got, ok := value.Value.([]byte)
+	got, ok := addressValue.Value.([]byte)
 	if !ok || !bytes.Equal(got, want) {
-		t.Fatalf("cdpCacheAddress = %v, want %v", value.Value, want)
+		t.Fatalf("cdpCacheAddress = %v, want %v", addressValue.Value, want)
+	}
+
+	identity := map[string]string{
+		"1.3.6.1.4.1.9.9.23.1.2.1.1.5.1.1": "NIAC-Go v1.5.0",
+		"1.3.6.1.4.1.9.9.23.1.2.1.1.8.1.1": "Simulated router",
+	}
+	for oid, want := range identity {
+		value, getErr := agent.HandleGet(oid)
+		if getErr != nil {
+			t.Fatalf("get %s: %v", oid, getErr)
+		}
+		if got := value.Value; got != want {
+			t.Fatalf("%s = %v, want %q", oid, got, want)
+		}
 	}
 }
 

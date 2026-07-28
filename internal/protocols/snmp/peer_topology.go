@@ -18,6 +18,9 @@ type PeerIdentity struct {
 	Address           net.IP
 	Type              string
 	SystemDescription string
+	CDPEnabled        bool
+	CDPPlatform       string
+	CDPVersion        string
 }
 
 // PeerResolver returns the identity for a remote device and interface. The
@@ -126,28 +129,52 @@ func (a *Agent) setPeerDiscoveryIdentity(
 		return false
 	}
 	ifIndex := a.discoveryIfIndex(trunk.Interface, fallbackIfIndex)
-	cdpChanged := a.setCDPPeerAddress(trunk, peer.Address, ifIndex, remoteIndex)
+	cdpChanged := a.setCDPPeerIdentity(trunk, peer, ifIndex, remoteIndex)
 	lldpChanged := a.setLLDPPeerIdentity(trunk, peer, ifIndex, remoteIndex)
 	return cdpChanged || lldpChanged
 }
 
-func (a *Agent) setCDPPeerAddress(
+func (a *Agent) setCDPPeerIdentity(
 	trunk config.TrunkPort,
-	address net.IP,
+	peer PeerIdentity,
 	ifIndex, deviceIndex int,
 ) bool {
 	if trunk.FDBOnly || a.device.CDPConfig == nil || !a.device.CDPConfig.Enabled {
 		return false
 	}
-	ipv4 := address.To4()
-	if ipv4 == nil {
-		return false
-	}
 
 	row := strconv.Itoa(ifIndex) + "." + strconv.Itoa(deviceIndex)
-	a.mib.Set(cdpCacheTable+".1.4."+row, &OIDValue{
-		Type:  gosnmp.OctetString,
-		Value: []byte(ipv4),
+	entry := cdpCacheTable + ".1"
+	if !peer.CDPEnabled {
+		changed := false
+		for column := 3; column <= 12; column++ {
+			oid := entry + "." + strconv.Itoa(column) + "." + row
+			if a.mib.Get(oid) != nil {
+				a.mib.Delete(oid)
+				changed = true
+			}
+		}
+		return changed
+	}
+
+	a.mib.Set(entry+".3."+row, &OIDValue{Type: gosnmp.Integer, Value: 1})
+	if ipv4 := peer.Address.To4(); ipv4 != nil {
+		a.mib.Set(entry+".4."+row, &OIDValue{Type: gosnmp.OctetString, Value: []byte(ipv4)})
+	}
+	version := peer.CDPVersion
+	if version == "" {
+		version = unknownPlaceholder
+	}
+	a.mib.Set(entry+".5."+row, &OIDValue{Type: gosnmp.OctetString, Value: version})
+	a.mib.Set(entry+".6."+row, &OIDValue{Type: gosnmp.OctetString, Value: trunk.RemoteDevice})
+	a.mib.Set(entry+".7."+row, &OIDValue{Type: gosnmp.OctetString, Value: trunk.RemoteInterface})
+	platform := peer.CDPPlatform
+	if platform == "" {
+		platform = unknownPlaceholder
+	}
+	a.mib.Set(entry+".8."+row, &OIDValue{Type: gosnmp.OctetString, Value: platform})
+	a.mib.Set(entry+".9."+row, &OIDValue{
+		Type: gosnmp.OctetString, Value: cdpCapabilities(peer.Type),
 	})
 	return true
 }

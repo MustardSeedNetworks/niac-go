@@ -40,7 +40,7 @@ func (a *Agent) SynthesizeARPTable(bindings []ARPBinding) {
 
 func isForwardingDevice(deviceType string) bool {
 	switch strings.ToLower(strings.TrimSpace(deviceType)) {
-	case "router", "firewall":
+	case "router", "layer3-switch", "firewall":
 		return true
 	default:
 		return false

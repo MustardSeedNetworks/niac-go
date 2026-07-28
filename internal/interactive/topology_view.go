@@ -82,7 +82,7 @@ func categorizeTopologyNodes(
 		switch node.Type {
 		case "router":
 			routers = append(routers, node)
-		case "switch":
+		case "switch", "layer3-switch":
 			switches = append(switches, node)
 		default:
 			others = append(others, node)

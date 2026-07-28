@@ -1,6 +1,7 @@
 package protocols_test
 
 import (
+	"encoding/binary"
 	"net"
 	"testing"
 	"time"
@@ -9,6 +10,48 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
+
+func TestBuildSystemCapabilitiesTLV(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewLLDPHandler(stack)
+
+	for _, deviceType := range []string{"ap", "access-point", "access_point", "wireless-ap", "wireless_ap"} {
+		t.Run(deviceType, func(t *testing.T) {
+			tlv := handler.BuildSystemCapabilitiesTLV(&config.Device{Type: deviceType})
+			if got := binary.BigEndian.Uint16(tlv[2:4]); got != protocols.LLDPCapWLANAP|protocols.LLDPCapBridge {
+				t.Fatalf("advertised capabilities = %#x, want WLAN AP and bridge", got)
+			}
+			if got := binary.BigEndian.Uint16(tlv[4:6]); got != protocols.LLDPCapWLANAP {
+				t.Fatalf("enabled capabilities = %#x, want WLAN AP", got)
+			}
+		})
+	}
+}
+
+func TestLayer3SwitchEnablesRouterAndBridgeCapabilities(t *testing.T) {
+	stack := protocols.NewStack(nil, &config.Config{}, logging.NewDebugConfig(0))
+	tlv := protocols.NewLLDPHandler(stack).BuildSystemCapabilitiesTLV(
+		&config.Device{Type: "layer3-switch"},
+	)
+	want := uint16(protocols.LLDPCapRouter | protocols.LLDPCapBridge)
+	if got := binary.BigEndian.Uint16(tlv[2:4]); got != want {
+		t.Fatalf("advertised capabilities = %#x, want %#x", got, want)
+	}
+	if got := binary.BigEndian.Uint16(tlv[4:6]); got != want {
+		t.Fatalf("enabled capabilities = %#x, want %#x", got, want)
+	}
+}
+
+func TestLLDPDefaultEnabledForAccessPointTypes(t *testing.T) {
+	for _, deviceType := range []string{"ap", "access-point", "access_point", "wireless-ap", "wireless_ap"} {
+		t.Run(deviceType, func(t *testing.T) {
+			if !protocols.LLDPDefaultEnabledForType(deviceType) {
+				t.Fatal("LLDP should be enabled by default")
+			}
+		})
+	}
+}
 
 // TestNewLLDPHandler tests creating a new LLDP handler.
 func TestNewLLDPHandler(t *testing.T) {
@@ -443,7 +486,11 @@ func TestLLDPConstants(t *testing.T) {
 	// listen reliably catches a beacon; see LLDPAdvertiseInterval).
 	expectedInterval := 15 * time.Second
 	if protocols.LLDPAdvertiseInterval != expectedInterval {
-		t.Errorf("LLDPAdvertiseInterval should be %v, got %v", expectedInterval, protocols.LLDPAdvertiseInterval)
+		t.Errorf(
+			"LLDPAdvertiseInterval should be %v, got %v",
+			expectedInterval,
+			protocols.LLDPAdvertiseInterval,
+		)
 	}
 
 	// Check multicast MAC

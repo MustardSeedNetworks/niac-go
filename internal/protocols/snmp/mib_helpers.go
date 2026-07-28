@@ -1,8 +1,18 @@
 package snmp
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"strings"
+)
+
+const (
+	cdpCapabilityRouter      = 0x01
+	cdpCapabilitySwitch      = 0x08
+	cdpCapabilityHost        = 0x10
+	cdpCapabilityIGMP        = 0x20
+	cdpCapabilityPhone       = 0x80
+	cdpCapabilitiesByteCount = 4
 )
 
 func parseMACBytes(mac string) []byte {
@@ -61,7 +71,7 @@ func getCapabilitiesBitfield(deviceType string) int {
 	deviceTypeLower := strings.ToLower(deviceType)
 
 	switch deviceTypeLower {
-	case "router", "firewall":
+	case "router", "layer3-switch", "firewall":
 		return CapabilityRouterBridge // Router + Bridge
 	case "switch":
 		return CapabilityBridge // Bridge
@@ -74,4 +84,23 @@ func getCapabilitiesBitfield(deviceType string) int {
 	default:
 		return LLDPCapabilityOther
 	}
+}
+
+func cdpCapabilities(deviceType string) []byte {
+	var capabilities uint32
+	switch strings.ToLower(deviceType) {
+	case "router":
+		capabilities = cdpCapabilityRouter | cdpCapabilityIGMP
+	case "layer3-switch":
+		capabilities = cdpCapabilityRouter | cdpCapabilitySwitch | cdpCapabilityIGMP
+	case "switch", "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
+		capabilities = cdpCapabilitySwitch | cdpCapabilityIGMP
+	case "phone", "voip-phone":
+		capabilities = cdpCapabilityPhone | cdpCapabilityHost
+	default:
+		capabilities = cdpCapabilityHost
+	}
+	encoded := make([]byte, cdpCapabilitiesByteCount)
+	binary.BigEndian.PutUint32(encoded, capabilities)
+	return encoded
 }

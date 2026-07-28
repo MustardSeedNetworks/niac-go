@@ -38,6 +38,18 @@ func TestCompileReferenceLab(t *testing.T) {
 	}
 }
 
+func TestCompileLayer3SwitchCreatesConnectedRoutes(t *testing.T) {
+	cfg := referenceConfig()
+	cfg.Devices[0].Type = "layer3-switch"
+	report := fabric.Compile(cfg, accessBinding())
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
+	}
+	if got := len(report.Topology.Routes); got != 4 {
+		t.Fatalf("routes = %d, want 4", got)
+	}
+}
+
 func TestCompileDHCPInfersNetworkOnMultiInterfaceRouter(t *testing.T) {
 	cfg := referenceConfig()
 	cfg.Devices[0].DHCPConfig = &config.DHCPConfig{
@@ -52,7 +64,8 @@ func TestCompileDHCPInfersNetworkOnMultiInterfaceRouter(t *testing.T) {
 	if !report.Safe {
 		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
 	}
-	if len(report.Topology.DHCPScopes) != 1 || report.Topology.DHCPScopes[0].Network != "lab-access" {
+	if len(report.Topology.DHCPScopes) != 1 ||
+		report.Topology.DHCPScopes[0].Network != "lab-access" {
 		t.Fatalf("DHCP scopes = %#v, want one lab-access scope", report.Topology.DHCPScopes)
 	}
 }
@@ -460,7 +473,9 @@ func TestCompileRejectsInvalidDHCPSemantics(t *testing.T) {
 		{
 			name: "IPv6 DNS server address",
 			mutate: func(cfg *config.Config) {
-				cfg.Devices[1].DHCPConfig.DomainNameServer = []net.IP{net.ParseIP("2001:4860:4860::8888")}
+				cfg.Devices[1].DHCPConfig.DomainNameServer = []net.IP{
+					net.ParseIP("2001:4860:4860::8888"),
+				}
 			},
 			code: fabric.CodeInvalidDHCPOption,
 		},

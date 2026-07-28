@@ -112,7 +112,7 @@ type CapturePlayback struct {
 // Device represents a network device.
 type Device struct {
 	Name string `yaml:"name,omitempty"`
-	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch ap access-point firewall server host workstation iot"`
+	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch layer3-switch ap access-point firewall server host workstation iot"`
 
 	MAC       string `yaml:"mac,omitempty"        validate:"omitempty,mac"`
 	Vendor    string `yaml:"vendor,omitempty"`

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"log/slog"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,8 +78,9 @@ const (
 
 // Device type string constants.
 const (
-	deviceTypeRouter = "router"
-	deviceTypeSwitch = "switch"
+	deviceTypeRouter       = "router"
+	deviceTypeSwitch       = "switch"
+	deviceTypeLayer3Switch = "layer3-switch"
 )
 
 // CDP encoding constants.
@@ -129,7 +131,8 @@ func (h *CDPHandler) Start() {
 	ticker := h.advertiseTicker
 
 	if h.stack.GetDebugLevel() >= 1 {
-		slog.Default().Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
+		slog.Default().
+			Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
 	}
 
 	go func() {
@@ -188,7 +191,13 @@ func (h *CDPHandler) sendAdvertisements() {
 		if frame != nil {
 			err := h.sendFrame(device, frame)
 			if err != nil && debugLevel >= DebugLevelInfo {
-				logger.Debug("CDP: Error sending advertisement", "device", device.Name, "error", err)
+				logger.Debug(
+					"CDP: Error sending advertisement",
+					"device",
+					device.Name,
+					"error",
+					err,
+				)
 			} else if debugLevel >= DebugLevelVerbose {
 				logger.Debug("CDP: Sent advertisement", "device", device.Name, "bytes", len(frame))
 			}
@@ -212,7 +221,13 @@ func (h *CDPHandler) buildCDPFrame(device *config.Device) []byte {
 		if device.CDPConfig.Holdtime > 0 {
 			h := device.CDPConfig.Holdtime
 			if h > math.MaxUint8 {
-				slog.Warn("CDP: holdtime exceeds uint8 max, capping to 255", "device", device.Name, "holdtime", h)
+				slog.Warn(
+					"CDP: holdtime exceeds uint8 max, capping to 255",
+					"device",
+					device.Name,
+					"holdtime",
+					h,
+				)
 				h = math.MaxUint8
 			}
 			holdtime = byte(h)
@@ -271,7 +286,10 @@ func (h *CDPHandler) buildLLCSNAPHeader() []byte {
 // buildDeviceIDTLV builds the Device ID TLV.
 func (h *CDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 	deviceID := []byte(h.stack.deviceHostname(device))
-	length := min(cdpTLVHeaderSize+len(deviceID), cdpMaxUint16) // Type (2) + Length (2) + Value, capped at max uint16
+	length := min(
+		cdpTLVHeaderSize+len(deviceID),
+		cdpMaxUint16,
+	) // Type (2) + Length (2) + Value, capped at max uint16
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeDeviceID)
@@ -313,7 +331,10 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	//   Address (variable)
 
 	addrLen := 1 + 1 + 1 + cdpAddressLenFieldLen + len(addrBytes)
-	length := min(4+4+addrLen, cdpMaxUint16) // Type + Length + NumAddrs + Address, capped at max uint16
+	length := min(
+		4+4+addrLen,
+		cdpMaxUint16,
+	) // Type + Length + NumAddrs + Address, capped at max uint16
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], CDPTLVTypeAddresses)
@@ -369,12 +390,14 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	// Determine capabilities based on device type
 	var capabilities uint32
 
-	switch device.Type {
+	switch strings.ToLower(device.Type) {
 	case deviceTypeRouter:
 		capabilities = CDPCapRouter | CDPCapIGMPCapable
+	case deviceTypeLayer3Switch:
+		capabilities = CDPCapRouter | CDPCapSwitch | CDPCapIGMPCapable
 	case deviceTypeSwitch:
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
-	case "ap", "wireless-ap":
+	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
 	case "phone", "voip-phone":
 		capabilities = CDPCapPhone | CDPCapHost
@@ -394,13 +417,7 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 
 // buildSoftwareVersionTLV builds the Software Version TLV.
 func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
-	// Use software version from config if available, otherwise use default
-	var version []byte
-	if device.CDPConfig != nil && device.CDPConfig.SoftwareVersion != "" {
-		version = []byte(device.CDPConfig.SoftwareVersion)
-	} else {
-		version = []byte("NIAC-Go v1.5.0")
-	}
+	version := []byte(cdpSoftwareVersion(device))
 
 	length := min(cdpTLVHeaderSize+len(version), cdpMaxUint16)
 
@@ -414,13 +431,7 @@ func (h *CDPHandler) buildSoftwareVersionTLV(device *config.Device) []byte {
 
 // buildPlatformTLV builds the Platform TLV.
 func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
-	// Use platform from config if available, otherwise generate default
-	var platform []byte
-	if device.CDPConfig != nil && device.CDPConfig.Platform != "" {
-		platform = []byte(device.CDPConfig.Platform)
-	} else {
-		platform = []byte("Simulated " + device.Type)
-	}
+	platform := []byte(cdpPlatform(device))
 
 	length := min(cdpTLVHeaderSize+len(platform), cdpMaxUint16)
 
@@ -430,6 +441,20 @@ func (h *CDPHandler) buildPlatformTLV(device *config.Device) []byte {
 	copy(tlv[4:], platform)
 
 	return tlv
+}
+
+func cdpSoftwareVersion(device *config.Device) string {
+	if device.CDPConfig != nil && device.CDPConfig.SoftwareVersion != "" {
+		return device.CDPConfig.SoftwareVersion
+	}
+	return "NIAC-Go v1.5.0"
+}
+
+func cdpPlatform(device *config.Device) string {
+	if device.CDPConfig != nil && device.CDPConfig.Platform != "" {
+		return device.CDPConfig.Platform
+	}
+	return "Simulated " + device.Type
 }
 
 // calculateChecksum calculates the CDP checksum.

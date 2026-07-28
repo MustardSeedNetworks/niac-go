@@ -116,7 +116,8 @@ type LLDPHandler struct {
 // configured.
 func lldpDefaultEnabledForType(deviceType string) bool {
 	switch strings.ToLower(deviceType) {
-	case "switch", "router", "access_point", "firewall", "voip_phone":
+	case "switch", "layer3-switch", "router", "ap", "access-point", "access_point",
+		"wireless-ap", "wireless_ap", "firewall", "voip_phone":
 		return true
 	default:
 		return false
@@ -302,7 +303,11 @@ func (h *LLDPHandler) buildChassisIDTLV(device *config.Device) []byte {
 	length := min(1+len(chassisID), lldpMaxTLVLength) // subtype + chassis ID, clamped to 9-bit max
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
-	tlv[0] = byte(LLDPTLVTypeChassisID<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[0] = byte(
+		LLDPTLVTypeChassisID<<1,
+	) | byte(
+		(length>>lldpLengthHighByteShift)&lldpLengthHighBit,
+	)
 	tlv[1] = byte(length & lldpLengthLowMask)
 	tlv[2] = subtype
 	copy(tlv[3:], chassisID)
@@ -373,7 +378,11 @@ func (h *LLDPHandler) buildPortDescriptionTLV(device *config.Device) []byte {
 	}
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
-	tlv[0] = byte(LLDPTLVTypePortDescription<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[0] = byte(
+		LLDPTLVTypePortDescription<<1,
+	) | byte(
+		(length>>lldpLengthHighByteShift)&lldpLengthHighBit,
+	)
 	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], description)
 
@@ -390,7 +399,11 @@ func (h *LLDPHandler) buildSystemNameTLV(device *config.Device) []byte {
 	}
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
-	tlv[0] = byte(LLDPTLVTypeSystemName<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[0] = byte(
+		LLDPTLVTypeSystemName<<1,
+	) | byte(
+		(length>>lldpLengthHighByteShift)&lldpLengthHighBit,
+	)
 	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], name)
 
@@ -413,7 +426,11 @@ func (h *LLDPHandler) buildSystemDescriptionTLV(device *config.Device) []byte {
 	}
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
-	tlv[0] = byte(LLDPTLVTypeSystemDescription<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[0] = byte(
+		LLDPTLVTypeSystemDescription<<1,
+	) | byte(
+		(length>>lldpLengthHighByteShift)&lldpLengthHighBit,
+	)
 	tlv[1] = byte(length & lldpLengthLowMask)
 	copy(tlv[2:], description)
 
@@ -428,14 +445,17 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 		enabled      uint16
 	)
 
-	switch device.Type {
+	switch strings.ToLower(device.Type) {
 	case "router":
 		capabilities = LLDPCapRouter | LLDPCapBridge
 		enabled = LLDPCapRouter
+	case "layer3-switch":
+		capabilities = LLDPCapRouter | LLDPCapBridge
+		enabled = capabilities
 	case "switch":
 		capabilities = LLDPCapBridge | LLDPCapRouter
 		enabled = LLDPCapBridge
-	case "ap", "wireless-ap":
+	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = LLDPCapWLANAP | LLDPCapBridge
 		enabled = LLDPCapWLANAP
 	case "phone", "voip-phone":
@@ -500,7 +520,11 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 	) // total TLV value length, clamped to 9-bit max
 
 	tlv := make([]byte, lldpTLVHeaderSize+length)
-	tlv[0] = byte(LLDPTLVTypeManagementAddress<<1) | byte((length>>lldpLengthHighByteShift)&lldpLengthHighBit)
+	tlv[0] = byte(
+		LLDPTLVTypeManagementAddress<<1,
+	) | byte(
+		(length>>lldpLengthHighByteShift)&lldpLengthHighBit,
+	)
 	tlv[1] = byte(length & lldpLengthLowMask)
 
 	offset := 2

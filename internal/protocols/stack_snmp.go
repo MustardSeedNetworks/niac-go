@@ -140,12 +140,18 @@ func (s *Stack) peerResolver() snmp.PeerResolver {
 			return snmp.PeerIdentity{}, false
 		}
 
-		return snmp.PeerIdentity{
+		peer := snmp.PeerIdentity{
 			MAC:               device.MACAddress,
 			Address:           peerInterfaceAddress(device, interfaceName),
 			Type:              device.Type,
 			SystemDescription: peerSystemDescription(device),
-		}, true
+		}
+		if device.CDPConfig != nil && device.CDPConfig.Enabled {
+			peer.CDPEnabled = true
+			peer.CDPPlatform = cdpPlatform(device)
+			peer.CDPVersion = cdpSoftwareVersion(device)
+		}
+		return peer, true
 	}
 }
 
@@ -192,7 +198,12 @@ func (s *Stack) initSNMPv3Engine(
 	engine, err := snmp.NewV3Engine(device.SNMPv3Config, device.MACAddress)
 	if err != nil {
 		if debugLevel >= 1 {
-			_, _ = fmt.Fprintf(os.Stdout, "SNMP: v3 engine init failed for %s: %v\n", device.Name, err)
+			_, _ = fmt.Fprintf(
+				os.Stdout,
+				"SNMP: v3 engine init failed for %s: %v\n",
+				device.Name,
+				err,
+			)
 		}
 		return
 	}
