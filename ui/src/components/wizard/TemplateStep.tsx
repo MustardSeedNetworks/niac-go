@@ -7,6 +7,7 @@ import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { ConfigPicker } from '../simulation/ConfigPicker';
+import { FleetGeneratorCard } from './FleetGeneratorCard';
 import type { WizardState } from './wizard-types';
 
 interface TemplateStepProps {
@@ -15,6 +16,8 @@ interface TemplateStepProps {
   onSelectUserConfig: (config: LibraryNetwork) => void;
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
+  onSelectFleet: () => void;
+  onFleetChange: (request: WizardState['fleetRequest']) => void;
   onInterfaceChange: (iface: string) => void;
 }
 
@@ -30,6 +33,8 @@ export const TemplateStep: FC<TemplateStepProps> = ({
   onSelectUserConfig,
   onUpload,
   onSelectEmpty,
+  onSelectFleet,
+  onFleetChange,
   onInterfaceChange,
 }) => {
   const { t } = useTranslation('pages');
@@ -55,7 +60,12 @@ export const TemplateStep: FC<TemplateStepProps> = ({
   }, []);
 
   const selection = {
-    source: state.uploadFile ? ('upload' as const) : state.source === 'empty' ? null : state.source,
+    source:
+      state.uploadFile || state.source === 'upload'
+        ? ('upload' as const)
+        : state.source === 'template' || state.source === 'userConfig'
+          ? state.source
+          : null,
     name: state.uploadFile
       ? state.uploadFile.name
       : (state.template?.name ?? state.userConfig?.name ?? ''),
@@ -110,6 +120,13 @@ export const TemplateStep: FC<TemplateStepProps> = ({
           <SmallText className="text-text-muted">{t('newSimWizard.template.help')}</SmallText>
         </CardContent>
       </Card>
+
+      <FleetGeneratorCard
+        request={state.fleetRequest}
+        selected={state.source === 'generated'}
+        onChange={onFleetChange}
+        onSelect={onSelectFleet}
+      />
 
       <ConfigPicker
         selection={selection}

@@ -99,15 +99,15 @@ type Site struct {
 
 // Counts controls how many devices the generator repeats at each site.
 type Counts struct {
-	SiteWANRouters        int `json:"siteWanRouters"`
+	SiteWANRouters        int `json:"site_wan_routers"`
 	Firewalls             int `json:"firewalls"`
-	CoreSwitches          int `json:"coreSwitches"`
-	DistributionSwitches  int `json:"distributionSwitches"`
-	AccessSwitches        int `json:"accessSwitches"`
-	ServerSwitches        int `json:"serverSwitches"`
-	AccessPointsPerAccess int `json:"accessPointsPerAccess"`
-	WorkstationsPerAccess int `json:"workstationsPerAccess"`
-	WirelessControllers   int `json:"wirelessControllers"`
+	CoreSwitches          int `json:"core_switches"`
+	DistributionSwitches  int `json:"distribution_switches"`
+	AccessSwitches        int `json:"access_switches"`
+	ServerSwitches        int `json:"server_switches"`
+	AccessPointsPerAccess int `json:"access_points_per_access"`
+	WorkstationsPerAccess int `json:"workstations_per_access"`
+	WirelessControllers   int `json:"wireless_controllers"`
 }
 
 // Request is the complete deterministic fleet-generation contract.
@@ -115,8 +115,8 @@ type Request struct {
 	Sites          []Site `json:"sites"`
 	Counts         Counts `json:"counts"`
 	Domain         string `json:"domain"`
-	SNMPCommunity  string `json:"snmpCommunity"`
-	AttachmentName string `json:"attachmentName"`
+	SNMPCommunity  string `json:"snmp_community"`
+	AttachmentName string `json:"attachment_name"`
 }
 
 // Manifest summarizes authored identity and topology for parity checks.

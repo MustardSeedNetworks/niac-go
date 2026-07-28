@@ -8,6 +8,7 @@ import {
   replaceScenarioDraft,
   type ScenarioDraft,
 } from '../api/library-client';
+import { generateScenario } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
@@ -45,6 +46,7 @@ function selectedSourceKey(state: WizardState) {
   if (state.source === 'upload' && state.uploadFile) {
     return `upload:${state.uploadFile.name}:${state.uploadFile.size}:${state.uploadFile.lastModified}`;
   }
+  if (state.source === 'generated') return `generated:${JSON.stringify(state.fleetRequest)}`;
   return state.source === 'empty' ? 'empty' : null;
 }
 
@@ -96,6 +98,9 @@ export const NewSimulationWizardPage: FC = () => {
         created = await createScenarioDraft(draftName, await fileToText(state.uploadFile));
       } else if (state.source === 'empty') {
         created = await createScenarioDraft(draftName, EMPTY_CONFIG_YAML);
+      } else if (state.source === 'generated') {
+        const generated = await generateScenario(state.fleetRequest);
+        created = await createScenarioDraft(draftName, generated.content);
       } else {
         throw new Error(t('newSimWizard.template.errorNoSource'));
       }
@@ -215,6 +220,18 @@ export const NewSimulationWizardPage: FC = () => {
                 userConfig: null,
                 uploadFile: null,
               }))
+            }
+            onSelectFleet={() =>
+              setState((s) => ({
+                ...s,
+                source: 'generated',
+                template: null,
+                userConfig: null,
+                uploadFile: null,
+              }))
+            }
+            onFleetChange={(fleetRequest) =>
+              setState((s) => ({ ...s, source: 'generated', fleetRequest }))
             }
             onInterfaceChange={(iface: string) =>
               setState((s) => ({ ...s, selectedInterface: iface }))

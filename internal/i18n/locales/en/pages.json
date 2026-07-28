@@ -445,6 +445,33 @@
       "help": "The simulation started from the validated draft. The saved draft remains available for future editing.",
       "title": "All set"
     },
+    "fleet": {
+      "addSite": "Add site",
+      "attachmentName": "Attachment name",
+      "counts": {
+        "accessPointsPerAccess": "Wi-Fi 7 APs per access switch",
+        "accessSwitches": "Access switches per site",
+        "coreSwitches": "Core switches per site",
+        "distributionSwitches": "Distribution switches per site",
+        "firewalls": "Firewalls per site",
+        "serverSwitches": "Server switches per site",
+        "siteWanRouters": "Redundant WAN, firewall, and core pairs",
+        "wirelessControllers": "Wireless controllers per site",
+        "workstationsPerAccess": "Wired workstations per access switch"
+      },
+      "domain": "DNS domain",
+      "help": "Start with the validated enterprise design, then adjust sites and device counts. NIAC assigns identities, addressing, ports, VLANs, services, and links consistently.",
+      "invalid": "Resolve the fleet values before continuing.",
+      "removeSite": "Remove site",
+      "select": "Use generated fleet",
+      "selected": "Generated fleet selected",
+      "siteCode": "Site code",
+      "siteLocation": "Location",
+      "siteOctet": "Address octet",
+      "sites": "Sites",
+      "snmpCommunity": "SNMP community",
+      "title": "Generate a multisite fleet"
+    },
     "label": "New Simulation",
     "nextLabel": "Next",
     "preflight": {
