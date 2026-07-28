@@ -1,6 +1,7 @@
 package scenario_test
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -58,6 +59,9 @@ func TestGenerateRejectsImpossibleFleetCounts(t *testing.T) {
 		}},
 		{"peer limit", "WAN, firewall, and core counts must be 1 or 2", func(r *scenario.Request) {
 			r.Counts.SiteWANRouters, r.Counts.Firewalls, r.Counts.CoreSwitches = 3, 3, 3
+		}},
+		{"excessive peer count", "WAN, firewall, and core counts must be 1 or 2", func(r *scenario.Request) {
+			r.Counts.SiteWANRouters, r.Counts.Firewalls, r.Counts.CoreSwitches = math.MaxInt, math.MaxInt, math.MaxInt
 		}},
 		{"distribution pairs", "distribution switch count must be even", func(r *scenario.Request) {
 			r.Counts.DistributionSwitches = 3

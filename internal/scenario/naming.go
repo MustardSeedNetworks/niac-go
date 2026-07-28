@@ -3,9 +3,13 @@ package scenario
 import "fmt"
 
 func numberedNames(prefix string, count int) []string {
-	names := make([]string, count)
-	for index := range count {
-		names[index] = numberedName(prefix, index+1)
+	if count < 1 || count > maxRedundantPeers {
+		return nil
+	}
+
+	names := make([]string, 0, maxRedundantPeers)
+	for index := 1; index <= count; index++ {
+		names = append(names, numberedName(prefix, index))
 	}
 	return names
 }
