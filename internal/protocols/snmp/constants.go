@@ -74,16 +74,16 @@ const (
 	// MicrosPerSec is the number of microseconds per second.
 	MicrosPerSec = 1000000
 
-	// CapabilityRouterBridge is the Router + Bridge capability bitmask.
-	CapabilityRouterBridge = 0x14
+	// CapabilityRouterBridge is the Router + Bridge capability bitmask in ASN.1 BITS wire order.
+	CapabilityRouterBridge = 0x2800
 	// CapabilityBridge is the Bridge (switch) capability bitmask.
-	CapabilityBridge = 0x04
+	CapabilityBridge = 0x2000
 	// CapabilityWLANAP is the WLAN Access Point capability bitmask.
-	CapabilityWLANAP = 0x08
+	CapabilityWLANAP = 0x1000
 	// CapabilityStationOnly is the Station Only capability bitmask.
-	CapabilityStationOnly = 0x80
+	CapabilityStationOnly = 0x0100
 	// CapabilityTelephoneStation is the Telephone + Station Only capability bitmask.
-	CapabilityTelephoneStation = 0xA0
+	CapabilityTelephoneStation = 0x0500
 
 	// BERLenByteMask is the mask for length bytes count in BER.
 	BERLenByteMask = 7
@@ -121,7 +121,7 @@ const (
 	PortIDSubtypeInterfaceName = 5
 
 	// LLDPCapabilityOther is the LLDP other capability bitmask.
-	LLDPCapabilityOther = 0x01
+	LLDPCapabilityOther = 0x8000
 
 	// STPPriorityDefault is the default STP bridge priority.
 	STPPriorityDefault = 32768

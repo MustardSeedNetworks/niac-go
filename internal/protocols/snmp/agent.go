@@ -187,12 +187,19 @@ func (a *Agent) initializeSystemMIB() {
 	// Bit 6: application (e.g., mail relays)
 	a.mib.Set("1.3.6.1.2.1.1.7.0", &OIDValue{
 		Type:  gosnmp.Integer,
-		Value: synth.SystemServices(profile.Type),
+		Value: systemServices(a.device, profile),
 	})
 
 	if a.debugLevel >= debugLevelVerbose {
 		a.logger.Debug("Initialized system MIB", "device", a.device.Name)
 	}
+}
+
+func systemServices(device *config.Device, profile synth.Profile) int {
+	if strings.EqualFold(device.Type, "layer3-switch") {
+		return synth.SystemServices(synth.TypeRouter)
+	}
+	return synth.SystemServices(profile.Type)
 }
 
 func systemProfile(device *config.Device) synth.Profile {
@@ -220,6 +227,8 @@ func synthVendor(vendor string) synth.Vendor {
 		return synth.VendorExtreme
 	case "hp", "hpe":
 		return synth.VendorHP
+	case "palo alto", "palo-alto", "paloalto":
+		return synth.VendorPaloAlto
 	default:
 		return synth.VendorGeneric
 	}
@@ -227,7 +236,7 @@ func synthVendor(vendor string) synth.Vendor {
 
 func synthDeviceType(deviceType string) synth.DeviceType {
 	switch strings.ToLower(strings.TrimSpace(deviceType)) {
-	case "switch":
+	case "switch", "layer3-switch":
 		return synth.TypeSwitch
 	case "router":
 		return synth.TypeRouter

@@ -27,6 +27,7 @@ const (
 	VendorAruba     Vendor = "aruba"
 	VendorExtreme   Vendor = "extreme"
 	VendorHP        Vendor = "hp"
+	VendorPaloAlto  Vendor = "palo-alto"
 	VendorGeneric   Vendor = "generic"
 	// VendorJuniperMist is the Mist-acquisition AP line. API-first, so
 	// the synthesised walk is minimal (system group + bare ifTable).
@@ -80,7 +81,8 @@ const (
 //
 //nolint:gochecknoglobals // static lookup
 var AllVendors = []Vendor{
-	VendorCiscoIOS, VendorJunos, VendorAristaEOS, VendorAruba, VendorExtreme, VendorHP, VendorGeneric,
+	VendorCiscoIOS, VendorJunos, VendorAristaEOS, VendorAruba, VendorExtreme, VendorHP,
+	VendorPaloAlto, VendorGeneric,
 }
 
 // DeviceType is the niac device.type string. Kept as a typed alias
@@ -362,6 +364,15 @@ var profileTable = func() map[profileKey]Profile {
 			false, true, true, false,
 		),
 	)
+
+	// ---- Palo Alto Networks ----
+	add(VendorPaloAlto, TypeFirewall, withFlags(Profile{
+		SysDescr:       "Palo Alto Networks PA-5450 firewall, PAN-OS 12.1",
+		SysObjectID:    "1.3.6.1.4.1.25461.2.3.57",
+		IfNameFormat:   "ethernet1/%d",
+		DefaultIfCount: defaultIfFirewall,
+		IfSpeedMbps:    speed100G,
+	}, true, false, true, true))
 
 	// ---- Generic (Net-SNMP) — host / server / printer / generic-anything ----
 	generic := func(descr, ifFmt string, n int, speed int) Profile {

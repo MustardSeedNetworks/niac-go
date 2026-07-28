@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -33,7 +34,12 @@ func TestSynthesizePeerTopologyLearnsHostOnPort(t *testing.T) {
 			t.Fatalf("SetOID: %v", err)
 		}
 	}
-	must(agent.SetOID(ifDescr+".10005", &OIDValue{Type: gosnmp.OctetString, Value: "FastEthernet0/5"}))
+	must(
+		agent.SetOID(
+			ifDescr+".10005",
+			&OIDValue{Type: gosnmp.OctetString, Value: "FastEthernet0/5"},
+		),
+	)
 	must(agent.SetOID(dot1dBasePortIfIndex+".5", &OIDValue{Type: gosnmp.Integer, Value: 10005}))
 
 	pc1MAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
@@ -96,7 +102,7 @@ func TestAuthoredDiscoveryUsesWalkInterfaceIdentityEndToEnd(t *testing.T) {
 	}
 	pcMAC, _ := net.ParseMAC("aa:bb:cc:00:00:21")
 	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
-		return PeerIdentity{MAC: pcMAC}, true
+		return PeerIdentity{MAC: pcMAC, CDPEnabled: true}, true
 	})
 
 	assertMIBValue(t, agent, lldpLocPortTable+".1.3.10005", "FastEthernet0/5")
@@ -207,8 +213,79 @@ func TestSynthesizePeerTopologyPublishesResolvedLLDPIdentity(t *testing.T) {
 		lldpRemTable+".1.10."+row,
 		"Cisco Wireless CW9178I Wi-Fi 7 access point",
 	)
-	assertMIBValue(t, agent, lldpRemTable+".1.11."+row, []byte{0, CapabilityWLANAP})
-	assertMIBValue(t, agent, lldpRemTable+".1.12."+row, []byte{0, CapabilityWLANAP})
+	assertMIBValue(t, agent, lldpRemTable+".1.11."+row, []byte{0x10, 0x00})
+	assertMIBValue(t, agent, lldpRemTable+".1.12."+row, []byte{0x10, 0x00})
+}
+
+func TestSynthesizePeerTopologyPublishesResolvedCDPIdentity(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "switch"
+	dev.CDPConfig = &config.CDPConfig{
+		Enabled: true, Platform: "Cisco Catalyst C9350-48HX", SoftwareVersion: "IOS XE 17.18",
+	}
+	dev.Interfaces = []config.Interface{{Name: "TenGigabitEthernet1/0/1"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "TenGigabitEthernet1/0/1", RemoteDevice: "AP01",
+		RemoteInterface: "mGigabitEthernet0", NativeVLAN: 200,
+	}}
+	agent := NewAgent(dev, 0)
+	peerAddress := net.ParseIP("10.240.200.100")
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{
+			Address: peerAddress, Type: "access-point", CDPEnabled: true,
+			CDPPlatform: "Cisco Wireless CW9178I", CDPVersion: "IOS XE 17.15.3",
+		}, true
+	})
+
+	row := "1.1"
+	assertMIBValue(t, agent, cdpCacheTable+".1.4."+row, []byte(peerAddress.To4()))
+	assertMIBValue(t, agent, cdpCacheTable+".1.5."+row, "IOS XE 17.15.3")
+	assertMIBValue(t, agent, cdpCacheTable+".1.6."+row, "AP01")
+	assertMIBValue(t, agent, cdpCacheTable+".1.7."+row, "mGigabitEthernet0")
+	assertMIBValue(t, agent, cdpCacheTable+".1.8."+row, "Cisco Wireless CW9178I")
+	assertMIBValue(t, agent, cdpCacheTable+".1.9."+row, []byte{0, 0, 0, 0x28})
+}
+
+func TestSynthesizePeerTopologyRemovesCDPForNonCDPPeer(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "router"
+	dev.CDPConfig = &config.CDPConfig{Enabled: true, Platform: "Cisco Catalyst C8500-12X"}
+	dev.Interfaces = []config.Interface{{Name: "TenGigabitEthernet0/1/1"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "TenGigabitEthernet0/1/1", RemoteDevice: "FW01",
+		RemoteInterface: "ethernet1/1", NativeVLAN: 200,
+	}}
+	agent := NewAgent(dev, 0)
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{Type: "firewall"}, true
+	})
+
+	for _, oid := range agent.mib.AllOIDs() {
+		if strings.HasPrefix(oid, cdpCacheTable+".1.") {
+			t.Fatalf("non-CDP firewall published CDP cache row %s", oid)
+		}
+	}
+}
+
+func TestCDPPeerCapabilitiesMatchDeviceAdvertisement(t *testing.T) {
+	tests := []struct {
+		deviceType string
+		want       []byte
+	}{
+		{deviceType: "router", want: []byte{0, 0, 0, 0x21}},
+		{deviceType: "layer3-switch", want: []byte{0, 0, 0, 0x29}},
+		{deviceType: "access-point", want: []byte{0, 0, 0, 0x28}},
+		{deviceType: "firewall", want: []byte{0, 0, 0, 0x10}},
+		{deviceType: "voip_phone", want: []byte{0, 0, 0, 0x10}},
+		{deviceType: "custom", want: []byte{0, 0, 0, 0x10}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.deviceType, func(t *testing.T) {
+			if got := cdpCapabilities(tt.deviceType); !bytes.Equal(got, tt.want) {
+				t.Fatalf("capabilities = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestSynthesizePeerTopologyDoesNotTurnAccessPointIntoBridge(t *testing.T) {
@@ -237,10 +314,10 @@ func TestSynthesizePeerTopologyDoesNotTurnAccessPointIntoBridge(t *testing.T) {
 func TestLLDPPeerCapabilitiesCoverSupportedRoles(t *testing.T) {
 	tests := []struct {
 		deviceType string
-		want       byte
+		want       []byte
 	}{
-		{deviceType: "firewall", want: CapabilityRouterBridge},
-		{deviceType: "voip_phone", want: CapabilityTelephoneStation},
+		{deviceType: "firewall", want: []byte{0x28, 0x00}},
+		{deviceType: "voip_phone", want: []byte{0x05, 0x00}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.deviceType, func(t *testing.T) {
@@ -256,7 +333,7 @@ func TestLLDPPeerCapabilitiesCoverSupportedRoles(t *testing.T) {
 			agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
 				return PeerIdentity{MAC: mac, Type: tt.deviceType}, true
 			})
-			assertMIBValue(t, agent, lldpRemTable+".1.11.0.1.1", []byte{0, tt.want})
+			assertMIBValue(t, agent, lldpRemTable+".1.11.0.1.1", tt.want)
 		})
 	}
 }

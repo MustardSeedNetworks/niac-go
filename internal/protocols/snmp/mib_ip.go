@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
-	"strings"
 	"sync/atomic"
 
 	"github.com/gosnmp/gosnmp"
@@ -64,7 +63,7 @@ func (a *Agent) initializeIPMIB() {
 
 func (a *Agent) registerIPScalars(device *config.Device) {
 	forwarding := ipForwardingDisabled
-	if strings.EqualFold(device.Type, "router") || strings.EqualFold(device.Type, "firewall") {
+	if isForwardingDevice(device.Type) {
 		forwarding = ipForwardingEnabled
 	}
 	ttl := defaultIPTTL

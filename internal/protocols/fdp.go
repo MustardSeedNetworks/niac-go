@@ -312,6 +312,8 @@ func (h *FDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	switch device.Type {
 	case deviceTypeRouter:
 		capabilities = FDPCapRouter | FDPCapSwitch
+	case deviceTypeLayer3Switch:
+		capabilities = FDPCapRouter | FDPCapSwitch
 	case deviceTypeSwitch:
 		capabilities = FDPCapSwitch
 	default:
@@ -501,7 +503,10 @@ func (h *FDPHandler) processFDPTLV(data *fdpTLVData, tlvType uint16, value []byt
 }
 
 // buildFDPNeighborRecord constructs a NeighborRecord from parsed FDP data.
-func (h *FDPHandler) buildFDPNeighborRecord(device *config.Device, data *fdpTLVData) NeighborRecord {
+func (h *FDPHandler) buildFDPNeighborRecord(
+	device *config.Device,
+	data *fdpTLVData,
+) NeighborRecord {
 	ttlSeconds := data.ttl
 	if ttlSeconds <= 0 {
 		ttlSeconds = FDPHoldtime

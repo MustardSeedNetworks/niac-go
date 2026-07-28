@@ -43,7 +43,7 @@ func (c *scenarioCompiler) compileInterfaces(device *config.Device) map[string]I
 		}
 		compiled[iface.Name] = iface
 		c.report.Topology.Interfaces = append(c.report.Topology.Interfaces, iface)
-		if device.Type == "router" {
+		if device.Type == "router" || device.Type == "layer3-switch" {
 			c.report.Topology.Routes = append(c.report.Topology.Routes, Route{
 				Device: device.Name, Destination: c.networks[iface.Network].Prefix,
 				Via: iface.Name, Connected: true,
@@ -182,7 +182,11 @@ func (c *scenarioCompiler) appendDHCPScope(device *config.Device, iface Interfac
 		return
 	}
 	if start.Compare(end) > 0 {
-		c.add(CodeInvalidDHCPRange, "devices."+device.Name+".dhcp", "DHCP pool start must not follow end")
+		c.add(
+			CodeInvalidDHCPRange,
+			"devices."+device.Name+".dhcp",
+			"DHCP pool start must not follow end",
+		)
 		return
 	}
 	if isReservedEndpoint(network.Prefix, start) || isReservedEndpoint(network.Prefix, end) {
@@ -232,7 +236,8 @@ func (c *scenarioCompiler) validateDHCPPoolCollisions(
 		}
 	}
 	for _, scope := range c.report.Topology.DHCPScopes {
-		if scope.Network == iface.Network && start.Compare(scope.End) <= 0 && end.Compare(scope.Start) >= 0 {
+		if scope.Network == iface.Network && start.Compare(scope.End) <= 0 &&
+			end.Compare(scope.Start) >= 0 {
 			c.add(
 				CodeDHCPAddressCollision,
 				field,
@@ -335,7 +340,11 @@ func (c *scenarioCompiler) validateDHCPLease(
 	address, ok := ipToAddr(lease.ClientIP)
 	if !ok || !address.Is4() || !network.Prefix.Contains(address) ||
 		isReservedEndpoint(network.Prefix, address) || !validDHCPLeaseMAC(lease) {
-		c.add(CodeInvalidDHCPLease, field, "DHCP lease must use a usable network address and unicast MAC")
+		c.add(
+			CodeInvalidDHCPLease,
+			field,
+			"DHCP lease must use a usable network address and unicast MAC",
+		)
 		return netip.Addr{}, dhcpLeaseMAC{}, false
 	}
 	if !c.validateDHCPLeaseAddress(field, address, poolStart, poolEnd, pendingAddresses) {
@@ -388,7 +397,10 @@ func (c *scenarioCompiler) validateDHCPLeaseAddress(
 			c.add(
 				CodeDHCPAddressCollision,
 				field+".ip",
-				fmt.Sprintf("DHCP lease address overlaps the pool assigned to device %s", scope.Device),
+				fmt.Sprintf(
+					"DHCP lease address overlaps the pool assigned to device %s",
+					scope.Device,
+				),
 			)
 			return false
 		}
@@ -422,7 +434,12 @@ func validDHCPLeaseMAC(lease config.DHCPLease) bool {
 
 func overlappingDHCPLeaseMAC(lease config.DHCPLease, assigned []dhcpLeaseMAC) (string, bool) {
 	for _, candidate := range assigned {
-		if dhcpLeaseMACsOverlap(lease.MACAddress, lease.MACMask, candidate.address, candidate.mask) {
+		if dhcpLeaseMACsOverlap(
+			lease.MACAddress,
+			lease.MACMask,
+			candidate.address,
+			candidate.mask,
+		) {
 			return candidate.device, true
 		}
 	}

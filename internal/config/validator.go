@@ -183,7 +183,11 @@ func (v *Validator) validateSyslog(device *Device, prefix string) {
 		return
 	}
 	for index, receiver := range device.SyslogConfig.Receivers {
-		v.validateUDPReceiver(receiver, fmt.Sprintf("%s.syslog.receivers[%d]", prefix, index), "SYSLOG")
+		v.validateUDPReceiver(
+			receiver,
+			fmt.Sprintf("%s.syslog.receivers[%d]", prefix, index),
+			"SYSLOG",
+		)
 	}
 }
 
@@ -225,7 +229,9 @@ func (v *Validator) validateSNMPCommunity(device *Device, prefix string) {
 	configured := cfg.Enabled != nil || cfg.SysName != "" || cfg.SysDescr != "" || cfg.SysContact != "" ||
 		cfg.SysLocation != "" || cfg.WalkFile != "" || len(cfg.WalkFiles) > 0 || len(cfg.AddMibs) > 0 ||
 		len(cfg.CommunityIncludes) > 0 || len(cfg.AccessList) > 0 || cfg.SnmpAddr != nil ||
-		cfg.Dot1DFdbTable != nil || cfg.Dot1QFdbTable != nil || cfg.Traps != nil
+		cfg.Dot1DFdbTable != nil ||
+		cfg.Dot1QFdbTable != nil ||
+		cfg.Traps != nil
 	if configured && strings.TrimSpace(cfg.Community) == "" {
 		v.addError(prefix+".snmp_agent.community", "SNMPv1/v2c requires an explicit community")
 	}
@@ -243,11 +249,17 @@ func (v *Validator) validateSNMPAddMibs(mibs []AddMib, prefix string) {
 			)
 		}
 		if _, duplicate := seen[oid]; duplicate {
-			v.addError(fmt.Sprintf("%s.snmp_agent.add_mibs[%d].oid", prefix, i), "duplicate MIB OID")
+			v.addError(
+				fmt.Sprintf("%s.snmp_agent.add_mibs[%d].oid", prefix, i),
+				"duplicate MIB OID",
+			)
 		}
 		seen[oid] = struct{}{}
 		if strings.TrimSpace(mib.Type) == "" {
-			v.addError(fmt.Sprintf("%s.snmp_agent.add_mibs[%d].type", prefix, i), "MIB type is required")
+			v.addError(
+				fmt.Sprintf("%s.snmp_agent.add_mibs[%d].type", prefix, i),
+				"MIB type is required",
+			)
 		}
 	}
 }
@@ -284,7 +296,9 @@ func (v *Validator) validateDeviceIdentity(device *Device, prefix string, names 
 	if device.Type == "" {
 		v.addError(prefix+".type", "device type is required")
 	} else {
-		validTypes := []string{"router", "switch", "ap", "access-point", "server", "host", "firewall"}
+		validTypes := []string{
+			"router", "switch", "layer3-switch", "ap", "access-point", "server", "host", "firewall",
+		}
 		if !contains(validTypes, device.Type) {
 			v.addWarning(prefix+".type", fmt.Sprintf("unknown device type: %s (valid: %s)",
 				device.Type, strings.Join(validTypes, ", ")))
@@ -339,7 +353,10 @@ func (v *Validator) validateTTLConfig(device *Device, prefix string) {
 	}
 
 	if device.TTLConfig.TTL < 1 || device.TTLConfig.TTL > 255 {
-		v.addError(prefix+".ttl.ttl", fmt.Sprintf("TTL must be between 1 and 255, got %d", device.TTLConfig.TTL))
+		v.addError(
+			prefix+".ttl.ttl",
+			fmt.Sprintf("TTL must be between 1 and 255, got %d", device.TTLConfig.TTL),
+		)
 	}
 
 	if device.TTLConfig.IP != nil && device.TTLConfig.IP.To4() == nil {
@@ -359,7 +376,10 @@ func (v *Validator) validateSNMPAccessList(device *Device, prefix string) {
 
 	for i, ip := range device.SNMPConfig.AccessList {
 		if ip == nil {
-			v.addError(fmt.Sprintf("%s.snmp.access_list[%d]", prefix, i), "SNMP access list IP is nil")
+			v.addError(
+				fmt.Sprintf("%s.snmp.access_list[%d]", prefix, i),
+				"SNMP access list IP is nil",
+			)
 		}
 	}
 }
@@ -372,13 +392,19 @@ func (v *Validator) validateNetBIOSNames(device *Device, prefix string) {
 
 	for i, name := range device.NetBIOSConfig.Names {
 		if name.Name == "" {
-			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name is required")
+			v.addError(
+				fmt.Sprintf("%s.netbios.names[%d].name", prefix, i),
+				"NetBIOS name is required",
+			)
 
 			continue
 		}
 
 		if len(name.Name) > netbiosMaxNameLen {
-			v.addError(fmt.Sprintf("%s.netbios.names[%d].name", prefix, i), "NetBIOS name exceeds 15 characters")
+			v.addError(
+				fmt.Sprintf("%s.netbios.names[%d].name", prefix, i),
+				"NetBIOS name exceeds 15 characters",
+			)
 		}
 	}
 }
@@ -454,7 +480,10 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 		}
 
 		if record.RCode < 0 || record.RCode > 15 {
-			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
+			v.addError(
+				recordPrefix+".rcode",
+				fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode),
+			)
 		}
 	}
 
@@ -471,7 +500,10 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 		}
 
 		if record.RCode < 0 || record.RCode > 15 {
-			v.addError(recordPrefix+".rcode", fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode))
+			v.addError(
+				recordPrefix+".rcode",
+				fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode),
+			)
 		}
 	}
 }
@@ -542,7 +574,10 @@ func (v *Validator) validatePortChannels(device *Device, prefix string) {
 
 		for j, member := range pc.Members {
 			if member == "" {
-				v.addError(fmt.Sprintf("%s.members[%d]", pcPrefix, j), "member interface name cannot be empty")
+				v.addError(
+					fmt.Sprintf("%s.members[%d]", pcPrefix, j),
+					"member interface name cannot be empty",
+				)
 			} else if existingPC, exists := memberInterfaces[member]; exists {
 				v.addError(fmt.Sprintf("%s.members[%d]", pcPrefix, j),
 					fmt.Sprintf("interface %s already belongs to port-channel %d", member, existingPC))
@@ -590,7 +625,10 @@ func (v *Validator) validateSingleTrunkPort(
 }
 
 // validateTrunkInterface validates trunk interface name and checks for duplicates.
-func (v *Validator) validateTrunkInterface(iface, trunkPrefix string, seenInterfaces map[string]bool) {
+func (v *Validator) validateTrunkInterface(
+	iface, trunkPrefix string,
+	seenInterfaces map[string]bool,
+) {
 	if iface == "" {
 		v.addError(trunkPrefix+".interface", "trunk interface name is required")
 
@@ -633,7 +671,12 @@ func (v *Validator) validateTrunkNativeVLAN(nativeVLAN int, trunkPrefix string) 
 	if !isValidVLANID(nativeVLAN) {
 		v.addError(
 			trunkPrefix+".native_vlan",
-			fmt.Sprintf("invalid native VLAN: %d (must be %d-%d)", nativeVLAN, minVLANID, maxVLANID),
+			fmt.Sprintf(
+				"invalid native VLAN: %d (must be %d-%d)",
+				nativeVLAN,
+				minVLANID,
+				maxVLANID,
+			),
 		)
 	}
 }

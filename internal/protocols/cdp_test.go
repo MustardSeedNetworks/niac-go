@@ -214,7 +214,11 @@ func TestBuildAddressesTLV(t *testing.T) {
 			// Verify TLV type
 			tlvType := binary.BigEndian.Uint16(tlv[0:2])
 			if tlvType != protocols.CDPTLVTypeAddresses {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.CDPTLVTypeAddresses, tlvType)
+				t.Errorf(
+					"Expected TLV type 0x%04X, got 0x%04X",
+					protocols.CDPTLVTypeAddresses,
+					tlvType,
+				)
 			}
 
 			// Verify number of addresses
@@ -292,7 +296,11 @@ func TestBuildPortIDTLVCDP(t *testing.T) {
 			// Verify TLV type
 			tlvType := binary.BigEndian.Uint16(tlv[0:2])
 			if tlvType != protocols.CDPTLVTypePortID {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.CDPTLVTypePortID, tlvType)
+				t.Errorf(
+					"Expected TLV type 0x%04X, got 0x%04X",
+					protocols.CDPTLVTypePortID,
+					tlvType,
+				)
 			}
 
 			// Verify port ID
@@ -316,10 +324,19 @@ func TestBuildCapabilitiesTLV(t *testing.T) {
 		expectedCapability uint32
 	}{
 		{"Router", "router", protocols.CDPCapRouter | protocols.CDPCapIGMPCapable},
+		{
+			"Layer 3 switch",
+			"layer3-switch",
+			protocols.CDPCapRouter | protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable,
+		},
 		{"Switch", "switch", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"AP", "ap", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"Access Point", "access-point", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
-		{"Access Point underscore", "access_point", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
+		{
+			"Access Point underscore",
+			"access_point",
+			protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable,
+		},
 		{"Wireless AP", "wireless-ap", protocols.CDPCapSwitch | protocols.CDPCapIGMPCapable},
 		{"Phone", "phone", protocols.CDPCapPhone | protocols.CDPCapHost},
 		{"VoIP Phone", "voip-phone", protocols.CDPCapPhone | protocols.CDPCapHost},
@@ -337,7 +354,11 @@ func TestBuildCapabilitiesTLV(t *testing.T) {
 			// Verify TLV type
 			tlvType := binary.BigEndian.Uint16(tlv[0:2])
 			if tlvType != protocols.CDPTLVTypeCapabilities {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.CDPTLVTypeCapabilities, tlvType)
+				t.Errorf(
+					"Expected TLV type 0x%04X, got 0x%04X",
+					protocols.CDPTLVTypeCapabilities,
+					tlvType,
+				)
 			}
 
 			// Verify TLV length
@@ -349,7 +370,11 @@ func TestBuildCapabilitiesTLV(t *testing.T) {
 			// Verify capabilities
 			capabilities := binary.BigEndian.Uint32(tlv[4:8])
 			if capabilities != tt.expectedCapability {
-				t.Errorf("Expected capabilities 0x%X, got 0x%X", tt.expectedCapability, capabilities)
+				t.Errorf(
+					"Expected capabilities 0x%X, got 0x%X",
+					tt.expectedCapability,
+					capabilities,
+				)
 			}
 		})
 	}
@@ -389,7 +414,11 @@ func TestBuildSoftwareVersionTLV(t *testing.T) {
 			// Verify TLV type
 			tlvType := binary.BigEndian.Uint16(tlv[0:2])
 			if tlvType != protocols.CDPTLVTypeSoftwareVersion {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.CDPTLVTypeSoftwareVersion, tlvType)
+				t.Errorf(
+					"Expected TLV type 0x%04X, got 0x%04X",
+					protocols.CDPTLVTypeSoftwareVersion,
+					tlvType,
+				)
 			}
 
 			// Verify software version
@@ -437,7 +466,11 @@ func TestBuildPlatformTLV(t *testing.T) {
 			// Verify TLV type
 			tlvType := binary.BigEndian.Uint16(tlv[0:2])
 			if tlvType != protocols.CDPTLVTypePlatform {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.CDPTLVTypePlatform, tlvType)
+				t.Errorf(
+					"Expected TLV type 0x%04X, got 0x%04X",
+					protocols.CDPTLVTypePlatform,
+					tlvType,
+				)
 			}
 
 			// Verify platform
@@ -533,7 +566,11 @@ func TestBuildCDPFrame(t *testing.T) {
 
 	protocolID := binary.BigEndian.Uint16(frame[6:8])
 	if protocolID != protocols.CDPProtocol {
-		t.Errorf("Invalid Protocol ID: expected 0x%04X, got 0x%04X", protocols.CDPProtocol, protocolID)
+		t.Errorf(
+			"Invalid Protocol ID: expected 0x%04X, got 0x%04X",
+			protocols.CDPProtocol,
+			protocolID,
+		)
 	}
 
 	// Verify CDP header

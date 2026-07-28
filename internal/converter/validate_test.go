@@ -125,6 +125,14 @@ func TestValidateConfig_InvalidDeviceType(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_Layer3SwitchAccepted(t *testing.T) {
+	d := validDevice()
+	d.Type = "layer3-switch"
+	if err := ValidateConfig(&Config{Devices: []Device{d}}); err != nil {
+		t.Fatalf("expected layer3-switch to be valid, got %v", err)
+	}
+}
+
 func TestValidateConfig_MultipleIPsAccepted(t *testing.T) {
 	d := validDevice()
 	d.IPs = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}

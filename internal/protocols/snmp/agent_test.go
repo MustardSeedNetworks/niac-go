@@ -155,8 +155,16 @@ func TestAgent_SystemIdentityMatchesDeviceRole(t *testing.T) {
 			objectID: "1.3.6.1.4.1.9.1.1641", services: 2,
 		},
 		{
+			name: "cisco layer 3 switch", deviceType: "layer3-switch", vendor: "cisco",
+			objectID: "1.3.6.1.4.1.9.1.1641", services: 6,
+		},
+		{
 			name: "cisco access point", deviceType: "access-point", vendor: "cisco",
 			objectID: "1.3.6.1.4.1.9.1.2877", services: 6,
+		},
+		{
+			name: "palo alto firewall", deviceType: "firewall", vendor: "palo alto",
+			objectID: "1.3.6.1.4.1.25461.2.3.57", services: 6,
 		},
 		{
 			name: "generic server", deviceType: "server", vendor: "dell",
@@ -177,6 +185,38 @@ func TestAgent_SystemIdentityMatchesDeviceRole(t *testing.T) {
 
 			assertMIBValue(t, agent, "1.3.6.1.2.1.1.2.0", tt.objectID)
 			assertMIBValue(t, agent, "1.3.6.1.2.1.1.7.0", tt.services)
+		})
+	}
+}
+
+func TestAgent_Layer3SwitchEnablesIPForwarding(t *testing.T) {
+	device := createTestDevice()
+	device.Type = "layer3-switch"
+	agent := NewAgent(device, 0)
+
+	assertMIBValue(t, agent, ipForwarding, ipForwardingEnabled)
+}
+
+func TestAgent_LLDPLocalCapabilitiesUseASN1BitsWireOrder(t *testing.T) {
+	tests := []struct {
+		deviceType string
+		want       []byte
+	}{
+		{deviceType: "router", want: []byte{0x28, 0x00}},
+		{deviceType: "switch", want: []byte{0x20, 0x00}},
+		{deviceType: "access-point", want: []byte{0x10, 0x00}},
+		{deviceType: "voip_phone", want: []byte{0x05, 0x00}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.deviceType, func(t *testing.T) {
+			device := createTestDevice()
+			device.Type = tt.deviceType
+			device.LLDPConfig = &config.LLDPConfig{Enabled: true}
+			agent := NewAgent(device, 0)
+
+			assertMIBValue(t, agent, lldpLocSysCapSupported, tt.want)
+			assertMIBValue(t, agent, lldpLocSysCapEnabled, tt.want)
 		})
 	}
 }

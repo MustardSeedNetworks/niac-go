@@ -21,9 +21,10 @@ const (
 
 // Device type constants for topology.
 const (
-	deviceTypeRouter = "router"
-	deviceTypeSwitch = "switch"
-	deviceTypeAP     = "ap"
+	deviceTypeRouter       = "router"
+	deviceTypeSwitch       = "switch"
+	deviceTypeLayer3Switch = "layer3-switch"
+	deviceTypeAP           = "ap"
 )
 
 // Graph describes a simple graph for visualization.
@@ -258,7 +259,12 @@ func formatVLANList(vlans []int) string {
 		return strings.Join(parts, ",")
 	}
 	// For longer lists, show count
-	return fmt.Sprintf("%d-%d (+%d more)", vlans[0], vlans[len(vlans)-1], len(vlans)-vlanRangeEndpoints)
+	return fmt.Sprintf(
+		"%d-%d (+%d more)",
+		vlans[0],
+		vlans[len(vlans)-1],
+		len(vlans)-vlanRangeEndpoints,
+	)
 }
 
 // ExportGraphML exports the topology in GraphML format (for yEd, Gephi).
@@ -273,8 +279,12 @@ func (t *Graph) ExportGraphML() string {
 	// Define keys (attributes)
 	sb.WriteString(`  <key id="d0" for="node" attr.name="type" attr.type="string"/>` + "\n")
 	sb.WriteString(`  <key id="d1" for="edge" attr.name="label" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d2" for="edge" attr.name="source_interface" attr.type="string"/>` + "\n")
-	sb.WriteString(`  <key id="d3" for="edge" attr.name="target_interface" attr.type="string"/>` + "\n")
+	sb.WriteString(
+		`  <key id="d2" for="edge" attr.name="source_interface" attr.type="string"/>` + "\n",
+	)
+	sb.WriteString(
+		`  <key id="d3" for="edge" attr.name="target_interface" attr.type="string"/>` + "\n",
+	)
 	sb.WriteString(`  <key id="d4" for="edge" attr.name="link_type" attr.type="string"/>` + "\n")
 	sb.WriteString(`  <key id="d5" for="edge" attr.name="vlans" attr.type="string"/>` + "\n")
 	sb.WriteString(`  <key id="d6" for="edge" attr.name="speed_mbps" attr.type="int"/>` + "\n")
@@ -300,10 +310,21 @@ func (t *Graph) ExportGraphML() string {
 			) + "\n",
 		)
 		sb.WriteString(fmt.Sprintf(`      <data key="d1">%s</data>`, escapeXML(link.Label)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d2">%s</data>`, escapeXML(link.SourceInterface)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d3">%s</data>`, escapeXML(link.TargetInterface)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d4">%s</data>`, escapeXML(link.LinkType)) + "\n")
-		sb.WriteString(fmt.Sprintf(`      <data key="d5">%s</data>`, escapeXML(formatVLANList(link.VLANs))) + "\n")
+		sb.WriteString(
+			fmt.Sprintf(`      <data key="d2">%s</data>`, escapeXML(link.SourceInterface)) + "\n",
+		)
+		sb.WriteString(
+			fmt.Sprintf(`      <data key="d3">%s</data>`, escapeXML(link.TargetInterface)) + "\n",
+		)
+		sb.WriteString(
+			fmt.Sprintf(`      <data key="d4">%s</data>`, escapeXML(link.LinkType)) + "\n",
+		)
+		sb.WriteString(
+			fmt.Sprintf(
+				`      <data key="d5">%s</data>`,
+				escapeXML(formatVLANList(link.VLANs)),
+			) + "\n",
+		)
 
 		if link.Speed > 0 {
 			sb.WriteString(fmt.Sprintf(`      <data key="d6">%d</data>`, link.Speed) + "\n")
@@ -332,7 +353,7 @@ func (t *Graph) ExportDOT() string {
 		switch node.Type {
 		case deviceTypeRouter:
 			shape = "ellipse"
-		case deviceTypeSwitch:
+		case deviceTypeSwitch, deviceTypeLayer3Switch:
 			shape = "box"
 		case deviceTypeAP:
 			shape = "diamond"
@@ -367,7 +388,11 @@ func (t *Graph) ExportDOT() string {
 			color = "red"
 		}
 
-		label := fmt.Sprintf("%s-%s", escapeDOT(link.SourceInterface), escapeDOT(link.TargetInterface))
+		label := fmt.Sprintf(
+			"%s-%s",
+			escapeDOT(link.SourceInterface),
+			escapeDOT(link.TargetInterface),
+		)
 		if len(link.VLANs) > 0 {
 			label += "\\nVLANs: " + escapeDOT(formatVLANList(link.VLANs))
 		}
