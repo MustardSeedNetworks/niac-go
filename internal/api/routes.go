@@ -33,6 +33,7 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	s.registerWriteProtectedRoutes(mux)
 	s.registerReadOnlyRoutes(mux)
 	s.registerLibraryRoutes(mux)
+	s.registerScenarioRoutes(mux)
 	s.registerWalkRoutes(mux)
 	s.registerPcapRoutes(mux)
 	s.registerSSERoutes(mux)
@@ -63,6 +64,25 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 			s.methodGate([]string{http.MethodGet, http.MethodHead}, s.serveSPA()),
 		),
 	))
+}
+
+func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
+	s.registerAll(mux, []apiRoute{
+		{
+			path:    "/api/v1/scenario/profiles",
+			handler: s.handleScenarioProfiles,
+			methods: []string{http.MethodGet},
+			feature: "config_templates",
+		},
+		{
+			path:    "/api/v1/scenario/generate",
+			handler: s.handleScenarioGenerate,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+			feature: "config_templates",
+		},
+	})
 }
 
 func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {

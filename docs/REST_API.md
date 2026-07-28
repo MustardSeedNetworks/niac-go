@@ -36,6 +36,8 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
+| `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
+| `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
 | `GET` | `/api/v1/version` | Version information |
 | `GET` | `/api/v1/errors` | Available error types and active error injections |
 | `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
@@ -47,6 +49,19 @@ Include `Authorization: Bearer <token>` or append `?token=<token>` when authenti
 The statistics stream publishes once per second while a simulation is active
 and at least one client is subscribed. Each `stats` event carries the same
 authoritative snapshot shape as `GET /api/v1/stats`.
+
+### Scenario generation
+
+`GET /api/v1/scenario/profiles` returns the role profiles used by the visual
+authoring flow. `POST /api/v1/scenario/generate` accepts sites, infrastructure
+counts, endpoint repeat counts, a domain, an SNMP community, and an attachment
+name. It returns portable YAML plus a manifest containing device, network, and
+link counts and deterministic SHA-256 fingerprints.
+
+Generation is side-effect free: it does not replace the active configuration,
+start a simulation, or save a draft. The returned `content` can be reviewed and
+then stored through the draft API. The generate route requires a read-write
+token, the `config_templates` entitlement, and a CSRF token.
 
 ## Web UI
 
