@@ -160,8 +160,9 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 			[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: err.Error()}})
 	case writeManagedConfigPathError(w, r, err):
 	default:
-		// SECURITY: Keep internal start failures in the daemon log, not the response.
-		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error", err)
+		// The error may include configuration-derived secrets. Record a stable
+		// failure code without writing the error text to logs or the response.
+		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error_code", "simulation_start_failed")
 		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
 			"Failed to start simulation", nil)
 	}

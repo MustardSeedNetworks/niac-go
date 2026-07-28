@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -185,6 +187,33 @@ func TestHandleSimulationStartRejectsMissingSSHPasswordAsRuntimeRequirement(t *t
 	if response.Error != "runtime_requirements_unmet" || len(response.Details) != 1 ||
 		response.Details[0].Field != "ssh.passwordEnv" {
 		t.Fatalf("response = %#v", response)
+	}
+}
+
+func TestHandleSimulationStartDoesNotLogSensitiveErrorText(t *testing.T) {
+	const secret = "do-not-log-this-password"
+	var logs bytes.Buffer
+	server := &Server{
+		daemon:  &preflightDaemon{startErr: fmt.Errorf("startup failed with password %s", secret)},
+		license: freshManager(t),
+		logger:  slog.New(slog.NewTextHandler(&logs, nil)),
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+	if strings.Contains(logs.String(), secret) {
+		t.Fatalf("log contains sensitive error text: %s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "error_code=simulation_start_failed") {
+		t.Fatalf("log does not contain the safe failure code: %s", logs.String())
 	}
 }
 
