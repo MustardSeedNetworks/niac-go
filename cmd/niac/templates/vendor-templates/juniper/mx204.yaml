@@ -12,29 +12,34 @@ devices:
       - "10.0.31.1"
       - "203.0.113.10"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "et-0/0/0"
+        type: ethernet
+        mtu: 1500
+        speed: 100000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "mx204-pe-01"
       system_description: "Juniper Networks, Inc. mx204, version 22.4R2, kernel JUNOS 22.4R2"
-      port_id: "et-0/0/0"
-      capabilities: ["router"]
+      port_description: "et-0/0/0"
       ttl: 120
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.2636.1.1.1.2.57"  # jnxProductLineMX204
-      sys_descr: "Juniper Networks, Inc. mx204, version 22.4R2"
-      sys_contact: "noc@example.com"
-      sys_location: "Metro POP 03"
+      sysdescr: "Juniper Networks, Inc. mx204, version 22.4R2"
+      syscontact: "noc@example.com"
+      syslocation: "Metro POP 03"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.2636.1.1.1.2.57"
       vendor: "juniper"
       model: "MX204"
       os: "Junos"

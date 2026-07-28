@@ -11,39 +11,41 @@ devices:
     ips:
       - "10.0.50.10"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "GigabitEthernet0"
+        type: ethernet
+        mtu: 1500
+        speed: 5000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "iw9165e-ap-01"
       system_description: "Cisco Catalyst IW-9165E Wi-Fi 6E Access Point, IOS XE 17.13.1"
-      port_id: "GigabitEthernet0"
-      capabilities: ["wlan_ap"]
+      port_description: "GigabitEthernet0"
       ttl: 120
 
     cdp:
       enabled: true
-      device_id: "iw9165e-ap-01.local"
       platform: "cisco IW-9165E-B-K9"
       software_version: "Cisco IOS XE Software, Version 17.13.01"
-      capabilities: ["Trans-Bridge", "Source-Route-Bridge"]
       port_id: "GigabitEthernet0"
-      duplex: "full"
-      ttl: 180
+      holdtime: 180
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.9.1.3120"  # IW-9165E
-      sys_descr: "Cisco AP Software, ap1g8, Version 17.13.1"
-      sys_contact: "wifi@example.com"
-      sys_location: "Outdoor Yard A"
+      sysdescr: "Cisco AP Software, ap1g8, Version 17.13.1"
+      syscontact: "wifi@example.com"
+      syslocation: "Outdoor Yard A"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.9.1.3120"
       vendor: "cisco"
       model: "IW-9165E-B-K9"
       os: "IOS-XE-AP"

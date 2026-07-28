@@ -11,33 +11,38 @@ devices:
     ips:
       - "10.0.12.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "1/1/1"
+        type: ethernet
+        mtu: 1500
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "cx6300m-48g-01"
       system_description: "Aruba JL663A 6300M 48G CL4 PoE 4SFP56 Swch, AOS-CX 10.13.1000"
-      port_id: "1/1/1"
-      capabilities: ["bridge"]
+      port_description: "1/1/1"
       ttl: 120
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.47196.4.1.1.3.123"  # arubaCX6300M48G
-      sys_descr: "Aruba 6300M 48G PoE 4SFP56 Switch, AOS-CX 10.13.1000"
-      sys_contact: "noc@example.com"
-      sys_location: "Campus Building C"
+      sysdescr: "Aruba 6300M 48G PoE 4SFP56 Switch, AOS-CX 10.13.1000"
+      syscontact: "noc@example.com"
+      syslocation: "Campus Building C"
 
     stp:
       enabled: true
       bridge_priority: 32768
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.47196.4.1.1.3.123"
       vendor: "aruba"
       model: "JL663A 6300M-48G"
       os: "AOS-CX"

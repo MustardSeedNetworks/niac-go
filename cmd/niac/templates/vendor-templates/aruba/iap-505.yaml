@@ -11,29 +11,34 @@ devices:
     ips:
       - "10.0.52.10"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "eth0"
+        type: ethernet
+        mtu: 1500
+        speed: 2500
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "iap-505-01"
       system_description: "Aruba AP-505 (RW), ArubaOS 8.11.1.0"
-      port_id: "eth0"
-      capabilities: ["wlan_ap"]
+      port_description: "eth0"
       ttl: 120
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.14823.1.2.96"  # ArubaAP505
-      sys_descr: "Aruba AP-505, ArubaOS 8.11.1.0"
-      sys_contact: "wifi@example.com"
-      sys_location: "Floor 2 SE"
+      sysdescr: "Aruba AP-505, ArubaOS 8.11.1.0"
+      syscontact: "wifi@example.com"
+      syslocation: "Floor 2 SE"
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.14823.1.2.96"
       vendor: "aruba"
       model: "AP-505"
       os: "ArubaOS"

@@ -11,18 +11,23 @@ devices:
     ips:
       - "10.0.13.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 64
 
+    interfaces:
+      - name: "1"
+        type: ethernet
+        mtu: 1500
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "x440-g2-48t-01"
       system_description: "ExtremeXOS (X440G2-48t) version 31.7.1.4"
-      port_id: "1"
-      capabilities: ["bridge"]
+      port_description: "1"
       ttl: 120
 
     # Extreme's proprietary discovery protocol — disabled by default
@@ -32,19 +37,19 @@ devices:
       display_string: "x440-g2-48t-01"
       version_string: "ExtremeXOS 31.7.1.4"
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.1916.2.140"  # extremeSummitX440G2-48t
-      sys_descr: "ExtremeXOS (X440G2-48t) version 31.7.1.4"
-      sys_contact: "noc@example.com"
-      sys_location: "Campus Edge"
+      sysdescr: "ExtremeXOS (X440G2-48t) version 31.7.1.4"
+      syscontact: "noc@example.com"
+      syslocation: "Campus Edge"
 
     stp:
       enabled: true
       bridge_priority: 32768
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.1916.2.140"
       vendor: "extreme"
       model: "X440-G2-48t"
       os: "EXOS"

@@ -11,43 +11,45 @@ devices:
     ips:
       - "10.0.10.1"
 
-    arp:
-      enabled: true
     icmp:
       enabled: true
       ttl: 255
 
+    interfaces:
+      - name: "GigabitEthernet1/0/1"
+        type: ethernet
+        mtu: 1500
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+
     lldp:
       enabled: true
-      system_name: "cat9300-48p-01"
       system_description: "Cisco IOS XE Software, C9300-48P, Version 17.9.3"
-      port_id: "GigabitEthernet1/0/1"
-      capabilities: ["bridge"]
+      port_description: "GigabitEthernet1/0/1"
       ttl: 120
 
     cdp:
       enabled: true
-      device_id: "cat9300-48p-01.local"
       platform: "cisco WS-C9300-48P"
       software_version: "Cisco IOS XE Software, Version 17.09.03"
-      capabilities: ["Switch", "IGMP"]
       port_id: "GigabitEthernet1/0/1"
-      duplex: "full"
-      ttl: 180
+      holdtime: 180
 
-    snmp:
+    snmp_agent:
       enabled: true
       community: "public"
-      sys_object_id: "1.3.6.1.4.1.9.1.2697"  # cevChassisCat9300L48P
-      sys_descr: "Cisco IOS Software, Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.9.3"
-      sys_contact: "noc@example.com"
-      sys_location: "Campus Building A"
+      sysdescr: "Cisco IOS Software, Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.9.3"
+      syscontact: "noc@example.com"
+      syslocation: "Campus Building A"
 
     stp:
       enabled: true
       bridge_priority: 32768
 
     properties:
+      sysObjectID: "1.3.6.1.4.1.9.1.2697"
       vendor: "cisco"
       model: "C9300-48P"
       os: "IOS-XE"
