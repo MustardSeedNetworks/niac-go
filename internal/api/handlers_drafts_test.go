@@ -1,0 +1,238 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+)
+
+func attachDraftLibrary(t *testing.T, server *Server) *library.Library {
+	t.Helper()
+	lib, err := library.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("library.Open() error = %v", err)
+	}
+	server.library = lib
+	return lib
+}
+
+func draftRequest(method, target, body, revision string) *http.Request {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	if revision != "" {
+		req.Header.Set("If-Match", quoteDraftETag(revision))
+	}
+	return req
+}
+
+func decodeDraftResponse(t *testing.T, rec *httptest.ResponseRecorder) library.Draft {
+	t.Helper()
+	var draft library.Draft
+	if err := json.NewDecoder(rec.Body).Decode(&draft); err != nil {
+		t.Fatalf("decode draft response: %v; body=%s", err, rec.Body.String())
+	}
+	return draft
+}
+
+func TestDraftHandlersLifecycleAndRuntimeIsolation(t *testing.T) {
+	server, configPath := newTestServer(t)
+	attachDraftLibrary(t, server)
+	before, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read active config: %v", err)
+	}
+	applied := false
+	server.cfg.ApplyConfig = func(_ *config.Config) error {
+		applied = true
+		return nil
+	}
+
+	createBody := fmt.Sprintf(`{"name":"branch-office","content":%s}`, strconvJSON(baseConfigYAML))
+	createRec := httptest.NewRecorder()
+	server.handleLibraryDrafts(createRec, draftRequest(http.MethodPost, "/api/v1/library/drafts", createBody, ""))
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, body=%s", createRec.Code, createRec.Body.String())
+	}
+	created := decodeDraftResponse(t, createRec)
+	if got := createRec.Header().Get("ETag"); got != quoteDraftETag(created.Revision) {
+		t.Fatalf("create ETag = %q, want %q", got, quoteDraftETag(created.Revision))
+	}
+	listRec := httptest.NewRecorder()
+	server.handleLibraryDrafts(listRec, draftRequest(http.MethodGet, "/api/v1/library/drafts", "", ""))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, body=%s", listRec.Code, listRec.Body.String())
+	}
+	var entries []library.DraftEntry
+	if decodeErr := json.NewDecoder(listRec.Body).Decode(&entries); decodeErr != nil {
+		t.Fatalf("decode list response: %v", decodeErr)
+	}
+	if len(entries) != 1 || entries[0].Revision != created.Revision {
+		t.Fatalf("list response = %+v", entries)
+	}
+
+	missingRevisionRec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(missingRevisionRec, draftRequest(
+		http.MethodPut,
+		"/api/v1/library/drafts/branch-office",
+		fmt.Sprintf(`{"content":%s}`, strconvJSON(updatedConfigYAML)),
+		"",
+	))
+	if missingRevisionRec.Code != http.StatusPreconditionRequired {
+		t.Fatalf("replace without If-Match status = %d, want 428", missingRevisionRec.Code)
+	}
+
+	staleRec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(staleRec, draftRequest(
+		http.MethodPut,
+		"/api/v1/library/drafts/branch-office",
+		fmt.Sprintf(`{"content":%s}`, strconvJSON(updatedConfigYAML)),
+		"stale",
+	))
+	if staleRec.Code != http.StatusPreconditionFailed {
+		t.Fatalf("stale replace status = %d, want 412", staleRec.Code)
+	}
+
+	replaceRec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(replaceRec, draftRequest(
+		http.MethodPut,
+		"/api/v1/library/drafts/branch-office",
+		fmt.Sprintf(`{"content":%s}`, strconvJSON(updatedConfigYAML)),
+		created.Revision,
+	))
+	if replaceRec.Code != http.StatusOK {
+		t.Fatalf("replace status = %d, body=%s", replaceRec.Code, replaceRec.Body.String())
+	}
+	replaced := decodeDraftResponse(t, replaceRec)
+	if replaced.Revision == created.Revision {
+		t.Fatal("replace did not advance revision")
+	}
+
+	readRec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(readRec, draftRequest(
+		http.MethodGet, "/api/v1/library/drafts/branch-office", "", "",
+	))
+	if readRec.Code != http.StatusOK {
+		t.Fatalf("read status = %d, body=%s", readRec.Code, readRec.Body.String())
+	}
+	if read := decodeDraftResponse(t, readRec); read.Revision != replaced.Revision {
+		t.Fatalf("read revision = %q, want %q", read.Revision, replaced.Revision)
+	}
+
+	deleteRec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(deleteRec, draftRequest(
+		http.MethodDelete, "/api/v1/library/drafts/branch-office", "", replaced.Revision,
+	))
+	if deleteRec.Code != http.StatusNoContent {
+		t.Fatalf("delete status = %d, body=%s", deleteRec.Code, deleteRec.Body.String())
+	}
+
+	after, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read active config after draft operations: %v", err)
+	}
+	if applied || string(after) != string(before) || server.configPath() != configPath {
+		t.Fatal("draft operations changed or applied the running configuration")
+	}
+}
+
+func TestDraftCreateValidatesConfigAndEntitlementsBeforePersistence(t *testing.T) {
+	server, _ := newTestServer(t)
+	lib := attachDraftLibrary(t, server)
+
+	invalidRec := httptest.NewRecorder()
+	server.handleLibraryDrafts(invalidRec, draftRequest(
+		http.MethodPost,
+		"/api/v1/library/drafts",
+		`{"name":"invalid","content":"devices: ["}`,
+		"",
+	))
+	if invalidRec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid config status = %d, want 400", invalidRec.Code)
+	}
+	if _, err := lib.ReadDraft("invalid"); !errors.Is(err, library.ErrNotFound) {
+		t.Fatalf("invalid config persisted, ReadDraft() error = %v", err)
+	}
+
+	var oversized strings.Builder
+	oversized.WriteString("devices:\n")
+	const deviceYAML = "  - name: device-%d\n" +
+		"    mac: \"02:00:00:00:00:%02x\"\n" +
+		"    ips: [\"192.0.2.%d\"]\n"
+	for index := range FreeTierDeviceCount + 1 {
+		fmt.Fprintf(&oversized, deviceYAML, index, index, index+1)
+	}
+	licensedRec := httptest.NewRecorder()
+	server.handleLibraryDrafts(licensedRec, draftRequest(
+		http.MethodPost,
+		"/api/v1/library/drafts",
+		fmt.Sprintf(`{"name":"too-large","content":%s}`, strconvJSON(oversized.String())),
+		"",
+	))
+	if licensedRec.Code != http.StatusPaymentRequired {
+		t.Fatalf("unlicensed config status = %d, want 402; body=%s", licensedRec.Code, licensedRec.Body.String())
+	}
+	if _, err := lib.ReadDraft("too-large"); !errors.Is(err, library.ErrNotFound) {
+		t.Fatalf("unlicensed config persisted, ReadDraft() error = %v", err)
+	}
+}
+
+func TestDraftRoutesEnforceAuthScopeCSRFAndWriteRatePolicy(t *testing.T) {
+	server, _, rwToken := newTestServerWithAuth(t)
+	attachDraftLibrary(t, server)
+	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
+	mux := http.NewServeMux()
+	server.registerAPIRoutes(mux)
+	body := fmt.Sprintf(`{"name":"secure","content":%s}`, strconvJSON(baseConfigYAML))
+
+	unauthRec := httptest.NewRecorder()
+	mux.ServeHTTP(unauthRec, draftRequest(http.MethodPost, "/api/v1/library/drafts", body, ""))
+	if unauthRec.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated status = %d, want 401", unauthRec.Code)
+	}
+
+	const roToken = "read-only-draft-token"
+	server.SetTokens([]tokenstore.ScopedToken{
+		{Value: roToken, Scope: tokenstore.ScopeReadOnly},
+		{Value: rwToken, Scope: tokenstore.ScopeReadWrite},
+	})
+	readOnlyReq := draftRequest(http.MethodPost, "/api/v1/library/drafts", body, "")
+	readOnlyReq.Header.Set("Authorization", "Bearer "+roToken)
+	readOnlyReq.Header.Set("X-Csrf-Token", testCSRFToken(t, server, roToken))
+	readOnlyRec := httptest.NewRecorder()
+	mux.ServeHTTP(readOnlyRec, readOnlyReq)
+	if readOnlyRec.Code != http.StatusForbidden {
+		t.Fatalf("read-only mutation status = %d, want 403", readOnlyRec.Code)
+	}
+
+	missingCSRFReq := draftRequest(http.MethodPost, "/api/v1/library/drafts", body, "")
+	missingCSRFReq.Header.Set("Authorization", "Bearer "+rwToken)
+	missingCSRFRec := httptest.NewRecorder()
+	mux.ServeHTTP(missingCSRFRec, missingCSRFReq)
+	if missingCSRFRec.Code != http.StatusForbidden {
+		t.Fatalf("missing CSRF status = %d, want 403", missingCSRFRec.Code)
+	}
+
+	validReq := draftRequest(http.MethodPost, "/api/v1/library/drafts", body, "")
+	validReq.Header.Set("Authorization", "Bearer "+rwToken)
+	validReq.Header.Set("X-Csrf-Token", testCSRFToken(t, server, rwToken))
+	validRec := httptest.NewRecorder()
+	mux.ServeHTTP(validRec, validReq)
+	if validRec.Code != http.StatusCreated {
+		t.Fatalf("authorized status = %d, want 201; body=%s", validRec.Code, validRec.Body.String())
+	}
+
+	policy := fetchRouteManifest(t)["/api/v1/library/drafts"]
+	if !policy.CSRF || !policy.RateLimited || policy.Admin {
+		t.Fatalf("draft route policy = %+v, want csrf+rateLimited without admin", policy)
+	}
+}
