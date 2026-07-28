@@ -166,6 +166,20 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
 		{
+			path:    "/api/v1/library/drafts",
+			handler: s.handleLibraryDrafts,
+			methods: []string{http.MethodGet, http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{
+			path:    "/api/v1/library/drafts/",
+			handler: s.handleLibraryDraftByName,
+			methods: []string{http.MethodGet, http.MethodPut, http.MethodDelete},
+			rl:      rlWrite,
+			csrf:    true,
+		},
+		{
 			path:    "/api/v1/library/networks",
 			handler: s.handleLibraryNetworks,
 			methods: []string{http.MethodGet, http.MethodPost},
