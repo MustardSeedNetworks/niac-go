@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
@@ -43,15 +45,16 @@ type Mutation struct {
 }
 
 type DeviceMutation struct {
-	Name       string            `json:"name"`
-	Type       string            `json:"type"`
-	Vendor     string            `json:"vendor,omitempty"`
-	MAC        string            `json:"mac,omitempty"`
-	MACSuffix  uint32            `json:"mac_suffix,omitempty"`
-	IPs        []string          `json:"ips,omitempty"`
-	VLAN       int               `json:"vlan,omitempty"`
-	Interfaces []Interface       `json:"interfaces,omitempty"`
-	Properties map[string]string `json:"properties,omitempty"`
+	Name        string            `json:"name"`
+	Type        string            `json:"type"`
+	Vendor      string            `json:"vendor,omitempty"`
+	MAC         string            `json:"mac,omitempty"`
+	MACSuffix   uint32            `json:"mac_suffix,omitempty"`
+	SysObjectID string            `json:"sys_object_id,omitempty"`
+	IPs         []string          `json:"ips,omitempty"`
+	VLAN        int               `json:"vlan,omitempty"`
+	Interfaces  []Interface       `json:"interfaces,omitempty"`
+	Properties  map[string]string `json:"properties,omitempty"`
 }
 
 type Interface struct {
@@ -101,6 +104,24 @@ type PositionMutation struct {
 func IsInvalid(err error) bool  { return errors.Is(err, errInvalid) }
 func IsNotFound(err error) bool { return errors.Is(err, errNotFound) }
 func IsConflict(err error) bool { return errors.Is(err, errConflict) }
+
+// ValidateSource rejects source forms that canonical runtime serialization cannot preserve.
+func ValidateSource(content string) error {
+	var source struct {
+		Segments []struct {
+			Config string `yaml:"config"`
+		} `yaml:"segments"`
+	}
+	if err := yaml.Unmarshal([]byte(content), &source); err != nil {
+		return invalid("draft YAML is invalid")
+	}
+	for _, segment := range source.Segments {
+		if strings.TrimSpace(segment.Config) != "" {
+			return invalid("visual mutations cannot preserve config-backed segments")
+		}
+	}
+	return nil
+}
 
 func Apply(cfg *config.Config, mutation Mutation) error {
 	if cfg == nil {
@@ -195,10 +216,17 @@ func addDevice(cfg *config.Config, input DeviceMutation) error {
 			OutUtilization: iface.OutUtilization, VLANs: slices.Clone(iface.VLANs),
 		}
 	}
+	properties := cloneMap(input.Properties)
+	if input.SysObjectID != "" {
+		if properties == nil {
+			properties = make(map[string]string)
+		}
+		properties["sysObjectID"] = input.SysObjectID
+	}
 	cfg.Devices = append(cfg.Devices, config.Device{
 		Name: input.Name, Type: input.Type, MACAddress: mac, MACVendor: input.Vendor, MACSuffix: input.MACSuffix,
 		IPAddresses: ips, VLAN: input.VLAN, Interfaces: interfaces,
-		Properties: cloneMap(input.Properties),
+		Properties: properties,
 	})
 	return nil
 }
@@ -208,8 +236,10 @@ func connect(cfg *config.Config, link LinkMutation) error {
 	if err != nil {
 		return err
 	}
-	if trunkIndex(left.device, left.endpoint.Interface) >= 0 ||
-		trunkIndex(right.device, right.endpoint.Interface) >= 0 {
+	if deviceSegment(cfg, left.endpoint.Device) != deviceSegment(cfg, right.endpoint.Device) {
+		return invalid("a link cannot cross isolated segments")
+	}
+	if endpointOccupied(cfg, left.endpoint) || endpointOccupied(cfg, right.endpoint) {
 		return conflict("one or both interfaces are already connected")
 	}
 	if validationErr := validateLinkProperties(link.Properties); validationErr != nil {
@@ -244,6 +274,12 @@ func updateLink(cfg *config.Config, link LinkMutation) error {
 	leftIndex, rightIndex := reciprocalIndices(left, right)
 	if leftIndex < 0 || rightIndex < 0 {
 		return conflict("reciprocal link does not exist")
+	}
+	if !sameTrunkProperties(
+		&left.device.TrunkPorts[leftIndex],
+		&right.device.TrunkPorts[rightIndex],
+	) {
+		return conflict("asymmetric link properties require YAML editing")
 	}
 	if validationErr := validateLinkProperties(link.Properties); validationErr != nil {
 		return validationErr
@@ -361,18 +397,33 @@ func setTrunkProperties(trunk *config.TrunkPort, properties LinkProperties) {
 	trunk.FDBOnly = properties.FDBOnly
 }
 
+func sameTrunkProperties(left, right *config.TrunkPort) bool {
+	leftVLANs := slices.Clone(left.VLANs)
+	rightVLANs := slices.Clone(right.VLANs)
+	slices.Sort(leftVLANs)
+	slices.Sort(rightVLANs)
+	return slices.Equal(leftVLANs, rightVLANs) && left.NativeVLAN == right.NativeVLAN &&
+		left.FDBOnly == right.FDBOnly
+}
+
 func reciprocalIndices(left, right resolvedEndpoint) (int, int) {
 	return exactTrunkIndex(left.device, left.endpoint.Interface, right.endpoint),
 		exactTrunkIndex(right.device, right.endpoint.Interface, left.endpoint)
 }
 
-func trunkIndex(device *config.Device, iface string) int {
-	for index := range device.TrunkPorts {
-		if device.TrunkPorts[index].Interface == iface {
-			return index
+func endpointOccupied(cfg *config.Config, endpoint Endpoint) bool {
+	for _, segment := range cfg.NormalizedSegments() {
+		for deviceIndex := range segment.Devices {
+			device := &segment.Devices[deviceIndex]
+			for _, trunk := range device.TrunkPorts {
+				if (device.Name == endpoint.Device && trunk.Interface == endpoint.Interface) ||
+					(trunk.RemoteDevice == endpoint.Device && trunk.RemoteInterface == endpoint.Interface) {
+					return true
+				}
+			}
 		}
 	}
-	return -1
+	return false
 }
 
 func exactTrunkIndex(device *config.Device, iface string, remote Endpoint) int {
@@ -408,6 +459,20 @@ func findDevice(cfg *config.Config, name string) *config.Device {
 		}
 	}
 	return nil
+}
+
+func deviceSegment(cfg *config.Config, name string) int {
+	if len(cfg.Segments) == 0 {
+		return 0
+	}
+	for segmentIndex := range cfg.Segments {
+		for deviceIndex := range cfg.Segments[segmentIndex].Devices {
+			if cfg.Segments[segmentIndex].Devices[deviceIndex].Name == name {
+				return segmentIndex
+			}
+		}
+	}
+	return -1
 }
 
 func cloneMap(source map[string]string) map[string]string {

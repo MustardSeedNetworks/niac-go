@@ -438,7 +438,10 @@
     "devices": {
       "help": "Edit the saved draft. Changes here do not affect the running simulation.",
       "saveLabel": "Save draft",
-      "savingLabel": "Saving…"
+      "savingLabel": "Saving…",
+      "viewLabel": "Draft editing view",
+      "visualLabel": "Visual topology",
+      "yamlLabel": "YAML"
     },
     "finish": {
       "gotoRuntime": "Go to Simulation",
@@ -510,7 +513,29 @@
       "startEmpty": "Start empty",
       "startingLabel": "Preparing draft…"
     },
-    "title": "New Simulation"
+    "title": "New Simulation",
+    "topology": {
+      "addDevice": "Add device",
+      "cancel": "Cancel",
+      "configBackedYamlOnly": "This draft references segment files, so it must be edited in YAML to preserve those references.",
+      "connectHint": "Drag between device handles to connect them, then choose one free port at each endpoint.",
+      "crossSegmentError": "Devices in different VLAN segments cannot be physically linked.",
+      "deviceName": "Device name",
+      "disconnect": "Disconnect",
+      "fdbOnly": "Learn the peer in the forwarding table without advertising it as a discovery neighbor",
+      "help": "Build the saved draft visually. Every change is revision checked and cannot affect the running simulation.",
+      "interface": "interface",
+      "interfaceCount": "Ethernet port count",
+      "linkTitle": "Edit physical link",
+      "nativeVlan": "Native VLAN",
+      "profile": "Device profile",
+      "profileLoadError": "Device profiles could not be loaded.",
+      "retry": "Retry",
+      "saveLink": "Save link",
+      "selectInterface": "Select a free interface",
+      "speed": "Port speed (Mbps)",
+      "vlans": "Allowed VLANs"
+    }
   },
   "packets": {
     "bpfFilter": {

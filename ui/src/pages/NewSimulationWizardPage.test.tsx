@@ -106,6 +106,16 @@ vi.mock('../components/config/YamlEditor', () => ({
   ),
 }));
 
+vi.mock('../components/wizard/DraftTopologyComposer', () => ({
+  DraftTopologyComposer: ({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) => (
+    <div data-testid="wizard-topology-composer">
+      <button type="button" onClick={() => onBusyChange(true)}>
+        Begin topology mutation
+      </button>
+    </div>
+  ),
+}));
+
 const wrapper = ({ children }: { children: ReactNode }) => (
   <MemoryRouter>
     <AppProvider>{children}</AppProvider>
@@ -114,6 +124,11 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 function renderWizard() {
   return render(<NewSimulationWizardPage />, { wrapper });
+}
+
+async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('tab', { name: 'YAML' }));
+  await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
 }
 
 beforeEach(() => {
@@ -199,7 +214,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
     expect(createScenarioDraft).toHaveBeenCalledWith(
       expect.stringMatching(/^scenario-/),
       emptyDraftContent,
@@ -225,7 +240,21 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-step-protocols')).toHaveAttribute('data-status', 'active');
 
     await user.click(screen.getByTestId('wizard-back-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
+  });
+
+  it('blocks navigation while a visual topology mutation is pending', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await user.click(await screen.findByRole('button', { name: 'Begin topology mutation' }));
+
+    expect(screen.getByTestId('wizard-next-button')).toBeDisabled();
+    expect(screen.getByTestId('wizard-back-button')).toBeDisabled();
   });
 
   it('generates a validated fleet and saves it as an isolated draft', async () => {
@@ -261,7 +290,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
 
     fireEvent.change(screen.getByTestId('wizard-draft-editor'), {
       target: {
@@ -274,7 +303,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(await screen.findByTestId('wizard-interface-select')).toHaveValue('lo0');
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
     expect(createScenarioDraft).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('wizard-draft-editor')).toHaveTextContent('edge-1');
   });
@@ -287,7 +316,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
     await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-next-button'));
@@ -321,7 +350,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
     await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-next-button'));
@@ -340,7 +369,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
 
     await user.click(screen.getByTestId('wizard-next-button'));
-    await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
+    await openYamlEditor(user);
     expect(createScenarioDraft).toHaveBeenCalledTimes(1);
     await user.click(screen.getByTestId('wizard-next-button'));
     await user.click(screen.getByTestId('wizard-next-button'));

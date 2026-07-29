@@ -69,6 +69,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Capability | Canonical location | Notes |
 | --- | --- | --- |
 | Guided simulation flow | `ui/src/pages/NewSimulationWizardPage.tsx` | Extend instead of creating another lab builder |
+| Draft topology composer | `ui/src/components/wizard/DraftTopologyComposer.tsx` + `draft-topology.ts` | Visual-first, revision-safe device/link/position editing; YAML remains the advanced source view |
 | Physical binding preflight | `ui/src/components/wizard/PreflightStep.tsx` | Review direct/access attachment and gate start on server diagnostics |
 | Config source picker | `ui/src/components/simulation/ConfigPicker.tsx` | Templates, saved networks, and uploads |
 | API request boundary | `ui/src/api/client.ts` | Add typed sibling functions here |
