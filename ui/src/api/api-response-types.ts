@@ -267,6 +267,10 @@ export interface TopologyLink {
   targetInterface?: string;
   vlans?: number[];
   nativeVlan?: number;
+  /** True when the authored link exposes only forwarding-database neighbors. */
+  fdbOnly?: boolean;
+  /** True when both endpoints declare this authored link and it is safe to mutate. */
+  reciprocal?: boolean;
   /** Speed in Mbps as a string ("100", "1000", "10000", "25000", ...).
    *  When the device has an Interface declaration with a Speed field,
    *  the daemon includes it; otherwise omitted and the edge falls
@@ -274,12 +278,7 @@ export interface TopologyLink {
   speed?: string;
   duplex?: string;
   status?: string;
-  /** Link utilization, 0–100. Source = the daemon's json:"utilizationPercent"
-   *  on api.TopologyLink; the request layer's snake→camel converter rewrites
-   *  the wire field to utilizationPercent. Today the daemon emits 0 for
-   *  every link (counter wiring is a separate work item); when live counters
-   *  land, the topology page already styles edges based on this value
-   *  (thickness + amber/red tint at high utilisation). */
+  /** Link utilization, 0–100, projected from the authored interface. */
   utilizationPercent?: number;
 }
 

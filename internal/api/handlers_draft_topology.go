@@ -31,6 +31,10 @@ func (s *Server) handleLibraryDraftTopologyMutation(
 	if !decodeJSONStrict(w, r, &mutation, MaxRequestBodySize) {
 		return
 	}
+	if sourceErr := drafttopology.ValidateSource(draft.Content); sourceErr != nil {
+		writeDraftTopologyError(w, r, sourceErr)
+		return
+	}
 	cfg, err := config.LoadYAMLBytes([]byte(draft.Content))
 	if err != nil {
 		s.logger.ErrorContext(

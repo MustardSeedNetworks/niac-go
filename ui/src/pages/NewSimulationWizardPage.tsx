@@ -241,6 +241,7 @@ export const NewSimulationWizardPage: FC = () => {
         {currentStep === 'devices' && draft && (
           <DevicesStep
             draftName={draft.name}
+            draft={draft}
             content={draftContent}
             dirty={draftDirty}
             saving={state.saving}
@@ -248,7 +249,13 @@ export const NewSimulationWizardPage: FC = () => {
               setDraftContent(content);
               setDraftDirty(content !== draft.content);
             }}
-            onSave={() => void saveDraft()}
+            onSave={saveDraft}
+            onDraftUpdate={(updated) => {
+              setDraft(updated);
+              setDraftContent(updated.content);
+              setDraftDirty(false);
+            }}
+            onBusyChange={(saving) => setState((s) => ({ ...s, saving }))}
           />
         )}
         {currentStep === 'protocols' && draft && (

@@ -65,6 +65,54 @@ export interface ScenarioDraft extends ScenarioDraftEntry {
   format: 'yaml';
 }
 
+export interface DraftTopologyEndpoint {
+  device: string;
+  interface: string;
+}
+
+export interface DraftTopologyLinkProperties {
+  vlans: number[];
+  nativeVlan: number;
+  fdbOnly: boolean;
+}
+
+export type DraftTopologyMutation =
+  | {
+      operation: 'add_device';
+      device: {
+        name: string;
+        type: string;
+        vendor?: string;
+        mac?: string;
+        macSuffix?: number;
+        sysObjectId?: string;
+        ips?: string[];
+        interfaces?: Array<{
+          name: string;
+          type: 'ethernet';
+          mtu: number;
+          speed: number;
+          duplex: 'full' | 'half';
+          adminStatus: 'up' | 'down';
+          operStatus: 'up' | 'down';
+        }>;
+        properties?: Record<string, string>;
+      };
+    }
+  | {
+      operation: 'connect' | 'update_link';
+      link: {
+        source: DraftTopologyEndpoint;
+        target: DraftTopologyEndpoint;
+        properties: DraftTopologyLinkProperties;
+      };
+    }
+  | {
+      operation: 'disconnect';
+      link: { source: DraftTopologyEndpoint; target: DraftTopologyEndpoint };
+    }
+  | { operation: 'move_device'; position: { device: string; x: number; y: number } };
+
 export const fetchScenarioDrafts = () =>
   deduplicatedGet<ScenarioDraftEntry[]>('/api/v1/library/drafts');
 
@@ -93,6 +141,17 @@ export const deleteScenarioDraft = (name: string, revision: string) =>
     method: 'DELETE',
     headers: { 'If-Match': `"${revision}"` },
   });
+
+export const mutateScenarioDraftTopology = (
+  name: string,
+  revision: string,
+  mutation: DraftTopologyMutation,
+) =>
+  requestJson<ScenarioDraft>(
+    `/api/v1/library/drafts/${encodeURIComponent(name)}/topology`,
+    mutation,
+    { method: 'PATCH', headers: { 'If-Match': `"${revision}"` } },
+  );
 
 /**
  * Revert a library walk to its preserved pristine original, discarding

@@ -120,4 +120,50 @@ describe('scenario draft client', () => {
       }),
     });
   });
+
+  it('applies topology mutations with the current draft revision', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            name: 'campus-draft',
+            content: 'devices: []\n',
+            format: 'yaml',
+            revision: 'revision-2',
+            modified_at: '2026-07-28T00:00:00Z',
+            size_bytes: 12,
+          }),
+      });
+
+    const { mutateScenarioDraftTopology } = await import('./library-client');
+    await mutateScenarioDraftTopology('campus-draft', 'revision-1', {
+      operation: 'add_device',
+      device: {
+        name: 'core-1',
+        type: 'switch',
+        vendor: 'cisco',
+        sysObjectId: '1.3.6.1.4.1.9.1.2494',
+      },
+    });
+
+    expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/library/drafts/campus-draft/topology');
+    const options = mockFetch.mock.calls[1][1];
+    const headers = options?.headers as Headers;
+    expect(options).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({
+        operation: 'add_device',
+        device: {
+          name: 'core-1',
+          type: 'switch',
+          vendor: 'cisco',
+          sys_object_id: '1.3.6.1.4.1.9.1.2494',
+        },
+      }),
+    });
+    expect(headers.get('If-Match')).toBe('"revision-1"');
+  });
 });

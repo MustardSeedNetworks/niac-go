@@ -171,7 +171,10 @@
     "devices": {
       "help": "Edita el borrador guardado. Los cambios aquí no afectan la simulación en ejecución.",
       "saveLabel": "Guardar borrador",
-      "savingLabel": "Guardando…"
+      "savingLabel": "Guardando…",
+      "viewLabel": "Vista de edición del borrador",
+      "visualLabel": "Topología visual",
+      "yamlLabel": "YAML"
     },
     "fleet": {
       "addSite": "Agregar sitio",
@@ -199,6 +202,28 @@
       "sites": "Sitios",
       "snmpCommunity": "Comunidad SNMP",
       "title": "Generar una flota multisitio"
+    },
+    "topology": {
+      "addDevice": "Agregar dispositivo",
+      "cancel": "Cancelar",
+      "connectHint": "Arrastra entre los conectores de los dispositivos y luego elige un puerto libre en cada extremo.",
+      "configBackedYamlOnly": "Este borrador hace referencia a archivos de segmentos, por lo que debe editarse en YAML para conservar esas referencias.",
+      "crossSegmentError": "Los dispositivos en segmentos VLAN diferentes no pueden enlazarse físicamente.",
+      "deviceName": "Nombre del dispositivo",
+      "disconnect": "Desconectar",
+      "fdbOnly": "Aprender el vecino en la tabla de reenvío sin anunciarlo como vecino de descubrimiento",
+      "help": "Crea visualmente el borrador guardado. Cada cambio valida la revisión y no puede afectar la simulación en ejecución.",
+      "interface": "interfaz",
+      "interfaceCount": "Cantidad de puertos Ethernet",
+      "linkTitle": "Editar enlace físico",
+      "nativeVlan": "VLAN nativa",
+      "profile": "Perfil del dispositivo",
+      "profileLoadError": "No se pudieron cargar los perfiles de dispositivos.",
+      "retry": "Reintentar",
+      "saveLink": "Guardar enlace",
+      "selectInterface": "Seleccionar una interfaz libre",
+      "speed": "Velocidad del puerto (Mbps)",
+      "vlans": "VLAN permitidas"
     },
     "protocols": {
       "title": "Protocolos",
