@@ -23,10 +23,10 @@ func buildLinks(request Request) linkMap {
 	links := make(linkMap)
 	addEdge(links,
 		endpoint{"LAB-EDGE-R1", "HundredGigabitEthernet0/0/1"},
-		endpoint{"WAN-R1", "HundredGigabitEthernet0/0/1"}, nil)
+		endpoint{"WAN-R1", "HundredGigabitEthernet0/0/1"}, []int{})
 	addEdge(links,
 		endpoint{"LAB-EDGE-R1", "HundredGigabitEthernet0/0/2"},
-		endpoint{"WAN-R2", "HundredGigabitEthernet0/0/1"}, nil)
+		endpoint{"WAN-R2", "HundredGigabitEthernet0/0/1"}, []int{})
 	for siteIndex, site := range request.Sites {
 		addSiteBackbone(links, site, siteIndex, request.Counts)
 		addSiteLAN(links, site, request.Counts)
@@ -63,12 +63,12 @@ func addFDB(links linkMap, sw, interfaceName, remote, remoteInterface string, vl
 	})
 }
 
-func addMesh(links linkMap, left, right []string, prefix string) {
+func addMesh(links linkMap, left, right []string, prefix string, vlans []int) {
 	index := 1
 	for _, leftName := range left {
 		for _, rightName := range right {
 			interfaceName := fmt.Sprintf("%s%d", prefix, index)
-			addEdge(links, endpoint{leftName, interfaceName}, endpoint{rightName, interfaceName}, nil)
+			addEdge(links, endpoint{leftName, interfaceName}, endpoint{rightName, interfaceName}, vlans)
 			index++
 		}
 	}
@@ -85,10 +85,10 @@ func addSiteBackbone(links linkMap, site Site, siteIndex int, counts Counts) {
 				fmt.Sprintf("WAN-R%d", provider),
 				fmt.Sprintf("HundredGigabitEthernet0/0/%d", siteIndex+firstSiteInterfaceIndex),
 			},
-			endpoint{wanName, "HundredGigabitEthernet0/0/1"}, nil)
+			endpoint{wanName, "HundredGigabitEthernet0/0/1"}, []int{})
 	}
-	addMesh(links, wan, firewalls, "TenGigabitEthernet0/1/")
-	addMesh(links, firewalls, cores, "HundredGigabitEthernet0/2/")
+	addMesh(links, wan, firewalls, "TenGigabitEthernet0/1/", []int{})
+	addMesh(links, firewalls, cores, "HundredGigabitEthernet0/2/", []int{})
 }
 
 func addSiteLAN(links linkMap, site Site, counts Counts) {

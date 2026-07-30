@@ -255,6 +255,32 @@ func TestValidate_ResolvesForwardTopologyReference(t *testing.T) {
 	}
 }
 
+func TestValidate_AllowsRoutedTopologyLinkWithoutVLANs(t *testing.T) {
+	cfg := &Config{Devices: []Device{
+		{
+			Name: "router-a", Type: "router",
+			Interfaces: []Interface{{Name: "Ethernet1"}},
+			TrunkPorts: []TrunkPort{{
+				Interface: "Ethernet1", RemoteDevice: "router-b", RemoteInterface: "Ethernet1",
+			}},
+		},
+		{Name: "router-b", Type: "router"},
+	}}
+
+	result := NewValidator("routed.yaml").Validate(cfg)
+
+	if result.HasWarnings() {
+		t.Fatalf("warnings = %#v, want none for a routed topology link", result.Warnings)
+	}
+}
+
+func TestIsRoutedTopologyLinkPreservesFDBOnlyMode(t *testing.T) {
+	port := TrunkPort{FDBOnly: true}
+	if IsRoutedTopologyLink("layer3-switch", port) {
+		t.Fatal("FDB-only link classified as routed")
+	}
+}
+
 func TestValidate_SNMPRequiresExplicitCommunity(t *testing.T) {
 	enabled := true
 	disabled := false

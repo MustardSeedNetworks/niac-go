@@ -82,12 +82,14 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 
 func (r runner) client() (*linklive.Client, error) {
 	return linklive.New(linklive.Config{
-		IdentityURL:   valueOr(r.getenv("LINKLIVE_IDENTITY_URL"), "https://id.link-live.com"),
-		APIURL:        valueOr(r.getenv("LINKLIVE_API_URL"), "https://link-live.com"),
-		Username:      r.getenv("LINKLIVE_USERNAME"),
-		Password:      r.getenv("LINKLIVE_PASSWORD"),
-		MFACode:       r.getenv("LINKLIVE_MFA_CODE"),
-		AllowInsecure: r.allowInsecure,
+		IdentityURL:    valueOr(r.getenv("LINKLIVE_IDENTITY_URL"), "https://id.link-live.com"),
+		APIURL:         valueOr(r.getenv("LINKLIVE_API_URL"), "https://link-live.com"),
+		Username:       r.getenv("LINKLIVE_USERNAME"),
+		Password:       r.getenv("LINKLIVE_PASSWORD"),
+		MFACode:        r.getenv("LINKLIVE_MFA_CODE"),
+		OrganizationID: r.getenv("LINKLIVE_ORGANIZATION_ID"),
+		AccessToken:    r.getenv("LINKLIVE_ACCESS_TOKEN"),
+		AllowInsecure:  r.allowInsecure,
 	})
 }
 

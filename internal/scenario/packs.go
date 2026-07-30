@@ -1,7 +1,7 @@
 package scenario
 
 const (
-	scenarioPackManifestVersion = 1
+	scenarioPackManifestVersion = 2
 	hospitalSiteOctet           = 51
 	warehouseSiteOctet          = 61
 	campusSiteOctet             = 71
@@ -104,7 +104,7 @@ func customerScenarioPacks() []Pack {
 				DeviceCount: hospitalDeviceCount, NetworkCount: hospitalNetworkCount, LinkCount: hospitalLinkCount,
 				DeviceNamesSHA256: "46da2595721bae0ef4a4d20ec3d95a12bb1b3e09be71e618cebecbf7ff59860b",
 				NetworksSHA256:    "3903357b0345fa756d65a537dffd67dfbf361ad414305a99137762e26f4816a4",
-				LinksSHA256:       "234a96797daa9728d71efd3d18abe5ef51a0c7cc5308dbc76ec99878663cdd6b",
+				LinksSHA256:       "83b19407c072afdb45cd9665d7c9c76975dde503626f423f0f40b70a587e1e28",
 			},
 		),
 		newScenarioPack(
@@ -128,7 +128,7 @@ func customerScenarioPacks() []Pack {
 				DeviceCount: warehouseDeviceCount, NetworkCount: warehouseNetworkCount, LinkCount: warehouseLinkCount,
 				DeviceNamesSHA256: "19e88c9625d3d38c2a864786ab6f76d43a23f7d6723ae9af014b64eb4c106bc9",
 				NetworksSHA256:    "2647fd6b5e33c0d7177be982854a7571d8d173d64677b6177c33afb5a7607aac",
-				LinksSHA256:       "fd9bae5c8b68b23feb766b9434113c6109de5101c24adc0e47be29473e5ae49d",
+				LinksSHA256:       "22836ae0988c218259b60c8e94e55b4ad61d2beff5e179f47da1a6d93e75a676",
 			},
 		),
 		newScenarioPack(
@@ -149,7 +149,7 @@ func customerScenarioPacks() []Pack {
 				DeviceCount: campusDeviceCount, NetworkCount: campusNetworkCount, LinkCount: campusLinkCount,
 				DeviceNamesSHA256: "ff1862a05edded994e0d6ca5962a0f602c052f24002260ddd1becc2f89964947",
 				NetworksSHA256:    "7262a118fbb0f2d4977d02895b839d0cbce5fd1161201b0f27a5b37fc3eb72ce",
-				LinksSHA256:       "36c9eac0b9675aa07ddac8bf52e8e00148f973ff631f9cd4993b86e479ed7390",
+				LinksSHA256:       "ee50d491a344adf6f7069de069c8d7b0be91c222505244aff7c9ce34afbb37c2",
 			},
 		),
 	}
@@ -175,7 +175,7 @@ func verticalScenarioPacks() []Pack {
 				DeviceCount: retailDeviceCount, NetworkCount: retailNetworkCount, LinkCount: retailLinkCount,
 				DeviceNamesSHA256: "972c99c87edd3fc07c128b19e2347d8692011605ef2fad7495b07a779495ca24",
 				NetworksSHA256:    "ff97ea73b175dd19168b1500d97165a5f44ee9d4f7337db67edc700a0ba0a829",
-				LinksSHA256:       "2ba69ec095b9f0f731bd96ad02dd2fe4e36152e776a6e0f5223f5528b04aab08",
+				LinksSHA256:       "108edbda094f681ea78f25912f26375ffbd6742cc7ec7a4fb5e35ff06917ccf6",
 			},
 		),
 		newScenarioPack(
@@ -201,7 +201,7 @@ func verticalScenarioPacks() []Pack {
 				LinkCount:         industrialLinkCount,
 				DeviceNamesSHA256: "6cc2ddcaa3671c6791b13c569ba04ef49c26a9b92a3b86c0c5a01ecef3d426f2",
 				NetworksSHA256:    "0259604d06e92b16ef8d4d1d6a2b0d9893963b23f936f7b65c7abd11562bc4e0",
-				LinksSHA256:       "62ddff222093eacbbbfdfbe4d400f3fd704e5459827f1e64203b70d0d684be3a",
+				LinksSHA256:       "6f0ae7af17e5a726169f835936c11f621af7e61371e45f28bc3f841b78b87d80",
 			},
 		),
 		newScenarioPack(
@@ -224,7 +224,7 @@ func verticalScenarioPacks() []Pack {
 				LinkCount:         serviceProviderLinkCount,
 				DeviceNamesSHA256: "c799d4b5fb95310c477721262a80043ed67e55785ea02e28f64d550d566bdb7c",
 				NetworksSHA256:    "95a2b3c773f6492777efba084054781170ec2b9b01745308bd7f061e658d0bd4",
-				LinksSHA256:       "62b843cd1b0e3ed09fd51c5e3f0e5a9ecba898396142a51c3bce4a2b7f8555ff",
+				LinksSHA256:       "3afe4b8ed0af88ade74971972a853a1a3bb6b6af54600bc6836c5279bbfc750c",
 			},
 		),
 	}
@@ -254,7 +254,7 @@ func newScenarioPack(
 	manifest Manifest,
 ) Pack {
 	return Pack{
-		ID: id, Version: "1.0.0", ManifestVersion: scenarioPackManifestVersion,
+		ID: id, Version: "1.1.0", ManifestVersion: scenarioPackManifestVersion,
 		Name: name, Description: description,
 		Request: Request{
 			Sites: sites, Counts: counts, Domain: domain,

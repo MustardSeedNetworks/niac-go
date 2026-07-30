@@ -41,6 +41,60 @@ func TestClientAuthenticatesAndFetchesTopology(t *testing.T) {
 	}
 }
 
+func TestClientUsesConfiguredAccessTokenWithoutLogin(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/auth/login" {
+			t.Fatal("client attempted login with a configured access token")
+		}
+		if got := r.Header.Get("Authorization"); got != "Access cached-token" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := linklive.New(linklive.Config{
+		IdentityURL: server.URL, APIURL: server.URL,
+		AccessToken: "cached-token", AllowInsecure: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = client.Analyses(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClientLoginIncludesOrganizationClaim(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v2/auth/login" {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		var body map[string]map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if got := body["claims"]["org"]; got != "org-7" {
+			t.Fatalf("org claim = %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"accessToken": "token"})
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := linklive.New(linklive.Config{
+		IdentityURL: server.URL, APIURL: server.URL,
+		Username: "tester@example.com", Password: "test-password",
+		OrganizationID: "org-7", AllowInsecure: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = client.Analyses(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func assertTopologyQuery(t *testing.T, r *http.Request) {
 	t.Helper()
 	var query map[string]string

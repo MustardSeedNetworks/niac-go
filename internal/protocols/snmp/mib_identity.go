@@ -39,19 +39,32 @@ func (a *Agent) refreshPhysicalAddresses(oids []string, mac []byte) {
 		oidValueBytes(a.mib.Get(dot1dBaseBridgeAddress)),
 		oidValueBytes(a.mib.Get(lldpLocChassisID)),
 	}
-	lowest := a.lowestPhysicalAddress(oids)
+	primary := a.primaryPhysicalAddress(oids)
 	for _, oid := range oids {
 		value := oidValueBytes(a.mib.Get(oid))
-		if !strings.HasPrefix(oid, ifPhysAddress+".") ||
-			len(value) != MACAddressOctets || bytes.Equal(value, make([]byte, MACAddressOctets)) {
+		if !strings.HasPrefix(oid, ifPhysAddress+".") || !hasPhysicalAddress(value) {
 			continue
 		}
 		address := derivedPhysicalAddress(mac, oid)
-		if oid == lowest || bytes.Equal(value, identities[0]) || bytes.Equal(value, identities[1]) {
+		if oid == primary || bytes.Equal(value, identities[0]) || bytes.Equal(value, identities[1]) {
 			address = mac
 		}
 		a.mib.Set(oid, &OIDValue{Type: gosnmp.OctetString, Value: address})
 	}
+}
+
+func (a *Agent) primaryPhysicalAddress(oids []string) string {
+	for _, iface := range a.device.Interfaces {
+		index, ok := a.ifIndexForInterface(iface.Name)
+		if !ok {
+			continue
+		}
+		oid := ifPhysAddress + "." + index
+		if hasPhysicalAddress(oidValueBytes(a.mib.Get(oid))) {
+			return oid
+		}
+	}
+	return a.lowestPhysicalAddress(oids)
 }
 
 func (a *Agent) lowestPhysicalAddress(oids []string) string {
@@ -59,8 +72,7 @@ func (a *Agent) lowestPhysicalAddress(oids []string) string {
 	lowestOID := ""
 	for _, oid := range oids {
 		value := oidValueBytes(a.mib.Get(oid))
-		if !strings.HasPrefix(oid, ifPhysAddress+".") ||
-			len(value) != MACAddressOctets || bytes.Equal(value, make([]byte, MACAddressOctets)) {
+		if !strings.HasPrefix(oid, ifPhysAddress+".") || !hasPhysicalAddress(value) {
 			continue
 		}
 		index, err := strconv.Atoi(strings.TrimPrefix(oid, ifPhysAddress+"."))
@@ -69,6 +81,10 @@ func (a *Agent) lowestPhysicalAddress(oids []string) string {
 		}
 	}
 	return lowestOID
+}
+
+func hasPhysicalAddress(value []byte) bool {
+	return len(value) == MACAddressOctets && !bytes.Equal(value, make([]byte, MACAddressOctets))
 }
 
 func oidValueBytes(value *OIDValue) []byte {

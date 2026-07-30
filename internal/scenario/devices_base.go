@@ -185,6 +185,9 @@ func authoredTrunkPorts(links []link) []converter.TrunkPort {
 }
 
 func nativeVLAN(vlans []int) int {
+	if len(vlans) == 0 {
+		return 0
+	}
 	for _, vlan := range vlans {
 		if vlan == vlanManagement {
 			return vlan

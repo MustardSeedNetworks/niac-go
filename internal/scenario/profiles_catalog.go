@@ -10,7 +10,7 @@ func networkProfiles() []DeviceProfile {
 			"IOS XE 17.15", synth.VendorCiscoIOS, synth.TypeRouter),
 		newProfile("firewall", "firewall", "palo alto", "PA-5450", "Palo Alto PA-5450",
 			"PAN-OS 11.2", synth.VendorPaloAlto, synth.TypeFirewall),
-		newProfile("core", "router", "cisco", "Nexus 9508", "Cisco Nexus 9508",
+		newProfile("core", "layer3-switch", "cisco", "Nexus 9508", "Cisco Nexus 9508",
 			"NX-OS 10.5", synth.VendorCiscoIOS, synth.TypeRouter),
 	}
 }

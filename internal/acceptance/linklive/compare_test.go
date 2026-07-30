@@ -20,6 +20,7 @@ func TestCompareAcceptsMatchingLayer3SwitchAndLink(t *testing.T) {
 
 func TestCompareReportsIdentityClassificationAndLinkTelemetry(t *testing.T) {
 	authored := authoredPair(t)
+	authored.Devices[0].Type = "switch"
 	observed := observedPair("Router", "Unknown", "")
 	observed.Hosts[0].Name = "WRONG-CORE"
 

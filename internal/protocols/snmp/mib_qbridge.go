@@ -75,6 +75,9 @@ func (a *Agent) initializeQBridgePVIDs() {
 	offset, hasOffset := a.basePortOffset()
 	maxPort := 0
 	for _, trunk := range a.device.TrunkPorts {
+		if config.IsRoutedTopologyLink(a.device.Type, trunk) {
+			continue
+		}
 		vlan := forwardingVLAN(trunk)
 		if vlan == 0 {
 			continue
@@ -99,6 +102,9 @@ func configuredVLANs(device *config.Device) []int {
 	seen := make(map[int]struct{})
 	vlans := make([]int, 0)
 	for _, trunk := range device.TrunkPorts {
+		if config.IsRoutedTopologyLink(device.Type, trunk) {
+			continue
+		}
 		candidates := append([]int(nil), trunk.VLANs...)
 		candidates = append(candidates, forwardingVLAN(trunk))
 		for _, vlan := range candidates {
