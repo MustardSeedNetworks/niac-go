@@ -5,6 +5,32 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.23](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.22...v0.94.23) (2026-07-30)
+
+
+### Features
+
+* add fleet generation to scenario wizard ([#1159](https://github.com/MustardSeedNetworks/niac-go/issues/1159)) ([f334cab](https://github.com/MustardSeedNetworks/niac-go/commit/f334cab05fb725a518bb1872add305d5af231f17))
+* add revision-safe draft topology mutations ([#1160](https://github.com/MustardSeedNetworks/niac-go/issues/1160)) ([b298a6a](https://github.com/MustardSeedNetworks/niac-go/commit/b298a6a1b5f88f668fd10b7728a71dcff8a62094))
+* add revisioned scenario draft storage ([#1154](https://github.com/MustardSeedNetworks/niac-go/issues/1154)) ([8a88165](https://github.com/MustardSeedNetworks/niac-go/commit/8a88165bb282bc7a24f0223a30f83f8c754cebbe))
+* add saved behavior timelines ([#1163](https://github.com/MustardSeedNetworks/niac-go/issues/1163)) ([072af57](https://github.com/MustardSeedNetworks/niac-go/commit/072af571cdf1de3f6476a3d8a8bf17937305b2ee))
+* add versioned scenario packs ([#1165](https://github.com/MustardSeedNetworks/niac-go/issues/1165)) ([b9c9126](https://github.com/MustardSeedNetworks/niac-go/commit/b9c91267020eb93c8d4a47660f8111e721aaba30))
+* add visual draft topology composer ([#1161](https://github.com/MustardSeedNetworks/niac-go/issues/1161)) ([37f78a7](https://github.com/MustardSeedNetworks/niac-go/commit/37f78a7b2082ead4d46f89291b6f5154c6970ac8))
+* add walk capture profile review ([#1162](https://github.com/MustardSeedNetworks/niac-go/issues/1162)) ([131a886](https://github.com/MustardSeedNetworks/niac-go/commit/131a8862dcafabbb6521f7b40c31a12e57e028a3))
+* expose protected scenario draft API ([#1155](https://github.com/MustardSeedNetworks/niac-go/issues/1155)) ([68a8071](https://github.com/MustardSeedNetworks/niac-go/commit/68a807164ed979a593c895872457f9b3f42f9a89))
+* generate deterministic scenario fleets ([#1158](https://github.com/MustardSeedNetworks/niac-go/issues/1158)) ([2124508](https://github.com/MustardSeedNetworks/niac-go/commit/2124508bd8ae8860c37c43e1ab3ddc2284cbc8a6))
+* make simulation wizard draft-first ([#1156](https://github.com/MustardSeedNetworks/niac-go/issues/1156)) ([1eb8842](https://github.com/MustardSeedNetworks/niac-go/commit/1eb88424e28d6a62dd7c7a1bb74e234ec9fddbce))
+
+
+### Performance Improvements
+
+* cache deterministic OUI allocation ([#1157](https://github.com/MustardSeedNetworks/niac-go/issues/1157)) ([a6d5f2d](https://github.com/MustardSeedNetworks/niac-go/commit/a6d5f2d2d5777d43924cc762f322a2081eed0136))
+
+
+### Documentation
+
+* plan customer scenario authoring ([#1150](https://github.com/MustardSeedNetworks/niac-go/issues/1150)) ([b3310b8](https://github.com/MustardSeedNetworks/niac-go/commit/b3310b814c141c21afbd9adf0d0fe67de190d770))
+
 ## [0.94.22](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.21...v0.94.22) (2026-07-28)
 
 
