@@ -2,8 +2,10 @@ package snmp
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,6 +28,7 @@ const (
 const (
 	walkScanBufInitial = 64 * 1024
 	walkScanBufMax     = 4 * 1024 * 1024
+	hexOctetWidth      = 2
 	endOfMIBMarker     = "No more variables left in this MIB View"
 )
 
@@ -115,6 +118,17 @@ type WalkEntry struct {
 	Value any
 }
 
+// FormatWalkEntries writes captured variable bindings in numeric net-snmp
+// format. Text octets remain strings; binary octets use Hex-STRING so replay
+// preserves their exact bytes.
+func FormatWalkEntries(entries []WalkEntry) []byte {
+	var out bytes.Buffer
+	for _, entry := range entries {
+		_, _ = fmt.Fprintln(&out, formatCapturedEntry(entry))
+	}
+	return out.Bytes()
+}
+
 // ParseWalkFile parses an SNMP walk file
 // Walk files are typically in the format:
 // OID = TYPE: VALUE
@@ -162,9 +176,19 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 
 	defer func() { _ = file.Close() }()
 
+	return parseWalk(file)
+}
+
+// ParseWalkContent parses in-memory net-snmp content without first placing
+// unreviewed capture data on disk.
+func ParseWalkContent(content []byte) ([]WalkEntry, error) {
+	return parseWalk(bytes.NewReader(content))
+}
+
+func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	var entries []WalkEntry
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 	// net-snmp wraps long Hex-STRING and multi-line octet-string values across
 	// several lines; a 30k-OID switch walk can carry lines well over the 64KiB
 	// default token size, so grow the buffer to avoid a mid-walk scan error.
@@ -279,6 +303,8 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 		return parseIntegerValue(valueStr)
 	case "GAUGE", "GAUGE32":
 		return parseGaugeValue(valueStr)
+	case "UINTEGER", "UINTEGER32", "UNSIGNED32":
+		return parseUnsignedValue(valueStr)
 	case "COUNTER", "COUNTER32":
 		return parseCounter32Value(valueStr)
 	case "COUNTER64":
@@ -289,12 +315,16 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 		return gosnmp.ObjectIdentifier, strings.TrimPrefix(valueStr, "."), nil
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
 		return gosnmp.IPAddress, valueStr, nil
-	case "BITS":
-		return parseHexStringValue(valueStr)
+	case "BITS", "BIT STRING":
+		return parseBitStringValue(valueStr)
 	case "HEX-STRING", "HEX":
 		return parseHexStringValue(valueStr)
 	case "OPAQUE":
-		return gosnmp.Opaque, valueStr, nil
+		return parseOpaqueValue(valueStr)
+	case "OPAQUE FLOAT":
+		return parseOpaqueFloat(valueStr)
+	case "OPAQUE DOUBLE":
+		return parseOpaqueDouble(valueStr)
 	case "NULL":
 		return gosnmp.Null, nil, nil
 	default:
@@ -320,6 +350,14 @@ func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 	bounded := safeUint32FromUint64(value)
 
 	return gosnmp.Gauge32, uint(bounded), nil
+}
+
+func parseUnsignedValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseUint(valueStr, 10, 64)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to parse unsigned integer: %w", err)
+	}
+	return gosnmp.Uinteger32, uint(safeUint32FromUint64(value)), nil
 }
 
 func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
@@ -372,6 +410,32 @@ func parseHexStringValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 	}
 
 	return gosnmp.OctetString, value, nil
+}
+
+func parseBitStringValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := decodeHexOctets(strings.TrimPrefix(valueStr, "HEX "))
+	if err != nil {
+		return 0, nil, err
+	}
+	return gosnmp.BitString, value, nil
+}
+
+func parseOpaqueValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	if encoded, ok := strings.CutPrefix(valueStr, "HEX "); ok {
+		value, err := decodeHexOctets(encoded)
+		return gosnmp.Opaque, value, err
+	}
+	return gosnmp.Opaque, []byte(valueStr), nil
+}
+
+func parseOpaqueFloat(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseFloat(valueStr, 32)
+	return gosnmp.OpaqueFloat, float32(value), err
+}
+
+func parseOpaqueDouble(valueStr string) (gosnmp.Asn1BER, any, error) {
+	value, err := strconv.ParseFloat(valueStr, 64)
+	return gosnmp.OpaqueDouble, value, err
 }
 
 func decodeHexOctets(value string) ([]byte, error) {
@@ -448,6 +512,8 @@ func formatTypeName(asnType gosnmp.Asn1BER) string {
 		return snmpTypeINTEGER
 	case gosnmp.Gauge32:
 		return "Gauge32"
+	case gosnmp.Uinteger32:
+		return "UInteger32"
 	case gosnmp.Counter32:
 		return "Counter32"
 	case gosnmp.Counter64:
@@ -467,7 +533,6 @@ func formatTypeName(asnType gosnmp.Asn1BER) string {
 		gosnmp.BitString,
 		gosnmp.ObjectDescription,
 		gosnmp.NsapAddress,
-		gosnmp.Uinteger32,
 		gosnmp.OpaqueFloat,
 		gosnmp.OpaqueDouble,
 		gosnmp.NoSuchObject,
@@ -485,7 +550,7 @@ func formatValue(asnType gosnmp.Asn1BER, value any) string {
 	switch asnType {
 	case gosnmp.OctetString:
 		return fmt.Sprintf("\"%v\"", value)
-	case gosnmp.Integer, gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64:
+	case gosnmp.Integer, gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Uinteger32:
 		return fmt.Sprintf("%v", value)
 	case gosnmp.TimeTicks:
 		return fmt.Sprintf("(%v)", value)
@@ -506,7 +571,6 @@ func formatValue(asnType gosnmp.Asn1BER, value any) string {
 		gosnmp.ObjectDescription,
 		gosnmp.Opaque,
 		gosnmp.NsapAddress,
-		gosnmp.Uinteger32,
 		gosnmp.OpaqueFloat,
 		gosnmp.OpaqueDouble,
 		gosnmp.NoSuchObject,

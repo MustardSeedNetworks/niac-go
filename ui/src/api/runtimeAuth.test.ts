@@ -66,6 +66,52 @@ describe('runtime bearer authentication', () => {
     expect(secondHeaders.get('X-Csrf-Token')).toBe('new-csrf');
   });
 
+  it('refreshes one stale CSRF token when network retries are disabled', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: 'stale-csrf' }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: { code: 'csrf_token_invalid', message: 'stale token' } }),
+          { status: 403 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: 'fresh-csrf' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ saved: true }), { status: 200 }));
+
+    const { request } = await import('./requestCore');
+    await request('/api/v1/walk/import', { method: 'POST' }, { maxRetries: 0, baseDelay: 0 });
+
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    const retriedHeaders = mockFetch.mock.calls[3][1]?.headers as Headers;
+    expect(retriedHeaders.get('X-Csrf-Token')).toBe('fresh-csrf');
+  });
+
+  it('does not retry a network failure when retries are disabled', async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError('offline'));
+    const { request } = await import('./requestCore');
+
+    await expect(
+      request('/api/v1/walk/import', { method: 'POST' }, { maxRetries: 0, baseDelay: 0 }),
+    ).rejects.toThrow('Unable to reach the server');
+    expect(mockFetch).toHaveBeenCalledOnce();
+  });
+
+  it('preserves camelCase payloads for migrated API contracts', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ saved: true }), { status: 200 }));
+    const { requestJsonCamelCase } = await import('./requestCore');
+
+    await requestJsonCamelCase('/api/v1/migrated', {
+      walkName: 'captured/access.walk',
+      capture: { authProtocol: 'sha256', timeoutSeconds: 20 },
+    });
+
+    const body = JSON.parse(String(mockFetch.mock.calls[0][1]?.body)) as Record<string, unknown>;
+    expect(body).toEqual({
+      walkName: 'captured/access.walk',
+      capture: { authProtocol: 'sha256', timeoutSeconds: 20 },
+    });
+  });
+
   it('raises the authentication event when CSRF retrieval is unauthorized', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' }),

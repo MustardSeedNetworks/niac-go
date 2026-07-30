@@ -4,13 +4,28 @@ import "github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp/synth"
 
 // DeviceProfile is the reusable vendor, model, role, and discovery identity.
 type DeviceProfile struct {
-	Role        string `json:"role"`
-	DeviceType  string `json:"deviceType"`
-	Vendor      string `json:"vendor"`
-	Model       string `json:"model"`
-	Platform    string `json:"platform"`
-	Software    string `json:"software"`
-	SysObjectID string `json:"sysObjectId"`
+	Role              string             `json:"role"`
+	DeviceType        string             `json:"deviceType"`
+	Vendor            string             `json:"vendor"`
+	Model             string             `json:"model"`
+	Platform          string             `json:"platform"`
+	Software          string             `json:"software"`
+	SysObjectID       string             `json:"sysObjectId"`
+	WalkName          string             `json:"walkName,omitempty"`
+	InterfaceCount    int                `json:"interfaceCount,omitempty"`
+	SupportedSNMPData []string           `json:"supportedSnmpData,omitempty"`
+	Interfaces        []ProfileInterface `json:"interfaces,omitempty"`
+	Source            string             `json:"source,omitempty"`
+}
+
+// ProfileInterface is the reusable interface inventory inferred from a walk.
+type ProfileInterface struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	MTU         int    `json:"mtu,omitempty"`
+	Speed       int64  `json:"speed,omitempty"`
+	AdminStatus string `json:"adminStatus,omitempty"`
+	OperStatus  string `json:"operStatus,omitempty"`
 }
 
 // EnterpriseReferenceRequest returns the accepted four-site Link-Live lab shape.

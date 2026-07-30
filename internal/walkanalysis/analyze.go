@@ -46,6 +46,7 @@ type Interface struct {
 	Name        string `json:"name"                   yaml:"name"`
 	Description string `json:"description,omitempty"  yaml:"description,omitempty"`
 	Type        string `json:"type"                   yaml:"type"`
+	MTU         int    `json:"mtu,omitempty"          yaml:"mtu,omitempty"`
 	Speed       int64  `json:"speed,omitempty"        yaml:"speed,omitempty"`
 	AdminStatus string `json:"admin_status,omitempty" yaml:"admin_status,omitempty"`
 	OperStatus  string `json:"oper_status,omitempty"  yaml:"oper_status,omitempty"`
@@ -97,6 +98,7 @@ const (
 const (
 	ifColDescr       = "2"
 	ifColType        = "3"
+	ifColMTU         = "4"
 	ifColSpeed       = "5"
 	ifColPhysAddress = "6"
 	ifColAdminStatus = "7"
@@ -217,6 +219,7 @@ type ifAccum struct {
 	operStatus    string
 	ifType        int
 	hasType       bool
+	mtu           int
 	speedBps      int64
 	hasSpeed      bool
 	highSpeedMbps int64
@@ -270,6 +273,10 @@ func applyIfCol(accum map[int]*ifAccum, idx, col string, e snmp.WalkEntry) {
 	case ifColType:
 		if v, ok := entryInt(e); ok {
 			a.ifType, a.hasType = v, true
+		}
+	case ifColMTU:
+		if v, ok := entryInt(e); ok && v > 0 {
+			a.mtu = v
 		}
 	case ifColSpeed:
 		if v, ok := entryGauge(e); ok {
@@ -329,6 +336,7 @@ func buildInterface(idx int, a *ifAccum) (Interface, bool) {
 		Name:        name,
 		Description: a.alias,
 		Type:        typeName,
+		MTU:         a.mtu,
 		Speed:       interfaceSpeed(a),
 		AdminStatus: a.adminStatus,
 		OperStatus:  a.operStatus,
@@ -441,7 +449,11 @@ func buildCDPNeighbors(rows map[string]map[string]string, nameByIndex map[int]st
 // lldpLocalInterface resolves a neighbor's local interface. The lldpRemTable
 // index is timeMark.localPortNum.remIndex; localPortNum resolves via
 // lldpLocPortTable, falling back to the IF-MIB name at the same index.
-func lldpLocalInterface(index string, locPort map[string]string, nameByIndex map[int]string) string {
+func lldpLocalInterface(
+	index string,
+	locPort map[string]string,
+	nameByIndex map[int]string,
+) string {
 	portNum := lldpLocalPortNum(index)
 	if portNum == "" {
 		return ""

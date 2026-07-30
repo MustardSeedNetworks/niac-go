@@ -111,7 +111,7 @@ export function notifyIfAuthenticationFailed(status: number) {
   }
 }
 
-interface RetryConfig {
+export interface RetryConfig {
   readonly maxRetries: number;
   readonly baseDelay: number;
 }
@@ -244,15 +244,17 @@ export async function request<T>(
   path: string,
   init: RequestInit = {},
   retry: RetryConfig = DEFAULT_RETRY,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ) {
   const externalSignal = init.signal;
-  let lastError: unknown;
+  let networkRetries = 0;
+  let csrfRetries = 0;
+  let retryDelay = 0;
 
-  for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
-    // FIX #175: Exponential backoff between retries
-    if (attempt > 0) {
-      const delay = retry.baseDelay * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+  while (true) {
+    if (retryDelay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      retryDelay = 0;
     }
 
     // Don't retry if the caller's signal was already aborted
@@ -261,7 +263,7 @@ export async function request<T>(
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     // If caller provides a signal, abort our controller when it fires
     const onExternalAbort = () => controller.abort();
@@ -281,8 +283,9 @@ export async function request<T>(
 
       if (!response.ok) {
         // FIX #175: Retry on 5xx, don't retry on 4xx
-        if (isRetryableStatus(response.status) && attempt < retry.maxRetries) {
-          lastError = new Error(response.statusText);
+        if (isRetryableStatus(response.status) && networkRetries < retry.maxRetries) {
+          retryDelay = retry.baseDelay * 2 ** networkRetries;
+          networkRetries += 1;
           continue;
         }
         const text = await response.text();
@@ -296,10 +299,10 @@ export async function request<T>(
           response.status === 403 &&
           isStateChangingMethod(init.method) &&
           /csrf_token_invalid/i.test(text) &&
-          attempt < retry.maxRetries
+          csrfRetries === 0
         ) {
           resetCSRFToken();
-          lastError = parseApiError(text, response.status);
+          csrfRetries += 1;
           continue;
         }
         throw parseApiError(text, response.status, response.statusText);
@@ -326,8 +329,9 @@ export async function request<T>(
       }
 
       // FIX #175: Retry network errors
-      if (isRetryableError(err) && attempt < retry.maxRetries) {
-        lastError = err;
+      if (isRetryableError(err) && networkRetries < retry.maxRetries) {
+        retryDelay = retry.baseDelay * 2 ** networkRetries;
+        networkRetries += 1;
         continue;
       }
 
@@ -340,12 +344,6 @@ export async function request<T>(
       externalSignal?.removeEventListener('abort', onExternalAbort);
     }
   }
-
-  // All retries exhausted
-  if (lastError instanceof TypeError) {
-    throw new NetworkError();
-  }
-  throw lastError ?? new ApiError('Request failed after retries', 0);
 }
 
 /**
@@ -353,12 +351,43 @@ export async function request<T>(
  * payload is converted to snake_case so endpoints match the Go API
  * server's struct tags without each call site having to think about it.
  */
-export const requestJson = <T>(path: string, payload: unknown, init: RequestInit = {}) =>
-  request<T>(path, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-    body: JSON.stringify(toSnakeCase(payload)),
-  });
+export const requestJson = <T>(
+  path: string,
+  payload: unknown,
+  init: RequestInit = {},
+  retry: RetryConfig = DEFAULT_RETRY,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+) =>
+  request<T>(
+    path,
+    {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      body: JSON.stringify(toSnakeCase(payload)),
+    },
+    retry,
+    timeoutMs,
+  );
+
+// requestJsonCamelCase is the ADR-0007 boundary for newly migrated endpoints.
+// Legacy callers still use requestJson until their server contracts migrate.
+export const requestJsonCamelCase = <T>(
+  path: string,
+  payload: unknown,
+  init: RequestInit = {},
+  retry: RetryConfig = DEFAULT_RETRY,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+) =>
+  request<T>(
+    path,
+    {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      body: JSON.stringify(payload),
+    },
+    retry,
+    timeoutMs,
+  );
 
 /**
  * requestText fetches a non-JSON body (e.g. the topology DOT/GraphML export)

@@ -48,6 +48,18 @@ export interface ScenarioDeviceProfile {
   platform: string;
   software: string;
   sysObjectId: string;
+  walkName?: string;
+  interfaceCount?: number;
+  supportedSnmpData?: string[];
+  interfaces?: Array<{
+    name: string;
+    type: string;
+    mtu?: number;
+    speed?: number;
+    adminStatus?: string;
+    operStatus?: string;
+  }>;
+  source?: string;
 }
 
 export const enterpriseScenarioRequest = (): ScenarioGenerateRequest => ({

@@ -202,10 +202,10 @@ func addEnabledRequirements(schema *jsonschema.Schema, required ...string) {
 // Interface represents configured metadata for a device interface.
 type Interface struct {
 	Name           string  `yaml:"name"`
-	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet l2vlan loopback tunnel other"`
+	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet l2vlan l3ipvlan loopback tunnel other"`
 	Network        string  `yaml:"network,omitempty"`
 	Address        string  `yaml:"address,omitempty"         validate:"omitempty,cidr"`
-	MTU            int     `yaml:"mtu,omitempty"             validate:"omitempty,gte=576,lte=65535"`
+	MTU            int     `yaml:"mtu,omitempty"             validate:"omitempty,gte=576,lte=1000000"`
 	Speed          int     `yaml:"speed,omitempty"` // Mbps
 	Duplex         string  `yaml:"duplex,omitempty"          validate:"omitempty,oneof=full half"`
 	AdminStatus    string  `yaml:"admin_status,omitempty"    validate:"omitempty,oneof=up down testing"`

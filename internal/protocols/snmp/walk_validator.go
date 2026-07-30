@@ -2,7 +2,9 @@ package snmp
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -49,6 +51,13 @@ func ValidateWalkFile(filename string) (*ValidationResult, error) {
 	return scanWalkFile(filename, file)
 }
 
+// ValidateWalkContent validates in-memory content before it enters the walk
+// library. Callers handling sensitive imports should not return Issues because
+// they contain the original input lines.
+func ValidateWalkContent(filename string, content []byte) (*ValidationResult, error) {
+	return scanWalkFile(filename, bytes.NewReader(content))
+}
+
 // writeValidatedFile writes data with 0600 perms to a path that has already been
 // validated upstream. The defensive checks here are belt-and-suspenders so static
 // analysers (gosec, CodeQL) can see the path is bounded.
@@ -89,14 +98,15 @@ func validateAndResolvePath(filename string) (string, error) {
 }
 
 // scanWalkFile reads and validates each line in the walk file.
-func scanWalkFile(filename string, file *os.File) (*ValidationResult, error) {
+func scanWalkFile(filename string, reader io.Reader) (*ValidationResult, error) {
 	result := &ValidationResult{
 		Filename: filename,
 		Valid:    true,
 		Issues:   []ValidationIssue{},
 	}
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, 0, walkScanBufInitial), walkScanBufMax)
 	lineNum := 0
 
 	for scanner.Scan() {
@@ -327,6 +337,7 @@ func isValidSNMPType(upperType string) bool {
 		"STRING": true, "OCTET STRING": true,
 		"INTEGER": true, "INT": true,
 		"GAUGE": true, "GAUGE32": true,
+		"UINTEGER": true, "UINTEGER32": true, "UNSIGNED32": true,
 		"COUNTER": true, "COUNTER32": true,
 		"COUNTER64": true,
 		"TIMETICKS": true,
@@ -465,7 +476,10 @@ func validateIntegerValue(lineNum int, valueStr, originalLine string) []Validati
 }
 
 // validateUnsigned32Value validates GAUGE32/COUNTER32 values.
-func validateUnsigned32Value(lineNum int, typeName, valueStr, originalLine string) []ValidationIssue {
+func validateUnsigned32Value(
+	lineNum int,
+	typeName, valueStr, originalLine string,
+) []ValidationIssue {
 	if valueStr == "" {
 		return []ValidationIssue{{
 			Line:     lineNum,
@@ -521,7 +535,10 @@ func validateTimeticksValue(lineNum int, valueStr, originalLine string) []Valida
 		return []ValidationIssue{{
 			Line:     lineNum,
 			Severity: "error",
-			Message:  fmt.Sprintf("Invalid Timeticks format '%s' - expected (number) or number", valueStr),
+			Message: fmt.Sprintf(
+				"Invalid Timeticks format '%s' - expected (number) or number",
+				valueStr,
+			),
 			Original: originalLine,
 			AutoFix:  false,
 		}}
@@ -626,7 +643,8 @@ func AutoFixWalkFile(filename string, outputPath string) (*ValidationResult, err
 	}
 
 	// Write fixed content
-	if writeErr := writeValidatedFile(outputPath, []byte(strings.Join(fixedContent, "\n"))); writeErr != nil {
+	fixed := []byte(strings.Join(fixedContent, "\n"))
+	if writeErr := writeValidatedFile(outputPath, fixed); writeErr != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToWriteFixedFile, writeErr)
 	}
 
@@ -686,7 +704,13 @@ func ValidateAndSummarize(filename string) (string, error) {
 				autoFixable++
 			}
 
-			fmt.Fprintf(&sb, "Line %d [%s]: %s\n", issue.Line, strings.ToUpper(issue.Severity), issue.Message)
+			fmt.Fprintf(
+				&sb,
+				"Line %d [%s]: %s\n",
+				issue.Line,
+				strings.ToUpper(issue.Severity),
+				issue.Message,
+			)
 
 			if issue.Suggestion != "" {
 				fmt.Fprintf(&sb, "  Suggestion: %s\n", issue.Suggestion)
@@ -694,7 +718,13 @@ func ValidateAndSummarize(filename string) (string, error) {
 		}
 
 		sb.WriteString(strings.Repeat("-", SecondsPerMinute) + "\n")
-		fmt.Fprintf(&sb, "Summary: %d errors, %d warnings, %d info\n", errorCount, warningCount, infoCount)
+		fmt.Fprintf(
+			&sb,
+			"Summary: %d errors, %d warnings, %d info\n",
+			errorCount,
+			warningCount,
+			infoCount,
+		)
 		fmt.Fprintf(&sb, "Auto-fixable: %d issues\n", autoFixable)
 	}
 

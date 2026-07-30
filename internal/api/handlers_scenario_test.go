@@ -18,7 +18,8 @@ func TestScenarioGenerationErrorStatusSeparatesInputFromInternalFailures(t *test
 	if got := scenarioGenerationErrorStatus(invalidRequest); got != http.StatusBadRequest {
 		t.Fatalf("invalid request status = %d, want 400", got)
 	}
-	if got := scenarioGenerationErrorStatus(errors.New("marshal failed")); got != http.StatusInternalServerError {
+	got := scenarioGenerationErrorStatus(errors.New("marshal failed"))
+	if got != http.StatusInternalServerError {
 		t.Fatalf("internal failure status = %d, want 500", got)
 	}
 }
@@ -47,10 +48,18 @@ func TestScenarioGenerationHandlersReturnValidatedFleet(t *testing.T) {
 		t.Fatalf("marshal request: %v", err)
 	}
 	generateRecorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/scenario/generate", bytes.NewReader(body))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/scenario/generate",
+		bytes.NewReader(body),
+	)
 	server.handleScenarioGenerate(generateRecorder, request)
 	if generateRecorder.Code != http.StatusOK {
-		t.Fatalf("generate status = %d, want 200; body=%s", generateRecorder.Code, generateRecorder.Body.String())
+		t.Fatalf(
+			"generate status = %d, want 200; body=%s",
+			generateRecorder.Code,
+			generateRecorder.Body.String(),
+		)
 	}
 	var response scenarioGenerateResponse
 	if err = json.NewDecoder(generateRecorder.Body).Decode(&response); err != nil {
@@ -84,8 +93,14 @@ func TestScenarioRoutesCarryTemplateAuthoringPolicy(t *testing.T) {
 	if profiles.Feature != "config_templates" || profiles.CSRF || profiles.RateLimited {
 		t.Fatalf("profiles policy = %+v, want config_templates read", profiles)
 	}
+	captured := routes["/api/v1/scenario/profiles/captured"]
+	if captured.Feature != "config_templates" || !captured.CSRF || !captured.RateLimited ||
+		captured.Admin {
+		t.Fatalf("captured profile policy = %+v, want config_templates+csrf+rateLimited", captured)
+	}
 	generate := routes["/api/v1/scenario/generate"]
-	if generate.Feature != "config_templates" || !generate.CSRF || !generate.RateLimited || generate.Admin {
+	if generate.Feature != "config_templates" || !generate.CSRF || !generate.RateLimited ||
+		generate.Admin {
 		t.Fatalf("generate policy = %+v, want config_templates+csrf+rateLimited", generate)
 	}
 }

@@ -27,7 +27,11 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 		{path: "/api/v1/stats", handler: s.handleStats, methods: []string{http.MethodGet}},
 		{path: "/api/v1/devices", handler: s.handleDevices, methods: []string{http.MethodGet}},
 		{path: "/api/v1/history", handler: s.handleHistory, methods: []string{http.MethodGet}},
-		{path: "/api/v1/license", handler: s.handleLicenseStatus, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/license",
+			handler: s.handleLicenseStatus,
+			methods: []string{http.MethodGet},
+		},
 	})
 
 	s.registerWriteProtectedRoutes(mux)
@@ -72,6 +76,14 @@ func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
 			path:    "/api/v1/scenario/profiles",
 			handler: s.handleScenarioProfiles,
 			methods: []string{http.MethodGet},
+			feature: "config_templates",
+		},
+		{
+			path:    "/api/v1/scenario/profiles/captured",
+			handler: s.handleCapturedProfileCreate,
+			methods: []string{http.MethodPost},
+			rl:      rlWrite,
+			csrf:    true,
 			feature: "config_templates",
 		},
 		{
@@ -213,7 +225,11 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
-		{path: "/api/v1/library/walks", handler: s.handleLibraryWalks, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/library/walks",
+			handler: s.handleLibraryWalks,
+			methods: []string{http.MethodGet},
+		},
 		// Revert mutates the walk on disk (restores + removes the .orig
 		// sidecar), so — like the networks POST above — it carries write
 		// rate limit + CSRF rather than being GET-only like its sibling.
@@ -241,7 +257,11 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 			rl:      rlWrite,
 			csrf:    true,
 		},
-		{path: "/api/v1/library/pcaps", handler: s.handleLibraryPcaps, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/library/pcaps",
+			handler: s.handleLibraryPcaps,
+			methods: []string{http.MethodGet},
+		},
 		// Install accepts a gzip-tar content bundle (base64 in the JSON body,
 		// like /api/v1/pcap/upload) and extracts it over the whole library —
 		// networks/walks/pcaps at once — so it carries the same admin-class
@@ -265,8 +285,17 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 // CSRF (#740). csrfProtect internally skips GET, so reads pass through.
 func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
-		{path: "/api/v1/config/schema", handler: s.handleConfigSchema, methods: []string{http.MethodGet}},
-		{path: "/api/v1/files", handler: s.handleFiles, methods: []string{http.MethodGet}, rl: rlFile},
+		{
+			path:    "/api/v1/config/schema",
+			handler: s.handleConfigSchema,
+			methods: []string{http.MethodGet},
+		},
+		{
+			path:    "/api/v1/files",
+			handler: s.handleFiles,
+			methods: []string{http.MethodGet},
+			rl:      rlFile,
+		},
 		// Templates: POST (upload), DELETE, and "use" mutate — write + CSRF.
 		{
 			path:    "/api/v1/templates",
@@ -307,21 +336,48 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			handler: s.handleSynthesizeWalkModels,
 			methods: []string{http.MethodGet},
 		},
-		{path: "/api/v1/device-schemas", handler: s.handleDeviceEditorSchema, methods: []string{http.MethodGet}},
-		{path: "/api/v1/device-schemas/", handler: s.handleDeviceEditorSchema, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/device-schemas",
+			handler: s.handleDeviceEditorSchema,
+			methods: []string{http.MethodGet},
+		},
+		{
+			path:    "/api/v1/device-schemas/",
+			handler: s.handleDeviceEditorSchema,
+			methods: []string{http.MethodGet},
+		},
+	})
+	s.registerTopologyReadOnlyRoutes(mux)
+}
+
+func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
+	s.registerAll(mux, []apiRoute{
 		{path: "/api/v1/topology", handler: s.handleTopology, methods: []string{http.MethodGet}},
-		{path: "/api/v1/topology/export", handler: s.handleTopologyExport, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/topology/export",
+			handler: s.handleTopologyExport,
+			methods: []string{http.MethodGet},
+		},
 		{path: "/api/v1/segments", handler: s.handleSegments, methods: []string{http.MethodGet}},
 		{
-			path:             "/api/v1/errors",
-			handler:          s.handleErrors,
-			methods:          []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+			path:    "/api/v1/errors",
+			handler: s.handleErrors,
+			methods: []string{
+				http.MethodGet,
+				http.MethodPost,
+				http.MethodPut,
+				http.MethodDelete,
+			},
 			rl:               rlWrite,
 			csrf:             true,
 			feature:          "error_injection",
 			featureWriteOnly: true,
 		},
-		{path: "/api/v1/interfaces", handler: s.handleInterfaces, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/interfaces",
+			handler: s.handleInterfaces,
+			methods: []string{http.MethodGet},
+		},
 		{path: "/api/v1/runtime", handler: s.handleRuntime, methods: []string{http.MethodGet}},
 		{
 			path:    "/api/v1/simulation/preflight",
@@ -348,6 +404,23 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
 		{
+			path:         "/api/v1/walk/import",
+			handler:      s.handleWalkImport,
+			methods:      []string{http.MethodPost},
+			rl:           rlWalk,
+			csrf:         true,
+			feature:      "config_templates",
+			maxBodyBytes: MaxWalkImportBodySize,
+		},
+		{
+			path:    "/api/v1/walk/capture-profile",
+			handler: s.handleWalkCaptureProfile,
+			methods: []string{http.MethodPost},
+			rl:      rlWalk,
+			csrf:    true,
+			feature: "config_templates",
+		},
+		{
 			path:    "/api/v1/walk/validate",
 			handler: s.handleWalkValidation,
 			methods: []string{http.MethodPost},
@@ -368,7 +441,12 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 			rl:      rlWalk,
 			csrf:    true,
 		},
-		{path: "/api/v1/walk/list", handler: s.handleWalkList, methods: []string{http.MethodGet}, rl: rlWalk},
+		{
+			path:    "/api/v1/walk/list",
+			handler: s.handleWalkList,
+			methods: []string{http.MethodGet},
+			rl:      rlWalk,
+		},
 		{
 			path:    "/api/v1/walk/validate-all",
 			handler: s.handleWalkBatchValidate,
@@ -409,10 +487,22 @@ func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 // registerSSERoutes registers Server-Sent Events streams (auth only).
 func (s *Server) registerSSERoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
-		{path: "/api/v1/stream/packets", handler: s.handleSSEPackets, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/stream/packets",
+			handler: s.handleSSEPackets,
+			methods: []string{http.MethodGet},
+		},
 		{path: "/api/v1/stream/logs", handler: s.handleSSELogs, methods: []string{http.MethodGet}},
-		{path: "/api/v1/stream/stats", handler: s.handleSSEStats, methods: []string{http.MethodGet}},
-		{path: "/api/v1/stream/status", handler: s.handleSSEStatus, methods: []string{http.MethodGet}},
+		{
+			path:    "/api/v1/stream/stats",
+			handler: s.handleSSEStats,
+			methods: []string{http.MethodGet},
+		},
+		{
+			path:    "/api/v1/stream/status",
+			handler: s.handleSSEStatus,
+			methods: []string{http.MethodGet},
+		},
 	})
 }
 

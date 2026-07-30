@@ -3,10 +3,14 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/drafttopology"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 const topologyDraftYAML = `devices:
@@ -25,6 +29,115 @@ const topologyDraftYAML = `devices:
       - name: Ethernet1/49
         type: ethernet
 `
+
+func TestCapturedProfileEnrichmentAttachesReviewedWalk(t *testing.T) {
+	server, _ := newTestServer(t)
+	contentLibrary := attachDraftLibrary(t, server)
+	writeErr := contentLibrary.WriteFile(
+		library.KindWalks, "captured/access.walk", []byte(capturedProfileFixture),
+	)
+	if writeErr != nil {
+		t.Fatalf("WriteFile() error = %v", writeErr)
+	}
+	profile := scenario.DeviceProfile{
+		Role: "office-access", DeviceType: "switch", Vendor: "cisco", Model: "Catalyst 9300",
+		Platform: "Cisco IOS XE", SysObjectID: "1.3.6.1.4.1.9.1.2238",
+		WalkName: "captured/access.walk", InterfaceCount: 1,
+		Interfaces: []scenario.ProfileInterface{
+			{Name: "GigabitEthernet1/0/1", Type: "ethernet", MTU: 1500, Speed: 100_000_000_000},
+		},
+		Source: "captured",
+	}
+	if err := scenario.SaveCustomProfile(contentLibrary.Root(), profile); err != nil {
+		t.Fatalf("SaveCustomProfile() error = %v", err)
+	}
+	cfg := &config.Config{}
+	mutation := drafttopology.Mutation{
+		Operation: drafttopology.AddDevice,
+		Device: &drafttopology.DeviceMutation{
+			Name: "access-1", Type: "host", Vendor: "generic", MACSuffix: 1,
+			ProfileRole: "office-access",
+			Interfaces:  []drafttopology.Interface{{Name: "GigabitEthernet1/0/1", Type: "ethernet"}},
+		},
+	}
+	if err := server.enrichCapturedDraftProfile(cfg, &mutation); err != nil {
+		t.Fatalf("enrichCapturedDraftProfile() error = %v", err)
+	}
+	if mutation.Device.Type != "switch" || mutation.Device.WalkFile != "captured/access.walk" ||
+		cfg.IncludePath != contentLibrary.SubDir(library.KindWalks) {
+		t.Fatalf("enriched mutation = %+v, includePath=%q", mutation.Device, cfg.IncludePath)
+	}
+	if len(mutation.Device.Interfaces) != 1 ||
+		mutation.Device.Interfaces[0].Name != "GigabitEthernet1/0/1" ||
+		mutation.Device.Interfaces[0].Speed != 100_000 ||
+		mutation.Device.Interfaces[0].MTU != 1500 {
+		t.Fatalf("captured interfaces = %+v", mutation.Device.Interfaces)
+	}
+	if err := drafttopology.Apply(cfg, mutation); err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+	if cfg.Devices[0].SNMPConfig.WalkFile != "captured/access.walk" ||
+		cfg.Devices[0].SNMPConfig.Community != "public" {
+		t.Fatalf("SNMP config = %+v", cfg.Devices[0].SNMPConfig)
+	}
+}
+
+func TestCapturedProfileEnrichmentRejectsExternalCommunityWalk(t *testing.T) {
+	server, _ := newTestServer(t)
+	contentLibrary := attachDraftLibrary(t, server)
+	writeErr := contentLibrary.WriteFile(
+		library.KindWalks, "captured/access.walk", []byte(capturedProfileFixture),
+	)
+	if writeErr != nil {
+		t.Fatalf("WriteFile() error = %v", writeErr)
+	}
+	profile := scenario.DeviceProfile{
+		Role: "office-access", DeviceType: "switch", Vendor: "cisco", Model: "Catalyst 9300",
+		Platform: "Cisco IOS XE", WalkName: "captured/access.walk", Source: "captured",
+	}
+	if err := scenario.SaveCustomProfile(contentLibrary.Root(), profile); err != nil {
+		t.Fatalf("SaveCustomProfile() error = %v", err)
+	}
+	cfg := &config.Config{IncludePath: t.TempDir(), Devices: []config.Device{{
+		SNMPConfig: config.SNMPConfig{
+			CommunityIncludes: []config.CommunityInclude{{WalkFile: "external.walk"}},
+		},
+	}}}
+	mutation := drafttopology.Mutation{
+		Operation: drafttopology.AddDevice,
+		Device: &drafttopology.DeviceMutation{
+			Name: "access-1", ProfileRole: "office-access",
+		},
+	}
+	enrichErr := server.enrichCapturedDraftProfile(cfg, &mutation)
+	if enrichErr == nil || !strings.Contains(enrichErr.Error(), "another content location") {
+		t.Fatalf("enrichCapturedDraftProfile() error = %v", enrichErr)
+	}
+}
+
+func TestCapturedProfileInterfacePreservesSupportedStates(t *testing.T) {
+	converted := capturedProfileInterface(scenario.ProfileInterface{
+		Name: "Ethernet1", Type: "ethernet", MTU: 65536, Speed: 1_000_000_000,
+		AdminStatus: "testing", OperStatus: "lowerLayerDown",
+	})
+	if converted.AdminStatus != "testing" || converted.OperStatus != "down" ||
+		converted.MTU != 65536 {
+		t.Fatalf("capturedProfileInterface() = %+v", converted)
+	}
+}
+
+func TestApplyCapturedProfileKeepsFallbackInterfacesWithoutInventory(t *testing.T) {
+	device := &drafttopology.DeviceMutation{
+		Interfaces: []drafttopology.Interface{{Name: "Ethernet1/1", Type: "ethernet"}},
+	}
+	applyCapturedProfile(device, scenario.DeviceProfile{
+		Role: "captured-switch", DeviceType: "switch", Vendor: "generic",
+		WalkName: "captured/portless.walk",
+	})
+	if len(device.Interfaces) != 1 || device.Interfaces[0].Name != "Ethernet1/1" {
+		t.Fatalf("fallback interfaces = %+v", device.Interfaces)
+	}
+}
 
 func TestDraftTopologyMutationPersistsReciprocalLinkWithoutApplyingRuntime(t *testing.T) {
 	server, _ := newTestServer(t)

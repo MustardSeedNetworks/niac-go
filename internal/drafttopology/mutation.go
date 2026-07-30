@@ -55,6 +55,8 @@ type DeviceMutation struct {
 	VLAN        int               `json:"vlan,omitempty"`
 	Interfaces  []Interface       `json:"interfaces,omitempty"`
 	Properties  map[string]string `json:"properties,omitempty"`
+	ProfileRole string            `json:"profile_role,omitempty"`
+	WalkFile    string            `json:"-"`
 }
 
 type Interface struct {
@@ -223,12 +225,24 @@ func addDevice(cfg *config.Config, input DeviceMutation) error {
 		}
 		properties["sysObjectID"] = input.SysObjectID
 	}
-	cfg.Devices = append(cfg.Devices, config.Device{
-		Name: input.Name, Type: input.Type, MACAddress: mac, MACVendor: input.Vendor, MACSuffix: input.MACSuffix,
+	device := config.Device{
+		Name: input.Name, Type: input.Type, MACAddress: mac,
+		MACVendor: input.Vendor, MACSuffix: input.MACSuffix,
 		IPAddresses: ips, VLAN: input.VLAN, Interfaces: interfaces,
-		Properties: properties,
-	})
+		Properties: properties, SNMPConfig: capturedSNMPConfig(input),
+	}
+	cfg.Devices = append(cfg.Devices, device)
 	return nil
+}
+
+func capturedSNMPConfig(input DeviceMutation) config.SNMPConfig {
+	if input.WalkFile == "" {
+		return config.SNMPConfig{}
+	}
+	enabled := true
+	return config.SNMPConfig{
+		Enabled: &enabled, Community: "public", SysName: input.Name, WalkFile: input.WalkFile,
+	}
 }
 
 func connect(cfg *config.Config, link LinkMutation) error {

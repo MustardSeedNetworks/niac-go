@@ -89,6 +89,8 @@ Sources: [Quick Start](https://doc.gambitcomm.com/mimic/quick.htm),
 
 ### Phase 1: Draft scenario contract
 
+**Status: Complete**
+
 - Introduce a saved draft that is independent of the running simulation.
 - Reuse the canonical converter/config validation pipeline.
 - Add create, read, replace, and delete operations under one authenticated,
@@ -107,6 +109,8 @@ Estimate: 8-12 engineering hours.
 
 ### Phase 2: Profiles and deterministic fleet generation
 
+**Status: Complete**
+
 - Define device profiles from existing templates and synthesized walk models.
 - Add repeat controls for site, role, count, hostname, IP, MAC, and VLAN rules.
 - Generate vendor-correct identity and occupied interfaces only.
@@ -116,6 +120,8 @@ Estimate: 10-16 engineering hours.
 
 ### Phase 3: Visual topology composer
 
+**Status: Complete**
+
 - Extend the existing React Flow topology page into an explicit edit mode.
 - Support add, connect, disconnect, move, and link-property editing.
 - Select peer ports as a pair and prevent duplicate or impossible occupancy.
@@ -124,6 +130,8 @@ Estimate: 10-16 engineering hours.
 Estimate: 16-24 engineering hours.
 
 ### Phase 4: Walk capture and profile creation
+
+**Status: Complete**
 
 - Import or capture a net-snmp walk through a bounded, cancelable operation.
 - Accept credentials only for the capture request and never persist or return
