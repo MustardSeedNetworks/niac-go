@@ -93,9 +93,9 @@ test.describe('Language switching', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // Either Spanish device-count phrasing should be on the page, OR
-    // the noInterface fallback if no simulation is running. Both are
-    // valid post-Phase-5 ES outputs.
-    await expect(page.locator('body')).toContainText(/dispositivo|Sin interfaz/i);
+    await expect
+      .poll(async () => page.evaluate((key) => localStorage.getItem(key), LOCAL_STORAGE_KEY))
+      .toBe('es');
+    await expect(page.getByTestId('dashboard-device-count')).toHaveText(/^\d+ dispositivos?$/i);
   });
 });

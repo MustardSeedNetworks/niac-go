@@ -54,6 +54,7 @@ test.describe('Responsive Design', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
+    await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
     await checkTouchTargets(page);
   });
 
@@ -61,6 +62,8 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize(viewports.desktop);
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
+
+    await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
   });
 
   test('should show mobile navigation on small screens', async ({ page }) => {
@@ -76,16 +79,20 @@ test.describe('Responsive Design', () => {
   });
 
   test('should maintain navigation on all pages', async ({ page }) => {
-    const pages = ['/', '/devices', '/topology', '/templates'];
+    const pages = [
+      { path: '/', title: 'Dashboard' },
+      { path: '/devices', title: 'Running Devices' },
+      { path: '/topology', title: 'Topology' },
+      { path: '/device-config', title: 'Device Library' },
+    ];
 
-    for (const url of pages) {
+    for (const route of pages) {
       await page.setViewportSize(viewports.mobile);
-      await page.goto(url);
+      await page.goto(route.path);
       await page.waitForLoadState('domcontentloaded');
 
-      // Page should not be completely blank
-      const content = await page.locator('body').textContent();
-      expect(content?.length).toBeGreaterThan(0);
+      await expect(page).toHaveURL((url) => url.pathname === route.path);
+      await expect(page.getByTestId('page-header-title')).toHaveText(route.title);
     }
   });
 });
