@@ -26,8 +26,8 @@ describe('scenario generator client', () => {
     expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/scenario/generate');
     const payload = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
     expect(payload).toMatchObject({
-      counts: { access_switches: 16, access_points_per_access: 2 },
-      attachment_name: 'cyberscope',
+      counts: { accessSwitches: 16, accessPointsPerAccess: 2 },
+      attachmentName: 'cyberscope',
     });
     expect(payload.sites).toHaveLength(4);
     expect(payload.sites[0]).toMatchObject({ code: 'COS', octet: 240 });

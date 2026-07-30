@@ -67,12 +67,12 @@ describe('useDeviceEditor', () => {
 
     act(() => result.current.updateField('hostname', 'edge-01'));
     act(() => result.current.updateField('mac', 'not-a-mac'));
-    await act(async () => {
-      await result.current.handleSave();
+    act(() => {
+      void result.current.handleSave();
     });
 
+    await waitFor(() => expect(result.current.fieldErrors.mac?.message).toMatch(/six hex octets/i));
     expect(mockCreateDevice).not.toHaveBeenCalled();
-    expect(result.current.fieldErrors.mac?.message).toMatch(/six hex octets/i);
     expect(result.current.message?.type).toBe('error');
   });
 
@@ -81,12 +81,14 @@ describe('useDeviceEditor', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => result.current.updateField('mac', '00:1A:2B:3C:4D:5E'));
-    await act(async () => {
-      await result.current.handleSave();
+    act(() => {
+      void result.current.handleSave();
     });
 
+    await waitFor(() =>
+      expect(result.current.fieldErrors.hostname?.message).toBe('Hostname is required'),
+    );
     expect(mockCreateDevice).not.toHaveBeenCalled();
-    expect(result.current.fieldErrors.hostname?.message).toBe('Hostname is required');
   });
 
   it('saves a valid new device through the API', async () => {
@@ -96,11 +98,11 @@ describe('useDeviceEditor', () => {
 
     act(() => result.current.updateField('hostname', 'edge-01'));
     act(() => result.current.updateField('mac', '00:1A:2B:3C:4D:5E'));
-    await act(async () => {
-      await result.current.handleSave();
+    act(() => {
+      void result.current.handleSave();
     });
 
-    expect(mockCreateDevice).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockCreateDevice).toHaveBeenCalledTimes(1));
     expect(mockCreateDevice).toHaveBeenCalledWith(
       expect.objectContaining({ hostname: 'edge-01', mac: '00:1A:2B:3C:4D:5E' }),
     );

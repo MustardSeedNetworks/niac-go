@@ -77,9 +77,7 @@ describe('DeviceListPage — delete confirmation', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete device edge-01/i }));
     await screen.findByText(/delete device\?/i);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
-    });
+    act(() => fireEvent.click(screen.getByRole('button', { name: /^delete$/i })));
 
     await waitFor(() => expect(deleteDevice).toHaveBeenCalledTimes(1));
     expect(deleteDevice).toHaveBeenCalledWith('edge-01');
@@ -107,9 +105,7 @@ describe('DeviceListPage — bulk delete', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete selected/i }));
     const confirmButton = await screen.findByRole('button', { name: /delete all/i });
 
-    await act(async () => {
-      fireEvent.click(confirmButton);
-    });
+    act(() => fireEvent.click(confirmButton));
 
     await waitFor(() => expect(deleteDevices).toHaveBeenCalledTimes(1));
     expect(deleteDevices).toHaveBeenCalledWith(expect.arrayContaining(['edge-01', 'edge-02']));
@@ -136,9 +132,7 @@ describe('DeviceListPage — bulk delete', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete selected/i }));
     const confirmButton = await screen.findByRole('button', { name: /delete all/i });
 
-    await act(async () => {
-      fireEvent.click(confirmButton);
-    });
+    act(() => fireEvent.click(confirmButton));
 
     await waitFor(() => expect(deleteDevices).toHaveBeenCalledTimes(1));
     const alert = await screen.findByRole('alert');

@@ -76,7 +76,7 @@ describe('PacketInspectorPage — filtered export', () => {
     await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
 
     // Push one TCP and one UDP packet through the stream.
-    await act(async () => {
+    act(() => {
       capturedOnMessage?.({
         type: 'packet',
         timestamp: '2026-07-24T12:00:00.000Z',
@@ -144,7 +144,7 @@ describe('PacketInspectorPage — filtered export', () => {
     );
     await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
 
-    await act(async () => {
+    act(() => {
       capturedOnMessage?.({
         type: 'packet',
         timestamp: '2026-07-24T12:00:00.000Z',
@@ -181,7 +181,7 @@ describe('PacketInspectorPage — filtered export', () => {
     );
     await waitFor(() => expect(capturedOnMessage).toBeTypeOf('function'));
 
-    await act(async () => {
+    act(() => {
       capturedOnMessage?.({
         type: 'packet',
         timestamp: '2026-07-24T12:00:00.000Z',

@@ -12,6 +12,10 @@ type scenarioGenerateResponse struct {
 	Manifest scenario.Manifest `json:"manifest"`
 }
 
+func (s *Server) handleScenarioPacks(w http.ResponseWriter, _ *http.Request) {
+	s.writeJSON(w, scenario.Packs())
+}
+
 func (s *Server) handleScenarioProfiles(w http.ResponseWriter, r *http.Request) {
 	profiles := scenario.Profiles()
 	if !s.libraryReady() {

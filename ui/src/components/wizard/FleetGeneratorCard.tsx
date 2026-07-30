@@ -10,6 +10,7 @@ import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
+import { ScenarioPackPicker } from './ScenarioPackPicker';
 
 interface FleetGeneratorCardProps {
   request: ScenarioGenerateRequest;
@@ -99,6 +100,8 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
             {selected ? t('newSimWizard.fleet.selected') : t('newSimWizard.fleet.select')}
           </Button>
         </div>
+
+        <ScenarioPackPicker request={request} onChange={onChange} />
 
         <div className="grid gap-default md:grid-cols-3">
           {(['domain', 'snmpCommunity', 'attachmentName'] as const).map((field) => (

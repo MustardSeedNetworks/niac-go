@@ -118,9 +118,7 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
     fireEvent.click(screen.getByRole('button', { name: /stop simulation/i }));
     await screen.findByText(/interrupt the current run/i);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /^stop$/i }));
-    });
+    act(() => fireEvent.click(screen.getByRole('button', { name: /^stop$/i })));
 
     await waitFor(() => expect(stopSimulation).toHaveBeenCalledTimes(1));
   });

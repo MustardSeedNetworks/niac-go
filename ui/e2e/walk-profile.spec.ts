@@ -40,11 +40,11 @@ const review = {
   },
 };
 
-test('imports, reviews, and creates a reusable walk profile', async ({ page }, testInfo) => {
+test('imports, reviews, and creates a reusable walk profile', async ({ page }) => {
   await page.route('**/api/v1/library/walks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/walk/import', async (route) => {
     const request = route.request().postDataJSON() as { name: string; content: string };
-    expect(request.name).toBe(`${testInfo.project.name}-office.walk`);
+    expect(request.name).toBe('office.walk');
     expect(request.content).toContain('sysName');
     await route.fulfill({ json: review });
   });
@@ -59,7 +59,7 @@ test('imports, reviews, and creates a reusable walk profile', async ({ page }, t
   await expect(page.getByText('Online', { exact: true })).toBeVisible();
   await expect(page.getByTestId('walk-profile-creator')).toBeVisible();
   const walkFile = page.getByTestId('walk-profile-file');
-  await walkFile.setInputFiles(`e2e/fixtures/${testInfo.project.name}-office.snmpwalk`);
+  await walkFile.setInputFiles('e2e/fixtures/office.snmpwalk');
   await expect(page.getByTestId('walk-profile-import')).toBeEnabled();
   await page.getByTestId('walk-profile-import').click();
   await expect(page.getByTestId('walk-profile-review')).toBeVisible();

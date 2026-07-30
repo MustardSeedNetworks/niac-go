@@ -227,6 +227,37 @@
       "domain": "Dominio DNS",
       "help": "Comienza con el diseño empresarial validado y ajusta los sitios y las cantidades. NIAC asigna identidades, direcciones, puertos, VLAN, servicios y enlaces de forma coherente.",
       "invalid": "Corrige los valores de la flota antes de continuar.",
+      "packSummary": "Versión {{version}} · {{devices}} dispositivos · {{links}} enlaces",
+      "packsError": "No se pudieron cargar los paquetes de escenarios.",
+      "packsHelp": "Elige un punto de partida realista y luego ajusta cualquier sitio o cantidad de dispositivos.",
+      "packsLoading": "Cargando paquetes de escenarios…",
+      "packsTitle": "Comenzar con un paquete de escenario",
+      "packMetadata": {
+        "hospital": {
+          "name": "Red hospitalaria",
+          "description": "Sitios de cuidados intensivos, atención ambulatoria y centros de datos clínicos con acceso cableado y Wi-Fi resiliente."
+        },
+        "warehouse": {
+          "name": "Red de almacenes",
+          "description": "Tres centros logísticos con cobertura densa para escáneres, estaciones cableadas, servicios locales y enlaces redundantes."
+        },
+        "campus": {
+          "name": "Campus empresarial",
+          "description": "Cuatro edificios grandes con capas de núcleo, distribución, acceso, Wi-Fi 7, estaciones de trabajo y servicios."
+        },
+        "retail": {
+          "name": "Red minorista",
+          "description": "Sede central y tres regiones comerciales con cobertura inalámbrica para puntos de venta y servicios empresariales locales."
+        },
+        "industrial": {
+          "name": "Red industrial",
+          "description": "Dos plantas de producción y un laboratorio de ingeniería con conmutación resiliente, estaciones cableadas y cobertura Wi-Fi 7."
+        },
+        "service-provider": {
+          "name": "Red de proveedor de servicios",
+          "description": "Cuatro puntos de presencia metropolitanos con capas amplias de distribución, acceso, servicios, clientes cableados y acceso inalámbrico."
+        }
+      },
       "removeSite": "Quitar sitio",
       "select": "Usar flota generada",
       "selected": "Flota generada seleccionada",

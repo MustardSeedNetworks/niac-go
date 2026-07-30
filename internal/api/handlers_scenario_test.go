@@ -26,6 +26,21 @@ func TestScenarioGenerationErrorStatusSeparatesInputFromInternalFailures(t *test
 
 func TestScenarioGenerationHandlersReturnValidatedFleet(t *testing.T) {
 	server := &Server{}
+	packRecorder := httptest.NewRecorder()
+	server.handleScenarioPacks(
+		packRecorder,
+		httptest.NewRequest(http.MethodGet, "/api/v1/scenario/packs", nil),
+	)
+	if packRecorder.Code != http.StatusOK {
+		t.Fatalf("packs status = %d, want 200", packRecorder.Code)
+	}
+	var packs []scenario.Pack
+	if err := json.NewDecoder(packRecorder.Body).Decode(&packs); err != nil {
+		t.Fatalf("decode packs: %v", err)
+	}
+	if len(packs) != 6 || packs[0].Manifest.DeviceCount == 0 {
+		t.Fatalf("packs = %+v, want six versioned manifests", packs)
+	}
 
 	profilesRecorder := httptest.NewRecorder()
 	server.handleScenarioProfiles(
@@ -89,6 +104,10 @@ func TestScenarioGenerateRejectsUnknownRequestFields(t *testing.T) {
 
 func TestScenarioRoutesCarryTemplateAuthoringPolicy(t *testing.T) {
 	routes := fetchRouteManifest(t)
+	packs := routes["/api/v1/scenario/packs"]
+	if packs.Feature != "config_templates" || packs.CSRF || packs.RateLimited {
+		t.Fatalf("packs policy = %+v, want config_templates read", packs)
+	}
 	profiles := routes["/api/v1/scenario/profiles"]
 	if profiles.Feature != "config_templates" || profiles.CSRF || profiles.RateLimited {
 		t.Fatalf("profiles policy = %+v, want config_templates read", profiles)

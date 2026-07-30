@@ -17,7 +17,6 @@ concurrency:
 jobs:
   browser-channels:
     name: Installed Chrome and Edge
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'release-please--')
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -67,7 +66,15 @@ jobs:
         env:
           E2E_BASE_URL: https://127.0.0.1:8445
           PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
-        run: npx playwright test --config=playwright.channels.config.ts
+        run: |
+          set -euo pipefail
+          for browser in chrome edge; do
+            for shard in 1 2; do
+              PLAYWRIGHT_REPORT_SUFFIX="${browser}-${shard}" \
+                npx playwright test --config=playwright.channels.config.ts \
+                --project="$browser" --shard="$shard/2"
+            done
+          done
 
       - name: Run installed browser authentication journeys
         working-directory: ui

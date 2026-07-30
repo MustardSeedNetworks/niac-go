@@ -71,10 +71,10 @@ describe('ScopeContext / useScope', () => {
     expect(result.current.canWrite).toBe(false);
 
     mockGet.mockResolvedValueOnce(respond('admin'));
-    await act(async () => {
-      await result.current.refresh();
+    act(() => {
+      void result.current.refresh();
     });
-    expect(result.current.isAdmin).toBe(true);
+    await waitFor(() => expect(result.current.isAdmin).toBe(true));
   });
 
   it('throws when used outside <ScopeProvider>', () => {

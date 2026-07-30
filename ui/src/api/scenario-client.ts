@@ -1,4 +1,4 @@
-import { deduplicatedGet, requestJson } from './requestCore';
+import { deduplicatedGet, requestJsonCamelCase } from './requestCore';
 
 export interface ScenarioSite {
   code: string;
@@ -37,6 +37,16 @@ export interface ScenarioManifest {
 
 export interface ScenarioGenerateResponse {
   content: string;
+  manifest: ScenarioManifest;
+}
+
+export interface ScenarioPack {
+  id: string;
+  version: string;
+  manifestVersion: number;
+  name: string;
+  description: string;
+  request: ScenarioGenerateRequest;
   manifest: ScenarioManifest;
 }
 
@@ -145,5 +155,9 @@ export const isScenarioRequestValid = (request: ScenarioGenerateRequest) => {
 export const fetchScenarioProfiles = () =>
   deduplicatedGet<ScenarioDeviceProfile[]>('/api/v1/scenario/profiles');
 
+export const fetchScenarioPacks = () => deduplicatedGet<ScenarioPack[]>('/api/v1/scenario/packs');
+
 export const generateScenario = (payload: ScenarioGenerateRequest) =>
-  requestJson<ScenarioGenerateResponse>('/api/v1/scenario/generate', payload, { method: 'POST' });
+  requestJsonCamelCase<ScenarioGenerateResponse>('/api/v1/scenario/generate', payload, {
+    method: 'POST',
+  });

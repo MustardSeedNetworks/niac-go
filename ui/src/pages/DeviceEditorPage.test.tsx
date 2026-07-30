@@ -54,7 +54,10 @@ function renderPage() {
  * every already-queued microtask (including the reset chain) before the
  * test interacts with the form.
  */
-const flushPendingEffects = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+const flushPendingEffects = () =>
+  new Promise<void>((resolve) => {
+    setTimeout(() => act(resolve), 0);
+  });
 
 describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
   it('shows a confirmation on Back when the form is dirty, and Stay keeps the user on the page', async () => {

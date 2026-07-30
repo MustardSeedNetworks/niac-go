@@ -14,8 +14,8 @@
  * UI, but never touch the notification store.
  */
 import { renderHook, waitFor } from '@testing-library/react';
-import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { useApiResource } from './useApiResource';
 
@@ -55,19 +55,17 @@ describe('useApiResource errorToast option', () => {
     });
   });
 
-  it('does not re-toast an identical error on repeated poll ticks', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it('does not re-toast an identical error on repeated requests', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('daemon unreachable'));
 
-    renderHook(() => useApiResource(fetcher, [], { intervalMs: 1000, errorToast: true }));
+    const { result } = renderHook(() => useApiResource(fetcher, [], { errorToast: true }));
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
     expect(useUIStore.getState().notifications).toHaveLength(1);
 
-    await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await Promise.resolve();
-    });
+    void result.current.refetch();
+    void result.current.refetch();
+    void result.current.refetch();
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
     // Same error message on every tick — still just the one toast.

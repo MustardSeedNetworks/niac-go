@@ -116,6 +116,8 @@ vi.mock('../components/wizard/DraftTopologyComposer', () => ({
   ),
 }));
 
+vi.mock('../components/wizard/ScenarioPackPicker', () => ({ ScenarioPackPicker: () => null }));
+
 const wrapper = ({ children }: { children: ReactNode }) => (
   <MemoryRouter>
     <AppProvider>{children}</AppProvider>
