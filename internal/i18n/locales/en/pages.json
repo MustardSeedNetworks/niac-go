@@ -499,6 +499,37 @@
       "domain": "DNS domain",
       "help": "Start with the validated enterprise design, then adjust sites and device counts. NIAC assigns identities, addressing, ports, VLANs, services, and links consistently.",
       "invalid": "Resolve the fleet values before continuing.",
+      "packMetadata": {
+        "campus": {
+          "description": "Four large buildings with core, distribution, access, Wi-Fi 7, workstation, and service layers.",
+          "name": "Enterprise campus"
+        },
+        "hospital": {
+          "description": "Acute-care, ambulatory, and clinical data-center sites with resilient wired and Wi-Fi access.",
+          "name": "Hospital network"
+        },
+        "industrial": {
+          "description": "Two production plants and an engineering lab with resilient switching, wired stations, and Wi-Fi 7 coverage.",
+          "name": "Industrial network"
+        },
+        "retail": {
+          "description": "Headquarters and three retail regions with wireless point-of-sale coverage and local business services.",
+          "name": "Retail network"
+        },
+        "service-provider": {
+          "description": "Four metro points of presence with deep distribution, access, service, wired-client, and wireless layers.",
+          "name": "Service provider network"
+        },
+        "warehouse": {
+          "description": "Three fulfillment centers with dense scanner coverage, wired stations, local services, and redundant uplinks.",
+          "name": "Warehouse network"
+        }
+      },
+      "packsError": "Scenario packs could not be loaded.",
+      "packsHelp": "Choose a realistic starting point, then adjust any site or device count below.",
+      "packsLoading": "Loading scenario packs…",
+      "packsTitle": "Start with a scenario pack",
+      "packSummary": "Version {{version}} · {{devices}} devices · {{links}} links",
       "removeSite": "Remove site",
       "select": "Use generated fleet",
       "selected": "Generated fleet selected",

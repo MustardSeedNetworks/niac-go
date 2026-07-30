@@ -25,3 +25,7 @@ survey.scalePanel.measureDistance
 #     not the deprecated license-tier brand
 survey.heatmaps.security.wpa2-enterprise
 survey.heatmaps.security.wpa3-enterprise
+
+# --- "Enterprise" used as an organization-size adjective in a scenario name,
+#     not the deprecated license-tier brand
+pages.newSimWizard.fleet.packMetadata.campus.name

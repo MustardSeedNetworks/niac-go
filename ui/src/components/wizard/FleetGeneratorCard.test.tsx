@@ -5,6 +5,8 @@ import { enterpriseScenarioRequest } from '../../api/scenario-client';
 import '../../i18n';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
 
+vi.mock('./ScenarioPackPicker', () => ({ ScenarioPackPicker: () => null }));
+
 describe('FleetGeneratorCard', () => {
   it('exposes bounded repeat controls and reports edits', () => {
     const onChange = vi.fn();

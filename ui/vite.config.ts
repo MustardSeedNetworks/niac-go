@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, 'src'),
-        '@locales': path.resolve(__dirname, '../internal/i18n/locales'),
+        '@': path.resolve(import.meta.dirname, 'src'),
+        '@locales': path.resolve(import.meta.dirname, '../internal/i18n/locales'),
       },
       dedupe: ['react', 'react-dom', 'react-router', 'lucide-react', 'i18next', 'react-i18next'],
     },

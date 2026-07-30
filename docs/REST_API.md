@@ -36,9 +36,12 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
+| `GET` | `/api/v1/scenario/packs` | Versioned hospital, warehouse, campus, retail, industrial, and service-provider presets |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
 | `PATCH` | `/api/v1/library/drafts/{name}/topology` | Apply one revision-safe topology edit to an isolated draft |
+| `PUT` | `/api/v1/library/drafts/{name}/behaviors` | Replace a draft's deterministic behavior timelines |
+| `GET` | `/api/v1/behaviors` | Current saved-timeline replay status |
 | `GET` | `/api/v1/version` | Version information |
 | `GET` | `/api/v1/errors` | Available error types and active error injections |
 | `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
@@ -53,16 +56,36 @@ authoritative snapshot shape as `GET /api/v1/stats`.
 
 ### Scenario generation
 
-`GET /api/v1/scenario/profiles` returns the role profiles used by the visual
-authoring flow. `POST /api/v1/scenario/generate` accepts sites, infrastructure
-counts, endpoint repeat counts, a domain, an SNMP community, and an attachment
-name. It returns portable YAML plus a manifest containing device, network, and
-link counts and deterministic SHA-256 fingerprints.
+`GET /api/v1/scenario/packs` returns six versioned composer presets with frozen
+device, network, and link manifests. `GET /api/v1/scenario/profiles` returns the
+role profiles used by the visual authoring flow. `POST
+/api/v1/scenario/generate` accepts camelCase sites, infrastructure counts,
+endpoint repeat counts, a domain, an SNMP community, and an attachment name. It
+returns portable YAML plus a manifest containing device, network, and link
+counts and deterministic SHA-256 fingerprints.
 
 Generation is side-effect free: it does not replace the active configuration,
 start a simulation, or save a draft. The returned `content` can be reviewed and
 then stored through the draft API. The generate route requires a read-write
 token, the `config_templates` entitlement, and a CSRF token.
+
+Scenario packs carry only the logical attachment name used by the composer.
+They cannot select a host interface, attachment mode, or access VLAN. Starting
+the generated draft still runs the normal preflight against the current
+operator-approved attachment policy.
+
+### Draft behavior timelines
+
+`PUT /api/v1/library/drafts/{name}/behaviors` replaces the named draft's saved
+traffic and fault phases. Send the current quoted draft revision in `If-Match`.
+Each timeline supplies a name, `startOffsetMs`, `repeatCount`, and bounded
+phases with `startOffsetMs`, `durationMs`, and reset behavior. The server
+validates every device/interface target and rejects overlapping phases before
+persisting a new revision.
+
+When that draft starts, NIAC replays the same transitions through authoritative
+device state on every simulation restart. `GET /api/v1/behaviors` reports the
+current replay state, active phases, and applied/total transition counts.
 
 ### Draft topology mutations
 

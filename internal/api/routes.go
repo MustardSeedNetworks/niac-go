@@ -73,6 +73,12 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
 		{
+			path:    "/api/v1/scenario/packs",
+			handler: s.handleScenarioPacks,
+			methods: []string{http.MethodGet},
+			feature: "config_templates",
+		},
+		{
 			path:    "/api/v1/scenario/profiles",
 			handler: s.handleScenarioProfiles,
 			methods: []string{http.MethodGet},
