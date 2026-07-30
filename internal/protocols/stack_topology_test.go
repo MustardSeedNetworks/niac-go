@@ -7,6 +7,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicecli"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -63,6 +64,25 @@ func TestRuntimeTopologyTracksCLIInterfaceShutdown(t *testing.T) {
 
 	graph := stack.RuntimeTopology()
 	if len(graph.Links) != 1 || graph.Links[0].Status != "down" {
+		t.Fatalf("RuntimeTopology() links = %#v", graph.Links)
+	}
+}
+
+func TestRuntimeTopologyProjectsInterfaceFaultAsDegraded(t *testing.T) {
+	left := faultTestDevice("left")
+	left.TrunkPorts[0].RemoteDevice = "right"
+	left.TrunkPorts[0].RemoteInterface = "Gi0/1"
+	right := faultTestDevice("right")
+	right.IPAddresses[0] = []byte{192, 0, 2, 2}
+	right.Interfaces[0].Address = "192.0.2.2/24"
+	cfg := &config.Config{Devices: []config.Device{left, right}}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	if err := stack.SetInterfaceFault("left", "Gi0/1", devicestate.FaultUtilization, 85); err != nil {
+		t.Fatalf("SetInterfaceFault() error = %v", err)
+	}
+
+	graph := stack.RuntimeTopology()
+	if len(graph.Links) != 1 || graph.Links[0].Status != "degraded" || graph.Links[0].Utilization != 85 {
 		t.Fatalf("RuntimeTopology() links = %#v", graph.Links)
 	}
 }

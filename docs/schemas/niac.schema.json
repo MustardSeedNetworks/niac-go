@@ -23,6 +23,110 @@
         "value"
       ]
     },
+    "BehaviorFault": {
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "device",
+        "interface",
+        "type",
+        "value"
+      ]
+    },
+    "BehaviorPhase": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "start_offset_ms": {
+          "type": "integer"
+        },
+        "duration_ms": {
+          "type": "integer"
+        },
+        "reset": {
+          "type": "boolean"
+        },
+        "traffic": {
+          "items": {
+            "$ref": "#/$defs/BehaviorTraffic"
+          },
+          "type": "array"
+        },
+        "faults": {
+          "items": {
+            "$ref": "#/$defs/BehaviorFault"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "duration_ms"
+      ]
+    },
+    "BehaviorTimeline": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "start_offset_ms": {
+          "type": "integer"
+        },
+        "repeat_count": {
+          "type": "integer"
+        },
+        "phases": {
+          "items": {
+            "$ref": "#/$defs/BehaviorPhase"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "repeat_count",
+        "phases"
+      ]
+    },
+    "BehaviorTraffic": {
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "utilization": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "device",
+        "interface",
+        "utilization"
+      ]
+    },
     "CapturePlayback": {
       "properties": {
         "file_name": {
@@ -92,6 +196,12 @@
         "capture_playbacks": {
           "items": {
             "$ref": "#/$defs/CapturePlayback"
+          },
+          "type": "array"
+        },
+        "behavior_timelines": {
+          "items": {
+            "$ref": "#/$defs/BehaviorTimeline"
           },
           "type": "array"
         },

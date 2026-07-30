@@ -51,6 +51,7 @@ const (
 type Config struct {
 	IncludePath        string              `yaml:"include_path,omitempty"`
 	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,dive"`
+	BehaviorTimelines  []BehaviorTimeline  `yaml:"behavior_timelines,omitempty"  validate:"omitempty,max=64,dive"`
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
 	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
 	// Segments binds independent device sets to VLAN tags for multi-VLAN
@@ -61,6 +62,39 @@ type Config struct {
 	Segments    []Segment           `yaml:"segments,omitempty"    validate:"omitempty,dive"`
 	Networks    []Network           `yaml:"networks,omitempty"    validate:"omitempty,dive"`
 	Attachments []LogicalAttachment `yaml:"attachments,omitempty" validate:"omitempty,dive"`
+}
+
+// BehaviorTimeline is one saved, repeatable sequence of runtime phases.
+type BehaviorTimeline struct {
+	Name          string          `yaml:"name"                      validate:"required,max=100"`
+	StartOffsetMS int             `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
+	RepeatCount   int             `yaml:"repeat_count"              validate:"gte=1,lte=1000"`
+	Phases        []BehaviorPhase `yaml:"phases"                    validate:"required,max=256,dive"`
+}
+
+// BehaviorPhase applies traffic and faults at a deterministic offset.
+type BehaviorPhase struct {
+	Name          string            `yaml:"name"                      validate:"required,max=100"`
+	StartOffsetMS int               `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
+	DurationMS    int               `yaml:"duration_ms"               validate:"gte=1,lte=86400000"`
+	Reset         bool              `yaml:"reset,omitempty"`
+	Traffic       []BehaviorTraffic `yaml:"traffic,omitempty"         validate:"omitempty,max=1024,dive"`
+	Faults        []BehaviorFault   `yaml:"faults,omitempty"          validate:"omitempty,max=1024,dive"`
+}
+
+// BehaviorTraffic sets observable utilization on one simulated interface.
+type BehaviorTraffic struct {
+	Device      string `yaml:"device"      validate:"required"`
+	Interface   string `yaml:"interface"   validate:"required"`
+	Utilization int    `yaml:"utilization" validate:"gte=1,lte=100"`
+}
+
+// BehaviorFault sets one supported SNMP interface fault rate.
+type BehaviorFault struct {
+	Device    string `yaml:"device"    validate:"required"`
+	Interface string `yaml:"interface" validate:"required"`
+	Type      string `yaml:"type"      validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization"`
+	Value     int    `yaml:"value"     validate:"gte=1,lte=100"`
 }
 
 // Network declares one internal routed IPv4 network.

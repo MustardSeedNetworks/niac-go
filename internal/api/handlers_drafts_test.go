@@ -146,6 +146,65 @@ func TestDraftHandlersLifecycleAndRuntimeIsolation(t *testing.T) {
 	}
 }
 
+func TestDraftBehaviorReplacementPersistsValidatedTimeline(t *testing.T) {
+	server, _ := newTestServer(t)
+	lib := attachDraftLibrary(t, server)
+	content := `devices:
+  - name: access-1
+    type: switch
+    vendor: cisco
+    ips: [192.0.2.10]
+    interfaces:
+      - name: Gi0/48
+        speed: 10000
+`
+	draft, err := lib.CreateDraft("behavior-lab", content)
+	if err != nil {
+		t.Fatalf("CreateDraft() error = %v", err)
+	}
+	body := `{"timelines":[{"name":"uplink degradation","start_offset_ms":1000,"repeat_count":2,"phases":[{"name":"congested","start_offset_ms":0,"duration_ms":3000,"reset":true,"traffic":[{"device":"access-1","interface":"Gi0/48","utilization":85}],"faults":[{"device":"access-1","interface":"Gi0/48","type":"packet_discards","value":12}]}]}]}`
+	rec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(rec, draftRequest(
+		http.MethodPut, "/api/v1/library/drafts/behavior-lab/behaviors", body, draft.Revision,
+	))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("replace behaviors status = %d, body=%s", rec.Code, rec.Body.String())
+	}
+	updated := decodeDraftResponse(t, rec)
+	cfg, err := config.LoadYAMLBytes([]byte(updated.Content))
+	if err != nil {
+		t.Fatalf("LoadYAMLBytes() error = %v\n%s", err, updated.Content)
+	}
+	if len(cfg.BehaviorTimelines) != 1 || cfg.BehaviorTimelines[0].RepeatCount != 2 ||
+		cfg.BehaviorTimelines[0].Phases[0].Traffic[0].Utilization != 85 {
+		t.Fatalf("saved behavior timelines = %+v", cfg.BehaviorTimelines)
+	}
+}
+
+func TestDraftBehaviorReplacementRejectsUnknownTarget(t *testing.T) {
+	server, _ := newTestServer(t)
+	lib := attachDraftLibrary(t, server)
+	draft, err := lib.CreateDraft("behavior-lab", baseConfigYAML)
+	if err != nil {
+		t.Fatalf("CreateDraft() error = %v", err)
+	}
+	body := `{"timelines":[{"name":"invalid","start_offset_ms":0,"repeat_count":1,"phases":[{"name":"phase","start_offset_ms":0,"duration_ms":1000,"reset":true,"traffic":[{"device":"missing","interface":"Gi0/1","utilization":85}],"faults":[]}]}]}`
+	rec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(rec, draftRequest(
+		http.MethodPut, "/api/v1/library/drafts/behavior-lab/behaviors", body, draft.Revision,
+	))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid behavior status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+	stored, err := lib.ReadDraft("behavior-lab")
+	if err != nil {
+		t.Fatalf("ReadDraft() error = %v", err)
+	}
+	if stored.Revision != draft.Revision {
+		t.Fatal("invalid behavior replacement changed the draft")
+	}
+}
+
 func TestDraftCreateValidatesConfigAndEntitlementsBeforePersistence(t *testing.T) {
 	server, _ := newTestServer(t)
 	lib := attachDraftLibrary(t, server)

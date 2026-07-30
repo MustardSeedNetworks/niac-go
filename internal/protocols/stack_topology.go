@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
@@ -29,6 +30,10 @@ func (s *Stack) RuntimeTopology() topology.Graph {
 			continue
 		}
 		snapshot := state.Snapshot()
+		faults := make(map[string][]devicestate.InterfaceFault)
+		for _, fault := range snapshot.Faults {
+			faults[fault.Interface] = append(faults[fault.Interface], fault)
+		}
 		for interfaceIndex := range device.Interfaces {
 			for _, current := range snapshot.Network.Interfaces {
 				if current.Name != device.Interfaces[interfaceIndex].Name {
@@ -41,11 +46,27 @@ func (s *Stack) RuntimeTopology() topology.Graph {
 				}
 				device.Interfaces[interfaceIndex].AdminStatus = interfaceStatus(current.AdminUp)
 				device.Interfaces[interfaceIndex].OperStatus = interfaceStatus(current.OperUp)
+				projectInterfaceFaults(&device.Interfaces[interfaceIndex], faults[current.Name])
 				break
 			}
 		}
 	}
 	return topology.Build(&projected)
+}
+
+func projectInterfaceFaults(iface *config.Interface, faults []devicestate.InterfaceFault) {
+	for _, fault := range faults {
+		if fault.Value <= 0 {
+			continue
+		}
+		if iface.OperStatus != "down" {
+			iface.OperStatus = "degraded"
+		}
+		if fault.Type == devicestate.FaultUtilization {
+			iface.InUtilization = max(iface.InUtilization, float64(fault.Value))
+			iface.OutUtilization = max(iface.OutUtilization, float64(fault.Value))
+		}
+	}
 }
 
 // RuntimeFabricTopology projects authoritative interface and route state into

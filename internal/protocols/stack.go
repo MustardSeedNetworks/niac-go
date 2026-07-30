@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/behavior"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -124,6 +125,8 @@ type Stack struct {
 	stateIPv4       map[*DeviceTable]map[netip.Addr][]*config.Device
 	stateDeviceIPv4 map[*config.Device]deviceIPv4Index
 	notifications   *stateNotificationManager
+	behaviorMu      sync.RWMutex
+	behaviorRunner  *behavior.Runner
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
@@ -251,6 +254,7 @@ func newStack(
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
 	stack.configureDeviceStates(nil)
+	stack.configureBehaviorTimelines(cfg)
 
 	return stack
 }
@@ -360,6 +364,7 @@ func (s *Stack) Start() error {
 	s.fdpHandler.Start()
 	s.startNeighborCleanupLoop()
 	s.startSessionCleanupLoop()
+	s.startBehaviorTimelines()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack started")
@@ -385,6 +390,7 @@ func (s *Stack) Stop() {
 	s.edpHandler.Stop()
 	s.fdpHandler.Stop()
 	s.udpHandler.Stop()
+	s.stopBehaviorTimelines()
 
 	close(s.stopChan)
 	s.notifications.Reset()
@@ -520,11 +526,15 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
+	previous := s.currentConfig()
+	s.stopBehaviorTimelines()
 
 	var replacementTopology *fabric.Topology
 	if s.fabric != nil {
 		report := fabric.Compile(cfg, s.fabric.binding.Binding)
 		if !report.Safe {
+			s.configureBehaviorTimelines(previous)
+			s.startBehaviorTimelines()
 			return fmt.Errorf("%w: %v", ErrUnsafeFabricReload, report.Diagnostics)
 		}
 		replacementTopology = &report.Topology
@@ -551,6 +561,8 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		_, _ = fmt.Fprintf(os.Stdout, "Protocol stack reloaded (%d devices)\n", len(cfg.Devices))
 	}
+	s.configureBehaviorTimelines(cfg)
+	s.startBehaviorTimelines()
 
 	return nil
 }

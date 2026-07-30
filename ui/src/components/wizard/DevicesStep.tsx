@@ -7,6 +7,7 @@ import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { YamlEditor } from '../config/YamlEditor';
+import { DraftBehaviorComposer } from './DraftBehaviorComposer';
 import { DraftTopologyComposer } from './DraftTopologyComposer';
 import { parseDraftTopology } from './draft-topology';
 
@@ -39,16 +40,18 @@ export const DevicesStep: FC<DevicesStepProps> = ({
     () => !parseDraftTopology(draft.content).configBacked,
     [draft.content],
   );
-  const [view, setView] = useState<'visual' | 'yaml'>(() => (visualSupported ? 'visual' : 'yaml'));
+  const [view, setView] = useState<'visual' | 'behaviors' | 'yaml'>(() =>
+    visualSupported ? 'visual' : 'yaml',
+  );
 
   useEffect(() => {
     if (!visualSupported) setView('yaml');
   }, [visualSupported]);
 
-  const switchView = async (next: 'visual' | 'yaml') => {
+  const switchView = async (next: 'visual' | 'behaviors' | 'yaml') => {
     if (next === view) return;
-    if (next === 'visual' && !visualSupported) return;
-    if (next === 'visual' && dirty && !(await onSave())) return;
+    if (next !== 'yaml' && !visualSupported) return;
+    if (next !== 'yaml' && dirty && !(await onSave())) return;
     setView(next);
   };
 
@@ -67,13 +70,13 @@ export const DevicesStep: FC<DevicesStepProps> = ({
           aria-label={t('newSimWizard.devices.viewLabel')}
           className="inline-flex w-fit rounded-lg border border-surface-border bg-bg-base/60 p-1"
         >
-          {(['visual', 'yaml'] as const).map((tab) => (
+          {(['visual', 'behaviors', 'yaml'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               role="tab"
               aria-selected={view === tab}
-              disabled={tab === 'visual' && !visualSupported}
+              disabled={tab !== 'yaml' && !visualSupported}
               className={`min-h-11 rounded-md px-4 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary ${
                 view === tab
                   ? 'bg-brand-primary text-on-brand'
@@ -92,6 +95,12 @@ export const DevicesStep: FC<DevicesStepProps> = ({
         )}
         {view === 'visual' && visualSupported ? (
           <DraftTopologyComposer
+            draft={draft}
+            onDraftUpdate={onDraftUpdate}
+            onBusyChange={onBusyChange}
+          />
+        ) : view === 'behaviors' && visualSupported ? (
+          <DraftBehaviorComposer
             draft={draft}
             onDraftUpdate={onDraftUpdate}
             onBusyChange={onBusyChange}
