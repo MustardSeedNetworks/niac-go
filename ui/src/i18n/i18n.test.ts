@@ -30,6 +30,10 @@ describe('i18n configuration', () => {
     expect(defaultNs).toBe('common');
   });
 
+  it('keeps diagnostic logging disabled in tests', () => {
+    expect(i18n.options.debug).toBe(false);
+  });
+
   it('loads EN resources for every declared namespace', () => {
     for (const ns of namespaces) {
       const bundle = i18n.getResourceBundle('en', ns);

@@ -100,7 +100,7 @@ i18n
       escapeValue: false,
     },
 
-    debug: import.meta.env.DEV,
+    debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
   })
   .catch(() => {
     // i18n initialization failure is non-recoverable, app will use fallback strings

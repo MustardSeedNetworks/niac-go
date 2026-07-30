@@ -55,6 +55,30 @@ func TestHandleSimulationPreflightReturnsManagedPathValidationError(t *testing.T
 	}
 }
 
+func TestHandleSimulationPreflightAcceptsGeneratedFleetBody(t *testing.T) {
+	configData := "devices: []\n" + strings.Repeat("# generated fleet padding\n", 50_000)
+	body, err := json.Marshal(SimulationRequest{Interface: "eth0", ConfigData: configData})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) <= MaxRequestBodySize {
+		t.Fatalf("request body = %d bytes, want more than legacy limit %d", len(body), MaxRequestBodySize)
+	}
+	daemon := &preflightDaemon{}
+	server := &Server{daemon: daemon}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation/preflight", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationPreflight(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if daemon.request.ConfigData != configData {
+		t.Fatalf("preflight received %d config bytes, want %d", len(daemon.request.ConfigData), len(configData))
+	}
+}
+
 func (d *preflightDaemon) StartSimulation(_ SimulationRequest, entitlements SimulationEntitlements) error {
 	d.entitlements = entitlements
 	if len(d.report.Topology.Networks) > 0 && !entitlements.RoutedLabs {

@@ -110,6 +110,17 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 		t.Errorf("/api/v1/library/install: maxBodyBytes = %d, want MaxLibraryInstallBodySize (%d)",
 			v.MaxBodyBytes, int64(MaxLibraryInstallBodySize))
 	}
+	for _, path := range []string{
+		"/api/v1/library/drafts",
+		"/api/v1/library/drafts/",
+		"/api/v1/simulation/preflight",
+		"/api/v1/simulation",
+	} {
+		if got := byPath[path].MaxBodyBytes; got != int64(MaxScenarioRequestBodySize) {
+			t.Errorf("%s: maxBodyBytes = %d, want MaxScenarioRequestBodySize (%d)",
+				path, got, int64(MaxScenarioRequestBodySize))
+		}
+	}
 
 	// Method-gated routes report their methods: a multi-method dispatcher
 	// declares its full set, a single-method route declares exactly one.

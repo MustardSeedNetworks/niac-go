@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestValidateSimulationRequestRejectsOversizedConfig(t *testing.T) {
+	errs := validateSimulationRequest(SimulationRequest{
+		Interface:  "eth0",
+		ConfigData: strings.Repeat("x", MaxScenarioConfigSize+1),
+	})
+	if len(errs) != 1 || errs[0].Field != "config_data" {
+		t.Fatalf("validation errors = %+v, want config_data size error", errs)
+	}
+}
+
 func TestNormalizeAndParseIP(t *testing.T) {
 	tests := []struct {
 		name    string

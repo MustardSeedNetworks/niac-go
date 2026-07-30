@@ -47,7 +47,9 @@ func TestRuntimeTopologyTracksCLIInterfaceShutdown(t *testing.T) {
 		{
 			Name: "left", Type: "switch",
 			Interfaces: []config.Interface{{Name: "Gi0/1", AdminStatus: "up", OperStatus: "up"}},
-			TrunkPorts: []config.TrunkPort{{Interface: "Gi0/1", RemoteDevice: "right", RemoteInterface: "Gi0/1"}},
+			TrunkPorts: []config.TrunkPort{
+				{Interface: "Gi0/1", RemoteDevice: "right", RemoteInterface: "Gi0/1"},
+			},
 		},
 		{
 			Name: "right", Type: "switch",
@@ -82,7 +84,30 @@ func TestRuntimeTopologyProjectsInterfaceFaultAsDegraded(t *testing.T) {
 	}
 
 	graph := stack.RuntimeTopology()
-	if len(graph.Links) != 1 || graph.Links[0].Status != "degraded" || graph.Links[0].Utilization != 85 {
+	if len(graph.Links) != 1 || graph.Links[0].Status != "degraded" ||
+		graph.Links[0].Utilization != 85 {
+		t.Fatalf("RuntimeTopology() links = %#v", graph.Links)
+	}
+}
+
+func TestRuntimeTopologyProjectsReciprocalTargetFault(t *testing.T) {
+	left := faultTestDevice("left")
+	left.TrunkPorts[0].RemoteDevice = "right"
+	left.TrunkPorts[0].RemoteInterface = "Gi0/1"
+	right := faultTestDevice("right")
+	right.IPAddresses[0] = []byte{192, 0, 2, 2}
+	right.Interfaces[0].Address = "192.0.2.2/24"
+	right.TrunkPorts[0].RemoteDevice = "left"
+	right.TrunkPorts[0].RemoteInterface = "Gi0/1"
+	cfg := &config.Config{Devices: []config.Device{left, right}}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	if err := stack.SetInterfaceFault("right", "Gi0/1", devicestate.FaultUtilization, 85); err != nil {
+		t.Fatalf("SetInterfaceFault() error = %v", err)
+	}
+
+	graph := stack.RuntimeTopology()
+	if len(graph.Links) != 1 || graph.Links[0].Status != "degraded" ||
+		graph.Links[0].Utilization != 85 {
 		t.Fatalf("RuntimeTopology() links = %#v", graph.Links)
 	}
 }

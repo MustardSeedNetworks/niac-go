@@ -284,6 +284,32 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(startSimulation).not.toHaveBeenCalled();
   });
 
+  it('keeps a selected template while generated fleet fields are edited', async () => {
+    const user = userEvent.setup();
+    const template: Template = {
+      name: 'branch-router',
+      description: 'Branch router',
+      deviceCount: 1,
+      type: 'router',
+    };
+    fetchTemplates.mockResolvedValue([template]);
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(await screen.findByRole('button', { name: 'Select' }));
+    await user.clear(screen.getByTestId('fleet-domain'));
+    await user.type(screen.getByTestId('fleet-domain'), 'edited.example');
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(createScenarioDraftFromTemplate).toHaveBeenCalledTimes(1));
+    expect(createScenarioDraftFromTemplate).toHaveBeenCalledWith(
+      expect.stringMatching(/^scenario-/),
+      template.name,
+    );
+    expect(generateScenario).not.toHaveBeenCalled();
+  });
+
   it('saves dirty edits before Back and resumes the same draft for an unchanged source', async () => {
     const user = userEvent.setup();
     renderWizard();

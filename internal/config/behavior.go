@@ -5,14 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 )
 
 var (
-	ErrBehaviorTargetNotFound  = errors.New("behavior target not found")
-	ErrBehaviorTargetAmbiguous = errors.New("behavior target is ambiguous")
-	ErrBehaviorPhaseEmpty      = errors.New("behavior phase has no traffic or faults")
-	ErrBehaviorPhaseOverlap    = errors.New("behavior phases overlap")
+	ErrBehaviorTargetNotFound   = errors.New("behavior target not found")
+	ErrBehaviorTargetAmbiguous  = errors.New("behavior target is ambiguous")
+	ErrBehaviorPhaseEmpty       = errors.New("behavior phase has no traffic or faults")
+	ErrBehaviorPhaseOverlap     = errors.New("behavior phases overlap")
+	ErrBehaviorScheduleTooLarge = errors.New("behavior schedule is too large")
 )
+
+const maxBehaviorScheduledActions = 100_000
 
 type behaviorTarget struct {
 	count      int
@@ -26,7 +30,127 @@ func validateBehaviorTargets(cfg *Config) error {
 			return fmt.Errorf("behavior timeline %q: %w", timeline.Name, err)
 		}
 	}
+	if err := validateBehaviorScheduleSize(cfg.BehaviorTimelines); err != nil {
+		return err
+	}
+	return validateBehaviorConflicts(cfg.BehaviorTimelines)
+}
+
+type behaviorInterval struct {
+	start         time.Duration
+	end           time.Duration
+	persistent    bool
+	timelineIndex int
+	timeline      string
+	phase         string
+}
+
+func validateBehaviorScheduleSize(timelines []BehaviorTimeline) error {
+	var scheduledActions int64
+	for _, timeline := range timelines {
+		for _, phase := range timeline.Phases {
+			applications := int64(len(phase.Traffic) + len(phase.Faults))
+			if phase.Reset {
+				applications *= 2
+			}
+			scheduledActions += applications * int64(timeline.RepeatCount)
+			if scheduledActions > maxBehaviorScheduledActions {
+				return fmt.Errorf(
+					"%w: maximum is %d action applications",
+					ErrBehaviorScheduleTooLarge,
+					maxBehaviorScheduledActions,
+				)
+			}
+		}
+	}
 	return nil
+}
+
+func validateBehaviorConflicts(timelines []BehaviorTimeline) error {
+	for _, targetIntervals := range behaviorIntervalsByTarget(timelines) {
+		if err := validateBehaviorTargetIntervals(targetIntervals, len(timelines)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func behaviorIntervalsByTarget(timelines []BehaviorTimeline) map[string][]behaviorInterval {
+	intervalsByTarget := make(map[string][]behaviorInterval)
+	for timelineIndex, timeline := range timelines {
+		cycleDuration := behaviorTimelineDuration(timeline.Phases)
+		for _, phase := range timeline.Phases {
+			keys := behaviorPhaseTargetKeys(phase)
+			repetitions := timeline.RepeatCount
+			if !phase.Reset {
+				repetitions = 1
+			}
+			for repetition := range repetitions {
+				start := timeline.StartOffset + time.Duration(
+					repetition,
+				)*cycleDuration + phase.StartOffset
+				interval := behaviorInterval{
+					start: start, end: start + phase.Duration, persistent: !phase.Reset,
+					timelineIndex: timelineIndex, timeline: timeline.Name, phase: phase.Name,
+				}
+				for key := range keys {
+					intervalsByTarget[key] = append(intervalsByTarget[key], interval)
+				}
+			}
+		}
+	}
+	return intervalsByTarget
+}
+
+func behaviorPhaseTargetKeys(phase BehaviorPhase) map[string]struct{} {
+	keys := make(map[string]struct{}, len(phase.Traffic)+len(phase.Faults))
+	for _, traffic := range phase.Traffic {
+		keys[behaviorConflictKey(traffic.Device, traffic.Interface, "high_utilization")] = struct{}{}
+	}
+	for _, fault := range phase.Faults {
+		keys[behaviorConflictKey(fault.Device, fault.Interface, fault.Type)] = struct{}{}
+	}
+	return keys
+}
+
+func validateBehaviorTargetIntervals(intervals []behaviorInterval, timelineCount int) error {
+	slices.SortFunc(intervals, func(left, right behaviorInterval) int {
+		return cmp.Compare(left.start, right.start)
+	})
+	furthestByTimeline := make(map[int]behaviorInterval, timelineCount)
+	for _, current := range intervals {
+		for timelineIndex, previous := range furthestByTimeline {
+			if timelineIndex == current.timelineIndex ||
+				!previous.persistent && current.start >= previous.end {
+				continue
+			}
+			return fmt.Errorf(
+				"%w: timeline %q phase %q conflicts with timeline %q phase %q",
+				ErrBehaviorPhaseOverlap,
+				current.timeline,
+				current.phase,
+				previous.timeline,
+				previous.phase,
+			)
+		}
+		previous, found := furthestByTimeline[current.timelineIndex]
+		if !found || current.persistent || !previous.persistent && current.end > previous.end {
+			furthestByTimeline[current.timelineIndex] = current
+		}
+	}
+	return nil
+}
+
+func behaviorTimelineDuration(phases []BehaviorPhase) time.Duration {
+	var duration time.Duration
+	for _, phase := range phases {
+		duration = max(duration, phase.StartOffset+phase.Duration)
+	}
+	return duration
+}
+
+func behaviorConflictKey(device, iface, faultType string) string {
+	return device + "\x00" + iface + "\x00" + faultType
 }
 
 func behaviorTargets(cfg *Config) map[string]behaviorTarget {

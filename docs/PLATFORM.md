@@ -127,7 +127,14 @@ Windows provides full functionality with Npcap dependency.
    - Run installer with **"Install Npcap in WinPcap API-compatible Mode"** checked
    - Reboot if prompted
 
-2. **Build**:
+2. **Install a release archive** from an elevated PowerShell session:
+   ```powershell
+   Expand-Archive niac-<version>-windows-<arch>.zip -DestinationPath .
+   cd niac-<version>-windows-<arch>
+   .\install.ps1
+   ```
+
+3. **Or build from source**:
    ```powershell
    go build -o niac.exe ./cmd/niac
    ```

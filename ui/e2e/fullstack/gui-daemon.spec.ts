@@ -18,6 +18,7 @@ devices:
     lldp:
       enabled: true
 `;
+const generatedFleetConfig = `${simulationConfig}${'# generated fleet device metadata\n'.repeat(40_000)}`;
 
 test.describe('daemon-served GUI', () => {
   test('serves the SPA and reads live API data from the Go daemon', async ({ page }) => {
@@ -60,6 +61,21 @@ test.describe('daemon-served GUI', () => {
 
     const updated = (await update.json()) as { packetsThreshold: number };
     expect(updated.packetsThreshold).toBe(2500);
+  });
+
+  test('preflights a generated fleet larger than the ordinary API body limit', async ({
+    request,
+  }) => {
+    expect(new TextEncoder().encode(generatedFleetConfig).length).toBeGreaterThan(1 << 20);
+    const csrf = await request.get('/api/v1/csrf-token');
+    const { token } = (await csrf.json()) as { token: string };
+
+    const preflight = await request.post('/api/v1/simulation/preflight', {
+      headers: { 'X-Csrf-Token': token },
+      data: { interface: simulationInterface, configData: generatedFleetConfig },
+    });
+
+    expect(preflight.ok()).toBe(true);
   });
 
   test('shows seeded devices from a daemon simulation', async ({ page, request }) => {

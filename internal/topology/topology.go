@@ -16,7 +16,9 @@ const (
 
 // Link type constants.
 const (
-	linkTypeTrunk = "trunk"
+	linkTypeTrunk          = "trunk"
+	statusSeverityDegraded = 1
+	statusSeverityDown     = 2
 )
 
 // Device type constants for topology.
@@ -186,6 +188,40 @@ func processTrunkPort(
 	}
 }
 
+func mergeTrunkEndpoint(
+	link *Link,
+	trunk config.TrunkPort,
+	deviceName string,
+	interfaceMap map[string]map[string]config.Interface,
+) {
+	speed, duplex, status, utilization := getInterfaceDetails(
+		interfaceMap,
+		deviceName,
+		trunk.Interface,
+	)
+	if link.Speed == 0 || speed > 0 && speed < link.Speed {
+		link.Speed = speed
+	}
+	if link.Duplex == "" || duplex == "half" {
+		link.Duplex = duplex
+	}
+	if linkStatusSeverity(status) > linkStatusSeverity(link.Status) {
+		link.Status = status
+	}
+	link.Utilization = max(link.Utilization, utilization)
+}
+
+func linkStatusSeverity(status string) int {
+	switch status {
+	case "down":
+		return statusSeverityDown
+	case "degraded":
+		return statusSeverityDegraded
+	default:
+		return 0
+	}
+}
+
 // Build derives a topology graph from the configuration.
 //
 // Trunk links are inherently bidirectional — both switches declare a
@@ -198,7 +234,7 @@ func Build(cfg *config.Config) Graph {
 	nodes := make(map[string]Node)
 	links := make([]Link, 0)
 	interfaceMap := buildInterfaceMap(cfg.Devices)
-	seenLinks := make(map[string]bool)
+	seenLinks := make(map[string]int)
 
 	for _, dev := range cfg.Devices {
 		nodes[dev.Name] = Node{
@@ -221,10 +257,10 @@ func Build(cfg *config.Config) Graph {
 				trunk.RemoteDevice,
 				trunk.RemoteInterface,
 			)
-			if seenLinks[pair] {
+			if index, found := seenLinks[pair]; found {
+				mergeTrunkEndpoint(&links[index], trunk, dev.Name, interfaceMap)
 				continue
 			}
-			seenLinks[pair] = true
 
 			if _, exists := nodes[trunk.RemoteDevice]; !exists {
 				nodes[trunk.RemoteDevice] = Node{
@@ -233,6 +269,7 @@ func Build(cfg *config.Config) Graph {
 				}
 			}
 
+			seenLinks[pair] = len(links)
 			links = append(links, processTrunkPort(trunk, dev.Name, interfaceMap))
 		}
 	}

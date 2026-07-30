@@ -230,9 +230,7 @@ export const NewSimulationWizardPage: FC = () => {
                 uploadFile: null,
               }))
             }
-            onFleetChange={(fleetRequest) =>
-              setState((s) => ({ ...s, source: 'generated', fleetRequest }))
-            }
+            onFleetChange={(fleetRequest) => setState((s) => ({ ...s, fleetRequest }))}
             onInterfaceChange={(iface: string) =>
               setState((s) => ({ ...s, selectedInterface: iface }))
             }

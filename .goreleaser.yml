@@ -150,7 +150,7 @@ archives:
 # The sidecar step in release.yml uses the exact same
 # "niac-{{ .Version }}-{{ .Os }}-{{ .Arch }}" naming convention and the
 # same file set (README.md, LICENSE, cmd/niac/templates, deploy/windows/
-# build.ps1 as install.ps1) so the zip is indistinguishable from a
+# install.ps1) so the zip is indistinguishable from a
 # goreleaser-native archive.
 
 # Linux .deb + .rpm via nfpm (built into goreleaser). Port of deploy/nfpm/nfpm.yaml —
@@ -270,7 +270,10 @@ release:
   # `replace_existing_artifacts: true` lets a re-run overwrite a partial
   # earlier failure cleanly.
   replace_existing_artifacts: true
-  draft: false
+  use_existing_draft: true
+  # Keep the release private until supplemental artifacts and provenance
+  # have succeeded. The provenance job publishes this draft as its final step.
+  draft: true
   prerelease: auto
   mode: replace
   header: |

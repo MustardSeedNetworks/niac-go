@@ -6,6 +6,11 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 WORKFLOW="$REPO_ROOT/.github/workflows/release.yml"
 NPCAP_CACHE_WORKFLOW="$REPO_ROOT/.github/workflows/cache-npcap-sdk.yml"
 CONTENT_CONFIG="$REPO_ROOT/.goreleaser.content.yml"
+CORE_CONFIG="$REPO_ROOT/.goreleaser.yml"
+RELEASE_PLEASE_CONFIG="$REPO_ROOT/.github/release-please-config.json"
+POSTINSTALL="$REPO_ROOT/deploy/nfpm/postinstall.sh"
+POSTREMOVE="$REPO_ROOT/deploy/nfpm/postremove.sh"
+WINDOWS_INSTALLER="$REPO_ROOT/deploy/windows/install.ps1"
 
 job_block() {
   local job=$1
@@ -119,6 +124,37 @@ require_text "$GORELEASER_JOB" \
   "needs: [build-ui, build-windows, niac-content]" \
   "the core release must wait for the content build"
 require_text "$GORELEASER_JOB" \
+  'cp deploy/windows/install.ps1 "${stage}/install.ps1"' \
+  "Windows archives must contain the dedicated installer"
+if grep -Fq 'cp deploy/windows/build.ps1 "${stage}/install.ps1"' <<<"$GORELEASER_JOB"; then
+  echo "Windows archives must not rename the distribution builder as install.ps1"
+  exit 1
+fi
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  '$SourceBinary = Join-Path $ScriptDir $BinaryName' \
+  "the Windows installer must resolve niac.exe relative to its own archive location"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  '[Security.Principal.WindowsBuiltInRole]::Administrator' \
+  "the Windows installer must require an elevated PowerShell session"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  'service install' \
+  "the Windows installer must install the NIAC service"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  'if ($LASTEXITCODE -ne 0)' \
+  "the Windows installer must fail when native service commands fail"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  'Get-Service -Name $ServiceName' \
+  "the Windows installer must detect an existing service before replacing the binary"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  'Stop-Service -Name $ServiceName' \
+  "the Windows installer must stop an existing service before replacing the binary"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  '& sc.exe config $ServiceName "binPath=" "`"$InstalledBinary`" service run"' \
+  "the Windows installer must rebind an existing service to the installed binary"
+require_text "$(<"$WINDOWS_INSTALLER")" \
+  'Get-NetFirewallRule -DisplayName "NiAC Simulator"' \
+  "the Windows installer must preserve a single firewall rule across upgrades"
+require_text "$GORELEASER_JOB" \
   "name: niac-content-packages" \
   "the core release must download the content packages"
 require_text "$GORELEASER_JOB" \
@@ -166,6 +202,58 @@ require_text "$GORELEASER_JOB" \
 require_text "$GORELEASER_JOB" \
   "packages=(\"\${RUNNER_TEMP}\"/niac-content-packages/*.deb \"\${RUNNER_TEMP}\"/niac-content-packages/*.rpm)" \
   "the core release must consume content packages from runner temporary storage"
+
+require_text "$(<"$CORE_CONFIG")" \
+  "draft: true" \
+  "GoReleaser must keep releases draft until every integrity stage succeeds"
+require_text "$(<"$CORE_CONFIG")" \
+  "use_existing_draft: true" \
+  "GoReleaser must upload into the draft created by Release Please"
+require_text "$(<"$RELEASE_PLEASE_CONFIG")" \
+  '"draft": true' \
+  "Release Please must create an unpublished release"
+require_text "$(<"$RELEASE_PLEASE_CONFIG")" \
+  '"force-tag-creation": true' \
+  "Release Please must create the tag that triggers artifact builds"
+
+PROVENANCE_JOB=$(job_block "provenance")
+require_text "$PROVENANCE_JOB" \
+  "Publish completed release" \
+  "provenance must publish the release only after attaching its bundle"
+require_text "$PROVENANCE_JOB" \
+  'gh release edit "$TARGET_TAG" --draft=false --repo "${GITHUB_REPOSITORY}"' \
+  "the final release step must publish the completed draft"
+ATTACH_LINE=$(grep -n "Attach attestation bundle to release" "$WORKFLOW" | cut -d: -f1)
+PUBLISH_LINE=$(grep -n "Publish completed release" "$WORKFLOW" | cut -d: -f1)
+if [ -z "$ATTACH_LINE" ] || [ -z "$PUBLISH_LINE" ] || [ "$ATTACH_LINE" -ge "$PUBLISH_LINE" ]; then
+  echo "the release must remain draft until provenance attachment completes"
+  exit 1
+fi
+
+for marker in firewall-ufw-owned firewall-firewalld-owned; do
+  require_text "$(<"$POSTINSTALL")" "$marker" \
+    "postinstall must record firewall rule ownership with $marker"
+  require_text "$(<"$POSTREMOVE")" "$marker" \
+    "postremove must require firewall rule ownership marker $marker"
+done
+require_text "$(<"$POSTINSTALL")" \
+  'PACKAGE_STATE_DIR=/var/lib/niac-package' \
+  "firewall ownership state must remain outside daemon-writable storage"
+require_text "$(<"$POSTINSTALL")" \
+  'firewall-cmd --permanent --query-port=${PORT}/tcp' \
+  "postinstall must not claim a pre-existing firewalld rule"
+require_text "$(<"$POSTINSTALL")" \
+  'grep -Eq "^${PORT}/tcp[[:space:]]+ALLOW"' \
+  "postinstall must not claim a pre-existing ufw rule"
+require_text "$(<"$POSTREMOVE")" \
+  '[ -f "$UFW_MARKER" ]' \
+  "postremove must gate ufw deletion on package ownership"
+require_text "$(<"$POSTREMOVE")" \
+  '[ -f "$FIREWALLD_MARKER" ]' \
+  "postremove must gate firewalld deletion on package ownership"
+require_text "$(<"$POSTREMOVE")" \
+  'firewall-offline-cmd --remove-port=8445/tcp' \
+  "postremove must delete package-owned permanent rules while firewalld is stopped"
 
 if grep -Fq "mode: append" "$CONTENT_CONFIG"; then
   echo "the content configuration must not retain an append-to-release path"

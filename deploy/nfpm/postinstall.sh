@@ -11,18 +11,33 @@ else
 fi
 
 PORT=8445
+PACKAGE_STATE_DIR=/var/lib/niac-package
+UFW_MARKER="$PACKAGE_STATE_DIR/firewall-ufw-owned"
+FIREWALLD_MARKER="$PACKAGE_STATE_DIR/firewall-firewalld-owned"
+
+record_firewall_ownership() {
+    mkdir -p "$PACKAGE_STATE_DIR"
+    chmod 0700 "$PACKAGE_STATE_DIR"
+    touch "$1"
+}
 
 open_firewall() {
     opened=""
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-        if ufw allow ${PORT}/tcp comment 'NIAC WebUI HTTPS' >/dev/null 2>&1; then
+        if ! ufw status 2>/dev/null | grep -Eq "^${PORT}/tcp[[:space:]]+ALLOW" && \
+            ufw allow ${PORT}/tcp comment 'NIAC WebUI HTTPS' >/dev/null 2>&1; then
+            record_firewall_ownership "$UFW_MARKER"
             opened="ufw"
         fi
     fi
     if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld 2>/dev/null; then
-        firewall-cmd --permanent --add-port=${PORT}/tcp >/dev/null 2>&1 || true
-        firewall-cmd --reload >/dev/null 2>&1 || true
-        opened="${opened:+$opened, }firewalld"
+        if ! firewall-cmd --permanent --query-port=${PORT}/tcp >/dev/null 2>&1; then
+            if firewall-cmd --permanent --add-port=${PORT}/tcp >/dev/null 2>&1; then
+                firewall-cmd --reload >/dev/null 2>&1 || true
+                record_firewall_ownership "$FIREWALLD_MARKER"
+                opened="${opened:+$opened, }firewalld"
+            fi
+        fi
     fi
     if [ -n "$opened" ]; then
         echo "Opened TCP ${PORT} on: $opened (NIAC_OPEN_FIREWALL set)"

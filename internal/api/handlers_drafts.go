@@ -102,7 +102,7 @@ func (s *Server) handleLibraryDraftList(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleLibraryDraftCreate(w http.ResponseWriter, r *http.Request) {
 	var req draftCreateRequest
-	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
 		return
 	}
 	content, ok := s.prepareDraftContent(w, r, req)
@@ -190,7 +190,7 @@ func (s *Server) handleLibraryDraftReplace(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req draftReplaceRequest
-	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
 		return
 	}
 	content, err := s.rebaseCapturedDraftContent(req.Content)
@@ -225,6 +225,11 @@ func (s *Server) handleLibraryDraftDelete(w http.ResponseWriter, r *http.Request
 func (s *Server) validateDraftContent(w http.ResponseWriter, r *http.Request, content string) bool {
 	if strings.TrimSpace(content) == "" {
 		writeError(w, r, http.StatusBadRequest, "validation_failed", "Draft content is required", nil)
+		return false
+	}
+	if len(content) > MaxScenarioConfigSize {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Draft content is too large",
+			[]ErrorDetail{{Field: "content", Issue: "max_size_exceeded"}})
 		return false
 	}
 	cfg, ok := s.validateConfigContent(w, r, content)
