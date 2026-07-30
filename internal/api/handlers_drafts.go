@@ -118,7 +118,12 @@ func (s *Server) prepareDraftContent(
 		return "", false
 	}
 	if hasContent {
-		return req.Content, s.validateDraftContent(w, r, req.Content)
+		content, err := s.rebaseCapturedDraftContent(req.Content)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, "config_invalid", "Draft configuration is invalid", nil)
+			return "", false
+		}
+		return content, s.validateDraftContent(w, r, content)
 	}
 
 	_, templatePath, err := templates.Load(req.TemplateName)
@@ -158,6 +163,12 @@ func (s *Server) handleLibraryDraftRead(w http.ResponseWriter, r *http.Request, 
 		s.writeDraftStoreError(w, r, "read", name, err)
 		return
 	}
+	draft.Content, err = s.rebaseCapturedDraftContent(draft.Content)
+	if err != nil {
+		s.writeDraftStoreError(w, r, "rebase", name, err)
+		return
+	}
+	draft.SizeBytes = int64(len(draft.Content))
 	s.writeDraft(w, http.StatusOK, draft)
 }
 
@@ -170,11 +181,16 @@ func (s *Server) handleLibraryDraftReplace(w http.ResponseWriter, r *http.Reques
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
-	if !s.validateDraftContent(w, r, req.Content) {
+	content, err := s.rebaseCapturedDraftContent(req.Content)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Draft configuration is invalid", nil)
+		return
+	}
+	if !s.validateDraftContent(w, r, content) {
 		return
 	}
 
-	draft, err := s.library.ReplaceDraft(name, revision, req.Content)
+	draft, err := s.library.ReplaceDraft(name, revision, content)
 	if err != nil {
 		s.writeDraftStoreError(w, r, "replace", name, err)
 		return

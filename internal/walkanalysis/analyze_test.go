@@ -93,7 +93,12 @@ func TestAnalyzeInterfaces(t *testing.T) {
 
 func TestAnalyzeStats(t *testing.T) {
 	got := analyzeFixture(t, realisticWalk).Statistics
-	want := Stats{TotalInterfaces: 2, PhysicalInterfaces: 1, LogicalInterfaces: 1, TotalNeighbors: 2}
+	want := Stats{
+		TotalInterfaces:    2,
+		PhysicalInterfaces: 1,
+		LogicalInterfaces:  1,
+		TotalNeighbors:     2,
+	}
 	if got != want {
 		t.Errorf("stats = %+v, want %+v", got, want)
 	}
@@ -103,8 +108,18 @@ func TestAnalyzeNeighbors(t *testing.T) {
 	got := analyzeFixture(t, realisticWalk).Neighbors
 	// Sorted by LocalInterface, then Protocol: cdp precedes lldp.
 	want := []Neighbor{
-		{LocalInterface: "ge-0/0/1", RemoteDevice: "core-rtr-01", RemoteInterface: "TenGigE0/0/0", Protocol: "cdp"},
-		{LocalInterface: "ge-0/0/1", RemoteDevice: "core-rtr-01", RemoteInterface: "xe-1/0/0", Protocol: "lldp"},
+		{
+			LocalInterface:  "ge-0/0/1",
+			RemoteDevice:    "core-rtr-01",
+			RemoteInterface: "TenGigE0/0/0",
+			Protocol:        "cdp",
+		},
+		{
+			LocalInterface:  "ge-0/0/1",
+			RemoteDevice:    "core-rtr-01",
+			RemoteInterface: "xe-1/0/0",
+			Protocol:        "lldp",
+		},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("neighbors = %d, want %d (%+v)", len(got), len(want), got)
@@ -171,6 +186,18 @@ func TestInterfaceSpeedHighSpeedFallback(t *testing.T) {
 	const want = int64(100000) * bitsPerMbit
 	if got.Interfaces[0].Speed != want {
 		t.Errorf("speed = %d, want %d", got.Interfaces[0].Speed, want)
+	}
+}
+
+func TestInterfaceMTUIsPreserved(t *testing.T) {
+	entries := []snmp.WalkEntry{
+		{OID: ".1.3.6.1.2.1.2.2.1.2.1", Value: "HundredGigE0/0/0/1"},
+		{OID: ".1.3.6.1.2.1.2.2.1.3.1", Value: 6},
+		{OID: ".1.3.6.1.2.1.2.2.1.4.1", Value: 1500},
+	}
+	got := Analyze(entries)
+	if len(got.Interfaces) != 1 || got.Interfaces[0].MTU != 1500 {
+		t.Fatalf("interfaces = %+v, want captured MTU 1500", got.Interfaces)
 	}
 }
 

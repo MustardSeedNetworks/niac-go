@@ -86,10 +86,11 @@ export type DraftTopologyMutation =
         mac?: string;
         macSuffix?: number;
         sysObjectId?: string;
+        profileRole?: string;
         ips?: string[];
         interfaces?: Array<{
           name: string;
-          type: 'ethernet';
+          type: string;
           mtu: number;
           speed: number;
           duplex: 'full' | 'half';

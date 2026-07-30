@@ -34,6 +34,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Capability | Canonical location | Notes |
 | --- | --- | --- |
 | Walk parsing and validation | `internal/protocols/snmp/walk.go` + `walk_validator.go` | Shared net-snmp syntax, numeric bounds, continuation, and terminal-marker handling |
+| Walk capture and profile inference | `internal/walkcapture` + `internal/walkprofile` + `internal/scenario/profile_store.go` | Bounded request-only SNMP credentials, sanitization-first evidence, reviewed reusable profiles, and exact captured interface/walk reuse |
 | IF-MIB identity resolution | `internal/protocols/snmp/mib_if.go` + `peer_topology.go` | Authored interface metadata and every topology table resolve through the walk's real ifIndex |
 | LLDP/CDP synthesis | `internal/protocols/snmp/mib_discovery.go` + `peer_topology.go` | Infrastructure neighbor rows with authored peer addresses; `fdb_only` attachments are intentionally excluded |
 | Bridge/FDB synthesis | `internal/protocols/snmp/peer_topology.go` | Fleet-resolved MAC to bridge-port to ifIndex chain used for endpoint placement |
@@ -70,6 +71,7 @@ parallel implementation. It is intentionally organized by purpose.
 | --- | --- | --- |
 | Guided simulation flow | `ui/src/pages/NewSimulationWizardPage.tsx` | Extend instead of creating another lab builder |
 | Draft topology composer | `ui/src/components/wizard/DraftTopologyComposer.tsx` + `draft-topology.ts` | Visual-first, revision-safe device/link/position editing; YAML remains the advanced source view |
+| Walk profile review | `ui/src/components/walk/WalkProfileCreator.tsx` | Import or cancelable direct capture, request-only credential clearing, inferred evidence review, and explicit profile creation |
 | Physical binding preflight | `ui/src/components/wizard/PreflightStep.tsx` | Review direct/access attachment and gate start on server diagnostics |
 | Config source picker | `ui/src/components/simulation/ConfigPicker.tsx` | Templates, saved networks, and uploads |
 | API request boundary | `ui/src/api/client.ts` | Add typed sibling functions here |

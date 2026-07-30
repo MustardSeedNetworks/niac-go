@@ -133,6 +133,14 @@ func TestValidateConfig_Layer3SwitchAccepted(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_CapturedInterfaceValuesAccepted(t *testing.T) {
+	device := validDevice()
+	device.Interfaces = []Interface{{Name: "lo", Type: "l3ipvlan", MTU: 65536}}
+	if err := ValidateConfig(&Config{Devices: []Device{device}}); err != nil {
+		t.Fatalf("captured interface rejected: %v", err)
+	}
+}
+
 func TestValidateConfig_MultipleIPsAccepted(t *testing.T) {
 	d := validDevice()
 	d.IPs = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}

@@ -42,6 +42,9 @@ export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
 }) => {
   const { t } = useTranslation('pages');
   const close = useCallback(() => onChange(null), [onChange]);
+  const selectedProfile = state
+    ? profiles.find((profile) => profile.role === state.role)
+    : undefined;
   return (
     <Modal
       isOpen={state !== null}
@@ -64,14 +67,24 @@ export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
                 value: profile.role,
                 label: `${profile.role} · ${profile.model}`,
               }))}
-              onChange={(role) => onChange({ ...state, role })}
+              onChange={(role) => {
+                const profile = profiles.find((item) => item.role === role);
+                onChange({
+                  ...state,
+                  role,
+                  interfaceCount: profile?.interfaceCount
+                    ? String(profile.interfaceCount)
+                    : state.interfaceCount,
+                });
+              }}
             />
             <div className="grid gap-default sm:grid-cols-2">
               <Input
                 label={t('newSimWizard.topology.interfaceCount')}
                 type="number"
                 min={1}
-                max={64}
+                max={4096}
+                disabled={Boolean(selectedProfile?.interfaces?.length)}
                 value={state.interfaceCount}
                 onChange={(event) => onChange({ ...state, interfaceCount: event.target.value })}
               />
@@ -80,6 +93,7 @@ export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
                 type="number"
                 min={10}
                 max={400000}
+                disabled={Boolean(selectedProfile?.interfaces?.length)}
                 value={state.speed}
                 onChange={(event) => onChange({ ...state, speed: event.target.value })}
               />

@@ -18,6 +18,28 @@ const profiles = [
     software: '17.15.3',
     sysObjectId: '1.3.6.1.4.1.9.1.2494',
   },
+  {
+    role: 'office-access',
+    deviceType: 'switch',
+    vendor: 'cisco',
+    model: 'Captured Catalyst',
+    platform: 'Cisco IOS XE',
+    software: '17.15',
+    sysObjectId: '1.3.6.1.4.1.9.1.2238',
+    walkName: 'captured/office.walk',
+    interfaceCount: 65,
+    interfaces: [
+      {
+        name: 'GigabitEthernet1/0/48',
+        type: 'ethernet',
+        mtu: 1500,
+        speed: 10_000_000_000,
+        adminStatus: 'up',
+        operStatus: 'down',
+      },
+    ],
+    source: 'captured',
+  },
 ];
 
 vi.mock('../../api/library-client', async (importOriginal) => {
@@ -135,6 +157,38 @@ describe('DraftTopologyComposer', () => {
     );
     expect(onDraftUpdate).toHaveBeenCalledWith(updated);
     expect(onBusyChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('uses the captured interface inventory when adding a reviewed profile', async () => {
+    const user = userEvent.setup();
+    mutateScenarioDraftTopology.mockResolvedValue({ ...draft, revision: 'revision-2' });
+    render(<DraftTopologyComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add device' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Device name'), 'COS-CAPTURED-SW01');
+    await user.selectOptions(within(dialog).getByLabelText('Device profile'), 'office-access');
+    expect(within(dialog).getByLabelText('Ethernet port count')).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Add device' }));
+
+    await waitFor(() => expect(mutateScenarioDraftTopology).toHaveBeenCalledTimes(1));
+    expect(mutateScenarioDraftTopology).toHaveBeenCalledWith(
+      'campus-draft',
+      'revision-1',
+      expect.objectContaining({
+        device: expect.objectContaining({
+          profileRole: 'office-access',
+          interfaces: [
+            expect.objectContaining({
+              name: 'GigabitEthernet1/0/48',
+              speed: 10_000,
+              mtu: 1500,
+              operStatus: 'down',
+            }),
+          ],
+        }),
+      }),
+    );
   });
 
   it('preserves FDB-only behavior when editing an authored link', async () => {

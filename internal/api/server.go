@@ -56,6 +56,11 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
+	// MaxWalkImportSize bounds raw text from an imported or captured SNMP
+	// walk. The JSON request cap allows for escaping overhead.
+	MaxWalkImportSize = 16 << 20 // 16MiB
+	// MaxWalkImportBodySize allows each raw byte to become a six-byte JSON Unicode escape.
+	MaxWalkImportBodySize = MaxWalkImportSize*6 + 1<<10
 	// MaxPCAPUploadSize is the maximum size for a raw (decoded) PCAP file
 	// upload (100MB) — this is the number advertised to users/UI copy and
 	// is checked AFTER base64 decoding.
@@ -506,8 +511,13 @@ func initialTokenStore(cfg ServerConfig) *tokenstore.TokenStore {
 	if cfg.TokenFile != "" {
 		tokens, err := tokenstore.LoadTokenFile(cfg.TokenFile)
 		if err != nil {
-			slog.Error("[API] Failed to load token file at startup, falling back to NIAC_API_TOKEN (if set)",
-				"path", cfg.TokenFile, "error", err)
+			slog.Error(
+				"[API] Failed to load token file at startup, falling back to NIAC_API_TOKEN (if set)",
+				"path",
+				cfg.TokenFile,
+				"error",
+				err,
+			)
 		} else {
 			if cfg.Token != "" {
 				slog.Info("[API] Token file overrides NIAC_API_TOKEN; the env var value will be ignored",
@@ -517,7 +527,9 @@ func initialTokenStore(cfg ServerConfig) *tokenstore.TokenStore {
 		}
 	}
 	if cfg.Token != "" {
-		return tokenstore.NewTokenStore([]tokenstore.ScopedToken{{Value: cfg.Token, Scope: tokenstore.ScopeReadWrite}})
+		return tokenstore.NewTokenStore(
+			[]tokenstore.ScopedToken{{Value: cfg.Token, Scope: tokenstore.ScopeReadWrite}},
+		)
 	}
 	return tokenstore.NewTokenStore(nil)
 }

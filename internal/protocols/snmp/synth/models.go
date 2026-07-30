@@ -3,6 +3,7 @@ package synth
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Model identifies a specific platform within a vendor. When the
@@ -97,6 +98,24 @@ func AllModels() []ModelDescriptor {
 		return out[i].Label < out[j].Label
 	})
 	return out
+}
+
+// MatchSysObjectID resolves a captured numeric sysObjectID to a supported
+// synthesized model. Exact matching avoids guessing a vendor or platform from
+// marketing text when NIAC already has authoritative identity data.
+func MatchSysObjectID(sysObjectID string) (ModelDescriptor, Profile, bool) {
+	normalized := strings.TrimPrefix(strings.TrimSpace(sysObjectID), ".")
+	for _, entry := range modelTable {
+		if strings.TrimPrefix(entry.sysObjectID, ".") != normalized {
+			continue
+		}
+		profile, err := PickModel(entry.descriptor.Vendor, entry.descriptor.Model)
+		if err != nil {
+			return ModelDescriptor{}, Profile{}, false
+		}
+		return entry.descriptor, profile, true
+	}
+	return ModelDescriptor{}, Profile{}, false
 }
 
 func sortDescriptors(d []ModelDescriptor) {

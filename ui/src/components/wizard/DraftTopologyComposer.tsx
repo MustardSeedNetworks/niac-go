@@ -228,15 +228,25 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
     if (!profile) return;
     const interfaceCount = Number.parseInt(deviceEditor.interfaceCount, 10);
     const speed = Number.parseInt(deviceEditor.speed, 10);
-    const interfaces = Array.from({ length: interfaceCount }, (_, index) => ({
-      name: `Ethernet1/${index + 1}`,
-      type: 'ethernet' as const,
-      mtu: speed >= 10000 ? 9000 : 1500,
-      speed,
-      duplex: 'full' as const,
-      adminStatus: 'up' as const,
-      operStatus: 'up' as const,
-    }));
+    const interfaces = profile.interfaces?.length
+      ? profile.interfaces.map((iface) => ({
+          name: iface.name,
+          type: iface.type,
+          mtu: iface.mtu ?? 1500,
+          speed: Math.round((iface.speed ?? 1_000_000_000) / 1_000_000),
+          duplex: 'full' as const,
+          adminStatus: iface.adminStatus === 'down' ? ('down' as const) : ('up' as const),
+          operStatus: iface.operStatus === 'down' ? ('down' as const) : ('up' as const),
+        }))
+      : Array.from({ length: interfaceCount }, (_, index) => ({
+          name: `Ethernet1/${index + 1}`,
+          type: 'ethernet',
+          mtu: speed >= 10000 ? 9000 : 1500,
+          speed,
+          duplex: 'full' as const,
+          adminStatus: 'up' as const,
+          operStatus: 'up' as const,
+        }));
     if (
       await applyMutation({
         operation: 'add_device',
@@ -246,6 +256,7 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
           vendor: profile.vendor,
           macSuffix: deterministicMACSuffix(deviceEditor.name.trim()),
           sysObjectId: profile.sysObjectId,
+          profileRole: profile.role,
           interfaces,
           properties: {
             role: profile.role,
@@ -272,12 +283,14 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
     if (!deviceEditor || !profiles) return false;
     const count = Number.parseInt(deviceEditor.interfaceCount, 10);
     const speed = Number.parseInt(deviceEditor.speed, 10);
+    const selectedProfile = profiles.find((profile) => profile.role === deviceEditor.role);
+    const maximumInterfaces = selectedProfile?.interfaces?.length ? 4096 : 64;
     return (
       /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/.test(deviceEditor.name.trim()) &&
       !model.devices.some((device) => device.name === deviceEditor.name.trim()) &&
       profiles.some((profile) => profile.role === deviceEditor.role) &&
       count >= 1 &&
-      count <= 64 &&
+      count <= maximumInterfaces &&
       speed >= 10 &&
       speed <= 400000
     );

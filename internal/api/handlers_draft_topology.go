@@ -22,6 +22,11 @@ func (s *Server) handleLibraryDraftTopologyMutation(
 		s.writeDraftStoreError(w, r, "read topology", name, err)
 		return
 	}
+	draft.Content, err = s.rebaseCapturedDraftContent(draft.Content)
+	if err != nil {
+		s.writeDraftStoreError(w, r, "rebase topology", name, err)
+		return
+	}
 	if draft.Revision != revision {
 		s.writeDraftStoreError(w, r, "mutate topology", name, library.ErrRevisionMismatch)
 		return
@@ -53,6 +58,10 @@ func (s *Server) handleLibraryDraftTopologyMutation(
 			"Draft configuration is invalid",
 			nil,
 		)
+		return
+	}
+	if profileErr := s.enrichCapturedDraftProfile(cfg, &mutation); profileErr != nil {
+		writeError(w, r, http.StatusBadRequest, "captured_profile_invalid", profileErr.Error(), nil)
 		return
 	}
 	if mutationErr := drafttopology.Apply(cfg, mutation); mutationErr != nil {
