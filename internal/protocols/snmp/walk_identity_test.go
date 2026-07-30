@@ -3,6 +3,8 @@ package snmp
 import (
 	"errors"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 const capturedIdentityWalk = `.1.3.6.1.2.1.2.2.1.6.1 = Hex-STRING: 00 0C CE 88 23 C7
@@ -52,4 +54,30 @@ func TestLoadWalkFileDoesNotInventLLDPIdentity(t *testing.T) {
 	if !errors.Is(err, ErrNoSuchObject) {
 		t.Fatalf("LLDP chassis ID error = %v, want ErrNoSuchObject", err)
 	}
+}
+
+func TestLoadWalkFileUsesAuthoredMACOnConfiguredUplink(t *testing.T) {
+	walk := `.1.3.6.1.2.1.2.2.1.2.1 = STRING: "Dot11Radio0"
+.1.3.6.1.2.1.2.2.1.2.5 = STRING: "mGigabitEthernet0"
+.1.3.6.1.2.1.2.2.1.6.1 = Hex-STRING: 00 00 0C F0 08 01
+.1.3.6.1.2.1.2.2.1.6.5 = Hex-STRING: 00 00 0C F0 08 05`
+	fixture := loadCapturedIdentity(t, "00:00:0c:f0:08:01", walk)
+	fixture.agent.device.Interfaces = []config.Interface{{Name: "mGigabitEthernet0"}}
+	fixture.agent.refreshAuthoredPhysicalIdentity()
+
+	assertAuthoredPhysicalAddress(t, fixture, 5)
+}
+
+func TestLoadWalkFileSkipsZeroMACOnConfiguredInterface(t *testing.T) {
+	walk := `.1.3.6.1.2.1.2.2.1.2.1 = STRING: "Vlan1"
+.1.3.6.1.2.1.2.2.1.2.5 = STRING: "mGigabitEthernet0"
+.1.3.6.1.2.1.2.2.1.6.1 = Hex-STRING: 00 00 00 00 00 00
+.1.3.6.1.2.1.2.2.1.6.5 = Hex-STRING: 00 00 0C F0 08 05`
+	fixture := loadCapturedIdentity(t, "00:00:0c:f0:08:01", walk)
+	fixture.agent.device.Interfaces = []config.Interface{{Name: "Vlan1"}, {Name: "mGigabitEthernet0"}}
+	fixture.agent.mib.Set(ifPhysAddress+".1", &OIDValue{Value: []byte{0, 0, 0, 0, 0, 0}})
+	fixture.agent.mib.Set(ifPhysAddress+".5", &OIDValue{Value: []byte{0, 0, 0x0c, 0xf0, 8, 5}})
+	fixture.agent.refreshAuthoredPhysicalIdentity()
+
+	assertAuthoredPhysicalAddress(t, fixture, 5)
 }

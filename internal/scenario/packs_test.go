@@ -26,7 +26,7 @@ func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
 		if result.Manifest != pack.Manifest {
 			t.Errorf("%s manifest = %#v", pack.ID, result.Manifest)
 		}
-		if pack.ManifestVersion != 1 || pack.Version != "1.0.0" {
+		if pack.ManifestVersion != 2 || pack.Version != "1.1.0" {
 			t.Errorf("%s versions = %q/%d", pack.ID, pack.Version, pack.ManifestVersion)
 		}
 	}

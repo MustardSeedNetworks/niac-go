@@ -81,7 +81,7 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 			remoteIndex,
 		) || changed
 
-		if !a.supportsBridgeTopology() {
+		if !a.supportsBridgeLink(trunk) {
 			continue
 		}
 		if trunk.Interface == "" || len(peer.MAC) == 0 {

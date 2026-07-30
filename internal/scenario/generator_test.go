@@ -30,9 +30,8 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		LinkCount:         634,
 		DeviceNamesSHA256: "77acffce1504dfc6b3a684b70af5a2d6bd4f07778fcd24718395006010042dd9",
 		NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
-		// The accepted reference's WLC FDB rows named a nonexistent eth0.
-		// This fingerprint records the corrected TenGigabitEthernet endpoint.
-		LinksSHA256: "e9b594d484730136f88a5f8af8dec64db673a83cada6c50cf5560f78faedda0e",
+		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
+		LinksSHA256: "5d39f3b580edf0271e558f4f972f5567030412875d674c47b502f87163738cfe",
 	}
 	if first.Manifest != want {
 		t.Fatalf("manifest = %#v, want %#v", first.Manifest, want)
@@ -42,8 +41,8 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generated YAML does not load: %v", err)
 	}
-	if result := config.NewValidator("generated-enterprise.yaml").Validate(cfg); !result.Valid {
-		t.Fatalf("generated config is invalid: %s", result.Format())
+	if result := config.NewValidator("generated-enterprise.yaml").Validate(cfg); !result.Valid || result.HasWarnings() {
+		t.Fatalf("generated config is not strict-clean: %s", result.Format())
 	}
 	assertEnterpriseDeviceMix(t, cfg)
 	assertAuthoredInterfacesAndLinks(t, cfg)

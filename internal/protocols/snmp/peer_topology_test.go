@@ -186,6 +186,38 @@ func TestQBridgeUsesDefaultNativeVLAN(t *testing.T) {
 	}
 }
 
+func TestRoutedTopologyLinkDoesNotPublishBridgeFDB(t *testing.T) {
+	dev := createTestDevice()
+	dev.Type = "layer3-switch"
+	dev.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	dev.CDPConfig = &config.CDPConfig{Enabled: true}
+	dev.Interfaces = []config.Interface{{Name: "HundredGigabitEthernet0/2/1"}}
+	dev.TrunkPorts = []config.TrunkPort{{
+		Interface: "HundredGigabitEthernet0/2/1", RemoteDevice: "FW01",
+		RemoteInterface: "ethernet1/2",
+	}}
+	agent := NewAgent(dev, 0)
+	peerMAC, _ := net.ParseMAC("aa:bb:cc:00:00:41")
+	agent.SynthesizePeerTopology(func(string, string) (PeerIdentity, bool) {
+		return PeerIdentity{MAC: peerMAC, Type: "firewall"}, true
+	})
+
+	assertMIBValue(t, agent, lldpRemTable+".1.9.0.1.1", "FW01")
+	macIndex := macBytesToOIDIndex(peerMAC)
+	if value := agent.mib.Get(dot1dTpFdbPort + "." + macIndex); value != nil {
+		t.Fatalf("routed link published bridge FDB port: %v", value.Value)
+	}
+	if value := agent.mib.Get(dot1qTpFDBPort + ".1." + macIndex); value != nil {
+		t.Fatalf("routed link published VLAN 1 FDB port: %v", value.Value)
+	}
+	if value := agent.mib.Get(dot1qPVID + ".1"); value != nil {
+		t.Fatalf("routed link published VLAN 1 PVID: %v", value.Value)
+	}
+	if value := agent.mib.Get(cdpCacheTable + ".1.11.1.1"); value != nil {
+		t.Fatalf("routed link published CDP native VLAN: %v", value.Value)
+	}
+}
+
 func TestSynthesizePeerTopologyPublishesResolvedLLDPIdentity(t *testing.T) {
 	dev := createTestDevice()
 	dev.Type = "switch"

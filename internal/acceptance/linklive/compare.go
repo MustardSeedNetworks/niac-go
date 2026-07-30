@@ -1,8 +1,6 @@
 package linklive
 
 import (
-	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -39,14 +37,14 @@ func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
 		}
 	}
 	var findings []Finding
-	if actual.Name != expected.Name {
+	if !namesMatch(actual.Name, expected.Name) {
 		findings = append(
 			findings,
 			conflict(FindingNameConflict, expected.Name, expected.Name, actual.Name),
 		)
 	}
 	wantType := displayedType(expected.Type)
-	if wantType != "" && actual.Type != wantType {
+	if wantType != "" && !displayedTypeMatches(expected.Type, actual.Type) {
 		findings = append(
 			findings,
 			conflict(FindingTypeConflict, expected.Name, wantType, actual.Type),
@@ -184,53 +182,6 @@ func findConnection(host ObservedHost, targetMAC string) (ObservedConnection, bo
 		}
 	}
 	return ObservedConnection{}, false
-}
-
-func displayedType(deviceType string) string {
-	switch deviceType {
-	case "switch", "layer3-switch":
-		return "Switch"
-	case "router", "firewall":
-		return "Router"
-	case "ap", "access-point":
-		return "AP"
-	case "host", "workstation", "iot":
-		return "Host/Client"
-	default:
-		return ""
-	}
-}
-
-func parseSpeedMbps(value string) int {
-	var number float64
-	var unit string
-	if _, err := fmt.Sscan(value, &number, &unit); err != nil {
-		return 0
-	}
-	switch strings.ToLower(unit) {
-	case "gb", "gbps":
-		number *= 1000
-	case "mb", "mbps":
-	default:
-		return 0
-	}
-	return int(number)
-}
-
-func parseVLAN(value string) int {
-	vlan, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil {
-		return 0
-	}
-	return vlan
-}
-
-func portsMatch(actual, left, right string) bool {
-	return strings.Contains(actual, left) && strings.Contains(actual, right)
-}
-
-func contains(values []string, want string) bool {
-	return slices.Contains(values, want)
 }
 
 func conflict(kind FindingKind, device, expected, observed string) Finding {

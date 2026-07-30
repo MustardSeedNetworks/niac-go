@@ -323,16 +323,16 @@ func (a *Agent) createCDPCacheEntry(
 		Value: "",
 	})
 
-	// cdpCacheNativeVLAN
-	nativeVLAN := trunk.NativeVLAN
-	if nativeVLAN == 0 {
-		nativeVLAN = 1
+	if !config.IsRoutedTopologyLink(a.device.Type, trunk) {
+		nativeVLAN := trunk.NativeVLAN
+		if nativeVLAN == 0 {
+			nativeVLAN = 1
+		}
+		a.mib.Set(entryBase+".11."+indexStr, &OIDValue{
+			Type:  gosnmp.Integer,
+			Value: nativeVLAN,
+		})
 	}
-
-	a.mib.Set(entryBase+".11."+indexStr, &OIDValue{
-		Type:  gosnmp.Integer,
-		Value: nativeVLAN,
-	})
 
 	// cdpCacheDuplex (1=unknown, 2=half, 3=full)
 	a.mib.Set(entryBase+".12."+indexStr, &OIDValue{

@@ -24,6 +24,7 @@ func assertEnterpriseDeviceMix(t *testing.T, cfg *config.Config) {
 				t.Errorf("missing %s-%s", site, role)
 			}
 		}
+		assertCoreTypes(t, cfg, site)
 	}
 	for _, device := range cfg.Devices {
 		if strings.Contains(device.Name, "-WAP-") &&
@@ -31,6 +32,23 @@ func assertEnterpriseDeviceMix(t *testing.T, cfg *config.Config) {
 			t.Errorf("%s does not identify as Wi-Fi 7", device.Name)
 		}
 	}
+}
+
+func assertCoreTypes(t *testing.T, cfg *config.Config, site string) {
+	t.Helper()
+	for _, suffix := range []string{"CORE-SW01", "CORE-SW02"} {
+		device := findDevice(cfg, site+"-"+suffix)
+		if device == nil || device.Type != "layer3-switch" {
+			t.Errorf("%s-%s type = %q, want layer3-switch", site, suffix, deviceType(device))
+		}
+	}
+}
+
+func deviceType(device *config.Device) string {
+	if device == nil {
+		return ""
+	}
+	return device.Type
 }
 
 func assertAuthoredInterfacesAndLinks(t *testing.T, cfg *config.Config) {
@@ -48,6 +66,33 @@ func assertAuthoredInterfacesAndLinks(t *testing.T, cfg *config.Config) {
 		}
 	}
 	assertAuthoredLinks(t, cfg)
+	assertRoutedEdgesUntagged(t, cfg)
+}
+
+func assertRoutedEdgesUntagged(t *testing.T, cfg *config.Config) {
+	t.Helper()
+	pairs := [][2]string{
+		{"LAB-EDGE-R1", "WAN-R1"},
+		{"WAN-R1", "COS-WAN-R01"},
+		{"COS-WAN-R01", "COS-FW01"},
+		{"COS-FW01", "COS-CORE-SW01"},
+	}
+	for _, pair := range pairs {
+		device := findDevice(cfg, pair[0])
+		port := findRemotePort(device, pair[1])
+		if port == nil || port.NativeVLAN != 0 || len(port.VLANs) != 0 {
+			t.Errorf("routed edge %s -> %s carries VLAN metadata: %+v", pair[0], pair[1], port)
+		}
+	}
+}
+
+func findRemotePort(device *config.Device, remote string) *config.TrunkPort {
+	for index := range device.TrunkPorts {
+		if device.TrunkPorts[index].RemoteDevice == remote {
+			return &device.TrunkPorts[index]
+		}
+	}
+	return nil
 }
 
 func assertAuthoredLinks(t *testing.T, cfg *config.Config) {

@@ -608,6 +608,9 @@ func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceName
 	for i, trunk := range device.TrunkPorts {
 		trunkPrefix := fmt.Sprintf("%s.trunk_ports[%d]", prefix, i)
 		v.validateSingleTrunkPort(&trunk, trunkPrefix, seenInterfaces, deviceNames)
+		if !IsRoutedTopologyLink(device.Type, trunk) {
+			v.validateTrunkVLANs(trunk.VLANs, trunkPrefix)
+		}
 	}
 }
 
@@ -619,7 +622,6 @@ func (v *Validator) validateSingleTrunkPort(
 	deviceNames map[string]bool,
 ) {
 	v.validateTrunkInterface(trunk.Interface, trunkPrefix, seenInterfaces)
-	v.validateTrunkVLANs(trunk.VLANs, trunkPrefix)
 	v.validateTrunkNativeVLAN(trunk.NativeVLAN, trunkPrefix)
 	v.validateTrunkRemoteDevice(trunk.RemoteDevice, trunk.RemoteInterface, trunkPrefix, deviceNames)
 }

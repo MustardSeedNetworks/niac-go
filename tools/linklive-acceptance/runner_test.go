@@ -43,8 +43,35 @@ func TestRunnerFailsOnMismatch(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "mismatches") {
 		t.Fatalf("error = %v", err)
 	}
-	if !strings.Contains(output.String(), "type-conflict") {
+	if !strings.Contains(output.String(), "duplex-conflict") {
 		t.Fatalf("output = %s", output.String())
+	}
+}
+
+func TestRunnerUsesAccessTokenEnvironment(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/auth/login" {
+			t.Fatal("runner attempted login with a configured access token")
+		}
+		if got := r.Header.Get("Authorization"); got != "Access cached-token" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		_, _ = w.Write([]byte(topologyJSON("Switch", "Full", "100 Gb")))
+	}))
+	t.Cleanup(server.Close)
+
+	environment := testEnvironment(server.URL)
+	executor := newRunner(func(key string) string {
+		if key == "LINKLIVE_ACCESS_TOKEN" {
+			return "cached-token"
+		}
+		return environment(key)
+	}, &bytes.Buffer{})
+	executor.allowInsecure = true
+	if err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-analysis", "analysis-7",
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

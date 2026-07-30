@@ -2,7 +2,6 @@
 package linklive
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -32,13 +31,15 @@ var ErrMFARequired = errors.New("Link-Live login requires MFA")
 
 // Config contains credentials and endpoint overrides for acceptance testing.
 type Config struct {
-	IdentityURL   string
-	APIURL        string
-	Username      string
-	Password      string
-	MFACode       string
-	HTTPClient    *http.Client
-	AllowInsecure bool
+	IdentityURL    string
+	APIURL         string
+	Username       string
+	Password       string
+	MFACode        string
+	OrganizationID string
+	AccessToken    string
+	HTTPClient     *http.Client
+	AllowInsecure  bool
 }
 
 // Client reads Link-Live analysis data without mutating it.
@@ -48,13 +49,9 @@ type Client struct {
 	token  string
 }
 
-type loginResponse struct {
-	AccessToken string `json:"accessToken"`
-}
-
 // New validates configuration and constructs a Link-Live client.
 func New(config Config) (*Client, error) {
-	if strings.TrimSpace(config.Username) == "" || config.Password == "" {
+	if config.AccessToken == "" && (strings.TrimSpace(config.Username) == "" || config.Password == "") {
 		return nil, errors.New("Link-Live username and password are required")
 	}
 	if err := validateBaseURL(config.IdentityURL, config.AllowInsecure); err != nil {
@@ -64,7 +61,7 @@ func New(config Config) (*Client, error) {
 		return nil, fmt.Errorf("API URL: %w", err)
 	}
 	config.HTTPClient = redirectSafeClient(config.HTTPClient)
-	return &Client{config: config}, nil
+	return &Client{config: config, token: config.AccessToken}, nil
 }
 
 // Analyses returns the unmodified analysis-list response.
@@ -98,42 +95,6 @@ func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) 
 	return c.do(req)
 }
 
-func (c *Client) accessToken(ctx context.Context) (string, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.token != "" {
-		return c.token, nil
-	}
-	token, err := c.login(ctx)
-	if err == nil {
-		c.token = token
-	}
-	return token, err
-}
-
-func (c *Client) login(ctx context.Context) (string, error) {
-	body := []byte(`{"claims":{"app":"` + linkLiveAppClaim + `"}}`)
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		c.config.IdentityURL+"/v2/auth/login",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return "", fmt.Errorf("create Link-Live login request: %w", err)
-	}
-	req.SetBasicAuth(c.config.Username, c.config.Password)
-	req.Header.Set("Content-Type", "application/json")
-	if c.config.MFACode != "" {
-		req.Header.Set("X-Bedrock-Otpcode", c.config.MFACode)
-	}
-	data, err := c.do(req)
-	if err != nil {
-		return "", err
-	}
-	return decodeToken(data)
-}
-
 func (c *Client) do(req *http.Request) (json.RawMessage, error) {
 	resp, err := c.config.HTTPClient.Do(req)
 	if err != nil {
@@ -154,17 +115,6 @@ func (c *Client) do(req *http.Request) (json.RawMessage, error) {
 		return nil, errors.New("Link-Live response exceeds size limit")
 	}
 	return data, nil
-}
-
-func decodeToken(data []byte) (string, error) {
-	var response loginResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return "", errors.New("Link-Live login returned invalid JSON")
-	}
-	if response.AccessToken == "" {
-		return "", errors.New("Link-Live login response omitted access token")
-	}
-	return response.AccessToken, nil
 }
 
 func validateBaseURL(rawURL string, allowInsecure bool) error {
