@@ -112,6 +112,7 @@ test-frontend-quiet:
 test-hooks: ## Run repository script regression tests
 	@./scripts/tests/pre-commit-hook-test.sh
 	@./scripts/tests/release-content-integrity-test.sh
+	@./scripts/tests/package-firewall-ownership-test.sh
 	@./scripts/tests/file-size-gate-test.sh
 	@./scripts/tests/lighthouse-policy-test.sh
 

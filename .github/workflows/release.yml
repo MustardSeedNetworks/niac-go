@@ -458,7 +458,7 @@ jobs:
             cp "windows-raw/niac-windows-${goarch}/niac.exe" "${stage}/niac.exe"
             cp README.md LICENSE "${stage}/"
             cp -r cmd/niac/templates/. "${stage}/templates/"
-            cp deploy/windows/build.ps1 "${stage}/install.ps1"
+            cp deploy/windows/install.ps1 "${stage}/install.ps1"
             ( cd "${stage}" && zip -qr "../dist/${stage}.zip" . )
             rm -rf "${stage}"
           done
@@ -767,3 +767,13 @@ jobs:
              niac-slsa-provenance.intoto.jsonl
           gh release upload "$TARGET_TAG" \
              niac-slsa-provenance.intoto.jsonl --clobber --repo "${GITHUB_REPOSITORY}"
+
+      - name: Publish completed release
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "$TARGET_TAG" --draft=false --repo "${GITHUB_REPOSITORY}"

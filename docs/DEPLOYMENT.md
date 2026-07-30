@@ -23,6 +23,11 @@ sudo apt-get install libpcap0.8
 For service operation, use the bundled `systemd/niac.service` as a starting
 point and adjust paths, user, interface, and config locations for the host.
 
+The DEB and RPM packages do not open TCP 8445 by default. Set
+`NIAC_OPEN_FIREWALL=1` during installation to add a UFW or firewalld rule. The
+package records ownership only when it creates that rule; purge removes a
+package-created rule but preserves any matching rule that existed beforehand.
+
 ## macOS
 
 Download the macOS archive for your architecture from the GitHub release:
@@ -60,8 +65,16 @@ An interrupted temporary write is ignored on the next start.
 
 ## Windows
 
-Download the Windows zip for your architecture from the GitHub release and add
-the extracted directory to `PATH`, or run `niac.exe` directly from that folder.
+Download and extract the Windows zip for your architecture from the GitHub
+release. From an elevated PowerShell session, run the bundled installer:
+
+```powershell
+.\install.ps1
+```
+
+The installer validates that the archive-local `niac.exe` is present, copies it
+under Program Files, adds NIAC to the machine `PATH`, installs the service, and
+starts it. You can instead run `niac.exe` directly from the extracted folder.
 
 Npcap is required for packet capture and injection features:
 

@@ -55,60 +55,14 @@ if (-not (Test-Path $SourceBinary)) {
 }
 Copy-Item $SourceBinary (Join-Path $BuildDir $BinaryName)
 
-# Create install script
-Write-Host "[3/4] Creating install script..." -ForegroundColor Cyan
-$InstallScript = @'
-# NiAC - Windows Installation Script
-# Run as Administrator
-
-$ErrorActionPreference = "Stop"
-
-$InstallDir = "$env:ProgramFiles\NiAC"
-$BinaryName = "niac.exe"
-$ServiceName = "NiACSimulator"
-
-Write-Host "Installing NiAC..." -ForegroundColor Green
-
-# Create installation directory
-New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-New-Item -ItemType Directory -Force -Path "$InstallDir\data" | Out-Null
-New-Item -ItemType Directory -Force -Path "$InstallDir\logs" | Out-Null
-
-# Copy binary
-Copy-Item $BinaryName "$InstallDir\$BinaryName" -Force
-
-# Add to PATH
-$MachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-if ($MachinePath -notlike "*$InstallDir*") {
-    [Environment]::SetEnvironmentVariable("Path", "$MachinePath;$InstallDir", "Machine")
-    Write-Host "  Added $InstallDir to system PATH"
+# Copy install script
+Write-Host "[3/4] Copying install script..." -ForegroundColor Cyan
+$Installer = Join-Path $ScriptDir "install.ps1"
+if (-not (Test-Path $Installer)) {
+    Write-Error "Cannot find dedicated installer: $Installer"
+    exit 1
 }
-
-# Install as Windows service
-Write-Host "  Installing Windows service..."
-& "$InstallDir\$BinaryName" service install
-
-# Add firewall rule
-Write-Host "  Adding firewall rule for port 8445..."
-New-NetFirewallRule -DisplayName "NiAC Simulator" `
-    -Direction Inbound -Protocol TCP -LocalPort 8445 `
-    -Action Allow -ErrorAction SilentlyContinue | Out-Null
-
-# Start service
-Write-Host "  Starting service..."
-& "$InstallDir\$BinaryName" service start
-
-Write-Host ""
-Write-Host "Installation complete!" -ForegroundColor Green
-Write-Host "  Web UI: https://localhost:8445"
-Write-Host "  Service: $ServiceName"
-Write-Host ""
-Write-Host "Commands:"
-Write-Host "  niac service status   - Check service status"
-Write-Host "  niac service stop     - Stop service"
-Write-Host "  niac service start    - Start service"
-'@
-Set-Content -Path (Join-Path $BuildDir "install.ps1") -Value $InstallScript
+Copy-Item $Installer (Join-Path $BuildDir "install.ps1")
 
 # Create zip
 Write-Host "[4/4] Creating zip archive..." -ForegroundColor Cyan

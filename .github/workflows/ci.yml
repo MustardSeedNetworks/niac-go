@@ -103,8 +103,13 @@ jobs:
               - 'ui/vite.config.ts'
             hooks:
               - '.husky/**'
+              - '.github/release-please-config.json'
+              - '.goreleaser.yml'
               - '.goreleaser.content.yml'
+              - 'deploy/nfpm/**'
+              - 'deploy/windows/install.ps1'
               - 'scripts/tests/pre-commit-hook-test.sh'
+              - 'scripts/tests/package-firewall-ownership-test.sh'
               - 'scripts/tests/release-content-integrity-test.sh'
 
   # ===========================================================================
@@ -546,6 +551,9 @@ jobs:
 
       - name: Test release content integrity contract
         run: ./scripts/tests/release-content-integrity-test.sh
+
+      - name: Test package firewall ownership lifecycle
+        run: ./scripts/tests/package-firewall-ownership-test.sh
 
       - name: Check for sensitive files
         run: |
