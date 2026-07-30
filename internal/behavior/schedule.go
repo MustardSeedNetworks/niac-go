@@ -3,6 +3,7 @@ package behavior
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"time"
 
@@ -18,39 +19,51 @@ type Action struct {
 	Value     int
 }
 
+// PhaseRef identifies one compiled phase while retaining its authored label.
+type PhaseRef struct {
+	ID    string
+	Label string
+}
+
 // Transition groups every action that occurs at one offset from runtime start.
 type Transition struct {
-	Offset  time.Duration
-	Phases  []string
-	Actions []Action
+	Offset      time.Duration
+	StartPhases []PhaseRef
+	EndPhases   []PhaseRef
+	Actions     []Action
 }
 
 type scheduledTransition struct {
 	offset  time.Duration
-	phase   string
-	reset   bool
+	phase   PhaseRef
+	end     bool
 	actions []Action
 }
 
 // Compile produces a stable transition sequence for every finite repetition.
 func Compile(timelines []config.BehaviorTimeline) []Transition {
 	scheduled := make([]scheduledTransition, 0)
-	for _, timeline := range timelines {
+	for timelineIndex, timeline := range timelines {
 		cycleDuration := behaviorCycleDuration(timeline.Phases)
 		for repetition := range timeline.RepeatCount {
 			cycleStart := timeline.StartOffset + time.Duration(repetition)*cycleDuration
-			for _, phase := range timeline.Phases {
+			for phaseIndex, phase := range timeline.Phases {
 				actions := behaviorActions(phase)
-				name := timeline.Name + ": " + phase.Name
-				scheduled = append(scheduled, scheduledTransition{
-					offset: cycleStart + phase.StartOffset, phase: name, actions: actions,
-				})
-				if phase.Reset {
-					scheduled = append(scheduled, scheduledTransition{
-						offset: cycleStart + phase.StartOffset + phase.Duration,
-						phase:  name, reset: true, actions: resetActions(actions),
-					})
+				phaseRef := PhaseRef{
+					ID:    fmt.Sprintf("%d:%d:%d", timelineIndex, repetition, phaseIndex),
+					Label: timeline.Name + ": " + phase.Name,
 				}
+				scheduled = append(scheduled, scheduledTransition{
+					offset: cycleStart + phase.StartOffset, phase: phaseRef, actions: actions,
+				})
+				end := scheduledTransition{
+					offset: cycleStart + phase.StartOffset + phase.Duration,
+					phase:  phaseRef, end: true,
+				}
+				if phase.Reset {
+					end.actions = resetActions(actions)
+				}
+				scheduled = append(scheduled, end)
 			}
 		}
 	}
@@ -58,10 +71,10 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 		if order := cmp.Compare(left.offset, right.offset); order != 0 {
 			return order
 		}
-		if left.reset == right.reset {
+		if left.end == right.end {
 			return 0
 		}
-		if left.reset {
+		if left.end {
 			return -1
 		}
 		return 1
@@ -110,7 +123,11 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 			result = append(result, Transition{Offset: current.offset})
 		}
 		transition := &result[len(result)-1]
-		transition.Phases = append(transition.Phases, current.phase)
+		if current.end {
+			transition.EndPhases = append(transition.EndPhases, current.phase)
+		} else {
+			transition.StartPhases = append(transition.StartPhases, current.phase)
+		}
 		transition.Actions = append(transition.Actions, current.actions...)
 	}
 	return result

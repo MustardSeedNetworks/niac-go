@@ -14,7 +14,9 @@ func TestCompileProducesStableRepeatedTransitions(t *testing.T) {
 		Name: "uplink degradation", StartOffset: time.Second, RepeatCount: 2,
 		Phases: []config.BehaviorPhase{{
 			Name: "congested", StartOffset: 2 * time.Second, Duration: 3 * time.Second, Reset: true,
-			Traffic: []config.BehaviorTraffic{{Device: "access-1", Interface: "Gi0/48", Utilization: 85}},
+			Traffic: []config.BehaviorTraffic{
+				{Device: "access-1", Interface: "Gi0/48", Utilization: 85},
+			},
 			Faults: []config.BehaviorFault{{
 				Device: "access-1", Interface: "Gi0/48", Type: "packet_discards", Value: 12,
 			}},
@@ -25,7 +27,12 @@ func TestCompileProducesStableRepeatedTransitions(t *testing.T) {
 	if len(transitions) != 4 {
 		t.Fatalf("Compile() transition count = %d, want 4", len(transitions))
 	}
-	wantOffsets := []time.Duration{3 * time.Second, 6 * time.Second, 8 * time.Second, 11 * time.Second}
+	wantOffsets := []time.Duration{
+		3 * time.Second,
+		6 * time.Second,
+		8 * time.Second,
+		11 * time.Second,
+	}
 	for index, want := range wantOffsets {
 		if transitions[index].Offset != want {
 			t.Errorf("transition %d offset = %s, want %s", index, transitions[index].Offset, want)
@@ -71,5 +78,23 @@ func TestCompileClearsBeforeApplyingAtSharedBoundary(t *testing.T) {
 	if boundary.Offset != time.Second || len(boundary.Actions) != 2 ||
 		boundary.Actions[0].Value != 0 || boundary.Actions[1].Value != 25 {
 		t.Fatalf("shared boundary = %+v", boundary)
+	}
+}
+
+func TestCompileEndsNonResetPhaseWithoutClearingItsActions(t *testing.T) {
+	transitions := behavior.Compile([]config.BehaviorTimeline{{
+		Name: "persistent", RepeatCount: 1,
+		Phases: []config.BehaviorPhase{{
+			Name: "baseline", Duration: time.Second,
+			Faults: []config.BehaviorFault{{
+				Device: "switch-1", Interface: "Gi0/1", Type: "fcs_errors", Value: 5,
+			}},
+		}},
+	}})
+	if len(transitions) != 2 {
+		t.Fatalf("Compile() transition count = %d, want 2", len(transitions))
+	}
+	if len(transitions[1].EndPhases) != 1 || len(transitions[1].Actions) != 0 {
+		t.Fatalf("non-reset end transition = %+v", transitions[1])
 	}
 }

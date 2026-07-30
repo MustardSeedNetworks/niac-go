@@ -1,11 +1,141 @@
 package config_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
+
+func TestBehaviorTimelineValidationRejectsCrossTimelineTargetOverlap(t *testing.T) {
+	yamlConfig := []byte(`
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    interfaces:
+      - name: Gi0/48
+behavior_timelines:
+  - name: first
+    repeat_count: 1
+    phases:
+      - name: warning
+        duration_ms: 2000
+        reset: true
+        faults:
+          - device: access-1
+            interface: Gi0/48
+            type: fcs_errors
+            value: 5
+  - name: second
+    start_offset_ms: 1000
+    repeat_count: 1
+    phases:
+      - name: critical
+        duration_ms: 2000
+        reset: true
+        faults:
+          - device: access-1
+            interface: Gi0/48
+            type: fcs_errors
+            value: 25
+`)
+
+	_, err := config.LoadYAMLBytes(yamlConfig)
+	if !errors.Is(err, config.ErrBehaviorPhaseOverlap) {
+		t.Fatalf("LoadYAMLBytes() error = %v, want %v", err, config.ErrBehaviorPhaseOverlap)
+	}
+}
+
+func TestBehaviorTimelineValidationRejectsPersistentCrossTimelineConflict(t *testing.T) {
+	yamlConfig := []byte(`
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    interfaces: [{name: Gi0/48}]
+behavior_timelines:
+  - name: persistent
+    repeat_count: 1
+    phases:
+      - name: baseline
+        duration_ms: 1000
+        faults: [{device: access-1, interface: Gi0/48, type: fcs_errors, value: 5}]
+  - name: later
+    start_offset_ms: 5000
+    repeat_count: 1
+    phases:
+      - name: override
+        duration_ms: 1000
+        reset: true
+        faults: [{device: access-1, interface: Gi0/48, type: fcs_errors, value: 25}]
+`)
+
+	_, err := config.LoadYAMLBytes(yamlConfig)
+	if !errors.Is(err, config.ErrBehaviorPhaseOverlap) {
+		t.Fatalf("LoadYAMLBytes() error = %v, want %v", err, config.ErrBehaviorPhaseOverlap)
+	}
+}
+
+func TestBehaviorTimelineValidationBoundsCompiledActions(t *testing.T) {
+	fault := "          - device: access-1\n            interface: Gi0/48\n            type: fcs_errors\n            value: 5\n"
+	yamlConfig := `
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    interfaces: [{name: Gi0/48}]
+behavior_timelines:
+  - name: oversized
+    repeat_count: 1000
+    phases:
+      - name: phase
+        duration_ms: 1000
+        reset: true
+        faults:
+` + strings.Repeat(fault, 51)
+
+	_, err := config.LoadYAMLBytes([]byte(yamlConfig))
+	if !errors.Is(err, config.ErrBehaviorScheduleTooLarge) {
+		t.Fatalf("LoadYAMLBytes() error = %v, want %v", err, config.ErrBehaviorScheduleTooLarge)
+	}
+}
+
+func TestBehaviorTimelineValidationRejectsNestedCrossTimelineOverlap(t *testing.T) {
+	yamlConfig := []byte(`
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    interfaces:
+      - name: Gi0/48
+behavior_timelines:
+  - name: long
+    repeat_count: 1
+    phases:
+      - name: enclosing
+        duration_ms: 100000
+        faults: [{device: access-1, interface: Gi0/48, type: fcs_errors, value: 5}]
+  - name: nested
+    repeat_count: 1
+    phases:
+      - name: first
+        start_offset_ms: 10000
+        duration_ms: 10000
+        faults: [{device: access-1, interface: Gi0/48, type: fcs_errors, value: 10}]
+      - name: second
+        start_offset_ms: 30000
+        duration_ms: 10000
+        faults: [{device: access-1, interface: Gi0/48, type: fcs_errors, value: 15}]
+`)
+
+	_, err := config.LoadYAMLBytes(yamlConfig)
+	if !errors.Is(err, config.ErrBehaviorPhaseOverlap) {
+		t.Fatalf("LoadYAMLBytes() error = %v, want %v", err, config.ErrBehaviorPhaseOverlap)
+	}
+}
 
 func TestBehaviorTimelineYAMLRoundTrip(t *testing.T) {
 	yamlConfig := []byte(`
@@ -56,7 +186,8 @@ behavior_timelines:
 	if err != nil {
 		t.Fatalf("round-trip LoadYAMLBytes() error = %v\n%s", err, rendered)
 	}
-	if len(reloaded.BehaviorTimelines) != 1 || reloaded.BehaviorTimelines[0].Phases[0].Traffic[0].Utilization != 85 {
+	if len(reloaded.BehaviorTimelines) != 1 ||
+		reloaded.BehaviorTimelines[0].Phases[0].Traffic[0].Utilization != 85 {
 		t.Fatalf("round-trip timelines = %+v", reloaded.BehaviorTimelines)
 	}
 }

@@ -2,6 +2,7 @@ package behavior
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -90,6 +91,7 @@ func (r *Runner) Status() Status {
 
 func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{}) {
 	defer close(done)
+	activePhases := make(map[string]string)
 	for _, transition := range r.transitions {
 		if !waitUntil(ctx, started.Add(transition.Offset)) {
 			r.finish("stopped", "")
@@ -103,9 +105,20 @@ func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{})
 				return
 			}
 		}
+		for _, phase := range transition.EndPhases {
+			delete(activePhases, phase.ID)
+		}
+		for _, phase := range transition.StartPhases {
+			activePhases[phase.ID] = phase.Label
+		}
+		phases := make([]string, 0, len(activePhases))
+		for _, label := range activePhases {
+			phases = append(phases, label)
+		}
+		slices.Sort(phases)
 		r.mu.Lock()
 		r.status.AppliedTransitions++
-		r.status.ActivePhases = append([]string(nil), transition.Phases...)
+		r.status.ActivePhases = phases
 		r.mu.Unlock()
 	}
 	r.finish("completed", "")

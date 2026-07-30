@@ -68,16 +68,17 @@ const (
 
 // Stack manages the network protocol stack.
 type Stack struct {
-	capture       stackCapture
-	config        *config.Config
-	configMu      sync.RWMutex
-	reloadMu      sync.RWMutex
-	devices       *DeviceTable
-	fabric        *fabricRuntime
-	segmentTables map[int]*DeviceTable // multi-VLAN mode (ADR 0008): tag -> that segment's isolated device set; nil when running flat
-	vlanMode      bool                 // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
-	serialNumber  int
-	mu            sync.Mutex
+	capture           stackCapture
+	config            *config.Config
+	configMu          sync.RWMutex
+	reloadMu          sync.RWMutex
+	reloadLifecycleMu sync.Mutex
+	devices           *DeviceTable
+	fabric            *fabricRuntime
+	segmentTables     map[int]*DeviceTable // multi-VLAN mode (ADR 0008): tag -> that segment's isolated device set; nil when running flat
+	vlanMode          bool                 // any device is VLAN-tagged: ignore untagged frames (no native/default replay)
+	serialNumber      int
+	mu                sync.Mutex
 
 	// Packet queues
 	sendQueue chan *Packet
@@ -524,21 +525,23 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 		return ErrNilConfig
 	}
 
-	s.reloadMu.Lock()
-	defer s.reloadMu.Unlock()
-	previous := s.currentConfig()
-	s.stopBehaviorTimelines()
+	s.reloadLifecycleMu.Lock()
+	defer s.reloadLifecycleMu.Unlock()
 
+	s.reloadMu.RLock()
 	var replacementTopology *fabric.Topology
 	if s.fabric != nil {
 		report := fabric.Compile(cfg, s.fabric.binding.Binding)
 		if !report.Safe {
-			s.configureBehaviorTimelines(previous)
-			s.startBehaviorTimelines()
+			s.reloadMu.RUnlock()
 			return fmt.Errorf("%w: %v", ErrUnsafeFabricReload, report.Diagnostics)
 		}
 		replacementTopology = &report.Topology
 	}
+	s.reloadMu.RUnlock()
+	s.stopBehaviorTimelines()
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
 
 	s.initializeDevices(cfg)
 	s.vlanMode = configUsesVLANs(cfg)
