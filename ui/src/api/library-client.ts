@@ -1,4 +1,4 @@
-import { deduplicatedGet, request, requestJson } from './requestCore';
+import { deduplicatedGet, request, requestJson, requestJsonCamelCase } from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
   LibraryNetwork,
@@ -188,7 +188,7 @@ export const replaceScenarioDraftBehaviors = (
   revision: string,
   timelines: DraftBehaviorTimeline[],
 ) =>
-  requestJson<ScenarioDraft>(
+  requestJsonCamelCase<ScenarioDraft>(
     `/api/v1/library/drafts/${encodeURIComponent(name)}/behaviors`,
     { timelines },
     { method: 'PUT', headers: { 'If-Match': `"${revision}"` } },

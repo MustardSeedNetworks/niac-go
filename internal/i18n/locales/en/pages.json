@@ -434,16 +434,6 @@
   },
   "newSimWizard": {
     "backLabel": "Back",
-    "description": "Build and validate a saved draft before starting a simulation.",
-    "devices": {
-      "behaviorsLabel": "Behaviors",
-      "help": "Edit the saved draft. Changes here do not affect the running simulation.",
-      "saveLabel": "Save draft",
-      "savingLabel": "Saving…",
-      "viewLabel": "Draft editing view",
-      "visualLabel": "Visual topology",
-      "yamlLabel": "YAML"
-    },
     "behaviors": {
       "addFault": "Add fault",
       "addPhase": "Add phase",
@@ -455,13 +445,13 @@
       "duration": "Duration (seconds)",
       "empty": "Add a timeline to make traffic and faults change automatically during the simulation.",
       "faultRate": "Rate (%)",
-      "faultType": "Fault",
       "faults": {
         "fcs_errors": "FCS errors",
         "high_utilization": "High utilization",
         "interface_errors": "Interface errors",
         "packet_discards": "Packet discards"
       },
+      "faultType": "Fault",
       "help": "Schedule realistic traffic and link conditions. The same timeline replays identically after every restart.",
       "interface": "Interface",
       "phaseName": "Phase name",
@@ -476,6 +466,16 @@
       "startsAfter": "Starts after (seconds)",
       "timelineName": "Timeline name",
       "utilization": "Utilization (%)"
+    },
+    "description": "Build and validate a saved draft before starting a simulation.",
+    "devices": {
+      "behaviorsLabel": "Behaviors",
+      "help": "Edit the saved draft. Changes here do not affect the running simulation.",
+      "saveLabel": "Save draft",
+      "savingLabel": "Saving…",
+      "viewLabel": "Draft editing view",
+      "visualLabel": "Visual topology",
+      "yamlLabel": "YAML"
     },
     "finish": {
       "gotoRuntime": "Go to Simulation",

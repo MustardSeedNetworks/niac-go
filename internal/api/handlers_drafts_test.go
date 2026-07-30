@@ -162,7 +162,7 @@ func TestDraftBehaviorReplacementPersistsValidatedTimeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDraft() error = %v", err)
 	}
-	body := `{"timelines":[{"name":"uplink degradation","start_offset_ms":1000,"repeat_count":2,"phases":[{"name":"congested","start_offset_ms":0,"duration_ms":3000,"reset":true,"traffic":[{"device":"access-1","interface":"Gi0/48","utilization":85}],"faults":[{"device":"access-1","interface":"Gi0/48","type":"packet_discards","value":12}]}]}]}`
+	body := `{"timelines":[{"name":"uplink degradation","startOffsetMs":1000,"repeatCount":2,"phases":[{"name":"congested","startOffsetMs":0,"durationMs":3000,"reset":true,"traffic":[{"device":"access-1","interface":"Gi0/48","utilization":85}],"faults":[{"device":"access-1","interface":"Gi0/48","type":"packet_discards","value":12}]}]}]}`
 	rec := httptest.NewRecorder()
 	server.handleLibraryDraftByName(rec, draftRequest(
 		http.MethodPut, "/api/v1/library/drafts/behavior-lab/behaviors", body, draft.Revision,
@@ -188,7 +188,7 @@ func TestDraftBehaviorReplacementRejectsUnknownTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDraft() error = %v", err)
 	}
-	body := `{"timelines":[{"name":"invalid","start_offset_ms":0,"repeat_count":1,"phases":[{"name":"phase","start_offset_ms":0,"duration_ms":1000,"reset":true,"traffic":[{"device":"missing","interface":"Gi0/1","utilization":85}],"faults":[]}]}]}`
+	body := `{"timelines":[{"name":"invalid","startOffsetMs":0,"repeatCount":1,"phases":[{"name":"phase","startOffsetMs":0,"durationMs":1000,"reset":true,"traffic":[{"device":"missing","interface":"Gi0/1","utilization":85}],"faults":[]}]}]}`
 	rec := httptest.NewRecorder()
 	server.handleLibraryDraftByName(rec, draftRequest(
 		http.MethodPut, "/api/v1/library/drafts/behavior-lab/behaviors", body, draft.Revision,

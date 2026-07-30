@@ -166,4 +166,65 @@ describe('scenario draft client', () => {
     });
     expect(headers.get('If-Match')).toBe('"revision-1"');
   });
+
+  it('preserves camelCase on the migrated behavior endpoint', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            name: 'campus-draft',
+            content: 'devices: []\n',
+            format: 'yaml',
+            revision: 'revision-2',
+            modifiedAt: '2026-07-29T00:00:00Z',
+            sizeBytes: 12,
+          }),
+      });
+
+    const { replaceScenarioDraftBehaviors } = await import('./library-client');
+    await replaceScenarioDraftBehaviors('campus-draft', 'revision-1', [
+      {
+        name: 'Busy period',
+        startOffsetMs: 500,
+        repeatCount: 2,
+        phases: [
+          {
+            name: 'Degraded uplink',
+            startOffsetMs: 1000,
+            durationMs: 30000,
+            reset: true,
+            traffic: [],
+            faults: [],
+          },
+        ],
+      },
+    ]);
+
+    const options = mockFetch.mock.calls[1][1];
+    expect(options).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({
+        timelines: [
+          {
+            name: 'Busy period',
+            startOffsetMs: 500,
+            repeatCount: 2,
+            phases: [
+              {
+                name: 'Degraded uplink',
+                startOffsetMs: 1000,
+                durationMs: 30000,
+                reset: true,
+                traffic: [],
+                faults: [],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  });
 });

@@ -52,13 +52,13 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
       timelines: [
         {
           name: 'Business day',
-          start_offset_ms: 0,
-          repeat_count: 1,
+          startOffsetMs: 0,
+          repeatCount: 1,
           phases: [
             {
               name: 'Busy period',
-              start_offset_ms: 0,
-              duration_ms: 30000,
+              startOffsetMs: 0,
+              durationMs: 30000,
               reset: true,
               traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
               faults: [],

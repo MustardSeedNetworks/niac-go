@@ -14,15 +14,15 @@ type draftBehaviorsReplaceRequest struct {
 
 type draftBehaviorTimeline struct {
 	Name          string               `json:"name"`
-	StartOffsetMS int                  `json:"start_offset_ms"`
-	RepeatCount   int                  `json:"repeat_count"`
+	StartOffsetMS int                  `json:"startOffsetMs"`
+	RepeatCount   int                  `json:"repeatCount"`
 	Phases        []draftBehaviorPhase `json:"phases"`
 }
 
 type draftBehaviorPhase struct {
 	Name          string                 `json:"name"`
-	StartOffsetMS int                    `json:"start_offset_ms"`
-	DurationMS    int                    `json:"duration_ms"`
+	StartOffsetMS int                    `json:"startOffsetMs"`
+	DurationMS    int                    `json:"durationMs"`
 	Reset         bool                   `json:"reset"`
 	Traffic       []draftBehaviorTraffic `json:"traffic"`
 	Faults        []draftBehaviorFault   `json:"faults"`
