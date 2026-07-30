@@ -9,6 +9,10 @@ vi.mock('./DraftTopologyComposer', () => ({
   DraftTopologyComposer: () => <div data-testid="topology-composer" />,
 }));
 
+vi.mock('./DraftBehaviorComposer', () => ({
+  DraftBehaviorComposer: () => <div data-testid="behavior-composer" />,
+}));
+
 vi.mock('../config/YamlEditor', () => ({
   YamlEditor: () => <div data-testid="yaml-editor" />,
 }));
@@ -44,6 +48,7 @@ describe('DevicesStep', () => {
 
     expect(screen.getByTestId('yaml-editor')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Visual topology' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Behaviors' })).toBeDisabled();
     expect(screen.getByText(/must be edited in YAML/)).toBeVisible();
   });
 
@@ -69,8 +74,14 @@ describe('DevicesStep', () => {
     expect(screen.getByTestId('yaml-editor')).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('tab', { name: 'Visual topology' }));
+    await user.click(screen.getByRole('tab', { name: 'Behaviors' }));
     expect(onSave).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('behavior-composer')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'YAML' }));
+    expect(screen.getByTestId('yaml-editor')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Visual topology' }));
+    expect(onSave).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId('topology-composer')).toBeInTheDocument();
   });
 });

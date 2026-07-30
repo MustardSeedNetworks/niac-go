@@ -379,6 +379,7 @@ func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodGet},
 		},
 		{path: "/api/v1/runtime", handler: s.handleRuntime, methods: []string{http.MethodGet}},
+		{path: "/api/v1/behaviors", handler: s.handleBehaviors, methods: []string{http.MethodGet}},
 		{
 			path:    "/api/v1/simulation/preflight",
 			handler: s.handleSimulationPreflight,

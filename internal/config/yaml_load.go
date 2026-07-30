@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 	"github.com/MustardSeedNetworks/niac-go/internal/oui"
@@ -113,6 +114,9 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string, roots [
 	}
 
 	cfg.Segments = segments
+	if err = validateBehaviorTargets(cfg); err != nil {
+		return nil, err
+	}
 
 	// A config must describe at least one device somewhere — either flat, or
 	// inline in a segment. (Segments that only reference a `config:` file are
@@ -283,10 +287,11 @@ func resolveIncludePath(configDir, includePath string) string {
 // createBaseConfig creates the base configuration with global settings.
 func createBaseConfig(yamlConfig *converter.Config) *Config {
 	cfg := &Config{
-		Devices:     make([]Device, 0, len(yamlConfig.Devices)),
-		IncludePath: yamlConfig.IncludePath,
-		Networks:    convertNetworks(yamlConfig.Networks),
-		Attachments: convertLogicalAttachments(yamlConfig.Attachments),
+		Devices:           make([]Device, 0, len(yamlConfig.Devices)),
+		IncludePath:       yamlConfig.IncludePath,
+		Networks:          convertNetworks(yamlConfig.Networks),
+		Attachments:       convertLogicalAttachments(yamlConfig.Attachments),
+		BehaviorTimelines: convertBehaviorTimelines(yamlConfig.BehaviorTimelines),
 	}
 
 	// Copy CapturePlayback if present (use first one from array for now)
@@ -332,4 +337,38 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 	}
 
 	return cfg
+}
+
+func convertBehaviorTimelines(authored []converter.BehaviorTimeline) []BehaviorTimeline {
+	result := make([]BehaviorTimeline, len(authored))
+	for timelineIndex, timeline := range authored {
+		result[timelineIndex] = BehaviorTimeline{
+			Name: timeline.Name, StartOffset: time.Duration(timeline.StartOffsetMS) * time.Millisecond,
+			RepeatCount: timeline.RepeatCount, Phases: make([]BehaviorPhase, len(timeline.Phases)),
+		}
+		for phaseIndex, phase := range timeline.Phases {
+			result[timelineIndex].Phases[phaseIndex] = BehaviorPhase{
+				Name: phase.Name, StartOffset: time.Duration(phase.StartOffsetMS) * time.Millisecond,
+				Duration: time.Duration(phase.DurationMS) * time.Millisecond, Reset: phase.Reset,
+				Traffic: convertBehaviorTraffic(phase.Traffic), Faults: convertBehaviorFaults(phase.Faults),
+			}
+		}
+	}
+	return result
+}
+
+func convertBehaviorTraffic(authored []converter.BehaviorTraffic) []BehaviorTraffic {
+	result := make([]BehaviorTraffic, len(authored))
+	for index, traffic := range authored {
+		result[index] = BehaviorTraffic(traffic)
+	}
+	return result
+}
+
+func convertBehaviorFaults(authored []converter.BehaviorFault) []BehaviorFault {
+	result := make([]BehaviorFault, len(authored))
+	for index, fault := range authored {
+		result[index] = BehaviorFault(fault)
+	}
+	return result
 }

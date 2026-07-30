@@ -169,12 +169,46 @@
       "startLabel": "Iniciar simulación"
     },
     "devices": {
+      "behaviorsLabel": "Comportamientos",
       "help": "Edita el borrador guardado. Los cambios aquí no afectan la simulación en ejecución.",
       "saveLabel": "Guardar borrador",
       "savingLabel": "Guardando…",
       "viewLabel": "Vista de edición del borrador",
       "visualLabel": "Topología visual",
       "yamlLabel": "YAML"
+    },
+    "behaviors": {
+      "addFault": "Agregar falla",
+      "addPhase": "Agregar fase",
+      "addTimeline": "Agregar cronograma",
+      "addTraffic": "Agregar tráfico",
+      "defaultPhase": "Período ocupado",
+      "defaultTimeline": "Día laboral",
+      "device": "Dispositivo",
+      "duration": "Duración (segundos)",
+      "empty": "Agrega un cronograma para cambiar automáticamente el tráfico y las fallas durante la simulación.",
+      "faultRate": "Tasa (%)",
+      "faultType": "Falla",
+      "faults": {
+        "fcs_errors": "Errores FCS",
+        "high_utilization": "Utilización alta",
+        "interface_errors": "Errores de interfaz",
+        "packet_discards": "Descartes de paquetes"
+      },
+      "help": "Programa tráfico y condiciones de enlace realistas. El mismo cronograma se repite de forma idéntica después de cada reinicio.",
+      "interface": "Interfaz",
+      "phaseName": "Nombre de fase",
+      "phaseOffset": "La fase comienza después de (segundos)",
+      "removeFault": "Quitar falla",
+      "removePhase": "Quitar fase",
+      "removeTimeline": "Quitar cronograma",
+      "removeTraffic": "Quitar tráfico",
+      "repetitions": "Repeticiones",
+      "reset": "Restablecer al finalizar",
+      "save": "Guardar comportamientos",
+      "startsAfter": "Comienza después de (segundos)",
+      "timelineName": "Nombre del cronograma",
+      "utilization": "Utilización (%)"
     },
     "fleet": {
       "addSite": "Agregar sitio",

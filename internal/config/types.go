@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"net"
+	"time"
 )
 
 // Sentinel errors for configuration validation.
@@ -98,12 +99,46 @@ const (
 // Config represents the network configuration.
 type Config struct {
 	Devices            []Device
-	IncludePath        string              // Base path for walk files
-	CapturePlayback    *CapturePlayback    // Optional PCAP playback config
+	IncludePath        string           // Base path for walk files
+	CapturePlayback    *CapturePlayback // Optional PCAP playback config
+	BehaviorTimelines  []BehaviorTimeline
 	DiscoveryProtocols *DiscoveryProtocols // Discovery protocol configuration
 	Segments           []Segment           // Multi-VLAN playback bindings (ADR 0008); empty = flat/untagged
 	Networks           []Network
 	Attachments        []LogicalAttachment
+}
+
+// BehaviorTimeline is one saved sequence replayed from simulation start.
+type BehaviorTimeline struct {
+	Name        string
+	StartOffset time.Duration
+	RepeatCount int
+	Phases      []BehaviorPhase
+}
+
+// BehaviorPhase applies traffic and faults for one bounded interval.
+type BehaviorPhase struct {
+	Name        string
+	StartOffset time.Duration
+	Duration    time.Duration
+	Reset       bool
+	Traffic     []BehaviorTraffic
+	Faults      []BehaviorFault
+}
+
+// BehaviorTraffic sets observable utilization on one interface.
+type BehaviorTraffic struct {
+	Device      string
+	Interface   string
+	Utilization int
+}
+
+// BehaviorFault sets one supported interface fault rate.
+type BehaviorFault struct {
+	Device    string
+	Interface string
+	Type      string
+	Value     int
 }
 
 // Network declares one internal routed IPv4 network.

@@ -1,4 +1,4 @@
-import { deduplicatedGet, request, requestJson } from './requestCore';
+import { deduplicatedGet, request, requestJson, requestJsonCamelCase } from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
   LibraryNetwork,
@@ -114,6 +114,35 @@ export type DraftTopologyMutation =
     }
   | { operation: 'move_device'; position: { device: string; x: number; y: number } };
 
+export interface DraftBehaviorTraffic {
+  device: string;
+  interface: string;
+  utilization: number;
+}
+
+export interface DraftBehaviorFault {
+  device: string;
+  interface: string;
+  type: 'fcs_errors' | 'packet_discards' | 'interface_errors' | 'high_utilization';
+  value: number;
+}
+
+export interface DraftBehaviorPhase {
+  name: string;
+  startOffsetMs: number;
+  durationMs: number;
+  reset: boolean;
+  traffic: DraftBehaviorTraffic[];
+  faults: DraftBehaviorFault[];
+}
+
+export interface DraftBehaviorTimeline {
+  name: string;
+  startOffsetMs: number;
+  repeatCount: number;
+  phases: DraftBehaviorPhase[];
+}
+
 export const fetchScenarioDrafts = () =>
   deduplicatedGet<ScenarioDraftEntry[]>('/api/v1/library/drafts');
 
@@ -152,6 +181,17 @@ export const mutateScenarioDraftTopology = (
     `/api/v1/library/drafts/${encodeURIComponent(name)}/topology`,
     mutation,
     { method: 'PATCH', headers: { 'If-Match': `"${revision}"` } },
+  );
+
+export const replaceScenarioDraftBehaviors = (
+  name: string,
+  revision: string,
+  timelines: DraftBehaviorTimeline[],
+) =>
+  requestJsonCamelCase<ScenarioDraft>(
+    `/api/v1/library/drafts/${encodeURIComponent(name)}/behaviors`,
+    { timelines },
+    { method: 'PUT', headers: { 'If-Match': `"${revision}"` } },
   );
 
 /**
