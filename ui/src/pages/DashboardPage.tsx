@@ -58,7 +58,9 @@ export const DashboardPage: FC = () => {
                 </p>
                 <p className="text-sm text-text-muted">
                   {stats?.interface ?? t('dashboard.status.noInterface')} •{' '}
-                  {t('dashboard.status.deviceCount', { count: stats?.deviceCount ?? 0 })}
+                  <span data-testid="dashboard-device-count">
+                    {t('dashboard.status.deviceCount', { count: stats?.deviceCount ?? 0 })}
+                  </span>
                 </p>
               </div>
             </div>
