@@ -146,6 +146,44 @@ func TestDraftHandlersLifecycleAndRuntimeIsolation(t *testing.T) {
 	}
 }
 
+func TestDraftCreateAcceptsGeneratedFleetBody(t *testing.T) {
+	server, _ := newTestServer(t)
+	attachDraftLibrary(t, server)
+	content := baseConfigYAML + strings.Repeat("# generated fleet padding\n", 50_000)
+	body := fmt.Sprintf(`{"name":"generated-fleet","content":%s}`, strconvJSON(content))
+	if len(body) <= MaxRequestBodySize {
+		t.Fatalf("request body = %d bytes, want more than legacy limit %d", len(body), MaxRequestBodySize)
+	}
+	rec := httptest.NewRecorder()
+
+	server.handleLibraryDrafts(rec, draftRequest(
+		http.MethodPost, "/api/v1/library/drafts", body, "",
+	))
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if draft := decodeDraftResponse(t, rec); draft.Content != content {
+		t.Fatalf("draft content = %d bytes, want %d", len(draft.Content), len(content))
+	}
+}
+
+func TestDraftCreateRejectsOversizedScenarioContent(t *testing.T) {
+	server, _ := newTestServer(t)
+	attachDraftLibrary(t, server)
+	content := baseConfigYAML + strings.Repeat("# x\n", MaxScenarioConfigSize/4+1)
+	body := fmt.Sprintf(`{"name":"oversized","content":%s}`, strconvJSON(content))
+	rec := httptest.NewRecorder()
+
+	server.handleLibraryDrafts(rec, draftRequest(
+		http.MethodPost, "/api/v1/library/drafts", body, "",
+	))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestDraftBehaviorReplacementPersistsValidatedTimeline(t *testing.T) {
 	server, _ := newTestServer(t)
 	lib := attachDraftLibrary(t, server)

@@ -56,6 +56,11 @@ import (
 const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
+	// MaxScenarioConfigSize bounds authored scenario YAML independently from
+	// ordinary API payloads. The fleet generator's supported presets exceed 1MiB.
+	MaxScenarioConfigSize = 4 << 20 // 4MiB
+	// MaxScenarioRequestBodySize covers worst-case JSON escaping of scenario YAML.
+	MaxScenarioRequestBodySize = MaxScenarioConfigSize*6 + 1<<10
 	// MaxWalkImportSize bounds raw text from an imported or captured SNMP
 	// walk. The JSON request cap allows for escaping overhead.
 	MaxWalkImportSize = 16 << 20 // 16MiB

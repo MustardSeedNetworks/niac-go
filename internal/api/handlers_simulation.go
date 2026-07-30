@@ -97,7 +97,7 @@ func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req SimulationRequest
-	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
 		return
 	}
 	if validationErrors := validateSimulationForPreflight(req); len(validationErrors) > 0 {
@@ -119,7 +119,7 @@ func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Reques
 // handleSimulationStart processes POST requests to start a simulation.
 func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 	var req SimulationRequest
-	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
 		return
 	}
 

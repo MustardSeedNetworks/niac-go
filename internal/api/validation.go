@@ -308,10 +308,10 @@ func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 
 	errs = append(errs, validateConfigPath(req.ConfigPath)...)
 
-	if req.ConfigData != "" && len(req.ConfigData) > MaxRequestBodySize {
+	if req.ConfigData != "" && len(req.ConfigData) > MaxScenarioConfigSize {
 		errs = append(errs, ErrorDetail{
 			Field: "config_data",
-			Issue: fmt.Sprintf("config data exceeds maximum size of %d bytes", MaxRequestBodySize),
+			Issue: fmt.Sprintf("config data exceeds maximum size of %d bytes", MaxScenarioConfigSize),
 			Value: "[too large]",
 		})
 	}

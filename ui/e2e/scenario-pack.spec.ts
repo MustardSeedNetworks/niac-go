@@ -27,6 +27,7 @@ const content = `devices:
     type: switch
     mac: 02:00:00:00:00:01
 `;
+const generatedFleetContent = `${content}${'# generated fleet device metadata\n'.repeat(40_000)}`;
 
 test('selects a versioned scenario pack and creates an editable draft', async ({ page }) => {
   let generated = false;
@@ -93,7 +94,7 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
     generated = true;
     await route.fulfill({
       json: {
-        content,
+        content: generatedFleetContent,
         manifest: {
           deviceCount: 351,
           networkCount: 30,
@@ -107,7 +108,8 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
   });
   await page.route('**/api/v1/library/drafts', async (route) => {
     const body = route.request().postDataJSON() as { name: string; content: string };
-    expect(body.content).toBe(content);
+    expect(new TextEncoder().encode(body.content).length).toBeGreaterThan(1 << 20);
+    expect(body.content).toBe(generatedFleetContent);
     await route.fulfill({
       status: 201,
       json: {
