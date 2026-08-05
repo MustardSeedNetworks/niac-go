@@ -53,7 +53,8 @@ engine, allowing you to:
   - Start/stop simulations from the web UI
   - Change network interfaces without restarting
   - Switch between different configuration files
-  - Manage multiple simulation sessions
+  - Replace the active simulation without restarting the daemon
+  - Run several scenarios at once, one per physical VLAN, on a trunk attachment
 
 The daemon serves HTTPS on 127.0.0.1:8445 by default. Binding to a
 non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
@@ -70,6 +71,9 @@ NIAC_API_TOKEN or --api-token.`,
 
   # Permit routed labs on an operator-managed access port
   niac daemon --attachment-policy eth0=access:200
+
+  # Permit concurrent scenario VLANs on an operator-managed trunk
+  niac daemon --attachment-policy eth0=trunk:200,201,202,203,204,205,299
 
   # Permit a directly connected untagged tester
   niac daemon --attachment-policy eth1=direct
@@ -95,8 +99,8 @@ NIAC_API_TOKEN or --api-token.`,
 		StringSliceVar(&options.webhookAllowedHosts, "webhook-allowed-host", nil,
 			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
 	daemonCmd.Flags().
-		StringSliceVar(&options.attachmentPolicies, "attachment-policy", nil,
-			"Operator-approved routed attachment (repeatable): INTERFACE=direct or INTERFACE=access:VLAN")
+		StringArrayVar(&options.attachmentPolicies, "attachment-policy", nil,
+			"Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...")
 
 	daemonCmd.Flags().
 		StringVar(&options.certDir, "cert-dir", "", "Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)")
@@ -158,37 +162,98 @@ func resolveDaemonAPIToken(o *daemonOptions) string {
 }
 
 func parseAttachmentPolicies(values []string) ([]fabric.PhysicalAttachmentPolicy, error) {
-	const syntax = "expected INTERFACE=direct or INTERFACE=access:VLAN"
 	policies := make([]fabric.PhysicalAttachmentPolicy, 0, len(values))
-	seen := make(map[fabric.PhysicalAttachmentPolicy]struct{}, len(values))
+	seenInterfaces := make(map[string]struct{}, len(values))
 	for _, value := range values {
-		interfaceName, modeValue, ok := strings.Cut(value, "=")
-		if !ok || strings.TrimSpace(interfaceName) != interfaceName || interfaceName == "" {
-			return nil, fmt.Errorf("invalid attachment policy %q: %s", value, syntax)
+		policy, err := parseAttachmentPolicy(value)
+		if err != nil {
+			return nil, err
 		}
-
-		policy := fabric.PhysicalAttachmentPolicy{Interface: interfaceName}
-		switch {
-		case modeValue == string(fabric.ModeDirect):
-			policy.Mode = fabric.ModeDirect
-		case strings.HasPrefix(modeValue, string(fabric.ModeAccess)+":"):
-			vlanText := strings.TrimPrefix(modeValue, string(fabric.ModeAccess)+":")
-			vlan, err := strconv.ParseUint(vlanText, 10, 16)
-			if err != nil || vlan == 0 || vlan > 4094 {
-				return nil, fmt.Errorf("invalid attachment policy %q: access VLAN must be between 1 and 4094", value)
-			}
-			policy.Mode = fabric.ModeAccess
-			policy.AccessVLAN = uint16(vlan)
-		default:
-			return nil, fmt.Errorf("invalid attachment policy %q: %s", value, syntax)
+		if _, duplicate := seenInterfaces[policy.Interface]; duplicate {
+			return nil, fmt.Errorf("duplicate interface in attachment policy %q", value)
 		}
-		if _, duplicate := seen[policy]; duplicate {
-			return nil, fmt.Errorf("duplicate attachment policy %q", value)
-		}
-		seen[policy] = struct{}{}
+		seenInterfaces[policy.Interface] = struct{}{}
 		policies = append(policies, policy)
 	}
 	return policies, nil
+}
+
+const attachmentPolicySyntax = "expected INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,..."
+
+func parseAttachmentPolicy(value string) (fabric.PhysicalAttachmentPolicy, error) {
+	interfaceName, modeValue, ok := strings.Cut(value, "=")
+	if !ok || strings.TrimSpace(interfaceName) != interfaceName || interfaceName == "" {
+		return fabric.PhysicalAttachmentPolicy{}, fmt.Errorf(
+			"invalid attachment policy %q: %s", value, attachmentPolicySyntax,
+		)
+	}
+	policy := fabric.PhysicalAttachmentPolicy{Interface: interfaceName}
+	switch {
+	case modeValue == string(fabric.ModeDirect):
+		policy.Mode = fabric.ModeDirect
+	case strings.HasPrefix(modeValue, string(fabric.ModeAccess)+":"):
+		vlan, err := parseAttachmentVLAN(
+			value,
+			strings.TrimPrefix(modeValue, "access:"),
+			"access VLAN",
+		)
+		if err != nil {
+			return fabric.PhysicalAttachmentPolicy{}, err
+		}
+		policy.Mode, policy.AccessVLAN = fabric.ModeAccess, vlan
+	case strings.HasPrefix(modeValue, string(fabric.ModeTrunk)+":"):
+		vlans, err := parseTrunkVLANs(value, strings.TrimPrefix(modeValue, "trunk:"))
+		if err != nil {
+			return fabric.PhysicalAttachmentPolicy{}, err
+		}
+		policy.Mode, policy.AllowedVLANs = fabric.ModeTrunk, vlans
+	default:
+		return fabric.PhysicalAttachmentPolicy{}, fmt.Errorf(
+			"invalid attachment policy %q: %s", value, attachmentPolicySyntax,
+		)
+	}
+	return policy, nil
+}
+
+func parseAttachmentVLAN(value, text, label string) (uint16, error) {
+	vlan, err := strconv.ParseUint(text, 10, 16)
+	if err != nil || vlan == 0 || vlan > 4094 {
+		return 0, fmt.Errorf(
+			"invalid attachment policy %q: %s must be between 1 and 4094",
+			value,
+			label,
+		)
+	}
+	return uint16(vlan), nil
+}
+
+func parseTrunkVLANs(value, text string) ([]uint16, error) {
+	if text == "" {
+		return nil, fmt.Errorf(
+			"invalid attachment policy %q: trunk requires at least one VLAN",
+			value,
+		)
+	}
+	vlans := make([]uint16, 0, strings.Count(text, ",")+1)
+	var previous uint16
+	for item := range strings.SplitSeq(text, ",") {
+		vlan, err := parseAttachmentVLAN(value, item, "trunk VLANs")
+		if err != nil {
+			return nil, err
+		}
+		if vlan == previous {
+			return nil, fmt.Errorf("invalid attachment policy %q: duplicate VLAN %d", value, vlan)
+		}
+		if vlan < previous {
+			return nil, fmt.Errorf(
+				"invalid attachment policy %q: trunk VLANs must be in ascending order",
+				value,
+			)
+		}
+		vlans = append(vlans, vlan)
+		previous = vlan
+	}
+	return vlans, nil
 }
 
 func runDaemon(options *daemonOptions, info versionInfo) error {
@@ -215,7 +280,9 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		logging.Warningf(
 			"SECURITY: No API token set. Anyone with network access can control simulations.",
 		)
-		logging.Warningf("         Use NIAC_API_TOKEN env var for production or network-exposed deployments.")
+		logging.Warningf(
+			"         Use NIAC_API_TOKEN env var for production or network-exposed deployments.",
+		)
 	}
 
 	cfg := daemon.Config{
@@ -239,7 +306,8 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// returns the same gate (the duplicate check is intentional defense in
 	// depth — the server will refuse too, but printing the friendly hint
 	// here surfaces it earlier in the log timeline).
-	if nonLoopback, parseErr := isNonLoopbackListen(listenAddr); parseErr == nil && nonLoopback && !authEnabled {
+	if nonLoopback, parseErr := isNonLoopbackListen(listenAddr); parseErr == nil && nonLoopback &&
+		!authEnabled {
 		return errors.New(
 			"niac refuses to bind a non-loopback address without an API token.\n" +
 				"Set NIAC_API_TOKEN=<value>, --api-token=<value>, or --token-file=<path>.\n" +

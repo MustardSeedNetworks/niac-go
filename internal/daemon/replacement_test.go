@@ -118,7 +118,7 @@ func replacementTestDaemon(t *testing.T) *Daemon {
 	daemon.apiServer = api.NewServer(api.ServerConfig{})
 	t.Cleanup(func() {
 		if daemon.simulation != nil {
-			_ = daemon.StopSimulation()
+			_ = daemon.StopSimulation("")
 		}
 	})
 	return daemon

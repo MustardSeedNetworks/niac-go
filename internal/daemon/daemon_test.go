@@ -140,7 +140,7 @@ devices:
 	}
 
 	// Stop simulation
-	err = daemon.StopSimulation()
+	err = daemon.StopSimulation("")
 	if err != nil {
 		t.Fatalf("Failed to stop simulation: %v", err)
 	}
@@ -499,7 +499,7 @@ func TestStopSimulation_NoSimulation(t *testing.T) {
 		t.Fatalf("Failed to create daemon: %v", err)
 	}
 
-	err = daemon.StopSimulation()
+	err = daemon.StopSimulation("")
 	if err == nil {
 		t.Error("Expected error when stopping non-existent simulation")
 	}
@@ -588,7 +588,7 @@ devices:
 			t.Errorf("Cycle %d: Simulation should be running", i)
 		}
 
-		stopErr := daemon.StopSimulation()
+		stopErr := daemon.StopSimulation("")
 		if stopErr != nil {
 			t.Fatalf("Cycle %d: Failed to stop simulation: %v", i, stopErr)
 		}
