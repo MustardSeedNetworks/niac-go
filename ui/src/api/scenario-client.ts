@@ -24,6 +24,13 @@ export interface ScenarioGenerateRequest {
   domain: string;
   snmpCommunity: string;
   attachmentName: string;
+  endpointProfile?:
+    | 'enterprise'
+    | 'hospital'
+    | 'warehouse'
+    | 'manufacturing'
+    | 'retail'
+    | 'service-provider';
 }
 
 export interface ScenarioManifest {
@@ -46,6 +53,7 @@ export interface ScenarioPack {
   manifestVersion: number;
   name: string;
   description: string;
+  mapPurpose: 'presentation' | 'stress';
   request: ScenarioGenerateRequest;
   manifest: ScenarioManifest;
 }
@@ -93,6 +101,7 @@ export const enterpriseScenarioRequest = (): ScenarioGenerateRequest => ({
   domain: 'demo.lab',
   snmpCommunity: 'NetAllyDemo',
   attachmentName: 'cyberscope',
+  endpointProfile: 'enterprise',
 });
 
 const validDomain = (domain: string) =>
@@ -109,6 +118,19 @@ export const isScenarioRequestValid = (request: ScenarioGenerateRequest) => {
   }
   if (!request.snmpCommunity.trim() || utf8Length(request.snmpCommunity) > 255) return false;
   if (!request.attachmentName.trim() || utf8Length(request.attachmentName) > 64) return false;
+  if (
+    request.endpointProfile !== undefined &&
+    ![
+      'enterprise',
+      'hospital',
+      'warehouse',
+      'manufacturing',
+      'retail',
+      'service-provider',
+    ].includes(request.endpointProfile)
+  ) {
+    return false;
+  }
 
   const codes = new Set<string>();
   const octets = new Set<number>();
