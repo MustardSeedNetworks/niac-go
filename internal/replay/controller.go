@@ -34,7 +34,7 @@ var (
 // Controller drives capture.PlaybackEngine for the API's ReplayManager
 // interface. Concurrent-safe; methods serialise on a single internal mutex.
 type Controller struct {
-	engine     *capture.Engine
+	engine     capture.PacketSender
 	debugLevel int
 
 	mu      sync.Mutex
@@ -45,7 +45,7 @@ type Controller struct {
 
 // New returns a Controller bound to the given capture engine. debugLevel is
 // passed through to each new PlaybackEngine instance.
-func New(engine *capture.Engine, debugLevel int) *Controller {
+func New(engine capture.PacketSender, debugLevel int) *Controller {
 	return &Controller{engine: engine, debugLevel: debugLevel}
 }
 
