@@ -31,6 +31,15 @@ func TestCompareReportsIdentityClassificationAndLinkTelemetry(t *testing.T) {
 	assertFinding(t, findings, linklive.FindingSpeedConflict)
 }
 
+func TestCompareReportsPrinterClassificationConflict(t *testing.T) {
+	authored := authoredPair(t)
+	authored.Devices[0].Type = "printer"
+	observed := observedPair("Host/Client", "Full", "100 Gb")
+
+	findings := linklive.Compare(authored, observed)
+	assertFinding(t, findings, linklive.FindingTypeConflict)
+}
+
 func TestCompareReportsMissingAddressUnexpectedProblemAndVLAN(t *testing.T) {
 	authored := authoredPair(t)
 	observed := observedPair("Switch", "Full", "100 Gb")
@@ -68,10 +77,11 @@ func TestParseTopologyNormalizesVendorMAC(t *testing.T) {
         "hostId": 7,
         "bestNameFormatted": "COS-CORE-SW01",
         "displayedDeviceType": "Switch",
-        "longMfrMac": "Cisco:00000c-f00401",
-        "defaultAddr": {"ipV4Address": "10.240.200.2"},
-        "connectedHosts": []
-    }]`)
+		"longMfrMac": "Cisco:00000c-f00401",
+		"defaultAddr": {"ipV4Address": "10.240.200.2"},
+		"interfaces": [{"iface":{"name":"Vlan200","status":"Up","speed":"100 Gb","duplex":"Unknown","mtu":9000,"util":{"percent":12.5},"errors":{"percent":1.2},"discards":{"percent":0.8}},"worstProblem":""}],
+		"connectedHosts": []
+	}]`)
 
 	snapshot, err := linklive.ParseTopology(data)
 	if err != nil {
@@ -79,6 +89,11 @@ func TestParseTopologyNormalizesVendorMAC(t *testing.T) {
 	}
 	if got := snapshot.Hosts[0].MAC; got != "00000cf00401" {
 		t.Fatalf("MAC = %q", got)
+	}
+	got := snapshot.Hosts[0].Interfaces[0].Interface
+	if got.Name != "Vlan200" || got.MTU != 9000 || got.Utilization.Percent != 12.5 ||
+		got.Errors.Percent != 1.2 || got.Discards.Percent != 0.8 {
+		t.Fatalf("interface = %+v", got)
 	}
 }
 
@@ -130,8 +145,12 @@ func authoredPair(t *testing.T) linklive.AuthoredSnapshot {
 		{
 			Name: "COS-CORE-SW01", Type: "layer3-switch", MACAddress: coreMAC,
 			IPAddresses: []net.IP{net.ParseIP("10.240.200.2")},
+			SNMPConfig:  config.SNMPConfig{Community: "NetAllyDemo"},
 			Interfaces: []config.Interface{
-				{Name: "HundredGigabitEthernet1/0/1", Speed: 100000, Duplex: "full"},
+				{
+					Name: "HundredGigabitEthernet1/0/1", Type: "ethernet", MTU: 9000,
+					Speed: 100000, Duplex: "full", OperStatus: "up", InUtilization: 10,
+				},
 			},
 			TrunkPorts: []config.TrunkPort{
 				{
@@ -160,6 +179,13 @@ func observedPair(deviceType, duplex, speed string) linklive.ObservedSnapshot {
 			Connections: []linklive.ObservedConnection{
 				{HostID: 2, Name: "COS-DIST-SW01", MAC: "00000cf00501", Edge: edge},
 			},
+			Interfaces: []linklive.ObservedInterface{{
+				Interface: linklive.ObservedInterfaceDetails{
+					Name: "HundredGigabitEthernet1/0/1", Status: "Up", Speed: "100 Gb",
+					Duplex: "Full", MTU: 9000,
+					Utilization: linklive.ObservedUtilization{Percent: 10.2},
+				},
+			}},
 		},
 		{HostID: 2, Name: "COS-DIST-SW01", Type: "Switch", MAC: "00000cf00501"},
 	}}
