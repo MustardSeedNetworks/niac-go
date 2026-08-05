@@ -45,11 +45,99 @@ func TestRecoverActiveSimulationAfterDaemonRestart(t *testing.T) {
 	if status.Recovery == nil || status.Recovery.State != recoveryStateRecovered {
 		t.Fatalf("recovery status = %#v", status.Recovery)
 	}
-	if stopErr := second.StopSimulation(); stopErr != nil {
+	if stopErr := second.StopSimulation(""); stopErr != nil {
 		t.Fatalf("StopSimulation() error = %v", stopErr)
 	}
 	if _, statErr := os.Stat(recoveryPath); !os.IsNotExist(statErr) {
 		t.Fatalf("explicit stop did not clear recovery state: %v", statErr)
+	}
+}
+
+func TestRecoverConcurrentTrunkSessionsAfterDaemonRestart(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	policy := fabric.PhysicalAttachmentPolicy{
+		Interface: "eth0", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200, 201},
+	}
+	first, err := NewDaemon(
+		Config{
+			RecoveryPath:       recoveryPath,
+			AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{policy},
+		},
+	)
+	if err != nil {
+		t.Fatalf("NewDaemon(first): %v", err)
+	}
+	first.apiServer = api.NewServer(api.ServerConfig{})
+	if err = first.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+		t.Fatalf("StartSimulation(hospital): %v", err)
+	}
+	if err = first.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements()); err != nil {
+		t.Fatalf("StartSimulation(warehouse): %v", err)
+	}
+	state, err := readRecoveryState(recoveryPath)
+	if err != nil || len(state.Sessions) != 2 {
+		t.Fatalf("readRecoveryState() state = %#v, error = %v", state, err)
+	}
+
+	first.mu.Lock()
+	for first.sessions.len() > 0 {
+		first.simulation = first.sessions.first()
+		if err = first.stopSimulationLocked(false); err != nil {
+			first.mu.Unlock()
+			t.Fatalf("shutdown stop: %v", err)
+		}
+	}
+	first.mu.Unlock()
+
+	second, err := NewDaemon(
+		Config{
+			RecoveryPath:       recoveryPath,
+			AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{policy},
+		},
+	)
+	if err != nil {
+		t.Fatalf("NewDaemon(second): %v", err)
+	}
+	second.apiServer = api.NewServer(api.ServerConfig{})
+	second.recoverActiveSimulation(fullSimulationEntitlements())
+	status := second.GetStatus()
+	if len(status.Sessions) != 2 || status.Recovery == nil ||
+		status.Recovery.State != recoveryStateRecovered {
+		t.Fatalf("recovered status = %#v", status)
+	}
+}
+
+func TestStoppingOneSessionPreservesOtherRecoveryIntent(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	d, err := NewDaemon(Config{
+		RecoveryPath: recoveryPath,
+		AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
+			Interface: "eth0", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200, 201},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("NewDaemon(): %v", err)
+	}
+	d.apiServer = api.NewServer(api.ServerConfig{})
+	if err = d.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+		t.Fatalf("StartSimulation(hospital): %v", err)
+	}
+	if err = d.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements()); err != nil {
+		t.Fatalf("StartSimulation(warehouse): %v", err)
+	}
+	if err = d.StopSimulation("hospital"); err != nil {
+		t.Fatalf("StopSimulation(hospital): %v", err)
+	}
+	state, err := readRecoveryState(recoveryPath)
+	if err != nil {
+		t.Fatalf("readRecoveryState(): %v", err)
+	}
+	if len(state.Sessions) != 1 || state.Sessions[0].Request.SessionID != "warehouse" {
+		t.Fatalf("recovery sessions = %#v", state.Sessions)
 	}
 }
 
@@ -58,10 +146,11 @@ func TestRecoverActiveSimulationFailsClosedForStaleConfig(t *testing.T) {
 	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
 	state := activeSimulationState{
 		SchemaVersion: activeSimulationSchemaVersion,
-		Request: api.SimulationRequest{
+		Sessions: []activeSimulationEntry{{Request: api.SimulationRequest{
+			SessionID:  "default",
 			Interface:  "recovery0",
 			ConfigPath: filepath.Join(t.TempDir(), "missing.yaml"),
-		},
+		}}},
 		SavedAt: time.Now().UTC(),
 	}
 	writeActiveSimulationFixture(t, recoveryPath, state)
@@ -78,6 +167,49 @@ func TestRecoverActiveSimulationFailsClosedForStaleConfig(t *testing.T) {
 	}
 }
 
+func TestRecoverActiveSimulationPreservesFailedSessionIntent(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	configDir := t.TempDir()
+	t.Setenv("NIAC_CONFIGS_DIR", configDir)
+	validPath := filepath.Join(configDir, "valid.yaml")
+	if err := os.WriteFile(validPath, []byte(validRecoveryConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	state := activeSimulationState{
+		SchemaVersion: activeSimulationSchemaVersion,
+		Sessions: []activeSimulationEntry{
+			{Request: api.SimulationRequest{SessionID: "valid", Interface: "recovery0", ConfigPath: validPath}},
+			{Request: api.SimulationRequest{
+				SessionID: "missing", Interface: "recovery1",
+				ConfigPath: filepath.Join(configDir, "missing.yaml"),
+			}},
+		},
+		SavedAt: time.Now().UTC(),
+	}
+	writeActiveSimulationFixture(t, recoveryPath, state)
+	daemon := recoveryTestDaemon(t, recoveryPath)
+	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+
+	persisted, err := readRecoveryState(recoveryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Sessions) != 2 {
+		t.Fatalf("persisted sessions = %#v, want both original intents", persisted.Sessions)
+	}
+	if err = daemon.StopSimulation("valid"); err != nil {
+		t.Fatal(err)
+	}
+	persisted, err = readRecoveryState(recoveryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Sessions) != 1 || persisted.Sessions[0].Request.SessionID != "missing" {
+		t.Fatalf("persisted sessions after stop = %#v, want failed intent", persisted.Sessions)
+	}
+}
+
 func TestRecoverActiveSimulationRechecksEntitlements(t *testing.T) {
 	t.Setenv(e2eDryRunEnv, "true")
 	configDir := t.TempDir()
@@ -89,10 +221,11 @@ func TestRecoverActiveSimulationRechecksEntitlements(t *testing.T) {
 	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
 	writeActiveSimulationFixture(t, recoveryPath, activeSimulationState{
 		SchemaVersion: activeSimulationSchemaVersion,
-		Request: api.SimulationRequest{
+		Sessions: []activeSimulationEntry{{Request: api.SimulationRequest{
+			SessionID:  "default",
 			Interface:  "recovery0",
 			ConfigPath: configPath,
-		},
+		}}},
 		SavedAt: time.Now().UTC(),
 	})
 
@@ -116,12 +249,13 @@ func TestRecoverActiveSimulationRechecksAttachmentPolicy(t *testing.T) {
 	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
 	writeActiveSimulationFixture(t, recoveryPath, activeSimulationState{
 		SchemaVersion: activeSimulationSchemaVersion,
-		Request: api.SimulationRequest{
+		Sessions: []activeSimulationEntry{{Request: api.SimulationRequest{
+			SessionID:      "default",
 			Interface:      "recovery0",
 			Attachment:     "tester",
 			AttachmentMode: fabric.ModeDirect,
 			ConfigPath:     configPath,
-		},
+		}}},
 		SavedAt: time.Now().UTC(),
 	})
 
