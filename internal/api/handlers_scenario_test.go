@@ -38,8 +38,8 @@ func TestScenarioGenerationHandlersReturnValidatedFleet(t *testing.T) {
 	if err := json.NewDecoder(packRecorder.Body).Decode(&packs); err != nil {
 		t.Fatalf("decode packs: %v", err)
 	}
-	if len(packs) != 6 || packs[0].Manifest.DeviceCount == 0 {
-		t.Fatalf("packs = %+v, want six versioned manifests", packs)
+	if len(packs) != 7 || packs[0].Manifest.DeviceCount == 0 {
+		t.Fatalf("packs = %+v, want seven versioned manifests", packs)
 	}
 
 	profilesRecorder := httptest.NewRecorder()
