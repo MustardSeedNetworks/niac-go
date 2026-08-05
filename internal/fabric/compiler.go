@@ -26,6 +26,17 @@ func Compile(cfg *config.Config, binding Binding) Report {
 	return compiler.report
 }
 
+// CompilePhysicalBinding validates a physical binding for a flat scenario.
+func CompilePhysicalBinding(binding Binding) Report {
+	compiler := scenarioCompiler{binding: binding}
+	compiler.validateBindingMode()
+	compiler.report.Topology.Binding = CompiledBinding{
+		Binding: binding, WireTagged: binding.Mode == ModeTrunk,
+	}
+	compiler.report.Safe = len(compiler.report.Diagnostics) == 0
+	return compiler.report
+}
+
 type scenarioCompiler struct {
 	cfg                *config.Config
 	binding            Binding
@@ -48,7 +59,7 @@ func (c *scenarioCompiler) compileBinding() {
 			continue
 		}
 		c.report.Topology.Binding = CompiledBinding{
-			Binding: c.binding, Network: attachment.Network, WireTagged: false,
+			Binding: c.binding, Network: attachment.Network, WireTagged: c.binding.Mode == ModeTrunk,
 		}
 		return
 	}
@@ -72,8 +83,12 @@ func (c *scenarioCompiler) validateBindingMode() {
 		if c.binding.AccessVLAN < 1 || c.binding.AccessVLAN > 4094 {
 			c.add(CodeInvalidAccessVLAN, "accessVlan", "access VLAN must be between 1 and 4094")
 		}
+	case ModeTrunk:
+		if c.binding.AccessVLAN < 1 || c.binding.AccessVLAN > 4094 {
+			c.add(CodeInvalidAccessVLAN, "accessVlan", "trunk VLAN must be between 1 and 4094")
+		}
 	default:
-		c.add(CodeInvalidAttachmentMode, "mode", "mode must be direct or access")
+		c.add(CodeInvalidAttachmentMode, "mode", "mode must be direct, access, or trunk")
 	}
 }
 
@@ -137,7 +152,11 @@ func (c *scenarioCompiler) compileDevices() {
 	for i := range c.cfg.Devices {
 		device := &c.cfg.Devices[i]
 		if _, exists := c.devices[device.Name]; exists {
-			c.add(CodeDuplicateDevice, fmt.Sprintf("devices[%d].name", i), "device name must be unique")
+			c.add(
+				CodeDuplicateDevice,
+				fmt.Sprintf("devices[%d].name", i),
+				"device name must be unique",
+			)
 			continue
 		}
 		c.devices[device.Name] = struct{}{}

@@ -171,6 +171,19 @@ func TestCompileAcceptsApprovedDirectPolicy(t *testing.T) {
 	}
 }
 
+func TestCompileAcceptsApprovedTrunkBinding(t *testing.T) {
+	report := fabric.Compile(referenceConfig(), fabric.Binding{
+		Attachment: "tester", Interface: "eth0", Mode: fabric.ModeTrunk,
+		AccessVLAN: 200, PolicyApproved: true,
+	})
+	if !report.Safe {
+		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
+	}
+	if !report.Topology.Binding.WireTagged {
+		t.Fatal("Compile() WireTagged = false, want true")
+	}
+}
+
 func TestCompileRejectsInvalidNetworkSemantics(t *testing.T) {
 	tests := []struct {
 		name   string
