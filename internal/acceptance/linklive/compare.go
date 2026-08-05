@@ -67,6 +67,7 @@ func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
 			conflict(FindingProblemConflict, expected.Name, "", actual.WorstProblem),
 		)
 	}
+	findings = append(findings, compareInterfaces(expected, actual.Interfaces)...)
 	return findings
 }
 

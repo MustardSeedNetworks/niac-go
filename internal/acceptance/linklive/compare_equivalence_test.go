@@ -36,6 +36,17 @@ func TestCompareAcceptsRenderedPortFromEitherEndpoint(t *testing.T) {
 	}
 }
 
+func TestCompareAcceptsRenderedExactPortPair(t *testing.T) {
+	authored := authoredPair(t)
+	authored.Links[0].TargetPort = "HundredGigabitEthernet1/0/49"
+	observed := observedPair("Switch", "Full", "100 Gb")
+	observed.Hosts[0].Connections[0].Edge.Port = "HundredGigabitEthernet1/0/1  /  HundredGigabitEthernet1/0/49"
+
+	if findings := linklive.Compare(authored, observed); len(findings) != 0 {
+		t.Fatalf("findings = %+v", findings)
+	}
+}
+
 func TestCompareRejectsPortWithMatchingPrefix(t *testing.T) {
 	authored := authoredPair(t)
 	observed := observedPair("Switch", "Full", "100 Gb")

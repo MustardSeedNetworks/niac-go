@@ -39,6 +39,8 @@ func displayedType(deviceType string) string {
 		return "AP"
 	case "host", "workstation", "iot":
 		return "Host/Client"
+	case "printer":
+		return "Printer"
 	default:
 		return ""
 	}
@@ -76,11 +78,18 @@ func parseVLAN(value string) int {
 }
 
 func portsMatch(actual, left, right string) bool {
-	actual = strings.TrimSpace(actual)
-	left, right = strings.TrimSpace(left), strings.TrimSpace(right)
+	actual = normalizePortDisplay(actual)
+	left, right = normalizePortDisplay(left), normalizePortDisplay(right)
 	if actual == "" {
 		return false
 	}
 	return left != "" && strings.EqualFold(actual, left) ||
-		right != "" && strings.EqualFold(actual, right)
+		right != "" && strings.EqualFold(actual, right) ||
+		left != "" && right != "" &&
+			(strings.EqualFold(actual, left+" / "+right) ||
+				strings.EqualFold(actual, right+" / "+left))
+}
+
+func normalizePortDisplay(value string) string {
+	return strings.Join(strings.Fields(value), " ")
 }

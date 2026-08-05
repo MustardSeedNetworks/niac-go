@@ -4,27 +4,38 @@ package linklive
 type FindingKind string
 
 const (
-	FindingMissingDevice    FindingKind = "missing-device"
-	FindingUnexpectedDevice FindingKind = "unexpected-device"
-	FindingNameConflict     FindingKind = "name-conflict"
-	FindingTypeConflict     FindingKind = "type-conflict"
-	FindingAddressConflict  FindingKind = "address-conflict"
-	FindingMissingLink      FindingKind = "missing-link"
-	FindingUnexpectedLink   FindingKind = "unexpected-link"
-	FindingPortConflict     FindingKind = "port-conflict"
-	FindingDuplexConflict   FindingKind = "duplex-conflict"
-	FindingSpeedConflict    FindingKind = "speed-conflict"
-	FindingVLANConflict     FindingKind = "vlan-conflict"
-	FindingProblemConflict  FindingKind = "problem-conflict"
+	FindingMissingDevice                FindingKind = "missing-device"
+	FindingUnexpectedDevice             FindingKind = "unexpected-device"
+	FindingNameConflict                 FindingKind = "name-conflict"
+	FindingTypeConflict                 FindingKind = "type-conflict"
+	FindingAddressConflict              FindingKind = "address-conflict"
+	FindingMissingLink                  FindingKind = "missing-link"
+	FindingUnexpectedLink               FindingKind = "unexpected-link"
+	FindingPortConflict                 FindingKind = "port-conflict"
+	FindingDuplexConflict               FindingKind = "duplex-conflict"
+	FindingSpeedConflict                FindingKind = "speed-conflict"
+	FindingVLANConflict                 FindingKind = "vlan-conflict"
+	FindingProblemConflict              FindingKind = "problem-conflict"
+	FindingMissingInterface             FindingKind = "missing-interface"
+	FindingUnexpectedInterface          FindingKind = "unexpected-interface"
+	FindingInterfaceStatusConflict      FindingKind = "interface-status-conflict"
+	FindingInterfaceSpeedConflict       FindingKind = "interface-speed-conflict"
+	FindingInterfaceDuplexConflict      FindingKind = "interface-duplex-conflict"
+	FindingInterfaceMTUConflict         FindingKind = "interface-mtu-conflict"
+	FindingInterfaceUtilizationConflict FindingKind = "interface-utilization-conflict"
+	FindingInterfaceErrorConflict       FindingKind = "interface-error-conflict"
+	FindingInterfaceDiscardConflict     FindingKind = "interface-discard-conflict"
+	FindingInterfaceProblemConflict     FindingKind = "interface-problem-conflict"
 )
 
 // Finding describes a deterministic difference between authored and observed truth.
 type Finding struct {
-	Kind     FindingKind `json:"kind"`
-	Device   string      `json:"device"`
-	Peer     string      `json:"peer,omitempty"`
-	Expected string      `json:"expected,omitempty"`
-	Observed string      `json:"observed,omitempty"`
+	Kind      FindingKind `json:"kind"`
+	Device    string      `json:"device"`
+	Interface string      `json:"interface,omitempty"`
+	Peer      string      `json:"peer,omitempty"`
+	Expected  string      `json:"expected,omitempty"`
+	Observed  string      `json:"observed,omitempty"`
 }
 
 // AuthoredSnapshot is the stable NIAC-side acceptance model.
@@ -35,10 +46,26 @@ type AuthoredSnapshot struct {
 
 // AuthoredDevice contains stable identity and addressing fields.
 type AuthoredDevice struct {
-	Name string
-	Type string
-	MAC  string
-	IPv4 []string
+	Name                       string
+	Type                       string
+	MAC                        string
+	IPv4                       []string
+	Interfaces                 []AuthoredInterface
+	InterfaceInventoryComplete bool
+}
+
+// AuthoredInterface contains deterministic interface state exposed through SNMP.
+type AuthoredInterface struct {
+	Name               string
+	Type               string
+	Status             string
+	SpeedMbps          int
+	Duplex             string
+	MTU                int
+	UtilizationPercent float64
+	UtilizationDynamic bool
+	ExpectZeroErrors   bool
+	ExpectZeroDiscards bool
 }
 
 // AuthoredLink contains the fields Link-Live renders for an inferred edge.
@@ -69,6 +96,7 @@ type ObservedHost struct {
 	WorstProblem string               `json:"worstProblem"`
 	DefaultAddr  observedDefaultAddr  `json:"defaultAddr"`
 	Connections  []ObservedConnection `json:"connectedHosts"`
+	Interfaces   []ObservedInterface  `json:"interfaces"`
 }
 
 type observedDefaultAddr struct {
@@ -91,4 +119,32 @@ type ObservedEdge struct {
 	Speed  string `json:"compiledSpeed"`
 	Duplex string `json:"compiledDuplex"`
 	VLAN   string `json:"compiledVlan"`
+}
+
+// ObservedInterface is one interface rendered in the Link-Live device view.
+type ObservedInterface struct {
+	Interface    ObservedInterfaceDetails `json:"iface"`
+	WorstProblem string                   `json:"worstProblem"`
+}
+
+// ObservedInterfaceDetails contains the interface telemetry Link-Live renders.
+type ObservedInterfaceDetails struct {
+	Name        string              `json:"name"`
+	Status      string              `json:"status"`
+	Speed       string              `json:"speed"`
+	Duplex      string              `json:"duplex"`
+	MTU         int                 `json:"mtu"`
+	Utilization ObservedUtilization `json:"util"`
+	Errors      ObservedPacketRate  `json:"errors"`
+	Discards    ObservedPacketRate  `json:"discards"`
+}
+
+// ObservedUtilization is Link-Live's normalized interface utilization.
+type ObservedUtilization struct {
+	Percent float64 `json:"percent"`
+}
+
+// ObservedPacketRate is Link-Live's normalized packet error or discard rate.
+type ObservedPacketRate struct {
+	Percent float64 `json:"percent"`
 }
