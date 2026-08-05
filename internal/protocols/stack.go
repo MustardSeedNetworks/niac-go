@@ -68,7 +68,7 @@ const (
 
 // Stack manages the network protocol stack.
 type Stack struct {
-	capture           stackCapture
+	capture           PacketTransport
 	config            *config.Config
 	configMu          sync.RWMutex
 	reloadMu          sync.RWMutex
@@ -137,7 +137,8 @@ type Stack struct {
 	observers  []PacketObserver
 }
 
-type stackCapture interface {
+// PacketTransport is the packet I/O boundary used by one protocol stack.
+type PacketTransport interface {
 	ReadPacket([]byte) ([]byte, error)
 	SendPacket([]byte) error
 	SetFilter(string) error
@@ -200,8 +201,17 @@ func NewStack(
 	return newStack(captureEngine, cfg, debugConfig)
 }
 
+// NewStackWithTransport creates a stack on a session-isolated packet transport.
+func NewStackWithTransport(
+	transport PacketTransport,
+	cfg *config.Config,
+	debugConfig *logging.DebugConfig,
+) *Stack {
+	return newStack(transport, cfg, debugConfig)
+}
+
 func newStack(
-	captureEngine stackCapture,
+	captureEngine PacketTransport,
 	cfg *config.Config,
 	debugConfig *logging.DebugConfig,
 ) *Stack {
