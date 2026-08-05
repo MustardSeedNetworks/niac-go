@@ -54,13 +54,16 @@ type Config struct {
 	BehaviorTimelines  []BehaviorTimeline  `yaml:"behavior_timelines,omitempty"  validate:"omitempty,max=64,dive"`
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
 	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
+
 	// Segments binds independent device sets to VLAN tags for multi-VLAN
 	// playback (ADR 0008). When present, each segment is served as its own
 	// isolated network (own IP space) on its tag, and top-level `devices` must
 	// be empty. When absent, `devices` is served as a single untagged segment —
 	// today's flat behavior.
-	Segments    []Segment           `yaml:"segments,omitempty"    validate:"omitempty,dive"`
-	Networks    []Network           `yaml:"networks,omitempty"    validate:"omitempty,dive"`
+	Segments []Segment `yaml:"segments,omitempty" validate:"omitempty,dive"`
+
+	Networks []Network `yaml:"networks,omitempty" validate:"omitempty,dive"`
+
 	Attachments []LogicalAttachment `yaml:"attachments,omitempty" validate:"omitempty,dive"`
 }
 
@@ -115,6 +118,7 @@ type LogicalAttachment struct {
 type Segment struct {
 	// Tag is "untagged" (the native VLAN) or a VLAN id in 1..4094.
 	Tag VLANTag `yaml:"tag" validate:"required"`
+
 	// Devices is an inline device set for this segment.
 	Devices []Device `yaml:"devices,omitempty" validate:"omitempty,dive"`
 	// Config is a path to a config file whose devices form this segment
@@ -146,7 +150,7 @@ type CapturePlayback struct {
 // Device represents a network device.
 type Device struct {
 	Name string `yaml:"name,omitempty"`
-	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch layer3-switch ap access-point firewall server host workstation iot"`
+	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch layer3-switch ap access-point firewall server host workstation iot printer voip-phone"`
 
 	MAC       string `yaml:"mac,omitempty"        validate:"omitempty,mac"`
 	Vendor    string `yaml:"vendor,omitempty"`
@@ -236,7 +240,7 @@ func addEnabledRequirements(schema *jsonschema.Schema, required ...string) {
 // Interface represents configured metadata for a device interface.
 type Interface struct {
 	Name           string  `yaml:"name"`
-	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet l2vlan l3ipvlan loopback tunnel other"`
+	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet ieee80211 l2vlan l3ipvlan loopback tunnel other"`
 	Network        string  `yaml:"network,omitempty"`
 	Address        string  `yaml:"address,omitempty"         validate:"omitempty,cidr"`
 	MTU            int     `yaml:"mtu,omitempty"             validate:"omitempty,gte=576,lte=1000000"`
@@ -301,9 +305,11 @@ type ReflectorConfig struct {
 	// simulating one-way path latency (Java Latency()). 0 = reflect
 	// immediately.
 	LatencyMs int `yaml:"latency_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
+
 	// JitterMs randomises the delay by +/- this many milliseconds around
 	// LatencyMs (Java Jitter()). 0 = no jitter.
 	JitterMs int `yaml:"jitter_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
+
 	// DSCP selects which ToS bits are toggled on the reflected packet:
 	// true wiggles the bottom two DSCP bits (0x03, Java Dscp), false
 	// wiggles the IP-precedence bit (0x01, Java IpPrecedence — the default).
