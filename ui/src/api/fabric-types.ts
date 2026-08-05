@@ -2,13 +2,13 @@ import type { SimulationRequest } from './api-response-types';
 
 export type SimulationPreflightRequest = SimulationRequest & {
   attachment: string;
-  attachmentMode: 'direct' | 'access';
+  attachmentMode: 'direct' | 'access' | 'trunk';
 };
 
 export interface FabricBinding {
   attachment: string;
   interface: string;
-  mode: 'direct' | 'access';
+  mode: 'direct' | 'access' | 'trunk';
   physicalVlan?: number;
   network: string;
   wireTagged: boolean;
