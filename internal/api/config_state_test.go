@@ -321,6 +321,25 @@ func TestUpdateSimulation(t *testing.T) {
 	}
 }
 
+func TestSimulationSessionsRemainAddressableWhenSelectionChanges(t *testing.T) {
+	server := NewServer(ServerConfig{})
+	hospital := &config.Config{Devices: []config.Device{{Name: "HOSPITAL-SW01"}}}
+	warehouse := &config.Config{Devices: []config.Device{{Name: "WAREHOUSE-SW01"}}}
+	server.UpdateSimulationSession("hospital", nil, hospital, "/tmp/hospital.yaml", "eth0", nil)
+	server.UpdateSimulationSession("warehouse", nil, warehouse, "/tmp/warehouse.yaml", "eth0", nil)
+
+	if !server.SelectSimulation("hospital") || server.currentConfig() != hospital {
+		t.Fatal("hospital session was not selected")
+	}
+	if !server.SelectSimulation("warehouse") || server.currentConfig() != warehouse {
+		t.Fatal("warehouse session was not selected")
+	}
+	server.RemoveSimulation("hospital")
+	if !server.SelectSimulation("warehouse") || server.currentConfig() != warehouse {
+		t.Fatal("removing hospital affected warehouse")
+	}
+}
+
 func TestClearSimulation(t *testing.T) {
 	cfg := mustLoadConfig(t, baseConfigYAML)
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))

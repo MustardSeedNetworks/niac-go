@@ -19,6 +19,9 @@ type preflightDaemon struct {
 	report       fabric.Report
 	err          error
 	startErr     error
+	stopErr      error
+	selectErr    error
+	selected     string
 	started      bool
 	entitlements SimulationEntitlements
 }
@@ -62,11 +65,19 @@ func TestHandleSimulationPreflightAcceptsGeneratedFleetBody(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(body) <= MaxRequestBodySize {
-		t.Fatalf("request body = %d bytes, want more than legacy limit %d", len(body), MaxRequestBodySize)
+		t.Fatalf(
+			"request body = %d bytes, want more than legacy limit %d",
+			len(body),
+			MaxRequestBodySize,
+		)
 	}
 	daemon := &preflightDaemon{}
 	server := &Server{daemon: daemon}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation/preflight", bytes.NewReader(body))
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/simulation/preflight",
+		bytes.NewReader(body),
+	)
 	rec := httptest.NewRecorder()
 
 	server.handleSimulationPreflight(rec, req)
@@ -75,11 +86,18 @@ func TestHandleSimulationPreflightAcceptsGeneratedFleetBody(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 	if daemon.request.ConfigData != configData {
-		t.Fatalf("preflight received %d config bytes, want %d", len(daemon.request.ConfigData), len(configData))
+		t.Fatalf(
+			"preflight received %d config bytes, want %d",
+			len(daemon.request.ConfigData),
+			len(configData),
+		)
 	}
 }
 
-func (d *preflightDaemon) StartSimulation(_ SimulationRequest, entitlements SimulationEntitlements) error {
+func (d *preflightDaemon) StartSimulation(
+	_ SimulationRequest,
+	entitlements SimulationEntitlements,
+) error {
 	d.entitlements = entitlements
 	if len(d.report.Topology.Networks) > 0 && !entitlements.RoutedLabs {
 		return ErrRoutedLabsLicenseRequired
@@ -87,7 +105,24 @@ func (d *preflightDaemon) StartSimulation(_ SimulationRequest, entitlements Simu
 	d.started = true
 	return d.startErr
 }
-func (*preflightDaemon) StopSimulation() error       { return nil }
+func (d *preflightDaemon) StopSimulation(string) error { return d.stopErr }
+func (d *preflightDaemon) SelectSimulation(sessionID string) error {
+	d.selected = sessionID
+	return d.selectErr
+}
+
+func TestHandleSimulationSelectTargetsOneSession(t *testing.T) {
+	daemon := &preflightDaemon{}
+	server := &Server{daemon: daemon}
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/simulation", strings.NewReader(`{"sessionId":"hospital"}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulation(rec, req)
+
+	if rec.Code != http.StatusOK || daemon.selected != "hospital" {
+		t.Fatalf("status = %d, selected = %q", rec.Code, daemon.selected)
+	}
+}
 func (*preflightDaemon) GetStatus() SimulationStatus { return SimulationStatus{} }
 
 func TestHandleSimulationStartReturnsManagedPathValidationError(t *testing.T) {
@@ -111,6 +146,37 @@ func TestHandleSimulationStartReturnsManagedPathValidationError(t *testing.T) {
 	}
 	if response.Error != "validation_failed" {
 		t.Fatalf("response = %#v", response)
+	}
+}
+
+func TestHandleSimulationStartReturnsSessionConflict(t *testing.T) {
+	server := &Server{
+		daemon:  &preflightDaemon{startErr: ErrSimulationSessionConflict},
+		license: freshManager(t),
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
+  "sessionId":"warehouse",
+  "interface":"eth0",
+  "configData":"devices: []"
+}`))
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStart(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusConflict)
+	}
+}
+
+func TestHandleSimulationStopReturnsSessionNotFound(t *testing.T) {
+	server := &Server{daemon: &preflightDaemon{stopErr: ErrSimulationSessionNotFound}}
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/simulation?sessionId=hospital", nil)
+	rec := httptest.NewRecorder()
+
+	server.handleSimulationStop(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }
 
