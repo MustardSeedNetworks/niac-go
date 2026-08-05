@@ -101,6 +101,7 @@ type Client struct {
 	hub      *Hub
 	send     chan []byte
 	stream   Stream
+	scope    string
 	closed   atomic.Bool
 	clientIP string
 }
@@ -125,5 +126,6 @@ type Hub struct {
 // so the hub's broadcast loop can dispatch to the right client set.
 type streamMessage struct {
 	stream Stream
+	scope  string
 	data   []byte
 }

@@ -32,16 +32,17 @@ type statsStackPayload struct {
 	UDPProxyOverloadDrops uint64 `json:"udpProxyOverloadDrops"`
 }
 
-func (s *Server) currentStatsPayload() (statsPayload, bool) {
+func (s *Server) currentStatsPayload() (statsPayload, string, bool) {
 	s.configMu.RLock()
 	stack := s.cfg.Stack
 	cfg := s.cfg.Config
 	iface := s.cfg.Interface
 	version := s.cfg.Version
+	sessionID := s.selectedSimulation
 	s.configMu.RUnlock()
 
 	if stack == nil {
-		return statsPayload{}, false
+		return statsPayload{}, "", false
 	}
 
 	stats := stack.GetStats()
@@ -69,7 +70,7 @@ func (s *Server) currentStatsPayload() (statsPayload, bool) {
 			Errors:                stats.Errors,
 			UDPProxyOverloadDrops: stats.UDPProxyOverloadDrops,
 		},
-	}, true
+	}, sessionID, true
 }
 
 func (s *Server) startStatsPublisher(interval time.Duration) {
@@ -84,9 +85,13 @@ func (s *Server) startStatsPublisher(interval time.Duration) {
 			if s.sseHub.ClientCount(sse.StreamStats) == 0 {
 				continue
 			}
-			payload, ok := s.currentStatsPayload()
+			payload, sessionID, ok := s.currentStatsPayload()
 			if ok {
-				s.sseHub.BroadcastStats(payload)
+				if sessionID == "" {
+					s.sseHub.BroadcastStats(payload)
+				} else {
+					s.sseHub.BroadcastStatsForSession(sessionID, payload)
+				}
 			}
 		}
 	}
