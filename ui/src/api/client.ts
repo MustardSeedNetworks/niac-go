@@ -1,4 +1,10 @@
-import { deduplicatedGet, request, requestJson, requestText } from './requestCore';
+import {
+  deduplicatedGet,
+  request,
+  requestJson,
+  requestJsonCamelCase,
+  requestText,
+} from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
   AlertConfig,
@@ -248,13 +254,20 @@ export const fetchUsableInterfaces = () =>
 export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
 export const preflightSimulation = (payload: SimulationPreflightRequest) =>
-  requestJson<SimulationPreflightReport>('/api/v1/simulation/preflight', payload, {
+  requestJsonCamelCase<SimulationPreflightReport>('/api/v1/simulation/preflight', payload, {
     method: 'POST',
   });
 export const startSimulation = (payload: SimulationRequest) =>
-  requestJson<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
-export const stopSimulation = () =>
-  request<{ status: string }>('/api/v1/simulation', { method: 'DELETE' });
+  requestJsonCamelCase<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
+export const selectSimulation = (sessionId: string) =>
+  requestJsonCamelCase<SimulationStatus>('/api/v1/simulation', { sessionId }, { method: 'PUT' });
+export const stopSimulation = (sessionId?: string) =>
+  request<{ status: string }>(
+    sessionId
+      ? `/api/v1/simulation?sessionId=${encodeURIComponent(sessionId)}`
+      : '/api/v1/simulation',
+    { method: 'DELETE' },
+  );
 
 // =====================================================================
 // Standalone packet capture (PCAP Inspector "sniff without a sim" mode)
