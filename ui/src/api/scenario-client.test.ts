@@ -28,6 +28,7 @@ describe('scenario generator client', () => {
     expect(payload).toMatchObject({
       counts: { accessSwitches: 16, accessPointsPerAccess: 2 },
       attachmentName: 'cyberscope',
+      endpointProfile: 'enterprise',
     });
     expect(payload.sites).toHaveLength(4);
     expect(payload.sites[0]).toMatchObject({ code: 'COS', octet: 240 });
@@ -50,6 +51,9 @@ describe('scenario generator client', () => {
     expect(isScenarioRequestValid(request)).toBe(true);
 
     request.sites[0].octet = 254;
+    expect(isScenarioRequestValid(request)).toBe(false);
+
+    Object.assign(request, { endpointProfile: 'invalid' });
     expect(isScenarioRequestValid(request)).toBe(false);
   });
 
