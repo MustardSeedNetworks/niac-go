@@ -20,6 +20,7 @@ const (
 	duplexHalf             = 2
 	interfaceTypeOther     = 1
 	interfaceTypeEthernet  = 6
+	interfaceTypeIEEE80211 = 71
 	interfaceTypeLoopback  = 24
 	interfaceTypeTunnel    = 131
 	interfaceTypeL2VLAN    = 135
@@ -139,6 +140,8 @@ func configuredInterfaceType(interfaceType string) int {
 		return interfaceTypeEthernet
 	case "l2vlan":
 		return interfaceTypeL2VLAN
+	case "ieee80211":
+		return interfaceTypeIEEE80211
 	case "loopback":
 		return interfaceTypeLoopback
 	case "tunnel":
