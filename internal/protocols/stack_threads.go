@@ -399,9 +399,16 @@ func (s *Stack) finalizeEgressFrame(pkt *Packet) ([]byte, int, error) {
 		return nil, -1, fmt.Errorf("invalid Ethernet frame length %d", length)
 	}
 	frame := pkt.Buffer[:length]
-	if s.fabric != nil && !s.fabric.binding.WireTagged {
+	if s.fabric != nil {
 		untagged, err := stripDot1Q(frame)
-		return untagged, -1, err
+		if err != nil {
+			return nil, -1, err
+		}
+		if !s.fabric.binding.WireTagged {
+			return untagged, -1, nil
+		}
+		physicalVLAN := int(s.fabric.binding.AccessVLAN)
+		return insertDot1Q(untagged, physicalVLAN), physicalVLAN, nil
 	}
 	if pkt.VLAN > 0 {
 		frame = insertDot1Q(frame, pkt.VLAN)
