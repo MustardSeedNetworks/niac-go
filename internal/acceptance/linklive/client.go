@@ -21,10 +21,12 @@ const (
 	topologyProjection = `{"bestNameFormatted":1,"longMfrMac":1,"defaultAddr.ipV4Address":1,` +
 		`"comment":1,"_id":1,"addresses":1,"connectedHosts":1,"hostIds":1,` +
 		`"hostId":1,"change":1,"monitoring":1,"worstProblem":1,` +
-		`"displayedDeviceType":1,"analysisId":1}`
+		`"displayedDeviceType":1,"analysisId":1,"interfaces":1}`
 )
 
 var analysisIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+var errTokenRefreshRequired = errors.New("Link-Live access token requires refresh")
 
 // ErrMFARequired means Link-Live requires an OTP for this login.
 var ErrMFARequired = errors.New("Link-Live login requires MFA")
@@ -87,6 +89,22 @@ func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) 
 	if err != nil {
 		return nil, err
 	}
+	data, err := c.authorizedGet(ctx, path, token)
+	if !errors.Is(err, errTokenRefreshRequired) {
+		return data, err
+	}
+	token, err = c.refreshAccessToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	return c.authorizedGet(ctx, path, token)
+}
+
+func (c *Client) authorizedGet(
+	ctx context.Context,
+	path string,
+	token string,
+) (json.RawMessage, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.config.APIURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create Link-Live request: %w", err)
@@ -103,6 +121,9 @@ func (c *Client) do(req *http.Request) (json.RawMessage, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode == mfaRequiredStatus {
 		return nil, ErrMFARequired
+	}
+	if resp.StatusCode == http.StatusUpgradeRequired {
+		return nil, errTokenRefreshRequired
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("Link-Live returned HTTP %d", resp.StatusCode)
