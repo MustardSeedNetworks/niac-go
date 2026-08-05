@@ -148,6 +148,7 @@ export const PacketInspectorPage: FC = () => {
 
   // SSE connection (auto-reconnects)
   const { connected, reconnect } = usePacketStream({
+    sessionId: simRunning ? simStatus?.sessionId : undefined,
     onMessage: useCallback((data: unknown) => {
       // Skip if paused
       if (isPausedRef.current) {
