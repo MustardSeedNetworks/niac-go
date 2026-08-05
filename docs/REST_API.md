@@ -36,7 +36,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
-| `GET` | `/api/v1/scenario/packs` | Versioned hospital, warehouse, campus, retail, industrial, and service-provider presets |
+| `GET` | `/api/v1/scenario/packs` | Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
 | `PATCH` | `/api/v1/library/drafts/{name}/topology` | Apply one revision-safe topology edit to an isolated draft |
