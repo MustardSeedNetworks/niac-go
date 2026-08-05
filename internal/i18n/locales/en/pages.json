@@ -501,27 +501,31 @@
       "invalid": "Resolve the fleet values before continuing.",
       "packMetadata": {
         "campus": {
-          "description": "Four large buildings with core, distribution, access, Wi-Fi 7, workstation, and service layers.",
+          "description": "Four readable sites with core, distribution, access, Wi-Fi 7, workstation, and service layers.",
           "name": "Enterprise campus"
         },
+        "enterprise-scale": {
+          "description": "Four-site, 531-device stress workload for discovery and scale testing; not intended as a presentation map.",
+          "name": "Enterprise scale reference"
+        },
         "hospital": {
-          "description": "Acute-care, ambulatory, and clinical data-center sites with resilient wired and Wi-Fi access.",
+          "description": "Single-site medical center with resilient wired access, 30 Wi-Fi 7 APs, clinical clients, and local services.",
           "name": "Hospital network"
         },
-        "industrial": {
-          "description": "Two production plants and an engineering lab with resilient switching, wired stations, and Wi-Fi 7 coverage.",
-          "name": "Industrial network"
+        "manufacturing": {
+          "description": "Single production plant with resilient switching, 30 Wi-Fi 7 APs, wired stations, and local services.",
+          "name": "Manufacturing plant"
         },
         "retail": {
-          "description": "Headquarters and three retail regions with wireless point-of-sale coverage and local business services.",
+          "description": "Two retail sites with wireless point-of-sale coverage and local business services.",
           "name": "Retail network"
         },
         "service-provider": {
-          "description": "Four metro points of presence with deep distribution, access, service, wired-client, and wireless layers.",
+          "description": "Three metro points of presence with distribution, access, service, and wired-client layers.",
           "name": "Service provider network"
         },
         "warehouse": {
-          "description": "Three fulfillment centers with dense scanner coverage, wired stations, local services, and redundant uplinks.",
+          "description": "Single-site fulfillment center with 30 Wi-Fi 7 APs, wired stations, local services, and redundant uplinks.",
           "name": "Warehouse network"
         }
       },
@@ -530,6 +534,7 @@
       "packsLoading": "Loading scenario packs…",
       "packsTitle": "Start with a scenario pack",
       "packSummary": "Version {{version}} · {{devices}} devices · {{links}} links",
+      "presentationPacksTitle": "Presentation-ready maps",
       "removeSite": "Remove site",
       "select": "Use generated fleet",
       "selected": "Generated fleet selected",
@@ -538,6 +543,8 @@
       "siteOctet": "Address octet",
       "sites": "Sites",
       "snmpCommunity": "SNMP community",
+      "stressPacksHelp": "Large inventories validate discovery scale but may not produce a readable Link-Live topology map.",
+      "stressPacksTitle": "Scale testing",
       "title": "Generate a multisite fleet"
     },
     "label": "New Simulation",
@@ -547,17 +554,19 @@
       "attachmentLabel": "Scenario attachment",
       "checkLabel": "Run preflight",
       "directMode": "Direct cable (untagged)",
-      "help": "Startup requires an administrator-approved attachment policy for the selected interface, mode, and access VLAN.",
+      "help": "Startup requires an administrator-approved attachment policy for the selected interface, mode, and physical VLAN.",
       "modeLabel": "Physical connection",
       "physicalVlanSummary": "Physical VLAN: {{vlan}}. Virtual VLANs remain isolated inside NIAC.",
       "requestError": "Preflight failed",
+      "sessionIdLabel": "Scenario ID",
       "safe_one": "Topology and binding preflight passed for {{count}} virtual network. Verify host-side isolation before connecting the tester.",
       "safe_other": "Topology and binding preflight passed for {{count}} virtual networks. Verify host-side isolation before connecting the tester.",
       "startLabel": "Start simulation",
       "title": "Review physical connection",
       "unsafeTitle": "Unsafe physical attachment — simulation start is blocked",
       "untagged": "untagged",
-      "vlanLabel": "Access VLAN (1–4094)"
+      "trunkMode": "Shared trunk (tagged)",
+      "vlanLabel": "Physical VLAN (1–4094)"
     },
     "protocols": {
       "subtitle": "Per-device protocol summary for the config you just built",
@@ -787,6 +796,20 @@
       "uptimeHelper": "Time running",
       "uptimeLabel": "Uptime",
       "viewDevices": "View Devices"
+    },
+    "sessions": {
+      "actions": "Actions",
+      "devices": "Devices",
+      "help": "Each scenario stays isolated on its assigned physical VLAN.",
+      "packetCounts": "RX {{received}} / TX {{transmitted}}",
+      "packets": "Packets",
+      "scenario": "Scenario",
+      "select": "View",
+      "selected": "Viewing",
+      "started": "Started",
+      "state": "State",
+      "title": "Active scenarios",
+      "vlan": "Physical VLAN"
     },
     "startSimulationTitle": "Start Simulation",
     "startSuccess": "Simulation started successfully!",
