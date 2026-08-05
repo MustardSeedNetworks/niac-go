@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -17,7 +18,7 @@ import (
 )
 
 const (
-	activeSimulationSchemaVersion = 1
+	activeSimulationSchemaVersion = 2
 	activeSimulationFileName      = "active-simulation.json"
 	maxActiveSimulationStateSize  = 64 * 1024
 	recoveryFileMode              = 0o600
@@ -26,9 +27,13 @@ const (
 )
 
 type activeSimulationState struct {
-	SchemaVersion int                   `json:"schemaVersion"`
-	Request       api.SimulationRequest `json:"request"`
-	SavedAt       time.Time             `json:"savedAt"`
+	SchemaVersion int                     `json:"schemaVersion"`
+	Sessions      []activeSimulationEntry `json:"sessions"`
+	SavedAt       time.Time               `json:"savedAt"`
+}
+
+type activeSimulationEntry struct {
+	Request api.SimulationRequest `json:"request"`
 }
 
 // DefaultRecoveryPath returns the platform-aware daemon recovery record path.
@@ -36,14 +41,67 @@ func DefaultRecoveryPath() string {
 	return filepath.Join(filepath.Dir(library.DefaultRoot()), "state", activeSimulationFileName)
 }
 
-func (d *Daemon) persistActiveSimulation(request api.SimulationRequest) error {
+func (d *Daemon) persistActiveSimulation(sessionID string, request api.SimulationRequest) error {
+	if d.cfg.RecoveryPath == "" || d.recovering {
+		return nil
+	}
+	requests, err := d.persistedSimulationRequests()
+	if err != nil {
+		return err
+	}
+	for id, simulation := range d.sessions.sessions {
+		requests[id] = simulation.Request
+	}
+	request.SessionID = sessionID
+	requests[sessionID] = request
+	return d.persistSimulationRequests(requests)
+}
+
+func (d *Daemon) persistSessionsExcluding(sessionID string) error {
 	if d.cfg.RecoveryPath == "" {
 		return nil
 	}
+	requests, err := d.persistedSimulationRequests()
+	if err != nil {
+		return err
+	}
+	for id, simulation := range d.sessions.sessions {
+		requests[id] = simulation.Request
+	}
+	delete(requests, sessionID)
+	if len(requests) == 0 {
+		return d.clearActiveSimulation()
+	}
+	return d.persistSimulationRequests(requests)
+}
+
+func (d *Daemon) persistedSimulationRequests() (map[string]api.SimulationRequest, error) {
+	requests := make(map[string]api.SimulationRequest, d.sessions.len()+1)
+	state, err := readRecoveryState(d.cfg.RecoveryPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return requests, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read recovery state: %w", err)
+	}
+	for _, session := range state.Sessions {
+		requests[session.Request.SessionID] = session.Request
+	}
+	return requests, nil
+}
+
+func (d *Daemon) persistSimulationRequests(requests map[string]api.SimulationRequest) error {
+	ids := make([]string, 0, len(requests))
+	for id := range requests {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
 	state := activeSimulationState{
 		SchemaVersion: activeSimulationSchemaVersion,
-		Request:       request,
 		SavedAt:       time.Now().UTC(),
+	}
+	for _, id := range ids {
+		state.Sessions = append(state.Sessions, activeSimulationEntry{Request: requests[id]})
 	}
 	data, marshalErr := json.MarshalIndent(state, "", "  ")
 	if marshalErr != nil {
@@ -111,18 +169,35 @@ func (d *Daemon) recoverActiveSimulation(entitlements api.SimulationEntitlements
 		d.setRecoveryFailure(attemptedAt, readErr)
 		return
 	}
-	if startErr := d.StartSimulation(state.Request, entitlements); startErr != nil {
-		d.setRecoveryFailure(attemptedAt, startErr)
+	d.mu.Lock()
+	d.recovering = true
+	d.mu.Unlock()
+	defer func() {
+		d.mu.Lock()
+		d.recovering = false
+		d.mu.Unlock()
+	}()
+	var failures []error
+	for _, session := range state.Sessions {
+		if startErr := d.StartSimulation(session.Request, entitlements); startErr != nil {
+			failures = append(
+				failures,
+				fmt.Errorf("session %q: %w", session.Request.SessionID, startErr),
+			)
+		}
+	}
+	if len(failures) != 0 {
+		d.setRecoveryFailure(attemptedAt, errors.Join(failures...))
 		return
 	}
 	d.mu.Lock()
 	d.recovery = &api.SimulationRecovery{
 		State:       recoveryStateRecovered,
-		Message:     "Active simulation restored from persisted launch intent.",
+		Message:     fmt.Sprintf("%d active simulation sessions restored.", len(state.Sessions)),
 		AttemptedAt: attemptedAt,
 	}
 	d.mu.Unlock()
-	logging.Successf("✓ Active simulation recovered on %s", state.Request.Interface)
+	logging.Successf("✓ %d active simulation sessions recovered", len(state.Sessions))
 }
 
 func (d *Daemon) setRecoveryFailure(attemptedAt time.Time, recoveryErr error) {
@@ -169,13 +244,33 @@ func readRecoveryState(path string) (activeSimulationState, error) {
 		return activeSimulationState{}, errors.New("recovery state contains trailing data")
 	}
 	if state.SchemaVersion != activeSimulationSchemaVersion {
-		return activeSimulationState{}, fmt.Errorf("unsupported recovery schema version %d", state.SchemaVersion)
+		return activeSimulationState{}, fmt.Errorf(
+			"unsupported recovery schema version %d",
+			state.SchemaVersion,
+		)
 	}
-	if state.Request.Interface == "" || state.Request.ConfigPath == "" {
-		return activeSimulationState{}, errors.New("recovery state is missing interface or configuration path")
+	if len(state.Sessions) == 0 {
+		return activeSimulationState{}, errors.New("recovery state contains no sessions")
 	}
-	if state.Request.ConfigData != "" || state.Request.TemplateName != "" {
-		return activeSimulationState{}, errors.New("recovery state must reference a persisted configuration path")
+	seen := make(map[string]struct{}, len(state.Sessions))
+	for _, session := range state.Sessions {
+		request := session.Request
+		if request.SessionID == "" || request.Interface == "" || request.ConfigPath == "" {
+			return activeSimulationState{}, errors.New(
+				"recovery state is missing session, interface, or configuration path",
+			)
+		}
+		if _, duplicate := seen[request.SessionID]; duplicate {
+			return activeSimulationState{}, errors.New(
+				"recovery state contains a duplicate session ID",
+			)
+		}
+		seen[request.SessionID] = struct{}{}
+		if request.ConfigData != "" || request.TemplateName != "" {
+			return activeSimulationState{}, errors.New(
+				"recovery state must reference persisted configuration paths",
+			)
+		}
 	}
 	return state, nil
 }
