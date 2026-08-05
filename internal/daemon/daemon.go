@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -30,11 +31,13 @@ import (
 var (
 	ErrInterfaceNotExist        = errors.New("interface does not exist")
 	ErrConfigDataExceedsMaxSize = errors.New("config data exceeds maximum size")
-	ErrConfigPathOrDataRequired = errors.New("either config_path, config_data, or template_name must be provided")
-	ErrNoSimulationRunning      = errors.New("no simulation running")
-	ErrTemplateNotFound         = errors.New("template not found")
-	ErrUnsafeTopology           = errors.New("routed topology failed preflight")
-	ErrInvalidSimulationConfig  = errors.New("simulation configuration failed semantic validation")
+	ErrConfigPathOrDataRequired = errors.New(
+		"either config_path, config_data, or template_name must be provided",
+	)
+	ErrNoSimulationRunning     = errors.New("no simulation running")
+	ErrTemplateNotFound        = errors.New("template not found")
+	ErrUnsafeTopology          = errors.New("routed topology failed preflight")
+	ErrInvalidSimulationConfig = errors.New("simulation configuration failed semantic validation")
 )
 
 const (
@@ -90,7 +93,10 @@ type Daemon struct {
 
 	mu         sync.RWMutex
 	simulation *Simulation
+	sessions   *sessionRegistry
+	trunks     map[string]*managedTrunkCapture
 	recovery   *api.SimulationRecovery
+	recovering bool
 	// startSimulation is injectable so replacement failure and cleanup are deterministic in tests.
 	startSimulation simulationStarter
 	// capture is the optional standalone packet-capture session that
@@ -106,7 +112,10 @@ type Daemon struct {
 
 // Simulation represents a running NIAC simulation.
 type Simulation struct {
+	SessionID  string
+	Request    api.SimulationRequest
 	Interface  string
+	Binding    fabric.Binding
 	ConfigPath string
 	ConfigName string
 	StartedAt  time.Time
@@ -117,13 +126,16 @@ type Simulation struct {
 	fabric *fabric.Topology
 	replay api.ReplayManager
 	cancel context.CancelFunc
+	close  func()
 }
 
 type simulationResources struct {
-	engine *capture.Engine
-	stack  *protocols.Stack
-	replay api.ReplayManager
-	cancel context.CancelFunc
+	engine   *capture.Engine
+	stack    *protocols.Stack
+	replay   api.ReplayManager
+	cancel   context.CancelFunc
+	close    func()
+	rollback func()
 }
 
 type simulationStarter func(
@@ -137,6 +149,8 @@ type simulationStarter func(
 func NewDaemon(cfg Config) (*Daemon, error) {
 	daemon := &Daemon{
 		cfg:                    cfg,
+		sessions:               newSessionRegistry(),
+		trunks:                 make(map[string]*managedTrunkCapture),
 		startSimulation:        startSimulationResources,
 		captureInterfaceExists: capture.InterfaceExists,
 		newCaptureEngine: func(name string, debugLevel int) (captureEngine, error) {
@@ -156,7 +170,10 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 		// SECURITY: Check for path traversal in the INPUT before filepath.Clean
 		// strips it. Cleaning first would let "/etc/../etc/passwd" slip through.
 		if strings.Contains(cfg.StoragePath, "..") {
-			return nil, fmt.Errorf("storage path must not contain '..' components: %s", cfg.StoragePath)
+			return nil, fmt.Errorf(
+				"storage path must not contain '..' components: %s",
+				cfg.StoragePath,
+			)
 		}
 
 		storagePath := expandPath(cfg.StoragePath)
@@ -245,12 +262,16 @@ func (d *Daemon) ReloadTokens() (int, error) {
 	envToken := os.Getenv("NIAC_API_TOKEN")
 	switch {
 	case envToken != "":
-		d.apiServer.SetTokens([]tokenstore.ScopedToken{{Value: envToken, Scope: tokenstore.ScopeReadWrite}})
+		d.apiServer.SetTokens(
+			[]tokenstore.ScopedToken{{Value: envToken, Scope: tokenstore.ScopeReadWrite}},
+		)
 		return 1, nil
 	case d.cfg.Token != "":
 		// Fall back to the daemon's startup-captured token when the
 		// env var has been unset between starts (rare but possible).
-		d.apiServer.SetTokens([]tokenstore.ScopedToken{{Value: d.cfg.Token, Scope: tokenstore.ScopeReadWrite}})
+		d.apiServer.SetTokens(
+			[]tokenstore.ScopedToken{{Value: d.cfg.Token, Scope: tokenstore.ScopeReadWrite}},
+		)
 		return 1, nil
 	default:
 		d.apiServer.SetTokens(nil)
@@ -273,9 +294,13 @@ func (d *Daemon) TokenScopeCounts() (int, int, int) {
 func (d *Daemon) Shutdown(ctx context.Context) error {
 	// Preserve active launch intent across process and host restarts.
 	d.mu.Lock()
-	if d.simulation != nil {
-		if stopErr := d.stopSimulationLocked(false); stopErr != nil {
-			logging.Errorf("Error stopping simulation: %v", stopErr)
+	if d.sessions != nil {
+		for d.sessions.len() > 0 {
+			d.simulation = d.sessions.first()
+			if stopErr := d.stopSimulationLocked(false); stopErr != nil {
+				logging.Errorf("Error stopping simulation: %v", stopErr)
+				break
+			}
 		}
 	}
 	d.mu.Unlock()
@@ -315,7 +340,10 @@ const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 // config YAML editor, "Download YAML" — has a real path to read from.
 // Without this, those surfaces returned config_read_failed because they
 // did a file Stat on the literal string "<inline>".
-func loadSimulationConfig(req api.SimulationRequest, persistInline bool) (*config.Config, string, error) {
+func loadSimulationConfig(
+	req api.SimulationRequest,
+	persistInline bool,
+) (*config.Config, string, error) {
 	switch {
 	case req.TemplateName != "":
 		// Loading templates by name preserves the template's own
@@ -416,12 +444,10 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 		return fabric.Report{}, err
 	}
 	if !usesRoutedFabric(cfg) {
-		return fabric.Report{
-			Safe: true,
-			Topology: fabric.Topology{Binding: fabric.CompiledBinding{
-				Binding: d.bindingFromRequest(req),
-			}},
-		}, nil
+		if req.AttachmentMode == fabric.ModeTrunk {
+			return fabric.CompilePhysicalBinding(d.bindingFromRequest(req)), nil
+		}
+		return fabric.Report{Safe: true}, nil
 	}
 	return fabric.Compile(cfg, d.bindingFromRequest(req)), nil
 }
@@ -455,11 +481,26 @@ func (d *Daemon) compileSimulationFabric(
 	req api.SimulationRequest,
 ) (compiledSimulationFabric, error) {
 	if !usesRoutedFabric(cfg) {
-		return compiledSimulationFabric{}, nil
+		if req.AttachmentMode != fabric.ModeTrunk {
+			return compiledSimulationFabric{}, nil
+		}
+		report := fabric.CompilePhysicalBinding(d.bindingFromRequest(req))
+		if !report.Safe {
+			return compiledSimulationFabric{}, fmt.Errorf(
+				"%w: %v",
+				ErrUnsafeTopology,
+				report.Diagnostics,
+			)
+		}
+		return compiledSimulationFabric{topology: &report.Topology}, nil
 	}
 	report := fabric.Compile(cfg, d.bindingFromRequest(req))
 	if !report.Safe {
-		return compiledSimulationFabric{}, fmt.Errorf("%w: %v", ErrUnsafeTopology, report.Diagnostics)
+		return compiledSimulationFabric{}, fmt.Errorf(
+			"%w: %v",
+			ErrUnsafeTopology,
+			report.Diagnostics,
+		)
 	}
 	return compiledSimulationFabric{topology: &report.Topology}, nil
 }
@@ -474,6 +515,10 @@ const inlineConfigName = "_running.inline.yaml"
 // daemon has a real configPath to operate on. Returns the absolute path
 // it was written to.
 func persistInlineConfig(content string) (string, error) {
+	return persistInlineSessionConfig(content, "default")
+}
+
+func persistInlineSessionConfig(content, sessionID string) (string, error) {
 	cleanDir, dirErr := inlineConfigDir()
 	if dirErr != nil {
 		return "", dirErr
@@ -481,13 +526,17 @@ func persistInlineConfig(content string) (string, error) {
 	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
 		return "", fmt.Errorf("create configs dir: %w", err)
 	}
-	path := filepath.Join(cleanDir, inlineConfigName)
+	name := inlineConfigName
+	if sessionID != "default" {
+		name = fmt.Sprintf("_running.%s.inline.yaml", sessionID)
+	}
+	path := filepath.Join(cleanDir, name)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write inline config: %w", err)
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return path, nil //nolint:nilerr // best-effort abs path; relative is fine too
+		return "", fmt.Errorf("resolve inline config path: %w", err)
 	}
 	return abs, nil
 }
@@ -530,9 +579,16 @@ func simulationInterfaceDiagnostic(interfaceName string, dryRun bool) *fabric.Di
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.SimulationEntitlements) error {
+func (d *Daemon) StartSimulation(
+	req api.SimulationRequest,
+	entitlements api.SimulationEntitlements,
+) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	sessionID, binding, err := d.prepareSessionStart(req)
+	if err != nil {
+		return err
+	}
 
 	dryRun := e2eDryRunSimulation()
 	if simulationInterfaceDiagnostic(req.Interface, dryRun) != nil {
@@ -548,21 +604,90 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 		return err
 	}
 	compiled := compiledFabric.topology
-	resources, err := d.startSimulation(req.Interface, cfg, compiled, dryRun)
+	active := d.sessions.get(sessionID)
+	resources, err := d.startResourcesForRequest(req, cfg, compiled, dryRun, active != nil)
 	if err != nil {
 		resources.stop()
 		return err
 	}
 	if req.ConfigData != "" {
-		configPath, err = persistInlineConfig(req.ConfigData)
+		configPath, err = persistInlineSessionConfig(req.ConfigData, sessionID)
 		if err != nil {
-			resources.stop()
+			resources.abort()
 			return fmt.Errorf("persist inline config: %w", err)
 		}
 	}
 
-	replacement := &Simulation{
+	replacement := newSimulation(sessionID, binding, req, configPath, cfg, compiled, resources)
+	if persistErr := d.persistActiveSimulation(sessionID, replacement.Request); persistErr != nil {
+		resources.abort()
+		return fmt.Errorf("persist active simulation: %w", persistErr)
+	}
+
+	active = d.sessions.replace(sessionID, replacement)
+	d.simulation = replacement
+	d.publishSimulation(replacement)
+	if active != nil {
+		d.stopSimulation(active)
+	}
+
+	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
+	d.startConfiguredReplay(resources.replay, cfg, configPath, dryRun)
+	return nil
+}
+
+func (d *Daemon) prepareSessionStart(req api.SimulationRequest) (string, fabric.Binding, error) {
+	if d.sessions == nil {
+		d.sessions = newSessionRegistry()
+	}
+	if d.trunks == nil {
+		d.trunks = make(map[string]*managedTrunkCapture)
+	}
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = "default"
+	}
+	binding := d.bindingFromRequest(req)
+	if err := d.sessions.validateReplacement(sessionID, binding); err != nil {
+		return "", fabric.Binding{}, err
+	}
+	return sessionID, binding, nil
+}
+
+func (d *Daemon) startResourcesForRequest(
+	req api.SimulationRequest,
+	cfg *config.Config,
+	compiled *fabric.Topology,
+	dryRun bool,
+	replacing bool,
+) (simulationResources, error) {
+	if req.AttachmentMode == fabric.ModeTrunk {
+		return d.startTrunkSimulationResources(
+			req.Interface, req.AccessVLAN, cfg, compiled, dryRun, replacing,
+		)
+	}
+	return d.startSimulation(req.Interface, cfg, compiled, dryRun)
+}
+
+func newSimulation(
+	sessionID string,
+	binding fabric.Binding,
+	req api.SimulationRequest,
+	configPath string,
+	cfg *config.Config,
+	compiled *fabric.Topology,
+	resources simulationResources,
+) *Simulation {
+	intent := req
+	intent.SessionID = sessionID
+	intent.ConfigPath = configPath
+	intent.ConfigData = ""
+	intent.TemplateName = ""
+	return &Simulation{
+		SessionID:  sessionID,
+		Request:    intent,
 		Interface:  req.Interface,
+		Binding:    binding,
 		ConfigPath: configPath,
 		ConfigName: filepath.Base(configPath),
 		StartedAt:  time.Now(),
@@ -572,33 +697,21 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 		fabric:     compiled,
 		replay:     resources.replay,
 		cancel:     resources.cancel,
+		close:      resources.close,
 	}
-	intent := req
-	intent.ConfigPath = configPath
-	intent.ConfigData = ""
-	intent.TemplateName = ""
-	if persistErr := d.persistActiveSimulation(intent); persistErr != nil {
-		resources.stop()
-		return fmt.Errorf("persist active simulation: %w", persistErr)
-	}
+}
 
-	active := d.simulation
-	d.simulation = replacement
-	d.apiServer.UpdateSimulation(resources.stack, cfg, configPath, req.Interface, resources.replay)
-	if active != nil {
-		d.stopSimulation(active)
-	}
-
-	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
-
-	// Auto-start PCAP playback if configured. The playback is best-effort —
-	// a failed playback start logs but doesn't fail the simulation, since
-	// the protocol stack is already up and serving devices.
-	if !dryRun && resources.replay != nil &&
+func (d *Daemon) startConfiguredReplay(
+	manager api.ReplayManager,
+	cfg *config.Config,
+	configPath string,
+	dryRun bool,
+) {
+	if !dryRun && manager != nil &&
 		cfg.CapturePlayback != nil &&
 		strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
 		fileName := resolvePlaybackPath(cfg.CapturePlayback.FileName, configPath)
-		_, replayErr := resources.replay.Start(api.ReplayRequest{
+		_, replayErr := manager.Start(api.ReplayRequest{
 			File:   fileName,
 			LoopMs: cfg.CapturePlayback.LoopTime,
 			Scale:  cfg.CapturePlayback.ScaleTime,
@@ -609,8 +722,6 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest, entitlements api.Sim
 			logging.Successf("✓ PCAP playback auto-started: %s", fileName)
 		}
 	}
-
-	return nil
 }
 
 func startSimulationResources(
@@ -638,6 +749,103 @@ func startSimulationResources(
 	}, nil
 }
 
+func (d *Daemon) startTrunkSimulationResources(
+	iface string,
+	vlan uint16,
+	cfg *config.Config,
+	topology *fabric.Topology,
+	dryRun bool,
+	replacing bool,
+) (simulationResources, error) {
+	if dryRun {
+		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(DefaultDebugLevel))
+		stack.ConfigureFabric(topology)
+		_, cancel := context.WithCancel(context.Background())
+		return simulationResources{stack: stack, cancel: cancel}, nil
+	}
+
+	managed := d.trunks[iface]
+	if managed == nil {
+		engine, err := capture.New(iface, DefaultDebugLevel)
+		if err != nil {
+			return simulationResources{}, fmt.Errorf("create trunk capture engine: %w", err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		managed = &managedTrunkCapture{capture: newTrunkCapture(engine), cancel: cancel}
+		d.trunks[iface] = managed
+		go func() {
+			if captureErr := managed.capture.run(ctx); captureErr != nil &&
+				!errors.Is(captureErr, context.Canceled) {
+				logging.Errorf("Trunk capture on %s stopped: %v", iface, captureErr)
+			}
+		}()
+	}
+
+	transport, previous, err := acquireTrunkTransport(managed.capture, vlan, replacing)
+	if err != nil {
+		return simulationResources{}, err
+	}
+	stack := protocols.NewStackWithTransport(
+		transport,
+		cfg,
+		logging.NewDebugConfig(DefaultDebugLevel),
+	)
+	stack.ConfigureFabric(topology)
+	if err = stack.Start(); err != nil {
+		if previous != nil {
+			managed.capture.restore(vlan, transport, previous)
+		} else {
+			managed.capture.unregister(vlan, transport)
+		}
+		d.closeUnusedTrunk(iface)
+		return simulationResources{}, fmt.Errorf("start protocol stack: %w", err)
+	}
+	_, cancel := context.WithCancel(context.Background())
+	return simulationResources{
+		stack:  stack,
+		replay: newReplayController(&trunkReplaySender{transport: transport, vlan: vlan}, stack.GetDebugLevel()),
+		cancel: cancel,
+		close: func() {
+			managed.capture.unregister(vlan, transport)
+			d.closeUnusedTrunk(iface)
+		},
+		rollback: func() {
+			if previous != nil {
+				managed.capture.restore(vlan, transport, previous)
+			}
+		},
+	}, nil
+}
+
+func acquireTrunkTransport(
+	capture *trunkCapture,
+	vlan uint16,
+	replacing bool,
+) (*trunkSessionTransport, *trunkSessionTransport, error) {
+	if replacing {
+		replacement, previous := capture.replace(vlan)
+		return replacement, previous, nil
+	}
+	transport, err := capture.register(vlan)
+	return transport, nil, err
+}
+
+func (d *Daemon) closeUnusedTrunk(iface string) {
+	managed := d.trunks[iface]
+	if managed == nil {
+		return
+	}
+	managed.capture.mu.RLock()
+	active := len(managed.capture.sessions)
+	managed.capture.mu.RUnlock()
+	if active != 0 {
+		return
+	}
+	delete(d.trunks, iface)
+	managed.cancel()
+	managed.capture.close()
+}
+
 func (resources simulationResources) stop() {
 	if resources.replay != nil {
 		_, _ = resources.replay.Stop()
@@ -645,12 +853,22 @@ func (resources simulationResources) stop() {
 	if resources.cancel != nil {
 		resources.cancel()
 	}
+	if resources.close != nil {
+		resources.close()
+	}
 	if resources.stack != nil {
 		resources.stack.Stop()
 	}
 	if resources.engine != nil {
 		resources.engine.Close()
 	}
+}
+
+func (resources simulationResources) abort() {
+	if resources.rollback != nil {
+		resources.rollback()
+	}
+	resources.stop()
 }
 
 func loadAuthorizedSimulationConfig(
@@ -711,9 +929,15 @@ func startSimulationStack(
 }
 
 // StopSimulation stops the current simulation.
-func (d *Daemon) StopSimulation() error {
+func (d *Daemon) StopSimulation(sessionID string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if sessionID != "" {
+		if d.sessions == nil || d.sessions.get(sessionID) == nil {
+			return api.ErrSimulationSessionNotFound
+		}
+		d.simulation = d.sessions.get(sessionID)
+	}
 
 	return d.stopSimulationLocked(true)
 }
@@ -723,18 +947,58 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 		return ErrNoSimulationRunning
 	}
 	if clearIntent {
-		if clearErr := d.clearActiveSimulation(); clearErr != nil {
+		if clearErr := d.persistSessionsExcluding(d.simulation.SessionID); clearErr != nil {
 			return fmt.Errorf("clear active simulation: %w", clearErr)
 		}
 	}
 
 	sim := d.simulation
-	d.simulation = nil
-	d.apiServer.ClearSimulation()
+	d.sessions.remove(sim.SessionID)
+	if d.apiServer != nil {
+		d.apiServer.RemoveSimulation(sim.SessionID)
+	}
+	d.simulation = d.sessions.first()
+	if d.apiServer != nil {
+		if d.simulation == nil {
+			d.apiServer.ClearSimulation()
+		} else {
+			d.apiServer.SelectSimulation(d.simulation.SessionID)
+		}
+	}
 	d.stopSimulation(sim)
 
 	logging.Infof("Simulation stopped")
 
+	return nil
+}
+
+func (d *Daemon) publishSimulation(sim *Simulation) {
+	if d.apiServer == nil || sim == nil {
+		return
+	}
+	d.apiServer.UpdateSimulationSession(
+		sim.SessionID,
+		sim.stack,
+		sim.cfg,
+		sim.ConfigPath,
+		sim.Interface,
+		sim.replay,
+	)
+	d.apiServer.SelectSimulation(sim.SessionID)
+}
+
+// SelectSimulation makes one running session the target of runtime API surfaces.
+func (d *Daemon) SelectSimulation(sessionID string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	sim := d.sessions.get(sessionID)
+	if sim == nil {
+		return api.ErrSimulationSessionNotFound
+	}
+	d.simulation = sim
+	if d.apiServer != nil {
+		d.apiServer.SelectSimulation(sessionID)
+	}
 	return nil
 }
 
@@ -744,6 +1008,7 @@ func (d *Daemon) stopSimulation(sim *Simulation) {
 		stack:  sim.stack,
 		replay: sim.replay,
 		cancel: sim.cancel,
+		close:  sim.close,
 	}.stop()
 	if d.storage != nil && sim.stack != nil && sim.cfg != nil {
 		stats := sim.stack.GetStats()
@@ -769,33 +1034,56 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 		Running:  d.simulation != nil,
 		Recovery: d.recovery,
 	}
-
-	if d.simulation != nil {
-		status.Interface = d.simulation.Interface
-		status.ConfigPath = d.simulation.ConfigPath
-		status.ConfigName = d.simulation.ConfigName
-		status.StartedAt = d.simulation.StartedAt
-
-		status.UptimeSeconds = time.Since(d.simulation.StartedAt).Seconds()
-		if d.simulation.cfg != nil {
-			status.DeviceCount = d.simulation.cfg.DeviceCount()
+	if d.sessions != nil {
+		ids := make([]string, 0, d.sessions.len())
+		for id := range d.sessions.sessions {
+			ids = append(ids, id)
 		}
-		if d.simulation.fabric != nil && d.simulation.stack != nil {
-			stats := d.simulation.stack.GetStats()
-			topology, ok := d.simulation.stack.RuntimeFabricTopology()
-			if !ok {
-				topology = *d.simulation.fabric
-			}
-			status.Fabric = &api.SimulationFabricStatus{
-				Topology:    topology,
-				Forwarded:   stats.FabricForwarded,
-				Drops:       stats.FabricDrops,
-				Received:    stats.PacketsReceived,
-				Transmitted: stats.PacketsSent,
-			}
+		slices.Sort(ids)
+		for _, id := range ids {
+			status.Sessions = append(status.Sessions, simulationStatus(
+				d.sessions.get(id), d.simulation != nil && d.simulation.SessionID == id,
+			))
 		}
 	}
 
+	if d.simulation != nil {
+		selected := simulationStatus(d.simulation, true)
+		selected.Sessions = status.Sessions
+		selected.Recovery = status.Recovery
+		return selected
+	}
+
+	return status
+}
+
+func simulationStatus(sim *Simulation, selected bool) api.SimulationStatus {
+	status := api.SimulationStatus{
+		SessionID:      sim.SessionID,
+		Selected:       selected,
+		Running:        true,
+		Interface:      sim.Interface,
+		AttachmentMode: sim.Binding.Mode,
+		PhysicalVLAN:   sim.Binding.AccessVLAN,
+		ConfigPath:     sim.ConfigPath,
+		ConfigName:     sim.ConfigName,
+		StartedAt:      sim.StartedAt,
+		UptimeSeconds:  time.Since(sim.StartedAt).Seconds(),
+	}
+	if sim.cfg != nil {
+		status.DeviceCount = sim.cfg.DeviceCount()
+	}
+	if sim.fabric != nil && sim.stack != nil {
+		stats := sim.stack.GetStats()
+		topology, ok := sim.stack.RuntimeFabricTopology()
+		if !ok {
+			topology = *sim.fabric
+		}
+		status.Fabric = &api.SimulationFabricStatus{
+			Topology: topology, Forwarded: stats.FabricForwarded, Drops: stats.FabricDrops,
+			Received: stats.PacketsReceived, Transmitted: stats.PacketsSent,
+		}
+	}
 	return status
 }
 
@@ -814,6 +1102,6 @@ func expandPath(path string) string {
 // in internal/replay so the daemon and the legacy CLI's runtime services
 // share one canonical copy — until #494 this was a duplicated stub here and
 // a working version in cmd/niac/runtime_services.go.
-func newReplayController(engine *capture.Engine, debugLevel int) *replay.Controller {
+func newReplayController(engine capture.PacketSender, debugLevel int) *replay.Controller {
 	return replay.New(engine, debugLevel)
 }
