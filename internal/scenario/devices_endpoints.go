@@ -19,7 +19,7 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 		for slot := 1; slot <= request.Counts.WorkstationsPerAccess; slot++ {
 			index := (accessIndex-1)*request.Counts.WorkstationsPerAccess + slot
 			devices = append(devices, endpointDevice(
-				site, index, workstationName(site, accessIndex, slot),
+				request, site, index, accessIndex, slot,
 				siteIP(site, vlanData, workstationHostOffset+index),
 			))
 		}
@@ -59,7 +59,8 @@ func servicePlacement(role string) (int, string) {
 func applyServiceCapabilities(request Request, site Site, role string, spec *deviceSpec) {
 	switch role {
 	case "DNS":
-		spec.dns = &converter.DNSServer{ForwardRecords: siteDNSRecords(request, site)}
+		records := siteDNSRecords(request, site)
+		spec.dns = &converter.DNSServer{ForwardRecords: records, ReverseRecords: records}
 	case "DHCP":
 		spec.dhcp = &converter.DhcpServer{
 			ServerIdentifier: siteIP(site, vlanData, dhcpServerHost),
@@ -94,12 +95,22 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 
 func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 	roles := serviceRoles()
-	records := make([]converter.DNSRecord, len(roles))
+	workstationCount := request.Counts.AccessSwitches * request.Counts.WorkstationsPerAccess
+	records := make([]converter.DNSRecord, 0, len(roles)+workstationCount)
 	for index, role := range roles {
 		vlan, _ := servicePlacement(role)
-		records[index] = converter.DNSRecord{
+		records = append(records, converter.DNSRecord{
 			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code), strings.ToLower(role), request.Domain),
 			IP:   siteIP(site, vlan, serviceHostOffset+index+1), TTL: dnsRecordTTL,
+		})
+	}
+	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {
+		for slot := 1; slot <= request.Counts.WorkstationsPerAccess; slot++ {
+			index := (accessIndex-1)*request.Counts.WorkstationsPerAccess + slot
+			records = append(records, converter.DNSRecord{
+				Name: strings.ToLower(wiredEndpointName(request, site, accessIndex, slot)) + "." + request.Domain,
+				IP:   siteIP(site, vlanData, workstationHostOffset+index), TTL: dnsRecordTTL,
+			})
 		}
 	}
 	return records

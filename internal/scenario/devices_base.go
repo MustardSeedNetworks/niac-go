@@ -57,9 +57,10 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 	if spec.site != nil {
 		location = spec.site.Location
 	}
+	macSuffix := identitySuffix(spec.site, spec.role, spec.index)
 	device := converter.Device{
 		Name: spec.name, Type: profile.DeviceType, Vendor: profile.Vendor,
-		MACSuffix: identitySuffix(spec.site, spec.role, spec.index), IPs: spec.ips,
+		MACSuffix: macSuffix, IPs: spec.ips,
 		VLAN: spec.vlan, Interfaces: interfaces, Routes: spec.routes,
 		SnmpAgent: &converter.SnmpAgent{
 			Community: request.SNMPCommunity, SysName: spec.name, SysDescr: spec.sysDescr,
@@ -80,32 +81,56 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 			}
 		}
 	}
+	if spec.role == "ap" {
+		device.SnmpAgent.AddMibs = apDiscoveryMIBs(spec.name, spec.site.Code, macSuffix)
+	}
 	return device
 }
 
-func endpointDevice(site Site, index int, name, address string) converter.Device {
-	profile := profileByRole("workstation")
-	return converter.Device{
+func endpointDevice(
+	request Request,
+	site Site,
+	index, accessIndex, slot int,
+	address string,
+) converter.Device {
+	kind := wiredEndpointKind(request, accessIndex, slot)
+	profile := profileByRole(kind.role)
+	name := wiredEndpointName(request, site, accessIndex, slot)
+	device := converter.Device{
 		Name: name, Type: profile.DeviceType, Vendor: profile.Vendor,
-		MACSuffix: identitySuffix(&site, "workstation", index), IPs: []string{address}, VLAN: vlanData,
+		MACSuffix: identitySuffix(&site, kind.role, index), IPs: []string{address}, VLAN: vlanData,
 		Interfaces: []converter.Interface{newInterface(
-			"eth0", siteNetworkName(site, "data"), address+"/24", speedOneGigabit, "Wired client access",
+			"eth0",
+			siteNetworkName(site, "data"),
+			address+"/24",
+			speedOneGigabit,
+			"Wired client access",
 		)},
-		Icmp: &converter.IcmpConfig{Enabled: true, TTL: windowsTTL},
+		Icmp: &converter.IcmpConfig{Enabled: true, TTL: kind.ttl},
 		OSFingerprint: &converter.OSFingerprintConfig{
-			OSType: "windows", TTL: windowsTTL, WindowSize: windowsTCPWindowSize,
+			OSType: kind.osType, TTL: kind.ttl, WindowSize: kind.windowSize,
 			MSS: windowsMSS, DontFragment: true,
 		},
 		Properties: map[string]string{
-			"role": "workstation", "site": site.Code, "model": profile.Model,
+			"role": kind.role, "site": site.Code, "model": profile.Model,
 			"platform": profile.Platform, "software": profile.Software,
 		},
 	}
+	if kind.osType == "windows" {
+		device.Netbios = &converter.NetbiosConfig{
+			Enabled: true, Name: name, Workgroup: "DEMO", NodeType: "H", Services: []string{"workstation"},
+		}
+	}
+	return device
 }
 
-func newInterface(name, network, address string, speed int, description string) converter.Interface {
+func newInterface(
+	name, network, address string,
+	speed int,
+	description string,
+) converter.Interface {
 	interfaceType := "ethernet"
-	mtu := 1500
+	mtu := standardMTU
 	switch {
 	case strings.HasPrefix(name, "Vlan"):
 		interfaceType = "l2vlan"

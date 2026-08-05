@@ -1,6 +1,7 @@
 package scenario_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -73,17 +74,70 @@ func assertServiceDNS(t *testing.T, cfg *config.Config) {
 			t.Fatalf("%s service DNS prerequisites are missing", site)
 		}
 		name := strings.ToLower(site) + "-dhcp01.demo.lab"
-		var resolved string
-		for _, record := range dns.DNSConfig.ForwardRecords {
-			if record.Name == name {
-				resolved = record.IP.String()
-				break
-			}
-		}
+		resolved := resolveDNSAddress(dns.DNSConfig.ForwardRecords, name)
 		if got, want := resolved, dhcp.IPAddresses[0].String(); got != want {
 			t.Errorf("%s resolves to %s, want DHCP address %s", name, got, want)
 		}
+		workstation := findDevice(cfg, site+"-WS-B01-F01-01")
+		if workstation == nil || len(workstation.IPAddresses) == 0 {
+			t.Fatalf("%s workstation DNS prerequisite is missing", site)
+		}
+		name = strings.ToLower(workstation.Name) + ".demo.lab"
+		resolved = resolveDNSAddress(dns.DNSConfig.ForwardRecords, name)
+		if got, want := resolved, workstation.IPAddresses[0].String(); got != want {
+			t.Errorf("%s resolves to %s, want workstation address %s", name, got, want)
+		}
+		assertReverseDNSRecord(t, dns.DNSConfig.ReverseRecords, workstation.IPAddresses[0].String(), name)
 	}
+}
+
+func resolveDNSAddress(records []config.DNSRecord, name string) string {
+	for _, record := range records {
+		if record.Name == name {
+			return record.IP.String()
+		}
+	}
+	return ""
+}
+
+func assertLabEdgeDNS(t *testing.T, cfg *config.Config) {
+	t.Helper()
+	edge := findDevice(cfg, "LAB-EDGE-R1")
+	if edge == nil || edge.DNSConfig == nil {
+		t.Fatal("lab-edge DNS is missing")
+	}
+	records := make(map[string]string, len(edge.DNSConfig.ForwardRecords))
+	for _, record := range edge.DNSConfig.ForwardRecords {
+		records[record.IP.String()] = record.Name
+	}
+	for index := range cfg.Devices {
+		device := &cfg.Devices[index]
+		for addressIndex, address := range device.IPAddresses {
+			want := labDNSName(device.Name, addressIndex)
+			if got := records[address.String()]; got != want {
+				t.Errorf("lab-edge DNS maps %s to %q, want %q", address, got, want)
+			}
+			assertReverseDNSRecord(t, edge.DNSConfig.ReverseRecords, address.String(), want)
+		}
+	}
+}
+
+func assertReverseDNSRecord(t *testing.T, records []config.DNSRecord, address, want string) {
+	t.Helper()
+	for _, record := range records {
+		if record.IP.String() == address && record.Name == want {
+			return
+		}
+	}
+	t.Errorf("reverse DNS maps %s to no record, want %q", address, want)
+}
+
+func labDNSName(device string, addressIndex int) string {
+	name := strings.ToLower(device)
+	if addressIndex > 0 {
+		name += fmt.Sprintf("-%d", addressIndex+1)
+	}
+	return name + ".demo.lab"
 }
 
 func countNamed(cfg *config.Config, prefix string) int {
