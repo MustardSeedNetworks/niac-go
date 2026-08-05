@@ -133,6 +133,10 @@ func (s *Server) replaceConfig(cfg *config.Config) {
 	s.configMu.Lock()
 	s.cfg.Config = cfg
 	s.cfg.Topology = topology.Build(cfg)
+	if state, ok := s.simulations[s.selectedSimulation]; ok {
+		state.config = cfg
+		s.simulations[s.selectedSimulation] = state
+	}
 	s.configMu.Unlock()
 }
 
