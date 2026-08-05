@@ -91,7 +91,7 @@ test.describe('daemon-served GUI', () => {
         configData: simulationConfig,
       },
     });
-    expect(start.ok()).toBe(true);
+    expect(start.ok(), await start.text()).toBe(true);
 
     try {
       await expect
