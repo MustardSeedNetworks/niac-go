@@ -9,8 +9,8 @@ import (
 
 func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
 	definitions := scenario.Packs()
-	if len(definitions) != 6 {
-		t.Fatalf("scenario pack count = %d, want 6", len(definitions))
+	if len(definitions) != 7 {
+		t.Fatalf("scenario pack count = %d, want 7", len(definitions))
 	}
 	seen := make(map[string]bool, len(definitions))
 	for _, pack := range definitions {
@@ -26,8 +26,51 @@ func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
 		if result.Manifest != pack.Manifest {
 			t.Errorf("%s manifest = %#v", pack.ID, result.Manifest)
 		}
-		if pack.ManifestVersion != 2 || pack.Version != "1.1.0" {
+		if pack.ManifestVersion != 3 || pack.Version != "1.3.0" {
 			t.Errorf("%s versions = %q/%d", pack.ID, pack.Version, pack.ManifestVersion)
+		}
+	}
+}
+
+func TestPresentationScenarioPacksFitLinkLiveMapBudget(t *testing.T) {
+	const maximumPresentationDevices = 160
+
+	for _, pack := range scenario.Packs() {
+		if pack.MapPurpose == scenario.MapPurposeStress {
+			continue
+		}
+		if pack.MapPurpose != scenario.MapPurposePresentation {
+			t.Errorf("%s map purpose = %q", pack.ID, pack.MapPurpose)
+		}
+		if pack.Manifest.DeviceCount > maximumPresentationDevices {
+			t.Errorf("%s devices = %d, presentation budget = %d", pack.ID,
+				pack.Manifest.DeviceCount, maximumPresentationDevices)
+		}
+	}
+}
+
+func TestEnterpriseScalePackIsNotPresentedAsAMapDemo(t *testing.T) {
+	for _, pack := range scenario.Packs() {
+		if pack.ID == "enterprise-scale" && pack.MapPurpose != scenario.MapPurposeStress {
+			t.Errorf("enterprise-scale map purpose = %q, want stress", pack.MapPurpose)
+		}
+	}
+}
+
+func TestVerticalDemoPacksAreSingleSite(t *testing.T) {
+	verticals := map[string]bool{"hospital": true, "warehouse": true, "manufacturing": true}
+	for _, pack := range scenario.Packs() {
+		if verticals[pack.ID] && len(pack.Request.Sites) != 1 {
+			t.Errorf("%s sites = %d, want one", pack.ID, len(pack.Request.Sites))
+		}
+	}
+}
+
+func TestWiredOnlyScenarioPacksOmitWirelessControllers(t *testing.T) {
+	for _, pack := range scenario.Packs() {
+		if pack.ID == "service-provider" && pack.Request.Counts.WirelessControllers != 0 {
+			t.Errorf("service-provider wireless controllers = %d, want zero",
+				pack.Request.Counts.WirelessControllers)
 		}
 	}
 }

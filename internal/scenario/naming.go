@@ -30,8 +30,3 @@ func accessPointName(site Site, accessIndex, slot int) string {
 	building, floor := location(accessIndex)
 	return fmt.Sprintf("%s-WAP-B%02d-F%02d-%02d", site.Code, building, floor, slot)
 }
-
-func workstationName(site Site, accessIndex, slot int) string {
-	building, floor := location(accessIndex)
-	return fmt.Sprintf("%s-WS-B%02d-F%02d-%02d", site.Code, building, floor, slot)
-}

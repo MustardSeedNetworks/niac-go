@@ -111,11 +111,26 @@ func accessPoint(site Site, index, perAccess int) deviceSpec {
 	return deviceSpec{
 		name: accessPointName(site, accessIndex, slot), role: "ap", index: index,
 		ips: []string{address}, site: &site,
-		sysDescr: fmt.Sprintf("Cisco Wireless CW9178I Wi-Fi 7 access point %d", index),
-		interfaces: []converter.Interface{newInterface(
-			"mGigabitEthernet0", siteNetworkName(site, "mgmt"), address+"/24", speedTenGigabit,
-			"Multigigabit PoE uplink",
-		)},
-		vlan: vlanManagement,
+		sysDescr:   fmt.Sprintf("Cisco Wireless CW9178I Wi-Fi 7 access point %d", index),
+		interfaces: accessPointInterfaces(site, address),
+		vlan:       vlanManagement,
 	}
+}
+
+func accessPointInterfaces(site Site, address string) []converter.Interface {
+	radioSpeeds := []int{1_400, 5_800, 5_800, 11_500}
+	interfaces := make([]converter.Interface, 0, len(radioSpeeds)+1)
+	for index, speed := range radioSpeeds {
+		name := fmt.Sprintf("Dot11Radio%d", index)
+		inUtilization, outUtilization := utilization(name)
+		interfaces = append(interfaces, converter.Interface{
+			Name: name, Type: "ieee80211", MTU: standardMTU, Speed: speed,
+			AdminStatus: "up", OperStatus: "up", Description: name,
+			InUtilization: inUtilization, OutUtilization: outUtilization,
+		})
+	}
+	return append(interfaces, newInterface(
+		"mGigabitEthernet0", siteNetworkName(site, "mgmt"), address+"/24", speedTenGigabit,
+		"Multigigabit PoE uplink",
+	))
 }

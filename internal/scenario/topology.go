@@ -30,7 +30,7 @@ func buildLinks(request Request) linkMap {
 	for siteIndex, site := range request.Sites {
 		addSiteBackbone(links, site, siteIndex, request.Counts)
 		addSiteLAN(links, site, request.Counts)
-		addSiteEndpoints(links, site, request.Counts)
+		addSiteEndpoints(links, site, request)
 	}
 	return links
 }
@@ -135,7 +135,8 @@ func addSiteLAN(links linkMap, site Site, counts Counts) {
 	}
 }
 
-func addSiteEndpoints(links linkMap, site Site, counts Counts) {
+func addSiteEndpoints(links linkMap, site Site, request Request) {
+	counts := request.Counts
 	for accessIndex := 1; accessIndex <= counts.AccessSwitches; accessIndex++ {
 		switchName := accessName(site, accessIndex)
 		for slot := 1; slot <= counts.AccessPointsPerAccess; slot++ {
@@ -146,7 +147,7 @@ func addSiteEndpoints(links linkMap, site Site, counts Counts) {
 		}
 		for slot := 1; slot <= counts.WorkstationsPerAccess; slot++ {
 			addFDB(links, switchName, fmt.Sprintf("GigabitEthernet1/0/%d", slot+workstationPortOffset),
-				workstationName(site, accessIndex, slot), "eth0", vlanData)
+				wiredEndpointName(request, site, accessIndex, slot), "eth0", vlanData)
 		}
 	}
 

@@ -93,6 +93,7 @@ func buildDevices(request Request, links linkMap) []converter.Device {
 		devices = append(devices, buildSiteLAN(request, site, siteIndex, links)...)
 		devices = append(devices, buildSiteEndpoints(request, site, links)...)
 	}
+	setLabEdgeDNS(devices, request.Domain)
 	return devices
 }
 

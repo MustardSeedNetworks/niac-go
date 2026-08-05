@@ -69,7 +69,7 @@ func validProfileInterface(iface ProfileInterface) bool {
 
 func validProfileInterfaceType(value string) bool {
 	switch value {
-	case "ethernet", "l2vlan", "l3ipvlan", "loopback", "tunnel", "other":
+	case "ethernet", "ieee80211", "l2vlan", "l3ipvlan", "loopback", "tunnel", "other":
 		return true
 	default:
 		return false

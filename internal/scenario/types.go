@@ -31,6 +31,7 @@ const (
 	speedOneGigabit     = 1000
 	speedTenGigabit     = 10000
 	speedHundredGigabit = 100000
+	standardMTU         = 1500
 
 	transitPeerOffset            = 2
 	secondProviderWANRouterIndex = 2
@@ -66,6 +67,8 @@ const (
 	wanIdentityOffset            = 10
 	transitBlockSize             = 8
 	firstDistributionAccessPort  = 3
+	macHighByteShift             = 16
+	macMiddleByteShift           = 8
 
 	enterpriseCOSOctet              = 240
 	enterpriseEVTOctet              = 241
@@ -112,11 +115,12 @@ type Counts struct {
 
 // Request is the complete deterministic fleet-generation contract.
 type Request struct {
-	Sites          []Site `json:"sites"`
-	Counts         Counts `json:"counts"`
-	Domain         string `json:"domain"`
-	SNMPCommunity  string `json:"snmpCommunity"`
-	AttachmentName string `json:"attachmentName"`
+	Sites           []Site `json:"sites"`
+	Counts          Counts `json:"counts"`
+	Domain          string `json:"domain"`
+	SNMPCommunity   string `json:"snmpCommunity"`
+	AttachmentName  string `json:"attachmentName"`
+	EndpointProfile string `json:"endpointProfile,omitempty"`
 }
 
 // Manifest summarizes authored identity and topology for parity checks.
