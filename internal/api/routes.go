@@ -399,7 +399,7 @@ func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
 		{
 			path:         "/api/v1/simulation",
 			handler:      s.handleSimulation,
-			methods:      []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+			methods:      []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 			maxBodyBytes: MaxScenarioRequestBodySize,
 			rl:           rlWrite,
 			csrf:         true,

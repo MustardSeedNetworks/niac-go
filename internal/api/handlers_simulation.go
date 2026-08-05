@@ -12,9 +12,16 @@ var (
 	// was rejected inside the simulation start transaction.
 	ErrRoutedLabsLicenseRequired = errors.New("routed virtual labs require a license grant")
 	// ErrUnlimitedDevicesLicenseRequired indicates that a config exceeds the Free device cap.
-	ErrUnlimitedDevicesLicenseRequired = errors.New("device count requires an unlimited devices grant")
+	ErrUnlimitedDevicesLicenseRequired = errors.New(
+		"device count requires an unlimited devices grant",
+	)
 	// ErrSimulationDeviceLimitExceeded indicates that a config exceeds NIAC's absolute device ceiling.
 	ErrSimulationDeviceLimitExceeded = errors.New("simulation exceeds the absolute device limit")
+	ErrSimulationSessionConflict     = errors.New(
+		"simulation session conflicts with an active physical binding",
+	)
+	ErrSimulationSessionIDRequired = errors.New("simulation session ID is required")
+	ErrSimulationSessionNotFound   = errors.New("simulation session was not found")
 )
 
 // SimulationEntitlements captures paid grants evaluated for one atomic start.
@@ -83,6 +90,8 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 		s.writeJSON(w, status)
 	case http.MethodPost:
 		s.handleSimulationStart(w, r)
+	case http.MethodPut:
+		s.handleSimulationSelect(w, r)
 	case http.MethodDelete:
 		s.handleSimulationStop(w, r)
 	default:
@@ -90,10 +99,36 @@ func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleSimulationSelect(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	if !validSessionID(req.SessionID) {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Scenario ID is invalid", nil)
+		return
+	}
+	if err := s.daemon.SelectSimulation(req.SessionID); err != nil {
+		writeError(w, r, http.StatusNotFound, "simulation_session_not_found",
+			"The selected scenario is not running", nil)
+		return
+	}
+	s.writeJSON(w, s.daemon.GetStatus())
+}
+
 // handleSimulationPreflight compiles a simulation request without changing runtime state.
 func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
-		writeError(w, r, http.StatusNotImplemented, "daemon_required", "Daemon mode is required", nil)
+		writeError(
+			w,
+			r,
+			http.StatusNotImplemented,
+			"daemon_required",
+			"Daemon mode is required",
+			nil,
+		)
 		return
 	}
 	var req SimulationRequest
@@ -101,7 +136,14 @@ func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if validationErrors := validateSimulationForPreflight(req); len(validationErrors) > 0 {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", validationErrors)
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_failed",
+			"Validation failed",
+			validationErrors,
+		)
 		return
 	}
 	report, err := s.daemon.PreflightSimulation(req)
@@ -110,7 +152,14 @@ func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		s.logger.ErrorContext(r.Context(), "[API] Simulation preflight failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "preflight_failed", "Simulation preflight failed", nil)
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"preflight_failed",
+			"Simulation preflight failed",
+			nil,
+		)
 		return
 	}
 	s.writeJSON(w, report)
@@ -154,6 +203,18 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Simulation exceeds the maximum supported device count", nil)
+	case errors.Is(err, ErrSimulationSessionConflict):
+		writeError(
+			w,
+			r,
+			http.StatusConflict,
+			"simulation_session_conflict",
+			"The selected interface or physical VLAN is already assigned to another active scenario",
+			nil,
+		)
+	case errors.Is(err, ErrSimulationSessionIDRequired):
+		writeError(w, r, http.StatusBadRequest, "validation_failed",
+			"A scenario ID is required for a shared trunk", nil)
 	case errors.Is(err, config.ErrSSHPasswordUnavailable):
 		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
 			"Configuration runtime requirements are not met",
@@ -162,7 +223,12 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 	default:
 		// The error may include configuration-derived secrets. Record a stable
 		// failure code without writing the error text to logs or the response.
-		s.logger.ErrorContext(r.Context(), "[API] Failed to start simulation", "error_code", "simulation_start_failed")
+		s.logger.ErrorContext(
+			r.Context(),
+			"[API] Failed to start simulation",
+			"error_code",
+			"simulation_start_failed",
+		)
 		writeError(w, r, http.StatusInternalServerError, "simulation_start_failed",
 			"Failed to start simulation", nil)
 	}
@@ -172,16 +238,42 @@ func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err err
 	if !errors.Is(err, config.ErrPathOutsideManagedRoots) {
 		return false
 	}
-	writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", []ErrorDetail{{
-		Field: "config_path", Issue: "configuration must be selected from NIAC-managed storage",
-		Value: "[redacted]",
-	}})
+	writeError(
+		w,
+		r,
+		http.StatusBadRequest,
+		"validation_failed",
+		"Validation failed",
+		[]ErrorDetail{{
+			Field: "config_path", Issue: "configuration must be selected from NIAC-managed storage",
+			Value: "[redacted]",
+		}},
+	)
 	return true
 }
 
 // handleSimulationStop processes DELETE requests to stop a simulation.
 func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
-	if err := s.daemon.StopSimulation(); err != nil {
+	sessionID := r.URL.Query().Get("sessionId")
+	if sessionID != "" && !validSessionID(sessionID) {
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"validation_failed",
+			"Validation failed",
+			[]ErrorDetail{{
+				Field: "sessionId", Issue: "session ID is invalid", Value: sessionID,
+			}},
+		)
+		return
+	}
+	if err := s.daemon.StopSimulation(sessionID); err != nil {
+		if errors.Is(err, ErrSimulationSessionNotFound) {
+			writeError(w, r, http.StatusNotFound, "simulation_session_not_found",
+				"The selected scenario is not running", nil)
+			return
+		}
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
 		s.logger.ErrorContext(r.Context(), "[API] Failed to stop simulation", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "simulation_stop_failed",
