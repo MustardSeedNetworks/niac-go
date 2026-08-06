@@ -18,8 +18,11 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
+// handleStats serves whichever session is selected. Prefer
+// GET /api/v1/sessions/{id}/stats, which names the session it means instead of
+// depending on selection.
 func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
-	payload, _, ok := s.currentStatsPayload()
+	payload, ok := s.selectedStatsPayload()
 	if !ok {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
 
