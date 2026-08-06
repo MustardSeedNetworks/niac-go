@@ -1,11 +1,16 @@
 package scenario
 
 const (
-	hospitalAccessSwitches             = 6
-	hospitalAccessPointsPerAccess      = 5
-	hospitalWorkstationsPerAccess      = 3
-	warehouseAccessSwitches            = 6
-	warehouseAccessPointsPerAccess     = 5
+	hospitalAccessSwitches        = 6
+	hospitalAccessPointsPerAccess = 5
+	hospitalWorkstationsPerAccess = 3
+	// A warehouse covers a large open floor from a few wiring closets, so it
+	// has far fewer access switches than a hospital or a plant and fans a
+	// dense set of long-range radios off each one. Its endpoints are mostly
+	// wireless handhelds rather than wired. This is what makes its map read
+	// differently from the other single-site verticals.
+	warehouseAccessSwitches            = 3
+	warehouseAccessPointsPerAccess     = maxAccessPointsPerAccess
 	warehouseWorkstationsPerAccess     = 2
 	campusAccessSwitches               = 4
 	campusAccessPointsPerAccess        = 2
