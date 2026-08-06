@@ -558,14 +558,14 @@
       "modeLabel": "Physical connection",
       "physicalVlanSummary": "Physical VLAN: {{vlan}}. Virtual VLANs remain isolated inside NIAC.",
       "requestError": "Preflight failed",
-      "sessionIdLabel": "Scenario ID",
       "safe_one": "Topology and binding preflight passed for {{count}} virtual network. Verify host-side isolation before connecting the tester.",
       "safe_other": "Topology and binding preflight passed for {{count}} virtual networks. Verify host-side isolation before connecting the tester.",
+      "sessionIdLabel": "Scenario ID",
       "startLabel": "Start simulation",
       "title": "Review physical connection",
+      "trunkMode": "Shared trunk (tagged)",
       "unsafeTitle": "Unsafe physical attachment — simulation start is blocked",
       "untagged": "untagged",
-      "trunkMode": "Shared trunk (tagged)",
       "vlanLabel": "Physical VLAN (1–4094)"
     },
     "protocols": {
