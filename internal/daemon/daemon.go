@@ -631,8 +631,15 @@ func (d *Daemon) StartSimulation(
 	}
 
 	active = d.sessions.replace(sessionID, replacement)
-	d.simulation = replacement
-	d.publishSimulation(replacement)
+	// Adopt the new session as the default for unscoped readers only when
+	// nothing else holds that spot, or when this start replaces the session
+	// already in it. Adopting unconditionally meant launching a second
+	// scenario silently repointed everyone watching the first.
+	adopt := d.simulation == nil || d.simulation.SessionID == sessionID
+	if adopt {
+		d.simulation = replacement
+	}
+	d.publishSimulation(replacement, adopt)
 	if active != nil {
 		d.stopSimulation(active)
 	}
@@ -983,7 +990,10 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 	return nil
 }
 
-func (d *Daemon) publishSimulation(sim *Simulation) {
+// publishSimulation makes a session readable through the API. adopt also makes
+// it the default the unscoped surface reports; clients that name their session
+// are unaffected either way.
+func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
 	if d.apiServer == nil || sim == nil {
 		return
 	}
@@ -995,7 +1005,9 @@ func (d *Daemon) publishSimulation(sim *Simulation) {
 		sim.Interface,
 		sim.replay,
 	)
-	d.apiServer.SelectSimulation(sim.SessionID)
+	if adopt {
+		d.apiServer.SelectSimulation(sim.SessionID)
+	}
 }
 
 // SelectSimulation makes one running session the target of runtime API surfaces.
