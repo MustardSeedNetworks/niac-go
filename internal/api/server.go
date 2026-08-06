@@ -359,6 +359,9 @@ type SimulationStatus struct {
 	Degraded       bool                `json:"degraded,omitempty"`
 	DegradedReason string              `json:"degradedReason,omitempty"`
 	Capture        *TrunkCaptureHealth `json:"capture,omitempty"`
+	// Capacity is daemon-wide, so it is set on the top-level status only, not
+	// on each entry of Sessions.
+	Capacity *DaemonCapacity `json:"capacity,omitempty"`
 }
 
 // SimulationRecovery reports the most recent daemon restart recovery attempt.

@@ -599,6 +599,12 @@ func (d *Daemon) StartSimulation(
 	if err != nil {
 		return err
 	}
+	// Per-config limits are already applied above. This is the daemon-wide
+	// budget: without it the device ceiling would apply once per session and
+	// so bound nothing.
+	if err = d.admitSessionLocked(sessionID, cfg); err != nil {
+		return err
+	}
 	compiledFabric, err := d.compileSimulationFabric(cfg, req)
 	if err != nil {
 		return err
@@ -1035,9 +1041,11 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
+	capacity := d.aggregateUsageLocked()
 	status := api.SimulationStatus{
 		Running:  d.simulation != nil,
 		Recovery: d.recovery,
+		Capacity: &capacity,
 	}
 	if d.sessions != nil {
 		ids := make([]string, 0, d.sessions.len())
@@ -1057,6 +1065,7 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 		selected := d.simulationStatusLocked(d.simulation, true)
 		selected.Sessions = status.Sessions
 		selected.Recovery = status.Recovery
+		selected.Capacity = status.Capacity
 		return selected
 	}
 

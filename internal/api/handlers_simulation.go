@@ -22,7 +22,22 @@ var (
 	)
 	ErrSimulationSessionIDRequired = errors.New("simulation session ID is required")
 	ErrSimulationSessionNotFound   = errors.New("simulation session was not found")
+	// ErrSimulationSessionCapacity and ErrSimulationDeviceCapacity are daemon-wide
+	// technical capacity limits, not entitlements. A per-config check cannot
+	// enforce them because several sessions run at once.
+	ErrSimulationSessionCapacity = errors.New("daemon session capacity exceeded")
+	ErrSimulationDeviceCapacity  = errors.New("daemon device capacity exceeded")
 )
+
+// DaemonCapacity reports what the daemon is currently carrying against its
+// aggregate safety budgets, so an operator can see how close a start is to
+// being refused before it is.
+type DaemonCapacity struct {
+	Sessions    int `json:"sessions"`
+	MaxSessions int `json:"maxSessions"`
+	Devices     int `json:"devices"`
+	MaxDevices  int `json:"maxDevices"`
+}
 
 // SimulationEntitlements captures paid grants evaluated for one atomic start.
 type SimulationEntitlements struct {
@@ -215,6 +230,12 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 	case errors.Is(err, ErrSimulationSessionIDRequired):
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
 			"A scenario ID is required for a shared trunk", nil)
+	case errors.Is(err, ErrSimulationSessionCapacity):
+		writeError(w, r, http.StatusConflict, "session_capacity_reached",
+			"The daemon is already running its maximum number of scenarios", nil)
+	case errors.Is(err, ErrSimulationDeviceCapacity):
+		writeError(w, r, http.StatusConflict, "device_capacity_reached",
+			"Running this scenario would exceed the daemon's total device capacity", nil)
 	case errors.Is(err, config.ErrSSHPasswordUnavailable):
 		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
 			"Configuration runtime requirements are not met",
