@@ -21,6 +21,10 @@ const (
 	FaultDiscards    FaultType = "packet_discards"
 	FaultInterface   FaultType = "interface_errors"
 	FaultUtilization FaultType = "high_utilization"
+	// FaultLinkDown drops the interface's carrier. Unlike the rates above it
+	// is an outcome rather than a counter: the interface reports operationally
+	// down, stops forwarding, and disappears from neighbour discovery.
+	FaultLinkDown FaultType = "link_down"
 )
 
 // FaultDefinition is one supported interface fault and its operator-facing label.
@@ -35,6 +39,7 @@ func interfaceFaultDefinitions() []FaultDefinition {
 		{Type: FaultDiscards, Label: "Packet Discards"},
 		{Type: FaultInterface, Label: "Interface Errors"},
 		{Type: FaultUtilization, Label: "High Utilization"},
+		{Type: FaultLinkDown, Label: "Link Down"},
 	}
 }
 
@@ -162,4 +167,22 @@ func sortedInterfaceFaults(faults map[interfaceFaultKey]InterfaceFault) []Interf
 		return cmp.Compare(left.Type, right.Type)
 	})
 	return result
+}
+
+// applyLinkDownFaults projects active link-down faults onto an interface list.
+// The carrier is what a link-down fault takes away; operational state follows
+// from it, the same way it does when an operator shuts a port.
+func applyLinkDownFaults(interfaces []Interface, faults map[interfaceFaultKey]InterfaceFault) {
+	if len(faults) == 0 {
+		return
+	}
+	for index := range interfaces {
+		key := interfaceFaultKey{
+			interfaceName: interfaces[index].Name, faultType: FaultLinkDown,
+		}
+		if fault, active := faults[key]; active && fault.Value > 0 {
+			interfaces[index].CarrierUp = false
+			interfaces[index].OperUp = false
+		}
+	}
 }

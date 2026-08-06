@@ -21,6 +21,7 @@ func availableErrorTypes() []map[string]string {
 		devicestate.FaultDiscards:    "Dropped packets (0-100)",
 		devicestate.FaultInterface:   "Generic interface errors (0-100)",
 		devicestate.FaultUtilization: "Interface bandwidth saturation (0-100%)",
+		devicestate.FaultLinkDown:    "Drop the link (non-zero takes the interface down)",
 	}
 	result := make([]map[string]string, 0, len(descriptions))
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {
