@@ -346,6 +346,18 @@ export interface SimulationStatus {
   degraded?: boolean;
   degradedReason?: string;
   capture?: TrunkCaptureHealth;
+  /** Daemon-wide, so present on the top-level status only — not per session. */
+  capacity?: DaemonCapacity;
+}
+
+/** Aggregate safety budgets for the whole daemon. These are technical capacity
+ * limits, not entitlements: a per-config check cannot bound them because
+ * several sessions run at once. */
+export interface DaemonCapacity {
+  sessions: number;
+  maxSessions: number;
+  devices: number;
+  maxDevices: number;
 }
 
 /** Per-reason trunk drop counts. Stray tags on a shared trunk are ordinary; a
