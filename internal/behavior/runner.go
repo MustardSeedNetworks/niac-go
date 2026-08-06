@@ -14,6 +14,39 @@ type Target interface {
 	SetInterfaceFault(string, string, devicestate.FaultType, int) error
 }
 
+// Clock is the single time seam for timeline replay: both the timestamps a run
+// reports and the waiting between transitions. One seam covering both is what
+// lets a replay be reproduced deterministically instead of depending on how
+// long the wall clock happened to take.
+type Clock interface {
+	Now() time.Time
+	// Wait blocks for d, or until ctx is done. It reports false when the wait
+	// was cut short so a cancelled run stops, rather than racing through every
+	// remaining transition whose offset has already passed.
+	Wait(ctx context.Context, d time.Duration) bool
+}
+
+type systemClock struct{}
+
+func (systemClock) Now() time.Time { return time.Now() }
+
+func (systemClock) Wait(ctx context.Context, d time.Duration) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	if d <= 0 {
+		return true
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 // Status is an immutable timeline-run snapshot.
 type Status struct {
 	State              string    `json:"state"`
@@ -33,18 +66,29 @@ type Runner struct {
 	status      Status
 	cancel      context.CancelFunc
 	done        chan struct{}
-	now         func() time.Time
+	clock       Clock
 }
 
-// New creates an idle runner.
+// New creates an idle runner driven by the wall clock.
 func New(target Target, transitions []Transition) *Runner {
+	return NewWithClock(target, transitions, systemClock{})
+}
+
+// NewWithClock creates an idle runner whose replay is driven by clock, so a
+// caller that needs the same timeline to produce the same result every time
+// can supply one it controls.
+func NewWithClock(target Target, transitions []Transition, clock Clock) *Runner {
+	if clock == nil {
+		clock = systemClock{}
+	}
 	return &Runner{
 		target: target, transitions: append([]Transition(nil), transitions...),
-		status: Status{State: "idle", TotalTransitions: len(transitions)}, now: time.Now,
+		status: Status{State: "idle", TotalTransitions: len(transitions)}, clock: clock,
 	}
 }
 
-// Start begins timeline replay. It is safe to call only once.
+// Start begins timeline replay. A runner replays once; call Reset to run the
+// same timeline again.
 func (r *Runner) Start() {
 	r.mu.Lock()
 	if r.status.State != "idle" {
@@ -53,7 +97,7 @@ func (r *Runner) Start() {
 	}
 	if len(r.transitions) == 0 {
 		r.status.State = "completed"
-		r.status.CompletedAt = r.now().UTC()
+		r.status.CompletedAt = r.clock.Now().UTC()
 		r.mu.Unlock()
 		return
 	}
@@ -61,7 +105,7 @@ func (r *Runner) Start() {
 	r.cancel = cancel
 	r.done = make(chan struct{})
 	r.status.State = "running"
-	started := r.now()
+	started := r.clock.Now()
 	r.status.StartedAt = started.UTC()
 	done := r.done
 	r.mu.Unlock()
@@ -93,7 +137,7 @@ func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{})
 	defer close(done)
 	activePhases := make(map[string]string)
 	for _, transition := range r.transitions {
-		if !waitUntil(ctx, started.Add(transition.Offset)) {
+		if !r.clock.Wait(ctx, transition.Offset-r.clock.Now().Sub(started)) {
 			r.finish("stopped", "")
 			return
 		}
@@ -129,21 +173,17 @@ func (r *Runner) finish(state, lastError string) {
 	r.status.State = state
 	r.status.LastError = lastError
 	r.status.ActivePhases = nil
-	r.status.CompletedAt = r.now().UTC()
+	r.status.CompletedAt = r.clock.Now().UTC()
 	r.mu.Unlock()
 }
 
-func waitUntil(ctx context.Context, deadline time.Time) bool {
-	delay := time.Until(deadline)
-	if delay <= 0 {
-		return true
-	}
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return true
-	case <-ctx.Done():
-		return false
-	}
+// Reset stops any active replay and returns the runner to idle so the same
+// timeline can be run again. Without it a runner was single-use, which made
+// "run this scenario again from the top" mean rebuilding it.
+func (r *Runner) Reset() {
+	r.Stop()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.status = Status{State: "idle", TotalTransitions: len(r.transitions)}
+	r.cancel, r.done = nil, nil
 }
