@@ -91,8 +91,14 @@ func (s *Store) StartupSnapshot() Snapshot {
 }
 
 func (s *Store) snapshot(source configuration) Snapshot {
+	network := cloneNetwork(source.network)
+	// A link-down fault is an outcome, not a counter rate: it changes what the
+	// interface *is*. Projecting it here rather than writing through to stored
+	// state means clearing the fault restores the interface with no bookkeeping
+	// to get wrong, and every consumer sees it because they all read a snapshot.
+	applyLinkDownFaults(network.Interfaces, s.faults)
 	return Snapshot{
-		Identity: source.identity, Network: cloneNetwork(source.network),
+		Identity: source.identity, Network: network,
 		Faults: sortedInterfaceFaults(s.faults), Version: s.version,
 	}
 }
