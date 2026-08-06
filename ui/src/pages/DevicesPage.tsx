@@ -10,6 +10,7 @@ import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { BaseCard } from '../ui/BaseCard';
 import { Button } from '../ui/Button';
@@ -35,11 +36,15 @@ export const DevicesPage: FC = () => (
  */
 const DeviceListCard: FC = () => {
   const { t } = useTranslation('pages');
+  const { sessionId } = useAppContext();
   const {
     data: devices,
     loading,
     error,
-  } = useApiResource(fetchDevices, [], { intervalMs: POLL_INTERVALS.slow });
+  } = useApiResource(() => fetchDevices(sessionId ?? ''), [sessionId], {
+    intervalMs: POLL_INTERVALS.slow,
+    enabled: sessionId !== null,
+  });
 
   return (
     <BaseCard<DeviceSummary[]>

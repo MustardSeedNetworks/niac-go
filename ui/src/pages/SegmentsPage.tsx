@@ -6,6 +6,7 @@ import type { SegmentSummary } from '../api/types';
 import { DeviceTable } from '../components/DeviceTable';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { BaseCard } from '../ui/BaseCard';
 import { Tag } from '../ui/Tag';
@@ -32,11 +33,15 @@ export const SegmentsPage: FC = () => (
  */
 const SegmentsListCard: FC = () => {
   const { t } = useTranslation('pages');
+  const { sessionId } = useAppContext();
   const {
     data: segments,
     loading,
     error,
-  } = useApiResource(fetchSegments, [], { intervalMs: POLL_INTERVALS.slow });
+  } = useApiResource(() => fetchSegments(sessionId ?? ''), [sessionId], {
+    intervalMs: POLL_INTERVALS.slow,
+    enabled: sessionId !== null,
+  });
 
   return (
     <BaseCard<SegmentSummary[]>

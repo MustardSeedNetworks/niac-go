@@ -350,6 +350,14 @@ export interface SimulationStatus {
   capacity?: DaemonCapacity;
 }
 
+/** One running simulation session a client can address by name. */
+export interface SessionSummary {
+  sessionId: string;
+  interface?: string;
+  configPath?: string;
+  deviceCount: number;
+}
+
 /** Aggregate safety budgets for the whole daemon. These are technical capacity
  * limits, not entitlements: a per-config check cannot bound them because
  * several sessions run at once. */

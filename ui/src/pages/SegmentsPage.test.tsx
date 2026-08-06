@@ -18,6 +18,12 @@ vi.mock('../api/client', () => ({
   fetchSegments: () => fetchSegments(),
 }));
 
+// Runtime reads name their session, so a page rendered on its own has to say
+// which scenario it is looking at.
+vi.mock('../contexts/AppContext', () => ({
+  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+}));
+
 const taggedSegments: SegmentSummary[] = [
   {
     vlanTag: 200,

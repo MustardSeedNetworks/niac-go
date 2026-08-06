@@ -1,6 +1,7 @@
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchNeighbors } from '../../api/client';
+import { useAppContext } from '../../contexts/AppContext';
 import { useApiResource } from '../../hooks/useApiResource';
 import type { TFunction } from '../../i18n';
 import { Card, CardContent } from '../../ui/Card';
@@ -38,11 +39,15 @@ const formatRelative = (iso: string, tCommon: TFunction<'common'>): string => {
 export const NeighborsView: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
+  const { sessionId } = useAppContext();
   const {
     data: neighbors,
     loading,
     error,
-  } = useApiResource(() => fetchNeighbors(), [], { intervalMs: NEIGHBOR_POLL_MS });
+  } = useApiResource(() => fetchNeighbors(sessionId ?? ''), [sessionId], {
+    intervalMs: NEIGHBOR_POLL_MS,
+    enabled: sessionId !== null,
+  });
 
   const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all');
   const [search, setSearch] = useState('');
