@@ -5,6 +5,64 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.27](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.26...v0.94.27) (2026-08-06)
+
+
+### Features
+
+* **api:** hold simulation state per session ([5196c6d](https://github.com/MustardSeedNetworks/niac-go/commit/5196c6dc13226999914e0609685916f1a477273a))
+* **api:** scope SSE packet and stats streams to a session ([cedf2d2](https://github.com/MustardSeedNetworks/niac-go/commit/cedf2d2c6b91070ab0395857f4f02de37ff60a75))
+* **api:** select and stop simulations by session ([8a1b51e](https://github.com/MustardSeedNetworks/niac-go/commit/8a1b51e87c4114e6c4d9d55587af1a076a3ae6dd))
+* **config:** accept endpoint device types and ieee80211 interfaces ([98a885f](https://github.com/MustardSeedNetworks/niac-go/commit/98a885f7263aa6371dcad7f8b675f7beb0ab315e))
+* **daemon,cli:** run concurrent trunk-VLAN sessions ([82461f2](https://github.com/MustardSeedNetworks/niac-go/commit/82461f2b75e9ae8873cdbdeb733e90447485bded))
+* **daemon:** add trunk VLAN capture and replay primitives ([e936678](https://github.com/MustardSeedNetworks/niac-go/commit/e936678eb789ececd568e680e924bb3ef17fa0f2))
+* **daemon:** persist and recover every active session ([3dcf788](https://github.com/MustardSeedNetworks/niac-go/commit/3dcf78801b07493e60c1c9f1e4be0a4c7d502582))
+* **daemon:** track concurrent simulations in a session registry ([2021b74](https://github.com/MustardSeedNetworks/niac-go/commit/2021b74979013c45b4ca5db6aeec934c3ac5a538))
+* **fabric:** add trunk attachment mode with an allowed-VLAN set ([91353b1](https://github.com/MustardSeedNetworks/niac-go/commit/91353b168487b9ea511ad9982ea9d4b97d39e1e3))
+* **lab:** add a one-command Link-Live acceptance loop per pack ([05f0a09](https://github.com/MustardSeedNetworks/niac-go/commit/05f0a0940defd94780467b495fdeddbfdcd24a9e))
+* **linklive-acceptance:** select the latest ready discovery by unit ([9964380](https://github.com/MustardSeedNetworks/niac-go/commit/9964380c935d5bcbddc226449c9750bfcb3415fe))
+* **linklive:** compare authored interfaces against discovered telemetry ([99b7bd1](https://github.com/MustardSeedNetworks/niac-go/commit/99b7bd1d3f9cc06354a926a73b051a38334b8b38))
+* **linklive:** refresh the access token when Link-Live returns 426 ([6868a8a](https://github.com/MustardSeedNetworks/niac-go/commit/6868a8a9824a250e938ff5c838e95aea3a4159e3))
+* **protocols:** confine trunk traffic to the bound physical VLAN ([498c149](https://github.com/MustardSeedNetworks/niac-go/commit/498c149630c174ed3bad884823f79ce5ad36dd4e))
+* **scenario:** give AP radios real identity and retier the scenario packs ([12566d0](https://github.com/MustardSeedNetworks/niac-go/commit/12566d00b2af34f792a6b55579ebc4934d41999e))
+* **snmp:** publish ifType 71 for ieee80211 interfaces ([51c6225](https://github.com/MustardSeedNetworks/niac-go/commit/51c6225c0eba0e421348a4547ac8b746b80d6070))
+* **ui:** offer trunk attachment and a session ID at preflight ([d8197e4](https://github.com/MustardSeedNetworks/niac-go/commit/d8197e420a3f3d3b84812809b7c7f590fd8028fe))
+* **ui:** scope the live packet stream to the running session ([bd17bdc](https://github.com/MustardSeedNetworks/niac-go/commit/bd17bdc469a398f790bf426c1ae4f2be8fc66449))
+* **ui:** separate presentation packs from the scale workload ([73e2003](https://github.com/MustardSeedNetworks/niac-go/commit/73e2003fa050ff503a854734bd782d38c01032a1))
+* **ui:** show and control concurrent scenario sessions ([b0642c8](https://github.com/MustardSeedNetworks/niac-go/commit/b0642c8e1996a5e45557f35ab180e994dd21a6b6))
+
+
+### Bug Fixes
+
+* **i18n:** allow-list Enterprise in the enterprise-scale pack name ([8332701](https://github.com/MustardSeedNetworks/niac-go/commit/833270101976589744cb05138b2ffb67e440c6fc))
+* **i18n:** restore the extractor's key order in the en page catalog ([727bd94](https://github.com/MustardSeedNetworks/niac-go/commit/727bd944dcd9db4adc9b825e9b84760f988cce30))
+* **ui:** send the camel-case wire contract for simulation requests ([07853ff](https://github.com/MustardSeedNetworks/niac-go/commit/07853ff377f849749e1b1d9f1a715fc8ca981ec4))
+
+
+### Code Refactoring
+
+* **protocols,capture,replay:** depend on transport interfaces ([36bca82](https://github.com/MustardSeedNetworks/niac-go/commit/36bca82a7f31996928be98d6be8b3514fb751079))
+
+
+### Documentation
+
+* add 2026-08 NIAC architecture and program planning docs ([469895d](https://github.com/MustardSeedNetworks/niac-go/commit/469895da42d86a21fa9d8abf0321bf3727954a03))
+* correct the scenario pack list in the REST reference ([126d60c](https://github.com/MustardSeedNetworks/niac-go/commit/126d60c68a9ee22239bb573380f69a2ac2e82af6))
+* sequence all scenario-shape work into M4 ([13abe33](https://github.com/MustardSeedNetworks/niac-go/commit/13abe334d9b0f96f569e7b8cf66e3f73ad39da98))
+
+
+### Tests
+
+* **api:** cover session selection and SSE scoping ([dcd549d](https://github.com/MustardSeedNetworks/niac-go/commit/dcd549d5926af08dfeb8200a014499719854f0db))
+* **api:** guard the scenario config size ceiling and pack count ([db465f5](https://github.com/MustardSeedNetworks/niac-go/commit/db465f593903bf42b2018e57ac012b3a52d1f6dd))
+* **e2e:** report the response body when a daemon start assertion fails ([ec552d4](https://github.com/MustardSeedNetworks/niac-go/commit/ec552d4bce0446e63d78afc131b86c143040dab5))
+
+
+### Miscellaneous
+
+* **deps-dev:** bump fast-uri ([#1185](https://github.com/MustardSeedNetworks/niac-go/issues/1185)) ([d4163f1](https://github.com/MustardSeedNetworks/niac-go/commit/d4163f1af3a87bb7a2322fd447ba06c4693f4d2b))
+* **ui:** bump brace-expansion to 5.0.9 ([50db5ad](https://github.com/MustardSeedNetworks/niac-go/commit/50db5ad483b6445621b48f6aba0ed13269c14233))
+
 ## [0.94.26](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.25...v0.94.26) (2026-07-30)
 
 
