@@ -342,6 +342,29 @@ export interface SimulationStatus {
   uptimeSeconds: number;
   fabric?: import('./fabric-types').SimulationFabricStatus;
   sessions?: SimulationStatus[];
+  /** Running, but unable to exchange frames — today only a dead shared trunk. */
+  degraded?: boolean;
+  degradedReason?: string;
+  capture?: TrunkCaptureHealth;
+}
+
+/** Per-reason trunk drop counts. Stray tags on a shared trunk are ordinary; a
+ * session overrunning its ingress queue is not. */
+export interface TrunkDropStats {
+  total: number;
+  untagged: number;
+  unapproved: number;
+  overrun: number;
+  unapprovedByVlan?: Record<string, number>;
+  overrunByVlan?: Record<string, number>;
+}
+
+export interface TrunkCaptureHealth {
+  interface: string;
+  healthy: boolean;
+  error?: string;
+  sessionVlans?: number[];
+  drops: TrunkDropStats;
 }
 
 /**

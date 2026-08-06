@@ -67,11 +67,20 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
                     })}
                   </td>
                   <td className="px-cell py-row">
-                    <Tag colorScheme="green">
-                      {session.selected
-                        ? t('runtime.sessions.selected')
-                        : t('runtime.running.active')}
-                    </Tag>
+                    {session.degraded ? (
+                      <div className="stack-compact">
+                        <Tag colorScheme="red">{t('runtime.sessions.degraded')}</Tag>
+                        <SmallText>
+                          {session.degradedReason || t('runtime.sessions.degradedHelp')}
+                        </SmallText>
+                      </div>
+                    ) : (
+                      <Tag colorScheme="green">
+                        {session.selected
+                          ? t('runtime.sessions.selected')
+                          : t('runtime.running.active')}
+                      </Tag>
+                    )}
                   </td>
                   <td className="px-cell py-row flex gap-compact">
                     {!session.selected && (
