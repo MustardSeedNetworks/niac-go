@@ -62,11 +62,31 @@ events, and recovery state consistently and repeatably.
 
 ## Milestone 4 — NetAlly acceptance
 
+**Sequencing decision (owner, 2026-08-05): all scenario-shape work happens here,
+last — not earlier.** Presentation packs share one infrastructure skeleton today,
+so several verticals render as the same Link-Live map (warehouse and
+manufacturing were byte-identical at 69 devices / 82 links). Giving each vertical
+a realistic shape is real work, but doing it before M1-M3 means re-freezing golden
+manifests and re-running live acceptance after every intervening milestone, since
+any generator, MIB, packet or comparator change invalidates earlier live results.
+Shape the scenarios once, against the finished engine, then validate once.
+
+A prepared warehouse divergence (3 closets x 9 radios, 57 devices / 67 links) and
+a validated 6-node ring spike for manufacturing are parked on
+`park/m4-vertical-topology-differentiation` — rebase and finish them under M4-3
+rather than re-deriving them. Hospital's 75-device / 88-link shape is already
+Link-Live-validated and should stay unchanged if at all possible.
+
+The one thing that cannot be answered from code: whether Link-Live's layout
+renders a ring as a visible loop or flattens it into a star. Run the parked spike
+config through one discovery before committing to ring generator work; if it
+flattens, take the cheaper "fewer, larger cells" shape for manufacturing instead.
+
 | ID | Work item | Hours | Depends on | Acceptance evidence |
 | --- | --- | ---: | --- | --- |
 | M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | Versioned golden manifests |
 | M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
-| M4-3 | Finalize warehouse and manufacturing stories | 8-14 | M4-2 | Two clean comparisons |
+| M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | Two clean comparisons, and two maps that do not look alike |
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | Three clean comparisons |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | Published resource baseline |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
