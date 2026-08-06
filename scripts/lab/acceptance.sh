@@ -72,16 +72,21 @@ print(json.dumps(doc['manifest']))
 
 start_session() {
 	local pack="$1" vlan="$2" out="$3"
+	# The generated config declares a logical attachment; the start request has
+	# to name it. Omitting it fails preflight with unknown_attachment, because
+	# a config that declares attachments requires the binding to pick one.
 	python3 -c "
 import json,sys
+request = json.load(open(sys.argv[5]))
 print(json.dumps({
   'sessionId': sys.argv[1],
   'attachmentMode': 'trunk',
   'accessVlan': int(sys.argv[2]),
   'interface': sys.argv[3],
+  'attachment': request.get('attachmentName', 'cyberscope'),
   'configData': open(sys.argv[4]).read(),
 }))
-" "$pack" "$vlan" "${LAB_IFACE:-eth0}" "${out}/${pack}.yaml" >"${out}/${pack}.start.json"
+" "$pack" "$vlan" "${LAB_IFACE:-eth0}" "${out}/${pack}.yaml" "${out}/${pack}.request.json" >"${out}/${pack}.start.json"
 
 	"${CURL[@]}" -X POST "${NIAC_URL}/api/v1/simulation/preflight" \
 		-H 'Content-Type: application/json' \

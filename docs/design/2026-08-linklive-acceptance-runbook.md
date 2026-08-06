@@ -90,6 +90,21 @@ under test. If the capture VLAN cannot reach Link-Live, finish and queue
 Discovery first, then switch to an outbound profile to flush — switching
 profiles resets the test port, so never do it mid-scan.
 
+## Start-up failures
+
+Before a discovery is worth running, the session has to actually start. Two
+failures seen in the lab:
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `preflight` returns `safe: false` with `unknown_attachment` | The generated config declares a logical attachment (`cyberscope` connected to `lab-transit`) and the start request did not name one. A config that declares attachments requires the binding to pick one. | Pass `attachment` in the start request; `acceptance.sh` reads it from the pack's `attachmentName`. |
+| `POST /api/v1/simulation` returns a bare `500 simulation_start_failed` | Deliberate: the error may contain config-derived secrets, so neither the response nor the log carries detail. | Run `preflight` with the same payload — it reports the real diagnostic. |
+
+`niac-demo-lab.service` requests attachment mode `access` on the same interface
+the presentation packs hold as `trunk`. Mixing modes on one interface is
+rejected by design, so that unit fails whenever the trunk sessions are up. It
+predates the concurrent-VLAN model and should be disabled rather than debugged.
+
 ## Findings triage
 
 Every finding kind the comparator can emit, and where to look first.
