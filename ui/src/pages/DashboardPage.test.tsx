@@ -107,6 +107,9 @@ describe('DashboardPage', () => {
     fetchInterfaces.mockReset().mockResolvedValue({ interfaces: [] });
     fetchSimulationStatus.mockReset().mockResolvedValue({
       running: true,
+      // Runtime reads are session-scoped, so the dashboard needs a session to
+      // read stats from — a running simulation always reports one.
+      sessionId: 'default',
       deviceCount: 5,
       uptimeSeconds: 120,
     });

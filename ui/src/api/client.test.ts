@@ -95,7 +95,7 @@ describe('API Client', () => {
       });
 
       const { fetchDevices } = await import('./client');
-      const result = await fetchDevices();
+      const result = await fetchDevices('hospital');
       expect(result).toHaveLength(2);
     });
   });

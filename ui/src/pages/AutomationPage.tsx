@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
@@ -16,7 +17,10 @@ import { H2, P, SmallText } from '../ui/Typography';
  * immediately; no daemon restart required.
  */
 export const AutomationPage: FC = () => {
-  const { data: stats } = useApiResource(fetchStats, []);
+  const { sessionId } = useAppContext();
+  const { data: stats } = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
+    enabled: sessionId !== null,
+  });
   const errorCount = stats?.stack.errors ?? 0;
 
   return (

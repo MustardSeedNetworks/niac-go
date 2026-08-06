@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
 import {
   fetchDevices,
   fetchErrorTypes,
@@ -45,39 +45,63 @@ interface AppContextValue {
   errorTypes: ApiResourceResult<ErrorInjectionInfo>;
   interfaces: ApiResourceResult<InterfacesResponse>;
   simStatus: ApiResourceResult<SimulationStatus>;
+  /**
+   * Which scenario this browser is looking at. Selection lives here rather
+   * than on the daemon: with several scenarios running, a server-side
+   * "current" session means one tab switching scenario silently repoints
+   * every other tab. Null until a scenario is running.
+   */
+  sessionId: string | null;
+  setSessionId: (sessionId: string | null) => void;
   pollIntervals: typeof POLL_INTERVALS;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Fetch shared data at the top level
-  const stats = useApiResource(fetchStats, [], {
-    intervalMs: POLL_INTERVALS.medium,
+  // Which scenario this browser is reading. Adopts whichever session the
+  // daemon reports until the operator picks one, then this browser keeps its
+  // own choice regardless of what other tabs do.
+  const [pinnedSessionId, setPinnedSessionId] = useState<string | null>(null);
+
+  const simStatus = useApiResource(fetchSimulationStatus, [], {
+    intervalMs: POLL_INTERVALS.fast,
   });
-  const devices = useApiResource(fetchDevices, [], {
+  const runningSessionIds = useMemo(
+    () => (simStatus.data?.sessions ?? []).map((session) => session.sessionId).filter(Boolean),
+    [simStatus.data],
+  );
+  // Drop a pin that no longer names a running scenario, so a stopped session
+  // does not leave every read 404ing.
+  const sessionId =
+    pinnedSessionId && runningSessionIds.includes(pinnedSessionId)
+      ? pinnedSessionId
+      : (simStatus.data?.sessionId ?? null);
+
+  // Runtime reads take the session as a dependency: switching scenario has to
+  // refetch, not keep showing the previous one's devices. With no scenario
+  // running there is nothing to read, so these resolve empty rather than
+  // requesting a session that does not exist.
+  const stats = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
+    intervalMs: POLL_INTERVALS.medium,
+    enabled: sessionId !== null,
+  });
+  const devices = useApiResource(() => fetchDevices(sessionId ?? ''), [sessionId], {
     intervalMs: POLL_INTERVALS.slow,
+    enabled: sessionId !== null,
   });
   const history = useApiResource(fetchHistory, [], {
     intervalMs: POLL_INTERVALS.slow,
   });
-  const neighbors = useApiResource(fetchNeighbors, [], {
+  const neighbors = useApiResource(() => fetchNeighbors(sessionId ?? ''), [sessionId], {
     intervalMs: POLL_INTERVALS.medium,
+    enabled: sessionId !== null,
   });
   const version = useApiResource(fetchVersion, [], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
   const errorTypes = useApiResource(fetchErrorTypes, []);
   const interfaces = useApiResource(fetchInterfaces, []);
-  // Single poller for simulation run/stop state, shared by HeaderBar (status
-  // chip), DashboardPage (status banner + stat cards), RuntimeControlPage
-  // (start/stop controls), and PacketInspectorPage (active-interface
-  // detection) via the useSimulationStatus() hook — see hooks/useSimulationStatus.ts.
-  // Previously each of those pages ran its own independent
-  // useApiResource(fetchSimulationStatus, …) poll against the same endpoint.
-  const simStatus = useApiResource(fetchSimulationStatus, [], {
-    intervalMs: POLL_INTERVALS.fast,
-  });
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo(
@@ -90,9 +114,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       errorTypes,
       interfaces,
       simStatus,
+      sessionId,
+      setSessionId: setPinnedSessionId,
       pollIntervals: POLL_INTERVALS,
     }),
-    [stats, devices, history, neighbors, version, errorTypes, interfaces, simStatus],
+    [stats, devices, history, neighbors, version, errorTypes, interfaces, simStatus, sessionId],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

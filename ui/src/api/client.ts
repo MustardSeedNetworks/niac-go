@@ -33,6 +33,7 @@ import type {
   ReplayState,
   RuntimeStatus,
   SegmentSummary,
+  SessionSummary,
   SimulationPreflightReport,
   SimulationPreflightRequest,
   SimulationRequest,
@@ -67,14 +68,26 @@ import type {
 // Stats, devices, history, neighbors, config
 // =====================================================================
 
-export const fetchStats = () => deduplicatedGet<StackStatsResponse>('/api/v1/stats');
-export const fetchDevices = () => deduplicatedGet<DeviceSummary[]>('/api/v1/devices');
-// ADR 0008: multi-VLAN segments grouping the same devices /api/v1/devices
+// Runtime reads name the session they mean. NIAC can run several scenarios at
+// once, so "the current simulation" is ambiguous: without a session ID the
+// answer depends on which scenario happens to be selected, and two tabs looking
+// at different scenarios would silently read each other's state.
+const sessionPath = (sessionId: string, resource: string) =>
+  `/api/v1/sessions/${encodeURIComponent(sessionId)}/${resource}`;
+
+export const fetchSessions = () => deduplicatedGet<SessionSummary[]>('/api/v1/sessions');
+export const fetchStats = (sessionId: string) =>
+  deduplicatedGet<StackStatsResponse>(sessionPath(sessionId, 'stats'));
+export const fetchDevices = (sessionId: string) =>
+  deduplicatedGet<DeviceSummary[]>(sessionPath(sessionId, 'devices'));
+// ADR 0008: multi-VLAN segments grouping the same devices the devices resource
 // reports flat. A flat (non-segmented) config still reports one untagged
 // segment, so the shape is uniform.
-export const fetchSegments = () => deduplicatedGet<SegmentSummary[]>('/api/v1/segments');
+export const fetchSegments = (sessionId: string) =>
+  deduplicatedGet<SegmentSummary[]>(sessionPath(sessionId, 'segments'));
 export const fetchHistory = () => deduplicatedGet<HistoryRecord[]>('/api/v1/history');
-export const fetchNeighbors = () => deduplicatedGet<NeighborRecord[]>('/api/v1/neighbors');
+export const fetchNeighbors = (sessionId: string) =>
+  deduplicatedGet<NeighborRecord[]>(sessionPath(sessionId, 'neighbors'));
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
 export const updateConfig = (payload: ConfigUpdateRequest) =>
   requestJson<ConfigDocument>('/api/v1/config', payload, { method: 'PUT' });
@@ -153,7 +166,8 @@ export const importConfig = (payload: { format: 'yaml' | 'java-dsl'; content: st
 // =====================================================================
 
 export const fetchVersion = () => deduplicatedGet<VersionInfo>('/api/v1/version');
-export const fetchTopology = () => deduplicatedGet<TopologyGraph>('/api/v1/topology');
+export const fetchTopology = (sessionId: string) =>
+  deduplicatedGet<TopologyGraph>(sessionPath(sessionId, 'topology'));
 
 // Server-side topology export. The daemon renders the running topology as
 // Graphviz DOT or GraphML (for Graphviz / yEd / gephi interop) — richer than

@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
 import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../ui/Button';
@@ -72,21 +73,30 @@ export const TopologyPage: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
+  const { sessionId } = useAppContext();
 
   // Fetch topology data from the API with periodic polling
   const {
     data: topology,
     loading: topologyLoading,
     refetch: refetchTopology,
-  } = useApiResource(fetchTopology, [], { intervalMs: 15000 });
+  } = useApiResource(() => fetchTopology(sessionId ?? ''), [sessionId], {
+    intervalMs: 15000,
+    enabled: sessionId !== null,
+  });
   const {
     data: devices,
     loading: devicesLoading,
     refetch: refetchDevices,
-  } = useApiResource(fetchDevices, [], { intervalMs: 15000 });
-  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(fetchNeighbors, [], {
+  } = useApiResource(() => fetchDevices(sessionId ?? ''), [sessionId], {
     intervalMs: 15000,
+    enabled: sessionId !== null,
   });
+  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(
+    () => fetchNeighbors(sessionId ?? ''),
+    [sessionId],
+    { intervalMs: 15000, enabled: sessionId !== null },
+  );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);
