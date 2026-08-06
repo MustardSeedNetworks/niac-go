@@ -36,7 +36,7 @@ type Store struct {
 	authored       configuration
 	version        uint64
 	events         []Event
-	checkpoints    map[string]configuration
+	checkpoints    map[string]checkpoint
 	faults         map[interfaceFaultKey]InterfaceFault
 	changes        chan struct{}
 	changeSignal   chan<- struct{}
