@@ -36,6 +36,8 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
 | `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
+| `GET` | `/api/v1/sessions` | Running simulation sessions a client can address |
+| `GET` | `/api/v1/sessions/{id}/{resource}` | One session's runtime state — see below |
 | `GET` | `/api/v1/scenario/packs` | Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
@@ -113,6 +115,38 @@ native VLAN, and FDB-only properties are updated on both endpoints together.
 The route requires a read-write token, CSRF protection, and the normal draft
 entitlement checks. It replaces only the named draft; it does not apply or
 restart the running simulation.
+
+## Session-scoped runtime
+
+NIAC can run several scenarios at once, one per physical VLAN behind a shared
+trunk. Each is a _session_ with its own ID. The unscoped runtime endpoints
+(`/api/v1/topology`, `/api/v1/devices`, `/api/v1/stats`, …) report whichever
+session is currently selected, which is ambiguous once more than one is
+running. Address a session explicitly instead:
+
+```text
+GET /api/v1/sessions                        list running sessions
+GET /api/v1/sessions/{id}/topology          that session's topology graph
+GET /api/v1/sessions/{id}/devices           its device inventory
+GET /api/v1/sessions/{id}/interfaces        its simulated devices' interfaces
+GET /api/v1/sessions/{id}/segments          its VLAN segments
+GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
+GET /api/v1/sessions/{id}/behaviors         its behaviour timeline status
+GET /api/v1/sessions/{id}/stats             its live counters
+GET /api/v1/sessions/{id}/runtime           its runtime summary
+```
+
+Naming a session that is not running returns `404 session_not_found` rather
+than falling back to another session — a silent fallback is how one client
+ends up driving a scenario it did not ask for.
+
+`GET /api/v1/sessions/{id}/interfaces` lists the interfaces of the _simulated
+devices_. The unscoped `/api/v1/interfaces` lists the **host's** capture NICs,
+which is a different thing and is not session-scoped.
+
+Live streams take the session as a query parameter:
+`/api/v1/stream/packets?sessionId={id}` and `/api/v1/stream/stats?sessionId={id}`.
+A stream subscribed without `sessionId` receives the selected session only.
 
 ## Web UI
 

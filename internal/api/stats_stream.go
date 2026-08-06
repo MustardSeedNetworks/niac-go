@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 const statsStreamInterval = time.Second
@@ -32,24 +33,47 @@ type statsStackPayload struct {
 	UDPProxyOverloadDrops uint64 `json:"udpProxyOverloadDrops"`
 }
 
-func (s *Server) currentStatsPayload() (statsPayload, string, bool) {
+// sessionStatsPayload builds one named session's stats. Shared by the session
+// stats endpoint and the stats publisher so both report the same numbers for
+// the same session.
+func (s *Server) sessionStatsPayload(session sessionRuntime) (statsPayload, bool) {
+	s.configMu.RLock()
+	version := s.cfg.Version
+	s.configMu.RUnlock()
+
+	deviceCount := 0
+	if cfg := session.config(); cfg != nil {
+		deviceCount = len(cfg.Devices)
+	}
+	return buildStatsPayload(session.stack(), session.iface(), version, deviceCount)
+}
+
+// selectedStatsPayload reads the process-wide projection that the unscoped
+// endpoints still use. It exists only for those endpoints and goes away with
+// them.
+func (s *Server) selectedStatsPayload() (statsPayload, bool) {
 	s.configMu.RLock()
 	stack := s.cfg.Stack
 	cfg := s.cfg.Config
 	iface := s.cfg.Interface
 	version := s.cfg.Version
-	sessionID := s.selectedSimulation
 	s.configMu.RUnlock()
 
-	if stack == nil {
-		return statsPayload{}, "", false
-	}
-
-	stats := stack.GetStats()
 	deviceCount := 0
 	if cfg != nil {
 		deviceCount = len(cfg.Devices)
 	}
+	return buildStatsPayload(stack, iface, version, deviceCount)
+}
+
+func buildStatsPayload(
+	stack *protocols.Stack, iface, version string, deviceCount int,
+) (statsPayload, bool) {
+	if stack == nil {
+		return statsPayload{}, false
+	}
+
+	stats := stack.GetStats()
 
 	return statsPayload{
 		Timestamp:   time.Now().UTC(),
@@ -70,9 +94,13 @@ func (s *Server) currentStatsPayload() (statsPayload, string, bool) {
 			Errors:                stats.Errors,
 			UDPProxyOverloadDrops: stats.UDPProxyOverloadDrops,
 		},
-	}, sessionID, true
+	}, true
 }
 
+// startStatsPublisher emits one scoped tick per running session. It has no
+// request to carry a session ID, so it iterates the sessions instead: with
+// several running, publishing only one of them would leave every other
+// session's subscribers on a silent stream.
 func (s *Server) startStatsPublisher(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -85,14 +113,25 @@ func (s *Server) startStatsPublisher(interval time.Duration) {
 			if s.sseHub.ClientCount(sse.StreamStats) == 0 {
 				continue
 			}
-			payload, sessionID, ok := s.currentStatsPayload()
-			if ok {
-				if sessionID == "" {
-					s.sseHub.BroadcastStats(payload)
-				} else {
-					s.sseHub.BroadcastStatsForSession(sessionID, payload)
-				}
-			}
+			s.publishSessionStats()
 		}
+	}
+}
+
+func (s *Server) publishSessionStats() {
+	for _, id := range s.sessionIDs() {
+		session, err := s.session(id)
+		if err != nil {
+			continue
+		}
+		if payload, ok := s.sessionStatsPayload(session); ok {
+			s.sseHub.BroadcastStatsForSession(id, payload)
+		}
+	}
+	// Subscribers that have not adopted ?sessionId= yet only ever receive the
+	// unscoped stream. Publishing the selected session there keeps them working
+	// until the unscoped runtime surface is removed; drop this with it.
+	if payload, ok := s.selectedStatsPayload(); ok {
+		s.sseHub.BroadcastStats(payload)
 	}
 }

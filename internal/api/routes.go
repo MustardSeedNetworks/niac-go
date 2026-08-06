@@ -34,6 +34,7 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 		},
 	})
 
+	s.registerSessionRoutes(mux)
 	s.registerWriteProtectedRoutes(mux)
 	s.registerReadOnlyRoutes(mux)
 	s.registerLibraryRoutes(mux)
