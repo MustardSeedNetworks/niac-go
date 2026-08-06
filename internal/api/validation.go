@@ -11,6 +11,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -301,6 +302,13 @@ func validateConfigPath(path string) []ErrorDetail {
 // SECURITY FIX MEDIUM-3: Prevent injection and resource exhaustion.
 func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 	var errs []ErrorDetail
+	if req.SessionID != "" && !validSessionID(req.SessionID) {
+		errs = append(errs, ErrorDetail{
+			Field: "sessionId",
+			Issue: "session ID must contain 1 to 40 lowercase letters, numbers, or hyphens and must start and end with a letter or number",
+			Value: req.SessionID,
+		})
+	}
 
 	if err := validateInterfaceName(req.Interface); err != nil {
 		errs = append(errs, *err)
@@ -311,12 +319,27 @@ func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 	if req.ConfigData != "" && len(req.ConfigData) > MaxScenarioConfigSize {
 		errs = append(errs, ErrorDetail{
 			Field: "config_data",
-			Issue: fmt.Sprintf("config data exceeds maximum size of %d bytes", MaxScenarioConfigSize),
+			Issue: fmt.Sprintf(
+				"config data exceeds maximum size of %d bytes",
+				MaxScenarioConfigSize,
+			),
 			Value: "[too large]",
 		})
 	}
 
 	return errs
+}
+
+func validSessionID(value string) bool {
+	if len(value) == 0 || len(value) > 40 || value[0] == '-' || value[len(value)-1] == '-' {
+		return false
+	}
+	for _, char := range value {
+		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+			return false
+		}
+	}
+	return true
 }
 
 // validateReplayRequest validates replay request fields
@@ -532,6 +555,12 @@ func validateSimulationStartRequest(req SimulationRequest) []ErrorDetail {
 			Field: "config",
 			Issue: "either config_path, config_data, or template_name must be provided",
 		})
+	}
+	if req.AttachmentMode == fabric.ModeTrunk && req.SessionID == "" {
+		errs = append(
+			errs,
+			ErrorDetail{Field: "sessionId", Issue: "session ID is required for trunk mode"},
+		)
 	}
 	return errs
 }

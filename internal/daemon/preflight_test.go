@@ -34,6 +34,24 @@ func TestPreflightSimulationDoesNotPersistInlineConfig(t *testing.T) {
 	}
 }
 
+func TestPreflightSimulationRejectsUnapprovedFlatTrunkVLAN(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	d, err := NewDaemon(Config{AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
+		Interface: "eth0", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := d.PreflightSimulation(trunkSessionRequest("warehouse", 201))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Safe || len(report.Diagnostics) != 1 ||
+		report.Diagnostics[0].Code != fabric.CodeAttachmentPolicyDenied {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
 func TestPreflightSimulationValidatesHostInterface(t *testing.T) {
 	t.Run("nonexistent", func(t *testing.T) {
 		t.Setenv(e2eDryRunEnv, "")
@@ -149,9 +167,49 @@ func TestPhysicalAttachmentPolicyRequiresExactMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &Daemon{cfg: Config{AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{tt.policy}}}
+			d := &Daemon{
+				cfg: Config{AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{tt.policy}},
+			}
 			if got := d.bindingFromRequest(tt.request).PolicyApproved; got != tt.approved {
 				t.Fatalf("PolicyApproved = %t, want %t", got, tt.approved)
+			}
+		})
+	}
+}
+
+func TestPhysicalAttachmentPolicyApprovesAllowedTrunkVLAN(t *testing.T) {
+	policy := fabric.PhysicalAttachmentPolicy{
+		Interface: "eth0", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200, 201, 299},
+	}
+	tests := []struct {
+		name    string
+		binding fabric.Binding
+		want    bool
+	}{
+		{
+			name: "allowed VLAN",
+			binding: fabric.Binding{
+				Interface: "eth0", Mode: fabric.ModeTrunk, AccessVLAN: 201,
+			},
+			want: true,
+		},
+		{
+			name: "unapproved VLAN",
+			binding: fabric.Binding{
+				Interface: "eth0", Mode: fabric.ModeTrunk, AccessVLAN: 202,
+			},
+		},
+		{
+			name: "wrong interface",
+			binding: fabric.Binding{
+				Interface: "eth1", Mode: fabric.ModeTrunk, AccessVLAN: 201,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := policy.Approves(tt.binding); got != tt.want {
+				t.Fatalf("Approves() = %t, want %t", got, tt.want)
 			}
 		})
 	}
@@ -202,7 +260,10 @@ devices:
 	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
 
 	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
-		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired", err)
+		t.Fatalf(
+			"loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired",
+			err,
+		)
 	}
 }
 
@@ -225,7 +286,10 @@ segments:
 	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
 
 	if !errors.Is(err, api.ErrRoutedLabsLicenseRequired) {
-		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired", err)
+		t.Fatalf(
+			"loadAuthorizedSimulationConfig() error = %v, want ErrRoutedLabsLicenseRequired",
+			err,
+		)
 	}
 }
 
@@ -257,7 +321,10 @@ func TestLoadAuthorizedSimulationConfigEnforcesFreeDeviceCap(t *testing.T) {
 	_, _, err := loadAuthorizedSimulationConfig(req, api.SimulationEntitlements{})
 
 	if !errors.Is(err, api.ErrUnlimitedDevicesLicenseRequired) {
-		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrUnlimitedDevicesLicenseRequired", err)
+		t.Fatalf(
+			"loadAuthorizedSimulationConfig() error = %v, want ErrUnlimitedDevicesLicenseRequired",
+			err,
+		)
 	}
 }
 
@@ -300,7 +367,10 @@ func TestLoadAuthorizedSimulationConfigEnforcesAbsoluteDeviceCap(t *testing.T) {
 	_, _, err := loadAuthorizedSimulationConfig(req, fullSimulationEntitlements())
 
 	if !errors.Is(err, api.ErrSimulationDeviceLimitExceeded) {
-		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want ErrSimulationDeviceLimitExceeded", err)
+		t.Fatalf(
+			"loadAuthorizedSimulationConfig() error = %v, want ErrSimulationDeviceLimitExceeded",
+			err,
+		)
 	}
 }
 
@@ -308,9 +378,15 @@ func simulationConfigWithDevices(count int) string {
 	var content strings.Builder
 	content.WriteString("devices:\n")
 	for index := range count {
-		_, _ = fmt.Fprintf(&content,
+		_, _ = fmt.Fprintf(
+			&content,
 			"  - name: device-%d\n    type: host\n    mac: 02:00:00:%02x:%02x:%02x\n    ips: [\"198.18.%d.%d\"]\n",
-			index, index>>16, index>>8&0xff, index&0xff, index/254, index%254+1,
+			index,
+			index>>16,
+			index>>8&0xff,
+			index&0xff,
+			index/254,
+			index%254+1,
 		)
 	}
 	return content.String()

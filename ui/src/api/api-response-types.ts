@@ -329,14 +329,19 @@ export interface RuntimeStatus {
 }
 
 export interface SimulationStatus {
+  sessionId?: string;
+  selected?: boolean;
   running: boolean;
   interface?: string;
+  attachmentMode?: 'direct' | 'access' | 'trunk';
+  physicalVlan?: number;
   configPath?: string;
   configName?: string;
   deviceCount: number;
   startedAt?: string;
   uptimeSeconds: number;
   fabric?: import('./fabric-types').SimulationFabricStatus;
+  sessions?: SimulationStatus[];
 }
 
 /**
@@ -360,9 +365,11 @@ export interface StandaloneCaptureRequest {
 }
 
 export interface SimulationRequest {
+  /** Stable identifier used to address one concurrent runtime. */
+  sessionId?: string;
   interface: string;
   attachment?: string;
-  attachmentMode?: 'direct' | 'access';
+  attachmentMode?: 'direct' | 'access' | 'trunk';
   accessVlan?: number;
   configPath?: string;
   configData?: string;

@@ -99,6 +99,8 @@ func (r *fabricRuntime) acceptsFrame(vlan int, tagged bool) bool {
 	switch r.binding.Mode {
 	case fabric.ModeDirect, fabric.ModeAccess:
 		return !tagged && vlan <= 0
+	case fabric.ModeTrunk:
+		return tagged && vlan == int(r.binding.AccessVLAN)
 	default:
 		return false
 	}
@@ -204,7 +206,10 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 	}
 }
 
-func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr) (fabricResolution, bool) {
+func (r *fabricRuntime) resolveIPv4(
+	dst netip.Addr,
+	ingressMAC net.HardwareAddr,
+) (fabricResolution, bool) {
 	if r == nil || !dst.Is4() {
 		return fabricResolution{}, false
 	}
@@ -225,7 +230,11 @@ func (r *fabricRuntime) resolveIPv4(dst netip.Addr, ingressMAC net.HardwareAddr)
 	if router == nil {
 		return fabricResolution{}, false
 	}
-	firstHopIP, found := r.interfaceAddress(router.device, router.attachmentInterface, router.attachmentIP)
+	firstHopIP, found := r.interfaceAddress(
+		router.device,
+		router.attachmentInterface,
+		router.attachmentIP,
+	)
 	if !found {
 		return fabricResolution{}, false
 	}
@@ -273,7 +282,11 @@ func (r *fabricRuntime) notificationEgress(
 	return fabricNotificationEgress{}, false
 }
 
-func (r *fabricRuntime) interfaceAddress(device *config.Device, name string, fallback netip.Addr) (netip.Addr, bool) {
+func (r *fabricRuntime) interfaceAddress(
+	device *config.Device,
+	name string,
+	fallback netip.Addr,
+) (netip.Addr, bool) {
 	if state := r.deviceStates[device]; state != nil {
 		for _, iface := range state.Snapshot().Network.Interfaces {
 			if iface.Name == name {
@@ -318,7 +331,8 @@ func (r *fabricRuntime) endpointForAddress(address netip.Addr) (fabricEndpoint, 
 			continue
 		}
 		for _, iface := range state.Snapshot().Network.Interfaces {
-			if iface.Name == endpoint.interfaceName && iface.Address.IsValid() && iface.Address.Addr() == address {
+			if iface.Name == endpoint.interfaceName && iface.Address.IsValid() &&
+				iface.Address.Addr() == address {
 				return endpoint, true
 			}
 		}
@@ -326,13 +340,17 @@ func (r *fabricRuntime) endpointForAddress(address netip.Addr) (fabricEndpoint, 
 	return fabricEndpoint{}, false
 }
 
-func (r *fabricRuntime) routeFor(dst netip.Addr, ingressMAC net.HardwareAddr) (*fabricRouter, fabricRoute) {
+func (r *fabricRuntime) routeFor(
+	dst netip.Addr,
+	ingressMAC net.HardwareAddr,
+) (*fabricRouter, fabricRoute) {
 	bestBits := -1
 	var best *fabricRouter
 	var bestRoute fabricRoute
 	for i := range r.attachmentRouters {
 		router := &r.attachmentRouters[i]
-		if !bytes.Equal(router.mac, ingressMAC) || !r.interfaceAvailable(router.device, router.attachmentInterface) {
+		if !bytes.Equal(router.mac, ingressMAC) ||
+			!r.interfaceAvailable(router.device, router.attachmentInterface) {
 			continue
 		}
 		for _, route := range r.routesFor(router) {

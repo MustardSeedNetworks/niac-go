@@ -58,6 +58,21 @@ func TestSynthesizedIFMIBAppliesAuthoredAttributes(t *testing.T) {
 	assertMIBValue(t, agent, ifOutErrors+suffix, uint32(0))
 }
 
+func TestSynthesizedIFMIBPublishesIEEE80211InterfaceType(t *testing.T) {
+	device := createTestDevice()
+	device.Interfaces = []config.Interface{{
+		Name: "Dot11Radio0", Type: "ieee80211", MTU: 1500, Speed: 5_800,
+		AdminStatus: "up", OperStatus: "up",
+	}}
+
+	agent := NewAgent(device, 0)
+	index, ok := agent.InterfaceIndex("Dot11Radio0")
+	if !ok {
+		t.Fatal("missing Dot11Radio0")
+	}
+	assertMIBValue(t, agent, ifType+"."+strconv.Itoa(index), 71)
+}
+
 func TestSynthesizedTopologyInterfaceDefaultsToFullDuplex(t *testing.T) {
 	device := createTestDevice()
 	device.TrunkPorts = []config.TrunkPort{{Interface: "GigabitEthernet1/0/1"}}

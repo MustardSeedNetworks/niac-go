@@ -297,7 +297,8 @@ func (v *Validator) validateDeviceIdentity(device *Device, prefix string, names 
 		v.addError(prefix+".type", "device type is required")
 	} else {
 		validTypes := []string{
-			"router", "switch", "layer3-switch", "ap", "access-point", "server", "host", "firewall",
+			"router", "switch", "layer3-switch", "ap", "access-point", "server", "host", "workstation",
+			"iot", "printer", "voip-phone", "firewall",
 		}
 		if !contains(validTypes, device.Type) {
 			v.addWarning(prefix+".type", fmt.Sprintf("unknown device type: %s (valid: %s)",

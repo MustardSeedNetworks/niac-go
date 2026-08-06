@@ -97,6 +97,22 @@ func TestLegacyEgressPreservesVLANTagging(t *testing.T) {
 	}
 }
 
+func TestRoutedTrunkEgressUsesAssignedPhysicalVLAN(t *testing.T) {
+	capture := &recordingCapture{}
+	stack := newStack(capture, &config.Config{}, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(&fabric.Topology{Binding: fabric.CompiledBinding{
+		Binding: fabric.Binding{
+			Mode: fabric.ModeTrunk, AccessVLAN: 200, PolicyApproved: true,
+		},
+		WireTagged: true,
+	}})
+	frame := insertDot1Q(untaggedFrame(t), 210)
+
+	stack.sendPacket(&Packet{Buffer: frame, Length: len(frame), VLAN: 210})
+
+	assertTaggedFrame(t, capture.frame, 200)
+}
+
 func TestRoutedEgressStripsStackedAndProviderTags(t *testing.T) {
 	capture := &recordingCapture{}
 	stack := newStack(capture, &config.Config{}, logging.NewDebugConfig(0))

@@ -42,7 +42,7 @@ func TestStartSimulationE2EDryRunDoesNotOpenInterface(t *testing.T) {
 		t.Fatalf("status.DeviceCount = %d, want 1", status.DeviceCount)
 	}
 
-	if stopErr := d.StopSimulation(); stopErr != nil {
+	if stopErr := d.StopSimulation(""); stopErr != nil {
 		t.Fatalf("StopSimulation() error = %v", stopErr)
 	}
 }
@@ -83,7 +83,7 @@ func TestScenarioPacksStartInRuntime(t *testing.T) {
 			if !status.Running || status.DeviceCount != result.Manifest.DeviceCount {
 				t.Fatalf("status = %#v, want running with %d devices", status, result.Manifest.DeviceCount)
 			}
-			if err = d.StopSimulation(); err != nil {
+			if err = d.StopSimulation(""); err != nil {
 				t.Fatalf("StopSimulation(): %v", err)
 			}
 		})

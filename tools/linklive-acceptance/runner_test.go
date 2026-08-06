@@ -75,6 +75,59 @@ func TestRunnerUsesAccessTokenEnvironment(t *testing.T) {
 	}
 }
 
+func TestRunnerSelectsLatestReadyDiscoveryForUnit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/auth/login":
+			_, _ = w.Write([]byte(`{"accessToken":"token"}`))
+		case "/v1/admin/analysis":
+			_, _ = w.Write([]byte(`[
+  {"_id":"other-unit","analysisType":"discovery","status":"ready","created_at":"2026-08-03T20:00:00Z","unitMac":"001122-334455"},
+  {"_id":"older","analysisType":"discovery","status":"ready","created_at":"2026-08-03T19:00:00Z","unitMac":"00C017-57017C"},
+  {"_id":"latest","analysisType":"discovery","status":"ready","created_at":"2026-08-03T21:00:00Z","unitMac":"00:C0:17:57:01:7C"}
+]`))
+		case "/v1/admin/hosts":
+			if !strings.Contains(r.URL.Query().Get("query"), "latest") {
+				t.Fatalf("query = %q", r.URL.Query().Get("query"))
+			}
+			_, _ = w.Write([]byte(topologyJSON("Switch", "Full", "100 Gb")))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	executor := newRunner(testEnvironment(server.URL), &bytes.Buffer{})
+	executor.allowInsecure = true
+	if err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-latest", "-unit-mac", "00C017-57017C",
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLatestDiscoveryMustBeReady(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/auth/login" {
+			_, _ = w.Write([]byte(`{"accessToken":"token"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`[
+  {"_id":"latest","analysisType":"discovery","status":"processing","created_at":"2026-08-03T21:00:00Z","unitMac":"00C017-57017C"}
+]`))
+	}))
+	t.Cleanup(server.Close)
+
+	executor := newRunner(testEnvironment(server.URL), &bytes.Buffer{})
+	executor.allowInsecure = true
+	err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-latest", "-unit-mac", "00C017-57017C",
+	})
+	if err == nil || !strings.Contains(err.Error(), "processing") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func linkLiveServer(t *testing.T, deviceType, duplex, speed string) *httptest.Server {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

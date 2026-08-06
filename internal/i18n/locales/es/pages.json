@@ -105,6 +105,20 @@
       "downloadYamlTitle": "Descargue la configuración en ejecución como YAML (equivalente a niac config dump).",
       "downloadYaml": "Descargar YAML"
     },
+    "sessions": {
+      "actions": "Acciones",
+      "devices": "Dispositivos",
+      "help": "Cada escenario permanece aislado en su VLAN física asignada.",
+      "packetCounts": "RX {{received}} / TX {{transmitted}}",
+      "packets": "Paquetes",
+      "scenario": "Escenario",
+      "select": "Ver",
+      "selected": "Visualizando",
+      "started": "Iniciado",
+      "state": "Estado",
+      "title": "Escenarios activos",
+      "vlan": "VLAN física"
+    },
     "fabric": {
       "attachment": "Conexión",
       "physicalVlan": "VLAN física",
@@ -158,7 +172,9 @@
       "modeLabel": "Conexión física",
       "accessMode": "VLAN de acceso",
       "directMode": "Cable directo (sin etiqueta)",
-      "vlanLabel": "VLAN de acceso (1–4094)",
+      "trunkMode": "Trunk compartido (etiquetado)",
+      "sessionIdLabel": "ID del escenario",
+      "vlanLabel": "VLAN física (1–4094)",
       "requestError": "Falló la comprobación previa",
       "safe_one": "La topología y la conexión pasaron la comprobación para {{count}} red virtual. Verifique el aislamiento del host antes de conectar el probador.",
       "safe_other": "La topología y la conexión pasaron la comprobación para {{count}} redes virtuales. Verifique el aislamiento del host antes de conectar el probador.",
@@ -232,30 +248,37 @@
       "packsHelp": "Elige un punto de partida realista y luego ajusta cualquier sitio o cantidad de dispositivos.",
       "packsLoading": "Cargando paquetes de escenarios…",
       "packsTitle": "Comenzar con un paquete de escenario",
+      "presentationPacksTitle": "Mapas listos para presentaciones",
+      "stressPacksHelp": "Los inventarios grandes validan la escala del descubrimiento, pero pueden no producir un mapa de topología legible en Link-Live.",
+      "stressPacksTitle": "Pruebas de escala",
       "packMetadata": {
         "hospital": {
           "name": "Red hospitalaria",
-          "description": "Sitios de cuidados intensivos, atención ambulatoria y centros de datos clínicos con acceso cableado y Wi-Fi resiliente."
+          "description": "Centro médico de un solo sitio con acceso cableado resiliente, 30 puntos de acceso Wi-Fi 7, clientes clínicos y servicios locales."
         },
         "warehouse": {
           "name": "Red de almacenes",
-          "description": "Tres centros logísticos con cobertura densa para escáneres, estaciones cableadas, servicios locales y enlaces redundantes."
+          "description": "Centro logístico de un solo sitio con 30 puntos de acceso Wi-Fi 7, estaciones cableadas, servicios locales y enlaces redundantes."
         },
         "campus": {
           "name": "Campus empresarial",
-          "description": "Cuatro edificios grandes con capas de núcleo, distribución, acceso, Wi-Fi 7, estaciones de trabajo y servicios."
+          "description": "Cuatro sitios legibles con capas de núcleo, distribución, acceso, Wi-Fi 7, estaciones de trabajo y servicios."
+        },
+        "enterprise-scale": {
+          "name": "Referencia empresarial a escala",
+          "description": "Carga de esfuerzo de cuatro sitios y 531 dispositivos para pruebas de descubrimiento y escala; no está destinada a mapas de presentación."
         },
         "retail": {
           "name": "Red minorista",
-          "description": "Sede central y tres regiones comerciales con cobertura inalámbrica para puntos de venta y servicios empresariales locales."
+          "description": "Dos sitios comerciales con cobertura inalámbrica para puntos de venta y servicios empresariales locales."
         },
-        "industrial": {
-          "name": "Red industrial",
-          "description": "Dos plantas de producción y un laboratorio de ingeniería con conmutación resiliente, estaciones cableadas y cobertura Wi-Fi 7."
+        "manufacturing": {
+          "name": "Planta de fabricación",
+          "description": "Planta de producción de un solo sitio con conmutación resiliente, 30 puntos de acceso Wi-Fi 7, estaciones cableadas y servicios locales."
         },
         "service-provider": {
           "name": "Red de proveedor de servicios",
-          "description": "Cuatro puntos de presencia metropolitanos con capas amplias de distribución, acceso, servicios, clientes cableados y acceso inalámbrico."
+          "description": "Tres puntos de presencia metropolitanos con capas de distribución, acceso, servicios y clientes cableados."
         }
       },
       "removeSite": "Quitar sitio",

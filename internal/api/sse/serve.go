@@ -127,6 +127,7 @@ func setupConnection(
 		hub:      hub,
 		send:     make(chan []byte, hub.config.BufferSize),
 		stream:   stream,
+		scope:    r.URL.Query().Get("sessionId"),
 		clientIP: r.RemoteAddr,
 	}
 

@@ -1,7 +1,10 @@
 // Package fabric compiles routed scenario configuration into immutable topology.
 package fabric
 
-import "net/netip"
+import (
+	"net/netip"
+	"slices"
+)
 
 // AttachmentMode controls how NIAC's untagged interface is externally isolated.
 type AttachmentMode string
@@ -9,6 +12,7 @@ type AttachmentMode string
 const (
 	ModeDirect AttachmentMode = "direct"
 	ModeAccess AttachmentMode = "access"
+	ModeTrunk  AttachmentMode = "trunk"
 )
 
 // DiagnosticCode identifies a stable compiler finding.
@@ -59,14 +63,21 @@ type Binding struct {
 
 // PhysicalAttachmentPolicy is an operator-owned permission for one exact host attachment.
 type PhysicalAttachmentPolicy struct {
-	Interface  string
-	Mode       AttachmentMode
-	AccessVLAN uint16
+	Interface    string
+	Mode         AttachmentMode
+	AccessVLAN   uint16
+	AllowedVLANs []uint16
 }
 
 // Approves reports whether the policy exactly matches a requested physical binding.
 func (p PhysicalAttachmentPolicy) Approves(binding Binding) bool {
-	return p.Interface == binding.Interface && p.Mode == binding.Mode && p.AccessVLAN == binding.AccessVLAN
+	if p.Interface != binding.Interface || p.Mode != binding.Mode {
+		return false
+	}
+	if p.Mode != ModeTrunk {
+		return p.AccessVLAN == binding.AccessVLAN
+	}
+	return slices.Contains(p.AllowedVLANs, binding.AccessVLAN)
 }
 
 // CompiledBinding is the physical exposure contract shown by preflight.

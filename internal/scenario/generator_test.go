@@ -28,10 +28,10 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		DeviceCount:       531,
 		NetworkCount:      39,
 		LinkCount:         634,
-		DeviceNamesSHA256: "77acffce1504dfc6b3a684b70af5a2d6bd4f07778fcd24718395006010042dd9",
+		DeviceNamesSHA256: "1286a7b93d0c7185189db240c88d6d400d4deb7dbcc361f1384c4a176bcfce0d",
 		NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
 		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
-		LinksSHA256: "5d39f3b580edf0271e558f4f972f5567030412875d674c47b502f87163738cfe",
+		LinksSHA256: "ac59d25316d4c1e422199e0dc8d4a1f14b8ca220f09992583ea860bf074dc85f",
 	}
 	if first.Manifest != want {
 		t.Fatalf("manifest = %#v, want %#v", first.Manifest, want)
@@ -41,12 +41,15 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generated YAML does not load: %v", err)
 	}
-	if result := config.NewValidator("generated-enterprise.yaml").Validate(cfg); !result.Valid || result.HasWarnings() {
+	if result := config.NewValidator("generated-enterprise.yaml").Validate(cfg); !result.Valid ||
+		result.HasWarnings() {
 		t.Fatalf("generated config is not strict-clean: %s", result.Format())
 	}
 	assertEnterpriseDeviceMix(t, cfg)
+	assertAPDiscoveryIdentity(t, cfg)
 	assertAuthoredInterfacesAndLinks(t, cfg)
 	assertServiceDNS(t, cfg)
+	assertLabEdgeDNS(t, cfg)
 	assertUniqueIdentityAndRoutes(t, cfg)
 }
 
@@ -81,8 +84,10 @@ func TestGenerateHonorsFleetRepeatControls(t *testing.T) {
 		if got := countNamed(cfg, site.Code+"-WAP-"); got != 12 {
 			t.Fatalf("%s access points = %d, want 12", site.Code, got)
 		}
-		if got := countNamed(cfg, site.Code+"-WS-"); got != 20 {
-			t.Fatalf("%s workstations = %d, want 20", site.Code, got)
+		got := countNamed(cfg, site.Code+"-WS-") + countNamed(cfg, site.Code+"-LAP-") +
+			countNamed(cfg, site.Code+"-MBP-")
+		if got != 20 {
+			t.Fatalf("%s wired clients = %d, want 20", site.Code, got)
 		}
 	}
 	assertUniqueIdentityAndRoutes(t, cfg)
@@ -109,23 +114,71 @@ func TestGenerateSingleSiteRouterDoesNotRouteThroughMissingPeer(t *testing.T) {
 func TestProfileCatalogUsesUniqueRoles(t *testing.T) {
 	seen := make(map[string]bool)
 	for _, profile := range scenario.Profiles() {
-		if profile.Role == "" || profile.DeviceType == "" || profile.Vendor == "" || profile.Model == "" {
+		if profile.Role == "" || profile.DeviceType == "" || profile.Vendor == "" ||
+			profile.Model == "" {
 			t.Errorf("incomplete profile: %+v", profile)
 		}
 		if seen[profile.Role] {
 			t.Errorf("duplicate role profile %q", profile.Role)
 		}
-		if profile.Vendor == "cisco" && !strings.HasPrefix(profile.SysObjectID, "1.3.6.1.4.1.9.1.") {
-			t.Errorf("%s Cisco profile has non-Cisco sysObjectID %q", profile.Role, profile.SysObjectID)
+		if profile.Vendor == "cisco" &&
+			!strings.HasPrefix(profile.SysObjectID, "1.3.6.1.4.1.9.1.") {
+			t.Errorf(
+				"%s Cisco profile has non-Cisco sysObjectID %q",
+				profile.Role,
+				profile.SysObjectID,
+			)
 		}
 		seen[profile.Role] = true
 	}
 	for _, role := range []string{
 		"lab", "wan", "firewall", "core", "distribution", "access",
-		"server-switch", "ap", "workstation", "server", "controller",
+		"server-switch", "ap", "workstation", "windows-laptop", "macbook",
+		"nurse-station", "infusion-pump", "mr-system", "rugged-handheld", "barcode-printer",
+		"plc", "hmi", "robot-controller", "point-of-sale", "receipt-printer", "digital-signage",
+		"noc-workstation", "server", "controller",
 	} {
 		if !seen[role] {
 			t.Errorf("missing profile for role %q", role)
+		}
+	}
+	for _, profile := range scenario.Profiles() {
+		if profile.Role == "ap" && profile.SysObjectID != "1.3.6.1.4.1.9.1.525" {
+			t.Errorf(
+				"AP sysObjectID = %q, want Link-Live-recognized Cisco AP identity",
+				profile.SysObjectID,
+			)
+		}
+	}
+}
+
+func TestVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T) {
+	expected := map[string][]string{
+		"hospital":      {"nurse-station", "infusion-pump", "mr-system"},
+		"warehouse":     {"rugged-handheld", "barcode-printer"},
+		"manufacturing": {"plc", "hmi", "robot-controller"},
+	}
+	for _, pack := range scenario.Packs() {
+		roles, found := expected[pack.ID]
+		if !found {
+			continue
+		}
+		result, err := scenario.Generate(pack.Request)
+		if err != nil {
+			t.Fatalf("Generate(%s): %v", pack.ID, err)
+		}
+		cfg, err := config.LoadYAMLBytes(result.YAML)
+		if err != nil {
+			t.Fatalf("LoadYAMLBytes(%s): %v", pack.ID, err)
+		}
+		seen := make(map[string]bool)
+		for _, device := range cfg.Devices {
+			seen[device.Properties["role"]] = true
+		}
+		for _, role := range roles {
+			if !seen[role] {
+				t.Errorf("%s has no %s endpoint", pack.ID, role)
+			}
 		}
 	}
 }

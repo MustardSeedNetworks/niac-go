@@ -49,6 +49,42 @@ describe('simulation preflight client', () => {
     expect(report.safe).toBe(true);
     expect(report.topology.binding.physicalVlan).toBe(2);
     expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/simulation/preflight');
-    expect(JSON.parse(mockFetch.mock.calls[1][1].body as string)).not.toHaveProperty('dedicated');
+    const body = JSON.parse(mockFetch.mock.calls[1][1].body as string);
+    expect(body).toMatchObject({
+      configData: 'devices: []',
+      attachmentMode: 'access',
+      accessVlan: 2,
+    });
+    expect(body).not.toHaveProperty('config_data');
+    expect(body).not.toHaveProperty('dedicated');
+  });
+
+  it('posts simulation starts with the API camel-case contract', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ token: 'csrf-token' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ running: true, deviceCount: 1, packets: 0 }),
+      });
+
+    const { startSimulation } = await import('./client');
+    await startSimulation({
+      interface: 'eth0',
+      configData: 'devices: []',
+      attachment: 'tester',
+      attachmentMode: 'access',
+      accessVlan: 200,
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls.at(-1)?.[1].body as string);
+    expect(body).toMatchObject({
+      configData: 'devices: []',
+      attachmentMode: 'access',
+      accessVlan: 200,
+    });
+    expect(body).not.toHaveProperty('config_data');
   });
 });

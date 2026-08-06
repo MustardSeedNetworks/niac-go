@@ -26,16 +26,24 @@ func TestAddDaemonCommandFlags(t *testing.T) {
 			t.Errorf("Expected --%s flag on daemon command", flag)
 		}
 	}
+	if flagType := cmd.Flags().Lookup("attachment-policy").Value.Type(); flagType != "stringArray" {
+		t.Fatalf("--attachment-policy type = %q, want stringArray", flagType)
+	}
 }
 
 func TestParseAttachmentPolicies(t *testing.T) {
-	got, err := parseAttachmentPolicies([]string{"eth0=access:200", "eth1=direct"})
+	got, err := parseAttachmentPolicies([]string{
+		"eth0=access:200",
+		"eth1=direct",
+		"eth2=trunk:200,201,299",
+	})
 	if err != nil {
 		t.Fatalf("parseAttachmentPolicies() error = %v", err)
 	}
 	want := []fabric.PhysicalAttachmentPolicy{
 		{Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 200},
 		{Interface: "eth1", Mode: fabric.ModeDirect},
+		{Interface: "eth2", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200, 201, 299}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("parseAttachmentPolicies() = %#v, want %#v", got, want)
@@ -54,8 +62,35 @@ func TestParseAttachmentPoliciesRejectsInvalidValues(t *testing.T) {
 		{name: "zero VLAN", value: []string{"eth0=access:0"}, match: "between 1 and 4094"},
 		{name: "reserved VLAN", value: []string{"eth0=access:4095"}, match: "between 1 and 4094"},
 		{name: "non-numeric VLAN", value: []string{"eth0=access:lab"}, match: "between 1 and 4094"},
+		{name: "empty trunk", value: []string{"eth0=trunk:"}, match: "at least one VLAN"},
+		{name: "trunk zero VLAN", value: []string{"eth0=trunk:0"}, match: "between 1 and 4094"},
+		{
+			name:  "trunk reserved VLAN",
+			value: []string{"eth0=trunk:4095"},
+			match: "between 1 and 4094",
+		},
+		{
+			name:  "trunk non-numeric VLAN",
+			value: []string{"eth0=trunk:lab"},
+			match: "between 1 and 4094",
+		},
+		{
+			name:  "trunk duplicate VLAN",
+			value: []string{"eth0=trunk:200,200"},
+			match: "duplicate VLAN",
+		},
+		{
+			name:  "trunk unordered VLANs",
+			value: []string{"eth0=trunk:201,200"},
+			match: "ascending order",
+		},
 		{name: "whitespace", value: []string{" eth0=direct"}, match: "expected INTERFACE"},
 		{name: "duplicate", value: []string{"eth0=direct", "eth0=direct"}, match: "duplicate"},
+		{
+			name:  "duplicate interface",
+			value: []string{"eth0=direct", "eth0=trunk:200"},
+			match: "duplicate interface",
+		},
 	}
 
 	for _, tt := range tests {

@@ -29,3 +29,4 @@ survey.heatmaps.security.wpa3-enterprise
 # --- "Enterprise" used as an organization-size adjective in a scenario name,
 #     not the deprecated license-tier brand
 pages.newSimWizard.fleet.packMetadata.campus.name
+pages.newSimWizard.fleet.packMetadata.enterprise-scale.name

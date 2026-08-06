@@ -113,6 +113,25 @@ func TestValidate_MissingDeviceType(t *testing.T) {
 	}
 }
 
+func TestValidate_AcceptsSupportedEndpointTypes(t *testing.T) {
+	for index, deviceType := range []string{"workstation", "iot", "printer", "voip-phone"} {
+		cfg := &Config{Devices: []Device{{
+			Name:        "endpoint-" + deviceType,
+			Type:        deviceType,
+			MACAddress:  net.HardwareAddr{0x02, 0x00, 0x00, 0x00, 0x00, byte(index + 1)},
+			IPAddresses: []net.IP{net.IPv4(192, 0, 2, byte(index+1))},
+		}}}
+
+		result := NewValidator("test.yaml").Validate(cfg)
+		if !result.Valid {
+			t.Errorf("%s endpoint was rejected: %#v", deviceType, result.Errors)
+		}
+		if result.HasWarnings() {
+			t.Errorf("%s endpoint warnings = %#v, want none", deviceType, result.Warnings)
+		}
+	}
+}
+
 func TestValidate_DuplicateDeviceName(t *testing.T) {
 	cfg := &Config{
 		Devices: []Device{

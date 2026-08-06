@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/acceptance/linklive"
@@ -26,6 +27,16 @@ type runner struct {
 type options struct {
 	configPath string
 	analysisID string
+	latest     bool
+	unitMAC    string
+}
+
+type analysisSummary struct {
+	ID           string    `json:"_id"`
+	AnalysisType string    `json:"analysisType"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UnitMAC      string    `json:"unitMac"`
 }
 
 type report struct {
@@ -69,7 +80,14 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 	if err != nil {
 		return report{}, err
 	}
-	raw, err := client.Topology(ctx, opts.analysisID)
+	analysisID := opts.analysisID
+	if opts.latest {
+		analysisID, err = latestReadyDiscovery(ctx, client, opts.unitMAC)
+		if err != nil {
+			return report{}, err
+		}
+	}
+	raw, err := client.Topology(ctx, analysisID)
 	if err != nil {
 		return report{}, err
 	}
@@ -77,7 +95,44 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 	if err != nil {
 		return report{}, err
 	}
-	return buildReport(opts.analysisID, linklive.FromConfig(authoredConfig), observed), nil
+	return buildReport(analysisID, linklive.FromConfig(authoredConfig), observed), nil
+}
+
+func latestReadyDiscovery(
+	ctx context.Context,
+	client *linklive.Client,
+	unitMAC string,
+) (string, error) {
+	raw, err := client.Analyses(ctx)
+	if err != nil {
+		return "", err
+	}
+	var analyses []analysisSummary
+	if err = json.Unmarshal(raw, &analyses); err != nil {
+		return "", errors.New("Link-Live analysis list returned invalid JSON")
+	}
+	wantedMAC := normalizeMAC(unitMAC)
+	var latest analysisSummary
+	for _, candidate := range analyses {
+		if candidate.AnalysisType != "discovery" ||
+			(wantedMAC != "" && normalizeMAC(candidate.UnitMAC) != wantedMAC) ||
+			candidate.CreatedAt.Before(latest.CreatedAt) {
+			continue
+		}
+		latest = candidate
+	}
+	if latest.ID == "" {
+		return "", errors.New("Link-Live returned no matching discovery analyses")
+	}
+	if latest.Status != "ready" {
+		return "", fmt.Errorf("latest Link-Live discovery analysis is %s", latest.Status)
+	}
+	return latest.ID, nil
+}
+
+func normalizeMAC(value string) string {
+	replacer := strings.NewReplacer(":", "", "-", "", ".", "")
+	return strings.ToUpper(replacer.Replace(strings.TrimSpace(value)))
 }
 
 func (r runner) client() (*linklive.Client, error) {
@@ -99,11 +154,19 @@ func parseOptions(args []string) (options, error) {
 	var opts options
 	set.StringVar(&opts.configPath, "config", "", "NIAC scenario YAML path")
 	set.StringVar(&opts.analysisID, "analysis", "", "Link-Live analysis ID")
+	set.BoolVar(&opts.latest, "latest", false, "use the latest ready Link-Live discovery analysis")
+	set.StringVar(&opts.unitMAC, "unit-mac", "", "limit -latest to one NetAlly unit MAC")
 	if err := set.Parse(args); err != nil {
 		return options{}, err
 	}
-	if opts.configPath == "" || opts.analysisID == "" {
-		return options{}, errors.New("-config and -analysis are required")
+	if opts.configPath == "" {
+		return options{}, errors.New("-config is required")
+	}
+	if (opts.analysisID == "") == !opts.latest {
+		return options{}, errors.New("exactly one of -analysis or -latest is required")
+	}
+	if opts.unitMAC != "" && !opts.latest {
+		return options{}, errors.New("-unit-mac requires -latest")
 	}
 	return opts, nil
 }

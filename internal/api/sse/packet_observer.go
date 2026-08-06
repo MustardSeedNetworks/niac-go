@@ -25,7 +25,8 @@ import (
 // must be cheap; this one does a thin gopacket pass and a hex encode
 // of the truncated raw bytes.
 type hubPacketObserver struct {
-	hub *Hub
+	hub       *Hub
+	sessionID string
 }
 
 // maxRawPacketBytes caps how many bytes of the raw frame we ship in
@@ -41,8 +42,12 @@ const ipv4Len = 4
 // NewPacketObserver returns a protocols.PacketObserver that forwards each
 // observed packet onto the hub's packets stream. Used to wire the SSE bridge
 // into a protocol stack from the api layer without exposing hub internals.
-func NewPacketObserver(hub *Hub) protocols.PacketObserver {
-	return &hubPacketObserver{hub: hub}
+func NewPacketObserver(hub *Hub, sessionID ...string) protocols.PacketObserver {
+	scope := ""
+	if len(sessionID) > 0 {
+		scope = sessionID[0]
+	}
+	return &hubPacketObserver{hub: hub, sessionID: scope}
 }
 
 // OnPacket is called by the stack for every rx/tx packet.
@@ -50,7 +55,11 @@ func (o *hubPacketObserver) OnPacket(direction string, pkt *protocols.Packet) {
 	if o == nil || o.hub == nil || pkt == nil {
 		return
 	}
-	o.hub.BroadcastPacket(packetToWire(direction, pkt))
+	if o.sessionID == "" {
+		o.hub.BroadcastPacket(packetToWire(direction, pkt))
+		return
+	}
+	o.hub.BroadcastPacketForSession(o.sessionID, packetToWire(direction, pkt))
 }
 
 // GopacketToWire is the standalone-capture cousin of packetToWire. It

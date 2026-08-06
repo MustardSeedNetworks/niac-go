@@ -57,8 +57,9 @@ const (
 	// MaxRequestBodySize is the maximum size for API request bodies (1MB).
 	MaxRequestBodySize = 1 << 20 // 1MB
 	// MaxScenarioConfigSize bounds authored scenario YAML independently from
-	// ordinary API payloads. The fleet generator's supported presets exceed 1MiB.
-	MaxScenarioConfigSize = 4 << 20 // 4MiB
+	// ordinary API payloads. It matches the daemon and UI limits so every
+	// supported generated pack can pass through preflight and start unchanged.
+	MaxScenarioConfigSize = 10 << 20 // 10MiB
 	// MaxScenarioRequestBodySize covers worst-case JSON escaping of scenario YAML.
 	MaxScenarioRequestBodySize = MaxScenarioConfigSize*6 + 1<<10
 	// MaxWalkImportSize bounds raw text from an imported or captured SNMP
@@ -319,6 +320,7 @@ type ServerConfig struct {
 
 // SimulationRequest represents a request to start a simulation.
 type SimulationRequest struct {
+	SessionID      string                `json:"sessionId,omitempty"`
 	Interface      string                `json:"interface"`
 	Attachment     string                `json:"attachment,omitempty"`
 	AttachmentMode fabric.AttachmentMode `json:"attachmentMode,omitempty"`
@@ -337,15 +339,20 @@ type SimulationRequest struct {
 
 // SimulationStatus represents the current simulation status.
 type SimulationStatus struct {
-	Running       bool                    `json:"running"`
-	Interface     string                  `json:"interface,omitempty"`
-	ConfigPath    string                  `json:"configPath,omitempty"`
-	ConfigName    string                  `json:"configName,omitempty"`
-	DeviceCount   int                     `json:"deviceCount"`
-	StartedAt     time.Time               `json:"startedAt,omitzero"`
-	UptimeSeconds float64                 `json:"uptimeSeconds"`
-	Fabric        *SimulationFabricStatus `json:"fabric,omitempty"`
-	Recovery      *SimulationRecovery     `json:"recovery,omitempty"`
+	SessionID      string                  `json:"sessionId,omitempty"`
+	Selected       bool                    `json:"selected,omitempty"`
+	Running        bool                    `json:"running"`
+	Interface      string                  `json:"interface,omitempty"`
+	AttachmentMode fabric.AttachmentMode   `json:"attachmentMode,omitempty"`
+	PhysicalVLAN   uint16                  `json:"physicalVlan,omitempty"`
+	ConfigPath     string                  `json:"configPath,omitempty"`
+	ConfigName     string                  `json:"configName,omitempty"`
+	DeviceCount    int                     `json:"deviceCount"`
+	StartedAt      time.Time               `json:"startedAt,omitzero"`
+	UptimeSeconds  float64                 `json:"uptimeSeconds"`
+	Fabric         *SimulationFabricStatus `json:"fabric,omitempty"`
+	Recovery       *SimulationRecovery     `json:"recovery,omitempty"`
+	Sessions       []SimulationStatus      `json:"sessions,omitempty"`
 }
 
 // SimulationRecovery reports the most recent daemon restart recovery attempt.
@@ -368,25 +375,28 @@ type SimulationFabricStatus struct {
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
 	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
-	StopSimulation() error
+	StopSimulation(sessionID string) error
+	SelectSimulation(sessionID string) error
 	GetStatus() SimulationStatus
 }
 
 // Server exposes the REST API, metrics endpoint, and Web UI.
 type Server struct {
-	cfg               ServerConfig
-	logger            *slog.Logger
-	httpServer        *http.Server
-	alertStop         chan struct{}
-	lastAlert         uint64
-	alertMu           sync.RWMutex
-	configMu          sync.RWMutex
-	configMutationMu  sync.Mutex
-	daemon            DaemonController
-	captureController CaptureController
-	startTime         time.Time
-	rateLimiter       *ratelimit.RateLimiter
-	routeManifest     []apiRoute // capability registry: routes registered via register() (route.go)
+	cfg                ServerConfig
+	logger             *slog.Logger
+	httpServer         *http.Server
+	alertStop          chan struct{}
+	lastAlert          uint64
+	alertMu            sync.RWMutex
+	configMu           sync.RWMutex
+	configMutationMu   sync.Mutex
+	simulations        map[string]simulationAPIState
+	selectedSimulation string
+	daemon             DaemonController
+	captureController  CaptureController
+	startTime          time.Time
+	rateLimiter        *ratelimit.RateLimiter
+	routeManifest      []apiRoute // capability registry: routes registered via register() (route.go)
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
@@ -449,6 +459,7 @@ func NewServer(cfg ServerConfig) *Server {
 		library:       lib,
 		tokens:        initialTokenStore(cfg),
 		pcapCache:     capture.NewCache(),
+		simulations:   make(map[string]simulationAPIState),
 	}
 	// License manager initialization is best-effort for Free-tier operation.
 	// Paid feature gates must treat a nil manager as unavailable and fail closed.
@@ -840,15 +851,27 @@ func (s *Server) UpdateSimulation(
 	iface string,
 	replay ReplayManager,
 ) {
+	s.UpdateSimulationSession("default", stack, cfg, configPath, iface, replay)
+	s.SelectSimulation("default")
+}
+
+// UpdateSimulationSession publishes one daemon runtime without changing the selected session.
+func (s *Server) UpdateSimulationSession(
+	sessionID string,
+	stack *protocols.Stack,
+	cfg *config.Config,
+	configPath string,
+	iface string,
+	replay ReplayManager,
+) {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()
-
-	s.cfg.Stack = stack
-	s.cfg.Config = cfg
-	s.cfg.ConfigPath = configPath
-	s.cfg.Interface = iface
-	s.cfg.Replay = replay
-	s.cfg.Topology = topology.Build(cfg)
+	if s.simulations == nil {
+		s.simulations = make(map[string]simulationAPIState)
+	}
+	s.simulations[sessionID] = simulationAPIState{
+		stack: stack, config: cfg, configPath: configPath, iface: iface, replay: replay,
+	}
 
 	// Wire the stack's packet stream into the SSE hub so the
 	// /api/v1/stream/packets subscribers actually see frames.
@@ -856,7 +879,7 @@ func (s *Server) UpdateSimulation(
 	// called, leaving the Packet Capture page perpetually empty even
 	// while a simulation was clearly handling traffic.
 	if stack != nil && s.sseHub != nil {
-		stack.AddPacketObserver(sse.NewPacketObserver(s.sseHub))
+		stack.AddPacketObserver(sse.NewPacketObserver(s.sseHub, sessionID))
 	}
 }
 
@@ -864,11 +887,7 @@ func (s *Server) UpdateSimulation(
 func (s *Server) ClearSimulation() {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()
-
-	s.cfg.Stack = nil
-	s.cfg.Config = nil
-	s.cfg.ConfigPath = ""
-	s.cfg.Interface = ""
-	s.cfg.Replay = nil
-	s.cfg.Topology = topology.Graph{}
+	s.simulations = make(map[string]simulationAPIState)
+	s.selectedSimulation = ""
+	s.applySimulationState(simulationAPIState{})
 }

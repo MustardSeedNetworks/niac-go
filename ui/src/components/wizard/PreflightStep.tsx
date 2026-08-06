@@ -18,8 +18,11 @@ const ACCESS_VLAN_DEFAULT = 200;
 export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starting = false }) => {
   const { t } = useTranslation('pages');
   const [attachment, setAttachment] = useState('tester');
-  const [mode, setMode] = useState<'direct' | 'access'>('access');
+  const [mode, setMode] = useState<'direct' | 'access' | 'trunk'>('access');
   const [accessVlan, setAccessVlan] = useState(ACCESS_VLAN_DEFAULT);
+  const [sessionId, setSessionId] = useState(
+    request.sessionId ?? `scenario-${ACCESS_VLAN_DEFAULT}`,
+  );
   const [report, setReport] = useState<SimulationPreflightReport | null>(null);
   const [approvedPayload, setApprovedPayload] = useState<SimulationPreflightRequest | null>(null);
   const [error, setError] = useState('');
@@ -30,7 +33,8 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
     ...request,
     attachment,
     attachmentMode: mode,
-    ...(mode === 'access' ? { accessVlan } : {}),
+    ...(mode === 'trunk' ? { sessionId } : {}),
+    ...(mode === 'access' || mode === 'trunk' ? { accessVlan } : {}),
   };
 
   const invalidate = () => {
@@ -87,16 +91,31 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             data-testid="wizard-attachment-mode"
             value={mode}
             onChange={(event) => {
-              setMode(event.target.value as 'direct' | 'access');
+              setMode(event.target.value as 'direct' | 'access' | 'trunk');
               invalidate();
             }}
             className="rounded border border-surface-border bg-bg-elevated px-3 py-row text-sm text-text-primary"
           >
             <option value="access">{t('newSimWizard.preflight.accessMode')}</option>
+            <option value="trunk">{t('newSimWizard.preflight.trunkMode')}</option>
             <option value="direct">{t('newSimWizard.preflight.directMode')}</option>
           </select>
         </label>
-        {mode === 'access' && (
+        {mode === 'trunk' && (
+          <label className="grid gap-compact text-xs text-text-muted">
+            {t('newSimWizard.preflight.sessionIdLabel')}
+            <input
+              data-testid="wizard-session-id"
+              value={sessionId}
+              onChange={(event) => {
+                setSessionId(event.target.value);
+                invalidate();
+              }}
+              className="rounded border border-surface-border bg-bg-elevated px-3 py-row text-sm text-text-primary"
+            />
+          </label>
+        )}
+        {(mode === 'access' || mode === 'trunk') && (
           <label className="grid gap-compact text-xs text-text-muted">
             {t('newSimWizard.preflight.vlanLabel')}
             <input
@@ -107,6 +126,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
               value={Number.isNaN(accessVlan) ? '' : accessVlan}
               onChange={(event) => {
                 setAccessVlan(event.target.valueAsNumber);
+                if (mode === 'trunk') setSessionId(`scenario-${event.target.valueAsNumber}`);
                 invalidate();
               }}
               className="rounded border border-surface-border bg-bg-elevated px-3 py-row text-sm text-text-primary"
@@ -156,7 +176,8 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             loading={checking}
             disabled={
               !attachment ||
-              (mode === 'access' &&
+              (mode === 'trunk' && !/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(sessionId)) ||
+              ((mode === 'access' || mode === 'trunk') &&
                 (!Number.isInteger(accessVlan) || accessVlan < 1 || accessVlan > 4094))
             }
           >

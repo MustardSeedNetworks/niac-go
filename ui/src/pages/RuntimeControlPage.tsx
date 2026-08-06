@@ -1,9 +1,20 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
+import {
+  fetchUsableInterfaces,
+  selectSimulation,
+  startSimulation,
+  stopSimulation,
+} from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
-import type { LibraryNetwork, NetworkInterface, SimulationRequest, Template } from '../api/types';
+import type {
+  LibraryNetwork,
+  NetworkInterface,
+  SimulationRequest,
+  SimulationStatus,
+  Template,
+} from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { PreflightStep } from '../components/wizard/PreflightStep';
 import { iconSizes } from '../constants/sizes';
@@ -16,6 +27,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
+import { ConcurrentSessionsPanel } from './runtime/ConcurrentSessionsPanel';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
 import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
 
@@ -46,7 +58,9 @@ export const RuntimeControlPage: FC = () => {
   const [preparing, setPreparing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [selectingSessionId, setSelectingSessionId] = useState<string | null>(null);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [stopTarget, setStopTarget] = useState<SimulationStatus | null>(null);
   // Success-only: failures are surfaced as toasts (see showError below), not
   // a page-level banner.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -212,9 +226,29 @@ export const RuntimeControlPage: FC = () => {
     [invalidatePreparedRequest, refetchSimStatus, showError, t],
   );
 
-  const handleStopClick = useCallback(() => {
-    setShowStopConfirm(true);
-  }, []);
+  const handleStopClick = useCallback(
+    (target?: SimulationStatus) => {
+      setStopTarget(target ?? simStatus);
+      setShowStopConfirm(true);
+    },
+    [simStatus],
+  );
+
+  const handleSelect = useCallback(
+    async (target: SimulationStatus) => {
+      if (!target.sessionId) return;
+      setSelectingSessionId(target.sessionId);
+      try {
+        await selectSimulation(target.sessionId);
+        refetchSimStatus();
+      } catch (err) {
+        showError(err);
+      } finally {
+        setSelectingSessionId(null);
+      }
+    },
+    [refetchSimStatus, showError],
+  );
 
   const handleStopConfirmed = useCallback(async () => {
     setShowStopConfirm(false);
@@ -222,15 +256,16 @@ export const RuntimeControlPage: FC = () => {
     setSuccessMessage(null);
 
     try {
-      await stopSimulation();
+      await stopSimulation(stopTarget?.sessionId ?? simStatus?.sessionId);
       setSuccessMessage(t('runtime.stopSuccess'));
       refetchSimStatus();
     } catch (err) {
       showError(err);
     } finally {
       setStopping(false);
+      setStopTarget(null);
     }
-  }, [showError, t]);
+  }, [refetchSimStatus, showError, simStatus?.sessionId, stopTarget?.sessionId, t]);
 
   return (
     <div className="stack-xl">
@@ -384,12 +419,23 @@ export const RuntimeControlPage: FC = () => {
       )}
 
       {isDaemonMode && simStatus?.running && (
-        <RunningSimulationCard
-          simStatus={simStatus}
-          stopping={stopping}
-          onStop={handleStopClick}
-          message={successMessage}
-        />
+        <>
+          {(simStatus.sessions?.length ?? 0) > 1 && (
+            <ConcurrentSessionsPanel
+              sessions={simStatus.sessions ?? []}
+              stoppingSessionId={stopping ? (stopTarget?.sessionId ?? null) : null}
+              selectingSessionId={selectingSessionId}
+              onSelect={handleSelect}
+              onStop={handleStopClick}
+            />
+          )}
+          <RunningSimulationCard
+            simStatus={simStatus}
+            stopping={stopping}
+            onStop={() => handleStopClick(simStatus)}
+            message={successMessage}
+          />
+        </>
       )}
 
       <AdvancedSection />
@@ -397,7 +443,10 @@ export const RuntimeControlPage: FC = () => {
       <ConfirmModal
         isOpen={showStopConfirm}
         onConfirm={handleStopConfirmed}
-        onCancel={() => setShowStopConfirm(false)}
+        onCancel={() => {
+          setShowStopConfirm(false);
+          setStopTarget(null);
+        }}
         title={t('runtime.stopConfirmTitle')}
         message={t('runtime.stopConfirmMessage')}
         confirmLabel={t('runtime.stopConfirmLabel')}

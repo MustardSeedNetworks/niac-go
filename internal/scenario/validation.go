@@ -11,18 +11,43 @@ func validateRequest(request Request) error {
 		return fmt.Errorf("sites must contain 1 to %d entries", maxSites)
 	}
 	if !validDomainSuffix(request.Domain) {
-		return fmt.Errorf("domain must be a valid DNS suffix no longer than %d bytes", maxScenarioDomainLength)
+		return fmt.Errorf(
+			"domain must be a valid DNS suffix no longer than %d bytes",
+			maxScenarioDomainLength,
+		)
 	}
-	if strings.TrimSpace(request.SNMPCommunity) == "" || len(request.SNMPCommunity) > maxSNMPCommunityLength {
-		return fmt.Errorf("SNMP community is required and must not exceed %d bytes", maxSNMPCommunityLength)
+	if strings.TrimSpace(request.SNMPCommunity) == "" ||
+		len(request.SNMPCommunity) > maxSNMPCommunityLength {
+		return fmt.Errorf(
+			"SNMP community is required and must not exceed %d bytes",
+			maxSNMPCommunityLength,
+		)
 	}
-	if strings.TrimSpace(request.AttachmentName) == "" || len(request.AttachmentName) > maxAttachmentNameLength {
-		return fmt.Errorf("attachment name is required and must not exceed %d bytes", maxAttachmentNameLength)
+	if strings.TrimSpace(request.AttachmentName) == "" ||
+		len(request.AttachmentName) > maxAttachmentNameLength {
+		return fmt.Errorf(
+			"attachment name is required and must not exceed %d bytes",
+			maxAttachmentNameLength,
+		)
 	}
 	if err := validateSites(request.Sites); err != nil {
 		return err
 	}
+	if !validEndpointProfile(request.EndpointProfile) {
+		return errors.New(
+			"endpoint profile must be enterprise, hospital, warehouse, manufacturing, retail, or service-provider",
+		)
+	}
 	return validateCounts(request.Counts)
+}
+
+func validEndpointProfile(profile string) bool {
+	switch profile {
+	case "", "enterprise", "hospital", "warehouse", "manufacturing", "retail", "service-provider":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateSites(sites []Site) error {
@@ -60,7 +85,8 @@ func validateCounts(c Counts) error {
 	if c.SiteWANRouters < 1 || c.SiteWANRouters > maxRedundantPeers {
 		return errors.New("WAN, firewall, and core counts must be 1 or 2")
 	}
-	if c.DistributionSwitches < maxRedundantPeers || c.DistributionSwitches > maxDistributionSwitches {
+	if c.DistributionSwitches < maxRedundantPeers ||
+		c.DistributionSwitches > maxDistributionSwitches {
 		return errors.New("distribution switch count must be between 2 and 8")
 	}
 	if c.DistributionSwitches%maxRedundantPeers != 0 {
@@ -106,7 +132,8 @@ func validSiteCode(code string) bool {
 }
 
 func validDomainSuffix(domain string) bool {
-	if domain == "" || len(domain) > maxScenarioDomainLength || strings.TrimSpace(domain) != domain {
+	if domain == "" || len(domain) > maxScenarioDomainLength ||
+		strings.TrimSpace(domain) != domain {
 		return false
 	}
 	for label := range strings.SplitSeq(domain, ".") {

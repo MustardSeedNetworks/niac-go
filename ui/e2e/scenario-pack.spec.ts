@@ -75,6 +75,7 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
           manifestVersion: 1,
           name: 'Hospital network',
           description: 'Acute-care, ambulatory, and clinical data-center sites.',
+          mapPurpose: 'presentation',
           request,
           manifest: {
             deviceCount: 351,

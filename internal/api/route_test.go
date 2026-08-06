@@ -129,6 +129,12 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 		"/api/v1/config/devices": {
 			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 		},
+		"/api/v1/replay": {
+			http.MethodGet, http.MethodPost, http.MethodDelete,
+		},
+		"/api/v1/simulation": {
+			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+		},
 		"/api/v1/topology": {http.MethodGet},
 	}
 	for p, want := range wantMethods {

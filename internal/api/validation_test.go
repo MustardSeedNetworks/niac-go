@@ -4,6 +4,9 @@ import (
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 func TestValidateSimulationRequestRejectsOversizedConfig(t *testing.T) {
@@ -13,6 +16,47 @@ func TestValidateSimulationRequestRejectsOversizedConfig(t *testing.T) {
 	})
 	if len(errs) != 1 || errs[0].Field != "config_data" {
 		t.Fatalf("validation errors = %+v, want config_data size error", errs)
+	}
+}
+
+func TestValidateSimulationRequestAcceptsEnterpriseScalePack(t *testing.T) {
+	generated, err := scenario.Generate(scenario.EnterpriseReferenceRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(generated.YAML) <= 4<<20 {
+		t.Fatalf("enterprise scale config = %d bytes, want regression fixture above old limit", len(generated.YAML))
+	}
+	errs := validateSimulationRequest(SimulationRequest{
+		SessionID: "enterprise-scale", Interface: "eth0", ConfigData: string(generated.YAML),
+	})
+	if len(errs) != 0 {
+		t.Fatalf("validation errors = %+v", errs)
+	}
+}
+
+func TestValidateSimulationRequestSessionID(t *testing.T) {
+	for _, value := range []string{"hospital", "warehouse-201", "scenario-299"} {
+		if errs := validateSimulationRequest(SimulationRequest{Interface: "eth0", SessionID: value}); len(
+			errs,
+		) != 0 {
+			t.Fatalf("session ID %q errors = %+v", value, errs)
+		}
+	}
+	for _, value := range []string{"Hospital", "hospital_200", "-hospital", "hospital-", strings.Repeat("a", 41)} {
+		errs := validateSimulationRequest(SimulationRequest{Interface: "eth0", SessionID: value})
+		if len(errs) != 1 || errs[0].Field != "sessionId" {
+			t.Fatalf("session ID %q errors = %+v, want sessionId error", value, errs)
+		}
+	}
+}
+
+func TestValidateSimulationStartRequiresSessionIDForTrunk(t *testing.T) {
+	errs := validateSimulationStartRequest(SimulationRequest{
+		Interface: "eth0", ConfigData: "devices: []", AttachmentMode: fabric.ModeTrunk,
+	})
+	if len(errs) != 1 || errs[0].Field != "sessionId" {
+		t.Fatalf("validation errors = %+v, want sessionId error", errs)
 	}
 }
 
@@ -47,7 +91,12 @@ func TestNormalizeAndParseIP(t *testing.T) {
 			// For decimal IP, check the result
 			if tt.input == "2130706433" {
 				if got.String() != tt.wantIP {
-					t.Errorf("normalizeAndParseIP(%q) = %s, want %s", tt.input, got.String(), tt.wantIP)
+					t.Errorf(
+						"normalizeAndParseIP(%q) = %s, want %s",
+						tt.input,
+						got.String(),
+						tt.wantIP,
+					)
 				}
 			}
 		})
@@ -212,7 +261,11 @@ func TestValidateWebhookURLSSRF(t *testing.T) {
 		{name: "localhost blocked", url: "http://localhost/webhook", wantErr: true},
 		{name: "127.0.0.1 blocked", url: "http://127.0.0.1/webhook", wantErr: true},
 		{name: "private IP blocked", url: "http://192.168.1.1/webhook", wantErr: true},
-		{name: "metadata service blocked", url: "http://169.254.169.254/latest/meta-data/", wantErr: true},
+		{
+			name:    "metadata service blocked",
+			url:     "http://169.254.169.254/latest/meta-data/",
+			wantErr: true,
+		},
 		{name: "invalid URL format", url: "not a url", wantErr: true},
 		{name: "no hostname", url: "http:///path", wantErr: true},
 		{name: "public IP allowed", url: "https://93.184.216.34/webhook", wantErr: false},
@@ -333,7 +386,11 @@ func TestValidateAlertConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := validateAlertConfig(tt.cfg)
 			if len(errs) != tt.wantErrs {
-				t.Errorf("validateAlertConfig() returned %d errors, want %d", len(errs), tt.wantErrs)
+				t.Errorf(
+					"validateAlertConfig() returned %d errors, want %d",
+					len(errs),
+					tt.wantErrs,
+				)
 				for _, e := range errs {
 					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
 				}
@@ -353,10 +410,18 @@ func TestValidateReplayRequest_Rate(t *testing.T) {
 		{name: "pps valid", req: ReplayRequest{RateMode: "pps", Pps: 1000}, wantErrs: 0},
 		{name: "pps missing rate", req: ReplayRequest{RateMode: "pps"}, wantErrs: 1},
 		{name: "pps negative", req: ReplayRequest{RateMode: "pps", Pps: -5}, wantErrs: 1},
-		{name: "pps too high", req: ReplayRequest{RateMode: "pps", Pps: maxReplayPPS + 1}, wantErrs: 1},
+		{
+			name:     "pps too high",
+			req:      ReplayRequest{RateMode: "pps", Pps: maxReplayPPS + 1},
+			wantErrs: 1,
+		},
 		{name: "mbps valid", req: ReplayRequest{RateMode: "mbps", MbpsCap: 100}, wantErrs: 0},
 		{name: "mbps missing cap", req: ReplayRequest{RateMode: "mbps"}, wantErrs: 1},
-		{name: "mbps too high", req: ReplayRequest{RateMode: "mbps", MbpsCap: maxReplayMbps + 1}, wantErrs: 1},
+		{
+			name:     "mbps too high",
+			req:      ReplayRequest{RateMode: "mbps", MbpsCap: maxReplayMbps + 1},
+			wantErrs: 1,
+		},
 		{name: "unknown mode", req: ReplayRequest{RateMode: "warpspeed"}, wantErrs: 1},
 	}
 
@@ -364,7 +429,11 @@ func TestValidateReplayRequest_Rate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := validateReplayRequest(tt.req)
 			if len(errs) != tt.wantErrs {
-				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				t.Errorf(
+					"validateReplayRequest() returned %d errors, want %d",
+					len(errs),
+					tt.wantErrs,
+				)
 				for _, e := range errs {
 					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
 				}
@@ -389,7 +458,11 @@ func TestValidateReplayRequest_LoopCount(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := validateReplayRequest(tt.req)
 			if len(errs) != tt.wantErrs {
-				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				t.Errorf(
+					"validateReplayRequest() returned %d errors, want %d",
+					len(errs),
+					tt.wantErrs,
+				)
 				for _, e := range errs {
 					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
 				}
@@ -407,14 +480,22 @@ func TestValidateReplayRequest_BPFFilter(t *testing.T) {
 		{name: "empty filter", req: ReplayRequest{}, wantErrs: 0},
 		{name: "valid filter", req: ReplayRequest{BPFFilter: "udp port 53"}, wantErrs: 0},
 		{name: "malformed filter", req: ReplayRequest{BPFFilter: "not a bpf !!!"}, wantErrs: 1},
-		{name: "over length", req: ReplayRequest{BPFFilter: strings.Repeat("a", maxBPFFilterLen+1)}, wantErrs: 1},
+		{
+			name:     "over length",
+			req:      ReplayRequest{BPFFilter: strings.Repeat("a", maxBPFFilterLen+1)},
+			wantErrs: 1,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := validateReplayRequest(tt.req)
 			if len(errs) != tt.wantErrs {
-				t.Errorf("validateReplayRequest() returned %d errors, want %d", len(errs), tt.wantErrs)
+				t.Errorf(
+					"validateReplayRequest() returned %d errors, want %d",
+					len(errs),
+					tt.wantErrs,
+				)
 				for _, e := range errs {
 					t.Logf("  error: field=%s issue=%s", e.Field, e.Issue)
 				}

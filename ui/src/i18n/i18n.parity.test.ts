@@ -99,6 +99,11 @@ const DNT_TERMS = [
   // "recorrido". Both forms: singular "walk"/"Walk" and plural "walks"/"Walks".
   'walk',
   'Walks',
+  // 802.1Q term of art. Most es strings already kept it verbatim ("puertos
+  // trunk", "trunk/LAG", "trunk_ports"); two had drifted to "troncal", which
+  // reads inconsistently beside the untranslated "VLAN" in the same controls.
+  // Matching is case-insensitive, so this one entry covers "Trunk" too.
+  'trunk',
 ];
 
 function flatKeyPaths(node: Json, prefix = ''): string[] {

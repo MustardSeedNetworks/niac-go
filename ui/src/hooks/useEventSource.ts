@@ -178,6 +178,7 @@ export interface StreamHookOptions {
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
   enabled?: boolean;
+  sessionId?: string;
 }
 
 export interface PacketStreamEvent {
@@ -198,9 +199,10 @@ export function isPacketStreamEvent(value: unknown): value is PacketStreamEvent 
 }
 
 export function usePacketStream(options: StreamHookOptions = {}): UseEventSourceResult {
-  const { enabled = true, ...restOptions } = options;
+  const { enabled = true, sessionId, ...restOptions } = options;
+  const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
   return useEventSource({
-    url: enabled ? `${getStreamBaseUrl()}/packets` : '',
+    url: enabled ? `${getStreamBaseUrl()}/packets${query}` : '',
     enabled,
     ...restOptions,
   });

@@ -36,7 +36,7 @@ var (
 
 // PlaybackEngine handles PCAP file playback.
 type PlaybackEngine struct {
-	engine     *Engine
+	engine     PacketSender
 	config     *config.CapturePlayback
 	debugLevel int
 	running    bool
@@ -73,6 +73,11 @@ type PlaybackEngine struct {
 	bpfVM *bpf.VM
 }
 
+// PacketSender is the playback egress boundary.
+type PacketSender interface {
+	SendPacket([]byte) error
+}
+
 // PlaybackPacket represents a packet with timestamp for playback.
 type PlaybackPacket struct {
 	Data      []byte
@@ -91,7 +96,7 @@ type PlaybackProgress struct {
 }
 
 // NewPlaybackEngine creates a new PCAP playback engine.
-func NewPlaybackEngine(engine *Engine, playbackConfig *config.CapturePlayback, debugLevel int) *PlaybackEngine {
+func NewPlaybackEngine(engine PacketSender, playbackConfig *config.CapturePlayback, debugLevel int) *PlaybackEngine {
 	return &PlaybackEngine{
 		engine:     engine,
 		config:     playbackConfig,

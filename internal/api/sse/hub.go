@@ -154,6 +154,9 @@ func (h *Hub) broadcastMessage(msg *streamMessage) {
 		if client.closed.Load() {
 			continue
 		}
+		if client.scope != msg.scope {
+			continue
+		}
 
 		select {
 		case client.send <- msg.data:
@@ -189,6 +192,10 @@ func (h *Hub) closeAllClients() {
 // limiter is saturated — the hub favours liveness over delivery
 // guarantees, since SSE clients auto-reconnect and can refetch state.
 func (h *Hub) Broadcast(stream Stream, data any) {
+	h.broadcastScoped(stream, "", data)
+}
+
+func (h *Hub) broadcastScoped(stream Stream, scope string, data any) {
 	logger := slog.Default()
 	if !h.running.Load() {
 		return
@@ -209,7 +216,7 @@ func (h *Hub) Broadcast(stream Stream, data any) {
 	sseData := fmt.Sprintf("id: %d\ndata: %s\n\n", eventID, jsonData)
 
 	select {
-	case h.broadcast <- &streamMessage{stream: stream, data: []byte(sseData)}:
+	case h.broadcast <- &streamMessage{stream: stream, scope: scope, data: []byte(sseData)}:
 	default:
 		// Broadcast channel full
 	}
@@ -218,6 +225,15 @@ func (h *Hub) Broadcast(stream Stream, data any) {
 // BroadcastPacket sends a packet to all packet stream subscribers.
 func (h *Hub) BroadcastPacket(data any) {
 	h.Broadcast(StreamPackets, PacketEvent{
+		Type:      "packet",
+		Data:      data,
+		Timestamp: time.Now().UTC(),
+	})
+}
+
+// BroadcastPacketForSession sends a packet only to clients following one simulation.
+func (h *Hub) BroadcastPacketForSession(sessionID string, data any) {
+	h.broadcastScoped(StreamPackets, sessionID, PacketEvent{
 		Type:      "packet",
 		Data:      data,
 		Timestamp: time.Now().UTC(),
@@ -237,6 +253,15 @@ func (h *Hub) BroadcastLog(level, message string) {
 // BroadcastStats sends statistics to all stats stream subscribers.
 func (h *Hub) BroadcastStats(data any) {
 	h.Broadcast(StreamStats, map[string]any{
+		"type":      "stats",
+		"data":      data,
+		"timestamp": time.Now().UTC(),
+	})
+}
+
+// BroadcastStatsForSession sends statistics only to clients following one simulation.
+func (h *Hub) BroadcastStatsForSession(sessionID string, data any) {
+	h.broadcastScoped(StreamStats, sessionID, map[string]any{
 		"type":      "stats",
 		"data":      data,
 		"timestamp": time.Now().UTC(),

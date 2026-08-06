@@ -89,6 +89,35 @@ describe('PreflightStep', () => {
     expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
   });
 
+  it('submits a stable session ID and physical VLAN for trunk mode', async () => {
+    const user = userEvent.setup();
+    const onStart = vi.fn();
+    preflightSimulation.mockResolvedValue({
+      ...safeReport,
+      topology: {
+        ...safeReport.topology,
+        binding: { ...safeReport.topology.binding, mode: 'trunk', wireTagged: true },
+      },
+    });
+    render(<PreflightStep request={{ interface: 'eth0' }} onStart={onStart} />);
+
+    await user.selectOptions(screen.getByTestId('wizard-attachment-mode'), 'trunk');
+    await user.clear(screen.getByTestId('wizard-session-id'));
+    await user.type(screen.getByTestId('wizard-session-id'), 'hospital');
+    await user.click(screen.getByTestId('wizard-preflight-check'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
+    expect(preflightSimulation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachmentMode: 'trunk',
+        sessionId: 'hospital',
+        accessVlan: 200,
+      }),
+    );
+    await user.click(screen.getByTestId('wizard-preflight-start'));
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'hospital' }));
+  });
+
   it('does not approve a changed payload when an older preflight resolves late', async () => {
     const user = userEvent.setup();
     let resolveFirst: (report: SimulationPreflightReport) => void = () => undefined;

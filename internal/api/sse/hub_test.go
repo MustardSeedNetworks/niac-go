@@ -301,6 +301,28 @@ func TestSSEHubBroadcastPacketWireEnvelope(t *testing.T) {
 	}
 }
 
+func TestSSEHubScopesPacketsToOneSimulationSession(t *testing.T) {
+	hub := NewHub(Config{})
+	go hub.Run()
+	defer hub.Stop()
+	hospital := &Client{hub: hub, send: make(chan []byte, 1), stream: StreamPackets, scope: "hospital"}
+	warehouse := &Client{hub: hub, send: make(chan []byte, 1), stream: StreamPackets, scope: "warehouse"}
+	hub.register <- hospital
+	hub.register <- warehouse
+	hub.BroadcastPacketForSession("hospital", map[string]string{"protocol": "ARP"})
+
+	select {
+	case <-hospital.send:
+	case <-time.After(time.Second):
+		t.Fatal("hospital did not receive its packet")
+	}
+	select {
+	case message := <-warehouse.send:
+		t.Fatalf("warehouse received hospital packet: %q", message)
+	case <-time.After(20 * time.Millisecond):
+	}
+}
+
 func TestSSERateLimiterAllow(t *testing.T) {
 	rl := newSSERateLimiter(100)
 	// Should allow initial requests

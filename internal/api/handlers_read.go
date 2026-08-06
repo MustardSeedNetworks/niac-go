@@ -19,7 +19,7 @@ import (
 )
 
 func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
-	payload, ok := s.currentStatsPayload()
+	payload, _, ok := s.currentStatsPayload()
 	if !ok {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
 

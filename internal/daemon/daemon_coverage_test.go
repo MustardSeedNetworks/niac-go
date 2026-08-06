@@ -279,7 +279,7 @@ func TestStopSimulationLocked_NilFields(t *testing.T) {
 	}
 	daemon.mu.Unlock()
 
-	err = daemon.StopSimulation()
+	err = daemon.StopSimulation("")
 	if err != nil {
 		t.Errorf("StopSimulation with nil fields should succeed, got: %v", err)
 	}

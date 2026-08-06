@@ -19,19 +19,29 @@ vi.mock('../../contexts/LicenseContext', () => ({
 
 const hospital: ScenarioPack = {
   id: 'hospital',
-  version: '1.0.0',
-  manifestVersion: 1,
+  version: '1.2.0',
+  manifestVersion: 3,
   name: 'Hospital network',
   description: 'Acute-care and ambulatory sites.',
+  mapPurpose: 'presentation',
   request: { ...enterpriseScenarioRequest(), domain: 'care.example' },
   manifest: {
-    deviceCount: 351,
-    networkCount: 30,
-    linkCount: 416,
+    deviceCount: 75,
+    networkCount: 12,
+    linkCount: 88,
     deviceNamesSha256: 'devices',
     networksSha256: 'networks',
     linksSha256: 'links',
   },
+};
+
+const enterpriseScale: ScenarioPack = {
+  ...hospital,
+  id: 'enterprise-scale',
+  name: 'Enterprise scale reference',
+  description: 'Stress workload.',
+  mapPurpose: 'stress',
+  manifest: { ...hospital.manifest, deviceCount: 531, linkCount: 634 },
 };
 
 describe('ScenarioPackPicker', () => {
@@ -49,7 +59,7 @@ describe('ScenarioPackPicker', () => {
     await user.click(await screen.findByTestId('scenario-pack-hospital'));
 
     expect(onChange).toHaveBeenCalledWith(hospital.request);
-    expect(screen.getByText(/Version 1.0.0 · 351 devices · 416 links/)).toBeVisible();
+    expect(screen.getByText(/Version 1.2.0 · 75 devices · 88 links/)).toBeVisible();
   });
 
   it('does not request Pro-only packs without the entitlement', () => {
@@ -67,6 +77,17 @@ describe('ScenarioPackPicker', () => {
     render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={vi.fn()} />);
 
     expect(await screen.findByText('Red hospitalaria')).toBeVisible();
-    expect(screen.getByText(/Sitios de cuidados intensivos/)).toBeVisible();
+    expect(screen.getByText(/Centro médico de un solo sitio/)).toBeVisible();
+  });
+
+  it('separates presentation maps from scale workloads', async () => {
+    fetchScenarioPacks.mockResolvedValueOnce([enterpriseScale, hospital]);
+
+    render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={vi.fn()} />);
+
+    expect(await screen.findByText('Presentation-ready maps')).toBeVisible();
+    expect(screen.getByText('Scale testing')).toBeVisible();
+    expect(screen.getByTestId('scenario-pack-hospital')).toBeVisible();
+    expect(screen.getByTestId('scenario-pack-enterprise-scale')).toBeVisible();
   });
 });

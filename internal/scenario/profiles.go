@@ -44,6 +44,7 @@ func EnterpriseReferenceRequest() Request {
 			WorkstationsPerAccess: enterpriseWorkstationsPerAccess, WirelessControllers: maxRedundantPeers,
 		},
 		Domain: defaultDomain, SNMPCommunity: defaultCommunity, AttachmentName: defaultAttachmentName,
+		EndpointProfile: "enterprise",
 	}
 }
 
@@ -51,7 +52,8 @@ func EnterpriseReferenceRequest() Request {
 func Profiles() []DeviceProfile {
 	profiles := networkProfiles()
 	profiles = append(profiles, campusProfiles()...)
-	return append(profiles, endpointProfiles()...)
+	profiles = append(profiles, endpointProfiles()...)
+	return append(profiles, patientMonitorProfiles()...)
 }
 
 func newProfile(role, deviceType, vendor, model, platform, software string,
