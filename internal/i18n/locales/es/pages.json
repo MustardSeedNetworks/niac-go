@@ -117,7 +117,9 @@
       "started": "Iniciado",
       "state": "Estado",
       "title": "Escenarios activos",
-      "vlan": "VLAN física"
+      "vlan": "VLAN física",
+      "degraded": "Degradado",
+      "degradedHelp": "Este escenario se está ejecutando, pero la captura del trunk compartido se detuvo, por lo que no puede enviar ni recibir."
     },
     "fabric": {
       "attachment": "Conexión",

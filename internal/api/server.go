@@ -353,6 +353,12 @@ type SimulationStatus struct {
 	Fabric         *SimulationFabricStatus `json:"fabric,omitempty"`
 	Recovery       *SimulationRecovery     `json:"recovery,omitempty"`
 	Sessions       []SimulationStatus      `json:"sessions,omitempty"`
+	// Degraded marks a session that is still running but cannot exchange
+	// frames, today only because the shared trunk capture it rides on has
+	// stopped. Running alone would read as healthy.
+	Degraded       bool                `json:"degraded,omitempty"`
+	DegradedReason string              `json:"degradedReason,omitempty"`
+	Capture        *TrunkCaptureHealth `json:"capture,omitempty"`
 }
 
 // SimulationRecovery reports the most recent daemon restart recovery attempt.
@@ -369,6 +375,32 @@ type SimulationFabricStatus struct {
 	Drops       uint64          `json:"drops"`
 	Received    uint64          `json:"received"`
 	Transmitted uint64          `json:"transmitted"`
+}
+
+// TrunkDropStats separates why the shared trunk discarded a frame. Frames
+// tagged for a VLAN nobody serves are ordinary on a shared trunk; a session
+// whose ingress queue overran is not. One aggregate counter cannot tell an
+// operator which is happening.
+type TrunkDropStats struct {
+	Total      uint64 `json:"total"`
+	Untagged   uint64 `json:"untagged"`
+	Unapproved uint64 `json:"unapproved"`
+	Overrun    uint64 `json:"overrun"`
+	// Keyed by VLAN. UnapprovedByVLAN names at most a bounded number of
+	// distinct tags, so traffic on the wire cannot size the map.
+	UnapprovedByVLAN map[uint16]uint64 `json:"unapprovedByVlan,omitempty"`
+	OverrunByVLAN    map[uint16]uint64 `json:"overrunByVlan,omitempty"`
+}
+
+// TrunkCaptureHealth reports one physical interface's shared capture. A session
+// bound to an unhealthy trunk can neither send nor receive, so this is what
+// stops it reporting as running when nothing can reach it.
+type TrunkCaptureHealth struct {
+	Interface    string         `json:"interface"`
+	Healthy      bool           `json:"healthy"`
+	Error        string         `json:"error,omitempty"`
+	SessionVLANs []uint16       `json:"sessionVlans,omitempty"`
+	Drops        TrunkDropStats `json:"drops"`
 }
 
 // DaemonController interface for daemon mode operations.

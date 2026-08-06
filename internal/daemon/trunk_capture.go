@@ -5,10 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
 const (
@@ -17,11 +21,19 @@ const (
 	dot1QHeaderLength    = 4
 	ethernetHeaderLength = 14
 	trunkIngressQueue    = 16384
+
+	// A trunk can carry frames on any of the 4094 valid tags, but only the
+	// operator-approved ones map to a session. Tracking every stray tag
+	// individually would let whatever is on the wire size our map, so only
+	// this many distinct unapproved tags are named; the rest are counted in
+	// the total.
+	maxTrackedUnapprovedVLANs = 16
 )
 
 var (
 	ErrTrunkVLANUnavailable = errors.New("trunk VLAN is not available")
 	ErrTrunkEgressVLAN      = errors.New("frame does not use the session's physical VLAN")
+	ErrTrunkCaptureFailed   = errors.New("shared trunk capture has stopped")
 )
 
 type trunkPhysicalCapture interface {
@@ -30,12 +42,35 @@ type trunkPhysicalCapture interface {
 	Close()
 }
 
+// trunkDrops separates why a frame was discarded. One aggregate counter cannot
+// distinguish "the wire carries tags we do not serve" — normal on a shared
+// trunk — from "a session cannot keep up", which is a real problem.
+type trunkDrops struct {
+	mu sync.Mutex
+	// Untagged frames, and frames whose tag is outside the valid 1..4094 range.
+	untagged uint64
+	// Frames tagged for a VLAN with no session, keyed by tag up to
+	// maxTrackedUnapprovedVLANs distinct tags.
+	unapproved      uint64
+	unapprovedByTag map[uint16]uint64
+	// Frames dropped because the session's ingress queue was full, keyed by
+	// the session's own VLAN and so bounded by the session count.
+	overrun      uint64
+	overrunByTag map[uint16]uint64
+}
+
 type trunkCapture struct {
 	physical trunkPhysicalCapture
 
 	mu       sync.RWMutex
 	sessions map[uint16]*trunkSessionTransport
-	drops    atomic.Uint64
+	drops    trunkDrops
+
+	// Set once the physical capture stops for any reason other than a
+	// deliberate cancel. Sessions bound to this trunk are dead once it is set,
+	// so they must report it rather than continue to look healthy.
+	failed  atomic.Bool
+	failure atomic.Pointer[string]
 }
 
 type managedTrunkCapture struct {
@@ -51,6 +86,11 @@ func newTrunkCapture(physical trunkPhysicalCapture) *trunkCapture {
 }
 
 func (c *trunkCapture) register(vlan uint16) (*trunkSessionTransport, error) {
+	// Starting a session on a trunk whose capture has died would report success
+	// and then carry nothing.
+	if c.failed.Load() {
+		return nil, fmt.Errorf("%w", ErrTrunkCaptureFailed)
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.sessions[vlan]; exists {
@@ -108,14 +148,14 @@ func (c *trunkCapture) run(ctx context.Context) error {
 func (c *trunkCapture) dispatchFrame(frame []byte) bool {
 	vlan, ok := frameVLAN(frame)
 	if !ok {
-		c.drops.Add(1)
+		c.drops.recordUntagged()
 		return false
 	}
 	c.mu.RLock()
 	transport := c.sessions[vlan]
 	if transport == nil {
 		c.mu.RUnlock()
-		c.drops.Add(1)
+		c.drops.recordUnapproved(vlan)
 		return false
 	}
 	select {
@@ -124,9 +164,92 @@ func (c *trunkCapture) dispatchFrame(frame []byte) bool {
 		return true
 	default:
 		c.mu.RUnlock()
-		c.drops.Add(1)
+		c.drops.recordOverrun(vlan)
 		return false
 	}
+}
+
+func (d *trunkDrops) recordUntagged() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.untagged++
+}
+
+func (d *trunkDrops) recordUnapproved(vlan uint16) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.unapproved++
+	if d.unapprovedByTag == nil {
+		d.unapprovedByTag = make(map[uint16]uint64)
+	}
+	if _, tracked := d.unapprovedByTag[vlan]; !tracked &&
+		len(d.unapprovedByTag) >= maxTrackedUnapprovedVLANs {
+		return
+	}
+	d.unapprovedByTag[vlan]++
+}
+
+func (d *trunkDrops) recordOverrun(vlan uint16) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.overrun++
+	if d.overrunByTag == nil {
+		d.overrunByTag = make(map[uint16]uint64)
+	}
+	d.overrunByTag[vlan]++
+}
+
+func (d *trunkDrops) snapshot() api.TrunkDropStats {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	stats := api.TrunkDropStats{
+		Untagged:   d.untagged,
+		Unapproved: d.unapproved,
+		Overrun:    d.overrun,
+		Total:      d.untagged + d.unapproved + d.overrun,
+	}
+	if len(d.unapprovedByTag) > 0 {
+		stats.UnapprovedByVLAN = maps.Clone(d.unapprovedByTag)
+	}
+	if len(d.overrunByTag) > 0 {
+		stats.OverrunByVLAN = maps.Clone(d.overrunByTag)
+	}
+	return stats
+}
+
+// fail marks the trunk dead and wakes every session reading from it, so a
+// blocked ReadPacket returns instead of hanging on a capture that will never
+// deliver another frame.
+func (c *trunkCapture) fail(err error) {
+	if err == nil || !c.failed.CompareAndSwap(false, true) {
+		return
+	}
+	message := err.Error()
+	c.failure.Store(&message)
+	c.mu.RLock()
+	transports := make([]*trunkSessionTransport, 0, len(c.sessions))
+	for _, transport := range c.sessions {
+		transports = append(transports, transport)
+	}
+	c.mu.RUnlock()
+	for _, transport := range transports {
+		transport.close()
+	}
+}
+
+func (c *trunkCapture) health(iface string) api.TrunkCaptureHealth {
+	health := api.TrunkCaptureHealth{
+		Interface: iface,
+		Healthy:   !c.failed.Load(),
+		Drops:     c.drops.snapshot(),
+	}
+	if message := c.failure.Load(); message != nil {
+		health.Error = *message
+	}
+	c.mu.RLock()
+	health.SessionVLANs = slices.Sorted(maps.Keys(c.sessions))
+	c.mu.RUnlock()
+	return health
 }
 
 func (c *trunkCapture) close() {
@@ -156,6 +279,11 @@ func (t *trunkSessionTransport) ReadPacket(buffer []byte) ([]byte, error) {
 }
 
 func (t *trunkSessionTransport) SendPacket(frame []byte) error {
+	// A dead trunk cannot carry the frame. Say so rather than writing into a
+	// handle that will never deliver it.
+	if t.parent.failed.Load() {
+		return fmt.Errorf("%w on the interface serving VLAN %d", ErrTrunkCaptureFailed, t.vlan)
+	}
 	vlan, ok := frameVLAN(frame)
 	if !ok || vlan != t.vlan {
 		return fmt.Errorf("%w: expected VLAN %d", ErrTrunkEgressVLAN, t.vlan)

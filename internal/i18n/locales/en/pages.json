@@ -799,6 +799,8 @@
     },
     "sessions": {
       "actions": "Actions",
+      "degraded": "Degraded",
+      "degradedHelp": "This scenario is running but its shared trunk capture has stopped, so it cannot send or receive.",
       "devices": "Devices",
       "help": "Each scenario stays isolated on its assigned physical VLAN.",
       "packetCounts": "RX {{received}} / TX {{transmitted}}",

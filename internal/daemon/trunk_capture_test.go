@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/gopacket/gopacket"
 )
@@ -61,8 +63,124 @@ func TestTrunkCaptureDropsUntaggedAndUnassignedFrames(t *testing.T) {
 	if capture.dispatchFrame(taggedTestFrame(299)) {
 		t.Fatal("unassigned dispatch = true, want false")
 	}
-	if got := capture.drops.Load(); got != 2 {
-		t.Fatalf("drops = %d, want 2", got)
+	drops := capture.drops.snapshot()
+	if drops.Total != 2 {
+		t.Fatalf("total drops = %d, want 2", drops.Total)
+	}
+	// The two drops have different causes and must not be conflated: one frame
+	// carried no tag, the other a tag no session serves.
+	if drops.Untagged != 1 {
+		t.Errorf("untagged drops = %d, want 1", drops.Untagged)
+	}
+	if drops.Unapproved != 1 {
+		t.Errorf("unapproved drops = %d, want 1", drops.Unapproved)
+	}
+	if got := drops.UnapprovedByVLAN[299]; got != 1 {
+		t.Errorf("unapproved drops on VLAN 299 = %d, want 1", got)
+	}
+}
+
+func TestTrunkDropsSeparateOverrunFromUnapproved(t *testing.T) {
+	capture := newTrunkCapture(&fakeTrunkPhysical{})
+	transport, err := capture.register(200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Fill the session's ingress queue so the next frame for its own VLAN has
+	// nowhere to go. That is a session falling behind, not stray trunk traffic.
+	for range trunkIngressQueue {
+		transport.rx <- []byte{}
+	}
+	if capture.dispatchFrame(taggedTestFrame(200)) {
+		t.Fatal("dispatch into a full queue = true, want false")
+	}
+	drops := capture.drops.snapshot()
+	if drops.Overrun != 1 {
+		t.Fatalf("overrun drops = %d, want 1", drops.Overrun)
+	}
+	if drops.Unapproved != 0 {
+		t.Errorf("unapproved drops = %d, want 0 — an overrun is not stray traffic", drops.Unapproved)
+	}
+	if got := drops.OverrunByVLAN[200]; got != 1 {
+		t.Errorf("overrun drops on VLAN 200 = %d, want 1", got)
+	}
+}
+
+func TestTrunkUnapprovedVLANTrackingIsBounded(t *testing.T) {
+	capture := newTrunkCapture(&fakeTrunkPhysical{})
+	// Whatever is on the wire must not be able to size our map.
+	for vlan := 1; vlan <= maxTrackedUnapprovedVLANs*4; vlan++ {
+		capture.dispatchFrame(taggedTestFrame(uint16(vlan)))
+	}
+	drops := capture.drops.snapshot()
+	if len(drops.UnapprovedByVLAN) > maxTrackedUnapprovedVLANs {
+		t.Errorf("tracked %d distinct VLANs, want at most %d",
+			len(drops.UnapprovedByVLAN), maxTrackedUnapprovedVLANs)
+	}
+	// The total still counts every dropped frame; only the per-VLAN detail is capped.
+	if want := uint64(maxTrackedUnapprovedVLANs * 4); drops.Unapproved != want {
+		t.Errorf("unapproved total = %d, want %d", drops.Unapproved, want)
+	}
+}
+
+func TestTrunkCaptureFailureWakesSessionsAndReportsUnhealthy(t *testing.T) {
+	capture := newTrunkCapture(&fakeTrunkPhysical{})
+	transport, err := capture.register(200)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	read := make(chan struct{})
+	go func() {
+		// A session blocked here would hang forever on a dead capture.
+		_, _ = transport.ReadPacket(make([]byte, 2048))
+		close(read)
+	}()
+
+	capture.fail(errors.New("pcap handle closed"))
+
+	select {
+	case <-read:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ReadPacket still blocked after the capture failed")
+	}
+
+	health := capture.health("eth0")
+	if health.Healthy {
+		t.Error("health.Healthy = true after a capture failure, want false")
+	}
+	if health.Error != "pcap handle closed" {
+		t.Errorf("health.Error = %q, want the capture error", health.Error)
+	}
+	if !slices.Contains(health.SessionVLANs, uint16(200)) {
+		t.Errorf("health.SessionVLANs = %v, want it to name the affected session", health.SessionVLANs)
+	}
+}
+
+func TestTrunkCaptureFailureStopsSendAndNewSessions(t *testing.T) {
+	capture := newTrunkCapture(&fakeTrunkPhysical{})
+	transport, err := capture.register(200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	capture.fail(errors.New("interface went down"))
+
+	// A degraded session must not appear to transmit.
+	if sendErr := transport.SendPacket(taggedTestFrame(200)); !errors.Is(sendErr, ErrTrunkCaptureFailed) {
+		t.Errorf("SendPacket error = %v, want ErrTrunkCaptureFailed", sendErr)
+	}
+	// Nor should a new session start on a dead trunk and report success.
+	if _, regErr := capture.register(201); !errors.Is(regErr, ErrTrunkCaptureFailed) {
+		t.Errorf("register error = %v, want ErrTrunkCaptureFailed", regErr)
+	}
+}
+
+func TestTrunkCaptureFailureIsRecordedOnce(t *testing.T) {
+	capture := newTrunkCapture(&fakeTrunkPhysical{})
+	capture.fail(errors.New("first"))
+	capture.fail(errors.New("second"))
+	if got := capture.health("eth0").Error; got != "first" {
+		t.Errorf("health.Error = %q, want the first failure to be kept", got)
 	}
 }
 

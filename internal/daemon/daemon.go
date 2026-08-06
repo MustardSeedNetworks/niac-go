@@ -774,10 +774,15 @@ func (d *Daemon) startTrunkSimulationResources(
 		managed = &managedTrunkCapture{capture: newTrunkCapture(engine), cancel: cancel}
 		d.trunks[iface] = managed
 		go func() {
-			if captureErr := managed.capture.run(ctx); captureErr != nil &&
-				!errors.Is(captureErr, context.Canceled) {
-				logging.Errorf("Trunk capture on %s stopped: %v", iface, captureErr)
+			captureErr := managed.capture.run(ctx)
+			if captureErr == nil || errors.Is(captureErr, context.Canceled) {
+				return
 			}
+			// Every session on this interface is now deaf and mute. Record it
+			// so their status says so, instead of reporting running while no
+			// frame can reach them.
+			logging.Errorf("Trunk capture on %s stopped: %v", iface, captureErr)
+			managed.capture.fail(captureErr)
 		}()
 	}
 
@@ -1041,19 +1046,42 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 		}
 		slices.Sort(ids)
 		for _, id := range ids {
-			status.Sessions = append(status.Sessions, simulationStatus(
-				d.sessions.get(id), d.simulation != nil && d.simulation.SessionID == id,
+			session := d.sessions.get(id)
+			status.Sessions = append(status.Sessions, d.simulationStatusLocked(
+				session, d.simulation != nil && d.simulation.SessionID == id,
 			))
 		}
 	}
 
 	if d.simulation != nil {
-		selected := simulationStatus(d.simulation, true)
+		selected := d.simulationStatusLocked(d.simulation, true)
 		selected.Sessions = status.Sessions
 		selected.Recovery = status.Recovery
 		return selected
 	}
 
+	return status
+}
+
+// simulationStatusLocked builds one session's status and attaches the health of
+// the shared trunk it rides on. A session whose trunk capture has died is still
+// "running" as a process but cannot exchange a single frame, so its status has
+// to carry that or an operator reads it as healthy. Caller holds d.mu.
+func (d *Daemon) simulationStatusLocked(sim *Simulation, selected bool) api.SimulationStatus {
+	status := simulationStatus(sim, selected)
+	if sim.Binding.Mode != fabric.ModeTrunk {
+		return status
+	}
+	managed, ok := d.trunks[sim.Interface]
+	if !ok {
+		return status
+	}
+	health := managed.capture.health(sim.Interface)
+	status.Capture = &health
+	if !health.Healthy {
+		status.Degraded = true
+		status.DegradedReason = health.Error
+	}
 	return status
 }
 
