@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/license"
+	"github.com/MustardSeedNetworks/niac-go/internal/userdir"
 )
 
 const sshHostKeyDirectory = "ssh-host-keys"
@@ -32,7 +32,7 @@ func loadOrCreateSSHHostSigner(deviceName string) (ssh.Signer, error) {
 }
 
 func invokingUserConfigDir(current *user.User, sudoUser, currentConfigDir string) string {
-	home := license.ResolveConfigHome(current, sudoUser)
+	home := userdir.ResolveHome(current, sudoUser)
 	if home == current.HomeDir || pathWithinHome(currentConfigDir, home) {
 		return currentConfigDir
 	}
