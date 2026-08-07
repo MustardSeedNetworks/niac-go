@@ -63,3 +63,28 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
 	}
 	return steady, total
 }
+
+// Every device must answer SNMP with its own name. A discovery tool names a
+// host from sysName first and only falls back to a reverse lookup, which it
+// resolves through its own resolver rather than the simulated one. Endpoints
+// without an agent therefore rendered as bare IP addresses on a Link-Live map
+// even though the simulation served correct PTR records.
+func TestEveryDeviceAnswersSNMPWithItsName(t *testing.T) {
+	for _, pack := range scenario.Packs() {
+		result, err := scenario.Generate(pack.Request)
+		if err != nil {
+			t.Fatalf("generate %s: %v", pack.ID, err)
+		}
+		cfg, err := config.LoadYAMLBytes(result.YAML)
+		if err != nil {
+			t.Fatalf("load %s: %v", pack.ID, err)
+		}
+		for index := range cfg.Devices {
+			device := &cfg.Devices[index]
+			if got := device.SNMPConfig.SysName; got != device.Name {
+				t.Errorf("%s %s sysName = %q, want %q — a device without its own sysName renders as a bare IP",
+					pack.ID, device.Name, got, device.Name)
+			}
+		}
+	}
+}

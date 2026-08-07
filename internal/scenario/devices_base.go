@@ -115,6 +115,17 @@ func endpointDevice(
 			"role": kind.role, "site": site.Code, "model": profile.Model,
 			"platform": profile.Platform, "software": profile.Software,
 		},
+		// Endpoints answer SNMP for their own identity. A discovery tool names a
+		// host from sysName first and only falls back to a reverse lookup, which
+		// it resolves through its own resolver rather than the simulated one —
+		// so without an agent here these devices render as bare IP addresses on
+		// the map. Managed endpoints (infusion pumps, imaging, patient monitors,
+		// clinical workstations) carry an agent in the real world too.
+		SnmpAgent: &converter.SnmpAgent{
+			Community: request.SNMPCommunity, SysName: name,
+			SysDescr:    profile.Vendor + " " + profile.Model,
+			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
+		},
 	}
 	if kind.osType == "windows" {
 		device.Netbios = &converter.NetbiosConfig{
