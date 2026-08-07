@@ -4,8 +4,7 @@
     "library": "Biblioteca",
     "liveView": "Vista en vivo",
     "inspect": "Inspeccionar",
-    "tools": "Herramientas",
-    "system": "Sistema"
+    "tools": "Herramientas"
   },
   "dashboard": {
     "label": "Panel",
@@ -517,7 +516,6 @@
     "page": {
       "errorInjectionTitle": "Inyección de errores",
       "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
-      "errorInjectionRequiresPro": "La inyección de errores requiere NIAC Pro.",
       "pcapReplayTitle": "Reproducción de PCAP",
       "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
       "recentRunsTitle": "Ejecuciones recientes",
@@ -987,34 +985,6 @@
       "editCopy": "Personalizar primero",
       "pickTemplate": "Usar tal cual",
       "pickTemplateTitle": "Seleccione esta plantilla como la configuración activa para ejecutarla sin cambios"
-    }
-  },
-  "license": {
-    "label": "Licencia",
-    "title": "Licencia y funciones",
-    "description": "Consulte su nivel de licencia activo, las funciones que desbloquea y cómo activar o actualizar.",
-    "loading": "Verificando licencia…",
-    "loadError": "No se pudo cargar el estado de la licencia.",
-    "retry": "Reintentar",
-    "devMode": "Compilación de desarrollo: la aplicación de licencia está desactivada, por lo que todas las funciones están disponibles y no se muestran avisos de actualización.",
-    "currentTier": "Nivel actual",
-    "deviceScaleContract": "Free: hasta 10 dispositivos simulados; Pro elimina el límite flexible del nivel; límite absoluto de 1000.",
-    "tier": "Nivel",
-    "activation": "Activación",
-    "activated": "Activada",
-    "notActivated": "Sin activar",
-    "trial": "Prueba",
-    "trialDaysRemaining": "{{days}} días restantes",
-    "features": "Funciones",
-    "noFeatures": "No se reportan indicadores de funciones para este nivel.",
-    "featureLocked": "Requiere actualización",
-    "manage": "Administrar su licencia",
-    "manageHint": "NIAC valida las licencias sin conexión, sin comunicación externa. Active, inicie una prueba o desactive con la CLI niac license en el host que ejecuta el daemon.",
-    "cmd": {
-      "status": "Estado",
-      "activate": "Activar",
-      "trial": "Prueba",
-      "deactivate": "Desactivar"
     }
   },
   "configPicker": {

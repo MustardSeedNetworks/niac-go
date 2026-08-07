@@ -16,7 +16,6 @@ const fetchDevices = vi.fn();
 const fetchErrorTypes = vi.fn();
 const fetchLibraryPcaps = vi.fn();
 const fetchReplayStatus = vi.fn();
-const hasFeature = vi.fn<(feature: string) => boolean>();
 
 vi.mock('../api/client', () => ({
   fetchHistory: () => fetchHistory(),
@@ -32,9 +31,6 @@ vi.mock('../api/client', () => ({
 vi.mock('../api/library-client', () => ({
   fetchLibraryPcaps: () => fetchLibraryPcaps(),
 }));
-vi.mock('../contexts/LicenseContext', () => ({
-  useLicense: () => ({ hasFeature, loading: false }),
-}));
 
 describe('TrafficInjectionPage', () => {
   beforeEach(() => {
@@ -43,7 +39,6 @@ describe('TrafficInjectionPage', () => {
     fetchErrorTypes.mockReset().mockResolvedValue({ availableTypes: [], info: '' });
     fetchLibraryPcaps.mockReset().mockResolvedValue([]);
     fetchReplayStatus.mockReset().mockResolvedValue({ running: false });
-    hasFeature.mockReset().mockReturnValue(true);
   });
 
   it('renders a #recent-runs anchor on the Recent Runs card', async () => {
@@ -68,17 +63,5 @@ describe('TrafficInjectionPage', () => {
     );
 
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' }));
-  });
-
-  it('shows the Pro upgrade treatment instead of fault controls on Free', async () => {
-    hasFeature.mockReturnValue(false);
-    render(
-      <MemoryRouter initialEntries={['/traffic']}>
-        <TrafficInjectionPage />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText('Error injection requires NIAC Pro.')).toBeInTheDocument();
-    expect(fetchErrorTypes).not.toHaveBeenCalled();
   });
 });
