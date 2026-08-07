@@ -9,6 +9,8 @@ import (
 	"slices"
 
 	fnd "github.com/MustardSeedNetworks/foundation/pkg/license"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/userdir"
 )
 
 // The manager, activation state and parsed-license types are the foundation
@@ -69,12 +71,7 @@ func runtimeConfigDir() string {
 
 // ResolveConfigHome returns the operator home that owns license state.
 func ResolveConfigHome(current *user.User, sudoUser string) string {
-	if current.Uid == "0" && sudoUser != "" && sudoUser != "root" {
-		if invoking, err := user.Lookup(sudoUser); err == nil && invoking.HomeDir != "" {
-			return invoking.HomeDir
-		}
-	}
-	return current.HomeDir
+	return userdir.ResolveHome(current, sudoUser)
 }
 
 // NewManagerWithDir creates a license manager that persists state in configDir.
