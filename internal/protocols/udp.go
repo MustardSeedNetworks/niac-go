@@ -142,6 +142,9 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		}
 	case UDPPortSNMP:
 		h.handleSNMP(pkt, ipLayer, udp, devices)
+	case MDNSPort:
+		// Multicast DNS (Bonjour/Avahi)
+		h.stack.mdnsHandler.HandleQuery(pkt, ipLayer, udp, devices, packet)
 	case NetBIOSNameServicePort:
 		// NetBIOS Name Service
 		h.stack.netbiosHandler.HandleNameService(pkt, packet, udp, devices)

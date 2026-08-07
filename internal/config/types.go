@@ -301,6 +301,7 @@ type Device struct {
 	HTTPConfig          *HTTPConfig          // HTTP server configuration
 	FTPConfig           *FTPConfig           // FTP server configuration
 	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
+	MDNSConfig          *MDNSConfig          // multicast DNS (Bonjour/Avahi) advertisement
 	SNMPv3Config        *SNMPv3Config        // SNMPv3 USM users (v0.86.0 — free, safe SNMP variant)
 	ICMPConfig          *ICMPConfig          // ICMP/ICMPv4 configuration
 	ICMPv6Config        *ICMPv6Config        // ICMPv6 configuration
@@ -557,6 +558,22 @@ type FTPUser struct {
 	Username string
 	Password string
 	HomeDir  string // Virtual home directory path
+}
+
+// MDNSConfig publishes a device on multicast DNS, the way Bonjour and Avahi
+// announce a host and its services on the local link.
+type MDNSConfig struct {
+	Enabled  bool
+	Hostname string // published as <Hostname>.local
+	Services []MDNSService
+	TTL      uint32
+}
+
+// MDNSService is one advertised DNS-SD service, such as _ipp._tcp.
+type MDNSService struct {
+	Type string
+	Port uint16
+	TXT  []string
 }
 
 // NetBIOSConfig holds NetBIOS service configuration.

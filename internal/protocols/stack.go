@@ -98,6 +98,7 @@ type Stack struct {
 	httpHandler        *HTTPHandler
 	ftpHandler         *FTPHandler
 	netbiosHandler     *NetBIOSHandler
+	mdnsHandler        *MDNSHandler
 	stpHandler         *STPHandler
 	lldpHandler        *LLDPHandler
 	cdpHandler         *CDPHandler
@@ -249,6 +250,7 @@ func newStack(
 	stack.dhcpv6Handler = NewDHCPv6Handler(stack)
 	stack.httpHandler = NewHTTPHandler(stack)
 	stack.ftpHandler = NewFTPHandler(stack)
+	stack.mdnsHandler = NewMDNSHandler(stack, debugConfig.GetProtocolLevel(logging.ProtocolDNS))
 	stack.netbiosHandler = NewNetBIOSHandler(
 		stack,
 		debugConfig.GetProtocolLevel(logging.ProtocolNetBIOS),

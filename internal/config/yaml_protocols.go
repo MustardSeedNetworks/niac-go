@@ -129,6 +129,37 @@ func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 }
 
 // parseNetBIOSConfig parses NetBIOS configuration from YAML.
+// parseMDNSConfig converts the YAML mdns block. A device that advertises
+// itself on multicast DNS defaults to its own name, which is what Bonjour and
+// Avahi do when no hostname is configured.
+func parseMDNSConfig(yamlMdns *converter.MdnsConfig, deviceName string) *MDNSConfig {
+	if yamlMdns == nil {
+		return nil
+	}
+
+	const defaultMDNSTTL = 120
+
+	cfg := &MDNSConfig{
+		Enabled:  yamlMdns.Enabled,
+		Hostname: yamlMdns.Hostname,
+		TTL:      yamlMdns.TTL,
+	}
+	if cfg.Hostname == "" {
+		cfg.Hostname = deviceName
+	}
+	if cfg.TTL == 0 {
+		cfg.TTL = defaultMDNSTTL
+	}
+
+	for _, svc := range yamlMdns.Services {
+		cfg.Services = append(cfg.Services, MDNSService{
+			Type: svc.Type, Port: svc.Port, TXT: append([]string(nil), svc.TXT...),
+		})
+	}
+
+	return cfg
+}
+
 func parseNetBIOSConfig(yamlNetbios *converter.NetbiosConfig, deviceName string) *NetBIOSConfig {
 	if yamlNetbios == nil {
 		return nil

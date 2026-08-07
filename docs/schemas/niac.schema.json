@@ -347,6 +347,9 @@
         "netbios": {
           "$ref": "#/$defs/NetbiosConfig"
         },
+        "mdns": {
+          "$ref": "#/$defs/MdnsConfig"
+        },
         "snmpv3": {
           "$ref": "#/$defs/Snmpv3Config"
         },
@@ -992,6 +995,49 @@
       "required": [
         "name",
         "connect"
+      ]
+    },
+    "MdnsConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/$defs/MdnsService"
+          },
+          "type": "array"
+        },
+        "ttl": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "MdnsService": {
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "txt": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "type",
+        "port"
       ]
     },
     "NetbiosConfig": {
