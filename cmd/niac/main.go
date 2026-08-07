@@ -96,7 +96,6 @@ func main() {
 		addDumpCommand,
 		addInitCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addInstallCACommand(root) },
-		addLicenseCommand,
 		addListCommand,
 		addInteractiveCommand,
 		addLogsCommand,

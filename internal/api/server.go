@@ -48,7 +48,6 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
-	"github.com/MustardSeedNetworks/niac-go/internal/license"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
@@ -445,10 +444,6 @@ type Server struct {
 	bgStopOnce     sync.Once
 	library        *library.Library
 	tlsFingerprint tlsFingerprintCache
-	// license is the offline license manager. Populated lazily in
-	// NewServer; may be nil in tests / dev builds that don't exercise
-	// license-gated endpoints.
-	license *license.Manager
 	// tokens is the active bearer-token store. Seeded from
 	// ServerConfig.TokenFile (preferred) or ServerConfig.Token at
 	// construction time, then rotated by Server.ReloadTokensFromFile or
@@ -495,14 +490,6 @@ func NewServer(cfg ServerConfig) *Server {
 		tokens:        initialTokenStore(cfg),
 		pcapCache:     capture.NewCache(),
 		simulations:   make(map[string]simulationAPIState),
-	}
-	// License manager initialization is best-effort for Free-tier operation.
-	// Paid feature gates must treat a nil manager as unavailable and fail closed.
-	if lm, lmErr := license.NewRuntimeManager(); lmErr == nil {
-		srv.license = lm
-	} else {
-		slog.Warn("[API] license manager init failed; paid feature gates unavailable",
-			"error", lmErr)
 	}
 	return srv
 }

@@ -27,11 +27,6 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 		{path: "/api/v1/stats", handler: s.handleStats, methods: []string{http.MethodGet}},
 		{path: "/api/v1/devices", handler: s.handleDevices, methods: []string{http.MethodGet}},
 		{path: "/api/v1/history", handler: s.handleHistory, methods: []string{http.MethodGet}},
-		{
-			path:    "/api/v1/license",
-			handler: s.handleLicenseStatus,
-			methods: []string{http.MethodGet},
-		},
 	})
 
 	s.registerSessionRoutes(mux)
