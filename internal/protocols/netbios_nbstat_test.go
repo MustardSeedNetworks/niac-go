@@ -93,6 +93,17 @@ func nodeStatusQuery(transactionID uint16) []byte {
 
 func netbiosRequestPacket(t *testing.T, srcIP, dstIP string, payload []byte) (gopacket.Packet, *layers.UDP) {
 	t.Helper()
+
+	return netbiosRequestFromPort(t, srcIP, dstIP, NetBIOSNameServicePort, payload)
+}
+
+func netbiosRequestFromPort(
+	t *testing.T,
+	srcIP, dstIP string,
+	srcPort int,
+	payload []byte,
+) (gopacket.Packet, *layers.UDP) {
+	t.Helper()
 	eth := &layers.Ethernet{
 		SrcMAC:       net.HardwareAddr{0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x01},
 		DstMAC:       net.HardwareAddr{0x02, 0x00, 0x33, 0x00, 0x00, 0x21},
@@ -103,7 +114,7 @@ func netbiosRequestPacket(t *testing.T, srcIP, dstIP string, payload []byte) (go
 		SrcIP: net.ParseIP(srcIP).To4(), DstIP: net.ParseIP(dstIP).To4(),
 	}
 	udp := &layers.UDP{
-		SrcPort: layers.UDPPort(NetBIOSNameServicePort),
+		SrcPort: layers.UDPPort(srcPort),
 		DstPort: layers.UDPPort(NetBIOSNameServicePort),
 	}
 	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
@@ -166,4 +177,51 @@ func decodeNodeStatusNames(t *testing.T, frame []byte) []string {
 	}
 
 	return names
+}
+
+// A conformant client may ask from an ephemeral port. Answering a hard-wired
+// 137 reaches Windows and nbtscan, which both bind 137, and nothing else — the
+// reply has to go back to the port the query came from.
+func TestNodeStatusAnswersTheQueriersPort(t *testing.T) {
+	const ephemeral = 51234
+
+	stack := newTestStackInternal(t)
+	handler := NewNetBIOSHandler(stack, 0)
+	device := netbiosTestDevice()
+	table := stack.devicesFor(0)
+	table.AddByIP(device.IPAddresses[0], device)
+	table.AddByMAC(device.MACAddress, device)
+
+	packet, udp := netbiosRequestFromPort(t, "10.254.200.100", "10.51.210.21",
+		ephemeral, nodeStatusQuery(0x4243))
+	handler.HandleNameService(&Packet{}, packet, udp, []*config.Device{device})
+
+	select {
+	case sent := <-stack.sendQueue:
+		reply := gopacket.NewPacket(sent.Buffer[:sent.Length], layers.LayerTypeEthernet, gopacket.Default)
+		replyUDP, ok := reply.Layer(layers.LayerTypeUDP).(*layers.UDP)
+		if !ok {
+			t.Fatal("reply has no UDP layer")
+		}
+		if replyUDP.DstPort != ephemeral {
+			t.Errorf("reply sent to port %d, want %d — the querier never sees it",
+				replyUDP.DstPort, ephemeral)
+		}
+	default:
+		t.Fatal("no node status reply")
+	}
+}
+
+func netbiosTestDevice() *config.Device {
+	const deviceName = "MED-NURSE-1101"
+
+	return &config.Device{
+		Name:        deviceName,
+		MACAddress:  net.HardwareAddr{0x02, 0x00, 0x33, 0x00, 0x00, 0x21},
+		IPAddresses: []net.IP{net.ParseIP("10.51.210.21")},
+		NetBIOSConfig: &config.NetBIOSConfig{
+			Enabled: true, Name: deviceName, Workgroup: "DEMO",
+			NodeType: "H", Services: []string{"workstation"},
+		},
+	}
 }
