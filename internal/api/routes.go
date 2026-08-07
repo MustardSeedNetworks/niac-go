@@ -305,13 +305,13 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodGet},
 			rl:      rlFile,
 		},
-		// Templates: POST (upload), DELETE, and "use" mutate — write + CSRF.
+		// Templates ship with the product and are read-only; only "use" mutates,
+		// so only it carries write rate limit + CSRF.
 		{
 			path:    "/api/v1/templates",
 			handler: s.handleTemplates,
-			methods: []string{http.MethodGet, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			methods: []string{http.MethodGet},
+			rl:      rlFile,
 		},
 		{
 			path:    "/api/v1/templates/use",
@@ -324,9 +324,8 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 		{
 			path:    "/api/v1/templates/",
 			handler: s.handleTemplateByName,
-			methods: []string{http.MethodGet, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			methods: []string{http.MethodGet},
+			rl:      rlFile,
 		},
 		// Per-device actions. synthesize-walk (#546 p2) mutates the library +
 		// running config YAML, so this path carries write rate limit + CSRF;
