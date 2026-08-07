@@ -123,7 +123,11 @@ func endpointDevice(
 		// clinical workstations) carry an agent in the real world too.
 		SnmpAgent: &converter.SnmpAgent{
 			Community: request.SNMPCommunity, SysName: name,
-			SysDescr:    profile.Vendor + " " + profile.Model,
+			// Platform and software already read the way a real agent reports
+			// itself ("Siemens Healthineers MR imaging system, Embedded clinical
+			// software"). The raw vendor field is a lowercase lookup key and
+			// renders as "siemens MAGNETOM Vida" on a discovery map.
+			SysDescr:    profile.Platform + ", " + profile.Software,
 			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
 		},
 	}
