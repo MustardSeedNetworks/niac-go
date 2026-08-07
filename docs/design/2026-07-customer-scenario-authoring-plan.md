@@ -70,6 +70,15 @@ Sources: [Quick Start](https://doc.gambitcomm.com/mimic/quick.htm),
 | NetFlow/IPFIX and sFlow | Gate later | Add only for an accepted monitoring workflow |
 | MQTT, IPMI, Redfish, cable | Retire | Outside NIAC's network-simulation product boundary |
 | Arbitrary web/CLI recording | Retire | Prefer typed, stateful protocol implementations |
+| Vertical protocol identity | Build | Discovery surface only — see below (2026-08-07) |
+
+**Vertical application protocols (amended 2026-08-07).** DICOM, HL7,
+EtherNet/IP, Modbus, ONVIF and SIP sit in the same class as the retired MQTT and
+Redfish entries, so they are bounded rather than adopted wholesale: NIAC
+implements each protocol's **identity and discovery surface only** — enough that
+a scanner fingerprints the device correctly — and none of the application
+workflow behind it. A real DICOM C-STORE or CIP connection will fail by design.
+Full scope in [vertical device realism](2026-08-vertical-device-realism.md).
 
 ## Authoring journey
 
