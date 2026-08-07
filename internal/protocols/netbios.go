@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // NetBIOS ports.
@@ -74,6 +76,7 @@ const (
 	nbnsMinHeader        = 12     // Minimum NBNS header size
 	nbDGMMinHeader       = 10     // Minimum Datagram header size
 	nbnsRecordTypeNB     = 0x0020 // NB record type
+	nbnsRecordTypeNBSTAT = 0x0021 // NBSTAT (node status) record type
 	nbnsClassIN          = 0x0001 // IN class
 	nbnsDefaultTTL       = 300    // Default TTL in seconds
 	nbnsDefaultNodeFlags = 0x0000 // Default B-node, unique name
@@ -166,6 +169,11 @@ func (h *NetBIOSHandler) handleNameQuery(
 	devices []*config.Device,
 ) {
 	name, nameType, _ := h.decodeNetBIOSName(data)
+	if queryRecordType(data) == nbnsRecordTypeNBSTAT {
+		h.handleNodeStatus(pkt, packet, transactionID, name, nameType)
+
+		return
+	}
 	if name == "" {
 		if h.debugLevel >= DebugLevelInfo {
 			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Failed to decode name sn=%d\n", pkt.SerialNumber)
@@ -593,4 +601,143 @@ func (h *NetBIOSHandler) RegisterName(name string, device *config.Device) {
 // SetDebugLevel updates the debug level.
 func (h *NetBIOSHandler) SetDebugLevel(level int) {
 	h.debugLevel = level
+}
+
+// queryRecordType reads the QTYPE that follows the encoded name in an NBNS
+// question. The name is always nbnsEncodedNameCap bytes; decodeNetBIOSName's
+// own offset already steps past QTYPE and QCLASS, so it cannot be used here.
+func queryRecordType(data []byte) uint16 {
+	if len(data) < nbnsEncodedNameCap+2 {
+		return 0
+	}
+
+	return binary.BigEndian.Uint16(data[nbnsEncodedNameCap : nbnsEncodedNameCap+2])
+}
+
+// handleNodeStatus answers an NBSTAT (node status) request.
+//
+// A discovery tool that finds an unknown address asks it "what are you called"
+// by sending NBSTAT for the wildcard name "*". That cannot be answered by
+// matching the queried name against a device, the way an ordinary name query
+// is, because "*" matches nothing — the device is identified by the address the
+// request was sent to. Without this, simulated Windows endpoints stayed
+// anonymous on a discovery map even with NetBIOS enabled.
+func (h *NetBIOSHandler) handleNodeStatus(
+	pkt *Packet,
+	packet gopacket.Packet,
+	transactionID uint16,
+	name string,
+	nameType byte,
+) {
+	ipv4, eth := extractNameQueryLayers(packet)
+	if ipv4 == nil || eth == nil {
+		return
+	}
+
+	device := firstNetBIOSDevice(h.stack.devicesFor(pkt.VLAN).GetByIP(ipv4.DstIP))
+	if device == nil {
+		return
+	}
+
+	names := deriveNetBIOSNames(device)
+	if len(names) == 0 {
+		return
+	}
+
+	deviceIPv4 := getFirstIPv4(device.IPAddresses)
+	if deviceIPv4 == nil {
+		return
+	}
+
+	h.sendNodeStatusResponse(pkt, transactionID, name, nameType, names,
+		deviceIPv4, ipv4.SrcIP, device.MACAddress, eth.SrcMAC)
+
+	if h.debugLevel >= DebugLevelInfo {
+		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Node status for %s -> %d name(s) sn=%d\n",
+			deviceIPv4, len(names), pkt.SerialNumber)
+	}
+}
+
+// firstNetBIOSDevice picks the device at an address that actually serves
+// NetBIOS. One address can map to several devices, and only one of them needs
+// to answer.
+func firstNetBIOSDevice(devices []*config.Device) *config.Device {
+	for _, device := range devices {
+		if device != nil && device.NetBIOSConfig != nil && device.NetBIOSConfig.Enabled {
+			return device
+		}
+	}
+
+	return nil
+}
+
+// sendNodeStatusResponse writes an NBSTAT answer listing the device's names.
+func (h *NetBIOSHandler) sendNodeStatusResponse(
+	reqPkt *Packet,
+	transactionID uint16,
+	name string,
+	nameType byte,
+	names []netbiosNameEntry,
+	deviceIP, dstIP net.IP,
+	srcMAC, dstMAC net.HardwareAddr,
+) {
+	const (
+		nbstatNameLen       = 15 // padded name inside a node-status entry
+		nbstatEntryLen      = 18 // 15 name + 1 suffix + 2 flags
+		nbstatStatisticsLen = 46 // unit ID plus counters, zero-filled after the MAC
+		nbstatGroupFlag     = 0x8000
+		nbstatActiveFlag    = 0x0400
+		macLen              = 6
+	)
+
+	// A node-status reply carries the name count in one byte, so never claim
+	// more names than that field can express.
+	if len(names) > math.MaxUint8 {
+		names = names[:math.MaxUint8]
+	}
+
+	body := new(bytes.Buffer)
+	body.WriteByte(safeconv.Uint8(len(names)))
+
+	for _, entry := range names {
+		padded := entry.Name
+		if len(padded) > nbstatNameLen {
+			padded = padded[:nbstatNameLen]
+		}
+		body.WriteString(padded + strings.Repeat(" ", nbstatNameLen-len(padded)))
+		body.WriteByte(entry.Suffix)
+
+		flags := uint16(nbstatActiveFlag)
+		if entry.Group {
+			flags |= nbstatGroupFlag
+		}
+		_ = binary.Write(body, binary.BigEndian, flags)
+	}
+
+	// Statistics: the adapter's unit ID is its MAC; the counters that follow
+	// are reported as zero because nothing here models adapter statistics.
+	statistics := make([]byte, nbstatStatisticsLen)
+	copy(statistics, srcMAC[:min(len(srcMAC), macLen)])
+	body.Write(statistics)
+
+	buf := new(bytes.Buffer)
+	_ = binary.Write(buf, binary.BigEndian, transactionID)
+	_ = binary.Write(buf, binary.BigEndian, uint16(NBNSFlagResponse|NBNSFlagAuthAnswer))
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // QDCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(1)) // ANCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // NSCOUNT
+	_ = binary.Write(buf, binary.BigEndian, uint16(0)) // ARCOUNT
+
+	buf.Write(h.encodeNetBIOSName(name, nameType))
+	_ = binary.Write(buf, binary.BigEndian, uint16(nbnsRecordTypeNBSTAT))
+	_ = binary.Write(buf, binary.BigEndian, uint16(nbnsClassIN))
+	_ = binary.Write(buf, binary.BigEndian, uint32(0)) // node status carries no TTL
+	_ = binary.Write(buf, binary.BigEndian, safeconv.Uint16(body.Len()))
+	buf.Write(body.Bytes())
+
+	_ = h.stack.udpHandler.SendUDP(
+		deviceIP.To4(), dstIP.To4(),
+		NetBIOSNameServicePort, NetBIOSNameServicePort,
+		buf.Bytes(), srcMAC, dstMAC, reqPkt.VLAN,
+	)
 }
