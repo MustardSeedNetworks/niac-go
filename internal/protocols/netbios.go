@@ -153,7 +153,7 @@ func (h *NetBIOSHandler) HandleNameService(
 
 	// Handle queries
 	if opcode == NBNSOpQuery && qdCount > 0 {
-		h.handleNameQuery(pkt, packet, transactionID, flags, payload[12:], devices)
+		h.handleNameQuery(pkt, packet, transactionID, uint16(udp.SrcPort), payload[12:], devices)
 	} else if h.debugLevel >= DebugLevelInfo {
 		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Unhandled opcode %d sn=%d\n", opcode, pkt.SerialNumber)
 	}
@@ -163,14 +163,13 @@ func (h *NetBIOSHandler) HandleNameService(
 func (h *NetBIOSHandler) handleNameQuery(
 	pkt *Packet,
 	packet gopacket.Packet,
-	transactionID uint16,
-	_ uint16,
+	transactionID, replyPort uint16,
 	data []byte,
 	devices []*config.Device,
 ) {
 	name, nameType, _ := h.decodeNetBIOSName(data)
 	if queryRecordType(data) == nbnsRecordTypeNBSTAT {
-		h.handleNodeStatus(pkt, packet, transactionID, name, nameType)
+		h.handleNodeStatus(pkt, packet, transactionID, replyPort, name, nameType)
 
 		return
 	}
@@ -209,7 +208,7 @@ func (h *NetBIOSHandler) handleNameQuery(
 		return
 	}
 
-	h.sendNameQueryResponse(pkt, transactionID, name, nameType, matchedGroup,
+	h.sendNameQueryResponse(pkt, transactionID, replyPort, name, nameType, matchedGroup,
 		deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
@@ -270,7 +269,7 @@ func getFirstIPv4(ips []net.IP) net.IP {
 // sendNameQueryResponse sends a NetBIOS name query response.
 func (h *NetBIOSHandler) sendNameQueryResponse(
 	reqPkt *Packet,
-	transactionID uint16,
+	transactionID, replyPort uint16,
 	name string,
 	nameType byte,
 	isGroup bool,
@@ -343,7 +342,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 		deviceIP.To4(),
 		dstIP.To4(),
 		NetBIOSNameServicePort,
-		NetBIOSNameServicePort,
+		replyPort,
 		buf.Bytes(),
 		srcMAC,
 		dstMAC,
@@ -625,7 +624,7 @@ func queryRecordType(data []byte) uint16 {
 func (h *NetBIOSHandler) handleNodeStatus(
 	pkt *Packet,
 	packet gopacket.Packet,
-	transactionID uint16,
+	transactionID, replyPort uint16,
 	name string,
 	nameType byte,
 ) {
@@ -649,7 +648,7 @@ func (h *NetBIOSHandler) handleNodeStatus(
 		return
 	}
 
-	h.sendNodeStatusResponse(pkt, transactionID, name, nameType, names,
+	h.sendNodeStatusResponse(pkt, transactionID, replyPort, name, nameType, names,
 		deviceIPv4, ipv4.SrcIP, device.MACAddress, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
@@ -674,7 +673,7 @@ func firstNetBIOSDevice(devices []*config.Device) *config.Device {
 // sendNodeStatusResponse writes an NBSTAT answer listing the device's names.
 func (h *NetBIOSHandler) sendNodeStatusResponse(
 	reqPkt *Packet,
-	transactionID uint16,
+	transactionID, replyPort uint16,
 	name string,
 	nameType byte,
 	names []netbiosNameEntry,
@@ -737,7 +736,7 @@ func (h *NetBIOSHandler) sendNodeStatusResponse(
 
 	_ = h.stack.udpHandler.SendUDP(
 		deviceIP.To4(), dstIP.To4(),
-		NetBIOSNameServicePort, NetBIOSNameServicePort,
+		NetBIOSNameServicePort, replyPort,
 		buf.Bytes(), srcMAC, dstMAC, reqPkt.VLAN,
 	)
 }
