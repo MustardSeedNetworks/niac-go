@@ -5,7 +5,6 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
-import { LicenseProvider } from './contexts/LicenseContext';
 import { ScopeProvider } from './contexts/ScopeContext';
 import { initThemeFromStorage } from './hooks/useTheme';
 import './i18n';
@@ -26,11 +25,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
       <AuthGate>
-        <LicenseProvider>
-          <ScopeProvider>
-            <App />
-          </ScopeProvider>
-        </LicenseProvider>
+        <ScopeProvider>
+          <App />
+        </ScopeProvider>
       </AuthGate>
     </BrowserRouter>
   </StrictMode>,

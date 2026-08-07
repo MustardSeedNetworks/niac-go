@@ -46,14 +46,6 @@
     "valueHelper": "Counter faults use increments per second; utilization uses percent",
     "valueLabel": "Value: {{value}}"
   },
-  "license": {
-    "currentTier": "Current tier: {{tier}}",
-    "featureUnavailable": "{{feature}} is not available on your current tier",
-    "loading": "Checking license…",
-    "tierGateTooltip": "Requires the {{tier}} tier",
-    "tierTooLow": "This feature requires the {{tier}} tier",
-    "upgradeHint": "Start a 14-day {{tier}} trial with `niac license trial`, or activate a {{tier}} key with `niac license activate -k <KEY>`."
-  },
   "packet": {
     "captureFailed": "Failed to start packet capture",
     "decodeFailed": "Failed to decode packet",

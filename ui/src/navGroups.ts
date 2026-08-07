@@ -4,7 +4,6 @@ import {
   FileBox,
   FileScan,
   GitCompare,
-  KeyRound,
   Layers,
   Network,
   PlugZap,
@@ -90,10 +89,6 @@ export function useNavGroups(): SidebarNavGroup[] {
           { path: '/traffic', label: t('traffic.label'), icon: Zap },
           { path: '/automation', label: t('automation.label'), icon: Workflow },
         ],
-      },
-      {
-        label: t('groups.system'),
-        items: [{ path: '/license', label: t('license.label'), icon: KeyRound }],
       },
     ],
     [t],

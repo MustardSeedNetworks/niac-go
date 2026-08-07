@@ -6,16 +6,11 @@ import i18n from '../../i18n';
 import { ScenarioPackPicker } from './ScenarioPackPicker';
 
 const fetchScenarioPacks = vi.hoisted(() => vi.fn());
-const hasFeature = vi.hoisted(() => vi.fn(() => true));
 
 vi.mock('../../api/scenario-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/scenario-client')>();
   return { ...actual, fetchScenarioPacks };
 });
-
-vi.mock('../../contexts/LicenseContext', () => ({
-  useLicense: () => ({ hasFeature, loading: false }),
-}));
 
 const hospital: ScenarioPack = {
   id: 'hospital',
@@ -47,7 +42,6 @@ const enterpriseScale: ScenarioPack = {
 describe('ScenarioPackPicker', () => {
   beforeEach(async () => {
     fetchScenarioPacks.mockReset().mockResolvedValue([hospital]);
-    hasFeature.mockReset().mockReturnValue(true);
     await i18n.changeLanguage('en');
   });
 
@@ -60,15 +54,6 @@ describe('ScenarioPackPicker', () => {
 
     expect(onChange).toHaveBeenCalledWith(hospital.request);
     expect(screen.getByText(/Version 1.2.0 · 75 devices · 88 links/)).toBeVisible();
-  });
-
-  it('does not request Pro-only packs without the entitlement', () => {
-    hasFeature.mockReturnValueOnce(false);
-
-    render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={vi.fn()} />);
-
-    expect(fetchScenarioPacks).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('scenario-pack-hospital')).not.toBeInTheDocument();
   });
 
   it('renders localized pack metadata', async () => {

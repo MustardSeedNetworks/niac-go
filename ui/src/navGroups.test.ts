@@ -40,7 +40,6 @@ describe('navGroups <-> pageRegistry parity', () => {
 
 /**
  * Nav regroup (naming + nav IA, PR 2a):
- *   - /license moves out of Overview into a bottom System group.
  *   - Tools groups config-diff, walk-validator, walk-analyzer, traffic,
  *     and automation (folded from the old single-item Alerts group).
  *   - Live View shrinks to Devices + Topology; segments moves to Library;
@@ -51,12 +50,6 @@ describe('navGroups <-> pageRegistry parity', () => {
 describe('navGroups regroup (Tools/System split)', () => {
   const { result } = renderHook(() => useNavGroups());
   const byPath = (path: string) => result.current.find((g) => g.items.some((i) => i.path === path));
-
-  it('places /license in a group of its own at the bottom (System)', () => {
-    const group = byPath('/license');
-    expect(group?.items.map((i) => i.path)).toEqual(['/license']);
-    expect(result.current[result.current.length - 1]).toBe(group);
-  });
 
   it('groups config-diff, walk-validator, walk-analyzer, traffic, and automation under Tools', () => {
     const group = byPath('/config-diff');
