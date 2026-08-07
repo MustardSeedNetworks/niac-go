@@ -14,10 +14,10 @@ from the target lab instead of fixed capacity claims.
 - Keep browser filters narrow when inspecting large packet or device sets.
 - Do not modify internal queue constants as an operator tuning mechanism.
 
-NIAC Free supports ten simulated devices. NIAC Pro removes that tier soft cap,
-but the absolute ceiling remains 1,000 devices. This is an authorization and
-safety contract, not a promise that every 1,000-device scenario will meet the
-same latency target on every host.
+One configuration is capped at 1,000 devices, and the daemon bounds concurrent
+sessions and total devices on top of that. These are safety limits, not a
+promise that every 1,000-device scenario will meet the same latency target on
+every host.
 
 ## Measure the running daemon
 

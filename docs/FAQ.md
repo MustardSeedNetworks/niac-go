@@ -67,9 +67,10 @@ simulators to the same production-facing interface.
 
 ## How many devices can I simulate?
 
-NIAC Free allows up to ten simulated devices across CLI, API, UI, import,
-template, configuration mutation, and runtime-start paths. NIAC Pro removes
-that tier soft cap. Every tier retains the absolute 1,000-device ceiling.
+One configuration may carry up to 1,000 devices, enforced across CLI, API, UI,
+import, template, configuration mutation, and runtime-start paths. The daemon
+additionally bounds concurrent sessions and total devices across everything
+running at once.
 
 Practical capacity depends on enabled protocols, traffic rate, walk size,
 host resources, and the observer polling NIAC.
