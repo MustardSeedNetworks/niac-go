@@ -39,7 +39,7 @@ layout.
 
 ## Primary workflows
 
-- **Dashboard** — build, license, simulation, device, and traffic status.
+- **Dashboard** — build, simulation, device, and traffic status.
 - **Simulation** — choose a configuration and physical attachment, run
   preflight, and start or stop the runtime.
 - **Running Devices** — inspect the authoritative state of the active devices.
@@ -53,7 +53,6 @@ layout.
   live capture is running.
 - **Compare & Merge** — compare or merge configuration documents.
 - **SNMP Walks** — validate, analyze, sanitize, and manage walk files.
-- **License** — view the active local license and feature grants.
 
 The canonical route registry is `ui/src/pageRegistry.tsx`; navigation groups
 are defined in `ui/src/navGroups.ts`.
@@ -66,9 +65,9 @@ streams and fetch authoritative state again rather than treating the last
 event as durable truth.
 
 Device tables use shared filtering, pagination, and virtual scrolling for
-larger result sets. NIAC Free is limited to ten simulated devices. NIAC Pro
-removes that tier soft cap; every path still enforces the absolute
-1,000-device ceiling.
+larger result sets. Every path enforces the absolute 1,000-device ceiling for
+one configuration; the daemon additionally bounds concurrent sessions and
+total devices across everything running at once.
 
 ## Development
 

@@ -9,8 +9,6 @@ criterion below is complete and verified from a release-built artifact.
   routed discovery, SNMP walks, and Link-Live observation.
 - [x] Make injected interface faults observable through IF-MIB and EtherLike-MIB
   counters while preserving monotonic counter behavior.
-- [x] Verify the Free-tier ten-device runtime limit and keep product, API, UI,
-  and operator documentation aligned with that contract.
 - [x] Remove stale roadmap, compatibility, licensing, and deployment claims from
   active documentation and close superseded tracking issues.
 - [ ] Pass lint, formatting, unit, integration, browser, security, package,
@@ -26,9 +24,10 @@ includes the CLI, embedded web UI, API, topology and scenario configuration,
 packet capture analysis and replay, and the protocol implementations shipped in
 the current binary.
 
-The v1 contract will limit NIAC Free to ten simulated devices across every
-configuration and startup path. NIAC Pro will remove that soft limit and unlock
-the Pro capability set. License validation remains local-only.
+NIAC ships as one unrestricted binary. There is no runtime tier, no activation,
+and no phone-home. Resource ceilings are technical safety limits rather than
+entitlements: 1,000 devices for one configuration, plus daemon-wide budgets
+bounding concurrent sessions and total devices.
 
 ## Release Process
 

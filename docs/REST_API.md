@@ -69,7 +69,7 @@ counts and deterministic SHA-256 fingerprints.
 Generation is side-effect free: it does not replace the active configuration,
 start a simulation, or save a draft. The returned `content` can be reviewed and
 then stored through the draft API. The generate route requires a read-write
-token, the `config_templates` entitlement, and a CSRF token.
+token and a CSRF token.
 
 Scenario packs carry only the logical attachment name used by the composer.
 They cannot select a host interface, attachment mode, or access VLAN. Starting
@@ -112,9 +112,8 @@ native VLAN, and FDB-only properties are updated on both endpoints together.
 }
 ```
 
-The route requires a read-write token, CSRF protection, and the normal draft
-entitlement checks. It replaces only the named draft; it does not apply or
-restart the running simulation.
+The route requires a read-write token and CSRF protection. It replaces only the
+named draft; it does not apply or restart the running simulation.
 
 ## Session-scoped runtime
 
