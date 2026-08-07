@@ -115,18 +115,18 @@ func TestFromConfigIncludesFDBLearnedEndpointLink(t *testing.T) {
 			},
 			TrunkPorts: []config.TrunkPort{
 				{
-					Interface: "GigabitEthernet1/0/10", RemoteDevice: "COS-WS-B01-F01-01",
+					Interface: "GigabitEthernet1/0/10", RemoteDevice: "COS-WS-1101",
 					RemoteInterface: "eth0", NativeVLAN: 210, FDBOnly: true,
 				},
 			},
 		},
-		{Name: "COS-WS-B01-F01-01", Type: "host", MACAddress: hostMAC},
+		{Name: "COS-WS-1101", Type: "host", MACAddress: hostMAC},
 	}})
 
 	if len(snapshot.Links) != 1 {
 		t.Fatalf("links = %+v, want one FDB-learned endpoint link", snapshot.Links)
 	}
-	if got := snapshot.Links[0]; got.Target != "COS-WS-B01-F01-01" || got.NativeVLAN != 210 {
+	if got := snapshot.Links[0]; got.Target != "COS-WS-1101" || got.NativeVLAN != 210 {
 		t.Fatalf("link = %+v", got)
 	}
 }

@@ -1,6 +1,7 @@
 package scenario_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -64,12 +65,17 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
 	return steady, total
 }
 
-// Every device must answer SNMP with its own name. A discovery tool names a
-// host from sysName first and only falls back to a reverse lookup, which it
-// resolves through its own resolver rather than the simulated one. Endpoints
-// without an agent therefore rendered as bare IP addresses on a Link-Live map
-// even though the simulation served correct PTR records.
-func TestEveryDeviceAnswersSNMPWithItsName(t *testing.T) {
+// Every device must announce its own name by some means, or it renders as a
+// bare IP address on a Link-Live map. A discovery tool reads sysName first and
+// only falls back to a reverse lookup, which it resolves through its own
+// resolver rather than the simulated one — so correct PTR records are not
+// enough on their own.
+//
+// Which means depends on what the device is. Infrastructure and appliances
+// answer SNMP; personal computers deliberately do not, so that a discovery tool
+// files them as hosts rather than as managed infrastructure, and they announce
+// over NetBIOS or multicast DNS instead.
+func TestEveryDeviceAnnouncesItsName(t *testing.T) {
 	for _, pack := range scenario.Packs() {
 		result, err := scenario.Generate(pack.Request)
 		if err != nil {
@@ -81,10 +87,33 @@ func TestEveryDeviceAnswersSNMPWithItsName(t *testing.T) {
 		}
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]
-			if got := device.SNMPConfig.SysName; got != device.Name {
-				t.Errorf("%s %s sysName = %q, want %q — a device without its own sysName renders as a bare IP",
-					pack.ID, device.Name, got, device.Name)
+			switch {
+			case device.SNMPConfig.SysName != "":
+				if got := device.SNMPConfig.SysName; got != device.Name {
+					t.Errorf("%s %s sysName = %q, want %q", pack.ID, device.Name, got, device.Name)
+				}
+			case device.NetBIOSConfig != nil && device.NetBIOSConfig.Enabled:
+				assertAnnouncedName(t, pack.ID, device.Name, device.NetBIOSConfig.Name, netbiosNameLimit)
+			case device.MDNSConfig != nil && device.MDNSConfig.Enabled:
+				assertAnnouncedName(t, pack.ID, device.Name, device.MDNSConfig.Hostname, 0)
+			default:
+				t.Errorf("%s %s announces no name at all — it renders as a bare IP", pack.ID, device.Name)
 			}
 		}
+	}
+}
+
+// netbiosNameLimit is the wire cap on a NetBIOS name. A longer name reaches a
+// discovery tool truncated and disagrees with authored truth.
+const netbiosNameLimit = 15
+
+func assertAnnouncedName(t *testing.T, pack, deviceName, announced string, limit int) {
+	t.Helper()
+	if !strings.EqualFold(announced, deviceName) {
+		t.Errorf("%s %s announces %q, want its own name", pack, deviceName, announced)
+	}
+	if limit > 0 && len(announced) > limit {
+		t.Errorf("%s %s announces %d characters, truncated above %d",
+			pack, deviceName, len(announced), limit)
 	}
 }

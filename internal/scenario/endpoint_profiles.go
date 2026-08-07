@@ -8,21 +8,31 @@ const (
 )
 
 type endpointKind struct {
-	role       string
-	prefix     string
-	osType     string
-	ttl        uint8
-	windowSize uint16
+	role   string
+	prefix string
+	osType string
+	ttl    uint8
+	// personalComputer marks a machine someone sits in front of. Those ship
+	// without an SNMP agent, so a discovery tool files them as hosts; the
+	// clinical, industrial and retail appliances alongside them are
+	// SNMP-managed in the real world and are meant to appear that way.
+	personalComputer bool
+	windowSize       uint16
 }
 
 func endpointKinds(profile string) []endpointKind {
-	windows := func(role, prefix string) endpointKind {
-		return endpointKind{
-			role: role, prefix: prefix, osType: "windows", ttl: windowsTTL,
-			windowSize: windowsTCPWindowSize,
+	pc := func(role, prefix, osType string) endpointKind {
+		kind := endpointKind{
+			role: role, prefix: prefix, osType: osType, personalComputer: true,
+			ttl: unixTTL, windowSize: unixTCPWindowSize,
 		}
+		if osType == "windows" {
+			kind.ttl, kind.windowSize = windowsTTL, windowsTCPWindowSize
+		}
+
+		return kind
 	}
-	embedded := func(role, prefix string) endpointKind {
+	appliance := func(role, prefix string) endpointKind {
 		return endpointKind{
 			role: role, prefix: prefix, osType: "linux", ttl: unixTTL,
 			windowSize: unixTCPWindowSize,
@@ -32,45 +42,39 @@ func endpointKinds(profile string) []endpointKind {
 	switch profile {
 	case "hospital":
 		return []endpointKind{
-			windows("nurse-station", "NURSE"),
-			embedded("infusion-pump", "PUMP"),
-			embedded("mr-system", "MRI"),
-			embedded("philips-patient-monitor", "PHMX850"),
-			embedded("ge-patient-monitor", "GEB850"),
+			pc("nurse-station", "NURSE", "windows"),
+			appliance("infusion-pump", "PUMP"),
+			appliance("mr-system", "MRI"),
+			appliance("philips-patient-monitor", "PHMX850"),
+			appliance("ge-patient-monitor", "GEB850"),
 		}
 	case "warehouse":
 		return []endpointKind{
-			embedded("rugged-handheld", "SCAN"),
-			embedded("barcode-printer", "LABEL"),
+			appliance("rugged-handheld", "SCAN"),
+			appliance("barcode-printer", "LABEL"),
 		}
 	case "manufacturing":
 		return []endpointKind{
-			embedded("plc", "PLC"),
-			embedded("hmi", "HMI"),
-			embedded("robot-controller", "ROBOT"),
+			appliance("plc", "PLC"),
+			appliance("hmi", "HMI"),
+			appliance("robot-controller", "ROBOT"),
 		}
 	case "retail":
 		return []endpointKind{
-			windows("point-of-sale", "POS"),
-			embedded("receipt-printer", "RCPT"),
-			embedded("digital-signage", "SIGN"),
+			pc("point-of-sale", "POS", "windows"),
+			appliance("receipt-printer", "RCPT"),
+			appliance("digital-signage", "SIGN"),
 		}
 	case "service-provider":
-		return []endpointKind{windows("noc-workstation", "NOC")}
+		return []endpointKind{pc("noc-workstation", "NOC", "windows")}
 	case "enterprise":
 		return []endpointKind{
-			windows("workstation", "WS"),
-			windows("windows-laptop", "LAP"),
-			{
-				role:       "macbook",
-				prefix:     "MBP",
-				osType:     "darwin",
-				ttl:        unixTTL,
-				windowSize: unixTCPWindowSize,
-			},
+			pc("workstation", "WS", "windows"),
+			pc("windows-laptop", "LAP", "windows"),
+			pc("macbook", "MBP", "darwin"),
 		}
 	default:
-		return []endpointKind{windows("workstation", "WS")}
+		return []endpointKind{pc("workstation", "WS", "windows")}
 	}
 }
 
@@ -80,9 +84,24 @@ func wiredEndpointKind(request Request, accessIndex, slot int) endpointKind {
 	return kinds[index]
 }
 
+// wiredEndpointName labels one endpoint.
+//
+// Appliances get the readable asset form. Personal computers get a compact one,
+// because a NetBIOS name is capped at 15 characters and - now that they carry no
+// SNMP agent - NetBIOS is where a discovery tool reads a Windows machine's name
+// from. A longer name would arrive truncated and disagree with authored truth.
+// Real fleets name Windows hosts tersely for exactly this reason.
+//
+// The compact tail packs building, floor and slot with no separators. Read it
+// from the right: two digits of slot, one of floor (always 1-4, see location),
+// and whatever precedes them is the building.
 func wiredEndpointName(request Request, site Site, accessIndex, slot int) string {
 	kind := wiredEndpointKind(request, accessIndex, slot)
 	building, floor := location(accessIndex)
+	if kind.personalComputer {
+		return fmt.Sprintf("%s-%s-%d%d%02d", site.Code, kind.prefix, building, floor, slot)
+	}
+
 	return fmt.Sprintf("%s-%s-B%02d-F%02d-%02d", site.Code, kind.prefix, building, floor, slot)
 }
 

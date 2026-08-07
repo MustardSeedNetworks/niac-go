@@ -80,7 +80,7 @@ func TestSNMPTopologyPublishesRouterARPForConnectedHost(t *testing.T) {
 			SNMPConfig: config.SNMPConfig{Community: "NetAllyDemo"},
 		},
 		{
-			Name: "COS-WS-B01-F01-01", Type: "host", MACAddress: hostMAC,
+			Name: "COS-WS-1101", Type: "host", MACAddress: hostMAC,
 			Interfaces: []config.Interface{{
 				Name: "eth0", Address: "10.240.210.21/24",
 			}},

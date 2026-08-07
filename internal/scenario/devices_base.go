@@ -96,17 +96,22 @@ func endpointDevice(
 	kind := wiredEndpointKind(request, accessIndex, slot)
 	profile := profileByRole(kind.role)
 	name := wiredEndpointName(request, site, accessIndex, slot)
+	access := newInterface(
+		"eth0",
+		siteNetworkName(site, "data"),
+		address+"/24",
+		speedOneGigabit,
+		"Wired client access",
+	)
+	// Every endpoint's port is eth0, so seeding load off the interface name
+	// alone hands the whole fleet one identical number. Switch and router ports
+	// vary because their names do.
+	access.InUtilization, access.OutUtilization = utilization(name + "/eth0")
 	device := converter.Device{
 		Name: name, Type: profile.DeviceType, Vendor: profile.Vendor,
 		MACSuffix: identitySuffix(&site, kind.role, index), IPs: []string{address}, VLAN: vlanData,
-		Interfaces: []converter.Interface{newInterface(
-			"eth0",
-			siteNetworkName(site, "data"),
-			address+"/24",
-			speedOneGigabit,
-			"Wired client access",
-		)},
-		Icmp: &converter.IcmpConfig{Enabled: true, TTL: kind.ttl},
+		Interfaces: []converter.Interface{access},
+		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: kind.ttl},
 		OSFingerprint: &converter.OSFingerprintConfig{
 			OSType: kind.osType, TTL: kind.ttl, WindowSize: kind.windowSize,
 			MSS: windowsMSS, DontFragment: true,
@@ -115,13 +120,16 @@ func endpointDevice(
 			"role": kind.role, "site": site.Code, "model": profile.Model,
 			"platform": profile.Platform, "software": profile.Software,
 		},
-		// Endpoints answer SNMP for their own identity. A discovery tool names a
-		// host from sysName first and only falls back to a reverse lookup, which
-		// it resolves through its own resolver rather than the simulated one —
-		// so without an agent here these devices render as bare IP addresses on
-		// the map. Managed endpoints (infusion pumps, imaging, patient monitors,
-		// clinical workstations) carry an agent in the real world too.
-		SnmpAgent: &converter.SnmpAgent{
+	}
+	if !kind.personalComputer {
+		// Appliances answer SNMP for their own identity. A discovery tool names
+		// a host from sysName first and only falls back to a reverse lookup,
+		// which it resolves through its own resolver rather than the simulated
+		// one — so without an agent here these render as bare IP addresses on
+		// the map. Infusion pumps, imaging, patient monitors, PLCs and label
+		// printers carry an agent in the real world too, and a discovery tool
+		// is meant to file them as managed rather than as ordinary hosts.
+		device.SnmpAgent = &converter.SnmpAgent{
 			Community: request.SNMPCommunity, SysName: name,
 			// Platform and software already read the way a real agent reports
 			// itself ("Siemens Healthineers MR imaging system, Embedded clinical
@@ -129,7 +137,7 @@ func endpointDevice(
 			// renders as "siemens MAGNETOM Vida" on a discovery map.
 			SysDescr:    profile.Platform + ", " + profile.Software,
 			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
-		},
+		}
 	}
 	if kind.osType == "windows" {
 		device.Netbios = &converter.NetbiosConfig{
