@@ -22,7 +22,7 @@ func TestRecoverActiveSimulationAfterDaemonRestart(t *testing.T) {
 		Interface:  "recovery0",
 		ConfigData: validRecoveryConfig,
 	}
-	if startErr := first.StartSimulation(request, fullSimulationEntitlements()); startErr != nil {
+	if startErr := first.StartSimulation(request); startErr != nil {
 		t.Fatalf("StartSimulation() error = %v", startErr)
 	}
 	if _, statErr := os.Stat(recoveryPath); statErr != nil {
@@ -37,7 +37,7 @@ func TestRecoverActiveSimulationAfterDaemonRestart(t *testing.T) {
 	first.mu.Unlock()
 
 	second := recoveryTestDaemon(t, recoveryPath)
-	second.recoverActiveSimulation(fullSimulationEntitlements())
+	second.recoverActiveSimulation()
 	status := second.GetStatus()
 	if !status.Running || status.Interface != request.Interface {
 		t.Fatalf("recovered status = %#v", status)
@@ -70,10 +70,10 @@ func TestRecoverConcurrentTrunkSessionsAfterDaemonRestart(t *testing.T) {
 		t.Fatalf("NewDaemon(first): %v", err)
 	}
 	first.apiServer = api.NewServer(api.ServerConfig{})
-	if err = first.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+	if err = first.StartSimulation(trunkSessionRequest("hospital", 200)); err != nil {
 		t.Fatalf("StartSimulation(hospital): %v", err)
 	}
-	if err = first.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements()); err != nil {
+	if err = first.StartSimulation(trunkSessionRequest("warehouse", 201)); err != nil {
 		t.Fatalf("StartSimulation(warehouse): %v", err)
 	}
 	state, err := readRecoveryState(recoveryPath)
@@ -101,7 +101,7 @@ func TestRecoverConcurrentTrunkSessionsAfterDaemonRestart(t *testing.T) {
 		t.Fatalf("NewDaemon(second): %v", err)
 	}
 	second.apiServer = api.NewServer(api.ServerConfig{})
-	second.recoverActiveSimulation(fullSimulationEntitlements())
+	second.recoverActiveSimulation()
 	status := second.GetStatus()
 	if len(status.Sessions) != 2 || status.Recovery == nil ||
 		status.Recovery.State != recoveryStateRecovered {
@@ -123,10 +123,10 @@ func TestStoppingOneSessionPreservesOtherRecoveryIntent(t *testing.T) {
 		t.Fatalf("NewDaemon(): %v", err)
 	}
 	d.apiServer = api.NewServer(api.ServerConfig{})
-	if err = d.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+	if err = d.StartSimulation(trunkSessionRequest("hospital", 200)); err != nil {
 		t.Fatalf("StartSimulation(hospital): %v", err)
 	}
-	if err = d.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements()); err != nil {
+	if err = d.StartSimulation(trunkSessionRequest("warehouse", 201)); err != nil {
 		t.Fatalf("StartSimulation(warehouse): %v", err)
 	}
 	if err = d.StopSimulation("hospital"); err != nil {
@@ -156,7 +156,7 @@ func TestRecoverActiveSimulationFailsClosedForStaleConfig(t *testing.T) {
 	writeActiveSimulationFixture(t, recoveryPath, state)
 
 	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Running {
 		t.Fatalf("stale state started a simulation: %#v", status)
@@ -189,7 +189,7 @@ func TestRecoverActiveSimulationPreservesFailedSessionIntent(t *testing.T) {
 	}
 	writeActiveSimulationFixture(t, recoveryPath, state)
 	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+	daemon.recoverActiveSimulation()
 
 	persisted, err := readRecoveryState(recoveryPath)
 	if err != nil {
@@ -207,34 +207,6 @@ func TestRecoverActiveSimulationPreservesFailedSessionIntent(t *testing.T) {
 	}
 	if len(persisted.Sessions) != 1 || persisted.Sessions[0].Request.SessionID != "missing" {
 		t.Fatalf("persisted sessions after stop = %#v, want failed intent", persisted.Sessions)
-	}
-}
-
-func TestRecoverActiveSimulationRechecksEntitlements(t *testing.T) {
-	t.Setenv(e2eDryRunEnv, "true")
-	configDir := t.TempDir()
-	t.Setenv("NIAC_CONFIGS_DIR", configDir)
-	configPath := filepath.Join(configDir, "routed.yaml")
-	if writeErr := os.WriteFile(configPath, []byte(routedRecoveryConfig), 0o600); writeErr != nil {
-		t.Fatal(writeErr)
-	}
-	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
-	writeActiveSimulationFixture(t, recoveryPath, activeSimulationState{
-		SchemaVersion: activeSimulationSchemaVersion,
-		Sessions: []activeSimulationEntry{{Request: api.SimulationRequest{
-			SessionID:  "default",
-			Interface:  "recovery0",
-			ConfigPath: configPath,
-		}}},
-		SavedAt: time.Now().UTC(),
-	})
-
-	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(api.SimulationEntitlements{})
-	status := daemon.GetStatus()
-	if status.Running || status.Recovery == nil ||
-		!strings.Contains(status.Recovery.Message, api.ErrRoutedLabsLicenseRequired.Error()) {
-		t.Fatalf("recovery status = %#v", status)
 	}
 }
 
@@ -260,7 +232,7 @@ func TestRecoverActiveSimulationRechecksAttachmentPolicy(t *testing.T) {
 	})
 
 	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Running || status.Recovery == nil ||
 		!strings.Contains(status.Recovery.Message, ErrUnsafeTopology.Error()) {
@@ -280,7 +252,7 @@ func TestRecoverActiveSimulationIgnoresInterruptedTempWrite(t *testing.T) {
 	}
 
 	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Running || status.Recovery != nil {
 		t.Fatalf("interrupted temp write affected recovery: %#v", status)
@@ -294,7 +266,7 @@ func TestRecoverActiveSimulationReportsInvalidState(t *testing.T) {
 	}
 
 	daemon := recoveryTestDaemon(t, recoveryPath)
-	daemon.recoverActiveSimulation(fullSimulationEntitlements())
+	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Recovery == nil || status.Recovery.State != recoveryStateFailed ||
 		!strings.Contains(status.Recovery.Message, "decode recovery state") {

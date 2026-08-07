@@ -60,19 +60,15 @@ func TestRoutePolicyManifest(t *testing.T) {
 
 func TestTemplateUseRoutePolicy(t *testing.T) {
 	use, ok := fetchRouteManifest(t)["/api/v1/templates/use"]
-	if !ok || use.Feature != "config_templates" || !use.CSRF || !use.RateLimited {
-		t.Errorf("/api/v1/templates/use policy = %+v, want config_templates+csrf+rateLimited", use)
+	if !ok || !use.CSRF || !use.RateLimited {
+		t.Errorf("/api/v1/templates/use policy = %+v, want csrf+rateLimited", use)
 	}
 }
 
 func TestErrorsRoutePolicy(t *testing.T) {
 	errorsRoute, ok := fetchRouteManifest(t)["/api/v1/errors"]
-	if !ok || errorsRoute.Feature != "error_injection" ||
-		!errorsRoute.FeatureWriteOnly || !errorsRoute.CSRF || !errorsRoute.RateLimited {
-		t.Errorf(
-			"/api/v1/errors policy = %+v, want write-only error_injection+csrf+rateLimited",
-			errorsRoute,
-		)
+	if !ok || !errorsRoute.CSRF || !errorsRoute.RateLimited {
+		t.Errorf("/api/v1/errors policy = %+v, want csrf+rateLimited", errorsRoute)
 	}
 }
 

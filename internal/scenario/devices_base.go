@@ -115,6 +115,17 @@ func endpointDevice(
 			"role": kind.role, "site": site.Code, "model": profile.Model,
 			"platform": profile.Platform, "software": profile.Software,
 		},
+		// Endpoints answer SNMP for their own identity. A discovery tool names a
+		// host from sysName first and only falls back to a reverse lookup, which
+		// it resolves through its own resolver rather than the simulated one —
+		// so without an agent here these devices render as bare IP addresses on
+		// the map. Managed endpoints (infusion pumps, imaging, patient monitors,
+		// clinical workstations) carry an agent in the real world too.
+		SnmpAgent: &converter.SnmpAgent{
+			Community: request.SNMPCommunity, SysName: name,
+			SysDescr:    profile.Vendor + " " + profile.Model,
+			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
+		},
 	}
 	if kind.osType == "windows" {
 		device.Netbios = &converter.NetbiosConfig{
@@ -181,20 +192,48 @@ func interfaceSpeed(name string) int {
 	}
 }
 
+// utilization derives a busy-but-plausible load for one interface. A production
+// network under load sits mostly in the 50-70% band, peaks higher on a minority
+// of links, and leaves a few quiet. Keying it off the interface name keeps every
+// run reproducible, which the Link-Live comparator depends on.
+//
+// Peaks stop below utilizationWarningFloor: Link-Live raises an interface
+// Warning above 80% (measured — clean up to 78.7%, warned from 81.8%), and a
+// demo map should read healthy rather than scattered with amber icons.
 func utilization(name string) (float64, float64) {
-	const (
-		minimumInUtilization  = 5
-		inUtilizationSpread   = 26
-		minimumOutUtilization = 4
-		outUtilizationFactor  = 7
-		outUtilizationSpread  = 25
-	)
+	const outSeedFactor = 7
 	sum := 0
 	for _, value := range []byte(name) {
 		sum += int(value)
 	}
-	return float64(minimumInUtilization + sum%inUtilizationSpread),
-		float64(minimumOutUtilization + (sum*outUtilizationFactor)%outUtilizationSpread)
+	return utilizationBand(sum), utilizationBand(sum * outSeedFactor)
+}
+
+func utilizationBand(seed int) float64 {
+	const (
+		steadyShare   = 70 // of 100 interfaces, this many sit in the steady band
+		peakShare     = 90 // steadyShare..peakShare peak; the remainder stay quiet
+		steadyFloor   = 50
+		peakFloor     = 70
+		quietFloor    = 25
+		steadySpread  = 21 // inclusive width of the steady band: 50-70
+		peakSpread    = 9  // inclusive width of the peak band: 70-78
+		quietSpread   = 25
+		bandSelector  = 100
+		mixMultiplier = 31 // odd multiplier and shift decorrelate band from value
+		mixShift      = 7
+	)
+	// Mix before selecting so a name's band and its value inside that band are
+	// not derived from the same low bits.
+	mixed := seed*mixMultiplier + seed/mixShift
+	switch band := mixed % bandSelector; {
+	case band < steadyShare:
+		return float64(steadyFloor + seed%steadySpread)
+	case band < peakShare:
+		return float64(peakFloor + seed%peakSpread)
+	default:
+		return float64(quietFloor + seed%quietSpread)
+	}
 }
 
 func authoredTrunkPorts(links []link) []converter.TrunkPort {

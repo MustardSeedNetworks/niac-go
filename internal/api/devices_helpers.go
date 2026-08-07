@@ -38,15 +38,6 @@ func (s *Server) validateDeviceAddition(
 		return errValidationFailed
 	}
 
-	// Free-tier soft cap. Pro licenses carry the "unlimited_devices"
-	// feature and skip this gate. A nil manager cannot establish that grant.
-	if (s.license == nil || !s.license.HasFeature("unlimited_devices")) &&
-		deviceCount >= FreeTierDeviceCount {
-		s.writeFeatureGate(w, r, "unlimited_devices",
-			deviceScaleContract+" "+defaultUpgradeMessage)
-		return errValidationFailed
-	}
-
 	if len(cfg.Segments) > 0 {
 		writeError(w, r, http.StatusConflict, "segmented_config_requires_replacement",
 			"Devices in segmented configurations must be changed through whole-config replacement", nil)
@@ -146,9 +137,6 @@ func (s *Server) createAndSaveDevice(
 		return nil, err
 	}
 
-	if !s.requireDeviceProtocolFeatures(w, r, newDevice) {
-		return nil, errValidationFailed
-	}
 	if validationErr := config.ValidateDeviceManagementRequirements(newDevice); validationErr != nil {
 		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
 			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})

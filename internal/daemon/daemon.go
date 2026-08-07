@@ -229,7 +229,7 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("start API server: %w", err)
 	}
 
-	d.recoverActiveSimulation(d.apiServer.SimulationEntitlements())
+	d.recoverActiveSimulation()
 
 	return nil
 }
@@ -579,10 +579,7 @@ func simulationInterfaceDiagnostic(interfaceName string, dryRun bool) *fabric.Di
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(
-	req api.SimulationRequest,
-	entitlements api.SimulationEntitlements,
-) error {
+func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	sessionID, binding, err := d.prepareSessionStart(req)
@@ -595,8 +592,14 @@ func (d *Daemon) StartSimulation(
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadAuthorizedSimulationConfig(req, entitlements)
+	cfg, configPath, err := loadAuthorizedSimulationConfig(req)
 	if err != nil {
+		return err
+	}
+	// Per-config limits are already applied above. This is the daemon-wide
+	// budget: without it the device ceiling would apply once per session and
+	// so bound nothing.
+	if err = d.admitSessionLocked(sessionID, cfg); err != nil {
 		return err
 	}
 	compiledFabric, err := d.compileSimulationFabric(cfg, req)
@@ -625,8 +628,15 @@ func (d *Daemon) StartSimulation(
 	}
 
 	active = d.sessions.replace(sessionID, replacement)
-	d.simulation = replacement
-	d.publishSimulation(replacement)
+	// Adopt the new session as the default for unscoped readers only when
+	// nothing else holds that spot, or when this start replaces the session
+	// already in it. Adopting unconditionally meant launching a second
+	// scenario silently repointed everyone watching the first.
+	adopt := d.simulation == nil || d.simulation.SessionID == sessionID
+	if adopt {
+		d.simulation = replacement
+	}
+	d.publishSimulation(replacement, adopt)
 	if active != nil {
 		d.stopSimulation(active)
 	}
@@ -878,14 +888,13 @@ func (resources simulationResources) abort() {
 
 func loadAuthorizedSimulationConfig(
 	req api.SimulationRequest,
-	entitlements api.SimulationEntitlements,
 ) (*config.Config, string, error) {
 	cfg, configPath, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return nil, "", err
 	}
-	if entitlementErr := api.ValidateConfigEntitlements(cfg, entitlements); entitlementErr != nil {
-		return nil, "", entitlementErr
+	if countErr := api.ValidateConfigDeviceCount(cfg); countErr != nil {
+		return nil, "", countErr
 	}
 	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
 		return nil, "", runtimeErr
@@ -977,7 +986,10 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 	return nil
 }
 
-func (d *Daemon) publishSimulation(sim *Simulation) {
+// publishSimulation makes a session readable through the API. adopt also makes
+// it the default the unscoped surface reports; clients that name their session
+// are unaffected either way.
+func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
 	if d.apiServer == nil || sim == nil {
 		return
 	}
@@ -989,7 +1001,9 @@ func (d *Daemon) publishSimulation(sim *Simulation) {
 		sim.Interface,
 		sim.replay,
 	)
-	d.apiServer.SelectSimulation(sim.SessionID)
+	if adopt {
+		d.apiServer.SelectSimulation(sim.SessionID)
+	}
 }
 
 // SelectSimulation makes one running session the target of runtime API surfaces.
@@ -1035,9 +1049,11 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
+	capacity := d.aggregateUsageLocked()
 	status := api.SimulationStatus{
 		Running:  d.simulation != nil,
 		Recovery: d.recovery,
+		Capacity: &capacity,
 	}
 	if d.sessions != nil {
 		ids := make([]string, 0, d.sessions.len())
@@ -1057,6 +1073,7 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 		selected := d.simulationStatusLocked(d.simulation, true)
 		selected.Sessions = status.Sessions
 		selected.Recovery = status.Recovery
+		selected.Capacity = status.Capacity
 		return selected
 	}
 

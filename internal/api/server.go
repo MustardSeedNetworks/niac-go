@@ -48,7 +48,6 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
-	"github.com/MustardSeedNetworks/niac-go/internal/license"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
@@ -359,6 +358,9 @@ type SimulationStatus struct {
 	Degraded       bool                `json:"degraded,omitempty"`
 	DegradedReason string              `json:"degradedReason,omitempty"`
 	Capture        *TrunkCaptureHealth `json:"capture,omitempty"`
+	// Capacity is daemon-wide, so it is set on the top-level status only, not
+	// on each entry of Sessions.
+	Capacity *DaemonCapacity `json:"capacity,omitempty"`
 }
 
 // SimulationRecovery reports the most recent daemon restart recovery attempt.
@@ -406,7 +408,7 @@ type TrunkCaptureHealth struct {
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
-	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
+	StartSimulation(req SimulationRequest) error
 	StopSimulation(sessionID string) error
 	SelectSimulation(sessionID string) error
 	GetStatus() SimulationStatus
@@ -442,10 +444,6 @@ type Server struct {
 	bgStopOnce     sync.Once
 	library        *library.Library
 	tlsFingerprint tlsFingerprintCache
-	// license is the offline license manager. Populated lazily in
-	// NewServer; may be nil in tests / dev builds that don't exercise
-	// license-gated endpoints.
-	license *license.Manager
 	// tokens is the active bearer-token store. Seeded from
 	// ServerConfig.TokenFile (preferred) or ServerConfig.Token at
 	// construction time, then rotated by Server.ReloadTokensFromFile or
@@ -492,14 +490,6 @@ func NewServer(cfg ServerConfig) *Server {
 		tokens:        initialTokenStore(cfg),
 		pcapCache:     capture.NewCache(),
 		simulations:   make(map[string]simulationAPIState),
-	}
-	// License manager initialization is best-effort for Free-tier operation.
-	// Paid feature gates must treat a nil manager as unavailable and fail closed.
-	if lm, lmErr := license.NewRuntimeManager(); lmErr == nil {
-		srv.license = lm
-	} else {
-		slog.Warn("[API] license manager init failed; paid feature gates unavailable",
-			"error", lmErr)
 	}
 	return srv
 }

@@ -156,7 +156,7 @@ func (d *Daemon) clearActiveSimulation() error {
 	return nil
 }
 
-func (d *Daemon) recoverActiveSimulation(entitlements api.SimulationEntitlements) {
+func (d *Daemon) recoverActiveSimulation() {
 	if d.cfg.RecoveryPath == "" {
 		return
 	}
@@ -179,7 +179,7 @@ func (d *Daemon) recoverActiveSimulation(entitlements api.SimulationEntitlements
 	}()
 	var failures []error
 	for _, session := range state.Sessions {
-		if startErr := d.StartSimulation(session.Request, entitlements); startErr != nil {
+		if startErr := d.StartSimulation(session.Request); startErr != nil {
 			failures = append(
 				failures,
 				fmt.Errorf("session %q: %w", session.Request.SessionID, startErr),

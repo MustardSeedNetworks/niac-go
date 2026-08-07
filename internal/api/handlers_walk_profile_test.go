@@ -199,12 +199,12 @@ func TestWalkImportRejectsInvalidAndResumesExistingReview(t *testing.T) {
 func TestWalkProfileRoutesCarryBoundedAuthoringPolicy(t *testing.T) {
 	routes := fetchRouteManifest(t)
 	importRoute := routes["/api/v1/walk/import"]
-	if importRoute.Feature != "config_templates" || !importRoute.CSRF || !importRoute.RateLimited ||
+	if !importRoute.CSRF || !importRoute.RateLimited ||
 		importRoute.MaxBodyBytes != MaxWalkImportBodySize {
 		t.Fatalf("walk import policy = %+v", importRoute)
 	}
 	captureRoute := routes["/api/v1/walk/capture-profile"]
-	if captureRoute.Feature != "config_templates" || !captureRoute.CSRF ||
+	if !captureRoute.CSRF ||
 		!captureRoute.RateLimited ||
 		captureRoute.Admin {
 		t.Fatalf("walk capture policy = %+v", captureRoute)

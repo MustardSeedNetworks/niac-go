@@ -26,35 +26,19 @@ type UseTemplateResponse struct {
 	ConfigPath string `json:"configPath"`
 }
 
-// handleTemplates handles GET /api/v1/templates (list) and POST (upload).
+// handleTemplates handles GET /api/v1/templates (list).
 func (s *Server) handleTemplates(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleTemplatesList(w, r)
-	case http.MethodPost:
-		s.handleTemplateUpload(w, r)
-	default:
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-	}
+	s.handleTemplatesList(w, r)
 }
 
-// handleTemplateByName handles GET /api/v1/templates/{name} and DELETE.
+// handleTemplateByName handles GET /api/v1/templates/{name}.
 func (s *Server) handleTemplateByName(w http.ResponseWriter, r *http.Request) {
-	// Extract template name from path: /api/v1/templates/{name}
 	name := strings.TrimPrefix(r.URL.Path, "/api/v1/templates/")
 	if name == "" {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "Template name required", nil)
 		return
 	}
-
-	switch r.Method {
-	case http.MethodGet:
-		s.handleTemplateContent(w, r, name)
-	case http.MethodDelete:
-		s.handleTemplateDelete(w, r, name)
-	default:
-		writeError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
-	}
+	s.handleTemplateContent(w, r, name)
 }
 
 // handleTemplatesList returns a list of available templates.
@@ -155,16 +139,4 @@ func parseUseTemplateRequest(r *http.Request) (*UseTemplateRequest, error) {
 	}
 
 	return &req, nil
-}
-
-// handleTemplateUpload handles POST /api/v1/templates (upload new template).
-func (s *Server) handleTemplateUpload(w http.ResponseWriter, r *http.Request) {
-	// For now, return not implemented
-	writeError(w, r, http.StatusNotImplemented, "not_implemented", "Template upload not yet implemented", nil)
-}
-
-// handleTemplateDelete handles DELETE /api/v1/templates/{name}.
-func (s *Server) handleTemplateDelete(w http.ResponseWriter, r *http.Request, _ string) {
-	// For now, return not implemented (don't want to delete built-in templates)
-	writeError(w, r, http.StatusNotImplemented, "not_implemented", "Template deletion not yet implemented", nil)
 }

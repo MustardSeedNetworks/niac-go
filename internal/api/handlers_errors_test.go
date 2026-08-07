@@ -16,11 +16,19 @@ import (
 )
 
 func TestAvailableErrorTypesOnlyAdvertiseObservableFaults(t *testing.T) {
+	// This list may only grow when the new fault genuinely changes something a
+	// tester can see. Link Down qualifies: it drops the carrier, so the packet
+	// path stops forwarding, the CLI reports the port down and SNMP reports
+	// ifOperStatus down — proven in internal/devicestate's link-down tests.
+	// PoE, DHCP, DNS and latency faults were considered and left out: nothing
+	// in the runtime observes them today, so advertising them would offer a
+	// knob that does nothing.
 	want := []string{
 		"FCS Errors",
 		"Packet Discards",
 		"Interface Errors",
 		"High Utilization",
+		"Link Down",
 	}
 
 	types := availableErrorTypes()

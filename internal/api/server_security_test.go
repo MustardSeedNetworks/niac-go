@@ -613,10 +613,14 @@ func generateTestToken() string {
 // TestCSRFWiring_TemplatesAndLibraryNetworks is the #740 regression test
 // (extended for #897 L4's library-networks unification): it drives
 // requests through the real mux (registerAPIRoutes) to prove the
-// templates + library-networks mutating endpoints actually have
-// csrfProtect in their middleware chain. A POST without the
-// X-Csrf-Token header must be rejected with 403 — if someone removes
-// csrfProtect from routes.go, this fails.
+// library-networks mutating endpoints actually have csrfProtect in their
+// middleware chain. A POST without the X-Csrf-Token header must be
+// rejected with 403 — if someone removes csrfProtect from routes.go, this
+// fails.
+//
+// /api/v1/templates is no longer in this list: templates ship with the
+// product and are read-only, so the path exposes no mutating method. See
+// TestTemplateRoutesRejectMutation.
 func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	lib, err := library.Open(t.TempDir())
@@ -624,14 +628,14 @@ func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 		t.Fatalf("open library: %v", err)
 	}
 	server.library = lib
-	// The templates/library routes chain through writeRateLimit, whose
-	// limiter newTestServerWithAuth doesn't initialize — set it so the
-	// full mux chain doesn't nil-panic before reaching csrfProtect.
+	// The library routes chain through writeRateLimit, whose limiter
+	// newTestServerWithAuth doesn't initialize — set it so the full mux
+	// chain doesn't nil-panic before reaching csrfProtect.
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
 	mux := http.NewServeMux()
 	server.registerAPIRoutes(mux)
 
-	for _, path := range []string{"/api/v1/templates", "/api/v1/library/networks"} {
+	for _, path := range []string{"/api/v1/library/networks"} {
 		t.Run("POST "+path+" without CSRF -> 403", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, path,
 				bytes.NewReader([]byte(`{"name":"x","content":"y"}`)))
@@ -660,6 +664,41 @@ func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 			// validation) — only that CSRF did not block it.
 			if rec.Code == http.StatusForbidden {
 				t.Errorf("%s with valid CSRF still 403: %s", path, rec.Body.String())
+			}
+		})
+	}
+}
+
+// TestTemplateRoutesRejectMutation locks in that the template paths expose no
+// mutating method. Upload and delete previously existed as registered routes
+// that only ever returned 501 — CSRF-protected, rate-limited surface that
+// could not succeed. They were removed rather than implemented: templates ship
+// with the product and are read-only. If someone re-adds a mutating method
+// here it needs csrfProtect, so this test fails loudly first.
+func TestTemplateRoutesRejectMutation(t *testing.T) {
+	server, _, token := newTestServerWithAuth(t)
+	server.fileLimiter = ratelimit.NewRateLimiter(FileRateLimit, FileBurst)
+	mux := http.NewServeMux()
+	server.registerAPIRoutes(mux)
+
+	cases := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/api/v1/templates"},
+		{http.MethodDelete, "/api/v1/templates/example.yaml"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, bytes.NewReader([]byte(`{}`)))
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Errorf("%s %s: status = %d, want 405 (no mutating template surface)",
+					tc.method, tc.path, rec.Code)
 			}
 		})
 	}

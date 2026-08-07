@@ -72,6 +72,11 @@ func faultRate(fault devicestate.InterfaceFault, speedsMbps map[string]int) uint
 	if fault.Value <= 0 {
 		return 0
 	}
+	// A downed link produces no counter rate; it changes interface state
+	// instead, which the device-state snapshot projects.
+	if fault.Type == devicestate.FaultLinkDown {
+		return 0
+	}
 	value := uint64(fault.Value)
 	if fault.Type != devicestate.FaultUtilization {
 		return value
@@ -105,6 +110,10 @@ func addFaultDelta(
 	case devicestate.FaultUtilization:
 		delta.InOctets += increment
 		delta.OutOctets += increment
+	case devicestate.FaultLinkDown:
+		// No counter moves for a downed link. The outage shows up as the
+		// interface reporting operationally down, projected by device state.
+		return
 	}
 	deltas[fault.Interface] = delta
 }

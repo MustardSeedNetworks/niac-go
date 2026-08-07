@@ -29,7 +29,12 @@ func (s *Server) handleSegments(w http.ResponseWriter, _ *http.Request) {
 
 		return
 	}
+	s.writeJSON(w, buildSegmentResponses(cfg))
+}
 
+// buildSegmentResponses projects a config's normalized segments. Shared with
+// the session-scoped segments endpoint so both render segments identically.
+func buildSegmentResponses(cfg *config.Config) []segmentResponse {
 	segments := cfg.NormalizedSegments()
 	out := make([]segmentResponse, 0, len(segments))
 	for i := range segments {
@@ -45,5 +50,5 @@ func (s *Server) handleSegments(w http.ResponseWriter, _ *http.Request) {
 		})
 	}
 
-	s.writeJSON(w, out)
+	return out
 }

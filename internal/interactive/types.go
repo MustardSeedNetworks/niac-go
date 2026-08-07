@@ -225,9 +225,8 @@ type model struct {
 	showNeighbors bool
 
 	// Error injection state
-	selectedDeviceIdx     int
-	selectedErrorType     int
-	faultInjectionEnabled bool
+	selectedDeviceIdx int
+	selectedErrorType int
 
 	// Stats
 	stackStats      stackStatsSnapshot

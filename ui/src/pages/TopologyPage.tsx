@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
 import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../ui/Button';
@@ -72,39 +73,38 @@ export const TopologyPage: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
+  const { sessionId } = useAppContext();
 
-  // Fetch topology data from the API with periodic polling
+  // Runtime reads name their session; nothing to read before one runs.
+  const poll = { intervalMs: 15000, enabled: sessionId !== null };
+  const session = sessionId ?? '';
   const {
     data: topology,
     loading: topologyLoading,
     refetch: refetchTopology,
-  } = useApiResource(fetchTopology, [], { intervalMs: 15000 });
+  } = useApiResource(() => fetchTopology(session), [sessionId], poll);
   const {
     data: devices,
     loading: devicesLoading,
     refetch: refetchDevices,
-  } = useApiResource(fetchDevices, [], { intervalMs: 15000 });
-  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(fetchNeighbors, [], {
-    intervalMs: 15000,
-  });
+  } = useApiResource(() => fetchDevices(session), [sessionId], poll);
+  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(
+    () => fetchNeighbors(session),
+    [sessionId],
+    poll,
+  );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);
   const [selectedDevice, setSelectedDevice] = useState<DeviceSummary | null>(null);
   const [showLegend, setShowLegend] = useState(true);
-  // Minimap removed in this version — it was always toggle-off by
-  // default and operators didn't use it; the ReactFlow Controls
-  // (fit-view + zoom buttons) already cover navigation on big graphs.
-  // showLabels controls whether TrunkEdge renders its per-side
-  // interface labels + the middle VLAN/speed label. On by default
-  // for clarity; toggle off via the header to see clean lines only.
+  // showLabels controls whether TrunkEdge renders its per-side interface
+  // labels + the middle VLAN/speed label. On by default for clarity.
   const [showLabels, setShowLabels] = useState(true);
   const [view, setView] = useState<'graph' | 'neighbors'>('graph');
-  // Search query in the header — filters which devices show up + their
-  // edges. Matched on name (case-insensitive substring).
+  // Filters devices + their edges by name, case-insensitive substring.
   const [search, setSearch] = useState('');
-  // Type-filter chips — empty Set means "show everything". When the
-  // user toggles a type on, only that type renders.
+  // Empty Set means "show everything"; toggling a type renders only it.
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   // Node click selects its neighbourhood: the clicked node + every
   // node connected to it by an edge get full opacity; everything else

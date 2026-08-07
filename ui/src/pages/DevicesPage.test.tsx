@@ -14,6 +14,12 @@ import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { DevicesPage } from './DevicesPage';
 
+// Runtime reads name their session, so a page rendered on its own has to say
+// which scenario it is looking at.
+vi.mock('../contexts/AppContext', () => ({
+  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+}));
+
 vi.mock('../api/client', () => ({
   fetchDevices: () => Promise.resolve([]),
   fetchConfig: () =>

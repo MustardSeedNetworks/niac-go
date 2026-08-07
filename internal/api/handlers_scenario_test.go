@@ -105,20 +105,20 @@ func TestScenarioGenerateRejectsUnknownRequestFields(t *testing.T) {
 func TestScenarioRoutesCarryTemplateAuthoringPolicy(t *testing.T) {
 	routes := fetchRouteManifest(t)
 	packs := routes["/api/v1/scenario/packs"]
-	if packs.Feature != "config_templates" || packs.CSRF || packs.RateLimited {
-		t.Fatalf("packs policy = %+v, want config_templates read", packs)
+	if packs.CSRF || packs.RateLimited {
+		t.Fatalf("packs policy = %+v, want an unmetered read", packs)
 	}
 	profiles := routes["/api/v1/scenario/profiles"]
-	if profiles.Feature != "config_templates" || profiles.CSRF || profiles.RateLimited {
-		t.Fatalf("profiles policy = %+v, want config_templates read", profiles)
+	if profiles.CSRF || profiles.RateLimited {
+		t.Fatalf("profiles policy = %+v, want an unmetered read", profiles)
 	}
 	captured := routes["/api/v1/scenario/profiles/captured"]
-	if captured.Feature != "config_templates" || !captured.CSRF || !captured.RateLimited ||
+	if !captured.CSRF || !captured.RateLimited ||
 		captured.Admin {
 		t.Fatalf("captured profile policy = %+v, want config_templates+csrf+rateLimited", captured)
 	}
 	generate := routes["/api/v1/scenario/generate"]
-	if generate.Feature != "config_templates" || !generate.CSRF || !generate.RateLimited ||
+	if !generate.CSRF || !generate.RateLimited ||
 		generate.Admin {
 		t.Fatalf("generate policy = %+v, want config_templates+csrf+rateLimited", generate)
 	}

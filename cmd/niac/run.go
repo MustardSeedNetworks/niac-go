@@ -80,7 +80,7 @@ func runSimulation(
 
 	// Dry run mode - just validate
 	if options.dryRun {
-		if entitlementErr := validateStoredSimulationConfig(cfg, loadFeatureChecker); entitlementErr != nil {
+		if entitlementErr := validateSimulationConfig(cfg); entitlementErr != nil {
 			return entitlementErr
 		}
 		logging.Successf("✓ Configuration valid: %s", configFile)

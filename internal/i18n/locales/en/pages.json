@@ -285,7 +285,6 @@
     "library": "Library",
     "liveView": "Live View",
     "overview": "Overview",
-    "system": "System",
     "tools": "Tools"
   },
   "libraryFiles": {
@@ -403,34 +402,6 @@
     "description": "Read-only browser for the on-disk {{protocol}} walk files the daemon serves from the unified library.",
     "label": "Walks",
     "title": "Walk Library"
-  },
-  "license": {
-    "activated": "Activated",
-    "activation": "Activation",
-    "cmd": {
-      "activate": "Activate",
-      "deactivate": "Deactivate",
-      "status": "Status",
-      "trial": "Trial"
-    },
-    "currentTier": "Current tier",
-    "description": "See your active license tier, the features it unlocks, and how to activate or upgrade.",
-    "deviceScaleContract": "Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.",
-    "devMode": "Development build — license enforcement is off, so every feature is available and no upgrade prompts are shown.",
-    "featureLocked": "Requires upgrade",
-    "features": "Features",
-    "label": "License",
-    "loadError": "Could not load license status.",
-    "loading": "Checking license…",
-    "manage": "Manage your license",
-    "manageHint": "NIAC validates licenses offline — there is no phone-home. Activate, start a trial, or deactivate with the niac license CLI on the host running the daemon.",
-    "noFeatures": "No feature flags are reported for this tier.",
-    "notActivated": "Not activated",
-    "retry": "Retry",
-    "tier": "Tier",
-    "title": "License & Features",
-    "trial": "Trial",
-    "trialDaysRemaining": "{{days}} days remaining"
   },
   "newSimWizard": {
     "backLabel": "Back",
@@ -986,7 +957,6 @@
     "label": "Fault Injection",
     "page": {
       "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
-      "errorInjectionRequiresPro": "Error injection requires NIAC Pro.",
       "errorInjectionTitle": "Error Injection",
       "noCapturedRuns": "No captured runs yet.",
       "pcapReplayDescription": "Replay captured packet traffic with loop and timing controls for testing.",

@@ -8,13 +8,6 @@ import (
 )
 
 var (
-	// ErrRoutedLabsLicenseRequired indicates that a routed or SSH configuration
-	// was rejected inside the simulation start transaction.
-	ErrRoutedLabsLicenseRequired = errors.New("routed virtual labs require a license grant")
-	// ErrUnlimitedDevicesLicenseRequired indicates that a config exceeds the Free device cap.
-	ErrUnlimitedDevicesLicenseRequired = errors.New(
-		"device count requires an unlimited devices grant",
-	)
 	// ErrSimulationDeviceLimitExceeded indicates that a config exceeds NIAC's absolute device ceiling.
 	ErrSimulationDeviceLimitExceeded = errors.New("simulation exceeds the absolute device limit")
 	ErrSimulationSessionConflict     = errors.New(
@@ -22,56 +15,33 @@ var (
 	)
 	ErrSimulationSessionIDRequired = errors.New("simulation session ID is required")
 	ErrSimulationSessionNotFound   = errors.New("simulation session was not found")
+	// ErrSimulationSessionCapacity and ErrSimulationDeviceCapacity are daemon-wide
+	// technical capacity limits, not entitlements. A per-config check cannot
+	// enforce them because several sessions run at once.
+	ErrSimulationSessionCapacity = errors.New("daemon session capacity exceeded")
+	ErrSimulationDeviceCapacity  = errors.New("daemon device capacity exceeded")
 )
 
-// SimulationEntitlements captures paid grants evaluated for one atomic start.
-type SimulationEntitlements struct {
-	RoutedLabs       bool
-	UnlimitedDevices bool
+// DaemonCapacity reports what the daemon is currently carrying against its
+// aggregate safety budgets, so an operator can see how close a start is to
+// being refused before it is.
+type DaemonCapacity struct {
+	Sessions    int `json:"sessions"`
+	MaxSessions int `json:"maxSessions"`
+	Devices     int `json:"devices"`
+	MaxDevices  int `json:"maxDevices"`
 }
 
-// ValidateConfigEntitlements applies the license and absolute-size policy used
-// by both simulation starts and whole-config replacement.
-func ValidateConfigEntitlements(cfg *config.Config, entitlements SimulationEntitlements) error {
+// ValidateConfigDeviceCount enforces NIAC's absolute per-config device ceiling,
+// used by both simulation starts and whole-config replacement. It is a
+// technical limit on what one config may carry, not an entitlement; the
+// daemon-wide budgets in internal/daemon/admission.go bound everything running
+// at once.
+func ValidateConfigDeviceCount(cfg *config.Config) error {
 	if cfg.DeviceCount() > MaxDeviceCount {
 		return ErrSimulationDeviceLimitExceeded
 	}
-	if cfg.DeviceCount() > FreeTierDeviceCount && !entitlements.UnlimitedDevices {
-		return ErrUnlimitedDevicesLicenseRequired
-	}
-	if configRequiresRoutedLabs(cfg) && !entitlements.RoutedLabs {
-		return ErrRoutedLabsLicenseRequired
-	}
 	return nil
-}
-
-func configRequiresRoutedLabs(cfg *config.Config) bool {
-	if len(cfg.Networks) > 0 || len(cfg.Attachments) > 0 {
-		return true
-	}
-	for _, segment := range cfg.NormalizedSegments() {
-		for index := range segment.Devices {
-			ssh := segment.Devices[index].SSHConfig
-			if ssh != nil && ssh.Enabled {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (s *Server) simulationEntitlements() SimulationEntitlements {
-	entitlements := SimulationEntitlements{}
-	if s.license != nil {
-		entitlements.RoutedLabs = s.license.HasFeature("routed_labs")
-		entitlements.UnlimitedDevices = s.license.HasFeature("unlimited_devices")
-	}
-	return entitlements
-}
-
-// SimulationEntitlements returns the currently active simulation grants.
-func (s *Server) SimulationEntitlements() SimulationEntitlements {
-	return s.simulationEntitlements()
 }
 
 func (s *Server) handleSimulation(w http.ResponseWriter, r *http.Request) {
@@ -182,8 +152,7 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 			"Simulation request validation failed", validationErrors)
 		return
 	}
-	entitlements := s.simulationEntitlements()
-	if err := s.daemon.StartSimulation(req, entitlements); err != nil {
+	if err := s.daemon.StartSimulation(req); err != nil {
 		s.handleSimulationStartError(w, r, err)
 		return
 	}
@@ -194,12 +163,6 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, ErrRoutedLabsLicenseRequired):
-		s.writeFeatureGate(w, r, "routed_labs",
-			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
-	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
-		s.writeFeatureGate(w, r, "unlimited_devices",
-			deviceScaleContract+" "+defaultUpgradeMessage)
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Simulation exceeds the maximum supported device count", nil)
@@ -215,6 +178,12 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 	case errors.Is(err, ErrSimulationSessionIDRequired):
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
 			"A scenario ID is required for a shared trunk", nil)
+	case errors.Is(err, ErrSimulationSessionCapacity):
+		writeError(w, r, http.StatusConflict, "session_capacity_reached",
+			"The daemon is already running its maximum number of scenarios", nil)
+	case errors.Is(err, ErrSimulationDeviceCapacity):
+		writeError(w, r, http.StatusConflict, "device_capacity_reached",
+			"Running this scenario would exceed the daemon's total device capacity", nil)
 	case errors.Is(err, config.ErrSSHPasswordUnavailable):
 		writeError(w, r, http.StatusBadRequest, "runtime_requirements_unmet",
 			"Configuration runtime requirements are not met",

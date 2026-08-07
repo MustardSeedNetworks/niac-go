@@ -3,7 +3,6 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchScenarioPacks, type ScenarioGenerateRequest } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
-import { useLicense } from '../../contexts/LicenseContext';
 import { useApiResource } from '../../hooks/useApiResource';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
@@ -104,8 +103,6 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onCha
   );
 };
 
-export const ScenarioPackPicker: FC<ScenarioPackPickerProps> = (props) => {
-  const { hasFeature, loading } = useLicense();
-  if (loading || !hasFeature('config_templates')) return null;
-  return <ScenarioPackPickerContent {...props} />;
-};
+export const ScenarioPackPicker: FC<ScenarioPackPickerProps> = (props) => (
+  <ScenarioPackPickerContent {...props} />
+);

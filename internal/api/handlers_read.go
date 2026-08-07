@@ -18,8 +18,11 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
+// handleStats serves whichever session is selected. Prefer
+// GET /api/v1/sessions/{id}/stats, which names the session it means instead of
+// depending on selection.
 func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
-	payload, _, ok := s.currentStatsPayload()
+	payload, ok := s.selectedStatsPayload()
 	if !ok {
 		http.Error(w, "no simulation running", http.StatusServiceUnavailable)
 
@@ -216,13 +219,7 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) authorizeConfigEntitlements(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
-	switch err := ValidateConfigEntitlements(cfg, s.simulationEntitlements()); {
-	case errors.Is(err, ErrRoutedLabsLicenseRequired):
-		s.writeFeatureGate(w, r, "routed_labs",
-			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
-	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
-		s.writeFeatureGate(w, r, "unlimited_devices",
-			deviceScaleContract+" "+defaultUpgradeMessage)
+	switch err := ValidateConfigDeviceCount(cfg); {
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Configuration exceeds the maximum supported device count", nil)

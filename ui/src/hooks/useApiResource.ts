@@ -18,6 +18,14 @@ interface Options<T> {
    * message.
    */
   errorToast?: boolean | { title?: string };
+  /**
+   * Skip fetching entirely while false, leaving `data` null and `loading`
+   * false. For a resource that needs something the caller does not have yet —
+   * a session-scoped read before any scenario is running. Requesting anyway
+   * would ask for a session that does not exist, and substituting a
+   * placeholder would report numbers that were never measured.
+   */
+  enabled?: boolean;
 }
 
 export function useApiResource<T>(
@@ -25,7 +33,7 @@ export function useApiResource<T>(
   deps: unknown[] = [],
   options: Options<T> = {},
 ) {
-  const { intervalMs, transform, errorToast } = options;
+  const { intervalMs, transform, errorToast, enabled = true } = options;
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -74,6 +82,12 @@ export function useApiResource<T>(
   );
 
   useEffect(() => {
+    if (!enabled) {
+      // Nothing to fetch yet. Leave data null rather than showing a stale or
+      // invented value, and stop reporting a load that will never happen.
+      setLoading(false);
+      return;
+    }
     // FIX #179: AbortController for cleanup on unmount/dependency change
     const controller = new AbortController();
 
@@ -92,7 +106,7 @@ export function useApiResource<T>(
         timerRef.current = null;
       }
     };
-  }, [...deps, intervalMs, run]);
+  }, [...deps, intervalMs, run, enabled]);
 
   const refetch = useCallback(() => run(), [run]);
 
