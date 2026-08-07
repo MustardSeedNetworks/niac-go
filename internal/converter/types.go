@@ -172,6 +172,7 @@ type Device struct {
 	HTTP          *HTTPConfig          `yaml:"http,omitempty"`
 	Ftp           *FtpConfig           `yaml:"ftp,omitempty"`
 	Netbios       *NetbiosConfig       `yaml:"netbios,omitempty"`
+	Mdns          *MdnsConfig          `yaml:"mdns,omitempty"`
 	Snmpv3        *Snmpv3Config        `yaml:"snmpv3,omitempty"` // v0.86.0 — free (safe SNMP variant)
 	Icmp          *IcmpConfig          `yaml:"icmp,omitempty"`
 	Icmpv6        *Icmpv6Config        `yaml:"icmpv6,omitempty"`
@@ -500,6 +501,22 @@ type FtpUser struct {
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
 	HomeDir  string `yaml:"home_dir,omitempty"`
+}
+
+// MdnsConfig publishes a device on multicast DNS, the way Bonjour and Avahi
+// announce a host and its services on the local link.
+type MdnsConfig struct {
+	Enabled  bool          `yaml:"enabled,omitempty"`
+	Hostname string        `yaml:"hostname,omitempty"`
+	Services []MdnsService `yaml:"services,omitempty"`
+	TTL      uint32        `yaml:"ttl,omitempty"`
+}
+
+// MdnsService is one advertised DNS-SD service, such as _ipp._tcp.
+type MdnsService struct {
+	Type string   `yaml:"type"`
+	Port uint16   `yaml:"port"`
+	TXT  []string `yaml:"txt,omitempty"`
 }
 
 // NetbiosConfig represents NetBIOS service configuration.

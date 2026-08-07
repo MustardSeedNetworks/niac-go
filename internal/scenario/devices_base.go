@@ -135,8 +135,37 @@ func endpointDevice(
 		device.Netbios = &converter.NetbiosConfig{
 			Enabled: true, Name: name, Workgroup: "DEMO", NodeType: "H", Services: []string{"workstation"},
 		}
+	} else {
+		// Windows announces itself over NetBIOS; everything else - Apple
+		// hardware, printers, and the embedded Linux inside clinical and
+		// industrial gear - uses multicast DNS. A device with neither is
+		// unnamed to a browser.
+		device.Mdns = &converter.MdnsConfig{
+			Enabled: true, Hostname: strings.ToLower(name),
+			Services: endpointMDNSServices(profile.DeviceType),
+		}
 	}
 	return device
+}
+
+// endpointMDNSServices advertises the services a device of this class offers.
+// A printer that does not answer a print-service browse is just an unnamed
+// host to anything looking for printers.
+func endpointMDNSServices(deviceType string) []converter.MdnsService {
+	const (
+		ippPort  = 631
+		rawPort  = 9100
+		httpPort = 80
+	)
+
+	if deviceType == "printer" {
+		return []converter.MdnsService{
+			{Type: "_ipp._tcp", Port: ippPort, TXT: []string{"rp=ipp/print"}},
+			{Type: "_pdl-datastream._tcp", Port: rawPort},
+		}
+	}
+
+	return []converter.MdnsService{{Type: "_http._tcp", Port: httpPort}}
 }
 
 func newInterface(

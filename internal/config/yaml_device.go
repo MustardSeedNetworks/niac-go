@@ -415,6 +415,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.HTTPConfig = parseHTTPConfig(yamlDevice.HTTP, device.Name)
 	device.FTPConfig = parseFTPConfig(yamlDevice.Ftp, device.Name)
 	device.NetBIOSConfig = parseNetBIOSConfig(yamlDevice.Netbios, device.Name)
+	device.MDNSConfig = parseMDNSConfig(yamlDevice.Mdns, device.Name)
 
 	// Handle manageability protocols (v0.86.0)
 	device.SNMPv3Config = parseSNMPv3Config(yamlDevice.Snmpv3)
