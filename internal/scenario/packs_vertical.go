@@ -16,9 +16,9 @@ func verticalScenarioPacks() []Pack {
 			), Manifest{
 				DeviceCount: retailDeviceCount, NetworkCount: twoSiteNetworkCount,
 				LinkCount:         retailLinkCount,
-				DeviceNamesSHA256: "fe35fa8827a70340c3990747010279b97f770e8c6658dfbfb5579b3d4f6ceb73",
+				DeviceNamesSHA256: "e5944f8f0f8795d3f054f6ce082c3c8c2c1dde8eab5839992487cebd554215a8",
 				NetworksSHA256:    "88cdfbd6e21a58552873afe83c93dac96b7fae0a28166ecb319475dbcc38d25b",
-				LinksSHA256:       "da53c82f48efbd25d23b21dc11e32fc8ea7c00043c7b39dc095d57ad6d340100",
+				LinksSHA256:       "c57237bbe4a9c00de9506bd06c2da4d0a32acf93e930ebf287f4f83da83d18b3",
 			},
 		),
 		manufacturingScenarioPack(),
@@ -58,9 +58,9 @@ func serviceProviderScenarioPack() Pack {
 		Manifest{
 			DeviceCount: serviceProviderDeviceCount, NetworkCount: threeSiteNetworkCount,
 			LinkCount:         serviceProviderLinkCount,
-			DeviceNamesSHA256: "fc492e5fe3db7aa366a1c2662fdc4512849350c5046c170f108063fee437d1ab",
+			DeviceNamesSHA256: "279b172d5ce92a4652ff5015da8325297a8d7217211b19ac020cec462d1a711f",
 			NetworksSHA256:    "79fcb26f2a9f506a24540a583ae570b5c25e1dcf8a63ccfa21946b4912fc7720",
-			LinksSHA256:       "b77376f0f247fa026ea07ac903999fd52027545d20296984c256a888f8b1bed7",
+			LinksSHA256:       "e64dc64a8796d5327205367f70b8934fd02c2cefd3a9d79b9a667b74f7031c9d",
 		},
 	)
 }

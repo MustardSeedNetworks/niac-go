@@ -28,10 +28,10 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		DeviceCount:       531,
 		NetworkCount:      39,
 		LinkCount:         634,
-		DeviceNamesSHA256: "1286a7b93d0c7185189db240c88d6d400d4deb7dbcc361f1384c4a176bcfce0d",
+		DeviceNamesSHA256: "6da20f0044fb2f696efc3d886c209eb47c07b5fa1e64222f93d58f6dc00f1979",
 		NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
 		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
-		LinksSHA256: "ac59d25316d4c1e422199e0dc8d4a1f14b8ca220f09992583ea860bf074dc85f",
+		LinksSHA256: "4c1acbf07eccc6464a4a86d8a53f867fdaa1cc7374d18b881bf30487a98713e6",
 	}
 	if first.Manifest != want {
 		t.Fatalf("manifest = %#v, want %#v", first.Manifest, want)

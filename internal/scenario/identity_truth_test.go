@@ -78,7 +78,7 @@ func assertServiceDNS(t *testing.T, cfg *config.Config) {
 		if got, want := resolved, dhcp.IPAddresses[0].String(); got != want {
 			t.Errorf("%s resolves to %s, want DHCP address %s", name, got, want)
 		}
-		workstation := findDevice(cfg, site+"-WS-B01-F01-01")
+		workstation := findDevice(cfg, site+"-WS-1101")
 		if workstation == nil || len(workstation.IPAddresses) == 0 {
 			t.Fatalf("%s workstation DNS prerequisite is missing", site)
 		}
