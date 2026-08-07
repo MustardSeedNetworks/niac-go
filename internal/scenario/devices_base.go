@@ -181,20 +181,43 @@ func interfaceSpeed(name string) int {
 	}
 }
 
+// utilization derives a busy-but-plausible load for one interface. A production
+// network under load sits mostly in the 50-70% band, peaks higher on a minority
+// of links, and leaves a few quiet. Keying it off the interface name keeps every
+// run reproducible, which the Link-Live comparator depends on.
 func utilization(name string) (float64, float64) {
-	const (
-		minimumInUtilization  = 5
-		inUtilizationSpread   = 26
-		minimumOutUtilization = 4
-		outUtilizationFactor  = 7
-		outUtilizationSpread  = 25
-	)
+	const outSeedFactor = 7
 	sum := 0
 	for _, value := range []byte(name) {
 		sum += int(value)
 	}
-	return float64(minimumInUtilization + sum%inUtilizationSpread),
-		float64(minimumOutUtilization + (sum*outUtilizationFactor)%outUtilizationSpread)
+	return utilizationBand(sum), utilizationBand(sum * outSeedFactor)
+}
+
+func utilizationBand(seed int) float64 {
+	const (
+		steadyShare   = 70 // of 100 interfaces, this many sit in the steady band
+		peakShare     = 90 // steadyShare..peakShare peak; the remainder stay quiet
+		steadyFloor   = 50
+		peakFloor     = 70
+		quietFloor    = 25
+		bandSpread    = 21 // inclusive width of the steady and peak bands
+		quietSpread   = 25
+		bandSelector  = 100
+		mixMultiplier = 31 // odd multiplier and shift decorrelate band from value
+		mixShift      = 7
+	)
+	// Mix before selecting so a name's band and its value inside that band are
+	// not derived from the same low bits.
+	mixed := seed*mixMultiplier + seed/mixShift
+	switch band := mixed % bandSelector; {
+	case band < steadyShare:
+		return float64(steadyFloor + seed%bandSpread)
+	case band < peakShare:
+		return float64(peakFloor + seed%bandSpread)
+	default:
+		return float64(quietFloor + seed%quietSpread)
+	}
 }
 
 func authoredTrunkPorts(links []link) []converter.TrunkPort {
