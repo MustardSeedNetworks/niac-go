@@ -185,6 +185,10 @@ func interfaceSpeed(name string) int {
 // network under load sits mostly in the 50-70% band, peaks higher on a minority
 // of links, and leaves a few quiet. Keying it off the interface name keeps every
 // run reproducible, which the Link-Live comparator depends on.
+//
+// Peaks stop below utilizationWarningFloor: Link-Live raises an interface
+// Warning above 80% (measured — clean up to 78.7%, warned from 81.8%), and a
+// demo map should read healthy rather than scattered with amber icons.
 func utilization(name string) (float64, float64) {
 	const outSeedFactor = 7
 	sum := 0
@@ -201,7 +205,8 @@ func utilizationBand(seed int) float64 {
 		steadyFloor   = 50
 		peakFloor     = 70
 		quietFloor    = 25
-		bandSpread    = 21 // inclusive width of the steady and peak bands
+		steadySpread  = 21 // inclusive width of the steady band: 50-70
+		peakSpread    = 9  // inclusive width of the peak band: 70-78
 		quietSpread   = 25
 		bandSelector  = 100
 		mixMultiplier = 31 // odd multiplier and shift decorrelate band from value
@@ -212,9 +217,9 @@ func utilizationBand(seed int) float64 {
 	mixed := seed*mixMultiplier + seed/mixShift
 	switch band := mixed % bandSelector; {
 	case band < steadyShare:
-		return float64(steadyFloor + seed%bandSpread)
+		return float64(steadyFloor + seed%steadySpread)
 	case band < peakShare:
-		return float64(peakFloor + seed%bandSpread)
+		return float64(peakFloor + seed%peakSpread)
 	default:
 		return float64(quietFloor + seed%quietSpread)
 	}

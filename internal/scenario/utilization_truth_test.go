@@ -8,16 +8,20 @@ import (
 )
 
 const (
-	steadyFloor        = 50
-	peakFloor          = 70
-	utilizationCeiling = 90
-	wantSteadyPercent  = 50
+	steadyFloor       = 50
+	peakFloor         = 70
+	wantSteadyPercent = 50
+
+	// Link-Live raises an interface Warning above 80% utilization. Measured
+	// against a live discovery: interfaces up to 78.7% stayed clean, 81.8% and
+	// above were flagged. Authored peaks must stay below that line so a demo
+	// map reads healthy instead of amber.
+	utilizationWarningFloor = 80
 )
 
 // A demo network has to look busy. Authored utilization sits mostly in the
 // 50-70% band, peaks higher on a minority of interfaces, and leaves a few quiet
-// — never above 90%, which would read as a saturated link rather than a healthy
-// one.
+// — always below the Link-Live warning threshold.
 func TestAuthoredUtilizationLooksBusy(t *testing.T) {
 	for _, pack := range scenario.Packs() {
 		steady, total := packUtilizationBands(t, pack)
@@ -47,9 +51,9 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
 		for _, iface := range device.Interfaces {
 			for _, value := range []float64{iface.InUtilization, iface.OutUtilization} {
 				total++
-				if value > utilizationCeiling {
-					t.Errorf("%s %s %s utilization %.0f%% exceeds %d%%",
-						pack.ID, device.Name, iface.Name, value, utilizationCeiling)
+				if value >= utilizationWarningFloor {
+					t.Errorf("%s %s %s utilization %.0f%% would trip the Link-Live warning at %d%%",
+						pack.ID, device.Name, iface.Name, value, utilizationWarningFloor)
 				}
 				if value >= steadyFloor && value < peakFloor {
 					steady++
