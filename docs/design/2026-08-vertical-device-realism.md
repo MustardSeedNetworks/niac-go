@@ -82,6 +82,43 @@ more phones on a campus, more UPS in a hospital riser.
 | NAS | Synology, QNAP | SMB, SNMP |
 | Badge reader | HID, Lenel | SNMP |
 
+## Server and storage tier
+
+Every pack already generates six service servers — DNS, DHCP, app, file, NMS and
+perf. That is the infrastructure floor, not the workload. Real facilities run
+the systems their vertical depends on, and those systems are usually the busiest
+and most interesting nodes on a discovery map.
+
+Servers hang off the spine-leaf server block. Shared across packs:
+
+| Class | Examples | Identity |
+| --- | --- | --- |
+| Virtualisation host | VMware ESXi, Hyper-V, Nutanix | SNMP, HTTPS |
+| Enterprise storage | NetApp, Dell PowerStore, Pure | SNMP, HTTPS |
+| NAS | Synology, QNAP | SMB, SNMP, HTTPS |
+| Backup | Veeam, Commvault | SNMP, HTTPS |
+| Directory / auth | AD DC, RADIUS, NAC (ISE, ClearPass) | LDAP, RADIUS, SNMP |
+
+Per-vertical workload systems:
+
+**Hospital** — **PACS archive** and vendor-neutral archive, EMR/EHR (Epic,
+Cerner), lab information system, pharmacy system, and a medical imaging storage
+array. PACS matters twice over: it is the busiest node in a real hospital
+network, and it is the **DICOM peer the MRI and other modalities talk to**, so
+both ends of that conversation answer C-ECHO and the story is coherent rather
+than a lone imaging device talking to nothing.
+
+**Manufacturing** — SCADA historian, MES server, OPC UA server, engineering
+workstation.
+
+**Warehouse** — WMS server, label/print server.
+
+**Retail** — back-office server, inventory and pricing server.
+
+**Campus** — file, print and virtualisation hosts; deliberately ordinary.
+
+**Service provider** — NMS, RADIUS/AAA, provisioning, DNS resolvers.
+
 ## Client tier
 
 Shared across campus, retail, hospital and service-provider packs.
@@ -124,18 +161,37 @@ current pack holds only a NOC workstation, which is the thinnest of the seven.
 
 ## Topology shape
 
-### The spine is invariant
+### The spine is invariant, and modern
 
-Every pack carries a full layered hierarchy, without exception:
+Every pack carries a full layered hierarchy, without exception. The *layers* are
+invariant; how they are realised follows current practice rather than the
+textbook 2005 three-tier diagram.
 
 ```
-edge router → WAN routers → firewalls → core → distribution → access
-                                                        ↳ access points (+ controllers)
+SD-WAN edge (HA) → NGFW cluster (HA) → core → distribution → access
+                                                      ↳ Wi-Fi 6E/7 APs
+                        ↳ spine/leaf server block
 ```
 
-Differentiating a vertical never means dropping a layer. A warehouse still has
-core and distribution switches; a manufacturing plant still has firewalls. A map
-missing a tier reads as a broken network rather than a different one.
+What "modern" means concretely:
+
+| Aspect | Dated | What we build |
+| --- | --- | --- |
+| Edge | Two WAN routers, static | **SD-WAN edge pair**, dual transport |
+| Firewall | Single inline | **NGFW HA cluster** |
+| Core/dist | Always separate tiers | **Collapsed core** at small sites; separate tiers only where site size earns it |
+| Server block | Flat server switch | **Spine-leaf** |
+| Access | Large L2 domains, VLANs spanning | **Routed access** — L3 to the access edge, VLANs local |
+| Access uplinks | 1G | **Multigig** to APs, 25/100G uplinks |
+| Redundancy | STP-blocked links | **MLAG/vPC**, stacked or virtual-chassis access |
+| Wireless | Hardware WLC in a closet | **Cloud-managed or virtual controller** |
+| Wi-Fi | Wi-Fi 5/6 | **Wi-Fi 6E / 7** |
+
+Differentiating a vertical never means dropping a layer. A warehouse still has a
+core; a manufacturing plant still has firewalls. A map missing a tier reads as a
+broken network rather than a different one. But a small retail store legitimately
+runs a **collapsed core** rather than four distinct tiers — that is modern
+practice, not a missing layer, and the map should show it that way.
 
 **Every pack gets access points and wireless controllers.** Service-provider
 currently generates none — 4 access switches per site and no AP or WLC at all —
