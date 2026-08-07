@@ -84,11 +84,10 @@ func createTestModel() *model {
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 
 	return &model{
-		cfg:                   cfg,
-		stack:                 stack,
-		interfaceName:         "eth0",
-		debugLevel:            0,
-		faultInjectionEnabled: true,
+		cfg:           cfg,
+		stack:         stack,
+		interfaceName: "eth0",
+		debugLevel:    0,
 		menuItems: []string{
 			"1. Inject FCS Errors (50%)",
 			"2. Inject Packet Discards (25%)",
@@ -366,35 +365,6 @@ func TestModelInjectErrorUsesDeviceNameForSharedAddress(t *testing.T) {
 	active := m.stack.ActiveInterfaceFaults()
 	if active["test-device-2"]["Management"][devicestate.FaultFCS] != 25 {
 		t.Fatalf("active faults = %#v", active)
-	}
-}
-
-func TestModel_ErrorInjectionRequiresEntitlement(t *testing.T) {
-	m := createTestModel()
-	m.faultInjectionEnabled = false
-
-	m.injectError(devicestate.FaultFCS, 50)
-	if activeFaultCount(m.stack) != 0 {
-		t.Fatal("Free tier injected an interface fault")
-	}
-	if !m.statusIsError || !strings.Contains(m.statusMessage, "NIAC Pro") {
-		t.Fatalf("status = %q, want NIAC Pro entitlement error", m.statusMessage)
-	}
-
-	m.menuVisible = false
-	_, _ = m.handleMenuToggle()
-	if m.menuVisible {
-		t.Fatal("Free tier opened the error injection menu")
-	}
-
-	_, _ = m.handleQuickErrorInjection("1")
-	if m.valueInputMode {
-		t.Fatal("Free tier opened fault value input")
-	}
-
-	_, _ = m.handleClearErrors()
-	if !m.statusIsError || !strings.Contains(m.statusMessage, "NIAC Pro") {
-		t.Fatalf("clear status = %q, want NIAC Pro entitlement error", m.statusMessage)
 	}
 }
 

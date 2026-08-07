@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -167,81 +166,4 @@ func TestImportConfig_BadFormat(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("got %d, want 400", rec.Code)
 	}
-}
-
-func TestConfigGeneratorsEnforceFreeDeviceLimit(t *testing.T) {
-	server, _ := newTestServer(t)
-	oversized := configYAMLWithDevices(FreeTierDeviceCount + 1)
-
-	tests := []struct {
-		name    string
-		path    string
-		request any
-		handler http.HandlerFunc
-	}{
-		{
-			name: "import",
-			path: "/api/v1/config/import",
-			request: ConfigImportRequest{
-				Format:  "yaml",
-				Content: oversized,
-			},
-			handler: server.handleConfigImport,
-		},
-		{
-			name: "merge",
-			path: "/api/v1/config/merge",
-			request: MergeConfigsRequest{
-				Base:    configYAMLWithDevices(FreeTierDeviceCount),
-				Overlay: configYAMLWithDevicesFrom(FreeTierDeviceCount, 1),
-			},
-			handler: server.handleConfigMerge,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			body, err := json.Marshal(test.request)
-			if err != nil {
-				t.Fatalf("marshal request: %v", err)
-			}
-			request := httptest.NewRequest(http.MethodPost, test.path, bytes.NewReader(body))
-			recorder := httptest.NewRecorder()
-
-			test.handler(recorder, request)
-
-			if recorder.Code != http.StatusPaymentRequired {
-				t.Fatalf("status = %d, want 402: %s", recorder.Code, recorder.Body.String())
-			}
-			var response FeatureGateResponse
-			if err = json.NewDecoder(recorder.Body).Decode(&response); err != nil {
-				t.Fatalf("decode response: %v", err)
-			}
-			if response.RequiredFeature != "unlimited_devices" {
-				t.Fatalf(
-					"required feature = %q, want unlimited_devices",
-					response.RequiredFeature,
-				)
-			}
-		})
-	}
-}
-
-func configYAMLWithDevices(count int) string {
-	return configYAMLWithDevicesFrom(0, count)
-}
-
-func configYAMLWithDevicesFrom(start, count int) string {
-	var content strings.Builder
-	content.WriteString("devices:\n")
-	for offset := range count {
-		index := start + offset
-		_, _ = fmt.Fprintf(
-			&content,
-			"  - name: device-%d\n    type: host\n    mac: 02:00:00:00:00:%02x\n",
-			index,
-			index,
-		)
-	}
-	return content.String()
 }

@@ -321,7 +321,7 @@ func TestStartSimulation_NonExistentConfigPath(t *testing.T) {
 		ConfigPath: "/nonexistent/path/config.yaml",
 	}
 
-	err = daemon.StartSimulation(req, fullSimulationEntitlements())
+	err = daemon.StartSimulation(req)
 	if err == nil {
 		t.Error("Expected error for nonexistent config file")
 	}
@@ -362,7 +362,7 @@ func TestStartSimulation_ConfigDataExceedsSize(t *testing.T) {
 		ConfigData: strings.Repeat("a", 11*1024*1024),
 	}
 
-	err = daemon.StartSimulation(req, fullSimulationEntitlements())
+	err = daemon.StartSimulation(req)
 	if err == nil {
 		t.Error("Expected error for oversized config data")
 	}
@@ -402,7 +402,7 @@ func TestStartSimulation_MissingConfigAndPath(t *testing.T) {
 		// Both ConfigData and ConfigPath empty
 	}
 
-	err = daemon.StartSimulation(req, fullSimulationEntitlements())
+	err = daemon.StartSimulation(req)
 	if err == nil {
 		t.Error("Expected error when both config_path and config_data are empty")
 	}
@@ -442,7 +442,7 @@ func TestStartSimulation_InvalidInterface(t *testing.T) {
 		ConfigData: "devices: []",
 	}
 
-	err = daemon.StartSimulation(req, fullSimulationEntitlements())
+	err = daemon.StartSimulation(req)
 	if err == nil {
 		t.Error("Expected error for nonexistent interface")
 	}
@@ -482,7 +482,7 @@ func TestStartSimulation_InvalidConfigData(t *testing.T) {
 		ConfigData: "{{{{invalid yaml",
 	}
 
-	err = daemon.StartSimulation(req, fullSimulationEntitlements())
+	err = daemon.StartSimulation(req)
 	if err == nil {
 		t.Error("Expected error for invalid YAML config")
 	}

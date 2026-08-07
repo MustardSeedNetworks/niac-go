@@ -17,22 +17,11 @@ var (
 )
 
 const (
-	deviceScaleContract = "Free: up to 10 simulated devices; Pro removes tier soft cap; " +
-		"absolute ceiling 1000."
-
-	// MaxDeviceCount is the absolute device ceiling enforced for every
-	// tier as a resource-exhaustion guard (security fix #173). Pro
-	// licenses raise the soft cap to this value via the
-	// "unlimited_devices" feature.
+	// MaxDeviceCount is the absolute device ceiling for one configuration,
+	// enforced as a resource-exhaustion guard (security fix #173). The
+	// daemon-wide budgets in internal/daemon/admission.go bound what runs
+	// across all sessions at once.
 	MaxDeviceCount = 1000
-
-	// FreeTierDeviceCount is the soft cap applied when the active
-	// license does NOT include the "unlimited_devices" feature
-	// (Free tier). Crossing it returns 402 + FeatureGateResponse
-	// rather than the generic 429 "device_limit_reached" the hard
-	// ceiling produces — UIs can render the upgrade hint instead of
-	// a server-error toast.
-	FreeTierDeviceCount = 10
 
 	// maxLabelLen is the max length of a hostname label (RFC 1123).
 	maxLabelLen = 63
