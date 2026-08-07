@@ -229,7 +229,7 @@ func (d *Daemon) Start() error {
 		return fmt.Errorf("start API server: %w", err)
 	}
 
-	d.recoverActiveSimulation(d.apiServer.SimulationEntitlements())
+	d.recoverActiveSimulation()
 
 	return nil
 }
@@ -579,10 +579,7 @@ func simulationInterfaceDiagnostic(interfaceName string, dryRun bool) *fabric.Di
 }
 
 // StartSimulation starts a new simulation.
-func (d *Daemon) StartSimulation(
-	req api.SimulationRequest,
-	entitlements api.SimulationEntitlements,
-) error {
+func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	sessionID, binding, err := d.prepareSessionStart(req)
@@ -595,7 +592,7 @@ func (d *Daemon) StartSimulation(
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadAuthorizedSimulationConfig(req, entitlements)
+	cfg, configPath, err := loadAuthorizedSimulationConfig(req)
 	if err != nil {
 		return err
 	}
@@ -891,14 +888,13 @@ func (resources simulationResources) abort() {
 
 func loadAuthorizedSimulationConfig(
 	req api.SimulationRequest,
-	entitlements api.SimulationEntitlements,
 ) (*config.Config, string, error) {
 	cfg, configPath, err := loadValidSimulationConfig(req, false)
 	if err != nil {
 		return nil, "", err
 	}
-	if entitlementErr := api.ValidateConfigEntitlements(cfg, entitlements); entitlementErr != nil {
-		return nil, "", entitlementErr
+	if countErr := api.ValidateConfigDeviceCount(cfg); countErr != nil {
+		return nil, "", countErr
 	}
 	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {
 		return nil, "", runtimeErr

@@ -88,7 +88,7 @@ func (*nilDaemonController) PreflightSimulation(SimulationRequest) (fabric.Repor
 	return fabric.Report{}, nil
 }
 
-func (*nilDaemonController) StartSimulation(SimulationRequest, SimulationEntitlements) error {
+func (*nilDaemonController) StartSimulation(SimulationRequest) error {
 	return nil
 }
 func (*nilDaemonController) StopSimulation(string) error   { return nil }

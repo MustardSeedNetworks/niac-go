@@ -26,7 +26,7 @@ func TestStartSimulationE2EDryRunDoesNotOpenInterface(t *testing.T) {
     ips:
       - "192.0.2.10"
 `,
-	}, fullSimulationEntitlements())
+	})
 	if err != nil {
 		t.Fatalf("StartSimulation() error = %v", err)
 	}
@@ -74,7 +74,7 @@ func TestScenarioPacksStartInRuntime(t *testing.T) {
 				AttachmentMode: fabric.ModeAccess,
 				AccessVLAN:     200,
 				ConfigData:     string(result.YAML),
-			}, fullSimulationEntitlements())
+			})
 			if err != nil {
 				t.Fatalf("StartSimulation(): %v", err)
 			}

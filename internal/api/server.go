@@ -409,7 +409,7 @@ type TrunkCaptureHealth struct {
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
-	StartSimulation(req SimulationRequest, entitlements SimulationEntitlements) error
+	StartSimulation(req SimulationRequest) error
 	StopSimulation(sessionID string) error
 	SelectSimulation(sessionID string) error
 	GetStatus() SimulationStatus

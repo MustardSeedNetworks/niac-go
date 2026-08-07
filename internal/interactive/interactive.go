@@ -276,14 +276,13 @@ func (m *model) closeAllOverlays() {
 
 // Options configures the interactive simulator.
 type Options struct {
-	InterfaceName         string
-	Config                *config.Config
-	DebugConfig           *logging.DebugConfig
-	Stack                 *protocols.Stack
-	StartTime             time.Time
-	Reload                func() (*config.Config, error)
-	ConfigFilePath        string
-	FaultInjectionEnabled bool
+	InterfaceName  string
+	Config         *config.Config
+	DebugConfig    *logging.DebugConfig
+	Stack          *protocols.Stack
+	StartTime      time.Time
+	Reload         func() (*config.Config, error)
+	ConfigFilePath string
 }
 
 // Run starts the interactive mode with the specified configuration.
@@ -312,19 +311,18 @@ func Run(options Options) error {
 
 	// Create model
 	m := model{
-		cfg:                   options.Config,
-		interfaceName:         options.InterfaceName,
-		debugLevel:            debugLevel,
-		stack:                 options.Stack,
-		reloadFunc:            options.Reload,
-		menuItems:             menuItems,
-		startTime:             startTime,
-		configFilePath:        options.ConfigFilePath,
-		faultInjectionEnabled: options.FaultInjectionEnabled,
-		exportFormat:          formatJSON,
-		searchCategory:        searchCategoryAll,
-		statusMessage:         "Press 'i' for menu, 'r' to reload config, 'h' for help",
-		debugLogs:             make([]string, 0, maxDebugLogs),
+		cfg:            options.Config,
+		interfaceName:  options.InterfaceName,
+		debugLevel:     debugLevel,
+		stack:          options.Stack,
+		reloadFunc:     options.Reload,
+		menuItems:      menuItems,
+		startTime:      startTime,
+		configFilePath: options.ConfigFilePath,
+		exportFormat:   formatJSON,
+		searchCategory: searchCategoryAll,
+		statusMessage:  "Press 'i' for menu, 'r' to reload config, 'h' for help",
+		debugLogs:      make([]string, 0, maxDebugLogs),
 	}
 
 	if options.Stack != nil {

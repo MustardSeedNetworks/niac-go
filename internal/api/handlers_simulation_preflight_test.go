@@ -15,15 +15,14 @@ import (
 )
 
 type preflightDaemon struct {
-	request      SimulationRequest
-	report       fabric.Report
-	err          error
-	startErr     error
-	stopErr      error
-	selectErr    error
-	selected     string
-	started      bool
-	entitlements SimulationEntitlements
+	request   SimulationRequest
+	report    fabric.Report
+	err       error
+	startErr  error
+	stopErr   error
+	selectErr error
+	selected  string
+	started   bool
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
@@ -94,14 +93,7 @@ func TestHandleSimulationPreflightAcceptsGeneratedFleetBody(t *testing.T) {
 	}
 }
 
-func (d *preflightDaemon) StartSimulation(
-	_ SimulationRequest,
-	entitlements SimulationEntitlements,
-) error {
-	d.entitlements = entitlements
-	if len(d.report.Topology.Networks) > 0 && !entitlements.RoutedLabs {
-		return ErrRoutedLabsLicenseRequired
-	}
+func (d *preflightDaemon) StartSimulation(_ SimulationRequest) error {
 	d.started = true
 	return d.startErr
 }
@@ -151,8 +143,7 @@ func TestHandleSimulationStartReturnsManagedPathValidationError(t *testing.T) {
 
 func TestHandleSimulationStartReturnsSessionConflict(t *testing.T) {
 	server := &Server{
-		daemon:  &preflightDaemon{startErr: ErrSimulationSessionConflict},
-		license: freshManager(t),
+		daemon: &preflightDaemon{startErr: ErrSimulationSessionConflict},
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
   "sessionId":"warehouse",
@@ -180,113 +171,12 @@ func TestHandleSimulationStopReturnsSessionNotFound(t *testing.T) {
 	}
 }
 
-func TestHandleSimulationStartRequiresRoutedLabsFeature(t *testing.T) {
-	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
-		Networks: []fabric.Network{{Name: "access"}},
-	}}}
-	server := &Server{daemon: daemon, license: freshManager(t)}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
-  "interface":"eth0",
-  "configData":"devices: []"
-}`))
-	rec := httptest.NewRecorder()
-
-	server.handleSimulationStart(rec, req)
-
-	if rec.Code != http.StatusPaymentRequired || daemon.started {
-		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
-	}
-	var response FeatureGateResponse
-	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if response.RequiredFeature != "routed_labs" {
-		t.Fatalf("required feature = %q", response.RequiredFeature)
-	}
-}
-
-func TestHandleSimulationStartFailsClosedWithoutLicenseManager(t *testing.T) {
-	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
-		Networks: []fabric.Network{{Name: "access"}},
-	}}}
-	server := &Server{daemon: daemon}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
-  "interface":"eth0",
-  "configData":"devices: []"
-}`))
-	rec := httptest.NewRecorder()
-
-	server.handleSimulationStart(rec, req)
-
-	if rec.Code != http.StatusPaymentRequired || daemon.started {
-		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
-	}
-}
-
-func TestHandleSimulationStartRequiresUnlimitedDevicesFeature(t *testing.T) {
-	daemon := &preflightDaemon{startErr: ErrUnlimitedDevicesLicenseRequired}
-	server := &Server{daemon: daemon, license: freshManager(t)}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
-  "interface":"eth0",
-  "configData":"devices: []"
-}`))
-	rec := httptest.NewRecorder()
-
-	server.handleSimulationStart(rec, req)
-
-	if rec.Code != http.StatusPaymentRequired {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusPaymentRequired)
-	}
-	var response FeatureGateResponse
-	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if response.RequiredFeature != "unlimited_devices" {
-		t.Fatalf("required feature = %q", response.RequiredFeature)
-	}
-	if !strings.Contains(response.UpgradeMessage, deviceScaleContract) {
-		t.Fatalf(
-			"upgrade message = %q, want device scale contract %q",
-			response.UpgradeMessage,
-			deviceScaleContract,
-		)
-	}
-}
-
-func TestHandleSimulationStartRejectsMissingSSHPasswordAsRuntimeRequirement(t *testing.T) {
-	daemon := &preflightDaemon{startErr: fmt.Errorf(
-		"load simulation: %w: device %q requires %q",
-		config.ErrSSHPasswordUnavailable, "edge-1", "NIAC_EDGE_PASSWORD",
-	)}
-	server := &Server{daemon: daemon, license: freshManager(t)}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
-  "interface":"eth0",
-  "configData":"devices: []"
-}`))
-	rec := httptest.NewRecorder()
-
-	server.handleSimulationStart(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
-	}
-	var response ErrorResponse
-	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if response.Error != "runtime_requirements_unmet" || len(response.Details) != 1 ||
-		response.Details[0].Field != "ssh.passwordEnv" {
-		t.Fatalf("response = %#v", response)
-	}
-}
-
 func TestHandleSimulationStartDoesNotLogSensitiveErrorText(t *testing.T) {
 	const secret = "do-not-log-this-password"
 	var logs bytes.Buffer
 	server := &Server{
-		daemon:  &preflightDaemon{startErr: fmt.Errorf("startup failed with password %s", secret)},
-		license: freshManager(t),
-		logger:  slog.New(slog.NewTextHandler(&logs, nil)),
+		daemon: &preflightDaemon{startErr: fmt.Errorf("startup failed with password %s", secret)},
+		logger: slog.New(slog.NewTextHandler(&logs, nil)),
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
   "interface":"eth0",
@@ -304,28 +194,6 @@ func TestHandleSimulationStartDoesNotLogSensitiveErrorText(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), "error_code=simulation_start_failed") {
 		t.Fatalf("log does not contain the safe failure code: %s", logs.String())
-	}
-}
-
-func TestHandleSimulationStartAllowsRoutedLabsTrial(t *testing.T) {
-	daemon := &preflightDaemon{report: fabric.Report{Topology: fabric.Topology{
-		Networks: []fabric.Network{{Name: "access"}},
-	}}}
-	manager := freshManager(t)
-	if result := manager.StartTrial(); !result.Success {
-		t.Fatalf("StartTrial() = %#v", result)
-	}
-	server := &Server{daemon: daemon, license: manager}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/simulation", strings.NewReader(`{
-  "interface":"eth0",
-  "configData":"devices: []"
-}`))
-	rec := httptest.NewRecorder()
-
-	server.handleSimulationStart(rec, req)
-
-	if rec.Code != http.StatusCreated || !daemon.started {
-		t.Fatalf("status = %d, started = %v", rec.Code, daemon.started)
 	}
 }
 

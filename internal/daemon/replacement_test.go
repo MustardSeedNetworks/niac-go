@@ -34,7 +34,7 @@ func TestFailedSimulationReplacementPreservesActiveRun(t *testing.T) {
 		return simulationResources{cancel: func() { cleanupCalls++ }}, errors.New("injected startup failure")
 	}
 
-	err = daemon.StartSimulation(replacementRequest("replacement-router"), fullSimulationEntitlements())
+	err = daemon.StartSimulation(replacementRequest("replacement-router"))
 	if err == nil || !strings.Contains(err.Error(), "injected startup failure") {
 		t.Fatalf("StartSimulation() error = %v, want injected startup failure", err)
 	}
@@ -75,10 +75,7 @@ func TestSuccessfulSimulationReplacementPublishesThenStopsOldRun(t *testing.T) {
 		}
 	}
 
-	if err := daemon.StartSimulation(
-		replacementRequest("replacement-router"),
-		fullSimulationEntitlements(),
-	); err != nil {
+	if err := daemon.StartSimulation(replacementRequest("replacement-router")); err != nil {
 		t.Fatalf("StartSimulation(replacement) error = %v", err)
 	}
 
@@ -126,7 +123,7 @@ func replacementTestDaemon(t *testing.T) *Daemon {
 
 func startReplacementTestSimulation(t *testing.T, daemon *Daemon, name string) {
 	t.Helper()
-	if err := daemon.StartSimulation(replacementRequest(name), fullSimulationEntitlements()); err != nil {
+	if err := daemon.StartSimulation(replacementRequest(name)); err != nil {
 		t.Fatalf("StartSimulation(%s) error = %v", name, err)
 	}
 }

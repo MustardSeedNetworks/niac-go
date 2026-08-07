@@ -18,10 +18,10 @@ func TestDaemonRunsDistinctTrunkSessionsConcurrently(t *testing.T) {
 		t.Fatalf("NewDaemon(): %v", err)
 	}
 
-	if err = d.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+	if err = d.StartSimulation(trunkSessionRequest("hospital", 200)); err != nil {
 		t.Fatalf("StartSimulation(hospital): %v", err)
 	}
-	if err = d.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements()); err != nil {
+	if err = d.StartSimulation(trunkSessionRequest("warehouse", 201)); err != nil {
 		t.Fatalf("StartSimulation(warehouse): %v", err)
 	}
 	if got := d.sessions.len(); got != 2 {
@@ -62,11 +62,11 @@ func TestDaemonRejectsDuplicateTrunkVLAN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDaemon(): %v", err)
 	}
-	if err = d.StartSimulation(trunkSessionRequest("hospital", 200), fullSimulationEntitlements()); err != nil {
+	if err = d.StartSimulation(trunkSessionRequest("hospital", 200)); err != nil {
 		t.Fatalf("StartSimulation(hospital): %v", err)
 	}
 
-	err = d.StartSimulation(trunkSessionRequest("warehouse", 200), fullSimulationEntitlements())
+	err = d.StartSimulation(trunkSessionRequest("warehouse", 200))
 	if !errors.Is(err, ErrPhysicalVLANInUse) {
 		t.Fatalf("StartSimulation(warehouse) error = %v, want ErrPhysicalVLANInUse", err)
 	}
@@ -85,7 +85,7 @@ func TestDaemonRejectsUnapprovedFlatTrunkVLAN(t *testing.T) {
 		t.Fatalf("NewDaemon(): %v", err)
 	}
 
-	err = d.StartSimulation(trunkSessionRequest("warehouse", 201), fullSimulationEntitlements())
+	err = d.StartSimulation(trunkSessionRequest("warehouse", 201))
 	if !errors.Is(err, ErrUnsafeTopology) {
 		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
 	}
@@ -101,7 +101,7 @@ func TestDaemonConfiguresFlatTrunkPhysicalVLAN(t *testing.T) {
 		t.Fatalf("NewDaemon(): %v", err)
 	}
 	if err = d.StartSimulation(
-		trunkSessionRequest("hospital", 200), fullSimulationEntitlements(),
+		trunkSessionRequest("hospital", 200),
 	); err != nil {
 		t.Fatalf("StartSimulation(): %v", err)
 	}
@@ -138,7 +138,7 @@ func TestStartingASessionDoesNotStealTheDefaultFromAnother(t *testing.T) {
 		vlan uint16
 	}{{"hospital", 200}, {"warehouse", 201}} {
 		if err = d.StartSimulation(
-			trunkSessionRequest(session.id, session.vlan), fullSimulationEntitlements(),
+			trunkSessionRequest(session.id, session.vlan),
 		); err != nil {
 			t.Fatalf("StartSimulation(%s): %v", session.id, err)
 		}
@@ -151,7 +151,7 @@ func TestStartingASessionDoesNotStealTheDefaultFromAnother(t *testing.T) {
 	// Restarting the session that holds the default keeps it, rather than
 	// leaving the daemon with no default at all.
 	if err = d.StartSimulation(
-		trunkSessionRequest("hospital", 200), fullSimulationEntitlements(),
+		trunkSessionRequest("hospital", 200),
 	); err != nil {
 		t.Fatalf("StartSimulation(hospital) restart: %v", err)
 	}

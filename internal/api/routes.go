@@ -77,13 +77,11 @@ func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
 			path:    "/api/v1/scenario/packs",
 			handler: s.handleScenarioPacks,
 			methods: []string{http.MethodGet},
-			feature: "config_templates",
 		},
 		{
 			path:    "/api/v1/scenario/profiles",
 			handler: s.handleScenarioProfiles,
 			methods: []string{http.MethodGet},
-			feature: "config_templates",
 		},
 		{
 			path:    "/api/v1/scenario/profiles/captured",
@@ -91,7 +89,6 @@ func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodPost},
 			rl:      rlWrite,
 			csrf:    true,
-			feature: "config_templates",
 		},
 		{
 			path:    "/api/v1/scenario/generate",
@@ -99,7 +96,6 @@ func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodPost},
 			rl:      rlWrite,
 			csrf:    true,
-			feature: "config_templates",
 		},
 	})
 }
@@ -319,7 +315,6 @@ func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodPost},
 			rl:      rlWrite,
 			csrf:    true,
-			feature: "config_templates",
 		},
 		{
 			path:    "/api/v1/templates/",
@@ -376,10 +371,8 @@ func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
 				http.MethodPut,
 				http.MethodDelete,
 			},
-			rl:               rlWrite,
-			csrf:             true,
-			feature:          "error_injection",
-			featureWriteOnly: true,
+			rl:   rlWrite,
+			csrf: true,
 		},
 		{
 			path:    "/api/v1/interfaces",
@@ -420,7 +413,6 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 			methods:      []string{http.MethodPost},
 			rl:           rlWalk,
 			csrf:         true,
-			feature:      "config_templates",
 			maxBodyBytes: MaxWalkImportBodySize,
 		},
 		{
@@ -429,7 +421,6 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 			methods: []string{http.MethodPost},
 			rl:      rlWalk,
 			csrf:    true,
-			feature: "config_templates",
 		},
 		{
 			path:    "/api/v1/walk/validate",
@@ -484,13 +475,11 @@ func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 			maxBodyBytes: MaxPCAPUploadBodySize,
 			rl:           rlUpload,
 			csrf:         true,
-			feature:      "pcap_ingest",
 		},
 		{
 			path:    "/api/v1/pcap/",
 			handler: s.handlePcapAnalysis,
 			methods: []string{http.MethodGet},
-			feature: "pcap_ingest",
 		},
 	})
 }

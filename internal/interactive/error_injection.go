@@ -11,9 +11,6 @@ import (
 )
 
 func (m *model) handleMenuSelection() {
-	if !m.requireFaultInjection() {
-		return
-	}
 	if m.selectedItem < 0 || m.selectedItem >= len(m.menuItems) {
 		return
 	}
@@ -118,9 +115,6 @@ func getErrorTypeByIndex(index int) devicestate.FaultType {
 }
 
 func (m *model) injectError(faultType devicestate.FaultType, value int) {
-	if !m.requireFaultInjection() {
-		return
-	}
 	if len(m.cfg.Devices) == 0 || m.stack == nil {
 		m.statusMessage = errorStyle.Render("✗ No devices configured")
 		m.statusIsError = true
@@ -265,9 +259,6 @@ func (m *model) renderMenu() string {
 
 // handleQuickErrorInjection handles number keys 1-4 for quick error injection.
 func (m *model) handleQuickErrorInjection(key string) (tea.Model, tea.Cmd) {
-	if !m.requireFaultInjection() {
-		return m, nil
-	}
 	if m.menuVisible || m.showHelp || m.showLogs || m.showStats {
 		return m, nil
 	}
@@ -291,9 +282,6 @@ func (m *model) handleQuickErrorInjection(key string) (tea.Model, tea.Cmd) {
 
 // handleClearErrors clears all error injections.
 func (m *model) handleClearErrors() (tea.Model, tea.Cmd) {
-	if !m.requireFaultInjection() {
-		return m, nil
-	}
 	if m.stack != nil {
 		m.stack.ClearAllInterfaceFaults()
 	}
@@ -303,17 +291,6 @@ func (m *model) handleClearErrors() (tea.Model, tea.Cmd) {
 	m.addDebugLog("All error injections cleared")
 
 	return m, nil
-}
-
-func (m *model) requireFaultInjection() bool {
-	if m.faultInjectionEnabled {
-		return true
-	}
-	m.menuVisible = false
-	m.valueInputMode = false
-	m.statusMessage = errorStyle.Render("Error injection requires NIAC Pro")
-	m.statusIsError = true
-	return false
 }
 
 func interfaceFaultTypes() []devicestate.FaultType {

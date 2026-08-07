@@ -111,9 +111,6 @@ func (m *model) handleEscapeKey() (tea.Model, tea.Cmd) {
 
 // handleMenuToggle toggles the interactive menu.
 func (m *model) handleMenuToggle() (tea.Model, tea.Cmd) {
-	if !m.requireFaultInjection() {
-		return m, nil
-	}
 	m.menuVisible = !m.menuVisible
 	if m.menuVisible {
 		m.statusMessage = "Interactive menu opened - use arrow keys to navigate"

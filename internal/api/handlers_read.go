@@ -219,13 +219,7 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) authorizeConfigEntitlements(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
-	switch err := ValidateConfigEntitlements(cfg, s.simulationEntitlements()); {
-	case errors.Is(err, ErrRoutedLabsLicenseRequired):
-		s.writeFeatureGate(w, r, "routed_labs",
-			"Routed virtual labs require the Pro tier. "+defaultUpgradeMessage)
-	case errors.Is(err, ErrUnlimitedDevicesLicenseRequired):
-		s.writeFeatureGate(w, r, "unlimited_devices",
-			deviceScaleContract+" "+defaultUpgradeMessage)
+	switch err := ValidateConfigDeviceCount(cfg); {
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Configuration exceeds the maximum supported device count", nil)

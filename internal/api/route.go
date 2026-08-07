@@ -2,7 +2,7 @@ package api
 
 // route.go is the capability registry: API routes are declared as data and a
 // single register() composes their per-route policy — rate limiting, CSRF,
-// admin scope, license feature — in ONE canonical order around the shared
+// admin scope — in ONE canonical order around the shared
 // recover+auth wrappers. This replaces hand-nesting the middleware at each
 // mux.HandleFunc call site, where the nesting could be applied inconsistently
 // or forgotten. scripts/check-route-policy.sh enforces that every /api route
@@ -48,7 +48,7 @@ type apiRoute struct {
 	// handler is the terminal handler.
 	handler http.HandlerFunc
 	// methods is the set of HTTP methods the route accepts. register() gates
-	// to these with a 405 + Allow header (before csrf/admin/feature checks).
+	// to these with a 405 + Allow header (before csrf/admin checks).
 	// Empty preserves the handler's own method dispatch (e.g. devices.go's
 	// multi-method switch keeps dispatching when methods covers its full set).
 	methods []string
@@ -63,10 +63,6 @@ type apiRoute struct {
 	csrf bool
 	// admin requires an admin-scoped token (adminProtect) — whole-topology ops.
 	admin bool
-	// feature requires a license feature via requireFeature. "" = none.
-	feature string
-	// featureWriteOnly leaves safe reads available while requiring feature for mutations.
-	featureWriteOnly bool
 }
 
 // methodGate rejects any method outside allowed with a 405 + Allow header,
@@ -97,7 +93,7 @@ func bodyLimited(limit int64, next http.HandlerFunc) http.HandlerFunc {
 }
 
 // register installs rt on mux, composing middleware in ONE canonical order
-// (outermost → innermost): recover → auth → rateLimit → csrf → admin → feature
+// (outermost → innermost): recover → auth → rateLimit → csrf → admin
 // → methodGate → bodyLimit → handler. Composing here rather than at each call
 // site makes the policy declarative and uniform, records it for
 // /__capabilities, and is the single choke point the route-policy CI gate
@@ -116,13 +112,6 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 	// is touched. Empty methods leaves the handler's own dispatch in charge.
 	if len(rt.methods) > 0 {
 		h = s.methodGate(rt.methods, h)
-	}
-	if rt.feature != "" {
-		if rt.featureWriteOnly {
-			h = s.requireFeatureForWrites(rt.feature, h)
-		} else {
-			h = s.requireFeature(rt.feature, h)
-		}
 	}
 	if rt.admin {
 		h = auth.AdminProtect(s.logger, getClientIP, simpleErr, h)
@@ -157,18 +146,16 @@ func (s *Server) registerAll(mux *http.ServeMux, routes []apiRoute) {
 // routePolicyView is the JSON projection of a route's policy for the
 // /__capabilities manifest (the handler func itself is not exposed).
 type routePolicyView struct {
-	Path             string   `json:"path"`
-	Methods          []string `json:"methods,omitempty"`
-	MaxBodyBytes     int64    `json:"maxBodyBytes,omitempty"`
-	RateLimited      bool     `json:"rateLimited"`
-	CSRF             bool     `json:"csrf"`
-	Admin            bool     `json:"admin"`
-	Feature          string   `json:"feature,omitempty"`
-	FeatureWriteOnly bool     `json:"featureWriteOnly,omitempty"`
+	Path         string   `json:"path"`
+	Methods      []string `json:"methods,omitempty"`
+	MaxBodyBytes int64    `json:"maxBodyBytes,omitempty"`
+	RateLimited  bool     `json:"rateLimited"`
+	CSRF         bool     `json:"csrf"`
+	Admin        bool     `json:"admin"`
 }
 
 // handleRoutePolicyManifest serves the route-policy manifest: every route
-// registered through register() with its rate-limit / CSRF / admin / feature
+// registered through register() with its rate-limit / CSRF / admin
 // policy. No auth — like /__version it is a deployment/audit introspection
 // surface (auth itself is applied to every registered route and is implicit).
 func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Request) {
@@ -180,14 +167,12 @@ func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Reques
 	views := make([]routePolicyView, 0, len(s.routeManifest))
 	for _, rt := range s.routeManifest {
 		views = append(views, routePolicyView{
-			Path:             rt.path,
-			Methods:          rt.methods,
-			MaxBodyBytes:     rt.maxBodyBytes,
-			RateLimited:      rt.rl != rlNone,
-			CSRF:             rt.csrf,
-			Admin:            rt.admin,
-			Feature:          rt.feature,
-			FeatureWriteOnly: rt.featureWriteOnly,
+			Path:         rt.path,
+			Methods:      rt.methods,
+			MaxBodyBytes: rt.maxBodyBytes,
+			RateLimited:  rt.rl != rlNone,
+			CSRF:         rt.csrf,
+			Admin:        rt.admin,
 		})
 	}
 	s.writeJSON(w, views)

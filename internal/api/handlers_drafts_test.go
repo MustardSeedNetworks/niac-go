@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -240,47 +239,6 @@ func TestDraftBehaviorReplacementRejectsUnknownTarget(t *testing.T) {
 	}
 	if stored.Revision != draft.Revision {
 		t.Fatal("invalid behavior replacement changed the draft")
-	}
-}
-
-func TestDraftCreateValidatesConfigAndEntitlementsBeforePersistence(t *testing.T) {
-	server, _ := newTestServer(t)
-	lib := attachDraftLibrary(t, server)
-
-	invalidRec := httptest.NewRecorder()
-	server.handleLibraryDrafts(invalidRec, draftRequest(
-		http.MethodPost,
-		"/api/v1/library/drafts",
-		`{"name":"invalid","content":"devices: ["}`,
-		"",
-	))
-	if invalidRec.Code != http.StatusBadRequest {
-		t.Fatalf("invalid config status = %d, want 400", invalidRec.Code)
-	}
-	if _, err := lib.ReadDraft("invalid"); !errors.Is(err, library.ErrNotFound) {
-		t.Fatalf("invalid config persisted, ReadDraft() error = %v", err)
-	}
-
-	var oversized strings.Builder
-	oversized.WriteString("devices:\n")
-	const deviceYAML = "  - name: device-%d\n" +
-		"    mac: \"02:00:00:00:00:%02x\"\n" +
-		"    ips: [\"192.0.2.%d\"]\n"
-	for index := range FreeTierDeviceCount + 1 {
-		fmt.Fprintf(&oversized, deviceYAML, index, index, index+1)
-	}
-	licensedRec := httptest.NewRecorder()
-	server.handleLibraryDrafts(licensedRec, draftRequest(
-		http.MethodPost,
-		"/api/v1/library/drafts",
-		fmt.Sprintf(`{"name":"too-large","content":%s}`, strconvJSON(oversized.String())),
-		"",
-	))
-	if licensedRec.Code != http.StatusPaymentRequired {
-		t.Fatalf("unlicensed config status = %d, want 402; body=%s", licensedRec.Code, licensedRec.Body.String())
-	}
-	if _, err := lib.ReadDraft("too-large"); !errors.Is(err, library.ErrNotFound) {
-		t.Fatalf("unlicensed config persisted, ReadDraft() error = %v", err)
 	}
 }
 
