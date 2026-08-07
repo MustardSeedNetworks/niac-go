@@ -52,8 +52,8 @@ NIAC to run as a service.
 Daemon mode records the active simulation launch intent in
 `<data-root>/state/active-simulation.json`. A graceful service shutdown keeps
 this record, and the next daemon start restores the simulation only after the
-current license grants, attachment policy, host interface, configuration,
-runtime requirements, and routed preflight all pass.
+attachment policy, host interface, configuration, runtime requirements, and
+routed preflight all pass.
 
 An explicit simulation stop removes the record. If recovery fails, NIAC keeps
 the API available, leaves the simulation stopped, and reports an actionable

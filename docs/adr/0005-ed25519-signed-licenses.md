@@ -1,6 +1,18 @@
 # ADR 0005: Ed25519-signed license tokens
 
-**Status:** Accepted (2026-06-08)
+**Status:** Superseded (2026-08-07)
+
+> **Superseded.** NIAC no longer performs any runtime license validation. The
+> product ships as one unrestricted binary; revenue attaches to releases,
+> support, and custom modelling rather than a runtime unlock. `internal/license`,
+> the `/api/v1/license` endpoint, the `niac license` commands, and every feature
+> gate were removed (see #1203). Resource ceilings remain as technical safety
+> limits — 1,000 devices for one configuration, plus daemon-wide session and
+> device budgets — not as entitlements.
+>
+> The reasoning below is retained because it explains why the previous rotor
+> cipher was replaced, and it still applies to any signed-artifact work in the
+> fleet. It no longer describes shipped NIAC behaviour.
 
 ## Context
 

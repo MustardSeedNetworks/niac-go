@@ -170,9 +170,14 @@ no bump (use `Release-As:` footer to force). Tags trigger `release.yml`
 which builds Linux, macOS, and Windows archives and attaches checksums plus
 SLSA provenance to the GitHub release.
 
-## License
+## Limits
 
-Free: up to 10 simulated devices; Pro removes tier soft cap; absolute ceiling 1000.
+NIAC ships as one unrestricted binary — no runtime tier, no activation, no
+phone-home. One configuration may carry up to 1,000 devices, and the daemon
+bounds concurrent sessions and total devices across everything running at once.
+These are technical safety limits, not entitlements.
+
+## License
 
 [Business Source License 1.1](LICENSE) — free for non-commercial use;
 commercial use requires a license. Converts to Apache-2.0 on the change
