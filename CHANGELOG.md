@@ -5,6 +5,42 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.27...v0.94.28) (2026-08-07)
+
+
+### Features
+
+* **api:** address one simulation session explicitly ([0dcc6b4](https://github.com/MustardSeedNetworks/niac-go/commit/0dcc6b41b1c17a7af767f9c2e947b4c875e8a42e))
+* **behavior,devicestate:** make timeline replay deterministic and checkpoints complete ([050dfab](https://github.com/MustardSeedNetworks/niac-go/commit/050dfab7aff93e66da64d2815dc8da41d14e0617))
+* **daemon,api,ui:** report trunk capture health and degrade its sessions ([92a2166](https://github.com/MustardSeedNetworks/niac-go/commit/92a2166572c4782bcdb94e2d788a6210550fc956))
+* **daemon:** enforce device and session budgets across the whole daemon ([5630a85](https://github.com/MustardSeedNetworks/niac-go/commit/5630a8544a6265a08fe20b47351549fe593bc41e))
+* **devicestate:** add a link-down fault, and only that one ([156c2f0](https://github.com/MustardSeedNetworks/niac-go/commit/156c2f09e92ebd196ec394f8142e6844abb74a3e))
+* **scenario:** author utilization that looks like a network under load ([622a262](https://github.com/MustardSeedNetworks/niac-go/commit/622a262afc887d06f2e67239524af1711bcd5984))
+* **ui:** read runtime state from a named session ([55fc242](https://github.com/MustardSeedNetworks/niac-go/commit/55fc24204a8aed739a882767004e411e7f6c68ba))
+
+
+### Bug Fixes
+
+* **daemon:** stop a new session taking the default from a running one ([c99dc95](https://github.com/MustardSeedNetworks/niac-go/commit/c99dc952f6981960e29074553abc641364353075))
+* **dns:** stop emitting a trailing empty label in PTR replies ([319ecd7](https://github.com/MustardSeedNetworks/niac-go/commit/319ecd706a06ea35b9e8c48a116c5393afcdaa4f)), closes [#1200](https://github.com/MustardSeedNetworks/niac-go/issues/1200)
+* **lab:** name the logical attachment when starting a pack ([f7277fe](https://github.com/MustardSeedNetworks/niac-go/commit/f7277fe4f814fd9143170d943734a2e74a00bc2d))
+* **scenario:** give endpoints an SNMP identity so they stop rendering as IPs ([46efb38](https://github.com/MustardSeedNetworks/niac-go/commit/46efb38dea8658ef8ea4d8ed843ca37ed875c1e7))
+* **scenario:** keep authored utilization below the Link-Live warning line ([4d56ada](https://github.com/MustardSeedNetworks/niac-go/commit/4d56ada3bf00388945b7cc2aee5bf64c38ed3eac))
+
+
+### Code Refactoring
+
+* **api,daemon,cli:** remove feature gating and the 402 path ([bef04b5](https://github.com/MustardSeedNetworks/niac-go/commit/bef04b517ab2cd5c2748c47467a3cba051359546))
+* **api:** drop the template upload and delete surface ([41d44e0](https://github.com/MustardSeedNetworks/niac-go/commit/41d44e059b1c6a748d8184ae91613a756ce6af54))
+* delete the runtime license package, endpoint and CLI ([11b5804](https://github.com/MustardSeedNetworks/niac-go/commit/11b5804784b42f7cbdd2afeab362e950fda2233f))
+* move home-directory resolution out of the license package ([2d4e5fd](https://github.com/MustardSeedNetworks/niac-go/commit/2d4e5fddcd31e86c94ebb9bd64c000c8867af8e8))
+* **ui:** remove the license page, context and feature gates ([6299f97](https://github.com/MustardSeedNetworks/niac-go/commit/6299f97b2ef58f1576caec33e43e8d97a9650141))
+
+
+### Documentation
+
+* supersede runtime licensing and drop tier claims ([3ab5e37](https://github.com/MustardSeedNetworks/niac-go/commit/3ab5e3795aa942a6fcd1cdbd9d1de3498defbcc7)), closes [#1203](https://github.com/MustardSeedNetworks/niac-go/issues/1203)
+
 ## [0.94.27](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.26...v0.94.27) (2026-08-06)
 
 
