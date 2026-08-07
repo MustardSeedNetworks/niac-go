@@ -213,10 +213,11 @@ func (h *DNSHandler) resolvePTRRecord(
 		return
 	}
 
-	ptr := host.name
-	if !strings.HasSuffix(ptr, ".") {
-		ptr += "."
-	}
+	// Hand the name over without a trailing dot: the serializer appends the
+	// root label itself, and a name that already ends in "." adds an empty
+	// label plus a second terminator. RDLENGTH then overstates the name by one
+	// byte and resolvers reject the whole reply as "extra input data".
+	ptr := strings.TrimSuffix(host.name, ".")
 
 	ctx.answers = append(ctx.answers, layers.DNSResourceRecord{
 		Name:  q.Name,
