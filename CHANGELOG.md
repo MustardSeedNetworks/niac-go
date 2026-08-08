@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.30](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.29...v0.94.30) (2026-08-08)
+
+
+### Documentation
+
+* record how the lab is actually driven and what M4-1 settled ([#1221](https://github.com/MustardSeedNetworks/niac-go/issues/1221)) ([a328369](https://github.com/MustardSeedNetworks/niac-go/commit/a328369236914633bfcf1c9482c873ce055315af))
+
+
+### Miscellaneous
+
+* **deps-dev:** bump js-yaml ([#1210](https://github.com/MustardSeedNetworks/niac-go/issues/1210)) ([8379c04](https://github.com/MustardSeedNetworks/niac-go/commit/8379c04b21f1179aa89d4f9b71d2700aee28e4c9))
+
 ## [0.94.29](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.28...v0.94.29) (2026-08-08)
 
 
