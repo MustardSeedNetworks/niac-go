@@ -25,7 +25,25 @@ func compareInterfaces(expected AuthoredDevice, actual []ObservedInterface) []Fi
 	return append(findings, compareUnexpectedInterfaces(expected.Name, wanted, actual)...)
 }
 
+// samplesUtilization reports whether Link-Live measures interface utilization
+// for this device at all.
+//
+// It measures switch and router ports. A leaf node - an endpoint, a server, a
+// wireless controller - is never sampled even when its agent serves
+// ifHCInOctets, which every one of ours does: verified against the live
+// simulation, MED-DNS01, MED-WLC01 and MED-PUMP-B01-F01-02 all return Counter64
+// octet counters and Link-Live still reports no utilization for any of them.
+// Expecting a sample there fails every run for something the simulation gets
+// right, and drowns the findings that matter.
+func samplesUtilization(device AuthoredDevice) bool {
+	return !isLeafType(device.Type)
+}
+
 func missingUtilizationFindings(device AuthoredDevice) []Finding {
+	if !samplesUtilization(device) {
+		return nil
+	}
+
 	var findings []Finding
 	for _, iface := range device.Interfaces {
 		if iface.UtilizationPercent <= 0 && !iface.UtilizationDynamic {

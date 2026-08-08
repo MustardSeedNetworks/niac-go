@@ -46,11 +46,44 @@ func displayedType(deviceType string) string {
 	}
 }
 
-func displayedTypeMatches(deviceType, actual string) bool {
-	if deviceType == "layer3-switch" {
+// displayedTypeMatches reports whether Link-Live filed the device the way the
+// authored role says it should.
+//
+// An endpoint that answers SNMP is filed as an SNMP Agent rather than as a
+// Host/Client, and that is the correct reading of it - a clinical appliance or
+// a managed printer is SNMP-managed gear, not somebody's desktop. Infrastructure
+// keeps its role label, so a switch Link-Live failed to recognise as a switch is
+// still a finding.
+func displayedTypeMatches(expected AuthoredDevice, actual string) bool {
+	if expected.Type == "layer3-switch" {
 		return actual == "Switch" || actual == "Router"
 	}
-	return displayedType(deviceType) == actual
+	if actual == snmpAgentType && expected.ServesSNMP && isEndpointType(expected.Type) {
+		return true
+	}
+
+	return displayedType(expected.Type) == actual
+}
+
+// snmpAgentType is how Link-Live labels a device it identified only by its
+// SNMP agent.
+const snmpAgentType = "SNMP Agent"
+
+func isEndpointType(deviceType string) bool {
+	switch deviceType {
+	case "host", "workstation", "iot", "printer":
+		return true
+	default:
+		return false
+	}
+}
+
+// isLeafType reports whether the device hangs off the network rather than
+// forming it. Servers and wireless controllers are not endpoints - they are
+// managed infrastructure - but they still sit on one port, which is what
+// decides whether Link-Live measures them.
+func isLeafType(deviceType string) bool {
+	return isEndpointType(deviceType) || deviceType == "server"
 }
 
 func parseSpeedMbps(value string) int {

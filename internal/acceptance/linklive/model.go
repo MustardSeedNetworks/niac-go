@@ -52,6 +52,9 @@ type AuthoredDevice struct {
 	IPv4                       []string
 	Interfaces                 []AuthoredInterface
 	InterfaceInventoryComplete bool
+	// ServesSNMP marks a device that answers SNMP for itself. Link-Live may
+	// file such a device as an SNMP Agent rather than by its role.
+	ServesSNMP bool
 }
 
 // AuthoredInterface contains deterministic interface state exposed through SNMP.
