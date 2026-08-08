@@ -72,6 +72,113 @@ ip link add link vmbr0 name vmbr0.201 type vlan id 201
 ip addr add 10.20.201.250/24 dev vmbr0.201 && ip link set vmbr0.201 up
 ```
 
+## Driving the CyberScope
+
+The unit is `10.44.10.184`. **VNC on 5900 is the only control path** — nothing
+else is open, no SSH and no web UI. There is no password.
+
+```bash
+# One-time
+python3 -m venv ~/vncenv && ~/vncenv/bin/pip install vncdotool
+```
+
+Chain every action and the screenshot into **one** `vncdo` invocation. A
+separate `capture` call opens a fresh session, receives no framebuffer update,
+and writes a black frame that looks exactly like a sleeping screen — this costs
+an hour if you do not know it.
+
+```bash
+# Wrong: two calls, second one writes black
+vncdo -s 10.44.10.184::5900 move 360 640 click 1
+vncdo -s 10.44.10.184::5900 capture shot.png
+
+# Right: one session
+vncdo -s 10.44.10.184::5900 move 360 640 click 1 pause 2 capture shot.png
+```
+
+Screen is 720x1280. Android navigation bar: back `180,1232`, home `360,1232`.
+`key ctrl-a` types a literal `a` rather than selecting all — clear a text field
+with repeated `key bsp`.
+
+### Capture walkthrough
+
+1. **Home** (`360,1232`) → **AutoTest** (`111,148`) → hamburger (`55,104`) →
+   expand the profile list (`451,96`) → **Wired Profile VLAN 200** (`300,481`).
+   Wait for DHCP to show `10.254.200.100`; that is the pack's own DHCP server
+   answering, and it is the proof the session is live on the right VLAN.
+2. **Home** → **Discovery** (`443,367`) → ⋮ (`676,104`) → **Refresh Discovery**
+   (`481,104`) → **CLEAR AND RERUN DISCOVERY** (`320,678`).
+3. Wait for the count to stop climbing. A good run reaches the pack's device
+   count in about five minutes. **If it stalls at a few dozen and never walks
+   past the first hop, that is the unit, not NIAC** — see below.
+4. ⋮ → **Upload To Link-Live** (`490,392`), set the Analysis Name, dismiss the
+   keyboard with `key esc`, then **UPLOAD TO ANALYSIS** (`293,1127`).
+5. The capture VLAN has no internet, so the upload queues. Switch AutoTest to
+   **EZ Wired Profile** to flush it. Confirm in the **Link-Live** app
+   (`111,805`) that the header reads `Link-Live (0 buffered)` and
+   `Link-Live is reachable`; anything else means the queue has not drained.
+
+Only one AutoTest profile can be linked at a time. VLAN 200 runs the pack;
+EZ Wired (`10.44.10.x`) is the only path out. Never switch profiles mid-scan —
+it resets the test port.
+
+### When Discovery stalls
+
+Symptom: the count sticks at a few dozen, the list is all `10.44.x` management
+hosts, and `LAB-EDGE-R1` appears with no MAC or vendor — meaning the unit found
+it by ARP but never SNMP-walked it, so it never followed the route into the
+pack's subnets.
+
+Before suspecting the simulation, prove NIAC from `pvm01`:
+
+```bash
+ip link add link vmbr0 name vmbr0.200 type vlan id 200
+ip addr add 10.254.200.251/24 dev vmbr0.200 && ip link set vmbr0.200 up
+ip route add 10.51.0.0/16 via 10.254.200.1 dev vmbr0.200
+
+snmpget -v2c -c NetAllyDemo 10.254.200.1  1.3.6.1.2.1.1.5.0   # LAB-EDGE-R1
+snmpget -v2c -c NetAllyDemo 10.51.200.21  1.3.6.1.2.1.1.5.0   # an access switch
+```
+
+If those answer, the simulation is fine. Discovery Settings → SNMP will still
+show the communities configured; the stall is unit-side. Retry the capture.
+
+## Link-Live API
+
+Credentials live in `~/.linklive/token.env` as `LINKLIVE_ACCESS_TOKEN`, kept
+alive by `~/.linklive/refresh.sh` under launchd so the account's MFA is never
+needed again.
+
+Two things that will waste time:
+
+- **Paths are `/v1/...`, not `/api/v1/...`.** The wrong path returns
+  `InvalidAuthHeader`, which reads like a credential problem and is not.
+- **The API rejects a token with `426 JWTNeedsToBeRefreshed` well before its
+  `exp` claim.** The unforced refresh script reports "still fresh" and does
+  nothing. Force it.
+
+```bash
+bash ~/.linklive/refresh.sh --force
+set -a; . ~/.linklive/token.env; set +a
+
+curl -s -H "Authorization: Access $LINKLIVE_ACCESS_TOKEN" \
+  https://link-live.com/v1/admin/analysis |
+  python3 -c 'import sys,json; rows=json.load(sys.stdin);
+rows.sort(key=lambda r: r["created_at"], reverse=True)
+[print(r["created_at"], r["_id"], r.get("fileName")) for r in rows[:5]]'
+```
+
+The header scheme is `Access`, not `Bearer`.
+
+Then compare against authored truth:
+
+```bash
+go run ./tools/linklive-acceptance -config <pack>.yaml -analysis <_id>
+```
+
+The runner prints a JSON report and then a plain-text failure line, so the
+output is **not** valid JSON as a whole — parse only up to the closing brace.
+
 ## Per-pack loop
 
 ```bash
@@ -115,8 +222,8 @@ Every finding kind the comparator can emit, and where to look first.
 | --- | --- | --- |
 | `missing-device` | device never answered, or discovery ran before the session was up | session running on the right VLAN; SNMP reachable from the tester sub-interface |
 | `unexpected-device` | stale tester inventory, or management-subnet nodes leaked in | clear Discovery and rerun; confirm the scan started on the pack's VLAN, not the outbound profile |
-| `name-conflict` | walk `sysName` overriding the authored name, or two devices sharing a walk | authored name wins by design — confirm the walk's sysName is being skipped |
-| `type-conflict` | profile `sysObjectID` does not map to the expected class | the device's profile in `profiles_catalog.go`; `layer3-switch` may legitimately render as Router or Switch |
+| `name-conflict` | walk `sysName` overriding the authored name, or two devices sharing a walk | authored name wins by design — confirm the walk's sysName is being skipped. A device shown as a **bare IP** is usually discovery timing rather than a defect: probe it directly before believing it (`snmpget` for an appliance, an NBSTAT node-status query **bound to source port 137** for a Windows endpoint — an unbound probe sees nothing even when the responder is working). |
+| `type-conflict` | profile `sysObjectID` does not map to the expected class | the device's profile in `profiles_catalog.go`; `layer3-switch` may legitimately render as Router or Switch. An **endpoint** filed as `SNMP Agent` is not a finding and is no longer reported — a clinical or industrial appliance that answers SNMP is managed gear, and Link-Live is right to say so. A **switch** filed as `SNMP Agent` still is a finding. |
 | `address-conflict` | device answering on an address the pack did not author | duplicate IP across concurrently running sessions — VLANs isolate, but check the pack itself |
 | `problem-conflict` | tester flagged a device-level problem the pack did not author | usually real; read the tester's own problem text |
 
@@ -139,7 +246,7 @@ Every finding kind the comparator can emit, and where to look first.
 | `interface-speed-conflict` | authored speed disagrees with the walk's `ifSpeed` | walk-backed speed wins on the wire; fix the authored value |
 | `interface-duplex-conflict` | duplex compared on an interface that has no duplex | logical and `ieee80211` interfaces are exempt; a hit means an ethernet interface really differs |
 | `interface-mtu-conflict` | authored MTU differs from IF-MIB | jumbo-frame mismatch on uplinks is the common one |
-| `interface-utilization-conflict` | first poll, or behavior-driven traffic | utilization is only compared once the device has produced a sample; behavior-driven interfaces are expected to move |
+| `interface-utilization-conflict` | first poll, or behavior-driven traffic | utilization is only compared once the device has produced a sample; behavior-driven interfaces are expected to move. Only **switch and router** ports are compared: Link-Live takes no utilization sample from a leaf node — endpoint, server, wireless controller — even though ours all serve `ifHCInOctets` (measured: `MED-DNS01`, `MED-WLC01`, `MED-PUMP-B01-F01-02` all return Counter64 and Link-Live still reports none). |
 | `interface-error-conflict` / `interface-discard-conflict` | fault injection running during the scan, or counters not authored | whether a behavior timeline was mid-phase |
 | `interface-problem-conflict` | tester flagged an interface problem not authored | usually real |
 

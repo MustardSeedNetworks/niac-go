@@ -84,13 +84,48 @@ flattens, take the cheaper "fewer, larger cells" shape for manufacturing instead
 
 | ID | Work item | Hours | Depends on | Acceptance evidence |
 | --- | --- | ---: | --- | --- |
-| M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | Versioned golden manifests |
+| M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | **Done 2026-08-08** (v0.94.29). Hospital pack: 158 findings -> 1. See below. |
 | M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
 | M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | Two clean comparisons, and two maps that do not look alike |
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | Three clean comparisons |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | Published resource baseline |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
 | M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | 12 clean unit-pinned Link-Live comparisons |
+
+### M4-1 outcome (2026-08-08, v0.94.29)
+
+Findings on the hospital pack, one live CyberScope capture per stage, analysis
+`6a767a6f9dc61ad432a4616f`:
+
+| Stage | Findings |
+| --- | ---: |
+| Before | 158 |
+| After the endpoint work (#1213-#1218) | 37 |
+| After the comparator rules (#1219) | **1** |
+
+Two long-standing finding classes turned out to be the comparator being wrong
+about Link-Live rather than NIAC being wrong about the network. Both are now
+documented at their implementation and guarded by tests that keep the real
+checks alive:
+
+- Link-Live measures interface utilization on **switch and router ports only**.
+  It takes no sample from a leaf node even though every one of ours serves
+  `ifHCInOctets`. This was the "zero utilization on WLCs and servers" gap.
+- An endpoint that answers SNMP is filed as `SNMP Agent`, which is the correct
+  reading of a clinical appliance.
+
+Endpoint identity was reshaped to match how discovery actually names things:
+personal computers carry no SNMP agent (so they file as Host/Client) and take
+NetBIOS-legal names of 15 characters or fewer, since NetBIOS is now their only
+name source. Appliances keep their agent and their readable asset names. mDNS
+and NetBIOS node-status both work on the wire.
+
+The single remaining finding is one nurse station rendered as a bare address.
+It is discovery timing, not a defect — that host answers an NBSTAT probe with
+its full name. **A second confirming capture was not obtained**: CyberScope
+Discovery stalled twice at ~36 devices without walking past the first hop while
+the simulation answered SNMP normally. Re-run before treating the pack as
+finally signed off.
 
 Checkpoint: all six presentation VLANs are demonstrable without regeneration,
 YAML repair, or ambiguous Link-Live selection.
