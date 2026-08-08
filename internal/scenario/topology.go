@@ -29,7 +29,7 @@ func buildLinks(request Request) linkMap {
 		endpoint{"WAN-R2", "HundredGigabitEthernet0/0/1"}, []int{})
 	for siteIndex, site := range request.Sites {
 		addSiteBackbone(links, site, siteIndex, request.Counts)
-		addSiteLAN(links, site, request.Counts)
+		addSiteLAN(links, site, request)
 		addSiteEndpoints(links, site, request)
 	}
 	return links
@@ -91,7 +91,8 @@ func addSiteBackbone(links linkMap, site Site, siteIndex int, counts Counts) {
 	addMesh(links, firewalls, cores, "HundredGigabitEthernet0/2/", []int{})
 }
 
-func addSiteLAN(links linkMap, site Site, counts Counts) {
+func addSiteLAN(links linkMap, site Site, request Request) {
+	counts := request.Counts
 	cores := numberedNames(site.Code+"-CORE-SW", counts.CoreSwitches)
 	for distribution := 1; distribution <= counts.DistributionSwitches; distribution++ {
 		distName := numberedName(site.Code+"-DIST-SW", distribution)
@@ -100,6 +101,13 @@ func addSiteLAN(links linkMap, site Site, counts Counts) {
 				endpoint{coreName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", distribution)},
 				endpoint{distName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", coreIndex+1)}, nil)
 		}
+	}
+
+	if request.AccessLayer == AccessLayerRing {
+		addAccessRing(links, site, counts)
+		addServerSwitches(links, site, counts)
+
+		return
 	}
 
 	distributionPairs := counts.DistributionSwitches / maxRedundantPeers
@@ -125,6 +133,11 @@ func addSiteLAN(links linkMap, site Site, counts Counts) {
 		}
 	}
 
+	addServerSwitches(links, site, counts)
+}
+
+func addServerSwitches(links linkMap, site Site, counts Counts) {
+	cores := numberedNames(site.Code+"-CORE-SW", counts.CoreSwitches)
 	for serverSwitch := 1; serverSwitch <= counts.ServerSwitches; serverSwitch++ {
 		name := numberedName(site.Code+"-SRV-SW", serverSwitch)
 		for coreIndex, coreName := range cores {
@@ -132,6 +145,32 @@ func addSiteLAN(links linkMap, site Site, counts Counts) {
 				endpoint{coreName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", serverSwitch+coreServerPortOffset)},
 				endpoint{name, fmt.Sprintf("HundredGigabitEthernet1/0/%d", coreIndex+1)}, nil)
 		}
+	}
+}
+
+// addAccessRing closes the access tier into one ring and joins it to the
+// distribution tier at two opposite points, so a break anywhere on the ring
+// still leaves every cell a path out. Link-Live renders this as the loop it is
+// rather than reducing it to a tree, which is what makes it worth generating.
+func addAccessRing(links linkMap, site Site, counts Counts) {
+	for index := 1; index <= counts.AccessSwitches; index++ {
+		next := index%counts.AccessSwitches + 1
+		addEdge(links,
+			endpoint{accessName(site, index), ringEastPort},
+			endpoint{accessName(site, next), ringWestPort}, nil)
+	}
+	for join := range maxRedundantPeers {
+		accessIndex := join*counts.AccessSwitches/maxRedundantPeers + 1
+		addEdge(links,
+			endpoint{
+				numberedName(site.Code+"-DIST-SW", join+1),
+				fmt.Sprintf("HundredGigabitEthernet1/0/%d", firstDistributionAccessPort),
+			},
+			endpoint{
+				accessName(site, accessIndex),
+				fmt.Sprintf("HundredGigabitEthernet1/0/%d", accessUplinkPortStart),
+			},
+			nil)
 	}
 }
 

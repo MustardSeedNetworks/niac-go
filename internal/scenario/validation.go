@@ -38,7 +38,30 @@ func validateRequest(request Request) error {
 			"endpoint profile must be enterprise, hospital, warehouse, manufacturing, retail, or service-provider",
 		)
 	}
+	if err := validateAccessLayer(request); err != nil {
+		return err
+	}
+
 	return validateCounts(request.Counts)
+}
+
+// validateAccessLayer refuses a shape that cannot be built rather than quietly
+// generating the default one, which would be indistinguishable from a typo.
+func validateAccessLayer(request Request) error {
+	switch request.AccessLayer {
+	case AccessLayerDualHomed:
+		return nil
+	case AccessLayerRing:
+		if request.Counts.AccessSwitches < minimumRingNodes {
+			return fmt.Errorf(
+				"a ring access layer needs at least %d access switches", minimumRingNodes,
+			)
+		}
+
+		return nil
+	default:
+		return errors.New("access layer must be empty or ring")
+	}
 }
 
 func validEndpointProfile(profile string) bool {

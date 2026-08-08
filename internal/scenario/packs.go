@@ -10,7 +10,7 @@ const (
 	serviceProviderSiteOctet    = 101
 	hospitalDeviceCount         = 75
 	warehouseDeviceCount        = 57
-	compactVerticalDeviceCount  = 69
+	manufacturingDeviceCount    = 69
 	campusDeviceCount           = 155
 	enterpriseScaleDeviceCount  = 531
 	retailDeviceCount           = 95
@@ -21,7 +21,7 @@ const (
 	fourSiteNetworkCount        = 39
 	hospitalLinkCount           = 88
 	warehouseLinkCount          = 67
-	compactVerticalLinkCount    = 82
+	manufacturingLinkCount      = 78
 	campusLinkCount             = 202
 	enterpriseScaleLinkCount    = 634
 	retailLinkCount             = 118

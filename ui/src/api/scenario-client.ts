@@ -31,6 +31,10 @@ export interface ScenarioGenerateRequest {
     | 'manufacturing'
     | 'retail'
     | 'service-provider';
+  /** How the access tier is organized. Absent means every access switch
+   * dual-homes into the distribution pair; 'ring' closes them into one ring
+   * that meets distribution at two points. */
+  accessLayer?: 'ring';
 }
 
 export interface ScenarioManifest {
