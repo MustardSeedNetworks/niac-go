@@ -5,6 +5,29 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.29](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.28...v0.94.29) (2026-08-08)
+
+
+### Features
+
+* **mdns:** let devices announce themselves on multicast DNS ([#1215](https://github.com/MustardSeedNetworks/niac-go/issues/1215)) ([294d4ce](https://github.com/MustardSeedNetworks/niac-go/commit/294d4ce60aefd9c6bc5a0aba0c45259df7009519))
+* **scenario:** split endpoints by device class so hosts are not managed gear ([#1217](https://github.com/MustardSeedNetworks/niac-go/issues/1217)) ([cdc18b5](https://github.com/MustardSeedNetworks/niac-go/commit/cdc18b5fd844618a5a0fd6ce9ac496b02e868c84))
+
+
+### Bug Fixes
+
+* **acceptance:** stop the comparator expecting what Link-Live never reports ([#1219](https://github.com/MustardSeedNetworks/niac-go/issues/1219)) ([9c3a2b9](https://github.com/MustardSeedNetworks/niac-go/commit/9c3a2b9f6d111ab0c3f697b983dc1f13cf6fc86c))
+* **deps:** pin nanoid to 3.3.17 to clear GHSA-2v37-7h3g-55p8 ([#1216](https://github.com/MustardSeedNetworks/niac-go/issues/1216)) ([1778b24](https://github.com/MustardSeedNetworks/niac-go/commit/1778b24f5b721297e7dc9a47a5fa8ed67d35c0d5))
+* **netbios:** answer node status requests so endpoints are not anonymous ([#1214](https://github.com/MustardSeedNetworks/niac-go/issues/1214)) ([e10732b](https://github.com/MustardSeedNetworks/niac-go/commit/e10732b3f8b2da165ca0aedf0776c72e72ee79f0))
+* **netbios:** answer the port the query came from ([#1218](https://github.com/MustardSeedNetworks/niac-go/issues/1218)) ([0967131](https://github.com/MustardSeedNetworks/niac-go/commit/09671312dedb41ff9a77e1732e27f12d95d9bb8f))
+* **scenario:** report endpoint sysDescr the way a real agent would ([f7075c9](https://github.com/MustardSeedNetworks/niac-go/commit/f7075c963962970729ed088c5561c996a3bc5d98))
+
+
+### Documentation
+
+* decide vertical device realism and where imitation stops ([a7a0f02](https://github.com/MustardSeedNetworks/niac-go/commit/a7a0f0262b49fb31c08b2c05dd249ac005879f3a))
+* modernise the topology spine and add the server and storage tier ([2fd5a2d](https://github.com/MustardSeedNetworks/niac-go/commit/2fd5a2d1ba321c911aa98ab40007e18979dba78b))
+
 ## [0.94.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.27...v0.94.28) (2026-08-07)
 
 
