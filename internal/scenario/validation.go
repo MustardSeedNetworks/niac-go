@@ -42,7 +42,7 @@ func validateRequest(request Request) error {
 		return err
 	}
 
-	return validateCounts(request.Counts)
+	return validateCounts(request.Counts, request.AccessLayer)
 }
 
 // validateAccessLayer refuses a shape that cannot be built rather than quietly
@@ -50,6 +50,8 @@ func validateRequest(request Request) error {
 func validateAccessLayer(request Request) error {
 	switch request.AccessLayer {
 	case AccessLayerDualHomed:
+		return nil
+	case AccessLayerCollapsedCore, AccessLayerChain:
 		return nil
 	case AccessLayerRing:
 		if request.Counts.AccessSwitches < minimumRingNodes {
@@ -60,7 +62,7 @@ func validateAccessLayer(request Request) error {
 
 		return nil
 	default:
-		return errors.New("access layer must be empty or ring")
+		return errors.New("access layer must be empty, ring, collapsed-core, or chain")
 	}
 }
 
@@ -101,19 +103,35 @@ func validateSites(sites []Site) error {
 	return nil
 }
 
-func validateCounts(c Counts) error {
+// validateDistributionTier enforces the redundant pair every shape needs except
+// a collapsed core, which by definition has no distribution tier to size.
+func validateDistributionTier(switches int, accessLayer AccessLayer) error {
+	if accessLayer == AccessLayerCollapsedCore {
+		if switches != 0 {
+			return errors.New("a collapsed core must not declare distribution switches")
+		}
+
+		return nil
+	}
+	if switches < maxRedundantPeers || switches > maxDistributionSwitches {
+		return errors.New("distribution switch count must be between 2 and 8")
+	}
+	if switches%maxRedundantPeers != 0 {
+		return errors.New("distribution switch count must be even")
+	}
+
+	return nil
+}
+
+func validateCounts(c Counts, accessLayer AccessLayer) error {
 	if c.SiteWANRouters != c.Firewalls || c.SiteWANRouters != c.CoreSwitches {
 		return errors.New("WAN, firewall, and core counts must match")
 	}
 	if c.SiteWANRouters < 1 || c.SiteWANRouters > maxRedundantPeers {
 		return errors.New("WAN, firewall, and core counts must be 1 or 2")
 	}
-	if c.DistributionSwitches < maxRedundantPeers ||
-		c.DistributionSwitches > maxDistributionSwitches {
-		return errors.New("distribution switch count must be between 2 and 8")
-	}
-	if c.DistributionSwitches%maxRedundantPeers != 0 {
-		return errors.New("distribution switch count must be even")
+	if err := validateDistributionTier(c.DistributionSwitches, accessLayer); err != nil {
+		return err
 	}
 	if c.AccessSwitches < 1 || c.AccessSwitches > maxAccessSwitches {
 		return errors.New("access switch count must be between 1 and 20")

@@ -132,6 +132,14 @@ const (
 	// the distribution tier at two opposite points, the way a plant runs its
 	// cells off a fiber ring rather than home-running every closet.
 	AccessLayerRing AccessLayer = "ring"
+	// AccessLayerCollapsedCore lands every access switch straight on the core
+	// pair. A campus that is wide and shallow does not earn a distribution tier,
+	// and generating one it does not use would be a tier nobody deployed.
+	AccessLayerCollapsedCore AccessLayer = "collapsed-core"
+	// AccessLayerChain daisy-chains the access switches, with only the first
+	// uplinked. A store runs its lanes off one another rather than home-running
+	// every till to the back office.
+	AccessLayerChain AccessLayer = "chain"
 )
 
 // Request is the complete deterministic fleet-generation contract.

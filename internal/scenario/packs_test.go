@@ -66,10 +66,18 @@ func TestVerticalDemoPacksAreSingleSite(t *testing.T) {
 	}
 }
 
-func TestWiredOnlyScenarioPacksOmitWirelessControllers(t *testing.T) {
+// Every presentation pack keeps the full layered spine, radios and controllers
+// included. Service provider used to be the one pack generating neither, which
+// left its map missing a tier every real POP has.
+func TestEveryPresentationPackKeepsTheWirelessTier(t *testing.T) {
 	for _, pack := range scenario.Packs() {
-		if pack.ID == "service-provider" && pack.Request.Counts.WirelessControllers != 0 {
-			t.Errorf("service-provider wireless controllers = %d, want zero",
+		if pack.MapPurpose != scenario.MapPurposePresentation {
+			continue
+		}
+		if pack.Request.Counts.AccessPointsPerAccess < 1 ||
+			pack.Request.Counts.WirelessControllers < 1 {
+			t.Errorf("%s generates %d radios per access switch and %d controllers",
+				pack.ID, pack.Request.Counts.AccessPointsPerAccess,
 				pack.Request.Counts.WirelessControllers)
 		}
 	}

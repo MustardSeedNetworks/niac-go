@@ -11,10 +11,10 @@ const (
 	hospitalDeviceCount         = 75
 	warehouseDeviceCount        = 57
 	manufacturingDeviceCount    = 69
-	campusDeviceCount           = 155
+	campusDeviceCount           = 147
 	enterpriseScaleDeviceCount  = 531
 	retailDeviceCount           = 95
-	serviceProviderDeviceCount  = 87
+	serviceProviderDeviceCount  = 117
 	singleSiteNetworkCount      = 12
 	twoSiteNetworkCount         = 21
 	threeSiteNetworkCount       = 30
@@ -22,10 +22,10 @@ const (
 	hospitalLinkCount           = 88
 	warehouseLinkCount          = 67
 	manufacturingLinkCount      = 78
-	campusLinkCount             = 202
+	campusLinkCount             = 186
 	enterpriseScaleLinkCount    = 634
-	retailLinkCount             = 118
-	serviceProviderLinkCount    = 122
+	retailLinkCount             = 112
+	serviceProviderLinkCount    = 146
 )
 
 type packSite struct {
@@ -113,31 +113,7 @@ func customerScenarioPacks() []Pack {
 				LinksSHA256:       "a495dcb76177b01348573b330b54640318d21c34f7c71e596de2aba0bb8c9939",
 			},
 		),
-		newScenarioPack(
-			"campus",
-			"Enterprise campus",
-			"Four readable sites with core, distribution, access, Wi-Fi 7, workstation, and service layers.",
-			MapPurposePresentation,
-			"campus.example",
-			packSites(campusSiteOctet,
-				packSite{code: "NTH", location: "North Campus"},
-				packSite{code: "STH", location: "South Campus"},
-				packSite{code: "ENG", location: "Engineering Campus"},
-				packSite{code: "ADM", location: "Administration Campus"},
-			),
-			packCounts(
-				campusAccessSwitches,
-				campusAccessPointsPerAccess,
-				campusWorkstationsPerAccess,
-			),
-			Manifest{
-				DeviceCount: campusDeviceCount, NetworkCount: fourSiteNetworkCount,
-				LinkCount:         campusLinkCount,
-				DeviceNamesSHA256: "17ed0a70d1f95060126e399c19b0a9fc4fa2ad5779be8ac8763debd34f97b72f",
-				NetworksSHA256:    "7262a118fbb0f2d4977d02895b839d0cbce5fd1161201b0f27a5b37fc3eb72ce",
-				LinksSHA256:       "b171d72805e3ea4524118adcf58a99c8e52112c8d32f43f25816b90b3ea2e3e8",
-			},
-		),
+		campusScenarioPack(),
 		newScenarioPack(
 			"enterprise-scale",
 			"Enterprise scale reference",
@@ -167,6 +143,34 @@ func packSites(firstOctet int, definitions ...packSite) []Site {
 		}
 	}
 	return sites
+}
+
+func campusScenarioPack() Pack {
+	pack := newScenarioPack(
+		"campus",
+		"Enterprise campus",
+		"Four readable sites, each wide and shallow: closets land straight on a collapsed core, with Wi-Fi 7, workstation, and service layers.",
+		MapPurposePresentation,
+		"campus.example",
+		packSites(campusSiteOctet,
+			packSite{code: "NTH", location: "North Campus"},
+			packSite{code: "STH", location: "South Campus"},
+			packSite{code: "ENG", location: "Engineering Campus"},
+			packSite{code: "ADM", location: "Administration Campus"},
+		),
+		campusCounts(),
+		Manifest{
+			DeviceCount: campusDeviceCount, NetworkCount: fourSiteNetworkCount,
+			LinkCount:         campusLinkCount,
+			DeviceNamesSHA256: "c15f6f9ddff32dc30e5751858c3ea2650dd2aa1b2900abf89b5f9b23692236f7",
+			NetworksSHA256:    "7262a118fbb0f2d4977d02895b839d0cbce5fd1161201b0f27a5b37fc3eb72ce",
+			LinksSHA256:       "faa6df268e4654e542f89b707ee9bc05744de70b6edc9419f990e77da478410d",
+		},
+	)
+	// A campus is wide and shallow; its closets land on the core directly.
+	pack.Request.AccessLayer = AccessLayerCollapsedCore
+
+	return pack
 }
 
 func newScenarioPack(

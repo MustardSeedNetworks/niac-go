@@ -33,8 +33,9 @@ export interface ScenarioGenerateRequest {
     | 'service-provider';
   /** How the access tier is organized. Absent means every access switch
    * dual-homes into the distribution pair; 'ring' closes them into one ring
-   * that meets distribution at two points. */
-  accessLayer?: 'ring';
+   * that meets distribution at two points; 'collapsed-core' lands them on the
+   * core with no distribution tier; 'chain' daisy-chains them off one uplink. */
+  accessLayer?: 'ring' | 'collapsed-core' | 'chain';
 }
 
 export interface ScenarioManifest {
