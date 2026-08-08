@@ -103,11 +103,23 @@ func addSiteLAN(links linkMap, site Site, request Request) {
 		}
 	}
 
-	if request.AccessLayer == AccessLayerRing {
+	switch request.AccessLayer {
+	case AccessLayerRing:
 		addAccessRing(links, site, counts)
 		addServerSwitches(links, site, counts)
 
 		return
+	case AccessLayerCollapsedCore:
+		addAccessToCore(links, site, counts)
+		addServerSwitches(links, site, counts)
+
+		return
+	case AccessLayerChain:
+		addAccessChain(links, site, counts)
+		addServerSwitches(links, site, counts)
+
+		return
+	case AccessLayerDualHomed:
 	}
 
 	distributionPairs := counts.DistributionSwitches / maxRedundantPeers
@@ -145,6 +157,49 @@ func addServerSwitches(links linkMap, site Site, counts Counts) {
 				endpoint{coreName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", serverSwitch+coreServerPortOffset)},
 				endpoint{name, fmt.Sprintf("HundredGigabitEthernet1/0/%d", coreIndex+1)}, nil)
 		}
+	}
+}
+
+// addAccessToCore lands every access switch on both core switches. With no
+// distribution tier the core is what the closets hang off, which is the whole
+// point of collapsing it.
+func addAccessToCore(links linkMap, site Site, counts Counts) {
+	cores := numberedNames(site.Code+"-CORE-SW", counts.CoreSwitches)
+	for accessIndex := 1; accessIndex <= counts.AccessSwitches; accessIndex++ {
+		for coreIndex, coreName := range cores {
+			addEdge(links,
+				endpoint{
+					coreName,
+					fmt.Sprintf("HundredGigabitEthernet1/0/%d", accessIndex),
+				},
+				endpoint{
+					accessName(site, accessIndex),
+					fmt.Sprintf("HundredGigabitEthernet1/0/%d", coreIndex+accessUplinkPortStart),
+				},
+				nil)
+		}
+	}
+}
+
+// addAccessChain daisy-chains the access switches and uplinks only the head of
+// the chain, which is how a store gets from the back office out along its lanes.
+func addAccessChain(links linkMap, site Site, counts Counts) {
+	for index := 1; index < counts.AccessSwitches; index++ {
+		addEdge(links,
+			endpoint{accessName(site, index), ringEastPort},
+			endpoint{accessName(site, index+1), ringWestPort}, nil)
+	}
+	for distribution := 1; distribution <= maxRedundantPeers; distribution++ {
+		addEdge(links,
+			endpoint{
+				numberedName(site.Code+"-DIST-SW", distribution),
+				fmt.Sprintf("HundredGigabitEthernet1/0/%d", firstDistributionAccessPort),
+			},
+			endpoint{
+				accessName(site, 1),
+				fmt.Sprintf("HundredGigabitEthernet1/0/%d", distribution+accessUplinkPortStart-1),
+			},
+			nil)
 	}
 }
 

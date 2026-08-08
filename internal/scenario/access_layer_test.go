@@ -1,6 +1,7 @@
 package scenario_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -124,4 +125,59 @@ func packRequest(t *testing.T, id string) scenario.Request {
 	t.Fatalf("no pack %q", id)
 
 	return scenario.Request{}
+}
+
+// A campus is wide and shallow: closets land straight on a collapsed core, with
+// no distribution tier between them. That is what makes its map read as a campus
+// rather than a smaller copy of the hospital.
+func TestCampusCollapsesTheCore(t *testing.T) {
+	cfg := generatePack(t, "campus")
+
+	if findDevice(cfg, "NTH-DIST-SW01") != nil {
+		t.Error("campus still generates a distribution tier")
+	}
+	if uplinks := countUplinks(cfg, "NTH-ACC-SW", "NTH-CORE-SW"); uplinks != 8 {
+		t.Errorf("access-to-core uplinks = %d, want 8", uplinks)
+	}
+}
+
+// A store runs its lanes off one another rather than home-running each till to
+// the back office, so the access tier is a chain with a single uplink.
+func TestRetailStoreChainsItsLanes(t *testing.T) {
+	cfg := generatePack(t, "retail")
+
+	for index := 1; index < 4; index++ {
+		name := numbered("STR-ACC-SW", index)
+		next := numbered("STR-ACC-SW", index+1)
+		if !adjacent(cfg, name, next) {
+			t.Errorf("%s is not chained to %s", name, next)
+		}
+	}
+	if adjacent(cfg, "STR-ACC-SW04", "STR-ACC-SW01") {
+		t.Error("the lane chain closes into a ring")
+	}
+	if uplinks := countUplinks(cfg, "STR-ACC-SW", "STR-DIST-SW"); uplinks != 2 {
+		t.Errorf("chain uplinks = %d, want 2", uplinks)
+	}
+}
+
+// A metro POP hands its access nodes off a ring, and every pack keeps the full
+// spine including radios and a controller pair - service provider was the one
+// pack generating neither.
+func TestServiceProviderRingsItsPOPAndKeepsTheSpine(t *testing.T) {
+	cfg := generatePack(t, "service-provider")
+
+	for index := 1; index <= 4; index++ {
+		next := index%4 + 1
+		if !adjacent(cfg, numbered("NYC-ACC-SW", index), numbered("NYC-ACC-SW", next)) {
+			t.Errorf("NYC-ACC-SW%02d is not linked to its ring neighbour", index)
+		}
+	}
+	if findDevice(cfg, "NYC-WLC01") == nil || findDevice(cfg, "NYC-WAP-B01-F01-01") == nil {
+		t.Error("service provider still generates no radios and no controller")
+	}
+}
+
+func numbered(prefix string, index int) string {
+	return fmt.Sprintf("%s%02d", prefix, index)
 }

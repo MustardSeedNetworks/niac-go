@@ -22,7 +22,7 @@ const (
 	manufacturingAccessPointsPerAccess = 5
 	manufacturingWorkstationsPerAccess = 2
 	providerAccessSwitches             = 4
-	providerAccessPointsPerAccess      = 0
+	providerAccessPointsPerAccess      = 2
 	providerWorkstationsPerAccess      = 2
 )
 
@@ -35,5 +35,15 @@ func packCounts(access, accessPoints, workstations int) Counts {
 	if accessPoints > 0 {
 		counts.WirelessControllers = maxRedundantPeers
 	}
+	return counts
+}
+
+// campusCounts drops the distribution tier: a wide, shallow campus lands its
+// closets straight on a collapsed core, so generating distribution switches
+// would put a tier on the map that nobody deployed.
+func campusCounts() Counts {
+	counts := packCounts(campusAccessSwitches, campusAccessPointsPerAccess, campusWorkstationsPerAccess)
+	counts.DistributionSwitches = 0
+
 	return counts
 }
