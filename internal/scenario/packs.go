@@ -9,7 +9,8 @@ const (
 	industrialSiteOctet         = 91
 	serviceProviderSiteOctet    = 101
 	hospitalDeviceCount         = 75
-	compactVerticalDeviceCount  = 69
+	warehouseDeviceCount        = 57
+	manufacturingDeviceCount    = 69
 	campusDeviceCount           = 155
 	enterpriseScaleDeviceCount  = 531
 	retailDeviceCount           = 95
@@ -19,7 +20,8 @@ const (
 	threeSiteNetworkCount       = 30
 	fourSiteNetworkCount        = 39
 	hospitalLinkCount           = 88
-	compactVerticalLinkCount    = 82
+	warehouseLinkCount          = 67
+	manufacturingLinkCount      = 78
 	campusLinkCount             = 202
 	enterpriseScaleLinkCount    = 634
 	retailLinkCount             = 118
@@ -104,11 +106,11 @@ func customerScenarioPacks() []Pack {
 				warehouseWorkstationsPerAccess,
 			),
 			Manifest{
-				DeviceCount: compactVerticalDeviceCount, NetworkCount: singleSiteNetworkCount,
-				LinkCount:         compactVerticalLinkCount,
-				DeviceNamesSHA256: "5e58dc80d18034ef8e07091a98bd2acda6c3507b1c2c12d3671b9d08aaac5044",
+				DeviceCount: warehouseDeviceCount, NetworkCount: singleSiteNetworkCount,
+				LinkCount:         warehouseLinkCount,
+				DeviceNamesSHA256: "f622b9683718ece6b665f88c858df863b6b7d54d8a4371efdc9b20cd79255b01",
 				NetworksSHA256:    "4b45bbf256fb1440d30d2149f3691664404012f192d5f98f788bcc0c413e90b5",
-				LinksSHA256:       "b7e277f9b64855164d8b0dd7f2e02acc7d6db091da8b5f23fb95378aa801a729",
+				LinksSHA256:       "a495dcb76177b01348573b330b54640318d21c34f7c71e596de2aba0bb8c9939",
 			},
 		),
 		newScenarioPack(

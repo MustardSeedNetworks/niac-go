@@ -27,7 +27,7 @@ func verticalScenarioPacks() []Pack {
 }
 
 func manufacturingScenarioPack() Pack {
-	return newScenarioPack(
+	pack := newScenarioPack(
 		"manufacturing", "Manufacturing plant",
 		"Single production plant with resilient switching, 30 Wi-Fi 7 APs, wired stations, and local services.",
 		MapPurposePresentation, "industrial.example",
@@ -35,13 +35,17 @@ func manufacturingScenarioPack() Pack {
 		packCounts(manufacturingAccessSwitches, manufacturingAccessPointsPerAccess,
 			manufacturingWorkstationsPerAccess),
 		Manifest{
-			DeviceCount: compactVerticalDeviceCount, NetworkCount: singleSiteNetworkCount,
-			LinkCount:         compactVerticalLinkCount,
+			DeviceCount: manufacturingDeviceCount, NetworkCount: singleSiteNetworkCount,
+			LinkCount:         manufacturingLinkCount,
 			DeviceNamesSHA256: "4bae5bd1de01cf8a6918eadf3e1c88754c680258ed0a6b9cffc543ab789f25f1",
 			NetworksSHA256:    "cc9ba550031f67fef5933891d5ff0dbd2aada452ba380493a2b52c830f25d0f8",
-			LinksSHA256:       "7a9980db15625aca3326a658c391d4a26edb066c45ea44bbb21f29e7feee7d90",
+			LinksSHA256:       "f7f48d392ce924ab868a8b0116eee50a6e3eeee24bd0586a3ac31cca802243bb",
 		},
 	)
+	// A plant runs its cells off a fiber ring, not a home run per closet.
+	pack.Request.AccessLayer = AccessLayerRing
+
+	return pack
 }
 
 func serviceProviderScenarioPack() Pack {

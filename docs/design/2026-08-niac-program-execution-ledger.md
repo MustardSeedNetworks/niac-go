@@ -77,14 +77,22 @@ a validated 6-node ring spike for manufacturing are parked on
 rather than re-deriving them. Hospital's 75-device / 88-link shape is already
 Link-Live-validated and should stay unchanged if at all possible.
 
-The one thing that cannot be answered from code: whether Link-Live's layout
-renders a ring as a visible loop or flattens it into a star. Run the parked spike
-config through one discovery before committing to ring generator work; if it
-flattens, take the cheaper "fewer, larger cells" shape for manufacturing instead.
+**Settled 2026-08-08: Link-Live keeps the ring.** A hand-closed 6-node access
+ring (`PLT-ACC-SW01..06`, east and west on `Te1/0/47` and `Te1/0/48`) was
+discovered by the CyberScope on analysis `6a774b2f9dc61ad4327b182a`, and
+Link-Live reported all six adjacencies including the closing `SW06 - SW01` edge,
+each with its own utilization sample. Its topology model carries the cycle rather
+than reducing it to a tree, so ring generator work is worth doing and the cheaper
+"fewer, larger cells" fallback is not needed. That spike config was hand-edited
+from a generated one, which makes it a spike and never an acceptance artifact.
+
+What the generator still needs is the ability to close a loop. `addEdge` already
+expresses an arbitrary adjacency; `addSiteLAN` only ever walks tiers downward, so
+nothing today emits an edge between two peers within one tier.
 
 | ID | Work item | Hours | Depends on | Acceptance evidence |
 | --- | --- | ---: | --- | --- |
-| M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | **Done 2026-08-08** (v0.94.29). Hospital pack: 158 findings -> 1. See below. |
+| M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | **Done and signed off 2026-08-08** (v0.94.30). Hospital pack: 158 -> 1, then a confirming capture on the release binary at 152 -> 2 once APs joined the leaf rule. Both remaining findings are the bare-IP discovery-timing artifact, each wire-confirmed by an NBSTAT probe. Analysis `6a7740009dc61ad43270d928`. |
 | M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
 | M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | Two clean comparisons, and two maps that do not look alike |
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | Three clean comparisons |

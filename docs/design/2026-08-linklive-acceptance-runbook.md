@@ -141,7 +141,25 @@ snmpget -v2c -c NetAllyDemo 10.51.200.21  1.3.6.1.2.1.1.5.0   # an access switch
 ```
 
 If those answer, the simulation is fine. Discovery Settings → SNMP will still
-show the communities configured; the stall is unit-side. Retry the capture.
+show the communities configured; the stall is unit-side.
+
+**The cure: re-select the AutoTest profile, then clear and rerun.** Drawer →
+**AutoTest** (the row, not the chevron) opens the profile list; tap **EZ Wired
+Profile** and **START**, then tap **Wired Profile VLAN 200** and **START**
+again. Discovery walks the pack on the next clear-and-rerun. This worked twice
+on 2026-08-08, each time after the same stall, and nothing else did — SNMP
+settings, credentials and Feature Access were all correct throughout.
+
+What a stalled unit is actually doing is worth knowing, because it is the
+fastest way to place the blame: it emits **no SNMP at all**. `tcpdump -i vmbr0
+'vlan and udp port 161'` on pvm01 captured zero packets across a full
+clear-and-rerun; the same filter after the profile bounce showed GetRequests to
+`10.254.200.1` within seconds. The stalled unit also loses its VLAN-200 address
+— it appears in its own Discovery list under the management IP rather than a
+`10.254.200.x` one.
+
+Remove any `vmbr0.<vlan>` sub-interface you added to prove the simulation
+before capturing, or it is discovered too and files as an unexpected device.
 
 ## Link-Live API
 
@@ -246,7 +264,7 @@ Every finding kind the comparator can emit, and where to look first.
 | `interface-speed-conflict` | authored speed disagrees with the walk's `ifSpeed` | walk-backed speed wins on the wire; fix the authored value |
 | `interface-duplex-conflict` | duplex compared on an interface that has no duplex | logical and `ieee80211` interfaces are exempt; a hit means an ethernet interface really differs |
 | `interface-mtu-conflict` | authored MTU differs from IF-MIB | jumbo-frame mismatch on uplinks is the common one |
-| `interface-utilization-conflict` | first poll, or behavior-driven traffic | utilization is only compared once the device has produced a sample; behavior-driven interfaces are expected to move. Only **switch and router** ports are compared: Link-Live takes no utilization sample from a leaf node — endpoint, server, wireless controller — even though ours all serve `ifHCInOctets` (measured: `MED-DNS01`, `MED-WLC01`, `MED-PUMP-B01-F01-02` all return Counter64 and Link-Live still reports none). |
+| `interface-utilization-conflict` | first poll, or behavior-driven traffic | utilization is only compared once the device has produced a sample; behavior-driven interfaces are expected to move. Only **switch and router** ports are compared: Link-Live takes no utilization sample from a leaf node — endpoint, server, wireless controller, **access point** — even though ours all serve `ifHCInOctets` (measured: `MED-DNS01`, `MED-WLC01`, `MED-PUMP-B01-F01-02` all return Counter64 and Link-Live still reports none; on the 2026-08-08 hospital capture all five interfaces of all 30 APs came back `util 0`, wired uplink included, while the switch port facing that uplink read 71.57%). |
 | `interface-error-conflict` / `interface-discard-conflict` | fault injection running during the scan, or counters not authored | whether a behavior timeline was mid-phase |
 | `interface-problem-conflict` | tester flagged an interface problem not authored | usually real |
 

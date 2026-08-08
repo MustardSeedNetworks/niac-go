@@ -46,29 +46,35 @@ const (
 	serviceHostOffset            = 9
 	controllerHostOffset         = 19
 	accessUplinkPortStart        = 49
-	coreServerPortOffset         = 8
-	workstationPortOffset        = 9
-	serverPortOffset             = 11
-	primaryCoreGatewayHost       = 2
-	dnsServerHost                = 10
-	dhcpServerHost               = 11
-	dhcpPoolStartHost            = 100
-	dhcpPoolEndHost              = 199
-	managedDeviceTTL             = 255
-	windowsTTL                   = 128
-	windowsTCPWindowSize         = 64240
-	windowsMSS                   = 1460
-	dnsRecordTTL                 = 300
-	performanceTestPort          = 5201
-	performanceBandwidthMbps     = 10000
-	performanceLatencyMillis     = 2
-	performanceJitterMillis      = 1
-	performancePacketLoss        = 0.01
-	wanIdentityOffset            = 10
-	transitBlockSize             = 8
-	firstDistributionAccessPort  = 3
-	macHighByteShift             = 16
-	macMiddleByteShift           = 8
+	// Fewer than three nodes is a pair of parallel links, not a ring.
+	minimumRingNodes = 3
+	// The ring ports sit above the access-point range and below the uplinks, so
+	// a ring switch keeps the same port plan as a dual-homed one.
+	ringEastPort                = "TenGigabitEthernet1/0/47"
+	ringWestPort                = "TenGigabitEthernet1/0/48"
+	coreServerPortOffset        = 8
+	workstationPortOffset       = 9
+	serverPortOffset            = 11
+	primaryCoreGatewayHost      = 2
+	dnsServerHost               = 10
+	dhcpServerHost              = 11
+	dhcpPoolStartHost           = 100
+	dhcpPoolEndHost             = 199
+	managedDeviceTTL            = 255
+	windowsTTL                  = 128
+	windowsTCPWindowSize        = 64240
+	windowsMSS                  = 1460
+	dnsRecordTTL                = 300
+	performanceTestPort         = 5201
+	performanceBandwidthMbps    = 10000
+	performanceLatencyMillis    = 2
+	performanceJitterMillis     = 1
+	performancePacketLoss       = 0.01
+	wanIdentityOffset           = 10
+	transitBlockSize            = 8
+	firstDistributionAccessPort = 3
+	macHighByteShift            = 16
+	macMiddleByteShift          = 8
 
 	enterpriseCOSOctet              = 240
 	enterpriseEVTOctet              = 241
@@ -113,14 +119,30 @@ type Counts struct {
 	WirelessControllers   int `json:"wirelessControllers"`
 }
 
+// AccessLayer is how a site organizes its access tier. It is shape rather than
+// a count, and it is what makes one vertical's map read differently from
+// another's at a glance.
+type AccessLayer string
+
+const (
+	// AccessLayerDualHomed hangs every access switch off both distribution
+	// switches. It is the default, and the hospital's Link-Live-validated shape.
+	AccessLayerDualHomed AccessLayer = ""
+	// AccessLayerRing chains the access switches into one closed ring that meets
+	// the distribution tier at two opposite points, the way a plant runs its
+	// cells off a fiber ring rather than home-running every closet.
+	AccessLayerRing AccessLayer = "ring"
+)
+
 // Request is the complete deterministic fleet-generation contract.
 type Request struct {
-	Sites           []Site `json:"sites"`
-	Counts          Counts `json:"counts"`
-	Domain          string `json:"domain"`
-	SNMPCommunity   string `json:"snmpCommunity"`
-	AttachmentName  string `json:"attachmentName"`
-	EndpointProfile string `json:"endpointProfile,omitempty"`
+	Sites           []Site      `json:"sites"`
+	Counts          Counts      `json:"counts"`
+	Domain          string      `json:"domain"`
+	SNMPCommunity   string      `json:"snmpCommunity"`
+	AttachmentName  string      `json:"attachmentName"`
+	EndpointProfile string      `json:"endpointProfile,omitempty"`
+	AccessLayer     AccessLayer `json:"accessLayer,omitempty"`
 }
 
 // Manifest summarizes authored identity and topology for parity checks.
