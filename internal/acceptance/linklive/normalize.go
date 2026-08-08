@@ -80,6 +80,7 @@ func authoredDevice(device config.Device, faults map[string]authoredFaultExpecta
 		IPv4: addresses,
 	}
 	if snmpEnabled(device) {
+		authored.ServesSNMP = true
 		authored.InterfaceInventoryComplete = !hasCapturedInterfaceInventory(device.SNMPConfig)
 		authored.Interfaces = authoredInterfaces(device, authored.InterfaceInventoryComplete)
 		for index := range authored.Interfaces {

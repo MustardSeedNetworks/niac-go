@@ -44,7 +44,7 @@ func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
 		)
 	}
 	wantType := displayedType(expected.Type)
-	if wantType != "" && !displayedTypeMatches(expected.Type, actual.Type) {
+	if wantType != "" && !displayedTypeMatches(expected, actual.Type) {
 		findings = append(
 			findings,
 			conflict(FindingTypeConflict, expected.Name, wantType, actual.Type),
