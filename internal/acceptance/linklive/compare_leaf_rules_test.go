@@ -51,7 +51,7 @@ func TestHostWithoutSNMPFiledAsAgentIsAConflict(t *testing.T) {
 // Expecting a sample from them failed every run for something the simulation
 // gets right.
 func TestLeafDevicesAreNotExpectedToReportUtilization(t *testing.T) {
-	for _, deviceType := range []string{"iot", "server", "host", "printer"} {
+	for _, deviceType := range []string{"iot", "server", "host", "printer", "access-point"} {
 		authored := leafSnapshot(t, deviceType, true)
 
 		findings := linklive.Compare(authored, leafObservedUnsampled())

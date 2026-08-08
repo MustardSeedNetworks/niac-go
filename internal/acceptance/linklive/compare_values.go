@@ -79,11 +79,14 @@ func isEndpointType(deviceType string) bool {
 }
 
 // isLeafType reports whether the device hangs off the network rather than
-// forming it. Servers and wireless controllers are not endpoints - they are
-// managed infrastructure - but they still sit on one port, which is what
-// decides whether Link-Live measures them.
+// forming it. Servers, wireless controllers and access points are not endpoints
+// - they are managed infrastructure - but they still sit on one port, which is
+// what decides whether Link-Live measures them. Access points are the same
+// reading: on the hospital capture Link-Live returned util 0 for all five
+// interfaces of every one of the 30 APs, wired uplink included, while the
+// switch port facing that same uplink reported 71.57%.
 func isLeafType(deviceType string) bool {
-	return isEndpointType(deviceType) || deviceType == "server"
+	return isEndpointType(deviceType) || deviceType == "server" || deviceType == "access-point"
 }
 
 func parseSpeedMbps(value string) int {
