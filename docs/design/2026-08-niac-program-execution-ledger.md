@@ -93,7 +93,7 @@ nothing today emits an edge between two peers within one tier.
 | ID | Work item | Hours | Depends on | Acceptance evidence |
 | --- | --- | ---: | --- | --- |
 | M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | **Done and signed off 2026-08-08** (v0.94.30). Hospital pack: 158 -> 1, then a confirming capture on the release binary at 152 -> 2 once APs joined the leaf rule. Both remaining findings are the bare-IP discovery-timing artifact, each wire-confirmed by an NBSTAT probe. Analysis `6a7740009dc61ad43270d928`. |
-| M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
+| M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | **Done 2026-08-08.** Imaging congestion authored at 88/84 on both ends of both uplinks; Link-Live flagged exactly those four interfaces and nothing else. Analysis `6a77de929dc61ad4321d622d`, 75/88, **zero findings**. The error half is limited by the injection surface - see below. |
 | M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | **Done 2026-08-08.** warehouse `6a77af229dc61ad432e2528a` 57/67 and manufacturing `6a77a37d9dc61ad432d7a746` 69/78, both **zero findings**, both on product-API-generated configs. Three closets versus a cell ring - the maps do not look alike. |
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | **Done 2026-08-08.** campus `6a77bb6b9dc61ad432ed59f2` 147/186 collapsed core, retail `6a77c25f9dc61ad432f3908d` 95/112 lane chain, service provider `6a77c98b9dc61ad4320a6858` 117/146 POP ring - **zero findings each**. |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | **Done 2026-08-08.** Baseline published below. |
@@ -209,6 +209,36 @@ isolation failures: 0
 
 Thirty cross-VLAN probes, none answered. What remains under M4-7 is duration -
 a 24-hour soak - and the EtherScope half of the discovery evidence.
+
+### The hospital story, and what the error half still needs
+
+The guided baseline is authored, not injected: `MED-ACC-SW02` saturates both
+uplinks at 88%/84% and the `MED-DIST-SW01/02` ends match, deliberately above the
+80% line where Link-Live raises an interface Warning. On the first capture
+Link-Live flagged exactly those four interfaces and the three devices they roll
+up to, and nothing else. The comparator expects a warning on an interface
+authored at or above the line, so the run is clean at zero findings.
+
+**The error half of the story cannot be told on those links today.** Runtime
+error injection (`POST /api/v1/errors`) only reaches interfaces the stack
+instantiates, which for an access switch is its SVI:
+
+```
+GET /api/v1/errors -> targets
+  {"device": "MED-ACC-SW01", "address": "10.51.200.21", "interfaces": ["Vlan200"]}
+
+POST {"device":"MED-ACC-SW02","interface":"HundredGigabitEthernet1/0/49",
+      "errorType":"FCS Errors","value":7}
+  -> 400 interface_not_found
+
+POST {"device":"MED-ACC-SW02","interface":"Vlan200", ...}
+  -> {"success": true}
+```
+
+So FCS errors can be demonstrated on a switch's management interface but not on
+the congested uplink an engineer would actually be looking at. Closing that
+means exposing authored trunk ports as fault targets, which is engine work
+rather than pack authoring; it belongs with the M3-4 fault matrix.
 
 Checkpoint: all six presentation VLANs are demonstrable without regeneration,
 YAML repair, or ambiguous Link-Live selection.

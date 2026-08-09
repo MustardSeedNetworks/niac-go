@@ -36,6 +36,15 @@ export interface ScenarioGenerateRequest {
    * that meets distribution at two points; 'collapsed-core' lands them on the
    * core with no distribution tier; 'chain' daisy-chains them off one uplink. */
   accessLayer?: 'ring' | 'collapsed-core' | 'chain';
+  /** Interfaces the pack deliberately runs hot, replacing the generated band.
+   * At or above 80% Link-Live raises an interface Warning, which is what makes
+   * a guided demo have something to find. */
+  congestion?: {
+    device: string;
+    interface: string;
+    inUtilization: number;
+    outUtilization: number;
+  }[];
 }
 
 export interface ScenarioManifest {
