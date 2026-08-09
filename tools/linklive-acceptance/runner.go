@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -22,13 +25,15 @@ type runner struct {
 	getenv        environment
 	output        io.Writer
 	allowInsecure bool
+	clock         func() time.Time
 }
 
 type options struct {
-	configPath string
-	analysisID string
-	latest     bool
-	unitMAC    string
+	configPath  string
+	analysisID  string
+	latest      bool
+	unitMAC     string
+	niacVersion string
 }
 
 type analysisSummary struct {
@@ -39,8 +44,17 @@ type analysisSummary struct {
 	UnitMAC      string    `json:"unitMac"`
 }
 
+// report is the acceptance result and the provenance needed to re-derive it.
+// A result pinned in the ledger has to say which artifact it compared, against
+// which analysis, on which build, and when; otherwise it is a claim rather than
+// evidence.
 type report struct {
 	AnalysisID      string             `json:"analysisId"`
+	ComparedAt      string             `json:"comparedAt"`
+	NIACVersion     string             `json:"niacVersion,omitempty"`
+	ConfigPath      string             `json:"configPath"`
+	ConfigSHA256    string             `json:"configSha256"`
+	UnitMAC         string             `json:"unitMac,omitempty"`
 	AuthoredDevices int                `json:"authoredDevices"`
 	AuthoredLinks   int                `json:"authoredLinks"`
 	Findings        []linklive.Finding `json:"findings"`
@@ -95,7 +109,38 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 	if err != nil {
 		return report{}, err
 	}
-	return buildReport(analysisID, linklive.FromConfig(authoredConfig), observed), nil
+	digest, err := fileDigest(opts.configPath)
+	if err != nil {
+		return report{}, err
+	}
+	result := buildReport(analysisID, linklive.FromConfig(authoredConfig), observed)
+	result.ComparedAt = r.now().UTC().Format(time.RFC3339)
+	result.NIACVersion = opts.niacVersion
+	result.ConfigPath = opts.configPath
+	result.ConfigSHA256 = digest
+	result.UnitMAC = normalizeMAC(opts.unitMAC)
+
+	return result, nil
+}
+
+// fileDigest identifies the artifact that was compared, so a report cannot be
+// paired after the fact with a config it never read.
+func fileDigest(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read NIAC scenario: %w", err)
+	}
+	sum := sha256.Sum256(data)
+
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func (r runner) now() time.Time {
+	if r.clock != nil {
+		return r.clock()
+	}
+
+	return time.Now()
 }
 
 func latestReadyDiscovery(
@@ -156,6 +201,8 @@ func parseOptions(args []string) (options, error) {
 	set.StringVar(&opts.analysisID, "analysis", "", "Link-Live analysis ID")
 	set.BoolVar(&opts.latest, "latest", false, "use the latest ready Link-Live discovery analysis")
 	set.StringVar(&opts.unitMAC, "unit-mac", "", "limit -latest to one NetAlly unit MAC")
+	set.StringVar(&opts.niacVersion, "niac-version", "",
+		"NIAC build that served the scenario, recorded in the report")
 	if err := set.Parse(args); err != nil {
 		return options{}, err
 	}
