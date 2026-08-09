@@ -56,6 +56,9 @@ func Generate(request Request) (Result, error) {
 		}},
 		Devices: buildDevices(request, links),
 	}
+	if err := applyCongestion(&authored, request.Congestion); err != nil {
+		return Result{}, fmt.Errorf("%w: %w", ErrInvalidRequest, err)
+	}
 	if err := converter.ValidateConfig(&authored); err != nil {
 		return Result{}, fmt.Errorf("generated authoring config: %w", err)
 	}
@@ -196,4 +199,36 @@ func transit(site Site, kind string, siteIndex int) (string, string, int) {
 	base += transitBlockSize * siteIndex
 	return strings.ToLower(site.Code) + "-" + kind + "-transit",
 		fmt.Sprintf("203.0.113.%d/29", base), base
+}
+
+// applyCongestion replaces the generated band on the interfaces a pack calls
+// out as its trouble spots. An interface that does not exist is a typo, and a
+// typo that quietly leaves the map healthy is the one outcome worth failing on:
+// the whole point of the story is that an engineer finds it.
+func applyCongestion(authored *converter.Config, links []CongestedLink) error {
+	for _, link := range links {
+		iface := findAuthoredInterface(authored, link.Device, link.Interface)
+		if iface == nil {
+			return fmt.Errorf("congested link %s %s does not exist", link.Device, link.Interface)
+		}
+		iface.InUtilization = link.InUtilization
+		iface.OutUtilization = link.OutUtilization
+	}
+
+	return nil
+}
+
+func findAuthoredInterface(authored *converter.Config, device, name string) *converter.Interface {
+	for deviceIndex := range authored.Devices {
+		if authored.Devices[deviceIndex].Name != device {
+			continue
+		}
+		for index := range authored.Devices[deviceIndex].Interfaces {
+			if authored.Devices[deviceIndex].Interfaces[index].Name == name {
+				return &authored.Devices[deviceIndex].Interfaces[index]
+			}
+		}
+	}
+
+	return nil
 }

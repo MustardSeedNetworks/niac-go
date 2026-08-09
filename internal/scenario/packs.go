@@ -69,28 +69,7 @@ func scenarioPackDefinitions() []Pack {
 
 func customerScenarioPacks() []Pack {
 	return []Pack{
-		newScenarioPack(
-			"hospital",
-			"Hospital network",
-			"Single-site medical center with resilient wired access, 30 Wi-Fi 7 APs, clinical clients, and local services.",
-			MapPurposePresentation,
-			"care.example",
-			packSites(hospitalSiteOctet,
-				packSite{code: "MED", location: "Regional Medical Center"},
-			),
-			packCounts(
-				hospitalAccessSwitches,
-				hospitalAccessPointsPerAccess,
-				hospitalWorkstationsPerAccess,
-			),
-			Manifest{
-				DeviceCount: hospitalDeviceCount, NetworkCount: singleSiteNetworkCount,
-				LinkCount:         hospitalLinkCount,
-				DeviceNamesSHA256: "a026920162b3dcc95656a4d3d69a0aeed84482e7724b018d5a49488383609030",
-				NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
-				LinksSHA256:       "99be6cdbe704f4e4d661a27be11b6294e62e8b52ca83e2c6198b4ba9fe8836b2",
-			},
-		),
+		hospitalScenarioPack(),
 		newScenarioPack(
 			"warehouse",
 			"Warehouse network",
@@ -143,6 +122,64 @@ func packSites(firstOctet int, definitions ...packSite) []Site {
 		}
 	}
 	return sites
+}
+
+// hospitalScenarioPack is the guided demo, so it is the one pack that carries a
+// story: the imaging closet saturates both of its uplinks, and both ends of
+// both links report it. Everything else stays healthy, because a finding only
+// reads as a finding when it is the exception on the map.
+func hospitalScenarioPack() Pack {
+	pack := newScenarioPack(
+		"hospital",
+		"Hospital network",
+		"Single-site medical center with resilient wired access, 30 Wi-Fi 7 APs, clinical clients, and local services.",
+		MapPurposePresentation,
+		"care.example",
+		packSites(hospitalSiteOctet,
+			packSite{code: "MED", location: "Regional Medical Center"},
+		),
+		packCounts(
+			hospitalAccessSwitches,
+			hospitalAccessPointsPerAccess,
+			hospitalWorkstationsPerAccess,
+		),
+		Manifest{
+			DeviceCount: hospitalDeviceCount, NetworkCount: singleSiteNetworkCount,
+			LinkCount:         hospitalLinkCount,
+			DeviceNamesSHA256: "a026920162b3dcc95656a4d3d69a0aeed84482e7724b018d5a49488383609030",
+			NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
+			LinksSHA256:       "99be6cdbe704f4e4d661a27be11b6294e62e8b52ca83e2c6198b4ba9fe8836b2",
+		},
+	)
+	pack.Request.Congestion = imagingCongestion()
+
+	return pack
+}
+
+func imagingCongestion() []CongestedLink {
+	const (
+		saturated = 88.0
+		busy      = 84.0
+	)
+
+	return []CongestedLink{
+		{
+			Device: "MED-ACC-SW02", Interface: "HundredGigabitEthernet1/0/49",
+			InUtilization: saturated, OutUtilization: busy,
+		},
+		{
+			Device: "MED-ACC-SW02", Interface: "HundredGigabitEthernet1/0/50",
+			InUtilization: busy, OutUtilization: saturated,
+		},
+		{
+			Device: "MED-DIST-SW01", Interface: "HundredGigabitEthernet1/0/4",
+			InUtilization: busy, OutUtilization: saturated,
+		},
+		{
+			Device: "MED-DIST-SW02", Interface: "HundredGigabitEthernet1/0/4",
+			InUtilization: saturated, OutUtilization: busy,
+		},
+	}
 }
 
 func campusScenarioPack() Pack {

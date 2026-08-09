@@ -142,15 +142,26 @@ const (
 	AccessLayerChain AccessLayer = "chain"
 )
 
+// CongestedLink is one authored trouble spot: a link the guided demo is meant
+// to find. It replaces the generated utilization band on one interface, which is
+// how a pack tells a story rather than rendering uniformly healthy.
+type CongestedLink struct {
+	Device         string  `json:"device"`
+	Interface      string  `json:"interface"`
+	InUtilization  float64 `json:"inUtilization"`
+	OutUtilization float64 `json:"outUtilization"`
+}
+
 // Request is the complete deterministic fleet-generation contract.
 type Request struct {
-	Sites           []Site      `json:"sites"`
-	Counts          Counts      `json:"counts"`
-	Domain          string      `json:"domain"`
-	SNMPCommunity   string      `json:"snmpCommunity"`
-	AttachmentName  string      `json:"attachmentName"`
-	EndpointProfile string      `json:"endpointProfile,omitempty"`
-	AccessLayer     AccessLayer `json:"accessLayer,omitempty"`
+	Sites           []Site          `json:"sites"`
+	Counts          Counts          `json:"counts"`
+	Domain          string          `json:"domain"`
+	SNMPCommunity   string          `json:"snmpCommunity"`
+	AttachmentName  string          `json:"attachmentName"`
+	EndpointProfile string          `json:"endpointProfile,omitempty"`
+	AccessLayer     AccessLayer     `json:"accessLayer,omitempty"`
+	Congestion      []CongestedLink `json:"congestion,omitempty"`
 }
 
 // Manifest summarizes authored identity and topology for parity checks.
