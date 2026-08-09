@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -193,5 +194,81 @@ func testEnvironment(baseURL string) func(string) string {
 			"LINKLIVE_API_URL":      baseURL,
 		}
 		return values[key]
+	}
+}
+
+// A report that cannot say what it compared is not evidence. Every run records
+// the artifact it read, the analysis it read it against, and when — so a result
+// pinned in the ledger can be re-derived rather than taken on trust.
+func TestReportCarriesItsProvenance(t *testing.T) {
+	server := linkLiveServer(t, "Switch", "Full", "100 Gb")
+	configPath := writeConfig(t)
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(server.URL), &output)
+	executor.allowInsecure = true
+
+	err := executor.run(context.Background(), []string{
+		"-config", configPath, "-analysis", "analysis-7", "-niac-version", "v0.94.30",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`"niacVersion": "v0.94.30"`,
+		`"configSha256": "`,
+		`"comparedAt": "`,
+		filepath.Base(configPath),
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Errorf("report omits %s:\n%s", want, output.String())
+		}
+	}
+}
+
+// The digest has to be of the artifact actually compared, so a report cannot be
+// paired with a config it did not read.
+func TestConfigDigestFollowsTheFile(t *testing.T) {
+	server := linkLiveServer(t, "Switch", "Full", "100 Gb")
+	first := runForDigest(t, server.URL, writeConfig(t))
+
+	path := writeConfig(t)
+	appendToFile(t, path, "\n# a different artifact\n")
+	second := runForDigest(t, server.URL, path)
+
+	if first == second {
+		t.Errorf("two different configs share digest %s", first)
+	}
+}
+
+func runForDigest(t *testing.T, url, configPath string) string {
+	t.Helper()
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(url), &output)
+	executor.allowInsecure = true
+	if err := executor.run(
+		context.Background(),
+		[]string{"-config", configPath, "-analysis", "analysis-7"},
+	); err != nil {
+		t.Fatal(err)
+	}
+	var report struct {
+		ConfigSHA256 string `json:"configSha256"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+
+	return report.ConfigSHA256
+}
+
+func appendToFile(t *testing.T, path, text string) {
+	t.Helper()
+	handle, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	if _, err = handle.WriteString(text); err != nil {
+		t.Fatal(err)
 	}
 }
