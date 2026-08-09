@@ -105,7 +105,7 @@ if [[ "${1:-}" == "--compare" ]]; then
 	pack="${2:-}"
 	[[ -n "$pack" ]] || die "usage: $0 --compare <pack-id> [unit-mac]"
 	[[ -f "${LAB_OUT}/${pack}.yaml" ]] || die "no ${LAB_OUT}/${pack}.yaml — run without --compare first"
-	args=(-config "${LAB_OUT}/${pack}.yaml" -latest)
+	args=(-config "${LAB_OUT}/${pack}.yaml" -latest -niac-version "$(version)")
 	[[ -n "${3:-}" ]] && args+=(-unit-mac "$3")
 	echo "comparing ${pack} against the latest ready discovery..."
 	go run ./tools/linklive-acceptance "${args[@]}" | tee "${LAB_OUT}/${pack}.report.json"
