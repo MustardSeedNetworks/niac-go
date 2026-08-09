@@ -98,7 +98,7 @@ nothing today emits an edge between two peers within one tier.
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | **Done 2026-08-08.** campus `6a77bb6b9dc61ad432ed59f2` 147/186 collapsed core, retail `6a77c25f9dc61ad432f3908d` 95/112 lane chain, service provider `6a77c98b9dc61ad4320a6858` 117/146 POP ring - **zero findings each**. |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | **Done 2026-08-08.** Baseline published below. |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
-| M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | 12 clean unit-pinned Link-Live comparisons |
+| M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | **Isolation proven 2026-08-08** (`scripts/lab/isolation.sh`, zero leaks across all six VLANs). The 24-hour soak and the EtherScope half remain. |
 
 ### M4-1 outcome (2026-08-08, v0.94.29)
 
@@ -187,6 +187,28 @@ sweeps subnets listed under Discovery Settings -> Extended Ranges**, so a pack's
 client and server subnets must be added before its first capture - manufacturing
 went 40 -> 14 -> 0 findings as `10.91.210.0/24` and then `10.91.240.0/24` were
 added.
+
+### VLAN isolation, 2026-08-08
+
+`scripts/lab/isolation.sh` walks each pack's VLAN in turn and checks two things:
+its own devices answer SNMP, and no other pack's device space answers at all.
+Every pack shares the same gateway address, so a leak would otherwise be silent
+- a device answering from the wrong VLAN looks exactly like a device that is
+simply there.
+
+```
+vlan 200  hospital          own device answers as "MED-ACC-SW01"
+vlan 201  warehouse         own device answers as "FUL-ACC-SW01"
+vlan 202  manufacturing     own device answers as "PLT-ACC-SW01"
+vlan 203  campus            own device answers as "NTH-ACC-SW01"
+vlan 204  retail            own device answers as "HQ-ACC-SW01"
+vlan 205  service-provider  own device answers as "NYC-ACC-SW01"
+
+isolation failures: 0
+```
+
+Thirty cross-VLAN probes, none answered. What remains under M4-7 is duration -
+a 24-hour soak - and the EtherScope half of the discovery evidence.
 
 Checkpoint: all six presentation VLANs are demonstrable without regeneration,
 YAML repair, or ambiguous Link-Live selection.
