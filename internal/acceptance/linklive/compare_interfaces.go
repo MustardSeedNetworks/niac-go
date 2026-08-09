@@ -129,9 +129,35 @@ func compareInterface(
 	return findings
 }
 
+// utilizationWarningPercent is where Link-Live raises an interface Warning.
+// Measured against a live discovery: interfaces up to 78.7% stayed clean, 81.8%
+// and above were flagged.
+const utilizationWarningPercent = 80
+
 func problemMatchesAuthoredState(expected AuthoredInterface, problem string) bool {
-	return strings.EqualFold(expected.Status, "down") &&
-		strings.Contains(strings.ToLower(problem), "down")
+	if strings.EqualFold(expected.Status, "down") &&
+		strings.Contains(strings.ToLower(problem), "down") {
+		return true
+	}
+
+	// A pack that authors an interface above the warning line is asking for the
+	// warning - that is the story a guided demo walks an engineer through, and
+	// reporting the amber icon as a mismatch would fail the run for the one
+	// thing the pack got right. A warning anywhere else is still a finding.
+	return expected.UtilizationPercent >= utilizationWarningPercent &&
+		strings.Contains(strings.ToLower(problem), "warning")
+}
+
+// expectsProblem reports whether any authored interface on the device is meant
+// to be flagged, which is what the device's own worst-problem rolls up from.
+func expectsProblem(device AuthoredDevice, problem string) bool {
+	for _, iface := range device.Interfaces {
+		if problemMatchesAuthoredState(iface, problem) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func deviceHasUtilizationSample(interfaces []ObservedInterface) bool {

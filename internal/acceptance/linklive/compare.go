@@ -61,7 +61,7 @@ func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
 			),
 		)
 	}
-	if strings.TrimSpace(actual.WorstProblem) != "" {
+	if strings.TrimSpace(actual.WorstProblem) != "" && !expectsProblem(expected, actual.WorstProblem) {
 		findings = append(
 			findings,
 			conflict(FindingProblemConflict, expected.Name, "", actual.WorstProblem),
