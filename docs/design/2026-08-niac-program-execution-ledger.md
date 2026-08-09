@@ -96,7 +96,7 @@ nothing today emits an edge between two peers within one tier.
 | M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
 | M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | **Done 2026-08-08.** warehouse `6a77af229dc61ad432e2528a` 57/67 and manufacturing `6a77a37d9dc61ad432d7a746` 69/78, both **zero findings**, both on product-API-generated configs. Three closets versus a cell ring - the maps do not look alike. |
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | **Done 2026-08-08.** campus `6a77bb6b9dc61ad432ed59f2` 147/186 collapsed core, retail `6a77c25f9dc61ad432f3908d` 95/112 lane chain, service provider `6a77c98b9dc61ad4320a6858` 117/146 POP ring - **zero findings each**. |
-| M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | Published resource baseline |
+| M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | **Done 2026-08-08.** Baseline published below. |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
 | M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | **Isolation proven 2026-08-08** (`scripts/lab/isolation.sh`, zero leaks across all six VLANs). The 24-hour soak and the EtherScope half remain. |
 
@@ -134,6 +134,32 @@ its full name. **A second confirming capture was not obtained**: CyberScope
 Discovery stalled twice at ~36 devices without walking past the first hop while
 the simulation answered SNMP normally. Re-run before treating the pack as
 finally signed off.
+
+### Scale baseline, 2026-08-08
+
+The 531-device workload on VLAN 299, alone on CT304 (v0.94.30-4-g66fd1b5,
+2 vCPU / 24 GB container on pvm01):
+
+| Measure | Result |
+| --- | --- |
+| Session start | 1.1 s for 531 devices |
+| Resident memory | 147 MB (181 MB with the six presentation packs, 560 devices) |
+| CPU, steady state | idle between polls; `top` reports 0.0% |
+| `GET /api/v1/devices` | 0.02 s |
+| `GET /api/v1/topology`, `/api/v1/stats` | 0.01 s |
+| SNMP, far device | 20/20 sequential gets in 0.13 s — 6.5 ms each |
+
+**The scale workload and the six presentation packs cannot run together.** The
+daemon's aggregate budget is 1000 devices; the six packs hold 560 and the scale
+workload needs 531, so starting it alongside them is refused with
+`device_capacity_reached`. That is the safety budget doing its job, and it
+matches the standing guidance to keep VLAN 299 off the trunk during a demo.
+Stop the presentation packs to run it.
+
+⚠️ `bridge vlan add dev vmbr0 vid <N> self` was missing on pvm01 for VLANs 203,
+204, 205 and 299 — added 2026-08-08. Without it a VLAN looks dead from pvm01
+exactly like a NIAC fault. Every capture so far ran on VLAN 200, which is why it
+had not surfaced.
 
 ### Acceptance results, 2026-08-08
 
