@@ -15,8 +15,9 @@ const (
 
 	// Link-Live raises an interface Warning above 80% utilization. Measured
 	// against a live discovery: interfaces up to 78.7% stayed clean, 81.8% and
-	// above were flagged. Authored peaks must stay below that line so a demo
-	// map reads healthy instead of amber.
+	// above were flagged. The generated band must stay below that line so a demo
+	// map reads healthy instead of amber; the only interfaces above it are the
+	// ones a pack deliberately calls out as its story.
 	utilizationWarningFloor = 80
 )
 
@@ -47,12 +48,17 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
 	if err != nil {
 		t.Fatalf("load %s: %v", pack.ID, err)
 	}
+	authored := make(map[string]bool, len(pack.Request.Congestion))
+	for _, link := range pack.Request.Congestion {
+		authored[link.Device+"|"+link.Interface] = true
+	}
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
 		for _, iface := range device.Interfaces {
+			story := authored[device.Name+"|"+iface.Name]
 			for _, value := range []float64{iface.InUtilization, iface.OutUtilization} {
 				total++
-				if value >= utilizationWarningFloor {
+				if value >= utilizationWarningFloor && !story {
 					t.Errorf("%s %s %s utilization %.0f%% would trip the Link-Live warning at %d%%",
 						pack.ID, device.Name, iface.Name, value, utilizationWarningFloor)
 				}
