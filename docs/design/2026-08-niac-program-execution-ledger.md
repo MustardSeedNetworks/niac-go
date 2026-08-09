@@ -94,8 +94,8 @@ nothing today emits an edge between two peers within one tier.
 | --- | --- | ---: | --- | --- |
 | M4-1 | Freeze authored-truth manifest and comparator rules | 5-8 | M3 | **Done and signed off 2026-08-08** (v0.94.30). Hospital pack: 158 -> 1, then a confirming capture on the release binary at 152 -> 2 once APs joined the leaf rule. Both remaining findings are the bare-IP discovery-timing artifact, each wire-confirmed by an NBSTAT probe. Analysis `6a7740009dc61ad43270d928`. |
 | M4-2 | Finalize hospital guided baseline and fault story | 6-10 | M4-1 | EtherScope/CyberScope/Link-Live evidence |
-| M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | Two clean comparisons, and two maps that do not look alike |
-| M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | Three clean comparisons |
+| M4-3 | Finalize warehouse and manufacturing stories, including distinct per-vertical topology shape | 8-14 | M4-2 | **Done 2026-08-08.** warehouse `6a77af229dc61ad432e2528a` 57/67 and manufacturing `6a77a37d9dc61ad432d7a746` 69/78, both **zero findings**, both on product-API-generated configs. Three closets versus a cell ring - the maps do not look alike. |
+| M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | **Done 2026-08-08.** campus `6a77bb6b9dc61ad432ed59f2` 147/186 collapsed core, retail `6a77c25f9dc61ad432f3908d` 95/112 lane chain, service provider `6a77c98b9dc61ad4320a6858` 117/146 POP ring - **zero findings each**. |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | Published resource baseline |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
 | M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | 12 clean unit-pinned Link-Live comparisons |
@@ -134,6 +134,33 @@ its full name. **A second confirming capture was not obtained**: CyberScope
 Discovery stalled twice at ~36 devices without walking past the first hop while
 the simulation answered SNMP normally. Re-run before treating the pack as
 finally signed off.
+
+### Acceptance results, 2026-08-08
+
+Every presentation pack, generated through `POST /api/v1/scenario/generate` and
+discovered by the CyberScope on physical VLAN 200:
+
+| Pack | Shape | Devices / links | Analysis | Findings |
+| --- | --- | --- | --- | ---: |
+| hospital | dual-homed access | 75 / 88 | `6a7740009dc61ad43270d928` | 2 |
+| warehouse | three closets, wireless-dominant | 57 / 67 | `6a77af229dc61ad432e2528a` | 0 |
+| manufacturing | cell ring | 69 / 78 | `6a77a37d9dc61ad432d7a746` | 0 |
+| campus | collapsed core | 147 / 186 | `6a77bb6b9dc61ad432ed59f2` | 0 |
+| retail | lane chain | 95 / 112 | `6a77c25f9dc61ad432f3908d` | 0 |
+| service provider | POP ring | 117 / 146 | `6a77c98b9dc61ad4320a6858` | 0 |
+
+Hospital's two are the bare-IP discovery-timing artifact, both wire-confirmed by
+an NBSTAT node-status probe; every other pack is exactly clean.
+
+Two tester behaviors decide whether a capture is usable, and neither is a NIAC
+fault. **Link-Live computes utilization from two SNMP polls**, so uploading
+straight after a clear-and-rerun reports `util 0` on every interface and files
+one finding per interface (110 on manufacturing, 120 on warehouse); a *Refresh
+Discovery* takes the second sample and both went to zero. **The tester only
+sweeps subnets listed under Discovery Settings -> Extended Ranges**, so a pack's
+client and server subnets must be added before its first capture - manufacturing
+went 40 -> 14 -> 0 findings as `10.91.210.0/24` and then `10.91.240.0/24` were
+added.
 
 Checkpoint: all six presentation VLANs are demonstrable without regeneration,
 YAML repair, or ambiguous Link-Live selection.

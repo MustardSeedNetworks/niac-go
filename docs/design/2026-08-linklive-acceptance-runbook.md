@@ -161,6 +161,23 @@ clear-and-rerun; the same filter after the profile bounce showed GetRequests to
 Remove any `vmbr0.<vlan>` sub-interface you added to prove the simulation
 before capturing, or it is discovered too and files as an unexpected device.
 
+### Two things that decide whether a capture is usable
+
+**Link-Live computes utilization from two SNMP polls.** Upload straight after a
+clear-and-rerun and every interface comes back `util 0`, which the comparator
+files as one `interface-utilization-conflict` per interface — 110 of them on
+manufacturing, 120 on warehouse. Run **Refresh Discovery** (it keeps the
+inventory and takes the second sample), wait for the count to settle, and upload
+that. Both went to zero findings unchanged otherwise.
+
+**The tester only sweeps subnets listed under Discovery Settings → Extended
+Ranges.** Missing devices are usually a missing range rather than a NIAC fault:
+manufacturing's endpoints and servers stayed absent until `10.91.210.0/24` and
+`10.91.240.0/24` were added, taking it 40 → 14 → 0. Add each pack's `.210`
+(clients) and `.240` (servers) subnets before its first capture — Discovery →
+drawer → **Discovery Settings** → **Extended Ranges** → **+**. The ranges for
+every pack are in place as of 2026-08-08.
+
 ## Link-Live API
 
 Credentials live in `~/.linklive/token.env` as `LINKLIVE_ACCESS_TOKEN`, kept
