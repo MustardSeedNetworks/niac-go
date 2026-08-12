@@ -2,6 +2,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"log/slog"
@@ -544,32 +545,56 @@ func estimateVarbindSize(oid string, value *OIDValue) int {
 	return size
 }
 
-// SetOID sets an OID value (for SNMP SET operations).
+// SetOID publishes a value into this agent's MIB. It is the simulation's own
+// authoring path and is deliberately unrestricted: NIAC decides what a device
+// reports. A manager on the wire goes through writeOID instead.
 func (a *Agent) SetOID(oid string, value *OIDValue) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	oid = strings.TrimPrefix(oid, ".")
-	if oid == snmpGroup+".30.0" {
-		enabled, ok := snmpInteger(value.Value)
-		if !ok || (enabled != authenticationTrapsOn && enabled != authenticationTrapsOff) {
-			return fmt.Errorf(
-				"%w: snmpEnableAuthenTraps must be enabled(1) or disabled(2)",
-				ErrInvalidValue,
-			)
-		}
-		a.stats.enableAuthenTraps.Store(uint32(enabled))
-		return nil
+	if oid == enableAuthenTrapsOID {
+		return a.setEnableAuthenTraps(value)
 	}
-
-	// Check if OID is writable
-	// For now, allow setting any OID
-	// In a full implementation, you'd check write permissions
-
 	a.mib.Set(oid, value)
 
 	if a.debugLevel >= debugLevelVerbose {
 		a.logger.Debug("SNMP SET", "oid", oid, "value", value.Value, "device", a.device.Name)
 	}
+
+	return nil
+}
+
+// writeOID applies a SET that arrived over the network. Everything this agent
+// serves is read-only unless it implements the object as writable, which is
+// what the device being imitated would answer: accepting every write tells a
+// scanner asking "can I write to this device?" the wrong thing, and lets a
+// stray SET put the simulation out of step with its authored truth.
+func (a *Agent) writeOID(oid string, value *OIDValue) error {
+	trimmed := strings.TrimPrefix(oid, ".")
+	if trimmed != enableAuthenTrapsOID {
+		if a.debugLevel >= debugLevelVerbose {
+			a.logger.Debug("SNMP SET refused", "oid", trimmed, "device", a.device.Name)
+		}
+
+		return fmt.Errorf("%w: %s", ErrNotWritable, trimmed)
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return a.setEnableAuthenTraps(value)
+}
+
+// setEnableAuthenTraps applies the one object this agent implements as
+// writable. The caller holds the lock.
+func (a *Agent) setEnableAuthenTraps(value *OIDValue) error {
+	enabled, ok := snmpInteger(value.Value)
+	if !ok || (enabled != authenticationTrapsOn && enabled != authenticationTrapsOff) {
+		return fmt.Errorf(
+			"%w: snmpEnableAuthenTraps must be enabled(1) or disabled(2)",
+			ErrInvalidValue,
+		)
+	}
+	a.stats.enableAuthenTraps.Store(uint32(enabled))
 
 	return nil
 }
@@ -659,7 +684,9 @@ func (a *Agent) ProcessPDU(
 
 		return a.processGetBulk(vars, nonRepeaters, reps)
 	case gosnmp.SetRequest:
-		return a.processSetRequest(vars)
+		response, _, _ := a.processSetRequest(vars)
+
+		return response
 	case gosnmp.Sequence,
 		gosnmp.GetResponse,
 		gosnmp.Trap,
@@ -697,13 +724,16 @@ func (a *Agent) ProcessPDU(
 func (a *Agent) ProcessRequest(
 	request *gosnmp.SnmpPacket,
 ) ([]gosnmp.SnmpPDU, gosnmp.SNMPError, uint8) {
+	if request.PDUType == gosnmp.SetRequest {
+		a.recordInboundPDU(request.PDUType, len(request.Variables))
+		variables, status, index := a.processSetRequest(request.Variables)
+
+		return variables, setErrorForVersion(status, request.Version), index
+	}
 	variables := a.ProcessPDU(
 		request.PDUType, request.Variables, int(request.NonRepeaters), request.MaxRepetitions,
 	)
 	for i, variable := range variables {
-		if request.PDUType == gosnmp.SetRequest && variable.Type == gosnmp.NoSuchObject {
-			return variables, gosnmp.BadValue, uint8(i + 1)
-		}
 		if request.Version == gosnmp.Version1 &&
 			(variable.Type == gosnmp.NoSuchObject || variable.Type == gosnmp.EndOfMibView) {
 			return request.Variables, gosnmp.NoSuchName, uint8(i + 1)
@@ -712,17 +742,25 @@ func (a *Agent) ProcessRequest(
 	return variables, gosnmp.NoError, 0
 }
 
-func (a *Agent) processSetRequest(vars []gosnmp.SnmpPDU) []gosnmp.SnmpPDU {
+func (a *Agent) processSetRequest(
+	vars []gosnmp.SnmpPDU,
+) ([]gosnmp.SnmpPDU, gosnmp.SNMPError, uint8) {
 	response := make([]gosnmp.SnmpPDU, len(vars))
+	status, index := gosnmp.NoError, uint8(0)
 	for i, variable := range vars {
 		value := &OIDValue{Type: variable.Type, Value: variable.Value}
-		if err := a.SetOID(variable.Name, value); err != nil {
-			response[i] = gosnmp.SnmpPDU{Name: variable.Name, Type: gosnmp.NoSuchObject}
+		err := a.writeOID(variable.Name, value)
+		response[i] = variable
+		if err == nil || status != gosnmp.NoError {
 			continue
 		}
-		response[i] = variable
+		status, index = gosnmp.BadValue, uint8(i+1)
+		if errors.Is(err, ErrNotWritable) {
+			status = gosnmp.NotWritable
+		}
 	}
-	return response
+
+	return response, status, index
 }
 
 // processGetRequest processes GET request variables.
@@ -904,4 +942,16 @@ func ParseOID(oid string) ([]int, error) {
 	}
 
 	return result, nil
+}
+
+// setErrorForVersion answers the way the device being imitated would. notWritable
+// is an SNMPv2c error status and has no SNMPv1 equivalent, so a version 1
+// manager is told noSuchName - which is what a real agent returns when it will
+// not write an object.
+func setErrorForVersion(status gosnmp.SNMPError, version gosnmp.SnmpVersion) gosnmp.SNMPError {
+	if status == gosnmp.NotWritable && version == gosnmp.Version1 {
+		return gosnmp.NoSuchName
+	}
+
+	return status
 }

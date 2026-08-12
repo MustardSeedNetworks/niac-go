@@ -8,7 +8,10 @@ import (
 )
 
 const (
-	snmpGroup              = "1.3.6.1.2.1.11"
+	snmpGroup = "1.3.6.1.2.1.11"
+	// enableAuthenTrapsOID is snmpEnableAuthenTraps, the one object this agent
+	// implements read-write. Everything else it serves is read-only.
+	enableAuthenTrapsOID   = snmpGroup + ".30.0"
 	authenticationTrapsOn  = 1
 	authenticationTrapsOff = 2
 )
