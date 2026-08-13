@@ -22,6 +22,13 @@ declare -A ROUTE=(
 
 sysname() { snmpget -v2c -c NetAllyDemo -t 2 -r 0 -Ovq "$1" 1.3.6.1.2.1.1.5.0 2>/dev/null; }
 
+# A sub-interface left over from an earlier probe keeps its own route to a pack's
+# space, so every VLAN under test reaches that pack through the stale link and
+# the check reports a leak that is not there. Start from a clean slate.
+for stale in $(ip -br link show | awk '$1 ~ /^vmbr0\./ {sub(/@.*/, "", $1); print $1}'); do
+	ip link del "$stale"
+done
+
 failures=0
 for pack in "${!VLAN[@]}"; do
 	vlan=${VLAN[$pack]}
