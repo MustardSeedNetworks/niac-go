@@ -40,8 +40,12 @@ func findDaemonCert() string {
 		return existingFile(certFile)
 	}
 
+	// Order matters: an installed daemon's certificate beats one left in the
+	// working directory by an earlier run. A stale certificate with the same
+	// subject fails verification in a way that reads like a configuration
+	// error, so the current directory is consulted last.
 	home, _ := os.UserHomeDir()
-	for _, dir := range []string{".", "/var/lib/niac", filepath.Join(home, ".niac")} {
+	for _, dir := range []string{packagedDataDir, filepath.Join(home, ".niac"), "."} {
 		if found := existingFile(filepath.Join(dir, certFile)); found != "" {
 			return found
 		}
@@ -49,6 +53,10 @@ func findDaemonCert() string {
 
 	return ""
 }
+
+// packagedDataDir is where the packaged service keeps its state, and therefore
+// where it resolves its relative certs/ directory.
+const packagedDataDir = "/var/lib/niac"
 
 func existingFile(path string) string {
 	if _, err := os.Stat(path); err != nil {

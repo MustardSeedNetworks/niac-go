@@ -59,9 +59,10 @@ type Config struct {
 
 // Client is a read-only view of a running daemon.
 type Client struct {
-	baseURL string
-	token   string
-	http    *http.Client
+	baseURL  string
+	token    string
+	certPath string
+	http     *http.Client
 }
 
 // New builds a client, resolving the address, token and trust settings.
@@ -86,9 +87,10 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL: strings.TrimSuffix(base, "/"),
-		token:   token,
-		http:    &http.Client{Transport: transport},
+		baseURL:  strings.TrimSuffix(base, "/"),
+		token:    token,
+		certPath: cfg.CertPath,
+		http:     &http.Client{Transport: transport},
 	}, nil
 }
 
@@ -166,6 +168,15 @@ func (c *Client) open(ctx context.Context, path string) (io.ReadCloser, error) {
 		if errors.As(err, &opErr) {
 			return nil, fmt.Errorf("%w at %s: is the daemon running?",
 				ErrDaemonUnreachable, c.baseURL)
+		}
+
+		var certErr *tls.CertificateVerificationError
+		if errors.As(err, &certErr) && c.certPath != "" {
+			// Naming the certificate that was tried turns "unknown authority"
+			// into something an operator can act on: it is usually a stale one
+			// left by an earlier run, and --cacert points at the right file.
+			return nil, fmt.Errorf("%w: trusted %s, which the daemon at %s does not match: %w",
+				ErrRequestFailed, c.certPath, c.baseURL, err)
 		}
 
 		return nil, fmt.Errorf("request %s: %w", path, err)
