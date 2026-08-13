@@ -109,11 +109,13 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 	if err != nil {
 		return handleDumpError(err, options.jsonOutput)
 	}
-	ctx, cancel := context.WithTimeout(ctx, dumpWindow)
+	// The window bounds the stream read only. Anything after it - including
+	// asking why nothing arrived - needs a context that has not just expired.
+	streamCtx, cancel := context.WithTimeout(ctx, dumpWindow)
 	defer cancel()
 
 	packets := make([]ipc.PacketData, 0, options.count)
-	err = client.StreamPackets(ctx, func(event cliclient.PacketEvent) bool {
+	err = client.StreamPackets(streamCtx, func(event cliclient.PacketEvent) bool {
 		if !matchesDumpFilter(event, options) {
 			return true
 		}
@@ -131,7 +133,7 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 
 		return len(packets) < options.count
 	})
-	if err != nil && ctx.Err() == nil {
+	if err != nil && streamCtx.Err() == nil {
 		return handleDumpError(err, options.jsonOutput)
 	}
 
