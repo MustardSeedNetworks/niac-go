@@ -12,6 +12,8 @@ type Runtime struct {
 	DeviceCount int     `json:"device_count"`
 	Uptime      float64 `json:"uptime_seconds"`
 	Version     string  `json:"version"`
+	PacketsRX   uint64  `json:"packets_received"`
+	PacketsTX   uint64  `json:"packets_sent"`
 }
 
 // Runtime reads the selected simulation's state.
