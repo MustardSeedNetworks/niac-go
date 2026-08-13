@@ -375,17 +375,18 @@ func (l *Library) fileEntry(kind Kind, relPath string, info fs.FileInfo) FileEnt
 	}
 }
 
-// detectFileSource mirrors detectSource for the walks/pcaps kinds:
-// consulting the embedded starterWalks pack is the source of truth for
-// SourceStarter. Only KindWalks has a starter pack today; pcaps have
-// no embedded set, so they're always SourceUser.
+// detectFileSource mirrors detectSource for the walks/pcaps kinds. Only
+// KindWalks has a starter pack today; both kinds can arrive in a bundle.
 func (l *Library) detectFileSource(kind Kind, relPath string) Source {
-	if kind != KindWalks {
-		return SourceUser
+	if kind == KindWalks {
+		if _, err := starterWalks.Open(filepath.Join("starter", "walks", relPath)); err == nil {
+			return SourceStarter
+		}
 	}
-	if _, err := starterWalks.Open(filepath.Join("starter", "walks", relPath)); err == nil {
-		return SourceStarter
+	if l.bundles.contains(l.root, filepath.Join(string(kind), relPath)) {
+		return SourceBundle
 	}
+
 	return SourceUser
 }
 
@@ -417,15 +418,19 @@ func (l *Library) FileEntryByName(kind Kind, relPath string) (FileEntry, error) 
 	return l.fileEntry(kind, leaf, info), nil
 }
 
-// detectSource decides whether a given filename came from the starter
-// pack or from user/bundle install. Starter-pack files are embedded
-// in the binary, so consulting starterPack is the source of truth.
+// detectSource decides whether a given filename came from the starter pack, a
+// content bundle, or the operator. Starter-pack files are embedded in the
+// binary, so consulting starterPack is the source of truth for those; a bundle
+// records what it installed, because afterwards its files are indistinguishable
+// from anything else on disk.
 func (l *Library) detectSource(filename string) Source {
 	if _, err := starterPack.Open(filepath.Join("starter", filename)); err == nil {
 		return SourceStarter
 	}
-	// Bundle vs user split is deferred to PR 2 (the bundle installer
-	// writes a marker file). For now, anything non-starter is "user".
+	if l.bundles.contains(l.root, filepath.Join(string(KindNetworks), filename)) {
+		return SourceBundle
+	}
+
 	return SourceUser
 }
 
