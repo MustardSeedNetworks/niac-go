@@ -215,22 +215,20 @@ func runLogsFollow(ctx context.Context, client *ipc.Client, level string, option
 	}
 }
 
-// filterLogs filters logs by the text pattern.
+// filterLogs filters logs by the text pattern. The match itself lives in the ipc
+// package so that this path and the --follow subscription cannot drift apart -
+// they are the same flag and must answer the same way.
 func filterLogs(logs []ipc.LogEntry, filter string) []ipc.LogEntry {
 	if filter == "" {
 		return logs
 	}
-
-	filter = strings.ToLower(filter)
-	filtered := make([]ipc.LogEntry, 0)
+	filtered := make([]ipc.LogEntry, 0, len(logs))
 	for _, log := range logs {
-		if strings.Contains(strings.ToLower(log.Message), filter) ||
-			strings.Contains(strings.ToLower(log.Device), filter) ||
-			strings.Contains(strings.ToLower(log.Source), filter) ||
-			strings.Contains(strings.ToLower(log.Protocol), filter) {
+		if ipc.LogMatchesFilter(log, filter) {
 			filtered = append(filtered, log)
 		}
 	}
+
 	return filtered
 }
 
