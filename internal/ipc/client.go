@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
@@ -42,7 +43,6 @@ const (
 	defaultPollingMs     = 500  // default polling interval
 	logChannelBuffer     = 100  // log channel buffer size
 	maxSeenLogs          = 1000 // max seen logs before map cleanup
-	asciiCaseOffset      = 32   // ASCII case conversion offset (a-A)
 )
 
 // Client is an IPC client for communicating with the NIAC server.
@@ -467,7 +467,7 @@ func (s *LogSubscription) shouldSkipLog(log LogEntry, seenLogs map[string]bool) 
 		return true
 	}
 
-	if s.filter != "" && !matchesFilter(log.Message, s.filter) {
+	if !LogMatchesFilter(log, s.filter) {
 		return true
 	}
 
@@ -493,59 +493,21 @@ func (s *LogSubscription) cleanupSeenLogs(seenLogs map[string]bool) map[string]b
 	return seenLogs
 }
 
-// matchesFilter checks if a message matches the given filter pattern.
-func matchesFilter(message, filter string) bool {
-	// Simple substring match for now
-	return len(filter) == 0 || containsIgnoreCase(message, filter)
-}
-
-// containsIgnoreCase checks if s contains substr (case-insensitive).
-func containsIgnoreCase(s, substr string) bool {
-	sLower := make([]byte, len(s))
-
-	substrLower := make([]byte, len(substr))
-
-	for i := range len(s) {
-		if s[i] >= 'A' && s[i] <= 'Z' {
-			sLower[i] = s[i] + asciiCaseOffset
-		} else {
-			sLower[i] = s[i]
-		}
-	}
-
-	for i := range len(substr) {
-		if substr[i] >= 'A' && substr[i] <= 'Z' {
-			substrLower[i] = substr[i] + asciiCaseOffset
-		} else {
-			substrLower[i] = substr[i]
-		}
-	}
-
-	return bytesContains(sLower, substrLower)
-}
-
-// bytesContains checks if b contains sub.
-func bytesContains(b, sub []byte) bool {
-	if len(sub) == 0 {
+// LogMatchesFilter reports whether a log record matches the operator's text
+// filter. It is the one implementation: `niac logs tail --filter X` and the same
+// command with --follow are the same flag and must answer the same way, so the
+// polling subscription here and the batch path in the CLI both call this.
+//
+// The match is a case-insensitive substring across every field the operator can
+// see in the output - message, device, source and protocol - which is what the
+// CLI help promises and what the log viewer's single text box implies.
+func LogMatchesFilter(log LogEntry, filter string) bool {
+	if filter == "" {
 		return true
 	}
-
-	if len(b) < len(sub) {
-		return false
-	}
-
-	for i := range len(b) - len(sub) + 1 {
-		match := true
-
-		for j := range sub {
-			if b[i+j] != sub[j] {
-				match = false
-
-				break
-			}
-		}
-
-		if match {
+	wanted := strings.ToLower(filter)
+	for _, field := range []string{log.Message, log.Device, log.Source, log.Protocol} {
+		if strings.Contains(strings.ToLower(field), wanted) {
 			return true
 		}
 	}
