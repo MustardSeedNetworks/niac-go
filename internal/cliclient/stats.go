@@ -1,6 +1,9 @@
 package cliclient
 
-import "context"
+import (
+	"context"
+	"net/url"
+)
 
 // StackStats is the daemon's per-protocol packet accounting, as served by
 // /api/v1/stats. These are the counters `niac monitor` reports; it used to
@@ -35,10 +38,25 @@ func (s StackStats) ARP() uint64 { return s.ARPRequests + s.ARPReplies }
 // ICMP is request and reply traffic together, for the same reason as ARP.
 func (s StackStats) ICMP() uint64 { return s.ICMPRequests + s.ICMPReplies }
 
-// Stats reads one sample of the daemon's counters.
+// Stats reads one sample of the counters for whichever session is selected.
+//
+// Several scenarios run at once, each with its own stack and its own counters,
+// so "the stats" is ambiguous unless a session is named: a caller watching the
+// selected session sees zeros while another session carries the traffic. Prefer
+// SessionStats.
 func (c *Client) Stats(ctx context.Context) (*Stats, error) {
 	var stats Stats
 	if err := c.get(ctx, "/api/v1/stats", &stats); err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
+}
+
+// SessionStats reads one sample of a named session's counters.
+func (c *Client) SessionStats(ctx context.Context, session string) (*Stats, error) {
+	var stats Stats
+	if err := c.get(ctx, "/api/v1/sessions/"+url.PathEscape(session)+"/stats", &stats); err != nil {
 		return nil, err
 	}
 

@@ -40,6 +40,9 @@ type monitorStats struct {
 	SNMP      uint64    `json:"snmp"`
 	Errors    uint64    `json:"errors"`
 	Uptime    float64   `json:"uptime_seconds"`
+	// Session names the scenario these counters belong to. Several run at
+	// once, each with its own stack, so a sample without it is ambiguous.
+	Session string `json:"session"`
 
 	// Rates (packets per second)
 	RateRX float64 `json:"rate_rx,omitempty"`
@@ -51,6 +54,7 @@ type monitorOptions struct {
 	interval string
 	api      string
 	caCert   string
+	session  string
 	insecure bool
 }
 
@@ -100,6 +104,8 @@ JSON and CSV formats append new lines for pipe-friendly output.`,
 		"Update interval (e.g., 1s, 500ms, 2s)")
 	monitorCmd.Flags().StringVar(&options.api, "api", "",
 		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	monitorCmd.Flags().StringVar(&options.session, "session", "",
+		"Scenario session to watch (default: whichever the daemon has selected)")
 	monitorCmd.Flags().StringVar(&options.caCert, "cacert", "",
 		"Daemon certificate to trust (default: the local daemon's own, when visible)")
 	monitorCmd.Flags().BoolVar(&options.insecure, "insecure", false,
@@ -150,18 +156,23 @@ func runMonitor(options *monitorOptions) error {
 	// Run the appropriate monitor based on format
 	switch format {
 	case FormatTable:
-		return runTableMonitor(ctx, client, interval)
+		return runTableMonitor(ctx, client, options.session, interval)
 	case FormatJSON:
-		return runJSONMonitor(ctx, client, interval)
+		return runJSONMonitor(ctx, client, options.session, interval)
 	case FormatCSV:
-		return runCSVMonitor(ctx, client, interval)
+		return runCSVMonitor(ctx, client, options.session, interval)
 	}
 
 	return nil
 }
 
 // runTableMonitor displays statistics in a continuously-updated table format.
-func runTableMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
+func runTableMonitor(
+	ctx context.Context,
+	client *cliclient.Client,
+	session string,
+	interval time.Duration,
+) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -169,7 +180,7 @@ func runTableMonitor(ctx context.Context, client *cliclient.Client, interval tim
 	logging.InitColors(true)
 
 	// Initial fetch
-	stats, err := fetchStats(ctx, client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, session, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -183,7 +194,7 @@ func runTableMonitor(ctx context.Context, client *cliclient.Client, interval tim
 			fmt.Fprintln(os.Stdout, "\nMonitoring stopped.")
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, session, prevStats, interval)
 			if fetchErr != nil {
 				// Connection lost, but don't exit immediately
 				fmt.Fprintf(os.Stdout, "\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), fetchErr)
@@ -198,13 +209,18 @@ func runTableMonitor(ctx context.Context, client *cliclient.Client, interval tim
 }
 
 // runJSONMonitor outputs statistics as JSON Lines (one JSON object per line).
-func runJSONMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
+func runJSONMonitor(
+	ctx context.Context,
+	client *cliclient.Client,
+	session string,
+	interval time.Duration,
+) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	// Initial fetch
-	stats, err := fetchStats(ctx, client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, session, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -216,7 +232,7 @@ func runJSONMonitor(ctx context.Context, client *cliclient.Client, interval time
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, session, prevStats, interval)
 			if fetchErr != nil {
 				// Output error as JSON
 				errObj := map[string]any{
@@ -234,7 +250,12 @@ func runJSONMonitor(ctx context.Context, client *cliclient.Client, interval time
 }
 
 // runCSVMonitor outputs statistics as CSV.
-func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
+func runCSVMonitor(
+	ctx context.Context,
+	client *cliclient.Client,
+	session string,
+	interval time.Duration,
+) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -262,7 +283,7 @@ func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.
 	writer.Flush()
 
 	// Initial fetch
-	stats, err := fetchStats(ctx, client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, session, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -274,7 +295,7 @@ func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, session, prevStats, interval)
 			if fetchErr != nil {
 				// Skip this interval on error
 				continue
@@ -285,6 +306,20 @@ func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.
 	}
 }
 
+// readStats reads the named session's counters, or the selected session's when
+// no name was given.
+func readStats(
+	ctx context.Context,
+	client *cliclient.Client,
+	session string,
+) (*cliclient.Stats, error) {
+	if session == "" {
+		return client.Stats(ctx)
+	}
+
+	return client.SessionStats(ctx, session)
+}
+
 // fetchStats reads one sample from the daemon and derives the rates.
 //
 // The per-protocol counters were reported as zero for as long as this command
@@ -293,14 +328,22 @@ func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.
 func fetchStats(
 	ctx context.Context,
 	client *cliclient.Client,
+	session string,
 	prev *monitorStats,
 	interval time.Duration,
 ) (*monitorStats, error) {
-	sample, err := client.Stats(ctx)
+	runtime, err := client.Runtime(ctx)
 	if err != nil {
 		return nil, err
 	}
-	runtime, err := client.Runtime(ctx)
+	// Several scenarios run at once, each with its own counters. Watch the one
+	// named, or the daemon's selected one - and say which, because a sample
+	// that does not name its session reads as though it covered everything.
+	watching := session
+	if watching == "" {
+		watching = runtime.ConfigName
+	}
+	sample, err := readStats(ctx, client, session)
 	if err != nil {
 		return nil, err
 	}
@@ -316,6 +359,7 @@ func fetchStats(
 		SNMP:      sample.Stack.SNMPQueries,
 		Errors:    sample.Stack.Errors,
 		Uptime:    runtime.Uptime,
+		Session:   watching,
 	}
 
 	// Calculate rates if we have previous stats.
