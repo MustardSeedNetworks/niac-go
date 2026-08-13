@@ -13,7 +13,10 @@ import (
 var (
 	ErrInvalidMACAddress = errors.New("invalid MAC address")
 	ErrInvalidIPAddress  = errors.New("invalid IP address")
-	errValidationFailed  = errors.New("validation failed")
+	// ErrInvalidDeviceDocument reports a device document that did not load as
+	// exactly one device.
+	ErrInvalidDeviceDocument = errors.New("device document did not resolve to one device")
+	errValidationFailed      = errors.New("validation failed")
 )
 
 const (
