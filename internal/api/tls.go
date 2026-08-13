@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -58,9 +59,12 @@ func ensureSelfSignedCert(certPath, keyPath string) (string, string, error) {
 		return "", "", errors.New("cert and key paths must both be set")
 	}
 
-	// Reuse existing cert+key when both are present on disk.
+	// Reuse existing cert+key when both are present and still cover what the
+	// daemon serves. A certificate written before loopback was covered cannot
+	// verify the address the daemon advertises, so it is replaced rather than
+	// served for another year.
 	if _, certErr := os.Stat(certPath); certErr == nil {
-		if _, keyErr := os.Stat(keyPath); keyErr == nil {
+		if _, keyErr := os.Stat(keyPath); keyErr == nil && coversLoopback(certPath) {
 			return certPath, keyPath, nil
 		}
 	}
@@ -91,6 +95,11 @@ func ensureSelfSignedCert(certPath, keyPath string) (string, string, error) {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		DNSNames:              []string{"localhost", "niac.local"},
+		// The daemon tells operators it listens on https://127.0.0.1:8445, so
+		// the certificate has to cover that address. Without these a browser
+		// shows a warning nothing can clear, and a client on the same host
+		// cannot verify the daemon even holding its certificate.
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.IPv6loopback},
 	}
 
 	certDER, err := x509.CreateCertificate(
@@ -139,4 +148,24 @@ func DefaultCertPaths(certDir string) (string, string) {
 	}
 	return filepath.Join(certDir, defaultCertFileName),
 		filepath.Join(certDir, defaultKeyFileName)
+}
+
+// coversLoopback reports whether an existing certificate can verify the address
+// the daemon advertises. It is how a certificate generated before loopback was
+// covered gets replaced instead of reused.
+func coversLoopback(certPath string) bool {
+	data, err := os.ReadFile(certPath)
+	if err != nil {
+		return false
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return false
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false
+	}
+
+	return cert.VerifyHostname("127.0.0.1") == nil
 }
