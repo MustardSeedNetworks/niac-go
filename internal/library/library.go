@@ -72,6 +72,9 @@ type Library struct {
 	root      string
 	draftRoot *os.Root
 	draftMu   sync.RWMutex
+	// bundles records which entries a content bundle installed, so they are
+	// reported as bundle content instead of as the operator's own.
+	bundles bundleIndex
 }
 
 // DefaultRoot resolves the standard library root following:

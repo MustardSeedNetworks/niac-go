@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 )
 
@@ -18,11 +20,13 @@ type dumpOptions struct {
 	device     string
 	iface      string
 	count      int
-	socketPath string
+	api        string
+	caCert     string
+	insecure   bool
 	jsonOutput bool
 }
 
-const dumpLongHelp = `Dump captured packets from a running NIAC simulation via IPC socket.
+const dumpLongHelp = `Dump packets from a running NIAC simulation, read from the daemon's live stream.
 
 This command connects to a running NIAC simulation and retrieves
 hex dumps of recently captured packets. The output format is similar
@@ -33,7 +37,7 @@ Packets can be filtered by device name or interface name. Use the
 
 Exit codes:
   0 - Success
-  1 - Connection failed (socket not found or connection refused)
+  1 - Connection failed (no daemon answered)
   2 - Error occurred (request failed, parse error, etc.)`
 
 const dumpExample = `  # Dump all captured packets
@@ -54,8 +58,8 @@ const dumpExample = `  # Dump all captured packets
   # Combine filters
   niac dump --device router-1 --interface eth0 --count 5
 
-  # Use a custom socket path
-  niac dump --socket /var/run/niac/niac.sock`
+  # Read from a daemon on another address
+  niac dump --api https://10.0.0.5:8445`
 
 func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
 	options := new(dumpOptions)
@@ -65,7 +69,7 @@ func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
 		Long:    dumpLongHelp,
 		Example: dumpExample,
 		Args:    cobra.NoArgs,
-		RunE:    func(_ *cobra.Command, _ []string) error { return runDump(options) },
+		RunE:    func(cmd *cobra.Command, _ []string) error { return runDump(cmd.Context(), options) },
 	}
 	addDumpFlags(dumpCmd, options)
 	root.AddCommand(dumpCmd)
@@ -75,7 +79,12 @@ func addDumpFlags(cmd *cobra.Command, options *dumpOptions) {
 	cmd.Flags().StringVar(&options.device, "device", "", "Filter by device name")
 	cmd.Flags().StringVar(&options.iface, "interface", "", "Filter by interface name")
 	cmd.Flags().IntVar(&options.count, "count", 0, "Maximum number of packets to display (0 = all)")
-	cmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
+	cmd.Flags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	cmd.Flags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
+	cmd.Flags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 	cmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output packets as JSON")
 }
 
@@ -90,33 +99,91 @@ type PacketDump struct {
 	HexDump   string    `json:"hex_dump,omitempty"`
 }
 
-// runDump executes the dump command.
-func runDump(options *dumpOptions) error {
-	socketPath := resolveSocketPath(options.socketPath)
-	if err := checkSocketExists(socketPath, options.jsonOutput); err != nil {
-		return err
-	}
-
-	packets, err := ipc.NewClient(socketPath).DumpPackets(options.device, options.iface, options.count)
+// runDump collects packets from the daemon's live stream.
+//
+// The daemon broadcasts frames as it handles them and keeps no capture buffer,
+// so this waits for the requested count rather than asking for history that
+// does not exist. A quiet simulation yields nothing, and says so.
+func runDump(ctx context.Context, options *dumpOptions) error {
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
 		return handleDumpError(err, options.jsonOutput)
 	}
+	// The window bounds the stream read only. Anything after it - including
+	// asking why nothing arrived - needs a context that has not just expired.
+	streamCtx, cancel := context.WithTimeout(ctx, dumpWindow)
+	defer cancel()
 
+	packets := make([]ipc.PacketData, 0, options.count)
+	err = client.StreamPackets(streamCtx, func(event cliclient.PacketEvent) bool {
+		if !matchesDumpFilter(event, options) {
+			return true
+		}
+		raw, decodeErr := event.Bytes()
+		if decodeErr != nil {
+			return true
+		}
+		packets = append(packets, ipc.PacketData{
+			Timestamp: parsePacketTime(event.Timestamp),
+			Length:    event.Size,
+			Device:    event.Device,
+			Interface: event.Direction,
+			Data:      raw,
+		})
+
+		return len(packets) < options.count
+	})
+	if err != nil && streamCtx.Err() == nil {
+		return handleDumpError(err, options.jsonOutput)
+	}
+
+	if len(packets) == 0 {
+		explainEmptyStream(ctx, client, options.jsonOutput)
+	}
 	outputPackets(packets, options.jsonOutput)
+
 	return nil
 }
 
-func checkSocketExists(socketPath string, jsonOutput bool) error {
-	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		if jsonOutput {
-			outputDumpJSON(map[string]any{"success": false, "error": "socket not found"})
-		} else {
-			fmt.Fprintf(os.Stderr, "Error: Socket not found: %s\n", socketPath)
-			fmt.Fprintf(os.Stderr, "Is the NIAC simulation running?\n")
-		}
-		os.Exit(1)
+// explainEmptyStream says why nothing arrived when the reason is structural
+// rather than a quiet network: the daemon broadcasts a packet on its unscoped
+// stream only when one scenario owns the capture. With several running, their
+// frames are scoped to each session and this stream stays silent no matter how
+// busy they are - and "No packets captured" would read as a quiet lab.
+func explainEmptyStream(ctx context.Context, client *cliclient.Client, jsonOutput bool) {
+	sessions, err := client.Sessions(ctx)
+	if err != nil || len(sessions) < 2 || jsonOutput {
+		return
 	}
-	return nil
+	fmt.Fprintf(os.Stderr,
+		"Note: %d scenarios are running, and their packets are scoped to each session.\n"+
+			"The unscoped stream this command reads only carries frames when one scenario is up.\n",
+		len(sessions))
+}
+
+// dumpWindow bounds how long a dump waits for its packets, so a quiet
+// simulation returns instead of hanging.
+const dumpWindow = 10 * time.Second
+
+// matchesDumpFilter keeps the frames the operator asked for.
+func matchesDumpFilter(event cliclient.PacketEvent, options *dumpOptions) bool {
+	if options.device != "" && !strings.EqualFold(event.Device, options.device) {
+		return false
+	}
+
+	return options.iface == "" || strings.EqualFold(event.Direction, options.iface)
+}
+
+// parsePacketTime reads the stream's timestamp, falling back to now when the
+// daemon sends a shape this build does not know.
+func parsePacketTime(value string) time.Time {
+	for _, layout := range []string{"2006-01-02T15:04:05.000Z", time.RFC3339Nano, time.RFC3339} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed
+		}
+	}
+
+	return time.Now()
 }
 
 func handleDumpError(err error, jsonOutput bool) error {

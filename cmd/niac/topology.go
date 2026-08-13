@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
 )
 
@@ -23,7 +24,9 @@ const (
 type topologyOptions struct {
 	format     string
 	outputFile string
-	socketPath string
+	api        string
+	caCert     string
+	insecure   bool
 }
 
 // topologyCmd is the parent command for topology operations.
@@ -82,8 +85,8 @@ Exit codes:
   # Save to file
   niac topology export --format dot --output topology.dot
 
-  # Use custom socket path
-  niac topology export --socket /tmp/niac.sock --format json
+  # Read from a daemon on another address
+  niac topology export --api https://10.0.0.5:8445 --format json
 
   # Generate visualization with Graphviz
   niac topology export --format dot | dot -Tpng -o network.png
@@ -92,8 +95,8 @@ Exit codes:
   # Process with jq
   niac topology export --format json | jq '.nodes[] | .name'`,
 		Args: cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runTopologyExport(options)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runTopologyExport(cmd.Context(), options)
 		},
 	}
 
@@ -102,15 +105,19 @@ Exit codes:
 		"Output format: dot, json, yaml")
 	topologyExportCmd.Flags().StringVarP(&options.outputFile, "output", "o", "",
 		"Output file path (default: stdout)")
-	topologyExportCmd.Flags().StringVar(&options.socketPath, "socket", "",
-		"Path to IPC socket (default: /tmp/niac.sock)")
+	topologyExportCmd.Flags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	topologyExportCmd.Flags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
+	topologyExportCmd.Flags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 
 	topologyCmd.AddCommand(topologyExportCmd)
 	root.AddCommand(topologyCmd)
 }
 
 // runTopologyExport executes the topology export command.
-func runTopologyExport(options *topologyOptions) error {
+func runTopologyExport(ctx context.Context, options *topologyOptions) error {
 	// Validate format
 	format := strings.ToLower(options.format)
 	if format != topologyFormatDOT && format != topologyFormatJSON && format != topologyFormatYAML {
@@ -123,24 +130,15 @@ func runTopologyExport(options *topologyOptions) error {
 		)
 	}
 
-	// Determine socket path
-	socketPath := options.socketPath
-	if socketPath == "" {
-		socketPath = ipc.DefaultSocketPath()
-	}
-
-	// Check if socket exists
-	if _, statErr := os.Stat(socketPath); os.IsNotExist(statErr) {
-		fmt.Fprintf(os.Stderr, "Error: NIAC is not running (socket not found: %s)\n", socketPath)
-		os.Exit(1)
-	}
-
-	// Create IPC client and fetch topology
-	client := ipc.NewClient(socketPath)
-	topology, err := client.GetTopology()
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to get topology: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(exitCodeError)
+	}
+	topology, err := client.Topology(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(exitCodeError)
 	}
 
 	// Generate output based on format

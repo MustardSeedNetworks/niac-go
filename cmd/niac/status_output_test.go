@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 func TestOutputErrorNotRunning(t *testing.T) {
@@ -58,15 +58,14 @@ func TestOutputSuccessText(t *testing.T) {
 		}
 	}()
 
-	status := &ipc.StatusData{
-		Running:      true,
-		Interface:    "en0",
-		ConfigPath:   "/path/config.yaml",
-		DeviceCount:  5,
-		Uptime:       3661,
-		PacketsRX:    10000,
-		PacketsTX:    20000,
-		ErrorsActive: 0,
+	status := &cliclient.Runtime{
+		Running:     true,
+		Interface:   "en0",
+		ConfigName:  "/path/config.yaml",
+		DeviceCount: 5,
+		Uptime:      3661,
+		PacketsRX:   10000,
+		PacketsTX:   20000,
 	}
 	outputSuccess(status, false)
 }
@@ -78,15 +77,14 @@ func TestOutputSuccessJSON(t *testing.T) {
 		}
 	}()
 
-	status := &ipc.StatusData{
-		Running:      true,
-		Interface:    "en0",
-		ConfigPath:   "/path/config.yaml",
-		DeviceCount:  5,
-		Uptime:       3661,
-		PacketsRX:    10000,
-		PacketsTX:    20000,
-		ErrorsActive: 0,
+	status := &cliclient.Runtime{
+		Running:     true,
+		Interface:   "en0",
+		ConfigName:  "/path/config.yaml",
+		DeviceCount: 5,
+		Uptime:      3661,
+		PacketsRX:   10000,
+		PacketsTX:   20000,
 	}
 	outputSuccess(status, true)
 }
@@ -94,37 +92,35 @@ func TestOutputSuccessJSON(t *testing.T) {
 func TestPrintHumanStatus(t *testing.T) {
 	tests := []struct {
 		name   string
-		status *ipc.StatusData
+		status *cliclient.Runtime
 	}{
 		{
 			name: "running",
-			status: &ipc.StatusData{
-				Running:      true,
-				Interface:    "en0",
-				ConfigPath:   "config.yaml",
-				DeviceCount:  3,
-				Uptime:       100,
-				PacketsRX:    5000,
-				PacketsTX:    3000,
-				ErrorsActive: 0,
+			status: &cliclient.Runtime{
+				Running:     true,
+				Interface:   "en0",
+				ConfigName:  "config.yaml",
+				DeviceCount: 3,
+				Uptime:      100,
+				PacketsRX:   5000,
+				PacketsTX:   3000,
 			},
 		},
 		{
 			name: "stopped",
-			status: &ipc.StatusData{
+			status: &cliclient.Runtime{
 				Running: false,
 			},
 		},
 		{
 			name: "with errors",
-			status: &ipc.StatusData{
-				Running:      true,
-				Interface:    "eth0",
-				DeviceCount:  10,
-				Uptime:       86400,
-				PacketsRX:    1000000,
-				PacketsTX:    500000,
-				ErrorsActive: 3,
+			status: &cliclient.Runtime{
+				Running:     true,
+				Interface:   "eth0",
+				DeviceCount: 10,
+				Uptime:      86400,
+				PacketsRX:   1000000,
+				PacketsTX:   500000,
 			},
 		},
 	}

@@ -166,8 +166,16 @@ func TestAddMonitorCommandFlags(t *testing.T) {
 	if cmd.Flags().Lookup("interval") == nil {
 		t.Error("Expected --interval flag")
 	}
-	if cmd.Flags().Lookup("socket") == nil {
-		t.Error("Expected --socket flag")
+	// The socket transport is gone: the daemon serves over its API, so the
+	// command points at an address rather than a socket path.
+	if cmd.Flags().Lookup("api") == nil {
+		t.Error("Expected --api flag")
+	}
+	if cmd.Flags().Lookup("insecure") == nil {
+		t.Error("Expected --insecure flag")
+	}
+	if cmd.Flags().Lookup("socket") != nil {
+		t.Error("--socket outlived the transport it addressed")
 	}
 }
 
