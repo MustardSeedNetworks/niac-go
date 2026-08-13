@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -13,12 +12,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 type statusOptions struct {
 	jsonOutput bool
-	socketPath string
+	api        string
+	caCert     string
+	insecure   bool
 }
 
 func addStatusCommand(root *cobra.Command, _ *serviceOptions) {
@@ -59,13 +60,18 @@ Exit codes:
     echo "NIAC is not running"
   fi`,
 		Args: cobra.NoArgs,
-		Run: func(_ *cobra.Command, _ []string) {
-			runStatus(options)
+		Run: func(cmd *cobra.Command, _ []string) {
+			runStatus(cmd.Context(), options)
 		},
 	}
 
 	statusCmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output status as JSON")
-	statusCmd.Flags().StringVar(&options.socketPath, "socket", "", "Path to IPC socket (default: /tmp/niac.sock)")
+	statusCmd.Flags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	statusCmd.Flags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
+	statusCmd.Flags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 
 	root.AddCommand(statusCmd)
 }
@@ -78,130 +84,43 @@ const (
 
 // statusResult holds the result of a status check operation.
 type statusResult struct {
-	status   *ipc.StatusData
+	status   *cliclient.Runtime
 	exitCode int
 	err      error
 }
 
-func runStatus(options *statusOptions) {
-	socketPath := resolveSocketPath(options.socketPath)
-
-	result := checkStatus(socketPath)
+func runStatus(ctx context.Context, options *statusOptions) {
+	result := checkStatus(ctx, options)
 
 	outputResult(result, options.jsonOutput)
 	os.Exit(result.exitCode)
 }
 
-// resolveSocketPath returns the socket path, using default if not specified.
-func resolveSocketPath(path string) string {
-	if path == "" {
-		return ipc.DefaultSocketPath()
-	}
-	return path
-}
-
-// checkStatus performs the full status check workflow.
-func checkStatus(socketPath string) statusResult {
-	if err := verifySocketExists(socketPath); err != nil {
-		return statusResult{exitCode: exitCodeNotRunning, err: err}
-	}
-
-	conn, err := connectToSocket(socketPath)
-	if err != nil {
-		return statusResult{exitCode: exitCodeNotRunning, err: err}
-	}
-	defer conn.Close()
-
-	status, err := requestStatus(conn)
+// checkStatus asks the daemon what it is running.
+//
+// It used to open a unix socket whose server was removed in #1012, so this
+// command reported NOT RUNNING no matter how many simulations were up.
+func checkStatus(ctx context.Context, options *statusOptions) statusResult {
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
 		return statusResult{exitCode: exitCodeError, err: err}
 	}
-
-	return statusResult{status: status, exitCode: exitCodeSuccess}
-}
-
-// verifySocketExists checks if the IPC socket file exists.
-func verifySocketExists(socketPath string) error {
-	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		return fmt.Errorf("socket not found: %s", socketPath)
-	}
-	return nil
-}
-
-// connectToSocket establishes a connection to the IPC socket.
-func connectToSocket(socketPath string) (net.Conn, error) {
-	dialer := net.Dialer{Timeout: shortTimeout * time.Second}
-
-	conn, err := dialer.DialContext(context.Background(), "unix", socketPath)
+	runtime, err := client.Runtime(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("connection failed: %w", err)
+		if errors.Is(err, cliclient.ErrDaemonUnreachable) {
+			return statusResult{exitCode: exitCodeNotRunning, err: err}
+		}
+
+		return statusResult{exitCode: exitCodeError, err: err}
+	}
+	if !runtime.Running {
+		return statusResult{
+			exitCode: exitCodeNotRunning,
+			err:      errors.New("the daemon is up but no simulation is running"),
+		}
 	}
 
-	_ = conn.SetDeadline(time.Now().Add(shortTimeout * time.Second))
-
-	return conn, nil
-}
-
-// requestStatus sends a status request and parses the response.
-func requestStatus(conn net.Conn) (*ipc.StatusData, error) {
-	if err := sendStatusRequest(conn); err != nil {
-		return nil, err
-	}
-
-	resp, err := receiveResponse(conn)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseStatusResponse(resp)
-}
-
-// sendStatusRequest sends the status command to the IPC server.
-func sendStatusRequest(conn net.Conn) error {
-	req := ipc.Request{Command: ipc.CommandStatus}
-	encoder := json.NewEncoder(conn)
-
-	if err := encoder.Encode(&req); err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-
-	return nil
-}
-
-// receiveResponse reads and decodes the IPC response.
-func receiveResponse(conn net.Conn) (*ipc.Response, error) {
-	var resp ipc.Response
-	decoder := json.NewDecoder(conn)
-
-	if err := decoder.Decode(&resp); err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if !resp.Success {
-		return nil, fmt.Errorf("%s", resp.Error)
-	}
-
-	return &resp, nil
-}
-
-// parseStatusResponse extracts and parses StatusData from the response.
-func parseStatusResponse(resp *ipc.Response) (*ipc.StatusData, error) {
-	statusData, ok := resp.Data["status"]
-	if !ok {
-		return nil, errors.New("status data not found in response")
-	}
-
-	statusBytes, err := json.Marshal(statusData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse status: %w", err)
-	}
-
-	var status ipc.StatusData
-	if err = json.Unmarshal(statusBytes, &status); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal status: %w", err)
-	}
-
-	return &status, nil
+	return statusResult{status: runtime, exitCode: exitCodeSuccess}
 }
 
 // outputResult formats and outputs the status result.
@@ -233,7 +152,7 @@ func outputError(err error, exitCode int, jsonOutput bool) {
 }
 
 // outputSuccess outputs successful status in the appropriate format.
-func outputSuccess(status *ipc.StatusData, jsonOutput bool) {
+func outputSuccess(status *cliclient.Runtime, jsonOutput bool) {
 	if jsonOutput {
 		outputStatusJSON(buildStatusMap(status))
 		return
@@ -243,23 +162,22 @@ func outputSuccess(status *ipc.StatusData, jsonOutput bool) {
 }
 
 // buildStatusMap creates a map representation of status data for JSON output.
-func buildStatusMap(status *ipc.StatusData) map[string]any {
+func buildStatusMap(status *cliclient.Runtime) map[string]any {
 	return map[string]any{
 		"running":          status.Running,
 		"interface":        status.Interface,
-		"config":           status.ConfigPath,
+		"config":           status.ConfigName,
 		"devices":          status.DeviceCount,
 		"uptime_seconds":   status.Uptime,
 		"uptime_formatted": formatDurationFromSeconds(status.Uptime),
 		"packets_rx":       status.PacketsRX,
 		"packets_tx":       status.PacketsTX,
-		"errors_active":    status.ErrorsActive,
-		"started_at":       status.StartedAt,
+		"version":          status.Version,
 	}
 }
 
 // printHumanStatus prints the status in human-readable format.
-func printHumanStatus(status *ipc.StatusData) {
+func printHumanStatus(status *cliclient.Runtime) {
 	statusStr := "STOPPED"
 	if status.Running {
 		statusStr = "RUNNING"
@@ -267,12 +185,12 @@ func printHumanStatus(status *ipc.StatusData) {
 
 	fmt.Fprintf(os.Stdout, "Status: %s\n", statusStr)
 	fmt.Fprintf(os.Stdout, "Interface: %s\n", status.Interface)
-	fmt.Fprintf(os.Stdout, "Config: %s\n", status.ConfigPath)
+	fmt.Fprintf(os.Stdout, "Config: %s\n", status.ConfigName)
 	fmt.Fprintf(os.Stdout, "Devices: %d\n", status.DeviceCount)
 	fmt.Fprintf(os.Stdout, "Uptime: %s\n", formatDurationFromSeconds(status.Uptime))
 	fmt.Fprintf(os.Stdout, "Packets RX: %s\n", formatStatusNumber(status.PacketsRX))
 	fmt.Fprintf(os.Stdout, "Packets TX: %s\n", formatStatusNumber(status.PacketsTX))
-	fmt.Fprintf(os.Stdout, "Errors Active: %d\n", status.ErrorsActive)
+	fmt.Fprintf(os.Stdout, "Version: %s\n", status.Version)
 }
 
 // formatDurationFromSeconds formats a duration in seconds as "2h 15m 43s".

@@ -16,7 +16,9 @@ func TestAddNeighborsCommandFlags(t *testing.T) {
 		t.Fatal("Expected neighbors command to be registered")
 	}
 
-	expectedFlags := []string{"device", "protocol", "socket", "json"}
+	// --socket went with the transport it addressed; the daemon is reached
+	// over its API now.
+	expectedFlags := []string{"device", "protocol", "api", "json"}
 	for _, flag := range expectedFlags {
 		if cmd.Flags().Lookup(flag) == nil && cmd.PersistentFlags().Lookup(flag) == nil {
 			t.Errorf("Expected --%s flag on neighbors command", flag)

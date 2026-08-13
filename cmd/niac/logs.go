@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -20,7 +21,9 @@ type logsOptions struct {
 	follow     bool
 	level      string
 	filter     string
-	socketPath string
+	api        string
+	caCert     string
+	insecure   bool
 	jsonOutput bool
 	count      int
 }
@@ -57,7 +60,7 @@ text pattern, and can be streamed in real-time with the tail subcommand.`,
 		Short: "Stream logs from a running simulation",
 		Long: `Stream logs from a running NIAC simulation in real-time.
 
-The tail command connects to the running simulation via IPC socket and
+The tail command reads the daemon's live log stream over its HTTPS API and
 displays log messages. Use --follow to continuously stream new logs.
 
 Log levels (from most to least verbose):
@@ -85,8 +88,8 @@ The --filter option performs case-insensitive substring matching on log messages
   # JSON output for scripting
   niac logs tail --json | jq '.message'
 
-  # Custom socket path
-  niac logs tail --socket /var/run/niac.sock`,
+  # Read from a daemon on another address
+  niac logs tail --api https://10.0.0.5:8445`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runLogsTail(options)
@@ -102,8 +105,12 @@ The --filter option performs case-insensitive substring matching on log messages
 		"Minimum log level: debug, info, warn, error")
 	logsTailCmd.Flags().StringVar(&options.filter, "filter", "",
 		"Filter logs by text pattern (case-insensitive)")
-	logsTailCmd.Flags().StringVar(&options.socketPath, "socket", "",
-		"Path to IPC socket (default: "+ipc.DefaultSocketPath()+")")
+	logsTailCmd.Flags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	logsTailCmd.Flags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
+	logsTailCmd.Flags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 	logsTailCmd.Flags().BoolVar(&options.jsonOutput, "json", false,
 		"Output logs as JSON (one object per line)")
 	logsTailCmd.Flags().IntVarP(&options.count, "count", "n", maxLogEntries,
@@ -122,17 +129,9 @@ func runLogsTail(options *logsOptions) error {
 		return fmt.Errorf("invalid log level %q: must be debug, info, warn, or error", options.level)
 	}
 
-	// Create IPC client
-	socketPath := options.socketPath
-	if socketPath == "" {
-		socketPath = ipc.GetDefaultSocketPath()
-	}
-
-	client := ipc.NewClient(socketPath)
-
-	// Check if server is running
-	if !client.IsRunning() {
-		return fmt.Errorf("no NIAC simulation running (socket: %s)", socketPath)
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
+	if err != nil {
+		return err
 	}
 
 	// Set up context with cancellation for graceful shutdown
@@ -153,66 +152,134 @@ func runLogsTail(options *logsOptions) error {
 		return runLogsFollow(ctx, client, level, options)
 	}
 
-	return runLogsOnce(client, level, options)
+	return runLogsOnce(ctx, client, level, options)
 }
 
-// runLogsOnce fetches and displays logs once (no follow mode).
-func runLogsOnce(client *ipc.Client, level string, options *logsOptions) error {
-	logs, err := client.GetLogs(level, options.count)
-	if err != nil {
-		return fmt.Errorf("failed to get logs: %w", err)
-	}
+// runLogsOnce collects from the live stream until it has the requested count or
+// the window closes.
+//
+// The daemon keeps no backlog: it broadcasts records as they happen and retains
+// nothing, so there is no "last N lines" to ask for. This reads what arrives
+// and stops, which is honest about what the daemon can answer; --follow is what
+// you want if the simulation is quiet.
+func runLogsOnce(ctx context.Context, client *cliclient.Client, level string, options *logsOptions) error {
+	ctx, cancel := context.WithTimeout(ctx, logsOnceWindow)
+	defer cancel()
 
-	// Apply text filter
-	filtered := filterLogs(logs, options.filter)
-
-	if options.jsonOutput {
-		for _, log := range filtered {
-			outputLogJSON(log)
-		}
-	} else {
+	if !options.jsonOutput {
 		logging.InitColors(true)
-		for _, log := range filtered {
-			printLogEntry(log)
-		}
+	}
+	seen := 0
+	err := streamLogs(ctx, client, level, options, func() bool {
+		seen++
+
+		return seen < options.count
+	})
+	if err != nil {
+		return err
+	}
+	if seen == 0 && !options.jsonOutput {
+		fmt.Fprintf(os.Stdout,
+			"No log records in %s. The daemon keeps no backlog; use --follow to watch.\n",
+			logsOnceWindow)
 	}
 
 	return nil
 }
 
-// runLogsFollow streams logs continuously.
-func runLogsFollow(ctx context.Context, client *ipc.Client, level string, options *logsOptions) error {
-	sub := client.SubscribeLogs(level, options.filter, logPollMilliseconds*time.Millisecond)
-	defer sub.Stop()
+// logsOnceWindow is how long a non-following read waits for records. Long
+// enough to catch a busy simulation, short enough not to look hung.
+const logsOnceWindow = 2 * time.Second
 
+// runLogsFollow streams logs continuously.
+func runLogsFollow(ctx context.Context, client *cliclient.Client, level string, options *logsOptions) error {
 	if !options.jsonOutput {
 		logging.InitColors(true)
 		fmt.Fprintln(os.Stdout, "Streaming logs (press Ctrl+C to stop)...")
 		fmt.Fprintln(os.Stdout, strings.Repeat("-", lineWidthStandard))
 	}
+	err := streamLogs(ctx, client, level, options, func() bool { return true })
+	if err != nil && ctx.Err() == nil {
+		return err
+	}
+	if !options.jsonOutput {
+		fmt.Fprintln(os.Stdout, "\nLog streaming stopped.")
+	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			if !options.jsonOutput {
-				fmt.Fprintln(os.Stdout, "\nLog streaming stopped.")
-			}
-			return nil
-		case log, ok := <-sub.Logs():
-			if !ok {
-				return nil
-			}
-			if options.jsonOutput {
-				outputLogJSON(log)
-			} else {
-				printLogEntry(log)
-			}
-		case err := <-sub.Errors():
-			if !options.jsonOutput {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			}
+	return nil
+}
+
+// streamLogs applies the level and text filters to the daemon's stream and
+// prints what survives, stopping when keepGoing says so.
+func streamLogs(
+	ctx context.Context,
+	client *cliclient.Client,
+	level string,
+	options *logsOptions,
+	keepGoing func() bool,
+) error {
+	return client.StreamLogs(ctx, func(event cliclient.LogEvent) bool {
+		entry := ipc.LogEntry{
+			Timestamp: parseLogTime(event.Timestamp),
+			Level:     ipc.LogLevel(event.Level),
+			Message:   event.Message,
+			Device:    event.Device,
+			Source:    event.Source,
+			Protocol:  event.Protocol,
+		}
+		if !matchesLevel(string(entry.Level), level) || !ipc.LogMatchesFilter(entry, options.filter) {
+			return true
+		}
+		if options.jsonOutput {
+			outputLogJSON(entry)
+		} else {
+			printLogEntry(entry)
+		}
+
+		return keepGoing()
+	})
+}
+
+// matchesLevel keeps records at or above the requested level.
+func matchesLevel(recordLevel, wanted string) bool {
+	if wanted == "" {
+		return true
+	}
+
+	return logLevelRank(recordLevel) >= logLevelRank(wanted)
+}
+
+// logLevelRank orders the levels so a request for one keeps everything at or
+// above it, which is what "--level warn" means to an operator.
+func logLevelRank(level string) int {
+	const (
+		rankDebug = iota
+		rankInfo
+		rankWarn
+		rankError
+	)
+	switch strings.ToLower(level) {
+	case "debug":
+		return rankDebug
+	case "warn", "warning":
+		return rankWarn
+	case "error":
+		return rankError
+	default:
+		return rankInfo
+	}
+}
+
+// parseLogTime reads the stream's timestamp, falling back to now when the
+// daemon sends a shape this build does not know.
+func parseLogTime(value string) time.Time {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "15:04:05.000"} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed
 		}
 	}
+
+	return time.Now()
 }
 
 // filterLogs filters logs by the text pattern. The match itself lives in the ipc

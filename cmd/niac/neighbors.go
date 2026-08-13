@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 // NeighborEntry represents a neighbor record for display.
@@ -29,7 +29,9 @@ type NeighborEntry struct {
 type neighborsOptions struct {
 	device     string
 	protocol   string
-	socketPath string
+	api        string
+	caCert     string
+	insecure   bool
 	jsonOutput bool
 }
 
@@ -76,8 +78,8 @@ Use the 'watch' subcommand for continuous live updates.`,
   # Watch with filters
   niac neighbors watch --device switch-1 --protocol cdp
 
-  # Use custom socket path
-  niac neighbors --socket /tmp/my-niac.sock`,
+  # Read from a daemon on another address
+  niac neighbors --api https://10.0.0.5:8445`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNeighbors(cmd, args, options)
@@ -116,8 +118,12 @@ Press Ctrl+C to stop watching.`,
 		"Filter by device name")
 	neighborsCmd.PersistentFlags().StringVar(&options.protocol, "protocol", "all",
 		"Filter by protocol: lldp, cdp, or all")
-	neighborsCmd.PersistentFlags().StringVar(&options.socketPath, "socket", "",
-		"Path to IPC socket (default: "+ipc.DefaultSocketPath()+")")
+	neighborsCmd.PersistentFlags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	neighborsCmd.PersistentFlags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
+	neighborsCmd.PersistentFlags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 	neighborsCmd.PersistentFlags().BoolVar(&options.jsonOutput, "json", false,
 		"Output in JSON format")
 
@@ -142,13 +148,13 @@ func runNeighbors(cmd *cobra.Command, args []string, options *neighborsOptions) 
 		return err
 	}
 
-	// Create IPC client
-	client := getNeighborsClient(options)
-
-	// Fetch neighbors
-	neighbors, err := fetchNeighbors(client)
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
-		return fmt.Errorf("failed to fetch neighbors: %w", err)
+		return err
+	}
+	neighbors, err := fetchNeighbors(cmd.Context(), client)
+	if err != nil {
+		return err
 	}
 
 	// Filter neighbors
@@ -168,12 +174,9 @@ func runNeighborsWatch(_ *cobra.Command, _ []string, options *neighborsOptions) 
 		return err
 	}
 
-	// Create IPC client
-	client := getNeighborsClient(options)
-
-	// Check if server is running
-	if !client.IsRunning() {
-		return fmt.Errorf("no NIAC simulation running (socket: %s)", client.SocketPath())
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
+	if err != nil {
+		return err
 	}
 
 	// Set up context with cancellation for graceful shutdown
@@ -194,12 +197,16 @@ func runNeighborsWatch(_ *cobra.Command, _ []string, options *neighborsOptions) 
 	return runNeighborsWatchLoop(ctx, client, options)
 }
 
-func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client, options *neighborsOptions) error {
+func runNeighborsWatchLoop(
+	ctx context.Context,
+	client *cliclient.Client,
+	options *neighborsOptions,
+) error {
 	ticker := time.NewTicker(tickerInterval * time.Second)
 	defer ticker.Stop()
 
 	// Initial fetch
-	err := displayNeighborsUpdate(client, options)
+	err := displayNeighborsUpdate(ctx, client, options)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial neighbors: %w", err)
 	}
@@ -212,7 +219,7 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client, options *nei
 			}
 			return nil
 		case <-ticker.C:
-			if updateErr := displayNeighborsUpdate(client, options); updateErr != nil {
+			if updateErr := displayNeighborsUpdate(ctx, client, options); updateErr != nil {
 				// Connection lost, but don't exit immediately
 				if !options.jsonOutput {
 					fmt.Fprintf(os.Stdout, "\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), updateErr)
@@ -230,8 +237,12 @@ func runNeighborsWatchLoop(ctx context.Context, client *ipc.Client, options *nei
 	}
 }
 
-func displayNeighborsUpdate(client *ipc.Client, options *neighborsOptions) error {
-	neighbors, err := fetchNeighbors(client)
+func displayNeighborsUpdate(
+	ctx context.Context,
+	client *cliclient.Client,
+	options *neighborsOptions,
+) error {
+	neighbors, err := fetchNeighbors(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -278,18 +289,10 @@ func validateProtocolFlag(protocol string) error {
 	}
 }
 
-func getNeighborsClient(options *neighborsOptions) *ipc.Client {
-	socketPath := options.socketPath
-	if socketPath == "" {
-		socketPath = ipc.GetDefaultSocketPath()
-	}
-	return ipc.NewClient(socketPath)
-}
-
-func fetchNeighbors(client *ipc.Client) ([]NeighborEntry, error) {
-	neighbors, err := client.GetNeighbors()
+func fetchNeighbors(ctx context.Context, client *cliclient.Client) ([]NeighborEntry, error) {
+	neighbors, err := client.Neighbors(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get neighbors: %w", err)
+		return nil, err
 	}
 
 	entries := make([]NeighborEntry, 0, len(neighbors))
