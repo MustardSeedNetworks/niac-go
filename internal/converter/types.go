@@ -49,8 +49,12 @@ const (
 
 // Config represents the YAML configuration structure.
 type Config struct {
-	IncludePath        string              `yaml:"include_path,omitempty"`
-	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,dive"`
+	IncludePath string `yaml:"include_path,omitempty"`
+	// One playback, not a list of them: the runtime plays exactly one capture
+	// (config.Config.CapturePlayback, one engine in the replay controller). The
+	// schema kept the shape of a list, so extra entries were dropped on load and
+	// deleted from disk on the next save. Refuse them instead.
+	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,max=1,dive"`
 	BehaviorTimelines  []BehaviorTimeline  `yaml:"behavior_timelines,omitempty"  validate:"omitempty,max=64,dive"`
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
 	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
