@@ -585,8 +585,8 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 		// DNS query over IPv6
 		h.stack.dnsHandler.HandleQueryV6(pkt, packet, ipv6, udp, devices)
 	case UDPPortSNMP:
-		if h.stack.snmpHandler != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 2 {
-			_, _ = fmt.Fprintf(os.Stdout, "SNMP/IPv6 query received (not yet implemented) sn=%d\n", pkt.SerialNumber)
+		if h.stack.snmpHandler != nil {
+			h.stack.snmpHandler.HandlePacketV6(pkt, ipv6, udp, devices)
 		}
 	case UDPPortDHCPv6:
 		// DHCPv6 server port
