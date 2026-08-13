@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 
+	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gosnmp/gosnmp"
 
@@ -35,7 +36,49 @@ func NewSNMPHandler(stack *Stack) *SNMPHandler {
 }
 
 // HandlePacket processes an SNMP request delivered over IPv4/UDP.
-func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
+func (h *SNMPHandler) HandlePacket(
+	pkt *Packet,
+	ip *layers.IPv4,
+	udp *layers.UDP,
+	devices []*config.Device,
+) {
+	h.handleDatagram(pkt, snmpPeer{src: ip.SrcIP, dst: ip.DstIP}, udp, devices)
+}
+
+// HandlePacketV6 serves the same request arriving over IPv6.
+//
+// Everything below this point is version-agnostic - the MIB, the PDU codec and
+// the USM engine never see an IP layer - so the two entry points differ only in
+// how the peer addresses are read and how the reply is framed.
+func (h *SNMPHandler) HandlePacketV6(
+	pkt *Packet,
+	ip *layers.IPv6,
+	udp *layers.UDP,
+	devices []*config.Device,
+) {
+	h.handleDatagram(pkt, snmpPeer{src: ip.SrcIP, dst: ip.DstIP, v6: true}, udp, devices)
+}
+
+const (
+	snmpIPv6Version  = 6
+	snmpIPv6HopLimit = 64
+)
+
+// snmpPeer is the pair of addresses a request arrived between, and which IP
+// version carried it. Keeping the handler on this rather than on a layer type
+// is what stops the v4 and v6 paths becoming two implementations that drift.
+type snmpPeer struct {
+	src net.IP
+	dst net.IP
+	v6  bool
+}
+
+func (h *SNMPHandler) handleDatagram(
+	pkt *Packet,
+	peer snmpPeer,
+	udp *layers.UDP,
+	devices []*config.Device,
+) {
 	if h == nil || h.stack == nil || h.stack.udpHandler == nil {
 		return
 	}
@@ -47,7 +90,7 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 	// SNMPv3 is handled from the raw datagram (USM engine discovery + auth +
 	// privacy); v1/v2c continue through the community-keyed agent path below.
 	if ver, ok := snmpPeekVersion(udp.Payload); ok && ver == gosnmp.Version3 {
-		h.handleV3(pkt, ip, udp, devices)
+		h.handleV3(pkt, peer, udp, devices)
 		return
 	}
 	if ver, ok := snmpPeekVersion(udp.Payload); ok && ver != gosnmp.Version1 && ver != gosnmp.Version2c {
@@ -59,26 +102,26 @@ func (h *SNMPHandler) HandlePacket(pkt *Packet, ip *layers.IPv4, udp *layers.UDP
 	if err != nil {
 		h.recordForDevices(devices, func(agent *snmp.Agent) { agent.RecordASNParseError() })
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "SNMP: decode failed for %s sn=%d err=%v\n", ip.DstIP, pkt.SerialNumber, err)
+			_, _ = fmt.Fprintf(os.Stdout, "SNMP: decode failed for %s sn=%d err=%v\n", peer.dst, pkt.SerialNumber, err)
 		}
 
 		return
 	}
 
 	for _, device := range devices {
-		h.processDeviceRequest(pkt, ip, udp, device, request)
+		h.processDeviceRequest(pkt, peer, udp, device, request)
 	}
 }
 
 // processDeviceRequest handles SNMP request for a single device.
 func (h *SNMPHandler) processDeviceRequest(
 	pkt *Packet,
-	ip *layers.IPv4,
+	peer snmpPeer,
 	udp *layers.UDP,
 	device *config.Device,
 	request *gosnmp.SnmpPacket,
 ) {
-	agent := h.findAgent(device, ip.SrcIP, request.Community)
+	agent := h.findAgent(device, peer.src, request.Community)
 	if agent == nil {
 		return
 	}
@@ -100,7 +143,7 @@ func (h *SNMPHandler) processDeviceRequest(
 	h.stack.stats.SNMPQueries++
 	h.stack.stats.mu.Unlock()
 
-	if h.sendResponse(pkt, ip, udp, device, payload) {
+	if h.sendResponse(pkt, peer, udp, device, payload) {
 		agent.RecordResponse(status)
 	}
 }
@@ -160,22 +203,28 @@ func (h *SNMPHandler) buildResponse(
 // sendResponse sends the SNMP response packet.
 func (h *SNMPHandler) sendResponse(
 	pkt *Packet,
-	ip *layers.IPv4,
+	peer snmpPeer,
 	udp *layers.UDP,
 	device *config.Device,
 	payload []byte,
 ) bool {
-	srcIP := ip.DstIP.To4()
-	dstIP := ip.SrcIP.To4()
-
-	if srcIP == nil || dstIP == nil {
-		return false
-	}
-
 	srcMAC := h.sourceMAC(device, pkt)
 	dstMAC := pkt.GetSourceMAC()
 
 	if len(dstMAC) == 0 || len(srcMAC) == 0 {
+		return false
+	}
+	// The reply leaves from the address the manager asked, not from whichever
+	// address the device happens to prefer: a manager only accepts an answer
+	// from the address it queried, which is what makes this load-bearing for a
+	// link-local one.
+	if peer.v6 {
+		return h.sendResponseV6(pkt, peer, udp, device.Name, srcMAC, dstMAC, payload)
+	}
+
+	srcIP := peer.dst.To4()
+	dstIP := peer.src.To4()
+	if srcIP == nil || dstIP == nil {
 		return false
 	}
 
@@ -192,6 +241,48 @@ func (h *SNMPHandler) sendResponse(
 			device.Name, pkt.SerialNumber, err)
 	}
 	return err == nil
+}
+
+// sendResponseV6 frames the reply as Ethernet/IPv6/UDP. IPv6 makes the UDP
+// checksum mandatory, unlike IPv4 where it may be zero, so the checksum is
+// computed rather than left off.
+func (h *SNMPHandler) sendResponseV6(
+	pkt *Packet,
+	peer snmpPeer,
+	udp *layers.UDP,
+	deviceName string,
+	srcMAC, dstMAC net.HardwareAddr,
+	payload []byte,
+) bool {
+	reply := &layers.UDP{SrcPort: udp.DstPort, DstPort: udp.SrcPort}
+	ip := &layers.IPv6{
+		Version:    snmpIPv6Version,
+		NextHeader: layers.IPProtocolUDP,
+		HopLimit:   snmpIPv6HopLimit,
+		SrcIP:      peer.dst,
+		DstIP:      peer.src,
+	}
+	eth := &layers.Ethernet{
+		SrcMAC: srcMAC, DstMAC: dstMAC, EthernetType: layers.EthernetTypeIPv6,
+	}
+	_ = reply.SetNetworkLayerForChecksum(ip)
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{ComputeChecksums: true, FixLengths: true}
+	if err := gopacket.SerializeLayers(
+		buf, opts, eth, ip, reply, gopacket.Payload(payload),
+	); err != nil {
+		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
+			_, _ = fmt.Fprintf(os.Stdout,
+				"SNMP: failed to serialize IPv6 response for device %s sn=%d err=%v\n",
+				deviceName, pkt.SerialNumber, err)
+		}
+
+		return false
+	}
+
+	// Reply on the VLAN the query arrived on (0 = untagged).
+	return h.stack.SendRawPacketVLAN(buf.Bytes(), pkt.VLAN) == nil
 }
 
 func (h *SNMPHandler) recordForDevices(devices []*config.Device, record func(*snmp.Agent)) {
@@ -231,14 +322,14 @@ func (h *SNMPHandler) decodeRequest(payload []byte) (*gosnmp.SnmpPacket, error) 
 
 // handleV3 routes an SNMPv3 datagram to each matching device's USM engine,
 // emitting the engine's discovery Report or authenticated response.
-func (h *SNMPHandler) handleV3(pkt *Packet, ip *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
+func (h *SNMPHandler) handleV3(pkt *Packet, peer snmpPeer, udp *layers.UDP, devices []*config.Device) {
 	for _, device := range devices {
 		group := h.stack.getSNMPAgents(device)
 		if group == nil || group.v3 == nil || group.v3Agent == nil {
 			continue
 		}
 
-		if !snmpAccessAllowed(device, ip.SrcIP) {
+		if !snmpAccessAllowed(device, peer.src) {
 			continue
 		}
 
@@ -256,7 +347,7 @@ func (h *SNMPHandler) handleV3(pkt *Packet, ip *layers.IPv4, udp *layers.UDP, de
 		h.stack.stats.SNMPQueries++
 		h.stack.stats.mu.Unlock()
 
-		if h.sendResponse(pkt, ip, udp, device, resp) {
+		if h.sendResponse(pkt, peer, udp, device, resp) {
 			group.v3Agent.RecordResponse(gosnmp.NoError)
 		}
 	}
