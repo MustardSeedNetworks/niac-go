@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 // maxEntrySize mirrors the package-internal cap. Duplicated rather
@@ -269,4 +270,78 @@ func TestBuildTarballYieldsValidGzip(t *testing.T) {
 	if _, readErr := io.ReadAll(gz); readErr != nil {
 		t.Fatalf("read all: %v", readErr)
 	}
+}
+
+// A bundle's files are indistinguishable from the operator's own once they are
+// on disk, so the extractor records what it wrote. Without it the library
+// reports installed content as "user" and the UI's Bundle badge never appears.
+func TestExtractRecordsWhatTheBundleInstalled(t *testing.T) {
+	dir := t.TempDir()
+	bundle := buildBundle(t, map[string]string{
+		"networks/campus.yaml": "devices: []\n",
+		"walks/switch-01.walk": ".1.3.6.1.2.1.1.5.0 = STRING: SW01\n",
+	})
+
+	manifest, err := content.Extract(bytes.NewReader(bundle), dir, content.ExtractOptions{})
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	if len(manifest.Paths) != 2 {
+		t.Fatalf("recorded paths = %v, want both entries", manifest.Paths)
+	}
+
+	lib, err := library.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := lib.ListNetworks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.Name == "campus" && entry.Source != library.SourceBundle {
+			t.Errorf("campus source = %q, want %q", entry.Source, library.SourceBundle)
+		}
+	}
+}
+
+// A dry run writes nothing, so it must not claim anything either.
+func TestADryRunRecordsNothing(t *testing.T) {
+	dir := t.TempDir()
+	bundle := buildBundle(t, map[string]string{"networks/campus.yaml": "devices: []\n"})
+
+	if _, err := content.Extract(
+		bytes.NewReader(bundle), dir, content.ExtractOptions{DryRun: true},
+	); err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, library.BundleIndexName)); !os.IsNotExist(err) {
+		t.Error("a dry run left an install record behind")
+	}
+}
+
+// buildBundle writes a gzip-tar the extractor accepts.
+func buildBundle(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for name, body := range files {
+		if err := tw.WriteHeader(&tar.Header{
+			Name: name, Mode: 0o600, Size: int64(len(body)), Typeflag: tar.TypeReg,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	return buf.Bytes()
 }

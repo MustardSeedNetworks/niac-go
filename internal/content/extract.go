@@ -79,6 +79,10 @@ type Manifest struct {
 	// PerKind reports the count of entries dropped under each library
 	// kind directory. Useful for the install summary line.
 	PerKind map[library.Kind]int
+	// Paths lists what was written, relative to the library root. A bundle's
+	// files are indistinguishable from the operator's own once they are on
+	// disk, so this is what lets them keep being reported as bundle content.
+	Paths []string
 }
 
 // Extract reads a gzip-tar bundle from r and writes its contents into
@@ -125,6 +129,12 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 
 		if procErr := processEntry(tr, hdr, root, opts, overwrite, &manifest, &totalBytes); procErr != nil {
 			return manifest, procErr
+		}
+	}
+
+	if !opts.DryRun {
+		if recErr := library.RecordBundleInstall(abs, manifest.Paths); recErr != nil {
+			return manifest, fmt.Errorf("record bundle contents: %w", recErr)
 		}
 	}
 
@@ -188,6 +198,7 @@ func processEntry(
 		manifest.Files++
 		manifest.Bytes += hdr.Size
 		manifest.PerKind[kind]++
+		manifest.Paths = append(manifest.Paths, rel)
 		return nil
 
 	default:

@@ -331,8 +331,9 @@ func TestLogsCommandFlags(t *testing.T) {
 	if flags.Lookup("filter") == nil {
 		t.Error("Expected --filter flag to be defined")
 	}
-	if flags.Lookup("socket") == nil {
-		t.Error("Expected --socket flag to be defined")
+	// The socket transport is gone; the daemon is reached over its API.
+	if flags.Lookup("api") == nil {
+		t.Error("Expected --api flag to be defined")
 	}
 	if flags.Lookup("json") == nil {
 		t.Error("Expected --json flag to be defined")

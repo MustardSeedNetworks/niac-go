@@ -73,8 +73,9 @@ func TestAddDumpCommand(t *testing.T) {
 	if cmd.Flags().Lookup("count") == nil {
 		t.Error("Expected --count flag")
 	}
-	if cmd.Flags().Lookup("socket") == nil {
-		t.Error("Expected --socket flag")
+	// The socket transport is gone; the daemon is reached over its API.
+	if cmd.Flags().Lookup("api") == nil {
+		t.Error("Expected --api flag")
 	}
 	if cmd.Flags().Lookup("json") == nil {
 		t.Error("Expected --json flag")
@@ -92,8 +93,9 @@ func TestAddStatusCommand(t *testing.T) {
 	if cmd.Flags().Lookup("json") == nil {
 		t.Error("Expected --json flag")
 	}
-	if cmd.Flags().Lookup("socket") == nil {
-		t.Error("Expected --socket flag")
+	// The socket transport is gone; the daemon is reached over its API.
+	if cmd.Flags().Lookup("api") == nil {
+		t.Error("Expected --api flag")
 	}
 }
 
@@ -247,8 +249,9 @@ func TestAddTopologyCommand(t *testing.T) {
 	if exportCmd.Flags().Lookup("output") == nil {
 		t.Error("Expected --output flag")
 	}
-	if exportCmd.Flags().Lookup("socket") == nil {
-		t.Error("Expected --socket flag")
+	// The socket transport is gone; the daemon is reached over its API.
+	if exportCmd.Flags().Lookup("api") == nil {
+		t.Error("Expected --api flag")
 	}
 }
 
