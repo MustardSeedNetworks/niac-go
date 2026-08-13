@@ -10,33 +10,50 @@ import (
 
 // newCLIClient builds the API client the read-only commands share.
 //
-// The daemon self-signs its certificate on first start, so a same-host CLI can
-// verify the connection by trusting that certificate rather than skipping the
-// check. --insecure remains for a daemon whose certificate this host cannot
-// see, and has to be asked for.
-func newCLIClient(apiURL string, insecure bool) (*cliclient.Client, error) {
+// The daemon self-signs its certificate on first start, so a CLI on the same
+// host verifies the connection by trusting that certificate rather than
+// skipping the check. --cacert names it outright; otherwise the usual places
+// are searched. --insecure remains for a daemon whose certificate this host
+// cannot see, and has to be asked for.
+func newCLIClient(apiURL, caCert string, insecure bool) (*cliclient.Client, error) {
+	if caCert == "" {
+		caCert = findDaemonCert()
+	}
+
 	return cliclient.New(cliclient.Config{
 		BaseURL:  apiURL,
-		CertPath: daemonCertPath(),
+		CertPath: caCert,
 		Insecure: insecure,
 	})
 }
 
-// daemonCertPath finds the certificate the local daemon serves, if this host is
-// the one running it. An empty result falls back to the system trust store,
-// which is right for a daemon fronted by a real certificate.
-func daemonCertPath() string {
-	certPath, _ := api.DefaultCertPaths(defaultCertDir())
-	if !filepath.IsAbs(certPath) {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		certPath = filepath.Join(home, ".niac", certPath)
+// findDaemonCert looks where a local daemon keeps its certificate. The daemon
+// resolves the same relative `certs/` directory against its own working
+// directory, which for the packaged service is its data directory - so a CLI
+// run from elsewhere has to check the data directory too.
+//
+// An empty result falls back to the system trust store, which is right for a
+// daemon behind a certificate a real authority issued.
+func findDaemonCert() string {
+	certFile, _ := api.DefaultCertPaths(defaultCertDir())
+	if filepath.IsAbs(certFile) {
+		return existingFile(certFile)
 	}
-	if _, err := os.Stat(certPath); err != nil {
+
+	home, _ := os.UserHomeDir()
+	for _, dir := range []string{".", "/var/lib/niac", filepath.Join(home, ".niac")} {
+		if found := existingFile(filepath.Join(dir, certFile)); found != "" {
+			return found
+		}
+	}
+
+	return ""
+}
+
+func existingFile(path string) string {
+	if _, err := os.Stat(path); err != nil {
 		return ""
 	}
 
-	return certPath
+	return path
 }

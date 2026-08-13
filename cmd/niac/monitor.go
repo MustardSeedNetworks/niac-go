@@ -50,6 +50,7 @@ type monitorOptions struct {
 	format   string
 	interval string
 	api      string
+	caCert   string
 	insecure bool
 }
 
@@ -99,6 +100,8 @@ JSON and CSV formats append new lines for pipe-friendly output.`,
 		"Update interval (e.g., 1s, 500ms, 2s)")
 	monitorCmd.Flags().StringVar(&options.api, "api", "",
 		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	monitorCmd.Flags().StringVar(&options.caCert, "cacert", "",
+		"Daemon certificate to trust (default: the local daemon's own, when visible)")
 	monitorCmd.Flags().BoolVar(&options.insecure, "insecure", false,
 		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 
@@ -125,7 +128,7 @@ func runMonitor(options *monitorOptions) error {
 		return fmt.Errorf("invalid format %q: must be table, json, or csv", options.format)
 	}
 
-	client, err := newCLIClient(options.api, options.insecure)
+	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
 		return err
 	}
