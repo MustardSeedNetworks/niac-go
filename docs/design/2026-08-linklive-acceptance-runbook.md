@@ -54,6 +54,20 @@ for v in 200 201 202 203 204 205 299; do
   bridge vlan add dev nic0  vid $v
 done
 
+**Make the bridge membership persistent, or it is gone on the next reboot.**
+`bridge-vids` in `/etc/network/interfaces` programs the bridge *ports*, not the
+bridge itself, and the lab terminates its VLAN sub-interfaces on the bridge. A
+reboot on 2026-08-09 wiped every `self` entry and the packs went silent in a way
+that reads exactly like a NIAC fault — SNMP timing out on every VLAN while the
+daemon was healthy and the sessions were running. Add to the `vmbr0` stanza:
+
+```
+post-up for v in 200 201 202 203 204 205 299; do bridge vlan add dev vmbr0 vid $v self; done
+```
+
+Check it with `bridge vlan show dev vmbr0`: if only VLAN 1 is listed, this is
+why nothing answers.
+
 # A live `bridge vlan add` on the veth is not enough — reboot reapplies
 # the trunk list to veth304i0 cleanly.
 pct reboot 304
