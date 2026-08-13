@@ -15,7 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -49,7 +49,8 @@ type monitorStats struct {
 type monitorOptions struct {
 	format   string
 	interval string
-	socket   string
+	api      string
+	insecure bool
 }
 
 func addMonitorCommand(root *cobra.Command, _ *serviceOptions) {
@@ -60,8 +61,8 @@ func addMonitorCommand(root *cobra.Command, _ *serviceOptions) {
 		Short: "Stream real-time statistics from a running NIAC simulation",
 		Long: `Monitor a running NIAC simulation in real-time.
 
-This command connects to a running NIAC instance via IPC socket and
-continuously displays statistics, similar to 'top' or 'watch'.
+This command reads statistics from a running NIAC daemon over its HTTPS API
+and displays them continuously, similar to 'top' or 'watch'.
 
 The monitor supports multiple output formats:
   - table: Human-readable table with auto-refresh (default)
@@ -82,8 +83,8 @@ JSON and CSV formats append new lines for pipe-friendly output.`,
   # Monitor with CSV output, redirect to file
   niac monitor --format csv > stats.csv
 
-  # Use a custom socket path
-  niac monitor --socket /tmp/my-niac.sock
+  # Read from a daemon on another address
+  niac monitor --api https://10.0.0.5:8445
 
   # Monitor with fast 500ms updates
   niac monitor --interval 500ms`,
@@ -96,8 +97,10 @@ JSON and CSV formats append new lines for pipe-friendly output.`,
 		"Output format: table, json, or csv")
 	monitorCmd.Flags().StringVar(&options.interval, "interval", "1s",
 		"Update interval (e.g., 1s, 500ms, 2s)")
-	monitorCmd.Flags().StringVar(&options.socket, "socket", "",
-		"IPC socket path (default: "+ipc.DefaultSocketPath()+")")
+	monitorCmd.Flags().StringVar(&options.api, "api", "",
+		"Daemon API address (default: "+cliclient.DefaultBaseURL+", or NIAC_API_URL)")
+	monitorCmd.Flags().BoolVar(&options.insecure, "insecure", false,
+		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 
 	root.AddCommand(monitorCmd)
 }
@@ -122,17 +125,9 @@ func runMonitor(options *monitorOptions) error {
 		return fmt.Errorf("invalid format %q: must be table, json, or csv", options.format)
 	}
 
-	// Create IPC client
-	socketPath := options.socket
-	if socketPath == "" {
-		socketPath = ipc.GetDefaultSocketPath()
-	}
-
-	client := ipc.NewClient(socketPath)
-
-	// Check if server is running
-	if !client.IsRunning() {
-		return fmt.Errorf("no NIAC simulation running (socket: %s)", socketPath)
+	client, err := newCLIClient(options.api, options.insecure)
+	if err != nil {
+		return err
 	}
 
 	// Set up context with cancellation for graceful shutdown
@@ -163,7 +158,7 @@ func runMonitor(options *monitorOptions) error {
 }
 
 // runTableMonitor displays statistics in a continuously-updated table format.
-func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
+func runTableMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -171,7 +166,7 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 	logging.InitColors(true)
 
 	// Initial fetch
-	stats, err := fetchStats(client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -185,7 +180,7 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 			fmt.Fprintln(os.Stdout, "\nMonitoring stopped.")
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
 			if fetchErr != nil {
 				// Connection lost, but don't exit immediately
 				fmt.Fprintf(os.Stdout, "\r[%s] Connection lost: %v\n", time.Now().Format("15:04:05"), fetchErr)
@@ -200,13 +195,13 @@ func runTableMonitor(ctx context.Context, client *ipc.Client, interval time.Dura
 }
 
 // runJSONMonitor outputs statistics as JSON Lines (one JSON object per line).
-func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
+func runJSONMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	// Initial fetch
-	stats, err := fetchStats(client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -218,7 +213,7 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
 			if fetchErr != nil {
 				// Output error as JSON
 				errObj := map[string]any{
@@ -236,7 +231,7 @@ func runJSONMonitor(ctx context.Context, client *ipc.Client, interval time.Durat
 }
 
 // runCSVMonitor outputs statistics as CSV.
-func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Duration) error {
+func runCSVMonitor(ctx context.Context, client *cliclient.Client, interval time.Duration) error {
 	var prevStats *monitorStats
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -264,7 +259,7 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 	writer.Flush()
 
 	// Initial fetch
-	stats, err := fetchStats(client, prevStats, interval)
+	stats, err := fetchStats(ctx, client, prevStats, interval)
 	if err != nil {
 		return fmt.Errorf("failed to fetch initial stats: %w", err)
 	}
@@ -276,7 +271,7 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			latestStats, fetchErr := fetchStats(client, prevStats, interval)
+			latestStats, fetchErr := fetchStats(ctx, client, prevStats, interval)
 			if fetchErr != nil {
 				// Skip this interval on error
 				continue
@@ -287,29 +282,38 @@ func runCSVMonitor(ctx context.Context, client *ipc.Client, interval time.Durati
 	}
 }
 
-// fetchStats fetches current statistics from the IPC server and calculates rates.
-func fetchStats(client *ipc.Client, prev *monitorStats, interval time.Duration) (*monitorStats, error) {
-	status, err := client.GetStatus()
+// fetchStats reads one sample from the daemon and derives the rates.
+//
+// The per-protocol counters were reported as zero for as long as this command
+// read the IPC transport, which carried no protocol breakdown. The daemon has
+// always counted them; /api/v1/stats serves them.
+func fetchStats(
+	ctx context.Context,
+	client *cliclient.Client,
+	prev *monitorStats,
+	interval time.Duration,
+) (*monitorStats, error) {
+	sample, err := client.Stats(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %w", err)
+		return nil, err
+	}
+	runtime, err := client.Runtime(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	// Safe conversion: ErrorsActive is an int from IPC status, bounded by protocol
-	var errorsActive uint64
-	if status.ErrorsActive >= 0 {
-		errorsActive = uint64(status.ErrorsActive)
+	stats := &monitorStats{
+		Time:      time.Now(),
+		PacketsRX: sample.Stack.PacketsReceived,
+		PacketsTX: sample.Stack.PacketsSent,
+		ARP:       sample.Stack.ARP(),
+		ICMP:      sample.Stack.ICMP(),
+		DNS:       sample.Stack.DNSQueries,
+		DHCP:      sample.Stack.DHCPRequests,
+		SNMP:      sample.Stack.SNMPQueries,
+		Errors:    sample.Stack.Errors,
+		Uptime:    runtime.Uptime,
 	}
-
-	stats := new(monitorStats)
-	stats.Time = time.Now()
-	stats.PacketsRX = status.PacketsRX
-	stats.PacketsTX = status.PacketsTX
-	stats.Errors = errorsActive
-	stats.Uptime = status.Uptime
-
-	// Note: The IPC StatusData currently only has PacketsRX, PacketsTX, ErrorsActive
-	// Protocol-specific stats (ARP, ICMP, DNS, etc.) would need to be added to the IPC protocol
-	// For now, we use placeholders that show 0 until the IPC protocol is extended
 
 	// Calculate rates if we have previous stats.
 	if prev == nil {
