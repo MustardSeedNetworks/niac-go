@@ -135,9 +135,28 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 		return handleDumpError(err, options.jsonOutput)
 	}
 
+	if len(packets) == 0 {
+		explainEmptyStream(ctx, client, options.jsonOutput)
+	}
 	outputPackets(packets, options.jsonOutput)
 
 	return nil
+}
+
+// explainEmptyStream says why nothing arrived when the reason is structural
+// rather than a quiet network: the daemon broadcasts a packet on its unscoped
+// stream only when one scenario owns the capture. With several running, their
+// frames are scoped to each session and this stream stays silent no matter how
+// busy they are - and "No packets captured" would read as a quiet lab.
+func explainEmptyStream(ctx context.Context, client *cliclient.Client, jsonOutput bool) {
+	sessions, err := client.Sessions(ctx)
+	if err != nil || len(sessions) < 2 || jsonOutput {
+		return
+	}
+	fmt.Fprintf(os.Stderr,
+		"Note: %d scenarios are running, and their packets are scoped to each session.\n"+
+			"The unscoped stream this command reads only carries frames when one scenario is up.\n",
+		len(sessions))
 }
 
 // dumpWindow bounds how long a dump waits for its packets, so a quiet
