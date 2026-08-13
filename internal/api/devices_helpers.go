@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
 func (s *Server) validateDeviceCreatePreconditions(
@@ -399,40 +400,45 @@ func parseIP(s string) (net.IP, error) {
 	return ip, nil
 }
 
+// parseDeviceFromYAML reads one device document the way the rest of the product
+// reads a config. It used to have its own reader that understood two fields, so
+// an operator who edited one line in the device editor got a device with its
+// addresses, agent and interfaces silently dropped - the read path serializes
+// all of them and the write path threw them away.
 func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	// SECURITY FIX #153: Validate YAML input before parsing
 	if validateErr := validateYAMLInput(yamlStr); validateErr != nil {
 		return nil, fmt.Errorf("YAML validation failed: %w", validateErr)
 	}
-
-	// This is a simplified parser - in production, use the full config loader
-	// For now, return a basic device
-	dev := &config.Device{
-		Name: hostname,
-	}
-
-	// Parse YAML into map for basic fields
-	var data map[string]any
-	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &data); unmarshalErr != nil {
+	var depthCheck map[string]any
+	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &depthCheck); unmarshalErr != nil {
 		return nil, fmt.Errorf("invalid YAML: %w", unmarshalErr)
 	}
-
 	// SECURITY FIX #153: Check YAML depth to prevent DoS attacks
-	if depthErr := checkYAMLDepth(data, 0); depthErr != nil {
+	if depthErr := checkYAMLDepth(depthCheck, 0); depthErr != nil {
 		return nil, depthErr
 	}
 
-	if t, ok := data["type"].(string); ok {
-		dev.Type = t
+	var authored converter.Device
+	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &authored); unmarshalErr != nil {
+		return nil, fmt.Errorf("invalid device: %w", unmarshalErr)
+	}
+	// The request names the device; that is what a rename and a clone rely on.
+	authored.Name = hostname
+
+	document, marshalErr := yaml.Marshal(converter.Config{Devices: []converter.Device{authored}})
+	if marshalErr != nil {
+		return nil, fmt.Errorf("re-encode device: %w", marshalErr)
+	}
+	loaded, loadErr := config.LoadYAMLBytes(document)
+	if loadErr != nil {
+		return nil, fmt.Errorf("invalid device: %w", loadErr)
+	}
+	if len(loaded.Devices) != 1 {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidDeviceDocument, hostname)
 	}
 
-	if mac, ok := data["mac"].(string); ok {
-		if parsed, parseErr := parseMAC(mac); parseErr == nil {
-			dev.MACAddress = parsed
-		}
-	}
-
-	return dev, nil
+	return &loaded.Devices[0], nil
 }
 
 func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.Device {
