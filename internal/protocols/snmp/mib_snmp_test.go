@@ -50,9 +50,11 @@ func TestSNMPGroupRejectsInvalidAuthTrapControl(t *testing.T) {
 	request := &gosnmp.SnmpPacket{Version: gosnmp.Version2c, PDUType: gosnmp.SetRequest, Variables: []gosnmp.SnmpPDU{{
 		Name: snmpGroup + ".30.0", Type: gosnmp.Integer, Value: 3,
 	}}}
+	// A failed SET echoes the request varbinds and reports the failure in
+	// error-status, which is what the protocol says and what a manager parses.
 	response, status, _ := agent.ProcessRequest(request)
-	if response[0].Type != gosnmp.NoSuchObject {
-		t.Fatalf("invalid SET response type = %v", response[0].Type)
+	if response[0].Name != snmpGroup+".30.0" {
+		t.Fatalf("invalid SET response varbind = %v", response[0].Name)
 	}
 	if status != gosnmp.BadValue {
 		t.Fatalf("invalid SET status = %v, want badValue", status)

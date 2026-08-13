@@ -11,6 +11,10 @@ var (
 	ErrEmptyOID            = errors.New("empty OID")
 	ErrInvalidOIDComponent = errors.New("invalid OID component")
 	ErrInvalidValue        = errors.New("invalid value")
+	// ErrNotWritable reports a manager trying to write an object this agent
+	// serves read-only, which is what a real device answers for almost all of
+	// its MIB.
+	ErrNotWritable = errors.New("object is not writable")
 )
 
 // Sentinel errors for addmib operations.
