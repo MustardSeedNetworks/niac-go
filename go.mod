@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/gopacket/gopacket v1.7.0
+	github.com/gopacket/gopacket v1.7.1
 	github.com/gosnmp/gosnmp v1.44.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kardianos/service v1.3.0
