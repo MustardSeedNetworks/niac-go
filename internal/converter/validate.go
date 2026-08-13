@@ -68,7 +68,32 @@ func formatFieldError(fe validator.FieldError) string {
 		return fmt.Sprintf("%s: %q is not one of [%s]", fe.Namespace(), fe.Value(), fe.Param())
 	case "gte", "lte", "gt", "lt":
 		return fmt.Sprintf("%s: %v fails rule %s=%s", fe.Namespace(), fe.Value(), fe.Tag(), fe.Param())
+	case "max", "min":
+		// A list cap is something an operator can act on, so say the limit and
+		// what they supplied rather than naming the rule that caught it.
+		return fmt.Sprintf("%s: %s %s entries, got %d",
+			fe.Namespace(), boundWord(fe.Tag()), fe.Param(), lengthOf(fe.Value()))
 	default:
 		return fmt.Sprintf("%s: failed rule %q", fe.Namespace(), fe.Tag())
 	}
+}
+
+func boundWord(tag string) string {
+	if tag == "min" {
+		return "at least"
+	}
+
+	return "at most"
+}
+
+// lengthOf reports the size of the value a length rule rejected, which for the
+// list and string rules this formatter serves is what the operator supplied.
+func lengthOf(value any) int {
+	rv := reflect.ValueOf(value)
+	if kind := rv.Kind(); kind == reflect.Slice || kind == reflect.Array ||
+		kind == reflect.Map || kind == reflect.String {
+		return rv.Len()
+	}
+
+	return 0
 }
