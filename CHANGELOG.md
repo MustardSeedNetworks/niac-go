@@ -5,6 +5,45 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.31](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.30...v0.94.31) (2026-08-14)
+
+
+### Features
+
+* **lab:** prove the six packs are actually isolated ([#1231](https://github.com/MustardSeedNetworks/niac-go/issues/1231)) ([54924c5](https://github.com/MustardSeedNetworks/niac-go/commit/54924c5ec0c4da0e4094e2dfd05a622a626454e4))
+* **linklive-acceptance:** make every report say what it compared ([#1229](https://github.com/MustardSeedNetworks/niac-go/issues/1229)) ([10bd4b4](https://github.com/MustardSeedNetworks/niac-go/commit/10bd4b4293640437efb10bef8e8bedf8a53b17ee))
+* **scenario:** distinct warehouse and manufacturing shapes, and the AP utilization rule ([#1222](https://github.com/MustardSeedNetworks/niac-go/issues/1222)) ([a9c45fb](https://github.com/MustardSeedNetworks/niac-go/commit/a9c45fbc42883ed7bef0d84bb3bc1aedc83c5158))
+* **scenario:** give campus, retail, and the provider POPs their own shape ([#1225](https://github.com/MustardSeedNetworks/niac-go/issues/1225)) ([f71c7bd](https://github.com/MustardSeedNetworks/niac-go/commit/f71c7bd7936bb53febc7f85fd007d1d2680816fc))
+* **scenario:** give the hospital demo something to find ([#1227](https://github.com/MustardSeedNetworks/niac-go/issues/1227)) ([d84ed4f](https://github.com/MustardSeedNetworks/niac-go/commit/d84ed4f3b3dcc59f3fc14d5e29df4e0776c79a3d))
+* **snmp:** answer SNMP queries over IPv6 ([#1244](https://github.com/MustardSeedNetworks/niac-go/issues/1244)) ([51acfcc](https://github.com/MustardSeedNetworks/niac-go/commit/51acfcc0a8fad24704619bd87c686aa542e90b26))
+
+
+### Bug Fixes
+
+* **acceptance:** expect the warning a pack deliberately authors ([#1228](https://github.com/MustardSeedNetworks/niac-go/issues/1228)) ([399f1be](https://github.com/MustardSeedNetworks/niac-go/commit/399f1be6d54da79ad9297d0f44c7febac5cb7d48))
+* **api:** stop the device editor throwing away the fields it just showed you ([#1235](https://github.com/MustardSeedNetworks/niac-go/issues/1235)) ([4d30ae8](https://github.com/MustardSeedNetworks/niac-go/commit/4d30ae803da04f8a226286d47ad9978dbacb3ca7))
+* **cli:** make niac monitor work, and report real numbers ([#1240](https://github.com/MustardSeedNetworks/niac-go/issues/1240)) ([4bc7316](https://github.com/MustardSeedNetworks/niac-go/commit/4bc73164da377f75f50358e0fc0f40fc7fd5eb73))
+* **cli:** reconnect the last five commands to the daemon ([#1241](https://github.com/MustardSeedNetworks/niac-go/issues/1241)) ([b3314ed](https://github.com/MustardSeedNetworks/niac-go/commit/b3314ed7eafe6219953d19250f50ff27b5321555))
+* **config:** refuse a second capture playback instead of deleting it ([#1236](https://github.com/MustardSeedNetworks/niac-go/issues/1236)) ([4dab243](https://github.com/MustardSeedNetworks/niac-go/commit/4dab243d00e51e158132c2ce095d6a124cb13c15))
+* **deps:** move the nanoid pin to 3.3.18 to clear GHSA-2v37-7h3g-55p8 again ([#1242](https://github.com/MustardSeedNetworks/niac-go/issues/1242)) ([db3876e](https://github.com/MustardSeedNetworks/niac-go/commit/db3876efaa406256c5b15e7822e92ac8df7f8a84))
+* **lab:** stop the isolation check reporting a leak that is not there ([#1234](https://github.com/MustardSeedNetworks/niac-go/issues/1234)) ([a4d6d49](https://github.com/MustardSeedNetworks/niac-go/commit/a4d6d49c05b8052c3bf28721e9afc46951e9f78f))
+* **library:** report bundle-installed content as bundle content ([#1243](https://github.com/MustardSeedNetworks/niac-go/issues/1243)) ([1e1a007](https://github.com/MustardSeedNetworks/niac-go/commit/1e1a007c396f595e4382559cea270d57cbcc2e1b))
+* **logs:** make --filter mean the same thing with and without --follow ([#1237](https://github.com/MustardSeedNetworks/niac-go/issues/1237)) ([1bc3aa2](https://github.com/MustardSeedNetworks/niac-go/commit/1bc3aa2df696f7f07690bd7cd68c9344e7104981))
+* **security:** bump Go to 1.26.6 for five reachable stdlib CVEs ([#1246](https://github.com/MustardSeedNetworks/niac-go/issues/1246)) ([421976b](https://github.com/MustardSeedNetworks/niac-go/commit/421976b2003d4208d3fcbf93427a1e17bca58285))
+* **snmp:** refuse a SET to an object the agent serves read-only ([#1233](https://github.com/MustardSeedNetworks/niac-go/issues/1233)) ([96cfd16](https://github.com/MustardSeedNetworks/niac-go/commit/96cfd1695e38569841aa67fb28136a16e52efecc))
+
+
+### Documentation
+
+* publish the scale baseline for the 531-device workload ([#1230](https://github.com/MustardSeedNetworks/niac-go/issues/1230)) ([1b5b9a9](https://github.com/MustardSeedNetworks/niac-go/commit/1b5b9a98d79070f0b1f3906e055800bd5bb8fb12))
+* record the hospital story evidence and the limit on its error half ([#1232](https://github.com/MustardSeedNetworks/niac-go/issues/1232)) ([159464f](https://github.com/MustardSeedNetworks/niac-go/commit/159464f61634cee101e5fdd593431240dc75c39b))
+* record the M4 acceptance results and the two capture preconditions ([#1226](https://github.com/MustardSeedNetworks/niac-go/issues/1226)) ([8f498c1](https://github.com/MustardSeedNetworks/niac-go/commit/8f498c1a2a1c77392c5509a08c20da4b2873de1a))
+
+
+### Continuous Integration
+
+* exempt bot PRs from the human change-PR body template ([#1245](https://github.com/MustardSeedNetworks/niac-go/issues/1245)) ([5ecf273](https://github.com/MustardSeedNetworks/niac-go/commit/5ecf2738d3efccdd1599af1499c82ae96e23725f))
+
 ## [0.94.30](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.29...v0.94.30) (2026-08-08)
 
 
