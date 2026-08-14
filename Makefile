@@ -20,7 +20,7 @@
 #
 # REQUIREMENTS
 # ------------
-#   - Go 1.26.5 (with CGO for libpcap)
+#   - Go 1.26.6 (with CGO for libpcap)
 #   - Node.js 26.5.0 and npm 12.0.1
 #   - libpcap-dev (Linux) or libpcap (macOS via Homebrew)
 #

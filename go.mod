@@ -1,6 +1,6 @@
 module github.com/MustardSeedNetworks/niac-go
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/MustardSeedNetworks/foundation v0.2.1
