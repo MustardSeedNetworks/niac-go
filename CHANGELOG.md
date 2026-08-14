@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.32](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.31...v0.94.32) (2026-08-14)
+
+
+### Bug Fixes
+
+* **icmpv6:** answer neighbor discovery, and answer it on the right VLAN ([#1247](https://github.com/MustardSeedNetworks/niac-go/issues/1247)) ([a6d7628](https://github.com/MustardSeedNetworks/niac-go/commit/a6d7628798c54e19e109ed0feb828cfd71060f93))
+
 ## [0.94.31](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.30...v0.94.31) (2026-08-14)
 
 
