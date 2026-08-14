@@ -712,8 +712,10 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(vlan int, srcIP, dstIP net.IP
 		DstIP:        dstIP,
 	}
 
-	// Set ICMPv6 payload
-	icmpv6.Payload = payload
+	// The body travels as its own layer: gopacket serializes only the 4-byte
+	// header from layers.ICMPv6 and ignores its Payload field, which sent every
+	// advertisement out empty -- parseable as NDP, but telling the host nothing.
+	body := gopacket.Payload(payload)
 
 	// An ICMPv6 checksum covers the IPv6 pseudo-header, so serialization fails
 	// outright without this -- every reply this function built was discarded
@@ -729,7 +731,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(vlan int, srcIP, dstIP net.IP
 		ComputeChecksums: true,
 	}
 
-	err := gopacket.SerializeLayers(buf, opts, eth, ipv6, icmpv6)
+	err := gopacket.SerializeLayers(buf, opts, eth, ipv6, icmpv6, body)
 	if err != nil {
 		return fmt.Errorf("failed to serialize ICMPv6 packet: %w", err)
 	}
