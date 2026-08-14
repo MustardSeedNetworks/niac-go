@@ -243,6 +243,7 @@ func (h *ICMPv6Handler) sendEchoReply(
 	}
 
 	err := h.sendICMPv6PacketWithDevice(
+		pkt.VLAN,
 		ipv6.DstIP,
 		ipv6.SrcIP,
 		device.MACAddress,
@@ -295,29 +296,25 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 		return
 	}
 
-	// Parse NS message: Type(1) | Code(1) | Checksum(2) | Reserved(4) | Target Address(16) | Options...
-	appLayer := packet.ApplicationLayer()
-	if appLayer == nil {
-		return
-	}
-	data := appLayer.Payload()
-	if len(data) < icmpv6NSMinSize {
+	// gopacket decodes a solicitation into its own layer, so the message is not
+	// application payload -- reading it as such found nothing and the device
+	// never answered, on any VLAN.
+	ns, ok := packet.Layer(layers.LayerTypeICMPv6NeighborSolicitation).(*layers.ICMPv6NeighborSolicitation)
+	if !ok {
 		if h.debugLevel.Load() >= int32(DebugLevelInfo) {
-			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS too short sn=%d\n", pkt.SerialNumber)
+			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS not decodable sn=%d\n", pkt.SerialNumber)
 		}
 
 		return
 	}
-
-	// Extract target IPv6 address (bytes 4-20)
-	targetIP := net.IP(data[4:20])
+	targetIP := ns.TargetAddress
 
 	if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: NS for %s from %s sn=%d\n", targetIP, ipv6.SrcIP, pkt.SerialNumber)
 	}
 
 	// Find device with target IPv6
-	devices := h.stack.devices.GetByIPv6(targetIP)
+	devices := h.stack.devicesFor(pkt.VLAN).GetByIPv6(targetIP)
 	if len(devices) == 0 {
 		if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 			_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: No device for target %s sn=%d\n", targetIP, pkt.SerialNumber)
@@ -328,7 +325,7 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 
 	// Send NA for each matching device
 	for _, device := range devices {
-		err := h.sendNeighborAdvertisement(device, ipv6.SrcIP, eth.SrcMAC, targetIP)
+		err := h.sendNeighborAdvertisement(pkt.VLAN, device, ipv6.SrcIP, eth.SrcMAC, targetIP)
 		if err != nil {
 			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Error sending NA sn=%d: %v\n", pkt.SerialNumber, err)
@@ -350,12 +347,14 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 }
 
 // sendNeighborAdvertisement sends a Neighbor Advertisement response.
-func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP net.IP,
+func (h *ICMPv6Handler) sendNeighborAdvertisement(vlan int, device *config.Device, dstIP net.IP,
 	dstMAC net.HardwareAddr, targetIP net.IP,
 ) error {
-	// Require a source IPv6 and MAC on the device.
-	srcIP := firstIPv6Address(device)
-	if srcIP == nil || len(device.MACAddress) == 0 {
+	// The solicited address is the source: a host discards an advertisement
+	// that names any other, which is what makes link-local resolvable on a
+	// device that also holds a global address.
+	srcIP := targetIP
+	if len(device.MACAddress) == 0 {
 		return ErrDeviceMissingMACOrIP
 	}
 
@@ -401,6 +400,7 @@ func (h *ICMPv6Handler) sendNeighborAdvertisement(device *config.Device, dstIP n
 
 	// Send packet
 	return h.sendICMPv6Packet(
+		vlan,
 		srcIP,
 		dstIP,
 		device.MACAddress,
@@ -428,7 +428,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 		_, _ = fmt.Fprintf(os.Stdout, "ICMPv6: Router Solicitation from %s sn=%d\n", ipv6.SrcIP, pkt.SerialNumber)
 	}
 
-	for _, device := range h.stack.devices.GetAll() {
+	for _, device := range h.stack.devicesFor(pkt.VLAN).GetAll() {
 		if !deviceCanAdvertiseIPv6(device) {
 			continue
 		}
@@ -437,7 +437,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 		if srcIP == nil {
 			continue
 		}
-		err := h.sendRouterAdvertisement(device, srcIP, ipv6.SrcIP, dstMAC)
+		err := h.sendRouterAdvertisement(pkt.VLAN, device, srcIP, ipv6.SrcIP, dstMAC)
 		if err != nil {
 			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				_, _ = fmt.Fprintf(
@@ -464,6 +464,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 }
 
 func (h *ICMPv6Handler) sendRouterAdvertisement(
+	vlan int,
 	device *config.Device,
 	srcIP, dstIP net.IP,
 	dstMAC net.HardwareAddr,
@@ -474,6 +475,7 @@ func (h *ICMPv6Handler) sendRouterAdvertisement(
 	}
 
 	return h.sendICMPv6PacketWithDevice(
+		vlan,
 		srcIP,
 		dstIP,
 		device.MACAddress,
@@ -661,14 +663,14 @@ func appendDefaultPrefix(options []byte, srcIP net.IP) []byte {
 }
 
 // sendICMPv6Packet sends an ICMPv6 packet.
-func (h *ICMPv6Handler) sendICMPv6Packet(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
+func (h *ICMPv6Handler) sendICMPv6Packet(vlan int, srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
 	icmpv6 *layers.ICMPv6, payload []byte,
 ) error {
-	return h.sendICMPv6PacketWithDevice(srcIP, dstIP, srcMAC, dstMAC, icmpv6, payload, nil)
+	return h.sendICMPv6PacketWithDevice(vlan, srcIP, dstIP, srcMAC, dstMAC, icmpv6, payload, nil)
 }
 
 // sendICMPv6PacketWithDevice sends an ICMPv6 packet with device config.
-func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
+func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(vlan int, srcIP, dstIP net.IP, srcMAC, dstMAC net.HardwareAddr,
 	icmpv6 *layers.ICMPv6, payload []byte, device *config.Device,
 ) error {
 	// Determine hop limit based on ICMPv6 type
@@ -713,6 +715,13 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	// Set ICMPv6 payload
 	icmpv6.Payload = payload
 
+	// An ICMPv6 checksum covers the IPv6 pseudo-header, so serialization fails
+	// outright without this -- every reply this function built was discarded
+	// with "checksum cannot be computed without network layer".
+	if err := icmpv6.SetNetworkLayerForChecksum(ipv6); err != nil {
+		return fmt.Errorf("failed to bind ICMPv6 checksum to IPv6 header: %w", err)
+	}
+
 	// Serialize packet
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
@@ -731,7 +740,7 @@ func (h *ICMPv6Handler) sendICMPv6PacketWithDevice(srcIP, dstIP net.IP, srcMAC, 
 	}
 
 	// Send the packet
-	return h.stack.SendRawPacket(buf.Bytes())
+	return h.stack.SendRawPacketVLAN(buf.Bytes(), vlan)
 }
 
 // getTypeName returns a human-readable name for an ICMPv6 type.
