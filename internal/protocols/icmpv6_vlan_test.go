@@ -78,6 +78,34 @@ func TestNeighborAdvertisementAnswersForTheAddressSolicited(t *testing.T) {
 	}
 }
 
+// TestNeighborAdvertisementCarriesItsBody: the advertisement's target address
+// and link-layer option live in the message body. A reply carrying only the
+// 4-byte ICMPv6 header parses as an advertisement and tells the host nothing,
+// so the neighbour entry stays unresolved and the address is unusable.
+func TestNeighborAdvertisementCarriesItsBody(t *testing.T) {
+	stack, device := ndpSegmentStack(t)
+	target := net.ParseIP("fd00:6a::21")
+
+	solicit(t, stack, device, target)
+
+	select {
+	case pkt := <-stack.sendQueue:
+		reply := gopacket.NewPacket(pkt.Buffer[:pkt.Length], layers.LayerTypeEthernet, gopacket.Default)
+		na, ok := reply.Layer(layers.LayerTypeICMPv6NeighborAdvertisement).(*layers.ICMPv6NeighborAdvertisement)
+		if !ok {
+			t.Fatal("advertisement body missing: the reply carried only an ICMPv6 header")
+		}
+		if !na.TargetAddress.Equal(target) {
+			t.Errorf("advertisement target = %s, want %s", na.TargetAddress, target)
+		}
+		if len(na.Options) == 0 {
+			t.Error("advertisement carried no target link-layer address option")
+		}
+	default:
+		t.Fatal("no Neighbor Advertisement queued")
+	}
+}
+
 // ndpSegmentStack builds a stack in segment mode -- the shape every scenario
 // pack runs in -- holding one device with a global and a link-local address.
 func ndpSegmentStack(t *testing.T) (*Stack, *config.Device) {
