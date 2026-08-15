@@ -1,0 +1,51 @@
+# Exact, reviewable exceptions for text that is not current product copy.
+# Format: git path pattern | why the immutable or developer-only text is exempt
+
+# Immutable history and legal source text.
+CHANGELOG.md | release-please generated immutable release history
+LICENSE | unmodified proprietary legal source text
+docs/archive/** | archived reports retained as immutable history
+
+# Imported immutable reference data.
+internal/oui/data/oui.txt | IEEE vendor registry; vendor names are not NIAC-authored copy
+
+# File-format and protocol terminology. "magic" here is the standard name for
+# a format's identifying byte sequence (snoop/pcap/zip magic), not marketing
+# copy, and standard terms are never renamed.
+internal/api/capture/snoop.go | snoop file-format magic bytes
+internal/api/capture/validation.go | capture file-format magic bytes
+internal/protocols/snmp/errors.go | file-format magic bytes
+internal/protocols/snmp/mibzip.go | zip archive magic bytes
+internal/protocols/udp.go | protocol magic-number constant
+
+# Developer instructions, tests, generated locks, and tool configuration.
+AGENTS.md | developer-only agent instructions
+**/AGENTS.md | developer-only agent instructions
+CODE_INDEX.md | developer-only code index
+CONTRIBUTING.md | developer-only contributor instructions naming dev tooling
+.github/** | developer CI and bot configuration
+docs/adr/** | architecture decision records are developer-facing design history
+.ignore | developer-tool path rules
+.serena/** | developer agent tooling
+.gitignore | developer-tool path rules
+.markdownlint-cli2.jsonc | developer-tool path rules
+.markdownlintignore | developer-tool path rules
+codecov.yml | developer-tool path rules
+scripts/i18n/banned-vocab.txt | policy term source
+scripts/i18n/** | developer i18n tooling
+scripts/test-check-banned-vocabulary.py | checker fixture self-tests
+**/*_test.go | developer test fixtures and protocol terminology
+ui/**/*.test.ts | developer test fixtures
+ui/**/*.test.tsx | developer test fixtures
+ui/e2e/** | developer end-to-end test fixtures
+package-lock.json | generated dependency lockfile
+ui/package-lock.json | generated dependency lockfile
+.golangci.yml | developer linter rule identifiers
+.clang-tidy | developer linter rule identifiers
+ui/vite.config.ts | developer-tool path rules
+ui/vitest.config.ts | developer-tool path rules
+internal/api/decode.go | capture file-format magic bytes
+internal/api/pcap.go | pcap file-format magic bytes
+internal/api/pcap_validation.go | pcap file-format magic bytes
+internal/capture/playback.go | pcap/pcapng file-format magic bytes
+scripts/banned-vocabulary-exclusions.txt | policy exclusion list; its reasons must name the terms
