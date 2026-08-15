@@ -45,6 +45,7 @@ jobs:
   changes:
     name: Changed paths
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
@@ -118,6 +119,7 @@ jobs:
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
     steps:
@@ -183,8 +185,23 @@ jobs:
       - name: Filename-policy gate — no monolith naming outside internal/api
         run: ./scripts/check-filename-policy.sh
 
+      - name: Banned-vocabulary gate (strategy reset, CLAUDE.md)
+        # Ported from seed, which was the only repo enforcing it. "magic" in
+        # the capture/pcap/snoop parsers is file-format terminology, not
+        # marketing copy, and the IEEE OUI registry carries vendor names the
+        # policy would otherwise flag; both are exact, reviewable exceptions
+        # in scripts/banned-vocabulary-exclusions.txt.
+        run: |
+          python3 scripts/test-check-banned-vocabulary.py
+          python3 scripts/check-banned-vocabulary.py
+
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        # Plain run: fast feedback plus the coverage profile. The race
+        # detector runs in its own `race` job so a race-detector crash (see
+        # the Go GC segfault flake seen on stem) cannot take out the entire
+        # test signal, and so a non-race failure is distinguishable at a
+        # glance. This matches seed and stem.
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: Check coverage threshold
         run: |
@@ -215,12 +232,48 @@ jobs:
           flags: backend
           fail_ci_if_error: false
 
+  race:
+    name: Backend (race detector)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Install libpcap-dev
+        # packages.microsoft.com intermittently serves an unsigned/invalid
+        # InRelease that aborts `apt-get update` for the whole runner, even
+        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
+        # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
+        # so a broken third-party mirror can't red the job, then retry the
+        # install with backoff for genuinely transient hiccups.
+        run: |
+          sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          for i in 1 2 3; do
+            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+              exit 0
+            fi
+            echo "apt attempt $i failed; retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          echo "::error::libpcap-dev install failed after 3 attempts"
+          exit 1
+
+
+      - name: Run tests with race detector
+        run: go test -race ./...
+
   # ===========================================================================
   # Frontend (TypeScript)
   # ===========================================================================
   frontend:
     name: Frontend (TypeScript)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
     defaults:
@@ -276,6 +329,7 @@ jobs:
   security:
     name: Security Scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Always runs — security checks are non-negotiable on every PR.
     permissions:
       # Job-level `permissions:` REPLACES the workflow-level block entirely
@@ -435,6 +489,7 @@ jobs:
   c-lint:
     name: C Lint (C23)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: changes
     if: needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true'
     steps:
@@ -465,10 +520,10 @@ jobs:
         id: check-c
         run: |
           if find . -name '*.c' -o -name '*.h' 2>/dev/null | grep -v node_modules | grep -q .; then
-            echo "has_c=true" >> $GITHUB_OUTPUT
+            echo "has_c=true" >> "$GITHUB_OUTPUT"
             echo "Found C source files"
           else
-            echo "has_c=false" >> $GITHUB_OUTPUT
+            echo "has_c=false" >> "$GITHUB_OUTPUT"
             echo "No C source files found - C23 linting ready for when C code is added"
           fi
 
@@ -536,6 +591,7 @@ jobs:
   quality:
     name: Quality Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.hooks == 'true'
     steps:
@@ -609,12 +665,49 @@ jobs:
   # ===========================================================================
   # Internationalization (i18n) Checks
   # ===========================================================================
+  # Workflow Linting
+  # ===========================================================================
+  # Static analysis of the workflows themselves. Kept out of `quality` so it
+  # runs in parallel and only when workflow files actually change.
+  #   actionlint — syntax, expression and shell errors inside run: blocks.
+  #                It caught a duplicated `with:` key that PyYAML accepts
+  #                silently by keeping the last occurrence.
+  #
+  # zizmor (Actions security scanner) is NOT wired in yet: it currently reports
+  # 76-88 findings per repo, 10-13 of them high (pull_request_target triggers,
+  # workflow-level write permissions, release-please App-token use). Those need
+  # real review — narrowing them carelessly breaks release automation — so they
+  # are tracked as their own security pass rather than bolted on here as a
+  # continue-on-error step that would enforce nothing.
+  workflow-lint:
+    name: Workflow Lint (actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Run actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          # SC2129 is a pure style preference about grouping `>>` redirects in
+          # step summaries; the ungrouped form stays readable and diffs one
+          # line at a time. Every correctness-level rule stays enabled.
+          actionlint -ignore 'SC2129' -color
+
+
+  # ===========================================================================
   # Validates the translation locale files in internal/i18n/locales/ against
   # the cross-repo conventions in msn-docs-internal/05-Engineering/. Uses the
   # shared script in scripts/i18n/, byte-identical to seed and stem.
   i18n:
     name: i18n Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: changes
     if: |
       needs.changes.outputs.frontend == 'true'
@@ -650,25 +743,49 @@ jobs:
   docs:
     name: Documentation Quality
     runs-on: ubuntu-latest
-    # Always runs — cheap (runs in seconds) and applies to every PR.
+    timeout-minutes: 10
+    # External link checking is NOT here: it walked every URL in every .md file
+    # and measured ~6 min — the longest job in this workflow and, on a
+    # backend-only change, the entire critical path. It also failed on
+    # third-party link rot rather than on the change under review, which is why
+    # it was pinned to continue-on-error and enforced nothing.
+    # It now runs on a schedule: .github/workflows/docs-link-check.yml
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Check markdown links
-        uses: gaurav-nelson/github-action-markdown-link-check@5c5dfc0ac2e225883c0e5f03a85311ec2830d368 # v1
-        continue-on-error: true
         with:
-          use-quiet-mode: "yes"
+          # Needed to diff against the base ref for changed-file scoping.
+          fetch-depth: 0
 
-      - name: Lint markdown files
+      - name: Collect changed markdown files
+        id: changed-md
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_SHA}" ] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only --diff-filter=ACMR "${BASE_SHA}" HEAD -- '*.md')
+          else
+            files=$(git ls-files '*.md')
+          fi
+          files=$(printf '%s\n' "${files}" | grep -vE '^(node_modules|build|dist|coverage)/' | grep -v 'CHANGELOG.md$' || true)
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          if [ -z "${files}" ]; then echo "empty=true" >> "$GITHUB_OUTPUT"; fi
+
+      # Blocking, but scoped to the files this change touches. The repo carries
+      # ~1.2k pre-existing violations of its own markdownlint config; gating the
+      # full tree would fail every PR, and gating nothing (the previous
+      # continue-on-error) enforced nothing. Scoping ratchets the debt down as
+      # files are touched, matching the file-size gate's baseline approach.
+      - name: Lint changed markdown files
+        if: steps.changed-md.outputs.empty != 'true'
         uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
-        continue-on-error: true
         with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
-            !**/dist/**
+          globs: ${{ steps.changed-md.outputs.files }}
 
   # ===========================================================================
   # Build
@@ -677,6 +794,7 @@ jobs:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
     needs: [changes, backend, frontend]
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     # gopacket/pcap requires CGO + libpcap. CI verifies a native amd64 build
     # only — release.yml handles the arm64 cross-compile (gcc-aarch64-linux-gnu
     # + libpcap-dev:arm64) when actually publishing artifacts.
@@ -748,6 +866,33 @@ jobs:
 
       - name: Verify binary
         run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
+
+      - name: Verify UIBuildHash embedded (Universal Build Contract)
+        # seed and stem both verify this; niac injected the ldflag but never
+        # checked it landed. Without the check a build that misses the flag
+        # ships happily and /__version returns uiBuildHash="unknown" — exactly
+        # the silent contract violation Build Contract rule #6 exists to catch.
+        # Static check: the binary must contain the md5 of the embedded UI
+        # assets. Cheaper and more reliable than booting the server in CI.
+        run: |
+          if [ -z "$(find internal/api/ui -mindepth 1 ! -name '.gitkeep' -print -quit 2>/dev/null)" ]; then
+            echo "::error::internal/api/ui is empty — frontend-dist artifact missing?"
+            exit 1
+          fi
+          EXPECTED=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
+          if [ "${#EXPECTED}" -ne 32 ]; then
+            echo "::error::Computed UI_BUILD_HASH is not 32 chars: '${EXPECTED}'"
+            exit 1
+          fi
+          echo "Expected UIBuildHash: ${EXPECTED}"
+          BIN="niac-${{ matrix.os }}-${{ matrix.arch }}"
+          if strings "${BIN}" | grep -qF "${EXPECTED}"; then
+            echo "  ✓ ${BIN}: UIBuildHash embedded correctly"
+          else
+            echo "::error::${BIN} does not contain UIBuildHash ${EXPECTED}"
+            echo "  → Universal Build Contract violated. Check the -X ...UIBuildHash=... ldflag in the 'Build binary' step."
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -951,7 +1096,7 @@ jobs:
           # Backend is HTTPS-only since #663. Self-signed cert auto-generated.
           # Use canonical TLS port 8445.
           nohup ./niac daemon --listen 127.0.0.1:8445 > server.log 2>&1 &
-          for i in {1..30}; do
+          for _ in {1..30}; do
             if curl -skf https://localhost:8445/__version 2>/dev/null; then
               echo "Server ready"
               exit 0
@@ -962,7 +1107,7 @@ jobs:
           exit 1
 
       - name: Run Lighthouse
-        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12.6.2
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
           # configPath drives all collect/assert/upload settings via
           # .lighthouserc.json. That file includes
@@ -997,17 +1142,20 @@ jobs:
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     # Browser-engine E2E is release-blocking. Lighthouse remains independent:
     # it measures performance and accessibility rather than functional browser
     # compatibility, and its thresholds are enforced by its own job.
     needs:
       - changes
       - backend
+      - race
       - frontend
       - security
       - semgrep
       - c-lint
       - quality
+      - workflow-lint
       - docs
       - build
       - e2e

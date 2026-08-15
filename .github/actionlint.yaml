@@ -1,0 +1,8 @@
+# actionlint configuration.
+#
+# GitHub added Windows-on-Arm hosted runners after actionlint's built-in label
+# list was cut, so `windows-11-arm` is reported as unknown. It is a real
+# GitHub-hosted label, used by the Windows arm64 release build.
+self-hosted-runner:
+  labels:
+    - windows-11-arm
