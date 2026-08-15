@@ -89,7 +89,7 @@ into `/__version`.
 
 The UI uses:
 
-- TypeScript with strict checking through `tsgo`;
+- TypeScript with strict checking through `tsc`;
 - Biome for linting and formatting;
 - Vitest and Testing Library for component behavior;
 - Playwright for critical browser journeys;

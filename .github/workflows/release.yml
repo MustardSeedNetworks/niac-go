@@ -305,7 +305,7 @@ jobs:
       # land. Kept fresh so the image's baked Multi-Arch:same libs
       # (libsystemd0, …) stay aligned with ubuntu-ports — a stale image
       # drifts and breaks the arm64 libpcap install.
-      image: goreleaser/goreleaser-cross:v1.26.4-v2.17.0
+      image: goreleaser/goreleaser-cross:v1.26.5-v2.17.1
     outputs:
       # base64-encoded SHA-256 hashes of all release artifacts, formatted
       # for slsa-github-generator's base64-subjects input. Set only on a
@@ -588,7 +588,7 @@ jobs:
       # present at the exact version the core job uses. No cross toolchain is
       # needed (this is a data-only meta package), but version parity beats
       # installing a second goreleaser.
-      image: goreleaser/goreleaser-cross:v1.26.4-v2.17.0
+      image: goreleaser/goreleaser-cross:v1.26.5-v2.17.1
     env:
       # Job-level env CAN reference secrets; step-level `if` CAN reference the
       # env context. This indirection is required because a job-level `if:`

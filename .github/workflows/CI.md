@@ -16,7 +16,7 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `changes`       | Path filtering           | Decides which downstream jobs run                                      |
 | `backend`       | Go checks                | lint, vet, staticcheck, fmt, tests, coverage floor                     |
 | `race`          | Go race detector         | `go test -race`, split from `backend` so it fails distinctly           |
-| `frontend`      | React/TS checks          | tsgo typecheck, Biome, Vite build, Vitest, Storybook build             |
+| `frontend`      | React/TS checks          | tsc typecheck, Biome, Vite build, Vitest, Storybook build             |
 | `c-lint`        | C lint (C23)             | clang-format, clang-tidy                                               |
 | `security`      | Security scans           | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy             |
 | `semgrep`       | SAST                     | Semgrep rules                                                          |
