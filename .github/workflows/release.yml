@@ -59,9 +59,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write # cosign keyless OIDC
-  attestations: write
+  contents: read
 
 env:
   NPCAP_SDK_VERSION: "1.16"
@@ -88,8 +86,11 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "26.5.0"
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+          # No npm cache on the release path. This job's output is published
+          # and attested, so a poisoned cache entry restored from a branch
+          # would land in a signed artifact. CI keeps its cache; releases
+          # always resolve from the registry. (zizmor cache-poisoning)
+          cache: false
 
       - name: Set up npm
         run: npm install --global npm@12.0.1
@@ -297,6 +298,9 @@ jobs:
     if: ${{ !inputs.provenance_only }}
     runs-on: ubuntu-latest
     needs: [build-ui, build-windows, niac-content]
+    permissions:
+      contents: write
+      id-token: write # cosign keyless OIDC
     container:
       # Docker Hub tag scheme: <go-version>-<goreleaser-version>. Pin so
       # behaviour stays reproducible; bump via dependabot when newer revs
