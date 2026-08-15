@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -144,7 +144,7 @@ func (m *model) renderDeviceConfig() string {
 }
 
 // handleDeviceConfigInput handles keyboard input in device config panel.
-func (m *model) handleDeviceConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleDeviceConfigInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showDeviceConfig = false
