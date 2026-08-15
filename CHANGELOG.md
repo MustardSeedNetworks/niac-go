@@ -5,6 +5,29 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.34](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.33...v0.94.34) (2026-08-15)
+
+
+### Bug Fixes
+
+* **ci:** exempt bot PRs from the required PR-body check ([#1258](https://github.com/MustardSeedNetworks/niac-go/issues/1258)) ([40572fc](https://github.com/MustardSeedNetworks/niac-go/commit/40572fc757c942c52a253df7e39b684b06a0f699))
+* **release:** stop requesting an App permission that is not granted ([#1275](https://github.com/MustardSeedNetworks/niac-go/issues/1275)) ([04be703](https://github.com/MustardSeedNetworks/niac-go/commit/04be7038d98e91927c43ff17bf294d2578ae98ff))
+
+
+### Continuous Integration
+
+* cache Playwright browsers and document the CI pipeline ([#1254](https://github.com/MustardSeedNetworks/niac-go/issues/1254)) ([3d0ac13](https://github.com/MustardSeedNetworks/niac-go/commit/3d0ac13b4fec881eae778c5f73c82fe0fcdc6842))
+* pin Node via the setup-node composite everywhere ([#1256](https://github.com/MustardSeedNetworks/niac-go/issues/1256)) ([ef54556](https://github.com/MustardSeedNetworks/niac-go/commit/ef54556829a760b0e1a8ff60c3fd4f1dea2e0f6e))
+* scope workflow permissions to jobs and narrow the release-please App token ([#1253](https://github.com/MustardSeedNetworks/niac-go/issues/1253)) ([1b684dd](https://github.com/MustardSeedNetworks/niac-go/commit/1b684dd183d768912cea92ba1e96d64a28e2d933))
+* split race tests, verify UIBuildHash, add missing gates ([#1251](https://github.com/MustardSeedNetworks/niac-go/issues/1251)) ([97c8a8c](https://github.com/MustardSeedNetworks/niac-go/commit/97c8a8c7f8c125e3f68b4fcd1154f1014cffb7ab))
+
+
+### Miscellaneous
+
+* **deps:** bump remaining outdated dependencies to latest ([#1274](https://github.com/MustardSeedNetworks/niac-go/issues/1274)) ([63c9832](https://github.com/MustardSeedNetworks/niac-go/commit/63c983213ad4ba9cc211ea0a8a6ae0d1128b0b66)), closes [#1273](https://github.com/MustardSeedNetworks/niac-go/issues/1273)
+* **deps:** take dependencies to latest and adopt TypeScript 7 ([#1270](https://github.com/MustardSeedNetworks/niac-go/issues/1270)) ([9fc602d](https://github.com/MustardSeedNetworks/niac-go/commit/9fc602d41f5a10b14dcca3c55f69a9c5971a1098))
+* **deps:** update dependency lint-staged to v17.3.0 ([#1271](https://github.com/MustardSeedNetworks/niac-go/issues/1271)) ([5aa26cc](https://github.com/MustardSeedNetworks/niac-go/commit/5aa26cc5a280fdbfedec94ace71d432e54f68834))
+
 ## [0.94.33](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.32...v0.94.33) (2026-08-14)
 
 
