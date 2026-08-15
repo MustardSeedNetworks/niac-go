@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js",
-    "build": "tsgo --build && node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js build",
+    "build": "tsc --build && node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js build",
     "build:analyze": "ANALYZE=true node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js build",
     "typecheck": "tsc --build --noEmit",
     "preview": "node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js preview",
