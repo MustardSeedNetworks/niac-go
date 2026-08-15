@@ -975,9 +975,23 @@ jobs:
               -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
             -o niac ./cmd/niac
 
-      - name: Install Playwright browsers
+      - name: Install Playwright OS dependencies
         working-directory: ui
-        run: npx playwright install --with-deps chromium webkit firefox
+        run: npx playwright install-deps chromium webkit firefox
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: ui
+        run: npx playwright install chromium webkit firefox
 
       - name: Start backend server
         env:
