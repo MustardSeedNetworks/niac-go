@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // handleExportInput handles keyboard input during export panel.
-func (m *model) handleExportInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleExportInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showExport = false

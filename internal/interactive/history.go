@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // renderHistory renders the run history viewer panel.
@@ -71,7 +71,7 @@ func (m *model) renderHistory() string {
 }
 
 // handleHistoryInput handles keyboard input in history viewer.
-func (m *model) handleHistoryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleHistoryInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 	if key == keyEsc {
 		m.showHistory = false

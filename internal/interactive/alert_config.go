@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // handleAlertConfigInput handles keyboard input in alert config panel.
-func (m *model) handleAlertConfigInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleAlertConfigInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	alertTypes := []string{"CPU", "Memory", "Disk", "PacketLoss", "Latency"}
 
 	switch msg.String() {

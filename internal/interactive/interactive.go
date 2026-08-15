@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
@@ -15,10 +15,7 @@ import (
 )
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(
-		tickCmd(),
-		tea.EnterAltScreen,
-	)
+	return tickCmd()
 }
 
 func tickCmd() tea.Cmd {
@@ -46,7 +43,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleReloadMsg(msg)
 	case editorFinishedMsg:
 		return m.handleEditorFinishedMsg(msg)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyMsg(msg)
 	case tickMsg:
 		m.uptime = time.Since(m.startTime)
@@ -79,7 +76,7 @@ func (m *model) refreshStats() {
 }
 
 // View renders the TUI display to the terminal.
-func (m *model) View() string {
+func (m *model) View() tea.View {
 	var s strings.Builder
 
 	// Title
@@ -128,7 +125,10 @@ func (m *model) View() string {
 	// Controls
 	m.renderControls(&s)
 
-	return s.String()
+	v := tea.NewView(s.String())
+	v.AltScreen = true
+
+	return v
 }
 
 // renderOverlays renders all overlay panels and returns the combined output.
@@ -335,7 +335,7 @@ func Run(options Options) error {
 	m.addDebugLog(fmt.Sprintf("Simulating %d device(s)", len(options.Config.Devices)))
 
 	// Start TUI
-	p := tea.NewProgram(&m, tea.WithAltScreen())
+	p := tea.NewProgram(&m)
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("error running program: %w", err)
 	}
