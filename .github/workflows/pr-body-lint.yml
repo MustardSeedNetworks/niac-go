@@ -14,17 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR body
-        # Bot PRs carry an auto-generated body -- a release-please changelog, or
-        # dependabot's upstream release notes -- not the human change-PR
-        # template. Neither can name a linked issue or write testing evidence,
-        # so the gate is unsatisfiable for them by construction, and holding a
-        # dependency bump behind it just parks security updates. Their
-        # integrity comes from the CI Complete gate, which still runs.
+        # Bot PRs (release-please, Renovate, Dependabot) carry auto-generated
+        # bodies, not the human change-PR template — no single linked issue and
+        # no code delta to describe. Validating them against it is a category
+        # error, and because this is a *required* check it does not just annoy:
+        # it silently parks every dependency update instead of merging it.
+        # Their integrity comes from the CI Complete gate, which still runs.
         if: >-
           github.event_name == 'pull_request'
-          && !startsWith(github.head_ref, 'release-please--')
-          && github.event.pull_request.user.login != 'dependabot[bot]'
-          && github.event.pull_request.user.login != 'renovate[bot]'
+          && github.event.pull_request.user.type != 'Bot'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
