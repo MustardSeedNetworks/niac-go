@@ -84,7 +84,7 @@
     "i18next-cli": "1.67.3",
     "jsdom": "30.0.1",
     "playwright": "1.62.0",
-    "postcss": "8.5.25",
+    "postcss": "8.5.26",
     "rollup-plugin-visualizer": "7.0.1",
     "storybook": "10.5.5",
     "vite": "8.2.0",
