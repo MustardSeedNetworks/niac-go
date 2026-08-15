@@ -22,22 +22,28 @@ cat >"$TEST_REPO/bin/gitleaks" <<'EOF'
 exit 0
 EOF
 
-cat >"$TEST_REPO/bin/node" <<'EOF'
+# Derived from .nvmrc and package.json rather than hardcoded, the same way
+# .husky/check-frontend derives them. A hardcoded stub silently breaks this
+# test on every Node/npm bump.
+EXPECTED_NODE=$(cat "$REPO_ROOT/.nvmrc")
+EXPECTED_NPM=$(sed -n 's/.*"packageManager": "npm@\([^"]*\)".*/\1/p' "$REPO_ROOT/package.json")
+
+cat >"$TEST_REPO/bin/node" <<EOF
 #!/usr/bin/env sh
-if [ "${1:-}" = "--version" ]; then
-  echo "v26.5.0"
+if [ "\${1:-}" = "--version" ]; then
+  echo "v$EXPECTED_NODE"
   exit 0
 fi
 exit 0
 EOF
 
-cat >"$TEST_REPO/bin/npm" <<'EOF'
+cat >"$TEST_REPO/bin/npm" <<EOF
 #!/usr/bin/env sh
-if [ "${1:-}" = "--version" ]; then
-  echo "12.0.1"
+if [ "\${1:-}" = "--version" ]; then
+  echo "$EXPECTED_NPM"
   exit 0
 fi
-if [ "${1:-}" = "run" ] && [ "${2:-}" = "typecheck" ]; then
+if [ "\${1:-}" = "run" ] && [ "\${2:-}" = "typecheck" ]; then
   exit 0
 fi
 echo "simulated frontend test startup failure" >&2
@@ -79,10 +85,12 @@ fi
 
 printf '%s\n' "$OUTPUT" | grep -q "Frontend tests failed"
 
+# A version that cannot ever coincide with the real pin, so this stays a
+# genuine mismatch across future bumps.
 cat >"$TEST_REPO/bin/node" <<'EOF'
 #!/usr/bin/env sh
 if [ "${1:-}" = "--version" ]; then
-  echo "v26.4.0"
+  echo "v0.0.0"
   exit 0
 fi
 exit 0
