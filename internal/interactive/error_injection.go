@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -46,7 +46,7 @@ func (m *model) promptForValue(errorType devicestate.FaultType, prompt string) {
 	m.menuVisible = false
 }
 
-func (m *model) handleValueInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleValueInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEnter:
 		// Process the input

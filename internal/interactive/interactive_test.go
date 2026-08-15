@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -148,7 +148,7 @@ func TestModel_Update_QuitKey(t *testing.T) {
 	m := createTestModel()
 
 	// Test 'q' key
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyPressMsg{Text: "q", Code: 'q'}
 	_, cmd := m.Update(msg)
 
 	if cmd == nil {
@@ -162,7 +162,7 @@ func TestModel_Update_DebugCycle(t *testing.T) {
 	m.debugLevel = 0
 
 	// Press 'd' four times to cycle through all levels
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	msg := tea.KeyPressMsg{Text: "d", Code: 'd'}
 
 	for i := 1; i <= 4; i++ {
 		result, _ := m.Update(msg)
@@ -182,7 +182,7 @@ func TestModel_Update_MenuToggle(t *testing.T) {
 	m.menuVisible = false
 
 	// Press 'i' to open menu
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}}
+	msg := tea.KeyPressMsg{Text: "i", Code: 'i'}
 	result, _ := m.Update(msg)
 	m = result.(*model)
 
@@ -204,7 +204,7 @@ func TestModel_Update_HelpToggle(t *testing.T) {
 	m := createTestModel()
 
 	// Press 'h' to open help
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	msg := tea.KeyPressMsg{Text: "h", Code: 'h'}
 	result, _ := m.Update(msg)
 	m = result.(*model)
 
@@ -223,7 +223,7 @@ func TestModel_Update_LogsToggle(t *testing.T) {
 	m := createTestModel()
 
 	// Press 'l' to open logs
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	msg := tea.KeyPressMsg{Text: "l", Code: 'l'}
 	result, _ := m.Update(msg)
 	m = result.(*model)
 
@@ -242,7 +242,7 @@ func TestModel_Update_StatsToggle(t *testing.T) {
 	m := createTestModel()
 
 	// Press 's' to open stats
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	msg := tea.KeyPressMsg{Text: "s", Code: 's'}
 	result, _ := m.Update(msg)
 	m = result.(*model)
 
@@ -264,7 +264,7 @@ func TestModel_Update_ClearErrors(t *testing.T) {
 	m.injectError(devicestate.FaultFCS, 50)
 
 	// Press 'c' to clear errors
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	msg := tea.KeyPressMsg{Text: "c", Code: 'c'}
 	result, _ := m.Update(msg)
 	m = result.(*model)
 
@@ -284,7 +284,7 @@ func TestModel_Update_MenuNavigation(t *testing.T) {
 	m.selectedItem = 0
 
 	// Press down arrow
-	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	downMsg := tea.KeyPressMsg{Code: tea.KeyDown}
 	result, _ := m.Update(downMsg)
 	m = result.(*model)
 
@@ -309,7 +309,7 @@ func TestModel_Update_MenuNavigation(t *testing.T) {
 	}
 
 	// Press up arrow
-	upMsg := tea.KeyMsg{Type: tea.KeyUp}
+	upMsg := tea.KeyPressMsg{Code: tea.KeyUp}
 	result, _ = m.Update(upMsg)
 	m = result.(*model)
 
@@ -449,7 +449,7 @@ func TestModel_HandleMenuSelection_ClearAll(t *testing.T) {
 func TestModel_View(t *testing.T) {
 	m := createTestModel()
 
-	view := m.View()
+	view := m.View().Content
 
 	// Verify basic elements are present
 	if !strings.Contains(view, "NIAC-Go Interactive Mode") {

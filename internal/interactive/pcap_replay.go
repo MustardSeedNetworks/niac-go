@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m *model) handlePcapReplayInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handlePcapReplayInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case keyEsc:
 		m.showPcapReplay = false

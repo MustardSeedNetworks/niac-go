@@ -1,14 +1,14 @@
 package interactive
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // keyAction holds mappings for keys to their handler functions.
 type keyAction func() (tea.Model, tea.Cmd)
 
 // handleKeyMsg routes key message to appropriate handler.
-func (m *model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleKeyMsg(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Handle modal input modes first
 	if m.searchMode {
 		return m.handleSearchInput(msg)
@@ -72,7 +72,7 @@ func (m *model) handleCKeyInput() (tea.Model, tea.Cmd) {
 }
 
 // handleNormalKeyInput handles keyboard input in normal mode.
-func (m *model) handleNormalKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *model) handleNormalKeyInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	// Quick dispatch for keys with simple handlers

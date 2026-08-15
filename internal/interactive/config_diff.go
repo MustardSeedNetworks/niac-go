@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
