@@ -4,8 +4,8 @@ go 1.26.6
 
 require (
 	github.com/MustardSeedNetworks/foundation v0.2.1
-	github.com/charmbracelet/bubbletea v1.3.10
-	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/charmbracelet/bubbletea/v2 v2.0.8
+	github.com/charmbracelet/lipgloss/v2 v2.0.6
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gopacket/gopacket v1.7.1
