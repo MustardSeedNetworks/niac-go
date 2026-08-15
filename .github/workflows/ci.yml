@@ -185,7 +185,7 @@ jobs:
       - name: Filename-policy gate — no monolith naming outside internal/api
         run: ./scripts/check-filename-policy.sh
 
-      - name: Banned-vocabulary gate (strategy reset, CLAUDE.md)
+      - name: Banned-vocabulary gate (strategy reset)
         # Ported from seed, which was the only repo enforcing it. "magic" in
         # the capture/pcap/snoop parsers is file-format terminology, not
         # marketing copy, and the IEEE OUI registry carries vendor names the

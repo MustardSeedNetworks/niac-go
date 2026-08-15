@@ -48,3 +48,4 @@ internal/api/decode.go | capture file-format magic bytes
 internal/api/pcap.go | pcap file-format magic bytes
 internal/api/pcap_validation.go | pcap file-format magic bytes
 internal/capture/playback.go | pcap/pcapng file-format magic bytes
+scripts/banned-vocabulary-exclusions.txt | policy exclusion list; its reasons must name the terms
