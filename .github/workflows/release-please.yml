@@ -18,6 +18,12 @@
 name: Release Please
 
 on:
+  # zizmor: ignore[dangerous-triggers]
+  # workflow_run is the required trigger here: release-please must run after
+  # CI succeeds on main, with write access, which pull_request cannot give.
+  # The usual workflow_run hazard is checking out the triggering run's
+  # untrusted head — this workflow performs no checkout at all, and is gated
+  # on branches:[main] + conclusion == 'success'.
   workflow_run:
     workflows: ["CI"]
     branches: [main]

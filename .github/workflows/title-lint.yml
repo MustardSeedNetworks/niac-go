@@ -3,7 +3,11 @@ name: Title Lint
 on:
   issues:
     types: [opened, edited]
-  pull_request_target:
+  # pull_request, not pull_request_target: this job only reads the PR title
+  # and sets a check conclusion, so the fork-PR read-only token is sufficient.
+  # pull_request_target would hand a write-capable token to a workflow that
+  # never needs one. (zizmor dangerous-triggers)
+  pull_request:
     types: [opened, edited, synchronize, reopened, ready_for_review]
 
 permissions: {}
@@ -12,7 +16,7 @@ jobs:
   lint-pr-title:
     name: Lint PR Title
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target'
+    if: github.event_name == 'pull_request'
     permissions:
       pull-requests: read
     steps:
