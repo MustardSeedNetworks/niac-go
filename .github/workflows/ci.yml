@@ -991,8 +991,10 @@ jobs:
           DPkg::Lock::Timeout "60";
           EOF
           for attempt in 1 2 3; do
-            # A timeout kill can leave dpkg half-configured; recover first.
-            [ "$attempt" -gt 1 ] && sudo dpkg --configure -a >/dev/null 2>&1 || true
+            if [ "$attempt" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
             if timeout -k 15 150 npx playwright install-deps chromium webkit firefox; then
               exit 0
             fi
