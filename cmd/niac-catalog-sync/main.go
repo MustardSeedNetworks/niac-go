@@ -1,3 +1,6 @@
+// Command niac-catalog-sync fetches or verifies the demo-catalog walk corpus
+// against internal/catalogsync's manifest, so packaging and CI can pin an
+// exact catalog commit without checking the (multi-gigabyte) walks into git.
 package main
 
 import (

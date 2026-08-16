@@ -29,9 +29,13 @@ const (
 )
 
 var (
+	// ErrInvalidRequest means the Request failed validation (target, timeout,
+	// credentials, or privacy protocol) before capture could begin.
 	ErrInvalidRequest = errors.New("invalid walk capture request")
-	ErrEntryLimit     = errors.New("walk capture exceeded 100000 entries")
-	ErrSizeLimit      = errors.New("walk capture exceeded 16 MiB")
+	// ErrEntryLimit means the capture stopped after reaching maximumEntries.
+	ErrEntryLimit = errors.New("walk capture exceeded 100000 entries")
+	// ErrSizeLimit means the capture stopped after reaching maximumBytes.
+	ErrSizeLimit = errors.New("walk capture exceeded 16 MiB")
 )
 
 // Request contains request-only SNMP connection material. Callers must not

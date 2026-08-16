@@ -121,17 +121,21 @@ const (
 	DefaultBurst = 200
 
 	// UploadRateLimit controls per-endpoint limits for upload operations.
-	UploadRateLimit = 5  // 5 requests per second
-	UploadBurst     = 10 // Burst of 10
+	UploadRateLimit = 5 // 5 requests per second
+	// UploadBurst is the burst allowance paired with UploadRateLimit.
+	UploadBurst = 10
 	// WriteRateLimit controls per-endpoint limits for write operations.
 	WriteRateLimit = 20 // 20 requests per second
-	WriteBurst     = 40 // Burst of 40
+	// WriteBurst is the burst allowance paired with WriteRateLimit.
+	WriteBurst = 40
 	// FileRateLimit controls per-endpoint limits for file listing operations.
 	FileRateLimit = 30 // 30 requests per second
-	FileBurst     = 60 // Burst of 60
+	// FileBurst is the burst allowance paired with FileRateLimit.
+	FileBurst = 60
 	// WalkRateLimit controls per-endpoint limits for walk file operations.
 	WalkRateLimit = 10 // 10 requests per second
-	WalkBurst     = 20 // Burst of 20
+	// WalkBurst is the burst allowance paired with WalkRateLimit.
+	WalkBurst = 20
 
 	// ErrMsgRequestBodyTooLarge is the error message when HTTP request body is too large.
 	ErrMsgRequestBodyTooLarge = "http: request body too large"

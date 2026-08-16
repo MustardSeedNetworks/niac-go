@@ -13,8 +13,11 @@ import (
 )
 
 var (
+	// ErrInvalidProfile means a scenario profile failed field validation
+	// (see profile_validate.go) before it could be stored.
 	ErrInvalidProfile = errors.New("invalid scenario profile")
-	ErrProfileExists  = errors.New("scenario profile already exists")
+	// ErrProfileExists means a profile with the same identity is already stored.
+	ErrProfileExists = errors.New("scenario profile already exists")
 )
 
 const (

@@ -30,9 +30,13 @@ const (
 type LogLevel string
 
 const (
+	// LogLevelDebug marks diagnostic detail not needed in normal operation.
 	LogLevelDebug LogLevel = "debug"
-	LogLevelInfo  LogLevel = "info"
-	LogLevelWarn  LogLevel = "warn"
+	// LogLevelInfo marks routine operational messages.
+	LogLevelInfo LogLevel = "info"
+	// LogLevelWarn marks a condition worth operator attention but not failing the simulation.
+	LogLevelWarn LogLevel = "warn"
+	// LogLevelError marks a failure in the simulation or a protocol handler.
 	LogLevelError LogLevel = "error"
 )
 

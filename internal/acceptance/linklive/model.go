@@ -3,6 +3,8 @@ package linklive
 // FindingKind identifies one acceptance mismatch.
 type FindingKind string
 
+// Finding kinds, one per class of comparator mismatch between the authored
+// topology and the Link-Live inventory export.
 const (
 	FindingMissingDevice                FindingKind = "missing-device"
 	FindingUnexpectedDevice             FindingKind = "unexpected-device"

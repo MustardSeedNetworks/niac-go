@@ -42,6 +42,7 @@ var (
 // Kind is one of the three top-level subdirectories of the library.
 type Kind string
 
+// The three library subdirectory kinds.
 const (
 	KindNetworks Kind = "networks"
 	KindWalks    Kind = "walks"
@@ -57,6 +58,7 @@ func AllKinds() []Kind { return []Kind{KindNetworks, KindWalks, KindPcaps} }
 // starter-pack entries (which would just reappear on next bootstrap).
 type Source string
 
+// The three entry sources tracked by Source.
 const (
 	SourceStarter Source = "starter"
 	SourceBundle  Source = "bundle"

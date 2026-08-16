@@ -7,10 +7,15 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
+// Session registry errors, re-exported from internal/api so callers that
+// only import daemon don't need an api import for errors.Is comparisons.
 var (
+	// ErrSessionIDRequired means a session operation was called with an empty session ID.
 	ErrSessionIDRequired = api.ErrSimulationSessionIDRequired
+	// ErrPhysicalVLANInUse means the requested VLAN is already bound to another active session.
 	ErrPhysicalVLANInUse = api.ErrSimulationSessionConflict
-	ErrInterfaceInUse    = api.ErrSimulationSessionConflict
+	// ErrInterfaceInUse means the requested physical interface is already bound to another active session.
+	ErrInterfaceInUse = api.ErrSimulationSessionConflict
 )
 
 type sessionRegistry struct {

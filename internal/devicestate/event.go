@@ -7,6 +7,7 @@ const maxEventHistory = 1024
 // EventKind identifies an authoritative state transition.
 type EventKind string
 
+// Event kinds recorded in a device's authoritative state history.
 const (
 	EventNetworkInstalled   EventKind = "network.installed"
 	EventIdentityUpdated    EventKind = "identity.updated"

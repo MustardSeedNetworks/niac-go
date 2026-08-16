@@ -8,11 +8,21 @@ import (
 	"time"
 )
 
+// Sentinel errors returned by behavior timeline validation, matched by
+// callers via errors.Is.
 var (
-	ErrBehaviorTargetNotFound   = errors.New("behavior target not found")
-	ErrBehaviorTargetAmbiguous  = errors.New("behavior target is ambiguous")
-	ErrBehaviorPhaseEmpty       = errors.New("behavior phase has no traffic or faults")
-	ErrBehaviorPhaseOverlap     = errors.New("behavior phases overlap")
+	// ErrBehaviorTargetNotFound means a timeline names a device or interface
+	// absent from the config.
+	ErrBehaviorTargetNotFound = errors.New("behavior target not found")
+	// ErrBehaviorTargetAmbiguous means a timeline's target string matches more
+	// than one device/interface.
+	ErrBehaviorTargetAmbiguous = errors.New("behavior target is ambiguous")
+	// ErrBehaviorPhaseEmpty means a phase declares neither traffic nor faults.
+	ErrBehaviorPhaseEmpty = errors.New("behavior phase has no traffic or faults")
+	// ErrBehaviorPhaseOverlap means two phases for the same target overlap in time.
+	ErrBehaviorPhaseOverlap = errors.New("behavior phases overlap")
+	// ErrBehaviorScheduleTooLarge means the timeline would exceed
+	// maxBehaviorScheduledActions once expanded into discrete scheduled actions.
 	ErrBehaviorScheduleTooLarge = errors.New("behavior schedule is too large")
 )
 

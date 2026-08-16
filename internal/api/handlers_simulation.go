@@ -10,16 +10,21 @@ import (
 var (
 	// ErrSimulationDeviceLimitExceeded indicates that a config exceeds NIAC's absolute device ceiling.
 	ErrSimulationDeviceLimitExceeded = errors.New("simulation exceeds the absolute device limit")
-	ErrSimulationSessionConflict     = errors.New(
+	// ErrSimulationSessionConflict indicates the session targets a physical
+	// VLAN or interface binding another active session already holds.
+	ErrSimulationSessionConflict = errors.New(
 		"simulation session conflicts with an active physical binding",
 	)
+	// ErrSimulationSessionIDRequired means a session operation was called with an empty session ID.
 	ErrSimulationSessionIDRequired = errors.New("simulation session ID is required")
-	ErrSimulationSessionNotFound   = errors.New("simulation session was not found")
+	// ErrSimulationSessionNotFound means the named session ID has no registered simulation state.
+	ErrSimulationSessionNotFound = errors.New("simulation session was not found")
 	// ErrSimulationSessionCapacity and ErrSimulationDeviceCapacity are daemon-wide
 	// technical capacity limits, not entitlements. A per-config check cannot
 	// enforce them because several sessions run at once.
 	ErrSimulationSessionCapacity = errors.New("daemon session capacity exceeded")
-	ErrSimulationDeviceCapacity  = errors.New("daemon device capacity exceeded")
+	// ErrSimulationDeviceCapacity is documented alongside ErrSimulationSessionCapacity above.
+	ErrSimulationDeviceCapacity = errors.New("daemon device capacity exceeded")
 )
 
 // DaemonCapacity reports what the daemon is currently carrying against its

@@ -108,7 +108,6 @@ type LLDPHandler struct {
 	running         bool
 }
 
-// NewLLDPHandler creates a new LLDP handler.
 // lldpDefaultEnabledForType reports whether LLDP advertisements
 // should be emitted by default when LLDPConfig is nil. Switches,
 // routers, APs, firewalls, and VoIP phones all run LLDP out of the
@@ -124,6 +123,7 @@ func lldpDefaultEnabledForType(deviceType string) bool {
 	}
 }
 
+// NewLLDPHandler creates a new LLDP handler.
 func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	return &LLDPHandler{
 		stack:    stack,

@@ -14,6 +14,9 @@ type simulationAPIState struct {
 	replay     ReplayManager
 }
 
+// SelectSimulation makes the named session's stack, config, and topology the
+// target of runtime API surfaces that operate on "the" simulation rather than
+// a specific session. It reports false if sessionID has no registered state.
 func (s *Server) SelectSimulation(sessionID string) bool {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()
@@ -26,6 +29,9 @@ func (s *Server) SelectSimulation(sessionID string) bool {
 	return true
 }
 
+// RemoveSimulation discards sessionID's registered state. If sessionID is
+// the currently selected simulation, the selection is cleared and the
+// runtime API surfaces revert to their unselected (empty) state.
 func (s *Server) RemoveSimulation(sessionID string) {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()

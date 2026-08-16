@@ -1,3 +1,6 @@
+// Package topology renders a simulated network's devices and links into the
+// node/edge graph the UI and Link-Live comparator consume, including the
+// display-string formatting for VLAN membership and link/device type labels.
 package topology
 
 import (

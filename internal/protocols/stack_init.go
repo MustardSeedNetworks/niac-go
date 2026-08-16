@@ -9,6 +9,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
+// AddPacketObserver registers obs to receive every packet the stack sends or
+// receives, via notifyObservers. A nil obs is ignored.
 func (s *Stack) AddPacketObserver(obs PacketObserver) {
 	if obs == nil {
 		return

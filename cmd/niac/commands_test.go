@@ -213,9 +213,9 @@ func captureStdout(t *testing.T, fn func()) string {
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
-	os.Stdout = writeEnd //nolint:reassign // CLI helpers write directly to os.Stdout.
+	os.Stdout = writeEnd
 	defer func() {
-		os.Stdout = original //nolint:reassign // Restore process stdout after capture.
+		os.Stdout = original
 	}()
 
 	fn()
