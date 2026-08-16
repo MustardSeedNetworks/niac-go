@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.35](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.34...v0.94.35) (2026-08-16)
+
+
+### Bug Fixes
+
+* **ci:** bound apt waits in Playwright OS-deps step ([#1279](https://github.com/MustardSeedNetworks/niac-go/issues/1279)) ([bd686c8](https://github.com/MustardSeedNetworks/niac-go/commit/bd686c80473d10fe3156ab17e5f25e82da68a399))
+* **ci:** bound apt waits in remaining install steps ([#1284](https://github.com/MustardSeedNetworks/niac-go/issues/1284)) ([a7f6274](https://github.com/MustardSeedNetworks/niac-go/commit/a7f6274f7ae27c53014aedd3caf28ad5617c0454))
+
 ## [0.94.34](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.33...v0.94.34) (2026-08-15)
 
 
