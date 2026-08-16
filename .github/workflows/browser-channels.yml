@@ -64,7 +64,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a test, because apt waits forever on a dead
@@ -72,7 +72,6 @@ jobs:
         # waits, then retries the transient case.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Install frontend dependencies
         working-directory: ui
@@ -82,7 +81,7 @@ jobs:
         run: make build
 
       - name: Install Chrome and Edge OS dependencies
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # A stalled Ubuntu mirror can hang apt for the whole job budget without
         # running a test (stem job 95068053052), because apt waits forever on a
@@ -91,7 +90,6 @@ jobs:
         # transient case.
         with:
           command: cd ui && npx playwright install-deps chrome msedge
-          label: Chrome/Edge OS dependencies
 
       - name: Cache Playwright browsers
         id: playwright-cache
