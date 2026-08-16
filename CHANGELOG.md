@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.36...v0.94.37) (2026-08-16)
+
+
+### Bug Fixes
+
+* **release:** generate SBOMs for .deb and .rpm ([#1299](https://github.com/MustardSeedNetworks/niac-go/issues/1299)) ([e16ae30](https://github.com/MustardSeedNetworks/niac-go/commit/e16ae30be672a25bdcf9d7413299a02a3e48b723))
+
+
+### Continuous Integration
+
+* make required checks report on merge_group ([#1302](https://github.com/MustardSeedNetworks/niac-go/issues/1302)) ([9a70f1e](https://github.com/MustardSeedNetworks/niac-go/commit/9a70f1e5d71ff71e9df163a89ebb4536e49a09ec))
+* stop PRs writing their own cache copies ([#1297](https://github.com/MustardSeedNetworks/niac-go/issues/1297)) ([2b41521](https://github.com/MustardSeedNetworks/niac-go/commit/2b415219e41a80f2be923e4749da9683ea5a3821))
+
 ## [0.94.36](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.35...v0.94.36) (2026-08-16)
 
 
