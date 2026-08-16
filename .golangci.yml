@@ -605,11 +605,6 @@ linters:
       - text: 'newexpr: '
         path: 'internal/api/schema.*\.go'
         linters: [ modernize ]
-      # sse_log_handler_test.go uses NewTextHandler(io.Discard) so the tee
-      # wrapper's Handle() runs unconditionally. slog.DiscardHandler's
-      # Enabled() short-circuits propagation, breaking the test setup.
-      - path: 'internal/api/sse_log_handler_test\.go'
-        linters: [ modernize, sloglint ]
       # JSON Schema + config-vocabulary literals repeated across api/*.go
       # (hostname/interface/name/enabled/disabled/ips/router/ipv4/etc).
       # These are wire-format field names + Schema "type" enums — the
@@ -730,10 +725,6 @@ linters:
           - gochecknoglobals
       # SNMP MIB standard OIDs are package-level constants.
       - path: 'internal/protocols/snmp/mib\.go'
-        linters:
-          - gochecknoglobals
-      # SNMP secure random is a package-level singleton.
-      - path: 'internal/protocols/snmp/securerandom\.go'
         linters:
           - gochecknoglobals
       # Template registry is a package-level singleton.
