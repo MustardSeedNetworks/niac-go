@@ -30,10 +30,32 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap
+        timeout-minutes: 8
+        # A stalled Ubuntu mirror can hang apt for the whole job budget
+        # without running a test, because apt waits forever on a dead
+        # connection by default. Bound apt's own network waits, then retry
+        # the transient case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
-          sudo apt-get update
-          sudo apt-get install -y libpcap-dev
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
+          for i in 1 2 3; do
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
+              exit 0
+            fi
+            echo "apt attempt $i failed; retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          echo "::error::libpcap-dev install failed after 3 attempts"
+          exit 1
 
       - name: Install frontend dependencies
         working-directory: ui
