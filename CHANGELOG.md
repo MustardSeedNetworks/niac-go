@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.38](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.37...v0.94.38) (2026-08-16)
+
+
+### Bug Fixes
+
+* **ci:** give markdown lint a base ref in the merge queue ([#1304](https://github.com/MustardSeedNetworks/niac-go/issues/1304)) ([aab13ba](https://github.com/MustardSeedNetworks/niac-go/commit/aab13ba717a63ff7fe0658a73f468a11320b7306))
+
+
+### Miscellaneous
+
+* make revive doc-comment gate real, fix nolintlint findings ([#1308](https://github.com/MustardSeedNetworks/niac-go/issues/1308)) ([ba83130](https://github.com/MustardSeedNetworks/niac-go/commit/ba8313035727a5150ad9970d82d881f5dcdfbd96))
+
 ## [0.94.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.36...v0.94.37) (2026-08-16)
 
 
