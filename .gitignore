@@ -113,6 +113,9 @@ web/dist/
 web/.vite/
 web/coverage/
 ui/playwright/.auth/
+# Also ignore a root-level copy: running playwright from the repo root rather
+# than ui/ writes the storage state here, and it holds a live session token.
+playwright/.auth/
 storybook-static/
 *storybook.log
 npm-debug.log*

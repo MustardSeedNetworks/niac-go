@@ -97,7 +97,7 @@ export function AuthGate({ children }: AuthGateProps): ReactElement {
           className="mt-2 w-full rounded-lg border border-surface-border bg-surface-sunken px-3 py-2 font-mono text-sm outline-none focus:border-brand-primary"
         />
         {error && (
-          <p role="alert" className="mt-3 text-sm text-status-error">
+          <p role="alert" data-testid="auth-gate-error" className="mt-3 text-sm text-status-error">
             {error}
           </p>
         )}
