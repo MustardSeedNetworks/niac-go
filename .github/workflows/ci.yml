@@ -132,7 +132,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -144,7 +144,6 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Verify dependencies
         # ./.github/actions/setup-go already runs `go mod download`; this
@@ -246,7 +245,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -258,7 +257,6 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Run tests with race detector
         run: go test -race ./...
@@ -352,7 +350,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -364,13 +362,12 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Run govulncheck
-        # make security-backend installs govulncheck if missing and runs the
-        # scan; using the target here keeps the version-string behavior in
-        # sync with `make security` / `make verify` locally instead of
-        # duplicating the invocation.
+        # make security-backend runs `go tool govulncheck` (declared in
+        # go.mod's tool directive, resolved via go.sum); using the target
+        # here keeps the invocation in sync with `make security` / `make
+        # verify` locally instead of duplicating it.
         run: make security-backend
 
       - name: Run gosec
@@ -717,7 +714,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -729,7 +726,6 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Download frontend build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -824,7 +820,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -836,7 +832,6 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Download frontend build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -863,7 +858,7 @@ jobs:
             -o niac ./cmd/niac
 
       - name: Install Playwright OS dependencies
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # Not removable: the runner image ships none of webkit's GStreamer/font
         # stack. A stalled Ubuntu mirror can hang apt for the whole job budget
@@ -873,8 +868,7 @@ jobs:
         # the transient case.
         with:
           command: cd ui && npx playwright install-deps chromium webkit firefox
-          timeout-seconds: '150'
-          label: Playwright OS dependencies
+          command-timeout: '150'
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -970,7 +964,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        uses: ./.github/actions/apt-install
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
         timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
@@ -982,7 +976,6 @@ jobs:
         # and retries transient hiccups with backoff.
         with:
           packages: libpcap-dev
-          label: libpcap-dev
 
       - name: Download frontend build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

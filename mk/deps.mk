@@ -41,8 +41,6 @@ tools-go: ## Install Go development tools
 	@printf "$(BOLD)📦 Installing Go development tools...$(RESET)\n"
 	@echo "Installing golangci-lint..."
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-	@echo "Installing govulncheck..."
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@echo "Installing gosec..."
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
 	@echo "Installing gofumpt..."
@@ -95,7 +93,7 @@ version-check: ## Show version info and check for outdated dependencies
 	@printf "$(CYAN)│$(RESET)                                                                              $(CYAN)│$(RESET)\n"
 	@printf "$(CYAN)│$(RESET) $(BOLD)Go Tools$(RESET)                                                                   $(CYAN)│$(RESET)\n"
 	@printf "$(CYAN)│$(RESET)   golangci-lint: %s\n" "$$(golangci-lint --version 2>/dev/null | head -1 || echo 'not installed')"
-	@printf "$(CYAN)│$(RESET)   govulncheck:   %s\n" "$$(govulncheck -version 2>/dev/null | head -1 || echo 'not installed')"
+	@printf "$(CYAN)│$(RESET)   govulncheck:   %s\n" "declared in go.mod (run via: go tool govulncheck)"
 	@printf "$(CYAN)│$(RESET)   gosec:         %s\n" "$$(gosec --version 2>/dev/null | head -1 || echo 'not installed')"
 	@printf "$(CYAN)│$(RESET)   gitleaks:      %s\n" "$$(gitleaks version 2>/dev/null || echo 'not installed')"
 	@printf "$(CYAN)│$(RESET)                                                                              $(CYAN)│$(RESET)\n"

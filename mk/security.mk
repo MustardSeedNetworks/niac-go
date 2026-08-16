@@ -37,19 +37,12 @@ security: ## Run all security scans
 
 security-backend: ## Run Go vulnerability scan (govulncheck)
 	@printf "$(BOLD)🔒 Running Go vulnerability scan...$(RESET)\n"
-	@if ! command -v govulncheck > /dev/null 2>&1; then \
-		printf "📦 Installing govulncheck...\n"; \
-		go install golang.org/x/vuln/cmd/govulncheck@latest; \
-	fi
-	@govulncheck ./...
+	@go tool govulncheck ./...
 	@printf "$(GREEN)✓ Go vulnerability scan complete$(RESET)\n"
 
 security-backend-quiet:
-	@if ! command -v govulncheck > /dev/null 2>&1; then \
-		go install golang.org/x/vuln/cmd/govulncheck@latest; \
-	fi
 	@printf "   Scanning Go dependencies...\n"
-	@OUTPUT=$$(govulncheck ./... 2>&1); \
+	@OUTPUT=$$(go tool govulncheck ./... 2>&1); \
 	STATUS=$$?; \
 	echo "$$OUTPUT" | grep -E "(Vulnerability|No vulnerabilities)" | head -5 || printf "   No vulnerabilities found\n"; \
 	if [ $$STATUS -ne 0 ]; then \

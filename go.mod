@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.6.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -54,7 +55,18 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
+	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
+	golang.org/x/mod v0.39.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
 	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/vuln v1.7.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	honnef.co/go/tools v0.7.0 // indirect
+)
+
+tool (
+	golang.org/x/vuln/cmd/govulncheck
+	honnef.co/go/tools/cmd/staticcheck
 )
