@@ -42,17 +42,17 @@ tools-go: ## Install Go development tools
 	@echo "Installing golangci-lint..."
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	@echo "Installing gosec..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@latest
+	@go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
 	@echo "Installing gofumpt..."
-	@go install mvdan.cc/gofumpt@latest
+	@go install mvdan.cc/gofumpt@v0.11.0
 	@echo "Installing goimports..."
-	@go install golang.org/x/tools/cmd/goimports@latest
+	@go install golang.org/x/tools/cmd/goimports@v0.49.0
 	@echo "Installing gotestsum..."
-	@go install gotest.tools/gotestsum@latest
+	@go install gotest.tools/gotestsum@v1.13.0
 	@echo "Installing gitleaks..."
-	@go install github.com/zricethezav/gitleaks/v8@latest
+	@go install github.com/zricethezav/gitleaks/v8@v8.30.1
 	@echo "Installing go-licenses..."
-	@go install github.com/google/go-licenses@latest
+	@go install github.com/google/go-licenses@v1.6.0
 	@printf "$(GREEN)✓ Go development tools installed$(RESET)\n"
 
 tools-frontend: ## Install frontend development tools

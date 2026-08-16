@@ -72,7 +72,7 @@ security-secrets: ## Scan for secrets in codebase (gitleaks)
 	@GITLEAKS=$$(command -v gitleaks 2>/dev/null || echo "$$(go env GOPATH)/bin/gitleaks"); \
 	if [ ! -x "$$GITLEAKS" ]; then \
 		printf "📦 Installing gitleaks...\n"; \
-		go install github.com/zricethezav/gitleaks/v8@latest; \
+		go install github.com/zricethezav/gitleaks/v8@v8.30.1; \
 		GITLEAKS="$$(go env GOPATH)/bin/gitleaks"; \
 	fi; \
 	if [ -f .gitleaks.toml ]; then \
@@ -85,7 +85,7 @@ security-secrets: ## Scan for secrets in codebase (gitleaks)
 security-secrets-quiet:
 	@GITLEAKS=$$(command -v gitleaks 2>/dev/null || echo "$$(go env GOPATH)/bin/gitleaks"); \
 	if [ ! -x "$$GITLEAKS" ]; then \
-		go install github.com/zricethezav/gitleaks/v8@latest; \
+		go install github.com/zricethezav/gitleaks/v8@v8.30.1; \
 		GITLEAKS="$$(go env GOPATH)/bin/gitleaks"; \
 	fi; \
 	printf "   Scanning for secrets...\n"; \
