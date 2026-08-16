@@ -129,16 +129,33 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
@@ -245,16 +262,33 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
@@ -356,16 +390,33 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
@@ -496,15 +547,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install C23 tools (clang-tidy, cppcheck, bear)
+        timeout-minutes: 8
+        # A stalled Ubuntu mirror can hang apt for the whole job budget
+        # without running a single check, because apt waits forever on a dead
+        # connection by default. Bound apt's own network waits, then retry
+        # the transient case before moving on to the rest of the toolchain
+        # setup.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang-18 \
-            clang-tidy-18 \
-            clang-format-18 \
-            cppcheck \
-            bear \
-            gcc-13
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
+          for attempt in 1 2 3; do
+            if [ "$attempt" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y clang-18 clang-tidy-18 clang-format-18 cppcheck bear gcc-13'; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::C23 toolchain install failed after 3 attempts"
+              exit 1
+            fi
+            echo "C23 toolchain install attempt ${attempt} failed; retrying in $((attempt * 10))s..."
+            sleep $((attempt * 10))
+          done
 
           # Set clang-18 as default
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
@@ -824,16 +894,33 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
@@ -933,16 +1020,33 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
@@ -1098,16 +1202,33 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
         # /#928 + Security Scanning/#932). Drop the unused Microsoft apt source
         # so a broken third-party mirror can't red the job, then retry the
         # install with backoff for genuinely transient hiccups.
+        #
+        # A stalled Ubuntu mirror can also hang apt itself for the whole job
+        # budget without running a test (job 95072124340 hung 25 minutes on
+        # this exact step), because apt waits forever on a dead connection by
+        # default. Bound apt's own network waits too, then retry the transient
+        # case.
         run: |
           sudo grep -rlZ packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -0 -r sudo rm -f
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "2";
+          DPkg::Lock::Timeout "60";
+          EOF
           for i in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libpcap-dev; then
+            if [ "$i" -gt 1 ]; then
+              # A timeout kill can leave dpkg half-configured; recover first.
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+            fi
+            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
               exit 0
             fi
             echo "apt attempt $i failed; retrying in $((i * 5))s..."
