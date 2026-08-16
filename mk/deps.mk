@@ -52,7 +52,7 @@ tools-go: ## Install Go development tools
 	@echo "Installing gitleaks..."
 	@go install github.com/zricethezav/gitleaks/v8@v8.30.1
 	@echo "Installing go-licenses..."
-	@go install github.com/google/go-licenses@v1.6.0
+	@go install github.com/google/go-licenses@v2.0.1
 	@printf "$(GREEN)✓ Go development tools installed$(RESET)\n"
 
 tools-frontend: ## Install frontend development tools
