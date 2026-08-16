@@ -1325,6 +1325,7 @@ jobs:
       - docs
       - build
       - e2e
+      - i18n
     if: always()
     steps:
       - name: Verify upstream results
