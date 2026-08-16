@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.36](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.35...v0.94.36) (2026-08-16)
+
+
+### Bug Fixes
+
+* **ci:** make the i18n gate actually gate ([#1286](https://github.com/MustardSeedNetworks/niac-go/issues/1286)) ([ffbe751](https://github.com/MustardSeedNetworks/niac-go/commit/ffbe7519408da78f1284732e47c3844fe9ce27b4))
+
+
+### Continuous Integration
+
+* consolidate duplicated apt-install blocks, right-size gates ([#1288](https://github.com/MustardSeedNetworks/niac-go/issues/1288)) ([4cd043d](https://github.com/MustardSeedNetworks/niac-go/commit/4cd043dbcfb70fe7aae5bf3bea3bfafcd45aa9f3))
+* declare which jobs deliberately do not gate a merge ([#1295](https://github.com/MustardSeedNetworks/niac-go/issues/1295)) ([7000aaf](https://github.com/MustardSeedNetworks/niac-go/commit/7000aaf93ac5513b2b64d516e533eb69ca1adf7c))
+
+
+### Miscellaneous
+
+* **ci:** migrate to the shared fleet apt-install composite ([#1293](https://github.com/MustardSeedNetworks/niac-go/issues/1293)) ([d34f2c2](https://github.com/MustardSeedNetworks/niac-go/commit/d34f2c2773c25d126cfaf5690af223f9a7036215))
+* **release:** drop the no-op trigger-release job ([#1291](https://github.com/MustardSeedNetworks/niac-go/issues/1291)) ([c0dc828](https://github.com/MustardSeedNetworks/niac-go/commit/c0dc82858eceac394c20f7ffe928ab31ebd55c38))
+
 ## [0.94.35](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.34...v0.94.35) (2026-08-16)
 
 
