@@ -246,6 +246,14 @@ sboms:
     artifacts: archive
     documents:
       - "{{ .ArtifactName }}.sbom.json"
+  # .deb/.rpm are `package` artifacts in goreleaser, not `archive` — without
+  # this block the native packages, the ones customers actually install, ship
+  # with no bill of materials. seed has always had both; this repo had only the
+  # archive block, so 4 of its artifacts were SBOM-less.
+  - id: packages-sbom
+    artifacts: package
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
 
 signs:
   # Sign all release artifacts via cosign keyless OIDC. Mirrors release.yml's
