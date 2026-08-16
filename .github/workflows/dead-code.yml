@@ -35,37 +35,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
+        # Uses the repo's setup-go composite (not the bare actions/setup-go)
+        # because setup-go's built-in cache only keys on go.sum and misses the
+        # build cache; the composite manages both explicitly.
+        uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        uses: ./.github/actions/apt-install
         timeout-minutes: 8
         # A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a check, because apt waits forever on a dead
-        # connection by default. Bound apt's own network waits, then retry
-        # the transient case.
-        run: |
-          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null <<'EOF'
-          Acquire::http::Timeout "20";
-          Acquire::https::Timeout "20";
-          Acquire::Retries "2";
-          DPkg::Lock::Timeout "60";
-          EOF
-          for i in 1 2 3; do
-            if [ "$i" -gt 1 ]; then
-              # A timeout kill can leave dpkg half-configured; recover first.
-              sudo dpkg --configure -a >/dev/null 2>&1 || true
-            fi
-            if timeout -k 15 120 sudo sh -c 'apt-get update && apt-get install -y libpcap-dev'; then
-              exit 0
-            fi
-            echo "apt attempt $i failed; retrying in $((i * 5))s..."
-            sleep $((i * 5))
-          done
-          echo "::error::libpcap-dev install failed after 3 attempts"
-          exit 1
+        # connection by default. The composite bounds apt's own network
+        # waits, then retries the transient case.
+        with:
+          packages: libpcap-dev
+          label: libpcap-dev
 
       - name: Run staticcheck for unused code
         run: |
