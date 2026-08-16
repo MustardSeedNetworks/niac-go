@@ -129,6 +129,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -245,6 +246,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -356,6 +358,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -496,6 +499,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install C23 tools (clang-tidy, cppcheck, bear)
+        timeout-minutes: 8
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -824,6 +828,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -933,6 +938,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -1098,6 +1104,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
+        timeout-minutes: 8
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
