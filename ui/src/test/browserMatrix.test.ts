@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import browserChannelAuthConfig from '../../playwright.channels.auth.config';
-import browserChannelsConfig from '../../playwright.channels.config';
 import criticalConfig from '../../playwright.config';
 
 function projectNames(config: {
@@ -10,12 +8,10 @@ function projectNames(config: {
 }
 
 describe('browser support matrix', () => {
-  it('gates every critical browser engine', () => {
-    expect(projectNames(criticalConfig)).toEqual(['chromium', 'webkit', 'firefox']);
-  });
-
-  it('tests the installed first-class Chromium browser channels', () => {
-    expect(projectNames(browserChannelsConfig)).toEqual(['chrome', 'edge']);
-    expect(projectNames(browserChannelAuthConfig)).toEqual(['chrome', 'edge']);
+  // Exact equality, not a subset check: this guard exists to make matrix drift
+  // loud in both directions. Adding an engine is a CI-time decision, and
+  // quietly dropping one would otherwise look like a passing suite.
+  it('gates exactly the engines the product targets', () => {
+    expect(projectNames(criticalConfig)).toEqual(['chromium', 'webkit']);
   });
 });

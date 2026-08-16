@@ -25,15 +25,13 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `i18n`          | Internationalization     | Catalog completeness, no translated standard terms                     |
 | `docs`          | Documentation            | Markdown lint (blocking, scoped to changed files)                      |
 | `build`         | Build verification       | Multi-arch binaries with full ldflags, UIBuildHash verified            |
-| `lighthouse`    | Frontend performance     | Lighthouse budgets                                                     |
-| `e2e`           | Browser tests            | Playwright, chromium + webkit + firefox                                |
+| `e2e`           | Browser tests            | Playwright, chromium + webkit                                          |
 | `ci-complete`   | Aggregate gate           | The required status check                                              |
 
 ### Other Workflows
 
 | Workflow               | Purpose                                               |
 | ---------------------- | ----------------------------------------------------- |
-| `browser-channels.yml` | Playwright browser channel coverage                   |
 | `cache-npcap-sdk.yml`  | Cache the Npcap SDK for Windows builds                |
 | `codeql.yml`           | CodeQL security analysis (Go, JS/TS)                  |
 | `dead-code.yml`        | Weekly dead code detection                            |
