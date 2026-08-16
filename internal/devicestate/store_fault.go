@@ -16,6 +16,7 @@ var (
 // FaultType identifies one SNMP-observable interface condition.
 type FaultType string
 
+// Interface fault types injectable via the fault API and interactive CLI.
 const (
 	FaultFCS         FaultType = "fcs_errors"
 	FaultDiscards    FaultType = "packet_discards"

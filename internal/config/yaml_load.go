@@ -12,6 +12,9 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/oui"
 )
 
+// LoadYAML reads and parses a network topology config from filename, without
+// confining it to a managed root — use LoadYAMLManaged for config paths that
+// come from an untrusted caller (e.g. an HTTP request).
 func LoadYAML(filename string) (*Config, error) {
 	return loadYAML(filename, nil)
 }

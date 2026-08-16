@@ -61,6 +61,8 @@ type SNMPAgentRequest struct {
 	AddMibs     []AddMibRequest `json:"addMibs,omitempty"`
 }
 
+// AddMibRequest is one caller-supplied static MIB override in an
+// SNMPAgentRequest, applied on top of a device's synthesized or captured walk.
 type AddMibRequest struct {
 	OID   string `json:"oid"`
 	Type  string `json:"type"`

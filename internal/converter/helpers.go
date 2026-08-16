@@ -105,8 +105,3 @@ func (p *Parser) formatMAC(mac string) string {
 	return fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 		mac[0:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12])
 }
-
-// MaxYAMLConfigSize caps in-memory YAML config size at 16 MiB. The check
-// guards against pathological alias-bomb / billion-laughs payloads that would
-// otherwise be expanded by yaml.Unmarshal. Real configs in our corpus top out
-// well under 1 MiB.

@@ -1,3 +1,6 @@
+// Package sse implements the server-sent-events hub that fans simulation
+// events (packets, daemon stats, log lines) out to connected HTTP clients,
+// each subscribed to a Stream subset, over long-lived unbuffered channels.
 package sse
 
 import (

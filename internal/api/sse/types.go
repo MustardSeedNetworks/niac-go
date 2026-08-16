@@ -73,9 +73,12 @@ func (c Config) withDefaults() Config {
 type Stream string
 
 const (
+	// StreamPackets carries observed protocol packets from the simulation.
 	StreamPackets Stream = "packets"
-	StreamLogs    Stream = "logs"
-	StreamStats   Stream = "stats"
+	// StreamLogs carries daemon and protocol-handler log lines.
+	StreamLogs Stream = "logs"
+	// StreamStats carries periodic daemon/simulation statistics snapshots.
+	StreamStats Stream = "stats"
 )
 
 // Message is the envelope shape used by the hub broadcast API.

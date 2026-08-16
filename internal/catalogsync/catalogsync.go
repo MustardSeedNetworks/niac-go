@@ -1,3 +1,7 @@
+// Package catalogsync fetches and verifies the demo-catalog walk corpus
+// against a checked-in manifest (name, commit, and per-file SHA-256), so
+// the multi-gigabyte SNMP walk bundle stays out of git while builds and CI
+// can still pin and validate an exact catalog revision.
 package catalogsync
 
 import (
@@ -19,6 +23,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
+// ManifestName is the checked-in file recording the catalog's expected
+// repository, commit, and per-file SHA-256 hashes that Run verifies against.
 const ManifestName = "catalog-source.json"
 
 const (
@@ -29,13 +35,21 @@ const (
 	maxValidationErrorLines     = 3
 )
 
+// Mode selects whether Run writes the staged catalog into ExamplesDir or
+// only verifies it matches what's already there.
 type Mode string
 
 const (
-	ModeSync  Mode = "sync"
+	// ModeSync writes the staged catalog into Options.ExamplesDir, replacing its contents.
+	ModeSync Mode = "sync"
+	// ModeCheck verifies Options.ExamplesDir already matches the staged catalog
+	// and fails without writing if it has drifted.
 	ModeCheck Mode = "check"
 )
 
+// Options configures a single Run invocation: which Mode to run, where the
+// upstream catalog checkout and generated examples directory live, and which
+// repository/commit the manifest should record as the source of truth.
 type Options struct {
 	Mode        Mode
 	CatalogDir  string
@@ -69,6 +83,10 @@ type stagedWalk struct {
 
 var commitPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$`)
 
+// Run stages the walk corpus from options.CatalogDir, validates it, writes a
+// manifest recording options.Repository/Commit, and then either syncs the
+// stage into options.ExamplesDir or checks it against what's already there,
+// per options.Mode.
 func Run(options Options) error {
 	if err := validateOptions(options); err != nil {
 		return err

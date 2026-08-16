@@ -1,3 +1,6 @@
+// Command linklive-acceptance drives a running niac simulation against a
+// Link-Live inventory export and reports topology/finding mismatches,
+// exercising the comparator in internal/acceptance/linklive as a CI gate.
 package main
 
 import (

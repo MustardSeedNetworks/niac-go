@@ -176,7 +176,6 @@ type Statistics struct {
 	UDPProxyOverloadDrops uint64
 }
 
-// NewStack creates a new protocol stack.
 // configUsesVLANs reports whether any device is assigned a VLAN. When true the
 // stack runs "VLAN mode" and ignores untagged frames, so it can never respond on
 // the native/default VLAN — preventing a leak (e.g. a rogue DHCP offer) onto an
@@ -191,6 +190,9 @@ func configUsesVLANs(cfg *config.Config) bool {
 	})
 }
 
+// NewStack builds the protocol stack for cfg: it wires every device's
+// simulated interfaces into the shared Ethernet/ARP/IP handler pipeline and
+// starts the packet capture engine that feeds observers and fault injection.
 func NewStack(
 	captureEngine *capture.Engine,
 	cfg *config.Config,
@@ -414,6 +416,9 @@ func (s *Stack) Stop() {
 	}
 }
 
+// Send enqueues pkt for transmission and reports whether it was accepted.
+// It swallows the underlying error; callers that need the reason should use
+// the internal send instead.
 func (s *Stack) Send(pkt *Packet) bool {
 	return s.send(pkt) == nil
 }
@@ -612,6 +617,10 @@ func (s *Stack) recordUDPProxyOverloadDrop() {
 	s.stats.mu.Unlock()
 }
 
+// IncrementStat bumps the named counter (one of "arp_requests",
+// "arp_replies", "icmp_requests", "icmp_replies", "dns_queries", or
+// "dhcp_requests") in the stack's Statistics snapshot. Unrecognized names
+// are silently ignored.
 func (s *Stack) IncrementStat(stat string) {
 	s.stats.mu.Lock()
 	defer s.stats.mu.Unlock()

@@ -1,3 +1,6 @@
+// Package tokenstore persists bearer API tokens (hash, scope, expiry) to
+// disk and validates presented tokens in constant time, backing the API
+// server's scope-by-method authorization checks.
 package tokenstore
 
 import (

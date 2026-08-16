@@ -9,6 +9,8 @@ import (
 // AttachmentMode controls how NIAC's untagged interface is externally isolated.
 type AttachmentMode string
 
+// Attachment modes for NIAC's untagged interface: unisolated, single-VLAN
+// access, or 802.1Q trunk carrying the compiled network's VLAN set.
 const (
 	ModeDirect AttachmentMode = "direct"
 	ModeAccess AttachmentMode = "access"
@@ -18,6 +20,9 @@ const (
 // DiagnosticCode identifies a stable compiler finding.
 type DiagnosticCode string
 
+// Stable diagnostic codes the fabric compiler attaches to configuration
+// errors, so API/CLI callers can classify a finding without string-matching
+// its message.
 const (
 	CodeAttachmentPolicyDenied   DiagnosticCode = "attachment_policy_denied"
 	CodeHostInterfaceUnavailable DiagnosticCode = "host_interface_unavailable"

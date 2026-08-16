@@ -33,11 +33,15 @@ type packSite struct {
 	location string
 }
 
+// MapPurpose classifies what a Pack's map is optimized to demonstrate:
+// a small, presentable topology versus a scale/load stress case.
 type MapPurpose string
 
 const (
+	// MapPurposePresentation marks a pack sized and laid out for demos and screenshots.
 	MapPurposePresentation MapPurpose = "presentation"
-	MapPurposeStress       MapPurpose = "stress"
+	// MapPurposeStress marks a pack sized to exercise the simulator at scale.
+	MapPurposeStress MapPurpose = "stress"
 )
 
 // Pack is one versioned composer preset with a frozen authored-truth manifest.

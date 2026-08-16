@@ -20,8 +20,12 @@ import (
 var embeddedData string
 
 var (
+	// ErrUnknownVendor means the requested vendor name matches no IEEE MA-L
+	// (organizationally unique identifier) assignment in the embedded registry.
 	ErrUnknownVendor = errors.New("vendor has no matching IEEE MA-L assignment")
-	ErrOrdinalRange  = errors.New("MAC suffix must fit in 24 bits")
+	// ErrOrdinalRange means a requested MAC suffix does not fit the 24-bit
+	// range available after a vendor's 3-byte OUI prefix.
+	ErrOrdinalRange = errors.New("MAC suffix must fit in 24 bits")
 )
 
 type prefix [3]byte

@@ -6,6 +6,8 @@ import "github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 // Mode identifies the active command hierarchy.
 type Mode string
 
+// Command hierarchy levels, ordered from the unprivileged entry mode down
+// through the vendor-CLI config sub-modes.
 const (
 	ModeUser            Mode = "user"
 	ModePrivileged      Mode = "privileged"

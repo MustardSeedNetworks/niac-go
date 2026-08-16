@@ -140,6 +140,10 @@ func (p *Parser) Parse() (*Config, error) {
 	return config, nil
 }
 
+// MaxYAMLConfigSize caps in-memory YAML config size at 16 MiB. The check
+// guards against pathological alias-bomb / billion-laughs payloads that would
+// otherwise be expanded by yaml.Unmarshal. Real configs in our corpus top out
+// well under 1 MiB.
 const MaxYAMLConfigSize = 16 * 1024 * 1024
 
 // LoadYAMLConfig loads a YAML config file into Go config structure.

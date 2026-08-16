@@ -11,6 +11,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
+// HandleQuery processes a DNS query over IPv4.
 func (h *DNSHandler) HandleQuery(
 	pkt *Packet,
 	ipLayer *layers.IPv4,

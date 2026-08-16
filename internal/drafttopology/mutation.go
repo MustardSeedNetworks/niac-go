@@ -27,16 +27,26 @@ var (
 	errConflict = errors.New("topology mutation conflict")
 )
 
+// Operation identifies which kind of edit a Mutation applies. It determines
+// which of Mutation's Device/Link/Position fields must be set.
 type Operation string
 
 const (
-	AddDevice  Operation = "add_device"
-	Connect    Operation = "connect"
+	// AddDevice inserts a new device; Mutation.Device must be set.
+	AddDevice Operation = "add_device"
+	// Connect creates a link between two device interfaces; Mutation.Link must be set.
+	Connect Operation = "connect"
+	// Disconnect removes an existing link; Mutation.Link must be set.
 	Disconnect Operation = "disconnect"
+	// MoveDevice repositions a device on the visual canvas; Mutation.Position must be set.
 	MoveDevice Operation = "move_device"
+	// UpdateLink changes the VLAN/native-VLAN/FDB properties of an existing link;
+	// Mutation.Link must be set.
 	UpdateLink Operation = "update_link"
 )
 
+// Mutation is a single typed edit to apply to a config.Config draft via Apply.
+// Exactly one of Device, Link, or Position is populated, selected by Operation.
 type Mutation struct {
 	Operation Operation         `json:"operation"`
 	Device    *DeviceMutation   `json:"device,omitempty"`
@@ -44,6 +54,10 @@ type Mutation struct {
 	Position  *PositionMutation `json:"position,omitempty"`
 }
 
+// DeviceMutation is the AddDevice payload: a new device's identity, addressing,
+// and interfaces. Identity is either MAC or Vendor (MACSuffix derives the MAC
+// suffix when Vendor is used); WalkFile, if set, seeds SNMP responses from a
+// captured walk instead of the synthetic profile generator.
 type DeviceMutation struct {
 	Name        string            `json:"name"`
 	Type        string            `json:"type"`
@@ -59,6 +73,8 @@ type DeviceMutation struct {
 	WalkFile    string            `json:"-"`
 }
 
+// Interface is a device interface as authored in a DeviceMutation, mirroring
+// the fields config.Interface exposes for physical/operational state.
 type Interface struct {
 	Name           string  `json:"name"`
 	Type           string  `json:"type,omitempty"`
@@ -75,36 +91,56 @@ type Interface struct {
 	VLANs          []int   `json:"vlans,omitempty"`
 }
 
+// Endpoint names one side of a link: a device and one of its interfaces.
 type Endpoint struct {
 	Device    string `json:"device"`
 	Interface string `json:"interface"`
 }
 
+// LinkEndpoints is the source/target pair identifying a link, independent of
+// its trunk properties. Connect/Disconnect/UpdateLink all resolve a link by
+// this pair before applying their respective mutation.
 type LinkEndpoints struct {
 	Source Endpoint `json:"source"`
 	Target Endpoint `json:"target"`
 }
 
+// LinkMutation is the Connect/Disconnect/UpdateLink payload: which link
+// (LinkEndpoints) and, for Connect/UpdateLink, the trunk properties to apply.
 type LinkMutation struct {
 	LinkEndpoints
 
 	Properties LinkProperties `json:"properties"`
 }
 
+// LinkProperties are the trunk-port settings carried on a link: the VLANs it
+// carries, its native VLAN (must be one of VLANs if set), and whether it is
+// FDB-only (forwarding-table visibility without carrying simulated traffic).
 type LinkProperties struct {
 	VLANs      []int `json:"vlans,omitempty"`
 	NativeVLAN int   `json:"native_vlan,omitempty"`
 	FDBOnly    bool  `json:"fdb_only,omitempty"`
 }
 
+// PositionMutation is the MoveDevice payload: a device's new canvas coordinates.
 type PositionMutation struct {
 	Device string  `json:"device"`
 	X      float64 `json:"x"`
 	Y      float64 `json:"y"`
 }
 
-func IsInvalid(err error) bool  { return errors.Is(err, errInvalid) }
+// IsInvalid reports whether err (or a wrapped cause) is a malformed-mutation
+// error from ValidateSource or Apply — callers map it to HTTP 400.
+func IsInvalid(err error) bool { return errors.Is(err, errInvalid) }
+
+// IsNotFound reports whether err (or a wrapped cause) is an error from Apply
+// naming a device, interface, or link that does not exist in the config —
+// callers map it to HTTP 404.
 func IsNotFound(err error) bool { return errors.Is(err, errNotFound) }
+
+// IsConflict reports whether err (or a wrapped cause) is an error from Apply
+// that the mutation cannot resolve without clobbering existing state (a
+// duplicate device name, an occupied interface) — callers map it to HTTP 409.
 func IsConflict(err error) bool { return errors.Is(err, errConflict) }
 
 // ValidateSource rejects source forms that canonical runtime serialization cannot preserve.
@@ -125,6 +161,9 @@ func ValidateSource(content string) error {
 	return nil
 }
 
+// Apply validates and executes mutation against cfg in place, dispatching on
+// mutation.Operation to the matching add/connect/disconnect/move/update-link
+// handler. Errors are classified via IsInvalid/IsNotFound/IsConflict.
 func Apply(cfg *config.Config, mutation Mutation) error {
 	if cfg == nil {
 		return invalid("configuration is required")

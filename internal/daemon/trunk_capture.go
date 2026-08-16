@@ -31,9 +31,15 @@ const (
 )
 
 var (
+	// ErrTrunkVLANUnavailable means the requested 802.1Q VLAN tag is not
+	// approved on the shared trunk capture.
 	ErrTrunkVLANUnavailable = errors.New("trunk VLAN is not available")
-	ErrTrunkEgressVLAN      = errors.New("frame does not use the session's physical VLAN")
-	ErrTrunkCaptureFailed   = errors.New("shared trunk capture has stopped")
+	// ErrTrunkEgressVLAN means a frame queued for egress does not carry the
+	// session's own physical VLAN tag.
+	ErrTrunkEgressVLAN = errors.New("frame does not use the session's physical VLAN")
+	// ErrTrunkCaptureFailed means the shared trunk capture goroutine has
+	// stopped and can no longer deliver or send frames.
+	ErrTrunkCaptureFailed = errors.New("shared trunk capture has stopped")
 )
 
 type trunkPhysicalCapture interface {

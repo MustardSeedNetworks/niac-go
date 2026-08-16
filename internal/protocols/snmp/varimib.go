@@ -16,6 +16,7 @@ import (
 // VariMibType represents the type of varimib handler.
 type VariMibType string
 
+// The VariMibType values, one per VariMibHandler implementation below.
 const (
 	VariMibFixed     VariMibType = "fixed"
 	VariMibIntegral  VariMibType = "integral"

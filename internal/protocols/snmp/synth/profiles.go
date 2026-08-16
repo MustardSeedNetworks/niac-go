@@ -20,6 +20,7 @@ import (
 // design doc + the UI dropdown values.
 type Vendor string
 
+// Operator-selectable vendor profiles (see AllVendors for UI dropdown order).
 const (
 	VendorCiscoIOS  Vendor = "cisco-ios"
 	VendorJunos     Vendor = "junos"
@@ -89,6 +90,7 @@ var AllVendors = []Vendor{
 // so map keys are self-documenting.
 type DeviceType string
 
+// Device types with a baseline synthesis profile.
 const (
 	TypeSwitch      DeviceType = "switch"
 	TypeRouter      DeviceType = "router"

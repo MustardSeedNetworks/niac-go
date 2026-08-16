@@ -1,3 +1,6 @@
+// Package device provides a crypto/rand-backed integer source for device
+// traffic simulation, so statistical jitter in simulated counters and
+// timing doesn't trip security linters that flag math/rand.
 package device
 
 import (

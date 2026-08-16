@@ -11,9 +11,13 @@ import (
 )
 
 var (
-	ErrFaultDeviceNotFound  = errors.New("fault target device not found")
+	// ErrFaultDeviceNotFound means the fault target names no device in the running simulation.
+	ErrFaultDeviceNotFound = errors.New("fault target device not found")
+	// ErrFaultDeviceAmbiguous means the fault target address resolves to more than one device.
 	ErrFaultDeviceAmbiguous = errors.New("fault target address matches multiple devices")
-	ErrFaultUnobservable    = errors.New("fault target has no observable SNMP interface counters")
+	// ErrFaultUnobservable means the target device exposes no SNMP interface
+	// counters a fault could visibly perturb.
+	ErrFaultUnobservable = errors.New("fault target has no observable SNMP interface counters")
 )
 
 // InterfaceFaultTarget describes one device's current fault-injection surface.

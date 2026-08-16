@@ -163,9 +163,20 @@ func (c *PacketConn) runEmitter(ctx context.Context) {
 	}
 }
 
-func (c *PacketConn) LocalAddr() net.Addr  { return c.local }
+// LocalAddr implements net.Conn.
+func (c *PacketConn) LocalAddr() net.Addr { return c.local }
+
+// RemoteAddr implements net.Conn.
 func (c *PacketConn) RemoteAddr() net.Addr { return c.remote }
 
-func (c *PacketConn) SetDeadline(time.Time) error      { return errors.ErrUnsupported }
-func (c *PacketConn) SetReadDeadline(time.Time) error  { return errors.ErrUnsupported }
+// SetDeadline implements net.Conn. Deadlines are not supported on a
+// packet-backed connection; it always returns errors.ErrUnsupported.
+func (c *PacketConn) SetDeadline(time.Time) error { return errors.ErrUnsupported }
+
+// SetReadDeadline implements net.Conn. Deadlines are not supported on a
+// packet-backed connection; it always returns errors.ErrUnsupported.
+func (c *PacketConn) SetReadDeadline(time.Time) error { return errors.ErrUnsupported }
+
+// SetWriteDeadline implements net.Conn. Deadlines are not supported on a
+// packet-backed connection; it always returns errors.ErrUnsupported.
 func (c *PacketConn) SetWriteDeadline(time.Time) error { return errors.ErrUnsupported }
