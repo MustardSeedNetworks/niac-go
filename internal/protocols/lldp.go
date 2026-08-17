@@ -94,9 +94,11 @@ const (
 	lldpMaxTTL              = 65535 // Maximum TTL value (uint16 max)
 	lldpIfIndexSubtype      = 2     // Interface numbering subtype: ifIndex
 	lldpIfIndexSize         = 4     // Interface index size (uint32)
-	lldpIPv4AddrLen         = 4     // IPv4 address length in bytes
 	lldpIPv6AddrLen         = 16    // IPv6 address length in bytes
-	lldpMACAddrLen          = 6     // MAC address length in bytes
+	// Management Address TLV subtypes, from the IANA address-family registry.
+	lldpAddrSubtypeIPv4 = 1
+	lldpAddrSubtypeIPv6 = 2
+	lldpMACAddrLen      = 6 // MAC address length in bytes
 )
 
 // LLDPHandler handles LLDP advertisements.
@@ -490,12 +492,15 @@ func (h *LLDPHandler) buildManagementAddressTLV(device *config.Device) []byte {
 		addressBytes   []byte
 	)
 
-	switch len(ip) {
-	case lldpIPv4AddrLen:
-		addressSubtype = 1 // IPv4
-		addressBytes = ip
-	case lldpIPv6AddrLen:
-		addressSubtype = 2 // IPv6
+	// Select the family with To4, not len(ip): net.ParseIP returns the 16-byte
+	// IPv4-in-IPv6 form for a v4 address, so switching on the length advertised
+	// every configured IPv4 management address under the IPv6 subtype.
+	switch v4 := ip.To4(); {
+	case v4 != nil:
+		addressSubtype = lldpAddrSubtypeIPv4
+		addressBytes = v4
+	case len(ip) == lldpIPv6AddrLen:
+		addressSubtype = lldpAddrSubtypeIPv6
 		addressBytes = ip
 	default:
 		return nil
