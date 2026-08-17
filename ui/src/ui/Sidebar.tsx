@@ -25,6 +25,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
+import { MsnMark } from './MsnMark';
 
 export interface SidebarNavItem {
   path: string;
@@ -236,6 +237,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           <span>{version}</span>
         </div>
       ) : null}
+      {/* Whose tool this is, under what it is. Quiet by design: the product
+          mark at the top of the rail is the one that has to be recognised. */}
+      <MsnMark collapsed={collapsed} className="mt-3" />
       {collapsed ? (
         <button
           type="button"
