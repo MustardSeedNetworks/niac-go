@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.39](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.38...v0.94.39) (2026-08-17)
+
+
+### Tests
+
+* **e2e:** run chromium and webkit only ([#1318](https://github.com/MustardSeedNetworks/niac-go/issues/1318)) ([5c40201](https://github.com/MustardSeedNetworks/niac-go/commit/5c40201fbf08f63a45e95027d2168d612e348a12))
+
+
+### Continuous Integration
+
+* drop Lighthouse ([#1315](https://github.com/MustardSeedNetworks/niac-go/issues/1315)) ([3a469e6](https://github.com/MustardSeedNetworks/niac-go/commit/3a469e62fc79677d9f84eb8348f01e1fe9eb37d3))
+
+
+### Miscellaneous
+
+* **deps:** update module github.com/google/go-licenses to v2 ([#1313](https://github.com/MustardSeedNetworks/niac-go/issues/1313)) ([6af5f55](https://github.com/MustardSeedNetworks/niac-go/commit/6af5f55d8f4632059b3f344b2b2f033dd342bf97))
+
 ## [0.94.38](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.37...v0.94.38) (2026-08-16)
 
 
