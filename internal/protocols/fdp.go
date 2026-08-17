@@ -30,12 +30,18 @@ const (
 
 // FDP TLV Types.
 const (
+	// FDPTLVTypeDeviceID and the types below follow Wireshark's packet-fdp.c, which is the only
+	// implementation available to check against. They are NOT CDP's: FDP puts
+	// the address at 2 and the interface at 3, where CDP has the port at 3 and
+	// the address at 2 with different contents. Emitting CDP's assignment made
+	// the dissector read the port name as an IP (104.101.114.110 is "hern",
+	// out of "GigabitEthernet0/1") and left Platform empty.
 	FDPTLVTypeDeviceID     = 0x0001
-	FDPTLVTypePort         = 0x0002
-	FDPTLVTypePlatform     = 0x0003
+	FDPTLVTypeIPAddress    = 0x0002
+	FDPTLVTypePort         = 0x0003
 	FDPTLVTypeCapabilities = 0x0004
 	FDPTLVTypeSoftware     = 0x0005
-	FDPTLVTypeIPAddress    = 0x0006
+	FDPTLVTypePlatform     = 0x0006
 )
 
 // FDP Capabilities flags.
@@ -59,6 +65,27 @@ const (
 	fdpChecksumByteShift = 8      // Bit shift for high byte in checksum
 	fdpChecksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit
 	fdpChecksumWordMask  = 0xffff // Mask for 16-bit value in checksum fold
+
+	// fdpNumAddrFieldLen is the Address TLV's leading "number of addresses"
+	// field size (4 bytes).
+	fdpNumAddrFieldLen = 4
+
+	// fdpAddressLenFieldLen is the per-address length field size (2 bytes).
+	fdpAddressLenFieldLen = 2
+
+	// fdpProtocolTypeNLPID is the Address TLV protocol-type naming the NLPID
+	// encoding — mirrors CDP's cdpProtocolTypeNLPID (cdp.go), since FDP is a
+	// CDP wire-format clone and CDP's encoding here was corrected against a
+	// spec-consistent decoder. No public FDP capture exists to verify this
+	// independently; see the doc comment on buildIPAddressTLV.
+	fdpProtocolTypeNLPID = 0x01
+
+	// fdpProtocolType802_2 is the other permitted protocol-type: the
+	// protocol field then carries an 8-byte SNAP header rather than a
+	// 1-byte NLPID. IPv6 is only recognised in this form.
+	fdpProtocolType802_2 = 0x02
+
+	fdpNLPIDIPv4 = 0xCC // NLPID identifying an IPv4 address
 )
 
 // Device type string constant for FDP specific types.
@@ -199,15 +226,15 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	payload = append(payload, fdpNullByte, fdpNullByte) // Checksum placeholder
 
 	// Add TLVs
+	// Emitted in ascending type order, as real gear does.
 	payload = append(payload, h.buildDeviceIDTLV(device)...)
-	payload = append(payload, h.buildPortTLV(device)...)
-	payload = append(payload, h.buildPlatformTLV(device)...)
-	payload = append(payload, h.buildCapabilitiesTLV(device)...)
-	payload = append(payload, h.buildSoftwareTLV(device)...)
-
 	if h.stack.firstStateIPAddress(device) != nil {
 		payload = append(payload, h.buildIPAddressTLV(device)...)
 	}
+	payload = append(payload, h.buildPortTLV(device)...)
+	payload = append(payload, h.buildCapabilitiesTLV(device)...)
+	payload = append(payload, h.buildSoftwareTLV(device)...)
+	payload = append(payload, h.buildPlatformTLV(device)...)
 
 	// Calculate checksum
 	checksum := h.calculateChecksum(payload)
@@ -350,28 +377,100 @@ func (h *FDPHandler) buildSoftwareTLV(device *config.Device) []byte {
 	return tlv
 }
 
-// buildIPAddressTLV builds the IP Address TLV.
+// buildIPAddressTLV builds the IP Address TLV. FDP is a CDP wire-format
+// clone (Foundry copied Cisco's TLV encoding — see fdpProtocolID and the
+// FDP TLV type numbering, which line up with CDP's), so this mirrors CDP's
+// corrected Addresses TLV (cdp.go buildAddressesTLV): a 4-byte address
+// count followed by protocol-type/protocol-length/protocol/address-length/
+// address per entry, rather than a bare address with no framing. No public
+// FDP capture exists to verify this independently against real Foundry/
+// Brocade hardware — flagged here rather than silently assumed correct.
 func (h *FDPHandler) buildIPAddressTLV(device *config.Device) []byte {
 	ip := h.stack.firstStateIPAddress(device)
 	if ip == nil {
 		return nil
 	}
 
-	var ipBytes []byte
-	if ip.To4() != nil {
-		ipBytes = ip.To4()
+	var (
+		addrBytes    []byte
+		protocolType byte
+		protocol     []byte
+	)
+
+	if v4 := ip.To4(); v4 != nil {
+		addrBytes = v4
+		protocolType = fdpProtocolTypeNLPID
+		protocol = []byte{fdpNLPIDIPv4}
 	} else {
-		ipBytes = ip.To16()
+		addrBytes = ip.To16()
+		protocolType = fdpProtocolType802_2
+		protocol = []byte{0xAA, 0xAA, 0x03, 0x00, 0x00, 0x00, 0x86, 0xDD}
 	}
 
-	length := min(fdpTLVHeaderSize+len(ipBytes), fdpMaxLen)
+	addrEntryLen := 1 + 1 + len(protocol) + fdpAddressLenFieldLen + len(addrBytes)
+	length := min(fdpTLVHeaderSize+fdpNumAddrFieldLen+addrEntryLen, fdpMaxLen)
 
 	tlv := make([]byte, length)
 	binary.BigEndian.PutUint16(tlv[0:2], FDPTLVTypeIPAddress)
 	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(length))
-	copy(tlv[4:], ipBytes)
+	binary.BigEndian.PutUint32(tlv[4:8], 1) // number of addresses
+
+	offset := fdpTLVHeaderSize + fdpNumAddrFieldLen
+	tlv[offset] = protocolType
+	offset++
+	tlv[offset] = safeconv.Byte(len(protocol))
+	offset++
+	copy(tlv[offset:], protocol)
+	offset += len(protocol)
+	addrBytesLen := min(len(addrBytes), fdpMaxLen)
+	binary.BigEndian.PutUint16(tlv[offset:offset+fdpAddressLenFieldLen], safeconv.Uint16(addrBytesLen))
+	offset += fdpAddressLenFieldLen
+	copy(tlv[offset:], addrBytes)
 
 	return tlv
+}
+
+// parseFDPAddressTLV parses an Address TLV value (as built by
+// buildIPAddressTLV) and returns the first address, or nil if the value is
+// malformed or empty.
+func parseFDPAddressTLV(value []byte) net.IP {
+	if len(value) < fdpNumAddrFieldLen {
+		return nil
+	}
+
+	numAddrs := binary.BigEndian.Uint32(value[0:fdpNumAddrFieldLen])
+	if numAddrs == 0 {
+		return nil
+	}
+
+	offset := fdpNumAddrFieldLen
+	if offset+2 > len(value) {
+		return nil
+	}
+
+	protocolLen := int(value[offset+1])
+	offset += 2
+
+	if offset+protocolLen+fdpAddressLenFieldLen > len(value) {
+		return nil
+	}
+
+	offset += protocolLen
+	addrLen := int(binary.BigEndian.Uint16(value[offset : offset+fdpAddressLenFieldLen]))
+	offset += fdpAddressLenFieldLen
+
+	if addrLen != net.IPv4len && addrLen != net.IPv6len {
+		return nil
+	}
+
+	if offset+addrLen > len(value) {
+		return nil
+	}
+
+	ip := make(net.IP, addrLen)
+	copy(ip, value[offset:offset+addrLen])
+
+	return ip
 }
 
 // calculateChecksum calculates the FDP checksum.
@@ -494,9 +593,7 @@ func (h *FDPHandler) processFDPTLV(data *fdpTLVData, tlvType uint16, value []byt
 	case FDPTLVTypeSoftware:
 		data.software = strings.TrimSpace(string(value))
 	case FDPTLVTypeIPAddress:
-		if len(value) == net.IPv4len || len(value) == net.IPv6len {
-			ip := make(net.IP, len(value))
-			copy(ip, value)
+		if ip := parseFDPAddressTLV(value); ip != nil {
 			data.mgmtIP = ip
 		}
 	}

@@ -307,8 +307,6 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 		s.ipv6Handler.HandlePacket(pkt)
 	case EtherTypeLLDP:
 		s.lldpHandler.HandlePacket(pkt)
-	case EtherTypeEDP:
-		s.edpHandler.HandlePacket(pkt)
 	case EtherTypeFDP:
 		s.fdpHandler.HandlePacket(pkt)
 	default:
