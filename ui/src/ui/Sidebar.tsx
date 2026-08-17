@@ -11,7 +11,6 @@
  * AppShell level alongside the existing test/state plumbing.
  */
 import {
-  Activity,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -73,16 +72,26 @@ const NavItemButton: FC<NavItemButtonProps> = ({ item, active, collapsed, onNavi
     type="button"
     onClick={() => onNavigate(item.path)}
     onMouseEnter={() => prefetchRoute(item.path)}
-    className={`group flex items-center gap-default w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+    aria-current={active ? 'page' : undefined}
+    /* 44px minimum target, 11px radius, and a 3px left bar for the active
+       route. The bar carries the state rather than a gradient fill: a filled
+       row competes with status colour, and the rail is chrome. */
+    className={`group relative flex items-center gap-default w-full min-h-11 px-3 py-2.5 rounded-[11px] text-sm font-medium transition-all duration-200 ${
       active
-        ? 'bg-gradient-to-r from-brand-primary/30 to-brand-primary/20 text-text-primary shadow-edge-highlight'
+        ? 'bg-[color-mix(in_oklab,var(--color-brand-primary)_16%,transparent)] text-text-primary'
         : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
     }`}
     title={collapsed ? item.label : undefined}
   >
+    {active ? (
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-brand-primary"
+      />
+    ) : null}
     {createElement(item.icon, {
       className: `${iconSizes.lg} flex-shrink-0 ${
-        active ? 'text-brand-accent' : 'text-text-muted group-hover:text-text-secondary'
+        active ? 'text-brand-primary' : 'text-text-muted group-hover:text-text-secondary'
       }`,
     })}
     {!collapsed ? (
@@ -145,8 +154,8 @@ const SidebarHeader: FC<SidebarHeaderProps> = ({ collapsed, onCollapse }) => {
     >
       <div className={`flex items-center gap-compact ${collapsed ? 'justify-center' : ''}`}>
         <div className="relative flex-shrink-0">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-primary to-brand-accent flex-center shadow-lg">
-            <Activity className={`${iconSizes.lg} text-text-inverse`} />
+          <div className="h-9 w-9 rounded-[11px] bg-brand-primary flex-center">
+            <span className="figure text-sm font-extrabold tracking-tight text-on-brand">NI</span>
           </div>
           <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-status-success border-2 border-surface-raised" />
         </div>
@@ -322,8 +331,8 @@ const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex-between px-4 py-row-lg bg-surface-raised/95 backdrop-blur-xl border-b border-surface-border">
       <div className="flex items-center gap-compact">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-primary to-brand-accent flex-center">
-          <Activity className={`${iconSizes.md} text-text-inverse`} />
+        <div className="h-8 w-8 rounded-[11px] bg-brand-primary flex-center">
+          <span className="figure text-xs font-extrabold tracking-tight text-on-brand">NI</span>
         </div>
         <span className="font-display font-bold text-text-primary">{t('app.title')}</span>
       </div>
@@ -413,8 +422,8 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       </aside>
 
       <aside
-        className={`hidden lg:flex fixed top-0 left-0 z-40 h-full flex-col bg-surface-raised/80 backdrop-blur-xl border-r border-surface-border transition-all duration-300 ease-in-out ${
-          collapsed ? 'w-16' : 'w-64'
+        className={`hidden lg:flex fixed top-0 left-0 z-40 h-full flex-col bg-gradient-to-b from-rail-from to-rail-to backdrop-blur-xl border-r border-hairline transition-all duration-300 ease-in-out ${
+          collapsed ? 'w-16' : 'w-[252px]'
         }`}
       >
         {body(true)}
