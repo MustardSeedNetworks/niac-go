@@ -30,12 +30,18 @@ const (
 
 // FDP TLV Types.
 const (
+	// FDPTLVTypeDeviceID and the types below follow Wireshark's packet-fdp.c, which is the only
+	// implementation available to check against. They are NOT CDP's: FDP puts
+	// the address at 2 and the interface at 3, where CDP has the port at 3 and
+	// the address at 2 with different contents. Emitting CDP's assignment made
+	// the dissector read the port name as an IP (104.101.114.110 is "hern",
+	// out of "GigabitEthernet0/1") and left Platform empty.
 	FDPTLVTypeDeviceID     = 0x0001
-	FDPTLVTypePort         = 0x0002
-	FDPTLVTypePlatform     = 0x0003
+	FDPTLVTypeIPAddress    = 0x0002
+	FDPTLVTypePort         = 0x0003
 	FDPTLVTypeCapabilities = 0x0004
 	FDPTLVTypeSoftware     = 0x0005
-	FDPTLVTypeIPAddress    = 0x0006
+	FDPTLVTypePlatform     = 0x0006
 )
 
 // FDP Capabilities flags.
@@ -220,15 +226,15 @@ func (h *FDPHandler) buildFDPFrame(device *config.Device) []byte {
 	payload = append(payload, fdpNullByte, fdpNullByte) // Checksum placeholder
 
 	// Add TLVs
+	// Emitted in ascending type order, as real gear does.
 	payload = append(payload, h.buildDeviceIDTLV(device)...)
-	payload = append(payload, h.buildPortTLV(device)...)
-	payload = append(payload, h.buildPlatformTLV(device)...)
-	payload = append(payload, h.buildCapabilitiesTLV(device)...)
-	payload = append(payload, h.buildSoftwareTLV(device)...)
-
 	if h.stack.firstStateIPAddress(device) != nil {
 		payload = append(payload, h.buildIPAddressTLV(device)...)
 	}
+	payload = append(payload, h.buildPortTLV(device)...)
+	payload = append(payload, h.buildCapabilitiesTLV(device)...)
+	payload = append(payload, h.buildSoftwareTLV(device)...)
+	payload = append(payload, h.buildPlatformTLV(device)...)
 
 	// Calculate checksum
 	checksum := h.calculateChecksum(payload)

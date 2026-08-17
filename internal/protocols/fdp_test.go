@@ -59,12 +59,15 @@ func TestFDPTLVTypes(t *testing.T) {
 		value    uint16
 		expected uint16
 	}{
+		// Per Wireshark's packet-fdp.c: address at 2, interface at 3. These are
+		// NOT CDP's numbers, and using CDP's made the dissector read the port
+		// name as an IP address.
 		{"Device ID", protocols.FDPTLVTypeDeviceID, 0x0001},
-		{"Port", protocols.FDPTLVTypePort, 0x0002},
-		{"Platform", protocols.FDPTLVTypePlatform, 0x0003},
+		{"IP Address", protocols.FDPTLVTypeIPAddress, 0x0002},
+		{"Port", protocols.FDPTLVTypePort, 0x0003},
 		{"Capabilities", protocols.FDPTLVTypeCapabilities, 0x0004},
 		{"Software", protocols.FDPTLVTypeSoftware, 0x0005},
-		{"IP Address", protocols.FDPTLVTypeIPAddress, 0x0006},
+		{"Platform", protocols.FDPTLVTypePlatform, 0x0006},
 	}
 
 	for _, tt := range tests {
