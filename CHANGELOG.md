@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.41](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.40...v0.94.41) (2026-08-17)
+
+
+### Bug Fixes
+
+* **protocols:** correct EDP wire format and mirror FDP address TLV on CDP ([#1335](https://github.com/MustardSeedNetworks/niac-go/issues/1335)) ([f984d0c](https://github.com/MustardSeedNetworks/niac-go/commit/f984d0cf7780ea0b98697620f547dd053dd3bbfe))
+
 ## [0.94.40](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.39...v0.94.40) (2026-08-17)
 
 
