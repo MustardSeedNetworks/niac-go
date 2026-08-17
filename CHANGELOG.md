@@ -5,6 +5,26 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.40](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.39...v0.94.40) (2026-08-17)
+
+
+### Bug Fixes
+
+* **protocols:** correct LLDP and CDP management address encodings ([#1332](https://github.com/MustardSeedNetworks/niac-go/issues/1332)) ([d7c16a4](https://github.com/MustardSeedNetworks/niac-go/commit/d7c16a4dcbc4ec8f24c231e52f157e14197b0355)), closes [#1330](https://github.com/MustardSeedNetworks/niac-go/issues/1330)
+* **protocols:** emit a conforming CDP Address TLV protocol type ([#1326](https://github.com/MustardSeedNetworks/niac-go/issues/1326)) ([8983b5e](https://github.com/MustardSeedNetworks/niac-go/commit/8983b5eb7dc496d8abf9aa5c99d0e31507864017))
+
+
+### Continuous Integration
+
+* make CI conformance a blocking gate ([#1327](https://github.com/MustardSeedNetworks/niac-go/issues/1327)) ([109626e](https://github.com/MustardSeedNetworks/niac-go/commit/109626ec935fac62cfebf61777d53a359d49b3dd))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1324](https://github.com/MustardSeedNetworks/niac-go/issues/1324)) ([824bd1c](https://github.com/MustardSeedNetworks/niac-go/commit/824bd1c55363815b323ab03af4d3fb20a077fa09))
+* remove Lighthouse residue left by its deletion ([#1334](https://github.com/MustardSeedNetworks/niac-go/issues/1334)) ([720907f](https://github.com/MustardSeedNetworks/niac-go/commit/720907f05df47c9bd7e80ecad3717199408c7ee0)), closes [#1314](https://github.com/MustardSeedNetworks/niac-go/issues/1314)
+* **ui:** remove stale license remnants ([#1331](https://github.com/MustardSeedNetworks/niac-go/issues/1331)) ([ef5f15d](https://github.com/MustardSeedNetworks/niac-go/commit/ef5f15d2d360101e50187a91a5af562d9d79e80d))
+
 ## [0.94.39](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.38...v0.94.39) (2026-08-17)
 
 
