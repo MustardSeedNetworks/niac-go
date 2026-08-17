@@ -144,6 +144,7 @@ const PageWithErrorBoundary = memo(
           <Breadcrumbs />
           <PageHeader
             icon={page.icon}
+            eyebrow={page.eyebrow}
             title={page.title}
             description={page.description}
             help={page.help}

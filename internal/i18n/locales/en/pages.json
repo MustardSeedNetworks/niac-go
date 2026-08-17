@@ -140,6 +140,7 @@
       "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-4 for quick injection).",
       "tuiModeLabel": "TUI Mode:"
     },
+    "eyebrow": "Simulation",
     "label": "Dashboard",
     "quickActions": {
       "debugConsoleDescription": "View live logs",
@@ -162,6 +163,19 @@
       "title": "Recent Runs",
       "txShort": "TX {{value}}",
       "viewAll": "View all history →"
+    },
+    "rollup": {
+      "checking": "Checking the daemon",
+      "degraded": "The stack is running but cannot exchange frames",
+      "degradedBody": "Devices are being simulated, but their traffic is not reaching the wire. Check the interface attachment and the trunk it depends on.",
+      "devicesLabel": "Devices",
+      "idle": "No simulation is running",
+      "idleBody": "Start one from the Simulation page to bring devices onto an interface.",
+      "noDaemon": "The daemon is not answering",
+      "noDaemonBody": "Counters cannot be read without a daemon, so none are shown. Start NIAC in daemon mode to see live state.",
+      "running_one": "Simulating {{count}} device on {{iface}}",
+      "running_other": "Simulating {{count}} devices on {{iface}}",
+      "uptimeLabel": "Uptime"
     },
     "stats": {
       "devicesOnline": "Devices Online",
@@ -719,6 +733,7 @@
     "description": "Monitor runtime status, view network interfaces, and manage NIAC configuration.",
     "errorNoConfig": "Please select a configuration above or upload a config file",
     "errorNoInterface": "Please select an interface above",
+    "eyebrow": "Runtime",
     "fabric": {
       "attachment": "Attachment",
       "drops": "Drops",
@@ -752,6 +767,20 @@
       "selectedPrefix": "Selected:"
     },
     "reviewConnectionLabel": "Review connection",
+    "rollup": {
+      "checking": "Checking the daemon",
+      "degraded": "The simulation is running but cannot exchange frames",
+      "degradedBody": "Devices are being simulated, but their traffic is not reaching the wire. Check the attachment mode and the trunk below.",
+      "devicesLabel": "Devices",
+      "idle": "No simulation is running",
+      "idleBody": "Pick an interface and a configuration below, then start a run.",
+      "ifaceLabel": "Interface",
+      "noDaemon": "NIAC is not running in daemon mode",
+      "noDaemonBody": "Simulations are started and stopped by the daemon, so nothing here can report its state until one is running.",
+      "running_one": "Simulating {{count}} device on {{iface}}",
+      "running_other": "Simulating {{count}} devices on {{iface}}",
+      "uptimeLabel": "Uptime"
+    },
     "running": {
       "active": "ACTIVE",
       "configHelper": "Configuration file",

@@ -83,6 +83,8 @@ const LibraryPcapsPage = lazy(() =>
 export type PageConfig = {
   path: string;
   label: string;
+  /** Kicker above the title naming the product domain. */
+  eyebrow?: string;
   title: string;
   description: string;
   icon: LucideIcon;
@@ -570,6 +572,10 @@ export function usePages(): PageConfig[] {
       staticPages.map((p) => ({
         path: p.path,
         label: t(`${p.i18nKey}.label`, p.interpolation),
+        // A page has an eyebrow when its locale namespace declares one, so the
+        // copy lives in one place instead of being mirrored by a flag here.
+        // Pages still awaiting their archetype pass have none.
+        eyebrow: t(`${p.i18nKey}.eyebrow`, { ...p.interpolation, defaultValue: '' }) || undefined,
         title: t(`${p.i18nKey}.title`, p.interpolation),
         description: t(`${p.i18nKey}.description`, p.interpolation),
         icon: p.icon,

@@ -12,7 +12,7 @@
  *     labeled pair, not one smuggled into the other's helper text
  *   - a "Start a Simulation" quick action links to /runtime
  */
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -112,6 +112,7 @@ describe('DashboardPage', () => {
       sessionId: 'default',
       deviceCount: 5,
       uptimeSeconds: 120,
+      interface: 'eth0',
     });
   });
 
@@ -149,6 +150,45 @@ describe('DashboardPage', () => {
     renderDashboard();
     const link = await screen.findByText('Start a Simulation');
     expect(link.closest('a')).toHaveAttribute('href', '/runtime');
+  });
+
+  it('names the interface and device count while a simulation runs', async () => {
+    renderDashboard();
+    expect(await screen.findByText('Simulating 5 devices on eth0')).toBeInTheDocument();
+  });
+
+  it('reports no data rather than all-clear while the first poll is in flight', async () => {
+    fetchSimulationStatus.mockReset().mockReturnValue(new Promise<SimulationStatus>(() => {}));
+    const { container } = renderDashboard();
+    await waitFor(() => expect(container.querySelector('[data-state]')).toBeInTheDocument());
+    expect(container.querySelector('[data-state]')).toHaveAttribute('data-state', 'unknown');
+  });
+
+  it('prints em dashes rather than zeros when the daemon is not answering', async () => {
+    fetchSimulationStatus.mockReset().mockResolvedValue(null as unknown as SimulationStatus);
+    const { container } = renderDashboard();
+    expect(await screen.findByText('The daemon is not answering')).toBeInTheDocument();
+    const rollup = container.querySelector('[data-state]');
+    expect(rollup).toHaveAttribute('data-state', 'unknown');
+    // Devices and Uptime are unmeasurable without a daemon, not zero. The
+    // stat cards below print their own dashes for the same reason, so scope
+    // the count to the rollup's own figures.
+    expect(within(rollup as HTMLElement).getAllByText('—')).toHaveLength(2);
+  });
+
+  it("uses the daemon's own reason as the headline when the stack is degraded", async () => {
+    fetchSimulationStatus.mockReset().mockResolvedValue({
+      running: true,
+      sessionId: 'default',
+      deviceCount: 5,
+      uptimeSeconds: 120,
+      interface: 'eth0',
+      degraded: true,
+      degradedReason: 'Shared trunk veth is down',
+    });
+    const { container } = renderDashboard();
+    expect(await screen.findByText('Shared trunk veth is down')).toBeInTheDocument();
+    expect(container.querySelector('[data-state]')).toHaveAttribute('data-state', 'warn');
   });
 
   it('deep-links each catalog error type to /traffic with the type preselected, instead of an inline form', async () => {
