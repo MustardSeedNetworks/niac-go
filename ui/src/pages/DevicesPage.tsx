@@ -56,6 +56,7 @@ const DeviceListCard: FC = () => {
       error={error?.message}
       getStatus={(d) => (d.length > 0 ? 'success' : 'unknown')}
       emptyMessage={t('devices.emptyMessage')}
+      testId="devices-card"
     >
       {(data) => (
         <>

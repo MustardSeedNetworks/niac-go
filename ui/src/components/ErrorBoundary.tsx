@@ -71,7 +71,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="flex min-h-[400px] flex-col items-center justify-center pad-xl">
+        <div
+          data-testid="error-boundary-fallback"
+          className="flex min-h-[400px] flex-col items-center justify-center pad-xl"
+        >
           <div className="mx-auto max-w-md text-center">
             <div className="mb-content flex justify-center">
               <div className="rounded-full bg-status-error pad dark:bg-status-error/20">

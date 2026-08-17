@@ -63,6 +63,12 @@ interface BaseCardProps<T> {
   className?: string;
   /** Click handler for interactive cards */
   onClick?: () => void;
+  /**
+   * Test hook prefix. The empty branch renders `${testId}-empty`, so a test can
+   * target one card's empty state; a page mounts several BaseCards and a shared
+   * testid trips Playwright strict mode.
+   */
+  testId?: string;
 }
 
 /**
@@ -109,6 +115,7 @@ export function BaseCard<T>({
   emptyMessage = 'No data available',
   className,
   onClick,
+  testId,
 }: BaseCardProps<T>): React.JSX.Element {
   // Loading state (highest priority)
   if (loading) {
@@ -154,7 +161,11 @@ export function BaseCard<T>({
         className={className}
         enableLiveRegion={true}
       >
-        <CardValue value={emptyMessage} size="md" />
+        {/* Test hook: the empty branch is otherwise selectable only by its
+            translated message, which breaks under the es locale. */}
+        <div data-testid={testId ? `${testId}-empty` : undefined}>
+          <CardValue value={emptyMessage} size="md" />
+        </div>
       </StatusCard>
     );
   }
