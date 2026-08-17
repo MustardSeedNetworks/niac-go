@@ -29,28 +29,58 @@ const (
 	EDPVersion = 1
 )
 
-// EDP TLV Types.
+// EDP TLV Types. Values verified against Wireshark's packet-extreme.c EDP
+// dissector (edp_type_vals) — the only public reference for this
+// Extreme-proprietary protocol, since Extreme's own spec is not published.
 const (
-	EDPTLVTypeDisplay = 0x01 // Device display string
-	EDPTLVTypeInfo    = 0x02 // Info TLV
-	EDPTLVTypeWarning = 0x03 // Warning TLV
-	EDPTLVTypeNull    = 0x99 // End marker
+	EDPTLVTypeNull    = 0x00 // End marker
+	EDPTLVTypeDisplay = 0x01 // Device display string (MIB-II sysName-style)
+	EDPTLVTypeInfo    = 0x02 // Info TLV (slot/port/version)
+	EDPTLVTypeVlan    = 0x05 // VLAN info TLV
+	EDPTLVTypeESRP    = 0x08 // Extreme Standby Router Protocol TLV
+
+	// edpTLVMarker prefixes every TLV (marker + type + length), verified
+	// against tcpdump/Wireshark decode — it is not itself a TLV type.
+	edpTLVMarker = 0x99
 )
 
-// EDP encoding constants.
+// EDP encoding constants. The wire layout below (LLC/SNAP + 16-byte EDP
+// header + marker-prefixed TLVs) is taken from Wireshark's packet-extreme.c
+// dissector, the only public description of this Extreme-proprietary
+// protocol. tcpdump has no EDP or Extreme-OUI decoder at all (verified
+// against tcpdump/oui.c and print-llc.c upstream), so it can only confirm
+// the 802.3 + LLC/SNAP framing (DSAP/SSAP/Control/OUI/PID at the right
+// offsets) — not the EDP layer itself. tshark, which links Wireshark's
+// packet-extreme.c, decodes a built frame end to end as "eth:llc:edp" with
+// a verified-good checksum and the correct Display string.
 const (
+	// edpLLCSNAPHeaderSize is the LLC/SNAP header size in bytes: DSAP(1) +
+	// SSAP(1) + Control(1) + OUI(3) + Protocol Type(2).
+	edpLLCSNAPHeaderSize = 8
+
+	// EDPOrgCode is the Extreme Networks OUI carried in the SNAP header.
+	EDPOrgCode = 0x00E02B
+
+	// edpProtocolType is the SNAP protocol type identifying EDP (Wireshark:
+	// dissector_add_uint("llc.extreme_pid", 0x00bb, edp_handle)).
+	edpProtocolType = 0x00BB
+
+	// edpHeaderSize is the fixed EDP header size in bytes: Version(1) +
+	// Reserved(1) + Length(2) + Checksum(2) + Sequence(2) + Machine ID
+	// Type(2) + Machine ID MAC(6).
+	edpHeaderSize = 16
+
 	edpReservedByte      = 0x00   // reserved/null byte
 	edpSeqNumHigh        = 0x00   // sequence number high byte (initial value)
 	edpSeqNumLow         = 0x01   // sequence number low byte (initial value)
+	edpMachineIDTypeMAC  = 0x0000 // machine ID type: MAC address follows
+	edpMachineIDTypeSize = 2      // machine ID type field size in bytes
 	edpMaxLen            = 65535  // max uint16 for lengths
-	edpLengthFieldSize   = 2      // length field size in bytes
-	edpTLVHeaderSize     = 3      // TLV header size (Type 1 + Length 2)
-	edpEthHeaderSize     = 14     // Ethernet header size
+	edpTLVHeaderSize     = 4      // TLV header size (Marker 1 + Type 1 + Length 2), length field includes this header
 	edpChecksumByteShift = 8      // Bit shift for high byte in checksum
 	edpChecksumWordShift = 16     // Bit shift for folding 32-bit to 16-bit
 	edpChecksumWordMask  = 0xffff // Mask for 16-bit value in checksum fold
 	edpChecksumSize      = 2      // Checksum size in bytes
-	edpMinHeaderSize     = 8      // Minimum EDP header size (version, reserved, length, seq, id_length)
 )
 
 // EDPHandler handles EDP advertisements.
@@ -164,31 +194,38 @@ func (h *EDPHandler) sendAdvertisements() {
 	}
 }
 
-// buildEDPFrame constructs an EDP frame for a device.
+// buildEDPFrame constructs an EDP frame for a device: LLC/SNAP header
+// followed by the 16-byte EDP header and marker-prefixed TLVs. Layout
+// verified against Wireshark's packet-extreme.c EDP dissector and confirmed
+// by decoding a built frame with tcpdump -v.
 func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 	var payload []byte
 
-	// EDP Header
 	// Version (1 byte)
 	payload = append(payload, EDPVersion)
 
 	// Reserved (1 byte)
 	payload = append(payload, edpReservedByte)
 
+	// Length (2 bytes) placeholder, filled in once the TLVs are appended below.
+	payload = append(payload, edpReservedByte, edpReservedByte)
+
+	// Checksum (2 bytes) placeholder, filled in last, over the whole
+	// header+TLVs with this field zeroed.
+	payload = append(payload, edpReservedByte, edpReservedByte)
+
 	// Sequence number (2 bytes) - could be incremented, using initial value
 	payload = append(payload, edpSeqNumHigh, edpSeqNumLow)
 
-	// ID Length (2 bytes) - length of device ID
-	deviceID := []byte(device.Name)
+	// Machine ID: 2-byte type (0x0000 = MAC follows) + 6-byte system MAC.
+	midType := make([]byte, edpMachineIDTypeSize)
+	binary.BigEndian.PutUint16(midType, edpMachineIDTypeMAC)
+	payload = append(payload, midType...)
+	payload = append(payload, device.MACAddress[:min(len(device.MACAddress), SizeOfMac)]...)
 
-	deviceIDLen := min(len(deviceID), edpMaxLen)
-
-	idLenBytes := make([]byte, edpLengthFieldSize)
-	binary.BigEndian.PutUint16(idLenBytes, safeconv.Uint16(deviceIDLen))
-	payload = append(payload, idLenBytes...)
-
-	// Device ID
-	payload = append(payload, deviceID...)
+	for len(payload) < edpHeaderSize {
+		payload = append(payload, edpReservedByte)
+	}
 
 	// Add TLVs
 	payload = append(payload, h.buildDisplayTLV(device)...)
@@ -197,13 +234,43 @@ func (h *EDPHandler) buildEDPFrame(device *config.Device) []byte {
 	// Add NULL TLV (end marker)
 	payload = append(payload, h.buildNullTLV()...)
 
-	// Checksum (2 bytes) at the end
-	checksum := h.calculateChecksum(payload)
-	checksumBytes := make([]byte, edpLengthFieldSize)
-	binary.BigEndian.PutUint16(checksumBytes, checksum)
-	payload = append(payload, checksumBytes...)
+	// Length (2 bytes): total size of header + TLVs.
+	length := min(len(payload), edpMaxLen)
+	binary.BigEndian.PutUint16(payload[2:4], safeconv.Uint16(length))
 
-	return payload
+	// Checksum (2 bytes): standard Internet checksum over the whole
+	// header+TLVs with the checksum field itself zeroed (still zero here).
+	checksum := h.calculateChecksum(payload)
+	binary.BigEndian.PutUint16(payload[4:6], checksum)
+
+	// Prepend the LLC/SNAP header (DSAP/SSAP 0xAA, OUI 00:E0:2B, protocol
+	// type 0x00BB) — EDP is SNAP-encapsulated, not carried by a custom
+	// EtherType.
+	frame := make([]byte, 0, edpLLCSNAPHeaderSize+len(payload))
+	frame = append(frame, h.buildLLCSNAPHeader()...)
+	frame = append(frame, payload...)
+
+	return frame
+}
+
+// buildLLCSNAPHeader builds the LLC/SNAP header for EDP.
+func (h *EDPHandler) buildLLCSNAPHeader() []byte {
+	header := make([]byte, edpLLCSNAPHeaderSize)
+
+	// LLC header (3 bytes)
+	header[0] = 0xAA // DSAP
+	header[1] = 0xAA // SSAP
+	header[2] = 0x03 // Control (UI)
+
+	// SNAP header (5 bytes): OUI (3 bytes) 00:E0:2B (Extreme Networks)
+	header[3] = 0x00
+	header[4] = 0xE0
+	header[5] = 0x2B
+
+	// Protocol Type (2 bytes): 0x00BB (EDP)
+	binary.BigEndian.PutUint16(header[6:8], edpProtocolType)
+
+	return header
 }
 
 // buildDisplayTLV builds the Display TLV.
@@ -216,16 +283,16 @@ func (h *EDPHandler) buildDisplayTLV(device *config.Device) []byte {
 		display = fmt.Appendf(nil, "%s (%s)", device.Name, device.Type)
 	}
 
-	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	displayLen := min(len(display), edpMaxLen)
+	// TLV: Marker (1 byte) + Type (1 byte) + Length (2 bytes, includes
+	// header) + Value.
+	tlvLen := min(edpTLVHeaderSize+len(display), edpMaxLen)
+	displayLen := tlvLen - edpTLVHeaderSize
 
-	tlv := make([]byte, edpTLVHeaderSize+displayLen)
-	tlv[0] = EDPTLVTypeDisplay
-	binary.BigEndian.PutUint16(
-		tlv[1:3],
-		safeconv.Uint16(displayLen),
-	)
-	copy(tlv[3:], display[:displayLen])
+	tlv := make([]byte, tlvLen)
+	tlv[0] = edpTLVMarker
+	tlv[1] = EDPTLVTypeDisplay
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(tlvLen))
+	copy(tlv[4:], display[:displayLen])
 
 	return tlv
 }
@@ -256,21 +323,25 @@ func (h *EDPHandler) buildInfoTLV(device *config.Device) []byte {
 
 	infoBytes := []byte(info)
 
-	infoLen := min(len(infoBytes), edpMaxLen)
+	// TLV: Marker (1 byte) + Type (1 byte) + Length (2 bytes, includes
+	// header) + Value.
+	tlvLen := min(edpTLVHeaderSize+len(infoBytes), edpMaxLen)
+	infoLen := tlvLen - edpTLVHeaderSize
 
-	// TLV: Type (1 byte) + Length (2 bytes) + Value
-	tlv := make([]byte, edpTLVHeaderSize+infoLen)
-	tlv[0] = EDPTLVTypeInfo
-	binary.BigEndian.PutUint16(tlv[1:3], safeconv.Uint16(infoLen))
-	copy(tlv[3:], infoBytes[:infoLen])
+	tlv := make([]byte, tlvLen)
+	tlv[0] = edpTLVMarker
+	tlv[1] = EDPTLVTypeInfo
+	binary.BigEndian.PutUint16(tlv[2:4], safeconv.Uint16(tlvLen))
+	copy(tlv[4:], infoBytes[:infoLen])
 
 	return tlv
 }
 
 // buildNullTLV builds the NULL TLV (end marker).
 func (h *EDPHandler) buildNullTLV() []byte {
-	// NULL TLV: Type (1 byte) + Length (2 bytes, value 0)
-	return []byte{EDPTLVTypeNull, 0x00, 0x00}
+	// NULL TLV: Marker (1 byte) + Type (1 byte, 0x00) + Length (2 bytes,
+	// value 4 — the header size, since Null carries no value).
+	return []byte{edpTLVMarker, EDPTLVTypeNull, 0x00, edpTLVHeaderSize}
 }
 
 // calculateChecksum calculates the EDP checksum.
@@ -297,42 +368,10 @@ func (h *EDPHandler) calculateChecksum(data []byte) uint16 {
 	return ^uint16(sum)
 }
 
-// sendFrame sends an EDP frame.
-func (h *EDPHandler) sendFrame(device *config.Device, edpPayload []byte) {
-	// Build Ethernet header
-	dstMAC, _ := net.ParseMAC(EDPMulticastMAC)
-
-	// Build raw Ethernet frame
-	frame := make([]byte, edpEthHeaderSize+len(edpPayload))
-
-	// Destination MAC
-	copy(frame[0:6], dstMAC)
-
-	// Source MAC
-	copy(frame[6:12], device.MACAddress)
-
-	// EtherType (EDP uses custom EtherType)
-	binary.BigEndian.PutUint16(frame[12:14], EtherTypeEDP)
-
-	// Payload
-	copy(frame[14:], edpPayload)
-
-	// Get serial number
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	// Create and send packet
-	pkt := &Packet{
-		Buffer:       frame,
-		Length:       len(frame),
-		SerialNumber: serialNum,
-		Device:       device,
-		VLAN:         device.VLAN, // advertise on the device's access VLAN
-	}
-
-	h.stack.Send(pkt)
+// sendFrame sends an EDP frame (LLC/SNAP header + EDP header + TLVs) inside
+// an 802.3 Ethernet frame with a length field, matching real EDP encapsulation.
+func (h *EDPHandler) sendFrame(device *config.Device, edpFrame []byte) {
+	_ = sendDiscoveryFrame(EDPMulticastMAC, device, edpFrame, h.stack)
 }
 
 // edpParsedData holds the parsed data from an EDP packet.
@@ -342,51 +381,48 @@ type edpParsedData struct {
 	info     string
 }
 
-// parseEDPHeader parses the EDP header and returns the device ID and cursor position.
-// Returns empty string and -1 if parsing fails.
+// parseEDPHeader parses the fixed 16-byte EDP header and returns the machine
+// ID (system MAC, formatted) and the cursor to the first TLV. Returns empty
+// string and -1 if parsing fails.
 func parseEDPHeader(payload []byte) (string, int) {
-	if len(payload) < edpMinHeaderSize {
+	if len(payload) < edpHeaderSize {
 		return "", -1
 	}
 
-	idLen := int(binary.BigEndian.Uint16(payload[4:6]))
-	cursor := 6
-
-	if cursor+idLen+edpChecksumSize > len(payload) {
+	dataLength := int(binary.BigEndian.Uint16(payload[2:4]))
+	if dataLength < edpHeaderSize || dataLength > len(payload) {
 		return "", -1
 	}
 
-	deviceID := strings.TrimSpace(string(payload[cursor : cursor+idLen]))
-	cursor += idLen
+	machineID := net.HardwareAddr(payload[10:16]).String()
 
-	return deviceID, cursor
+	return machineID, edpHeaderSize
 }
 
-// parseEDPTLVs parses TLVs from the payload starting at cursor.
-func parseEDPTLVs(payload []byte, cursor int) (string, string) {
-	checksumBoundary := len(payload) - edpChecksumSize
-	if checksumBoundary <= cursor {
-		return "", ""
+// parseEDPTLVs parses marker-prefixed TLVs from the payload starting at
+// cursor, up to boundary (the EDP header's Length field).
+func parseEDPTLVs(payload []byte, cursor int, boundary int) (string, string) {
+	if boundary > len(payload) {
+		boundary = len(payload)
 	}
 
 	var display, info string
-	for cursor < checksumBoundary {
-		if cursor+edpTLVHeaderSize > checksumBoundary {
+	for cursor < boundary {
+		if cursor+edpTLVHeaderSize > boundary || payload[cursor] != edpTLVMarker {
 			break
 		}
 
-		tlvt := payload[cursor]
-		tlvLen := int(binary.BigEndian.Uint16(payload[cursor+1 : cursor+3]))
-		cursor += edpTLVHeaderSize
+		tlvType := payload[cursor+1]
+		tlvLen := int(binary.BigEndian.Uint16(payload[cursor+2 : cursor+4]))
 
-		if cursor+tlvLen > checksumBoundary {
+		if tlvLen < edpTLVHeaderSize || cursor+tlvLen > boundary {
 			break
 		}
 
-		value := payload[cursor : cursor+tlvLen]
+		value := payload[cursor+edpTLVHeaderSize : cursor+tlvLen]
 		cursor += tlvLen
 
-		switch tlvt {
+		switch tlvType {
 		case EDPTLVTypeDisplay:
 			display = strings.TrimSpace(string(value))
 		case EDPTLVTypeInfo:
@@ -439,12 +475,18 @@ func (h *EDPHandler) HandlePacket(pkt *Packet) {
 		return
 	}
 
+	// EDP is LLC/SNAP encapsulated; strip the 8-byte LLC/SNAP header if present.
+	if len(payload) >= edpLLCSNAPHeaderSize && payload[0] == 0xAA && payload[1] == 0xAA {
+		payload = payload[edpLLCSNAPHeaderSize:]
+	}
+
 	deviceID, cursor := parseEDPHeader(payload)
 	if cursor < 0 {
 		return
 	}
 
-	display, info := parseEDPTLVs(payload, cursor)
+	dataLength := int(binary.BigEndian.Uint16(payload[2:4]))
+	display, info := parseEDPTLVs(payload, cursor, dataLength)
 	parsed := edpParsedData{deviceID: deviceID, display: display, info: info}
 
 	device := h.stack.selectDiscoveryDevice(ProtocolEDP)

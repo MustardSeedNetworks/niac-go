@@ -362,18 +362,25 @@ func TestBuildSoftwareTLVFDP(t *testing.T) {
 }
 
 // TestBuildIPAddressTLVFDP verifies IP Address TLV construction for FDP.
+// Regression for #1333: the TLV now mirrors CDP's corrected Addresses TLV
+// (NumAddresses + protocol-type/length/protocol + address-length/address)
+// instead of a bare, unframed address.
 func TestBuildIPAddressTLVFDP(t *testing.T) {
 	cfg := &config.Config{}
 	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
 	handler := protocols.NewFDPHandler(stack)
 
 	tests := []struct {
-		name           string
-		ip             net.IP
-		expectedLength int
+		name             string
+		ip               net.IP
+		expectedLength   int
+		expectedProtoLen int
+		expectedProtocol byte // first byte of the protocol field
 	}{
-		{"IPv4 address", net.ParseIP("192.168.1.1"), 8},  // 4 bytes header + 4 bytes IPv4
-		{"IPv6 address", net.ParseIP("2001:db8::1"), 20}, // 4 bytes header + 16 bytes IPv6
+		// header(4) + numAddr(4) + protoType(1) + protoLen(1) + NLPID(1) + addrLen(2) + addr(4)
+		{"IPv4 address", net.ParseIP("192.168.1.1"), 17, 1, 0xCC},
+		// header(4) + numAddr(4) + protoType(1) + protoLen(1) + SNAP(8) + addrLen(2) + addr(16)
+		{"IPv6 address", net.ParseIP("2001:db8::1"), 36, 8, 0xAA},
 	}
 
 	for _, tt := range tests {
@@ -383,22 +390,56 @@ func TestBuildIPAddressTLVFDP(t *testing.T) {
 			}
 
 			tlv := handler.BuildIPAddressTLV(device)
-
-			if tlv == nil {
-				t.Fatal("Expected TLV, got nil")
-			}
-
-			// Verify TLV type
-			tlvType := binary.BigEndian.Uint16(tlv[0:2])
-			if tlvType != protocols.FDPTLVTypeIPAddress {
-				t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.FDPTLVTypeIPAddress, tlvType)
-			}
-
-			// Verify length
-			if len(tlv) != tt.expectedLength {
-				t.Errorf("Expected TLV length %d, got %d", tt.expectedLength, len(tlv))
-			}
+			assertFDPAddressTLV(t, tlv, tt.ip, tt.expectedLength, tt.expectedProtoLen, tt.expectedProtocol)
 		})
+	}
+}
+
+// assertFDPAddressTLV checks the structure of a built FDP Address TLV
+// (TLV type, length, address count, protocol framing) and that it
+// round-trips through parseFDPAddressTLV back to the original IP.
+func assertFDPAddressTLV(
+	t *testing.T,
+	tlv []byte,
+	wantIP net.IP,
+	wantLength, wantProtoLen int,
+	wantProtocolFirstByte byte,
+) {
+	t.Helper()
+
+	if tlv == nil {
+		t.Fatal("Expected TLV, got nil")
+	}
+
+	tlvType := binary.BigEndian.Uint16(tlv[0:2])
+	if tlvType != protocols.FDPTLVTypeIPAddress {
+		t.Errorf("Expected TLV type 0x%04X, got 0x%04X", protocols.FDPTLVTypeIPAddress, tlvType)
+	}
+
+	if len(tlv) != wantLength {
+		t.Fatalf("Expected TLV length %d, got %d", wantLength, len(tlv))
+	}
+
+	// Number of addresses (4 bytes at offset 4)
+	numAddrs := binary.BigEndian.Uint32(tlv[4:8])
+	if numAddrs != 1 {
+		t.Errorf("Expected 1 address, got %d", numAddrs)
+	}
+
+	protocolLen := int(tlv[9])
+	if protocolLen != wantProtoLen {
+		t.Errorf("Expected protocol length %d, got %d", wantProtoLen, protocolLen)
+	}
+
+	if tlv[10] != wantProtocolFirstByte {
+		t.Errorf("Expected protocol first byte 0x%02X, got 0x%02X", wantProtocolFirstByte, tlv[10])
+	}
+
+	// Round-trip: the address must decode back out via the parser that
+	// HandlePacket uses on ingress.
+	gotIP := protocols.ParseFDPAddressTLV(tlv[4:])
+	if gotIP == nil || gotIP.String() != wantIP.String() {
+		t.Errorf("Expected round-tripped address %s, got %v", wantIP, gotIP)
 	}
 }
 
@@ -519,6 +560,79 @@ func TestBuildFDPFrame_CustomConfig(t *testing.T) {
 	holdtime := frame[9]
 	if holdtime != 120 {
 		t.Errorf("Expected holdtime 120, got %d", holdtime)
+	}
+}
+
+// TestBuildFDPFrame_TLVChainIsWellFormed walks the built FDP TLV chain and
+// asserts every TLV's length field is internally consistent (>= the 4-byte
+// header) and that the chain consumes the FDP payload exactly, with no
+// trailing bytes and no TLV overrunning the payload. tcpdump/Wireshark have
+// no FDP dissector to validate against (unlike EDP), so this is the
+// strongest available check that the TLV walk doesn't derail — the failure
+// mode a bad length field produces.
+func TestBuildFDPFrame_TLVChainIsWellFormed(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewFDPHandler(stack)
+
+	device := &config.Device{
+		Name:        "Switch-1",
+		Type:        "switch",
+		MACAddress:  net.HardwareAddr{0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E},
+		IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+		Interfaces: []config.Interface{
+			{Name: "1/1/1"},
+		},
+	}
+
+	frame := handler.BuildFDPFrame(device)
+
+	// FDP payload starts after the 8-byte LLC/SNAP header; the 4-byte FDP
+	// header (version+holdtime+checksum) precedes the first TLV.
+	fdpPayload := frame[8:]
+	fdpHeaderSize := 4
+
+	cursor := fdpHeaderSize
+	limit := len(fdpPayload)
+	tlvCount := 0
+
+	for cursor < limit {
+		if cursor+fdpHeaderSize > limit {
+			t.Fatalf("TLV header at offset %d runs past payload end %d", cursor, limit)
+		}
+
+		tlvType := binary.BigEndian.Uint16(fdpPayload[cursor : cursor+2])
+		length := int(binary.BigEndian.Uint16(fdpPayload[cursor+2 : cursor+fdpHeaderSize]))
+
+		if length < fdpHeaderSize {
+			t.Fatalf(
+				"TLV type 0x%04X at offset %d has length %d, shorter than the 4-byte header",
+				tlvType, cursor, length,
+			)
+		}
+
+		if cursor+length > limit {
+			t.Fatalf(
+				"TLV type 0x%04X at offset %d claims length %d, overrunning payload end %d",
+				tlvType, cursor, length, limit,
+			)
+		}
+
+		cursor += length
+		tlvCount++
+	}
+
+	if cursor != limit {
+		t.Errorf(
+			"TLV chain consumed %d bytes but payload is %d bytes (%d trailing/unaccounted)",
+			cursor, limit, limit-cursor,
+		)
+	}
+
+	// Device ID, Port, Platform, Capabilities, Software, IP Address = 6 TLVs
+	// for a device with an IP address set.
+	if tlvCount != 6 {
+		t.Errorf("expected 6 TLVs in the chain, walked %d", tlvCount)
 	}
 }
 

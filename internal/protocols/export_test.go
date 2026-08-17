@@ -326,6 +326,9 @@ func (h *EDPHandler) EDPCalculateChecksum(data []byte) uint16 { return h.calcula
 // BuildEDPFrame exposes buildEDPFrame for testing.
 func (h *EDPHandler) BuildEDPFrame(device *config.Device) []byte { return h.buildEDPFrame(device) }
 
+// EDPBuildLLCSNAPHeader exposes buildLLCSNAPHeader for testing.
+func (h *EDPHandler) EDPBuildLLCSNAPHeader() []byte { return h.buildLLCSNAPHeader() }
+
 // EDPSendAdvertisements exposes sendAdvertisements for testing.
 func (h *EDPHandler) EDPSendAdvertisements() { h.sendAdvertisements() }
 
@@ -370,6 +373,9 @@ func (h *FDPHandler) BuildSoftwareTLV(device *config.Device) []byte {
 func (h *FDPHandler) BuildIPAddressTLV(device *config.Device) []byte {
 	return h.buildIPAddressTLV(device)
 }
+
+// ParseFDPAddressTLV exposes parseFDPAddressTLV for testing.
+func ParseFDPAddressTLV(value []byte) net.IP { return parseFDPAddressTLV(value) }
 
 // FDPCalculateChecksum exposes calculateChecksum for testing.
 func (h *FDPHandler) FDPCalculateChecksum(data []byte) uint16 { return h.calculateChecksum(data) }
