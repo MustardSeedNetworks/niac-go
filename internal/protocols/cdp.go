@@ -95,6 +95,15 @@ const (
 	cdpTLVHeaderSize      = 4      // TLV header overhead (Type 2 + Length 2)
 	capabilitiesTLVLen    = 8      // fixed capabilities TLV length
 	cdpAddressLenFieldLen = 2      // address length field size (2 bytes)
+
+	// cdpProtocolTypeNLPID is the Address TLV protocol-type naming the NLPID
+	// encoding. It labels the encoding; the NLPID itself follows in the protocol
+	// field. A decoder that reads anything else here abandons the TLV walk, so
+	// every field after the addresses — Port ID, Platform, Version — is lost.
+	cdpProtocolTypeNLPID = 0x01
+
+	cdpNLPIDIPv4 = 0xCC // NLPID identifying an IPv4 address
+	cdpNLPIDIPv6 = 0x8E // NLPID identifying an IPv6 address
 )
 
 // CDPHandler handles CDP advertisements.
@@ -308,16 +317,14 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 
 	var (
 		addrBytes []byte
-		protoType byte
+		nlpid     byte
 	)
 
 	if ip.To4() != nil {
-		// IPv4
-		protoType = 0xCC // NLPID for IPv4
+		nlpid = cdpNLPIDIPv4
 		addrBytes = ip.To4()
 	} else {
-		// IPv6
-		protoType = 0x8E // NLPID for IPv6
+		nlpid = cdpNLPIDIPv6
 		addrBytes = ip.To16()
 	}
 
@@ -342,11 +349,11 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	binary.BigEndian.PutUint32(tlv[4:8], 1) // Number of addresses
 
 	offset := 8
-	tlv[offset] = protoType
+	tlv[offset] = cdpProtocolTypeNLPID
 	offset++
 	tlv[offset] = 1 // Protocol length
 	offset++
-	tlv[offset] = protoType // Protocol value
+	tlv[offset] = nlpid
 	offset++
 	addrBytesLen := min(len(addrBytes), cdpMaxUint16)
 	binary.BigEndian.PutUint16(

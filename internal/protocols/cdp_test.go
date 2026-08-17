@@ -1,10 +1,14 @@
 package protocols_test
 
 import (
+	"bytes"
 	"encoding/binary"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
@@ -184,6 +188,34 @@ func TestBuildDeviceIDTLV(t *testing.T) {
 	}
 }
 
+// assertNLPIDAddressEntry checks one Address TLV entry: Protocol Type, Protocol
+// Length, Protocol, then the address length and the address.
+//
+// The protocol type names the encoding — 1 for NLPID — and is not the NLPID
+// value, which follows it. Emitting the value in both fields makes a conforming
+// decoder abandon the whole TLV walk, dropping every field after the addresses.
+func assertNLPIDAddressEntry(t *testing.T, entry []byte, wantNLPID byte, wantAddr []byte) {
+	t.Helper()
+
+	if protoType := entry[0]; protoType != 0x01 {
+		t.Errorf("Expected protocol type 0x01 (NLPID), got 0x%02X", protoType)
+	}
+	if protoLen := entry[1]; protoLen != 1 {
+		t.Errorf("Expected protocol length 1, got %d", protoLen)
+	}
+	if nlpid := entry[2]; nlpid != wantNLPID {
+		t.Errorf("Expected NLPID 0x%02X, got 0x%02X", wantNLPID, nlpid)
+	}
+
+	addrLen := binary.BigEndian.Uint16(entry[3:5])
+	if int(addrLen) != len(wantAddr) {
+		t.Fatalf("Expected address length %d, got %d", len(wantAddr), addrLen)
+	}
+	if got := entry[5 : 5+addrLen]; !bytes.Equal(got, wantAddr) {
+		t.Errorf("Expected address %x, got %x", wantAddr, got)
+	}
+}
+
 // TestBuildAddressesTLV verifies Addresses TLV construction.
 func TestBuildAddressesTLV(t *testing.T) {
 	cfg := &config.Config{}
@@ -191,16 +223,17 @@ func TestBuildAddressesTLV(t *testing.T) {
 	handler := protocols.NewCDPHandler(stack)
 
 	tests := []struct {
-		name         string
-		ip           net.IP
-		expectedType byte
+		name          string
+		ip            net.IP
+		expectedNLPID byte
+		expectedAddr  []byte
 	}{
-		{"IPv4 address", net.ParseIP("192.168.1.1"), 0xCC},
-		{"IPv6 address", net.ParseIP("2001:db8::1"), 0x8E},
+		{"IPv4 address", net.ParseIP("192.168.1.1"), 0xCC, []byte{192, 168, 1, 1}},
+		{"IPv6 address", net.ParseIP("2001:db8::1"), 0x8E, net.ParseIP("2001:db8::1").To16()},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			device := &config.Device{
 				IPAddresses: []net.IP{tt.ip},
 			}
@@ -227,11 +260,7 @@ func TestBuildAddressesTLV(t *testing.T) {
 				t.Errorf("Expected 1 address, got %d", numAddrs)
 			}
 
-			// Verify protocol type
-			protoType := tlv[8]
-			if protoType != tt.expectedType {
-				t.Errorf("Expected protocol type 0x%02X, got 0x%02X", tt.expectedType, protoType)
-			}
+			assertNLPIDAddressEntry(t, tlv[8:], tt.expectedNLPID, tt.expectedAddr)
 		})
 	}
 }
@@ -525,6 +554,68 @@ func TestCalculateChecksum(t *testing.T) {
 			// Verify checksum is calculated (non-panic test)
 			_ = checksum
 		})
+	}
+}
+
+// TestBuildCDPFrameDecodesEndToEnd feeds a built advertisement to an independent
+// decoder and reads back the fields after the Address TLV.
+//
+// The byte-level tests above check each TLV in isolation, which is exactly how a
+// malformed Address TLV escaped notice: it is well-formed on its own terms, and
+// only a decoder walking the TLV chain in order notices that it derails the
+// walk. Everything after the addresses — Port ID, Platform, Version — was
+// silently lost on the wire.
+func TestBuildCDPFrameDecodesEndToEnd(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewCDPHandler(stack)
+
+	srcMAC := net.HardwareAddr{0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E}
+	device := &config.Device{
+		Name:        "Switch-1",
+		Type:        "switch",
+		MACAddress:  srcMAC,
+		IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+		Interfaces:  []config.Interface{{Name: "GigabitEthernet0/1"}},
+	}
+
+	payload := handler.BuildCDPFrame(device)
+
+	// An 802.3 frame: addresses, the payload length in place of an EtherType,
+	// then the LLC/SNAP-framed advertisement.
+	dstMAC, err := net.ParseMAC(protocols.CDPMulticastMAC)
+	if err != nil {
+		t.Fatalf("parse CDP multicast MAC: %v", err)
+	}
+
+	frame := make([]byte, 0, 14+len(payload))
+	frame = append(frame, dstMAC...)
+	frame = append(frame, srcMAC...)
+	frame = binary.BigEndian.AppendUint16(frame, uint16(len(payload)))
+	frame = append(frame, payload...)
+
+	packet := gopacket.NewPacket(frame, layers.LinkTypeEthernet, gopacket.Default)
+	if errLayer := packet.ErrorLayer(); errLayer != nil {
+		t.Fatalf("decode failed: %v", errLayer.Error())
+	}
+
+	infoLayer := packet.Layer(layers.LayerTypeCiscoDiscoveryInfo)
+	if infoLayer == nil {
+		t.Fatal("no CDP info layer decoded")
+	}
+	info, ok := infoLayer.(*layers.CiscoDiscoveryInfo)
+	if !ok {
+		t.Fatalf("unexpected layer type %T", infoLayer)
+	}
+
+	if info.DeviceID != "Switch-1" {
+		t.Errorf("DeviceID = %q, want %q", info.DeviceID, "Switch-1")
+	}
+	if info.PortID != "GigabitEthernet0/1" {
+		t.Errorf("PortID = %q, want %q", info.PortID, "GigabitEthernet0/1")
+	}
+	if len(info.Addresses) != 1 || !info.Addresses[0].Equal(net.ParseIP("192.168.1.1")) {
+		t.Errorf("Addresses = %v, want [192.168.1.1]", info.Addresses)
 	}
 }
 
