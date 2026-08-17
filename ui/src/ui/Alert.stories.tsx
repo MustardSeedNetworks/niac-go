@@ -45,9 +45,9 @@ export const RichContent: Story = {
     status: 'warning',
     children: (
       <div className="space-y-1">
-        <p className="font-medium">License renewal due in 7 days</p>
+        <p className="font-medium">Simulation disk usage nearing capacity</p>
         <p className="text-sm">
-          Renew via Settings → License or contact{' '}
+          Trim old scenario snapshots via Settings → Storage or contact{' '}
           <a className="underline" href="mailto:support@mustardseed.io">
             support@mustardseed.io
           </a>
