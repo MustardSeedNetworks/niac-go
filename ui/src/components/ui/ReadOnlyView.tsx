@@ -14,7 +14,7 @@
  *
  * For controls that should remain visible-but-disabled with a custom
  * tooltip, prefer the inline `useScope().canWrite` + `disabled`
- * pattern so the title can compose with other gates (e.g. license).
+ * pattern so the title can compose with other gates.
  */
 
 import type { ReactElement, ReactNode } from 'react';

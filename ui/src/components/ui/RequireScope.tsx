@@ -1,7 +1,6 @@
 /**
  * RequireScope — render children only if the current token meets a
- * minimum scope. Hide-variant gating, parallel to <RequireFeature>
- * for license tier (#762).
+ * minimum scope (#762).
  *
  * Use this for entire pages, drawer sections, nav items, or any UI
  * surface that should simply not exist below the threshold:
@@ -16,7 +15,7 @@
  *
  * Fail-closed: while the initial scope fetch is in flight `canWrite`
  * and `isAdmin` are false so children render the `fallback` (default
- * null), matching <RequireFeature>'s behavior.
+ * null).
  */
 
 import type { ReactElement, ReactNode } from 'react';
