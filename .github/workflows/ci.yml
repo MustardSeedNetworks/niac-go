@@ -984,9 +984,7 @@ jobs:
     name: CI Complete
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Browser-engine E2E is release-blocking. Lighthouse remains independent:
-    # it measures performance and accessibility rather than functional browser
-    # compatibility, and its thresholds are enforced by its own job.
+    # Browser-engine E2E is release-blocking.
     needs:
       - changes
       - backend
