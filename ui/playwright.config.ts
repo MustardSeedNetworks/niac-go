@@ -22,9 +22,9 @@ const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
  * - Replay functionality
  * - Network simulation
  *
- * Engines: Chromium, WebKit, and Firefox. Installed Chrome and Edge channels
- * use playwright.channels.config.ts; actual Safari remains a manual release
- * candidate gate because Playwright controls WebKit rather than Safari.
+ * Engines: Chromium and WebKit — the two the product targets. Actual Safari
+ * remains a manual release-candidate gate because Playwright drives WebKit
+ * rather than Safari itself.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -74,10 +74,6 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
     },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).
