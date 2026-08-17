@@ -229,7 +229,6 @@ func TestBuildAddressesTLV(t *testing.T) {
 		expectedAddr  []byte
 	}{
 		{"IPv4 address", net.ParseIP("192.168.1.1"), 0xCC, []byte{192, 168, 1, 1}},
-		{"IPv6 address", net.ParseIP("2001:db8::1"), 0x8E, net.ParseIP("2001:db8::1").To16()},
 	}
 
 	for _, tt := range tests {
@@ -262,6 +261,42 @@ func TestBuildAddressesTLV(t *testing.T) {
 
 			assertNLPIDAddressEntry(t, tlv[8:], tt.expectedNLPID, tt.expectedAddr)
 		})
+	}
+}
+
+// TestBuildAddressesTLVIPv6UsesSNAPForm pins the IPv6 encoding.
+//
+// IPv6 is only recognised under protocol type 2, whose protocol field carries an
+// 8-byte SNAP header. Verified against tcpdump: it prints "IPv6 2001:db8::1" for
+// this form, and falls back to raw bytes for the NLPID 0x8E this used to emit.
+func TestBuildAddressesTLVIPv6UsesSNAPForm(t *testing.T) {
+	cfg := &config.Config{}
+	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
+	handler := protocols.NewCDPHandler(stack)
+
+	addr := net.ParseIP("2001:db8::1")
+	tlv := handler.BuildAddressesTLV(&config.Device{IPAddresses: []net.IP{addr}})
+	if tlv == nil {
+		t.Fatal("Expected TLV, got nil")
+	}
+
+	if protoType := tlv[8]; protoType != 0x02 {
+		t.Errorf("Expected protocol type 0x02 (802.2), got 0x%02X", protoType)
+	}
+	if protoLen := tlv[9]; protoLen != 8 {
+		t.Fatalf("Expected protocol length 8, got %d", protoLen)
+	}
+	wantSNAP := []byte{0xAA, 0xAA, 0x03, 0x00, 0x00, 0x00, 0x86, 0xDD}
+	if got := tlv[10:18]; !bytes.Equal(got, wantSNAP) {
+		t.Errorf("Expected SNAP protocol %x, got %x", wantSNAP, got)
+	}
+
+	addrLen := binary.BigEndian.Uint16(tlv[18:20])
+	if addrLen != 16 {
+		t.Fatalf("Expected address length 16, got %d", addrLen)
+	}
+	if got := net.IP(tlv[20 : 20+addrLen]); !got.Equal(addr) {
+		t.Errorf("Expected address %v, got %v", addr, got)
 	}
 }
 

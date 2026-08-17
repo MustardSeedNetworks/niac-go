@@ -102,8 +102,12 @@ const (
 	// every field after the addresses — Port ID, Platform, Version — is lost.
 	cdpProtocolTypeNLPID = 0x01
 
+	// cdpProtocolType802_2 is the other permitted protocol-type: the protocol
+	// field then carries an 8-byte SNAP header rather than a 1-byte NLPID. IPv6
+	// is only recognised in this form.
+	cdpProtocolType802_2 = 0x02
+
 	cdpNLPIDIPv4 = 0xCC // NLPID identifying an IPv4 address
-	cdpNLPIDIPv6 = 0x8E // NLPID identifying an IPv6 address
 )
 
 // CDPHandler handles CDP advertisements.
@@ -316,16 +320,25 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	}
 
 	var (
-		addrBytes []byte
-		nlpid     byte
+		addrBytes    []byte
+		protocolType byte
+		protocol     []byte
 	)
 
-	if ip.To4() != nil {
-		nlpid = cdpNLPIDIPv4
-		addrBytes = ip.To4()
+	// IPv4 is named by a 1-byte NLPID; IPv6 only by an 8-byte SNAP header under
+	// protocol type 2. Verified against tcpdump, which prints "IPv6 2001:db8::1"
+	// for the SNAP form and falls back to raw bytes for an NLPID 0x8E — the form
+	// this emitted before. Note gopacket's CDPAddressTypeIPV6 constant carries
+	// the IPv4 ethertype (0x0800) and so misses the correct encoding too; the
+	// wire format is what matters here, not any one decoder.
+	if v4 := ip.To4(); v4 != nil {
+		addrBytes = v4
+		protocolType = cdpProtocolTypeNLPID
+		protocol = []byte{cdpNLPIDIPv4}
 	} else {
-		nlpid = cdpNLPIDIPv6
 		addrBytes = ip.To16()
+		protocolType = cdpProtocolType802_2
+		protocol = []byte{0xAA, 0xAA, 0x03, 0x00, 0x00, 0x00, 0x86, 0xDD}
 	}
 
 	// Address format:
@@ -337,7 +350,7 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	//   Address Length (2 bytes)
 	//   Address (variable)
 
-	addrLen := 1 + 1 + 1 + cdpAddressLenFieldLen + len(addrBytes)
+	addrLen := 1 + 1 + len(protocol) + cdpAddressLenFieldLen + len(addrBytes)
 	length := min(
 		4+4+addrLen,
 		cdpMaxUint16,
@@ -349,12 +362,12 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 	binary.BigEndian.PutUint32(tlv[4:8], 1) // Number of addresses
 
 	offset := 8
-	tlv[offset] = cdpProtocolTypeNLPID
+	tlv[offset] = protocolType
 	offset++
-	tlv[offset] = 1 // Protocol length
+	tlv[offset] = safeconv.Byte(len(protocol))
 	offset++
-	tlv[offset] = nlpid
-	offset++
+	copy(tlv[offset:], protocol)
+	offset += len(protocol)
 	addrBytesLen := min(len(addrBytes), cdpMaxUint16)
 	binary.BigEndian.PutUint16(
 		tlv[offset:offset+2],
