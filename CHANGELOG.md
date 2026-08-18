@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.42](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.41...v0.94.42) (2026-08-18)
+
+
+### Features
+
+* **ui:** move page help into the drawer's Pages tab ([#1339](https://github.com/MustardSeedNetworks/niac-go/issues/1339)) ([527a034](https://github.com/MustardSeedNetworks/niac-go/commit/527a0342a1d2e611290fb0da2bf02f9f3ce39021))
+
 ## [0.94.41](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.40...v0.94.41) (2026-08-17)
 
 
