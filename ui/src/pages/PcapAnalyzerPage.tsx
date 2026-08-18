@@ -21,6 +21,7 @@ import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { InfoPopover } from '../ui/InfoPopover';
+import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
@@ -361,61 +362,36 @@ export const PcapAnalyzerPage: FC = () => {
 
           {/* Packets View */}
           {viewMode === 'packets' && (
-            <>
-              {/* Filter Bar */}
-              <div className="mb-content">
-                <FilterBar value={filterExpression} onChange={setFilterExpression} />
-              </div>
+            <Inspector
+              filter={<FilterBar value={filterExpression} onChange={setFilterExpression} />}
+            >
+              <InspectorRecords>
+                <PcapPacketList
+                  packets={filteredPackets}
+                  totalPackets={analysisResult.packets.length}
+                  selectedPacketId={selectedPacket?.id ?? null}
+                  onSelectPacket={handleSelectPacket}
+                  getRowStyle={getRowStyle}
+                />
+              </InspectorRecords>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">
-                {/* Packet List */}
-                <div className="lg:col-span-7 xl:col-span-8">
-                  <div className="h-[600px]">
-                    <PcapPacketList
-                      packets={filteredPackets}
-                      totalPackets={analysisResult.packets.length}
-                      selectedPacketId={selectedPacket?.id ?? null}
-                      onSelectPacket={handleSelectPacket}
-                      getRowStyle={getRowStyle}
-                    />
-                  </div>
-                </div>
+              <InspectorPanes>
+                <InspectorPane label={tPages('libraryPcaps.analyzer.hexDumpLabel')}>
+                  <HexDumpViewer
+                    rawData={selectedPacket?.rawData ?? ''}
+                    headerLength={14}
+                    highlightRange={highlightRange}
+                  />
+                </InspectorPane>
 
-                {/* Right panel - Details */}
-                <div className="lg:col-span-5 xl:col-span-4 stack-xl">
-                  {/* Hex Dump Viewer */}
-                  <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
-                    <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                        {tPages('libraryPcaps.analyzer.hexDumpLabel')}
-                      </SmallText>
-                      <div className="flex-1 min-h-0">
-                        <HexDumpViewer
-                          rawData={selectedPacket?.rawData ?? ''}
-                          headerLength={14}
-                          highlightRange={highlightRange}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Packet Details */}
-                  <Card className="border-surface-border bg-bg-surface/70 h-[280px]">
-                    <CardContent className="h-full flex flex-col">
-                      <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                        {tPages('libraryPcaps.analyzer.packetDetailsLabel')}
-                      </SmallText>
-                      <div className="flex-1 min-h-0 overflow-y-auto">
-                        <PacketDetails
-                          packet={selectedPacketForDetails}
-                          onFieldSelect={(start, end) => setHighlightRange([start, end])}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </>
+                <InspectorPane label={tPages('libraryPcaps.analyzer.packetDetailsLabel')} scroll>
+                  <PacketDetails
+                    packet={selectedPacketForDetails}
+                    onFieldSelect={(start, end) => setHighlightRange([start, end])}
+                  />
+                </InspectorPane>
+              </InspectorPanes>
+            </Inspector>
           )}
 
           {/* Statistics View */}
