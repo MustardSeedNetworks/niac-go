@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 
-export type Status = 'success' | 'warning' | 'error' | 'unknown' | 'loading' | 'info';
+export type Status = 'success' | 'warning' | 'error' | 'unknown' | 'loading';
 
 interface StatusConfigItem {
   readonly icon: ReactNode;
@@ -62,20 +62,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     color: 'text-status-error',
     bgColor: 'bg-status-error/15',
     label: 'Status: error',
-  },
-  info: {
-    icon: (
-      <svg className="w-full h-full" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path
-          fillRule="evenodd"
-          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-          clipRule="evenodd"
-        />
-      </svg>
-    ),
-    color: 'text-status-info',
-    bgColor: 'bg-status-info/15',
-    label: 'Status: info',
   },
   unknown: {
     icon: (
@@ -149,8 +135,6 @@ export function getStatusConfig(status: Status): StatusConfigItem {
       return statusConfig.warning;
     case 'error':
       return statusConfig.error;
-    case 'info':
-      return statusConfig.info;
     case 'unknown':
       return statusConfig.unknown;
     case 'loading':
