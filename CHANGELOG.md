@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.44](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.43...v0.94.44) (2026-08-18)
+
+
+### Features
+
+* **ui:** add the Inspector archetype and converge the two packet inspectors ([#1348](https://github.com/MustardSeedNetworks/niac-go/issues/1348)) ([f0241ff](https://github.com/MustardSeedNetworks/niac-go/commit/f0241ff74853a3c3fbe0bd300dadc80083ae2f1f))
+
+
+### Bug Fixes
+
+* **ci:** size job budgets to their apt steps' worst case ([#1350](https://github.com/MustardSeedNetworks/niac-go/issues/1350)) ([5b6aafa](https://github.com/MustardSeedNetworks/niac-go/commit/5b6aafacf87194604a34a2fdc8d70845e8e3c1cf))
+
 ## [0.94.43](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.42...v0.94.43) (2026-08-18)
 
 
