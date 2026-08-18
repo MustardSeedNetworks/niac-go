@@ -29,6 +29,7 @@ import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
 import { ConcurrentSessionsPanel } from './runtime/ConcurrentSessionsPanel';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
+import { RuntimeRollup } from './runtime/RuntimeRollup';
 import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
 
 /**
@@ -45,7 +46,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  */
 export const RuntimeControlPage: FC = () => {
   const { t } = useTranslation('pages');
-  const { data: simStatus, refetch: refetchSimStatus } = useSimulationStatus();
+  const { data: simStatus, loading: simLoading, refetch: refetchSimStatus } = useSimulationStatus();
 
   const { simulationSettings, setSimulationSettings } = useUIStore();
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
@@ -269,6 +270,8 @@ export const RuntimeControlPage: FC = () => {
 
   return (
     <div className="stack-xl">
+      <RuntimeRollup simStatus={simStatus} loading={simLoading} />
+
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
         <Card className="border-status-warning/30 bg-status-warning/20">

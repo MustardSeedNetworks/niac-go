@@ -11,12 +11,7 @@
     "title": "Panel",
     "description": "Contadores en vivo, instantáneas de ejecución y acciones rápidas para la pila NIAC activa.",
     "status": {
-      "running": "Simulación en ejecución",
-      "stopped": "Simulación detenida",
-      "noInterface": "Sin interfaz",
-      "deviceCount_one": "{{count}} dispositivo",
-      "deviceCount_other": "{{count}} dispositivos",
-      "uptimeLabel": "Tiempo activo: {{uptime}}"
+      "noInterface": "Sin interfaz"
     },
     "stats": {
       "devicesOnline": "Dispositivos en línea",
@@ -55,6 +50,20 @@
       "tuiModeLabel": "Modo TUI:",
       "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida).",
       "clickHint": "Seleccione un tipo para inyectarlo en la página de Tráfico."
+    },
+    "eyebrow": "Simulación",
+    "rollup": {
+      "checking": "Comprobando el daemon",
+      "degraded": "El stack está en ejecución pero no puede intercambiar tramas",
+      "degradedBody": "Los dispositivos se están simulando, pero su tráfico no llega al cable. Revise la conexión de la interfaz y el trunk del que depende.",
+      "devicesLabel": "Dispositivos",
+      "idle": "No hay ninguna simulación en ejecución",
+      "idleBody": "Inicie una desde la página Simulación para poner dispositivos en una interfaz.",
+      "noDaemon": "El daemon no responde",
+      "noDaemonBody": "Los contadores no se pueden leer sin un daemon, así que no se muestra ninguno. Inicie NIAC en modo daemon para ver el estado en vivo.",
+      "running_one": "Simulando {{count}} dispositivo en {{iface}}",
+      "running_other": "Simulando {{count}} dispositivos en {{iface}}",
+      "uptimeLabel": "Tiempo activo"
     }
   },
   "runtime": {
@@ -143,6 +152,21 @@
       "noDevices": "La configuración elegida no tiene dispositivos — no se ejecutará nada.",
       "deviceCount_one": "{{count}} dispositivo se lanzará al hacer clic en Iniciar.",
       "deviceCount_other": "{{count}} dispositivos se lanzarán al hacer clic en Iniciar."
+    },
+    "eyebrow": "Ejecución",
+    "rollup": {
+      "checking": "Comprobando el daemon",
+      "degraded": "La simulación está en ejecución pero no puede intercambiar tramas",
+      "degradedBody": "Los dispositivos se están simulando, pero su tráfico no llega al cable. Revise el modo de conexión y el trunk más abajo.",
+      "devicesLabel": "Dispositivos",
+      "idle": "No hay ninguna simulación en ejecución",
+      "idleBody": "Elija una interfaz y una configuración más abajo, y luego inicie una ejecución.",
+      "ifaceLabel": "Interfaz",
+      "noDaemon": "NIAC no se está ejecutando en modo daemon",
+      "noDaemonBody": "Las simulaciones las inicia y detiene el daemon, así que nada aquí puede informar de su estado hasta que haya uno en ejecución.",
+      "running_one": "Simulando {{count}} dispositivo en {{iface}}",
+      "running_other": "Simulando {{count}} dispositivos en {{iface}}",
+      "uptimeLabel": "Tiempo activo"
     }
   },
   "newSimWizard": {

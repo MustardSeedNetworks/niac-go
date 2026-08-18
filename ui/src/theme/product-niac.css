@@ -1,0 +1,54 @@
+/* NIAC — product brand values. Anchor stays indigo (#4f46e5 family).
+ *
+ * NIAC also owns the topology device-kind colours. They are deliberately
+ * few: a node's KIND is carried by its 2-character monogram chip and its
+ * shape, not by a unique hue per vendor, so the graph stays readable when a
+ * simulated estate has 48 nodes.
+ */
+
+:root {
+  --color-brand-primary: #4338ca;
+  --color-brand-accent: #372fa8;
+  --color-brand-gold: #8a6208;
+  --color-text-accent: #4338ca;
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+
+  --color-node-switch: #4338ca;
+  --color-node-router: #0d5fb0;
+  --color-node-endpoint: #5f6a63;
+  --color-link-fast: #4338ca;
+  --color-link-slow: #8b968f;
+
+  /* NIAC's five module accents. Role change as elsewhere: badges and chart
+	 * series, never button fills. module-topology intentionally equals the
+	 * brand anchor — the topology IS the product's centre. */
+  --color-module-topology: #4338ca;
+  --color-module-protocols: #0b6b62;
+  --color-module-analyze: #9333a8;
+  --color-module-inject: #b4143c;
+  --color-module-templates: #96450a;
+}
+
+.dark {
+  --color-brand-primary: #a5b4fc;
+  --color-brand-accent: #c3cdfe;
+  --color-brand-gold: #f5c451;
+  --color-text-accent: #c3cdfe;
+  --color-on-brand: #08100c;
+  --color-on-danger: #08100c;
+  --color-on-success: #08100c;
+
+  --color-node-switch: #a5b4fc;
+  --color-node-router: #64b5f6;
+  --color-node-endpoint: #93a8b2;
+  --color-link-fast: #a5b4fc;
+  --color-link-slow: #7f93a0;
+
+  --color-module-topology: #a5b4fc;
+  --color-module-protocols: #2dd4bf;
+  --color-module-analyze: #e879f9;
+  --color-module-inject: #fb7185;
+  --color-module-templates: #fbbf24;
+}

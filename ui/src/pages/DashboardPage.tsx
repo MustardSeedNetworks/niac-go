@@ -15,6 +15,7 @@ import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Card, CardContent } from '../ui/Card';
+import { type RollupState, StatusRollup } from '../ui/StatusRollup';
 import { Tag } from '../ui/Tag';
 import { AccentLink, H2 } from '../ui/Typography';
 import { formatNumber, formatTime, formatUptime } from '../utils/format';
@@ -29,51 +30,68 @@ export const DashboardPage: FC = () => {
   const { data: stats } = useAppState('stats');
   const { data: history } = useAppState('history');
   const { data: errorInfo } = useAppState('errorTypes');
-  const { data: simStatus } = useSimulationStatus();
+  const { data: simStatus, loading: simLoading } = useSimulationStatus();
   const [showErrorCatalog, setShowErrorCatalog] = useState(false);
 
   const isRunning = simStatus?.running ?? false;
   const uptimeSeconds = simStatus?.uptimeSeconds ?? 0;
 
+  const rollupState: RollupState =
+    simLoading || !simStatus ? 'unknown' : simStatus.degraded ? 'warn' : 'ok';
+
+  const rollupHeadline = simLoading
+    ? t('dashboard.rollup.checking')
+    : !simStatus
+      ? t('dashboard.rollup.noDaemon')
+      : simStatus.degraded
+        ? (simStatus.degradedReason ?? t('dashboard.rollup.degraded'))
+        : isRunning
+          ? t('dashboard.rollup.running', {
+              count: simStatus.deviceCount,
+              iface: simStatus.interface ?? t('dashboard.status.noInterface'),
+            })
+          : t('dashboard.rollup.idle');
+
+  const rollupBody = simLoading
+    ? undefined
+    : !simStatus
+      ? t('dashboard.rollup.noDaemonBody')
+      : simStatus.degraded
+        ? t('dashboard.rollup.degradedBody')
+        : isRunning
+          ? undefined
+          : t('dashboard.rollup.idleBody');
+
   return (
     <div className="stack-xl animate-fade-in">
-      {/* Status banner */}
-      <Card
-        className={`border-l-4 ${isRunning ? 'border-l-status-success' : 'border-l-surface-border'}`}
-      >
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center justify-between gap-comfortable">
-            <div className="flex items-center gap-comfortable">
-              <div className="relative">
-                <div
-                  className={`h-3 w-3 rounded-full ${isRunning ? 'bg-status-success' : 'bg-bg-muted'}`}
-                />
-                {isRunning && (
-                  <div className="absolute inset-0 h-3 w-3 rounded-full bg-status-success animate-ping opacity-75" />
-                )}
-              </div>
-              <div>
-                <p className="font-semibold text-text-primary">
-                  {isRunning ? t('dashboard.status.running') : t('dashboard.status.stopped')}
-                </p>
-                <p className="text-sm text-text-muted">
-                  {stats?.interface ?? t('dashboard.status.noInterface')} •{' '}
-                  <span data-testid="dashboard-device-count">
-                    {t('dashboard.status.deviceCount', { count: stats?.deviceCount ?? 0 })}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-compact">
-              {uptimeSeconds > 0 && (
-                <Tag colorScheme="violet">
-                  {t('dashboard.status.uptimeLabel', { uptime: formatUptime(uptimeSeconds) })}
-                </Tag>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Overview opens with the rollup rather than the counters: the first
+          question here is whether the stack is healthy, and a row of numbers
+          does not answer it.
+
+          Until the daemon answers, its counters are not zero — they are
+          unmeasurable, so the rollup prints em dashes instead. A daemon that
+          never answers is the same case: NIAC with no daemon has nothing to
+          report, which is not the same as a simulation reporting nothing.
+
+          A running-but-degraded stack is the one state the daemon names
+          itself, so its own reason becomes the headline. Idle is calm rather
+          than green — no simulation running is the normal resting state, not
+          a success. */}
+      <StatusRollup
+        state={rollupState}
+        headline={rollupHeadline}
+        body={rollupBody}
+        figures={[
+          {
+            label: t('dashboard.rollup.devicesLabel'),
+            value: simStatus ? String(simStatus.deviceCount) : '—',
+          },
+          {
+            label: t('dashboard.rollup.uptimeLabel'),
+            value: uptimeSeconds > 0 ? formatUptime(uptimeSeconds) : '—',
+          },
+        ]}
+      />
 
       {/* Stat cards row */}
       <div className="grid gap-comfortable sm:grid-cols-2 lg:grid-cols-4">

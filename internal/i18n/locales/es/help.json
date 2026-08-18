@@ -9,6 +9,7 @@
   },
   "tabs": {
     "overview": "Resumen",
+    "pages": "Páginas",
     "devices": "Dispositivos",
     "protocols": "Protocolos",
     "commands": "Comandos",
@@ -43,6 +44,10 @@
     "categoryItems_other": "{{count}} elementos",
     "webUiQuickRefTitle": "Referencia rápida de la interfaz web",
     "featuresEmpty": "Ninguna función coincide con la búsqueda."
+  },
+  "pages": {
+    "contents": "Páginas",
+    "empty": "Ninguna página coincide con esa búsqueda."
   },
   "jargon": {
     "bpf": "Una expresión de Berkeley Packet Filter (BPF) aplicada por el motor de captura. Los paquetes que no coinciden se descartan antes de la captura — nunca llegan al búfer, a diferencia de un filtro de visualización.",

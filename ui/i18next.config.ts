@@ -24,6 +24,13 @@ export default defineConfig({
       'src/data/help-content.ts',
       'src/i18n/index.ts',
       'src/i18n/types.ts',
+      // The page registry addresses every key through `pages.{i18nKey}.*`
+      // template literals. Resolving those would have the extractor invent an
+      // `eyebrow` for every page, and an eyebrow is opt-in — a page has one
+      // only where its locale declares it. Every `pages:` prefix is already
+      // listed in scripts/i18n/dynamic-prefixes.txt, so these keys are
+      // preserved rather than pruned.
+      'src/pageRegistry.ts',
     ],
     functions: ['t', '*.t', 'i18next.t'],
     useTranslationNames: ['useTranslation'],
