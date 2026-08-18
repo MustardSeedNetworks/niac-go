@@ -23,6 +23,7 @@ export type {
 
 export type HelpTab =
   | 'overview'
+  | 'pages'
   | 'devices'
   | 'protocols'
   | 'commands'

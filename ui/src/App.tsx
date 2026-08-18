@@ -8,6 +8,7 @@ import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { ReadOnlyView } from './components/ui/ReadOnlyView';
 import { AppProvider, useAppState } from './contexts/AppContext';
+import { pageHelp } from './data/page-help';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
@@ -46,6 +47,8 @@ function AppShell() {
   // Drawers used to live inside Sidebar.tsx; moved here as part of Phase 1
   // so the canonical Sidebar (synced from stem) stays drawer-agnostic.
   const [helpOpen, setHelpOpen] = useState(false);
+  // Route the (?) was clicked on, cleared on close so the next click re-applies.
+  const [helpPath, setHelpPath] = useState<string | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useKeyboardShortcuts(() => setHelpOpen(true));
@@ -72,7 +75,7 @@ function AppShell() {
                 key={page.path}
                 path={page.path}
                 element={
-                  <PageWithErrorBoundary page={page}>
+                  <PageWithErrorBoundary page={page} onOpenHelp={setHelpPath}>
                     <page.component />
                   </PageWithErrorBoundary>
                 }
@@ -85,6 +88,7 @@ function AppShell() {
               path="/device-config/new"
               element={
                 <PageWithErrorBoundary
+                  onOpenHelp={setHelpPath}
                   page={{
                     path: '/device-config/new',
                     label: t('deviceEditor.newLabel'),
@@ -102,6 +106,7 @@ function AppShell() {
               path="/device-config/:hostname"
               element={
                 <PageWithErrorBoundary
+                  onOpenHelp={setHelpPath}
                   page={{
                     path: '/device-config/:hostname',
                     label: t('deviceEditor.editLabel'),
@@ -124,7 +129,14 @@ function AppShell() {
         onClose={() => setSettingsOpen(false)}
         version={version?.version}
       />
-      <HelpDrawer isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpDrawer
+        isOpen={helpOpen || helpPath !== undefined}
+        onClose={() => {
+          setHelpOpen(false);
+          setHelpPath(undefined);
+        }}
+        section={helpPath}
+      />
     </SidebarLayout>
   );
 }
@@ -136,8 +148,19 @@ function AppShell() {
  * so the next page rendered the previous page's failure UI.
  */
 const PageWithErrorBoundary = memo(
-  ({ page, children }: { page: PageConfig; children: ReactNode }) => {
+  ({
+    page,
+    onOpenHelp,
+    children,
+  }: {
+    page: PageConfig;
+    onOpenHelp: (path: string) => void;
+    children: ReactNode;
+  }) => {
     const location = useLocation();
+    // Dynamic routes (the per-device editor) carry no page help; they get no
+    // (?) rather than one that opens on someone else's content.
+    const documented = page.path in pageHelp;
     return (
       <PageErrorBoundary key={location.pathname}>
         <section className="stack-xl">
@@ -147,7 +170,7 @@ const PageWithErrorBoundary = memo(
             eyebrow={page.eyebrow}
             title={page.title}
             description={page.description}
-            help={page.help}
+            onHelp={documented ? () => onOpenHelp(page.path) : undefined}
           />
           {children}
         </section>

@@ -17,6 +17,7 @@
 import {
   Book,
   Boxes,
+  FileText,
   HelpCircle,
   Keyboard,
   LayoutGrid,
@@ -36,14 +37,29 @@ import { FAQSection } from './help-drawer/FAQSection';
 import { GlossarySection } from './help-drawer/GlossarySection';
 import { ItemListSection } from './help-drawer/ItemListSection';
 import { OverviewSection } from './help-drawer/OverviewSection';
+import { PagesSection } from './help-drawer/PagesSection';
 import { ShortcutsSection } from './help-drawer/ShortcutsSection';
 
 interface HelpDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Route path this open was requested on — supplied by a page header's (?).
+   * App clears it on close, so clicking (?) always lands on that page's help
+   * even if the reader browsed elsewhere during the previous open.
+   */
+  section?: string;
 }
 
-type HelpTab = 'overview' | 'devices' | 'protocols' | 'commands' | 'glossary' | 'shortcuts' | 'faq';
+type HelpTab =
+  | 'overview'
+  | 'pages'
+  | 'devices'
+  | 'protocols'
+  | 'commands'
+  | 'glossary'
+  | 'shortcuts'
+  | 'faq';
 
 interface TabConfig {
   id: HelpTab;
@@ -51,15 +67,26 @@ interface TabConfig {
   icon: ReactNode;
 }
 
-export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement | null {
+export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): ReactElement | null {
   const { t } = useTranslation('help');
-  const [activeTab, setActiveTab] = useState<HelpTab>('overview');
+  const [activeTab, setActiveTab] = useState<HelpTab>(section ? 'pages' : 'overview');
+  const [activePath, setActivePath] = useState(section ?? '/');
+  const [requestedSection, setRequestedSection] = useState(section);
   const [searchQuery, setSearchQuery] = useState('');
   const buildVersion = useBuildVersion();
+
+  if (section !== requestedSection) {
+    setRequestedSection(section);
+    if (section) {
+      setActiveTab('pages');
+      setActivePath(section);
+    }
+  }
 
   const TABS: TabConfig[] = useMemo(
     () => [
       { id: 'overview', label: t('tabs.overview'), icon: <LayoutGrid className="w-4 h-4" /> },
+      { id: 'pages', label: t('tabs.pages'), icon: <FileText className="w-4 h-4" /> },
       { id: 'devices', label: t('tabs.devices'), icon: <Boxes className="w-4 h-4" /> },
       { id: 'protocols', label: t('tabs.protocols'), icon: <Network className="w-4 h-4" /> },
       { id: 'commands', label: t('tabs.commands'), icon: <Terminal className="w-4 h-4" /> },
@@ -180,6 +207,13 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps): ReactElement |
           {/* Content */}
           <div className={cn(spacing.drawer, 'stack-xl')}>
             {activeTab === 'overview' && <OverviewSection searchQuery={searchQuery} />}
+            {activeTab === 'pages' && (
+              <PagesSection
+                searchQuery={searchQuery}
+                activePath={activePath}
+                onSelectPath={setActivePath}
+              />
+            )}
             {activeTab === 'devices' && (
               <ItemListSection categoryId="devices" searchQuery={searchQuery} />
             )}

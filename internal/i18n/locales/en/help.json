@@ -45,12 +45,17 @@
     "whatNiacDoesBody": "NIAC (Network In A Can) simulates one or more network devices on a real host interface. It answers ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP and other protocols so a discovery tool, NMS, or monitoring platform sees the simulated devices as if they were physical hardware. Use it for tooling validation, training labs, and reproducer environments without standing up real gear.",
     "whatNiacDoesTitle": "What NIAC does"
   },
+  "pages": {
+    "contents": "Pages",
+    "empty": "No page matches that search."
+  },
   "tabs": {
     "commands": "Commands",
     "devices": "Devices",
     "faq": "FAQ",
     "glossary": "Glossary",
     "overview": "Overview",
+    "pages": "Pages",
     "protocols": "Protocols",
     "shortcuts": "Shortcuts"
   }
