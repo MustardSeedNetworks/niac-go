@@ -325,8 +325,8 @@ jobs:
         run: dpkg --add-architecture arm64
 
       - name: Install libpcap headers for amd64 + arm64
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@37513d7fbaacf4a7adaab1ac1514f021115868d1 # v1.4.0
+        timeout-minutes: 10
         # goreleaser-cross ships compilers but not libpcap headers. gopacket/pcap
         # needs pcap.h + libpcap.so (and its transitive link deps: libdbus-1-3,
         # libibverbs, …) for cgo, per target arch.
@@ -626,8 +626,8 @@ jobs:
 
       - name: Install corpus-checkout + bundle prerequisites
         if: env.HAS_CONTENT_KEY == 'true'
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@37513d7fbaacf4a7adaab1ac1514f021115868d1 # v1.4.0
+        timeout-minutes: 10
         # goreleaser-cross is Go-focused; make sure ssh (deploy-key checkout),
         # python3 and make (bundle generation) are present.
         #
