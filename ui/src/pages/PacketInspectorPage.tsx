@@ -38,6 +38,7 @@ import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
@@ -492,11 +493,9 @@ export const PacketInspectorPage: FC = () => {
             </CardContent>
           </Card>
 
-          {/* Main content grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">
-            {/* Packet List - Left sidebar */}
-            <div className="lg:col-span-4 xl:col-span-3">
-              <Card className="border-surface-border bg-bg-surface/70 h-[600px]">
+          <Inspector>
+            <InspectorRecords>
+              <Card className="border-surface-border bg-bg-surface/70 h-full">
                 <CardContent className="h-full flex flex-col">
                   <div className="flex-between mb-heading">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
@@ -519,42 +518,25 @@ export const PacketInspectorPage: FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </InspectorRecords>
 
-            {/* Right panel - Hex dump and details */}
-            <div className="lg:col-span-8 xl:col-span-9 stack-xl">
-              {/* Hex Dump Viewer */}
-              <Card className="border-surface-border bg-bg-surface/70 h-[350px]">
-                <CardContent className="h-full flex flex-col">
-                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                    {t('packets.inspector.hexDumpLabel')}
-                  </SmallText>
-                  <div className="flex-1 min-h-0">
-                    <HexDumpViewer
-                      rawData={selectedPacket?.rawData ?? ''}
-                      headerLength={hexHeaderLength}
-                      highlightRange={highlightRange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            <InspectorPanes>
+              <InspectorPane label={t('packets.inspector.hexDumpLabel')}>
+                <HexDumpViewer
+                  rawData={selectedPacket?.rawData ?? ''}
+                  headerLength={hexHeaderLength}
+                  highlightRange={highlightRange}
+                />
+              </InspectorPane>
 
-              {/* Packet Details */}
-              <Card className="border-surface-border bg-bg-surface/70 h-[220px]">
-                <CardContent className="h-full flex flex-col">
-                  <SmallText className="text-text-muted uppercase tracking-wide font-semibold mb-heading">
-                    {t('packets.inspector.packetDetailsLabel')}
-                  </SmallText>
-                  <div className="flex-1 min-h-0 overflow-y-auto">
-                    <PacketDetails
-                      packet={selectedPacket}
-                      onFieldSelect={(start, end) => setHighlightRange([start, end])}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+              <InspectorPane label={t('packets.inspector.packetDetailsLabel')} scroll>
+                <PacketDetails
+                  packet={selectedPacket}
+                  onFieldSelect={(start, end) => setHighlightRange([start, end])}
+                />
+              </InspectorPane>
+            </InspectorPanes>
+          </Inspector>
 
           {/* Coloring Rules Panel */}
           {showColoringRules && (
