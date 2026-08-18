@@ -13,7 +13,7 @@ const meta: Meta<typeof StatusBadge> = {
   argTypes: {
     status: {
       control: 'select',
-      options: ['success', 'warning', 'error', 'loading', 'unknown', 'info'],
+      options: ['success', 'warning', 'error', 'loading', 'unknown'],
     },
     variant: { control: 'select', options: ['icon', 'dot'] },
     size: { control: 'select', options: ['sm', 'md', 'lg'] },
@@ -30,7 +30,6 @@ export const ErrorState: Story = {
   args: { status: 'error', variant: 'icon' },
 };
 export const Loading: Story = { args: { status: 'loading', variant: 'icon' } };
-export const Info: Story = { args: { status: 'info', variant: 'icon' } };
 export const Unknown: Story = { args: { status: 'unknown', variant: 'icon' } };
 
 export const DotVariant: Story = { args: { status: 'success', variant: 'dot' } };
@@ -38,10 +37,10 @@ export const DotVariant: Story = { args: { status: 'success', variant: 'dot' } }
 export const FullMatrix: Story = {
   render: () => (
     <div className="grid grid-cols-6 gap-3 items-center">
-      {(['success', 'warning', 'error', 'loading', 'unknown', 'info'] as const).map((s) => (
+      {(['success', 'warning', 'error', 'loading', 'unknown'] as const).map((s) => (
         <StatusBadge key={s} status={s} variant="icon" />
       ))}
-      {(['success', 'warning', 'error', 'loading', 'unknown', 'info'] as const).map((s) => (
+      {(['success', 'warning', 'error', 'loading', 'unknown'] as const).map((s) => (
         <StatusBadge key={`dot-${s}`} status={s} variant="dot" />
       ))}
     </div>

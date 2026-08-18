@@ -27,6 +27,7 @@
 
 import type { FC, HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
 import { type Status, StatusBadge } from './StatusBadge';
+import { getStatusConfig } from './StatusConfig';
 
 // Re-export Status type for convenience
 export type { Status };
@@ -275,16 +276,7 @@ export const CardValue: FC<CardValueProps> = ({
   status,
   mono = false,
 }) => {
-  const statusColor = status
-    ? {
-        success: 'text-status-success',
-        warning: 'text-status-warning',
-        error: 'text-status-error',
-        info: 'text-status-info',
-        unknown: 'text-text-muted',
-        loading: 'text-status-info',
-      }[status]
-    : 'text-text-primary';
+  const statusColor = status ? getStatusConfig(status).color : 'text-text-primary';
 
   return (
     <div>
@@ -315,16 +307,7 @@ interface CardRowProps {
  * CardRow - Displays a label-value pair in a horizontal row.
  */
 export const CardRow: FC<CardRowProps> = ({ label, value, status, mono = false }) => {
-  const statusColor = status
-    ? {
-        success: 'text-status-success',
-        warning: 'text-status-warning',
-        error: 'text-status-error',
-        info: 'text-status-info',
-        unknown: 'text-text-muted',
-        loading: 'text-status-info',
-      }[status]
-    : 'text-text-primary';
+  const statusColor = status ? getStatusConfig(status).color : 'text-text-primary';
 
   return (
     <div className="flex justify-between items-center py-compact">
