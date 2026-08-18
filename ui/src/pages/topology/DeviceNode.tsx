@@ -26,19 +26,12 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
-  const statusColor = {
-    online: 'bg-status-success',
-    offline: 'bg-bg-muted',
-    warning: 'bg-status-warning',
-  }[data.status || 'online'];
-
   // The card truncates the device name and shows `+N` overflow for IPs and
   // protocols, so the full data is invisible without a tooltip. Build a
   // multi-line description and surface it through both title (native hover
   // tooltip) and aria-label (screen readers).
-  const status = data.status || 'online';
   const tooltipLines: string[] = [
-    t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type, status }),
+    t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type }),
   ];
   if (data.ips && data.ips.length > 0) {
     tooltipLines.push(t('topology.deviceNode.tooltipIps', { ips: data.ips.join(', ') }));
@@ -88,11 +81,6 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
         type="source"
         position={Position.Right}
         className="!w-2 !h-2 !bg-brand-accent !border-0"
-      />
-
-      {/* Status indicator */}
-      <div
-        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${statusColor} border-2 border-border-muted`}
       />
 
       {/* Icon and name */}

@@ -179,7 +179,6 @@ function makeData(device: DeviceSummary): DeviceNodeData {
     type: device.type || 'unknown',
     ips: device.ips,
     protocols: device.protocols,
-    status: 'online',
   };
 }
 
