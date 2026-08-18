@@ -41,8 +41,8 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@37513d7fbaacf4a7adaab1ac1514f021115868d1 # v1.4.0
+        timeout-minutes: 10
         # A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a check, because apt waits forever on a dead
         # connection by default. The composite bounds apt's own network
