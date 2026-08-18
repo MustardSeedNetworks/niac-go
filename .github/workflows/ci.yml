@@ -126,10 +126,10 @@ jobs:
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
-    # Observed p95 ~2m15s (checked via gh api .../actions/runs/<id>/jobs across
-    # 5 recent main/PR runs on 2026-08-15); 25m was ~11x that. ~4x buffer
-    # covers cold-cache and golangci-lint variance.
-    timeout-minutes: 10
+    # p95 ~2m15s (5 recent main/PR runs, 2026-08-15) describes runs where apt
+    # was fast. The budget is sized instead so the 10-min libpcap step can go
+    # to its worst case and still leave room for the work — see the e2e job.
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
     steps:
@@ -140,7 +140,7 @@ jobs:
 
       - name: Install libpcap-dev
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -240,9 +240,9 @@ jobs:
   race:
     name: Backend (race detector)
     runs-on: ubuntu-latest
-    # Observed p95 ~6m20s (checked via gh api .../actions/runs/<id>/jobs across
-    # 5 recent main/PR runs on 2026-08-15); 25m was ~4x that.
-    timeout-minutes: 15
+    # p95 ~6m20s (5 recent main/PR runs, 2026-08-15), plus headroom for the
+    # 10-min libpcap step's worst case — see the e2e job.
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
     steps:
@@ -253,7 +253,7 @@ jobs:
 
       - name: Install libpcap-dev
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -330,7 +330,7 @@ jobs:
   security:
     name: Security Scanning
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 16
     # Always runs — security checks are non-negotiable on every PR.
     permissions:
       # Job-level `permissions:` REPLACES the workflow-level block entirely
@@ -358,7 +358,7 @@ jobs:
 
       - name: Install libpcap-dev
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -707,9 +707,9 @@ jobs:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
     needs: [changes, backend, frontend]
     runs-on: ubuntu-latest
-    # Observed p95 ~1m10s (checked via gh api .../actions/runs/<id>/jobs across
-    # 5 recent main/PR runs on 2026-08-15); 25m was ~21x that.
-    timeout-minutes: 6
+    # p95 ~1m10s (5 recent main/PR runs, 2026-08-15). Was 6 — under the 10-min
+    # libpcap step it contains, so a slow mirror could not fail cleanly here.
+    timeout-minutes: 16
     # gopacket/pcap requires CGO + libpcap. CI verifies a native amd64 build
     # only — release.yml handles the arm64 cross-compile (gcc-aarch64-linux-gnu
     # + libpcap-dev:arm64) when actually publishing artifacts.
@@ -734,7 +734,7 @@ jobs:
 
       - name: Install libpcap-dev
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -818,9 +818,16 @@ jobs:
     name: E2E Browser Tests
     runs-on: ubuntu-latest
     needs: [changes, backend, frontend]
-    # Observed p95 ~5m8s (checked via gh api .../actions/runs/<id>/jobs across
-    # 5 recent main/PR runs on 2026-08-15); 30m was ~6x that.
-    timeout-minutes: 12
+    # NOT sized from p95. A job budget has to exceed its apt steps' worst case
+    # plus the actual work, or a slow mirror becomes indistinguishable from a
+    # hung test. This job has two apt steps at 10 min each; p95 (~5m8s) only
+    # describes runs where apt was fast, so budgeting to it guarantees the
+    # pathological run dies. Sized to 12 that way, it did: on 2026-08-18 a slow
+    # libpcap install took 5.5 min, the job hit its budget mid-test, and the
+    # merge queue ejected release PR #1349 for what looked like a test failure
+    # (run 32161326698). That is the mechanism behind stem#664's "PRs silently
+    # leave the merge queue after successful runs".
+    timeout-minutes: 25
     # Skipped on draft PRs (slow); also skipped if no frontend/backend changed.
     # always() lets the if: evaluate when backend was skipped upstream.
     if: |
@@ -840,7 +847,7 @@ jobs:
 
       - name: Install libpcap-dev
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -878,7 +885,7 @@ jobs:
 
       - name: Install Playwright OS dependencies
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@3567cebc11a2277106bb350042287918ad92e542 # v1.2.0
-        timeout-minutes: 8
+        timeout-minutes: 10
         # Not removable: the runner image ships none of webkit's GStreamer/font
         # stack. A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a test (stem job 95068053052), because apt waits
@@ -887,7 +894,7 @@ jobs:
         # the transient case.
         with:
           command: cd ui && npx playwright install-deps chromium webkit
-          command-timeout: '150'
+          command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
       # per ref, so a PR that saves writes its own copy that dies on merge —
