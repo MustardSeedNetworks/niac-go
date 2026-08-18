@@ -73,17 +73,12 @@ test.describe('Language switching', () => {
     await expect(page.getByText(/Panel/).last()).toBeVisible();
   });
 
-  test('honors pluralization for device count', async ({ page }) => {
-    // The Dashboard status banner reads device count from the running
-    // daemon. We can't reliably control deviceCount in this E2E
-    // (depends on the simulation state), but we CAN verify the count
-    // rendering uses singular/plural correctly by checking that EITHER:
-    //
-    //   "1 device" / "N devices"     (en)
-    //   "1 dispositivo" / "N dispositivos"   (es)
-    //
-    // appears in the page after the language toggle. The plural-form
-    // strings come from common.plurals.deviceCount_{one,other}.
+  test('translates the dashboard rollup', async ({ page }) => {
+    // The device count is a rollup figure now — a bare number with a separate
+    // label — so this page no longer renders a pluralised count string, and
+    // the plural forms themselves are covered by i18n.plurals.test.ts, which
+    // does not depend on daemon state. What is worth asserting here is that
+    // the rollup's own copy is translated.
     await page.addInitScript(
       ({ key }) => {
         localStorage.setItem(key, 'es');
@@ -96,6 +91,7 @@ test.describe('Language switching', () => {
     await expect
       .poll(async () => page.evaluate((key) => localStorage.getItem(key), LOCAL_STORAGE_KEY))
       .toBe('es');
-    await expect(page.getByTestId('dashboard-device-count')).toHaveText(/^\d+ dispositivos?$/i);
+    await expect(page.getByTestId('status-rollup')).toBeVisible();
+    await expect(page.getByTestId('status-rollup')).not.toContainText(/dashboard\.rollup\./);
   });
 });

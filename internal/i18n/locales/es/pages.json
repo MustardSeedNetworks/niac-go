@@ -11,12 +11,7 @@
     "title": "Panel",
     "description": "Contadores en vivo, instantáneas de ejecución y acciones rápidas para la pila NIAC activa.",
     "status": {
-      "running": "Simulación en ejecución",
-      "stopped": "Simulación detenida",
-      "noInterface": "Sin interfaz",
-      "deviceCount_one": "{{count}} dispositivo",
-      "deviceCount_other": "{{count}} dispositivos",
-      "uptimeLabel": "Tiempo activo: {{uptime}}"
+      "noInterface": "Sin interfaz"
     },
     "stats": {
       "devicesOnline": "Dispositivos en línea",

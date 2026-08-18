@@ -188,12 +188,7 @@
       "txLabel": "TX"
     },
     "status": {
-      "deviceCount_one": "{{count}} device",
-      "deviceCount_other": "{{count}} devices",
-      "noInterface": "No interface",
-      "running": "Simulation Running",
-      "stopped": "Simulation Stopped",
-      "uptimeLabel": "Uptime: {{uptime}}"
+      "noInterface": "No interface"
     },
     "title": "Dashboard"
   },
