@@ -21,12 +21,18 @@ function renderLegend() {
 }
 
 describe('TopologyLegend — complete encoding coverage', () => {
-  it('documents node status dot colors (DeviceNode.tsx statusColor map)', () => {
+  it('does not advertise node states the data layer cannot produce', () => {
+    // Was 'documents node status dot colors'. The legend showed Online /
+    // Offline / Warning swatches while every node was hardcoded 'online' and
+    // DeviceSummary carried no status field at all — so two of the three
+    // states were unreachable and the third was fabricated (niac-go#1352).
+    // A legend that documents a non-existent encoding is what made the green
+    // read as meaningful.
     renderLegend();
-    expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('Online')).toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
+
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
   });
 
   it('documents discovered (dashed) vs declared (solid) edge line style (TrunkEdge.tsx)', () => {

@@ -12,7 +12,6 @@ export interface DeviceNodeData extends Record<string, unknown> {
   type: string;
   ips?: string[];
   protocols?: string[];
-  status?: 'online' | 'offline' | 'warning';
   selected?: boolean;
   onClick?: (id: string) => void;
 }

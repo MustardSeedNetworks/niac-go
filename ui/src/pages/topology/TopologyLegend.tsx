@@ -36,12 +36,6 @@ const DEVICE_TYPES = [
 // Matches DeviceNode.tsx's statusColor map (bg-status-success /
 // bg-bg-muted / bg-status-warning) — kept as CSS custom properties so
 // the legend swatches track the same theme tokens as the live dots.
-const STATUS_DOTS = [
-  { status: 'online', swatchClass: 'bg-status-success', labelKey: 'statusOnline' },
-  { status: 'offline', swatchClass: 'bg-bg-muted', labelKey: 'statusOffline' },
-  { status: 'warning', swatchClass: 'bg-status-warning', labelKey: 'statusWarning' },
-] as const;
-
 // Matches layout.ts's linkSpeedColors / getEdgeColor.
 const LINK_SPEEDS = [
   { label: '100M', color: 'var(--color-link-100m)' },
@@ -124,23 +118,6 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Status dot colors */}
-            <div>
-              <div className="text-xs text-text-muted uppercase tracking-wide mb-2">
-                {t('topology.legend.statusHeading')}
-              </div>
-              <div className="space-y-1.5">
-                {STATUS_DOTS.map(({ status, swatchClass, labelKey }) => (
-                  <div key={status} className="flex items-center gap-compact">
-                    <div className={`w-2.5 h-2.5 rounded-full ${swatchClass}`} />
-                    <span className="text-xs text-text-secondary">
-                      {t(`topology.legend.${labelKey}`)}
-                    </span>
-                  </div>
-                ))}
               </div>
             </div>
 

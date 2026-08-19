@@ -441,10 +441,6 @@
       "deviceTypesHeading": "Tipos de dispositivo",
       "linkSpeedsHeading": "Velocidades de enlace",
       "nodesHeading": "Nodos",
-      "statusHeading": "Estado",
-      "statusOnline": "En línea",
-      "statusOffline": "Fuera de línea",
-      "statusWarning": "Advertencia",
       "focusHint": "Haga clic en un nodo para resaltar sus vecinos: los dispositivos no relacionados se atenúan.",
       "edgesHeading": "Enlaces",
       "utilizationHeading": "Utilización",
@@ -496,7 +492,7 @@
       "closeAriaLabel": "Cerrar detalles del dispositivo"
     },
     "deviceNode": {
-      "tooltipSummary": "{{label}} ({{type}}, {{status}})",
+      "tooltipSummary": "{{label}} ({{type}})",
       "tooltipIps": "IPs: {{ips}}",
       "tooltipProtocols": "Protocolos: {{protocols}}"
     },

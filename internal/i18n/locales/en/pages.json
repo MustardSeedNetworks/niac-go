@@ -878,7 +878,7 @@
     "deviceNode": {
       "tooltipIps": "IPs: {{ips}}",
       "tooltipProtocols": "Protocols: {{protocols}}",
-      "tooltipSummary": "{{label}} ({{type}}, {{status}})"
+      "tooltipSummary": "{{label}} ({{type}})"
     },
     "header": {
       "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
@@ -921,10 +921,6 @@
       "linkSpeedsHeading": "Link Speeds",
       "nodesHeading": "Nodes",
       "showLegend": "Show Legend",
-      "statusHeading": "Status",
-      "statusOffline": "Offline",
-      "statusOnline": "Online",
-      "statusWarning": "Warning",
       "utilizationCritical": "Critical (85%+)",
       "utilizationHeading": "Utilization",
       "utilizationHigh": "High (60–84%)"
