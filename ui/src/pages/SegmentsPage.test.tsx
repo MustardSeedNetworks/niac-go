@@ -53,14 +53,16 @@ describe('SegmentsPage', () => {
     const seg200 = within(results).getByTestId('segment-200');
     expect(within(seg200).getByText('VLAN 200')).toBeInTheDocument();
     expect(within(seg200).getByText('sw-200')).toBeInTheDocument();
-    expect(within(seg200).getByText('1 device')).toBeInTheDocument();
+    expect(within(seg200).getByTestId('segment-count-200')).toHaveTextContent('1');
+    expect(within(seg200).getByText('device')).toBeInTheDocument();
     expect(within(seg200).queryByText('sw-300')).not.toBeInTheDocument();
 
     const seg300 = within(results).getByTestId('segment-300');
     expect(within(seg300).getByText('VLAN 300')).toBeInTheDocument();
     expect(within(seg300).getByText('sw-300')).toBeInTheDocument();
     expect(within(seg300).getByText('rtr-300')).toBeInTheDocument();
-    expect(within(seg300).getByText('2 devices')).toBeInTheDocument();
+    expect(within(seg300).getByTestId('segment-count-300')).toHaveTextContent('2');
+    expect(within(seg300).getByText('devices')).toBeInTheDocument();
   });
 
   it('labels the native VLAN segment "Untagged" for a flat config', async () => {
@@ -79,7 +81,22 @@ describe('SegmentsPage', () => {
     const segment = within(results).getByTestId('segment-0');
     expect(within(segment).getByText('Untagged')).toBeInTheDocument();
     expect(within(segment).getByText('r1')).toBeInTheDocument();
-    expect(within(segment).getByText('1 device')).toBeInTheDocument();
+    expect(within(segment).getByTestId('segment-count-0')).toHaveTextContent('1');
+    expect(within(segment).getByText('device')).toBeInTheDocument();
+  });
+
+  // A segment's device count changes as the simulation runs, which makes it a
+  // figure. The archetype monospaces figures so a column of them stays
+  // comparable at a glance; prose beside them must not be monospaced.
+  it('renders each segment device count as a figure', async () => {
+    fetchSegments.mockResolvedValue(taggedSegments);
+
+    render(<SegmentsPage />);
+
+    const results = await screen.findByTestId('segments-results');
+    const count = within(results).getByTestId('segment-count-300');
+    expect(count).toHaveClass('figure');
+    expect(count).toHaveTextContent('2');
   });
 
   it('shows the empty state when no segments are defined', async () => {

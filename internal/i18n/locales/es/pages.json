@@ -374,13 +374,13 @@
     "copyNameButton": "Copiar nombre"
   },
   "segments": {
+    "deviceNoun_one": "dispositivo",
+    "deviceNoun_other": "dispositivos",
     "label": "Segmentos",
     "title": "Segmentos",
     "description": "Vista de solo lectura de los dispositivos de cada segmento VLAN que describe la configuración activa.",
     "vlanHeader": "VLAN {{tag}}",
     "untaggedHeader": "Untagged",
-    "deviceCount_one": "{{count}} dispositivo",
-    "deviceCount_other": "{{count}} dispositivos",
     "emptySegmentDevices": "No hay dispositivos en este segmento.",
     "empty": "No hay segmentos definidos en la configuración cargada."
   },
@@ -399,6 +399,11 @@
   },
   "topology": {
     "label": "Topología",
+    "tiers": {
+      "access": "Acceso",
+      "core": "Core",
+      "distribution": "Distribución"
+    },
     "title": "Topología",
     "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
     "neighbors": {

@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
-import { exportTopology, fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
+import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
 import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
@@ -39,7 +39,10 @@ import {
   layoutNodes,
   NeighborsView,
   readSavedLayoutMode,
+  TierBands,
   TopologyLegend,
+  useTierBands,
+  useTopologyExport,
   writeSavedLayoutMode,
 } from './topology';
 import { TrunkEdge } from './topology/TrunkEdge';
@@ -122,6 +125,8 @@ export const TopologyPage: FC = () => {
   // because rings get hard to read past ~6 devices and the layered
   // dagre layout matches how operators draw networks on a whiteboard.
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => readSavedLayoutMode());
+
+  const { tiers, extent: tierExtent } = useTierBands(nodes, layoutMode);
   // Node-position persistence (browser-local, debounced writes) — see
   // ../hooks/useTopologyLayoutPersistence.ts. Layout *mode* persistence
   // stays a direct localStorage read/write above; only positions get
@@ -453,77 +458,19 @@ export const TopologyPage: FC = () => {
     return () => window.clearTimeout(t);
   }, [devices]);
 
+  const {
+    error: exportError,
+    exportJSON: handleExport,
+    exportDOT: handleExportDOT,
+    exportGraphML: handleExportGraphML,
+    exportPNG: handleExportPNG,
+  } = useTopologyExport(nodes, edges);
+
   // onConnect is a no-op: edges come from the backend and are not user-editable
   const onConnect = useCallback((_params: Connection) => {
     // Intentionally empty - topology edges are derived from device configs
     // and neighbor discovery; user-drawn edges would not persist.
   }, []);
-
-  // Export topology as JSON
-  const handleExport = useCallback(() => {
-    const exportData = {
-      nodes: nodes.map((n) => ({
-        name: n.id,
-        type: n.data.type,
-        ips: n.data.ips,
-        protocols: n.data.protocols,
-        position: n.position,
-      })),
-      edges: edges.map((e) => ({
-        source: e.source,
-        target: e.target,
-        label: e.label,
-        data: e.data,
-      })),
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `niac-topology-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [nodes, edges]);
-
-  const [exportError, setExportError] = useState<string | null>(null);
-
-  // Server-side topology export (DOT / GraphML). Unlike the client-side JSON
-  // snapshot above, this fetches the daemon's rendered topology, so the output
-  // reflects what the running simulation actually sees — suitable for feeding
-  // into Graphviz / yEd / gephi.
-  const exportServerFormat = useCallback(
-    async (format: 'dot' | 'graphml', extension: string, mimeType: string) => {
-      setExportError(null);
-      try {
-        const content = await exportTopology(format);
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `niac-topology-${new Date().toISOString().slice(0, 10)}.${extension}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        setExportError((err as Error).message);
-      }
-    },
-    [],
-  );
-
-  const handleExportDOT = useCallback(
-    () => void exportServerFormat('dot', 'dot', 'text/vnd.graphviz'),
-    [exportServerFormat],
-  );
-  const handleExportGraphML = useCallback(
-    () => void exportServerFormat('graphml', 'graphml', 'application/xml'),
-    [exportServerFormat],
-  );
 
   // Refresh data by refetching from the API. We bump the reset
   // counter so the build-graph effect re-runs even when the data
@@ -551,39 +498,6 @@ export const TopologyPage: FC = () => {
   }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
   const loading = topologyLoading || devicesLoading;
-
-  // PNG export. Captures the ReactFlow viewport via the .react-flow
-  // root element; html-to-image walks the DOM, inlines computed
-  // styles, and rasterises to PNG. We snapshot at 2× pixel ratio so
-  // the image scales cleanly on Retina/4K screens.
-  const handleExportPNG = useCallback(async () => {
-    setExportError(null);
-    const root = document.querySelector<HTMLElement>('.react-flow');
-    if (!root) {
-      setExportError('Could not find the topology canvas to export.');
-      return;
-    }
-    try {
-      const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(root, {
-        pixelRatio: 2,
-        backgroundColor: '#0a0a0a',
-        cacheBust: true,
-        // Skip the ReactFlow controls + minimap chrome — viewers want
-        // the diagram, not the UI scaffolding.
-        filter: (node) =>
-          !(node instanceof HTMLElement) || !node.classList?.contains?.('react-flow__panel'),
-      });
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `niac-topology-${new Date().toISOString().slice(0, 10)}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      setExportError((err as Error).message || 'Failed to export topology as PNG.');
-    }
-  }, []);
 
   return (
     <div className="stack-xl">
@@ -877,6 +791,7 @@ export const TopologyPage: FC = () => {
                   }}
                   proOptions={{ hideAttribution: true }}
                 >
+                  <TierBands tiers={tiers} left={tierExtent.left} width={tierExtent.width} />
                   <Background
                     variant={BackgroundVariant.Dots}
                     gap={20}
