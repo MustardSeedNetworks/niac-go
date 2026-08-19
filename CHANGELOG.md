@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.46](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.45...v0.94.46) (2026-08-19)
+
+
+### Bug Fixes
+
+* **topology:** stop reporting a device status the daemon never measured ([#1354](https://github.com/MustardSeedNetworks/niac-go/issues/1354)) ([3df44e5](https://github.com/MustardSeedNetworks/niac-go/commit/3df44e5990fbe000ec28793ccb1a8f34e4beb221))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1355](https://github.com/MustardSeedNetworks/niac-go/issues/1355)) ([0a2a351](https://github.com/MustardSeedNetworks/niac-go/commit/0a2a351afef01f36ee87704eb6781fd85cc7296d))
+
 ## [0.94.45](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.44...v0.94.45) (2026-08-18)
 
 
