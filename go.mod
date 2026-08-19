@@ -3,7 +3,7 @@ module github.com/MustardSeedNetworks/niac-go
 go 1.26.6
 
 require (
-	charm.land/bubbletea/v2 v2.0.8
+	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/MustardSeedNetworks/foundation v0.2.1
 	github.com/fatih/color v1.19.0
