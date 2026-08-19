@@ -27,6 +27,19 @@ function download(href: string, extension: string): void {
   document.body.removeChild(link);
 }
 
+/**
+ * canvasBackground resolves the page's own background token so a PNG matches
+ * the theme it was exported from. The previous hardcoded dark hex produced a
+ * black plate behind a light-theme diagram; returning undefined when the token
+ * cannot be read lets html-to-image fall back rather than invent a colour.
+ */
+function canvasBackground(): string | undefined {
+  const token = getComputedStyle(document.documentElement)
+    .getPropertyValue('--color-bg-base')
+    .trim();
+  return token === '' ? undefined : token;
+}
+
 /** downloadBlob wraps content in a blob, downloads it, and releases the URL. */
 function downloadBlob(content: string, mimeType: string, extension: string): void {
   const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
@@ -101,7 +114,7 @@ export function useTopologyExport(nodes: DeviceNode[], edges: LinkEdge[]): Topol
       const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(root, {
         pixelRatio: 2,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: canvasBackground(),
         cacheBust: true,
         // Skip the ReactFlow controls + minimap chrome — viewers want the
         // diagram, not the UI scaffolding.
