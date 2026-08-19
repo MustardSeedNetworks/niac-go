@@ -961,6 +961,11 @@
       "noLinksBannerSuffix": "entries to your YAML to visualize connections. Live LLDP/CDP/EDP/FDP neighbors are on the",
       "noTopologyData": "No topology data available"
     },
+    "tiers": {
+      "access": "Access",
+      "core": "Core",
+      "distribution": "Distribution"
+    },
     "title": "Topology",
     "trunkEdge": {
       "rowDuplex": "Duplex",

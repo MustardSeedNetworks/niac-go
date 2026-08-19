@@ -399,6 +399,11 @@
   },
   "topology": {
     "label": "Topología",
+    "tiers": {
+      "access": "Acceso",
+      "core": "Core",
+      "distribution": "Distribución"
+    },
     "title": "Topología",
     "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
     "neighbors": {

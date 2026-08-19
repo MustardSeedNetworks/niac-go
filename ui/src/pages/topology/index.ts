@@ -23,5 +23,8 @@ export {
   writeSavedLayoutMode,
   writeSavedPositions,
 } from './persistence';
+export { TierBands } from './TierBands';
 export { TopologyLegend } from './TopologyLegend';
+export { deriveTiers, type Tier, type TierExtent, useTierBands } from './tiers';
 export type { DeviceNode as DeviceNodeType, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
+export { type TopologyExport, useTopologyExport } from './useTopologyExport';

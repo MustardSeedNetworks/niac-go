@@ -1,4 +1,4 @@
 # path maximum-lines
 internal/protocols/dhcpv6.go 1204
 ui/src/data/help-content.ts 3632
-ui/src/pages/TopologyPage.tsx 945
+ui/src/pages/TopologyPage.tsx 865
