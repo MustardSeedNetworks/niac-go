@@ -101,11 +101,44 @@ print(json.dumps({
 
 version() { "${CURL[@]}" "${NIAC_URL}/__version" | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])"; }
 
+# The report has to name the build that served the scenario, the pack that
+# composed it, and the VLAN it rode — none of which is recoverable from the YAML
+# afterwards. Physical VLAN is deployment identity and lives here, never in the
+# portable pack manifest.
+write_provenance() {
+	local pack="$1" out="$2"
+	"${CURL[@]}" "${NIAC_URL}/__version" >"${out}/version.json"
+	"${CURL[@]}" "${NIAC_URL}/api/v1/scenario/packs" >"${out}/packs.json"
+	python3 -c "
+import hashlib, json, sys
+
+pack_id, out, vlan = sys.argv[1], sys.argv[2], int(sys.argv[3])
+build = json.load(open(f'{out}/version.json'))
+pack = next(p for p in json.load(open(f'{out}/packs.json')) if p['id'] == pack_id)
+manifest = json.load(open(f'{out}/{pack_id}.generated.json'))['manifest']
+canonical = json.dumps(manifest, sort_keys=True, separators=(',', ':')).encode()
+
+json.dump({
+    'niacVersion': build['version'],
+    'niacCommit': build['commit'],
+    'uiBuildHash': build['uiBuildHash'],
+    'pack': pack_id,
+    'packVersion': pack['version'],
+    'manifestVersion': pack['manifestVersion'],
+    'manifestSha256': hashlib.sha256(canonical).hexdigest(),
+    'sessionId': pack_id,
+    'physicalVlan': vlan,
+}, open(f'{out}/{pack_id}.provenance.json', 'w'), indent=2)
+" "$pack" "$out" "$3"
+}
+
 if [[ "${1:-}" == "--compare" ]]; then
 	pack="${2:-}"
 	[[ -n "$pack" ]] || die "usage: $0 --compare <pack-id> [unit-mac]"
 	[[ -f "${LAB_OUT}/${pack}.yaml" ]] || die "no ${LAB_OUT}/${pack}.yaml — run without --compare first"
-	args=(-config "${LAB_OUT}/${pack}.yaml" -latest -niac-version "$(version)")
+	args=(-config "${LAB_OUT}/${pack}.yaml" -latest)
+	[[ -f "${LAB_OUT}/${pack}.provenance.json" ]] &&
+		args+=(-provenance "${LAB_OUT}/${pack}.provenance.json")
 	[[ -n "${3:-}" ]] && args+=(-unit-mac "$3")
 	echo "comparing ${pack} against the latest ready discovery..."
 	go run ./tools/linklive-acceptance "${args[@]}" | tee "${LAB_OUT}/${pack}.report.json"
@@ -123,6 +156,7 @@ manifest="$(generate "$pack" "$LAB_OUT")"
 echo "  manifest: ${manifest}"
 echo "starting session ${pack} on physical VLAN ${vlan}"
 start_session "$pack" "$vlan" "$LAB_OUT"
+write_provenance "$pack" "$LAB_OUT" "$vlan"
 
 today="$(date -u +%Y-%m-%d)"
 devices="$(python3 -c "import json;print(json.loads('''${manifest}''')['deviceCount'])")"

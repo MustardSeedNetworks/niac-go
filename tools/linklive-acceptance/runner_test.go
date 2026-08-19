@@ -142,6 +142,27 @@ func linkLiveServer(t *testing.T, deviceType, duplex, speed string) *httptest.Se
 	return server
 }
 
+// analysisServer serves a single ready discovery so a -latest run has a real
+// analysis summary to draw capture time and unit identity from.
+func analysisServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/auth/login":
+			_, _ = w.Write([]byte(`{"accessToken":"token"}`))
+		case "/v1/admin/analysis":
+			_, _ = w.Write([]byte(`[{"_id":"analysis-7","analysisType":"discovery",` +
+				`"status":"ready","created_at":"2026-08-08T12:00:00Z",` +
+				`"unitMac":"00C017-123456"}]`))
+		default:
+			_, _ = w.Write([]byte(topologyJSON("Switch", "Full", "100 Gb")))
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	return server
+}
+
 func topologyJSON(deviceType, duplex, speed string) string {
 	return `[{"hostId":1,"bestNameFormatted":"COS-CORE-SW01",` +
 		`"displayedDeviceType":"` + deviceType + `","longMfrMac":"Cisco:00000c-f00401",` +
@@ -208,7 +229,8 @@ func TestReportCarriesItsProvenance(t *testing.T) {
 	executor.allowInsecure = true
 
 	err := executor.run(context.Background(), []string{
-		"-config", configPath, "-analysis", "analysis-7", "-niac-version", "v0.94.30",
+		"-config", configPath, "-analysis", "analysis-7",
+		"-provenance", writeProvenance(t, `{"niacVersion":"v0.94.30"}`),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -223,6 +245,111 @@ func TestReportCarriesItsProvenance(t *testing.T) {
 			t.Errorf("report omits %s:\n%s", want, output.String())
 		}
 	}
+}
+
+// A pinned result has to name the build that served the scenario and the pack
+// that was served. Version alone cannot distinguish two builds of the same tag,
+// and nothing in the compared artifacts records which pack produced them.
+func TestReportCarriesBuildAndPackProvenance(t *testing.T) {
+	server := linkLiveServer(t, "Switch", "Full", "100 Gb")
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(server.URL), &output)
+	executor.allowInsecure = true
+
+	err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-analysis", "analysis-7",
+		"-provenance", writeProvenance(t, `{
+			"niacVersion": "0.94.46",
+			"niacCommit": "a1c5ccc",
+			"uiBuildHash": "2fa5e6c0ad2a2278d3486df29fa3baa8",
+			"pack": "hospital",
+			"packVersion": "1.3.0",
+			"manifestVersion": 3,
+			"manifestSha256": "deadbeef",
+			"sessionId": "hospital",
+			"physicalVlan": 200
+		}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`"niacCommit": "a1c5ccc"`,
+		`"uiBuildHash": "2fa5e6c0ad2a2278d3486df29fa3baa8"`,
+		`"pack": "hospital"`,
+		`"packVersion": "1.3.0"`,
+		`"manifestSha256": "deadbeef"`,
+		`"sessionId": "hospital"`,
+		`"physicalVlan": 200`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Errorf("report omits %s:\n%s", want, output.String())
+		}
+	}
+}
+
+// Comparison time is when the runner ran; it says nothing about when the unit
+// captured. Without the analysis timestamp a report cannot be placed against a
+// lab change, which is the question asked of every disputed result.
+func TestReportRecordsWhenTheAnalysisWasCaptured(t *testing.T) {
+	server := analysisServer(t)
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(server.URL), &output)
+	executor.allowInsecure = true
+
+	err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-latest",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"analysisCreatedAt": "2026-08-08T12:00:00Z"`) {
+		t.Errorf("report omits the analysis capture time:\n%s", output.String())
+	}
+}
+
+// The report should name the unit that actually produced the analysis, not the
+// filter the operator happened to type.
+func TestReportNamesTheCapturingUnit(t *testing.T) {
+	server := analysisServer(t)
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(server.URL), &output)
+	executor.allowInsecure = true
+
+	err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-latest",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"unitMac": "00C017123456"`) {
+		t.Errorf("report omits the capturing unit MAC:\n%s", output.String())
+	}
+}
+
+func TestProvenanceFileMustParse(t *testing.T) {
+	server := linkLiveServer(t, "Switch", "Full", "100 Gb")
+	var output bytes.Buffer
+	executor := newRunner(testEnvironment(server.URL), &output)
+	executor.allowInsecure = true
+
+	err := executor.run(context.Background(), []string{
+		"-config", writeConfig(t), "-analysis", "analysis-7",
+		"-provenance", writeProvenance(t, `{"niacVersion":`),
+	})
+	if err == nil || !strings.Contains(err.Error(), "provenance") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func writeProvenance(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "provenance.json")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	return path
 }
 
 // The digest has to be of the artifact actually compared, so a report cannot be

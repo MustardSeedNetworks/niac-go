@@ -29,11 +29,11 @@ type runner struct {
 }
 
 type options struct {
-	configPath  string
-	analysisID  string
-	latest      bool
-	unitMAC     string
-	niacVersion string
+	configPath     string
+	analysisID     string
+	latest         bool
+	unitMAC        string
+	provenancePath string
 }
 
 type analysisSummary struct {
@@ -49,16 +49,34 @@ type analysisSummary struct {
 // which analysis, on which build, and when; otherwise it is a claim rather than
 // evidence.
 type report struct {
-	AnalysisID      string             `json:"analysisId"`
-	ComparedAt      string             `json:"comparedAt"`
-	NIACVersion     string             `json:"niacVersion,omitempty"`
-	ConfigPath      string             `json:"configPath"`
-	ConfigSHA256    string             `json:"configSha256"`
-	UnitMAC         string             `json:"unitMac,omitempty"`
-	AuthoredDevices int                `json:"authoredDevices"`
-	AuthoredLinks   int                `json:"authoredLinks"`
-	Findings        []linklive.Finding `json:"findings"`
-	Passed          bool               `json:"passed"`
+	AnalysisID        string             `json:"analysisId"`
+	AnalysisCreatedAt string             `json:"analysisCreatedAt,omitempty"`
+	ComparedAt        string             `json:"comparedAt"`
+	ConfigPath        string             `json:"configPath"`
+	ConfigSHA256      string             `json:"configSha256"`
+	UnitMAC           string             `json:"unitMac,omitempty"`
+	AuthoredDevices   int                `json:"authoredDevices"`
+	AuthoredLinks     int                `json:"authoredLinks"`
+	Findings          []linklive.Finding `json:"findings"`
+	Passed            bool               `json:"passed"`
+	Provenance        provenance         `json:"provenance"`
+}
+
+// provenance is the build and deployment identity of a run. None of it is
+// derivable from the artifacts the runner reads — the scenario YAML does not
+// record which build served it, which pack composed it, or which VLAN carried
+// it — so the lab driver supplies it. Physical VLAN belongs here, as deployment
+// identity, and never inside a portable pack manifest.
+type provenance struct {
+	NIACVersion     string `json:"niacVersion,omitempty"`
+	NIACCommit      string `json:"niacCommit,omitempty"`
+	UIBuildHash     string `json:"uiBuildHash,omitempty"`
+	Pack            string `json:"pack,omitempty"`
+	PackVersion     string `json:"packVersion,omitempty"`
+	ManifestVersion int    `json:"manifestVersion,omitempty"`
+	ManifestSHA256  string `json:"manifestSha256,omitempty"`
+	SessionID       string `json:"sessionId,omitempty"`
+	PhysicalVLAN    int    `json:"physicalVlan,omitempty"`
 }
 
 func newRunner(getenv environment, output io.Writer) runner {
@@ -94,14 +112,14 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 	if err != nil {
 		return report{}, err
 	}
-	analysisID := opts.analysisID
+	analysis := analysisSummary{ID: opts.analysisID}
 	if opts.latest {
-		analysisID, err = latestReadyDiscovery(ctx, client, opts.unitMAC)
+		analysis, err = latestReadyDiscovery(ctx, client, opts.unitMAC)
 		if err != nil {
 			return report{}, err
 		}
 	}
-	raw, err := client.Topology(ctx, analysisID)
+	raw, err := client.Topology(ctx, analysis.ID)
 	if err != nil {
 		return report{}, err
 	}
@@ -113,12 +131,21 @@ func (r runner) compare(ctx context.Context, opts options) (report, error) {
 	if err != nil {
 		return report{}, err
 	}
-	result := buildReport(analysisID, linklive.FromConfig(authoredConfig), observed)
+	provenanceData, err := loadProvenance(opts.provenancePath)
+	if err != nil {
+		return report{}, err
+	}
+	result := buildReport(analysis.ID, linklive.FromConfig(authoredConfig), observed)
 	result.ComparedAt = r.now().UTC().Format(time.RFC3339)
-	result.NIACVersion = opts.niacVersion
 	result.ConfigPath = opts.configPath
 	result.ConfigSHA256 = digest
-	result.UnitMAC = normalizeMAC(opts.unitMAC)
+	result.Provenance = provenanceData
+	// The unit that produced the analysis is a fact of the analysis, not of the
+	// filter the operator typed; -analysis names no unit at all.
+	if !analysis.CreatedAt.IsZero() {
+		result.AnalysisCreatedAt = analysis.CreatedAt.UTC().Format(time.RFC3339)
+	}
+	result.UnitMAC = normalizeMAC(valueOr(analysis.UnitMAC, opts.unitMAC))
 
 	return result, nil
 }
@@ -147,14 +174,14 @@ func latestReadyDiscovery(
 	ctx context.Context,
 	client *linklive.Client,
 	unitMAC string,
-) (string, error) {
+) (analysisSummary, error) {
 	raw, err := client.Analyses(ctx)
 	if err != nil {
-		return "", err
+		return analysisSummary{}, err
 	}
 	var analyses []analysisSummary
 	if err = json.Unmarshal(raw, &analyses); err != nil {
-		return "", errors.New("Link-Live analysis list returned invalid JSON")
+		return analysisSummary{}, errors.New("Link-Live analysis list returned invalid JSON")
 	}
 	wantedMAC := normalizeMAC(unitMAC)
 	var latest analysisSummary
@@ -167,12 +194,32 @@ func latestReadyDiscovery(
 		latest = candidate
 	}
 	if latest.ID == "" {
-		return "", errors.New("Link-Live returned no matching discovery analyses")
+		return analysisSummary{}, errors.New("Link-Live returned no matching discovery analyses")
 	}
 	if latest.Status != "ready" {
-		return "", fmt.Errorf("latest Link-Live discovery analysis is %s", latest.Status)
+		return analysisSummary{}, fmt.Errorf(
+			"latest Link-Live discovery analysis is %s", latest.Status)
 	}
-	return latest.ID, nil
+	return latest, nil
+}
+
+// loadProvenance reads the lab driver's build/deployment identity block. An
+// unreadable or malformed file fails the run rather than yielding a report that
+// silently claims less provenance than the operator asked it to record.
+func loadProvenance(path string) (provenance, error) {
+	if path == "" {
+		return provenance{}, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return provenance{}, fmt.Errorf("read provenance: %w", err)
+	}
+	var loaded provenance
+	if err = json.Unmarshal(data, &loaded); err != nil {
+		return provenance{}, fmt.Errorf("parse provenance: %w", err)
+	}
+
+	return loaded, nil
 }
 
 func normalizeMAC(value string) string {
@@ -201,8 +248,8 @@ func parseOptions(args []string) (options, error) {
 	set.StringVar(&opts.analysisID, "analysis", "", "Link-Live analysis ID")
 	set.BoolVar(&opts.latest, "latest", false, "use the latest ready Link-Live discovery analysis")
 	set.StringVar(&opts.unitMAC, "unit-mac", "", "limit -latest to one NetAlly unit MAC")
-	set.StringVar(&opts.niacVersion, "niac-version", "",
-		"NIAC build that served the scenario, recorded in the report")
+	set.StringVar(&opts.provenancePath, "provenance", "",
+		"JSON file of build/deployment identity recorded in the report")
 	if err := set.Parse(args); err != nil {
 		return options{}, err
 	}
