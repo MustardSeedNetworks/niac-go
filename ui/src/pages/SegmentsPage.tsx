@@ -91,7 +91,14 @@ const SegmentSection = memo(({ segment }: { segment: SegmentSummary }) => {
     >
       <div className="flex-between">
         <H3>{heading}</H3>
-        <Tag colorScheme="blue">{t('segments.deviceCount', { count: segment.devices.length })}</Tag>
+        {/* The count changes as the simulation runs, so it is a figure; the
+            noun beside it is prose and must not be monospaced with it. */}
+        <Tag colorScheme="blue">
+          <span className="figure" data-testid={`segment-count-${segment.vlanTag}`}>
+            {segment.devices.length}
+          </span>{' '}
+          {t('segments.deviceNoun', { count: segment.devices.length })}
+        </Tag>
       </div>
       {segment.devices.length === 0 ? (
         <SmallText className="text-text-muted">{t('segments.emptySegmentDevices')}</SmallText>

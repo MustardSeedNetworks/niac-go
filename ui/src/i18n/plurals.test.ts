@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import i18n from './index';
 
 const CASES = [
-  { ns: 'pages', key: 'segments.deviceCount', en: [/^1 device$/, /^3 devices$/] },
+  { ns: 'pages', key: 'segments.deviceNoun', en: [/^device$/, /^devices$/] },
 ] as const;
 
 describe('plural selection', () => {
