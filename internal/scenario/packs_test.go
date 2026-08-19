@@ -23,10 +23,10 @@ func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
 			t.Errorf("Generate(%s): %v", pack.ID, err)
 			continue
 		}
-		if result.Manifest != pack.Manifest {
+		if result.Manifest.Parity() != pack.Manifest {
 			t.Errorf("%s manifest = %#v", pack.ID, result.Manifest)
 		}
-		if pack.ManifestVersion != 3 || pack.Version != "1.3.0" {
+		if pack.ManifestVersion != 4 || pack.Version != "1.3.0" {
 			t.Errorf("%s versions = %q/%d", pack.ID, pack.Version, pack.ManifestVersion)
 		}
 	}

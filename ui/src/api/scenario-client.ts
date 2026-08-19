@@ -47,13 +47,55 @@ export interface ScenarioGenerateRequest {
   }[];
 }
 
-export interface ScenarioManifest {
+/** The frozen parity contract a pack pins: counts and digests only. */
+export interface ScenarioParity {
   deviceCount: number;
   networkCount: number;
   linkCount: number;
   deviceNamesSha256: string;
   networksSha256: string;
   linksSha256: string;
+}
+
+/**
+ * What one consumer collector should find. An absent collector key means the
+ * scenario authors nothing that collector reads, which is a different claim
+ * from a count of zero.
+ */
+export interface ScenarioObservation {
+  devices: number;
+  rows?: number;
+}
+
+/**
+ * The generated scenario's full manifest. It carries the parity fields inline
+ * plus the derived identity, interface truth, observations, and timing.
+ */
+export interface ScenarioManifest extends ScenarioParity {
+  schemaVersion: number;
+  identity: {
+    requestSha256: string;
+    domain: string;
+    accessLayer?: string;
+    endpointProfile?: string;
+  };
+  interfaces: {
+    count: number;
+    sha256: string;
+    congested?: {
+      device: string;
+      interface: string;
+      inUtilization: number;
+      outUtilization: number;
+    }[];
+  };
+  expectedObservations: Record<string, ScenarioObservation>;
+  timing: {
+    lldpIntervalSeconds?: number;
+    cdpIntervalSeconds?: number;
+    fdpIntervalSeconds?: number;
+    neighborsStableAfterSeconds: number;
+  };
 }
 
 export interface ScenarioGenerateResponse {
@@ -69,7 +111,7 @@ export interface ScenarioPack {
   description: string;
   mapPurpose: 'presentation' | 'stress';
   request: ScenarioGenerateRequest;
-  manifest: ScenarioManifest;
+  manifest: ScenarioParity;
 }
 
 export interface ScenarioDeviceProfile {

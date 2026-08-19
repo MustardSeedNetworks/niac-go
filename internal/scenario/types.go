@@ -164,14 +164,106 @@ type Request struct {
 	Congestion      []CongestedLink `json:"congestion,omitempty"`
 }
 
-// Manifest summarizes authored identity and topology for parity checks.
-type Manifest struct {
+// ManifestSchemaVersion is the version of the manifest document. Version 3
+// carried counts and three hashes; version 4 adds the reproducible identity,
+// interface truth, expected observations, and timing tolerances a consumer
+// needs to assert against a running scenario without operating it by hand.
+const ManifestSchemaVersion = 4
+
+// SEED's collector names. These are the strings SEED's snmp.Collector.Name()
+// returns and the keys its polling_targets.collector_chain uses — four of them
+// differ from the package directory they live in. Neither repository imports
+// the other's internal packages, so this is a written-down contract: changing a
+// name here without changing it in SEED silently breaks the pairing.
+const (
+	CollectorSysInfo = "sys_info"
+	CollectorIfTable = "if_table"
+	CollectorLLDP    = "lldp"
+	CollectorCDP     = "cdp"
+	CollectorFDP     = "fdp"
+	CollectorRouting = "routing"
+	CollectorFDB     = "fdb"
+)
+
+// Parity is the frozen authored-truth contract a pack pins: the counts and
+// digests that must not drift. It is deliberately comparable, so a pack can
+// assert equality against a freshly generated scenario in one expression.
+type Parity struct {
 	DeviceCount       int    `json:"deviceCount"`
 	NetworkCount      int    `json:"networkCount"`
 	LinkCount         int    `json:"linkCount"`
 	DeviceNamesSHA256 string `json:"deviceNamesSha256"`
 	NetworksSHA256    string `json:"networksSha256"`
 	LinksSHA256       string `json:"linksSha256"`
+}
+
+// Identity is the reproducible input that produced a scenario. Generation is
+// deterministic and takes no random seed, so the digest of the request *is* the
+// seed: a consumer holding it can regenerate byte-identical YAML.
+type Identity struct {
+	RequestSHA256   string `json:"requestSha256"`
+	Domain          string `json:"domain"`
+	AccessLayer     string `json:"accessLayer,omitempty"`
+	EndpointProfile string `json:"endpointProfile,omitempty"`
+}
+
+// InterfaceTruth is what a consumer polling ifTable should find. The digest
+// covers the operational facts a collector actually reads, so an edit to speed,
+// duplex, or either status changes it while a cosmetic edit does not.
+type InterfaceTruth struct {
+	Count     int             `json:"count"`
+	SHA256    string          `json:"sha256"`
+	Congested []CongestedLink `json:"congested,omitempty"`
+}
+
+// Observation is what one SEED collector should find against this scenario.
+//
+// An absent collector key means the scenario authors nothing that collector
+// reads. That is a different claim from a count of zero: zero says "poll this
+// and expect an empty table", absent says "this scenario makes no promise".
+// A consumer that conflates them will assert an emptiness never promised.
+type Observation struct {
+	Devices int `json:"devices"`
+	Rows    int `json:"rows,omitempty"`
+}
+
+// Timing bounds how long a consumer must wait before an observation is stable.
+// Neighbour tables cannot be complete until every advertiser has transmitted at
+// least once, so the tolerance follows the slowest advertisement interval the
+// scenario actually authors rather than a chosen number.
+type Timing struct {
+	LLDPIntervalSeconds         int `json:"lldpIntervalSeconds,omitempty"`
+	CDPIntervalSeconds          int `json:"cdpIntervalSeconds,omitempty"`
+	FDPIntervalSeconds          int `json:"fdpIntervalSeconds,omitempty"`
+	NeighborsStableAfterSeconds int `json:"neighborsStableAfterSeconds"`
+}
+
+// Manifest is the authored truth a consumer checks a running scenario against.
+// The parity fields stay inline at the top level so existing readers of
+// deviceCount and the digests are unaffected by the version 4 additions.
+type Manifest struct {
+	SchemaVersion int `json:"schemaVersion"`
+
+	DeviceCount       int    `json:"deviceCount"`
+	NetworkCount      int    `json:"networkCount"`
+	LinkCount         int    `json:"linkCount"`
+	DeviceNamesSHA256 string `json:"deviceNamesSha256"`
+	NetworksSHA256    string `json:"networksSha256"`
+	LinksSHA256       string `json:"linksSha256"`
+
+	Identity     Identity               `json:"identity"`
+	Interfaces   InterfaceTruth         `json:"interfaces"`
+	Observations map[string]Observation `json:"expectedObservations"`
+	Timing       Timing                 `json:"timing"`
+}
+
+// Parity returns the frozen subset a pack pins.
+func (m Manifest) Parity() Parity {
+	return Parity{
+		DeviceCount: m.DeviceCount, NetworkCount: m.NetworkCount, LinkCount: m.LinkCount,
+		DeviceNamesSHA256: m.DeviceNamesSHA256, NetworksSHA256: m.NetworksSHA256,
+		LinksSHA256: m.LinksSHA256,
+	}
 }
 
 // Result contains portable YAML plus its deterministic parity manifest.
