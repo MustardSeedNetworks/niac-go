@@ -15,7 +15,7 @@ vi.mock('../../api/scenario-client', async (importOriginal) => {
 const hospital: ScenarioPack = {
   id: 'hospital',
   version: '1.2.0',
-  manifestVersion: 3,
+  manifestVersion: 4,
   name: 'Hospital network',
   description: 'Acute-care and ambulatory sites.',
   mapPurpose: 'presentation',

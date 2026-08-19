@@ -3,19 +3,31 @@ package scenario
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 const (
+	// congestionWarningPercent is the utilization at which Link-Live raises an
+	// interface Warning; a pack authors its trouble spots at or above it.
+	congestionWarningPercent = 80
+
+	// neighborSettleCycles is how many advertisement intervals a consumer waits
+	// before a neighbour table is trustworthy: one to transmit, one to prove
+	// nothing further arrives.
+	neighborSettleCycles = 2
+
 	transitSubnet    = "10.254.200.0/24"
 	transitGateway   = "10.254.200.1"
 	internetLoopback = "8.8.8.8"
@@ -76,7 +88,14 @@ func Generate(request Request) (Result, error) {
 		return Result{}, errors.New(validation.Format())
 	}
 
-	return Result{YAML: data, Manifest: buildManifest(&authored)}, nil
+	identity, err := buildIdentity(request)
+	if err != nil {
+		return Result{}, err
+	}
+	manifest := buildManifest(&authored)
+	manifest.Identity = identity
+
+	return Result{YAML: data, Manifest: manifest}, nil
 }
 
 func buildDevices(request Request, links linkMap) []converter.Device {
@@ -158,9 +177,161 @@ func buildManifest(authored *converter.Config) Manifest {
 	sort.Strings(edges)
 
 	return Manifest{
-		DeviceCount: len(authored.Devices), NetworkCount: len(authored.Networks), LinkCount: len(edges),
+		SchemaVersion: ManifestSchemaVersion,
+		DeviceCount:   len(authored.Devices), NetworkCount: len(authored.Networks), LinkCount: len(edges),
 		DeviceNamesSHA256: hashLines(names), NetworksSHA256: hashLines(networks), LinksSHA256: hashLines(edges),
+		Interfaces:   buildInterfaceTruth(authored),
+		Observations: buildObservations(authored),
+		Timing:       buildTiming(authored),
 	}
+}
+
+// buildIdentity digests the request that produced the scenario. Generation is
+// deterministic, so this digest is the seed a consumer replays from.
+func buildIdentity(request Request) (Identity, error) {
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		return Identity{}, fmt.Errorf("digest scenario request: %w", err)
+	}
+	sum := sha256.Sum256(encoded)
+
+	return Identity{
+		RequestSHA256:   hex.EncodeToString(sum[:]),
+		Domain:          request.Domain,
+		AccessLayer:     string(request.AccessLayer),
+		EndpointProfile: request.EndpointProfile,
+	}, nil
+}
+
+// buildInterfaceTruth digests the operational facts an ifTable collector reads,
+// and lifts out the authored congestion because that is the whole of the
+// behaviour a pack currently authors.
+func buildInterfaceTruth(authored *converter.Config) InterfaceTruth {
+	lines := make([]string, 0)
+	congested := make([]CongestedLink, 0)
+	for _, device := range authored.Devices {
+		for _, iface := range device.Interfaces {
+			lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%s|%s|%s|%d",
+				device.Name, iface.Name, iface.Type, iface.Speed, iface.Duplex,
+				iface.AdminStatus, iface.OperStatus, iface.MTU))
+			if iface.InUtilization >= congestionWarningPercent ||
+				iface.OutUtilization >= congestionWarningPercent {
+				congested = append(congested, CongestedLink{
+					Device: device.Name, Interface: iface.Name,
+					InUtilization: iface.InUtilization, OutUtilization: iface.OutUtilization,
+				})
+			}
+		}
+	}
+	sort.Strings(lines)
+	sort.Slice(congested, func(i, j int) bool {
+		if congested[i].Device != congested[j].Device {
+			return congested[i].Device < congested[j].Device
+		}
+
+		return congested[i].Interface < congested[j].Interface
+	})
+
+	return InterfaceTruth{Count: len(lines), SHA256: hashLines(lines), Congested: congested}
+}
+
+// buildObservations records what each SEED collector should find. A collector
+// the scenario authors nothing for is omitted rather than recorded as zero —
+// see the Observation doc comment for why those are different claims.
+func buildObservations(authored *converter.Config) map[string]Observation {
+	observations := make(map[string]Observation)
+
+	// Collectors whose answer is one row per device report only a device count;
+	// table collectors also report how many rows those devices contribute.
+	perDevice := func(collector string, rows deviceCounter) {
+		if devices, _ := countDevices(authored, rows); devices > 0 {
+			observations[collector] = Observation{Devices: devices}
+		}
+	}
+	tabular := func(collector string, rows deviceCounter) {
+		if devices, total := countDevices(authored, rows); devices > 0 {
+			observations[collector] = Observation{Devices: devices, Rows: total}
+		}
+	}
+
+	perDevice(CollectorSysInfo, func(d converter.Device) int { return present(d.SnmpAgent != nil) })
+	perDevice(CollectorLLDP, func(d converter.Device) int {
+		return present(d.Lldp != nil && d.Lldp.Enabled)
+	})
+	perDevice(CollectorCDP, func(d converter.Device) int {
+		return present(d.Cdp != nil && d.Cdp.Enabled)
+	})
+	perDevice(CollectorFDP, func(d converter.Device) int {
+		return present(d.Fdp != nil && d.Fdp.Enabled)
+	})
+	tabular(CollectorIfTable, func(d converter.Device) int { return len(d.Interfaces) })
+	tabular(CollectorRouting, func(d converter.Device) int { return len(d.Routes) })
+	tabular(CollectorFDB, countFDBPorts)
+
+	return observations
+}
+
+// deviceCounter reports how many rows one device contributes to a collector.
+type deviceCounter func(converter.Device) int
+
+// countDevices returns how many devices contribute at least one row, and the
+// total row count across them.
+func countDevices(authored *converter.Config, rows deviceCounter) (int, int) {
+	devices, total := 0, 0
+	for _, device := range authored.Devices {
+		count := rows(device)
+		if count == 0 {
+			continue
+		}
+		devices++
+		total += count
+	}
+
+	return devices, total
+}
+
+func present(enabled bool) int {
+	if enabled {
+		return 1
+	}
+
+	return 0
+}
+
+func countFDBPorts(device converter.Device) int {
+	ports := 0
+	for _, port := range device.TrunkPorts {
+		if port.FDBOnly {
+			ports++
+		}
+	}
+
+	return ports
+}
+
+// buildTiming derives the wait tolerance from the advertisement intervals of
+// the protocols the scenario actually authors. A pack that advertises only LLDP
+// and CDP settles in two 15s cycles; one that authors FDP needs two 60s cycles.
+func buildTiming(authored *converter.Config) Timing {
+	var timing Timing
+	slowest := time.Duration(0)
+	for _, device := range authored.Devices {
+		if device.Lldp != nil && device.Lldp.Enabled {
+			timing.LLDPIntervalSeconds = int(protocols.LLDPAdvertiseInterval.Seconds())
+			slowest = max(slowest, protocols.LLDPAdvertiseInterval)
+		}
+		if device.Cdp != nil && device.Cdp.Enabled {
+			timing.CDPIntervalSeconds = int(protocols.CDPAdvertiseInterval.Seconds())
+			slowest = max(slowest, protocols.CDPAdvertiseInterval)
+		}
+		if device.Fdp != nil && device.Fdp.Enabled {
+			timing.FDPIntervalSeconds = int(protocols.FDPAdvertiseInterval.Seconds())
+			slowest = max(slowest, protocols.FDPAdvertiseInterval)
+		}
+	}
+	timing.NeighborsStableAfterSeconds = int(slowest.Seconds()) * neighborSettleCycles
+
+	return timing
 }
 
 func hashLines(lines []string) string {

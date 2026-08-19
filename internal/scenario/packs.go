@@ -1,7 +1,7 @@
 package scenario
 
 const (
-	scenarioPackManifestVersion = 3
+	scenarioPackManifestVersion = ManifestSchemaVersion
 	hospitalSiteOctet           = 51
 	warehouseSiteOctet          = 61
 	campusSiteOctet             = 71
@@ -53,7 +53,9 @@ type Pack struct {
 	Description     string     `json:"description"`
 	MapPurpose      MapPurpose `json:"mapPurpose"`
 	Request         Request    `json:"request"`
-	Manifest        Manifest   `json:"manifest"`
+	// Manifest pins the parity contract only. The richer manifest fields are
+	// derived at generation time and would be meaningless frozen by hand.
+	Manifest Parity `json:"manifest"`
 }
 
 // Packs returns copies of the built-in scenario composer presets.
@@ -88,7 +90,7 @@ func customerScenarioPacks() []Pack {
 				warehouseAccessPointsPerAccess,
 				warehouseWorkstationsPerAccess,
 			),
-			Manifest{
+			Parity{
 				DeviceCount: warehouseDeviceCount, NetworkCount: singleSiteNetworkCount,
 				LinkCount:         warehouseLinkCount,
 				DeviceNamesSHA256: "f622b9683718ece6b665f88c858df863b6b7d54d8a4371efdc9b20cd79255b01",
@@ -105,7 +107,7 @@ func customerScenarioPacks() []Pack {
 			defaultDomain,
 			EnterpriseReferenceRequest().Sites,
 			EnterpriseReferenceRequest().Counts,
-			Manifest{
+			Parity{
 				DeviceCount: enterpriseScaleDeviceCount, NetworkCount: fourSiteNetworkCount,
 				LinkCount:         enterpriseScaleLinkCount,
 				DeviceNamesSHA256: "6da20f0044fb2f696efc3d886c209eb47c07b5fa1e64222f93d58f6dc00f1979",
@@ -147,7 +149,7 @@ func hospitalScenarioPack() Pack {
 			hospitalAccessPointsPerAccess,
 			hospitalWorkstationsPerAccess,
 		),
-		Manifest{
+		Parity{
 			DeviceCount: hospitalDeviceCount, NetworkCount: singleSiteNetworkCount,
 			LinkCount:         hospitalLinkCount,
 			DeviceNamesSHA256: "a026920162b3dcc95656a4d3d69a0aeed84482e7724b018d5a49488383609030",
@@ -200,7 +202,7 @@ func campusScenarioPack() Pack {
 			packSite{code: "ADM", location: "Administration Campus"},
 		),
 		campusCounts(),
-		Manifest{
+		Parity{
 			DeviceCount: campusDeviceCount, NetworkCount: fourSiteNetworkCount,
 			LinkCount:         campusLinkCount,
 			DeviceNamesSHA256: "c15f6f9ddff32dc30e5751858c3ea2650dd2aa1b2900abf89b5f9b23692236f7",
@@ -220,7 +222,7 @@ func newScenarioPack(
 	domain string,
 	sites []Site,
 	counts Counts,
-	manifest Manifest,
+	manifest Parity,
 ) Pack {
 	return Pack{
 		ID: id, Version: "1.3.0", ManifestVersion: scenarioPackManifestVersion,

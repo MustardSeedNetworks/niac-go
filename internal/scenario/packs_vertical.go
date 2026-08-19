@@ -21,7 +21,7 @@ func retailScenarioPack() Pack {
 			retailAccessSwitches,
 			retailAccessPointsPerAccess,
 			retailWorkstationsPerAccess,
-		), Manifest{
+		), Parity{
 			DeviceCount: retailDeviceCount, NetworkCount: twoSiteNetworkCount,
 			LinkCount:         retailLinkCount,
 			DeviceNamesSHA256: "e5944f8f0f8795d3f054f6ce082c3c8c2c1dde8eab5839992487cebd554215a8",
@@ -43,7 +43,7 @@ func manufacturingScenarioPack() Pack {
 		packSites(industrialSiteOctet, packSite{code: "PLT", location: "Production Plant"}),
 		packCounts(manufacturingAccessSwitches, manufacturingAccessPointsPerAccess,
 			manufacturingWorkstationsPerAccess),
-		Manifest{
+		Parity{
 			DeviceCount: manufacturingDeviceCount, NetworkCount: singleSiteNetworkCount,
 			LinkCount:         manufacturingLinkCount,
 			DeviceNamesSHA256: "4bae5bd1de01cf8a6918eadf3e1c88754c680258ed0a6b9cffc543ab789f25f1",
@@ -69,7 +69,7 @@ func serviceProviderScenarioPack() Pack {
 			packSite{code: "SFO", location: "San Francisco Metro POP"},
 		),
 		packCounts(providerAccessSwitches, providerAccessPointsPerAccess, providerWorkstationsPerAccess),
-		Manifest{
+		Parity{
 			DeviceCount: serviceProviderDeviceCount, NetworkCount: threeSiteNetworkCount,
 			LinkCount:         serviceProviderLinkCount,
 			DeviceNamesSHA256: "00e2aa73f52847020ae7b8b2afe86329e93087efae74adecfd3835e8685e0ea3",

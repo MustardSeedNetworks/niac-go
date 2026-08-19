@@ -24,7 +24,7 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		t.Fatal("same request produced different YAML")
 	}
 
-	want := scenario.Manifest{
+	want := scenario.Parity{
 		DeviceCount:       531,
 		NetworkCount:      39,
 		LinkCount:         634,
@@ -33,8 +33,8 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
 		LinksSHA256: "4c1acbf07eccc6464a4a86d8a53f867fdaa1cc7374d18b881bf30487a98713e6",
 	}
-	if first.Manifest != want {
-		t.Fatalf("manifest = %#v, want %#v", first.Manifest, want)
+	if first.Manifest.Parity() != want {
+		t.Fatalf("manifest = %#v, want %#v", first.Manifest.Parity(), want)
 	}
 
 	cfg, err := config.LoadYAMLBytes(first.YAML)
