@@ -9,9 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import i18n from './index';
 
-const CASES = [
-  { ns: 'pages', key: 'segments.deviceNoun', en: [/^device$/, /^devices$/] },
-] as const;
+const CASES = [{ ns: 'pages', key: 'segments.deviceNoun', en: [/^device$/, /^devices$/] }] as const;
 
 describe('plural selection', () => {
   it('picks singular and plural forms in English', async () => {
