@@ -34,7 +34,7 @@ lint-backend: ## Run Go linter
 	@GOLANGCI_LINT="$$(go env GOPATH)/bin/golangci-lint"; \
 	if [ ! -f "$$GOLANGCI_LINT" ]; then \
 		printf "📦 Installing golangci-lint v2...\n"; \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1; \
 	fi; \
 	$$GOLANGCI_LINT cache clean && \
 	$$GOLANGCI_LINT run --timeout=5m
@@ -44,7 +44,7 @@ lint-backend-quiet:
 	@GOLANGCI_LINT="$$(go env GOPATH)/bin/golangci-lint"; \
 	if [ ! -f "$$GOLANGCI_LINT" ]; then \
 		printf "   Installing golangci-lint v2...\n"; \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1; \
 	fi; \
 	$$GOLANGCI_LINT cache clean >/dev/null 2>&1; \
 	LINTER_COUNT=$$(grep -c "^    - " .golangci.yml 2>/dev/null || echo "30+"); \
@@ -99,7 +99,7 @@ fix-backend: ## Auto-fix Go linting issues
 	@GOLANGCI_LINT="$$(go env GOPATH)/bin/golangci-lint"; \
 	if [ ! -f "$$GOLANGCI_LINT" ]; then \
 		printf "📦 Installing golangci-lint v2...\n"; \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1; \
 	fi; \
 	$$GOLANGCI_LINT run --fix
 	@gofmt -w -s .
@@ -108,7 +108,7 @@ fix-backend: ## Auto-fix Go linting issues
 fix-backend-quiet:
 	@GOLANGCI_LINT="$$(go env GOPATH)/bin/golangci-lint"; \
 	if [ ! -f "$$GOLANGCI_LINT" ]; then \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1; \
 	fi; \
 	$$GOLANGCI_LINT run --fix 2>&1 | grep -E "^[0-9]+ issues" || printf "   No issues found\n"
 	@gofmt -w -s .
