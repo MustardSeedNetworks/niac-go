@@ -11,8 +11,15 @@ export function tokenize(input: string): Token[] {
   let pos = 0;
 
   while (pos < input.length) {
+    // Read the character once: `pos < input.length` bounds the loop but does
+    // not tell the type system what came back.
+    const ch = input[pos];
+    if (ch === undefined) {
+      break;
+    }
+
     // Skip whitespace
-    if (/\s/.test(input[pos])) {
+    if (/\s/.test(ch)) {
       pos++;
       continue;
     }
@@ -48,7 +55,7 @@ export function tokenize(input: string): Token[] {
     }
 
     // Field names (dotted identifiers) or bare literals/keywords
-    if (/[a-zA-Z0-9_.]/.test(input[pos])) {
+    if (/[a-zA-Z0-9_.]/.test(ch)) {
       pos = tokenizeIdentifier(input, pos, tokens);
       continue;
     }
@@ -90,8 +97,12 @@ function tokenizeQuotedString(input: string, startPos: number, tokens: Token[]):
 function tokenizeIdentifier(input: string, startPos: number, tokens: Token[]): number {
   let pos = startPos;
   let value = '';
-  while (pos < input.length && /[a-zA-Z0-9_./:-]/.test(input[pos])) {
-    value += input[pos];
+  while (pos < input.length) {
+    const ch = input[pos];
+    if (ch === undefined || !/[a-zA-Z0-9_./:-]/.test(ch)) {
+      break;
+    }
+    value += ch;
     pos++;
   }
   if (value === 'contains') {

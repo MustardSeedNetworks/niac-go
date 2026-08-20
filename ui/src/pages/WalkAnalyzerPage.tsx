@@ -64,8 +64,9 @@ export const WalkAnalyzerPage: FC = () => {
         if (cancelled) return;
         setFiles(entries);
         setFilesError(null);
-        if (entries.length > 0 && !selectedFile) {
-          setSelectedFile(entries[0].name);
+        const firstEntry = entries[0];
+        if (firstEntry && !selectedFile) {
+          setSelectedFile(firstEntry.name);
         }
       })
       .catch((err: Error) => {

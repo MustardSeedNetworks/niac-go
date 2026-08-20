@@ -149,7 +149,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
                         packet.timestamp,
                         timeMode,
                         packets[0]?.timestamp ?? null,
-                        idx > 0 ? packets[idx - 1].timestamp : null,
+                        packets[idx - 1]?.timestamp ?? null,
                       )}
                       rowStyle={getRowStyle?.(packet)}
                     />

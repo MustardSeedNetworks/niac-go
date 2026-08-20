@@ -143,7 +143,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const leases = [...(device.dhcp?.clientLeases || [])];
                     leases[index] = {
-                      ...leases[index],
+                      ...lease,
                       macAddress: e.target.value,
                     };
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });
@@ -157,7 +157,7 @@ export const DhcpSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const leases = [...(device.dhcp?.clientLeases || [])];
                     leases[index] = {
-                      ...leases[index],
+                      ...lease,
                       clientIp: e.target.value,
                     };
                     updateDhcp({ ...getDhcpConfig(), clientLeases: leases });

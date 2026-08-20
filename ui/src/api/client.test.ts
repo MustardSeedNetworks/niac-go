@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { required } from '../test/required';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -84,8 +85,7 @@ describe('API Client', () => {
       const { fetchVersion } = await import('./client');
       const result = await fetchVersion();
       const typed = result as unknown as Record<string, Record<string, string>>;
-      expect(typed.outerKey).toBeDefined();
-      expect(typed.outerKey.innerKey).toBe('value');
+      expect(typed.outerKey?.innerKey).toBe('value');
     });
 
     it('handles arrays', async () => {
@@ -165,9 +165,7 @@ describe('API Client', () => {
       const { fetchVersion } = await import('./client');
       await fetchVersion();
 
-      const callArgs = mockFetch.mock.calls[0];
-      const headers = callArgs[1]?.headers;
-      expect(headers).toBeDefined();
+      expect(mockFetch.mock.calls[0]?.[1]?.headers).toBeDefined();
     });
   });
 
@@ -187,9 +185,9 @@ describe('API Client', () => {
       await updateAlerts({ packetsThreshold: 100, webhookUrl: '' });
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/csrf-token');
+      expect(mockFetch.mock.calls[0]?.[0]).toContain('/api/v1/csrf-token');
 
-      const headers = mockFetch.mock.calls[1][1]?.headers as Headers;
+      const headers = mockFetch.mock.calls[1]?.[1]?.headers as Headers;
       expect(headers.get('X-Csrf-Token')).toBe('csrf-token');
     });
   });
@@ -270,7 +268,7 @@ describe('API Client', () => {
       const promise = uploadPcapWithProgress({ filename: 'x.pcap', data: 'AAAA' }, onProgress);
 
       await vi.waitFor(() => expect(FakeXHR.instances).toHaveLength(1));
-      const xhr = FakeXHR.instances[0];
+      const xhr = required(FakeXHR.instances[0], 'the upload XHR');
       expect(xhr.method).toBe('POST');
       // Headers normalizes names to lowercase when iterated.
       expect(xhr.headers['x-csrf-token']).toBe('csrf-token');
@@ -303,7 +301,7 @@ describe('API Client', () => {
       const promise = uploadPcapWithProgress({ filename: 'big.pcap', data: 'AAAA' }, vi.fn());
 
       await vi.waitFor(() => expect(FakeXHR.instances).toHaveLength(1));
-      const xhr = FakeXHR.instances[0];
+      const xhr = required(FakeXHR.instances[0], 'the upload XHR');
 
       xhr.status = 413;
       xhr.statusText = 'Request Entity Too Large';

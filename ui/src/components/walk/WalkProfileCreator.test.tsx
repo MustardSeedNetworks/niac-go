@@ -93,7 +93,7 @@ describe('WalkProfileCreator', () => {
     fireEvent.click(screen.getByTestId('walk-profile-capture'));
 
     await waitFor(() => expect(captureWalkProfile).toHaveBeenCalled());
-    expect(captureWalkProfile.mock.calls[0][1]).toEqual(
+    expect(captureWalkProfile.mock.calls[0]?.[1]).toEqual(
       expect.objectContaining({
         target: '192.0.2.10',
         community: 'private-secret',

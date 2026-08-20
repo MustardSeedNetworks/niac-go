@@ -5,8 +5,10 @@
  * empty/loading states, testid passthrough, client-side sort toggling,
  * and row selection (select-one / select-all).
  */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { required } from '../test/required';
 import { DataTable, type DataTableColumn } from './DataTable';
 
 interface Row {
@@ -58,8 +60,8 @@ describe('DataTable', () => {
 
   it('renders one row per item and passes through column data-testid', () => {
     const columns: DataTableColumn<Row>[] = [
-      { ...baseColumns[0], 'data-testid': 'name-cell' },
-      baseColumns[1],
+      { ...required(baseColumns[0], 'the name column'), 'data-testid': 'name-cell' },
+      required(baseColumns[1], 'the second column'),
     ];
     render(
       <DataTable

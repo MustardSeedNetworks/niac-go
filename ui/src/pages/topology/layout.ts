@@ -193,7 +193,11 @@ export function getLinkSpeed(label?: string): string | undefined {
   if (!speedMatch) {
     return;
   }
-  const num = Number.parseInt(speedMatch[1], 10);
+  const digits = speedMatch[1];
+  if (digits === undefined) {
+    return;
+  }
+  const num = Number.parseInt(digits, 10);
   const unit = speedMatch[2]?.toUpperCase() || 'M';
   const multiplier = unit === 'G' ? 1000 : unit === 'T' ? 1000000 : 1;
   return String(num * multiplier);
@@ -227,20 +231,22 @@ export function getVlan(label?: string): number | undefined {
   if (!vlanMatch) {
     return;
   }
-  return Number.parseInt(vlanMatch[1], 10);
+  const digits = vlanMatch[1];
+  return digits === undefined ? undefined : Number.parseInt(digits, 10);
 }
 
 /**
  * Get edge color based on link type and speed
  */
 export function getEdgeColor(data: LinkEdgeData): string {
+  // linkSpeedColors is keyed by speeds that arrive in the data, so it stays an
+  // open Record and every read — including trunk — falls back rather than
+  // asserting the key is there.
+  const fallback = 'var(--color-border-muted)';
   if (data.linkType === 'trunk' || data.linkType === 'lag') {
-    return linkSpeedColors.trunk;
+    return linkSpeedColors.trunk ?? fallback;
   }
-  if (data.speed && linkSpeedColors[data.speed]) {
-    return linkSpeedColors[data.speed];
-  }
-  return 'var(--color-border-muted)';
+  return (data.speed ? linkSpeedColors[data.speed] : undefined) ?? fallback;
 }
 
 /**

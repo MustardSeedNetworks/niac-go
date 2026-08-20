@@ -4,8 +4,10 @@
  * Guards the server-side DOT + GraphML export options (wired to
  * GET /api/v1/topology/export) alongside the existing PNG + JSON.
  */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { required } from '../../test/required';
 import { ActionsMenu } from './ActionsMenu';
 
 describe('ActionsMenu — topology export', () => {
@@ -38,14 +40,14 @@ describe('ActionsMenu — topology export', () => {
     const { onExportDOT } = renderMenu();
     openMenu();
     // Order matches the menu: [0]=PNG, [1]=JSON, [2]=DOT, [3]=GraphML.
-    fireEvent.click(screen.getAllByRole('menuitem')[2]);
+    fireEvent.click(required(screen.getAllByRole('menuitem')[2], 'the third menu item'));
     expect(onExportDOT).toHaveBeenCalledTimes(1);
   });
 
   it('invokes the GraphML export handler', () => {
     const { onExportGraphML } = renderMenu();
     openMenu();
-    fireEvent.click(screen.getAllByRole('menuitem')[3]);
+    fireEvent.click(required(screen.getAllByRole('menuitem')[3], 'the fourth menu item'));
     expect(onExportGraphML).toHaveBeenCalledTimes(1);
   });
 

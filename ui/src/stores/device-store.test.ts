@@ -80,7 +80,7 @@ describe('useDeviceStore', () => {
         useDeviceStore.getState().updateDevice('router-1', { ip: '10.0.0.1' });
       });
 
-      expect(useDeviceStore.getState().devices[0].ip).toBe('10.0.0.1');
+      expect(useDeviceStore.getState().devices[0]?.ip).toBe('10.0.0.1');
     });
 
     it('does nothing for non-existent hostname', () => {
@@ -89,7 +89,7 @@ describe('useDeviceStore', () => {
         useDeviceStore.getState().updateDevice('nonexistent', { ip: '10.0.0.1' });
       });
 
-      expect(useDeviceStore.getState().devices[0].ip).toBe('192.168.1.1');
+      expect(useDeviceStore.getState().devices[0]?.ip).toBe('192.168.1.1');
     });
   });
 
@@ -102,7 +102,7 @@ describe('useDeviceStore', () => {
 
       const state = useDeviceStore.getState();
       expect(state.devices).toHaveLength(1);
-      expect(state.devices[0].hostname).toBe('switch-1');
+      expect(state.devices[0]?.hostname).toBe('switch-1');
     });
 
     it('clears selection if removed device was selected', () => {
@@ -166,7 +166,7 @@ describe('useDeviceStore', () => {
 
       const filtered = useDeviceStore.getState().filteredDevices();
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].hostname).toBe('router-1');
+      expect(filtered[0]?.hostname).toBe('router-1');
     });
 
     it('filters by device type', () => {
@@ -179,7 +179,7 @@ describe('useDeviceStore', () => {
 
       const filtered = useDeviceStore.getState().filteredDevices();
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].type).toBe('switch');
+      expect(filtered[0]?.type).toBe('switch');
     });
 
     it('returns all devices when filter is "all"', () => {

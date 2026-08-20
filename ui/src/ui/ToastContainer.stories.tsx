@@ -20,7 +20,7 @@ function SeededToasts({ kinds }: { kinds: ToastType[] }) {
     for (const type of kinds) {
       useUIStore.getState().addNotification({
         type,
-        title: `${type[0].toUpperCase()}${type.slice(1)} notification`,
+        title: `${type.charAt(0).toUpperCase()}${type.slice(1)} notification`,
         message: `This is a ${type}-level toast example.`,
         duration: -1,
       });

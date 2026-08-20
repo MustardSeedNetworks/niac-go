@@ -6,8 +6,10 @@
  * layers closed first to prove the buttons actually drive every layer at
  * once rather than being a no-op.
  */
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { required } from '../test/required';
 import type { Packet } from './PacketList';
 import { ProtocolTree } from './ProtocolTree';
 
@@ -51,8 +53,8 @@ describe('ProtocolTree — expand-all / collapse-all', () => {
     const { container } = render(<ProtocolTree packet={makePacket()} />);
 
     const layerButtons = layerToggleButtons(container);
-    fireEvent.click(layerButtons[0]);
-    fireEvent.click(layerButtons[1]);
+    fireEvent.click(required(layerButtons[0], 'the first layer button'));
+    fireEvent.click(required(layerButtons[1], 'the second layer button'));
     expect(container.querySelectorAll('.border-l.border-surface-border').length).toBe(
       layerButtons.length - 2,
     );

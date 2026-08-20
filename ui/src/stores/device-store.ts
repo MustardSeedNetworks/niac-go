@@ -107,8 +107,9 @@ export const useDeviceStore = create<DeviceStoreState>()(
         updateDevice: (hostname, updates) =>
           set((state) => {
             const index = state.devices.findIndex((d) => d.hostname === hostname);
-            if (index !== -1) {
-              state.devices[index] = { ...state.devices[index], ...updates };
+            const existing = state.devices[index];
+            if (existing) {
+              state.devices[index] = { ...existing, ...updates };
             }
           }),
 

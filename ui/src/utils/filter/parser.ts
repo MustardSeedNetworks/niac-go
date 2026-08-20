@@ -139,7 +139,9 @@ class Parser {
   }
 
   private advance(): Token {
-    const token = this.tokens[this.pos];
+    // Past the end is EOF, the same answer peek() already gives — advancing
+    // off the end should not hand the caller undefined typed as a Token.
+    const token = this.peek();
     this.pos++;
     return token;
   }

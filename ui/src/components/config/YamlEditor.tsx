@@ -360,8 +360,7 @@ function validateYaml(content: string): string[] {
   const errors: string[] = [];
   const lines = content.split('\n');
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (const [i, line] of lines.entries()) {
     const lineNum = i + 1;
 
     // Check for tabs (YAML should use spaces)
@@ -370,7 +369,7 @@ function validateYaml(content: string): string[] {
     }
 
     // Check for inconsistent indentation
-    const leadingSpaces = line.match(/^(\s*)/)?.[1].length ?? 0;
+    const leadingSpaces = line.match(/^(\s*)/)?.[1]?.length ?? 0;
     if (leadingSpaces > 0 && leadingSpaces % 2 !== 0) {
       errors.push(i18n.t('configDiff.yamlIndentationError', { ns: 'pages', lineNum }));
     }

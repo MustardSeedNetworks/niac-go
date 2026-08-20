@@ -61,7 +61,7 @@ describe('ContentBundleUploader', () => {
         type: 'success',
         title: 'Content bundle installed',
       });
-      expect(notifications[0].message).toContain('1 networks, 1 walks, 1 pcaps');
+      expect(notifications[0]?.message).toContain('1 networks, 1 walks, 1 pcaps');
     });
 
     // Selection resets after a successful install.
@@ -81,8 +81,8 @@ describe('ContentBundleUploader', () => {
     await waitFor(() => {
       const notifications = useUIStore.getState().notifications;
       expect(notifications).toHaveLength(1);
-      expect(notifications[0].type).toBe('error');
-      expect(notifications[0].message).toContain('bundle is corrupt');
+      expect(notifications[0]?.type).toBe('error');
+      expect(notifications[0]?.message).toContain('bundle is corrupt');
     });
   });
 });

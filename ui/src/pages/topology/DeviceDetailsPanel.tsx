@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import {
   topologyDeviceColors as deviceColors,
-  topologyDeviceIcons as deviceIcons,
+  getTopologyDeviceIcon,
 } from '../../constants/device-types';
 import { Button } from '../../ui/Button';
 import { Tag } from '../../ui/Tag';
@@ -33,7 +33,7 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
   }
 
   const deviceType = device.type?.toLowerCase() || 'unknown';
-  const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
+  const Icon = getTopologyDeviceIcon(deviceType);
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
   return (

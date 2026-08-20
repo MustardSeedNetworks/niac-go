@@ -38,8 +38,8 @@ devices:
       reciprocal: true,
     });
     expect(model.positions['core-1']).toEqual({ x: 120.5, y: 240 });
-    expect(model.interfaces['core-1'][0].occupied).toBe(true);
-    expect(model.interfaces['dist-1'][2].occupied).toBe(false);
+    expect(model.interfaces['core-1']?.[0]?.occupied).toBe(true);
+    expect(model.interfaces['dist-1']?.[2]?.occupied).toBe(false);
     expect(model.segmented).toBe(false);
   });
 
@@ -56,8 +56,8 @@ devices:
     interfaces: [{ name: Ethernet1/49, type: ethernet }]
 `);
     expect(model.links).toHaveLength(1);
-    expect(model.links[0].reciprocal).toBe(false);
-    expect(model.interfaces['dist-1'][0].occupied).toBe(true);
+    expect(model.links[0]?.reciprocal).toBe(false);
+    expect(model.interfaces['dist-1']?.[0]?.occupied).toBe(true);
   });
 
   it('marks reciprocal links with asymmetric properties as read-only', () => {
@@ -75,7 +75,7 @@ devices:
       - { interface: Ethernet1/49, remote_device: core-1, remote_interface: Ethernet1/1, vlans: [200, 210] }
 `);
     expect(model.links).toHaveLength(1);
-    expect(model.links[0].reciprocal).toBe(false);
+    expect(model.links[0]?.reciprocal).toBe(false);
   });
 
   it('projects devices from segmented drafts', () => {

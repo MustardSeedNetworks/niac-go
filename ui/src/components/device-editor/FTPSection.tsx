@@ -117,7 +117,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const users = [...(device.ftp?.users || [])];
                     users[index] = {
-                      ...users[index],
+                      ...user,
                       username: e.target.value,
                     };
                     updateFtp({ ...getFtpConfig(), users });
@@ -132,7 +132,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const users = [...(device.ftp?.users || [])];
                     users[index] = {
-                      ...users[index],
+                      ...user,
                       password: e.target.value,
                     };
                     updateFtp({ ...getFtpConfig(), users });
@@ -145,7 +145,7 @@ export const FtpSection: FC<ProtocolSectionProps> = ({
                   value={user.homeDir || ''}
                   onChange={(e) => {
                     const users = [...(device.ftp?.users || [])];
-                    users[index] = { ...users[index], homeDir: e.target.value };
+                    users[index] = { ...user, homeDir: e.target.value };
                     updateFtp({ ...getFtpConfig(), users });
                   }}
                   placeholder={t('editor.sections.ftp.homeDirPlaceholder')}
