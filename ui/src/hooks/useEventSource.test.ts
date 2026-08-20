@@ -33,7 +33,7 @@ describe('consumeEventStream', () => {
       onMessage: (message) => messages.push(message),
     });
 
-    const headers = mockFetch.mock.calls[0][1]?.headers as Headers;
+    const headers = mockFetch.mock.calls[0]?.[1]?.headers as Headers;
     expect(headers.get('Authorization')).toBe('Bearer stream-token');
     expect(headers.get('Accept')).toBe('text/event-stream');
     expect(messages).toEqual([{ type: 'log', message: 'ready' }, 'plain text']);

@@ -67,16 +67,30 @@ export function deriveTiers(nodes: DeviceNode[]): Tier[] {
 
 /** groupByRank buckets node y positions into ascending ranks. */
 function groupByRank(nodes: DeviceNode[]): number[][] {
-  const sorted = nodes.map((n) => n.position.y).sort((a, b) => a - b);
+  const [firstY, ...restY] = nodes.map((n) => n.position.y).sort((a, b) => a - b);
 
-  const ranks: number[][] = [[sorted[0]]];
-  for (const y of sorted.slice(1)) {
-    const current = ranks[ranks.length - 1];
-    if (y - current[0] <= RANK_EPSILON) {
+  // No nodes means no ranks. The previous form seeded the first bucket with
+  // sorted[0] unconditionally, so an empty graph produced one phantom tier
+  // holding undefined — which the caller then counted as a device.
+  if (firstY === undefined) {
+    return [];
+  }
+
+  // The anchor is carried rather than re-read from the bucket: it is the value
+  // every member of the current rank is compared against, which is a fact
+  // about the rank, not about the array's first slot.
+  let anchor = firstY;
+  let current = [firstY];
+  const ranks: number[][] = [current];
+
+  for (const y of restY) {
+    if (y - anchor <= RANK_EPSILON) {
       current.push(y);
       continue;
     }
-    ranks.push([y]);
+    anchor = y;
+    current = [y];
+    ranks.push(current);
   }
   return ranks;
 }

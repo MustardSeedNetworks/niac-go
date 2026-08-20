@@ -49,7 +49,7 @@ describe('FleetGeneratorCard', () => {
         sites: expect.arrayContaining([expect.objectContaining({ code: 'COS' })]),
       }),
     );
-    expect(onChange.mock.calls[0][0].sites).toHaveLength(3);
+    expect(onChange.mock.calls[0]?.[0]?.sites).toHaveLength(3);
   });
 
   it('keeps redundant layers and endpoint totals valid', () => {

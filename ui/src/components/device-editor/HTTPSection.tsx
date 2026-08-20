@@ -70,7 +70,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) => {
                       const endpoints = [...(device.http?.endpoints || [])];
                       endpoints[index] = {
-                        ...endpoints[index],
+                        ...endpoint,
                         method: e.target.value as HTTPEndpoint['method'],
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
@@ -88,7 +88,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) => {
                       const endpoints = [...(device.http?.endpoints || [])];
                       endpoints[index] = {
-                        ...endpoints[index],
+                        ...endpoint,
                         path: e.target.value,
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
@@ -102,7 +102,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) => {
                       const endpoints = [...(device.http?.endpoints || [])];
                       endpoints[index] = {
-                        ...endpoints[index],
+                        ...endpoint,
                         statusCode: Number.parseInt(e.target.value, 10),
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
@@ -131,7 +131,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) => {
                       const endpoints = [...(device.http?.endpoints || [])];
                       endpoints[index] = {
-                        ...endpoints[index],
+                        ...endpoint,
                         contentType: e.target.value,
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });
@@ -145,7 +145,7 @@ export const HttpSection: FC<ProtocolSectionProps> = ({
                     onChange={(e) => {
                       const endpoints = [...(device.http?.endpoints || [])];
                       endpoints[index] = {
-                        ...endpoints[index],
+                        ...endpoint,
                         body: e.target.value,
                       };
                       updateHttp({ ...getHttpConfig(), endpoints });

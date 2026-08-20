@@ -23,7 +23,7 @@ describe('runtime bearer authentication', () => {
     setRuntimeAPIToken('browser-token');
     await request('/api/v1/auth/scope');
 
-    const headers = mockFetch.mock.calls[0][1]?.headers as Headers;
+    const headers = mockFetch.mock.calls[0]?.[1]?.headers as Headers;
     expect(headers.get('Authorization')).toBe('Bearer browser-token');
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
@@ -59,9 +59,9 @@ describe('runtime bearer authentication', () => {
     setRuntimeAPIToken('second-token');
     await request('/api/v1/alerts', { method: 'PUT' });
 
-    expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/csrf-token');
-    expect(mockFetch.mock.calls[2][0]).toContain('/api/v1/csrf-token');
-    const secondHeaders = mockFetch.mock.calls[3][1]?.headers as Headers;
+    expect(mockFetch.mock.calls[0]?.[0]).toContain('/api/v1/csrf-token');
+    expect(mockFetch.mock.calls[2]?.[0]).toContain('/api/v1/csrf-token');
+    const secondHeaders = mockFetch.mock.calls[3]?.[1]?.headers as Headers;
     expect(secondHeaders.get('Authorization')).toBe('Bearer second-token');
     expect(secondHeaders.get('X-Csrf-Token')).toBe('new-csrf');
   });
@@ -82,7 +82,7 @@ describe('runtime bearer authentication', () => {
     await request('/api/v1/walk/import', { method: 'POST' }, { maxRetries: 0, baseDelay: 0 });
 
     expect(mockFetch).toHaveBeenCalledTimes(4);
-    const retriedHeaders = mockFetch.mock.calls[3][1]?.headers as Headers;
+    const retriedHeaders = mockFetch.mock.calls[3]?.[1]?.headers as Headers;
     expect(retriedHeaders.get('X-Csrf-Token')).toBe('fresh-csrf');
   });
 
@@ -105,7 +105,7 @@ describe('runtime bearer authentication', () => {
       capture: { authProtocol: 'sha256', timeoutSeconds: 20 },
     });
 
-    const body = JSON.parse(String(mockFetch.mock.calls[0][1]?.body)) as Record<string, unknown>;
+    const body = JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
     expect(body).toEqual({
       walkName: 'captured/access.walk',
       capture: { authProtocol: 'sha256', timeoutSeconds: 20 },

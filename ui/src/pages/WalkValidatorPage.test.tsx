@@ -7,8 +7,10 @@
  * .bak behavior, and the file must only be rewritten after the user
  * confirms — never on the click itself.
  */
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { required } from '../test/required';
 import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { ToastContainer } from '../ui/ToastContainer';
@@ -64,7 +66,7 @@ describe('WalkValidatorPage — Auto-fix confirmation', () => {
     fireEvent.click(screen.getByRole('button', { name: /auto-fix/i }));
     const confirmButtons = screen.getAllByRole('button', { name: /auto-fix/i });
     // The dialog's confirm button is the last "Auto-fix"-labeled control.
-    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+    fireEvent.click(required(confirmButtons.at(-1), 'the last confirm button'));
 
     await waitFor(() => expect(fixWalk).toHaveBeenCalledWith('cisco/c3900.walk'));
   });

@@ -63,26 +63,28 @@ const collectChangedLines = (
   let nextLeftIdx = leftIdx;
   let nextRightIdx = rightIdx;
 
-  while (
-    nextLeftIdx < leftLines.length &&
-    (currentLcs === null || leftLines[nextLeftIdx] !== currentLcs)
-  ) {
+  while (nextLeftIdx < leftLines.length) {
+    const content = leftLines[nextLeftIdx];
+    if (content === undefined || (currentLcs !== null && content === currentLcs)) {
+      break;
+    }
     leftChanged.push({
       lineNumber: nextLeftIdx + 1,
-      content: leftLines[nextLeftIdx],
+      content,
       type: 'removed',
       leftLineNumber: nextLeftIdx + 1,
     });
     nextLeftIdx++;
   }
 
-  while (
-    nextRightIdx < rightLines.length &&
-    (currentLcs === null || rightLines[nextRightIdx] !== currentLcs)
-  ) {
+  while (nextRightIdx < rightLines.length) {
+    const content = rightLines[nextRightIdx];
+    if (content === undefined || (currentLcs !== null && content === currentLcs)) {
+      break;
+    }
     rightChanged.push({
       lineNumber: nextRightIdx + 1,
-      content: rightLines[nextRightIdx],
+      content,
       type: 'added',
       rightLineNumber: nextRightIdx + 1,
     });
@@ -118,12 +120,19 @@ export function computeLcs(left: string[], right: string[]): string[] {
   );
 
   for (let i = 1; i <= m; i++) {
+    // Holding the two rows makes each cell one lookup instead of two, and is
+    // what lets the table be indexed at all once an index is not a promise
+    // that something is there.
+    const row = dp[i];
+    const previousRow = dp[i - 1];
+    if (!row || !previousRow) {
+      continue;
+    }
     for (let j = 1; j <= n; j++) {
-      if (left[i - 1] === right[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
+      row[j] =
+        left[i - 1] === right[j - 1]
+          ? (previousRow[j - 1] ?? 0) + 1
+          : Math.max(previousRow[j] ?? 0, row[j - 1] ?? 0);
     }
   }
 
@@ -133,11 +142,12 @@ export function computeLcs(left: string[], right: string[]): string[] {
   let j = n;
 
   while (i > 0 && j > 0) {
-    if (left[i - 1] === right[j - 1]) {
-      lcs.unshift(left[i - 1]);
+    const leftLine = left[i - 1];
+    if (leftLine !== undefined && leftLine === right[j - 1]) {
+      lcs.unshift(leftLine);
       i--;
       j--;
-    } else if (dp[i - 1][j] > dp[i][j - 1]) {
+    } else if ((dp[i - 1]?.[j] ?? 0) > (dp[i]?.[j - 1] ?? 0)) {
       i--;
     } else {
       j--;
@@ -164,13 +174,19 @@ export function computeDiff(left: string, right: string): DiffBlock[] {
   let lcsIdx = 0;
 
   while (leftIdx < leftLines.length || rightIdx < rightLines.length) {
-    const currentLcs = lcsIdx < lcs.length ? lcs[lcsIdx] : null;
+    // `?? null` rather than a length check: past the end of the LCS there is
+    // no anchor line, which is the same thing the length check meant.
+    const currentLcs = lcs[lcsIdx] ?? null;
+    const unchangedContent = leftLines[leftIdx];
 
-    if (isLcsMatch(currentLcs, leftLines, rightLines, leftIdx, rightIdx)) {
+    if (
+      unchangedContent !== undefined &&
+      isLcsMatch(currentLcs, leftLines, rightLines, leftIdx, rightIdx)
+    ) {
       // Unchanged line
       const line: DiffLine = {
         lineNumber: leftIdx + 1,
-        content: leftLines[leftIdx],
+        content: unchangedContent,
         type: 'unchanged',
         leftLineNumber: leftIdx + 1,
         rightLineNumber: rightIdx + 1,

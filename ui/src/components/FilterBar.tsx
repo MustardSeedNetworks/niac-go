@@ -55,8 +55,8 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
       const textAfter = value.substring(cursorPos);
 
       // Find the current word being typed
-      const wordMatch = textBefore.match(/([a-zA-Z0-9_.]+)$/);
-      const wordStart = wordMatch ? cursorPos - wordMatch[1].length : cursorPos;
+      const currentWord = textBefore.match(/([a-zA-Z0-9_.]+)$/)?.[1];
+      const wordStart = currentWord ? cursorPos - currentWord.length : cursorPos;
 
       const newValue = value.substring(0, wordStart) + suggestion.insertText + textAfter;
       onChange(newValue);
@@ -83,9 +83,10 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
         e.preventDefault();
         setSelectedSuggestion((prev) => Math.max(prev - 1, -1));
       } else if (e.key === 'Tab' || e.key === 'Enter') {
-        if (selectedSuggestion >= 0) {
+        const chosen = suggestions[selectedSuggestion];
+        if (chosen) {
           e.preventDefault();
-          applySuggestion(suggestions[selectedSuggestion]);
+          applySuggestion(chosen);
         }
       } else if (e.key === 'Escape') {
         setSuggestions([]);

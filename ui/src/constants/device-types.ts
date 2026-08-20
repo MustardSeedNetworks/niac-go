@@ -110,13 +110,20 @@ export const deviceTypeOptions: { value: DeviceType; label: string }[] = [
  * Get device icon by type with fallback
  */
 export function getDeviceIcon(type: DeviceType | string): LucideIcon {
-  if (type in deviceTypeIcons) {
-    return deviceTypeIcons[type as DeviceType];
-  }
-  if (type in topologyDeviceIcons) {
-    return topologyDeviceIcons[type];
-  }
-  return Server;
+  // `type in map` narrows the key, not the value that comes back, so each
+  // lookup is read once and tested rather than probed and then re-read.
+  return deviceTypeIcons[type as DeviceType] ?? topologyDeviceIcons[type] ?? Server;
+}
+
+/**
+ * Get the topology icon for a device type.
+ *
+ * The two topology components each had this lookup inline with an `unknown`
+ * fallback that was itself an open-Record read — so the fallback needed a
+ * fallback. It belongs here, next to the map and the Server default.
+ */
+export function getTopologyDeviceIcon(type: string): LucideIcon {
+  return topologyDeviceIcons[type] ?? topologyDeviceIcons.unknown ?? Server;
 }
 
 /**
@@ -133,7 +140,7 @@ export function getDeviceColor(type: DeviceType | string): TagColorScheme {
  * Get topology device color (CSS variable) by type with fallback
  */
 export function getTopologyDeviceColor(type: string): string {
-  return topologyDeviceColors[type] || topologyDeviceColors.unknown;
+  return topologyDeviceColors[type] ?? topologyDeviceColors.unknown ?? 'var(--color-text-muted)';
 }
 
 /**

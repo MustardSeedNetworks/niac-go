@@ -94,7 +94,7 @@ function evaluateComparison(
 ): boolean {
   // Special case: tcp.port/udp.port should check both source and dest
   if (field === 'tcp.port' || field === 'udp.port') {
-    const proto = field.split('.')[0].toUpperCase();
+    const proto = (field.split('.')[0] ?? '').toUpperCase();
     if (getProtocol(packet).toUpperCase() !== proto) {
       return false;
     }

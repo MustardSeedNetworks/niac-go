@@ -46,13 +46,13 @@ describe('scenario draft client', () => {
     await createScenarioDraft('campus-draft', 'devices: []\n');
     await fetchScenarioDraft('campus-draft');
 
-    expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/library/drafts');
-    expect(mockFetch.mock.calls[1][1]).toMatchObject({
+    expect(mockFetch.mock.calls[1]?.[0]).toContain('/api/v1/library/drafts');
+    expect(mockFetch.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ name: 'campus-draft', content: 'devices: []\n' }),
     });
-    expect(mockFetch.mock.calls[2][0]).toContain('/api/v1/library/drafts/campus-draft');
-    expect(mockFetch.mock.calls[2][1]).toMatchObject({ credentials: 'same-origin' });
+    expect(mockFetch.mock.calls[2]?.[0]).toContain('/api/v1/library/drafts/campus-draft');
+    expect(mockFetch.mock.calls[2]?.[1]).toMatchObject({ credentials: 'same-origin' });
   });
 
   it('sends the current revision when replacing and deleting a draft', async () => {
@@ -80,12 +80,12 @@ describe('scenario draft client', () => {
     await replaceScenarioDraft('campus-draft', 'revision-1', 'devices:\n  - name: router-1\n');
     await deleteScenarioDraft('campus-draft', 'revision-2');
 
-    const replaceHeaders = mockFetch.mock.calls[1][1]?.headers as Headers;
-    expect(mockFetch.mock.calls[1][1]).toMatchObject({ method: 'PUT' });
+    const replaceHeaders = mockFetch.mock.calls[1]?.[1]?.headers as Headers;
+    expect(mockFetch.mock.calls[1]?.[1]).toMatchObject({ method: 'PUT' });
     expect(replaceHeaders.get('If-Match')).toBe('"revision-1"');
 
-    const deleteHeaders = mockFetch.mock.calls[2][1]?.headers as Headers;
-    expect(mockFetch.mock.calls[2][1]).toMatchObject({ method: 'DELETE' });
+    const deleteHeaders = mockFetch.mock.calls[2]?.[1]?.headers as Headers;
+    expect(mockFetch.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' });
     expect(deleteHeaders.get('If-Match')).toBe('"revision-2"');
   });
 
@@ -112,7 +112,7 @@ describe('scenario draft client', () => {
     const { createScenarioDraftFromTemplate } = await import('./library-client');
     await createScenarioDraftFromTemplate('switch-draft', 'catalyst-9300-48p');
 
-    expect(mockFetch.mock.calls[1][1]).toMatchObject({
+    expect(mockFetch.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({
         name: 'switch-draft',
@@ -149,8 +149,8 @@ describe('scenario draft client', () => {
       },
     });
 
-    expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/library/drafts/campus-draft/topology');
-    const options = mockFetch.mock.calls[1][1];
+    expect(mockFetch.mock.calls[1]?.[0]).toContain('/api/v1/library/drafts/campus-draft/topology');
+    const options = mockFetch.mock.calls[1]?.[1];
     const headers = options?.headers as Headers;
     expect(options).toMatchObject({
       method: 'PATCH',
@@ -203,7 +203,7 @@ describe('scenario draft client', () => {
       },
     ]);
 
-    const options = mockFetch.mock.calls[1][1];
+    const options = mockFetch.mock.calls[1]?.[1];
     expect(options).toMatchObject({
       method: 'PUT',
       body: JSON.stringify({

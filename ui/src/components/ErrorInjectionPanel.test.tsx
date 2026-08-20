@@ -5,10 +5,12 @@
  * navigates here with the type in the query string; the real injection
  * form must land with that type already selected.
  */
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ErrorInjectionInfo } from '../api/types';
+import { required } from '../test/required';
 import '../i18n';
 import { ErrorInjectionPanel } from './ErrorInjectionPanel';
 
@@ -126,7 +128,7 @@ describe('ErrorInjectionPanel', () => {
     );
 
     const clearButtons = await screen.findAllByRole('button', { name: /Clear error on/ });
-    fireEvent.click(clearButtons[0]);
+    fireEvent.click(required(clearButtons[0], 'a clear button'));
     await waitFor(() => expect(clearError).toHaveBeenCalledWith('sw-core', 'Gi0/1', 'FCS Errors'));
   });
 });

@@ -10,9 +10,11 @@
  *      files + all decisions, no "reload the page" claim) and must call
  *      onClearAll, not onReset.
  */
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { required } from '../../test/required';
 import '../../i18n';
 import type { DiffBlock, MergeDecision } from './DiffViewer';
 import { MergeControls } from './MergeControls';
@@ -92,7 +94,7 @@ describe('MergeControls — Clear All', () => {
 
     await user.click(screen.getByRole('button', { name: 'Clear All' }));
     const confirmButtons = screen.getAllByRole('button', { name: 'Clear All' });
-    await user.click(confirmButtons[confirmButtons.length - 1]);
+    await user.click(required(confirmButtons.at(-1), 'the last confirm button'));
 
     expect(onClearAll).toHaveBeenCalledTimes(1);
     expect(onReset).not.toHaveBeenCalled();

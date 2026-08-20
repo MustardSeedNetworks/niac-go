@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { required } from '../test/required';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -23,8 +24,8 @@ describe('scenario generator client', () => {
     const response = await generateScenario(request);
 
     expect(response.manifest.deviceCount).toBe(0);
-    expect(mockFetch.mock.calls[1][0]).toContain('/api/v1/scenario/generate');
-    const payload = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
+    expect(mockFetch.mock.calls[1]?.[0]).toContain('/api/v1/scenario/generate');
+    const payload = JSON.parse(mockFetch.mock.calls[1]?.[1]?.body as string);
     expect(payload).toMatchObject({
       counts: { accessSwitches: 16, accessPointsPerAccess: 2 },
       attachmentName: 'cyberscope',
@@ -50,7 +51,7 @@ describe('scenario generator client', () => {
     request.counts.coreSwitches = 1;
     expect(isScenarioRequestValid(request)).toBe(true);
 
-    request.sites[0].octet = 254;
+    required(request.sites[0], 'the first site').octet = 254;
     expect(isScenarioRequestValid(request)).toBe(false);
 
     Object.assign(request, { endpointProfile: 'invalid' });
@@ -73,7 +74,7 @@ describe('scenario generator client', () => {
     expect(isScenarioRequestValid(request)).toBe(false);
     request.attachmentName = 'cyberscope';
 
-    request.sites[0].location = 'é'.repeat(65);
+    required(request.sites[0], 'the first site').location = 'é'.repeat(65);
     expect(isScenarioRequestValid(request)).toBe(false);
   });
 });

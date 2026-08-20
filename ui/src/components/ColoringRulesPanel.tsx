@@ -147,7 +147,13 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
       if (index <= 0) return;
       setLocalRules((prev) => {
         const next = [...prev];
-        [next[index - 1], next[index]] = [next[index], next[index - 1]];
+        const above = next[index - 1];
+        const current = next[index];
+        if (!above || !current) {
+          return prev;
+        }
+        next[index - 1] = current;
+        next[index] = above;
         return next;
       });
     }, []);
@@ -156,7 +162,13 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
       setLocalRules((prev) => {
         if (index >= prev.length - 1) return prev;
         const next = [...prev];
-        [next[index], next[index + 1]] = [next[index + 1], next[index]];
+        const current = next[index];
+        const below = next[index + 1];
+        if (!current || !below) {
+          return prev;
+        }
+        next[index] = below;
+        next[index + 1] = current;
         return next;
       });
     }, []);

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { type ReactNode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../../api/library-client';
+import { required } from '../../test/required';
 import '../../i18n';
 import { DraftTopologyComposer } from './DraftTopologyComposer';
 
@@ -70,7 +71,7 @@ vi.mock('@xyflow/react', () => ({
   }) => (
     <div>
       {edges[0] && (
-        <button type="button" onClick={() => onEdgeClick({}, edges[0])}>
+        <button type="button" onClick={() => onEdgeClick({}, required(edges[0], 'the first edge'))}>
           Edit first link
         </button>
       )}

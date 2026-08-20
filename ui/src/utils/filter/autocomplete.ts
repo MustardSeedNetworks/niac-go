@@ -34,8 +34,7 @@ export function getAutocompleteSuggestions(
 }
 
 function extractCurrentWord(text: string): string {
-  const match = text.match(/([a-zA-Z0-9_.]+)$/);
-  return match ? match[1] : '';
+  return text.match(/([a-zA-Z0-9_.]+)$/)?.[1] ?? '';
 }
 
 function getFieldSuggestions(prefix: string): AutocompleteSuggestion[] {

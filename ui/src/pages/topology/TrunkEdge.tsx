@@ -210,14 +210,18 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
 };
 
 function formatVlans(vlans: number[]): string {
-  if (vlans.length === 0) return '';
-  if (vlans.length === 1) return `VLAN ${vlans[0]}`;
-  const sorted = [...vlans].sort((a, b) => a - b);
+  const [firstVlan, ...restVlans] = [...vlans].sort((a, b) => a - b);
+  if (firstVlan === undefined) {
+    return '';
+  }
+  if (restVlans.length === 0) {
+    return `VLAN ${firstVlan}`;
+  }
+
   const runs: string[] = [];
-  let start = sorted[0];
-  let prev = sorted[0];
-  for (let i = 1; i < sorted.length; i++) {
-    const v = sorted[i];
+  let start = firstVlan;
+  let prev = firstVlan;
+  for (const v of restVlans) {
     if (v === prev + 1) {
       prev = v;
       continue;

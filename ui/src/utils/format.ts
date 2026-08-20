@@ -233,7 +233,10 @@ export function useFormatBytes(): (size: number) => string {
       const formatted = new Intl.NumberFormat(locale, {
         maximumFractionDigits: value >= 10 ? 0 : 1,
       }).format(value);
-      return t(`format.${units[idx]}`, { value: formatted });
+      // The loop bounds idx; units[0] is the fallback because a size that
+      // never divided is bytes, which is what the zero case returns too.
+      const unit = units[idx] ?? units[0];
+      return t(`format.${unit}`, { value: formatted });
     },
     [locale, t],
   );

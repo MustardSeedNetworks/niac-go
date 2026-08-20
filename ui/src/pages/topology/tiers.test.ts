@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { required } from '../../test/required';
 import { deriveTiers } from './tiers';
 import type { DeviceNode } from './types';
 
@@ -17,8 +18,8 @@ describe('deriveTiers', () => {
     const tiers = deriveTiers([node('core-1', 40), node('acc-1', 460), node('acc-2', 460)]);
 
     expect(tiers.map((t) => t.label)).toEqual(['Core', 'Access']);
-    expect(tiers[0].deviceCount).toBe(1);
-    expect(tiers[1].deviceCount).toBe(2);
+    expect(tiers[0]?.deviceCount).toBe(1);
+    expect(tiers[1]?.deviceCount).toBe(2);
   });
 
   it('labels every band between the first and last Distribution', () => {
@@ -48,11 +49,14 @@ describe('deriveTiers', () => {
     const tiers = deriveTiers([node('a', 40), node('b', 43), node('c', 460)]);
 
     expect(tiers).toHaveLength(2);
-    expect(tiers[0].deviceCount).toBe(2);
+    expect(tiers[0]?.deviceCount).toBe(2);
   });
 
   it('spans each band across the devices it contains', () => {
-    const [core] = deriveTiers([node('core-1', 40), node('acc-1', 460)]);
+    const core = required(
+      deriveTiers([node('core-1', 40), node('acc-1', 460)])[0],
+      'the core band',
+    );
 
     expect(core.y).toBeLessThanOrEqual(40);
     expect(core.height).toBeGreaterThan(0);

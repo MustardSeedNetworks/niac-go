@@ -76,7 +76,9 @@ export function formatTimeByMode(
 export function nextTimeDisplayMode(current: TimeDisplayMode): TimeDisplayMode {
   const modes: TimeDisplayMode[] = ['absolute', 'relative', 'delta'];
   const idx = modes.indexOf(current);
-  return modes[(idx + 1) % modes.length];
+  // The modulo keeps this in range; the fallback is what says so to the type
+  // system, and returning the first mode is what wrapping already means.
+  return modes[(idx + 1) % modes.length] ?? 'absolute';
 }
 
 /**

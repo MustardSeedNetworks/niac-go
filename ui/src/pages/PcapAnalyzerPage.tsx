@@ -142,8 +142,9 @@ export const PcapAnalyzerPage: FC = () => {
       setSuccess(tPages('libraryPcaps.analyzer.analyzeSuccess', { count: result.packets.length }));
 
       // Auto-select first packet
-      if (result.packets.length > 0) {
-        setSelectedPacket(result.packets[0]);
+      const firstPacket = result.packets[0];
+      if (firstPacket) {
+        setSelectedPacket(firstPacket);
       }
     } catch (err) {
       // The server enforces its own upload size cap (independent of the

@@ -84,8 +84,8 @@ describe('PreflightStep', () => {
     expect(preflightSimulation).toHaveBeenCalledWith(
       expect.objectContaining({ attachmentMode: 'direct' }),
     );
-    expect(preflightSimulation.mock.calls[0][0]).not.toHaveProperty('accessVlan');
-    expect(preflightSimulation.mock.calls[0][0]).not.toHaveProperty('dedicated');
+    expect(preflightSimulation.mock.calls[0]?.[0]).not.toHaveProperty('accessVlan');
+    expect(preflightSimulation.mock.calls[0]?.[0]).not.toHaveProperty('dedicated');
     expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
   });
 

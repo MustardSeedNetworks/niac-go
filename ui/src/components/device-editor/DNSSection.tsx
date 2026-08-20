@@ -58,7 +58,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const records = [...(device.dns?.forwardRecords || [])];
                     records[index] = {
-                      ...records[index],
+                      ...record,
                       name: e.target.value,
                     };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
@@ -71,7 +71,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   value={record.ip || ''}
                   onChange={(e) => {
                     const records = [...(device.dns?.forwardRecords || [])];
-                    records[index] = { ...records[index], ip: e.target.value };
+                    records[index] = { ...record, ip: e.target.value };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
                   }}
                   placeholder={t('editor.sections.dns.ipPlaceholder')}
@@ -83,7 +83,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const records = [...(device.dns?.forwardRecords || [])];
                     records[index] = {
-                      ...records[index],
+                      ...record,
                       ttl: Number.parseInt(e.target.value, 10),
                     };
                     updateDns({ ...getDnsConfig(), forwardRecords: records });
@@ -138,7 +138,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   value={record.ip || ''}
                   onChange={(e) => {
                     const records = [...(device.dns?.reverseRecords || [])];
-                    records[index] = { ...records[index], ip: e.target.value };
+                    records[index] = { ...record, ip: e.target.value };
                     updateDns({ ...getDnsConfig(), reverseRecords: records });
                   }}
                   placeholder={t('editor.sections.dns.ipPlaceholder')}
@@ -150,7 +150,7 @@ export const DnsSection: FC<ProtocolSectionProps> = ({
                   onChange={(e) => {
                     const records = [...(device.dns?.reverseRecords || [])];
                     records[index] = {
-                      ...records[index],
+                      ...record,
                       name: e.target.value,
                     };
                     updateDns({ ...getDnsConfig(), reverseRecords: records });

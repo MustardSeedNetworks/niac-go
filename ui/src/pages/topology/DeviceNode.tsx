@@ -7,7 +7,7 @@ import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   topologyDeviceColors as deviceColors,
-  topologyDeviceIcons as deviceIcons,
+  getTopologyDeviceIcon,
 } from '../../constants/device-types';
 import type { DeviceNodeData } from './types';
 
@@ -23,7 +23,7 @@ interface DeviceNodeProps {
 export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const { t } = useTranslation('pages');
   const deviceType = (data.type as string)?.toLowerCase() || 'unknown';
-  const Icon = deviceIcons[deviceType] || deviceIcons.unknown;
+  const Icon = getTopologyDeviceIcon(deviceType);
   const color = deviceColors[deviceType] || deviceColors.unknown;
 
   // The card truncates the device name and shows `+N` overflow for IPs and
