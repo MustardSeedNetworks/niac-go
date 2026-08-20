@@ -5,6 +5,28 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.47](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.46...v0.94.47) (2026-08-20)
+
+
+### Features
+
+* **acceptance:** record the provenance a pinned result needs to be evidence ([#1360](https://github.com/MustardSeedNetworks/niac-go/issues/1360)) ([bf32992](https://github.com/MustardSeedNetworks/niac-go/commit/bf32992ccce1a3ec2cfa9a11e08a7d72e590e26b))
+* **scenario:** bump the manifest to v4 with observations SEED can assert ([#1363](https://github.com/MustardSeedNetworks/niac-go/issues/1363)) ([ee12ed4](https://github.com/MustardSeedNetworks/niac-go/commit/ee12ed45c7338ceded80f19d441216b7b8e0ed8f))
+* **topology:** draw the archetype's core-to-access tier bands ([#1365](https://github.com/MustardSeedNetworks/niac-go/issues/1365)) ([4d8780a](https://github.com/MustardSeedNetworks/niac-go/commit/4d8780a42c718875a64314076293d15be2018dc5))
+
+
+### Bug Fixes
+
+* **deps:** bump golang.org/x/mod to v0.40.0 for CVE-2026-56864/56865 ([#1372](https://github.com/MustardSeedNetworks/niac-go/issues/1372)) ([36af8b4](https://github.com/MustardSeedNetworks/niac-go/commit/36af8b403e1cee103bc5713f3e56fbfe6e3266da)), closes [#1371](https://github.com/MustardSeedNetworks/niac-go/issues/1371)
+* **deps:** update module charm.land/bubbletea/v2 to v2.0.9 ([#1366](https://github.com/MustardSeedNetworks/niac-go/issues/1366)) ([ed6092e](https://github.com/MustardSeedNetworks/niac-go/commit/ed6092ed3bc2624ca19d9510e5331687de8a429c))
+* **lint:** scope Biome's dist, build and coverage excludes to where they land ([#1369](https://github.com/MustardSeedNetworks/niac-go/issues/1369)) ([2746c8c](https://github.com/MustardSeedNetworks/niac-go/commit/2746c8cd3d145d7892ba49ef3cc44273e2724e9c))
+
+
+### Miscellaneous
+
+* **deps:** update module github.com/golangci/golangci-lint/v2/cmd/golangci-lint to v2.13.0 ([#1368](https://github.com/MustardSeedNetworks/niac-go/issues/1368)) ([39fcfb5](https://github.com/MustardSeedNetworks/niac-go/commit/39fcfb56e6280940ca3ac0390fcc70a8032ffb49))
+* **ts:** turn on noUncheckedIndexedAccess across niac's UI ([#1374](https://github.com/MustardSeedNetworks/niac-go/issues/1374)) ([60792c7](https://github.com/MustardSeedNetworks/niac-go/commit/60792c75b6c63c5578bb481c0763bd2416040ad2)), closes [#1338](https://github.com/MustardSeedNetworks/niac-go/issues/1338)
+
 ## [0.94.46](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.45...v0.94.46) (2026-08-19)
 
 
