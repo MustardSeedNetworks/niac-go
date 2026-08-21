@@ -1,7 +1,8 @@
 import { FileCog, Server } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import { parseDocument } from 'yaml';
 import { fetchConfig, fetchDevices, updateConfig } from '../api/client';
 import { isApiError } from '../api/errors';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
@@ -16,25 +17,39 @@ import { BaseCard } from '../ui/BaseCard';
 import { Button } from '../ui/Button';
 import { CardRow } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
+import { findDeviceFragment, spliceDeviceFragment } from '../utils/device-fragment';
 import { copyToClipboard } from '../utils/file';
 import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
 
 /**
- * Devices Page - Config Workspace
+ * Devices Page - list + detail over the loaded config.
  *
- * Review YAML-derived devices, SNMP walks, DHCP/DNS personas, and packet playback targets.
+ * The list and the editor used to be two cards that did not talk to each
+ * other: selecting a device meant nothing, and the only way to change one was
+ * to find it by eye in the whole-config YAML. Selecting a device now opens
+ * that device's own block in the detail pane; saving splices it back into the
+ * config, which is still what the daemon accepts. Clearing the selection
+ * returns the pane to whole-config editing, which is the only way to reach
+ * anything that is not a device.
  */
-export const DevicesPage: FC = () => (
-  <div className="grid gap-spacious xl:grid-cols-2">
-    <DeviceListCard />
-    <ConfigEditorCard />
-  </div>
-);
+export const DevicesPage: FC = () => {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-spacious xl:grid-cols-2">
+      <DeviceListCard selected={selected} onSelect={setSelected} />
+      <ConfigEditorCard selected={selected} onClearSelection={() => setSelected(null)} />
+    </div>
+  );
+};
 
 /**
  * Device List Card - Shows devices from current config
  */
-const DeviceListCard: FC = () => {
+const DeviceListCard: FC<{
+  selected: string | null;
+  onSelect: (name: string) => void;
+}> = ({ selected, onSelect }) => {
   const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
   const {
@@ -60,7 +75,11 @@ const DeviceListCard: FC = () => {
     >
       {(data) => (
         <>
-          <DeviceTable devices={data} />
+          <DeviceTable
+            devices={data}
+            selectedName={selected}
+            onSelect={(device) => onSelect(device.name)}
+          />
           <Link
             to="/device-config"
             className="mt-heading inline-block text-sm text-brand-accent hover:underline"
@@ -74,9 +93,32 @@ const DeviceListCard: FC = () => {
 };
 
 /**
+ * fragmentProblem names why a device fragment cannot be saved, as an i18n key
+ * suffix, or null when it is fine. Parsing here rather than letting the splice
+ * run means a malformed edit is refused whole, instead of being written into
+ * the config for the daemon to reject after it has already replaced the file.
+ */
+function fragmentProblem(
+  text: string,
+): 'deviceFragmentInvalid' | 'deviceFragmentNameMissing' | null {
+  const doc = parseDocument(text);
+  if (doc.errors.length > 0) {
+    return 'deviceFragmentInvalid';
+  }
+  const name = doc.get('name');
+  if (typeof name !== 'string' || name.trim() === '') {
+    return 'deviceFragmentNameMissing';
+  }
+  return null;
+}
+
+/**
  * Config Editor Card - YAML configuration editor
  */
-const ConfigEditorCard: FC = () => {
+const ConfigEditorCard: FC<{
+  selected: string | null;
+  onClearSelection: () => void;
+}> = ({ selected, onClearSelection }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const { data, loading, error } = useApiResource(fetchConfig, [], {
@@ -96,11 +138,30 @@ const ConfigEditorCard: FC = () => {
   // ErrorDetail.line), so the editor can highlight and scroll to it.
   const [errorLine, setErrorLine] = useState<number | null>(null);
 
+  // The device's own block, located in the loaded config. Null whenever the
+  // pane is showing the whole config — either because nothing is selected, or
+  // because the selected device has no block the parser can find, in which
+  // case the pane says so rather than editing something else.
+  const fragment = useMemo(
+    () => (data && selected ? findDeviceFragment(data.content, selected) : null),
+    [data, selected],
+  );
+  const fragmentMissing = selected !== null && data !== null && fragment === null;
+  const sourceText = fragment ? fragment.text : (data?.content ?? '');
+
   useEffect(() => {
     if (data && !dirty) {
-      setValue(data.content);
+      setValue(sourceText);
     }
-  }, [data, dirty]);
+  }, [data, dirty, sourceText]);
+
+  // Switching subject discards an in-progress edit, so the pane never shows one
+  // device's YAML under another device's name.
+  useEffect(() => {
+    setDirty(false);
+    setStatus(null);
+    setErrorLine(null);
+  }, [selected]);
 
   const handleChange = (newValue: string) => {
     setValue(newValue);
@@ -122,14 +183,29 @@ const ConfigEditorCard: FC = () => {
     if (!dirty || saving) {
       return;
     }
+    if (fragment) {
+      const problem = fragmentProblem(value);
+      if (problem) {
+        setStatus({ tone: 'error', message: t(`devices.${problem}`) });
+        return;
+      }
+    }
     setSaving(true);
     setStatus(null);
     setErrorLine(null);
     try {
-      const updated = await updateConfig({ content: value });
-      setValue(updated.content);
+      const content = fragment ? spliceDeviceFragment(data?.content ?? '', fragment, value) : value;
+      const updated = await updateConfig({ content });
+      // The whole-config pane shows what came back; the device pane keeps the
+      // edited block, because the response is the whole file.
+      if (!fragment) {
+        setValue(updated.content);
+      }
       setDirty(false);
-      setStatus({ tone: 'success', message: t('devices.configSaved') });
+      setStatus({
+        tone: 'success',
+        message: fragment ? t('devices.deviceSaved') : t('devices.configSaved'),
+      });
     } catch (err) {
       const detail = isApiError(err) ? err.details[0] : undefined;
       const line = detail?.line ?? null;
@@ -177,21 +253,35 @@ const ConfigEditorCard: FC = () => {
     );
   }
 
+  const editingDevice = fragment !== null;
+
   return (
     <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
-      title={t('devices.yamlEditorTitle')}
-      subtitle={t('devices.yamlEditorSubtitle')}
+      title={editingDevice ? t('devices.deviceEditorTitle') : t('devices.yamlEditorTitle')}
+      subtitle={editingDevice ? t('devices.deviceEditorSubtitle') : t('devices.yamlEditorSubtitle')}
       icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
       data={data}
       loading={loading && !data}
       error={error?.message}
       getStatus={() => (dirty ? 'warning' : 'success')}
+      testId="config-editor-card"
     >
       {(cfg) => (
         <>
-          <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
-          <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
-          <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
+          {editingDevice ? (
+            <CardRow label={t('devices.selectedLabel')} value={selected ?? ''} mono />
+          ) : (
+            <>
+              <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
+              <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
+              <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
+            </>
+          )}
+          {fragmentMissing && (
+            <SmallText className="mt-heading text-status-warning" data-testid="fragment-missing">
+              {t('devices.deviceFragmentMissing')}
+            </SmallText>
+          )}
           <YamlEditor
             className="mt-heading"
             height="18rem"
@@ -219,6 +309,11 @@ const ConfigEditorCard: FC = () => {
             <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
               {t('devices.discardChangesButton')}
             </Button>
+            {selected !== null && (
+              <Button variant="outline" onClick={onClearSelection} data-testid="edit-whole-config">
+                {t('devices.wholeConfigButton')}
+              </Button>
+            )}
           </div>
           <SmallText className="mt-inline text-text-muted">
             {t('devices.saveHelpTextPrefix')} <code>niac validate</code>
