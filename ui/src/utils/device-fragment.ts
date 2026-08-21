@@ -122,5 +122,5 @@ export function spliceDeviceFragment(
     })
     .join('\n');
 
-  return configText.slice(0, fragment.start) + block + '\n' + configText.slice(fragment.end);
+  return `${configText.slice(0, fragment.start)}${block}\n${configText.slice(fragment.end)}`;
 }
