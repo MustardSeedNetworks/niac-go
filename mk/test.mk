@@ -11,13 +11,20 @@
 # =============================================================================
 
 .PHONY: test test-all test-backend test-backend-quiet test-frontend test-frontend-quiet \
-        test-hooks test-e2e test-e2e-ui test-e2e-install test-coverage
+        test-hooks test-e2e test-e2e-ui test-e2e-install test-coverage check-stale-tests
 
 # =============================================================================
 # Main Test Targets
 # =============================================================================
 
-test: ## Run unit tests (backend + frontend)
+# check-stale-tests refuses to start while orphaned test binaries from an
+# earlier run are still holding the machine. Go's -test.timeout cannot kill a
+# binary stuck in a cgo call, so they accumulate silently and make every
+# subsequent timing meaningless — see the script for what that cost once.
+check-stale-tests:
+	@./scripts/check-stale-tests.sh
+
+test: check-stale-tests ## Run unit tests (backend + frontend)
 	@printf "$(BOLD)$(CYAN)┌─ Unit Tests ─────────────────────────────────────────────────────────────────┐$(RESET)\n"
 	@printf "$(CYAN)│$(RESET) $(BOLD)[1/3]$(RESET) Backend (Go)                                                          $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-backend)
@@ -31,7 +38,7 @@ test: ## Run unit tests (backend + frontend)
 	@$(MAKE) --no-print-directory test-hooks
 	@printf "$(CYAN)└──────────────────────────────────────────────────────────────────────────────┘$(RESET)\n"
 
-test-all: ## Run ALL tests (unit + E2E)
+test-all: check-stale-tests ## Run ALL tests (unit + E2E)
 	@printf "$(BOLD)$(CYAN)┌─ Full Test Suite ────────────────────────────────────────────────────────────┐$(RESET)\n"
 	@printf "$(CYAN)│$(RESET) $(BOLD)[1/4]$(RESET) Backend unit tests                                                    $(CYAN)│$(RESET)\n"
 	$(call timer-start,test-backend)
@@ -53,7 +60,7 @@ test-all: ## Run ALL tests (unit + E2E)
 # Backend Tests
 # =============================================================================
 
-test-backend: ## Run Go tests with progress
+test-backend: check-stale-tests ## Run Go tests with progress
 	@printf "\n$(BOLD)🧪 Running backend tests...$(RESET)\n"
 	@PKGS=$$(go list ./... | grep -v '/ui$$'); \
 	PKG_COUNT=$$(echo "$$PKGS" | wc -l | tr -d ' '); \
