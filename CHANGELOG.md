@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.48](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.47...v0.94.48) (2026-08-21)
+
+
+### Features
+
+* **devices:** open the selected device's own config in the detail pane ([#1380](https://github.com/MustardSeedNetworks/niac-go/issues/1380)) ([bf16750](https://github.com/MustardSeedNetworks/niac-go/commit/bf167505f75a8f6ec1fa5c952fbf27a8bedd64e2))
+
+
+### Miscellaneous
+
+* **deps:** update module github.com/golangci/golangci-lint/v2/cmd/golangci-lint to v2.13.1 ([#1375](https://github.com/MustardSeedNetworks/niac-go/issues/1375)) ([3379b7c](https://github.com/MustardSeedNetworks/niac-go/commit/3379b7cdbf1a5a3d4e2c65facf0dba3b5b5a0cb8))
+* **ts:** converge the strictness flags and gate the contract ([#1377](https://github.com/MustardSeedNetworks/niac-go/issues/1377)) ([08fa699](https://github.com/MustardSeedNetworks/niac-go/commit/08fa699d8e0fed719548546143e0cab7c9b6f1ed))
+
 ## [0.94.47](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.46...v0.94.47) (2026-08-20)
 
 
