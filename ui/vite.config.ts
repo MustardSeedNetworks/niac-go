@@ -1,5 +1,6 @@
 import path from 'node:path';
-import react from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, loadEnv, type PluginOption } from 'vite';
 
@@ -11,6 +12,15 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      // React Compiler. It memoises what it can prove is safe, which is why
+      // every existing memo() and useCallback stays in place here: removing
+      // them is a separate change, and 18 of this repo's memos hold an
+      // identity stable rather than save work — the compiler does not
+      // replace those, so each removal has to be proven individually.
+      //
+      // plugin-react v6 is oxc-based and has no `babel` option; the compiler
+      // runs through @rolldown/plugin-babel with the preset the plugin ships.
+      babel({ presets: [reactCompilerPreset()] }),
       // FIX #181: Bundle analysis when ANALYZE=true
       analyze &&
         (visualizer({
