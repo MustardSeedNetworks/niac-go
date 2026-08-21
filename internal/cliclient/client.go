@@ -164,8 +164,7 @@ func (c *Client) open(ctx context.Context, path string) (io.ReadCloser, error) {
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		var opErr *net.OpError
-		if errors.As(err, &opErr) {
+		if _, ok := errors.AsType[*net.OpError](err); ok {
 			return nil, fmt.Errorf("%w at %s: is the daemon running?",
 				ErrDaemonUnreachable, c.baseURL)
 		}
