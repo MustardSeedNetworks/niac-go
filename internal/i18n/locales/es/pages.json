@@ -371,7 +371,16 @@
     "configParseErrorLine": "Línea {{line}}: {{message}}",
     "walkCopied": "{{name}} copiado",
     "walkCopyError": "No se pudo copiar el nombre del walk",
-    "copyNameButton": "Copiar nombre"
+    "copyNameButton": "Copiar nombre",
+    "selectButton": "Editar",
+    "selectedLabel": "Editando",
+    "deviceEditorTitle": "Configuración del dispositivo",
+    "deviceEditorSubtitle": "El YAML del dispositivo seleccionado, reinsertado en la configuración al guardar",
+    "wholeConfigButton": "Editar toda la configuración",
+    "deviceSaved": "Dispositivo guardado y configuración recargada",
+    "deviceFragmentMissing": "Este dispositivo no tiene un bloque editable en la configuración cargada — edita toda la configuración.",
+    "deviceFragmentInvalid": "El YAML del dispositivo no se puede analizar, por lo que no se guardó.",
+    "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó."
   },
   "segments": {
     "deviceNoun_one": "dispositivo",
