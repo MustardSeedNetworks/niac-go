@@ -50,8 +50,7 @@ func decodeJSONStrictWith(
 	logger := slog.Default()
 
 	if err := decoder.Decode(dst); err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			attrs := append([]any{"max_size", maxSize}, extraAttrs...)
 			logger.WarnContext(r.Context(), "Request body too large", attrs...)
 			limit := content.HumanBytes(maxSize)
