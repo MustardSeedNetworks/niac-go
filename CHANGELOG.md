@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.49](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.48...v0.94.49) (2026-08-21)
+
+
+### Continuous Integration
+
+* refuse to start tests while orphaned test binaries are running ([#1384](https://github.com/MustardSeedNetworks/niac-go/issues/1384)) ([c1f8197](https://github.com/MustardSeedNetworks/niac-go/commit/c1f81977d5337646e1fb408ed9d5a20698a8a631))
+
 ## [0.94.48](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.47...v0.94.48) (2026-08-21)
 
 
