@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.50](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.49...v0.94.50) (2026-08-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @hookform/resolvers to v5.9.1 ([#1373](https://github.com/MustardSeedNetworks/niac-go/issues/1373)) ([04dd4f8](https://github.com/MustardSeedNetworks/niac-go/commit/04dd4f84072a22b904f65c099754a8174a552d71))
+* **deps:** update dependency lucide-react to v1.32.0 ([#1383](https://github.com/MustardSeedNetworks/niac-go/issues/1383)) ([c9f8df2](https://github.com/MustardSeedNetworks/niac-go/commit/c9f8df22c42ab516257efdfeda93b445ab7dda39))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @testing-library/user-event to v14.6.5 ([#1263](https://github.com/MustardSeedNetworks/niac-go/issues/1263)) ([59f4071](https://github.com/MustardSeedNetworks/niac-go/commit/59f40712f8976c344cc83f72085633b3e0c61545))
+* **deps:** update dependency i18next-cli to v1.71.0 ([#1381](https://github.com/MustardSeedNetworks/niac-go/issues/1381)) ([9e8f38a](https://github.com/MustardSeedNetworks/niac-go/commit/9e8f38a53b3156b93ca2a13ca85cf48818551088))
+
 ## [0.94.49](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.48...v0.94.49) (2026-08-21)
 
 
