@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.52](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.51...v0.94.52) (2026-08-22)
+
+
+### Continuous Integration
+
+* exempt bots from the issue-title lint ([#1393](https://github.com/MustardSeedNetworks/niac-go/issues/1393)) ([2531ed5](https://github.com/MustardSeedNetworks/niac-go/commit/2531ed569e3934e7c754c3b30cabe473c2209970))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.5.9 ([#1394](https://github.com/MustardSeedNetworks/niac-go/issues/1394)) ([846ce4b](https://github.com/MustardSeedNetworks/niac-go/commit/846ce4b7880ff6a19ba529515053cf40fccf8adf))
+
 ## [0.94.51](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.50...v0.94.51) (2026-08-21)
 
 
