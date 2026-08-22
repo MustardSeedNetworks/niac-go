@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.54](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.53...v0.94.54) (2026-08-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency i18next to v26.4.0 ([#1404](https://github.com/MustardSeedNetworks/niac-go/issues/1404)) ([669af9f](https://github.com/MustardSeedNetworks/niac-go/commit/669af9f2e05627e1dad21bcc5875d47dd9293614))
+* **deps:** update dependency immer to v11.1.18 ([#1401](https://github.com/MustardSeedNetworks/niac-go/issues/1401)) ([e5d33f4](https://github.com/MustardSeedNetworks/niac-go/commit/e5d33f49aff5436194ffca18fd60bd0ae5f65907))
+* **deps:** update dependency react-hook-form to v7.86.0 ([#1406](https://github.com/MustardSeedNetworks/niac-go/issues/1406)) ([8b8429a](https://github.com/MustardSeedNetworks/niac-go/commit/8b8429ac995f76215b2f03a5a2a51ac391923f60))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.5.10 ([#1398](https://github.com/MustardSeedNetworks/niac-go/issues/1398)) ([fa45259](https://github.com/MustardSeedNetworks/niac-go/commit/fa45259b70ce949a45d137d7092dd450931b6f75))
+* **deps:** update dependency @vitejs/plugin-react to v6.1.0 ([#1403](https://github.com/MustardSeedNetworks/niac-go/issues/1403)) ([a0e670f](https://github.com/MustardSeedNetworks/niac-go/commit/a0e670f8ea1c1731220f35f821a7f67977a08ebb))
+* **deps:** update frontend toolchain ([#1399](https://github.com/MustardSeedNetworks/niac-go/issues/1399)) ([0c75d09](https://github.com/MustardSeedNetworks/niac-go/commit/0c75d096296d811f1ce5ed996fd1780139c47b28))
+* **deps:** update storybook monorepo to v10.5.10 ([#1400](https://github.com/MustardSeedNetworks/niac-go/issues/1400)) ([fb9affe](https://github.com/MustardSeedNetworks/niac-go/commit/fb9affec034a9ac51679bdafeb968162b97e0811))
+
 ## [0.94.53](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.52...v0.94.53) (2026-08-22)
 
 
