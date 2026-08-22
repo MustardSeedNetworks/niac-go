@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.57](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.56...v0.94.57) (2026-08-22)
+
+
+### Continuous Integration
+
+* serialise Release Please so concurrent runs stop racing the ref ([#1414](https://github.com/MustardSeedNetworks/niac-go/issues/1414)) ([86ff65c](https://github.com/MustardSeedNetworks/niac-go/commit/86ff65c5e0600577e6381ee35d257ffd3e97c52a))
+
 ## [0.94.56](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.55...v0.94.56) (2026-08-22)
 
 
