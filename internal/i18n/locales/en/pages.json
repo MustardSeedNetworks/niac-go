@@ -443,6 +443,7 @@
       "faultType": "Fault",
       "help": "Schedule realistic traffic and link conditions. The same timeline replays identically after every restart.",
       "interface": "Interface",
+      "needsInterface": "Add at least one interface to a device before scheduling behaviors — timelines target a device interface.",
       "phaseName": "Phase name",
       "phaseOffset": "Phase starts after (seconds)",
       "removeFault": "Remove fault",

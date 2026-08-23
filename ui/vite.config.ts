@@ -1,7 +1,16 @@
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, loadEnv, type PluginOption } from 'vite';
+
+const require = createRequire(import.meta.url);
+// Settings > About used to hard-code these and drifted two TypeScript majors
+// behind reality (D17). Read them from the manifest so they cannot go stale.
+const pkg = require('./package.json') as {
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+};
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -9,6 +18,10 @@ export default defineConfig(({ mode }) => {
   const analyze = env.ANALYZE === 'true';
 
   return {
+    define: {
+      __REACT_VERSION__: JSON.stringify(pkg.dependencies.react),
+      __TYPESCRIPT_VERSION__: JSON.stringify(pkg.devDependencies.typescript),
+    },
     plugins: [
       react(),
       // FIX #181: Bundle analysis when ANALYZE=true
