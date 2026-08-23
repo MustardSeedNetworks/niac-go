@@ -124,7 +124,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     refetch,
   } = useApiResource(() => {
     if (isNewDevice || !hostname) {
-      return Promise.resolve({ device: createEmptyDevice() });
+      return Promise.resolve(createEmptyDevice());
     }
     return fetchConfigDevice(hostname);
   }, [hostname, isNewDevice]);
@@ -160,11 +160,12 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     ]);
   }, [schema]);
 
-  // Update local state when fetched device changes
+  // Update local state when fetched device changes. The response is the device
+  // itself — it is not wrapped in { device } (D10).
   useEffect(() => {
-    if (fetchedDevice?.device) {
-      reset(fetchedDevice.device);
-      setOriginalDevice(fetchedDevice.device);
+    if (fetchedDevice?.hostname) {
+      reset(fetchedDevice);
+      setOriginalDevice(fetchedDevice);
     }
   }, [fetchedDevice, reset]);
 
