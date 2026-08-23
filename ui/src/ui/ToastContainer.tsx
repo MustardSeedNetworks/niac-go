@@ -41,6 +41,13 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
         {notification.message && (
           <p className="text-sm opacity-80 mt-0.5">{notification.message}</p>
         )}
+        {notification.details && notification.details.length > 0 && (
+          <ul className="mt-tight list-disc pl-4 text-xs opacity-80">
+            {notification.details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
+        )}
       </div>
       <button
         type="button"

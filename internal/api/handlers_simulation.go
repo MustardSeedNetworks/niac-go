@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -127,17 +128,44 @@ func (s *Server) handleSimulationPreflight(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		s.logger.ErrorContext(r.Context(), "[API] Simulation preflight failed", "error", err)
+		// Return what went wrong, not just that something did. The daemon
+		// already knows ("SNMPv1/v2c requires an explicit community"), and the
+		// CLI prints it; collapsing it to a fixed string left the one button
+		// whose whole job is diagnosis unable to diagnose anything (D5).
 		writeError(
 			w,
 			r,
 			http.StatusBadRequest,
 			"preflight_failed",
 			"Simulation preflight failed",
-			nil,
+			preflightErrorDetails(err),
 		)
 		return
 	}
 	s.writeJSON(w, report)
+}
+
+// preflightErrorDetails turns a preflight error into per-issue details so the
+// client can show the operator what to fix. Semantic validation aggregates its
+// findings into one error separated by newlines or "; ", so split on both.
+func preflightErrorDetails(err error) []ErrorDetail {
+	if err == nil {
+		return nil
+	}
+	raw := strings.NewReplacer("\n", "; ").Replace(err.Error())
+	var details []ErrorDetail
+	for part := range strings.SplitSeq(raw, "; ") {
+		issue := strings.TrimSpace(part)
+		if issue == "" {
+			continue
+		}
+		details = append(details, ErrorDetail{Issue: issue})
+	}
+	if len(details) == 0 {
+		return nil
+	}
+
+	return details
 }
 
 // handleSimulationStart processes POST requests to start a simulation.

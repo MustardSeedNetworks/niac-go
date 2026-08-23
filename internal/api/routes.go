@@ -358,6 +358,14 @@ func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
 		},
 		{path: "/api/v1/segments", handler: s.handleSegments, methods: []string{http.MethodGet}},
 		{
+			path:         "/api/v1/client-errors",
+			handler:      s.handleClientErrors,
+			methods:      []string{http.MethodPost},
+			maxBodyBytes: MaxRequestBodySize,
+			rl:           rlWrite,
+			csrf:         true,
+		},
+		{
 			path:    "/api/v1/errors",
 			handler: s.handleErrors,
 			methods: []string{
