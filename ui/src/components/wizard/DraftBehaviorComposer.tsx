@@ -162,6 +162,12 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
           variant="outline"
           leftIcon={<Plus className={iconSizes.md} />}
           disabled={busy || !firstDevice || !firstInterface}
+          // A timeline targets a device interface, so there is nothing to
+          // schedule until one exists. Without this the empty state told the
+          // user to click a permanently disabled button (D4).
+          title={
+            !firstDevice || !firstInterface ? t('newSimWizard.behaviors.needsInterface') : undefined
+          }
           onClick={addTimeline}
         >
           {t('newSimWizard.behaviors.addTimeline')}
@@ -174,6 +180,11 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
           <SmallText className="mt-tight text-text-muted">
             {t('newSimWizard.behaviors.empty')}
           </SmallText>
+          {(!firstDevice || !firstInterface) && (
+            <SmallText className="mt-tight block text-text-muted">
+              {t('newSimWizard.behaviors.needsInterface')}
+            </SmallText>
+          )}
         </div>
       )}
 
@@ -324,7 +335,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
         <Button
           tone="violet"
           leftIcon={<Save className={iconSizes.md} />}
-          disabled={busy || !valid}
+          disabled={busy || !valid || timelines.length === 0}
           loading={busy}
           data-testid="save-behaviors"
           onClick={() => void save()}

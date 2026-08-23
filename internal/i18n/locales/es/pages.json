@@ -238,6 +238,7 @@
       },
       "help": "Programa tráfico y condiciones de enlace realistas. El mismo cronograma se repite de forma idéntica después de cada reinicio.",
       "interface": "Interfaz",
+      "needsInterface": "Agregue al menos una interfaz a un dispositivo antes de programar comportamientos: las líneas de tiempo apuntan a una interfaz de dispositivo.",
       "phaseName": "Nombre de fase",
       "phaseOffset": "La fase comienza después de (segundos)",
       "removeFault": "Quitar falla",

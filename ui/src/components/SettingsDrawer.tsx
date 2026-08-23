@@ -467,8 +467,8 @@ function AboutSection({ version }: AboutSectionProps): ReactElement {
           <div className="grid grid-cols-2 gap-compact pt-2 border-t border-surface-border">
             <InfoItem label={t('about.version')} value={version} />
             <InfoItem label={t('about.build')} value="Production" />
-            <InfoItem label="React" value="19.2" />
-            <InfoItem label="TypeScript" value="5.9" />
+            <InfoItem label="React" value={__REACT_VERSION__} />
+            <InfoItem label="TypeScript" value={__TYPESCRIPT_VERSION__} />
           </div>
         </div>
       </Section>

@@ -12,3 +12,10 @@
 declare module "@fontsource-variable/manrope";
 declare module "@fontsource-variable/inter";
 declare module "@fontsource-variable/jetbrains-mono";
+
+/**
+ * Dependency versions injected by vite.config.ts from package.json, so the
+ * Settings > About panel cannot drift from what actually shipped (D17).
+ */
+declare const __REACT_VERSION__: string;
+declare const __TYPESCRIPT_VERSION__: string;
