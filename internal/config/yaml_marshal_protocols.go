@@ -19,7 +19,13 @@ func ttlToYAML(cfg *TTLConfig) *converter.TTLConfig {
 }
 
 func snmpToYAML(cfg *SNMPConfig) *converter.SnmpAgent {
-	if cfg == nil {
+	// Device.SNMPConfig is a value field, so callers hand this a pointer that is
+	// never nil — unlike every sibling protocol config, which is a pointer and
+	// can simply be absent (#1462). Treat the entirely-unset struct as absent
+	// here, or every saved device grows an `snmp_agent: {}` block that the
+	// loader then reads back as "SNMP configured" and the validator rejects for
+	// having no community (#1460).
+	if cfg == nil || cfg.unset() {
 		return nil
 	}
 	out := &converter.SnmpAgent{
@@ -258,4 +264,14 @@ func reflectorToYAML(cfg *ReflectorConfig) *converter.ReflectorConfig {
 	}
 	out := converter.ReflectorConfig(*cfg)
 	return &out
+}
+
+// unset reports whether the config carries no SNMP settings at all, so
+// marshalling can omit the block entirely and keep the round trip faithful.
+func (c *SNMPConfig) unset() bool {
+	return c.Enabled == nil && c.Community == "" && c.SysName == "" && c.SysDescr == "" &&
+		c.SysContact == "" && c.SysLocation == "" && c.WalkFile == "" &&
+		len(c.WalkFiles) == 0 && len(c.AddMibs) == 0 && len(c.CommunityIncludes) == 0 &&
+		len(c.AccessList) == 0 && c.SnmpAddr == nil &&
+		c.Dot1DFdbTable == nil && c.Dot1QFdbTable == nil && c.Traps == nil
 }

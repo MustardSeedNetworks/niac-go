@@ -152,6 +152,13 @@ func preflightErrorDetails(err error) []ErrorDetail {
 	if err == nil {
 		return nil
 	}
+	// A validation failure carries a structured error per finding, complete with
+	// the offending field path. ListError.Error() collapses those to a bare
+	// count once there is more than one, so unwrap before falling back to text.
+	var listErr *config.ListError
+	if errors.As(err, &listErr) && len(listErr.Errors) > 0 {
+		return validationErrorDetails(listErr)
+	}
 	raw := strings.NewReplacer("\n", "; ").Replace(err.Error())
 	var details []ErrorDetail
 	for part := range strings.SplitSeq(raw, "; ") {
@@ -163,6 +170,22 @@ func preflightErrorDetails(err error) []ErrorDetail {
 	}
 	if len(details) == 0 {
 		return nil
+	}
+
+	return details
+}
+
+// validationErrorDetails maps each semantic-validation finding onto a detail,
+// keeping the field path and source position the validator recorded.
+func validationErrorDetails(listErr *config.ListError) []ErrorDetail {
+	details := make([]ErrorDetail, 0, len(listErr.Errors))
+	for _, e := range listErr.Errors {
+		details = append(details, ErrorDetail{
+			Field:  e.Field,
+			Issue:  e.Message,
+			Line:   e.Line,
+			Column: e.Column,
+		})
 	}
 
 	return details

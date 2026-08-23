@@ -87,9 +87,12 @@ func TestParseAttachmentPoliciesRejectsInvalidValues(t *testing.T) {
 		{name: "whitespace", value: []string{" eth0=direct"}, match: "expected INTERFACE"},
 		{name: "duplicate", value: []string{"eth0=direct", "eth0=direct"}, match: "duplicate"},
 		{
-			name:  "duplicate interface",
+			// Still rejected, but as a direct-exclusivity violation rather than a
+			// bare duplicate interface: one interface may now hold a trunk and an
+			// access policy together (#1463), just never direct with anything.
+			name:  "direct combined with trunk",
 			value: []string{"eth0=direct", "eth0=trunk:200"},
-			match: "duplicate interface",
+			match: "cannot combine direct",
 		},
 	}
 
@@ -118,5 +121,81 @@ func TestDaemonOptionsStruct(t *testing.T) {
 	}
 	if opts.storagePath != "/custom/path.db" {
 		t.Errorf("storagePath = %q, want %q", opts.storagePath, "/custom/path.db")
+	}
+}
+
+// TestParseAttachmentPoliciesAllowsNativeAlongsideTrunk guards #1463.
+//
+// #1426 taught the session registry that one interface carries N tagged
+// sessions plus at most one native session — a trunk port with a native VLAN.
+// The policy parser still rejected any repeat of an interface, so the operator
+// could not approve both bindings and the capability was unreachable: CT304
+// runs six tagged scenarios and refuses a seventh in access mode on policy
+// grounds, not registry grounds.
+func TestParseAttachmentPoliciesAllowsNativeAlongsideTrunk(t *testing.T) {
+	got, err := parseAttachmentPolicies([]string{
+		"eth0=trunk:200,201",
+		"eth0=access:210",
+	})
+	if err != nil {
+		t.Fatalf("native alongside trunk on one interface = %v, want accepted", err)
+	}
+
+	want := []fabric.PhysicalAttachmentPolicy{
+		{Interface: "eth0", Mode: fabric.ModeTrunk, AllowedVLANs: []uint16{200, 201}},
+		{Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 210},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("parseAttachmentPolicies() = %#v, want %#v", got, want)
+	}
+}
+
+// Both bindings must actually be approved by the resulting policy set.
+func TestNativeAndTaggedBindingsAreBothApproved(t *testing.T) {
+	policies, err := parseAttachmentPolicies([]string{"eth0=trunk:200,201", "eth0=access:210"})
+	if err != nil {
+		t.Fatalf("parseAttachmentPolicies() error = %v", err)
+	}
+
+	approves := func(binding fabric.Binding) bool {
+		for _, policy := range policies {
+			if policy.Approves(binding) {
+				return true
+			}
+		}
+		return false
+	}
+
+	tagged := fabric.Binding{Interface: "eth0", Mode: fabric.ModeTrunk, AccessVLAN: 201}
+	native := fabric.Binding{Interface: "eth0", Mode: fabric.ModeAccess, AccessVLAN: 210}
+	if !approves(tagged) {
+		t.Error("tagged binding on eth0 VLAN 201 was not approved")
+	}
+	if !approves(native) {
+		t.Error("native binding on eth0 access VLAN 210 was not approved")
+	}
+}
+
+// Direct means unisolated ownership of the whole interface, so it still cannot
+// share one with anything else.
+func TestParseAttachmentPoliciesKeepsDirectExclusive(t *testing.T) {
+	for _, values := range [][]string{
+		{"eth0=direct", "eth0=trunk:200"},
+		{"eth0=trunk:200", "eth0=direct"},
+		{"eth0=direct", "eth0=access:210"},
+	} {
+		if _, err := parseAttachmentPolicies(values); err == nil {
+			t.Errorf("parseAttachmentPolicies(%v) = nil error, want direct to stay exclusive", values)
+		}
+	}
+}
+
+// A repeated mode on one interface is still an operator mistake.
+func TestParseAttachmentPoliciesRejectsRepeatedMode(t *testing.T) {
+	if _, err := parseAttachmentPolicies([]string{"eth0=access:210", "eth0=access:211"}); err == nil {
+		t.Error("two access policies on one interface = nil error, want a duplicate error")
+	}
+	if _, err := parseAttachmentPolicies([]string{"eth0=trunk:200", "eth0=trunk:201"}); err == nil {
+		t.Error("two trunk policies on one interface = nil error, want a duplicate error")
 	}
 }
