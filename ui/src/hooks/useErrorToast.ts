@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isApiError } from '../api/errors';
 import { useUIStore } from '../stores/ui-store';
 import { getErrorMessage } from '../utils/format';
 
@@ -19,10 +20,21 @@ export function useErrorToast() {
 
   return useCallback(
     (err: unknown, title?: string) => {
+      // Surface the server's details[] rather than only the generic message.
+      // The API says exactly what is wrong ("line 65: field enabled not found
+      // in type converter.DhcpServer"); dropping it left users with nothing to
+      // act on (D3).
+      const details = isApiError(err)
+        ? err.details.map((detail) =>
+            detail.line ? `line ${detail.line}: ${detail.issue}` : detail.issue,
+          )
+        : undefined;
+
       addNotification({
         type: 'error',
         title: title ?? t('toast.requestFailedTitle'),
         message: getErrorMessage(err),
+        details: details && details.length > 0 ? details : undefined,
       });
     },
     [addNotification, t],

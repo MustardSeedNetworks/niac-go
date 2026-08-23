@@ -76,6 +76,13 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   message?: string;
+  /**
+   * Structured detail lines from the API's `details[]`. The server already
+   * says things like "line 65: field enabled not found in type
+   * converter.DhcpServer"; before D3 the toast showed only the generic
+   * `message` and threw these away, which made the wizard a dead end.
+   */
+  details?: string[];
   timestamp: number;
   duration?: number;
 }
