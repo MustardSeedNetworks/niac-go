@@ -42,6 +42,14 @@ var (
 	ErrTrunkCaptureFailed = errors.New("shared trunk capture has stopped")
 )
 
+// nativeVLANKey is the demux slot for the native (untagged) session.
+//
+// A real trunk port carries a native VLAN alongside its tagged ones, so NIAC
+// reserves key 0 for it — matching config.UntaggedTag, which already means
+// "the native VLAN" everywhere else. Valid 802.1Q tags are 1..4094, so 0 can
+// never collide with a tagged session (D19).
+const nativeVLANKey uint16 = 0
+
 type trunkPhysicalCapture interface {
 	StartCaptureContext(context.Context, func(gopacket.Packet)) error
 	SendPacket([]byte) error
@@ -152,16 +160,22 @@ func (c *trunkCapture) run(ctx context.Context) error {
 }
 
 func (c *trunkCapture) dispatchFrame(frame []byte) bool {
-	vlan, ok := frameVLAN(frame)
-	if !ok {
-		c.drops.recordUntagged()
-		return false
+	vlan, tagged := frameVLAN(frame)
+	if !tagged {
+		// Untagged frames belong to the native session, exactly as a trunk
+		// port's native VLAN works. Without one registered they are still
+		// dropped and counted rather than delivered somewhere arbitrary (D19).
+		vlan = nativeVLANKey
 	}
 	c.mu.RLock()
 	transport := c.sessions[vlan]
 	if transport == nil {
 		c.mu.RUnlock()
-		c.drops.recordUnapproved(vlan)
+		if !tagged {
+			c.drops.recordUntagged()
+		} else {
+			c.drops.recordUnapproved(vlan)
+		}
 		return false
 	}
 	select {
@@ -290,10 +304,20 @@ func (t *trunkSessionTransport) SendPacket(frame []byte) error {
 	if t.parent.failed.Load() {
 		return fmt.Errorf("%w on the interface serving VLAN %d", ErrTrunkCaptureFailed, t.vlan)
 	}
-	vlan, ok := frameVLAN(frame)
-	if !ok || vlan != t.vlan {
+	vlan, tagged := frameVLAN(frame)
+	if t.vlan == nativeVLANKey {
+		// The native session is the trunk's untagged VLAN: it must emit
+		// untagged frames, and must not smuggle a tag onto the wire (D19).
+		if tagged {
+			return fmt.Errorf("%w: the native session must send untagged", ErrTrunkEgressVLAN)
+		}
+
+		return t.parent.physical.SendPacket(frame)
+	}
+	if !tagged || vlan != t.vlan {
 		return fmt.Errorf("%w: expected VLAN %d", ErrTrunkEgressVLAN, t.vlan)
 	}
+
 	return t.parent.physical.SendPacket(frame)
 }
 
