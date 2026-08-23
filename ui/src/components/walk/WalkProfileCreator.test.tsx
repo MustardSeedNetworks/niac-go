@@ -122,3 +122,40 @@ describe('WalkProfileCreator', () => {
     await waitFor(() => expect(screen.getByTestId('walk-profile-username')).toHaveValue(''));
   });
 });
+
+/**
+ * Guards #1499.
+ *
+ * #1488 made the server say why a capture failed, and on the released 0.94.66
+ * it does — the response carried "no response from the target: it did not
+ * answer, or the community or SNMPv3 credentials are wrong" while the screen
+ * showed only "SNMP walk capture failed". setError kept err.message and dropped
+ * ApiError.details.
+ */
+describe('WalkProfileCreator capture failures', () => {
+  beforeEach(() => {
+    captureWalkProfile.mockReset();
+  });
+
+  it('shows the server detail alongside the message', async () => {
+    const { ApiError } = await import('../../api/errors');
+    captureWalkProfile.mockRejectedValue(
+      new ApiError('SNMP walk capture failed', 502, 'walk_capture_failed', [
+        { issue: 'no response from the target: it did not answer, or the community is wrong' },
+      ]),
+    );
+    render(<WalkProfileCreator />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Capture from device' }));
+    fireEvent.change(screen.getByLabelText('Target IP address'), {
+      target: { value: '10.44.99.250' },
+    });
+    fireEvent.change(screen.getByTestId('walk-profile-community'), {
+      target: { value: 'not-a-real-community' },
+    });
+    fireEvent.click(screen.getByTestId('walk-profile-capture'));
+
+    expect(await screen.findByText('SNMP walk capture failed')).toBeInTheDocument();
+    expect(await screen.findByText(/no response from the target/)).toBeInTheDocument();
+  });
+});
