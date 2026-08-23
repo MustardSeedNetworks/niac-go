@@ -30,12 +30,31 @@ func (r *sessionRegistry) validateReplacement(sessionID string, binding fabric.B
 	if sessionID == "" {
 		return ErrSessionIDRequired
 	}
+	// One interface carries N tagged (trunk) sessions plus at most one native
+	// session, exactly like a trunk port with a native VLAN. This used to
+	// require *both* sessions to be trunk, so a native scenario and a tagged one
+	// could never run together (D19).
+	//
+	// ModeAccess is the native case: an access port delivers frames untagged, so
+	// the session takes the demux's native slot. ModeDirect is not — it means
+	// unisolated ownership of the whole interface, so it still excludes
+	// everything else.
 	for id, active := range r.sessions {
 		if id == sessionID || active.Binding.Interface != binding.Interface {
 			continue
 		}
-		if active.Binding.Mode != fabric.ModeTrunk || binding.Mode != fabric.ModeTrunk {
+		if active.Binding.Mode == fabric.ModeDirect || binding.Mode == fabric.ModeDirect {
 			return fmt.Errorf("%w: %s", ErrInterfaceInUse, binding.Interface)
+		}
+		activeNative := active.Binding.Mode == fabric.ModeAccess
+		incomingNative := binding.Mode == fabric.ModeAccess
+
+		if activeNative && incomingNative {
+			return fmt.Errorf("%w: %s", ErrInterfaceInUse, binding.Interface)
+		}
+		if activeNative != incomingNative {
+			// One native, one tagged — different demux slots, no conflict.
+			continue
 		}
 		if active.Binding.AccessVLAN == binding.AccessVLAN {
 			return fmt.Errorf(

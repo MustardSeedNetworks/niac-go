@@ -671,9 +671,19 @@ func (d *Daemon) startResourcesForRequest(
 	dryRun bool,
 	replacing bool,
 ) (simulationResources, error) {
+	// A trunk port carries a native VLAN, so NIAC models one for its own
+	// attachment too (D19). An access-mode session receives untagged frames, so
+	// it joins the shared trunk capture in the native slot (key 0) rather than
+	// opening a competing handle on the same interface. Direct mode is
+	// unisolated ownership of the whole interface and keeps its own capture.
 	if req.AttachmentMode == fabric.ModeTrunk {
 		return d.startTrunkSimulationResources(
 			req.Interface, req.AccessVLAN, cfg, compiled, dryRun, replacing,
+		)
+	}
+	if req.AttachmentMode == fabric.ModeAccess && !dryRun && d.trunks[req.Interface] != nil {
+		return d.startTrunkSimulationResources(
+			req.Interface, nativeVLANKey, cfg, compiled, dryRun, replacing,
 		)
 	}
 	return d.startSimulation(req.Interface, cfg, compiled, dryRun)
