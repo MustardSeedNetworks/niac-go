@@ -77,10 +77,8 @@ func TestApplyRejectsOccupiedAndImpossiblePorts(t *testing.T) {
 	connect := drafttopology.Mutation{
 		Operation: drafttopology.Connect,
 		Link: &drafttopology.LinkMutation{
-			LinkEndpoints: drafttopology.LinkEndpoints{
-				Source: drafttopology.Endpoint{Device: "core-1", Interface: "Ethernet1/1"},
-				Target: drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
-			},
+			Source:     drafttopology.Endpoint{Device: "core-1", Interface: "Ethernet1/1"},
+			Target:     drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
 			Properties: drafttopology.LinkProperties{VLANs: []int{200}, NativeVLAN: 200},
 		},
 	}
@@ -109,10 +107,10 @@ func TestApplyRejectsRemoteEndpointOccupiedByOneSidedLink(t *testing.T) {
 	})
 	err := drafttopology.Apply(cfg, drafttopology.Mutation{
 		Operation: drafttopology.Connect,
-		Link: &drafttopology.LinkMutation{LinkEndpoints: drafttopology.LinkEndpoints{
+		Link: &drafttopology.LinkMutation{
 			Source: drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
 			Target: drafttopology.Endpoint{Device: "access-1", Interface: "Ethernet1/1"},
-		}},
+		},
 	})
 	if !drafttopology.IsConflict(err) {
 		t.Fatalf("connect error = %v, want occupied conflict", err)
@@ -132,10 +130,10 @@ func TestApplyRejectsCrossSegmentLink(t *testing.T) {
 	}}
 	err := drafttopology.Apply(cfg, drafttopology.Mutation{
 		Operation: drafttopology.Connect,
-		Link: &drafttopology.LinkMutation{LinkEndpoints: drafttopology.LinkEndpoints{
+		Link: &drafttopology.LinkMutation{
 			Source: drafttopology.Endpoint{Device: "core-1", Interface: "Ethernet1/1"},
 			Target: drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
-		}},
+		},
 	})
 	if !drafttopology.IsInvalid(err) {
 		t.Fatalf("connect error = %v, want invalid", err)
@@ -155,10 +153,8 @@ func TestApplyRejectsAsymmetricLinkUpdate(t *testing.T) {
 	err := drafttopology.Apply(cfg, drafttopology.Mutation{
 		Operation: drafttopology.UpdateLink,
 		Link: &drafttopology.LinkMutation{
-			LinkEndpoints: drafttopology.LinkEndpoints{
-				Source: drafttopology.Endpoint{Device: "core-1", Interface: "Ethernet1/1"},
-				Target: drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
-			},
+			Source:     drafttopology.Endpoint{Device: "core-1", Interface: "Ethernet1/1"},
+			Target:     drafttopology.Endpoint{Device: "dist-1", Interface: "Ethernet1/49"},
 			Properties: drafttopology.LinkProperties{VLANs: []int{200}},
 		},
 	})

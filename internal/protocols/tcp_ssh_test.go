@@ -167,7 +167,7 @@ func TestSSHTCPHandlerAcknowledgesRetransmissionWithoutRedelivery(t *testing.T) 
 		sourceMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 1}, destinationMAC: net.HardwareAddr{0x02, 0, 0, 0, 0, 2},
 		sourcePort: TCPPortSSH, destinationPort: 40000,
 	}
-	segment := &layers.TCP{Seq: 100, BaseLayer: layers.BaseLayer{Payload: []byte("payload")}}
+	segment := &layers.TCP{Seq: 100, Payload: []byte("payload")}
 	handler.acceptSegment(session, segment)
 	handler.acceptSegment(session, segment)
 
@@ -242,7 +242,7 @@ func TestSSHTCPHandlerDrainsPayloadAcceptedWithFIN(t *testing.T) {
 	defer handler.closeSession(session.key)
 
 	handler.acceptSegment(session, &layers.TCP{
-		Seq: 100, FIN: true, BaseLayer: layers.BaseLayer{Payload: []byte("final-command")},
+		Seq: 100, FIN: true, Payload: []byte("final-command"),
 	})
 
 	buffer := make([]byte, len("final-command"))
