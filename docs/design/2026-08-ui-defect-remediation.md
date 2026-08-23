@@ -423,3 +423,88 @@ light-theme pass, and mobile/tablet widths.
 **Standing constraints:** feature branch + conventional commits + PR (`main` is
 protected); `make lint` / `make fmt-check` / `make test` clean per PR; no
 `//nolint` or `biome-ignore` without asking; fix root causes, no suppressions.
+
+---
+
+## Closeout — 2026-08-23, released as v0.94.60
+
+All nineteen defects are fixed, merged and verified against a running daemon on
+CT304. Seven further defects were found _by_ the verification pass and were
+fixed the same way; every one of them was invisible to the test suite before its
+guard landed.
+
+### Verified live on the released 0.94.60 build
+
+| Defect | Evidence on CT304 |
+| --- | --- |
+| D1 | 8 help tabs, 0 blocked by hit-test |
+| D2 | 7 scenario packs offered, each with version/device/link metadata |
+| D6 | `networks`/`interfaces`/`routes`/`dhcpScopes` all lists |
+| D7 | 0 console errors across all 16 routes |
+| D8 | both dialog buttons hit-test to themselves; mouse Cancel closes |
+| D9 | first device reports `SNMP, DHCP, DNS, LLDP, CDP` |
+| D10 | editor populates `LAB-EDGE-R1` + MAC |
+| D11 | "Alert configuration saved"; in-wizard Add device, 0 failed requests |
+| D12 | segments group as `(0,3) (200,80) (210,36) (240,28)` |
+| D13 | runtime 147 == simulation 147 |
+| D14 | all 4 export items mouse-reachable |
+| D15 | graph centred — `nodesCenterX` 964 == `paneCenterX` 964 |
+| D16 | STP/LLDP/CDP named; no `Unknown` |
+| D17 | TypeScript 7.0.2, React 19.2.8 |
+| D19 | see below |
+
+### D19 acceptance
+
+`--attachment-policy eth0=trunk:200,...,299 --attachment-policy eth0=access:210`
+is accepted, and the trunk capture reports:
+
+```text
+sessionVlans: [0, 200, 201, 202, 203, 204, 205]
+drops: {untagged: 0, unapproved: 357, overrun: 0}
+```
+
+Demux slot 0 is the native session, live alongside six tagged ones, each with
+its own independently climbing RX. Untagged ARP frames injected on the host end
+of the veth were confirmed arriving by `tcpdump` and produced **zero** untagged
+drops, proving they were delivered to the native session rather than discarded
+— that counter read 67 before this work.
+
+### Found by the verification pass
+
+| Issue | Defect |
+| --- | --- |
+| #1457 | every packet reported arrival time `0001-01-01T00:00:00Z` |
+| #1458 | the protocol tree fabricated an IPv4 layer on LLC frames |
+| #1460 | every saved config gained `snmp_agent: {}`, so wizard drafts failed their own validation |
+| #1461 | preflight reported "N configuration errors found" without naming any |
+| #1463 | one policy per interface, so a native scenario could never be approved |
+| #1465 | Escape never closed any modal |
+| #1467 | two preflight paths still returned `null` arrays |
+
+Two were residuals of earlier fixes in this same programme — #1458 (D16 guarded
+only the first of two branches) and #1467 (D6 seeded only two of four
+construction sites) — and #1465 was a second, independent cause behind D18.
+That is the argument for verifying against a running system rather than a green
+suite: **`make test` and 23 Playwright specs passed while all nineteen original
+defects were live**, because `ui/e2e/device-editor.spec.ts` stubs
+`**/api/v1/**` and fulfils 201 unconditionally.
+
+### Deferred, with rationale
+
+- **#1462** — `Device.SNMPConfig` is value-typed while every sibling protocol
+  config is a pointer, so "no SNMP" is unrepresentable. #1460 was fixed at the
+  writer, which is correct and local; the pointer migration changes load and
+  marshal semantics for every config, template and walk scenario and needs its
+  own red-first change.
+- **#1469** — release binaries build with Go 1.27.0 while `go.mod` declares
+  1.26.6. Owner call: the same container pin exists in seed and stem, and the
+  fleet rule is to bump all three in lockstep.
+
+### Wave 8 sweep
+
+All 16 registered routes drove clean: HTTP 200, no error boundary, no console
+errors, no failed API calls. The wizard was driven end to end through
+Start-empty → Add device → Protocols → Review → Connection → preflight → start,
+which is the path D11 would have broken. That single run surfaced four of
+the seven new defects above: the invalid draft, the unnamed preflight errors,
+the unapprovable native policy, and the remaining null arrays.
