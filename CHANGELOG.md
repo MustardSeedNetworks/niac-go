@@ -5,6 +5,38 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.60](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.59...v0.94.60) (2026-08-23)
+
+
+### Features
+
+* **daemon:** let a native (untagged) session run alongside tagged ones ([#1454](https://github.com/MustardSeedNetworks/niac-go/issues/1454)) ([f097216](https://github.com/MustardSeedNetworks/niac-go/commit/f097216c4688a194532fe0a34c421c472e06c3d0)), closes [#1426](https://github.com/MustardSeedNetworks/niac-go/issues/1426) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+
+
+### Bug Fixes
+
+* **api:** complete the ADR-0007 camelCase migration on the client ([#1441](https://github.com/MustardSeedNetworks/niac-go/issues/1441)) ([69e15ae](https://github.com/MustardSeedNetworks/niac-go/commit/69e15ae9003b6fb55822889ef48cdb59d6e41ebf))
+* **api:** group the segments view by per-device VLAN ([#1452](https://github.com/MustardSeedNetworks/niac-go/issues/1452)) ([8c1ea2c](https://github.com/MustardSeedNetworks/niac-go/commit/8c1ea2c20e53ca8da71254995b27c223bf3206bd)), closes [#1425](https://github.com/MustardSeedNetworks/niac-go/issues/1425) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **config:** make wizard drafts startable and preflight failures legible ([#1464](https://github.com/MustardSeedNetworks/niac-go/issues/1464)) ([da6b4df](https://github.com/MustardSeedNetworks/niac-go/commit/da6b4dfbf5d80e3c4ea0a9e60dae7107b6d4ff36)), closes [#1460](https://github.com/MustardSeedNetworks/niac-go/issues/1460) [#1461](https://github.com/MustardSeedNetworks/niac-go/issues/1461) [#1463](https://github.com/MustardSeedNetworks/niac-go/issues/1463)
+* **daemon:** report device count from the running stack, not the start-time snapshot ([#1447](https://github.com/MustardSeedNetworks/niac-go/issues/1447)) ([9afd7cd](https://github.com/MustardSeedNetworks/niac-go/commit/9afd7cdabfed90190c8050b404c7629451e72fd3)), closes [#1423](https://github.com/MustardSeedNetworks/niac-go/issues/1423) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **fabric:** marshal empty topology collections as [] rather than null ([#1445](https://github.com/MustardSeedNetworks/niac-go/issues/1445)) ([ceb9d85](https://github.com/MustardSeedNetworks/niac-go/commit/ceb9d8501b44b493a15b5aaeea4ee844ca639e92)), closes [#1421](https://github.com/MustardSeedNetworks/niac-go/issues/1421) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **fabric:** return arrays, not null, from every preflight path ([#1468](https://github.com/MustardSeedNetworks/niac-go/issues/1468)) ([b863efc](https://github.com/MustardSeedNetworks/niac-go/commit/b863efc5a57c9156443963e9eb3fed6e27749a7a)), closes [#1467](https://github.com/MustardSeedNetworks/niac-go/issues/1467)
+* **library:** ship one validated template tree instead of three ([#1456](https://github.com/MustardSeedNetworks/niac-go/issues/1456)) ([b2ffce3](https://github.com/MustardSeedNetworks/niac-go/commit/b2ffce34530efd9d9ac486a8fd49e407285c1d41)), closes [#1428](https://github.com/MustardSeedNetworks/niac-go/issues/1428) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **packets:** stop the inspector reporting a zero arrival time and a phantom IPv4 layer ([#1459](https://github.com/MustardSeedNetworks/niac-go/issues/1459)) ([e84331e](https://github.com/MustardSeedNetworks/niac-go/commit/e84331e6a0e1e53381a91ed01faff5cce42e2e3a)), closes [#1457](https://github.com/MustardSeedNetworks/niac-go/issues/1457) [#1458](https://github.com/MustardSeedNetworks/niac-go/issues/1458)
+* **sse:** decode tagged L2 control frames instead of reporting Unknown ([#1455](https://github.com/MustardSeedNetworks/niac-go/issues/1455)) ([4a95cda](https://github.com/MustardSeedNetworks/niac-go/commit/4a95cdada9e547cec656e4c366936f766101f959)), closes [#1427](https://github.com/MustardSeedNetworks/niac-go/issues/1427) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* surface the reasons the API already knows ([#1449](https://github.com/MustardSeedNetworks/niac-go/issues/1449)) ([724aedf](https://github.com/MustardSeedNetworks/niac-go/commit/724aedfa83e8604b2f17ed2b630e01441b108c4a)), closes [#1429](https://github.com/MustardSeedNetworks/niac-go/issues/1429) [#1430](https://github.com/MustardSeedNetworks/niac-go/issues/1430) [#1431](https://github.com/MustardSeedNetworks/niac-go/issues/1431) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **ui:** derive About versions from the manifest and explain the disabled timeline button ([#1450](https://github.com/MustardSeedNetworks/niac-go/issues/1450)) ([71593d6](https://github.com/MustardSeedNetworks/niac-go/commit/71593d6b2c06b87a9067c0377f8178842950f616))
+* **ui:** let Escape reach the focus trap so modals actually close ([#1466](https://github.com/MustardSeedNetworks/niac-go/issues/1466)) ([19da728](https://github.com/MustardSeedNetworks/niac-go/commit/19da72810d00ef84f65262e6220adfab19036030)), closes [#1465](https://github.com/MustardSeedNetworks/niac-go/issues/1465)
+* **ui:** load the device into the editor from the flat API response ([#1446](https://github.com/MustardSeedNetworks/niac-go/issues/1446)) ([74c6768](https://github.com/MustardSeedNetworks/niac-go/commit/74c676885bb057790d9402857dae12cd4506b060)), closes [#1422](https://github.com/MustardSeedNetworks/niac-go/issues/1422) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **ui:** make clipped help tabs and the topology export menu reachable ([#1448](https://github.com/MustardSeedNetworks/niac-go/issues/1448)) ([aa5acb6](https://github.com/MustardSeedNetworks/niac-go/commit/aa5acb6c6e6ce5b586fcb606fe0b64dfbea66775)), closes [#1432](https://github.com/MustardSeedNetworks/niac-go/issues/1432) [#1433](https://github.com/MustardSeedNetworks/niac-go/issues/1433) [#1434](https://github.com/MustardSeedNetworks/niac-go/issues/1434) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **ui:** paint modal dialogs above their own backdrop ([#1442](https://github.com/MustardSeedNetworks/niac-go/issues/1442)) ([0e306e7](https://github.com/MustardSeedNetworks/niac-go/commit/0e306e7205293f797364eeba0eadfd11d74281bd)), closes [#1419](https://github.com/MustardSeedNetworks/niac-go/issues/1419) [#1420](https://github.com/MustardSeedNetworks/niac-go/issues/1420) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+* **ui:** read the protocols the device API already returns ([#1451](https://github.com/MustardSeedNetworks/niac-go/issues/1451)) ([9846cb5](https://github.com/MustardSeedNetworks/niac-go/commit/9846cb5c0090fe01200ebe337030daa260f13928)), closes [#1424](https://github.com/MustardSeedNetworks/niac-go/issues/1424) [#1437](https://github.com/MustardSeedNetworks/niac-go/issues/1437)
+
+
+### Miscellaneous
+
+* **deps:** update dependency vite to v8.2.2 ([#1453](https://github.com/MustardSeedNetworks/niac-go/issues/1453)) ([846cca2](https://github.com/MustardSeedNetworks/niac-go/commit/846cca28266a419de836248f1ad203fbea50bf42))
+
 ## [0.94.59](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.58...v0.94.59) (2026-08-23)
 
 
