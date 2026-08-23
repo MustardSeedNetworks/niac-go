@@ -426,10 +426,10 @@ protected); `make lint` / `make fmt-check` / `make test` clean per PR; no
 
 ---
 
-## Closeout — 2026-08-23, released as v0.94.60
+## Closeout — 2026-08-23, released as v0.94.61
 
 All nineteen defects are fixed, merged and verified against a running daemon on
-CT304. Seven further defects were found _by_ the verification pass and were
+CT304. Eight further defects were found _by_ the verification pass and were
 fixed the same way; every one of them was invisible to the test suite before its
 guard landed.
 
@@ -451,6 +451,9 @@ guard landed.
 | D15 | graph centred — `nodesCenterX` 964 == `paneCenterX` 964 |
 | D16 | STP/LLDP/CDP named; no `Unknown` |
 | D17 | TypeScript 7.0.2, React 19.2.8 |
+| D3, D5 | a failing preflight lists `devices[0].snmp_agent.community: SNMPv1/v2c requires an explicit community` and the same for `devices[1]` |
+| D4 | Behaviors names why its button is disabled: "Add at least one interface to a device before scheduling behaviors" |
+| D18 | Escape closes the stop-simulation dialog (completed by #1465) |
 | D19 | see below |
 
 ### D19 acceptance
@@ -480,10 +483,14 @@ drops, proving they were delivered to the native session rather than discarded
 | #1463 | one policy per interface, so a native scenario could never be approved |
 | #1465 | Escape never closed any modal |
 | #1467 | two preflight paths still returned `null` arrays |
+| #1472 | the wizard discarded the details #1461 had just made the server send |
 
-Two were residuals of earlier fixes in this same programme — #1458 (D16 guarded
-only the first of two branches) and #1467 (D6 seeded only two of four
-construction sites) — and #1465 was a second, independent cause behind D18.
+Three were residuals of earlier fixes in this same programme — #1458 (D16
+guarded only the first of two branches), #1467 (D6 seeded only two of four
+construction sites), and #1472 (D3 threaded details through the toast path while
+the wizard renders an inline banner) — and #1465 was a second, independent cause
+behind D18. The recurring shape is a fix that covers one branch, one
+construction site, or one surface, and reads as finished.
 That is the argument for verifying against a running system rather than a green
 suite: **`make test` and 23 Playwright specs passed while all nineteen original
 defects were live**, because `ui/e2e/device-editor.spec.ts` stubs
