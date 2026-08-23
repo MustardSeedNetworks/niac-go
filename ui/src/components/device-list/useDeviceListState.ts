@@ -13,12 +13,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { getErrorMessage } from '../../utils/format';
 import { safeGetItem, safeSetItem } from '../../utils/storage';
 import type { StatusMessage } from './DeviceStatusMessage';
-import {
-  getDeviceProtocols,
-  matchesProtocolFilter,
-  matchesSearchQuery,
-  PROTOCOL_RULES,
-} from './deviceFilters';
+import { getDeviceProtocols, matchesProtocolFilter, matchesSearchQuery } from './deviceFilters';
 
 export interface UseDeviceListStateReturn {
   // Data
@@ -124,14 +119,14 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     return Array.from(types);
   }, [devices]);
 
-  // Get unique protocols for filter
+  // Protocol filter options, from what the devices actually report. Built by
+  // probing sub-objects the list response does not carry, this always produced
+  // an empty dropdown (D9).
   const protocols = useMemo(() => {
     const protos = new Set<string>();
-    for (const d of devices) {
-      for (const rule of PROTOCOL_RULES) {
-        if (rule.isEnabled(d)) {
-          protos.add(rule.label);
-        }
+    for (const device of devices) {
+      for (const protocol of getDeviceProtocols(device)) {
+        protos.add(protocol);
       }
     }
     return Array.from(protos).sort();

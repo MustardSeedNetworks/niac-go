@@ -95,6 +95,13 @@ export interface Device {
   mapToIp?: string;
   interfaces?: string[];
   interfaceDetails?: DeviceInterface[];
+  /**
+   * Protocols this device speaks, as computed by the server. Present on both
+   * the list summary and the detail response. The UI used to re-derive this
+   * from the sub-objects below, which the *summary* response omits — so every
+   * device rendered as "No protocols" (D9). Read this field.
+   */
+  protocols?: string[];
   snmpAgent?: SNMPAgent;
   lldp?: LLDPConfig;
   cdp?: CDPConfig;
