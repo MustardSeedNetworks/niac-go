@@ -160,7 +160,7 @@ describe('scenario draft client', () => {
           name: 'core-1',
           type: 'switch',
           vendor: 'cisco',
-          sys_object_id: '1.3.6.1.4.1.9.1.2494',
+          sysObjectId: '1.3.6.1.4.1.9.1.2494',
         },
       }),
     });
