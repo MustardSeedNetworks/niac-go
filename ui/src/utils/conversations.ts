@@ -57,10 +57,16 @@ function buildFilterExpression(protocol: string, endpointA: string, endpointB: s
   const [ipB, portB] = splitEndpoint(endpointB);
   const proto = protocol.toLowerCase();
 
+  // Directional ports, not `${proto}.port` twice: that field resolves to a
+  // single value per packet, so comparing it to both ends inside one
+  // conjunction produced an expression no packet could satisfy and every
+  // conversation filter matched nothing (#1497).
   return (
     `${proto} && ` +
-    `((ip.src == ${ipA} && ${proto}.port == ${portA} && ip.dst == ${ipB} && ${proto}.port == ${portB}) || ` +
-    `(ip.src == ${ipB} && ${proto}.port == ${portB} && ip.dst == ${ipA} && ${proto}.port == ${portA}))`
+    `((ip.src == ${ipA} && ${proto}.srcport == ${portA} && ` +
+    `ip.dst == ${ipB} && ${proto}.dstport == ${portB}) || ` +
+    `(ip.src == ${ipB} && ${proto}.srcport == ${portB} && ` +
+    `ip.dst == ${ipA} && ${proto}.dstport == ${portA}))`
   );
 }
 
@@ -158,6 +164,20 @@ export function streamTransport(packet: PacketLike): 'TCP' | 'UDP' | null {
   }
   const proto = packet.protocol.toUpperCase();
   return proto === 'TCP' || proto === 'UDP' ? proto : null;
+}
+
+/**
+ * Whether a packet belongs to a followable conversation.
+ *
+ * Lived twice, once in PacketInspectorPage and once in PcapAnalyzerPage, which
+ * is how the live-view fix for #1494 missed the PCAP view entirely. One
+ * definition so a third copy cannot drift.
+ */
+export function canFollowStream(packet: PacketLike | null | undefined): boolean {
+  if (!packet) {
+    return false;
+  }
+  return streamTransport(packet) !== null && !!packet.sourcePort && !!packet.destPort;
 }
 
 /**
