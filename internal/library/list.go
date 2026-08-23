@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // NetworkEntry is one row in the networks list.
@@ -419,12 +421,15 @@ func (l *Library) FileEntryByName(kind Kind, relPath string) (FileEntry, error) 
 }
 
 // detectSource decides whether a given filename came from the starter pack, a
-// content bundle, or the operator. Starter-pack files are embedded in the
-// binary, so consulting starterPack is the source of truth for those; a bundle
-// records what it installed, because afterwards its files are indistinguishable
-// from anything else on disk.
+// content bundle, or the operator. Starter networks are the templates embedded
+// in the binary, so consulting internal/templates is the source of truth for
+// those; a bundle records what it installed, because afterwards its files are
+// indistinguishable from anything else on disk.
 func (l *Library) detectSource(filename string) Source {
-	if _, err := starterPack.Open(filepath.Join("starter", filename)); err == nil {
+	if templates.Exists(strings.TrimSuffix(filename, filepath.Ext(filename))) {
+		return SourceStarter
+	}
+	if _, err := starterWalks.Open(filepath.Join("starter", "walks", filename)); err == nil {
 		return SourceStarter
 	}
 	if l.bundles.contains(l.root, filepath.Join(string(KindNetworks), filename)) {

@@ -23,6 +23,7 @@ devices:
       software_version: "IOS XR 7.5.2"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Core Router 2
@@ -37,6 +38,7 @@ devices:
       system_description: "Data Center Core Router Secondary"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Distribution Switch 1
@@ -53,6 +55,7 @@ devices:
       bridge_priority: 4096
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Distribution Switch 2
@@ -69,6 +72,7 @@ devices:
       bridge_priority: 8192
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Access Switch
@@ -85,6 +89,7 @@ devices:
       bridge_priority: 32768
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Web Server
@@ -97,6 +102,7 @@ devices:
       server_name: "DC-Web-Server"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Infrastructure Server (DNS/DHCP)
@@ -122,4 +128,5 @@ devices:
           ip: "10.1.10.10"
 
     snmp_agent:
+      community: public
       walk_file: ""

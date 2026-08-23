@@ -24,6 +24,7 @@ devices:
       software_version: "IOS XR 7.8.1"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Provider Edge Router 2
@@ -42,6 +43,7 @@ devices:
       platform: "Cisco ASR 9010"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Provider Core Router 1
@@ -57,6 +59,7 @@ devices:
       port_description: "HundredGigE0/0/0/0"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Provider Core Router 2
@@ -71,6 +74,7 @@ devices:
       system_description: "Provider Core Router - Core B"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Border Router
@@ -85,6 +89,7 @@ devices:
       system_description: "Border/Edge Router - Internet Exchange"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Customer Edge Router
@@ -99,6 +104,7 @@ devices:
       system_description: "Customer Edge Router - Customer A"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # NOC Server
@@ -124,4 +130,5 @@ devices:
           ip: "10.255.0.100"
 
     snmp_agent:
+      community: public
       walk_file: ""

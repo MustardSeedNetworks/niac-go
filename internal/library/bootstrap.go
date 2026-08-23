@@ -6,15 +6,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-)
 
-// starterPack holds a small, curated set of network YAMLs bundled into
-// the binary. On first run they're copied into networks/ so the picker
-// is non-empty before any content tarball is installed. Keep the set
-// small — for the full library users install the content bundle.
-//
-//go:embed starter/*.yaml
-var starterPack embed.FS
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
+)
 
 // starterWalks holds a small, curated set of SNMP walk files (one
 // representative device per vendor) bundled into the binary. On first
@@ -43,22 +37,20 @@ func (l *Library) bootstrapStarterPack() error {
 		return nil
 	}
 
-	entries, err := starterPack.ReadDir("starter")
-	if err != nil {
-		return fmt.Errorf("read starter pack: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || !isYAMLFilename(entry.Name()) {
-			continue
+	// Seeded from internal/templates, the maintained template tree, rather than
+	// a second embedded copy of the same eight files.
+	//
+	// There used to be a starter/*.yaml duplicate here. It was never migrated
+	// when the config schema changed, and nothing validated it, so every
+	// template the New Simulation wizard offered failed to load while the two
+	// other template trees stayed green in CI (D2). One tree, one place to fix.
+	for _, name := range templates.ListNames() {
+		tmpl, getErr := templates.Get(name)
+		if getErr != nil {
+			return fmt.Errorf("read starter template %s: %w", name, getErr)
 		}
-		src := filepath.Join("starter", entry.Name())
-		data, readErr := fs.ReadFile(starterPack, src)
-		if readErr != nil {
-			return fmt.Errorf("read starter file %s: %w", entry.Name(), readErr)
-		}
-		dst := filepath.Join(networksDir, entry.Name())
-		if writeErr := os.WriteFile(dst, data, libraryFileMode); writeErr != nil {
+		dst := filepath.Join(networksDir, name+".yaml")
+		if writeErr := os.WriteFile(dst, []byte(tmpl.Content), libraryFileMode); writeErr != nil {
 			return fmt.Errorf("write starter file %s: %w", dst, writeErr)
 		}
 	}

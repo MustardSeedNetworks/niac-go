@@ -23,6 +23,7 @@ devices:
       software_version: "IOS XE 17.9.1"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Campus Core Router 2
@@ -41,6 +42,7 @@ devices:
       platform: "Cisco Catalyst 9600"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Building A Distribution
@@ -57,6 +59,7 @@ devices:
       bridge_priority: 4096
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Building A Access Floor 1
@@ -73,6 +76,7 @@ devices:
       bridge_priority: 32768
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Building B Distribution
@@ -89,6 +93,7 @@ devices:
       bridge_priority: 4096
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Campus DNS/DHCP Server
@@ -114,4 +119,5 @@ devices:
           ip: "10.0.10.100"
 
     snmp_agent:
+      community: public
       walk_file: ""
