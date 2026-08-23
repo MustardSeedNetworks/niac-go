@@ -23,7 +23,7 @@ import { H3, SmallText } from '../ui/Typography';
  * simulation is loaded.
  */
 export const SegmentsPage: FC = () => (
-  <div className="grid gap-spacious">
+  <div className="grid grid-cols-1 gap-spacious">
     <SegmentsListCard />
   </div>
 );
