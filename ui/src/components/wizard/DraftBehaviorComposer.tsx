@@ -49,8 +49,16 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
     value: device.name,
     label: device.name,
   }));
-  const firstDevice = deviceOptions[0]?.value ?? '';
-  const firstInterface = topology.interfaces[firstDevice]?.[0]?.name ?? '';
+  // The first device is not necessarily a usable one: the Start-empty seed puts
+  // an interfaceless host at position 0, which left this step permanently
+  // disabled however many switches were added afterwards (#1491). Seed from the
+  // first device that actually has an interface, since that is what a timeline
+  // targets.
+  const seedDevice = topology.devices.find(
+    (device) => (topology.interfaces[device.name] ?? []).length > 0,
+  );
+  const firstDevice = seedDevice?.name ?? '';
+  const firstInterface = firstDevice ? (topology.interfaces[firstDevice]?.[0]?.name ?? '') : '';
   const interfaceOptions = (device: string) =>
     (topology.interfaces[device] ?? []).map((iface) => ({ value: iface.name, label: iface.name }));
 
