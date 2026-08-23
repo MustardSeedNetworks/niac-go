@@ -167,9 +167,13 @@ export interface DeviceListResponse {
 /**
  * Response from GET /api/v1/config/devices/:id
  */
-export interface DeviceDetailResponse {
-  device: Device;
-}
+/**
+ * GET /api/v1/config/devices/:id returns the device **flat**, not wrapped.
+ * This used to declare `{ device: Device }`, so the editor's `fetchedDevice?.device`
+ * was always undefined and the form silently stayed empty (D10). Typed as the
+ * device itself so the compiler enforces the real shape.
+ */
+export type DeviceDetailResponse = Device;
 
 /**
  * Request body for POST /api/v1/config/devices
