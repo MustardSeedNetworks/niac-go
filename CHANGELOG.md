@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.66](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.65...v0.94.66) (2026-08-23)
+
+
+### Bug Fixes
+
+* **pcap:** show packet addresses and let application protocols be followed ([#1495](https://github.com/MustardSeedNetworks/niac-go/issues/1495)) ([4d6b073](https://github.com/MustardSeedNetworks/niac-go/commit/4d6b073912314e85311ea75f8f72d5689660edcc)), closes [#1497](https://github.com/MustardSeedNetworks/niac-go/issues/1497)
+
 ## [0.94.65](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.64...v0.94.65) (2026-08-23)
 
 
