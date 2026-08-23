@@ -36,6 +36,41 @@ beforeEach(() => {
 });
 
 describe('PreflightStep', () => {
+  // D6: a Go nil slice marshals as `null`, not `[]`. The success branch read
+  // `topology.networks.length`, so a preflight that PASSED crashed the wizard
+  // into an error boundary. Both pre-existing fixtures used `[]`, which is
+  // exactly why this shipped — this one reproduces the wire shape the daemon
+  // actually sent for a config with no networks.
+  it('renders a safe report whose collections came back null', async () => {
+    const user = userEvent.setup();
+    preflightSimulation.mockResolvedValue({
+      safe: true,
+      topology: {
+        binding: {
+          attachment: 'cyberscope',
+          interface: 'eth0',
+          mode: 'trunk',
+          physicalVlan: 299,
+          network: '',
+          wireTagged: true,
+        },
+        networks: null,
+        interfaces: null,
+        routes: null,
+        dhcpScopes: null,
+      },
+      diagnostics: null,
+    });
+
+    render(<PreflightStep request={{ interface: 'eth0' }} onStart={vi.fn()} />);
+    await user.click(screen.getByTestId('wizard-preflight-check'));
+
+    // Must reach the success state rather than throwing on `.length`.
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-preflight-start')).toBeEnabled();
+    });
+  });
+
   it('checks access mode with VLAN 200 by default and starts only after a safe report', async () => {
     const user = userEvent.setup();
     const onStart = vi.fn();

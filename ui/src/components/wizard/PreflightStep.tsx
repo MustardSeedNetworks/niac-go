@@ -144,7 +144,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             role="status"
           >
             <SmallText className="text-status-success">
-              {t('newSimWizard.preflight.safe', { count: report.topology.networks.length })}
+              {t('newSimWizard.preflight.safe', { count: report.topology.networks?.length ?? 0 })}
             </SmallText>
             <SmallText className="mt-tight block text-text-secondary">
               {t('newSimWizard.preflight.physicalVlanSummary', {
@@ -162,7 +162,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
               {t('newSimWizard.preflight.unsafeTitle')}
             </p>
             <ul className="mt-tight list-disc pl-5 text-sm text-status-error">
-              {report.diagnostics.map((diagnostic) => (
+              {(report.diagnostics ?? []).map((diagnostic) => (
                 <li key={`${diagnostic.code}-${diagnostic.field}`}>{diagnostic.message}</li>
               ))}
             </ul>

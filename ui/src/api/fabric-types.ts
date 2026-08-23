@@ -48,16 +48,24 @@ export interface FabricDiagnostic {
   message: string;
 }
 
+/**
+ * The daemon now seeds these collections so they marshal as `[]` (see
+ * internal/fabric.NewTopology). They are still typed nullable because a Go nil
+ * slice renders as `null`, and asserting non-null here is what let D6 ship: the
+ * success branch did `topology.networks.length` and crashed the wizard on a
+ * preflight that had *passed*. Keep the nullability so the compiler forces a
+ * guard at every read, including against an older daemon.
+ */
 export interface SimulationPreflightReport {
   safe: boolean;
   topology: {
     binding: FabricBinding;
-    networks: FabricNetwork[];
-    interfaces: FabricInterface[];
-    routes: FabricRoute[];
-    dhcpScopes: FabricDhcpScope[];
+    networks: FabricNetwork[] | null;
+    interfaces: FabricInterface[] | null;
+    routes: FabricRoute[] | null;
+    dhcpScopes: FabricDhcpScope[] | null;
   };
-  diagnostics: FabricDiagnostic[];
+  diagnostics: FabricDiagnostic[] | null;
 }
 
 export interface SimulationFabricStatus {
