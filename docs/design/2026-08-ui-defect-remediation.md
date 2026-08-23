@@ -426,10 +426,10 @@ protected); `make lint` / `make fmt-check` / `make test` clean per PR; no
 
 ---
 
-## Closeout — 2026-08-23, released as v0.94.61
+## Closeout — 2026-08-23, released as v0.94.67
 
 All nineteen defects are fixed, merged and verified against a running daemon on
-CT304. Eight further defects were found _by_ the verification pass and were
+CT304. Eighteen further defects were found _by_ the verification pass and were
 fixed the same way; every one of them was invisible to the test suite before its
 guard landed.
 
@@ -484,6 +484,15 @@ drops, proving they were delivered to the native session rather than discarded
 | #1465 | Escape never closed any modal |
 | #1467 | two preflight paths still returned `null` arrays |
 | #1472 | the wizard discarded the details #1461 had just made the server send |
+| #1476 | error injection rejected the interface names its own dropdown offered |
+| #1481 | filter chips only appended, so two clicks built an unsatisfiable filter |
+| #1483 | three pages scrolled sideways at phone and tablet widths |
+| #1488 | every walk-capture failure reported one opaque string |
+| #1491 | Behaviors was gated on the first device having an interface |
+| #1493 | PCAP addresses never rendered — `sourceIP` vs `sourceIp` |
+| #1494 | Follow Stream was dead for every application protocol |
+| #1497 | every conversation filter in the product was unsatisfiable |
+| #1499 | the Walk Analyzer dropped the detail #1488 had just added |
 
 Three were residuals of earlier fixes in this same programme — #1458 (D16
 guarded only the first of two branches), #1467 (D6 seeded only two of four
@@ -507,11 +516,39 @@ defects were live**, because `ui/e2e/device-editor.spec.ts` stubs
   1.26.6. Owner call: the same container pin exists in seed and stem, and the
   fleet rule is to bump all three in lockstep.
 
-### Wave 8 sweep
+### Wave 8 sweep — complete
 
 All 16 registered routes drove clean: HTTP 200, no error boundary, no console
 errors, no failed API calls. The wizard was driven end to end through
 Start-empty → Add device → Protocols → Review → Connection → preflight → start,
-which is the path D11 would have broken. That single run surfaced four of
-the seven new defects above: the invalid draft, the unnamed preflight errors,
-the unapprovable native policy, and the remaining null arrays.
+which is the path D11 would have broken. That single run surfaced four of the
+eight follow-ups above: the invalid draft, the unnamed preflight errors, the
+unapprovable native policy, and the remaining null arrays.
+
+The remaining surfaces named in the original Wave 8 list were then driven, and
+found **seven more defects**, all fixed and released in v0.94.67.
+
+| Surface | Outcome |
+| --- | --- |
+| Dashboard Error Injection quick action | deep-links with the type preselected; **#1476** — a 15-char cap rejected the interface names its own dropdown offers, excluding every WAN router and AP |
+| Packets display filter + chips | filter correct; **#1481** — chips only appended and joined with `&&`, so two clicks built a filter no packet can satisfy |
+| Packets Colors panel | opens, six rules, Add/Reset/Apply present |
+| Packets capture-side BPF | Apply correctly gated on input |
+| Packets Follow Stream | **#1494** dead for HTTP/DNS, **#1497** the filter it built matched nothing, and its gate existed twice so the first fix missed the PCAP view |
+| PCAP analyzer | **#1493** — `sourceIP`/`destIP` vs `sourceIp`/`destIp`, so every address rendered blank |
+| Walk Analyzer analyze | parses identity, 214 interfaces, full table |
+| Walk Analyzer capture from device | **#1488** — every failure reported one opaque string; **#1499** — the UI then dropped the detail the server had started sending |
+| Per-page Help buttons | all 16 open with the right page context |
+| Wizard drag-to-connect | works end to end, camelCase `nativeVlan` payload |
+| Wizard timeline creation | **#1491** — gated on the _first_ device having an interface, so Start-empty drafts were permanently blocked |
+| Light theme | clean, no contrast failures across 400 elements |
+| Mobile / tablet widths | **#1483** — three pages scrolled sideways at 390px |
+| PCAP library upload | correctly refuses a bare `.pcap`; bundles only, by design |
+
+Two near-misses are worth recording, because both would have been false
+reports. A display filter returning `0 / 100` looked like a defect until the
+packet rows were read separately from the filter chips: the buffer genuinely
+held no ARP or TCP, so the filter was right. And `Follow Stream` showing
+buttons off-screen at 390px looked like a layout bug until the containing
+element was checked: they sit inside a horizontally scrollable table, which is
+the intended design. Both were checked before filing rather than after.
