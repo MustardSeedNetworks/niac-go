@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.61](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.60...v0.94.61) (2026-08-23)
+
+
+### Bug Fixes
+
+* **ui:** show the preflight details the server sends ([#1473](https://github.com/MustardSeedNetworks/niac-go/issues/1473)) ([812bd4d](https://github.com/MustardSeedNetworks/niac-go/commit/812bd4d2fe353290acc7f320b40312cfb8f918f8)), closes [#1472](https://github.com/MustardSeedNetworks/niac-go/issues/1472)
+
+
+### Documentation
+
+* **design:** record the UI defect remediation closeout ([#1470](https://github.com/MustardSeedNetworks/niac-go/issues/1470)) ([d91526b](https://github.com/MustardSeedNetworks/niac-go/commit/d91526b3a4daeeb56c765247209484dfa7b962b4))
+
 ## [0.94.60](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.59...v0.94.60) (2026-08-23)
 
 
