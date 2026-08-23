@@ -39,7 +39,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
         aria-label={t('list.cloneModal.closeAria')}
       />
       <div
-        className="mx-4 w-full max-w-md rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
+        className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl"
         role="dialog"
         aria-modal="true"
       >

@@ -105,6 +105,15 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   const containerRef = useRef<T>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
+  // Consumers pass inline arrows for onEscape (e.g. `onCancel={() => setOpen(false)}`),
+  // so its identity changes on every parent render. Holding it in a ref keeps it out
+  // of the effect's dependency list: otherwise the whole trap tears down and re-arms
+  // on each render, and the teardown's restoreFocus() yanks focus back out of the
+  // dialog. On a continuously re-rendering page (the log stream at Trace level) that
+  // thrashes focus many times a second and makes Escape unreliable. (D18)
+  const onEscapeRef = useRef(onEscape);
+  onEscapeRef.current = onEscape;
+
   useEffect(() => {
     if (!isActive) {
       return;
@@ -134,10 +143,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     // Handle keyboard navigation
     function handleKeyDown(event: KeyboardEvent): void {
       // Handle Escape key
-      if (event.key === 'Escape' && onEscape) {
+      const escapeHandler = onEscapeRef.current;
+      if (event.key === 'Escape' && escapeHandler) {
         event.preventDefault();
         event.stopPropagation();
-        onEscape();
+        escapeHandler();
         return;
       }
 
@@ -181,7 +191,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
         previousActiveElement.current.focus();
       }
     };
-  }, [isActive, onEscape, autoFocus, restoreFocus]);
+  }, [isActive, autoFocus, restoreFocus]);
 
   return containerRef;
 }
