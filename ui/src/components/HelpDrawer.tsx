@@ -180,7 +180,14 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
 
             {/* Tab Navigation */}
             <div className="border-b border-surface-border px-cell">
-              <nav className="flex gap-tight -mb-px">
+              {/*
+                Wraps rather than clipping. The strip is ~851px of tabs inside a
+                fixed-width drawer (~455px of content), so a non-wrapping row with
+                overflow-x: visible left Commands / Glossary / Shortcuts / FAQ
+                unreachable by mouse at every viewport width — widening the window
+                does not help, because the drawer width is fixed (D1).
+              */}
+              <div className="flex flex-wrap gap-tight -mb-px" role="tablist">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
@@ -200,7 +207,7 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
                     <span>{tab.label}</span>
                   </button>
                 ))}
-              </nav>
+              </div>
             </div>
           </div>
 

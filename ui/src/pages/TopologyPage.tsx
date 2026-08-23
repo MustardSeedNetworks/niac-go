@@ -45,6 +45,7 @@ import {
   useTopologyExport,
   writeSavedLayoutMode,
 } from './topology';
+import { reframeAfterPaint } from './topology/reframe';
 import { TrunkEdge } from './topology/TrunkEdge';
 
 /**
@@ -349,10 +350,7 @@ export const TopologyPage: FC = () => {
     setNodes([]);
     setEdges([]);
     setResetCounter((n) => n + 1);
-    // Re-frame the canvas after the fresh layout settles.
-    window.setTimeout(() => {
-      rfInstance.current?.fitView({ padding: 0.2, duration: 400 });
-    }, 150);
+    reframeAfterPaint(() => rfInstance.current?.fitView({ padding: 0.2, duration: 400 }));
   }, [setNodes, setEdges, layoutPersistence]);
 
   // The set of unique device types currently in the graph — drives the
@@ -452,10 +450,10 @@ export const TopologyPage: FC = () => {
     lastDeviceSetSig.current = sig;
     // Defer one tick so layoutNodes has populated the new positions
     // before fitView measures them.
-    const t = window.setTimeout(() => {
-      rfInstance.current?.fitView({ padding: 0.2, duration: 400 });
-    }, 50);
-    return () => window.clearTimeout(t);
+    const cancelReframe = reframeAfterPaint(() =>
+      rfInstance.current?.fitView({ padding: 0.2, duration: 400 }),
+    );
+    return cancelReframe;
   }, [devices]);
 
   const {
@@ -491,9 +489,7 @@ export const TopologyPage: FC = () => {
         // refit (better than freezing on a transient network blip).
       })
       .finally(() => {
-        window.requestAnimationFrame(() => {
-          rfInstance.current?.fitView({ padding: 0.2, duration: 300 });
-        });
+        reframeAfterPaint(() => rfInstance.current?.fitView({ padding: 0.2, duration: 300 }));
       });
   }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
@@ -502,7 +498,7 @@ export const TopologyPage: FC = () => {
   return (
     <div className="stack-xl">
       {/* Header Card */}
-      <Card className="border-surface-border bg-bg-surface/70">
+      <Card className="relative z-20 border-surface-border bg-bg-surface/70">
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">
             <div className="flex items-center gap-default">
@@ -718,7 +714,7 @@ export const TopologyPage: FC = () => {
           ≈ 240 px on this layout). Gives much more room for the graph
           on standard 1080p+ displays. */}
       {view === 'graph' && (
-        <Card className="border-surface-border bg-bg-surface/70 overflow-hidden">
+        <Card className="relative z-0 border-surface-border bg-bg-surface/70 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading ? (
               <div className="absolute inset-0 flex-center">
