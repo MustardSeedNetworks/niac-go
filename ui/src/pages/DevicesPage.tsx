@@ -36,7 +36,7 @@ export const DevicesPage: FC = () => {
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
-    <div className="grid gap-spacious xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-spacious xl:grid-cols-2">
       <DeviceListCard selected={selected} onSelect={setSelected} />
       <ConfigEditorCard selected={selected} onClearSelection={() => setSelected(null)} />
     </div>
