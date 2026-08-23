@@ -190,7 +190,10 @@ export function DataTable<T>({
 
   if (!useVirtualization) {
     return (
-      <div className="overflow-x-auto rounded-xl border border-surface-border" data-testid={testId}>
+      <div
+        className="min-w-0 overflow-x-auto rounded-xl border border-surface-border"
+        data-testid={testId}
+      >
         <table className="min-w-full divide-y divide-knob/10 text-sm">
           {renderHeader()}
           <tbody className="divide-y divide-knob/5 text-text-secondary">
