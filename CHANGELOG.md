@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.59](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.58...v0.94.59) (2026-08-23)
+
+
+### Documentation
+
+* **design:** add UI defect remediation plan (19 defects, 8 waves) ([#1438](https://github.com/MustardSeedNetworks/niac-go/issues/1438)) ([a81dfb6](https://github.com/MustardSeedNetworks/niac-go/commit/a81dfb6fc421b096b1b8b80345e564052642f07e))
+
 ## [0.94.58](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.57...v0.94.58) (2026-08-22)
 
 
