@@ -73,13 +73,41 @@ func (s *Server) handleWalkCaptureProfile(w http.ResponseWriter, r *http.Request
 			status = http.StatusBadRequest
 		}
 		message := "SNMP walk capture failed"
+		var details []ErrorDetail
 		if status == http.StatusBadRequest {
 			message = err.Error()
+		} else {
+			details = walkCaptureFailureDetails(err)
 		}
-		writeError(w, r, status, "walk_capture_failed", message, nil)
+		writeError(w, r, status, "walk_capture_failed", message, details)
 		return
 	}
 	s.createWalkReview(w, r, request.Name, content)
+}
+
+// walkCaptureFailureDetails names which capture failure happened. Every
+// non-validation failure used to collapse into one opaque string with no
+// details, so a timeout, a wrong community, an unreachable host and a walk that
+// blew a size limit were indistinguishable to the operator (#1488).
+//
+// The text is curated per case rather than echoed from the upstream error, so
+// the client learns which situation it is without receiving gosnmp internals.
+func walkCaptureFailureDetails(err error) []ErrorDetail {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, walkcapture.ErrEntryLimit):
+		return []ErrorDetail{{Issue: "walk capture exceeded 100000 entries"}}
+	case errors.Is(err, walkcapture.ErrSizeLimit):
+		return []ErrorDetail{{Issue: "walk capture exceeded 16 MiB"}}
+	case strings.Contains(err.Error(), "connect to SNMP target"):
+		return []ErrorDetail{{Field: "target", Issue: "could not reach the target on UDP/161"}}
+	default:
+		return []ErrorDetail{{
+			Issue: "no response from the target: it did not answer, " +
+				"or the community or SNMPv3 credentials are wrong",
+		}}
+	}
 }
 
 func (s *Server) createWalkReview(
