@@ -163,20 +163,60 @@ func resolveDaemonAPIToken(o *daemonOptions) string {
 
 func parseAttachmentPolicies(values []string) ([]fabric.PhysicalAttachmentPolicy, error) {
 	policies := make([]fabric.PhysicalAttachmentPolicy, 0, len(values))
-	seenInterfaces := make(map[string]struct{}, len(values))
+	// One interface carries N tagged sessions plus at most one native session,
+	// exactly as the session registry models a trunk port with a native VLAN
+	// (#1426), so it needs one policy per mode rather than one policy outright
+	// (#1463). Direct is the exception: it is unisolated ownership of the whole
+	// interface, so it cannot share one.
+	seenModes := make(map[string]map[fabric.AttachmentMode]struct{}, len(values))
 	for _, value := range values {
 		policy, err := parseAttachmentPolicy(value)
 		if err != nil {
 			return nil, err
 		}
-		if _, duplicate := seenInterfaces[policy.Interface]; duplicate {
-			return nil, fmt.Errorf("duplicate interface in attachment policy %q", value)
+		modes := seenModes[policy.Interface]
+		if modes == nil {
+			modes = make(map[fabric.AttachmentMode]struct{}, attachmentModesPerInterface)
+			seenModes[policy.Interface] = modes
 		}
-		seenInterfaces[policy.Interface] = struct{}{}
+		if _, duplicate := modes[policy.Mode]; duplicate {
+			return nil, fmt.Errorf(
+				"duplicate %s policy for interface %q in attachment policy %q",
+				policy.Mode, policy.Interface, value,
+			)
+		}
+		if exclusiveErr := checkDirectExclusive(policy, modes, value); exclusiveErr != nil {
+			return nil, exclusiveErr
+		}
+		modes[policy.Mode] = struct{}{}
 		policies = append(policies, policy)
 	}
 	return policies, nil
 }
+
+// checkDirectExclusive rejects a direct policy sharing an interface with any
+// other mode, in either order.
+func checkDirectExclusive(
+	policy fabric.PhysicalAttachmentPolicy,
+	modes map[fabric.AttachmentMode]struct{},
+	value string,
+) error {
+	_, hasDirect := modes[fabric.ModeDirect]
+	if !hasDirect && policy.Mode != fabric.ModeDirect {
+		return nil
+	}
+	if hasDirect || len(modes) > 0 {
+		return fmt.Errorf(
+			"interface %q cannot combine direct with another attachment mode (%q)",
+			policy.Interface, value,
+		)
+	}
+	return nil
+}
+
+// attachmentModesPerInterface is the most modes one interface can hold: a
+// trunk policy for the tagged sessions plus an access policy for the native one.
+const attachmentModesPerInterface = 2
 
 const attachmentPolicySyntax = "expected INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,..."
 
