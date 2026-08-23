@@ -52,7 +52,12 @@ export const ActionsMenu: FC<{
   };
 
   return (
-    <div className="relative" data-topology-actions>
+    // z-50 here, not just on the dropdown: Card's default variant sets
+    // backdrop-blur-xl, which creates a stacking context, so the dropdown's own
+    // z-50 could not be compared against the sibling graph Card. The graph Card
+    // is later in the DOM and painted its whole layer over the menu's last item
+    // (D14). Raising this wrapper puts the header card's context on top.
+    <div className="relative z-50" data-topology-actions>
       <Button
         variant="ghost"
         size="sm"
