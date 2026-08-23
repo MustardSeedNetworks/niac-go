@@ -14,8 +14,8 @@ type Packet struct {
 	ID         string         `json:"id"`
 	Number     int            `json:"number"`
 	Timestamp  string         `json:"timestamp"`
-	SourceIP   string         `json:"sourceIP"`
-	DestIP     string         `json:"destIP"`
+	SourceIP   string         `json:"sourceIp"`
+	DestIP     string         `json:"destIp"`
 	SourcePort *int           `json:"sourcePort,omitempty"`
 	DestPort   *int           `json:"destPort,omitempty"`
 	Protocol   string         `json:"protocol"`

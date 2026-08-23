@@ -140,12 +140,33 @@ export function extractConversations(packets: PacketLike[]): Conversation[] {
 }
 
 /**
+ * The transport a packet's stream rides on, or null when it has none.
+ *
+ * `protocol` carries the *application* protocol once one is recognised — HTTP,
+ * DNS — so matching it against 'TCP'/'UDP' left Follow Stream permanently
+ * disabled for exactly the conversations worth following (#1494). The transport
+ * is still available in the headers the analyzer emits; fall back to the label
+ * only when they are absent.
+ */
+export function streamTransport(packet: PacketLike): 'TCP' | 'UDP' | null {
+  const headers = packet.headers as Record<string, unknown> | undefined;
+  if (headers?.tcp) {
+    return 'TCP';
+  }
+  if (headers?.udp) {
+    return 'UDP';
+  }
+  const proto = packet.protocol.toUpperCase();
+  return proto === 'TCP' || proto === 'UDP' ? proto : null;
+}
+
+/**
  * Get the conversation filter expression for a specific packet.
  * Returns null if the packet doesn't belong to a TCP/UDP conversation.
  */
 export function getStreamFilter(packet: PacketLike): string | null {
-  const proto = packet.protocol.toUpperCase();
-  if (proto !== 'TCP' && proto !== 'UDP') {
+  const proto = streamTransport(packet);
+  if (!proto) {
     return null;
   }
   if (!packet.sourcePort || !packet.destPort) {

@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -250,5 +251,36 @@ func TestNewPacketCollector(t *testing.T) {
 
 	if len(collector.sourceCounts) != 0 {
 		t.Errorf("initial sourceCounts = %d, want 0", len(collector.sourceCounts))
+	}
+}
+
+// TestPacketMarshalsIPFieldsAsCamelCase guards #1493.
+//
+// The struct emitted `sourceIP` and `destIP` while ui/src/api/pcap-types.ts
+// declares `sourceIp` and `destIp`, so both fields arrived undefined and the
+// PCAP analyzer rendered every SOURCE and DESTINATION cell empty. Ports, flags
+// and lengths were correct, which is what made it look like a rendering bug
+// rather than a wire mismatch.
+//
+// Every other field on this struct already matches its TS counterpart, and the
+// convention for a trailing initialism across the API is to lowercase it —
+// analysisId, sessionId, webhookUrl. These two were the only pair spelled the
+// other way (ADR-0007).
+func TestPacketMarshalsIPFieldsAsCamelCase(t *testing.T) {
+	raw, err := json.Marshal(Packet{SourceIP: "10.99.1.10", DestIP: "10.99.1.20"})
+	if err != nil {
+		t.Fatalf("marshal packet: %v", err)
+	}
+	body := string(raw)
+
+	for _, want := range []string{`"sourceIp":"10.99.1.10"`, `"destIp":"10.99.1.20"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %s in %s", want, body)
+		}
+	}
+	for _, unwanted := range []string{`"sourceIP"`, `"destIP"`} {
+		if strings.Contains(body, unwanted) {
+			t.Errorf("%s is the pre-ADR-0007 spelling the UI cannot read\n%s", unwanted, body)
+		}
 	}
 }

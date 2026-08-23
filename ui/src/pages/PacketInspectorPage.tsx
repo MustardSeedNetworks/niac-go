@@ -41,7 +41,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
-import { getStreamFilter } from '../utils/conversations';
+import { getStreamFilter, streamTransport } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 import { packetFromStreamEvent } from './packets/packet-from-stream';
@@ -223,9 +223,10 @@ export const PacketInspectorPage: FC = () => {
   // Can the selected packet be followed as a stream?
   const canFollowStream = useMemo(() => {
     if (!selectedPacket) return false;
-    const proto = selectedPacket.protocol.toUpperCase();
+    // The transport, not the display label: `protocol` reads HTTP or DNS once
+    // an application protocol is recognised (#1494).
     return (
-      (proto === 'TCP' || proto === 'UDP') &&
+      streamTransport(selectedPacket) !== null &&
       !!selectedPacket.sourcePort &&
       !!selectedPacket.destPort
     );
