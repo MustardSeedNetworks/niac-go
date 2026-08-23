@@ -44,6 +44,7 @@ import { H2, SmallText } from '../ui/Typography';
 import { getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
+import { packetFromStreamEvent } from './packets/packet-from-stream';
 
 /** Maximum number of packets to buffer */
 const MAX_PACKETS = 100;
@@ -160,44 +161,7 @@ export const PacketInspectorPage: FC = () => {
 
       const incoming = data.data;
 
-      // SSE payloads bypass the shared toCamelCase converter in client.ts,
-      // so fall back to snake_case keys when the camelCase key is missing.
-      const packet: Packet = {
-        id: generatePacketId(),
-        timestamp: (incoming.timestamp as string) || data.timestamp,
-        protocol: (incoming.protocol as string) || 'Unknown',
-        sourceIp: (incoming.sourceIp as string) || (incoming.source_ip as string) || 'Unknown',
-        destIp: (incoming.destIp as string) || (incoming.dest_ip as string) || 'Unknown',
-        sourcePort:
-          (incoming.sourcePort as number | undefined) ??
-          (incoming.source_port as number | undefined),
-        destPort:
-          (incoming.destPort as number | undefined) ?? (incoming.dest_port as number | undefined),
-        size: (incoming.size as number) || 0,
-        summary: (incoming.summary as string) || '',
-        rawData:
-          (incoming.rawData as string) ||
-          (incoming.raw_data as string) ||
-          (incoming.payload as string) ||
-          '',
-        headers: incoming.headers as Record<string, unknown> | undefined,
-        physicalVlan:
-          (incoming.physicalVlan as number | undefined) ??
-          (incoming.physical_vlan as number | undefined),
-        ingressNetwork:
-          (incoming.ingressNetwork as string | undefined) ??
-          (incoming.ingress_network as string | undefined),
-        routeDecision:
-          (incoming.routeDecision as string | undefined) ??
-          (incoming.route_decision as string | undefined),
-        hop: incoming.hop as string | undefined,
-        egressNetwork:
-          (incoming.egressNetwork as string | undefined) ??
-          (incoming.egress_network as string | undefined),
-        egressRejectionReason:
-          (incoming.egressRejectionReason as string | undefined) ??
-          (incoming.egress_rejection_reason as string | undefined),
-      };
+      const packet = packetFromStreamEvent(incoming, data.timestamp, generatePacketId());
 
       setPackets((prev) => {
         const updated = [...prev, packet];
