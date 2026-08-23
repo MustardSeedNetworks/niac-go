@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.65](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.64...v0.94.65) (2026-08-23)
+
+
+### Bug Fixes
+
+* **api:** say why a walk capture failed ([#1489](https://github.com/MustardSeedNetworks/niac-go/issues/1489)) ([fb8a387](https://github.com/MustardSeedNetworks/niac-go/commit/fb8a3877ff99112eb134066f42f2dc59d18de0fb)), closes [#1488](https://github.com/MustardSeedNetworks/niac-go/issues/1488)
+* **ui:** enable Behaviors from any device that has an interface ([#1492](https://github.com/MustardSeedNetworks/niac-go/issues/1492)) ([c9656e5](https://github.com/MustardSeedNetworks/niac-go/commit/c9656e56072380ec6d0faa98ae961f3c19bae500)), closes [#1491](https://github.com/MustardSeedNetworks/niac-go/issues/1491)
+
 ## [0.94.64](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.63...v0.94.64) (2026-08-23)
 
 
