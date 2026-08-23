@@ -20,7 +20,7 @@ func Compile(cfg *config.Config, binding Binding) Report {
 		dhcpLeaseAddresses: make(map[netip.Addr]string),
 		// Seed the report's collections so a scenario that produces none of
 		// them still marshals as [] rather than null. (D6)
-		report: Report{Topology: NewTopology(), Diagnostics: []Diagnostic{}},
+		report: NewReport(),
 	}
 	compiler.compileBinding()
 	compiler.compileNetworks()
@@ -33,7 +33,7 @@ func Compile(cfg *config.Config, binding Binding) Report {
 func CompilePhysicalBinding(binding Binding) Report {
 	compiler := scenarioCompiler{
 		binding: binding,
-		report:  Report{Topology: NewTopology(), Diagnostics: []Diagnostic{}},
+		report:  NewReport(),
 	}
 	compiler.validateBindingMode()
 	compiler.report.Topology.Binding = CompiledBinding{
