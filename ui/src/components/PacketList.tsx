@@ -13,8 +13,8 @@ export interface Packet {
   id: string;
   timestamp: string;
   protocol: string;
-  sourceIp: string;
-  destIp: string;
+  sourceIp?: string;
+  destIp?: string;
   sourcePort?: number;
   destPort?: number;
   size: number;
@@ -71,10 +71,10 @@ const PacketRow = memo(
         <SmallText className="text-text-muted font-mono text-xs">{formattedTime}</SmallText>
       </div>
       <div className="mt-tight text-sm text-text-primary truncate">
-        {packet.sourceIp}
+        {packet.sourceIp ?? '\u2014'}
         {packet.sourcePort && `:${packet.sourcePort}`}
         <span className="text-text-muted mx-1">-&gt;</span>
-        {packet.destIp}
+        {packet.destIp ?? '\u2014'}
         {packet.destPort && `:${packet.destPort}`}
       </div>
       <SmallText className="text-text-muted truncate block">{packet.summary}</SmallText>

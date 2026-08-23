@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -52,5 +53,40 @@ func TestGopacketToWireUsesStandaloneCaptureShape(t *testing.T) {
 	}
 	if wire["raw_data"] != "00112233445566778899aabb0800" {
 		t.Errorf("raw_data = %v", wire["raw_data"])
+	}
+}
+
+// TestPacketToWireNeverEmitsTheZeroTimestamp guards #1457.
+//
+// protocols.Packet carries a Timestamp, but only 3 of the 27 &Packet{...}
+// literals outside tests set it: NewPacket and ParsePacket stamp time.Now(),
+// while the protocol emitters build the struct directly and leave it zero.
+// packetToWire formatted it unconditionally, so the inspector showed every
+// frame arriving at "0001-01-01T00:00:00.000Z".
+//
+// The guard lives at the encoder because the encoder owns the wire contract —
+// the 24 emitter sites are not a boundary, and a 25th would regress silently.
+// Its documented cousin GopacketToWire already guards exactly this way.
+func TestPacketToWireNeverEmitsTheZeroTimestamp(t *testing.T) {
+	pkt := &protocols.Packet{Buffer: []byte{0xde, 0xad, 0xbe, 0xef}, Length: 4}
+	if !pkt.Timestamp.IsZero() {
+		t.Fatal("precondition: a bare Packet literal should carry the zero time")
+	}
+
+	got, _ := packetToWire("tx", pkt)["timestamp"].(string)
+	if strings.HasPrefix(got, "0001-01-01") {
+		t.Errorf("timestamp = %q, want an observation time, not the zero value", got)
+	}
+}
+
+// A packet that does carry a real timestamp must keep it — the guard fills a
+// gap, it does not overwrite recorded arrival times.
+func TestPacketToWirePreservesARealTimestamp(t *testing.T) {
+	when := time.Date(2026, 8, 23, 14, 30, 15, 0, time.UTC)
+	pkt := &protocols.Packet{Buffer: []byte{0x01}, Length: 1, Timestamp: when}
+
+	got, _ := packetToWire("rx", pkt)["timestamp"].(string)
+	if want := "2026-08-23T14:30:15.000Z"; got != want {
+		t.Errorf("timestamp = %q, want %q", got, want)
 	}
 }

@@ -118,8 +118,16 @@ func packetToWire(direction string, pkt *protocols.Packet) map[string]any {
 		truncated = true
 	}
 
+	// Only NewPacket and ParsePacket stamp a Timestamp; the protocol emitters
+	// build Packet literals directly and leave it zero. Stamp observation time
+	// here, as GopacketToWire does, so the wire never carries the zero value.
+	ts := pkt.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
 	out := map[string]any{
-		"timestamp": pkt.Timestamp.UTC().Format("2006-01-02T15:04:05.000Z"),
+		"timestamp": ts.UTC().Format("2006-01-02T15:04:05.000Z"),
 		"direction": direction,
 		"size":      pkt.Length,
 		"raw_data":  hex.EncodeToString(raw),
