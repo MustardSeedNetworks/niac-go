@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.64](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.63...v0.94.64) (2026-08-23)
+
+
+### Bug Fixes
+
+* **ui:** stop pages scrolling sideways at phone and tablet widths ([#1487](https://github.com/MustardSeedNetworks/niac-go/issues/1487)) ([386fd1c](https://github.com/MustardSeedNetworks/niac-go/commit/386fd1c96a1909da979253bfc754744ebe72098e)), closes [#1483](https://github.com/MustardSeedNetworks/niac-go/issues/1483)
+
 ## [0.94.63](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.62...v0.94.63) (2026-08-23)
 
 
