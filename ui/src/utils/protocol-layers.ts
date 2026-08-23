@@ -121,7 +121,12 @@ function buildIpLayer(
   const ipv6 = headers?.ipv6 as Record<string, unknown> | undefined;
   const ip = ipv4 ?? ipv6 ?? (headers?.ip as Record<string, unknown> | undefined);
 
-  if (ip) {
+  // Only render an IP layer when the packet actually has one. This used to fall
+  // back to packet.sourceIp, which PacketInspectorPage defaults to the literal
+  // "Unknown" — so an STP BPDU, which has no IP layer at all, was shown as
+  // "Internet Protocol Version 4 (IPv4) / Source: Unknown" (D16).
+  const hasAddresses = Boolean(ip?.src ?? ip?.dst);
+  if (ip && hasAddresses) {
     const version = ipv6 ? 'IPv6' : 'IPv4';
     return {
       name: `Internet Protocol Version ${ipv6 ? '6' : '4'} (${version})`,
