@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.63](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.62...v0.94.63) (2026-08-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependency i18next to v26.4.0 ([#1479](https://github.com/MustardSeedNetworks/niac-go/issues/1479)) ([79dc98a](https://github.com/MustardSeedNetworks/niac-go/commit/79dc98a137e9e36a36d64755d64fd31e3f437ab9))
+* **deps:** update dependency react-i18next to v17.0.12 ([#1478](https://github.com/MustardSeedNetworks/niac-go/issues/1478)) ([9f0a6b1](https://github.com/MustardSeedNetworks/niac-go/commit/9f0a6b10f93a9f9eef3ce197e99cdcd414c3489a))
+* **ui:** accept the interface names error injection's own dropdown offers ([#1480](https://github.com/MustardSeedNetworks/niac-go/issues/1480)) ([98f8168](https://github.com/MustardSeedNetworks/niac-go/commit/98f8168ef77dc88fa9dbd32228f1a2c799ac6728)), closes [#1476](https://github.com/MustardSeedNetworks/niac-go/issues/1476)
+* **ui:** make the packet filter chips toggle and combine with OR ([#1482](https://github.com/MustardSeedNetworks/niac-go/issues/1482)) ([71b6fac](https://github.com/MustardSeedNetworks/niac-go/commit/71b6fac4fd20eb38f3c8cdd2cf97f3621009ef9b)), closes [#1481](https://github.com/MustardSeedNetworks/niac-go/issues/1481)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1484](https://github.com/MustardSeedNetworks/niac-go/issues/1484)) ([63e72ed](https://github.com/MustardSeedNetworks/niac-go/commit/63e72ed72adc0cb60f7533e791ede6788cea48da))
+* **deps:** lock file maintenance ([#1486](https://github.com/MustardSeedNetworks/niac-go/issues/1486)) ([55621e8](https://github.com/MustardSeedNetworks/niac-go/commit/55621e8b5b9294aca2efae0984474a1a850351e5))
+* **deps:** update dependency @vitejs/plugin-react to v6.1.0 ([#1443](https://github.com/MustardSeedNetworks/niac-go/issues/1443)) ([6b8cef0](https://github.com/MustardSeedNetworks/niac-go/commit/6b8cef0458d8b6a54609ee6dfeec7d59dada00ac))
+* **deps:** update storybook monorepo to v10.5.10 ([#1477](https://github.com/MustardSeedNetworks/niac-go/issues/1477)) ([b117033](https://github.com/MustardSeedNetworks/niac-go/commit/b117033d3e4fea059a07f9057dcc68e603c55a37))
+
 ## [0.94.62](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.61...v0.94.62) (2026-08-23)
 
 
