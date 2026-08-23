@@ -4,7 +4,7 @@ import { ApiError, type ApiErrorDetail, NetworkError, TimeoutError } from './err
  * Core HTTP request infrastructure for the API client. Everything that
  * is shared by every endpoint lives here:
  *
- *   - case conversion (toSnakeCase out, toCamelCase in)
+ *   - case conversion (toCamelCase in; nothing converts on the way out)
  *   - bearer token + CSRF header injection
  *   - timeout + signal forwarding
  *   - retry-with-backoff for 5xx and network errors
@@ -42,26 +42,6 @@ export const toCamelCase = <T>(value: T): T => {
     for (const [key, entry] of Object.entries(value)) {
       const camelKey = key.includes('_') ? toCamelKey(key) : key;
       result[camelKey] = toCamelCase(entry);
-    }
-    return result as T;
-  }
-  return value;
-};
-
-const toSnakeKey = (key: string) =>
-  key
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
-    .toLowerCase();
-
-export const toSnakeCase = <T>(value: T): T => {
-  if (Array.isArray(value)) {
-    return value.map((item) => toSnakeCase(item)) as T;
-  }
-  if (isPlainObject(value)) {
-    const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      result[toSnakeKey(key)] = toSnakeCase(entry);
     }
     return result as T;
   }
@@ -347,9 +327,15 @@ export async function request<T>(
 }
 
 /**
- * requestJson is the JSON-bodied cousin of request(). Camel-case in the
- * payload is converted to snake_case so endpoints match the Go API
- * server's struct tags without each call site having to think about it.
+ * requestJson is the JSON-bodied cousin of request(). The payload is sent
+ * exactly as given: per ADR-0007 the API speaks camelCase in both directions
+ * with no exceptions, so there is nothing to convert on the way out.
+ *
+ * This used to snake_case the body, which was correct while the server still
+ * had snake_case request tags. Those are gone, and the transform silently
+ * broke every payload with a multi-word key — device create/clone,
+ * error injection, PCAP replay, alert saving (D11). Responses are still
+ * camel-cased on the way in by request(), for endpoints that predate the ADR.
  */
 export const requestJson = <T>(
   path: string,
@@ -363,14 +349,15 @@ export const requestJson = <T>(
     {
       ...init,
       headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-      body: JSON.stringify(toSnakeCase(payload)),
+      body: JSON.stringify(payload),
     },
     retry,
     timeoutMs,
   );
 
-// requestJsonCamelCase is the ADR-0007 boundary for newly migrated endpoints.
-// Legacy callers still use requestJson until their server contracts migrate.
+// requestJsonCamelCase is retained as an alias so the many call sites migrated
+// during the ADR-0007 rollout keep working. It is now identical to requestJson;
+// prefer requestJson for new code.
 export const requestJsonCamelCase = <T>(
   path: string,
   payload: unknown,

@@ -72,6 +72,15 @@ test.describe('Device Editor', () => {
   });
 });
 
+/**
+ * NOTE: this describe block stubs `**\/api/v1/**` with page.route() and fulfills
+ * 201 unconditionally, so it asserts the shape the client *sends* and never
+ * exercises the server that would reject it. That is exactly how D11 shipped:
+ * the payload below was snake_cased, every real POST returned 400, and this
+ * test stayed green. Contract coverage lives in
+ * ui/src/api/wire-casing.contract.test.ts and the Go handler tests; treat this
+ * spec as UI wiring only.
+ */
 test.describe('Device Editor API wiring', () => {
   test('creates a device with interface speed, duplex, and status metadata', async ({ page }) => {
     let createPayload: Record<string, unknown> | undefined;
@@ -162,13 +171,13 @@ test.describe('Device Editor API wiring', () => {
       hostname: 'edge-switch-01',
       mac: '02:00:00:00:10:01',
       ip: '192.0.2.11',
-      interface_details: [
+      interfaceDetails: [
         {
           name: 'Ethernet1/1',
           speed: 10000,
           duplex: 'full',
-          admin_status: 'up',
-          oper_status: 'down',
+          adminStatus: 'up',
+          operStatus: 'down',
           description: 'uplink to core',
         },
       ],

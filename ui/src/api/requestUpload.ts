@@ -5,7 +5,6 @@ import {
   notifyIfAuthenticationFailed,
   parseApiError,
   toCamelCase,
-  toSnakeCase,
 } from './requestCore';
 
 /**
@@ -86,7 +85,7 @@ export function requestJsonWithProgress<T>(
           reject(new DOMException('Request aborted', 'AbortError'));
         };
 
-        xhr.send(JSON.stringify(toSnakeCase(payload)));
+        xhr.send(JSON.stringify(payload));
       })
       .catch(reject);
   });

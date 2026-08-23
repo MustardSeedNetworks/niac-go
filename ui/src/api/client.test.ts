@@ -62,7 +62,7 @@ describe('API Client', () => {
     vi.restoreAllMocks();
   });
 
-  describe('toCamelCase / toSnakeCase helpers', () => {
+  describe('toCamelCase response conversion', () => {
     it('converts snake_case keys to camelCase', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

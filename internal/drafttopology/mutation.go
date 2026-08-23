@@ -63,13 +63,13 @@ type DeviceMutation struct {
 	Type        string            `json:"type"`
 	Vendor      string            `json:"vendor,omitempty"`
 	MAC         string            `json:"mac,omitempty"`
-	MACSuffix   uint32            `json:"mac_suffix,omitempty"`
-	SysObjectID string            `json:"sys_object_id,omitempty"`
+	MACSuffix   uint32            `json:"macSuffix,omitempty"`
+	SysObjectID string            `json:"sysObjectId,omitempty"`
 	IPs         []string          `json:"ips,omitempty"`
 	VLAN        int               `json:"vlan,omitempty"`
 	Interfaces  []Interface       `json:"interfaces,omitempty"`
 	Properties  map[string]string `json:"properties,omitempty"`
-	ProfileRole string            `json:"profile_role,omitempty"`
+	ProfileRole string            `json:"profileRole,omitempty"`
 	WalkFile    string            `json:"-"`
 }
 
@@ -83,11 +83,11 @@ type Interface struct {
 	MTU            int     `json:"mtu,omitempty"`
 	Speed          int     `json:"speed,omitempty"`
 	Duplex         string  `json:"duplex,omitempty"`
-	AdminStatus    string  `json:"admin_status,omitempty"`
-	OperStatus     string  `json:"oper_status,omitempty"`
+	AdminStatus    string  `json:"adminStatus,omitempty"`
+	OperStatus     string  `json:"operStatus,omitempty"`
 	Description    string  `json:"description,omitempty"`
-	InUtilization  float64 `json:"in_utilization,omitempty"`
-	OutUtilization float64 `json:"out_utilization,omitempty"`
+	InUtilization  float64 `json:"inUtilization,omitempty"`
+	OutUtilization float64 `json:"outUtilization,omitempty"`
 	VLANs          []int   `json:"vlans,omitempty"`
 }
 
@@ -118,8 +118,8 @@ type LinkMutation struct {
 // FDB-only (forwarding-table visibility without carrying simulated traffic).
 type LinkProperties struct {
 	VLANs      []int `json:"vlans,omitempty"`
-	NativeVLAN int   `json:"native_vlan,omitempty"`
-	FDBOnly    bool  `json:"fdb_only,omitempty"`
+	NativeVLAN int   `json:"nativeVlan,omitempty"`
+	FDBOnly    bool  `json:"fdbOnly,omitempty"`
 }
 
 // PositionMutation is the MoveDevice payload: a device's new canvas coordinates.

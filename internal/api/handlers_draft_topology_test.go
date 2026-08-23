@@ -157,7 +157,7 @@ func TestDraftTopologyMutationPersistsReciprocalLinkWithoutApplyingRuntime(t *te
       "link":{
         "source":{"device":"core-1","interface":"Ethernet1/1"},
         "target":{"device":"dist-1","interface":"Ethernet1/49"},
-        "properties":{"vlans":[200,210],"native_vlan":200}
+        "properties":{"vlans":[200,210],"nativeVlan":200}
       }
     }`
 	rec := httptest.NewRecorder()
