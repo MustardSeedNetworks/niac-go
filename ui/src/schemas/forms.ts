@@ -65,7 +65,11 @@ export const ErrorInjectionSchema = v.object({
     v.string(),
     v.trim(),
     v.minLength(1, 'Interface is required'),
-    v.maxLength(15, 'Interface name is too long (max 15 chars)'),
+    // SNMP ifName, not a Linux device name: the values NIAC simulates run to
+    // "HundredGigabitEthernet0/0/1" (27 chars). A 15-char IFNAMSIZ-style cap
+    // rejected names this form's own dropdown offers, and the server imposes no
+    // length limit at all — only non-empty (#1476).
+    v.maxLength(255, 'Interface name is too long (max 255 chars)'),
   ),
   selectedErrorType: v.pipe(v.string(), v.minLength(1, 'Error type is required')),
   errorValue: v.pipe(
