@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { type FC, type KeyboardEvent, type ReactNode, useEffect } from 'react';
+import { type FC, type ReactNode, useEffect } from 'react';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -56,13 +56,6 @@ export const Modal: FC<ModalProps> = ({
     return null;
   }
 
-  const handleContentKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    // Prevent escape from bubbling if handled by the focus-trap hook
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex-center">
       {closeOnBackdropClick ? (
@@ -81,7 +74,6 @@ export const Modal: FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        onKeyDown={handleContentKeyDown}
       >
         {(title || showCloseButton) && (
           <div className="flex-between px-6 py-4 border-b border-surface-border">
