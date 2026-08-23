@@ -41,7 +41,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
-import { getStreamFilter } from '../utils/conversations';
+import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 import { packetFromStreamEvent } from './packets/packet-from-stream';
@@ -221,15 +221,7 @@ export const PacketInspectorPage: FC = () => {
   }, [selectedPacket]);
 
   // Can the selected packet be followed as a stream?
-  const canFollowStream = useMemo(() => {
-    if (!selectedPacket) return false;
-    const proto = selectedPacket.protocol.toUpperCase();
-    return (
-      (proto === 'TCP' || proto === 'UDP') &&
-      !!selectedPacket.sourcePort &&
-      !!selectedPacket.destPort
-    );
-  }, [selectedPacket]);
+  const followable = useMemo(() => canFollowStream(selectedPacket), [selectedPacket]);
 
   // Header/payload byte boundary for the hex dump, derived from the
   // selected packet's dissected protocol layers rather than a hardcoded
@@ -403,9 +395,9 @@ export const PacketInspectorPage: FC = () => {
                     size="sm"
                     onClick={handleFollowStream}
                     leftIcon={<Share2 className={iconSizes.md} />}
-                    disabled={!canFollowStream}
+                    disabled={!followable}
                     title={
-                      canFollowStream ? undefined : t('packets.inspector.followStreamDisabledTitle')
+                      followable ? undefined : t('packets.inspector.followStreamDisabledTitle')
                     }
                   >
                     {t('packets.inspector.followStreamTitle')}

@@ -141,7 +141,14 @@ function compareValues(
 function evaluateFieldExists(field: string, packet: PacketLike): boolean {
   // Bare protocol names check if the packet is that protocol
   if (BARE_PROTOCOLS.includes(field.toLowerCase() as (typeof BARE_PROTOCOLS)[number])) {
-    return getProtocol(packet).toLowerCase() === field.toLowerCase();
+    const wanted = field.toLowerCase();
+    if (getProtocol(packet).toLowerCase() === wanted) {
+      return true;
+    }
+    // `protocol` holds the application protocol once one is recognised, so an
+    // HTTP packet is still a TCP packet and `tcp` must match it — as it does in
+    // Wireshark. The transport is in the headers the analyzer emits (#1497).
+    return Boolean(getHeaders(packet)?.[wanted]);
   }
 
   // For dotted fields, check if the field resolves to a non-null value

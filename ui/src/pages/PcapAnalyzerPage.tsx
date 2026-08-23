@@ -24,7 +24,7 @@ import { InfoPopover } from '../ui/InfoPopover';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
-import { getStreamFilter } from '../utils/conversations';
+import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
 
 /**
@@ -213,15 +213,7 @@ export const PcapAnalyzerPage: FC = () => {
     }
   }, [selectedPacket]);
 
-  const canFollowStream = useMemo(() => {
-    if (!selectedPacket) return false;
-    const proto = selectedPacket.protocol.toUpperCase();
-    return (
-      (proto === 'TCP' || proto === 'UDP') &&
-      !!selectedPacket.sourcePort &&
-      !!selectedPacket.destPort
-    );
-  }, [selectedPacket]);
+  const followable = useMemo(() => canFollowStream(selectedPacket), [selectedPacket]);
 
   const streamPackets = useMemo(() => {
     if (!selectedPacket || !showStreamView) return [];
@@ -343,7 +335,7 @@ export const PcapAnalyzerPage: FC = () => {
                     size="sm"
                     onClick={handleFollowStream}
                     leftIcon={<Share2 className={iconSizes.md} />}
-                    disabled={!canFollowStream}
+                    disabled={!followable}
                   >
                     {tPages('libraryPcaps.analyzer.followStreamButton')}
                   </Button>
