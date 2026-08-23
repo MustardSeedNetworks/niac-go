@@ -161,3 +161,13 @@ type Report struct {
 	Topology    Topology     `json:"topology"`
 	Diagnostics []Diagnostic `json:"diagnostics"`
 }
+
+// NewReport returns a Report whose collections are empty rather than nil.
+//
+// The UI declares all five as non-nullable arrays, and a nil Go slice marshals
+// as null — omitempty does not help, the fields have to be initialised. Build
+// every Report through this so the wire contract holds by construction instead
+// of by each caller remembering (#1467).
+func NewReport() Report {
+	return Report{Topology: NewTopology(), Diagnostics: []Diagnostic{}}
+}
