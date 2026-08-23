@@ -16,6 +16,62 @@ interface FilterBarProps {
 const QUICK_PROTOCOLS = ['tcp', 'udp', 'icmp', 'arp', 'dns', 'http'] as const;
 
 /**
+ * Matches the trailing protocol group the chips themselves build: a bare atom
+ * or a parenthesised OR of atoms, optionally preceded by a typed expression.
+ */
+const PROTOCOL_GROUP =
+  /(?:^|\s&&\s)\(?((?:tcp|udp|icmp|arp|dns|http)(?:\s\|\|\s(?:tcp|udp|icmp|arp|dns|http))*)\)?$/;
+
+interface SplitFilter {
+  /** Whatever the user typed, with the protocol group removed. */
+  rest: string;
+  protocols: string[];
+}
+
+/**
+ * Separate the chip-managed protocol group from the rest of the expression.
+ *
+ * Only the shapes the chips produce are recognised; anything else is left
+ * untouched as `rest`, so toggling never rewrites an expression it did not
+ * build.
+ */
+function splitFilter(value: string): SplitFilter {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { rest: '', protocols: [] };
+  }
+  const match = PROTOCOL_GROUP.exec(trimmed);
+  const group = match?.[1];
+  if (!match || !group) {
+    return { rest: trimmed, protocols: [] };
+  }
+  return {
+    rest: trimmed
+      .slice(0, match.index)
+      .replace(/\s*&&\s*$/, '')
+      .trim(),
+    protocols: group.split(' || '),
+  };
+}
+
+/**
+ * Protocol atoms combine with `||`: selecting TCP and UDP means either, and
+ * `tcp && udp` can never match a frame (#1481).
+ */
+function buildFilter(rest: string, protocols: string[]): string {
+  const group =
+    protocols.length === 0
+      ? ''
+      : protocols.length === 1
+        ? protocols.join('')
+        : `(${protocols.join(' || ')})`;
+  if (!rest) {
+    return group;
+  }
+  return group ? `${rest} && ${group}` : rest;
+}
+
+/**
  * Expression-based filter bar with validation, autocomplete, and quick-insert buttons.
  * Shows green border when valid, red when invalid.
  */
@@ -95,10 +151,15 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
     [suggestions, selectedSuggestion, applySuggestion],
   );
 
-  const handleQuickInsert = useCallback(
+  const activeProtocols = splitFilter(value).protocols;
+
+  const handleQuickToggle = useCallback(
     (protocol: string) => {
-      const newValue = value.trim() ? `${value} && ${protocol}` : protocol;
-      onChange(newValue);
+      const { rest, protocols } = splitFilter(value);
+      const next = protocols.includes(protocol)
+        ? protocols.filter((entry) => entry !== protocol)
+        : [...protocols, protocol];
+      onChange(buildFilter(rest, next));
       inputRef.current?.focus();
     },
     [value, onChange],
@@ -159,8 +220,13 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
             <button
               key={protocol}
               type="button"
-              onClick={() => handleQuickInsert(protocol)}
-              className="px-cell py-compact text-xs rounded border border-surface-border text-text-muted hover:text-text-primary hover:border-surface-border bg-bg-surface/50 transition-colors uppercase"
+              aria-pressed={activeProtocols.includes(protocol)}
+              onClick={() => handleQuickToggle(protocol)}
+              className={`px-cell py-compact text-xs rounded border transition-colors uppercase ${
+                activeProtocols.includes(protocol)
+                  ? 'border-brand-primary bg-brand-primary/15 text-text-primary'
+                  : 'border-surface-border text-text-muted hover:text-text-primary bg-bg-surface/50'
+              }`}
             >
               {protocol}
             </button>

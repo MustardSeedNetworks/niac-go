@@ -75,7 +75,7 @@ func (req *errorInjectionRequest) validationMessage() string {
 	case req.Interface == "":
 		return "interface is required"
 	case req.ErrorType == "":
-		return "error_type is required"
+		return "errorType is required"
 	case req.Value < 0 || req.Value > 100:
 		return "value must be between 0 and 100"
 	default:
