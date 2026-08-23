@@ -4,6 +4,7 @@ import { preflightSimulation } from '../../api/client';
 import { type ApiErrorDetail, isApiError } from '../../api/errors';
 import type { SimulationPreflightReport, SimulationPreflightRequest } from '../../api/fabric-types';
 import type { SimulationRequest } from '../../api/types';
+import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
@@ -140,20 +141,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             />
           </label>
         )}
-        {error && (
-          <div className="text-status-error" role="alert">
-            <SmallText className="text-status-error">{error}</SmallText>
-            {errorDetails.length > 0 && (
-              <ul className="mt-tight list-disc pl-5 text-sm text-status-error">
-                {errorDetails.map((detail) => (
-                  <li key={`${detail.field ?? ''}-${detail.issue}`}>
-                    {detail.field ? `${detail.field}: ${detail.issue}` : detail.issue}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {error && <ApiErrorMessage message={error} details={errorDetails} />}
         {report?.safe && (
           <div
             className="rounded-lg border border-status-success/40 bg-status-success/10 pad-sm"

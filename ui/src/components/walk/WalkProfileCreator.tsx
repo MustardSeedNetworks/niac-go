@@ -1,5 +1,6 @@
 import { type FC, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { type ApiErrorDetail, isApiError } from '../../api/errors';
 import {
   captureWalkProfile,
   createCapturedProfile,
@@ -7,6 +8,7 @@ import {
   type WalkCaptureCredentials,
   type WalkProfileReview,
 } from '../../api/walk-profile-client';
+import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
 import { Card, CardContent } from '../../ui/Card';
 import { WalkProfileReviewForm } from './WalkProfileReviewForm';
 import { WalkProfileSource } from './WalkProfileSource';
@@ -40,6 +42,9 @@ export const WalkProfileCreator: FC = () => {
   const [review, setReview] = useState<WalkProfileReview | null>(null);
   const [busy, setBusy] = useState<'idle' | 'reading' | 'capturing' | 'creating'>('idle');
   const [error, setError] = useState<string | null>(null);
+  // The server enumerates why a capture failed (#1488); keeping only
+  // err.message discarded it at the last step (#1499).
+  const [errorDetails, setErrorDetails] = useState<readonly ApiErrorDetail[]>([]);
   const [createdRole, setCreatedRole] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -48,6 +53,7 @@ export const WalkProfileCreator: FC = () => {
     setReview(null);
     setCreatedRole(null);
     setError(null);
+    setErrorDetails([]);
   };
 
   const runImport = async () => {
@@ -58,6 +64,7 @@ export const WalkProfileCreator: FC = () => {
     }
     setBusy('reading');
     setError(null);
+    setErrorDetails([]);
     setCreatedRole(null);
     controller.current = new AbortController();
     try {
@@ -69,7 +76,10 @@ export const WalkProfileCreator: FC = () => {
         ),
       );
     } catch (caught) {
-      if ((caught as Error).name !== 'AbortError') setError((caught as Error).message);
+      if ((caught as Error).name !== 'AbortError') {
+        setError((caught as Error).message);
+        setErrorDetails(isApiError(caught) ? caught.details : []);
+      }
     } finally {
       controller.current = null;
       setFile(null);
@@ -81,6 +91,7 @@ export const WalkProfileCreator: FC = () => {
   const runCapture = async () => {
     setBusy('capturing');
     setError(null);
+    setErrorDetails([]);
     setCreatedRole(null);
     controller.current = new AbortController();
     try {
@@ -88,7 +99,10 @@ export const WalkProfileCreator: FC = () => {
         await captureWalkProfile(walkFilename(captureName), capture, controller.current.signal),
       );
     } catch (caught) {
-      if ((caught as Error).name !== 'AbortError') setError((caught as Error).message);
+      if ((caught as Error).name !== 'AbortError') {
+        setError((caught as Error).message);
+        setErrorDetails(isApiError(caught) ? caught.details : []);
+      }
     } finally {
       controller.current = null;
       setCapture((current) => ({
@@ -106,6 +120,7 @@ export const WalkProfileCreator: FC = () => {
     if (!review) return;
     setBusy('creating');
     setError(null);
+    setErrorDetails([]);
     try {
       const created = await createCapturedProfile({
         role: review.profile.role,
@@ -148,11 +163,7 @@ export const WalkProfileCreator: FC = () => {
           runCapture={runCapture}
           cancel={() => controller.current?.abort()}
         />
-        {error && (
-          <p role="alert" className="text-sm text-status-error">
-            {error}
-          </p>
-        )}
+        {error && <ApiErrorMessage message={error} details={errorDetails} />}
         {createdRole && (
           <p role="status" className="text-sm text-status-success">
             {t('walkAnalyzer.profile.created', { role: createdRole })}
