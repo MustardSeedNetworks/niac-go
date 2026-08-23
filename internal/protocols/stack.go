@@ -492,6 +492,22 @@ func (s *Stack) SendRawPacketVLAN(data []byte, vlan int) error {
 	return s.send(pkt)
 }
 
+// Config returns the configuration the stack is currently running.
+//
+// ReloadConfig replaces it, so this is the live view — unlike a config pointer
+// captured when the session started, which goes stale the moment a device is
+// added or removed (D13). Safe on a nil receiver so status paths can call it
+// before a stack exists.
+func (s *Stack) Config() *config.Config {
+	if s == nil {
+		return nil
+	}
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+
+	return s.config
+}
+
 // GetDevices returns the device table.
 func (s *Stack) GetDevices() *DeviceTable {
 	return s.devices

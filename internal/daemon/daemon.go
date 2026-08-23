@@ -1115,7 +1115,12 @@ func simulationStatus(sim *Simulation, selected bool) api.SimulationStatus {
 		StartedAt:      sim.StartedAt,
 		UptimeSeconds:  time.Since(sim.StartedAt).Seconds(),
 	}
-	if sim.cfg != nil {
+	// Prefer the running stack's config: it is replaced by ReloadConfig, whereas
+	// sim.cfg is captured at session start and never reassigned, so it goes stale
+	// the moment a device is added or removed (D13).
+	if live := sim.stack.Config(); live != nil {
+		status.DeviceCount = live.DeviceCount()
+	} else if sim.cfg != nil {
 		status.DeviceCount = sim.cfg.DeviceCount()
 	}
 	if sim.fabric != nil && sim.stack != nil {
