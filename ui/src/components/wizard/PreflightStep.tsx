@@ -1,6 +1,7 @@
 import { type FC, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { preflightSimulation } from '../../api/client';
+import { type ApiErrorDetail, isApiError } from '../../api/errors';
 import type { SimulationPreflightReport, SimulationPreflightRequest } from '../../api/fabric-types';
 import type { SimulationRequest } from '../../api/types';
 import { Button } from '../../ui/Button';
@@ -26,6 +27,10 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
   const [report, setReport] = useState<SimulationPreflightReport | null>(null);
   const [approvedPayload, setApprovedPayload] = useState<SimulationPreflightRequest | null>(null);
   const [error, setError] = useState('');
+  // The server enumerates validation failures one per offending field (#1461);
+  // keeping only err.message threw that diagnosis away on the one screen whose
+  // job is to show it (#1472).
+  const [errorDetails, setErrorDetails] = useState<readonly ApiErrorDetail[]>([]);
   const [checking, setChecking] = useState(false);
   const requestSequence = useRef(0);
 
@@ -51,6 +56,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
     const checkedPayload = payload;
     setChecking(true);
     setError('');
+    setErrorDetails([]);
     try {
       const result = await preflightSimulation(checkedPayload);
       if (requestSequence.current !== sequence) return;
@@ -61,6 +67,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
       setReport(null);
       setApprovedPayload(null);
       setError(err instanceof Error ? err.message : t('newSimWizard.preflight.requestError'));
+      setErrorDetails(isApiError(err) ? err.details : []);
     } finally {
       if (requestSequence.current === sequence) setChecking(false);
     }
@@ -134,9 +141,18 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
           </label>
         )}
         {error && (
-          <SmallText className="text-status-error" role="alert">
-            {error}
-          </SmallText>
+          <div className="text-status-error" role="alert">
+            <SmallText className="text-status-error">{error}</SmallText>
+            {errorDetails.length > 0 && (
+              <ul className="mt-tight list-disc pl-5 text-sm text-status-error">
+                {errorDetails.map((detail) => (
+                  <li key={`${detail.field ?? ''}-${detail.issue}`}>
+                    {detail.field ? `${detail.field}: ${detail.issue}` : detail.issue}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
         {report?.safe && (
           <div
