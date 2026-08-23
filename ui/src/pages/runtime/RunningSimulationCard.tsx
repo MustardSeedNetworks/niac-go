@@ -130,7 +130,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
                   {t('runtime.fabric.virtualNetworks')}
                 </SmallText>
                 <ul className="mt-tight text-sm text-text-primary">
-                  {simStatus.fabric.topology.networks.map((network) => (
+                  {(simStatus.fabric.topology.networks ?? []).map((network) => (
                     <li key={network.name}>
                       {network.name} · {network.prefix} · {t('runtime.fabric.virtualVlan')}:{' '}
                       {network.virtualVlan ?? t('runtime.fabric.none')}
@@ -143,7 +143,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
                   {t('runtime.fabric.routes')}
                 </SmallText>
                 <ul className="mt-tight text-sm text-text-primary">
-                  {simStatus.fabric.topology.routes.map((route) => (
+                  {(simStatus.fabric.topology.routes ?? []).map((route) => (
                     <li key={`${route.device}-${route.destination}-${route.via}`}>
                       {route.device}: {route.destination} → {route.via}
                     </li>

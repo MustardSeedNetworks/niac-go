@@ -135,6 +135,19 @@ type Topology struct {
 	DHCPScopes []DHCPScope     `json:"dhcpScopes"`
 }
 
+// NewTopology returns a Topology whose collections are empty slices rather
+// than nil. encoding/json renders a nil slice as `null`, and the wire contract
+// (mirrored by ui/src/api/fabric-types.ts) declares these as arrays, so a
+// consumer doing `topology.networks.length` must never be handed null (D6).
+func NewTopology() Topology {
+	return Topology{
+		Networks:   []Network{},
+		Interfaces: []Interface{},
+		Routes:     []Route{},
+		DHCPScopes: []DHCPScope{},
+	}
+}
+
 // Diagnostic explains why a topology is unsafe.
 type Diagnostic struct {
 	Code    DiagnosticCode `json:"code"`

@@ -18,6 +18,9 @@ func Compile(cfg *config.Config, binding Binding) Report {
 		devices:            make(map[string]struct{}),
 		addresses:          make(map[netip.Addr]string),
 		dhcpLeaseAddresses: make(map[netip.Addr]string),
+		// Seed the report's collections so a scenario that produces none of
+		// them still marshals as [] rather than null. (D6)
+		report: Report{Topology: NewTopology(), Diagnostics: []Diagnostic{}},
 	}
 	compiler.compileBinding()
 	compiler.compileNetworks()
@@ -28,7 +31,10 @@ func Compile(cfg *config.Config, binding Binding) Report {
 
 // CompilePhysicalBinding validates a physical binding for a flat scenario.
 func CompilePhysicalBinding(binding Binding) Report {
-	compiler := scenarioCompiler{binding: binding}
+	compiler := scenarioCompiler{
+		binding: binding,
+		report:  Report{Topology: NewTopology(), Diagnostics: []Diagnostic{}},
+	}
 	compiler.validateBindingMode()
 	compiler.report.Topology.Binding = CompiledBinding{
 		Binding: binding, WireTagged: binding.Mode == ModeTrunk,
