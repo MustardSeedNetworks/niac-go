@@ -24,6 +24,7 @@ devices:
       port_id: "GigabitEthernet0/0"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Core Switch
@@ -41,6 +42,7 @@ devices:
       bridge_priority: 24576
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Wireless Access Point
@@ -54,6 +56,7 @@ devices:
       port_description: "GigabitEthernet0"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # DHCP and DNS Server
@@ -83,4 +86,5 @@ devices:
       server_name: "Office-Server"
 
     snmp_agent:
+      community: public
       walk_file: ""

@@ -20,6 +20,7 @@ devices:
 
     # SNMP - Simple Network Management Protocol
     snmp_agent:
+      community: public
       walk_file: ""
 
   # Access Switch - Layer 2 switching
@@ -44,4 +45,5 @@ devices:
 
     # SNMP
     snmp_agent:
+      community: public
       walk_file: ""

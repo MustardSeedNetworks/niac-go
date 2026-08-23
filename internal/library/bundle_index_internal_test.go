@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // A bundle's files land in the same directories as the operator's own and look
@@ -71,16 +73,10 @@ func newLibraryWithFile(t *testing.T, kind Kind, name string) *Library {
 
 func firstStarterNetwork(t *testing.T) string {
 	t.Helper()
-	entries, err := starterPack.ReadDir("starter")
-	if err != nil {
-		t.Fatal(err)
+	names := templates.ListNames()
+	if len(names) == 0 {
+		t.Fatal("the starter pack ships no network")
 	}
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			return entry.Name()
-		}
-	}
-	t.Fatal("the starter pack ships no network")
 
-	return ""
+	return names[0] + ".yaml"
 }

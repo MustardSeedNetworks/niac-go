@@ -17,6 +17,7 @@ devices:
       system_description: "IoT Edge Gateway Router"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
     dhcp:
@@ -77,6 +78,7 @@ devices:
       server_name: "Thermostat-01"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # IP Camera
@@ -89,6 +91,7 @@ devices:
       server_name: "IPCamera-01"
 
     snmp_agent:
+      community: public
       walk_file: ""
 
   # IoT Hub
@@ -112,4 +115,5 @@ devices:
           ip: "192.168.100.100"
 
     snmp_agent:
+      community: public
       walk_file: ""
