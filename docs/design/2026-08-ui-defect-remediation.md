@@ -1,6 +1,7 @@
 # UI defect remediation — 19 defects, 8 waves
 
-**Status:** in progress · **Owner-approved:** 2026-08-22 · **Baseline:** origin/main @ 0.94.58 (`0710c026`), `make test` green
+**Status:** in progress · **Owner-approved:** 2026-08-22
+**Baseline:** origin/main @ 0.94.58 (`0710c026`), `make test` green
 **Epic:** #1437 · **Issues:** #1418–#1436
 
 Found by driving every sidebar item of the web UI against the live daemon on
@@ -11,11 +12,12 @@ written — none were fixed by the 50 commits between 0.94.46 and 0.94.58.
 **Why the existing suite did not catch any of this:** `make test` and 23
 Playwright specs pass while all 19 defects are live — including
 `device-crud.spec.ts` and `device-editor.spec.ts`, for two flows that are
-provably broken. Green tests are therefore *not* the completion signal for this
+provably broken. Green tests are therefore _not_ the completion signal for this
 programme. Every fix below lands a guard that is proven to fail against the
 pre-fix code first.
 
 **Owner decisions (2026-08-22):**
+
 - CT304 may be redeployed for live verification; 0.94.46 + config backup kept as rollback.
 - D19 native VLAN: demux key 0 = native, at most one per interface, coexists with N tagged sessions.
 - Self-merge on genuinely green CI; never `--admin` past a red gate.
@@ -33,9 +35,9 @@ Repo: `~/Developer/MustardSeedNetworks/niac-go` · Report: DEFECTS.md · Evidenc
 ## Corrections to the sweep report (verified during planning)
 
 | # | Sweep said | Code says |
-|---|---|---|
-| D8 | Fix is in `ConfirmModal.tsx`; "Escape does not dismiss" | Markup is in `ui/Modal.tsx:66-108`, not ConfirmModal. Escape **is** wired (`useFocusTrap`, `document`-level listener, `closeOnEscape=true` default). The Escape miss is better explained by **D18** below. Correct the published claim. |
-| D14 | Menu overflows its container | Real cause: `Card` default variant sets `backdrop-blur-xl` (`ui/Card.tsx:41`), which creates a **stacking context**. Header Card and graph Card are siblings with `z-index:auto`; the graph Card is later in DOM so its whole layer paints over the menu's `z-50`. |
+| --- | --- | --- |
+| D8 | Fix is in `ConfirmModal.tsx`; "Escape does not dismiss" | Markup is in `ui/Modal.tsx:66-108`. Escape **is** wired (document-level, `closeOnEscape=true`). See **D18**. |
+| D14 | Menu overflows its container | `Card`'s `backdrop-blur-xl` (`ui/Card.tsx:41`) creates a **stacking context**; the graph Card paints over the menu's `z-50`. |
 | D15 | `fitView` never called | `fitView={true}` **is** set (`TopologyPage.tsx:871-872`). Cause is a `setTimeout(…,150)` race in `handleResetLayout` (`:338-351`). `handleRefresh` (`:534-549`) already fixed this with `requestAnimationFrame` and its comment documents the exact bug. |
 | D16 | Server supplies the literal `"Unknown"` for IPs | Server **omits** the keys; the literal is set client-side at `PacketInspectorPage.tsx:169-170`. Server also emits packet fields **flat** (`src_mac`, `source_ip`, …) while the client reads a nested `headers.ethernet` / `headers.ipv4` object that is never sent. |
 | D11 | "One deletion — no snake_case request structs remain" | True for `internal/api`, **false repo-wide**: `internal/drafttopology` still has **9** snake_case tags and is strict-decoded. Deleting the conversion without migrating them first breaks the wizard's visual topology editor. |
@@ -51,15 +53,19 @@ render**, and each teardown runs `previousActiveElement.current.focus()`
 (`restoreFocus`), yanking focus out of the dialog. On a continuously
 re-rendering page (Logs at Trace level) focus thrashes many times per second.
 This is the likely cause of the Escape miss observed during the sweep.
-*Fix: `useCallback` the handlers, or hold `onEscape` in a ref inside the hook.*
+_Fix: `useCallback` the handlers, or hold `onEscape` in a ref inside the hook._
 
 ---
 
 ## Preconditions (before any fix branch)
 
 1. `git -C ~/Developer/MustardSeedNetworks/niac-go fetch && git switch -c <branch> origin/main` — never commit to `main`.
-2. Establish a green baseline: `make lint && make fmt-check && make test`. Record the result. Every wave is judged against this, not against a hopeful clean slate.
-3. Note the test contract: `make test` = `go test -race -coverprofile` over all non-ui packages **plus** Vitest. `make test-e2e` = full `make build` then Playwright (`ui/e2e/*.spec.ts`, 23 specs) against a **real built daemon** — E2E never mocks the backend, which is why contract bugs must be caught there or in Go handler tests, not in Vitest.
+2. Establish a green baseline: `make lint && make fmt-check && make test`. Record the result. Every wave is judged
+   against this, not against a hopeful clean slate.
+3. Note the test contract: `make test` = `go test -race -coverprofile` over all non-ui packages **plus** Vitest.
+   `make test-e2e` = full `make build` then Playwright (`ui/e2e/*.spec.ts`, 23 specs) against a **real built
+   daemon** — E2E never mocks the backend, which is why contract bugs must be caught there or in Go handler tests,
+   not in Vitest.
 4. Vitest coverage gates: lines 75 / branches 67 / functions 45 / statements 67. New guard tests must not drop these.
 
 ---
@@ -70,8 +76,8 @@ This is the likely cause of the Escape miss observed during the sweep.
 
 This is not a patch; it is the completion of an **accepted** architectural
 decision. `docs/adr/0007-json-wire-casing-convention.md` (Accepted 2026-06-16)
-mandates *"Every field niac's API emits or accepts is camelCase. There are no
-wire-level snake_case exceptions."* The server side is done — my audit found
+mandates _"Every field NIAC's API emits or accepts is camelCase. There are no
+wire-level snake_case exceptions."_ The server side is done — my audit found
 **zero** snake_case `json:` tags on any request struct in `internal/api` (the ADR
 recorded 74 at the start). The client was never migrated.
 
@@ -80,7 +86,7 @@ Order matters:
 1. **Migrate `internal/drafttopology` to camelCase** — 9 tags, strict-decoded at
    `internal/api/handlers_draft_topology.go:35`:
    `admin_status, fdb_only, in_utilization, mac_suffix, native_vlan, oper_status, out_utilization, profile_role, sys_object_id`.
-   The client already *names* these fields in camelCase
+   The client already _names_ these fields in camelCase
    (`library-client.ts:81-100`: `macSuffix`, `sysObjectId`, `profileRole`,
    `adminStatus`, `operStatus`) — they only match today **because**
    `toSnakeCase` converts them. This package was outside the ADR's
@@ -99,7 +105,7 @@ replay · save alerts — plus the latent ones never exercised
 (`templates/use` → `newConfigName`/`templateName`; `synthesize-walk` →
 `interfaceCount`; `walk/validate` → `autoFix`).
 
-**Test landmines:** none, under *this* direction. `library-client.test.ts`
+**Test landmines:** none, under _this_ direction. `library-client.test.ts`
 (`'creates template drafts without flattening resources in the browser'`)
 asserts a **camelCase** body for `createScenarioDraftFromTemplate` — which
 bypasses `requestJson` entirely today. Moving everything to camelCase keeps it
@@ -189,7 +195,7 @@ short-circuits that case — so **the edit-load path has no test at all**. Guard
 `sim.cfg` is set once at session start (`daemon.go:706`) and **never reassigned**
 — the daemon has no "replace config on a running session" API. Device mutations
 call `api.Server.saveConfig` → `replaceConfig` (`config_state.go:132-140`), which
-updates the *API layer's* state only. The `ApplyConfig` hook (`server.go:313`)
+updates the _API layer's_ state only. The `ApplyConfig` hook (`server.go:313`)
 that could bridge them is **never wired in production** — assigned only in tests,
 and `cmd/niac/runtime_services_test.go::TestRuntimeServicesApplyConfigNil`
 asserts it is nil at runtime.
@@ -210,6 +216,7 @@ error. This is the change that makes "zero" hold instead of decay.
 ## Wave 3 — data the product already has and discards
 
 ### F6 · D9 — protocols column and filter
+
 `ui/src/components/device-list/deviceFilters.ts:3-32` re-derives protocols from
 sub-objects (`snmpAgent`, `lldp`, …) that the list response does not carry.
 Verified server-side: `handleDeviceList` (`internal/api/devices.go:68`) only
@@ -221,16 +228,16 @@ the **summary** shape, not a fixture with `snmpAgent` populated.
 
 ### F7 · D12 — DECIDED (owner, 2026-08-22): derive segments from per-device VLAN
 
-Owner's rule: *"multiple scenarios each on their own tag, or an untagged
+Owner's rule: _"multiple scenarios each on their own tag, or an untagged
 scenario, or tagged as well — either should work, just like anything else in
-the networking world."* Applied to Segments that settles option (a).
+the networking world."_ Applied to Segments that settles option (a).
 
 Two different things are called "VLAN" in NIAC; the decision touches both:
 
 | | What it is | Status |
-|---|---|---|
-| **Physical VLAN** (`Binding.AccessVLAN`) | the tag a whole *scenario* rides on the wire | works — 6 scenarios verified on tags 200-205 |
-| **Internal VLAN** (`Segment.Tag`, per-device `vlan`) | VLANs *inside* one simulated network (mgmt 200, data 210, wifi 220, servers 240) | **broken — this is D12** |
+| --- | --- | --- |
+| **Physical VLAN** (`Binding.AccessVLAN`) | the tag a whole _scenario_ rides on the wire | works — 6 scenarios verified on tags 200-205 |
+| **Internal VLAN** (`Segment.Tag`, per-device `vlan`) | VLANs _inside_ one simulated network (mgmt 200, data 210, wifi 220, servers 240) | **broken — this is D12** |
 
 `Segment.Tag == 0` is `config.UntaggedTag` — the **native VLAN** sentinel
 (`internal/config/types.go:164-171`). Today it is misused as a catch-all: with no
@@ -240,10 +247,11 @@ one "Untagged" bucket.
 
 **Fix:** derive segments from the per-device VLAN the config already resolves
 (the same source `/api/v1/config/devices` uses for its `vlan` field). Keep tag 0
-as a *real* native/untagged bucket for genuinely untagged devices — both must
+as a _real_ native/untagged bucket for genuinely untagged devices — both must
 work; neither is a dumping ground.
 
 **Test landmines — these assert the catch-all as correct and must be rewritten:**
+
 - `internal/config/segments_test.go::TestNormalizedSegmentsBackwardCompat`
 - `internal/api/handlers_segments_test.go::TestHandleSegmentsFlatConfigIsUntagged`
 
@@ -265,7 +273,7 @@ if active.Binding.Mode != fabric.ModeTrunk || binding.Mode != fabric.ModeTrunk {
 
 If either session is `access` or `direct`, the second is refused outright. But a
 real trunk port carries a **native VLAN** — untagged frames alongside tagged
-ones. NIAC already models exactly that for the devices it *simulates*
+ones. NIAC already models exactly that for the devices it _simulates_
 (`config.TrunkPort.NativeVLAN`, validated at `internal/config/validator.go:669`);
 its own host attachment has no equivalent — `fabric.Binding`
 (`internal/fabric/types.go:61-67`) carries only `Mode` + `AccessVLAN`.
@@ -287,7 +295,9 @@ the session registry, the capture demux, and preflight validation. Treat it as
 its own PR with its own design note, not a drive-by.
 
 ### F8 · D16 — packet decode
+
 Two independent faults, both code-confirmed:
+
 1. **Shape mismatch.** `internal/api/sse/packet_observer.go:84-135` emits a
    **flat** map (`src_mac`, `dst_mac`, `source_ip`, `dest_ip`, `protocol`,
    `raw_data`…). `ui/src/utils/protocol-layers.ts:107` reads nested
@@ -301,7 +311,7 @@ Two independent faults, both code-confirmed:
 3. The literal `"Unknown"` for IPs comes from `PacketInspectorPage.tsx:169-170`,
    client-side — not the server.
 
-**Open sub-item:** the sweep observed a phantom *IPv4* layer render, which
+**Open sub-item:** the sweep observed a phantom _IPv4_ layer render, which
 `buildIpLayer` should not produce when `headers` is undefined. Trace this during
 implementation rather than assuming — it implies a second population path.
 
@@ -312,7 +322,7 @@ implementation rather than assuming — it implies a second population path.
 Three parallel template trees exist:
 
 | Tree | Files | Validated in CI? | Deployed? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `internal/library/starter/` | 8 | **No** | **Yes** — md5-identical to CT304 |
 | `internal/templates/builtin/` | 8 | Yes (`internal/templates/templates_test.go::TestTemplateConfigValidity`) | No |
 | `cmd/niac/templates/` | 7 | Yes (`internal/api/templates/templates_test.go::TestShippedTemplatesAreValid`, full validator) | No |
@@ -322,7 +332,7 @@ Three parallel template trees exist:
 wizard lists. **It is the only tree with no validation test, and the only broken one.**
 Proof of divergence — the same file in each tree:
 
-```
+```text
 builtin/small-office.yaml   dhcp: subnet_mask / pool_start / pool_end / router   ← current schema
 starter/small-office.yaml   dhcp: enabled / pools / range_start                  ← obsolete
 ```
@@ -387,7 +397,7 @@ in CI — it catches all eight today.
 
 ## Wave 8 — close the coverage gap
 
-Zero *known* defects != zero defects. These surfaces were never driven and must be
+Zero _known_ defects != zero defects. These surfaces were never driven and must be
 swept before the claim holds: wizard drag-to-connect and in-wizard Add device
 (**note: this is exactly the path F1 step 1 protects — sweep it immediately after
 Wave 1**), the "Start empty" path, real timeline creation, Walk Analyzer
@@ -400,7 +410,7 @@ light-theme pass, and mobile/tablet widths.
 ## Sequencing summary
 
 | Wave | Closes | Gate to advance |
-|---|---|---|
+| --- | --- | --- |
 | 1 | D11, D8, D18 | `make test` green; contract + hit-test guards land; **re-drive the wizard topology editor** |
 | 2 | D6, D10, D13 | marshal test proves `[]`; edit-load test exists |
 | 3 | D9, D12, D16, **D19** | protocols visible; segments split by VLAN; a native + tagged scenario run together; tagged BPDU decodes |
