@@ -1,180 +1,64 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../../api/errors';
 import '../../i18n';
-import type { SimulationPreflightReport } from '../../api/fabric-types';
 import { PreflightStep } from './PreflightStep';
 
 const preflightSimulation = vi.fn();
-
 vi.mock('../../api/client', () => ({
   preflightSimulation: (payload: unknown) => preflightSimulation(payload),
 }));
 
-const safeReport: SimulationPreflightReport = {
-  safe: true,
-  topology: {
-    binding: {
-      attachment: 'tester',
-      interface: 'eth0',
-      mode: 'access',
-      physicalVlan: 200,
-      network: 'lab-access',
-      wireTagged: false,
-    },
-    networks: [],
-    interfaces: [],
-    routes: [],
-    dhcpScopes: [],
-  },
-  diagnostics: [],
-};
+/**
+ * Guards #1472.
+ *
+ * #1461 made the server enumerate its validation errors, and it does — on
+ * CT304 a failing preflight returns one detail per error, each with the field
+ * path that names the offending device. PreflightStep narrowed the rejection to
+ * `Error` and kept only `message`, so the one screen whose job is diagnosis
+ * showed a bare "Simulation preflight failed".
+ *
+ * #1429 (D3) threaded details through the *toast* path; the wizard renders this
+ * failure as an inline banner and never reaches that code.
+ */
+const request = { interface: 'eth0', configData: 'devices: []\n' } as never;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  preflightSimulation.mockResolvedValue(safeReport);
-});
-
-describe('PreflightStep', () => {
-  // D6: a Go nil slice marshals as `null`, not `[]`. The success branch read
-  // `topology.networks.length`, so a preflight that PASSED crashed the wizard
-  // into an error boundary. Both pre-existing fixtures used `[]`, which is
-  // exactly why this shipped — this one reproduces the wire shape the daemon
-  // actually sent for a config with no networks.
-  it('renders a safe report whose collections came back null', async () => {
+describe('PreflightStep validation failures', () => {
+  it('lists every detail the server sent, with its field', async () => {
     const user = userEvent.setup();
-    preflightSimulation.mockResolvedValue({
-      safe: true,
-      topology: {
-        binding: {
-          attachment: 'cyberscope',
-          interface: 'eth0',
-          mode: 'trunk',
-          physicalVlan: 299,
-          network: '',
-          wireTagged: true,
+    preflightSimulation.mockRejectedValue(
+      new ApiError('Simulation preflight failed', 400, 'preflight_failed', [
+        {
+          field: 'devices[0].snmp_agent.community',
+          issue: 'SNMPv1/v2c requires an explicit community',
         },
-        networks: null,
-        interfaces: null,
-        routes: null,
-        dhcpScopes: null,
-      },
-      diagnostics: null,
-    });
+        {
+          field: 'devices[1].snmp_agent.community',
+          issue: 'SNMPv1/v2c requires an explicit community',
+        },
+      ]),
+    );
 
-    render(<PreflightStep request={{ interface: 'eth0' }} onStart={vi.fn()} />);
+    render(<PreflightStep request={request} onStart={vi.fn()} />);
     await user.click(screen.getByTestId('wizard-preflight-check'));
 
-    // Must reach the success state rather than throwing on `.length`.
-    await waitFor(() => {
-      expect(screen.getByTestId('wizard-preflight-start')).toBeEnabled();
-    });
+    expect(await screen.findAllByText(/SNMPv1\/v2c requires an explicit community/)).toHaveLength(
+      2,
+    );
+    expect(screen.getByText(/devices\[0\]\.snmp_agent\.community/)).toBeInTheDocument();
+    expect(screen.getByText(/devices\[1\]\.snmp_agent\.community/)).toBeInTheDocument();
   });
 
-  it('checks access mode with VLAN 200 by default and starts only after a safe report', async () => {
+  it('still shows the message when the server sent no details', async () => {
     const user = userEvent.setup();
-    const onStart = vi.fn();
-    render(
-      <PreflightStep
-        request={{ interface: 'eth0', configData: 'devices: []\n' }}
-        onStart={onStart}
-      />,
+    preflightSimulation.mockRejectedValue(
+      new ApiError('Simulation preflight failed', 400, 'preflight_failed', []),
     );
 
-    expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
+    render(<PreflightStep request={request} onStart={vi.fn()} />);
     await user.click(screen.getByTestId('wizard-preflight-check'));
 
-    await waitFor(() => expect(preflightSimulation).toHaveBeenCalledTimes(1));
-    expect(preflightSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        interface: 'eth0',
-        attachment: 'tester',
-        attachmentMode: 'access',
-        accessVlan: 200,
-      }),
-    );
-    expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled();
-
-    await user.click(screen.getByTestId('wizard-preflight-start'));
-    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ accessVlan: 200 }));
-  });
-
-  it('submits direct mode without browser-owned isolation authorization', async () => {
-    const user = userEvent.setup();
-    preflightSimulation.mockResolvedValue({
-      ...safeReport,
-      safe: false,
-      diagnostics: [{ code: 'unknown_attachment', field: 'attachment', message: 'not found' }],
-    });
-    render(<PreflightStep request={{ interface: 'eth0' }} onStart={vi.fn()} />);
-
-    await user.selectOptions(screen.getByTestId('wizard-attachment-mode'), 'direct');
-    expect(screen.queryByTestId('wizard-access-vlan')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('wizard-dedicated-interface')).not.toBeInTheDocument();
-    expect(screen.getByTestId('wizard-preflight-check')).not.toBeDisabled();
-    await user.click(screen.getByTestId('wizard-preflight-check'));
-
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('not found'));
-    expect(screen.getByRole('alert')).toHaveTextContent('Unsafe physical attachment');
-    expect(preflightSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({ attachmentMode: 'direct' }),
-    );
-    expect(preflightSimulation.mock.calls[0]?.[0]).not.toHaveProperty('accessVlan');
-    expect(preflightSimulation.mock.calls[0]?.[0]).not.toHaveProperty('dedicated');
-    expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
-  });
-
-  it('submits a stable session ID and physical VLAN for trunk mode', async () => {
-    const user = userEvent.setup();
-    const onStart = vi.fn();
-    preflightSimulation.mockResolvedValue({
-      ...safeReport,
-      topology: {
-        ...safeReport.topology,
-        binding: { ...safeReport.topology.binding, mode: 'trunk', wireTagged: true },
-      },
-    });
-    render(<PreflightStep request={{ interface: 'eth0' }} onStart={onStart} />);
-
-    await user.selectOptions(screen.getByTestId('wizard-attachment-mode'), 'trunk');
-    await user.clear(screen.getByTestId('wizard-session-id'));
-    await user.type(screen.getByTestId('wizard-session-id'), 'hospital');
-    await user.click(screen.getByTestId('wizard-preflight-check'));
-
-    await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
-    expect(preflightSimulation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        attachmentMode: 'trunk',
-        sessionId: 'hospital',
-        accessVlan: 200,
-      }),
-    );
-    await user.click(screen.getByTestId('wizard-preflight-start'));
-    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'hospital' }));
-  });
-
-  it('does not approve a changed payload when an older preflight resolves late', async () => {
-    const user = userEvent.setup();
-    let resolveFirst: (report: SimulationPreflightReport) => void = () => undefined;
-    preflightSimulation.mockReturnValueOnce(
-      new Promise<SimulationPreflightReport>((resolve) => {
-        resolveFirst = resolve;
-      }),
-    );
-    const onStart = vi.fn();
-    render(<PreflightStep request={{ interface: 'eth0' }} onStart={onStart} />);
-
-    await user.click(screen.getByTestId('wizard-preflight-check'));
-    await user.clear(screen.getByTestId('wizard-access-vlan'));
-    await user.type(screen.getByTestId('wizard-access-vlan'), '2');
-    resolveFirst(safeReport);
-
-    await waitFor(() => expect(preflightSimulation).toHaveBeenCalledTimes(1));
-    expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
-    await user.click(screen.getByTestId('wizard-preflight-check'));
-    await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
-    await user.click(screen.getByTestId('wizard-preflight-start'));
-
-    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ accessVlan: 2 }));
+    expect(await screen.findByText('Simulation preflight failed')).toBeInTheDocument();
   });
 });
