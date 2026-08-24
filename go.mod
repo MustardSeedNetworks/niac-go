@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/MustardSeedNetworks/foundation v0.5.0
+	github.com/MustardSeedNetworks/foundation v0.5.2
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gopacket/gopacket v1.7.1
