@@ -78,6 +78,13 @@
     "validate": "Validate",
     "view": "View"
   },
+  "coloringRules": {
+    "addRule": "Add Rule",
+    "empty": "No coloring rules defined.",
+    "help": "Rules are evaluated top-to-bottom. First matching rule determines the row color.",
+    "resetDefaults": "Reset Defaults",
+    "title": "Coloring Rules"
+  },
   "commandPalette": {
     "actionsHeading": "Actions",
     "closeAriaLabel": "Close command palette",
@@ -89,24 +96,24 @@
     "openSettings": "Open Settings"
   },
   "emptyState": {
+    "noDevicesConfigured": "No devices defined in the loaded configuration.",
     "noDevicesFound": "No devices found",
     "noItems": "No items to display",
     "noLogs": "No logs yet",
     "noPackets": "No packets captured yet",
-    "noResults": "No results match the current filters",
-    "noDevicesConfigured": "No devices defined in the loaded configuration."
+    "noResults": "No results match the current filters"
   },
   "errorBoundary": {
+    "componentStack": "Component Stack:",
     "defaultMessage": "An unexpected error occurred",
-    "reload": "Reload Page",
-    "title": "Something went wrong",
-    "tryAgain": "Try Again",
     "description": "An unexpected error occurred. You can try to recover or reload the page.",
     "errorDetails": "Error Details:",
-    "componentStack": "Component Stack:",
-    "pageTitle": "Page Error",
     "pageDescription": "This page encountered an error. Try navigating to another page or refresh.",
-    "retry": "Retry"
+    "pageTitle": "Page Error",
+    "reload": "Reload Page",
+    "retry": "Retry",
+    "title": "Something went wrong",
+    "tryAgain": "Try Again"
   },
   "filters": {
     "captureFilterCaption": "Capture filter — drops packets before they're buffered",
@@ -244,12 +251,5 @@
     "requestFailedTitle": "Request failed",
     "streamDisconnectedMessage": "Reconnecting…",
     "streamDisconnectedTitle": "Log stream disconnected"
-  },
-  "coloringRules": {
-    "title": "Coloring Rules",
-    "help": "Rules are evaluated top-to-bottom. First matching rule determines the row color.",
-    "empty": "No coloring rules defined.",
-    "addRule": "Add Rule",
-    "resetDefaults": "Reset Defaults"
   }
 }

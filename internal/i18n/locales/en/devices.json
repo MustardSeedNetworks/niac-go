@@ -1,5 +1,6 @@
 {
   "editor": {
+    "addOid": "Add OID",
     "deletingLabel": "Deleting…",
     "editDevice": "Edit Device",
     "general": "General",
@@ -236,8 +237,7 @@
       "confirmLabel": "Leave",
       "message": "This device has unsaved changes. If you leave now, those changes will be lost.",
       "title": "Leave without saving?"
-    },
-    "addOid": "Add OID"
+    }
   },
   "list": {
     "allProtocols": "All Protocols",
