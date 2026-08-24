@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.70](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.69...v0.94.70) (2026-08-24)
+
+
+### Bug Fixes
+
+* **capture:** require payload before a port names an application protocol ([#1507](https://github.com/MustardSeedNetworks/niac-go/issues/1507)) ([9262e7a](https://github.com/MustardSeedNetworks/niac-go/commit/9262e7a78a245f09806e354dde9c4bf294bfa3e7)), closes [#1506](https://github.com/MustardSeedNetworks/niac-go/issues/1506)
+
 ## [0.94.69](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.68...v0.94.69) (2026-08-23)
 
 
