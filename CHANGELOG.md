@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.74](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.73...v0.94.74) (2026-08-24)
+
+
+### Continuous Integration
+
+* compile the darwin build on a macOS runner ([#1521](https://github.com/MustardSeedNetworks/niac-go/issues/1521)) ([a916e77](https://github.com/MustardSeedNetworks/niac-go/commit/a916e77cec2d033f4ea8545747fa617701f56fb9))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1522](https://github.com/MustardSeedNetworks/niac-go/issues/1522)) ([b1d6339](https://github.com/MustardSeedNetworks/niac-go/commit/b1d633985f51769d55f017ecda95909615ee26a9))
+
 ## [0.94.73](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.72...v0.94.73) (2026-08-24)
 
 
