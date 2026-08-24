@@ -361,6 +361,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   onOpenSettings,
   topBar,
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => safeGetItem(STORAGE_KEY) === 'true');
@@ -403,7 +404,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-row focus:rounded-lg focus:bg-brand-primary focus:text-on-brand focus:outline-none"
       >
-        Skip to main content
+        {t('accessibility.skipToMainContent')}
       </a>
 
       <MobileTopBar mobileOpen={mobileOpen} toggleMobile={() => setMobileOpen(!mobileOpen)} />

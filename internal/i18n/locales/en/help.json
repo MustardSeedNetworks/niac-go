@@ -58,5 +58,16 @@
     "pages": "Pages",
     "protocols": "Protocols",
     "shortcuts": "Shortcuts"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions"
+  },
+  "search": {
+    "noEntries": "No entries match your search.",
+    "noGlossary": "No glossary entries match your search.",
+    "noShortcuts": "No shortcuts match your search."
+  },
+  "shortcuts": {
+    "note": "Keyboard shortcuts are contextual and may vary based on the current page."
   }
 }

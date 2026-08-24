@@ -165,7 +165,8 @@
     "noResults": "Ningún resultado coincide con los filtros actuales",
     "noItems": "No hay elementos para mostrar",
     "noPackets": "Aún no se han capturado paquetes",
-    "noLogs": "Aún no hay registros"
+    "noLogs": "Aún no hay registros",
+    "noDevicesConfigured": "No hay dispositivos definidos en la configuración cargada."
   },
   "table": {
     "showingResults": "Mostrando {{shown}} de {{total}} resultados",
@@ -175,8 +176,14 @@
   "errorBoundary": {
     "title": "Algo salió mal",
     "defaultMessage": "Ocurrió un error inesperado",
-    "tryAgain": "Reintentar",
-    "reload": "Recargar la página"
+    "tryAgain": "Intentar de nuevo",
+    "reload": "Recargar la página",
+    "description": "Se produjo un error inesperado. Puede intentar recuperarse o recargar la página.",
+    "errorDetails": "Detalles del error:",
+    "componentStack": "Pila de componentes:",
+    "pageTitle": "Error de página",
+    "pageDescription": "Esta página encontró un error. Intente navegar a otra página o actualice.",
+    "retry": "Reintentar"
   },
   "commandPalette": {
     "dialogLabel": "Paleta de comandos",
@@ -237,5 +244,12 @@
   "jargon": {
     "ariaLabel": "Acerca de {{term}}",
     "groupedByTerm": "agrupado por {{term}}"
+  },
+  "coloringRules": {
+    "title": "Reglas de color",
+    "help": "Las reglas se evalúan de arriba abajo. La primera regla coincidente determina el color de la fila.",
+    "empty": "No hay reglas de color definidas.",
+    "addRule": "Agregar regla",
+    "resetDefaults": "Restablecer valores predeterminados"
   }
 }

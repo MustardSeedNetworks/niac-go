@@ -7,6 +7,7 @@
 import { Network } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GLOSSARY } from '../../data/help-content';
 import type { GlossaryEntry } from './types';
 
@@ -23,6 +24,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactElement {
+  const { t } = useTranslation('help');
   const filteredGlossary = useMemo(() => {
     if (!searchQuery.trim()) return GLOSSARY;
     const query = searchQuery.toLowerCase();
@@ -52,9 +54,7 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
   return (
     <div className="stack-xl">
       {filteredGlossary.length === 0 ? (
-        <p className="text-sm text-text-muted py-4 text-center">
-          No glossary entries match your search.
-        </p>
+        <p className="text-sm text-text-muted py-4 text-center">{t('search.noGlossary')}</p>
       ) : (
         Object.entries(groupedEntries).map(([category, entries]) =>
           entries.length > 0 ? (

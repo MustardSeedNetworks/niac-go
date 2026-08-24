@@ -132,7 +132,7 @@ export const SnmpSection: FC<SNMPSectionProps> = ({
                 className="rounded bg-brand-primary px-2 py-1 text-xs text-knob"
                 onClick={() => updateAddMibs([...addMibs, { oid: '', type: 'STRING', value: '' }])}
               >
-                Add OID
+                {t('editor.addOid')}
               </button>
             </div>
             {addMibs.map((mib, index) => (

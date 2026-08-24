@@ -1,5 +1,5 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { fixWalk, validateAllWalks, validateWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type {
@@ -152,18 +152,24 @@ export const WalkValidatorPage: FC = () => {
               </InfoPopover>
             </h1>
             <p className="text-sm text-text-muted">
-              Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines,
-              missing OIDs
-              <InfoPopover label={tCommon('jargon.ariaLabel', { term: 'OID' })} title="OID">
-                {tHelp('jargon.oid')}
-              </InfoPopover>
-              , and unquoted strings; fix auto-rewrites the file in place.
+              <Trans
+                i18nKey="walkValidator.engineNote"
+                ns="pages"
+                components={{
+                  code: <code />,
+                  oid: (
+                    <InfoPopover label={tCommon('jargon.ariaLabel', { term: 'OID' })} title="OID">
+                      {tHelp('jargon.oid')}
+                    </InfoPopover>
+                  ),
+                }}
+              />
             </p>
           </header>
 
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-text-secondary">From walks/ directory</span>
+              <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
               <select
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
@@ -285,7 +291,7 @@ export const WalkValidatorPage: FC = () => {
             )}
 
             {issues.length === 0 ? (
-              <p className="text-sm text-text-muted">No issues reported.</p>
+              <p className="text-sm text-text-muted">{t('walkValidator.noIssues')}</p>
             ) : filteredIssues.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.noMatchingIssues')}</p>
             ) : (

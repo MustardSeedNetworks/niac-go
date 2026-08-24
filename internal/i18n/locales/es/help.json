@@ -58,5 +58,16 @@
     "netbiosNodeType": "El tipo de nodo NetBIOS controla cómo un host resuelve nombres: B-node usa difusión (broadcast), P-node consulta directamente a un servidor de nombres, M-node difunde primero y recurre al servidor como respaldo, y H-node consulta primero al servidor y recurre a la difusión como respaldo.",
     "msbrowse": "MSBROWSE es el nombre de grupo NetBIOS especial que un host anuncia para ofrecerse como explorador maestro (master browser) local, el host que mantiene la lista de máquinas compartidas de la red.",
     "librarySource": "los archivos starter vienen incluidos con NIAC, los archivos bundle proceden del paquete de contenido publicado (niac content install), y los archivos user se añadieron o editaron localmente."
+  },
+  "faq": {
+    "title": "Preguntas frecuentes"
+  },
+  "search": {
+    "noEntries": "Ninguna entrada coincide con su búsqueda.",
+    "noGlossary": "Ninguna entrada del glosario coincide con su búsqueda.",
+    "noShortcuts": "Ningún atajo coincide con su búsqueda."
+  },
+  "shortcuts": {
+    "note": "Los atajos de teclado son contextuales y pueden variar según la página actual."
   }
 }

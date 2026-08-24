@@ -7,6 +7,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { faq } from '../../data/help-content';
 import { cn } from '../../styles/theme';
 import type { FAQEntry } from './types';
@@ -16,6 +17,7 @@ interface FAQSectionProps {
 }
 
 export function FAQSection({ searchQuery }: FAQSectionProps): ReactElement {
+  const { t } = useTranslation('help');
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return faq;
     const query = searchQuery.toLowerCase();
@@ -29,9 +31,9 @@ export function FAQSection({ searchQuery }: FAQSectionProps): ReactElement {
 
   return (
     <div className="stack">
-      <h3 className="text-sm font-semibold text-text-primary">Frequently Asked Questions</h3>
+      <h3 className="text-sm font-semibold text-text-primary">{t('faq.title')}</h3>
       {filtered.length === 0 ? (
-        <p className="text-sm text-text-muted py-4 text-center">No entries match your search.</p>
+        <p className="text-sm text-text-muted py-4 text-center">{t('search.noEntries')}</p>
       ) : (
         <div className="stack-sm">
           {filtered.map((entry) => (

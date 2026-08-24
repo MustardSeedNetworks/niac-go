@@ -542,7 +542,10 @@
     "page": {
       "packetThresholdLabel": "Umbral de paquetes",
       "webhookUrlLabel": "URL del webhook"
-    }
+    },
+    "alertPolicy": "Política de alertas",
+    "recentErrors": "Contador de errores recientes:",
+    "loadingAlerts": "Cargando la configuración de alertas…"
   },
   "traffic": {
     "label": "Inyección de fallos",
@@ -910,7 +913,10 @@
     "oidFilterLabel": "Filtrar por OID",
     "oidFilterPlaceholder": "p. ej. .1.3.6.1.2.1.1",
     "noMatchingIssues": "Ningún problema coincide con ese filtro de OID.",
-    "showingFiltered": "Mostrando los primeros {{shown}} de {{filtered}} problemas coincidentes ({{total}} en total) — corrija automáticamente para eliminarlos todos."
+    "showingFiltered": "Mostrando los primeros {{shown}} de {{filtered}} problemas coincidentes ({{total}} en total) — corrija automáticamente para eliminarlos todos.",
+    "fromWalksDir": "Del directorio walks/",
+    "noIssues": "No se informaron problemas.",
+    "engineNote": "El mismo motor que <code>niac analyze-walk</code>. Validate detecta líneas mal formadas, OID faltantes<oid/> y cadenas sin comillas; fix reescribe el archivo automáticamente."
   },
   "walkAnalyzer": {
     "label": "Analizador de Walk",
@@ -953,7 +959,13 @@
       "vendor": "Fabricante",
       "version": "Versión de SNMP",
       "walkFile": "Archivo walk de net-snmp"
-    }
+    },
+    "engineNote": "El mismo motor que <code>niac analyze-walk</code>. Analiza SNMPv2-MIB, IF-MIB/ifXTable, LLDP-MIB y CISCO-CDP-MIB para obtener la identidad del dispositivo, el inventario de interfaces y las adyacencias de vecinos.",
+    "fromWalksDir": "Del directorio walks/",
+    "localInterface": "Interfaz local",
+    "protocol": "Protocolo",
+    "remoteDevice": "Dispositivo remoto",
+    "remoteInterface": "Interfaz remota"
   },
   "libraryWalks": {
     "label": "Walks",

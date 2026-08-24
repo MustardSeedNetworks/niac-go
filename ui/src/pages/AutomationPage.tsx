@@ -90,7 +90,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       <CardContent className="stack-lg">
         <H2 className="flex items-center gap-compact">
           <BellRing className={`${iconSizes.lg} text-status-warning`} />
-          Alert policy
+          {t('automation.alertPolicy')}
         </H2>
         <P className="text-text-secondary">
           The daemon fires a webhook when total packet count crosses the threshold. Updates take
@@ -106,9 +106,12 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
           ).
         </P>
         <SmallText className="text-text-muted">
-          Recent errors counter: <strong className="text-text-secondary">{recentErrors}</strong>
+          {t('automation.recentErrors')}{' '}
+          <strong className="text-text-secondary">{recentErrors}</strong>
         </SmallText>
-        {loading && <SmallText className="text-text-muted">Loading alert configuration…</SmallText>}
+        {loading && (
+          <SmallText className="text-text-muted">{t('automation.loadingAlerts')}</SmallText>
+        )}
         {error && (
           <SmallText className="text-status-error">
             Unable to load alerts: {error.message}

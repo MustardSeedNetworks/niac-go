@@ -7,6 +7,7 @@
 import { Command } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SHORTCUTS } from '../../data/help-content';
 import { cn, layout } from '../../styles/theme';
 import type { Shortcut } from './types';
@@ -23,6 +24,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactElement {
+  const { t } = useTranslation('help');
   const filteredShortcuts = useMemo(() => {
     if (!searchQuery.trim()) return SHORTCUTS;
     const query = searchQuery.toLowerCase();
@@ -52,7 +54,7 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
   return (
     <div className="stack-xl">
       {filteredShortcuts.length === 0 ? (
-        <p className="text-sm text-text-muted py-4 text-center">No shortcuts match your search.</p>
+        <p className="text-sm text-text-muted py-4 text-center">{t('search.noShortcuts')}</p>
       ) : (
         Object.entries(groupedShortcuts).map(([category, shortcuts]) =>
           shortcuts.length > 0 ? (
@@ -70,9 +72,7 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
           ) : null,
         )
       )}
-      <p className="text-xs text-text-muted">
-        Keyboard shortcuts are contextual and may vary based on the current page.
-      </p>
+      <p className="text-xs text-text-muted">{t('shortcuts.note')}</p>
     </div>
   );
 }

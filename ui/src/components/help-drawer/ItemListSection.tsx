@@ -7,6 +7,7 @@
 
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { categories, items } from '../../data/help-content';
 import { HelpItemCard } from './HelpItemCard';
 
@@ -17,6 +18,7 @@ interface ItemListSectionProps {
 }
 
 export function ItemListSection({ categoryId, searchQuery }: ItemListSectionProps): ReactElement {
+  const { t } = useTranslation('help');
   const category = categories[categoryId];
 
   const filtered = useMemo(() => {
@@ -43,7 +45,7 @@ export function ItemListSection({ categoryId, searchQuery }: ItemListSectionProp
       )}
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-text-muted py-4 text-center">No entries match your search.</p>
+        <p className="text-sm text-text-muted py-4 text-center">{t('search.noEntries')}</p>
       ) : (
         <div className="stack-sm">
           {filtered.map((item) => (

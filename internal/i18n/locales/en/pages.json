@@ -6,7 +6,10 @@
       "packetThresholdLabel": "Packet threshold",
       "webhookUrlLabel": "Webhook URL"
     },
-    "title": "Alerts"
+    "title": "Alerts",
+    "alertPolicy": "Alert policy",
+    "recentErrors": "Recent errors counter:",
+    "loadingAlerts": "Loading alert configuration…"
   },
   "configDiff": {
     "acceptAllConfirmLabel": "Accept All",
@@ -1089,7 +1092,13 @@
       "version": "SNMP version",
       "walkFile": "net-snmp walk file"
     },
-    "title": "Walk Analyzer"
+    "title": "Walk Analyzer",
+    "engineNote": "Same engine as <code>niac analyze-walk</code>. Parses SNMPv2-MIB, IF-MIB/ifXTable, LLDP-MIB, and CISCO-CDP-MIB into device identity, interface inventory, and neighbor adjacencies.",
+    "fromWalksDir": "From walks/ directory",
+    "localInterface": "Local Interface",
+    "protocol": "Protocol",
+    "remoteDevice": "Remote Device",
+    "remoteInterface": "Remote Interface"
   },
   "walkValidator": {
     "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written.",
@@ -1121,6 +1130,9 @@
     "showingFiltered": "Showing first {{shown}} of {{filtered}} matching issues ({{total}} total) — auto-fix to clear them all.",
     "title": "{{protocol}} Walks",
     "validateAllButton": "Validate all",
-    "validatingAllButton": "Validating all…"
+    "validatingAllButton": "Validating all…",
+    "fromWalksDir": "From walks/ directory",
+    "noIssues": "No issues reported.",
+    "engineNote": "Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines, missing OIDs<oid/>, and unquoted strings; fix auto-rewrites the file in place."
   }
 }
