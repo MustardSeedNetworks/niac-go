@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.73](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.72...v0.94.73) (2026-08-24)
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.5.10 ([#1517](https://github.com/MustardSeedNetworks/niac-go/issues/1517)) ([7696e90](https://github.com/MustardSeedNetworks/niac-go/commit/7696e907de7e30faa39f99517339a4d7e7d942d7))
+
 ## [0.94.72](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.71...v0.94.72) (2026-08-24)
 
 
