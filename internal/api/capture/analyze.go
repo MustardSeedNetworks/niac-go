@@ -317,7 +317,14 @@ func parseTCPLayer(packet gopacket.Packet, pkt *Packet) {
 		"window":  tcp.Window,
 	}
 
-	pkt.Protocol = getProtocolByPort(srcPort, dstPort, "TCP")
+	// A port number alone does not make a packet that protocol. The three-way
+	// handshake and bare ACKs on port 80 carry no application data, and both
+	// tcpdump and Wireshark show them as TCP, reserving the application name for
+	// segments that actually carry payload. Labelling them HTTP made a NIAC
+	// capture disagree with tcpdump on the first three rows of every conversation.
+	if len(tcp.Payload) > 0 {
+		pkt.Protocol = getProtocolByPort(srcPort, dstPort, "TCP")
+	}
 }
 
 // parseUDPLayer extracts UDP information from a packet.
@@ -345,7 +352,12 @@ func parseUDPLayer(packet gopacket.Packet, pkt *Packet) {
 		"length":  udp.Length,
 	}
 
-	pkt.Protocol = getProtocolByPort(srcPort, dstPort, "UDP")
+	// Same rule as TCP: the datagram has to carry something for its port to name
+	// an application protocol. A UDP datagram almost always does, so this is a
+	// consistency guard rather than a behaviour change.
+	if len(udp.Payload) > 0 {
+		pkt.Protocol = getProtocolByPort(srcPort, dstPort, "UDP")
+	}
 }
 
 // parseICMPLayer extracts ICMP information from a packet.
