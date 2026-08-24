@@ -151,34 +151,21 @@ check_no_empty_values() {
 # Check: no fallback patterns (t('key', 'English fallback'))
 # -----------------------------------------------------------------------------
 check_no_fallback_patterns() {
-  section "No t('key', 'fallback') patterns in $UI_SRC_DIR"
+  section "Structural i18n (t() fallbacks)"
   [ ! -d "$UI_SRC_DIR" ] && { warn "UI_SRC_DIR=$UI_SRC_DIR does not exist; skipping"; return; }
 
-  # Match t('key', '...something...') with single OR double quotes for both
-  # arguments. Ignore: t(key) [single arg], t('key', { interpolation }) [object].
-  # The interpolation form starts with { not a quote.
-  # Word-boundary `\bt\(` so identifiers ending in `t` (e.g.
-  # headers.set('Accept', 'application/json')) don't false-match.
-  local hits
-  hits=$(grep -rnE "\\bt\\(\\s*['\"][^'\"]+['\"]\\s*,\\s*['\"]" "$UI_SRC_DIR" \
-    --include='*.ts' --include='*.tsx' 2>/dev/null \
-    | grep -v "// allow-fallback") || true
-
-  if [ -n "$hits" ]; then
-    local count
-    count=$(echo "$hits" | wc -l | tr -d ' ')
-    ratchet_fail "$count fallback pattern(s) t('key', 'string') — banned per I18N_CONVENTIONS:"
-    echo "$hits" | sed 's/^/      /'
-    while IFS= read -r line; do
-      local file
-      file=$(echo "$line" | cut -d: -f1)
-      local lineno
-      lineno=$(echo "$line" | cut -d: -f2)
-      annotate "$file" "line $lineno: fallback pattern banned — add key to locale file instead"
-    done <<<"$hits"
-  else
-    ok "no fallback patterns"
+  # Was a grep. TypeScript is not line-oriented and the grep missed the
+  # multiline call form, a fallback quoted with the other delimiter, and
+  # English copy assigned to a const and passed as the argument. Semgrep
+  # parses TS and propagates constants, so it sees all three.
+  local out
+  if ! out=$(python3 scripts/i18n/semgrep-i18n.py 2>&1); then
+    fail "banned t() fallback patterns:"
+    echo "$out" | sed 's/^/      /' | head -40
+    return
   fi
+  [ -n "$out" ] && warn "$out"
+  ok "no t() fallback patterns"
 }
 
 # -----------------------------------------------------------------------------
@@ -396,14 +383,8 @@ check_key_usage() {
     warn "python3 not found; skipping check-keys.py"
     return
   fi
-  # Propagate --ratchet so newly-added repos can absorb check-keys.py
-  # without an immediate cleanup burden. Use a plain string instead of
-  # an array because bash 3.2 (macOS default) errors on `${empty[@]}`
-  # under `set -u`.
-  local extra=""
-  [ "$RATCHET" -eq 1 ] && extra="--ratchet"
   local out
-  if ! out=$(python3 "$script" $extra 2>&1); then
+  if ! out=$(python3 "$script" 2>&1); then
     fail "check-keys.py found t() calls referencing missing keys:"
     echo "$out" | head -40 | sed 's/^/      /'
     return
@@ -415,7 +396,7 @@ check_key_usage() {
     wcount=$(echo "$out" | grep -c "^  [^✓]" || echo 0)
     warn "$wcount unused EN locale key(s) (informational; not failing — too noisy until catch-up)"
   fi
-  ok "every t() call resolves to an EN locale key (or all errors demoted under --ratchet)"
+  ok "every t() call resolves to an EN locale key"
 }
 
 # -----------------------------------------------------------------------------
@@ -455,12 +436,10 @@ check_locked_versions() {
 # Main
 # -----------------------------------------------------------------------------
 QUICK=0
-RATCHET=0
 ONLY_CHECK=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --quick)   QUICK=1; shift ;;
-    --ratchet) RATCHET=1; shift ;;
     --check)   ONLY_CHECK="$2"; shift 2 ;;
     --help|-h)
       sed -n '2,30p' "$0"
@@ -469,15 +448,6 @@ while [ $# -gt 0 ]; do
     *) echo "Unknown arg: $1"; exit 2 ;;
   esac
 done
-
-# Helper used by the two ratchet-eligible checks to downgrade fail → warn.
-ratchet_fail() {
-  if [ "$RATCHET" -eq 1 ]; then
-    warn "$1"
-  else
-    fail "$1"
-  fi
-}
 
 run_check() {
   local fn="$1"

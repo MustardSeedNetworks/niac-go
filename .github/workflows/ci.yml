@@ -669,6 +669,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The t()-fallback rules are semgrep rules, not grep — every text-based
+      # version had a blind spot. Pinned exact, per the dependency policy; the
+      # fleet SAST job pins its own copy separately.
+      - name: Install semgrep
+        run: pipx install semgrep==1.168.0
+
       - uses: ./.github/actions/setup-node
 
       - name: Install frontend dependencies
@@ -685,7 +691,7 @@ jobs:
         # cleanup brings both counts to zero across seed/stem/niac.
         # See scripts/i18n/README.md and
         # msn-docs-internal/05-Engineering/I18N_CONVENTIONS.md.
-        run: ./scripts/i18n/validate.sh --ratchet
+        run: ./scripts/i18n/validate.sh
 
   # ===========================================================================
   # Documentation Checks
