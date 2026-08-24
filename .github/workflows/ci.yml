@@ -243,6 +243,40 @@ jobs:
           flags: backend
           fail_ci_if_error: false
 
+  # ===========================================================================
+  # Backend (macOS)
+  # ===========================================================================
+  # niac ships a darwin build (goreleaser `niac-darwin`, CGO_ENABLED=1), but
+  # every CI job runs on ubuntu, so `internal/truststore/truststore_darwin.go`
+  # and the darwin half of the library lock/sync pair were never compiled — a
+  # break in them would surface at release time, not here. Cross-compiling from
+  # ubuntu cannot stand in: gopacket/pcap needs cgo, so `GOOS=darwin go build`
+  # fails on the pure-Go builder. macOS ships libpcap, so this needs no apt step.
+  backend-darwin:
+    name: Backend (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # truststore is the only package with darwin-specific logic and it has
+      # tests, so this both links the darwin build and exercises it.
+      - name: Test
+        run: go test -race ./internal/truststore/...
+
   race:
     name: Backend (race detector)
     runs-on: ubuntu-latest
@@ -1001,6 +1035,7 @@ jobs:
     needs:
       - changes
       - backend
+      - backend-darwin
       - race
       - frontend
       - security
