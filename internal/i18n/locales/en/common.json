@@ -78,6 +78,13 @@
     "validate": "Validate",
     "view": "View"
   },
+  "coloringRules": {
+    "addRule": "Add Rule",
+    "empty": "No coloring rules defined.",
+    "help": "Rules are evaluated top-to-bottom. First matching rule determines the row color.",
+    "resetDefaults": "Reset Defaults",
+    "title": "Coloring Rules"
+  },
   "commandPalette": {
     "actionsHeading": "Actions",
     "closeAriaLabel": "Close command palette",
@@ -89,6 +96,7 @@
     "openSettings": "Open Settings"
   },
   "emptyState": {
+    "noDevicesConfigured": "No devices defined in the loaded configuration.",
     "noDevicesFound": "No devices found",
     "noItems": "No items to display",
     "noLogs": "No logs yet",
@@ -96,10 +104,16 @@
     "noResults": "No results match the current filters"
   },
   "errorBoundary": {
+    "componentStack": "Component Stack:",
     "defaultMessage": "An unexpected error occurred",
-    "reload": "Reload the page",
+    "description": "An unexpected error occurred. You can try to recover or reload the page.",
+    "errorDetails": "Error Details:",
+    "pageDescription": "This page encountered an error. Try navigating to another page or refresh.",
+    "pageTitle": "Page Error",
+    "reload": "Reload Page",
+    "retry": "Retry",
     "title": "Something went wrong",
-    "tryAgain": "Try again"
+    "tryAgain": "Try Again"
   },
   "filters": {
     "captureFilterCaption": "Capture filter — drops packets before they're buffered",

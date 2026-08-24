@@ -1,5 +1,5 @@
 import { type FC, type ReactNode, useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { analyzeWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalyzeResponse } from '../api/types';
@@ -113,15 +113,13 @@ export const WalkAnalyzerPage: FC = () => {
               {t('walkAnalyzer.pageTitle')}
             </h1>
             <p className="text-sm text-text-muted">
-              Same engine as <code>niac analyze-walk</code>. Parses SNMPv2-MIB, IF-MIB/ifXTable,
-              LLDP-MIB, and CISCO-CDP-MIB into device identity, interface inventory, and neighbor
-              adjacencies.
+              <Trans i18nKey="walkAnalyzer.engineNote" ns="pages" components={{ code: <code /> }} />
             </p>
           </header>
 
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-text-secondary">From walks/ directory</span>
+              <span className="text-text-secondary">{t('walkAnalyzer.fromWalksDir')}</span>
               <select
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
@@ -270,10 +268,10 @@ export const WalkAnalyzerPage: FC = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
                     <tr>
-                      <th className="px-3 py-row">Local Interface</th>
-                      <th className="px-3 py-row w-24">Protocol</th>
-                      <th className="px-3 py-row">Remote Device</th>
-                      <th className="px-3 py-row">Remote Interface</th>
+                      <th className="px-3 py-row">{t('walkAnalyzer.localInterface')}</th>
+                      <th className="px-3 py-row w-24">{t('walkAnalyzer.protocol')}</th>
+                      <th className="px-3 py-row">{t('walkAnalyzer.remoteDevice')}</th>
+                      <th className="px-3 py-row">{t('walkAnalyzer.remoteInterface')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-knob/5">

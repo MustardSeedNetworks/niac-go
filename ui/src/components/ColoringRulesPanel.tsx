@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { SmallText } from '../ui/Typography';
@@ -129,6 +130,7 @@ RuleRow.displayName = 'RuleRow';
  */
 export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
   ({ rules, onRulesChange, onReset, onClose }) => {
+    const { t } = useTranslation('common');
     const [localRules, setLocalRules] = useState<ColoringRule[]>([...rules]);
 
     const handleRuleChange = useCallback((index: number, updated: ColoringRule) => {
@@ -202,7 +204,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
         <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
           {/* Header */}
           <div className="flex-between px-5 py-4 border-b border-surface-border">
-            <h3 className="heading-3 text-text-primary">Coloring Rules</h3>
+            <h3 className="heading-3 text-text-primary">{t('coloringRules.title')}</h3>
             <button
               type="button"
               onClick={onClose}
@@ -215,7 +217,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           {/* Rules list */}
           <div className="flex-1 overflow-y-auto px-5 py-4 stack-sm">
             <SmallText className="text-text-muted mb-heading block">
-              Rules are evaluated top-to-bottom. First matching rule determines the row color.
+              {t('coloringRules.help')}
             </SmallText>
 
             {localRules.map((rule, index) => (
@@ -233,7 +235,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
 
             {localRules.length === 0 && (
               <div className="text-center py-8 text-text-muted">
-                <p>No coloring rules defined.</p>
+                <p>{t('coloringRules.empty')}</p>
               </div>
             )}
           </div>
@@ -247,7 +249,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
                 onClick={handleAdd}
                 leftIcon={<Plus className={iconSizes.md} />}
               >
-                Add Rule
+                {t('coloringRules.addRule')}
               </Button>
               <Button
                 variant="ghost"
@@ -255,7 +257,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
                 onClick={handleReset}
                 leftIcon={<RotateCcw className={iconSizes.md} />}
               >
-                Reset Defaults
+                {t('coloringRules.resetDefaults')}
               </Button>
             </div>
 

@@ -9,6 +9,14 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
 // ============================================================
+// Real i18n
+// ============================================================
+// Initialising the real i18next means a test asserting on user-visible text is
+// asserting on the actual locale files. Without it, <Trans> and t() render
+// nothing and a test that checks copy silently checks the absence of copy.
+import '../i18n';
+
+// ============================================================
 // JSDoM polyfills — common browser APIs not implemented by JSDoM
 // Universal baseline shared across seed/stem/niac test setups.
 // ============================================================

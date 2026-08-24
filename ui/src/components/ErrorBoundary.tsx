@@ -5,6 +5,10 @@
 
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+// An error boundary must be a class, so it cannot use the useTranslation
+// hook. <Trans> is a component and subscribes to language changes, so the
+// fallback still re-renders when the locale switches.
+import { Trans } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { reportError } from '../utils/error-reporter';
 
@@ -85,18 +89,18 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h2 className="mb-2 heading-2 text-text-muted dark:text-text-primary">
-              Something went wrong
+              <Trans i18nKey="errorBoundary.title" ns="common" />
             </h2>
 
             <p className="mb-section text-sm text-text-disabled dark:text-text-muted">
-              An unexpected error occurred. You can try to recover or reload the page.
+              <Trans i18nKey="errorBoundary.description" ns="common" />
             </p>
 
             {/* Error details (development only - hidden in production) */}
             {import.meta.env.DEV && this.state.error && (
               <div className="mb-section rounded-lg bg-bg-muted pad text-left dark:bg-bg-elevated">
                 <p className="mb-tight text-xs font-medium text-text-muted dark:text-text-muted">
-                  Error Details:
+                  <Trans i18nKey="errorBoundary.errorDetails" ns="common" />
                 </p>
                 <pre className="overflow-auto text-xs text-status-error dark:text-status-error">
                   {this.state.error.message}
@@ -104,7 +108,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.state.errorInfo?.componentStack && (
                   <>
                     <p className="mb-tight mt-heading text-xs font-medium text-text-muted dark:text-text-muted">
-                      Component Stack:
+                      <Trans i18nKey="errorBoundary.componentStack" ns="common" />
                     </p>
                     <pre className="max-h-32 overflow-auto text-xs text-text-disabled dark:text-text-muted">
                       {this.state.errorInfo.componentStack}
@@ -121,14 +125,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 className="inline-flex items-center gap-compact rounded-lg bg-status-info px-4 py-row label transition-colors hover:bg-status-info focus:outline-none focus:ring-2 focus:ring-status-info focus:ring-offset-2"
               >
                 <RefreshCw className={iconSizes.md} />
-                Try Again
+                <Trans i18nKey="errorBoundary.tryAgain" ns="common" />
               </button>
               <button
                 type="button"
                 onClick={this.handleReload}
                 className="inline-flex items-center gap-compact rounded-lg border border-border-muted bg-knob px-4 py-row text-sm font-medium text-text-disabled transition-colors hover:bg-bg-muted focus:outline-none focus:ring-2 focus:ring-status-info focus:ring-offset-2 dark:border-border-muted dark:bg-bg-elevated dark:text-text-secondary dark:hover:bg-bg-elevated"
               >
-                Reload Page
+                <Trans i18nKey="errorBoundary.reload" ns="common" />
               </button>
             </div>
           </div>
@@ -155,10 +159,10 @@ export class PageErrorBoundary extends ErrorBoundary {
             />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-status-error dark:text-status-error">
-                Page Error
+                <Trans i18nKey="errorBoundary.pageTitle" ns="common" />
               </h3>
               <p className="mt-tight text-sm text-status-error dark:text-status-error">
-                This page encountered an error. Try navigating to another page or refresh.
+                <Trans i18nKey="errorBoundary.pageDescription" ns="common" />
               </p>
               <div className="mt-content flex gap-compact">
                 <button
@@ -166,7 +170,7 @@ export class PageErrorBoundary extends ErrorBoundary {
                   onClick={this.handleRetry}
                   className="text-sm font-medium text-status-error hover:text-status-error dark:text-status-error dark:hover:text-status-error"
                 >
-                  Retry
+                  <Trans i18nKey="errorBoundary.retry" ns="common" />
                 </button>
                 <span className="text-status-error dark:text-status-error">|</span>
                 <button
@@ -174,7 +178,7 @@ export class PageErrorBoundary extends ErrorBoundary {
                   onClick={this.handleReload}
                   className="text-sm font-medium text-status-error hover:text-status-error dark:text-status-error dark:hover:text-status-error"
                 >
-                  Reload
+                  <Trans i18nKey="buttons.reload" ns="common" />
                 </button>
               </div>
             </div>

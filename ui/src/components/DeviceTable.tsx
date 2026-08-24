@@ -25,6 +25,7 @@ export interface DeviceTableProps {
 
 export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTableProps) => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
 
   const columns: DataTableColumn<DeviceSummary>[] = [
     {
@@ -87,7 +88,7 @@ export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTabl
       rowClassName={(device) => (device.name === selectedName ? 'bg-brand-accent/10' : '')}
       emptyMessage={
         <div className="rounded-xl border border-surface-border bg-bg-base/50 pad-xl text-center text-text-muted">
-          No devices defined in the loaded configuration.
+          {tCommon('emptyState.noDevicesConfigured')}
         </div>
       }
       virtualization={{

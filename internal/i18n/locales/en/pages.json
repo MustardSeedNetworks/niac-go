@@ -1,11 +1,14 @@
 {
   "automation": {
+    "alertPolicy": "Alert policy",
     "description": "Configure alert thresholds and webhook targets for the running daemon.",
     "label": "Alerts",
+    "loadingAlerts": "Loading alert configuration…",
     "page": {
       "packetThresholdLabel": "Packet threshold",
       "webhookUrlLabel": "Webhook URL"
     },
+    "recentErrors": "Recent errors counter:",
     "title": "Alerts"
   },
   "configDiff": {
@@ -1050,7 +1053,10 @@
   },
   "walkAnalyzer": {
     "description": "Parse an SNMP walk file into device identity, interface inventory, and LLDP/CDP neighbor adjacencies.",
+    "engineNote": "Same engine as <code>niac analyze-walk</code>. Parses SNMPv2-MIB, IF-MIB/ifXTable, LLDP-MIB, and CISCO-CDP-MIB into device identity, interface inventory, and neighbor adjacencies.",
+    "fromWalksDir": "From walks/ directory",
     "label": "Walk Analyzer",
+    "localInterface": "Local Interface",
     "noInterfacesFound": "No interfaces found.",
     "noNeighborsFound": "No LLDP/CDP neighbors found.",
     "noWalksFound": "No walks found",
@@ -1089,6 +1095,9 @@
       "version": "SNMP version",
       "walkFile": "net-snmp walk file"
     },
+    "protocol": "Protocol",
+    "remoteDevice": "Remote Device",
+    "remoteInterface": "Remote Interface",
     "title": "Walk Analyzer"
   },
   "walkValidator": {
@@ -1104,6 +1113,8 @@
       "status": "Status"
     },
     "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
+    "engineNote": "Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines, missing OIDs<oid/>, and unquoted strings; fix auto-rewrites the file in place.",
+    "fromWalksDir": "From walks/ directory",
     "issuesTable": {
       "line": "Line",
       "message": "Message",
@@ -1112,6 +1123,7 @@
       "severity": "Severity"
     },
     "label": "{{protocol}} Walks",
+    "noIssues": "No issues reported.",
     "noMatchingIssues": "No issues match that OID filter.",
     "noWalksFound": "No walks found",
     "oidFilterLabel": "Filter by OID",

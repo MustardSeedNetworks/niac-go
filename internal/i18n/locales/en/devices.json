@@ -1,5 +1,6 @@
 {
   "editor": {
+    "addOid": "Add OID",
     "deletingLabel": "Deleting…",
     "editDevice": "Edit Device",
     "general": "General",
