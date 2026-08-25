@@ -655,8 +655,10 @@ jobs:
 
   # ===========================================================================
   # Validates the translation locale files in internal/i18n/locales/ against
-  # the cross-repo conventions in msn-docs-internal/05-Engineering/. Uses the
-  # shared script in scripts/i18n/, byte-identical to seed and stem.
+  # the cross-repo conventions in msn-docs-internal/05-Engineering/. The checks
+  # live once in MustardSeedNetworks/.github; this repo keeps only its own
+  # glossary, banned vocabulary, glossary exceptions and dynamic-prefix
+  # allow-list. The extractor-drift check below is niac-only and stays here.
   i18n:
     name: i18n Validation
     runs-on: ubuntu-latest
@@ -669,12 +671,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The t()-fallback rules are semgrep rules, not grep — every text-based
-      # version had a blind spot. Pinned exact, per the dependency policy; the
-      # fleet SAST job pins its own copy separately.
-      - name: Install semgrep
-        run: pipx install semgrep==1.168.0
-
       - uses: ./.github/actions/setup-node
 
       - name: Install frontend dependencies
@@ -685,17 +681,12 @@ jobs:
         working-directory: ui
         run: npm run i18n:lint && npm run i18n:check && npm run i18n:test
 
-      # The gate itself needs a gate: check-keys.py printed `::error::`
-      # annotations while returning 0 for any finding count at or below 30,
-      # and an annotation does not fail a job. Runs before the validator so a
-      # broken checker is reported as a broken checker.
-      - name: Self-test the i18n key checker
-        run: python3 scripts/i18n/test-check-keys.py
-
+      # The shared gate: installs semgrep, self-tests the key checker, then
+      # validates. Defined once in MustardSeedNetworks/.github — edit the
+      # checks there, the data files here. See scripts/i18n/README.md and
+      # msn-docs-internal/05-Engineering/I18N_CONVENTIONS.md.
       - name: Validate i18n (parity, glossary, banned vocab, etc.)
-        # See scripts/i18n/README.md and
-        # msn-docs-internal/05-Engineering/I18N_CONVENTIONS.md.
-        run: ./scripts/i18n/validate.sh
+        uses: MustardSeedNetworks/.github/.github/actions/i18n-validate@e6d74ebd42168c9b89f2b93f14841f58b90edece # v1.5.0
 
   # ===========================================================================
   # Documentation Checks
