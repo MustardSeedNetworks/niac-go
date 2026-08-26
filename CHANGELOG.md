@@ -5,6 +5,27 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.75](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.74...v0.94.75) (2026-08-26)
+
+
+### Bug Fixes
+
+* **ci:** request the workflows scope for the release-please token ([#1541](https://github.com/MustardSeedNetworks/niac-go/issues/1541)) ([f5bb1e5](https://github.com/MustardSeedNetworks/niac-go/commit/f5bb1e505fb15d07e14bee99216f5bd728ac3842))
+* **deps:** update dependency react-hook-form to v7.86.0 ([#1530](https://github.com/MustardSeedNetworks/niac-go/issues/1530)) ([1c02c6a](https://github.com/MustardSeedNetworks/niac-go/commit/1c02c6aba3e19ef55dc9e191f01ab10f1d41aa7a))
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.5.2 ([#1529](https://github.com/MustardSeedNetworks/niac-go/issues/1529)) ([6660da9](https://github.com/MustardSeedNetworks/niac-go/commit/6660da955f46a7f0086dee59ff858bd52a4843a1))
+* **i18n:** fail the key gate on any finding, and see &lt;Trans&gt; keys ([#1532](https://github.com/MustardSeedNetworks/niac-go/issues/1532)) ([b331af9](https://github.com/MustardSeedNetworks/niac-go/commit/b331af945d47d7ba01a5e49a98c7a71fb11a6614)), closes [#1531](https://github.com/MustardSeedNetworks/niac-go/issues/1531)
+* **i18n:** localize the last 35 hardcoded strings and make the check block ([#1528](https://github.com/MustardSeedNetworks/niac-go/issues/1528)) ([6a7556c](https://github.com/MustardSeedNetworks/niac-go/commit/6a7556cd728037b60701cdb3024e5b1724ab9810))
+* **i18n:** semgrep for the fallback rules, and drop --ratchet ([#1525](https://github.com/MustardSeedNetworks/niac-go/issues/1525)) ([fc9295a](https://github.com/MustardSeedNetworks/niac-go/commit/fc9295afb972bf6f12e84215a3348a3d68cf0ad3))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1536](https://github.com/MustardSeedNetworks/niac-go/issues/1536)) ([1a739ca](https://github.com/MustardSeedNetworks/niac-go/commit/1a739cace9c8a48a3bf177c95e695093dbd36a3e))
+* **deps:** lock file maintenance ([#1538](https://github.com/MustardSeedNetworks/niac-go/issues/1538)) ([c7e2e6c](https://github.com/MustardSeedNetworks/niac-go/commit/c7e2e6c2340af0ba5b41c20b24f72ca4f99f92cd))
+* **deps:** lock file maintenance ([#1539](https://github.com/MustardSeedNetworks/niac-go/issues/1539)) ([8fc47d3](https://github.com/MustardSeedNetworks/niac-go/commit/8fc47d3fb79c4292033f4bff5f38860da629b907))
+* **deps:** update dependency @testing-library/user-event to v14.6.6 ([#1535](https://github.com/MustardSeedNetworks/niac-go/issues/1535)) ([8459bf0](https://github.com/MustardSeedNetworks/niac-go/commit/8459bf03a880f795782fe1360978fb7daccc1f09))
+* **i18n:** adopt the shared gate from MustardSeedNetworks/.github ([#1534](https://github.com/MustardSeedNetworks/niac-go/issues/1534)) ([0c557be](https://github.com/MustardSeedNetworks/niac-go/commit/0c557be89c48c356065fadab5e9553c9c7b0d7ea)), closes [#1533](https://github.com/MustardSeedNetworks/niac-go/issues/1533)
+
 ## [0.94.74](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.73...v0.94.74) (2026-08-24)
 
 
