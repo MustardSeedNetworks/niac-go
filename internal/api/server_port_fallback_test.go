@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -39,7 +38,9 @@ func TestBindWithFallback_FreePort(t *testing.T) {
 }
 
 // TestBindWithFallback_FallsBackOneStep grabs a port, holds it open, then
-// expects bindWithFallback to land on requested+1.
+// expects bindWithFallback to land on requested+1. This is the regression
+// test for #1537: on Windows, before the platform split, isAddrInUse never
+// recognised WSAEADDRINUSE and this fell through to a fatal error instead.
 func TestBindWithFallback_FallsBackOneStep(t *testing.T) {
 	hold, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -76,16 +77,11 @@ func TestBindWithFallback_PortZeroUsesEphemeral(t *testing.T) {
 	}
 }
 
-// TestIsAddrInUse_RecognisesSyscall confirms isAddrInUse matches a wrapped
-// EADDRINUSE.
-func TestIsAddrInUse_RecognisesSyscall(t *testing.T) {
-	wrapped := &net.OpError{Op: "listen", Err: syscall.EADDRINUSE}
-	if !isAddrInUse(wrapped) {
-		t.Fatalf("expected isAddrInUse to match EADDRINUSE")
-	}
-}
-
 // TestIsAddrInUse_RejectsOtherErrors ensures unrelated errors don't match.
+// Platform-agnostic: the two isAddrInUse implementations agree on this case,
+// so it needs no build tag. Each implementation's positive case (a real
+// EADDRINUSE/WSAEADDRINUSE match) lives next to it in
+// server_port_fallback_unix_test.go / server_port_fallback_windows_test.go.
 func TestIsAddrInUse_RejectsOtherErrors(t *testing.T) {
 	if isAddrInUse(errors.New("some unrelated failure")) {
 		t.Fatalf("expected isAddrInUse to reject unrelated error")

@@ -3,17 +3,17 @@ package api
 // server_port_fallback.go provides bindWithFallback, a helper that opens
 // a TCP listener on a desired address and walks port+1..+9 if the
 // canonical port is already in use. This keeps `niac daemon` runnable
-// for developers who have another service squatting on 8080 without
-// changing the documented default port (see #69).
+// for developers who have another service squatting on 8445 without
+// changing the documented default port (see #69). isAddrInUse itself lives
+// in the platform-specific server_port_fallback_unix.go / _windows.go
+// siblings — see #1537 for why the predicate can't be shared.
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"strconv"
-	"syscall"
 )
 
 // portFallbackMaxOffset is the maximum offset above the requested port that
@@ -80,35 +80,4 @@ func bindWithFallback(
 		"bind %s and +1..+%d all in use",
 		addr, portFallbackMaxOffset,
 	)
-}
-
-// isAddrInUse reports whether err indicates the address-in-use condition.
-// It checks [syscall.EADDRINUSE] via [errors.Is] (works on Linux/macOS) and
-// falls back to a string match for platforms whose listener wrapping does
-// not unwrap to the syscall errno.
-func isAddrInUse(err error) bool {
-	if errors.Is(err, syscall.EADDRINUSE) {
-		return true
-	}
-	var opErr *net.OpError
-	if errors.As(err, &opErr) && opErr.Err != nil {
-		return containsAddrInUse(opErr.Err.Error())
-	}
-	return false
-}
-
-// containsAddrInUse looks for the canonical address-in-use substring.
-// Split out so it can be unit-tested independently of platform errno
-// behaviour.
-func containsAddrInUse(msg string) bool {
-	const needle = "address already in use"
-	if len(msg) < len(needle) {
-		return false
-	}
-	for i := 0; i+len(needle) <= len(msg); i++ {
-		if msg[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
 }
