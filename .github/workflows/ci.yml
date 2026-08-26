@@ -277,6 +277,47 @@ jobs:
       - name: Test
         run: go test -race ./internal/truststore/...
 
+  # ===========================================================================
+  # Backend (Windows)
+  # ===========================================================================
+  # niac ships a windows.exe (release.yml's build-windows, CGO+Npcap on real
+  # Windows runners), but ubuntu CI never compiles internal/api's
+  # _windows.go half — a break in it would surface at release time, not
+  # here. internal/api needs no cgo (only internal/api/capture's pcap path
+  # does), so this cross-builds cleanly with CGO_ENABLED=0 from a Linux-hosted
+  # runner; running it on windows-latest instead links and executes the real
+  # Winsock errno path (#1537: syscall.EADDRINUSE is not WSAEADDRINUSE).
+  backend-windows:
+    name: Backend (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+        run: go build ./internal/api/...
+
+      - name: Vet
+        env:
+          CGO_ENABLED: "0"
+        run: go vet ./internal/api/...
+
+      # server_port_fallback_windows.go is the only file with Windows-specific
+      # logic in this package; this both links it and exercises it.
+      - name: Test
+        env:
+          CGO_ENABLED: "0"
+        run: go test ./internal/api/
+
   race:
     name: Backend (race detector)
     runs-on: ubuntu-latest
@@ -1037,6 +1078,7 @@ jobs:
       - changes
       - backend
       - backend-darwin
+      - backend-windows
       - race
       - frontend
       - security

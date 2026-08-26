@@ -15,6 +15,7 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | --------------- | ------------------------ | ---------------------------------------------------------------------- |
 | `changes`       | Path filtering           | Decides which downstream jobs run                                      |
 | `backend`       | Go checks                | lint, vet, staticcheck, fmt, tests, coverage floor                     |
+| `backend-windows` | Go checks (Windows)    | Cross-builds + vets + tests `internal/api` on `windows-latest` — the only Go job that links and runs `_windows.go` files |
 | `race`          | Go race detector         | `go test -race`, split from `backend` so it fails distinctly           |
 | `frontend`      | React/TS checks          | tsc typecheck, Biome, Vite build, Vitest, Storybook build              |
 | `c-lint`        | C lint (C23)             | clang-format, clang-tidy                                               |
