@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.76](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.75...v0.94.76) (2026-08-26)
+
+
+### Bug Fixes
+
+* **api:** detect an in-use port by the Winsock errno on Windows ([#1543](https://github.com/MustardSeedNetworks/niac-go/issues/1543)) ([548b58e](https://github.com/MustardSeedNetworks/niac-go/commit/548b58e611edf57d349bc810520a4dce550937eb))
+
 ## [0.94.75](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.74...v0.94.75) (2026-08-26)
 
 
