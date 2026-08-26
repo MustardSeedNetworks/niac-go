@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -381,7 +382,7 @@ func (l *Library) fileEntry(kind Kind, relPath string, info fs.FileInfo) FileEnt
 // KindWalks has a starter pack today; both kinds can arrive in a bundle.
 func (l *Library) detectFileSource(kind Kind, relPath string) Source {
 	if kind == KindWalks {
-		if _, err := starterWalks.Open(filepath.Join("starter", "walks", relPath)); err == nil {
+		if _, err := starterWalks.Open(path.Join("starter", "walks", relPath)); err == nil {
 			return SourceStarter
 		}
 	}
@@ -429,7 +430,7 @@ func (l *Library) detectSource(filename string) Source {
 	if templates.Exists(strings.TrimSuffix(filename, filepath.Ext(filename))) {
 		return SourceStarter
 	}
-	if _, err := starterWalks.Open(filepath.Join("starter", "walks", filename)); err == nil {
+	if _, err := starterWalks.Open(path.Join("starter", "walks", filename)); err == nil {
 		return SourceStarter
 	}
 	if l.bundles.contains(l.root, filepath.Join(string(KindNetworks), filename)) {

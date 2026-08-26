@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
@@ -80,7 +81,11 @@ func (l *Library) bootstrapWalks() error {
 		if entry.IsDir() || !isWalkFilename(entry.Name()) {
 			continue
 		}
-		src := filepath.Join("starter", "walks", entry.Name())
+		// embed.FS is always slash-separated regardless of GOOS, so this must be
+		// path.Join and not filepath.Join: on Windows the latter produced
+		// "starter\\walks\\x.walk", which the embedded FS cannot resolve, and the
+		// whole content library failed to open with /api/v1/library disabled.
+		src := path.Join("starter", "walks", entry.Name())
 		data, readErr := fs.ReadFile(starterWalks, src)
 		if readErr != nil {
 			return fmt.Errorf("read starter walk %s: %w", entry.Name(), readErr)
