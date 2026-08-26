@@ -283,10 +283,13 @@ jobs:
   # niac ships a windows.exe (release.yml's build-windows, CGO+Npcap on real
   # Windows runners), but ubuntu CI never compiles internal/api's
   # _windows.go half — a break in it would surface at release time, not
-  # here. internal/api needs no cgo (only internal/api/capture's pcap path
-  # does), so this cross-builds cleanly with CGO_ENABLED=0 from a Linux-hosted
-  # runner; running it on windows-latest instead links and executes the real
-  # Winsock errno path (#1537: syscall.EADDRINUSE is not WSAEADDRINUSE).
+  # here. Running on windows-latest links and executes the real Winsock errno
+  # path (#1537: syscall.EADDRINUSE is not WSAEADDRINUSE).
+  #
+  # CGO_ENABLED=0 because this runner has no Npcap. That is also why the test
+  # step is scoped rather than running the package: parts of internal/api do
+  # reach libpcap at runtime, so a full `go test` here fails on a missing
+  # wpcap.dll for reasons that have nothing to do with the code under review.
   backend-windows:
     name: Backend (Windows)
     runs-on: windows-latest
@@ -313,10 +316,15 @@ jobs:
 
       # server_port_fallback_windows.go is the only file with Windows-specific
       # logic in this package; this both links it and exercises it.
+      #
+      # Scoped to those tests rather than the whole package: validateReplayRequest
+      # compiles a BPF filter, which reaches libpcap and needs wpcap.dll, and
+      # windows-latest has no Npcap. Build and Vet above already cover the rest of
+      # the package compiling on Windows.
       - name: Test
         env:
           CGO_ENABLED: "0"
-        run: go test ./internal/api/
+        run: go test ./internal/api/ -run 'AddrInUse|BindWithFallback' -v
 
   race:
     name: Backend (race detector)
