@@ -58,7 +58,7 @@ jobs:
       frontend: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.frontend }}
       c: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.c }}
       docs: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.docs }}
-      workflows: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.workflows }}
+      ci_infra: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.ci_infra }}
       schema: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.schema }}
       https: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.https }}
       hooks: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.hooks }}
@@ -87,8 +87,21 @@ jobs:
               - '.clang-format'
             docs:
               - '**/*.md'
-            workflows:
+            # Everything that *implements* a CI gate, not just the workflow
+            # that calls it. niac carries 39 scripts under scripts/, most of
+            # them gate implementations, and the filters enumerated only a
+            # handful by name — so a PR could rewrite a gate and run no job
+            # that used it, and stay green: CI Complete accepts `skipped`.
+            # Enumerating scripts one at a time IS the failure mode; this is
+            # the directory class that replaces it. Every job that OR'd
+            # `workflows` now ORs this.
+            ci_infra:
               - '.github/workflows/**'
+              - '.github/actions/**'
+              - 'scripts/**'
+              - '.golangci.yml'
+              - 'biome.json'
+              - 'ui/biome.json'
             schema:
               - 'docs/schemas/**'
               - 'cmd/niac-schema/**'
@@ -131,7 +144,7 @@ jobs:
     # to its worst case and still leave room for the work — see the e2e job.
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -257,7 +270,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -295,7 +308,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -333,7 +346,7 @@ jobs:
     # 10-min libpcap step's worst case — see the e2e job.
     timeout-minutes: 20
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.https == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -365,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.ci_infra == 'true'
     defaults:
       run:
         working-directory: ui
@@ -588,7 +601,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.hooks == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.hooks == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -677,7 +690,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    if: needs.changes.outputs.workflows == 'true'
+    if: needs.changes.outputs.ci_infra == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -715,7 +728,7 @@ jobs:
     needs: changes
     if: |
       needs.changes.outputs.frontend == 'true'
-      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.ci_infra == 'true'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
