@@ -40,7 +40,7 @@ tools: tools-go tools-frontend ## Install all development tools
 tools-go: ## Install Go development tools
 	@printf "$(BOLD)📦 Installing Go development tools...$(RESET)\n"
 	@echo "Installing golangci-lint..."
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 	@echo "Installing gosec..."
 	@go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
 	@echo "Installing gofumpt..."
