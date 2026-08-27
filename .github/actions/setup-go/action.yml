@@ -14,7 +14,7 @@ outputs:
     value: ${{ steps.go-cache-paths.outputs.mod }}
   cache-key:
     description: 'Cache key matching the restore performed here'
-    value: ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-${{ hashFiles('**/go.sum') }}
+    value: ${{ steps.go-cache-paths.outputs.key }}
 runs:
   using: composite
   steps:
@@ -39,10 +39,17 @@ runs:
         # cache key with default-path jobs (actions/cache restores to the saved
         # path, so a path mismatch leaves the job cold). Discriminate by path.
         tag="$(printf '%s|%s' "$build" "$mod" | sha256sum | cut -c1-12)"
+        # hashFiles() is not available in a composite action's `outputs:` block,
+        # so the key is assembled here and exported whole. That is also why the
+        # restore below reads the same output rather than repeating the
+        # expression: two hand-copied keys are what drift apart, and a restore
+        # that no longer matches its save is a silently cold cache.
+        sums="$(git ls-files '*go.sum' | sort | xargs -r sha256sum | sha256sum | cut -c1-64)"
         {
           echo "build=$build"
           echo "mod=$mod"
           echo "tag=$tag"
+          echo "key=${RUNNER_OS}-go-${tag}-${sums}"
         } >> "$GITHUB_OUTPUT"
 
     # Persist the build + module caches across runs (official actions/cache Go
@@ -58,7 +65,7 @@ runs:
         path: |
           ${{ steps.go-cache-paths.outputs.build }}
           ${{ steps.go-cache-paths.outputs.mod }}
-        key: ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ steps.go-cache-paths.outputs.key }}
         restore-keys: |
           ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-
 
