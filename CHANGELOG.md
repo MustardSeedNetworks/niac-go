@@ -5,6 +5,22 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.79](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.78...v0.94.79) (2026-08-27)
+
+
+### Continuous Integration
+
+* adopt shared-workflow v1.8.0 ([#1563](https://github.com/MustardSeedNetworks/niac-go/issues/1563)) ([39c85f4](https://github.com/MustardSeedNetworks/niac-go/commit/39c85f45a354f0ae32ce7a5fd486bf0db0d29134))
+* make .nvmrc the only source for the Node version ([#1565](https://github.com/MustardSeedNetworks/niac-go/issues/1565)) ([a36fc2e](https://github.com/MustardSeedNetworks/niac-go/commit/a36fc2eba4607f6d4238f0bcdff759d0231217fa))
+* make gate implementations trigger the gates they implement ([#1560](https://github.com/MustardSeedNetworks/niac-go/issues/1560)) ([c5f34b9](https://github.com/MustardSeedNetworks/niac-go/commit/c5f34b91d8b545141e2c79ecc2e0be222e7ca843))
+* refuse to release a tag whose commit never passed CI ([#1567](https://github.com/MustardSeedNetworks/niac-go/issues/1567)) ([3692051](https://github.com/MustardSeedNetworks/niac-go/commit/3692051780c12d6faf8d71ffe36cede4d9bb58a4))
+* save the Go cache after compiling, cancel superseded runs, pin the macOS target ([#1569](https://github.com/MustardSeedNetworks/niac-go/issues/1569)) ([f410ff3](https://github.com/MustardSeedNetworks/niac-go/commit/f410ff34756ef21fa6e8787e330668cb9935d85e))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1558](https://github.com/MustardSeedNetworks/niac-go/issues/1558)) ([8d5f7c9](https://github.com/MustardSeedNetworks/niac-go/commit/8d5f7c9adb4461ab4965e32ce9f77dd57a9ed0b4))
+
 ## [0.94.78](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.77...v0.94.78) (2026-08-27)
 
 
