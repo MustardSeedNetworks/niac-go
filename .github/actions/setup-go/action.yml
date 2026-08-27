@@ -5,6 +5,16 @@ inputs:
     description: 'Path to go.mod file'
     required: false
     default: 'go.mod'
+outputs:
+  cache-build:
+    description: 'Resolved GOCACHE path'
+    value: ${{ steps.go-cache-paths.outputs.build }}
+  cache-mod:
+    description: 'Resolved GOMODCACHE path'
+    value: ${{ steps.go-cache-paths.outputs.mod }}
+  cache-key:
+    description: 'Cache key matching the restore performed here'
+    value: ${{ steps.go-cache-paths.outputs.key }}
 runs:
   using: composite
   steps:
@@ -29,10 +39,17 @@ runs:
         # cache key with default-path jobs (actions/cache restores to the saved
         # path, so a path mismatch leaves the job cold). Discriminate by path.
         tag="$(printf '%s|%s' "$build" "$mod" | sha256sum | cut -c1-12)"
+        # hashFiles() is not available in a composite action's `outputs:` block,
+        # so the key is assembled here and exported whole. That is also why the
+        # restore below reads the same output rather than repeating the
+        # expression: two hand-copied keys are what drift apart, and a restore
+        # that no longer matches its save is a silently cold cache.
+        sums="$(git ls-files '*go.sum' | sort | xargs -r sha256sum | sha256sum | cut -c1-64)"
         {
           echo "build=$build"
           echo "mod=$mod"
           echo "tag=$tag"
+          echo "key=${RUNNER_OS}-go-${tag}-${sums}"
         } >> "$GITHUB_OUTPUT"
 
     # Persist the build + module caches across runs (official actions/cache Go
@@ -48,7 +65,7 @@ runs:
         path: |
           ${{ steps.go-cache-paths.outputs.build }}
           ${{ steps.go-cache-paths.outputs.mod }}
-        key: ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ steps.go-cache-paths.outputs.key }}
         restore-keys: |
           ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-
 
@@ -56,16 +73,12 @@ runs:
       shell: bash
       run: go mod download
 
-    # Save only from the default branch. GitHub scopes caches per ref, so a PR
-    # that saves writes its OWN copy that is useless the moment it merges —
-    # this pushed niac past the 10GB cache ceiling where entries evict each
-    # other and restores fail with `tar` exit 2. PRs still READ main's cache;
-    # they simply stop littering.
-    - name: Save Go cache (default branch only)
-      if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          ${{ steps.go-cache-paths.outputs.build }}
-          ${{ steps.go-cache-paths.outputs.mod }}
-        key: ${{ runner.os }}-go-${{ steps.go-cache-paths.outputs.tag }}-${{ hashFiles('**/go.sum') }}
+# NOTE: there is deliberately no save step here. This composite runs at the
+# START of a job, so anything saved from inside it captures the build cache as
+# it was BEFORE the caller compiled anything — which is the empty cache the
+# restore just produced on a miss. The save has to be the last step of a job
+# that actually compiled, so it lives in ci.yml; the outputs above exist to let
+# that step reuse this exact path/key pair.
+#
+# It also cannot be a separate job: caches are populated per runner, and a
+# fresh runner has nothing to save.
