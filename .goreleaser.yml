@@ -98,6 +98,12 @@ builds:
         goarch: arm64
         env:
           - CC=oa64-clang
+          # osxcross's clang and its linker were defaulting differently, so the
+          # release log read "object file was built for newer macOS version
+          # (13.0) than being linked (11.0)". Setting it once makes both agree.
+          # 13.0 is what the objects were already compiled for, so this records
+          # the existing floor rather than changing what the binary supports.
+          - MACOSX_DEPLOYMENT_TARGET=13.0
           - CXX=oa64-clang++
 
   # Windows is intentionally NOT built here. gopacket/pcap needs real cgo
