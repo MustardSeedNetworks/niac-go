@@ -20,7 +20,7 @@
     "test:watch": "node --disable-warning=DEP0205 ./node_modules/vitest/vitest.mjs --reporter=dot",
     "test:coverage": "node --disable-warning=DEP0205 ./node_modules/vitest/vitest.mjs run --coverage --reporter=verbose",
     "test:e2e": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --reporter=list",
-    "test:e2e:auth": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.auth.config.ts --reporter=list",
+    "test:e2e:auth": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.auth.config.ts",
     "test:e2e:fullstack": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.fullstack.config.ts --reporter=list",
     "i18n:extract": "i18next-cli extract",
     "i18n:check": "node scripts/check-i18n-extraction.ts",

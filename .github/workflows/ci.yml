@@ -1079,7 +1079,11 @@ jobs:
         env:
           E2E_BASE_URL: https://localhost:8445
           PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
-        run: npx playwright test --reporter=html
+        # No --reporter here on purpose: passing one REPLACES the config's
+        # reporter array, and the config is what writes the JSON report the
+        # flake budget reads. `--reporter=html` silently produced no
+        # results.json at all.
+        run: npx playwright test
 
       - name: Run authenticated browser E2E tests
         working-directory: ui
@@ -1092,6 +1096,24 @@ jobs:
           name: playwright-report
           path: ui/playwright-report/
           retention-days: 7
+
+      # A test that fails then passes on retry reports `flaky` and the job exits
+      # 0, so a retry-pass looks exactly like a pass. Budget 0: niac's suite is
+      # flake-free on the most recent green main run, so anything that starts
+      # leaning on retries is a regression to fix, not a number to raise.
+      #
+      # The glob covers BOTH suites -- the main run and the authenticated run,
+      # which writes results-auth.json. Globbing one file would have quietly
+      # excluded half the E2E surface.
+      #
+      # Runs after the upload so the report is retained even when this is what
+      # fails.
+      - name: Enforce flake budget
+        if: always()
+        uses: MustardSeedNetworks/.github/.github/actions/flake-budget@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
+        with:
+          report: ui/playwright-report/results*.json
+          budget: "0"
 
       - name: Upload server logs on failure
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
