@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.77](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.76...v0.94.77) (2026-08-27)
+
+
+### Continuous Integration
+
+* **dead-code:** make one step actually gate, on reachability ([#1548](https://github.com/MustardSeedNetworks/niac-go/issues/1548)) ([90fb757](https://github.com/MustardSeedNetworks/niac-go/commit/90fb757310306fd9b58a47918ff0dfccad074b1a))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1546](https://github.com/MustardSeedNetworks/niac-go/issues/1546)) ([3c17960](https://github.com/MustardSeedNetworks/niac-go/commit/3c17960362ce70a9f5537f959c1ac07fe71107c2))
+* **deps:** lock file maintenance ([#1553](https://github.com/MustardSeedNetworks/niac-go/issues/1553)) ([3a1da9e](https://github.com/MustardSeedNetworks/niac-go/commit/3a1da9e8967eeaf3969a787908d957ad6882191f))
+* **deps:** lock file maintenance ([#1554](https://github.com/MustardSeedNetworks/niac-go/issues/1554)) ([42fd8af](https://github.com/MustardSeedNetworks/niac-go/commit/42fd8af76c998c4ed154f522a35fc923664e24ba))
+* **deps:** lock file maintenance ([#1555](https://github.com/MustardSeedNetworks/niac-go/issues/1555)) ([3585b45](https://github.com/MustardSeedNetworks/niac-go/commit/3585b4564bf4ee6df0ce56ae3cfd541ea9ddca5c))
+* **deps:** update dependency @types/react-dom to v19.2.5 ([#1551](https://github.com/MustardSeedNetworks/niac-go/issues/1551)) ([d760ac9](https://github.com/MustardSeedNetworks/niac-go/commit/d760ac9c38dea1180d2c0374ad3dd2e3282c4d0e))
+* **deps:** update module github.com/securego/gosec/v2/cmd/gosec to v2.29.0 ([#1545](https://github.com/MustardSeedNetworks/niac-go/issues/1545)) ([f04284a](https://github.com/MustardSeedNetworks/niac-go/commit/f04284a1c56e682fda17302d4289f1d155812b0f))
+* **deps:** update node.js to v26.8.0 ([#1549](https://github.com/MustardSeedNetworks/niac-go/issues/1549)) ([c1594e1](https://github.com/MustardSeedNetworks/niac-go/commit/c1594e129ac5eb4b0f9c20f9d37d0fdfa599c2d7))
+* **deps:** update node.js to v26.8.1 ([#1552](https://github.com/MustardSeedNetworks/niac-go/issues/1552)) ([faff9fe](https://github.com/MustardSeedNetworks/niac-go/commit/faff9fef4bc147e63118f3126f6e81c16fc3d873))
+
 ## [0.94.76](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.75...v0.94.76) (2026-08-26)
 
 
