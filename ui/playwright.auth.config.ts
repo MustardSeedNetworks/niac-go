@@ -6,6 +6,11 @@ const authToken = 'niac-e2e-browser-auth-token'; // gitleaks:allow — local tes
 
 export default defineConfig({
   ...baseConfig,
+  // Spreading baseConfig carries its reporter array over, which would send this
+  // suite's JSON to the same results.json the main run writes -- the second run
+  // would overwrite the first and hide its flakes. Distinct file, so the flake
+  // budget can glob both and see the whole picture.
+  reporter: [['list'], ['json', { outputFile: 'playwright-report/results-auth.json' }]],
   testMatch: 'browser-auth.auth.ts',
   fullyParallel: false,
   workers: 1,
