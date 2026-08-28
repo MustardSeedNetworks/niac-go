@@ -11,7 +11,8 @@ const content = `devices:
 `;
 
 test('authors and saves a deterministic behavior timeline', async ({ page }) => {
-  let saved = false;
+  let draftMethod: string | undefined;
+  let behaviorRequest: { method: string; ifMatch?: string; body: unknown } | undefined;
   await page.route('**/api/v1/simulation', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ json: { running: false, interface: '', deviceCount: 0 } });
@@ -30,7 +31,7 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await page.route('**/api/v1/library/networks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/library/drafts', async (route) => {
     const request = route.request();
-    expect(request.method()).toBe('POST');
+    draftMethod = request.method();
     const body = request.postDataJSON() as { name: string };
     await route.fulfill({
       status: 201,
@@ -46,28 +47,16 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   });
   await page.route('**/api/v1/library/drafts/*/behaviors', async (route) => {
     const request = route.request();
-    expect(request.method()).toBe('PUT');
-    expect(request.headers()['if-match']).toBe('"revision-1"');
-    expect(request.postDataJSON()).toEqual({
-      timelines: [
-        {
-          name: 'Business day',
-          startOffsetMs: 0,
-          repeatCount: 1,
-          phases: [
-            {
-              name: 'Busy period',
-              startOffsetMs: 0,
-              durationMs: 30000,
-              reset: true,
-              traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
-              faults: [],
-            },
-          ],
-        },
-      ],
-    });
-    saved = true;
+    // Capture only. Asserting in here used to hang the test: a failed expect()
+    // throws before route.fulfill(), so the request the app is awaiting never
+    // gets a response, and the test dies on the 30s timeout with no diff to
+    // read instead of failing fast on the mismatch. Assertions live after the
+    // await below, where a failure prints what actually differed.
+    behaviorRequest = {
+      method: request.method(),
+      ifMatch: request.headers()['if-match'],
+      body: request.postDataJSON() as unknown,
+    };
     await route.fulfill({
       json: {
         name: 'browser-behavior-draft',
@@ -86,7 +75,35 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await page.getByTestId('wizard-next-button').click();
   await page.getByRole('tab', { name: 'Behaviors' }).click();
   await page.getByRole('button', { name: 'Add timeline' }).click();
+  // Wait on the response itself rather than polling a closure flag: the wait is
+  // armed before the click, so it cannot miss a fast response, and a failure
+  // names the request that never arrived.
+  const behaviorsSaved = page.waitForResponse(
+    (response) => response.url().includes('/behaviors') && response.request().method() === 'PUT',
+  );
   await page.getByTestId('save-behaviors').click();
+  await behaviorsSaved;
 
-  await expect.poll(() => saved).toBe(true);
+  expect(draftMethod).toBe('POST');
+  expect(behaviorRequest?.method).toBe('PUT');
+  expect(behaviorRequest?.ifMatch).toBe('"revision-1"');
+  expect(behaviorRequest?.body).toEqual({
+    timelines: [
+      {
+        name: 'Business day',
+        startOffsetMs: 0,
+        repeatCount: 1,
+        phases: [
+          {
+            name: 'Busy period',
+            startOffsetMs: 0,
+            durationMs: 30000,
+            reset: true,
+            traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
+            faults: [],
+          },
+        ],
+      },
+    ],
+  });
 });
