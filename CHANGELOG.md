@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.83](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.82...v0.94.83) (2026-08-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @xyflow/react to v12.11.5 ([#1591](https://github.com/MustardSeedNetworks/niac-go/issues/1591)) ([3384ea6](https://github.com/MustardSeedNetworks/niac-go/commit/3384ea6e178d5ff8594565cdaea07a709632b8f0))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1592](https://github.com/MustardSeedNetworks/niac-go/issues/1592)) ([eeb82a8](https://github.com/MustardSeedNetworks/niac-go/commit/eeb82a84db780c5111ffe920ff2b462b59f57114))
+* **deps:** update dependency i18next-cli to v1.71.3 ([#1590](https://github.com/MustardSeedNetworks/niac-go/issues/1590)) ([ba33573](https://github.com/MustardSeedNetworks/niac-go/commit/ba33573e111b98ead64d218e9255e1aff5195e87))
+
 ## [0.94.82](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.81...v0.94.82) (2026-08-28)
 
 
