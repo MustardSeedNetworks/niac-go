@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.79...v0.94.80) (2026-08-28)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1572](https://github.com/MustardSeedNetworks/niac-go/issues/1572)) ([be4ac2a](https://github.com/MustardSeedNetworks/niac-go/commit/be4ac2a72ca9aee61bbaf01e20b2981e27bcdd28))
+* **deps:** lock file maintenance ([#1579](https://github.com/MustardSeedNetworks/niac-go/issues/1579)) ([f468260](https://github.com/MustardSeedNetworks/niac-go/commit/f468260eab867df2ad943001e03fb70f8fed7b52))
+* **deps:** update dependency @types/node to v26.3.0 ([#1571](https://github.com/MustardSeedNetworks/niac-go/issues/1571)) ([74e1d07](https://github.com/MustardSeedNetworks/niac-go/commit/74e1d07d6497977b6551d85907645afa5702c8bc))
+* **deps:** update dependency i18next-cli to v1.71.1 ([#1570](https://github.com/MustardSeedNetworks/niac-go/issues/1570)) ([b529735](https://github.com/MustardSeedNetworks/niac-go/commit/b5297359adb219aed37e54fc46ce57f1261f6246))
+* **deps:** update github actions ([#1576](https://github.com/MustardSeedNetworks/niac-go/issues/1576)) ([3f489be](https://github.com/MustardSeedNetworks/niac-go/commit/3f489bef3a56337e38bc44b080692e50e2ec1884))
+* **deps:** update module github.com/golangci/golangci-lint/v2/cmd/golangci-lint to v2.13.2 ([#1575](https://github.com/MustardSeedNetworks/niac-go/issues/1575)) ([dba90ca](https://github.com/MustardSeedNetworks/niac-go/commit/dba90caf34534cd2fa6f100519b952c185d602b5))
+
 ## [0.94.79](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.78...v0.94.79) (2026-08-27)
 
 
