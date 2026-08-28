@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.81](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.80...v0.94.81) (2026-08-28)
+
+
+### Bug Fixes
+
+* **e2e:** stop behavior-timeline deadlocking on a failed route assertion ([#1582](https://github.com/MustardSeedNetworks/niac-go/issues/1582)) ([df06475](https://github.com/MustardSeedNetworks/niac-go/commit/df06475c55fe208beeca82a40c101e24db5882da)), closes [#1581](https://github.com/MustardSeedNetworks/niac-go/issues/1581)
+
+
+### Continuous Integration
+
+* use the App Client ID instead of the deprecated app-id input ([#1577](https://github.com/MustardSeedNetworks/niac-go/issues/1577)) ([10ce530](https://github.com/MustardSeedNetworks/niac-go/commit/10ce53094eff90b7f3f2eb5dd8f63201d32a56e5))
+
 ## [0.94.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.79...v0.94.80) (2026-08-28)
 
 
