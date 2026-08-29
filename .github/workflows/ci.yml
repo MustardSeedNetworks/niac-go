@@ -412,11 +412,16 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage thresholds
         # vitest gates the frontend job so a red or missing-provider test can
         # never reach main invisibly (regression: #930 landed a red test while
         # this job only ran lint/typecheck/build).
-        run: npm run test
+        #
+        # test:coverage, not test: the anti-regression thresholds in
+        # vitest.config.ts were never evaluated because required CI ran the
+        # plain `test` script, and coverage fell 6-13pp *through* the floor
+        # they exist to hold (#1595). A threshold nothing runs is not a gate.
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
