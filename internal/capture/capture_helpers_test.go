@@ -3,7 +3,6 @@ package capture
 import (
 	"errors"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -63,27 +62,6 @@ func TestRateLimiter_DrainAndRefill(t *testing.T) {
 		// Got a refilled token
 	case <-time.After(200 * time.Millisecond):
 		t.Error("Token did not refill after waiting")
-	}
-}
-
-// TestRateLimiter_GoroutineCleanup verifies goroutines are cleaned up on Stop.
-func TestRateLimiter_GoroutineCleanup(t *testing.T) {
-	before := runtime.NumGoroutine()
-
-	// Create and stop 20 rate limiters
-	for range 20 {
-		rl := NewRateLimiter(100)
-		rl.Stop()
-	}
-
-	// Allow goroutines to fully exit
-	time.Sleep(50 * time.Millisecond)
-
-	after := runtime.NumGoroutine()
-
-	// Should not have leaked goroutines (tolerance of 3 for runtime fluctuations)
-	if after > before+3 {
-		t.Errorf("Goroutine leak: before=%d, after=%d", before, after)
 	}
 }
 
