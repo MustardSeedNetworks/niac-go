@@ -2,81 +2,178 @@ import { expect, test } from '@playwright/test';
 import { disableAnimations } from './helpers/auth';
 
 /**
- * Topology DeviceNode tooltip contract test.
+ * Topology DeviceNode tooltip contract.
  *
- * niac PR #772 added a hover tooltip / accessible-name surface to the
- * topology graph nodes — `title` and `aria-label` carry `label (type,
- * status)` + every IP + every protocol so the truncated card data is
- * still reachable. This spec asserts the contract:
+ * The card truncates the device name and shows `+N` overflow for IPs and
+ * protocols, so `title` (hover) and `aria-label` (screen reader) are the only
+ * places the full values are reachable. That is the contract worth pinning.
  *
- *   1. Every rendered node has the `topology-device-node` testid (so
- *      future E2E flows can target them stably).
- *   2. Every node's `title` and `aria-label` are identical strings
- *      and both non-empty (the SR + hover tooltip must agree).
- *   3. The tooltip text mentions the `(<type>, <status>)` substring
- *      and at least one IP token.
+ * This spec used to call `test.skip` when the graph rendered zero nodes,
+ * which it did on both browsers on every run — the tests never executed. The
+ * skip did more than remove coverage: it hid a test that *contradicted*
+ * production. It asserted the tooltip matched `(<type>, <status>)`, but #1354
+ * deliberately removed the device status, because the value was a literal
+ * `'online'` the daemon never measured. The assertion would have failed the
+ * moment it ran, and the spec was left claiming a contract that no longer
+ * exists.
  *
- * The /topology page is only meaningful with a loaded simulation, so
- * empty-state environments are tolerated: if no nodes render, the
- * test is skipped (we cover the assertion when the data is there).
+ * So the tests now bring their own topology instead of hoping one is loaded,
+ * and assert the real strings by value rather than checking a section is
+ * non-empty when it happens to be present.
  */
 
-test.describe('Topology — DeviceNode hover-tooltip contract', () => {
-  test.beforeEach(async ({ page }) => {
-    await disableAnimations(page);
-    await page.goto('/topology');
-    await expect(page.getByTestId('page-header-title')).toBeVisible({
-      timeout: 10000,
-    });
+/** The page reads its session from /api/v1/simulation, not from the session
+ *  list: AppContext takes `sessionId` off the simulation status and every
+ *  runtime fetch is disabled until it is non-null. Without a running session
+ *  the topology resolves empty no matter what the topology route returns. */
+const SESSION_ID = 'e2e-topology';
+
+function simulationStatus(deviceCount: number) {
+  return {
+    sessionId: SESSION_ID,
+    selected: true,
+    running: true,
+    interface: 'lo0',
+    configName: 'e2e-topology',
+    deviceCount,
+    uptimeSeconds: 42,
+    sessions: [
+      {
+        sessionId: SESSION_ID,
+        running: true,
+        deviceCount,
+        uptimeSeconds: 42,
+      },
+    ],
+  };
+}
+
+/** Two devices chosen so the assertions can tell them apart: different
+ *  type, different IP count, and one with a single protocol. */
+const DEVICES = [
+  {
+    name: 'core-sw-01',
+    type: 'switch',
+    ips: ['10.44.0.2', '10.44.10.2', '10.44.20.2'],
+    protocols: ['lldp', 'snmp', 'stp'],
+  },
+  {
+    name: 'edge-rtr-01',
+    type: 'router',
+    ips: ['10.44.0.1'],
+    protocols: ['bgp'],
+  },
+];
+
+const TOPOLOGY = {
+  nodes: DEVICES.map((d) => ({ name: d.name, type: d.type })),
+  links: [{ source: 'core-sw-01', target: 'edge-rtr-01', label: 'Gi0/1', discovered: false }],
+};
+
+/** The tooltip DeviceNode must produce, built from the same locale strings
+ *  the component uses: `{{label}} ({{type}})`, `IPs: …`, `Protocols: …`. */
+function expectedTooltip(device: (typeof DEVICES)[number]): string {
+  return [
+    `${device.name} (${device.type})`,
+    `IPs: ${device.ips.join(', ')}`,
+    `Protocols: ${device.protocols.join(', ')}`,
+  ].join('\n');
+}
+
+async function serveTopology(
+  page: import('@playwright/test').Page,
+  opts: { devices: typeof DEVICES; topology: typeof TOPOLOGY },
+) {
+  const json = (body: unknown) => ({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
   });
 
-  test('every node exposes the testid and a non-empty tooltip', async ({ page }) => {
+  await page.route('**/api/v1/simulation', (route) =>
+    route.fulfill(json(simulationStatus(opts.devices.length))),
+  );
+  await page.route('**/api/v1/sessions/*/topology', (route) => route.fulfill(json(opts.topology)));
+  await page.route('**/api/v1/sessions/*/devices', (route) => route.fulfill(json(opts.devices)));
+  await page.route('**/api/v1/sessions/*/neighbors', (route) => route.fulfill(json([])));
+  await page.route('**/api/v1/sessions/*/stats', (route) => route.fulfill(json({})));
+}
+
+test.describe('Topology — DeviceNode tooltip contract', () => {
+  test.beforeEach(async ({ page }) => {
+    await disableAnimations(page);
+  });
+
+  test('every node carries the testid and identical title and aria-label', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+
     const nodes = page.getByTestId('topology-device-node');
-    const count = await nodes.count();
+    // The prerequisite is required, not hoped for: a zero-node page must fail
+    // here rather than skip past the assertions below.
+    await expect(nodes).toHaveCount(DEVICES.length);
 
-    if (count === 0) {
-      test.skip(true, 'No simulation loaded — topology renders zero nodes.');
-      return;
-    }
-
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < DEVICES.length; i++) {
       const node = nodes.nth(i);
       const title = await node.getAttribute('title');
       const aria = await node.getAttribute('aria-label');
-      expect(title, `node ${i} missing title`).toBeTruthy();
-      expect(aria, `node ${i} missing aria-label`).toBeTruthy();
-      expect(title).toBe(aria);
+      expect(title, `node ${i} has no title`).toBeTruthy();
+      // The hover tooltip and the screen-reader name must be the same text.
+      expect(aria, `node ${i} aria-label differs from title`).toBe(title);
     }
   });
 
-  test('tooltip text follows the (type, status) + IPs/protocols contract', async ({ page }) => {
-    const nodes = page.getByTestId('topology-device-node');
-    const count = await nodes.count();
+  test('the tooltip carries the full label, type, IPs and protocols', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('topology-device-node')).toHaveCount(DEVICES.length);
 
-    if (count === 0) {
-      test.skip(true, 'No simulation loaded — topology renders zero nodes.');
-      return;
+    // Asserted by value. The previous version only checked that an "IPs:"
+    // section was non-empty *if it was present*, which passes for a node that
+    // dropped every address.
+    for (const device of DEVICES) {
+      const node = page.getByTestId('topology-device-node').filter({ hasText: device.name });
+      await expect(node).toHaveAttribute('title', expectedTooltip(device));
+      await expect(node).toHaveAttribute('aria-label', expectedTooltip(device));
     }
 
-    const first = nodes.first();
-    const title = (await first.getAttribute('title')) ?? '';
-
-    // Header line: `label (type, status)`
-    expect(title, 'title should contain `(<type>, <status>)` substring').toMatch(
-      /\(.+,\s*(online|offline|warning)\)/i,
-    );
-
-    // If the node carries any IPs or protocols, they must appear in the
-    // tooltip (DeviceNode.tsx contract: every value goes in, no
-    // truncation). We can't assert specific values without a fixture,
-    // but if there's a label section we can prove it's non-empty.
-    if (title.includes('IPs:')) {
-      const ipsLine = title.split('\n').find((line) => line.startsWith('IPs:'));
-      expect(ipsLine?.replace('IPs:', '').trim().length).toBeGreaterThan(0);
+    // Every IP must survive the card's `+N` overflow into the tooltip.
+    const core = page.getByTestId('topology-device-node').filter({ hasText: 'core-sw-01' });
+    const coreTitle = (await core.getAttribute('title')) ?? '';
+    for (const ip of DEVICES[0].ips) {
+      expect(coreTitle, `tooltip dropped ${ip}`).toContain(ip);
     }
-    if (title.includes('Protocols:')) {
-      const protoLine = title.split('\n').find((line) => line.startsWith('Protocols:'));
-      expect(protoLine?.replace('Protocols:', '').trim().length).toBeGreaterThan(0);
+  });
+
+  test('does not report a device status the daemon never measures', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('topology-device-node')).toHaveCount(DEVICES.length);
+
+    // #1354 removed the fabricated `status: 'online'` literal. This spec used
+    // to require it, and could not notice the contradiction because it always
+    // skipped. Pin the removal so it cannot come back.
+    for (let i = 0; i < DEVICES.length; i++) {
+      const title =
+        (await page.getByTestId('topology-device-node').nth(i).getAttribute('title')) ?? '';
+      expect(title, 'tooltip must not claim a device status').not.toMatch(
+        /\b(online|offline|warning)\b/i,
+      );
     }
+  });
+
+  test('renders no nodes, and does not fail, for a session with an empty topology', async ({
+    page,
+  }) => {
+    await serveTopology(page, { devices: [], topology: { nodes: [], links: [] } });
+    await page.goto('/topology');
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+
+    // The empty state is a real state with its own assertion, rather than the
+    // reason the other tests do not run.
+    await expect(page.getByTestId('topology-device-node')).toHaveCount(0);
   });
 });
