@@ -227,13 +227,18 @@ func FuzzDeviceConfigParsing(f *testing.F) {
 		// Try parsing different field types - should not panic
 		switch key {
 		case "mac":
-			// MAC parsing should handle invalid input gracefully
-			if mac, err := parseMACAddress(value); err == nil {
+			// The stdlib parsers are called directly. They were previously
+			// wrapped in helpers that deferred recover() "to ensure no
+			// panics", which did the opposite: recovering in a function with
+			// unnamed results turns a panic into a zero-value return, so a
+			// genuine panic was reported as ordinary invalid input. A fuzz
+			// target does not need that -- an unrecovered panic is exactly
+			// what the harness exists to report.
+			if mac, err := net.ParseMAC(value); err == nil {
 				device.MACAddress = mac
 			}
 		case "ip", "ipv6":
-			// IP parsing should handle invalid input gracefully
-			if ip := parseIPAddress(value); ip != nil {
+			if ip := net.ParseIP(value); ip != nil {
 				device.IPAddresses = append(device.IPAddresses, ip)
 			}
 		default:
@@ -246,34 +251,4 @@ func FuzzDeviceConfigParsing(f *testing.F) {
 		_ = len(device.Interfaces)
 		_ = device.MACAddress
 	})
-}
-
-// Helper functions for fuzzing
-
-func parseMACAddress(s string) (net.HardwareAddr, error) {
-	// This wraps net.ParseMAC to ensure no panics
-	defer func() {
-		_ = recover() // Catch any panics
-	}()
-
-	if s == "" {
-		return nil, os.ErrInvalid
-	}
-
-	// Use standard library - it handles errors gracefully
-	return net.ParseMAC(s)
-}
-
-func parseIPAddress(s string) net.IP {
-	// This wraps net.ParseIP to ensure no panics
-	defer func() {
-		_ = recover() // Catch any panics
-	}()
-
-	if s == "" {
-		return nil
-	}
-
-	// Use standard library - it handles errors gracefully
-	return net.ParseIP(s)
 }
