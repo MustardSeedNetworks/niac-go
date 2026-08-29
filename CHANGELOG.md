@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.85](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.84...v0.94.85) (2026-08-29)
+
+
+### Tests
+
+* **ui:** restore branch coverage toward the anti-regression floors ([#1602](https://github.com/MustardSeedNetworks/niac-go/issues/1602)) ([378cb16](https://github.com/MustardSeedNetworks/niac-go/commit/378cb16a96fa6c389d1475820faced51c4326c83)), closes [#1595](https://github.com/MustardSeedNetworks/niac-go/issues/1595)
+
+
+### Continuous Integration
+
+* drop the Codecov upload, keep the local coverage gate ([#1600](https://github.com/MustardSeedNetworks/niac-go/issues/1600)) ([f1e2257](https://github.com/MustardSeedNetworks/niac-go/commit/f1e2257ad4ed4f63f6ed9bdd5f6cdb76d8fb25e6)), closes [#1599](https://github.com/MustardSeedNetworks/niac-go/issues/1599)
+
 ## [0.94.84](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.83...v0.94.84) (2026-08-28)
 
 
