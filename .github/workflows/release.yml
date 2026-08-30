@@ -122,6 +122,8 @@ jobs:
       ui_hash: ${{ steps.ui-hash.outputs.hash }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         # The Node/npm pin lives in the composite action, same as ci.yml, so
@@ -250,6 +252,8 @@ jobs:
             cc: clang
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup-go
 
@@ -356,6 +360,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Mark workspace as safe (container runs as root)
@@ -660,6 +665,7 @@ jobs:
         if: env.HAS_CONTENT_KEY == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Mark workspace as safe (container runs as root)
@@ -686,6 +692,7 @@ jobs:
         if: env.HAS_CONTENT_KEY == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: MustardSeedNetworks/niac-demo-catalog
           ssh-key: ${{ secrets.CONTENT_REPO_DEPLOY_KEY }}
           path: .content-corpus
