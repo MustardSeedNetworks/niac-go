@@ -75,6 +75,14 @@ export default defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+    // Gecko. docs/WEBUI.md lists Firefox under "Engine CI — critical journeys
+    // on relevant pull requests", but it was never in this list, so the only
+    // independent-engine coverage the table promised did not exist. Chromium
+    // and WebKit are Blink and WebKit; nothing here exercised a third engine.
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).
   // Otherwise Playwright owns the make-built HTTPS daemon and tears it down.
