@@ -461,6 +461,45 @@ jobs:
   # ===========================================================================
   # Frontend (TypeScript)
   # ===========================================================================
+  # `build` and `e2e` both embed the built UI (internal/api/ui/ via go:embed),
+  # so they need this artifact — but they used to take it from the `frontend`
+  # job, which only runs when frontend files changed. A backend-only PR
+  # therefore skipped `frontend`, and with it `build` and `e2e`, while
+  # CI Complete still went green: nothing verified that a Go change still
+  # produced a working binary or passed a browser test until the merge queue
+  # forced the full suite (#1629 sibling finding; seed solved this the same way
+  # with its own "Build UI (shared artifact)" job).
+  #
+  # Building the UI is the cheap part; the frontend job's lint, typecheck,
+  # coverage and Storybook stay gated on frontend changes.
+  build-ui:
+    name: Build UI (shared artifact)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.ci_infra == 'true'
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-dist
+          path: internal/api/ui/
+          retention-days: 1
+
   frontend:
     name: Frontend (TypeScript)
     runs-on: ubuntu-latest
@@ -499,16 +538,8 @@ jobs:
         # they exist to hold (#1595). A threshold nothing runs is not a gate.
         run: npm run test:coverage
 
-      - name: Build
-        run: npm run build
-
-      - name: Upload frontend build
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: frontend-dist
-          path: internal/api/ui/
-          retention-days: 1
-
+      # The production build and its artifact moved to the shared build-ui job
+      # above, so `build` and `e2e` no longer depend on this job running.
       - name: Build Storybook
         run: npm run build-storybook -- --output-dir storybook-static --quiet
 
@@ -905,7 +936,7 @@ jobs:
   # ===========================================================================
   build:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
-    needs: [changes, backend, frontend]
+    needs: [changes, backend, build-ui]
     runs-on: ubuntu-latest
     # p95 ~1m10s (5 recent main/PR runs, 2026-08-15). Was 6 — under the 10-min
     # libpcap step it contains, so a slow mirror could not fail cleanly here.
@@ -916,7 +947,7 @@ jobs:
     # always() lets the if: evaluate when backend was skipped upstream.
     if: |
       always() &&
-      needs.frontend.result == 'success' &&
+      needs.build-ui.result == 'success' &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
     strategy:
       fail-fast: false
@@ -1017,7 +1048,7 @@ jobs:
   e2e:
     name: E2E Browser Tests
     runs-on: ubuntu-latest
-    needs: [changes, backend, frontend]
+    needs: [changes, backend, build-ui]
     # NOT sized from p95. A job budget has to exceed its apt steps' worst case
     # plus the actual work, or a slow mirror becomes indistinguishable from a
     # hung test. This job has two apt steps at 10 min each; p95 (~5m8s) only
@@ -1033,7 +1064,7 @@ jobs:
     if: |
       always() &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
-      needs.frontend.result == 'success' &&
+      needs.build-ui.result == 'success' &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
 
     steps:
@@ -1233,6 +1264,7 @@ jobs:
       - backend-windows
       - race
       - capture-rawsocket
+      - build-ui
       - frontend
       - security
       - semgrep
