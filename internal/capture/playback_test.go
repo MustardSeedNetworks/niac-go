@@ -2,8 +2,11 @@ package capture
 
 import (
 	"encoding/binary"
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -106,44 +109,14 @@ func TestPlaybackEngineForEachPacketExcludesTruncatedTail(t *testing.T) {
 
 // TestNewPlaybackEngine tests playback engine creation.
 func TestNewPlaybackEngine(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	// Need a real engine for playback
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
+	sender := &recordingSender{}
 	playbackConfig := &config.CapturePlayback{
 		FileName: "test.pcap",
 	}
 
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	pb := NewPlaybackEngine(sender, playbackConfig, 0)
 
-	if pb == nil {
-		t.Fatal("NewPlaybackEngine returned nil")
-	}
-
-	if pb.engine != engine {
+	if pb.engine != PacketSender(sender) {
 		t.Error("Engine not set correctly")
 	}
 
@@ -162,251 +135,101 @@ func TestNewPlaybackEngine(t *testing.T) {
 
 // TestPlaybackEngine_Start_NoConfig tests starting without config.
 func TestPlaybackEngine_Start_NoConfig(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
+	pb := NewPlaybackEngine(&recordingSender{}, nil, 0)
 
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	pb := NewPlaybackEngine(engine, nil, 0)
-
-	err = pb.Start()
-	if err == nil {
-		t.Error("Expected error when starting with nil config")
+	if err := pb.Start(); !errors.Is(err, ErrNoPlaybackConfiguration) {
+		t.Errorf("Start() error = %v, want ErrNoPlaybackConfiguration", err)
 	}
 }
 
 // TestPlaybackEngine_Start_NonExistentFile tests starting with missing file.
 func TestPlaybackEngine_Start_NonExistentFile(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
+	missing := filepath.Join(t.TempDir(), "definitely-does-not-exist.pcap")
+	pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{FileName: missing}, 0)
+
+	if err := pb.Start(); err == nil {
+		t.Fatal("Start() with a non-existent file returned nil, want an error")
 	}
 
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
-		FileName: "/tmp/definitely-does-not-exist-12345.pcap",
-	}
-
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
-
-	err = pb.Start()
-	if err == nil {
-		t.Error("Expected error when starting with non-existent file")
+	if pb.IsRunning() {
+		t.Error("engine reports running after a failed Start")
 	}
 }
 
 // TestPlaybackEngine_Stop tests stopping playback.
 func TestPlaybackEngine_Stop(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
+	pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{FileName: "test.pcap"}, 0)
 
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
-		FileName: "test.pcap",
-	}
-
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
-
-	// Stop before start should not panic
+	// Stop before start, and Stop twice, are both no-ops rather than panics.
+	pb.Stop()
 	pb.Stop()
 
-	// Stop twice should not panic
-	pb.Stop()
+	if pb.IsRunning() {
+		t.Error("engine reports running after Stop on a never-started engine")
+	}
 }
 
 // TestPlaybackEngine_IsRunning tests running state.
 func TestPlaybackEngine_IsRunning(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
-		FileName: "test.pcap",
-	}
-
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	sender := &recordingSender{}
+	pcapFile := createTestPCAP(t, 2)
+	pb := NewPlaybackEngine(sender, &config.CapturePlayback{
+		FileName: pcapFile,
+		RateMode: config.RateTopspeed,
+		LoopTime: 60_000, // long interval: the engine stays running after pass one
+	}, 0)
 
 	if pb.IsRunning() {
 		t.Error("Expected IsRunning() to be false initially")
+	}
+
+	if err := pb.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	if !pb.IsRunning() {
+		t.Error("Expected IsRunning() to be true after Start")
+	}
+
+	pb.Stop()
+
+	if pb.IsRunning() {
+		t.Error("Expected IsRunning() to be false after Stop")
 	}
 }
 
 // TestPlaybackEngine_GetConfig tests config retrieval.
 func TestPlaybackEngine_GetConfig(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
 	playbackConfig := &config.CapturePlayback{
 		FileName: "test.pcap",
 	}
 
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	pb := NewPlaybackEngine(&recordingSender{}, playbackConfig, 0)
 
-	cfg := pb.GetConfig()
-	if cfg != playbackConfig {
+	if cfg := pb.GetConfig(); cfg != playbackConfig {
 		t.Error("GetConfig() returned different config")
 	}
 }
 
 // TestPlaybackEngine_LoadPCAP tests PCAP file loading.
 func TestPlaybackEngine_LoadPCAP(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	// Create test PCAP file
 	pcapFile := createTestPCAP(t, 5)
 
-	loopbackNames := []string{"lo", "lo0"}
+	pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{FileName: pcapFile}, 0)
 
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
-		FileName: pcapFile,
-	}
-
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
-
-	// Test loading PCAP
 	packets, err := collectPlayback(pb)
 	if err != nil {
 		t.Fatalf("Failed to load PCAP: %v", err)
 	}
 
 	if len(packets) != 5 {
-		t.Errorf("Expected 5 packets, got %d", len(packets))
+		t.Fatalf("Expected 5 packets, got %d", len(packets))
 	}
 
-	// Verify packet data
+	want := readPCAPFrames(t, pcapFile)
 	for i, pkt := range packets {
-		if len(pkt.Data) == 0 {
-			t.Errorf("Packet %d has no data", i)
+		if !slices.Equal(pkt.Data, want[i]) {
+			t.Errorf("packet %d data = %x, want %x", i, pkt.Data, want[i])
 		}
 
 		if pkt.Timestamp.IsZero() {
@@ -417,65 +240,34 @@ func TestPlaybackEngine_LoadPCAP(t *testing.T) {
 
 // TestPlaybackEngine_CalculatePacketDelay tests timing calculation.
 func TestPlaybackEngine_CalculatePacketDelay(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
 	tests := []struct {
 		name          string
 		scaleTime     float64
 		packetOffset  time.Duration
 		expectedDelay time.Duration
-		tolerance     time.Duration
 	}{
-		{"no scaling", 1.0, 100 * time.Millisecond, 100 * time.Millisecond, 50 * time.Millisecond},
-		{"2x speed", 2.0, 100 * time.Millisecond, 200 * time.Millisecond, 50 * time.Millisecond},
-		{"0.5x speed", 0.5, 100 * time.Millisecond, 50 * time.Millisecond, 25 * time.Millisecond},
+		{"no scaling", 1.0, 100 * time.Millisecond, 100 * time.Millisecond},
+		{"2x speed", 2.0, 100 * time.Millisecond, 200 * time.Millisecond},
+		{"0.5x speed", 0.5, 100 * time.Millisecond, 50 * time.Millisecond},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			playbackConfig := &config.CapturePlayback{
+			pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{
 				FileName:  "test.pcap",
 				ScaleTime: tt.scaleTime,
-			}
+			}, 0)
 
-			pb := NewPlaybackEngine(engine, playbackConfig, 0)
+			// A frozen clock makes the expected delay exact, so the assertion
+			// needs no tolerance window and cannot flake under a loaded runner.
+			baseTime := time.Date(2026, time.August, 29, 12, 0, 0, 0, time.UTC)
+			pb.now = func() time.Time { return baseTime }
 
-			baseTime := time.Now()
-			firstPacketTime := baseTime
-			packetTime := baseTime.Add(tt.packetOffset)
+			pkt := PlaybackPacket{Timestamp: baseTime.Add(tt.packetOffset)}
 
-			pkt := PlaybackPacket{
-				Timestamp: packetTime,
-			}
-
-			delay := pb.calculatePacketDelay(pkt, baseTime, firstPacketTime)
-
-			if delay < tt.expectedDelay-tt.tolerance || delay > tt.expectedDelay+tt.tolerance {
-				t.Errorf("Expected delay ~%v, got %v", tt.expectedDelay, delay)
+			delay := pb.calculatePacketDelay(pkt, baseTime, baseTime)
+			if delay != tt.expectedDelay {
+				t.Errorf("calculatePacketDelay = %v, want %v", delay, tt.expectedDelay)
 			}
 		})
 	}
@@ -483,52 +275,19 @@ func TestPlaybackEngine_CalculatePacketDelay(t *testing.T) {
 
 // TestPlaybackEngine_CalculatePacketDelay_PastDue tests handling of past-due packets.
 func TestPlaybackEngine_CalculatePacketDelay_PastDue(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
+	pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{
 		FileName:  "test.pcap",
 		ScaleTime: 1.0,
-	}
+	}, 0)
 
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	// Playback started a second ago; this packet was due 900ms back.
+	nowTime := time.Date(2026, time.August, 29, 12, 0, 0, 0, time.UTC)
+	pb.now = func() time.Time { return nowTime }
 
-	// Simulate packet that should have been sent in the past
-	baseTime := time.Now().Add(-1 * time.Second) // Started 1 second ago
-	firstPacketTime := baseTime
-	packetTime := baseTime.Add(100 * time.Millisecond) // This packet was due 900ms ago
+	baseTime := nowTime.Add(-1 * time.Second)
+	pkt := PlaybackPacket{Timestamp: baseTime.Add(100 * time.Millisecond)}
 
-	pkt := PlaybackPacket{
-		Timestamp: packetTime,
-	}
-
-	delay := pb.calculatePacketDelay(pkt, baseTime, firstPacketTime)
-
-	// Should return 0 for past-due packets (send immediately)
-	if delay != 0 {
+	if delay := pb.calculatePacketDelay(pkt, baseTime, baseTime); delay != 0 {
 		t.Errorf("Expected 0 delay for past-due packet, got %v", delay)
 	}
 }
@@ -550,100 +309,78 @@ func TestPlaybackPacket_Structure(t *testing.T) {
 }
 
 // TestPlaybackEngine_RestartAfterStop verifies Start can be called again
-// after Stop with a real PCAP file. Regression for #464.
+// after Stop, and that each restarted run replays the whole capture.
+// Regression for #464.
 func TestPlaybackEngine_RestartAfterStop(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
+	const packetCount = 3
 
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	pcapFile := createTestPCAP(t, 3)
-	playbackConfig := &config.CapturePlayback{FileName: pcapFile}
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	pcapFile := createTestPCAP(t, packetCount)
 
 	for i := range 3 {
+		sender := &recordingSender{}
+		pb := NewPlaybackEngine(sender, &config.CapturePlayback{
+			FileName: pcapFile,
+			RateMode: config.RateTopspeed,
+		}, 0)
+
 		if startErr := pb.Start(); startErr != nil {
 			t.Fatalf("iter %d: Start failed: %v", i, startErr)
 		}
-		// Tiny window for the goroutine to be alive then bail.
-		time.Sleep(20 * time.Millisecond)
+
+		// Synchronise on the pass completing rather than on a fixed sleep.
+		waitPasses(t, pb, 1, 2*time.Second)
 		pb.Stop()
+
+		if got := sender.Count(); got != packetCount {
+			t.Fatalf("iter %d: sent %d frames, want %d", i, got, packetCount)
+		}
+
+		assertFramesMatchPCAP(t, sender, pcapFile)
 	}
 }
 
 // TestPlaybackEngine_ConcurrentStartStop tests concurrent start/stop calls.
 func TestPlaybackEngine_ConcurrentStartStop(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
+	pb := NewPlaybackEngine(&recordingSender{}, &config.CapturePlayback{
+		FileName: createTestPCAP(t, 2),
+		RateMode: config.RateTopspeed,
+		LoopTime: 60_000,
+	}, 0)
+
+	if err := pb.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
 	}
 
-	loopbackNames := []string{"lo", "lo0"}
+	// Concurrent Stop() calls must all return, and exactly once must actually
+	// halt the engine.
+	const stoppers = 10
 
-	var testInterface string
+	var wg sync.WaitGroup
 
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
+	wg.Add(stoppers)
 
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	playbackConfig := &config.CapturePlayback{
-		FileName: "test.pcap",
-	}
-
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
-
-	// Multiple Stop() calls should not panic
-	done := make(chan struct{})
-
-	for range 10 {
+	for range stoppers {
 		go func() {
+			defer wg.Done()
 			pb.Stop()
-
-			done <- struct{}{}
 		}()
 	}
 
-	// Wait for all goroutines
-	for range 10 {
-		select {
-		case <-done:
-		case <-time.After(1 * time.Second):
-			t.Fatal("Concurrent Stop() calls deadlocked")
-		}
+	done := make(chan struct{})
+
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Concurrent Stop() calls deadlocked")
+	}
+
+	if pb.IsRunning() {
+		t.Error("engine still reports running after concurrent Stop")
 	}
 }
 
@@ -681,42 +418,19 @@ func TestPlaybackEngine_Progress_TracksCounters(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_Progress_AfterPlayOnce runs a real playOnce() pass over
-// a loopback interface (same CI-skip convention as the rest of this file,
-// since sending packets needs raw-socket privileges) and asserts the
-// progress counters match the packets actually written to the PCAP.
+// TestPlaybackEngine_Progress_AfterPlayOnce runs a full playOnce() pass through
+// a recording sender and asserts both the progress counters and the frames that
+// reached the egress boundary match the PCAP that was replayed.
 func TestPlaybackEngine_Progress_AfterPlayOnce(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping playback test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
 	const packetCount = 5
-	pcapFile := createTestPCAP(t, packetCount)
 
-	playbackConfig := &config.CapturePlayback{FileName: pcapFile}
-	pb := NewPlaybackEngine(engine, playbackConfig, 0)
+	pcapFile := createTestPCAP(t, packetCount)
+	sender := &recordingSender{}
+
+	pb := NewPlaybackEngine(sender, &config.CapturePlayback{
+		FileName: pcapFile,
+		RateMode: config.RateTopspeed,
+	}, 0)
 
 	// playOnce is synchronous, so no polling/timing is needed to observe the
 	// final counters.
@@ -736,4 +450,38 @@ func TestPlaybackEngine_Progress_AfterPlayOnce(t *testing.T) {
 		t.Errorf("expected BytesSent (%d) to equal TotalBytes (%d) after a full pass",
 			progress.BytesSent, progress.TotalBytes)
 	}
+
+	assertFramesMatchPCAP(t, sender, pcapFile)
 }
+
+// TestPlaybackEngine_PlayOnce_SendFailureIsNotCounted proves the progress
+// counters track what the egress boundary accepted, not what was read: a
+// sender that rejects from the third frame onward leaves PacketsSent at two
+// while the pass still completes and reports the true total.
+func TestPlaybackEngine_PlayOnce_SendFailureIsNotCounted(t *testing.T) {
+	const packetCount = 5
+
+	pcapFile := createTestPCAP(t, packetCount)
+	sender := &recordingSender{failFrom: 3, failErr: errSendRefused}
+
+	pb := NewPlaybackEngine(sender, &config.CapturePlayback{
+		FileName: pcapFile,
+		RateMode: config.RateTopspeed,
+	}, 0)
+
+	pb.playOnce()
+
+	progress := pb.Progress()
+	if progress.PacketsSent != 2 {
+		t.Errorf("PacketsSent = %d, want 2 (sends 3-5 were refused)", progress.PacketsSent)
+	}
+	if progress.TotalPackets != packetCount {
+		t.Errorf("TotalPackets = %d, want %d", progress.TotalPackets, packetCount)
+	}
+	if got := sender.Count(); got != 2 {
+		t.Errorf("sender accepted %d frames, want 2", got)
+	}
+}
+
+// errSendRefused stands in for a driver rejecting a frame.
+var errSendRefused = errors.New("send refused")

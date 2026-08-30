@@ -104,21 +104,14 @@ func TestPacingDelay_TimingModeDelegates(t *testing.T) {
 // the real send loop: a capture whose packets are 10ms apart (≈190ms in timing
 // mode) replays near-instantly under topspeed.
 func TestReplay_Topspeed_IgnoresCapturedTiming(t *testing.T) {
-	iface := findLoopback(t)
-
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
 	const count = 20
-	pb := NewPlaybackEngine(engine, &config.CapturePlayback{
+
+	pb, sender := newTestPlayback(t, &config.CapturePlayback{
 		FileName: createTestPCAPFile(t, count),
 		RateMode: config.RateTopspeed,
-	}, 0)
+	})
 
-	if err = pb.Start(); err != nil {
+	if err := pb.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 	defer pb.Stop()
@@ -128,6 +121,10 @@ func TestReplay_Topspeed_IgnoresCapturedTiming(t *testing.T) {
 	deadline := time.Now().Add(100 * time.Millisecond)
 	for time.Now().Before(deadline) {
 		if pb.Progress().PacketsSent == count {
+			if got := sender.Count(); got != count {
+				t.Fatalf("sender got %d frames, want %d", got, count)
+			}
+
 			return
 		}
 		time.Sleep(2 * time.Millisecond)

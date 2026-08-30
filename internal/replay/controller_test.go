@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 	"github.com/gopacket/gopacket/pcapgo"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
@@ -61,52 +63,60 @@ func writeTestPCAP(t *testing.T, packetCount int) string {
 	return pcapFile
 }
 
-// TestStatus_ReportsProgress drives a real replay over the loopback
-// interface and asserts Status() surfaces non-zero sent counters plus a
-// correct percent-complete once the pass finishes. Skipped in CI: sending
-// raw packets needs privileges the CI runner doesn't have (same convention
-// as internal/capture's playback tests).
+// recordingSender is the test double for capture.PacketSender, the egress
+// boundary replay drives. Replay needs nothing else from the capture engine,
+// so the whole controller runs here without a raw socket.
+type recordingSender struct {
+	mu     sync.Mutex
+	frames [][]byte
+}
+
+func (s *recordingSender) SendPacket(pkt []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.frames = append(s.frames, slices.Clone(pkt))
+
+	return nil
+}
+
+func (s *recordingSender) count() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.frames)
+}
+
+// TestStatus_ReportsProgress drives a real replay through a recording sender
+// and asserts Status() surfaces the sent counters and a correct
+// percent-complete once the pass finishes.
 func TestStatus_ReportsProgress(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping replay test in CI environment")
-	}
-
-	var testInterface string
-	for _, name := range []string{"lo", "lo0"} {
-		if capture.InterfaceExists(name) {
-			testInterface = name
-			break
-		}
-	}
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := capture.New(testInterface, 0)
-	if err != nil {
-		t.Skipf("cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
 	const packetCount = 5
+
+	sender := &recordingSender{}
 	pcapFile := writeTestPCAP(t, packetCount)
 
-	c := replay.New(engine, 0)
-	if _, startErr := c.Start(api.ReplayRequest{File: pcapFile}); startErr != nil {
+	c := replay.New(sender, 0)
+	req := api.ReplayRequest{File: pcapFile, RateMode: string(config.RateTopspeed)}
+
+	if _, startErr := c.Start(req); startErr != nil {
 		t.Fatalf("Start failed: %v", startErr)
 	}
 
 	// Playback of a 5-packet, sub-millisecond-spaced PCAP finishes almost
-	// immediately; poll briefly rather than sleeping a fixed duration.
-	deadline := time.Now().Add(2 * time.Second)
+	// immediately; poll on the observable counter rather than sleeping.
+	deadline := time.Now().Add(5 * time.Second)
+
 	var state api.ReplayState
+
 	for time.Now().Before(deadline) {
 		state = c.Status()
 		if state.PacketsSent >= packetCount {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
+
 	if _, stopErr := c.Stop(); stopErr != nil {
 		t.Fatalf("Stop failed: %v", stopErr)
 	}
@@ -122,6 +132,9 @@ func TestStatus_ReportsProgress(t *testing.T) {
 	}
 	if state.PercentComplete != 100 {
 		t.Errorf("expected PercentComplete=100, got %v", state.PercentComplete)
+	}
+	if got := sender.count(); got != packetCount {
+		t.Errorf("sender received %d frames, want %d", got, packetCount)
 	}
 }
 
