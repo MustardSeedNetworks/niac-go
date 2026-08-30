@@ -29,6 +29,15 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve configuration path: %w", err)
 	}
+	// Containment is re-checked here, after symlink resolution and before any
+	// further filesystem call. The earlier check saw only the literal path; a
+	// symlink inside a managed root can point anywhere, so until this passes the
+	// resolved path is still untrusted. Statting first would touch an escaped
+	// path and let its result -- "not a regular file" versus a stat error --
+	// describe something outside the roots.
+	if !pathWithinAnyRoot(realPath, roots, true) {
+		return "", ErrPathOutsideManagedRoots
+	}
 	info, err := os.Stat(realPath)
 	if err != nil {
 		return "", fmt.Errorf("stat configuration path: %w", err)
@@ -37,10 +46,7 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 		return "", fmt.Errorf("%w: configuration must be a regular file", ErrPathOutsideManagedRoots)
 	}
 
-	if pathWithinAnyRoot(realPath, roots, true) {
-		return realPath, nil
-	}
-	return "", ErrPathOutsideManagedRoots
+	return realPath, nil
 }
 
 func hasParentTraversal(path string) bool {

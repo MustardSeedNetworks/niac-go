@@ -82,7 +82,7 @@ func (s *Server) handleSimulationSelect(w http.ResponseWriter, r *http.Request) 
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
-	if !validSessionID(req.SessionID) {
+	if !ValidSessionID(req.SessionID) {
 		writeError(w, r, http.StatusBadRequest, "validation_failed", "Scenario ID is invalid", nil)
 		return
 	}
@@ -280,7 +280,7 @@ func writeManagedConfigPathError(w http.ResponseWriter, r *http.Request, err err
 // handleSimulationStop processes DELETE requests to stop a simulation.
 func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("sessionId")
-	if sessionID != "" && !validSessionID(sessionID) {
+	if sessionID != "" && !ValidSessionID(sessionID) {
 		writeError(
 			w,
 			r,

@@ -38,6 +38,11 @@ var (
 	ErrTemplateNotFound        = errors.New("template not found")
 	ErrUnsafeTopology          = errors.New("routed topology failed preflight")
 	ErrInvalidSimulationConfig = errors.New("simulation configuration failed semantic validation")
+
+	// errInvalidInlineSessionID rejects a session id that would be
+	// interpolated into the inline config filename. Unexported: callers reach
+	// it through StartSimulation, which reports it as a start failure.
+	errInvalidInlineSessionID = errors.New("invalid session id for the inline config filename")
 )
 
 const (
@@ -515,14 +520,31 @@ func (d *Daemon) compileSimulationFabric(
 // path leaves it in place so the user can still download the YAML after.
 const inlineConfigName = "_running.inline.yaml"
 
+// defaultSessionID names the unnamed session, whose inline config keeps the
+// fixed inlineConfigName rather than a per-session filename.
+const defaultSessionID = "default"
+
 // persistInlineConfig writes the inline YAML to disk so the rest of the
 // daemon has a real configPath to operate on. Returns the absolute path
 // it was written to.
 func persistInlineConfig(content string) (string, error) {
-	return persistInlineSessionConfig(content, "default")
+	return persistInlineSessionConfig(content, defaultSessionID)
 }
 
+// persistInlineSessionConfig writes an inline configuration to the configs
+// directory under a filename built from sessionID.
+//
+// The id is checked here rather than trusted from the caller. The HTTP handler
+// validates it, but the crash-recovery path calls StartSimulation with a request
+// deserialised from active-simulation.json and never reaches those validators,
+// so an id that got onto disk by any means would otherwise be interpolated
+// straight into a path. Rejecting it at the sink makes the guarantee independent
+// of which caller arrives.
 func persistInlineSessionConfig(content, sessionID string) (string, error) {
+	if sessionID != defaultSessionID && !api.ValidSessionID(sessionID) {
+		return "", fmt.Errorf("%w: %q", errInvalidInlineSessionID, sessionID)
+	}
+
 	cleanDir, dirErr := inlineConfigDir()
 	if dirErr != nil {
 		return "", dirErr
@@ -531,7 +553,7 @@ func persistInlineSessionConfig(content, sessionID string) (string, error) {
 		return "", fmt.Errorf("create configs dir: %w", err)
 	}
 	name := inlineConfigName
-	if sessionID != "default" {
+	if sessionID != defaultSessionID {
 		name = fmt.Sprintf("_running.%s.inline.yaml", sessionID)
 	}
 	path := filepath.Join(cleanDir, name)
@@ -659,7 +681,7 @@ func (d *Daemon) prepareSessionStart(req api.SimulationRequest) (string, fabric.
 	}
 	sessionID := req.SessionID
 	if sessionID == "" {
-		sessionID = "default"
+		sessionID = defaultSessionID
 	}
 	binding := d.bindingFromRequest(req)
 	if err := d.sessions.validateReplacement(sessionID, binding); err != nil {

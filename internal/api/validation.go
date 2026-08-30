@@ -302,7 +302,7 @@ func validateConfigPath(path string) []ErrorDetail {
 // SECURITY FIX MEDIUM-3: Prevent injection and resource exhaustion.
 func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 	var errs []ErrorDetail
-	if req.SessionID != "" && !validSessionID(req.SessionID) {
+	if req.SessionID != "" && !ValidSessionID(req.SessionID) {
 		errs = append(errs, ErrorDetail{
 			Field: "sessionId",
 			Issue: "session ID must contain 1 to 40 lowercase letters, numbers, or hyphens and must start and end with a letter or number",
@@ -330,7 +330,14 @@ func validateSimulationRequest(req SimulationRequest) []ErrorDetail {
 	return errs
 }
 
-func validSessionID(value string) bool {
+// ValidSessionID reports whether value is a usable session identifier: 1-40
+// characters of [a-z0-9-], not starting or ending with a hyphen.
+//
+// Exported because internal/daemon interpolates a session id into the inline
+// config filename and must enforce the same rule at that sink -- the daemon's
+// crash-recovery path calls StartSimulation with a request read back from disk
+// and never passes through this package's validators.
+func ValidSessionID(value string) bool {
 	if len(value) == 0 || len(value) > 40 || value[0] == '-' || value[len(value)-1] == '-' {
 		return false
 	}
