@@ -1146,7 +1146,7 @@ jobs:
         # own network waits (via playwright's internal apt calls) and retries
         # the transient case.
         with:
-          command: cd ui && npx playwright install-deps chromium webkit
+          command: cd ui && npx playwright install-deps chromium webkit firefox
           command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
@@ -1164,7 +1164,7 @@ jobs:
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: ui
-        run: npx playwright install chromium webkit
+        run: npx playwright install chromium webkit firefox
 
       - name: Save Playwright browsers (default branch only)
         if: steps.playwright-cache.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
