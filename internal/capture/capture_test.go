@@ -1,6 +1,9 @@
 package capture
 
 import (
+	"context"
+	"errors"
+	"io"
 	"os"
 	"slices"
 	"sync"
@@ -286,46 +289,208 @@ func TestEngine_Close(t *testing.T) {
 	engine.Close()
 }
 
-// TestSendEthernet_ValidFrame tests building Ethernet frame.
+// TestSendEthernet_ValidFrame asserts the frame SendEthernet hands to the
+// handle decodes back to the addresses, ethertype and payload it was given.
 func TestSendEthernet_ValidFrame(t *testing.T) {
-	// This test would require a real interface to send packets
-	// Instead, we can test the serialization logic by creating an engine
-	// and checking if SendEthernet builds valid frames
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping packet send test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
+	engine, handle := newFakeEngine(0)
 
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	payload := []byte{0x01, 0x02, 0x03, 0x04}
 
-	// This will attempt to send, which may fail on loopback, but shouldn't panic
-	err = engine.SendEthernet(dstMAC, srcMAC, uint16(layers.EthernetTypeIPv4), payload)
-	// Don't fail test if send fails - we're mainly testing it doesn't panic
-	// Some systems don't allow raw packet sending on loopback
-	_ = err
+	err := engine.SendEthernet(dstMAC, srcMAC, uint16(layers.EthernetTypeIPv4), payload)
+	if err != nil {
+		t.Fatalf("SendEthernet: %v", err)
+	}
+
+	frames := handle.writtenFrames()
+	if len(frames) != 1 {
+		t.Fatalf("handle received %d frames, want exactly 1", len(frames))
+	}
+
+	packet := gopacket.NewPacket(frames[0], layers.LayerTypeEthernet, gopacket.Default)
+
+	eth, ok := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	if !ok {
+		t.Fatalf("frame has no Ethernet layer: %v", packet)
+	}
+
+	if !slices.Equal(eth.SrcMAC, srcMAC) || !slices.Equal(eth.DstMAC, dstMAC) {
+		t.Errorf("MACs = %s -> %s, want %x -> %x", eth.SrcMAC, eth.DstMAC, srcMAC, dstMAC)
+	}
+	if eth.EthernetType != layers.EthernetTypeIPv4 {
+		t.Errorf("ethertype = %v, want IPv4", eth.EthernetType)
+	}
+	// SendEthernet serializes with FixLengths, so a 4-byte payload is zero-padded
+	// to the 46-byte Ethernet minimum — a 60-byte frame on the wire.
+	const (
+		minPayload = 46
+		minFrame   = 60
+	)
+
+	if len(frames[0]) != minFrame {
+		t.Errorf("frame length = %d, want %d (padded to the Ethernet minimum)", len(frames[0]), minFrame)
+	}
+	if !slices.Equal(eth.Payload[:len(payload)], payload) {
+		t.Errorf("payload = %x, want it to start with %x", eth.Payload, payload)
+	}
+	padding := eth.Payload[len(payload):]
+	wantPadding := make([]byte, minPayload-len(payload))
+
+	if !slices.Equal(padding, wantPadding) {
+		t.Errorf("payload padding = %x, want %d zero bytes", padding, len(wantPadding))
+	}
+}
+
+// TestSendEthernet_WriteFails propagates a handle that refuses the frame,
+// rather than reporting a send that never happened as a success.
+func TestSendEthernet_WriteFails(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+	handle.writeErr = errFakeHandle
+
+	err := engine.SendEthernet(
+		[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		[]byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		uint16(layers.EthernetTypeIPv4),
+		[]byte{0x01},
+	)
+	if !errors.Is(err, errFakeHandle) {
+		t.Fatalf("SendEthernet error = %v, want errFakeHandle", err)
+	}
+}
+
+// TestEngine_ReadPacket covers the three outcomes the read path distinguishes:
+// a frame, a timeout (which must not read as an error, or shutdown stops being
+// responsive), and a real failure.
+func TestEngine_ReadPacket(t *testing.T) {
+	frame := []byte{0xaa, 0xbb, 0xcc, 0xdd}
+
+	t.Run("returns the frame", func(t *testing.T) {
+		engine, handle := newFakeEngine(0)
+		handle.reads = []readResult{{data: frame}}
+
+		got, err := engine.ReadPacket(make([]byte, snapshotLength))
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		if !slices.Equal(got, frame) {
+			t.Errorf("ReadPacket = %x, want %x", got, frame)
+		}
+	})
+
+	t.Run("timeout is not an error", func(t *testing.T) {
+		engine, handle := newFakeEngine(0)
+		handle.reads = []readResult{{err: pcap.NextErrorTimeoutExpired}}
+
+		got, err := engine.ReadPacket(make([]byte, snapshotLength))
+		if err != nil {
+			t.Fatalf("ReadPacket on timeout returned %v, want nil", err)
+		}
+		if got != nil {
+			t.Errorf("ReadPacket on timeout returned %x, want nil", got)
+		}
+	})
+
+	t.Run("read failure propagates", func(t *testing.T) {
+		engine, handle := newFakeEngine(0)
+		handle.reads = []readResult{{err: errFakeHandle}}
+
+		if _, err := engine.ReadPacket(make([]byte, snapshotLength)); !errors.Is(err, errFakeHandle) {
+			t.Fatalf("ReadPacket error = %v, want errFakeHandle", err)
+		}
+	})
+
+	t.Run("frame larger than the buffer is returned whole", func(t *testing.T) {
+		engine, handle := newFakeEngine(0)
+		handle.reads = []readResult{{data: frame}}
+
+		got, err := engine.ReadPacket(make([]byte, 2))
+		if err != nil {
+			t.Fatalf("ReadPacket: %v", err)
+		}
+		if !slices.Equal(got, frame) {
+			t.Errorf("ReadPacket = %x, want the whole %x rather than a truncated copy", got, frame)
+		}
+	})
+}
+
+// TestEngine_StartCaptureContext_DeliversPackets drives the capture loop over a
+// queued handle and asserts every frame reaches the handler in order.
+func TestEngine_StartCaptureContext_DeliversPackets(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+
+	first := ethernetFrame(t, 0x01)
+	second := ethernetFrame(t, 0x02)
+	handle.reads = []readResult{
+		{data: first, ci: gopacket.CaptureInfo{CaptureLength: len(first), Length: len(first)}},
+		{data: second, ci: gopacket.CaptureInfo{CaptureLength: len(second), Length: len(second)}},
+	}
+	handle.readErr = io.EOF
+
+	var seen [][]byte
+
+	err := engine.StartCaptureContext(t.Context(), func(p gopacket.Packet) {
+		seen = append(seen, p.Data())
+	})
+	if err != nil {
+		t.Fatalf("StartCaptureContext: %v", err)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("handler saw %d packets, want 2", len(seen))
+	}
+	if !slices.Equal(seen[0], first) || !slices.Equal(seen[1], second) {
+		t.Errorf("handler saw %x, want %x then %x", seen, first, second)
+	}
+}
+
+// TestEngine_StartCaptureContext_Cancellation proves a cancelled context stops
+// the loop and reports why, which is how the daemon shuts capture down.
+func TestEngine_StartCaptureContext_Cancellation(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+	handle.readErr = pcap.NextErrorTimeoutExpired
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := engine.StartCaptureContext(ctx, func(gopacket.Packet) {
+		t.Error("handler must not run after the context is cancelled")
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("StartCaptureContext error = %v, want context.Canceled", err)
+	}
+}
+
+// TestEngine_Close_ClosesHandle asserts Close reaches the handle. Close is the
+// only thing that releases the kernel ring buffer.
+func TestEngine_Close_ClosesHandle(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+
+	engine.Close()
+
+	if got := handle.closeCount(); got != 1 {
+		t.Errorf("handle closed %d times, want 1", got)
+	}
+}
+
+// ethernetFrame serializes a minimal Ethernet frame carrying tag as its
+// payload, so two frames are distinguishable.
+func ethernetFrame(t *testing.T, tag byte) []byte {
+	t.Helper()
+
+	eth := &layers.Ethernet{
+		SrcMAC:       []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		DstMAC:       []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+
+	buf := gopacket.NewSerializeBuffer()
+	if err := gopacket.SerializeLayers(buf, gopacket.SerializeOptions{FixLengths: true},
+		eth, gopacket.Payload([]byte{tag, 0x00, 0x00, 0x00})); err != nil {
+		t.Fatalf("serialize frame: %v", err)
+	}
+
+	return slices.Clone(buf.Bytes())
 }
 
 // TestBuildARPPacket tests ARP packet construction.

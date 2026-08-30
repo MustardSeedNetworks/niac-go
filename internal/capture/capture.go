@@ -29,13 +29,31 @@ const (
 // ErrNoMACAddressFound is returned when an interface has no MAC address.
 var ErrNoMACAddressFound = errors.New("no MAC address found for interface")
 
+// packetHandle is the part of *pcap.Handle that Engine uses. Naming the subset
+// lets the tests assert the frames Engine emits and the filter it installs
+// against a substitute handle — a raw socket needs CAP_NET_RAW, which no CI
+// runner grants, so without this seam none of that behaviour is covered.
+type packetHandle interface {
+	gopacket.PacketDataSource
+
+	WritePacketData(data []byte) error
+	SetBPFFilter(expr string) error
+	LinkType() layers.LinkType
+	Stats() (*pcap.Stats, error)
+	Close()
+}
+
 // Engine handles packet capture and injection.
 type Engine struct {
 	interfaceName string
-	handle        *pcap.Handle
+	handle        packetHandle
 	debugLevel    int
 	activeFilter  string
 	filterMu      sync.RWMutex
+
+	// lookupInterface resolves interfaceName to its OS interface. A nil value
+	// means net.InterfaceByName, which is what every production path uses.
+	lookupInterface func(name string) (*net.Interface, error)
 }
 
 // New creates a new capture engine.
@@ -297,7 +315,12 @@ func (e *Engine) SendARP(srcMAC, dstMAC []byte, srcIP, dstIP string, isRequest b
 
 // GetInterfaceMAC returns the MAC address of the interface.
 func (e *Engine) GetInterfaceMAC() ([]byte, error) {
-	iface, err := net.InterfaceByName(e.interfaceName)
+	lookup := e.lookupInterface
+	if lookup == nil {
+		lookup = net.InterfaceByName
+	}
+
+	iface, err := lookup(e.interfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("lookup interface %s: %w", e.interfaceName, err)
 	}
