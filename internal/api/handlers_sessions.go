@@ -86,7 +86,7 @@ func (s *Server) dispatchSessionSubpath(w http.ResponseWriter, r *http.Request) 
 		writeError(w, r, http.StatusNotFound, "not_found", "A session ID is required", nil)
 		return
 	}
-	if !validSessionID(sessionID) {
+	if !ValidSessionID(sessionID) {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
 			"Invalid session ID", []ErrorDetail{{Field: "sessionId", Issue: "invalid session ID"}})
 		return
