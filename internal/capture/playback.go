@@ -67,6 +67,12 @@ type PlaybackEngine struct {
 	// alongside packetsSent).
 	packetsFiltered atomic.Uint64
 
+	// now returns the current time. It is a field so the pacing tests can drive
+	// the delay arithmetic from a fixed clock and assert exact durations rather
+	// than tolerating wall-clock jitter. A nil value means the real clock, which
+	// is what every production construction path uses.
+	now func() time.Time
+
 	// bpfVM is the compiled replay filter, or nil when no BPFFilter is set. Set
 	// under mu in Start before the playback goroutine spawns; read only by that
 	// single goroutine, so its serial Run calls need no further locking.
@@ -103,6 +109,15 @@ func NewPlaybackEngine(engine PacketSender, playbackConfig *config.CapturePlayba
 		debugLevel: debugLevel,
 		stopChan:   make(chan struct{}),
 	}
+}
+
+// currentTime reads the engine's clock.
+func (p *PlaybackEngine) currentTime() time.Time {
+	if p.now == nil {
+		return time.Now()
+	}
+
+	return p.now()
 }
 
 // Progress returns a snapshot of the current playback progress. Safe to call
@@ -373,12 +388,12 @@ func (p *PlaybackEngine) pacingDelay(
 	case config.RatePPS:
 		// Send packet index N (0-based) at startTime + N/pps seconds.
 		targetElapsed := float64(sentPackets) / p.config.PacketsPerSec * float64(time.Second)
-		return rateDelay(startTime, time.Duration(targetElapsed))
+		return p.rateDelay(startTime, time.Duration(targetElapsed))
 	case config.RateMbps:
 		// Hold average throughput at the cap: having already sent sentBytes,
 		// the next send is due at startTime + sentBytes*8 / (mbps*1e6) seconds.
 		targetElapsed := float64(sentBytes*bitsPerByte) / (p.config.MbpsCap * bitsPerMbit) * float64(time.Second)
-		return rateDelay(startTime, time.Duration(targetElapsed))
+		return p.rateDelay(startTime, time.Duration(targetElapsed))
 	case config.RateTiming:
 		return p.calculatePacketDelay(pkt, startTime, firstPacketTime)
 	default: // empty / unknown → original timing
@@ -388,8 +403,8 @@ func (p *PlaybackEngine) pacingDelay(
 
 // rateDelay returns the wait needed for targetElapsed to have passed since
 // startTime, or 0 if that moment is already past.
-func rateDelay(startTime time.Time, targetElapsed time.Duration) time.Duration {
-	if d := time.Until(startTime.Add(targetElapsed)); d > 0 {
+func (p *PlaybackEngine) rateDelay(startTime time.Time, targetElapsed time.Duration) time.Duration {
+	if d := startTime.Add(targetElapsed).Sub(p.currentTime()); d > 0 {
 		return d
 	}
 
@@ -586,7 +601,7 @@ func (p *PlaybackEngine) calculatePacketDelay(pkt PlaybackPacket, startTime, fir
 
 	// Calculate when this packet should be sent
 	targetTime := startTime.Add(relativeTime)
-	now := time.Now()
+	now := p.currentTime()
 
 	// Return sleep duration (0 if target time has passed)
 	if targetTime.After(now) {

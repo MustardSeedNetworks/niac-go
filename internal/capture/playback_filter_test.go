@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -112,7 +113,7 @@ func TestValidateBPFExpr(t *testing.T) {
 // TestReplay_BPFFilter_MalformedFailsStart proves a bad filter is reported
 // synchronously by Start rather than swallowed in the playback goroutine.
 func TestReplay_BPFFilter_MalformedFailsStart(t *testing.T) {
-	pb := newLoopbackPlayback(t, &config.CapturePlayback{
+	pb, _ := newTestPlayback(t, &config.CapturePlayback{
 		FileName:  createTestPCAPFile(t, 1),
 		BPFFilter: "not a valid filter !!!",
 	})
@@ -130,7 +131,7 @@ func TestReplay_BPFFilter_SelectsSubset(t *testing.T) {
 		dns   = 3
 		other = 2
 	)
-	pb := newLoopbackPlayback(t, &config.CapturePlayback{
+	pb, sender := newTestPlayback(t, &config.CapturePlayback{
 		FileName:  createMixedUDPPCAP(t, dns, other),
 		BPFFilter: "udp port 53",
 		RateMode:  config.RateTopspeed,
@@ -141,14 +142,7 @@ func TestReplay_BPFFilter_SelectsSubset(t *testing.T) {
 	}
 	defer pb.Stop()
 
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		p := pb.Progress()
-		if p.PacketsSent+p.PacketsFiltered == dns+other {
-			break
-		}
-		time.Sleep(2 * time.Millisecond)
-	}
+	waitLoopExit(t, pb, 2*time.Second)
 
 	got := pb.Progress()
 	if got.PacketsSent != dns {
@@ -156,5 +150,19 @@ func TestReplay_BPFFilter_SelectsSubset(t *testing.T) {
 	}
 	if got.PacketsFiltered != other {
 		t.Errorf("PacketsFiltered = %d, want %d (udp/80 dropped)", got.PacketsFiltered, other)
+	}
+
+	// The counters alone cannot tell a correct filter from one that keeps the
+	// wrong subset: assert the frames that reached the sender are the udp/53
+	// ones.
+	wantFrame := udpPacketBytes(t, 53)
+	frames := sender.Frames()
+	if len(frames) != dns {
+		t.Fatalf("sender got %d frames, want %d", len(frames), dns)
+	}
+	for i, frame := range frames {
+		if !slices.Equal(frame, wantFrame) {
+			t.Errorf("frame %d = %x, want the udp/53 frame %x", i, frame, wantFrame)
+		}
 	}
 }

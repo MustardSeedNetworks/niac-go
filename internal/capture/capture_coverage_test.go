@@ -298,69 +298,63 @@ func createTestPCAPFile(t *testing.T, count int) string {
 
 // TestPlaybackEngine_Start_WithDebugLogging tests Start with debug levels that trigger logging.
 func TestPlaybackEngine_Start_WithDebugLogging(t *testing.T) {
-	iface := findLoopback(t)
+	const packetCount = 3
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
+	pcapFile := createTestPCAPFile(t, packetCount)
+	sender := &recordingSender{}
 
-	pcapFile := createTestPCAPFile(t, 3)
-
-	// Test with ScaleTime and LoopTime set so debug logging fires
-	playbackConfig := &config.CapturePlayback{
+	// ScaleTime and LoopTime set so the debug logging branches fire.
+	pb := NewPlaybackEngine(sender, &config.CapturePlayback{
 		FileName:  pcapFile,
 		ScaleTime: 2.0,
 		LoopTime:  500,
-	}
+		RateMode:  config.RateTopspeed,
+	}, 1) // debug >= 1 triggers logging
 
-	pb := NewPlaybackEngine(engine, playbackConfig, 1) // debug >= 1 triggers logging
-
-	err = pb.Start()
-	if err != nil {
+	if err := pb.Start(); err != nil {
 		t.Fatalf("Start() failed: %v", err)
 	}
 
-	// Let it run briefly, then stop
-	time.Sleep(100 * time.Millisecond)
+	// Stop on the first completed pass rather than after a fixed sleep.
+	waitPasses(t, pb, 1, 2*time.Second)
 	pb.Stop()
 
 	if pb.IsRunning() {
 		t.Error("Expected playback to be stopped")
 	}
+	if got := sender.Count(); got != packetCount {
+		t.Errorf("sent %d frames in the first pass, want %d", got, packetCount)
+	}
 }
 
 // TestPlaybackEngine_Start_PlayOnce tests Start without looping (plays once and exits).
 func TestPlaybackEngine_Start_PlayOnce(t *testing.T) {
-	iface := findLoopback(t)
+	const packetCount = 2
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
+	pcapFile := createTestPCAPFile(t, packetCount)
+	sender := &recordingSender{}
 
-	pcapFile := createTestPCAPFile(t, 2)
-
-	playbackConfig := &config.CapturePlayback{
+	pb := NewPlaybackEngine(sender, &config.CapturePlayback{
 		FileName:  pcapFile,
 		ScaleTime: 1.0,
 		LoopTime:  0, // no loop, play once
-	}
+		RateMode:  config.RateTopspeed,
+	}, debugLevelVerbose) // verbose to cover sendPacketWithLogging
 
-	pb := NewPlaybackEngine(engine, playbackConfig, debugLevelVerbose) // verbose to cover sendPacketWithLogging
-
-	err = pb.Start()
-	if err != nil {
+	if err := pb.Start(); err != nil {
 		t.Fatalf("Start() failed: %v", err)
 	}
+	defer pb.Stop()
 
-	// Wait for the play-once to finish (packets are 10ms apart, so 50ms should be plenty)
-	time.Sleep(200 * time.Millisecond)
+	// The single-shot loop returns on its own; wait for that rather than for a
+	// duration guessed from the capture timing.
+	waitLoopExit(t, pb, 2*time.Second)
 
-	// After play-once, the goroutine exits, but running flag stays true until Stop
-	pb.Stop()
+	if got := pb.Progress().Passes; got != 1 {
+		t.Errorf("passes = %d, want exactly 1", got)
+	}
+
+	assertFramesMatchPCAP(t, sender, pcapFile)
 }
 
 // TestPlaybackEngine_LoadPCAP_EmptyFile tests loading a PCAP with zero packets.
