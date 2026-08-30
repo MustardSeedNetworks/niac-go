@@ -2,13 +2,16 @@ package capture
 
 import (
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/pcapgo"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -16,225 +19,272 @@ import (
 
 // --- Engine tests that exercise Filter, Stats, SendARP, GetInterfaceMAC ---
 
-// findLoopback returns the loopback interface name or skips the test.
-func findLoopback(t *testing.T) string {
-	t.Helper()
-
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping test in CI environment")
-	}
-
-	for _, name := range []string{"lo", "lo0", "Loopback"} {
-		if InterfaceExists(name) {
-			return name
-		}
-	}
-
-	t.Skip("No loopback interface found")
-
-	return ""
-}
-
 // TestEngine_Filter tests Filter getter and SetFilter.
 func TestEngine_Filter(t *testing.T) {
-	iface := findLoopback(t)
+	engine, handle := newFakeEngine(0)
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	// Initially empty
 	if f := engine.Filter(); f != "" {
 		t.Errorf("Expected empty filter, got %q", f)
 	}
 
-	// Set a valid BPF filter (use "ip" which works on all link types)
-	err = engine.SetFilter("ip")
-	if err != nil {
-		// Some loopback interfaces reject certain filters; skip gracefully
-		t.Skipf("SetFilter(ip) failed (may be unsupported on loopback): %v", err)
+	if err := engine.SetFilter("ip"); err != nil {
+		t.Fatalf("SetFilter(ip): %v", err)
 	}
 
 	if f := engine.Filter(); f != "ip" {
 		t.Errorf("Expected filter 'ip', got %q", f)
 	}
 
-	// Set another filter
-	err = engine.SetFilter("tcp")
-	if err != nil {
-		t.Skipf("SetFilter(tcp) failed: %v", err)
+	if err := engine.SetFilter("tcp"); err != nil {
+		t.Fatalf("SetFilter(tcp): %v", err)
 	}
 
 	if f := engine.Filter(); f != "tcp" {
 		t.Errorf("Expected filter 'tcp', got %q", f)
 	}
+
+	// Filter() reporting the right string is not enough: the expression has to
+	// reach the handle, in order, or capture is unfiltered on the wire.
+	want := []string{"ip", "tcp"}
+	if got := handle.installedFilters(); !slices.Equal(got, want) {
+		t.Errorf("handle received filters %q, want %q", got, want)
+	}
 }
 
-// TestEngine_SetFilter_Invalid tests SetFilter with an invalid expression.
-func TestEngine_SetFilter_Invalid(t *testing.T) {
-	iface := findLoopback(t)
+// TestEngine_SetFilter_Rejected proves a filter the handle refuses is reported
+// and does not become the engine's active filter — otherwise Filter() would
+// claim a filter that was never installed.
+func TestEngine_SetFilter_Rejected(t *testing.T) {
+	engine, handle := newFakeEngine(0)
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
+	if err := engine.SetFilter("ip"); err != nil {
+		t.Fatalf("SetFilter(ip): %v", err)
 	}
-	defer engine.Close()
 
-	err = engine.SetFilter("not a valid bpf expression !!!")
-	if err == nil {
-		t.Skip("System accepted invalid BPF filter (unusual)")
+	handle.filterErr = errFakeHandle
+
+	if err := engine.SetFilter("not a valid bpf expression !!!"); !errors.Is(err, errFakeHandle) {
+		t.Fatalf("SetFilter error = %v, want errFakeHandle", err)
 	}
-	// Filter should not have been updated on error
+
+	if f := engine.Filter(); f != "ip" {
+		t.Errorf("active filter = %q, want the previous 'ip' to survive a rejected set", f)
+	}
 }
 
 // TestEngine_Stats tests Stats retrieval.
 func TestEngine_Stats(t *testing.T) {
-	iface := findLoopback(t)
-
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
+	engine, handle := newFakeEngine(0)
+	handle.stats = pcap.Stats{PacketsReceived: 42, PacketsDropped: 7, PacketsIfDropped: 1}
 
 	stats, err := engine.Stats()
 	if err != nil {
 		t.Fatalf("Stats() failed: %v", err)
 	}
 
-	if stats == nil {
-		t.Fatal("Stats() returned nil without error")
+	if stats.PacketsReceived != 42 {
+		t.Errorf("PacketsReceived = %d, want 42", stats.PacketsReceived)
 	}
-
-	// On a fresh engine, received/dropped should be 0
-	if stats.PacketsReceived < 0 {
-		t.Errorf("PacketsReceived should be >= 0, got %d", stats.PacketsReceived)
+	if stats.PacketsDropped != 7 {
+		t.Errorf("PacketsDropped = %d, want 7", stats.PacketsDropped)
+	}
+	if stats.PacketsIfDropped != 1 {
+		t.Errorf("PacketsIfDropped = %d, want 1", stats.PacketsIfDropped)
 	}
 }
 
-// TestEngine_SendARP_Request tests sending an ARP request on loopback.
-func TestEngine_SendARP_Request(t *testing.T) {
-	iface := findLoopback(t)
+// TestEngine_Stats_Error surfaces a handle that cannot report statistics.
+func TestEngine_Stats_Error(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+	handle.statsErr = errFakeHandle
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
+	if _, err := engine.Stats(); !errors.Is(err, errFakeHandle) {
+		t.Fatalf("Stats error = %v, want errFakeHandle", err)
 	}
-	defer engine.Close()
+}
+
+// decodeARP decodes the single frame the engine wrote and returns its Ethernet
+// and ARP layers.
+func decodeARP(t *testing.T, handle *fakeHandle) (*layers.Ethernet, *layers.ARP) {
+	t.Helper()
+
+	frames := handle.writtenFrames()
+	if len(frames) != 1 {
+		t.Fatalf("handle received %d frames, want exactly 1", len(frames))
+	}
+
+	packet := gopacket.NewPacket(frames[0], layers.LayerTypeEthernet, gopacket.Default)
+
+	eth, ok := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	if !ok {
+		t.Fatalf("frame has no Ethernet layer: %v", packet)
+	}
+
+	arp, ok := packet.Layer(layers.LayerTypeARP).(*layers.ARP)
+	if !ok {
+		t.Fatalf("frame has no ARP layer: %v", packet)
+	}
+
+	return eth, arp
+}
+
+// TestEngine_SendARP_Request asserts the bytes handed to the handle really are
+// an ARP request carrying the addresses the caller asked for.
+func TestEngine_SendARP_Request(t *testing.T) {
+	engine, handle := newFakeEngine(0)
 
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-	// May fail on loopback but should not panic
-	_ = engine.SendARP(srcMAC, dstMAC, "192.168.1.1", "192.168.1.2", true)
+	if err := engine.SendARP(srcMAC, dstMAC, "192.168.1.1", "192.168.1.2", true); err != nil {
+		t.Fatalf("SendARP: %v", err)
+	}
+
+	eth, arp := decodeARP(t, handle)
+
+	if !slices.Equal(eth.SrcMAC, srcMAC) || !slices.Equal(eth.DstMAC, dstMAC) {
+		t.Errorf("ethernet MACs = %s -> %s, want %x -> %x", eth.SrcMAC, eth.DstMAC, srcMAC, dstMAC)
+	}
+	if eth.EthernetType != layers.EthernetTypeARP {
+		t.Errorf("ethertype = %v, want ARP", eth.EthernetType)
+	}
+	if arp.Operation != uint16(layers.ARPRequest) {
+		t.Errorf("ARP operation = %d, want request (%d)", arp.Operation, layers.ARPRequest)
+	}
+	if got := net.IP(arp.SourceProtAddress).String(); got != "192.168.1.1" {
+		t.Errorf("ARP sender IP = %s, want 192.168.1.1", got)
+	}
+	if got := net.IP(arp.DstProtAddress).String(); got != "192.168.1.2" {
+		t.Errorf("ARP target IP = %s, want 192.168.1.2", got)
+	}
+	if !slices.Equal(arp.SourceHwAddress, srcMAC) {
+		t.Errorf("ARP sender MAC = %x, want %x", arp.SourceHwAddress, srcMAC)
+	}
 }
 
-// TestEngine_SendARP_Reply tests sending an ARP reply.
+// TestEngine_SendARP_Reply asserts the reply opcode, which is the only thing
+// distinguishing a reply from a request on the wire.
 func TestEngine_SendARP_Reply(t *testing.T) {
-	iface := findLoopback(t)
-
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
+	engine, handle := newFakeEngine(0)
 
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := []byte{0x00, 0x66, 0x77, 0x88, 0x99, 0xaa}
 
-	_ = engine.SendARP(srcMAC, dstMAC, "10.0.0.1", "10.0.0.2", false)
+	if err := engine.SendARP(srcMAC, dstMAC, "10.0.0.1", "10.0.0.2", false); err != nil {
+		t.Fatalf("SendARP: %v", err)
+	}
+
+	_, arp := decodeARP(t, handle)
+
+	if arp.Operation != uint16(layers.ARPReply) {
+		t.Errorf("ARP operation = %d, want reply (%d)", arp.Operation, layers.ARPReply)
+	}
+	if !slices.Equal(arp.DstHwAddress, dstMAC) {
+		t.Errorf("ARP target MAC = %x, want %x", arp.DstHwAddress, dstMAC)
+	}
 }
 
-// TestEngine_SendARP_InvalidSrcIP tests SendARP with invalid source IP.
-func TestEngine_SendARP_InvalidSrcIP(t *testing.T) {
-	iface := findLoopback(t)
-
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
+// TestEngine_SendARP_InvalidIP rejects unparseable addresses before anything
+// reaches the wire.
+func TestEngine_SendARP_InvalidIP(t *testing.T) {
+	tests := []struct {
+		name         string
+		srcIP, dstIP string
+	}{
+		{"invalid source", "not-an-ip", "192.168.1.2"},
+		{"invalid destination", "192.168.1.1", "invalid-ip"},
+		{"IPv6 source is not an ARP address", "2001:db8::1", "192.168.1.2"},
 	}
-	defer engine.Close()
 
 	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-	err = engine.SendARP(srcMAC, dstMAC, "not-an-ip", "192.168.1.2", true)
-	if err == nil {
-		t.Error("Expected error for invalid source IP")
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			engine, handle := newFakeEngine(0)
 
-// TestEngine_SendARP_InvalidDstIP tests SendARP with invalid destination IP.
-func TestEngine_SendARP_InvalidDstIP(t *testing.T) {
-	iface := findLoopback(t)
+			if err := engine.SendARP(srcMAC, dstMAC, tt.srcIP, tt.dstIP, true); err == nil {
+				t.Fatal("SendARP returned nil, want an error")
+			}
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	srcMAC := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
-	dstMAC := []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-
-	err = engine.SendARP(srcMAC, dstMAC, "192.168.1.1", "invalid-ip", true)
-	if err == nil {
-		t.Error("Expected error for invalid destination IP")
+			if got := len(handle.writtenFrames()); got != 0 {
+				t.Errorf("handle received %d frames, want none for a rejected address", got)
+			}
+		})
 	}
 }
 
 // TestEngine_GetInterfaceMAC tests MAC address retrieval.
 func TestEngine_GetInterfaceMAC(t *testing.T) {
-	iface := findLoopback(t)
+	want := net.HardwareAddr{0x02, 0x00, 0x00, 0x00, 0x00, 0x01}
 
-	engine, err := New(iface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	mac, err := engine.GetInterfaceMAC()
-	if err != nil {
-		// Loopback typically has no MAC, so this error is expected
-		if !errors.Is(err, ErrNoMACAddressFound) {
-			t.Errorf("Expected ErrNoMACAddressFound, got: %v", err)
+	engine, _ := newFakeEngine(0)
+	engine.lookupInterface = func(name string) (*net.Interface, error) {
+		if name != "fake0" {
+			t.Errorf("looked up %q, want the engine's own interface", name)
 		}
 
-		return
+		return &net.Interface{Name: name, HardwareAddr: want}, nil
 	}
 
-	// If we did get a MAC, verify it has the right length
-	if len(mac) != macAddressSize {
-		t.Errorf("Expected MAC of length %d, got %d", macAddressSize, len(mac))
+	got, err := engine.GetInterfaceMAC()
+	if err != nil {
+		t.Fatalf("GetInterfaceMAC: %v", err)
+	}
+
+	if !slices.Equal(got, want) {
+		t.Errorf("MAC = %x, want %x", got, want)
 	}
 }
 
-// TestEngine_SendPacket_VerboseDebug tests SendPacket with verbose debug level.
+// TestEngine_GetInterfaceMAC_NoAddress is the loopback case: an interface with
+// no hardware address must report ErrNoMACAddressFound rather than a short MAC.
+func TestEngine_GetInterfaceMAC_NoAddress(t *testing.T) {
+	engine, _ := newFakeEngine(0)
+	engine.lookupInterface = func(name string) (*net.Interface, error) {
+		return &net.Interface{Name: name}, nil
+	}
+
+	if _, err := engine.GetInterfaceMAC(); !errors.Is(err, ErrNoMACAddressFound) {
+		t.Fatalf("error = %v, want ErrNoMACAddressFound", err)
+	}
+}
+
+// TestEngine_GetInterfaceMAC_LookupFails propagates a failed lookup.
+func TestEngine_GetInterfaceMAC_LookupFails(t *testing.T) {
+	engine, _ := newFakeEngine(0)
+	engine.lookupInterface = func(string) (*net.Interface, error) {
+		return nil, errFakeHandle
+	}
+
+	if _, err := engine.GetInterfaceMAC(); !errors.Is(err, errFakeHandle) {
+		t.Fatalf("error = %v, want errFakeHandle", err)
+	}
+}
+
+// TestEngine_SendPacket_VerboseDebug tests SendPacket at verbose debug level.
 func TestEngine_SendPacket_VerboseDebug(t *testing.T) {
-	iface := findLoopback(t)
+	engine, handle := newFakeEngine(debugLevelVerbose)
 
-	engine, err := New(iface, debugLevelVerbose)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-	defer engine.Close()
-
-	// Build a minimal packet
-	eth := &layers.Ethernet{
-		SrcMAC:       []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		DstMAC:       []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		EthernetType: layers.EthernetTypeIPv4,
+	frame := []byte{0xde, 0xad, 0xbe, 0xef}
+	if err := engine.SendPacket(frame); err != nil {
+		t.Fatalf("SendPacket: %v", err)
 	}
 
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{FixLengths: true}
+	written := handle.writtenFrames()
+	if len(written) != 1 || !slices.Equal(written[0], frame) {
+		t.Fatalf("handle received %x, want exactly [%x]", written, frame)
+	}
+}
 
-	_ = gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload([]byte{0x01, 0x02}))
+// TestEngine_SendPacket_Error surfaces a driver refusing the frame.
+func TestEngine_SendPacket_Error(t *testing.T) {
+	engine, handle := newFakeEngine(0)
+	handle.writeErr = errFakeHandle
 
-	// Should exercise the debug logging path; may fail on loopback but should not panic
-	_ = engine.SendPacket(buf.Bytes())
+	if err := engine.SendPacket([]byte{0x01}); !errors.Is(err, errFakeHandle) {
+		t.Fatalf("SendPacket error = %v, want errFakeHandle", err)
+	}
 }
 
 // TestEngine_Close_NilHandle tests Close with nil handle.
