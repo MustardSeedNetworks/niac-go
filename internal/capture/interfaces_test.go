@@ -23,7 +23,7 @@ func TestInterfaceExists_Loopback(t *testing.T) {
 	}
 
 	if !found {
-		t.Skip("No standard loopback interface found (unusual)")
+		t.Fatal("no loopback interface found; every host this suite runs on has one")
 	}
 }
 
@@ -55,11 +55,11 @@ func TestListInterfaces_NoError(t *testing.T) {
 func TestGetInterface_AllInterfaces(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		t.Skipf("Cannot enumerate interfaces: %v", err)
+		t.Fatalf("cannot enumerate interfaces: %v", err)
 	}
 
 	if len(devices) == 0 {
-		t.Skip("No interfaces available")
+		t.Fatal("no interfaces available; enumeration needs no privileges and must find at least loopback")
 	}
 
 	// Test getting each interface
@@ -81,11 +81,11 @@ func TestGetInterface_AllInterfaces(t *testing.T) {
 func TestGetInterface_CaseSensitive(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		t.Skipf("Cannot enumerate interfaces: %v", err)
+		t.Fatalf("cannot enumerate interfaces: %v", err)
 	}
 
 	if len(devices) == 0 {
-		t.Skip("No interfaces available")
+		t.Fatal("no interfaces available; enumeration needs no privileges and must find at least loopback")
 	}
 
 	// Take first device and try with different cases
@@ -94,7 +94,7 @@ func TestGetInterface_CaseSensitive(t *testing.T) {
 	// Try exact match
 	_, err = GetInterface(firstDevice)
 	if err != nil {
-		t.Skipf("Cannot get interface %s: %v", firstDevice, err)
+		t.Fatalf("cannot get interface %s that FindAllDevs just reported: %v", firstDevice, err)
 	}
 
 	// Try with obviously wrong case (assuming lowercase device name)
@@ -178,7 +178,7 @@ func TestInterfaceExists_Concurrency(_ *testing.T) {
 func TestGetInterface_Concurrency(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil || len(devices) == 0 {
-		t.Skip("No interfaces available for concurrency test")
+		t.Fatal("no interfaces available for the concurrency test")
 	}
 
 	testInterface := devices[0].Name
@@ -224,7 +224,7 @@ func BenchmarkGetInterface(b *testing.B) {
 func TestGetInterface_InterfaceFields(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil || len(devices) == 0 {
-		t.Skip("No interfaces available")
+		t.Fatal("no interfaces available; enumeration needs no privileges and must find at least loopback")
 	}
 
 	for _, device := range devices {

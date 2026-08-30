@@ -69,12 +69,12 @@ func TestRateLimiter_DrainAndRefill(t *testing.T) {
 func TestGetAllInterfaces(t *testing.T) {
 	interfaces, err := GetAllInterfaces()
 	if err != nil {
-		t.Skipf("Cannot enumerate interfaces: %v", err)
+		t.Fatalf("cannot enumerate interfaces: %v", err)
 	}
 
 	// Should return at least one interface on most systems
 	if len(interfaces) == 0 {
-		t.Skip("No interfaces found (unusual but not an error)")
+		t.Fatal("no interfaces found; enumeration needs no privileges and must find at least loopback")
 	}
 
 	// Verify each interface has a name
@@ -89,7 +89,7 @@ func TestGetAllInterfaces(t *testing.T) {
 func TestGetAllInterfaces_MatchesFindAllDevs(t *testing.T) {
 	interfaces, err := GetAllInterfaces()
 	if err != nil {
-		t.Skipf("Cannot enumerate interfaces: %v", err)
+		t.Fatalf("cannot enumerate interfaces: %v", err)
 	}
 
 	// Each returned interface should be findable by GetInterface

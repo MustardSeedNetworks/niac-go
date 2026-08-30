@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"os"
 	"slices"
 	"sync"
 	"testing"
@@ -148,7 +147,7 @@ func TestInterfaceExists(t *testing.T) {
 	loopbackNames := []string{"lo", "lo0", "Loopback"}
 
 	if !slices.ContainsFunc(loopbackNames, InterfaceExists) {
-		t.Skip("No loopback interface found (unusual but not an error)")
+		t.Fatal("no loopback interface found; every host this suite runs on has one")
 	}
 }
 
@@ -164,11 +163,11 @@ func TestGetInterface(t *testing.T) {
 	// Get list of interfaces first
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		t.Skipf("Cannot enumerate interfaces: %v", err)
+		t.Fatalf("cannot enumerate interfaces: %v", err)
 	}
 
 	if len(devices) == 0 {
-		t.Skip("No network interfaces found")
+		t.Fatal("no network interfaces found; enumeration needs no privileges and must find at least loopback")
 	}
 
 	// Test with first available interface
@@ -203,90 +202,12 @@ func TestListInterfaces(_ *testing.T) {
 	ListInterfaces()
 }
 
-// TestEngine_NewEngine tests engine creation.
-func TestEngine_New(t *testing.T) {
-	// This test requires a valid network interface
-	// Skip if not running with privileges or on CI without network access
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping engine creation test in CI environment")
-	}
-
-	// Try to find loopback interface
-	loopbackNames := []string{"lo", "lo0", "Loopback"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found for testing")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine (may need privileges): %v", err)
-	}
-	defer engine.Close()
-
-	if engine == nil {
-		t.Fatal("New returned nil engine without error")
-	}
-
-	if engine.interfaceName != testInterface {
-		t.Errorf("Expected interface %s, got %s", testInterface, engine.interfaceName)
-	}
-
-	if engine.handle == nil {
-		t.Error("Engine handle is nil")
-	}
-}
-
 // TestEngine_New_InvalidInterface tests engine creation with invalid interface.
 func TestEngine_New_InvalidInterface(t *testing.T) {
 	_, err := New("definitely-does-not-exist-interface-12345", 0)
 	if err == nil {
 		t.Error("Expected error for invalid interface, got nil")
 	}
-}
-
-// TestEngine_Close tests engine cleanup.
-func TestEngine_Close(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping engine test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0", "Loopback"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	engine, err := New(testInterface, 0)
-	if err != nil {
-		t.Skipf("Cannot create engine: %v", err)
-	}
-
-	// Close should not panic
-	engine.Close()
-
-	// Calling Close() twice should not panic
-	engine.Close()
 }
 
 // TestSendEthernet_ValidFrame asserts the frame SendEthernet hands to the
@@ -568,52 +489,6 @@ func TestRateLimiter_TokenBucket(t *testing.T) {
 		t.Error("Got token when bucket should be empty")
 	case <-time.After(50 * time.Millisecond):
 		// Expected - no token available immediately
-	}
-}
-
-// TestEngine_DebugLevel tests debug level setting.
-func TestEngine_DebugLevel(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping engine test in CI environment")
-	}
-
-	loopbackNames := []string{"lo", "lo0"}
-
-	var testInterface string
-
-	for _, name := range loopbackNames {
-		if InterfaceExists(name) {
-			testInterface = name
-
-			break
-		}
-	}
-
-	if testInterface == "" {
-		t.Skip("No loopback interface found")
-	}
-
-	tests := []struct {
-		name       string
-		debugLevel int
-	}{
-		{"zero debug", 0},
-		{"debug level 1", 1},
-		{"debug level 3", 3},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			engine, err := New(testInterface, tt.debugLevel)
-			if err != nil {
-				t.Skipf("Cannot create engine: %v", err)
-			}
-			defer engine.Close()
-
-			if engine.debugLevel != tt.debugLevel {
-				t.Errorf("Expected debug level %d, got %d", tt.debugLevel, engine.debugLevel)
-			}
-		})
 	}
 }
 

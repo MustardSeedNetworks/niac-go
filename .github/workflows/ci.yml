@@ -383,6 +383,82 @@ jobs:
         run: go test -race ./...
 
   # ===========================================================================
+  # Raw-socket boundary (Linux, explicit capabilities)
+  # ===========================================================================
+  # internal/capture is driven through the PacketSender and packetHandle seams
+  # in every other job, so it needs no privileges there. What those seams cannot
+  # cover is the boundary itself: opening a live pcap handle, compiling a real
+  # BPF filter, and putting a frame on the wire. That is this job.
+  #
+  # The suite is behind the `rawsocket` build tag, so `go test ./...` elsewhere
+  # never picks it up. It is built here and then granted CAP_NET_RAW /
+  # CAP_NET_ADMIN on the binary, so the tests run as the normal unprivileged
+  # runner user: `sudo go test` would instead pollute GOCACHE with root-owned
+  # files and prove nothing about the capability grant.
+  #
+  # Nothing in the suite skips. A missing capability, a missing loopback or a
+  # handle that will not open is a failure — a privileged suite that can quietly
+  # no-op is exactly the defect this job exists to catch, so it fails closed and
+  # NIAC_RAWSOCKET_TESTS must be set for it to run at all.
+  capture-rawsocket:
+    name: Raw-socket boundary (Linux)
+    runs-on: ubuntu-latest
+    # The suite itself runs in well under a second; the budget is sized for the
+    # 10-min worst case of the libpcap step, same as the backend jobs.
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.ci_infra == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Install libpcap-dev
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
+        timeout-minutes: 10
+        # See the race job for why this composite exists rather than a bare
+        # apt-get install.
+        with:
+          packages: libpcap-dev
+
+      # The binary must not live on /tmp: it is mounted nosuid on Ubuntu, and
+      # nosuid strips file capabilities silently — setcap succeeds, getcap
+      # reports the caps, and the process still gets EPERM opening the socket.
+      - name: Build the raw-socket test binary
+        run: go test -c -tags rawsocket -o "$GITHUB_WORKSPACE/capture-rawsocket.test" ./internal/capture/
+
+      - name: Grant CAP_NET_RAW and CAP_NET_ADMIN to the test binary
+        run: |
+          sudo setcap cap_net_raw,cap_net_admin+eip "$GITHUB_WORKSPACE/capture-rawsocket.test"
+          getcap "$GITHUB_WORKSPACE/capture-rawsocket.test"
+
+      # Proves the grant is what makes the suite pass. Without it the preflight
+      # must fail; if it passed here the job would be testing nothing, so a
+      # zero exit is the failure condition.
+      - name: Verify the suite fails closed without the capabilities
+        run: |
+          # cp does not carry file capabilities across, so the copy is
+          # unprivileged without having to strip anything.
+          cp "$GITHUB_WORKSPACE/capture-rawsocket.test" "$RUNNER_TEMP/no-caps.test"
+          if getcap "$RUNNER_TEMP/no-caps.test" | grep -q cap_net_raw; then
+            echo "::error::the unprivileged copy still carries capabilities"
+            exit 1
+          fi
+          if NIAC_RAWSOCKET_TESTS=1 "$RUNNER_TEMP/no-caps.test" \
+              -test.run TestPreflight_RawSocketCapabilitiesPresent; then
+            echo "::error::the raw-socket preflight passed without CAP_NET_RAW - it is not actually checking anything"
+            exit 1
+          fi
+          echo "Preflight correctly failed without the capability grant."
+
+      - name: Run the raw-socket boundary suite
+        env:
+          NIAC_RAWSOCKET_TESTS: "1"
+        run: |
+          "$GITHUB_WORKSPACE/capture-rawsocket.test" -test.v
+
+  # ===========================================================================
   # Frontend (TypeScript)
   # ===========================================================================
   frontend:
@@ -1144,6 +1220,7 @@ jobs:
       - backend-darwin
       - backend-windows
       - race
+      - capture-rawsocket
       - frontend
       - security
       - semgrep

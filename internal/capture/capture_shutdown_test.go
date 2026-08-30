@@ -5,58 +5,6 @@ import (
 	"time"
 )
 
-// TestEngineCloseCleanup tests that Close() properly cleans up resources.
-func TestEngineCloseCleanup(t *testing.T) {
-	// Note: This test requires a valid network interface
-	// Skip if running in CI without network access
-	engine, err := New("lo0", 0)
-	if err != nil {
-		t.Skipf("Skipping test - no network interface available: %v", err)
-	}
-
-	// Ensure cleanup happens
-	engine.Close()
-
-	// Try to close again - should be safe
-	engine.Close()
-}
-
-// TestReadPacketTimeout tests that ReadPacket respects timeout.
-func TestReadPacketTimeout(t *testing.T) {
-	engine, err := New("lo0", 0)
-	if err != nil {
-		t.Skipf("Skipping test - no network interface available: %v", err)
-	}
-	defer engine.Close()
-
-	buffer := make([]byte, 65536)
-
-	// Set a deadline for the test
-	done := make(chan bool)
-
-	go func() {
-		// Should timeout and return nil within 100ms
-		data, readErr := engine.ReadPacket(buffer)
-		if readErr != nil {
-			t.Errorf("ReadPacket returned error on timeout: %v", readErr)
-		}
-
-		if data != nil {
-			// It's OK if we get a packet, but timeout should also be OK
-			t.Logf("Received packet: %d bytes", len(data))
-		}
-
-		done <- true
-	}()
-
-	select {
-	case <-done:
-		// Good - ReadPacket returned
-	case <-time.After(500 * time.Millisecond):
-		t.Error("ReadPacket blocked longer than expected timeout")
-	}
-}
-
 // stopDeadline bounds Stop. It is far above the real cost -- Stop only closes
 // a channel and joins one goroutine -- so exceeding it means a hang, not a slow
 // machine.
