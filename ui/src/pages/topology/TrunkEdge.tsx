@@ -84,8 +84,12 @@ export const TrunkEdge: FC<EdgeProps> = ({
   if (linkData.vlans && linkData.vlans.length > 0) {
     middleParts.push(formatVlans(linkData.vlans));
   }
-  if (linkData.speed) {
-    middleParts.push(formatSpeed(linkData.speed));
+  // Guard the formatted value, not the raw field: '0' is truthy but
+  // formatSpeed returns '', which would still be joined in and leave the
+  // label reading 'VLAN 10 · '.
+  const middleSpeed = linkData.speed ? formatSpeed(linkData.speed) : '';
+  if (middleSpeed) {
+    middleParts.push(middleSpeed);
   }
   const middleLabel = middleParts.join(' · ');
 
@@ -170,8 +174,9 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
   if (data.vlans && data.vlans.length > 0) {
     rows.push([t('topology.trunkEdge.rowVlans'), data.vlans.join(', ')]);
   }
-  if (data.speed) {
-    rows.push([t('topology.trunkEdge.rowSpeed'), formatSpeed(data.speed)]);
+  const speedLabel = data.speed ? formatSpeed(data.speed) : '';
+  if (speedLabel) {
+    rows.push([t('topology.trunkEdge.rowSpeed'), speedLabel]);
   }
   if (data.duplex) {
     rows.push([t('topology.trunkEdge.rowDuplex'), data.duplex]);
