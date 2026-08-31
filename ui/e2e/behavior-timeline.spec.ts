@@ -72,8 +72,24 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption('lo0');
   await page.getByTestId('wizard-start-empty').click();
+  // The Behaviors tab is disabled until the draft POST resolves -- the step
+  // derives visualSupported from draft.content, which does not exist until
+  // then. Clicking straight after Next therefore raced the response: Playwright
+  // waited for the button to become enabled and on WebKit that wait ran past
+  // the 30s timeout, while Chromium usually won. Arm the wait before the click
+  // so a fast response cannot be missed, then require the tab to be enabled
+  // before clicking it.
+  const draftSaved = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/library/drafts') && response.request().method() === 'POST',
+  );
   await page.getByTestId('wizard-next-button').click();
-  await page.getByRole('tab', { name: 'Behaviors' }).click();
+  await draftSaved;
+
+  const behaviorsTab = page.getByTestId('wizard-view-behaviors');
+  await expect(behaviorsTab).toBeEnabled();
+  await behaviorsTab.click();
+  await expect(behaviorsTab).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Add timeline' }).click();
   // Wait on the response itself rather than polling a closure flag: the wait is
   // armed before the click, so it cannot miss a fast response, and a failure
