@@ -5,6 +5,55 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.86](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.85...v0.94.86) (2026-08-31)
+
+
+### Bug Fixes
+
+* **daemon,config:** validate at the path-building sinks, not only at the handler ([#1627](https://github.com/MustardSeedNetworks/niac-go/issues/1627)) ([6566fae](https://github.com/MustardSeedNetworks/niac-go/commit/6566fae6ae742706d87e48836646cb531bc88aa5)), closes [#1626](https://github.com/MustardSeedNetworks/niac-go/issues/1626)
+
+
+### Documentation
+
+* reconcile CI.md with the pipeline it describes ([#1651](https://github.com/MustardSeedNetworks/niac-go/issues/1651)) ([11dd32f](https://github.com/MustardSeedNetworks/niac-go/commit/11dd32fde7cc1d08a3c9917215d0cd156566fc30))
+
+
+### Tests
+
+* **capture:** assert the frames Engine emits via a named handle seam ([#1623](https://github.com/MustardSeedNetworks/niac-go/issues/1623)) ([0fb87f9](https://github.com/MustardSeedNetworks/niac-go/commit/0fb87f94d1cc39bafc3d2163f09df2844b3ba410)), closes [#1622](https://github.com/MustardSeedNetworks/niac-go/issues/1622)
+* **capture:** assert the limiter's owned worker instead of a constant ([#1609](https://github.com/MustardSeedNetworks/niac-go/issues/1609)) ([4772bea](https://github.com/MustardSeedNetworks/niac-go/commit/4772bea3a492eb262eace72ca1f037b39ce6a836)), closes [#1608](https://github.com/MustardSeedNetworks/niac-go/issues/1608)
+* **capture:** cover the raw-socket boundary in a job that fails closed ([#1625](https://github.com/MustardSeedNetworks/niac-go/issues/1625)) ([7cb5de2](https://github.com/MustardSeedNetworks/niac-go/commit/7cb5de2bf4627065dc2c30748ee8dbd9e6307705)), closes [#1624](https://github.com/MustardSeedNetworks/niac-go/issues/1624)
+* **capture:** drive PCAP replay through an injected sender instead of a raw socket ([#1621](https://github.com/MustardSeedNetworks/niac-go/issues/1621)) ([2a79800](https://github.com/MustardSeedNetworks/niac-go/commit/2a798002cb1f5e3ee9d8e4fac8665a37cc417fe9)), closes [#1620](https://github.com/MustardSeedNetworks/niac-go/issues/1620)
+* **config:** stop the fuzz helpers swallowing the panics they exist to catch ([#1613](https://github.com/MustardSeedNetworks/niac-go/issues/1613)) ([5e9b457](https://github.com/MustardSeedNetworks/niac-go/commit/5e9b4579a3f0cd34eb7630214466a02abe18564a)), closes [#1612](https://github.com/MustardSeedNetworks/niac-go/issues/1612)
+* **e2e:** give the topology contract tests their own topology ([#1616](https://github.com/MustardSeedNetworks/niac-go/issues/1616)) ([6961dc4](https://github.com/MustardSeedNetworks/niac-go/commit/6961dc47f3ebfbc1b4cc14b500925f0be286d3a3)), closes [#1615](https://github.com/MustardSeedNetworks/niac-go/issues/1615)
+* **e2e:** run the Firefox engine the docs already promise ([#1638](https://github.com/MustardSeedNetworks/niac-go/issues/1638)) ([cffde13](https://github.com/MustardSeedNetworks/niac-go/commit/cffde1324144899670a2d018cee52adc4c260306)), closes [#1637](https://github.com/MustardSeedNetworks/niac-go/issues/1637)
+* **e2e:** synchronise the wizard tab switch on the draft response ([#1647](https://github.com/MustardSeedNetworks/niac-go/issues/1647)) ([a2951ce](https://github.com/MustardSeedNetworks/niac-go/commit/a2951cefc11a105c7b9812dc0b39c802a27440a6))
+* turn off Node's unused webstorage global instead of warning per file ([#1611](https://github.com/MustardSeedNetworks/niac-go/issues/1611)) ([5db52d2](https://github.com/MustardSeedNetworks/niac-go/commit/5db52d237790774393dc5b8c3650e3eeb57a5412)), closes [#1610](https://github.com/MustardSeedNetworks/niac-go/issues/1610)
+
+
+### Continuous Integration
+
+* fail the build on open High CodeQL alerts ([#1630](https://github.com/MustardSeedNetworks/niac-go/issues/1630)) ([5855775](https://github.com/MustardSeedNetworks/niac-go/commit/585577511a457826d6c47dc31181f2d292ed8edb)), closes [#1629](https://github.com/MustardSeedNetworks/niac-go/issues/1629)
+* make release builds reproducible ([#1653](https://github.com/MustardSeedNetworks/niac-go/issues/1653)) ([36d8683](https://github.com/MustardSeedNetworks/niac-go/commit/36d86836b2c4349e2b39e5cb05225c25c7dec266))
+* pin depcheck in the dead-code job ([#1636](https://github.com/MustardSeedNetworks/niac-go/issues/1636)) ([d9d272d](https://github.com/MustardSeedNetworks/niac-go/commit/d9d272d206d4fe59391eed7aa47b2f031f6416fe)), closes [#1635](https://github.com/MustardSeedNetworks/niac-go/issues/1635)
+* run Build and E2E on backend-only changes ([#1632](https://github.com/MustardSeedNetworks/niac-go/issues/1632)) ([3c99789](https://github.com/MustardSeedNetworks/niac-go/commit/3c9978971cb7744014dd85504257c1ff2253e375)), closes [#1631](https://github.com/MustardSeedNetworks/niac-go/issues/1631)
+* stop checkout persisting credentials into the workspace ([#1634](https://github.com/MustardSeedNetworks/niac-go/issues/1634)) ([723e753](https://github.com/MustardSeedNetworks/niac-go/commit/723e7536b0adc52d60d2b247d63a63e33ea53cd7)), closes [#1633](https://github.com/MustardSeedNetworks/niac-go/issues/1633)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1617](https://github.com/MustardSeedNetworks/niac-go/issues/1617)) ([e6f1c43](https://github.com/MustardSeedNetworks/niac-go/commit/e6f1c437b72fe3086d8d2c3b21275a0267ca4745))
+* **deps:** lock file maintenance ([#1618](https://github.com/MustardSeedNetworks/niac-go/issues/1618)) ([0680673](https://github.com/MustardSeedNetworks/niac-go/commit/0680673de18556fac69cc330faa90f4f1299db13))
+* **deps:** lock file maintenance ([#1639](https://github.com/MustardSeedNetworks/niac-go/issues/1639)) ([b3585f6](https://github.com/MustardSeedNetworks/niac-go/commit/b3585f63df05792dc0f50813bf0ee18fc697c727))
+* **deps:** lock file maintenance ([#1643](https://github.com/MustardSeedNetworks/niac-go/issues/1643)) ([d279cd0](https://github.com/MustardSeedNetworks/niac-go/commit/d279cd0b4c366ae5899c3961599e72b9012cbfa8))
+* **deps:** lock file maintenance ([#1645](https://github.com/MustardSeedNetworks/niac-go/issues/1645)) ([a77523f](https://github.com/MustardSeedNetworks/niac-go/commit/a77523f1547d4224e6bc903826e395fbefa981e9))
+* **deps:** update dependency @biomejs/biome to v2.5.11 ([#1644](https://github.com/MustardSeedNetworks/niac-go/issues/1644)) ([120b539](https://github.com/MustardSeedNetworks/niac-go/commit/120b539c2a3260ef7b03202a00a2e766283337a8))
+* **deps:** update dependency @testing-library/react to v16.3.3 ([#1640](https://github.com/MustardSeedNetworks/niac-go/issues/1640)) ([bc868f2](https://github.com/MustardSeedNetworks/niac-go/commit/bc868f295c3f8bb4758daf5e939052fec09325d2))
+* **deps:** update dependency @types/node to v26.4.0 ([#1619](https://github.com/MustardSeedNetworks/niac-go/issues/1619)) ([35c0c5d](https://github.com/MustardSeedNetworks/niac-go/commit/35c0c5df53d9b8527bed3856ce47539b9fcfa2a7))
+* **deps:** update dependency lint-staged to v17.4.1 ([#1628](https://github.com/MustardSeedNetworks/niac-go/issues/1628)) ([9fffe2d](https://github.com/MustardSeedNetworks/niac-go/commit/9fffe2dc9244f573c25294c6037d3f6abed497f5))
+* **npm:** soak package releases for seven days before resolving them ([#1642](https://github.com/MustardSeedNetworks/niac-go/issues/1642)) ([e7901da](https://github.com/MustardSeedNetworks/niac-go/commit/e7901dacc4796180258ac9c0181a8814d439c739))
+* stop tracking the linklive-acceptance binary ([#1649](https://github.com/MustardSeedNetworks/niac-go/issues/1649)) ([636a183](https://github.com/MustardSeedNetworks/niac-go/commit/636a183151f136be7cf7c4aa44b1bdb2729fd60b))
+
 ## [0.94.85](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.84...v0.94.85) (2026-08-29)
 
 
