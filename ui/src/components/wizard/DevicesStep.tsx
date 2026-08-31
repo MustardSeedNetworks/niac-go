@@ -75,6 +75,7 @@ export const DevicesStep: FC<DevicesStepProps> = ({
               key={tab}
               type="button"
               role="tab"
+              data-testid={`wizard-view-${tab}`}
               aria-selected={view === tab}
               disabled={tab !== 'yaml' && !visualSupported}
               className={`min-h-11 rounded-md px-4 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary ${
