@@ -1,36 +1,43 @@
 export type TimeDisplayMode = 'absolute' | 'relative' | 'delta';
 
 /**
+ * Milliseconds since the epoch, or null when the timestamp does not parse.
+ *
+ * A bad timestamp has to be tested for rather than caught: `new Date(bad)`
+ * does not throw, and neither does arithmetic on the NaN it yields.
+ */
+function epochMs(timestamp: string): number | null {
+  const ms = new Date(timestamp).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
  * Format timestamp in absolute mode: HH:mm:ss.fff
  */
 export function formatAbsoluteTime(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      fractionalSecondDigits: 3,
-    });
-  } catch {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
     return timestamp;
   }
+  return date.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3,
+  });
 }
 
 /**
  * Format timestamp as relative offset from a reference time: +N.NNNs
  */
 export function formatRelativeTime(timestamp: string, referenceTimestamp: string): string {
-  try {
-    const current = new Date(timestamp).getTime();
-    const reference = new Date(referenceTimestamp).getTime();
-    const deltaMs = current - reference;
-    const deltaSec = deltaMs / 1000;
-    return `+${deltaSec.toFixed(3)}s`;
-  } catch {
+  const current = epochMs(timestamp);
+  const reference = epochMs(referenceTimestamp);
+  if (current === null || reference === null) {
     return timestamp;
   }
+  return `+${((current - reference) / 1000).toFixed(3)}s`;
 }
 
 /**
@@ -40,15 +47,12 @@ export function formatDeltaTime(timestamp: string, previousTimestamp: string | n
   if (!previousTimestamp) {
     return '\u03940.000s';
   }
-  try {
-    const current = new Date(timestamp).getTime();
-    const previous = new Date(previousTimestamp).getTime();
-    const deltaMs = current - previous;
-    const deltaSec = deltaMs / 1000;
-    return `\u0394${deltaSec.toFixed(3)}s`;
-  } catch {
+  const current = epochMs(timestamp);
+  const previous = epochMs(previousTimestamp);
+  if (current === null || previous === null) {
     return timestamp;
   }
+  return `\u0394${((current - previous) / 1000).toFixed(3)}s`;
 }
 
 /**
