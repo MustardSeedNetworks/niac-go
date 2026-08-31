@@ -55,6 +55,7 @@ before:
 builds:
   - id: niac-linux
     main: ./cmd/niac
+    mod_timestamp: "{{ .CommitTimestamp }}"
     binary: niac
     env:
       - CGO_ENABLED=1
@@ -67,7 +68,7 @@ builds:
       - -s -w
       - -X github.com/MustardSeedNetworks/niac-go/internal/version.Version={{.Version}}
       - -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit={{.Commit}}
-      - -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime={{.Date}}
+      - -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime={{.CommitDate}}
       - -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash={{.Env.UI_BUILD_HASH}}
     # Per-target cross-compile settings. goreleaser-cross has all of
     # these toolchains preinstalled; without them, building linux/arm64
@@ -81,6 +82,7 @@ builds:
 
   - id: niac-darwin
     main: ./cmd/niac
+    mod_timestamp: "{{ .CommitTimestamp }}"
     binary: niac
     env:
       - CGO_ENABLED=1
