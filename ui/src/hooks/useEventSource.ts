@@ -38,7 +38,9 @@ function parseEventRecord(record: string): unknown | undefined {
 
   const data = lines
     .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trimStart())
+    // The grammar strips a single leading U+0020 after the colon, not all
+    // leading whitespace: a second space, or a tab, belongs to the payload.
+    .map((line) => line.slice(5).replace(/^ /, ''))
     .join('\n');
   if (!data) return undefined;
 

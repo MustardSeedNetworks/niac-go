@@ -81,11 +81,16 @@ describe('frame parsing', () => {
     expect(await collect([': keep-alive\n\n', 'data:\n\n'])).toEqual([]);
   });
 
-  it('strips all leading whitespace after the colon, not just one space', async () => {
-    // The SSE grammar strips a single leading U+0020; parseEventRecord uses
-    // trimStart(), so 'data:  a' yields 'a' rather than ' a'. Only observable
-    // for payloads that are deliberately space-indented, which ours are not.
-    expect(await collect(['data:  a\n\n'])).toEqual(['a']);
+  it('strips a single leading space after the colon, per the SSE grammar', async () => {
+    // The grammar removes one U+0020, not all leading whitespace: 'data:  a'
+    // carries a space that belongs to the payload. Only observable for
+    // deliberately space-indented payloads, which ours are not -- but the
+    // parser should not decide that for its callers.
+    expect(await collect(['data:  a\n\n'])).toEqual([' a']);
+  });
+
+  it('keeps a tab after the colon, which is payload rather than separator', async () => {
+    expect(await collect(['data:\ta\n\n'])).toEqual(['\ta']);
   });
 
   it('drops a trailing partial record rather than emitting half of it', async () => {
