@@ -111,14 +111,16 @@ describe('exportDevicesAsYAML', () => {
       devices: Record<string, unknown>[];
     };
     const out = at(doc.devices, 0);
-    // hostname becomes `name`, and the two renamed keys are the ones a typo
-    // would break silently.
+    // Every key here is checked against internal/converter/types.go. This
+    // test previously pinned `netbios_status`, which the daemon does not
+    // declare -- and because it decodes with KnownFields(true), that one key
+    // made the whole exported file unloadable.
     expect(out.name).toBe('core-1');
     expect(out.snmp_agent).toBeDefined();
-    expect(out.netbios_status).toBeDefined();
+    expect(out.netbios).toBeDefined();
     expect(out.ips).toEqual(['10.0.0.1', '10.0.0.2']);
     expect(out).not.toHaveProperty('hostname');
-    expect(out).not.toHaveProperty('netbios');
+    expect(out).not.toHaveProperty('netbios_status');
   });
 
   it('omits an empty ips array rather than emitting an empty list', async () => {

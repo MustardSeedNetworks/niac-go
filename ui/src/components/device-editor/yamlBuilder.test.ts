@@ -30,11 +30,11 @@ describe('escaping', () => {
   // backslash or a newline produced a document that would not parse -- and
   // every one of these is a value a user can type into the device editor.
   it('survives a double quote in a value', () => {
-    expect(previewDevice({ ...base, hostname: 'a"b' }).hostname).toBe('a"b');
+    expect(previewDevice({ ...base, hostname: 'a"b' }).name).toBe('a"b');
   });
 
   it('survives a backslash in a value', () => {
-    expect(previewDevice({ ...base, hostname: 'a\\b' }).hostname).toBe('a\\b');
+    expect(previewDevice({ ...base, hostname: 'a\\b' }).name).toBe('a\\b');
   });
 
   it('survives a newline in a value', () => {
@@ -43,11 +43,11 @@ describe('escaping', () => {
       ftp: { enabled: true, welcomeBanner: 'line one\nline two' } as Device['ftp'],
     });
 
-    expect((out.ftp as { welcomeBanner: string }).welcomeBanner).toBe('line one\nline two');
+    expect((out.ftp as { welcome_banner: string }).welcome_banner).toBe('line one\nline two');
   });
 
   it('survives a colon-space in a value, which would otherwise start a mapping', () => {
-    expect(previewDevice({ ...base, hostname: 'a: b' }).hostname).toBe('a: b');
+    expect(previewDevice({ ...base, hostname: 'a: b' }).name).toBe('a: b');
   });
 
   it('quotes a value that would otherwise parse as a number', () => {
@@ -56,11 +56,12 @@ describe('escaping', () => {
 });
 
 describe('base device lines', () => {
-  it('emits only hostname and mac for a minimal device', () => {
-    expect(previewDevice(base)).toEqual({ hostname: 'sw1', mac: '00:11:22:33:44:55' });
+  it('emits only name and mac for a minimal device', () => {
+    // `name`, not `hostname`: the daemon's Device struct has no hostname field.
+    expect(previewDevice(base)).toEqual({ name: 'sw1', mac: '00:11:22:33:44:55' });
   });
 
-  it('emits type, ip and ips when present', () => {
+  it('folds a scalar ip into ips, which is the only address field the daemon has', () => {
     const out = previewDevice({
       ...base,
       type: 'switch' as Device['type'],
@@ -69,8 +70,22 @@ describe('base device lines', () => {
     });
 
     expect(out.type).toBe('switch');
-    expect(out.ip).toBe('10.0.0.1');
+    expect(out).not.toHaveProperty('ip');
+    // Deduped: a device carrying the same address in both fields lists it once.
     expect(out.ips).toEqual(['10.0.0.1', '10.0.0.2']);
+  });
+
+  it('maps a UI device type onto the daemon spelling', () => {
+    // The UI says access_point; the daemon's oneof says access-point.
+    expect(previewDevice({ ...base, type: 'access_point' as Device['type'] }).type).toBe(
+      'access-point',
+    );
+  });
+
+  it('omits a type the daemon does not accept rather than failing its validation', () => {
+    expect(previewDevice({ ...base, type: 'unknown' as Device['type'] })).not.toHaveProperty(
+      'type',
+    );
   });
 
   it('omits an empty ips array', () => {
@@ -104,8 +119,8 @@ describe('interfaces', () => {
         name: 'Gi0/1',
         speed: 1000,
         duplex: 'full',
-        adminStatus: 'up',
-        operStatus: 'up',
+        admin_status: 'up',
+        oper_status: 'up',
         description: 'uplink',
       },
     ]);
@@ -122,18 +137,18 @@ describe('interfaces', () => {
   });
 });
 
-describe('snmpAgent', () => {
+describe('snmp_agent', () => {
   it('is omitted entirely when absent', () => {
-    expect(previewDevice(base)).not.toHaveProperty('snmpAgent');
+    expect(previewDevice(base)).not.toHaveProperty('snmp_agent');
   });
 
   it('emits the block even when every sub-field is empty', () => {
     const out = previewDevice({ ...base, snmpAgent: {} as Device['snmpAgent'] });
-    expect(out).toHaveProperty('snmpAgent');
-    expect(out.snmpAgent).toBeNull();
+    expect(out).toHaveProperty('snmp_agent');
+    expect(out.snmp_agent).toBeNull();
   });
 
-  it('emits scalar fields, walkFiles and addMibs', () => {
+  it('emits scalar fields, walk_files and add_mibs under the daemon key names', () => {
     const out = previewDevice({
       ...base,
       snmpAgent: {
@@ -145,22 +160,22 @@ describe('snmpAgent', () => {
       } as Device['snmpAgent'],
     });
 
-    expect(out.snmpAgent).toEqual({
+    expect(out.snmp_agent).toEqual({
       community: 'public',
-      sysName: 'core',
-      walkFile: 'a.walk',
-      walkFiles: ['a.walk', 'b.walk'],
-      addMibs: [{ oid: '1.3.6.1', type: 'STRING', value: 'x' }],
+      sysname: 'core',
+      walk_file: 'a.walk',
+      walk_files: ['a.walk', 'b.walk'],
+      add_mibs: [{ oid: '1.3.6.1', type: 'STRING', value: 'x' }],
     });
   });
 
-  it('omits empty walkFiles and addMibs arrays', () => {
+  it('omits empty walk_files and add_mibs arrays', () => {
     const out = previewDevice({
       ...base,
       snmpAgent: { community: 'public', walkFiles: [], addMibs: [] } as Device['snmpAgent'],
     });
 
-    expect(out.snmpAgent).toEqual({ community: 'public' });
+    expect(out.snmp_agent).toEqual({ community: 'public' });
   });
 });
 
@@ -175,7 +190,7 @@ describe('protocols gated on an enabled flag', () => {
       key: 'lldp',
       enabled: { lldp: { enabled: true, systemDescription: 'desc' } as Device['lldp'] },
       disabled: { lldp: { enabled: false, systemDescription: 'desc' } as Device['lldp'] },
-      expected: { enabled: true, systemDescription: 'desc' },
+      expected: { enabled: true, system_description: 'desc' },
     },
     {
       key: 'cdp',
@@ -187,19 +202,19 @@ describe('protocols gated on an enabled flag', () => {
       key: 'stp',
       enabled: { stp: { enabled: true, bridgePriority: 4096 } as Device['stp'] },
       disabled: { stp: { enabled: false } as Device['stp'] },
-      expected: { enabled: true, bridgePriority: 4096 },
+      expected: { enabled: true, bridge_priority: 4096 },
     },
     {
       key: 'http',
       enabled: { http: { enabled: true, serverName: 'nginx' } as Device['http'] },
       disabled: { http: { enabled: false } as Device['http'] },
-      expected: { enabled: true, serverName: 'nginx' },
+      expected: { enabled: true, server_name: 'nginx' },
     },
     {
       key: 'ftp',
       enabled: { ftp: { enabled: true, welcomeBanner: 'hi' } as Device['ftp'] },
       disabled: { ftp: { enabled: false } as Device['ftp'] },
-      expected: { enabled: true, welcomeBanner: 'hi' },
+      expected: { enabled: true, welcome_banner: 'hi' },
     },
     {
       key: 'netbios',
@@ -230,13 +245,13 @@ describe('protocols gated on an enabled flag', () => {
     expect(out.lldp).toEqual({ enabled: true });
   });
 
-  it('stp emits a zero bridgePriority, which is a real value', () => {
+  it('stp emits a zero bridge_priority, which is a real value', () => {
     // Gated on `!== undefined`, so priority 0 must survive.
     const out = previewDevice({
       ...base,
       stp: { enabled: true, bridgePriority: 0 } as Device['stp'],
     });
-    expect(out.stp).toEqual({ enabled: true, bridgePriority: 0 });
+    expect(out.stp).toEqual({ enabled: true, bridge_priority: 0 });
   });
 });
 
@@ -252,9 +267,9 @@ describe('protocols gated on presence only', () => {
     });
 
     expect(out.dhcp).toEqual({
-      subnetMask: '255.255.255.0',
+      subnet_mask: '255.255.255.0',
       router: '10.0.0.1',
-      domainNameServer: '10.0.0.53',
+      domain_name_server: '10.0.0.53',
     });
   });
 
@@ -274,58 +289,49 @@ describe('protocols gated on presence only', () => {
     });
 
     expect(out.dns).toEqual({
-      forwardRecords: [
+      forward_records: [
         { name: 'a.example', ip: '10.0.0.5' },
         { name: 'b.example', ip: '10.0.0.6' },
       ],
     });
   });
 
-  it('dns omits an empty forwardRecords array', () => {
+  it('dns omits an empty forward_records array', () => {
     expect(previewDevice({ ...base, dns: { forwardRecords: [] } as Device['dns'] }).dns).toBeNull();
   });
 });
 
 describe('traffic', () => {
-  it('is omitted when absent or disabled', () => {
+  // The daemon's Device struct has no traffic key at all -- the only `traffic`
+  // in its schema belongs to a behaviour phase. Because it decodes with
+  // KnownFields(true), emitting one made the whole document unloadable, so the
+  // block is dropped however it is configured.
+  it('is never emitted, whatever the device carries', () => {
     expect(previewDevice(base)).not.toHaveProperty('traffic');
     expect(
       previewDevice({ ...base, traffic: { enabled: false } as Device['traffic'] }),
     ).not.toHaveProperty('traffic');
-  });
-
-  it('emits arpAnnouncements only when they are themselves enabled', () => {
-    const withArp = previewDevice({
-      ...base,
-      traffic: {
-        enabled: true,
-        arpAnnouncements: { enabled: true },
-      } as Device['traffic'],
-    });
-    expect(withArp.traffic).toEqual({ enabled: true, arpAnnouncements: { enabled: true } });
-
-    const withoutArp = previewDevice({
-      ...base,
-      traffic: {
-        enabled: true,
-        arpAnnouncements: { enabled: false },
-      } as Device['traffic'],
-    });
-    expect(withoutArp.traffic).toEqual({ enabled: true });
+    expect(
+      previewDevice({
+        ...base,
+        traffic: { enabled: true, arpAnnouncements: { enabled: true } } as Device['traffic'],
+      }),
+    ).not.toHaveProperty('traffic');
   });
 });
 
 describe('ordering and failure', () => {
-  it('emits interfaces before snmpAgent', () => {
+  it('emits snmp_agent before interfaces, following the daemon struct order', () => {
     // The daemon does not care, but a reordering here would be an unreviewed
-    // change to a user-visible preview.
+    // change to a user-visible preview. The order now follows the field order
+    // of converter.Device, so the preview reads like the schema it targets.
     const yaml = buildYamlPreview({
       ...base,
       interfaceDetails: [{ name: 'Gi0/1' }] as Device['interfaceDetails'],
       snmpAgent: { community: 'public' } as Device['snmpAgent'],
     });
 
-    expect(yaml.indexOf('interfaces:')).toBeLessThan(yaml.indexOf('snmpAgent:'));
+    expect(yaml.indexOf('snmp_agent:')).toBeLessThan(yaml.indexOf('interfaces:'));
   });
 
   it('returns the error placeholder instead of throwing', () => {

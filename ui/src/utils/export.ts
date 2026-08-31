@@ -1,5 +1,6 @@
 import { stringify as stringifyYaml } from 'yaml';
 import type { Device } from '../api/types';
+import { toDaemonDevice } from './device-yaml';
 
 /**
  * Export devices as a NIAC-loadable YAML config and trigger file download.
@@ -7,29 +8,11 @@ import type { Device } from '../api/types';
  * downloaded file can be fed straight back into Simulation → Pick.
  */
 export function exportDevicesAsYAML(devices: Device[], filename = 'devices.yaml'): void {
-  const doc = {
-    devices: devices.map((d) => {
-      const out: Record<string, unknown> = {
-        name: d.hostname,
-      };
-      if (d.type) out.type = d.type;
-      if (d.mac) out.mac = d.mac;
-      if (d.ip) out.ip = d.ip;
-      if (d.ips && d.ips.length > 0) out.ips = d.ips;
-      // Preserve the protocol blobs the daemon understands. Each is
-      // optional — only emit when present so the YAML stays tidy.
-      if (d.snmpAgent) out.snmp_agent = d.snmpAgent;
-      if (d.lldp) out.lldp = d.lldp;
-      if (d.cdp) out.cdp = d.cdp;
-      if (d.stp) out.stp = d.stp;
-      if (d.dhcp) out.dhcp = d.dhcp;
-      if (d.dns) out.dns = d.dns;
-      if (d.http) out.http = d.http;
-      if (d.ftp) out.ftp = d.ftp;
-      if (d.netbios) out.netbios_status = d.netbios;
-      return out;
-    }),
-  };
+  // Same mapper as the device-editor preview. This function used to build the
+  // document itself and emitted `netbios_status` plus camelCase sub-fields, so
+  // the file it produced could not be loaded back at all -- the daemon decodes
+  // with KnownFields(true), which makes one unknown key fatal.
+  const doc = { devices: devices.map(toDaemonDevice) };
   const yaml = stringifyYaml(doc);
   downloadFile(yaml, filename, 'application/x-yaml');
 }
