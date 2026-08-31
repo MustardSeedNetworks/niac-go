@@ -24,11 +24,10 @@ describe('formatAbsoluteTime', () => {
     expect(formatAbsoluteTime(T0)).toMatch(/^\d{2}:\d{2}:\d{2}\.\d{3}$/);
   });
 
-  it('renders an unparseable timestamp as "Invalid Date"', () => {
-    // Not what the catch suggests: toLocaleTimeString returns the string
-    // "Invalid Date" rather than throwing, so the `return timestamp` fallback
-    // never runs and this is what the time column actually shows.
-    expect(formatAbsoluteTime('not-a-date')).toBe('Invalid Date');
+  it('falls back to the raw timestamp when it does not parse', () => {
+    // toLocaleTimeString returns the string "Invalid Date" rather than
+    // throwing, so a try/catch cannot see this -- the date has to be tested.
+    expect(formatAbsoluteTime('not-a-date')).toBe('not-a-date');
   });
 });
 
@@ -47,10 +46,14 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime(T0, T1)).toBe('+-1.250s');
   });
 
-  it('yields NaN rather than throwing on an unparseable timestamp', () => {
-    // Date arithmetic does not throw, so the catch is unreachable here and the
-    // NaN propagates — this is what the column actually shows today.
-    expect(formatRelativeTime('nope', T0)).toBe('+NaNs');
+  it('falls back to the raw timestamp when it does not parse', () => {
+    // NaN arithmetic does not throw, so the NaN used to propagate into the
+    // column as "+NaNs".
+    expect(formatRelativeTime('nope', T0)).toBe('nope');
+  });
+
+  it('falls back to the raw timestamp when the reference does not parse', () => {
+    expect(formatRelativeTime(T1, 'nope')).toBe(T1);
   });
 });
 
@@ -65,6 +68,11 @@ describe('formatDeltaTime', () => {
 
   it('renders a negative delta for an out-of-order packet', () => {
     expect(formatDeltaTime(T0, T1)).toBe('Δ-1.250s');
+  });
+
+  it('falls back to the raw timestamp when either timestamp does not parse', () => {
+    expect(formatDeltaTime('nope', T0)).toBe('nope');
+    expect(formatDeltaTime(T1, 'nope')).toBe(T1);
   });
 });
 
