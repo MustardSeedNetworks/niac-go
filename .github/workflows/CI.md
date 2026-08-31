@@ -11,23 +11,27 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 
 ### ci.yml - Main CI Pipeline
 
-| Job               | Description              | Checks                                                                 |
-| ----------------- | ------------------------ | ---------------------------------------------------------------------- |
-| `changes`         | Path filtering           | Decides which downstream jobs run                                      |
-| `backend`         | Go checks                | lint, vet, staticcheck, fmt, tests, coverage floor                     |
-| `backend-windows` | Go checks (Windows)      | Builds, vets and runs the port-fallback tests on `windows-latest`      |
-| `race`            | Go race detector         | `go test -race`, split from `backend` so it fails distinctly           |
-| `frontend`        | React/TS checks          | tsc typecheck, Biome, Vite build, Vitest, Storybook build              |
-| `c-lint`          | C lint (C23)             | clang-format, clang-tidy                                               |
-| `security`        | Security scans           | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy             |
-| `semgrep`         | SAST                     | Semgrep rules                                                          |
-| `quality`         | Code quality gates       | banned vocabulary, file size ratchet, output escaping, sensitive files |
-| `workflow-lint`   | Workflow static analysis | actionlint; zizmor (blocks on High)                                    |
-| `i18n`            | Internationalization     | Catalog completeness, no translated standard terms                     |
-| `docs`            | Documentation            | Markdown lint (blocking, scoped to changed files)                      |
-| `build`           | Build verification       | Multi-arch binaries with full ldflags, UIBuildHash verified            |
-| `e2e`             | Browser tests            | Playwright, chromium + webkit                                          |
-| `ci-complete`     | Aggregate gate           | The required status check                                              |
+| Job                 | Description                 | Checks                                                                        |
+| ------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `changes`           | Path filtering              | Decides which downstream jobs run                                             |
+| `backend`           | Go checks                   | lint, vet, staticcheck, fmt, tests, coverage floor                            |
+| `backend-darwin`    | Go checks (macOS)           | Builds, vets and tests on `macos-latest`; the only compiler for `*_darwin.go` |
+| `backend-windows`   | Go checks (Windows)         | Builds, vets and runs the port-fallback tests on `windows-latest`             |
+| `race`              | Go race detector            | `go test -race`, split from `backend` so it fails distinctly                  |
+| `capture-rawsocket` | Raw-socket boundary (Linux) | Runs the `rawsocket`-tagged capture tests, which need CAP_NET_RAW             |
+| `build-ui`          | Build UI (shared artifact)  | Builds the frontend once; `backend` and `race` consume the artifact           |
+| `frontend`          | React/TS checks             | tsc typecheck, Biome, Vite build, Vitest, Storybook build                     |
+| `security`          | Security scans              | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy                    |
+| `semgrep`           | SAST                        | Semgrep rules                                                                 |
+| `ci-conformance`    | Fleet CI conformance        | Reusable workflow from `MustardSeedNetworks/.github`                          |
+| `quality`           | Code quality gates          | banned vocabulary, file size ratchet, output escaping, sensitive files        |
+| `workflow-lint`     | Workflow static analysis    | actionlint; zizmor (blocks on High)                                           |
+| `i18n`              | Internationalization        | Catalog completeness, no translated standard terms                            |
+| `docs`              | Documentation               | Markdown lint (blocking, scoped to changed files)                             |
+| `build`             | Build verification          | Multi-arch binaries with full ldflags, UIBuildHash verified                   |
+| `e2e`               | Browser tests               | Playwright: chromium, webkit and firefox                                      |
+| `codeql-alert-gate` | CodeQL alert gate           | Fails on open High/Critical CodeQL alerts; reusable from `.github`            |
+| `ci-complete`       | Aggregate gate              | The required status check                                                     |
 
 ### Other Workflows
 
@@ -72,7 +76,8 @@ check exists to catch.
   findings.** The repo sits at zero High. One finding survived review and
   carries a `# zizmor: ignore[...]` comment with the reasoning inline (in
   `release-please.yml`); anything else that reaches High fails the build.
-  Low/Informational are reported but not yet enforced.
+  Medium, Low and Informational are reported but not yet enforced (currently
+  1 medium, 1 low, 6 informational).
 
 Permissions follow least privilege: workflows declare `permissions: {}` (or
 `contents: read`) at the top level and grant scopes per job. A new job that
@@ -110,8 +115,13 @@ The npm version is still declared in the composite; `packageManager` in
 
 ```bash
 gh pr create --fill
-gh pr merge --auto --squash --delete-branch
+gh pr merge --auto
 ```
+
+`main` uses a **merge queue**, which rejects `--squash` and `--delete-branch`
+on `gh pr merge`: the queue owns the merge method. A queued PR reports
+`BLOCKED` with an entry under `mergeQueue`, not `CLEAN` — check
+`mergeQueueEntry.state` rather than `autoMergeRequest`, which stays null.
 
 Fix issues locally first:
 
@@ -126,7 +136,7 @@ make test-e2e  # Build and run frontend E2E tests against the HTTPS daemon
 ### Backend
 
 ```bash
-make lint-backend      # golangci-lint v2.12.2
+make lint-backend      # golangci-lint v2.13.2 (the version ci.yml pins)
 make test-backend      # Go tests
 make test-coverage     # Coverage report
 make security-backend  # govulncheck
