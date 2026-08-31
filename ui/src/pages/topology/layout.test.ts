@@ -56,11 +56,16 @@ describe('getLinkSpeed', () => {
     expect(getLinkSpeed('trunk 10G uplink')).toBe('10000');
   });
 
-  it('takes the first number in the label, even when it is a VLAN id', () => {
-    // The regex is unanchored, so a label that names the VLAN before the speed
-    // yields the VLAN as the speed: 'vlan 10 1G' parses as 10 Mbps, not 1 Gbps.
-    // Only reachable on pre-typed-field API responses, where speed is absent.
-    expect(getLinkSpeed('vlan 10 1G')).toBe('10');
+  it('prefers the speed token over a VLAN id earlier in the label', () => {
+    // A label that names the VLAN first used to yield the VLAN as the speed,
+    // because the match was unanchored: 'vlan 10 1G' parsed as 10 Mbps. Only
+    // reachable on API responses that omit the typed speed field.
+    expect(getLinkSpeed('vlan 10 1G')).toBe('1000');
+    expect(getLinkSpeed('vlan 200 10G uplink')).toBe('10000');
+  });
+
+  it('skips a VLAN id when no number in the label carries a unit', () => {
+    expect(getLinkSpeed('vlan 10 100')).toBe('100');
   });
 });
 

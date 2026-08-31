@@ -189,7 +189,13 @@ export function getLinkSpeed(label?: string): string | undefined {
   if (!label) {
     return;
   }
-  const speedMatch = /(\d+)([MGT])?/i.exec(label);
+  // A VLAN id in the label is not a speed. Drop it before parsing, so
+  // 'vlan 10 100' reads 100 Mbps rather than 10.
+  const withoutVlan = label.replace(/\bvlans?\s*\d+/gi, ' ');
+
+  // A number carrying a unit is the speed even when a bare number precedes
+  // it; only fall back to a bare number when the label has no unit at all.
+  const speedMatch = /(\d+)\s*([MGT])\b/i.exec(withoutVlan) ?? /(\d+)/.exec(withoutVlan);
   if (!speedMatch) {
     return;
   }
