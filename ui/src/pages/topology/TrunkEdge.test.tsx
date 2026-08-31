@@ -97,14 +97,13 @@ describe('middle label', () => {
     expect(screen.getByText(/100M/)).toBeDefined();
   });
 
-  it('leaves a dangling separator when the speed is present but unformattable', () => {
-    // '0' is a truthy string, so it passes the `if (linkData.speed)` guard and
-    // formatSpeed's '' is still joined in -- the label reads 'VLAN 10 · '.
-    // Pinned as found; the guard should test the formatted value, not the raw
-    // field.
+  it('omits the speed rather than dangling a separator when it will not format', () => {
+    // '0' is a truthy string, so it passed the raw-field guard and
+    // formatSpeed's '' was joined in anyway, reading 'VLAN 10 · '.
     renderEdge({ vlans: [10], speed: '0' });
 
-    expect(screen.getByText('VLAN 10 ·')).toBeDefined();
+    expect(screen.getByText('VLAN 10')).toBeDefined();
+    expect(screen.queryByText('VLAN 10 ·')).toBeNull();
   });
 
   it('joins vlan and speed with a separator', () => {
@@ -159,6 +158,14 @@ describe('stroke styling', () => {
 });
 
 describe('hover tooltip', () => {
+  it('omits the speed row when the speed will not format', () => {
+    // Same raw-field guard as the middle label: an unformattable speed used to
+    // render a Speed row with an empty value.
+    renderEdge({ hovered: true, vlans: [10], speed: '0' });
+
+    expect(screen.queryByText(/Speed/i)).toBeNull();
+  });
+
   it('is absent until the edge is hovered', () => {
     renderEdge({ speed: '1000', hovered: false });
 
