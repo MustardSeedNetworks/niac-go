@@ -24,6 +24,37 @@ function previewDevice(device: Device): Record<string, unknown> {
   return first;
 }
 
+describe('escaping', () => {
+  // The preview was built by string concatenation, interpolating values
+  // straight into double-quoted scalars. A value carrying a quote, a
+  // backslash or a newline produced a document that would not parse -- and
+  // every one of these is a value a user can type into the device editor.
+  it('survives a double quote in a value', () => {
+    expect(previewDevice({ ...base, hostname: 'a"b' }).hostname).toBe('a"b');
+  });
+
+  it('survives a backslash in a value', () => {
+    expect(previewDevice({ ...base, hostname: 'a\\b' }).hostname).toBe('a\\b');
+  });
+
+  it('survives a newline in a value', () => {
+    const out = previewDevice({
+      ...base,
+      ftp: { enabled: true, welcomeBanner: 'line one\nline two' } as Device['ftp'],
+    });
+
+    expect((out.ftp as { welcomeBanner: string }).welcomeBanner).toBe('line one\nline two');
+  });
+
+  it('survives a colon-space in a value, which would otherwise start a mapping', () => {
+    expect(previewDevice({ ...base, hostname: 'a: b' }).hostname).toBe('a: b');
+  });
+
+  it('quotes a value that would otherwise parse as a number', () => {
+    expect(previewDevice({ ...base, mac: '0011' }).mac).toBe('0011');
+  });
+});
+
 describe('base device lines', () => {
   it('emits only hostname and mac for a minimal device', () => {
     expect(previewDevice(base)).toEqual({ hostname: 'sw1', mac: '00:11:22:33:44:55' });
