@@ -132,3 +132,6 @@ ui/storybook-static/
 # CI: sibling niac-demo-catalog corpus checkout for the niac-content bundle
 # (release.yml). Kept out of the tree so goreleaser does not see a dirty state.
 .content-corpus/
+
+# Build artifacts from tools/ — built with `go run ./tools/<name>`, never committed.
+/linklive-acceptance
