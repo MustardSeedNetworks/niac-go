@@ -6,7 +6,8 @@
  */
 
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import i18next from 'i18next';
+import { afterEach, vi } from 'vitest';
 
 // ============================================================
 // Real i18n
@@ -15,6 +16,49 @@ import { vi } from 'vitest';
 // asserting on the actual locale files. Without it, <Trans> and t() render
 // nothing and a test that checks copy silently checks the absence of copy.
 import '../i18n';
+
+// ============================================================
+// Unresolved i18n keys fail the test that provoked them
+// ============================================================
+// Loading the real locale files is only half the guarantee. i18next renders the
+// KEY itself on a miss, so `settings.mode.reflector` appears in the UI looking
+// like a label and every assertion still passes — seed measured this by
+// corrupting all 4,290 strings in both locales and still saw 285 of 311 tests
+// pass (#1669, seed#1942).
+//
+// Rather than assert copy string by string — a human reviews wording — every
+// existing test becomes a missing-key detector: i18next reports each miss and
+// the test that provoked it fails.
+//
+// missingKeyHandler, NOT the `missingKey` event. Only the handler is told
+// whether a defaultValue was supplied, and an optional lookup with an explicit
+// default is a deliberate absence, not a defect — pageRegistry.ts reads an
+// optional eyebrow per page that way. Seed's first attempt used the event and
+// reported eleven keys of which seven were non-problems; a gate that cries wolf
+// on its first run is one people learn to ignore.
+const missingI18nKeys = new Set<string>();
+
+i18next.options.saveMissing = true;
+i18next.options.missingKeyHandler = (_lngs, namespace, key, _fallback, _updateMissing, options) => {
+  if (options?.defaultValue !== undefined) {
+    return; // deliberate optional lookup
+  }
+  missingI18nKeys.add(`${namespace}:${key}`);
+};
+
+afterEach(() => {
+  if (missingI18nKeys.size === 0) {
+    return;
+  }
+  const keys = [...missingI18nKeys].sort();
+  missingI18nKeys.clear(); // do not blame the next test for this one's misses
+  throw new Error(
+    `Unresolved i18n key(s) rendered during this test:\n  ${keys.join('\n  ')}\n` +
+      'i18next renders the key itself on a miss, so this would have shipped as ' +
+      'visible UI text. Add the key to the locale files, or pass an explicit ' +
+      'defaultValue if the lookup is genuinely optional.',
+  );
+});
 
 // ============================================================
 // JSDoM polyfills — common browser APIs not implemented by JSDoM
