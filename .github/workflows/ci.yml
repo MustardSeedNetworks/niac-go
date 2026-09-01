@@ -244,6 +244,31 @@ jobs:
           python3 scripts/test-check-banned-vocabulary.py
           python3 scripts/check-banned-vocabulary.py
 
+      # niac ships windows binaries, but every other job here runs on ubuntu or
+      # macOS, so the windows-tagged files below were compiled by nothing and a
+      # break in them surfaced at release time rather than in CI:
+      #   cmd/niac/cmd_service_windows.go
+      #   internal/truststore/truststore_windows.go
+      #   internal/library/draft_lock_windows.go
+      #   internal/library/draft_sync_windows.go
+      #
+      # The Backend (Windows) job added for #1537 does not cover them — it is
+      # scoped to ./internal/api/... because a full build there needs Npcap.
+      # Cross-compiling does cover them, and costs seconds: gopacket/pcap loads
+      # its DLL at runtime on windows rather than through cgo, so no native
+      # runner is involved. Both targets pass today, so this is a regression
+      # guard rather than a repair.
+      #
+      # What it does NOT reproduce: the release links windows with
+      # CGO_ENABLED=1 against the Npcap SDK. That path is still only exercised
+      # at release time (#1523).
+      - name: Cross-build windows
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          GOOS=windows GOARCH=amd64 go build ./...
+          GOOS=windows GOARCH=arm64 go build ./...
+
       - name: Run tests
         # Plain run: fast feedback plus the coverage profile. The race
         # detector runs in its own `race` job so a race-detector crash (see
