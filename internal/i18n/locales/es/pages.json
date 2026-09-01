@@ -943,7 +943,6 @@
       "fileTooLarge": "Los archivos walk deben tener un tamaño máximo de 16 MiB.",
       "importAction": "Importar y revisar",
       "importTab": "Importar archivo walk",
-      "method": "Origen del perfil de walk",
       "model": "Modelo",
       "platform": "Plataforma",
       "port": "Puerto SNMP",

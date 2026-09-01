@@ -57,12 +57,11 @@ export function contextMenuItems(menu: ContextMenuTarget, ctx: ContextMenuCtx): 
 }
 
 function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
-  const translate = ctx.t;
   const device = ctx.devices?.find((d) => d.name === nodeId);
   return [
     {
       key: 'view',
-      label: translate('topology.contextMenu.viewDetails'),
+      label: ctx.t('topology.contextMenu.viewDetails'),
       onSelect: () => {
         if (device) ctx.setSelectedDevice(device);
       },
@@ -70,26 +69,26 @@ function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
     },
     {
       key: 'edit',
-      label: translate('topology.contextMenu.editYaml'),
-      hint: translate('topology.contextMenu.editYamlHint'),
+      label: ctx.t('topology.contextMenu.editYaml'),
+      hint: ctx.t('topology.contextMenu.editYamlHint'),
       onSelect: () => ctx.navigate(`/device-config/${nodeId}`),
     },
     {
       key: 'focus',
-      label: translate('topology.contextMenu.focusNeighborhood'),
+      label: ctx.t('topology.contextMenu.focusNeighborhood'),
       onSelect: () =>
         ctx.setFocusedNodeId((curr: string | null) => (curr === nodeId ? null : nodeId)),
     },
     {
       key: 'copy-name',
-      label: translate('topology.contextMenu.copyName'),
+      label: ctx.t('topology.contextMenu.copyName'),
       onSelect: () => ctx.copyToClipboard(nodeId),
       separatorBefore: true,
     },
     {
       key: 'hide',
-      label: translate('topology.contextMenu.hideFromView'),
-      hint: translate('topology.contextMenu.hideFromViewHint'),
+      label: ctx.t('topology.contextMenu.hideFromView'),
+      hint: ctx.t('topology.contextMenu.hideFromViewHint'),
       destructive: true,
       onSelect: () => ctx.hideDevice(nodeId),
       separatorBefore: true,
@@ -98,7 +97,6 @@ function nodeMenuItems(nodeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
 }
 
 function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
-  const translate = ctx.t;
   const edge = ctx.edges.find((e) => e.id === edgeId);
   const ifacePair =
     edge?.data?.sourceInterface || edge?.data?.targetInterface
@@ -107,7 +105,7 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
   const items: ContextMenuItem[] = [
     {
       key: 'copy-pair',
-      label: translate('topology.contextMenu.copyInterfacePair'),
+      label: ctx.t('topology.contextMenu.copyInterfacePair'),
       onSelect: () => ctx.copyToClipboard(ifacePair),
     },
   ];
@@ -118,7 +116,7 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
     const vlanList = edge.data.vlans.join(',');
     items.push({
       key: 'copy-vlans',
-      label: translate('topology.contextMenu.copyVlanList', { count: edge.data.vlans.length }),
+      label: ctx.t('topology.contextMenu.copyVlanList', { count: edge.data.vlans.length }),
       onSelect: () => ctx.copyToClipboard(vlanList),
     });
   }
@@ -126,17 +124,16 @@ function edgeMenuItems(edgeId: string, ctx: ContextMenuCtx): ContextMenuItem[] {
 }
 
 function paneMenuItems(ctx: ContextMenuCtx): ContextMenuItem[] {
-  const translate = ctx.t;
   return [
     {
       key: 'export',
-      label: translate('topology.actionsMenu.exportJson'),
+      label: ctx.t('topology.actionsMenu.exportJson'),
       onSelect: ctx.handleExport,
     },
     {
       key: 'reset',
-      label: translate('topology.contextMenu.resetLayout'),
-      hint: translate('topology.contextMenu.resetLayoutHint'),
+      label: ctx.t('topology.contextMenu.resetLayout'),
+      hint: ctx.t('topology.contextMenu.resetLayoutHint'),
       destructive: true,
       onSelect: ctx.handleResetLayout,
       separatorBefore: true,

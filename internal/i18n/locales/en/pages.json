@@ -1078,7 +1078,6 @@
       "fileTooLarge": "Walk files must be 16 MiB or smaller.",
       "importAction": "Import and review",
       "importTab": "Import walk file",
-      "method": "Walk profile source",
       "model": "Model",
       "platform": "Platform",
       "port": "SNMP port",
