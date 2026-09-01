@@ -168,8 +168,11 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -179,6 +182,12 @@ jobs:
         # drops the unused Microsoft source, bounds apt's own network waits,
         # and retries transient hiccups with backoff.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       - name: Verify dependencies
@@ -379,8 +388,11 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -390,6 +402,12 @@ jobs:
         # drops the unused Microsoft source, bounds apt's own network waits,
         # and retries transient hiccups with backoff.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       - name: Run tests with race detector
@@ -430,11 +448,20 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # See the race job for why this composite exists rather than a bare
         # apt-get install.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       # The binary must not live on /tmp: it is mounted nosuid on Ubuntu, and
@@ -601,8 +628,11 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -612,6 +642,12 @@ jobs:
         # drops the unused Microsoft source, bounds apt's own network waits,
         # and retries transient hiccups with backoff.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       - name: Run govulncheck
@@ -991,8 +1027,11 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -1002,6 +1041,12 @@ jobs:
         # drops the unused Microsoft source, bounds apt's own network waits,
         # and retries transient hiccups with backoff.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       - name: Download frontend build
@@ -1106,8 +1151,11 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # packages.microsoft.com intermittently serves an unsigned/invalid
         # InRelease that aborts `apt-get update` for the whole runner, even
         # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
@@ -1117,6 +1165,12 @@ jobs:
         # drops the unused Microsoft source, bounds apt's own network waits,
         # and retries transient hiccups with backoff.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           packages: libpcap-dev
 
       - name: Download frontend build
@@ -1144,8 +1198,11 @@ jobs:
             -o niac ./cmd/niac
 
       - name: Install Playwright OS dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
-        timeout-minutes: 10
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        # 20 rather than 10: the release path may now take three attempts with
+        # 90s then 180s between them. A backstop, not a wait -- raising it
+        # costs an ordinary run nothing.
+        timeout-minutes: 20
         # Not removable: the runner image ships none of webkit's GStreamer/font
         # stack. A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a test (stem job 95068053052), because apt waits
@@ -1153,6 +1210,12 @@ jobs:
         # own network waits (via playwright's internal apt calls) and retries
         # the transient case.
         with:
+          # A mirror outage lasting minutes is not a transient error, and
+          # two attempts ten seconds apart cannot span one -- that is what
+          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
+          # fast: there a quick red is worth more than riding out an outage.
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
           command: cd ui && npx playwright install-deps chromium webkit firefox
           command-timeout: '270'
 
