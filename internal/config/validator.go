@@ -54,10 +54,10 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 
 	deviceNames := make(map[string]bool)
 	knownDeviceNames := make(map[string]bool)
-	deviceIPs := make(map[string]string)
 	deviceMACs := make(map[string]string)
 
 	if len(cfg.Segments) == 0 {
+		deviceIPs := make(map[string]string)
 		for i := range cfg.Devices {
 			knownDeviceNames[cfg.Devices[i].Name] = true
 		}
@@ -81,13 +81,19 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		}
 	}
 	for i := range cfg.Segments {
+		// Addresses are unique per segment, not per config: a segment is a
+		// separate broadcast domain, so a gateway at 10.0.0.1 in each VLAN is
+		// correct networking rather than a collision. Names and MACs stay
+		// config-wide -- a name identifies a device across the whole
+		// simulation, and every segment shares one physical interface.
+		segmentIPs := make(map[string]string)
 		for j := range cfg.Segments[i].Devices {
 			v.validateDevice(
 				&cfg.Segments[i].Devices[j],
 				fmt.Sprintf("segments[%d].devices[%d]", i, j),
 				deviceNames,
 				knownDeviceNames,
-				deviceIPs,
+				segmentIPs,
 				deviceMACs,
 			)
 		}
