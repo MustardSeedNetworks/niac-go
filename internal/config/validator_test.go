@@ -228,8 +228,14 @@ func TestValidate_DetectsDuplicateIdentityAcrossSegments(t *testing.T) {
 	if result.Valid {
 		t.Fatal("Validate() valid = true, want duplicate identity errors")
 	}
-	if len(result.Errors) != 3 {
-		t.Fatalf("errors = %#v, want duplicate name, MAC, and IP", result.Errors)
+	// Name and MAC only. The duplicate *address* used to be a third error, and
+	// that was wrong: a segment is a separate broadcast domain, so reusing an
+	// address across segments is what segmentation is for. Address uniqueness
+	// is now scoped per segment -- see the two tests at the end of this file,
+	// and the catalog's demo-segments scenario, which could not validate while
+	// the check was config-wide.
+	if len(result.Errors) != 2 {
+		t.Fatalf("errors = %#v, want duplicate name and MAC", result.Errors)
 	}
 }
 
@@ -503,5 +509,40 @@ func TestValidate_AddMibOID(t *testing.T) {
 	result := NewValidator("test.yaml").Validate(cfg)
 	if result.Valid {
 		t.Fatal("expected invalid AddMib OID configuration")
+	}
+}
+
+// A segment is a separate broadcast domain, so the same address in two
+// segments is correct networking -- a gateway at 10.0.0.1 in each VLAN is the
+// textbook case, and the catalog's demo-segments scenario exists to show it.
+// The uniqueness maps were built once and shared across every segment, so that
+// scenario could not validate.
+func TestValidate_DuplicateIPsAcrossSegmentsAreAllowed(t *testing.T) {
+	cfg := &Config{Segments: []Segment{
+		{Tag: 200, Devices: []Device{
+			{Name: "mgmt-gw", Type: "router", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
+		}},
+		{Tag: 210, Devices: []Device{
+			{Name: "data-gw", Type: "router", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
+		}},
+	}}
+
+	if errs := NewValidator("segments.yaml").Validate(cfg); errs.HasErrors() {
+		t.Fatalf("reusing an address in a different segment must be valid, got: %v", errs.Error())
+	}
+}
+
+// The scoping must not disable the check: within one segment a repeated
+// address is still a configuration error.
+func TestValidate_DuplicateIPsWithinOneSegmentStillFail(t *testing.T) {
+	cfg := &Config{Segments: []Segment{
+		{Tag: 200, Devices: []Device{
+			{Name: "a", Type: "router", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
+			{Name: "b", Type: "router", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
+		}},
+	}}
+
+	if !NewValidator("segments.yaml").Validate(cfg).HasErrors() {
+		t.Fatal("a repeated address inside one segment must still be an error")
 	}
 }
