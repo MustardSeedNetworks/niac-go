@@ -7,7 +7,8 @@ import { Link } from 'react-router';
  *
  * Visual scale (top to bottom, sized for our dark-theme baseline):
  *
- *   H1  — page header (set by Layout's <PageHeader>, rarely used in body)
+ *   H1  — page header (set by App.tsx's PageWithErrorBoundary from
+ *         pageRegistry.tsx, rarely used in body)
  *         text-2xl / font-bold / text-text-primary
  *   H2  — section header inside a card
  *         text-xl  / font-semibold / text-text-primary

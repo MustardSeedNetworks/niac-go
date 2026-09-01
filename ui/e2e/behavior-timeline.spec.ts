@@ -90,7 +90,7 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await expect(behaviorsTab).toBeEnabled();
   await behaviorsTab.click();
   await expect(behaviorsTab).toHaveAttribute('aria-selected', 'true');
-  await page.getByRole('button', { name: 'Add timeline' }).click();
+  await page.getByTestId('add-timeline').click();
   // Wait on the response itself rather than polling a closure flag: the wait is
   // armed before the click, so it cannot miss a fast response, and a failure
   // names the request that never arrived.

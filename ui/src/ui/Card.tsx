@@ -297,8 +297,6 @@ interface CardRowProps {
   label: string;
   /** Row value */
   value: string | number;
-  /** Status-based coloring for the value */
-  status?: Status;
   /** Use monospace font for value */
   mono?: boolean;
 }
@@ -306,14 +304,12 @@ interface CardRowProps {
 /**
  * CardRow - Displays a label-value pair in a horizontal row.
  */
-export const CardRow: FC<CardRowProps> = ({ label, value, status, mono = false }) => {
-  const statusColor = status ? getStatusConfig(status).color : 'text-text-primary';
-
+export const CardRow: FC<CardRowProps> = ({ label, value, mono = false }) => {
   return (
     <div className="flex justify-between items-center py-compact">
       <span className="text-sm text-text-muted shrink-0">{label}</span>
       <span
-        className={`text-sm font-medium ${statusColor} ${mono ? 'font-mono tabular-nums' : ''} truncate text-right`}
+        className={`text-sm font-medium text-text-primary ${mono ? 'font-mono tabular-nums' : ''} truncate text-right`}
         title={String(value)}
         data-testid="card-row-value"
       >

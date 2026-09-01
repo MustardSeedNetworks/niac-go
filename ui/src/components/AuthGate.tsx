@@ -103,6 +103,7 @@ export function AuthGate({ children }: AuthGateProps): ReactElement {
         )}
         <button
           type="submit"
+          data-testid="auth-gate-connect"
           disabled={!token.trim()}
           className="mt-6 w-full rounded-lg bg-brand-primary px-4 py-2 font-medium text-text-inverse disabled:opacity-50"
         >

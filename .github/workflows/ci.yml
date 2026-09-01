@@ -1231,10 +1231,44 @@ jobs:
           restore-keys: |
             playwright-browsers-${{ runner.os }}-
 
+      # Retried, because the ~500MB browser download over a shared runner
+      # network is exactly what a retry is for. Unretried, it failed three
+      # times in one night across the fleet with `Installation process exited
+      # with code: 100` (#1341) — and what it took down was worse than a red
+      # job: a seed merge-queue run was ejected and needed manual re-enqueue,
+      # and a stem CI run on main failed, which silently skipped the release
+      # because release-please.yml is workflow_run-gated on CI success.
+      #
+      # Not the apt-install composite next to it: that one writes apt config
+      # and recovers the dpkg lock, none of which applies to a plain download.
+      # What is copied is its POLICY — the release path rides out a longer
+      # outage, ordinary CI still fails fast, because there a quick red is
+      # worth more than waiting.
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: ui
-        run: npx playwright install chromium webkit firefox
+        timeout-minutes: 20
+        env:
+          ATTEMPTS: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          RETRY_DELAY: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
+        run: |
+          set -uo pipefail
+
+          attempt=1
+          while [ "$attempt" -le "$ATTEMPTS" ]; do
+            if npx playwright install chromium webkit firefox; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$ATTEMPTS" ]; then
+              echo "playwright browser install failed after ${ATTEMPTS} attempt(s)" >&2
+              exit 1
+            fi
+
+            echo "attempt ${attempt} failed; retrying in ${RETRY_DELAY}s" >&2
+            sleep "$RETRY_DELAY"
+            attempt=$((attempt + 1))
+          done
 
       - name: Save Playwright browsers (default branch only)
         if: steps.playwright-cache.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)

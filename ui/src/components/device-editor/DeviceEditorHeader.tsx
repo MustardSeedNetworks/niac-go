@@ -106,6 +106,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
                 )
               }
               onClick={onSave}
+              data-testid="device-editor-save"
               disabled={!isDirty || saving}
             >
               {saving

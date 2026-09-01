@@ -36,7 +36,7 @@ test.describe('daemon-served GUI', () => {
 
     await expect(page).toHaveTitle(/NIAC/i);
     await expect(page.getByRole('navigation')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
 
     await expect
       .poll(() =>
@@ -103,8 +103,8 @@ test.describe('daemon-served GUI', () => {
         .toBe(true);
 
       await page.goto('/devices');
-      await expect(page.getByRole('cell', { name: 'sim-router-01' })).toBeVisible();
-      await expect(page.getByRole('cell', { name: 'sim-switch-01' })).toBeVisible();
+      await expect(page.getByRole('cell', { name: 'sim-router-01', exact: true })).toBeVisible();
+      await expect(page.getByRole('cell', { name: 'sim-switch-01', exact: true })).toBeVisible();
     } finally {
       await request.delete('/api/v1/simulation', { headers });
     }
