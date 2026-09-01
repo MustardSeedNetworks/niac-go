@@ -5,6 +5,31 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.87](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.86...v0.94.87) (2026-09-01)
+
+
+### Bug Fixes
+
+* **ci:** make the issue-title gate clear itself and accept the house style ([#1667](https://github.com/MustardSeedNetworks/niac-go/issues/1667)) ([7d6edd9](https://github.com/MustardSeedNetworks/niac-go/commit/7d6edd91ed4eddf0a3e9da27ab01cc10e6cdd915))
+* **config:** scope address uniqueness to a segment ([#1665](https://github.com/MustardSeedNetworks/niac-go/issues/1665)) ([4aa5d87](https://github.com/MustardSeedNetworks/niac-go/commit/4aa5d87e8eae31a494f7e5b049ef2dd0f56dd996))
+* **device-editor:** serialise the YAML preview instead of concatenating it ([#1660](https://github.com/MustardSeedNetworks/niac-go/issues/1660)) ([9157c4e](https://github.com/MustardSeedNetworks/niac-go/commit/9157c4e6bcb7f1b243770d72c42c21bd24e470d6)), closes [#1607](https://github.com/MustardSeedNetworks/niac-go/issues/1607)
+* **device-yaml:** emit the daemon's schema from one serialiser ([#1663](https://github.com/MustardSeedNetworks/niac-go/issues/1663)) ([8a31793](https://github.com/MustardSeedNetworks/niac-go/commit/8a31793931245e4d247180eaf858573e96f626fb)), closes [#1661](https://github.com/MustardSeedNetworks/niac-go/issues/1661)
+* **events:** strip one leading space from SSE data fields, not all whitespace ([#1659](https://github.com/MustardSeedNetworks/niac-go/issues/1659)) ([7e8bd4a](https://github.com/MustardSeedNetworks/niac-go/commit/7e8bd4ac5d19cfa7d05a722d881b6596c0d2b8e6)), closes [#1606](https://github.com/MustardSeedNetworks/niac-go/issues/1606)
+* **pcap:** show the raw timestamp when a packet time will not parse ([#1657](https://github.com/MustardSeedNetworks/niac-go/issues/1657)) ([1f1cdd1](https://github.com/MustardSeedNetworks/niac-go/commit/1f1cdd1135382e3e8a2e12dbe641cb7c9d986380)), closes [#1604](https://github.com/MustardSeedNetworks/niac-go/issues/1604)
+* **topology:** drop the dangling separator when a link speed will not format ([#1658](https://github.com/MustardSeedNetworks/niac-go/issues/1658)) ([751f72b](https://github.com/MustardSeedNetworks/niac-go/commit/751f72b98191992818aadc2018f4cea6b26fe630)), closes [#1605](https://github.com/MustardSeedNetworks/niac-go/issues/1605)
+* **topology:** stop parsing a VLAN id as the link speed ([#1656](https://github.com/MustardSeedNetworks/niac-go/issues/1656)) ([9778771](https://github.com/MustardSeedNetworks/niac-go/commit/9778771ed87af8c25b36bf2b424248e715be7e5b)), closes [#1603](https://github.com/MustardSeedNetworks/niac-go/issues/1603)
+
+
+### Continuous Integration
+
+* never cancel a CI run on main ([#1655](https://github.com/MustardSeedNetworks/niac-go/issues/1655)) ([d656a2d](https://github.com/MustardSeedNetworks/niac-go/commit/d656a2d5037916bd8f28c608c63c1fc2e139b7fb))
+* ride out a mirror outage on the release path ([#1666](https://github.com/MustardSeedNetworks/niac-go/issues/1666)) ([2b9ba4e](https://github.com/MustardSeedNetworks/niac-go/commit/2b9ba4e0513d3e12e50d6f16502f407cffa04805)), closes [#1364](https://github.com/MustardSeedNetworks/niac-go/issues/1364)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1670](https://github.com/MustardSeedNetworks/niac-go/issues/1670)) ([0477741](https://github.com/MustardSeedNetworks/niac-go/commit/04777417e8377df9f1a50a6c000613e046dd4e90))
+
 ## [0.94.86](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.85...v0.94.86) (2026-08-31)
 
 
