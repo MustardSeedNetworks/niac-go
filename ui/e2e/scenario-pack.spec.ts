@@ -132,5 +132,5 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
   await page.getByTestId('wizard-next-button').click();
 
   await expect.poll(() => generated).toBe(true);
-  await expect(page.getByRole('tab', { name: 'Visual topology' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Visual topology', exact: true })).toBeVisible();
 });

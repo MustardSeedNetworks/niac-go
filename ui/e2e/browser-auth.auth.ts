@@ -15,10 +15,10 @@ test('authenticates production REST and SSE traffic without persisting the beare
   await page.goto('/');
   await expect(page.getByTestId('api-token-input')).toBeVisible();
   await page.getByTestId('api-token-input').fill(authToken);
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByTestId('auth-gate-connect').click();
 
   await expect(page.getByRole('navigation')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByTestId('page-header-title')).toHaveText('Dashboard');
   await expect
     .poll(() =>
       protectedResponses.some(

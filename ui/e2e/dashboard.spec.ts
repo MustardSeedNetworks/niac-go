@@ -16,10 +16,11 @@ test.describe('Dashboard', () => {
   });
 
   test('should display dashboard overview', async ({ page }) => {
-    // Substantive assertion: the page renders at least one heading.
-    // The previous `expect(body).not.toBeEmpty()` was tautological — body
-    // is never empty for a rendered SPA shell.
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    // Substantive assertion: the page's own H1 rendered. `getByRole('heading')
+    // .first()` was weaker than it looked — it passes on whatever heading
+    // happens to come first in the DOM, including one from the app shell, so it
+    // could not distinguish "dashboard rendered" from "something rendered".
+    await expect(page.getByTestId('page-header-title')).toBeVisible();
   });
 
   test('should display navigation menu', async ({ page }) => {

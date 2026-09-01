@@ -177,6 +177,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
             !firstDevice || !firstInterface ? t('newSimWizard.behaviors.needsInterface') : undefined
           }
           onClick={addTimeline}
+          data-testid="add-timeline"
         >
           {t('newSimWizard.behaviors.addTimeline')}
         </Button>

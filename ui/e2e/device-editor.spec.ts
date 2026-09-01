@@ -156,7 +156,7 @@ test.describe('Device Editor API wiring', () => {
     await page.getByLabel('Primary IP Address').fill('192.0.2.11');
 
     await page.getByRole('button', { name: /interfaces section, collapsed/i }).click();
-    await page.getByRole('button', { name: 'Add Interface' }).click();
+    await page.getByTestId('add-interface').click();
     await page.getByLabel('Interface 1 name').fill('Ethernet1/1');
     await page.getByLabel('Interface 1 speed Mbps').fill('10000');
     await page.getByLabel('Interface 1 duplex').selectOption('full');
@@ -164,7 +164,7 @@ test.describe('Device Editor API wiring', () => {
     await page.getByLabel('Interface 1 oper status').selectOption('down');
     await page.getByLabel('Interface 1 description').fill('uplink to core');
 
-    await page.getByRole('button', { name: 'Create' }).click();
+    await page.getByTestId('device-editor-save').click();
 
     await expect(page.getByRole('alert')).toContainText('Device created successfully');
     expect(createPayload).toMatchObject({

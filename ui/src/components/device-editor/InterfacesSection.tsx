@@ -199,7 +199,14 @@ export const InterfacesSection: FC<InterfacesSectionProps> = ({
           </div>
         ))}
 
-        <Button type="button" onClick={addInterface} variant="outline" tone="gray" size="sm">
+        <Button
+          type="button"
+          data-testid="add-interface"
+          onClick={addInterface}
+          variant="outline"
+          tone="gray"
+          size="sm"
+        >
           {t('editor.sections.interfaces.addButton')}
         </Button>
       </div>
