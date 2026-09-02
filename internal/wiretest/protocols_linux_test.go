@@ -1,10 +1,11 @@
 //go:build linux && integration
 
-package wiretest
+package wiretest_test
 
 import (
 	"bytes"
 	"net"
+	"slices"
 	"testing"
 	"time"
 
@@ -20,9 +21,12 @@ import (
 // contradicts the OFFER it followed.
 func TestDHCPLeaseComesFromTheAuthoredPool(t *testing.T) {
 	authored := startHospital(t)
-	edge := deviceByName(t, authored, edgeRouterName)
+	edge := edgeRouter(t, authored)
 	if edge.DHCPConfig == nil {
-		t.Fatalf("%s has no authored DHCP server; the pack no longer serves leases on the transit network", edgeRouterName)
+		t.Fatalf(
+			"%s has no authored DHCP server; the pack no longer serves leases on the transit network",
+			edgeRouterName,
+		)
 	}
 	poolStart, poolEnd := edge.DHCPConfig.PoolStart, edge.DHCPConfig.PoolEnd
 
@@ -33,12 +37,21 @@ func TestDHCPLeaseComesFromTheAuthoredPool(t *testing.T) {
 	offer := dhcpExchange(t, handle, src, xid, layers.DHCPMsgTypeDiscover, nil)
 	offered := append(net.IP(nil), offer.YourClientIP...)
 	if !addrWithin(offered, poolStart, poolEnd) {
-		t.Fatalf("DHCPOFFER yiaddr = %s, outside the authored pool %s-%s", offered, poolStart, poolEnd)
+		t.Fatalf(
+			"DHCPOFFER yiaddr = %s, outside the authored pool %s-%s",
+			offered,
+			poolStart,
+			poolEnd,
+		)
 	}
 
 	ack := dhcpExchange(t, handle, src, xid, layers.DHCPMsgTypeRequest, offered)
 	if !ack.YourClientIP.Equal(offered) {
-		t.Errorf("DHCPACK yiaddr = %s, want the offered %s — the server did not honour its own offer", ack.YourClientIP, offered)
+		t.Errorf(
+			"DHCPACK yiaddr = %s, want the offered %s — the server did not honour its own offer",
+			ack.YourClientIP,
+			offered,
+		)
 	}
 	if router := dhcpOptionIP(ack, layers.DHCPOptRouter); !router.Equal(edge.DHCPConfig.Router) {
 		t.Errorf("DHCPACK router option = %s, want the authored %s", router, edge.DHCPConfig.Router)
@@ -75,12 +88,24 @@ func dhcpMessageType(pkt *layers.DHCPv4) layers.DHCPMsgType {
 // dhcpExchange sends one DHCP message and returns the simulation's reply. The
 // request is retransmitted on a tick because a real client does the same and
 // because the responder and the pcap handle race on a freshly created veth.
-func dhcpExchange(t *testing.T, handle *pcap.Handle, src net.HardwareAddr, xid uint32, kind layers.DHCPMsgType, requested net.IP) *layers.DHCPv4 {
+func dhcpExchange(
+	t *testing.T,
+	handle *pcap.Handle,
+	src net.HardwareAddr,
+	xid uint32,
+	kind layers.DHCPMsgType,
+	requested net.IP,
+) *layers.DHCPv4 {
 	t.Helper()
 
-	opts := []layers.DHCPOption{{Type: layers.DHCPOptMessageType, Data: []byte{byte(kind)}, Length: 1}}
+	opts := []layers.DHCPOption{
+		{Type: layers.DHCPOptMessageType, Data: []byte{byte(kind)}, Length: 1},
+	}
 	if requested != nil {
-		opts = append(opts, layers.DHCPOption{Type: layers.DHCPOptRequestIP, Data: requested.To4(), Length: 4})
+		opts = append(
+			opts,
+			layers.DHCPOption{Type: layers.DHCPOptRequestIP, Data: requested.To4(), Length: 4},
+		)
 	}
 	dhcp := &layers.DHCPv4{
 		Operation:    layers.DHCPOpRequest,
@@ -91,8 +116,18 @@ func dhcpExchange(t *testing.T, handle *pcap.Handle, src net.HardwareAddr, xid u
 		Flags:        0x8000, // broadcast: the client has no lease to be unicast at
 		Options:      opts,
 	}
-	eth := &layers.Ethernet{SrcMAC: src, DstMAC: net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, EthernetType: layers.EthernetTypeIPv4}
-	ip := &layers.IPv4{Version: 4, TTL: 64, Protocol: layers.IPProtocolUDP, SrcIP: net.IPv4zero, DstIP: net.IPv4bcast}
+	eth := &layers.Ethernet{
+		SrcMAC:       src,
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+	ip := &layers.IPv4{
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolUDP,
+		SrcIP:    net.IPv4zero,
+		DstIP:    net.IPv4bcast,
+	}
 	udp := &layers.UDP{SrcPort: 68, DstPort: 67}
 	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
 		t.Fatalf("dhcp checksum setup: %v", err)
@@ -144,7 +179,7 @@ func dhcpExchange(t *testing.T, handle *pcap.Handle, src net.HardwareAddr, xid u
 // so a hospital-site switch's LLDP never reaches this wire.
 func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 	authored := startHospital(t)
-	edge := deviceByName(t, authored, edgeRouterName)
+	edge := edgeRouter(t, authored)
 
 	want := edge.Name
 	if edge.SNMPConfig.SysName != "" {
@@ -167,7 +202,11 @@ func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 				continue
 			}
 			if lldp.SysName != want {
-				t.Fatalf("LLDP system name on the wire = %q, want the authored %q", lldp.SysName, want)
+				t.Fatalf(
+					"LLDP system name on the wire = %q, want the authored %q",
+					lldp.SysName,
+					want,
+				)
 			}
 			return
 		case <-deadline:
@@ -182,7 +221,7 @@ func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 // Compare the ifDescr values against the authored interface list instead.
 func TestSNMPWalkReturnsAuthoredInterfaceNames(t *testing.T) {
 	authored := startHospital(t)
-	edge := deviceByName(t, authored, edgeRouterName)
+	edge := edgeRouter(t, authored)
 
 	community := edge.SNMPConfig.Community
 	if community == "" {
@@ -221,17 +260,12 @@ func TestSNMPWalkReturnsAuthoredInterfaceNames(t *testing.T) {
 	// TrunkPorts are synthesized ahead of Interfaces, so an authored interface
 	// missing from the walk is the failure worth naming precisely.
 	for _, iface := range edge.Interfaces {
-		if !contains(got, iface.Name) {
-			t.Errorf("authored interface %q is absent from the ifDescr walk; got %v", iface.Name, got)
+		if !slices.Contains(got, iface.Name) {
+			t.Errorf(
+				"authored interface %q is absent from the ifDescr walk; got %v",
+				iface.Name,
+				got,
+			)
 		}
 	}
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, item := range haystack {
-		if item == needle {
-			return true
-		}
-	}
-	return false
 }

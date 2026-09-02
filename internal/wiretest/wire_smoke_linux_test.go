@@ -1,6 +1,6 @@
 //go:build linux && integration
 
-package wiretest
+package wiretest_test
 
 import (
 	"os"
@@ -34,6 +34,10 @@ func TestNoSimulatedAddressIsOnAKernelInterface(t *testing.T) {
 
 	out := run(t, "ip", "-4", "-br", "addr", "show")
 	if strings.Contains(out, transitGateway+"/") {
-		t.Errorf("the simulated gateway %s is assigned to a kernel interface, so the kernel can answer for it:\n%s", transitGateway, out)
+		t.Errorf(
+			"the simulated gateway %s is assigned to a kernel interface, so the kernel can answer for it:\n%s",
+			transitGateway,
+			out,
+		)
 	}
 }

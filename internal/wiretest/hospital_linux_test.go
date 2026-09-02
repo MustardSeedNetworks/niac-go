@@ -1,6 +1,6 @@
 //go:build linux && integration
 
-package wiretest
+package wiretest_test
 
 import (
 	"context"
@@ -73,19 +73,19 @@ func startHospital(t *testing.T) *config.Config {
 	if err != nil {
 		t.Fatalf("daemon.NewDaemon: %v", err)
 	}
-	if err := d.StartSimulation(api.SimulationRequest{
+	if startErr := d.StartSimulation(api.SimulationRequest{
 		SessionID:      "wiretest",
 		Interface:      simIface,
 		Attachment:     pack.Request.AttachmentName,
 		AttachmentMode: fabric.ModeAccess,
 		AccessVLAN:     accessVLAN,
 		ConfigData:     string(result.YAML),
-	}); err != nil {
-		t.Fatalf("StartSimulation on %s: %v", simIface, err)
+	}); startErr != nil {
+		t.Fatalf("StartSimulation on %s: %v", simIface, startErr)
 	}
 	t.Cleanup(func() {
-		if err := d.StopSimulation(""); err != nil {
-			t.Errorf("StopSimulation: %v", err)
+		if stopErr := d.StopSimulation(""); stopErr != nil {
+			t.Errorf("StopSimulation: %v", stopErr)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -94,16 +94,16 @@ func startHospital(t *testing.T) *config.Config {
 	return authored
 }
 
-// deviceByName returns the authored device or fails; a renamed device should
+// edgeRouter returns the authored edge router or fails; a renamed device should
 // report as exactly that rather than as a nil dereference.
-func deviceByName(t *testing.T, cfg *config.Config, name string) *config.Device {
+func edgeRouter(t *testing.T, cfg *config.Config) *config.Device {
 	t.Helper()
 	for index := range cfg.Devices {
-		if cfg.Devices[index].Name == name {
+		if cfg.Devices[index].Name == edgeRouterName {
 			return &cfg.Devices[index]
 		}
 	}
-	t.Fatalf("no device named %q in the generated config", name)
+	t.Fatalf("no device named %q in the generated config", edgeRouterName)
 	return nil
 }
 
@@ -154,7 +154,7 @@ func serialize(t *testing.T, ls ...gopacket.SerializableLayer) []byte {
 // miss entirely.
 func TestARPAnswersWithAuthoredEdgeRouterMAC(t *testing.T) {
 	authored := startHospital(t)
-	edge := deviceByName(t, authored, edgeRouterName)
+	edge := edgeRouter(t, authored)
 
 	handle := openClient(t)
 	src := clientMAC(t)
@@ -217,7 +217,11 @@ func awaitARPReply(t *testing.T, handle *pcap.Handle, request []byte, want net.I
 				t.Fatalf("re-writing ARP request: %v", err)
 			}
 		case <-deadline:
-			t.Fatalf("no ARP reply for %s within 20s; the simulation is not answering on %s", want, simIface)
+			t.Fatalf(
+				"no ARP reply for %s within 20s; the simulation is not answering on %s",
+				want,
+				simIface,
+			)
 		}
 	}
 }

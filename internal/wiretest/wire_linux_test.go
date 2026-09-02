@@ -7,9 +7,10 @@
 // reads what actually arrives on the other. A responder that satisfies its unit
 // tests and emits nothing — or emits the wrong field — fails here and nowhere
 // else.
-package wiretest
+package wiretest_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,7 +52,10 @@ func TestMain(m *testing.M) {
 		os.Exit(m.Run())
 	}
 	if os.Geteuid() != 0 {
-		fmt.Fprintln(os.Stderr, "wiretest: needs root to create a network namespace; run under sudo")
+		fmt.Fprintln(
+			os.Stderr,
+			"wiretest: needs root to create a network namespace; run under sudo",
+		)
 		os.Exit(0)
 	}
 	if _, err := exec.LookPath("ip"); err != nil {
@@ -64,9 +68,8 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "wiretest: %v\n", err)
 		os.Exit(1)
 	}
-	defer teardownNamespace()
-
-	// Re-run ourselves inside the namespace with the same flags.
+	// Re-run ourselves inside the namespace with the same flags. Teardown is
+	// explicit rather than deferred because this function ends in os.Exit.
 	args := append([]string{"netns", "exec", wireNS, os.Args[0]}, os.Args[1:]...)
 	cmd := exec.Command("ip", args...)
 	cmd.Env = append(os.Environ(), nsEnvVar+"=1")
@@ -75,7 +78,7 @@ func TestMain(m *testing.M) {
 	code := 0
 	if err := cmd.Run(); err != nil {
 		var exit *exec.ExitError
-		if ok := asExitError(err, &exit); ok {
+		if errors.As(err, &exit) {
 			code = exit.ExitCode()
 		} else {
 			fmt.Fprintf(os.Stderr, "wiretest: re-exec failed: %v\n", err)
@@ -84,14 +87,6 @@ func TestMain(m *testing.M) {
 	}
 	teardownNamespace()
 	os.Exit(code)
-}
-
-func asExitError(err error, target **exec.ExitError) bool {
-	if e, ok := err.(*exec.ExitError); ok {
-		*target = e
-		return true
-	}
-	return false
 }
 
 // setupNamespace creates the namespace and an unaddressed veth pair inside it.
