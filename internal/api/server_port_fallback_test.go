@@ -40,19 +40,14 @@ func TestBindWithFallback_FreePort(t *testing.T) {
 // holdPortWithFreeSuccessor returns a listener occupying some port P, having
 // first confirmed P+1 is bindable, and the value of P.
 //
-// The confirmation is the point. The ephemeral port the OS hands out says
-// nothing about its successor, and on Windows the successor can land in a
-// range WinNAT/Hyper-V has reserved, where bind fails with WSAEACCES ("an
-// attempt was made to access a socket in a way forbidden by its access
-// permissions") rather than WSAEADDRINUSE. isAddrInUse correctly does not
-// treat a permissions error as "in use", so the walk stops and the caller
-// sees a fall-through — a red job that says nothing about the fallback logic
-// under test.
+// The confirmation is the point, and it is still needed after #1682. That fix
+// made the walk STEP OVER a WinNAT-reserved port rather than stop at it — but
+// this test asserts the listener lands on exactly taken+1, so a reserved
+// successor now sends the walk to taken+2 and fails the assertion just the
+// same. The failure mode changed; the flakiness did not.
 //
 // Observed on a windows-latest merge_group run at 127.0.0.1:49664, which
-// ejected a PR from the merge queue. Whether the walk SHOULD step over a
-// reserved port is a separate product question, filed rather than decided
-// here; this only makes the test deterministic about what it is asserting.
+// ejected a PR from the merge queue.
 func holdPortWithFreeSuccessor(t *testing.T) (net.Listener, int) {
 	t.Helper()
 
@@ -83,7 +78,7 @@ func holdPortWithFreeSuccessor(t *testing.T) (net.Listener, int) {
 
 // TestBindWithFallback_FallsBackOneStep grabs a port, holds it open, then
 // expects bindWithFallback to land on requested+1. This is the regression
-// test for #1537: on Windows, before the platform split, isAddrInUse never
+// test for #1537: on Windows, before the platform split, the predicate never
 // recognised WSAEADDRINUSE and this fell through to a fatal error instead.
 func TestBindWithFallback_FallsBackOneStep(t *testing.T) {
 	hold, taken := holdPortWithFreeSuccessor(t)
@@ -118,13 +113,13 @@ func TestBindWithFallback_PortZeroUsesEphemeral(t *testing.T) {
 }
 
 // TestIsAddrInUse_RejectsOtherErrors ensures unrelated errors don't match.
-// Platform-agnostic: the two isAddrInUse implementations agree on this case,
+// Platform-agnostic: the two isPortUnavailable implementations agree on this case,
 // so it needs no build tag. Each implementation's positive case (a real
 // EADDRINUSE/WSAEADDRINUSE match) lives next to it in
 // server_port_fallback_unix_test.go / server_port_fallback_windows_test.go.
 func TestIsAddrInUse_RejectsOtherErrors(t *testing.T) {
-	if isAddrInUse(errors.New("some unrelated failure")) {
-		t.Fatalf("expected isAddrInUse to reject unrelated error")
+	if isPortUnavailable(errors.New("some unrelated failure")) {
+		t.Fatalf("expected isPortUnavailable to reject unrelated error")
 	}
 }
 
