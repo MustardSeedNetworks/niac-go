@@ -1,14 +1,13 @@
 import { X } from 'lucide-react';
-import { type FC, type ReactNode, useEffect } from 'react';
+import { type FC, type ReactNode, useEffect, useId } from 'react';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
-export interface ModalProps {
+interface ModalBaseProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
   children: ReactNode;
   size?: ModalSize;
   showCloseButton?: boolean;
@@ -16,6 +15,26 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   className?: string;
 }
+
+/**
+ * A dialog must have an accessible name, so the type requires exactly one way
+ * of giving it one. Before this, `title` was optional and a title-less Modal
+ * compiled fine and shipped a dialog a screen reader announces as "dialog" and
+ * nothing else — axe's aria-dialog-name, and eight of the nine violations the
+ * Storybook a11y gate found when it was first turned on (#1668).
+ *
+ * - `title`      — Modal renders the heading and labels itself from it.
+ * - `labelledBy` — the caller renders its own heading and passes its id, for
+ *                  layouts Modal's header cannot express (an icon beside the
+ *                  title, a heading with a subtitle beneath it).
+ * - `ariaLabel`  — last resort, when there is no visible heading to point at.
+ */
+type ModalNaming =
+  | { title: string; labelledBy?: never; ariaLabel?: never }
+  | { title?: never; labelledBy: string; ariaLabel?: never }
+  | { title?: never; labelledBy?: never; ariaLabel: string };
+
+export type ModalProps = ModalBaseProps & ModalNaming;
 
 const sizeClasses: Record<ModalSize, string> = {
   sm: 'max-w-sm',
@@ -29,6 +48,8 @@ export const Modal: FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
+  labelledBy,
+  ariaLabel,
   children,
   size = 'md',
   showCloseButton = true,
@@ -36,6 +57,11 @@ export const Modal: FC<ModalProps> = ({
   closeOnEscape = true,
   className = '',
 }) => {
+  // Was the literal id "modal-title", which is a duplicate the moment two
+  // modals are mounted at once — and aria-labelledby then resolves to whichever
+  // the browser finds first.
+  const headingId = useId();
+
   // Trap Tab/Shift+Tab focus inside the dialog and route Escape through onClose.
   const containerRef = useFocusTrap<HTMLDivElement>({
     isActive: isOpen,
@@ -73,12 +99,13 @@ export const Modal: FC<ModalProps> = ({
         className={`relative z-10 mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl ${className}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-labelledby={title ? headingId : labelledBy}
+        aria-label={ariaLabel}
       >
         {(title || showCloseButton) && (
           <div className="flex-between px-6 py-4 border-b border-surface-border">
             {title && (
-              <h2 id="modal-title" className="heading-3 text-text-primary">
+              <h2 id={headingId} className="heading-3 text-text-primary">
                 {title}
               </h2>
             )}

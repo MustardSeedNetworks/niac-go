@@ -6,7 +6,9 @@ import type { UserConfig } from 'vite';
 const currentDir: string = dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  // No .mdx docs pages in this repo; the glob only produced a
+  // 'No story files found' warning on every run.
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     '@chromatic-com/storybook',
     '@storybook/addon-vitest',
@@ -29,6 +31,10 @@ const config: StorybookConfig = {
         ...viteConfig.resolve,
         alias: {
           '@': resolve(currentDir, '../src'),
+          // src/i18n imports the shared catalogues through this alias. Without
+          // it here the override silently drops it and every story that pulls
+          // in i18n fails to load.
+          '@locales': resolve(currentDir, '../../internal/i18n/locales'),
         },
       },
     };

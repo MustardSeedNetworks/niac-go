@@ -27,7 +27,10 @@
     "i18n:lint": "biome check i18next.config.ts i18n-fixtures scripts/check-i18n-extraction.ts scripts/check-i18n-extraction.test.ts",
     "i18n:test": "node --test scripts/check-i18n-extraction.test.ts && i18next-cli --config i18n-fixtures/i18next.config.ts extract --ci",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test:storybook:run": "node --disable-warning=DEP0205 ./node_modules/vitest/vitest.mjs run --config vitest.storybook.config.ts --project=storybook",
+    "test:storybook": "npm run test:storybook:run",
+    "test:storybook:contract": "../scripts/test-storybook-contract.sh"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.0",
@@ -79,6 +82,7 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "@vitejs/plugin-react": "6.1.0",
+    "@vitest/browser-playwright": "4.1.11",
     "@vitest/coverage-v8": "4.1.11",
     "axe-core": "4.13.0",
     "i18next-cli": "1.71.3",
