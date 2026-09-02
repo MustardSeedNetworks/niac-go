@@ -1036,7 +1036,7 @@ jobs:
       # checks there, the data files here. See scripts/i18n/README.md and
       # msn-docs-internal/05-Engineering/I18N_CONVENTIONS.md.
       - name: Validate i18n (parity, glossary, banned vocab, etc.)
-        uses: MustardSeedNetworks/.github/.github/actions/i18n-validate@a146506fd53fe5e01fdc01892dd838c10081d183 # v1.9.0
+        uses: MustardSeedNetworks/.github/.github/actions/i18n-validate@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
 
   # ===========================================================================
   # Documentation Checks
