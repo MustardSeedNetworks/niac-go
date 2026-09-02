@@ -73,6 +73,9 @@ const NavItemButton: FC<NavItemButtonProps> = ({ item, active, collapsed, onNavi
     type="button"
     onClick={() => onNavigate(item.path)}
     onMouseEnter={() => prefetchRoute(item.path)}
+    // Keyed by route so a spec names the destination rather than the label,
+    // which is translated copy and changes without the navigation changing.
+    data-testid={`nav-item-${item.path === '/' ? 'root' : item.path.replace(/^\//, '')}`}
     aria-current={active ? 'page' : undefined}
     /* 44px minimum target, 11px radius, and a 3px left bar for the active
        route. The bar carries the state rather than a gradient fill: a filled
@@ -187,14 +190,6 @@ interface SidebarFooterProps {
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
   onExpand: () => void;
-  // SidebarLayout mounts SidebarBody twice (mobile + desktop asides) and
-  // both stay in the DOM regardless of viewport — the responsive classes
-  // only toggle display, not mount. Emitting the testids on both copies
-  // makes every getByTestId('sidebar-*-button') resolve to 2 elements
-  // and trip strict-mode. Layout passes `surfaceTestIds=true` only for
-  // the desktop aside (the default Playwright viewport is 1280x720, lg+).
-  // Same fix shape as stem PR #381.
-  surfaceTestIds: boolean;
 }
 
 const SidebarFooter: FC<SidebarFooterProps> = ({
@@ -203,7 +198,6 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   onOpenHelp,
   onOpenSettings,
   onExpand,
-  surfaceTestIds,
 }) => {
   const { t } = useTranslation();
   return (
@@ -216,7 +210,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             icon={HelpCircle}
             label={t('footer.help')}
             title={t('footer.openHelp')}
-            data-testid={surfaceTestIds ? 'sidebar-help-button' : undefined}
+            data-testid="sidebar-help-button"
           />
         ) : null}
         {onOpenSettings ? (
@@ -226,7 +220,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             icon={Settings}
             label={t('footer.settings')}
             title={t('footer.openSettings')}
-            data-testid={surfaceTestIds ? 'sidebar-settings-button' : undefined}
+            data-testid="sidebar-settings-button"
           />
         ) : null}
       </div>
@@ -265,8 +259,6 @@ interface SidebarBodyProps {
   isActive: (path: string) => boolean;
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
-  // Forwarded to SidebarFooter — see comment there.
-  surfaceTestIds: boolean;
 }
 
 const SidebarBody: FC<SidebarBodyProps> = ({
@@ -279,7 +271,6 @@ const SidebarBody: FC<SidebarBodyProps> = ({
   isActive,
   onOpenHelp,
   onOpenSettings,
-  surfaceTestIds,
 }) => {
   const { t } = useTranslation();
   // group.label is either a plain display string ("Account") or an
@@ -319,7 +310,6 @@ const SidebarBody: FC<SidebarBodyProps> = ({
         onOpenHelp={onOpenHelp}
         onOpenSettings={onOpenSettings}
         onExpand={onExpand}
-        surfaceTestIds={surfaceTestIds}
       />
     </>
   );
@@ -343,6 +333,7 @@ const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
       <button
         type="button"
         onClick={toggleMobile}
+        data-testid="mobile-menu-toggle"
         className="pad-xs rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
         title={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
@@ -371,19 +362,32 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
     safeSetItem(STORAGE_KEY, String(collapsed));
   }, [collapsed]);
 
+  // Close the drawer when the route changes. The dependency array was empty,
+  // so this ran once on mount — where mobileOpen is already false — and the
+  // drawer therefore never closed on navigation at all. On a phone, tapping a
+  // nav item changed the route and left the drawer covering the page it had
+  // just navigated to, with the toggle the only way out.
+  //
+  // Invisible on desktop, where the drawer is display:none at lg+, which is why
+  // it survived until something drove a real phone viewport (#1320).
   useEffect(() => {
     setMobileOpen(false);
-  }, []);
+  }, [location.pathname]);
 
   const isActive = (path: string) =>
     location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
 
-  // Both asides below stay in the DOM regardless of viewport (responsive
-  // classes only toggle display, not mount). Only the desktop aside emits
-  // sidebar-*-button testids — the mobile copy keeps them undefined so
-  // getByTestId in tests resolves to exactly one element under strict
-  // mode. Same fix shape as stem PR #381.
-  const body = (surfaceTestIds: boolean) => (
+  // Both asides below stay in the DOM regardless of viewport: the responsive
+  // classes toggle display, not mount. So every sidebar testid exists twice,
+  // and a test has to say which surface it means — each aside carries
+  // data-testid="sidebar-mobile" / "sidebar-desktop" and specs scope through
+  // it (see e2e/support/sidebar.ts).
+  //
+  // Previously the mobile copy emitted no testids at all, to keep unscoped
+  // getByTestId calls resolving to one element. That kept the desktop tests
+  // simple and left the mobile navigation undrivable — nothing could open it,
+  // so no test could reach any mobile layout (#1320).
+  const body = () => (
     <SidebarBody
       groups={groups}
       collapsed={collapsed}
@@ -394,7 +398,6 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       isActive={isActive}
       onOpenHelp={onOpenHelp}
       onOpenSettings={onOpenSettings}
-      surfaceTestIds={surfaceTestIds}
     />
   );
 
@@ -419,19 +422,21 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       ) : null}
 
       <aside
+        data-testid="sidebar-mobile"
         className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-surface-raised/95 backdrop-blur-xl border-r border-surface-border transform transition-transform duration-300 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">{body(false)}</div>
+        <div className="flex flex-col h-full">{body()}</div>
       </aside>
 
       <aside
+        data-testid="sidebar-desktop"
         className={`hidden lg:flex fixed top-0 left-0 z-40 h-full flex-col bg-gradient-to-b from-rail-from to-rail-to backdrop-blur-xl border-r border-hairline transition-all duration-300 ease-in-out ${
           collapsed ? 'w-16' : 'w-[252px]'
         }`}
       >
-        {body(true)}
+        {body()}
       </aside>
 
       <main

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { disableAnimations } from './helpers/auth';
+import { sidebar } from './support/sidebar';
 
 /**
  * Help Drawer — version-badge contract test.
@@ -24,19 +25,19 @@ test.describe('Help Drawer', () => {
   });
 
   test('clicking the sidebar Help button opens the drawer', async ({ page }) => {
-    await page.getByTestId('sidebar-help-button').click();
+    await sidebar(page).getByTestId('sidebar-help-button').click();
     await expect(page.getByTestId('help-drawer')).toBeVisible();
   });
 
   test('the version badge renders and matches /NIAC v.+/', async ({ page }) => {
-    await page.getByTestId('sidebar-help-button').click();
+    await sidebar(page).getByTestId('sidebar-help-button').click();
     const badge = page.getByTestId('help-drawer-version');
     await expect(badge).toBeVisible();
     await expect(badge).toHaveText(/NIAC v.+/);
   });
 
   test('clicking the close affordance dismisses the drawer', async ({ page }) => {
-    await page.getByTestId('sidebar-help-button').click();
+    await sidebar(page).getByTestId('sidebar-help-button').click();
     const drawer = page.getByTestId('help-drawer');
     await expect(drawer).toBeVisible();
 

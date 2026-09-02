@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { sidebar } from './support/sidebar';
 
 /**
  * Error Scenario Tests
@@ -23,7 +24,9 @@ import { expect, test } from '@playwright/test';
 
 /** The app shell rendered, and no render-crash fallback replaced it. */
 async function expectShellSurvives(page: import('@playwright/test').Page): Promise<void> {
-  await expect(page.getByTestId('sidebar-settings-button')).toBeVisible({ timeout: 15000 });
+  await expect(sidebar(page).getByTestId('sidebar-settings-button')).toBeVisible({
+    timeout: 15000,
+  });
   await expect(page.getByTestId('error-boundary-fallback')).toHaveCount(0);
 }
 
