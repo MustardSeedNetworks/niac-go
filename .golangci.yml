@@ -15,6 +15,10 @@ version: "2"
 run:
   timeout: 5m
   tests: true
+  # Without this, every //go:build integration file is invisible to the linter
+  # on every platform — a silent "false clear", not a pass.
+  build-tags:
+    - integration
   modules-download-mode: readonly
   allow-parallel-runners: true
   relative-path-mode: gomod
