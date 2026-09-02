@@ -1,0 +1,53 @@
+# Wire-level integration suite.
+#
+# internal/wiretest asserts on frames rather than structs: it stands a real veth
+# pair up, serves a generated pack on one end, and reads what actually arrives on
+# the other. That needs root, iproute2 and a machine whose network state the job
+# may reshape, so it cannot run per-PR on a hosted runner.
+#
+# It is also not reachable from one. The lab host (dev-srv-ubuntu, 10.44.30.30)
+# is RFC1918 with outbound-only connectivity, so a GitHub-hosted runner cannot
+# SSH in; the job has to execute ON the lab network. Hence a self-hosted runner
+# rather than an SSH-driven hosted one.
+#
+# PREREQUISITE — NOT YET SATISFIED. No self-hosted runner is registered to this
+# repository or the organization (`gh api repos/:owner/:repo/actions/runners`
+# returns total_count 0). Until an owner registers one on the lab network with
+# the labels below, this workflow is inert: scheduled runs will queue and expire
+# rather than fail. Registration needs an owner-provisioned runner token and is
+# tracked as the human step under P1-1 in ~/.claude/plans/niac-v1-plan.md.
+name: Wire Nightly
+
+on:
+  schedule:
+    # 03:30 UTC — after the lab's nightly soak window, before the workday.
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # The suite owns a fixed namespace and veth pair on the runner host; two
+  # concurrent runs would delete each other's links mid-test.
+  group: wire-nightly
+  cancel-in-progress: false
+
+jobs:
+  wire:
+    name: Wire integration (lab)
+    runs-on: [self-hosted, linux, msn-lab]
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Run the wire suite
+        # Root is required to create the network namespace and veth pair. The
+        # runner account needs passwordless sudo for go on the lab host.
+        run: sudo --preserve-env=PATH,GOPATH,GOCACHE,GOMODCACHE go test -tags integration ./internal/wiretest/... -count=1 -v
