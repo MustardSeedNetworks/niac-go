@@ -77,8 +77,7 @@ func TestMain(m *testing.M) {
 
 	code := 0
 	if err := cmd.Run(); err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			code = exit.ExitCode()
 		} else {
 			fmt.Fprintf(os.Stderr, "wiretest: re-exec failed: %v\n", err)
