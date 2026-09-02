@@ -105,6 +105,22 @@ export default defineConfig({
       testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Firefox'] },
     },
+    // Edge, because the authoring plan's Definition of Complete names Chrome,
+    // Edge and Safari as first-class authoring browsers and only two of the
+    // three were covered. `channel: 'msedge'` drives the real installed Edge
+    // rather than Chromium — the point is Edge's own integration, since the
+    // engine underneath is already exercised by the chromium project.
+    //
+    // Scoped to the authoring journey the criterion actually names — compose a
+    // scenario, edit a device, author a behaviour timeline — rather than the
+    // whole suite. Edge and Chromium share Blink, so running everything twice
+    // buys little; what is worth checking is that the journey completes in
+    // Edge's own shell.
+    {
+      name: 'edge',
+      testMatch: /(behavior-timeline|scenario-pack|device-editor)\.spec\.ts/,
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
     {
       name: 'tablet-safari',
       testMatch: /.*\.mobile\.spec\.ts/,
