@@ -3,11 +3,6 @@
 # GitHub added Windows-on-Arm hosted runners after actionlint's built-in label
 # list was cut, so `windows-11-arm` is reported as unknown. It is a real
 # GitHub-hosted label, used by the Windows arm64 release build.
-#
-# `msn-lab` marks the self-hosted runner on the lab network that the wire
-# integration suite needs. The suite reshapes network state and must reach
-# 10.44.30.0/24, neither of which a hosted runner can do.
 self-hosted-runner:
   labels:
     - windows-11-arm
-    - msn-lab
