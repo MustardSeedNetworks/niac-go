@@ -41,10 +41,14 @@ export const Default: Story = {
   },
 };
 
+// A chrome-less dialog still needs a name; with no visible heading to point
+// at, ariaLabel is the way to give it one. The story previously passed neither
+// and rendered a dialog a screen reader announces as "dialog" and nothing else.
 export const NoTitleNoCloseButton: Story = {
   args: {
     isOpen: true,
     showCloseButton: false,
+    ariaLabel: 'Example dialog',
     onClose: () => undefined,
     children: <SampleBody />,
   },
