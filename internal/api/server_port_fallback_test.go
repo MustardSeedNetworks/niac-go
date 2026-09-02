@@ -37,18 +37,58 @@ func TestBindWithFallback_FreePort(t *testing.T) {
 	}
 }
 
+// holdPortWithFreeSuccessor returns a listener occupying some port P, having
+// first confirmed P+1 is bindable, and the value of P.
+//
+// The confirmation is the point. The ephemeral port the OS hands out says
+// nothing about its successor, and on Windows the successor can land in a
+// range WinNAT/Hyper-V has reserved, where bind fails with WSAEACCES ("an
+// attempt was made to access a socket in a way forbidden by its access
+// permissions") rather than WSAEADDRINUSE. isAddrInUse correctly does not
+// treat a permissions error as "in use", so the walk stops and the caller
+// sees a fall-through — a red job that says nothing about the fallback logic
+// under test.
+//
+// Observed on a windows-latest merge_group run at 127.0.0.1:49664, which
+// ejected a PR from the merge queue. Whether the walk SHOULD step over a
+// reserved port is a separate product question, filed rather than decided
+// here; this only makes the test deterministic about what it is asserting.
+func holdPortWithFreeSuccessor(t *testing.T) (net.Listener, int) {
+	t.Helper()
+
+	const attempts = 20
+	for range attempts {
+		hold, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("hold listen: %v", err)
+		}
+		port := hold.Addr().(*net.TCPAddr).Port
+
+		// Probe the successor and release it again immediately. A port that
+		// binds now can in principle be taken before bindWithFallback reaches
+		// it, but nothing else on the runner is claiming single ports in this
+		// range, and a reserved block — the failure being guarded against —
+		// stays reserved.
+		probe, probeErr := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port+1))
+		if probeErr == nil {
+			_ = probe.Close()
+			return hold, port
+		}
+		_ = hold.Close()
+	}
+
+	t.Skipf("no ephemeral port with a bindable successor after %d attempts", attempts)
+	return nil, 0
+}
+
 // TestBindWithFallback_FallsBackOneStep grabs a port, holds it open, then
 // expects bindWithFallback to land on requested+1. This is the regression
 // test for #1537: on Windows, before the platform split, isAddrInUse never
 // recognised WSAEADDRINUSE and this fell through to a fatal error instead.
 func TestBindWithFallback_FallsBackOneStep(t *testing.T) {
-	hold, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("hold listen: %v", err)
-	}
+	hold, taken := holdPortWithFreeSuccessor(t)
 	defer func() { _ = hold.Close() }()
 
-	taken := hold.Addr().(*net.TCPAddr).Port
 	addr := "127.0.0.1:" + strconv.Itoa(taken)
 
 	ln, bound, err := bindWithFallback(context.Background(), silentLogger(), addr)
