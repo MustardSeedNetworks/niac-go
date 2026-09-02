@@ -40,14 +40,14 @@ func TestDHCPLeaseComesFromTheAuthoredPool(t *testing.T) {
 	if !ack.YourClientIP.Equal(offered) {
 		t.Errorf("DHCPACK yiaddr = %s, want the offered %s — the server did not honour its own offer", ack.YourClientIP, offered)
 	}
-	if router := dhcpOptionIP(ack, layers.DHCPOptRouter); !router.Equal(net.ParseIP(edge.DHCPConfig.Router)) {
+	if router := dhcpOptionIP(ack, layers.DHCPOptRouter); !router.Equal(edge.DHCPConfig.Router) {
 		t.Errorf("DHCPACK router option = %s, want the authored %s", router, edge.DHCPConfig.Router)
 	}
 }
 
 // addrWithin reports whether addr falls inside the inclusive authored range.
-func addrWithin(addr net.IP, start, end string) bool {
-	a, s, e := addr.To4(), net.ParseIP(start).To4(), net.ParseIP(end).To4()
+func addrWithin(addr, start, end net.IP) bool {
+	a, s, e := addr.To4(), start.To4(), end.To4()
 	if a == nil || s == nil || e == nil {
 		return false
 	}
