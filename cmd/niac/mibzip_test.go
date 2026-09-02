@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 func TestRunMibZipCompressInspectExpand(t *testing.T) {
