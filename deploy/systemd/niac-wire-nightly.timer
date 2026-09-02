@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the NIAC wire integration suite nightly
+Documentation=https://github.com/MustardSeedNetworks/niac-go/blob/main/scripts/lab/wire-nightly.sh
+
+[Timer]
+# 03:30 UTC, after the lab's soak window and before the workday.
+OnCalendar=*-*-* 03:30:00 UTC
+# A host that was asleep at 03:30 still owes us the run.
+Persistent=true
+RandomizedDelaySec=300
+Unit=niac-wire-nightly.service
+
+[Install]
+WantedBy=timers.target

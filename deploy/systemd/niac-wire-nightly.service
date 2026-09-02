@@ -1,0 +1,24 @@
+[Unit]
+Description=NIAC wire-level integration suite
+Documentation=https://github.com/MustardSeedNetworks/niac-go/blob/main/scripts/lab/wire-nightly.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The suite creates a network namespace and a veth pair, which needs real root
+# rather than an ambient capability set.
+User=root
+# A clone this unit owns. Never point this at a developer checkout: the
+# script resets it to origin/main on every run.
+Environment=NIAC_WIRE_REPO=/var/lib/niac-wire/repo
+Environment=NIAC_WIRE_STATE=/var/lib/niac-wire
+Environment=GOCACHE=/var/cache/niac-wire/go-build
+Environment=GOMODCACHE=/var/cache/niac-wire/go-mod
+ExecStart=/usr/local/bin/niac-wire-nightly.sh
+TimeoutStartSec=1800
+# The suite tears its own namespace down, so this only matters after a kill.
+# Absence is the normal case, so its complaint is not worth a journal line.
+ExecStopPost=-/bin/sh -c 'ip netns del niacwire 2>/dev/null || true'
+StateDirectory=niac-wire
+CacheDirectory=niac-wire
