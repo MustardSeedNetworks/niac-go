@@ -67,12 +67,33 @@ export default defineConfig({
     ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === 'true' || !process.env.CI,
   },
   projects: [
+    // ── Supported breakpoint matrix ──────────────────────────────────────
+    // This list is the contract, not an accumulation. The product is expected
+    // to work on desktop, tablet and phone; before this, every project used a
+    // `Desktop *` preset, so no phone or tablet layout was exercised on any
+    // run and a mobile-only regression shipped green (#1320).
+    //
+    //   desktop  chromium · webkit · firefox   full suite
+    //   tablet   iPad (gen 7)                  smoke subset
+    //   phone    Pixel 7 · iPhone 15           smoke subset
+    //
+    // Real device presets, not `setViewportSize` inside a desktop project: a
+    // narrow window is not a phone. The presets bring the right user agent,
+    // touch support and input modality, which is what decides whether a
+    // control is reachable at all.
+    //
+    // The small screens run only `*.mobile.spec.ts` — the app shell, primary
+    // navigation and the main journey. Running the full suite on five
+    // projects would multiply E2E wall-clock for coverage that is mostly
+    // viewport-independent.
     {
       name: 'chromium',
+      testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'webkit',
+      testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Safari'] },
     },
     // Gecko. docs/WEBUI.md lists Firefox under "Engine CI — critical journeys
@@ -81,7 +102,23 @@ export default defineConfig({
     // and WebKit are Blink and WebKit; nothing here exercised a third engine.
     {
       name: 'firefox',
+      testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'tablet-safari',
+      testMatch: /.*\.mobile\.spec\.ts/,
+      use: { ...devices['iPad (gen 7)'] },
+    },
+    {
+      name: 'mobile-chrome',
+      testMatch: /.*\.mobile\.spec\.ts/,
+      use: { ...devices['Pixel 7'] },
+    },
+    {
+      name: 'mobile-safari',
+      testMatch: /.*\.mobile\.spec\.ts/,
+      use: { ...devices['iPhone 15'] },
     },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).

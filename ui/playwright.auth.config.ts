@@ -12,6 +12,20 @@ export default defineConfig({
   // budget can glob both and see the whole picture.
   reporter: [['list'], ['json', { outputFile: 'playwright-report/results-auth.json' }]],
   testMatch: 'browser-auth.auth.ts',
+  // Spreading baseConfig also carries its form-factor matrix, and a project's
+  // OWN testMatch beats the config-level one above — so the small-screen
+  // projects dragged e2e/app-shell.mobile.spec.ts into this suite, where it ran
+  // against the token-gated daemon with storageState cleared and could not get
+  // past the auth gate. This is a browser-auth check across the three engines;
+  // it has no business running on a phone.
+  //
+  // Derived from baseConfig rather than restated, so adding an engine there
+  // still reaches this suite. Projects carrying their own testMatch are the
+  // form-factor ones and are dropped; testIgnore is stripped because the
+  // config-level testMatch above already scopes this run to one file.
+  projects: (baseConfig.projects ?? [])
+    .filter((project) => !('testMatch' in project && project.testMatch))
+    .map(({ testIgnore: _testIgnore, ...project }) => project),
   fullyParallel: false,
   workers: 1,
   use: {
