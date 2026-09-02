@@ -98,9 +98,9 @@ func startHospital(t *testing.T) *config.Config {
 // report as exactly that rather than as a nil dereference.
 func deviceByName(t *testing.T, cfg *config.Config, name string) *config.Device {
 	t.Helper()
-	for _, device := range cfg.Devices {
-		if device.Name == name {
-			return device
+	for index := range cfg.Devices {
+		if cfg.Devices[index].Name == name {
+			return &cfg.Devices[index]
 		}
 	}
 	t.Fatalf("no device named %q in the generated config", name)
