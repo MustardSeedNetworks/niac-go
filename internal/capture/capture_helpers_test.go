@@ -1,8 +1,11 @@
 package capture
 
 import (
+	"bytes"
 	"errors"
+	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,14 +32,39 @@ func TestRateLimiter_NegativeRate(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_StopIdempotent tests that Stop() is safe to call multiple times.
-func TestRateLimiter_StopIdempotent(_ *testing.T) {
+// TestRateLimiter_StopIdempotent asserts repeated Stop calls are no-ops: the
+// CAS guard means only the first closes done, so the later calls neither panic
+// on a double close nor reopen anything.
+func TestRateLimiter_StopIdempotent(t *testing.T) {
 	rl := NewRateLimiter(50)
 
-	// Stop multiple times should not panic
-	rl.Stop()
-	rl.Stop()
-	rl.Stop()
+	for i := range 3 {
+		rl.Stop()
+
+		if got := rl.stopped.Load(); got != 1 {
+			t.Fatalf("after Stop() call %d: stopped flag = %d, want 1", i+1, got)
+		}
+
+		select {
+		case <-rl.done:
+		default:
+			t.Fatalf("after Stop() call %d: done channel still open", i+1)
+		}
+	}
+}
+
+// captureLogs redirects the default slog logger into a buffer for the duration
+// of the test, so a level-gated helper can be asserted on what it emitted.
+func captureLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var buf bytes.Buffer
+
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	return &buf
 }
 
 // TestRateLimiter_DrainAndRefill tests that tokens refill after being drained.
@@ -129,75 +157,112 @@ func TestPlaybackEngine_IsStoppedAfterClose(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_LogError tests logError at various debug levels.
+// TestPlaybackEngine_LogError asserts logError emits only at debug level 1+.
 func TestPlaybackEngine_LogError(t *testing.T) {
 	tests := []struct {
 		name       string
 		debugLevel int
+		wantLog    bool
 	}{
-		{"debug 0 - no log", 0},
-		{"debug 1 - logs", 1},
-		{"debug 3 - logs", 3},
+		{"debug 0 - no log", 0, false},
+		{"debug 1 - logs", 1, true},
+		{"debug 3 - logs", 3, true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := captureLogs(t)
+
 			pb := &PlaybackEngine{
 				debugLevel: tt.debugLevel,
 				stopChan:   make(chan struct{}),
 			}
 
-			// Should not panic at any debug level
 			pb.logError("test error", "key", "value")
+
+			assertLogged(t, buf, tt.wantLog, "test error", "key=value")
 		})
 	}
 }
 
-// TestPlaybackEngine_LogBasic tests logBasic at various debug levels.
+// assertLogged checks whether the captured log holds the expected message and
+// attribute, or is empty when the level gate should have suppressed it.
+func assertLogged(t *testing.T, buf *bytes.Buffer, want bool, msg, attr string) {
+	t.Helper()
+
+	got := buf.String()
+
+	if !want {
+		if got != "" {
+			t.Errorf("debug level suppressed nothing; logged %q", got)
+		}
+
+		return
+	}
+
+	if !strings.Contains(got, msg) {
+		t.Errorf("log missing message %q; got %q", msg, got)
+	}
+
+	if !strings.Contains(got, attr) {
+		t.Errorf("log missing attribute %q; got %q", attr, got)
+	}
+}
+
+// TestPlaybackEngine_LogBasic asserts logBasic emits only at debugLevelBasic+.
 func TestPlaybackEngine_LogBasic(t *testing.T) {
 	tests := []struct {
 		name       string
 		debugLevel int
+		wantLog    bool
 	}{
-		{"debug 0 - no log", 0},
-		{"debug 1 - no log", 1},
-		{"debug 2 - logs", 2},
-		{"debug 3 - logs", 3},
+		{"debug 0 - no log", 0, false},
+		{"debug 1 - no log", 1, false},
+		{"debug 2 - logs", 2, true},
+		{"debug 3 - logs", 3, true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := captureLogs(t)
+
 			pb := &PlaybackEngine{
 				debugLevel: tt.debugLevel,
 				stopChan:   make(chan struct{}),
 			}
 
-			// Should not panic at any debug level
 			pb.logBasic("test message", "packets", 42)
+
+			assertLogged(t, buf, tt.wantLog, "test message", "packets=42")
 		})
 	}
 }
 
-// TestPlaybackEngine_LogPlaybackComplete tests completion logging.
+// TestPlaybackEngine_LogPlaybackComplete asserts the completion line is gated at
+// debugLevelBasic and carries the packet count it was given.
 func TestPlaybackEngine_LogPlaybackComplete(t *testing.T) {
 	tests := []struct {
 		name       string
 		debugLevel int
+		wantLog    bool
 	}{
-		{"below threshold - no log", 1},
-		{"at threshold - logs", 2},
-		{"above threshold - logs", 3},
+		{"below threshold - no log", 1, false},
+		{"at threshold - logs", 2, true},
+		{"above threshold - logs", 3, true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := captureLogs(t)
+
 			pb := &PlaybackEngine{
 				debugLevel: tt.debugLevel,
 				stopChan:   make(chan struct{}),
 			}
 
-			// Should not panic
 			pb.logPlaybackComplete(time.Now().Add(-1*time.Second), 100)
+
+			assertLogged(t, buf, tt.wantLog, "Playback complete", "packets=100")
 		})
 	}
 }
@@ -473,12 +538,17 @@ func TestErrPlaybackSentinels(t *testing.T) {
 	}
 }
 
-// TestPlaybackEngine_StopNotRunning tests Stop when not running.
-func TestPlaybackEngine_StopNotRunning(_ *testing.T) {
+// TestPlaybackEngine_StopNotRunning asserts Stop returns early on an engine that
+// never started, leaving stopChan untouched — closing it here would panic the
+// real Stop that follows a real Start.
+func TestPlaybackEngine_StopNotRunning(t *testing.T) {
 	pb := &PlaybackEngine{
 		stopChan: make(chan struct{}),
 	}
 
-	// Should not panic when stopping a non-running engine
 	pb.Stop()
+
+	if pb.isStopped() {
+		t.Error("Stop() on a non-running engine closed stopChan")
+	}
 }

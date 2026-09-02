@@ -1,10 +1,13 @@
 package capture
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -87,26 +90,51 @@ func TestRateLimiter_Wait_RateLimiting(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_Stop tests clean shutdown.
-func TestRateLimiter_Stop(_ *testing.T) {
-	rl := NewRateLimiter(100)
+// TestRateLimiter_Stop asserts Stop closes the done channel and that refilling
+// actually ceases: a drained bucket stays empty across several tick periods.
+func TestRateLimiter_Stop(t *testing.T) {
+	const pps = 100
 
-	// Stop should not panic
+	rl := NewRateLimiter(pps)
+
+	// Drain the initial bucket so any post-Stop refill is observable.
+	for range pps {
+		<-rl.tokens
+	}
+
 	rl.Stop()
-	// Verify ticker stopped (accessing stopped ticker doesn't panic)
-	// We can't directly test the goroutine exit without race detector,
-	// but Stop() closes done channel which causes goroutine to exit
+
+	select {
+	case <-rl.done:
+	default:
+		t.Error("Stop() left the done channel open")
+	}
+
+	if got := rl.stopped.Load(); got != 1 {
+		t.Errorf("stopped flag = %d, want 1", got)
+	}
+
+	// Three tick periods: a live refill goroutine would have added tokens.
+	time.Sleep(3 * time.Second / pps)
+
+	if got := len(rl.tokens); got != 0 {
+		t.Errorf("bucket refilled after Stop(): %d tokens, want 0", got)
+	}
 }
 
-// TestRateLimiter_Stop_NoLeaks tests that goroutine exits after Stop.
-func TestRateLimiter_Stop_NoLeaks(_ *testing.T) {
-	// This test verifies goroutine cleanup by creating/stopping many rate limiters
+// TestRateLimiter_Stop_NoLeaks asserts the refill goroutine is gone once Stop
+// returns. Stop waits on the WaitGroup, so the count is exact, not approximate.
+func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
+	before := runtime.NumGoroutine()
+
 	for range 100 {
 		rl := NewRateLimiter(100)
 		rl.Stop()
 	}
-	// If goroutines don't exit, this would accumulate many goroutines
-	// Run with -race flag to detect leaks
+
+	if after := runtime.NumGoroutine(); after > before {
+		t.Errorf("goroutines leaked: %d before, %d after 100 create/stop cycles", before, after)
+	}
 }
 
 // TestRateLimiter_ConcurrentWait tests concurrent Wait() calls.
@@ -195,11 +223,27 @@ func TestGetInterface_NonExistent(t *testing.T) {
 	}
 }
 
-// TestListInterfaces tests listing all interfaces.
-func TestListInterfaces(_ *testing.T) {
-	// This test just verifies ListInterfaces doesn't panic
-	// We can't easily capture stdout to verify output
-	ListInterfaces()
+// TestListInterfaces asserts the listing names every interface libpcap reports.
+func TestListInterfaces(t *testing.T) {
+	devices, err := pcap.FindAllDevs()
+	if err != nil {
+		t.Fatalf("cannot enumerate interfaces: %v", err)
+	}
+
+	if len(devices) == 0 {
+		t.Fatal("no network interfaces found; enumeration needs no privileges and must find at least loopback")
+	}
+
+	var buf bytes.Buffer
+
+	ListInterfaces(&buf)
+
+	out := buf.String()
+	for _, device := range devices {
+		if !strings.Contains(out, device.Name) {
+			t.Errorf("listing omitted interface %q; got:\n%s", device.Name, out)
+		}
+	}
 }
 
 // TestEngine_New_InvalidInterface tests engine creation with invalid interface.

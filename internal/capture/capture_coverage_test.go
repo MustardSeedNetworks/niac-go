@@ -287,15 +287,31 @@ func TestEngine_SendPacket_Error(t *testing.T) {
 	}
 }
 
-// TestEngine_Close_NilHandle tests Close with nil handle.
-func TestEngine_Close_NilHandle(_ *testing.T) {
-	engine := &Engine{
-		interfaceName: "test",
-		handle:        nil,
-	}
+// TestEngine_Close asserts Close reaches the handle when there is one and is a
+// no-op when New failed and left the handle nil.
+func TestEngine_Close(t *testing.T) {
+	t.Run("nil handle", func(t *testing.T) {
+		engine := &Engine{
+			interfaceName: "test",
+			handle:        nil,
+		}
 
-	// Should not panic
-	engine.Close()
+		engine.Close()
+
+		if engine.handle != nil {
+			t.Error("Close() populated a nil handle")
+		}
+	})
+
+	t.Run("live handle", func(t *testing.T) {
+		engine, handle := newFakeEngine(0)
+
+		engine.Close()
+
+		if got := handle.closeCount(); got != 1 {
+			t.Errorf("handle Close count = %d, want 1", got)
+		}
+	})
 }
 
 // --- Playback tests for Start with debug logging paths ---

@@ -39,18 +39,6 @@ func TestInterfaceExists_MultipleCalls(t *testing.T) {
 	}
 }
 
-// TestListInterfaces_NoError tests that listing doesn't panic.
-func TestListInterfaces_NoError(t *testing.T) {
-	// Should not panic
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("ListInterfaces panicked: %v", r)
-		}
-	}()
-
-	ListInterfaces()
-}
-
 // TestGetInterface_AllInterfaces tests getting all available interfaces.
 func TestGetInterface_AllInterfaces(t *testing.T) {
 	devices, err := pcap.FindAllDevs()
@@ -155,22 +143,27 @@ func TestGetInterface_VeryLongName(t *testing.T) {
 	}
 }
 
-// TestInterfaceExists_Concurrency tests concurrent calls.
-func TestInterfaceExists_Concurrency(_ *testing.T) {
-	done := make(chan bool, 10)
+// TestInterfaceExists_Concurrency asserts concurrent lookups of a real
+// interface all agree; the race detector covers the shared enumeration.
+func TestInterfaceExists_Concurrency(t *testing.T) {
+	devices, err := pcap.FindAllDevs()
+	if err != nil || len(devices) == 0 {
+		t.Fatal("no interfaces available for the concurrency test")
+	}
 
-	// Launch multiple goroutines
+	name := devices[0].Name
+	results := make(chan bool, 10)
+
 	for range 10 {
 		go func() {
-			_ = InterfaceExists("lo")
-
-			done <- true
+			results <- InterfaceExists(name)
 		}()
 	}
 
-	// Wait for all
-	for range 10 {
-		<-done
+	for i := range 10 {
+		if !<-results {
+			t.Errorf("concurrent call %d reported %q missing", i+1, name)
+		}
 	}
 }
 

@@ -374,7 +374,7 @@ func handleInformationalFlags(flags *legacyFlags, args []string, info versionInf
 	// Handle list interfaces flag
 	if flags.listInterfaces {
 		fmt.Fprintln(os.Stdout, "Available network interfaces:")
-		capture.ListInterfaces()
+		capture.ListInterfaces(os.Stdout)
 		return true
 	}
 
@@ -406,7 +406,7 @@ func validateInterface(interfaceName string) error {
 	if !capture.InterfaceExists(interfaceName) {
 		logging.Errorf("Interface '%s' not found", interfaceName)
 		fmt.Fprintln(os.Stdout, "\nAvailable interfaces:")
-		capture.ListInterfaces()
+		capture.ListInterfaces(os.Stdout)
 		return fmt.Errorf("interface not found: %s", interfaceName)
 	}
 	return nil
