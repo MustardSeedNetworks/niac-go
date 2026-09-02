@@ -14,7 +14,7 @@ interface ScenarioPackPickerProps {
 
 const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onChange }) => {
   const { t } = useTranslation('pages');
-  const { t: common } = useTranslation('common');
+  const { t: tCommon } = useTranslation('common');
   const { data: packs, loading, error, refetch } = useApiResource(fetchScenarioPacks, []);
   const selected = packs?.find((pack) => JSON.stringify(pack.request) === JSON.stringify(request));
 
@@ -70,7 +70,7 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onCha
         <div className="flex items-center gap-default" role="alert">
           <SmallText className="text-status-error">{t('newSimWizard.fleet.packsError')}</SmallText>
           <Button size="sm" variant="outline" onClick={() => void refetch()}>
-            {common('buttons.retry')}
+            {tCommon('buttons.retry')}
           </Button>
         </div>
       )}

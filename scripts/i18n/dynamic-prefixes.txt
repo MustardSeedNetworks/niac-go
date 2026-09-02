@@ -44,14 +44,6 @@ protocols:categories.
 errors:generic.
 errors:validation.
 
-# common.buttons.* / common.labels.* / common.status.* — intentional
-# UI primitive reserve. Stable EN+ES baseline of vocabulary that
-# components may reach for as the codebase grows. Not pruning so
-# new code doesn't have to round-trip a locale PR for "Save".
-common:buttons.
-common:labels.
-common:status.
-
 # common.format.* — formatBytes/formatDurationMs/formatUptime/
 # formatRelativeTime use t() with computed keys (bytesB/bytesKB/
 # durationMs/durationS etc.) keyed off the magnitude.
@@ -105,28 +97,147 @@ errors:walk.
 help:drawer.
 help:footer.
 
-# pages.<key>.{label,title,description} — usePages() hook (in
-# pageRegistry.tsx) generates the route table via t(`${i18nKey}.label`)
-# / t(`${i18nKey}.title`) / t(`${i18nKey}.description`) for registered pages.
-# Same pattern for the `deviceEditor.{new,edit}{Label,Title,
-# Description}` six keys consumed by App.tsx's inline PageConfig.
-pages:dashboard.
-pages:runtime.
-pages:devices.
-pages:deviceLibrary.
-pages:deviceEditor.
-pages:topology.
-pages:automation.
-pages:traffic.
-pages:debug.
-pages:packets.
-pages:configDiff.
-pages:walkValidator.
-pages:libraryWalks.
-pages:libraryPcaps.
-pages:newSimWizard.
-pages:walkAnalyzer.
-pages:license.
+# pages.* — the page registry and a handful of data-driven label tables are
+# the only dynamic consumers in this namespace, so they are listed key by key
+# rather than as a `pages:<page>.` prefix per page.
+#
+# A bare per-page prefix preserves the WHOLE namespace, which is far more than
+# the dynamic lookups need: configDiff carries 89 keys, debug 57 and
+# libraryFiles 51, nearly all of them ordinary copy reached by literal t()
+# calls the analyzer reads perfectly well. Preserving them hid dead copy from
+# both removeUnusedKeys and the unused-key report — five dead
+# dashboard.status.* keys survived every gate that way (#1343).
+
+# usePages() (pageRegistry.ts) builds the route table with
+# t(`${i18nKey}.label`) / .title / .description, and reads an OPTIONAL
+# eyebrow via t(`${i18nKey}.eyebrow`, { defaultValue: '' }).
+pages:dashboard.label
+pages:dashboard.title
+pages:dashboard.description
+pages:dashboard.eyebrow
+pages:runtime.label
+pages:runtime.title
+pages:runtime.description
+pages:runtime.eyebrow
+pages:devices.label
+pages:devices.title
+pages:devices.description
+pages:devices.eyebrow
+pages:deviceLibrary.label
+pages:deviceLibrary.title
+pages:deviceLibrary.description
+pages:deviceLibrary.eyebrow
+pages:deviceEditor.label
+pages:deviceEditor.title
+pages:deviceEditor.description
+pages:deviceEditor.eyebrow
+pages:topology.label
+pages:topology.title
+pages:topology.description
+pages:topology.eyebrow
+pages:automation.label
+pages:automation.title
+pages:automation.description
+pages:automation.eyebrow
+pages:traffic.label
+pages:traffic.title
+pages:traffic.description
+pages:traffic.eyebrow
+pages:debug.label
+pages:debug.title
+pages:debug.description
+pages:debug.eyebrow
+pages:packets.label
+pages:packets.title
+pages:packets.description
+pages:packets.eyebrow
+pages:configDiff.label
+pages:configDiff.title
+pages:configDiff.description
+pages:configDiff.eyebrow
+pages:walkValidator.label
+pages:walkValidator.title
+pages:walkValidator.description
+pages:walkValidator.eyebrow
+pages:libraryWalks.label
+pages:libraryWalks.title
+pages:libraryWalks.description
+pages:libraryWalks.eyebrow
+pages:libraryPcaps.label
+pages:libraryPcaps.title
+pages:libraryPcaps.description
+pages:libraryPcaps.eyebrow
+pages:newSimWizard.label
+pages:newSimWizard.title
+pages:newSimWizard.description
+pages:newSimWizard.eyebrow
+pages:walkAnalyzer.label
+pages:walkAnalyzer.title
+pages:walkAnalyzer.description
+pages:walkAnalyzer.eyebrow
+pages:license.label
+pages:license.title
+pages:license.description
+pages:license.eyebrow
+
+# App.tsx's inline PageConfig covers the device editor's new/edit variants
+# with the same template-literal shape.
+pages:deviceEditor.newLabel
+pages:deviceEditor.newTitle
+pages:deviceEditor.newDescription
+pages:deviceEditor.editLabel
+pages:deviceEditor.editTitle
+pages:deviceEditor.editDescription
+
+# The label tables below hold their i18n key in a `labelKey` field and render
+# it with t(`...${labelKey}`), so the analyzer sees the render site but never
+# the key. Listed at the narrowest prefix covering each table.
+
+# TopologyLegend.tsx — DEVICE_TYPES[] and UTILIZATION_BANDS[] labelKeys.
+pages:topology.legend.deviceType
+pages:topology.legend.utilization
+
+# BpfFilterBar.tsx — PRESETS[] labelKeys, rendered via tPages(preset.labelKey).
+pages:packets.bpfFilter.preset
+
+# WalkProfileSource.tsx — t(`walkAnalyzer.profile.${mode}Tab`) over
+# ['import','capture'].
+pages:walkAnalyzer.profile.captureTab
+pages:walkAnalyzer.profile.importTab
+
+# NewSimulationWizardPage.tsx — t(`newSimWizard.steps.${id}`) over the
+# wizard's step ids.
+pages:newSimWizard.steps.
+
+# BehaviorPhaseActions.tsx — t(`newSimWizard.behaviors.faults.${type}`) over
+# the fault types the daemon supports.
+pages:newSimWizard.behaviors.faults.
+
+# TierBands.tsx — a constant map from tier name to key, then t(key).
+pages:topology.tiers.
+
+# DevicesPage.tsx — a validator returns 'deviceFragmentInvalid' /
+# 'deviceFragmentNameMissing' as a key name which is then translated.
+pages:devices.deviceFragment
+
+# DevicesStep.tsx — the draft-editing view tabs render
+# t(`newSimWizard.devices.${tab}Label`) over ['visual','behaviors','yaml'].
+pages:newSimWizard.devices.visualLabel
+pages:newSimWizard.devices.behaviorsLabel
+pages:newSimWizard.devices.yamlLabel
+
+# FleetGeneratorCard.tsx — two data-driven label loops:
+# t(`newSimWizard.fleet.${field}`) over ['domain','snmpCommunity',
+# 'attachmentName'], and t(`newSimWizard.fleet.counts.${field}`) over the
+# whole device-count table.
+pages:newSimWizard.fleet.domain
+pages:newSimWizard.fleet.snmpCommunity
+pages:newSimWizard.fleet.attachmentName
+pages:newSimWizard.fleet.counts.
+
+# ScenarioPackPicker.tsx — t(`newSimWizard.fleet.packMetadata.${pack.id}.name`)
+# and .description; pack ids come from the daemon's pack catalogue.
+pages:newSimWizard.fleet.packMetadata.
 
 # protocols.filters.* / protocols.labels.* — discovery-protocol UI
 # (CDP/LLDP/EDP/FDP filtering chip + neighbor table) reads filter
