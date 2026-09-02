@@ -5,6 +5,33 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.89](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.88...v0.94.89) (2026-09-02)
+
+
+### Bug Fixes
+
+* **i18n:** narrow the preserve patterns so dead keys are visible ([#1677](https://github.com/MustardSeedNetworks/niac-go/issues/1677)) ([3e35487](https://github.com/MustardSeedNetworks/niac-go/commit/3e354877af7cdb6dfee8f5687a1c6bf040ba6f49)), closes [#1343](https://github.com/MustardSeedNetworks/niac-go/issues/1343)
+* **test:** stop the port-fallback test depending on which port it gets ([#1683](https://github.com/MustardSeedNetworks/niac-go/issues/1683)) ([1839df8](https://github.com/MustardSeedNetworks/niac-go/commit/1839df8b6be658c3fc12a51eafd1364872c43d3e))
+
+
+### Tests
+
+* **e2e:** cover phone and tablet viewports ([#1680](https://github.com/MustardSeedNetworks/niac-go/issues/1680)) ([6e50348](https://github.com/MustardSeedNetworks/niac-go/commit/6e50348535cfec01c0d9f03e496f15ab21050feb)), closes [#1320](https://github.com/MustardSeedNetworks/niac-go/issues/1320)
+* **i18n:** fail the test that renders an unresolved key ([#1678](https://github.com/MustardSeedNetworks/niac-go/issues/1678)) ([0e51344](https://github.com/MustardSeedNetworks/niac-go/commit/0e51344cfc0aca4ebd3c532d06365229a14124ce)), closes [#1669](https://github.com/MustardSeedNetworks/niac-go/issues/1669)
+* **protocols:** decode EDP and FDP advertisements end to end ([#1675](https://github.com/MustardSeedNetworks/niac-go/issues/1675)) ([04c1e2a](https://github.com/MustardSeedNetworks/niac-go/commit/04c1e2a69723351b295bb3b34872511a1b71da19)), closes [#1329](https://github.com/MustardSeedNetworks/niac-go/issues/1329)
+* **storybook:** run the stories, and let a11y violations fail the build ([#1679](https://github.com/MustardSeedNetworks/niac-go/issues/1679)) ([153a245](https://github.com/MustardSeedNetworks/niac-go/commit/153a2458b1f098b82df4545afacfd0c84377691a)), closes [#1321](https://github.com/MustardSeedNetworks/niac-go/issues/1321) [#1668](https://github.com/MustardSeedNetworks/niac-go/issues/1668)
+
+
+### Continuous Integration
+
+* compile the windows build target ([#1676](https://github.com/MustardSeedNetworks/niac-go/issues/1676)) ([b9f328a](https://github.com/MustardSeedNetworks/niac-go/commit/b9f328ad95496ad7f6a257d4c19612a141418439)), closes [#1523](https://github.com/MustardSeedNetworks/niac-go/issues/1523)
+* pick up the i18n gate that runs extraction ([#1681](https://github.com/MustardSeedNetworks/niac-go/issues/1681)) ([1782b8a](https://github.com/MustardSeedNetworks/niac-go/commit/1782b8a01110f6b1af723f3cabf1e17ae0e4753c)), closes [#1342](https://github.com/MustardSeedNetworks/niac-go/issues/1342)
+
+
+### Miscellaneous
+
+* four small corrections ([#1673](https://github.com/MustardSeedNetworks/niac-go/issues/1673)) ([bf99eb2](https://github.com/MustardSeedNetworks/niac-go/commit/bf99eb2c2e74b09907aa1c4339a32295d635c472)), closes [#1337](https://github.com/MustardSeedNetworks/niac-go/issues/1337) [#1341](https://github.com/MustardSeedNetworks/niac-go/issues/1341) [#1344](https://github.com/MustardSeedNetworks/niac-go/issues/1344) [#1346](https://github.com/MustardSeedNetworks/niac-go/issues/1346)
+
 ## [0.94.88](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.87...v0.94.88) (2026-09-01)
 
 
