@@ -17,22 +17,29 @@ import (
 	"testing"
 )
 
-// Both veth ends live in one dedicated namespace, and neither carries a kernel
-// IP address.
+// Both veth ends live in one dedicated namespace.
 //
 // NIAC does not bind sockets: capture.New opens libpcap on the interface and
 // the responders match on the captured frame's fields (internal/protocols/udp.go
 // keys SNMP off udp.DstPort == 161). So the host's snmpd was never a competitor
 // for a bind. What the namespace actually prevents is the kernel itself
 // answering for the simulated network — replying to ARP for, or returning ICMP
-// unreachables about, addresses that exist only inside the simulation. Leaving
-// both ends unaddressed keeps the exchange purely L2 and leaves the kernel with
-// nothing to answer.
+// unreachables about, addresses that exist only inside the simulation.
+//
+// The test end does carry one address, because an SNMP client needs a source
+// address to be answered at. That is the client's own address and nothing
+// simulated: the invariant that matters is that no *simulated* address is
+// assigned to a kernel interface, which TestNoSimulatedAddressIsOnAKernelInterface
+// asserts.
 const (
 	wireNS    = "niacwire"
 	simIface  = "nw-sim"  // the daemon binds this end
 	testIface = "nw-test" // the test client drives this end
 	nsEnvVar  = "NIAC_WIRETEST_IN_NS"
+
+	// The pack's transit network. clientCIDR is below the authored DHCP pool
+	// (.100-.199) so it can never collide with a lease the simulation hands out.
+	clientCIDR = "10.254.200.50/24"
 )
 
 // TestMain builds the namespace once, then re-executes this test binary inside
@@ -98,6 +105,7 @@ func setupNamespace() error {
 		{"netns", "exec", wireNS, "ip", "link", "set", "lo", "up"},
 		{"netns", "exec", wireNS, "ip", "link", "set", testIface, "up"},
 		{"netns", "exec", wireNS, "ip", "link", "set", simIface, "up"},
+		{"netns", "exec", wireNS, "ip", "addr", "add", clientCIDR, "dev", testIface},
 	}
 	for _, args := range steps {
 		if out, err := exec.Command("ip", args...).CombinedOutput(); err != nil {

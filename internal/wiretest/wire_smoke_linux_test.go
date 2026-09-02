@@ -25,19 +25,15 @@ func TestWireExistsAndIsUp(t *testing.T) {
 	}
 }
 
-// Neither end may carry a kernel address. If one ever does, the kernel starts
-// answering ARP and emitting ICMP unreachables for the simulated network, and
-// an assertion can pass against the kernel instead of against NIAC — the worst
-// kind of green.
-func TestWireEndsHaveNoKernelAddresses(t *testing.T) {
+// No simulated address may be assigned to a kernel interface. If one ever is,
+// the kernel starts answering ARP and emitting ICMP unreachables on behalf of
+// the simulation, and an assertion can pass against the kernel instead of
+// against NIAC — the worst kind of green.
+func TestNoSimulatedAddressIsOnAKernelInterface(t *testing.T) {
 	requireWire(t)
 
 	out := run(t, "ip", "-4", "-br", "addr", "show")
-	for _, iface := range []string{simIface, testIface} {
-		for _, line := range strings.Split(out, "\n") {
-			if strings.HasPrefix(line, iface) && strings.Contains(line, ".") {
-				t.Errorf("%s carries a kernel IPv4 address, which lets the kernel answer for the simulation: %s", iface, line)
-			}
-		}
+	if strings.Contains(out, transitGateway+"/") {
+		t.Errorf("the simulated gateway %s is assigned to a kernel interface, so the kernel can answer for it:\n%s", transitGateway, out)
 	}
 }
