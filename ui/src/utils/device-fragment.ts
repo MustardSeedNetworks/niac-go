@@ -34,15 +34,29 @@ function lineStart(source: string, offset: number): number {
  */
 function blockEnd(source: string, start: number, valueEnd: number): number {
   const nextNewline = source.indexOf('\n', valueEnd);
-  let end = nextNewline === -1 ? source.length : nextNewline + 1;
-  while (end > start) {
-    const lastLineStart = lineStart(source, end - 1);
-    if (source.slice(lastLineStart, end).trim() !== '') {
+  const end = nextNewline === -1 ? source.length : nextNewline + 1;
+  return trimTrailingBlankLines(source, start, end);
+}
+
+/** Start of the line the next sequence item begins on, or null when this is
+ * the last item. */
+function nextItemStart(source: string, next: unknown): number | null {
+  const range = (next as Node | undefined)?.range;
+  return range ? lineStart(source, range[0]) : null;
+}
+
+/** Walks `end` back over blank lines, so the gap between two devices belongs
+ * to neither of them and editing one does not close up the spacing. */
+function trimTrailingBlankLines(source: string, start: number, end: number): number {
+  let trimmed = end;
+  while (trimmed > start) {
+    const lastLineStart = lineStart(source, trimmed - 1);
+    if (source.slice(lastLineStart, trimmed).trim() !== '') {
       break;
     }
-    end = lastLineStart;
+    trimmed = lastLineStart;
   }
-  return end;
+  return trimmed;
 }
 
 /**
@@ -61,7 +75,7 @@ export function findDeviceFragment(configText: string, deviceName: string): Devi
     return null;
   }
 
-  for (const item of devices.items) {
+  for (const [index, item] of devices.items.entries()) {
     if (!isMap(item) || item.get('name') !== deviceName) {
       continue;
     }
@@ -71,7 +85,19 @@ export function findDeviceFragment(configText: string, deviceName: string): Devi
     }
     const [nodeStart, valueEnd] = range;
     const start = lineStart(configText, nodeStart);
-    const end = blockEnd(configText, start, valueEnd);
+
+    // Bounded by where the next device starts, not by scanning forward from
+    // this one's value-end. A block map's value-end can already sit on the
+    // following line, and scanning from there swallowed the next device's
+    // `- name:` line whenever the two were adjacent -- which is how the
+    // daemon writes every config it saves, since yaml.Marshal puts no blank
+    // line between sequence items. Splicing that fragment back deleted the
+    // following device and grafted its fields onto this one.
+    const nextStart = nextItemStart(configText, devices.items[index + 1]);
+    const end =
+      nextStart === null
+        ? blockEnd(configText, start, valueEnd)
+        : trimTrailingBlankLines(configText, start, nextStart);
     const block = configText.slice(start, end);
 
     // The first line carries the `- ` marker; the rest are indented to line up

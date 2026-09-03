@@ -114,3 +114,40 @@ describe('spliceDeviceFragment', () => {
     }
   });
 });
+
+describe('adjacent devices', () => {
+  // The daemon writes every config it saves through yaml.Marshal, which puts
+  // no blank line between sequence items. Editing a device in such a config
+  // used to consume the next device's `- name:` line: the splice deleted that
+  // device and grafted its fields onto the edited one.
+  const adjacent = `devices:
+  - name: dev-a
+    type: router
+  - name: dev-b
+    type: server
+`;
+
+  it('stops the fragment at the next device', () => {
+    const fragment = findDeviceFragment(adjacent, 'dev-a');
+
+    expect(fragment?.text).toBe('name: dev-a\ntype: router\n');
+  });
+
+  it('leaves the following device intact when the edit is spliced back', () => {
+    const fragment = findDeviceFragment(adjacent, 'dev-a');
+    if (!fragment) throw new Error('expected a fragment for dev-a');
+
+    const result = spliceDeviceFragment(adjacent, fragment, 'name: dev-a\ntype: firewall\n');
+
+    expect(result).toBe(`devices:
+  - name: dev-a
+    type: firewall
+  - name: dev-b
+    type: server
+`);
+  });
+
+  it('still finds the last device, which has no next sibling', () => {
+    expect(findDeviceFragment(adjacent, 'dev-b')?.text).toBe('name: dev-b\ntype: server\n');
+  });
+});
