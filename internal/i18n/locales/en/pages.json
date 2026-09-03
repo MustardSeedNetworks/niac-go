@@ -600,6 +600,7 @@
     "steps": {
       "devices": "Devices",
       "finish": "Finish",
+      "networks": "Networks",
       "preflight": "Connection",
       "protocols": "Protocols",
       "review": "Review",

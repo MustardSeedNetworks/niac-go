@@ -13,6 +13,7 @@ import { generateScenario } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
+import { NetworksStep } from '../components/wizard/NetworksStep';
 import { PreflightStep } from '../components/wizard/PreflightStep';
 import { ProtocolsStep } from '../components/wizard/ProtocolsStep';
 import { ReviewStep } from '../components/wizard/ReviewStep';
@@ -40,6 +41,15 @@ const EMPTY_CONFIG_YAML = 'devices: []\n';
 function newDraftName(now = new Date()) {
   return `scenario-${now.toISOString().replaceAll(/[-:.TZ]/g, '')}`;
 }
+
+/**
+ * Steps that edit the draft's content and so must save before navigating.
+ *
+ * This was `=== 'devices'` when Devices was the only editing step. Leaving it
+ * that way would have let the Networks and Protocols steps change the draft
+ * and silently drop it on Next or Back.
+ */
+const CONTENT_EDITING_STEPS = new Set(['devices', 'networks', 'protocols']);
 
 function selectedSourceKey(state: WizardState) {
   if (state.source === 'template' && state.template) return `template:${state.template.name}`;
@@ -166,7 +176,7 @@ export const NewSimulationWizardPage: FC = () => {
   }, [draft, discardDraft]);
 
   const goBack = useCallback(async () => {
-    if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
+    if (CONTENT_EDITING_STEPS.has(WIZARD_STEPS[state.step] ?? '') && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
   }, [saveDraft, state.step]);
 
@@ -190,7 +200,7 @@ export const NewSimulationWizardPage: FC = () => {
       await prepareConfig();
       return;
     }
-    if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
+    if (CONTENT_EDITING_STEPS.has(WIZARD_STEPS[state.step] ?? '') && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.min(WIZARD_STEPS.length - 1, s.step + 1) }));
   }, [state.step, prepareConfig, saveDraft]);
 
@@ -302,8 +312,23 @@ export const NewSimulationWizardPage: FC = () => {
             onBusyChange={(saving) => setState((s) => ({ ...s, saving }))}
           />
         )}
+        {currentStep === 'networks' && draft && (
+          <NetworksStep
+            content={draftContent}
+            onChange={(content) => {
+              setDraftContent(content);
+              setDraftDirty(content !== draft.content);
+            }}
+          />
+        )}
         {currentStep === 'protocols' && draft && (
-          <ProtocolsStep name={draft.name} content={draft.content} />
+          <ProtocolsStep
+            content={draftContent}
+            onChange={(content) => {
+              setDraftContent(content);
+              setDraftDirty(content !== draft.content);
+            }}
+          />
         )}
         {currentStep === 'review' && draft && (
           <ReviewStep name={draft.name} content={draft.content} />

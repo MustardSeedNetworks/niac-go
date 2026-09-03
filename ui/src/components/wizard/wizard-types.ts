@@ -9,10 +9,14 @@ import type { LibraryNetwork, Template } from '../../api/types';
  * NewSimulationWizard step identifiers, in stepper order. Kept as a
  * const tuple (not an enum) so the stepper can derive index/label
  * arrays from the same source of truth.
+ *
+ * `networks` sits after `devices` because addressing needs devices to exist
+ * before it can put them on a network.
  */
 export const WIZARD_STEPS = [
   'template',
   'devices',
+  'networks',
   'protocols',
   'review',
   'preflight',

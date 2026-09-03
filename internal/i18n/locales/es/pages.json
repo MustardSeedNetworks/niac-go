@@ -343,12 +343,13 @@
       "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"
     },
     "steps": {
-      "template": "Plantilla",
-      "preflight": "Conexión",
       "devices": "Dispositivos",
+      "finish": "Finalizar",
+      "networks": "Redes",
+      "preflight": "Conexión",
       "protocols": "Protocolos",
       "review": "Revisión",
-      "finish": "Finalizar"
+      "template": "Plantilla"
     },
     "template": {
       "interfaceLabel": "Interfaz de red",
