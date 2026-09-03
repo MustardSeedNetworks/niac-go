@@ -27,7 +27,7 @@ func TestRoutePolicyManifest(t *testing.T) {
 		t.Fatalf("GET /__capabilities: status = %d, want 200", rec.Code)
 	}
 
-	var views []routePolicyView
+	var views []RoutePolicy
 	if err := json.Unmarshal(rec.Body.Bytes(), &views); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestRoutePolicyManifest(t *testing.T) {
 		t.Fatal("expected a non-empty route manifest")
 	}
 
-	byPath := make(map[string]routePolicyView, len(views))
+	byPath := make(map[string]RoutePolicy, len(views))
 	for _, v := range views {
 		byPath[v.Path] = v
 	}
@@ -142,7 +142,7 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 
 // fetchRouteManifest registers the full route table and returns the
 // /__capabilities manifest keyed by path.
-func fetchRouteManifest(t *testing.T) map[string]routePolicyView {
+func fetchRouteManifest(t *testing.T) map[string]RoutePolicy {
 	t.Helper()
 	server, _, _ := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
@@ -156,11 +156,11 @@ func fetchRouteManifest(t *testing.T) map[string]routePolicyView {
 		t.Fatalf("GET /__capabilities: status = %d, want 200", rec.Code)
 	}
 
-	var views []routePolicyView
+	var views []RoutePolicy
 	if err := json.Unmarshal(rec.Body.Bytes(), &views); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
-	byPath := make(map[string]routePolicyView, len(views))
+	byPath := make(map[string]RoutePolicy, len(views))
 	for _, v := range views {
 		byPath[v.Path] = v
 	}

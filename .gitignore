@@ -6,6 +6,7 @@
 /niac
 /niac-convert
 /niac-schema
+/niac-openapi
 *.exe
 *.dll
 *.so
