@@ -41,7 +41,7 @@ configuration.
 ### Supported Protocols by Layer
 
 | Layer | Protocols |
-|-------|-----------|
+| ------- | ----------- |
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
@@ -78,7 +78,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable LLDP |
 | `system_name` | string | No | device name | System name advertised |
 | `system_description` | string | No | "" | Device description |
@@ -135,7 +135,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable CDP |
 | `platform` | string | No | "" | Platform/model identifier |
 | `capabilities` | string | No | "Switch" | Device capabilities |
@@ -164,7 +164,7 @@ sudo tcpdump -i en0 ether dst 01:00:0c:cc:cc:cc
 #### LLDP vs CDP Comparison
 
 | Feature | LLDP | CDP |
-|---------|------|-----|
+| --------- | ------ | ----- |
 | Standard | IEEE 802.1AB (open) | Cisco proprietary |
 | Multi-vendor | ✅ Yes | ❌ Cisco only |
 | Default interval | 30 seconds | 60 seconds |
@@ -252,7 +252,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable STP |
 | `bridge_priority` | integer | No | 32768 | Bridge priority (0-61440) |
 | `hello_time` | integer | No | 2 | BPDU interval (1-10 seconds) |
@@ -263,7 +263,7 @@ devices:
 #### STP Versions
 
 | Version | Standard | Convergence | Use Case |
-|---------|----------|-------------|----------|
+| --------- | ---------- | ------------- | ---------- |
 | STP | IEEE 802.1D | 30-50 seconds | Legacy compatibility |
 | RSTP | IEEE 802.1w | <6 seconds | Modern networks (recommended) |
 | MSTP | IEEE 802.1s | <6 seconds | VLAN-aware, complex topologies |
@@ -271,7 +271,7 @@ devices:
 #### Bridge Priority Values
 
 | Priority | Purpose |
-|----------|---------|
+| ---------- | --------- |
 | 0 or 4096 | Force as root bridge |
 | 8192 | Secondary/backup root |
 | 32768 | Default (let election decide) |
@@ -356,7 +356,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMP responses |
 | `ttl` | integer | No | 64 | Time to live (1-255) |
 
@@ -406,7 +406,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMPv6 responses |
 | `hop_limit` | integer | No | 255 | Hop limit (RFC 4861) |
 
@@ -528,14 +528,14 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DHCP server |
 | `pools` | array | Yes | [] | DHCP address pools |
 
 **Pool Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `network` | string | Yes | - | Network CIDR (e.g., 10.0.0.0/24) |
 | `range_start` | string | Yes | - | First IP in range |
 | `range_end` | string | Yes | - | Last IP in range |
@@ -632,14 +632,14 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DNS server |
 | `forward_records` | array | No | [] | A records (hostname -> IP) |
 
 **Forward Record Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `name` | string | Yes | - | Fully qualified domain name |
 | `ip` | string | Yes | - | IPv4 or IPv6 address |
 | `ttl` | integer | No | 3600 | Time to live (seconds) |
@@ -698,7 +698,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable HTTP server |
 | `port` | integer | No | 80 | TCP port |
 | `endpoints` | array | No | [] | HTTP endpoints |
@@ -706,7 +706,7 @@ devices:
 **Endpoint Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `path` | string | Yes | - | URL path (e.g., /api/info) |
 | `content` | string | Yes | - | Response content (HTML/JSON) |
 
@@ -762,7 +762,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable FTP server |
 | `port` | integer | No | 21 | TCP port |
 | `users` | array | No | [] | FTP user accounts |
@@ -770,7 +770,7 @@ devices:
 **User Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `username` | string | Yes | - | FTP username |
 | `password` | string | Yes | - | FTP password |
 
@@ -819,7 +819,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable NetBIOS |
 | `name` | string | No | device name | NetBIOS name (15 chars max) |
 | `workgroup` | string | No | "WORKGROUP" | Workgroup name |
@@ -877,7 +877,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable mDNS advertisement |
 | `hostname` | string | No | device name | Published as `<hostname>.local` |
 | `ttl` | integer | No | 120 | Record TTL in seconds |
@@ -886,7 +886,7 @@ devices:
 Each entry in `services` takes:
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `type` | string | Yes | - | DNS-SD service type (e.g. `_ipp._tcp`) |
 | `port` | integer | Yes | - | Port the service listens on |
 | `txt` | array | No | - | TXT record key=value strings |
@@ -961,7 +961,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable SNMP agent |
 | `community` | string | No | "public" | SNMP community string |
 | `walk_file` | string | No | "" | Path to SNMP walk file |

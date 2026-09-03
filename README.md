@@ -58,7 +58,7 @@ sudo ./niac daemon
 ## Commands
 
 | Command | Purpose |
-|---------|---------|
+| --------- | --------- |
 | `niac daemon` | Run with HTTPS web UI control plane (port 8445) |
 | `niac run <iface> <config>` | Run a simulation on a real interface |
 | `niac interactive <iface> <config>` | Run with a TUI dashboard and interactive fault controls |
@@ -148,7 +148,7 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 ## Build
 
 | Command | Purpose |
-|---------|---------|
+| --------- | --------- |
 | `make build` | Full build (frontend + backend) |
 | `make quick` | Backend-only (dev iteration; do **not** ship) |
 | `make test` | Go unit + integration tests |

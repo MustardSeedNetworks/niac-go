@@ -5,7 +5,7 @@ This document describes platform-specific requirements, capabilities, and limita
 ## Platform Support Matrix
 
 | Feature | Linux | macOS | Windows |
-|---------|-------|-------|---------|
+| --------- | ------- | ------- | --------- |
 | LLDP Discovery | Full | Full | Full |
 | CDP Discovery | Full | Full | Full |
 | ARP Scanning | Full | Full | Full |
@@ -187,7 +187,7 @@ Run as Administrator:
 ## Release Architecture Support
 
 | Architecture | Linux | macOS | Windows |
-|--------------|-------|-------|---------|
+| -------------- | ------- | ------- | --------- |
 | x86_64 (AMD64) | ✓ | - | ✓ |
 | ARM64 | ✓ | ✓ (Apple Silicon) | ✓ |
 
@@ -223,7 +223,7 @@ All protocols are supported on all platforms:
 ### Performance Characteristics
 
 | Metric | Linux | macOS | Windows |
-|--------|-------|-------|---------|
+| -------- | ------- | ------- | --------- |
 | Packet capture latency | Lowest | Low | Medium |
 | High-speed capture (10GbE) | Excellent | Good | Good |
 | CPU efficiency | Best | Good | Good |

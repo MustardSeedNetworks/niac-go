@@ -72,5 +72,6 @@
     "url_inline": true
   },
   "MD055": { "style": "leading_and_trailing" },
-  "MD056": true
+  "MD056": true,
+  "MD060": { "style": "compact" }
 }
