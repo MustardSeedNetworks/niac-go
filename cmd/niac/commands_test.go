@@ -454,6 +454,20 @@ func TestShouldUseLegacyCommand(t *testing.T) {
 		{name: "help", args: []string{"help"}, want: false},
 		{name: "double dash compatibility", args: []string{"--", "--dry-run", "lo0", "config.yaml"}, want: false},
 		{name: "no args", args: nil, want: false},
+
+		// --help and -h reach cobra, which owns the command list. They used to
+		// fall through to legacy mode because cobra registers the help flag
+		// during Execute, so the known-root-flag check ran before it existed
+		// and `niac --help` printed the legacy banner.
+		{name: "long help flag", args: []string{"--help"}, want: false},
+		{name: "short help flag", args: []string{"-h"}, want: false},
+		{name: "long version flag", args: []string{"--version"}, want: false},
+
+		// A single unknown word is not a legacy invocation: legacy needs an
+		// interface and a config file. Sending it to cobra is what turns it
+		// into "unknown command" instead of a usage banner and a wrong code.
+		{name: "unknown subcommand", args: []string{"totallybogus"}, want: false},
+		{name: "unknown subcommand with flag", args: []string{"totallybogus", "--json"}, want: false},
 	}
 
 	for _, tt := range tests {

@@ -109,6 +109,7 @@ func main() {
 		addTemplateCommand,
 		addTopologyCommand,
 		addValidateCommand,
+		func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },
 	}
 
 	rootCmd := newRootCommand(

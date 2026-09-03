@@ -63,8 +63,8 @@ sudo ./niac daemon
 | `niac run <iface> <config>` | Run a simulation on a real interface |
 | `niac interactive <iface> <config>` | Run with a TUI dashboard and interactive fault controls |
 | `niac init [out]` | Interactive template wizard |
-| `niac generate [out]` | Interactive configuration generator |
 | `niac validate <config>` | Validate a YAML configuration |
+| `niac version` | Print version, commit and build metadata |
 | `niac template` | Manage built-in scenario templates |
 | `niac status` | Query a running simulation |
 | `niac monitor` | Stream real-time stats |
