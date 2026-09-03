@@ -16,8 +16,15 @@ import (
 // migrateLegacyUserConfigs is the only remaining caller: the directories
 // are still consulted, read-only, once at startup, so nothing already on
 // an operator's disk goes missing when they upgrade.
+// NIAC_CONFIGS_DIR replaces the built-in locations rather than sitting in
+// front of them: an operator who names a configs directory is naming the only
+// one, and searching $HOME behind it migrated another install's networks into
+// a deliberately isolated library (P1-16).
 func getUserConfigDirs() []string {
-	dirs := []string{
+	if customDir := os.Getenv("NIAC_CONFIGS_DIR"); customDir != "" {
+		return []string{customDir}
+	}
+	return []string{
 		// Working directory configs
 		"configs",
 		// System-wide user configs
@@ -25,13 +32,16 @@ func getUserConfigDirs() []string {
 		// User-specific configs
 		os.ExpandEnv("$HOME/.niac/configs"),
 	}
+}
 
-	// Add custom directory from environment variable
-	if customDir := os.Getenv("NIAC_CONFIGS_DIR"); customDir != "" {
-		dirs = append([]string{customDir}, dirs...)
-	}
-
-	return dirs
+// isDaemonInlineConfig reports whether a legacy filename is the daemon's own
+// materialisation of a POSTed config — `_running.inline.yaml`, or
+// `_running.<session>.inline.yaml` for a named session (see
+// internal/daemon's inlineConfigName). Those are scratch files, not something
+// an operator authored, so migrating them published a running scenario under
+// a reserved name.
+func isDaemonInlineConfig(name string) bool {
+	return strings.HasPrefix(name, "_running.") && strings.HasSuffix(name, "inline")
 }
 
 // legacyConfigCandidate is one YAML file found under a legacy config
@@ -57,10 +67,11 @@ func collectLegacyConfigCandidates(dir string) ([]legacyConfigCandidate, error) 
 		if ext != ".yaml" && ext != ".yml" {
 			return nil
 		}
-		candidates = append(candidates, legacyConfigCandidate{
-			path: path,
-			name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
-		})
+		name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		if isDaemonInlineConfig(name) {
+			return nil
+		}
+		candidates = append(candidates, legacyConfigCandidate{path: path, name: name})
 		return nil
 	})
 	return candidates, err

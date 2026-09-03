@@ -410,15 +410,22 @@ func loadSimulationConfig(
 	}
 }
 
+// simulationConfigRoots lists the directories a simulation config may be
+// named out of. NIAC_CONFIGS_DIR replaces the built-in configs locations
+// instead of preceding them, so a daemon started against isolated directories
+// cannot resolve a config out of the invoking user's $HOME (P1-16). The
+// library root and the template search path are governed by their own
+// settings and stay in the list either way.
 func simulationConfigRoots() []string {
-	roots := []string{
-		filepath.Join(library.DefaultRoot(), string(library.KindNetworks)),
-		"configs",
-		"/var/lib/niac/configs",
-		os.ExpandEnv("$HOME/.niac/configs"),
-	}
+	roots := []string{filepath.Join(library.DefaultRoot(), string(library.KindNetworks))}
 	if custom := os.Getenv("NIAC_CONFIGS_DIR"); custom != "" {
 		roots = append([]string{custom}, roots...)
+	} else {
+		roots = append(roots,
+			"configs",
+			"/var/lib/niac/configs",
+			os.ExpandEnv("$HOME/.niac/configs"),
+		)
 	}
 	return append(roots, templates.Dirs()...)
 }

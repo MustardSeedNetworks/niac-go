@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -122,4 +123,48 @@ func writeManagedPathTestConfig(t *testing.T, dir, name string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestSimulationConfigRootsHonoursAnExplicitConfigsDir(t *testing.T) {
+	// NIAC_CONFIGS_DIR names the operator's configs directory. Keeping the
+	// three built-in locations behind it let a daemon under isolated env
+	// dirs resolve a config out of the invoking user's $HOME (P1-16). The
+	// library root and the shipped templates are governed separately and
+	// stay in the search path.
+	libraryRoot := t.TempDir()
+	custom := t.TempDir()
+	t.Setenv("NIAC_LIBRARY_ROOT", libraryRoot)
+	t.Setenv("NIAC_CONFIGS_DIR", custom)
+
+	roots := simulationConfigRoots()
+
+	if len(roots) == 0 || roots[0] != custom {
+		t.Fatalf("roots = %v, want %q first", roots, custom)
+	}
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		t.Fatal(homeErr)
+	}
+	for _, unwanted := range []string{
+		"configs",
+		"/var/lib/niac/configs",
+		filepath.Join(home, ".niac", "configs"),
+	} {
+		if slices.Contains(roots, unwanted) {
+			t.Errorf("roots still contains the built-in location %q: %v", unwanted, roots)
+		}
+	}
+	if !slices.Contains(roots, filepath.Join(libraryRoot, "networks")) {
+		t.Errorf("roots dropped the library networks dir: %v", roots)
+	}
+}
+
+func TestSimulationConfigRootsFallsBackToTheBuiltInLocations(t *testing.T) {
+	t.Setenv("NIAC_CONFIGS_DIR", "")
+
+	roots := simulationConfigRoots()
+
+	if !slices.Contains(roots, "configs") || !slices.Contains(roots, "/var/lib/niac/configs") {
+		t.Fatalf("roots = %v, want the built-in locations when the override is unset", roots)
+	}
 }

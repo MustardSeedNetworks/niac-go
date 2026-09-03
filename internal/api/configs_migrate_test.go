@@ -192,3 +192,49 @@ func TestMigrateLegacyUserConfigsDedupesAcrossDirsByFirstMatch(t *testing.T) {
 		t.Errorf("expected first-dir content to win, got %q", doc.Content)
 	}
 }
+
+func TestGetUserConfigDirsHonoursAnExplicitOverride(t *testing.T) {
+	// An operator who points NIAC_CONFIGS_DIR at a directory is naming the
+	// only place their configs live. Appending $HOME/.niac/configs behind it
+	// pulled another install's networks into an isolated library (P1-16).
+	custom := t.TempDir()
+	t.Setenv("NIAC_CONFIGS_DIR", custom)
+
+	dirs := getUserConfigDirs()
+
+	if len(dirs) != 1 || dirs[0] != custom {
+		t.Fatalf("dirs = %v, want only %q", dirs, custom)
+	}
+}
+
+func TestGetUserConfigDirsFallsBackToTheLegacyLocations(t *testing.T) {
+	t.Setenv("NIAC_CONFIGS_DIR", "")
+
+	dirs := getUserConfigDirs()
+
+	if len(dirs) != 3 {
+		t.Fatalf("dirs = %v, want the three legacy locations", dirs)
+	}
+}
+
+func TestMigrateLegacyUserConfigsSkipsDaemonInlineConfigs(t *testing.T) {
+	// _running*.inline.yaml is the daemon's own materialisation of a POSTed
+	// config, not something an operator authored. Migrating it published a
+	// scratch file as a named network.
+	lib := openMigrateTestLibrary(t)
+	legacyDir := t.TempDir()
+	writeLegacyConfig(t, legacyDir, "_running.inline", migrateSampleYAML)
+	writeLegacyConfig(t, legacyDir, "_running.hospital.inline", migrateSampleYAML)
+	writeLegacyConfig(t, legacyDir, "legacy-net", migrateSampleYAML)
+
+	migrated, err := migrateLegacyUserConfigsFromDirs(lib, []string{legacyDir})
+	if err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	if migrated != 1 {
+		t.Fatalf("migrated = %d, want 1 (the authored config only)", migrated)
+	}
+	if _, readErr := lib.ReadNetwork("_running.inline"); readErr == nil {
+		t.Error("the daemon's inline scratch config reached the library")
+	}
+}
