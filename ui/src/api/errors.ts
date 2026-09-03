@@ -9,6 +9,8 @@
 
 /** Field-level detail attached to an API error response (see internal/api ErrorDetail). */
 export interface ApiErrorDetail {
+  /** Stable finding code, when the source defines one (fabric DiagnosticCode). */
+  readonly code?: string;
   readonly field?: string;
   readonly issue: string;
   readonly value?: string;

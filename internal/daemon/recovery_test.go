@@ -235,7 +235,7 @@ func TestRecoverActiveSimulationRechecksAttachmentPolicy(t *testing.T) {
 	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Running || status.Recovery == nil ||
-		!strings.Contains(status.Recovery.Message, ErrUnsafeTopology.Error()) {
+		!strings.Contains(status.Recovery.Message, fabric.ErrUnsafeTopology.Error()) {
 		t.Fatalf("recovery status = %#v", status)
 	}
 }

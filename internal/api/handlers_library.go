@@ -104,6 +104,13 @@ func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Reque
 	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
 		return
 	}
+	// The library used to accept anything that was non-empty, so a scenario
+	// `niac validate` rejects could sit in the library until a start failed
+	// on it. Refuse it at the door, with the codes every other surface uses.
+	if details := validateScenarioYAML([]byte(req.Content)); len(details) > 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed", details)
+		return
+	}
 	if err := s.library.WriteNetwork(req.Name, req.Content); err != nil {
 		if errors.Is(err, library.ErrInvalidName) {
 			writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)

@@ -57,6 +57,30 @@ const (
 	CodeDHCPAddressCollision     DiagnosticCode = "dhcp_address_collision"
 )
 
+// bindingDiagnosticCodes are the findings that describe a physical deployment
+// rather than the scenario file. Every other code is config-scoped.
+//
+// The split is the contract behind CompileConfig: an authoring surface has no
+// binding, so it reports every config-scoped code a later preflight of the
+// same file will report, and none of these. A new code belongs on this list or
+// it is config-scoped by default -- decide when you add it, not when a surface
+// disagrees.
+func bindingDiagnosticCodes() []DiagnosticCode {
+	return []DiagnosticCode{
+		CodeAttachmentPolicyDenied,
+		CodeHostInterfaceUnavailable,
+		CodeInvalidAccessVLAN,
+		CodeInvalidAttachmentMode,
+		CodeUnknownAttachment,
+	}
+}
+
+// IsBinding reports whether the code describes the physical deployment rather
+// than the scenario file.
+func (c DiagnosticCode) IsBinding() bool {
+	return slices.Contains(bindingDiagnosticCodes(), c)
+}
+
 // Binding maps a scenario attachment to one physical deployment interface.
 type Binding struct {
 	Attachment     string         `json:"attachment"`
