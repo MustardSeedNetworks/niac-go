@@ -31,6 +31,13 @@ export default defineConfig({
       // listed in scripts/i18n/dynamic-prefixes.txt, so these keys are
       // preserved rather than pruned.
       'src/pageRegistry.ts',
+      // The generated device-editor forms label every field through
+      // `editor.fields.{path}`, where the path comes from the schema manifest.
+      // The extractor cannot resolve that template literal and invents a
+      // literal `<path>` key for it. `devices:editor.` is already a preserved
+      // dynamic prefix, so this file's own static chrome keys (addEntry,
+      // removeEntry, mapKey, mapValue, unset) survive the prune.
+      'src/components/device-editor/SchemaFields.tsx',
     ],
     functions: ['t', '*.t', 'i18next.t'],
     useTranslationNames: ['useTranslation'],

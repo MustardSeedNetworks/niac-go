@@ -90,6 +90,13 @@
   "editor": {
     "newDevice": "Nuevo dispositivo",
     "editDevice": "Editar dispositivo",
+    "fields": {
+      "addEntry": "Añadir {{label}}",
+      "mapKey": "Clave",
+      "mapValue": "Valor",
+      "removeEntry": "Eliminar entrada de {{label}}",
+      "unset": "—"
+    },
     "general": "General",
     "interfaces": "Interfaces",
     "trunkPorts": "Puertos trunk",

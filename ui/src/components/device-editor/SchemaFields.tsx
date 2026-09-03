@@ -68,7 +68,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
           onChange={(e) => onChange(e.target.value)}
           className={selectClassName}
         >
-          <option value="">{t('editor.fields.unset', { defaultValue: '—' })}</option>
+          <option value="">{t('editor.fields.unset')}</option>
           {(field.options ?? []).map((option) => (
             <option key={option} value={option}>
               {option}
@@ -170,10 +170,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
             <Button
               variant="ghost"
               size="sm"
-              aria-label={t('editor.fields.removeEntry', {
-                defaultValue: 'Remove {{label}} entry',
-                label,
-              })}
+              aria-label={t('editor.fields.removeEntry', { label })}
               onClick={() => onChange(entries.filter((_, i) => i !== index))}
             >
               <X className={iconSizes.sm} />
@@ -187,7 +184,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
           className="self-start"
         >
           <Plus className={iconSizes.sm} />
-          {t('editor.fields.addEntry', { defaultValue: 'Add {{label}}', label })}
+          {t('editor.fields.addEntry', { label })}
         </Button>
       </fieldset>
     );
@@ -214,7 +211,7 @@ const MapField: FC<{
           <input
             type="text"
             value={key}
-            aria-label={t('editor.fields.mapKey', { defaultValue: 'Key' })}
+            aria-label={t('editor.fields.mapKey')}
             onChange={(e) =>
               onChange(
                 Object.fromEntries(
@@ -227,7 +224,7 @@ const MapField: FC<{
           <input
             type="text"
             value={typeof entryValue === 'string' ? entryValue : ''}
-            aria-label={t('editor.fields.mapValue', { defaultValue: 'Value' })}
+            aria-label={t('editor.fields.mapValue')}
             onChange={(e) =>
               onChange(
                 Object.fromEntries(
@@ -240,10 +237,7 @@ const MapField: FC<{
           <Button
             variant="ghost"
             size="sm"
-            aria-label={t('editor.fields.removeEntry', {
-              defaultValue: 'Remove {{label}} entry',
-              label,
-            })}
+            aria-label={t('editor.fields.removeEntry', { label })}
             onClick={() => onChange(Object.fromEntries(entries.filter((_, i) => i !== index)))}
           >
             <X className={iconSizes.sm} />
@@ -257,7 +251,7 @@ const MapField: FC<{
         onClick={() => onChange({ ...Object.fromEntries(entries), '': '' })}
       >
         <Plus className={iconSizes.sm} />
-        {t('editor.fields.addEntry', { defaultValue: 'Add {{label}}', label })}
+        {t('editor.fields.addEntry', { label })}
       </Button>
     </fieldset>
   );

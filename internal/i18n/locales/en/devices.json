@@ -3,6 +3,13 @@
     "addOid": "Add OID",
     "deletingLabel": "Deleting…",
     "editDevice": "Edit Device",
+    "fields": {
+      "addEntry": "Add {{label}}",
+      "mapKey": "Key",
+      "mapValue": "Value",
+      "removeEntry": "Remove {{label}} entry",
+      "unset": "—"
+    },
     "general": "General",
     "header": {
       "backTitle": "Back to device list",
