@@ -616,7 +616,7 @@ func (v *Validator) validateTrunkPorts(device *Device, prefix string, deviceName
 		trunkPrefix := fmt.Sprintf("%s.trunk_ports[%d]", prefix, i)
 		v.validateSingleTrunkPort(&trunk, trunkPrefix, seenInterfaces, deviceNames)
 		if !IsRoutedTopologyLink(device.Type, trunk) {
-			v.validateTrunkVLANs(trunk.VLANs, trunkPrefix)
+			v.validateTrunkVLANs(trunk.VLANs, trunk.NativeVLAN, trunkPrefix)
 		}
 	}
 }
@@ -654,9 +654,16 @@ func (v *Validator) validateTrunkInterface(
 }
 
 // validateTrunkVLANs validates VLAN IDs on a trunk port.
-func (v *Validator) validateTrunkVLANs(vlans []int, trunkPrefix string) {
+//
+// A port carrying a native VLAN and no tagged ones is an access port, which
+// is how most host-facing links are authored; it has no allowed VLAN list by
+// definition, so warning about the empty list there reports correct authoring
+// as a mistake. The warning is for a port that declares neither.
+func (v *Validator) validateTrunkVLANs(vlans []int, nativeVLAN int, trunkPrefix string) {
 	if len(vlans) == 0 {
-		v.addWarning(trunkPrefix+".vlans", "trunk port has no allowed VLANs configured")
+		if nativeVLAN == 0 {
+			v.addWarning(trunkPrefix+".vlans", "trunk port has no allowed VLANs configured")
+		}
 
 		return
 	}

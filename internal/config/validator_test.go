@@ -299,6 +299,45 @@ func TestValidate_AllowsRoutedTopologyLinkWithoutVLANs(t *testing.T) {
 	}
 }
 
+func TestValidate_AllowsAccessPortWithNativeVLANOnly(t *testing.T) {
+	cfg := &Config{Devices: []Device{
+		{
+			Name: "access-sw", Type: "switch",
+			Interfaces: []Interface{{Name: "Ethernet1"}},
+			TrunkPorts: []TrunkPort{{
+				Interface: "Ethernet1", NativeVLAN: 10,
+				RemoteDevice: "host", RemoteInterface: "eth0",
+			}},
+		},
+		{Name: "host", Type: "workstation"},
+	}}
+
+	result := NewValidator("access.yaml").Validate(cfg)
+
+	if result.HasWarnings() {
+		t.Fatalf("warnings = %#v, want none for an access port", result.Warnings)
+	}
+}
+
+func TestValidate_WarnsOnSwitchPortWithNoVLANsAtAll(t *testing.T) {
+	cfg := &Config{Devices: []Device{
+		{
+			Name: "access-sw", Type: "switch",
+			Interfaces: []Interface{{Name: "Ethernet1"}},
+			TrunkPorts: []TrunkPort{{
+				Interface: "Ethernet1", RemoteDevice: "host", RemoteInterface: "eth0",
+			}},
+		},
+		{Name: "host", Type: "workstation"},
+	}}
+
+	result := NewValidator("unconfigured.yaml").Validate(cfg)
+
+	if !result.HasWarnings() {
+		t.Fatal("want a warning for a switch port declaring neither tagged nor native VLANs")
+	}
+}
+
 func TestIsRoutedTopologyLinkPreservesFDBOnlyMode(t *testing.T) {
 	port := TrunkPort{FDBOnly: true}
 	if IsRoutedTopologyLink("layer3-switch", port) {

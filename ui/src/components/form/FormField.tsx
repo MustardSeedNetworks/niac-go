@@ -13,6 +13,26 @@ export interface FormFieldProps {
   error?: string;
 }
 
+const rowClassName = 'flex items-center gap-compact text-sm font-medium text-text-secondary mb-2';
+
+/**
+ * Hover help for a field.
+ *
+ * It sits beside the label rather than inside it. A tooltip nested in the
+ * <label> becomes part of the control's accessible name, so a field labelled
+ * "Username" with help text announced as "Username Username is the account the
+ * simulated CLI accepts" -- the name and the description run together. Keeping
+ * it a sibling leaves the accessible name as the label alone.
+ */
+const HelpTip: FC<{ text: string }> = ({ text }) => (
+  <span className="relative group">
+    <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} aria-hidden="true" />
+    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-compact-md bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+      {text}
+    </span>
+  </span>
+);
+
 export const FormField: FC<FormFieldProps> = ({
   label,
   children,
@@ -23,36 +43,20 @@ export const FormField: FC<FormFieldProps> = ({
   error,
 }) => (
   <div className={className}>
-    {htmlFor ? (
-      <label
-        htmlFor={htmlFor}
-        className="flex items-center gap-compact text-sm font-medium text-text-secondary mb-2"
-      >
-        {label}
-        {required && <span className="text-status-error">*</span>}
-        {helpText && (
-          <span className="relative group">
-            <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} />
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-compact-md bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-              {helpText}
-            </span>
-          </span>
-        )}
-      </label>
-    ) : (
-      <div className="flex items-center gap-compact text-sm font-medium text-text-secondary mb-2">
-        {label}
-        {required && <span className="text-status-error">*</span>}
-        {helpText && (
-          <span className="relative group">
-            <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} />
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-compact-md bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-              {helpText}
-            </span>
-          </span>
-        )}
-      </div>
-    )}
+    <div className={rowClassName}>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="flex items-center gap-compact">
+          {label}
+          {required && <span className="text-status-error">*</span>}
+        </label>
+      ) : (
+        <span className="flex items-center gap-compact">
+          {label}
+          {required && <span className="text-status-error">*</span>}
+        </span>
+      )}
+      {helpText && <HelpTip text={helpText} />}
+    </div>
     {children}
     {error && (
       <p className="mt-1 text-xs text-status-error" role="alert">
