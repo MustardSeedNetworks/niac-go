@@ -3,7 +3,6 @@ import {
   fetchDevices,
   fetchNeighbors,
   fetchReplayStatus,
-  fetchRuntimeStatus,
   fetchStats,
   fetchTopology,
 } from '../api/client';
@@ -13,7 +12,6 @@ type PrefetchFn = () => Promise<unknown>;
 type SessionPrefetchFn = (sessionId: string) => Promise<unknown>;
 
 const ROUTE_PREFETCH_MAP: Record<string, PrefetchFn[]> = {
-  '/runtime': [fetchRuntimeStatus],
   '/device-config': [fetchConfig],
   '/analysis': [fetchReplayStatus],
 };

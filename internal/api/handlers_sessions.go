@@ -134,7 +134,6 @@ func (s *Server) sessionResourceHandler(resource string) (sessionHandler, bool) 
 		"interfaces": s.handleSessionInterfaces,
 		"segments":   s.handleSessionSegments,
 		"neighbors":  s.handleSessionNeighbors,
-		"behaviors":  s.handleSessionBehaviors,
 		"stats":      s.handleSessionStats,
 		"runtime":    s.handleSessionRuntime,
 	}

@@ -126,7 +126,6 @@ GET /api/v1/sessions/{id}/devices           its device inventory
 GET /api/v1/sessions/{id}/interfaces        its simulated devices' interfaces
 GET /api/v1/sessions/{id}/segments          its VLAN segments
 GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
-GET /api/v1/sessions/{id}/behaviors         its behaviour timeline status
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
 DELETE /api/v1/sessions/{id}                stop that session
@@ -138,7 +137,10 @@ ends up driving a scenario it did not ask for.
 
 `GET /api/v1/sessions/{id}/interfaces` lists the interfaces of the _simulated
 devices_. The unscoped `/api/v1/interfaces` lists the **host's** capture NICs,
-which is a different thing and is not session-scoped.
+which is a different thing and is not session-scoped: it reports the same NICs
+whatever session a client is looking at, and carries no `current_interface`.
+To learn which NIC a session runs on, read that session's entry in
+`GET /api/v1/sessions`.
 
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.

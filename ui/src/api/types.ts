@@ -29,7 +29,6 @@ export type {
   NetworkInterface,
   ReplayRequest,
   ReplayState,
-  RuntimeStatus,
   SegmentSummary,
   SessionSummary,
   SimulationRequest,

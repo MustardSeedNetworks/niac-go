@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/behavior"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
@@ -64,18 +63,6 @@ func (s *Server) handleSessionNeighbors(w http.ResponseWriter, r *http.Request, 
 		neighbors = []protocols.NeighborRecord{}
 	}
 	s.writeJSON(w, neighbors)
-}
-
-func (s *Server) handleSessionBehaviors(w http.ResponseWriter, r *http.Request, session sessionRuntime) {
-	if !requireGet(w, r) {
-		return
-	}
-	stack := session.stack()
-	if stack == nil {
-		s.writeJSON(w, behavior.Status{State: "idle"})
-		return
-	}
-	s.writeJSON(w, stack.BehaviorStatus())
 }
 
 // sessionInterfaceResponse names the device an interface belongs to, which the

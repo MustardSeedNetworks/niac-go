@@ -94,7 +94,7 @@ func TestSessionResourcesTolerateASessionWithNoStack(t *testing.T) {
 	// not an error — the session is real.
 	server := serverWithSessions(map[string][]string{"hospital": {"MED-CORE-SW01"}})
 
-	for _, resource := range []string{"topology", "segments", "neighbors", "behaviors", "interfaces"} {
+	for _, resource := range []string{"topology", "segments", "neighbors", "interfaces"} {
 		recorder := sessionRequest(t, server, "/api/v1/sessions/hospital/"+resource)
 		if recorder.Code != http.StatusOK {
 			t.Errorf("%s: status = %d, want 200", resource, recorder.Code)
@@ -197,5 +197,69 @@ func TestSessionGetStillRequiresAResource(t *testing.T) {
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", recorder.Code)
+	}
+}
+
+// TestSessionInterfacesReportOnlyTheNamedSessionsPorts is the interfaces half
+// of the per-session guarantee TestSessionRoutesReturnOnlyTheNamedSessionsDevices
+// makes for devices. It is deliberately separate from the host's capture NICs,
+// which /api/v1/interfaces serves and which are not session state at all.
+func TestSessionInterfacesReportOnlyTheNamedSessionsPorts(t *testing.T) {
+	server := &Server{simulations: map[string]simulationAPIState{}}
+	for id, device := range map[string]struct {
+		name  string
+		ports []string
+	}{
+		"hospital":  {"MED-CORE-SW01", []string{"Gi0/1", "Gi0/2"}},
+		"warehouse": {"FUL-CORE-SW01", []string{"Te1/1"}},
+	} {
+		cfg := &config.Config{Devices: []config.Device{{Name: device.name}}}
+		for _, port := range device.ports {
+			cfg.Devices[0].Interfaces = append(cfg.Devices[0].Interfaces,
+				config.Interface{Name: port, Type: "ethernet", AdminStatus: "up", OperStatus: "up"})
+		}
+		server.simulations[id] = simulationAPIState{config: cfg, iface: "eth0"}
+	}
+
+	for _, want := range []struct {
+		session string
+		device  string
+		ports   []string
+	}{
+		{"hospital", "MED-CORE-SW01", []string{"Gi0/1", "Gi0/2"}},
+		{"warehouse", "FUL-CORE-SW01", []string{"Te1/1"}},
+	} {
+		recorder := sessionRequest(t, server, "/api/v1/sessions/"+want.session+"/interfaces")
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want 200", want.session, recorder.Code)
+		}
+		var got []sessionInterfaceResponse
+		if err := json.Unmarshal(recorder.Body.Bytes(), &got); err != nil {
+			t.Fatalf("%s: %v", want.session, err)
+		}
+		if len(got) != len(want.ports) {
+			t.Fatalf("%s: %d interfaces, want %d", want.session, len(got), len(want.ports))
+		}
+		for index, port := range want.ports {
+			if got[index].Device != want.device || got[index].Name != port {
+				t.Errorf("%s[%d] = %s/%s, want %s/%s",
+					want.session, index, got[index].Device, got[index].Name, want.device, port)
+			}
+			if got[index].OperStatus != "up" {
+				t.Errorf("%s[%d] operStatus = %q, want up", want.session, index, got[index].OperStatus)
+			}
+		}
+	}
+}
+
+// TestSessionBehaviorsResourceIsGone records a removal, not a gap. The
+// resource was registered during the session-scoping migration and never had a
+// consumer on either the UI or the CLI side; the global /api/v1/behaviors it
+// shadowed is still served.
+func TestSessionBehaviorsResourceIsGone(t *testing.T) {
+	server := serverWithSessions(map[string][]string{"hospital": {"MED-CORE-SW01"}})
+
+	if got := sessionRequest(t, server, "/api/v1/sessions/hospital/behaviors").Code; got != http.StatusNotFound {
+		t.Errorf("status = %d, want 404 for a resource that is no longer served", got)
 	}
 }
