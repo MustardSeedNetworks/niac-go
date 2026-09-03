@@ -22,6 +22,7 @@ type preflightDaemon struct {
 	stopErr   error
 	selectErr error
 	selected  string
+	stopped   string
 	started   bool
 }
 
@@ -97,7 +98,12 @@ func (d *preflightDaemon) StartSimulation(_ SimulationRequest) error {
 	d.started = true
 	return d.startErr
 }
-func (d *preflightDaemon) StopSimulation(string) error { return d.stopErr }
+
+func (d *preflightDaemon) StopSimulation(sessionID string) error {
+	d.stopped = sessionID
+	return d.stopErr
+}
+
 func (d *preflightDaemon) SelectSimulation(sessionID string) error {
 	d.selected = sessionID
 	return d.selectErr
