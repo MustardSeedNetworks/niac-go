@@ -13,7 +13,6 @@ import type {
   LLDPConfig,
   OSFingerprintConfig,
   STPConfig,
-  TrafficConfig,
   TTLConfig,
 } from './network-protocol-types';
 
@@ -29,7 +28,6 @@ import type {
 
 // Re-export all network protocol types
 export type {
-  ARPAnnouncementConfig,
   CDPConfig,
   ChassisIDType,
   EDPConfig,
@@ -44,12 +42,8 @@ export type {
   LLDPConfig,
   OSFingerprintConfig,
   OSType,
-  PeriodicPingConfig,
-  RandomTrafficConfig,
-  RandomTrafficPattern,
   STPConfig,
   STPVersion,
-  TrafficConfig,
   TTLConfig,
 } from './network-protocol-types';
 // Re-export all service protocol types
@@ -116,7 +110,6 @@ export interface Device {
   icmp?: ICMPConfig;
   icmpv6?: ICMPv6Config;
   dhcpv6?: DHCPv6Config;
-  traffic?: TrafficConfig;
   ttl?: TTLConfig;
   osFingerprint?: OSFingerprintConfig;
   ssh?: SSHConfig;

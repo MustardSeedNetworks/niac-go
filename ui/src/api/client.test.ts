@@ -250,6 +250,39 @@ describe('API Client', () => {
     });
   });
 
+  describe('device create/update payloads', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
+
+    it('strips the server-computed protocols field from createDevice', async () => {
+      const { createDevice } = await import('./client');
+      await createDevice({
+        hostname: 'sw1',
+        mac: '00:11:22:33:44:55',
+        protocols: ['snmp', 'lldp'],
+      });
+
+      const [, options] = required(mockFetch.mock.calls[0], 'the createDevice fetch call');
+      const sent = JSON.parse((options as RequestInit).body as string);
+      expect(sent).not.toHaveProperty('protocols');
+      expect(sent).toMatchObject({ hostname: 'sw1', mac: '00:11:22:33:44:55' });
+    });
+
+    it('strips the server-computed protocols field from updateDevice', async () => {
+      const { updateDevice } = await import('./client');
+      await updateDevice('sw1', { mac: '00:11:22:33:44:55', protocols: ['snmp'] });
+
+      const [, options] = required(mockFetch.mock.calls[0], 'the updateDevice fetch call');
+      const sent = JSON.parse((options as RequestInit).body as string);
+      expect(sent).not.toHaveProperty('protocols');
+      expect(sent).toEqual({ mac: '00:11:22:33:44:55' });
+    });
+  });
+
   describe('uploadPcapWithProgress', () => {
     beforeEach(() => {
       FakeXHR.instances = [];

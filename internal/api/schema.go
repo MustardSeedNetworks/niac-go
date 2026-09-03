@@ -43,10 +43,6 @@ const (
 	defaultICMPTTL          = 64      // default ICMP TTL
 	dhcpv6PreferredLifetime = 604800  // DHCPv6 preferred lifetime (7 days)
 	dhcpv6ValidLifetime     = 2592000 // DHCPv6 valid lifetime (30 days)
-	defaultPingInterval     = 120     // default periodic ping interval
-	defaultPingPayload      = 32      // default ping payload size
-	defaultTrafficInterval  = 180     // default random traffic interval
-	defaultTrafficPacketCnt = 5       // default traffic packet count
 	defaultIperfPort        = 5201    // default iperf port
 	defaultIperfDuration    = 1000    // default iperf duration ms
 	defaultBandwidthMbps    = 100     // default bandwidth in Mbps
@@ -199,7 +195,6 @@ func buildDeviceTypeSchema() *SchemaProperty {
 
 // buildProtocolSchemaProperties returns all protocol-related schema properties.
 func buildProtocolSchemaProperties() map[string]*SchemaProperty {
-	minZero := 0.0
 	maxPort := 65535.0
 	maxPriority := 61440.0
 	maxTTL := 255.0
@@ -221,7 +216,6 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),
 		"dhcpv6":         buildDHCPv6Schema(),
-		"traffic":        buildTrafficSchema(&minZero),
 		"ttl":            buildTTLConfigSchema(&maxTTL),
 		"os_fingerprint": buildOSFingerprintSchema(),
 		"iperf3":         buildIPerf3Schema(&maxPort),

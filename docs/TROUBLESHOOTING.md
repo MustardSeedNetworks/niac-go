@@ -761,7 +761,6 @@ devices:
 2. **Identify traffic sources:**
    - Too many devices
    - Aggressive advertisement intervals
-   - Excessive random traffic
 
 **Solutions:**
 
@@ -773,14 +772,7 @@ devices:
      advertise_interval: 120  # Instead of 60
    ```
 
-2. **Reduce random traffic:**
-   ```yaml
-   traffic:
-     random_traffic:
-       enabled: false  # Disable if not needed
-   ```
-
-3. **Limit device count:**
+2. **Limit device count:**
    - Consider splitting configuration into multiple runs
 
 ### High memory usage

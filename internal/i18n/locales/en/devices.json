@@ -203,24 +203,6 @@
         "selectPrompt": "Select a model...",
         "unsupportedCombo": "This vendor has no profile for this device type."
       },
-      "traffic": {
-        "arpAnnouncementsTitle": "ARP Announcements",
-        "arpIntervalHelp": "Time between ARP announcements",
-        "broadcastArp": "Broadcast ARP",
-        "intervalLabel": "Interval (seconds)",
-        "multicast": "Multicast",
-        "packetCountHelp": "Packets per burst",
-        "packetCountLabel": "Packet Count",
-        "patternsLabel": "Traffic Patterns",
-        "payloadSizeHelp": "Size of ICMP payload",
-        "payloadSizeLabel": "Payload Size (bytes)",
-        "periodicPingsTitle": "Periodic Pings",
-        "pingIntervalHelp": "Time between pings",
-        "randomIntervalHelp": "Time between traffic bursts",
-        "randomTrafficTitle": "Random Traffic",
-        "title": "Traffic Patterns",
-        "udpPattern": "UDP"
-      },
       "yamlPreview": {
         "readOnly": "Read-only",
         "title": "YAML Preview"

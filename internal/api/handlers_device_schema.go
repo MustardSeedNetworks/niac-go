@@ -12,7 +12,7 @@ import (
 //
 // Sections are referenced by the same string keys the editor uses
 // internally ("snmp", "lldp", "cdp", "stp", "dhcp", "dns", "http",
-// "ftp", "netbios", "traffic", "ips", "basic"). "basic" is always
+// "ftp", "netbios", "ips", "basic"). "basic" is always
 // visible — the device's name and type live there.
 type DeviceEditorSchema struct {
 	Type            string   `json:"type"`
@@ -34,56 +34,56 @@ var deviceEditorSchemas = map[string]DeviceEditorSchema{ //nolint:gochecknogloba
 		Type:  "switch",
 		Label: "Switch",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "cdp", "stp", "ips", "traffic",
+			"basic", "snmp", "lldp", "cdp", "stp", "ips",
 		},
 	},
 	"router": {
 		Type:  "router",
 		Label: "Router",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "cdp", "ips", "dhcp", "traffic",
+			"basic", "snmp", "lldp", "cdp", "ips", "dhcp",
 		},
 	},
 	"host": {
 		Type:  "host",
 		Label: "Host / Workstation",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "ips", "dns", "http", "ftp", "netbios", "traffic",
+			"basic", "snmp", "lldp", "ips", "dns", "http", "ftp", "netbios",
 		},
 	},
 	"server": {
 		Type:  "server",
 		Label: "Server",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "ips", "dns", "dhcp", "http", "ftp", "netbios", "traffic",
+			"basic", "snmp", "lldp", "ips", "dns", "dhcp", "http", "ftp", "netbios",
 		},
 	},
 	"firewall": {
 		Type:  "firewall",
 		Label: "Firewall",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "ips", "traffic",
+			"basic", "snmp", "lldp", "ips",
 		},
 	},
 	"access_point": {
 		Type:  "access_point",
 		Label: "Wireless Access Point",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "ips", "traffic",
+			"basic", "snmp", "lldp", "ips",
 		},
 	},
 	"printer": {
 		Type:  "printer",
 		Label: "Printer",
 		VisibleSections: []string{
-			"basic", "snmp", "ips", "traffic",
+			"basic", "snmp", "ips",
 		},
 	},
 	"voip_phone": {
 		Type:  "voip_phone",
 		Label: "VoIP Phone",
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "cdp", "ips", "traffic",
+			"basic", "snmp", "lldp", "cdp", "ips",
 		},
 	},
 	"unknown": {
@@ -92,7 +92,7 @@ var deviceEditorSchemas = map[string]DeviceEditorSchema{ //nolint:gochecknogloba
 		// Fallback shows everything so users with non-standard types
 		// can still configure any field they need.
 		VisibleSections: []string{
-			"basic", "snmp", "lldp", "cdp", "stp", "ips", "dhcp", "dns", "http", "ftp", "netbios", "traffic",
+			"basic", "snmp", "lldp", "cdp", "stp", "ips", "dhcp", "dns", "http", "ftp", "netbios",
 		},
 	},
 }

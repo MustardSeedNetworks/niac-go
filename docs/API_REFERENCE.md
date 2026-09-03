@@ -25,7 +25,6 @@ Complete YAML configuration schema reference for NiAC-Go.
 - [Topology Configuration](#topology-configuration)
   - [Port Channels](#port-channels)
   - [Trunk Ports](#trunk-ports)
-- [Traffic Configuration](#traffic-configuration)
 - [Default Values](#default-values)
 - [Validation Rules](#validation-rules)
 
@@ -81,9 +80,6 @@ devices:
     # Topology configurations (v1.23.0)
     port_channels: [...]
     trunk_ports: [...]
-
-    # Traffic configurations (v1.6.0)
-    traffic: {...}
 ```
 
 ### Core Device Fields
@@ -665,66 +661,6 @@ trunk_ports:
 - `native_vlan`: 1-4094, must be in vlans list
 - `remote_device`: Must exist in devices list (for validation)
 
-## Traffic Configuration
-
-**Traffic Pattern Configuration** - Added in v1.6.0
-
-```yaml
-traffic:
-  enabled: true
-  arp_announcements:
-    enabled: true
-    interval: 60
-  periodic_pings:
-    enabled: true
-    interval: 120
-    payload_size: 32
-  random_traffic:
-    enabled: true
-    interval: 180
-    packet_count: 5
-    patterns: ["broadcast_arp", "multicast", "udp"]
-```
-
-### Fields
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable traffic generation |
-| `arp_announcements` | object | No | - | Gratuitous ARP config |
-| `periodic_pings` | object | No | - | Periodic ICMP config |
-| `random_traffic` | object | No | - | Random traffic config |
-
-### ARP Announcements
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable ARP announcements |
-| `interval` | integer | No | 60 | Interval (seconds) |
-
-### Periodic Pings
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable periodic pings |
-| `interval` | integer | No | 120 | Interval (seconds) |
-| `payload_size` | integer | No | 32 | Payload size (bytes) |
-
-### Random Traffic
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable random traffic |
-| `interval` | integer | No | 180 | Interval (seconds) |
-| `packet_count` | integer | No | 5 | Packets per interval |
-| `patterns` | string array | No | [] | Traffic patterns |
-
-#### Traffic Patterns
-
-- `broadcast_arp`: Broadcast ARP packets
-- `multicast`: Multicast packets
-- `udp`: Random UDP packets
-
 ## Default Values
 
 ### Discovery Protocols
@@ -767,16 +703,6 @@ traffic:
 | SNMP | community | "public" |
 | NetBIOS | workgroup | "WORKGROUP" |
 | NetBIOS | ttl | 300 seconds |
-
-### Traffic Patterns
-
-| Field | Default |
-|-------|---------|
-| arp_announcement_interval | 60 seconds |
-| periodic_ping_interval | 120 seconds |
-| periodic_ping_payload_size | 32 bytes |
-| random_traffic_interval | 180 seconds |
-| random_traffic_packet_count | 5 packets |
 
 ## Validation Rules
 

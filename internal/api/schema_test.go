@@ -161,7 +161,7 @@ func TestBuildProtocolSchemaProperties(t *testing.T) {
 	expectedProtocols := []string{
 		"snmpAgent", "lldp", "cdp", "edp", "fdp", "stp",
 		"dhcp", "dns", "http", "ftp", "netbios",
-		"icmp", "icmpv6", "dhcpv6", "traffic", "ttl",
+		"icmp", "icmpv6", "dhcpv6", "ttl",
 		"os_fingerprint", "ssh", "syslog", "iperf3", "reflector",
 	}
 
@@ -376,20 +376,6 @@ func TestBuildICMPSchema(t *testing.T) {
 	}
 	if _, ok := schema.Properties["ttl"]; !ok {
 		t.Error("missing ttl property")
-	}
-}
-
-func TestBuildTrafficSchema(t *testing.T) {
-	minZero := 0.0
-	schema := buildTrafficSchema(&minZero)
-	if schema.Type != "object" {
-		t.Errorf("type = %q, want %q", schema.Type, "object")
-	}
-	subProps := []string{"arp_announcements", "periodic_pings", "random_traffic"}
-	for _, p := range subProps {
-		if _, ok := schema.Properties[p]; !ok {
-			t.Errorf("missing property: %s", p)
-		}
 	}
 }
 

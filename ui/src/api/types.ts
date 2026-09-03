@@ -60,7 +60,6 @@ export type {
 // Device Configuration Types
 export type {
   AddMib,
-  ARPAnnouncementConfig,
   CDPConfig,
   ChassisIDType,
   CloneDeviceRequest,
@@ -105,15 +104,11 @@ export type {
   NetBIOSService,
   OSFingerprintConfig,
   OSType,
-  PeriodicPingConfig,
-  RandomTrafficConfig,
-  RandomTrafficPattern,
   SNMPAgent,
   SSHConfig,
   STPConfig,
   STPVersion,
   SyslogConfig,
-  TrafficConfig,
   TrapConfig,
   TrapTriggerConfig,
   TTLConfig,

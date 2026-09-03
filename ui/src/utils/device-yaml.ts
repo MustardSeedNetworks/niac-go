@@ -108,9 +108,10 @@ const dns = (device: Device): Record<string, unknown> | null | undefined => {
  * Only fields the daemon's `Device` struct declares are emitted. Notably
  * absent, and deliberately so:
  *
- *   - `traffic` — the daemon has no device-level traffic key at all; the only
- *     `traffic` in its schema belongs to a behaviour phase. Emitting it made
- *     the document unloadable.
+ *   - `traffic` — there is no device-level traffic concept at all; the UI's
+ *     device editor never exposed this field to begin with. The only
+ *     `traffic` in the daemon's schema belongs to a behaviour phase, which
+ *     is a different concept modelled elsewhere.
  *   - `ip` — the daemon has `ips` only, so a single address is folded in.
  *   - `protocols` — server-computed, not configuration.
  */

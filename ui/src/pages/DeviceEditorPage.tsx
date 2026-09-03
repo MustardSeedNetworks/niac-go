@@ -17,7 +17,6 @@ import {
   NetBiosSection,
   SnmpSection,
   StpSection,
-  TrafficSection,
   useDeviceEditor,
   YamlPreviewSection,
 } from '../components/device-editor';
@@ -201,15 +200,6 @@ export const DeviceEditorPage: FC = () => {
           device={device}
           isExpanded={expandedSections.has('netbios')}
           onToggle={() => toggleSection('netbios')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('traffic') && (
-        <TrafficSection
-          device={device}
-          isExpanded={expandedSections.has('traffic')}
-          onToggle={() => toggleSection('traffic')}
           onUpdate={updateField}
         />
       )}

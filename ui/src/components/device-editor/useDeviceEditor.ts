@@ -156,7 +156,6 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       'http',
       'ftp',
       'netbios',
-      'traffic',
     ]);
   }, [schema]);
 
