@@ -1,0 +1,19 @@
+name: shape-probe
+type: switch
+mac: 00:11:22:33:44:55
+ips:
+  - 10.0.0.7
+  - 2001:db8::7
+vlan: 10
+properties:
+  sexagesimal: 00:11:22
+  booleanish: on
+  leading_zero: "0700"
+  version: "1.10"
+  multiline: |-
+    line one
+    line two
+  quoted: 'has "quotes" and a: colon'
+ttl:
+  ttl: 0
+babble: false

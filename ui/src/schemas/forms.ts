@@ -10,11 +10,17 @@ import * as v from 'valibot';
 // Hostname source-of-truth regex (mirrors the Go-side validation).
 const HOSTNAME_REGEX = /^[a-zA-Z][a-zA-Z0-9._-]{0,252}$/;
 
-// MAC + IPv4 regexes mirror the Go `validate:"mac"` / `validate:"ip"` tags on
+// MAC + IP regexes mirror the Go `validate:"mac"` / `validate:"ip"` tags on
 // converter.Device (internal/converter/types.go). Kept here so the device
 // editor can surface format errors inline before the round-trip to the server.
 const MAC_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
-const IPV4_REGEX = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+// `ips` accepts IPv6 too (the clinic scenario authors both), so an IPv4-only
+// check would reject valid authoring. Loose on purpose: the daemon's
+// `validate:"ip"` is the arbiter, this only catches a typo before the trip.
+const IPV4_OCTET = String.raw`(25[0-5]|2[0-4]\d|1?\d?\d)`;
+const IP_REGEX = new RegExp(
+  `^(${IPV4_OCTET}(\\.${IPV4_OCTET}){3}|[0-9A-Fa-f]{0,4}(:[0-9A-Fa-f]{0,4}){2,7})$`,
+);
 
 /**
  * Clone-device form: a single field for the new hostname. The Go side
@@ -83,39 +89,61 @@ export const ErrorInjectionSchema = v.object({
 export type ErrorInjectionFormFields = v.InferOutput<typeof ErrorInjectionSchema>;
 
 /**
- * Device editor: the two always-required identity fields plus the optional
- * primary IP. The device object carries many more (per-protocol) sections, but
- * only these need format-level validation before save — the Go side validates
- * the full structure. `safeParse` against this schema replaces the editor's old
- * presence-only checks (`if (!device.hostname.trim())`) and drives inline field
- * errors. Extra keys on the parsed object are ignored by `v.object`, so it can
- * be run against a whole `Device` without stripping the other sections (the
- * caller keeps using the untouched device for the actual save).
+ * Device editor: the identity fields, validated before the round trip.
+ *
+ * The editor's model is the authored YAML document, so these are the daemon's
+ * own key names. Everything else in the document is validated server-side by
+ * the one validator (P1b-4) and reported with codes; only identity is worth
+ * catching inline, because it is what the author types by hand.
+ *
+ * Identity is `mac` XOR `vendor`, which the daemon enforces as
+ * ErrDeviceMACSourceConflict. `v.forward` attaches the cross-field issue to a
+ * field: a bare `v.check` produces an issue with no path, which no input can
+ * display.
  */
-export const DeviceFormSchema = v.object({
-  hostname: v.pipe(
-    v.string(),
-    v.trim(),
-    v.minLength(1, 'Hostname is required'),
-    v.maxLength(253, 'Hostname is too long (max 253 chars)'),
-    v.regex(
-      HOSTNAME_REGEX,
-      'Hostname must start with a letter and contain only alphanumeric, dots, hyphens, or underscores',
+export const AuthoredDeviceSchema = v.pipe(
+  v.object({
+    // Absent and empty are the same unnamed device to an author, and only one
+    // of them has a message worth showing.
+    name: v.optional(
+      v.pipe(
+        v.string(),
+        v.trim(),
+        v.minLength(1, 'Name is required'),
+        v.maxLength(253, 'Name is too long (max 253 chars)'),
+        v.regex(
+          HOSTNAME_REGEX,
+          'Name must start with a letter and contain only alphanumeric, dots, hyphens, or underscores',
+        ),
+      ),
+      '',
     ),
-  ),
-  mac: v.pipe(
-    v.string(),
-    v.trim(),
-    v.minLength(1, 'MAC address is required'),
-    v.regex(MAC_REGEX, 'MAC must be six hex octets, e.g. 00:1A:2B:3C:4D:5E'),
-  ),
-  ip: v.optional(
-    v.pipe(
-      v.string(),
-      // Primary IP is optional; an empty string means "no management IP".
-      v.check((s) => s === '' || IPV4_REGEX.test(s), 'Primary IP must be a valid IPv4 address'),
+    mac: v.optional(
+      v.pipe(
+        v.string(),
+        v.check(
+          (s) => s === '' || MAC_REGEX.test(s),
+          'MAC must be six hex octets, e.g. 00:1A:2B:3C:4D:5E',
+        ),
+      ),
     ),
+    vendor: v.optional(v.string()),
+    ips: v.optional(
+      v.array(
+        v.pipe(
+          v.string(),
+          v.check((s) => s === '' || IP_REGEX.test(s), 'Each address must be a valid IP address'),
+        ),
+      ),
+    ),
+  }),
+  v.forward(
+    v.check(
+      ({ mac, vendor }) => Boolean(mac?.trim()) !== Boolean(vendor?.trim()),
+      'A device is identified by a MAC address or by a vendor, not both and not neither',
+    ),
+    ['mac'],
   ),
-});
+);
 
-export type DeviceFormFields = v.InferOutput<typeof DeviceFormSchema>;
+export type AuthoredDeviceFormFields = v.InferOutput<typeof AuthoredDeviceSchema>;

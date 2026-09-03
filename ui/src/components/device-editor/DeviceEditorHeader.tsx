@@ -1,13 +1,14 @@
 import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Device, DeviceType } from '../../api/types';
+import type { DeviceType } from '../../api/types';
 import { deviceTypeIcons } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
+import type { AuthoredDevice } from './generated/authored-device.generated';
 
 export interface StatusMessage {
   type: 'success' | 'error';
@@ -15,7 +16,7 @@ export interface StatusMessage {
 }
 
 export interface DeviceEditorHeaderProps {
-  device: Device;
+  device: AuthoredDevice;
   isNewDevice: boolean;
   isDirty: boolean;
   saving: boolean;
@@ -63,9 +64,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
             </button>
             <DeviceIcon className={`${iconSizes.xl} text-brand-accent`} />
             <div>
-              <H2>
-                {isNewDevice ? t('editor.newDevice') : device.hostname || t('editor.editDevice')}
-              </H2>
+              <H2>{isNewDevice ? t('editor.newDevice') : device.name || t('editor.editDevice')}</H2>
               <SmallText className="text-text-muted">
                 {isNewDevice
                   ? t('editor.header.newDeviceSubtitle')

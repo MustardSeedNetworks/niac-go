@@ -1,31 +1,36 @@
 /**
- * Device editor load path — regression guard for D10.
+ * Device editor load path.
  *
- * `GET /api/v1/config/devices/{hostname}` returns the device **flat**, but the
- * hook waited for a `{ device: … }` wrapper that the server never sends. The
- * condition was therefore never true: `reset()` never ran, the form kept
- * react-hook-form's empty defaults, and `originalDevice` stayed null so Discard
- * had nothing to restore. Save remained enabled on a blank form bound to a real
- * hostname, so opening a device and saving would overwrite it with an empty one.
+ * Two defects live here. D10: the hook waited for a `{ device: … }` wrapper the
+ * server never sends, so the form kept its empty defaults while bound to a real
+ * hostname and a save would overwrite the device with nothing. P1b-2: the form
+ * then held the camelCase projection, which covers 56 of the 223 authored
+ * fields, so every other field was dropped on save.
  *
- * The existing useDeviceEditor.test.tsx pins `useParams` to `{hostname:'new'}`
- * for the whole file, and the hook short-circuits that case — so the edit-load
- * path had no coverage at all. This file supplies it, and deliberately mocks
- * `fetchConfigDevice` with the **flat** shape the server actually returns.
+ * The hook now loads `rawYaml` — the document the daemon itself serialized —
+ * so this mocks the response shape the server actually returns, and asserts a
+ * field the projection does not carry survives the load.
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const EXISTING_DEVICE = {
-  hostname: 'LAB-EDGE-R1',
-  type: 'router',
-  mac: '00:00:0c:00:01:01',
-  ip: '10.254.200.1',
-  ips: ['10.254.200.1', '203.0.113.1'],
-  interfaceDetails: [{ name: 'TenGigabitEthernet0/0/0', speed: 10000, duplex: 'full' }],
-  snmpAgent: { enabled: true, community: 'NetAllyDemo', sysname: 'LAB-EDGE-R1' },
-};
+const RAW_YAML = `name: LAB-EDGE-R1
+type: router
+mac: 00:00:0c:00:01:01
+ips:
+  - 10.254.200.1
+  - 203.0.113.1
+snmp_agent:
+  enabled: true
+  community: NetAllyDemo
+  sysname: LAB-EDGE-R1
+mdns:
+  enabled: true
+  services:
+    - type: _workstation._tcp
+      port: 9
+`;
 
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
@@ -37,12 +42,16 @@ vi.mock('react-router', async () => {
   };
 });
 
+const mockUpdateDevice = vi.fn();
 vi.mock('../../api/client', () => ({
-  // Flat — exactly what handleDeviceGet writes. Not { device: … }.
-  fetchConfigDevice: vi.fn().mockResolvedValue(EXISTING_DEVICE),
+  // Flat, with the authored document beside the projection — exactly what
+  // handleDeviceGet writes. Not { device: … }.
+  fetchConfigDevice: vi
+    .fn()
+    .mockResolvedValue({ hostname: 'LAB-EDGE-R1', type: 'router', rawYaml: RAW_YAML }),
   fetchDeviceEditorSchema: vi.fn().mockResolvedValue({ visibleSections: [] }),
   createDevice: vi.fn(),
-  updateDevice: vi.fn(),
+  updateDevice: (...args: unknown[]) => mockUpdateDevice(...args),
   deleteDevice: vi.fn(),
 }));
 
@@ -55,26 +64,34 @@ describe('useDeviceEditor — loading an existing device', () => {
     vi.clearAllMocks();
   });
 
-  it('populates the form from the flat device response', async () => {
+  it('populates the form from the authored document', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
     const { result } = renderHook(() => useDeviceEditor());
 
-    await waitFor(() => {
-      expect(result.current.device.hostname).toBe('LAB-EDGE-R1');
-    });
+    await waitFor(() => expect(result.current.device.name).toBe('LAB-EDGE-R1'));
 
     expect(result.current.device.mac).toBe('00:00:0c:00:01:01');
     expect(result.current.device.type).toBe('router');
+    // `mdns` has no camelCase Device property, which is why the projection lost
+    // it and why the editor reads the document instead.
+    expect(result.current.device.mdns?.services?.[0]?.type).toBe('_workstation._tcp');
   });
 
   it('captures originalDevice so Discard has something to restore', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
     const { result } = renderHook(() => useDeviceEditor());
 
-    await waitFor(() => {
-      expect(result.current.originalDevice).not.toBeNull();
-    });
+    await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
 
-    expect(result.current.originalDevice?.hostname).toBe('LAB-EDGE-R1');
+    expect(result.current.originalDevice?.name).toBe('LAB-EDGE-R1');
+  });
+
+  it('is not dirty until something is edited, so the guard stays quiet', async () => {
+    const { useDeviceEditor } = await import('./useDeviceEditor');
+    const { result } = renderHook(() => useDeviceEditor());
+
+    await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
+
+    expect(result.current.isDirty).toBe(false);
   });
 });

@@ -44,16 +44,6 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "title": "Device",
     "fields": [
       {
-        "name": "vendor",
-        "title": "Vendor",
-        "kind": "string"
-      },
-      {
-        "name": "mac_suffix",
-        "title": "MAC suffix",
-        "kind": "integer"
-      },
-      {
         "name": "vlan",
         "title": "Vlan",
         "kind": "integer"
@@ -1524,4 +1514,20 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "fields": [],
     "kind": "map"
   }
+] as const;
+
+/** The daemon's own `type` vocabulary, for the hand-built type picker. */
+export const DEVICE_TYPES: readonly string[] = [
+  "router",
+  "switch",
+  "layer3-switch",
+  "ap",
+  "access-point",
+  "firewall",
+  "server",
+  "host",
+  "workstation",
+  "iot",
+  "printer",
+  "voip-phone"
 ] as const;

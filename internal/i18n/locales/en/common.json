@@ -46,7 +46,6 @@
     "pause": "Pause",
     "refresh": "Refresh",
     "reload": "Reload",
-    "remove": "Remove",
     "resume": "Resume",
     "retry": "Try again",
     "save": "Save"
@@ -129,7 +128,6 @@
   },
   "labels": {
     "config": "Config",
-    "description": "Description",
     "devices": "Devices",
     "interface": "Interface",
     "interfaces": "Interfaces",

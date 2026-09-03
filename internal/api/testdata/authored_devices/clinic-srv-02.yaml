@@ -1,0 +1,23 @@
+name: clinic-srv-02
+type: server
+vendor: hp
+mac_suffix: 17
+ips:
+  - 10.20.0.11
+ttl:
+  ttl: 128
+icmp:
+  enabled: true
+snmp_agent:
+  enabled: true
+  community: msn_public
+  sysname: clinic-srv-02
+  sysdescr: "Hardware: Intel64 Family 6 - Software: Windows Version 10.0"
+http:
+  enabled: true
+  server_name: Microsoft-IIS/10.0
+netbios:
+  enabled: true
+  names:
+    - name: CLINIC-SRV-02
+      suffix: "20"

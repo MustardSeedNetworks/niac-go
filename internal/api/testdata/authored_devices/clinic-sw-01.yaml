@@ -1,0 +1,85 @@
+name: clinic-sw-01
+type: switch
+vendor: cisco
+mac_suffix: 2
+ips:
+  - 10.20.99.2
+lldp:
+  enabled: true
+  system_description: Cisco Catalyst 9200L-24P clinic access
+  port_description: GigabitEthernet1/0/24
+cdp:
+  enabled: true
+  platform: Cisco C9200L-24P-4G
+  software_version: 17.9.4
+stp:
+  enabled: true
+  bridge_priority: 32768
+  hello_time: 2
+  max_age: 20
+  forward_delay: 15
+snmp_agent:
+  enabled: true
+  community: msn_public
+  sysname: clinic-sw-01
+  sysdescr: Cisco IOS XE Software, C9200L 17.9.4
+  syslocation: Clinic branch, comms closet
+  syscontact: netops@clinic.example
+interfaces:
+  - name: GigabitEthernet1/0/24
+    speed: 1000
+    duplex: full
+    admin_status: up
+    oper_status: up
+    network: clinic-mgmt
+    address: 10.20.99.2/24
+    description: uplink to clinic-rtr-01
+  - name: GigabitEthernet1/0/1
+    speed: 1000
+    duplex: full
+    admin_status: up
+    oper_status: up
+    description: srv-01
+  - name: GigabitEthernet1/0/2
+    speed: 1000
+    duplex: full
+    admin_status: up
+    oper_status: up
+    description: srv-02
+  - name: GigabitEthernet1/0/5
+    speed: 1000
+    duplex: full
+    admin_status: up
+    oper_status: up
+    description: reception-pc
+  - name: GigabitEthernet1/0/6
+    speed: 100
+    duplex: half
+    admin_status: up
+    oper_status: up
+    description: exam-pc (duplex mismatch on purpose)
+  - name: GigabitEthernet1/0/12
+    speed: 1000
+    duplex: full
+    admin_status: up
+    oper_status: up
+    description: ap-01
+trunk_ports:
+  - interface: GigabitEthernet1/0/24
+    remote_device: clinic-rtr-01
+    remote_interface: GigabitEthernet0/0/1
+  - interface: GigabitEthernet1/0/1
+    remote_device: clinic-srv-01
+    remote_interface: eth0
+  - interface: GigabitEthernet1/0/2
+    remote_device: clinic-srv-02
+    remote_interface: eth0
+  - interface: GigabitEthernet1/0/5
+    remote_device: reception-pc
+    remote_interface: eth0
+  - interface: GigabitEthernet1/0/6
+    remote_device: exam-pc
+    remote_interface: eth0
+  - interface: GigabitEthernet1/0/12
+    remote_device: clinic-ap-01
+    remote_interface: eth0

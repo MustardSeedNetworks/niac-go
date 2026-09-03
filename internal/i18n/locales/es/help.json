@@ -55,8 +55,6 @@
     "oid": "Un OID (object identifier) es la dirección numérica con puntos de un único valor en un árbol MIB de SNMP, p. ej. 1.3.6.1.2.1.1.1.0 para sysDescr.",
     "snmpWalk": "Un SNMP walk es una secuencia guardada de pares OID/valor recopilada al recorrer el árbol MIB de un dispositivo con solicitudes GetNext. NIAC reproduce estos archivos para simular las respuestas SNMP de un dispositivo.",
     "fiveTuple": "Una 5-tuple es la combinación (protocolo, IP:puerto de origen, IP:puerto de destino) que identifica de forma única una conversación TCP/UDP.",
-    "netbiosNodeType": "El tipo de nodo NetBIOS controla cómo un host resuelve nombres: B-node usa difusión (broadcast), P-node consulta directamente a un servidor de nombres, M-node difunde primero y recurre al servidor como respaldo, y H-node consulta primero al servidor y recurre a la difusión como respaldo.",
-    "msbrowse": "MSBROWSE es el nombre de grupo NetBIOS especial que un host anuncia para ofrecerse como explorador maestro (master browser) local, el host que mantiene la lista de máquinas compartidas de la red.",
     "librarySource": "los archivos starter vienen incluidos con NIAC, los archivos bundle proceden del paquete de contenido publicado (niac content install), y los archivos user se añadieron o editaron localmente."
   },
   "faq": {

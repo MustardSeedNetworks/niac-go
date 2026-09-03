@@ -3,9 +3,12 @@
 
 The manifest is what the device editor's forms are built from and what the
 authoring-parity gate evidences bindings against, so the invariant that matters
-is coverage: every field the parity baseline lists as unbound has to be
-reachable in the manifest, or the generated editor cannot close that gap no
-matter how the forms are wired.
+is coverage: every field of the daemon's authored Device has to be reachable in
+the manifest or on a hand-built control, with no field owned by both.
+
+This used to compare against the parity baseline's device rows. That was only
+meaningful while the baseline had any: it is now empty of them, so the schema
+itself is the comparison.
 
 Run: scripts/test-gen-device-editor-sections.py
 """
@@ -52,26 +55,35 @@ def manifest_leaves(sections: list[dict]) -> set[str]:
     return leaves
 
 
-def baseline_device_fields() -> list[str]:
-    out = []
-    for raw in (ROOT / "scripts" / "authoring-parity-baseline.txt").read_text(encoding="utf-8").splitlines():
-        line = raw.strip().partition("#")[0].strip()
-        if line.startswith("devices[]."):
-            out.append(line[len("devices[]."):])
-    return out
+def schema_device_fields() -> list[str]:
+    """Every device leaf the parity gate walks, minus the `devices[].` prefix."""
+    spec = importlib.util.spec_from_file_location("gate", ROOT / "scripts" / "check-authoring-parity.py")
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    schema = json.loads((ROOT / gen.SCHEMA).read_text(encoding="utf-8"))
+
+    return [
+        leaf[len("devices[]."):]
+        for leaf in gate.schema_leaves(schema)
+        if leaf.startswith("devices[].")
+    ]
 
 
-def test_manifest_covers_every_unbound_device_field(sections: list[dict]) -> list[str]:
+def test_manifest_covers_every_device_field(sections: list[dict]) -> list[str]:
     leaves = manifest_leaves(sections)
-    missing = [field for field in baseline_device_fields() if field not in leaves]
-    if missing:
-        return [f"manifest cannot render baselined field `{field}`" for field in missing]
-    return []
+    hand_bound = {path[len("devices[]."):] for path in gen.HAND_BOUND_PATHS}
+    missing = [
+        field
+        for field in schema_device_fields()
+        if field not in leaves and field not in hand_bound
+    ]
+
+    return [f"no form can set `{field}`: neither generated nor hand-bound" for field in missing]
 
 
 def test_identity_fields_stay_hand_bound(sections: list[dict]) -> list[str]:
     top = {field["name"] for section in sections if section["key"] == "device" for field in section["fields"]}
-    clashes = sorted(gen.HAND_BOUND & (top | {section["key"] for section in sections}))
+    clashes = sorted(set(gen.HAND_BOUND) & (top | {section["key"] for section in sections}))
     return [f"`{field}` is hand-bound but also generated — two owners for one value" for field in clashes]
 
 
@@ -92,7 +104,7 @@ def main() -> int:
     sections = gen.build(schema)
 
     failures = (
-        test_manifest_covers_every_unbound_device_field(sections)
+        test_manifest_covers_every_device_field(sections)
         + test_identity_fields_stay_hand_bound(sections)
         + test_every_section_has_fields(sections)
         + test_committed_output_is_current()
@@ -105,7 +117,7 @@ def main() -> int:
     print(
         f"gen-device-editor-sections: {len(sections)} sections, "
         f"{len(manifest_leaves(sections))} settable paths, "
-        f"all {len(baseline_device_fields())} baselined device fields covered."
+        f"all {len(schema_device_fields())} device fields covered."
     )
     return 0
 

@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"net"
 	"net/http"
@@ -490,8 +491,15 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 		return nil, depthErr
 	}
 
+	// KnownFields, because this is the device editor's save path: a key the
+	// authored Device does not declare is a misnamed field, and dropping it
+	// silently is the failure this whole rewrite exists to remove. The loader
+	// below is strict too, but it never sees the key -- the re-encode only
+	// carries fields that decoded here.
 	var authored converter.Device
-	if unmarshalErr := yaml.Unmarshal([]byte(yamlStr), &authored); unmarshalErr != nil {
+	decoder := yaml.NewDecoder(strings.NewReader(yamlStr))
+	decoder.KnownFields(true)
+	if unmarshalErr := decoder.Decode(&authored); unmarshalErr != nil && !errors.Is(unmarshalErr, io.EOF) {
 		return nil, fmt.Errorf("invalid device: %w", unmarshalErr)
 	}
 	// The request names the device; that is what a rename and a clone rely on.

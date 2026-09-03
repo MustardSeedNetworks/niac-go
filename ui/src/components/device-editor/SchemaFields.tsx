@@ -27,6 +27,13 @@ export interface SchemaFieldProps {
   path: string;
   value: AuthoredValue;
   onChange: (value: AuthoredValue) => void;
+  /**
+   * Values to suggest for a string field, keyed by path. A schema `string` is
+   * an open field the daemon resolves at load time — `snmp_agent.walk_file`
+   * against the walk library — so the known values are offered without
+   * becoming a closed vocabulary the form would reject a valid entry against.
+   */
+  suggestions?: Readonly<Record<string, readonly string[]>>;
 }
 
 const isRecord = (value: AuthoredValue): value is Record<string, AuthoredValue> =>
@@ -38,7 +45,13 @@ const asList = (value: AuthoredValue): AuthoredValue[] => (Array.isArray(value) 
 const blankEntry = (field: FieldDescriptor): AuthoredValue =>
   field.kind === 'objectList' ? {} : field.itemKind === 'integer' ? 0 : '';
 
-export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange }) => {
+export const SchemaField: FC<SchemaFieldProps> = ({
+  field,
+  path,
+  value,
+  onChange,
+  suggestions,
+}) => {
   const { t } = useTranslation('devices');
   const label = t(`editor.fields.${path}`, { defaultValue: field.title });
   const help = field.description;
@@ -99,6 +112,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
   }
 
   if (field.kind === 'string') {
+    const suggested = suggestions?.[path];
     return (
       <FormField label={label} helpText={help} htmlFor={id}>
         <input
@@ -106,9 +120,17 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
           type="text"
           value={typeof value === 'string' ? value : ''}
           pattern={field.pattern}
+          list={suggested ? `${id}-suggestions` : undefined}
           onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
           className={inputClassName}
         />
+        {suggested && (
+          <datalist id={`${id}-suggestions`}>
+            {suggested.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        )}
       </FormField>
     );
   }
@@ -123,6 +145,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
           path={path}
           value={nested}
           onChange={(key, next) => onChange({ ...nested, [key]: next })}
+          suggestions={suggestions}
         />
       </fieldset>
     );
@@ -150,6 +173,7 @@ export const SchemaField: FC<SchemaFieldProps> = ({ field, path, value, onChange
                     onChange={(key, next) =>
                       replace(index, { ...(isRecord(entry) ? entry : {}), [key]: next })
                     }
+                    suggestions={suggestions}
                   />
                 </div>
               ) : (
@@ -262,9 +286,16 @@ export interface SchemaFieldListProps {
   path: string;
   value: Record<string, AuthoredValue>;
   onChange: (key: string, value: AuthoredValue) => void;
+  suggestions?: Readonly<Record<string, readonly string[]>>;
 }
 
-export const SchemaFieldList: FC<SchemaFieldListProps> = ({ fields, path, value, onChange }) => (
+export const SchemaFieldList: FC<SchemaFieldListProps> = ({
+  fields,
+  path,
+  value,
+  onChange,
+  suggestions,
+}) => (
   <div className="grid gap-comfortable md:grid-cols-2">
     {fields.map((field) => (
       <div
@@ -280,6 +311,7 @@ export const SchemaFieldList: FC<SchemaFieldListProps> = ({ fields, path, value,
           path={`${path}.${field.name}`}
           value={value[field.name]}
           onChange={(next) => onChange(field.name, next)}
+          suggestions={suggestions}
         />
       </div>
     ))}
@@ -291,6 +323,7 @@ export interface SchemaSectionBodyProps {
   /** The section's own value: an object for a block, an array for a list. */
   value: AuthoredValue;
   onChange: (value: AuthoredValue) => void;
+  suggestions?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -300,7 +333,12 @@ export interface SchemaSectionBodyProps {
  * `port_channels` are lists of objects and `properties` is a free-form map, so
  * their own descriptor is the field to render rather than a list of children.
  */
-export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({ section, value, onChange }) => {
+export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({
+  section,
+  value,
+  onChange,
+  suggestions,
+}) => {
   if (section.kind === 'object') {
     const nested = isRecord(value) ? value : {};
     return (
@@ -309,6 +347,7 @@ export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({ section, value, 
         path={section.key}
         value={nested}
         onChange={(key, next) => onChange({ ...nested, [key]: next })}
+        suggestions={suggestions}
       />
     );
   }
@@ -324,6 +363,7 @@ export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({ section, value, 
       path={section.key}
       value={value}
       onChange={onChange}
+      suggestions={suggestions}
     />
   );
 };
