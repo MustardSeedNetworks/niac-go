@@ -1,6 +1,11 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -165,4 +170,121 @@ func readAuthoredFixture(t *testing.T, name string) string {
 	}
 
 	return string(data)
+}
+
+// The editor's whole loop, through the HTTP handlers: open a device, save it
+// untouched, open it again. That has to be an identity — an operator who fixes
+// one typo must not lose an unrelated block — and it is the loop that was
+// broken twice over. The projection the editor used to POST carried a
+// `hostname` DeviceUpdateRequest does not declare, so with the strict decoder
+// every update of an existing device answered 400; and had it been accepted, it
+// would have written back only the 56 fields the projection has properties for.
+func TestDeviceEditorLoopPreservesTheDocument(t *testing.T) {
+	for _, name := range authoredFixtureNames(t) {
+		t.Run(name, func(t *testing.T) {
+			// A device authoring `ssh.password_env` cannot be saved unless that
+			// variable is set: the daemon refuses to persist a config it could
+			// not run (ValidateDeviceManagementRequirements). The clinic server
+			// authors one, so the loop needs it present to reach the save.
+			t.Setenv("NIAC_SSH_PASSWORD", "contract-fixture")
+			server := newAuthoredDeviceServer(t, name)
+
+			opened := getDeviceRawYAML(t, server, name)
+			if opened == "" {
+				t.Fatal("GET returned no rawYaml, so the editor has nothing to load")
+			}
+
+			body, err := json.Marshal(DeviceUpdateRequest{RawYAML: opened})
+			if err != nil {
+				t.Fatalf("marshal update: %v", err)
+			}
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/"+name, bytes.NewReader(body))
+			server.handleDevicesV2(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("save answered %d: %s", rec.Code, rec.Body.String())
+			}
+
+			if reopened := getDeviceRawYAML(t, server, name); reopened != opened {
+				t.Errorf("saving an untouched device changed it\nopened:\n%s\nreopened:\n%s", opened, reopened)
+			}
+		})
+	}
+}
+
+// One edit reaches the device and nothing else moves.
+func TestDeviceEditorLoopAppliesOneEdit(t *testing.T) {
+	const name = "clinic-rtr-01"
+	server := newAuthoredDeviceServer(t, name)
+
+	edited := strings.Replace(
+		getDeviceRawYAML(t, server, name),
+		"syslocation: Clinic branch, comms closet",
+		"syslocation: Clinic branch, server room",
+		1,
+	)
+	body, err := json.Marshal(DeviceUpdateRequest{RawYAML: edited})
+	if err != nil {
+		t.Fatalf("marshal update: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/config/devices/"+name, bytes.NewReader(body))
+	server.handleDevicesV2(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("save answered %d: %s", rec.Code, rec.Body.String())
+	}
+
+	reopened := getDeviceRawYAML(t, server, name)
+	if !strings.Contains(reopened, "syslocation: Clinic branch, server room") {
+		t.Errorf("the edit did not land:\n%s", reopened)
+	}
+	// The DHCP block is untouched by the edit and is one of the 167 fields the
+	// old camelCase projection had no property for.
+	if !strings.Contains(reopened, "pool_start: 10.20.0.100") {
+		t.Errorf("an unrelated block was lost by the save:\n%s", reopened)
+	}
+}
+
+func newAuthoredDeviceServer(t *testing.T, name string) *Server {
+	t.Helper()
+
+	// Loaded the same way the daemon loads it, so the server holds the device
+	// an author's file produces rather than one a test built by hand.
+	device, err := parseDeviceFromYAML(readAuthoredFixture(t, name), name)
+	if err != nil {
+		t.Fatalf("load fixture: %v", err)
+	}
+	cfg := &config.Config{Devices: []config.Device{*device}}
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configYAML, err := config.MarshalConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if writeErr := os.WriteFile(configPath, configYAML, 0o600); writeErr != nil {
+		t.Fatalf("write config: %v", writeErr)
+	}
+
+	return &Server{
+		cfg:    ServerConfig{Config: cfg, ConfigPath: configPath, Version: "test"},
+		logger: slog.Default(),
+	}
+}
+
+func getDeviceRawYAML(t *testing.T, server *Server, name string) string {
+	t.Helper()
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/config/devices/"+name, nil)
+	server.handleDevicesV2(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET answered %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp DeviceResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode device: %v", err)
+	}
+
+	return resp.RawYAML
 }
