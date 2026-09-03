@@ -77,7 +77,7 @@ func TestNewSSEHub(t *testing.T) {
 	}
 
 	// Check that all streams are initialized
-	for _, stream := range []Stream{StreamPackets, StreamLogs, StreamStats} {
+	for _, stream := range []Stream{StreamPackets, StreamLogs} {
 		if _, ok := hub.clients[stream]; !ok {
 			t.Errorf("stream %q not initialized in clients map", stream)
 		}
@@ -139,7 +139,6 @@ func TestSSEHubBroadcastWhenNotRunning(_ *testing.T) {
 	hub.Broadcast(StreamPackets, map[string]string{"test": "data"})
 	hub.BroadcastPacket(map[string]string{"test": "data"})
 	hub.BroadcastLog("info", "test message")
-	hub.BroadcastStats(map[string]int{"count": 42})
 }
 
 func TestSSEHubRegisterAndUnregister(t *testing.T) {

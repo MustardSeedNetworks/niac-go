@@ -497,11 +497,6 @@ func (s *Server) registerSSERoutes(mux *http.ServeMux) {
 		},
 		{path: "/api/v1/stream/logs", handler: s.handleSSELogs, methods: []string{http.MethodGet}},
 		{
-			path:    "/api/v1/stream/stats",
-			handler: s.handleSSEStats,
-			methods: []string{http.MethodGet},
-		},
-		{
 			path:    "/api/v1/stream/status",
 			handler: s.handleSSEStatus,
 			methods: []string{http.MethodGet},
@@ -542,7 +537,6 @@ func (s *Server) startBackgroundTasks() {
 
 	// Start SSE hub for real-time streaming
 	go s.sseHub.Run()
-	go s.startStatsPublisher(statsStreamInterval)
 	s.logger.Info("[SSE] Server-Sent Events hub started")
 
 	// Tee slog into the SSE hub so the Protocol Debug Console gets

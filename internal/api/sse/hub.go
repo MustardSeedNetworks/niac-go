@@ -19,8 +19,8 @@ import (
 // Lifecycle:
 //   - NewHub() builds the hub. Call Run() in a goroutine.
 //   - HTTP handlers send on hub.register / hub.unregister.
-//   - Producers (packet observer, daemon stats, future log tee) call
-//     Broadcast / BroadcastPacket / BroadcastLog / BroadcastStats.
+//   - Producers (packet observer, future log tee) call
+//     Broadcast / BroadcastPacket / BroadcastLog.
 //   - Stop() closes stopChan; Run drains and unregisters every client.
 
 // NewHub creates a new SSE hub with the given configuration. Zero
@@ -38,7 +38,7 @@ func NewHub(cfg Config) *Hub {
 	}
 
 	// Initialize per-stream structures
-	for _, stream := range []Stream{StreamPackets, StreamLogs, StreamStats} {
+	for _, stream := range []Stream{StreamPackets, StreamLogs} {
 		hub.clients[stream] = make(map[*Client]bool)
 		hub.rateLimiters[stream] = newSSERateLimiter(int64(cfg.MaxMsgPerSec))
 	}
@@ -249,24 +249,6 @@ func (h *Hub) BroadcastLog(level, message string) {
 		"type":      "log",
 		"level":     level,
 		"message":   message,
-		"timestamp": time.Now().UTC(),
-	})
-}
-
-// BroadcastStats sends statistics to all stats stream subscribers.
-func (h *Hub) BroadcastStats(data any) {
-	h.Broadcast(StreamStats, map[string]any{
-		"type":      "stats",
-		"data":      data,
-		"timestamp": time.Now().UTC(),
-	})
-}
-
-// BroadcastStatsForSession sends statistics only to clients following one simulation.
-func (h *Hub) BroadcastStatsForSession(sessionID string, data any) {
-	h.broadcastScoped(StreamStats, sessionID, map[string]any{
-		"type":      "stats",
-		"data":      data,
 		"timestamp": time.Now().UTC(),
 	})
 }
