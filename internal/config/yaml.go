@@ -21,6 +21,18 @@ func MarshalConfigYAML(cfg *Config) ([]byte, error) {
 	return yaml.Marshal(configToYAML(cfg))
 }
 
+// MarshalDeviceYAML serializes a single device through the same canonical DTO
+// as MarshalConfigYAML, producing a bare device document the loader accepts.
+// The device editor's `rawYaml` field is read with this and posted back to the
+// parser, so anything this drops is authoring the editor silently discards.
+func MarshalDeviceYAML(device *Device) ([]byte, error) {
+	if device == nil {
+		return nil, errors.New("device is nil")
+	}
+
+	return yaml.Marshal(deviceToYAML(device))
+}
+
 func configToYAML(cfg *Config) converter.Config {
 	out := converter.Config{
 		IncludePath:       cfg.IncludePath,

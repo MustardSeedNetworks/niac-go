@@ -1,0 +1,249 @@
+# Clinic branch office — authored by hand as a complete scenario.
+# One router, one access switch, two servers, two workstations, one AP.
+networks:
+  - name: clinic-lan
+    subnet: 10.20.0.0/24
+  - name: clinic-mgmt
+    subnet: 10.20.99.0/24
+
+attachments:
+  - name: tester
+    connect: clinic-lan
+
+devices:
+  - name: clinic-rtr-01
+    type: router
+    vendor: cisco
+    mac_suffix: 1
+    ips:
+      - "10.20.0.1"
+      - "10.20.99.1"
+    ttl:
+      ttl: 255
+    icmp:
+      enabled: true
+    lldp:
+      enabled: true
+      system_description: "Cisco ISR 1100 clinic edge"
+      port_description: "GigabitEthernet0/0/1"
+    cdp:
+      enabled: true
+      platform: "Cisco ISR1111-4P"
+      software_version: "17.9.4a"
+    snmp_agent:
+      enabled: true
+      community: msn_public
+      sysname: clinic-rtr-01
+      sysdescr: "Cisco IOS XE Software, ISR1100 17.9.4a"
+      syslocation: "Clinic branch, comms closet"
+      syscontact: "netops@clinic.example"
+    dhcp:
+      pool_start: "10.20.0.100"
+      pool_end: "10.20.0.199"
+      subnet_mask: "255.255.255.0"
+      router: "10.20.0.1"
+      domain_name_server: "10.20.0.10"
+      ntp_servers:
+        - "10.20.0.10"
+    dns:
+      forward_records:
+        - name: "rtr.clinic.example"
+          ip: "10.20.0.1"
+        - name: "srv-01.clinic.example"
+          ip: "10.20.0.10"
+        - name: "srv-02.clinic.example"
+          ip: "10.20.0.11"
+    interfaces:
+      - name: GigabitEthernet0/0/1
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        network: clinic-lan
+        address: 10.20.0.1/24
+        description: "to clinic-sw-01 Gi1/0/24"
+    trunk_ports:
+      - interface: GigabitEthernet0/0/1
+        remote_device: clinic-sw-01
+        remote_interface: GigabitEthernet1/0/24
+
+  - name: clinic-sw-01
+    type: switch
+    vendor: cisco
+    mac_suffix: 2
+    ips:
+      - "10.20.99.2"
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 9200L-24P clinic access"
+      port_description: "GigabitEthernet1/0/24"
+    cdp:
+      enabled: true
+      platform: "Cisco C9200L-24P-4G"
+      software_version: "17.9.4"
+    stp:
+      enabled: true
+      bridge_priority: 32768
+      hello_time: 2
+      max_age: 20
+      forward_delay: 15
+    snmp_agent:
+      enabled: true
+      community: msn_public
+      sysname: clinic-sw-01
+      sysdescr: "Cisco IOS XE Software, C9200L 17.9.4"
+      syslocation: "Clinic branch, comms closet"
+      syscontact: "netops@clinic.example"
+    interfaces:
+      - name: GigabitEthernet1/0/24
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        network: clinic-mgmt
+        address: 10.20.99.2/24
+        description: "uplink to clinic-rtr-01"
+      - name: GigabitEthernet1/0/1
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        description: "srv-01"
+      - name: GigabitEthernet1/0/2
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        description: "srv-02"
+      - name: GigabitEthernet1/0/5
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        description: "reception-pc"
+      - name: GigabitEthernet1/0/6
+        speed: 100
+        duplex: half
+        admin_status: up
+        oper_status: up
+        description: "exam-pc (duplex mismatch on purpose)"
+      - name: GigabitEthernet1/0/12
+        speed: 1000
+        duplex: full
+        admin_status: up
+        oper_status: up
+        description: "ap-01"
+    trunk_ports:
+      - interface: GigabitEthernet1/0/24
+        remote_device: clinic-rtr-01
+        remote_interface: GigabitEthernet0/0/1
+      - interface: GigabitEthernet1/0/1
+        remote_device: clinic-srv-01
+        remote_interface: eth0
+      - interface: GigabitEthernet1/0/2
+        remote_device: clinic-srv-02
+        remote_interface: eth0
+      - interface: GigabitEthernet1/0/5
+        remote_device: reception-pc
+        remote_interface: eth0
+      - interface: GigabitEthernet1/0/6
+        remote_device: exam-pc
+        remote_interface: eth0
+      - interface: GigabitEthernet1/0/12
+        remote_device: clinic-ap-01
+        remote_interface: eth0
+
+  - name: clinic-srv-01
+    type: server
+    vendor: dell
+    mac_suffix: 16
+    ips:
+      - "10.20.0.10"
+    ttl:
+      ttl: 64
+    icmp:
+      enabled: true
+    lldp:
+      enabled: true
+      system_description: "Ubuntu 24.04 DNS/NTP server"
+    snmp_agent:
+      enabled: true
+      community: msn_public
+      sysname: clinic-srv-01
+      sysdescr: "Linux clinic-srv-01 6.8.0 x86_64"
+    http:
+      enabled: true
+      server_name: "nginx/1.24.0"
+    ssh:
+      enabled: true
+      username: "admin"
+      password_env: "NIAC_SSH_PASSWORD"
+
+  - name: clinic-srv-02
+    type: server
+    vendor: hp
+    mac_suffix: 17
+    ips:
+      - "10.20.0.11"
+    ttl:
+      ttl: 128
+    icmp:
+      enabled: true
+    snmp_agent:
+      enabled: true
+      community: msn_public
+      sysname: clinic-srv-02
+      sysdescr: "Hardware: Intel64 Family 6 - Software: Windows Version 10.0"
+    http:
+      enabled: true
+      server_name: "Microsoft-IIS/10.0"
+    netbios:
+      enabled: true
+      names:
+        - name: CLINIC-SRV-02
+          suffix: "20"
+
+  - name: reception-pc
+    type: workstation
+    mac: "00:1A:2B:20:00:20"
+    ips:
+      - "10.20.0.120"
+    ttl:
+      ttl: 128
+    icmp:
+      enabled: true
+    netbios:
+      enabled: true
+      names:
+        - name: RECEPTION-PC
+          suffix: "20"
+
+  - name: exam-pc
+    type: workstation
+    mac: "00:1A:2B:20:00:21"
+    ips:
+      - "10.20.0.121"
+    ttl:
+      ttl: 64
+    icmp:
+      enabled: true
+    mdns:
+      enabled: true
+      services:
+        - type: _workstation._tcp
+          port: 9
+
+  - name: clinic-ap-01
+    type: ap
+    vendor: aruba
+    mac_suffix: 48
+    ips:
+      - "10.20.99.30"
+    lldp:
+      enabled: true
+      system_description: "Aruba AP-515 clinic waiting room"
+    snmp_agent:
+      enabled: true
+      community: msn_public
+      sysname: clinic-ap-01
+      sysdescr: "ArubaOS (MODEL: 515), Version 8.10.0.9"

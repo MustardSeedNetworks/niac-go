@@ -80,7 +80,12 @@ if [ -d "ui/src" ]; then
             echo "⚠️  $file ($lines lines, max: $MAX_TS_LINES)"
             WARNINGS=$((WARNINGS + 1))
         fi
-    done < <(find ui/src -name "*.ts" -o -name "*.tsx" | tr '\n' '\0' 2>/dev/null || true)
+    # Generated files are excluded: the limit exists to keep hand-maintained
+    # code readable, and a generator's output is neither read nor split by
+    # hand. `.generated.` is the same marker biome.json already excludes.
+    # The parentheses matter — without them the trailing -not binds only to
+    # the *.tsx branch and every oversized .ts file walks straight through.
+    done < <(find ui/src \( -name "*.ts" -o -name "*.tsx" \) -not -name "*.generated.*" | tr '\n' '\0' 2>/dev/null || true)
 fi
 
 echo "==========================================================================="

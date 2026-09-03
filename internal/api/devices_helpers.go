@@ -544,53 +544,11 @@ func cloneDevice(src *config.Device, newHostname, newIP, newMAC string) *config.
 }
 
 func serializeDeviceToYAML(dev *config.Device) ([]byte, error) {
-	// Build a map representation for YAML serialization
-	data := map[string]any{
-		"name": dev.Name,
-		"type": dev.Type,
-	}
-
-	if dev.MACAddress != nil {
-		data["mac"] = dev.MACAddress.String()
-	}
-
-	if len(dev.IPAddresses) > 0 {
-		if len(dev.IPAddresses) == 1 {
-			data["ip"] = dev.IPAddresses[0].String()
-		} else {
-			ips := make([]string, 0, len(dev.IPAddresses))
-			for _, ip := range dev.IPAddresses {
-				ips = append(ips, ip.String())
-			}
-
-			data["ips"] = ips
-		}
-	}
-
-	// Add SNMP config if present
-	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
-		snmp := map[string]any{
-			"enabled": true,
-		}
-		if dev.SNMPConfig.Community != "" {
-			snmp["community"] = dev.SNMPConfig.Community
-		}
-
-		if dev.SNMPConfig.SysName != "" {
-			snmp["sysname"] = dev.SNMPConfig.SysName
-		}
-
-		if dev.SNMPConfig.WalkFile != "" {
-			snmp["walk_file"] = dev.SNMPConfig.WalkFile
-		}
-
-		data["snmp_agent"] = snmp
-	}
-
-	yamlData, err := yaml.Marshal(data)
+	yamlData, err := config.MarshalDeviceYAML(dev)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal device YAML: %w", err)
 	}
+
 	return yamlData, nil
 }
 
