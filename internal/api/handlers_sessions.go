@@ -92,6 +92,16 @@ func (s *Server) dispatchSessionSubpath(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if !found || resource == "" {
+		if r.Method == http.MethodDelete {
+			// Resolved here, not left to the daemon, so an unknown ID answers
+			// the same 404 the read resources under this prefix answer.
+			if _, err := s.session(sessionID); err != nil {
+				s.writeSessionLookupError(w, r, sessionID, err)
+				return
+			}
+			s.stopSessionByID(w, r, sessionID)
+			return
+		}
 		writeError(w, r, http.StatusNotFound, "not_found",
 			"A session resource is required", nil)
 		return

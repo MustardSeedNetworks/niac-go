@@ -308,6 +308,19 @@ func (s *Server) handleSimulationStop(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+	s.stopSessionByID(w, r, sessionID)
+}
+
+// stopSessionByID stops one session, or every session when sessionID is empty.
+// It backs both spellings of stop: DELETE /api/v1/simulation?sessionId=<id>
+// and DELETE /api/v1/sessions/<id>. Callers validate the ID first.
+func (s *Server) stopSessionByID(w http.ResponseWriter, r *http.Request, sessionID string) {
+	if s.daemon == nil {
+		writeError(w, r, http.StatusNotImplemented, "daemon_required",
+			"Simulation control is only available in daemon mode. "+
+				"Start NIAC with the 'niac daemon' command.", nil)
+		return
+	}
 	if err := s.daemon.StopSimulation(sessionID); err != nil {
 		if errors.Is(err, ErrSimulationSessionNotFound) {
 			writeError(w, r, http.StatusNotFound, "simulation_session_not_found",

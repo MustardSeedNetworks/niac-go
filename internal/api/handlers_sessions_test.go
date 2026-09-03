@@ -148,3 +148,54 @@ func TestSessionReadResourcesRejectNonGet(t *testing.T) {
 		t.Errorf("Allow = %q, want GET", allow)
 	}
 }
+
+func TestSessionDeleteStopsThatSessionOnly(t *testing.T) {
+	// Stopping a session had one spelling — DELETE /api/v1/simulation with a
+	// sessionId query — while the session subtree answered "a session
+	// resource is required" for the obvious one (P1-16).
+	daemon := &preflightDaemon{}
+	server := serverWithSessions(map[string][]string{
+		"hospital":  {"MED-CORE-SW01"},
+		"warehouse": {"FUL-CORE-SW01"},
+	})
+	server.daemon = daemon
+
+	recorder := httptest.NewRecorder()
+	server.dispatchSessionSubpath(
+		recorder,
+		httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/hospital", nil),
+	)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	if daemon.stopped != "hospital" {
+		t.Errorf("stopped session = %q, want %q", daemon.stopped, "hospital")
+	}
+}
+
+func TestSessionDeleteRejectsAnUnknownSession(t *testing.T) {
+	server := serverWithSessions(map[string][]string{"hospital": {"MED-CORE-SW01"}})
+	server.daemon = &preflightDaemon{}
+
+	recorder := httptest.NewRecorder()
+	server.dispatchSessionSubpath(
+		recorder,
+		httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/warehouse", nil),
+	)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", recorder.Code)
+	}
+}
+
+func TestSessionGetStillRequiresAResource(t *testing.T) {
+	server := serverWithSessions(map[string][]string{"hospital": {"MED-CORE-SW01"}})
+	server.daemon = &preflightDaemon{}
+
+	recorder := sessionRequest(t, server, "/api/v1/sessions/hospital")
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", recorder.Code)
+	}
+}

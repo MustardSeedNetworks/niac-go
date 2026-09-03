@@ -37,6 +37,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
 | `GET` | `/api/v1/sessions` | Running simulation sessions a client can address |
 | `GET` | `/api/v1/sessions/{id}/{resource}` | One session's runtime state — see below |
+| `DELETE` | `/api/v1/sessions/{id}` | Stop that session |
 | `GET` | `/api/v1/scenario/packs` | Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
@@ -128,6 +129,7 @@ GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
 GET /api/v1/sessions/{id}/behaviors         its behaviour timeline status
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
+DELETE /api/v1/sessions/{id}                stop that session
 ```
 
 Naming a session that is not running returns `404 session_not_found` rather
