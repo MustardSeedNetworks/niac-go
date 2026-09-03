@@ -137,8 +137,6 @@ func formatWalkEntries(entries []snmp.WalkEntry) string {
 }
 
 func formatWalkEntry(entry snmp.WalkEntry) string {
-	// EndOfContents and UnknownType are aliases in gosnmp.
-	//nolint:exhaustive // Separate cases would create duplicate case values.
 	switch entry.Type {
 	case gosnmp.OctetString:
 		return fmt.Sprintf("%s = STRING: %q", normalizeOID(entry.OID), fmt.Sprint(entry.Value))
@@ -158,7 +156,10 @@ func formatWalkEntry(entry snmp.WalkEntry) string {
 		return fmt.Sprintf("%s = IpAddress: %s", normalizeOID(entry.OID), fmt.Sprint(entry.Value))
 	case gosnmp.Null:
 		return fmt.Sprintf("%s = NULL: null", normalizeOID(entry.OID))
-	case gosnmp.EndOfContents | gosnmp.UnknownType,
+	// gosnmp gives UnknownType the same value as EndOfContents, so it cannot
+	// be listed separately. The previous spelling was a bitwise OR of the two,
+	// which matched only because both are 0x00.
+	case gosnmp.EndOfContents,
 		gosnmp.Boolean,
 		gosnmp.BitString,
 		gosnmp.ObjectDescription,
