@@ -1,0 +1,11 @@
+# Route ⇄ consumer ratchet; see check-route-consumers.py.
+# Plain lines: registered routes with no UI or CLI consumer.
+# `404 <path>` lines: requests the UI or CLI makes that no route serves.
+# Optional `# reason`. Remove a line when it stops being true — the gate fails on stale entries.
+/api/v1/behaviors
+/api/v1/devices
+/api/v1/files
+/api/v1/segments
+/api/v1/stream/stats
+/api/v1/stream/status
+/api/v1/walk/list

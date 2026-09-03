@@ -1,0 +1,6 @@
+# Schema fields the device editor deliberately does not expose, with the reason.
+# See check-authoring-parity.py. Derived or server-resolved values only —
+# anything an author could legitimately want to set belongs in schema-bindings.json.
+include_path  # resolved by the daemon relative to the config file; not a device property
+segments[].config  # path to another config file; segments are composed, not authored per field
+segments[].tag  # VLAN tag of a segment, assigned by the segment composer (Segments page), not the device editor
