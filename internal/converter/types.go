@@ -3,7 +3,6 @@ package converter
 import (
 	"errors"
 
-	"github.com/invopop/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,15 +48,31 @@ const (
 
 // Config represents the YAML configuration structure.
 type Config struct {
+	// IncludePath is a directory the loader searches for files referenced by
+	// relative path elsewhere in this config (walk files, capture files).
+	// Relative to the config file's own directory when itself relative.
 	IncludePath string `yaml:"include_path,omitempty"`
-	// One playback, not a list of them: the runtime plays exactly one capture
-	// (config.Config.CapturePlayback, one engine in the replay controller). The
-	// schema kept the shape of a list, so extra entries were dropped on load and
-	// deleted from disk on the next save. Refuse them instead.
-	CapturePlaybacks   []CapturePlayback   `yaml:"capture_playbacks,omitempty"   validate:"omitempty,max=1,dive"`
-	BehaviorTimelines  []BehaviorTimeline  `yaml:"behavior_timelines,omitempty"  validate:"omitempty,max=64,dive"`
+
+	// CapturePlaybacks replays a recorded PCAP alongside the simulated
+	// devices. At most one entry: the runtime plays exactly one capture
+	// (config.Config.CapturePlayback, one engine in the replay controller).
+	// The schema kept the shape of a list, so extra entries were dropped on
+	// load and deleted from disk on the next save. Refuse them instead.
+	CapturePlaybacks []CapturePlayback `yaml:"capture_playbacks,omitempty" validate:"omitempty,max=1,dive"`
+
+	// BehaviorTimelines are saved, repeatable sequences of runtime phases
+	// that drive traffic and faults on a schedule after the session starts.
+	// Up to 64 timelines; they run concurrently.
+	BehaviorTimelines []BehaviorTimeline `yaml:"behavior_timelines,omitempty" validate:"omitempty,max=64,dive"`
+
+	// DiscoveryProtocols sets the fleet-wide default for LLDP, CDP, EDP and
+	// FDP advertisement. A device's own lldp/cdp/edp/fdp block overrides it.
 	DiscoveryProtocols *DiscoveryProtocols `yaml:"discovery_protocols,omitempty"`
-	Devices            []Device            `yaml:"devices"                       validate:"omitempty,dive"`
+
+	// Devices is the simulated device set served as a single untagged
+	// segment. Mutually exclusive with `segments`: when segments is present,
+	// this must be empty.
+	Devices []Device `yaml:"devices" validate:"omitempty,dive"`
 
 	// Segments binds independent device sets to VLAN tags for multi-VLAN
 	// playback (ADR 0008). When present, each segment is served as its own
@@ -66,54 +81,120 @@ type Config struct {
 	// today's flat behavior.
 	Segments []Segment `yaml:"segments,omitempty" validate:"omitempty,dive"`
 
+	// Networks declares the routed IPv4 networks devices attach to. An
+	// interface naming one in its `network` field must carry an `address`
+	// written as a prefix (10.10.0.5/24), not a bare address.
 	Networks []Network `yaml:"networks,omitempty" validate:"omitempty,dive"`
 
+	// Attachments bind this config's virtual networks to the deployment's
+	// host-side interfaces. Preflight rejects an attachment naming a network
+	// this config does not declare, or a host interface the daemon's
+	// attachment policy does not permit.
 	Attachments []LogicalAttachment `yaml:"attachments,omitempty" validate:"omitempty,dive"`
 }
 
 // BehaviorTimeline is one saved, repeatable sequence of runtime phases.
 type BehaviorTimeline struct {
-	Name          string          `yaml:"name"                      validate:"required,max=100"`
-	StartOffsetMS int             `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
-	RepeatCount   int             `yaml:"repeat_count"              validate:"gte=1,lte=1000"`
-	Phases        []BehaviorPhase `yaml:"phases"                    validate:"required,max=256,dive"`
+	// Name identifies the timeline in the runtime view and the API. Unique
+	// within the config.
+	Name string `yaml:"name" validate:"required,max=100"`
+
+	// StartOffsetMS delays the whole timeline this many milliseconds after
+	// the session starts. 0 starts it immediately.
+	StartOffsetMS int `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
+
+	// RepeatCount is how many times the phase sequence runs, 1..1000. There
+	// is no infinite repeat; pick a count that covers the intended run.
+	RepeatCount int `yaml:"repeat_count" validate:"gte=1,lte=1000"`
+
+	// Phases are the ordered steps of the timeline. Each phase's
+	// start_offset_ms is relative to the timeline, not to the previous phase.
+	Phases []BehaviorPhase `yaml:"phases" validate:"required,max=256,dive"`
 }
 
 // BehaviorPhase applies traffic and faults at a deterministic offset.
 type BehaviorPhase struct {
-	Name          string            `yaml:"name"                      validate:"required,max=100"`
-	StartOffsetMS int               `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
-	DurationMS    int               `yaml:"duration_ms"               validate:"gte=1,lte=86400000"`
-	Reset         bool              `yaml:"reset,omitempty"`
-	Traffic       []BehaviorTraffic `yaml:"traffic,omitempty"         validate:"omitempty,max=1024,dive"`
-	Faults        []BehaviorFault   `yaml:"faults,omitempty"          validate:"omitempty,max=1024,dive"`
+	// Name identifies the phase in the runtime view.
+	Name string `yaml:"name" validate:"required,max=100"`
+
+	// StartOffsetMS is when this phase begins, measured from the start of the
+	// timeline (not from the previous phase).
+	StartOffsetMS int `yaml:"start_offset_ms,omitempty" validate:"gte=0,lte=86400000"`
+
+	// DurationMS is how long the phase's traffic and faults stay applied.
+	DurationMS int `yaml:"duration_ms" validate:"gte=1,lte=86400000"`
+
+	// Reset clears the traffic and faults set by earlier phases before this
+	// one applies its own, instead of layering on top of them.
+	Reset bool `yaml:"reset,omitempty"`
+
+	// Traffic sets observable interface utilization for the phase's duration.
+	Traffic []BehaviorTraffic `yaml:"traffic,omitempty" validate:"omitempty,max=1024,dive"`
+
+	// Faults injects SNMP-visible interface faults for the phase's duration.
+	Faults []BehaviorFault `yaml:"faults,omitempty" validate:"omitempty,max=1024,dive"`
 }
 
 // BehaviorTraffic sets observable utilization on one simulated interface.
 type BehaviorTraffic struct {
-	Device      string `yaml:"device"      validate:"required"`
-	Interface   string `yaml:"interface"   validate:"required"`
-	Utilization int    `yaml:"utilization" validate:"gte=1,lte=100"`
+	// Device is the `name` of the device carrying the interface.
+	Device string `yaml:"device" validate:"required"`
+
+	// Interface is the interface `name` on that device, as declared in its
+	// `interfaces` list.
+	Interface string `yaml:"interface" validate:"required"`
+
+	// Utilization is the percentage, 1..100, reported through the interface's
+	// IF-MIB counters while the phase is active.
+	Utilization int `yaml:"utilization" validate:"gte=1,lte=100"`
 }
 
 // BehaviorFault sets one supported SNMP interface fault rate.
 type BehaviorFault struct {
-	Device    string `yaml:"device"    validate:"required"`
+	// Device is the `name` of the device carrying the interface.
+	Device string `yaml:"device" validate:"required"`
+
+	// Interface is the interface `name` on that device, as declared in its
+	// `interfaces` list.
 	Interface string `yaml:"interface" validate:"required"`
-	Type      string `yaml:"type"      validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization"`
-	Value     int    `yaml:"value"     validate:"gte=1,lte=100"`
+
+	// Type is the fault to inject. Interface-scoped only: these raise SNMP
+	// counters, they do not take a service (DHCP, DNS) out.
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization"`
+
+	// Value is the rate or percentage, 1..100, applied while the phase runs.
+	Value int `yaml:"value" validate:"gte=1,lte=100"`
 }
 
 // Network declares one internal routed IPv4 network.
 type Network struct {
-	Name        string `yaml:"name"                   validate:"required"`
-	Subnet      string `yaml:"subnet"                 validate:"required,cidr"`
-	VirtualVLAN int    `yaml:"virtual_vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
+	// Name is how interfaces and attachments refer to this network. Unique
+	// within the config.
+	Name string `yaml:"name" validate:"required"`
+
+	// Subnet is the network in CIDR form, for example 10.10.0.0/24. Every
+	// interface address on this network must fall inside it, and a DHCP pool
+	// served onto it must sit within the same subnet.
+	Subnet string `yaml:"subnet" validate:"required,cidr"`
+
+	// VirtualVLAN tags this network's frames with a VLAN id, 1..4094, when
+	// the network is served on a trunk. Omit for untagged.
+	VirtualVLAN int `yaml:"virtual_vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
 }
 
 // LogicalAttachment names the virtual network exposed by a deployment binding.
 type LogicalAttachment struct {
-	Name    string `yaml:"name"    validate:"required"`
+	// Name labels this attachment. It is what a session's binding selects the
+	// attachment by at start time, not a network name — a binding naming an
+	// attachment this config does not declare is reported as
+	// `unknown_attachment`.
+	Name string `yaml:"name" validate:"required"`
+
+	// Connect is the `networks[].name` this attachment exposes to the host.
+	// Whether the host interface may actually carry it is decided at start
+	// against the daemon's attachment policy, which reports
+	// `attachment_policy_denied` or `host_interface_unavailable`;
+	// `niac validate` has no host binding and cannot check those.
 	Connect string `yaml:"connect" validate:"required"`
 }
 
@@ -132,532 +213,312 @@ type Segment struct {
 
 // DiscoveryProtocols configures discovery protocol behavior.
 type DiscoveryProtocols struct {
+	// LLDP sets the fleet-wide default for IEEE 802.1AB advertisement.
 	LLDP *ProtocolConfig `yaml:"lldp,omitempty"`
-	CDP  *ProtocolConfig `yaml:"cdp,omitempty"`
-	EDP  *ProtocolConfig `yaml:"edp,omitempty"`
-	FDP  *ProtocolConfig `yaml:"fdp,omitempty"`
+
+	// CDP sets the fleet-wide default for Cisco Discovery Protocol.
+	CDP *ProtocolConfig `yaml:"cdp,omitempty"`
+
+	// EDP sets the fleet-wide default for Extreme Discovery Protocol.
+	EDP *ProtocolConfig `yaml:"edp,omitempty"`
+
+	// FDP sets the fleet-wide default for Foundry Discovery Protocol.
+	FDP *ProtocolConfig `yaml:"fdp,omitempty"`
 }
 
 // ProtocolConfig configures a discovery protocol.
 type ProtocolConfig struct {
-	Enabled  bool `yaml:"enabled"`
-	Interval int  `yaml:"interval,omitempty"` // Advertisement interval in seconds
+	// Enabled turns the protocol on for every device that does not override
+	// it with its own block.
+	Enabled bool `yaml:"enabled"`
+
+	// Interval is the advertisement interval in seconds. Omit for the
+	// protocol's own default (30 s for LLDP, 60 s for CDP).
+	Interval int `yaml:"interval,omitempty"`
 }
 
 // CapturePlayback represents PCAP playback configuration.
 type CapturePlayback struct {
-	FileName  string  `yaml:"file_name"            validate:"required"`
-	LoopTime  int     `yaml:"loop_time,omitempty"  validate:"omitempty,gte=0"`
+	// FileName is the pcap or pcapng file to replay, resolved against
+	// `include_path` when relative.
+	FileName string `yaml:"file_name" validate:"required"`
+
+	// LoopTime is the seconds to wait before replaying the file again.
+	// 0 replays it once.
+	LoopTime int `yaml:"loop_time,omitempty" validate:"omitempty,gte=0"`
+
+	// ScaleTime multiplies the capture's inter-packet gaps: 2.0 replays at
+	// half speed, 0.5 at double. Omit or 0 replays at the recorded rate.
 	ScaleTime float64 `yaml:"scale_time,omitempty" validate:"omitempty,gte=0"`
 }
 
 // Device represents a network device.
 type Device struct {
+	// Name is the device's identity across the config: behaviour phases,
+	// trunk_ports.remote_device and the topology graph all refer to it.
+	// Unique within the config, and read-only once the device exists — the
+	// daemon takes a device's name from the URL, so renaming through the
+	// editor is not supported.
 	Name string `yaml:"name,omitempty"`
+
+	// Type selects the device persona: which MIBs it serves, which icon the
+	// topology draws and how a scanner classifies it. Note the authored
+	// spelling: the vocabulary hyphenates, so `voip-phone` and
+	// `layer3-switch` are accepted and their underscored forms are not. An
+	// access point is `ap` or `access-point`, never `access_point`.
 	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=router switch layer3-switch ap access-point firewall server host workstation iot printer voip-phone"`
 
-	MAC       string `yaml:"mac,omitempty"        validate:"omitempty,mac"`
-	Vendor    string `yaml:"vendor,omitempty"`
+	// MAC is the device's explicit base MAC address (aa:bb:cc:dd:ee:ff).
+	// Mutually exclusive with `vendor`: set one or the other, never both.
+	MAC string `yaml:"mac,omitempty" validate:"omitempty,mac"`
+
+	// Vendor derives the MAC from a vendor OUI instead of stating one.
+	// Mutually exclusive with `mac`. Set `mac_suffix` alongside it: without a
+	// suffix every device of the same vendor collides on the same address,
+	// ending :00:00:00.
+	Vendor string `yaml:"vendor,omitempty"`
+
+	// MACSuffix is the per-device low 24 bits appended to the vendor OUI,
+	// 0..16777215. Required in practice whenever `vendor` is used more than
+	// once.
 	MACSuffix uint32 `yaml:"mac_suffix,omitempty" validate:"lte=16777215"`
 
-	IPs           []string             `yaml:"ips,omitempty"            validate:"omitempty,dive,ip"`
-	VLAN          int                  `yaml:"vlan,omitempty"           validate:"omitempty,gte=1,lte=4094"`
-	MapToIP       string               `yaml:"map_to_ip,omitempty"      validate:"omitempty,ip"`
-	Babble        bool                 `yaml:"babble,omitempty"`
-	TTL           *TTLConfig           `yaml:"ttl,omitempty"`
-	SnmpAgent     *SnmpAgent           `yaml:"snmp_agent,omitempty"`
-	Dhcp          *DhcpServer          `yaml:"dhcp,omitempty"`
-	DNS           *DNSServer           `yaml:"dns,omitempty"`
-	Lldp          *LldpConfig          `yaml:"lldp,omitempty"`
-	Cdp           *CdpConfig           `yaml:"cdp,omitempty"`
-	Edp           *EdpConfig           `yaml:"edp,omitempty"`
-	Fdp           *FdpConfig           `yaml:"fdp,omitempty"`
-	Stp           *StpConfig           `yaml:"stp,omitempty"`
-	HTTP          *HTTPConfig          `yaml:"http,omitempty"`
-	Ftp           *FtpConfig           `yaml:"ftp,omitempty"`
-	Netbios       *NetbiosConfig       `yaml:"netbios,omitempty"`
-	Mdns          *MdnsConfig          `yaml:"mdns,omitempty"`
-	Snmpv3        *Snmpv3Config        `yaml:"snmpv3,omitempty"` // v0.86.0 — free (safe SNMP variant)
-	Icmp          *IcmpConfig          `yaml:"icmp,omitempty"`
-	Icmpv6        *Icmpv6Config        `yaml:"icmpv6,omitempty"`
-	Dhcpv6        *Dhcpv6Config        `yaml:"dhcpv6,omitempty"`
-	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"` // v1.24.0
-	SSH           *SSHConfig           `yaml:"ssh,omitempty"`
-	Syslog        *SyslogConfig        `yaml:"syslog,omitempty"`
-	IPerf3        *IPerf3Config        `yaml:"iperf3,omitempty"`                                   // v1.25.0
-	Reflector     *ReflectorConfig     `yaml:"reflector,omitempty"`                                // v0.94.0 — NetAlly UDP reflector endpoint
-	Interfaces    []Interface          `yaml:"interfaces,omitempty"     validate:"omitempty,dive"` // Device interface metadata
-	Routes        []Route              `yaml:"routes,omitempty"         validate:"omitempty,dive"`
-	TrunkPorts    []TrunkPort          `yaml:"trunk_ports,omitempty"`   // v1.23.0 — topology link declarations
-	PortChannels  []PortChannel        `yaml:"port_channels,omitempty"` // v1.23.0 — LAG bundling
+	// IPs are the device's addresses as bare IPs (10.10.0.5), used when the
+	// device is not modelled through `interfaces` and `networks`. Interface
+	// addresses use a prefix instead.
+	IPs []string `yaml:"ips,omitempty" validate:"omitempty,dive,ip"`
+
+	// VLAN is the access VLAN, 1..4094, for a device served on a trunk
+	// without its own interface list.
+	VLAN int `yaml:"vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
+
+	// MapToIP answers for this additional address as well, so one simulated
+	// device can respond on a second IP.
+	MapToIP string `yaml:"map_to_ip,omitempty" validate:"omitempty,ip"`
+
+	// Babble makes the device emit unsolicited background chatter, so a
+	// passive scanner sees it without probing.
+	Babble bool `yaml:"babble,omitempty"`
+
+	// TTL configures ICMP TTL expiry so the device appears as a traceroute
+	// hop. It is an object (ttl / ip / mask), not a bare integer — a plain
+	// `ttl: 64` is rejected. The per-packet IP TTL lives in
+	// `os_fingerprint.ttl`.
+	TTL *TTLConfig `yaml:"ttl,omitempty"`
+
+	// SnmpAgent serves SNMP for this device, from a walk file and/or
+	// individual OID overrides.
+	SnmpAgent *SnmpAgent `yaml:"snmp_agent,omitempty"`
+
+	// Dhcp makes the device a DHCP server. Its pool must sit inside a routed
+	// network this config declares, or preflight rejects the config.
+	Dhcp *DhcpServer `yaml:"dhcp,omitempty"`
+
+	// DNS makes the device a DNS server. Its records key the address as `ip`,
+	// not `address`.
+	DNS *DNSServer `yaml:"dns,omitempty"`
+
+	// Lldp overrides the fleet-wide `discovery_protocols.lldp` for this
+	// device and carries its advertised strings.
+	Lldp *LldpConfig `yaml:"lldp,omitempty"`
+
+	// Cdp overrides the fleet-wide `discovery_protocols.cdp` for this device.
+	Cdp *CdpConfig `yaml:"cdp,omitempty"`
+
+	// Edp overrides the fleet-wide `discovery_protocols.edp` for this device.
+	Edp *EdpConfig `yaml:"edp,omitempty"`
+
+	// Fdp overrides the fleet-wide `discovery_protocols.fdp` for this device.
+	Fdp *FdpConfig `yaml:"fdp,omitempty"`
+
+	// Stp makes the device participate in spanning tree, so a scanner sees
+	// bridge priorities and a root election.
+	Stp *StpConfig `yaml:"stp,omitempty"`
+
+	// HTTP serves a web listener with author-defined endpoints, which is what
+	// makes a device identifiable as a server or an appliance.
+	HTTP *HTTPConfig `yaml:"http,omitempty"`
+
+	// Ftp serves an FTP listener with a banner and optional accounts.
+	Ftp *FtpConfig `yaml:"ftp,omitempty"`
+
+	// Netbios answers NetBIOS name queries, which is how Windows-facing
+	// scanners name a host. Names are capped at 15 characters.
+	Netbios *NetbiosConfig `yaml:"netbios,omitempty"`
+
+	// Mdns publishes the device and its services over multicast DNS, the way
+	// Bonjour and Avahi announce a printer or a camera.
+	Mdns *MdnsConfig `yaml:"mdns,omitempty"`
+
+	// Snmpv3 adds USM users for authenticated, optionally encrypted SNMP.
+	// Independent of `snmp_agent`, which serves v1/v2c.
+	Snmpv3 *Snmpv3Config `yaml:"snmpv3,omitempty"`
+
+	// Icmp configures ping and IPv4 router advertisement behaviour.
+	Icmp *IcmpConfig `yaml:"icmp,omitempty"`
+
+	// Icmpv6 configures IPv6 ping, neighbour discovery and router
+	// advertisement behaviour.
+	Icmpv6 *Icmpv6Config `yaml:"icmpv6,omitempty"`
+
+	// Dhcpv6 makes the device a DHCPv6 server. Omit the block entirely when
+	// the device should not serve DHCPv6: an empty `dhcpv6: {}` is a
+	// configured server that picks up the default lifetimes.
+	Dhcpv6 *Dhcpv6Config `yaml:"dhcpv6,omitempty"`
+
+	// OSFingerprint shapes the device's TCP/IP stack and service banners so a
+	// fingerprinting scanner identifies the intended operating system.
+	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"`
+
+	// SSH serves an authenticated vendor-like CLI. The password is never
+	// written in the config: `password_env` names an environment variable
+	// that must be set in the daemon's environment, or the device cannot
+	// start.
+	SSH *SSHConfig `yaml:"ssh,omitempty"`
+
+	// Syslog sends this device's state-change messages to RFC 5424
+	// collectors.
+	Syslog *SyslogConfig `yaml:"syslog,omitempty"`
+
+	// IPerf3 answers iperf3 throughput tests with the authored rates.
+	IPerf3 *IPerf3Config `yaml:"iperf3,omitempty"`
+
+	// Reflector makes the device a NetAlly-style UDP reflector endpoint for
+	// TrueSpeed and performance tests. Presence enables it; there is no
+	// separate enable flag.
+	Reflector *ReflectorConfig `yaml:"reflector,omitempty"`
+
+	// Interfaces declares the device's ports: addresses, speeds, status and
+	// the network each one attaches to. This is what IF-MIB reports and what
+	// behaviour phases target by name.
+	Interfaces []Interface `yaml:"interfaces,omitempty" validate:"omitempty,dive"`
+
+	// Routes are static IPv4 routes this device advertises and forwards on.
+	Routes []Route `yaml:"routes,omitempty" validate:"omitempty,dive"`
+
+	// TrunkPorts declare the VLAN-tagged links to neighbouring devices. This
+	// is how topology edges are authored — there is no separate `links`
+	// section; an edge exists because a trunk port names a `remote_device`.
+	TrunkPorts []TrunkPort `yaml:"trunk_ports,omitempty"`
+
+	// PortChannels bundle member interfaces into a LAG. They draw no edge on
+	// their own: a trunk_port whose `interface` is "port-channel<id>" is what
+	// surfaces the link.
+	PortChannels []PortChannel `yaml:"port_channels,omitempty"`
+
 	// Properties is a free-form vendor-metadata block used by the
 	// vendor template pack (cmd/niac/templates/vendor-templates) to
 	// carry vendor / model / OS / port-config strings into the
 	// device list. Keys are author-defined; consumers treat unknown
-	// keys as informational.
+	// keys as informational. The loader's own derived keys (vlan,
+	// custom_mibs_count) are not authored here.
 	Properties map[string]string `yaml:"properties,omitempty"`
-}
-
-// SSHConfig enables authenticated vendor-like command sessions.
-type SSHConfig struct {
-	Enabled     bool   `yaml:"enabled"`
-	Username    string `yaml:"username,omitempty"`
-	PasswordEnv string `yaml:"password_env,omitempty" jsonschema:"pattern=^[A-Za-z_][A-Za-z0-9_]*$"`
-}
-
-// JSONSchemaExtend requires SSH credentials only when the service is enabled.
-func (SSHConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
-	addEnabledRequirements(schema, "username", "password_env")
-	username, found := schema.Properties.Get("username")
-	if found {
-		username.Pattern = `.*\S.*`
-	}
-}
-
-// SyslogConfig sends configuration-state messages to RFC 5424 collectors.
-type SyslogConfig struct {
-	Enabled   bool     `yaml:"enabled"`
-	Receivers []string `yaml:"receivers,omitempty"`
-}
-
-// JSONSchemaExtend requires collectors only when SYSLOG is enabled.
-func (SyslogConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
-	addEnabledRequirements(schema, "receivers")
-	receivers, found := schema.Properties.Get("receivers")
-	if found {
-		minimum := uint64(1)
-		receivers.MinItems = &minimum
-		octet := `(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])`
-		port := `(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])`
-		receivers.Items.Pattern = `^(?:` + octet + `\.){3}` + octet + `:` + port + `$`
-	}
-}
-
-func addEnabledRequirements(schema *jsonschema.Schema, required ...string) {
-	properties := jsonschema.NewProperties()
-	properties.Set("enabled", &jsonschema.Schema{Const: true})
-	schema.AllOf = append(schema.AllOf, &jsonschema.Schema{
-		If:   &jsonschema.Schema{Properties: properties, Required: []string{"enabled"}},
-		Then: &jsonschema.Schema{Required: required},
-	})
 }
 
 // Interface represents configured metadata for a device interface.
 type Interface struct {
-	Name           string  `yaml:"name"`
-	Type           string  `yaml:"type,omitempty"            validate:"omitempty,oneof=ethernet ieee80211 l2vlan l3ipvlan loopback tunnel other"`
-	Network        string  `yaml:"network,omitempty"`
-	Address        string  `yaml:"address,omitempty"         validate:"omitempty,cidr"`
-	MTU            int     `yaml:"mtu,omitempty"             validate:"omitempty,gte=576,lte=1000000"`
-	Speed          int     `yaml:"speed,omitempty"` // Mbps
-	Duplex         string  `yaml:"duplex,omitempty"          validate:"omitempty,oneof=full half"`
-	AdminStatus    string  `yaml:"admin_status,omitempty"    validate:"omitempty,oneof=up down testing"`
-	OperStatus     string  `yaml:"oper_status,omitempty"     validate:"omitempty,oneof=up down testing"`
-	Description    string  `yaml:"description,omitempty"`
-	InUtilization  float64 `yaml:"in_utilization,omitempty"  validate:"omitempty,gte=0,lte=100"`
+	// Name is the port name, for example GigabitEthernet0/1 or eth0.
+	// Behaviour phases and trunk ports target the interface by this name.
+	Name string `yaml:"name"`
+
+	// Type is the IF-MIB interface type reported for this port.
+	Type string `yaml:"type,omitempty" validate:"omitempty,oneof=ethernet ieee80211 l2vlan l3ipvlan loopback tunnel other"`
+
+	// Network is the `networks[].name` this port attaches to. When set, the
+	// port's `address` must be written as a prefix and must fall inside that
+	// network's subnet.
+	Network string `yaml:"network,omitempty"`
+
+	// Address is the port's IPv4 address, written as a prefix
+	// (10.10.0.5/24) — a bare address is rejected. When `network` is set the
+	// address must fall inside that network's subnet and carry the same
+	// prefix length; a /32 host address on a /24 network is refused.
+	Address string `yaml:"address,omitempty" validate:"omitempty,cidr"`
+
+	// MTU is the port's MTU in bytes, 576..1000000.
+	MTU int `yaml:"mtu,omitempty" validate:"omitempty,gte=576,lte=1000000"`
+
+	// Speed is the port's nominal speed in Mbps, reported through IF-MIB.
+	Speed int `yaml:"speed,omitempty"`
+
+	// Duplex is the port's duplex mode.
+	Duplex string `yaml:"duplex,omitempty" validate:"omitempty,oneof=full half"`
+
+	// AdminStatus is the configured state of the port (ifAdminStatus).
+	AdminStatus string `yaml:"admin_status,omitempty" validate:"omitempty,oneof=up down testing"`
+
+	// OperStatus is the observed state of the port (ifOperStatus). A link
+	// fault drives this down at runtime.
+	OperStatus string `yaml:"oper_status,omitempty" validate:"omitempty,oneof=up down testing"`
+
+	// Description is the port's ifAlias text, as a switch's port description.
+	Description string `yaml:"description,omitempty"`
+
+	// InUtilization is the steady-state inbound utilization percentage,
+	// 0..100, before any behaviour phase changes it.
+	InUtilization float64 `yaml:"in_utilization,omitempty" validate:"omitempty,gte=0,lte=100"`
+
+	// OutUtilization is the steady-state outbound utilization percentage,
+	// 0..100, before any behaviour phase changes it.
 	OutUtilization float64 `yaml:"out_utilization,omitempty" validate:"omitempty,gte=0,lte=100"`
-	VLANs          []int   `yaml:"vlans,omitempty"`
+
+	// VLANs are the VLAN ids carried on this port when it is a switch port.
+	VLANs []int `yaml:"vlans,omitempty"`
 }
 
 // Route declares an IPv4 static route through a named device interface.
 type Route struct {
+	// Destination is the target network in CIDR form, for example
+	// 10.20.0.0/24. Use 0.0.0.0/0 for a default route.
 	Destination string `yaml:"destination" validate:"required,cidr"`
-	Via         string `yaml:"via"         validate:"required"`
-	NextHop     string `yaml:"next_hop"    validate:"required,ip4_addr"`
+
+	// Via is the `name` of the local interface the route leaves by.
+	Via string `yaml:"via" validate:"required"`
+
+	// NextHop is the gateway's bare IPv4 address — an address, not a prefix.
+	NextHop string `yaml:"next_hop" validate:"required,ip4_addr"`
 }
 
 // TrunkPort declares a VLAN-tagged trunk link to a neighbouring device.
 // The remote_device field is what BuildTopology uses to draw an edge
 // between two devices on the topology graph.
 type TrunkPort struct {
-	Interface       string `yaml:"interface"`
-	VLANs           []int  `yaml:"vlans,omitempty"`
-	NativeVLAN      int    `yaml:"native_vlan,omitempty"`
-	RemoteDevice    string `yaml:"remote_device,omitempty"`
+	// Interface is the local port carrying the trunk, matching an
+	// `interfaces[].name`, or "port-channel<id>" for a LAG.
+	Interface string `yaml:"interface"`
+
+	// VLANs are the tagged VLAN ids the trunk carries. A port with no VLANs
+	// and no native VLAN is an access port, not a trunk.
+	VLANs []int `yaml:"vlans,omitempty"`
+
+	// NativeVLAN is the untagged VLAN on this trunk.
+	NativeVLAN int `yaml:"native_vlan,omitempty"`
+
+	// RemoteDevice is the `name` of the device at the far end. This is what
+	// draws the topology edge; without it the port is a stub.
+	RemoteDevice string `yaml:"remote_device,omitempty"`
+
+	// RemoteInterface is the far-end port name, used to label the edge.
 	RemoteInterface string `yaml:"remote_interface,omitempty"`
-	FDBOnly         bool   `yaml:"fdb_only,omitempty"`
+
+	// FDBOnly records the neighbour in the forwarding database without
+	// drawing a topology edge, for a device seen but not linked.
+	FDBOnly bool `yaml:"fdb_only,omitempty"`
 }
 
 // PortChannel declares a Link Aggregation (LACP) bundle. Doesn't
 // produce topology edges on its own — trunk_ports referencing
 // "port-channel<id>" as their interface are what surface edges.
 type PortChannel struct {
-	ID      int      `yaml:"id"`
+	// ID is the channel number; a trunk port refers to the bundle as
+	// "port-channel<id>".
+	ID int `yaml:"id"`
+
+	// Members are the `interfaces[].name` values bundled into the channel.
 	Members []string `yaml:"members,omitempty"`
-	Mode    string   `yaml:"mode,omitempty"`
-}
 
-// IPerf3Config represents iPerf3 server emulation configuration.
-type IPerf3Config struct {
-	Enabled           bool    `yaml:"enabled,omitempty"`
-	Port              uint16  `yaml:"port,omitempty"                validate:"omitempty,gte=1"`
-	MaxBandwidthMbps  float64 `yaml:"max_bandwidth_mbps,omitempty"`
-	TypicalLatencyMs  float64 `yaml:"typical_latency_ms,omitempty"`
-	JitterMs          float64 `yaml:"jitter_ms,omitempty"`
-	PacketLossPercent float64 `yaml:"packet_loss_percent,omitempty"`
-	UploadMbps        float64 `yaml:"upload_mbps,omitempty"`
-	DownloadMbps      float64 `yaml:"download_mbps,omitempty"`
-}
-
-// ReflectorConfig represents a NetAlly-style UDP reflector endpoint. When
-// present, the device echoes signed reflector probes (TrueSpeed / performance
-// tests) back to the sender with source/destination swapped, matching the
-// niac-java Reflector() section. The presence of this block enables the
-// reflector; there is no separate enable flag (Java sets isReflector on the
-// section being parsed).
-type ReflectorConfig struct {
-	// LatencyMs delays the reflected packet by this many milliseconds,
-	// simulating one-way path latency (Java Latency()). 0 = reflect
-	// immediately.
-	LatencyMs int `yaml:"latency_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
-
-	// JitterMs randomises the delay by +/- this many milliseconds around
-	// LatencyMs (Java Jitter()). 0 = no jitter.
-	JitterMs int `yaml:"jitter_ms,omitempty" validate:"omitempty,gte=0,lte=60000"`
-
-	// DSCP selects which ToS bits are toggled on the reflected packet:
-	// true wiggles the bottom two DSCP bits (0x03, Java Dscp), false
-	// wiggles the IP-precedence bit (0x01, Java IpPrecedence — the default).
-	DSCP bool `yaml:"dscp,omitempty"`
-}
-
-// OSFingerprintConfig represents OS fingerprinting configuration for device simulation.
-type OSFingerprintConfig struct {
-	OSType       string `yaml:"os_type,omitempty"`       // e.g., "linux", "windows", "cisco-ios", "juniper-junos"
-	TTL          uint8  `yaml:"ttl,omitempty"`           // Default IP TTL (Linux=64, Windows=128, Cisco=255)
-	WindowSize   uint16 `yaml:"window_size,omitempty"`   // TCP window size
-	WindowScale  uint8  `yaml:"window_scale,omitempty"`  // TCP window scale option
-	MSS          uint16 `yaml:"mss,omitempty"`           // TCP maximum segment size
-	SSHBanner    string `yaml:"ssh_banner,omitempty"`    // SSH version banner
-	HTTPServer   string `yaml:"http_server,omitempty"`   // HTTP Server header
-	FTPBanner    string `yaml:"ftp_banner,omitempty"`    // FTP welcome banner
-	SMTPBanner   string `yaml:"smtp_banner,omitempty"`   // SMTP banner
-	TelnetBanner string `yaml:"telnet_banner,omitempty"` // Telnet banner
-	DontFragment bool   `yaml:"dont_fragment,omitempty"` // IP DF bit (Linux=true, Windows=false usually)
-}
-
-// SnmpAgent represents SNMP agent configuration.
-type SnmpAgent struct {
-	Enabled           *bool              `yaml:"enabled,omitempty"`
-	Community         string             `yaml:"community,omitempty"`
-	SysName           string             `yaml:"sysname,omitempty"`
-	SysDescr          string             `yaml:"sysdescr,omitempty"`
-	SysContact        string             `yaml:"syscontact,omitempty"`
-	SysLocation       string             `yaml:"syslocation,omitempty"`
-	WalkFile          string             `yaml:"walk_file,omitempty"`
-	WalkFiles         []string           `yaml:"walk_files,omitempty"`
-	AddMibs           []AddMib           `yaml:"add_mibs,omitempty"           validate:"omitempty,dive"`
-	CommunityIncludes []CommunityInclude `yaml:"community_includes,omitempty" validate:"omitempty,dive"`
-	AccessList        []string           `yaml:"access_list,omitempty"`
-	SnmpAddr          string             `yaml:"snmp_addr,omitempty"`
-	Dot1DFdbTable     *FdbTableConfig    `yaml:"dot1d_fdb_table,omitempty"`
-	Dot1QFdbTable     *FdbTableConfig    `yaml:"dot1q_fdb_table,omitempty"`
-	Traps             *TrapsConfig       `yaml:"traps,omitempty"` // v1.6.0
-}
-
-// AddMib represents a MIB override or addition.
-type AddMib struct {
-	OID   string `yaml:"oid"   validate:"required"`
-	Type  string `yaml:"type"  validate:"required"`
-	Value string `yaml:"value" validate:"required"`
-}
-
-// CommunityInclude represents a community-specific walk include.
-type CommunityInclude struct {
-	Community string `yaml:"community" validate:"required"`
-	WalkFile  string `yaml:"walk_file" validate:"required"`
-}
-
-// FdbTableConfig configures SNMP forwarding database table injection.
-type FdbTableConfig struct {
-	Port int `yaml:"port,omitempty"`
-	VLAN int `yaml:"vlan,omitempty"`
-}
-
-// TTLConfig configures ICMP TTL timeout behavior (traceroute simulation).
-type TTLConfig struct {
-	TTL  int    `yaml:"ttl,omitempty"`
-	IP   string `yaml:"ip,omitempty"`
-	Mask string `yaml:"mask,omitempty"`
-}
-
-// DhcpServer represents DHCP server configuration.
-type DhcpServer struct {
-	ClientLeases     []DhcpLease `yaml:"client_leases,omitempty"      validate:"omitempty,dive"`
-	SubnetMask       string      `yaml:"subnet_mask,omitempty"`
-	Router           string      `yaml:"router,omitempty"`
-	DomainNameServer string      `yaml:"domain_name_server,omitempty"`
-	NextServerIP     string      `yaml:"next_server_ip,omitempty"`
-	ServerIdentifier string      `yaml:"server_identifier,omitempty"`
-	// Pool configuration
-	PoolStart string `yaml:"pool_start,omitempty"` // Start of DHCP address pool
-	PoolEnd   string `yaml:"pool_end,omitempty"`   // End of DHCP address pool
-	// DHCPv4 high priority options
-	NTPServers     []string `yaml:"ntp_servers,omitempty"`      // Option 42
-	DomainSearch   []string `yaml:"domain_search,omitempty"`    // Option 119
-	TFTPServerName string   `yaml:"tftp_server_name,omitempty"` // Option 66
-	BootfileName   string   `yaml:"bootfile_name,omitempty"`    // Option 67
-	VendorSpecific string   `yaml:"vendor_specific,omitempty"`  // Option 43 (hex string)
-	// DHCPv6 options
-	SNTPServersV6 []string `yaml:"sntp_servers_v6,omitempty"` // Option 31
-	NTPServersV6  []string `yaml:"ntp_servers_v6,omitempty"`  // Option 56
-	SIPServersV6  []string `yaml:"sip_servers_v6,omitempty"`  // Option 22
-	SIPDomainsV6  []string `yaml:"sip_domains_v6,omitempty"`  // Option 21
-}
-
-// DhcpLease represents a DHCP client lease.
-type DhcpLease struct {
-	ClientIP     string `yaml:"client_ip"                validate:"required,ip"`
-	MacAddrValue string `yaml:"mac_addr_value,omitempty"`
-	MacAddrMask  string `yaml:"mac_addr_mask,omitempty"`
-}
-
-// DNSServer represents DNS server configuration.
-type DNSServer struct {
-	ForwardRecords []DNSRecord `yaml:"forward_records,omitempty" validate:"omitempty,dive"`
-	ReverseRecords []DNSRecord `yaml:"reverse_records,omitempty" validate:"omitempty,dive"`
-}
-
-// DNSRecord represents a DNS A or PTR record.
-type DNSRecord struct {
-	Name  string `yaml:"name"            validate:"required"`
-	IP    string `yaml:"ip"              validate:"required,ip"`
-	TTL   int    `yaml:"ttl,omitempty"   validate:"omitempty,gte=0"`
-	RCode int    `yaml:"rcode,omitempty" validate:"omitempty,gte=0,lte=15"`
-}
-
-// LldpConfig represents LLDP discovery protocol configuration.
-type LldpConfig struct {
-	Enabled           bool   `yaml:"enabled,omitempty"`
-	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
-	TTL               int    `yaml:"ttl,omitempty"`
-	SystemDescription string `yaml:"system_description,omitempty"`
-	PortDescription   string `yaml:"port_description,omitempty"`
-	ChassisIDType     string `yaml:"chassis_id_type,omitempty"`
-}
-
-// CdpConfig represents CDP discovery protocol configuration.
-type CdpConfig struct {
-	Enabled           bool   `yaml:"enabled,omitempty"`
-	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
-	Holdtime          int    `yaml:"holdtime,omitempty"`
-	Version           int    `yaml:"version,omitempty"`
-	SoftwareVersion   string `yaml:"software_version,omitempty"`
-	Platform          string `yaml:"platform,omitempty"`
-	PortID            string `yaml:"port_id,omitempty"`
-}
-
-// EdpConfig represents EDP discovery protocol configuration.
-type EdpConfig struct {
-	Enabled           bool   `yaml:"enabled,omitempty"`
-	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
-	VersionString     string `yaml:"version_string,omitempty"`
-	DisplayString     string `yaml:"display_string,omitempty"`
-}
-
-// FdpConfig represents FDP discovery protocol configuration.
-type FdpConfig struct {
-	Enabled           bool   `yaml:"enabled,omitempty"`
-	AdvertiseInterval int    `yaml:"advertise_interval,omitempty"`
-	Holdtime          int    `yaml:"holdtime,omitempty"`
-	SoftwareVersion   string `yaml:"software_version,omitempty"`
-	Platform          string `yaml:"platform,omitempty"`
-	PortID            string `yaml:"port_id,omitempty"`
-}
-
-// StpConfig represents STP/RSTP/MSTP configuration.
-type StpConfig struct {
-	Enabled        bool   `yaml:"enabled,omitempty"`
-	BridgePriority uint16 `yaml:"bridge_priority,omitempty"`
-	HelloTime      uint16 `yaml:"hello_time,omitempty"`
-	MaxAge         uint16 `yaml:"max_age,omitempty"`
-	ForwardDelay   uint16 `yaml:"forward_delay,omitempty"`
-	Version        string `yaml:"version,omitempty"`
-}
-
-// HTTPConfig represents HTTP server configuration.
-type HTTPConfig struct {
-	Enabled    bool           `yaml:"enabled,omitempty"`
-	ServerName string         `yaml:"server_name,omitempty"`
-	Endpoints  []HTTPEndpoint `yaml:"endpoints,omitempty"`
-}
-
-// HTTPEndpoint represents an HTTP endpoint configuration.
-type HTTPEndpoint struct {
-	Path        string `yaml:"path,omitempty"`
-	Method      string `yaml:"method,omitempty"`
-	StatusCode  int    `yaml:"status_code,omitempty"`
-	ContentType string `yaml:"content_type,omitempty"`
-	Body        string `yaml:"body,omitempty"`
-}
-
-// FtpConfig represents FTP server configuration.
-type FtpConfig struct {
-	Enabled        bool      `yaml:"enabled,omitempty"`
-	WelcomeBanner  string    `yaml:"welcome_banner,omitempty"`
-	SystemType     string    `yaml:"system_type,omitempty"`
-	AllowAnonymous bool      `yaml:"allow_anonymous,omitempty"`
-	Users          []FtpUser `yaml:"users,omitempty"`
-}
-
-// FtpUser represents an FTP user account.
-type FtpUser struct {
-	Username string `yaml:"username,omitempty"`
-	Password string `yaml:"password,omitempty"`
-	HomeDir  string `yaml:"home_dir,omitempty"`
-}
-
-// MdnsConfig publishes a device on multicast DNS, the way Bonjour and Avahi
-// announce a host and its services on the local link.
-type MdnsConfig struct {
-	Enabled  bool          `yaml:"enabled,omitempty"`
-	Hostname string        `yaml:"hostname,omitempty"`
-	Services []MdnsService `yaml:"services,omitempty"`
-	TTL      uint32        `yaml:"ttl,omitempty"`
-}
-
-// MdnsService is one advertised DNS-SD service, such as _ipp._tcp.
-type MdnsService struct {
-	Type string   `yaml:"type"`
-	Port uint16   `yaml:"port"`
-	TXT  []string `yaml:"txt,omitempty"`
-}
-
-// NetbiosConfig represents NetBIOS service configuration.
-type NetbiosConfig struct {
-	Enabled   bool          `yaml:"enabled,omitempty"`
-	Name      string        `yaml:"name,omitempty"`
-	Workgroup string        `yaml:"workgroup,omitempty"`
-	NodeType  string        `yaml:"node_type,omitempty"`
-	Services  []string      `yaml:"services,omitempty"`
-	TTL       uint32        `yaml:"ttl,omitempty"`
-	Names     []NetbiosName `yaml:"names,omitempty"`
-	MsBrowse  bool          `yaml:"msbrowse,omitempty"`
-}
-
-// NetbiosName represents a NetBIOS name entry.
-type NetbiosName struct {
-	Name   string `yaml:"name,omitempty"`
-	Suffix string `yaml:"suffix,omitempty"`
-	Group  bool   `yaml:"group,omitempty"`
-}
-
-// Snmpv3Config represents SNMPv3 user / auth / priv configuration.
-//
-// Added 2026-05-27. NOT license-gated — SNMPv3 is the only safe SNMP
-// version (v1/v2c send credentials in cleartext) and is free for all
-// NIAC tiers. The actual SNMPv3 packet path lives in
-// internal/protocols/snmp/.
-type Snmpv3Config struct {
-	Enabled  bool         `yaml:"enabled,omitempty"`
-	EngineID string       `yaml:"engine_id,omitempty"`
-	Users    []Snmpv3User `yaml:"users,omitempty"`
-}
-
-// Snmpv3User represents one SNMPv3 USM user record.
-type Snmpv3User struct {
-	Username     string `yaml:"username"                validate:"required"`
-	AuthProtocol string `yaml:"auth_protocol,omitempty" validate:"omitempty,oneof=none md5 sha sha256 sha512"`
-	AuthPassword string `yaml:"auth_password,omitempty"`
-	PrivProtocol string `yaml:"priv_protocol,omitempty" validate:"omitempty,oneof=none des aes aes192 aes256"`
-	PrivPassword string `yaml:"priv_password,omitempty"`
-}
-
-// IcmpConfig represents ICMP/ICMPv4 configuration.
-type IcmpConfig struct {
-	Enabled             bool                     `yaml:"enabled,omitempty"`
-	TTL                 uint8                    `yaml:"ttl,omitempty"`
-	RateLimit           int                      `yaml:"rate_limit,omitempty"`
-	AddressMaskReply    string                   `yaml:"address_mask_reply,omitempty"`
-	RouterAdvertisement *IcmpRouterAdvertisement `yaml:"router_advertisement,omitempty"`
-}
-
-// IcmpRouterAdvertisement configures IPv4 router advertisements.
-type IcmpRouterAdvertisement struct {
-	Period   int          `yaml:"period,omitempty"`
-	Lifetime int          `yaml:"lifetime,omitempty"`
-	Routers  []IcmpRouter `yaml:"routers,omitempty"`
-}
-
-// IcmpRouter represents an advertised router entry.
-type IcmpRouter struct {
-	Address    string `yaml:"address,omitempty"`
-	Preference int    `yaml:"preference,omitempty"`
-}
-
-// Icmpv6Config represents ICMPv6 configuration.
-type Icmpv6Config struct {
-	Enabled             bool                       `yaml:"enabled,omitempty"`
-	HopLimit            uint8                      `yaml:"hop_limit,omitempty"`
-	RateLimit           int                        `yaml:"rate_limit,omitempty"`
-	RouterAdvertisement *Icmpv6RouterAdvertisement `yaml:"router_advertisement,omitempty"`
-}
-
-// Icmpv6RouterAdvertisement configures IPv6 router advertisements.
-type Icmpv6RouterAdvertisement struct {
-	Period        int                `yaml:"period,omitempty"`
-	CurHopLimit   int                `yaml:"cur_hop_limit,omitempty"`
-	Managed       int                `yaml:"managed,omitempty"`
-	Other         int                `yaml:"other,omitempty"`
-	Lifetime      int                `yaml:"lifetime,omitempty"`
-	ReachableTime int                `yaml:"reachable_time,omitempty"`
-	RetransTimer  int                `yaml:"retrans_timer,omitempty"`
-	MTU           int                `yaml:"mtu,omitempty"`
-	PrefixInfo    []Icmpv6PrefixInfo `yaml:"prefix_info,omitempty"`
-}
-
-// Icmpv6PrefixInfo represents IPv6 prefix info options.
-type Icmpv6PrefixInfo struct {
-	PrefixLength      int    `yaml:"prefix_length,omitempty"`
-	Onlink            int    `yaml:"onlink,omitempty"`
-	Auto              int    `yaml:"auto,omitempty"`
-	ValidLifetime     int    `yaml:"valid_lifetime,omitempty"`
-	PreferredLifetime int    `yaml:"preferred_lifetime,omitempty"`
-	Prefix            string `yaml:"prefix,omitempty"`
-}
-
-// Dhcpv6Config represents DHCPv6 server configuration.
-type Dhcpv6Config struct {
-	Enabled           bool         `yaml:"enabled,omitempty"`
-	Pools             []Dhcpv6Pool `yaml:"pools,omitempty"`
-	PreferredLifetime uint32       `yaml:"preferred_lifetime,omitempty"`
-	ValidLifetime     uint32       `yaml:"valid_lifetime,omitempty"`
-	Preference        uint8        `yaml:"preference,omitempty"`
-	DNSServers        []string     `yaml:"dns_servers,omitempty"`
-	DomainList        []string     `yaml:"domain_list,omitempty"`
-	SNTPServers       []string     `yaml:"sntp_servers,omitempty"`
-	NTPServers        []string     `yaml:"ntp_servers,omitempty"`
-	SIPServers        []string     `yaml:"sip_servers,omitempty"`
-	SIPDomains        []string     `yaml:"sip_domains,omitempty"`
-}
-
-// Dhcpv6Pool represents an IPv6 address pool.
-type Dhcpv6Pool struct {
-	Network    string `yaml:"network,omitempty"`
-	RangeStart string `yaml:"range_start,omitempty"`
-	RangeEnd   string `yaml:"range_end,omitempty"`
-}
-
-// TrapsConfig represents SNMP trap configuration (v1.6.0).
-type TrapsConfig struct {
-	Enabled   bool                 `yaml:"enabled,omitempty"`
-	Receivers []string             `yaml:"receivers,omitempty"`
-	Community string               `yaml:"community,omitempty"` // SNMP community string
-	ColdStart *TrapTriggerConfig   `yaml:"cold_start,omitempty"`
-	LinkState *LinkStateTrapConfig `yaml:"link_state,omitempty"`
-}
-
-// TrapTriggerConfig configures a simple trap trigger.
-type TrapTriggerConfig struct {
-	Enabled   bool `yaml:"enabled,omitempty"`
-	OnStartup bool `yaml:"on_startup,omitempty"`
-}
-
-// LinkStateTrapConfig configures link up/down traps.
-type LinkStateTrapConfig struct {
-	Enabled  bool `yaml:"enabled,omitempty"`
-	LinkDown bool `yaml:"link_down,omitempty"`
-	LinkUp   bool `yaml:"link_up,omitempty"`
+	// Mode is the LACP mode, for example active, passive or on.
+	Mode string `yaml:"mode,omitempty"`
 }
 
 // Parser handles parsing Java DSL format.

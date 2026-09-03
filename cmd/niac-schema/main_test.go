@@ -2,7 +2,11 @@ package main_test
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/invopop/jsonschema"
@@ -79,4 +83,52 @@ func defKeys(defs jsonschema.Definitions) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// TestEveryPropertyIsDescribed holds the P1b-5 parity clause: every field an
+// author can write must carry a description.
+//
+// The descriptions are the single source the authoring guide, the YAML
+// editor's completion and the device editor's per-field help all read from —
+// the generated forms render field.description as their only help text, so an
+// undescribed field is an unlabelled control as well as an undocumented one.
+// It asserts against the committed schema rather than a fresh reflection
+// because that file is what those three consumers actually load.
+func TestEveryPropertyIsDescribed(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "schemas", "niac.schema.json"))
+	if err != nil {
+		t.Fatalf("read committed schema: %v", err)
+	}
+
+	var schema struct {
+		Defs map[string]struct {
+			Properties map[string]struct {
+				Description string `json:"description"`
+			} `json:"properties"`
+		} `json:"$defs"`
+	}
+	if unmarshalErr := json.Unmarshal(raw, &schema); unmarshalErr != nil {
+		t.Fatalf("unmarshal committed schema: %v", unmarshalErr)
+	}
+
+	total := 0
+	var undescribed []string
+	for typeName, def := range schema.Defs {
+		for field, property := range def.Properties {
+			total++
+			if strings.TrimSpace(property.Description) == "" {
+				undescribed = append(undescribed, typeName+"."+field)
+			}
+		}
+	}
+
+	if total == 0 {
+		t.Fatal("committed schema exposes no properties; the generator or this test is wrong")
+	}
+	if len(undescribed) > 0 {
+		sort.Strings(undescribed)
+		t.Errorf("%d of %d schema properties have no description; add a Go doc comment "+
+			"on the field in internal/converter/types.go and run `make schema`:\n  %s",
+			len(undescribed), total, strings.Join(undescribed, "\n  "))
+	}
 }

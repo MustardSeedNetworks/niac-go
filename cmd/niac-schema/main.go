@@ -37,9 +37,12 @@ func main() {
 		// Allow YAML-style snake_case keys to match what the converter parser
 		// actually accepts (the struct tags already say `yaml:"snake_case"`).
 		// invopop/jsonschema honours yaml: tags when configured.
-		Anonymous: true,
-		// Comments-as-descriptions would require a comment map — skip for now.
+		Anonymous:                 true,
 		AllowAdditionalProperties: false,
+	}
+	if err := reflector.AddGoComments("github.com/MustardSeedNetworks/niac-go", "./internal/converter"); err != nil {
+		fmt.Fprintf(os.Stderr, "comments: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Use yaml struct tags as the field-name source. Falling back to camelCase

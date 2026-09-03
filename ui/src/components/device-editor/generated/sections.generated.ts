@@ -46,16 +46,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "vlan",
         "title": "Vlan",
+        "description": "VLAN is the access VLAN, 1..4094, for a device served on a trunk\nwithout its own interface list.",
         "kind": "integer"
       },
       {
         "name": "map_to_ip",
         "title": "Map to IP",
+        "description": "MapToIP answers for this additional address as well, so one simulated\ndevice can respond on a second IP.",
         "kind": "string"
       },
       {
         "name": "babble",
         "title": "Babble",
+        "description": "Babble makes the device emit unsolicited background chatter, so a\npassive scanner sees it without probing.",
         "kind": "boolean"
       }
     ],
@@ -68,16 +71,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the hop count at which this device answers with ICMP time\nexceeded, placing it at that position in a traceroute.",
         "kind": "integer"
       },
       {
         "name": "ip",
         "title": "Ip",
+        "description": "IP is the source address the time-exceeded message comes from.",
         "kind": "string"
       },
       {
         "name": "mask",
         "title": "Mask",
+        "description": "Mask is the netmask paired with IP when the hop answers for a range.",
         "kind": "string"
       }
     ],
@@ -90,62 +96,74 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves SNMP for this device. Omit to inherit the default,\nwhich is enabled whenever the block is present.",
         "kind": "boolean"
       },
       {
         "name": "community",
         "title": "Community",
+        "description": "Community is the v1/v2c read community string. Omit for \"public\".",
         "kind": "string"
       },
       {
         "name": "sysname",
         "title": "Sysname",
+        "description": "SysName is sysName.0, the device's SNMP name. It overrides whatever the\nwalk file carries.",
         "kind": "string"
       },
       {
         "name": "sysdescr",
         "title": "Sysdescr",
+        "description": "SysDescr is sysDescr.0, the description string a scanner reads to\nidentify the platform and OS version.",
         "kind": "string"
       },
       {
         "name": "syscontact",
         "title": "Syscontact",
+        "description": "SysContact is sysContact.0. Starter walks carry a placeholder here;\nkeep real customer contacts out of shipped content.",
         "kind": "string"
       },
       {
         "name": "syslocation",
         "title": "Syslocation",
+        "description": "SysLocation is sysLocation.0. Starter walks carry a placeholder here;\nkeep real customer locations out of shipped content.",
         "kind": "string"
       },
       {
         "name": "walk_file",
         "title": "Walk file",
+        "description": "WalkFile is the recorded SNMP walk this device replays, resolved\nagainst `include_path` when relative. It supplies every OID not\noverridden by the fields above or by `add_mibs`.",
         "kind": "string"
       },
       {
         "name": "walk_files",
         "title": "Walk files",
+        "description": "WalkFiles is several walk files merged in order, later entries winning.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "add_mibs",
         "title": "Add mibs",
+        "description": "AddMibs sets or overrides individual OIDs on top of the walk.",
         "kind": "objectList",
         "fields": [
           {
             "name": "oid",
             "title": "Oid",
+            "description": "OID is the numeric object identifier, for example 1.3.6.1.2.1.1.5.0.",
             "kind": "string"
           },
           {
             "name": "type",
             "title": "Type",
+            "description": "Type is the SNMP value type, for example STRING, INTEGER, OID,\nCounter32, Gauge32 or Hex-STRING.",
             "kind": "string"
           },
           {
             "name": "value",
             "title": "Value",
+            "description": "Value is the value served for the OID, interpreted per `type`.",
             "kind": "string"
           }
         ]
@@ -153,16 +171,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "community_includes",
         "title": "Community includes",
+        "description": "CommunityIncludes serve a different walk file per community string, so\none device can answer differently to different pollers.",
         "kind": "objectList",
         "fields": [
           {
             "name": "community",
             "title": "Community",
+            "description": "Community is the community string that selects this walk.",
             "kind": "string"
           },
           {
             "name": "walk_file",
             "title": "Walk file",
+            "description": "WalkFile is the walk served to pollers using that community.",
             "kind": "string"
           }
         ]
@@ -170,27 +191,32 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "access_list",
         "title": "Access list",
+        "description": "AccessList restricts which source addresses may poll this agent.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "snmp_addr",
         "title": "Snmp addr",
+        "description": "SnmpAddr binds the agent to a specific address when the device has\nmore than one.",
         "kind": "string"
       },
       {
         "name": "dot1d_fdb_table",
         "title": "Dot1d fdb table",
+        "description": "FdbTableConfig configures SNMP forwarding database table injection.",
         "kind": "object",
         "fields": [
           {
             "name": "port",
             "title": "Port",
+            "description": "Port is the bridge port number the entry is learned on.",
             "kind": "integer"
           },
           {
             "name": "vlan",
             "title": "Vlan",
+            "description": "VLAN is the VLAN id the entry belongs to.",
             "kind": "integer"
           }
         ]
@@ -198,16 +224,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "dot1q_fdb_table",
         "title": "Dot1q fdb table",
+        "description": "FdbTableConfig configures SNMP forwarding database table injection.",
         "kind": "object",
         "fields": [
           {
             "name": "port",
             "title": "Port",
+            "description": "Port is the bridge port number the entry is learned on.",
             "kind": "integer"
           },
           {
             "name": "vlan",
             "title": "Vlan",
+            "description": "VLAN is the VLAN id the entry belongs to.",
             "kind": "integer"
           }
         ]
@@ -215,37 +244,44 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "traps",
         "title": "Traps",
+        "description": "TrapsConfig represents SNMP trap configuration (v1.6.0).",
         "kind": "object",
         "fields": [
           {
             "name": "enabled",
             "title": "Enabled",
+            "description": "Enabled sends SNMP notifications from this device.",
             "kind": "boolean"
           },
           {
             "name": "receivers",
             "title": "Receivers",
+            "description": "Receivers are trap destinations as \"host:port\", conventionally port\n162.",
             "kind": "scalarList",
             "itemKind": "string"
           },
           {
             "name": "community",
             "title": "Community",
+            "description": "Community is the community string sent with v2c traps.",
             "kind": "string"
           },
           {
             "name": "cold_start",
             "title": "Cold start",
+            "description": "TrapTriggerConfig configures a simple trap trigger.",
             "kind": "object",
             "fields": [
               {
                 "name": "enabled",
                 "title": "Enabled",
+                "description": "Enabled arms this trigger.",
                 "kind": "boolean"
               },
               {
                 "name": "on_startup",
                 "title": "On startup",
+                "description": "OnStartup fires the trap once when the session starts.",
                 "kind": "boolean"
               }
             ]
@@ -253,21 +289,25 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
           {
             "name": "link_state",
             "title": "Link state",
+            "description": "LinkStateTrapConfig configures link up/down traps.",
             "kind": "object",
             "fields": [
               {
                 "name": "enabled",
                 "title": "Enabled",
+                "description": "Enabled arms link-state traps.",
                 "kind": "boolean"
               },
               {
                 "name": "link_down",
                 "title": "Link down",
+                "description": "LinkDown sends a trap when an interface goes down.",
                 "kind": "boolean"
               },
               {
                 "name": "link_up",
                 "title": "Link up",
+                "description": "LinkUp sends a trap when an interface comes up.",
                 "kind": "boolean"
               }
             ]
@@ -284,21 +324,25 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "client_leases",
         "title": "Client leases",
+        "description": "ClientLeases are fixed reservations handed to matching clients.",
         "kind": "objectList",
         "fields": [
           {
             "name": "client_ip",
             "title": "Client ip",
+            "description": "ClientIP is the address reserved for the matching client.",
             "kind": "string"
           },
           {
             "name": "mac_addr_value",
             "title": "Mac addr value",
+            "description": "MacAddrValue is the client MAC the reservation matches.",
             "kind": "string"
           },
           {
             "name": "mac_addr_mask",
             "title": "Mac addr mask",
+            "description": "MacAddrMask masks MacAddrValue so a reservation can match a range of\nMACs, such as a whole vendor OUI.",
             "kind": "string"
           }
         ]
@@ -306,86 +350,102 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "subnet_mask",
         "title": "Subnet mask",
+        "description": "SubnetMask is option 1, the mask offered to clients.",
         "kind": "string"
       },
       {
         "name": "router",
         "title": "Router",
+        "description": "Router is option 3, the default gateway offered to clients.",
         "kind": "string"
       },
       {
         "name": "domain_name_server",
         "title": "Domain name server",
+        "description": "DomainNameServer is option 6, the DNS server offered to clients.",
         "kind": "string"
       },
       {
         "name": "next_server_ip",
         "title": "Next server ip",
+        "description": "NextServerIP is the siaddr field, the TFTP server a booting client\nshould fetch its image from.",
         "kind": "string"
       },
       {
         "name": "server_identifier",
         "title": "Server identifier",
+        "description": "ServerIdentifier is option 54, this server's own address.",
         "kind": "string"
       },
       {
         "name": "pool_start",
         "title": "Pool start",
+        "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it.",
         "kind": "string"
       },
       {
         "name": "pool_end",
         "title": "Pool end",
+        "description": "PoolEnd is the last address of the dynamic pool.",
         "kind": "string"
       },
       {
         "name": "ntp_servers",
         "title": "Ntp servers",
+        "description": "NTPServers is option 42, the NTP servers offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "domain_search",
         "title": "Domain search",
+        "description": "DomainSearch is option 119, the domain search list.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "tftp_server_name",
         "title": "Tftp server name",
+        "description": "TFTPServerName is option 66, the boot server name.",
         "kind": "string"
       },
       {
         "name": "bootfile_name",
         "title": "Bootfile name",
+        "description": "BootfileName is option 67, the boot file a client should request.",
         "kind": "string"
       },
       {
         "name": "vendor_specific",
         "title": "Vendor specific",
+        "description": "VendorSpecific is option 43, vendor-specific information as a hex\nstring.",
         "kind": "string"
       },
       {
         "name": "sntp_servers_v6",
         "title": "Sntp servers v6",
+        "description": "SNTPServersV6 is DHCPv6 option 31, the SNTP servers offered.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "ntp_servers_v6",
         "title": "Ntp servers v6",
+        "description": "NTPServersV6 is DHCPv6 option 56, the NTP servers offered.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "sip_servers_v6",
         "title": "Sip servers v6",
+        "description": "SIPServersV6 is DHCPv6 option 22, the SIP servers offered.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "sip_domains_v6",
         "title": "Sip domains v6",
+        "description": "SIPDomainsV6 is DHCPv6 option 21, the SIP domain list offered.",
         "kind": "scalarList",
         "itemKind": "string"
       }
@@ -399,26 +459,31 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "forward_records",
         "title": "Forward records",
+        "description": "ForwardRecords are name-to-address (A) records this server answers.",
         "kind": "objectList",
         "fields": [
           {
             "name": "name",
             "title": "Name",
+            "description": "Name is the hostname, for example clinic-rtr-01.clinic.local.",
             "kind": "string"
           },
           {
             "name": "ip",
             "title": "Ip",
+            "description": "IP is the record's address. The key is `ip`, not `address` \u2014 an\n`address` key is rejected by the strict loader.",
             "kind": "string"
           },
           {
             "name": "ttl",
             "title": "TTL",
+            "description": "TTL is the record's time to live in seconds.",
             "kind": "integer"
           },
           {
             "name": "rcode",
             "title": "Rcode",
+            "description": "RCode answers this record with a DNS response code instead of the\naddress, 0..15 \u2014 3 is NXDOMAIN, which is how a lookup failure is\nauthored.",
             "kind": "integer"
           }
         ]
@@ -426,26 +491,31 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "reverse_records",
         "title": "Reverse records",
+        "description": "ReverseRecords are address-to-name (PTR) records this server answers.",
         "kind": "objectList",
         "fields": [
           {
             "name": "name",
             "title": "Name",
+            "description": "Name is the hostname, for example clinic-rtr-01.clinic.local.",
             "kind": "string"
           },
           {
             "name": "ip",
             "title": "Ip",
+            "description": "IP is the record's address. The key is `ip`, not `address` \u2014 an\n`address` key is rejected by the strict loader.",
             "kind": "string"
           },
           {
             "name": "ttl",
             "title": "TTL",
+            "description": "TTL is the record's time to live in seconds.",
             "kind": "integer"
           },
           {
             "name": "rcode",
             "title": "Rcode",
+            "description": "RCode answers this record with a DNS response code instead of the\naddress, 0..15 \u2014 3 is NXDOMAIN, which is how a lookup failure is\nauthored.",
             "kind": "integer"
           }
         ]
@@ -460,31 +530,37 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled advertises LLDP from this device, overriding the fleet-wide\n`discovery_protocols.lldp`.",
         "kind": "boolean"
       },
       {
         "name": "advertise_interval",
         "title": "Advertise interval",
+        "description": "AdvertiseInterval is the seconds between advertisements. Omit for 30.",
         "kind": "integer"
       },
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the seconds a neighbour should hold this advertisement.",
         "kind": "integer"
       },
       {
         "name": "system_description",
         "title": "System description",
+        "description": "SystemDescription is the advertised system description TLV.",
         "kind": "string"
       },
       {
         "name": "port_description",
         "title": "Port description",
+        "description": "PortDescription is the advertised port description TLV.",
         "kind": "string"
       },
       {
         "name": "chassis_id_type",
         "title": "Chassis id type",
+        "description": "ChassisIDType selects which chassis ID subtype is advertised, for\nexample mac or local.",
         "kind": "string"
       }
     ],
@@ -497,36 +573,43 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled advertises CDP from this device, overriding the fleet-wide\n`discovery_protocols.cdp`.",
         "kind": "boolean"
       },
       {
         "name": "advertise_interval",
         "title": "Advertise interval",
+        "description": "AdvertiseInterval is the seconds between advertisements. Omit for 60.",
         "kind": "integer"
       },
       {
         "name": "holdtime",
         "title": "Holdtime",
+        "description": "Holdtime is the seconds a neighbour should hold this advertisement.",
         "kind": "integer"
       },
       {
         "name": "version",
         "title": "Version",
+        "description": "Version is the CDP protocol version advertised, 1 or 2.",
         "kind": "integer"
       },
       {
         "name": "software_version",
         "title": "Software version",
+        "description": "SoftwareVersion is the advertised software version string.",
         "kind": "string"
       },
       {
         "name": "platform",
         "title": "Platform",
+        "description": "Platform is the advertised platform string, for example\n\"cisco WS-C3750X-48P\".",
         "kind": "string"
       },
       {
         "name": "port_id",
         "title": "Port id",
+        "description": "PortID is the advertised port identifier.",
         "kind": "string"
       }
     ],
@@ -539,21 +622,25 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled advertises EDP (Extreme) from this device.",
         "kind": "boolean"
       },
       {
         "name": "advertise_interval",
         "title": "Advertise interval",
+        "description": "AdvertiseInterval is the seconds between advertisements.",
         "kind": "integer"
       },
       {
         "name": "version_string",
         "title": "Version string",
+        "description": "VersionString is the advertised software version.",
         "kind": "string"
       },
       {
         "name": "display_string",
         "title": "Display string",
+        "description": "DisplayString is the advertised system display name.",
         "kind": "string"
       }
     ],
@@ -566,31 +653,37 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled advertises FDP (Foundry) from this device.",
         "kind": "boolean"
       },
       {
         "name": "advertise_interval",
         "title": "Advertise interval",
+        "description": "AdvertiseInterval is the seconds between advertisements.",
         "kind": "integer"
       },
       {
         "name": "holdtime",
         "title": "Holdtime",
+        "description": "Holdtime is the seconds a neighbour should hold this advertisement.",
         "kind": "integer"
       },
       {
         "name": "software_version",
         "title": "Software version",
+        "description": "SoftwareVersion is the advertised software version string.",
         "kind": "string"
       },
       {
         "name": "platform",
         "title": "Platform",
+        "description": "Platform is the advertised platform string.",
         "kind": "string"
       },
       {
         "name": "port_id",
         "title": "Port id",
+        "description": "PortID is the advertised port identifier.",
         "kind": "string"
       }
     ],
@@ -603,31 +696,37 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled makes the device participate in spanning tree.",
         "kind": "boolean"
       },
       {
         "name": "bridge_priority",
         "title": "Bridge priority",
+        "description": "BridgePriority is the bridge priority; the lowest value in the segment\nwins the root election. Multiples of 4096.",
         "kind": "integer"
       },
       {
         "name": "hello_time",
         "title": "Hello time",
+        "description": "HelloTime is the seconds between BPDUs.",
         "kind": "integer"
       },
       {
         "name": "max_age",
         "title": "Max age",
+        "description": "MaxAge is the seconds a BPDU stays valid.",
         "kind": "integer"
       },
       {
         "name": "forward_delay",
         "title": "Forward delay",
+        "description": "ForwardDelay is the seconds a port spends in listening and learning.",
         "kind": "integer"
       },
       {
         "name": "version",
         "title": "Version",
+        "description": "Version selects the spanning-tree flavour, for example stp, rstp\nor mstp.",
         "kind": "string"
       }
     ],
@@ -640,41 +739,49 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves the HTTP listener.",
         "kind": "boolean"
       },
       {
         "name": "server_name",
         "title": "Server name",
+        "description": "ServerName is the Server response header, a signal a scanner uses to\nidentify the platform.",
         "kind": "string"
       },
       {
         "name": "endpoints",
         "title": "Endpoints",
+        "description": "Endpoints are the paths this server answers. A request to any other\npath gets 404.",
         "kind": "objectList",
         "fields": [
           {
             "name": "path",
             "title": "Path",
+            "description": "Path is the request path, for example /status.",
             "kind": "string"
           },
           {
             "name": "method",
             "title": "Method",
+            "description": "Method is the HTTP method matched. Omit for GET.",
             "kind": "string"
           },
           {
             "name": "status_code",
             "title": "Status code",
+            "description": "StatusCode is the response status. Omit for 200.",
             "kind": "integer"
           },
           {
             "name": "content_type",
             "title": "Content type",
+            "description": "ContentType is the response Content-Type header.",
             "kind": "string"
           },
           {
             "name": "body",
             "title": "Body",
+            "description": "Body is the response body served verbatim.",
             "kind": "string"
           }
         ]
@@ -689,41 +796,49 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves the FTP listener.",
         "kind": "boolean"
       },
       {
         "name": "welcome_banner",
         "title": "Welcome banner",
+        "description": "WelcomeBanner is the 220 greeting, a primary identification signal.",
         "kind": "string"
       },
       {
         "name": "system_type",
         "title": "System type",
+        "description": "SystemType is the SYST response, for example \"UNIX Type: L8\".",
         "kind": "string"
       },
       {
         "name": "allow_anonymous",
         "title": "Allow anonymous",
+        "description": "AllowAnonymous accepts the anonymous account without a password.",
         "kind": "boolean"
       },
       {
         "name": "users",
         "title": "Users",
+        "description": "Users are the accounts the server accepts.",
         "kind": "objectList",
         "fields": [
           {
             "name": "username",
             "title": "Username",
+            "description": "Username is the account name.",
             "kind": "string"
           },
           {
             "name": "password",
             "title": "Password",
+            "description": "Password is the account password. Unlike SSH, this is written in the\nconfig \u2014 use only simulated credentials, never a real one.",
             "kind": "string"
           },
           {
             "name": "home_dir",
             "title": "Home dir",
+            "description": "HomeDir is the directory the account lands in.",
             "kind": "string"
           }
         ]
@@ -738,52 +853,62 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled answers NetBIOS name queries.",
         "kind": "boolean"
       },
       {
         "name": "name",
         "title": "Name",
+        "description": "Name is the NetBIOS name, at most 15 characters \u2014 longer names are\ntruncated on the wire, so authored names should already be short.",
         "kind": "string"
       },
       {
         "name": "workgroup",
         "title": "Workgroup",
+        "description": "Workgroup is the advertised workgroup or domain.",
         "kind": "string"
       },
       {
         "name": "node_type",
         "title": "Node type",
+        "description": "NodeType is the NetBIOS node type, for example B, P, M or H.",
         "kind": "string"
       },
       {
         "name": "services",
         "title": "Services",
+        "description": "Services are the advertised service suffixes.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the seconds a resolver should cache the name.",
         "kind": "integer"
       },
       {
         "name": "names",
         "title": "Names",
+        "description": "Names are additional NetBIOS name entries served by this device.",
         "kind": "objectList",
         "fields": [
           {
             "name": "name",
             "title": "Name",
+            "description": "Name is the entry's NetBIOS name, at most 15 characters.",
             "kind": "string"
           },
           {
             "name": "suffix",
             "title": "Suffix",
+            "description": "Suffix is the two-hex-digit name suffix, for example 00 (workstation)\nor 20 (file server).",
             "kind": "string"
           },
           {
             "name": "group",
             "title": "Group",
+            "description": "Group marks the entry as a group name rather than a unique name.",
             "kind": "boolean"
           }
         ]
@@ -791,6 +916,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "msbrowse",
         "title": "Msbrowse",
+        "description": "MsBrowse advertises the __MSBROWSE__ entry, marking the device as a\nmaster browser.",
         "kind": "boolean"
       }
     ],
@@ -803,31 +929,37 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled publishes this device over mDNS.",
         "kind": "boolean"
       },
       {
         "name": "hostname",
         "title": "Hostname",
+        "description": "Hostname is the advertised name, without the .local suffix.",
         "kind": "string"
       },
       {
         "name": "services",
         "title": "Services",
+        "description": "Services are the DNS-SD services advertised, which is what makes a\nprinter or a camera discoverable as such.",
         "kind": "objectList",
         "fields": [
           {
             "name": "type",
             "title": "Type",
+            "description": "Type is the DNS-SD service type, for example _ipp._tcp or _rtsp._tcp.",
             "kind": "string"
           },
           {
             "name": "port",
             "title": "Port",
+            "description": "Port is the TCP or UDP port the service is advertised on.",
             "kind": "integer"
           },
           {
             "name": "txt",
             "title": "Txt",
+            "description": "TXT are the service's TXT record key=value strings.",
             "kind": "scalarList",
             "itemKind": "string"
           }
@@ -836,6 +968,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the seconds a resolver should cache these records.",
         "kind": "integer"
       }
     ],
@@ -848,26 +981,31 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled answers SNMPv3 requests. Independent of `snmp_agent`, which\nserves v1/v2c.",
         "kind": "boolean"
       },
       {
         "name": "engine_id",
         "title": "Engine id",
+        "description": "EngineID is the USM engine identifier as a hex string. Omit to derive\none from the device's MAC.",
         "kind": "string"
       },
       {
         "name": "users",
         "title": "Users",
+        "description": "Users are the USM accounts this agent accepts.",
         "kind": "objectList",
         "fields": [
           {
             "name": "username",
             "title": "Username",
+            "description": "Username is the USM security name.",
             "kind": "string"
           },
           {
             "name": "auth_protocol",
             "title": "Auth protocol",
+            "description": "AuthProtocol is the authentication digest. \"none\" is noAuthNoPriv.",
             "kind": "enum",
             "options": [
               "none",
@@ -880,11 +1018,13 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
           {
             "name": "auth_password",
             "title": "Auth password",
+            "description": "AuthPassword is the authentication passphrase, at least 8 characters.\nSimulated credentials only.",
             "kind": "string"
           },
           {
             "name": "priv_protocol",
             "title": "Priv protocol",
+            "description": "PrivProtocol is the privacy cipher. Requires an auth protocol \u2014\nthere is no privNoAuth mode in USM.",
             "kind": "enum",
             "options": [
               "none",
@@ -897,6 +1037,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
           {
             "name": "priv_password",
             "title": "Priv password",
+            "description": "PrivPassword is the privacy passphrase, at least 8 characters.\nSimulated credentials only.",
             "kind": "string"
           }
         ]
@@ -911,51 +1052,61 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled answers ICMP echo requests, which is what makes the device\npingable.",
         "kind": "boolean"
       },
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the TTL stamped on ICMP replies.",
         "kind": "integer"
       },
       {
         "name": "rate_limit",
         "title": "Rate limit",
+        "description": "RateLimit caps replies per second; further requests are dropped.",
         "kind": "integer"
       },
       {
         "name": "address_mask_reply",
         "title": "Address mask reply",
+        "description": "AddressMaskReply is the mask answered to an ICMP address mask request.",
         "kind": "string"
       },
       {
         "name": "router_advertisement",
         "title": "Router advertisement",
+        "description": "IcmpRouterAdvertisement configures IPv4 router advertisements.",
         "kind": "object",
         "fields": [
           {
             "name": "period",
             "title": "Period",
+            "description": "Period is the seconds between advertisements.",
             "kind": "integer"
           },
           {
             "name": "lifetime",
             "title": "Lifetime",
+            "description": "Lifetime is the seconds a client should consider the router valid.",
             "kind": "integer"
           },
           {
             "name": "routers",
             "title": "Routers",
+            "description": "Routers are the advertised router entries.",
             "kind": "objectList",
             "fields": [
               {
                 "name": "address",
                 "title": "Address",
+                "description": "Address is the advertised router's IPv4 address.",
                 "kind": "string"
               },
               {
                 "name": "preference",
                 "title": "Preference",
+                "description": "Preference is the advertised preference level; higher wins.",
                 "kind": "integer"
               }
             ]
@@ -972,96 +1123,115 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled answers ICMPv6 echo and neighbour solicitation.",
         "kind": "boolean"
       },
       {
         "name": "hop_limit",
         "title": "Hop limit",
+        "description": "HopLimit is the hop limit stamped on ICMPv6 replies.",
         "kind": "integer"
       },
       {
         "name": "rate_limit",
         "title": "Rate limit",
+        "description": "RateLimit caps replies per second.",
         "kind": "integer"
       },
       {
         "name": "router_advertisement",
         "title": "Router advertisement",
+        "description": "Icmpv6RouterAdvertisement configures IPv6 router advertisements.",
         "kind": "object",
         "fields": [
           {
             "name": "period",
             "title": "Period",
+            "description": "Period is the seconds between advertisements.",
             "kind": "integer"
           },
           {
             "name": "cur_hop_limit",
             "title": "Cur hop limit",
+            "description": "CurHopLimit is the hop limit clients should adopt.",
             "kind": "integer"
           },
           {
             "name": "managed",
             "title": "Managed",
+            "description": "Managed sets the M flag: clients should use DHCPv6 for addresses.",
             "kind": "integer"
           },
           {
             "name": "other",
             "title": "Other",
+            "description": "Other sets the O flag: clients should use DHCPv6 for other\nconfiguration only.",
             "kind": "integer"
           },
           {
             "name": "lifetime",
             "title": "Lifetime",
+            "description": "Lifetime is the seconds this router stays a valid default.",
             "kind": "integer"
           },
           {
             "name": "reachable_time",
             "title": "Reachable time",
+            "description": "ReachableTime is the milliseconds a neighbour is assumed reachable.",
             "kind": "integer"
           },
           {
             "name": "retrans_timer",
             "title": "Retrans timer",
+            "description": "RetransTimer is the milliseconds between neighbour solicitations.",
             "kind": "integer"
           },
           {
             "name": "mtu",
             "title": "Mtu",
+            "description": "MTU is the link MTU advertised to clients.",
             "kind": "integer"
           },
           {
             "name": "prefix_info",
             "title": "Prefix info",
+            "description": "PrefixInfo are the advertised prefixes clients autoconfigure from.",
             "kind": "objectList",
             "fields": [
               {
                 "name": "prefix_length",
                 "title": "Prefix length",
+                "description": "PrefixLength is the advertised prefix length, typically 64.",
                 "kind": "integer"
               },
               {
                 "name": "onlink",
                 "title": "Onlink",
+                "description": "Onlink sets the L flag: the prefix is on-link.",
                 "kind": "integer"
               },
               {
                 "name": "auto",
                 "title": "Auto",
+                "description": "Auto sets the A flag: clients may autoconfigure from this prefix.",
                 "kind": "integer"
               },
               {
                 "name": "valid_lifetime",
                 "title": "Valid lifetime",
+                "description": "ValidLifetime is the seconds the prefix stays valid.",
                 "kind": "integer"
               },
               {
                 "name": "preferred_lifetime",
                 "title": "Preferred lifetime",
+                "description": "PreferredLifetime is the seconds the prefix stays preferred.",
                 "kind": "integer"
               },
               {
                 "name": "prefix",
                 "title": "Prefix",
+                "description": "Prefix is the advertised IPv6 prefix, for example 2001:db8:1::.",
                 "kind": "string"
               }
             ]
@@ -1078,26 +1248,31 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves DHCPv6.",
         "kind": "boolean"
       },
       {
         "name": "pools",
         "title": "Pools",
+        "description": "Pools are the IPv6 address ranges handed out.",
         "kind": "objectList",
         "fields": [
           {
             "name": "network",
             "title": "Network",
+            "description": "Network is the pool's prefix, for example 2001:db8:1::/64.",
             "kind": "string"
           },
           {
             "name": "range_start",
             "title": "Range start",
+            "description": "RangeStart is the first address handed out.",
             "kind": "string"
           },
           {
             "name": "range_end",
             "title": "Range end",
+            "description": "RangeEnd is the last address handed out.",
             "kind": "string"
           }
         ]
@@ -1105,51 +1280,60 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "preferred_lifetime",
         "title": "Preferred lifetime",
+        "description": "PreferredLifetime is the seconds a lease stays preferred.",
         "kind": "integer"
       },
       {
         "name": "valid_lifetime",
         "title": "Valid lifetime",
+        "description": "ValidLifetime is the seconds a lease stays valid.",
         "kind": "integer"
       },
       {
         "name": "preference",
         "title": "Preference",
+        "description": "Preference is the server preference, 0..255; a client prefers the\nhighest.",
         "kind": "integer"
       },
       {
         "name": "dns_servers",
         "title": "Dns servers",
+        "description": "DNSServers are the DNS servers offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "domain_list",
         "title": "Domain list",
+        "description": "DomainList is the domain search list offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "sntp_servers",
         "title": "Sntp servers",
+        "description": "SNTPServers are the SNTP servers offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "ntp_servers",
         "title": "Ntp servers",
+        "description": "NTPServers are the NTP servers offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "sip_servers",
         "title": "Sip servers",
+        "description": "SIPServers are the SIP servers offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "sip_domains",
         "title": "Sip domains",
+        "description": "SIPDomains is the SIP domain list offered to clients.",
         "kind": "scalarList",
         "itemKind": "string"
       }
@@ -1163,56 +1347,67 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "os_type",
         "title": "Os type",
+        "description": "OSType is the operating system to imitate, for example \"linux\",\n\"windows\", \"cisco-ios\" or \"juniper-junos\".",
         "kind": "string"
       },
       {
         "name": "ttl",
         "title": "TTL",
+        "description": "TTL is the default IP TTL stamped on outbound packets, which is a\nprimary fingerprinting signal (Linux 64, Windows 128, Cisco 255).",
         "kind": "integer"
       },
       {
         "name": "window_size",
         "title": "Window size",
+        "description": "WindowSize is the advertised TCP window size.",
         "kind": "integer"
       },
       {
         "name": "window_scale",
         "title": "Window scale",
+        "description": "WindowScale is the TCP window scale option.",
         "kind": "integer"
       },
       {
         "name": "mss",
         "title": "Mss",
+        "description": "MSS is the TCP maximum segment size.",
         "kind": "integer"
       },
       {
         "name": "ssh_banner",
         "title": "Ssh banner",
+        "description": "SSHBanner is the SSH version banner presented on connect.",
         "kind": "string"
       },
       {
         "name": "http_server",
         "title": "Http server",
+        "description": "HTTPServer is the HTTP Server response header.",
         "kind": "string"
       },
       {
         "name": "ftp_banner",
         "title": "Ftp banner",
+        "description": "FTPBanner is the FTP welcome banner.",
         "kind": "string"
       },
       {
         "name": "smtp_banner",
         "title": "Smtp banner",
+        "description": "SMTPBanner is the SMTP greeting banner.",
         "kind": "string"
       },
       {
         "name": "telnet_banner",
         "title": "Telnet banner",
+        "description": "TelnetBanner is the Telnet greeting banner.",
         "kind": "string"
       },
       {
         "name": "dont_fragment",
         "title": "Dont fragment",
+        "description": "DontFragment sets the IP DF bit, another fingerprinting signal\n(typically true on Linux, false on Windows).",
         "kind": "boolean"
       }
     ],
@@ -1225,17 +1420,20 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves the SSH listener. When true, username and password_env\nare both required.",
         "kind": "boolean"
       },
       {
         "name": "username",
         "title": "Username",
+        "description": "Username is the account the simulated CLI accepts.",
         "pattern": ".*\\S.*",
         "kind": "string"
       },
       {
         "name": "password_env",
         "title": "Password env",
+        "description": "PasswordEnv names the environment variable holding the password \u2014 the\npassword itself is never written in the config. That variable must be\nset in the daemon's environment or the device fails to start.",
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
         "kind": "string"
       }
@@ -1249,11 +1447,13 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled turns on syslog emission for this device. When true, at least\none receiver is required.",
         "kind": "boolean"
       },
       {
         "name": "receivers",
         "title": "Receivers",
+        "description": "Receivers are collector endpoints as \"host:port\", for example\n10.10.0.9:514.",
         "kind": "scalarList",
         "itemKind": "string"
       }
@@ -1267,41 +1467,49 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
+        "description": "Enabled serves the iperf3 listener.",
         "kind": "boolean"
       },
       {
         "name": "port",
         "title": "Port",
+        "description": "Port is the TCP port iperf3 listens on. Omit for the default, 5201.",
         "kind": "integer"
       },
       {
         "name": "max_bandwidth_mbps",
         "title": "Max bandwidth mbps",
+        "description": "MaxBandwidthMbps caps the throughput the device will report.",
         "kind": "number"
       },
       {
         "name": "typical_latency_ms",
         "title": "Typical latency ms",
+        "description": "TypicalLatencyMs is the round-trip latency reported to the tester.",
         "kind": "number"
       },
       {
         "name": "jitter_ms",
         "title": "Jitter ms",
+        "description": "JitterMs is the variation reported around the typical latency.",
         "kind": "number"
       },
       {
         "name": "packet_loss_percent",
         "title": "Packet loss percent",
+        "description": "PacketLossPercent is the loss rate reported to the tester, 0..100.",
         "kind": "number"
       },
       {
         "name": "upload_mbps",
         "title": "Upload mbps",
+        "description": "UploadMbps is the reported client-to-server rate.",
         "kind": "number"
       },
       {
         "name": "download_mbps",
         "title": "Download mbps",
+        "description": "DownloadMbps is the reported server-to-client rate.",
         "kind": "number"
       }
     ],
@@ -1314,16 +1522,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "latency_ms",
         "title": "Latency ms",
+        "description": "LatencyMs delays the reflected packet by this many milliseconds,\nsimulating one-way path latency (Java Latency()). 0 = reflect\nimmediately.",
         "kind": "integer"
       },
       {
         "name": "jitter_ms",
         "title": "Jitter ms",
+        "description": "JitterMs randomises the delay by +/- this many milliseconds around\nLatencyMs (Java Jitter()). 0 = no jitter.",
         "kind": "integer"
       },
       {
         "name": "dscp",
         "title": "Dscp",
+        "description": "DSCP selects which ToS bits are toggled on the reflected packet:\ntrue wiggles the bottom two DSCP bits (0x03, Java Dscp), false\nwiggles the IP-precedence bit (0x01, Java IpPrecedence \u2014 the default).",
         "kind": "boolean"
       }
     ],
@@ -1336,11 +1547,13 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "name",
         "title": "Name",
+        "description": "Name is the port name, for example GigabitEthernet0/1 or eth0.\nBehaviour phases and trunk ports target the interface by this name.",
         "kind": "string"
       },
       {
         "name": "type",
         "title": "Type",
+        "description": "Type is the IF-MIB interface type reported for this port.",
         "kind": "enum",
         "options": [
           "ethernet",
@@ -1355,26 +1568,31 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "network",
         "title": "Network",
+        "description": "Network is the `networks[].name` this port attaches to. When set, the\nport's `address` must be written as a prefix and must fall inside that\nnetwork's subnet.",
         "kind": "string"
       },
       {
         "name": "address",
         "title": "Address",
+        "description": "Address is the port's IPv4 address, written as a prefix\n(10.10.0.5/24) \u2014 a bare address is rejected. When `network` is set the\naddress must fall inside that network's subnet and carry the same\nprefix length; a /32 host address on a /24 network is refused.",
         "kind": "string"
       },
       {
         "name": "mtu",
         "title": "Mtu",
+        "description": "MTU is the port's MTU in bytes, 576..1000000.",
         "kind": "integer"
       },
       {
         "name": "speed",
         "title": "Speed",
+        "description": "Speed is the port's nominal speed in Mbps, reported through IF-MIB.",
         "kind": "integer"
       },
       {
         "name": "duplex",
         "title": "Duplex",
+        "description": "Duplex is the port's duplex mode.",
         "kind": "enum",
         "options": [
           "full",
@@ -1384,6 +1602,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "admin_status",
         "title": "Admin status",
+        "description": "AdminStatus is the configured state of the port (ifAdminStatus).",
         "kind": "enum",
         "options": [
           "up",
@@ -1394,6 +1613,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "oper_status",
         "title": "Oper status",
+        "description": "OperStatus is the observed state of the port (ifOperStatus). A link\nfault drives this down at runtime.",
         "kind": "enum",
         "options": [
           "up",
@@ -1404,21 +1624,25 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "description",
         "title": "Description",
+        "description": "Description is the port's ifAlias text, as a switch's port description.",
         "kind": "string"
       },
       {
         "name": "in_utilization",
         "title": "In utilization",
+        "description": "InUtilization is the steady-state inbound utilization percentage,\n0..100, before any behaviour phase changes it.",
         "kind": "number"
       },
       {
         "name": "out_utilization",
         "title": "Out utilization",
+        "description": "OutUtilization is the steady-state outbound utilization percentage,\n0..100, before any behaviour phase changes it.",
         "kind": "number"
       },
       {
         "name": "vlans",
         "title": "Vlans",
+        "description": "VLANs are the VLAN ids carried on this port when it is a switch port.",
         "kind": "scalarList",
         "itemKind": "integer"
       }
@@ -1432,16 +1656,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "destination",
         "title": "Destination",
+        "description": "Destination is the target network in CIDR form, for example\n10.20.0.0/24. Use 0.0.0.0/0 for a default route.",
         "kind": "string"
       },
       {
         "name": "via",
         "title": "Via",
+        "description": "Via is the `name` of the local interface the route leaves by.",
         "kind": "string"
       },
       {
         "name": "next_hop",
         "title": "Next hop",
+        "description": "NextHop is the gateway's bare IPv4 address \u2014 an address, not a prefix.",
         "kind": "string"
       }
     ],
@@ -1454,32 +1681,38 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "interface",
         "title": "Interface",
+        "description": "Interface is the local port carrying the trunk, matching an\n`interfaces[].name`, or \"port-channel<id>\" for a LAG.",
         "kind": "string"
       },
       {
         "name": "vlans",
         "title": "Vlans",
+        "description": "VLANs are the tagged VLAN ids the trunk carries. A port with no VLANs\nand no native VLAN is an access port, not a trunk.",
         "kind": "scalarList",
         "itemKind": "integer"
       },
       {
         "name": "native_vlan",
         "title": "Native vlan",
+        "description": "NativeVLAN is the untagged VLAN on this trunk.",
         "kind": "integer"
       },
       {
         "name": "remote_device",
         "title": "Remote device",
+        "description": "RemoteDevice is the `name` of the device at the far end. This is what\ndraws the topology edge; without it the port is a stub.",
         "kind": "string"
       },
       {
         "name": "remote_interface",
         "title": "Remote interface",
+        "description": "RemoteInterface is the far-end port name, used to label the edge.",
         "kind": "string"
       },
       {
         "name": "fdb_only",
         "title": "Fdb only",
+        "description": "FDBOnly records the neighbour in the forwarding database without\ndrawing a topology edge, for a device seen but not linked.",
         "kind": "boolean"
       }
     ],
@@ -1492,17 +1725,20 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "id",
         "title": "Id",
+        "description": "ID is the channel number; a trunk port refers to the bundle as\n\"port-channel<id>\".",
         "kind": "integer"
       },
       {
         "name": "members",
         "title": "Members",
+        "description": "Members are the `interfaces[].name` values bundled into the channel.",
         "kind": "scalarList",
         "itemKind": "string"
       },
       {
         "name": "mode",
         "title": "Mode",
+        "description": "Mode is the LACP mode, for example active, passive or on.",
         "kind": "string"
       }
     ],

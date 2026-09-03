@@ -6,13 +6,16 @@
     "AddMib": {
       "properties": {
         "oid": {
-          "type": "string"
+          "type": "string",
+          "description": "OID is the numeric object identifier, for example 1.3.6.1.2.1.1.5.0."
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "Type is the SNMP value type, for example STRING, INTEGER, OID,\nCounter32, Gauge32 or Hex-STRING."
         },
         "value": {
-          "type": "string"
+          "type": "string",
+          "description": "Value is the value served for the OID, interpreted per `type`."
         }
       },
       "additionalProperties": false,
@@ -21,15 +24,18 @@
         "oid",
         "type",
         "value"
-      ]
+      ],
+      "description": "AddMib represents a MIB override or addition."
     },
     "BehaviorFault": {
       "properties": {
         "device": {
-          "type": "string"
+          "type": "string",
+          "description": "Device is the `name` of the device carrying the interface."
         },
         "interface": {
-          "type": "string"
+          "type": "string",
+          "description": "Interface is the interface `name` on that device, as declared in its\n`interfaces` list."
         },
         "type": {
           "type": "string",
@@ -38,10 +44,12 @@
             "packet_discards",
             "interface_errors",
             "high_utilization"
-          ]
+          ],
+          "description": "Type is the fault to inject. Interface-scoped only: these raise SNMP\ncounters, they do not take a service (DHCP, DNS) out."
         },
         "value": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Value is the rate or percentage, 1..100, applied while the phase runs."
         }
       },
       "additionalProperties": false,
@@ -51,33 +59,40 @@
         "interface",
         "type",
         "value"
-      ]
+      ],
+      "description": "BehaviorFault sets one supported SNMP interface fault rate."
     },
     "BehaviorPhase": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name identifies the phase in the runtime view."
         },
         "start_offset_ms": {
-          "type": "integer"
+          "type": "integer",
+          "description": "StartOffsetMS is when this phase begins, measured from the start of the\ntimeline (not from the previous phase)."
         },
         "duration_ms": {
-          "type": "integer"
+          "type": "integer",
+          "description": "DurationMS is how long the phase's traffic and faults stay applied."
         },
         "reset": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Reset clears the traffic and faults set by earlier phases before this\none applies its own, instead of layering on top of them."
         },
         "traffic": {
           "items": {
             "$ref": "#/$defs/BehaviorTraffic"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Traffic sets observable interface utilization for the phase's duration."
         },
         "faults": {
           "items": {
             "$ref": "#/$defs/BehaviorFault"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Faults injects SNMP-visible interface faults for the phase's duration."
         }
       },
       "additionalProperties": false,
@@ -85,24 +100,29 @@
       "required": [
         "name",
         "duration_ms"
-      ]
+      ],
+      "description": "BehaviorPhase applies traffic and faults at a deterministic offset."
     },
     "BehaviorTimeline": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name identifies the timeline in the runtime view and the API. Unique\nwithin the config."
         },
         "start_offset_ms": {
-          "type": "integer"
+          "type": "integer",
+          "description": "StartOffsetMS delays the whole timeline this many milliseconds after\nthe session starts. 0 starts it immediately."
         },
         "repeat_count": {
-          "type": "integer"
+          "type": "integer",
+          "description": "RepeatCount is how many times the phase sequence runs, 1..1000. There\nis no infinite repeat; pick a count that covers the intended run."
         },
         "phases": {
           "items": {
             "$ref": "#/$defs/BehaviorPhase"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Phases are the ordered steps of the timeline. Each phase's\nstart_offset_ms is relative to the timeline, not to the previous phase."
         }
       },
       "additionalProperties": false,
@@ -111,18 +131,22 @@
         "name",
         "repeat_count",
         "phases"
-      ]
+      ],
+      "description": "BehaviorTimeline is one saved, repeatable sequence of runtime phases."
     },
     "BehaviorTraffic": {
       "properties": {
         "device": {
-          "type": "string"
+          "type": "string",
+          "description": "Device is the `name` of the device carrying the interface."
         },
         "interface": {
-          "type": "string"
+          "type": "string",
+          "description": "Interface is the interface `name` on that device, as declared in its\n`interfaces` list."
         },
         "utilization": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Utilization is the percentage, 1..100, reported through the interface's\nIF-MIB counters while the phase is active."
         }
       },
       "additionalProperties": false,
@@ -131,60 +155,75 @@
         "device",
         "interface",
         "utilization"
-      ]
+      ],
+      "description": "BehaviorTraffic sets observable utilization on one simulated interface."
     },
     "CapturePlayback": {
       "properties": {
         "file_name": {
-          "type": "string"
+          "type": "string",
+          "description": "FileName is the pcap or pcapng file to replay, resolved against\n`include_path` when relative."
         },
         "loop_time": {
-          "type": "integer"
+          "type": "integer",
+          "description": "LoopTime is the seconds to wait before replaying the file again.\n0 replays it once."
         },
         "scale_time": {
-          "type": "number"
+          "type": "number",
+          "description": "ScaleTime multiplies the capture's inter-packet gaps: 2.0 replays at\nhalf speed, 0.5 at double. Omit or 0 replays at the recorded rate."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "file_name"
-      ]
+      ],
+      "description": "CapturePlayback represents PCAP playback configuration."
     },
     "CdpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled advertises CDP from this device, overriding the fleet-wide\n`discovery_protocols.cdp`."
         },
         "advertise_interval": {
-          "type": "integer"
+          "type": "integer",
+          "description": "AdvertiseInterval is the seconds between advertisements. Omit for 60."
         },
         "holdtime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Holdtime is the seconds a neighbour should hold this advertisement."
         },
         "version": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Version is the CDP protocol version advertised, 1 or 2."
         },
         "software_version": {
-          "type": "string"
+          "type": "string",
+          "description": "SoftwareVersion is the advertised software version string."
         },
         "platform": {
-          "type": "string"
+          "type": "string",
+          "description": "Platform is the advertised platform string, for example\n\"cisco WS-C3750X-48P\"."
         },
         "port_id": {
-          "type": "string"
+          "type": "string",
+          "description": "PortID is the advertised port identifier."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "CdpConfig represents CDP discovery protocol configuration."
     },
     "CommunityInclude": {
       "properties": {
         "community": {
-          "type": "string"
+          "type": "string",
+          "description": "Community is the community string that selects this walk."
         },
         "walk_file": {
-          "type": "string"
+          "type": "string",
+          "description": "WalkFile is the walk served to pollers using that community."
         }
       },
       "additionalProperties": false,
@@ -192,72 +231,86 @@
       "required": [
         "community",
         "walk_file"
-      ]
+      ],
+      "description": "CommunityInclude represents a community-specific walk include."
     },
     "Config": {
       "properties": {
         "include_path": {
-          "type": "string"
+          "type": "string",
+          "description": "IncludePath is a directory the loader searches for files referenced by\nrelative path elsewhere in this config (walk files, capture files).\nRelative to the config file's own directory when itself relative."
         },
         "capture_playbacks": {
           "items": {
             "$ref": "#/$defs/CapturePlayback"
           },
-          "type": "array"
+          "type": "array",
+          "description": "CapturePlaybacks replays a recorded PCAP alongside the simulated\ndevices. At most one entry: the runtime plays exactly one capture\n(config.Config.CapturePlayback, one engine in the replay controller).\nThe schema kept the shape of a list, so extra entries were dropped on\nload and deleted from disk on the next save. Refuse them instead."
         },
         "behavior_timelines": {
           "items": {
             "$ref": "#/$defs/BehaviorTimeline"
           },
-          "type": "array"
+          "type": "array",
+          "description": "BehaviorTimelines are saved, repeatable sequences of runtime phases\nthat drive traffic and faults on a schedule after the session starts.\nUp to 64 timelines; they run concurrently."
         },
         "discovery_protocols": {
-          "$ref": "#/$defs/DiscoveryProtocols"
+          "$ref": "#/$defs/DiscoveryProtocols",
+          "description": "DiscoveryProtocols sets the fleet-wide default for LLDP, CDP, EDP and\nFDP advertisement. A device's own lldp/cdp/edp/fdp block overrides it."
         },
         "devices": {
           "items": {
             "$ref": "#/$defs/Device"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Devices is the simulated device set served as a single untagged\nsegment. Mutually exclusive with `segments`: when segments is present,\nthis must be empty."
         },
         "segments": {
           "items": {
             "$ref": "#/$defs/Segment"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Segments binds independent device sets to VLAN tags for multi-VLAN\nplayback (ADR 0008). When present, each segment is served as its own\nisolated network (own IP space) on its tag, and top-level `devices` must\nbe empty. When absent, `devices` is served as a single untagged segment —\ntoday's flat behavior."
         },
         "networks": {
           "items": {
             "$ref": "#/$defs/Network"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Networks declares the routed IPv4 networks devices attach to. An\ninterface naming one in its `network` field must carry an `address`\nwritten as a prefix (10.10.0.5/24), not a bare address."
         },
         "attachments": {
           "items": {
             "$ref": "#/$defs/LogicalAttachment"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Attachments bind this config's virtual networks to the deployment's\nhost-side interfaces. Preflight rejects an attachment naming a network\nthis config does not declare, or a host interface the daemon's\nattachment policy does not permit."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "devices"
-      ]
+      ],
+      "description": "Config represents the YAML configuration structure."
     },
     "DNSRecord": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the hostname, for example clinic-rtr-01.clinic.local."
         },
         "ip": {
-          "type": "string"
+          "type": "string",
+          "description": "IP is the record's address. The key is `ip`, not `address` — an\n`address` key is rejected by the strict loader."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the record's time to live in seconds."
         },
         "rcode": {
-          "type": "integer"
+          "type": "integer",
+          "description": "RCode answers this record with a DNS response code instead of the\naddress, 0..15 — 3 is NXDOMAIN, which is how a lookup failure is\nauthored."
         }
       },
       "additionalProperties": false,
@@ -265,7 +318,8 @@
       "required": [
         "name",
         "ip"
-      ]
+      ],
+      "description": "DNSRecord represents a DNS A or PTR record."
     },
     "DNSServer": {
       "properties": {
@@ -273,22 +327,26 @@
           "items": {
             "$ref": "#/$defs/DNSRecord"
           },
-          "type": "array"
+          "type": "array",
+          "description": "ForwardRecords are name-to-address (A) records this server answers."
         },
         "reverse_records": {
           "items": {
             "$ref": "#/$defs/DNSRecord"
           },
-          "type": "array"
+          "type": "array",
+          "description": "ReverseRecords are address-to-name (PTR) records this server answers."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "DNSServer represents DNS server configuration."
     },
     "Device": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the device's identity across the config: behaviour phases,\ntrunk_ports.remote_device and the topology graph all refer to it.\nUnique within the config, and read-only once the device exists — the\ndaemon takes a device's name from the URL, so renaming through the\neditor is not supported."
         },
         "type": {
           "type": "string",
@@ -305,149 +363,189 @@
             "iot",
             "printer",
             "voip-phone"
-          ]
+          ],
+          "description": "Type selects the device persona: which MIBs it serves, which icon the\ntopology draws and how a scanner classifies it. Note the authored\nspelling: the vocabulary hyphenates, so `voip-phone` and\n`layer3-switch` are accepted and their underscored forms are not. An\naccess point is `ap` or `access-point`, never `access_point`."
         },
         "mac": {
-          "type": "string"
+          "type": "string",
+          "description": "MAC is the device's explicit base MAC address (aa:bb:cc:dd:ee:ff).\nMutually exclusive with `vendor`: set one or the other, never both."
         },
         "vendor": {
-          "type": "string"
+          "type": "string",
+          "description": "Vendor derives the MAC from a vendor OUI instead of stating one.\nMutually exclusive with `mac`. Set `mac_suffix` alongside it: without a\nsuffix every device of the same vendor collides on the same address,\nending :00:00:00."
         },
         "mac_suffix": {
-          "type": "integer"
+          "type": "integer",
+          "description": "MACSuffix is the per-device low 24 bits appended to the vendor OUI,\n0..16777215. Required in practice whenever `vendor` is used more than\nonce."
         },
         "ips": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "IPs are the device's addresses as bare IPs (10.10.0.5), used when the\ndevice is not modelled through `interfaces` and `networks`. Interface\naddresses use a prefix instead."
         },
         "vlan": {
-          "type": "integer"
+          "type": "integer",
+          "description": "VLAN is the access VLAN, 1..4094, for a device served on a trunk\nwithout its own interface list."
         },
         "map_to_ip": {
-          "type": "string"
+          "type": "string",
+          "description": "MapToIP answers for this additional address as well, so one simulated\ndevice can respond on a second IP."
         },
         "babble": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Babble makes the device emit unsolicited background chatter, so a\npassive scanner sees it without probing."
         },
         "ttl": {
-          "$ref": "#/$defs/TTLConfig"
+          "$ref": "#/$defs/TTLConfig",
+          "description": "TTL configures ICMP TTL expiry so the device appears as a traceroute\nhop. It is an object (ttl / ip / mask), not a bare integer — a plain\n`ttl: 64` is rejected. The per-packet IP TTL lives in\n`os_fingerprint.ttl`."
         },
         "snmp_agent": {
-          "$ref": "#/$defs/SnmpAgent"
+          "$ref": "#/$defs/SnmpAgent",
+          "description": "SnmpAgent serves SNMP for this device, from a walk file and/or\nindividual OID overrides."
         },
         "dhcp": {
-          "$ref": "#/$defs/DhcpServer"
+          "$ref": "#/$defs/DhcpServer",
+          "description": "Dhcp makes the device a DHCP server. Its pool must sit inside a routed\nnetwork this config declares, or preflight rejects the config."
         },
         "dns": {
-          "$ref": "#/$defs/DNSServer"
+          "$ref": "#/$defs/DNSServer",
+          "description": "DNS makes the device a DNS server. Its records key the address as `ip`,\nnot `address`."
         },
         "lldp": {
-          "$ref": "#/$defs/LldpConfig"
+          "$ref": "#/$defs/LldpConfig",
+          "description": "Lldp overrides the fleet-wide `discovery_protocols.lldp` for this\ndevice and carries its advertised strings."
         },
         "cdp": {
-          "$ref": "#/$defs/CdpConfig"
+          "$ref": "#/$defs/CdpConfig",
+          "description": "Cdp overrides the fleet-wide `discovery_protocols.cdp` for this device."
         },
         "edp": {
-          "$ref": "#/$defs/EdpConfig"
+          "$ref": "#/$defs/EdpConfig",
+          "description": "Edp overrides the fleet-wide `discovery_protocols.edp` for this device."
         },
         "fdp": {
-          "$ref": "#/$defs/FdpConfig"
+          "$ref": "#/$defs/FdpConfig",
+          "description": "Fdp overrides the fleet-wide `discovery_protocols.fdp` for this device."
         },
         "stp": {
-          "$ref": "#/$defs/StpConfig"
+          "$ref": "#/$defs/StpConfig",
+          "description": "Stp makes the device participate in spanning tree, so a scanner sees\nbridge priorities and a root election."
         },
         "http": {
-          "$ref": "#/$defs/HTTPConfig"
+          "$ref": "#/$defs/HTTPConfig",
+          "description": "HTTP serves a web listener with author-defined endpoints, which is what\nmakes a device identifiable as a server or an appliance."
         },
         "ftp": {
-          "$ref": "#/$defs/FtpConfig"
+          "$ref": "#/$defs/FtpConfig",
+          "description": "Ftp serves an FTP listener with a banner and optional accounts."
         },
         "netbios": {
-          "$ref": "#/$defs/NetbiosConfig"
+          "$ref": "#/$defs/NetbiosConfig",
+          "description": "Netbios answers NetBIOS name queries, which is how Windows-facing\nscanners name a host. Names are capped at 15 characters."
         },
         "mdns": {
-          "$ref": "#/$defs/MdnsConfig"
+          "$ref": "#/$defs/MdnsConfig",
+          "description": "Mdns publishes the device and its services over multicast DNS, the way\nBonjour and Avahi announce a printer or a camera."
         },
         "snmpv3": {
-          "$ref": "#/$defs/Snmpv3Config"
+          "$ref": "#/$defs/Snmpv3Config",
+          "description": "Snmpv3 adds USM users for authenticated, optionally encrypted SNMP.\nIndependent of `snmp_agent`, which serves v1/v2c."
         },
         "icmp": {
-          "$ref": "#/$defs/IcmpConfig"
+          "$ref": "#/$defs/IcmpConfig",
+          "description": "Icmp configures ping and IPv4 router advertisement behaviour."
         },
         "icmpv6": {
-          "$ref": "#/$defs/Icmpv6Config"
+          "$ref": "#/$defs/Icmpv6Config",
+          "description": "Icmpv6 configures IPv6 ping, neighbour discovery and router\nadvertisement behaviour."
         },
         "dhcpv6": {
-          "$ref": "#/$defs/Dhcpv6Config"
+          "$ref": "#/$defs/Dhcpv6Config",
+          "description": "Dhcpv6 makes the device a DHCPv6 server. Omit the block entirely when\nthe device should not serve DHCPv6: an empty `dhcpv6: {}` is a\nconfigured server that picks up the default lifetimes."
         },
         "os_fingerprint": {
-          "$ref": "#/$defs/OSFingerprintConfig"
+          "$ref": "#/$defs/OSFingerprintConfig",
+          "description": "OSFingerprint shapes the device's TCP/IP stack and service banners so a\nfingerprinting scanner identifies the intended operating system."
         },
         "ssh": {
-          "$ref": "#/$defs/SSHConfig"
+          "$ref": "#/$defs/SSHConfig",
+          "description": "SSH serves an authenticated vendor-like CLI. The password is never\nwritten in the config: `password_env` names an environment variable\nthat must be set in the daemon's environment, or the device cannot\nstart."
         },
         "syslog": {
-          "$ref": "#/$defs/SyslogConfig"
+          "$ref": "#/$defs/SyslogConfig",
+          "description": "Syslog sends this device's state-change messages to RFC 5424\ncollectors."
         },
         "iperf3": {
-          "$ref": "#/$defs/IPerf3Config"
+          "$ref": "#/$defs/IPerf3Config",
+          "description": "IPerf3 answers iperf3 throughput tests with the authored rates."
         },
         "reflector": {
-          "$ref": "#/$defs/ReflectorConfig"
+          "$ref": "#/$defs/ReflectorConfig",
+          "description": "Reflector makes the device a NetAlly-style UDP reflector endpoint for\nTrueSpeed and performance tests. Presence enables it; there is no\nseparate enable flag."
         },
         "interfaces": {
           "items": {
             "$ref": "#/$defs/Interface"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Interfaces declares the device's ports: addresses, speeds, status and\nthe network each one attaches to. This is what IF-MIB reports and what\nbehaviour phases target by name."
         },
         "routes": {
           "items": {
             "$ref": "#/$defs/Route"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Routes are static IPv4 routes this device advertises and forwards on."
         },
         "trunk_ports": {
           "items": {
             "$ref": "#/$defs/TrunkPort"
           },
-          "type": "array"
+          "type": "array",
+          "description": "TrunkPorts declare the VLAN-tagged links to neighbouring devices. This\nis how topology edges are authored — there is no separate `links`\nsection; an edge exists because a trunk port names a `remote_device`."
         },
         "port_channels": {
           "items": {
             "$ref": "#/$defs/PortChannel"
           },
-          "type": "array"
+          "type": "array",
+          "description": "PortChannels bundle member interfaces into a LAG. They draw no edge on\ntheir own: a trunk_port whose `interface` is \"port-channel\u003cid\u003e\" is what\nsurfaces the link."
         },
         "properties": {
           "additionalProperties": {
             "type": "string"
           },
-          "type": "object"
+          "type": "object",
+          "description": "Properties is a free-form vendor-metadata block used by the\nvendor template pack (cmd/niac/templates/vendor-templates) to\ncarry vendor / model / OS / port-config strings into the\ndevice list. Keys are author-defined; consumers treat unknown\nkeys as informational. The loader's own derived keys (vlan,\ncustom_mibs_count) are not authored here."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Device represents a network device."
     },
     "DhcpLease": {
       "properties": {
         "client_ip": {
-          "type": "string"
+          "type": "string",
+          "description": "ClientIP is the address reserved for the matching client."
         },
         "mac_addr_value": {
-          "type": "string"
+          "type": "string",
+          "description": "MacAddrValue is the client MAC the reservation matches."
         },
         "mac_addr_mask": {
-          "type": "string"
+          "type": "string",
+          "description": "MacAddrMask masks MacAddrValue so a reservation can match a range of\nMACs, such as a whole vendor OUI."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "client_ip"
-      ]
+      ],
+      "description": "DhcpLease represents a DHCP client lease."
     },
     "DhcpServer": {
       "properties": {
@@ -455,466 +553,585 @@
           "items": {
             "$ref": "#/$defs/DhcpLease"
           },
-          "type": "array"
+          "type": "array",
+          "description": "ClientLeases are fixed reservations handed to matching clients."
         },
         "subnet_mask": {
-          "type": "string"
+          "type": "string",
+          "description": "SubnetMask is option 1, the mask offered to clients."
         },
         "router": {
-          "type": "string"
+          "type": "string",
+          "description": "Router is option 3, the default gateway offered to clients."
         },
         "domain_name_server": {
-          "type": "string"
+          "type": "string",
+          "description": "DomainNameServer is option 6, the DNS server offered to clients."
         },
         "next_server_ip": {
-          "type": "string"
+          "type": "string",
+          "description": "NextServerIP is the siaddr field, the TFTP server a booting client\nshould fetch its image from."
         },
         "server_identifier": {
-          "type": "string"
+          "type": "string",
+          "description": "ServerIdentifier is option 54, this server's own address."
         },
         "pool_start": {
-          "type": "string"
+          "type": "string",
+          "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it."
         },
         "pool_end": {
-          "type": "string"
+          "type": "string",
+          "description": "PoolEnd is the last address of the dynamic pool."
         },
         "ntp_servers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "NTPServers is option 42, the NTP servers offered to clients."
         },
         "domain_search": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "DomainSearch is option 119, the domain search list."
         },
         "tftp_server_name": {
-          "type": "string"
+          "type": "string",
+          "description": "TFTPServerName is option 66, the boot server name."
         },
         "bootfile_name": {
-          "type": "string"
+          "type": "string",
+          "description": "BootfileName is option 67, the boot file a client should request."
         },
         "vendor_specific": {
-          "type": "string"
+          "type": "string",
+          "description": "VendorSpecific is option 43, vendor-specific information as a hex\nstring."
         },
         "sntp_servers_v6": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SNTPServersV6 is DHCPv6 option 31, the SNTP servers offered."
         },
         "ntp_servers_v6": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "NTPServersV6 is DHCPv6 option 56, the NTP servers offered."
         },
         "sip_servers_v6": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SIPServersV6 is DHCPv6 option 22, the SIP servers offered."
         },
         "sip_domains_v6": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SIPDomainsV6 is DHCPv6 option 21, the SIP domain list offered."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "DhcpServer represents DHCP server configuration."
     },
     "Dhcpv6Config": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves DHCPv6."
         },
         "pools": {
           "items": {
             "$ref": "#/$defs/Dhcpv6Pool"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Pools are the IPv6 address ranges handed out."
         },
         "preferred_lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "PreferredLifetime is the seconds a lease stays preferred."
         },
         "valid_lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "ValidLifetime is the seconds a lease stays valid."
         },
         "preference": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Preference is the server preference, 0..255; a client prefers the\nhighest."
         },
         "dns_servers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "DNSServers are the DNS servers offered to clients."
         },
         "domain_list": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "DomainList is the domain search list offered to clients."
         },
         "sntp_servers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SNTPServers are the SNTP servers offered to clients."
         },
         "ntp_servers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "NTPServers are the NTP servers offered to clients."
         },
         "sip_servers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SIPServers are the SIP servers offered to clients."
         },
         "sip_domains": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "SIPDomains is the SIP domain list offered to clients."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Dhcpv6Config represents DHCPv6 server configuration."
     },
     "Dhcpv6Pool": {
       "properties": {
         "network": {
-          "type": "string"
+          "type": "string",
+          "description": "Network is the pool's prefix, for example 2001:db8:1::/64."
         },
         "range_start": {
-          "type": "string"
+          "type": "string",
+          "description": "RangeStart is the first address handed out."
         },
         "range_end": {
-          "type": "string"
+          "type": "string",
+          "description": "RangeEnd is the last address handed out."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Dhcpv6Pool represents an IPv6 address pool."
     },
     "DiscoveryProtocols": {
       "properties": {
         "lldp": {
-          "$ref": "#/$defs/ProtocolConfig"
+          "$ref": "#/$defs/ProtocolConfig",
+          "description": "LLDP sets the fleet-wide default for IEEE 802.1AB advertisement."
         },
         "cdp": {
-          "$ref": "#/$defs/ProtocolConfig"
+          "$ref": "#/$defs/ProtocolConfig",
+          "description": "CDP sets the fleet-wide default for Cisco Discovery Protocol."
         },
         "edp": {
-          "$ref": "#/$defs/ProtocolConfig"
+          "$ref": "#/$defs/ProtocolConfig",
+          "description": "EDP sets the fleet-wide default for Extreme Discovery Protocol."
         },
         "fdp": {
-          "$ref": "#/$defs/ProtocolConfig"
+          "$ref": "#/$defs/ProtocolConfig",
+          "description": "FDP sets the fleet-wide default for Foundry Discovery Protocol."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "DiscoveryProtocols configures discovery protocol behavior."
     },
     "EdpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled advertises EDP (Extreme) from this device."
         },
         "advertise_interval": {
-          "type": "integer"
+          "type": "integer",
+          "description": "AdvertiseInterval is the seconds between advertisements."
         },
         "version_string": {
-          "type": "string"
+          "type": "string",
+          "description": "VersionString is the advertised software version."
         },
         "display_string": {
-          "type": "string"
+          "type": "string",
+          "description": "DisplayString is the advertised system display name."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "EdpConfig represents EDP discovery protocol configuration."
     },
     "FdbTableConfig": {
       "properties": {
         "port": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Port is the bridge port number the entry is learned on."
         },
         "vlan": {
-          "type": "integer"
+          "type": "integer",
+          "description": "VLAN is the VLAN id the entry belongs to."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "FdbTableConfig configures SNMP forwarding database table injection."
     },
     "FdpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled advertises FDP (Foundry) from this device."
         },
         "advertise_interval": {
-          "type": "integer"
+          "type": "integer",
+          "description": "AdvertiseInterval is the seconds between advertisements."
         },
         "holdtime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Holdtime is the seconds a neighbour should hold this advertisement."
         },
         "software_version": {
-          "type": "string"
+          "type": "string",
+          "description": "SoftwareVersion is the advertised software version string."
         },
         "platform": {
-          "type": "string"
+          "type": "string",
+          "description": "Platform is the advertised platform string."
         },
         "port_id": {
-          "type": "string"
+          "type": "string",
+          "description": "PortID is the advertised port identifier."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "FdpConfig represents FDP discovery protocol configuration."
     },
     "FtpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves the FTP listener."
         },
         "welcome_banner": {
-          "type": "string"
+          "type": "string",
+          "description": "WelcomeBanner is the 220 greeting, a primary identification signal."
         },
         "system_type": {
-          "type": "string"
+          "type": "string",
+          "description": "SystemType is the SYST response, for example \"UNIX Type: L8\"."
         },
         "allow_anonymous": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "AllowAnonymous accepts the anonymous account without a password."
         },
         "users": {
           "items": {
             "$ref": "#/$defs/FtpUser"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Users are the accounts the server accepts."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "FtpConfig represents FTP server configuration."
     },
     "FtpUser": {
       "properties": {
         "username": {
-          "type": "string"
+          "type": "string",
+          "description": "Username is the account name."
         },
         "password": {
-          "type": "string"
+          "type": "string",
+          "description": "Password is the account password. Unlike SSH, this is written in the\nconfig — use only simulated credentials, never a real one."
         },
         "home_dir": {
-          "type": "string"
+          "type": "string",
+          "description": "HomeDir is the directory the account lands in."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "FtpUser represents an FTP user account."
     },
     "HTTPConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves the HTTP listener."
         },
         "server_name": {
-          "type": "string"
+          "type": "string",
+          "description": "ServerName is the Server response header, a signal a scanner uses to\nidentify the platform."
         },
         "endpoints": {
           "items": {
             "$ref": "#/$defs/HTTPEndpoint"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Endpoints are the paths this server answers. A request to any other\npath gets 404."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "HTTPConfig represents HTTP server configuration."
     },
     "HTTPEndpoint": {
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "Path is the request path, for example /status."
         },
         "method": {
-          "type": "string"
+          "type": "string",
+          "description": "Method is the HTTP method matched. Omit for GET."
         },
         "status_code": {
-          "type": "integer"
+          "type": "integer",
+          "description": "StatusCode is the response status. Omit for 200."
         },
         "content_type": {
-          "type": "string"
+          "type": "string",
+          "description": "ContentType is the response Content-Type header."
         },
         "body": {
-          "type": "string"
+          "type": "string",
+          "description": "Body is the response body served verbatim."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "HTTPEndpoint represents an HTTP endpoint configuration."
     },
     "IPerf3Config": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves the iperf3 listener."
         },
         "port": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Port is the TCP port iperf3 listens on. Omit for the default, 5201."
         },
         "max_bandwidth_mbps": {
-          "type": "number"
+          "type": "number",
+          "description": "MaxBandwidthMbps caps the throughput the device will report."
         },
         "typical_latency_ms": {
-          "type": "number"
+          "type": "number",
+          "description": "TypicalLatencyMs is the round-trip latency reported to the tester."
         },
         "jitter_ms": {
-          "type": "number"
+          "type": "number",
+          "description": "JitterMs is the variation reported around the typical latency."
         },
         "packet_loss_percent": {
-          "type": "number"
+          "type": "number",
+          "description": "PacketLossPercent is the loss rate reported to the tester, 0..100."
         },
         "upload_mbps": {
-          "type": "number"
+          "type": "number",
+          "description": "UploadMbps is the reported client-to-server rate."
         },
         "download_mbps": {
-          "type": "number"
+          "type": "number",
+          "description": "DownloadMbps is the reported server-to-client rate."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "IPerf3Config represents iPerf3 server emulation configuration."
     },
     "IcmpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled answers ICMP echo requests, which is what makes the device\npingable."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the TTL stamped on ICMP replies."
         },
         "rate_limit": {
-          "type": "integer"
+          "type": "integer",
+          "description": "RateLimit caps replies per second; further requests are dropped."
         },
         "address_mask_reply": {
-          "type": "string"
+          "type": "string",
+          "description": "AddressMaskReply is the mask answered to an ICMP address mask request."
         },
         "router_advertisement": {
-          "$ref": "#/$defs/IcmpRouterAdvertisement"
+          "$ref": "#/$defs/IcmpRouterAdvertisement",
+          "description": "RouterAdvertisement makes the device announce itself as an IPv4 router."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "IcmpConfig represents ICMP/ICMPv4 configuration."
     },
     "IcmpRouter": {
       "properties": {
         "address": {
-          "type": "string"
+          "type": "string",
+          "description": "Address is the advertised router's IPv4 address."
         },
         "preference": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Preference is the advertised preference level; higher wins."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "IcmpRouter represents an advertised router entry."
     },
     "IcmpRouterAdvertisement": {
       "properties": {
         "period": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Period is the seconds between advertisements."
         },
         "lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Lifetime is the seconds a client should consider the router valid."
         },
         "routers": {
           "items": {
             "$ref": "#/$defs/IcmpRouter"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Routers are the advertised router entries."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "IcmpRouterAdvertisement configures IPv4 router advertisements."
     },
     "Icmpv6Config": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled answers ICMPv6 echo and neighbour solicitation."
         },
         "hop_limit": {
-          "type": "integer"
+          "type": "integer",
+          "description": "HopLimit is the hop limit stamped on ICMPv6 replies."
         },
         "rate_limit": {
-          "type": "integer"
+          "type": "integer",
+          "description": "RateLimit caps replies per second."
         },
         "router_advertisement": {
-          "$ref": "#/$defs/Icmpv6RouterAdvertisement"
+          "$ref": "#/$defs/Icmpv6RouterAdvertisement",
+          "description": "RouterAdvertisement makes the device announce itself as an IPv6 router."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Icmpv6Config represents ICMPv6 configuration."
     },
     "Icmpv6PrefixInfo": {
       "properties": {
         "prefix_length": {
-          "type": "integer"
+          "type": "integer",
+          "description": "PrefixLength is the advertised prefix length, typically 64."
         },
         "onlink": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Onlink sets the L flag: the prefix is on-link."
         },
         "auto": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Auto sets the A flag: clients may autoconfigure from this prefix."
         },
         "valid_lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "ValidLifetime is the seconds the prefix stays valid."
         },
         "preferred_lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "PreferredLifetime is the seconds the prefix stays preferred."
         },
         "prefix": {
-          "type": "string"
+          "type": "string",
+          "description": "Prefix is the advertised IPv6 prefix, for example 2001:db8:1::."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Icmpv6PrefixInfo represents IPv6 prefix info options."
     },
     "Icmpv6RouterAdvertisement": {
       "properties": {
         "period": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Period is the seconds between advertisements."
         },
         "cur_hop_limit": {
-          "type": "integer"
+          "type": "integer",
+          "description": "CurHopLimit is the hop limit clients should adopt."
         },
         "managed": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Managed sets the M flag: clients should use DHCPv6 for addresses."
         },
         "other": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Other sets the O flag: clients should use DHCPv6 for other\nconfiguration only."
         },
         "lifetime": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Lifetime is the seconds this router stays a valid default."
         },
         "reachable_time": {
-          "type": "integer"
+          "type": "integer",
+          "description": "ReachableTime is the milliseconds a neighbour is assumed reachable."
         },
         "retrans_timer": {
-          "type": "integer"
+          "type": "integer",
+          "description": "RetransTimer is the milliseconds between neighbour solicitations."
         },
         "mtu": {
-          "type": "integer"
+          "type": "integer",
+          "description": "MTU is the link MTU advertised to clients."
         },
         "prefix_info": {
           "items": {
             "$ref": "#/$defs/Icmpv6PrefixInfo"
           },
-          "type": "array"
+          "type": "array",
+          "description": "PrefixInfo are the advertised prefixes clients autoconfigure from."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Icmpv6RouterAdvertisement configures IPv6 router advertisements."
     },
     "Interface": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the port name, for example GigabitEthernet0/1 or eth0.\nBehaviour phases and trunk ports target the interface by this name."
         },
         "type": {
           "type": "string",
@@ -926,26 +1143,32 @@
             "loopback",
             "tunnel",
             "other"
-          ]
+          ],
+          "description": "Type is the IF-MIB interface type reported for this port."
         },
         "network": {
-          "type": "string"
+          "type": "string",
+          "description": "Network is the `networks[].name` this port attaches to. When set, the\nport's `address` must be written as a prefix and must fall inside that\nnetwork's subnet."
         },
         "address": {
-          "type": "string"
+          "type": "string",
+          "description": "Address is the port's IPv4 address, written as a prefix\n(10.10.0.5/24) — a bare address is rejected. When `network` is set the\naddress must fall inside that network's subnet and carry the same\nprefix length; a /32 host address on a /24 network is refused."
         },
         "mtu": {
-          "type": "integer"
+          "type": "integer",
+          "description": "MTU is the port's MTU in bytes, 576..1000000."
         },
         "speed": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Speed is the port's nominal speed in Mbps, reported through IF-MIB."
         },
         "duplex": {
           "type": "string",
           "enum": [
             "full",
             "half"
-          ]
+          ],
+          "description": "Duplex is the port's duplex mode."
         },
         "admin_status": {
           "type": "string",
@@ -953,7 +1176,8 @@
             "up",
             "down",
             "testing"
-          ]
+          ],
+          "description": "AdminStatus is the configured state of the port (ifAdminStatus)."
         },
         "oper_status": {
           "type": "string",
@@ -961,76 +1185,95 @@
             "up",
             "down",
             "testing"
-          ]
+          ],
+          "description": "OperStatus is the observed state of the port (ifOperStatus). A link\nfault drives this down at runtime."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Description is the port's ifAlias text, as a switch's port description."
         },
         "in_utilization": {
-          "type": "number"
+          "type": "number",
+          "description": "InUtilization is the steady-state inbound utilization percentage,\n0..100, before any behaviour phase changes it."
         },
         "out_utilization": {
-          "type": "number"
+          "type": "number",
+          "description": "OutUtilization is the steady-state outbound utilization percentage,\n0..100, before any behaviour phase changes it."
         },
         "vlans": {
           "items": {
             "type": "integer"
           },
-          "type": "array"
+          "type": "array",
+          "description": "VLANs are the VLAN ids carried on this port when it is a switch port."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "name"
-      ]
+      ],
+      "description": "Interface represents configured metadata for a device interface."
     },
     "LinkStateTrapConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled arms link-state traps."
         },
         "link_down": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "LinkDown sends a trap when an interface goes down."
         },
         "link_up": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "LinkUp sends a trap when an interface comes up."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "LinkStateTrapConfig configures link up/down traps."
     },
     "LldpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled advertises LLDP from this device, overriding the fleet-wide\n`discovery_protocols.lldp`."
         },
         "advertise_interval": {
-          "type": "integer"
+          "type": "integer",
+          "description": "AdvertiseInterval is the seconds between advertisements. Omit for 30."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the seconds a neighbour should hold this advertisement."
         },
         "system_description": {
-          "type": "string"
+          "type": "string",
+          "description": "SystemDescription is the advertised system description TLV."
         },
         "port_description": {
-          "type": "string"
+          "type": "string",
+          "description": "PortDescription is the advertised port description TLV."
         },
         "chassis_id_type": {
-          "type": "string"
+          "type": "string",
+          "description": "ChassisIDType selects which chassis ID subtype is advertised, for\nexample mac or local."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "LldpConfig represents LLDP discovery protocol configuration."
     },
     "LogicalAttachment": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name labels this attachment. It is what a session's binding selects the\nattachment by at start time, not a network name — a binding naming an\nattachment this config does not declare is reported as\n`unknown_attachment`."
         },
         "connect": {
-          "type": "string"
+          "type": "string",
+          "description": "Connect is the `networks[].name` this attachment exposes to the host.\nWhether the host interface may actually carry it is decided at start\nagainst the daemon's attachment policy, which reports\n`attachment_policy_denied` or `host_interface_unavailable`;\n`niac validate` has no host binding and cannot check those."
         }
       },
       "additionalProperties": false,
@@ -1038,42 +1281,51 @@
       "required": [
         "name",
         "connect"
-      ]
+      ],
+      "description": "LogicalAttachment names the virtual network exposed by a deployment binding."
     },
     "MdnsConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled publishes this device over mDNS."
         },
         "hostname": {
-          "type": "string"
+          "type": "string",
+          "description": "Hostname is the advertised name, without the .local suffix."
         },
         "services": {
           "items": {
             "$ref": "#/$defs/MdnsService"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Services are the DNS-SD services advertised, which is what makes a\nprinter or a camera discoverable as such."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the seconds a resolver should cache these records."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "MdnsConfig publishes a device on multicast DNS, the way Bonjour and Avahi announce a host and its services on the local link."
     },
     "MdnsService": {
       "properties": {
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "Type is the DNS-SD service type, for example _ipp._tcp or _rtsp._tcp."
         },
         "port": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Port is the TCP or UDP port the service is advertised on."
         },
         "txt": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "TXT are the service's TXT record key=value strings."
         }
       },
       "additionalProperties": false,
@@ -1081,69 +1333,86 @@
       "required": [
         "type",
         "port"
-      ]
+      ],
+      "description": "MdnsService is one advertised DNS-SD service, such as _ipp._tcp."
     },
     "NetbiosConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled answers NetBIOS name queries."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the NetBIOS name, at most 15 characters — longer names are\ntruncated on the wire, so authored names should already be short."
         },
         "workgroup": {
-          "type": "string"
+          "type": "string",
+          "description": "Workgroup is the advertised workgroup or domain."
         },
         "node_type": {
-          "type": "string"
+          "type": "string",
+          "description": "NodeType is the NetBIOS node type, for example B, P, M or H."
         },
         "services": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Services are the advertised service suffixes."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the seconds a resolver should cache the name."
         },
         "names": {
           "items": {
             "$ref": "#/$defs/NetbiosName"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Names are additional NetBIOS name entries served by this device."
         },
         "msbrowse": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "MsBrowse advertises the __MSBROWSE__ entry, marking the device as a\nmaster browser."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "NetbiosConfig represents NetBIOS service configuration."
     },
     "NetbiosName": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the entry's NetBIOS name, at most 15 characters."
         },
         "suffix": {
-          "type": "string"
+          "type": "string",
+          "description": "Suffix is the two-hex-digit name suffix, for example 00 (workstation)\nor 20 (file server)."
         },
         "group": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Group marks the entry as a group name rather than a unique name."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "NetbiosName represents a NetBIOS name entry."
     },
     "Network": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is how interfaces and attachments refer to this network. Unique\nwithin the config."
         },
         "subnet": {
-          "type": "string"
+          "type": "string",
+          "description": "Subnet is the network in CIDR form, for example 10.10.0.0/24. Every\ninterface address on this network must fall inside it, and a DHCP pool\nserved onto it must sit within the same subnet."
         },
         "virtual_vlan": {
-          "type": "integer"
+          "type": "integer",
+          "description": "VirtualVLAN tags this network's frames with a VLAN id, 1..4094, when\nthe network is served on a trunk. Omit for untagged."
         }
       },
       "additionalProperties": false,
@@ -1151,108 +1420,135 @@
       "required": [
         "name",
         "subnet"
-      ]
+      ],
+      "description": "Network declares one internal routed IPv4 network."
     },
     "OSFingerprintConfig": {
       "properties": {
         "os_type": {
-          "type": "string"
+          "type": "string",
+          "description": "OSType is the operating system to imitate, for example \"linux\",\n\"windows\", \"cisco-ios\" or \"juniper-junos\"."
         },
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the default IP TTL stamped on outbound packets, which is a\nprimary fingerprinting signal (Linux 64, Windows 128, Cisco 255)."
         },
         "window_size": {
-          "type": "integer"
+          "type": "integer",
+          "description": "WindowSize is the advertised TCP window size."
         },
         "window_scale": {
-          "type": "integer"
+          "type": "integer",
+          "description": "WindowScale is the TCP window scale option."
         },
         "mss": {
-          "type": "integer"
+          "type": "integer",
+          "description": "MSS is the TCP maximum segment size."
         },
         "ssh_banner": {
-          "type": "string"
+          "type": "string",
+          "description": "SSHBanner is the SSH version banner presented on connect."
         },
         "http_server": {
-          "type": "string"
+          "type": "string",
+          "description": "HTTPServer is the HTTP Server response header."
         },
         "ftp_banner": {
-          "type": "string"
+          "type": "string",
+          "description": "FTPBanner is the FTP welcome banner."
         },
         "smtp_banner": {
-          "type": "string"
+          "type": "string",
+          "description": "SMTPBanner is the SMTP greeting banner."
         },
         "telnet_banner": {
-          "type": "string"
+          "type": "string",
+          "description": "TelnetBanner is the Telnet greeting banner."
         },
         "dont_fragment": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "DontFragment sets the IP DF bit, another fingerprinting signal\n(typically true on Linux, false on Windows)."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "OSFingerprintConfig represents OS fingerprinting configuration for device simulation."
     },
     "PortChannel": {
       "properties": {
         "id": {
-          "type": "integer"
+          "type": "integer",
+          "description": "ID is the channel number; a trunk port refers to the bundle as\n\"port-channel\u003cid\u003e\"."
         },
         "members": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Members are the `interfaces[].name` values bundled into the channel."
         },
         "mode": {
-          "type": "string"
+          "type": "string",
+          "description": "Mode is the LACP mode, for example active, passive or on."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "id"
-      ]
+      ],
+      "description": "PortChannel declares a Link Aggregation (LACP) bundle."
     },
     "ProtocolConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled turns the protocol on for every device that does not override\nit with its own block."
         },
         "interval": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Interval is the advertisement interval in seconds. Omit for the\nprotocol's own default (30 s for LLDP, 60 s for CDP)."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "enabled"
-      ]
+      ],
+      "description": "ProtocolConfig configures a discovery protocol."
     },
     "ReflectorConfig": {
       "properties": {
         "latency_ms": {
-          "type": "integer"
+          "type": "integer",
+          "description": "LatencyMs delays the reflected packet by this many milliseconds,\nsimulating one-way path latency (Java Latency()). 0 = reflect\nimmediately."
         },
         "jitter_ms": {
-          "type": "integer"
+          "type": "integer",
+          "description": "JitterMs randomises the delay by +/- this many milliseconds around\nLatencyMs (Java Jitter()). 0 = no jitter."
         },
         "dscp": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "DSCP selects which ToS bits are toggled on the reflected packet:\ntrue wiggles the bottom two DSCP bits (0x03, Java Dscp), false\nwiggles the IP-precedence bit (0x01, Java IpPrecedence — the default)."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "ReflectorConfig represents a NetAlly-style UDP reflector endpoint."
     },
     "Route": {
       "properties": {
         "destination": {
-          "type": "string"
+          "type": "string",
+          "description": "Destination is the target network in CIDR form, for example\n10.20.0.0/24. Use 0.0.0.0/0 for a default route."
         },
         "via": {
-          "type": "string"
+          "type": "string",
+          "description": "Via is the `name` of the local interface the route leaves by."
         },
         "next_hop": {
-          "type": "string"
+          "type": "string",
+          "description": "NextHop is the gateway's bare IPv4 address — an address, not a prefix."
         }
       },
       "additionalProperties": false,
@@ -1261,7 +1557,8 @@
         "destination",
         "via",
         "next_hop"
-      ]
+      ],
+      "description": "Route declares an IPv4 static route through a named device interface."
     },
     "SSHConfig": {
       "allOf": [
@@ -1286,129 +1583,158 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves the SSH listener. When true, username and password_env\nare both required."
         },
         "username": {
           "type": "string",
-          "pattern": ".*\\S.*"
+          "pattern": ".*\\S.*",
+          "description": "Username is the account the simulated CLI accepts."
         },
         "password_env": {
           "type": "string",
-          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "PasswordEnv names the environment variable holding the password — the\npassword itself is never written in the config. That variable must be\nset in the daemon's environment or the device fails to start."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "enabled"
-      ]
+      ],
+      "description": "SSHConfig enables authenticated vendor-like command sessions."
     },
     "Segment": {
       "properties": {
         "tag": {
-          "type": "string"
+          "type": "string",
+          "description": "Tag is \"untagged\" (the native VLAN) or a VLAN id in 1..4094."
         },
         "devices": {
           "items": {
             "$ref": "#/$defs/Device"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Devices is an inline device set for this segment."
         },
         "config": {
-          "type": "string"
+          "type": "string",
+          "description": "Config is a path to a config file whose devices form this segment\n(resolved by the loader). Mutually exclusive with Devices."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "tag"
-      ]
+      ],
+      "description": "Segment binds a device set to a VLAN tag for multi-VLAN playback."
     },
     "SnmpAgent": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled serves SNMP for this device. Omit to inherit the default,\nwhich is enabled whenever the block is present."
         },
         "community": {
-          "type": "string"
+          "type": "string",
+          "description": "Community is the v1/v2c read community string. Omit for \"public\"."
         },
         "sysname": {
-          "type": "string"
+          "type": "string",
+          "description": "SysName is sysName.0, the device's SNMP name. It overrides whatever the\nwalk file carries."
         },
         "sysdescr": {
-          "type": "string"
+          "type": "string",
+          "description": "SysDescr is sysDescr.0, the description string a scanner reads to\nidentify the platform and OS version."
         },
         "syscontact": {
-          "type": "string"
+          "type": "string",
+          "description": "SysContact is sysContact.0. Starter walks carry a placeholder here;\nkeep real customer contacts out of shipped content."
         },
         "syslocation": {
-          "type": "string"
+          "type": "string",
+          "description": "SysLocation is sysLocation.0. Starter walks carry a placeholder here;\nkeep real customer locations out of shipped content."
         },
         "walk_file": {
-          "type": "string"
+          "type": "string",
+          "description": "WalkFile is the recorded SNMP walk this device replays, resolved\nagainst `include_path` when relative. It supplies every OID not\noverridden by the fields above or by `add_mibs`."
         },
         "walk_files": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "WalkFiles is several walk files merged in order, later entries winning."
         },
         "add_mibs": {
           "items": {
             "$ref": "#/$defs/AddMib"
           },
-          "type": "array"
+          "type": "array",
+          "description": "AddMibs sets or overrides individual OIDs on top of the walk."
         },
         "community_includes": {
           "items": {
             "$ref": "#/$defs/CommunityInclude"
           },
-          "type": "array"
+          "type": "array",
+          "description": "CommunityIncludes serve a different walk file per community string, so\none device can answer differently to different pollers."
         },
         "access_list": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "AccessList restricts which source addresses may poll this agent."
         },
         "snmp_addr": {
-          "type": "string"
+          "type": "string",
+          "description": "SnmpAddr binds the agent to a specific address when the device has\nmore than one."
         },
         "dot1d_fdb_table": {
-          "$ref": "#/$defs/FdbTableConfig"
+          "$ref": "#/$defs/FdbTableConfig",
+          "description": "Dot1DFdbTable injects a bridge forwarding-database entry, so a scanner\nwalking dot1dTpFdbTable sees this device's neighbours."
         },
         "dot1q_fdb_table": {
-          "$ref": "#/$defs/FdbTableConfig"
+          "$ref": "#/$defs/FdbTableConfig",
+          "description": "Dot1QFdbTable injects a VLAN-aware forwarding-database entry\n(dot1qTpFdbTable)."
         },
         "traps": {
-          "$ref": "#/$defs/TrapsConfig"
+          "$ref": "#/$defs/TrapsConfig",
+          "description": "Traps sends SNMP notifications to receivers on cold start and on link\nstate changes."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "SnmpAgent represents SNMP agent configuration."
     },
     "Snmpv3Config": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled answers SNMPv3 requests. Independent of `snmp_agent`, which\nserves v1/v2c."
         },
         "engine_id": {
-          "type": "string"
+          "type": "string",
+          "description": "EngineID is the USM engine identifier as a hex string. Omit to derive\none from the device's MAC."
         },
         "users": {
           "items": {
             "$ref": "#/$defs/Snmpv3User"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Users are the USM accounts this agent accepts."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Snmpv3Config represents SNMPv3 user / auth / priv configuration."
     },
     "Snmpv3User": {
       "properties": {
         "username": {
-          "type": "string"
+          "type": "string",
+          "description": "Username is the USM security name."
         },
         "auth_protocol": {
           "type": "string",
@@ -1418,10 +1744,12 @@
             "sha",
             "sha256",
             "sha512"
-          ]
+          ],
+          "description": "AuthProtocol is the authentication digest. \"none\" is noAuthNoPriv."
         },
         "auth_password": {
-          "type": "string"
+          "type": "string",
+          "description": "AuthPassword is the authentication passphrase, at least 8 characters.\nSimulated credentials only."
         },
         "priv_protocol": {
           "type": "string",
@@ -1431,41 +1759,51 @@
             "aes",
             "aes192",
             "aes256"
-          ]
+          ],
+          "description": "PrivProtocol is the privacy cipher. Requires an auth protocol —\nthere is no privNoAuth mode in USM."
         },
         "priv_password": {
-          "type": "string"
+          "type": "string",
+          "description": "PrivPassword is the privacy passphrase, at least 8 characters.\nSimulated credentials only."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "username"
-      ]
+      ],
+      "description": "Snmpv3User represents one SNMPv3 USM user record."
     },
     "StpConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled makes the device participate in spanning tree."
         },
         "bridge_priority": {
-          "type": "integer"
+          "type": "integer",
+          "description": "BridgePriority is the bridge priority; the lowest value in the segment\nwins the root election. Multiples of 4096."
         },
         "hello_time": {
-          "type": "integer"
+          "type": "integer",
+          "description": "HelloTime is the seconds between BPDUs."
         },
         "max_age": {
-          "type": "integer"
+          "type": "integer",
+          "description": "MaxAge is the seconds a BPDU stays valid."
         },
         "forward_delay": {
-          "type": "integer"
+          "type": "integer",
+          "description": "ForwardDelay is the seconds a port spends in listening and learning."
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Version selects the spanning-tree flavour, for example stp, rstp\nor mstp."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "StpConfig represents STP/RSTP/MSTP configuration."
     },
     "SyslogConfig": {
       "allOf": [
@@ -1489,7 +1827,8 @@
       ],
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled turns on syslog emission for this device. When true, at least\none receiver is required."
         },
         "receivers": {
           "items": {
@@ -1497,95 +1836,117 @@
             "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
           },
           "type": "array",
-          "minItems": 1
+          "minItems": 1,
+          "description": "Receivers are collector endpoints as \"host:port\", for example\n10.10.0.9:514."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "enabled"
-      ]
+      ],
+      "description": "SyslogConfig sends configuration-state messages to RFC 5424 collectors."
     },
     "TTLConfig": {
       "properties": {
         "ttl": {
-          "type": "integer"
+          "type": "integer",
+          "description": "TTL is the hop count at which this device answers with ICMP time\nexceeded, placing it at that position in a traceroute."
         },
         "ip": {
-          "type": "string"
+          "type": "string",
+          "description": "IP is the source address the time-exceeded message comes from."
         },
         "mask": {
-          "type": "string"
+          "type": "string",
+          "description": "Mask is the netmask paired with IP when the hop answers for a range."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "TTLConfig configures ICMP TTL timeout behavior (traceroute simulation)."
     },
     "TrapTriggerConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled arms this trigger."
         },
         "on_startup": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "OnStartup fires the trap once when the session starts."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "TrapTriggerConfig configures a simple trap trigger."
     },
     "TrapsConfig": {
       "properties": {
         "enabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Enabled sends SNMP notifications from this device."
         },
         "receivers": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Receivers are trap destinations as \"host:port\", conventionally port\n162."
         },
         "community": {
-          "type": "string"
+          "type": "string",
+          "description": "Community is the community string sent with v2c traps."
         },
         "cold_start": {
-          "$ref": "#/$defs/TrapTriggerConfig"
+          "$ref": "#/$defs/TrapTriggerConfig",
+          "description": "ColdStart sends a coldStart trap when the device comes up."
         },
         "link_state": {
-          "$ref": "#/$defs/LinkStateTrapConfig"
+          "$ref": "#/$defs/LinkStateTrapConfig",
+          "description": "LinkState sends linkUp and linkDown traps as interfaces change, which\nis how an injected link fault reaches an NMS."
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "TrapsConfig represents SNMP trap configuration (v1.6.0)."
     },
     "TrunkPort": {
       "properties": {
         "interface": {
-          "type": "string"
+          "type": "string",
+          "description": "Interface is the local port carrying the trunk, matching an\n`interfaces[].name`, or \"port-channel\u003cid\u003e\" for a LAG."
         },
         "vlans": {
           "items": {
             "type": "integer"
           },
-          "type": "array"
+          "type": "array",
+          "description": "VLANs are the tagged VLAN ids the trunk carries. A port with no VLANs\nand no native VLAN is an access port, not a trunk."
         },
         "native_vlan": {
-          "type": "integer"
+          "type": "integer",
+          "description": "NativeVLAN is the untagged VLAN on this trunk."
         },
         "remote_device": {
-          "type": "string"
+          "type": "string",
+          "description": "RemoteDevice is the `name` of the device at the far end. This is what\ndraws the topology edge; without it the port is a stub."
         },
         "remote_interface": {
-          "type": "string"
+          "type": "string",
+          "description": "RemoteInterface is the far-end port name, used to label the edge."
         },
         "fdb_only": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "FDBOnly records the neighbour in the forwarding database without\ndrawing a topology edge, for a device seen but not linked."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "interface"
-      ]
+      ],
+      "description": "TrunkPort declares a VLAN-tagged trunk link to a neighbouring device."
     }
   },
   "title": "NIAC configuration",
