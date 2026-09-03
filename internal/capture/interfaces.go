@@ -3,8 +3,8 @@ package capture
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"os"
 	"slices"
 
 	"github.com/gopacket/gopacket/pcap"
@@ -31,8 +31,8 @@ func InterfaceExists(name string) bool {
 	})
 }
 
-// ListInterfaces prints all available network interfaces.
-func ListInterfaces() {
+// ListInterfaces writes all available network interfaces to w.
+func ListInterfaces(w io.Writer) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
 		logger := slog.Default()
@@ -42,27 +42,27 @@ func ListInterfaces() {
 	}
 
 	if len(devices) == 0 {
-		_, _ = fmt.Fprintln(os.Stdout, "  No interfaces found")
+		_, _ = fmt.Fprintln(w, "  No interfaces found")
 
 		return
 	}
 
 	for _, device := range devices {
-		_, _ = fmt.Fprintf(os.Stdout, "  %s", device.Name)
+		_, _ = fmt.Fprintf(w, "  %s", device.Name)
 		if device.Description != "" {
-			_, _ = fmt.Fprintf(os.Stdout, " - %s", device.Description)
+			_, _ = fmt.Fprintf(w, " - %s", device.Description)
 		}
 
-		_, _ = fmt.Fprintln(os.Stdout)
+		_, _ = fmt.Fprintln(w)
 
 		if len(device.Addresses) > 0 {
 			for _, addr := range device.Addresses {
-				_, _ = fmt.Fprintf(os.Stdout, "    IP: %s", addr.IP)
+				_, _ = fmt.Fprintf(w, "    IP: %s", addr.IP)
 				if addr.Netmask != nil {
-					_, _ = fmt.Fprintf(os.Stdout, "  Netmask: %s", addr.Netmask)
+					_, _ = fmt.Fprintf(w, "  Netmask: %s", addr.Netmask)
 				}
 
-				_, _ = fmt.Fprintln(os.Stdout)
+				_, _ = fmt.Fprintln(w)
 			}
 		}
 	}
