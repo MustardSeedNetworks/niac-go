@@ -1,6 +1,7 @@
 # Protocol Configuration Guide
 
-This guide covers all 19 protocols supported by NiAC-Go, including configuration examples, use cases, and best practices.
+This guide covers all 21 protocols supported by NIAC-Go, including
+configuration examples, use cases, and best practices.
 
 ## Table of Contents
 
@@ -25,22 +26,26 @@ This guide covers all 19 protocols supported by NiAC-Go, including configuration
   - [HTTP](#http)
   - [FTP](#ftp)
   - [NetBIOS](#netbios)
+  - [mDNS](#mdns)
   - [SNMP](#snmp)
+  - [SSH Device Management](#ssh-device-management)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-NiAC-Go supports 19 network protocols across all layers of the OSI model. Each protocol can be independently configured per device via YAML configuration.
+NIAC-Go supports 21 network protocols across all layers of the OSI model.
+Each protocol can be independently configured per device via YAML
+configuration.
 
 ### Supported Protocols by Layer
 
 | Layer | Protocols |
-|-------|-----------|
+| ------- | ----------- |
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, SNMP |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH |
 
 ## Layer 2 Protocols
 
@@ -49,6 +54,7 @@ NiAC-Go supports 19 network protocols across all layers of the OSI model. Each p
 **Link Layer Discovery Protocol** - IEEE 802.1AB standard for network device discovery.
 
 #### Use Cases
+
 - Multi-vendor network discovery
 - Network topology mapping
 - Neighbor relationship verification
@@ -72,7 +78,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable LLDP |
 | `system_name` | string | No | device name | System name advertised |
 | `system_description` | string | No | "" | Device description |
@@ -95,6 +101,7 @@ sudo tcpdump -i en0 ether proto 0x88cc
 ```
 
 #### Best Practices
+
 - Use LLDP for multi-vendor environments (industry standard)
 - Set advertise_interval to 30 seconds (default, RFC recommended)
 - Always configure system_description for identification
@@ -106,6 +113,7 @@ sudo tcpdump -i en0 ether proto 0x88cc
 **Cisco Discovery Protocol** - Cisco proprietary neighbor discovery protocol.
 
 #### Use Cases
+
 - Cisco device discovery
 - Legacy network compatibility
 - Cisco-specific network management
@@ -127,7 +135,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable CDP |
 | `platform` | string | No | "" | Platform/model identifier |
 | `capabilities` | string | No | "Switch" | Device capabilities |
@@ -146,6 +154,7 @@ sudo tcpdump -i en0 ether dst 01:00:0c:cc:cc:cc
 ```
 
 #### Best Practices
+
 - Use CDP for Cisco-only environments
 - Disable CDP on edge ports facing untrusted networks (security)
 - Set advertise_interval to 60 seconds (Cisco default)
@@ -155,7 +164,7 @@ sudo tcpdump -i en0 ether dst 01:00:0c:cc:cc:cc
 #### LLDP vs CDP Comparison
 
 | Feature | LLDP | CDP |
-|---------|------|-----|
+| --------- | ------ | ----- |
 | Standard | IEEE 802.1AB (open) | Cisco proprietary |
 | Multi-vendor | ✅ Yes | ❌ Cisco only |
 | Default interval | 30 seconds | 60 seconds |
@@ -168,6 +177,7 @@ sudo tcpdump -i en0 ether dst 01:00:0c:cc:cc:cc
 **Extreme Discovery Protocol** - Extreme Networks proprietary discovery protocol.
 
 #### Use Cases
+
 - Extreme Networks device discovery
 - ExtremeXOS/EXOS switch management
 - Legacy Extreme network compatibility
@@ -184,6 +194,7 @@ devices:
 ```
 
 #### Best Practices
+
 - Use EDP for Extreme Networks devices
 - Enable alongside LLDP for maximum compatibility
 - Primarily used in Extreme-only networks
@@ -193,6 +204,7 @@ devices:
 **Foundry Discovery Protocol** - Brocade/Foundry proprietary discovery protocol.
 
 #### Use Cases
+
 - Brocade/Foundry device discovery
 - Legacy Foundry network compatibility
 - Ruckus ICX switch management (post-acquisition)
@@ -209,6 +221,7 @@ devices:
 ```
 
 #### Best Practices
+
 - Use FDP for Brocade/Foundry/Ruckus devices
 - Enable alongside LLDP for multi-vendor compatibility
 
@@ -217,6 +230,7 @@ devices:
 **Spanning Tree Protocol** - IEEE 802.1D/802.1w/802.1s loop prevention protocol.
 
 #### Use Cases
+
 - Loop prevention in Layer 2 networks
 - Network redundancy and failover
 - Topology optimization
@@ -238,7 +252,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable STP |
 | `bridge_priority` | integer | No | 32768 | Bridge priority (0-61440) |
 | `hello_time` | integer | No | 2 | BPDU interval (1-10 seconds) |
@@ -249,7 +263,7 @@ devices:
 #### STP Versions
 
 | Version | Standard | Convergence | Use Case |
-|---------|----------|-------------|----------|
+| --------- | ---------- | ------------- | ---------- |
 | STP | IEEE 802.1D | 30-50 seconds | Legacy compatibility |
 | RSTP | IEEE 802.1w | <6 seconds | Modern networks (recommended) |
 | MSTP | IEEE 802.1s | <6 seconds | VLAN-aware, complex topologies |
@@ -257,7 +271,7 @@ devices:
 #### Bridge Priority Values
 
 | Priority | Purpose |
-|----------|---------|
+| ---------- | --------- |
 | 0 or 4096 | Force as root bridge |
 | 8192 | Secondary/backup root |
 | 32768 | Default (let election decide) |
@@ -274,6 +288,7 @@ sudo niac --debug-stp 3 en0 config.yaml
 ```
 
 #### Best Practices
+
 - Use RSTP (802.1w) for modern networks (faster convergence)
 - Set root bridge priority to 4096, backup to 8192
 - Use 32768 (default) for access switches
@@ -288,6 +303,7 @@ sudo niac --debug-stp 3 en0 config.yaml
 **Address Resolution Protocol** - Maps IPv4 addresses to MAC addresses.
 
 #### Use Cases
+
 - IP to MAC address resolution
 - Network reachability testing
 - ARP table population
@@ -319,6 +335,7 @@ sudo tcpdump -i en0 arp
 **Internet Control Message Protocol** - IPv4 diagnostic and error reporting.
 
 #### Use Cases
+
 - Ping (echo request/reply)
 - Network troubleshooting
 - Connectivity verification
@@ -339,7 +356,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMP responses |
 | `ttl` | integer | No | 64 | Time to live (1-255) |
 
@@ -357,6 +374,7 @@ traceroute 10.0.0.1
 ```
 
 #### Best Practices
+
 - Enable ICMP for network troubleshooting
 - Use TTL of 64 (standard for most systems)
 - Consider disabling ICMP on WAN-facing interfaces (security)
@@ -367,6 +385,7 @@ traceroute 10.0.0.1
 **Internet Control Message Protocol for IPv6** - IPv6 diagnostic and error reporting.
 
 #### Use Cases
+
 - IPv6 ping (echo request/reply)
 - Neighbor Discovery Protocol (NDP)
 - Router advertisements
@@ -387,7 +406,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMPv6 responses |
 | `hop_limit` | integer | No | 255 | Hop limit (RFC 4861) |
 
@@ -405,6 +424,7 @@ sudo tcpdump -i en0 icmp6
 ```
 
 #### Best Practices
+
 - Always use hop_limit of 255 for NDP (RFC 4861 requirement)
 - Enable ICMPv6 for IPv6 networks (required for NDP)
 - ICMPv6 is more critical than ICMP (don't disable)
@@ -417,6 +437,7 @@ sudo tcpdump -i en0 icmp6
 **Transmission Control Protocol** - Reliable, connection-oriented transport.
 
 #### Use Cases
+
 - HTTP servers
 - FTP servers
 - Reliable data transfer
@@ -429,6 +450,7 @@ TCP is automatically used by application protocols (HTTP, FTP) that require it. 
 **User Datagram Protocol** - Connectionless, unreliable transport.
 
 #### Use Cases
+
 - DNS queries
 - DHCP
 - SNMP
@@ -444,7 +466,7 @@ jitter, and DiffServ handling. When a UDP packet arrives whose payload carries a
 reflector signature (`DATA:OT` or `PROBEOT`, 5 bytes into the payload), the
 device echoes it back to the sender with source/destination MAC and IP swapped,
 the ToS byte wiggled, and the reply optionally delayed. UDP ports are left
-unswapped to match the niac-java reflector; the tester matches replies by
+unswapped to match the `niac-java` reflector; the tester matches replies by
 signature, not the 4-tuple. Replies inherit the request's VLAN tag.
 
 ##### Configuration
@@ -478,6 +500,7 @@ separate enable flag.
 **Dynamic Host Configuration Protocol** - Automatic IPv4 address assignment.
 
 #### Use Cases
+
 - Automatic IP address assignment
 - Network parameter distribution (gateway, DNS)
 - PXE boot servers
@@ -505,14 +528,14 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DHCP server |
 | `pools` | array | Yes | [] | DHCP address pools |
 
 **Pool Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `network` | string | Yes | - | Network CIDR (e.g., 10.0.0.0/24) |
 | `range_start` | string | Yes | - | First IP in range |
 | `range_end` | string | Yes | - | Last IP in range |
@@ -535,6 +558,7 @@ sudo tcpdump -i en0 port 67 or port 68
 ```
 
 #### Best Practices
+
 - Use lease_time of 86400 (24 hours) for workstations
 - Use shorter lease_time (3600-7200) for guest networks
 - Always provide gateway and dns_servers
@@ -546,6 +570,7 @@ sudo tcpdump -i en0 port 67 or port 68
 **Dynamic Host Configuration Protocol for IPv6** - Automatic IPv6 address assignment.
 
 #### Use Cases
+
 - IPv6 address assignment
 - IPv6 network parameters
 - Dual-stack networks
@@ -569,6 +594,7 @@ devices:
 ```
 
 #### Best Practices
+
 - Use DHCPv6 for stateful IPv6 addressing
 - Consider SLAAC for stateless autoconfiguration
 - Use /64 prefix for subnets (standard)
@@ -579,6 +605,7 @@ devices:
 **Domain Name System** - Name resolution service.
 
 #### Use Cases
+
 - Hostname to IP resolution
 - Internal domain names
 - Split-horizon DNS
@@ -605,14 +632,14 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DNS server |
 | `forward_records` | array | No | [] | A records (hostname -> IP) |
 
 **Forward Record Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `name` | string | Yes | - | Fully qualified domain name |
 | `ip` | string | Yes | - | IPv4 or IPv6 address |
 | `ttl` | integer | No | 3600 | Time to live (seconds) |
@@ -631,6 +658,7 @@ sudo tcpdump -i en0 port 53
 ```
 
 #### Best Practices
+
 - Use TTL of 3600 (1 hour) for internal records
 - Use shorter TTL (300-600) for frequently changing records
 - Always use fully qualified domain names (FQDNs)
@@ -642,6 +670,7 @@ sudo tcpdump -i en0 port 53
 **Hypertext Transfer Protocol** - Web server protocol.
 
 #### Use Cases
+
 - Web-based management interfaces
 - API endpoints
 - Configuration portals
@@ -669,7 +698,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable HTTP server |
 | `port` | integer | No | 80 | TCP port |
 | `endpoints` | array | No | [] | HTTP endpoints |
@@ -677,7 +706,7 @@ devices:
 **Endpoint Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `path` | string | Yes | - | URL path (e.g., /api/info) |
 | `content` | string | Yes | - | Response content (HTML/JSON) |
 
@@ -695,6 +724,7 @@ sudo tcpdump -i en0 port 80
 ```
 
 #### Best Practices
+
 - Use port 80 for standard HTTP
 - Use port 443 for HTTPS (if implementing)
 - Return JSON for API endpoints
@@ -706,6 +736,7 @@ sudo tcpdump -i en0 port 80
 **File Transfer Protocol** - File transfer service.
 
 #### Use Cases
+
 - Firmware upgrades
 - Configuration backups
 - File distribution
@@ -731,7 +762,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable FTP server |
 | `port` | integer | No | 21 | TCP port |
 | `users` | array | No | [] | FTP user accounts |
@@ -739,7 +770,7 @@ devices:
 **User Fields:**
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `username` | string | Yes | - | FTP username |
 | `password` | string | Yes | - | FTP password |
 
@@ -754,6 +785,7 @@ sudo tcpdump -i en0 port 21
 ```
 
 #### Best Practices
+
 - Use SFTP or FTPS instead of FTP (security)
 - Create separate accounts for different access levels
 - Use strong passwords (production)
@@ -765,6 +797,7 @@ sudo tcpdump -i en0 port 21
 **Network Basic Input/Output System** - Windows network name service.
 
 #### Use Cases
+
 - Windows network browsing
 - SMB/CIFS file sharing
 - Legacy Windows compatibility
@@ -786,7 +819,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable NetBIOS |
 | `name` | string | No | device name | NetBIOS name (15 chars max) |
 | `workgroup` | string | No | "WORKGROUP" | Workgroup name |
@@ -805,16 +838,85 @@ sudo tcpdump -i en0 port 137 or port 138 or port 139
 ```
 
 #### Best Practices
+
 - Use NetBIOS only for Windows compatibility
 - Limit NetBIOS name to 15 characters
 - Disable NetBIOS on non-Windows networks (security)
 - Consider modern alternatives (DNS, LLMNR)
+
+### mDNS
+
+**Multicast DNS** - link-local name and service advertisement, as published by
+Bonjour and Avahi.
+
+#### Use Cases
+
+- Printers, cameras, and appliances that a scanner finds without unicast DNS
+- DNS-SD service inventories (`_ipp._tcp`, `_http._tcp`)
+- Discovery tools that classify a device from its advertised services
+- Networks with no authoritative DNS for the local segment
+
+#### Configuration
+
+```yaml
+devices:
+  - name: floor2-printer
+    ips:
+      - "10.0.0.60"
+    mdns:
+      enabled: true
+      hostname: "floor2-printer"
+      ttl: 120
+      services:
+        - type: "_ipp._tcp"
+          port: 631
+          txt:
+            - "rp=ipp/print"
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Enable mDNS advertisement |
+| `hostname` | string | No | device name | Published as `<hostname>.local` |
+| `ttl` | integer | No | 120 | Record TTL in seconds |
+| `services` | array | No | - | Advertised DNS-SD services |
+
+Each entry in `services` takes:
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `type` | string | Yes | - | DNS-SD service type (e.g. `_ipp._tcp`) |
+| `port` | integer | Yes | - | Port the service listens on |
+| `txt` | array | No | - | TXT record key=value strings |
+
+#### Testing
+
+```bash
+# Browse advertised services (macOS)
+dns-sd -B _services._dns-sd._udp local
+
+# Resolve a published host (Linux)
+avahi-resolve --name floor2-printer.local
+
+# Monitor mDNS traffic
+sudo tcpdump -i en0 port 5353
+```
+
+#### Best Practices
+
+- Advertise only the services the device would really publish
+- Keep hostnames unique per segment; `.local` collisions are resolved by the client
+- Use TXT records that match the vendor's real service metadata
+- Pair with SNMP so a discovery tool corroborates the same device two ways
 
 ### SNMP
 
 **Simple Network Management Protocol** - Network monitoring and management.
 
 #### Use Cases
+
 - Network device monitoring
 - Performance metrics collection
 - Alerting and notifications (traps)
@@ -859,7 +961,7 @@ devices:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable SNMP agent |
 | `community` | string | No | "public" | SNMP community string |
 | `walk_file` | string | No | "" | Path to SNMP walk file |
@@ -914,6 +1016,7 @@ snmptrapd -f -Lo
 ```
 
 #### Best Practices
+
 - Use SNMPv3 in production (authentication and encryption)
 - Change default community strings ("public", "private")
 - Limit SNMP access with ACLs
@@ -1070,22 +1173,26 @@ See: `examples/combinations/wireless-controller.yaml`
 ### Monitoring and Troubleshooting
 
 1. **Enable debug flags** for specific protocols:
+
    ```bash
    sudo niac --debug-lldp 3 --debug-snmp 3 en0 config.yaml
    ```
 
 2. **Use tcpdump** to monitor protocol traffic:
+
    ```bash
    sudo tcpdump -i en0 ether proto 0x88cc  # LLDP
    sudo tcpdump -i en0 port 161 or port 162  # SNMP
    ```
 
 3. **Validate configurations** before deployment:
+
    ```bash
    niac validate config.yaml
    ```
 
 4. **Use dry-run mode** to test configurations:
+
    ```bash
    niac --dry-run lo0 config.yaml
    ```

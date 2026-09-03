@@ -11,7 +11,7 @@ import (
 //
 // Every /api route is installed through the capability registry (register /
 // registerAll in route.go), which composes its policy — auth, rate limiting,
-// CSRF, admin scope, license feature — in one canonical order so a route cannot
+// CSRF, admin scope — in one canonical order so a route cannot
 // ship without it. scripts/check-route-policy.sh enforces this. Only the
 // unauthenticated introspection endpoints (/__version, /__capabilities) are
 // registered directly. The SPA shell is also public so it can collect a bearer
@@ -462,8 +462,8 @@ func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
 	})
 }
 
-// registerPcapRoutes registers PCAP analysis endpoints (gated by the
-// pcap_ingest license feature; upload additionally rate-limited + CSRF).
+// registerPcapRoutes registers PCAP analysis endpoints. Upload is
+// additionally rate-limited + CSRF-protected.
 func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
 		// Upload decodes a base64 PCAP payload up to MaxPCAPUploadSize (100MB
