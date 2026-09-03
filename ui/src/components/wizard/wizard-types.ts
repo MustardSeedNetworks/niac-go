@@ -1,5 +1,5 @@
 import {
-  enterpriseScenarioRequest,
+  defaultScenarioRequest,
   isScenarioRequestValid,
   type ScenarioGenerateRequest,
 } from '../../api/scenario-client';
@@ -50,7 +50,7 @@ export const initialWizardState: WizardState = {
   template: null,
   userConfig: null,
   uploadFile: null,
-  fleetRequest: enterpriseScenarioRequest(),
+  fleetRequest: defaultScenarioRequest(),
   selectedInterface: '',
   starting: false,
   saving: false,

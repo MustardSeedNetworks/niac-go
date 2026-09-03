@@ -10,7 +10,7 @@ describe('scenario generator client', () => {
     mockFetch.mockReset();
   });
 
-  it('submits the enterprise repeat controls to the protected generator', async () => {
+  it('submits the default pack repeat controls to the protected generator', async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })
       .mockResolvedValueOnce({
@@ -19,8 +19,8 @@ describe('scenario generator client', () => {
         json: () => Promise.resolve({ content: 'devices: []\n', manifest: { device_count: 0 } }),
       });
 
-    const { enterpriseScenarioRequest, generateScenario } = await import('./scenario-client');
-    const request = enterpriseScenarioRequest();
+    const { defaultScenarioRequest, generateScenario } = await import('./scenario-client');
+    const request = defaultScenarioRequest();
     const response = await generateScenario(request);
 
     expect(response.manifest.deviceCount).toBe(0);
@@ -29,15 +29,15 @@ describe('scenario generator client', () => {
     expect(payload).toMatchObject({
       counts: { accessSwitches: 16, accessPointsPerAccess: 2 },
       attachmentName: 'cyberscope',
-      endpointProfile: 'enterprise',
+      endpointProfile: 'hospital',
     });
     expect(payload.sites).toHaveLength(4);
     expect(payload.sites[0]).toMatchObject({ code: 'COS', octet: 240 });
   });
 
   it('rejects cross-field combinations the generator cannot build', async () => {
-    const { enterpriseScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
-    const request = enterpriseScenarioRequest();
+    const { defaultScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
+    const request = defaultScenarioRequest();
     expect(isScenarioRequestValid(request)).toBe(true);
 
     request.counts.accessSwitches = 20;
@@ -59,8 +59,8 @@ describe('scenario generator client', () => {
   });
 
   it('matches the generator integer and UTF-8 byte limits', async () => {
-    const { enterpriseScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
-    const request = enterpriseScenarioRequest();
+    const { defaultScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
+    const request = defaultScenarioRequest();
 
     request.counts.accessSwitches = 1.5;
     expect(isScenarioRequestValid(request)).toBe(false);

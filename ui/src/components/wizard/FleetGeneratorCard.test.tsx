@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { enterpriseScenarioRequest } from '../../api/scenario-client';
+import { defaultScenarioRequest } from '../../api/scenario-client';
 import '../../i18n';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
 
@@ -12,7 +12,7 @@ describe('FleetGeneratorCard', () => {
     const onChange = vi.fn();
     render(
       <FleetGeneratorCard
-        request={enterpriseScenarioRequest()}
+        request={defaultScenarioRequest()}
         selected={false}
         onChange={onChange}
         onSelect={vi.fn()}
@@ -35,7 +35,7 @@ describe('FleetGeneratorCard', () => {
     const onChange = vi.fn();
     render(
       <FleetGeneratorCard
-        request={enterpriseScenarioRequest()}
+        request={defaultScenarioRequest()}
         selected
         onChange={onChange}
         onSelect={vi.fn()}
@@ -56,7 +56,7 @@ describe('FleetGeneratorCard', () => {
     const onChange = vi.fn();
     render(
       <FleetGeneratorCard
-        request={enterpriseScenarioRequest()}
+        request={defaultScenarioRequest()}
         selected
         onChange={onChange}
         onSelect={vi.fn()}
