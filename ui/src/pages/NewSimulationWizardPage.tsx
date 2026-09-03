@@ -4,6 +4,7 @@ import { startSimulation } from '../api/client';
 import {
   createScenarioDraft,
   createScenarioDraftFromTemplate,
+  deleteScenarioDraft,
   fetchLibraryNetworkContent,
   replaceScenarioDraft,
   type ScenarioDraft,
@@ -28,13 +29,13 @@ import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
+import { reportError } from '../utils/error-reporter';
 import { fileToText } from '../utils/file';
 
-const EMPTY_CONFIG_YAML = `devices:
-  - name: new-device
-    type: host
-    mac: 02:00:00:00:00:01
-`;
+// An empty start is genuinely empty. The placeholder host this used to seed
+// was indistinguishable from a device the author had added, so it either
+// shipped into the scenario or had to be found and deleted first.
+const EMPTY_CONFIG_YAML = 'devices: []\n';
 
 function newDraftName(now = new Date()) {
   return `scenario-${now.toISOString().replaceAll(/[-:.TZ]/g, '')}`;
@@ -69,6 +70,23 @@ export const NewSimulationWizardPage: FC = () => {
   const [draftContent, setDraftContent] = useState('');
   const [draftDirty, setDraftDirty] = useState(false);
   const [draftSourceKey, setDraftSourceKey] = useState<string | null>(null);
+  const [startedSessionId, setStartedSessionId] = useState<string | null>(null);
+
+  /**
+   * Best-effort removal of a draft the wizard is done with.
+   *
+   * A failure here is not the author's problem: the draft they are moving to
+   * has already been created, or they have already cancelled. Surfacing it
+   * would report an error for an action they did not take, so it is logged
+   * and swallowed rather than raised.
+   */
+  const discardDraft = useCallback(async (target: ScenarioDraft) => {
+    try {
+      await deleteScenarioDraft(target.name, target.revision);
+    } catch (err) {
+      reportError(err, `discard-scenario-draft:${target.name}`);
+    }
+  }, []);
 
   const steps = WIZARD_STEPS.map((id) => ({
     id,
@@ -105,6 +123,10 @@ export const NewSimulationWizardPage: FC = () => {
         throw new Error(t('newSimWizard.template.errorNoSource'));
       }
 
+      // Changing the source mid-wizard used to leave the previous draft behind
+      // in the library, one per change of mind.
+      if (draft) await discardDraft(draft);
+
       setDraft(created);
       setDraftContent(created.content);
       setDraftDirty(false);
@@ -114,7 +136,7 @@ export const NewSimulationWizardPage: FC = () => {
       showError(err);
       setState((s) => ({ ...s, starting: false }));
     }
-  }, [draft, draftSourceKey, state, showError, t]);
+  }, [draft, draftSourceKey, discardDraft, state, showError, t]);
 
   const saveDraft = useCallback(async () => {
     if (!draft || !draftDirty) return true;
@@ -133,6 +155,16 @@ export const NewSimulationWizardPage: FC = () => {
     }
   }, [draft, draftContent, draftDirty, showError]);
 
+  const cancelWizard = useCallback(async () => {
+    if (draft) await discardDraft(draft);
+    setDraft(null);
+    setDraftContent('');
+    setDraftDirty(false);
+    setDraftSourceKey(null);
+    setStartedSessionId(null);
+    setState(initialWizardState);
+  }, [draft, discardDraft]);
+
   const goBack = useCallback(async () => {
     if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
@@ -142,7 +174,8 @@ export const NewSimulationWizardPage: FC = () => {
     async (request: SimulationRequest) => {
       setState((s) => ({ ...s, starting: true }));
       try {
-        await startSimulation(request);
+        const started = await startSimulation(request);
+        setStartedSessionId(started.sessionId ?? null);
         setState((s) => ({ ...s, step: WIZARD_STEPS.indexOf('finish'), starting: false }));
       } catch (err) {
         showError(err);
@@ -160,6 +193,19 @@ export const NewSimulationWizardPage: FC = () => {
     if (WIZARD_STEPS[state.step] === 'devices' && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.min(WIZARD_STEPS.length - 1, s.step + 1) }));
   }, [state.step, prepareConfig, saveDraft]);
+
+  // Only offered once a draft exists: before that there is nothing to abandon
+  // and the author can simply navigate away.
+  const cancelButton = draft ? (
+    <Button
+      variant="outline"
+      data-testid="wizard-cancel-button"
+      disabled={state.saving || state.starting}
+      onClick={() => void cancelWizard()}
+    >
+      {t('newSimWizard.cancelLabel')}
+    </Button>
+  ) : null;
 
   const currentStep = WIZARD_STEPS[state.step];
   const canProceed =
@@ -269,11 +315,13 @@ export const NewSimulationWizardPage: FC = () => {
             starting={state.starting}
           />
         )}
-        {currentStep === 'finish' && draft && <FinishStep draftName={draft.name} />}
+        {currentStep === 'finish' && draft && (
+          <FinishStep draftName={draft.name} sessionId={startedSessionId} />
+        )}
       </div>
 
       {currentStep === 'preflight' && (
-        <div className="flex justify-start">
+        <div className="flex justify-start gap-default">
           <Button
             variant="outline"
             data-testid="wizard-back-button"
@@ -282,18 +330,22 @@ export const NewSimulationWizardPage: FC = () => {
           >
             {t('newSimWizard.backLabel')}
           </Button>
+          {cancelButton}
         </div>
       )}
       {currentStep !== 'preflight' && currentStep !== 'finish' && (
         <div className="flex justify-between gap-default">
-          <Button
-            variant="outline"
-            data-testid="wizard-back-button"
-            disabled={state.step === 0 || state.saving}
-            onClick={() => void goBack()}
-          >
-            {t('newSimWizard.backLabel')}
-          </Button>
+          <div className="flex gap-default">
+            <Button
+              variant="outline"
+              data-testid="wizard-back-button"
+              disabled={state.step === 0 || state.saving}
+              onClick={() => void goBack()}
+            >
+              {t('newSimWizard.backLabel')}
+            </Button>
+            {cancelButton}
+          </div>
           <Button
             tone="violet"
             data-testid="wizard-next-button"

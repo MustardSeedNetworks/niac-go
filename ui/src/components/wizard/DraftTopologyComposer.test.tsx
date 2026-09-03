@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../../api/library-client';
 import { required } from '../../test/required';
@@ -8,6 +8,7 @@ import '../../i18n';
 import { DraftTopologyComposer } from './DraftTopologyComposer';
 
 const mutateScenarioDraftTopology = vi.hoisted(() => vi.fn());
+const fitView = vi.hoisted(() => vi.fn());
 const fetchScenarioProfiles = vi.hoisted(() => vi.fn());
 const profiles = [
   {
@@ -64,20 +65,28 @@ vi.mock('@xyflow/react', () => ({
     children,
     edges,
     onEdgeClick,
+    onInit,
   }: {
     children: ReactNode;
     edges: Array<{ source: string; target: string; data?: Record<string, unknown> }>;
     onEdgeClick: (event: unknown, edge: (typeof edges)[number]) => void;
-  }) => (
-    <div>
-      {edges[0] && (
-        <button type="button" onClick={() => onEdgeClick({}, required(edges[0], 'the first edge'))}>
-          Edit first link
-        </button>
-      )}
-      {children}
-    </div>
-  ),
+    onInit?: (instance: { fitView: typeof fitView }) => void;
+  }) => {
+    useEffect(() => onInit?.({ fitView }), [onInit]);
+    return (
+      <div>
+        {edges[0] && (
+          <button
+            type="button"
+            onClick={() => onEdgeClick({}, required(edges[0], 'the first edge'))}
+          >
+            Edit first link
+          </button>
+        )}
+        {children}
+      </div>
+    );
+  },
   useEdgesState: <T,>(initial: T[]) => {
     const [edges, setEdges] = useState(initial);
     return [edges, setEdges, vi.fn()] as const;
@@ -100,6 +109,7 @@ const draft: ScenarioDraft = {
 describe('DraftTopologyComposer', () => {
   beforeEach(() => {
     mutateScenarioDraftTopology.mockReset();
+    fitView.mockReset();
     fetchScenarioProfiles.mockReset().mockResolvedValue(profiles);
   });
 
@@ -233,5 +243,113 @@ devices:
         }),
       }),
     );
+  });
+  const switchPair = (portProps: string) => ({
+    ...draft,
+    content: `
+devices:
+  - name: core-1
+    type: switch
+    interfaces:
+      - { name: Ethernet1/1, type: ethernet, speed: 10000 }
+    trunk_ports:
+      - { interface: Ethernet1/1, remote_device: dist-1, remote_interface: Ethernet1/49${portProps} }
+  - name: dist-1
+    type: switch
+    interfaces:
+      - { name: Ethernet1/49, type: ethernet, speed: 10000 }
+    trunk_ports:
+      - { interface: Ethernet1/49, remote_device: core-1, remote_interface: Ethernet1/1${portProps} }
+`,
+  });
+
+  it('refuses a switch link that declares neither tagged nor native VLANs', async () => {
+    const user = userEvent.setup();
+    render(
+      <DraftTopologyComposer
+        draft={switchPair('')}
+        onDraftUpdate={vi.fn()}
+        onBusyChange={vi.fn()}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Edit first link' }));
+    const dialog = screen.getByRole('dialog');
+
+    // The unfinished state the config validator warns about: authoring it here
+    // produced a scenario that validated with a warning the author never saw.
+    expect(within(dialog).getByRole('button', { name: 'Save link' })).toBeDisabled();
+  });
+
+  it('accepts a switch link carrying only a native VLAN as an access port', async () => {
+    const user = userEvent.setup();
+    render(
+      <DraftTopologyComposer
+        draft={switchPair(', native_vlan: 10')}
+        onDraftUpdate={vi.fn()}
+        onBusyChange={vi.fn()}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Edit first link' }));
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getByRole('button', { name: 'Save link' })).toBeEnabled();
+  });
+
+  it('accepts a router-to-router link with no VLANs at all', async () => {
+    const user = userEvent.setup();
+    const routed = {
+      ...draft,
+      content: `
+devices:
+  - name: rtr-1
+    type: router
+    interfaces:
+      - { name: Ethernet1/1, type: ethernet, speed: 10000 }
+    trunk_ports:
+      - { interface: Ethernet1/1, remote_device: rtr-2, remote_interface: Ethernet1/1 }
+  - name: rtr-2
+    type: router
+    interfaces:
+      - { name: Ethernet1/1, type: ethernet, speed: 10000 }
+    trunk_ports:
+      - { interface: Ethernet1/1, remote_device: rtr-1, remote_interface: Ethernet1/1 }
+`,
+    };
+    render(<DraftTopologyComposer draft={routed} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Edit first link' }));
+    const dialog = screen.getByRole('dialog');
+
+    // A routed link is neither a trunk nor an access port, and config's
+    // IsRoutedTopologyLink says so too.
+    expect(within(dialog).getByRole('button', { name: 'Save link' })).toBeEnabled();
+  });
+
+  it('re-fits the viewport when a device is added', async () => {
+    const user = userEvent.setup();
+    const added = {
+      ...draft,
+      revision: 'revision-2',
+      content: 'devices:\n  - name: COS-ACCESS-SW01\n    type: switch\n',
+    };
+    mutateScenarioDraftTopology.mockResolvedValue(added);
+    const Harness = () => {
+      const [current, setCurrent] = useState(draft);
+      return (
+        <DraftTopologyComposer draft={current} onDraftUpdate={setCurrent} onBusyChange={vi.fn()} />
+      );
+    };
+    render(<Harness />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add device' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Device name'), 'COS-ACCESS-SW01');
+    await user.click(within(dialog).getByRole('button', { name: 'Add device' }));
+
+    // fitView on the ReactFlow prop only fits on mount, so a device added to a
+    // panned graph landed off-screen.
+    await waitFor(() => expect(fitView).toHaveBeenCalled());
   });
 });

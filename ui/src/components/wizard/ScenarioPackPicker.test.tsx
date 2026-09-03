@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enterpriseScenarioRequest, type ScenarioPack } from '../../api/scenario-client';
+import { defaultScenarioRequest, type ScenarioPack } from '../../api/scenario-client';
 import i18n from '../../i18n';
 import { ScenarioPackPicker } from './ScenarioPackPicker';
 
@@ -19,7 +19,7 @@ const hospital: ScenarioPack = {
   name: 'Hospital network',
   description: 'Acute-care and ambulatory sites.',
   mapPurpose: 'presentation',
-  request: { ...enterpriseScenarioRequest(), domain: 'care.example' },
+  request: { ...defaultScenarioRequest(), domain: 'care.example' },
   manifest: {
     deviceCount: 75,
     networkCount: 12,
@@ -48,7 +48,7 @@ describe('ScenarioPackPicker', () => {
   it('loads a versioned pack into the editable composer', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={onChange} />);
+    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={onChange} />);
 
     await user.click(await screen.findByTestId('scenario-pack-hospital'));
 
@@ -59,7 +59,7 @@ describe('ScenarioPackPicker', () => {
   it('renders localized pack metadata', async () => {
     await i18n.changeLanguage('es');
 
-    render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={vi.fn()} />);
+    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={vi.fn()} />);
 
     expect(await screen.findByText('Red hospitalaria')).toBeVisible();
     expect(screen.getByText(/Centro médico de un solo sitio/)).toBeVisible();
@@ -68,7 +68,7 @@ describe('ScenarioPackPicker', () => {
   it('separates presentation maps from scale workloads', async () => {
     fetchScenarioPacks.mockResolvedValueOnce([enterpriseScale, hospital]);
 
-    render(<ScenarioPackPicker request={enterpriseScenarioRequest()} onChange={vi.fn()} />);
+    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={vi.fn()} />);
 
     expect(await screen.findByText('Presentation-ready maps')).toBeVisible();
     expect(screen.getByText('Scale testing')).toBeVisible();

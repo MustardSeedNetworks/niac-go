@@ -460,6 +460,7 @@
       "timelineName": "Timeline name",
       "utilization": "Utilization (%)"
     },
+    "cancelLabel": "Cancel",
     "description": "Build and validate a saved draft before starting a simulation.",
     "devices": {
       "behaviorsLabel": "Behaviors",
@@ -471,8 +472,10 @@
       "yamlLabel": "YAML"
     },
     "finish": {
+      "draftLabel": "From draft {{name}}",
       "gotoRuntime": "Go to Simulation",
       "help": "The simulation started from the validated draft. The saved draft remains available for future editing.",
+      "sessionLabel": "Session: {{id}}",
       "title": "All set"
     },
     "fleet": {

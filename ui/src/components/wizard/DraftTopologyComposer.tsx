@@ -5,11 +5,12 @@ import {
   type EdgeTypes,
   type NodeTypes,
   ReactFlow,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
 import { Cable, Plus } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   type DraftTopologyEndpoint,
@@ -74,6 +75,16 @@ function parseVLANs(value: string): number[] | null {
   return [...new Set(vlans)];
 }
 
+/**
+ * Device types that legitimately carry a link with no VLANs at all.
+ *
+ * Mirrors config.IsRoutedTopologyLink: a router-to-router link is routed, not
+ * switched, so it has neither a tagged list nor a native VLAN. Every other
+ * link is either a trunk (tagged VLANs) or an access port (a native VLAN),
+ * and one declaring neither is the unfinished state the validator warns about.
+ */
+const ROUTED_DEVICE_TYPES = new Set(['router', 'firewall', 'layer3-switch']);
+
 function linkState(link: TopologyLink): LinkEditorState {
   return {
     source: link.source,
@@ -102,6 +113,8 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
   } = useApiResource(fetchScenarioProfiles, []);
   const [busy, setBusy] = useState(false);
   const [deviceEditor, setDeviceEditor] = useState<DeviceEditorState | null>(null);
+  const flowRef = useRef<ReactFlowInstance<DeviceNodeType, LinkEdge> | null>(null);
+  const deviceCountRef = useRef(0);
   const [linkEditor, setLinkEditor] = useState<LinkEditorState | null>(null);
   const model = useMemo(() => parseDraftTopology(draft.content), [draft.content]);
   const layoutedNodes = useMemo(() => {
@@ -124,6 +137,19 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
 
   useEffect(() => setNodes(layoutedNodes), [layoutedNodes, setNodes]);
   useEffect(() => setEdges(layoutedEdges), [layoutedEdges, setEdges]);
+
+  // ReactFlow's fitView prop only fits on mount, so a device added to a graph
+  // the author had panned or zoomed landed outside the viewport and read as
+  // "nothing happened". Re-fit when the graph grows, not on every render:
+  // re-fitting after a delete or an edit would fight the author's own panning.
+  useEffect(() => {
+    const count = model.devices.length;
+    const grew = count > deviceCountRef.current;
+    deviceCountRef.current = count;
+    if (grew && flowRef.current) {
+      void flowRef.current.fitView({ duration: 200 });
+    }
+  }, [model.devices.length]);
 
   const applyMutation = useCallback(
     async (mutation: DraftTopologyMutation) => {
@@ -275,9 +301,19 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
     if (!linkEditor?.sourceInterface || !linkEditor.targetInterface) return false;
     const vlans = parseVLANs(linkEditor.vlans);
     if (!vlans || vlans.some((vlan) => vlan < 1 || vlan > 4094)) return false;
-    if (!linkEditor.nativeVlan) return true;
+    if (!linkEditor.nativeVlan) {
+      if (vlans.length > 0) return true;
+      // Neither tagged nor native: only a routed link may say nothing.
+      const endpointType = (name: string) =>
+        model.devices.find((device) => device.name === name)?.type ?? 'unknown';
+      return (
+        ROUTED_DEVICE_TYPES.has(endpointType(linkEditor.source)) &&
+        ROUTED_DEVICE_TYPES.has(endpointType(linkEditor.target))
+      );
+    }
+    if (vlans.length === 0) return true; // access port: a native VLAN, no tagged list
     return vlans.includes(Number.parseInt(linkEditor.nativeVlan, 10));
-  }, [linkEditor]);
+  }, [linkEditor, model.devices]);
 
   const deviceValid = useMemo(() => {
     if (!deviceEditor || !profiles) return false;
@@ -353,6 +389,9 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
           elementsSelectable={!busy}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
+          onInit={(instance) => {
+            flowRef.current = instance;
+          }}
           fitView={true}
           minZoom={0.1}
           maxZoom={2}

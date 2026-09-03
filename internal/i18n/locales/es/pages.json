@@ -170,54 +170,7 @@
     }
   },
   "newSimWizard": {
-    "label": "Nueva simulación",
-    "title": "Nueva simulación",
-    "description": "Construye y valida un borrador guardado antes de iniciar una simulación.",
-    "steps": {
-      "template": "Plantilla",
-      "preflight": "Conexión",
-      "devices": "Dispositivos",
-      "protocols": "Protocolos",
-      "review": "Revisión",
-      "finish": "Finalizar"
-    },
     "backLabel": "Atrás",
-    "nextLabel": "Siguiente",
-    "template": {
-      "interfaceLabel": "Interfaz de red",
-      "startEmpty": "Empezar vacío",
-      "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
-      "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
-      "startingLabel": "Preparando borrador…"
-    },
-    "preflight": {
-      "title": "Revisar conexión física",
-      "help": "El inicio requiere una política de conexión aprobada por un administrador para la interfaz, el modo y la VLAN de acceso seleccionados.",
-      "attachmentLabel": "Conexión del escenario",
-      "modeLabel": "Conexión física",
-      "accessMode": "VLAN de acceso",
-      "directMode": "Cable directo (sin etiqueta)",
-      "trunkMode": "Trunk compartido (etiquetado)",
-      "sessionIdLabel": "ID del escenario",
-      "vlanLabel": "VLAN física (1–4094)",
-      "requestError": "Falló la comprobación previa",
-      "safe_one": "La topología y la conexión pasaron la comprobación para {{count}} red virtual. Verifique el aislamiento del host antes de conectar el probador.",
-      "safe_other": "La topología y la conexión pasaron la comprobación para {{count}} redes virtuales. Verifique el aislamiento del host antes de conectar el probador.",
-      "physicalVlanSummary": "VLAN física: {{vlan}}. Las VLAN virtuales permanecen aisladas dentro de NIAC.",
-      "untagged": "sin etiqueta",
-      "unsafeTitle": "Conexión física insegura — el inicio de la simulación está bloqueado",
-      "checkLabel": "Ejecutar comprobación",
-      "startLabel": "Iniciar simulación"
-    },
-    "devices": {
-      "behaviorsLabel": "Comportamientos",
-      "help": "Edita el borrador guardado. Los cambios aquí no afectan la simulación en ejecución.",
-      "saveLabel": "Guardar borrador",
-      "savingLabel": "Guardando…",
-      "viewLabel": "Vista de edición del borrador",
-      "visualLabel": "Topología visual",
-      "yamlLabel": "YAML"
-    },
     "behaviors": {
       "addFault": "Agregar falla",
       "addPhase": "Agregar fase",
@@ -251,6 +204,24 @@
       "startsAfter": "Comienza después de (segundos)",
       "timelineName": "Nombre del cronograma",
       "utilization": "Utilización (%)"
+    },
+    "cancelLabel": "Cancelar",
+    "description": "Construye y valida un borrador guardado antes de iniciar una simulación.",
+    "devices": {
+      "behaviorsLabel": "Comportamientos",
+      "help": "Edita el borrador guardado. Los cambios aquí no afectan la simulación en ejecución.",
+      "saveLabel": "Guardar borrador",
+      "savingLabel": "Guardando…",
+      "viewLabel": "Vista de edición del borrador",
+      "visualLabel": "Topología visual",
+      "yamlLabel": "YAML"
+    },
+    "finish": {
+      "draftLabel": "Del borrador {{name}}",
+      "gotoRuntime": "Ir a Simulación",
+      "help": "La simulación se inició desde el borrador validado. El borrador guardado permanece disponible para futuras ediciones.",
+      "sessionLabel": "Sesión: {{id}}",
+      "title": "Todo listo"
     },
     "fleet": {
       "addSite": "Agregar sitio",
@@ -317,6 +288,47 @@
       "snmpCommunity": "Comunidad SNMP",
       "title": "Generar una flota multisitio"
     },
+    "label": "Nueva simulación",
+    "nextLabel": "Siguiente",
+    "preflight": {
+      "title": "Revisar conexión física",
+      "help": "El inicio requiere una política de conexión aprobada por un administrador para la interfaz, el modo y la VLAN de acceso seleccionados.",
+      "attachmentLabel": "Conexión del escenario",
+      "modeLabel": "Conexión física",
+      "accessMode": "VLAN de acceso",
+      "directMode": "Cable directo (sin etiqueta)",
+      "trunkMode": "Trunk compartido (etiquetado)",
+      "sessionIdLabel": "ID del escenario",
+      "vlanLabel": "VLAN física (1–4094)",
+      "requestError": "Falló la comprobación previa",
+      "safe_one": "La topología y la conexión pasaron la comprobación para {{count}} red virtual. Verifique el aislamiento del host antes de conectar el probador.",
+      "safe_other": "La topología y la conexión pasaron la comprobación para {{count}} redes virtuales. Verifique el aislamiento del host antes de conectar el probador.",
+      "physicalVlanSummary": "VLAN física: {{vlan}}. Las VLAN virtuales permanecen aisladas dentro de NIAC.",
+      "untagged": "sin etiqueta",
+      "unsafeTitle": "Conexión física insegura — el inicio de la simulación está bloqueado",
+      "checkLabel": "Ejecutar comprobación",
+      "startLabel": "Iniciar simulación"
+    },
+    "protocols": {
+      "title": "Protocolos",
+      "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"
+    },
+    "steps": {
+      "template": "Plantilla",
+      "preflight": "Conexión",
+      "devices": "Dispositivos",
+      "protocols": "Protocolos",
+      "review": "Revisión",
+      "finish": "Finalizar"
+    },
+    "template": {
+      "interfaceLabel": "Interfaz de red",
+      "startEmpty": "Empezar vacío",
+      "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
+      "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
+      "startingLabel": "Preparando borrador…"
+    },
+    "title": "Nueva simulación",
     "topology": {
       "addDevice": "Agregar dispositivo",
       "cancel": "Cancelar",
@@ -338,15 +350,6 @@
       "selectInterface": "Seleccionar una interfaz libre",
       "speed": "Velocidad del puerto (Mbps)",
       "vlans": "VLAN permitidas"
-    },
-    "protocols": {
-      "title": "Protocolos",
-      "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"
-    },
-    "finish": {
-      "title": "Todo listo",
-      "help": "La simulación se inició desde el borrador validado. El borrador guardado permanece disponible para futuras ediciones.",
-      "gotoRuntime": "Ir a Simulación"
     }
   },
   "devices": {

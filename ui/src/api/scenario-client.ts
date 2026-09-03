@@ -136,7 +136,14 @@ export interface ScenarioDeviceProfile {
   source?: string;
 }
 
-export const enterpriseScenarioRequest = (): ScenarioGenerateRequest => ({
+/**
+ * The fleet generator's starting point.
+ *
+ * Hospital rather than enterprise: it is the pack the wire test, the
+ * Link-Live comparator work and the demo scenarios all use, so the default
+ * lands a new author on the network the rest of the product is tuned around.
+ */
+export const defaultScenarioRequest = (): ScenarioGenerateRequest => ({
   sites: [
     { code: 'COS', octet: 240, location: 'Colorado Springs, CO' },
     { code: 'EVT', octet: 241, location: 'Everett, WA' },
@@ -157,7 +164,7 @@ export const enterpriseScenarioRequest = (): ScenarioGenerateRequest => ({
   domain: 'demo.lab',
   snmpCommunity: 'NetAllyDemo',
   attachmentName: 'cyberscope',
-  endpointProfile: 'enterprise',
+  endpointProfile: 'hospital',
 });
 
 const validDomain = (domain: string) =>

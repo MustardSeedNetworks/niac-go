@@ -46,15 +46,14 @@ const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
 const createScenarioDraft = vi.fn<(name: string, content: string) => Promise<ScenarioDraft>>();
 const createScenarioDraftFromTemplate =
   vi.fn<(name: string, templateName: string) => Promise<ScenarioDraft>>();
+const deleteScenarioDraft = vi.fn<(name: string, revision: string) => Promise<void>>();
 const replaceScenarioDraft =
   vi.fn<(name: string, revision: string, content: string) => Promise<ScenarioDraft>>();
 const generateScenario =
   vi.fn<(request: ScenarioGenerateRequest) => Promise<{ content: string }>>();
-const emptyDraftContent = `devices:
-  - name: new-device
-    type: host
-    mac: 02:00:00:00:00:01
-`;
+// An empty start seeds no devices at all: the placeholder host it used to
+// carry was indistinguishable from one the author had added.
+const emptyDraftContent = 'devices: []\n';
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>();
@@ -86,6 +85,7 @@ vi.mock('../api/library-client', () => ({
     createScenarioDraftFromTemplate(name, templateName),
   replaceScenarioDraft: (name: string, revision: string, content: string) =>
     replaceScenarioDraft(name, revision, content),
+  deleteScenarioDraft: (name: string, revision: string) => deleteScenarioDraft(name, revision),
 }));
 
 vi.mock('../api/scenario-client', async (importOriginal) => {
@@ -165,7 +165,9 @@ beforeEach(() => {
     sizeBytes: 76,
   });
   generateScenario.mockResolvedValue({ content: 'devices:\n  - name: COS-CORE-SW01\n' });
+  deleteScenarioDraft.mockResolvedValue(undefined);
   startSimulation.mockResolvedValue({
+    sessionId: 'session-7f3a',
     running: true,
     interface: 'lo0',
     deviceCount: 0,
@@ -207,6 +209,48 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(screen.getByTestId('wizard-next-button')).not.toBeDisabled();
   });
 
+  it('discards the draft when the wizard is cancelled', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(createScenarioDraft).toHaveBeenCalledTimes(1));
+    await user.click(await screen.findByTestId('wizard-cancel-button'));
+
+    // Every abandoned wizard run used to leave its draft in the library.
+    await waitFor(() =>
+      expect(deleteScenarioDraft).toHaveBeenCalledWith('scenario-20260728-120000', 'revision-1'),
+    );
+    // ...and the wizard returns to its starting state.
+    await waitFor(() => expect(screen.getByTestId('wizard-next-button')).toBeDisabled());
+  });
+
+  it('discards the superseded draft when the source changes mid-wizard', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-start-empty'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+    await waitFor(() => expect(createScenarioDraft).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByTestId('wizard-back-button'));
+    await user.click(screen.getByTestId('wizard-select-fleet'));
+    await user.click(screen.getByTestId('wizard-next-button'));
+
+    await waitFor(() => expect(createScenarioDraft).toHaveBeenCalledTimes(2));
+    // One draft per wizard session: changing your mind should not leave the
+    // first one behind.
+    await waitFor(() =>
+      expect(deleteScenarioDraft).toHaveBeenCalledWith('scenario-20260728-120000', 'revision-1'),
+    );
+  });
+
   it('creates and edits a draft without starting or changing the active runtime', async () => {
     const user = userEvent.setup();
     renderWizard();
@@ -222,7 +266,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
       emptyDraftContent,
     );
     expect(startSimulation).not.toHaveBeenCalled();
-    expect(screen.getByTestId('wizard-draft-editor')).toHaveTextContent('new-device');
+    expect(screen.getByTestId('wizard-draft-editor')).toHaveTextContent('devices: []');
 
     fireEvent.change(screen.getByTestId('wizard-draft-editor'), {
       target: {
@@ -367,6 +411,9 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(await screen.findByTestId('wizard-finish-draft-name')).toHaveTextContent(
       'scenario-20260728-120000',
     );
+    // The session is what the author goes on to find on the runtime page; the
+    // draft name alone left them matching timestamps by eye.
+    expect(screen.getByTestId('wizard-finish-session-id')).toHaveTextContent('session-7f3a');
   });
 
   it('keeps the selected source and interface after a failed preflight and allows retry', async () => {
