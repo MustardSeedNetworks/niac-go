@@ -370,6 +370,11 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	// restart. Operators can edit the token file or update
 	// NIAC_API_TOKEN and `kill -HUP <pid>` to apply the new value;
 	// in-flight requests under the old token are unaffected.
+	//
+	// This is daemon-mode-specific: standalone mode's SIGHUP handler
+	// (main.go's handleReload) reloads the YAML config instead, because
+	// there is no API token to rotate there. See docs/DEPLOYMENT.md
+	// "Signal Handling".
 	hupChan := make(chan os.Signal, 1)
 	signal.Notify(hupChan, syscall.SIGHUP)
 	defer signal.Stop(hupChan)
