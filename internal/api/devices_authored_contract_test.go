@@ -212,6 +212,45 @@ func TestDeviceEditorLoopPreservesTheDocument(t *testing.T) {
 	}
 }
 
+// The create half of the same loop. It was covered only by an E2E that mocked
+// a 201, which is exactly how the update 400 stayed invisible: the daemon has
+// to accept a body of `{hostname, rawYaml}` with none of the scalar fields
+// `buildDeviceFromRequest` applies before it reaches the document.
+func TestDeviceEditorLoopCreatesFromDocument(t *testing.T) {
+	// One MAC identity, one vendor identity — the two halves of the choice the
+	// daemon rejects both of.
+	for _, name := range []string{"exam-pc", "clinic-rtr-01"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("NIAC_SSH_PASSWORD", "contract-fixture")
+			authored := readAuthoredFixture(t, name)
+			server := newEmptyDeviceServer(t)
+
+			body, err := json.Marshal(DeviceCreateRequest{Hostname: name, RawYAML: authored})
+			if err != nil {
+				t.Fatalf("marshal create: %v", err)
+			}
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/config/devices", bytes.NewReader(body))
+			server.handleDevicesV2(rec, req)
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("create answered %d: %s", rec.Code, rec.Body.String())
+			}
+
+			want, err := parseDeviceFromYAML(authored, name)
+			if err != nil {
+				t.Fatalf("parse fixture: %v", err)
+			}
+			wantYAML, err := config.MarshalDeviceYAML(want)
+			if err != nil {
+				t.Fatalf("serialize expectation: %v", err)
+			}
+			if got := getDeviceRawYAML(t, server, name); got != string(wantYAML) {
+				t.Errorf("the created device is not the authored one\nwant:\n%s\ngot:\n%s", wantYAML, got)
+			}
+		})
+	}
+}
+
 // One edit reaches the device and nothing else moves.
 func TestDeviceEditorLoopAppliesOneEdit(t *testing.T) {
 	const name = "clinic-rtr-01"
@@ -256,6 +295,25 @@ func newAuthoredDeviceServer(t *testing.T, name string) *Server {
 	}
 	cfg := &config.Config{Devices: []config.Device{*device}}
 
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configYAML, err := config.MarshalConfigYAML(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if writeErr := os.WriteFile(configPath, configYAML, 0o600); writeErr != nil {
+		t.Fatalf("write config: %v", writeErr)
+	}
+
+	return &Server{
+		cfg:    ServerConfig{Config: cfg, ConfigPath: configPath, Version: "test"},
+		logger: slog.Default(),
+	}
+}
+
+func newEmptyDeviceServer(t *testing.T) *Server {
+	t.Helper()
+
+	cfg := &config.Config{}
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 	configYAML, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
