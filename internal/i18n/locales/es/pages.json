@@ -289,6 +289,25 @@
       "title": "Generar una flota multisitio"
     },
     "label": "Nueva simulación",
+    "networks": {
+      "add": "Añadir",
+      "addressingTitle": "Direccionamiento",
+      "assignAll": "Asignar automáticamente",
+      "assignTo": "Red para {{device}}",
+      "attachmentConnect": "Red",
+      "attachmentName": "Nombre del adjunto",
+      "attachmentsHelp": "Un adjunto expone una red al host. Su nombre es al que se vincula una sesión al iniciar; si la interfaz del host puede transportarla lo decide la comprobación previa.",
+      "attachmentsTitle": "Adjuntos",
+      "empty": "Aún no hay redes. Añade una para dar direcciones enrutables a los dispositivos.",
+      "name": "Nombre",
+      "noDevices": "Aún no hay dispositivos. Añádelos en el paso anterior.",
+      "pickNetwork": "Elige una red",
+      "remove": "Eliminar",
+      "subnet": "Subred",
+      "title": "Redes",
+      "unaddressed": "sin dirección",
+      "virtualVlan": "VLAN"
+    },
     "nextLabel": "Siguiente",
     "preflight": {
       "title": "Revisar conexión física",

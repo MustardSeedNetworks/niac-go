@@ -544,6 +544,25 @@
       "title": "Generate a multisite fleet"
     },
     "label": "New Simulation",
+    "networks": {
+      "add": "Add",
+      "addressingTitle": "Addressing",
+      "assignAll": "Auto-assign",
+      "assignTo": "Network for {{device}}",
+      "attachmentConnect": "Network",
+      "attachmentName": "Attachment name",
+      "attachmentsHelp": "An attachment exposes one network to the host. Its name is what a session binds to at start; whether the host interface may carry it is decided by preflight.",
+      "attachmentsTitle": "Attachments",
+      "empty": "No networks yet. Add one to give devices routable addresses.",
+      "name": "Name",
+      "noDevices": "No devices yet. Add them on the previous step.",
+      "pickNetwork": "Pick a network",
+      "remove": "Remove",
+      "subnet": "Subnet",
+      "title": "Networks",
+      "unaddressed": "not addressed",
+      "virtualVlan": "VLAN"
+    },
     "nextLabel": "Next",
     "preflight": {
       "accessMode": "Access VLAN",
