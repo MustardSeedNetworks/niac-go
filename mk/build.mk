@@ -126,12 +126,18 @@ schema: ## Regenerate docs/schemas/niac.schema.json from converter.Config
 	@go run ./cmd/niac-schema -o docs/schemas/niac.schema.json
 	@printf "$(GREEN)Wrote docs/schemas/niac.schema.json ($$(wc -l < docs/schemas/niac.schema.json) lines)$(RESET)\n"
 	@$(MAKE) --no-print-directory ui-sections
+	@$(MAKE) --no-print-directory openapi
+
+openapi: ## Regenerate docs/openapi.yaml from the capability registry
+	@printf "$(BOLD)Generating the OpenAPI description from the route registry...$(RESET)\n"
+	@go run ./cmd/niac-openapi -o docs/openapi.yaml
+	@printf "$(GREEN)Wrote docs/openapi.yaml ($$(wc -l < docs/openapi.yaml) lines)$(RESET)\n"
 
 ui-sections: ## Regenerate the device-editor form manifest from the schema
 	@printf "$(BOLD)Generating device-editor sections from the schema...$(RESET)\n"
 	@./scripts/gen-device-editor-sections.py
 
-.PHONY: schema ui-sections
+.PHONY: schema ui-sections openapi
 
 # =============================================================================
 # Development Targets

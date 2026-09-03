@@ -143,15 +143,44 @@ func (s *Server) registerAll(mux *http.ServeMux, routes []apiRoute) {
 	}
 }
 
-// routePolicyView is the JSON projection of a route's policy for the
-// /__capabilities manifest (the handler func itself is not exposed).
-type routePolicyView struct {
+// RoutePolicy is the projection of one registered route's policy: the JSON
+// shape /__capabilities serves, and the input the OpenAPI generator
+// (cmd/niac-openapi) documents. The handler func itself is not exposed.
+type RoutePolicy struct {
 	Path         string   `json:"path"`
 	Methods      []string `json:"methods,omitempty"`
 	MaxBodyBytes int64    `json:"maxBodyBytes,omitempty"`
 	RateLimited  bool     `json:"rateLimited"`
 	CSRF         bool     `json:"csrf"`
 	Admin        bool     `json:"admin"`
+}
+
+// RouteManifest walks the capability registry out of process and returns every
+// route it declares. Registration only composes closures, so a zero-value
+// Server registers the full set without opening the library, a listener or a
+// capture handle — which is what lets the OpenAPI generator run in CI from a
+// plain `go run`. Registry order is preserved; callers that need a stable
+// document sort it themselves.
+func RouteManifest() []RoutePolicy {
+	s := &Server{}
+	s.registerAPIRoutes(http.NewServeMux())
+	return s.routePolicies()
+}
+
+// routePolicies projects the registered routes onto RoutePolicy.
+func (s *Server) routePolicies() []RoutePolicy {
+	views := make([]RoutePolicy, 0, len(s.routeManifest))
+	for _, rt := range s.routeManifest {
+		views = append(views, RoutePolicy{
+			Path:         rt.path,
+			Methods:      rt.methods,
+			MaxBodyBytes: rt.maxBodyBytes,
+			RateLimited:  rt.rl != rlNone,
+			CSRF:         rt.csrf,
+			Admin:        rt.admin,
+		})
+	}
+	return views
 }
 
 // handleRoutePolicyManifest serves the route-policy manifest: every route
@@ -164,16 +193,5 @@ func (s *Server) handleRoutePolicyManifest(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	views := make([]routePolicyView, 0, len(s.routeManifest))
-	for _, rt := range s.routeManifest {
-		views = append(views, routePolicyView{
-			Path:         rt.path,
-			Methods:      rt.methods,
-			MaxBodyBytes: rt.maxBodyBytes,
-			RateLimited:  rt.rl != rlNone,
-			CSRF:         rt.csrf,
-			Admin:        rt.admin,
-		})
-	}
-	s.writeJSON(w, views)
+	s.writeJSON(w, s.routePolicies())
 }

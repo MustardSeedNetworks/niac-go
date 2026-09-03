@@ -118,6 +118,9 @@ jobs:
             schema:
               - 'docs/schemas/**'
               - 'cmd/niac-schema/**'
+              - 'cmd/niac-openapi/**'
+              - 'docs/openapi-source.yaml'
+              - 'docs/openapi.yaml'
             https:
               - 'cmd/niac/**'
               - 'internal/api/**'
@@ -212,6 +215,18 @@ jobs:
             exit 1
           fi
           echo "Schema is up to date."
+
+      - name: Verify docs/openapi.yaml is up to date
+        run: |
+          # The API description is generated from the capability registry, so
+          # a new or changed route brings its documentation along or fails
+          # here. Refresh locally with `make openapi`.
+          go run ./cmd/niac-openapi -o /tmp/openapi.yaml
+          if ! diff -u docs/openapi.yaml /tmp/openapi.yaml; then
+            echo "::error::docs/openapi.yaml is stale. Run 'make openapi' and commit the result."
+            exit 1
+          fi
+          echo "OpenAPI description is up to date."
 
       - name: Output-escaping / XSS gate (#742)
         run: ./scripts/check-output-escaping.sh
