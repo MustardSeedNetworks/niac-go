@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues, error messages, and solutions for NiAC-Go.
+Common issues, error messages, and solutions for NIAC-Go.
 
 ## Table of Contents
 
@@ -18,7 +18,8 @@ Common issues, error messages, and solutions for NiAC-Go.
 ### Error: "Failed to parse YAML"
 
 **Symptom:**
-```
+
+```text
 Error: failed to load config: yaml: unmarshal errors:
   line 10: cannot unmarshal !!str `yes` into bool
 ```
@@ -28,6 +29,7 @@ Error: failed to load config: yaml: unmarshal errors:
 **Solutions:**
 
 1. **Boolean values** - Use lowercase `true`/`false`, not `yes`/`no`:
+
    ```yaml
    # ❌ Wrong
    enabled: yes
@@ -37,6 +39,7 @@ Error: failed to load config: yaml: unmarshal errors:
    ```
 
 2. **Indentation** - Use consistent 2-space indentation:
+
    ```yaml
    # ❌ Wrong (mixed tabs/spaces)
    devices:
@@ -50,6 +53,7 @@ Error: failed to load config: yaml: unmarshal errors:
    ```
 
 3. **Strings with special characters** - Use quotes:
+
    ```yaml
    # ❌ Wrong
    password: p@ssw0rd:123
@@ -63,13 +67,15 @@ Error: failed to load config: yaml: unmarshal errors:
 ### Error: "Invalid MAC address format"
 
 **Symptom:**
-```
+
+```text
 Error: invalid MAC address format: 00:11:22:33:44
 ```
 
 **Cause:** MAC address must be 6 octets (48 bits).
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong (5 octets)
 mac: "00:11:22:33:44"
@@ -84,13 +90,15 @@ mac: "00:11:22:33:44:55"
 ### Error: "Invalid IP address format"
 
 **Symptom:**
-```
+
+```text
 Error: invalid IP address: 10.0.0.256
 ```
 
 **Cause:** IP address octets must be 0-255.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong (octet > 255)
 ips: ["10.0.0.256"]
@@ -106,13 +114,15 @@ ips: ["2001:db8::1"]
 ### Error: "Duplicate device name"
 
 **Symptom:**
-```
+
+```text
 Error: duplicate device name: switch-01
 ```
 
 **Cause:** Device names must be unique across all devices.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 devices:
@@ -132,13 +142,15 @@ devices:
 ### Error: "Duplicate MAC address"
 
 **Symptom:**
-```
+
+```text
 Error: duplicate MAC address: 00:11:22:33:44:01
 ```
 
 **Cause:** Each device must have a unique MAC address.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 devices:
@@ -160,13 +172,15 @@ devices:
 ### Error: "Bridge priority must be multiple of 4096"
 
 **Symptom:**
-```
+
+```text
 Error: STP bridge_priority must be multiple of 4096 (0-61440)
 ```
 
 **Cause:** STP bridge priority has specific valid values.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 stp:
@@ -181,13 +195,15 @@ stp:
 ### Error: "Port-channel member already in use"
 
 **Symptom:**
-```
+
+```text
 Error: interface GigabitEthernet0/1 already belongs to port-channel 1
 ```
 
 **Cause:** An interface can only be in one port-channel.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 port_channels:
@@ -207,13 +223,15 @@ port_channels:
 ### Error: "Invalid VLAN ID"
 
 **Symptom:**
-```
+
+```text
 Error: invalid VLAN ID: 5000 (must be 1-4094)
 ```
 
 **Cause:** VLAN IDs must be within valid range and avoid reserved values.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 trunk_ports:
@@ -234,13 +252,15 @@ trunk_ports:
 ### Error: "Remote device not found"
 
 **Symptom:**
-```
+
+```text
 Warning: remote device 'switch-03' not found in configuration
 ```
 
 **Cause:** Referenced device doesn't exist in devices list.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 devices:
@@ -264,13 +284,15 @@ devices:
 ### Error: "DHCP pool overlap"
 
 **Symptom:**
-```
+
+```text
 Error: DHCP pools overlap: 10.0.10.100-10.0.10.200 and 10.0.10.150-10.0.10.250
 ```
 
 **Cause:** DHCP address pools must not overlap.
 
 **Solution:**
+
 ```yaml
 # ❌ Wrong
 dhcp:
@@ -298,28 +320,33 @@ dhcp:
 ### LLDP neighbors not appearing
 
 **Symptoms:**
+
 - `lldpcli show neighbors` shows no results
 - Neighbors expected but not discovered
 
 **Diagnosis:**
 
 1. **Check LLDP is enabled:**
+
    ```yaml
    lldp:
      enabled: true  # Must be true
    ```
 
-2. **Verify NiAC-Go is running:**
+2. **Verify NIAC-Go is running:**
+
    ```bash
    ps aux | grep niac
    ```
 
 3. **Check debug output:**
+
    ```bash
    sudo niac --debug-lldp 3 en0 config.yaml
    ```
 
 4. **Monitor LLDP traffic:**
+
    ```bash
    sudo tcpdump -i en0 ether proto 0x88cc
    ```
@@ -332,6 +359,7 @@ dhcp:
 - Advertisement interval too long (increase with `--debug`)
 
 **Solution:**
+
 ```yaml
 # Ensure both ends have LLDP enabled
 devices:
@@ -352,6 +380,7 @@ devices:
 **Cause:** Only one discovery protocol enabled at a time by default.
 
 **Solution:** Enable both protocols explicitly:
+
 ```yaml
 devices:
   - name: cisco-switch
@@ -364,6 +393,7 @@ devices:
 ### SNMP queries timing out
 
 **Symptoms:**
+
 ```bash
 $ snmpget -v2c -c public 10.0.0.1 sysName.0
 Timeout: No Response from 10.0.0.1
@@ -372,6 +402,7 @@ Timeout: No Response from 10.0.0.1
 **Diagnosis:**
 
 1. **Verify SNMP agent enabled:**
+
    ```yaml
    snmp_agent:
      enabled: true
@@ -379,6 +410,7 @@ Timeout: No Response from 10.0.0.1
    ```
 
 2. **Check community string:**
+
    ```bash
    # Wrong community
    snmpget -v2c -c public 10.0.0.1 sysName.0  # ❌
@@ -388,16 +420,19 @@ Timeout: No Response from 10.0.0.1
    ```
 
 3. **Verify device is reachable:**
+
    ```bash
    ping 10.0.0.1
    ```
 
 4. **Check debug output:**
+
    ```bash
    sudo niac --debug-snmp 3 en0 config.yaml
    ```
 
 **Solution:**
+
 ```yaml
 snmp_agent:
   enabled: true
@@ -411,6 +446,7 @@ snmp_agent:
 **Diagnosis:**
 
 1. **Verify trap configuration:**
+
    ```yaml
    snmp_agent:
      traps:
@@ -420,12 +456,14 @@ snmp_agent:
    ```
 
 2. **Check trap receiver is listening:**
+
    ```bash
    # On trap receiver
    sudo snmptrapd -f -Lo
    ```
 
 3. **Verify trap triggers are enabled:**
+
    ```yaml
    snmp_agent:
      traps:
@@ -460,6 +498,7 @@ snmp_agent:
    ```
 
 **Solution:**
+
 ```yaml
 snmp_agent:
   traps:
@@ -479,12 +518,14 @@ snmp_agent:
 **Diagnosis:**
 
 1. **Verify DHCP server enabled:**
+
    ```yaml
    dhcp:
      enabled: true
    ```
 
 2. **Check pool configuration:**
+
    ```yaml
    dhcp:
      pools:
@@ -495,22 +536,26 @@ snmp_agent:
    ```
 
 3. **Monitor DHCP traffic:**
+
    ```bash
    sudo tcpdump -i en0 port 67 or port 68
    ```
 
 4. **Check debug output:**
+
    ```bash
    sudo niac --debug-dhcp 3 en0 config.yaml
    ```
 
 **Common Causes:**
+
 - DHCP pool exhausted (all IPs assigned)
 - Client on wrong subnet
 - Firewall blocking DHCP ports (67/68)
 - Gateway IP incorrect
 
 **Solution:**
+
 ```yaml
 dhcp:
   enabled: true
@@ -530,12 +575,14 @@ dhcp:
 **Diagnosis:**
 
 1. **Verify DNS server enabled:**
+
    ```yaml
    dns:
      enabled: true
    ```
 
 2. **Check forward records:**
+
    ```yaml
    dns:
      forward_records:
@@ -544,6 +591,7 @@ dhcp:
    ```
 
 3. **Test DNS query:**
+
    ```bash
    # Wrong domain
    dig @10.0.0.1 wrong.example.com  # NXDOMAIN
@@ -553,11 +601,13 @@ dhcp:
    ```
 
 4. **Monitor DNS traffic:**
+
    ```bash
    sudo tcpdump -i en0 port 53
    ```
 
 **Solution:**
+
 ```yaml
 dns:
   enabled: true
@@ -576,6 +626,7 @@ dns:
 **Diagnosis:**
 
 1. **Check LACP mode compatibility:**
+
    ```yaml
    # ❌ Wrong: passive on both ends (needs one active)
    device-01:
@@ -595,6 +646,7 @@ dns:
    ```
 
 2. **Verify member interfaces exist:**
+
    ```yaml
    port_channels:
      - id: 1
@@ -602,6 +654,7 @@ dns:
    ```
 
 3. **Check member interface status:**
+
    ```bash
    sudo niac --debug-lacp 3 en0 config.yaml
    ```
@@ -609,7 +662,7 @@ dns:
 **LACP Mode Combinations:**
 
 | Device 1 | Device 2 | Result |
-|----------|----------|--------|
+| ---------- | ---------- | -------- |
 | active | active | ✅ Works (best) |
 | active | passive | ✅ Works |
 | passive | passive | ❌ Fails |
@@ -617,6 +670,7 @@ dns:
 | active | on | ❌ Fails (mismatch) |
 
 **Solution:**
+
 ```yaml
 # Use active mode on both ends
 devices:
@@ -639,6 +693,7 @@ devices:
 **Diagnosis:**
 
 1. **Verify VLAN in allowed list:**
+
    ```yaml
    trunk_ports:
      - interface: "GigabitEthernet0/1"
@@ -646,6 +701,7 @@ devices:
    ```
 
 2. **Check both ends of trunk:**
+
    ```yaml
    # Both devices must allow same VLANs
    device-01:
@@ -657,6 +713,7 @@ devices:
    ```
 
 3. **Verify native VLAN matches:**
+
    ```yaml
    device-01:
      trunk_ports:
@@ -667,6 +724,7 @@ devices:
    ```
 
 **Solution:**
+
 ```yaml
 devices:
   - name: switch-01
@@ -691,12 +749,14 @@ devices:
 **Diagnosis:**
 
 1. **Check STP version:**
+
    ```yaml
    stp:
      version: "rstp"  # Use RSTP for fast convergence
    ```
 
 2. **Verify root bridge priority:**
+
    ```yaml
    # Root bridge should have lowest priority
    root-switch:
@@ -709,6 +769,7 @@ devices:
    ```
 
 3. **Check STP timers:**
+
    ```yaml
    stp:
      hello_time: 2     # Default
@@ -717,12 +778,14 @@ devices:
    ```
 
 4. **Monitor STP:**
+
    ```bash
    sudo niac --debug-stp 3 en0 config.yaml
    sudo tcpdump -i en0 ether dst 01:80:c2:00:00:00
    ```
 
 **Solution:**
+
 ```yaml
 devices:
   - name: root-bridge
@@ -748,11 +811,12 @@ devices:
 
 ### High CPU usage
 
-**Symptoms:** NiAC-Go consuming excessive CPU.
+**Symptoms:** NIAC-Go consuming excessive CPU.
 
 **Diagnosis:**
 
 1. **Check packet rate:**
+
    ```bash
    # Monitor packet rate
    sudo niac --stats en0 config.yaml
@@ -765,6 +829,7 @@ devices:
 **Solutions:**
 
 1. **Increase advertisement intervals:**
+
    ```yaml
    lldp:
      advertise_interval: 60  # Instead of 30
@@ -777,16 +842,18 @@ devices:
 
 ### High memory usage
 
-**Symptoms:** NiAC-Go consuming excessive memory.
+**Symptoms:** NIAC-Go consuming excessive memory.
 
 **Diagnosis:**
 
 1. **Check walk file sizes:**
+
    ```bash
    ls -lh examples/device_walks_sanitized/cisco/*.walk
    ```
 
 2. **Monitor memory:**
+
    ```bash
    ps aux | grep niac
    top -pid $(pgrep niac)
@@ -803,9 +870,10 @@ devices:
 
 ### Slow startup time
 
-**Symptoms:** NiAC-Go takes long time to start.
+**Symptoms:** NIAC-Go takes long time to start.
 
 **Causes:**
+
 - Large walk files loading
 - Many devices configured
 - Complex topology validation
@@ -813,6 +881,7 @@ devices:
 **Solutions:**
 
 1. **Use `--dry-run` for validation only:**
+
    ```bash
    niac --dry-run lo0 config.yaml
    ```
@@ -830,34 +899,40 @@ devices:
 **Diagnosis:**
 
 1. **Verify ICMP enabled:**
+
    ```yaml
    icmp:
      enabled: true
    ```
 
 2. **Check device is running:**
+
    ```bash
    ps aux | grep niac
    ```
 
 3. **Verify IP address:**
+
    ```yaml
    ips: ["10.0.0.1"]  # Correct IP?
    ```
 
 4. **Check network interface:**
+
    ```bash
    # Are you running on correct interface?
    sudo niac en0 config.yaml  # Not lo0!
    ```
 
 5. **Check routing:**
+
    ```bash
    # Is device on same network?
    ip route get 10.0.0.1
    ```
 
 **Solution:**
+
 ```bash
 # Run NiAC-Go on correct interface
 sudo niac en0 config.yaml  # Physical interface
@@ -873,13 +948,15 @@ devices:
 ### Interface permission denied
 
 **Symptom:**
-```
+
+```text
 Error: failed to open interface en0: permission denied
 ```
 
 **Cause:** Packet capture requires root/administrator privileges.
 
 **Solution:**
+
 ```bash
 # ❌ Wrong
 niac en0 config.yaml
@@ -891,13 +968,15 @@ sudo niac en0 config.yaml
 ### Interface not found
 
 **Symptom:**
-```
+
+```text
 Error: interface en0 not found
 ```
 
 **Diagnosis:**
 
 1. **List available interfaces:**
+
    ```bash
    # macOS
    ifconfig -l
@@ -915,6 +994,7 @@ Error: interface en0 not found
    - Windows: `Ethernet`, `Wi-Fi`
 
 **Solution:**
+
 ```bash
 # Use correct interface name
 sudo niac eth0 config.yaml  # Linux
@@ -926,7 +1006,8 @@ sudo niac en0 config.yaml   # macOS
 ### Walk file not found
 
 **Symptom:**
-```
+
+```text
 Error: walk file not found: device_walks/cisco/c3850.walk
 ```
 
@@ -935,11 +1016,13 @@ Error: walk file not found: device_walks/cisco/c3850.walk
 **Solution:**
 
 1. **Check file exists:**
+
    ```bash
    ls -l examples/device_walks_sanitized/cisco/
    ```
 
 2. **Use correct path:**
+
    ```yaml
    # ❌ Wrong (missing examples/)
    snmp_agent:
@@ -957,7 +1040,8 @@ Error: walk file not found: device_walks/cisco/c3850.walk
 ### Walk file parse errors
 
 **Symptom:**
-```
+
+```text
 Error: failed to parse walk file: invalid OID format
 ```
 
@@ -966,18 +1050,21 @@ Error: failed to parse walk file: invalid OID format
 **Solutions:**
 
 1. **Use sanitized walk files:**
+
    ```yaml
    # Prefer sanitized versions
    walk_file: "examples/device_walks_sanitized/cisco/niac-cisco-c3850.walk"
    ```
 
 2. **Regenerate walk file:**
+
    ```bash
    # Sanitize walk file
    niac sanitize --input original.walk --output sanitized.walk
    ```
 
 3. **Capture new walk:**
+
    ```bash
    # Capture from real device
    snmpwalk -v2c -c public 10.0.0.1 . > device.walk
