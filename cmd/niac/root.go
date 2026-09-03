@@ -139,7 +139,7 @@ func executeRootCommand(cmd *cobra.Command) {
 	err := cmd.Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
 

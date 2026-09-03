@@ -310,12 +310,16 @@ func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 	}
 }
 
-// TestHandleInformationalFlags_ListDevices_NoConfig tests list devices without config.
+// --list-devices needs a configuration file. Without one the command must exit
+// rather than fall through to printDeviceList with no path to read.
 func TestHandleInformationalFlags_ListDevices_NoConfig(t *testing.T) {
-	// This should exit with error, but handleInformationalFlags calls os.Exit
-	// We can't easily test this without refactoring
-	// Skipping this test as it calls os.Exit(1)
-	t.Skip("Skipping test that calls os.Exit(1)")
+	code, exited := withExitCapture(t, func() {
+		handleInformationalFlags(&legacyFlags{listDevices: true}, nil, versionInfo{})
+	})
+
+	if !exited || code != 1 {
+		t.Fatalf("--list-devices with no config exited=%v code=%d, want exited with 1", exited, code)
+	}
 }
 
 // TestHandleInformationalFlags_NoFlags tests no informational flags.

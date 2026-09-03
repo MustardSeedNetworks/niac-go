@@ -192,7 +192,7 @@ func handleDumpError(err error, jsonOutput bool) error {
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
-	os.Exit(exitCodeError)
+	exitProcess(exitCodeError)
 	return nil
 }
 

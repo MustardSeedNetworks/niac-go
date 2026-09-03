@@ -190,7 +190,7 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 			exitWithStats(1, &flags, nil)
 		}
 		runDryRunValidation(configFile, interfaceName, cfg)
-		// runDryRunValidation calls os.Exit, so this line is unreachable
+		// runDryRunValidation exits, so this line is unreachable
 	}
 
 	// Create debug configuration
@@ -227,7 +227,7 @@ func exitWithStats(code int, flags *legacyFlags, statsTracker *stats.Statistics)
 	if flags != nil && (flags.exportStatsJSON != "" || flags.exportStatsCSV != "") {
 		exportStatistics(flags, statsTracker)
 	}
-	os.Exit(code)
+	exitProcess(code)
 }
 
 // startProfilingServer starts the pprof HTTP server for performance profiling.
@@ -476,7 +476,7 @@ func printDeviceList(configFile string) {
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "Error loading configuration: %v\n", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	fmt.Fprintf(os.Stdout, "Devices in %s:\n\n", configFile)

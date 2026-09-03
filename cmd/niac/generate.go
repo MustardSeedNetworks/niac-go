@@ -442,7 +442,7 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 	cleaned, pathErr := validateCLIPath(output)
 	if pathErr != nil {
 		color.Red("Invalid output path: %v", pathErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	output = cleaned
 
@@ -451,7 +451,7 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 		color.Yellow("Warning: %s already exists!", output)
 		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
 			color.Red("Aborted.")
-			os.Exit(0)
+			exitProcess(0)
 		}
 	}
 
@@ -461,13 +461,13 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 func writeConfiguration(outputFile string, cfg *generatedConfig) {
 	if err := validateFilePath(outputFile, true); err != nil {
 		color.Red("Invalid output path: %v", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	yaml := generateYAML(cfg)
 	if err := writeSafeFile(outputFile, []byte(yaml)); err != nil {
 		color.Red("Failed to write configuration: %v", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
 

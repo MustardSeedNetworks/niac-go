@@ -156,7 +156,7 @@ func runTemplateShow(args []string) {
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	fmt.Fprint(os.Stdout, tmpl.Content)
@@ -167,13 +167,13 @@ func runTemplateUse(args []string) {
 	outputFile, pathErr := validateCLIPath(args[1])
 	if pathErr != nil {
 		color.Red("Error: invalid output path: %v", pathErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Check if output file exists
 	if _, statErr := statSafeFile(outputFile); statErr == nil {
 		color.Red("Error: file already exists: %s", outputFile)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Get template
@@ -185,13 +185,13 @@ func runTemplateUse(args []string) {
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Write to file
 	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
 		color.Red("Error writing file: %v", writeErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	color.Green("✓ Created %s from %s template", outputFile, templateName)
@@ -210,7 +210,7 @@ func runTemplateApply(args []string) {
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
 		color.Red("Error: %v", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	describeTemplate(tmpl)
@@ -219,7 +219,7 @@ func runTemplateApply(args []string) {
 	if loadErr != nil {
 		color.Red("✗ Template validation failed: %v", loadErr)
 		cleanup()
-		os.Exit(1)
+		exitProcess(1)
 	}
 	cleanup()
 

@@ -283,7 +283,7 @@ func processFlags(flags *legacyFlags) {
 	}
 	if flags.enableProfiling && (flags.profilePort < 1 || flags.profilePort > 65535) {
 		fmt.Fprintf(os.Stderr, "Error: --profile-port must be between 1 and 65535, got %d\n", flags.profilePort)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
 
@@ -384,7 +384,7 @@ func handleInformationalFlags(flags *legacyFlags, args []string, info versionInf
 			fmt.Fprintln(os.Stdout, "Error: --list-devices requires a configuration file")
 			fmt.Fprintln(os.Stdout)
 			printUsage()
-			os.Exit(1)
+			exitProcess(1)
 		}
 		printDeviceList(args[0])
 		return true
@@ -477,7 +477,7 @@ func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 
 	if !result.Valid {
 		logging.Errorf("Configuration validation failed")
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Additional runtime checks
@@ -485,5 +485,5 @@ func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 	logging.Successf("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Configuration is valid. Use without --dry-run to start simulation.")
-	os.Exit(0)
+	exitProcess(0)
 }

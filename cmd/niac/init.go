@@ -54,7 +54,7 @@ func runInit(args []string) {
 	tmpl, err := templates.Get(selectedTemplate)
 	if err != nil {
 		color.Red("Error loading template: %v", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	printTemplateDetails(tmpl)
@@ -63,12 +63,12 @@ func runInit(args []string) {
 
 	if !confirmOverwriteIfExists(reader, outputFile) {
 		fmt.Fprintln(os.Stdout, "Aborted.")
-		os.Exit(0)
+		exitProcess(0)
 	}
 
 	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
 		color.Red("Error writing file: %v", writeErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	printInitSuccess(outputFile, selectedTemplate)
@@ -284,10 +284,10 @@ func handleInputError(err error) {
 	if errors.Is(err, io.EOF) {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Input cancelled.")
-		os.Exit(0)
+		exitProcess(0)
 	}
 	color.Red("Error reading input: %v", err)
-	os.Exit(1)
+	exitProcess(1)
 }
 
 func mustPromptChoice(reader *bufio.Reader, prompt string, validChoices []string) string {

@@ -93,7 +93,7 @@ func runStatus(ctx context.Context, options *statusOptions) {
 	result := checkStatus(ctx, options)
 
 	outputResult(result, options.jsonOutput)
-	os.Exit(result.exitCode)
+	exitProcess(result.exitCode)
 }
 
 // checkStatus asks the daemon what it is running.

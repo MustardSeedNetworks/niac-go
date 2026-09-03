@@ -114,20 +114,20 @@ func runConfigExport(args []string) {
 	outputFile, pathErr := validateCLIPath(args[1])
 	if pathErr != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Check if output exists
 	if _, err := statSafeFile(outputFile); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", outputFile)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Load configuration
 	cfg, err := config.Load(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Validate
@@ -143,13 +143,13 @@ func runConfigExport(args []string) {
 	data, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	// Write to file
 	if writeErr := writeSafeFile(outputFile, data); writeErr != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	fmt.Fprintf(os.Stdout, "Configuration exported to %s\n", outputFile)
@@ -171,12 +171,12 @@ func loadConfigPair(file1, file2 string) (*config.Config, *config.Config) {
 	cfg1, err := config.Load(file1)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file1, err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	cfg2, err := config.Load(file2)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file2, err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	return cfg1, cfg2
 }
@@ -225,7 +225,7 @@ func runConfigMerge(args []string) {
 	outputFile, pathErr := validateCLIPath(args[2])
 	if pathErr != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	checkOutputNotExists(outputFile)
 
@@ -240,7 +240,7 @@ func runConfigMerge(args []string) {
 func checkOutputNotExists(path string) {
 	if _, err := statSafeFile(path); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", path)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
 
@@ -248,7 +248,7 @@ func loadConfigOrExit(path, label string) *config.Config {
 	cfg, err := config.Load(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", label, err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	return cfg
 }
@@ -275,12 +275,12 @@ func writeConfigOrExit(cfg *config.Config, path string) {
 	data, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 	err = writeSafeFile(path, data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
 

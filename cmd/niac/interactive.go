@@ -63,7 +63,7 @@ func runInteractive(args []string, options *interactiveOptions, services *servic
 	cfg, resolvedConfig, err := loadConfigOrScenario(configFile)
 	if err != nil {
 		logging.Errorf("Failed to load configuration: %v", err)
-		os.Exit(1)
+		exitProcess(1)
 	}
 
 	debugLevel := options.debugLevel
@@ -80,6 +80,6 @@ func runInteractive(args []string, options *interactiveOptions, services *servic
 	// Start interactive mode
 	if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services); runErr != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", runErr)
-		os.Exit(1)
+		exitProcess(1)
 	}
 }
