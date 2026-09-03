@@ -58,8 +58,8 @@ without writing to disk.`,
   # Pipe to file
   niac template show data-center > my-config.yaml`,
 		Args: cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			runTemplateShow(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runTemplateShow(args)
 		},
 	}
 
@@ -81,8 +81,8 @@ with 'niac run'; the template itself is unchanged.`,
   # Quick workflow
   niac template use basic-network config.yaml && niac validate config.yaml`,
 		Args: cobra.ExactArgs(argsCountTwo),
-		Run: func(_ *cobra.Command, args []string) {
-			runTemplateUse(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runTemplateUse(args)
 		},
 	}
 
@@ -101,8 +101,8 @@ and protocols it contains without creating a file.`,
   # Verify IoT network configuration
   niac template apply iot-network`,
 		Args: cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			runTemplateApply(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runTemplateApply(args)
 		},
 	}
 
@@ -145,53 +145,50 @@ func runTemplateList() {
 	fmt.Fprintln(os.Stdout, "  niac init                                  # Interactive template wizard")
 }
 
-func runTemplateShow(args []string) {
+func runTemplateShow(args []string) error {
 	templateName := args[0]
 
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
-		color.Red("Error: %v", err)
 		fmt.Fprintln(os.Stdout)
 		fmt.Fprintln(os.Stdout, "Available templates:")
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		exitProcess(1)
+		return fmt.Errorf("loading template: %w", err)
 	}
 
 	fmt.Fprint(os.Stdout, tmpl.Content)
+
+	return nil
 }
 
-func runTemplateUse(args []string) {
+func runTemplateUse(args []string) error {
 	templateName := args[0]
 	outputFile, pathErr := validateCLIPath(args[1])
 	if pathErr != nil {
-		color.Red("Error: invalid output path: %v", pathErr)
-		exitProcess(1)
+		return fmt.Errorf("invalid output path: %w", pathErr)
 	}
 
 	// Check if output file exists
 	if _, statErr := statSafeFile(outputFile); statErr == nil {
-		color.Red("Error: file already exists: %s", outputFile)
-		exitProcess(1)
+		return fmt.Errorf("%w: %s", errOutputExists, outputFile)
 	}
 
 	// Get template
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
-		color.Red("Error: %v", err)
 		fmt.Fprintln(os.Stdout)
 		fmt.Fprintln(os.Stdout, "Available templates:")
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		exitProcess(1)
+		return fmt.Errorf("loading template: %w", err)
 	}
 
 	// Write to file
 	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
-		color.Red("Error writing file: %v", writeErr)
-		exitProcess(1)
+		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
 	color.Green("✓ Created %s from %s template", outputFile, templateName)
@@ -202,31 +199,32 @@ func runTemplateUse(args []string) {
 	fmt.Fprintln(os.Stdout, "Next steps:")
 	fmt.Fprintf(os.Stdout, "  niac validate %s\n", outputFile)
 	fmt.Fprintf(os.Stdout, "  sudo niac interactive en0 %s\n", outputFile)
+
+	return nil
 }
 
-func runTemplateApply(args []string) {
+func runTemplateApply(args []string) error {
 	templateName := args[0]
 
 	tmpl, err := templates.Get(templateName)
 	if err != nil {
-		color.Red("Error: %v", err)
-		exitProcess(1)
+		return fmt.Errorf("loading template: %w", err)
 	}
 
 	describeTemplate(tmpl)
 
 	cfg, cleanup, loadErr := loadAndValidateTemplate(tmpl)
+	defer cleanup()
 	if loadErr != nil {
-		color.Red("✗ Template validation failed: %v", loadErr)
-		cleanup()
-		exitProcess(1)
+		return fmt.Errorf("template validation failed: %w", loadErr)
 	}
-	cleanup()
 
 	color.Green("✓ Template is valid")
 	fmt.Fprintln(os.Stdout)
 
 	describeDevices(templateName, cfg.Devices)
+
+	return nil
 }
 
 func describeTemplate(tmpl *templates.Template) {

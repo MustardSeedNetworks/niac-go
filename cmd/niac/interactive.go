@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -42,8 +41,8 @@ The TUI provides:
   #   q - Quit
   #   ↑↓ - Navigate devices`,
 		Args: cobra.ExactArgs(argsCountTwo),
-		Run: func(_ *cobra.Command, args []string) {
-			runInteractive(args, options, services)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runInteractive(args, options, services)
 		},
 	}
 
@@ -55,15 +54,13 @@ The TUI provides:
 	root.AddCommand(interactiveCmd)
 }
 
-func runInteractive(args []string, options *interactiveOptions, services *serviceOptions) {
+func runInteractive(args []string, options *interactiveOptions, services *serviceOptions) error {
 	interfaceName := args[0]
 	configFile := args[1]
 
-	// Load configuration
 	cfg, resolvedConfig, err := loadConfigOrScenario(configFile)
 	if err != nil {
-		logging.Errorf("Failed to load configuration: %v", err)
-		exitProcess(1)
+		return fmt.Errorf("loading configuration: %w", err)
 	}
 
 	debugLevel := options.debugLevel
@@ -77,9 +74,5 @@ func runInteractive(args []string, options *interactiveOptions, services *servic
 	logging.InitColors(!options.noColor)
 	debugConfig := logging.NewDebugConfig(debugLevel)
 
-	// Start interactive mode
-	if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services); runErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", runErr)
-		exitProcess(1)
-	}
+	return runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services)
 }

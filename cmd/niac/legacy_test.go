@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"testing"
@@ -290,7 +291,7 @@ func TestHandleInformationalFlags_Version(t *testing.T) {
 
 	// Can't easily test the actual printVersion() call without capturing stdout,
 	// but we can test that it returns true (indicating program should exit)
-	handled := handleInformationalFlags(flags, []string{}, info)
+	handled, _ := handleInformationalFlags(flags, []string{}, info)
 
 	if !handled {
 		t.Error("Expected handleInformationalFlags to return true for version flag")
@@ -303,7 +304,7 @@ func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 	flags.listInterfaces = true
 	info := versionInfo{version: "test", commit: "test", date: "test"}
 
-	handled := handleInformationalFlags(flags, []string{}, info)
+	handled, _ := handleInformationalFlags(flags, []string{}, info)
 
 	if !handled {
 		t.Error("Expected handleInformationalFlags to return true for list-interfaces flag")
@@ -313,12 +314,13 @@ func TestHandleInformationalFlags_ListInterfaces(t *testing.T) {
 // --list-devices needs a configuration file. Without one the command must exit
 // rather than fall through to printDeviceList with no path to read.
 func TestHandleInformationalFlags_ListDevices_NoConfig(t *testing.T) {
-	code, exited := withExitCapture(t, func() {
-		handleInformationalFlags(&legacyFlags{listDevices: true}, nil, versionInfo{})
-	})
+	handled, err := handleInformationalFlags(&legacyFlags{listDevices: true}, nil, versionInfo{})
+	if !handled {
+		t.Error("handled = false; the flag was consumed, so the caller must stop")
+	}
 
-	if !exited || code != 1 {
-		t.Fatalf("--list-devices with no config exited=%v code=%d, want exited with 1", exited, code)
+	if !errors.Is(err, errListDevicesNeedsConfig) {
+		t.Fatalf("--list-devices with no config = %v, want errListDevicesNeedsConfig", err)
 	}
 }
 
@@ -330,7 +332,7 @@ func TestHandleInformationalFlags_NoFlags(t *testing.T) {
 	flags.listDevices = false
 	info := versionInfo{version: "test", commit: "test", date: "test"}
 
-	handled := handleInformationalFlags(flags, []string{"eth0", "config.yaml"}, info)
+	handled, _ := handleInformationalFlags(flags, []string{"eth0", "config.yaml"}, info)
 
 	if handled {
 		t.Error("Expected handleInformationalFlags to return false when no flags are set")

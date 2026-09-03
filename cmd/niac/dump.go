@@ -192,8 +192,7 @@ func handleDumpError(err error, jsonOutput bool) error {
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
-	exitProcess(exitCodeError)
-	return nil
+	return withExitCode(exitCodeError, err)
 }
 
 func outputPackets(packets []ipc.PacketData, jsonOutput bool) {

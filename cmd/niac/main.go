@@ -140,7 +140,10 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 	}
 
 	// Process flag overrides (verbose/quiet)
-	processFlags(&flags)
+	if flagErr := processFlags(&flags); flagErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", flagErr)
+		exitWithStats(1, &flags, nil)
+	}
 	applyLegacyServiceFlags(&flags, services)
 
 	// Initialize colors (respects --no-color flag and NO_COLOR env var)
@@ -150,8 +153,16 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 	args := flagSet.Args()
 
 	// Handle informational flags (version, list-interfaces, list-devices)
-	if handleInformationalFlags(&flags, args, info) {
-		exitWithStats(0, &flags, nil)
+	handled, infoErr := handleInformationalFlags(&flags, args, info)
+	if handled {
+		code := 0
+		if infoErr != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", infoErr)
+
+			code = 1
+		}
+
+		exitWithStats(code, &flags, nil)
 	}
 
 	// Validate required arguments
@@ -189,8 +200,12 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 			logging.Errorf("%v", entitlementErr)
 			exitWithStats(1, &flags, nil)
 		}
-		runDryRunValidation(configFile, interfaceName, cfg)
-		// runDryRunValidation exits, so this line is unreachable
+		if dryRunErr := runDryRunValidation(configFile, interfaceName, cfg); dryRunErr != nil {
+			logging.Errorf("%v", dryRunErr)
+			exitWithStats(1, &flags, nil)
+		}
+
+		exitWithStats(0, &flags, nil)
 	}
 
 	// Create debug configuration
@@ -227,7 +242,7 @@ func exitWithStats(code int, flags *legacyFlags, statsTracker *stats.Statistics)
 	if flags != nil && (flags.exportStatsJSON != "" || flags.exportStatsCSV != "") {
 		exportStatistics(flags, statsTracker)
 	}
-	exitProcess(code)
+	os.Exit(code)
 }
 
 // startProfilingServer starts the pprof HTTP server for performance profiling.
@@ -476,7 +491,7 @@ func printDeviceList(configFile string) {
 	cfg, err := config.Load(configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "Error loading configuration: %v\n", err)
-		exitProcess(1)
+		os.Exit(1)
 	}
 
 	fmt.Fprintf(os.Stdout, "Devices in %s:\n\n", configFile)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,10 +77,9 @@ func TestConfigExportOverwriteProtection(t *testing.T) {
 	input := writeFile(t, dir, "in.yaml", minimalConfig)
 	output := writeFile(t, dir, "out.json", "original contents")
 
-	code, exited := withExitCapture(t, func() { runConfigExport([]string{input, output}) })
-
-	if !exited || code != 1 {
-		t.Fatalf("runConfigExport over an existing file exited=%v code=%d, want exited with 1", exited, code)
+	err := runConfigExport([]string{input, output})
+	if !errors.Is(err, errOutputExists) {
+		t.Fatalf("runConfigExport over an existing file = %v, want errOutputExists", err)
 	}
 
 	contents, err := os.ReadFile(output)
@@ -258,10 +258,9 @@ func TestConfigMergeOverwriteProtection(t *testing.T) {
 	overlay := writeFile(t, dir, "overlay.yaml", minimalConfig)
 	output := writeFile(t, dir, "merged.yaml", "original contents")
 
-	code, exited := withExitCapture(t, func() { runConfigMerge([]string{base, overlay, output}) })
-
-	if !exited || code != 1 {
-		t.Fatalf("runConfigMerge over an existing file exited=%v code=%d, want exited with 1", exited, code)
+	err := runConfigMerge([]string{base, overlay, output})
+	if !errors.Is(err, errOutputExists) {
+		t.Fatalf("runConfigMerge over an existing file = %v, want errOutputExists", err)
 	}
 
 	contents, err := os.ReadFile(output)
@@ -274,19 +273,13 @@ func TestConfigMergeOverwriteProtection(t *testing.T) {
 	}
 }
 
-// Malformed YAML must fail loudly. loadConfigOrExit returns its config variable
-// on the line after exiting, so a regression that let execution continue here
-// would surface as a nil dereference rather than a clean exit.
+// Malformed YAML must fail loudly rather than exporting an empty config.
 func TestConfigInvalidInput(t *testing.T) {
 	dir := t.TempDir()
 	input := writeFile(t, dir, "broken.yaml", "devices: [this is not: valid yaml\n")
 
-	code, exited := withExitCapture(t, func() {
-		runConfigExport([]string{input, filepath.Join(dir, "out.json")})
-	})
-
-	if !exited || code != 1 {
-		t.Fatalf("runConfigExport on malformed YAML exited=%v code=%d, want exited with 1", exited, code)
+	if err := runConfigExport([]string{input, filepath.Join(dir, "out.json")}); err == nil {
+		t.Fatal("runConfigExport on malformed YAML = nil, want a load error")
 	}
 }
 
@@ -295,11 +288,8 @@ func TestConfigInvalidInput(t *testing.T) {
 func TestConfigMissingFiles(t *testing.T) {
 	dir := t.TempDir()
 
-	code, exited := withExitCapture(t, func() {
-		runConfigExport([]string{filepath.Join(dir, "absent.yaml"), filepath.Join(dir, "out.json")})
-	})
-
-	if !exited || code != 1 {
-		t.Fatalf("runConfigExport on a missing input exited=%v code=%d, want exited with 1", exited, code)
+	err := runConfigExport([]string{filepath.Join(dir, "absent.yaml"), filepath.Join(dir, "out.json")})
+	if err == nil {
+		t.Fatal("runConfigExport on a missing input = nil, want a load error")
 	}
 }

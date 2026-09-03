@@ -132,13 +132,11 @@ func runTopologyExport(ctx context.Context, options *topologyOptions) error {
 
 	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		exitProcess(exitCodeError)
+		return fmt.Errorf("connecting to daemon: %w", err)
 	}
 	topology, err := client.Topology(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		exitProcess(exitCodeError)
+		return fmt.Errorf("fetching topology: %w", err)
 	}
 
 	// Generate output based on format
@@ -149,22 +147,19 @@ func runTopologyExport(ctx context.Context, options *topologyOptions) error {
 	case topologyFormatJSON:
 		output, err = exportTopologyJSON(topology)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to export JSON: %v\n", err)
-			exitProcess(exitCodeError)
+			return fmt.Errorf("failed to export JSON: %w", err)
 		}
 	case topologyFormatYAML:
 		output, err = exportTopologyYAML(topology)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to export YAML: %v\n", err)
-			exitProcess(exitCodeError)
+			return fmt.Errorf("failed to export YAML: %w", err)
 		}
 	}
 
 	// Write output
 	if options.outputFile != "" {
 		if writeErr := os.WriteFile(options.outputFile, []byte(output), 0o600); writeErr != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to write to file %s: %v\n", options.outputFile, writeErr)
-			exitProcess(exitCodeError)
+			return fmt.Errorf("failed to write to file %s: %w", options.outputFile, writeErr)
 		}
 		fmt.Fprintf(os.Stderr, "Topology exported to %s\n", options.outputFile)
 	} else {

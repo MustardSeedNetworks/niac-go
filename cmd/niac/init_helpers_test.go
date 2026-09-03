@@ -52,7 +52,11 @@ func TestPrintNextStep(t *testing.T) {
 
 func TestPromptOutputFileWithArgs(t *testing.T) {
 	reader := bufio.NewReader(strings.NewReader(""))
-	result := promptOutputFile(reader, []string{"custom-output.yaml"})
+	result, err := promptOutputFile(reader, []string{"custom-output.yaml"})
+	if err != nil {
+		t.Fatalf("promptOutputFile() error = %v", err)
+	}
+
 	if result != "custom-output.yaml" {
 		t.Errorf("promptOutputFile() = %q, want %q", result, "custom-output.yaml")
 	}
@@ -61,7 +65,11 @@ func TestPromptOutputFileWithArgs(t *testing.T) {
 func TestConfirmOverwriteIfExistsNoFile(t *testing.T) {
 	reader := bufio.NewReader(strings.NewReader(""))
 	// Non-existent file should return true without prompting
-	result := confirmOverwriteIfExists(reader, "/tmp/nonexistent-niac-test-file-999.yaml")
+	result, err := confirmOverwriteIfExists(reader, "/tmp/nonexistent-niac-test-file-999.yaml")
+	if err != nil {
+		t.Fatalf("confirmOverwriteIfExists() error = %v", err)
+	}
+
 	if !result {
 		t.Error("Expected true for non-existent file")
 	}

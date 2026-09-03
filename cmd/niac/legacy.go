@@ -274,18 +274,24 @@ func defineServiceFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
 }
 
 // processFlags applies flag transformations (verbose/quiet override) and validates flag values.
-func processFlags(flags *legacyFlags) {
+func processFlags(flags *legacyFlags) error {
 	if flags.verbose {
 		flags.debugLevel = 3
 	}
+
 	if flags.quiet {
 		flags.debugLevel = 0
 	}
+
 	if flags.enableProfiling && (flags.profilePort < 1 || flags.profilePort > 65535) {
-		fmt.Fprintf(os.Stderr, "Error: --profile-port must be between 1 and 65535, got %d\n", flags.profilePort)
-		exitProcess(1)
+		return fmt.Errorf("%w: got %d", errProfilePortRange, flags.profilePort)
 	}
+
+	return nil
 }
+
+// errProfilePortRange marks an out-of-range --profile-port.
+var errProfilePortRange = errors.New("--profile-port must be between 1 and 65535")
 
 func applyLegacyServiceFlags(flags *legacyFlags, services *serviceOptions) {
 	if flags.storagePath != "" {
@@ -362,35 +368,41 @@ func setupDebugConfig(flags *legacyFlags) *logging.DebugConfig {
 	return debugConfig
 }
 
-// handleInformationalFlags processes version/list flags and exits if handled
-// Returns true if a flag was handled and program should exit.
-func handleInformationalFlags(flags *legacyFlags, args []string, info versionInfo) bool {
-	// Handle version flag
+// errListDevicesNeedsConfig marks --list-devices used without a configuration
+// file, so a caller can tell "nothing to do" apart from "handled".
+var errListDevicesNeedsConfig = errors.New("--list-devices requires a configuration file")
+
+// handleInformationalFlags processes version/list flags.
+//
+// It reports whether a flag was handled, in which case the caller should stop
+// rather than start a simulation.
+func handleInformationalFlags(flags *legacyFlags, args []string, info versionInfo) (bool, error) {
 	if flags.showVersion {
 		printVersion(info)
-		return true
+
+		return true, nil
 	}
 
-	// Handle list interfaces flag
 	if flags.listInterfaces {
 		fmt.Fprintln(os.Stdout, "Available network interfaces:")
 		capture.ListInterfaces(os.Stdout)
-		return true
+
+		return true, nil
 	}
 
-	// Handle list devices flag (needs config file)
 	if flags.listDevices {
 		if len(args) < 1 {
-			fmt.Fprintln(os.Stdout, "Error: --list-devices requires a configuration file")
-			fmt.Fprintln(os.Stdout)
 			printUsage()
-			exitProcess(1)
+
+			return true, errListDevicesNeedsConfig
 		}
+
 		printDeviceList(args[0])
-		return true
+
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
 
 // validateLegacyArguments validates required command-line arguments.
@@ -465,8 +477,8 @@ func logCapturePlaybackDebug(cfg *config.Config) {
 	}
 }
 
-// runDryRunValidation runs dry-run validation and exits.
-func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
+// runDryRunValidation reports whether the configuration would start.
+func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) error {
 	// Run comprehensive configuration validation
 	validator := config.NewValidator(configFile)
 	result := validator.Validate(cfg)
@@ -476,8 +488,7 @@ func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 	}
 
 	if !result.Valid {
-		logging.Errorf("Configuration validation failed")
-		exitProcess(1)
+		return errConfigInvalid
 	}
 
 	// Additional runtime checks
@@ -485,5 +496,10 @@ func runDryRunValidation(configFile, interfaceName string, cfg *config.Config) {
 	logging.Successf("Ready to simulate %d devices on %s", len(cfg.Devices), interfaceName)
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Configuration is valid. Use without --dry-run to start simulation.")
-	exitProcess(0)
+
+	return nil
 }
+
+// errConfigInvalid marks a dry run whose validation output has already been
+// printed, so the caller adds an exit code rather than another message.
+var errConfigInvalid = errors.New("configuration validation failed")
