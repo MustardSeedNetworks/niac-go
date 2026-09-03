@@ -301,25 +301,6 @@ describe('protocols gated on presence only', () => {
   });
 });
 
-describe('traffic', () => {
-  // The daemon's Device struct has no traffic key at all -- the only `traffic`
-  // in its schema belongs to a behaviour phase. Because it decodes with
-  // KnownFields(true), emitting one made the whole document unloadable, so the
-  // block is dropped however it is configured.
-  it('is never emitted, whatever the device carries', () => {
-    expect(previewDevice(base)).not.toHaveProperty('traffic');
-    expect(
-      previewDevice({ ...base, traffic: { enabled: false } as Device['traffic'] }),
-    ).not.toHaveProperty('traffic');
-    expect(
-      previewDevice({
-        ...base,
-        traffic: { enabled: true, arpAnnouncements: { enabled: true } } as Device['traffic'],
-      }),
-    ).not.toHaveProperty('traffic');
-  });
-});
-
 describe('ordering and failure', () => {
   it('emits snmp_agent before interfaces, following the daemon struct order', () => {
     // The daemon does not care, but a reordering here would be an unreviewed

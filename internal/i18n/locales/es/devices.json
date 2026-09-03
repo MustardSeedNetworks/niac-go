@@ -283,24 +283,6 @@
         "servicesTitle": "Servicios NetBIOS",
         "masterBrowserLabel": "Master Browser (MSBROWSE)"
       },
-      "traffic": {
-        "title": "Patrones de tráfico",
-        "arpAnnouncementsTitle": "Anuncios ARP",
-        "intervalLabel": "Intervalo (segundos)",
-        "arpIntervalHelp": "Tiempo entre anuncios ARP",
-        "periodicPingsTitle": "Pings periódicos",
-        "pingIntervalHelp": "Tiempo entre pings",
-        "payloadSizeLabel": "Tamaño de payload (bytes)",
-        "payloadSizeHelp": "Tamaño del payload ICMP",
-        "randomTrafficTitle": "Tráfico aleatorio",
-        "randomIntervalHelp": "Tiempo entre ráfagas de tráfico",
-        "packetCountLabel": "Cantidad de paquetes",
-        "packetCountHelp": "Paquetes por ráfaga",
-        "patternsLabel": "Patrones de tráfico",
-        "broadcastArp": "ARP de difusión",
-        "multicast": "Multicast",
-        "udpPattern": "UDP"
-      },
       "synthesizeWalk": {
         "label": "Sintetizar walk base",
         "help": "Genere un walk SNMP base a partir de un perfil de proveedor/modelo en lugar de capturarlo desde hardware real",

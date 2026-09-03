@@ -1,6 +1,6 @@
 # API Reference
 
-Complete YAML configuration schema reference for NiAC-Go.
+Complete YAML configuration schema reference for NIAC-Go.
 
 ## Table of Contents
 
@@ -25,13 +25,14 @@ Complete YAML configuration schema reference for NiAC-Go.
 - [Topology Configuration](#topology-configuration)
   - [Port Channels](#port-channels)
   - [Trunk Ports](#trunk-ports)
-- [Traffic Configuration](#traffic-configuration)
 - [Default Values](#default-values)
 - [Validation Rules](#validation-rules)
 
 ## Overview
 
-NiAC-Go uses YAML configuration files to define network devices and their protocols. This reference documents all available fields, their types, default values, and validation rules.
+NIAC-Go uses YAML configuration files to define network devices and their
+protocols. This reference documents all available fields, their types, default
+values, and validation rules.
 
 **Target Go Version:** 1.23+
 
@@ -48,7 +49,7 @@ devices:
 ### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `devices` | array | Yes | [] | List of device configurations |
 
 ## Device Configuration
@@ -81,15 +82,12 @@ devices:
     # Topology configurations (v1.23.0)
     port_channels: [...]
     trunk_ports: [...]
-
-    # Traffic configurations (v1.6.0)
-    traffic: {...}
 ```
 
 ### Core Device Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `name` | string | Yes | - | Unique device identifier |
 | `type` | string | No | "" | Device type: router, switch, ap, etc. |
 | `mac` | string | Yes | - | MAC address (format: 00:11:22:33:44:55) |
@@ -98,7 +96,7 @@ devices:
 ### Device Type Values
 
 | Type | Description |
-|------|-------------|
+| ------ | ------------- |
 | `router` | Layer 3 router |
 | `switch` | Layer 2/3 switch |
 | `ap` | Wireless access point |
@@ -126,7 +124,7 @@ lldp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable LLDP |
 | `system_name` | string | No | device name | System name |
 | `system_description` | string | No | "" | Device description |
@@ -157,7 +155,7 @@ cdp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable CDP |
 | `platform` | string | No | "" | Platform/model identifier |
 | `capabilities` | string | No | "Switch" | Device capabilities |
@@ -183,7 +181,7 @@ edp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable EDP |
 | `platform` | string | No | "" | Platform identifier |
 | `software_version` | string | No | "" | Software version |
@@ -202,7 +200,7 @@ fdp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable FDP |
 | `platform` | string | No | "" | Platform identifier |
 | `software_version` | string | No | "" | Software version |
@@ -224,7 +222,7 @@ stp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable STP |
 | `bridge_priority` | integer | No | 32768 | Bridge priority |
 | `hello_time` | integer | No | 2 | BPDU interval (seconds) |
@@ -260,14 +258,14 @@ dhcp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DHCP server |
 | `pools` | array | Yes | [] | DHCP address pools |
 
 #### Pool Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `network` | string | Yes | - | Network CIDR (e.g., 10.0.0.0/24) |
 | `range_start` | string | Yes | - | First IP in range |
 | `range_end` | string | Yes | - | Last IP in range |
@@ -302,14 +300,14 @@ dhcpv6:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DHCPv6 server |
 | `pools` | array | Yes | [] | DHCPv6 address pools |
 
 #### Pool Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `network` | string | Yes | - | IPv6 network (e.g., 2001:db8::/64) |
 | `range_start` | string | Yes | - | First IPv6 in range |
 | `range_end` | string | Yes | - | Last IPv6 in range |
@@ -342,14 +340,14 @@ dns:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DNS server |
 | `forward_records` | array | No | [] | A/AAAA records |
 
 #### Forward Record Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `name` | string | Yes | - | Fully qualified domain name |
 | `ip` | string | Yes | - | IPv4 or IPv6 address |
 | `ttl` | integer | No | 3600 | Time to live (seconds) |
@@ -378,7 +376,7 @@ http:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable HTTP server |
 | `port` | integer | No | 80 | TCP port |
 | `endpoints` | array | No | [] | HTTP endpoints |
@@ -386,7 +384,7 @@ http:
 #### Endpoint Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `path` | string | Yes | - | URL path (e.g., /api/info) |
 | `content` | string | Yes | - | Response content |
 
@@ -413,7 +411,7 @@ ftp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable FTP server |
 | `port` | integer | No | 21 | TCP port |
 | `users` | array | No | [] | User accounts |
@@ -421,7 +419,7 @@ ftp:
 #### User Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `username` | string | Yes | - | FTP username |
 | `password` | string | Yes | - | FTP password |
 
@@ -445,7 +443,7 @@ netbios:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable NetBIOS |
 | `name` | string | No | device name | NetBIOS name |
 | `workgroup` | string | No | "WORKGROUP" | Workgroup name |
@@ -468,7 +466,7 @@ icmp:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMP responses |
 | `ttl` | integer | No | 64 | Time to live |
 
@@ -489,7 +487,7 @@ icmpv6:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMPv6 responses |
 | `hop_limit` | integer | No | 255 | Hop limit (RFC 4861) |
 
@@ -532,7 +530,7 @@ snmp_agent:
 #### Agent Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable SNMP agent |
 | `community` | string | No | "public" | Community string |
 | `walk_file` | string | No | "" | Path to SNMP walk file |
@@ -545,7 +543,7 @@ snmp_agent:
 #### Trap Configuration
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable SNMP traps |
 | `receivers` | string array | Yes | [] | Trap receiver IPs (IP:port) |
 | `community` | string | No | "public" | Trap community string |
@@ -553,7 +551,7 @@ snmp_agent:
 #### Event-Based Traps
 
 | Trap | Fields | Description |
-|------|--------|-------------|
+| ------ | -------- | ------------- |
 | `cold_start` | enabled, on_startup | Device initialization |
 | `link_state` | enabled, link_up, link_down | Authoritative interface state changes |
 
@@ -611,7 +609,7 @@ port_channels:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `id` | integer | Yes | - | Port-channel ID |
 | `members` | string array | Yes | [] | Member interface names |
 | `mode` | string | No | "active" | LACP mode |
@@ -619,7 +617,7 @@ port_channels:
 #### LACP Modes
 
 | Mode | Description |
-|------|-------------|
+| ------ | ------------- |
 | `active` | Actively sends LACP packets (recommended) |
 | `passive` | Responds to LACP packets |
 | `on` | Static LAG without LACP |
@@ -651,7 +649,7 @@ trunk_ports:
 #### Fields
 
 | Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
+| ------- | ------ | ---------- | --------- | ------------- |
 | `interface` | string | Yes | - | Local interface (physical or port-channel) |
 | `vlans` | integer array | Yes | [] | Allowed VLANs |
 | `native_vlan` | integer | No | 1 | Untagged VLAN |
@@ -665,72 +663,12 @@ trunk_ports:
 - `native_vlan`: 1-4094, must be in vlans list
 - `remote_device`: Must exist in devices list (for validation)
 
-## Traffic Configuration
-
-**Traffic Pattern Configuration** - Added in v1.6.0
-
-```yaml
-traffic:
-  enabled: true
-  arp_announcements:
-    enabled: true
-    interval: 60
-  periodic_pings:
-    enabled: true
-    interval: 120
-    payload_size: 32
-  random_traffic:
-    enabled: true
-    interval: 180
-    packet_count: 5
-    patterns: ["broadcast_arp", "multicast", "udp"]
-```
-
-### Fields
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable traffic generation |
-| `arp_announcements` | object | No | - | Gratuitous ARP config |
-| `periodic_pings` | object | No | - | Periodic ICMP config |
-| `random_traffic` | object | No | - | Random traffic config |
-
-### ARP Announcements
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable ARP announcements |
-| `interval` | integer | No | 60 | Interval (seconds) |
-
-### Periodic Pings
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable periodic pings |
-| `interval` | integer | No | 120 | Interval (seconds) |
-| `payload_size` | integer | No | 32 | Payload size (bytes) |
-
-### Random Traffic
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | boolean | No | false | Enable random traffic |
-| `interval` | integer | No | 180 | Interval (seconds) |
-| `packet_count` | integer | No | 5 | Packets per interval |
-| `patterns` | string array | No | [] | Traffic patterns |
-
-#### Traffic Patterns
-
-- `broadcast_arp`: Broadcast ARP packets
-- `multicast`: Multicast packets
-- `udp`: Random UDP packets
-
 ## Default Values
 
 ### Discovery Protocols
 
 | Protocol | Field | Default |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | LLDP | advertise_interval | 30 seconds |
 | LLDP | ttl | 120 seconds |
 | CDP | advertise_interval | 60 seconds |
@@ -741,7 +679,7 @@ traffic:
 ### Spanning Tree
 
 | Field | Default |
-|-------|---------|
+| ------- | --------- |
 | bridge_priority | 32768 |
 | hello_time | 2 seconds |
 | max_age | 20 seconds |
@@ -751,7 +689,7 @@ traffic:
 ### Network Protocols
 
 | Protocol | Field | Default |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | ICMP | ttl | 64 |
 | ICMPv6 | hop_limit | 64 (255 for NDP) |
 | DHCP | lease_time | 86400 seconds (24 hours) |
@@ -761,22 +699,12 @@ traffic:
 ### Application Protocols
 
 | Protocol | Field | Default |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | HTTP | port | 80 |
 | FTP | port | 21 |
 | SNMP | community | "public" |
 | NetBIOS | workgroup | "WORKGROUP" |
 | NetBIOS | ttl | 300 seconds |
-
-### Traffic Patterns
-
-| Field | Default |
-|-------|---------|
-| arp_announcement_interval | 60 seconds |
-| periodic_ping_interval | 120 seconds |
-| periodic_ping_payload_size | 32 bytes |
-| random_traffic_interval | 180 seconds |
-| random_traffic_packet_count | 5 packets |
 
 ## Validation Rules
 

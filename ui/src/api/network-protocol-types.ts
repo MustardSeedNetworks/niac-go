@@ -1,6 +1,6 @@
 /**
  * Network Protocol Configuration Types
- * Layer 2/3 protocols (discovery, STP, ICMP, traffic patterns, OS fingerprint)
+ * Layer 2/3 protocols (discovery, STP, ICMP, OS fingerprint)
  */
 
 // ============================================================================
@@ -130,40 +130,6 @@ export interface ICMPv6PrefixInfo {
   preferredLifetime?: number;
   prefix?: string;
 }
-
-// ============================================================================
-// Traffic Pattern Configuration Types
-// ============================================================================
-
-/**
- * Traffic Pattern configuration
- */
-export interface TrafficConfig {
-  enabled: boolean;
-  arpAnnouncements?: ARPAnnouncementConfig;
-  periodicPings?: PeriodicPingConfig;
-  randomTraffic?: RandomTrafficConfig;
-}
-
-export interface ARPAnnouncementConfig {
-  enabled: boolean;
-  interval?: number;
-}
-
-export interface PeriodicPingConfig {
-  enabled: boolean;
-  interval?: number;
-  payloadSize?: number;
-}
-
-export interface RandomTrafficConfig {
-  enabled: boolean;
-  interval?: number;
-  packetCount?: number;
-  patterns?: RandomTrafficPattern[];
-}
-
-export type RandomTrafficPattern = 'broadcast_arp' | 'multicast' | 'udp';
 
 // ============================================================================
 // Miscellaneous Configuration Types

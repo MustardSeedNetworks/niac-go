@@ -167,11 +167,21 @@ type DeviceInterfaceUpdate struct {
 }
 
 // DeviceCreateRequest represents a request to create a device.
+//
+// Every field below mirrors one editable field of the UI's Device type
+// (ui/src/api/device-config-types.ts) so a whole-object save never trips the
+// strict decoder over a field the editor legitimately exposes. `protocols` is
+// deliberately absent: it is server-computed (collectDeviceProtocols) and
+// must never become a settable field — see devices_protocol_types.go.
 type DeviceCreateRequest struct {
 	Hostname         string                  `json:"hostname"`
 	Type             string                  `json:"type"`
 	MAC              string                  `json:"mac,omitempty"`
 	IP               string                  `json:"ip,omitempty"`
+	IPs              []string                `json:"ips,omitempty"`
+	VLAN             int                     `json:"vlan,omitempty"`
+	Babble           *bool                   `json:"babble,omitempty"`
+	MapToIP          string                  `json:"mapToIp,omitempty"`
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	Template         string                  `json:"template,omitempty"` // Use template as base
@@ -179,19 +189,57 @@ type DeviceCreateRequest struct {
 	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
 	SSH              *SSHConfigRequest       `json:"ssh,omitempty"`
 	Syslog           *SyslogConfigRequest    `json:"syslog,omitempty"`
+	LLDP             *LLDPRequest            `json:"lldp,omitempty"`
+	CDP              *CDPRequest             `json:"cdp,omitempty"`
+	EDP              *EDPRequest             `json:"edp,omitempty"`
+	FDP              *FDPRequest             `json:"fdp,omitempty"`
+	STP              *STPRequest             `json:"stp,omitempty"`
+	DHCP             *DHCPRequest            `json:"dhcp,omitempty"`
+	DHCPv6           *DHCPv6Request          `json:"dhcpv6,omitempty"`
+	DNS              *DNSRequest             `json:"dns,omitempty"`
+	HTTP             *HTTPRequest            `json:"http,omitempty"`
+	FTP              *FTPRequest             `json:"ftp,omitempty"`
+	NetBIOS          *NetBIOSRequest         `json:"netbios,omitempty"`
+	ICMP             *ICMPRequest            `json:"icmp,omitempty"`
+	ICMPv6           *ICMPv6Request          `json:"icmpv6,omitempty"`
+	TTL              *TTLRequest             `json:"ttl,omitempty"`
+	OSFingerprint    *OSFingerprintRequest   `json:"osFingerprint,omitempty"`
+	IPerf3           *IPerf3Request          `json:"iperf3,omitempty"`
 }
 
-// DeviceUpdateRequest represents a request to update a device.
+// DeviceUpdateRequest represents a request to update a device. Every pointer
+// field is applied only when present, so a partial update never clobbers a
+// field the caller left unset — see applyPartialDeviceUpdate.
 type DeviceUpdateRequest struct {
 	Type             string                  `json:"type,omitempty"`
 	MAC              string                  `json:"mac,omitempty"`
 	IP               string                  `json:"ip,omitempty"`
+	IPs              []string                `json:"ips,omitempty"`
+	VLAN             int                     `json:"vlan,omitempty"`
+	Babble           *bool                   `json:"babble,omitempty"`
+	MapToIP          string                  `json:"mapToIp,omitempty"`
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
 	RawYAML          string                  `json:"rawYaml,omitempty"` // Full YAML for the device
 	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
 	SSH              *SSHConfigRequest       `json:"ssh,omitempty"`
 	Syslog           *SyslogConfigRequest    `json:"syslog,omitempty"`
+	LLDP             *LLDPRequest            `json:"lldp,omitempty"`
+	CDP              *CDPRequest             `json:"cdp,omitempty"`
+	EDP              *EDPRequest             `json:"edp,omitempty"`
+	FDP              *FDPRequest             `json:"fdp,omitempty"`
+	STP              *STPRequest             `json:"stp,omitempty"`
+	DHCP             *DHCPRequest            `json:"dhcp,omitempty"`
+	DHCPv6           *DHCPv6Request          `json:"dhcpv6,omitempty"`
+	DNS              *DNSRequest             `json:"dns,omitempty"`
+	HTTP             *HTTPRequest            `json:"http,omitempty"`
+	FTP              *FTPRequest             `json:"ftp,omitempty"`
+	NetBIOS          *NetBIOSRequest         `json:"netbios,omitempty"`
+	ICMP             *ICMPRequest            `json:"icmp,omitempty"`
+	ICMPv6           *ICMPv6Request          `json:"icmpv6,omitempty"`
+	TTL              *TTLRequest             `json:"ttl,omitempty"`
+	OSFingerprint    *OSFingerprintRequest   `json:"osFingerprint,omitempty"`
+	IPerf3           *IPerf3Request          `json:"iperf3,omitempty"`
 }
 
 // DeviceCloneRequest represents a request to clone a device.

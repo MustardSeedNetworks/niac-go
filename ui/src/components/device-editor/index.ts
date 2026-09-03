@@ -16,7 +16,6 @@ export { SnmpSection } from './SnmpSection';
 export { StpSection } from './StpSection';
 export type { SynthesizeWalkControlProps } from './SynthesizeWalkControl';
 export { SynthesizeWalkControl } from './SynthesizeWalkControl';
-export { TrafficSection } from './TrafficSection';
 // Types
 export type { ProtocolSectionBaseProps, ProtocolSectionProps, SNMPSectionProps } from './types';
 export {

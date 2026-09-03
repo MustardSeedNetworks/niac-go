@@ -350,13 +350,32 @@ export const fetchConfigDevices = () =>
 export const fetchConfigDevice = (hostname: string) =>
   request<DeviceDetailResponse>(`/api/v1/config/devices/${encodeURIComponent(hostname)}`);
 
+/**
+ * Strips fields the daemon computes and returns but never accepts back.
+ *
+ * The device editor round-trips a fetched `Device` through create/update —
+ * fetch, edit, save the same object — so a response-only field left on it
+ * gets replayed as if it were a settable one. `protocols` is exactly that
+ * (server-computed by `collectDeviceProtocols`; deliberately absent from
+ * `DeviceCreateRequest`/`DeviceUpdateRequest` in internal/api/devices_types.go),
+ * and the strict decoder 400s on it with no indication of which field is at
+ * fault. One helper, used by both create and update, so a future
+ * server-only field has one place to be added.
+ */
+export const toDeviceRequest = <T extends Partial<Device>>(device: T): Omit<T, 'protocols'> => {
+  const { protocols: _protocols, ...rest } = device;
+  return rest;
+};
+
 export const createDevice = (device: Device) =>
-  requestJson<DeviceMutationResponse>('/api/v1/config/devices', device, { method: 'POST' });
+  requestJson<DeviceMutationResponse>('/api/v1/config/devices', toDeviceRequest(device), {
+    method: 'POST',
+  });
 
 export const updateDevice = (hostname: string, device: Partial<Device>) =>
   requestJson<DeviceMutationResponse>(
     `/api/v1/config/devices/${encodeURIComponent(hostname)}`,
-    device,
+    toDeviceRequest(device),
     { method: 'PUT' },
   );
 
