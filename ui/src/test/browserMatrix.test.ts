@@ -21,11 +21,18 @@ describe('browser support matrix', () => {
   // The three small-screen projects joined in #1320. Every project had been a
   // `Desktop *` preset, so no phone or tablet layout was exercised on any run
   // and a mobile-only regression shipped green.
+  //
+  // `edge` joined for the scenario-authoring epic (#1151), whose Definition of
+  // Complete names Chrome, Edge and Safari as first-class authoring browsers.
+  // Only two of the three were covered. It runs the real installed Edge via
+  // `channel: 'msedge'`, not Chromium — the Blink engine is already exercised
+  // by the chromium project, so what this adds is Edge's own shell.
   it('gates exactly the engines and form factors the product targets', () => {
     expect(projectNames(criticalConfig)).toEqual([
       'chromium',
       'webkit',
       'firefox',
+      'edge',
       'tablet-safari',
       'mobile-chrome',
       'mobile-safari',
@@ -41,11 +48,11 @@ describe('browser support matrix', () => {
     expect(projectNames(authConfig)).toEqual(['chromium', 'webkit', 'firefox']);
   });
 
-  // The desktop/small-screen split is the cost control that makes the added
-  // projects affordable: the full suite stays on desktop and the small screens
-  // run only the smoke subset. A project that silently lost its filter would
-  // run all 26 spec files on three more devices.
-  it('keeps the full suite on desktop and the smoke subset on small screens', () => {
+  // The split is the cost control that makes the added projects affordable: the
+  // full suite runs on the three desktop engines, and every other project is
+  // narrowed to a subset by testMatch. A project that silently lost its filter
+  // would run all 26 spec files on four more browsers.
+  it('runs the full suite on the desktop engines and a subset everywhere else', () => {
     const projects = (criticalConfig.projects ?? []) as Array<{
       name?: string;
       testMatch?: unknown;

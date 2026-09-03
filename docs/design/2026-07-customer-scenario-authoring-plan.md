@@ -21,6 +21,24 @@ a second builder.
 **Verdict: build the authoring workflow; reshape the recorder; retire broad
 protocol imitation.**
 
+> **Amended 2026-09-02 — the buyer named below no longer exists.** This gate was
+> written on 2026-07-28 against a paid NIAC Pro tier. The 2026-08-05 licensing
+> amendment removed NIAC's runtime tier entirely: it ships as one unrestricted
+> binary, and `internal/license/` has since been deleted from the repository, so
+> Phase 1's "enforce license entitlements before persistence" is unimplementable
+> by design and was not implemented.
+>
+> That does not invalidate the work, which is materially complete and whose
+> engineering rationale — composable, verifiable scenarios against MIMIC's
+> breadth — stands on its own. It reclassifies it. Under the fleet's
+> marketability gate this is now a **deliberate non-market build**: the return is
+> the CyberScope/Link-Live demo path and the lab lead-magnets, not a tier unlock.
+> Revenue attaches to releases, support and custom modeling per
+> LICENSE_STRATEGY.md 2.3.
+>
+> The original text is kept below rather than rewritten, so the decision that was
+> actually made at the time stays legible.
+
 - **User and pain:** network-management QA, support, demo, and lab engineers
   need realistic networks, but assembling hundreds of consistent device,
   interface, and topology records manually is slow and error-prone.
@@ -34,6 +52,11 @@ protocol imitation.**
 - **Kill criterion:** if three representative scenarios still require YAML
   repair after the composer ships, stop adding scenario types and repair the
   authoring model.
+  - **Run 2026-09-02: not tripped.** All seven packs generate through the
+    composer, load, and validate strict-clean — no errors, no warnings, no hand
+    editing — and each still matches its frozen parity manifest. Executed as
+    `TestEveryPackGeneratesWithoutYAMLRepair` in `internal/scenario/`, so it is a
+    standing check rather than a one-off measurement.
 
 ## Competitive evidence
 
@@ -155,6 +178,12 @@ Estimate: 10-16 engineering hours.
 
 ### Phase 5: Saved behavior timelines
 
+**Status: Complete** — landed in `072af571 feat: add saved behavior timelines
+(#1163)`. `internal/api/handlers_draft_behaviors.go`,
+`ui/src/components/wizard/DraftBehaviorComposer.tsx`, and
+`ui/e2e/behavior-timeline.spec.ts` cover the model, the composer and the
+acceptance.
+
 - Compose named phases from existing traffic and fault capabilities.
 - Support deterministic start offsets, duration, repetition, and reset.
 - Keep every transition in authoritative device state and emit observable
@@ -164,6 +193,15 @@ Estimate: 10-16 engineering hours.
 Estimate: 12-20 engineering hours.
 
 ### Phase 6: Scenario packs and release acceptance
+
+**Status: Complete** — landed in `b9c91267 feat: add versioned scenario packs
+(#1165)`, retiered by `12566d00`, with Link-Live comparison in `99b7bd1d`.
+Seven packs ship against the six this phase asked for: hospital, warehouse,
+campus, enterprise-scale, retail, manufacturing and service-provider.
+
+Browser acceptance was the last gap and is now closed: the `edge` Playwright
+project drives the real installed Edge via `channel: 'msedge'` over the
+authoring journey (scenario pack, device editor, behavior timeline).
 
 - Build hospital, warehouse, campus, retail, industrial, and service-provider
   packs through the composer, not bespoke generators.

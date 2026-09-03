@@ -1316,7 +1316,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          command: cd ui && npx playwright install-deps chromium webkit firefox
+          command: cd ui && npx playwright install-deps chromium webkit firefox msedge
           command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
@@ -1327,9 +1327,13 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          # v2: the browser set gained msedge for the authoring-journey project
+          # (#1151). Without bumping this, a cache hit from before that change
+          # restores a browser directory with no Edge in it and the edge project
+          # fails on a runner that looks fully provisioned.
+          key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: |
-            playwright-browsers-${{ runner.os }}-
+            playwright-browsers-v2-${{ runner.os }}-
 
       # Retried, because the ~500MB browser download over a shared runner
       # network is exactly what a retry is for. Unretried, it failed three
@@ -1356,7 +1360,7 @@ jobs:
 
           attempt=1
           while [ "$attempt" -le "$ATTEMPTS" ]; do
-            if npx playwright install chromium webkit firefox; then
+            if npx playwright install chromium webkit firefox msedge; then
               exit 0
             fi
 
