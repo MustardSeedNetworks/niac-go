@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -90,9 +88,12 @@ func (s *Server) handleTemplateContent(w http.ResponseWriter, r *http.Request, n
 
 // handleTemplateUse handles POST /api/v1/templates/use.
 func (s *Server) handleTemplateUse(w http.ResponseWriter, r *http.Request) {
-	req, err := parseUseTemplateRequest(r)
-	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid_request", err.Error(), nil)
+	var req UseTemplateRequest
+	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+		return
+	}
+	if req.TemplateName == "" {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", "templateName is required", nil)
 		return
 	}
 
@@ -125,18 +126,4 @@ func (s *Server) handleTemplateUse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, response)
-}
-
-// parseUseTemplateRequest parses and validates the use template request.
-func parseUseTemplateRequest(r *http.Request) (*UseTemplateRequest, error) {
-	var req UseTemplateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.New("invalid JSON body")
-	}
-
-	if req.TemplateName == "" {
-		return nil, errors.New("templateName is required")
-	}
-
-	return &req, nil
 }

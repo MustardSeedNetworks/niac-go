@@ -978,7 +978,12 @@ func handleSignal(
 	return true
 }
 
-// handleReload attempts to reload the configuration.
+// handleReload attempts to reload the configuration. This is
+// non-interactive standalone mode's SIGHUP behavior (`niac run` and the
+// legacy bare invocation; `--interactive` TUI mode has no SIGHUP handler at
+// all); daemon mode's SIGHUP instead rotates API bearer tokens
+// (cmd_daemon.go's handleSIGHUP) because standalone mode has no API token to
+// rotate. See docs/DEPLOYMENT.md "Signal Handling".
 func handleReload(reloadConfig func() (*config.Config, error), debugLevel int) {
 	if reloadConfig == nil {
 		fmt.Fprintln(os.Stdout)

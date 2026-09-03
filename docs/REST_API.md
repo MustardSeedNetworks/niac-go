@@ -12,7 +12,7 @@ niac daemon
 Flags:
 
 | Flag | Description |
-|------|-------------|
+| - | - |
 | `--listen` | HTTPS address for REST API & Web UI (default: `127.0.0.1:8445`) |
 | `--api-token` | Daemon bearer token (prefer `NIAC_API_TOKEN`) |
 | `--cert-dir` | Directory containing the generated HTTPS certificate and key |
@@ -23,9 +23,8 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 ## Endpoints
 
 | Method | Path | Description |
-|--------|------|-------------|
+| - | - | - |
 | `GET` | `/api/v1/stats` | Live packet counters, interface info, NIAC version |
-| `GET` | `/api/v1/stream/stats` | Server-sent live statistics stream |
 | `GET` | `/api/v1/devices` | Device inventory (type, IPs, enabled protocols) |
 | `GET` | `/api/v1/history` | Recent runs persisted to BoltDB |
 | `GET` | `/api/v1/config` | Active YAML config plus file metadata |
@@ -34,7 +33,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `POST`/`DELETE` | `/api/v1/replay` | Start or stop packet replay |
 | `GET` | `/api/v1/alerts` | Current alert threshold + webhook |
 | `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
-| `GET` | `/api/v1/files?kind=walks|pcaps` | List available SNMP walk or PCAP files |
+| `GET` | `/api/v1/files?kind=walks\|pcaps` | List available SNMP walk or PCAP files |
 | `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
 | `GET` | `/api/v1/sessions` | Running simulation sessions a client can address |
 | `GET` | `/api/v1/sessions/{id}/{resource}` | One session's runtime state — see below |
@@ -51,10 +50,6 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
 Include `Authorization: Bearer <token>` or append `?token=<token>` when authentication is enabled.
-
-The statistics stream publishes once per second while a simulation is active
-and at least one client is subscribed. Each `stats` event carries the same
-authoritative snapshot shape as `GET /api/v1/stats`.
 
 ### Scenario generation
 
@@ -144,7 +139,7 @@ devices_. The unscoped `/api/v1/interfaces` lists the **host's** capture NICs,
 which is a different thing and is not session-scoped.
 
 Live streams take the session as a query parameter:
-`/api/v1/stream/packets?sessionId={id}` and `/api/v1/stream/stats?sessionId={id}`.
+`/api/v1/stream/packets?sessionId={id}`.
 A stream subscribed without `sessionId` receives the selected session only.
 
 ## Web UI
@@ -173,9 +168,15 @@ Navigate to `https://localhost:8445/`. A non-loopback listener requires an API t
 }
 ```
 
-`PUT /api/v1/config` expects JSON `{ "content": "<yaml here>" }`. NIAC runs the same validation pipeline as `niac validate` before swapping the on-disk file. On success the response mirrors the GET payload and the Web UI automatically refreshes. Validation errors (malformed YAML, missing fields, etc.) are surfaced with HTTP 400 and a descriptive message so editors can fix issues without leaving the browser.
+`PUT /api/v1/config` expects JSON `{ "content": "<yaml here>" }`. NIAC runs the same
+validation pipeline as `niac validate` before swapping the on-disk file. On success the
+response mirrors the GET payload and the Web UI automatically refreshes. Validation errors
+(malformed YAML, missing fields, etc.) are surfaced with HTTP 400 and a descriptive message
+so editors can fix issues without leaving the browser.
 
-Saving a config immediately reloads the running simulator—no CLI restart required. If the reload fails for any reason, the change is rejected and the previous configuration remains active.
+Saving a config immediately reloads the running simulator—no CLI restart required. If the
+reload fails for any reason, the change is rejected and the previous configuration remains
+active.
 
 ### Packet replay
 
@@ -202,11 +203,19 @@ Saving a config immediately reloads the running simulator—no CLI restart requi
 }
 ```
 
-The CLI's capture engine replays the PCAP immediately, optionally looping (`loop_ms`) or time-scaling (`scale`). When `data` is provided, NIAC stores the uploaded PCAP in a temporary directory so the server never needs direct access to the user's filesystem. If `data` is omitted, the `file` path must exist on the host running NIAC. `DELETE /api/v1/replay` stops the current playback and cleans up any uploaded file.
+The CLI's capture engine replays the PCAP immediately, optionally looping (`loop_ms`) or
+time-scaling (`scale`). When `data` is provided, NIAC stores the uploaded PCAP in a temporary
+directory so the server never needs direct access to the user's filesystem. If `data` is
+omitted, the `file` path must exist on the host running NIAC. `DELETE /api/v1/replay` stops
+the current playback and cleans up any uploaded file.
 
 ### File discovery
 
-`GET /api/v1/files?kind=walks` returns `.walk` files located under the `include_path` defined in the YAML config. `kind=pcaps` scans the directory that contains the active config file for `.pcap`/`.pcapng` captures. Both responses include the absolute path, size, and timestamp so the Web UI (or operators) can copy/paste the correct paths into configs or replay requests without shelling into the host.
+`GET /api/v1/files?kind=walks` returns `.walk` files located under the `include_path`
+defined in the YAML config. `kind=pcaps` scans the directory that contains the active config
+file for `.pcap`/`.pcapng` captures. Both responses include the absolute path, size, and
+timestamp so the Web UI (or operators) can copy/paste the correct paths into configs or
+replay requests without shelling into the host.
 
 ### Alerts
 
@@ -219,11 +228,13 @@ The CLI's capture engine replays the PCAP immediately, optionally looping (`loop
 }
 ```
 
-`PUT /api/v1/alerts` expects the same payload to update the alert loop at runtime. Setting `packets_threshold` to `0` disables alerts.
+`PUT /api/v1/alerts` expects the same payload to update the alert loop at runtime. Setting
+`packets_threshold` to `0` disables alerts.
 
 ### Error Injection
 
-NIAC supports runtime error injection for testing and simulation scenarios. The Web UI provides a Traffic Injection page with controls for injecting errors on device interfaces.
+NIAC supports runtime error injection for testing and simulation scenarios. The Web UI
+provides a Traffic Injection page with controls for injecting errors on device interfaces.
 
 `GET /api/v1/errors` returns available error types and currently active injections:
 
@@ -287,7 +298,8 @@ clears one fault. Omitting `errorType` clears every fault on that interface.
 
 `DELETE /api/v1/errors` (no query parameters) clears all active error injections.
 
-Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays active errors in real-time and allows clearing individual interfaces or all errors at once.
+Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays
+active errors in real-time and allows clearing individual interfaces or all errors at once.
 
 FCS faults increment `dot3StatsFCSErrors` and `ifInErrors`; packet discards
 increment `ifInDiscards` and `ifOutDiscards`; interface errors increment
@@ -296,7 +308,8 @@ interface octet counters. All counters remain monotonic after a fault clears.
 
 ## Alerts
 
-Add `--alert-packets-threshold <n>` and optional `--alert-webhook https://...` to receive webhook notifications when total packets exceed the threshold. Payload format:
+Add `--alert-packets-threshold <n>` and optional `--alert-webhook https://...` to receive
+webhook notifications when total packets exceed the threshold. Payload format:
 
 ```json
 {
@@ -310,7 +323,8 @@ Add `--alert-packets-threshold <n>` and optional `--alert-webhook https://...` t
 
 ## Monitoring & Metrics
 
-NIAC-Go exposes comprehensive Prometheus-compatible metrics at `/metrics`. For complete monitoring setup instructions, see the [Monitoring Guide](MONITORING.md).
+NIAC-Go exposes comprehensive Prometheus-compatible metrics at `/metrics`. For complete
+monitoring setup instructions, see the [Monitoring Guide](MONITORING.md).
 
 ### Quick Start
 
@@ -337,6 +351,7 @@ curl -k -H "Authorization: Bearer $NIAC_API_TOKEN" https://localhost:8445/metric
 ### Grafana Dashboard
 
 A pre-built Grafana dashboard is available at `docs/grafana-dashboard.json` with panels for:
+
 - Overview (devices, packets, errors)
 - System health (memory, goroutines, uptime)
 - Protocol breakdown (traffic by protocol type)

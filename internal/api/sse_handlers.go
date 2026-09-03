@@ -19,11 +19,6 @@ func (s *Server) handleSSELogs(w http.ResponseWriter, r *http.Request) {
 	sse.Serve(s.sseHub, sse.StreamLogs, w, r, s.logger, simpleErr)
 }
 
-// handleSSEStats streams periodic stats.
-func (s *Server) handleSSEStats(w http.ResponseWriter, r *http.Request) {
-	sse.Serve(s.sseHub, sse.StreamStats, w, r, s.logger, simpleErr)
-}
-
 // handleSSEStatus returns SSE hub status: running state, per-stream client
 // counts, and the configured caps. Used by the SSE Status page in the UI to
 // confirm the hub is healthy and to surface client churn.
@@ -36,7 +31,7 @@ func (s *Server) handleSSEStatus(w http.ResponseWriter, _ *http.Request) {
 	} else {
 		status = map[string]any{
 			"running": false,
-			"clients": map[string]int{"packets": 0, "logs": 0, "stats": 0, "total": 0},
+			"clients": map[string]int{"packets": 0, "logs": 0, "total": 0},
 		}
 	}
 

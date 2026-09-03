@@ -193,7 +193,6 @@ func (h *Hub) Status() Status {
 		Clients: map[string]int{
 			"packets": h.ClientCount(StreamPackets),
 			"logs":    h.ClientCount(StreamLogs),
-			"stats":   h.ClientCount(StreamStats),
 			"total":   h.TotalClientCount(),
 		},
 		Limits: map[string]int{

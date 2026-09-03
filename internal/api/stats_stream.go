@@ -4,11 +4,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
-
-const statsStreamInterval = time.Second
 
 type statsPayload struct {
 	Timestamp   time.Time         `json:"timestamp"`
@@ -33,9 +30,8 @@ type statsStackPayload struct {
 	UDPProxyOverloadDrops uint64 `json:"udpProxyOverloadDrops"`
 }
 
-// sessionStatsPayload builds one named session's stats. Shared by the session
-// stats endpoint and the stats publisher so both report the same numbers for
-// the same session.
+// sessionStatsPayload builds one named session's stats for the session
+// stats endpoint.
 func (s *Server) sessionStatsPayload(session sessionRuntime) (statsPayload, bool) {
 	s.configMu.RLock()
 	version := s.cfg.Version
@@ -95,43 +91,4 @@ func buildStatsPayload(
 			UDPProxyOverloadDrops: stats.UDPProxyOverloadDrops,
 		},
 	}, true
-}
-
-// startStatsPublisher emits one scoped tick per running session. It has no
-// request to carry a session ID, so it iterates the sessions instead: with
-// several running, publishing only one of them would leave every other
-// session's subscribers on a silent stream.
-func (s *Server) startStatsPublisher(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-s.bgStop:
-			return
-		case <-ticker.C:
-			if s.sseHub.ClientCount(sse.StreamStats) == 0 {
-				continue
-			}
-			s.publishSessionStats()
-		}
-	}
-}
-
-func (s *Server) publishSessionStats() {
-	for _, id := range s.sessionIDs() {
-		session, err := s.session(id)
-		if err != nil {
-			continue
-		}
-		if payload, ok := s.sessionStatsPayload(session); ok {
-			s.sseHub.BroadcastStatsForSession(id, payload)
-		}
-	}
-	// Subscribers that have not adopted ?sessionId= yet only ever receive the
-	// unscoped stream. Publishing the selected session there keeps them working
-	// until the unscoped runtime surface is removed; drop this with it.
-	if payload, ok := s.selectedStatsPayload(); ok {
-		s.sseHub.BroadcastStats(payload)
-	}
 }

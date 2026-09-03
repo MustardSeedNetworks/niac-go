@@ -63,6 +63,26 @@ or remove the named state file before restarting the daemon.
 Writes use a synchronized temporary file followed by an atomic replacement.
 An interrupted temporary write is ignored on the next start.
 
+## Signal Handling
+
+`SIGHUP` means different things depending on how NIAC was started, because
+the two modes have different things worth reloading without a restart:
+
+- **Daemon mode** (`niac daemon`, including the systemd unit) — `SIGHUP`
+  rotates the API bearer-token set: it re-reads the configured token file (or
+  `NIAC_API_TOKEN`) and swaps in the new tokens without dropping connections
+  or restarting the simulation. See `cmd/niac/cmd_daemon.go`'s `handleSIGHUP`
+  and `internal/daemon.Daemon.ReloadTokens`.
+- **Standalone mode** (`niac run <interface> <config-file>`, and the legacy
+  bare invocation without a subcommand, both in non-interactive mode) —
+  `SIGHUP` reloads the YAML config file from disk, validates it, and applies
+  it to the running simulation (`cmd/niac/main.go`'s `buildReloadFunc` /
+  `handleReload`). There is no API token to rotate in this mode.
+  `--interactive` (TUI) mode does not install a SIGHUP handler at all.
+
+`SIGTERM`/`SIGINT` mean the same thing in both modes: stop the simulation and
+exit cleanly.
+
 ## Windows
 
 Download and extract the Windows zip for your architecture from the GitHub

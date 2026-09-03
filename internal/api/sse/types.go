@@ -14,7 +14,6 @@ package sse
 //
 //	/api/v1/stream/packets — real-time packet stream
 //	/api/v1/stream/logs    — real-time log stream
-//	/api/v1/stream/stats   — real-time statistics
 //	/api/v1/stream/status  — hub status JSON
 //
 // SSE was chosen over WebSocket because:
@@ -77,8 +76,6 @@ const (
 	StreamPackets Stream = "packets"
 	// StreamLogs carries daemon and protocol-handler log lines.
 	StreamLogs Stream = "logs"
-	// StreamStats carries periodic daemon/simulation statistics snapshots.
-	StreamStats Stream = "stats"
 )
 
 // Message is the envelope shape used by the hub broadcast API.

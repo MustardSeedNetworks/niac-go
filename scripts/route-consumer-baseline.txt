@@ -6,6 +6,5 @@
 /api/v1/devices
 /api/v1/files
 /api/v1/segments
-/api/v1/stream/stats
 /api/v1/stream/status
 /api/v1/walk/list
