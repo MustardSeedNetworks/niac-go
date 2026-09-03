@@ -11,43 +11,43 @@ niac daemon
 
 Flags:
 
-|Flag|Description|
-|-|-|
-|`--listen`|HTTPS address for REST API & Web UI (default: `127.0.0.1:8445`)|
-|`--api-token`|Daemon bearer token (prefer `NIAC_API_TOKEN`)|
-|`--cert-dir`|Directory containing the generated HTTPS certificate and key|
-|`--storage`|BoltDB location for run history (default: `~/.niac/niac.db`, set to `disabled` to opt out)|
+| Flag | Description |
+| - | - |
+| `--listen` | HTTPS address for REST API & Web UI (default: `127.0.0.1:8445`) |
+| `--api-token` | Daemon bearer token (prefer `NIAC_API_TOKEN`) |
+| `--cert-dir` | Directory containing the generated HTTPS certificate and key |
+| `--storage` | BoltDB location for run history (default: `~/.niac/niac.db`, set to `disabled` to opt out) |
 
 Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no separate metrics listener.
 
 ## Endpoints
 
-|Method|Path|Description|
-|-|-|-|
-|`GET`|`/api/v1/stats`|Live packet counters, interface info, NIAC version|
-|`GET`|`/api/v1/devices`|Device inventory (type, IPs, enabled protocols)|
-|`GET`|`/api/v1/history`|Recent runs persisted to BoltDB|
-|`GET`|`/api/v1/config`|Active YAML config plus file metadata|
-|`PUT`|`/api/v1/config`|Validate + persist new YAML config content|
-|`GET`|`/api/v1/replay`|Current PCAP replay status|
-|`POST`/`DELETE`|`/api/v1/replay`|Start or stop packet replay|
-|`GET`|`/api/v1/alerts`|Current alert threshold + webhook|
-|`PUT`|`/api/v1/alerts`|Update alert threshold/webhook|
-|`GET`|`/api/v1/files?kind=walks\|pcaps`|List available SNMP walk or PCAP files|
-|`GET`|`/api/v1/topology`|Simple topology graph derived from configuration|
-|`GET`|`/api/v1/sessions`|Running simulation sessions a client can address|
-|`GET`|`/api/v1/sessions/{id}/{resource}`|One session's runtime state — see below|
-|`GET`|`/api/v1/scenario/packs`|Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset|
-|`GET`|`/api/v1/scenario/profiles`|Reusable vendor, model, role, and discovery profiles|
-|`POST`|`/api/v1/scenario/generate`|Generate deterministic validated YAML from sites and repeat controls|
-|`PATCH`|`/api/v1/library/drafts/{name}/topology`|Apply one revision-safe topology edit to an isolated draft|
-|`PUT`|`/api/v1/library/drafts/{name}/behaviors`|Replace a draft's deterministic behavior timelines|
-|`GET`|`/api/v1/behaviors`|Current saved-timeline replay status|
-|`GET`|`/api/v1/version`|Version information|
-|`GET`|`/api/v1/errors`|Available error types and active error injections|
-|`POST`|`/api/v1/errors`|Inject network errors on device interfaces|
-|`DELETE`|`/api/v1/errors`|Clear specific or all error injections|
-|`GET`|`/metrics`|Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md))|
+| Method | Path | Description |
+| - | - | - |
+| `GET` | `/api/v1/stats` | Live packet counters, interface info, NIAC version |
+| `GET` | `/api/v1/devices` | Device inventory (type, IPs, enabled protocols) |
+| `GET` | `/api/v1/history` | Recent runs persisted to BoltDB |
+| `GET` | `/api/v1/config` | Active YAML config plus file metadata |
+| `PUT` | `/api/v1/config` | Validate + persist new YAML config content |
+| `GET` | `/api/v1/replay` | Current PCAP replay status |
+| `POST`/`DELETE` | `/api/v1/replay` | Start or stop packet replay |
+| `GET` | `/api/v1/alerts` | Current alert threshold + webhook |
+| `PUT` | `/api/v1/alerts` | Update alert threshold/webhook |
+| `GET` | `/api/v1/files?kind=walks\|pcaps` | List available SNMP walk or PCAP files |
+| `GET` | `/api/v1/topology` | Simple topology graph derived from configuration |
+| `GET` | `/api/v1/sessions` | Running simulation sessions a client can address |
+| `GET` | `/api/v1/sessions/{id}/{resource}` | One session's runtime state — see below |
+| `GET` | `/api/v1/scenario/packs` | Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset |
+| `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
+| `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
+| `PATCH` | `/api/v1/library/drafts/{name}/topology` | Apply one revision-safe topology edit to an isolated draft |
+| `PUT` | `/api/v1/library/drafts/{name}/behaviors` | Replace a draft's deterministic behavior timelines |
+| `GET` | `/api/v1/behaviors` | Current saved-timeline replay status |
+| `GET` | `/api/v1/version` | Version information |
+| `GET` | `/api/v1/errors` | Available error types and active error injections |
+| `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
+| `DELETE` | `/api/v1/errors` | Clear specific or all error injections |
+| `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
 Include `Authorization: Bearer <token>` or append `?token=<token>` when authentication is enabled.
 
