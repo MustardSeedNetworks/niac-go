@@ -31,7 +31,6 @@ import type {
   PcapUploadResponse,
   ReplayRequest,
   ReplayState,
-  RuntimeStatus,
   SegmentSummary,
   SessionSummary,
   SimulationPreflightReport,
@@ -266,7 +265,6 @@ export const fetchInterfaces = () => deduplicatedGet<InterfacesResponse>('/api/v
 // Fetch only usable interfaces (ethernet, WiFi, loopback)
 export const fetchUsableInterfaces = () =>
   deduplicatedGet<InterfacesResponse>('/api/v1/interfaces?filter=usable');
-export const fetchRuntimeStatus = () => deduplicatedGet<RuntimeStatus>('/api/v1/runtime');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
 export const preflightSimulation = (payload: SimulationPreflightRequest) =>
   requestJsonCamelCase<SimulationPreflightReport>('/api/v1/simulation/preflight', payload, {

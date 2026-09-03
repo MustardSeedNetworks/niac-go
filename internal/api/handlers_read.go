@@ -468,6 +468,16 @@ func (s *Server) handleNeighbors(w http.ResponseWriter, _ *http.Request) {
 	s.writeJSON(w, neighbors)
 }
 
+// handleInterfaces lists the host's capture NICs. It is deliberately
+// session-agnostic: the same NICs are available to every session, and a
+// daemon runs several at once. It used to mark one NIC "current" from
+// s.cfg.Interface, the process-wide selected session's interface, so the
+// answer depended on which session happened to be selected rather than on
+// the caller. A client that wants the NIC a given session runs on reads it
+// from that session's own summary in GET /api/v1/sessions.
+//
+// The simulated devices' interfaces are a different resource entirely:
+// GET /api/v1/sessions/{id}/interfaces.
 func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 	// Method gating (GET-only) is enforced declaratively by the route registry.
 	// Check for filter parameter
@@ -505,11 +515,7 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 		Name        string   `json:"name"`
 		Description string   `json:"description"`
 		Addresses   []string `json:"addresses"`
-		Current     bool     `json:"current"`
 	}
-
-	// SECURITY FIX #161: Thread-safe access to Interface
-	currentIface := s.currentInterface()
 
 	result := make([]interfaceInfo, 0, len(ifaces))
 	for _, iface := range ifaces {
@@ -522,14 +528,10 @@ func (s *Server) handleInterfaces(w http.ResponseWriter, r *http.Request) {
 			Name:        iface.Name,
 			Description: iface.Description,
 			Addresses:   addrs,
-			Current:     iface.Name == currentIface,
 		})
 	}
 
-	s.writeJSON(w, map[string]any{
-		"interfaces":        result,
-		"current_interface": currentIface,
-	})
+	s.writeJSON(w, map[string]any{"interfaces": result})
 }
 
 func (s *Server) handleRuntime(w http.ResponseWriter, _ *http.Request) {

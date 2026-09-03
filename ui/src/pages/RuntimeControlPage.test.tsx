@@ -80,10 +80,9 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
     vi.mocked(client.fetchNeighbors).mockResolvedValue([]);
     vi.mocked(client.fetchVersion).mockResolvedValue({ version: '0.0.0' });
     vi.mocked(client.fetchErrorTypes).mockResolvedValue({ availableTypes: [], info: '' });
-    vi.mocked(client.fetchInterfaces).mockResolvedValue({ interfaces: [], currentInterface: '' });
+    vi.mocked(client.fetchInterfaces).mockResolvedValue({ interfaces: [] });
     vi.mocked(client.fetchUsableInterfaces).mockResolvedValue({
       interfaces: [],
-      currentInterface: '',
     });
     stopSimulation.mockResolvedValue(undefined);
     selectSimulation.mockResolvedValue(running);
@@ -180,10 +179,9 @@ describe('RuntimeControlPage — routed start preflight', () => {
     vi.mocked(client.fetchNeighbors).mockResolvedValue([]);
     vi.mocked(client.fetchVersion).mockResolvedValue({ version: '0.0.0' });
     vi.mocked(client.fetchErrorTypes).mockResolvedValue({ availableTypes: [], info: '' });
-    vi.mocked(client.fetchInterfaces).mockResolvedValue({ interfaces: [], currentInterface: '' });
+    vi.mocked(client.fetchInterfaces).mockResolvedValue({ interfaces: [] });
     vi.mocked(client.fetchUsableInterfaces).mockResolvedValue({
-      interfaces: [{ name: 'eth0', description: 'Ethernet', addresses: [], current: true }],
-      currentInterface: 'eth0',
+      interfaces: [{ name: 'eth0', description: 'Ethernet', addresses: [] }],
     });
     vi.mocked(client.fetchTemplates).mockResolvedValue([
       {

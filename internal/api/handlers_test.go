@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
@@ -162,6 +164,49 @@ func TestHandleInterfaces(t *testing.T) {
 	// May return OK or error depending on system interfaces
 	if rec.Code != http.StatusOK && rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want %d or %d", rec.Code, http.StatusOK, http.StatusInternalServerError)
+	}
+}
+
+// TestHandleInterfacesCarriesNoSessionState guards the fix for P1-8. The
+// response used to carry current_interface, plus a per-NIC "current" flag,
+// both derived from the process-wide selected session — so with two sessions
+// running the answer depended on which one happened to be selected rather
+// than on the caller. Which NIC a session runs on belongs to that session's
+// summary in GET /api/v1/sessions.
+func TestHandleInterfacesCarriesNoSessionState(t *testing.T) {
+	server, _ := createTestServer(t)
+	server.configMu.Lock()
+	server.cfg.Interface = "eth0"
+	server.configMu.Unlock()
+
+	rec := httptest.NewRecorder()
+	server.handleInterfaces(rec, httptest.NewRequest(http.MethodGet, "/api/v1/interfaces", nil))
+	if rec.Code == http.StatusInternalServerError {
+		t.Skip("pcap cannot list interfaces in this environment")
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body) != 1 {
+		t.Errorf("response keys = %v, want only interfaces", slices.Sorted(maps.Keys(body)))
+	}
+	if _, found := body["current_interface"]; found {
+		t.Error("response still reports current_interface, which names the selected session")
+	}
+
+	var ifaces []map[string]json.RawMessage
+	if err := json.Unmarshal(body["interfaces"], &ifaces); err != nil {
+		t.Fatal(err)
+	}
+	for index, iface := range ifaces {
+		if _, found := iface["current"]; found {
+			t.Errorf("interfaces[%d] still carries a current flag", index)
+		}
 	}
 }
 

@@ -304,28 +304,16 @@ export interface ErrorInjectionInfo {
   };
 }
 
+// The host's capture NICs. Which NIC a given session runs on is that
+// session's fact, not a NIC's: read it from SessionSummary.interface.
 export interface NetworkInterface {
   name: string;
   description: string;
   addresses: string[];
-  current: boolean;
 }
 
 export interface InterfacesResponse {
   interfaces: NetworkInterface[];
-  currentInterface: string;
-}
-
-export interface RuntimeStatus {
-  running: boolean;
-  interface: string;
-  configPath: string;
-  configName?: string;
-  version: string;
-  deviceCount: number;
-  packetsSent: number;
-  packetsReceived: number;
-  uptimeSeconds: number;
 }
 
 export interface SimulationStatus {
