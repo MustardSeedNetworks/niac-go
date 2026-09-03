@@ -156,27 +156,35 @@ func exitAfterInformationalFlag(flags *legacyFlags, args []string, info versionI
 	exitWithStats(code, flags, nil)
 }
 
-func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) {
+// parseLegacyFlags parses the legacy flag set and applies the overrides and
+// service options it implies, returning the flags and the remaining arguments.
+func parseLegacyFlags(osArgs []string, services *serviceOptions) (legacyFlags, []string) {
 	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 	var flags legacyFlags
+
 	defineLegacyFlags(flagSet, &flags)
+
 	flagSet.Usage = printUsage
-	// Parse the provided arguments (skip first element which is program name)
+
+	// Skip the first element, which is the program name.
 	if len(osArgs) > 1 {
 		_ = flagSet.Parse(osArgs[1:])
 	} else {
 		_ = flagSet.Parse(nil)
 	}
 
-	// Process flag overrides (verbose/quiet)
 	exitOnFlagError(&flags, processFlags(&flags))
 	applyLegacyServiceFlags(&flags, services)
 
-	// Initialize colors (respects --no-color flag and NO_COLOR env var)
+	// Respects --no-color and the NO_COLOR env var.
 	logging.InitColors(!flags.noColor)
 
-	// Get remaining arguments
-	args := flagSet.Args()
+	return flags, flagSet.Args()
+}
+
+func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) {
+	flags, args := parseLegacyFlags(osArgs, services)
 
 	// Handle informational flags (version, list-interfaces, list-devices)
 	exitAfterInformationalFlag(&flags, args, info)

@@ -111,8 +111,8 @@ func runGenerate(args []string) error {
 		return stopIfCancelled(err)
 	}
 
-	if err := writeConfiguration(outputFile, cfg); err != nil {
-		return err
+	if writeErr := writeConfiguration(outputFile, cfg); writeErr != nil {
+		return writeErr
 	}
 
 	printSummary(outputFile, cfg)
@@ -324,9 +324,9 @@ func selectManagementProtocols(reader *bufio.Reader, _ string, protocols map[str
 		if promptErr != nil {
 			return promptErr
 		}
-		walkFile, err := promptString(reader, "    Walk file (leave empty for none): ", "")
-		if err != nil {
-			return err
+		walkFile, walkErr := promptString(reader, "    Walk file (leave empty for none): ", "")
+		if walkErr != nil {
+			return walkErr
 		}
 		protocols["snmp"] = protocolConfig{
 			enabled: true,
