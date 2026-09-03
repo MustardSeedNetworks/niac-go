@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -137,10 +138,17 @@ and network discovery without physical hardware.`,
 
 func executeRootCommand(cmd *cobra.Command) {
 	err := cmd.Execute()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if err == nil {
+		return
 	}
+
+	fmt.Fprintln(os.Stderr, err)
+
+	if coded, ok := errors.AsType[codedError](err); ok {
+		os.Exit(coded.code)
+	}
+
+	os.Exit(1)
 }
 
 func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {

@@ -51,8 +51,8 @@ Exit codes:
     exit 1
   fi`,
 		Args: cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			runValidate(args, options)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runValidate(args, options)
 		},
 	}
 
@@ -63,14 +63,15 @@ Exit codes:
 }
 
 // outputJSONResult outputs validation results as JSON.
-func outputJSONResult(result *config.ListError) {
+func outputJSONResult(result *config.ListError) error {
 	jsonOutput, jsonErr := result.ToJSON()
 	if jsonErr != nil {
-		logging.Errorf("Failed to generate JSON output: %v", jsonErr)
-		os.Exit(1)
+		return fmt.Errorf("generating JSON output: %w", jsonErr)
 	}
 
 	fmt.Fprintln(os.Stdout, jsonOutput)
+
+	return nil
 }
 
 // outputTextResult outputs validation results as human-readable text.
@@ -88,20 +89,18 @@ func outputTextResult(result *config.ListError, configFile string, verbose bool,
 	}
 }
 
-func runValidate(args []string, options *validateOptions) {
+func runValidate(args []string, options *validateOptions) error {
 	configFile := args[0]
 
 	// Check if file exists
 	if _, statErr := os.Stat(configFile); os.IsNotExist(statErr) {
-		logging.Errorf("Configuration file not found: %s", configFile)
-		os.Exit(1)
+		return fmt.Errorf("configuration file not found: %s", configFile)
 	}
 
 	// Load configuration
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		logging.Errorf("Failed to load configuration: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("loading configuration: %w", err)
 	}
 
 	// Validate configuration
@@ -110,13 +109,17 @@ func runValidate(args []string, options *validateOptions) {
 
 	// Output results
 	if options.json {
-		outputJSONResult(result)
+		if jsonErr := outputJSONResult(result); jsonErr != nil {
+			return jsonErr
+		}
 	} else {
 		outputTextResult(result, configFile, options.verbose, cfg.DeviceCount())
 	}
 
-	// Exit with appropriate code
+	// Report an invalid configuration as a failure
 	if !result.Valid {
-		os.Exit(1)
+		return errConfigInvalid
 	}
+
+	return nil
 }

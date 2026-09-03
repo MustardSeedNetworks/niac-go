@@ -127,32 +127,67 @@ func main() {
 
 // runLegacyMode maintains backward compatibility with original command-line interface
 // Refactored into smaller, testable functions.
-func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) {
+// exitOnFlagError stops the legacy path when flag validation failed.
+func exitOnFlagError(flags *legacyFlags, err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	exitWithStats(1, flags, nil)
+}
+
+// exitAfterInformationalFlag stops the legacy path when --version, --list-*, or
+// another informational flag has already answered the operator's question.
+func exitAfterInformationalFlag(flags *legacyFlags, args []string, info versionInfo) {
+	handled, err := handleInformationalFlags(flags, args, info)
+	if !handled {
+		return
+	}
+
+	code := 0
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
+		code = 1
+	}
+
+	exitWithStats(code, flags, nil)
+}
+
+// parseLegacyFlags parses the legacy flag set and applies the overrides and
+// service options it implies, returning the flags and the remaining arguments.
+func parseLegacyFlags(osArgs []string, services *serviceOptions) (legacyFlags, []string) {
 	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 	var flags legacyFlags
+
 	defineLegacyFlags(flagSet, &flags)
+
 	flagSet.Usage = printUsage
-	// Parse the provided arguments (skip first element which is program name)
+
+	// Skip the first element, which is the program name.
 	if len(osArgs) > 1 {
 		_ = flagSet.Parse(osArgs[1:])
 	} else {
 		_ = flagSet.Parse(nil)
 	}
 
-	// Process flag overrides (verbose/quiet)
-	processFlags(&flags)
+	exitOnFlagError(&flags, processFlags(&flags))
 	applyLegacyServiceFlags(&flags, services)
 
-	// Initialize colors (respects --no-color flag and NO_COLOR env var)
+	// Respects --no-color and the NO_COLOR env var.
 	logging.InitColors(!flags.noColor)
 
-	// Get remaining arguments
-	args := flagSet.Args()
+	return flags, flagSet.Args()
+}
+
+func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) {
+	flags, args := parseLegacyFlags(osArgs, services)
 
 	// Handle informational flags (version, list-interfaces, list-devices)
-	if handleInformationalFlags(&flags, args, info) {
-		exitWithStats(0, &flags, nil)
-	}
+	exitAfterInformationalFlag(&flags, args, info)
 
 	// Validate required arguments
 	interfaceName, configFile, err := validateLegacyArguments(args)
@@ -189,8 +224,12 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 			logging.Errorf("%v", entitlementErr)
 			exitWithStats(1, &flags, nil)
 		}
-		runDryRunValidation(configFile, interfaceName, cfg)
-		// runDryRunValidation calls os.Exit, so this line is unreachable
+		if dryRunErr := runDryRunValidation(configFile, interfaceName, cfg); dryRunErr != nil {
+			logging.Errorf("%v", dryRunErr)
+			exitWithStats(1, &flags, nil)
+		}
+
+		exitWithStats(0, &flags, nil)
 	}
 
 	// Create debug configuration

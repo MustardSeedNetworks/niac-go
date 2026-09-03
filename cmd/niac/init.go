@@ -31,20 +31,23 @@ then suggest the most appropriate template.`,
 			"  # Start interactive wizard\n  niac init\n\n  # Start wizard with specific output file\n  niac init my-network.yaml\n\n  # Quick workflow\n  niac init && niac validate %s",
 			defaultInitOutputFile,
 		),
-		Run: func(_ *cobra.Command, args []string) {
-			runInit(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runInit(args)
 		},
 	}
 
 	root.AddCommand(initCmd)
 }
 
-func runInit(args []string) {
+func runInit(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
 
 	printInitHeader()
 
-	networkType := promptNetworkType(reader)
+	networkType, err := promptNetworkType(reader)
+	if err != nil {
+		return stopIfCancelled(err)
+	}
 	selectedTemplate, templateDesc := mapNetworkTypeToTemplate(networkType)
 
 	fmt.Fprintln(os.Stdout)
@@ -53,25 +56,32 @@ func runInit(args []string) {
 
 	tmpl, err := templates.Get(selectedTemplate)
 	if err != nil {
-		color.Red("Error loading template: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("loading template: %w", err)
 	}
 
 	printTemplateDetails(tmpl)
 
-	outputFile := promptOutputFile(reader, args)
+	outputFile, err := promptOutputFile(reader, args)
+	if err != nil {
+		return stopIfCancelled(err)
+	}
 
-	if !confirmOverwriteIfExists(reader, outputFile) {
+	overwrite, err := confirmOverwriteIfExists(reader, outputFile)
+	if err != nil {
+		return stopIfCancelled(err)
+	}
+	if !overwrite {
 		fmt.Fprintln(os.Stdout, "Aborted.")
-		os.Exit(0)
+		return nil
 	}
 
 	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
-		color.Red("Error writing file: %v", writeErr)
-		os.Exit(1)
+		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
 	printInitSuccess(outputFile, selectedTemplate)
+
+	return nil
 }
 
 // printInitHeader displays the wizard header banner.
@@ -88,7 +98,7 @@ func printInitHeader() {
 }
 
 // promptNetworkType displays network type menu and prompts for selection.
-func promptNetworkType(reader *bufio.Reader) string {
+func promptNetworkType(reader *bufio.Reader) (string, error) {
 	_, _ = fmt.Fprintln(
 		os.Stdout,
 		color.CyanString("1. What type of network are you simulating?"),
@@ -139,31 +149,31 @@ func printTemplateDetails(tmpl *templates.Template) {
 }
 
 // promptOutputFile prompts for output filename or uses provided argument.
-func promptOutputFile(reader *bufio.Reader, args []string) string {
+func promptOutputFile(reader *bufio.Reader, args []string) (string, error) {
 	if len(args) > 0 {
-		return args[0]
+		return args[0], nil
 	}
 
 	fmt.Fprintf(os.Stdout, "2. Enter output filename [%s]: ", defaultInitOutputFile)
 	filename, readErr := readLine(reader)
 	if readErr != nil && !errors.Is(readErr, io.EOF) {
-		handleInputError(readErr)
+		return "", inputError(readErr)
 	}
 	if filename == "" {
-		return defaultInitOutputFile
+		return defaultInitOutputFile, nil
 	}
-	return filename
+	return filename, nil
 }
 
 // confirmOverwriteIfExists checks if file exists and prompts for overwrite confirmation.
 // Returns true if file doesn't exist or user confirms overwrite.
-func confirmOverwriteIfExists(reader *bufio.Reader, outputFile string) bool {
+func confirmOverwriteIfExists(reader *bufio.Reader, outputFile string) (bool, error) {
 	if _, statErr := statSafeFile(outputFile); statErr == nil {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Warning: File %s already exists!", outputFile)
 		return mustPromptYesNo(reader, "Overwrite? (y/n): ")
 	}
-	return true
+	return true, nil
 }
 
 // printInitSuccess displays success message and next steps.
@@ -280,36 +290,51 @@ func readLine(reader *bufio.Reader) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
-func handleInputError(err error) {
+// errInputCancelled marks operator cancellation of a prompt (e.g. Ctrl-D) so
+// callers can stop cleanly instead of treating it as a failure.
+var errInputCancelled = errors.New("input cancelled")
+
+// stopIfCancelled converts a cancelled-input sentinel into a clean stop
+// (nil); any other error propagates unchanged.
+func stopIfCancelled(err error) error {
+	if errors.Is(err, errInputCancelled) {
+		return nil
+	}
+	return err
+}
+
+// inputError converts a prompt read failure into a returned error. EOF means
+// the operator cancelled (e.g. Ctrl-D), which is reported as
+// errInputCancelled so callers can stop without treating it as a failure.
+func inputError(err error) error {
 	if errors.Is(err, io.EOF) {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Input cancelled.")
-		os.Exit(0)
+		return errInputCancelled
 	}
-	color.Red("Error reading input: %v", err)
-	os.Exit(1)
+	return fmt.Errorf("reading input: %w", err)
 }
 
-func mustPromptChoice(reader *bufio.Reader, prompt string, validChoices []string) string {
+func mustPromptChoice(reader *bufio.Reader, prompt string, validChoices []string) (string, error) {
 	choice, err := promptChoice(reader, prompt, validChoices)
 	if err != nil {
-		handleInputError(err)
+		return "", inputError(err)
 	}
-	return choice
+	return choice, nil
 }
 
-func mustPromptYesNo(reader *bufio.Reader, prompt string) bool {
+func mustPromptYesNo(reader *bufio.Reader, prompt string) (bool, error) {
 	value, err := promptYesNo(reader, prompt)
 	if err != nil {
-		handleInputError(err)
+		return false, inputError(err)
 	}
-	return value
+	return value, nil
 }
 
-func mustPromptInt(reader *bufio.Reader, prompt string, minValue, maxValue int) int {
+func mustPromptInt(reader *bufio.Reader, prompt string, minValue, maxValue int) (int, error) {
 	value, err := promptInt(reader, prompt, minValue, maxValue)
 	if err != nil {
-		handleInputError(err)
+		return 0, inputError(err)
 	}
-	return value
+	return value, nil
 }

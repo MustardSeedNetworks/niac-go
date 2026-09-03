@@ -60,8 +60,8 @@ Exit codes:
     echo "NIAC is not running"
   fi`,
 		Args: cobra.NoArgs,
-		Run: func(cmd *cobra.Command, _ []string) {
-			runStatus(cmd.Context(), options)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runStatus(cmd.Context(), options)
 		},
 	}
 
@@ -89,11 +89,21 @@ type statusResult struct {
 	err      error
 }
 
-func runStatus(ctx context.Context, options *statusOptions) {
+// errStatusReported marks a status result that has already been printed.
+var errStatusReported = errors.New("simulation is not running")
+
+func runStatus(ctx context.Context, options *statusOptions) error {
 	result := checkStatus(ctx, options)
 
 	outputResult(result, options.jsonOutput)
-	os.Exit(result.exitCode)
+
+	if result.exitCode == exitCodeSuccess {
+		return nil
+	}
+
+	// outputResult has already reported the detail; the error exists to carry
+	// the exit code, and cobra's usage text would be noise on top of it.
+	return withExitCode(result.exitCode, errStatusReported)
 }
 
 // checkStatus asks the daemon what it is running.

@@ -39,8 +39,8 @@ The generator will ask you for:
 
   # Validate and run
   niac config generate network.yaml && niac validate network.yaml`,
-		Run: func(_ *cobra.Command, args []string) {
-			runGenerate(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runGenerate(args)
 		},
 	}
 
@@ -88,18 +88,36 @@ func deviceTypeOptions() []deviceTypeOption {
 	}
 }
 
-func runGenerate(args []string) {
+func runGenerate(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
 	printGeneratorHeader()
 
-	cfg := collectNetworkInfo(reader)
-	devices := collectDevices(reader, cfg)
+	cfg, err := collectNetworkInfo(reader)
+	if err != nil {
+		return stopIfCancelled(err)
+	}
+
+	devices, err := collectDevices(reader, cfg)
+	if err != nil {
+		return stopIfCancelled(err)
+	}
 	cfg.devices = devices
 
-	outputFile := chooseOutputFile(args, reader)
-	writeConfiguration(outputFile, cfg)
+	outputFile, err := chooseOutputFile(args, reader)
+	if err != nil {
+		if errors.Is(err, errGenerateAborted) {
+			return nil
+		}
+		return stopIfCancelled(err)
+	}
+
+	if writeErr := writeConfiguration(outputFile, cfg); writeErr != nil {
+		return writeErr
+	}
 
 	printSummary(outputFile, cfg)
+
+	return nil
 }
 
 func printGeneratorHeader() {
@@ -114,29 +132,45 @@ func printGeneratorHeader() {
 	color.Yellow("configuration file for your network simulation.\n\n")
 }
 
-func collectNetworkInfo(reader *bufio.Reader) *generatedConfig {
+func collectNetworkInfo(reader *bufio.Reader) (*generatedConfig, error) {
 	_, _ = color.New(color.Bold, color.FgCyan).Println("Step 1: Network Information")
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	cfg := new(generatedConfig)
 	cfg.devices = make([]generatedDevice, 0)
-	cfg.networkName = promptString(reader, color.CyanString("Network name: "), "simulation-network")
-	cfg.subnet = promptString(
+
+	var err error
+	cfg.networkName, err = promptString(reader, color.CyanString("Network name: "), "simulation-network")
+	if err != nil {
+		return nil, err
+	}
+	cfg.subnet, err = promptString(
 		reader,
 		color.CyanString("Network subnet (CIDR, e.g., 192.168.1.0/24): "),
 		"192.168.1.0/24",
 	)
-	cfg.includePath = promptString(reader, color.CyanString("Path for SNMP walk files (leave empty for none): "), "")
+	if err != nil {
+		return nil, err
+	}
+	cfg.includePath, err = promptString(
+		reader, color.CyanString("Path for SNMP walk files (leave empty for none): "), "",
+	)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Fprintln(os.Stdout)
 
-	return cfg
+	return cfg, nil
 }
 
-func collectDevices(reader *bufio.Reader, cfg *generatedConfig) []generatedDevice {
+func collectDevices(reader *bufio.Reader, cfg *generatedConfig) ([]generatedDevice, error) {
 	_, _ = color.New(color.Bold, color.FgCyan).Println("Step 2: Device Configuration")
 	color.White("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
-	deviceCount := mustPromptInt(reader, "How many devices to create (1-20): ", 1, maxDeviceCount)
+	deviceCount, err := mustPromptInt(reader, "How many devices to create (1-20): ", 1, maxDeviceCount)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Fprintln(os.Stdout)
 
 	devices := make([]generatedDevice, 0, deviceCount)
@@ -148,19 +182,34 @@ func collectDevices(reader *bufio.Reader, cfg *generatedConfig) []generatedDevic
 			protocols: make(map[string]protocolConfig),
 		}
 
-		device.devType = promptDeviceType(reader)
-		device.name = promptDeviceName(reader, device.devType, i+1)
-		device.ip = promptDeviceIP(reader, cfg.subnet, i+1)
-		device.mac = promptDeviceMAC(reader, i+1)
+		device.devType, err = promptDeviceType(reader)
+		if err != nil {
+			return nil, err
+		}
+		device.name, err = promptDeviceName(reader, device.devType, i+1)
+		if err != nil {
+			return nil, err
+		}
+		device.ip, err = promptDeviceIP(reader, cfg.subnet, i+1)
+		if err != nil {
+			return nil, err
+		}
+		device.mac, err = promptDeviceMAC(reader, i+1)
+		if err != nil {
+			return nil, err
+		}
 
 		color.Cyan("Select protocols to enable for %s:\n", device.name)
-		device.protocols = selectProtocols(reader, device.devType)
+		device.protocols, err = selectProtocols(reader, device.devType)
+		if err != nil {
+			return nil, err
+		}
 
 		devices = append(devices, device)
 		fmt.Fprintln(os.Stdout)
 	}
 
-	return devices
+	return devices, nil
 }
 
 func mapDeviceType(choice string) string {
@@ -209,13 +258,34 @@ func generateDefaultMAC(deviceNum int) string {
 	return fmt.Sprintf("02:00:00:00:00:%02x", deviceNum)
 }
 
-func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolConfig {
+func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolConfig, error) {
 	protocols := make(map[string]protocolConfig)
 
-	// Discovery protocols
+	sections := []func(*bufio.Reader, string, map[string]protocolConfig) error{
+		selectDiscoveryProtocols,
+		selectManagementProtocols,
+		selectNetworkServices,
+		selectApplicationProtocols,
+	}
+
+	for _, section := range sections {
+		if err := section(reader, devType, protocols); err != nil {
+			return nil, err
+		}
+	}
+
+	return protocols, nil
+}
+
+// selectDiscoveryProtocols prompts for LLDP/CDP.
+func selectDiscoveryProtocols(reader *bufio.Reader, _ string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Discovery Protocols:")
-	if mustPromptYesNo(reader, "  Enable LLDP? (y/n): ") {
+	lldp, err := mustPromptYesNo(reader, "  Enable LLDP? (y/n): ")
+	if err != nil {
+		return err
+	}
+	if lldp {
 		protocols["lldp"] = protocolConfig{
 			enabled: true,
 			params: map[string]string{
@@ -224,7 +294,11 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 			},
 		}
 	}
-	if mustPromptYesNo(reader, "  Enable CDP? (y/n): ") {
+	cdp, err := mustPromptYesNo(reader, "  Enable CDP? (y/n): ")
+	if err != nil {
+		return err
+	}
+	if cdp {
 		protocols["cdp"] = protocolConfig{
 			enabled: true,
 			params: map[string]string{
@@ -234,12 +308,26 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 		}
 	}
 
-	// Management protocols
+	return nil
+}
+
+// selectManagementProtocols prompts for SNMP.
+func selectManagementProtocols(reader *bufio.Reader, _ string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Management Protocols:")
-	if mustPromptYesNo(reader, "  Enable SNMP? (y/n): ") {
-		community := promptString(reader, "    SNMP community [public]: ", "public")
-		walkFile := promptString(reader, "    Walk file (leave empty for none): ", "")
+	snmp, err := mustPromptYesNo(reader, "  Enable SNMP? (y/n): ")
+	if err != nil {
+		return err
+	}
+	if snmp {
+		community, promptErr := promptString(reader, "    SNMP community [public]: ", "public")
+		if promptErr != nil {
+			return promptErr
+		}
+		walkFile, walkErr := promptString(reader, "    Walk file (leave empty for none): ", "")
+		if walkErr != nil {
+			return walkErr
+		}
 		protocols["snmp"] = protocolConfig{
 			enabled: true,
 			params: map[string]string{
@@ -249,11 +337,19 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 		}
 	}
 
-	// Network services
+	return nil
+}
+
+// selectNetworkServices prompts for DHCP/DNS on routers and servers.
+func selectNetworkServices(reader *bufio.Reader, devType string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Network Services:")
 	if devType == "router" || devType == "server" {
-		if mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ") {
+		dhcp, promptErr := mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ")
+		if promptErr != nil {
+			return promptErr
+		}
+		if dhcp {
 			protocols["dhcp"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -262,7 +358,11 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 				},
 			}
 		}
-		if mustPromptYesNo(reader, "  Enable DNS server? (y/n): ") {
+		dns, err := mustPromptYesNo(reader, "  Enable DNS server? (y/n): ")
+		if err != nil {
+			return err
+		}
+		if dns {
 			protocols["dns"] = protocolConfig{
 				enabled: true,
 				params:  make(map[string]string),
@@ -270,11 +370,19 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 		}
 	}
 
-	// Application protocols
+	return nil
+}
+
+// selectApplicationProtocols prompts for HTTP/FTP on servers and workstations.
+func selectApplicationProtocols(reader *bufio.Reader, devType string, protocols map[string]protocolConfig) error {
 	if devType == "server" || devType == "workstation" {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Application Protocols:")
-		if mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ") {
+		httpEnabled, promptErr := mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ")
+		if promptErr != nil {
+			return promptErr
+		}
+		if httpEnabled {
 			protocols["http"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -282,7 +390,11 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 				},
 			}
 		}
-		if mustPromptYesNo(reader, "  Enable FTP server? (y/n): ") {
+		ftpEnabled, err := mustPromptYesNo(reader, "  Enable FTP server? (y/n): ")
+		if err != nil {
+			return err
+		}
+		if ftpEnabled {
 			protocols["ftp"] = protocolConfig{
 				enabled: true,
 				params: map[string]string{
@@ -292,7 +404,7 @@ func selectProtocols(reader *bufio.Reader, devType string) map[string]protocolCo
 		}
 	}
 
-	return protocols
+	return nil
 }
 
 func generateYAML(cfg *generatedConfig) string {
@@ -424,7 +536,11 @@ func countEnabledProtocols(protocols map[string]protocolConfig) int {
 	return count
 }
 
-func chooseOutputFile(args []string, reader *bufio.Reader) string {
+// errGenerateAborted marks the operator declining to overwrite an existing
+// file, so runGenerate can stop cleanly instead of treating it as a failure.
+var errGenerateAborted = errors.New("generation aborted")
+
+func chooseOutputFile(args []string, reader *bufio.Reader) (string, error) {
 	var output string
 
 	if len(args) > 0 {
@@ -432,43 +548,51 @@ func chooseOutputFile(args []string, reader *bufio.Reader) string {
 	} else {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Step 3: Save Configuration")
-		output = promptString(
+
+		var err error
+		output, err = promptString(
 			reader,
 			fmt.Sprintf("  Output filename [%s]: ", defaultGenerateOutputFile),
 			defaultGenerateOutputFile,
 		)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	cleaned, pathErr := validateCLIPath(output)
 	if pathErr != nil {
-		color.Red("Invalid output path: %v", pathErr)
-		os.Exit(1)
+		return "", fmt.Errorf("invalid output path: %w", pathErr)
 	}
 	output = cleaned
 
-	if _, err := statSafeFile(output); err == nil {
+	if _, statErr := statSafeFile(output); statErr == nil {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Warning: %s already exists!", output)
-		if !mustPromptYesNo(reader, "Overwrite? (y/n): ") {
+		overwrite, err := mustPromptYesNo(reader, "Overwrite? (y/n): ")
+		if err != nil {
+			return "", err
+		}
+		if !overwrite {
 			color.Red("Aborted.")
-			os.Exit(0)
+			return "", errGenerateAborted
 		}
 	}
 
-	return output
+	return output, nil
 }
 
-func writeConfiguration(outputFile string, cfg *generatedConfig) {
+func writeConfiguration(outputFile string, cfg *generatedConfig) error {
 	if err := validateFilePath(outputFile, true); err != nil {
-		color.Red("Invalid output path: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid output path: %w", err)
 	}
 
 	yaml := generateYAML(cfg)
 	if err := writeSafeFile(outputFile, []byte(yaml)); err != nil {
-		color.Red("Failed to write configuration: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("writing configuration: %w", err)
 	}
+
+	return nil
 }
 
 func printSummary(outputFile string, cfg *generatedConfig) {
@@ -501,7 +625,7 @@ func printSummary(outputFile string, cfg *generatedConfig) {
 	)
 }
 
-func promptDeviceType(reader *bufio.Reader) string {
+func promptDeviceType(reader *bufio.Reader) (string, error) {
 	fmt.Fprintln(os.Stdout, "    Select a device type:")
 	options := deviceTypeOptions()
 	for _, option := range options {
@@ -513,58 +637,64 @@ func promptDeviceType(reader *bufio.Reader) string {
 		keys[i] = option.key
 	}
 
-	choice := mustPromptChoice(reader, "    Choice (1-6): ", keys)
+	choice, err := mustPromptChoice(reader, "    Choice (1-6): ", keys)
+	if err != nil {
+		return "", err
+	}
 	if devType := mapDeviceType(choice); devType != "" {
-		return devType
+		return devType, nil
 	}
 
 	color.Red("Invalid device type selected")
 	return promptDeviceType(reader)
 }
 
-func promptDeviceName(reader *bufio.Reader, devType string, deviceNum int) string {
+func promptDeviceName(reader *bufio.Reader, devType string, deviceNum int) (string, error) {
 	defaultName := fmt.Sprintf("%s-%d", devType, deviceNum)
 	return promptString(reader, fmt.Sprintf("    Name [%s]: ", defaultName), defaultName)
 }
 
-func promptDeviceIP(reader *bufio.Reader, subnet string, deviceNum int) string {
+func promptDeviceIP(reader *bufio.Reader, subnet string, deviceNum int) (string, error) {
 	defaultIP := generateDefaultIP(subnet, deviceNum)
 	for {
-		ip := promptString(reader, fmt.Sprintf("    IP [%s]: ", defaultIP), defaultIP)
+		ip, err := promptString(reader, fmt.Sprintf("    IP [%s]: ", defaultIP), defaultIP)
+		if err != nil {
+			return "", err
+		}
 		if net.ParseIP(ip) != nil {
-			return ip
+			return ip, nil
 		}
 		color.Red("Please enter a valid IP address")
 	}
 }
 
-func promptDeviceMAC(reader *bufio.Reader, deviceNum int) string {
+func promptDeviceMAC(reader *bufio.Reader, deviceNum int) (string, error) {
 	defaultMAC := generateDefaultMAC(deviceNum)
 	for {
-		mac := promptString(reader, fmt.Sprintf("    MAC [%s]: ", defaultMAC), defaultMAC)
-		if _, err := net.ParseMAC(mac); err == nil {
-			return mac
+		mac, err := promptString(reader, fmt.Sprintf("    MAC [%s]: ", defaultMAC), defaultMAC)
+		if err != nil {
+			return "", err
+		}
+		if _, macErr := net.ParseMAC(mac); macErr == nil {
+			return mac, nil
 		}
 		color.Red("Please enter a valid MAC address")
 	}
 }
 
-func promptString(reader *bufio.Reader, prompt string, defaultValue string) string {
-	for {
-		fmt.Fprint(os.Stdout, prompt)
-		input, err := readLine(reader)
-		if err != nil {
-			if errors.Is(err, io.EOF) && defaultValue != "" {
-				return defaultValue
-			}
-			handleInputError(err)
-			continue
+func promptString(reader *bufio.Reader, prompt string, defaultValue string) (string, error) {
+	fmt.Fprint(os.Stdout, prompt)
+	input, err := readLine(reader)
+	if err != nil {
+		if errors.Is(err, io.EOF) && defaultValue != "" {
+			return defaultValue, nil
 		}
-		if input == "" {
-			return defaultValue
-		}
-		return input
+		return "", inputError(err)
 	}
+	if input == "" {
+		return defaultValue, nil
+	}
+	return input, nil
 }
 
 // promptInt and promptChoice are already defined in init.go

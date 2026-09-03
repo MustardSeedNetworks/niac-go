@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,13 +69,27 @@ func TestConfigExportCommand(t *testing.T) {
 	}
 }
 
-// TestConfigExportOverwriteProtection tests that export doesn't overwrite existing files via [os.Exit]
-// Note: This test cannot fully verify [os.Exit(1)] behavior in unit tests
-// It verifies the check exists by ensuring file is not modified.
+// Export must refuse to clobber an existing file. Asserting the exit code alone
+// would pass even if the file had already been truncated, so the original
+// contents are checked too.
 func TestConfigExportOverwriteProtection(t *testing.T) {
-	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
-	// The actual protection logic exists in runConfigExport lines 103-106
-	// Manual/integration testing confirms this works correctly
+	dir := t.TempDir()
+	input := writeFile(t, dir, "in.yaml", minimalConfig)
+	output := writeFile(t, dir, "out.json", "original contents")
+
+	err := runConfigExport([]string{input, output})
+	if !errors.Is(err, errOutputExists) {
+		t.Fatalf("runConfigExport over an existing file = %v, want errOutputExists", err)
+	}
+
+	contents, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("reading %s: %v", output, err)
+	}
+
+	if string(contents) != "original contents" {
+		t.Errorf("output file was modified: %q", contents)
+	}
 }
 
 // TestConfigDiffCommand tests the config diff command.
@@ -235,26 +250,46 @@ func TestConfigMergeCommand(t *testing.T) {
 	// (switch-1 keeps its original MAC which also ends in a different value)
 }
 
-// TestConfigMergeOverwriteProtection tests merge doesn't overwrite existing files via [os.Exit]
-// Note: Cannot fully test [os.Exit(1)] in unit tests.
+// Merge shares checkOutputNotExists with export; it gets its own test because
+// it reaches that guard by a different path and takes three arguments.
 func TestConfigMergeOverwriteProtection(t *testing.T) {
-	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
-	// The actual protection logic exists in runConfigMerge lines 214-217
-	// Manual/integration testing confirms this works correctly
+	dir := t.TempDir()
+	base := writeFile(t, dir, "base.yaml", minimalConfig)
+	overlay := writeFile(t, dir, "overlay.yaml", minimalConfig)
+	output := writeFile(t, dir, "merged.yaml", "original contents")
+
+	err := runConfigMerge([]string{base, overlay, output})
+	if !errors.Is(err, errOutputExists) {
+		t.Fatalf("runConfigMerge over an existing file = %v, want errOutputExists", err)
+	}
+
+	contents, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("reading %s: %v", output, err)
+	}
+
+	if string(contents) != "original contents" {
+		t.Errorf("output file was modified: %q", contents)
+	}
 }
 
-// TestConfigInvalidInput tests error handling for invalid input files that call [os.Exit]
-// Note: Cannot fully test [os.Exit(1)] in unit tests.
+// Malformed YAML must fail loudly rather than exporting an empty config.
 func TestConfigInvalidInput(t *testing.T) {
-	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
-	// The actual error handling exists in config.Load() calls throughout config.go
-	// Manual/integration testing confirms this works correctly
+	dir := t.TempDir()
+	input := writeFile(t, dir, "broken.yaml", "devices: [this is not: valid yaml\n")
+
+	if err := runConfigExport([]string{input, filepath.Join(dir, "out.json")}); err == nil {
+		t.Fatal("runConfigExport on malformed YAML = nil, want a load error")
+	}
 }
 
-// TestConfigMissingFiles tests error handling for missing files that call [os.Exit]
-// Note: Cannot fully test [os.Exit(1)] in unit tests.
+// A path that does not exist is the commonest operator typo, and it must exit
+// rather than proceed with a zero-value config.
 func TestConfigMissingFiles(t *testing.T) {
-	t.Skip("Skipping test that requires os.Exit() - cannot be unit tested")
-	// The actual error handling exists in config.Load() calls which use [os.Exit(1)]
-	// Manual/integration testing confirms this works correctly
+	dir := t.TempDir()
+
+	err := runConfigExport([]string{filepath.Join(dir, "absent.yaml"), filepath.Join(dir, "out.json")})
+	if err == nil {
+		t.Fatal("runConfigExport on a missing input = nil, want a load error")
+	}
 }

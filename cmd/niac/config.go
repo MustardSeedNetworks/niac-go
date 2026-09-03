@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -52,8 +53,8 @@ This command:
   # Validate and normalize
   niac config export messy.yaml clean.yaml`,
 		Args: cobra.ExactArgs(argsCountTwo),
-		Run: func(_ *cobra.Command, args []string) {
-			runConfigExport(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runConfigExport(args)
 		},
 	}
 }
@@ -78,8 +79,8 @@ Compares:
   # Compare before/after changes
   niac config diff config.yaml config.new.yaml`,
 		Args: cobra.ExactArgs(argsCountTwo),
-		Run: func(_ *cobra.Command, args []string) {
-			runConfigDiff(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runConfigDiff(args)
 		},
 	}
 }
@@ -103,31 +104,31 @@ The overlay file takes precedence:
   # Combine device configs
   niac config merge routers.yaml switches.yaml network.yaml`,
 		Args: cobra.ExactArgs(argsCountThree),
-		Run: func(_ *cobra.Command, args []string) {
-			runConfigMerge(args)
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runConfigMerge(args)
 		},
 	}
 }
 
-func runConfigExport(args []string) {
+// errOutputExists marks a refusal to overwrite an operator's file, so a test
+// can assert the reason rather than merely that something failed.
+var errOutputExists = errors.New("output file already exists")
+
+func runConfigExport(args []string) error {
 	inputFile := args[0]
+
 	outputFile, pathErr := validateCLIPath(args[1])
 	if pathErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
-		os.Exit(1)
+		return fmt.Errorf("invalid output path: %w", pathErr)
 	}
 
-	// Check if output exists
-	if _, err := statSafeFile(outputFile); err == nil {
-		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", outputFile)
-		os.Exit(1)
+	if err := checkOutputNotExists(outputFile); err != nil {
+		return err
 	}
 
-	// Load configuration
 	cfg, err := config.Load(inputFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("loading configuration: %w", err)
 	}
 
 	// Validate
@@ -139,46 +140,44 @@ func runConfigExport(args []string) {
 		fmt.Fprintln(os.Stderr, "\nExporting anyway...")
 	}
 
-	// Marshal to YAML
-	data, err := config.MarshalConfigYAML(cfg)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Write to file
-	if writeErr := writeSafeFile(outputFile, data); writeErr != nil {
-		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", writeErr)
-		os.Exit(1)
+	if writeErr := writeConfigFile(cfg, outputFile); writeErr != nil {
+		return writeErr
 	}
 
 	fmt.Fprintf(os.Stdout, "Configuration exported to %s\n", outputFile)
 	fmt.Fprintf(os.Stdout, "Devices: %d\n", cfg.DeviceCount())
+
+	return nil
 }
 
-func runConfigDiff(args []string) {
-	cfg1, cfg2 := loadConfigPair(args[0], args[1])
+func runConfigDiff(args []string) error {
+	cfg1, cfg2, err := loadConfigPair(args[0], args[1])
+	if err != nil {
+		return err
+	}
+
 	devices1 := buildDeviceMap(cfg1)
 	devices2 := buildDeviceMap(cfg2)
-	hasChanges := compareDeviceMaps(devices1, devices2)
 
-	if !hasChanges {
+	if !compareDeviceMaps(devices1, devices2) {
 		fmt.Fprintln(os.Stdout, "No differences found")
 	}
+
+	return nil
 }
 
-func loadConfigPair(file1, file2 string) (*config.Config, *config.Config) {
+func loadConfigPair(file1, file2 string) (*config.Config, *config.Config, error) {
 	cfg1, err := config.Load(file1)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file1, err)
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("loading %s: %w", file1, err)
 	}
+
 	cfg2, err := config.Load(file2)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", file2, err)
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("loading %s: %w", file2, err)
 	}
-	return cfg1, cfg2
+
+	return cfg1, cfg2, nil
 }
 
 func buildDeviceMap(cfg *config.Config) map[string]*config.Device {
@@ -220,37 +219,56 @@ func compareDeviceMaps(devices1, devices2 map[string]*config.Device) bool {
 	return hasChanges
 }
 
-func runConfigMerge(args []string) {
+func runConfigMerge(args []string) error {
 	baseFile, overlayFile := args[0], args[1]
+
 	outputFile, pathErr := validateCLIPath(args[2])
 	if pathErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: invalid output path: %v\n", pathErr)
-		os.Exit(1)
+		return fmt.Errorf("invalid output path: %w", pathErr)
 	}
-	checkOutputNotExists(outputFile)
 
-	base := loadConfigOrExit(baseFile, "base")
-	overlay := loadConfigOrExit(overlayFile, "overlay")
+	if err := checkOutputNotExists(outputFile); err != nil {
+		return err
+	}
+
+	base, err := loadLabelledConfig(baseFile, "base")
+	if err != nil {
+		return err
+	}
+
+	overlay, err := loadLabelledConfig(overlayFile, "overlay")
+	if err != nil {
+		return err
+	}
+
 	merged := mergeConfigs(base, overlay)
-
-	writeConfigOrExit(merged, outputFile)
-	printMergeStats(base, overlay, merged, outputFile)
-}
-
-func checkOutputNotExists(path string) {
-	if _, err := statSafeFile(path); err == nil {
-		fmt.Fprintf(os.Stderr, "Error: output file already exists: %s\n", path)
-		os.Exit(1)
+	if writeErr := writeConfigFile(merged, outputFile); writeErr != nil {
+		return writeErr
 	}
+
+	printMergeStats(base, overlay, merged, outputFile)
+
+	return nil
 }
 
-func loadConfigOrExit(path, label string) *config.Config {
+// checkOutputNotExists refuses to clobber an existing file. Both export and
+// merge write to an operator-named path, and silently overwriting one is the
+// kind of loss a CLI should never cause.
+func checkOutputNotExists(path string) error {
+	if _, err := statSafeFile(path); err == nil {
+		return fmt.Errorf("%w: %s", errOutputExists, path)
+	}
+
+	return nil
+}
+
+func loadLabelledConfig(path, label string) (*config.Config, error) {
 	cfg, err := config.Load(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading %s: %v\n", label, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("loading %s: %w", label, err)
 	}
-	return cfg
+
+	return cfg, nil
 }
 
 func mergeConfigs(base, overlay *config.Config) *config.Config {
@@ -271,17 +289,17 @@ func mergeConfigs(base, overlay *config.Config) *config.Config {
 	return merged
 }
 
-func writeConfigOrExit(cfg *config.Config, path string) {
+func writeConfigFile(cfg *config.Config, path string) error {
 	data, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error marshaling configuration: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("marshaling configuration: %w", err)
 	}
-	err = writeSafeFile(path, data)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
-		os.Exit(1)
+
+	if writeErr := writeSafeFile(path, data); writeErr != nil {
+		return fmt.Errorf("writing file: %w", writeErr)
 	}
+
+	return nil
 }
 
 func printMergeStats(base, overlay, merged *config.Config, output string) {
