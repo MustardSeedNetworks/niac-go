@@ -1,88 +1,97 @@
 /**
- * forms.test.ts — pins the DeviceFormSchema validation the device editor
- * relies on (#730). These cases lock the format rules that mirror the Go
- * `validate:"mac"` / `validate:"ip"` tags and guarantee the schema ignores
- * the many other device sections so it can be run against a whole Device.
+ * forms.test.ts — pins the identity validation the device editor relies on.
+ *
+ * The editor's model is the authored YAML document, so these are the daemon's
+ * own key names, and the rules mirror the Go side: `validate:"mac"`,
+ * `validate:"ip"`, and ErrDeviceMACSourceConflict for the mac-XOR-vendor
+ * choice. The schema ignores every other authored block so it can be run
+ * against a whole device.
  */
 
 import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
-import { DeviceFormSchema, ErrorInjectionSchema } from './forms';
+import { AuthoredDeviceSchema, ErrorInjectionSchema } from './forms';
 
 /** First validation message for a given top-level field, or undefined. */
 function errorFor(input: unknown, field: string): string | undefined {
-  const result = v.safeParse(DeviceFormSchema, input);
+  const result = v.safeParse(AuthoredDeviceSchema, input);
   if (result.success) return undefined;
   const issue = result.issues.find((i) => i.path?.[0]?.key === field);
   return issue?.message;
 }
 
-describe('DeviceFormSchema', () => {
-  it('accepts a valid device (hostname + MAC + IPv4)', () => {
-    const result = v.safeParse(DeviceFormSchema, {
-      hostname: 'core-switch-01',
+describe('AuthoredDeviceSchema', () => {
+  it('accepts a device identified by MAC', () => {
+    const result = v.safeParse(AuthoredDeviceSchema, {
+      name: 'core-switch-01',
       mac: '00:1A:2B:3C:4D:5E',
-      ip: '10.0.0.1',
+      ips: ['10.0.0.1'],
     });
     expect(result.success).toBe(true);
   });
 
-  it('treats an empty primary IP as valid (no management IP)', () => {
+  it('accepts a device identified by vendor', () => {
+    const result = v.safeParse(AuthoredDeviceSchema, { name: 'sw1', vendor: 'cisco' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts IPv6 addresses, which the clinic scenario authors', () => {
     expect(
-      v.safeParse(DeviceFormSchema, { hostname: 'sw1', mac: '00:1A:2B:3C:4D:5E', ip: '' }).success,
+      v.safeParse(AuthoredDeviceSchema, {
+        name: 'sw1',
+        mac: '00:1A:2B:3C:4D:5E',
+        ips: ['2001:db8::7'],
+      }).success,
     ).toBe(true);
   });
 
-  it('treats an omitted primary IP as valid', () => {
-    expect(
-      v.safeParse(DeviceFormSchema, { hostname: 'sw1', mac: '00:1A:2B:3C:4D:5E' }).success,
-    ).toBe(true);
-  });
-
-  it('ignores the other device sections (runs against a whole Device)', () => {
-    const result = v.safeParse(DeviceFormSchema, {
-      hostname: 'sw1',
+  it('ignores the other authored blocks (runs against a whole device)', () => {
+    const result = v.safeParse(AuthoredDeviceSchema, {
+      name: 'sw1',
       mac: '00:1A:2B:3C:4D:5E',
       type: 'switch',
-      ips: ['10.0.0.2'],
-      snmpAgent: { community: 'public' },
-      interfaceDetails: [{ name: 'Gi0/1' }],
+      snmp_agent: { community: 'public' },
+      interfaces: [{ name: 'Gi0/1' }],
     });
     expect(result.success).toBe(true);
   });
 
   it('accepts hyphen-separated MAC addresses', () => {
     expect(
-      v.safeParse(DeviceFormSchema, { hostname: 'sw1', mac: '00-1A-2B-3C-4D-5E' }).success,
+      v.safeParse(AuthoredDeviceSchema, { name: 'sw1', mac: '00-1A-2B-3C-4D-5E' }).success,
     ).toBe(true);
   });
 
-  it('requires a hostname', () => {
-    expect(errorFor({ hostname: '', mac: '00:1A:2B:3C:4D:5E' }, 'hostname')).toBe(
-      'Hostname is required',
-    );
+  it('requires a name', () => {
+    expect(errorFor({ name: '', mac: '00:1A:2B:3C:4D:5E' }, 'name')).toBe('Name is required');
   });
 
-  it('rejects a hostname that does not start with a letter', () => {
-    expect(errorFor({ hostname: '1router', mac: '00:1A:2B:3C:4D:5E' }, 'hostname')).toMatch(
+  it('rejects a name that does not start with a letter', () => {
+    expect(errorFor({ name: '1router', mac: '00:1A:2B:3C:4D:5E' }, 'name')).toMatch(
       /must start with a letter/i,
     );
   });
 
-  it('requires a MAC address', () => {
-    expect(errorFor({ hostname: 'sw1', mac: '' }, 'mac')).toBe('MAC address is required');
-  });
-
   it('rejects a malformed MAC address', () => {
-    expect(errorFor({ hostname: 'sw1', mac: 'ZZ:ZZ:ZZ:ZZ:ZZ:ZZ' }, 'mac')).toMatch(
-      /six hex octets/i,
+    expect(errorFor({ name: 'sw1', mac: 'ZZ:ZZ:ZZ:ZZ:ZZ:ZZ' }, 'mac')).toMatch(/six hex octets/i);
+  });
+
+  it('rejects a malformed address', () => {
+    expect(errorFor({ name: 'sw1', mac: '00:1A:2B:3C:4D:5E', ips: ['999.1.1.1'] }, 'ips')).toMatch(
+      /valid IP address/i,
     );
   });
 
-  it('rejects a malformed primary IP', () => {
-    expect(errorFor({ hostname: 'sw1', mac: '00:1A:2B:3C:4D:5E', ip: '999.1.1.1' }, 'ip')).toMatch(
-      /valid IPv4/i,
+  // The daemon rejects both and neither; the issue is forwarded to `mac` so an
+  // input can display it. A bare check would carry no path and show nowhere.
+  it('rejects a device carrying both a MAC and a vendor', () => {
+    expect(errorFor({ name: 'sw1', mac: '00:1A:2B:3C:4D:5E', vendor: 'cisco' }, 'mac')).toMatch(
+      /not both and not neither/i,
     );
+  });
+
+  it('rejects a device carrying neither', () => {
+    expect(errorFor({ name: 'sw1' }, 'mac')).toMatch(/not both and not neither/i);
   });
 });
 

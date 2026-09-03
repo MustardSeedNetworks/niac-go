@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type FieldErrors, type Path, type PathValue, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import * as v from 'valibot';
@@ -11,34 +10,45 @@ import {
   updateDevice,
 } from '../../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../../api/library-client';
-import type { Device } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
-import { DeviceFormSchema } from '../../schemas/forms';
+import { AuthoredDeviceSchema } from '../../schemas/forms';
+import { parseAuthoredDevice, serializeAuthoredDevice } from '../../utils/authored-device-yaml';
 import { getErrorMessage } from '../../utils/format';
 import type { StatusMessage } from './DeviceEditorHeader';
+import type { AuthoredDevice, AuthoredValue } from './generated/authored-device.generated';
+import { DEVICE_SECTIONS } from './generated/sections.generated';
 import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
 /**
- * Create an empty device with default values
+ * The identity fields the editor validates inline, and the only ones that can
+ * carry a field error.
  */
-export const createEmptyDevice = (): Device => ({
-  hostname: '',
-  mac: '',
-  type: 'switch',
-  ip: '',
-  ips: [],
-  interfaceDetails: [],
-});
+export type IdentityField = 'name' | 'mac' | 'vendor' | 'ips';
+
+export type DeviceFieldErrors = Partial<Record<IdentityField, string>>;
+
+/** A new device starts as the smallest document the daemon will load. */
+export const createEmptyDevice = (): AuthoredDevice => ({ type: 'switch' });
+
+/**
+ * The per-type schema names sections by the keys the hand-built editor used.
+ * The generated manifest names them after the daemon's own YAML keys, which
+ * differ in one place.
+ */
+const RELEVANCE_ALIASES: Record<string, string> = { snmp: 'snmp_agent' };
 
 export interface UseDeviceEditorReturn {
   // URL params
   hostname: string | undefined;
   isNewDevice: boolean;
 
-  // Device state
-  device: Device;
-  originalDevice: Device | null;
+  // Device state — the authored YAML document itself, so what the editor
+  // holds is what the daemon loads (P1b-2).
+  device: AuthoredDevice;
+  originalDevice: AuthoredDevice | null;
   isDirty: boolean;
+  /** The document as it would be POSTed; also what the preview pane shows. */
+  yaml: string;
 
   // Loading state
   loading: boolean;
@@ -48,21 +58,19 @@ export interface UseDeviceEditorReturn {
   // Walk files for SNMP
   walkFiles: LibraryFileEntry[] | null;
 
-  // Per-type visibility schema (#546 part 1). The editor uses this to
-  // hide sections that don't apply to the currently picked
-  // device.type — a switch shouldn't see DNS, a host shouldn't see
-  // STP, etc. Always falls back to "show everything" on fetch error
-  // so a network blip never breaks the form.
-  visibleSections: Set<string>;
+  /**
+   * Generated sections in render order: the ones the daemon calls relevant to
+   * this device type first, then the rest. Order only — every section renders,
+   * because a hidden section is a field the author cannot reach while the
+   * parity gate reports it bound.
+   */
+  sections: typeof DEVICE_SECTIONS;
 
   // UI state
   saving: boolean;
   deleting: boolean;
   message: StatusMessage | null;
-  // Inline, per-field validation errors surfaced next to the offending
-  // input (hostname / mac / ip). Populated on a failed save from the
-  // valibot DeviceFormSchema; cleared as the user edits the field.
-  fieldErrors: FieldErrors<Device>;
+  fieldErrors: DeviceFieldErrors;
   expandedSections: Set<string>;
   showYamlPreview: boolean;
   showDeleteConfirm: boolean;
@@ -73,7 +81,8 @@ export interface UseDeviceEditorReturn {
   setShowDeleteConfirm: (show: boolean) => void;
   setMessage: (message: StatusMessage | null) => void;
   toggleSection: (section: string) => void;
-  updateField: <K extends keyof Device>(field: K, value: Device[K]) => void;
+  /** Replace one top-level key of the authored document. */
+  updateField: (key: keyof AuthoredDevice, value: AuthoredValue) => void;
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
   handleDiscard: () => void;
@@ -96,77 +105,69 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const location = useLocation();
   const isNewDevice = hostname === 'new' || location.pathname === '/device-config/new';
 
-  // react-hook-form owns the device values. Inputs use the custom
-  // `updateField` setter (not `register`), so the form runs headless:
-  // `watch()` exposes current values, `safeParse` validates on save, and
-  // `setError` drives the inline field errors. Keeping this contract means
-  // the ~14 section components stay unchanged.
-  const form = useForm<Device>({ defaultValues: createEmptyDevice() });
-  const { setValue, getValues, watch, reset, setError, clearErrors, formState } = form;
-  const device = watch();
-
-  // State
-  const [originalDevice, setOriginalDevice] = useState<Device | null>(null);
+  const [device, setDevice] = useState<AuthoredDevice>(createEmptyDevice);
+  const [originalDevice, setOriginalDevice] = useState<AuthoredDevice | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<DeviceFieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<StatusMessage | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    () => new Set(location.hash === '#snmp' ? ['basic', 'snmp'] : ['basic']),
+    () => new Set(location.hash === '#snmp' ? ['basic', 'snmp_agent'] : ['basic']),
   );
   const [showYamlPreview, setShowYamlPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Fetch existing device if editing
+  // Fetch existing device if editing. The single-device GET always serializes
+  // `rawYaml`; that document, not the camelCase projection beside it, is what
+  // the editor loads.
   const {
-    data: fetchedDevice,
+    data: fetched,
     loading,
     error,
     refetch,
   } = useApiResource(() => {
     if (isNewDevice || !hostname) {
-      return Promise.resolve(createEmptyDevice());
+      return Promise.resolve(null);
     }
     return fetchConfigDevice(hostname);
   }, [hostname, isNewDevice]);
 
-  // Fetch available walk files
   const { data: walkFiles } = useApiResource(fetchLibraryWalks, []);
 
-  // Per-type editor schema. Re-fetches when device.type changes; on
-  // error or while loading we fall through to the "show everything"
-  // set below so the form never disappears entirely.
+  // Per-type editor schema. Re-fetches when the type changes; on error or
+  // while loading the relevance order is simply the manifest's own.
   const { data: schema } = useApiResource(
-    () => fetchDeviceEditorSchema(device.type || 'unknown'),
+    () => fetchDeviceEditorSchema(device.type ?? 'unknown'),
     [device.type],
   );
-  const visibleSections = useMemo(() => {
-    if (schema?.visibleSections && schema.visibleSections.length > 0) {
-      return new Set(schema.visibleSections);
+  const sections = useMemo(() => {
+    const relevant = new Set(
+      (schema?.visibleSections ?? []).map((key) => RELEVANCE_ALIASES[key] ?? key),
+    );
+    if (relevant.size === 0) {
+      return DEVICE_SECTIONS;
     }
-    return new Set([
-      'basic',
-      'interfaces',
-      'snmp',
-      'lldp',
-      'cdp',
-      'stp',
-      'ips',
-      'dhcp',
-      'dns',
-      'http',
-      'ftp',
-      'netbios',
-    ]);
+    return [
+      ...DEVICE_SECTIONS.filter((section) => relevant.has(section.key)),
+      ...DEVICE_SECTIONS.filter((section) => !relevant.has(section.key)),
+    ];
   }, [schema]);
 
-  // Update local state when fetched device changes. The response is the device
-  // itself — it is not wrapped in { device } (D10).
   useEffect(() => {
-    if (fetchedDevice?.hostname) {
-      reset(fetchedDevice);
-      setOriginalDevice(fetchedDevice);
+    if (!fetched) {
+      return;
     }
-  }, [fetchedDevice, reset]);
+    // A detail response without `rawYaml` is a device the daemon could not
+    // serialize. Loading an empty document over it would let the next save
+    // replace the real device with nothing, so refuse instead.
+    const loaded = fetched.rawYaml ? parseAuthoredDevice(fetched.rawYaml) : null;
+    if (!loaded) {
+      setMessage({ type: 'error', text: t('editor.messages.missingDocument') });
+      return;
+    }
+    setDevice(loaded);
+    setOriginalDevice(loaded);
+  }, [fetched, t]);
 
   // Deep-link support: the Running Devices walk browser links here with
   // `#snmp` so a copied walk name can actually be used. Once the section
@@ -175,23 +176,22 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     if (location.hash !== '#snmp' || loading) {
       return;
     }
-    document.getElementById('snmp-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document
+      .getElementById('snmp_agent-section')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash, loading]);
 
-  // Check if device has been modified. Deliberately kept as a structural
-  // JSON compare (not rhf's formState.isDirty) so the unsaved-changes
-  // navigation guard behaves exactly as before the rhf migration.
+  // The serialized document is both what a save sends and what the preview
+  // shows, so dirtiness is measured on it: clearing a field the author never
+  // set is not an edit, and comparing the in-memory objects would say it was.
+  const yaml = useMemo(() => serializeAuthoredDevice(device), [device]);
   const isDirty = useMemo(() => {
     if (isNewDevice) {
-      return device.hostname.trim() !== '';
+      return Boolean(device.name?.trim());
     }
-    if (!originalDevice) {
-      return false;
-    }
-    return JSON.stringify(device) !== JSON.stringify(originalDevice);
-  }, [device, originalDevice, isNewDevice]);
+    return originalDevice !== null && yaml !== serializeAuthoredDevice(originalDevice);
+  }, [yaml, device.name, originalDevice, isNewDevice]);
 
-  // Toggle section expansion
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -204,43 +204,29 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     });
   }, []);
 
-  // Handle form field changes
-  const updateField = useCallback(
-    <K extends keyof Device>(field: K, value: Device[K]) => {
-      // Bridge the ergonomic `keyof Device` public signature to rhf's
-      // `Path`/`PathValue` types — a top-level key is always a valid path,
-      // but the compiler can't prove it through the generic.
-      setValue(field as Path<Device>, value as PathValue<Device, Path<Device>>, {
-        shouldDirty: true,
-      });
-      clearErrors(field as Path<Device>);
-      setMessage(null);
-    },
-    [setValue, clearErrors],
-  );
+  const updateField = useCallback((key: keyof AuthoredDevice, value: AuthoredValue) => {
+    setDevice((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      if (!(key in prev)) {
+        return prev;
+      }
+      const { [key as IdentityField]: _cleared, ...rest } = prev;
+      return rest;
+    });
+    setMessage(null);
+  }, []);
 
-  // Handle save
   const handleSave = useCallback(async () => {
-    const current = getValues();
-
-    // Format-level validation (hostname / mac / ip) before the round-trip.
-    // The Go side validates the full structure; this catches the common
-    // mistakes inline. Uses safeParse so unrelated device sections pass
-    // through untouched.
-    clearErrors();
-    const result = v.safeParse(DeviceFormSchema, current);
+    const result = v.safeParse(AuthoredDeviceSchema, device);
     if (!result.success) {
-      // Surface the first issue per field. valibot reports pipe issues in
-      // order, so an empty hostname shows "Hostname is required" (minLength)
-      // rather than the later format message.
-      const flagged = new Set<string>();
+      const errors: DeviceFieldErrors = {};
       for (const issue of result.issues) {
         const key = issue.path?.[0]?.key;
-        if (typeof key === 'string' && !flagged.has(key)) {
-          flagged.add(key);
-          setError(key as Path<Device>, { message: issue.message });
+        if (typeof key === 'string' && !(key in errors)) {
+          errors[key as IdentityField] = issue.message;
         }
       }
+      setFieldErrors(errors);
       setMessage({
         type: 'error',
         text: result.issues[0]?.message ?? t('editor.messages.fixHighlightedFields'),
@@ -248,16 +234,16 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       return;
     }
 
+    const name = result.output.name;
     setSaving(true);
     setMessage(null);
 
     try {
       if (isNewDevice) {
-        await createDevice(current);
+        await createDevice(name, yaml);
         setMessage({ type: 'success', text: t('editor.messages.createdSuccess') });
-        // Navigate to the new device's edit page
         setTimeout(() => {
-          navigate(`/device-config/${encodeURIComponent(current.hostname)}`);
+          navigate(`/device-config/${encodeURIComponent(name)}`);
         }, 500);
       } else {
         if (!hostname) {
@@ -265,24 +251,17 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
           setSaving(false);
           return;
         }
-        await updateDevice(hostname, current);
+        await updateDevice(hostname, yaml);
         setMessage({ type: 'success', text: t('editor.messages.updatedSuccess') });
-        setOriginalDevice(current);
-        // If hostname changed, navigate to new URL
-        if (current.hostname !== hostname) {
-          setTimeout(() => {
-            navigate(`/device-config/${encodeURIComponent(current.hostname)}`);
-          }, 500);
-        }
+        setOriginalDevice(device);
       }
     } catch (err) {
       setMessage({ type: 'error', text: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }
-  }, [getValues, clearErrors, setError, hostname, isNewDevice, navigate, t]);
+  }, [device, yaml, hostname, isNewDevice, navigate, t]);
 
-  // Handle delete
   const handleDelete = useCallback(async () => {
     if (!hostname || isNewDevice) {
       return;
@@ -298,15 +277,15 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     }
   }, [hostname, isNewDevice, navigate]);
 
-  // Handle cancel/discard
   const handleDiscard = useCallback(() => {
     if (isNewDevice) {
       navigate('/device-config');
     } else if (originalDevice) {
-      reset(originalDevice);
+      setDevice(originalDevice);
+      setFieldErrors({});
       setMessage(null);
     }
-  }, [isNewDevice, originalDevice, navigate, reset]);
+  }, [isNewDevice, originalDevice, navigate]);
 
   const {
     pendingPath: pendingLeavePath,
@@ -325,15 +304,16 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     device,
     originalDevice,
     isDirty,
+    yaml,
     loading,
     error,
     refetch,
     walkFiles,
-    visibleSections,
+    sections,
     saving,
     deleting,
     message,
-    fieldErrors: formState.errors,
+    fieldErrors,
     expandedSections,
     showYamlPreview,
     showDeleteConfirm,

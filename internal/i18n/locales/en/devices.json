@@ -23,6 +23,7 @@
     "messages": {
       "createdSuccess": "Device created successfully",
       "fixHighlightedFields": "Please fix the highlighted fields",
+      "missingDocument": "The daemon did not return this device's authored YAML, so it cannot be edited safely.",
       "missingHostname": "Missing hostname for update",
       "updatedSuccess": "Device updated successfully"
     },
@@ -33,168 +34,105 @@
     "sections": {
       "additionalIps": {
         "addButton": "Add IP Address",
-        "description": "Add secondary IP addresses for multi-homed or VLAN configurations.",
+        "description": "Every address this device answers on. IPv4 and IPv6 are both accepted.",
+        "entryLabel": "IP address {{index}}",
         "placeholder": "e.g., 192.168.2.1",
-        "title": "Additional IP Addresses"
+        "removeLabel": "Remove IP address {{index}}",
+        "title": "IP Addresses"
       },
       "basic": {
+        "hostnameFixedHelp": "A device is renamed by cloning it; the name identifies it here.",
         "hostnameHelp": "Unique identifier for the device",
         "hostnameLabel": "Hostname",
         "hostnamePlaceholder": "e.g., core-switch-01",
-        "ipHelp": "Main management IP address",
-        "ipLabel": "Primary IP Address",
-        "ipPlaceholder": "e.g., 192.168.1.1",
+        "identityLabel": "Identity",
+        "identityMac": "MAC address",
+        "identityVendor": "Vendor",
         "macHelp": "Hardware address in format XX:XX:XX:XX:XX:XX",
         "macLabel": "MAC Address",
         "macPlaceholder": "e.g., 00:1A:2B:3C:4D:5E",
+        "macSuffixHelp": "Distinguishes devices of the same vendor; without it they share one address",
+        "macSuffixLabel": "MAC Suffix",
         "title": "Basic Settings",
         "typeHelp": "Category of network device",
-        "typeLabel": "Device Type"
+        "typeLabel": "Device Type",
+        "vendorHelp": "The daemon allocates a MAC from this vendor's OUI",
+        "vendorLabel": "Vendor",
+        "vendorPlaceholder": "e.g., cisco"
       },
       "cdp": {
-        "holdtimeHelp": "How long to hold neighbor information",
-        "holdtimeLabel": "Holdtime (seconds)",
-        "platformHelp": "Hardware platform",
-        "platformLabel": "Platform",
-        "platformPlaceholder": "cisco WS-C3750-48P",
-        "portIdHelp": "Local port identifier",
-        "portIdLabel": "Port ID",
-        "portIdPlaceholder": "GigabitEthernet0/1",
-        "softwareVersionHelp": "IOS/NX-OS version",
-        "softwareVersionLabel": "Software Version",
-        "softwareVersionPlaceholder": "Cisco IOS Software, Version 15.1(4)M",
         "title": "CDP (Cisco Discovery Protocol)"
       },
+      "device": {
+        "title": "Device"
+      },
       "dhcp": {
-        "addLeaseButton": "Add Static Lease",
-        "dnsServerHelp": "Domain name server for clients",
-        "dnsServerLabel": "DNS Server",
-        "domainNameHelp": "Domain suffix for clients",
-        "domainNameLabel": "Domain Name",
-        "gatewayHelp": "Router/gateway for clients",
-        "gatewayLabel": "Default Gateway",
-        "ipPlaceholder": "IP Address",
-        "macPlaceholder": "MAC Address",
-        "poolEndHelp": "End of DHCP address pool",
-        "poolEndLabel": "Pool End",
-        "poolStartHelp": "Start of DHCP address pool",
-        "poolStartLabel": "Pool Start",
-        "staticLeasesTitle": "Static Leases",
-        "subnetMaskHelp": "DHCP subnet mask",
-        "subnetMaskLabel": "Subnet Mask",
         "title": "DHCP Server"
       },
+      "dhcpv6": {
+        "title": "DHCPv6 Server"
+      },
       "dns": {
-        "addForwardButton": "Add Forward Record",
-        "addReverseButton": "Add Reverse Record",
-        "forwardRecordsTitle": "Forward Records (A Records)",
-        "hostnamePlaceholder": "Hostname (e.g., www.example.com)",
-        "ipPlaceholder": "IP Address",
-        "reverseHostnamePlaceholder": "Hostname (e.g., server.example.com)",
-        "reverseRecordsTitle": "Reverse Records (PTR Records)",
-        "title": "DNS Server",
-        "ttlPlaceholder": "TTL"
+        "title": "DNS Server"
+      },
+      "edp": {
+        "title": "EDP (Extreme Discovery Protocol)"
+      },
+      "fdp": {
+        "title": "FDP (Foundry Discovery Protocol)"
       },
       "ftp": {
-        "addUserButton": "Add User",
-        "allowAnonymousHelp": "Allow anonymous FTP access",
-        "allowAnonymousLabel": "Allow Anonymous",
-        "disabledState": "Disabled",
-        "enabledState": "Enabled",
-        "homeDirPlaceholder": "Home Directory",
-        "passwordPlaceholder": "Password",
-        "systemTypeHelp": "SYST response",
-        "systemTypeLabel": "System Type",
-        "systemTypePlaceholder": "UNIX Type: L8",
-        "title": "FTP Server",
-        "usernamePlaceholder": "Username",
-        "usersTitle": "FTP Users",
-        "welcomeBannerHelp": "FTP welcome message",
-        "welcomeBannerLabel": "Welcome Banner",
-        "welcomeBannerPlaceholder": "Welcome to FTP Server"
+        "title": "FTP Server"
       },
       "http": {
-        "addEndpointButton": "Add Endpoint",
-        "bodyPlaceholder": "Response body",
-        "contentTypePlaceholder": "Content-Type (e.g., application/json)",
-        "endpointsTitle": "Endpoints",
-        "pathPlaceholder": "/api/status",
-        "serverNameHelp": "HTTP Server header value",
-        "serverNameLabel": "Server Name",
-        "serverNamePlaceholder": "Apache/2.4.41",
-        "statusPlaceholder": "Status",
         "title": "HTTP Server"
       },
+      "icmp": {
+        "title": "ICMP"
+      },
+      "icmpv6": {
+        "title": "ICMPv6"
+      },
       "interfaces": {
-        "addButton": "Add Interface",
-        "adminStatusAria": "Interface {{index}} admin status",
-        "adminStatusLabel": "Admin Status",
-        "autoOption": "Auto",
-        "descriptionAria": "Interface {{index}} description",
-        "descriptionPlaceholder": "uplink",
-        "downOption": "Down",
-        "duplexAria": "Interface {{index}} duplex",
-        "duplexLabel": "Duplex",
-        "fullOption": "Full",
-        "halfOption": "Half",
-        "nameAria": "Interface {{index}} name",
-        "nameLabel": "Name",
-        "namePlaceholder": "Ethernet1/1",
-        "operStatusAria": "Interface {{index}} oper status",
-        "operStatusLabel": "Oper Status",
-        "speedAria": "Interface {{index}} speed Mbps",
-        "speedLabel": "Speed (Mbps)",
-        "testingOption": "Testing",
-        "unsetOption": "Unset",
-        "upOption": "Up"
+        "title": "Interfaces"
+      },
+      "iperf3": {
+        "title": "iPerf3"
       },
       "lldp": {
-        "advertiseIntervalHelp": "How often to send LLDP frames",
-        "advertiseIntervalLabel": "Advertise Interval (seconds)",
-        "portDescriptionHelp": "LLDP port description",
-        "portDescriptionLabel": "Port Description",
-        "portDescriptionPlaceholder": "GigabitEthernet0/1",
-        "systemDescriptionHelp": "LLDP system description",
-        "systemDescriptionLabel": "System Description",
-        "systemDescriptionPlaceholder": "Cisco IOS Software...",
-        "title": "LLDP (Link Layer Discovery Protocol)",
-        "ttlHelp": "Time-to-live for LLDP information",
-        "ttlLabel": "TTL (seconds)"
+        "title": "LLDP (Link Layer Discovery Protocol)"
+      },
+      "mdns": {
+        "title": "mDNS"
       },
       "netbios": {
-        "masterBrowserLabel": "Master Browser (MSBROWSE)",
-        "nameHelp": "NetBIOS computer name (max 15 chars)",
-        "nameLabel": "NetBIOS Name",
-        "namePlaceholder": "FILESERVER",
-        "nodeTypeB": "B-node (Broadcast)",
-        "nodeTypeH": "H-node (Hybrid)",
-        "nodeTypeHelp": "NetBIOS node type",
-        "nodeTypeLabel": "Node Type",
-        "nodeTypeM": "M-node (Mixed)",
-        "nodeTypeP": "P-node (Point-to-Point)",
-        "servicesTitle": "NetBIOS Services",
-        "title": "NetBIOS",
-        "ttlHelp": "Time-to-live for NetBIOS announcements",
-        "ttlLabel": "TTL (seconds)",
-        "workgroupHelp": "NetBIOS workgroup/domain",
-        "workgroupLabel": "Workgroup",
-        "workgroupPlaceholder": "WORKGROUP"
+        "title": "NetBIOS"
       },
-      "snmp": {
-        "communityHelp": "SNMP v1/v2c community string",
-        "communityLabel": "Community String",
-        "sysNameHelp": "SNMP sysName value",
-        "sysNameLabel": "System Name",
-        "sysNamePlaceholder": "Device hostname",
-        "title": "SNMP Agent",
-        "walkFileHelp": "SNMP walk file from the library (Library › Walks)",
-        "walkFileLabel": "Walk File",
-        "walkFileMissingSuffix": "(not in library)",
-        "walkFileSelectPrompt": "Select a walk file..."
+      "os_fingerprint": {
+        "title": "OS Fingerprint"
+      },
+      "port_channels": {
+        "title": "Port Channels"
+      },
+      "properties": {
+        "title": "Properties"
+      },
+      "reflector": {
+        "title": "UDP Reflector"
+      },
+      "routes": {
+        "title": "Routes"
+      },
+      "snmp_agent": {
+        "title": "SNMP Agent"
+      },
+      "snmpv3": {
+        "title": "SNMPv3"
+      },
+      "ssh": {
+        "title": "SSH"
       },
       "stp": {
-        "bridgePriorityHelp": "STP bridge priority (0-61440, in steps of 4096)",
-        "bridgePriorityLabel": "Bridge Priority",
         "title": "STP (Spanning Tree Protocol)"
       },
       "synthesizeWalk": {
@@ -209,6 +147,15 @@
         "selectAria": "Baseline walk model",
         "selectPrompt": "Select a model...",
         "unsupportedCombo": "This vendor has no profile for this device type."
+      },
+      "syslog": {
+        "title": "Syslog"
+      },
+      "trunk_ports": {
+        "title": "Trunk Ports"
+      },
+      "ttl": {
+        "title": "TTL"
       },
       "yamlPreview": {
         "readOnly": "Read-only",

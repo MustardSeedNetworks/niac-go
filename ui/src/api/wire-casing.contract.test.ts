@@ -62,21 +62,19 @@ describe('ADR-0007: outgoing payloads are camelCase', () => {
     armFetch();
   });
 
-  it('createDevice preserves interfaceDetails and does not snake_case it', async () => {
+  // The device's own fields moved into `rawYaml`, where snake_case is correct
+  // — that string is the daemon's YAML, parsed by the config loader, not JSON.
+  // The envelope around it is still a JSON DTO and still camelCase.
+  it('createDevice sends a camelCase envelope around the authored YAML', async () => {
     const { createDevice } = await import('./client');
-    await createDevice({
-      hostname: 'UITEST-RTR-01',
-      mac: '00:1A:2B:3C:99:11',
-      type: 'router',
-      ip: '10.99.99.11',
-      interfaceDetails: [{ name: 'Gi0/0', adminStatus: 'up', operStatus: 'up' }],
-    } as never).catch(() => undefined);
+    await createDevice(
+      'UITEST-RTR-01',
+      'name: UITEST-RTR-01\ninterfaces:\n  - name: Gi0/0\n    admin_status: up\n',
+    ).catch(() => undefined);
 
     const keys = sentKeys();
-    expect(keys).toContain('interfaceDetails');
-    expect(keys).not.toContain('interface_details');
-    expect(keys).toContain('adminStatus');
-    expect(keys).not.toContain('admin_status');
+    expect(keys).toEqual(['hostname', 'rawYaml']);
+    expect(keys).not.toContain('raw_yaml');
   });
 
   it('cloneDevice sends newHostname, not new_hostname', async () => {

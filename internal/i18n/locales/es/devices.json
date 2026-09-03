@@ -124,171 +124,108 @@
       "backToList": "Volver a la lista"
     },
     "sections": {
+      "additionalIps": {
+        "title": "Direcciones IP",
+        "description": "Todas las direcciones en las que responde este dispositivo. Se aceptan IPv4 e IPv6.",
+        "placeholder": "p. ej., 192.168.2.1",
+        "addButton": "Agregar dirección IP",
+        "entryLabel": "Dirección IP {{index}}",
+        "removeLabel": "Eliminar dirección IP {{index}}"
+      },
       "basic": {
         "title": "Ajustes básicos",
         "hostnameLabel": "Hostname",
         "hostnameHelp": "Identificador único del dispositivo",
+        "hostnameFixedHelp": "Un dispositivo se renombra clonándolo; aquí el nombre lo identifica.",
         "hostnamePlaceholder": "p. ej., core-switch-01",
+        "typeLabel": "Tipo de dispositivo",
+        "typeHelp": "Categoría del dispositivo de red",
+        "identityLabel": "Identidad",
+        "identityMac": "Dirección MAC",
+        "identityVendor": "Fabricante",
         "macLabel": "Dirección MAC",
         "macHelp": "Dirección de hardware en formato XX:XX:XX:XX:XX:XX",
         "macPlaceholder": "p. ej., 00:1A:2B:3C:4D:5E",
-        "typeLabel": "Tipo de dispositivo",
-        "typeHelp": "Categoría del dispositivo de red",
-        "ipLabel": "Dirección IP principal",
-        "ipHelp": "Dirección IP de gestión principal",
-        "ipPlaceholder": "p. ej., 192.168.1.1"
-      },
-      "interfaces": {
-        "nameLabel": "Nombre",
-        "namePlaceholder": "Ethernet1/1",
-        "nameAria": "Nombre de la interfaz {{index}}",
-        "speedLabel": "Velocidad (Mbps)",
-        "speedAria": "Velocidad Mbps de la interfaz {{index}}",
-        "duplexLabel": "Dúplex",
-        "duplexAria": "Dúplex de la interfaz {{index}}",
-        "unsetOption": "Sin definir",
-        "fullOption": "Completo",
-        "halfOption": "Medio",
-        "autoOption": "Automático",
-        "adminStatusLabel": "Estado administrativo",
-        "adminStatusAria": "Estado administrativo de la interfaz {{index}}",
-        "upOption": "Activo",
-        "downOption": "Inactivo",
-        "operStatusLabel": "Estado operativo",
-        "operStatusAria": "Estado operativo de la interfaz {{index}}",
-        "testingOption": "En pruebas",
-        "descriptionPlaceholder": "enlace ascendente",
-        "descriptionAria": "Descripción de la interfaz {{index}}",
-        "addButton": "Agregar interfaz"
-      },
-      "snmp": {
-        "title": "Agente SNMP",
-        "communityLabel": "Cadena de comunidad",
-        "communityHelp": "Cadena de comunidad SNMP v1/v2c",
-        "sysNameLabel": "Nombre del sistema",
-        "sysNameHelp": "Valor de sysName de SNMP",
-        "sysNamePlaceholder": "Hostname del dispositivo",
-        "walkFileLabel": "Archivo walk",
-        "walkFileHelp": "Archivo walk de SNMP de la biblioteca (Biblioteca › Walks)",
-        "walkFileSelectPrompt": "Seleccione un archivo walk...",
-        "walkFileMissingSuffix": "(no está en la biblioteca)"
-      },
-      "lldp": {
-        "title": "LLDP (Link Layer Discovery Protocol)",
-        "systemDescriptionLabel": "Descripción del sistema",
-        "systemDescriptionHelp": "Descripción del sistema LLDP",
-        "systemDescriptionPlaceholder": "Cisco IOS Software...",
-        "portDescriptionLabel": "Descripción del puerto",
-        "portDescriptionHelp": "Descripción del puerto LLDP",
-        "portDescriptionPlaceholder": "GigabitEthernet0/1",
-        "advertiseIntervalLabel": "Intervalo de anuncio (segundos)",
-        "advertiseIntervalHelp": "Frecuencia de envío de tramas LLDP",
-        "ttlLabel": "TTL (segundos)",
-        "ttlHelp": "Tiempo de vida de la información LLDP"
+        "vendorLabel": "Fabricante",
+        "vendorHelp": "El daemon asigna una MAC del OUI de este fabricante",
+        "vendorPlaceholder": "p. ej., cisco",
+        "macSuffixLabel": "Sufijo MAC",
+        "macSuffixHelp": "Distingue dispositivos del mismo fabricante; sin él comparten una dirección"
       },
       "cdp": {
-        "title": "CDP (Cisco Discovery Protocol)",
-        "platformLabel": "Plataforma",
-        "platformHelp": "Plataforma de hardware",
-        "platformPlaceholder": "cisco WS-C3750-48P",
-        "portIdLabel": "ID de puerto",
-        "portIdHelp": "Identificador de puerto local",
-        "portIdPlaceholder": "GigabitEthernet0/1",
-        "softwareVersionLabel": "Versión de software",
-        "softwareVersionHelp": "Versión de IOS/NX-OS",
-        "softwareVersionPlaceholder": "Cisco IOS Software, Version 15.1(4)M",
-        "holdtimeLabel": "Holdtime (segundos)",
-        "holdtimeHelp": "Cuánto tiempo conservar la información del vecino"
+        "title": "CDP (Cisco Discovery Protocol)"
       },
-      "stp": {
-        "title": "STP (Spanning Tree Protocol)",
-        "bridgePriorityLabel": "Prioridad de bridge",
-        "bridgePriorityHelp": "Prioridad de bridge STP (0-61440, en pasos de 4096)"
-      },
-      "additionalIps": {
-        "title": "Direcciones IP adicionales",
-        "description": "Agregue direcciones IP secundarias para configuraciones multihome o de VLAN.",
-        "placeholder": "p. ej., 192.168.2.1",
-        "addButton": "Agregar dirección IP"
+      "device": {
+        "title": "Dispositivo"
       },
       "dhcp": {
-        "title": "Servidor DHCP",
-        "subnetMaskLabel": "Máscara de subred",
-        "subnetMaskHelp": "Máscara de subred DHCP",
-        "gatewayLabel": "Puerta de enlace predeterminada",
-        "gatewayHelp": "Router/puerta de enlace para los clientes",
-        "dnsServerLabel": "Servidor DNS",
-        "dnsServerHelp": "Servidor de nombres de dominio para los clientes",
-        "domainNameLabel": "Nombre de dominio",
-        "domainNameHelp": "Sufijo de dominio para los clientes",
-        "poolStartLabel": "Inicio del pool",
-        "poolStartHelp": "Inicio del pool de direcciones DHCP",
-        "poolEndLabel": "Fin del pool",
-        "poolEndHelp": "Fin del pool de direcciones DHCP",
-        "staticLeasesTitle": "Concesiones estáticas",
-        "macPlaceholder": "Dirección MAC",
-        "ipPlaceholder": "Dirección IP",
-        "addLeaseButton": "Agregar concesión estática"
+        "title": "Servidor DHCP"
+      },
+      "dhcpv6": {
+        "title": "Servidor DHCPv6"
       },
       "dns": {
-        "title": "Servidor DNS",
-        "forwardRecordsTitle": "Registros directos (registros A)",
-        "hostnamePlaceholder": "Hostname (p. ej., www.example.com)",
-        "ipPlaceholder": "Dirección IP",
-        "ttlPlaceholder": "TTL",
-        "addForwardButton": "Agregar registro directo",
-        "reverseRecordsTitle": "Registros inversos (registros PTR)",
-        "reverseHostnamePlaceholder": "Hostname (p. ej., server.example.com)",
-        "addReverseButton": "Agregar registro inverso"
+        "title": "Servidor DNS"
       },
-      "http": {
-        "title": "Servidor HTTP",
-        "serverNameLabel": "Nombre del servidor",
-        "serverNameHelp": "Valor del encabezado Server de HTTP",
-        "serverNamePlaceholder": "Apache/2.4.41",
-        "endpointsTitle": "Endpoints",
-        "pathPlaceholder": "/api/status",
-        "statusPlaceholder": "Estado",
-        "contentTypePlaceholder": "Content-Type (p. ej., application/json)",
-        "bodyPlaceholder": "Cuerpo de la respuesta",
-        "addEndpointButton": "Agregar endpoint"
+      "edp": {
+        "title": "EDP (Extreme Discovery Protocol)"
+      },
+      "fdp": {
+        "title": "FDP (Foundry Discovery Protocol)"
       },
       "ftp": {
-        "title": "Servidor FTP",
-        "welcomeBannerLabel": "Mensaje de bienvenida",
-        "welcomeBannerHelp": "Mensaje de bienvenida de FTP",
-        "welcomeBannerPlaceholder": "Bienvenido al servidor FTP",
-        "systemTypeLabel": "Tipo de sistema",
-        "systemTypeHelp": "Respuesta SYST",
-        "systemTypePlaceholder": "UNIX Type: L8",
-        "allowAnonymousLabel": "Permitir acceso anónimo",
-        "allowAnonymousHelp": "Permitir acceso FTP anónimo",
-        "enabledState": "Habilitado",
-        "disabledState": "Deshabilitado",
-        "usersTitle": "Usuarios FTP",
-        "usernamePlaceholder": "Nombre de usuario",
-        "passwordPlaceholder": "Contraseña",
-        "homeDirPlaceholder": "Directorio raíz",
-        "addUserButton": "Agregar usuario"
+        "title": "Servidor FTP"
+      },
+      "http": {
+        "title": "Servidor HTTP"
+      },
+      "icmp": {
+        "title": "ICMP"
+      },
+      "icmpv6": {
+        "title": "ICMPv6"
+      },
+      "interfaces": {
+        "title": "Interfaces"
+      },
+      "iperf3": {
+        "title": "iPerf3"
+      },
+      "lldp": {
+        "title": "LLDP (Link Layer Discovery Protocol)"
+      },
+      "mdns": {
+        "title": "mDNS"
       },
       "netbios": {
-        "title": "NetBIOS",
-        "nameLabel": "Nombre NetBIOS",
-        "nameHelp": "Nombre de equipo NetBIOS (máx. 15 caracteres)",
-        "namePlaceholder": "FILESERVER",
-        "workgroupLabel": "Grupo de trabajo",
-        "workgroupHelp": "Grupo de trabajo/dominio NetBIOS",
-        "workgroupPlaceholder": "WORKGROUP",
-        "nodeTypeLabel": "Tipo de nodo",
-        "nodeTypeHelp": "Tipo de nodo NetBIOS",
-        "nodeTypeB": "Nodo B (difusión)",
-        "nodeTypeP": "Nodo P (punto a punto)",
-        "nodeTypeM": "Nodo M (mixto)",
-        "nodeTypeH": "Nodo H (híbrido)",
-        "ttlLabel": "TTL (segundos)",
-        "ttlHelp": "Tiempo de vida de los anuncios NetBIOS",
-        "servicesTitle": "Servicios NetBIOS",
-        "masterBrowserLabel": "Master Browser (MSBROWSE)"
+        "title": "NetBIOS"
+      },
+      "os_fingerprint": {
+        "title": "Huella del sistema operativo"
+      },
+      "port_channels": {
+        "title": "Port Channels"
+      },
+      "properties": {
+        "title": "Propiedades"
+      },
+      "reflector": {
+        "title": "Reflector UDP"
+      },
+      "routes": {
+        "title": "Rutas"
+      },
+      "snmp_agent": {
+        "title": "Agente SNMP"
+      },
+      "snmpv3": {
+        "title": "SNMPv3"
+      },
+      "ssh": {
+        "title": "SSH"
+      },
+      "stp": {
+        "title": "STP (Spanning Tree Protocol)"
       },
       "synthesizeWalk": {
         "label": "Sintetizar walk base",
@@ -303,6 +240,15 @@
         "generatedMessage": "Se generó {{label}} — {{oidCount}} OIDs, {{sizeBytes}} bytes",
         "originalPreservedSuffix": "; original conservado"
       },
+      "syslog": {
+        "title": "Syslog"
+      },
+      "trunk_ports": {
+        "title": "Puertos trunk"
+      },
+      "ttl": {
+        "title": "TTL"
+      },
       "yamlPreview": {
         "title": "Vista previa del YAML",
         "readOnly": "Solo lectura"
@@ -312,7 +258,8 @@
       "fixHighlightedFields": "Corrija los campos resaltados",
       "missingHostname": "Falta el hostname para la actualización",
       "createdSuccess": "Dispositivo creado correctamente",
-      "updatedSuccess": "Dispositivo actualizado correctamente"
+      "updatedSuccess": "Dispositivo actualizado correctamente",
+      "missingDocument": "El daemon no devolvió el YAML de este dispositivo, por lo que no se puede editar de forma segura."
     },
     "addOid": "Agregar OID"
   },

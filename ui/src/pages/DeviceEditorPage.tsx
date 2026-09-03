@@ -4,34 +4,29 @@ import { useTranslation } from 'react-i18next';
 import {
   AdditionalIPsSection,
   BasicSettingsSection,
-  buildYamlPreview,
-  CdpSection,
   DeviceEditorHeader,
   DeviceEditorStatusView,
-  DhcpSection,
-  DnsSection,
-  FtpSection,
-  HttpSection,
-  InterfacesSection,
-  LldpSection,
-  NetBiosSection,
-  SnmpSection,
-  StpSection,
+  SchemaSectionBody,
+  SynthesizeWalkControl,
   useDeviceEditor,
   YamlPreviewSection,
 } from '../components/device-editor';
+import type { AuthoredValue } from '../components/device-editor/generated/authored-device.generated';
+import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 export const DeviceEditorPage: FC = () => {
   const {
+    hostname,
     isNewDevice,
     device,
     isDirty,
+    yaml,
     loading,
     error,
     refetch,
     walkFiles,
-    visibleSections,
+    sections,
     saving,
     deleting,
     message,
@@ -54,27 +49,28 @@ export const DeviceEditorPage: FC = () => {
   } = useDeviceEditor();
   const { t } = useTranslation('devices');
 
-  // Generate YAML preview
-  const yamlPreview = useMemo(() => buildYamlPreview(device), [device]);
-
-  // Show loading or error state
-  const statusView = (
-    <DeviceEditorStatusView
-      isNewDevice={isNewDevice}
-      loading={loading}
-      error={error}
-      onRetry={refetch}
-      onNavigateBack={() => navigate('/device-config')}
-    />
+  // The one open string field the daemon resolves against a library. Offered
+  // as suggestions rather than a closed list, because a config may reference a
+  // walk that has since been renamed and the author must still see it.
+  const suggestions = useMemo(
+    () => ({ 'snmp_agent.walk_file': (walkFiles ?? []).map((file) => file.name) }),
+    [walkFiles],
   );
 
   if (!isNewDevice && (loading || error)) {
-    return statusView;
+    return (
+      <DeviceEditorStatusView
+        isNewDevice={isNewDevice}
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        onNavigateBack={() => navigate('/device-config')}
+      />
+    );
   }
 
   return (
     <div className="stack-xl">
-      {/* Header */}
       <DeviceEditorHeader
         device={device}
         isNewDevice={isNewDevice}
@@ -90,127 +86,66 @@ export const DeviceEditorPage: FC = () => {
         onNavigateBack={requestNavigateBack}
       />
 
-      {/* YAML Preview */}
-      {showYamlPreview && <YamlPreviewSection yamlContent={yamlPreview} />}
+      {showYamlPreview && <YamlPreviewSection yamlContent={yaml} />}
 
-      {/* Basic Settings — always visible; type picker lives here so
-          the rest of the form can react when it changes. */}
-      {visibleSections.has('basic') && (
-        <BasicSettingsSection
-          device={device}
-          isExpanded={expandedSections.has('basic')}
-          onToggle={() => toggleSection('basic')}
-          onUpdate={updateField}
-          errors={fieldErrors}
-        />
-      )}
-
-      <InterfacesSection
+      <BasicSettingsSection
         device={device}
-        isExpanded={expandedSections.has('interfaces')}
-        onToggle={() => toggleSection('interfaces')}
+        isNewDevice={isNewDevice}
+        isExpanded={expandedSections.has('basic')}
+        onToggle={() => toggleSection('basic')}
         onUpdate={updateField}
+        errors={fieldErrors}
       />
 
-      {visibleSections.has('snmp') && (
-        <SnmpSection
-          device={device}
-          isExpanded={expandedSections.has('snmp')}
-          onToggle={() => toggleSection('snmp')}
-          onUpdate={updateField}
-          walkFiles={walkFiles}
-          isNewDevice={isNewDevice}
-        />
-      )}
+      <AdditionalIPsSection
+        device={device}
+        isExpanded={expandedSections.has('ips')}
+        onToggle={() => toggleSection('ips')}
+        onUpdate={updateField}
+        errors={fieldErrors}
+      />
 
-      {visibleSections.has('lldp') && (
-        <LldpSection
-          device={device}
-          isExpanded={expandedSections.has('lldp')}
-          onToggle={() => toggleSection('lldp')}
-          onUpdate={updateField}
-        />
-      )}
+      {/* Every section the schema declares, in relevance order. None is
+          hidden: a section the form does not render is a field the author
+          cannot reach, and the authoring-parity gate would still count it
+          bound. */}
+      {sections.map((section) => (
+        <CollapsibleSection
+          key={section.key}
+          id={`${section.key}-section`}
+          title={t(`editor.sections.${section.key}.title`, { defaultValue: section.title })}
+          isExpanded={expandedSections.has(section.key)}
+          onToggle={() => toggleSection(section.key)}
+        >
+          <div className="stack-lg">
+            <SchemaSectionBody
+              section={section}
+              value={device[section.key as keyof typeof device] as AuthoredValue}
+              onChange={(next) => updateField(section.key as keyof typeof device, next)}
+              suggestions={suggestions}
+            />
+            {section.key === 'snmp_agent' && (
+              <SynthesizeWalkControl
+                hostname={device.name ?? hostname ?? ''}
+                disabled={isNewDevice}
+                onSynthesized={(walkPath) =>
+                  updateField('snmp_agent', {
+                    ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
+                    walk_file: walkPath,
+                  })
+                }
+              />
+            )}
+          </div>
+        </CollapsibleSection>
+      ))}
 
-      {visibleSections.has('cdp') && (
-        <CdpSection
-          device={device}
-          isExpanded={expandedSections.has('cdp')}
-          onToggle={() => toggleSection('cdp')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('stp') && (
-        <StpSection
-          device={device}
-          isExpanded={expandedSections.has('stp')}
-          onToggle={() => toggleSection('stp')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('ips') && (
-        <AdditionalIPsSection
-          device={device}
-          isExpanded={expandedSections.has('ips')}
-          onToggle={() => toggleSection('ips')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('dhcp') && (
-        <DhcpSection
-          device={device}
-          isExpanded={expandedSections.has('dhcp')}
-          onToggle={() => toggleSection('dhcp')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('dns') && (
-        <DnsSection
-          device={device}
-          isExpanded={expandedSections.has('dns')}
-          onToggle={() => toggleSection('dns')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('http') && (
-        <HttpSection
-          device={device}
-          isExpanded={expandedSections.has('http')}
-          onToggle={() => toggleSection('http')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('ftp') && (
-        <FtpSection
-          device={device}
-          isExpanded={expandedSections.has('ftp')}
-          onToggle={() => toggleSection('ftp')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {visibleSections.has('netbios') && (
-        <NetBiosSection
-          device={device}
-          isExpanded={expandedSections.has('netbios')}
-          onToggle={() => toggleSection('netbios')}
-          onUpdate={updateField}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteConfirm}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
         title={t('list.deleteConfirmTitle')}
-        message={t('list.deleteConfirmMessage', { hostname: device.hostname })}
+        message={t('list.deleteConfirmMessage', { hostname: device.name ?? '' })}
         confirmLabel={t('list.deleteConfirmLabel')}
         confirmTone="red"
         confirming={deleting}

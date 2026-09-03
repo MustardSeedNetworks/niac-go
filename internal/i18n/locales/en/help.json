@@ -32,8 +32,6 @@
     "bpf": "A Berkeley Packet Filter (BPF) expression applied by the capture engine. Packets that don't match are dropped before capture — they never reach the buffer, unlike a display filter.",
     "fiveTuple": "A 5-tuple is the (protocol, source IP:port, destination IP:port) combination that uniquely identifies a TCP/UDP conversation.",
     "librarySource": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally.",
-    "msbrowse": "MSBROWSE is the special NetBIOS group name a host announces to volunteer as the local master browser, the host that maintains the network's list of shared machines.",
-    "netbiosNodeType": "The NetBIOS node type controls how a host resolves names: B-node broadcasts, P-node queries a name server directly, M-node broadcasts first then falls back to a server, and H-node queries the server first then falls back to broadcast.",
     "oid": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
     "pcap": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
     "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses."

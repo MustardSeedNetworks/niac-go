@@ -1,23 +1,19 @@
 // Device editor components
 export { AdditionalIPsSection } from './AdditionalIPsSection';
 export { BasicSettingsSection } from './BasicSettingsSection';
-export { CdpSection } from './CdpSection';
 export type { StatusMessage } from './DeviceEditorHeader';
 export { DeviceEditorHeader } from './DeviceEditorHeader';
 export { DeviceEditorStatusView } from './DeviceEditorStatusView';
-export { DhcpSection } from './DHCPSection';
-export { DnsSection } from './DNSSection';
-export { FtpSection } from './FTPSection';
-export { HttpSection } from './HTTPSection';
-export { InterfacesSection } from './InterfacesSection';
-export { LldpSection } from './LldpSection';
-export { NetBiosSection } from './NetBIOSSection';
-export { SnmpSection } from './SnmpSection';
-export { StpSection } from './StpSection';
+// Generated form
+export type {
+  AuthoredDevice,
+  AuthoredValue,
+} from './generated/authored-device.generated';
+export { DEVICE_SECTIONS, DEVICE_TYPES } from './generated/sections.generated';
+export { SchemaField, SchemaFieldList, SchemaSectionBody } from './SchemaFields';
 export type { SynthesizeWalkControlProps } from './SynthesizeWalkControl';
 export { SynthesizeWalkControl } from './SynthesizeWalkControl';
 // Types
-export type { ProtocolSectionBaseProps, ProtocolSectionProps, SNMPSectionProps } from './types';
 export {
   checkboxClassName,
   inputClassName,
@@ -25,10 +21,8 @@ export {
   selectClassName,
   smallInputClassName,
 } from './types';
-export type { UseDeviceEditorReturn } from './useDeviceEditor';
+export type { DeviceFieldErrors, UseDeviceEditorReturn } from './useDeviceEditor';
 
 // Hooks
 export { createEmptyDevice, useDeviceEditor } from './useDeviceEditor';
 export { YamlPreviewSection } from './YamlPreviewSection';
-// Utilities
-export { buildYamlPreview } from './yamlBuilder';

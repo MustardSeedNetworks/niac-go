@@ -258,28 +258,28 @@ describe('API Client', () => {
       });
     });
 
-    it('strips the server-computed protocols field from createDevice', async () => {
+    // The device editor saves the authored document, not the camelCase
+    // projection. `DeviceUpdateRequest` declares no `hostname`, and every
+    // fetched device carries one, so posting the projection back made the
+    // strict decoder answer `400 invalid_request` naming no field — every
+    // save of an existing device failed. One shape removes the class.
+    it('createDevice sends the name and the authored document', async () => {
       const { createDevice } = await import('./client');
-      await createDevice({
-        hostname: 'sw1',
-        mac: '00:11:22:33:44:55',
-        protocols: ['snmp', 'lldp'],
-      });
+      await createDevice('sw1', 'name: sw1\nmac: 00:11:22:33:44:55\n');
 
       const [, options] = required(mockFetch.mock.calls[0], 'the createDevice fetch call');
       const sent = JSON.parse((options as RequestInit).body as string);
-      expect(sent).not.toHaveProperty('protocols');
-      expect(sent).toMatchObject({ hostname: 'sw1', mac: '00:11:22:33:44:55' });
+      expect(sent).toEqual({ hostname: 'sw1', rawYaml: 'name: sw1\nmac: 00:11:22:33:44:55\n' });
     });
 
-    it('strips the server-computed protocols field from updateDevice', async () => {
+    it('updateDevice sends only the authored document, named by the URL', async () => {
       const { updateDevice } = await import('./client');
-      await updateDevice('sw1', { mac: '00:11:22:33:44:55', protocols: ['snmp'] });
+      await updateDevice('sw1', 'name: sw1\nmac: 00:11:22:33:44:55\n');
 
-      const [, options] = required(mockFetch.mock.calls[0], 'the updateDevice fetch call');
+      const [url, options] = required(mockFetch.mock.calls[0], 'the updateDevice fetch call');
       const sent = JSON.parse((options as RequestInit).body as string);
-      expect(sent).not.toHaveProperty('protocols');
-      expect(sent).toEqual({ mac: '00:11:22:33:44:55' });
+      expect(url).toContain('/api/v1/config/devices/sw1');
+      expect(sent).toEqual({ rawYaml: 'name: sw1\nmac: 00:11:22:33:44:55\n' });
     });
   });
 

@@ -33,7 +33,9 @@ describe('authored device YAML', () => {
     );
     // The identity controls stay hand-bound and are deliberately absent from
     // the generated manifest; everything else must be a section or a field.
-    const handBound = new Set(['name', 'type', 'mac', 'ips']);
+    // `vendor` and `mac_suffix` are there because identity is one choice: the
+    // daemon rejects a device carrying both a MAC and a vendor.
+    const handBound = new Set(['name', 'type', 'mac', 'ips', 'vendor', 'mac_suffix']);
 
     const unrenderable = clinic.devices.flatMap((device) =>
       Object.keys(device).filter((key) => !known.has(key) && !handBound.has(key)),

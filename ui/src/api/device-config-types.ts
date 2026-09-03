@@ -158,28 +158,35 @@ export interface DeviceListResponse {
 }
 
 /**
- * Response from GET /api/v1/config/devices/:id
- */
-/**
  * GET /api/v1/config/devices/:id returns the device **flat**, not wrapped.
  * This used to declare `{ device: Device }`, so the editor's `fetchedDevice?.device`
  * was always undefined and the form silently stayed empty (D10). Typed as the
  * device itself so the compiler enforces the real shape.
+ *
+ * `rawYaml` is the authored document the daemon loaded this device from, and
+ * the single-device GET always serializes it. It is what the device editor
+ * reads and writes: the camelCase projection above covers 56 of the 223 fields
+ * an author can set, so an editor holding it drops the rest on save.
  */
-export type DeviceDetailResponse = Device;
+export type DeviceDetailResponse = Device & { rawYaml?: string };
 
 /**
- * Request body for POST /api/v1/config/devices
+ * Request body for POST /api/v1/config/devices.
+ *
+ * `hostname` names the device — the daemon takes the name from here, not from
+ * the document — and `rawYaml` carries everything else.
  */
 export interface CreateDeviceRequest {
-  device: Device;
+  hostname: string;
+  rawYaml: string;
 }
 
 /**
- * Request body for PUT /api/v1/config/devices/:id
+ * Request body for PUT /api/v1/config/devices/:id. The URL names the device;
+ * the body is the authored document.
  */
 export interface UpdateDeviceRequest {
-  device: Partial<Device>;
+  rawYaml: string;
 }
 
 /**
