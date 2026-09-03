@@ -1,7 +1,9 @@
 package version_test
 
 import (
+	"runtime/debug"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/version"
@@ -81,5 +83,23 @@ func TestInfoMatchesGetters(t *testing.T) {
 	}
 	if info["uiBuildHash"] != version.GetUIBuildHash() {
 		t.Errorf("Info()[uiBuildHash]=%q, GetUIBuildHash()=%q", info["uiBuildHash"], version.GetUIBuildHash())
+	}
+}
+
+// Go stamps "+dirty" onto Main.Version itself when the working tree is
+// modified, so the version must not carry a second marker of its own.
+func TestBuildInfoVersionKeepsOneDirtyMarker(t *testing.T) {
+	info := &debug.BuildInfo{
+		Main: debug.Module{Version: "v0.94.91-0.20260902214000-d755fdbbda0c+dirty"},
+		Settings: []debug.BuildSetting{
+			{Key: "vcs.revision", Value: "d755fdbbda0cea6de351c3af3c745448f3bfe195"},
+			{Key: "vcs.modified", Value: "true"},
+		},
+	}
+
+	ver, _, _ := version.ExtractVersionFromBuildInfo(info)
+
+	if got := strings.Count(ver, "dirty"); got != 1 {
+		t.Errorf("version %q carries %d dirty markers, want exactly 1", ver, got)
 	}
 }

@@ -19,11 +19,14 @@ the lab.
 
 ## Features
 
-- **Configurable topology** — declare devices, interfaces, VLANs, and neighbours in YAML; load templates or generate interactively
+- **Configurable topology** — declare devices, interfaces, VLANs, and
+  neighbours in YAML; load templates or generate interactively
 - **Multi-IP per device** — each simulated endpoint can carry multiple v4/v6 addresses
-- **Protocol coverage** — ARP, ICMPv4/v6, DHCPv4/v6, DNS, LLDP, CDP, SNMP (v1/v2c/v3, walks + traps), TCP, UDP (incl. NetAlly reflector), HTTP, iperf3
+- **Protocol coverage** — ARP, ICMPv4/v6, DHCPv4/v6, DNS, LLDP, CDP, SNMP
+  (v1/v2c/v3, walks + traps), TCP, UDP (incl. NetAlly reflector), HTTP, iperf3
 - **Per-protocol debug levels** — turn verbose logging on/off at the protocol layer without restarting
-- **PCAP analysis** — `niac analyze-pcap` summarises captures by protocol; `niac analyze-walk` extracts topology from SNMP walks
+- **PCAP analysis** — `niac analyze-pcap` summarises captures by protocol;
+  `niac analyze-walk` extracts topology from SNMP walks
 - **Error injection** — inject latency, loss, jitter, or protocol-specific faults on a running simulation
 - **Web UI** — daemon mode exposes a React/TypeScript control plane over HTTPS
   on port 8445
@@ -33,9 +36,9 @@ the lab.
 ## Quick Start
 
 ```bash
-# Install (Linux/macOS, requires Go 1.26+)
-git clone https://github.com/MustardSeedNetworks/niac-go ~/Developer/niac/go
-cd ~/Developer/niac/go
+# Install (Linux/macOS, requires Go 1.27+)
+git clone https://github.com/MustardSeedNetworks/niac-go
+cd niac-go
 make build
 
 # Generate a starter config interactively
@@ -58,7 +61,7 @@ sudo ./niac daemon
 |---------|---------|
 | `niac daemon` | Run with HTTPS web UI control plane (port 8445) |
 | `niac run <iface> <config>` | Run a simulation on a real interface |
-| `niac interactive <iface> <config>` | Run with a TUI dashboard |
+| `niac interactive <iface> <config>` | Run with a TUI dashboard and interactive fault controls |
 | `niac init [out]` | Interactive template wizard |
 | `niac generate [out]` | Interactive configuration generator |
 | `niac validate <config>` | Validate a YAML configuration |
@@ -67,13 +70,12 @@ sudo ./niac daemon
 | `niac monitor` | Stream real-time stats |
 | `niac logs` | Stream simulation logs |
 | `niac dump` | Dump captured packets |
-| `niac interactive <interface> <config>` | Run with interactive fault controls |
 | `niac neighbors [watch]` | LLDP/CDP neighbour table |
 | `niac analyze-pcap <file>` | Summarise a PCAP by protocol |
 | `niac analyze-walk <file>` | Extract relationships from an SNMP walk |
 | `niac sanitize <in> <out>` | Anonymise SNMP walks |
 | `niac topology` | Topology management |
-| `niac service` | Windows service management |
+| `niac service` | Windows service management (Windows only) |
 | `niac man` | Generate man pages |
 | `niac completion <shell>` | Shell completion scripts |
 
@@ -81,7 +83,7 @@ Run `niac <command> --help` for flags.
 
 ## Architecture
 
-```
+```text
 ui/src/             → React/TypeScript control plane (Vite)
                           ↓ npm run build
 internal/api/ui/    → Built assets (embedded via go:embed)
@@ -156,7 +158,7 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make fmt-all` | Auto-format everything |
 | `make schema` | Regenerate JSON schema from `Config` struct |
 
-Verified versions: **Go 1.26.6**, Node.js 26.5.0, golangci-lint v2.12.2.
+Verified versions: **Go 1.27.0**, Node.js 26.8.1, golangci-lint v2.13.2.
 All release artifacts are built in GitHub Actions by the pinned `release.yml`
 pipeline after release-please creates a `v*` tag. Linux and Apple Silicon macOS
 use GoReleaser Cross; Windows uses native GitHub runners with CGO and the Npcap

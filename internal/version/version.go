@@ -45,7 +45,9 @@ func extractVersionFromBuildInfo(info *debug.BuildInfo) (string, string, string)
 		ver = info.Main.Version
 	}
 
-	var modified bool
+	// vcs.modified is deliberately not consulted: the go tool already stamps
+	// "+dirty" onto Main.Version for a modified tree, so appending a marker
+	// here produced "...+dirty-dirty".
 	for _, setting := range info.Settings {
 		switch setting.Key {
 		case "vcs.revision":
@@ -55,13 +57,7 @@ func extractVersionFromBuildInfo(info *debug.BuildInfo) (string, string, string)
 			}
 		case "vcs.time":
 			buildTime = setting.Value
-		case "vcs.modified":
-			modified = setting.Value == "true"
 		}
-	}
-
-	if modified && ver != defaultVersion {
-		ver += "-dirty"
 	}
 
 	return ver, commit, buildTime
