@@ -3132,31 +3132,6 @@ paths:
             summary: Server-sent packet stream
             tags:
                 - Streams
-    /api/v1/stream/stats:
-        get:
-            operationId: getApiV1StreamStats
-            responses:
-                "401":
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                    description: Missing or invalid bearer token.
-                "405":
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                    description: Method not allowed; the Allow header lists the accepted set.
-                "500":
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Error'
-                    description: Internal error.
-            summary: Server-sent counter stream
-            tags:
-                - Streams
     /api/v1/stream/status:
         get:
             operationId: getApiV1StreamStatus

@@ -224,9 +224,6 @@ operations:
   GET /api/v1/stream/logs:
     summary: Server-sent log stream
     tags: [Streams]
-  GET /api/v1/stream/stats:
-    summary: Server-sent counter stream
-    tags: [Streams]
   GET /api/v1/stream/status:
     summary: Server-sent status stream
     tags: [Streams]
