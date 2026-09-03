@@ -3,10 +3,12 @@ package ipc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,19 +18,15 @@ import (
 // newFakeServer stands up a Unix socket that answers each connection with one
 // JSON response, so the client can be exercised end to end without a daemon.
 //
-// The socket lives in a deliberately short directory: sun_path is capped near
-// 104 bytes on macOS, and t.TempDir()'s path plus a long test name overruns it,
-// which surfaces as a bind failure rather than anything about the client.
+// The socket path is built by hand rather than from t.TempDir(). sun_path is
+// capped near 104 bytes on macOS, and t.TempDir() spends most of that on the
+// per-test directory: with it, every test here fails on darwin with
+// "bind: invalid argument" before the client is ever exercised.
 func newFakeServer(t *testing.T, handler func(Request) Response) string {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("", "n")
-	if err != nil {
-		t.Fatalf("MkdirTemp: %v", err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-
-	socketPath := filepath.Join(dir, "s")
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("niac-ipc-%d-%d", os.Getpid(), nextSocketID.Add(1)))
+	t.Cleanup(func() { _ = os.Remove(socketPath) })
 
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -37,11 +35,7 @@ func newFakeServer(t *testing.T, handler func(Request) Response) string {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for {
 			conn, acceptErr := listener.Accept()
 			if acceptErr != nil {
@@ -59,7 +53,7 @@ func newFakeServer(t *testing.T, handler func(Request) Response) string {
 				_ = json.NewEncoder(conn).Encode(handler(req))
 			}()
 		}
-	}()
+	})
 
 	t.Cleanup(func() {
 		_ = listener.Close()
@@ -68,6 +62,9 @@ func newFakeServer(t *testing.T, handler func(Request) Response) string {
 
 	return socketPath
 }
+
+// nextSocketID keeps concurrently running tests from colliding on a path.
+var nextSocketID atomic.Uint64
 
 // okResponse builds a successful response carrying one keyed payload, which is
 // the shape every client getter unwraps.

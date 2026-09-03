@@ -19,11 +19,16 @@ var errExitSentinel = errors.New("exitProcess called")
 // A substitute that returned normally would let that nil escape and the test
 // would panic somewhere unrelated, or worse, assert against a state the real
 // binary can never reach.
-func withExitCapture(t *testing.T, fn func()) (code int, exited bool) {
+func withExitCapture(t *testing.T, fn func()) (int, bool) {
 	t.Helper()
 
 	original := exitProcess
 	t.Cleanup(func() { exitProcess = original })
+
+	var (
+		code   int
+		exited bool
+	)
 
 	exitProcess = func(c int) {
 		code = c
@@ -32,20 +37,22 @@ func withExitCapture(t *testing.T, fn func()) (code int, exited bool) {
 		panic(errExitSentinel)
 	}
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
+	func() {
+		defer func() {
+			recovered := recover()
+			if recovered == nil {
+				return
+			}
 
-		if err, ok := recovered.(error); ok && errors.Is(err, errExitSentinel) {
-			return
-		}
+			if err, ok := recovered.(error); ok && errors.Is(err, errExitSentinel) {
+				return
+			}
 
-		panic(recovered)
+			panic(recovered)
+		}()
+
+		fn()
 	}()
-
-	fn()
 
 	return code, exited
 }
