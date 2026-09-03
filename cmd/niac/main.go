@@ -127,6 +127,35 @@ func main() {
 
 // runLegacyMode maintains backward compatibility with original command-line interface
 // Refactored into smaller, testable functions.
+// exitOnFlagError stops the legacy path when flag validation failed.
+func exitOnFlagError(flags *legacyFlags, err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	exitWithStats(1, flags, nil)
+}
+
+// exitAfterInformationalFlag stops the legacy path when --version, --list-*, or
+// another informational flag has already answered the operator's question.
+func exitAfterInformationalFlag(flags *legacyFlags, args []string, info versionInfo) {
+	handled, err := handleInformationalFlags(flags, args, info)
+	if !handled {
+		return
+	}
+
+	code := 0
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
+		code = 1
+	}
+
+	exitWithStats(code, flags, nil)
+}
+
 func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) {
 	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	var flags legacyFlags
@@ -140,10 +169,7 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 	}
 
 	// Process flag overrides (verbose/quiet)
-	if flagErr := processFlags(&flags); flagErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", flagErr)
-		exitWithStats(1, &flags, nil)
-	}
+	exitOnFlagError(&flags, processFlags(&flags))
 	applyLegacyServiceFlags(&flags, services)
 
 	// Initialize colors (respects --no-color flag and NO_COLOR env var)
@@ -153,17 +179,7 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 	args := flagSet.Args()
 
 	// Handle informational flags (version, list-interfaces, list-devices)
-	handled, infoErr := handleInformationalFlags(&flags, args, info)
-	if handled {
-		code := 0
-		if infoErr != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", infoErr)
-
-			code = 1
-		}
-
-		exitWithStats(code, &flags, nil)
-	}
+	exitAfterInformationalFlag(&flags, args, info)
 
 	// Validate required arguments
 	interfaceName, configFile, err := validateLegacyArguments(args)

@@ -140,8 +140,8 @@ func runConfigExport(args []string) error {
 		fmt.Fprintln(os.Stderr, "\nExporting anyway...")
 	}
 
-	if err := writeConfigFile(cfg, outputFile); err != nil {
-		return err
+	if writeErr := writeConfigFile(cfg, outputFile); writeErr != nil {
+		return writeErr
 	}
 
 	fmt.Fprintf(os.Stdout, "Configuration exported to %s\n", outputFile)
@@ -242,8 +242,8 @@ func runConfigMerge(args []string) error {
 	}
 
 	merged := mergeConfigs(base, overlay)
-	if err := writeConfigFile(merged, outputFile); err != nil {
-		return err
+	if writeErr := writeConfigFile(merged, outputFile); writeErr != nil {
+		return writeErr
 	}
 
 	printMergeStats(base, overlay, merged, outputFile)
@@ -295,8 +295,8 @@ func writeConfigFile(cfg *config.Config, path string) error {
 		return fmt.Errorf("marshaling configuration: %w", err)
 	}
 
-	if err := writeSafeFile(path, data); err != nil {
-		return fmt.Errorf("writing file: %w", err)
+	if writeErr := writeSafeFile(path, data); writeErr != nil {
+		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
 	return nil

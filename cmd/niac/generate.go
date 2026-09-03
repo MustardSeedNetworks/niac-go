@@ -261,12 +261,29 @@ func generateDefaultMAC(deviceNum int) string {
 func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolConfig, error) {
 	protocols := make(map[string]protocolConfig)
 
-	// Discovery protocols
+	sections := []func(*bufio.Reader, string, map[string]protocolConfig) error{
+		selectDiscoveryProtocols,
+		selectManagementProtocols,
+		selectNetworkServices,
+		selectApplicationProtocols,
+	}
+
+	for _, section := range sections {
+		if err := section(reader, devType, protocols); err != nil {
+			return nil, err
+		}
+	}
+
+	return protocols, nil
+}
+
+// selectDiscoveryProtocols prompts for LLDP/CDP.
+func selectDiscoveryProtocols(reader *bufio.Reader, _ string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Discovery Protocols:")
 	lldp, err := mustPromptYesNo(reader, "  Enable LLDP? (y/n): ")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if lldp {
 		protocols["lldp"] = protocolConfig{
@@ -279,7 +296,7 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 	}
 	cdp, err := mustPromptYesNo(reader, "  Enable CDP? (y/n): ")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if cdp {
 		protocols["cdp"] = protocolConfig{
@@ -291,21 +308,25 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 	}
 
-	// Management protocols
+	return nil
+}
+
+// selectManagementProtocols prompts for SNMP.
+func selectManagementProtocols(reader *bufio.Reader, _ string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Management Protocols:")
 	snmp, err := mustPromptYesNo(reader, "  Enable SNMP? (y/n): ")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if snmp {
-		community, err := promptString(reader, "    SNMP community [public]: ", "public")
-		if err != nil {
-			return nil, err
+		community, promptErr := promptString(reader, "    SNMP community [public]: ", "public")
+		if promptErr != nil {
+			return promptErr
 		}
 		walkFile, err := promptString(reader, "    Walk file (leave empty for none): ", "")
 		if err != nil {
-			return nil, err
+			return err
 		}
 		protocols["snmp"] = protocolConfig{
 			enabled: true,
@@ -316,13 +337,17 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 	}
 
-	// Network services
+	return nil
+}
+
+// selectNetworkServices prompts for DHCP/DNS on routers and servers.
+func selectNetworkServices(reader *bufio.Reader, devType string, protocols map[string]protocolConfig) error {
 	fmt.Fprintln(os.Stdout)
 	color.Yellow("Network Services:")
 	if devType == "router" || devType == "server" {
-		dhcp, err := mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ")
-		if err != nil {
-			return nil, err
+		dhcp, promptErr := mustPromptYesNo(reader, "  Enable DHCP server? (y/n): ")
+		if promptErr != nil {
+			return promptErr
 		}
 		if dhcp {
 			protocols["dhcp"] = protocolConfig{
@@ -335,7 +360,7 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 		dns, err := mustPromptYesNo(reader, "  Enable DNS server? (y/n): ")
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if dns {
 			protocols["dns"] = protocolConfig{
@@ -345,13 +370,17 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 	}
 
-	// Application protocols
+	return nil
+}
+
+// selectApplicationProtocols prompts for HTTP/FTP on servers and workstations.
+func selectApplicationProtocols(reader *bufio.Reader, devType string, protocols map[string]protocolConfig) error {
 	if devType == "server" || devType == "workstation" {
 		fmt.Fprintln(os.Stdout)
 		color.Yellow("Application Protocols:")
-		httpEnabled, err := mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ")
-		if err != nil {
-			return nil, err
+		httpEnabled, promptErr := mustPromptYesNo(reader, "  Enable HTTP server? (y/n): ")
+		if promptErr != nil {
+			return promptErr
 		}
 		if httpEnabled {
 			protocols["http"] = protocolConfig{
@@ -363,7 +392,7 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 		ftpEnabled, err := mustPromptYesNo(reader, "  Enable FTP server? (y/n): ")
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if ftpEnabled {
 			protocols["ftp"] = protocolConfig{
@@ -375,7 +404,7 @@ func selectProtocols(reader *bufio.Reader, devType string) (map[string]protocolC
 		}
 	}
 
-	return protocols, nil
+	return nil
 }
 
 func generateYAML(cfg *generatedConfig) string {

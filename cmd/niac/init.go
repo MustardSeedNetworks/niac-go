@@ -75,8 +75,8 @@ func runInit(args []string) error {
 		return nil
 	}
 
-	if err := writeSafeFile(outputFile, []byte(tmpl.Content)); err != nil {
-		return fmt.Errorf("writing file: %w", err)
+	if writeErr := writeSafeFile(outputFile, []byte(tmpl.Content)); writeErr != nil {
+		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
 	printInitSuccess(outputFile, selectedTemplate)

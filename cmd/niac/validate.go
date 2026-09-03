@@ -109,8 +109,8 @@ func runValidate(args []string, options *validateOptions) error {
 
 	// Output results
 	if options.json {
-		if err := outputJSONResult(result); err != nil {
-			return err
+		if jsonErr := outputJSONResult(result); jsonErr != nil {
+			return jsonErr
 		}
 	} else {
 		outputTextResult(result, configFile, options.verbose, cfg.DeviceCount())
