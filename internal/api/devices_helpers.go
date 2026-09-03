@@ -40,8 +40,14 @@ func (s *Server) validateDeviceAddition(
 	}
 
 	if len(cfg.Segments) > 0 {
-		writeError(w, r, http.StatusConflict, "segmented_config_requires_replacement",
-			"Devices in segmented configurations must be changed through whole-config replacement", nil)
+		writeError(
+			w,
+			r,
+			http.StatusConflict,
+			"segmented_config_requires_replacement",
+			"Devices in segmented configurations must be changed through whole-config replacement",
+			nil,
+		)
 		return errValidationFailed
 	}
 
@@ -129,7 +135,14 @@ func (s *Server) createAndSaveDevice(
 ) (*config.Device, error) {
 	newDevice, err := createDeviceFromRequest(req)
 	if err != nil {
-		s.logger.ErrorContext(r.Context(), "[API] Device creation failed", "error", err, "hostname", req.Hostname)
+		s.logger.ErrorContext(
+			r.Context(),
+			"[API] Device creation failed",
+			"error",
+			err,
+			"hostname",
+			req.Hostname,
+		)
 
 		line, msg := parseYAMLError(err)
 		writeError(w, r, http.StatusBadRequest, "device_creation_failed",
@@ -139,8 +152,14 @@ func (s *Server) createAndSaveDevice(
 	}
 
 	if validationErr := config.ValidateDeviceManagementRequirements(newDevice); validationErr != nil {
-		writeError(w, r, http.StatusBadRequest, "management_config_invalid",
-			"Device management configuration is invalid", []ErrorDetail{{Issue: validationErr.Error()}})
+		writeError(
+			w,
+			r,
+			http.StatusBadRequest,
+			"management_config_invalid",
+			"Device management configuration is invalid",
+			[]ErrorDetail{{Issue: validationErr.Error()}},
+		)
 		return nil, validationErr
 	}
 
@@ -148,7 +167,14 @@ func (s *Server) createAndSaveDevice(
 	newCfg.Devices = append(newCfg.Devices, *newDevice)
 
 	if saveErr := s.saveConfig(&newCfg); saveErr != nil {
-		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
+		writeError(
+			w,
+			r,
+			http.StatusInternalServerError,
+			"save_failed",
+			"Failed to save configuration",
+			nil,
+		)
 		return nil, saveErr
 	}
 
@@ -199,6 +225,10 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 		dev.IPAddresses = []net.IP{ip}
 	}
 
+	if err := applyDeviceScalarFields(dev, req.IPs, req.VLAN, req.Babble, req.MapToIP); err != nil {
+		return fmt.Errorf("invalid_ip: %w", err)
+	}
+
 	interfaceUpdates := coalesceInterfaceUpdates(req.Interfaces, req.InterfaceDetails)
 	if interfaceUpdates != nil {
 		interfaces, err := interfaceUpdatesToConfig(interfaceUpdates)
@@ -211,6 +241,18 @@ func applyPartialDeviceUpdate(dev *config.Device, req DeviceUpdateRequest) error
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
 	applyManagementRequests(dev, req.SSH, req.Syslog)
+	applyDiscoveryProtocolRequests(dev, req.LLDP, req.CDP, req.EDP, req.FDP, req.STP)
+
+	serviceErr := applyServiceProtocolRequests(
+		dev, req.DHCP, req.DHCPv6, req.DNS, req.HTTP, req.FTP, req.NetBIOS,
+	)
+	if serviceErr != nil {
+		return serviceErr
+	}
+
+	if err := applyHostProtocolRequests(dev, req.ICMP, req.ICMPv6, req.TTL, req.OSFingerprint, req.IPerf3); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -225,7 +267,10 @@ func applySNMPAgentRequest(dst *config.SNMPConfig, src *SNMPAgentRequest) {
 	dst.WalkFiles = append([]string(nil), src.WalkFiles...)
 	dst.AddMibs = make([]config.AddMib, 0, len(src.AddMibs))
 	for _, mib := range src.AddMibs {
-		dst.AddMibs = append(dst.AddMibs, config.AddMib{OID: mib.OID, Type: mib.Type, Value: mib.Value})
+		dst.AddMibs = append(
+			dst.AddMibs,
+			config.AddMib{OID: mib.OID, Type: mib.Type, Value: mib.Value},
+		)
 	}
 }
 
@@ -265,13 +310,23 @@ func interfaceUpdatesToConfig(updates []DeviceInterfaceUpdate) ([]config.Interfa
 			return nil, fmt.Errorf("invalid_interface: speed must be zero or greater for %s", name)
 		}
 		if update.Duplex != "" && !isAllowedInterfaceValue(update.Duplex, "full", "half", "auto") {
-			return nil, fmt.Errorf("invalid_interface: duplex must be full, half, or auto for %s", name)
+			return nil, fmt.Errorf(
+				"invalid_interface: duplex must be full, half, or auto for %s",
+				name,
+			)
 		}
 		if update.AdminStatus != "" && !isAllowedInterfaceValue(update.AdminStatus, "up", "down") {
-			return nil, fmt.Errorf("invalid_interface: admin_status must be up or down for %s", name)
+			return nil, fmt.Errorf(
+				"invalid_interface: admin_status must be up or down for %s",
+				name,
+			)
 		}
-		if update.OperStatus != "" && !isAllowedInterfaceValue(update.OperStatus, "up", "down", "testing") {
-			return nil, fmt.Errorf("invalid_interface: oper_status must be up, down, or testing for %s", name)
+		if update.OperStatus != "" &&
+			!isAllowedInterfaceValue(update.OperStatus, "up", "down", "testing") {
+			return nil, fmt.Errorf(
+				"invalid_interface: oper_status must be up, down, or testing for %s",
+				name,
+			)
 		}
 
 		interfaces = append(interfaces, config.Interface{
@@ -357,6 +412,10 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 		dev.IPAddresses = []net.IP{ip}
 	}
 
+	if err := applyDeviceScalarFields(dev, req.IPs, req.VLAN, req.Babble, req.MapToIP); err != nil {
+		return nil, err
+	}
+
 	interfaceUpdates := coalesceInterfaceUpdates(req.Interfaces, req.InterfaceDetails)
 	if interfaceUpdates != nil {
 		interfaces, err := interfaceUpdatesToConfig(interfaceUpdates)
@@ -369,6 +428,18 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 		applySNMPAgentRequest(&dev.SNMPConfig, req.SNMPAgent)
 	}
 	applyManagementRequests(dev, req.SSH, req.Syslog)
+	applyDiscoveryProtocolRequests(dev, req.LLDP, req.CDP, req.EDP, req.FDP, req.STP)
+
+	serviceErr := applyServiceProtocolRequests(
+		dev, req.DHCP, req.DHCPv6, req.DNS, req.HTTP, req.FTP, req.NetBIOS,
+	)
+	if serviceErr != nil {
+		return nil, serviceErr
+	}
+
+	if err := applyHostProtocolRequests(dev, req.ICMP, req.ICMPv6, req.TTL, req.OSFingerprint, req.IPerf3); err != nil {
+		return nil, err
+	}
 
 	if req.RawYAML != "" {
 		parsed, err := parseDeviceFromYAML(req.RawYAML, req.Hostname)
