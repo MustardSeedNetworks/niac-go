@@ -288,6 +288,16 @@
       "snmpCommunity": "Comunidad SNMP",
       "title": "Generar una flota multisitio"
     },
+    "fleetDefaults": {
+      "captureHelp": "Reproduce una captura grabada junto a los dispositivos simulados. Solo una captura: el runtime reproduce exactamente una y el cargador rechaza más.",
+      "captureTitle": "Reproducción de captura",
+      "discoveryHelp": "Se aplica a todo dispositivo que no lo anule con su propio bloque. El intervalo está en segundos; déjalo vacío para el valor predeterminado del protocolo.",
+      "discoveryTitle": "Valores predeterminados de protocolos de descubrimiento",
+      "fileName": "Archivo de captura",
+      "interval": "Intervalo (s)",
+      "loopTime": "Tiempo de bucle (s)",
+      "scaleTime": "Escala de tiempo"
+    },
     "label": "Nueva simulación",
     "networks": {
       "add": "Añadir",

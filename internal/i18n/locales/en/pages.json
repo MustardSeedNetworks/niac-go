@@ -543,6 +543,16 @@
       "stressPacksTitle": "Scale testing",
       "title": "Generate a multisite fleet"
     },
+    "fleetDefaults": {
+      "captureHelp": "Replays a recorded capture alongside the simulated devices. One capture only: the runtime plays exactly one, and the loader refuses more.",
+      "captureTitle": "Capture playback",
+      "discoveryHelp": "Applies to every device that does not override it with its own block. Interval is in seconds; leave it blank for the protocol's own default.",
+      "discoveryTitle": "Discovery protocol defaults",
+      "fileName": "Capture file",
+      "interval": "Interval (s)",
+      "loopTime": "Loop time (s)",
+      "scaleTime": "Time scale"
+    },
     "label": "New Simulation",
     "networks": {
       "add": "Add",
