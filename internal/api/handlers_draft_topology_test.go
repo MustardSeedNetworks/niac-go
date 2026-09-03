@@ -195,6 +195,45 @@ func TestDraftTopologyMutationPersistsReciprocalLinkWithoutApplyingRuntime(t *te
 	}
 }
 
+func TestDraftTopologyAddsTheFirstDeviceToAnEmptyDraft(t *testing.T) {
+	server, _ := newTestServer(t)
+	lib := attachDraftLibrary(t, server)
+	draft, err := lib.CreateDraft("empty-topology", "devices: []\n")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	body := `{
+      "operation":"add_device",
+      "device":{
+        "name":"first-1","type":"router","vendor":"cisco","macSuffix":123,
+        "interfaces":[{"name":"Ethernet1/1","type":"ethernet","mtu":1500,
+          "speed":1000,"duplex":"full","adminStatus":"up","operStatus":"up"}]
+      }
+    }`
+	rec := httptest.NewRecorder()
+	server.handleLibraryDraftByName(rec, draftRequest(
+		http.MethodPatch, "/api/v1/library/drafts/empty-topology/topology", body, draft.Revision,
+	))
+
+	// The handler loads the draft's *current* content before applying the
+	// mutation, and the loader refuses a device-less config because a runnable
+	// one must describe at least one device. Treating that as a broken draft
+	// made it impossible to add the first device to an empty draft at all,
+	// which is exactly what authoring a network from empty starts with.
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PATCH status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	updated := decodeDraftResponse(t, rec)
+	cfg, loadErr := config.LoadYAMLBytes([]byte(updated.Content))
+	if loadErr != nil {
+		t.Fatalf("mutated draft does not load: %v", loadErr)
+	}
+	if len(cfg.Devices) != 1 || cfg.Devices[0].Name != "first-1" {
+		t.Fatalf("devices = %#v, want one device named first-1", cfg.Devices)
+	}
+}
+
 func TestDraftTopologyMutationRequiresRevisionAndPreservesDraftOnFailure(t *testing.T) {
 	server, _ := newTestServer(t)
 	lib := attachDraftLibrary(t, server)
