@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,7 +24,7 @@ import (
 func newFakeServer(t *testing.T, handler func(Request) Response) string {
 	t.Helper()
 
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("niac-ipc-%d-%d", os.Getpid(), nextSocketID.Add(1)))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("niac-ipc-%d-%d", os.Getpid(), time.Now().UnixNano()))
 	t.Cleanup(func() { _ = os.Remove(socketPath) })
 
 	listener, err := net.Listen("unix", socketPath)
@@ -62,9 +61,6 @@ func newFakeServer(t *testing.T, handler func(Request) Response) string {
 
 	return socketPath
 }
-
-// nextSocketID keeps concurrently running tests from colliding on a path.
-var nextSocketID atomic.Uint64
 
 // okResponse builds a successful response carrying one keyed payload, which is
 // the shape every client getter unwraps.
