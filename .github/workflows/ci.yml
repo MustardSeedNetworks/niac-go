@@ -299,17 +299,18 @@ jobs:
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "Current coverage: ${COVERAGE}%"
 
-          # Minimum coverage threshold. Acts as an anti-regression floor.
-          # Project target is 90% (CLAUDE.md). Current measured ~55%.
+          # Minimum coverage threshold. Acts as an anti-regression floor,
+          # set a few points under the measured total so ordinary churn does
+          # not fail the build. Project target is 90% (CLAUDE.md).
           #
           # Ratchet plan (raise after each release exceeds the next tier
-          # by 5+ points):
-          #   2026-Q2: 50 (current)
-          #   2026-Q3: 55
-          #   2026-Q4: 60
-          #   2027-Q2: 70
+          # by 3+ points):
+          #   2026-Q2: 50
+          #   2026-Q3: 68 (current; measured 71.3% on main at b86fc10c)
+          #   2026-Q4: 75
+          #   2027-Q2: 82
           #   long-term: 90
-          MIN_COVERAGE=50
+          MIN_COVERAGE=68
 
           if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
             echo "ERROR: Coverage ${COVERAGE}% is below minimum threshold of ${MIN_COVERAGE}%"
