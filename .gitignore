@@ -5,6 +5,7 @@
 # Binaries
 /niac
 /niac-convert
+/niac-schema
 *.exe
 *.dll
 *.so

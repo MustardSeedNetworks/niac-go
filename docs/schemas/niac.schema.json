@@ -32,7 +32,13 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "fcs_errors",
+            "packet_discards",
+            "interface_errors",
+            "high_utilization"
+          ]
         },
         "value": {
           "type": "integer"
@@ -285,7 +291,21 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "router",
+            "switch",
+            "layer3-switch",
+            "ap",
+            "access-point",
+            "firewall",
+            "server",
+            "host",
+            "workstation",
+            "iot",
+            "printer",
+            "voip-phone"
+          ]
         },
         "mac": {
           "type": "string"
@@ -897,7 +917,16 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "ethernet",
+            "ieee80211",
+            "l2vlan",
+            "l3ipvlan",
+            "loopback",
+            "tunnel",
+            "other"
+          ]
         },
         "network": {
           "type": "string"
@@ -912,13 +941,27 @@
           "type": "integer"
         },
         "duplex": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "full",
+            "half"
+          ]
         },
         "admin_status": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "up",
+            "down",
+            "testing"
+          ]
         },
         "oper_status": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "up",
+            "down",
+            "testing"
+          ]
         },
         "description": {
           "type": "string"
@@ -1368,13 +1411,27 @@
           "type": "string"
         },
         "auth_protocol": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "none",
+            "md5",
+            "sha",
+            "sha256",
+            "sha512"
+          ]
         },
         "auth_password": {
           "type": "string"
         },
         "priv_protocol": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "none",
+            "des",
+            "aes",
+            "aes192",
+            "aes256"
+          ]
         },
         "priv_password": {
           "type": "string"

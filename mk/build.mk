@@ -125,8 +125,13 @@ schema: ## Regenerate docs/schemas/niac.schema.json from converter.Config
 	@printf "$(BOLD)Generating JSON Schema for the YAML config...$(RESET)\n"
 	@go run ./cmd/niac-schema -o docs/schemas/niac.schema.json
 	@printf "$(GREEN)Wrote docs/schemas/niac.schema.json ($$(wc -l < docs/schemas/niac.schema.json) lines)$(RESET)\n"
+	@$(MAKE) --no-print-directory ui-sections
 
-.PHONY: schema
+ui-sections: ## Regenerate the device-editor form manifest from the schema
+	@printf "$(BOLD)Generating device-editor sections from the schema...$(RESET)\n"
+	@./scripts/gen-device-editor-sections.py
+
+.PHONY: schema ui-sections
 
 # =============================================================================
 # Development Targets

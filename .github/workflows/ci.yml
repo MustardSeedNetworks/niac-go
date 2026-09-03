@@ -238,6 +238,13 @@ jobs:
           python3 scripts/test-check-authoring-parity.py
           python3 scripts/check-authoring-parity.py
 
+      # The device editor's forms are generated from the schema, so a struct
+      # change that nobody regenerates for would silently stop being editable.
+      - name: Device-editor manifest drift — generated forms match the schema
+        run: |
+          python3 scripts/test-gen-device-editor-sections.py
+          python3 scripts/gen-device-editor-sections.py --check
+
       # The four products each own their tsconfig, so the strictness flags
       # drift silently — a missing one never announces itself, it just checks
       # less than its sibling does.

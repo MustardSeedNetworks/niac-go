@@ -269,8 +269,8 @@ verify: ## Full verification (lint, test, security, build, schema)
 	$(call timer-end,build,Build)
 	$(call step,5,5,Schema Drift Check)
 	@$(MAKE) --no-print-directory schema
-	@git diff --exit-code -- docs/schemas/niac.schema.json >/dev/null || { \
-		printf "$(RED)ERROR: docs/schemas/niac.schema.json changed. Commit the regenerated schema.$(RESET)\n"; \
+	@git diff --exit-code -- docs/schemas/niac.schema.json ui/src/components/device-editor/generated >/dev/null || { \
+		printf "$(RED)ERROR: the generated schema or device-editor manifest changed. Run 'make schema' and commit the result.$(RESET)\n"; \
 		exit 1; \
 	}
 	@printf "\n$(BOLD)$(GREEN)╔══════════════════════════════════════════════════════════════════════════════╗$(RESET)\n"
