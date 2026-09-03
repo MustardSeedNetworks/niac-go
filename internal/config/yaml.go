@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"net"
+	"slices"
 	"strconv"
 	"time"
 
@@ -152,6 +153,7 @@ func deviceToYAML(device *Device) converter.Device {
 		HTTP:          httpToYAML(device.HTTPConfig),
 		Ftp:           ftpToYAML(device.FTPConfig),
 		Netbios:       netbiosToYAML(device.NetBIOSConfig),
+		Mdns:          mdnsToYAML(device.MDNSConfig),
 		Snmpv3:        snmpv3ToYAML(device.SNMPv3Config),
 		Icmp:          icmpToYAML(device.ICMPConfig),
 		Icmpv6:        icmpv6ToYAML(device.ICMPv6Config),
@@ -165,10 +167,30 @@ func deviceToYAML(device *Device) converter.Device {
 		Routes:        routesToYAML(device.Routes),
 		TrunkPorts:    trunkPortsToYAML(device.TrunkPorts),
 		PortChannels:  portChannelsToYAML(device.PortChannels),
-		Properties:    device.Properties,
+		Properties:    authoredProperties(device.Properties),
 	}
 	if device.MACVendor != "" {
 		out.MAC = ""
+	}
+	return out
+}
+
+// derivedProperties are written into Device.Properties by the loader from
+// other authored fields (`vlan`, `len(add_mibs)`), not by an author. Emitting
+// them back would promote derived state to authored state: the device editor
+// reads this document, shows every property in its free-form map, and saves
+// what it was shown.
+var derivedProperties = []string{"vlan", "custom_mibs_count"} //nolint:gochecknoglobals // static lookup table
+
+func authoredProperties(properties map[string]string) map[string]string {
+	out := make(map[string]string, len(properties))
+	for key, value := range properties {
+		if !slices.Contains(derivedProperties, key) {
+			out[key] = value
+		}
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

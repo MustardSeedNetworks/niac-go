@@ -217,6 +217,19 @@ func netbiosToYAML(cfg *NetBIOSConfig) *converter.NetbiosConfig {
 	return out
 }
 
+func mdnsToYAML(cfg *MDNSConfig) *converter.MdnsConfig {
+	if cfg == nil {
+		return nil
+	}
+	out := &converter.MdnsConfig{Enabled: cfg.Enabled, Hostname: cfg.Hostname, TTL: cfg.TTL}
+	for _, service := range cfg.Services {
+		out.Services = append(out.Services, converter.MdnsService{
+			Type: service.Type, Port: service.Port, TXT: service.TXT,
+		})
+	}
+	return out
+}
+
 func snmpv3ToYAML(cfg *SNMPv3Config) *converter.Snmpv3Config {
 	if cfg == nil {
 		return nil

@@ -1,0 +1,14 @@
+name: reception-pc
+type: workstation
+mac: 00:1A:2B:20:00:20
+ips:
+  - 10.20.0.120
+ttl:
+  ttl: 128
+icmp:
+  enabled: true
+netbios:
+  enabled: true
+  names:
+    - name: RECEPTION-PC
+      suffix: "20"

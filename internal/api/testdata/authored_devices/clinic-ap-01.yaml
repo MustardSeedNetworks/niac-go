@@ -1,0 +1,14 @@
+name: clinic-ap-01
+type: ap
+vendor: aruba
+mac_suffix: 48
+ips:
+  - 10.20.99.30
+lldp:
+  enabled: true
+  system_description: Aruba AP-515 clinic waiting room
+snmp_agent:
+  enabled: true
+  community: msn_public
+  sysname: clinic-ap-01
+  sysdescr: "ArubaOS (MODEL: 515), Version 8.10.0.9"

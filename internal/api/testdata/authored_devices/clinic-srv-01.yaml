@@ -1,0 +1,25 @@
+name: clinic-srv-01
+type: server
+vendor: dell
+mac_suffix: 16
+ips:
+  - 10.20.0.10
+ttl:
+  ttl: 64
+icmp:
+  enabled: true
+lldp:
+  enabled: true
+  system_description: Ubuntu 24.04 DNS/NTP server
+snmp_agent:
+  enabled: true
+  community: msn_public
+  sysname: clinic-srv-01
+  sysdescr: Linux clinic-srv-01 6.8.0 x86_64
+http:
+  enabled: true
+  server_name: nginx/1.24.0
+ssh:
+  enabled: true
+  username: admin
+  password_env: NIAC_SSH_PASSWORD

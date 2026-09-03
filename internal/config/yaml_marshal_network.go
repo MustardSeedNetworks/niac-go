@@ -1,6 +1,10 @@
 package config
 
-import "github.com/MustardSeedNetworks/niac-go/internal/converter"
+import (
+	"reflect"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
+)
 
 func icmpToYAML(cfg *ICMPConfig) *converter.IcmpConfig {
 	if cfg == nil {
@@ -59,6 +63,14 @@ func icmpv6ToYAML(cfg *ICMPv6Config) *converter.Icmpv6Config {
 
 func dhcpv6ToYAML(cfg *DHCPv6Config) *converter.Dhcpv6Config {
 	if cfg == nil {
+		return nil
+	}
+	// A device with no `dhcpv6` block loads as a zero-value config rather than
+	// nil (parseDHCPv6Config, alone among the protocol parsers). Emitting that
+	// as `dhcpv6: {}` makes the block present, and a present block picks up
+	// the lifetime defaults on the next load — so one save through the device
+	// editor gave every device a DHCPv6 server it never authored.
+	if reflect.DeepEqual(cfg, &DHCPv6Config{}) {
 		return nil
 	}
 	out := &converter.Dhcpv6Config{

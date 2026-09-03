@@ -1,0 +1,14 @@
+name: exam-pc
+type: workstation
+mac: 00:1A:2B:20:00:21
+ips:
+  - 10.20.0.121
+ttl:
+  ttl: 64
+icmp:
+  enabled: true
+mdns:
+  enabled: true
+  services:
+    - type: _workstation._tcp
+      port: 9
