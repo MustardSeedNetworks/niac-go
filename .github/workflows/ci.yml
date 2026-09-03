@@ -228,6 +228,16 @@ jobs:
       - name: Filename-policy gate — no monolith naming outside internal/api
         run: ./scripts/check-filename-policy.sh
 
+      - name: Route-consumer gate — every route has a caller, every call has a route
+        run: |
+          python3 scripts/test-check-route-consumers.py
+          python3 scripts/check-route-consumers.py
+
+      - name: Authoring-parity gate — every schema field is editable (owner decision 2026-09-02)
+        run: |
+          python3 scripts/test-check-authoring-parity.py
+          python3 scripts/check-authoring-parity.py
+
       # The four products each own their tsconfig, so the strictness flags
       # drift silently — a missing one never announces itself, it just checks
       # less than its sibling does.
