@@ -223,8 +223,22 @@ func TestStartSimulationRecompilesUnsafeRoutedRequest(t *testing.T) {
 
 	err := d.StartSimulation(req)
 
-	if !errors.Is(err, ErrUnsafeTopology) {
-		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	if !errors.Is(err, fabric.ErrUnsafeTopology) {
+		t.Fatalf("StartSimulation() error = %v, want fabric.ErrUnsafeTopology", err)
+	}
+	// The API renders these; a start that only carried the sentinel is what
+	// made a configuration error come back as an opaque 500 (P1b-4).
+	var topologyErr *fabric.UnsafeTopologyError
+	if !errors.As(err, &topologyErr) {
+		t.Fatalf("StartSimulation() error = %v, want it to carry the diagnostics", err)
+	}
+	if len(topologyErr.Diagnostics) == 0 {
+		t.Fatal("StartSimulation() carried an empty diagnostic list")
+	}
+	for _, diagnostic := range topologyErr.Diagnostics {
+		if diagnostic.Code == "" {
+			t.Fatalf("diagnostic %+v has no code", diagnostic)
+		}
 	}
 }
 
@@ -302,8 +316,8 @@ devices:
 
 	err := d.StartSimulation(req)
 
-	if !errors.Is(err, ErrUnsafeTopology) {
-		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	if !errors.Is(err, fabric.ErrUnsafeTopology) {
+		t.Fatalf("StartSimulation() error = %v, want fabric.ErrUnsafeTopology", err)
 	}
 }
 
@@ -316,8 +330,8 @@ func TestUnsafeReplacementLeavesRunningSimulationIntact(t *testing.T) {
 
 	err := d.StartSimulation(routedRequest(0))
 
-	if !errors.Is(err, ErrUnsafeTopology) {
-		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	if !errors.Is(err, fabric.ErrUnsafeTopology) {
+		t.Fatalf("StartSimulation() error = %v, want fabric.ErrUnsafeTopology", err)
 	}
 	if d.simulation != running {
 		t.Fatal("unsafe replacement stopped the running simulation")
@@ -338,8 +352,8 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 
 	err := d.StartSimulation(routedRequest(0))
 
-	if !errors.Is(err, ErrUnsafeTopology) {
-		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	if !errors.Is(err, fabric.ErrUnsafeTopology) {
+		t.Fatalf("StartSimulation() error = %v, want fabric.ErrUnsafeTopology", err)
 	}
 	got, readErr := os.ReadFile(path)
 	if readErr != nil {

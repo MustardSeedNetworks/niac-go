@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -106,6 +107,7 @@ func runValidate(args []string, options *validateOptions) error {
 	// Validate configuration
 	validator := config.NewValidator(configFile)
 	result := validator.Validate(cfg)
+	addFabricFindings(result, cfg, configFile)
 
 	// Output results
 	if options.json {
@@ -122,4 +124,25 @@ func runValidate(args []string, options *validateOptions) error {
 	}
 
 	return nil
+}
+
+// addFabricFindings folds the fabric compiler's findings into the validation
+// result, so `niac validate` refuses exactly what the daemon refuses to start.
+//
+// Semantic validation alone passed files that preflight rejected on six
+// counts, and validate then printed "Configuration is valid" for a scenario
+// the daemon would not run (P1b-4). The compiler's stable codes travel with
+// each finding so an operator can match a validate line to a preflight line.
+func addFabricFindings(result *config.ListError, cfg *config.Config, configFile string) {
+	// A flat scenario has no fabric to compile; its interfaces name no
+	// network, which the compiler would read as references to a network that
+	// does not exist.
+	if !fabric.IsRouted(cfg) {
+		return
+	}
+	for _, diagnostic := range fabric.CompileConfig(cfg).Diagnostics {
+		finding := config.NewConfigError(configFile, diagnostic.Field, diagnostic.Message)
+		finding.Code = string(diagnostic.Code)
+		result.Add(finding)
+	}
 }

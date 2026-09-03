@@ -36,7 +36,6 @@ var (
 	)
 	ErrNoSimulationRunning     = errors.New("no simulation running")
 	ErrTemplateNotFound        = errors.New("template not found")
-	ErrUnsafeTopology          = errors.New("routed topology failed preflight")
 	ErrInvalidSimulationConfig = errors.New("simulation configuration failed semantic validation")
 
 	// errInvalidInlineSessionID rejects a session id that would be
@@ -450,7 +449,7 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 	if err != nil {
 		return fabric.NewReport(), err
 	}
-	if !usesRoutedFabric(cfg) {
+	if !fabric.IsRouted(cfg) {
 		if req.AttachmentMode == fabric.ModeTrunk {
 			return fabric.CompilePhysicalBinding(d.bindingFromRequest(req)), nil
 		}
@@ -459,10 +458,6 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 		return report, nil
 	}
 	return fabric.Compile(cfg, d.bindingFromRequest(req)), nil
-}
-
-func usesRoutedFabric(cfg *config.Config) bool {
-	return len(cfg.Networks) > 0 || len(cfg.Attachments) > 0
 }
 
 func (d *Daemon) bindingFromRequest(req api.SimulationRequest) fabric.Binding {
@@ -489,29 +484,15 @@ func (d *Daemon) compileSimulationFabric(
 	cfg *config.Config,
 	req api.SimulationRequest,
 ) (compiledSimulationFabric, error) {
-	if !usesRoutedFabric(cfg) {
+	if !fabric.IsRouted(cfg) {
 		if req.AttachmentMode != fabric.ModeTrunk {
 			return compiledSimulationFabric{}, nil
 		}
 		report := fabric.CompilePhysicalBinding(d.bindingFromRequest(req))
-		if !report.Safe {
-			return compiledSimulationFabric{}, fmt.Errorf(
-				"%w: %v",
-				ErrUnsafeTopology,
-				report.Diagnostics,
-			)
-		}
-		return compiledSimulationFabric{topology: &report.Topology}, nil
+		return compiledFabricFromReport(report)
 	}
 	report := fabric.Compile(cfg, d.bindingFromRequest(req))
-	if !report.Safe {
-		return compiledSimulationFabric{}, fmt.Errorf(
-			"%w: %v",
-			ErrUnsafeTopology,
-			report.Diagnostics,
-		)
-	}
-	return compiledSimulationFabric{topology: &report.Topology}, nil
+	return compiledFabricFromReport(report)
 }
 
 // inlineConfigName is the deterministic filename used to materialise inline
@@ -1190,4 +1171,14 @@ func expandPath(path string) string {
 // a working version in cmd/niac/runtime_services.go.
 func newReplayController(engine capture.PacketSender, debugLevel int) *replay.Controller {
 	return replay.New(engine, debugLevel)
+}
+
+// compiledFabricFromReport turns a compiler report into the daemon's internal
+// result, carrying the diagnostics out as structure rather than as text so the
+// API can answer a configuration error with the same list preflight shows.
+func compiledFabricFromReport(report fabric.Report) (compiledSimulationFabric, error) {
+	if !report.Safe {
+		return compiledSimulationFabric{}, fabric.NewUnsafeTopologyError(report.Diagnostics)
+	}
+	return compiledSimulationFabric{topology: &report.Topology}, nil
 }

@@ -86,8 +86,8 @@ func TestDaemonRejectsUnapprovedFlatTrunkVLAN(t *testing.T) {
 	}
 
 	err = d.StartSimulation(trunkSessionRequest("warehouse", 201))
-	if !errors.Is(err, ErrUnsafeTopology) {
-		t.Fatalf("StartSimulation() error = %v, want ErrUnsafeTopology", err)
+	if !errors.Is(err, fabric.ErrUnsafeTopology) {
+		t.Fatalf("StartSimulation() error = %v, want fabric.ErrUnsafeTopology", err)
 	}
 }
 

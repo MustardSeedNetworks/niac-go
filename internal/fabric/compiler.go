@@ -11,7 +11,33 @@ import (
 
 // Compile validates and canonicalizes a routed scenario without side effects.
 func Compile(cfg *config.Config, binding Binding) Report {
-	compiler := scenarioCompiler{
+	compiler := newScenarioCompiler(cfg, binding)
+	compiler.compileBinding()
+	return compiler.compileScenario()
+}
+
+// CompileConfig runs the configuration-derived half of Compile: everything the
+// scenario file itself determines, with none of the deployment-specific
+// binding checks. It is what an authoring surface with no physical attachment
+// -- `niac validate`, a library upload -- can answer, and it emits exactly the
+// diagnostic codes a later preflight of the same file will emit for the same
+// defects.
+func CompileConfig(cfg *config.Config) Report {
+	compiler := newScenarioCompiler(cfg, Binding{})
+	return compiler.compileScenario()
+}
+
+// IsRouted reports whether a scenario declares the routed fabric that the
+// compiler models. A flat scenario carries device interfaces with no network,
+// which the compiler would read as references to a network that does not
+// exist, so every surface must gate its compile on this one predicate rather
+// than deciding for itself.
+func IsRouted(cfg *config.Config) bool {
+	return cfg != nil && (len(cfg.Networks) > 0 || len(cfg.Attachments) > 0)
+}
+
+func newScenarioCompiler(cfg *config.Config, binding Binding) *scenarioCompiler {
+	return &scenarioCompiler{
 		cfg:                cfg,
 		binding:            binding,
 		networks:           make(map[string]Network),
@@ -22,11 +48,13 @@ func Compile(cfg *config.Config, binding Binding) Report {
 		// them still marshals as [] rather than null. (D6)
 		report: NewReport(),
 	}
-	compiler.compileBinding()
-	compiler.compileNetworks()
-	compiler.compileDevices()
-	compiler.report.Safe = len(compiler.report.Diagnostics) == 0
-	return compiler.report
+}
+
+func (c *scenarioCompiler) compileScenario() Report {
+	c.compileNetworks()
+	c.compileDevices()
+	c.report.Safe = len(c.report.Diagnostics) == 0
+	return c.report
 }
 
 // CompilePhysicalBinding validates a physical binding for a flat scenario.

@@ -21,6 +21,7 @@ type ErrorResponse struct {
 
 // ErrorDetail provides detailed information about a specific error.
 type ErrorDetail struct {
+	Code   string `json:"code,omitempty"`   // Stable finding code, when the source defines one (fabric.DiagnosticCode)
 	Field  string `json:"field,omitempty"`  // Field name that caused the error
 	Issue  string `json:"issue"`            // Description of the issue
 	Value  string `json:"value,omitempty"`  // The value that caused the error (sanitized)

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
 var (
@@ -218,6 +219,10 @@ func (s *Server) handleSimulationStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Request, err error) {
+	var (
+		listErr     *config.ListError
+		topologyErr *fabric.UnsafeTopologyError
+	)
 	switch {
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
@@ -245,6 +250,16 @@ func (s *Server) handleSimulationStartError(w http.ResponseWriter, r *http.Reque
 			"Configuration runtime requirements are not met",
 			[]ErrorDetail{{Field: "ssh.passwordEnv", Issue: err.Error()}})
 	case writeManagedConfigPathError(w, r, err):
+	case errors.As(err, &listErr):
+		// Semantic validation already carries a finding per field. Collapsing
+		// it to a 500 left the operator with nothing to fix.
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed",
+			validationErrorDetails(listErr))
+	case errors.As(err, &topologyErr):
+		// Preflight answers this exact config with this exact list; start
+		// answered "Failed to start simulation" and a 500 (P1b-4).
+		writeError(w, r, http.StatusBadRequest, "preflight_failed",
+			"Simulation preflight failed", diagnosticDetails(topologyErr.Diagnostics))
 	default:
 		// The error may include configuration-derived secrets. Record a stable
 		// failure code without writing the error text to logs or the response.

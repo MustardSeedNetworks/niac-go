@@ -20,6 +20,7 @@ const (
 
 // Error represents a structured configuration error with context.
 type Error struct {
+	Code       string        `json:"code,omitempty"`       // Stable finding code, when the source defines one (fabric.DiagnosticCode)
 	File       string        `json:"file"`                 // Configuration file path
 	Line       int           `json:"line"`                 // Line number (0 if unknown)
 	Column     int           `json:"column"`               // Column number (0 if unknown)
