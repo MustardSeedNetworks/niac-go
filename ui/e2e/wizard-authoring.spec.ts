@@ -12,12 +12,22 @@ test.describe('wizard authoring from empty', () => {
   test('gives every device an address and SNMP without leaving the wizard', async ({ page }) => {
     await page.goto('/new-simulation');
 
+    // Capture the draft this run creates. Reading "the newest draft" from the
+    // library made the assertion depend on which spec finished last.
+    const created = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/library/drafts') &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    );
+
     // Step 1 - source and interface.
     const iface = page.getByTestId('wizard-interface-select');
     await expect(iface).toBeEnabled();
     await iface.selectOption({ index: 1 });
     await page.getByTestId('wizard-start-empty').click();
     await page.getByTestId('wizard-next-button').click();
+    const draftName = ((await (await created).json()) as { name: string }).name;
 
     // Step 2 - author two devices through the composer, the surface an author
     // actually uses when starting from nothing.
@@ -26,7 +36,16 @@ test.describe('wizard authoring from empty', () => {
       await page.getByRole('button', { name: 'Add device' }).first().click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Device name').fill(name);
+      // Arm the wait before the click. Adding a device is a topology PATCH,
+      // and the dialog closes only once it resolves: waiting on the dialog
+      // alone made this a race against the network, which firefox lost on a
+      // loaded runner and the retry then won.
+      const added = page.waitForResponse(
+        (response) =>
+          response.url().includes('/topology') && response.request().method() === 'PATCH',
+      );
       await dialog.getByRole('button', { name: 'Add device' }).click();
+      await added;
       await expect(dialog).toBeHidden();
     }
     await page.getByTestId('wizard-next-button').click();
@@ -65,15 +84,7 @@ test.describe('wizard authoring from empty', () => {
     // it rather than its YAML.
     await expect(page.getByTestId('wizard-step-review')).toHaveAttribute('data-status', 'active');
 
-    const drafts = await page.request.get('/api/v1/library/drafts');
-    expect(drafts.ok()).toBe(true);
-    const entries = (await drafts.json()) as Array<{ name: string; modifiedAt: string }>;
-    const newest = entries.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0];
-    expect(newest).toBeDefined();
-
-    const saved = await page.request.get(
-      `/api/v1/library/drafts/${encodeURIComponent(newest?.name ?? '')}`,
-    );
+    const saved = await page.request.get(`/api/v1/library/drafts/${encodeURIComponent(draftName)}`);
     expect(saved.ok()).toBe(true);
     const { content } = (await saved.json()) as { content: string };
 

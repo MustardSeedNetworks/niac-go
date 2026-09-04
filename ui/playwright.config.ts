@@ -10,6 +10,9 @@ if (!/^\d+$/.test(e2ePort) || e2ePortNumber < 1 || e2ePortNumber > 65535) {
   throw new Error('E2E_PORT must be a numeric TCP port between 1 and 65535');
 }
 const e2eHost = '127.0.0.1';
+// The synthetic interface the dry-run daemon binds. Shared with the specs so
+// the attachment policy below and the interface they select cannot drift.
+export const e2eSimInterface = process.env.E2E_SIM_INTERFACE ?? 'e2e-dry-run0';
 const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
 
 /**
@@ -93,7 +96,12 @@ export default defineConfig({
     },
     {
       name: 'webkit',
-      testIgnore: /.*\.mobile\.spec\.ts/,
+      // three-way-authoring drives a *started* simulation, and the daemon
+      // serves one at a time -- a second concurrent start answers 409. Running
+      // it on more than one engine at once would have the projects stopping
+      // each other's session, which is a race, not coverage. The UI half of
+      // the same journey runs on every engine via wizard-authoring.spec.ts.
+      testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
       use: { ...devices['Desktop Safari'] },
     },
     // Gecko. docs/WEBUI.md lists Firefox under "Engine CI — critical journeys
@@ -102,7 +110,8 @@ export default defineConfig({
     // and WebKit are Blink and WebKit; nothing here exercised a third engine.
     {
       name: 'firefox',
-      testIgnore: /.*\.mobile\.spec\.ts/,
+      // See the webkit note: one started simulation at a time.
+      testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
       use: { ...devices['Desktop Firefox'] },
     },
     // Edge, because the authoring plan's Definition of Complete names Chrome,
@@ -142,7 +151,13 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: `cd .. && NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen ${e2eHost}:${e2ePort} --storage disabled`,
+        command:
+          // The attachment policy is what lets an E2E reach *start*: a
+          // binding with no approving policy fails preflight with
+          // attachment_policy_denied, by design, so without this the
+          // authoring journeys could only be driven as far as review.
+          `cd .. && NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen ${e2eHost}:${e2ePort} ` +
+          `--storage disabled --attachment-policy ${e2eSimInterface}=access:200`,
         url: `${baseURL}/__version`,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,

@@ -1458,7 +1458,14 @@ jobs:
           # Backend is HTTPS-only since #663 (the --http flag was removed and
           # the legacy HTTP listener deleted). Self-signed cert auto-generated
           # on first start. Use canonical TLS port 8445 per CLAUDE.md.
-          nohup ./niac daemon --listen 127.0.0.1:8445 > server.log 2>&1 &
+          # --attachment-policy is what lets an authoring E2E reach *start*:
+          # a binding with no approving policy fails preflight with
+          # attachment_policy_denied, by design. playwright.config.ts sets
+          # the same flag for the local webServer, but CI starts the daemon
+          # itself, so it has to be set in both places or the specs pass
+          # locally and fail here.
+          nohup ./niac daemon --listen 127.0.0.1:8445 \
+            --attachment-policy e2e-dry-run0=access:200 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
             if curl -skf https://localhost:8445/__version 2>/dev/null; then
