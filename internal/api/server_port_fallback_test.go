@@ -37,64 +37,51 @@ func TestBindWithFallback_FreePort(t *testing.T) {
 	}
 }
 
-// holdPortWithFreeSuccessor returns a listener occupying some port P, having
-// first confirmed P+1 is bindable, and the value of P.
-//
-// The confirmation is the point, and it is still needed after #1682. That fix
-// made the walk STEP OVER a WinNAT-reserved port rather than stop at it — but
-// this test asserts the listener lands on exactly taken+1, so a reserved
-// successor now sends the walk to taken+2 and fails the assertion just the
-// same. The failure mode changed; the flakiness did not.
-//
-// Observed on a windows-latest merge_group run at 127.0.0.1:49664, which
-// ejected a PR from the merge queue.
-func holdPortWithFreeSuccessor(t *testing.T) (net.Listener, int) {
+// holdPort returns a listener occupying an ephemeral port, and that port.
+func holdPort(t *testing.T) (net.Listener, int) {
 	t.Helper()
 
-	const attempts = 20
-	for range attempts {
-		hold, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatalf("hold listen: %v", err)
-		}
-		port := hold.Addr().(*net.TCPAddr).Port
-
-		// Probe the successor and release it again immediately. A port that
-		// binds now can in principle be taken before bindWithFallback reaches
-		// it, but nothing else on the runner is claiming single ports in this
-		// range, and a reserved block — the failure being guarded against —
-		// stays reserved.
-		probe, probeErr := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port+1))
-		if probeErr == nil {
-			_ = probe.Close()
-			return hold, port
-		}
-		_ = hold.Close()
+	hold, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("hold listen: %v", err)
 	}
-
-	t.Skipf("no ephemeral port with a bindable successor after %d attempts", attempts)
-	return nil, 0
+	return hold, hold.Addr().(*net.TCPAddr).Port
 }
 
-// TestBindWithFallback_FallsBackOneStep grabs a port, holds it open, then
-// expects bindWithFallback to land on requested+1. This is the regression
-// test for #1537: on Windows, before the platform split, the predicate never
-// recognised WSAEADDRINUSE and this fell through to a fatal error instead.
-func TestBindWithFallback_FallsBackOneStep(t *testing.T) {
-	hold, taken := holdPortWithFreeSuccessor(t)
+// TestBindWithFallback_StepsPastAnOccupiedPort holds a port open and expects
+// bindWithFallback to walk past it rather than fail. Regression test for
+// #1537: on Windows, before the platform split, the predicate never recognised
+// WSAEADDRINUSE, so this fell through to a fatal error instead of stepping.
+//
+// It asserts the offset is somewhere in 1..portFallbackMaxOffset, not that it
+// is exactly 1, because the exact landing port is not a property of the code
+// under test. Which successor is free belongs to the machine: a WinNAT-reserved
+// port sends the walk to taken+2 (that is #1682's fix working, not a bug), and
+// a port probed as free can be claimed by something else before the walk
+// reaches it. Asserting taken+1 turned both into failures — one of them ejected
+// a PR from the merge queue on a windows-latest run at 127.0.0.1:49664.
+//
+// The old helper probed taken+1 first and skipped the test after 20 failed
+// attempts, which narrowed the race without closing it and could silently skip
+// the only coverage of this path. Both are gone: with a range assertion there
+// is nothing to pre-probe.
+func TestBindWithFallback_StepsPastAnOccupiedPort(t *testing.T) {
+	hold, taken := holdPort(t)
 	defer func() { _ = hold.Close() }()
 
 	addr := "127.0.0.1:" + strconv.Itoa(taken)
 
 	ln, bound, err := bindWithFallback(context.Background(), silentLogger(), addr)
 	if err != nil {
-		t.Fatalf("bindWithFallback fell through: %v", err)
+		t.Fatalf("bindWithFallback fell through instead of stepping past %d: %v", taken, err)
 	}
 	defer func() { _ = ln.Close() }()
 
-	wantSuffix := ":" + strconv.Itoa(taken+1)
-	if !strings.HasSuffix(bound, wantSuffix) {
-		t.Fatalf("expected bound addr to end with %q, got %q", wantSuffix, bound)
+	boundPort := ln.Addr().(*net.TCPAddr).Port
+	offset := boundPort - taken
+	if offset < 1 || offset > portFallbackMaxOffset {
+		t.Fatalf("expected a port in %d+1..%d (offset 1..%d), got %q (offset %d)",
+			taken, taken+portFallbackMaxOffset, portFallbackMaxOffset, bound, offset)
 	}
 }
 
