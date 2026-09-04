@@ -110,7 +110,7 @@ func TestAuthoredNetworkAnswersARPWithItsAuthoredMAC(t *testing.T) {
 	source := clientMAC(t)
 	target := net.ParseIP(authoredRouterIP).To4()
 
-	arp := &layers.ARP{
+	requestARP := &layers.ARP{
 		AddrType:          layers.LinkTypeEthernet,
 		Protocol:          layers.EthernetTypeIPv4,
 		HwAddressSize:     6,
@@ -130,7 +130,7 @@ func TestAuthoredNetworkAnswersARPWithItsAuthoredMAC(t *testing.T) {
 	// "the device is unreachable" rather than "the frame was addressed wrong".
 	frame := serialize(t,
 		&layers.Ethernet{SrcMAC: source, DstMAC: broadcast, EthernetType: layers.EthernetTypeARP},
-		arp,
+		requestARP,
 	)
 	if err := handle.WritePacketData(frame); err != nil {
 		t.Fatalf("writing ARP request: %v", err)
@@ -148,14 +148,14 @@ func TestAuthoredNetworkAnswersARPWithItsAuthoredMAC(t *testing.T) {
 		if arpLayer == nil {
 			continue
 		}
-		arp, ok := arpLayer.(*layers.ARP)
-		if !ok || arp.Operation != layers.ARPReply {
+		reply, ok := arpLayer.(*layers.ARP)
+		if !ok || reply.Operation != layers.ARPReply {
 			continue
 		}
-		if !net.IP(arp.SourceProtAddress).Equal(net.ParseIP(authoredRouterIP)) {
+		if !net.IP(reply.SourceProtAddress).Equal(net.ParseIP(authoredRouterIP)) {
 			continue
 		}
-		if got := net.HardwareAddr(arp.SourceHwAddress).String(); got != want {
+		if got := net.HardwareAddr(reply.SourceHwAddress).String(); got != want {
 			t.Fatalf("ARP reply from %s carried MAC %s, want the authored %s",
 				authoredRouterIP, got, want)
 		}
