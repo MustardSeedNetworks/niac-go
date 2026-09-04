@@ -48,10 +48,10 @@ install one.`,
 
 func newContentInstallCmd() *cobra.Command {
 	var (
-		root         string
-		bundlePath   string
-		dryRun       bool
-		skipExisting bool
+		root       string
+		bundlePath string
+		dryRun     bool
+		force      bool
 	)
 	cmd := &cobra.Command{
 		Use:   "install",
@@ -73,17 +73,18 @@ cannot escape the library.`,
   niac content install --bundle ./niac-content.tar.gz --dry-run`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runContentInstall(contentInstallArgs{
-				root:         root,
-				bundlePath:   bundlePath,
-				dryRun:       dryRun,
-				skipExisting: skipExisting,
+				root:       root,
+				bundlePath: bundlePath,
+				dryRun:     dryRun,
+				force:      force,
 			})
 		},
 	}
 	cmd.Flags().StringVar(&root, "root", "", "Library root (default: NIAC_LIBRARY_ROOT or ~/.niac/library)")
 	cmd.Flags().StringVar(&bundlePath, "bundle", "", "Local bundle file to install (required)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would be installed without writing files")
-	cmd.Flags().BoolVar(&skipExisting, "skip-existing", false, "Skip files that already exist (default: overwrite)")
+	cmd.Flags().BoolVar(&force, "force", false,
+		"Overwrite your own files and any bundle file you have edited (default: preserve them)")
 	_ = cmd.MarkFlagRequired("bundle")
 	return cmd
 }
@@ -91,7 +92,7 @@ cannot escape the library.`,
 type contentInstallArgs struct {
 	root, bundlePath string
 	dryRun           bool
-	skipExisting     bool
+	force            bool
 }
 
 func runContentInstall(args contentInstallArgs) error {
@@ -113,8 +114,8 @@ func runContentInstall(args contentInstallArgs) error {
 	fmt.Fprintf(os.Stdout, "Installing %s into %s\n", sourceLabel, libRoot)
 
 	manifest, err := content.Extract(source, libRoot, content.ExtractOptions{
-		DryRun:       args.dryRun,
-		SkipExisting: args.skipExisting,
+		DryRun: args.dryRun,
+		Force:  args.force,
 	})
 	if err != nil {
 		return fmt.Errorf("extract bundle: %w", err)
@@ -130,6 +131,11 @@ func runContentInstall(args contentInstallArgs) error {
 		if n := manifest.PerKind[kind]; n > 0 {
 			fmt.Fprintf(os.Stdout, "  %s: %d\n", kind, n)
 		}
+	}
+	if manifest.Preserved > 0 {
+		fmt.Fprintf(os.Stdout,
+			"Kept %d existing file(s) the bundle also ships; re-run with --force to replace them\n",
+			manifest.Preserved)
 	}
 	return nil
 }

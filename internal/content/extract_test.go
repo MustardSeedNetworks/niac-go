@@ -134,7 +134,10 @@ func TestExtractDryRunWritesNothing(t *testing.T) {
 	}
 }
 
-func TestExtractSkipExistingPreservesFiles(t *testing.T) {
+// A file already on disk belongs to the operator until the index says a
+// bundle put it there, so the default install leaves it alone and only
+// --force takes it.
+func TestExtractPreservesTheOperatorsFileUnlessForced(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "networks"), 0o755); err != nil {
 		t.Fatal(err)
@@ -145,21 +148,41 @@ func TestExtractSkipExistingPreservesFiles(t *testing.T) {
 	}
 
 	tarball := buildTarball(t, []tarballEntry{{name: "networks/x.yaml", body: "FROM_BUNDLE"}})
-	opts := content.ExtractOptions{SkipExisting: true}
-	if _, err := content.Extract(bytes.NewReader(tarball), root, opts); err != nil {
+	manifest, err := content.Extract(bytes.NewReader(tarball), root, content.ExtractOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := os.ReadFile(preExisting)
-	if string(got) != "ORIGINAL" {
-		t.Errorf("SkipExisting did not preserve original: got %q", got)
+	if got, _ := os.ReadFile(preExisting); string(got) != "ORIGINAL" {
+		t.Errorf("default install overwrote the operator's file: got %q", got)
+	}
+	if manifest.Preserved != 1 {
+		t.Errorf("preserved count: got %d want 1", manifest.Preserved)
 	}
 
-	if _, err := content.Extract(bytes.NewReader(tarball), root, content.ExtractOptions{}); err != nil {
+	if _, err = content.Extract(bytes.NewReader(tarball), root, content.ExtractOptions{Force: true}); err != nil {
 		t.Fatal(err)
 	}
-	got, _ = os.ReadFile(preExisting)
-	if string(got) != "FROM_BUNDLE" {
-		t.Errorf("default overwrite did not replace original: got %q", got)
+	if got, _ := os.ReadFile(preExisting); string(got) != "FROM_BUNDLE" {
+		t.Errorf("--force did not replace the file: got %q", got)
+	}
+}
+
+// The bundle's own unmodified files are its to replace: that is what makes
+// an upgrade an upgrade rather than a no-op.
+func TestExtractReplacesItsOwnUntouchedFiles(t *testing.T) {
+	root := t.TempDir()
+	v1 := buildTarball(t, []tarballEntry{{name: "networks/x.yaml", body: "V1"}})
+	if _, err := content.Extract(bytes.NewReader(v1), root, content.ExtractOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	v2 := buildTarball(t, []tarballEntry{{name: "networks/x.yaml", body: "V2"}})
+	if _, err := content.Extract(bytes.NewReader(v2), root, content.ExtractOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(filepath.Join(root, "networks", "x.yaml"))
+	if string(got) != "V2" {
+		t.Errorf("bundle did not replace its own untouched file: got %q", got)
 	}
 }
 
