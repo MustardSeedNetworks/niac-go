@@ -108,15 +108,27 @@ and network discovery without physical hardware.`,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			// If no args, show help
 			if len(args) == 0 {
-				_ = cmd.Help()
-				return
+				return cmd.Help()
+			}
+			// Root accepts arbitrary args so the legacy positional form still
+			// works, which also means a mistyped subcommand lands here. Legacy
+			// needs an interface and a config file, so anything shorter is a
+			// typo rather than a run -- reported as an unknown command instead
+			// of being handed to the legacy runner, which printed usage and
+			// exited as though it had been asked to do something.
+			if countPositionalArgs(args) < legacyPositionalArgs {
+				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
 			}
 			legacyArgs := append([]string{os.Args[0]}, args...)
 			legacyRunner(legacyArgs)
+
+			return nil
 		},
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	cobra.OnInitialize(func() {
@@ -148,10 +160,31 @@ func executeRootCommand(cmd *cobra.Command) {
 		os.Exit(coded.code)
 	}
 
+	// A mistyped command is a usage error, not a run that failed: the
+	// distinction is what lets a script tell "niac does not have that
+	// subcommand" from "the simulation stopped".
+	if isUnknownCommandError(err) {
+		os.Exit(exitUsage)
+	}
+
 	os.Exit(1)
 }
 
+// exitUsage is the conventional shell exit status for a usage error.
+const exitUsage = 2
+
+func isUnknownCommandError(err error) bool {
+	return strings.HasPrefix(err.Error(), "unknown command")
+}
+
 func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {
+	// cobra registers --help, -h and --version lazily, inside Execute. Without
+	// this the known-root-flag check below runs while they do not exist yet,
+	// so `niac --help` read as an unknown command and printed the legacy usage
+	// banner instead of the command list.
+	root.InitDefaultHelpFlag()
+	root.InitDefaultVersionFlag()
+
 	firstArg := firstCommandArg(args, root)
 	if firstArg == "" || firstArg == "--" {
 		return false
@@ -161,9 +194,38 @@ func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {
 		return false
 	}
 
-	return !slices.ContainsFunc(root.Commands(), func(cmd *cobra.Command) bool {
+	if slices.ContainsFunc(root.Commands(), func(cmd *cobra.Command) bool {
 		return cmd.Name() == firstArg || cmd.HasAlias(firstArg)
-	})
+	}) {
+		return false
+	}
+
+	// An unrecognised *flag* belongs to legacy, which owns that vocabulary
+	// (--list-interfaces, --dry-run and the rest).
+	if strings.HasPrefix(firstArg, "-") {
+		return true
+	}
+
+	// An unrecognised *word* is a mistyped subcommand unless it can be a
+	// legacy invocation, which needs an interface and a config file. Sending
+	// the single-word case to cobra is what makes `niac bogus` report an
+	// unknown command instead of printing usage and exiting as if it had run.
+	return countPositionalArgs(args) >= legacyPositionalArgs
+}
+
+// legacyPositionalArgs is what the legacy form takes: an interface and a
+// config file.
+const legacyPositionalArgs = 2
+
+func countPositionalArgs(args []string) int {
+	count := 0
+	for _, arg := range args {
+		if !strings.HasPrefix(arg, "-") {
+			count++
+		}
+	}
+
+	return count
 }
 
 func firstCommandArg(args []string, root *cobra.Command) string {
@@ -195,7 +257,18 @@ func isKnownRootFlag(arg string, root *cobra.Command) bool {
 		name = flagName
 	}
 
-	return root.PersistentFlags().Lookup(name) != nil || root.Flags().Lookup(name) != nil
+	if root.PersistentFlags().Lookup(name) != nil || root.Flags().Lookup(name) != nil {
+		return true
+	}
+
+	// A single character is a shorthand (-h), which Lookup does not resolve --
+	// it matches on the flag's long name only.
+	if len(name) == 1 {
+		return root.PersistentFlags().ShorthandLookup(name) != nil ||
+			root.Flags().ShorthandLookup(name) != nil
+	}
+
+	return false
 }
 
 func shouldSkipRootFlagValue(arg string, root *cobra.Command) bool {
