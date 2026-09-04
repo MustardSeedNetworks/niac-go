@@ -5,6 +5,50 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.92](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.91...v0.94.92) (2026-09-04)
+
+
+### Features
+
+* **content:** let the content bundle upgrade (P1c-5) ([#1775](https://github.com/MustardSeedNetworks/niac-go/issues/1775)) ([17f5b96](https://github.com/MustardSeedNetworks/niac-go/commit/17f5b96b8c023bdd77f4d68a51e79c4e8fdac56b))
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-router to v8.3.1 ([#1779](https://github.com/MustardSeedNetworks/niac-go/issues/1779)) ([2efaaef](https://github.com/MustardSeedNetworks/niac-go/commit/2efaaeff4c3aa269f87c4c143dbf1cc84ca04717))
+* **library:** scope draft read/write locks per draft name ([#1797](https://github.com/MustardSeedNetworks/niac-go/issues/1797)) ([30aa3a6](https://github.com/MustardSeedNetworks/niac-go/commit/30aa3a6e9db350af5694be13463d06c11f472225)), closes [#1795](https://github.com/MustardSeedNetworks/niac-go/issues/1795)
+* **sanitize:** remove real addresses the sanitizer could not reach, and gate them ([#1770](https://github.com/MustardSeedNetworks/niac-go/issues/1770)) ([120aef8](https://github.com/MustardSeedNetworks/niac-go/commit/120aef845507a34e2cce989c860cb570064b94eb)), closes [#1769](https://github.com/MustardSeedNetworks/niac-go/issues/1769)
+
+
+### Documentation
+
+* clear the markdown debt that fails the docs gate on any touched file ([#1768](https://github.com/MustardSeedNetworks/niac-go/issues/1768)) ([75e3c51](https://github.com/MustardSeedNetworks/niac-go/commit/75e3c515c2df394f6e75b9a9a6513cdf8f72934f)), closes [#1767](https://github.com/MustardSeedNetworks/niac-go/issues/1767)
+
+
+### Tests
+
+* **auth:** pin the fleet SIEM contract for auth.forbidden ([#1761](https://github.com/MustardSeedNetworks/niac-go/issues/1761)) ([0ef2555](https://github.com/MustardSeedNetworks/niac-go/commit/0ef2555dcd788e28fb0b00e92566bf19b87d73ee))
+* **capture:** count the refill goroutine by name, not the whole process ([#1782](https://github.com/MustardSeedNetworks/niac-go/issues/1782)) ([8d7c199](https://github.com/MustardSeedNetworks/niac-go/commit/8d7c199e6a3139359020eb3183f3cf4222005a52))
+* **e2e:** author one network three ways and replay it on the wire (P1b-6) ([#1758](https://github.com/MustardSeedNetworks/niac-go/issues/1758)) ([2ef5717](https://github.com/MustardSeedNetworks/niac-go/commit/2ef5717e0ae286dee08f7d09e74fd50aaa57563e))
+* **e2e:** wait for the device dialog's autofocus before filling it ([#1796](https://github.com/MustardSeedNetworks/niac-go/issues/1796)) ([1d2d578](https://github.com/MustardSeedNetworks/niac-go/commit/1d2d578347d7a93b1a078c7e73ee77bbf64621bb)), closes [#1773](https://github.com/MustardSeedNetworks/niac-go/issues/1773)
+
+
+### Continuous Integration
+
+* arm auto-merge on the release PR ([#1777](https://github.com/MustardSeedNetworks/niac-go/issues/1777)) ([6ee75a5](https://github.com/MustardSeedNetworks/niac-go/commit/6ee75a59c52bb0e39b52c0134a8021332d3995af)), closes [#1776](https://github.com/MustardSeedNetworks/niac-go/issues/1776)
+* collapse the file-size gate to one enforced limit ([#1787](https://github.com/MustardSeedNetworks/niac-go/issues/1787)) ([5f9602f](https://github.com/MustardSeedNetworks/niac-go/commit/5f9602f1d406281f4f907b199897287210f5a71c)), closes [#1784](https://github.com/MustardSeedNetworks/niac-go/issues/1784)
+* decide npm audit outcomes on the JSON verdict, not on prose ([#1791](https://github.com/MustardSeedNetworks/niac-go/issues/1791)) ([b9fd29d](https://github.com/MustardSeedNetworks/niac-go/commit/b9fd29dbb33a25a13798e103a8b08ea2a9ba5762)), closes [#1790](https://github.com/MustardSeedNetworks/niac-go/issues/1790)
+* drop the five funlen exclusions that exclude nothing ([#1786](https://github.com/MustardSeedNetworks/niac-go/issues/1786)) ([83f67f9](https://github.com/MustardSeedNetworks/niac-go/commit/83f67f9b634677a9ee212ec662f8a1b7d9d0f13a)), closes [#1785](https://github.com/MustardSeedNetworks/niac-go/issues/1785)
+* lint the Windows tree with GOOS=windows, gating new findings only ([#1789](https://github.com/MustardSeedNetworks/niac-go/issues/1789)) ([ce4b82b](https://github.com/MustardSeedNetworks/niac-go/commit/ce4b82bd30fbc2710f4fdc86edbe60113201dcbf)), closes [#1788](https://github.com/MustardSeedNetworks/niac-go/issues/1788)
+* retry npm audit when the registry, not the tree, is the problem ([#1772](https://github.com/MustardSeedNetworks/niac-go/issues/1772)) ([291e793](https://github.com/MustardSeedNetworks/niac-go/commit/291e793d43a791fb2951e3626b9a4d8045e1be33)), closes [#1771](https://github.com/MustardSeedNetworks/niac-go/issues/1771)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1762](https://github.com/MustardSeedNetworks/niac-go/issues/1762)) ([07052d6](https://github.com/MustardSeedNetworks/niac-go/commit/07052d6c20e85db628d5abccb71b9bc986adb86a))
+* **deps:** lock file maintenance ([#1780](https://github.com/MustardSeedNetworks/niac-go/issues/1780)) ([6f89b74](https://github.com/MustardSeedNetworks/niac-go/commit/6f89b74df15be0b1a4ed1f1f7e9c16a3a7b83022))
+* **deps:** lock file maintenance ([#1792](https://github.com/MustardSeedNetworks/niac-go/issues/1792)) ([18918f6](https://github.com/MustardSeedNetworks/niac-go/commit/18918f6f621fc1e141f1b532da54327e7db7f63b))
+
 ## [0.94.91](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.90...v0.94.91) (2026-09-04)
 
 
