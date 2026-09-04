@@ -5,7 +5,7 @@ captures Context, Decision, and Consequences so the reasoning survives the
 people and the diffs. Format matches the sibling repos (seed/stem).
 
 | ADR | Title | Status |
-|-----|-------|--------|
+| ----- | ------- | -------- |
 | [0001](0001-schema-generation-from-go-structs.md) | Schema generation from Go structs | Accepted |
 | [0002](0002-capability-registry.md) | Capability registry for route policy | Accepted |
 | [0003](0003-dependency-direction-depguard.md) | Dependency direction enforced by depguard | Accepted |

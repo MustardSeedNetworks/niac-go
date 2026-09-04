@@ -1,8 +1,8 @@
 # ADR 0003: Dependency direction enforced by depguard
 
-| Status  | Date       | Deciders         |
-|---------|------------|------------------|
-| Accepted | 2026-06-07 | @krisarmstrong   |
+| Status | Date | Deciders |
+| --------- | ------------ | ------------------ |
+| Accepted | 2026-06-07 | @krisarmstrong |
 
 ## Context
 
@@ -11,7 +11,7 @@ core — `internal/protocols`, `internal/converter`, `internal/device`,
 `internal/mibdb` — should not depend on the web/API layer (`internal/api`); the
 transport is composed at `internal/api` and `internal/daemon`. This direction
 was clean **by convention** but unenforced, so a future upward import would
-compile and ship silently. (Unlike stem, niac's `internal/api` is legitimately
+compile and ship silently. (Unlike stem, NIAC's `internal/api` is legitimately
 imported by orchestration layers — daemon/ipc/replay — so the rule targets the
 genuinely-inward domain packages, not a blanket "nothing imports api".)
 

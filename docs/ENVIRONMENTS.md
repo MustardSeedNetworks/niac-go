@@ -1,6 +1,7 @@
 # Environment Simulation Guide
 
-This guide demonstrates how to simulate complete network environments using NiAC-Go, from small branch offices to large data centers.
+This guide demonstrates how to simulate complete network environments using NIAC-Go, from small branch offices to
+large data centers.
 
 ## Table of Contents
 
@@ -14,13 +15,15 @@ This guide demonstrates how to simulate complete network environments using NiAC
 
 ## Overview
 
-NiAC-Go can simulate complete network environments with:
+NIAC-Go can simulate complete network environments with:
+
 - Multiple devices (routers, switches, APs, servers)
 - Protocol combinations (LLDP, CDP, DHCP, DNS, SNMP, etc.)
 - Topology relationships (port-channels, trunks, VLANs)
 - Multi-vendor integration
 
 Each example includes:
+
 - Topology diagram
 - Complete YAML configuration
 - Usage instructions
@@ -32,7 +35,7 @@ Each example includes:
 
 Modern data center design with spine-leaf topology for east-west traffic optimization.
 
-```
+```text
           [Spine-01]  [Spine-02]
            /    |    X    |    \
           /     |   / \   |     \
@@ -42,6 +45,7 @@ Modern data center design with spine-leaf topology for east-west traffic optimiz
 ```
 
 ### Features
+
 - 2 Spine switches (Cisco Nexus 9300)
 - 3 Leaf switches (Cisco Nexus 9300)
 - Port-channels between spine and leaf
@@ -112,6 +116,7 @@ devices:
 ```
 
 ### Usage
+
 ```bash
 niac validate examples/environments/datacenter-spine-leaf.yaml
 sudo niac en0 examples/environments/datacenter-spine-leaf.yaml
@@ -123,7 +128,7 @@ sudo niac en0 examples/environments/datacenter-spine-leaf.yaml
 
 Traditional hierarchical design: core, distribution, access.
 
-```
+```text
       [Core-01]  [Core-02]
          |    X    |
       [Dist-01]  [Dist-02]
@@ -134,6 +139,7 @@ Traditional hierarchical design: core, distribution, access.
 ```
 
 ### Features
+
 - 2 Core switches (Catalyst 9500)
 - 2 Distribution switches (Catalyst 9400)
 - 3 Access switches (Catalyst 9300)
@@ -192,7 +198,7 @@ devices:
 
 Small office with router, switch, wireless.
 
-```
+```text
   [Internet]
       |
   [Router]
@@ -203,6 +209,7 @@ Small office with router, switch, wireless.
 ```
 
 ### Features
+
 - Edge router with DHCP/DNS
 - Access switch with PoE
 - Wireless access point
@@ -259,13 +266,14 @@ devices:
 
 Wireless LAN controller managing multiple APs.
 
-```
+```text
   [WLC] --- [Switch]
     |          |
   [AP-01]   [AP-02]
 ```
 
 ### Features
+
 - Wireless LAN Controller
 - HTTP management API
 - DHCP for APs
@@ -279,13 +287,14 @@ See: `examples/combinations/wireless-controller.yaml`
 
 Mixed Cisco, Juniper, and Aruba equipment.
 
-```
+```text
   [Cisco-Core] --- [Juniper-Edge]
        |                 |
   [Aruba-Switch]   [Aruba-AP]
 ```
 
 ### Features
+
 - LLDP (multi-vendor standard)
 - SNMP monitoring all vendors
 - Vendor-specific MIBs
@@ -327,7 +336,7 @@ devices:
 
 Provider edge with customer segregation.
 
-```
+```text
        [PE-01]  [PE-02]
          |    X    |
       [CE-A]    [CE-B]
@@ -335,6 +344,7 @@ Provider edge with customer segregation.
 ```
 
 ### Features
+
 - VRF/VLAN per customer
 - DHCP relay to customer servers
 - Isolated management
@@ -346,16 +356,19 @@ Provider edge with customer segregation.
 For any environment:
 
 1. **Validate Configuration**
+
 ```bash
 niac validate environment.yaml
 ```
 
 2. **Deploy**
+
 ```bash
 sudo niac en0 environment.yaml
 ```
 
 3. **Verify Topology**
+
 ```bash
 # LLDP neighbors
 lldpcli show neighbors
@@ -368,6 +381,7 @@ show etherchannel summary
 ```
 
 4. **Test Protocols**
+
 ```bash
 # SNMP
 snmpwalk -v2c -c public 10.0.0.1 system
@@ -380,6 +394,7 @@ dig @10.0.0.1 router.local
 ```
 
 5. **Monitor**
+
 ```bash
 # SNMP traps
 snmptrapd -f -Lo
@@ -391,24 +406,28 @@ tail -f /var/log/syslog
 ## Best Practices
 
 ### Design
+
 1. Start with a clear topology diagram
 2. Plan IP addressing scheme
 3. Define VLAN strategy
 4. Document all connections
 
 ### Configuration
+
 1. Use consistent naming conventions
 2. Group related devices
 3. Define remote_device references
 4. Enable appropriate discovery protocols
 
 ### Testing
+
 1. Validate before deployment
 2. Test in stages (core → dist → access)
 3. Verify neighbor relationships
 4. Monitor for errors/warnings
 
 ### Production
+
 1. Document all configurations
 2. Implement change control
 3. Monitor via SNMP

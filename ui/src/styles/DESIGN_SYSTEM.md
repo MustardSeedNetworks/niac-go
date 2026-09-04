@@ -7,7 +7,7 @@ raw values.
 
 Three tiers, **one** source of truth for values, **one** derivation direction:
 
-```
+```text
 Primitive   Tailwind's built-in palette (indigo-600 = #4f46e5)   ← never referenced directly in app code
    ↓ alias
 Semantic    index.css @theme + :root/.dark                       ← THE source of truth for VALUES
@@ -27,6 +27,7 @@ Component   index.css @layer components + the TS class-token
    palette utility (`bg-gray-500`, `text-pink-400`) and never a raw hex.
 
 **Picking the right token:**
+
 - Neutral chrome (backgrounds, borders, muted text) → `surface-*` / `border-*` / `text-*`.
 - Meaning (ok / warn / error / info) → `status-*`.
 - Filled-surface foreground → `on-brand` / `on-danger` / `on-info`; black/white → `scrim` / `knob`.
@@ -39,5 +40,5 @@ Component   index.css @layer components + the TS class-token
 flip light↔dark via the cascade. NIAC has no `<canvas>` drawing, so (unlike seed)
 it needs no JS token-reader; the topology graph is SVG.
 
-**Brand:** NIAC's anchor is **indigo** `#4f46e5` (niac-500). The five feature
+**Brand:** NIAC's anchor is **indigo** `#4f46e5` (`niac-500`). The five feature
 modules have their own accents (`--color-module-{topology,protocols,analyze,inject,templates}`).

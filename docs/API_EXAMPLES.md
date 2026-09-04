@@ -49,6 +49,7 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
 ```
 
 **Response:**
+
 ```json
 {
   "timestamp": "2025-11-14T12:34:56Z",
@@ -79,6 +80,7 @@ curl -H "Authorization: Bearer $NIAC_API_TOKEN" \
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -600,6 +602,7 @@ All API errors return standardized JSON responses:
 ```
 
 Common error codes:
+
 - `401`: `unauthorized` - Invalid or missing authentication token
 - `403`: `csrf_token_missing` or `csrf_token_invalid` - Missing/invalid CSRF token
 - `429`: `rate_limit_exceeded` - Too many requests
@@ -608,6 +611,7 @@ Common error codes:
 ## Rate Limiting
 
 The API enforces rate limiting:
+
 - **100 requests per second per IP**
 - **Burst of 200 requests**
 

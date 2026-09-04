@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document outlines a comprehensive UI redesign for NIAC (Network In A Can) WebUI to create a more polished, professional, and user-friendly experience.
+This document outlines a comprehensive UI redesign for NIAC (Network In A Can) WebUI to create a more polished,
+professional, and user-friendly experience.
 
 ---
 
@@ -10,7 +11,7 @@ This document outlines a comprehensive UI redesign for NIAC (Network In A Can) W
 
 ### Color Palette
 
-```
+```text
 Primary Brand Colors:
 - Primary: #8B5CF6 (violet-500) - Main actions, active states
 - Primary Hover: #7C3AED (violet-600)
@@ -38,7 +39,7 @@ Text:
 
 ### Typography
 
-```
+```text
 Font Families:
 - Headings: 'Space Grotesk', sans-serif
 - Body: 'Inter', system-ui, sans-serif
@@ -56,7 +57,7 @@ Scale:
 
 ### Spacing
 
-```
+```text
 Base unit: 4px
 - xs: 4px
 - sm: 8px
@@ -69,7 +70,7 @@ Base unit: 4px
 
 ### Border Radius
 
-```
+```text
 - sm: 6px (buttons, inputs)
 - md: 8px (cards)
 - lg: 12px (modals, large cards)
@@ -82,6 +83,7 @@ Base unit: 4px
 ## Layout Structure
 
 ### Current Issues
+
 - Horizontal nav overflows on smaller screens
 - No clear visual hierarchy between sections
 - Inconsistent spacing and padding
@@ -89,7 +91,7 @@ Base unit: 4px
 
 ### Proposed Layout
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │ ┌──────┐                                                         │
 │ │ NIAC │  Command Center    Runtime    Devices    ...    [v2.12] │
@@ -119,7 +121,7 @@ Base unit: 4px
 
 Consider a collapsible sidebar for better navigation:
 
-```
+```text
 ┌────────┬─────────────────────────────────────────────────────────┐
 │ ≡ NIAC │ Page Title                                    [Actions] │
 ├────────┼─────────────────────────────────────────────────────────┤
@@ -155,6 +157,7 @@ Consider a collapsible sidebar for better navigation:
 2. **Scrollable/Dropdown on overflow**: Add horizontal scroll or dropdown for nav items
 
 3. **Active State Improvements**:
+
    ```css
    /* Current active */
    bg-violet-600/20 text-violet-300 border border-violet-500/30
@@ -178,7 +181,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Command Center                                                  │
 │ Live counters and status for the active NIAC stack              │
@@ -208,6 +211,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Add trend indicators (▲▼→) to stat cards
 - Mini sparkline graphs in stat cards
 - Quick actions panel for common operations
@@ -218,7 +222,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Runtime Control                                                 │
 ├─────────────────────────────────────────────────────────────────┤
@@ -253,7 +257,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Devices & Configuration                                         │
 ├─────────────────────────────────────────────────────────────────┤
@@ -280,6 +284,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Multiple view modes (Cards, Table, Tree hierarchy)
 - Device cards with protocol badges
 - Quick action menu (···) for clone, delete, export
@@ -289,7 +294,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ ← Back   Device: router-core-1                   [Save] [Reset] │
 ├─────────────────────────────────────────────────────────────────┤
@@ -322,6 +327,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Vertical tabs for sections (much cleaner)
 - Live YAML preview with syntax highlighting
 - Inline validation messages
@@ -331,7 +337,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Topology & Neighbors                                            │
 ├─────────────────────────────────────────────────────────────────┤
@@ -359,6 +365,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Interactive topology diagram (consider vis.js or d3.js)
 - Zoom and pan controls
 - Export to multiple formats
@@ -368,7 +375,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Traffic & Error Injection                                       │
 ├─────────────────────────────────────────────────────────────────┤
@@ -403,7 +410,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Debug Console                                     [Clear] [⚙]   │
 ├─────────────────────────────────────────────────────────────────┤
@@ -429,6 +436,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Visual slider controls for debug levels
 - Color-coded log levels
 - Filter by protocol/level
@@ -439,7 +447,7 @@ Consider a collapsible sidebar for better navigation:
 
 **Proposed Improvements**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ Packet Inspector                                                │
 ├─────────────────────────────────────────────────────────────────┤
@@ -465,6 +473,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 **Key Changes**:
+
 - Wireshark-like 3-pane layout
 - Collapsible protocol layers
 - Hex dump with ASCII sidebar
@@ -575,6 +584,7 @@ Consider a collapsible sidebar for better navigation:
 ## Animations & Transitions
 
 ### Page Transitions
+
 ```css
 /* Fade in on page mount */
 @keyframes fadeIn {
@@ -588,6 +598,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 ### Loading States
+
 ```css
 /* Skeleton loading */
 @keyframes shimmer {
@@ -608,6 +619,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 ### Micro-interactions
+
 - Button press: scale(0.98)
 - Card hover: translateY(-2px), shadow increase
 - Tab switch: underline slide animation
@@ -628,7 +640,8 @@ Consider a collapsible sidebar for better navigation:
 ## Responsive Design
 
 ### Breakpoints
-```
+
+```text
 - sm: 640px (mobile landscape)
 - md: 768px (tablet)
 - lg: 1024px (desktop)
@@ -637,6 +650,7 @@ Consider a collapsible sidebar for better navigation:
 ```
 
 ### Mobile Considerations
+
 1. Collapsible sidebar navigation
 2. Stacked cards instead of grids
 3. Touch-friendly tap targets (min 44px)
@@ -648,6 +662,7 @@ Consider a collapsible sidebar for better navigation:
 ## Implementation Priority
 
 ### Phase 1: Foundation (High Impact)
+
 1. ✅ Update color palette and spacing
 2. ✅ Improve navigation (grouping, overflow handling)
 3. ✅ Enhance Card components with glassmorphism
@@ -655,12 +670,14 @@ Consider a collapsible sidebar for better navigation:
 5. ✅ Improve form inputs and buttons
 
 ### Phase 2: Page Improvements
+
 1. Command Center dashboard widgets
 2. Device list card/table views
 3. Config Builder vertical tabs
 4. Debug console enhancements
 
 ### Phase 3: Advanced Features
+
 1. Interactive topology visualization
 2. Real-time traffic graphs
 3. Advanced packet inspector
@@ -671,6 +688,7 @@ Consider a collapsible sidebar for better navigation:
 ## Technical Notes
 
 ### Dependencies to Consider
+
 - `@tremor/react` - Dashboard charts and widgets
 - `recharts` or `chart.js` - Traffic graphs
 - `vis-network` or `cytoscape.js` - Topology visualization
@@ -678,6 +696,7 @@ Consider a collapsible sidebar for better navigation:
 - `framer-motion` - Animations
 
 ### Performance Considerations
+
 - Virtual scrolling for long lists (already using)
 - Lazy loading for heavy components
 - Debounced search inputs

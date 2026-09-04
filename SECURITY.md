@@ -6,11 +6,11 @@ Until NIAC reaches 1.0, only the **latest released version** receives
 security fixes. Older 0.x versions are kept on the repo for reference but
 are not patched — upgrade to the current minor.
 
-| Version          | Supported           |
+| Version | Supported |
 | ---------------- | ------------------- |
-| Latest (`main`)  | :white_check_mark:  |
-| Older 0.x        | :x:                 |
-| Future 1.x       | :white_check_mark:  |
+| Latest (`main`) | :white_check_mark: |
+| Older 0.x | :x: |
+| Future 1.x | :white_check_mark: |
 
 ## Reporting a vulnerability
 
@@ -45,12 +45,12 @@ Include in your report:
 
 ### Severity levels
 
-| Level    | Description                         | Target Resolution |
+| Level | Description | Target Resolution |
 | -------- | ----------------------------------- | ----------------- |
-| Critical | Remote code execution, auth bypass  | 24-48 hours       |
-| High     | Data exposure, privilege escalation | 7 days            |
-| Medium   | Limited impact vulnerabilities      | 30 days           |
-| Low      | Minor issues, hardening             | Next release      |
+| Critical | Remote code execution, auth bypass | 24-48 hours |
+| High | Data exposure, privilege escalation | 7 days |
+| Medium | Limited impact vulnerabilities | 30 days |
+| Low | Minor issues, hardening | Next release |
 
 ## Scope
 
@@ -83,7 +83,6 @@ Out of scope:
 - Verify release artifacts with `cosign verify-blob` against
   `<file>.cosign.bundle`. Each release also ships a CycloneDX SBOM per
   archive — the verification recipe is in the GitHub release notes.
-
 
 ## Acknowledgments
 

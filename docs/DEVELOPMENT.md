@@ -43,7 +43,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 ## Common Tasks
 
 | Task | Command |
-|------|---------|
+| ------ | --------- |
 | Build all | `make build` |
 | Run tests | `make test` |
 | Lint | `make lint` |

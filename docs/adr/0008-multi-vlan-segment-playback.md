@@ -8,7 +8,7 @@ NIAC replays one config against one interface. VLAN handling is a **global
 mode**, not a first-class dimension:
 
 - Each device carries an optional `vlan:` field, and every reply echoes the
-  VLAN the request arrived on (the "reply-VLAN pattern", niac-go #876/#883).
+  VLAN the request arrived on (the "reply-VLAN pattern", `niac-go` #876/#883).
 - VLAN confinement (#865) restricts a running sim to a single tagged VLAN and
   drops untagged frames, so a demo trunk sees no rogue replies on the native
   VLAN.
@@ -70,13 +70,13 @@ this on port contention; none does.
   discovery tickers, DHCP leases, neighbour/FDB caches, stats — running
   **unchanged**, bound to exactly one VLAN (or untagged).
 - The engine **owns a fixed egress VLAN.** Consequences: a reply is tagged
-  correctly *by construction* (the request could only have reached this engine
+  correctly _by construction_ (the request could only have reached this engine
   on this VLAN), and device-initiated **emissions** (LLDP/CDP/babble) are tagged
   the same way for free. This **retires the reply-VLAN bug class** (#876/#883,
   and the IPv6 gap #884) instead of threading `pkt.VLAN` through every handler
   forever.
 - L2/L3 identity is **engine-local:** IPs and MACs may repeat across engines;
-  ARP and FDB resolve *within* an engine, never across.
+  ARP and FDB resolve _within_ an engine, never across.
 
 ### Config
 
@@ -118,7 +118,7 @@ this on port contention; none does.
 
 ## References
 
-- niac-go #865 (VLAN confinement), #876 (reply-VLAN + MAC echo), #883 (DNS
+- `niac-go` #865 (VLAN confinement), #876 (reply-VLAN + MAC echo), #883 (DNS
   reply-VLAN), #884 (IPv6 reply-VLAN gap — subsumed here)
 - Supersedes this ADR's prior "segments / per-segment device table" framing with
   the sharper "N engines behind one L2 demux" model.

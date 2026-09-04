@@ -1,8 +1,8 @@
 # ADR 0004: Scope-based bearer-token auth + CSRF posture
 
-| Status  | Date       | Deciders         |
-|---------|------------|------------------|
-| Accepted | 2026-06-07 | @krisarmstrong   |
+| Status | Date | Deciders |
+| --------- | ------------ | ------------------ |
+| Accepted | 2026-06-07 | @krisarmstrong |
 
 ## Context
 
@@ -40,7 +40,7 @@ decision rather than incidental.
   can no longer be forgotten on a new route.
 - No login surface means no dedicated login rate limiter; the generic per-IP
   limiter throttles token-guessing, which is acceptable given high-entropy tokens
-  + constant-time lookup. A future interactive-login requirement would revisit.
+  and constant-time lookup. A future interactive-login requirement would revisit.
 
 ## Alternatives considered
 

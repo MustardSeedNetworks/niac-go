@@ -3,9 +3,9 @@
 This directory holds the published JSON Schemas for the formats NIAC reads
 and writes.
 
-| File                  | Source-of-truth Go type        | Regenerate with |
-|-----------------------|--------------------------------|-----------------|
-| `niac.schema.json`    | `internal/converter.Config`    | `make schema`   |
+| File | Source-of-truth Go type | Regenerate with |
+| ----------------------- | -------------------------------- | ----------------- |
+| `niac.schema.json` | `internal/converter.Config` | `make schema` |
 
 ## Editor integration
 
