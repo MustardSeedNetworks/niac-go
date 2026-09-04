@@ -830,6 +830,12 @@ jobs:
       # gitleaks-action requires a paid licence for organization repos. Use the
       # MIT-licensed gitleaks CLI directly instead — same engine, same config.
       # Scans full history (the security job checks out with fetch-depth: 0).
+      - name: Check starter walks are safe to ship
+        # Content, not code: nothing stopped an unsanitised walk landing in
+        # the tree, and four were shipping tcpConnTable and LLDP management
+        # addresses that record who a real device was talking to.
+        run: ./scripts/check-starter-walks.sh
+
       - name: Run gitleaks
         env:
           GITLEAKS_VERSION: "8.30.1"

@@ -126,11 +126,24 @@ func isDistinctiveIdentifier(s string) bool {
 	return strings.ContainsAny(s, "0123456789.-_@")
 }
 
+// sanitizedHostnameRe matches a name this function has already produced.
+var sanitizedHostnameRe = regexp.MustCompile(`^niac-core-(?:sw|rtr|ap|srv|fw|dev)-\d{2}$`)
+
 // sanitizeHostname deterministically maps hostname to a
 // "niac-core-{type}-{NN}" branded name, inferring the device type from
 // common substrings (sw/rtr/ap/srv/fw) and falling back to "dev". The
 // mapping is cached in mapping.Hostnames so repeat calls agree.
 func sanitizeHostname(hostname string, mapping *Mapping) string {
+	// An already-sanitized name is returned unchanged, so sanitizing twice
+	// gives the same answer as sanitizing once. The number is a hash of the
+	// input, which is deterministic but not idempotent: re-running hashed
+	// `niac-core-sw-96` and produced `niac-core-sw-05`, so a walk that was
+	// already clean came back looking edited and no caller could use "nothing
+	// changed" as a check.
+	if sanitizedHostnameRe.MatchString(hostname) {
+		return hostname
+	}
+
 	mapping.mu.RLock()
 	if sanitized, exists := mapping.Hostnames[hostname]; exists {
 		mapping.mu.RUnlock()

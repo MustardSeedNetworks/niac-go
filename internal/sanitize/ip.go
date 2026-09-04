@@ -164,6 +164,143 @@ func rewriteOIDIndexIP(line string, mapping *Mapping) string {
 	return strings.Join(arcs, ".") + line[sep:]
 }
 
+// rewriteEmbeddedPrivateIPs maps every private, non-10/8 dotted quad inside
+// the OID field, wherever it sits in the index.
+//
+// rewriteOIDIndexIP only covers four tables whose index *ends* in an address.
+// The addresses that were shipping in the starter walks were in others:
+// tcpConnTable's index carries two of them with ports between
+// (.6.13.1.<col>.<lAddr>.<lPort>.<rAddr>.<rPort>), and udpTable, the RFC 4022
+// InetAddress tables, LLDP management addresses and two vendor-private trees
+// each place theirs differently again. A tcpConnTable row records who a real
+// device was actually talking to, so leaving them was the leak.
+//
+// Rather than encode fourteen index layouts -- two of them vendor-private,
+// where the layout would be a guess -- this targets the property that
+// identifies the leak: a *private* address outside the range the sanitizer
+// maps into. Anything already in 10/8 has been through the mapper, and public
+// addresses are handled by rule elsewhere. Four arcs are replaced by four
+// arcs, so the OID's structure is unchanged either way.
+//
+// The residual risk is four consecutive arcs that form a private quad without
+// being an address; in these MIB regions that does not occur, and the effect
+// would be a renumbered index rather than a malformed OID.
+func rewriteEmbeddedPrivateIPs(line string, mapping *Mapping) string {
+	sep := strings.Index(line, " = ")
+	if sep < 0 {
+		return line
+	}
+
+	arcs := strings.Split(line[:sep], ".")
+	changed := false
+	// Slide a four-arc window over the OID's arcs. Scanning the text with a
+	// regex instead matches the first four arcs of the OID itself
+	// (".1.3.6.1"), so the window never lines up with the address further in.
+	for i := 0; i+ipv4OctetCount <= len(arcs); {
+		quad := strings.Join(arcs[i:i+ipv4OctetCount], ".")
+		if !isPrivateOutsideMappedRange(quad) {
+			i++
+			continue
+		}
+		copy(arcs[i:i+ipv4OctetCount], strings.Split(sanitizeIP(quad, mapping), "."))
+		changed = true
+		// Past the address just replaced: an address cannot overlap another.
+		i += ipv4OctetCount
+	}
+	if !changed {
+		return line
+	}
+
+	return strings.Join(arcs, ".") + line[sep:]
+}
+
+// rewriteValuePrivateIPs maps private, non-10/8 addresses that appear inside a
+// value, including in free text.
+//
+// The IpAddress rule only matches a typed SNMP address. These arrive as
+// strings instead: a DISMAN-PING target, an ENTITY-MIB address, and Brocade
+// log lines like `SNMP: Auth. failure, intruder IP: 192.168.0.2.` -- prose
+// that still names a real host. Arc alignment is not a concern here because a
+// value is text, not an OID, so a plain dotted-quad match is exact.
+func rewriteValuePrivateIPs(line string, mapping *Mapping) string {
+	sep := strings.Index(line, " = ")
+	if sep < 0 {
+		return line
+	}
+
+	value := line[sep:]
+	matches := valueQuadRe.FindAllStringSubmatchIndex(value, -1)
+	if matches == nil {
+		return line
+	}
+
+	// Rebuilt back to front so earlier offsets stay valid. The submatch, not
+	// the whole match, is the address: the pattern's boundaries are there to
+	// reject a quad inside a longer dotted run, and replacing the whole match
+	// would eat the characters around it.
+	var builder strings.Builder
+	last := 0
+	for _, m := range matches {
+		lo, hi := m[2], m[3]
+		quad := value[lo:hi]
+		if !isPrivateOutsideMappedRange(quad) {
+			continue
+		}
+		builder.WriteString(value[last:lo])
+		builder.WriteString(sanitizeIP(quad, mapping))
+		last = hi
+	}
+	if last == 0 {
+		return line
+	}
+	builder.WriteString(value[last:])
+
+	return line[:sep] + builder.String()
+}
+
+// valueQuadRe matches a maximal run of digits and dots, which is then
+// validated as an address.
+//
+// Bounding the quad directly cannot express "not part of a longer dotted run"
+// in RE2, which has no lookahead: a trailing boundary of [^0-9.] rejects the
+// sentence period in `intruder IP: 192.168.0.2.`, and one of [^0-9] would
+// accept the first four octets of a five-octet run. Taking the whole run and
+// asking net.ParseIP whether it is an address settles both -- a run ends at a
+// digit, so the sentence period is outside it, and 1.2.3.4.5 parses as
+// nothing.
+var valueQuadRe = regexp.MustCompile(`([0-9][0-9.]*[0-9])`)
+
+// isPrivateOutsideMappedRange reports whether quad is an RFC1918 address that
+// the sanitizer has not already mapped into 10/8.
+func isPrivateOutsideMappedRange(quad string) bool {
+	parsed := net.ParseIP(quad)
+	if parsed == nil || parsed.To4() == nil {
+		return false
+	}
+	if !parsed.IsPrivate() {
+		return false
+	}
+
+	return !mappedIPNet().Contains(parsed)
+}
+
+// mappedFirstOctet is the first octet of the range sanitizeIP maps into.
+const mappedFirstOctet = 10
+
+// mappedPrefixBits is that range's prefix length.
+const mappedPrefixBits = 8
+
+// ipv4Bits is the width of an IPv4 address.
+const ipv4Bits = 32
+
+// mappedIPNet is the range sanitizeIP maps into.
+func mappedIPNet() *net.IPNet {
+	return &net.IPNet{
+		IP:   net.IPv4(mappedFirstOctet, 0, 0, 0),
+		Mask: net.CIDRMask(mappedPrefixBits, ipv4Bits),
+	}
+}
+
 // hasIPIndexedPrefix reports whether oid sits under a known IPv4-indexed
 // table column.
 func hasIPIndexedPrefix(oid string) bool {
