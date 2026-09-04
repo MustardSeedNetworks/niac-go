@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 func TestPrintPacketsHexDump(t *testing.T) {
-	packets := []ipc.PacketData{
+	packets := []cliclient.PacketData{
 		{
 			Timestamp: time.Now(),
 			Length:    14,
@@ -39,11 +39,11 @@ func TestPrintPacketsHexDumpEmpty(t *testing.T) {
 			t.Errorf("printPacketsHexDump panicked: %v", r)
 		}
 	}()
-	printPacketsHexDump([]ipc.PacketData{})
+	printPacketsHexDump([]cliclient.PacketData{})
 }
 
 func TestOutputPacketsJSON(t *testing.T) {
-	packets := []ipc.PacketData{
+	packets := []cliclient.PacketData{
 		{
 			Timestamp: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
 			Length:    14,

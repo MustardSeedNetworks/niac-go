@@ -28,7 +28,7 @@ func addStatusCommand(root *cobra.Command, _ *serviceOptions) {
 	statusCmd := &cobra.Command{
 		Use:   "status",
 		Short: "Query the status of a running NIAC simulation",
-		Long: `Query the status of a running NIAC simulation via IPC socket.
+		Long: `Query the status of a running NIAC simulation over the daemon API.
 
 This command connects to a running NIAC simulation and retrieves
 current status information including:
@@ -42,16 +42,16 @@ current status information including:
 
 Exit codes:
   0 - Simulation is running
-  1 - Simulation is not running (socket not found or connection refused)
-  2 - Error occurred (socket error, parse error, etc.)`,
+  1 - Simulation is not running (no daemon answered, or it reports idle)
+  2 - Error occurred (unreachable daemon, authentication, parse error)`,
 		Example: `  # Check simulation status
   niac status
 
   # Output status as JSON
   niac status --json
 
-  # Use a custom socket path
-  niac status --socket /var/run/niac.sock
+  # Reach a daemon on another address
+  niac status --api https://127.0.0.1:8445
 
   # Use in scripts
   if niac status > /dev/null 2>&1; then

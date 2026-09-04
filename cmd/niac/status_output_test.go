@@ -14,7 +14,7 @@ func TestOutputErrorNotRunning(t *testing.T) {
 		}
 	}()
 
-	err := errors.New("socket not found: /tmp/niac.sock")
+	err := errors.New("no NIAC daemon is answering at https://127.0.0.1:8445")
 	outputError(err, exitCodeNotRunning, false)
 }
 
@@ -25,7 +25,7 @@ func TestOutputErrorNotRunningJSON(t *testing.T) {
 		}
 	}()
 
-	err := errors.New("socket not found: /tmp/niac.sock")
+	err := errors.New("no NIAC daemon is answering at https://127.0.0.1:8445")
 	outputError(err, exitCodeNotRunning, true)
 }
 

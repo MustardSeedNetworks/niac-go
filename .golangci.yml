@@ -651,17 +651,6 @@ linters:
       - path: 'internal/daemon/.*_test\.go'
         linters:
           - testpackage
-      # IPC tests require access to unexported functions.
-      - path: 'internal/ipc/.*_test\.go'
-        linters:
-          - testpackage
-      # usetesting wants t.TempDir() here, but a Unix socket path is capped near
-      # 104 bytes by sun_path and t.TempDir()'s per-test directory overruns it:
-      # every socket test fails on darwin with "bind: invalid argument" before
-      # the client under test is reached.
-      - path: 'internal/ipc/client_test\.go'
-        linters:
-          - usetesting
       # Capture tests require internal testing for race condition handling.
       - path: 'internal/capture/.*_test\.go'
         linters:

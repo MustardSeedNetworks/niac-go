@@ -2202,7 +2202,7 @@ const commandItems: HelpItem[] = [
     category: 'commands',
     summary: 'Show running-daemon state.',
     techDesc:
-      'Connects to the daemon’s IPC socket and prints: uptime, active interface, loaded config name, device count, active error injections, total packets RX/TX, per-protocol counters.',
+      'Connects to the daemon’s API and prints: uptime, active interface, loaded config name, device count, active error injections, total packets RX/TX, per-protocol counters.',
     laymanDesc: 'Quick "is it running and what’s it doing?" check.',
     whenToUse: 'Sanity-check from a shell script.',
     whenNotToUse: 'You’re already in the web UI.',
@@ -2240,7 +2240,7 @@ const commandItems: HelpItem[] = [
     category: 'commands',
     summary: 'Stream live counters from a running daemon.',
     techDesc:
-      'Subscribes over IPC and prints stats every `--interval` (default 1s) in table / json / csv formats. Like `top` but for the NIAC simulation.',
+      'Subscribes to the daemon’s stats stream and prints stats every `--interval` (default 1s) in table / json / csv formats. Like `top` but for the NIAC simulation.',
     laymanDesc: 'Watch the simulation’s packet counters live.',
     whenToUse: 'Tailing a running daemon, scripting metric collection.',
     whenNotToUse: 'You want long-term metrics — scrape `/metrics` from the HTTPS daemon.',
@@ -3176,12 +3176,6 @@ export const glossary: GlossaryEntry[] = [
     term: 'Inform',
     definition:
       'An SNMP "trap with ack" — the receiver must acknowledge receipt. Adds reliability.',
-    category: 'concept',
-  },
-  {
-    term: 'IPC socket',
-    definition:
-      'Unix-domain socket used by the niac CLI to talk to the running daemon. Default path `/tmp/niac.sock`.',
     category: 'concept',
   },
   {
