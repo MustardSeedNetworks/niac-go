@@ -35,7 +35,21 @@ test.describe('wizard authoring from empty', () => {
     for (const name of ['e2e-rtr-01', 'e2e-sw-01']) {
       await page.getByRole('button', { name: 'Add device' }).first().click();
       const dialog = page.getByRole('dialog');
-      await dialog.getByLabel('Device name').fill(name);
+      // useFocusTrap autofocuses the dialog's first focusable element (the
+      // header's "Close modal" button, not the name field below) via
+      // requestAnimationFrame once the dialog mounts. Filling the name field
+      // before that rAF fires raced it: on a loaded runner the rAF could land
+      // *after* fill() had already focused and typed into the name field,
+      // stealing focus back to Close mid-fill and leaving the field empty --
+      // which left the dialog's "Add device" button permanently disabled
+      // (deviceValid requires a non-empty name) and the next click spun for
+      // the full 30s test timeout instead of failing at its actual cause
+      // (niac-go#1773). Waiting for that autofocus to land first sequences
+      // around the race instead of fighting it after the fact.
+      await expect(dialog.getByRole('button', { name: 'Close modal' })).toBeFocused();
+      const nameField = dialog.getByLabel('Device name');
+      await nameField.fill(name);
+      await expect(nameField).toHaveValue(name);
       // Arm the wait before the click. Adding a device is a topology PATCH,
       // and the dialog closes only once it resolves: waiting on the dialog
       // alone made this a race against the network, which firefox lost on a
