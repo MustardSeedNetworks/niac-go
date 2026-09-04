@@ -14,7 +14,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "runs.db")
 
-	store, err := storage.Open(path)
+	store, err := storage.Open(path, storage.RetainAll)
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
@@ -75,7 +75,7 @@ func TestStorageAddAndListRuns(t *testing.T) {
 func TestOpenDisabled(t *testing.T) {
 	t.Parallel()
 
-	if _, err := storage.Open("disabled"); err == nil {
+	if _, err := storage.Open("disabled", storage.RetainAll); err == nil {
 		t.Fatalf("Open(\"disabled\") expected error, got nil")
 	}
 }

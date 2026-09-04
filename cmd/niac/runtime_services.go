@@ -74,7 +74,7 @@ func startRuntimeServices(
 	}
 
 	if storagePath != "" {
-		rs.storage, err = storage.Open(storagePath)
+		rs.storage, err = storage.Open(storagePath, services.storageKeep)
 		if err != nil {
 			return nil, fmt.Errorf("open storage: %w", err)
 		}

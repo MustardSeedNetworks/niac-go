@@ -17,6 +17,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
 const (
@@ -28,6 +29,7 @@ type daemonOptions struct {
 	listen              string
 	token               string
 	storagePath         string
+	storageKeep         int
 	webhookAllowedHosts []string
 	attachmentPolicies  []string
 	certDir             string
@@ -95,6 +97,9 @@ NIAC_API_TOKEN or --api-token.`,
 	}
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+	daemonCmd.Flags().
+		IntVar(&options.storageKeep, "storage-keep", storage.DefaultRunRetention,
+			"Run history records to keep, pruned oldest first on start (0 keeps every run)")
 	daemonCmd.Flags().
 		StringSliceVar(&options.webhookAllowedHosts, "webhook-allowed-host", nil,
 			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
@@ -330,6 +335,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		Token:               token,
 		TokenFile:           tokenFile,
 		StoragePath:         options.storagePath,
+		StorageKeep:         options.storageKeep,
 		RecoveryPath:        daemon.DefaultRecoveryPath(),
 		Version:             info.version,
 		Commit:              info.commit,
