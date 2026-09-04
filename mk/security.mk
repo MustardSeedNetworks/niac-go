@@ -53,12 +53,12 @@ security-backend-quiet:
 
 security-frontend: ## Run frontend security scan (npm audit)
 	@printf "$(BOLD)🔒 Running npm audit...$(RESET)\n"
-	@cd $(UI_DIR) && npm audit --audit-level=high
+	@cd $(UI_DIR) && ../scripts/npm-audit.sh
 	@printf "$(GREEN)✓ npm audit complete$(RESET)\n"
 
 security-frontend-quiet:
 	@printf "   Auditing npm packages...\n"
-	@OUTPUT=$$(cd $(UI_DIR) && npm audit --audit-level=high 2>&1); \
+	@OUTPUT=$$(cd $(UI_DIR) && ../scripts/npm-audit.sh 2>&1); \
 	STATUS=$$?; \
 	echo "$$OUTPUT" | grep -E "(found|vulnerabilities)" | head -3 || printf "   No vulnerabilities found\n"; \
 	if [ $$STATUS -ne 0 ]; then \
