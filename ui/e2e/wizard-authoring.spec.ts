@@ -36,7 +36,16 @@ test.describe('wizard authoring from empty', () => {
       await page.getByRole('button', { name: 'Add device' }).first().click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Device name').fill(name);
+      // Arm the wait before the click. Adding a device is a topology PATCH,
+      // and the dialog closes only once it resolves: waiting on the dialog
+      // alone made this a race against the network, which firefox lost on a
+      // loaded runner and the retry then won.
+      const added = page.waitForResponse(
+        (response) =>
+          response.url().includes('/topology') && response.request().method() === 'PATCH',
+      );
       await dialog.getByRole('button', { name: 'Add device' }).click();
+      await added;
       await expect(dialog).toBeHidden();
     }
     await page.getByTestId('wizard-next-button').click();

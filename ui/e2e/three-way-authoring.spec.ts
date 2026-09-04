@@ -173,7 +173,13 @@ async function authorInWizard(page: Page): Promise<string> {
     await page.getByRole('button', { name: 'Add device' }).first().click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Device name').fill(want.hostname);
+    // Arm the wait before the click: the dialog closes only once the topology
+    // PATCH resolves, so waiting on the dialog alone races the network.
+    const added = page.waitForResponse(
+      (response) => response.url().includes('/topology') && response.request().method() === 'PATCH',
+    );
     await dialog.getByRole('button', { name: 'Add device' }).click();
+    await added;
     await expect(dialog).toBeHidden();
   }
   await page.getByTestId('wizard-next-button').click();
