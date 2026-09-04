@@ -1,8 +1,11 @@
 package content
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
@@ -34,32 +37,30 @@ func PackagedBundlePath() string {
 // pack that library.Open seeds on first run.
 //
 // Precedence: the deb full bundle (≈138 devices) wins over the embedded
-// essentials (≈18 starters). It runs while the library is still
-// "unseeded" — walks/ is empty, or holds only embedded-starter files
-// (Source==SourceStarter) with no real/user content yet. The moment any
-// non-starter walk is present the library counts as seeded and adoption
-// is skipped, so this never fights user content.
+// essentials (≈18 starters). Adoption runs whenever the bundle on disk
+// is not the one the library last recorded, so upgrading the
+// niac-content package brings its new devices in. It used to run only
+// while walks/ held nothing but embedded starters, which meant a single
+// walk uploaded before the package was installed blocked the whole
+// 138-device bundle for good.
 //
-// Extraction is additive (ExtractOptions.SkipExisting): the embedded
-// starters and any user files are preserved untouched; the extract only
-// fills in the ≈120 devices the embed lacks. That also gives a natural
-// once-guard — after adoption walks/ holds non-starter bundle files
-// (extracted files aren't in the embedded starter set, so
-// library.detectFileSource stamps them SourceUser), so the "only
-// starters" check is false on every later boot and it won't re-extract.
+// The bundle identifies itself by the SHA-256 of its own bytes rather
+// than a version string inside the tar: the generator's layout is the
+// manifest and stays that way, and any rebuild of the corpus is a
+// different bundle whether or not someone remembered to bump a number.
+// Re-adopting the recorded bundle is a no-op, so this costs one hash per
+// daemon boot and nothing else.
+//
+// What lands is decided per file by Extract: a device the library does
+// not have, or one this bundle shipped earlier and nobody has touched
+// since, is written; the operator's own walks and any shipped walk they
+// have edited are preserved. The embedded starters are never recorded as
+// bundle content, so they fall on the preserved side too.
 //
 // bundlePath must be a local file (the packaged path or its env
 // override); never a URL. If it doesn't exist (the niac-content package
 // isn't installed) this is a no-op — installed=false, err=nil.
 func AdoptPackagedBundle(lib *library.Library, bundlePath string) (Manifest, bool, error) {
-	seeded, err := librarySeeded(lib)
-	if err != nil {
-		return Manifest{}, false, err
-	}
-	if seeded {
-		return Manifest{}, false, nil
-	}
-
 	f, err := os.Open(bundlePath) // #nosec G304 -- operator-controlled packaged path, not user input
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -69,26 +70,35 @@ func AdoptPackagedBundle(lib *library.Library, bundlePath string) (Manifest, boo
 	}
 	defer func() { _ = f.Close() }()
 
-	manifest, err := Extract(f, lib.Root(), ExtractOptions{SkipExisting: true})
+	version, err := bundleVersion(f)
+	if err != nil {
+		return Manifest{}, false, fmt.Errorf("read packaged bundle %s: %w", bundlePath, err)
+	}
+	index, err := library.ReadBundleIndex(lib.Root())
+	if err != nil {
+		return Manifest{}, false, fmt.Errorf("read bundle index: %w", err)
+	}
+	if index.Version == version {
+		return Manifest{}, false, nil
+	}
+
+	if _, err = f.Seek(0, io.SeekStart); err != nil {
+		return Manifest{}, false, fmt.Errorf("rewind packaged bundle %s: %w", bundlePath, err)
+	}
+	manifest, err := Extract(f, lib.Root(), ExtractOptions{BundleVersion: version})
 	if err != nil {
 		return Manifest{}, false, fmt.Errorf("extract packaged bundle %s: %w", bundlePath, err)
 	}
+
 	return manifest, true, nil
 }
 
-// librarySeeded reports whether walks/ already holds real content. An
-// empty walks/ or one holding only embedded starters is "unseeded"
-// (false); the first non-starter (user- or bundle-sourced) walk flips
-// it to seeded (true).
-func librarySeeded(lib *library.Library) (bool, error) {
-	files, err := lib.ListFiles(library.KindWalks)
-	if err != nil {
-		return false, fmt.Errorf("list walks: %w", err)
+// bundleVersion identifies a bundle by the SHA-256 of its bytes.
+func bundleVersion(r io.Reader) (string, error) {
+	digest := sha256.New()
+	if _, err := io.Copy(digest, r); err != nil {
+		return "", err
 	}
-	for _, f := range files {
-		if f.Source != library.SourceStarter {
-			return true, nil
-		}
-	}
-	return false, nil
+
+	return hex.EncodeToString(digest.Sum(nil)), nil
 }

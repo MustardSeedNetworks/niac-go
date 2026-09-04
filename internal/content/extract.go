@@ -25,9 +25,12 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,16 +61,21 @@ const (
 const topLevelKindParts = 2
 
 // ExtractOptions tunes Extract behaviour. The zero value is the
-// sensible default: extract everything, overwrite existing files,
-// don't dry-run.
+// sensible default: install everything, replace the bundle's own
+// unmodified files, leave anything the operator wrote or edited alone.
 type ExtractOptions struct {
 	// DryRun reports what would be installed without touching the disk.
 	DryRun bool
-	// SkipExisting flips the default overwrite-on-conflict behaviour to
-	// "skip existing files" (additive merge). The zero value (false)
-	// overwrites, so reinstalling a newer bundle replaces older
-	// content.
-	SkipExisting bool
+	// Force overwrites files the bundle would otherwise leave alone --
+	// the operator's own, and shipped files they have since edited. It is
+	// the only way to lose local changes, and `niac content install`
+	// exposes it as --force.
+	Force bool
+	// BundleVersion identifies the bundle being installed, recorded in the
+	// library's index so a later bundle can tell it is a different one.
+	// Empty leaves the recorded version alone, for an install that does
+	// not identify itself.
+	BundleVersion string
 }
 
 // Manifest summarises an extraction. Returned by Extract; printed by
@@ -83,6 +91,15 @@ type Manifest struct {
 	// files are indistinguishable from the operator's own once they are on
 	// disk, so this is what lets them keep being reported as bundle content.
 	Paths []string
+	// Preserved counts the files the bundle ships that were left as they are
+	// on disk because the operator wrote or edited them. Reported by the
+	// install summary so it is visible that the bundle did not fully land.
+	Preserved int
+	// BundleVersion echoes the version recorded for this install.
+	BundleVersion string
+	// hashes maps each written path to the SHA-256 of the bytes written, for
+	// the library index. Not part of the summary callers print.
+	hashes map[string]string
 }
 
 // Extract reads a gzip-tar bundle from r and writes its contents into
@@ -113,9 +130,18 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 	}
 	defer gz.Close()
 
+	// What the last bundle shipped, so an entry landing on an existing file
+	// can tell that file apart from one the operator has since edited. An
+	// unreadable index reports nothing as bundle content, which errs towards
+	// preserving whatever is on disk.
+	index, _ := library.ReadBundleIndex(abs)
+
 	tr := tar.NewReader(gz)
-	manifest := Manifest{PerKind: map[library.Kind]int{}}
-	overwrite := !opts.SkipExisting
+	manifest := Manifest{
+		PerKind:       map[library.Kind]int{},
+		BundleVersion: opts.BundleVersion,
+		hashes:        map[string]string{},
+	}
 
 	var totalBytes int64
 	for {
@@ -127,13 +153,13 @@ func Extract(r io.Reader, libRoot string, opts ExtractOptions) (Manifest, error)
 			return manifest, fmt.Errorf("read tar entry: %w", hdrErr)
 		}
 
-		if procErr := processEntry(tr, hdr, root, opts, overwrite, &manifest, &totalBytes); procErr != nil {
+		if procErr := processEntry(tr, hdr, root, opts, index, &manifest, &totalBytes); procErr != nil {
 			return manifest, procErr
 		}
 	}
 
 	if !opts.DryRun {
-		if recErr := library.RecordBundleInstall(abs, manifest.Paths); recErr != nil {
+		if recErr := library.RecordBundleInstall(abs, opts.BundleVersion, manifest.hashes); recErr != nil {
 			return manifest, fmt.Errorf("record bundle contents: %w", recErr)
 		}
 	}
@@ -157,7 +183,7 @@ func processEntry(
 	hdr *tar.Header,
 	root *os.Root,
 	opts ExtractOptions,
-	overwrite bool,
+	index library.BundleIndex,
 	manifest *Manifest,
 	totalBytes *int64,
 ) error {
@@ -183,27 +209,59 @@ func processEntry(
 		return nil
 
 	case tar.TypeReg:
-		if hdr.Size < 0 || hdr.Size > maxEntrySize {
-			return fmt.Errorf("%w: %s is %d bytes", ErrEntryTooLarge, hdr.Name, hdr.Size)
-		}
-		*totalBytes += hdr.Size
-		if *totalBytes > maxBundleSize {
-			return fmt.Errorf("%w (running total %d bytes)", ErrBundleTooLarge, *totalBytes)
-		}
-		if !opts.DryRun {
-			if writeErr := writeFile(root, rel, tr, hdr.Size, overwrite); writeErr != nil {
-				return writeErr
-			}
-		}
-		manifest.Files++
-		manifest.Bytes += hdr.Size
-		manifest.PerKind[kind]++
-		manifest.Paths = append(manifest.Paths, rel)
-		return nil
+		return writeRegularEntry(tr, hdr, root, rel, kind, opts, index, manifest, totalBytes)
 
 	default:
 		return fmt.Errorf("%w: %s (typeflag %d)", ErrUnsupportedType, hdr.Name, hdr.Typeflag)
 	}
+}
+
+// writeRegularEntry applies the size caps and the overwrite policy to one
+// file entry, then writes it and records what it wrote. Split out of
+// processEntry to keep that function under the cognitive-complexity cap.
+func writeRegularEntry(
+	tr *tar.Reader,
+	hdr *tar.Header,
+	root *os.Root,
+	rel string,
+	kind library.Kind,
+	opts ExtractOptions,
+	index library.BundleIndex,
+	manifest *Manifest,
+	totalBytes *int64,
+) error {
+	if hdr.Size < 0 || hdr.Size > maxEntrySize {
+		return fmt.Errorf("%w: %s is %d bytes", ErrEntryTooLarge, hdr.Name, hdr.Size)
+	}
+	*totalBytes += hdr.Size
+	if *totalBytes > maxBundleSize {
+		return fmt.Errorf("%w (running total %d bytes)", ErrBundleTooLarge, *totalBytes)
+	}
+
+	replaceable, checkErr := mayReplace(root, rel, index, opts.Force)
+	if checkErr != nil {
+		return checkErr
+	}
+	if !replaceable {
+		manifest.Preserved++
+		return nil
+	}
+
+	sum := ""
+	if !opts.DryRun {
+		written, writeErr := writeFile(root, rel, tr, hdr.Size)
+		if writeErr != nil {
+			return writeErr
+		}
+		sum = written
+	}
+	manifest.Files++
+	manifest.Bytes += hdr.Size
+	manifest.PerKind[kind]++
+	manifest.Paths = append(manifest.Paths, rel)
+	manifest.hashes[filepath.ToSlash(rel)] = sum
+
+	return nil
 }
 
 // resolveEntryPath validates a tar entry path against the library
@@ -266,48 +324,95 @@ func matchKind(top string) (library.Kind, bool) {
 	return "", false
 }
 
-// writeFile creates or overwrites rel (relative to root) with size bytes
-// from r. Writes via a temp file in the same directory then atomically
-// renames, so a crash mid-extract leaves the previous version intact.
-// All operations go through os.Root, so the kernel guarantees rel cannot
-// escape the library root — including through a symlink already on disk.
-func writeFile(root *os.Root, rel string, r io.Reader, size int64, overwrite bool) error {
-	if !overwrite {
-		if _, statErr := root.Stat(rel); statErr == nil {
-			return nil
+// mayReplace reports whether the bundle may write over rel. A path with
+// nothing at it is always free. Otherwise the file on disk must be one a
+// previous bundle put there AND still byte-identical to what that bundle
+// shipped: then it is stale bundle content and the new bundle owns it.
+// Anything else — the operator's own file, or a shipped file they have
+// edited — is theirs to keep, and only Force takes it from them.
+func mayReplace(root *os.Root, rel string, index library.BundleIndex, force bool) (bool, error) {
+	if force {
+		return true, nil
+	}
+	info, statErr := root.Stat(rel)
+	if statErr != nil {
+		if errors.Is(statErr, fs.ErrNotExist) {
+			return true, nil
 		}
+		return false, fmt.Errorf("stat %s: %w", rel, statErr)
+	}
+	if !info.Mode().IsRegular() {
+		return false, nil
 	}
 
+	shipped, known := index.Files[filepath.ToSlash(rel)]
+	if !known || shipped == "" {
+		return false, nil
+	}
+	current, sumErr := hashFile(root, rel)
+	if sumErr != nil {
+		return false, sumErr
+	}
+
+	return current == shipped, nil
+}
+
+// hashFile returns the SHA-256 of rel, read through the library root so it
+// is the same containment every other access here uses.
+func hashFile(root *os.Root, rel string) (string, error) {
+	f, err := root.Open(rel)
+	if err != nil {
+		return "", fmt.Errorf("open %s: %w", rel, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	digest := sha256.New()
+	if _, err = io.Copy(digest, f); err != nil {
+		return "", fmt.Errorf("hash %s: %w", rel, err)
+	}
+
+	return hex.EncodeToString(digest.Sum(nil)), nil
+}
+
+// writeFile creates or overwrites rel (relative to root) with size bytes
+// from r, returning the SHA-256 of what it wrote for the library index.
+// Writes via a temp file in the same directory then atomically renames,
+// so a crash mid-extract leaves the previous version intact.
+// All operations go through os.Root, so the kernel guarantees rel cannot
+// escape the library root — including through a symlink already on disk.
+func writeFile(root *os.Root, rel string, r io.Reader, size int64) (string, error) {
 	dir := filepath.Dir(rel)
 	if mkErr := root.MkdirAll(dir, libraryDirMode); mkErr != nil {
-		return fmt.Errorf("mkdir parent of %s: %w", rel, mkErr)
+		return "", fmt.Errorf("mkdir parent of %s: %w", rel, mkErr)
 	}
 
 	tmpRel, tmp, createErr := createTemp(root, dir, filepath.Base(rel))
 	if createErr != nil {
-		return fmt.Errorf("create temp for %s: %w", rel, createErr)
+		return "", fmt.Errorf("create temp for %s: %w", rel, createErr)
 	}
 	cleanup := func() { _ = root.Remove(tmpRel) }
 
-	if _, copyErr := io.CopyN(tmp, r, size); copyErr != nil {
+	digest := sha256.New()
+	if _, copyErr := io.CopyN(io.MultiWriter(tmp, digest), r, size); copyErr != nil {
 		_ = tmp.Close()
 		cleanup()
-		return fmt.Errorf("copy bytes for %s: %w", rel, copyErr)
+		return "", fmt.Errorf("copy bytes for %s: %w", rel, copyErr)
 	}
 	if chmodErr := tmp.Chmod(libraryFileMode); chmodErr != nil {
 		_ = tmp.Close()
 		cleanup()
-		return fmt.Errorf("chmod temp for %s: %w", rel, chmodErr)
+		return "", fmt.Errorf("chmod temp for %s: %w", rel, chmodErr)
 	}
 	if closeErr := tmp.Close(); closeErr != nil {
 		cleanup()
-		return fmt.Errorf("close temp for %s: %w", rel, closeErr)
+		return "", fmt.Errorf("close temp for %s: %w", rel, closeErr)
 	}
 	if renameErr := root.Rename(tmpRel, rel); renameErr != nil {
 		cleanup()
-		return fmt.Errorf("rename %s -> %s: %w", tmpRel, rel, renameErr)
+		return "", fmt.Errorf("rename %s -> %s: %w", tmpRel, rel, renameErr)
 	}
-	return nil
+
+	return hex.EncodeToString(digest.Sum(nil)), nil
 }
 
 // createTemp opens a fresh temp file under dir (relative to root) with a

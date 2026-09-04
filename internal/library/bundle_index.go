@@ -1,84 +1,117 @@
 package library
 
 import (
-	"bufio"
+	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
 // BundleIndexName is the file recording which library entries arrived in a
-// content bundle.
+// content bundle, and what they looked like when they did.
 //
 // Nothing else can tell: a bundle's files land in the same directories as the
 // operator's own and look identical afterwards, so without this every installed
 // file was reported as "user" and the Bundle badge the UI already draws could
 // never appear.
 //
-// It is a plain list of library-relative paths, one per line, appended as
-// bundles install. A missing or unreadable index means nothing is known to have
-// come from a bundle, which is the pre-existing behaviour.
+// It holds the version of the bundle last adopted and, per library-relative
+// path, the SHA-256 of the file as that bundle shipped it. The hash is what
+// lets an upgrade tell a file the operator has edited from one it may safely
+// replace. A missing or unreadable index means nothing is known to have come
+// from a bundle: every file on disk is then treated as the operator's and left
+// alone, which is the safe direction.
 const BundleIndexName = ".bundle-installed"
 
-// bundleIndex is the set of paths a bundle installed, read once per library
-// handle. Listing a directory asks for every entry's source in turn, and each
-// answer should not cost a file read.
+// bundleIndexMode keeps the index readable only by the owner, as the
+// append-only list it replaces was.
+const bundleIndexMode = 0o600
+
+// BundleIndex is what the library records about the content bundle it holds.
+type BundleIndex struct {
+	// Version identifies the bundle last adopted. Adoption re-runs when the
+	// bundle on disk no longer matches it; content.AdoptPackagedBundle uses
+	// the bundle file's SHA-256.
+	Version string `json:"version"`
+	// Files maps a library-relative path (slash-separated, kind-prefixed, e.g.
+	// "walks/cisco-2960.walk") to the SHA-256 of the bytes the bundle shipped
+	// there.
+	Files map[string]string `json:"files"`
+}
+
+// bundleIndex is the index as read from disk, loaded once per library handle.
+// Listing a directory asks for every entry's source in turn, and each answer
+// should not cost a file read.
 type bundleIndex struct {
-	once  sync.Once
-	paths map[string]bool
+	once   sync.Once
+	loaded BundleIndex
 }
 
 func (b *bundleIndex) contains(root, relative string) bool {
-	b.once.Do(func() { b.paths = readBundleIndex(root) })
+	b.once.Do(func() { b.loaded, _ = ReadBundleIndex(root) })
 
-	return b.paths[filepath.ToSlash(relative)]
+	_, ok := b.loaded.Files[filepath.ToSlash(relative)]
+
+	return ok
 }
 
-func readBundleIndex(root string) map[string]bool {
-	paths := map[string]bool{}
-	file, err := os.Open(filepath.Join(root, BundleIndexName))
+// ReadBundleIndex loads the library's bundle index. A missing index is not an
+// error: it reports an empty index, meaning nothing is known to have come from
+// a bundle.
+func ReadBundleIndex(root string) (BundleIndex, error) {
+	index := BundleIndex{Files: map[string]string{}}
+	raw, err := os.ReadFile(filepath.Join(root, BundleIndexName))
 	if err != nil {
-		return paths
-	}
-	defer func() { _ = file.Close() }()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if line := strings.TrimSpace(scanner.Text()); line != "" {
-			paths[filepath.ToSlash(line)] = true
+		if errors.Is(err, fs.ErrNotExist) {
+			return index, nil
 		}
+		return index, err
+	}
+	if err = json.Unmarshal(raw, &index); err != nil {
+		return BundleIndex{Files: map[string]string{}}, err
+	}
+	if index.Files == nil {
+		index.Files = map[string]string{}
 	}
 
-	return paths
+	return index, nil
 }
 
-// RecordBundleInstall adds the paths a bundle wrote to the library's index, so
-// they are reported as bundle content rather than as the operator's own.
+// RecordBundleInstall folds what a bundle just wrote into the library's index,
+// so those files are reported as bundle content rather than as the operator's
+// own and a later bundle can tell which of them are still untouched.
 //
-// Paths are library-relative, as the extractor resolves them. Appending keeps
-// earlier installs, and duplicates are harmless because the index is read as a
-// set.
-func RecordBundleInstall(root string, relativePaths []string) error {
-	if len(relativePaths) == 0 {
+// Paths are library-relative, as the extractor resolves them, mapped to the
+// SHA-256 of the bytes just written. Entries from earlier installs are kept: a
+// path this bundle happens not to ship is still bundle content on disk, and
+// keeping its hash means a bundle that reintroduces it later does not mistake
+// it for the operator's file. A non-empty version replaces the recorded one;
+// an empty version leaves it alone, for installs that do not identify
+// themselves (an operator's `niac content install`).
+func RecordBundleInstall(root, version string, files map[string]string) error {
+	if len(files) == 0 && version == "" {
 		return nil
 	}
-	file, err := os.OpenFile(
-		filepath.Join(root, BundleIndexName),
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-		0o600,
-	)
+	index, err := ReadBundleIndex(root)
+	if err != nil {
+		// An index we cannot parse is replaced rather than merged into: the
+		// alternative is refusing every future install because of one corrupt
+		// file. Nothing on disk is touched, only the record of it.
+		index = BundleIndex{Files: map[string]string{}}
+	}
+	if version != "" {
+		index.Version = version
+	}
+	for relative, sum := range files {
+		index.Files[filepath.ToSlash(relative)] = sum
+	}
+
+	encoded, err := json.MarshalIndent(index, "", "  ")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
 
-	writer := bufio.NewWriter(file)
-	for _, path := range relativePaths {
-		if _, err = writer.WriteString(filepath.ToSlash(path) + "\n"); err != nil {
-			return err
-		}
-	}
-
-	return writer.Flush()
+	return os.WriteFile(filepath.Join(root, BundleIndexName), append(encoded, '\n'), bundleIndexMode)
 }

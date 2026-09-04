@@ -13,7 +13,7 @@ import (
 // as "user" - and the Bundle badge the UI already draws could never appear.
 func TestBundleInstalledContentReportsItsSource(t *testing.T) {
 	lib := newLibraryWithFile(t, KindNetworks, "campus.yaml")
-	if err := RecordBundleInstall(lib.root, []string{"networks/campus.yaml"}); err != nil {
+	if err := RecordBundleInstall(lib.root, "v1", map[string]string{"networks/campus.yaml": "abc"}); err != nil {
 		t.Fatalf("RecordBundleInstall: %v", err)
 	}
 
@@ -34,7 +34,7 @@ func TestUnrecordedContentIsStillTheOperatorsOwn(t *testing.T) {
 // Walks and pcaps arrive in bundles too, and are asked about by kind.
 func TestBundleInstalledWalksReportTheirSource(t *testing.T) {
 	lib := newLibraryWithFile(t, KindWalks, "switch-01.walk")
-	if err := RecordBundleInstall(lib.root, []string{"walks/switch-01.walk"}); err != nil {
+	if err := RecordBundleInstall(lib.root, "v1", map[string]string{"walks/switch-01.walk": "abc"}); err != nil {
 		t.Fatalf("RecordBundleInstall: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestBundleInstalledWalksReportTheirSource(t *testing.T) {
 // cannot claim a file that reappears on every bootstrap.
 func TestStarterContentOutranksTheIndex(t *testing.T) {
 	lib := newLibraryWithFile(t, KindNetworks, "enterprise.yaml")
-	if err := RecordBundleInstall(lib.root, []string{"networks/enterprise.yaml"}); err != nil {
+	if err := RecordBundleInstall(lib.root, "v1", map[string]string{"networks/enterprise.yaml": "abc"}); err != nil {
 		t.Fatalf("RecordBundleInstall: %v", err)
 	}
 	starterName := firstStarterNetwork(t)
