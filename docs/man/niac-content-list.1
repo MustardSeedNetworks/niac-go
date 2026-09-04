@@ -2,22 +2,25 @@
 .TH "NIAC" "1" "Sep 2026" "NIAC" "NIAC Manual"
 
 .SH NAME
-niac-template-list - List available templates
+niac-content-list - List what's installed in the library
 
 
 .SH SYNOPSIS
-\fBniac template list [flags]\fP
+\fBniac content list [flags]\fP
 
 
 .SH DESCRIPTION
-Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+Print every kind (networks / walks / pcaps) currently in the library
+along with the file count and on-disk size for each, plus a TOTAL row.
 
 
 .SH OPTIONS
 \fB-h\fP, \fB--help\fP[=false]
 	help for list
+
+.PP
+\fB--root\fP=""
+	Library root (default: NIAC_LIBRARY_ROOT or ~/.niac/library)
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -31,13 +34,16 @@ iot-network, etc.) and are the fastest path to a runnable YAML config.
 
 .SH EXAMPLE
 .EX
-  # List all templates with descriptions
-  niac template list
+  # List the default library
+  niac content list
+
+  # Inspect a non-default library
+  niac content list --root /var/lib/niac/library
 .EE
 
 
 .SH SEE ALSO
-\fBniac-template(1)\fP
+\fBniac-content(1)\fP
 
 
 .SH HISTORY

@@ -57,29 +57,39 @@ sudo ./niac daemon
 
 ## Commands
 
-| Command | Purpose |
-| --------- | --------- |
-| `niac daemon` | Run with HTTPS web UI control plane (port 8445) |
-| `niac run <iface> <config>` | Run a simulation on a real interface |
-| `niac interactive <iface> <config>` | Run with a TUI dashboard and interactive fault controls |
-| `niac init [out]` | Interactive template wizard |
-| `niac validate <config>` | Validate a YAML configuration |
-| `niac version` | Print version, commit and build metadata |
-| `niac template` | Manage built-in scenario templates |
-| `niac status` | Query a running simulation |
-| `niac monitor` | Stream real-time stats |
-| `niac logs` | Stream simulation logs |
-| `niac dump` | Dump captured packets |
-| `niac neighbors [watch]` | LLDP/CDP neighbour table |
-| `niac analyze-pcap <file>` | Summarise a PCAP by protocol |
-| `niac analyze-walk <file>` | Extract relationships from an SNMP walk |
-| `niac sanitize <in> <out>` | Anonymise SNMP walks |
-| `niac topology` | Topology management |
-| `niac service` | Windows service management (Windows only) |
-| `niac man` | Generate man pages |
-| `niac completion <shell>` | Shell completion scripts |
+<!-- BEGIN GENERATED COMMANDS -->
 
-Run `niac <command> --help` for flags.
+| Command | Description |
+| --- | --- |
+| `niac analyze-pcap <pcap-file>` | Summarise a packet capture by protocol |
+| `niac analyze-walk <walk-file>` | Analyze an SNMP walk file: device, interfaces, and LLDP/CDP neighbors |
+| `niac completion [bash\|zsh\|fish\|powershell]` | Generate completion script |
+| `niac config` | Configuration management tools |
+| `niac content` | Install and inspect the on-disk content library |
+| `niac daemon` | Run NIAC in daemon mode with web UI control |
+| `niac dump` | Dump captured packets from a running NIAC simulation |
+| `niac init [output-file]` | Interactive template wizard for quick configuration setup |
+| `niac install-ca` | Install NIAC's self-signed root certificate into the OS trust store |
+| `niac interactive <interface> <config-file>` | Run NIAC in interactive TUI mode |
+| `niac list` | List interfaces and demo content |
+| `niac logs` | View and stream simulation logs |
+| `niac man` | Generate man pages |
+| `niac mibzip` | Convert SNMP walk files to and from MibZip format |
+| `niac monitor` | Stream real-time statistics from a running NIAC simulation |
+| `niac neighbors [watch]` | Display neighbor discovery table from LLDP/CDP protocols |
+| `niac run <interface> <config-file>` | Run network simulation |
+| `niac sanitize <input-walk> <output-walk>` | Sanitize SNMP walk files with NIAC branding |
+| `niac status` | Query the status of a running NIAC simulation |
+| `niac template` | Manage configuration templates |
+| `niac topology` | Network topology management commands |
+| `niac validate <config-file>` | Validate a NIAC configuration file |
+| `niac version` | Print the version, commit and build metadata |
+
+<!-- END GENERATED COMMANDS -->
+
+The table is generated from the command tree by `make cli-docs`. On Windows the
+binary also carries `niac service` for Windows service management. Run
+`niac <command> --help` for flags, or see [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 
 ## Architecture
 

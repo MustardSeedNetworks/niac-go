@@ -31,7 +31,7 @@ func addSanitizeCommand(root *cobra.Command, _ *serviceOptions) {
 
 	sanitizeCmd := &cobra.Command{
 		Use:   "sanitize <input-walk> <output-walk>",
-		Short: "Sanitize SNMP walk files with NiAC-Go branding",
+		Short: "Sanitize SNMP walk files with NIAC branding",
 		Long: `Sanitize SNMP walk files by replacing real network data with consistent
 NiAC-Go branded data. IP addresses are mapped deterministically so the
 same input IP always produces the same output IP.

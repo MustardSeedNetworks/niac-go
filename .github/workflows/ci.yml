@@ -130,6 +130,8 @@ jobs:
               - 'cmd/niac-openapi/**'
               - 'docs/openapi-source.yaml'
               - 'docs/openapi.yaml'
+              - 'docs/CLI_REFERENCE.md'
+              - 'README.md'
             https:
               - 'cmd/niac/**'
               - 'internal/api/**'
@@ -236,6 +238,15 @@ jobs:
             exit 1
           fi
           echo "OpenAPI description is up to date."
+
+      - name: Verify the generated CLI documentation is up to date
+        run: |
+          # README.md's command table and the Commands section of
+          # docs/CLI_REFERENCE.md are generated from the cobra tree, so a new
+          # command or a changed help string brings its documentation along or
+          # fails here. Refresh locally with `make cli-docs`.
+          go run ./cmd/niac docs --check
+          echo "CLI documentation is up to date."
 
       - name: Output-escaping / XSS gate (#742)
         run: ./scripts/check-output-escaping.sh

@@ -137,7 +137,15 @@ ui-sections: ## Regenerate the device-editor form manifest from the schema
 	@printf "$(BOLD)Generating device-editor sections from the schema...$(RESET)\n"
 	@./scripts/gen-device-editor-sections.py
 
-.PHONY: schema ui-sections openapi
+cli-docs: ## Regenerate the CLI sections of README.md and docs/CLI_REFERENCE.md
+	@printf "$(BOLD)Generating the CLI reference from the command tree...$(RESET)\n"
+	@go run ./cmd/niac docs
+
+man: ## Regenerate the man pages under docs/man
+	@printf "$(BOLD)Generating man pages...$(RESET)\n"
+	@go run ./cmd/niac man
+
+.PHONY: schema ui-sections openapi cli-docs man
 
 # =============================================================================
 # Development Targets

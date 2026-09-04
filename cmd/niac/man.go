@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -13,10 +12,11 @@ func addManCommand(root *cobra.Command, info versionInfo) {
 	var outputDir string
 
 	manCmd := &cobra.Command{
-		Use:    "man",
-		Short:  "Generate man pages",
-		Long:   `Generate Unix man pages for NIAC commands.`,
-		Hidden: true, // Hidden from help, mainly for maintainers
+		Use:   "man",
+		Short: "Generate man pages",
+		Long:  `Generate Unix man pages for NIAC commands.`,
+		// Not hidden: generating man pages is a normal operator task, and both
+		// the README and the CLI reference have always documented it.
 		Example: `  # Generate man pages to ./docs/man/ (default)
   niac man
 
@@ -37,14 +37,15 @@ func addManCommand(root *cobra.Command, info versionInfo) {
 	root.AddCommand(manCmd)
 }
 
-func runMan(root *cobra.Command, info versionInfo, outputDir string) error {
+func runMan(root *cobra.Command, _ versionInfo, outputDir string) error {
 	header := new(doc.GenManHeader)
 	header.Title = "NIAC"
 	header.Section = "1"
-	header.Source = fmt.Sprintf("NIAC %s", info.version)
+	// No version in the source line and no explicit date: the committed pages
+	// under docs/man would otherwise claim whichever version and day they were
+	// last regenerated on. A nil Date lets cobra honour SOURCE_DATE_EPOCH.
+	header.Source = "NIAC"
 	header.Manual = "NIAC Manual"
-	now := time.Now()
-	header.Date = &now
 
 	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return fmt.Errorf("create man directory: %w", err)

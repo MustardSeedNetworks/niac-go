@@ -81,11 +81,12 @@ const (
 	debugLevelDebug   = 3
 )
 
-func main() {
-	info := readVersionInfo()
-	services := new(serviceOptions)
-
-	builders := []func(*cobra.Command, *serviceOptions){
+// commandBuilders returns every builder that populates the root command, in
+// the order they are registered. main, the docs generator and the help
+// completeness test all build the tree from this one list, so a command added
+// here is documented and checked without a second edit.
+func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
+	return []func(*cobra.Command, *serviceOptions){
 		func(root *cobra.Command, services *serviceOptions) { addRunCommand(root, services, info) },
 		func(root *cobra.Command, _ *serviceOptions) { addCompletionCommand(root) },
 		addAnalyzeCommand,
@@ -100,6 +101,7 @@ func main() {
 		addInteractiveCommand,
 		addLogsCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addManCommand(root, info) },
+		func(root *cobra.Command, _ *serviceOptions) { addDocsCommand(root) },
 		addMibZipCommand,
 		addMonitorCommand,
 		addNeighborsCommand,
@@ -111,12 +113,17 @@ func main() {
 		addValidateCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },
 	}
+}
+
+func main() {
+	info := readVersionInfo()
+	services := new(serviceOptions)
 
 	rootCmd := newRootCommand(
 		info,
 		services,
 		func(args []string) { runLegacyMode(args, info, services) },
-		builders,
+		commandBuilders(info),
 	)
 	if shouldUseLegacyCommand(os.Args[1:], rootCmd) {
 		runLegacyMode(os.Args, info, services)

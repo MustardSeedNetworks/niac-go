@@ -2,22 +2,24 @@
 .TH "NIAC" "1" "Sep 2026" "NIAC" "NIAC Manual"
 
 .SH NAME
-niac-template-list - List available templates
+niac-mibzip-compress - Compress a text SNMP walk file
 
 
 .SH SYNOPSIS
-\fBniac template list [flags]\fP
+\fBniac mibzip compress   [flags]\fP
 
 
 .SH DESCRIPTION
-Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+Compress a text SNMP walk file into NIAC MibZip binary format.
+
+.PP
+The input file is parsed as a standard snmpwalk-style text file. The output
+file is created with owner-only permissions.
 
 
 .SH OPTIONS
 \fB-h\fP, \fB--help\fP[=false]
-	help for list
+	help for compress
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -31,13 +33,12 @@ iot-network, etc.) and are the fastest path to a runnable YAML config.
 
 .SH EXAMPLE
 .EX
-  # List all templates with descriptions
-  niac template list
+  niac mibzip compress walks/cisco-c9300.walk walks/cisco-c9300.mz
 .EE
 
 
 .SH SEE ALSO
-\fBniac-template(1)\fP
+\fBniac-mibzip(1)\fP
 
 
 .SH HISTORY

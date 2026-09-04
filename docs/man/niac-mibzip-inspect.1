@@ -2,22 +2,24 @@
 .TH "NIAC" "1" "Sep 2026" "NIAC" "NIAC Manual"
 
 .SH NAME
-niac-template-list - List available templates
+niac-mibzip-inspect - Inspect a file for MibZip format
 
 
 .SH SYNOPSIS
-\fBniac template list [flags]\fP
+\fBniac mibzip inspect  [flags]\fP
 
 
 .SH DESCRIPTION
-Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+Inspect a file and report whether it uses NIAC MibZip format.
+
+.PP
+For MibZip files, the command also reports the number of expanded walk entries
+so operators can quickly verify the compressed asset is readable.
 
 
 .SH OPTIONS
 \fB-h\fP, \fB--help\fP[=false]
-	help for list
+	help for inspect
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -31,13 +33,12 @@ iot-network, etc.) and are the fastest path to a runnable YAML config.
 
 .SH EXAMPLE
 .EX
-  # List all templates with descriptions
-  niac template list
+  niac mibzip inspect walks/cisco-c9300.mz
 .EE
 
 
 .SH SEE ALSO
-\fBniac-template(1)\fP
+\fBniac-mibzip(1)\fP
 
 
 .SH HISTORY

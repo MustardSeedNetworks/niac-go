@@ -2,23 +2,19 @@
 .TH "NIAC" "1" "Sep 2026" "NIAC" "NIAC Manual"
 
 .SH NAME
-niac-interactive - Run NIAC in interactive TUI mode
+niac-run - Run network simulation
 
 
 .SH SYNOPSIS
-\fBniac interactive   [flags]\fP
+\fBniac run   [flags]\fP
 
 
 .SH DESCRIPTION
-Run NIAC with an interactive Terminal User Interface (TUI).
+Run NIAC network simulation with an optional terminal UI.
 
 .PP
-The TUI provides:
-- Real-time device monitoring
-- Live statistics and packet counts
-- Interactive error injection (press 'i')
-- Device status visualization
-- Keyboard controls (q to quit)
+By default, runs in headless mode. Add --tui for interactive terminal UI.
+Use "niac daemon" for the HTTPS web UI and API.
 
 
 .SH OPTIONS
@@ -26,8 +22,12 @@ The TUI provides:
 	Debug level (0-3)
 
 .PP
+\fB-n\fP, \fB--dry-run\fP[=false]
+	Validate config without starting simulation
+
+.PP
 \fB-h\fP, \fB--help\fP[=false]
-	help for interactive
+	help for run
 
 .PP
 \fB--no-color\fP[=false]
@@ -36,6 +36,10 @@ The TUI provides:
 .PP
 \fB-q\fP, \fB--quiet\fP[=false]
 	Quiet mode (equivalent to -d 0)
+
+.PP
+\fB--tui\fP[=false]
+	Enable interactive Terminal UI
 
 .PP
 \fB-v\fP, \fB--verbose\fP[=false]
@@ -53,17 +57,14 @@ The TUI provides:
 
 .SH EXAMPLE
 .EX
-  # Run interactive mode
-  sudo niac interactive en0 config.yaml
+  # Headless simulation
+  sudo niac run en0 config.yaml
 
-  # Quick start with template
-  niac template use router router.yaml
-  sudo niac interactive en0 router.yaml
+  # With Terminal UI (TUI)
+  sudo niac run en0 config.yaml --tui
 
-  # Controls during runtime:
-  #   i - Interactive error injection menu
-  #   q - Quit
-  #   ↑↓ - Navigate devices
+  # Validate config without running
+  niac run en0 config.yaml --dry-run
 .EE
 
 

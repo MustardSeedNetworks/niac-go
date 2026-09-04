@@ -19,7 +19,12 @@ func addVersionCommand(root *cobra.Command, info versionInfo) {
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version, commit and build metadata",
-		Args:  cobra.NoArgs,
+		Long: `Print the build metadata compiled into this binary.
+
+The fields are the ones the daemon serves at /__version — version, commit,
+buildTime, uiBuildHash and releaseTrain — so a deployment check can compare
+the binary on disk against the daemon it started.`,
+		Args: cobra.NoArgs,
 		Example: `  # Human-readable
   niac version
 

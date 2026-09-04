@@ -2,22 +2,24 @@
 .TH "NIAC" "1" "Sep 2026" "NIAC" "NIAC Manual"
 
 .SH NAME
-niac-template-list - List available templates
+niac-mibzip-expand - Expand a MibZip file to text
 
 
 .SH SYNOPSIS
-\fBniac template list [flags]\fP
+\fBniac mibzip expand   [flags]\fP
 
 
 .SH DESCRIPTION
-Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+Expand a NIAC MibZip binary file back into a text SNMP walk file.
+
+.PP
+The expanded file is useful for validating compressed walks, reviewing legacy
+assets, or converting MibZip content back into the shared walk catalog.
 
 
 .SH OPTIONS
 \fB-h\fP, \fB--help\fP[=false]
-	help for list
+	help for expand
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -31,13 +33,12 @@ iot-network, etc.) and are the fastest path to a runnable YAML config.
 
 .SH EXAMPLE
 .EX
-  # List all templates with descriptions
-  niac template list
+  niac mibzip expand walks/cisco-c9300.mz walks/cisco-c9300-expanded.walk
 .EE
 
 
 .SH SEE ALSO
-\fBniac-template(1)\fP
+\fBniac-mibzip(1)\fP
 
 
 .SH HISTORY
