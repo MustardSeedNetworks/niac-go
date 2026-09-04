@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/MustardSeedNetworks/niac-go/internal/capturering"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
@@ -12,6 +13,10 @@ type simulationAPIState struct {
 	configPath string
 	iface      string
 	replay     ReplayManager
+	// capture retains the session's recent frames for pcapng export. The SSE
+	// bridge broadcasts and keeps nothing, so without this a client that
+	// connects after an exchange has already missed it.
+	capture *capturering.Ring
 }
 
 // SelectSimulation makes the named session's stack, config, and topology the

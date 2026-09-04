@@ -128,6 +128,7 @@ GET /api/v1/sessions/{id}/segments          its VLAN segments
 GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
+GET /api/v1/sessions/{id}/capture/export    its retained frames as pcapng
 DELETE /api/v1/sessions/{id}                stop that session
 ```
 
@@ -145,6 +146,40 @@ To learn which NIC a session runs on, read that session's entry in
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.
 A stream subscribed without `sessionId` receives the selected session only.
+
+### Exporting a capture
+
+`GET /api/v1/sessions/{id}/capture/export` answers with a pcapng file of the
+frames that session has handled recently. The packet stream broadcasts and
+keeps nothing, and truncates each frame to 256 bytes for the browser's hex
+view; the export reads a bounded per-session ring of whole frames, so an
+exchange that happened before anyone connected is still there.
+
+Each frame carries the fabric decision as a pcapng packet comment
+(`direction`, `vlan`, `ingress`, `egress`, `route`, `hop`, `rejection`) —
+the part of a replay that no sniffer on the wire could reconstruct. Wireshark
+shows it in the packet detail pane.
+
+| Parameter | Meaning |
+| --- | --- |
+| `filter` | libpcap BPF expression applied to the retained frames. An expression that does not compile is a `400`, not a truncated file. |
+| `last` | Keep only the newest N frames. |
+
+`last` is applied first and `filter` second, so `?filter=arp&last=200` means
+"the ARP frames among the newest 200", not "the newest 200 ARP frames".
+
+The ring is bounded by frame count and by bytes, so the export is a recent
+window rather than the whole run. `X-Niac-Frame-Count` reports how many frames
+the file holds.
+
+```bash
+curl -sk -H "Authorization: Bearer $TOKEN" \
+  "https://localhost:8445/api/v1/sessions/hospital/capture/export?filter=arp&last=500" \
+  -o hospital.pcapng
+```
+
+`niac dump --session hospital --pcap hospital.pcapng` is the same read from
+the CLI.
 
 ## Web UI
 

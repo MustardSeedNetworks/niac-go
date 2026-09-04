@@ -65,3 +65,31 @@ func (p *PlaybackEngine) matchesFilter(data []byte) bool {
 
 	return n > 0
 }
+
+// Matcher reports whether one frame passes a compiled BPF filter.
+type Matcher func(data []byte) bool
+
+// NewEthernetMatcher compiles expr into a Matcher over Ethernet frames. An
+// empty expr yields a Matcher that passes everything, so callers need no nil
+// check.
+//
+// Compilation goes through libpcap, so this must stay in internal/capture
+// with the rest of the cgo surface; the returned Matcher is pure Go and safe
+// to call on a request path. A frame the VM cannot evaluate is dropped rather
+// than passed: the operator asked for a filtered capture, and handing them an
+// unvetted frame would misreport what matched.
+func NewEthernetMatcher(expr string) (Matcher, error) {
+	if expr == "" {
+		return func([]byte) bool { return true }, nil
+	}
+	vm, err := compileBPFVM(layers.LinkTypeEthernet, expr)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(data []byte) bool {
+		n, runErr := vm.Run(data)
+
+		return runErr == nil && n > 0
+	}, nil
+}

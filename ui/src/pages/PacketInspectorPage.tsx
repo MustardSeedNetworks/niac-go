@@ -2,6 +2,7 @@ import {
   Activity,
   Download,
   FileBox,
+  FileDown,
   Palette,
   Pause,
   Play,
@@ -45,6 +46,7 @@ import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 import { packetFromStreamEvent } from './packets/packet-from-stream';
+import { useCaptureExport, useFilteredJsonExport } from './packets/useCaptureExport';
 
 /** Maximum number of packets to buffer */
 const MAX_PACKETS = 100;
@@ -142,6 +144,12 @@ export const PacketInspectorPage: FC = () => {
   // Apply display filter
   const { filteredPackets } = useDisplayFilter(packets, filterExpression);
 
+  // Gated the same way the packet stream is: a session listed but no longer
+  // running has no ring, and the export would 404 into a toast.
+  const exportSessionId = simRunning ? simStatus?.sessionId : undefined;
+  const handleExportPcap = useCaptureExport(exportSessionId);
+  const handleExport = useFilteredJsonExport(filteredPackets);
+
   // Ref to track pause state in callback
   const isPausedRef = useRef(isPaused);
   useEffect(() => {
@@ -179,25 +187,6 @@ export const PacketInspectorPage: FC = () => {
     setPackets([]);
     setSelectedPacket(null);
   }, []);
-
-  // Export the currently filtered packets as JSON. Respects the active
-  // display filter so the export matches what's on screen.
-  const handleExport = useCallback(() => {
-    if (filteredPackets.length === 0) {
-      return;
-    }
-
-    const exportData = JSON.stringify(filteredPackets, null, 2);
-    const blob = new Blob([exportData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `packets-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [filteredPackets]);
 
   // Toggle pause state
   const handlePauseToggle = useCallback(() => {
@@ -379,6 +368,17 @@ export const PacketInspectorPage: FC = () => {
                     title={t('packets.inspector.exportButtonTitle')}
                   >
                     {t('packets.inspector.exportButton')}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleExportPcap}
+                    leftIcon={<FileDown className={iconSizes.md} />}
+                    disabled={!exportSessionId}
+                    title={t('packets.inspector.exportPcapButtonTitle')}
+                  >
+                    {t('packets.inspector.exportPcapButton')}
                   </Button>
 
                   <Button

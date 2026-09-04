@@ -136,6 +136,10 @@ func (s *Server) sessionResourceHandler(resource string) (sessionHandler, bool) 
 		"neighbors":  s.handleSessionNeighbors,
 		"stats":      s.handleSessionStats,
 		"runtime":    s.handleSessionRuntime,
+		// Two segments deep: dispatchSessionSubpath cuts the session ID off
+		// the front and leaves the rest whole, so the key is the full
+		// resource path.
+		"capture/export": s.handleSessionCaptureExport,
 	}
 	handler, ok := handlers[resource]
 	return handler, ok
