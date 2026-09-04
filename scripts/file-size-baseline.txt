@@ -1,4 +1,18 @@
-# path maximum-lines
+# Files over the size limit, with the maximum they may not grow past.
+# Seeded by ci/file-size-one-tier; shrink-only. One line: <path> <lines>
+cmd/niac/main.go 1161
+internal/api/devices_handlers_test.go 1097
+internal/api/server.go 926
+internal/converter/converter_test.go 1497
+internal/daemon/daemon.go 1193
+internal/interactive/helpers_test.go 1144
+internal/protocols/coverage_boost_test.go 1647
+internal/protocols/coverage_extra_test.go 3546
+internal/protocols/dhcp.go 1162
 internal/protocols/dhcpv6.go 1204
+internal/protocols/healthcheck.go 1094
+internal/protocols/snmp/agent.go 957
+internal/protocols/snmp/agent_test.go 1160
 ui/src/data/help-content.ts 3632
-ui/src/pages/TopologyPage.tsx 865
+ui/src/pages/PacketInspectorPage.tsx 637
+ui/src/pages/TopologyPage.tsx 856
