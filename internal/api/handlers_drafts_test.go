@@ -183,6 +183,42 @@ func TestDraftCreateRejectsOversizedScenarioContent(t *testing.T) {
 	}
 }
 
+func TestDraftCreateAcceptsADeviceLessDraft(t *testing.T) {
+	server, _ := newTestServer(t)
+	attachDraftLibrary(t, server)
+	rec := httptest.NewRecorder()
+
+	server.handleLibraryDrafts(rec, draftRequest(
+		http.MethodPost, "/api/v1/library/drafts", `{"name":"empty","content":"devices: []\n"}`, "",
+	))
+
+	// A draft with no devices yet is work in progress, not an invalid config.
+	// The loader refuses one because a runnable config must describe at least
+	// one device; refusing it here too made authoring a network from empty
+	// impossible, because the wizard could not create the draft it was about
+	// to fill in.
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+}
+
+func TestDraftCreateStillRejectsAnUnparseableDraft(t *testing.T) {
+	server, _ := newTestServer(t)
+	attachDraftLibrary(t, server)
+	rec := httptest.NewRecorder()
+
+	server.handleLibraryDrafts(rec, draftRequest(
+		http.MethodPost, "/api/v1/library/drafts",
+		`{"name":"bad","content":"devices:\n  - name: x\n    bogus_key: 1\n"}`, "",
+	))
+
+	// Tolerating a device-less draft must not tolerate a misspelled field:
+	// that is the class of mistake the strict loader exists to catch.
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestDraftBehaviorReplacementPersistsValidatedTimeline(t *testing.T) {
 	server, _ := newTestServer(t)
 	lib := attachDraftLibrary(t, server)

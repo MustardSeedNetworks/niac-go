@@ -1,0 +1,32 @@
+devices:
+  - name: contract-rtr-01
+    type: router
+    mac: "00:11:22:33:44:55"
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: contract-lan
+        address: 10.20.0.1/24
+
+networks:
+  - name: contract-lan
+    subnet: 10.20.0.0/24
+  - name: contract-mgmt
+    subnet: 10.20.99.0/24
+    virtual_vlan: 99
+
+attachments:
+  - name: tester
+    connect: contract-lan
+
+discovery_protocols:
+  lldp:
+    enabled: true
+    interval: 30
+  cdp:
+    enabled: true
+
+capture_playbacks:
+  - file_name: contract.pcap
+    loop_time: 60
+    scale_time: 0.5

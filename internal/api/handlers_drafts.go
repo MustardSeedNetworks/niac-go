@@ -232,6 +232,18 @@ func (s *Server) validateDraftContent(w http.ResponseWriter, r *http.Request, co
 			[]ErrorDetail{{Field: "content", Issue: "max_size_exceeded"}})
 		return false
 	}
+
+	// A draft with no devices yet is work in progress, not an invalid config.
+	// The loader refuses one because a *runnable* config must describe at
+	// least one device, and that rule still holds where it matters: starting a
+	// session and preflighting one both load the content through the same
+	// path. Refusing it here instead made "author a network from empty"
+	// impossible -- the wizard could not create the draft it was about to fill
+	// in.
+	if _, err := config.LoadYAMLBytes([]byte(content)); errors.Is(err, config.ErrNoDevicesDefined) {
+		return true
+	}
+
 	cfg, ok := s.validateConfigContent(w, r, content)
 	return ok && s.authorizeConfigEntitlements(w, r, cfg)
 }

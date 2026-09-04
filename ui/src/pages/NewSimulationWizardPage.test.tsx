@@ -193,6 +193,23 @@ beforeEach(() => {
   });
 });
 
+/**
+ * Click Next until the named step is the active one.
+ *
+ * These journeys used to click Next a fixed number of times, which broke the
+ * moment a step was inserted -- and broke as a confusing "element not found"
+ * on the step they were aiming at rather than as "the count is stale".
+ */
+const advanceTo = async (user: ReturnType<typeof userEvent.setup>, step: string) => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (screen.getByTestId(`wizard-step-${step}`).getAttribute('data-status') === 'active') {
+      return;
+    }
+    await user.click(screen.getByTestId('wizard-next-button'));
+  }
+  throw new Error(`wizard never reached the ${step} step`);
+};
+
 describe('NewSimulationWizardPage — step navigation', () => {
   it('disables Next on step 1 until an interface and a source are picked', async () => {
     const user = userEvent.setup();
@@ -283,7 +300,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(startSimulation).not.toHaveBeenCalled();
 
     expect(screen.getByTestId('wizard-step-template')).toHaveAttribute('data-status', 'done');
-    expect(screen.getByTestId('wizard-step-protocols')).toHaveAttribute('data-status', 'active');
+    expect(screen.getByTestId('wizard-step-networks')).toHaveAttribute('data-status', 'active');
 
     await user.click(screen.getByTestId('wizard-back-button'));
     await openYamlEditor(user);
@@ -389,9 +406,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
     await openYamlEditor(user);
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
+    await advanceTo(user, 'preflight');
     await waitFor(() => expect(screen.getByTestId('wizard-preflight-check')).toBeInTheDocument());
     expect(startSimulation).not.toHaveBeenCalled();
 
@@ -426,18 +441,16 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-start-empty'));
     await user.click(screen.getByTestId('wizard-next-button'));
     await openYamlEditor(user);
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-preflight-check'));
+    await advanceTo(user, 'preflight');
+    await user.click(await screen.findByTestId('wizard-preflight-check'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('preflight unavailable');
     expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
 
-    await user.click(screen.getByTestId('wizard-back-button'));
-    await user.click(screen.getByTestId('wizard-back-button'));
-    await user.click(screen.getByTestId('wizard-back-button'));
-    await user.click(screen.getByTestId('wizard-back-button'));
+    // Back to the template step, however many steps that is.
+    while (screen.queryByTestId('wizard-interface-select') === null) {
+      await user.click(screen.getByTestId('wizard-back-button'));
+    }
 
     expect(await screen.findByTestId('wizard-interface-select')).toHaveValue('lo0');
     expect(screen.getByTestId('wizard-start-empty')).toHaveClass('border-brand-accent');
@@ -446,10 +459,8 @@ describe('NewSimulationWizardPage — step navigation', () => {
     await user.click(screen.getByTestId('wizard-next-button'));
     await openYamlEditor(user);
     expect(createScenarioDraft).toHaveBeenCalledTimes(1);
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-next-button'));
-    await user.click(screen.getByTestId('wizard-preflight-check'));
+    await advanceTo(user, 'preflight');
+    await user.click(await screen.findByTestId('wizard-preflight-check'));
 
     await waitFor(() => expect(screen.getByTestId('wizard-preflight-start')).not.toBeDisabled());
     expect(preflightSimulation).toHaveBeenLastCalledWith(

@@ -60,6 +60,47 @@ HAND_BOUND = {
 
 GENERATED_COMPONENT = "components/device-editor/generated/sections.generated.ts"
 
+# Config-level paths, which are not device properties and so are not part of the
+# device manifest at all -- they are authored by the wizard. Kept here rather
+# than hand-written into schema-bindings.json so the registry has exactly one
+# author, and the parity gate still evidences each one against the component
+# that names the field.
+NETWORKS_STEP = "components/wizard/NetworksStep.tsx"
+FLEET_DEFAULTS = "components/wizard/FleetDefaultsEditor.tsx"
+BEHAVIOR_COMPOSER = "components/wizard/DraftBehaviorComposer.tsx"
+
+CONFIG_BOUND = {
+    "networks[].name": NETWORKS_STEP,
+    "networks[].subnet": NETWORKS_STEP,
+    "networks[].virtual_vlan": NETWORKS_STEP,
+    "attachments[].name": NETWORKS_STEP,
+    "attachments[].connect": NETWORKS_STEP,
+    "capture_playbacks[].file_name": FLEET_DEFAULTS,
+    "capture_playbacks[].loop_time": FLEET_DEFAULTS,
+    "capture_playbacks[].scale_time": FLEET_DEFAULTS,
+    **{
+        f"discovery_protocols.{protocol}.{field}": FLEET_DEFAULTS
+        for protocol in ("lldp", "cdp", "edp", "fdp")
+        for field in ("enabled", "interval")
+    },
+    **{
+        f"behavior_timelines[].{field}": BEHAVIOR_COMPOSER
+        for field in ("name", "start_offset_ms", "repeat_count")
+    },
+    **{
+        f"behavior_timelines[].phases[].{field}": BEHAVIOR_COMPOSER
+        for field in ("name", "start_offset_ms", "duration_ms", "reset")
+    },
+    **{
+        f"behavior_timelines[].phases[].traffic[].{field}": BEHAVIOR_COMPOSER
+        for field in ("device", "interface", "utilization")
+    },
+    **{
+        f"behavior_timelines[].phases[].faults[].{field}": BEHAVIOR_COMPOSER
+        for field in ("device", "interface", "type", "value")
+    },
+}
+
 HAND_BOUND_PATHS = dict(HAND_BOUND.values())
 
 TITLES = {
@@ -218,7 +259,7 @@ def render_bindings(sections: list[dict]) -> str:
     so it is also the honest evidence that a field is reachable. Hand-typing 217
     entries would let a field the generator dropped stay quietly bound.
     """
-    bindings: dict[str, object] = dict(HAND_BOUND_PATHS)
+    bindings: dict[str, object] = {**HAND_BOUND_PATHS, **CONFIG_BOUND}
     for path in binding_paths(sections):
         bindings[path] = GENERATED_COMPONENT
     return json.dumps(dict(sorted(bindings.items())), indent=2) + "\n"

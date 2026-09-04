@@ -288,7 +288,36 @@
       "snmpCommunity": "Comunidad SNMP",
       "title": "Generar una flota multisitio"
     },
+    "fleetDefaults": {
+      "captureHelp": "Reproduce una captura grabada junto a los dispositivos simulados. Solo una captura: el runtime reproduce exactamente una y el cargador rechaza más.",
+      "captureTitle": "Reproducción de captura",
+      "discoveryHelp": "Se aplica a todo dispositivo que no lo anule con su propio bloque. El intervalo está en segundos; déjalo vacío para el valor predeterminado del protocolo.",
+      "discoveryTitle": "Valores predeterminados de protocolos de descubrimiento",
+      "fileName": "Archivo de captura",
+      "interval": "Intervalo (s)",
+      "loopTime": "Tiempo de bucle (s)",
+      "scaleTime": "Escala de tiempo"
+    },
     "label": "Nueva simulación",
+    "networks": {
+      "add": "Añadir",
+      "addressingTitle": "Direccionamiento",
+      "assignAll": "Asignar automáticamente",
+      "assignTo": "Red para {{device}}",
+      "attachmentConnect": "Red",
+      "attachmentName": "Nombre del adjunto",
+      "attachmentsHelp": "Un adjunto expone una red al host. Su nombre es al que se vincula una sesión al iniciar; si la interfaz del host puede transportarla lo decide la comprobación previa.",
+      "attachmentsTitle": "Adjuntos",
+      "empty": "Aún no hay redes. Añade una para dar direcciones enrutables a los dispositivos.",
+      "name": "Nombre",
+      "noDevices": "Aún no hay dispositivos. Añádelos en el paso anterior.",
+      "pickNetwork": "Elige una red",
+      "remove": "Eliminar",
+      "subnet": "Subred",
+      "title": "Redes",
+      "unaddressed": "sin dirección",
+      "virtualVlan": "VLAN"
+    },
     "nextLabel": "Siguiente",
     "preflight": {
       "title": "Revisar conexión física",
@@ -314,12 +343,13 @@
       "subtitle": "Resumen de protocolos por dispositivo para la configuración que acabas de construir"
     },
     "steps": {
-      "template": "Plantilla",
-      "preflight": "Conexión",
       "devices": "Dispositivos",
+      "finish": "Finalizar",
+      "networks": "Redes",
+      "preflight": "Conexión",
       "protocols": "Protocolos",
       "review": "Revisión",
-      "finish": "Finalizar"
+      "template": "Plantilla"
     },
     "template": {
       "interfaceLabel": "Interfaz de red",

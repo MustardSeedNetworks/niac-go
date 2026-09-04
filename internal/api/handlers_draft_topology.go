@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -41,6 +42,13 @@ func (s *Server) handleLibraryDraftTopologyMutation(
 		return
 	}
 	cfg, err := config.LoadYAMLBytes([]byte(draft.Content))
+	if errors.Is(err, config.ErrNoDevicesDefined) {
+		// The draft this mutation is about to add the first device to. The
+		// loader refuses a device-less config because a runnable one must
+		// describe at least one device; treating that as a broken draft made
+		// it impossible to add a device to an empty draft at all.
+		cfg, err = &config.Config{}, nil
+	}
 	if err != nil {
 		s.logger.ErrorContext(
 			r.Context(),

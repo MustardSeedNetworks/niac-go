@@ -543,7 +543,36 @@
       "stressPacksTitle": "Scale testing",
       "title": "Generate a multisite fleet"
     },
+    "fleetDefaults": {
+      "captureHelp": "Replays a recorded capture alongside the simulated devices. One capture only: the runtime plays exactly one, and the loader refuses more.",
+      "captureTitle": "Capture playback",
+      "discoveryHelp": "Applies to every device that does not override it with its own block. Interval is in seconds; leave it blank for the protocol's own default.",
+      "discoveryTitle": "Discovery protocol defaults",
+      "fileName": "Capture file",
+      "interval": "Interval (s)",
+      "loopTime": "Loop time (s)",
+      "scaleTime": "Time scale"
+    },
     "label": "New Simulation",
+    "networks": {
+      "add": "Add",
+      "addressingTitle": "Addressing",
+      "assignAll": "Auto-assign",
+      "assignTo": "Network for {{device}}",
+      "attachmentConnect": "Network",
+      "attachmentName": "Attachment name",
+      "attachmentsHelp": "An attachment exposes one network to the host. Its name is what a session binds to at start; whether the host interface may carry it is decided by preflight.",
+      "attachmentsTitle": "Attachments",
+      "empty": "No networks yet. Add one to give devices routable addresses.",
+      "name": "Name",
+      "noDevices": "No devices yet. Add them on the previous step.",
+      "pickNetwork": "Pick a network",
+      "remove": "Remove",
+      "subnet": "Subnet",
+      "title": "Networks",
+      "unaddressed": "not addressed",
+      "virtualVlan": "VLAN"
+    },
     "nextLabel": "Next",
     "preflight": {
       "accessMode": "Access VLAN",
@@ -571,6 +600,7 @@
     "steps": {
       "devices": "Devices",
       "finish": "Finish",
+      "networks": "Networks",
       "preflight": "Connection",
       "protocols": "Protocols",
       "review": "Review",
