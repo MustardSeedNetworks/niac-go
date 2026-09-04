@@ -40,7 +40,7 @@ then lands in the library and is auto-attached to the device.
 
 - Editing an existing walk line-by-line in the UI. That's
   `/walk-validator`'s job.
-- Walk *capture* from real hardware. That's `snmpwalk` + the
+- Walk _capture_ from real hardware. That's `snmpwalk` + the
   validator path.
 - Generating walks for every MIB module the device might support.
   The point is a usable baseline, not exhaustive coverage. Operators
@@ -48,7 +48,7 @@ then lands in the library and is auto-attached to the device.
 
 ## Endpoint
 
-```
+```http
 POST /api/v1/devices/{hostname}/synthesize-walk
 Content-Type: application/json
 
@@ -62,7 +62,7 @@ Content-Type: application/json
 
 Response:
 
-```
+```http
 201 Created
 {
   "walkPath": "synthesized/router-3.walk",
@@ -79,7 +79,7 @@ from #556).
 ### Why a POST, not idempotent PUT
 
 The endpoint mutates two things — writes a walk to the library
-*and* rewrites the device's YAML to attach it. A `PUT` would imply
+_and_ rewrites the device's YAML to attach it. A `PUT` would imply
 the body is the full desired state of an existing resource, which
 doesn't model "go generate one for me." POST + 201 matches the
 "create a derived resource" semantics already used elsewhere (e.g.
@@ -91,25 +91,25 @@ Each vendor profile is a small Go struct keyed off the vendor name.
 Defines the sysDescr template, sysObjectID prefix, and any
 vendor-specific quirks (e.g. Cisco's `ciscoLwapp*` for APs).
 
-| Vendor key      | sysDescr template                                          | sysObjectID prefix    | Notes |
-|-----------------|------------------------------------------------------------|-----------------------|-------|
-| `cisco-ios`     | `Cisco IOS Software, %s Software, Version 15.7(3)M3, ...`  | `.1.3.6.1.4.1.9`      | %s = platform string from type |
-| `junos`         | `Juniper Networks, Inc. %s, kernel JUNOS 21.4R3.15, ...`   | `.1.3.6.1.4.1.2636`   |  |
-| `arista-eos`    | `Arista Networks EOS version 4.30.4M`                      | `.1.3.6.1.4.1.30065`  |  |
-| `generic`       | `Linux %s 6.1.0 #1 SMP x86_64 GNU/Linux`                   | `.1.3.6.1.4.1.8072`   | Net-SNMP enterprise; safe default |
+| Vendor key | sysDescr template | sysObjectID prefix | Notes |
+| ----------------- | ------------------------------------------------------------ | ----------------------- | ------- |
+| `cisco-ios` | `Cisco IOS Software, %s Software, Version 15.7(3)M3, ...` | `.1.3.6.1.4.1.9` | %s = platform string from type |
+| `junos` | `Juniper Networks, Inc. %s, kernel JUNOS 21.4R3.15, ...` | `.1.3.6.1.4.1.2636` | |
+| `arista-eos` | `Arista Networks EOS version 4.30.4M` | `.1.3.6.1.4.1.30065` | |
+| `generic` | `Linux %s 6.1.0 #1 SMP x86_64 GNU/Linux` | `.1.3.6.1.4.1.8072` | Net-SNMP enterprise; safe default |
 
 Platform strings substituted into sysDescr come from the device
 type → platform map:
 
-| device.type     | Cisco platform | Juniper platform | Arista platform | Generic |
-|-----------------|----------------|------------------|-----------------|---------|
-| `switch`        | `Catalyst 3850` | `EX4300`         | `DCS-7050SX`    | `Linux switch` |
-| `router`        | `ISR 4451-X`    | `MX204`          | `DCS-7280SR`    | `Linux router` |
-| `firewall`      | `ASA 5525-X`    | `SRX340`         | `(none — n/a)`  | `Linux firewall` |
-| `access_point`  | `Aironet 2802i` | `(none — n/a)`   | `(none — n/a)`  | `Linux AP` |
-| `server` / `host` | `(skipped — use generic)` |              |                 | `Linux host` |
-| `voip_phone`    | `IP Phone 7945` | `(none — n/a)`   | `(none — n/a)`  | `Generic phone` |
-| `printer`       | `(skipped — use generic)` |              |                 | `Linux printer` |
+| device.type | Cisco platform | Juniper platform | Arista platform | Generic |
+| ----------------- | ---------------- | ------------------ | ----------------- | --------- |
+| `switch` | `Catalyst 3850` | `EX4300` | `DCS-7050SX` | `Linux switch` |
+| `router` | `ISR 4451-X` | `MX204` | `DCS-7280SR` | `Linux router` |
+| `firewall` | `ASA 5525-X` | `SRX340` | `(none — n/a)` | `Linux firewall` |
+| `access_point` | `Aironet 2802i` | `(none — n/a)` | `(none — n/a)` | `Linux AP` |
+| `server` / `host` | `(skipped — use generic)` | | | `Linux host` |
+| `voip_phone` | `IP Phone 7945` | `(none — n/a)` | `(none — n/a)` | `Generic phone` |
+| `printer` | `(skipped — use generic)` | | | `Linux printer` |
 
 When the operator picks a vendor that doesn't apply to the device's
 type (e.g. Juniper + access_point), the daemon falls back to
@@ -120,31 +120,31 @@ type (e.g. Juniper + access_point), the daemon falls back to
 All types include the system group (`1.3.6.1.2.1.1.*`) populated
 from device fields. The rest is type-driven, mirroring
 `internal/protocols/snmp/mib_*.go` (the responder already knows how
-to *serve* these MIBs; this PR synthesizes the *table contents* the
+to _serve_ these MIBs; this PR synthesizes the _table contents_ the
 responder would have read off a walk file).
 
-| device.type     | System | IF-MIB | IP-MIB | BRIDGE-MIB | LLDP-MIB | ipForwarding |
-|-----------------|:------:|:------:|:------:|:----------:|:--------:|:------------:|
-| `switch`        | ✓      | ✓      |        | ✓          | ✓        |              |
-| `router`        | ✓      | ✓      | ✓      |            | ✓        | 1 (enabled)  |
-| `firewall`      | ✓      | ✓      | ✓      |            |          | 1            |
-| `access_point`  | ✓      | ✓      |        |            | ✓        |              |
-| `host` / `server` | ✓    | ✓ (single if) |  |            |          |              |
-| `voip_phone`    | ✓      | ✓ (single if) |  |            | ✓        |              |
-| `printer`       | ✓      | ✓ (single if) |  |            |          |              |
+| device.type | System | IF-MIB | IP-MIB | BRIDGE-MIB | LLDP-MIB | ipForwarding |
+| ----------------- | :------: | :------: | :------: | :----------: | :--------: | :------------: |
+| `switch` | ✓ | ✓ | | ✓ | ✓ | |
+| `router` | ✓ | ✓ | ✓ | | ✓ | 1 (enabled) |
+| `firewall` | ✓ | ✓ | ✓ | | | 1 |
+| `access_point` | ✓ | ✓ | | | ✓ | |
+| `host` / `server` | ✓ | ✓ (single if) | | | | |
+| `voip_phone` | ✓ | ✓ (single if) | | | ✓ | |
+| `printer` | ✓ | ✓ (single if) | | | | |
 
 `ifTable` row count = `interfaceCount` request field, or the type
 default:
 
-| device.type     | Default interfaceCount |
-|-----------------|-----------------------:|
-| `switch`        |                     24 |
-| `router`        |                      4 |
-| `firewall`      |                      4 |
-| `access_point`  |                      2 (radio0, radio1) |
-| `host` / `server` |                    1 |
-| `voip_phone`    |                      2 (eth0, voice) |
-| `printer`       |                      1 |
+| device.type | Default interfaceCount |
+| ----------------- | -----------------------: |
+| `switch` | 24 |
+| `router` | 4 |
+| `firewall` | 4 |
+| `access_point` | 2 (radio0, radio1) |
+| `host` / `server` | 1 |
+| `voip_phone` | 2 (eth0, voice) |
+| `printer` | 1 |
 
 Interface names follow vendor conventions where they're well-known
 (Cisco → `GigabitEthernet0/0`, `Vlan1`; Juniper → `ge-0/0/0`; Arista
@@ -160,7 +160,7 @@ it's omitted (L2 device).
 
 Generated walks land at:
 
-```
+```text
 ~/.niac/library/walks/synthesized/{hostname}.walk
 ```
 
@@ -170,7 +170,7 @@ in #555 — the Source column will show `user` for both today; a
 future enhancement could add a `synthesized` source badge).
 
 On regeneration, the existing file is moved to `{hostname}.walk.bak`
-before the new one is written. The `.bak` is removed on the *next*
+before the new one is written. The `.bak` is removed on the _next_
 regeneration so we never keep more than one rollback step.
 
 ## Frontend changes
@@ -221,12 +221,14 @@ func (s *Server) handleSynthesizeWalk(w http.ResponseWriter, r *http.Request) {
 ```
 
 New package `internal/protocols/snmp/synth/`:
+
 - `profiles.go` — vendor + platform tables (the data in this doc)
 - `build.go` — `Build(profile, device, req) []byte` that emits
   walk-format lines for system / ifTable / etc.
 - `formats.go` — small helpers for the line format (`oid type value`).
 
 Tests in `internal/protocols/snmp/synth/build_test.go`:
+
 - Each (vendor, type) combination produces a parseable walk
 - `interfaceCount` controls ifTable row count
 - Switches don't get `ipAddrTable`; routers do
@@ -295,7 +297,7 @@ inline so the implementation PR has the contract pinned.
 
 4. **No idempotency key.** Rely on the UI's button-loading state to
    debounce double-clicks. Matches every other write endpoint in
-   niac (Save Device, Create Network, etc.). Synthesise-walk is a
+   NIAC (Save Device, Create Network, etc.). Synthesise-walk is a
    rare, user-initiated action; the retry-storm scenario is
    theoretical. Add idempotency in a follow-up only if a real
    incident shows it's needed.

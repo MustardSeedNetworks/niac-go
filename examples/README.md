@@ -6,7 +6,8 @@ This directory is generated from the shared NIAC demo catalog:
 git@github.com:MustardSeedNetworks/niac-demo-catalog.git
 ```
 
-Do not commit shared walks, captures, PCAPs, or generated scenario files directly to this repository. Add or update those assets in `niac-demo-catalog`, then regenerate this directory locally:
+Do not commit shared walks, captures, PCAPs, or generated scenario files directly to this repository. Add or update
+those assets in `niac-demo-catalog`, then regenerate this directory locally:
 
 ```bash
 ./scripts/sync-demo-catalog.sh --sync

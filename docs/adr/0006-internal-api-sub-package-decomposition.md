@@ -11,9 +11,9 @@ infrastructure concerns: the bearer-token store and scope model
 per-session CSRF manager (`csrf_manager.go`), the SSE hub/streaming engine
 (`sse*.go`), and the auth/admin middleware (`middleware.go`).
 
-The dependency-direction depguard rule (ADR-0003) protects the *domain core*
+The dependency-direction depguard rule (ADR-0003) protects the _domain core_
 (protocols/converter/device/mibdb) from importing the API layer, but it cannot
-express boundaries *within* `internal/api` — everything is one package, so any
+express boundaries _within_ `internal/api` — everything is one package, so any
 file can reach any other. That makes the cohesive concerns above implicit and
 lets future code couple, say, the SSE engine to an auth handler with no signal.
 
@@ -30,7 +30,7 @@ Extract the cohesive concerns into sibling leaf packages under
   which holds the concrete manager and wires it into the declarative route
   registry (`register()`/`registerAll()` in `route.go`/`routes.go`). The
   registry, `/__capabilities`, and the middleware composition order are
-  unchanged — only *where the building blocks live* changes.
+  unchanged — only _where the building blocks live_ changes.
 
 Each extraction adds a depguard `api-<concern>-isolated` rule
 (modelled on `domain-core-inward-only`) that denies the sub-package importing

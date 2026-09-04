@@ -4,15 +4,18 @@ This document describes the walk file sanitization feature added in v1.23.0.
 
 ## Overview
 
-The `niac sanitize` command transforms SNMP walk files by replacing real network data with consistent NiAC-Go branded data. This allows walk files to be safely shared publicly without exposing sensitive network information.
+The `niac sanitize` command transforms SNMP walk files by replacing real network data with consistent NIAC-Go branded
+data. This allows walk files to be safely shared publicly without exposing sensitive network information.
 
 ## What Gets Transformed
 
 ### IP Addresses (Deterministic Mapping)
 
-All IP addresses are mapped to the 10.0.0.0/8 network using deterministic hashing. The same input IP always produces the same output IP, preserving network topology and routing relationships.
+All IP addresses are mapped to the 10.0.0.0/8 network using deterministic hashing. The same input IP always produces
+the same output IP, preserving network topology and routing relationships.
 
 **Mapping Strategy:**
+
 - `10.x.x.x` → `10.0.x.x` (Data Center West)
 - `172.x.x.x` → `10.1.x.x` (Data Center East)
 - `192.168.x.x` → `10.2.x.x` (Corporate Campus)
@@ -20,7 +23,8 @@ All IP addresses are mapped to the 10.0.0.0/8 network using deterministic hashin
 - Other ranges → `10.3.x.x` (Remote Offices)
 
 **Example:**
-```
+
+```text
 Original: 63.147.68.1
 Sanitized: 10.100.94.227
 ```
@@ -28,7 +32,7 @@ Sanitized: 10.100.94.227
 ### System Information
 
 | Field | Original | Sanitized |
-|-------|----------|-----------|
+| ------- | ---------- | ----------- |
 | sysContact | `admin@company.com` | `netadmin@niac-go.com` |
 | sysLocation | `Building 5, Floor 3` | `NiAC-Go - DC-WEST - Network Operations` |
 | sysName | `PROD-CORE-SW-01` | `niac-core-sw-14` |
@@ -38,7 +42,7 @@ Sanitized: 10.100.94.227
 Hostnames are transformed using device type detection and deterministic numbering:
 
 | Original | Sanitized | Detection |
-|----------|-----------|-----------|
+| ---------- | ----------- | ----------- |
 | `PROD-CORE-SW-01` | `niac-core-sw-14` | Contains "sw" → switch |
 | `EDGE-RTR-WEST` | `niac-core-rtr-42` | Contains "rtr" → router |
 | `AP-FLOOR3-201` | `niac-core-ap-07` | Contains "ap" → access point |
@@ -104,7 +108,7 @@ niac sanitize \
 ## Options
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| ------ | --------- | ------------- |
 | `--mapping-file` | (none) | JSON file to load/save IP mappings |
 | `--domain` | `niac-go.com` | Domain for hostnames and DNS |
 | `--location` | `DC-WEST` | Default location suffix |
@@ -140,7 +144,8 @@ The mapping file stores all transformations in JSON format:
 ## Example Output
 
 Before sanitization:
-```
+
+```text
 SNMPv2-MIB::sysContact.0 = STRING: netadmin@example.com
 SNMPv2-MIB::sysName.0 = STRING: PROD-CORE-SW-01
 SNMPv2-MIB::sysLocation.0 = STRING: Building 5, Floor 3, Rack 12
@@ -148,7 +153,8 @@ SNMPv2-MIB::sysLocation.0 = STRING: Building 5, Floor 3, Rack 12
 ```
 
 After sanitization:
-```
+
+```text
 SNMPv2-MIB::sysContact.0 = STRING: netadmin@niac-go.com
 SNMPv2-MIB::sysName.0 = STRING: niac-core-sw-14
 SNMPv2-MIB::sysLocation.0 = STRING: NiAC-Go - DC-WEST - Network Operations
@@ -168,7 +174,7 @@ The sanitization uses SHA-256 hashing to ensure:
 
 ### 1. Public Repository
 
-Share walk files in public repositories (like niac-go) without exposing real network infrastructure:
+Share walk files in public repositories (like `niac-go`) without exposing real network infrastructure:
 
 ```bash
 niac sanitize --batch \
@@ -209,7 +215,7 @@ niac sanitize device.walk vendor-support.walk
 
 ## Validation
 
-Sanitized walk files are fully compatible with niac and can be used in configurations:
+Sanitized walk files are fully compatible with NIAC and can be used in configurations:
 
 ```yaml
 devices:
@@ -235,7 +241,7 @@ sudo niac en0 config.yaml
 Sanitization performance (tested on M1 Mac):
 
 | Files | Total Size | Time | Speed |
-|-------|------------|------|-------|
+| ------- | ------------ | ------ | ------- |
 | 1 | 2.5 MB | 0.8s | 3.1 MB/s |
 | 10 | 25 MB | 7.2s | 3.5 MB/s |
 | 100 | 250 MB | 68s | 3.7 MB/s |
@@ -246,6 +252,7 @@ Sanitization performance (tested on M1 Mac):
 ### IPs Not Being Transformed
 
 Special IPs are intentionally preserved:
+
 - `0.0.0.0`, `255.255.255.255`
 - `127.0.0.0/8` (localhost)
 - `224.0.0.0/4` (multicast)
@@ -253,6 +260,7 @@ Special IPs are intentionally preserved:
 ### Mapping File Growing Too Large
 
 This is normal. With 555 walk files:
+
 - ~1.2 million IP mappings
 - Mapping file size: ~50-80 MB
 - This ensures consistency across all files
@@ -271,19 +279,21 @@ niac sanitize --mapping-file map.json file2.walk out2.walk
 
 ## Security Notes
 
-1. **Deterministic != Reversible**: While mappings are deterministic, SHA-256 prevents reversing sanitized IPs back to originals without the mapping file.
+1. **Deterministic != Reversible**: While mappings are deterministic, SHA-256 prevents reversing sanitized IPs back to
+originals without the mapping file.
 
 2. **Protect Mapping Files**: The mapping file contains the key to reverse transformations. Keep it private.
 
 3. **Review Output**: Always review sanitized files before sharing publicly to ensure all sensitive data was transformed.
 
-4. **Special Cases**: Some custom SNMP OIDs may contain sensitive data not caught by standard patterns. Review vendor-specific MIBs.
+4. **Special Cases**: Some custom SNMP OIDs may contain sensitive data not caught by standard patterns. Review
+vendor-specific MIBs.
 
 ## Related Documentation
 
 - [SNMP Agent Configuration](../examples/snmp/)
 - [Walk File Format](WALK_FILE_FORMAT.md)
-- [NiAC-Go Branding Guidelines](NIAC_GO_CORP_BRANDING.md)
+- [NIAC-Go Branding Guidelines](NIAC_GO_CORP_BRANDING.md)
 - [CLI Reference](CLI_REFERENCE.md)
 
 ## Version History

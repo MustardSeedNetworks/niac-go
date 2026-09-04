@@ -43,6 +43,7 @@ niac validate <config-file> [flags]
 The validator performs comprehensive checks:
 
 **Device Validation:**
+
 - Device name uniqueness
 - Required fields (name, type)
 - Device type validity (router, switch, ap, access-point, server, host)
@@ -50,12 +51,14 @@ The validator performs comprehensive checks:
 - IP address duplicates
 
 **Protocol Validation:**
+
 - SNMP trap receiver addresses and supported state triggers
 - SNMP trap receiver format (IP:port or IP)
 - DNS record format (domain names, IPs)
 - DNS forward and reverse record completeness
 
 **Output Levels:**
+
 - **Errors**: Critical issues that prevent configuration loading
 - **Warnings**: Potential issues that don't prevent loading
 - **Info**: Informational messages
@@ -108,7 +111,8 @@ niac template list
 ```
 
 Output:
-```
+
+```text
 Available Templates:
 
   minimal      - Single device with basic protocols
@@ -133,6 +137,7 @@ niac template show <template-name>
 ```
 
 Example:
+
 ```bash
 niac template show minimal
 ```
@@ -146,6 +151,7 @@ niac template use <template-name> <output-file>
 ```
 
 Examples:
+
 ```bash
 # Create a router configuration
 niac template use router my-router.yaml
@@ -158,6 +164,7 @@ niac template use complete lab-network.yaml
 ```
 
 Error handling:
+
 ```bash
 # Error if file already exists
 $ niac template use router config.yaml
@@ -172,7 +179,7 @@ Available templates: minimal, router, switch, ap, server, iot, complete
 #### Template Descriptions
 
 | Template | Use Case | Protocols | Devices |
-|----------|----------|-----------|---------|
+| ---------- | ---------- | ----------- | --------- |
 | **minimal** | Quick testing, CI/CD | ARP, ICMP | 1 |
 | **router** | Enterprise router | All routing protocols | 1 |
 | **switch** | L2/L3 switch | STP, LLDP, CDP, VLANs | 1 |
@@ -213,6 +220,7 @@ niac --interactive en0 config.yaml
 #### TUI Features
 
 The interactive TUI provides:
+
 - Device list with status indicators
 - Per-device packet statistics
 - Protocol status (enabled/disabled)
@@ -238,12 +246,14 @@ niac config export <input-file> <output-file>
 ```
 
 Features:
+
 - Loads and validates the input configuration
 - Normalizes all fields and structures
 - Exports to clean YAML format
 - Useful for converting legacy .cfg to YAML
 
 Examples:
+
 ```bash
 # Export to new file
 niac config export config.yaml normalized.yaml
@@ -256,6 +266,7 @@ niac config export messy.yaml clean.yaml
 ```
 
 Error handling:
+
 - Fails if output file already exists (prevents accidental overwrite)
 - Shows validation warnings but exports anyway
 - Exits with error if input file cannot be loaded
@@ -269,13 +280,15 @@ niac config diff <file1> <file2>
 ```
 
 Compares:
+
 - Device additions/removals
 - Device name changes
 - MAC/IP address changes
 - Device type changes
 
 Output format:
-```
+
+```text
 + Device added: new-device
 - Device removed: old-device
 ~ Device router-1: MAC changed from 00:11:22:33:44:55 to 00:11:22:33:44:66
@@ -284,6 +297,7 @@ No differences found  (if files are identical)
 ```
 
 Examples:
+
 ```bash
 # Compare two configs
 niac config diff prod.yaml staging.yaml
@@ -304,11 +318,13 @@ niac config merge <base-file> <overlay-file> <output-file>
 ```
 
 Merge behavior:
+
 - Devices with same name: overlay replaces base
 - New devices in overlay: added to result
 - Devices only in base: kept in result
 
 Examples:
+
 ```bash
 # Merge overlay into base
 niac config merge base.yaml overlay.yaml merged.yaml
@@ -321,7 +337,8 @@ niac config merge routers.yaml switches.yaml network.yaml
 ```
 
 Output:
-```
+
+```text
 Merged configuration written to merged.yaml
 Base devices: 5
 Overlay devices: 3
@@ -329,6 +346,7 @@ Merged devices: 7
 ```
 
 Error handling:
+
 - Fails if output file already exists
 - Exits with error if base or overlay cannot be loaded
 
@@ -341,6 +359,7 @@ niac config generate [output-file]
 ```
 
 The generator prompts for:
+
 - Network name and subnet
 - Number of devices
 - Device details (type, name, IP, MAC)
@@ -348,6 +367,7 @@ The generator prompts for:
 - Protocol-specific configuration
 
 Examples:
+
 ```bash
 # Generate configuration interactively
 niac config generate
@@ -360,7 +380,8 @@ niac config generate network.yaml && niac validate network.yaml
 ```
 
 Interactive prompts:
-```
+
+```text
 Step 1: Network Information
   Network name: simulation-network
   Network subnet (CIDR): 192.168.1.0/24
@@ -390,11 +411,13 @@ niac init [flags]
 ```
 
 Provides a guided interface for:
+
 1. Selecting a template (minimal, router, switch, etc.)
 2. Specifying output filename
 3. Optionally editing the configuration
 
 Examples:
+
 ```bash
 # Start the init wizard
 niac init
@@ -404,7 +427,8 @@ niac init && niac validate config.yaml
 ```
 
 Interactive flow:
-```
+
+```text
 NIAC Configuration Wizard
 
 Select a template:
@@ -430,13 +454,14 @@ Next steps:
 
 ### completion
 
-Generate shell completion scripts for niac commands.
+Generate shell completion scripts for NIAC commands.
 
 ```bash
 niac completion <shell>
 ```
 
 Supported shells:
+
 - `bash`
 - `zsh`
 - `fish`
@@ -489,6 +514,7 @@ niac completion powershell > niac.ps1
 #### Features
 
 Once installed, shell completion provides:
+
 - Command completion (`niac va<TAB>` → `niac validate`)
 - Subcommand completion (`niac template <TAB>` → shows `list show use`)
 - Flag completion (`niac validate --<TAB>` → shows available flags)
@@ -497,15 +523,16 @@ Once installed, shell completion provides:
 
 ### man
 
-Generate Unix man pages for niac commands.
+Generate Unix man pages for NIAC commands.
 
 ```bash
 niac man [output-directory]
 ```
 
-Generates man pages for all niac commands in the specified directory (defaults to ./man).
+Generates man pages for all NIAC commands in the specified directory (defaults to ./man).
 
 Examples:
+
 ```bash
 # Generate man pages in ./man directory
 niac man
@@ -524,7 +551,8 @@ man niac-template
 ```
 
 Generated pages:
-- `niac.1` - Main niac command
+
+- `niac.1` - Main NIAC command
 - `niac-validate.1` - Validate subcommand
 - `niac-template.1` - Template subcommand
 - `niac-interactive.1` - Interactive subcommand
@@ -544,6 +572,7 @@ niac <interface> <config-file> [flags]
 ### Legacy Flags
 
 #### Core Flags
+
 - `--debug <level>` - Set debug level (0-3)
 - `--verbose, -v` - Verbose output
 - `--quiet, -q` - Quiet mode (errors only)
@@ -551,20 +580,24 @@ niac <interface> <config-file> [flags]
 - `--dry-run` - Validate configuration and exit
 
 #### Information Flags
+
 - `--version` - Show version
 - `--list-interfaces` - List network interfaces
 - `--list-devices` - List devices in config
 
 #### Output Flags
+
 - `--no-color` - Disable color output
 - `--log-file <file>` - Write logs to file
 - `--stats-interval <seconds>` - Statistics interval
 
 #### Performance Profiling Flags
+
 - `--profile, -p` - Enable pprof performance profiling
 - `--profile-port <port>` - Port for pprof HTTP server (default: 6060)
 
 #### Per-Protocol Debug Flags
+
 - `--debug-arp` - Debug ARP protocol
 - `--debug-icmp` - Debug ICMP protocol
 - `--debug-lldp` - Debug LLDP protocol
@@ -697,7 +730,8 @@ go tool pprof goroutine.prof
 # http://localhost:6060/debug/pprof/allocs    - Allocation profile
 ```
 
-**Security Note:** The profiling server binds to `127.0.0.1` (localhost only) for security. Do not expose the profiling port on public networks or production environments.
+**Security Note:** The profiling server binds to `127.0.0.1` (localhost only) for security. Do not expose the
+profiling port on public networks or production environments.
 
 ## Environment Variables
 
@@ -709,6 +743,7 @@ NIAC-Go respects the following environment variables:
 - Per-device SSH password variables named by `devices[].ssh.password_env`
 
 Example:
+
 ```bash
 export NO_COLOR=1
 export NIAC_DEBUG=2
@@ -733,7 +768,7 @@ event display. Type `?` or a command prefix followed by `?` for contextual help.
 
 ### Standard Output
 
-```
+```text
 ✓ Success message
 ❌ Error message
 ⚠️  Warning message

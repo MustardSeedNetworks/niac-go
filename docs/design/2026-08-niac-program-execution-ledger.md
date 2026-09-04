@@ -181,8 +181,8 @@ an NBSTAT node-status probe; every other pack is exactly clean.
 Two tester behaviors decide whether a capture is usable, and neither is a NIAC
 fault. **Link-Live computes utilization from two SNMP polls**, so uploading
 straight after a clear-and-rerun reports `util 0` on every interface and files
-one finding per interface (110 on manufacturing, 120 on warehouse); a *Refresh
-Discovery* takes the second sample and both went to zero. **The tester only
+one finding per interface (110 on manufacturing, 120 on warehouse); a _Refresh
+Discovery_ takes the second sample and both went to zero. **The tester only
 sweeps subnets listed under Discovery Settings -> Extended Ranges**, so a pack's
 client and server subnets must be added before its first capture - manufacturing
 went 40 -> 14 -> 0 findings as `10.91.210.0/24` and then `10.91.240.0/24` were
@@ -193,10 +193,11 @@ added.
 `scripts/lab/isolation.sh` walks each pack's VLAN in turn and checks two things:
 its own devices answer SNMP, and no other pack's device space answers at all.
 Every pack shares the same gateway address, so a leak would otherwise be silent
+
 - a device answering from the wrong VLAN looks exactly like a device that is
 simply there.
 
-```
+```text
 vlan 200  hospital          own device answers as "MED-ACC-SW01"
 vlan 201  warehouse         own device answers as "FUL-ACC-SW01"
 vlan 202  manufacturing     own device answers as "PLT-ACC-SW01"
@@ -223,7 +224,7 @@ authored at or above the line, so the run is clean at zero findings.
 error injection (`POST /api/v1/errors`) only reaches interfaces the stack
 instantiates, which for an access switch is its SVI:
 
-```
+```text
 GET /api/v1/errors -> targets
   {"device": "MED-ACC-SW01", "address": "10.51.200.21", "interfaces": ["Vlan200"]}
 

@@ -13,17 +13,17 @@ No severity ratings are assigned here.
 
 ## Summary
 
-| Category                  | Result |
-|---------------------------|--------|
-| Token source              | PASS — env var preferred, CLI flag deprecated |
-| Token comparison          | PASS — SHA-256 + constant-time compare |
-| Warn-when-unset behavior  | PASS — startup logs scream when token missing |
-| Default-on auth           | WARN — auth is OPTIONAL by default (no token => no auth) |
-| Rate limiting             | PASS — per-IP token-bucket on every endpoint |
-| Audit logging             | WARN — `unauthorized` warns logged with clientIP but not UA |
-| Token rotation            | WARN — no rotation API; restart required |
-| Password support          | N/A — no users, no passwords, no sessions |
-| CSRF                      | N/A — bearer token only, no cookies |
+| Category | Result |
+| --------------------------- | -------- |
+| Token source | PASS — env var preferred, CLI flag deprecated |
+| Token comparison | PASS — SHA-256 + constant-time compare |
+| Warn-when-unset behavior | PASS — startup logs scream when token missing |
+| Default-on auth | WARN — auth is OPTIONAL by default (no token => no auth) |
+| Rate limiting | PASS — per-IP token-bucket on every endpoint |
+| Audit logging | WARN — `unauthorized` warns logged with clientIP but not UA |
+| Token rotation | WARN — no rotation API; restart required |
+| Password support | N/A — no users, no passwords, no sessions |
+| CSRF | N/A — bearer token only, no cookies |
 
 Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
 
@@ -32,6 +32,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
 ## Checklist
 
 ### Token source / handling
+
 - **Result**: PASS
 - **Where**:
   - `cmd/niac/runtime_services.go:34-48` — `resolveAPIToken` prefers
@@ -40,13 +41,15 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   - `cmd/niac/cmd_daemon.go:52-87` — CLI flag is marked deprecated.
 
 ### Token comparison
+
 - **Result**: PASS
 - **Where**: `internal/api/middleware.go:180-203`
-- **Detail**: Strip `Bearer ` prefix, hash both sides with SHA-256 to
+- **Detail**: Strip `Bearer` prefix, hash both sides with SHA-256 to
   equalize lengths, then `subtle.ConstantTimeCompare`. Avoids
   length-leak timing attack.
 
 ### Warn-when-unset
+
 - **Result**: PASS
 - **Where**: `internal/api/server.go:291-297`
 - **Detail**: On startup when `s.cfg.Token == ""` the server logs two
@@ -55,6 +58,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   systemd journal.
 
 ### Auth-on by default
+
 - **Result**: WARN
 - **Where**: `internal/api/middleware.go:174-178`
 - **Detail**: When `s.cfg.Token == ""` the middleware short-circuits
@@ -65,7 +69,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   network ACLs. It would break:
   - `make dev-run` and the local Playwright suite (they hit the API
     without a token).
-  - Any local installer that runs niac on `127.0.0.1` without
+  - Any local installer that runs NIAC on `127.0.0.1` without
     setting `NIAC_API_TOKEN`.
   - `cmd_service_windows.go:82` which calls `resolveAPIToken("")`
     with no env-var fallback.
@@ -74,6 +78,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   token? Filed as followup.
 
 ### Rate limiting
+
 - **Result**: PASS
 - **Where**: `internal/api/middleware.go:161-172`
 - **Detail**: Per-IP token-bucket via `rateLimiter.GetLimiter(clientIP)`
@@ -81,6 +86,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   visitor cap (same pattern as stem/seed).
 
 ### Audit logging
+
 - **Result**: WARN
 - **Where**: `internal/api/middleware.go:194-200`
 - **Detail**: Failed auth attempts are logged with `requestID` and
@@ -92,6 +98,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   See Small fixes below.
 
 ### Token rotation
+
 - **Result**: WARN
 - **Where**: token loaded once at startup via
   `resolveAPIToken` then captured in `ServerConfig.Token`
@@ -102,6 +109,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
   `NIAC_API_TOKEN`. Filed as followup.
 
 ### Password / CSRF / sessions
+
 - **Result**: N/A
 - **Detail**: NIAC has no user accounts, no passwords, no cookies.
   A shared static bearer token is the whole auth model.
@@ -111,6 +119,7 @@ Totals: 4 PASS, 3 WARN, 0 FAIL (2 N/A).
 ## Small fixes shipped in this PR
 
 ### Structured event tag + User-Agent on auth warns
+
 - **File**: `internal/api/middleware.go`
 - **Change**: Add `event=auth.unauthorized` and `userAgent` to the
   unauthorized log line; add `event=api.rate_limited` and `userAgent`

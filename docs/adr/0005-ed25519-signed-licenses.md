@@ -38,7 +38,7 @@ License keys become **Ed25519-signed tokens**. The format (`signing.go`) is
 shared by convention across seed/stem/NIAC and the keygen tool — each repo owns
 its own copy (no master module), matching the harmonization rule:
 
-```
+```text
 MSN1.<base64url(payload)>.<base64url(signature)>
 ```
 
@@ -74,5 +74,5 @@ so a signed token can only grant features this build defines.
 
 ## Related issues and PRs
 
-- The Ed25519 license item in the stem/niac remediation plan; the keygen signing
+- The Ed25519 license item in the stem/NIAC remediation plan; the keygen signing
   change; the parallel stem and seed adoptions.

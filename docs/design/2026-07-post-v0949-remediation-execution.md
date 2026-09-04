@@ -122,8 +122,9 @@ CI policy:
 Fix [#1044](https://github.com/MustardSeedNetworks/niac-go/issues/1044) and
 [#1052](https://github.com/MustardSeedNetworks/niac-go/issues/1052).
 
-#1043 requires no implementation because the single-listener HTTPS
-architecture removed the reported partial-start failure mode.
+[#1043](https://github.com/MustardSeedNetworks/niac-go/issues/1043) requires no
+implementation because the single-listener HTTPS architecture removed the
+reported partial-start failure mode.
 
 The i18n migration is an intentional contract migration:
 

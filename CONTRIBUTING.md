@@ -4,12 +4,12 @@ Thanks for your interest in contributing.
 
 ## Toolchain
 
-| Tool       | Version  | Why                                                |
-|------------|----------|----------------------------------------------------|
-| Go         | 1.25.5+  | All backend code (CGO + libpcap)                   |
-| Node.js    | 25.2.1+  | UI build (vite, biome)                             |
-| libpcap-dev| latest   | `gopacket/pcap` requires it. `apt install libpcap-dev` (Linux), `brew install libpcap` (macOS) |
-| golangci-lint | v2.12.2 | Pinned in CI; `make tools` installs it locally   |
+| Tool | Version | Why |
+| ------------ | ---------- | ---------------------------------------------------- |
+| Go | 1.25.5+ | All backend code (CGO + libpcap) |
+| Node.js | 25.2.1+ | UI build (vite, biome) |
+| libpcap-dev | latest | `gopacket/pcap` requires it. `apt install libpcap-dev` (Linux), `brew install libpcap` (macOS) |
+| golangci-lint | v2.12.2 | Pinned in CI; `make tools` installs it locally |
 
 ## First-time setup
 
@@ -35,7 +35,8 @@ underlying issue rather than `--no-verify`-ing past it.
   `test`, `chore`, `ci`, `build`, `revert`.
 
   Examples:
-  ```
+
+  ```text
   feat(snmp): add bulk walk support
   fix(capture): handle packet overflow on arm64
   chore(deps): bump gopacket to v1.5.0

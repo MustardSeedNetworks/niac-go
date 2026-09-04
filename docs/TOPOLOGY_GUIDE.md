@@ -1,6 +1,7 @@
 # Topology Configuration Guide
 
-This guide covers network topology configuration in NiAC-Go, including port-channels (Link Aggregation Groups), trunk ports with VLAN tagging, and multi-device topologies.
+This guide covers network topology configuration in NIAC-Go, including port-channels (Link Aggregation Groups), trunk
+ports with VLAN tagging, and multi-device topologies.
 
 **Added in:** v1.23.0
 
@@ -16,7 +17,8 @@ This guide covers network topology configuration in NiAC-Go, including port-chan
 
 ## Port-Channels (Link Aggregation)
 
-Port-channels (also known as LAGs or EtherChannels) bundle multiple physical interfaces into a single logical interface for increased bandwidth and redundancy.
+Port-channels (also known as LAGs or EtherChannels) bundle multiple physical interfaces into a single logical
+interface for increased bandwidth and redundancy.
 
 ### Basic Configuration
 
@@ -37,7 +39,7 @@ devices:
 ### Port-Channel Fields
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ------- | ------ | ---------- | ------------- |
 | `id` | integer | Yes | Port-channel ID (must be unique per device) |
 | `members` | string array | Yes | Physical interface names to aggregate |
 | `mode` | string | No | LACP mode: `active`, `passive`, or `on` |
@@ -60,6 +62,7 @@ devices:
 ### Validation
 
 The validator checks:
+
 - Port-channel ID uniqueness within a device
 - No duplicate member interfaces
 - Member interfaces aren't in multiple port-channels
@@ -67,7 +70,8 @@ The validator checks:
 
 ## Trunk Ports
 
-Trunk ports carry traffic for multiple VLANs using 802.1Q tagging. They're essential for inter-switch links and router-on-a-stick configurations.
+Trunk ports carry traffic for multiple VLANs using 802.1Q tagging. They're essential for inter-switch links and
+router-on-a-stick configurations.
 
 ### Basic Configuration
 
@@ -87,7 +91,7 @@ devices:
 ### Trunk Port Fields
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| ------- | ------ | ---------- | ------------- |
 | `interface` | string | Yes | Local interface name (physical or port-channel) |
 | `vlans` | integer array | Yes | List of allowed VLANs (1-4094) |
 | `native_vlan` | integer | No | Untagged VLAN (default: 1) |
@@ -104,6 +108,7 @@ devices:
 ### Native VLAN
 
 The native VLAN carries untagged traffic. Best practices:
+
 - Use VLAN 1 for management (most common)
 - Or use a dedicated management VLAN
 - **Security:** Change native VLAN from 1 to prevent VLAN hopping attacks
@@ -151,6 +156,7 @@ devices:
 ### Remote Device Validation
 
 The validator checks:
+
 - Referenced device exists in the configuration
 - Both ends of the link reference each other (optional but recommended)
 - VLAN lists match (warning if different)
@@ -341,11 +347,13 @@ devices:
 ### Port-Channel Issues
 
 **Problem:** Port-channel not forming
+
 - Check LACP mode compatibility (active/passive/on)
 - Verify member interfaces have same speed/duplex
 - Ensure interfaces are enabled (admin status up)
 
 **Problem:** Member interface not joining
+
 - Check for interface already in another port-channel
 - Verify interface configuration matches other members
 - Check for STP blocking
@@ -353,11 +361,13 @@ devices:
 ### Trunk Issues
 
 **Problem:** VLANs not passing traffic
+
 - Verify VLAN in allowed list on both ends
 - Check native VLAN matches
 - Ensure VLAN exists on device
 
 **Problem:** Validation warnings about remote device
+
 - Check device name spelling
 - Ensure both devices defined in same config file
 - Verify remote_interface matches actual interface
@@ -365,14 +375,17 @@ devices:
 ### Validation Errors
 
 **Error:** "duplicate port-channel ID"
+
 - Each port-channel ID must be unique per device
 - Use different IDs for different port-channels
 
 **Error:** "interface already belongs to port-channel X"
+
 - Remove interface from other port-channel first
 - Use unique member interfaces
 
 **Error:** "invalid VLAN ID"
+
 - Use VLANs 1-4094 only
 - Avoid reserved VLANs (1002-1005, 4095)
 

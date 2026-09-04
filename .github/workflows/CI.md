@@ -11,45 +11,45 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 
 ### ci.yml - Main CI Pipeline
 
-| Job                 | Description                 | Checks                                                                        |
+| Job | Description | Checks |
 | ------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `changes`           | Path filtering              | Decides which downstream jobs run                                             |
-| `backend`           | Go checks                   | lint, vet, staticcheck, fmt, tests, coverage floor                            |
-| `backend-darwin`    | Go checks (macOS)           | Builds, vets and tests on `macos-latest`; the only compiler for `*_darwin.go` |
-| `backend-windows`   | Go checks (Windows)         | Builds, vets and runs the port-fallback tests on `windows-latest`             |
-| `race`              | Go race detector            | `go test -race`, split from `backend` so it fails distinctly                  |
-| `capture-rawsocket` | Raw-socket boundary (Linux) | Runs the `rawsocket`-tagged capture tests, which need CAP_NET_RAW             |
-| `build-ui`          | Build UI (shared artifact)  | Builds the frontend once; `backend` and `race` consume the artifact           |
-| `frontend`          | React/TS checks             | tsc typecheck, Biome, Vite build, Vitest, Storybook build                     |
-| `security`          | Security scans              | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy                    |
-| `semgrep`           | SAST                        | Semgrep rules                                                                 |
-| `ci-conformance`    | Fleet CI conformance        | Reusable workflow from `MustardSeedNetworks/.github`                          |
-| `quality`           | Code quality gates          | banned vocabulary, file size ratchet, output escaping, sensitive files        |
-| `workflow-lint`     | Workflow static analysis    | actionlint; zizmor (blocks on High)                                           |
-| `i18n`              | Internationalization        | Catalog completeness, no translated standard terms                            |
-| `docs`              | Documentation               | Markdown lint (blocking, scoped to changed files)                             |
-| `build`             | Build verification          | Multi-arch binaries with full ldflags, UIBuildHash verified                   |
-| `e2e`               | Browser tests               | Playwright: chromium, webkit and firefox                                      |
-| `codeql-alert-gate` | CodeQL alert gate           | Fails on open High/Critical CodeQL alerts; reusable from `.github`            |
-| `ci-complete`       | Aggregate gate              | The required status check                                                     |
+| `changes` | Path filtering | Decides which downstream jobs run |
+| `backend` | Go checks | lint, vet, staticcheck, fmt, tests, coverage floor |
+| `backend-darwin` | Go checks (macOS) | Builds, vets and tests on `macos-latest`; the only compiler for `*_darwin.go` |
+| `backend-windows` | Go checks (Windows) | Builds, vets and runs the port-fallback tests on `windows-latest` |
+| `race` | Go race detector | `go test -race`, split from `backend` so it fails distinctly |
+| `capture-rawsocket` | Raw-socket boundary (Linux) | Runs the `rawsocket`-tagged capture tests, which need CAP_NET_RAW |
+| `build-ui` | Build UI (shared artifact) | Builds the frontend once; `backend` and `race` consume the artifact |
+| `frontend` | React/TS checks | tsc typecheck, Biome, Vite build, Vitest, Storybook build |
+| `security` | Security scans | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy |
+| `semgrep` | SAST | Semgrep rules |
+| `ci-conformance` | Fleet CI conformance | Reusable workflow from `MustardSeedNetworks/.github` |
+| `quality` | Code quality gates | banned vocabulary, file size ratchet, output escaping, sensitive files |
+| `workflow-lint` | Workflow static analysis | actionlint; zizmor (blocks on High) |
+| `i18n` | Internationalization | Catalog completeness, no translated standard terms |
+| `docs` | Documentation | Markdown lint (blocking, scoped to changed files) |
+| `build` | Build verification | Multi-arch binaries with full ldflags, UIBuildHash verified |
+| `e2e` | Browser tests | Playwright: chromium, webkit and firefox |
+| `codeql-alert-gate` | CodeQL alert gate | Fails on open High/Critical CodeQL alerts; reusable from `.github` |
+| `ci-complete` | Aggregate gate | The required status check |
 
 ### Other Workflows
 
-| Workflow               | Purpose                                               |
+| Workflow | Purpose |
 | ---------------------- | ----------------------------------------------------- |
-| `cache-npcap-sdk.yml`  | Cache the Npcap SDK for Windows builds                |
-| `codeql.yml`           | CodeQL security analysis (Go, JS/TS)                  |
-| `dead-code.yml`        | Weekly dead code detection                            |
-| `docs-link-check.yml`  | Weekly external link check (split out of `ci.yml`)    |
-| `label-sync.yml`       | Sync label definitions                                |
-| `labeler.yml`          | Auto-label PRs and issues                             |
-| `license-check.yml`    | Verify dependency licenses                            |
-| `pr-body-lint.yml`     | Enforce the PR body template                          |
-| `release-please.yml`   | Automated version management and release PRs          |
-| `release.yml`          | goreleaser release builds, signing, SLSA provenance   |
-| `scorecard.yml`        | OpenSSF Scorecard                                     |
-| `title-lint.yml`       | Lint PR and issue titles                              |
-| `todo-tracker.yml`     | Weekly TODO tracking                                  |
+| `cache-npcap-sdk.yml` | Cache the Npcap SDK for Windows builds |
+| `codeql.yml` | CodeQL security analysis (Go, JS/TS) |
+| `dead-code.yml` | Weekly dead code detection |
+| `docs-link-check.yml` | Weekly external link check (split out of `ci.yml`) |
+| `label-sync.yml` | Sync label definitions |
+| `labeler.yml` | Auto-label PRs and issues |
+| `license-check.yml` | Verify dependency licenses |
+| `pr-body-lint.yml` | Enforce the PR body template |
+| `release-please.yml` | Automated version management and release PRs |
+| `release.yml` | goreleaser release builds, signing, SLSA provenance |
+| `scorecard.yml` | OpenSSF Scorecard |
+| `title-lint.yml` | Lint PR and issue titles |
+| `todo-tracker.yml` | Weekly TODO tracking |
 
 ## Build contract
 

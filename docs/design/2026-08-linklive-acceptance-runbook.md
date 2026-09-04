@@ -60,13 +60,13 @@ pct reboot 304
 ```
 
 **Make the bridge membership persistent, or it is gone on the next reboot.**
-`bridge-vids` in `/etc/network/interfaces` programs the bridge *ports*, not the
+`bridge-vids` in `/etc/network/interfaces` programs the bridge _ports_, not the
 bridge itself, and the lab terminates its VLAN sub-interfaces on the bridge. A
 reboot on 2026-08-09 wiped every `self` entry and the packs went silent in a way
 that reads exactly like a NIAC fault — SNMP timing out on every VLAN while the
 daemon was healthy and the sessions were running. Add to the `vmbr0` stanza:
 
-```
+```text
 post-up for v in 200 201 202 203 204 205 299; do bridge vlan add dev vmbr0 vid $v self; done
 ```
 
@@ -272,7 +272,7 @@ Every finding kind the comparator can emit, and where to look first.
 | `missing-device` | device never answered, or discovery ran before the session was up | session running on the right VLAN; SNMP reachable from the tester sub-interface |
 | `unexpected-device` | stale tester inventory, or management-subnet nodes leaked in | clear Discovery and rerun; confirm the scan started on the pack's VLAN, not the outbound profile |
 | `name-conflict` | walk `sysName` overriding the authored name, or two devices sharing a walk | authored name wins by design — confirm the walk's sysName is being skipped. A device shown as a **bare IP** is usually discovery timing rather than a defect: probe it directly before believing it (`snmpget` for an appliance, an NBSTAT node-status query **bound to source port 137** for a Windows endpoint — an unbound probe sees nothing even when the responder is working). |
-| `interface-problem-conflict` / `problem-conflict` | Link-Live flagged something the pack did not author | expected where the pack authors congestion — an interface at or above 80% is *meant* to warn and no longer files as a finding (hospital's imaging uplinks). Anywhere else it is real. |
+| `interface-problem-conflict` / `problem-conflict` | Link-Live flagged something the pack did not author | expected where the pack authors congestion — an interface at or above 80% is _meant_ to warn and no longer files as a finding (hospital's imaging uplinks). Anywhere else it is real. |
 | `type-conflict` | profile `sysObjectID` does not map to the expected class | the device's profile in `profiles_catalog.go`; `layer3-switch` may legitimately render as Router or Switch. An **endpoint** filed as `SNMP Agent` is not a finding and is no longer reported — a clinical or industrial appliance that answers SNMP is managed gear, and Link-Live is right to say so. A **switch** filed as `SNMP Agent` still is a finding. |
 | `address-conflict` | device answering on an address the pack did not author | duplicate IP across concurrently running sessions — VLANs isolate, but check the pack itself |
 | `problem-conflict` | tester flagged a device-level problem the pack did not author | usually real; read the tester's own problem text |

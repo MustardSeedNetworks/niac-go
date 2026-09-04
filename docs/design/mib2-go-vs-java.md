@@ -7,8 +7,8 @@ simulated protocol and forwarding state. `niac-java` is a walk replay engine:
 it can expose any OIDs present in a captured walk or added with `AddMib`, but it
 does not calculate those values from packet processing.
 
-| Capability | niac-go | niac-java |
-|---|---|---|
+| Capability | `niac-go` | `niac-java` |
+| --- | --- | --- |
 | RFC 1213 groups | Explicit system, IF/IF-X, IP, ICMP, TCP, UDP, EGP, and SNMP MIB implementations | `Mib.Constants` and `OidMap` names; values come from walks or injected entries |
 | Interface and bridge counters | Packet-authoritative shared counters for IF-MIB, IF-X, and bridge ports | No packet-derived counters |
 | Routing and topology | Route, ARP/IP address, bridge/FDB, STP, LLDP/CDP tables are synthesized from configured topology | No route/FDB/STP synthesis; DHCP can add static FDB rows |

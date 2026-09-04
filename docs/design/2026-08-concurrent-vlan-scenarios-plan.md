@@ -24,7 +24,7 @@ running several daemon processes against subinterfaces remains unsupported.
 ## Lab VLAN assignments
 
 | Physical VLAN | Scenario | Link-Live purpose |
-|---:|---|---|
+| ---: | --- | --- |
 | 200 | Hospital | Presentation |
 | 201 | Warehouse | Presentation |
 | 202 | Manufacturing plant | Presentation |

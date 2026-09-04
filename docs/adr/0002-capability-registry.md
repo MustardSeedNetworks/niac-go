@@ -1,8 +1,8 @@
 # ADR 0002: Capability registry for route policy
 
-| Status  | Date       | Deciders         |
-|---------|------------|------------------|
-| Accepted | 2026-06-07 | @krisarmstrong   |
+| Status | Date | Deciders |
+| --------- | ------------ | ------------------ |
+| Accepted | 2026-06-07 | @krisarmstrong |
 
 ## Context
 
@@ -36,7 +36,7 @@ Supporting mechanisms:
   in one place, and the previously-hidden mutating routes are now explicitly
   tagged `rl: rlWrite, csrf: true`.
 - Mirrors stem's capability registry and seed's ADR-0002, harmonizing the fleet
-  while each repo keeps its own implementation (niac's policy model is
+  while each repo keeps its own implementation (NIAC's policy model is
   scope-based with multiple rate limiters + a license feature).
 
 ## Alternatives considered

@@ -31,7 +31,7 @@ surface, not the application workflow.**
 | ONVIF | WS-Discovery Probe/ProbeMatch, device information | Media profiles, PTZ, streaming |
 | SIP | OPTIONS response with a plausible User-Agent | Registration, call setup, RTP |
 
-ONVIF and SIP are not optional extras. WS-Discovery is *how* a camera is found,
+ONVIF and SIP are not optional extras. WS-Discovery is _how_ a camera is found,
 and SIP is what distinguishes a phone from a host with a phone vendor's OUI.
 Without them those devices do not read as cameras or phones to any scanner.
 
@@ -63,7 +63,7 @@ still works from authored truth.
 
 Device counts per pack are unchanged (hospital 75, warehouse 69, manufacturing
 69, campus 155, retail 95, service-provider 87, enterprise-scale 531). More
-device *types*, same device *count*.
+device _types_, same device _count_.
 
 ## Common tier
 
@@ -163,11 +163,11 @@ current pack holds only a NOC workstation, which is the thinnest of the seven.
 
 ### The spine is invariant, and modern
 
-Every pack carries a full layered hierarchy, without exception. The *layers* are
+Every pack carries a full layered hierarchy, without exception. The _layers_ are
 invariant; how they are realised follows current practice rather than the
 textbook 2005 three-tier diagram.
 
-```
+```text
 SD-WAN edge (HA) → NGFW cluster (HA) → core → distribution → access
                                                       ↳ Wi-Fi 6E/7 APs
                         ↳ spine/leaf server block
@@ -200,7 +200,7 @@ the wireless tier like the rest.
 
 ### What differs
 
-Per-vertical shape is expressed in how the access layer is *organised* and what
+Per-vertical shape is expressed in how the access layer is _organised_ and what
 hangs beneath it, not by removing structure above it:
 
 | Pack | Access-layer organisation |
