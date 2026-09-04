@@ -902,17 +902,10 @@ func (s *Server) UpdateSimulationSession(
 	if s.simulations == nil {
 		s.simulations = make(map[string]simulationAPIState)
 	}
+	ring := s.attachPacketObservers(sessionID, stack)
 	s.simulations[sessionID] = simulationAPIState{
-		stack: stack, config: cfg, configPath: configPath, iface: iface, replay: replay,
-	}
-
-	// Wire the stack's packet stream into the SSE hub so the
-	// /api/v1/stream/packets subscribers actually see frames.
-	// Previously the hub had BroadcastPacket defined but it was never
-	// called, leaving the Packet Capture page perpetually empty even
-	// while a simulation was clearly handling traffic.
-	if stack != nil && s.sseHub != nil {
-		stack.AddPacketObserver(sse.NewPacketObserver(s.sseHub, sessionID))
+		stack: stack, config: cfg, configPath: configPath, iface: iface,
+		replay: replay, capture: ring,
 	}
 }
 

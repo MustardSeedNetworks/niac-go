@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -23,6 +24,13 @@ type dumpOptions struct {
 	caCert     string
 	insecure   bool
 	jsonOutput bool
+	// pcapFile writes the daemon's retained frames to a pcapng file instead
+	// of hex-dumping the live stream. The two are different reads: the stream
+	// only carries what arrives while this command waits, the ring already
+	// holds what happened before it started.
+	pcapFile string
+	session  string
+	filter   string
 }
 
 const dumpLongHelp = `Dump packets from a running NIAC simulation, read from the daemon's live stream.
@@ -58,7 +66,13 @@ const dumpExample = `  # Dump all captured packets
   niac dump --device router-1 --interface eth0 --count 5
 
   # Read from a daemon on another address
-  niac dump --api https://10.0.0.5:8445`
+  niac dump --api https://10.0.0.5:8445
+
+  # Save the session's retained frames as pcapng for Wireshark
+  niac dump --session hospital --pcap /tmp/hospital.pcapng
+
+  # Only the ARP frames, newest 200
+  niac dump --session hospital --pcap arp.pcapng --filter arp --count 200`
 
 func addDumpCommand(root *cobra.Command, _ *serviceOptions) {
 	options := new(dumpOptions)
@@ -85,6 +99,12 @@ func addDumpFlags(cmd *cobra.Command, options *dumpOptions) {
 	cmd.Flags().BoolVar(&options.insecure, "insecure", false,
 		"Skip TLS verification, for a daemon whose certificate this host cannot see")
 	cmd.Flags().BoolVar(&options.jsonOutput, "json", false, "Output packets as JSON")
+	cmd.Flags().StringVar(&options.pcapFile, "pcap", "",
+		"Write the session's retained frames to this pcapng file instead of hex-dumping the live stream")
+	cmd.Flags().StringVar(&options.session, "session", "",
+		"Session to export with --pcap (default: the only running session)")
+	cmd.Flags().StringVar(&options.filter, "filter", "",
+		"BPF expression applied to the exported frames (--pcap only)")
 }
 
 // PacketDump represents a captured packet for display.
@@ -107,6 +127,9 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 	client, err := newCLIClient(options.api, options.caCert, options.insecure)
 	if err != nil {
 		return handleDumpError(err, options.jsonOutput)
+	}
+	if options.pcapFile != "" {
+		return runDumpPcap(ctx, client, options)
 	}
 	// The window bounds the stream read only. Anything after it - including
 	// asking why nothing arrived - needs a context that has not just expired.
@@ -142,6 +165,73 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 	outputPackets(packets, options.jsonOutput)
 
 	return nil
+}
+
+// runDumpPcap writes the session's retained frames to a pcapng file.
+//
+// This reads the daemon's ring rather than the live stream, so it returns
+// what already happened instead of waiting for the next frame — the export a
+// dump of a finished exchange actually needs.
+func runDumpPcap(ctx context.Context, client *cliclient.Client, options *dumpOptions) error {
+	sessionID, err := resolveDumpSession(ctx, client, options.session)
+	if err != nil {
+		return handleDumpError(err, options.jsonOutput)
+	}
+
+	file, err := os.OpenFile(options.pcapFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return handleDumpError(fmt.Errorf("create %s: %w", options.pcapFile, err), options.jsonOutput)
+	}
+	defer file.Close()
+
+	written, err := client.ExportCapture(ctx, sessionID, cliclient.CaptureExportOptions{
+		Filter: options.filter,
+		Last:   options.count,
+	}, file)
+	if err != nil {
+		return handleDumpError(err, options.jsonOutput)
+	}
+	if err = file.Close(); err != nil {
+		return handleDumpError(fmt.Errorf("close %s: %w", options.pcapFile, err), options.jsonOutput)
+	}
+
+	if options.jsonOutput {
+		outputDumpJSON(map[string]any{
+			"success": true, "session": sessionID, "file": options.pcapFile, "bytes": written,
+		})
+	} else {
+		fmt.Fprintf(os.Stdout, "Wrote %d bytes from session %s to %s\n",
+			written, sessionID, options.pcapFile)
+	}
+
+	return nil
+}
+
+// resolveDumpSession picks the session to export. An explicit --session wins;
+// otherwise a single running session is unambiguous and anything else is a
+// question the operator has to answer, not one to guess at.
+func resolveDumpSession(ctx context.Context, client *cliclient.Client, requested string) (string, error) {
+	if requested != "" {
+		return requested, nil
+	}
+	sessions, err := client.Sessions(ctx)
+	if err != nil {
+		return "", err
+	}
+	switch len(sessions) {
+	case 0:
+		return "", errors.New("no simulation is running, so there is nothing to export")
+	case 1:
+		return sessions[0].SessionID, nil
+	default:
+		names := make([]string, len(sessions))
+		for i, session := range sessions {
+			names[i] = session.SessionID
+		}
+
+		return "", fmt.Errorf("%d scenarios are running (%s); name one with --session",
+			len(sessions), strings.Join(names, ", "))
+	}
 }
 
 // explainEmptyStream says why nothing arrived when the reason is structural

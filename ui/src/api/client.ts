@@ -1,6 +1,7 @@
 import {
   deduplicatedGet,
   request,
+  requestBlob,
   requestJson,
   requestJsonCamelCase,
   requestText,
@@ -174,6 +175,22 @@ export const fetchTopology = (sessionId: string) =>
 // the client-side JSON snapshot. Returns the raw document text.
 export const exportTopology = (format: 'dot' | 'graphml') =>
   requestText(`/api/v1/topology/export?format=${format}`);
+// The live packet view holds the last 100 frames in the browser, truncated to
+// 256 bytes each for the hex pane. This asks the daemon for what its own ring
+// retains — whole frames, with the fabric decision as a pcapng packet comment —
+// so what the inspector shows can reach Wireshark.
+export const exportSessionCapture = (
+  sessionId: string,
+  options: { filter?: string; last?: number } = {},
+) => {
+  const query = new URLSearchParams();
+  if (options.filter) query.set('filter', options.filter);
+  if (options.last !== undefined) query.set('last', String(options.last));
+  const suffix = query.size > 0 ? `?${query}` : '';
+
+  return requestBlob(`${sessionPath(sessionId, 'capture/export')}${suffix}`);
+};
+
 export const fetchErrorTypes = () => deduplicatedGet<ErrorInjectionInfo>('/api/v1/errors');
 
 // Content library endpoint wrappers (walks/pcaps listing, revert/sanitize,

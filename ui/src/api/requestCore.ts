@@ -417,6 +417,46 @@ export async function requestText(path: string, init: RequestInit = {}): Promise
   }
 }
 
+/**
+ * requestBlob is requestText's binary twin, for endpoints that answer with a
+ * file rather than JSON. A plain <a href> cannot be used for these: the bearer
+ * token lives in memory and never reaches the browser's request for a
+ * navigation, so the download would 401.
+ */
+export async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const headers = await buildRequestHeaders(path, init);
+    const response = await fetch(buildUrl(path), {
+      ...init,
+      headers,
+      credentials: 'same-origin',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        notifyAuthenticationRequired();
+      }
+      throw parseApiError(await response.text(), response.status, response.statusText);
+    }
+
+    return await response.blob();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new TimeoutError();
+    }
+    if (err instanceof TypeError) {
+      throw new NetworkError();
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Request deduplication for concurrent identical GET requests.
 const inflightRequests = new Map<string, Promise<unknown>>();
 

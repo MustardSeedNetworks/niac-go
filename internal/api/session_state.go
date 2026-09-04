@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/capturering"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/topology"
@@ -52,6 +53,18 @@ func (r sessionRuntime) stack() *protocols.Stack { return r.state.stack }
 func (r sessionRuntime) configPath() string { return r.state.configPath }
 
 func (r sessionRuntime) iface() string { return r.state.iface }
+
+// captureFrames returns the frames the session's ring retains, newest last.
+// A session registered without a ring — every test server built by hand, and
+// any future caller of RegisterSimulation that predates it — reports an empty
+// capture rather than a nil dereference.
+func (r sessionRuntime) captureFrames(last int) []capturering.Frame {
+	if r.state.capture == nil {
+		return nil
+	}
+
+	return r.state.capture.Snapshot(last)
+}
 
 // topology prefers what the stack is actually running over what was authored,
 // matching the projection the global accessor used.

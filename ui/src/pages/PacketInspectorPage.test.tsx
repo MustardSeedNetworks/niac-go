@@ -124,7 +124,9 @@ describe('PacketInspectorPage — filtered export', () => {
       });
     const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
-    fireEvent.click(screen.getByRole('button', { name: /export/i }));
+    // Named exactly: the toolbar also carries "Export pcapng", which asks the
+    // daemon for its retained frames rather than serialising what this tab holds.
+    fireEvent.click(screen.getByRole('button', { name: 'Export filtered (JSON)' }));
 
     expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
     expect(capturedBlob).toBeDefined();
