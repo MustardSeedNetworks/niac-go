@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -219,15 +218,15 @@ func streamLogs(
 	keepGoing func() bool,
 ) error {
 	return client.StreamLogs(ctx, func(event cliclient.LogEvent) bool {
-		entry := ipc.LogEntry{
+		entry := cliclient.LogEntry{
 			Timestamp: parseLogTime(event.Timestamp),
-			Level:     ipc.LogLevel(event.Level),
+			Level:     cliclient.LogLevel(event.Level),
 			Message:   event.Message,
 			Device:    event.Device,
 			Source:    event.Source,
 			Protocol:  event.Protocol,
 		}
-		if !matchesLevel(string(entry.Level), level) || !ipc.LogMatchesFilter(entry, options.filter) {
+		if !matchesLevel(string(entry.Level), level) || !cliclient.LogMatchesFilter(entry, options.filter) {
 			return true
 		}
 		if options.jsonOutput {
@@ -285,13 +284,13 @@ func parseLogTime(value string) time.Time {
 // filterLogs filters logs by the text pattern. The match itself lives in the ipc
 // package so that this path and the --follow subscription cannot drift apart -
 // they are the same flag and must answer the same way.
-func filterLogs(logs []ipc.LogEntry, filter string) []ipc.LogEntry {
+func filterLogs(logs []cliclient.LogEntry, filter string) []cliclient.LogEntry {
 	if filter == "" {
 		return logs
 	}
-	filtered := make([]ipc.LogEntry, 0, len(logs))
+	filtered := make([]cliclient.LogEntry, 0, len(logs))
 	for _, log := range logs {
-		if ipc.LogMatchesFilter(log, filter) {
+		if cliclient.LogMatchesFilter(log, filter) {
 			filtered = append(filtered, log)
 		}
 	}
@@ -300,19 +299,19 @@ func filterLogs(logs []ipc.LogEntry, filter string) []ipc.LogEntry {
 }
 
 // printLogEntry prints a log entry in human-readable format.
-func printLogEntry(log ipc.LogEntry) {
+func printLogEntry(log cliclient.LogEntry) {
 	timestamp := log.Timestamp.Format("15:04:05.000")
 
 	// Format level with color
 	var levelStr string
 	switch log.Level {
-	case ipc.LogLevelDebug:
+	case cliclient.LogLevelDebug:
 		levelStr = logging.Sprintf("debug", "%-5s", "DEBUG")
-	case ipc.LogLevelInfo:
+	case cliclient.LogLevelInfo:
 		levelStr = logging.Sprintf("info", "%-5s", "INFO")
-	case ipc.LogLevelWarn:
+	case cliclient.LogLevelWarn:
 		levelStr = logging.Sprintf("warning", "%-5s", "WARN")
-	case ipc.LogLevelError:
+	case cliclient.LogLevelError:
 		levelStr = logging.Sprintf("error", "%-5s", "ERROR")
 	default:
 		levelStr = fmt.Sprintf("%-5s", string(log.Level))
@@ -340,7 +339,7 @@ func printLogEntry(log ipc.LogEntry) {
 }
 
 // outputLogJSON outputs a log entry as JSON.
-func outputLogJSON(log ipc.LogEntry) {
+func outputLogJSON(log cliclient.LogEntry) {
 	output := map[string]any{
 		"timestamp": log.Timestamp.Format(time.RFC3339Nano),
 		"level":     string(log.Level),

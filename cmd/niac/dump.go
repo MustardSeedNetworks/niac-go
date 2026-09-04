@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
 )
 
 // dumpOptions holds command-line options for the dump command.
@@ -114,7 +113,7 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 	streamCtx, cancel := context.WithTimeout(ctx, dumpWindow)
 	defer cancel()
 
-	packets := make([]ipc.PacketData, 0, options.count)
+	packets := make([]cliclient.PacketData, 0, options.count)
 	err = client.StreamPackets(streamCtx, func(event cliclient.PacketEvent) bool {
 		if !matchesDumpFilter(event, options) {
 			return true
@@ -123,7 +122,7 @@ func runDump(ctx context.Context, options *dumpOptions) error {
 		if decodeErr != nil {
 			return true
 		}
-		packets = append(packets, ipc.PacketData{
+		packets = append(packets, cliclient.PacketData{
 			Timestamp: parsePacketTime(event.Timestamp),
 			Length:    event.Size,
 			Device:    event.Device,
@@ -195,7 +194,7 @@ func handleDumpError(err error, jsonOutput bool) error {
 	return withExitCode(exitCodeError, err)
 }
 
-func outputPackets(packets []ipc.PacketData, jsonOutput bool) {
+func outputPackets(packets []cliclient.PacketData, jsonOutput bool) {
 	if len(packets) == 0 {
 		if jsonOutput {
 			outputDumpJSON(map[string]any{"success": true, "packets": []any{}, "count": 0})
@@ -212,7 +211,7 @@ func outputPackets(packets []ipc.PacketData, jsonOutput bool) {
 }
 
 // printPacketsHexDump prints packets in hex dump format (similar to xxd).
-func printPacketsHexDump(packets []ipc.PacketData) {
+func printPacketsHexDump(packets []cliclient.PacketData) {
 	for i, pkt := range packets {
 		// Print packet header
 		fmt.Fprintf(os.Stdout, "Packet #%d: %d bytes @ %s\n",
@@ -302,7 +301,7 @@ func formatASCII(sb *strings.Builder, data []byte) {
 }
 
 // outputPacketsJSON outputs packets as formatted JSON.
-func outputPacketsJSON(packets []ipc.PacketData) {
+func outputPacketsJSON(packets []cliclient.PacketData) {
 	result := make([]PacketDump, len(packets))
 	for i, pkt := range packets {
 		result[i] = PacketDump{

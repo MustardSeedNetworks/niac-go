@@ -28,7 +28,7 @@ func addStatusCommand(root *cobra.Command, _ *serviceOptions) {
 	statusCmd := &cobra.Command{
 		Use:   "status",
 		Short: "Query the status of a running NIAC simulation",
-		Long: `Query the status of a running NIAC simulation via IPC socket.
+		Long: `Query the status of a running NIAC simulation.
 
 This command connects to a running NIAC simulation and retrieves
 current status information including:

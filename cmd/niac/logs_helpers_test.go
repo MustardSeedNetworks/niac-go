@@ -4,54 +4,54 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 func TestPrintLogEntry(t *testing.T) {
 	tests := []struct {
 		name string
-		log  ipc.LogEntry
+		log  cliclient.LogEntry
 	}{
 		{
 			name: "debug level",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelDebug,
+				Level:     cliclient.LogLevelDebug,
 				Message:   "Debug message",
 			},
 		},
 		{
 			name: "info with device",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelInfo,
+				Level:     cliclient.LogLevelInfo,
 				Message:   "Info message",
 				Device:    "router-1",
 			},
 		},
 		{
 			name: "warn with source",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelWarn,
+				Level:     cliclient.LogLevelWarn,
 				Message:   "Warning message",
 				Source:    "system",
 			},
 		},
 		{
 			name: "error with protocol",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelError,
+				Level:     cliclient.LogLevelError,
 				Message:   "Error message",
 				Protocol:  "SNMP",
 			},
 		},
 		{
 			name: "full entry with device and protocol",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelInfo,
+				Level:     cliclient.LogLevelInfo,
 				Message:   "Full message",
 				Source:    "device",
 				Device:    "switch-1",
@@ -60,17 +60,17 @@ func TestPrintLogEntry(t *testing.T) {
 		},
 		{
 			name: "unknown level",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevel("custom"),
+				Level:     cliclient.LogLevel("custom"),
 				Message:   "Custom level",
 			},
 		},
 		{
 			name: "no context",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelInfo,
+				Level:     cliclient.LogLevelInfo,
 				Message:   "Plain message",
 			},
 		},
@@ -91,21 +91,21 @@ func TestPrintLogEntry(t *testing.T) {
 func TestOutputLogJSONFormats(t *testing.T) {
 	tests := []struct {
 		name string
-		log  ipc.LogEntry
+		log  cliclient.LogEntry
 	}{
 		{
 			name: "minimal",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelInfo,
+				Level:     cliclient.LogLevelInfo,
 				Message:   "Test message",
 			},
 		},
 		{
 			name: "full entry",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelError,
+				Level:     cliclient.LogLevelError,
 				Message:   "Full log entry",
 				Source:    "error-injection",
 				Device:    "router-1",
@@ -114,9 +114,9 @@ func TestOutputLogJSONFormats(t *testing.T) {
 		},
 		{
 			name: "no optional fields",
-			log: ipc.LogEntry{
+			log: cliclient.LogEntry{
 				Timestamp: time.Now(),
-				Level:     ipc.LogLevelDebug,
+				Level:     cliclient.LogLevelDebug,
 				Message:   "Debug only",
 			},
 		},
