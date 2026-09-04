@@ -20,6 +20,7 @@ type sanitizeOptions struct {
 	contact     string
 	community   string
 	batch       bool
+	check       bool
 	inputDir    string
 	outputDir   string
 }
@@ -56,8 +57,17 @@ What is TRANSFORMED (deterministic):
   niac sanitize --batch --input-dir walks/ --output-dir sanitized/
 
   # Use persistent mapping file
-  niac sanitize --mapping-file ip-map.json device.walk output.walk`,
+  niac sanitize --mapping-file ip-map.json device.walk output.walk
+
+  # Check walks are safe to ship (exit 1 when any is not)
+  niac sanitize --check internal/library/starter/walks/*.walk`,
 		Args: func(_ *cobra.Command, args []string) error {
+			if options.check {
+				if len(args) == 0 {
+					return errors.New("--check requires at least one walk file")
+				}
+				return nil
+			}
 			if options.batch {
 				// Batch mode requires --input-dir and --output-dir
 				if options.inputDir == "" || options.outputDir == "" {
@@ -71,11 +81,17 @@ What is TRANSFORMED (deterministic):
 			}
 			return nil
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.check {
+				return runSanitizeCheck(cmd, args)
+			}
+
 			return runSanitize(args, options)
 		},
 	}
 
+	sanitizeCmd.Flags().BoolVar(&options.check, "check", false,
+		"Report walks that are not safe to ship instead of writing sanitized copies")
 	sanitizeCmd.Flags().StringVar(&options.mappingFile, "mapping-file", "", "JSON file to load/save IP mappings")
 	sanitizeCmd.Flags().StringVar(&options.domain, "domain", defaults.Domain, "Domain for hostnames and DNS")
 	sanitizeCmd.Flags().StringVar(&options.location, "location", defaults.Location, "Default location suffix")
@@ -491,3 +507,50 @@ func validateDirPath(path string, allowCreate bool) error {
 
 	return nil
 }
+
+// runSanitizeCheck reports walks that are not safe to ship.
+//
+// A separate mode rather than a flag on the write path: checking answers "may
+// this be published", which is a question CI asks about files already in the
+// tree, and it must not write anything while answering it.
+func runSanitizeCheck(cmd *cobra.Command, paths []string) error {
+	out := cmd.OutOrStdout()
+	total := 0
+
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return withExitCode(exitUsage, fmt.Errorf("reading %s: %w", path, err))
+		}
+
+		findings := sanitize.Check(content)
+		if len(findings) == 0 {
+			continue
+		}
+		total += len(findings)
+
+		_, _ = fmt.Fprintf(out, "%s: %d finding(s)\n", path, len(findings))
+		for index, finding := range findings {
+			if index == maxReportedFindings {
+				_, _ = fmt.Fprintf(out, "  ... and %d more\n", len(findings)-maxReportedFindings)
+
+				break
+			}
+			_, _ = fmt.Fprintf(out, "  %s\n", finding)
+		}
+	}
+
+	if total > 0 {
+		return fmt.Errorf("%w: %d finding(s)", errWalksNotSafeToShip, total)
+	}
+
+	_, _ = fmt.Fprintf(out, "%d walk(s) safe to ship\n", len(paths))
+
+	return nil
+}
+
+// maxReportedFindings caps the per-file report: a walk with hundreds of
+// findings needs fixing, not a page of them in a CI log.
+const maxReportedFindings = 5
+
+var errWalksNotSafeToShip = errors.New("walks are not safe to ship")

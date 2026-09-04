@@ -194,6 +194,8 @@ func sanitizeLine(line string, mapping *Mapping, opts Options) string {
 
 	// 6. IP addresses embedded as the row index of a standard IPv4 table column.
 	line = rewriteOIDIndexIP(line, mapping)
+	line = rewriteEmbeddedPrivateIPs(line, mapping)
+	line = rewriteValuePrivateIPs(line, mapping)
 
 	// 7. DNS domains (but skip email addresses in contact strings).
 	if opts.Domain != "" && !isContact {
