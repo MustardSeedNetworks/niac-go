@@ -66,8 +66,10 @@ type Config struct {
 	// TokenFile is the Wave 2 multi-token JSON file path. Forwarded to
 	// api.ServerConfig.TokenFile. When non-empty, the daemon's SIGHUP
 	// handler re-reads this path on each signal.
-	TokenFile    string
-	StoragePath  string
+	TokenFile   string
+	StoragePath string
+	// StorageKeep bounds the run history; 0 keeps every run.
+	StorageKeep  int
 	RecoveryPath string
 	Version      string
 	Commit       string
@@ -184,7 +186,7 @@ func NewDaemon(cfg Config) (*Daemon, error) {
 
 		var err error
 
-		daemon.storage, err = storage.Open(storagePath)
+		daemon.storage, err = storage.Open(storagePath, cfg.StorageKeep)
 		if err != nil {
 			return nil, fmt.Errorf("open storage: %w", err)
 		}

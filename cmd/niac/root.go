@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 	"github.com/MustardSeedNetworks/niac-go/internal/version"
 )
 
@@ -128,6 +129,9 @@ and network discovery without physical hardware.`,
 
 	rootCmd.PersistentFlags().
 		StringVar(&services.storagePath, "storage-path", "", "Path to NIAC run history database (default: ~/.niac/niac.db)")
+	rootCmd.PersistentFlags().
+		IntVar(&services.storageKeep, "storage-keep", storage.DefaultRunRetention,
+			"Run history records to keep, pruned oldest first on start (0 keeps every run)")
 
 	for _, build := range commandBuilders {
 		build(rootCmd, services)

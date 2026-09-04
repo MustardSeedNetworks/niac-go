@@ -63,6 +63,15 @@ const (
 	uint64ByteSize = 8
 )
 
+// DefaultRunRetention is how many run records are kept when a caller does not
+// say otherwise. The history had no bound at all: a daemon that starts a
+// session per CI run grew its BoltDB file for the life of the install, and
+// nothing ever read a run that old.
+const DefaultRunRetention = 500
+
+// RetainAll disables pruning, for an operator who wants the whole history.
+const RetainAll = 0
+
 // Storage wraps a BoltDB instance for persisting NIAC run history.
 type Storage struct {
 	db *bbolt.DB
@@ -81,8 +90,9 @@ type RunRecord struct {
 	Errors          uint64        `json:"errors"           yaml:"errors"`
 }
 
-// Open opens (or creates) the storage database at the requested path.
-func Open(path string) (*Storage, error) {
+// Open opens (or creates) the storage database at the requested path and
+// prunes it to keep runs, oldest first. Pass RetainAll to keep everything.
+func Open(path string, keep int) (*Storage, error) {
 	if strings.EqualFold(path, "disabled") || path == "" {
 		return nil, ErrStorageDisabled
 	}
@@ -109,7 +119,57 @@ func Open(path string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", initErr)
 	}
 
-	return &Storage{db: db}, nil
+	store := &Storage{db: db}
+	if _, pruneErr := store.Prune(keep); pruneErr != nil {
+		_ = db.Close()
+
+		return nil, pruneErr
+	}
+
+	return store, nil
+}
+
+// Prune deletes the oldest records so at most keep remain, and reports how
+// many it removed. keep <= 0 (RetainAll) keeps everything.
+//
+// Records are keyed by an increasing sequence, so bbolt's cursor already walks
+// them oldest-first and the ones to drop are a prefix -- there is no need to
+// read or sort the values.
+func (s *Storage) Prune(keep int) (int, error) {
+	if s == nil || s.db == nil {
+		return 0, ErrStorageNotInitialised
+	}
+	if keep <= RetainAll {
+		return 0, nil
+	}
+
+	deleted := 0
+	err := s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(runBucket))
+		if bucket == nil {
+			return nil
+		}
+
+		excess := bucket.Stats().KeyN - keep
+		if excess <= 0 {
+			return nil
+		}
+
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil && deleted < excess; key, _ = cursor.Next() {
+			if delErr := cursor.Delete(); delErr != nil {
+				return fmt.Errorf("failed to prune run record: %w", delErr)
+			}
+			deleted++
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return deleted, nil
 }
 
 // Close closes the underlying database.

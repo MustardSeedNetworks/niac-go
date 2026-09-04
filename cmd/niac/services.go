@@ -7,6 +7,8 @@ import (
 
 type serviceOptions struct {
 	storagePath string
+	// storageKeep bounds the run history. 0 keeps everything.
+	storageKeep int
 }
 
 func defaultStoragePath() string {
