@@ -7,6 +7,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // AddPacketObserver registers obs to receive every packet the stack sends or
@@ -68,11 +69,10 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	s.configMu.Unlock()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"Initialized %d devices from configuration\n",
-			cfg.DeviceCount(),
-		)
+		// Through the logging package, not straight to os.Stdout: a library
+		// writing to stdout corrupts any machine-readable output the caller
+		// prints there, which is exactly what `niac daemon --once` emits.
+		logging.Infof("Initialized %d devices from configuration", cfg.DeviceCount())
 	}
 }
 

@@ -30,6 +30,14 @@ type daemonOptions struct {
 	token               string
 	storagePath         string
 	storageKeep         int
+	once                bool
+	onceDuration        time.Duration
+	onceInterface       string
+	onceConfig          string
+	onceSessionID       string
+	onceAttachment      string
+	onceAttachmentMode  string
+	onceAccessVLAN      int
 	webhookAllowedHosts []string
 	attachmentPolicies  []string
 	certDir             string
@@ -82,7 +90,19 @@ NIAC_API_TOKEN or --api-token.`,
 
   # Disable run-history persistence
   niac daemon --storage disabled`,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		Args: cobra.ArbitraryArgs,
+		RunE: func(_ *cobra.Command, args []string) error {
+			if options.once {
+				return runDaemonOnce(options, info, args)
+			}
+			if len(args) > 0 {
+				// A usage error, same as a mistyped subcommand: exit 2, so a
+				// script can tell "you called it wrong" from "the run failed".
+				return withExitCode(exitUsage, fmt.Errorf(
+					"daemon takes no positional arguments without --once, got %d "+
+						"(did you mean: niac daemon --once %s)", len(args), strings.Join(args, " ")))
+			}
+
 			return runDaemon(options, info)
 		},
 	}
@@ -97,6 +117,7 @@ NIAC_API_TOKEN or --api-token.`,
 	}
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+	addDaemonOnceFlags(daemonCmd, options)
 	daemonCmd.Flags().
 		IntVar(&options.storageKeep, "storage-keep", storage.DefaultRunRetention,
 			"Run history records to keep, pruned oldest first on start (0 keeps every run)")
@@ -118,6 +139,31 @@ NIAC_API_TOKEN or --api-token.`,
 				"Re-read on SIGHUP.")
 
 	root.AddCommand(daemonCmd)
+}
+
+// addDaemonOnceFlags registers the single-shot flag group. Kept apart from the
+// long-lived daemon's own flags because it is one cohesive mode: every flag
+// here is inert without --once, and the grouping is what the help output
+// should show.
+func addDaemonOnceFlags(cmd *cobra.Command, options *daemonOptions) {
+	cmd.Flags().
+		BoolVar(&options.once, "once", false,
+			"Run one session in the foreground and exit with a JSON summary")
+	cmd.Flags().
+		DurationVar(&options.onceDuration, "duration", 0,
+			"With --once, how long to run before stopping (0 runs until interrupted)")
+	cmd.Flags().
+		StringVar(&options.onceSessionID, "session-id", "once",
+			"With --once, the session identifier to run under")
+	cmd.Flags().
+		StringVar(&options.onceAttachment, "attachment", "",
+			"With --once, the logical attachment to bind")
+	cmd.Flags().
+		StringVar(&options.onceAttachmentMode, "attachment-mode", "direct",
+			"With --once, the physical binding mode: direct, access or trunk")
+	cmd.Flags().
+		IntVar(&options.onceAccessVLAN, "access-vlan", 0,
+			"With --once, the VLAN for access or trunk mode")
 }
 
 // resolveDaemonTokenFile layers --token-file / NIAC_API_TOKEN_FILE in
