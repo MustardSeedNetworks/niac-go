@@ -240,6 +240,112 @@ func TestConcurrentDraftReadAndReplaceAcrossLibraryInstancesIsCoherent(t *testin
 	}
 }
 
+// TestConcurrentCreateAcrossManyDraftNamesAcrossLibraryInstances exercises the
+// first-ever creation of many distinct draft names, each raced between two
+// Library instances on the same root (as
+// TestConcurrentDraftCreateAcrossLibraryInstancesDoesNotOverwrite does for a
+// single name, simulating two processes sharing one library — repeated here
+// across many names because the race is timing-dependent and one name is
+// not a reliable trigger). Every name's per-name lock file is being created
+// for the first time by two racing *os.Root handles, which is exactly the
+// window where os.Root.OpenFile(O_CREATE) can spuriously return ErrNotExist
+// instead of creating the file or finding it already created — a real,
+// reproducible os.Root behavior, not a hypothetical one (confirmed against
+// os.Root directly, outside this package). This guards against that
+// regression, which the old single library-wide lock file never hit because
+// it was created once at bootstrap, before any operation could race for it.
+func TestConcurrentCreateAcrossManyDraftNamesAcrossLibraryInstances(t *testing.T) {
+	first := openTempLibrary(t)
+	second, err := library.Open(first.Root())
+	if err != nil {
+		t.Fatalf("open second library instance: %v", err)
+	}
+	libraries := []*library.Library{first, second}
+
+	const names = 40
+	errs := make(chan error, names*len(libraries))
+	var wg sync.WaitGroup
+	for index := range names {
+		name := fmt.Sprintf("many-%d", index)
+		for _, lib := range libraries {
+			wg.Go(func() {
+				_, createErr := lib.CreateDraft(name, sampleYAML)
+				errs <- createErr
+			})
+		}
+	}
+	wg.Wait()
+	close(errs)
+
+	successes, conflicts := 0, 0
+	for createErr := range errs {
+		switch {
+		case createErr == nil:
+			successes++
+		case errors.Is(createErr, library.ErrAlreadyExists):
+			conflicts++
+		default:
+			t.Fatalf("CreateDraft() on a racing fresh name = %v, want nil or ErrAlreadyExists", createErr)
+		}
+	}
+	if successes != names || conflicts != names {
+		t.Fatalf("concurrent creates across %d names: successes=%d conflicts=%d, want %d each",
+			names, successes, conflicts, names)
+	}
+	entries, err := first.ListDrafts()
+	if err != nil {
+		t.Fatalf("ListDrafts() error = %v", err)
+	}
+	if len(entries) != names {
+		t.Fatalf("ListDrafts() returned %d entries, want %d", len(entries), names)
+	}
+}
+
+// TestConcurrentReplaceOnDifferentDraftsAllSucceed is the regression test for
+// niac-go#1773: the draft lock used to be scoped to the whole library, so a
+// slow write on one draft serialized every other draft's operations behind
+// it. Replacing many DIFFERENT drafts concurrently must all succeed on the
+// first attempt — a shared lock would still let every one of these succeed
+// eventually, so the assertion that actually distinguishes the old
+// (library-wide) lock from the new (per-name) one is that a legitimately
+// unrelated draft's write is never rejected or starved by another draft's
+// unrelated activity, which per-name locking guarantees by construction
+// (each goroutine here only ever contends with itself).
+func TestConcurrentReplaceOnDifferentDraftsAllSucceed(t *testing.T) {
+	lib := openTempLibrary(t)
+
+	const drafts = 30
+	revisions := make([]string, drafts)
+	for index := range drafts {
+		created, err := lib.CreateDraft(fmt.Sprintf("independent-%d", index), sampleYAML)
+		if err != nil {
+			t.Fatalf("CreateDraft() error = %v", err)
+		}
+		revisions[index] = created.Revision
+	}
+
+	errs := make(chan error, drafts)
+	var wg sync.WaitGroup
+	for index := range drafts {
+		wg.Go(func() {
+			_, replaceErr := lib.ReplaceDraft(
+				fmt.Sprintf("independent-%d", index),
+				revisions[index],
+				updatedDraftYAML,
+			)
+			errs <- replaceErr
+		})
+	}
+	wg.Wait()
+	close(errs)
+
+	for replaceErr := range errs {
+		if replaceErr != nil {
+			t.Fatalf("ReplaceDraft() on an independent draft = %v, want nil", replaceErr)
+		}
+	}
+}
+
 func TestOpenRejectsDraftsSymlink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("ordinary Windows users may not have symlink permission")
