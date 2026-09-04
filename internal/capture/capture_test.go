@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
-	"runtime"
+	"runtime/pprof"
 	"slices"
 	"strings"
 	"sync"
@@ -122,18 +122,68 @@ func TestRateLimiter_Stop(t *testing.T) {
 	}
 }
 
-// TestRateLimiter_Stop_NoLeaks asserts the refill goroutine is gone once Stop
-// returns. Stop waits on the WaitGroup, so the count is exact, not approximate.
-func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
-	before := runtime.NumGoroutine()
+// refillFrame is the top stack frame of the goroutine NewRateLimiter starts.
+// TestRateLimiter_Stop_NoLeaks fails loudly if this stops matching, so a
+// rename cannot turn the leak check into a no-op.
+const refillFrame = "niac-go/internal/capture.NewRateLimiter.func1("
 
-	for range 100 {
-		rl := NewRateLimiter(100)
+// refillGoroutines counts the goroutines currently running a RateLimiter's
+// refill loop. It reads the goroutine profile rather than runtime.Stack so
+// that there is no buffer to size: WriteTo grows its own.
+func refillGoroutines(t *testing.T) int {
+	t.Helper()
+
+	var dump bytes.Buffer
+	if err := pprof.Lookup("goroutine").WriteTo(&dump, 2); err != nil {
+		t.Fatalf("goroutine profile: %v", err)
+	}
+
+	return bytes.Count(dump.Bytes(), []byte(refillFrame))
+}
+
+// TestRateLimiter_Stop_NoLeaks asserts the refill goroutine is gone once Stop
+// returns. Stop waits on the WaitGroup, so the count is exact, not
+// approximate. It counts the refill loop by name rather than calling
+// runtime.NumGoroutine, which counts every goroutine in the process: an
+// unrelated one starting mid-test used to fail this at random and eject the
+// PR from the merge queue.
+func TestRateLimiter_Stop_NoLeaks(t *testing.T) {
+	const limiters = 100
+
+	live := make([]*RateLimiter, 0, limiters)
+	for range limiters {
+		live = append(live, NewRateLimiter(100))
+	}
+
+	// Assert the count while they are all running: a refillFrame that no
+	// longer matched would read 0 both here and after Stop, and the leak
+	// check below would pass without testing anything.
+	//
+	// Poll rather than sample once. WaitGroup.Go returns as soon as the
+	// goroutine exists, but the refill frame only appears on its stack once
+	// it is first scheduled, so a single read routinely sees 94-96 of 100.
+	got := refillGoroutines(t)
+	for deadline := time.Now().Add(10 * time.Second); got != limiters && time.Now().Before(deadline); {
+		time.Sleep(time.Millisecond)
+
+		got = refillGoroutines(t)
+	}
+
+	if got != limiters {
+		t.Fatalf(
+			"refill goroutines with %d limiters live = %d, want %d; is refillFrame still correct?",
+			limiters,
+			got,
+			limiters,
+		)
+	}
+
+	for _, rl := range live {
 		rl.Stop()
 	}
 
-	if after := runtime.NumGoroutine(); after > before {
-		t.Errorf("goroutines leaked: %d before, %d after 100 create/stop cycles", before, after)
+	if left := refillGoroutines(t); left != 0 {
+		t.Errorf("refill goroutines after Stop = %d, want 0", left)
 	}
 }
 
