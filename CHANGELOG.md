@@ -5,6 +5,74 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.91](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.90...v0.94.91) (2026-09-04)
+
+
+### Features
+
+* **storage:** bound the run history ([#1752](https://github.com/MustardSeedNetworks/niac-go/issues/1752)) ([13dd6bc](https://github.com/MustardSeedNetworks/niac-go/commit/13dd6bc0fa25ae7739390da38da5c014836f60b0)), closes [#1751](https://github.com/MustardSeedNetworks/niac-go/issues/1751)
+* **ui:** generate the device editor's forms from the config schema (P1b-2, 1 of 2) ([#1721](https://github.com/MustardSeedNetworks/niac-go/issues/1721)) ([0ba6e16](https://github.com/MustardSeedNetworks/niac-go/commit/0ba6e16383d8cd7b763ad677ee545ba868dbed7c))
+* **ui:** the device editor authors the whole schema (P1b-2, 2 of 2) ([#1725](https://github.com/MustardSeedNetworks/niac-go/issues/1725)) ([b0dd0a7](https://github.com/MustardSeedNetworks/niac-go/commit/b0dd0a7dac5b83a014fda07047d768f6ababe983))
+* **ui:** the wizard authors a complete network from empty (P1b-3, 2 of 2) ([#1741](https://github.com/MustardSeedNetworks/niac-go/issues/1741)) ([500d75a](https://github.com/MustardSeedNetworks/niac-go/commit/500d75a7594696b7f45b05067e47b3039cc08e9d))
+
+
+### Bug Fixes
+
+* **api:** step over a reserved port instead of stopping at it ([#1686](https://github.com/MustardSeedNetworks/niac-go/issues/1686)) ([a4045bd](https://github.com/MustardSeedNetworks/niac-go/commit/a4045bd63c5aa1ce382331021681a0f2b086a292)), closes [#1682](https://github.com/MustardSeedNetworks/niac-go/issues/1682)
+* **api:** stop one threshold crossing alerting every five seconds ([#1748](https://github.com/MustardSeedNetworks/niac-go/issues/1748)) ([790c394](https://github.com/MustardSeedNetworks/niac-go/commit/790c394865c31fa9efad41f28966913e32274d5e)), closes [#1747](https://github.com/MustardSeedNetworks/niac-go/issues/1747)
+* **api:** stop the interfaces resource reporting the selected session (P1-8) ([#1730](https://github.com/MustardSeedNetworks/niac-go/issues/1730)) ([dd47b40](https://github.com/MustardSeedNetworks/niac-go/commit/dd47b40ef3277b9bad1bc6e38265a1ae22ac3117))
+* **biome:** bring the config schema back to the installed version ([#1717](https://github.com/MustardSeedNetworks/niac-go/issues/1717)) ([f520b82](https://github.com/MustardSeedNetworks/niac-go/commit/f520b8290d227f69b606fb2fd3c6bb099d6f9f69)), closes [#1716](https://github.com/MustardSeedNetworks/niac-go/issues/1716)
+* **cli:** make the command list, version and unknown commands work ([#1746](https://github.com/MustardSeedNetworks/niac-go/issues/1746)) ([b476ee0](https://github.com/MustardSeedNetworks/niac-go/commit/b476ee075ee3292c1fd71a6e42f308b2332f1048)), closes [#1745](https://github.com/MustardSeedNetworks/niac-go/issues/1745) [#1712](https://github.com/MustardSeedNetworks/niac-go/issues/1712)
+* **daemon:** honour NIAC_CONFIGS_DIR and stop a session by its own path (P1-16) ([#1728](https://github.com/MustardSeedNetworks/niac-go/issues/1728)) ([55396df](https://github.com/MustardSeedNetworks/niac-go/commit/55396dfd96e735f8ed7fd328fbd06c3b21583461))
+* **deps:** golang.org/x/crypto v0.56.0 for GO-2026-6354/6355 ([#1695](https://github.com/MustardSeedNetworks/niac-go/issues/1695)) ([c3f2a1e](https://github.com/MustardSeedNetworks/niac-go/commit/c3f2a1eebe1a69ae284a84e73e1fb2b45c355655))
+* **mibzip:** drop the bitwise-OR case and its exhaustive suppression ([#1699](https://github.com/MustardSeedNetworks/niac-go/issues/1699)) ([5add5fe](https://github.com/MustardSeedNetworks/niac-go/commit/5add5fead3e626b16a62b4f64518636ec797206a))
+* **ui:** accept every editable device field, and remove the traffic section that never persisted ([#1707](https://github.com/MustardSeedNetworks/niac-go/issues/1707)) ([a66c109](https://github.com/MustardSeedNetworks/niac-go/commit/a66c109f8263da09249abcb6cff5af0e97b7c24a))
+* **ui:** the wizard stops leaking drafts and authoring warned-about links ([#1738](https://github.com/MustardSeedNetworks/niac-go/issues/1738)) ([6169a9a](https://github.com/MustardSeedNetworks/niac-go/commit/6169a9a9b97f917ff81ad76209445a7a09178f6d)), closes [#1737](https://github.com/MustardSeedNetworks/niac-go/issues/1737)
+* **validate:** run one validator on every authoring surface ([#1711](https://github.com/MustardSeedNetworks/niac-go/issues/1711)) ([57791fc](https://github.com/MustardSeedNetworks/niac-go/commit/57791fc4b1656d19ba3176430ea3b96c78b74c33)), closes [#1710](https://github.com/MustardSeedNetworks/niac-go/issues/1710)
+* **version:** stop double-stamping dirty, and correct stale docs ([#1700](https://github.com/MustardSeedNetworks/niac-go/issues/1700)) ([ca6ec84](https://github.com/MustardSeedNetworks/niac-go/commit/ca6ec84a7395a7b3c9b0fd9a29660f2135bfca63))
+
+
+### Code Refactoring
+
+* delete the dead IPC socket client ([#1756](https://github.com/MustardSeedNetworks/niac-go/issues/1756)) ([b0a5749](https://github.com/MustardSeedNetworks/niac-go/commit/b0a5749604903921e37ef9b4b6b50afc7b71cc4a)), closes [#1754](https://github.com/MustardSeedNetworks/niac-go/issues/1754)
+* **niac:** return errors instead of exiting, and cover the IPC client ([#1702](https://github.com/MustardSeedNetworks/niac-go/issues/1702)) ([c6ab8f3](https://github.com/MustardSeedNetworks/niac-go/commit/c6ab8f3dbe06862832a5df5bc4e6e2131a33997f))
+
+
+### Documentation
+
+* **api:** generate openapi.yaml from the capability registry (P1-7) ([#1724](https://github.com/MustardSeedNetworks/niac-go/issues/1724)) ([8b3202d](https://github.com/MustardSeedNetworks/niac-go/commit/8b3202dfe4c26486ab4b9efa5a7610606d43c830))
+* **config:** describe every schema field and ship an authoring guide ([#1736](https://github.com/MustardSeedNetworks/niac-go/issues/1736)) ([f74df56](https://github.com/MustardSeedNetworks/niac-go/commit/f74df56028bcadd9b6187c95586b39ef7a2105a5))
+
+
+### Tests
+
+* **capture:** assert behavior in the ten no-op tests ([#1697](https://github.com/MustardSeedNetworks/niac-go/issues/1697)) ([ea24bd6](https://github.com/MustardSeedNetworks/niac-go/commit/ea24bd6a5bee25ad471fe2812d4f6428335177a6))
+* **scenario:** run the authoring epic's own kill criterion ([#1688](https://github.com/MustardSeedNetworks/niac-go/issues/1688)) ([687467f](https://github.com/MustardSeedNetworks/niac-go/commit/687467f6029b0523769a4cc6a80bc925cd6a124c))
+* **wiretest:** assert the simulation on a real wire ([#1690](https://github.com/MustardSeedNetworks/niac-go/issues/1690)) ([93a47d4](https://github.com/MustardSeedNetworks/niac-go/commit/93a47d4460e58074e38bb246d3af1a0863a58954))
+
+
+### Continuous Integration
+
+* drop the quality job's no-op TODO check ([#1750](https://github.com/MustardSeedNetworks/niac-go/issues/1750)) ([c93f9f0](https://github.com/MustardSeedNetworks/niac-go/commit/c93f9f0a08fc2c8c86de8f52ae0facf74132f5c7)), closes [#1749](https://github.com/MustardSeedNetworks/niac-go/issues/1749)
+* give each main commit its own concurrency group ([#1732](https://github.com/MustardSeedNetworks/niac-go/issues/1732)) ([b44ea74](https://github.com/MustardSeedNetworks/niac-go/commit/b44ea74de1af8b4b12041a173d17b383c0bf1419)), closes [#1731](https://github.com/MustardSeedNetworks/niac-go/issues/1731)
+* route-consumer and authoring-parity gates ([#1709](https://github.com/MustardSeedNetworks/niac-go/issues/1709)) ([b4a77c9](https://github.com/MustardSeedNetworks/niac-go/commit/b4a77c9fdfebe3bff8374bcb8cc2d44f26b72096)), closes [#1708](https://github.com/MustardSeedNetworks/niac-go/issues/1708)
+* wire the shared dependency-review gate into CI ([#1743](https://github.com/MustardSeedNetworks/niac-go/issues/1743)) ([79bac05](https://github.com/MustardSeedNetworks/niac-go/commit/79bac0557cb46bb3579aa240749227480cccd9d8)), closes [#1742](https://github.com/MustardSeedNetworks/niac-go/issues/1742)
+* **wire:** run the wire suite from a lab timer, not a self-hosted runner ([#1692](https://github.com/MustardSeedNetworks/niac-go/issues/1692)) ([d755fdb](https://github.com/MustardSeedNetworks/niac-go/commit/d755fdbbda0cea6de351c3af3c745448f3bfe195))
+
+
+### Miscellaneous
+
+* **api:** close out the route and stream plumbing items ([#1705](https://github.com/MustardSeedNetworks/niac-go/issues/1705)) ([d0eb538](https://github.com/MustardSeedNetworks/niac-go/commit/d0eb53834b92c3de98e0366a6b7fd0bdd717536a))
+* **ci:** ratchet the coverage floor to 68 ([#1718](https://github.com/MustardSeedNetworks/niac-go/issues/1718)) ([f060048](https://github.com/MustardSeedNetworks/niac-go/commit/f060048efbcc4e8159668925b2d9901d240734e9))
+* **deps:** lock file maintenance ([#1713](https://github.com/MustardSeedNetworks/niac-go/issues/1713)) ([b86fc10](https://github.com/MustardSeedNetworks/niac-go/commit/b86fc10ced9c0772fae318b5fed62f7fee7a10c3))
+* **deps:** lock file maintenance ([#1726](https://github.com/MustardSeedNetworks/niac-go/issues/1726)) ([dc2d542](https://github.com/MustardSeedNetworks/niac-go/commit/dc2d5425e01131c9f6461efb580cc7c41841b7e6))
+* **deps:** lock file maintenance ([#1734](https://github.com/MustardSeedNetworks/niac-go/issues/1734)) ([b43bf21](https://github.com/MustardSeedNetworks/niac-go/commit/b43bf21d2912f5b0bbde7961acecc92c9612484f))
+* **deps:** lock file maintenance ([#1744](https://github.com/MustardSeedNetworks/niac-go/issues/1744)) ([14c0a60](https://github.com/MustardSeedNetworks/niac-go/commit/14c0a6075b34672c9397f64f0216e41b202795d2))
+* **deps:** lock file maintenance ([#1755](https://github.com/MustardSeedNetworks/niac-go/issues/1755)) ([1e48bdc](https://github.com/MustardSeedNetworks/niac-go/commit/1e48bdc237334f720969644b8ca02530b0adf5d4))
+* **deps:** take the two stale indirect Go modules to latest ([#1715](https://github.com/MustardSeedNetworks/niac-go/issues/1715)) ([c01e584](https://github.com/MustardSeedNetworks/niac-go/commit/c01e584cd6edee83d522e76bfae1455c2b1f368f)), closes [#1714](https://github.com/MustardSeedNetworks/niac-go/issues/1714)
+* **deps:** update dependency @biomejs/biome to v2.5.11 ([#1733](https://github.com/MustardSeedNetworks/niac-go/issues/1733)) ([4a710de](https://github.com/MustardSeedNetworks/niac-go/commit/4a710deae8a74255ac6ea7b69e99a67f1a7d1e78))
+* **deps:** update dependency @vitejs/plugin-react to v6.1.1 ([#1759](https://github.com/MustardSeedNetworks/niac-go/issues/1759)) ([1de6ec4](https://github.com/MustardSeedNetworks/niac-go/commit/1de6ec4b14ce73040785ea23cbdcadfcb0965fdf))
+
 ## [0.94.90](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.89...v0.94.90) (2026-09-02)
 
 
