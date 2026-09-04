@@ -166,7 +166,12 @@ const (
 	// Background task interval constants.
 	rateLimiterCleanupMins = 5 // minutes between rate limiter cleanup
 	alertTickerSecs        = 5 // seconds between alert checks
-	webhookTimeoutSecs     = 5 // seconds for webhook timeout
+	// alertCooldown is the quiet period after a threshold alert. The packet
+	// total is cumulative, so once it crosses the threshold it stays across
+	// it: without a cooldown a crossing re-notified on every tick, for the
+	// life of the simulation.
+	alertCooldown      = 15 * time.Minute
+	webhookTimeoutSecs = 5 // seconds for webhook timeout
 
 	// Bit shift constants for IP parsing.
 	bitShift24 = 24
@@ -425,6 +430,8 @@ type Server struct {
 	httpServer         *http.Server
 	alertStop          chan struct{}
 	lastAlert          uint64
+	alertFiring        bool
+	lastAlertAt        time.Time
 	alertMu            sync.RWMutex
 	configMu           sync.RWMutex
 	configMutationMu   sync.Mutex
