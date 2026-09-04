@@ -59,21 +59,64 @@ func (s *Server) alertLoop(stop <-chan struct{}) {
 
 			stats := stack.GetStats()
 
-			total := stats.PacketsSent + stats.PacketsReceived
-			if total >= cfg.PacketsThreshold {
-				s.alertMu.Lock()
-
-				if total != s.lastAlert {
-					s.lastAlert = total
-					go s.sendAlert(total)
-				}
-
-				s.alertMu.Unlock()
-			}
+			s.evaluateAlertThreshold(
+				stats.PacketsSent+stats.PacketsReceived,
+				cfg.PacketsThreshold,
+				time.Now(),
+			)
 		case <-stop:
 			return
 		}
 	}
+}
+
+// evaluateAlertThreshold fires at most one alert per crossing, then at most
+// one per cooldown while the total stays across the threshold.
+//
+// The previous rule was "fire whenever the total differs from the last one
+// alerted". The packet total is cumulative, so on a running simulation it
+// differs on every tick -- one crossing sent a webhook every five seconds for
+// as long as the session lived. The receiver of that storm was whatever
+// operators had configured, which is why this is a defect rather than noise.
+func (s *Server) evaluateAlertThreshold(total, threshold uint64, now time.Time) {
+	s.alertMu.Lock()
+	fire, firing := shouldFireAlert(s.alertFiring, s.lastAlertAt, total, threshold, now)
+	s.alertFiring = firing
+	if fire {
+		s.lastAlert = total
+		s.lastAlertAt = now
+	}
+	s.alertMu.Unlock()
+
+	if fire {
+		go s.sendAlert(total)
+	}
+}
+
+// shouldFireAlert decides whether a tick notifies, and what the firing state
+// becomes. Kept pure so the decision is testable without a webhook: the
+// send path refuses loopback by SSRF policy, so a test receiver can never
+// stand in for the real one.
+//
+// It returns whether this tick notifies, and the firing state to carry into
+// the next one: true at most once per crossing, then at most once per cooldown
+// while the total stays across the threshold.
+func shouldFireAlert(
+	firing bool,
+	lastAlertAt time.Time,
+	total, threshold uint64,
+	now time.Time,
+) (bool, bool) {
+	if total < threshold {
+		// Below the line again: re-arm so the next crossing is reported.
+		return false, false
+	}
+
+	if firing && now.Sub(lastAlertAt) < alertCooldown {
+		return false, true
+	}
+
+	return true, true
 }
 
 func (s *Server) sendAlert(total uint64) {
@@ -228,6 +271,8 @@ func (s *Server) updateAlertConfig(cfg AlertConfig) {
 
 	s.cfg.Alert = cfg
 	s.lastAlert = 0
+	s.alertFiring = false
+	s.lastAlertAt = time.Time{}
 
 	// Start new alert loop if threshold is set
 	if cfg.PacketsThreshold > 0 {

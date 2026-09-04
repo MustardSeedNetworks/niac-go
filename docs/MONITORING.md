@@ -13,7 +13,8 @@ This guide explains how to monitor NIAC-Go using Prometheus and Grafana.
 
 ## Overview
 
-NIAC-Go exposes comprehensive metrics via a Prometheus-compatible `/metrics` endpoint. These metrics provide visibility into:
+NIAC-Go exposes metrics via a Prometheus-compatible `/metrics` endpoint.
+They provide visibility into:
 
 - **Traffic Statistics**: Packet counts, protocol breakdown
 - **System Performance**: Memory usage, goroutines, GC activity
@@ -48,16 +49,19 @@ niac_memory_usage_bytes 45678912
 ### 1. Install Prometheus
 
 **macOS (Homebrew):**
+
 ```bash
 brew install prometheus
 ```
 
 **Linux (Ubuntu/Debian):**
+
 ```bash
 sudo apt-get install prometheus
 ```
 
 **Docker:**
+
 ```bash
 docker run -d -p 9090:9090 \
   -v /path/to/prometheus.yml:/etc/prometheus/prometheus.yml \
@@ -112,12 +116,14 @@ docker run -d -p 9090:9090 \
 ### 1. Install Grafana
 
 **macOS (Homebrew):**
+
 ```bash
 brew install grafana
 brew services start grafana
 ```
 
 **Linux (Ubuntu/Debian):**
+
 ```bash
 sudo apt-get install grafana
 sudo systemctl start grafana-server
@@ -125,6 +131,7 @@ sudo systemctl enable grafana-server
 ```
 
 **Docker:**
+
 ```bash
 docker run -d -p 3000:3000 --name=grafana grafana/grafana
 ```
@@ -147,6 +154,7 @@ docker run -d -p 3000:3000 --name=grafana grafana/grafana
 ### 4. Import NIAC-Go Dashboard
 
 Option A: Import from file
+
 1. Download `docs/grafana-dashboard.json` from the repository
 2. Navigate to **Create** → **Import**
 3. Click **Upload JSON file**
@@ -155,6 +163,7 @@ Option A: Import from file
 6. Click **Import**
 
 Option B: Manual import
+
 1. Navigate to **Create** → **Import**
 2. Paste the contents of `grafana-dashboard.json`
 3. Select your Prometheus data source
@@ -163,6 +172,7 @@ Option B: Manual import
 ### 5. View Dashboard
 
 The dashboard will display:
+
 - **Overview Panel**: Devices, packet rates, errors
 - **System Metrics Panel**: Goroutines, memory, uptime, GC
 - **Protocol Breakdown Panel**: Traffic by protocol type
@@ -174,7 +184,7 @@ The dashboard will display:
 ### Traffic Metrics
 
 | Metric | Type | Description |
-|--------|------|-------------|
+| -------- | ------ | ------------- |
 | `niac_packets_sent_total` | counter | Total packets sent |
 | `niac_packets_received_total` | counter | Total packets received |
 | `niac_devices_total` | gauge | Number of simulated devices |
@@ -184,7 +194,7 @@ The dashboard will display:
 ### Protocol-Specific Metrics
 
 | Metric | Type | Description |
-|--------|------|-------------|
+| -------- | ------ | ------------- |
 | `niac_arp_requests_total` | counter | ARP requests sent |
 | `niac_arp_replies_total` | counter | ARP replies sent |
 | `niac_icmp_requests_total` | counter | ICMP requests sent |
@@ -196,7 +206,7 @@ The dashboard will display:
 ### System Metrics
 
 | Metric | Type | Description |
-|--------|------|-------------|
+| -------- | ------ | ------------- |
 | `niac_uptime_seconds` | gauge | Server uptime in seconds |
 | `niac_goroutines_total` | gauge | Number of active goroutines |
 | `niac_memory_usage_bytes` | gauge | Current memory allocation |
@@ -275,29 +285,41 @@ Configure via REST API:
 
 ```bash
 # Set alert threshold
-curl -X PUT https://localhost:8445/api/v1/alert \
+curl -X PUT https://localhost:8445/api/v1/alerts \
   -H "Content-Type: application/json" \
   -d '{
-    "packets_threshold": 100000,
-    "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    "packetsThreshold": 100000,
+    "webhookUrl": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
   }'
 
 # Get alert status
-curl https://localhost:8445/api/v1/alert
+curl https://localhost:8445/api/v1/alerts
 
-# Disable alerts
-curl -X DELETE https://localhost:8445/api/v1/alert
+# Disable alerts by clearing the threshold
+curl -X PUT https://localhost:8445/api/v1/alerts \
+  -H "Content-Type: application/json" \
+  -d '{"packetsThreshold": 0, "webhookUrl": ""}'
 ```
+
+A crossing notifies once, then at most once per cooldown while the total stays
+above the threshold. The packet total is cumulative, so it does not fall back
+below the line on its own.
+
+The webhook URL is re-validated at send time and private, loopback and
+link-local destinations are refused, so a receiver has to be reachable on a
+routable address.
 
 ## Useful Queries
 
 ### Packet Rate
+
 ```promql
 rate(niac_packets_sent_total[5m])
 rate(niac_packets_received_total[5m])
 ```
 
 ### Protocol Distribution
+
 ```promql
 # ARP percentage
 (rate(niac_arp_requests_total[5m]) + rate(niac_arp_replies_total[5m]))
@@ -305,18 +327,21 @@ rate(niac_packets_received_total[5m])
 ```
 
 ### Memory Growth
+
 ```promql
 # Memory growth over 1 hour
 delta(niac_memory_usage_bytes[1h])
 ```
 
 ### GC Frequency
+
 ```promql
 # GC runs per minute
 rate(niac_gc_runs_total[5m]) * 60
 ```
 
 ### Uptime
+
 ```promql
 # Uptime in hours
 niac_uptime_seconds / 3600
@@ -347,6 +372,7 @@ niac --config devices.yml
 ### High memory usage
 
 This is normal during large simulations. Consider:
+
 - Reducing number of simulated devices
 - Disabling packet capture
 - Increasing available memory
@@ -355,9 +381,11 @@ This is normal during large simulations. Consider:
 
 1. **Scrape Interval**: Use 5-15s for real-time monitoring
 2. **Retention**: Configure Prometheus retention based on your needs:
+
    ```bash
    prometheus --storage.tsdb.retention.time=30d
    ```
+
 3. **High Availability**: Run multiple Prometheus instances for production
 4. **Grafana Alerts**: Set up Grafana alerting in addition to Prometheus
 5. **Metric Cardinality**: NIAC-Go metrics have low cardinality, safe for long-term storage
@@ -372,6 +400,7 @@ This is normal during large simulations. Consider:
 ## Support
 
 For monitoring-related issues, please open an issue on GitHub with:
+
 - Prometheus/Grafana versions
 - Configuration files (sanitize sensitive data)
 - Relevant log output
