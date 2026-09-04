@@ -698,26 +698,6 @@ linters:
       - path: 'internal/protocols/.*_test\.go'
         linters:
           - testpackage
-      # API schema builders are pure data-shape constructors; splitting them hurts readability.
-      - path: 'internal/api/schema.*\.go'
-        linters:
-          - funlen
-      # Protocol packet builders layer multi-header packets; extraction harms cohesion.
-      - path: 'internal/protocols/.*\.go'
-        linters:
-          - funlen
-      # SNMP MIB initializers and walk parsers are table-driven; splitting hurts readability.
-      - path: 'internal/protocols/snmp/.*\.go'
-        linters:
-          - funlen
-      # cmd/niac cobra command builders contain verbose Long/Example help text.
-      - path: 'cmd/niac/.*\.go'
-        linters:
-          - funlen
-      # Interactive renderers assemble multi-section terminal UI text in-place.
-      - path: 'internal/interactive/.*\.go'
-        linters:
-          - funlen
       # Interactive UI styles are idiomatic globals for lipgloss/bubbletea.
       - path: 'internal/interactive/types\.go'
         linters:
