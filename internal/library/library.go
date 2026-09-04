@@ -26,7 +26,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // Sentinel errors.
@@ -73,7 +72,7 @@ const (
 type Library struct {
 	root      string
 	draftRoot *os.Root
-	draftMu   sync.RWMutex
+	draftMu   draftNameLocks
 	// bundles records which entries a content bundle installed, so they are
 	// reported as bundle content instead of as the operator's own.
 	bundles bundleIndex
@@ -185,19 +184,9 @@ func (l *Library) ensureLayout() error {
 		_ = draftRoot.Close()
 		return fmt.Errorf("protect library drafts dir %s: %w", l.draftsDir(), chmodErr)
 	}
-	lockFile, lockErr := draftRoot.OpenFile(".lock", os.O_RDWR|os.O_CREATE, draftFileMode)
-	if lockErr != nil {
-		_ = draftRoot.Close()
-		return fmt.Errorf("create library draft lock: %w", lockErr)
-	}
-	if closeErr := lockFile.Close(); closeErr != nil {
-		_ = draftRoot.Close()
-		return fmt.Errorf("close library draft lock: %w", closeErr)
-	}
-	if chmodErr := draftRoot.Chmod(".lock", draftFileMode); chmodErr != nil {
-		_ = draftRoot.Close()
-		return fmt.Errorf("protect library draft lock: %w", chmodErr)
-	}
+	// No lock file is pre-created here: draft cross-process locks are
+	// per-name (see acquireDraftLock) and created lazily on first use of
+	// that name, so bootstrap has nothing to reserve up front.
 	l.draftRoot = draftRoot
 	return nil
 }

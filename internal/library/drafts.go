@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -57,16 +58,54 @@ func draftRevision(content []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(content))
 }
 
-// ListDrafts returns saved drafts in stable name order.
-func (l *Library) ListDrafts() ([]DraftEntry, error) {
-	l.draftMu.RLock()
-	defer l.draftMu.RUnlock()
-	release, lockErr := l.acquireDraftLock(false)
-	if lockErr != nil {
-		return nil, lockErr
-	}
-	defer release()
+// draftNameLocks hands out one *sync.RWMutex per draft name, so operations
+// on different drafts never block each other in-process.
+//
+// This used to be a single library-wide sync.RWMutex (plus a single
+// library-wide flock, see acquireDraftLock): every CreateDraft/ReplaceDraft/
+// DeleteDraft call — regardless of which draft it named — serialized behind
+// the same lock. Under concurrent load (several E2E specs each authoring
+// their own scenario against one daemon) that turned unrelated drafts'
+// mutations into a queue, and a request stuck behind enough queued writers
+// could exceed a test's timeout despite touching a draft nothing else was
+// using (niac-go#1773). Scoping the lock to the draft name — which is
+// already the unit of the optimistic-concurrency revision check — removes
+// that cross-draft contention without changing same-name semantics.
+//
+// The map is never pruned: a *sync.RWMutex per draft name that has ever
+// existed persists for the life of the process. That is a bounded, small
+// cost (tens of bytes per name) against the churn a single daemon sees, and
+// far cheaper than adding eviction with its own races.
+type draftNameLocks struct {
+	mu    sync.Mutex
+	locks map[string]*sync.RWMutex
+}
 
+func (d *draftNameLocks) forName(name string) *sync.RWMutex {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.locks == nil {
+		d.locks = make(map[string]*sync.RWMutex)
+	}
+	lock, ok := d.locks[name]
+	if !ok {
+		lock = &sync.RWMutex{}
+		d.locks[name] = lock
+	}
+	return lock
+}
+
+// ListDrafts returns saved drafts in stable name order.
+//
+// Unlike the single-draft operations, listing touches every name at once
+// and so cannot be scoped to one name's lock. It takes no lock at all:
+// each draft file is read via readDraftUnlocked, which only ever sees a
+// fully-written revision (writeDraftAtomic always writes-then-renames), so
+// a concurrent writer cannot produce a torn read. The one interleaving this
+// allows — a draft named by ReadDir being deleted before it is opened — is
+// handled explicitly below rather than by locking the whole directory
+// against every writer for the duration of a list.
+func (l *Library) ListDrafts() ([]DraftEntry, error) {
 	entries, err := fs.ReadDir(l.draftRoot.FS(), ".")
 	if err != nil {
 		return nil, fmt.Errorf("read drafts: %w", err)
@@ -78,6 +117,11 @@ func (l *Library) ListDrafts() ([]DraftEntry, error) {
 			continue
 		}
 		draft, readErr := l.readDraftUnlocked(trimYAMLExt(entry.Name()), entry.Name())
+		if errors.Is(readErr, ErrNotFound) {
+			// Deleted by a concurrent DeleteDraft between the ReadDir above
+			// and this open. Not this list's entry to report.
+			continue
+		}
 		if readErr != nil {
 			return nil, readErr
 		}
@@ -99,9 +143,10 @@ func (l *Library) ReadDraft(name string) (*Draft, error) {
 		return nil, err
 	}
 
-	l.draftMu.RLock()
-	defer l.draftMu.RUnlock()
-	release, lockErr := l.acquireDraftLock(false)
+	lock := l.draftMu.forName(trimmed)
+	lock.RLock()
+	defer lock.RUnlock()
+	release, lockErr := l.acquireDraftLock(trimmed, false)
 	if lockErr != nil {
 		return nil, lockErr
 	}
@@ -146,9 +191,10 @@ func (l *Library) CreateDraft(name, content string) (*Draft, error) {
 		return nil, ErrEmptyContent
 	}
 
-	l.draftMu.Lock()
-	defer l.draftMu.Unlock()
-	release, lockErr := l.acquireDraftLock(true)
+	lock := l.draftMu.forName(trimmed)
+	lock.Lock()
+	defer lock.Unlock()
+	release, lockErr := l.acquireDraftLock(trimmed, true)
 	if lockErr != nil {
 		return nil, lockErr
 	}
@@ -175,9 +221,10 @@ func (l *Library) ReplaceDraft(name, expectedRevision, content string) (*Draft, 
 		return nil, ErrEmptyContent
 	}
 
-	l.draftMu.Lock()
-	defer l.draftMu.Unlock()
-	release, lockErr := l.acquireDraftLock(true)
+	lock := l.draftMu.forName(trimmed)
+	lock.Lock()
+	defer lock.Unlock()
+	release, lockErr := l.acquireDraftLock(trimmed, true)
 	if lockErr != nil {
 		return nil, lockErr
 	}
@@ -203,9 +250,10 @@ func (l *Library) DeleteDraft(name, expectedRevision string) error {
 		return err
 	}
 
-	l.draftMu.Lock()
-	defer l.draftMu.Unlock()
-	release, lockErr := l.acquireDraftLock(true)
+	lock := l.draftMu.forName(trimmed)
+	lock.Lock()
+	defer lock.Unlock()
+	release, lockErr := l.acquireDraftLock(trimmed, true)
 	if lockErr != nil {
 		return lockErr
 	}
@@ -266,8 +314,16 @@ func (l *Library) createDraftTemp() (string, *os.File, error) {
 	return "", nil, errors.New("allocate unique draft temp file")
 }
 
-func (l *Library) acquireDraftLock(exclusive bool) (func(), error) {
-	file, err := l.draftRoot.OpenFile(".lock", os.O_RDWR, draftFileMode)
+// acquireDraftLock takes the cross-process (flock) lock for one draft name.
+// The lock file is named after the draft and created lazily on first use:
+// unlike the pre-2026-09 single library-wide ".lock", there is nothing to
+// reserve for a name that doesn't exist yet, and nothing to prune when a
+// draft is deleted — an empty, unused lock file left behind costs nothing.
+// trimmed has already passed validateName (via draftFilename), so it is
+// safe to embed directly in the lock file's name.
+func (l *Library) acquireDraftLock(trimmed string, exclusive bool) (func(), error) {
+	leaf := "." + trimmed + ".lock"
+	file, err := l.openOrCreateDraftLockFile(leaf)
 	if err != nil {
 		return nil, fmt.Errorf("open draft lock: %w", err)
 	}
@@ -280,4 +336,35 @@ func (l *Library) acquireDraftLock(exclusive bool) (func(), error) {
 		unlock()
 		_ = file.Close()
 	}, nil
+}
+
+// openOrCreateDraftLockFile opens a per-draft lock file, creating it on
+// first use.
+//
+// os.Root.OpenFile(O_CREATE) is not safe to call concurrently from two
+// separate *os.Root handles on the same not-yet-existing path: on the very
+// first creation it can spuriously fail with ErrNotExist instead of either
+// creating the file or finding it already created (reproduced directly
+// against os.Root outside this package — two Root handles opened on the
+// same directory, racing O_CREATE on a name neither has created yet). This
+// only affects the first-ever open of a given lock file; once it exists,
+// concurrent O_CREATE opens are fine. The old single library-wide ".lock"
+// never hit this because bootstrap created it once, synchronously, before
+// any operation could race for it — the per-name lock files created here
+// have no such upfront moment, so callers retry through the transient
+// ErrNotExist instead.
+func (l *Library) openOrCreateDraftLockFile(leaf string) (*os.File, error) {
+	const attempts = 20
+	var lastErr error
+	for range attempts {
+		file, err := l.draftRoot.OpenFile(leaf, os.O_RDWR|os.O_CREATE, draftFileMode)
+		if err == nil {
+			return file, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, fmt.Errorf("after %d attempts: %w", attempts, lastErr)
 }
