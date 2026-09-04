@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/ipc"
+	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
 )
 
 func buildLogsCommand() (*cobra.Command, *cobra.Command) {
@@ -39,10 +39,10 @@ func buildLogsCommand() (*cobra.Command, *cobra.Command) {
 
 func makeLogEntry(
 	ts time.Time,
-	level ipc.LogLevel,
+	level cliclient.LogLevel,
 	message, source, device, protocol string,
-) ipc.LogEntry {
-	var entry ipc.LogEntry
+) cliclient.LogEntry {
+	var entry cliclient.LogEntry
 	entry.Timestamp = ts
 	entry.Level = level
 	entry.Message = message
@@ -55,11 +55,11 @@ func makeLogEntry(
 func TestFilterLogs(t *testing.T) {
 	now := time.Now()
 
-	logs := []ipc.LogEntry{
-		makeLogEntry(now, ipc.LogLevelInfo, "Device router-1 active", "device", "router-1", ""),
-		makeLogEntry(now, ipc.LogLevelWarn, "Error injection started", "error-injection", "switch-1", ""),
-		makeLogEntry(now, ipc.LogLevelInfo, "LLDP packet received", "system", "", "LLDP"),
-		makeLogEntry(now, ipc.LogLevelError, "Connection failed to router-2", "system", "router-2", ""),
+	logs := []cliclient.LogEntry{
+		makeLogEntry(now, cliclient.LogLevelInfo, "Device router-1 active", "device", "router-1", ""),
+		makeLogEntry(now, cliclient.LogLevelWarn, "Error injection started", "error-injection", "switch-1", ""),
+		makeLogEntry(now, cliclient.LogLevelInfo, "LLDP packet received", "system", "", "LLDP"),
+		makeLogEntry(now, cliclient.LogLevelError, "Connection failed to router-2", "system", "router-2", ""),
 	}
 
 	tests := []struct {
@@ -151,10 +151,10 @@ func TestLogLevelValidation(t *testing.T) {
 }
 
 func TestOutputLogJSON(t *testing.T) {
-	var log ipc.LogEntry
+	var log cliclient.LogEntry
 	expectedTime := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 	log.Timestamp = expectedTime
-	log.Level = ipc.LogLevelInfo
+	log.Level = cliclient.LogLevelInfo
 	log.Message = "Test message"
 	log.Source = "test-source"
 	log.Device = "test-device"
@@ -164,7 +164,7 @@ func TestOutputLogJSON(t *testing.T) {
 	var buf bytes.Buffer
 	// Note: In actual test, we'd need to redirect stdout
 	// For now, just verify the log entry has correct fields
-	if log.Level != ipc.LogLevelInfo {
+	if log.Level != cliclient.LogLevelInfo {
 		t.Error("Expected log level to be info")
 	}
 	if log.Message != "Test message" {
@@ -191,15 +191,15 @@ func TestLogEntryFields(t *testing.T) {
 	now := time.Now()
 
 	// Test minimal log entry
-	var minimalLog ipc.LogEntry
+	var minimalLog cliclient.LogEntry
 	minimalLog.Timestamp = now
-	minimalLog.Level = ipc.LogLevelDebug
+	minimalLog.Level = cliclient.LogLevelDebug
 	minimalLog.Message = "Debug message"
 
 	if minimalLog.Timestamp != now {
 		t.Error("Timestamp not set correctly")
 	}
-	if minimalLog.Level != ipc.LogLevelDebug {
+	if minimalLog.Level != cliclient.LogLevelDebug {
 		t.Error("Level not set correctly")
 	}
 	if minimalLog.Message != "Debug message" {
@@ -216,9 +216,9 @@ func TestLogEntryFields(t *testing.T) {
 	}
 
 	// Test full log entry
-	var fullLog ipc.LogEntry
+	var fullLog cliclient.LogEntry
 	fullLog.Timestamp = now
-	fullLog.Level = ipc.LogLevelError
+	fullLog.Level = cliclient.LogLevelError
 	fullLog.Message = "Full error message"
 	fullLog.Source = "error-injection"
 	fullLog.Device = "router-1"
@@ -227,7 +227,7 @@ func TestLogEntryFields(t *testing.T) {
 	if !fullLog.Timestamp.Equal(now) {
 		t.Error("Timestamp not set correctly for full log")
 	}
-	if fullLog.Level != ipc.LogLevelError {
+	if fullLog.Level != cliclient.LogLevelError {
 		t.Error("Level not set correctly for full log")
 	}
 	if fullLog.Message != "Full error message" {
@@ -247,13 +247,13 @@ func TestLogEntryFields(t *testing.T) {
 func TestLogLevelConstants(t *testing.T) {
 	// Verify log level constants are defined correctly
 	tests := []struct {
-		level    ipc.LogLevel
+		level    cliclient.LogLevel
 		expected string
 	}{
-		{ipc.LogLevelDebug, "debug"},
-		{ipc.LogLevelInfo, "info"},
-		{ipc.LogLevelWarn, "warn"},
-		{ipc.LogLevelError, "error"},
+		{cliclient.LogLevelDebug, "debug"},
+		{cliclient.LogLevelInfo, "info"},
+		{cliclient.LogLevelWarn, "warn"},
+		{cliclient.LogLevelError, "error"},
 	}
 
 	for _, tt := range tests {
@@ -267,7 +267,7 @@ func TestLogLevelConstants(t *testing.T) {
 
 func TestFilterLogsEmptySlice(t *testing.T) {
 	// Test filtering an empty slice
-	logs := []ipc.LogEntry{}
+	logs := []cliclient.LogEntry{}
 
 	result := filterLogs(logs, "anything")
 	if len(result) != 0 {
@@ -282,7 +282,7 @@ func TestFilterLogsEmptySlice(t *testing.T) {
 
 func TestFilterLogsNilSlice(t *testing.T) {
 	// Test filtering a nil slice
-	var logs []ipc.LogEntry
+	var logs []cliclient.LogEntry
 
 	result := filterLogs(logs, "anything")
 	if len(result) != 0 {
@@ -357,10 +357,10 @@ func TestLogsCommandFlags(t *testing.T) {
 func TestLogFilterCaseSensitivity(t *testing.T) {
 	now := time.Now()
 
-	logs := []ipc.LogEntry{
-		makeLogEntry(now, ipc.LogLevelInfo, "UPPERCASE MESSAGE", "Test", "", ""),
-		makeLogEntry(now, ipc.LogLevelInfo, "lowercase message", "test", "", ""),
-		makeLogEntry(now, ipc.LogLevelInfo, "MixedCase Message", "TeSt", "", ""),
+	logs := []cliclient.LogEntry{
+		makeLogEntry(now, cliclient.LogLevelInfo, "UPPERCASE MESSAGE", "Test", "", ""),
+		makeLogEntry(now, cliclient.LogLevelInfo, "lowercase message", "test", "", ""),
+		makeLogEntry(now, cliclient.LogLevelInfo, "MixedCase Message", "TeSt", "", ""),
 	}
 
 	// Filter should be case-insensitive
