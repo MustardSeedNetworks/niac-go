@@ -438,6 +438,40 @@ jobs:
           CGO_ENABLED: "0"
         run: go test ./internal/api/ -run 'AddrInUse|BindWithFallback' -v
 
+  # Windows-tagged Go has never been linted: golangci-lint runs on ubuntu and
+  # skips *_windows.go, and the Windows job runs build/vet/tests but no linter.
+  # GOOS=windows makes golangci-lint compile and lint the whole Windows tree on
+  # Linux -- nothing Windows-side needs cgo -- so this costs one job, no runner.
+  #
+  # only-new-issues: this repo carries pre-existing findings under
+  # GOOS=windows (see MustardSeedNetworks/seed#2408); gating them all would
+  # block every PR. New Windows debt is blocked from today.
+  #
+  # pull_request only: only-new-issues needs a base to diff against, and on
+  # merge_group there is none -- it would fall back to all pre-existing
+  # findings and redden every merge. ci-complete accepts skipped, so this is
+  # not a deadlock.
+  lint-windows:
+    name: Lint (GOOS=windows)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run golangci-lint for GOOS=windows
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        env:
+          GOOS: windows
+        with:
+          version: v2.13.2
+          only-new-issues: true
+
   race:
     name: Backend (race detector)
     runs-on: ubuntu-latest
@@ -1568,6 +1602,7 @@ jobs:
       - backend
       - backend-darwin
       - backend-windows
+      - lint-windows
       - race
       - capture-rawsocket
       - build-ui
