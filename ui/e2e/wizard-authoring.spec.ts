@@ -12,12 +12,22 @@ test.describe('wizard authoring from empty', () => {
   test('gives every device an address and SNMP without leaving the wizard', async ({ page }) => {
     await page.goto('/new-simulation');
 
+    // Capture the draft this run creates. Reading "the newest draft" from the
+    // library made the assertion depend on which spec finished last.
+    const created = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/library/drafts') &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    );
+
     // Step 1 - source and interface.
     const iface = page.getByTestId('wizard-interface-select');
     await expect(iface).toBeEnabled();
     await iface.selectOption({ index: 1 });
     await page.getByTestId('wizard-start-empty').click();
     await page.getByTestId('wizard-next-button').click();
+    const draftName = ((await (await created).json()) as { name: string }).name;
 
     // Step 2 - author two devices through the composer, the surface an author
     // actually uses when starting from nothing.
@@ -65,15 +75,7 @@ test.describe('wizard authoring from empty', () => {
     // it rather than its YAML.
     await expect(page.getByTestId('wizard-step-review')).toHaveAttribute('data-status', 'active');
 
-    const drafts = await page.request.get('/api/v1/library/drafts');
-    expect(drafts.ok()).toBe(true);
-    const entries = (await drafts.json()) as Array<{ name: string; modifiedAt: string }>;
-    const newest = entries.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0];
-    expect(newest).toBeDefined();
-
-    const saved = await page.request.get(
-      `/api/v1/library/drafts/${encodeURIComponent(newest?.name ?? '')}`,
-    );
+    const saved = await page.request.get(`/api/v1/library/drafts/${encodeURIComponent(draftName)}`);
     expect(saved.ok()).toBe(true);
     const { content } = (await saved.json()) as { content: string };
 

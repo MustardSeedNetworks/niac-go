@@ -1,0 +1,62 @@
+# The network the authoring surfaces produce.
+#
+# ui/e2e/three-way-authoring.spec.ts authors this same network three ways --
+# uploaded YAML, the device editor, and the wizard from empty -- asserting each
+# route produces its devices, addresses, link and SNMP. The nightly wire suite
+# replays this file, so the shape those surfaces produce is checked on the wire
+# and not only as a saved config.
+#
+# The wizard's own output is not byte-identical: its composer assigns MACs from
+# the device name and adds profile metadata. This is the same network, not the
+# same bytes.
+#
+# Keep this and ui/e2e/fixtures/three-way-network.ts in step; the E2E fails if
+# they diverge.
+networks:
+  - name: e2e-lan
+    subnet: 10.77.0.0/24
+
+attachments:
+  - name: tester
+    connect: e2e-lan
+
+devices:
+  - name: e2e-rtr-01
+    type: router
+    mac: "02:00:00:00:77:01"
+    icmp:
+      enabled: true
+    snmp_agent:
+      enabled: true
+      community: e2e_public
+      sysname: e2e-rtr-01
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: e2e-lan
+        address: 10.77.0.1/24
+    trunk_ports:
+      - interface: Ethernet1/1
+        native_vlan: 1
+        remote_device: e2e-sw-01
+        remote_interface: Ethernet1/1
+
+  - name: e2e-sw-01
+    type: switch
+    mac: "02:00:00:00:77:02"
+    icmp:
+      enabled: true
+    snmp_agent:
+      enabled: true
+      community: e2e_public
+      sysname: e2e-sw-01
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: e2e-lan
+        address: 10.77.0.2/24
+    trunk_ports:
+      - interface: Ethernet1/1
+        native_vlan: 1
+        remote_device: e2e-rtr-01
+        remote_interface: Ethernet1/1
