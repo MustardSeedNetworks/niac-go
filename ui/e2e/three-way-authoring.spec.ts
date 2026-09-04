@@ -22,6 +22,10 @@ interface SessionDevice {
   protocols?: string[];
 }
 
+// This spec's own session id. Stopping "whatever is running" would reach into
+// another spec's simulation when the runner has more workers than the laptop.
+const SESSION_ID = 'e2e-three-way';
+
 /** Start a session from config text, the way each route's final step does. */
 async function startSession(request: APIRequestContext, configData: string) {
   const csrf = await request.get('/api/v1/csrf-token');
@@ -31,6 +35,7 @@ async function startSession(request: APIRequestContext, configData: string) {
   const started = await request.post('/api/v1/simulation', {
     headers: { 'X-Csrf-Token': token },
     data: {
+      sessionId: SESSION_ID,
       interface: SIM_INTERFACE,
       configData,
       attachment: ATTACHMENT.name,
@@ -43,11 +48,13 @@ async function startSession(request: APIRequestContext, configData: string) {
   return (await started.json()) as { sessionId?: string; deviceCount: number };
 }
 
-/** Stop whatever is running so each route starts from the same place. */
+/** Stop this spec's session so each route starts from the same place. */
 async function stopSession(request: APIRequestContext) {
   const csrf = await request.get('/api/v1/csrf-token');
   const { token } = (await csrf.json()) as { token: string };
-  await request.delete('/api/v1/simulation', { headers: { 'X-Csrf-Token': token } });
+  await request.delete(`/api/v1/simulation?sessionId=${encodeURIComponent(SESSION_ID)}`, {
+    headers: { 'X-Csrf-Token': token },
+  });
 }
 
 /**
