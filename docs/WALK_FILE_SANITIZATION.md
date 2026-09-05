@@ -11,8 +11,16 @@ data. This allows walk files to be safely shared publicly without exposing sensi
 
 ### IP Addresses (Deterministic Mapping)
 
-All IP addresses are mapped to the 10.0.0.0/8 network using deterministic hashing. The same input IP always produces
-the same output IP, preserving network topology and routing relationships.
+IP addresses are mapped into 10.0.0.0/8 **one subnet at a time**: the `/24` an
+address belongs to is mapped as a unit and the host octet is carried across
+unchanged. The same input always produces the same output.
+
+Mapping each address independently was the original design, and it broke the
+walk's internal consistency — one real `/24` landed in 24 different `/24`s, so a
+device's interface address, its ARP neighbours and its routes no longer agreed.
+Anything deriving topology from a walk then saw the device contradict itself.
+Mapping the prefix keeps every relationship inside the file: same subnet in,
+same subnet out, and two real subnets never merge into one.
 
 **Mapping Strategy:**
 
@@ -51,13 +59,31 @@ Hostnames are transformed using device type detection and deterministic numberin
 ### DNS Domains
 
 - `.local` → `.niac-go.local`
-- `.com`, `.net`, `.org` → `.niac-go.com`
+- A domain the device's own `sysName` or `sysContact` names → `niac-go.com`
+
+Only the domains the device claims are rewritten. A vendor support URL in
+`sysDescr` is not customer data, and rewriting every `.com` turned
+`www.cisco.com` into `www.cisco.niac-go.com`, damaging the product fingerprint
+a tester classifies on.
+
+### Serial Numbers
+
+A serial number identifies one physical unit a customer owns, so it is replaced
+with a stand-in of the same shape: same length, digits stay digits and letters
+stay letters. Anything that parses or validates the format still works.
+
+### IPv6
+
+IPv6 addresses are mapped into the RFC 3849 documentation prefix
+`2001:db8::/32`, keeping the interface identifier — the same way the IPv4 path
+keeps the host octet.
 
 ## What Gets Preserved
 
 The following data is **NOT** modified (not sensitive):
 
-- ✅ Serial numbers
+- ✅ Subnet masks — a mask is not an address, and hashing one produced
+  `255.255.255.0` → `10.3.199.4`, leaving every device with a nonsense prefix
 - ✅ MAC addresses (vendor OUI is public information)
 - ✅ Hardware models and platform strings
 - ✅ Interface counts, types, and names

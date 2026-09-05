@@ -1280,16 +1280,20 @@ NiAC-Go branded data. IP addresses are mapped deterministically so the
 same input IP always produces the same output IP.
 
 What is KEPT (not sensitive):
-  • Serial numbers
   • MAC addresses
-  • Hardware models
+  • Hardware models and vendor strings, including vendor support URLs
   • Interface counts/types
   • VLAN IDs
+  • Subnet masks
 
 What is TRANSFORMED (deterministic):
-  • IP addresses → 10.0.0.0/8 (NiAC-Go network)
-  • Hostnames → niac-<location>-<type>-<number>
-  • DNS domains → niac-go.com / niac-go.local
+  • IP addresses → 10.0.0.0/8, one subnet at a time so a device's
+    addresses, neighbours and routes still agree with each other
+  • IPv6 addresses → 2001:db8::/32, interface identifier preserved
+  • Hostnames → niac-core-<type>-<number>, type read from the device's
+    own sysDescr/sysServices, numbers allocated so none repeat
+  • Serial numbers → a stand-in of the same shape
+  • DNS domains the device names → niac-go.com / niac-go.local
   • Contact info → netadmin@niac-go.com
   • Location strings → NiAC-Go - DC-WEST
   • Community strings → public or niac-go-ro

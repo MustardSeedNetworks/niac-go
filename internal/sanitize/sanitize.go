@@ -1,9 +1,17 @@
 // Package sanitize scrubs real network data out of captured SNMP walks so
-// they are safe to share and to seed the demo replay corpus. IP addresses
-// and hostnames are transformed deterministically (same input always
-// produces the same output), while structurally load-bearing fields —
-// serial numbers, MAC addresses, hardware models, interface counts/types,
-// VLAN IDs — are left untouched.
+// they are safe to share and to seed the demo replay corpus.
+//
+// Two properties are held at once. Nothing identifying survives: addresses,
+// hostnames, contacts, community strings and serial numbers are all replaced
+// deterministically, so the same input always produces the same output. And
+// the walk stays internally consistent and still fingerprints as the product
+// it came from: a subnet is mapped as a subnet rather than address by address,
+// a serial keeps its shape, a mask stays a mask, and the vendor strings a
+// tester classifies on — models, MAC OUIs, support URLs — are untouched.
+//
+// Both halves were once wrong in the same file. Masks were hashed like
+// addresses, one /24 was scattered across 24, and "www.cisco.com" became
+// "www.cisco.niac-go.com", while serial numbers and IPv6 shipped verbatim.
 //
 // The package is pure: Content takes and returns []byte and never
 // touches the filesystem. cmd/niac's `sanitize` command and internal/api's
@@ -14,7 +22,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -67,8 +74,15 @@ type MappingStatistics struct {
 // field names and tags are load-bearing for that on-disk format.
 type Mapping struct {
 	IPMappings map[string]string `json:"ip_mappings"`
-	Hostnames  map[string]string `json:"hostnames"`
-	Statistics MappingStatistics `json:"statistics"`
+	// Prefixes maps a real /24 to the sanitized /24 that stands in for it, so
+	// every address on one network keeps landing on one network. Absent from
+	// files written before prefix-preserving mapping; callers must tolerate nil.
+	Prefixes  map[string]string `json:"prefixes"`
+	Hostnames map[string]string `json:"hostnames"`
+	// hostnameSlots records which sanitized hostnames are already handed out,
+	// so two devices in one pack cannot end up sharing a sysName.
+	hostnameSlots map[string]struct{}
+	Statistics    MappingStatistics `json:"statistics"`
 
 	mu sync.RWMutex
 }
@@ -76,8 +90,10 @@ type Mapping struct {
 // NewMapping returns an empty, ready-to-use Mapping.
 func NewMapping() *Mapping {
 	return &Mapping{
-		IPMappings: make(map[string]string),
-		Hostnames:  make(map[string]string),
+		IPMappings:    make(map[string]string),
+		Prefixes:      make(map[string]string),
+		Hostnames:     make(map[string]string),
+		hostnameSlots: make(map[string]struct{}),
 	}
 }
 
@@ -135,7 +151,12 @@ func Content(content []byte, mapping *Mapping, opts Options) ([]byte, Stats, err
 	}
 
 	initialIPs, initialHostnames := mapping.counts()
-	subs := collectIdentitySubs(lines, mapping, opts.Contact)
+	// The device says what it is (sysDescr, sysServices); resolve that once for
+	// the whole walk, before any name is rewritten.
+	deviceType := deviceTypeFromWalk(lines)
+	// Only the domains this device's own identity names are customer data.
+	domains := collectIdentityDomains(lines, opts)
+	subs := collectIdentitySubs(lines, mapping, opts.Contact, deviceType)
 
 	var out bytes.Buffer
 	for _, line := range lines {
@@ -143,11 +164,11 @@ func Content(content []byte, mapping *Mapping, opts Options) ([]byte, Stats, err
 		if isIdentityScalar(line) {
 			// The scalar rules already replace this line's value; scrubbing
 			// it again would double-sanitize the just-written hostname.
-			sanitized = sanitizeLine(line, mapping, opts)
+			sanitized = sanitizeLine(line, mapping, opts, deviceType, domains)
 		} else {
 			// Scrub echoed identity before the per-line DNS rewrite so a
 			// full FQDN still matches, then apply IP/DNS rules.
-			sanitized = sanitizeLine(applyIdentitySubs(line, subs), mapping, opts)
+			sanitized = sanitizeLine(applyIdentitySubs(line, subs), mapping, opts, deviceType, domains)
 		}
 		out.WriteString(sanitized)
 		out.WriteByte('\n')
@@ -160,7 +181,7 @@ func Content(content []byte, mapping *Mapping, opts Options) ([]byte, Stats, err
 // sanitizeLine applies every per-line transformation rule in order:
 // system-group identity scalars, community strings, IP addresses (value
 // and OID-index forms), and DNS domains.
-func sanitizeLine(line string, mapping *Mapping, opts Options) string {
+func sanitizeLine(line string, mapping *Mapping, opts Options, deviceType string, domains []string) string {
 	// 1-3. System-group identity scalars. Match both numeric walks
 	// (.1.3.6.1.2.1.1.<n>.0, i.e. snmpwalk -On) and symbolic walks (MIB name).
 	isContact := isSystemScalar(line, "4", "sysContact")
@@ -173,15 +194,22 @@ func sanitizeLine(line string, mapping *Mapping, opts Options) string {
 		// Use the unquoted value so the scalar and the global echo scrub
 		// (collectIdentitySubs) sanitize the identical hostname string.
 		if v, ok := scalarStringValue(line); ok {
-			line = stringValueRe.ReplaceAllString(line, "= STRING: "+sanitizeHostname(v, mapping))
+			line = stringValueRe.ReplaceAllString(line, "= STRING: "+sanitizeHostnameAs(v, deviceType, mapping))
 		}
 	}
 
-	// 4. SNMP community strings (symbolic MIB objects only; numeric community
-	// columns are enterprise-specific and not represented by a fixed OID).
-	if strings.Contains(line, "snmpCommunity") || strings.Contains(line, "community") {
+	// 4. SNMP community strings, identified by the OID rather than the text.
+	// Matching "community" anywhere on the line replaced any STRING value that
+	// happened to mention the word -- vendor help text and sysDescr prose
+	// included -- while telling us nothing about whether the value was a secret.
+	if isCommunityOID(line) {
 		line = stringValueRe.ReplaceAllString(line, "= STRING: "+opts.Community)
 	}
+
+	// 4b. Serial numbers identify one physical unit a customer owns. They were
+	// kept verbatim as "structurally load-bearing", but only their shape is:
+	// a format-preserving stand-in keeps every consumer working.
+	line = rewriteSerial(line)
 
 	// 5. IP addresses in IpAddress values.
 	line = ipValueRe.ReplaceAllStringFunc(line, func(match string) string {
@@ -196,11 +224,15 @@ func sanitizeLine(line string, mapping *Mapping, opts Options) string {
 	line = rewriteOIDIndexIP(line, mapping)
 	line = rewriteEmbeddedPrivateIPs(line, mapping)
 	line = rewriteValuePrivateIPs(line, mapping)
+	line = rewriteValueIPv6(line, mapping)
 
-	// 7. DNS domains (but skip email addresses in contact strings).
+	// 7. DNS domains the device's own identity names. Rewriting every .com/.net
+	// /.org instead turned the vendor's "www.cisco.com" in sysDescr into
+	// "www.cisco.niac-go.com" and damaged the fingerprint testers classify on --
+	// while a vendor's support URL is not customer data in the first place.
 	if opts.Domain != "" && !isContact {
 		line = dnsLocalRe.ReplaceAllString(line, ".niac-go.local")
-		line = dnsTLDRe.ReplaceAllString(line, "."+opts.Domain)
+		line = rewriteIdentityDomains(line, domains, opts.Domain)
 	}
 
 	return line
