@@ -3,7 +3,6 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"os"
 	"slices"
 
 	"github.com/gopacket/gopacket"
@@ -102,7 +101,7 @@ func (h *SNMPHandler) handleDatagram(
 	if err != nil {
 		h.recordForDevices(devices, func(agent *snmp.Agent) { agent.RecordASNParseError() })
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "SNMP: decode failed for %s sn=%d err=%v\n", peer.dst, pkt.SerialNumber, err)
+			logging.Debugf("SNMP: decode failed for %s sn=%d err=%v", peer.dst, pkt.SerialNumber, err)
 		}
 
 		return
@@ -131,8 +130,8 @@ func (h *SNMPHandler) processDeviceRequest(
 	payload, status, err := h.buildResponse(agent, request)
 	if err != nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-			_, _ = fmt.Fprintf(os.Stdout,
-				"SNMP: marshal response failed for device %s sn=%d err=%v\n",
+			logging.Debugf(
+				"SNMP: marshal response failed for device %s sn=%d err=%v",
 				device.Name, pkt.SerialNumber, err)
 		}
 
@@ -236,8 +235,8 @@ func (h *SNMPHandler) sendResponse(
 		pkt.VLAN,
 	)
 	if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-		_, _ = fmt.Fprintf(os.Stdout,
-			"SNMP: failed to emit response for device %s sn=%d err=%v\n",
+		logging.Debugf(
+			"SNMP: failed to emit response for device %s sn=%d err=%v",
 			device.Name, pkt.SerialNumber, err)
 	}
 	return err == nil
@@ -273,8 +272,8 @@ func (h *SNMPHandler) sendResponseV6(
 		buf, opts, eth, ip, reply, gopacket.Payload(payload),
 	); err != nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= 1 {
-			_, _ = fmt.Fprintf(os.Stdout,
-				"SNMP: failed to serialize IPv6 response for device %s sn=%d err=%v\n",
+			logging.Debugf(
+				"SNMP: failed to serialize IPv6 response for device %s sn=%d err=%v",
 				deviceName, pkt.SerialNumber, err)
 		}
 
@@ -336,8 +335,8 @@ func (h *SNMPHandler) handleV3(pkt *Packet, peer snmpPeer, udp *layers.UDP, devi
 		resp, err := group.v3.Respond(udp.Payload, group.v3Agent.ProcessPDU)
 		if err != nil || resp == nil {
 			if err != nil && h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
-				_, _ = fmt.Fprintf(os.Stdout,
-					"SNMP: v3 respond declined for %s sn=%d err=%v\n", device.Name, pkt.SerialNumber, err)
+				logging.Debugf(
+					"SNMP: v3 respond declined for %s sn=%d err=%v", device.Name, pkt.SerialNumber, err)
 			}
 
 			continue

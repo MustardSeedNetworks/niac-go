@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -264,7 +264,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 
 	if !cfg.Enabled {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3 disabled for device, ignoring request\n")
+			logging.Debugf("iPerf3 disabled for device, ignoring request")
 		}
 
 		return
@@ -273,7 +273,7 @@ func (h *IPerf3Handler) HandleIPerf3Request(
 	// Handle TCP SYN - initial connection
 	if tcpLayer.SYN && !tcpLayer.ACK {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: New connection from %s:%d\n", ipLayer.SrcIP, tcpLayer.SrcPort)
+			logging.Debugf("iPerf3: New connection from %s:%d", ipLayer.SrcIP, tcpLayer.SrcPort)
 		}
 
 		h.sendSYNACK(ipLayer, tcpLayer, devices, pkt.VLAN)
@@ -309,7 +309,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 	payload := tcpLayer.Payload
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Received %d bytes from %s:%d in state %d\n",
+		logging.Debugf("iPerf3: Received %d bytes from %s:%d in state %d",
 			len(payload), ipLayer.SrcIP, tcpLayer.SrcPort, session.State)
 	}
 
@@ -360,7 +360,7 @@ func (h *IPerf3Handler) handleIPerf3Data(
 	case iperf3StateExchResult:
 		// Exchange results phase
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test complete, sending results\n")
+			logging.Debugf("iPerf3: Test complete, sending results")
 		}
 
 		h.sendResults(ipLayer, tcpLayer, devices, session, pkt.VLAN)
@@ -410,7 +410,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	err := json.Unmarshal(jsonData, &params)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Failed to parse params: %v (data: %s)\n", err, string(jsonData))
+			logging.Debugf("iPerf3: Failed to parse params: %v (data: %s)", err, string(jsonData))
 		}
 		// Send acknowledgment anyway
 		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, vlan)
@@ -427,7 +427,7 @@ func (h *IPerf3Handler) handleParamExchange(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v\n",
+		logging.Debugf("iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v",
 			params.Time, params.Parallel, params.TCP, params.Reverse)
 	}
 
@@ -572,7 +572,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 		srcMAC = srcDevices[0].MACAddress
 	} else {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Cannot send SYN-ACK: no MAC for %s\n", ipLayer.SrcIP)
+			logging.Debugf("iPerf3: Cannot send SYN-ACK: no MAC for %s", ipLayer.SrcIP)
 		}
 
 		return
@@ -617,7 +617,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing SYN-ACK: %v\n", err)
+			logging.Debugf("iPerf3: Error serializing SYN-ACK: %v", err)
 		}
 
 		return
@@ -638,7 +638,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	h.stack.Send(pktOut)
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d\n",
+		logging.Debugf("iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort)
 	}
 }
@@ -710,7 +710,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Error serializing TCP response: %v\n", err)
+			logging.Debugf("iPerf3: Error serializing TCP response: %v", err)
 		}
 
 		return
@@ -731,7 +731,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 	h.stack.Send(pktOut)
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "iPerf3: Sent %d bytes to %s:%d\n", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
+		logging.Debugf("iPerf3: Sent %d bytes to %s:%d", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
 	}
 }
 

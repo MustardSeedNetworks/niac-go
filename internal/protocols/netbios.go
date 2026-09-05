@@ -3,10 +3,8 @@ package protocols
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"math"
 	"net"
-	"os"
 	"strings"
 	"sync"
 
@@ -14,6 +12,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -124,7 +123,7 @@ func (h *NetBIOSHandler) HandleNameService(
 ) {
 	if len(udp.Payload) < nbnsMinHeader {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Packet too short sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("NetBIOS NS: Packet too short sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -142,7 +141,7 @@ func (h *NetBIOSHandler) HandleNameService(
 	opcode := (flags >> nbnsOpcodeShift) & nbnsNibbleMask
 
 	if h.debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: TID=0x%04x Op=%d QD=%d AN=%d Response=%v sn=%d\n",
+		logging.Debugf("NetBIOS NS: TID=0x%04x Op=%d QD=%d AN=%d Response=%v sn=%d",
 			transactionID, opcode, qdCount, anCount, isResponse, pkt.SerialNumber)
 	}
 
@@ -155,7 +154,7 @@ func (h *NetBIOSHandler) HandleNameService(
 	if opcode == NBNSOpQuery && qdCount > 0 {
 		h.handleNameQuery(pkt, packet, transactionID, uint16(udp.SrcPort), payload[12:], devices)
 	} else if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Unhandled opcode %d sn=%d\n", opcode, pkt.SerialNumber)
+		logging.Debugf("NetBIOS NS: Unhandled opcode %d sn=%d", opcode, pkt.SerialNumber)
 	}
 }
 
@@ -175,14 +174,14 @@ func (h *NetBIOSHandler) handleNameQuery(
 	}
 	if name == "" {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Failed to decode name sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("NetBIOS NS: Failed to decode name sn=%d", pkt.SerialNumber)
 		}
 
 		return
 	}
 
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Query for '%s'<%02X> sn=%d\n", name, nameType, pkt.SerialNumber)
+		logging.Debugf("NetBIOS NS: Query for '%s'<%02X> sn=%d", name, nameType, pkt.SerialNumber)
 	}
 
 	ipv4, eth := extractNameQueryLayers(packet)
@@ -193,7 +192,7 @@ func (h *NetBIOSHandler) handleNameQuery(
 	matchedDevice, matchedGroup := findMatchingNetBIOSDevice(devices, name, nameType)
 	if matchedDevice == nil {
 		if h.debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Name '%s' not found sn=%d\n", name, pkt.SerialNumber)
+			logging.Debugf("NetBIOS NS: Name '%s' not found sn=%d", name, pkt.SerialNumber)
 		}
 
 		return
@@ -202,7 +201,7 @@ func (h *NetBIOSHandler) handleNameQuery(
 	deviceIPv4 := getFirstIPv4(matchedDevice.IPAddresses)
 	if deviceIPv4 == nil {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Device '%s' has no IPv4 address sn=%d\n", name, pkt.SerialNumber)
+			logging.Debugf("NetBIOS NS: Device '%s' has no IPv4 address sn=%d", name, pkt.SerialNumber)
 		}
 
 		return
@@ -212,7 +211,7 @@ func (h *NetBIOSHandler) handleNameQuery(
 		deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Sent positive response for '%s' -> %s sn=%d\n",
+		logging.Debugf("NetBIOS NS: Sent positive response for '%s' -> %s sn=%d",
 			name, deviceIPv4, pkt.SerialNumber)
 	}
 }
@@ -359,7 +358,7 @@ func (h *NetBIOSHandler) HandleDatagramService(
 ) {
 	if len(udp.Payload) < nbDGMMinHeader {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Packet too short sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("NetBIOS DGM: Packet too short sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -371,7 +370,7 @@ func (h *NetBIOSHandler) HandleDatagramService(
 	msgType := payload[0]
 
 	if h.debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Type=0x%02x sn=%d\n", msgType, pkt.SerialNumber)
+		logging.Debugf("NetBIOS DGM: Type=0x%02x sn=%d", msgType, pkt.SerialNumber)
 	}
 
 	// Types: 0x10=Direct Unique, 0x11=Direct Group, 0x12=Broadcast
@@ -379,16 +378,15 @@ func (h *NetBIOSHandler) HandleDatagramService(
 	case nbDGMDirectUnique, nbDGMDirectGroup, nbDGMBroadcast:
 		// Silently accept datagrams (we're simulating passive devices)
 		if h.debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"NetBIOS DGM: Received datagram type 0x%02x sn=%d\n",
+			logging.Debugf(
+				"NetBIOS DGM: Received datagram type 0x%02x sn=%d",
 				msgType,
 				pkt.SerialNumber,
 			)
 		}
 	default:
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "NetBIOS DGM: Unknown message type 0x%02x sn=%d\n", msgType, pkt.SerialNumber)
+			logging.Debugf("NetBIOS DGM: Unknown message type 0x%02x sn=%d", msgType, pkt.SerialNumber)
 		}
 	}
 }
@@ -652,7 +650,7 @@ func (h *NetBIOSHandler) handleNodeStatus(
 		deviceIPv4, ipv4.SrcIP, device.MACAddress, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "NetBIOS NS: Node status for %s -> %d name(s) sn=%d\n",
+		logging.Debugf("NetBIOS NS: Node status for %s -> %d name(s) sn=%d",
 			deviceIPv4, len(names), pkt.SerialNumber)
 	}
 }

@@ -3,7 +3,6 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -70,7 +70,7 @@ func (h *FTPHandler) HandleRequest(
 	if debugLevel >= DebugLevelInfo {
 		// SECURITY FIX MEDIUM-4: Sanitize command for logging to prevent log injection
 		sanitizedCmd := sanitizeForLogging(command)
-		_, _ = fmt.Fprintf(os.Stdout, "FTP command from %s: %s (device: %v)\n",
+		logging.Debugf("FTP command from %s: %s (device: %v)",
 			ipLayer.SrcIP, sanitizedCmd, getDeviceNames(devices))
 	}
 
@@ -105,7 +105,7 @@ func (h *FTPHandler) sendResponse(
 	identity, ok := h.stack.replyEthernet(reqPkt, device)
 	if !ok {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send FTP response: no source MAC for %s\n", ipLayer.SrcIP)
+			logging.Debugf("Cannot send FTP response: no source MAC for %s", ipLayer.SrcIP)
 		}
 
 		return
@@ -158,7 +158,7 @@ func (h *FTPHandler) sendResponse(
 	)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing FTP response: %v\n", err)
+			logging.Debugf("Error serializing FTP response: %v", err)
 		}
 
 		return
@@ -187,7 +187,7 @@ func (h *FTPHandler) sendResponse(
 			responseStr = responseStr[:ftpLogMessageMaxLen] + "..."
 		}
 
-		_, _ = fmt.Fprintf(os.Stdout, "Sent FTP response: %s from %s to %s (device: %s)\n",
+		logging.Debugf("Sent FTP response: %s from %s to %s (device: %s)",
 			responseStr, ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }
@@ -208,7 +208,7 @@ func (h *FTPHandler) sendResponseV6(
 	device := devices[0]
 	if len(device.MACAddress) == 0 || dstMAC == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send FTP/IPv6 response: missing MAC info\n")
+			logging.Debugf("Cannot send FTP/IPv6 response: missing MAC info")
 		}
 
 		return
@@ -253,7 +253,7 @@ func (h *FTPHandler) sendResponseV6(
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response))
 	if err != nil {
 		if debugLevel >= 1 {
-			_, _ = fmt.Fprintf(os.Stdout, "FTP/IPv6: Failed to serialize response: %v\n", err)
+			logging.Debugf("FTP/IPv6: Failed to serialize response: %v", err)
 		}
 
 		return
@@ -274,7 +274,7 @@ func (h *FTPHandler) sendResponseV6(
 	h.stack.Send(respPkt)
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent FTP/IPv6 response %d bytes to [%s]\n", len(response), ipv6.SrcIP)
+		logging.Debugf("Sent FTP/IPv6 response %d bytes to [%s]", len(response), ipv6.SrcIP)
 	}
 }
 
@@ -488,7 +488,7 @@ func (h *FTPHandler) SendWelcome(reqPkt *Packet, ipLayer *layers.IPv4, tcpLayer 
 	}()
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Scheduled FTP welcome banner for %s\n", deviceName)
+		logging.Debugf("Scheduled FTP welcome banner for %s", deviceName)
 	}
 }
 
@@ -514,7 +514,7 @@ func (h *FTPHandler) HandleRequestV6(
 	if debugLevel >= DebugLevelInfo {
 		// SECURITY FIX: Sanitize command for logging to prevent log injection (same as IPv4 handler)
 		sanitizedCmd := sanitizeForLogging(command)
-		_, _ = fmt.Fprintf(os.Stdout, "FTP/IPv6 command from [%s]: %s (device: %v)\n",
+		logging.Debugf("FTP/IPv6 command from [%s]: %s (device: %v)",
 			ipv6.SrcIP, sanitizedCmd, getDeviceNames(devices))
 	}
 

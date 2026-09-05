@@ -8,7 +8,6 @@ import (
 	"html"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -86,14 +86,14 @@ func (h *HTTPHandler) HandleRequest(
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP request: %v\n", err)
+			logging.Debugf("Failed to parse HTTP request: %v", err)
 		}
 
 		return
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "HTTP %s %s from %s (device: %v)\n",
+		logging.Debugf("HTTP %s %s from %s (device: %v)",
 			request.Method, request.Path, ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -391,7 +391,7 @@ func (h *HTTPHandler) sendResponse(
 	identity, ok := h.stack.replyEthernet(reqPkt, device)
 	if !ok {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send HTTP response: no source MAC for %s\n", ipLayer.SrcIP)
+			logging.Debugf("Cannot send HTTP response: no source MAC for %s", ipLayer.SrcIP)
 		}
 
 		return
@@ -444,7 +444,7 @@ func (h *HTTPHandler) sendResponse(
 	)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing HTTP response: %v\n", err)
+			logging.Debugf("Error serializing HTTP response: %v", err)
 		}
 
 		return
@@ -468,7 +468,7 @@ func (h *HTTPHandler) sendResponse(
 	h.stack.Send(responsePkt)
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP response: %d bytes from %s to %s (device: %s)\n",
+		logging.Debugf("Sent HTTP response: %d bytes from %s to %s (device: %s)",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }
@@ -505,14 +505,14 @@ func (h *HTTPHandler) HandleRequestV6(
 	request, err := parseHTTPRequest(tcpLayer.Payload)
 	if err != nil {
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "Failed to parse HTTP/IPv6 request: %v\n", err)
+			logging.Debugf("Failed to parse HTTP/IPv6 request: %v", err)
 		}
 
 		return
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6 %s %s from [%s] (device: %v)\n",
+		logging.Debugf("HTTP/IPv6 %s %s from [%s] (device: %v)",
 			request.Method, request.Path, ipv6.SrcIP, getDeviceNames(devices))
 	}
 
@@ -540,7 +540,7 @@ func (h *HTTPHandler) sendResponseV6(
 	device := devices[0]
 	if len(device.MACAddress) == 0 || dstMAC == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6: Cannot send response, missing MAC info\n")
+			logging.Debugf("HTTP/IPv6: Cannot send response, missing MAC info")
 		}
 
 		return
@@ -585,7 +585,7 @@ func (h *HTTPHandler) sendResponseV6(
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response))
 	if err != nil {
 		if debugLevel >= 1 {
-			_, _ = fmt.Fprintf(os.Stdout, "HTTP/IPv6: Failed to serialize response: %v\n", err)
+			logging.Debugf("HTTP/IPv6: Failed to serialize response: %v", err)
 		}
 
 		return
@@ -606,7 +606,7 @@ func (h *HTTPHandler) sendResponseV6(
 	h.stack.Send(respPkt)
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)\n",
+		logging.Debugf("Sent HTTP/IPv6 response: %d bytes from [%s] to [%s] (device: %s)",
 			len(response), ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }

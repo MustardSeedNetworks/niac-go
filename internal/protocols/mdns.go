@@ -1,14 +1,13 @@
 package protocols
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -122,7 +121,7 @@ func (h *MDNSHandler) respond(
 	}
 
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "mDNS: %s answered %d record(s) sn=%d\n",
+		logging.Debugf("mDNS: %s answered %d record(s) sn=%d",
 			device.Name, len(answers), pkt.SerialNumber)
 	}
 }

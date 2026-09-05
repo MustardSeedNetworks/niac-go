@@ -3,7 +3,6 @@ package protocols
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -149,7 +149,7 @@ func (h *HealthCheckHandler) HandleTCPConnect(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Health check TCP SYN on port %d from %s (devices: %v)\n",
+		logging.Debugf("Health check TCP SYN on port %d from %s (devices: %v)",
 			port, ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -171,7 +171,7 @@ func (h *HealthCheckHandler) HandleLDAPRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "LDAP request from %s (devices: %v)\n",
+		logging.Debugf("LDAP request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -196,7 +196,7 @@ func (h *HealthCheckHandler) HandleRTSPRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "RTSP request from %s (devices: %v)\n",
+		logging.Debugf("RTSP request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -218,7 +218,7 @@ func (h *HealthCheckHandler) HandleMySQLRequest(
 	// For initial connection, send MySQL greeting packet
 	if tcpLayer.SYN && !tcpLayer.ACK {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "MySQL connection from %s (devices: %v)\n",
+			logging.Debugf("MySQL connection from %s (devices: %v)",
 				ipLayer.SrcIP, getDeviceNames(devices))
 		}
 
@@ -246,7 +246,7 @@ func (h *HealthCheckHandler) HandlePostgresRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "PostgreSQL request from %s (devices: %v)\n",
+		logging.Debugf("PostgreSQL request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -271,7 +271,7 @@ func (h *HealthCheckHandler) HandleMSSQLRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "MSSQL request from %s (devices: %v)\n",
+		logging.Debugf("MSSQL request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -295,7 +295,7 @@ func (h *HealthCheckHandler) HandleModbusRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Modbus TCP request from %s (devices: %v)\n",
+		logging.Debugf("Modbus TCP request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -319,7 +319,7 @@ func (h *HealthCheckHandler) HandleDICOMRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "DICOM request from %s (devices: %v)\n",
+		logging.Debugf("DICOM request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -343,7 +343,7 @@ func (h *HealthCheckHandler) HandleHL7Request(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "HL7 MLLP request from %s (devices: %v)\n",
+		logging.Debugf("HL7 MLLP request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -367,7 +367,7 @@ func (h *HealthCheckHandler) HandleOPCUARequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "OPC UA request from %s (devices: %v)\n",
+		logging.Debugf("OPC UA request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -391,7 +391,7 @@ func (h *HealthCheckHandler) HandleSMBRequest(
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "SMB request from %s (devices: %v)\n",
+		logging.Debugf("SMB request from %s (devices: %v)",
 			ipLayer.SrcIP, getDeviceNames(devices))
 	}
 
@@ -422,7 +422,7 @@ func (h *HealthCheckHandler) sendSYNACK(
 	identity, ok := h.stack.replyEthernet(reqPkt, device)
 	if !ok {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Cannot send SYN-ACK: no source MAC for %s\n", ipLayer.SrcIP)
+			logging.Debugf("Cannot send SYN-ACK: no source MAC for %s", ipLayer.SrcIP)
 		}
 
 		return
@@ -467,7 +467,7 @@ func (h *HealthCheckHandler) sendSYNACK(
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing SYN-ACK: %v\n", err)
+			logging.Debugf("Error serializing SYN-ACK: %v", err)
 		}
 
 		return
@@ -489,7 +489,7 @@ func (h *HealthCheckHandler) sendSYNACK(
 	h.stack.Send(pkt)
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP SYN-ACK from %s:%d to %s:%d device=%s\n",
+		logging.Debugf("Sent TCP SYN-ACK from %s:%d to %s:%d device=%s",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort, device.Name)
 	}
 }
@@ -556,7 +556,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP response: %v\n", err)
+			logging.Debugf("Error serializing TCP response: %v", err)
 		}
 
 		return

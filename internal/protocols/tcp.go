@@ -3,13 +3,13 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"os"
 	"slices"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // Well-known TCP ports.
@@ -74,7 +74,7 @@ func (h *TCPHandler) parseTCPLayer(pkt *Packet, debugLevel int) (*layers.TCP, bo
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "TCP packet missing TCP layer sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("TCP packet missing TCP layer sn=%d", pkt.SerialNumber)
 		}
 
 		return nil, false
@@ -97,7 +97,7 @@ func (h *TCPHandler) logTCPPacket(
 	}
 
 	flags := buildTCPFlagsString(tcp)
-	_, _ = fmt.Fprintf(os.Stdout, "TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+	logging.Debugf("TCP packet: %s:%d -> %s:%d flags=[%s] seq=%d ack=%d sn=%d",
 		srcIP, tcp.SrcPort, dstIP, tcp.DstPort,
 		flags, tcp.Seq, tcp.Ack, serial)
 }
@@ -305,7 +305,7 @@ func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) [
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for %s\n", srcIP)
+		logging.Debugf("Cannot send RST: no MAC for %s", srcIP)
 	}
 
 	return nil
@@ -350,7 +350,7 @@ func (h *TCPHandler) sendRSTPacket(
 
 	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply); err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP RST: %v\n", err)
+			logging.Debugf("Error serializing TCP RST: %v", err)
 		}
 
 		return
@@ -384,7 +384,7 @@ func (h *TCPHandler) sendSerializedPacket(
 	h.stack.Send(pkt)
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP RST from %s:%d to %s:%d device=%s sn=%d\n",
+		logging.Debugf("Sent TCP RST from %s:%d to %s:%d device=%s sn=%d",
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort,
 			device.Name, serialNum)
 	}
@@ -467,7 +467,7 @@ func (h *TCPHandler) SendTCP(
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d\n",
+		logging.Debugf("Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d",
 			srcIP, srcPort, dstIP, dstPort, len(payload), serialNum)
 	}
 
@@ -501,7 +501,7 @@ func (h *TCPHandler) parseTCPLayerFromPacket(
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet missing TCP layer sn=%d\n", serial)
+			logging.Debugf("TCP/IPv6 packet missing TCP layer sn=%d", serial)
 		}
 
 		return nil, false
@@ -524,7 +524,7 @@ func (h *TCPHandler) logTCPPacketV6(
 	}
 
 	flags := buildTCPFlagsString(tcp)
-	_, _ = fmt.Fprintf(os.Stdout, "TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d\n",
+	logging.Debugf("TCP/IPv6 packet: [%s]:%d -> [%s]:%d flags=[%s] seq=%d ack=%d sn=%d",
 		ipv6.SrcIP, tcp.SrcPort, ipv6.DstIP, tcp.DstPort,
 		flags, tcp.Seq, tcp.Ack, serial)
 }
@@ -582,7 +582,7 @@ func (h *TCPHandler) lookupDestinationMACV6(srcIP net.IP, debugLevel int, vlan i
 	}
 
 	if debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "Cannot send RST: no MAC for [%s]\n", srcIP)
+		logging.Debugf("Cannot send RST: no MAC for [%s]", srcIP)
 	}
 
 	return nil
@@ -626,7 +626,7 @@ func (h *TCPHandler) sendRSTPacketV6(
 
 	if err := gopacket.SerializeLayers(buffer, opts, eth, ipv6Reply, tcpReply); err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Error serializing TCP/IPv6 RST: %v\n", err)
+			logging.Debugf("Error serializing TCP/IPv6 RST: %v", err)
 		}
 
 		return
@@ -658,7 +658,7 @@ func (h *TCPHandler) sendSerializedPacketV6(
 	h.stack.Send(pkt)
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d\n",
+		logging.Debugf("Sent TCP/IPv6 RST from [%s]:%d to [%s]:%d device=%s sn=%d",
 			ipv6Reply.SrcIP, tcpReply.SrcPort, ipv6Reply.DstIP, tcpReply.DstPort,
 			device.Name, serialNum)
 	}

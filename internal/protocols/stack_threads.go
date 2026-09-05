@@ -14,6 +14,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -37,7 +38,7 @@ func (s *Stack) receiveAndQueuePacket(buffer []byte) {
 	data, err := s.capture.ReadPacket(buffer)
 	if err != nil {
 		if s.debugConfig.GetGlobal() >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "Error reading packet: %v\n", err)
+			logging.Debugf("Error reading packet: %v", err)
 		}
 
 		return
@@ -102,7 +103,7 @@ func (s *Stack) queuePacket(pkt *Packet) {
 		}
 		s.notifyObservers("rx", pkt)
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
-			_, _ = fmt.Fprintln(os.Stdout, "Receive queue full, dropping packet")
+			logging.Debugf("Receive queue full, dropping packet")
 		}
 	}
 }
@@ -289,9 +290,8 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 	}
 
 	if s.debugConfig.GetGlobal() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"Decoding packet sn=%d etherType=0x%04x\n",
+		logging.Debugf(
+			"Decoding packet sn=%d etherType=0x%04x",
 			pkt.SerialNumber,
 			etherType,
 		)
@@ -311,9 +311,8 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 		s.fdpHandler.HandlePacket(pkt)
 	default:
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"Unknown EtherType 0x%04x sn=%d\n",
+			logging.Debugf(
+				"Unknown EtherType 0x%04x sn=%d",
 				etherType,
 				pkt.SerialNumber,
 			)
@@ -367,7 +366,7 @@ func (s *Stack) sendPacket(pkt *Packet) {
 	s.notifyObservers("tx", transmitted)
 
 	if s.debugConfig.GetGlobal() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent packet sn=%d length=%d\n", pkt.SerialNumber, pkt.Length)
+		logging.Debugf("Sent packet sn=%d length=%d", pkt.SerialNumber, pkt.Length)
 	}
 
 	// Reschedule if looping
@@ -420,7 +419,7 @@ func (s *Stack) recordSendError(pkt *Packet, err error) {
 		if pkt != nil {
 			serial = pkt.SerialNumber
 		}
-		_, _ = fmt.Fprintf(os.Stdout, "Error sending packet sn=%d: %v\n", serial, err)
+		logging.Debugf("Error sending packet sn=%d: %v", serial, err)
 	}
 	s.stats.mu.Lock()
 	s.stats.Errors++

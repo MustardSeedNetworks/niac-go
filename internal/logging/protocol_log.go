@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 )
 
 // ProtocolLevel is the typed log severity for ProtocolLogf. Using a
@@ -55,10 +54,12 @@ func ProtocolLogf(ctx context.Context, protocol string, level ProtocolLevel, for
 	}
 	msg := fmt.Sprintf(format, args...)
 
-	// Stdout copy: preserves "PROTOCOL: ..." prefix so existing
-	// log-scraping tools (operator's grep / journalctl filters) keep
-	// working without surprise.
-	_, _ = fmt.Fprintf(os.Stdout, "%s: %s\n", protocol, msg)
+	// Human-readable copy through this package's own writer, preserving the
+	// "PROTOCOL: ..." prefix so existing log-scraping tools (operator's grep /
+	// journalctl filters) keep working without surprise. It went straight to
+	// os.Stdout until niac#1805: that bypassed SetOutput, so `niac daemon
+	// --once` could not keep stdout clean for its JSON summary.
+	writeLine(fmt.Sprintf("%s: %s", protocol, msg))
 
 	// SSE-visible copy via slog. Tagged with the protocol so the UI
 	// can group / filter; the message itself stays unprefixed because
