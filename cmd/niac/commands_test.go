@@ -365,11 +365,8 @@ func TestAddNeighborsCommand(t *testing.T) {
 func TestNewRootCommand(t *testing.T) {
 	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
 	services := new(serviceOptions)
-	legacyCalled := false
 
-	root := newRootCommand(info, services, func(_ []string) {
-		legacyCalled = true
-	}, []func(*cobra.Command, *serviceOptions){
+	root := newRootCommand(info, services, []func(*cobra.Command, *serviceOptions){
 		addConfigCommand,
 		addValidateCommand,
 	})
@@ -403,79 +400,6 @@ func TestNewRootCommand(t *testing.T) {
 	}
 	if root.PersistentFlags().Lookup("storage-path") == nil {
 		t.Error("Expected --storage-path persistent flag")
-	}
-
-	_ = legacyCalled
-}
-
-func TestRootCommandForwardsLegacyArgs(t *testing.T) {
-	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
-	services := new(serviceOptions)
-	var gotArgs []string
-
-	root := newRootCommand(info, services, func(args []string) {
-		gotArgs = append([]string(nil), args...)
-	}, nil)
-	root.SetArgs([]string{"lo0", "config.yaml"})
-
-	if err := root.Execute(); err != nil {
-		t.Fatalf("Execute() returned error: %v", err)
-	}
-
-	wantArgs := []string{"lo0", "config.yaml"}
-	if len(gotArgs) != len(wantArgs)+1 {
-		t.Fatalf("legacy runner args length = %d, want %d; args=%v", len(gotArgs), len(wantArgs)+1, gotArgs)
-	}
-	for i, want := range wantArgs {
-		if gotArgs[i+1] != want {
-			t.Fatalf("legacy runner arg %d = %q, want %q; args=%v", i+1, gotArgs[i+1], want, gotArgs)
-		}
-	}
-}
-
-func TestShouldUseLegacyCommand(t *testing.T) {
-	info := versionInfo{version: "1.0.0", commit: "abc123", date: "2024-01-01"}
-	services := new(serviceOptions)
-	root := newRootCommand(info, services, func(_ []string) {}, []func(*cobra.Command, *serviceOptions){
-		func(root *cobra.Command, services *serviceOptions) { addRunCommand(root, services, info) },
-		addValidateCommand,
-	})
-
-	tests := []struct {
-		name string
-		args []string
-		want bool
-	}{
-		{name: "legacy positional", args: []string{"en0", "config.yaml"}, want: true},
-		{name: "legacy dry run", args: []string{"--dry-run", "lo0", "config.yaml"}, want: true},
-		{name: "legacy verbose with value flag", args: []string{"--debug", "2", "en0", "config.yaml"}, want: true},
-		{name: "legacy informational flag", args: []string{"--list-interfaces"}, want: true},
-		{name: "cobra subcommand", args: []string{"run", "en0", "config.yaml"}, want: false},
-		{name: "help", args: []string{"help"}, want: false},
-		{name: "double dash compatibility", args: []string{"--", "--dry-run", "lo0", "config.yaml"}, want: false},
-		{name: "no args", args: nil, want: false},
-
-		// --help and -h reach cobra, which owns the command list. They used to
-		// fall through to legacy mode because cobra registers the help flag
-		// during Execute, so the known-root-flag check ran before it existed
-		// and `niac --help` printed the legacy banner.
-		{name: "long help flag", args: []string{"--help"}, want: false},
-		{name: "short help flag", args: []string{"-h"}, want: false},
-		{name: "long version flag", args: []string{"--version"}, want: false},
-
-		// A single unknown word is not a legacy invocation: legacy needs an
-		// interface and a config file. Sending it to cobra is what turns it
-		// into "unknown command" instead of a usage banner and a wrong code.
-		{name: "unknown subcommand", args: []string{"totallybogus"}, want: false},
-		{name: "unknown subcommand with flag", args: []string{"totallybogus", "--json"}, want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldUseLegacyCommand(tt.args, root); got != tt.want {
-				t.Fatalf("shouldUseLegacyCommand(%v) = %v, want %v", tt.args, got, tt.want)
-			}
-		})
 	}
 }
 

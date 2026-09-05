@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -72,7 +71,6 @@ func populateVersionFromFile(info *versionInfo) {
 func newRootCommand(
 	info versionInfo,
 	services *serviceOptions,
-	legacyRunner func([]string),
 	commandBuilders []func(*cobra.Command, *serviceOptions),
 ) *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -88,16 +86,13 @@ and network discovery without physical hardware.`,
 		Example: `  # Quick start with template
   niac template use router router.yaml
   niac validate router.yaml
-  sudo niac run en0 router.yaml
+  sudo niac daemon --once en0 router.yaml --duration 60s
 
   # Validate configuration
   niac validate config.yaml
 
-  # Run simulation (legacy mode)
-  sudo niac en0 config.yaml
-
-  # Run with profiling enabled (legacy mode)
-  sudo niac -- --profile en0 config.yaml
+  # Serve the web UI and API
+  sudo niac daemon
 
   # List available templates
   niac template list
@@ -105,28 +100,12 @@ and network discovery without physical hardware.`,
   # Generate shell completion
   niac completion bash > /etc/bash_completion.d/niac`,
 		Version: info.version,
-		Args:    cobra.ArbitraryArgs,
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// If no args, show help
-			if len(args) == 0 {
-				return cmd.Help()
-			}
-			// Root accepts arbitrary args so the legacy positional form still
-			// works, which also means a mistyped subcommand lands here. Legacy
-			// needs an interface and a config file, so anything shorter is a
-			// typo rather than a run -- reported as an unknown command instead
-			// of being handed to the legacy runner, which printed usage and
-			// exited as though it had been asked to do something.
-			if countPositionalArgs(args) < legacyPositionalArgs {
-				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
-			}
-			legacyArgs := append([]string{os.Args[0]}, args...)
-			legacyRunner(legacyArgs)
-
-			return nil
+		// Root once accepted arbitrary args and unknown flags so the legacy
+		// positional runtime could hide behind them. With that runtime gone,
+		// a stray word or flag is a typo, and cobra reports it as one.
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -160,134 +139,45 @@ func executeRootCommand(cmd *cobra.Command) {
 
 	fmt.Fprintln(os.Stderr, err)
 
-	if coded, ok := errors.AsType[codedError](err); ok {
-		os.Exit(coded.code)
+	if code := exitCodeForError(err); code != 0 {
+		os.Exit(code)
 	}
-
-	// A mistyped command is a usage error, not a run that failed: the
-	// distinction is what lets a script tell "niac does not have that
-	// subcommand" from "the simulation stopped".
-	if isUnknownCommandError(err) {
-		os.Exit(exitUsage)
-	}
-
-	os.Exit(1)
 }
 
 // exitUsage is the conventional shell exit status for a usage error.
 const exitUsage = 2
 
-func isUnknownCommandError(err error) bool {
-	return strings.HasPrefix(err.Error(), "unknown command")
+// exitCodeForError maps a command error to a process exit status. A mistyped
+// command or flag is a usage error, not a run that failed: the distinction is
+// what lets a script tell "niac does not have that subcommand" from "the
+// simulation stopped".
+func exitCodeForError(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	if coded, ok := errors.AsType[codedError](err); ok {
+		return coded.code
+	}
+
+	if isUsageError(err) {
+		return exitUsage
+	}
+
+	return 1
 }
 
-func shouldUseLegacyCommand(args []string, root *cobra.Command) bool {
-	// cobra registers --help, -h and --version lazily, inside Execute. Without
-	// this the known-root-flag check below runs while they do not exist yet,
-	// so `niac --help` read as an unknown command and printed the legacy usage
-	// banner instead of the command list.
-	root.InitDefaultHelpFlag()
-	root.InitDefaultVersionFlag()
-
-	firstArg := firstCommandArg(args, root)
-	if firstArg == "" || firstArg == "--" {
-		return false
-	}
-
-	if firstArg == "help" || firstArg == cobra.ShellCompRequestCmd || firstArg == cobra.ShellCompNoDescRequestCmd {
-		return false
-	}
-
-	if slices.ContainsFunc(root.Commands(), func(cmd *cobra.Command) bool {
-		return cmd.Name() == firstArg || cmd.HasAlias(firstArg)
-	}) {
-		return false
-	}
-
-	// An unrecognised *flag* belongs to legacy, which owns that vocabulary
-	// (--list-interfaces, --dry-run and the rest).
-	if strings.HasPrefix(firstArg, "-") {
-		return true
-	}
-
-	// An unrecognised *word* is a mistyped subcommand unless it can be a
-	// legacy invocation, which needs an interface and a config file. Sending
-	// the single-word case to cobra is what makes `niac bogus` report an
-	// unknown command instead of printing usage and exiting as if it had run.
-	return countPositionalArgs(args) >= legacyPositionalArgs
-}
-
-// legacyPositionalArgs is what the legacy form takes: an interface and a
-// config file.
-const legacyPositionalArgs = 2
-
-func countPositionalArgs(args []string) int {
-	count := 0
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") {
-			count++
+// isUsageError recognises cobra's own "you typed something niac does not have"
+// errors. The flag cases matter because the legacy runtime used to swallow
+// unknown flags (--list-interfaces and the rest of its vocabulary); now that it
+// is gone they reach cobra, and they are usage errors like any other.
+func isUsageError(err error) bool {
+	message := err.Error()
+	for _, prefix := range []string{"unknown command", "unknown flag", "unknown shorthand flag"} {
+		if strings.HasPrefix(message, prefix) {
+			return true
 		}
-	}
-
-	return count
-}
-
-func firstCommandArg(args []string, root *cobra.Command) string {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if arg == "--" {
-			return arg
-		}
-		if !strings.HasPrefix(arg, "-") || arg == "-" {
-			return arg
-		}
-		if !isKnownRootFlag(arg, root) {
-			return arg
-		}
-		if shouldSkipRootFlagValue(arg, root) && i+1 < len(args) {
-			i++
-		}
-	}
-
-	return ""
-}
-
-func isKnownRootFlag(arg string, root *cobra.Command) bool {
-	name := strings.TrimLeft(arg, "-")
-	if name == "" {
-		return false
-	}
-	if flagName, _, found := strings.Cut(name, "="); found {
-		name = flagName
-	}
-
-	if root.PersistentFlags().Lookup(name) != nil || root.Flags().Lookup(name) != nil {
-		return true
-	}
-
-	// A single character is a shorthand (-h), which Lookup does not resolve --
-	// it matches on the flag's long name only.
-	if len(name) == 1 {
-		return root.PersistentFlags().ShorthandLookup(name) != nil ||
-			root.Flags().ShorthandLookup(name) != nil
 	}
 
 	return false
-}
-
-func shouldSkipRootFlagValue(arg string, root *cobra.Command) bool {
-	name := strings.TrimLeft(arg, "-")
-	if name == "" || strings.Contains(name, "=") {
-		return false
-	}
-
-	flag := root.PersistentFlags().Lookup(name)
-	if flag == nil {
-		flag = root.Flags().Lookup(name)
-	}
-	if flag == nil {
-		return false
-	}
-
-	return flag.Value.Type() != "bool"
 }

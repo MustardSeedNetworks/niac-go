@@ -17,9 +17,7 @@ func newVersionTestRoot(t *testing.T) (*cobra.Command, *bytes.Buffer) {
 		date:        "2026-09-03T00:00:00Z",
 		uiBuildHash: "deadbeef",
 	}
-	root := newRootCommand(info, new(serviceOptions), func(_ []string) {
-		t.Fatal("legacy runner must not run for a cobra subcommand")
-	}, []func(*cobra.Command, *serviceOptions){
+	root := newRootCommand(info, new(serviceOptions), []func(*cobra.Command, *serviceOptions){
 		func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },
 	})
 	out := new(bytes.Buffer)
@@ -76,27 +74,7 @@ func TestRootRejectsAMistypedSubcommand(t *testing.T) {
 	if err == nil {
 		t.Fatal("Execute() = nil, want an unknown-command error")
 	}
-	if !isUnknownCommandError(err) {
-		t.Fatalf("error = %v, want one isUnknownCommandError recognises (it selects exit %d)", err, exitUsage)
-	}
-}
-
-// The legacy positional form still reaches the legacy runner: an interface and
-// a config file is a run, not a typo.
-func TestRootStillRoutesTheLegacyPositionalForm(t *testing.T) {
-	info := versionInfo{version: "v1.2.3"}
-	ran := false
-	root := newRootCommand(info, new(serviceOptions), func(_ []string) { ran = true },
-		[]func(*cobra.Command, *serviceOptions){
-			func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },
-		})
-	root.SetOut(new(bytes.Buffer))
-	root.SetArgs([]string{"lo0", "config.yaml"})
-
-	if err := root.Execute(); err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-	if !ran {
-		t.Fatal("legacy runner was not called for the positional form")
+	if got := exitCodeForError(err); got != exitUsage {
+		t.Fatalf("error = %v selects exit %d, want %d", err, got, exitUsage)
 	}
 }

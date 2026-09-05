@@ -30,6 +30,7 @@ func TestFailedSimulationReplacementPreservesActiveRun(t *testing.T) {
 		*config.Config,
 		*fabric.Topology,
 		bool,
+		int,
 	) (simulationResources, error) {
 		return simulationResources{cancel: func() { cleanupCalls++ }}, errors.New("injected startup failure")
 	}

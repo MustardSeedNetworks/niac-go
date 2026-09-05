@@ -219,7 +219,7 @@ table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
 \`topology\`/\`service\`/\`man\`/\`completion\` for housekeeping.`,
     items: [
       'cmd-daemon',
-      'cmd-run',
+      'cmd-daemon-once',
       'cmd-init',
       'cmd-generate',
       'cmd-validate',
@@ -321,7 +321,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Minimal router persona',
-        command: 'niac template use router router.yaml && sudo niac run en0 router.yaml',
+        command: 'niac template use router router.yaml && sudo niac daemon --once en0 router.yaml',
       },
       {
         desc: 'Validate a router config before running it',
@@ -381,7 +381,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Spin up a single access switch',
-        command: 'niac template use switch switch.yaml && sudo niac run en0 switch.yaml',
+        command: 'niac template use switch switch.yaml && sudo niac daemon --once en0 switch.yaml',
       },
       {
         desc: 'Make this switch the STP root',
@@ -482,7 +482,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Web server with custom homepage',
-        command: 'niac template use server server.yaml && sudo niac run en0 server.yaml',
+        command: 'niac template use server server.yaml && sudo niac daemon --once en0 server.yaml',
       },
       {
         desc: 'Server with a JSON API',
@@ -573,7 +573,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Cisco Aironet 9120 AP',
-        command: 'niac template use ap ap.yaml && sudo niac run en0 ap.yaml',
+        command: 'niac template use ap ap.yaml && sudo niac daemon --once en0 ap.yaml',
       },
       {
         desc: 'AP with SNMP walk reflecting real radio counters',
@@ -615,7 +615,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Temperature sensor with /data endpoint',
-        command: 'niac template use iot sensor.yaml && sudo niac run en0 sensor.yaml',
+        command: 'niac template use iot sensor.yaml && sudo niac daemon --once en0 sensor.yaml',
       },
       {
         desc: 'Fifty bare endpoints for scanner stress test',
@@ -723,7 +723,7 @@ const protocolItems: HelpItem[] = [
     examples: [
       {
         desc: 'Verify ARP works from another host',
-        command: 'arp -n 10.0.0.1   # after sudo niac run en0 router.yaml',
+        command: 'arp -n 10.0.0.1   # after sudo niac daemon --once en0 router.yaml',
         output: '10.0.0.1   ether   00:1A:2B:3C:4D:01   C   en0',
       },
       {
@@ -1927,7 +1927,7 @@ const commandItems: HelpItem[] = [
     laymanDesc:
       'The "always on" mode. Start it once, then drive everything (start/stop simulations, edit configs, inject errors) from a browser.',
     whenToUse: 'Lab desktops, persistent test rigs, anything you want to leave running.',
-    whenNotToUse: 'One-shot scripted scenarios — use `niac run`.',
+    whenNotToUse: 'One-shot scripted scenarios — use `niac daemon --once`.',
     parameters: [
       {
         name: 'HTTPS listen',
@@ -1977,23 +1977,24 @@ const commandItems: HelpItem[] = [
       'Set NIAC_API_TOKEN before using a non-loopback listener; NIAC refuses an unauthenticated external bind.',
       'Use `niac dump` to grab a pcap from a running daemon without restarting.',
     ],
-    seeAlso: ['cmd-run', 'cmd-monitor', 'cmd-status'],
+    seeAlso: ['cmd-daemon-once', 'cmd-monitor', 'cmd-status'],
   },
   {
-    id: 'cmd-run',
-    name: 'niac run',
+    id: 'cmd-daemon-once',
+    name: 'niac daemon --once',
     standard: 'niac CLI',
     category: 'commands',
     summary: 'Run a single simulation from a YAML config.',
     techDesc:
-      'Binds to `<interface>`, loads `<config-file>`, starts all configured device handlers, and runs until Ctrl-C. No web UI — use the daemon for that. Equivalent to passing the args positionally in legacy mode.',
-    laymanDesc: 'One config, one interface, until you stop it. Like a foreground script.',
+      'Binds to `<interface>`, loads `<config-file>`, starts one session through the same registry, admission and preflight checks the long-lived daemon uses, and runs for `--duration` or until Ctrl-C. No listener, so no web UI. Exits with a JSON summary on stdout.',
+    laymanDesc:
+      'One config, one interface, until you stop it or the timer runs out. Like a foreground script.',
     whenToUse: 'CI jobs, quick "does this config even work" checks.',
     whenNotToUse: 'You want the web UI — use `niac daemon`.',
     parameters: [
       {
         name: 'interface',
-        flag: '<positional 1>',
+        flag: '<positional 1, after --once>',
         type: 'string',
         defaultValue: '',
         required: true,
@@ -2003,7 +2004,7 @@ const commandItems: HelpItem[] = [
       },
       {
         name: 'config-file',
-        flag: '<positional 2>',
+        flag: '<positional 2, after --once>',
         type: 'path',
         defaultValue: '',
         required: true,
@@ -2012,14 +2013,25 @@ const commandItems: HelpItem[] = [
         example: 'examples/complete-kitchen-sink.yaml',
       },
       {
-        name: 'dry-run',
-        flag: '--dry-run',
-        type: 'bool',
-        defaultValue: 'false',
+        name: 'duration',
+        flag: '--duration',
+        type: 'duration',
+        defaultValue: '0',
         required: false,
-        techDesc: 'Validate the config and exit without binding sockets.',
-        laymanDesc: 'Check the file without actually starting the sim.',
-        example: 'niac --dry-run lo0 my.yaml',
+        techDesc: 'How long to run before stopping. Zero runs until interrupted.',
+        laymanDesc: 'Stop by itself after this long.',
+        example: '--duration 60s',
+      },
+      {
+        name: 'debug',
+        flag: '--debug, -d',
+        type: 'int (0-3)',
+        defaultValue: '1',
+        required: false,
+        techDesc:
+          'Log verbosity for the run: 0 quiet, 1 normal, 2 verbose, 3 trace. A run with no listener cannot be changed later through PUT /api/v1/debug/level, so this is its only control.',
+        laymanDesc: 'How chatty the run is.',
+        example: '-d 3',
       },
     ],
     configFields: [],
@@ -2027,11 +2039,11 @@ const commandItems: HelpItem[] = [
     examples: [
       {
         desc: 'Run a router config on en0',
-        command: 'sudo niac run en0 examples/vendors/cisco-network.yaml',
+        command: 'sudo niac daemon --once en0 examples/vendors/cisco-network.yaml',
       },
       {
         desc: 'Validate without binding',
-        command: 'niac run --dry-run lo0 my.yaml',
+        command: 'niac validate my.yaml',
       },
     ],
     tips: [
@@ -2138,7 +2150,7 @@ const commandItems: HelpItem[] = [
       },
     ],
     tips: ['Pair with `niac config diff` to catch regressions when editing a config.'],
-    seeAlso: ['cmd-run', 'cmd-init'],
+    seeAlso: ['cmd-daemon-once', 'cmd-init'],
   },
   {
     id: 'cmd-template',
@@ -3330,9 +3342,9 @@ export const glossary: GlossaryEntry[] = [
     category: 'niac',
   },
   {
-    term: 'Run mode',
+    term: 'Single-shot mode',
     definition:
-      'NIAC running one config to exit, foreground. Started with `niac run <iface> <config>`.',
+      'NIAC running one config to exit, foreground. Started with `niac daemon --once <iface> <config>`.',
     category: 'niac',
   },
   {
@@ -3438,9 +3450,9 @@ export const faq: FAQEntry[] = [
   },
   {
     id: 'faq-daemon-vs-run',
-    question: 'What’s the difference between daemon and run modes?',
+    question: 'What’s the difference between daemon and single-shot mode?',
     answer:
-      '`niac run <iface> <config>` is a one-shot foreground process: it starts the simulation, runs until Ctrl-C, then exits. No web UI. Good for CI. `niac daemon` is a long-lived background process with the embedded web UI. Configs are loaded / unloaded via the REST API or web UI; the daemon outlives any single simulation. Good for lab desktops or persistent test rigs.',
+      '`niac daemon --once <iface> <config>` is a one-shot foreground process: it starts the simulation, runs for `--duration` or until Ctrl-C, then exits with a JSON summary. No web UI. Good for CI. `niac daemon` is a long-lived background process with the embedded web UI. Configs are loaded / unloaded via the REST API or web UI; the daemon outlives any single simulation. Good for lab desktops or persistent test rigs.',
     tags: ['daemon', 'run', 'modes', 'webui'],
   },
   {

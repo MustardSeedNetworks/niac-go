@@ -162,24 +162,3 @@ func TestAddConfigCommandSubcommands(t *testing.T) {
 
 // TestPrintDeviceListEmptyConfig is skipped because config.Load rejects empty devices
 // and calls os.Exit(1) which cannot be tested in unit tests.
-
-func TestPrintDeviceListMinimalDevices(t *testing.T) {
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "minimal.yaml")
-	configContent := `devices:
-  - name: "dev1"
-    mac: "00:11:22:33:44:55"
-    ips:
-      - "10.0.0.1"
-`
-	if err := os.WriteFile(configFile, []byte(configContent), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("printDeviceList panicked: %v", r)
-		}
-	}()
-	printDeviceList(configFile)
-}

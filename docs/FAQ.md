@@ -41,7 +41,7 @@ completion and structural validation. Runtime validation remains authoritative.
 For a headless run:
 
 ```bash
-sudo niac run eth0 lab.yaml
+sudo niac daemon --once eth0 lab.yaml
 ```
 
 For the HTTPS API and web UI:

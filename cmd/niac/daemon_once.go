@@ -51,9 +51,10 @@ type OnceSummary struct {
 // runDaemonOnce starts one session in the foreground, runs it for the
 // requested duration or until interrupted, then stops and reports.
 func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) error {
-	// stdout carries the JSON summary and nothing else, so
-	// `niac daemon --once ... | jq` works. The daemon's own progress lines are
-	// diagnostics and belong on stderr.
+	// The daemon's own progress lines are diagnostics and belong on stderr, so
+	// stdout can carry the JSON summary. It is not yet clean enough to pipe:
+	// internal/protocols writes 162 diagnostics straight to os.Stdout, bypassing
+	// this (niac#1805).
 	logging.SetOutput(os.Stderr)
 	defer logging.SetOutput(nil)
 
@@ -62,9 +63,11 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		return withExitCode(onceExitConfig, err)
 	}
 
-	configData, err := os.ReadFile(configPath)
+	// A scenario or template name resolves like a path, the convenience the
+	// deleted `run` command carried.
+	source, err := resolveConfigSource(configPath)
 	if err != nil {
-		return withExitCode(onceExitConfig, fmt.Errorf("reading %s: %w", configPath, err))
+		return withExitCode(onceExitConfig, err)
 	}
 
 	policies, err := parseAttachmentPolicies(options.attachmentPolicies)
@@ -83,6 +86,7 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		ReleaseTrain:       info.releaseTrain,
 		UIBuildHash:        info.uiBuildHash,
 		AttachmentPolicies: policies,
+		DebugLevel:         options.debugLevel,
 	})
 	if err != nil {
 		return withExitCode(onceExitRuntime, fmt.Errorf("creating the runtime: %w", err))
@@ -96,8 +100,8 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 	request := api.SimulationRequest{
 		SessionID:      options.onceSessionID,
 		Interface:      iface,
-		ConfigData:     string(configData),
-		ConfigPath:     configPath,
+		ConfigData:     string(source.data),
+		ConfigPath:     source.path,
 		Attachment:     options.onceAttachment,
 		AttachmentMode: fabric.AttachmentMode(options.onceAttachmentMode),
 		AccessVLAN:     uint16(options.onceAccessVLAN), //nolint:gosec // range-checked below
@@ -130,7 +134,7 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		SessionID:       status.SessionID,
 		StatsAvailable:  haveStats,
 		Interface:       iface,
-		ConfigPath:      configPath,
+		ConfigPath:      source.label,
 		DeviceCount:     status.DeviceCount,
 		DurationSeconds: time.Since(started).Seconds(),
 		PacketsSent:     stats.PacketsSent,

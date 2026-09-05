@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -125,6 +126,10 @@ func runValidate(args []string, options *validateOptions) error {
 
 	return nil
 }
+
+// errConfigInvalid marks a validation run whose findings have already been
+// printed, so the caller adds an exit code rather than another message.
+var errConfigInvalid = errors.New("configuration validation failed")
 
 // addFabricFindings folds the fabric compiler's findings into the validation
 // result, so `niac validate` refuses exactly what the daemon refuses to start.

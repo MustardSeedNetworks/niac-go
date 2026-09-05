@@ -54,7 +54,6 @@ Complete command-line reference for NIAC-Go.
 - [`niac monitor`](#niac-monitor) — stream real-time statistics from a running NIAC simulation
 - [`niac neighbors`](#niac-neighbors) — display neighbor discovery table from LLDP/CDP protocols
 - [`niac neighbors watch`](#niac-neighbors-watch) — watch neighbor table for live updates
-- [`niac run`](#niac-run) — run network simulation
 - [`niac sanitize`](#niac-sanitize) — sanitize SNMP walk files with NIAC branding
 - [`niac status`](#niac-status) — query the status of a running NIAC simulation
 - [`niac template`](#niac-template) — manage configuration templates
@@ -565,6 +564,7 @@ Flags:
       --attachment-mode string          With --once, the physical binding mode: direct, access or trunk (default "direct")
       --attachment-policy stringArray   Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...
       --cert-dir string                 Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)
+  -d, --debug int                       Simulation log verbosity: 0 quiet, 1 normal, 2 verbose, 3 trace (default 1)
       --duration duration               With --once, how long to run before stopping (0 runs until interrupted)
       --listen string                   Address to listen on for the HTTPS API and web UI (default: 127.0.0.1:8445)
       --once                            Run one session in the foreground and exit with a JSON summary
@@ -1266,40 +1266,6 @@ niac neighbors watch --device router-1
 niac neighbors watch --protocol lldp
 ```
 
-### `niac run`
-
-Run network simulation.
-
-```text
-niac run <interface> <config-file> [flags]
-```
-
-```text
-Run a NIAC network simulation in the foreground.
-
-Use "niac daemon" for the HTTPS web UI and API.
-```
-
-Flags:
-
-```text
-  -d, --debug int   Debug level (0-3) (default 1)
-  -n, --dry-run     Validate config without starting simulation
-      --no-color    Disable colored output
-  -q, --quiet       Quiet mode (equivalent to -d 0)
-  -v, --verbose     Verbose output (equivalent to -d 3)
-```
-
-Examples:
-
-```bash
-# Headless simulation
-sudo niac run en0 config.yaml
-
-# Validate config without running
-niac run en0 config.yaml --dry-run
-```
-
 ### `niac sanitize`
 
 Sanitize SNMP walk files with NIAC branding.
@@ -1529,7 +1495,7 @@ niac template use <template-name> <output-file>
 ```text
 Copy a named template's body into a new YAML file at the given
 output path. The output file becomes the starting point you edit and run
-with 'niac run'; the template itself is unchanged.
+with 'niac daemon --once'; the template itself is unchanged.
 ```
 
 Examples:
@@ -1734,64 +1700,48 @@ niac version --json
 reference above, which is produced on Linux and macOS. It manages the Windows
 service: `niac service install`, `uninstall`, `start`, `stop` and `status`.
 
-## Direct Invocation Mode
+## Single-shot foreground runs
 
-The original positional command form remains available in the current pre-1.0
-binary. It is not a compatibility guarantee for future pre-1.0 releases.
+`niac daemon --once` runs one session in the foreground and exits with a JSON
+summary. It is the only foreground runtime: the positional form
+(`niac en0 config.yaml`) and `niac run` were removed because each built its own
+protocol stack, bypassing the session registry, admission budgets and preflight
+that `daemon` enforces.
 
 ```bash
-niac <interface> <config-file> [flags]
+niac daemon --once <interface> <config-file-or-scenario> [flags]
 ```
 
-### Legacy Flags
+A config argument that is not a file resolves against the built-in templates
+and then the installed content library, so a scenario name works in place of a
+path.
 
-#### Core Flags
+### Flags
 
-- `--debug <level>` - Set debug level (0-3)
-- `--verbose, -v` - Verbose output
-- `--quiet, -q` - Quiet mode (errors only)
-- `--dry-run` - Validate configuration and exit
+- `--duration <d>` - How long to run before stopping (0 runs until interrupted)
+- `--debug, -d <level>` - Log verbosity: 0 quiet, 1 normal, 2 verbose, 3 trace
+- `--session-id <id>` - Session identifier to run under
+- `--attachment <name>` - Logical attachment to bind
+- `--attachment-mode <mode>` - Physical binding mode: direct, access or trunk
+- `--access-vlan <id>` - VLAN for access or trunk mode
 
-#### Information Flags
+Exit codes: 0 the run completed, 1 the run failed, 2 the configuration was
+refused.
 
-- `--version` - Show version
-- `--list-interfaces` - List network interfaces
-- `--list-devices` - List devices in config
-
-#### Output Flags
-
-- `--no-color` - Disable color output
-- `--log-file <file>` - Write logs to file
-- `--stats-interval <seconds>` - Statistics interval
-
-#### Performance Profiling Flags
-
-- `--profile, -p` - Enable pprof performance profiling
-- `--profile-port <port>` - Port for pprof HTTP server (default: 6060)
-
-#### Per-Protocol Debug Flags
-
-- `--debug-arp` - Debug ARP protocol
-- `--debug-icmp` - Debug ICMP protocol
-- `--debug-lldp` - Debug LLDP protocol
-- `--debug-cdp` - Debug CDP protocol
-- `--debug-snmp` - Debug SNMP protocol
-- And 14 more protocol-specific flags...
-
-### Legacy Examples
+### Examples
 
 ```bash
-# Basic simulation
-niac en0 config.yaml
+# Basic simulation, stopped with Ctrl-C
+sudo niac daemon --once en0 config.yaml
 
-# With debug output
-niac en0 config.yaml --debug 2
+# Bounded run with trace logging
+sudo niac daemon --once -d 3 --duration 60s en0 config.yaml
 
-# Dry run validation
-niac en0 config.yaml --dry-run --verbose
+# A named scenario instead of a path
+sudo niac daemon --once en0 basic-network
 
-# Per-protocol debugging
-niac en0 config.yaml --debug-lldp --debug-cdp
+# Validate without running
+niac validate config.yaml
 ```
 
 ## Examples
@@ -1808,7 +1758,7 @@ niac template use router my-router.yaml
 niac validate my-router.yaml
 
 # Run the simulation
-sudo niac run en0 my-router.yaml
+sudo niac daemon --once en0 my-router.yaml
 ```
 
 #### 2. CI/CD Pipeline Integration
@@ -1844,10 +1794,10 @@ niac config edit lab-network.yaml
 niac validate lab-network.yaml --verbose
 
 # 4. Dry run to check interface
-niac --dry-run en0 lab-network.yaml
+niac validate lab-network.yaml
 
 # 5. Run simulation
-sudo niac run en0 lab-network.yaml
+sudo niac daemon --once en0 lab-network.yaml
 ```
 
 #### 4. Debugging Network Issues

@@ -284,7 +284,7 @@ devices:
 sudo tcpdump -i en0 ether dst 01:80:c2:00:00:00
 
 # Run with STP debug
-sudo niac --debug-stp 3 en0 config.yaml
+sudo niac daemon --once -d 3 en0 config.yaml
 ```
 
 #### Best Practices
@@ -1175,7 +1175,7 @@ See: `examples/combinations/wireless-controller.yaml`
 1. **Enable debug flags** for specific protocols:
 
    ```bash
-   sudo niac --debug-lldp 3 --debug-snmp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    ```
 
 2. **Use tcpdump** to monitor protocol traffic:

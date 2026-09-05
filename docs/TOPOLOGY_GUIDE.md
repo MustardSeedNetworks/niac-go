@@ -258,7 +258,7 @@ niac validate topology.yaml
 # Fix any validation errors before deployment
 
 # 3. Deploy to test environment first
-sudo niac en0 topology.yaml
+sudo niac daemon --once en0 topology.yaml
 
 # 4. Verify neighbor relationships
 lldpcli show neighbors

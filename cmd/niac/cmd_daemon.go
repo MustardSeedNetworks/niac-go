@@ -42,6 +42,7 @@ type daemonOptions struct {
 	attachmentPolicies  []string
 	certDir             string
 	apiToken            string
+	debugLevel          int
 	// Wave 2 (SIGHUP rotation + scoped tokens) options. tokenFile is the
 	// path to a 0o600 JSON file containing one or more {value, scope}
 	// pairs; preferred over apiToken / NIAC_API_TOKEN. SIGHUP re-reads
@@ -117,6 +118,14 @@ NIAC_API_TOKEN or --api-token.`,
 	}
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
+	// A long-lived daemon can change verbosity later through
+	// PUT /api/v1/debug/level; a --once run has no listener, so this is the
+	// only control it has. One global level, matching that endpoint's
+	// contract -- the deleted CLI's per-protocol --debug-lldp and friends had
+	// no counterpart in the handlers, which all read the global level.
+	daemonCmd.Flags().
+		IntVarP(&options.debugLevel, "debug", "d", daemon.DefaultDebugLevel,
+			"Simulation log verbosity: 0 quiet, 1 normal, 2 verbose, 3 trace")
 	addDaemonOnceFlags(daemonCmd, options)
 	daemonCmd.Flags().
 		IntVar(&options.storageKeep, "storage-keep", storage.DefaultRunRetention,
@@ -391,6 +400,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		WebhookAllowedHosts: options.webhookAllowedHosts,
 		CertDir:             certDir,
 		AttachmentPolicies:  attachmentPolicies,
+		DebugLevel:          options.debugLevel,
 	}
 
 	// Sanity-check the listen address up front so we fail with the helpful
@@ -507,4 +517,20 @@ func isNonLoopbackListen(addr string) (bool, error) {
 	// fast checks above, assume non-loopback so the user sees the
 	// token-required hint.
 	return true, nil
+}
+
+// resolveAPIToken returns the API token, preferring environment variable over CLI flag.
+// SECURITY FIX #101: Prefer NIAC_API_TOKEN environment variable over CLI flag.
+func resolveAPIToken(cliToken string) string {
+	if envToken := os.Getenv("NIAC_API_TOKEN"); envToken != "" {
+		return envToken
+	}
+
+	// Warn if using deprecated CLI flag
+	if cliToken != "" {
+		fmt.Fprintln(os.Stderr, "WARNING: --api-token flag is deprecated and exposes token in process list")
+		fmt.Fprintln(os.Stderr, "    Please use NIAC_API_TOKEN environment variable instead")
+	}
+
+	return cliToken
 }

@@ -73,11 +73,9 @@ the two modes have different things worth reloading without a restart:
   `NIAC_API_TOKEN`) and swaps in the new tokens without dropping connections
   or restarting the simulation. See `cmd/niac/cmd_daemon.go`'s `handleSIGHUP`
   and `internal/daemon.Daemon.ReloadTokens`.
-- **Standalone mode** (`niac run <interface> <config-file>`, and the legacy
-  bare invocation without a subcommand) —
-  `SIGHUP` reloads the YAML config file from disk, validates it, and applies
-  it to the running simulation (`cmd/niac/main.go`'s `buildReloadFunc` /
-  `handleReload`). There is no API token to rotate in this mode.
+- **Single-shot mode** (`niac daemon --once <interface> <config-file>`) — the
+  same runtime with no listener, so there is nothing to rotate; it runs for
+  `--duration` or until interrupted, then prints a JSON summary.
 
 `SIGTERM`/`SIGINT` mean the same thing in both modes: stop the simulation and
 exit cleanly.
