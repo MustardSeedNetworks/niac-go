@@ -44,6 +44,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.95.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.0...v0.95.1) (2026-09-05)
 
 
+> Backfilled by hand. These commits were in the tag but missing from this
+> entry: the release PR auto-merged before release-please regenerated it
+> (niac#1817). The version bump is left as released.
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** delete the legacy runtime and `niac run` (P1c-3) ([#1806](https://github.com/MustardSeedNetworks/niac-go/issues/1806)). `daemon --once` is the one foreground runtime. This should have bumped a minor under `bump-minor-pre-major`; it shipped as a patch and is left as released.
+
+### Bug Fixes
+
+* **protocols:** route diagnostics through internal/logging, not os.Stdout ([#1810](https://github.com/MustardSeedNetworks/niac-go/issues/1810)) ([b5b421a](https://github.com/MustardSeedNetworks/niac-go/commit/b5b421ad6b20ed6b5916c751612fcbdf2093e510))
+
+
+### Code Refactoring
+
+* **cli:** delete the legacy runtime and `niac run` (P1c-3) ([#1806](https://github.com/MustardSeedNetworks/niac-go/issues/1806)) ([a0703ee](https://github.com/MustardSeedNetworks/niac-go/commit/a0703eeb37cbff88206975cf08dde8688cac7f8f))
+
+
 ### Continuous Integration
 
 * restore the release-PR auto-merge step, with a repository for gh ([#1804](https://github.com/MustardSeedNetworks/niac-go/issues/1804)) ([3c353c8](https://github.com/MustardSeedNetworks/niac-go/commit/3c353c89104688d281b2354570d806d7e32fdefe))
@@ -72,8 +91,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.94.92](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.91...v0.94.92) (2026-09-04)
 
 
+> Backfilled by hand. These commits were in the tag but missing from this
+> entry: the release PR auto-merged before release-please regenerated it
+> (niac#1817).
+
+
 ### Features
 
+* **cli:** add daemon --once, a foreground single-shot runtime ([#1764](https://github.com/MustardSeedNetworks/niac-go/issues/1764)) ([849dc41](https://github.com/MustardSeedNetworks/niac-go/commit/849dc411)) — backfilled
 * **content:** let the content bundle upgrade (P1c-5) ([#1775](https://github.com/MustardSeedNetworks/niac-go/issues/1775)) ([17f5b96](https://github.com/MustardSeedNetworks/niac-go/commit/17f5b96b8c023bdd77f4d68a51e79c4e8fdac56b))
 
 
@@ -114,6 +139,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **deps:** lock file maintenance ([#1792](https://github.com/MustardSeedNetworks/niac-go/issues/1792)) ([18918f6](https://github.com/MustardSeedNetworks/niac-go/commit/18918f6f621fc1e141f1b532da54327e7db7f63b))
 
 ## [0.94.91](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.90...v0.94.91) (2026-09-04)
+
+
+> Backfilled by hand. These commits were in the tag but missing from this
+> entry: the release PR auto-merged before release-please regenerated it
+> (niac#1817).
+
+
+### Miscellaneous
+
+* assert the port fallback stepped, not which port it landed on ([#1766](https://github.com/MustardSeedNetworks/niac-go/issues/1766)) ([0902539](https://github.com/MustardSeedNetworks/niac-go/commit/0902539d)) — backfilled
+* **deps:** update dependency @biomejs/biome to v2.5.11 ([#1720](https://github.com/MustardSeedNetworks/niac-go/issues/1720)) ([ef2e8e5](https://github.com/MustardSeedNetworks/niac-go/commit/ef2e8e5b)) — backfilled
 
 
 ### Features
