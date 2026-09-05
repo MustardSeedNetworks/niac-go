@@ -15,8 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -85,38 +83,11 @@ func main() {
 	info := readVersionInfo()
 	services := new(serviceOptions)
 
-	builders := []func(*cobra.Command, *serviceOptions){
-		func(root *cobra.Command, services *serviceOptions) { addRunCommand(root, services, info) },
-		func(root *cobra.Command, _ *serviceOptions) { addCompletionCommand(root) },
-		addAnalyzeCommand,
-		addAnalyzePcapCommand,
-		addConfigCommand,
-		addContentCommand,
-		func(root *cobra.Command, _ *serviceOptions) { addDaemonCommand(root, info) },
-		addDumpCommand,
-		addInitCommand,
-		func(root *cobra.Command, _ *serviceOptions) { addInstallCACommand(root) },
-		addListCommand,
-		addInteractiveCommand,
-		addLogsCommand,
-		func(root *cobra.Command, _ *serviceOptions) { addManCommand(root, info) },
-		addMibZipCommand,
-		addMonitorCommand,
-		addNeighborsCommand,
-		addSanitizeCommand,
-		addServiceCommand,
-		addStatusCommand,
-		addTemplateCommand,
-		addTopologyCommand,
-		addValidateCommand,
-		func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },
-	}
-
 	rootCmd := newRootCommand(
 		info,
 		services,
 		func(args []string) { runLegacyMode(args, info, services) },
-		builders,
+		commandBuilders(info),
 	)
 	if shouldUseLegacyCommand(os.Args[1:], rootCmd) {
 		runLegacyMode(os.Args, info, services)

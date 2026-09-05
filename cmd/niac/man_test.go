@@ -16,7 +16,9 @@ func TestAddManCommand(t *testing.T) {
 		t.Fatal("Expected man command to be registered")
 	}
 
-	if !cmd.Hidden {
-		t.Error("Expected man command to be hidden")
+	// `man` is user-facing: the README and the CLI reference both document it,
+	// and the generated reference only covers commands that are not hidden.
+	if cmd.Hidden {
+		t.Error("Expected man command to be visible in help")
 	}
 }
