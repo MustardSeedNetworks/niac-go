@@ -2038,7 +2038,7 @@ const commandItems: HelpItem[] = [
       'Use `lo0` (loopback) for any test that doesn’t need to be seen by other machines — no root needed on macOS.',
       'Ctrl-C cleans up sockets and ARP-table entries before exiting.',
     ],
-    seeAlso: ['cmd-daemon', 'cmd-run', 'cmd-validate'],
+    seeAlso: ['cmd-daemon', 'cmd-monitor', 'cmd-validate'],
   },
   {
     id: 'cmd-init',
