@@ -5,6 +5,27 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.92...v0.95.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** remove the interactive TUI (P1c-6) ([#1802](https://github.com/MustardSeedNetworks/niac-go/issues/1802))
+
+### Features
+
+* **capture:** export a session's retained frames as pcapng (P1c-10) ([#1799](https://github.com/MustardSeedNetworks/niac-go/issues/1799)) ([4a094f4](https://github.com/MustardSeedNetworks/niac-go/commit/4a094f4d33a08004a5eff72b81ede2f14a341d36))
+
+
+### Code Refactoring
+
+* **cli:** remove the interactive TUI (P1c-6) ([#1802](https://github.com/MustardSeedNetworks/niac-go/issues/1802)) ([3e9aaa1](https://github.com/MustardSeedNetworks/niac-go/commit/3e9aaa11b3f885f93e9cbc5cd72a7ee9dde84f46))
+
+
+### Documentation
+
+* generate the CLI reference from the cobra command tree (P1c-9) ([#1794](https://github.com/MustardSeedNetworks/niac-go/issues/1794)) ([32a9e93](https://github.com/MustardSeedNetworks/niac-go/commit/32a9e9373500cbf3399413ae87c355d23ab06f10))
+
 ## [0.94.92](https://github.com/MustardSeedNetworks/niac-go/compare/v0.94.91...v0.94.92) (2026-09-04)
 
 
