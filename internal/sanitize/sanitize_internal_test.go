@@ -134,16 +134,20 @@ func TestSanitizeHostname(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mapping := NewMapping()
 
-			result := sanitizeHostname(tt.hostname, mapping)
+			// The type is supplied by the caller, which has read the walk's
+			// sysDescr and sysServices. Deriving it from the hostname is the
+			// defect this signature change removes: "ap" inside "capitol-hill-1"
+			// made a switch an access point.
+			result := sanitizeHostnameAs(tt.hostname, tt.wantDeviceType, mapping)
 			if !strings.HasPrefix(result, "niac-core-") {
-				t.Errorf("sanitizeHostname() = %v, want prefix niac-core-", result)
+				t.Errorf("sanitizeHostnameAs() = %v, want prefix niac-core-", result)
 			}
 			if !strings.Contains(result, tt.wantDeviceType) {
-				t.Errorf("sanitizeHostname() = %v, want device type %v", result, tt.wantDeviceType)
+				t.Errorf("sanitizeHostnameAs() = %v, want device type %v", result, tt.wantDeviceType)
 			}
 
-			if result2 := sanitizeHostname(tt.hostname, mapping); result != result2 {
-				t.Errorf("sanitizeHostname() not deterministic: first=%v, second=%v", result, result2)
+			if result2 := sanitizeHostnameAs(tt.hostname, tt.wantDeviceType, mapping); result != result2 {
+				t.Errorf("sanitizeHostnameAs() not deterministic: first=%v, second=%v", result, result2)
 			}
 			if mapping.Hostnames[tt.hostname] != result {
 				t.Errorf("mapping not stored: got %v, want %v", mapping.Hostnames[tt.hostname], result)
@@ -153,7 +157,7 @@ func TestSanitizeHostname(t *testing.T) {
 }
 
 func sanitizeLineDefaults(line string) string {
-	return sanitizeLine(line, NewMapping(), DefaultOptions())
+	return sanitizeLine(line, NewMapping(), DefaultOptions(), defaultDeviceType, nil)
 }
 
 func TestSanitizeLineSystemContact(t *testing.T) {
@@ -161,6 +165,7 @@ func TestSanitizeLineSystemContact(t *testing.T) {
 		`SNMPv2-MIB::sysContact.0 = STRING: admin@company.com`,
 		NewMapping(),
 		Options{Domain: "niac-go.com", Location: "DC-WEST", Contact: "ops@niac.dev", Community: "public"},
+		defaultDeviceType, nil,
 	)
 	if !strings.Contains(result, "ops@niac.dev") {
 		t.Errorf("Expected contact to be replaced, got: %s", result)
@@ -172,6 +177,7 @@ func TestSanitizeLineSystemLocation(t *testing.T) {
 		`SNMPv2-MIB::sysLocation.0 = STRING: Building A, Floor 3`,
 		NewMapping(),
 		Options{Domain: "niac-go.com", Location: "DC-EAST", Contact: "ops@niac.dev", Community: "public"},
+		defaultDeviceType, nil,
 	)
 	if !strings.Contains(result, "DC-EAST") {
 		t.Errorf("Expected location DC-EAST, got: %s", result)
@@ -205,29 +211,47 @@ func TestSanitizeLineSpecialIP(t *testing.T) {
 	}
 }
 
+// A .local name is always the customer's. A public domain is only rewritten
+// when the device's own identity named it: rewriting every .com/.net/.org
+// turned the vendor support URL in sysDescr into "www.cisco.niac-go.com" and
+// damaged the fingerprint testers classify on, while protecting no one.
 func TestSanitizeLineDNS(t *testing.T) {
 	tests := []struct {
 		name         string
 		line         string
+		domains      []string
 		wantContains string
+		wantAbsent   string
 	}{
-		{"local domain replaced", `hostname.local`, "niac-go.local"},
-		{"com domain replaced", `server.example.com`, "niac-go.com"},
+		{
+			name:         "local domain replaced",
+			line:         "hostname.local",
+			wantContains: "niac-go.local",
+		},
+		{
+			name:         "a domain the device claims is replaced",
+			line:         `x = STRING: "peer at server.example.com"`,
+			domains:      []string{"example.com"},
+			wantContains: "niac-go.com",
+		},
+		{
+			name:         "a vendor domain is left alone",
+			line:         `x = STRING: "Technical Support: http://www.cisco.com/techsupport"`,
+			domains:      []string{"example.com"},
+			wantContains: "www.cisco.com",
+			wantAbsent:   "niac-go.com",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := sanitizeLineDefaults(tt.line); !strings.Contains(got, tt.wantContains) {
+			got := sanitizeLine(tt.line, NewMapping(), DefaultOptions(), defaultDeviceType, tt.domains)
+			if !strings.Contains(got, tt.wantContains) {
 				t.Errorf("sanitizeLine() = %q, want to contain %q", got, tt.wantContains)
 			}
+			if tt.wantAbsent != "" && strings.Contains(got, tt.wantAbsent) {
+				t.Errorf("sanitizeLine() = %q, want it not to contain %q", got, tt.wantAbsent)
+			}
 		})
-	}
-}
-
-func TestSanitizeLineDomainEmpty(t *testing.T) {
-	result := sanitizeLine("hostname.local some text", NewMapping(),
-		Options{Domain: "", Location: "DC-WEST", Contact: "admin@niac-go.com", Community: "public"})
-	if strings.Contains(result, "niac-go.local") {
-		t.Error("Expected no domain replacement with empty domain")
 	}
 }
 
@@ -292,7 +316,7 @@ func TestCollectAndApplyIdentitySubsScrubsEchoedHostname(t *testing.T) {
 		`.1.3.6.1.2.1.1.5.0 = STRING: "COS_Lab_R00.fnet.eng"`,              // sysName
 		`.1.3.6.1.4.1.9.9.23.1.2.1.1.6.1 = STRING: "COS_Lab_R00.fnet.eng"`, // CDP neighbor echo
 	}
-	subs := collectIdentitySubs(lines, NewMapping(), "netadmin@niac-go.com")
+	subs := collectIdentitySubs(lines, NewMapping(), "netadmin@niac-go.com", defaultDeviceType)
 	got := applyIdentitySubs(lines[1], subs)
 	if strings.Contains(got, "COS_Lab_R00.fnet.eng") {
 		t.Errorf("echoed hostname not scrubbed: %q", got)
@@ -307,7 +331,7 @@ func TestCollectAndApplyIdentitySubsScrubsEchoedContact(t *testing.T) {
 		`.1.3.6.1.2.1.1.4.0 = STRING: "netops@ucdenver.pvt"`,
 		`.1.3.6.1.4.1.9.2.1.61.0 = STRING: "escalate: netops@ucdenver.pvt"`,
 	}
-	subs := collectIdentitySubs(lines, NewMapping(), "netadmin@niac-go.com")
+	subs := collectIdentitySubs(lines, NewMapping(), "netadmin@niac-go.com", defaultDeviceType)
 	got := applyIdentitySubs(lines[1], subs)
 	if strings.Contains(got, "netops@ucdenver.pvt") {
 		t.Errorf("echoed contact not scrubbed: %q", got)
@@ -319,7 +343,7 @@ func TestCollectAndApplyIdentitySubsScrubsEchoedContact(t *testing.T) {
 // replace across the file (it could be a substring of legitimate model strings).
 func TestCollectIdentitySubsSkipsGenericNames(t *testing.T) {
 	lines := []string{`.1.3.6.1.2.1.1.5.0 = STRING: "Switch"`}
-	subs := collectIdentitySubs(lines, NewMapping(), "c@example.test")
+	subs := collectIdentitySubs(lines, NewMapping(), "c@example.test", defaultDeviceType)
 	for _, s := range subs {
 		if s.from == "Switch" {
 			t.Errorf("generic name %q should not become a global substitution", s.from)
@@ -332,32 +356,58 @@ func TestCollectIdentitySubsSkipsGenericNames(t *testing.T) {
 func TestApplyIdentitySubsLongestFirst(t *testing.T) {
 	subs := collectIdentitySubs([]string{
 		`.1.3.6.1.2.1.1.5.0 = STRING: "sw1.corp.example"`,
-	}, NewMapping(), "c@example.test")
+	}, NewMapping(), "c@example.test", defaultDeviceType)
 	got := applyIdentitySubs(`x = STRING: "sw1.corp.example neighbor"`, subs)
 	if strings.Contains(got, "sw1.corp.example") {
 		t.Errorf("FQDN not fully scrubbed: %q", got)
 	}
 }
 
-func TestSanitizeHostnameDeviceTypes(t *testing.T) {
+// The device's own sysDescr and sysServices decide its type. This test used to
+// assert the opposite -- that "switch-floor1" is a switch because of its name --
+// which is the rule that called every "capitol" device an access point.
+func TestDeviceTypeIsReadFromTheWalkNotTheHostname(t *testing.T) {
 	tests := []struct {
-		name           string
-		hostname       string
-		wantDeviceType string
+		name  string
+		lines []string
+		want  string
 	}{
-		{"switch keyword", "switch-floor1", "sw"},
-		{"router keyword", "router-dc1", "rtr"},
-		{"access point", "access-point-3", "ap"},
-		{"server keyword", "server-web01", "srv"},
-		{"firewall keyword", "firewall-edge", "fw"},
-		{"generic device", "unknown-device-42", "dev"},
+		{
+			name:  "sysDescr names the product",
+			lines: []string{`.1.3.6.1.2.1.1.1.0 = STRING: "Cisco Aironet 1140 Series Access Point"`},
+			want:  "ap",
+		},
+		{
+			name:  "sysServices says it forwards IP",
+			lines: []string{`.1.3.6.1.2.1.1.7.0 = INTEGER: 6`},
+			want:  "rtr",
+		},
+		{
+			name:  "sysServices says bridge only",
+			lines: []string{`.1.3.6.1.2.1.1.7.0 = INTEGER: 2`},
+			want:  "sw",
+		},
+		{
+			name:  "sysServices says end system",
+			lines: []string{`.1.3.6.1.2.1.1.7.0 = INTEGER: 72`},
+			want:  "srv",
+		},
+		{
+			name:  "a name that says switch does not make it one",
+			lines: []string{`.1.3.6.1.2.1.1.5.0 = STRING: "switch-floor1"`},
+			want:  defaultDeviceType,
+		},
+		{
+			name:  "nothing to go on",
+			lines: []string{`.1.3.6.1.2.1.1.5.0 = STRING: "unknown-device-42"`},
+			want:  defaultDeviceType,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := sanitizeHostname(tt.hostname, NewMapping())
-			if !strings.Contains(result, tt.wantDeviceType) {
-				t.Errorf("sanitizeHostname(%q) = %q, want device type %q", tt.hostname, result, tt.wantDeviceType)
+			if got := deviceTypeFromWalk(tt.lines); got != tt.want {
+				t.Errorf("deviceTypeFromWalk() = %q, want %q", got, tt.want)
 			}
 		})
 	}

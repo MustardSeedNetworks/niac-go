@@ -26,6 +26,23 @@ const (
 	// Management).
 	managementSubnetOctet = 100
 
+	// managementFirstOctet is the one public first octet treated as management.
+	managementFirstOctet = 63
+
+	// Class octets: which /16 of 10/8 each address class maps into.
+	corporateClassOctet = 2 // 10.2.0.0/16 - Corporate Campus
+	remoteClassOctet    = 3 // 10.3.0.0/16 - Remote Offices
+
+	// prefixSlotsPerClass is how many /24s one class octet can hold.
+	prefixSlotsPerClass = 256
+
+	// overflowClassOctet starts the range used when a class fills up.
+	overflowClassOctet = 200
+
+	// maxOctet bounds an octet value; maxOctetValue is the largest one.
+	maxOctet      = 256
+	maxOctetValue = 255
+
 	// ipv4OctetCount is the number of trailing OID arcs that form a
 	// dotted-quad index.
 	ipv4OctetCount = 4
@@ -43,58 +60,154 @@ var ipValueRe = regexp.MustCompile(`IpAddress: (\d+\.\d+\.\d+\.\d+)`)
 //	.4.22.1 ipNetToMediaTable · .3.1.1 atTable (legacy)
 var ipIndexedOIDRe = regexp.MustCompile(`^\.1\.3\.6\.1\.2\.1\.(?:4\.2[012]\.1|3\.1\.1)\.`)
 
-// sanitizeIP deterministically maps ip into 10.0.0.0/8, spreading across
-// different /16s based on the original network. The mapping is cached in
-// mapping.IPMappings so repeat calls (and concurrent callers) agree.
+// sanitizeIP maps ip into 10.0.0.0/8 prefix-preservingly: the /24 it belongs to
+// is mapped as a unit and the host octet is carried across unchanged.
+//
+// Hashing each address independently was the original design and it broke the
+// walk's internal consistency. One real /24 on cisco-1841-01 landed in 24
+// different /24s, so a device's interface address, its ARP neighbours and its
+// routes no longer agreed with each other. Every consumer that derives topology
+// from a walk then saw a device contradict itself, which is why the starter
+// packs needed address tricks to look plausible.
+//
+// Mapping the prefix instead keeps every relationship inside the file: same
+// subnet in, same subnet out; different subnets stay different.
 func sanitizeIP(ip string, mapping *Mapping) string {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return ip
+	}
+	ipBytes := parsed.To4()
+	if ipBytes == nil {
+		return sanitizeIPv6(ip, parsed, mapping)
+	}
+	if isSpecialIP(ip) || isNetmask(ipBytes) {
+		return ip
+	}
+
 	mapping.mu.RLock()
 	if sanitized, exists := mapping.IPMappings[ip]; exists {
 		mapping.mu.RUnlock()
+
 		return sanitized
 	}
 	mapping.mu.RUnlock()
 
-	hash := sha256.Sum256([]byte(ip))
-	hashInt := binary.BigEndian.Uint32(hash[:4])
-
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		return ip
-	}
-
-	ipBytes := parsedIP.To4()
-	if ipBytes == nil {
-		return ip // IPv6 not supported yet
-	}
-
-	var subnet byte
-	switch {
-	case ipBytes[0] == privateIPClassA:
-		subnet = 0 // 10.0.0.0/16 - Data Center West
-	case ipBytes[0] == privateIPClassB:
-		subnet = 1 // 10.1.0.0/16 - Data Center East
-	case ipBytes[0] == privateIPClassC:
-		subnet = 2 // 10.2.0.0/16 - Corporate Campus
-	case ipBytes[0] == 63 || ipBytes[0] < privateIPClassA:
-		subnet = managementSubnetOctet // 10.100.0.0/16 - Management
-	default:
-		subnet = 3 // 10.3.0.0/16 - Remote Offices
-	}
-
-	octet3 := safeconv.ByteFromUint32(hashInt >> bitShiftOctet)
-	octet4 := safeconv.ByteFromUint32(hashInt)
-
-	sanitized := fmt.Sprintf("10.%d.%d.%d", subnet, octet3, octet4)
+	host := ipBytes[3]
+	sanitized := mapPrefix(ipBytes, mapping) + "." + strconv.Itoa(int(host))
 
 	mapping.mu.Lock()
+	defer mapping.mu.Unlock()
 	if existing, exists := mapping.IPMappings[ip]; exists {
-		mapping.mu.Unlock()
 		return existing
 	}
 	mapping.IPMappings[ip] = sanitized
-	mapping.mu.Unlock()
 
 	return sanitized
+}
+
+// mapPrefix returns the sanitized "10.x.y" prefix for an address's /24,
+// allocating one on first sight.
+//
+// The class octet keeps the original scheme's meaning (which /16 of 10/8 a
+// network lands in); the third octet starts at a hash of the prefix and probes
+// forward until it finds a free slot, so two real /24s can never share one
+// sanitized /24 -- which would silently merge two networks into one.
+func mapPrefix(ipBytes net.IP, mapping *Mapping) string {
+	prefix := fmt.Sprintf("%d.%d.%d", ipBytes[0], ipBytes[1], ipBytes[2])
+
+	mapping.mu.RLock()
+	if mapped, exists := mapping.Prefixes[prefix]; exists {
+		mapping.mu.RUnlock()
+
+		return mapped
+	}
+	mapping.mu.RUnlock()
+
+	mapping.mu.Lock()
+	defer mapping.mu.Unlock()
+	if mapped, exists := mapping.Prefixes[prefix]; exists {
+		return mapped
+	}
+	if mapping.Prefixes == nil {
+		// A mapping loaded from an on-disk file written before prefixes existed.
+		mapping.Prefixes = make(map[string]string)
+	}
+
+	taken := make(map[string]struct{}, len(mapping.Prefixes))
+	for _, mapped := range mapping.Prefixes {
+		taken[mapped] = struct{}{}
+	}
+
+	hash := sha256.Sum256([]byte(prefix))
+	start := binary.BigEndian.Uint32(hash[:4])
+	class := classOctet(ipBytes[0])
+	for attempt := range prefixSlotsPerClass {
+		octet3 := safeconv.ByteFromUint32((start + uint32(attempt)) % prefixSlotsPerClass)
+		candidate := fmt.Sprintf("10.%d.%d", class, octet3)
+		if _, used := taken[candidate]; used {
+			continue
+		}
+		mapping.Prefixes[prefix] = candidate
+
+		return candidate
+	}
+
+	// Every slot in the class is spoken for: 256 distinct /24s from one address
+	// class in a single mapping. Spilling into the overflow class keeps the
+	// guarantee that two networks never merge, at the cost of the class hint.
+	for octet2 := overflowClassOctet; octet2 < maxOctet; octet2++ {
+		for octet3 := range prefixSlotsPerClass {
+			candidate := fmt.Sprintf("10.%d.%d", octet2, octet3)
+			if _, used := taken[candidate]; used {
+				continue
+			}
+			mapping.Prefixes[prefix] = candidate
+
+			return candidate
+		}
+	}
+
+	// 10/8 is exhausted -- ~16 million distinct /24s in one mapping. Returning
+	// the prefix unmapped would leak it, so refuse to pretend.
+	panic("sanitize: no free /24 left in 10.0.0.0/8")
+}
+
+// classOctet keeps the original scheme's meaning for the second octet: which
+// /16 of 10/8 a network lands in, chosen by the address class it came from.
+func classOctet(firstOctet byte) byte {
+	switch {
+	case firstOctet == privateIPClassA:
+		return 0 // 10.0.0.0/16 - Data Center West
+	case firstOctet == privateIPClassB:
+		return 1 // 10.1.0.0/16 - Data Center East
+	case firstOctet == privateIPClassC:
+		return corporateClassOctet
+	case firstOctet == managementFirstOctet || firstOctet < privateIPClassA:
+		return managementSubnetOctet // 10.100.0.0/16 - Management
+	default:
+		return remoteClassOctet
+	}
+}
+
+// isNetmask reports whether the four bytes are a contiguous subnet mask rather
+// than an address.
+//
+// A mask shares the IpAddress SNMP type with an address, so the value alone
+// cannot be told apart by type -- and hashing one produced
+// "255.255.255.0 -> 10.3.199.4", leaving every sanitized device with a nonsense
+// prefix length. Requiring a leading 255 keeps this to the masks devices
+// actually use (/8 and longer) rather than every address with a run of high
+// bits.
+func isNetmask(ipBytes net.IP) bool {
+	if ipBytes[0] != maxOctetValue {
+		return false
+	}
+	value := binary.BigEndian.Uint32(ipBytes)
+	inverted := ^value
+
+	// A contiguous mask's complement is one less than a power of two.
+	return inverted&(inverted+1) == 0
 }
 
 // isSpecialIP reports whether ip is a reserved/well-known address that
@@ -305,4 +418,100 @@ func mappedIPNet() *net.IPNet {
 // table column.
 func hasIPIndexedPrefix(oid string) bool {
 	return ipIndexedOIDRe.MatchString(oid)
+}
+
+// sanitizeIPv6 maps an IPv6 address into the documentation prefix
+// 2001:db8::/32, preserving the interface identifier the same way the v4 path
+// preserves the host octet.
+//
+// IPv6 was passed through untouched, so a walk from a dual-stack device shipped
+// its real v6 addressing verbatim -- and a global unicast v6 address is at
+// least as identifying as a v4 one, often more so, since it frequently carries
+// the provider's allocation.
+func sanitizeIPv6(original string, parsed net.IP, mapping *Mapping) string {
+	if parsed.IsLoopback() || parsed.IsUnspecified() || parsed.IsMulticast() ||
+		parsed.IsLinkLocalUnicast() || documentationPrefix().Contains(parsed) {
+		return original
+	}
+
+	mapping.mu.RLock()
+	if sanitized, exists := mapping.IPMappings[original]; exists {
+		mapping.mu.RUnlock()
+
+		return sanitized
+	}
+	mapping.mu.RUnlock()
+
+	sixteen := parsed.To16()
+	// The /64 is the network; the interface identifier below it is the "host
+	// octet" of v6 and carries no customer information once the prefix is gone.
+	network := fmt.Sprintf("%x", sixteen[:ipv6NetworkBytes])
+	hash := sha256.Sum256([]byte(network))
+
+	mapped := make(net.IP, net.IPv6len)
+	copy(mapped, documentationPrefixBytes())
+	// Two bytes of hash fill the subnet field the documentation prefix leaves
+	// free, keeping distinct /64s distinct.
+	mapped[6], mapped[7] = hash[0], hash[1]
+	copy(mapped[ipv6NetworkBytes:], sixteen[ipv6NetworkBytes:])
+
+	sanitized := mapped.String()
+
+	mapping.mu.Lock()
+	defer mapping.mu.Unlock()
+	if existing, exists := mapping.IPMappings[original]; exists {
+		return existing
+	}
+	mapping.IPMappings[original] = sanitized
+
+	return sanitized
+}
+
+// ipv6NetworkBytes is the /64 boundary: the network half of an address.
+const ipv6NetworkBytes = 8
+
+// documentationPrefixBytes is 2001:db8:: as raw bytes.
+func documentationPrefixBytes() net.IP {
+	return net.IP{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+}
+
+// documentationPrefix is 2001:db8::/32, reserved by RFC 3849 for exactly this.
+func documentationPrefix() *net.IPNet {
+	return &net.IPNet{
+		IP:   documentationPrefixBytes(),
+		Mask: net.CIDRMask(ipv6DocPrefixBits, ipv6Bits),
+	}
+}
+
+const (
+	ipv6DocPrefixBits = 32
+	ipv6Bits          = 128
+)
+
+// ipv6ValueRe matches an IPv6 address inside a walk value. Requiring two
+// colons keeps it off timestamps and MAC addresses, which use one separator
+// style or the other but never a run of two colons.
+var ipv6ValueRe = regexp.MustCompile(`\b[0-9a-fA-F:]*::?[0-9a-fA-F:]*:[0-9a-fA-F:]+\b`)
+
+// rewriteValueIPv6 maps IPv6 addresses that appear in a value.
+func rewriteValueIPv6(line string, mapping *Mapping) string {
+	sep := strings.Index(line, " = ")
+	if sep < 0 {
+		return line
+	}
+
+	value := line[sep:]
+	rewritten := ipv6ValueRe.ReplaceAllStringFunc(value, func(match string) string {
+		parsed := net.ParseIP(match)
+		if parsed == nil || parsed.To4() != nil {
+			return match
+		}
+
+		return sanitizeIP(match, mapping)
+	})
+	if rewritten == value {
+		return line
+	}
+
+	return line[:sep] + rewritten
 }
