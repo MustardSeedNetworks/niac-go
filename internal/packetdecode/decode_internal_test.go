@@ -1,4 +1,4 @@
-package sse
+package packetdecode
 
 import "testing"
 
@@ -28,7 +28,7 @@ func taggedBPDU() []byte {
 
 func TestEnrichWithLayersDecodesTaggedBPDU(t *testing.T) {
 	out := map[string]any{"protocol": "Unknown", "summary": ""}
-	enrichWithLayers(out, taggedBPDU())
+	Enrich(out, taggedBPDU())
 
 	if got := out["protocol"]; got != "STP" {
 		t.Errorf("protocol = %v, want STP — a tagged BPDU is not Unknown", got)
@@ -49,7 +49,7 @@ func TestEnrichWithLayersDecodesTaggedBPDU(t *testing.T) {
 // the MACs of every packet.
 func TestEnrichWithLayersEmitsNestedHeaders(t *testing.T) {
 	out := map[string]any{"protocol": "Unknown", "summary": ""}
-	enrichWithLayers(out, taggedBPDU())
+	Enrich(out, taggedBPDU())
 
 	headers, ok := out["headers"].(map[string]any)
 	if !ok {
@@ -80,7 +80,7 @@ func TestEnrichWithLayersStillClassifiesIPv4(t *testing.T) {
 		0x08, 0x00, 0xf7, 0xff, 0x00, 0x01, 0x00, 0x01,
 	}
 	out := map[string]any{"protocol": "Unknown", "summary": ""}
-	enrichWithLayers(out, frame)
+	Enrich(out, frame)
 
 	if got := out["protocol"]; got != "ICMP" {
 		t.Errorf("protocol = %v, want ICMP", got)
@@ -91,5 +91,37 @@ func TestEnrichWithLayersStillClassifiesIPv4(t *testing.T) {
 	headers, _ := out["headers"].(map[string]any)
 	if _, hasIP := headers["ipv4"]; !hasIP {
 		t.Error("headers.ipv4 missing for an IPv4 packet")
+	}
+}
+
+// The well-known-port table came from the analyzer, which was the only surface
+// that had it. It now names protocols on the live stream too.
+func TestProtocolByPort(t *testing.T) {
+	tests := []struct {
+		name    string
+		srcPort uint16
+		dstPort uint16
+		want    string
+	}{
+		{"HTTP dest", 12345, 80, "HTTP"},
+		{"HTTPS dest", 12345, 443, "HTTPS"},
+		{"SSH dest", 12345, 22, "SSH"},
+		{"DNS dest", 12345, 53, "DNS"},
+		{"SNMP dest", 12345, 161, "SNMP"},
+		{"DHCP dest", 12345, 67, "DHCP"},
+		{"HTTP src", 80, 12345, "HTTP"},
+		{"unknown ports", 12345, 54321, ""},
+		{"MySQL dest", 12345, 3306, "MySQL"},
+		{"PostgreSQL dest", 12345, 5432, "PostgreSQL"},
+		{"Redis dest", 12345, 6379, "Redis"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := protocolByPort(tt.srcPort, tt.dstPort); got != tt.want {
+				t.Errorf("protocolByPort(%d, %d) = %q, want %q",
+					tt.srcPort, tt.dstPort, got, tt.want)
+			}
+		})
 	}
 }

@@ -50,10 +50,15 @@ type Stats struct {
 
 // AnalysisResult is the complete analysis of a PCAP file.
 type AnalysisResult struct {
-	ID        string   `json:"id"`
-	Filename  string   `json:"filename"`
-	FileSize  int64    `json:"fileSize"`
-	Packets   []Packet `json:"packets"`
-	Stats     Stats    `json:"stats"`
-	CreatedAt string   `json:"createdAt"`
+	ID       string   `json:"id"`
+	Filename string   `json:"filename"`
+	FileSize int64    `json:"fileSize"`
+	Packets  []Packet `json:"packets"`
+	// Truncated reports that the file held more packets than the analyzer
+	// retains rows for. Stats still describe the whole file; the packet list
+	// does not. Surfacing it is the difference between a short list and a
+	// silently wrong one.
+	Truncated bool   `json:"truncated"`
+	Stats     Stats  `json:"stats"`
+	CreatedAt string `json:"createdAt"`
 }

@@ -23,6 +23,10 @@ and generic application protocols.
 \fB--output\fP="text"
 	Output format (text, json, yaml)
 
+.PP
+\fB--packets\fP[=false]
+	List every packet, the same rows the web packet list shows
+
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
 \fB--storage-keep\fP=500
@@ -43,6 +47,9 @@ and generic application protocols.
 
   # YAML output (handy for diffing two captures)
   niac analyze-pcap --output yaml capture.pcap
+
+  # Every packet, the same rows the web packet list shows
+  niac analyze-pcap --packets capture.pcap
 .EE
 
 

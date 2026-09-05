@@ -396,6 +396,7 @@
       "tabPacketsTitle": "Show every decoded packet with timestamp, headers, and payload",
       "tabStats": "Statistics",
       "tabStatsTitle": "Show aggregate statistics: byte/packet totals per protocol and per host",
+      "truncatedNotice": "Showing the first {{shown}} packets. This capture holds more than the analyzer lists; the statistics below still cover the whole file.",
       "uploadFailed": "Upload failed"
     },
     "description": "Read-only browser for the on-disk {{format}} captures the daemon serves from the unified library.",

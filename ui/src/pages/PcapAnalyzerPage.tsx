@@ -268,6 +268,13 @@ export const PcapAnalyzerPage: FC = () => {
                       count: analysisResult.packets.length,
                     })}
                   </Tag>
+                  {analysisResult.truncated && (
+                    <Tag colorScheme="yellow">
+                      {tPages('libraryPcaps.analyzer.truncatedNotice', {
+                        shown: analysisResult.packets.length,
+                      })}
+                    </Tag>
+                  )}
                 </div>
 
                 {/* Control buttons */}

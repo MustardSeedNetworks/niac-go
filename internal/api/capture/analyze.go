@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/gopacket/gopacket"
-	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcap"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/packetdecode"
 )
 
 // dirPermSecure is the permission mode for secure directories (owner rwx only).
@@ -25,16 +25,19 @@ const (
 	topNCount       = 10     // top N count for sources/destinations
 	idUniqueMask    = 0xFFFF // mask for ID uniqueness
 	maxRawDataBytes = 128    // max raw data bytes to include
+
+	// maxRetainedPackets bounds the per-packet rows one analysis keeps.
+	//
+	// An upload may be ~100MB (MaxPCAPUploadBodySize), which is roughly 1.5M
+	// minimum-size frames; a Packet struct with its hex preview per frame is far
+	// more memory than the capture itself, and the cache's own 500MB ceiling
+	// only evicts *after* one analysis has already been built. Statistics still
+	// count every packet in the file -- only the rendered rows stop here.
+	maxRetainedPackets = 50000
 )
 
 // Protocol operation constants.
-const (
-	arpOperationRequest = 1 // ARP Request operation
-	arpOperationReply   = 2 // ARP Reply operation
-	icmpTypeEchoRequest = 8 // ICMP Echo Request type
-	icmpTypeEchoReply   = 0 // ICMP Echo Reply type
-	pcapMinHeaderLen    = 4 // Minimum header length for pcap protocol address
-)
+const ()
 
 // writeToSecureTempFile creates a secure temp directory and writes pcap data to
 // a temp file. Returns the temp file path and a cleanup function. Caller must
@@ -166,7 +169,11 @@ func Analyze(data []byte, filename string) (*AnalysisResult, error) {
 
 		ts := packet.Metadata().Timestamp
 		pkt := parsePacket(packet, packetNum)
-		result.Packets = append(result.Packets, pkt)
+		if len(result.Packets) < maxRetainedPackets {
+			result.Packets = append(result.Packets, pkt)
+		} else {
+			result.Truncated = true
+		}
 		result.Stats.TotalBytes += int64(pkt.Length)
 		result.Stats.Protocols[pkt.Protocol]++
 
@@ -178,235 +185,13 @@ func Analyze(data []byte, filename string) (*AnalysisResult, error) {
 	return result, nil
 }
 
-// parseEthernetLayer extracts Ethernet header information from a packet.
-func parseEthernetLayer(packet gopacket.Packet, pkt *Packet) {
-	ethLayer := packet.Layer(layers.LayerTypeEthernet)
-	if ethLayer == nil {
-		return
-	}
-
-	eth, ok := ethLayer.(*layers.Ethernet)
-	if !ok {
-		return
-	}
-
-	pkt.Headers["ethernet"] = map[string]string{
-		"srcMAC": eth.SrcMAC.String(),
-		"dstMAC": eth.DstMAC.String(),
-		"type":   eth.EthernetType.String(),
-	}
-}
-
-// parseIPv4Layer extracts IPv4 header information from a packet.
-func parseIPv4Layer(packet gopacket.Packet, pkt *Packet) {
-	ipLayer := packet.Layer(layers.LayerTypeIPv4)
-	if ipLayer == nil {
-		return
-	}
-
-	ip, ok := ipLayer.(*layers.IPv4)
-	if !ok {
-		return
-	}
-
-	pkt.SourceIP = ip.SrcIP.String()
-	pkt.DestIP = ip.DstIP.String()
-	pkt.Protocol = ip.Protocol.String()
-	pkt.Headers["ipv4"] = map[string]any{
-		"version": ip.Version,
-		"ttl":     ip.TTL,
-		"id":      ip.Id,
-	}
-}
-
-// parseIPv6Layer extracts IPv6 header information from a packet.
-func parseIPv6Layer(packet gopacket.Packet, pkt *Packet) {
-	ipLayer := packet.Layer(layers.LayerTypeIPv6)
-	if ipLayer == nil {
-		return
-	}
-
-	ip, ok := ipLayer.(*layers.IPv6)
-	if !ok {
-		return
-	}
-
-	pkt.SourceIP = ip.SrcIP.String()
-	pkt.DestIP = ip.DstIP.String()
-	pkt.Protocol = ip.NextHeader.String()
-	pkt.Headers["ipv6"] = map[string]any{
-		"version":    ip.Version,
-		"hopLimit":   ip.HopLimit,
-		"nextHeader": ip.NextHeader.String(),
-	}
-}
-
-// parseARPLayer extracts ARP information from a packet.
-func parseARPLayer(packet gopacket.Packet, pkt *Packet) {
-	arpLayer := packet.Layer(layers.LayerTypeARP)
-	if arpLayer == nil {
-		return
-	}
-
-	arp, ok := arpLayer.(*layers.ARP)
-	if !ok {
-		return
-	}
-
-	pkt.Protocol = "ARP"
-	// Guard against non-IPv4 ARP or truncated address fields.
-	if len(arp.SourceProtAddress) >= pcapMinHeaderLen {
-		pkt.SourceIP = fmt.Sprintf(
-			"%d.%d.%d.%d",
-			arp.SourceProtAddress[0],
-			arp.SourceProtAddress[1],
-			arp.SourceProtAddress[2],
-			arp.SourceProtAddress[3],
-		)
-	}
-
-	if len(arp.DstProtAddress) >= pcapMinHeaderLen {
-		pkt.DestIP = fmt.Sprintf(
-			"%d.%d.%d.%d",
-			arp.DstProtAddress[0],
-			arp.DstProtAddress[1],
-			arp.DstProtAddress[2],
-			arp.DstProtAddress[3],
-		)
-	}
-
-	opStr := "Unknown"
-	switch arp.Operation {
-	case arpOperationRequest:
-		opStr = "Request"
-	case arpOperationReply:
-		opStr = "Reply"
-	}
-
-	pkt.Info = fmt.Sprintf("ARP %s: Who has %s? Tell %s", opStr, pkt.DestIP, pkt.SourceIP)
-}
-
-// parseTCPLayer extracts TCP information from a packet.
-func parseTCPLayer(packet gopacket.Packet, pkt *Packet) {
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	if tcpLayer == nil {
-		return
-	}
-
-	tcp, ok := tcpLayer.(*layers.TCP)
-	if !ok {
-		return
-	}
-
-	pkt.Protocol = "TCP"
-	srcPort := int(tcp.SrcPort)
-	dstPort := int(tcp.DstPort)
-	pkt.SourcePort = &srcPort
-	pkt.DestPort = &dstPort
-
-	flags := getTCPFlags(tcp)
-	pkt.Info = fmt.Sprintf("%d -> %d [%s] Seq=%d Ack=%d Win=%d",
-		srcPort, dstPort, flags, tcp.Seq, tcp.Ack, tcp.Window)
-
-	pkt.Headers["tcp"] = map[string]any{
-		"srcPort": srcPort,
-		"dstPort": dstPort,
-		"seq":     tcp.Seq,
-		"ack":     tcp.Ack,
-		"flags":   flags,
-		"window":  tcp.Window,
-	}
-
-	// A port number alone does not make a packet that protocol. The three-way
-	// handshake and bare ACKs on port 80 carry no application data, and both
-	// tcpdump and Wireshark show them as TCP, reserving the application name for
-	// segments that actually carry payload. Labelling them HTTP made a NIAC
-	// capture disagree with tcpdump on the first three rows of every conversation.
-	if len(tcp.Payload) > 0 {
-		pkt.Protocol = getProtocolByPort(srcPort, dstPort, "TCP")
-	}
-}
-
-// parseUDPLayer extracts UDP information from a packet.
-func parseUDPLayer(packet gopacket.Packet, pkt *Packet) {
-	udpLayer := packet.Layer(layers.LayerTypeUDP)
-	if udpLayer == nil {
-		return
-	}
-
-	udp, ok := udpLayer.(*layers.UDP)
-	if !ok {
-		return
-	}
-
-	pkt.Protocol = "UDP"
-	srcPort := int(udp.SrcPort)
-	dstPort := int(udp.DstPort)
-	pkt.SourcePort = &srcPort
-	pkt.DestPort = &dstPort
-
-	pkt.Info = fmt.Sprintf("%d -> %d Len=%d", srcPort, dstPort, udp.Length)
-	pkt.Headers["udp"] = map[string]any{
-		"srcPort": srcPort,
-		"dstPort": dstPort,
-		"length":  udp.Length,
-	}
-
-	// Same rule as TCP: the datagram has to carry something for its port to name
-	// an application protocol. A UDP datagram almost always does, so this is a
-	// consistency guard rather than a behaviour change.
-	if len(udp.Payload) > 0 {
-		pkt.Protocol = getProtocolByPort(srcPort, dstPort, "UDP")
-	}
-}
-
-// parseICMPLayer extracts ICMP information from a packet.
-func parseICMPLayer(packet gopacket.Packet, pkt *Packet) {
-	icmpLayer := packet.Layer(layers.LayerTypeICMPv4)
-	if icmpLayer == nil {
-		return
-	}
-
-	icmp, ok := icmpLayer.(*layers.ICMPv4)
-	if !ok {
-		return
-	}
-
-	pkt.Protocol = "ICMP"
-	pkt.Info = fmt.Sprintf("Type=%d Code=%d", icmp.TypeCode.Type(), icmp.TypeCode.Code())
-
-	if icmp.TypeCode.Type() == icmpTypeEchoRequest {
-		pkt.Info = "Echo Request (ping)"
-	} else if icmp.TypeCode.Type() == icmpTypeEchoReply {
-		pkt.Info = "Echo Reply (pong)"
-	}
-}
-
-// parseDNSLayer extracts DNS information from a packet.
-func parseDNSLayer(packet gopacket.Packet, pkt *Packet) {
-	dnsLayer := packet.Layer(layers.LayerTypeDNS)
-	if dnsLayer == nil {
-		return
-	}
-
-	dns, ok := dnsLayer.(*layers.DNS)
-	if !ok {
-		return
-	}
-
-	pkt.Protocol = "DNS"
-	if dns.QR {
-		pkt.Info = fmt.Sprintf("Response: %d answers", len(dns.Answers))
-		return
-	}
-
-	if len(dns.Questions) > 0 {
-		pkt.Info = "Query: " + string(dns.Questions[0].Name)
-	} else {
-		pkt.Info = "Query"
-	}
-}
-
+// parsePacket turns one frame into the row the packet list renders.
+//
+// The decode itself is internal/packetdecode, the same call the live inspector
+// makes, so a capture exported from the inspector reads back the way it was
+// shown. This function only projects that decoder's map onto the analyzer's
+// struct and adds what is specific to a file: a stable row number and a hex
+// preview.
 func parsePacket(packet gopacket.Packet, num int) Packet {
 	pkt := Packet{
 		ID:        fmt.Sprintf("%d-%x", num, time.Now().UnixNano()&idUniqueMask),
@@ -419,21 +204,13 @@ func parsePacket(packet gopacket.Packet, num int) Packet {
 		Headers:   make(map[string]any),
 	}
 
-	// Get raw hex data (first 128 bytes)
 	rawLen := min(len(packet.Data()), maxRawDataBytes)
 	pkt.RawData = hex.EncodeToString(packet.Data()[:rawLen])
 
-	// Parse each layer
-	parseEthernetLayer(packet, &pkt)
-	parseIPv4Layer(packet, &pkt)
-	parseIPv6Layer(packet, &pkt)
-	parseARPLayer(packet, &pkt)
-	parseTCPLayer(packet, &pkt)
-	parseUDPLayer(packet, &pkt)
-	parseICMPLayer(packet, &pkt)
-	parseDNSLayer(packet, &pkt)
+	decoded := map[string]any{"protocol": "Unknown", "summary": ""}
+	packetdecode.Enrich(decoded, packet.Data())
+	applyDecoded(&pkt, decoded)
 
-	// Set default info if not set
 	if pkt.Info == "" {
 		pkt.Info = fmt.Sprintf("%s %s -> %s", pkt.Protocol, pkt.SourceIP, pkt.DestIP)
 	}
@@ -441,80 +218,33 @@ func parsePacket(packet gopacket.Packet, num int) Packet {
 	return pkt
 }
 
-func getTCPFlags(tcp *layers.TCP) string {
-	var flags []string
-	if tcp.SYN {
-		flags = append(flags, "SYN")
+// applyDecoded copies the decoder's fields onto pkt. The decoder speaks the SSE
+// wire spelling because that is the shape a browser already parses; this is the
+// one place that translates.
+func applyDecoded(pkt *Packet, decoded map[string]any) {
+	if v, ok := decoded["protocol"].(string); ok && v != "" {
+		pkt.Protocol = v
 	}
-
-	if tcp.ACK {
-		flags = append(flags, "ACK")
+	if v, ok := decoded["summary"].(string); ok && v != "" {
+		pkt.Info = v
 	}
-
-	if tcp.FIN {
-		flags = append(flags, "FIN")
+	if v, ok := decoded["source_ip"].(string); ok && v != "" {
+		pkt.SourceIP = v
 	}
-
-	if tcp.RST {
-		flags = append(flags, "RST")
+	if v, ok := decoded["dest_ip"].(string); ok && v != "" {
+		pkt.DestIP = v
 	}
-
-	if tcp.PSH {
-		flags = append(flags, "PSH")
+	if v, ok := decoded["source_port"].(uint16); ok {
+		port := int(v)
+		pkt.SourcePort = &port
 	}
-
-	if tcp.URG {
-		flags = append(flags, "URG")
+	if v, ok := decoded["dest_port"].(uint16); ok {
+		port := int(v)
+		pkt.DestPort = &port
 	}
-
-	if len(flags) == 0 {
-		return "none"
+	if v, ok := decoded["headers"].(map[string]any); ok {
+		pkt.Headers = v
 	}
-
-	return strings.Join(flags, ",")
-}
-
-func getProtocolByPort(srcPort, dstPort int, baseProto string) string {
-	ports := map[int]string{
-		20:   "FTP-DATA",
-		21:   "FTP",
-		22:   "SSH",
-		23:   "Telnet",
-		25:   "SMTP",
-		53:   "DNS",
-		67:   "DHCP",
-		68:   "DHCP",
-		80:   "HTTP",
-		110:  "POP3",
-		123:  "NTP",
-		137:  "NetBIOS",
-		138:  "NetBIOS",
-		139:  "NetBIOS",
-		143:  "IMAP",
-		161:  "SNMP",
-		162:  "SNMP-Trap",
-		443:  "HTTPS",
-		445:  "SMB",
-		514:  "Syslog",
-		993:  "IMAPS",
-		995:  "POP3S",
-		3306: "MySQL",
-		3389: "RDP",
-		5432: "PostgreSQL",
-		6379: "Redis",
-		8080: "HTTP-Alt",
-		8443: "HTTPS-Alt",
-	}
-
-	if name, ok := ports[dstPort]; ok {
-		return name
-	}
-
-	if name, ok := ports[srcPort]; ok {
-		return name
-	}
-
-	return baseProto
 }
 
 func topNFromMap(m map[string]int, n int) []IPCount {

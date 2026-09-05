@@ -22,6 +22,13 @@ export interface PcapAnalysisResult {
   filename: string;
   fileSize: number;
   packets: PcapPacket[];
+  /**
+   * The capture held more packets than the analyzer keeps rows for, so
+   * `packets` is a prefix of the file. `stats` still describes the whole
+   * capture — showing the short list without saying so would make the two
+   * disagree with no explanation.
+   */
+  truncated?: boolean;
   stats: PcapStats;
 }
 
