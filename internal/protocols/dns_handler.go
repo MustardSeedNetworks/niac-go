@@ -3,12 +3,12 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // HandleQuery processes a DNS query over IPv4.
@@ -58,7 +58,7 @@ func (h *DNSHandler) parseDNSLayer(
 	dnsLayer := packet.Layer(layers.LayerTypeDNS)
 	if dnsLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "%s packet missing DNS layer sn=%d\n", prefix, serial)
+			logging.Debugf("%s packet missing DNS layer sn=%d", prefix, serial)
 		}
 
 		return nil, false
@@ -81,7 +81,7 @@ func (h *DNSHandler) logDNSQueries(
 	}
 
 	for _, q := range questions {
-		_, _ = fmt.Fprintf(os.Stdout, "DNS Query: %s type=%s class=%s from %s sn=%d\n",
+		logging.Debugf("DNS Query: %s type=%s class=%s from %s sn=%d",
 			string(q.Name), q.Type, q.Class, srcIP, serial)
 	}
 }
@@ -96,7 +96,7 @@ func (h *DNSHandler) validateServerDevice(
 ) bool {
 	if serverDevice == nil || serverIP == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "%s: No server device/IP configured sn=%d\n", prefix, serial)
+			logging.Debugf("%s: No server device/IP configured sn=%d", prefix, serial)
 		}
 
 		return false
@@ -104,7 +104,7 @@ func (h *DNSHandler) validateServerDevice(
 
 	if len(serverDevice.MACAddress) == 0 {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "%s: Server device %s missing MAC address sn=%d\n",
+			logging.Debugf("%s: Server device %s missing MAC address sn=%d",
 				prefix, serverDevice.Name, serial)
 		}
 
@@ -132,7 +132,7 @@ func (h *DNSHandler) handleNBSTATIfPresent(
 
 		err := h.handleNBSTATQuery(pkt, ipLayer, udpLayer, serverDevice, dns.ID, q, packet)
 		if err != nil && debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "DNS: NBSTAT handling failed: %v sn=%d\n", err, pkt.SerialNumber)
+			logging.Debugf("DNS: NBSTAT handling failed: %v sn=%d", err, pkt.SerialNumber)
 		}
 
 		return true
@@ -165,7 +165,7 @@ func (h *DNSHandler) buildDNSResponse(
 	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, serial)
 
 	if len(response.Answers) == 0 && debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "DNS: NXDOMAIN for queries sn=%d\n", serial)
+		logging.Debugf("DNS: NXDOMAIN for queries sn=%d", serial)
 	} else if len(response.Answers) > 0 && response.ResponseCode == 0 {
 		response.ResponseCode = layers.DNSResponseCodeNoErr
 	}
@@ -196,14 +196,14 @@ func (h *DNSHandler) sendAndLogResponse(
 	err := h.SendDNSResponse(response, srcIP, dstIP, srcMAC, dstMAC, dstPort, vlan)
 	if err != nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "DNS: Failed to send response: %v sn=%d\n", err, serial)
+			logging.Debugf("DNS: Failed to send response: %v sn=%d", err, serial)
 		}
 
 		return
 	}
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "DNS: Sent response with %d answers sn=%d\n",
+		logging.Debugf("DNS: Sent response with %d answers sn=%d",
 			len(response.Answers), serial)
 	}
 }
@@ -359,7 +359,7 @@ func (h *DNSHandler) handleNBSTATIfPresentV6(
 
 		err := h.handleNBSTATQueryV6(pkt, ipv6, udpLayer, serverDevice, dns.ID, q, packet)
 		if err != nil && debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: NBSTAT handling failed: %v sn=%d\n",
+			logging.Debugf("DNS/IPv6: NBSTAT handling failed: %v sn=%d",
 				err, pkt.SerialNumber)
 		}
 
@@ -392,7 +392,7 @@ func (h *DNSHandler) buildDNSResponseV6(
 	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, serial)
 
 	if len(response.Answers) == 0 && debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: NXDOMAIN for queries sn=%d\n", serial)
+		logging.Debugf("DNS/IPv6: NXDOMAIN for queries sn=%d", serial)
 	} else if len(response.Answers) > 0 && response.ResponseCode == 0 {
 		response.ResponseCode = layers.DNSResponseCodeNoErr
 	}
@@ -409,7 +409,7 @@ func (h *DNSHandler) extractSourceMACWithValidation(
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: Missing Ethernet layer sn=%d\n", serial)
+			logging.Debugf("DNS/IPv6: Missing Ethernet layer sn=%d", serial)
 		}
 
 		return nil, false
@@ -435,7 +435,7 @@ func (h *DNSHandler) sendAndLogResponseV6(
 ) {
 	err := h.SendDNSResponseV6(response, srcIP, dstIP, srcMAC, dstMAC, dstPort, vlan)
 	if err != nil && debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "DNS/IPv6: Failed to send response: %v sn=%d\n", err, serial)
+		logging.Debugf("DNS/IPv6: Failed to send response: %v sn=%d", err, serial)
 	}
 }
 

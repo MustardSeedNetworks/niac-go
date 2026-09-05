@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -129,7 +129,7 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 	// Check minimum packet size (Ethernet header + LLC + BPDU)
 	if len(pkt.Buffer) < stpMinPacketSize {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "STP: Packet too short sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("STP: Packet too short sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -145,7 +145,7 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 
 	if dsap != 0x42 || ssap != 0x42 {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "STP: Invalid LLC header sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("STP: Invalid LLC header sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -160,14 +160,14 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 
 	if protocolID != STPProtocolID {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "STP: Invalid protocol ID 0x%04x sn=%d\n", protocolID, pkt.SerialNumber)
+			logging.Debugf("STP: Invalid protocol ID 0x%04x sn=%d", protocolID, pkt.SerialNumber)
 		}
 
 		return
 	}
 
 	if h.debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "STP: Received BPDU version=%d type=0x%02x sn=%d\n",
+		logging.Debugf("STP: Received BPDU version=%d type=0x%02x sn=%d",
 			version, bpduType, pkt.SerialNumber)
 	}
 
@@ -180,7 +180,7 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 		h.handleTCN(pkt)
 	default:
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "STP: Unknown BPDU type 0x%02x sn=%d\n", bpduType, pkt.SerialNumber)
+			logging.Debugf("STP: Unknown BPDU type 0x%02x sn=%d", bpduType, pkt.SerialNumber)
 		}
 	}
 }
@@ -192,7 +192,7 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 	// Parse Configuration BPDU fields
 	if len(data) < stpMinConfigBPDU {
 		if h.debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "STP: Config BPDU too short sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("STP: Config BPDU too short sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -212,9 +212,8 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 		tcFlag := (flags & BPDUFlagTopologyChange) != 0
 		tcAckFlag := (flags & BPDUFlagTopologyChangeAck) != 0
 
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"STP: Config BPDU - Root=0x%016x Cost=%d Bridge=0x%016x Port=%d TC=%v TCAck=%v sn=%d\n",
+		logging.Debugf(
+			"STP: Config BPDU - Root=0x%016x Cost=%d Bridge=0x%016x Port=%d TC=%v TCAck=%v sn=%d",
 			rootID,
 			rootPathCost,
 			bridgeID,
@@ -239,7 +238,7 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 // handleTCN processes a Topology Change Notification BPDU.
 func (h *STPHandler) handleTCN(pkt *Packet) {
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "STP: Topology Change Notification received sn=%d\n", pkt.SerialNumber)
+		logging.Debugf("STP: Topology Change Notification received sn=%d", pkt.SerialNumber)
 	}
 	// In a real implementation, this would trigger topology change procedures
 	// For simulation, we just log it
@@ -388,7 +387,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	h.stack.Send(pkt)
 
 	if h.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "STP: Sent Config BPDU from %s sn=%d\n", device.Name, serialNum)
+		logging.Debugf("STP: Sent Config BPDU from %s sn=%d", device.Name, serialNum)
 	}
 
 	return nil

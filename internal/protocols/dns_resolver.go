@@ -2,9 +2,7 @@ package protocols
 
 import (
 	"encoding/hex"
-	"fmt"
 	"net"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,6 +10,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 type dnsResolveContext struct {
@@ -237,9 +236,8 @@ func (h *DNSHandler) resolvePTRRecord(
 // logInvalidDNSName logs an invalid DNS name error.
 func (h *DNSHandler) logInvalidDNSName(name []byte, ctx *dnsResolveContext) {
 	if ctx.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"DNS: Invalid domain name length (> 255 or label > 63): %s sn=%d\n",
+		logging.Debugf(
+			"DNS: Invalid domain name length (> 255 or label > 63): %s sn=%d",
 			name,
 			ctx.serial,
 		)
@@ -249,9 +247,8 @@ func (h *DNSHandler) logInvalidDNSName(name []byte, ctx *dnsResolveContext) {
 // logDNSRecord logs a resolved DNS record.
 func (h *DNSHandler) logDNSRecord(recordType, name, value string, ctx *dnsResolveContext) {
 	if ctx.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"DNS: %s -> %s (%s record) sn=%d\n",
+		logging.Debugf(
+			"DNS: %s -> %s (%s record) sn=%d",
 			name,
 			value,
 			recordType,
@@ -263,9 +260,8 @@ func (h *DNSHandler) logDNSRecord(recordType, name, value string, ctx *dnsResolv
 // logPTRParseFailure logs a PTR query parse failure.
 func (h *DNSHandler) logPTRParseFailure(name []byte, ctx *dnsResolveContext) {
 	if ctx.debugLevel >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"DNS: PTR query %s could not be parsed sn=%d\n",
+		logging.Debugf(
+			"DNS: PTR query %s could not be parsed sn=%d",
 			name,
 			ctx.serial,
 		)

@@ -1,9 +1,7 @@
 package protocols
 
 import (
-	"fmt"
 	"net/netip"
-	"os"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -243,7 +241,7 @@ func (s *Stack) configureDHCPServer(device *config.Device) {
 	s.dhcpHandler.SetStaticLeases(device.DHCPConfig.ClientLeases)
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		_, _ = fmt.Fprintf(os.Stdout, "Configured DHCP server for device %s\n", device.Name)
+		logging.Debugf("Configured DHCP server for device %s", device.Name)
 	}
 }
 

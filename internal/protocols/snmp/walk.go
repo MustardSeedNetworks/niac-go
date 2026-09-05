@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // SNMP type name constants for walk file parsing and formatting.
@@ -222,7 +224,7 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 		entry, parseErr := parseWalkLine(line)
 		if parseErr != nil {
 			// Log error but continue parsing
-			_, _ = fmt.Fprintf(os.Stdout, "Warning: line %d: %v\n", lineNum, parseErr)
+			logging.Debugf("Warning: line %d: %v", lineNum, parseErr)
 
 			continue
 		}

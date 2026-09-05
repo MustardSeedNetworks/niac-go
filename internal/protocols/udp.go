@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"slices"
 	"strconv"
 	"sync"
@@ -103,7 +102,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "UDP packet missing UDP layer sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("UDP packet missing UDP layer sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -115,7 +114,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	}
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "UDP packet: %s:%d -> %s:%d length=%d sn=%d\n",
+		logging.Debugf("UDP packet: %s:%d -> %s:%d length=%d sn=%d",
 			ipLayer.SrcIP, udp.SrcPort, ipLayer.DstIP, udp.DstPort, len(udp.Payload), pkt.SerialNumber)
 	}
 
@@ -160,7 +159,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		}
 
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "UDP packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
+			logging.Debugf("UDP packet to unhandled port %d sn=%d", udp.DstPort, pkt.SerialNumber)
 		}
 
 		h.sendPortUnreachable(pkt, ipLayer, udp, devices)
@@ -208,7 +207,7 @@ func (h *UDPHandler) sendPortUnreachable(
 func (h *UDPHandler) handleSNMP(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
 	if h.stack.snmpHandler == nil {
 		if h.stack.GetProtocolDebugLevel(logging.ProtocolSNMP) >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "SNMP handler not initialised sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("SNMP handler not initialised sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -438,7 +437,7 @@ func (h *UDPHandler) sendUDPWithTOS(
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent UDP packet: %s:%d -> %s:%d length=%d sn=%d\n",
+		logging.Debugf("Sent UDP packet: %s:%d -> %s:%d length=%d sn=%d",
 			srcIP, srcPort, dstIP, dstPort, len(payload), serialNum)
 	}
 
@@ -499,7 +498,7 @@ func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 	}
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Reflected UDP probe %s:%d -> %s (sn=%d)\n",
+		logging.Debugf("Reflected UDP probe %s:%d -> %s (sn=%d)",
 			ipLayer.SrcIP, udp.SrcPort, ipLayer.DstIP, pkt.SerialNumber)
 	}
 
@@ -563,7 +562,7 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "UDP/IPv6 packet missing UDP layer sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("UDP/IPv6 packet missing UDP layer sn=%d", pkt.SerialNumber)
 		}
 
 		return
@@ -575,7 +574,7 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 	}
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "UDP/IPv6 packet: [%s]:%d -> [%s]:%d length=%d sn=%d\n",
+		logging.Debugf("UDP/IPv6 packet: [%s]:%d -> [%s]:%d length=%d sn=%d",
 			ipv6.SrcIP, udp.SrcPort, ipv6.DstIP, udp.DstPort, len(udp.Payload), pkt.SerialNumber)
 	}
 
@@ -599,7 +598,7 @@ func (h *UDPHandler) HandlePacketV6(pkt *Packet, packet gopacket.Packet, ipv6 *l
 		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
 	default:
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "UDP/IPv6 packet to unhandled port %d sn=%d\n", udp.DstPort, pkt.SerialNumber)
+			logging.Debugf("UDP/IPv6 packet to unhandled port %d sn=%d", udp.DstPort, pkt.SerialNumber)
 		}
 	}
 }

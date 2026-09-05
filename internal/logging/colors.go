@@ -97,6 +97,15 @@ func stripControlChars(args []any) []any {
 	return cleaned
 }
 
+// writeLine writes one already-formatted line to the package's output writer,
+// uncoloured. Callers that want a colour or a prefix use the level helpers.
+func writeLine(line string) {
+	colorsMu.Lock()
+	defer colorsMu.Unlock()
+
+	_, _ = fmt.Fprintln(output, line)
+}
+
 // Errorf prints an error message in red.
 func Errorf(format string, args ...any) {
 	colorsMu.Lock()

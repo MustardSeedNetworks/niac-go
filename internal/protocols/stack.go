@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"os"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -382,7 +381,7 @@ func (s *Stack) Start() error {
 	s.startBehaviorTimelines()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack started")
+		logging.Debugf("Protocol stack started")
 	}
 
 	return nil
@@ -412,7 +411,7 @@ func (s *Stack) Stop() {
 	s.wg.Wait()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		_, _ = fmt.Fprintln(os.Stdout, "Protocol stack stopped")
+		logging.Debugf("Protocol stack stopped")
 	}
 }
 
@@ -462,7 +461,7 @@ func (s *Stack) send(pkt *Packet) error {
 			s.notifyObservers("tx", pkt)
 		}
 		if s.debugConfig.GetGlobal() >= DebugLevelInfo {
-			_, _ = fmt.Fprintln(os.Stdout, "Send queue full, dropping packet")
+			logging.Debugf("Send queue full, dropping packet")
 		}
 		return ErrSendQueueFull
 	}
@@ -595,7 +594,7 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	}
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		_, _ = fmt.Fprintf(os.Stdout, "Protocol stack reloaded (%d devices)\n", len(cfg.Devices))
+		logging.Debugf("Protocol stack reloaded (%d devices)", len(cfg.Devices))
 	}
 	s.configureBehaviorTimelines(cfg)
 	s.startBehaviorTimelines()

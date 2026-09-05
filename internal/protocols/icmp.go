@@ -5,12 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -60,9 +60,8 @@ func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []
 	icmpLayer := packet.Layer(layers.LayerTypeICMPv4)
 	if icmpLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"ICMP packet missing ICMP layer sn=%d\n",
+			logging.Debugf(
+				"ICMP packet missing ICMP layer sn=%d",
 				pkt.SerialNumber,
 			)
 		}
@@ -86,7 +85,7 @@ func (h *ICMPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []
 		h.handleRouterSolicitation(pkt, ipLayer, icmp)
 	default:
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "ICMP packet type=%d code=%d sn=%d\n",
+			logging.Debugf("ICMP packet type=%d code=%d sn=%d",
 				icmp.TypeCode.Type(), icmp.TypeCode.Code(), pkt.SerialNumber)
 		}
 	}
@@ -157,7 +156,7 @@ func (h *ICMPHandler) sendAddressMaskReply(
 		device,
 	)
 	if err != nil && h.stack.GetDebugLevel() >= DebugLevelInfo {
-		_, _ = fmt.Fprintf(os.Stdout, "ICMP: Address Mask Reply failed: %v\n", err)
+		logging.Debugf("ICMP: Address Mask Reply failed: %v", err)
 	}
 }
 
@@ -198,7 +197,7 @@ func (h *ICMPHandler) handleRouterSolicitation(
 		)
 		if err != nil {
 			if debugLevel >= DebugLevelInfo {
-				_, _ = fmt.Fprintf(os.Stdout, "ICMP: Router Advertisement failed: %v\n", err)
+				logging.Debugf("ICMP: Router Advertisement failed: %v", err)
 			}
 		}
 	}
@@ -399,7 +398,7 @@ func (h *ICMPHandler) handleEchoRequest(
 	debugLevel := h.stack.GetDebugLevel()
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "ICMP Echo Request from %s to %s id=%d seq=%d sn=%d\n",
+		logging.Debugf("ICMP Echo Request from %s to %s id=%d seq=%d sn=%d",
 			ipLayer.SrcIP, ipLayer.DstIP, icmp.Id, icmp.Seq, pkt.SerialNumber)
 	}
 
@@ -430,13 +429,13 @@ func (h *ICMPHandler) handleEchoRequest(
 		)
 		if err != nil {
 			if debugLevel >= DebugLevelInfo {
-				_, _ = fmt.Fprintf(os.Stdout, "Error sending ICMP reply: %v\n", err)
+				logging.Debugf("Error sending ICMP reply: %v", err)
 			}
 		} else {
 			h.stack.IncrementStat("icmp_replies")
 
 			if debugLevel >= DebugLevelVerbose {
-				_, _ = fmt.Fprintf(os.Stdout, "ICMP Echo Reply from %s (%s) to %s device=%s\n",
+				logging.Debugf("ICMP Echo Reply from %s (%s) to %s device=%s",
 					ipLayer.DstIP, device.MACAddress, ipLayer.SrcIP, device.Name)
 			}
 		}
@@ -589,9 +588,8 @@ func (h *ICMPHandler) SendICMPUnreachable(
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(
-			os.Stdout,
-			"Sent ICMP Destination Unreachable (code=%d) from %s to %s sn=%d\n",
+		logging.Debugf(
+			"Sent ICMP Destination Unreachable (code=%d) from %s to %s sn=%d",
 			code,
 			srcIP,
 			dstIP,

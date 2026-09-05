@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // IP protocol numbers.
@@ -60,7 +60,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	}
 
 	if debugLevel >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "IP packet: %s -> %s protocol=%d sn=%d\n",
+		logging.Debugf("IP packet: %s -> %s protocol=%d sn=%d",
 			ip.SrcIP, ip.DstIP, ip.Protocol, pkt.SerialNumber)
 	}
 
@@ -95,7 +95,7 @@ func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "IP packet missing IPv4 layer sn=%d\n", pkt.SerialNumber)
+			logging.Debugf("IP packet missing IPv4 layer sn=%d", pkt.SerialNumber)
 		}
 
 		return nil
@@ -143,7 +143,7 @@ func (h *IPHandler) getTargetDevices(
 
 	if len(devices) == 0 && !isBroadcast {
 		if debugLevel >= DebugLevelVerbose {
-			_, _ = fmt.Fprintf(os.Stdout, "IP packet not for our devices: %s sn=%d\n", ip.DstIP, serialNum)
+			logging.Debugf("IP packet not for our devices: %s sn=%d", ip.DstIP, serialNum)
 		}
 
 		return nil
@@ -244,7 +244,7 @@ func (h *IPHandler) routeToProtocolHandler(pkt *Packet, ip *layers.IPv4, devices
 		h.stack.tcpHandler.HandlePacket(pkt, ip, devices)
 	default:
 		if debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(os.Stdout, "Unhandled IP protocol %d sn=%d\n", ip.Protocol, pkt.SerialNumber)
+			logging.Debugf("Unhandled IP protocol %d sn=%d", ip.Protocol, pkt.SerialNumber)
 		}
 	}
 }
@@ -381,7 +381,7 @@ func (h *IPHandler) SendIPPacket(
 	h.stack.Send(pkt)
 
 	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		_, _ = fmt.Fprintf(os.Stdout, "Sent IP packet: %s -> %s protocol=%d length=%d sn=%d\n",
+		logging.Debugf("Sent IP packet: %s -> %s protocol=%d length=%d sn=%d",
 			srcIP, dstIP, protocol, len(payload), serialNum)
 	}
 

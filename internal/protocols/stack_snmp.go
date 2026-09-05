@@ -3,7 +3,6 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
@@ -41,9 +40,8 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	for _, walkFile := range configuredWalkFiles(device.SNMPConfig) {
 		err := baseAgent.LoadWalkFile(walkFile)
 		if err != nil && debugLevel >= 1 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"SNMP: failed to load walk file for %s: %v\n",
+			logging.Debugf(
+				"SNMP: failed to load walk file for %s: %v",
 				device.Name,
 				err,
 			)
@@ -55,9 +53,8 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 		agent := group.Ensure(include.Community, device, debugLevel)
 		err := agent.LoadWalkFile(include.WalkFile)
 		if err != nil && debugLevel >= 1 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"SNMP: failed to load walk file for %s (%s): %v\n",
+			logging.Debugf(
+				"SNMP: failed to load walk file for %s (%s): %v",
 				device.Name,
 				include.Community,
 				err,
@@ -71,9 +68,8 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	for _, mib := range device.SNMPConfig.AddMibs {
 		err := baseAgent.AddMib(mib.OID, mib.Type, mib.Value)
 		if err != nil && debugLevel >= DebugLevelInfo {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"SNMP: AddMib failed for %s oid=%s err=%v\n",
+			logging.Debugf(
+				"SNMP: AddMib failed for %s oid=%s err=%v",
 				device.Name,
 				mib.OID,
 				err,
@@ -198,9 +194,8 @@ func (s *Stack) initSNMPv3Engine(
 	engine, err := snmp.NewV3Engine(device.SNMPv3Config, device.MACAddress)
 	if err != nil {
 		if debugLevel >= 1 {
-			_, _ = fmt.Fprintf(
-				os.Stdout,
-				"SNMP: v3 engine init failed for %s: %v\n",
+			logging.Debugf(
+				"SNMP: v3 engine init failed for %s: %v",
 				device.Name,
 				err,
 			)

@@ -19,10 +19,12 @@ import (
 // again. That keeps the handler chain shallow no matter how many daemons
 // the test suite spins up.
 //
-// The stack still emits some fmt.Fprintf(os.Stdout, ...) lines that are
-// invisible to slog — those don't appear here. Migrating those to slog
-// is a separate cleanup. For now this captures everything that already
-// routes through slog.Default (which is most of the new code).
+// The stack's own diagnostics go through internal/logging, which writes to
+// its own io.Writer rather than slog, so they still do not appear here.
+// (They used to go straight to os.Stdout; niac#1805 moved them onto that
+// writer so `daemon --once` can keep stdout clean, which is a different
+// problem from making them SSE-visible.) This captures everything that
+// routes through slog.Default, which is most of the newer code.
 type logHandler struct {
 	next slog.Handler
 	// hub is read via atomic.Pointer so daemon shutdown / re-init can
