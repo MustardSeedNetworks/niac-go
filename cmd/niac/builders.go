@@ -19,7 +19,6 @@ func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
 		addInitCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addInstallCACommand(root) },
 		addListCommand,
-		addInteractiveCommand,
 		addLogsCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addManCommand(root, info) },
 		func(root *cobra.Command, _ *serviceOptions) { addDocsCommand(root) },

@@ -88,7 +88,7 @@ and network discovery without physical hardware.`,
 		Example: `  # Quick start with template
   niac template use router router.yaml
   niac validate router.yaml
-  sudo niac interactive en0 router.yaml
+  sudo niac run en0 router.yaml
 
   # Validate configuration
   niac validate config.yaml

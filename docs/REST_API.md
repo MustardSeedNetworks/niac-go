@@ -188,7 +188,7 @@ Navigate to `https://localhost:8445/`. A non-loopback listener requires an API t
 - Live stats (packets, errors, device counts)
 - Device inventory table
 - Historical runs pulled from BoltDB
-- YAML editor that reads/writes the same config file used by the CLI/TUI
+- YAML editor that reads/writes the same config file used by the CLI
 - An interactive topology graph (ForceGraph)
 - Traffic injection controls for error injection and PCAP replay
 

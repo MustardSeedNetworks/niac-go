@@ -45,6 +45,10 @@ Exit codes:
 	Filter by device name
 
 .PP
+\fB--filter\fP=""
+	BPF expression applied to the exported frames (--pcap only)
+
+.PP
 \fB-h\fP, \fB--help\fP[=false]
 	help for dump
 
@@ -59,6 +63,14 @@ Exit codes:
 .PP
 \fB--json\fP[=false]
 	Output packets as JSON
+
+.PP
+\fB--pcap\fP=""
+	Write the session's retained frames to this pcapng file instead of hex-dumping the live stream
+
+.PP
+\fB--session\fP=""
+	Session to export with --pcap (default: the only running session)
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -92,6 +104,12 @@ Exit codes:
 
   # Read from a daemon on another address
   niac dump --api https://10.0.0.5:8445
+
+  # Save the session's retained frames as pcapng for Wireshark
+  niac dump --session hospital --pcap /tmp/hospital.pcapng
+
+  # Only the ARP frames, newest 200
+  niac dump --session hospital --pcap arp.pcapng --filter arp --count 200
 .EE
 
 

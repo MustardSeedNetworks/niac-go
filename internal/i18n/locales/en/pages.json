@@ -139,9 +139,7 @@
     "description": "Live counters, run snapshots, and quick actions for the active NIAC stack.",
     "errorPanel": {
       "clickHint": "Select a type to inject it on the Traffic page.",
-      "title": "Error Injection Types",
-      "tuiModeDescription": "Run {{command}} to access interactive error injection with keyboard controls (press 'i' for menu, keys 1-4 for quick injection).",
-      "tuiModeLabel": "TUI Mode:"
+      "title": "Error Injection Types"
     },
     "eyebrow": "Simulation",
     "label": "Dashboard",
@@ -796,6 +794,7 @@
     "interfaceSelectPrompt": "Select interface…",
     "interfaceTitle": "Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing.",
     "label": "Simulation",
+    "noCapturedRuns": "No captured runs yet.",
     "noUsableInterfaces": "No usable interfaces",
     "pickConfigHint": "Pick one below — Start unlocks once you do",
     "preparingConnectionLabel": "Preparing connection…",
@@ -810,6 +809,10 @@
       "previewOnly": "Preview only — Start to launch",
       "selectedPrefix": "Selected:"
     },
+    "recentRunsDescription": "Past simulation runs the daemon recorded.",
+    "recentRunsTag": "History",
+    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
+    "recentRunsTitle": "Recent runs",
     "reviewConnectionLabel": "Review connection",
     "rollup": {
       "checking": "Checking the daemon",
@@ -1032,13 +1035,8 @@
     "page": {
       "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",
       "errorInjectionTitle": "Error Injection",
-      "noCapturedRuns": "No captured runs yet.",
       "pcapReplayDescription": "Replay captured packet traffic with loop and timing controls for testing.",
       "pcapReplayTitle": "PCAP Replay",
-      "recentRunsDescription": "Past simulation runs the daemon recorded.",
-      "recentRunsTag": "History",
-      "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
-      "recentRunsTitle": "Recent runs",
       "replayBpfHelp": "tcpdump-style filter; replay only matching packets",
       "replayBpfLabel": "BPF Filter",
       "replayBpfPlaceholder": "e.g. udp port 53 (blank = replay all)",

@@ -314,7 +314,7 @@ export const DashboardPage: FC = () => {
               )}
             </div>
             {history && history.length > 0 && (
-              <AccentLink to="/traffic#recent-runs" className="text-sm">
+              <AccentLink to="/runtime#recent-runs" className="text-sm">
                 {t('dashboard.recentRuns.viewAll')}
               </AccentLink>
             )}
@@ -356,12 +356,6 @@ const ErrorTypeCatalog = memo(({ errorTypes, info }: { errorTypes: ErrorType[]; 
             <p className="text-sm text-text-muted">{errorType.description}</p>
           </AccentLink>
         ))}
-      </div>
-      <div className="mt-heading rounded-lg bg-status-info/20 pad-sm text-sm text-status-info">
-        <strong>{t('dashboard.errorPanel.tuiModeLabel')}</strong>{' '}
-        {t('dashboard.errorPanel.tuiModeDescription', {
-          command: 'niac interactive [interface] [config]',
-        })}
       </div>
     </div>
   );

@@ -7,7 +7,7 @@
  *   - the Automation timeline card (a verbatim duplicate of Recent Runs)
  *     is gone
  *   - "View all history" points at the real Recent Runs section on
- *     /traffic instead of the top of that page
+ *     /runtime instead of the top of that page
  *   - the RX/TX and DNS/DHCP stat cards show both real counters as a
  *     labeled pair, not one smuggled into the other's helper text
  *   - a "Start a Simulation" quick action links to /runtime
@@ -140,10 +140,10 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('Automation timeline')).not.toBeInTheDocument();
   });
 
-  it('"View all history" links to the real Recent Runs section on /traffic', async () => {
+  it('"View all history" links to the real Recent Runs section on /runtime', async () => {
     renderDashboard();
     const link = await screen.findByText('View all history →');
-    expect(link.closest('a')).toHaveAttribute('href', '/traffic#recent-runs');
+    expect(link.closest('a')).toHaveAttribute('href', '/runtime#recent-runs');
   });
 
   it('has a "Start a Simulation" quick action linking to /runtime', async () => {

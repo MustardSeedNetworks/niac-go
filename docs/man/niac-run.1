@@ -10,10 +10,9 @@ niac-run - Run network simulation
 
 
 .SH DESCRIPTION
-Run NIAC network simulation with an optional terminal UI.
+Run a NIAC network simulation in the foreground.
 
 .PP
-By default, runs in headless mode. Add --tui for interactive terminal UI.
 Use "niac daemon" for the HTTPS web UI and API.
 
 
@@ -38,10 +37,6 @@ Use "niac daemon" for the HTTPS web UI and API.
 	Quiet mode (equivalent to -d 0)
 
 .PP
-\fB--tui\fP[=false]
-	Enable interactive Terminal UI
-
-.PP
 \fB-v\fP, \fB--verbose\fP[=false]
 	Verbose output (equivalent to -d 3)
 
@@ -59,9 +54,6 @@ Use "niac daemon" for the HTTPS web UI and API.
 .EX
   # Headless simulation
   sudo niac run en0 config.yaml
-
-  # With Terminal UI (TUI)
-  sudo niac run en0 config.yaml --tui
 
   # Validate config without running
   niac run en0 config.yaml --dry-run

@@ -14,11 +14,10 @@ import (
 // legacyFlags holds all command-line flags for legacy mode.
 type legacyFlags struct {
 	// Core flags
-	debugLevel      int
-	verbose         bool
-	quiet           bool
-	interactiveMode bool
-	dryRun          bool
+	debugLevel int
+	verbose    bool
+	quiet      bool
+	dryRun     bool
 
 	// Information flags
 	showVersion    bool
@@ -82,8 +81,6 @@ func defineCoreFlags(flagSet *flag.FlagSet, flags *legacyFlags) {
 	flagSet.BoolVar(&flags.verbose, "verbose", false, "Verbose output (equivalent to -d 3)")
 	flagSet.BoolVar(&flags.quiet, "q", false, "Quiet mode (equivalent to -d 0)")
 	flagSet.BoolVar(&flags.quiet, "quiet", false, "Quiet mode (equivalent to -d 0)")
-	flagSet.BoolVar(&flags.interactiveMode, "i", false, "Enable interactive TUI mode")
-	flagSet.BoolVar(&flags.interactiveMode, "interactive", false, "Enable interactive TUI mode")
 	flagSet.BoolVar(&flags.dryRun, "n", false, "Dry run - validate configuration without starting")
 	flagSet.BoolVar(
 		&flags.dryRun,
@@ -451,10 +448,6 @@ func logConfigurationDebug(configFile, interfaceName string, flags *legacyFlags,
 		flags.debugLevel,
 		getDebugLevelName(flags.debugLevel),
 	)
-
-	if flags.interactiveMode {
-		logging.Infof("  Mode: Interactive TUI")
-	}
 
 	logCapturePlaybackDebug(cfg)
 	fmt.Fprintln(os.Stdout)

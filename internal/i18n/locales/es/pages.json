@@ -47,8 +47,6 @@
     },
     "errorPanel": {
       "title": "Tipos de inyección de errores",
-      "tuiModeLabel": "Modo TUI:",
-      "tuiModeDescription": "Ejecute {{command}} para acceder a la inyección interactiva de errores con controles de teclado (pulse 'i' para el menú, teclas 1-7 para inyección rápida).",
       "clickHint": "Seleccione un tipo para inyectarlo en la página de Tráfico."
     },
     "eyebrow": "Simulación",
@@ -167,7 +165,12 @@
       "running_one": "Simulando {{count}} dispositivo en {{iface}}",
       "running_other": "Simulando {{count}} dispositivos en {{iface}}",
       "uptimeLabel": "Tiempo activo"
-    }
+    },
+    "recentRunsTitle": "Ejecuciones recientes",
+    "recentRunsTag": "Historial",
+    "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
+    "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
+    "noCapturedRuns": "Aún no hay ejecuciones capturadas."
   },
   "newSimWizard": {
     "backLabel": "Atrás",
@@ -589,11 +592,6 @@
       "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
       "pcapReplayTitle": "Reproducción de PCAP",
       "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
-      "recentRunsTitle": "Ejecuciones recientes",
-      "recentRunsTag": "Historial",
-      "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
-      "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
-      "noCapturedRuns": "Aún no hay ejecuciones capturadas.",
       "replayProgressLabel": "{{sent}} / {{total}} packets ({{percent}}%)",
       "replayProgressBytes": "{{bytes}} enviados",
       "replayProgressUnknown": "Enviando packets… (total desconocido)",

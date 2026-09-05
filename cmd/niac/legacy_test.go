@@ -353,8 +353,6 @@ func TestDefineLegacyFlags(t *testing.T) {
 		"verbose",
 		"q",
 		"quiet",
-		"i",
-		"interactive",
 		"n",
 		"dry-run",
 		"V",
@@ -389,7 +387,6 @@ func TestLegacyFlags_AllFieldsPresent(t *testing.T) {
 	flags.debugLevel = 1
 	flags.verbose = true
 	flags.quiet = true
-	flags.interactiveMode = true
 	flags.dryRun = true
 	flags.showVersion = true
 	flags.listInterfaces = true

@@ -21,12 +21,16 @@ func addConfigCommand(root *cobra.Command, _ *serviceOptions) {
   # Compare two configurations
   niac config diff config1.yaml config2.yaml
 
+  # Edit a configuration in $EDITOR and validate it
+  niac config edit config.yaml
+
   # Merge configurations
   niac config merge base.yaml overlay.yaml merged.yaml`,
 	}
 
 	configCmd.AddCommand(newConfigExportCmd())
 	configCmd.AddCommand(newConfigDiffCmd())
+	configCmd.AddCommand(newConfigEditCmd())
 	configCmd.AddCommand(newConfigInterfaceCmd())
 	configCmd.AddCommand(newConfigMergeCmd())
 	addGenerateCommand(configCmd)

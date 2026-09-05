@@ -26,6 +26,7 @@ Complete command-line reference for NIAC-Go.
 - [`niac completion`](#niac-completion) — generate completion script
 - [`niac config`](#niac-config) — configuration management tools
 - [`niac config diff`](#niac-config-diff) — compare two configurations
+- [`niac config edit`](#niac-config-edit) — open a configuration in $EDITOR and validate the result
 - [`niac config export`](#niac-config-export) — export configuration to YAML
 - [`niac config generate`](#niac-config-generate) — interactive configuration generator
 - [`niac config interface`](#niac-config-interface) — manage device interface metadata
@@ -38,7 +39,6 @@ Complete command-line reference for NIAC-Go.
 - [`niac dump`](#niac-dump) — dump captured packets from a running NIAC simulation
 - [`niac init`](#niac-init) — interactive template wizard for quick configuration setup
 - [`niac install-ca`](#niac-install-ca) — install NIAC's self-signed root certificate into the OS trust store
-- [`niac interactive`](#niac-interactive) — run NIAC in interactive TUI mode
 - [`niac list`](#niac-list) — list interfaces and demo content
 - [`niac list captures`](#niac-list-captures) — list packet captures
 - [`niac list interfaces`](#niac-list-interfaces) — list available network interfaces
@@ -210,6 +210,9 @@ niac config export input.yaml output.yaml
 # Compare two configurations
 niac config diff config1.yaml config2.yaml
 
+# Edit a configuration in $EDITOR and validate it
+niac config edit config.yaml
+
 # Merge configurations
 niac config merge base.yaml overlay.yaml merged.yaml
 ```
@@ -243,6 +246,32 @@ niac config diff baseline.yaml current.yaml
 
 # Compare before/after changes
 niac config diff config.yaml config.new.yaml
+```
+
+### `niac config edit`
+
+Open a configuration in $EDITOR and validate the result.
+
+```text
+niac config edit <config-file>
+```
+
+```text
+Open a NIAC configuration file in $EDITOR (falling back to $VISUAL, then vi)
+and validate it once the editor exits.
+
+An edit that leaves the file unparseable or invalid is reported; the file is
+left as the editor wrote it so the mistake can be corrected.
+```
+
+Examples:
+
+```bash
+# Edit and validate a scenario
+niac config edit clinic.yaml
+
+# Use a specific editor for one invocation
+EDITOR=nano niac config edit clinic.yaml
 ```
 
 ### `niac config export`
@@ -725,50 +754,6 @@ sudo niac install-ca --uninstall
 
 # Install a non-default certificate file
 sudo niac install-ca --cert /etc/niac/certs/server.crt
-```
-
-### `niac interactive`
-
-Run NIAC in interactive TUI mode.
-
-```text
-niac interactive <interface> <config-file> [flags]
-```
-
-```text
-Run NIAC with an interactive Terminal User Interface (TUI).
-
-The TUI provides:
-- Real-time device monitoring
-- Live statistics and packet counts
-- Interactive error injection (press 'i')
-- Device status visualization
-- Keyboard controls (q to quit)
-```
-
-Flags:
-
-```text
-  -d, --debug int   Debug level (0-3) (default 1)
-      --no-color    Disable colored output
-  -q, --quiet       Quiet mode (equivalent to -d 0)
-  -v, --verbose     Verbose output (equivalent to -d 3)
-```
-
-Examples:
-
-```bash
-# Run interactive mode
-sudo niac interactive en0 config.yaml
-
-# Quick start with template
-niac template use router router.yaml
-sudo niac interactive en0 router.yaml
-
-# Controls during runtime:
-#   i - Interactive error injection menu
-#   q - Quit
-#   ↑↓ - Navigate devices
 ```
 
 ### `niac list`
@@ -1290,9 +1275,8 @@ niac run <interface> <config-file> [flags]
 ```
 
 ```text
-Run NIAC network simulation with an optional terminal UI.
+Run a NIAC network simulation in the foreground.
 
-By default, runs in headless mode. Add --tui for interactive terminal UI.
 Use "niac daemon" for the HTTPS web UI and API.
 ```
 
@@ -1303,7 +1287,6 @@ Flags:
   -n, --dry-run     Validate config without starting simulation
       --no-color    Disable colored output
   -q, --quiet       Quiet mode (equivalent to -d 0)
-      --tui         Enable interactive Terminal UI
   -v, --verbose     Verbose output (equivalent to -d 3)
 ```
 
@@ -1312,9 +1295,6 @@ Examples:
 ```bash
 # Headless simulation
 sudo niac run en0 config.yaml
-
-# With Terminal UI (TUI)
-sudo niac run en0 config.yaml --tui
 
 # Validate config without running
 niac run en0 config.yaml --dry-run
@@ -1770,7 +1750,6 @@ niac <interface> <config-file> [flags]
 - `--debug <level>` - Set debug level (0-3)
 - `--verbose, -v` - Verbose output
 - `--quiet, -q` - Quiet mode (errors only)
-- `--interactive, -i` - Interactive TUI mode
 - `--dry-run` - Validate configuration and exit
 
 #### Information Flags
@@ -1808,9 +1787,6 @@ niac en0 config.yaml
 # With debug output
 niac en0 config.yaml --debug 2
 
-# Interactive mode (legacy)
-niac en0 config.yaml --interactive
-
 # Dry run validation
 niac en0 config.yaml --dry-run --verbose
 
@@ -1831,8 +1807,8 @@ niac template use router my-router.yaml
 # Validate the configuration
 niac validate my-router.yaml
 
-# Run in interactive mode
-niac interactive en0 my-router.yaml
+# Run the simulation
+sudo niac run en0 my-router.yaml
 ```
 
 #### 2. CI/CD Pipeline Integration
@@ -1862,7 +1838,7 @@ echo "✅ All configurations valid"
 niac template use complete lab-network.yaml
 
 # 2. Edit configuration
-vim lab-network.yaml
+niac config edit lab-network.yaml
 
 # 3. Validate before running
 niac validate lab-network.yaml --verbose
@@ -1871,7 +1847,7 @@ niac validate lab-network.yaml --verbose
 niac --dry-run en0 lab-network.yaml
 
 # 5. Run simulation
-niac interactive en0 lab-network.yaml
+sudo niac run en0 lab-network.yaml
 ```
 
 #### 4. Debugging Network Issues

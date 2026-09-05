@@ -198,7 +198,7 @@ func runTemplateUse(args []string) error {
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Next steps:")
 	fmt.Fprintf(os.Stdout, "  niac validate %s\n", outputFile)
-	fmt.Fprintf(os.Stdout, "  sudo niac interactive en0 %s\n", outputFile)
+	fmt.Fprintf(os.Stdout, "  sudo niac run en0 %s\n", outputFile)
 
 	return nil
 }
@@ -269,7 +269,7 @@ func describeDevices(templateName string, devices []config.Device) {
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "To use this template:")
 	fmt.Fprintf(os.Stdout, "  niac template use %s config.yaml\n", templateName)
-	fmt.Fprintln(os.Stdout, "  sudo niac interactive en0 config.yaml")
+	fmt.Fprintln(os.Stdout, "  sudo niac run en0 config.yaml")
 }
 
 func describeDeviceInfo(device config.Device) {

@@ -18,13 +18,13 @@ func TestAddRunCommand(t *testing.T) {
 		t.Fatal("Expected run command to be registered")
 	}
 
-	expectedFlags := []string{"debug", "verbose", "quiet", "no-color", "tui", "dry-run"}
+	expectedFlags := []string{"debug", "verbose", "quiet", "no-color", "dry-run"}
 	for _, flag := range expectedFlags {
 		if cmd.Flags().Lookup(flag) == nil {
 			t.Errorf("Expected --%s flag on run command", flag)
 		}
 	}
-	for _, obsolete := range []string{"web", "port"} {
+	for _, obsolete := range []string{"web", "port", "tui"} {
 		if cmd.Flags().Lookup(obsolete) != nil {
 			t.Errorf("obsolete --%s flag must not be registered", obsolete)
 		}
@@ -35,7 +35,6 @@ func TestRunOptionsStruct(t *testing.T) {
 	opts := &runOptions{
 		debugLevel: 2,
 		verbose:    true,
-		tui:        true,
 	}
 
 	if opts.debugLevel != 2 {
@@ -43,8 +42,5 @@ func TestRunOptionsStruct(t *testing.T) {
 	}
 	if !opts.verbose {
 		t.Error("Expected verbose=true")
-	}
-	if !opts.tui {
-		t.Error("Expected tui=true")
 	}
 }
