@@ -231,13 +231,10 @@ All protocols are supported on all platforms:
 
 ### Debug Features
 
-All debug flags work across platforms:
+Debug verbosity is one global level and behaves the same on every platform:
 
 ```bash
---debug-arp      # ARP protocol debugging
---debug-lldp     # LLDP protocol debugging
---debug-cdp      # CDP protocol debugging
---debug-packet   # Raw packet debugging
+sudo niac daemon --once -d 3 en0 config.yaml   # 0 quiet .. 3 trace
 ```
 
 ---

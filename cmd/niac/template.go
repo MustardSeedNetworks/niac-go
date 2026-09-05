@@ -68,7 +68,7 @@ without writing to disk.`,
 		Short: "Copy template to a new file",
 		Long: `Copy a named template's body into a new YAML file at the given
 output path. The output file becomes the starting point you edit and run
-with 'niac run'; the template itself is unchanged.`,
+with 'niac daemon --once'; the template itself is unchanged.`,
 		Example: `  # Create small office config
   niac template use small-office office.yaml
 
@@ -198,7 +198,7 @@ func runTemplateUse(args []string) error {
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Next steps:")
 	fmt.Fprintf(os.Stdout, "  niac validate %s\n", outputFile)
-	fmt.Fprintf(os.Stdout, "  sudo niac run en0 %s\n", outputFile)
+	fmt.Fprintf(os.Stdout, "  sudo niac daemon --once en0 %s\n", outputFile)
 
 	return nil
 }
@@ -269,7 +269,7 @@ func describeDevices(templateName string, devices []config.Device) {
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "To use this template:")
 	fmt.Fprintf(os.Stdout, "  niac template use %s config.yaml\n", templateName)
-	fmt.Fprintln(os.Stdout, "  sudo niac run en0 config.yaml")
+	fmt.Fprintln(os.Stdout, "  sudo niac daemon --once en0 config.yaml")
 }
 
 func describeDeviceInfo(device config.Device) {

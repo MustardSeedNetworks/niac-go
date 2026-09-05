@@ -233,7 +233,7 @@ Validate the configuration works:
 
 ```bash
 niac validate config.yaml
-sudo niac en0 config.yaml
+sudo niac daemon --once en0 config.yaml
 ```
 
 ## Performance

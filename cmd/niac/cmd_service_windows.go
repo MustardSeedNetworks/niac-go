@@ -87,6 +87,7 @@ func (p *niacProgram) run() {
 		ReleaseTrain: p.info.releaseTrain,
 		UIBuildHash:  p.info.uiBuildHash,
 		CertDir:      defaultCertDir(),
+		DebugLevel:   daemon.DefaultDebugLevel,
 	})
 	if err != nil {
 		logging.Errorf("Failed to create daemon: %v", err)

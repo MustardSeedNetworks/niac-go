@@ -119,7 +119,7 @@ devices:
 
 ```bash
 niac validate examples/environments/datacenter-spine-leaf.yaml
-sudo niac en0 examples/environments/datacenter-spine-leaf.yaml
+sudo niac daemon --once en0 examples/environments/datacenter-spine-leaf.yaml
 ```
 
 ## Enterprise Campus (3-Tier)
@@ -364,7 +364,7 @@ niac validate environment.yaml
 2. **Deploy**
 
 ```bash
-sudo niac en0 environment.yaml
+sudo niac daemon --once en0 environment.yaml
 ```
 
 3. **Verify Topology**

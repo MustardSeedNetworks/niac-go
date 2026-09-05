@@ -95,7 +95,7 @@ func runDocs(out interface{ Write([]byte) (int, error) }, check bool) error {
 // metadata, or the drift gate would fail on every commit.
 func buildDocsRoot() *cobra.Command {
 	info := versionInfo{version: "dev", commit: "none", date: "unknown"}
-	return newRootCommand(info, new(serviceOptions), func([]string) {}, commandBuilders(info))
+	return newRootCommand(info, new(serviceOptions), commandBuilders(info))
 }
 
 // walkCommands applies fn to c and every command beneath it.
@@ -112,7 +112,7 @@ func isDocumented(c *cobra.Command) bool {
 	return !c.Hidden && c.Name() != "help"
 }
 
-// usageLine renders "niac run <interface> <config>" — the command path plus the
+// usageLine renders "niac daemon <flags>" — the command path plus the
 // positional arguments declared in Use, without cobra's "[flags]" suffix.
 func usageLine(c *cobra.Command) string {
 	_, args, _ := strings.Cut(strings.TrimSpace(c.Use), " ")

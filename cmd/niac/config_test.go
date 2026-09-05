@@ -20,7 +20,6 @@ func newTestRootCommand() *cobra.Command {
 	return newRootCommand(
 		info,
 		services,
-		func([]string) {},
 		[]func(*cobra.Command, *serviceOptions){
 			addConfigCommand,
 		},

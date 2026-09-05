@@ -342,7 +342,7 @@ dhcp:
 3. **Check debug output:**
 
    ```bash
-   sudo niac --debug-lldp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    ```
 
 4. **Monitor LLDP traffic:**
@@ -428,7 +428,7 @@ Timeout: No Response from 10.0.0.1
 4. **Check debug output:**
 
    ```bash
-   sudo niac --debug-snmp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    ```
 
 **Solution:**
@@ -544,7 +544,7 @@ snmp_agent:
 4. **Check debug output:**
 
    ```bash
-   sudo niac --debug-dhcp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    ```
 
 **Common Causes:**
@@ -656,7 +656,7 @@ dns:
 3. **Check member interface status:**
 
    ```bash
-   sudo niac --debug-lacp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    ```
 
 **LACP Mode Combinations:**
@@ -780,7 +780,7 @@ devices:
 4. **Monitor STP:**
 
    ```bash
-   sudo niac --debug-stp 3 en0 config.yaml
+   sudo niac daemon --once -d 3 en0 config.yaml
    sudo tcpdump -i en0 ether dst 01:80:c2:00:00:00
    ```
 
@@ -819,7 +819,7 @@ devices:
 
    ```bash
    # Monitor packet rate
-   sudo niac --stats en0 config.yaml
+   sudo niac daemon --once en0 config.yaml
    ```
 
 2. **Identify traffic sources:**
@@ -921,7 +921,7 @@ devices:
 
    ```bash
    # Are you running on correct interface?
-   sudo niac en0 config.yaml  # Not lo0!
+   sudo niac daemon --once en0 config.yaml  # Not lo0!
    ```
 
 5. **Check routing:**
@@ -935,7 +935,7 @@ devices:
 
 ```bash
 # Run NiAC-Go on correct interface
-sudo niac en0 config.yaml  # Physical interface
+sudo niac daemon --once en0 config.yaml  # Physical interface
 
 # Enable ICMP
 devices:
@@ -959,10 +959,10 @@ Error: failed to open interface en0: permission denied
 
 ```bash
 # ❌ Wrong
-niac en0 config.yaml
+niac daemon --once en0 config.yaml
 
 # ✅ Correct
-sudo niac en0 config.yaml
+sudo niac daemon --once en0 config.yaml
 ```
 
 ### Interface not found
@@ -997,8 +997,8 @@ Error: interface en0 not found
 
 ```bash
 # Use correct interface name
-sudo niac eth0 config.yaml  # Linux
-sudo niac en0 config.yaml   # macOS
+sudo niac daemon --once eth0 config.yaml  # Linux
+sudo niac daemon --once en0 config.yaml   # macOS
 ```
 
 ## SNMP Issues
@@ -1074,18 +1074,20 @@ Error: failed to parse walk file: invalid OID format
 
 ### Enable protocol debug output
 
+Verbosity is one global level, not one switch per protocol: every handler
+reads the same level.
+
 ```bash
-# Debug specific protocols
-sudo niac --debug-lldp 3 en0 config.yaml
-sudo niac --debug-cdp 3 en0 config.yaml
-sudo niac --debug-snmp 3 en0 config.yaml
-sudo niac --debug-dhcp 3 en0 config.yaml
-sudo niac --debug-stp 3 en0 config.yaml
+# Raise verbosity for a single-shot run
+sudo niac daemon --once -d 3 en0 config.yaml
 
-# Debug multiple protocols
-sudo niac --debug-lldp 3 --debug-snmp 3 en0 config.yaml
+# Or change it on a running daemon, without restarting the simulation
+curl -sk -X PUT https://localhost:8445/api/v1/debug/level \
+  -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"level":"trace"}'
 
-# Debug levels: 1 (errors), 2 (warnings), 3 (info), 4 (debug), 5 (trace)
+# Levels: 0 quiet, 1 normal, 2 verbose, 3 trace
 ```
 
 ### Capture and analyze traffic
@@ -1119,16 +1121,14 @@ niac --dry-run lo0 config.yaml
 # - Topology validation
 ```
 
-### Interactive error injection
+### Error injection
+
+Fault injection lives in the web UI (Traffic → Fault Injection) and the
+`/api/v1/faults` API, against a running `niac daemon`.
 
 ```bash
-# Launch interactive mode
-sudo niac --interactive en0 config.yaml
-
-# Controls:
-# [i] - Open interactive menu
-# [c] - Clear all errors
-# [q] - Quit
+sudo niac daemon
+# then open https://localhost:8445
 
 # Use to:
 # - Test SNMP trap triggers
@@ -1140,7 +1140,7 @@ sudo niac --interactive en0 config.yaml
 
 ```bash
 # Run with verbose output
-sudo niac -v en0 config.yaml
+sudo niac daemon --once -d 3 en0 config.yaml
 
 # Monitor system logs (macOS)
 log show --predicate 'process == "niac"' --last 1h
@@ -1149,7 +1149,7 @@ log show --predicate 'process == "niac"' --last 1h
 journalctl -u niac -f
 
 # Check for errors
-sudo niac en0 config.yaml 2>&1 | grep -i error
+sudo niac daemon --once en0 config.yaml 2>&1 | grep -i error
 ```
 
 ## Getting Help

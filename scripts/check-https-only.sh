@@ -27,7 +27,7 @@ report_matches \
 
 report_matches \
   "Plaintext or obsolete API example found in active operator documentation:" \
-  'http://localhost:8080|localhost:9090/metrics|niac run.*--(api|web)' \
+  'http://localhost:8080|localhost:9090/metrics|niac daemon.*--(api|web)' \
   docs/API_EXAMPLES.md docs/CI_CD.md docs/FAQ.md docs/MONITORING.md \
   docs/PERFORMANCE.md docs/README.md docs/WEBUI.md docs/openapi.yaml
 

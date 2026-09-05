@@ -46,8 +46,8 @@ make build
 # Validate
 ./niac validate my-lab.yaml
 
-# Run on eth0 (needs CAP_NET_RAW or sudo)
-sudo ./niac run eth0 my-lab.yaml
+# Run once on eth0 in the foreground (needs CAP_NET_RAW or sudo)
+sudo ./niac daemon --once eth0 my-lab.yaml
 
 # Or start the daemon + web UI
 sudo ./niac daemon
@@ -75,7 +75,6 @@ sudo ./niac daemon
 | `niac mibzip` | Convert SNMP walk files to and from MibZip format |
 | `niac monitor` | Stream real-time statistics from a running NIAC simulation |
 | `niac neighbors [watch]` | Display neighbor discovery table from LLDP/CDP protocols |
-| `niac run <interface> <config-file>` | Run network simulation |
 | `niac sanitize <input-walk> <output-walk>` | Sanitize SNMP walk files with NIAC branding |
 | `niac status` | Query the status of a running NIAC simulation |
 | `niac template` | Manage configuration templates |

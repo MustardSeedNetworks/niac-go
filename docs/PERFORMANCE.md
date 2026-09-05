@@ -76,10 +76,9 @@ fields. Record them with the result.
 
 ## Profiling
 
-The legacy foreground CLI can expose Go pprof on loopback when its explicit
-profiling flag is enabled. Never bind profiling to an untrusted network.
-Daemon performance investigations should begin with metrics, traces, race
-tests, and focused Go benchmarks; add profiling only for a reproduced problem.
+NIAC does not expose Go pprof. Performance investigations begin with metrics,
+traces, race tests, and focused Go benchmarks; add profiling to a local build
+only for a reproduced problem, and never bind it to an untrusted network.
 
 ## Regression workflow
 

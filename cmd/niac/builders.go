@@ -8,7 +8,6 @@ import "github.com/spf13/cobra"
 // here is documented and checked without a second edit.
 func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
 	return []func(*cobra.Command, *serviceOptions){
-		func(root *cobra.Command, services *serviceOptions) { addRunCommand(root, services, info) },
 		func(root *cobra.Command, _ *serviceOptions) { addCompletionCommand(root) },
 		addAnalyzeCommand,
 		addAnalyzePcapCommand,

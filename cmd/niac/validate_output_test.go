@@ -130,33 +130,3 @@ func TestOutputTextResultWithWarnings(t *testing.T) {
 	}()
 	outputTextResult(result, configFile, true, len(cfg.Devices))
 }
-
-func TestPrintDeviceList(t *testing.T) {
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-	configContent := `devices:
-  - name: "router-1"
-    type: "router"
-    mac: "00:11:22:33:44:55"
-    ips:
-      - "192.168.1.1"
-    snmp_agent:
-      community: "public"
-  - name: "switch-1"
-    type: "switch"
-    mac: "00:11:22:33:44:66"
-    ips:
-      - "192.168.1.2"
-      - "192.168.1.3"
-`
-	if err := os.WriteFile(configFile, []byte(configContent), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("printDeviceList panicked: %v", r)
-		}
-	}()
-	printDeviceList(configFile)
-}
