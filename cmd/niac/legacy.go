@@ -14,10 +14,10 @@ import (
 // legacyFlags holds all command-line flags for legacy mode.
 type legacyFlags struct {
 	// Core flags
-	debugLevel      int
-	verbose         bool
-	quiet           bool
-	dryRun          bool
+	debugLevel int
+	verbose    bool
+	quiet      bool
+	dryRun     bool
 
 	// Information flags
 	showVersion    bool

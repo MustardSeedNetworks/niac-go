@@ -42,7 +42,11 @@ func TestConfigEditInvokesEditorAndValidates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	editor := fakeEditor(t, tmpDir, `printf 'devices:\n  - name: "router-9"\n    type: "router"\n    mac: "00:11:22:33:44:99"\n    ips:\n      - "192.168.1.9"\n' > "$1"`)
+	editor := fakeEditor(
+		t,
+		tmpDir,
+		`printf 'devices:\n  - name: "router-9"\n    type: "router"\n    mac: "00:11:22:33:44:99"\n    ips:\n      - "192.168.1.9"\n' > "$1"`,
+	)
 	t.Setenv("EDITOR", editor)
 
 	root := newTestRootCommand()
