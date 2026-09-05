@@ -381,9 +381,14 @@ func parseIPList(ipStrings []string) []net.IP {
 // parseSNMPTrapsConfig parses SNMP traps configuration from YAML.
 func parseSNMPTrapsConfig(yamlTraps *converter.TrapsConfig) *TrapConfig {
 	trapsCfg := &TrapConfig{
-		Enabled:   yamlTraps.Enabled,
-		Receivers: yamlTraps.Receivers,
-		Community: yamlTraps.Community,
+		Enabled:              yamlTraps.Enabled,
+		Receivers:            yamlTraps.Receivers,
+		Community:            yamlTraps.Community,
+		Version:              yamlTraps.Version,
+		SecurityUser:         yamlTraps.SecurityUser,
+		Inform:               yamlTraps.Inform,
+		InformRetries:        yamlTraps.InformRetries,
+		InformTimeoutSeconds: yamlTraps.InformTimeoutSeconds,
 	}
 
 	parseSNMPTriggerTraps(trapsCfg, yamlTraps)

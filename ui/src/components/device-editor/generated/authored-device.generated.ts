@@ -64,6 +64,11 @@ export interface AuthoredDevice {
           readonly enabled?: boolean;
           readonly receivers?: readonly string[];
           readonly community?: string;
+          readonly version?: 'v2c' | 'v3';
+          readonly security_user?: string;
+          readonly inform?: boolean;
+          readonly inform_retries?: number;
+          readonly inform_timeout_seconds?: number;
           readonly cold_start?: {
               readonly enabled?: boolean;
               readonly on_startup?: boolean;

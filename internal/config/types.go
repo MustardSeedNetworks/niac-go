@@ -769,8 +769,24 @@ type TrapConfig struct {
 	Enabled   bool
 	Receivers []string // Trap receiver addresses (IP:port format)
 	Community string   // SNMP community string (default: "public")
-	ColdStart *TrapTriggerConfig
-	LinkState *LinkStateTrapConfig
+	// Version is "v2c" (the default) or "v3". A v3 notification is
+	// authenticated and encrypted with a USM user from the device's snmpv3
+	// block, which is what a manager configured for v3-only will accept.
+	Version string
+	// SecurityUser names the snmpv3 user a v3 notification is sent as. Empty
+	// uses the device's first configured user.
+	SecurityUser string
+	// Inform sends an InformRequest instead of a trap. An inform is
+	// acknowledged, so the sender knows the manager received it; a trap is
+	// fire-and-forget and a dropped one is invisible.
+	Inform bool
+	// InformRetries is how many times an unacknowledged inform is resent.
+	InformRetries int
+	// InformTimeoutSeconds is how long to wait for an acknowledgement before
+	// resending.
+	InformTimeoutSeconds int
+	ColdStart            *TrapTriggerConfig
+	LinkState            *LinkStateTrapConfig
 }
 
 // TrapTriggerConfig configures a simple trap trigger.

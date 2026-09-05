@@ -143,6 +143,28 @@ type TrapsConfig struct {
 	// Community is the community string sent with v2c traps.
 	Community string `yaml:"community,omitempty"`
 
+	// Version selects the notification version: v2c (the default) or v3. A v3
+	// notification is authenticated and encrypted with a USM user from this
+	// device's snmpv3 block, which is what a manager configured for v3-only
+	// will accept.
+	Version string `yaml:"version,omitempty" validate:"omitempty,oneof=v2c v3"`
+
+	// SecurityUser names the snmpv3 user a v3 notification is sent as. Omit it
+	// to use the device's first configured user.
+	SecurityUser string `yaml:"security_user,omitempty"`
+
+	// Inform sends an InformRequest rather than a trap. An inform is
+	// acknowledged, so the sender knows the manager received it; a trap is
+	// fire-and-forget and a dropped one is invisible.
+	Inform bool `yaml:"inform,omitempty"`
+
+	// InformRetries is how many times an unacknowledged inform is resent.
+	InformRetries int `yaml:"inform_retries,omitempty" validate:"omitempty,gte=0,lte=10"`
+
+	// InformTimeoutSeconds is how long to wait for an acknowledgement before
+	// resending.
+	InformTimeoutSeconds int `yaml:"inform_timeout_seconds,omitempty" validate:"omitempty,gte=1,lte=60"`
+
 	// ColdStart sends a coldStart trap when the device comes up.
 	ColdStart *TrapTriggerConfig `yaml:"cold_start,omitempty"`
 

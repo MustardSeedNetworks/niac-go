@@ -2054,6 +2054,30 @@
           "type": "string",
           "description": "Community is the community string sent with v2c traps."
         },
+        "version": {
+          "type": "string",
+          "enum": [
+            "v2c",
+            "v3"
+          ],
+          "description": "Version selects the notification version: v2c (the default) or v3. A v3\nnotification is authenticated and encrypted with a USM user from this\ndevice's snmpv3 block, which is what a manager configured for v3-only\nwill accept."
+        },
+        "security_user": {
+          "type": "string",
+          "description": "SecurityUser names the snmpv3 user a v3 notification is sent as. Omit it\nto use the device's first configured user."
+        },
+        "inform": {
+          "type": "boolean",
+          "description": "Inform sends an InformRequest rather than a trap. An inform is\nacknowledged, so the sender knows the manager received it; a trap is\nfire-and-forget and a dropped one is invisible."
+        },
+        "inform_retries": {
+          "type": "integer",
+          "description": "InformRetries is how many times an unacknowledged inform is resent."
+        },
+        "inform_timeout_seconds": {
+          "type": "integer",
+          "description": "InformTimeoutSeconds is how long to wait for an acknowledgement before\nresending."
+        },
         "cold_start": {
           "$ref": "#/$defs/TrapTriggerConfig",
           "description": "ColdStart sends a coldStart trap when the device comes up."

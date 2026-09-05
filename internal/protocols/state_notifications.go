@@ -546,12 +546,19 @@ type stateNotificationManager struct {
 	registrations map[*config.Device]*stateNotificationRegistration
 	sender        datagramSender
 	started       time.Time
+	// informs tracks notifications awaiting acknowledgement. Nil disables
+	// inform retry, which is what a manager built without a stack gets.
+	informs *informTracker
+	// stack resolves a device's SNMPv3 engine when a notification is sent at
+	// v3. Nil in tests that drive the manager with a fake sender.
+	stack *Stack
 }
 
 func newStateNotificationManager(stack *Stack) *stateNotificationManager {
 	return &stateNotificationManager{
 		wake: make(chan struct{}, 1), registrations: make(map[*config.Device]*stateNotificationRegistration),
 		sender: newStackDatagramSender(stack), started: time.Now(),
+		informs: newInformTracker(), stack: stack,
 	}
 }
 
@@ -584,6 +591,9 @@ func (m *stateNotificationManager) Reset() {
 	}
 	m.registrations = make(map[*config.Device]*stateNotificationRegistration)
 	m.mu.Unlock()
+	// Outstanding inform retries go with the registrations: a stopped stack
+	// that keeps resending is sending into a network it no longer has.
+	m.stopInforms()
 	if sender, ok := m.sender.(*stackDatagramSender); ok {
 		sender.reset()
 	}
@@ -701,24 +711,74 @@ func (m *stateNotificationManager) sendTrap(
 		community = config.DefaultSNMPCommunity
 	}
 	uptime := safeconv.Uint32FromInt64(int64(time.Since(m.started) / snmpCentisecond))
-	packet := &gosnmp.SnmpPacket{
-		Version: gosnmp.Version2c, Community: community, PDUType: gosnmp.SNMPv2Trap,
-		RequestID: safeconv.Uint32FromUint64(version), Variables: []gosnmp.SnmpPDU{
-			{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uptime},
-			{Name: ".1.3.6.1.6.3.1.1.4.1.0", Type: gosnmp.ObjectIdentifier, Value: oid},
-		},
+	requestID := safeconv.Uint32FromUint64(version)
+	vars := []gosnmp.SnmpPDU{
+		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uptime},
+		{Name: ".1.3.6.1.6.3.1.1.4.1.0", Type: gosnmp.ObjectIdentifier, Value: oid},
 	}
-	packet.Variables = append(packet.Variables, variables...)
-	packet.Variables = append(packet.Variables, m.trapIdentityVariables(device)...)
-	payload, err := packet.MarshalMsg()
+	vars = append(vars, variables...)
+	vars = append(vars, m.trapIdentityVariables(device)...)
+
+	// An inform is acknowledged, so a dropped one is visible and resent; a trap
+	// is fire-and-forget. The PDU type is the only difference on the wire.
+	pduType := gosnmp.SNMPv2Trap
+	if traps.Inform {
+		pduType = gosnmp.InformRequest
+	}
+
+	payload, err := m.marshalNotification(device, traps, community, pduType, requestID, vars)
 	if err != nil {
 		slog.Warn("marshal SNMP notification", "device", device.Name, "error", err)
+
 		return
 	}
+
 	for _, receiver := range traps.Receivers {
-		m.send(device, normalizeReceiver(receiver, snmp.DefaultSNMPTrapPort), snmp.DefaultSNMPTrapPort, payload)
+		target := normalizeReceiver(receiver, snmp.DefaultSNMPTrapPort)
+		m.send(device, target, snmp.DefaultSNMPTrapPort, payload)
+		if traps.Inform {
+			m.trackInform(device, traps, target, requestID, payload)
+		}
 	}
 }
+
+// marshalNotification encodes the notification at the configured version.
+//
+// v2c carries the community string in the clear, so a manager configured for
+// v3-only rejects it outright and a device that can only send v2c is silent to
+// that manager. v3 is authenticated, and encrypted when the user has a privacy
+// protocol.
+func (m *stateNotificationManager) marshalNotification(
+	device *config.Device,
+	traps *config.TrapConfig,
+	community string,
+	pduType gosnmp.PDUType,
+	requestID uint32,
+	vars []gosnmp.SnmpPDU,
+) ([]byte, error) {
+	if traps.Version == trapVersion3 {
+		engine := m.v3Engine(device)
+		if engine == nil {
+			return nil, fmt.Errorf("%w: device %s has traps version v3", snmp.ErrV3Disabled, device.Name)
+		}
+
+		return engine.MarshalNotification(traps.SecurityUser, pduType, requestID, vars)
+	}
+
+	packet := &gosnmp.SnmpPacket{
+		Version: gosnmp.Version2c, Community: community, PDUType: pduType,
+		RequestID: requestID, Variables: vars,
+	}
+	payload, err := packet.MarshalMsg()
+	if err != nil {
+		return nil, fmt.Errorf("marshal v2c notification: %w", err)
+	}
+
+	return payload, nil
+}
+
+// trapVersion3 is the configured value that selects SNMPv3 notifications.
+const trapVersion3 = "v3"
 
 func (m *stateNotificationManager) trapIdentityVariables(device *config.Device) []gosnmp.SnmpPDU {
 	registration := m.registrations[device]
@@ -798,4 +858,14 @@ func syslogEscape(value string) string {
 	value = strings.ReplaceAll(value, `\`, `\\`)
 	value = strings.ReplaceAll(value, `"`, `\"`)
 	return strings.ReplaceAll(value, `]`, `\]`)
+}
+
+// v3Engine returns the device's SNMPv3 authoritative engine, which is also its
+// notification originator, or nil when v3 is not configured on it.
+func (m *stateNotificationManager) v3Engine(device *config.Device) *snmp.V3Engine {
+	if m.stack == nil {
+		return nil
+	}
+
+	return m.stack.deviceV3Engine(device)
 }
