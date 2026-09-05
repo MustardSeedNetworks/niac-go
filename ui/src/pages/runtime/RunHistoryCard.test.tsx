@@ -51,11 +51,13 @@ describe('RunHistoryCard', () => {
         id: 1,
         configName: 'clinic.yaml',
         startedAt: new Date('2026-09-04T12:00:00Z').toISOString(),
-        duration: 30,
+        duration: '30s',
+        interface: 'lo0',
         deviceCount: 12,
         packetsReceived: 4096,
         packetsSent: 2048,
-      } as HistoryRecord,
+        errors: 0,
+      },
     ]);
 
     render(

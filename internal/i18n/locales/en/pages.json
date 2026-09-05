@@ -794,6 +794,7 @@
     "interfaceSelectPrompt": "Select interface…",
     "interfaceTitle": "Pick the host interface the daemon should bind to. Loopback (lo0/lo) is safest for local testing.",
     "label": "Simulation",
+    "noCapturedRuns": "No captured runs yet.",
     "noUsableInterfaces": "No usable interfaces",
     "pickConfigHint": "Pick one below — Start unlocks once you do",
     "preparingConnectionLabel": "Preparing connection…",
@@ -808,6 +809,10 @@
       "previewOnly": "Preview only — Start to launch",
       "selectedPrefix": "Selected:"
     },
+    "recentRunsDescription": "Past simulation runs the daemon recorded.",
+    "recentRunsTag": "History",
+    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
+    "recentRunsTitle": "Recent runs",
     "reviewConnectionLabel": "Review connection",
     "rollup": {
       "checking": "Checking the daemon",
@@ -864,12 +869,7 @@
     "stopConfirmMessage": "Are you sure you want to stop the simulation? This will interrupt the current run.",
     "stopConfirmTitle": "Stop simulation?",
     "stopSuccess": "Simulation stopped",
-    "title": "Simulation",
-    "recentRunsTitle": "Recent runs",
-    "recentRunsTag": "History",
-    "recentRunsDescription": "Past simulation runs the daemon recorded.",
-    "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
-    "noCapturedRuns": "No captured runs yet."
+    "title": "Simulation"
   },
   "segments": {
     "description": "Read-only view of the devices in each VLAN segment the active config describes.",
