@@ -530,10 +530,16 @@ NIAC_API_TOKEN or --api-token.
 Flags:
 
 ```text
+      --access-vlan int                 With --once, the VLAN for access or trunk mode
       --api-token string                Bearer token (preferred: NIAC_API_TOKEN). Required when --listen is non-loopback.
+      --attachment string               With --once, the logical attachment to bind
+      --attachment-mode string          With --once, the physical binding mode: direct, access or trunk (default "direct")
       --attachment-policy stringArray   Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...
       --cert-dir string                 Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)
+      --duration duration               With --once, how long to run before stopping (0 runs until interrupted)
       --listen string                   Address to listen on for the HTTPS API and web UI (default: 127.0.0.1:8445)
+      --once                            Run one session in the foreground and exit with a JSON summary
+      --session-id string               With --once, the session identifier to run under (default "once")
       --storage string                  Path to run history database (use 'disabled' to disable) (default "~/.niac/niac.db")
       --storage-keep int                Run history records to keep, pruned oldest first on start (0 keeps every run) (default 500)
       --token-file string               Path to a 0600 JSON file with scoped tokens (overrides --api-token / NIAC_API_TOKEN). Schema: {"tokens":[{"value":"...","scope":"read-only|read-write"}]}. Re-read on SIGHUP.
@@ -597,9 +603,12 @@ Flags:
       --cacert string      Daemon certificate to trust (default: the local daemon's own, when visible)
       --count int          Maximum number of packets to display (0 = all)
       --device string      Filter by device name
+      --filter string      BPF expression applied to the exported frames (--pcap only)
       --insecure           Skip TLS verification, for a daemon whose certificate this host cannot see
       --interface string   Filter by interface name
       --json               Output packets as JSON
+      --pcap string        Write the session's retained frames to this pcapng file instead of hex-dumping the live stream
+      --session string     Session to export with --pcap (default: the only running session)
 ```
 
 Examples:
@@ -625,6 +634,12 @@ niac dump --device router-1 --interface eth0 --count 5
 
 # Read from a daemon on another address
 niac dump --api https://10.0.0.5:8445
+
+# Save the session's retained frames as pcapng for Wireshark
+niac dump --session hospital --pcap /tmp/hospital.pcapng
+
+# Only the ARP frames, newest 200
+niac dump --session hospital --pcap arp.pcapng --filter arp --count 200
 ```
 
 ### `niac init`
