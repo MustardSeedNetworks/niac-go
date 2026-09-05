@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.3...v0.95.4) (2026-09-05)
+
+
+### Bug Fixes
+
+* **capture:** decode packets once, so all three surfaces agree ([#1819](https://github.com/MustardSeedNetworks/niac-go/issues/1819)) ([c20eea2](https://github.com/MustardSeedNetworks/niac-go/commit/c20eea2163cb8d6e9dce421acba4431c06cee409))
+* **sanitize:** map subnets, not addresses, and stop damaging vendor strings ([#1821](https://github.com/MustardSeedNetworks/niac-go/issues/1821)) ([49ee339](https://github.com/MustardSeedNetworks/niac-go/commit/49ee339e1cb8f0952e53c6fe78ffcaf067d95bfb))
+
 ## [0.95.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.2...v0.95.3) (2026-09-05)
 
 
