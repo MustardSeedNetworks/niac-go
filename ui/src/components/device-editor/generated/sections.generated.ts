@@ -562,6 +562,180 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "title": "Chassis id type",
         "description": "ChassisIDType selects which chassis ID subtype is advertised, for\nexample mac or local.",
         "kind": "string"
+      },
+      {
+        "name": "med",
+        "title": "Med",
+        "description": "LldpMedConfig represents the LLDP-MED (TIA-1057) extensions.",
+        "kind": "object",
+        "fields": [
+          {
+            "name": "device_type",
+            "title": "Device type",
+            "description": "DeviceType is the MED device class: endpoint_class1 (generic),\nendpoint_class2 (media), endpoint_class3 (communication device, such as a\nphone), or network_connectivity for the switch side.",
+            "kind": "enum",
+            "options": [
+              "endpoint_class1",
+              "endpoint_class2",
+              "endpoint_class3",
+              "network_connectivity"
+            ]
+          },
+          {
+            "name": "network_policies",
+            "title": "Network policies",
+            "description": "NetworkPolicies are the per-application VLAN, priority and DSCP\nassignments the device advertises.",
+            "kind": "objectList",
+            "fields": [
+              {
+                "name": "application",
+                "title": "Application",
+                "description": "Application is the traffic class the policy describes.",
+                "kind": "enum",
+                "options": [
+                  "voice",
+                  "voice_signaling",
+                  "guest_voice",
+                  "guest_voice_signaling",
+                  "softphone_voice",
+                  "video_conferencing",
+                  "streaming_video",
+                  "video_signaling"
+                ]
+              },
+              {
+                "name": "unknown",
+                "title": "Unknown",
+                "description": "Unknown marks the policy as not yet known to the endpoint, which is how a\nphone asks the switch which VLAN to use.",
+                "kind": "boolean"
+              },
+              {
+                "name": "tagged",
+                "title": "Tagged",
+                "description": "Tagged reports whether the application's frames carry an 802.1Q tag.",
+                "kind": "boolean"
+              },
+              {
+                "name": "vlan_id",
+                "title": "Vlan id",
+                "description": "VLANID is the VLAN the application uses. Zero with tagged false means the\nport's untagged VLAN.",
+                "kind": "integer"
+              },
+              {
+                "name": "priority",
+                "title": "Priority",
+                "description": "Priority is the 802.1p user priority.",
+                "kind": "integer"
+              },
+              {
+                "name": "dscp",
+                "title": "Dscp",
+                "description": "DSCP is the DiffServ code point.",
+                "kind": "integer"
+              }
+            ]
+          },
+          {
+            "name": "power",
+            "title": "Power",
+            "description": "LldpMedPower is the TIA-1057 Extended Power-via-MDI TLV.",
+            "kind": "object",
+            "fields": [
+              {
+                "name": "device_type",
+                "title": "Device type",
+                "description": "DeviceType is pse for the switch supplying power, pd for the powered\ndevice drawing it.",
+                "kind": "enum",
+                "options": [
+                  "pse",
+                  "pd"
+                ]
+              },
+              {
+                "name": "source",
+                "title": "Source",
+                "description": "Source is where the power comes from.",
+                "kind": "enum",
+                "options": [
+                  "unknown",
+                  "primary",
+                  "backup",
+                  "pse",
+                  "local",
+                  "pse_local"
+                ]
+              },
+              {
+                "name": "priority",
+                "title": "Priority",
+                "description": "Priority is how important this device's power is.",
+                "kind": "enum",
+                "options": [
+                  "unknown",
+                  "critical",
+                  "high",
+                  "low"
+                ]
+              },
+              {
+                "name": "value_tenth_watts",
+                "title": "Value tenth watts",
+                "description": "ValueTenthWatts is the power value in tenths of a watt, the TLV's own\nunit, so a config value and a captured frame read the same.",
+                "kind": "integer"
+              }
+            ]
+          },
+          {
+            "name": "inventory",
+            "title": "Inventory",
+            "description": "LldpMedInventory is the TIA-1057 inventory set.",
+            "kind": "object",
+            "fields": [
+              {
+                "name": "hardware_revision",
+                "title": "Hardware revision",
+                "description": "HardwareRevision is the board or chassis revision the device reports.",
+                "kind": "string"
+              },
+              {
+                "name": "firmware_revision",
+                "title": "Firmware revision",
+                "description": "FirmwareRevision is the boot firmware version.",
+                "kind": "string"
+              },
+              {
+                "name": "software_revision",
+                "title": "Software revision",
+                "description": "SoftwareRevision is the running software version.",
+                "kind": "string"
+              },
+              {
+                "name": "serial_number",
+                "title": "Serial number",
+                "description": "SerialNumber is the unit serial number a discovery tool displays.",
+                "kind": "string"
+              },
+              {
+                "name": "manufacturer",
+                "title": "Manufacturer",
+                "description": "Manufacturer is the vendor name, for example \"Cisco Systems\".",
+                "kind": "string"
+              },
+              {
+                "name": "model_name",
+                "title": "Model name",
+                "description": "ModelName is the product model, for example \"CP-8841\".",
+                "kind": "string"
+              },
+              {
+                "name": "asset_id",
+                "title": "Asset id",
+                "description": "AssetID is the operator's own asset tag.",
+                "kind": "string"
+              }
+            ]
+          }
+        ]
       }
     ],
     "kind": "object"

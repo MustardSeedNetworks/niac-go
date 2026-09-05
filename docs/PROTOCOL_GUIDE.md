@@ -86,6 +86,62 @@ devices:
 | `port_description` | string | No | interface | Port description |
 | `advertise_interval` | integer | No | 30 | Advertisement interval (seconds) |
 | `management_address` | string | No | device IP | Management IP address |
+| `med` | object | No | none | LLDP-MED (TIA-1057) extensions — see below |
+
+#### LLDP-MED (TIA-1057)
+
+A discovery tool reads LLDP-MED to tell a phone from a printer and to learn the
+voice VLAN an endpoint belongs on. Without it an IP phone or access point
+appears as an anonymous endpoint. Omit the `med` block and the device sends
+plain 802.1AB, which is what a switch or router does.
+
+```yaml
+devices:
+  - name: clinic-phone-01
+    lldp:
+      enabled: true
+      med:
+        device_type: endpoint_class3   # a communication device, e.g. a phone
+        network_policies:
+          - application: voice
+            tagged: true
+            vlan_id: 110
+            priority: 5                # 802.1p
+            dscp: 46                   # expedited forwarding
+          - application: voice_signaling
+            tagged: true
+            vlan_id: 110
+            priority: 3
+            dscp: 24
+        power:
+          device_type: pd              # the device drawing power
+          source: pse
+          priority: high
+          value_tenth_watts: 65        # 6.5 W, the TLV's own unit
+        inventory:
+          hardware_revision: "1.0"
+          firmware_revision: "SIP88xx.12-8-1"
+          serial_number: "FCH2043E0AB"
+          manufacturer: "Cisco Systems"
+          model_name: "CP-8841"
+```
+
+| Field | Values |
+| ------- | -------- |
+| `device_type` | `endpoint_class1`, `endpoint_class2`, `endpoint_class3`, `network_connectivity` |
+| `network_policies[].application` | `voice`, `voice_signaling`, `guest_voice`, `guest_voice_signaling`, `softphone_voice`, `video_conferencing`, `streaming_video`, `video_signaling` |
+| `power.device_type` | `pse` (supplying), `pd` (drawing) |
+| `power.source` | `unknown`, `primary`, `backup`, `pse`, `local`, `pse_local` |
+| `power.priority` | `unknown`, `critical`, `high`, `low` |
+
+The capabilities TLV is derived from what the device actually advertises rather
+than declared separately, so it can never claim a capability the frame does not
+carry. An application NIAC does not recognise is dropped rather than sent as
+type 0, which a receiver reads as malformed.
+
+The generated vertical packs give every access point a MED block: a
+`network_connectivity` class, the voice policy its clients use, its PoE draw,
+and its model and serial.
 
 #### Testing
 

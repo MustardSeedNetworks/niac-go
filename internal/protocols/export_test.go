@@ -642,3 +642,7 @@ func GetAllDHCPServersExported() net.IP {
 
 // DHCPv6FindAvailableAddress exposes findAvailableAddress for testing via allocateLease.
 // Note: allocateLease is already exported via DHCPv6AllocateLease.
+
+// TIAOUI exposes the LLDP-MED organizationally unique identifier as the
+// integer gopacket reports on a decoded TLV.
+const TIAOUI = uint32(0x0012BB)

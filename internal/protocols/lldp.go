@@ -258,6 +258,10 @@ func (h *LLDPHandler) buildLLDPFrame(device *config.Device) []byte {
 	frame = append(frame, h.buildSystemDescriptionTLV(device)...)
 	frame = append(frame, h.buildSystemCapabilitiesTLV(device)...)
 
+	// LLDP-MED, when the device advertises it. After the standard TLVs, which
+	// is where TIA-1057 puts the organizationally specific set.
+	frame = append(frame, h.buildMEDTLVs(device)...)
+
 	// Management Address TLV (if device has IP address)
 	if h.stack.firstStateIPAddress(device) != nil {
 		frame = append(frame, h.buildManagementAddressTLV(device)...)

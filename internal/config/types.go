@@ -487,6 +487,78 @@ type LLDPConfig struct {
 	SystemDescription string
 	PortDescription   string
 	ChassisIDType     string // "mac", "local", "network_address"
+	// MED carries the TIA-1057 extensions a phone, camera or access point
+	// advertises. Nil means the device sends plain 802.1AB, which is what a
+	// switch or router does.
+	MED *LLDPMEDConfig
+}
+
+// LLDPMEDConfig holds the LLDP-MED (TIA-1057) extensions.
+//
+// These are what a discovery tool reads to tell a phone from a printer and to
+// learn the voice VLAN it should be on. Without them an IP phone appears as an
+// anonymous endpoint, so a tester checking that NIAC's hospital pack looks like
+// a hospital sees a rack of unidentified MAC addresses.
+type LLDPMEDConfig struct {
+	// DeviceType is the MED device class: "endpoint_class1" (generic),
+	// "endpoint_class2" (media), "endpoint_class3" (communication device, e.g.
+	// a phone) or "network_connectivity" (the switch side).
+	DeviceType string
+	// NetworkPolicies are the per-application VLAN/priority/DSCP assignments
+	// the device advertises or expects.
+	NetworkPolicies []LLDPMEDNetworkPolicy
+	// Power is the extended power-via-MDI advertisement. Nil when the device
+	// says nothing about power.
+	Power *LLDPMEDPower
+	// Inventory is the hardware inventory set. Nil when the device advertises
+	// none of it.
+	Inventory *LLDPMEDInventory
+}
+
+// LLDPMEDNetworkPolicy is one TIA-1057 Network Policy TLV.
+type LLDPMEDNetworkPolicy struct {
+	// Application is the traffic class: "voice", "voice_signaling",
+	// "guest_voice", "guest_voice_signaling", "softphone_voice",
+	// "video_conferencing", "streaming_video" or "video_signaling".
+	Application string
+	// Unknown marks the policy as not yet known to the endpoint, which is how a
+	// phone asks the switch what VLAN to use.
+	Unknown bool
+	// Tagged reports whether the application's frames carry an 802.1Q tag.
+	Tagged bool
+	// VLANID is the VLAN the application uses; 0 with Tagged false means the
+	// device uses the port's untagged VLAN.
+	VLANID int
+	// Priority is the 802.1p user priority, 0-7.
+	Priority int
+	// DSCP is the DiffServ code point, 0-63.
+	DSCP int
+}
+
+// LLDPMEDPower is the TIA-1057 Extended Power-via-MDI TLV.
+type LLDPMEDPower struct {
+	// DeviceType is "pse" (the switch supplying power) or "pd" (the powered
+	// device drawing it).
+	DeviceType string
+	// Source is "unknown", "primary", "backup", "pse", "local" or "pse_local".
+	Source string
+	// Priority is "unknown", "critical", "high" or "low".
+	Priority string
+	// ValueTenthWatts is the power value in tenths of a watt, matching the
+	// TLV's own unit so a config value and a captured frame read the same.
+	ValueTenthWatts int
+}
+
+// LLDPMEDInventory is the TIA-1057 inventory set. Empty fields are omitted from
+// the advertisement rather than sent blank.
+type LLDPMEDInventory struct {
+	HardwareRevision string
+	FirmwareRevision string
+	SoftwareRevision string
+	SerialNumber     string
+	Manufacturer     string
+	ModelName        string
+	AssetID          string
 }
 
 // CDPConfig holds CDP (Cisco Discovery Protocol) configuration.

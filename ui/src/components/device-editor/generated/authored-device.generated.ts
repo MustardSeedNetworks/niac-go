@@ -119,6 +119,32 @@ export interface AuthoredDevice {
       readonly system_description?: string;
       readonly port_description?: string;
       readonly chassis_id_type?: string;
+      readonly med?: {
+          readonly device_type?: 'endpoint_class1' | 'endpoint_class2' | 'endpoint_class3' | 'network_connectivity';
+          readonly network_policies?: readonly {
+              readonly application?: 'voice' | 'voice_signaling' | 'guest_voice' | 'guest_voice_signaling' | 'softphone_voice' | 'video_conferencing' | 'streaming_video' | 'video_signaling';
+              readonly unknown?: boolean;
+              readonly tagged?: boolean;
+              readonly vlan_id?: number;
+              readonly priority?: number;
+              readonly dscp?: number;
+            }[];
+          readonly power?: {
+              readonly device_type?: 'pse' | 'pd';
+              readonly source?: 'unknown' | 'primary' | 'backup' | 'pse' | 'local' | 'pse_local';
+              readonly priority?: 'unknown' | 'critical' | 'high' | 'low';
+              readonly value_tenth_watts?: number;
+            };
+          readonly inventory?: {
+              readonly hardware_revision?: string;
+              readonly firmware_revision?: string;
+              readonly software_revision?: string;
+              readonly serial_number?: string;
+              readonly manufacturer?: string;
+              readonly model_name?: string;
+              readonly asset_id?: string;
+            };
+        };
     };
   readonly cdp?: {
       readonly enabled?: boolean;
