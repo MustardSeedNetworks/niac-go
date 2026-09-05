@@ -70,7 +70,7 @@ func runConfigEdit(cmd *cobra.Command, file string) error {
 		return err
 	}
 
-	//nolint:gosec // editorPath comes from exec.LookPath, configFile from validateCLIPath
+	// editorPath is resolved by exec.LookPath and configFile by validateCLIPath.
 	editor := exec.CommandContext(cmd.Context(), editorPath, configFile)
 	editor.Stdin = os.Stdin
 	editor.Stdout = cmd.OutOrStdout()
