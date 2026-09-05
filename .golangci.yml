@@ -260,7 +260,7 @@ linters:
             - "**/internal/fabric/**"
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
-              desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon. topology is derived domain (config→graph) consumed by api/ipc/interactive, so it stays inward too"
+              desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon. topology is derived domain (config→graph) consumed by api and ipc, so it stays inward too"
         # Sub-API leaf packages extracted from the internal/api monolith must
         # not import back into the api transport layer — they are self-contained
         # building blocks that the Server (and daemon) compose inward. See ADR-0006.
@@ -643,10 +643,6 @@ linters:
       - path: 'tests/integration/.*_test\.go'
         linters:
           - testpackage
-      # Interactive tests require access to unexported functions.
-      - path: 'internal/interactive/.*_test\.go'
-        linters:
-          - testpackage
       # Daemon tests require access to unexported functions.
       - path: 'internal/daemon/.*_test\.go'
         linters:
@@ -698,10 +694,6 @@ linters:
       - path: 'internal/protocols/.*_test\.go'
         linters:
           - testpackage
-      # Interactive UI styles are idiomatic globals for lipgloss/bubbletea.
-      - path: 'internal/interactive/types\.go'
-        linters:
-          - gochecknoglobals
       # Build-time ldflags injection variables (standard Go pattern).
       - path: 'cmd/niac/root\.go'
         linters:

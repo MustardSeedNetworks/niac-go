@@ -18,7 +18,6 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/interactive"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/stats"
@@ -220,17 +219,9 @@ func runLegacyMode(osArgs []string, info versionInfo, services *serviceOptions) 
 	}
 	statsTracker.SetSNMPDeviceCount(snmpCount)
 
-	// Start simulation based on mode
-	if flags.interactiveMode {
-		if runErr := runInteractiveMode(interfaceName, cfg, debugConfig, configFile, services); runErr != nil {
-			fmt.Fprintf(os.Stdout, "Error: %v\n", runErr)
-			exitWithStats(1, &flags, statsTracker)
-		}
-	} else {
-		if runErr := runNormalMode(interfaceName, cfg, debugConfig, configFile, services); runErr != nil {
-			fmt.Fprintf(os.Stdout, "Error: %v\n", runErr)
-			exitWithStats(1, &flags, statsTracker)
-		}
+	if runErr := runNormalMode(interfaceName, cfg, debugConfig, configFile, services); runErr != nil {
+		fmt.Fprintf(os.Stdout, "Error: %v\n", runErr)
+		exitWithStats(1, &flags, statsTracker)
 	}
 }
 
@@ -349,7 +340,6 @@ func printUsageOptions() {
 	fmt.Fprintln(os.Stdout, "                             0=quiet, 1=normal, 2=verbose, 3=debug")
 	fmt.Fprintln(os.Stdout, "    -v, --verbose            Verbose output (equivalent to -d 3)")
 	fmt.Fprintln(os.Stdout, "    -q, --quiet              Quiet mode (equivalent to -d 0)")
-	fmt.Fprintln(os.Stdout, "    -i, --interactive        Enable interactive TUI mode")
 	fmt.Fprintln(os.Stdout, "    -n, --dry-run            Validate configuration without starting")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  Information:")
@@ -432,8 +422,6 @@ func printUsageExamples() {
 	fmt.Fprintln(os.Stdout, "  # Validate configuration")
 	fmt.Fprintln(os.Stdout, "  niac --dry-run en0 network.cfg")
 	fmt.Fprintln(os.Stdout)
-	fmt.Fprintln(os.Stdout, "  # Run in interactive mode with verbose debugging")
-	fmt.Fprintln(os.Stdout, "  sudo niac --interactive --verbose en0 network.cfg")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "  # Run in quiet mode with log file")
 	fmt.Fprintln(os.Stdout, "  sudo niac --quiet --log-file niac.log en0 network.cfg")
@@ -655,7 +643,7 @@ func validateSimulationConfig(cfg *config.Config) error {
 	return config.ValidateRuntimeRequirements(cfg)
 }
 
-// runNormalMode runs NIAC in normal (non-interactive) mode.
+// runNormalMode runs NIAC as a foreground simulator until it is interrupted.
 func runNormalMode(
 	interfaceName string,
 	cfg *config.Config,
@@ -689,56 +677,6 @@ func runNormalMode(
 
 	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime)
 	return runSimulationLoop(stack, debugConfig.GetGlobal(), startTime, reloadFunc)
-}
-
-// runInteractiveMode runs NIAC with the interactive TUI layered on the live simulator.
-func runInteractiveMode(
-	interfaceName string,
-	cfg *config.Config,
-	debugConfig *logging.DebugConfig,
-	configFile string,
-	services *serviceOptions,
-) error {
-	engine, stack, startTime, err := startSimulation(interfaceName, cfg, debugConfig)
-	if err != nil {
-		return err
-	}
-
-	servicesRuntime, err := startRuntimeServices(
-		engine,
-		stack,
-		cfg,
-		interfaceName,
-		configFile,
-		services,
-	)
-	if err != nil {
-		engine.Close()
-		stack.Stop()
-		return err
-	}
-
-	defer func() {
-		stack.Stop()
-		engine.Close()
-		if servicesRuntime != nil {
-			servicesRuntime.Stop()
-		}
-	}()
-
-	reloadFunc := buildReloadFunc(stack, configFile, servicesRuntime)
-	if runErr := interactive.Run(interactive.Options{
-		InterfaceName:  interfaceName,
-		Config:         cfg,
-		DebugConfig:    debugConfig,
-		Stack:          stack,
-		StartTime:      startTime,
-		Reload:         reloadFunc,
-		ConfigFilePath: configFile,
-	}); runErr != nil {
-		return fmt.Errorf("failed to run interactive mode: %w", runErr)
-	}
-	return nil
 }
 
 // initializeCaptureEngine initializes the packet capture engine.
@@ -950,10 +888,9 @@ func handleSignal(
 	return true
 }
 
-// handleReload attempts to reload the configuration. This is
-// non-interactive standalone mode's SIGHUP behavior (`niac run` and the
-// legacy bare invocation; `--interactive` TUI mode has no SIGHUP handler at
-// all); daemon mode's SIGHUP instead rotates API bearer tokens
+// handleReload attempts to reload the configuration. This is standalone
+// mode's SIGHUP behavior (`niac run` and the legacy bare invocation);
+// daemon mode's SIGHUP instead rotates API bearer tokens
 // (cmd_daemon.go's handleSIGHUP) because standalone mode has no API token to
 // rotate. See docs/DEPLOYMENT.md "Signal Handling".
 func handleReload(reloadConfig func() (*config.Config, error), debugLevel int) {

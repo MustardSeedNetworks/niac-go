@@ -14,7 +14,6 @@ type runOptions struct {
 	verbose    bool
 	quiet      bool
 	noColor    bool
-	tui        bool
 	dryRun     bool
 }
 
@@ -24,15 +23,11 @@ func addRunCommand(root *cobra.Command, services *serviceOptions, info versionIn
 	runCmd := &cobra.Command{
 		Use:   "run <interface> <config-file>",
 		Short: "Run network simulation",
-		Long: `Run NIAC network simulation with an optional terminal UI.
+		Long: `Run a NIAC network simulation in the foreground.
 
-By default, runs in headless mode. Add --tui for interactive terminal UI.
 Use "niac daemon" for the HTTPS web UI and API.`,
 		Example: `  # Headless simulation
   sudo niac run en0 config.yaml
-
-  # With Terminal UI (TUI)
-  sudo niac run en0 config.yaml --tui
 
   # Validate config without running
   niac run en0 config.yaml --dry-run`,
@@ -46,7 +41,6 @@ Use "niac daemon" for the HTTPS web UI and API.`,
 	runCmd.Flags().BoolVarP(&options.verbose, "verbose", "v", false, "Verbose output (equivalent to -d 3)")
 	runCmd.Flags().BoolVarP(&options.quiet, "quiet", "q", false, "Quiet mode (equivalent to -d 0)")
 	runCmd.Flags().BoolVar(&options.noColor, "no-color", false, "Disable colored output")
-	runCmd.Flags().BoolVar(&options.tui, "tui", false, "Enable interactive Terminal UI")
 	runCmd.Flags().BoolVarP(&options.dryRun, "dry-run", "n", false, "Validate config without starting simulation")
 
 	root.AddCommand(runCmd)
@@ -96,9 +90,6 @@ func runSimulation(
 		printBanner(info.version)
 		logging.Infof("Interface: %s", interfaceName)
 		logging.Infof("Config: %s (%d devices)", resolvedConfig, len(cfg.Devices))
-		if options.tui {
-			logging.Infof("TUI: Enabled")
-		}
 		fmt.Fprintln(os.Stdout)
 	}
 
@@ -107,9 +98,5 @@ func runSimulation(
 		return err
 	}
 
-	// Run in appropriate mode
-	if options.tui {
-		return runInteractiveMode(interfaceName, cfg, debugConfig, resolvedConfig, services)
-	}
 	return runNormalMode(interfaceName, cfg, debugConfig, resolvedConfig, services)
 }

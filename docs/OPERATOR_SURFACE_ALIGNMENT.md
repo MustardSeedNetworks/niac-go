@@ -1,13 +1,12 @@
 # Operator Surface Alignment
 
-NIAC keeps three operator surfaces by design:
+NIAC keeps two operator surfaces by design:
 
 - CLI: automation, CI, scripting, headless systems, support/debug commands.
-- TUI: terminal-first live demos and operators who do not want a browser.
 - Web UI: guided workflows, visualization, config editing, packet inspection.
 
 Best-practice rule: implement capability in the backend/domain layer first,
-expose a lean CLI command for automation, then provide richer TUI/Web UI flows
+expose a lean CLI command for automation, then provide a richer Web UI flow
 on top of the same backend capability.
 
 ## Current Web UI Route Alignment
@@ -36,6 +35,6 @@ Pre-1.0 route aliases are not retained. Unknown or retired UI paths return to
 the dashboard through the wildcard route; documentation and tests use only the
 canonical paths above.
 
-There is no automatic CLI/TUI/Web symmetry requirement. A new surface is added
+There is no automatic CLI/Web symmetry requirement. A new surface is added
 only when a concrete operator workflow needs it and the product feature gate
 accepts its build and maintenance cost.

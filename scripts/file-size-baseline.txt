@@ -5,7 +5,6 @@ internal/api/devices_handlers_test.go 1097
 internal/api/server.go 926
 internal/converter/converter_test.go 1497
 internal/daemon/daemon.go 1193
-internal/interactive/helpers_test.go 1144
 internal/protocols/coverage_boost_test.go 1647
 internal/protocols/coverage_extra_test.go 3546
 internal/protocols/dhcp.go 1162

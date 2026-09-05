@@ -211,7 +211,7 @@ test_cli_help() {
     log_header "Subcommand Help"
     run_test "validate --help" "${NIAC_BIN} validate --help"
     run_test "template --help" "${NIAC_BIN} template --help"
-    run_test "interactive --help" "${NIAC_BIN} interactive --help"
+    run_test "config edit --help" "${NIAC_BIN} config edit --help"
     run_test "completion --help" "${NIAC_BIN} completion --help"
 }
 

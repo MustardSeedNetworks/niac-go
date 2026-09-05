@@ -28,6 +28,7 @@ import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
 import { ConcurrentSessionsPanel } from './runtime/ConcurrentSessionsPanel';
+import { RunHistoryCard } from './runtime/RunHistoryCard';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
 import { RuntimeRollup } from './runtime/RuntimeRollup';
 import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
@@ -440,6 +441,8 @@ export const RuntimeControlPage: FC = () => {
           />
         </>
       )}
+
+      <RunHistoryCard />
 
       <AdvancedSection />
 

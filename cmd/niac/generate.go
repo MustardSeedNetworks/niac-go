@@ -621,7 +621,7 @@ func printSummary(outputFile string, cfg *generatedConfig) {
 	_, _ = fmt.Fprintf(
 		os.Stdout,
 		"  %s\n",
-		color.CyanString("niac interactive en0 %s", outputFile),
+		color.CyanString("niac run en0 %s", outputFile),
 	)
 }
 

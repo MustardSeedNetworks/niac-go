@@ -105,7 +105,7 @@ export interface GlossaryEntry {
 export interface Shortcut {
   keys: string[];
   description: string;
-  category: 'navigation' | 'actions' | 'general' | 'tui';
+  category: 'navigation' | 'actions' | 'general';
 }
 
 export interface FAQEntry {
@@ -212,7 +212,7 @@ visualization in the web UI that derives links from LLDP/CDP neighbor entries.`,
     summary: 'Every command the niac binary exposes.',
     description: `NIAC is a single binary with a Cobra-based CLI. Top-level
 subcommands cover the full lifecycle: \`init\`/\`generate\`/\`template\` for
-creating configs, \`validate\` for checking them, \`daemon\`/\`run\`/\`interactive\`
+creating configs, \`validate\` for checking them, \`daemon\`/\`run\`
 for executing simulations, \`status\`/\`monitor\`/\`logs\`/\`dump\` for observing a
 running daemon, \`neighbors\` for the LLDP/CDP
 table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
@@ -220,7 +220,6 @@ table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
     items: [
       'cmd-daemon',
       'cmd-run',
-      'cmd-interactive',
       'cmd-init',
       'cmd-generate',
       'cmd-validate',
@@ -262,7 +261,7 @@ finds. Both are read-only by default.`,
     fullName: 'Error Injection',
     summary: 'Make a simulated device misbehave to test monitoring tooling.',
     description: `Error injection lets you push a running simulated device into a
-faulted state without restarting the daemon. The interactive TUI and Web UI
+faulted state without restarting the daemon. The Web UI and the API
 set per-interface FCS errors, packet discards, interface errors, or utilization.
 The simulated SNMP agent advances the corresponding interface counters, so a
 monitoring tool polling the device will see the fault.`,
@@ -2039,33 +2038,7 @@ const commandItems: HelpItem[] = [
       'Use `lo0` (loopback) for any test that doesn’t need to be seen by other machines — no root needed on macOS.',
       'Ctrl-C cleans up sockets and ARP-table entries before exiting.',
     ],
-    seeAlso: ['cmd-daemon', 'cmd-interactive', 'cmd-validate'],
-  },
-  {
-    id: 'cmd-interactive',
-    name: 'niac interactive',
-    standard: 'niac CLI',
-    category: 'commands',
-    summary: 'Run a simulation with a terminal UI (TUI).',
-    techDesc:
-      'Like `niac run` but with a Bubble Tea TUI: counters per protocol, recent log lines, neighbor table, error-injection panel. Same args as `niac run`.',
-    laymanDesc: 'Same as `run`, but with a fancy terminal dashboard instead of plain stdout.',
-    whenToUse: 'Live demos, debug sessions, anything you want to watch in a terminal.',
-    whenNotToUse: 'Headless CI — use `niac run`.',
-    parameters: [],
-    configFields: [],
-    metrics: [],
-    examples: [
-      {
-        desc: 'Interactive demo',
-        command: 'sudo niac interactive en0 examples/complete-kitchen-sink.yaml',
-      },
-    ],
-    tips: [
-      'Press `?` inside the TUI for a key-binding overlay.',
-      'Use a wide terminal (≥ 120 cols) for the full layout.',
-    ],
-    seeAlso: ['cmd-run', 'cmd-monitor'],
+    seeAlso: ['cmd-daemon', 'cmd-run', 'cmd-validate'],
   },
   {
     id: 'cmd-init',
@@ -2734,7 +2707,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-fcs',
     name: 'FCS Errors',
-    standard: 'TUI/Web FCS error injection',
+    standard: 'Web FCS error injection',
     category: 'errors',
     summary: 'Frame Check Sequence (CRC) error counter.',
     techDesc:
@@ -2769,7 +2742,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-discards',
     name: 'Packet Discards',
-    standard: 'TUI/Web packet-discard injection',
+    standard: 'Web packet-discard injection',
     category: 'errors',
     summary: 'Input/output packet discard counter.',
     techDesc:
@@ -2806,7 +2779,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-iferrors',
     name: 'Interface Errors',
-    standard: 'TUI/Web interface-error injection',
+    standard: 'Web interface-error injection',
     category: 'errors',
     summary: 'Generic interface-error counter.',
     techDesc:
@@ -2829,7 +2802,7 @@ const errorItems: HelpItem[] = [
   {
     id: 'err-util',
     name: 'High Utilization',
-    standard: 'TUI/Web utilization injection',
+    standard: 'Web utilization injection',
     category: 'errors',
     summary: 'Interface-bandwidth-utilization gauge.',
     techDesc:
@@ -3363,12 +3336,6 @@ export const glossary: GlossaryEntry[] = [
     category: 'niac',
   },
   {
-    term: 'Interactive mode',
-    definition:
-      'NIAC running with a terminal UI dashboard. Started with `niac interactive <iface> <config>`.',
-    category: 'niac',
-  },
-  {
     term: 'Topology config',
     definition: 'The YAML file that describes the simulated network: devices, protocols, VLANs.',
     category: 'niac',
@@ -3376,7 +3343,7 @@ export const glossary: GlossaryEntry[] = [
   {
     term: 'Error injection',
     definition:
-      'Forcing a simulated device into a faulted state at runtime through the TUI or Web UI.',
+      'Forcing a simulated device into a faulted state at runtime through the Web UI or the API.',
     category: 'niac',
   },
   {
@@ -3448,22 +3415,6 @@ export const shortcuts: Shortcut[] = [
   { keys: ['Ctrl', 'r'], description: 'Reload from disk', category: 'actions' },
   { keys: ['Ctrl', '.'], description: 'Toggle dark / light theme', category: 'actions' },
   { keys: ['Ctrl', 'b'], description: 'Toggle sidebar', category: 'actions' },
-
-  // TUI (`niac interactive`)
-  { keys: ['q'], description: 'Quit interactive mode', category: 'tui' },
-  { keys: ['?'], description: 'TUI help overlay', category: 'tui' },
-  { keys: ['Tab'], description: 'Cycle through panels', category: 'tui' },
-  { keys: ['Shift', 'Tab'], description: 'Cycle backwards', category: 'tui' },
-  { keys: ['n'], description: 'Show neighbors panel', category: 'tui' },
-  { keys: ['l'], description: 'Show logs panel', category: 'tui' },
-  { keys: ['s'], description: 'Show statistics panel', category: 'tui' },
-  { keys: ['i'], description: 'Open inject prompt', category: 'tui' },
-  { keys: ['/'], description: 'Filter log lines', category: 'tui' },
-  { keys: ['j', 'k'], description: 'Scroll down / up (vim-style)', category: 'tui' },
-  { keys: ['g', 'g'], description: 'Jump to top', category: 'tui' },
-  { keys: ['G'], description: 'Jump to bottom', category: 'tui' },
-  { keys: ['Ctrl', 'l'], description: 'Clear screen / redraw', category: 'tui' },
-  { keys: ['Ctrl', 'c'], description: 'Force quit', category: 'tui' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -3496,7 +3447,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-inject-packet-loss',
     question: 'How do I inject packet loss?',
     answer:
-      'Open Error Injection in `niac interactive` or the Web UI traffic page, choose the device, and set Packet Discards from 0 to 100. The simulated device’s ifInDiscards / ifOutDiscards counters increment at that rate so monitoring tooling sees realistic packet drops. Use the same panel’s clear action to stop it.',
+      'Open Error Injection on the Web UI traffic page, choose the device, and set Packet Discards from 0 to 100. The simulated device’s ifInDiscards / ifOutDiscards counters increment at that rate so monitoring tooling sees realistic packet drops. Use the same panel’s clear action to stop it.',
     tags: ['inject', 'loss', 'errors'],
   },
   {

@@ -188,9 +188,9 @@ func printInitSuccess(outputFile, selectedTemplate string) {
 	printNextStep("1", "Validate your configuration:",
 		color.CyanString("niac validate %s", outputFile))
 	printNextStep("2", "Edit the configuration (optional):",
-		color.CyanString("vi %s", outputFile))
+		color.CyanString("niac config edit %s", outputFile))
 	printNextStep("3", "Run the simulation:",
-		color.CyanString("sudo niac interactive en0 %s", outputFile))
+		color.CyanString("sudo niac run en0 %s", outputFile))
 	printNextStep("4", "Or use dry-run mode to test without running:",
 		color.CyanString("niac --dry-run en0 %s", outputFile))
 

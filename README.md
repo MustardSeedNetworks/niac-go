@@ -30,7 +30,6 @@ the lab.
 - **Error injection** — inject latency, loss, jitter, or protocol-specific faults on a running simulation
 - **Web UI** — daemon mode exposes a React/TypeScript control plane over HTTPS
   on port 8445
-- **Interactive TUI** — single-screen control for ad-hoc lab use
 - **Templates** — ship YAML scenarios (`niac template`) and run them anywhere
 
 ## Quick Start
