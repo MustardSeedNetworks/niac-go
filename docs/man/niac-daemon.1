@@ -29,8 +29,20 @@ NIAC_API_TOKEN or --api-token.
 
 
 .SH OPTIONS
+\fB--access-vlan\fP=0
+	With --once, the VLAN for access or trunk mode
+
+.PP
 \fB--api-token\fP=""
 	Bearer token (preferred: NIAC_API_TOKEN). Required when --listen is non-loopback.
+
+.PP
+\fB--attachment\fP=""
+	With --once, the logical attachment to bind
+
+.PP
+\fB--attachment-mode\fP="direct"
+	With --once, the physical binding mode: direct, access or trunk
 
 .PP
 \fB--attachment-policy\fP=[]
@@ -41,12 +53,24 @@ NIAC_API_TOKEN or --api-token.
 	Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)
 
 .PP
+\fB--duration\fP=0s
+	With --once, how long to run before stopping (0 runs until interrupted)
+
+.PP
 \fB-h\fP, \fB--help\fP[=false]
 	help for daemon
 
 .PP
 \fB--listen\fP=""
 	Address to listen on for the HTTPS API and web UI (default: 127.0.0.1:8445)
+
+.PP
+\fB--once\fP[=false]
+	Run one session in the foreground and exit with a JSON summary
+
+.PP
+\fB--session-id\fP="once"
+	With --once, the session identifier to run under
 
 .PP
 \fB--storage\fP="~/.niac/niac.db"

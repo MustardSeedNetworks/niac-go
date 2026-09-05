@@ -69,7 +69,6 @@ sudo ./niac daemon
 | `niac dump` | Dump captured packets from a running NIAC simulation |
 | `niac init [output-file]` | Interactive template wizard for quick configuration setup |
 | `niac install-ca` | Install NIAC's self-signed root certificate into the OS trust store |
-| `niac interactive <interface> <config-file>` | Run NIAC in interactive TUI mode |
 | `niac list` | List interfaces and demo content |
 | `niac logs` | View and stream simulation logs |
 | `niac man` | Generate man pages |
