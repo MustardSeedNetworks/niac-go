@@ -12,5 +12,4 @@ internal/protocols/healthcheck.go 1094
 internal/protocols/snmp/agent.go 957
 internal/protocols/snmp/agent_test.go 1160
 ui/src/data/help-content.ts 3632
-ui/src/pages/PacketInspectorPage.tsx 637
 ui/src/pages/TopologyPage.tsx 856

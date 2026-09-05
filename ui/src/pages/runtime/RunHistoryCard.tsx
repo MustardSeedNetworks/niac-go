@@ -20,7 +20,7 @@ const RECENT_RUN_LIMIT = 5;
  */
 export const RunHistoryCard: FC = () => {
   const { t } = useTranslation('pages');
-  const { data: history } = useApiResource(fetchHistory, [], {
+  const { data: history, error } = useApiResource(fetchHistory, [], {
     intervalMs: POLL_INTERVALS.slow,
   });
   const location = useLocation();
@@ -61,8 +61,19 @@ export const RunHistoryCard: FC = () => {
               </SmallText>
             </div>
           ))}
-          {(!history || history.length === 0) && (
-            <SmallText className="text-text-muted italic">{t('runtime.noCapturedRuns')}</SmallText>
+          {error ? (
+            // "No runs recorded" and "the history could not be read" are
+            // different facts, and showing the first for the second tells an
+            // operator their runs were not saved.
+            <SmallText role="alert" className="text-status-error">
+              {t('runtime.recentRunsFailed', { error: error.message })}
+            </SmallText>
+          ) : (
+            (!history || history.length === 0) && (
+              <SmallText className="text-text-muted italic">
+                {t('runtime.noCapturedRuns')}
+              </SmallText>
+            )
           )}
         </div>
       </CardContent>

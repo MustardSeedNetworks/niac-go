@@ -124,8 +124,12 @@ const ConfigEditorCard: FC<{
   const { data, loading, error } = useApiResource(fetchConfig, [], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
+  // The walk list only populates a picker, so a failure is a toast rather than
+  // a blocked editor -- but an empty picker and an unreachable library look the
+  // same, and only one of them is the operator's problem.
   const { data: walkFiles } = useApiResource(fetchLibraryWalks, [], {
     intervalMs: POLL_INTERVALS.verySlow,
+    errorToast: { title: t('devices.walkListFailed') },
   });
   const [value, setValue] = useState('');
   const [dirty, setDirty] = useState(false);

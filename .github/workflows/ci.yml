@@ -257,6 +257,11 @@ jobs:
       - name: Library-stdout gate (#1805)
         run: ./scripts/check-library-stdout.sh
 
+      - name: Fetch-error-state gate (U1)
+        run: |
+          python3 scripts/test-check-fetch-error-states.py
+          python3 scripts/check-fetch-error-states.py
+
       - name: Route-policy gate (capability registry)
         run: ./scripts/check-route-policy.sh
 
