@@ -956,6 +956,50 @@ devices:
           enabled: true
           link_down: true
           link_up: true
+
+  # SNMPv3 notifications, acknowledged
+  - name: clinic-core-01
+    snmpv3:
+      enabled: true
+      users:
+        - username: niac-notify
+          auth_protocol: sha256
+          auth_password: "authpassphrase"
+          priv_protocol: aes
+          priv_password: "privpassphrase"
+    snmp_agent:
+      traps:
+        enabled: true
+        receivers: ["10.100.0.100:162"]
+        version: v3               # v2c (default) or v3
+        security_user: niac-notify  # omit to use this device's first user
+        inform: true              # acknowledged, rather than fire-and-forget
+        inform_retries: 3
+        inform_timeout_seconds: 5
+        link_state: {enabled: true, link_down: true, link_up: true}
+
+##### Notification version and delivery
+
+A v2c trap carries its community string in the clear, so a manager configured
+for v3-only rejects it — a device that can only send v2c is silent to that
+manager. Setting `version: v3` sends the notification authenticated, and
+encrypted when the named user has a privacy protocol, using the same engine that
+answers the device's queries.
+
+A trap is fire-and-forget: if it is dropped, the device believes it reported the
+event and the manager never heard of it. An inform is answered with a Response
+carrying the same request ID, and an unanswered one is resent
+`inform_retries` times at `inform_timeout_seconds` intervals before NIAC logs
+that it was never acknowledged.
+
+| Field | Type | Default | Description |
+| ------- | ------ | --------- | ------------- |
+| `version` | string | `v2c` | `v2c` or `v3` |
+| `security_user` | string | first user | Which `snmpv3` user a v3 notification is sent as |
+| `inform` | boolean | false | Send an InformRequest instead of a trap |
+| `inform_retries` | integer | 3 | Resends of an unacknowledged inform |
+| `inform_timeout_seconds` | integer | 5 | Wait before resending |
+
 ```
 
 #### Fields

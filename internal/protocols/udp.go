@@ -18,11 +18,14 @@ import (
 
 // Well-known UDP ports.
 const (
-	UDPPortDNS    = 53
-	UDPPortDHCP   = 67
-	UDPPortDHCPC  = 68
-	UDPPortSNMP   = 161
-	UDPPortDHCPv6 = 547
+	UDPPortDNS   = 53
+	UDPPortDHCP  = 67
+	UDPPortDHCPC = 68
+	UDPPortSNMP  = 161
+	// UDPPortSNMPTrap is where a notification receiver listens, and so where
+	// the acknowledgement of an inform NIAC sent comes back to.
+	UDPPortSNMPTrap = 162
+	UDPPortDHCPv6   = 547
 )
 
 // UDP internal constants.
@@ -141,6 +144,11 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		}
 	case UDPPortSNMP:
 		h.handleSNMP(pkt, ipLayer, udp, devices)
+	case UDPPortSNMPTrap:
+		// The only thing NIAC expects on 162 is the acknowledgement of an
+		// inform it sent. Without somewhere to notice that reply, an inform is
+		// a trap that retries blindly.
+		h.handleInformResponse(udp.Payload, ipLayer.SrcIP.String())
 	case MDNSPort:
 		// Multicast DNS (Bonjour/Avahi)
 		h.stack.mdnsHandler.HandleQuery(pkt, ipLayer, udp, devices, packet)

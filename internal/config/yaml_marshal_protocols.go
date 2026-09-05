@@ -62,7 +62,10 @@ func trapsToYAML(cfg *TrapConfig) *converter.TrapsConfig {
 	}
 	return &converter.TrapsConfig{
 		Enabled: cfg.Enabled, Receivers: cfg.Receivers, Community: cfg.Community,
-		ColdStart: triggerToYAML(cfg.ColdStart), LinkState: linkStateToYAML(cfg.LinkState),
+		Version: cfg.Version, SecurityUser: cfg.SecurityUser,
+		Inform: cfg.Inform, InformRetries: cfg.InformRetries,
+		InformTimeoutSeconds: cfg.InformTimeoutSeconds,
+		ColdStart:            triggerToYAML(cfg.ColdStart), LinkState: linkStateToYAML(cfg.LinkState),
 	}
 }
 

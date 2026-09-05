@@ -356,3 +356,25 @@ func (s *Stack) updateDot1QFdbTable(
 }
 
 // IncrementStat increments a specific statistic.
+
+// deviceV3Engine returns the device's SNMPv3 engine, or nil when v3 is off.
+func (s *Stack) deviceV3Engine(device *config.Device) *snmp.V3Engine {
+	if s == nil {
+		return nil
+	}
+	group := s.snmpAgents[device]
+	if group == nil {
+		return nil
+	}
+
+	return group.v3
+}
+
+// acknowledgeInform clears the retry for an inform a receiver just answered.
+func (s *Stack) acknowledgeInform(requestID uint32, receiver string) bool {
+	if s == nil || s.notifications == nil {
+		return false
+	}
+
+	return s.notifications.AcknowledgeInform(requestID, receiver)
+}

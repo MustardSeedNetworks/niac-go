@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -434,3 +435,98 @@ func mapPrivProtocol(name string) (gosnmp.SnmpV3PrivProtocol, error) {
 		return gosnmp.NoPriv, fmt.Errorf("unknown privacy protocol %q", name)
 	}
 }
+
+// MarshalNotification builds an authenticated (and, where the user has a
+// privacy protocol, encrypted) v3 trap or inform.
+//
+// A v2c trap carries a community string in the clear, so a manager configured
+// for v3-only rejects it and a NIAC device that only sends v2c is silent to
+// that manager. The engine that answers this device's queries is also its
+// notification originator, so the same engine ID and boots/time are
+// authoritative here — which is what lets a receiver validate the message
+// without a prior discovery exchange.
+func (e *V3Engine) MarshalNotification(
+	username string,
+	pduType gosnmp.PDUType,
+	requestID uint32,
+	variables []gosnmp.SnmpPDU,
+) ([]byte, error) {
+	if e == nil {
+		return nil, ErrV3Disabled
+	}
+
+	user := e.notificationUser(username)
+	if user == nil {
+		return nil, fmt.Errorf("%w: %q", ErrV3UnknownUser, username)
+	}
+
+	level := user.msgFlags
+	pkt := &gosnmp.SnmpPacket{
+		Version:       gosnmp.Version3,
+		MsgFlags:      level,
+		SecurityModel: gosnmp.UserSecurityModel,
+		// An inform is acknowledged, so it must be reportable for the receiver
+		// to be able to answer at all; a trap is fire-and-forget.
+		SecurityParameters: e.responseUSM(user, level),
+		ContextEngineID:    e.engineID,
+		PDUType:            pduType,
+		MsgID:              requestID,
+		RequestID:          requestID,
+		MsgMaxSize:         snmpMaxMessageSize,
+		Error:              gosnmp.NoError,
+		Variables:          variables,
+	}
+	if pduType == gosnmp.InformRequest {
+		pkt.MsgFlags |= gosnmp.Reportable
+	}
+
+	if err := pkt.SecurityParameters.InitSecurityKeys(); err != nil {
+		return nil, fmt.Errorf("snmpv3: init notification keys: %w", err)
+	}
+	if level&gosnmp.AuthPriv > gosnmp.AuthNoPriv {
+		if err := pkt.SecurityParameters.InitPacket(pkt); err != nil {
+			return nil, fmt.Errorf("snmpv3: init notification salt: %w", err)
+		}
+	}
+
+	out, err := pkt.MarshalMsg()
+	if err != nil {
+		return nil, fmt.Errorf("snmpv3: marshal notification: %w", err)
+	}
+
+	return out, nil
+}
+
+// notificationUser picks the USM user a notification is sent as.
+//
+// With no name configured it takes the lexicographically first user rather
+// than "the first one", which a map has no notion of: an arbitrary pick would
+// send the same config as a different user between runs, and a receiver
+// validating by user name would see a device that changes identity.
+func (e *V3Engine) notificationUser(username string) *v3User {
+	if username != "" {
+		user, known := e.users[username]
+		if !known {
+			return nil
+		}
+
+		return &user
+	}
+
+	names := make([]string, 0, len(e.users))
+	for name := range e.users {
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	sort.Strings(names)
+	user := e.users[names[0]]
+
+	return &user
+}
+
+// snmpMaxMessageSize is the message size a v3 notification advertises. RFC 3412
+// sets 484 as the floor every implementation must accept; this is the
+// conventional larger value managers use.
+const snmpMaxMessageSize = 65507

@@ -9,6 +9,15 @@ var (
 	ErrNoSuchObject        = errors.New("no such object")
 	ErrEndOfMIBView        = errors.New("end of MIB view")
 	ErrEmptyOID            = errors.New("empty OID")
+
+	// ErrV3Disabled reports a v3 operation on a device with no v3 engine,
+	// which is what "snmpv3 is not configured on this device" looks like to a
+	// caller that asked for a v3 notification.
+	ErrV3Disabled = errors.New("snmpv3 is not enabled on this device")
+
+	// ErrV3UnknownUser reports a notification addressed to a USM user the
+	// device does not have.
+	ErrV3UnknownUser       = errors.New("snmpv3 user not configured")
 	ErrInvalidOIDComponent = errors.New("invalid OID component")
 	ErrInvalidValue        = errors.New("invalid value")
 	// ErrNotWritable reports a manager trying to write an object this agent

@@ -105,6 +105,8 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 			Dot1QFdbTable: &FdbTableConfig{Port: 8, VLAN: 201},
 			Traps: &TrapConfig{
 				Enabled: true, Receivers: []string{"10.254.200.50:162"}, Community: "traps",
+				Version: "v3", SecurityUser: "niac-notify",
+				Inform: true, InformRetries: 4, InformTimeoutSeconds: 7,
 				ColdStart: &TrapTriggerConfig{Enabled: true, OnStartup: true},
 				LinkState: &LinkStateTrapConfig{Enabled: true, LinkDown: true, LinkUp: true},
 			},
@@ -246,6 +248,14 @@ func assertAuthoredRoutedDevice(t *testing.T, device *converter.Device, walk str
 	if device.SnmpAgent.Community != "NetAllyDemo" || device.SnmpAgent.WalkFile != walk ||
 		!device.SnmpAgent.Traps.LinkState.LinkDown {
 		t.Fatalf("SNMP = %#v", device.SnmpAgent)
+	}
+	// The notification version and inform settings have to survive the save
+	// path too. A field the editor writes and the daemon never reads back is
+	// the failure mode this whole round trip exists to catch.
+	traps := device.SnmpAgent.Traps
+	if traps.Version != "v3" || traps.SecurityUser != "niac-notify" || !traps.Inform ||
+		traps.InformRetries != 4 || traps.InformTimeoutSeconds != 7 {
+		t.Fatalf("trap delivery settings lost on save: %#v", traps)
 	}
 	if device.Dhcp.PoolStart != "10.254.200.100" || device.DNS.ForwardRecords[0].TTL != 300 {
 		t.Fatalf("services lost: DHCP=%#v DNS=%#v", device.Dhcp, device.DNS)

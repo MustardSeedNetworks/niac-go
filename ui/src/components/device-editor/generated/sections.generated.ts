@@ -267,6 +267,40 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
             "kind": "string"
           },
           {
+            "name": "version",
+            "title": "Version",
+            "description": "Version selects the notification version: v2c (the default) or v3. A v3\nnotification is authenticated and encrypted with a USM user from this\ndevice's snmpv3 block, which is what a manager configured for v3-only\nwill accept.",
+            "kind": "enum",
+            "options": [
+              "v2c",
+              "v3"
+            ]
+          },
+          {
+            "name": "security_user",
+            "title": "Security user",
+            "description": "SecurityUser names the snmpv3 user a v3 notification is sent as. Omit it\nto use the device's first configured user.",
+            "kind": "string"
+          },
+          {
+            "name": "inform",
+            "title": "Inform",
+            "description": "Inform sends an InformRequest rather than a trap. An inform is\nacknowledged, so the sender knows the manager received it; a trap is\nfire-and-forget and a dropped one is invisible.",
+            "kind": "boolean"
+          },
+          {
+            "name": "inform_retries",
+            "title": "Inform retries",
+            "description": "InformRetries is how many times an unacknowledged inform is resent.",
+            "kind": "integer"
+          },
+          {
+            "name": "inform_timeout_seconds",
+            "title": "Inform timeout seconds",
+            "description": "InformTimeoutSeconds is how long to wait for an acknowledgement before\nresending.",
+            "kind": "integer"
+          },
+          {
             "name": "cold_start",
             "title": "Cold start",
             "description": "TrapTriggerConfig configures a simple trap trigger.",
