@@ -66,6 +66,7 @@
   },
   "runtime": {
     "label": "Simulación",
+    "recentRunsFailed": "No se pudo leer el historial de ejecuciones: {{error}}",
     "title": "Simulación",
     "description": "Supervise el estado de ejecución, vea las interfaces de red y gestione la configuración de NIAC.",
     "daemonModeWarning": "Modo daemon no detectado",
@@ -395,6 +396,7 @@
     "useInEditor": "Usar en el editor de dispositivos",
     "subtitle": "Dispositivos generados a partir del YAML de configuración activo",
     "emptyMessage": "No hay dispositivos definidos en la configuración cargada",
+    "walkListFailed": "No se pudo cargar la lista de archivos walk",
     "yamlEditorTitle": "Editor YAML",
     "yamlEditorSubtitle": "Editar configuración activa",
     "noConfigMessage": "No hay ninguna simulación en ejecución. Elija una red en Simulación e iníciela para ver y editar aquí el YAML en ejecución.",
@@ -477,6 +479,8 @@
       "ttlMinutes": "{{value}}m"
     },
     "page": {
+      "loadFailed": "No se pudo cargar la topología",
+      "neighborsFailed": "No se pudieron cargar los datos de vecinos",
       "networkTopologyTitle": "Topología de red",
       "noTopologyData": "Sin datos de topología disponibles",
       "connectionCount_one": "{{count}} conexión",
@@ -573,6 +577,7 @@
   },
   "automation": {
     "label": "Alertas",
+    "statsFailed": "No se pudieron cargar las estadísticas",
     "title": "Alertas",
     "description": "Configure los umbrales de alerta y los destinos de webhook para el daemon en ejecución.",
     "page": {
@@ -699,6 +704,8 @@
     "clearAllLogsAriaLabel": "Borrar todos los registros"
   },
   "packets": {
+    "captureStatusFailed": "No se pudo leer el estado de captura",
+    "interfacesFailed": "No se pudo cargar la lista de interfaces",
     "label": "Paquetes",
     "title": "Paquetes",
     "description": "Vista en vivo de los paquetes en la simulación en ejecución, o inspección sin conexión de un archivo {{format}} capturado.",

@@ -1,0 +1,19 @@
+# Files with a useApiResource call that cannot show a failure.
+# Shrink-only: see scripts/check-fetch-error-states.py
+#
+# Every *page* was fixed in U1. These four are the remaining queue, left
+# baselined rather than papered over with a toast each, because each needs a
+# decision the page-level fix did not:
+#
+#   AppContext          eight polls behind the whole shell. A toast per poll
+#                       would storm on a daemon restart; this wants one
+#                       connection-lost banner, which is U3's session chrome.
+#   ErrorInjectionPanel } embedded panels whose host page already renders an
+#   ReplayControlPanel  } error region — the fix is to lift the state, not to
+#                       add a second error surface inside the card.
+#   useDeviceEditor     a hook, not a view: its callers decide how a failed
+#                       load reads, and DevicesPage already shows one.
+ui/src/components/ErrorInjectionPanel.tsx
+ui/src/components/ReplayControlPanel.tsx
+ui/src/components/device-editor/useDeviceEditor.ts
+ui/src/contexts/AppContext.tsx

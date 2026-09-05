@@ -9,6 +9,7 @@
       "webhookUrlLabel": "Webhook URL"
     },
     "recentErrors": "Recent errors counter:",
+    "statsFailed": "Statistics could not be loaded",
     "title": "Alerts"
   },
   "configDiff": {
@@ -295,6 +296,7 @@
     "useInEditor": "Use in device editor",
     "walkCopied": "Copied {{name}}",
     "walkCopyError": "Unable to copy walk name",
+    "walkListFailed": "Walk list could not be loaded",
     "wholeConfigButton": "Edit whole config",
     "yamlEditorSubtitle": "Edit active configuration",
     "yamlEditorTitle": "YAML editor"
@@ -649,6 +651,7 @@
       "presetTcp": "TCP",
       "presetUdp": "UDP"
     },
+    "captureStatusFailed": "Capture status could not be read",
     "conversations": {
       "clickToFilterHint": "Click a row to filter packets",
       "emptyDescription": "Conversations require packets with port information",
@@ -717,6 +720,7 @@
       "summaryLabel": "Summary",
       "viewTabsAriaLabel": "Packets view"
     },
+    "interfacesFailed": "Interface list could not be loaded",
     "label": "Packets",
     "list": {
       "cycleTimeModeTitle": "Click to cycle: Absolute / Relative / Delta",
@@ -811,6 +815,7 @@
       "selectedPrefix": "Selected:"
     },
     "recentRunsDescription": "Past simulation runs the daemon recorded.",
+    "recentRunsFailed": "Run history could not be read: {{error}}",
     "recentRunsTag": "History",
     "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
     "recentRunsTitle": "Recent runs",
@@ -1005,7 +1010,9 @@
     "page": {
       "connectionCount_one": "{{count}} connection",
       "connectionCount_other": "{{count}} connections",
+      "loadFailed": "Could not load the topology",
       "loadingTopology": "Loading topology...",
+      "neighborsFailed": "Neighbour data could not be loaded",
       "networkTopologyTitle": "Network Topology",
       "noConnectionsHint": "Configure devices with trunk ports or port-channels to visualize connections",
       "noLinksBannerAddPrefix": "Devices loaded, but the running config has no declared topology links. Add",

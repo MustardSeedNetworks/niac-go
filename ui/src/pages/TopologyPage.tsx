@@ -45,6 +45,7 @@ import {
   useTopologyExport,
   writeSavedLayoutMode,
 } from './topology';
+import { CanvasState } from './topology/CanvasState';
 import { reframeAfterPaint } from './topology/reframe';
 import { TrunkEdge } from './topology/TrunkEdge';
 
@@ -85,17 +86,21 @@ export const TopologyPage: FC = () => {
   const {
     data: topology,
     loading: topologyLoading,
+    error: topologyError,
     refetch: refetchTopology,
   } = useApiResource(() => fetchTopology(session), [sessionId], poll);
   const {
     data: devices,
     loading: devicesLoading,
+    error: devicesError,
     refetch: refetchDevices,
   } = useApiResource(() => fetchDevices(session), [sessionId], poll);
+  // Neighbours enrich the graph rather than draw it, so a failure there is a
+  // toast, not a blocked canvas.
   const { data: neighbors, refetch: refetchNeighbors } = useApiResource(
     () => fetchNeighbors(session),
     [sessionId],
-    poll,
+    { ...poll, errorToast: { title: t('topology.page.neighborsFailed') } },
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNodeType>([]);
@@ -494,6 +499,11 @@ export const TopologyPage: FC = () => {
   }, [refetchTopology, refetchDevices, refetchNeighbors]);
 
   const loading = topologyLoading || devicesLoading;
+  // A failed fetch used to fall through to the "no topology data" branch, so a
+  // daemon that could not be reached looked exactly like a network with no
+  // devices in it. The comment on handleRefresh claimed these errors surfaced
+  // through the per-hook error states; the page never read them.
+  const loadError = topologyError ?? devicesError;
 
   return (
     <div className="stack-xl">
@@ -716,25 +726,8 @@ export const TopologyPage: FC = () => {
       {view === 'graph' && (
         <Card className="relative z-0 border-surface-border bg-bg-surface/70 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
-            {loading ? (
-              <div className="absolute inset-0 flex-center">
-                <div className="flex flex-col items-center gap-default">
-                  <RefreshCw className="w-8 h-8 text-brand-accent animate-spin" />
-                  <SmallText className="text-text-muted">
-                    {t('topology.page.loadingTopology')}
-                  </SmallText>
-                </div>
-              </div>
-            ) : nodes.length === 0 ? (
-              <div className="absolute inset-0 flex-center">
-                <div className="text-center">
-                  <Network className="w-16 h-16 text-text-disabled mx-auto mb-content" />
-                  <p className="text-text-muted mb-2">{t('topology.page.noTopologyData')}</p>
-                  <SmallText className="text-text-muted">
-                    {t('topology.page.noConnectionsHint')}
-                  </SmallText>
-                </div>
-              </div>
+            {loading || loadError || nodes.length === 0 ? (
+              <CanvasState loading={loading} error={loadError} onRetry={handleRefresh} />
             ) : (
               <>
                 {edges.length === 0 && (

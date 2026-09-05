@@ -17,9 +17,14 @@ import { H2, P, SmallText } from '../ui/Typography';
  * immediately; no daemon restart required.
  */
 export const AutomationPage: FC = () => {
+  const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
+  // The error count only decorates the alert card's helper text, so a failed
+  // stats poll is a toast rather than a blocked page -- but it is not nothing:
+  // silently showing zero recent errors reads as "all clear".
   const { data: stats } = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
     enabled: sessionId !== null,
+    errorToast: { title: t('automation.statsFailed') },
   });
   const errorCount = stats?.stack.errors ?? 0;
 
