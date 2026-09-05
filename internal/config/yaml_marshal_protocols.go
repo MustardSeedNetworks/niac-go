@@ -140,8 +140,59 @@ func lldpToYAML(cfg *LLDPConfig) *converter.LldpConfig {
 	if cfg == nil {
 		return nil
 	}
-	out := converter.LldpConfig(*cfg)
-	return &out
+
+	return &converter.LldpConfig{
+		Enabled:           cfg.Enabled,
+		AdvertiseInterval: cfg.AdvertiseInterval,
+		TTL:               cfg.TTL,
+		SystemDescription: cfg.SystemDescription,
+		PortDescription:   cfg.PortDescription,
+		ChassisIDType:     cfg.ChassisIDType,
+		MED:               lldpMEDToYAML(cfg.MED),
+	}
+}
+
+// lldpMEDToYAML is the save-side counterpart of parseLLDPMEDConfig. The two
+// halves are written out field by field rather than converted with a struct
+// cast: the cast silently dropped whatever the two types did not share, which
+// is exactly how an authored field reaches the daemon and never comes back.
+func lldpMEDToYAML(cfg *LLDPMEDConfig) *converter.LldpMedConfig {
+	if cfg == nil {
+		return nil
+	}
+
+	out := &converter.LldpMedConfig{DeviceType: cfg.DeviceType}
+	for _, policy := range cfg.NetworkPolicies {
+		out.NetworkPolicies = append(out.NetworkPolicies, converter.LldpMedNetworkPolicy{
+			Application: policy.Application,
+			Unknown:     policy.Unknown,
+			Tagged:      policy.Tagged,
+			VLANID:      policy.VLANID,
+			Priority:    policy.Priority,
+			DSCP:        policy.DSCP,
+		})
+	}
+	if cfg.Power != nil {
+		out.Power = &converter.LldpMedPower{
+			DeviceType:      cfg.Power.DeviceType,
+			Source:          cfg.Power.Source,
+			Priority:        cfg.Power.Priority,
+			ValueTenthWatts: cfg.Power.ValueTenthWatts,
+		}
+	}
+	if cfg.Inventory != nil {
+		out.Inventory = &converter.LldpMedInventory{
+			HardwareRevision: cfg.Inventory.HardwareRevision,
+			FirmwareRevision: cfg.Inventory.FirmwareRevision,
+			SoftwareRevision: cfg.Inventory.SoftwareRevision,
+			SerialNumber:     cfg.Inventory.SerialNumber,
+			Manufacturer:     cfg.Inventory.Manufacturer,
+			ModelName:        cfg.Inventory.ModelName,
+			AssetID:          cfg.Inventory.AssetID,
+		}
+	}
+
+	return out
 }
 
 func cdpToYAML(cfg *CDPConfig) *converter.CdpConfig {

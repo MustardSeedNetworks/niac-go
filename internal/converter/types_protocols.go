@@ -132,6 +132,99 @@ type LldpConfig struct {
 	// ChassisIDType selects which chassis ID subtype is advertised, for
 	// example mac or local.
 	ChassisIDType string `yaml:"chassis_id_type,omitempty"`
+
+	// MED carries the TIA-1057 extensions a phone, camera or access point
+	// advertises. Omit it and the device sends plain 802.1AB, which is what a
+	// switch or router does.
+	MED *LldpMedConfig `yaml:"med,omitempty"`
+}
+
+// LldpMedConfig represents the LLDP-MED (TIA-1057) extensions.
+//
+// A discovery tool reads these to tell a phone from a printer and to learn the
+// voice VLAN an endpoint should use. Without them an IP phone is an anonymous
+// endpoint, so a pack meant to look like a hospital shows a rack of unidentified
+// MAC addresses instead.
+type LldpMedConfig struct {
+	// DeviceType is the MED device class: endpoint_class1 (generic),
+	// endpoint_class2 (media), endpoint_class3 (communication device, such as a
+	// phone), or network_connectivity for the switch side.
+	DeviceType string `yaml:"device_type,omitempty" validate:"omitempty,oneof=endpoint_class1 endpoint_class2 endpoint_class3 network_connectivity"`
+
+	// NetworkPolicies are the per-application VLAN, priority and DSCP
+	// assignments the device advertises.
+	NetworkPolicies []LldpMedNetworkPolicy `yaml:"network_policies,omitempty" validate:"omitempty,dive"`
+
+	// Power is the extended power-via-MDI advertisement.
+	Power *LldpMedPower `yaml:"power,omitempty"`
+
+	// Inventory is the hardware inventory set.
+	Inventory *LldpMedInventory `yaml:"inventory,omitempty"`
+}
+
+// LldpMedNetworkPolicy is one TIA-1057 Network Policy TLV.
+type LldpMedNetworkPolicy struct {
+	// Application is the traffic class the policy describes.
+	Application string `yaml:"application" validate:"required,oneof=voice voice_signaling guest_voice guest_voice_signaling softphone_voice video_conferencing streaming_video video_signaling"`
+
+	// Unknown marks the policy as not yet known to the endpoint, which is how a
+	// phone asks the switch which VLAN to use.
+	Unknown bool `yaml:"unknown,omitempty"`
+
+	// Tagged reports whether the application's frames carry an 802.1Q tag.
+	Tagged bool `yaml:"tagged,omitempty"`
+
+	// VLANID is the VLAN the application uses. Zero with tagged false means the
+	// port's untagged VLAN.
+	VLANID int `yaml:"vlan_id,omitempty" validate:"omitempty,gte=0,lte=4094"`
+
+	// Priority is the 802.1p user priority.
+	Priority int `yaml:"priority,omitempty" validate:"omitempty,gte=0,lte=7"`
+
+	// DSCP is the DiffServ code point.
+	DSCP int `yaml:"dscp,omitempty" validate:"omitempty,gte=0,lte=63"`
+}
+
+// LldpMedPower is the TIA-1057 Extended Power-via-MDI TLV.
+type LldpMedPower struct {
+	// DeviceType is pse for the switch supplying power, pd for the powered
+	// device drawing it.
+	DeviceType string `yaml:"device_type,omitempty" validate:"omitempty,oneof=pse pd"`
+
+	// Source is where the power comes from.
+	Source string `yaml:"source,omitempty" validate:"omitempty,oneof=unknown primary backup pse local pse_local"`
+
+	// Priority is how important this device's power is.
+	Priority string `yaml:"priority,omitempty" validate:"omitempty,oneof=unknown critical high low"`
+
+	// ValueTenthWatts is the power value in tenths of a watt, the TLV's own
+	// unit, so a config value and a captured frame read the same.
+	ValueTenthWatts int `yaml:"value_tenth_watts,omitempty" validate:"omitempty,gte=0,lte=1023"`
+}
+
+// LldpMedInventory is the TIA-1057 inventory set. An empty field is omitted
+// from the advertisement rather than sent blank.
+type LldpMedInventory struct {
+	// HardwareRevision is the board or chassis revision the device reports.
+	HardwareRevision string `yaml:"hardware_revision,omitempty"`
+
+	// FirmwareRevision is the boot firmware version.
+	FirmwareRevision string `yaml:"firmware_revision,omitempty"`
+
+	// SoftwareRevision is the running software version.
+	SoftwareRevision string `yaml:"software_revision,omitempty"`
+
+	// SerialNumber is the unit serial number a discovery tool displays.
+	SerialNumber string `yaml:"serial_number,omitempty"`
+
+	// Manufacturer is the vendor name, for example "Cisco Systems".
+	Manufacturer string `yaml:"manufacturer,omitempty"`
+
+	// ModelName is the product model, for example "CP-8841".
+	ModelName string `yaml:"model_name,omitempty"`
+
+	// AssetID is the operator's own asset tag.
+	AssetID string `yaml:"asset_id,omitempty"`
 }
 
 // CdpConfig represents CDP discovery protocol configuration.

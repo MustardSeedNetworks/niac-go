@@ -601,6 +601,7 @@ func parseLLDPConfig(yamlLldp *converter.LldpConfig) *LLDPConfig {
 		SystemDescription: yamlLldp.SystemDescription,
 		PortDescription:   yamlLldp.PortDescription,
 		ChassisIDType:     yamlLldp.ChassisIDType,
+		MED:               parseLLDPMEDConfig(yamlLldp.MED),
 	}
 	// Set defaults if not specified
 	if lldpCfg.AdvertiseInterval == 0 {
@@ -841,3 +842,43 @@ func parseSNMPv3Config(yamlV3 *converter.Snmpv3Config) *SNMPv3Config {
 }
 
 // ParseSimpleConfig parses a simple device configuration format
+
+// parseLLDPMEDConfig converts the YAML LLDP-MED block into runtime form.
+func parseLLDPMEDConfig(yamlMED *converter.LldpMedConfig) *LLDPMEDConfig {
+	if yamlMED == nil {
+		return nil
+	}
+
+	med := &LLDPMEDConfig{DeviceType: yamlMED.DeviceType}
+	for _, policy := range yamlMED.NetworkPolicies {
+		med.NetworkPolicies = append(med.NetworkPolicies, LLDPMEDNetworkPolicy{
+			Application: policy.Application,
+			Unknown:     policy.Unknown,
+			Tagged:      policy.Tagged,
+			VLANID:      policy.VLANID,
+			Priority:    policy.Priority,
+			DSCP:        policy.DSCP,
+		})
+	}
+	if yamlMED.Power != nil {
+		med.Power = &LLDPMEDPower{
+			DeviceType:      yamlMED.Power.DeviceType,
+			Source:          yamlMED.Power.Source,
+			Priority:        yamlMED.Power.Priority,
+			ValueTenthWatts: yamlMED.Power.ValueTenthWatts,
+		}
+	}
+	if yamlMED.Inventory != nil {
+		med.Inventory = &LLDPMEDInventory{
+			HardwareRevision: yamlMED.Inventory.HardwareRevision,
+			FirmwareRevision: yamlMED.Inventory.FirmwareRevision,
+			SoftwareRevision: yamlMED.Inventory.SoftwareRevision,
+			SerialNumber:     yamlMED.Inventory.SerialNumber,
+			Manufacturer:     yamlMED.Inventory.Manufacturer,
+			ModelName:        yamlMED.Inventory.ModelName,
+			AssetID:          yamlMED.Inventory.AssetID,
+		}
+	}
+
+	return med
+}

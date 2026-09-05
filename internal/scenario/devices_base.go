@@ -83,7 +83,9 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 	}
 	if spec.role == "ap" {
 		device.SnmpAgent.AddMibs = apDiscoveryMIBs(spec.name, spec.site.Code, macSuffix)
+		device.Lldp = withAccessPointMED(device.Lldp, profile, macSuffix)
 	}
+
 	return device
 }
 
@@ -300,3 +302,56 @@ func nativeVLAN(vlans []int) int {
 	}
 	return vlans[0]
 }
+
+// Access points draw PoE and carry the voice and guest policies their clients
+// use, so they advertise LLDP-MED. Without it a discovery tool sees an
+// anonymous endpoint where a pack means to show an access point, which is what
+// a tester checking the hospital pack against a real one notices first.
+func withAccessPointMED(
+	lldp *converter.LldpConfig,
+	profile DeviceProfile,
+	macSuffix uint32,
+) *converter.LldpConfig {
+	if lldp == nil {
+		return nil
+	}
+
+	lldp.MED = &converter.LldpMedConfig{
+		// An access point is the network's side of the MED conversation: it
+		// tells attached endpoints which VLAN and priority to use.
+		DeviceType: "network_connectivity",
+		NetworkPolicies: []converter.LldpMedNetworkPolicy{
+			{Application: "voice", Tagged: true, VLANID: vlanVoiceIoT, Priority: apVoicePriority, DSCP: apVoiceDSCP},
+		},
+		Power: &converter.LldpMedPower{
+			DeviceType:      "pd",
+			Source:          "pse",
+			Priority:        "high",
+			ValueTenthWatts: apPowerTenthWatts,
+		},
+		Inventory: &converter.LldpMedInventory{
+			SoftwareRevision: profile.Software,
+			SerialNumber:     apSerialNumber(macSuffix),
+			Manufacturer:     profile.Vendor,
+			ModelName:        profile.Model,
+		},
+	}
+
+	return lldp
+}
+
+// apSerialNumber derives a stable, obviously-simulated serial from the device's
+// MAC suffix, so two access points in a pack never share one.
+func apSerialNumber(macSuffix uint32) string {
+	return fmt.Sprintf("NIAC%06X", macSuffix)
+}
+
+const (
+	// apVoicePriority is the 802.1p priority a voice policy advertises.
+	apVoicePriority = 5
+	// apVoiceDSCP is expedited forwarding, what voice traffic is marked with.
+	apVoiceDSCP = 46
+	// apPowerTenthWatts is a Wi-Fi 7 access point's draw, in the TLV's own
+	// 0.1 W units: 25.5 W, an 802.3at class 4 device.
+	apPowerTenthWatts = 255
+)
