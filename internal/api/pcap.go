@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -138,5 +140,49 @@ func (s *Server) handlePcapAnalysis(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.writeJSON(w, result)
+	s.writeJSON(w, pageResult(result, r.URL.Query()))
+}
+
+// pageResult applies ?offset= and ?limit= to the packet list.
+//
+// Both default to "everything retained", so a client that does not ask for a
+// page sees exactly what it saw before. A capture at the retention cap is
+// 50,000 rows, which is more than a browser wants in one response but not so
+// many that slicing them here is expensive.
+func pageResult(result *capture.AnalysisResult, query url.Values) *capture.AnalysisResult {
+	offset := queryInt(query, "offset", 0)
+	limit := queryInt(query, "limit", len(result.Packets))
+	if offset <= 0 && limit >= len(result.Packets) {
+		return result
+	}
+
+	offset = max(offset, 0)
+	offset = min(offset, len(result.Packets))
+	end := len(result.Packets)
+	if limit >= 0 && offset+limit < end {
+		end = offset + limit
+	}
+
+	// Copy the header, replace the window: the cached result must not be
+	// mutated, or the next reader gets one client's page.
+	paged := *result
+	paged.Packets = result.Packets[offset:end]
+
+	return &paged
+}
+
+// queryInt reads a non-negative integer query parameter, falling back to def
+// for anything absent or unparseable. A malformed page request reads the
+// default rather than failing: the caller wanted packets, not an error page.
+func queryInt(query url.Values, name string, def int) int {
+	raw := query.Get(name)
+	if raw == "" {
+		return def
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 0 {
+		return def
+	}
+
+	return value
 }

@@ -39,15 +39,14 @@ func buildTCPPacket(t *testing.T, srcPort, dstPort int, syn bool, payload []byte
 
 func labelFor(t *testing.T, packet gopacket.Packet) string {
 	t.Helper()
-	pkt := &Packet{Headers: map[string]any{}}
-	parseTCPLayer(packet, pkt)
-	return pkt.Protocol
+
+	return parsePacket(packet, 1).Protocol
 }
 
 // TestBarePortsDoNotImplyAnApplicationProtocol guards the analyzer's PROTOCOL
-// column.
+// column, and now the live inspector's too: both read internal/packetdecode.
 //
-// parseTCPLayer applied getProtocolByPort unconditionally, so a three-way
+// The analyzer once applied its port table unconditionally, so a three-way
 // handshake on port 80 — SYN, SYN-ACK, ACK, none of which carry a byte of
 // application data — was labelled HTTP. tcpdump and Wireshark both show TCP for
 // those and reserve the application name for segments that actually carry

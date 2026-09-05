@@ -1038,6 +1038,7 @@
       "followStreamButton": "Seguir flujo",
       "hexDumpLabel": "Volcado hexadecimal",
       "packetDetailsLabel": "Detalles del paquete",
+      "truncatedNotice": "Mostrando los primeros {{shown}} paquetes. Esta captura contiene más de los que el analizador lista; las estadísticas siguientes cubren todo el archivo.",
       "uploadFailed": "Error al cargar el archivo",
       "analyzeSuccess_one": "Se analizó correctamente {{count}} paquete",
       "analyzeSuccess_other": "Se analizaron correctamente {{count}} paquetes",

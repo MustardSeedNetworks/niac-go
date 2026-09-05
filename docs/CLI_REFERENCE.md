@@ -84,6 +84,7 @@ Flags:
 
 ```text
       --output string   Output format (text, json, yaml) (default "text")
+      --packets         List every packet, the same rows the web packet list shows
 ```
 
 Examples:
@@ -97,6 +98,9 @@ niac analyze-pcap --output json capture.pcap
 
 # YAML output (handy for diffing two captures)
 niac analyze-pcap --output yaml capture.pcap
+
+# Every packet, the same rows the web packet list shows
+niac analyze-pcap --packets capture.pcap
 ```
 
 ### `niac analyze-walk`
