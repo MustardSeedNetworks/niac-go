@@ -98,7 +98,7 @@ nothing today emits an edge between two peers within one tier.
 | M4-4 | Finalize campus, retail, and service-provider stories | 12-20 | M4-2 | **Done 2026-08-08.** campus `6a77bb6b9dc61ad432ed59f2` 147/186 collapsed core, retail `6a77c25f9dc61ad432f3908d` 95/112 lane chain, service provider `6a77c98b9dc61ad4320a6858` 117/146 POP ring - **zero findings each**. |
 | M4-5 | Validate VLAN 299 scale workload and responsiveness | 4-7 | M1, M3 | **Done 2026-08-08.** Baseline published below. |
 | M4-6 | Extend the runner to pin unit/analysis and record final-binary, pack, binding, and timestamp provenance | 5-8 | M4-1 | Repeatable read-only acceptance report |
-| M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | **Isolation proven 2026-08-08** (`scripts/lab/isolation.sh`, zero leaks across all six VLANs). The 24-hour soak and the EtherScope half remain. |
+| M4-7 | Run 24-hour isolation plus EtherScope and CyberScope discovery for all six packs | 12-20 | M4-2..M4-6 | **Done 2026-09-06.** Isolation proven 2026-08-08 (`scripts/lab/isolation.sh`, zero leaks). 24-hour soak ran 2026-08-19 04:12Z to 2026-08-20 04:20Z on v0.94.46 (see below). EtherScope nXG discovery of all six packs on v0.95.6: four packs zero findings, two carry only the NBSTAT source-MAC defect (#1842, fixed in #1843) — see the EtherScope section below. |
 
 ### M4-1 outcome (2026-08-08, v0.94.29)
 
@@ -243,6 +243,71 @@ rather than pack authoring; it belongs with the M3-4 fault matrix.
 
 Checkpoint: all six presentation VLANs are demonstrable without regeneration,
 YAML repair, or ambiguous Link-Live selection.
+
+### 24-hour soak, 2026-08-19 (M4-7 duration evidence)
+
+`scripts/lab/soak.sh` against CT304 on v0.94.46, report at
+`pvm01:/root/soak-v0.94.46/report.txt`, samples in `samples.jsonl`.
+
+| Field | Value |
+| --- | --- |
+| started | 2026-08-19T04:12:24Z |
+| ended | 2026-08-20T04:20:43Z |
+| rounds | 95 at 900 s |
+| daemon restarts | 0 |
+| goroutines | 78 -> 78 |
+| heap | 58 MB -> 93 MB |
+| errors / drops | 0 / 0 |
+| failures | 0 |
+
+Heap grew 35 MB over 24 hours with a flat goroutine count; nothing in the
+samples restarts or drops. Worth a second soak on a 0.95.x build before v1
+(P5 hardening), not a blocker.
+
+### EtherScope acceptance, 2026-09-06 (v0.95.6, M4-7 EtherScope half)
+
+Same bar as M4-1: fresh Link-Live analyses of product-API-generated configs,
+compared with `tools/linklive-acceptance` against the generated YAML. CT304
+was upgraded 0.94.67 -> 0.95.6 first (Proxmox snapshot `pre-0956`; all six
+sessions recovered, zero restarts), then every pack was regenerated through
+`POST /api/v1/scenario/generate` and restarted on its VLAN. Unit
+`00C017-536204`, second-sample uploads (Refresh Discovery before upload).
+
+| Pack | VLAN | Authored | Analysis | Findings |
+| --- | --- | --- | --- | --- |
+| hospital | 200 | 75 / 88 | `6a9cff5c9e0a52ab6110b536` | 5 `missing-link`, all NetBIOS hosts (#1842) |
+| warehouse | 201 | 57 / 67 | `6a9cf8ad9e0a52ab610b1d6e` | **zero** |
+| manufacturing | 202 | 69 / 78 | `6a9d03369e0a52ab612009c4` | **zero** |
+| campus | 203 | 147 / 186 | `6a9d0c2d9e0a52ab6127fdaa` | 2 `missing-link`, both NetBIOS file servers (#1842) |
+| retail | 204 | 95 / 112 | `6a9d0c309e0a52ab612801b2` | **zero** |
+| service-provider | 205 | 117 / 146 | `6a9d10569e0a52ab612b6cfd` | **zero** |
+
+**The one product defect.** Every surviving finding is a missing link between
+an access switch and a device that has a `netbios:` block. The switch side is
+correct on the wire (Q-BRIDGE FDB, bridge-port mapping, PVID, status learned
+— all identical in shape to the neighbouring devices that resolve). A capture
+on pvm01 showed the cause: NBSTAT replies to an off-subnet requester leave
+with the endpoint's own MAC, while ICMP and SNMP replies from the same
+endpoint leave with the gateway's MAC. The tester therefore sees the
+endpoint's MAC on its own segment and Link-Live attaches the device to the
+unmanaged bridge behind the lab switch instead of its access port. Fixed
+in PR #1843 (frame source from `replySourceMAC`, unit ID unchanged); the
+hospital and campus rows need a fresh run on a build carrying it.
+
+**Not a product defect, and it cost the first hospital pass.** The
+EtherScope's 35 stored Extended Ranges covered an old `10.240.x` scheme, so
+its first scan found 49 of 75 hospital devices while all 75 answered SNMP
+from pvm01. The 24 current endpoint and server subnets are on the unit now;
+the runbook records the check.
+
+`scripts/lab/acceptance.sh` could not run at all on a current build until this
+run: every mutating route requires the CSRF token, and the script never sent
+one. It fetches it now and stops a stale session of the same id first.
+
+For F3, the whole run was captured on pvm01: `/root/cap/etherscope-discovery-20260905-2114.pcap`
+(`vlan and udp port 161`, 255 MB, 979,935 packets) covers every discovery of all
+six packs by the EtherScope; it is the tester-side input the consumer demand
+matrix asks for.
 
 ## Milestone 5 — SEED development contract
 
