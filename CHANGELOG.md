@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.6...v0.95.7) (2026-09-06)
+
+
+### Bug Fixes
+
+* **ci:** do not arm auto-merge on a release PR that no longer describes main ([#1831](https://github.com/MustardSeedNetworks/niac-go/issues/1831)) ([26702d8](https://github.com/MustardSeedNetworks/niac-go/commit/26702d8085c6f107cbb33cf0b2b67a24a996f77d))
+
+
+### Miscellaneous
+
+* **deps:** update pre-commit hook gitleaks/gitleaks to v8.30.1 ([#1832](https://github.com/MustardSeedNetworks/niac-go/issues/1832)) ([650042b](https://github.com/MustardSeedNetworks/niac-go/commit/650042ba29bdcef5af78f22e0d7db88a32655f20))
+* **deps:** update pre-commit hook igorshubovych/markdownlint-cli to v0.49.1 ([#1833](https://github.com/MustardSeedNetworks/niac-go/issues/1833)) ([18a0b9c](https://github.com/MustardSeedNetworks/niac-go/commit/18a0b9cabdb28c28e26e52aaf10e34c4e558c13d))
+* **deps:** update pre-commit hook koalaman/shellcheck-precommit to v0.11.0 ([#1834](https://github.com/MustardSeedNetworks/niac-go/issues/1834)) ([5e42771](https://github.com/MustardSeedNetworks/niac-go/commit/5e42771201ed3c2b19a4b2a77385d46197f68faf))
+
 ## [0.95.6](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.5...v0.95.6) (2026-09-05)
 
 
