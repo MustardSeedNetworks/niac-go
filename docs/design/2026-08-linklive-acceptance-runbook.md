@@ -205,10 +205,16 @@ costs a full scan if you do not know it.
 - **Extended Ranges are per unit, and this unit's were stale.** The 35 ranges
   it shipped with covered an old `10.240.x` / `10.241.x` scheme, so the first
   hospital pass missed all 26 endpoints and servers while every switch on the
-  pack answered. The 24 current `.210` and `.240` subnets (10.51, 10.61, 10.91,
-  10.71-74, 10.81-82, 10.101-103) are in place now; check the count reads
-  `59 Extended Ranges` before the first scan after a factory reset or a
-  settings load. A missing range looks exactly like a NIAC fault.
+  pack answered. The current `.210`, `.240` and `.250` subnets (10.51, 10.61,
+  10.91, 10.71-74, 10.81-82, 10.101-103) are in place now; check the count
+  reads `71 Extended Ranges` before the first scan after a factory reset or a
+  settings load. A missing range looks exactly like a NIAC fault, and a pack
+  that gains a subnet (the G3 phones and cameras on `.250`, 0.95.9) needs its
+  range added before it can pass.
+- **The Extended Ranges screen shows "Initializing" for a few seconds after it
+  opens and swallows the first tap.** Wait ten seconds before the first `+`,
+  or the first subnet of the batch is silently lost. The list is not sorted;
+  a new entry can land anywhere in it.
 - **With 59 ranges a Refresh Discovery takes six to seven minutes**, not the
   three the CyberScope needed. Uploading earlier gets a
   "Active Discovery has not completed" dialog; answer NO and wait.
