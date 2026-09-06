@@ -309,6 +309,27 @@ For F3, the whole run was captured on pvm01: `/root/cap/etherscope-discovery-202
 six packs by the EtherScope; it is the tester-side input the consumer demand
 matrix asks for.
 
+### EtherScope rerun on v0.95.9, 2026-09-06 (P4-3)
+
+CT304 upgraded to v0.95.9 (snapshot `pre-0959`, six sessions recovered,
+zero restarts); hospital and campus regenerated through the product API. On
+the wire the NBSTAT replies now leave with the gateway MAC
+(`00:00:0c:00:01:01`), unit ID unchanged — the #1842 signature is gone.
+
+| Pack | Authored | Analysis | Findings |
+| --- | --- | --- | --- |
+| hospital | 78 / 88 | `6a9d48789e0a52ab615b1d33` | **zero** with the #1848 comparator (2 `interface-utilization-conflict` on `voip-phone` before it) |
+| campus | 159 / 186 | `6a9d3f0d9e0a52ab615323f2` | **zero** with the #1848 comparator (8 `interface-utilization-conflict` on `voip-phone` before it: Link-Live never samples a leaf, and the new type was not on the leaf list) |
+
+The packs grew between 0.95.6 and 0.95.9: the G3 profiles add phones and a
+camera per site on the `.250` voice/IoT subnet. Two of the three reruns
+missed exactly those devices until the unit's Extended Ranges gained the
+`.250` subnets — unit configuration, not NIAC (every one answered SNMP from
+pvm01 throughout).
+
+With that, all six packs read zero findings against product-API-generated
+configs on v0.95.9 — the M4-1 bar, on the EtherScope.
+
 ## Milestone 5 — SEED development contract
 
 | ID | Work item | Hours | Depends on | Acceptance evidence |
