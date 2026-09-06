@@ -25,10 +25,10 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 	}
 
 	want := scenario.Parity{
-		DeviceCount:       531,
+		DeviceCount:       543,
 		NetworkCount:      39,
 		LinkCount:         634,
-		DeviceNamesSHA256: "6da20f0044fb2f696efc3d886c209eb47c07b5fa1e64222f93d58f6dc00f1979",
+		DeviceNamesSHA256: "8514a6d423b598a11d6ebc6edfc399c978883b831106e8c187e681619229346f",
 		NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
 		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
 		LinksSHA256: "4c1acbf07eccc6464a4a86d8a53f867fdaa1cc7374d18b881bf30487a98713e6",
@@ -76,8 +76,9 @@ func TestGenerateHonorsFleetRepeatControls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generated YAML does not load: %v", err)
 	}
-	// Three global devices plus 54 devices at each site.
-	if got, want := cfg.DeviceCount(), 111; got != want {
+	// Three global devices plus 57 at each site: 54, and the three appended
+	// LLDP-MED endpoints (two phones, one camera).
+	if got, want := cfg.DeviceCount(), 117; got != want {
 		t.Fatalf("device count = %d, want %d", got, want)
 	}
 	for _, site := range request.Sites {
@@ -186,5 +187,5 @@ func TestVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T) {
 func ExampleGenerate() {
 	result, _ := scenario.Generate(scenario.EnterpriseReferenceRequest())
 	fmt.Println(result.Manifest.DeviceCount)
-	// Output: 531
+	// Output: 543
 }

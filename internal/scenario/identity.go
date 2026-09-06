@@ -38,7 +38,7 @@ func roleCode(role string) int {
 	case "controller":
 		return roleControllerCode
 	default:
-		if isWiredEndpointRole(role) {
+		if isWiredEndpointRole(role) || isMEDEndpointRole(role) {
 			return roleWorkstationCode
 		}
 		panic("unknown scenario role: " + role)

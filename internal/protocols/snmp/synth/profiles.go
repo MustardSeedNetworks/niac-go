@@ -376,6 +376,19 @@ var profileTable = func() map[profileKey]Profile {
 		IfSpeedMbps:    speed100G,
 	}, true, false, true, true))
 
+	// A Cisco endpoint that is not a switch or router: an IP phone answers SNMP
+	// with a sysObjectID under Cisco's own 1.3.6.1.4.1.9.1 arc, which is what a
+	// discovery tool matches on to say "Cisco" before it reads anything else.
+	// Without a cisco/host pairing the scenario catalog could only give a Cisco
+	// phone a Net-SNMP Linux OID, which reads as a generic host.
+	add(VendorCiscoIOS, TypeHost, withFlags(Profile{
+		SysDescr:       "Cisco IP Phone CP-8841, Version SIP88xx.12-8-1",
+		SysObjectID:    "1.3.6.1.4.1.9.1.1755",
+		IfNameFormat:   "eth%d",
+		DefaultIfCount: defaultIfHost,
+		IfSpeedMbps:    speed1G,
+	}, true, false, true, false))
+
 	// ---- Generic (Net-SNMP) — host / server / printer / generic-anything ----
 	generic := func(descr, ifFmt string, n int, speed int) Profile {
 		return Profile{
