@@ -208,7 +208,7 @@ func (h *NetBIOSHandler) handleNameQuery(
 	}
 
 	h.sendNameQueryResponse(pkt, transactionID, replyPort, name, nameType, matchedGroup,
-		deviceIPv4, ipv4.SrcIP, matchedDevice.MACAddress, eth.SrcMAC)
+		deviceIPv4, ipv4.SrcIP, matchedDevice, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
 		logging.Debugf("NetBIOS NS: Sent positive response for '%s' -> %s sn=%d",
@@ -273,7 +273,8 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	nameType byte,
 	isGroup bool,
 	deviceIP, dstIP net.IP,
-	srcMAC, dstMAC net.HardwareAddr,
+	device *config.Device,
+	dstMAC net.HardwareAddr,
 ) {
 	// Build NetBIOS Name Service response
 	buf := new(bytes.Buffer)
@@ -303,12 +304,12 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 	ttl := uint32(nbnsDefaultTTL)
 	nodeFlags := uint16(nbnsDefaultNodeFlags) // Default: B-node, unique name
 
-	if matched := h.stack.devicesFor(reqPkt.VLAN).GetByMAC(srcMAC); matched != nil && matched.NetBIOSConfig != nil {
-		if matched.NetBIOSConfig.TTL > 0 {
-			ttl = matched.NetBIOSConfig.TTL
+	if device != nil && device.NetBIOSConfig != nil {
+		if device.NetBIOSConfig.TTL > 0 {
+			ttl = device.NetBIOSConfig.TTL
 		}
 
-		switch matched.NetBIOSConfig.NodeType {
+		switch device.NetBIOSConfig.NodeType {
 		case "B":
 			nodeFlags = 0x0000
 		case "P":
@@ -343,7 +344,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 		NetBIOSNameServicePort,
 		replyPort,
 		buf.Bytes(),
-		srcMAC,
+		h.stack.replySourceMAC(reqPkt, device),
 		dstMAC,
 		reqPkt.VLAN,
 	)
@@ -647,7 +648,7 @@ func (h *NetBIOSHandler) handleNodeStatus(
 	}
 
 	h.sendNodeStatusResponse(pkt, transactionID, replyPort, name, nameType, names,
-		deviceIPv4, ipv4.SrcIP, device.MACAddress, eth.SrcMAC)
+		deviceIPv4, ipv4.SrcIP, device, eth.SrcMAC)
 
 	if h.debugLevel >= DebugLevelInfo {
 		logging.Debugf("NetBIOS NS: Node status for %s -> %d name(s) sn=%d",
@@ -669,6 +670,13 @@ func firstNetBIOSDevice(devices []*config.Device) *config.Device {
 }
 
 // sendNodeStatusResponse writes an NBSTAT answer listing the device's names.
+//
+// The unit ID inside the answer is the device's own MAC: that is the adapter
+// the names belong to. The frame's source MAC is a separate question — when the
+// requester sits on another subnet the reply crosses the simulated gateway and
+// must leave with the gateway's MAC like every other routed reply, or a tester
+// on that subnet sees the endpoint's MAC on its own segment and places the
+// device behind its nearest switch instead of on the authored access port.
 func (h *NetBIOSHandler) sendNodeStatusResponse(
 	reqPkt *Packet,
 	transactionID, replyPort uint16,
@@ -676,7 +684,8 @@ func (h *NetBIOSHandler) sendNodeStatusResponse(
 	nameType byte,
 	names []netbiosNameEntry,
 	deviceIP, dstIP net.IP,
-	srcMAC, dstMAC net.HardwareAddr,
+	device *config.Device,
+	dstMAC net.HardwareAddr,
 ) {
 	const (
 		nbstatNameLen       = 15 // padded name inside a node-status entry
@@ -714,7 +723,7 @@ func (h *NetBIOSHandler) sendNodeStatusResponse(
 	// Statistics: the adapter's unit ID is its MAC; the counters that follow
 	// are reported as zero because nothing here models adapter statistics.
 	statistics := make([]byte, nbstatStatisticsLen)
-	copy(statistics, srcMAC[:min(len(srcMAC), macLen)])
+	copy(statistics, device.MACAddress[:min(len(device.MACAddress), macLen)])
 	body.Write(statistics)
 
 	buf := new(bytes.Buffer)
@@ -735,6 +744,6 @@ func (h *NetBIOSHandler) sendNodeStatusResponse(
 	_ = h.stack.udpHandler.SendUDP(
 		deviceIP.To4(), dstIP.To4(),
 		NetBIOSNameServicePort, replyPort,
-		buf.Bytes(), srcMAC, dstMAC, reqPkt.VLAN,
+		buf.Bytes(), h.stack.replySourceMAC(reqPkt, device), dstMAC, reqPkt.VLAN,
 	)
 }
