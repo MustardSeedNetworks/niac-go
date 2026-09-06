@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.8...v0.95.9) (2026-09-06)
+
+
+### Bug Fixes
+
+* **netbios:** send routed NBSTAT replies from the gateway MAC ([#1843](https://github.com/MustardSeedNetworks/niac-go/issues/1843)) ([9fcfdd8](https://github.com/MustardSeedNetworks/niac-go/commit/9fcfdd8415d2378a89e5ff2d0625634783f43e2d))
+
+
+### Continuous Integration
+
+* install the pinned golangci-lint when the local version differs ([#1839](https://github.com/MustardSeedNetworks/niac-go/issues/1839)) ([c1d1d7a](https://github.com/MustardSeedNetworks/niac-go/commit/c1d1d7a4ec141c693d4af06b8f7187ec8328ead5))
+
 ## [0.95.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.7...v0.95.8) (2026-09-06)
 
 
