@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.10...v0.95.11) (2026-09-06)
+
+
+### Documentation
+
+* **lab:** record the v0.95.9 rerun — all six packs zero findings on the EtherScope ([#1850](https://github.com/MustardSeedNetworks/niac-go/issues/1850)) ([8150928](https://github.com/MustardSeedNetworks/niac-go/commit/81509286cb95759cbf7c4c44a783408a131705b3))
+
 ## [0.95.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.9...v0.95.10) (2026-09-06)
 
 
