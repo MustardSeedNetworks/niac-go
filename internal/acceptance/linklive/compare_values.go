@@ -71,7 +71,7 @@ const snmpAgentType = "SNMP Agent"
 
 func isEndpointType(deviceType string) bool {
 	switch deviceType {
-	case "host", "workstation", "iot", "printer":
+	case "host", "workstation", "iot", "printer", "voip-phone":
 		return true
 	default:
 		return false
@@ -86,7 +86,8 @@ func isEndpointType(deviceType string) bool {
 // interfaces of every one of the 30 APs, wired uplink included, while the
 // switch port facing that same uplink reported 71.57%.
 func isLeafType(deviceType string) bool {
-	return isEndpointType(deviceType) || deviceType == "server" || deviceType == "access-point"
+	return isEndpointType(deviceType) || deviceType == "server" ||
+		deviceType == "access-point" || deviceType == "ap"
 }
 
 func parseSpeedMbps(value string) int {
