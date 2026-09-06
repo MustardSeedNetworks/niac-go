@@ -225,3 +225,87 @@ func netbiosTestDevice() *config.Device {
 		},
 	}
 }
+
+// A tester on another subnet reaches the endpoint through the simulated
+// gateway, so the reply frame has to leave with the gateway's MAC — the same
+// path ICMP and SNMP replies already take. Before this, NBSTAT replies carried
+// the endpoint's own MAC across the router, a real tester saw that MAC arrive on
+// its own segment, and Link-Live placed every NetBIOS-enabled host behind the
+// tester's nearest switch instead of on its authored access port (niac#1842).
+// The unit ID inside the answer stays the endpoint's MAC: that is the adapter
+// the names belong to.
+func TestNodeStatusRoutedReplyLeavesWithGatewayMAC(t *testing.T) {
+	const (
+		deviceName = "MED-NURSE-1101"
+		deviceIP   = "10.51.210.21"
+		clientIP   = "10.254.200.251"
+	)
+
+	stack := newTestStackInternal(t)
+	handler := NewNetBIOSHandler(stack, 0)
+
+	device := &config.Device{
+		Name:        deviceName,
+		MACAddress:  net.HardwareAddr{0x00, 0x00, 0x97, 0x33, 0x09, 0x01},
+		IPAddresses: []net.IP{net.ParseIP(deviceIP)},
+		NetBIOSConfig: &config.NetBIOSConfig{
+			Enabled: true, Name: deviceName, Workgroup: "DEMO",
+			NodeType: "H", Services: []string{"workstation"},
+		},
+	}
+	table := stack.devicesFor(0)
+	table.AddByIP(net.ParseIP(deviceIP), device)
+	table.AddByMAC(device.MACAddress, device)
+
+	gatewayMAC := net.HardwareAddr{0x00, 0x00, 0x0c, 0x00, 0x01, 0x01}
+	packet, udp := netbiosRequestPacket(t, clientIP, deviceIP, nodeStatusQuery(0x4343))
+
+	handler.HandleNameService(&Packet{fabricReplySourceMAC: gatewayMAC}, packet, udp, []*config.Device{device})
+
+	select {
+	case sent := <-stack.sendQueue:
+		frame := sent.Buffer[:sent.Length]
+		reply := gopacket.NewPacket(frame, layers.LayerTypeEthernet, gopacket.Default)
+		eth, ok := reply.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+		if !ok {
+			t.Fatal("reply has no Ethernet layer")
+		}
+		if !bytesEqualMAC(eth.SrcMAC, gatewayMAC) {
+			t.Errorf("routed reply source MAC = %s, want gateway %s", eth.SrcMAC, gatewayMAC)
+		}
+		if unit := decodeNodeStatusUnitID(t, frame); !bytesEqualMAC(unit, device.MACAddress) {
+			t.Errorf("unit ID = %s, want the endpoint's own MAC %s", unit, device.MACAddress)
+		}
+	default:
+		t.Fatal("no node status reply")
+	}
+}
+
+func bytesEqualMAC(a, b net.HardwareAddr) bool {
+	return a.String() == b.String()
+}
+
+// decodeNodeStatusUnitID walks past the name list to the statistics block,
+// whose first six bytes are the adapter's unit ID.
+func decodeNodeStatusUnitID(t *testing.T, frame []byte) net.HardwareAddr {
+	t.Helper()
+	packet := gopacket.NewPacket(frame, layers.LayerTypeEthernet, gopacket.Default)
+	udp, ok := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
+	if !ok {
+		t.Fatal("reply has no UDP layer")
+	}
+	const (
+		headerLen = 12
+		nameLen   = 34
+		rrPrefix  = 8
+		entryLen  = 18
+		macLen    = 6
+	)
+	offset := headerLen + nameLen + rrPrefix + 2
+	count := int(udp.Payload[offset])
+	offset += 1 + count*entryLen
+	if offset+macLen > len(udp.Payload) {
+		t.Fatalf("reply too short for a unit ID: %d bytes", len(udp.Payload))
+	}
+	return net.HardwareAddr(udp.Payload[offset : offset+macLen])
+}

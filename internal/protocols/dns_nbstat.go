@@ -41,14 +41,14 @@ func (h *DNSHandler) handleNBSTATQuery(
 		dnsPort,
 		uint16(udpLayer.SrcPort),
 		payload,
-		[]byte(serverDevice.MACAddress),
+		h.stack.replySourceMAC(reqPkt, serverDevice),
 		[]byte(dstMAC),
 		reqPkt.VLAN,
 	)
 }
 
 func (h *DNSHandler) handleNBSTATQueryV6(
-	_ *Packet,
+	reqPkt *Packet,
 	ipv6 *layers.IPv6,
 	udpLayer *layers.UDP,
 	serverDevice *config.Device,
@@ -73,7 +73,7 @@ func (h *DNSHandler) handleNBSTATQueryV6(
 		payload,
 		serverDeviceIP(serverDevice, true),
 		ipv6.SrcIP,
-		serverDevice.MACAddress,
+		h.stack.replySourceMAC(reqPkt, serverDevice),
 		dstMAC,
 		udpLayer.SrcPort,
 	)
