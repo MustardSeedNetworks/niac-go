@@ -192,6 +192,52 @@ manufacturing's endpoints and servers stayed absent until `10.91.210.0/24` and
 drawer → **Discovery Settings** → **Extended Ranges** → **+**. The ranges for
 every pack are in place as of 2026-08-08.
 
+## Driving the EtherScope nXG
+
+The EtherScope is `10.44.10.31`, VNC on 5900, no password, same Android UI
+and the same tap map as the CyberScope. Its AutoTest profile group is
+`niacbackup`: **Wired Profile** is VLAN 200 (hospital); VLAN 201-205 carry
+their number in the name. Its Link-Live unit MAC is `00C017-536204`.
+
+Everything below was learned on the 2026-09-06 run (NIAC 0.95.6); each one
+costs a full scan if you do not know it.
+
+- **Extended Ranges are per unit, and this unit's were stale.** The 35 ranges
+  it shipped with covered an old `10.240.x` / `10.241.x` scheme, so the first
+  hospital pass missed all 26 endpoints and servers while every switch on the
+  pack answered. The 24 current `.210` and `.240` subnets (10.51, 10.61, 10.91,
+  10.71-74, 10.81-82, 10.101-103) are in place now; check the count reads
+  `59 Extended Ranges` before the first scan after a factory reset or a
+  settings load. A missing range looks exactly like a NIAC fault.
+- **With 59 ranges a Refresh Discovery takes six to seven minutes**, not the
+  three the CyberScope needed. Uploading earlier gets a
+  "Active Discovery has not completed" dialog; answer NO and wait.
+- **The save icon on Discovery Settings is a profile load/save dialog**, not
+  an apply. It swallows every tap until CANCEL. Changes apply on the next
+  Refresh Discovery; nothing to save.
+- **Uploads queue on the pack VLAN and flush on the next profile switch.**
+  You do not need to switch to EZ Wired after every pack; switching to the
+  next pack's profile drains the queue. Do switch to EZ Wired after the last
+  one and confirm `Link-Live (0 buffered)`.
+- **The unit auto-uploads a discovery when a scan settles** (Automatic Uploads
+  9/9), so every pack produces two analyses: the automatic single-sample one
+  and your manual one after the refresh. Pick by `numHosts` and time, and pass
+  `-analysis <id>` to the comparator rather than `-latest`; `-unit-mac` is only
+  accepted with `-latest`.
+- **Skip the Comment field.** The soft keyboard stays up after `key esc` and
+  the next tap lands on it. The auto-generated timestamp name is enough.
+- **Drag to scroll, not the wheel.** `vncdo move x 1050 mousedown 1 move x 200
+  mouseup 1` scrolls a list; `click 5` does nothing and `drag` drops the
+  connection.
+- The Discovery app resumes on whatever screen it was left on. Press back
+  until the device list shows before tapping the overflow menu.
+
+The comparator also needs the CSRF token now: `acceptance.sh` fetches it
+from `/api/v1/csrf-token` for the generate/preflight/start path and stops the
+previous session of the same id first. Run it inside CT304 against
+`https://127.0.0.1:8445` (the daemon binds loopback); copy `.lab/` back for
+`--compare`.
+
 ## Link-Live API
 
 Credentials live in `~/.linklive/token.env` as `LINKLIVE_ACCESS_TOKEN`, kept

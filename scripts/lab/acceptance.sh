@@ -15,6 +15,7 @@
 # Environment:
 #   NIAC_URL        daemon base URL           (default https://10.44.40.22:8445)
 #   NIAC_API_TOKEN  daemon API token          (required for a non-loopback bind)
+#   The CSRF token is fetched from the daemon; nothing to set.
 #   LAB_OUT         where configs/reports go  (default ./.lab)
 set -euo pipefail
 
@@ -22,6 +23,14 @@ NIAC_URL="${NIAC_URL:-https://10.44.40.22:8445}"
 LAB_OUT="${LAB_OUT:-.lab}"
 CURL=(curl -sk --fail-with-body)
 [[ -n "${NIAC_API_TOKEN:-}" ]] && CURL+=(-H "Authorization: Bearer ${NIAC_API_TOKEN}")
+
+# Every state-changing route (generate, preflight, start, stop) requires the
+# per-session CSRF token minted for this bearer (or the loopback session when
+# there is none). One GET, reused for the run.
+csrf_token() {
+	"${CURL[@]}" "${NIAC_URL}/api/v1/csrf-token" |
+		python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])'
+}
 
 # Physical VLAN per pack. Deployment identity — deliberately NOT inside the
 # portable pack, per the concurrent-VLAN plan.
@@ -149,6 +158,11 @@ pack="${1:-}"
 [[ -n "$pack" ]] || die "usage: $0 <pack-id> [vlan]"
 vlan="${2:-$(vlan_for "$pack")}" || die "unknown pack $pack"
 mkdir -p "$LAB_OUT"
+CURL+=(-H "X-CSRF-Token: $(csrf_token)")
+
+# A previous build's session under the same id has to go first; the daemon
+# refuses a duplicate session id and a stale session is not the thing under test.
+"${CURL[@]}" -X DELETE "${NIAC_URL}/api/v1/sessions/${pack}" -o /dev/null || true
 
 ver="$(version)"
 echo "generating ${pack} through the product API (${NIAC_URL})"
