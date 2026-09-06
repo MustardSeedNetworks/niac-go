@@ -106,3 +106,76 @@ func hospitalDevices(t *testing.T) []config.Device {
 
 	return cfg.Devices
 }
+
+// Phones and cameras are what LLDP-MED exists to classify. The packs had
+// neither, so nothing in a generated network advertised an endpoint class and
+// the feature could only be seen working on an access point.
+func TestHospitalPackHasMEDEndpoints(t *testing.T) {
+	devices := hospitalDevices(t)
+
+	byRole := map[string]int{}
+	for i := range devices {
+		device := &devices[i]
+		role := device.Properties["role"]
+		if role != "voip-phone" && role != "ip-camera" {
+			continue
+		}
+		byRole[role]++
+
+		if device.LLDPConfig == nil || device.LLDPConfig.MED == nil {
+			t.Errorf("%s (%s) advertises no LLDP-MED", device.Name, role)
+
+			continue
+		}
+		checkEndpointMED(t, device.Name, role, device.LLDPConfig.MED)
+	}
+
+	if byRole["voip-phone"] == 0 {
+		t.Error("the hospital pack generated no IP phones")
+	}
+	if byRole["ip-camera"] == 0 {
+		t.Error("the hospital pack generated no cameras")
+	}
+}
+
+// checkEndpointMED asserts what a discovery tool reads off one MED endpoint.
+func checkEndpointMED(t *testing.T, name, role string, med *config.LLDPMEDConfig) {
+	t.Helper()
+
+	want := "endpoint_class3"
+	if role == "ip-camera" {
+		want = "endpoint_class2"
+	}
+	if med.DeviceType != want {
+		t.Errorf("%s MED class = %q, want %q", name, med.DeviceType, want)
+	}
+	if len(med.NetworkPolicies) == 0 || !med.NetworkPolicies[0].Tagged {
+		t.Errorf("%s advertises no tagged network policy", name)
+	}
+	if med.Power == nil || med.Power.DeviceType != "pd" {
+		t.Errorf("%s is a PoE endpoint that does not advertise as a PD", name)
+	}
+	if med.Inventory == nil || med.Inventory.SerialNumber == "" {
+		t.Errorf("%s advertises no serial number", name)
+	}
+}
+
+// Two devices sharing a MAC is a broken network, not a cosmetic clash. The
+// appended endpoints number from where the wired ones stop for exactly that
+// reason: continuing the index is what keeps a phone off a workstation's MAC.
+func TestMEDEndpointsDoNotCollideWithWiredEndpoints(t *testing.T) {
+	devices := hospitalDevices(t)
+
+	seen := make(map[string]string, len(devices))
+	for i := range devices {
+		device := &devices[i]
+		mac := device.MACAddress.String()
+		if mac == "" {
+			continue
+		}
+		if previous, clash := seen[mac]; clash {
+			t.Errorf("%s and %s share MAC %s", previous, device.Name, mac)
+		}
+		seen[mac] = device.Name
+	}
+}

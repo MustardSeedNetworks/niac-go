@@ -8,13 +8,13 @@ const (
 	retailSiteOctet             = 81
 	industrialSiteOctet         = 91
 	serviceProviderSiteOctet    = 101
-	hospitalDeviceCount         = 75
-	warehouseDeviceCount        = 57
-	manufacturingDeviceCount    = 69
-	campusDeviceCount           = 147
-	enterpriseScaleDeviceCount  = 531
-	retailDeviceCount           = 95
-	serviceProviderDeviceCount  = 117
+	hospitalDeviceCount         = 78
+	warehouseDeviceCount        = 60
+	manufacturingDeviceCount    = 72
+	campusDeviceCount           = 159
+	enterpriseScaleDeviceCount  = 543
+	retailDeviceCount           = 101
+	serviceProviderDeviceCount  = 126
 	singleSiteNetworkCount      = 12
 	twoSiteNetworkCount         = 21
 	threeSiteNetworkCount       = 30
@@ -93,7 +93,7 @@ func customerScenarioPacks() []Pack {
 			Parity{
 				DeviceCount: warehouseDeviceCount, NetworkCount: singleSiteNetworkCount,
 				LinkCount:         warehouseLinkCount,
-				DeviceNamesSHA256: "f622b9683718ece6b665f88c858df863b6b7d54d8a4371efdc9b20cd79255b01",
+				DeviceNamesSHA256: "3c76bcb87bcc9df0701d2b2c34bb5e671832e2f28089ab4d7dedc0c44b17717b",
 				NetworksSHA256:    "4b45bbf256fb1440d30d2149f3691664404012f192d5f98f788bcc0c413e90b5",
 				LinksSHA256:       "a495dcb76177b01348573b330b54640318d21c34f7c71e596de2aba0bb8c9939",
 			},
@@ -110,7 +110,7 @@ func customerScenarioPacks() []Pack {
 			Parity{
 				DeviceCount: enterpriseScaleDeviceCount, NetworkCount: fourSiteNetworkCount,
 				LinkCount:         enterpriseScaleLinkCount,
-				DeviceNamesSHA256: "6da20f0044fb2f696efc3d886c209eb47c07b5fa1e64222f93d58f6dc00f1979",
+				DeviceNamesSHA256: "8514a6d423b598a11d6ebc6edfc399c978883b831106e8c187e681619229346f",
 				NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
 				LinksSHA256:       "4c1acbf07eccc6464a4a86d8a53f867fdaa1cc7374d18b881bf30487a98713e6",
 			},
@@ -152,7 +152,7 @@ func hospitalScenarioPack() Pack {
 		Parity{
 			DeviceCount: hospitalDeviceCount, NetworkCount: singleSiteNetworkCount,
 			LinkCount:         hospitalLinkCount,
-			DeviceNamesSHA256: "a026920162b3dcc95656a4d3d69a0aeed84482e7724b018d5a49488383609030",
+			DeviceNamesSHA256: "93d15a9fe811e623d831d3987909cdd35642e25e3e0afb48fa4be219aeabb426",
 			NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
 			LinksSHA256:       "99be6cdbe704f4e4d661a27be11b6294e62e8b52ca83e2c6198b4ba9fe8836b2",
 		},
@@ -205,7 +205,7 @@ func campusScenarioPack() Pack {
 		Parity{
 			DeviceCount: campusDeviceCount, NetworkCount: fourSiteNetworkCount,
 			LinkCount:         campusLinkCount,
-			DeviceNamesSHA256: "c15f6f9ddff32dc30e5751858c3ea2650dd2aa1b2900abf89b5f9b23692236f7",
+			DeviceNamesSHA256: "e67474b172037c2b38c1b74c4a48c0c2a2fa1d9cb2d3201226a8187916edf243",
 			NetworksSHA256:    "7262a118fbb0f2d4977d02895b839d0cbce5fd1161201b0f27a5b37fc3eb72ce",
 			LinksSHA256:       "faa6df268e4654e542f89b707ee9bc05744de70b6edc9419f990e77da478410d",
 		},

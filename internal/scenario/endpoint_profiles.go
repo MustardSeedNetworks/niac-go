@@ -115,3 +115,11 @@ func isWiredEndpointRole(role string) bool {
 	}
 	return false
 }
+
+// isMEDEndpointRole reports whether role is one of the appended LLDP-MED
+// endpoints. They are deliberately not in endpointKinds -- being there would
+// shift the wired round-robin and rename existing devices -- so the identity
+// map has to know about them separately.
+func isMEDEndpointRole(role string) bool {
+	return role == "voip-phone" || role == "ip-camera"
+}

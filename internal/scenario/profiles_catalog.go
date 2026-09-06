@@ -50,6 +50,14 @@ func endpointProfiles() []DeviceProfile {
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("infusion-pump", "iot", "baxter", "Sigma Spectrum", "Baxter infusion pump",
 			"Embedded clinical software", synth.VendorGeneric, synth.TypeHost),
+		// A phone and a camera are what LLDP-MED exists to identify. Without
+		// them the packs had nothing that advertised an endpoint class, so a
+		// discovery tool had nothing to classify and G3 could not be seen
+		// working anywhere but on an access point.
+		newProfile("voip-phone", "voip-phone", "cisco", "CP-8841", "Cisco IP Phone 8841",
+			"SIP88xx.12-8-1", synth.VendorCiscoIOS, synth.TypeHost),
+		newProfile("ip-camera", "iot", "axis", "P3265-LVE", "Axis P3265-LVE network camera",
+			"AXIS OS 11.11", synth.VendorGeneric, synth.TypeHost),
 		newProfile(
 			"mr-system",
 			"iot",

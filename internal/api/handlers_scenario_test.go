@@ -80,8 +80,8 @@ func TestScenarioGenerationHandlersReturnValidatedFleet(t *testing.T) {
 	if err = json.NewDecoder(generateRecorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode generated scenario: %v", err)
 	}
-	if response.Manifest.DeviceCount != 531 {
-		t.Fatalf("device count = %d, want 531", response.Manifest.DeviceCount)
+	if response.Manifest.DeviceCount != 543 {
+		t.Fatalf("device count = %d, want 543", response.Manifest.DeviceCount)
 	}
 	if _, err = config.LoadYAMLBytes([]byte(response.Content)); err != nil {
 		t.Fatalf("generated content does not load: %v", err)

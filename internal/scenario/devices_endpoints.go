@@ -24,6 +24,7 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 			))
 		}
 	}
+	devices = append(devices, medEndpoints(request, site, workstationCount)...)
 	for index, role := range serviceRoles() {
 		devices = append(devices, serviceServer(request, site, role, index+1, links))
 	}
@@ -129,3 +130,125 @@ func wirelessController(request Request, site Site, index int, links linkMap) co
 		vlan: vlanServers, http: &converter.HTTPConfig{Enabled: true, ServerName: "Cisco IOS XE"},
 	}, links)
 }
+
+// medEndpoints appends the phones and cameras that make LLDP-MED visible.
+//
+// They are appended rather than mixed into the wired round-robin on purpose.
+// Adding two kinds to that rotation changes which kind every later slot gets,
+// so 13 of the hospital pack's existing devices became different devices --
+// and the pack's Link-Live acceptance was verified against those exact 75.
+// Appending leaves every verified device where it was and makes the diff
+// purely additive.
+func medEndpoints(request Request, site Site, workstationCount int) []converter.Device {
+	counts := map[string]int{"voip-phone": medPhonesPerSite, "ip-camera": medCamerasPerSite}
+	order := []string{"voip-phone", "ip-camera"}
+
+	devices := make([]converter.Device, 0, medPhonesPerSite+medCamerasPerSite)
+	offset := workstationCount
+	for _, role := range order {
+		for index := 1; index <= counts[role]; index++ {
+			offset++
+			devices = append(devices, medEndpoint(request, site, role, index, offset))
+		}
+	}
+
+	return devices
+}
+
+const (
+	// medPhonesPerSite and medCamerasPerSite are deliberately small: they exist
+	// so a discovery tool has something to classify by MED, not to model a real
+	// handset count. Growing them re-signs every pack manifest.
+	// Two and one, not three and two: the presentation packs are capped at 160
+	// devices for the Link-Live map, and campus has four sites, so five per
+	// site would put it at 167 and over the budget.
+	medPhonesPerSite  = 2
+	medCamerasPerSite = 1
+)
+
+// medEndpoint builds one MED-advertising endpoint.
+func medEndpoint(request Request, site Site, role string, index, hostOffset int) converter.Device {
+	profile := profileByRole(role)
+	prefix := "PHONE"
+	if role == "ip-camera" {
+		prefix = "CAM"
+	}
+	name := fmt.Sprintf("%s-%s-%02d", site.Code, prefix, index)
+	address := siteIP(site, vlanVoiceIoT, workstationHostOffset+hostOffset)
+	access := newInterface(
+		"eth0",
+		siteNetworkName(site, "voice-iot"),
+		address+"/24",
+		speedOneGigabit,
+		profile.Platform+" access",
+	)
+	access.InUtilization, access.OutUtilization = utilization(name + "/eth0")
+
+	device := converter.Device{
+		Name: name, Type: profile.DeviceType, Vendor: profile.Vendor,
+		// hostOffset, not index: it continues the wired endpoints' numbering, so
+		// a phone and a camera at index 1 cannot land on the same MAC as each
+		// other or on the first workstation's.
+		MACSuffix: identitySuffix(&site, role, hostOffset), IPs: []string{address}, VLAN: vlanVoiceIoT,
+		Interfaces: []converter.Interface{access},
+		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: unixTTL},
+		SnmpAgent: &converter.SnmpAgent{
+			Community: request.SNMPCommunity, SysName: name,
+			SysDescr:    profile.Platform + ", " + profile.Software,
+			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
+		},
+		Mdns: &converter.MdnsConfig{
+			Enabled: true, Hostname: strings.ToLower(name),
+			Services: endpointMDNSServices(profile.DeviceType),
+		},
+		Properties: map[string]string{
+			"role": role, "site": site.Code, "model": profile.Model,
+			"platform": profile.Platform, "software": profile.Software,
+		},
+		Lldp: &converter.LldpConfig{
+			Enabled:           true,
+			SystemDescription: profile.Platform + " - " + name,
+			MED:               medProfileFor(role, profile, apSerialNumber(identitySuffix(&site, role, hostOffset))),
+		},
+	}
+
+	return device
+}
+
+// medProfileFor is the MED block each endpoint class advertises.
+//
+// A phone is a class III communication device on a tagged voice VLAN; a camera
+// is a class II media endpoint on the same segment. Both draw PoE, which is
+// what a switch reads to budget power.
+func medProfileFor(role string, profile DeviceProfile, serial string) *converter.LldpMedConfig {
+	deviceType, application, watts := "endpoint_class3", "voice", medPhoneTenthWatts
+	if role == "ip-camera" {
+		deviceType, application, watts = "endpoint_class2", "streaming_video", medCameraTenthWatts
+	}
+
+	return &converter.LldpMedConfig{
+		DeviceType: deviceType,
+		NetworkPolicies: []converter.LldpMedNetworkPolicy{{
+			Application: application, Tagged: true, VLANID: vlanVoiceIoT,
+			Priority: medVoicePriority, DSCP: medVoiceDSCP,
+		}},
+		Power: &converter.LldpMedPower{
+			DeviceType: "pd", Source: "pse", Priority: "high", ValueTenthWatts: watts,
+		},
+		Inventory: &converter.LldpMedInventory{
+			SoftwareRevision: profile.Software,
+			SerialNumber:     serial,
+			Manufacturer:     profile.Vendor,
+			ModelName:        profile.Model,
+		},
+	}
+}
+
+const (
+	// medPhoneTenthWatts is a class-2 handset's draw; medCameraTenthWatts a
+	// class-3 PTZ camera's. Both in the TLV's own 0.1 W unit.
+	medPhoneTenthWatts  = 65
+	medCameraTenthWatts = 128
+	medVoicePriority    = 5
+	medVoiceDSCP        = 46
+)
