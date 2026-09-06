@@ -49,9 +49,11 @@ func TestHostWithoutSNMPFiledAsAgentIsAConflict(t *testing.T) {
 // against the live simulation, where servers, controllers and appliances all
 // serve Counter64 octet counters and are still reported with no utilization.
 // Expecting a sample from them failed every run for something the simulation
-// gets right.
+// gets right. voip-phone arrived with the G3 profiles and was missing here, so
+// the 2026-09-06 campus run filed eight findings on phones Link-Live had never
+// measured; ap is the validator's alias for access-point.
 func TestLeafDevicesAreNotExpectedToReportUtilization(t *testing.T) {
-	for _, deviceType := range []string{"iot", "server", "host", "printer", "access-point"} {
+	for _, deviceType := range []string{"iot", "server", "host", "printer", "access-point", "ap", "voip-phone"} {
 		authored := leafSnapshot(t, deviceType, true)
 
 		findings := linklive.Compare(authored, leafObservedUnsampled())
