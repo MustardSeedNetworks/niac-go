@@ -10,8 +10,15 @@
  * Pages are rendered with every API call left pending, which is the state
  * a page is in before its first response — the toolbar is chrome, so the
  * primary must be there before the data is.
+ *
+ * Every route here is a lazy import of a whole page, resolved for the first
+ * time under v8 coverage. testing-library's 1 s default is sized for a
+ * mounted component, not for that: on a loaded shared runner the wizard
+ * chunk took 1207 ms where the same route's green PR run took 732 ms, and
+ * the gate failed main (#1887). The bound below is ~4x that worst case;
+ * findBy still returns the moment the header appears.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { configure, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
@@ -119,6 +126,8 @@ const primaries: Record<string, RegExp | typeof none> = {
   '/library/walks': /install bundle/i,
   '/library/pcaps': /install bundle/i,
 };
+
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   vi.clearAllMocks();
