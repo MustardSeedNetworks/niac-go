@@ -146,7 +146,7 @@ describe('DashboardPage', () => {
     expect(link.closest('a')).toHaveAttribute('href', '/runtime#recent-runs');
   });
 
-  it('has a "Start a Simulation" quick action linking to /runtime', async () => {
+  it('has a "Start a Simulation" primary action linking to /runtime', async () => {
     renderDashboard();
     const link = await screen.findByText('Start a Simulation');
     expect(link.closest('a')).toHaveAttribute('href', '/runtime');

@@ -135,7 +135,7 @@ export const pageHelp: Record<string, PageHelpBlock[]> = {
       text: 'Topology can be exported from the export button as a PNG image, a JSON snapshot, or — rendered server-side from the running daemon — Graphviz `.dot` or GraphML for use in Graphviz, yEd, or gephi.',
     },
   ],
-  '/automation': [
+  '/alerts': [
     {
       kind: 'paragraph',
       text: 'The daemon emits an alert webhook when the total packet count crosses the configured threshold. Useful for catching runaway traffic from a misconfigured device persona.',

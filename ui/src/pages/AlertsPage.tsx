@@ -16,7 +16,7 @@ import { H2, P, SmallText } from '../ui/Typography';
  * running daemon. Wires GET/PUT /api/v1/alerts. Updates take effect
  * immediately; no daemon restart required.
  */
-export const AutomationPage: FC = () => {
+export const AlertsPage: FC = () => {
   const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
   // The error count only decorates the alert card's helper text, so a failed
@@ -24,7 +24,7 @@ export const AutomationPage: FC = () => {
   // silently showing zero recent errors reads as "all clear".
   const { data: stats } = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
     enabled: sessionId !== null,
-    errorToast: { title: t('automation.statsFailed') },
+    errorToast: { title: t('alerts.statsFailed') },
   });
   const errorCount = stats?.stack.errors ?? 0;
 
@@ -95,7 +95,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       <CardContent className="stack-lg">
         <H2 className="flex items-center gap-compact">
           <BellRing className={`${iconSizes.lg} text-status-warning`} />
-          {t('automation.alertPolicy')}
+          {t('alerts.alertPolicy')}
         </H2>
         <P className="text-text-secondary">
           The daemon fires a webhook when total packet count crosses the threshold. Updates take
@@ -111,15 +111,12 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
           ).
         </P>
         <SmallText className="text-text-muted">
-          {t('automation.recentErrors')}{' '}
-          <strong className="text-text-secondary">{recentErrors}</strong>
+          {t('alerts.recentErrors')} <strong className="text-text-secondary">{recentErrors}</strong>
         </SmallText>
-        {loading && (
-          <SmallText className="text-text-muted">{t('automation.loadingAlerts')}</SmallText>
-        )}
+        {loading && <SmallText className="text-text-muted">{t('alerts.loadingAlerts')}</SmallText>}
         {error && (
           <SmallText className="text-status-error">
-            {t('automation.loadError', { message: error.message })}
+            {t('alerts.loadError', { message: error.message })}
           </SmallText>
         )}
         {data && (
@@ -127,7 +124,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
             <div className="grid gap-comfortable md:grid-cols-2">
               <div>
                 <label htmlFor="alert-packet-threshold" className="text-sm text-text-muted">
-                  {t('automation.page.packetThresholdLabel')}
+                  {t('alerts.page.packetThresholdLabel')}
                 </label>
                 <input
                   id="alert-packet-threshold"
@@ -146,7 +143,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
               </div>
               <div>
                 <label htmlFor="alert-webhook-url" className="text-sm text-text-muted">
-                  {t('automation.page.webhookUrlLabel')}
+                  {t('alerts.page.webhookUrlLabel')}
                 </label>
                 <input
                   id="alert-webhook-url"
@@ -188,4 +185,4 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   );
 };
 
-export default AutomationPage;
+export default AlertsPage;

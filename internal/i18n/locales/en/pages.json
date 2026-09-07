@@ -1,5 +1,5 @@
 {
-  "automation": {
+  "alerts": {
     "alertPolicy": "Alert policy",
     "description": "Configure alert thresholds and webhook targets for the running daemon.",
     "label": "Alerts",
@@ -149,7 +149,6 @@
       "debugConsoleLabel": "Debug Console",
       "errorInjectionDescription": "Inject network errors",
       "errorInjectionLabel": "Error Injection",
-      "startSimulationDescription": "Launch a new run",
       "startSimulationLabel": "Start a Simulation",
       "title": "Quick Actions",
       "trafficInjectionDescription": "Replay PCAP files",

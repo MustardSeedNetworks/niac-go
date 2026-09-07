@@ -41,7 +41,7 @@ describe('navGroups <-> pageRegistry parity', () => {
 /**
  * Nav regroup (naming + nav IA, PR 2a):
  *   - Tools groups config-diff, walk-validator, walk-analyzer, traffic,
- *     and automation (folded from the old single-item Alerts group).
+ *     and alerts (folded from the old single-item Alerts group).
  *   - Live View shrinks to Devices + Topology; segments moves to Library;
  *     Inspect shrinks to Packets + Debug.
  * Locks the structure so a future edit can't silently re-scatter these
@@ -51,20 +51,20 @@ describe('navGroups regroup (Tools/System split)', () => {
   const { result } = renderHook(() => useNavGroups());
   const byPath = (path: string) => result.current.find((g) => g.items.some((i) => i.path === path));
 
-  it('groups config-diff, walk-validator, walk-analyzer, traffic, and automation under Tools', () => {
+  it('groups config-diff, walk-validator, walk-analyzer, traffic, and alerts under Tools', () => {
     const group = byPath('/config-diff');
     expect(group?.items.map((i) => i.path)).toEqual([
       '/config-diff',
       '/walk-validator',
       '/walk-analyzer',
       '/traffic',
-      '/automation',
+      '/alerts',
     ]);
   });
 
   it('no longer has a standalone single-item Alerts group', () => {
-    const automationGroup = byPath('/automation');
-    expect(automationGroup?.items.length).toBeGreaterThan(1);
+    const alertsGroup = byPath('/alerts');
+    expect(alertsGroup?.items.length).toBeGreaterThan(1);
   });
 
   it('keeps Live View to Devices + Topology', () => {

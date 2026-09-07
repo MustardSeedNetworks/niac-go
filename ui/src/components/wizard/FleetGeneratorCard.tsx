@@ -91,7 +91,7 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
           </div>
           <Button
             type="button"
-            tone="violet"
+            variant="outline"
             className="min-h-11"
             data-testid="wizard-select-fleet"
             disabled={!isScenarioRequestValid(request)}

@@ -157,8 +157,12 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
         {message && <SmallText className="text-status-success">{message}</SmallText>}
 
         <div className="flex flex-wrap gap-default">
+          {/* While a simulation runs, stopping it is the page's primary
+              action — it was drawn as an outline beside two ghosts, so the
+              running card had no primary at all. Red because it ends the
+              run; it is confirmed before it fires. */}
           <Button
-            variant="outline"
+            tone="red"
             disabled={stopping}
             onClick={onStop}
             leftIcon={<Activity className={iconSizes.md} />}

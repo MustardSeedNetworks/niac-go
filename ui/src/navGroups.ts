@@ -1,5 +1,6 @@
 import {
   Activity,
+  BellRing,
   Database,
   FileBox,
   FileScan,
@@ -11,7 +12,6 @@ import {
   ShieldCheck,
   Terminal,
   Wand2,
-  Workflow,
   Wrench,
   Zap,
 } from 'lucide-react';
@@ -87,7 +87,7 @@ export function useNavGroups(): SidebarNavGroup[] {
           },
           { path: '/walk-analyzer', label: t('walkAnalyzer.label'), icon: FileScan },
           { path: '/traffic', label: t('traffic.label'), icon: Zap },
-          { path: '/automation', label: t('automation.label'), icon: Workflow },
+          { path: '/alerts', label: t('alerts.label'), icon: BellRing },
         ],
       },
     ],

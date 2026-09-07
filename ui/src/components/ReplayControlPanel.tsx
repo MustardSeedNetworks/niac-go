@@ -372,7 +372,12 @@ export const ReplayControlPanel: FC = () => {
 
           {/* Action Button */}
           {!replayStatus?.running && (
-            <Button onClick={handleStart} disabled={isSubmitting} className="w-full">
+            <Button
+              variant="outline"
+              onClick={handleStart}
+              disabled={isSubmitting}
+              className="w-full"
+            >
               {isSubmitting
                 ? t('traffic.page.replayStarting')
                 : t('traffic.page.replayStartButton')}

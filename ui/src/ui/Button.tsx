@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
+import { Link, type LinkProps } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
@@ -86,7 +87,14 @@ const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
   );
 };
 
-// React 19: ref as a regular prop instead of forwardRef
+/**
+ * Button renders data-variant / data-tone alongside the classes so "one
+ * primary action per page" is a queryable fact rather than a source grep:
+ * the primary is [data-variant="solid"][data-tone="violet"], whichever
+ * component rendered it. See App.primaryAction.test.tsx.
+ *
+ * React 19: ref as a regular prop instead of forwardRef.
+ */
 export const Button: FC<ButtonProps> = ({
   children,
   variant = 'solid',
@@ -105,6 +113,8 @@ export const Button: FC<ButtonProps> = ({
     ref={ref}
     className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
     disabled={disabled || loading}
+    data-variant={variant}
+    data-tone={tone}
     {...props}
   >
     {loading ? <LoadingSpinner size={size} /> : leftIcon}
@@ -161,3 +171,40 @@ export const IconButton: FC<IconButtonProps> = ({
     </button>
   );
 };
+
+interface LinkButtonProps extends Omit<LinkProps, 'className'> {
+  children: ReactNode;
+  variant?: ButtonVariant;
+  tone?: ButtonTone;
+  size?: ButtonSize;
+  leftIcon?: ReactNode;
+  className?: string;
+}
+
+/**
+ * LinkButton is a Button that navigates. A page whose primary action is a
+ * route change gets the anchor semantics (middle-click, copy link, the
+ * browser's own affordances) with the primary's weight, instead of either a
+ * text link that does not read as the primary action or a Button calling
+ * navigate() — which loses all of that. Carries the same data-variant /
+ * data-tone as Button so one query finds every primary.
+ */
+export const LinkButton: FC<LinkButtonProps> = ({
+  children,
+  variant = 'solid',
+  tone = 'violet',
+  size = 'md',
+  leftIcon,
+  className = '',
+  ...props
+}) => (
+  <Link
+    className={`${baseStyles} no-underline ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
+    data-variant={variant}
+    data-tone={tone}
+    {...props}
+  >
+    {leftIcon}
+    {children}
+  </Link>
+);
