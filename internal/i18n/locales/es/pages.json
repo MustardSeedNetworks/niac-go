@@ -419,7 +419,8 @@
     "deviceSaved": "Dispositivo guardado y configuración recargada",
     "deviceFragmentMissing": "Este dispositivo no tiene un bloque editable en la configuración cargada — edita toda la configuración.",
     "deviceFragmentInvalid": "El YAML del dispositivo no se puede analizar, por lo que no se guardó.",
-    "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó."
+    "deviceFragmentNameMissing": "Un dispositivo necesita un nombre, por lo que no se guardó.",
+    "actionsHeader": "Acciones"
   },
   "segments": {
     "deviceNoun_one": "dispositivo",
@@ -514,7 +515,8 @@
       "deviceTypeFirewall": "Firewall",
       "deviceTypeServer": "Servidor",
       "deviceTypeWorkstation": "Estación de trabajo",
-      "deviceTypeAccessPoint": "Punto de acceso"
+      "deviceTypeAccessPoint": "Punto de acceso",
+      "hideLegend": "Ocultar leyenda"
     },
     "actionsMenu": {
       "exportPng": "Exportar como PNG",

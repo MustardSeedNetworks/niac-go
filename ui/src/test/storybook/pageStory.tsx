@@ -20,7 +20,14 @@ import type { ComponentType } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { AppProvider } from '../../contexts/AppContext';
 import { ScopeProvider } from '../../contexts/ScopeContext';
-import { type ApiRoutes, makeApiStub, status } from './apiStub';
+import {
+  type ApiRoutes,
+  answeredRequests,
+  makeApiStub,
+  pendingRequests,
+  resetRequestCounters,
+  status,
+} from './apiStub';
 import * as fixtures from './fixtures';
 
 /** Session-scoped resource path, matching api/client's own sessionPath(). */
@@ -112,16 +119,67 @@ export const EMPTY_ROUTES: ApiRoutes = {
  * The loaded state with one read failing — the third story every page owes.
  * U1 gave every page a shared error state; nothing rendered it, so nothing
  * proved it appears.
+ *
+ * 404 rather than 500 deliberately. requestCore retries any 5xx with
+ * exponential backoff (1 s, 2 s, 4 s), and during those sleeps there is no
+ * request outstanding — so a 500 both delays the page's error state past any
+ * reasonable story timeout and gives `settled` a false quiet window to
+ * return in. A 4xx is not retried, so the page reaches the same error state
+ * immediately, which is the state these stories are about.
  */
 export const withFailure = (path: string): ApiRoutes => ({
   ...LOADED_ROUTES,
-  [path]: status(500, { error: 'simulated daemon failure' }),
+  [path]: status(404, { error: 'simulated read failure' }),
 });
 
 const apiDecorator: Decorator = (Story, context) => {
   const routes = (context.parameters.api ?? {}) as ApiRoutes;
+  resetRequestCounters();
   globalThis.fetch = makeApiStub({ ...CHROME_ROUTES, ...routes });
   return <Story />;
+};
+
+const SETTLE_TIMEOUT_MS = 10_000;
+const SETTLE_QUIET_MS = 150;
+const SETTLE_POLL_MS = 25;
+
+/**
+ * settled — the play function every page story runs before axe does.
+ *
+ * The a11y addon checks the DOM as soon as mount and play settle, so without
+ * this a story named Loaded is checked while it is still a skeleton, and one
+ * named Error while it is still a spinner: on the topology page the error
+ * state took 1-2 s to appear, well past testing-library's 1 s default. That
+ * is the fleet's "green but checking nothing" shape — the gate runs, reports
+ * pass, and never sees the state the story exists to cover.
+ *
+ * One quiet moment is not enough. A page fires its session-scoped reads
+ * before AppContext has resolved the session id, so there is a real gap
+ * between that first round and the refetch that follows — the topology page
+ * settled, then failed, in two rounds. So the wait is for the answered count
+ * to hold still across a window, which catches the whole cascade. The window
+ * is far shorter than the 2 s poll, so a polling page still has quiet
+ * stretches to find.
+ */
+export const settled = () => async (): Promise<void> => {
+  const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+  let lastAnswered = -1;
+  let quietSince = 0;
+  while (Date.now() < deadline) {
+    const answered = answeredRequests();
+    if (pendingRequests() === 0 && answered > 0 && answered === lastAnswered) {
+      if (quietSince === 0) quietSince = Date.now();
+      if (Date.now() - quietSince >= SETTLE_QUIET_MS) return;
+    } else {
+      quietSince = 0;
+    }
+    lastAnswered = answered;
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_POLL_MS));
+  }
+  throw new Error(
+    `page never settled: ${answeredRequests()} answered, ` +
+      `${pendingRequests()} still pending after ${SETTLE_TIMEOUT_MS} ms`,
+  );
 };
 
 /**

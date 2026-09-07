@@ -96,3 +96,41 @@ describe('useApiResource errorToast option', () => {
     expect(useUIStore.getState().notifications).toHaveLength(2);
   });
 });
+
+/**
+ * An inline options object must not put the caller in a fetch loop.
+ *
+ * Every real call site writes `errorToast: { title: t('...') }` inline, so
+ * the options object has a new identity on every render. While `run` named
+ * that object as a dependency, `run` changed every render, the fetch effect
+ * re-ran every render, and the state it set caused the next render: five
+ * pages sat in an unbounded loop against the daemon. The page-story harness
+ * measured 39,191 requests in ten seconds on the alerts page.
+ */
+describe('useApiResource — stable identity across renders', () => {
+  it('fetches once when the options object is rebuilt on every render', async () => {
+    const fetcher = vi.fn(() => Promise.resolve('value'));
+    const { rerender, result } = renderHook(() =>
+      // A fresh object literal each render, exactly as the pages write it.
+      useApiResource(fetcher, [], { errorToast: { title: 'Failed' } }),
+    );
+
+    await waitFor(() => expect(result.current.data).toBe('value'));
+    for (let i = 0; i < 5; i += 1) rerender();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches once when transform is declared inline', async () => {
+    const fetcher = vi.fn(() => Promise.resolve(2));
+    const { rerender, result } = renderHook(() =>
+      useApiResource(fetcher, [], { transform: (n: number) => n * 2 }),
+    );
+
+    await waitFor(() => expect(result.current.data).toBe(4));
+    for (let i = 0; i < 5; i += 1) rerender();
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});

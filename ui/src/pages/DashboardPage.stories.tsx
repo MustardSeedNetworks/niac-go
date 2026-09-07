@@ -13,6 +13,7 @@ import {
   LOADED_ROUTES,
   pageMeta,
   sessionResource,
+  settled,
   withFailure,
 } from '../test/storybook/pageStory';
 import { DashboardPage } from './DashboardPage';
@@ -26,10 +27,13 @@ export default meta;
 type Story = StoryObj<typeof DashboardPage>;
 
 /** Fresh install: nothing running and nothing authored. */
-export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES }, play: settled() };
 
 /** The scenario running, with data on every read. */
-export const Loaded: Story = { parameters: { api: LOADED_ROUTES } };
+export const Loaded: Story = { parameters: { api: LOADED_ROUTES }, play: settled() };
 
 /** The rollup that drives every tile returns 500. */
-export const Error: Story = { parameters: { api: withFailure(sessionResource('stats')) } };
+export const Error: Story = {
+  parameters: { api: withFailure(sessionResource('stats')) },
+  play: settled(),
+};

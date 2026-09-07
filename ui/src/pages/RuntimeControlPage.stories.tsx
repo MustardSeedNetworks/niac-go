@@ -8,7 +8,13 @@
  * providers, the `<main>` landmark context and the fetch stub.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { EMPTY_ROUTES, LOADED_ROUTES, pageMeta, withFailure } from '../test/storybook/pageStory';
+import {
+  EMPTY_ROUTES,
+  LOADED_ROUTES,
+  pageMeta,
+  settled,
+  withFailure,
+} from '../test/storybook/pageStory';
 import { RuntimeControlPage } from './RuntimeControlPage';
 
 const meta: Meta<typeof RuntimeControlPage> = {
@@ -20,10 +26,13 @@ export default meta;
 type Story = StoryObj<typeof RuntimeControlPage>;
 
 /** Fresh install: nothing running and nothing authored. */
-export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES }, play: settled() };
 
 /** The scenario running, with data on every read. */
-export const Loaded: Story = { parameters: { api: LOADED_ROUTES } };
+export const Loaded: Story = { parameters: { api: LOADED_ROUTES }, play: settled() };
 
 /** The interface list the start form needs returns 500. */
-export const Error: Story = { parameters: { api: withFailure('/api/v1/interfaces') } };
+export const Error: Story = {
+  parameters: { api: withFailure('/api/v1/interfaces') },
+  play: settled(),
+};

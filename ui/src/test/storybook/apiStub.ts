@@ -7,11 +7,13 @@
  * is enough to put a page into any state — no per-module mocking, which is
  * unavailable in Storybook anyway.
  *
- * A route key is matched as a substring of the request URL, longest key
- * first, so `/api/v1/simulation/preflight` wins over `/api/v1/simulation`
- * regardless of declaration order. An unmatched request is a 404 rather than
- * an invented body: a story that silently answers a call it never declared
- * hides the page's real behaviour.
+ * A route key matches the request's PATH exactly, query string ignored.
+ * Substring matching was the obvious choice and was wrong: pages fetch
+ * session-scoped resources before the session id resolves, so
+ * `/api/v1/sessions//topology` matched the `/api/v1/sessions` key and the
+ * topology arrived as the list of sessions — a page showing invented data in
+ * the story that exists to show it has none. Unmatched is a 404, which is
+ * what the daemon answers for that path anyway.
  */
 
 /**
@@ -44,18 +46,57 @@ const json = (body: unknown, status: number): Response =>
   });
 
 /**
+ * Request bookkeeping, so a story can wait for the state it claims to show.
+ *
+ * This is the difference between a story that is named Loaded and one that
+ * *is* loaded: the a11y addon runs axe as soon as mount and play settle, and
+ * a page whose data has not landed yet is still showing its skeleton. On the
+ * topology page the error state took over a second to appear, so an Error
+ * story with no play had axe checking a spinner.
+ */
+let pending = 0;
+let answered = 0;
+
+/** Requests the stub has been given but not yet answered. */
+export const pendingRequests = (): number => pending;
+
+/** Requests the stub has answered since the counters were last reset. */
+export const answeredRequests = (): number => answered;
+
+export const resetRequestCounters = (): void => {
+  pending = 0;
+  answered = 0;
+};
+
+/**
  * makeApiStub returns a `fetch` implementation answering `routes`.
  * Keys are URL substrings; the longest matching key wins.
  */
 export function makeApiStub(routes: ApiRoutes): typeof fetch {
-  const keys = Object.keys(routes).sort((a, b) => b.length - a.length);
   return ((input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    const key = keys.find((k) => url.includes(k));
-    if (key === undefined) {
-      return Promise.resolve(json({ error: `no story route for ${url}` }, 404));
-    }
-    const route = routes[key];
-    return Promise.resolve(isExplicit(route) ? json(route.body, route.status) : json(route, 200));
+    // Relative paths are what api/requestCore builds; URL needs a base.
+    const path = new URL(url, 'http://story.invalid').pathname;
+    const key = path in routes ? path : undefined;
+    const route = key === undefined ? undefined : routes[key];
+    const response =
+      key === undefined
+        ? json({ error: `no story route for ${path}` }, 404)
+        : isExplicit(route)
+          ? json(route.body, route.status)
+          : json(route, 200);
+
+    // Answered on a macrotask rather than synchronously: a promise that is
+    // already resolved settles inside the same microtask checkpoint as the
+    // caller, so `pending` would never be observed above zero and the wait
+    // below would pass before anything had been requested.
+    pending += 1;
+    return new Promise<Response>((resolve) => {
+      setTimeout(() => {
+        pending -= 1;
+        answered += 1;
+        resolve(response);
+      }, 0);
+    });
   }) as typeof fetch;
 }

@@ -39,6 +39,19 @@ export function useApiResource<T>(
   const [error, setError] = useState<Error | null>(null);
   const timerRef = useRef<number | null>(null);
   const fetcherRef = useRef<(signal?: AbortSignal) => Promise<T>>(fetcher);
+  // transform and errorToast are held the same way the fetcher is, and for a
+  // sharper reason than tidiness. Both are declared inline at their call
+  // sites -- an errorToast whose title is a translated string is a fresh
+  // object on every render -- so naming them as dependencies of `run`
+  // made `run` a new
+  // function on every render, which made the effect below re-run on every
+  // render, which fetched, which set state, which rendered. Five call sites
+  // sat in an unbounded fetch loop against the daemon (Alerts, Devices,
+  // Topology, Packet Inspector and its capture starter); the page-story
+  // harness measured 39,191 requests in ten seconds on Alerts. Holding them
+  // in refs keeps `run` stable while still using the latest value.
+  const transformRef = useRef(transform);
+  const errorToastRef = useRef(errorToast);
   const lastToastedMessageRef = useRef<string | null>(null);
   const addNotification = useUIStore((s) => s.addNotification);
   const { t } = useTranslation('common');
@@ -48,13 +61,19 @@ export function useApiResource<T>(
     fetcherRef.current = fetcher;
   }, [fetcher]);
 
+  useEffect(() => {
+    transformRef.current = transform;
+    errorToastRef.current = errorToast;
+  }, [transform, errorToast]);
+
   const run = useCallback(
     async (signal?: AbortSignal) => {
       try {
         const result = await fetcherRef.current(signal);
         // FIX #179: Don't update state if aborted
         if (signal?.aborted) return;
-        setData(transform ? transform(result) : result);
+        const apply = transformRef.current;
+        setData(apply ? apply(result) : result);
         setError(null);
         lastToastedMessageRef.current = null;
       } catch (err) {
@@ -62,12 +81,13 @@ export function useApiResource<T>(
         if (err instanceof DOMException && err.name === 'AbortError') return;
         if (signal?.aborted) return;
         setError(err as Error);
-        if (errorToast) {
+        const toast = errorToastRef.current;
+        if (toast) {
           const message = getErrorMessage(err);
           if (lastToastedMessageRef.current !== message) {
             lastToastedMessageRef.current = message;
             const title =
-              (typeof errorToast === 'object' ? errorToast.title : undefined) ??
+              (typeof toast === 'object' ? toast.title : undefined) ??
               t('toast.requestFailedTitle');
             addNotification({ type: 'error', title, message });
           }
@@ -78,7 +98,7 @@ export function useApiResource<T>(
         }
       }
     },
-    [transform, errorToast, addNotification, t],
+    [addNotification, t],
   );
 
   useEffect(() => {

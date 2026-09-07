@@ -8,7 +8,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 import type { WalkBatchValidationResponse, WalkValidationResponse } from '../api/types';
-import { EMPTY_ROUTES, LOADED_ROUTES, pageMeta, withFailure } from '../test/storybook/pageStory';
+import {
+  EMPTY_ROUTES,
+  LOADED_ROUTES,
+  pageMeta,
+  settled,
+  withFailure,
+} from '../test/storybook/pageStory';
 import { WalkValidatorPage } from './WalkValidatorPage';
 
 const validation: WalkValidationResponse = {
@@ -78,7 +84,7 @@ const validateRoutes = {
 };
 
 /** No walks in the library yet: nothing to validate. */
-export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES }, play: settled() };
 
 /** After Validate: the per-line issues table. */
 export const Loaded: Story = {
@@ -101,4 +107,7 @@ export const BatchResults: Story = {
 };
 
 /** The walk listing returns 500, so the picker cannot be populated. */
-export const Error: Story = { parameters: { api: withFailure('/api/v1/library/walks') } };
+export const Error: Story = {
+  parameters: { api: withFailure('/api/v1/library/walks') },
+  play: settled(),
+};
