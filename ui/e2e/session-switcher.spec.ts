@@ -24,6 +24,22 @@ const session = (sessionId: string, deviceCount: number) => ({
 
 const scoped = /\/api\/v1\/sessions\/([a-z0-9-]+)\//;
 
+/**
+ * Assert that reads from here on name only `sessionId`. Clearing the log and
+ * asserting immediately would race a poll that was already in flight across
+ * the switch; waiting for one more read first means the window under test is
+ * steady state.
+ */
+async function expectStableOn(
+  page: import('@playwright/test').Page,
+  reads: string[],
+  sessionId: string,
+): Promise<void> {
+  reads.length = 0;
+  await expect.poll(() => reads.length).toBeGreaterThan(0);
+  expect(reads.filter((path) => scoped.exec(path)?.[1] !== sessionId)).toEqual([]);
+}
+
 test('switches every runtime read to the scenario picked in the header', async ({ page }) => {
   const reads: string[] = [];
 
@@ -47,7 +63,14 @@ test('switches every runtime read to the scenario picked in the header', async (
     // the page subscribed to, and a body would keep the request open.
     await route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' });
   });
-  await page.route('**/api/v1/capture/status', (route) => route.fulfill({ json: { running: false } }));
+  // The pages this test walks through poll the content library, which nothing
+  // here asserts on. Left unstubbed, three browser projects at once drive the
+  // daemon's rate limiter into 429s and the app drops to its "NIAC could not
+  // be reached" screen — a failure of the test's own load, not of the switcher.
+  await page.route('**/api/v1/library/**', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/capture/status', (route) =>
+    route.fulfill({ json: { running: false } }),
+  );
 
   await page.route('**/api/v1/sessions/*/**', async (route) => {
     const url = new URL(route.request().url());
@@ -71,15 +94,17 @@ test('switches every runtime read to the scenario picked in the header', async (
     .toBe(true);
 
   const urlBeforeSwitch = page.url();
-  reads.length = 0;
   await switcher.selectOption('warehouse');
 
-  // Devices is the page we are on; it must repoint where it stands.
+  // Devices is the page we are on; it must repoint where it stands. Wait for
+  // the first warehouse read before clearing: a hospital poll already in
+  // flight when the switch happens is not a failure, so the window that has
+  // to be free of hospital is the one after the switch has taken effect.
   await expect
     .poll(() => reads.some((path) => path === '/api/v1/sessions/warehouse/devices'))
     .toBe(true);
   expect(page.url()).toBe(urlBeforeSwitch);
-  expect(reads.filter((path) => scoped.exec(path)?.[1] === 'hospital')).toEqual([]);
+  await expectStableOn(page, reads, 'warehouse');
 
   // Topology reads the same selection, reached by in-app navigation: the
   // selection is this browser's and lives in the running app, so the switch
@@ -91,7 +116,7 @@ test('switches every runtime read to the scenario picked in the header', async (
   await expect
     .poll(() => reads.some((path) => path === '/api/v1/sessions/warehouse/topology'))
     .toBe(true);
-  expect(reads.filter((path) => scoped.exec(path)?.[1] === 'hospital')).toEqual([]);
+  await expectStableOn(page, reads, 'warehouse');
 
   // Packets is scoped through the stream URL rather than a /sessions/ read:
   // before U3 it subscribed to whichever session the daemon reported, so the

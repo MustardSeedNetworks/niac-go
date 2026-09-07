@@ -109,7 +109,7 @@ export const PacketInspectorPage: FC = () => {
     intervalMs: POLL_INTERVALS.fast,
     errorToast: { title: t('packets.captureStatusFailed') },
   });
-  const simRunning = sessionId !== null && selectedSession?.running === true;
+  const simRunning = sessionId !== null;
   const captureRunning = captureStatus?.running === true;
   const streamActive = simRunning || captureRunning;
   const activeInterface = simRunning

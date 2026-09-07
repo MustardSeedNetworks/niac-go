@@ -62,7 +62,16 @@ export const RuntimeControlPage: FC = () => {
   // a page-level banner.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const showError = useErrorToast();
-  const { sessionId, setSessionId } = useAppContext();
+  const { sessionId, setSessionId, selectedSession, sessions } = useAppContext();
+  // Everything that describes "the running scenario" on this page describes
+  // the one this browser selected. Falling back to the daemon's top-level
+  // status keeps the two states it alone carries: no daemon (null) and a
+  // daemon with nothing running.
+  const shownSession = selectedSession ?? simStatus;
+  // Non-null exactly when a scenario is running, which is what the card below
+  // is gated on; naming it here keeps the gate and the thing it describes the
+  // same value.
+  const runningSession = shownSession?.running ? shownSession : null;
   const requestSequence = useRef(0);
 
   const invalidatePreparedRequest = useCallback(() => {
@@ -262,7 +271,7 @@ export const RuntimeControlPage: FC = () => {
 
   return (
     <div className="stack-xl">
-      <RuntimeRollup simStatus={simStatus} loading={simLoading} />
+      <RuntimeRollup simStatus={shownSession} loading={simLoading} />
 
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
@@ -413,11 +422,11 @@ export const RuntimeControlPage: FC = () => {
         </Card>
       )}
 
-      {isDaemonMode && simStatus?.running && (
+      {isDaemonMode && runningSession && (
         <>
-          {(simStatus.sessions?.length ?? 0) > 1 && (
+          {sessions.length > 1 && (
             <ConcurrentSessionsPanel
-              sessions={simStatus.sessions ?? []}
+              sessions={sessions}
               selectedSessionId={sessionId}
               stoppingSessionId={stopping ? (stopTarget?.sessionId ?? null) : null}
               onSelect={handleSelect}
@@ -425,9 +434,9 @@ export const RuntimeControlPage: FC = () => {
             />
           )}
           <RunningSimulationCard
-            simStatus={simStatus}
+            simStatus={runningSession}
             stopping={stopping}
-            onStop={() => handleStopClick(simStatus)}
+            onStop={() => handleStopClick(runningSession)}
             message={successMessage}
           />
         </>

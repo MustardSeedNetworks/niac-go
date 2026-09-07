@@ -129,7 +129,7 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
       sessionId: 'warehouse',
       sessions: [
         { ...running, sessionId: 'hospital', physicalVlan: 200 },
-        { ...running, sessionId: 'warehouse', physicalVlan: 201, selected: true },
+        { ...running, sessionId: 'warehouse', physicalVlan: 201 },
       ],
     });
     renderPage();
@@ -159,6 +159,40 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
     fireEvent.click(await screen.findByTestId('session-select-hospital'));
 
     await waitFor(() => expect(client.fetchDevices).toHaveBeenCalledWith('hospital'));
+  });
+
+  // The running-scenario card sits directly under the table. Left on the
+  // daemon's top-level status it would name one scenario while the table
+  // marked another selected, and its Stop would stop the one it named.
+  it('describes and stops the selected scenario, not the daemon default', async () => {
+    const client = await import('../api/client');
+    vi.mocked(client.fetchSimulationStatus).mockResolvedValue({
+      ...running,
+      sessionId: 'warehouse',
+      interface: 'veth-warehouse',
+      sessions: [
+        { ...running, sessionId: 'hospital', interface: 'veth-hospital', physicalVlan: 200 },
+        { ...running, sessionId: 'warehouse', interface: 'veth-warehouse', physicalVlan: 201 },
+      ],
+    });
+    renderPage();
+    fireEvent.click(await screen.findByTestId('session-select-hospital'));
+
+    // The rollup and the card both describe the run; neither may still be
+    // describing the daemon's default.
+    await waitFor(() => expect(screen.getAllByText('veth-hospital').length).toBeGreaterThan(0));
+    expect(screen.queryByText('veth-warehouse')).not.toBeInTheDocument();
+
+    // The card's Stop, not one of the table's per-row buttons.
+    const cardStop = screen
+      .getAllByRole('button', { name: /stop simulation/i })
+      .find((button) => !button.dataset.testid);
+    if (!cardStop) throw new Error('the running-scenario card has no Stop button');
+    fireEvent.click(cardStop);
+    await screen.findByText(/interrupt the current run/i);
+    act(() => fireEvent.click(screen.getByRole('button', { name: /^stop$/i })));
+
+    await waitFor(() => expect(stopSimulation).toHaveBeenCalledWith('hospital'));
   });
 });
 
