@@ -382,6 +382,7 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
       }
     >
       <YamlViewer
+        ariaLabel={t('configDiff.mergePreviewEditorAria')}
         value={content}
         height="100%"
         minHeight="300px"

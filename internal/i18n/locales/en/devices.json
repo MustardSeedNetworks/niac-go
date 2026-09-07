@@ -157,6 +157,7 @@
         "title": "TTL"
       },
       "yamlPreview": {
+        "editorAria": "Generated device YAML, read only",
         "readOnly": "Read-only",
         "title": "YAML Preview"
       }
@@ -223,6 +224,7 @@
     "noIp": "No IP",
     "noProtocols": "No protocols",
     "openEditorTitle": "Open {{hostname}} in the device editor",
+    "protocolFilterAria": "Filter by protocol",
     "searchClearAria": "Clear search",
     "searchPlaceholder": "Search devices by name, type, or hostname...",
     "selectAllAria": "Select all devices",
@@ -244,6 +246,7 @@
     "tableHeaderType": "Type",
     "tableViewTitle": "Table view",
     "title": "Device Library",
+    "typeFilterAria": "Filter by device type",
     "unknownType": "unknown",
     "viewRunningState": "View running state"
   },

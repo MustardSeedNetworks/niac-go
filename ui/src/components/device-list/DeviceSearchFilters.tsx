@@ -58,6 +58,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
       <div className="flex items-center gap-compact">
         <Filter className={`${iconSizes.md} text-text-muted`} />
         <select
+          aria-label={t('list.typeFilterAria')}
           value={typeFilter}
           onChange={(e) => onTypeFilterChange(e.target.value as DeviceType | 'all')}
           className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"
@@ -73,6 +74,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
 
       {/* Protocol filter */}
       <select
+        aria-label={t('list.protocolFilterAria')}
         value={protocolFilter}
         onChange={(e) => onProtocolFilterChange(e.target.value)}
         className="rounded-lg border border-surface-border bg-bg-base/60 py-row px-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none"

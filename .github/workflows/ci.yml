@@ -262,6 +262,11 @@ jobs:
           python3 scripts/test-check-fetch-error-states.py
           python3 scripts/check-fetch-error-states.py
 
+      - name: Page-story gate (U6) — every route has Empty/Loaded/Error stories
+        run: |
+          python3 scripts/test-check-page-stories.py
+          python3 scripts/check-page-stories.py
+
       - name: Route-policy gate (capability registry)
         run: ./scripts/check-route-policy.sh
 

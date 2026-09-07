@@ -59,6 +59,7 @@
     "lineCount_one": "{{count}} line",
     "lineCount_other": "{{count}} lines",
     "mergeControlsTitle": "Merge Controls",
+    "mergePreviewEditorAria": "Merged configuration preview, read only",
     "modificationsLabel": "Modifications",
     "modifiedBlocksCount_one": "{{count}} modified block",
     "modifiedBlocksCount_other": "{{count}} modified blocks",
@@ -469,6 +470,7 @@
       "savingLabel": "Saving…",
       "viewLabel": "Draft editing view",
       "visualLabel": "Visual topology",
+      "yamlEditorAria": "Scenario device YAML",
       "yamlLabel": "YAML"
     },
     "finish": {
@@ -902,7 +904,8 @@
       "loadFailed": "Failed to load template",
       "loading": "Loading template content...",
       "pickTemplate": "Use as-is",
-      "pickTemplateTitle": "Select this template as the active configuration to run unchanged"
+      "pickTemplateTitle": "Select this template as the active configuration to run unchanged",
+      "yamlEditorAria": "Template YAML preview, read only"
     }
   },
   "topology": {

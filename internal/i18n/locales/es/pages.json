@@ -217,6 +217,7 @@
       "savingLabel": "Guardando…",
       "viewLabel": "Vista de edición del borrador",
       "visualLabel": "Topología visual",
+      "yamlEditorAria": "YAML de dispositivos del escenario",
       "yamlLabel": "YAML"
     },
     "finish": {
@@ -921,7 +922,8 @@
     "yamlEditorLabel": "Editor YAML",
     "yamlTabsError": "Línea {{lineNum}}: no se permiten tabulaciones en YAML, use espacios",
     "yamlIndentationError": "Línea {{lineNum}}: sangría inconsistente (debe ser múltiplo de 2 espacios)",
-    "noneChoiceLabel": "Ninguno"
+    "noneChoiceLabel": "Ninguno",
+    "mergePreviewEditorAria": "Vista previa de la configuración combinada, solo lectura"
   },
   "walkValidator": {
     "label": "Walks de {{protocol}}",
@@ -1070,7 +1072,8 @@
       "cloning": "Clonando…",
       "editCopy": "Personalizar primero",
       "pickTemplate": "Usar tal cual",
-      "pickTemplateTitle": "Seleccione esta plantilla como la configuración activa para ejecutarla sin cambios"
+      "pickTemplateTitle": "Seleccione esta plantilla como la configuración activa para ejecutarla sin cambios",
+      "yamlEditorAria": "Vista previa YAML de la plantilla, solo lectura"
     }
   },
   "configPicker": {

@@ -84,7 +84,9 @@
       "descriptionPrefix": "Cree una copia de",
       "descriptionSuffix": "con un nuevo nombre.",
       "newHostnameLabel": "Nuevo hostname"
-    }
+    },
+    "protocolFilterAria": "Filtrar por protocolo",
+    "typeFilterAria": "Filtrar por tipo de dispositivo"
   },
   "editor": {
     "newDevice": "Nuevo dispositivo",
@@ -249,7 +251,8 @@
       },
       "yamlPreview": {
         "title": "Vista previa del YAML",
-        "readOnly": "Solo lectura"
+        "readOnly": "Solo lectura",
+        "editorAria": "YAML de dispositivo generado, solo lectura"
       }
     },
     "messages": {
