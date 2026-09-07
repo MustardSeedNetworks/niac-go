@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { type FC, type ReactNode, useEffect, useId } from 'react';
+import { type FC, type ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -94,6 +94,27 @@ export const Modal: FC<ModalProps> = ({
     };
   }, [isOpen]);
 
+  // A scrollable region a keyboard cannot reach is a mouse-only region: axe's
+  // scrollable-region-focusable, which the Storybook a11y gate enforces. It is
+  // satisfied by focusable *content* too, so only a body with none of its own
+  // — StreamView's stream dump, a plain text panel — needs the tab stop, and
+  // giving it to every dialog would put one in front of forms that don't.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) {
+      return;
+    }
+    const hasFocusableContent = body.querySelector(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (hasFocusableContent) {
+      body.removeAttribute('tabindex');
+    } else {
+      body.tabIndex = 0;
+    }
+  });
+
   if (!isOpen) {
     return null;
   }
@@ -143,7 +164,9 @@ export const Modal: FC<ModalProps> = ({
             )}
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto pad-lg">{children}</div>
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto pad-lg">
+          {children}
+        </div>
         {footer && (
           <div className="flex shrink-0 justify-end gap-default border-t border-surface-border px-6 py-4">
             {footer}

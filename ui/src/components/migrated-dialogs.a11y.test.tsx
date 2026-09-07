@@ -128,3 +128,49 @@ describe.each(dialogs)('%s', (name, renderDialog) => {
     }
   });
 });
+
+/**
+ * A scrollable region needs keyboard access, but axe accepts focusable content
+ * in place of a focusable container — so Modal gives the tab stop only to a
+ * body that has none of its own. StreamView's stream dump is plain text;
+ * ColoringRulesPanel's body is inputs and buttons.
+ */
+describe('scrollable dialog body', () => {
+  function body(): HTMLElement {
+    const element = screen.getByRole('dialog').querySelector('.overflow-y-auto');
+    if (!(element instanceof HTMLElement)) {
+      throw new Error('dialog has no scrollable body');
+    }
+    return element;
+  }
+
+  it('is focusable when its content is not', () => {
+    renderInRouter(
+      <StreamView packets={[packet]} clientEndpoint="10.0.0.1:1234" onClose={() => undefined} />,
+    );
+    expect(body()).toHaveAttribute('tabindex', '0');
+  });
+
+  it('is not an extra tab stop when its content is focusable', () => {
+    // With no rules the panel renders an empty message and its inputs live in
+    // the footer, so it needs one rule to have focusable body content at all.
+    renderInRouter(
+      <ColoringRulesPanel
+        rules={[
+          {
+            id: 'rule-1',
+            name: 'TCP',
+            filter: 'tcp',
+            foreground: '#ffffff',
+            background: '#374151',
+            enabled: true,
+          },
+        ]}
+        onRulesChange={() => undefined}
+        onReset={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    expect(body()).not.toHaveAttribute('tabindex');
+  });
+});
