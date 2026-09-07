@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.19](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.18...v0.95.19) (2026-09-07)
+
+
+### Code Refactoring
+
+* **ui:** put the seven hand-rolled tables on the shared DataTable ([#1871](https://github.com/MustardSeedNetworks/niac-go/issues/1871)) ([a2021a6](https://github.com/MustardSeedNetworks/niac-go/commit/a2021a656961df7e55310cb86539952944d708b1)), closes [#1870](https://github.com/MustardSeedNetworks/niac-go/issues/1870)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1872](https://github.com/MustardSeedNetworks/niac-go/issues/1872)) ([a7c7466](https://github.com/MustardSeedNetworks/niac-go/commit/a7c74667f4e1f519c8a89bf37fb6dc8c6081eab7))
+
 ## [0.95.18](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.17...v0.95.18) (2026-09-07)
 
 
