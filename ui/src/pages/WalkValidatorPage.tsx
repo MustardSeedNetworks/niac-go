@@ -284,7 +284,6 @@ export const WalkValidatorPage: FC = () => {
           <div className="flex flex-wrap items-center gap-default">
             <Button
               type="button"
-              tone="blue"
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
