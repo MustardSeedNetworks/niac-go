@@ -8,7 +8,15 @@ export interface FormFieldProps {
   helpText?: string;
   required?: boolean;
   className?: string;
-  htmlFor?: string;
+  /**
+   * The id of the control this field labels. Required: an optional
+   * association is one a new field silently forgets, and the fallback that
+   * used to render a bare <span> looked identical while leaving the control
+   * with no accessible name and no click-to-focus target. A field that wraps
+   * a group rather than a single control points at the group's primary
+   * control.
+   */
+  htmlFor: string;
   /** Inline validation error rendered below the field, in the error color. */
   error?: string;
 }
@@ -44,17 +52,10 @@ export const FormField: FC<FormFieldProps> = ({
 }) => (
   <div className={className}>
     <div className={rowClassName}>
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="flex items-center gap-compact">
-          {label}
-          {required && <span className="text-status-error">*</span>}
-        </label>
-      ) : (
-        <span className="flex items-center gap-compact">
-          {label}
-          {required && <span className="text-status-error">*</span>}
-        </span>
-      )}
+      <label htmlFor={htmlFor} className="flex items-center gap-compact">
+        {label}
+        {required && <span className="text-status-error">*</span>}
+      </label>
       {helpText && <HelpTip text={helpText} />}
     </div>
     {children}

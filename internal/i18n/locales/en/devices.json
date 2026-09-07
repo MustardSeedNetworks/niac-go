@@ -144,7 +144,6 @@
         "modelsLoadError": "Could not load device profiles: {{message}}",
         "originalPreservedSuffix": "; original preserved",
         "saveFirstHint": "Save the device before generating a walk.",
-        "selectAria": "Baseline walk model",
         "selectPrompt": "Select a model...",
         "unsupportedCombo": "This vendor has no profile for this device type."
       },

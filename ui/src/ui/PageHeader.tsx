@@ -18,7 +18,7 @@
  */
 import type { LucideIcon } from 'lucide-react';
 import { ChevronRight, HelpCircle } from 'lucide-react';
-import { createElement, type FC, type ReactNode } from 'react';
+import { createElement, type FC, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 
@@ -29,6 +29,12 @@ interface BreadcrumbItem {
 
 interface PageHeaderProps {
   title: string;
+  /**
+   * The shell's focus target for a route change. The <h1> carries
+   * tabIndex={-1} unconditionally so it can receive programmatic focus
+   * without joining the tab order; see hooks/useFocusOnRouteChange.
+   */
+  titleRef?: RefObject<HTMLHeadingElement | null>;
   /** Kicker above the title naming the product domain. */
   eyebrow?: string;
   /**
@@ -78,6 +84,7 @@ const Breadcrumb: FC<BreadcrumbProps> = ({ items, className = '' }) => (
 
 export const PageHeader: FC<PageHeaderProps> = ({
   title,
+  titleRef,
   eyebrow,
   secondary,
   description,
@@ -102,7 +109,12 @@ export const PageHeader: FC<PageHeaderProps> = ({
                 {eyebrow}
               </p>
             ) : null}
-            <h1 className="heading-1 font-display" data-testid="page-header-title">
+            <h1
+              ref={titleRef}
+              tabIndex={-1}
+              className="heading-1 font-display"
+              data-testid="page-header-title"
+            >
               {title}
             </h1>
             {description ? <p className="body-small mt-tight max-w-2xl">{description}</p> : null}

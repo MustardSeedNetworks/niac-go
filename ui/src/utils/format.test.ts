@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import i18n from '../i18n';
 import {
   formatBytes,
   formatDuration,
@@ -152,8 +153,24 @@ describe('getErrorMessage', () => {
   });
 
   it('returns default message for other types', () => {
-    expect(getErrorMessage(42)).toBe('An unexpected error occurred');
-    expect(getErrorMessage(null)).toBe('An unexpected error occurred');
-    expect(getErrorMessage(undefined)).toBe('An unexpected error occurred');
+    expect(getErrorMessage(42)).toBe('An unknown error occurred');
+    expect(getErrorMessage(null)).toBe('An unknown error occurred');
+    expect(getErrorMessage(undefined)).toBe('An unknown error occurred');
   });
+
+  it('translates its fallback with the active language', async () => {
+    await i18n.changeLanguage('es');
+
+    // Every toast and eight useApiResource consumers inherit this string, so
+    // an English literal here leaks into a Spanish UI at every failure.
+    expect(getErrorMessage(42)).toBe('Ocurrió un error desconocido');
+  });
+
+  it('prefers an explicit fallback over the translated default', () => {
+    expect(getErrorMessage(42, 'could not reach the daemon')).toBe('could not reach the daemon');
+  });
+});
+
+afterEach(async () => {
+  await i18n.changeLanguage('en');
 });

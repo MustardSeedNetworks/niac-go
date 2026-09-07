@@ -22,6 +22,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../hooks/useLocale';
+import i18n from '../i18n';
 
 // ---------------------------------------------------------------------------
 // Pure formatters (English fallback)
@@ -150,7 +151,10 @@ export function getErrorMessage(err: unknown, fallback?: string): string {
   if (typeof err === 'string') {
     return err;
   }
-  return fallback ?? 'An unexpected error occurred';
+  // The i18next instance rather than the hook: this is the fallback every
+  // toast and every useApiResource consumer inherits, and it is also called
+  // from outside React (store callbacks, error boundaries).
+  return fallback ?? i18n.t('errors:generic.unknown');
 }
 
 // ---------------------------------------------------------------------------

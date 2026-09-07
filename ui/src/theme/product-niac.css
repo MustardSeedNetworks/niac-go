@@ -29,6 +29,21 @@
   --color-module-analyze: #9333a8;
   --color-module-inject: #b4143c;
   --color-module-templates: #96450a;
+
+  /* ---- editor syntax (One Light) -------------------------------------
+   * The YAML editor is the only place NIAC renders code, and CodeMirror
+   * paints from JS rather than from utility classes, so its palette has to
+   * exist as tokens or the editor stays a dark slab in a light page.
+   * Values are the One Light / One Dark pairs the editor already used for
+   * dark; only the light half is new. */
+  --color-syntax-keyword: #a626a4;
+  --color-syntax-string: #50a14f;
+  --color-syntax-number: #986801;
+  --color-syntax-atom: #0184bc;
+  --color-syntax-property: #e45649;
+  --color-syntax-comment: #a0a1a7;
+  --color-syntax-punctuation: #383a42;
+  --color-syntax-meta: #4078f2;
 }
 
 .dark {
@@ -51,4 +66,14 @@
   --color-module-analyze: #e879f9;
   --color-module-inject: #fb7185;
   --color-module-templates: #fbbf24;
+
+  /* ---- editor syntax (One Dark) --------------------------------------- */
+  --color-syntax-keyword: #c678dd;
+  --color-syntax-string: #98c379;
+  --color-syntax-number: #d19a66;
+  --color-syntax-atom: #56b6c2;
+  --color-syntax-property: #e06c75;
+  --color-syntax-comment: #5c6370;
+  --color-syntax-punctuation: #abb2bf;
+  --color-syntax-meta: #61afef;
 }

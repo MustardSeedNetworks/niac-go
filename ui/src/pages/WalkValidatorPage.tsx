@@ -218,7 +218,7 @@ export const WalkValidatorPage: FC = () => {
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="stack-lg">
           <header>
-            <h1 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
+            <h2 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
               <InfoPopover
                 label={tCommon('jargon.ariaLabel', { term: 'SNMP walk' })}
@@ -226,7 +226,7 @@ export const WalkValidatorPage: FC = () => {
               >
                 {tHelp('jargon.snmpWalk')}
               </InfoPopover>
-            </h1>
+            </h2>
             <p className="text-sm text-text-muted">
               <Trans
                 i18nKey="walkValidator.engineNote"

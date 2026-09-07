@@ -174,9 +174,9 @@ export const WalkAnalyzerPage: FC = () => {
       <Card className="border-surface-border bg-bg-surface/70">
         <CardContent className="stack-lg">
           <header>
-            <h1 className="text-2xl font-semibold text-text-primary">
+            <h2 className="text-2xl font-semibold text-text-primary">
               {t('walkAnalyzer.pageTitle')}
-            </h1>
+            </h2>
             <p className="text-sm text-text-muted">
               <Trans i18nKey="walkAnalyzer.engineNote" ns="pages" components={{ code: <code /> }} />
             </p>

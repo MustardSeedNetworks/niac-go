@@ -586,7 +586,8 @@
     },
     "alertPolicy": "Política de alertas",
     "recentErrors": "Contador de errores recientes:",
-    "loadingAlerts": "Cargando la configuración de alertas…"
+    "loadingAlerts": "Cargando la configuración de alertas…",
+    "loadError": "No se pudieron cargar las alertas: {{message}}"
   },
   "traffic": {
     "label": "Inyección de fallos",
