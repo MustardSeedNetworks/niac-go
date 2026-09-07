@@ -2,19 +2,24 @@
  * Modal primitive stories (Wave 5 / #636).
  *
  * Size matrix, showCloseButton/closeOnBackdropClick/closeOnEscape
- * flag combinations, with-title vs no-title shells.
+ * flag combinations, with-title vs no-title shells, and the header/footer
+ * regions the migrated dialogs (#1828 follow-up) render into — the a11y gate
+ * only sees a layout that some story puts on screen.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { FileCode } from 'lucide-react';
 import { useState } from 'react';
+import { iconSizes } from '../constants/sizes';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { SmallText } from './Typography';
 
 const meta: Meta<typeof Modal> = {
   title: 'UI/Modal',
   component: Modal,
   parameters: { layout: 'fullscreen' },
   argTypes: {
-    size: { control: 'select', options: ['sm', 'md', 'lg', 'xl', 'full'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg', 'xl', '3xl', 'full'] },
     isOpen: { control: 'boolean' },
     showCloseButton: { control: 'boolean' },
     closeOnBackdropClick: { control: 'boolean' },
@@ -99,5 +104,46 @@ export const InteractiveToggle: Story = {
         </Modal>
       </div>
     );
+  },
+};
+
+// The header/footer regions: a heading with a subtitle beside an icon is what
+// `title` alone cannot express, and actions in the footer stay put while a long
+// body scrolls. `labelledBy` points at the caller's own heading, which is what
+// gives the dialog its accessible name.
+export const HeaderAndFooterRegions: Story = {
+  args: {
+    isOpen: true,
+    size: 'full',
+    labelledBy: 'story-modal-title',
+    onClose: () => undefined,
+    header: (
+      <div className="flex items-center gap-default">
+        <div className="rounded-lg bg-brand-primary/20 pad-xs">
+          <FileCode className={`${iconSizes.lg} text-brand-accent`} />
+        </div>
+        <div>
+          <h2 id="story-modal-title" className="heading-3 text-text-primary">
+            hospital-pack.yaml
+          </h2>
+          <SmallText className="text-text-muted">248 lines · 12 devices</SmallText>
+        </div>
+      </div>
+    ),
+    footer: (
+      <>
+        <Button variant="outline">Close</Button>
+        <Button tone="violet">Use template</Button>
+      </>
+    ),
+    children: (
+      <div className="space-y-2">
+        {Array.from({ length: 40 }, (_, line) => (
+          <p key={line} className="font-mono text-xs text-text-secondary">
+            line {line + 1}: a body long enough to scroll under a pinned footer
+          </p>
+        ))}
+      </div>
+    ),
   },
 };

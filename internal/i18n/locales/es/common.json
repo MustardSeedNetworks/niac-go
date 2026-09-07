@@ -61,6 +61,7 @@
     "closeMenu": "Cerrar menú",
     "openDrawer": "Abrir panel",
     "closeDrawer": "Cerrar panel",
+    "closeDialog": "Cerrar diálogo",
     "collapseSidebar": "Contraer barra lateral",
     "expandSidebar": "Expandir barra lateral",
     "switchToLightMode": "Cambiar a modo claro",

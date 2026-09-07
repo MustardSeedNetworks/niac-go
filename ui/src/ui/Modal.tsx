@@ -1,14 +1,26 @@
 import { X } from 'lucide-react';
 import { type FC, type ReactNode, useEffect, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '3xl' | 'full';
 
 interface ModalBaseProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
+  /**
+   * Header content beside the close button, for headers `title` cannot express
+   * — an icon, or a heading with a subtitle beneath it. Pairs with `labelledBy`,
+   * which points at the heading rendered here.
+   */
+  header?: ReactNode;
+  /**
+   * A row below the scrolling body, separated by a rule. Actions that must stay
+   * on screen while a long body scrolls belong here rather than in `children`.
+   */
+  footer?: ReactNode;
   size?: ModalSize;
   showCloseButton?: boolean;
   closeOnBackdropClick?: boolean;
@@ -41,6 +53,7 @@ const sizeClasses: Record<ModalSize, string> = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-xl',
+  '3xl': 'max-w-3xl',
   full: 'max-w-4xl',
 };
 
@@ -50,6 +63,8 @@ export const Modal: FC<ModalProps> = ({
   title,
   labelledBy,
   ariaLabel,
+  header,
+  footer,
   children,
   size = 'md',
   showCloseButton = true,
@@ -57,6 +72,7 @@ export const Modal: FC<ModalProps> = ({
   closeOnEscape = true,
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   // Was the literal id "modal-title", which is a duplicate the moment two
   // modals are mounted at once — and aria-labelledby then resolves to whichever
   // the browser finds first.
@@ -82,6 +98,8 @@ export const Modal: FC<ModalProps> = ({
     return null;
   }
 
+  const closeLabel = t('accessibility.closeDialog');
+
   return (
     <div className="fixed inset-0 z-50 flex-center">
       {closeOnBackdropClick ? (
@@ -89,62 +107,49 @@ export const Modal: FC<ModalProps> = ({
           type="button"
           className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
           onClick={onClose}
-          aria-label="Close modal"
+          aria-label={closeLabel}
         />
       ) : (
         <div className="absolute inset-0 bg-scrim/70 backdrop-blur-sm" />
       )}
       <div
         ref={containerRef}
-        className={`relative z-10 mx-4 w-full ${sizeClasses[size]} rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl ${className}`}
+        // The panel is capped and column-laid-out for every modal, not only the
+        // tall ones: a dialog whose body outgrows the viewport used to push its
+        // own footer off-screen, taking the actions with it.
+        className={`relative z-10 mx-4 flex max-h-[90vh] w-full flex-col ${sizeClasses[size]} rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? headingId : labelledBy}
         aria-label={ariaLabel}
       >
-        {(title || showCloseButton) && (
-          <div className="flex-between px-6 py-4 border-b border-surface-border">
+        {(title || header || showCloseButton) && (
+          <div className="flex-between shrink-0 gap-default px-6 py-4 border-b border-surface-border">
             {title && (
               <h2 id={headingId} className="heading-3 text-text-primary">
                 {title}
               </h2>
             )}
+            {header}
             {showCloseButton && (
               <button
                 type="button"
                 onClick={onClose}
                 className="ml-auto p-1 text-text-muted hover:text-text-primary transition-colors rounded-lg hover:bg-surface-hover"
-                aria-label="Close modal"
+                aria-label={closeLabel}
               >
                 <X className={iconSizes.lg} />
               </button>
             )}
           </div>
         )}
-        <div className="pad-lg">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto pad-lg">{children}</div>
+        {footer && (
+          <div className="flex shrink-0 justify-end gap-default border-t border-surface-border px-6 py-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
-// Convenience components for modal sections
-export const ModalHeader: FC<{ children: ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => <div className={`mb-content ${className}`}>{children}</div>;
-
-export const ModalBody: FC<{ children: ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => <div className={`stack-lg ${className}`}>{children}</div>;
-
-export const ModalFooter: FC<{ children: ReactNode; className?: string }> = ({
-  children,
-  className = '',
-}) => (
-  <div
-    className={`flex justify-end gap-default pt-section mt-content border-t border-surface-border ${className}`}
-  >
-    {children}
-  </div>
-);

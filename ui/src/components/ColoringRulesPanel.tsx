@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
 import { generateRuleId } from '../utils/coloring-rules';
@@ -200,48 +201,13 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
     }, [onReset, onClose]);
 
     return (
-      <div className="fixed inset-0 z-50 flex-center bg-scrim/60">
-        <div className="w-full max-w-3xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
-          {/* Header */}
-          <div className="flex-between px-5 py-4 border-b border-surface-border">
-            <h3 className="heading-3 text-text-primary">{t('coloringRules.title')}</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 text-text-muted hover:text-text-primary"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Rules list */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 stack-sm">
-            <SmallText className="text-text-muted mb-heading block">
-              {t('coloringRules.help')}
-            </SmallText>
-
-            {localRules.map((rule, index) => (
-              <RuleRow
-                key={rule.id}
-                rule={rule}
-                onChange={(updated) => handleRuleChange(index, updated)}
-                onDelete={() => handleDelete(index)}
-                onMoveUp={() => handleMoveUp(index)}
-                onMoveDown={() => handleMoveDown(index)}
-                isFirst={index === 0}
-                isLast={index === localRules.length - 1}
-              />
-            ))}
-
-            {localRules.length === 0 && (
-              <div className="text-center py-8 text-text-muted">
-                <p>{t('coloringRules.empty')}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex-between px-5 py-4 border-t border-surface-border">
+      <Modal
+        isOpen
+        onClose={onClose}
+        size="3xl"
+        title={t('coloringRules.title')}
+        footer={
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-compact">
               <Button
                 variant="ghost"
@@ -263,15 +229,40 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
 
             <div className="flex items-center gap-compact">
               <Button variant="ghost" size="sm" onClick={onClose}>
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button tone="violet" size="sm" onClick={handleApply}>
-                Apply
+                {t('buttons.apply')}
               </Button>
             </div>
           </div>
+        }
+      >
+        <div className="stack-sm">
+          <SmallText className="text-text-muted mb-heading block">
+            {t('coloringRules.help')}
+          </SmallText>
+
+          {localRules.map((rule, index) => (
+            <RuleRow
+              key={rule.id}
+              rule={rule}
+              onChange={(updated) => handleRuleChange(index, updated)}
+              onDelete={() => handleDelete(index)}
+              onMoveUp={() => handleMoveUp(index)}
+              onMoveDown={() => handleMoveDown(index)}
+              isFirst={index === 0}
+              isLast={index === localRules.length - 1}
+            />
+          ))}
+
+          {localRules.length === 0 && (
+            <div className="text-center py-8 text-text-muted">
+              <p>{t('coloringRules.empty')}</p>
+            </div>
+          )}
         </div>
-      </div>
+      </Modal>
     );
   },
 );
