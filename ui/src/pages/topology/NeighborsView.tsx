@@ -5,6 +5,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useApiResource } from '../../hooks/useApiResource';
 import type { TFunction } from '../../i18n';
 import { Card, CardContent } from '../../ui/Card';
+import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 
 /**
  * NeighborsView renders the live CDP / LLDP / EDP / FDP discovery table —
@@ -134,6 +135,55 @@ export const NeighborsView: FC = () => {
     return counts;
   }, [neighbors]);
 
+  const columns: DataTableColumn<(typeof filtered)[number]>[] = [
+    {
+      key: 'protocol',
+      header: t('topology.neighbors.headerProtocol'),
+      cellClassName: 'font-mono text-xs text-status-info',
+      cell: (n) => n.protocols.join(', '),
+    },
+    {
+      key: 'localDevice',
+      header: t('topology.neighbors.headerLocalDevice'),
+      cell: (n) => n.localDevice,
+    },
+    {
+      key: 'remoteDevice',
+      header: t('topology.neighbors.headerRemoteDevice'),
+      cell: (n) => n.remoteDevice,
+    },
+    {
+      key: 'remotePort',
+      header: t('topology.neighbors.headerRemotePort'),
+      cellClassName: 'text-text-muted',
+      cell: (n) => n.remotePort || tCommon('format.dash'),
+    },
+    {
+      key: 'chassisId',
+      header: t('topology.neighbors.headerChassisId'),
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (n) => n.remoteChassisId || tCommon('format.dash'),
+    },
+    {
+      key: 'mgmtAddr',
+      header: t('topology.neighbors.headerMgmtAddr'),
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (n) => n.managementAddress || tCommon('format.dash'),
+    },
+    {
+      key: 'ttl',
+      header: t('topology.neighbors.headerTtl'),
+      cellClassName: 'text-text-muted',
+      cell: (n) => formatTtl(n.ttl, tCommon, t),
+    },
+    {
+      key: 'lastSeen',
+      header: t('topology.neighbors.headerLastSeen'),
+      cellClassName: 'text-text-muted',
+      cell: (n) => formatRelative(n.lastSeen, tCommon),
+    },
+  ];
+
   return (
     <div className="stack-lg">
       <Card className="border-surface-border bg-bg-surface/70">
@@ -205,45 +255,13 @@ export const NeighborsView: FC = () => {
             </div>
           )}
           {filtered.length > 0 && (
-            <table className="w-full text-sm">
-              <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
-                <tr>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerProtocol')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerLocalDevice')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerRemoteDevice')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerRemotePort')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerChassisId')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerMgmtAddr')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerTtl')}</th>
-                  <th className="px-4 py-row">{t('topology.neighbors.headerLastSeen')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-knob/5">
-                {filtered.map((n) => (
-                  <tr
-                    key={`${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
-                    className="text-text-primary hover:bg-bg-base/40"
-                  >
-                    <td className="px-4 py-row font-mono text-xs text-status-info">
-                      {n.protocols.join(', ')}
-                    </td>
-                    <td className="px-4 py-row">{n.localDevice}</td>
-                    <td className="px-4 py-row">{n.remoteDevice}</td>
-                    <td className="px-4 py-row text-text-muted">{n.remotePort || '—'}</td>
-                    <td className="px-4 py-row font-mono text-xs text-text-muted">
-                      {n.remoteChassisId || '—'}
-                    </td>
-                    <td className="px-4 py-row font-mono text-xs text-text-muted">
-                      {n.managementAddress || '—'}
-                    </td>
-                    <td className="px-4 py-row text-text-muted">{formatTtl(n.ttl, tCommon, t)}</td>
-                    <td className="px-4 py-row text-text-muted">
-                      {formatRelative(n.lastSeen, tCommon)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              rows={filtered}
+              columns={columns}
+              getRowKey={(n) => `${n.localDevice}-${n.remoteDevice}-${n.remotePort}`}
+              emptyMessage={null}
+              rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+            />
           )}
         </CardContent>
       </Card>

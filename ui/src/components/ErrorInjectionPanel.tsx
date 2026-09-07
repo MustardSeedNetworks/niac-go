@@ -10,6 +10,7 @@ import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
@@ -77,6 +78,19 @@ export const ErrorInjectionPanel: FC = () => {
     Record<string, Record<string, number>>,
   ][];
 
+  // The wire shape is device -> interface -> errorType -> value; the table
+  // wants one row per leaf.
+  const activeRows = activeEntries.flatMap(([deviceIp, interfaces]) =>
+    Object.entries(interfaces).flatMap(([iface, errorTypes]) =>
+      Object.entries(errorTypes).map(([errorType, value]) => ({
+        deviceIp,
+        iface,
+        errorType,
+        value,
+      })),
+    ),
+  );
+
   const onInject: SubmitHandler<ErrorInjectionFormFields> = async (values) => {
     setMessage(null);
     try {
@@ -133,6 +147,45 @@ export const ErrorInjectionPanel: FC = () => {
   };
 
   const busy = isSubmitting || clearingBusy;
+
+  const activeErrorColumns: DataTableColumn<(typeof activeRows)[number]>[] = [
+    {
+      key: 'deviceIp',
+      header: t('injection.tableHeaderDeviceIp'),
+      cell: (row) => row.deviceIp,
+    },
+    { key: 'iface', header: t('injection.tableHeaderInterface'), cell: (row) => row.iface },
+    { key: 'errorType', header: t('injection.tableHeaderErrorType'), cell: (row) => row.errorType },
+    {
+      key: 'value',
+      header: t('injection.tableHeaderValue'),
+      cell: (row) => (
+        <Tag colorScheme="yellow">
+          {row.errorType === 'High Utilization' ? `${row.value}%` : `${row.value}/s`}
+        </Tag>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('injection.tableHeaderActions'),
+      cell: (row) => (
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          tone="blue"
+          onClick={() => handleClearSpecific(row.deviceIp, row.iface, row.errorType)}
+          disabled={busy}
+          aria-label={t('injection.clearOneAriaLabel', {
+            deviceIp: row.deviceIp,
+            iface: row.iface,
+          })}
+        >
+          {t('injection.clearOneButton')}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="stack-lg">
@@ -295,59 +348,12 @@ export const ErrorInjectionPanel: FC = () => {
         <Card>
           <CardContent>
             <h3 className="heading-3 mb-content">{t('injection.activeErrorsTitle')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border-default">
-                    <th className="text-left py-row px-cell">
-                      {t('injection.tableHeaderDeviceIp')}
-                    </th>
-                    <th className="text-left py-row px-cell">
-                      {t('injection.tableHeaderInterface')}
-                    </th>
-                    <th className="text-left py-row px-cell">
-                      {t('injection.tableHeaderErrorType')}
-                    </th>
-                    <th className="text-left py-row px-cell">{t('injection.tableHeaderValue')}</th>
-                    <th className="text-left py-row px-cell">
-                      {t('injection.tableHeaderActions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeEntries.map(([deviceIp, interfaces]) =>
-                    Object.entries(interfaces).map(([iface, errorTypes]) =>
-                      Object.entries(errorTypes).map(([errorType, value]) => (
-                        <tr
-                          key={`${deviceIp}-${iface}-${errorType}`}
-                          className="border-b border-border-default"
-                        >
-                          <td className="py-row px-cell">{deviceIp}</td>
-                          <td className="py-row px-cell">{iface}</td>
-                          <td className="py-row px-cell">{errorType}</td>
-                          <td className="py-row px-cell">
-                            <Tag colorScheme="yellow">
-                              {errorType === 'High Utilization' ? `${value}%` : `${value}/s`}
-                            </Tag>
-                          </td>
-                          <td className="py-row px-cell">
-                            <button
-                              type="button"
-                              onClick={() => handleClearSpecific(deviceIp, iface, errorType)}
-                              disabled={busy}
-                              className="text-status-info hover:text-status-info text-sm"
-                              aria-label={t('injection.clearOneAriaLabel', { deviceIp, iface })}
-                            >
-                              {t('injection.clearOneButton')}
-                            </button>
-                          </td>
-                        </tr>
-                      )),
-                    ),
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              rows={activeRows}
+              columns={activeErrorColumns}
+              getRowKey={(row) => `${row.deviceIp}-${row.iface}-${row.errorType}`}
+              emptyMessage={null}
+            />
           </CardContent>
         </Card>
       )}

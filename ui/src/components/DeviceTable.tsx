@@ -2,9 +2,9 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../api/types';
 import { Button } from '../ui/Button';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
-import { DataTable, type DataTableColumn } from './DataTable';
 
 /**
  * DeviceTable renders a DeviceSummary[] as a table, switching to virtual

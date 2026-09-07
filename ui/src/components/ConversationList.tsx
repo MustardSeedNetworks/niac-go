@@ -1,7 +1,8 @@
-import { type FC, memo, useCallback, useMemo, useState } from 'react';
+import { type FC, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -13,9 +14,6 @@ import {
 import { formatBytes, formatDurationSeconds } from '../utils/format';
 import { getProtocolColor } from '../utils/protocol-colors';
 import type { Packet } from './PacketList';
-
-type SortField = 'packets' | 'bytes' | 'duration' | 'protocol';
-type SortDirection = 'asc' | 'desc';
 
 interface ConversationListProps {
   packets: (Packet | PcapPacket)[];
@@ -33,53 +31,56 @@ export const ConversationList: FC<ConversationListProps> = memo(
     const { t } = useTranslation('common');
     const { t: tHelp } = useTranslation('help');
     const { t: tPages } = useTranslation('pages');
-    const [sortField, setSortField] = useState<SortField>('packets');
-    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
     const conversations = useMemo(() => extractConversations(packets), [packets]);
 
-    const sorted = useMemo(() => {
-      const copy = [...conversations];
-      copy.sort((a, b) => {
-        let cmp = 0;
-        switch (sortField) {
-          case 'packets':
-            cmp = a.packets - b.packets;
-            break;
-          case 'bytes':
-            cmp = a.bytes - b.bytes;
-            break;
-          case 'duration':
-            cmp = getConversationDuration(a) - getConversationDuration(b);
-            break;
-          case 'protocol':
-            cmp = a.protocol.localeCompare(b.protocol);
-            break;
-        }
-        return sortDirection === 'desc' ? -cmp : cmp;
-      });
-      return copy;
-    }, [conversations, sortField, sortDirection]);
-
-    const handleSort = useCallback(
-      (field: SortField) => {
-        if (sortField === field) {
-          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-        } else {
-          setSortField(field);
-          setSortDirection('desc');
-        }
+    const columns: DataTableColumn<Conversation>[] = [
+      {
+        key: 'endpointA',
+        header: tPages('packets.conversations.headerEndpointA'),
+        cellClassName: 'text-text-primary text-sm font-mono',
+        cell: (conv) => conv.endpointA,
       },
-      [sortField],
-    );
-
-    const sortIndicator = useCallback(
-      (field: SortField) => {
-        if (sortField !== field) return '';
-        return sortDirection === 'desc' ? ' ▼' : ' ▲';
+      {
+        key: 'endpointB',
+        header: tPages('packets.conversations.headerEndpointB'),
+        cellClassName: 'text-text-primary text-sm font-mono',
+        cell: (conv) => conv.endpointB,
       },
-      [sortField, sortDirection],
-    );
+      {
+        key: 'protocol',
+        header: tPages('packets.list.headerProtocol'),
+        sortAccessor: (conv) => conv.protocol,
+        cell: (conv) => (
+          <Tag colorScheme={getProtocolColor(conv.protocol)} className="text-xs">
+            {conv.protocol}
+          </Tag>
+        ),
+      },
+      {
+        key: 'packets',
+        header: tPages('packets.conversations.headerPackets'),
+        align: 'right',
+        sortAccessor: (conv) => conv.packets,
+        cellClassName: 'text-text-secondary text-sm font-mono',
+        cell: (conv) => conv.packets,
+      },
+      {
+        key: 'bytes',
+        header: tPages('packets.conversations.headerBytes'),
+        align: 'right',
+        sortAccessor: (conv) => conv.bytes,
+        cellClassName: 'text-text-secondary text-sm font-mono',
+        cell: (conv) => formatBytes(conv.bytes),
+      },
+      {
+        key: 'duration',
+        header: tPages('packets.stats.duration'),
+        align: 'right',
+        sortAccessor: (conv) => getConversationDuration(conv),
+        cellClassName: 'text-text-muted text-sm font-mono',
+        cell: (conv) => formatDurationSeconds(getConversationDuration(conv)),
+      },
+    ];
 
     if (conversations.length === 0) {
       return (
@@ -110,57 +111,17 @@ export const ConversationList: FC<ConversationListProps> = memo(
             </SmallText>
           </div>
 
-          <div className="overflow-auto rounded-lg border border-surface-border max-h-[500px]">
-            <table className="min-w-full divide-y divide-knob/5">
-              <thead className="bg-bg-surface/80 sticky top-0 z-10">
-                <tr>
-                  <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    {tPages('packets.conversations.headerEndpointA')}
-                  </th>
-                  <th className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
-                    {tPages('packets.conversations.headerEndpointB')}
-                  </th>
-                  <th
-                    className="px-3 py-row text-left text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
-                    onClick={() => handleSort('protocol')}
-                  >
-                    {tPages('packets.list.headerProtocol')}
-                    {sortIndicator('protocol')}
-                  </th>
-                  <th
-                    className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
-                    onClick={() => handleSort('packets')}
-                  >
-                    {tPages('packets.conversations.headerPackets')}
-                    {sortIndicator('packets')}
-                  </th>
-                  <th
-                    className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
-                    onClick={() => handleSort('bytes')}
-                  >
-                    {tPages('packets.conversations.headerBytes')}
-                    {sortIndicator('bytes')}
-                  </th>
-                  <th
-                    className="px-3 py-row text-right text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer hover:text-brand-accent select-none"
-                    onClick={() => handleSort('duration')}
-                  >
-                    {tPages('packets.stats.duration')}
-                    {sortIndicator('duration')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-knob/5">
-                {sorted.map((conv) => (
-                  <ConversationRow
-                    key={conv.id}
-                    conversation={conv}
-                    onClick={() => onSelectConversation(conv.filterExpression)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            rows={conversations}
+            columns={columns}
+            getRowKey={(conv) => conv.id}
+            defaultSort={{ key: 'packets', direction: 'desc' }}
+            onRowClick={(conv) => onSelectConversation(conv.filterExpression)}
+            rowClassName={() => 'hover:bg-bg-surface/50 transition-colors'}
+            stickyHeader
+            containerClassName="max-h-[500px] overflow-y-auto"
+            emptyMessage={null}
+          />
         </CardContent>
       </Card>
     );
@@ -168,35 +129,3 @@ export const ConversationList: FC<ConversationListProps> = memo(
 );
 
 ConversationList.displayName = 'ConversationList';
-
-const ConversationRow: FC<{
-  conversation: Conversation;
-  onClick: () => void;
-}> = memo(({ conversation, onClick }) => {
-  const duration = getConversationDuration(conversation);
-
-  return (
-    <tr onClick={onClick} className="cursor-pointer hover:bg-bg-surface/50 transition-colors">
-      <td className="px-3 py-row text-text-primary text-sm font-mono">{conversation.endpointA}</td>
-      <td className="px-3 py-row text-text-primary text-sm font-mono">{conversation.endpointB}</td>
-      <td className="px-3 py-row">
-        <Tag colorScheme={getProtocolColor(conversation.protocol)} className="text-xs">
-          {conversation.protocol}
-        </Tag>
-      </td>
-      <td className="px-3 py-row text-text-secondary text-sm text-right font-mono">
-        {conversation.packets}
-      </td>
-      <td className="px-3 py-row text-text-secondary text-sm text-right font-mono">
-        {formatBytes(conversation.bytes)}
-      </td>
-      <td className="px-3 py-row text-text-muted text-sm text-right font-mono">
-        {formatDurationSeconds(duration)}
-      </td>
-    </tr>
-  );
-});
-
-ConversationRow.displayName = 'ConversationRow';
-
-export default ConversationList;

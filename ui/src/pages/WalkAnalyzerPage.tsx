@@ -4,7 +4,9 @@ import { analyzeWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalyzeResponse } from '../api/types';
 import { WalkProfileCreator } from '../components/walk/WalkProfileCreator';
+import { Button } from '../ui/Button';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { formatBitsPerSecond } from '../utils/format';
 
 const STATUS_BADGE: Record<string, string> = {
@@ -86,6 +88,69 @@ export const WalkAnalyzerPage: FC = () => {
   const interfaces = result?.interfaces ?? [];
   const neighbors = result?.neighbors ?? [];
 
+  const interfaceColumns: DataTableColumn<(typeof interfaces)[number]>[] = [
+    {
+      key: 'index',
+      header: 'Index',
+      headerClassName: 'w-16',
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (iface) => iface.index,
+    },
+    { key: 'name', header: 'Name', cell: (iface) => iface.name || '—' },
+    {
+      key: 'type',
+      header: 'Type',
+      cellClassName: 'text-text-muted',
+      cell: (iface) => iface.type || '—',
+    },
+    {
+      key: 'speed',
+      header: 'Speed',
+      cellClassName: 'font-mono text-xs',
+      cell: (iface) => formatBitsPerSecond(iface.speed),
+    },
+    { key: 'admin', header: 'Admin', cell: (iface) => renderStatusBadge(iface.adminStatus) },
+    { key: 'oper', header: 'Oper', cell: (iface) => renderStatusBadge(iface.operStatus) },
+    {
+      key: 'mac',
+      header: 'MAC',
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (iface) => iface.macAddress || '—',
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      cellClassName: 'text-text-muted',
+      cell: (iface) => iface.description || '—',
+    },
+  ];
+
+  const neighborColumns: DataTableColumn<(typeof neighbors)[number]>[] = [
+    {
+      key: 'localInterface',
+      header: t('walkAnalyzer.localInterface'),
+      cellClassName: 'font-mono text-xs',
+      cell: (neighbor) => neighbor.localInterface || '—',
+    },
+    {
+      key: 'protocol',
+      header: t('walkAnalyzer.protocol'),
+      headerClassName: 'w-24',
+      cell: (neighbor) => renderProtocolBadge(neighbor.protocol),
+    },
+    {
+      key: 'remoteDevice',
+      header: t('walkAnalyzer.remoteDevice'),
+      cell: (neighbor) => neighbor.remoteDevice || '—',
+    },
+    {
+      key: 'remoteInterface',
+      header: t('walkAnalyzer.remoteInterface'),
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (neighbor) => neighbor.remoteInterface || '—',
+    },
+  ];
+
   const run = useCallback(async () => {
     if (!targetPath) {
       setError('Pick a walk file or enter a path first.');
@@ -158,16 +223,17 @@ export const WalkAnalyzerPage: FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              tone="blue"
               onClick={() => void run()}
               disabled={busy !== 'idle' || !targetPath}
               title="Parses the walk file into device identity, interfaces, and neighbors. Read-only — never modifies the file."
               data-testid="walk-analyzer-analyze-button"
-              className="rounded bg-status-info/20 px-3 py-compact-md text-sm font-medium text-status-info ring-1 ring-status-info/40 hover:bg-status-info/30 disabled:opacity-50"
             >
               {busy === 'analyzing' ? 'Analyzing…' : 'Analyze'}
-            </button>
+            </Button>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
@@ -215,43 +281,13 @@ export const WalkAnalyzerPage: FC = () => {
               {interfaces.length === 0 ? (
                 <p className="text-sm text-text-muted">{t('walkAnalyzer.noInterfacesFound')}</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
-                    <tr>
-                      <th className="px-3 py-row w-16">Index</th>
-                      <th className="px-3 py-row">Name</th>
-                      <th className="px-3 py-row">Type</th>
-                      <th className="px-3 py-row">Speed</th>
-                      <th className="px-3 py-row">Admin</th>
-                      <th className="px-3 py-row">Oper</th>
-                      <th className="px-3 py-row">MAC</th>
-                      <th className="px-3 py-row">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-knob/5">
-                    {interfaces.map((iface, idx) => (
-                      <tr
-                        key={`${iface.index}-${idx}`}
-                        className="text-text-primary hover:bg-bg-base/40"
-                      >
-                        <td className="px-3 py-row font-mono text-xs text-text-muted">
-                          {iface.index}
-                        </td>
-                        <td className="px-3 py-row">{iface.name || '—'}</td>
-                        <td className="px-3 py-row text-text-muted">{iface.type || '—'}</td>
-                        <td className="px-3 py-row font-mono text-xs">
-                          {formatBitsPerSecond(iface.speed)}
-                        </td>
-                        <td className="px-3 py-row">{renderStatusBadge(iface.adminStatus)}</td>
-                        <td className="px-3 py-row">{renderStatusBadge(iface.operStatus)}</td>
-                        <td className="px-3 py-row font-mono text-xs text-text-muted">
-                          {iface.macAddress || '—'}
-                        </td>
-                        <td className="px-3 py-row text-text-muted">{iface.description || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  rows={interfaces}
+                  columns={interfaceColumns}
+                  getRowKey={(iface) => `${iface.index}-${iface.name}`}
+                  emptyMessage={null}
+                  rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                />
               )}
             </CardContent>
           </Card>
@@ -265,33 +301,15 @@ export const WalkAnalyzerPage: FC = () => {
               {neighbors.length === 0 ? (
                 <p className="text-sm text-text-muted">{t('walkAnalyzer.noNeighborsFound')}</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
-                    <tr>
-                      <th className="px-3 py-row">{t('walkAnalyzer.localInterface')}</th>
-                      <th className="px-3 py-row w-24">{t('walkAnalyzer.protocol')}</th>
-                      <th className="px-3 py-row">{t('walkAnalyzer.remoteDevice')}</th>
-                      <th className="px-3 py-row">{t('walkAnalyzer.remoteInterface')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-knob/5">
-                    {neighbors.map((neighbor, idx) => (
-                      <tr
-                        key={`${neighbor.localInterface}-${neighbor.remoteDevice}-${idx}`}
-                        className="text-text-primary hover:bg-bg-base/40"
-                      >
-                        <td className="px-3 py-row font-mono text-xs">
-                          {neighbor.localInterface || '—'}
-                        </td>
-                        <td className="px-3 py-row">{renderProtocolBadge(neighbor.protocol)}</td>
-                        <td className="px-3 py-row">{neighbor.remoteDevice || '—'}</td>
-                        <td className="px-3 py-row font-mono text-xs text-text-muted">
-                          {neighbor.remoteInterface || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  rows={neighbors}
+                  columns={neighborColumns}
+                  getRowKey={(neighbor) =>
+                    `${neighbor.localInterface}-${neighbor.remoteDevice}-${neighbor.remoteInterface}`
+                  }
+                  emptyMessage={null}
+                  rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+                />
               )}
             </CardContent>
           </Card>

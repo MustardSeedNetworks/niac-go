@@ -7,7 +7,6 @@ import {
   type LibraryFileEntry,
   revertWalk,
 } from '../api/library-client';
-import { DataTable, type DataTableColumn, type DataTableSelection } from '../components/DataTable';
 import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
 import { RequireScope } from '../components/ui/RequireScope';
 import { useApiResource } from '../hooks/useApiResource';
@@ -16,6 +15,7 @@ import { useWalkSanitize } from '../hooks/useWalkSanitize';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { DataTable, type DataTableColumn, type DataTableSelection } from '../ui/DataTable';
 import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
