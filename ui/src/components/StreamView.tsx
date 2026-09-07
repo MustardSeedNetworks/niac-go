@@ -1,8 +1,8 @@
-import { X } from 'lucide-react';
-import { type FC, memo, useMemo, useState } from 'react';
+import { type FC, memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import { SmallText } from '../ui/Typography';
 import type { Packet } from './PacketList';
 
@@ -71,6 +71,7 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('ascii');
+  const titleId = useId();
 
   const segments = useMemo<StreamSegment[]>(() => {
     return packets
@@ -93,12 +94,15 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex-center bg-scrim/60">
-      <div className="w-full max-w-4xl mx-4 bg-bg-surface border border-surface-border rounded-xl shadow-2xl max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex-between px-5 py-4 border-b border-surface-border">
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="full"
+      labelledBy={titleId}
+      header={
+        <>
           <div>
-            <h3 className="heading-3 text-text-primary">
+            <h3 id={titleId} className="heading-3 text-text-primary">
               {t('packets.inspector.followStreamTitle')}
             </h3>
             <SmallText className="text-text-muted">
@@ -112,91 +116,75 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               </span>
             </SmallText>
           </div>
-          <div className="flex items-center gap-default">
-            {/* Display mode toggle */}
-            <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
-              <button
-                type="button"
-                onClick={() => setDisplayMode('ascii')}
-                className={`px-3 py-compact text-xs rounded-md transition-colors ${
-                  displayMode === 'ascii'
-                    ? 'bg-brand-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                {t('packets.streamView.asciiToggle')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDisplayMode('hex')}
-                className={`px-3 py-compact text-xs rounded-md transition-colors ${
-                  displayMode === 'hex'
-                    ? 'bg-brand-primary text-text-primary'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                {t('packets.streamView.hexToggle')}
-              </button>
-            </div>
-
+          <div className="ml-auto flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
             <button
               type="button"
-              onClick={onClose}
-              className="p-1 text-text-muted hover:text-text-primary"
+              onClick={() => setDisplayMode('ascii')}
+              className={`px-3 py-compact text-xs rounded-md transition-colors ${
+                displayMode === 'ascii'
+                  ? 'bg-brand-primary text-text-primary'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
             >
-              <X className="h-5 w-5" />
+              {t('packets.streamView.asciiToggle')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayMode('hex')}
+              className={`px-3 py-compact text-xs rounded-md transition-colors ${
+                displayMode === 'hex'
+                  ? 'bg-brand-primary text-text-primary'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {t('packets.streamView.hexToggle')}
             </button>
           </div>
+        </>
+      }
+      footer={
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          {tCommon('buttons.close')}
+        </Button>
+      }
+    >
+      {segments.length === 0 ? (
+        <div className="text-center py-8 text-text-muted">
+          <p>{t('packets.inspector.noPayload')}</p>
         </div>
-
-        {/* Stream content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {segments.length === 0 ? (
-            <div className="text-center py-8 text-text-muted">
-              <p>{t('packets.inspector.noPayload')}</p>
+      ) : (
+        <div className="stack-xs font-mono text-xs">
+          {segments.map((segment, idx) => (
+            <div
+              key={`${segment.timestamp}-${idx}`}
+              className={`flex items-start gap-tight px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
+                segment.isClient
+                  ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
+                  : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
+              }`}
+            >
+              {/* Non-color direction cue: color alone doesn't work for colorblind
+                  users, so a text glyph carries direction independently. */}
+              <span
+                role="img"
+                aria-label={
+                  segment.isClient
+                    ? t('packets.streamView.clientToServerAriaLabel')
+                    : t('packets.streamView.serverToClientAriaLabel')
+                }
+                data-testid="stream-direction-glyph"
+                className="shrink-0 font-bold"
+              >
+                {segment.isClient ? '→' : '←'}
+              </span>
+              <span>
+                {displayMode === 'ascii' ? hexToAscii(segment.data) : formatHex(segment.data)}
+              </span>
             </div>
-          ) : (
-            <div className="stack-xs font-mono text-xs">
-              {segments.map((segment, idx) => (
-                <div
-                  key={`${segment.timestamp}-${idx}`}
-                  className={`flex items-start gap-tight px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
-                    segment.isClient
-                      ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
-                      : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
-                  }`}
-                >
-                  {/* Non-color direction cue: color alone doesn't work for colorblind
-                      users, so a text glyph carries direction independently. */}
-                  <span
-                    role="img"
-                    aria-label={
-                      segment.isClient
-                        ? t('packets.streamView.clientToServerAriaLabel')
-                        : t('packets.streamView.serverToClientAriaLabel')
-                    }
-                    data-testid="stream-direction-glyph"
-                    className="shrink-0 font-bold"
-                  >
-                    {segment.isClient ? '→' : '←'}
-                  </span>
-                  <span>
-                    {displayMode === 'ascii' ? hexToAscii(segment.data) : formatHex(segment.data)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-row-lg border-t border-surface-border">
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            {tCommon('buttons.close')}
-          </Button>
-        </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 });
 

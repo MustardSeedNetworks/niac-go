@@ -36,7 +36,7 @@ test.describe('wizard authoring from empty', () => {
       await page.getByRole('button', { name: 'Add device' }).first().click();
       const dialog = page.getByRole('dialog');
       // useFocusTrap autofocuses the dialog's first focusable element (the
-      // header's "Close modal" button, not the name field below) via
+      // header's "Close dialog" button, not the name field below) via
       // requestAnimationFrame once the dialog mounts. Filling the name field
       // before that rAF fires raced it: on a loaded runner the rAF could land
       // *after* fill() had already focused and typed into the name field,
@@ -46,7 +46,7 @@ test.describe('wizard authoring from empty', () => {
       // the full 30s test timeout instead of failing at its actual cause
       // (niac-go#1773). Waiting for that autofocus to land first sequences
       // around the race instead of fighting it after the fact.
-      await expect(dialog.getByRole('button', { name: 'Close modal' })).toBeFocused();
+      await expect(dialog.getByRole('button', { name: 'Close dialog' })).toBeFocused();
       const nameField = dialog.getByLabel('Device name');
       await nameField.fill(name);
       await expect(nameField).toHaveValue(name);

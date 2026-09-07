@@ -899,7 +899,6 @@
     "resetConfirmMessage": "¿Reiniciar todas las decisiones de fusión? Esto no se puede deshacer.",
     "resetConfirmLabel": "Reiniciar",
     "clearAllConfirmMessage": "¿Borrar ambos archivos cargados y todas las decisiones de fusión y empezar de nuevo?",
-    "closeModalLabel": "Cerrar modal",
     "previewModalTitle": "Vista previa de la configuración fusionada",
     "lineCount_one": "{{count}} línea",
     "lineCount_other": "{{count}} líneas",
@@ -1059,7 +1058,6 @@
   "templates": {
     "previewModal": {
       "editCopyFailed": "No se pudo crear una copia editable",
-      "closeModalLabel": "Cerrar modal",
       "defaultDescription": "Vista previa de la plantilla de configuración",
       "deviceCount_one": "{{count}} dispositivo",
       "deviceCount_other": "{{count}} dispositivos",

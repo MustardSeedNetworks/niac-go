@@ -1,6 +1,7 @@
 {
   "accessibility": {
     "clearSearch": "Clear search",
+    "closeDialog": "Close dialog",
     "closeDrawer": "Close drawer",
     "closeHelp": "Close help",
     "closeMenu": "Close menu",

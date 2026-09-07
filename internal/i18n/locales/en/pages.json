@@ -35,7 +35,6 @@
     "clearAllButton": "Clear All",
     "clearAllConfirmMessage": "Clear both loaded files and all merge decisions and start over?",
     "closeButton": "Close",
-    "closeModalLabel": "Close modal",
     "copyToClipboardButton": "Copy to Clipboard",
     "decisionsLabel": "Decisions:",
     "decisionsMadeCount": "{{decisionsCount}} / {{changedBlocksCount}} decisions made",
@@ -892,7 +891,6 @@
     "previewModal": {
       "cloning": "Cloning…",
       "closeButton": "Close",
-      "closeModalLabel": "Close modal",
       "copyYaml": "Copy YAML",
       "defaultDescription": "Configuration template preview",
       "deviceCount_one": "{{count}} device",

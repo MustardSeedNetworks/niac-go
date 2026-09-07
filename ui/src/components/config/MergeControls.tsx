@@ -8,12 +8,13 @@ import {
   RotateCcw,
   Trash2,
 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { type FC, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { ConfirmModal } from '../../ui/ConfirmModal';
+import { Modal } from '../../ui/Modal';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
@@ -338,6 +339,7 @@ interface MergePreviewModalProps {
 
 export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose, onExport }) => {
   const { t } = useTranslation('pages');
+  const titleId = useId();
   const lineCount = useMemo(() => content.split('\n').length, [content]);
 
   const handleCopy = useCallback(async () => {
@@ -345,66 +347,28 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
   }, [content]);
 
   return (
-    <div className="fixed inset-0 z-50 flex-center">
-      <button
-        type="button"
-        className="absolute inset-0 bg-scrim/70 backdrop-blur-sm"
-        onClick={onClose}
-        aria-label={t('configDiff.closeModalLabel')}
-      />
-      <div
-        className="relative mx-4 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-surface-border bg-bg-surface/95 shadow-2xl flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="preview-modal-title"
-      >
-        {/* Modal Header */}
-        <div className="flex-between border-b border-surface-border px-6 py-4 flex-shrink-0">
-          <div className="flex items-center gap-default">
-            <div className="rounded-lg bg-brand-primary/20 pad-xs">
-              <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
-            </div>
-            <div>
-              <h2 id="preview-modal-title" className="heading-3 text-text-primary">
-                {t('configDiff.previewModalTitle')}
-              </h2>
-              <SmallText className="text-text-muted">
-                {t('configDiff.lineCount', { count: lineCount })}
-              </SmallText>
-            </div>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="full"
+      labelledBy={titleId}
+      header={
+        <div className="flex items-center gap-default">
+          <div className="rounded-lg bg-brand-primary/20 pad-xs">
+            <FileCheck className={`${iconSizes.lg} text-brand-accent`} />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg pad-xs text-text-muted hover:bg-surface-hover hover:text-text-primary transition-colors"
-            aria-label={t('configDiff.closeModalLabel')}
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <title>{t('configDiff.closeButton')}</title>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+          <div>
+            <h2 id={titleId} className="heading-3 text-text-primary">
+              {t('configDiff.previewModalTitle')}
+            </h2>
+            <SmallText className="text-text-muted">
+              {t('configDiff.lineCount', { count: lineCount })}
+            </SmallText>
+          </div>
         </div>
-
-        {/* Modal Content */}
-        <div className="flex-1 overflow-auto pad-lg">
-          <YamlViewer
-            value={content}
-            height="100%"
-            minHeight="300px"
-            maxHeight="60vh"
-            showLineNumbers={true}
-            showFoldGutter={true}
-          />
-        </div>
-
-        {/* Modal Footer */}
-        <div className="flex justify-end gap-default border-t border-surface-border px-6 py-4 bg-bg-base/50 flex-shrink-0">
+      }
+      footer={
+        <>
           <Button variant="outline" onClick={onClose}>
             {t('configDiff.closeButton')}
           </Button>
@@ -414,8 +378,17 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
           <Button tone="violet" onClick={onExport} leftIcon={<Download className={iconSizes.md} />}>
             {t('configDiff.downloadYamlButton')}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <YamlViewer
+        value={content}
+        height="100%"
+        minHeight="300px"
+        maxHeight="60vh"
+        showLineNumbers={true}
+        showFoldGutter={true}
+      />
+    </Modal>
   );
 };

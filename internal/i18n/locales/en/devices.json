@@ -196,7 +196,6 @@
     "cloneDeviceAria": "Clone device {{hostname}}",
     "cloneDeviceTitle": "Create a copy of {{hostname}} with a new hostname; all protocols and interfaces are duplicated",
     "cloneModal": {
-      "closeAria": "Close clone device modal",
       "descriptionPrefix": "Create a copy of",
       "descriptionSuffix": "with a new name.",
       "newHostnameLabel": "New Hostname",
