@@ -562,7 +562,6 @@ export const TopologyPage: FC = () => {
                 </button>
               </div>
               <Button
-                variant="ghost"
                 size="sm"
                 onClick={handleRefresh}
                 leftIcon={<RefreshCw className="w-4 h-4" />}

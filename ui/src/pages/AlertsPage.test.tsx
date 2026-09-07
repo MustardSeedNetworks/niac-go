@@ -1,5 +1,5 @@
 /**
- * AutomationPage.test.tsx
+ * AlertsPage.test.tsx
  *
  * Covers the two things U4 names on this page: the alert-load failure is
  * reported through a translated string rather than an English literal glued
@@ -9,7 +9,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
-import { AutomationPage } from './AutomationPage';
+import { AlertsPage } from './AlertsPage';
 
 const fetchAlerts = vi.fn();
 const fetchStats = vi.fn();
@@ -24,7 +24,7 @@ vi.mock('../contexts/AppContext', () => ({
   useAppContext: () => ({ sessionId: null }),
 }));
 
-describe('AutomationPage', () => {
+describe('AlertsPage', () => {
   beforeEach(async () => {
     fetchAlerts.mockReset();
     fetchStats.mockReset();
@@ -33,7 +33,7 @@ describe('AutomationPage', () => {
 
   it('labels the threshold and webhook inputs', async () => {
     fetchAlerts.mockResolvedValue({ packetsThreshold: 100, webhookUrl: 'https://x.test/h' });
-    render(<AutomationPage />);
+    render(<AlertsPage />);
 
     // The inputs render as soon as the fetch resolves; their values are
     // mirrored in from `data` by an effect one tick later.
@@ -46,7 +46,7 @@ describe('AutomationPage', () => {
   it('reports a load failure through a translated string', async () => {
     fetchAlerts.mockRejectedValue(new Error('daemon unreachable'));
     await i18n.changeLanguage('es');
-    render(<AutomationPage />);
+    render(<AlertsPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/daemon unreachable/)).toBeInTheDocument();

@@ -284,7 +284,6 @@ export const WalkValidatorPage: FC = () => {
           <div className="flex flex-wrap items-center gap-default">
             <Button
               type="button"
-              variant="outline"
               tone="blue"
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}

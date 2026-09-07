@@ -14,7 +14,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/devices': 'Running Devices',
   '/device-config': 'Device Library',
   '/topology': 'Topology',
-  '/automation': 'Alerts',
+  '/alerts': 'Alerts',
   '/traffic': 'Fault Injection',
   '/debug': 'Logs',
   '/packets': 'Packets',

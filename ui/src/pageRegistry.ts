@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
+  BellRing,
   Database,
   FileBox,
   FileScan,
@@ -12,7 +13,6 @@ import {
   ShieldCheck,
   Terminal,
   Wand2,
-  Workflow,
   Wrench,
   Zap,
 } from 'lucide-react';
@@ -50,8 +50,8 @@ const DeviceEditorPage = lazy(() =>
 const DeviceListPage = lazy(() =>
   import('./pages/DeviceListPage').then((m) => ({ default: m.DeviceListPage })),
 );
-const AutomationPage = lazy(() =>
-  import('./pages/AutomationPage').then((m) => ({ default: m.AutomationPage })),
+const AlertsPage = lazy(() =>
+  import('./pages/AlertsPage').then((m) => ({ default: m.AlertsPage })),
 );
 const DebugConsolePage = lazy(() =>
   import('./pages/DebugConsolePage').then((m) => ({ default: m.DebugConsolePage })),
@@ -105,7 +105,7 @@ type PageI18nKey =
   | 'segments'
   | 'deviceLibrary'
   | 'topology'
-  | 'automation'
+  | 'alerts'
   | 'traffic'
   | 'debug'
   | 'packets'
@@ -187,10 +187,10 @@ const staticPages: PageDef[] = [
     component: TopologyPage,
   },
   {
-    path: '/automation',
-    i18nKey: 'automation',
-    icon: Workflow,
-    component: AutomationPage,
+    path: '/alerts',
+    i18nKey: 'alerts',
+    icon: BellRing,
+    component: AlertsPage,
   },
   {
     path: '/traffic',

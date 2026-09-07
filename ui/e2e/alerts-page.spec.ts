@@ -1,16 +1,16 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Automation Page (/automation) E2E
+ * Alerts Page (/alerts) E2E
  *
- * Covers the alert / automation policy surface:
+ * Covers the alert policy surface:
  * - Page renders with "Alert policy" heading
- * - Page lands on /automation route
+ * - Page lands on /alerts route
  */
 
-test.describe('Automation Page', () => {
+test.describe('Alerts Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/automation');
+    await page.goto('/alerts');
     await page.waitForLoadState('domcontentloaded');
   });
 
@@ -20,8 +20,8 @@ test.describe('Automation Page', () => {
     });
   });
 
-  test('should land on the /automation route', async ({ page }) => {
-    await expect(page).toHaveURL(/\/automation$/);
+  test('should land on the /alerts route', async ({ page }) => {
+    await expect(page).toHaveURL(/\/alerts$/);
   });
 
   test('should render alert configuration form fields', async ({ page }) => {

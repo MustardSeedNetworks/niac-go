@@ -161,9 +161,14 @@ export const LogFilters: FC<LogFiltersProps> = memo(
 
           {/* Action Buttons */}
           <div className="flex items-center gap-compact">
+            {/* The log stream's pause/resume is this page's primary action:
+                always the primary, in both states. It used to be primary
+                only while paused, and repainted green by an ad-hoc class
+                override — so the console had no primary at all while
+                running. */}
             {onPauseToggle && (
               <Button
-                variant={paused ? 'solid' : 'outline'}
+                variant="solid"
                 size="sm"
                 onClick={onPauseToggle}
                 leftIcon={
@@ -173,9 +178,6 @@ export const LogFilters: FC<LogFiltersProps> = memo(
                   paused
                     ? tPages('debug.resumeLogStreamAriaLabel')
                     : tPages('debug.pauseLogStreamAriaLabel')
-                }
-                className={
-                  paused ? 'bg-status-success hover:bg-status-success border-status-success' : ''
                 }
               >
                 {paused ? tPages('debug.resumeButton') : tPages('debug.pauseButton')}

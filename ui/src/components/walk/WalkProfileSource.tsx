@@ -35,7 +35,11 @@ export const WalkProfileSource: FC<Props> = (props) => {
           <Button
             key={mode}
             type="button"
-            variant={props.mode === mode ? 'solid' : 'outline'}
+            // A segmented control, not an action: the selected segment is
+            // filled surface, not the page's primary. It used to render
+            // solid, which made two primaries on this page.
+            variant={props.mode === mode ? 'secondary' : 'ghost'}
+            aria-pressed={props.mode === mode}
             size="sm"
             onClick={() => props.setMode(mode)}
           >

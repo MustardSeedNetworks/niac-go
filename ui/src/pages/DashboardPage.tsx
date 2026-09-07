@@ -14,6 +14,7 @@ import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
+import { LinkButton } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { type RollupState, StatusRollup } from '../ui/StatusRollup';
 import { Tag } from '../ui/Tag';
@@ -91,6 +92,15 @@ export const DashboardPage: FC = () => {
             value: uptimeSeconds > 0 ? formatUptime(uptimeSeconds) : '—',
           },
         ]}
+        /* The overview's one primary action. It sits on the rollup because
+           that is where the page answers "is anything running". It replaces
+           the quick-action tile of the same name: the same label twice on
+           one page, once as a shortcut among equals, is not a primary. */
+        actions={
+          <LinkButton to="/runtime" leftIcon={<Play className={iconSizes.md} />}>
+            {t('dashboard.quickActions.startSimulationLabel')}
+          </LinkButton>
+        }
       />
 
       {/* Stat cards row */}
@@ -178,22 +188,6 @@ export const DashboardPage: FC = () => {
               {t('dashboard.quickActions.title')}
             </H2>
             <div className="grid gap-default sm:grid-cols-2">
-              <AccentLink to="/runtime" className="no-underline">
-                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex-center group-hover:scale-110 transition-transform">
-                    <Play className={`${iconSizes.lg} text-status-success`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {t('dashboard.quickActions.startSimulationLabel')}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {t('dashboard.quickActions.startSimulationDescription')}
-                    </p>
-                  </div>
-                </div>
-              </AccentLink>
-
               <button
                 type="button"
                 onClick={() => setShowErrorCatalog(!showErrorCatalog)}

@@ -29,7 +29,7 @@ import { expect, test } from '@playwright/test';
  *
  * Per-page navigation coverage is implicit in the smoke spec
  * (which visits each route) and in the per-page specs
- * (dashboard, devices, topology-page, automation-page, etc.) that
+ * (dashboard, devices, topology-page, alerts-page, etc.) that
  * already exist. Re-implementing it here under stable selectors
  * needs sidebar-nav-* testids on each NavItemButton, which is a
  * separate feature task.

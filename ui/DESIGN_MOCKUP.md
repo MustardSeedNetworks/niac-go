@@ -152,7 +152,7 @@ Consider a collapsible sidebar for better navigation:
    - **Configuration**: Devices & Config, Config Builder, Templates
    - **Network**: Topology & Neighbors, Traffic Injection
    - **Analysis**: Analysis, Debug Console, Packet Inspector, PCAP Analyzer
-   - **Tools**: Config Diff, Automation
+   - **Tools**: Config Diff, Alerts
 
 2. **Scrollable/Dropdown on overflow**: Add horizontal scroll or dropdown for nav items
 

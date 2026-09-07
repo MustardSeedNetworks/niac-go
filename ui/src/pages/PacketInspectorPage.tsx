@@ -317,7 +317,6 @@ export const PacketInspectorPage: FC = () => {
                 {/* Control buttons */}
                 <div className="flex flex-wrap items-center gap-compact">
                   <Button
-                    variant={isPaused ? 'outline' : 'ghost'}
                     size="sm"
                     onClick={handlePauseToggle}
                     leftIcon={
@@ -405,7 +404,7 @@ export const PacketInspectorPage: FC = () => {
 
                   {/* SSE auto-reconnects, but manual reconnect is available */}
                   {!connected && (
-                    <Button tone="violet" size="sm" onClick={reconnect}>
+                    <Button variant="outline" size="sm" onClick={reconnect}>
                       {t('packets.inspector.reconnectButton')}
                     </Button>
                   )}

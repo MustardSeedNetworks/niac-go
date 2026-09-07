@@ -135,10 +135,10 @@ pages:topology.label
 pages:topology.title
 pages:topology.description
 pages:topology.eyebrow
-pages:automation.label
-pages:automation.title
-pages:automation.description
-pages:automation.eyebrow
+pages:alerts.label
+pages:alerts.title
+pages:alerts.description
+pages:alerts.eyebrow
 pages:traffic.label
 pages:traffic.title
 pages:traffic.description

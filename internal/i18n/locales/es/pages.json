@@ -33,8 +33,7 @@
       "trafficInjectionDescription": "Reproduzca archivos PCAP",
       "viewTopologyLabel": "Ver topología",
       "viewTopologyDescription": "Gráfico de red",
-      "startSimulationLabel": "Iniciar una simulación",
-      "startSimulationDescription": "Inicie una nueva ejecución"
+      "startSimulationLabel": "Iniciar una simulación"
     },
     "recentRuns": {
       "title": "Ejecuciones recientes",
@@ -575,7 +574,7 @@
       "sourceDeclared": "Declarado (trunk_ports)"
     }
   },
-  "automation": {
+  "alerts": {
     "label": "Alertas",
     "statsFailed": "No se pudieron cargar las estadísticas",
     "title": "Alertas",

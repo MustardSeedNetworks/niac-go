@@ -22,7 +22,7 @@ editor routes are registered explicitly in `ui/src/App.tsx`:
 - `/device-config/new`
 - `/device-config/:hostname`
 - `/topology`
-- `/automation`
+- `/alerts`
 - `/traffic`
 - `/debug`
 - `/packets`

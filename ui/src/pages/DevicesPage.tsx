@@ -14,7 +14,7 @@ import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { BaseCard } from '../ui/BaseCard';
-import { Button } from '../ui/Button';
+import { Button, LinkButton } from '../ui/Button';
 import { CardRow } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
 import { findDeviceFragment, spliceDeviceFragment } from '../utils/device-fragment';
@@ -80,12 +80,9 @@ const DeviceListCard: FC<{
             selectedName={selected}
             onSelect={(device) => onSelect(device.name)}
           />
-          <Link
-            to="/device-config"
-            className="mt-heading inline-block text-sm text-brand-accent hover:underline"
-          >
-            {t('devices.editInLibrary')} &rarr;
-          </Link>
+          <LinkButton to="/device-config" size="sm" className="mt-heading">
+            {t('devices.editInLibrary')}
+          </LinkButton>
         </>
       )}
     </BaseCard>
