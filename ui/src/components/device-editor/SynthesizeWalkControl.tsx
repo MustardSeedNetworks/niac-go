@@ -111,10 +111,12 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
     <FormField
       label={t('editor.sections.synthesizeWalk.label')}
       helpText={t('editor.sections.synthesizeWalk.help')}
+      htmlFor="synthesize-walk-model"
     >
       <div className="stack-sm" data-testid="synthesize-walk-control">
         <div className="flex flex-wrap items-center gap-default">
           <select
+            id="synthesize-walk-model"
             value={selected}
             onChange={(e) => {
               setSelected(e.target.value);
@@ -122,7 +124,6 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
               setSuccess(null);
             }}
             disabled={disabled || generating || !models}
-            aria-label={t('editor.sections.synthesizeWalk.selectAria')}
             data-testid="synthesize-walk-model-select"
             className={selectClassName}
           >

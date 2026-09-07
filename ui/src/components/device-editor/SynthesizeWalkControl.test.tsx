@@ -56,6 +56,17 @@ describe('SynthesizeWalkControl', () => {
     synthesizeWalk.mockReset();
   });
 
+  it('associates the visible field label with the model select', async () => {
+    fetchSynthesizeWalkModels.mockResolvedValue(models);
+    render(<SynthesizeWalkControl hostname="sw-1" disabled={false} onSynthesized={vi.fn()} />);
+
+    // The FormField label is the only name the user can see, so it has to be
+    // the control's accessible name -- an aria-label duplicating it in other
+    // words leaves the visible text pointing at nothing.
+    const select = await screen.findByLabelText('Synthesize Baseline Walk');
+    expect(select.tagName).toBe('SELECT');
+  });
+
   it('renders the catalog grouped by vendor, with each model selectable', async () => {
     fetchSynthesizeWalkModels.mockResolvedValue(models);
 

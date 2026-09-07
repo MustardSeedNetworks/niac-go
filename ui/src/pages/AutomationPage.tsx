@@ -119,17 +119,18 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
         )}
         {error && (
           <SmallText className="text-status-error">
-            Unable to load alerts: {error.message}
+            {t('automation.loadError', { message: error.message })}
           </SmallText>
         )}
         {data && (
           <>
             <div className="grid gap-comfortable md:grid-cols-2">
               <div>
-                <SmallText className="text-text-muted">
+                <label htmlFor="alert-packet-threshold" className="text-sm text-text-muted">
                   {t('automation.page.packetThresholdLabel')}
-                </SmallText>
+                </label>
                 <input
+                  id="alert-packet-threshold"
                   className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   type="number"
                   min="0"
@@ -144,10 +145,11 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 />
               </div>
               <div>
-                <SmallText className="text-text-muted">
+                <label htmlFor="alert-webhook-url" className="text-sm text-text-muted">
                   {t('automation.page.webhookUrlLabel')}
-                </SmallText>
+                </label>
                 <input
+                  id="alert-webhook-url"
                   className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
                   placeholder="https://hooks.example.com/niac"
                   value={webhook}

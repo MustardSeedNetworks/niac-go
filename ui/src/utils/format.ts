@@ -4,9 +4,12 @@
  * Two layers:
  *
  *   1. Pure functions (formatBytes, formatDurationMs, formatUptime,
- *      formatRelativeTime, getErrorMessage) — fall back to English
- *      and the browser-default locale. Safe to call from non-React
- *      code (utilities, error boundaries, console logs).
+ *      formatRelativeTime, getErrorMessage) — use the browser-default
+ *      locale for numbers and dates. Safe to call from non-React code
+ *      (utilities, error boundaries, console logs). getErrorMessage is
+ *      the exception to "no locale": its fallback string is user-facing
+ *      and every toast inherits it, so it reads the i18next instance
+ *      directly rather than returning English.
  *
  *   2. React hooks (useFormatBytes, useFormatNumber, useFormatTime,
  *      useFormatRelativeTime) — return locale-aware formatters bound
@@ -22,6 +25,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../hooks/useLocale';
+import i18n from '../i18n';
 
 // ---------------------------------------------------------------------------
 // Pure formatters (English fallback)
@@ -150,7 +154,10 @@ export function getErrorMessage(err: unknown, fallback?: string): string {
   if (typeof err === 'string') {
     return err;
   }
-  return fallback ?? 'An unexpected error occurred';
+  // The i18next instance rather than the hook: this is the fallback every
+  // toast and every useApiResource consumer inherits, and it is also called
+  // from outside React (store callbacks, error boundaries).
+  return fallback ?? i18n.t('errors:generic.unknown');
 }
 
 // ---------------------------------------------------------------------------

@@ -230,7 +230,6 @@
         "label": "Sintetizar walk base",
         "help": "Genere un walk SNMP base a partir de un perfil de proveedor/modelo en lugar de capturarlo desde hardware real",
         "selectPrompt": "Seleccione un modelo...",
-        "selectAria": "Modelo de walk base",
         "generateButton": "Generar walk",
         "generatingButton": "Generando…",
         "saveFirstHint": "Guarde el dispositivo antes de generar un walk.",

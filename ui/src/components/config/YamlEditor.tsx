@@ -57,44 +57,49 @@ const errorLineField = StateField.define<DecorationSet>({
 
 const errorLineTheme = EditorView.theme({
   '.cm-niac-error-line': {
-    backgroundColor: 'rgba(239, 68, 68, 0.18)',
-    borderLeft: '3px solid #ef4444',
+    backgroundColor: 'color-mix(in srgb, var(--color-status-error) 18%, transparent)',
+    borderLeft: '3px solid var(--color-status-error)',
   },
 });
 
 /**
- * Custom dark theme for CodeMirror that matches the app's design
+ * CodeMirror theme, painted from the app's design tokens.
+ *
+ * CodeMirror styles from JS rather than from utility classes, so the tokens
+ * are referenced as `var(--color-*)` directly. That is also what makes the
+ * editor follow the theme: the custom properties are redefined under `.dark`
+ * (ui/src/theme/), so light and dark need no JS branch here.
  */
 const niacTheme = EditorView.theme({
   '&': {
-    color: '#d4d4d4',
+    color: 'var(--color-text-primary)',
     backgroundColor: 'transparent',
     fontSize: '14px',
     fontFamily:
       'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   },
   '.cm-content': {
-    caretColor: '#a78bfa',
+    caretColor: 'var(--color-brand-primary)',
     padding: '16px 0',
   },
   '.cm-cursor': {
-    borderLeftColor: '#a78bfa',
+    borderLeftColor: 'var(--color-brand-primary)',
   },
   '&.cm-focused': {
     outline: 'none',
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: 'color-mix(in srgb, var(--color-brand-primary) 30%, transparent)',
   },
   '.cm-activeLine': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'color-mix(in srgb, var(--color-text-primary) 5%, transparent)',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'color-mix(in srgb, var(--color-text-primary) 5%, transparent)',
   },
   '.cm-gutters': {
     backgroundColor: 'transparent',
-    color: '#6b7280',
+    color: 'var(--color-text-muted)',
     border: 'none',
     paddingRight: '8px',
   },
@@ -107,9 +112,9 @@ const niacTheme = EditorView.theme({
     cursor: 'pointer',
   },
   '.cm-foldPlaceholder': {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    backgroundColor: 'color-mix(in srgb, var(--color-brand-primary) 20%, transparent)',
     border: 'none',
-    color: '#a78bfa',
+    color: 'var(--color-brand-primary)',
     padding: '0 4px',
     margin: '0 4px',
   },
@@ -119,19 +124,19 @@ const niacTheme = EditorView.theme({
  * YAML-specific syntax highlighting
  */
 const yamlHighlighting = HighlightStyle.define([
-  { tag: tags.keyword, color: '#c678dd' },
-  { tag: tags.string, color: '#98c379' },
-  { tag: tags.number, color: '#d19a66' },
-  { tag: tags.bool, color: '#56b6c2' },
-  { tag: tags.null, color: '#56b6c2' },
-  { tag: tags.propertyName, color: '#e06c75' },
-  { tag: tags.comment, color: '#5c6370', fontStyle: 'italic' },
-  { tag: tags.punctuation, color: '#abb2bf' },
-  { tag: tags.bracket, color: '#abb2bf' },
-  { tag: tags.operator, color: '#abb2bf' },
-  { tag: tags.meta, color: '#61afef' },
-  { tag: tags.atom, color: '#d19a66' },
-  { tag: tags.special(tags.variableName), color: '#e06c75' },
+  { tag: tags.keyword, color: 'var(--color-syntax-keyword)' },
+  { tag: tags.string, color: 'var(--color-syntax-string)' },
+  { tag: tags.number, color: 'var(--color-syntax-number)' },
+  { tag: tags.bool, color: 'var(--color-syntax-atom)' },
+  { tag: tags.null, color: 'var(--color-syntax-atom)' },
+  { tag: tags.propertyName, color: 'var(--color-syntax-property)' },
+  { tag: tags.comment, color: 'var(--color-syntax-comment)', fontStyle: 'italic' },
+  { tag: tags.punctuation, color: 'var(--color-syntax-punctuation)' },
+  { tag: tags.bracket, color: 'var(--color-syntax-punctuation)' },
+  { tag: tags.operator, color: 'var(--color-syntax-punctuation)' },
+  { tag: tags.meta, color: 'var(--color-syntax-meta)' },
+  { tag: tags.atom, color: 'var(--color-syntax-number)' },
+  { tag: tags.special(tags.variableName), color: 'var(--color-syntax-property)' },
 ]);
 
 interface YamlEditorProps {

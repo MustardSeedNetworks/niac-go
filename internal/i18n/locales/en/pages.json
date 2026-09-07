@@ -3,6 +3,7 @@
     "alertPolicy": "Alert policy",
     "description": "Configure alert thresholds and webhook targets for the running daemon.",
     "label": "Alerts",
+    "loadError": "Unable to load alerts: {{message}}",
     "loadingAlerts": "Loading alert configuration…",
     "page": {
       "packetThresholdLabel": "Packet threshold",

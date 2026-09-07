@@ -20,7 +20,6 @@
 # Scope: *.tsx / *.ts under ui/src/, EXCEPT test files (.test/.spec/.stories/
 # .mock), token definition sites (styles/, constants/), and the documented
 # domain-rendering palettes (intentional, not theme colors):
-#   components/config/YamlEditor.tsx       CodeMirror One Dark editor theme
 #   utils/coloring-rules.ts                topology color-rule preset swatches
 #   components/ColoringRulesPanel.tsx      coloring-rule default swatches
 #   pages/topology/layout.ts               topology graph edge colors
@@ -47,7 +46,7 @@ else
 fi
 
 # Definition sites, tests, and documented domain-rendering palettes.
-EXCLUDE_RE='\.(test|spec|stories|mock)\.(ts|tsx):|/styles/|/constants/|/YamlEditor\.tsx:|/coloring-rules\.ts:|/ColoringRulesPanel\.tsx:|topology/layout\.ts:|/TopologyPage\.tsx:'
+EXCLUDE_RE='\.(test|spec|stories|mock)\.(ts|tsx):|/styles/|/constants/|/coloring-rules\.ts:|/ColoringRulesPanel\.tsx:|topology/layout\.ts:|/TopologyPage\.tsx:'
 
 FAIL_COUNT=0
 

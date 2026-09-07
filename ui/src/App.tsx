@@ -1,5 +1,5 @@
 import { Wrench } from 'lucide-react';
-import { memo, type ReactNode, Suspense, useState } from 'react';
+import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
@@ -9,6 +9,7 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { ReadOnlyView } from './components/ui/ReadOnlyView';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelp } from './data/page-help';
+import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
@@ -50,8 +51,13 @@ function AppShell() {
   // Route the (?) was clicked on, cleared on close so the next click re-applies.
   const [helpPath, setHelpPath] = useState<string | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Held here rather than inside PageWithErrorBoundary: that subtree is keyed
+  // on the pathname, so anything living in it is remounted by the very
+  // navigation it would have to remember.
+  const pageTitleRef = useRef<HTMLHeadingElement>(null);
 
   useKeyboardShortcuts(() => setHelpOpen(true));
+  useFocusOnRouteChange(pageTitleRef);
 
   return (
     <SidebarLayout
@@ -75,7 +81,11 @@ function AppShell() {
                 key={page.path}
                 path={page.path}
                 element={
-                  <PageWithErrorBoundary page={page} onOpenHelp={setHelpPath}>
+                  <PageWithErrorBoundary
+                    page={page}
+                    onOpenHelp={setHelpPath}
+                    titleRef={pageTitleRef}
+                  >
                     <page.component />
                   </PageWithErrorBoundary>
                 }
@@ -89,6 +99,7 @@ function AppShell() {
               element={
                 <PageWithErrorBoundary
                   onOpenHelp={setHelpPath}
+                  titleRef={pageTitleRef}
                   page={{
                     path: '/device-config/new',
                     label: t('deviceEditor.newLabel'),
@@ -107,6 +118,7 @@ function AppShell() {
               element={
                 <PageWithErrorBoundary
                   onOpenHelp={setHelpPath}
+                  titleRef={pageTitleRef}
                   page={{
                     path: '/device-config/:hostname',
                     label: t('deviceEditor.editLabel'),
@@ -151,10 +163,12 @@ const PageWithErrorBoundary = memo(
   ({
     page,
     onOpenHelp,
+    titleRef,
     children,
   }: {
     page: PageConfig;
     onOpenHelp: (path: string) => void;
+    titleRef: RefObject<HTMLHeadingElement | null>;
     children: ReactNode;
   }) => {
     const location = useLocation();
@@ -166,6 +180,7 @@ const PageWithErrorBoundary = memo(
         <section className="stack-xl">
           <Breadcrumbs />
           <PageHeader
+            titleRef={titleRef}
             icon={page.icon}
             eyebrow={page.eyebrow}
             title={page.title}
