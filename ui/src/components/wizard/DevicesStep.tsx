@@ -109,6 +109,7 @@ export const DevicesStep: FC<DevicesStepProps> = ({
         ) : (
           <>
             <YamlEditor
+              ariaLabel={t('newSimWizard.devices.yamlEditorAria')}
               value={content}
               onChange={onChange}
               readOnly={saving}

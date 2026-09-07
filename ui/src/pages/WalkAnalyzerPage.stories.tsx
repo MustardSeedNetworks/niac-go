@@ -1,25 +1,17 @@
 /**
- * Stories for the walk analyzer page.
+ * Stories for the walk analyzer page (/walk-analyzer).
  *
- * The a11y gate only ever saw atoms — no page had a story, so the two
- * walk pages' tables were never checked (U2b). Both stories drive the
- * page through its own Analyze button so the migrated DataTables are on
- * screen when axe runs, rather than asserting against an empty shell.
+ * These were the first page stories in the tree (U2b) and hand-rolled their
+ * own fetch stub and `<main>` wrapper. Both now come from the shared page
+ * harness that U6 gave every route, so this file carries only what is
+ * specific to the analyzer: the analysis payload and the click that puts the
+ * migrated DataTables on screen before axe runs.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 import type { WalkAnalyzeResponse } from '../api/types';
+import { EMPTY_ROUTES, LOADED_ROUTES, pageMeta, withFailure } from '../test/storybook/pageStory';
 import { WalkAnalyzerPage } from './WalkAnalyzerPage';
-
-const walks = [
-  {
-    name: 'cisco/c9300.walk',
-    sizeBytes: 84_213,
-    modifiedAt: '2026-09-01T10:00:00Z',
-    source: 'starter',
-    edited: false,
-  },
-];
 
 const analysis: WalkAnalyzeResponse = {
   success: true,
@@ -74,49 +66,22 @@ const analysis: WalkAnalyzeResponse = {
   },
 };
 
-/** Answers only the calls this page makes; anything else is a 404. */
-const stubFetch = (analyzeBody: unknown) => (input: RequestInfo | URL) => {
-  const url = String(input instanceof Request ? input.url : input);
-  const json = (body: unknown) =>
-    Promise.resolve(
-      new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } }),
-    );
-  if (url.includes('/api/v1/library/walks')) return json(walks);
-  if (url.includes('/api/v1/csrf-token')) return json({ token: 'story' });
-  if (url.includes('/api/v1/walk/analyze')) return json(analyzeBody);
-  return Promise.resolve(new Response('not found', { status: 404 }));
-};
-
-/**
- * Pages render inside the shell's `<main>` (Sidebar.tsx). A story that
- * renders the page bare puts its card-section `<header>` elements outside
- * any sectioning content, where they map to `role="banner"` — so axe
- * reports duplicate banner landmarks that do not exist in the app. The
- * wrapper reproduces the real landmark context.
- */
 const meta: Meta<typeof WalkAnalyzerPage> = {
-  title: 'Pages/WalkAnalyzerPage',
-  component: WalkAnalyzerPage,
-  decorators: [
-    (Story) => {
-      globalThis.fetch = stubFetch(analysis) as typeof fetch;
-      return (
-        <main>
-          <Story />
-        </main>
-      );
-    },
-  ],
+  ...pageMeta('WalkAnalyzerPage', WalkAnalyzerPage),
+  parameters: { route: '/walk-analyzer' },
 };
 
 export default meta;
 type Story = StoryObj<typeof WalkAnalyzerPage>;
 
-/** Before a walk has been analysed: the picker and the Analyze button only. */
-export const Empty: Story = {};
+const analyzeRoutes = { '/api/v1/walk/analyze': analysis };
+
+/** No walks in the library yet: the picker has nothing to offer. */
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
 
 /** After Analyze: identity card plus the interfaces and neighbours tables. */
-export const Analyzed: Story = {
+export const Loaded: Story = {
+  parameters: { api: { ...LOADED_ROUTES, ...analyzeRoutes } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByTestId('walk-analyzer-analyze-button'));
@@ -124,3 +89,6 @@ export const Analyzed: Story = {
     await expect(canvas.getByText('dist-01')).toBeInTheDocument();
   },
 };
+
+/** The walk listing returns 500, so the picker cannot be populated. */
+export const Error: Story = { parameters: { api: withFailure('/api/v1/library/walks') } };

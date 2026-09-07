@@ -196,6 +196,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
 
         {content && !loading && !error && (
           <YamlViewer
+            ariaLabel={t('templates.previewModal.yamlEditorAria')}
             value={content.content}
             height="auto"
             minHeight="200px"

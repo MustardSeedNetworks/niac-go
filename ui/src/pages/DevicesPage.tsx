@@ -284,6 +284,7 @@ const ConfigEditorCard: FC<{
             </SmallText>
           )}
           <YamlEditor
+            ariaLabel={t('devices.yamlEditorTitle')}
             className="mt-heading"
             height="18rem"
             value={value}

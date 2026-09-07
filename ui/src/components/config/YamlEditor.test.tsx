@@ -15,29 +15,35 @@ const CONTENT = 'devices:\n  - name: r1\n    type: router\n  - name: r2\n';
 
 describe('YamlEditor — error line highlighting', () => {
   it('applies the error-line decoration class to the reported line', () => {
-    const { container } = render(<YamlEditor value={CONTENT} errorLine={3} />);
+    const { container } = render(
+      <YamlEditor ariaLabel="Test YAML editor" value={CONTENT} errorLine={3} />,
+    );
 
     const highlighted = container.querySelectorAll('.cm-niac-error-line');
     expect(highlighted).toHaveLength(1);
   });
 
   it('renders no highlight when errorLine is not set', () => {
-    const { container } = render(<YamlEditor value={CONTENT} />);
+    const { container } = render(<YamlEditor ariaLabel="Test YAML editor" value={CONTENT} />);
 
     expect(container.querySelectorAll('.cm-niac-error-line')).toHaveLength(0);
   });
 
   it('clamps an out-of-range line to the last line instead of throwing', () => {
-    const { container } = render(<YamlEditor value={CONTENT} errorLine={999} />);
+    const { container } = render(
+      <YamlEditor ariaLabel="Test YAML editor" value={CONTENT} errorLine={999} />,
+    );
 
     expect(container.querySelectorAll('.cm-niac-error-line')).toHaveLength(1);
   });
 
   it('clears the highlight when errorLine is reset to null', () => {
-    const { container, rerender } = render(<YamlEditor value={CONTENT} errorLine={2} />);
+    const { container, rerender } = render(
+      <YamlEditor ariaLabel="Test YAML editor" value={CONTENT} errorLine={2} />,
+    );
     expect(container.querySelectorAll('.cm-niac-error-line')).toHaveLength(1);
 
-    rerender(<YamlEditor value={CONTENT} errorLine={null} />);
+    rerender(<YamlEditor ariaLabel="Test YAML editor" value={CONTENT} errorLine={null} />);
     expect(container.querySelectorAll('.cm-niac-error-line')).toHaveLength(0);
   });
 });

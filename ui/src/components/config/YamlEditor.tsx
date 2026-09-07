@@ -160,6 +160,15 @@ interface YamlEditorProps {
   showFoldGutter?: boolean;
   /** Whether to wrap long lines */
   lineWrapping?: boolean;
+  /**
+   * Accessible name for the editor. REQUIRED, not optional: CodeMirror's
+   * `.cm-content` is `role="textbox"`, so an unnamed editor is an unnamed
+   * input to every screen reader — which is what all three call sites
+   * shipped until the page stories put one in front of axe (U6). Following
+   * U4's `htmlFor`: a new editor cannot forget the name rather than being
+   * caught after the fact.
+   */
+  ariaLabel: string;
   /** Additional CSS class names */
   className?: string;
   /** Callback when validation errors are detected */
@@ -185,6 +194,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   onChange,
   readOnly = false,
   placeholder,
+  ariaLabel,
   height = 'auto',
   minHeight = '200px',
   maxHeight = '500px',
@@ -236,8 +246,10 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       exts.push(EditorView.contentAttributes.of({ 'aria-placeholder': placeholder }));
     }
 
+    exts.push(EditorView.contentAttributes.of({ 'aria-label': ariaLabel }));
+
     return exts;
-  }, [readOnly, placeholder, showLineNumbers, showFoldGutter, lineWrapping]);
+  }, [readOnly, placeholder, ariaLabel, showLineNumbers, showFoldGutter, lineWrapping]);
 
   // Handle content updates
   const handleUpdate = useCallback(

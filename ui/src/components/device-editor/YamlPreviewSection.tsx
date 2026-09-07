@@ -19,6 +19,7 @@ export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent })
           <Tag colorScheme="gray">{t('editor.sections.yamlPreview.readOnly')}</Tag>
         </H2>
         <YamlEditor
+          ariaLabel={t('editor.sections.yamlPreview.editorAria')}
           value={yamlContent}
           readOnly={true}
           height="auto"
