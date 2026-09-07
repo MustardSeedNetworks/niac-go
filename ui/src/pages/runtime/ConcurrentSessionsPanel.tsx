@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
+import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatNumber } from '../../utils/format';
@@ -24,6 +25,87 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
   onStop,
 }) => {
   const { t } = useTranslation('pages');
+
+  const columns: DataTableColumn<SimulationStatus>[] = [
+    {
+      key: 'scenario',
+      header: t('runtime.sessions.scenario'),
+      cellClassName: 'font-medium text-text-primary',
+      cell: (session) => session.sessionId,
+    },
+    {
+      key: 'vlan',
+      header: t('runtime.sessions.vlan'),
+      cell: (session) => session.physicalVlan ?? t('runtime.fabric.untagged'),
+    },
+    {
+      key: 'devices',
+      header: t('runtime.sessions.devices'),
+      cell: (session) => session.deviceCount,
+    },
+    {
+      key: 'started',
+      header: t('runtime.sessions.started'),
+      cell: (session) =>
+        session.startedAt ? new Date(session.startedAt).toLocaleString() : '\u2014',
+    },
+    {
+      key: 'packets',
+      header: t('runtime.sessions.packets'),
+      cell: (session) =>
+        t('runtime.sessions.packetCounts', {
+          received: formatNumber(session.fabric?.received ?? 0),
+          transmitted: formatNumber(session.fabric?.transmitted ?? 0),
+        }),
+    },
+    {
+      key: 'state',
+      header: t('runtime.sessions.state'),
+      cell: (session) =>
+        session.degraded ? (
+          <div className="stack-compact">
+            <Tag colorScheme="red">{t('runtime.sessions.degraded')}</Tag>
+            <SmallText>{session.degradedReason || t('runtime.sessions.degradedHelp')}</SmallText>
+          </div>
+        ) : (
+          <Tag colorScheme="green">
+            {session.sessionId === selectedSessionId
+              ? t('runtime.sessions.selected')
+              : t('runtime.running.active')}
+          </Tag>
+        ),
+    },
+    {
+      key: 'actions',
+      header: t('runtime.sessions.actions'),
+      cellClassName: 'flex gap-compact',
+      cell: (session) => (
+        <>
+          {session.sessionId !== selectedSessionId && (
+            <Button
+              size="xs"
+              variant="outline"
+              data-testid={`session-select-${session.sessionId}`}
+              onClick={() => onSelect(session)}
+            >
+              {t('runtime.sessions.select')}
+            </Button>
+          )}
+          <Button
+            size="xs"
+            variant="outline"
+            tone="red"
+            data-testid={`session-stop-${session.sessionId}`}
+            loading={stoppingSessionId === session.sessionId}
+            onClick={() => onStop(session)}
+          >
+            {t('runtime.running.stopButton')}
+          </Button>
+        </>
+      ),
+    },
+  ];
+
   return (
     <Card>
       <CardContent className="stack-lg">
@@ -31,85 +113,13 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
           <H2>{t('runtime.sessions.title')}</H2>
           <SmallText>{t('runtime.sessions.help')}</SmallText>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-text-muted">
-              <tr>
-                <th className="px-cell py-row">{t('runtime.sessions.scenario')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.vlan')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.devices')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.started')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.packets')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.state')}</th>
-                <th className="px-cell py-row">{t('runtime.sessions.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((session) => (
-                <tr
-                  key={session.sessionId}
-                  data-testid={`session-row-${session.sessionId}`}
-                  className="border-t border-surface-border"
-                >
-                  <td className="px-cell py-row font-medium text-text-primary">
-                    {session.sessionId}
-                  </td>
-                  <td className="px-cell py-row text-text-secondary">
-                    {session.physicalVlan ?? t('runtime.fabric.untagged')}
-                  </td>
-                  <td className="px-cell py-row text-text-secondary">{session.deviceCount}</td>
-                  <td className="px-cell py-row text-text-secondary">
-                    {session.startedAt ? new Date(session.startedAt).toLocaleString() : '—'}
-                  </td>
-                  <td className="px-cell py-row text-text-secondary">
-                    {t('runtime.sessions.packetCounts', {
-                      received: formatNumber(session.fabric?.received ?? 0),
-                      transmitted: formatNumber(session.fabric?.transmitted ?? 0),
-                    })}
-                  </td>
-                  <td className="px-cell py-row">
-                    {session.degraded ? (
-                      <div className="stack-compact">
-                        <Tag colorScheme="red">{t('runtime.sessions.degraded')}</Tag>
-                        <SmallText>
-                          {session.degradedReason || t('runtime.sessions.degradedHelp')}
-                        </SmallText>
-                      </div>
-                    ) : (
-                      <Tag colorScheme="green">
-                        {session.sessionId === selectedSessionId
-                          ? t('runtime.sessions.selected')
-                          : t('runtime.running.active')}
-                      </Tag>
-                    )}
-                  </td>
-                  <td className="px-cell py-row flex gap-compact">
-                    {session.sessionId !== selectedSessionId && (
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        data-testid={`session-select-${session.sessionId}`}
-                        onClick={() => onSelect(session)}
-                      >
-                        {t('runtime.sessions.select')}
-                      </Button>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      tone="red"
-                      data-testid={`session-stop-${session.sessionId}`}
-                      loading={stoppingSessionId === session.sessionId}
-                      onClick={() => onStop(session)}
-                    >
-                      {t('runtime.running.stopButton')}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          rows={sessions}
+          columns={columns}
+          getRowKey={(session) => String(session.sessionId)}
+          rowTestId={(session) => `session-row-${session.sessionId}`}
+          emptyMessage={null}
+        />
       </CardContent>
     </Card>
   );

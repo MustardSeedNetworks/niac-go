@@ -3,7 +3,9 @@
  *
  * Covers the behaviors the primitive owns independently of any consumer:
  * empty/loading states, testid passthrough, client-side sort toggling,
- * and row selection (select-one / select-all).
+ * row selection (select-one / select-all), and — added with the U2b
+ * migration of the seven hand-rolled tables — activatable rows, per-row
+ * style and testid, and a caller-supplied initial sort.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -201,5 +203,102 @@ describe('DataTable', () => {
     );
     expect(renderStatus).toHaveBeenCalledWith(expect.any(Number), 3);
     expect(screen.getByText('3/3')).toBeInTheDocument();
+  });
+
+  it('activates a row on click and on Enter and Space', () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+        onRowClick={onRowClick}
+      />,
+    );
+
+    const bravo = required(screen.getByText('Bravo').closest('tr'));
+    // Reachable by keyboard, not mouse-only.
+    expect(bravo).toHaveAttribute('tabindex', '0');
+
+    fireEvent.click(bravo);
+    fireEvent.keyDown(bravo, { key: 'Enter' });
+    fireEvent.keyDown(bravo, { key: ' ' });
+    expect(onRowClick).toHaveBeenCalledTimes(3);
+    expect(onRowClick).toHaveBeenNthCalledWith(1, rows[0]);
+
+    // Any other key is left to the browser.
+    fireEvent.keyDown(bravo, { key: 'a' });
+    expect(onRowClick).toHaveBeenCalledTimes(3);
+  });
+
+  it('leaves rows inert when no row handler is given', () => {
+    render(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+      />,
+    );
+
+    expect(required(screen.getByText('Bravo').closest('tr'))).not.toHaveAttribute('tabindex');
+  });
+
+  it("applies the caller's per-row style and testid", () => {
+    render(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+        rowStyle={(r) => (r.id === 'a' ? { backgroundColor: 'rgb(1, 2, 3)' } : undefined)}
+        rowTestId={(r) => `row-${r.id}`}
+      />,
+    );
+
+    expect(screen.getByTestId('row-a')).toHaveStyle({ backgroundColor: 'rgb(1, 2, 3)' });
+    expect(screen.getByTestId('row-b')).not.toHaveStyle({ backgroundColor: 'rgb(1, 2, 3)' });
+  });
+
+  it('orders rows by the initial sort before any header is clicked', () => {
+    render(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+        defaultSort={{ key: 'count', direction: 'desc' }}
+      />,
+    );
+
+    const names = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => row.textContent);
+    expect(names).toEqual(['Alpha5', 'Bravo2']);
+  });
+
+  it('pins the header only when asked to', () => {
+    const { rerender } = render(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+      />,
+    );
+    expect(required(screen.getByText('Name').closest('thead')).className).not.toContain('sticky');
+
+    rerender(
+      <DataTable
+        rows={rows}
+        columns={baseColumns}
+        getRowKey={(r) => r.id}
+        emptyMessage={<div>Nothing here</div>}
+        stickyHeader
+      />,
+    );
+    expect(required(screen.getByText('Name').closest('thead')).className).toContain('sticky');
   });
 });

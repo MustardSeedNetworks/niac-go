@@ -6,10 +6,13 @@ import type {
   WalkBatchValidationResponse,
   WalkValidationIssue,
   WalkValidationResponse,
+  WalkValidationResult,
 } from '../api/types';
 import { useErrorToast } from '../hooks/useErrorToast';
+import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { InfoPopover } from '../ui/InfoPopover';
 
 type Severity = 'error' | 'warning' | 'info';
@@ -137,6 +140,79 @@ export const WalkValidatorPage: FC = () => {
     [batchResponse],
   );
 
+  const issueColumns: DataTableColumn<WalkValidationIssue>[] = [
+    {
+      key: 'line',
+      header: t('walkValidator.issuesTable.line'),
+      headerClassName: 'w-16',
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (issue) => issue.line,
+    },
+    {
+      key: 'severity',
+      header: t('walkValidator.issuesTable.severity'),
+      headerClassName: 'w-24',
+      cell: (issue) => (
+        <span
+          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
+        >
+          {issue.severity}
+        </span>
+      ),
+    },
+    {
+      key: 'message',
+      header: t('walkValidator.issuesTable.message'),
+      cell: (issue) => issue.message,
+    },
+    {
+      key: 'oid',
+      header: t('walkValidator.issuesTable.oid'),
+      cellClassName: 'font-mono text-xs text-text-muted',
+      cell: (issue) => issue.oid ?? '',
+    },
+    {
+      key: 'original',
+      header: t('walkValidator.issuesTable.original'),
+      cellClassName: 'truncate font-mono text-xs text-text-muted',
+      cell: (issue) => issue.original,
+    },
+  ];
+
+  const batchColumns: DataTableColumn<WalkValidationResult>[] = [
+    {
+      key: 'filename',
+      header: t('walkValidator.batchTable.filename'),
+      cellClassName: 'font-mono text-xs',
+      cell: (result) => result.filename,
+    },
+    {
+      key: 'status',
+      header: t('walkValidator.batchTable.status'),
+      headerClassName: 'w-24',
+      cell: (result) => (
+        <span
+          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
+            result.valid
+              ? 'bg-status-success/20 text-status-success ring-status-success/40'
+              : 'bg-status-error/20 text-status-error ring-status-error/40'
+          }`}
+        >
+          {result.valid
+            ? t('walkValidator.batchStatusValid')
+            : t('walkValidator.batchStatusInvalid')}
+        </span>
+      ),
+    },
+    {
+      key: 'issues',
+      header: t('walkValidator.batchTable.issues'),
+      headerClassName: 'w-24',
+      cellClassName: 'text-text-muted',
+      cell: (result) => result.issues.length,
+    },
+  ];
+
   return (
     <div className="stack-xl">
       <Card className="border-surface-border bg-bg-surface/70">
@@ -206,35 +282,37 @@ export const WalkValidatorPage: FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              tone="blue"
               onClick={() => void run('validating')}
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
-              className="rounded bg-status-info/20 px-3 py-compact-md text-sm font-medium text-status-info ring-1 ring-status-info/40 hover:bg-status-info/30 disabled:opacity-50"
             >
               {busy === 'validating' ? 'Validating…' : 'Validate'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              tone="red"
               onClick={() => setShowAutoFixConfirm(true)}
               disabled={busy !== 'idle' || !targetPath}
-              className="rounded bg-status-warning/20 px-3 py-compact-md text-sm font-medium text-status-warning ring-1 ring-status-warning/40 hover:bg-status-warning/30 disabled:opacity-50"
               title="Validate and rewrite the file in place. A .bak is created next to the original."
             >
               {busy === 'fixing' ? 'Fixing…' : 'Auto-fix'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => void runBatch()}
               disabled={batchBusy}
               title="Validate every walk file referenced by the running config in one pass."
-              className="rounded bg-bg-base/60 px-3 py-compact-md text-sm font-medium text-text-primary ring-1 ring-surface-border hover:bg-bg-base/80 disabled:opacity-50"
             >
               {batchBusy
                 ? t('walkValidator.validatingAllButton')
                 : t('walkValidator.validateAllButton')}
-            </button>
+            </Button>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
@@ -295,43 +373,13 @@ export const WalkValidatorPage: FC = () => {
             ) : filteredIssues.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.noMatchingIssues')}</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
-                  <tr>
-                    <th className="px-3 py-row w-16">{t('walkValidator.issuesTable.line')}</th>
-                    <th className="px-3 py-row w-24">{t('walkValidator.issuesTable.severity')}</th>
-                    <th className="px-3 py-row">{t('walkValidator.issuesTable.message')}</th>
-                    <th className="px-3 py-row">{t('walkValidator.issuesTable.oid')}</th>
-                    <th className="px-3 py-row">{t('walkValidator.issuesTable.original')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-knob/5">
-                  {visibleIssues.map((issue, idx) => (
-                    <tr
-                      key={`${issue.line}-${idx}`}
-                      className="text-text-primary hover:bg-bg-base/40"
-                    >
-                      <td className="px-3 py-row font-mono text-xs text-text-muted">
-                        {issue.line}
-                      </td>
-                      <td className="px-3 py-row">
-                        <span
-                          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_BADGE[issue.severity as Severity] ?? ''}`}
-                        >
-                          {issue.severity}
-                        </span>
-                      </td>
-                      <td className="px-3 py-row">{issue.message}</td>
-                      <td className="px-3 py-row font-mono text-xs text-text-muted">
-                        {issue.oid ?? ''}
-                      </td>
-                      <td className="px-3 py-row truncate font-mono text-xs text-text-muted">
-                        {issue.original}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                rows={visibleIssues}
+                columns={issueColumns}
+                getRowKey={(issue) => `${issue.line}-${issue.oid ?? ''}-${issue.message}`}
+                emptyMessage={null}
+                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+              />
             )}
             {filteredIssues.length > ISSUES_DISPLAY_CAP && (
               <p className="text-xs text-text-muted">
@@ -368,36 +416,13 @@ export const WalkValidatorPage: FC = () => {
             {batchResults.length === 0 ? (
               <p className="text-sm text-text-muted">{t('walkValidator.batchEmpty')}</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-bg-base/40 text-left text-xs uppercase tracking-wider text-text-muted">
-                  <tr>
-                    <th className="px-3 py-row">{t('walkValidator.batchTable.filename')}</th>
-                    <th className="px-3 py-row w-24">{t('walkValidator.batchTable.status')}</th>
-                    <th className="px-3 py-row w-24">{t('walkValidator.batchTable.issues')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-knob/5">
-                  {batchResults.map((result) => (
-                    <tr key={result.filename} className="text-text-primary hover:bg-bg-base/40">
-                      <td className="px-3 py-row font-mono text-xs">{result.filename}</td>
-                      <td className="px-3 py-row">
-                        <span
-                          className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
-                            result.valid
-                              ? 'bg-status-success/20 text-status-success ring-status-success/40'
-                              : 'bg-status-error/20 text-status-error ring-status-error/40'
-                          }`}
-                        >
-                          {result.valid
-                            ? t('walkValidator.batchStatusValid')
-                            : t('walkValidator.batchStatusInvalid')}
-                        </span>
-                      </td>
-                      <td className="px-3 py-row text-text-muted">{result.issues.length}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                rows={batchResults}
+                columns={batchColumns}
+                getRowKey={(result) => result.filename}
+                emptyMessage={null}
+                rowClassName={() => 'text-text-primary hover:bg-bg-base/40'}
+              />
             )}
           </CardContent>
         </Card>

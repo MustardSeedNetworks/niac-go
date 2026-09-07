@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type CSSProperties, type KeyboardEvent, type ReactNode, useMemo, useState } from 'react';
 import { useVirtualScroll } from '../hooks/useVirtualScroll';
 
 /**
@@ -13,6 +13,8 @@ import { useVirtualScroll } from '../hooks/useVirtualScroll';
  *
  * Not every list view fits this shape — see Phase 7 PR summary for
  * which consumers were migrated and which were deliberately left as-is.
+ * `PacketList` (a stack of button cards), `LogViewer` (expandable stream)
+ * and `device-list/DeviceTableView` (a CSS grid) stay off it by design.
  */
 export interface DataTableColumn<T> {
   /** Stable identifier, also used as the React key for the header cell. */
@@ -35,6 +37,11 @@ export interface DataTableSelection<T> {
   selectRowAriaLabel: (row: T) => string;
 }
 
+export interface DataTableSort {
+  key: string;
+  direction: SortDirection;
+}
+
 export interface DataTableVirtualization {
   itemHeight: number;
   containerHeight: number;
@@ -54,6 +61,21 @@ interface DataTableProps<T> {
   selection?: DataTableSelection<T>;
   virtualization?: DataTableVirtualization;
   rowClassName?: (row: T) => string;
+  /** Per-row inline style, for callers whose row colour is data-driven. */
+  rowStyle?: (row: T) => CSSProperties | undefined;
+  rowTestId?: (row: T) => string;
+  /**
+   * Makes rows activatable. Rows become focusable and respond to Enter and
+   * Space as well as click, so a click-to-drill-down table is reachable
+   * from the keyboard.
+   */
+  onRowClick?: (row: T) => void;
+  /** Sort applied before the user clicks any header. */
+  defaultSort?: DataTableSort;
+  /** Pins the header while the body scrolls. Needs a bounded container. */
+  stickyHeader?: boolean;
+  /** Extra classes on the scroll container, e.g. a height bound. */
+  containerClassName?: string;
   'data-testid'?: string;
 }
 
@@ -76,9 +98,15 @@ export function DataTable<T>({
   selection,
   virtualization,
   rowClassName,
+  rowStyle,
+  rowTestId,
+  onRowClick,
+  defaultSort,
+  stickyHeader = false,
+  containerClassName,
   'data-testid': testId,
 }: DataTableProps<T>) {
-  const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(null);
+  const [sort, setSort] = useState<DataTableSort | null>(defaultSort ?? null);
 
   const sortedRows = useMemo(() => {
     if (!sort) {
@@ -124,7 +152,11 @@ export function DataTable<T>({
     : false;
 
   const renderHeader = () => (
-    <thead className="bg-bg-surface/60 text-xs uppercase tracking-wide text-text-muted">
+    <thead
+      className={`text-xs uppercase tracking-wide text-text-muted ${
+        stickyHeader ? 'sticky top-0 z-10 bg-bg-surface' : 'bg-bg-surface/60'
+      }`}
+    >
       <tr>
         {selection && (
           <th className="px-4 py-row-lg text-left">
@@ -160,10 +192,26 @@ export function DataTable<T>({
     </thead>
   );
 
+  const activateRow = (row: T) => (event: KeyboardEvent<HTMLTableRowElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    onRowClick?.(row);
+  };
+
   const renderRow = (row: T) => {
     const key = getRowKey(row);
     return (
-      <tr key={key} className={rowClassName?.(row)}>
+      <tr
+        key={key}
+        data-testid={rowTestId?.(row)}
+        className={`${rowClassName?.(row) ?? ''} ${onRowClick ? 'cursor-pointer' : ''}`.trim()}
+        style={rowStyle?.(row)}
+        onClick={onRowClick ? () => onRowClick(row) : undefined}
+        onKeyDown={onRowClick ? activateRow(row) : undefined}
+        tabIndex={onRowClick ? 0 : undefined}
+      >
         {selection && (
           <td className="px-4 py-row-lg">
             <input
@@ -191,7 +239,7 @@ export function DataTable<T>({
   if (!useVirtualization) {
     return (
       <div
-        className="min-w-0 overflow-x-auto rounded-xl border border-surface-border"
+        className={`min-w-0 overflow-x-auto rounded-xl border border-surface-border ${containerClassName ?? ''}`.trimEnd()}
         data-testid={testId}
       >
         <table className="min-w-full divide-y divide-knob/10 text-sm">
