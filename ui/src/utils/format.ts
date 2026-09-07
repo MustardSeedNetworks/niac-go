@@ -4,9 +4,12 @@
  * Two layers:
  *
  *   1. Pure functions (formatBytes, formatDurationMs, formatUptime,
- *      formatRelativeTime, getErrorMessage) — fall back to English
- *      and the browser-default locale. Safe to call from non-React
- *      code (utilities, error boundaries, console logs).
+ *      formatRelativeTime, getErrorMessage) — use the browser-default
+ *      locale for numbers and dates. Safe to call from non-React code
+ *      (utilities, error boundaries, console logs). getErrorMessage is
+ *      the exception to "no locale": its fallback string is user-facing
+ *      and every toast inherits it, so it reads the i18next instance
+ *      directly rather than returning English.
  *
  *   2. React hooks (useFormatBytes, useFormatNumber, useFormatTime,
  *      useFormatRelativeTime) — return locale-aware formatters bound
