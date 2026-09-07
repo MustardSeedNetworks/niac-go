@@ -10,7 +10,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 import type { WalkAnalyzeResponse } from '../api/types';
-import { EMPTY_ROUTES, LOADED_ROUTES, pageMeta, withFailure } from '../test/storybook/pageStory';
+import {
+  EMPTY_ROUTES,
+  LOADED_ROUTES,
+  pageMeta,
+  settled,
+  withFailure,
+} from '../test/storybook/pageStory';
 import { WalkAnalyzerPage } from './WalkAnalyzerPage';
 
 const analysis: WalkAnalyzeResponse = {
@@ -77,7 +83,7 @@ type Story = StoryObj<typeof WalkAnalyzerPage>;
 const analyzeRoutes = { '/api/v1/walk/analyze': analysis };
 
 /** No walks in the library yet: the picker has nothing to offer. */
-export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES }, play: settled() };
 
 /** After Analyze: identity card plus the interfaces and neighbours tables. */
 export const Loaded: Story = {
@@ -91,4 +97,7 @@ export const Loaded: Story = {
 };
 
 /** The walk listing returns 500, so the picker cannot be populated. */
-export const Error: Story = { parameters: { api: withFailure('/api/v1/library/walks') } };
+export const Error: Story = {
+  parameters: { api: withFailure('/api/v1/library/walks') },
+  play: settled(),
+};

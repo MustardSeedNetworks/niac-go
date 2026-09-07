@@ -65,7 +65,9 @@ export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTabl
     // by keyboard and announce itself as actionable.
     columns.push({
       key: 'select',
-      header: '',
+      // An action column still owes the row a header: axe's empty-table-header
+      // is not pedantry here, it is the column a screen reader cannot name.
+      header: <span className="sr-only">{t('devices.actionsHeader')}</span>,
       cell: (device) => (
         <Button
           size="sm"

@@ -81,6 +81,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
         <button
           type="button"
           onClick={onToggle}
+          aria-label={t('topology.legend.hideLegend')}
           className="text-text-muted hover:text-text-primary"
         >
           <EyeOff className="w-4 h-4" />

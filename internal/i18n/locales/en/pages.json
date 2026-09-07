@@ -267,6 +267,7 @@
     "title": "Device Library"
   },
   "devices": {
+    "actionsHeader": "Actions",
     "availableSnmpWalks": "Available SNMP walks",
     "configParseErrorLine": "Line {{line}}: {{message}}",
     "configSaved": "Configuration saved",
@@ -973,6 +974,7 @@
       "directionSingle": "Single (access link)",
       "edgesHeading": "Edges",
       "focusHint": "Click a node to highlight its neighbors — unrelated devices dim.",
+      "hideLegend": "Hide legend",
       "legendHeading": "Legend",
       "lineStyleDeclared": "Declared (config)",
       "lineStyleDiscovered": "Discovered (LLDP/CDP)",

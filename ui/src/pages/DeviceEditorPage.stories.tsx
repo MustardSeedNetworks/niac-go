@@ -10,7 +10,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { DeviceEditorSchema } from '../api/client';
 import type { DeviceDetailResponse } from '../api/types';
-import { LOADED_ROUTES, pageMeta, withFailure } from '../test/storybook/pageStory';
+import { LOADED_ROUTES, pageMeta, settled, withFailure } from '../test/storybook/pageStory';
 import { DeviceEditorPage } from './DeviceEditorPage';
 
 const HOSTNAME = 'core-sw-01';
@@ -47,11 +47,12 @@ export default meta;
 type Story = StoryObj<typeof DeviceEditorPage>;
 
 /** A new device: the blank authoring form. */
-export const Empty: Story = { parameters: { api: editorRoutes } };
+export const Empty: Story = { parameters: { api: editorRoutes }, play: settled() };
 
 /** An authored device loaded for editing. */
 export const Loaded: Story = {
   parameters: { api: editorRoutes, route: `/device-config/${HOSTNAME}` },
+  play: settled(),
 };
 
 /** The device read returns 500 while its hostname is in the URL. */
@@ -60,4 +61,5 @@ export const Error: Story = {
     api: { ...editorRoutes, ...withFailure(DEVICE_PATH) },
     route: `/device-config/${HOSTNAME}`,
   },
+  play: settled(),
 };

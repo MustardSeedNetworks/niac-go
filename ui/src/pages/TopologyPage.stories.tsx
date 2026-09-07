@@ -8,11 +8,13 @@
  * providers, the `<main>` landmark context and the fetch stub.
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, within } from 'storybook/test';
 import {
   EMPTY_ROUTES,
   LOADED_ROUTES,
   pageMeta,
   sessionResource,
+  settled,
   withFailure,
 } from '../test/storybook/pageStory';
 import { TopologyPage } from './TopologyPage';
@@ -26,10 +28,19 @@ export default meta;
 type Story = StoryObj<typeof TopologyPage>;
 
 /** Fresh install: nothing running and nothing authored. */
-export const Empty: Story = { parameters: { api: EMPTY_ROUTES } };
+export const Empty: Story = { parameters: { api: EMPTY_ROUTES }, play: settled() };
 
 /** The scenario running, with data on every read. */
-export const Loaded: Story = { parameters: { api: LOADED_ROUTES } };
+export const Loaded: Story = { parameters: { api: LOADED_ROUTES }, play: settled() };
 
 /** The graph itself — U1’s defect was that this failure looked like an empty graph returns 500. */
-export const Error: Story = { parameters: { api: withFailure(sessionResource('topology')) } };
+export const Error: Story = {
+  parameters: { api: withFailure(sessionResource('topology')) },
+  play: async (context) => {
+    await settled()();
+    // The canary for `settled`: with the default 1 s findBy timeout this only
+    // passes because the wait above already put the error state on screen.
+    const canvas = within(context.canvasElement);
+    await expect(await canvas.findByTestId('topology-load-error')).toBeInTheDocument();
+  },
+};
