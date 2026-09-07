@@ -151,12 +151,14 @@
     "packetCount_one": "{{count}} packet",
     "packetCount_other": "{{count}} packets"
   },
+  "session": {
+    "none": "No scenario running",
+    "switchLabel": "Scenario this browser is reading"
+  },
   "status": {
     "loading": "Loading...",
     "ready": "Ready",
-    "running": "Running",
-    "saving": "Saving...",
-    "stopped": "Stopped"
+    "saving": "Saving..."
   },
   "table": {
     "selectAll": "Select all",

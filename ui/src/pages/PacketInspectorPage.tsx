@@ -25,12 +25,12 @@ import { type Packet, PacketList } from '../components/PacketList';
 import { StreamView } from '../components/StreamView';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
+import { useAppContext } from '../contexts/AppContext';
 import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
-import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
@@ -100,17 +100,20 @@ export const PacketInspectorPage: FC = () => {
   // populates from either a running simulation OR a standalone capture
   // session. Polling both lets us pick whichever is producing traffic
   // and show its interface in the header.
-  const { data: simStatus } = useSimulationStatus();
+  // Scoped to the scenario this browser picked in the header, not to whichever
+  // one the daemon reports at the top level: switching scenario has to move
+  // the stream, the export and the interface readout with it.
+  const { selectedSession, sessionId } = useAppContext();
   // A failed poll read as "not capturing" — so a running capture appeared to stop.
   const { data: captureStatus, refetch: refetchCapture } = useApiResource(fetchCaptureStatus, [], {
     intervalMs: POLL_INTERVALS.fast,
     errorToast: { title: t('packets.captureStatusFailed') },
   });
-  const simRunning = simStatus?.running === true;
+  const simRunning = sessionId !== null && selectedSession?.running === true;
   const captureRunning = captureStatus?.running === true;
   const streamActive = simRunning || captureRunning;
   const activeInterface = simRunning
-    ? simStatus?.interface
+    ? selectedSession?.interface
     : captureRunning
       ? captureStatus?.interface
       : undefined;
@@ -143,7 +146,7 @@ export const PacketInspectorPage: FC = () => {
 
   // Gated the same way the packet stream is: a session listed but no longer
   // running has no ring, and the export would 404 into a toast.
-  const exportSessionId = simRunning ? simStatus?.sessionId : undefined;
+  const exportSessionId = simRunning ? (sessionId ?? undefined) : undefined;
   const handleExportPcap = useCaptureExport(exportSessionId);
   const handleExport = useFilteredJsonExport(filteredPackets);
 
@@ -155,7 +158,7 @@ export const PacketInspectorPage: FC = () => {
 
   // SSE connection (auto-reconnects)
   const { connected, reconnect } = usePacketStream({
-    sessionId: simRunning ? simStatus?.sessionId : undefined,
+    sessionId: simRunning ? (sessionId ?? undefined) : undefined,
     onMessage: useCallback((data: unknown) => {
       // Skip if paused
       if (isPausedRef.current) {

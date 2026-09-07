@@ -3,11 +3,14 @@
  *
  * Per the canonical convention (stem/ui/SHELL.md): per-product, not synced.
  * NIAC has no profile system and no interface picker, so the right slot
- * carries only the theme toggle. Settings + Help live in the sidebar
- * footer; there is no logout (NIAC is single-user).
+ * carries only the theme toggle. The left slot carries the scenario
+ * switcher: a daemon runs several scenarios at once and every runtime read
+ * is scoped to one, so which one this browser reads belongs in the chrome
+ * rather than on a page the operator has to navigate to. Settings + Help
+ * live in the sidebar footer; there is no logout (NIAC is single-user).
  *
  *   ┌──────────────────────────────────────────────────────────────┐
- *   │ [logo] NIAC  [ConnectionStatus][SimStatus] … [theme toggle]  │
+ *   │ [logo] NIAC  [ConnectionStatus][SessionSwitcher] … [theme]   │
  *   └──────────────────────────────────────────────────────────────┘
  */
 import { Moon, Network, Sun } from 'lucide-react';
@@ -15,7 +18,7 @@ import type { FC, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
-import { SimulationStatusChip } from '../ui/SimulationStatusChip';
+import { SessionSwitcher } from './SessionSwitcher';
 
 export const HeaderBar: FC = (): ReactElement => {
   const { t } = useTranslation('common');
@@ -26,14 +29,14 @@ export const HeaderBar: FC = (): ReactElement => {
 
   return (
     <>
-      {/* Left slot: logo + product name + connection status */}
+      {/* Left slot: logo + product name + connection and scenario state */}
       <div className="flex items-center gap-default min-w-0">
         <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-primary to-brand-accent flex-center shrink-0">
           <Network className="h-5 w-5 text-text-inverse" aria-hidden="true" />
         </div>
         <span className="font-display font-bold text-text-primary truncate">NIAC</span>
         <ConnectionStatus />
-        <SimulationStatusChip />
+        <SessionSwitcher />
       </div>
 
       {/* Right slot: theme toggle only (no profiles / interfaces in NIAC).

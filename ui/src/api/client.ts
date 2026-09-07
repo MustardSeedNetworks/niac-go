@@ -289,8 +289,6 @@ export const preflightSimulation = (payload: SimulationPreflightRequest) =>
   });
 export const startSimulation = (payload: SimulationRequest) =>
   requestJsonCamelCase<SimulationStatus>('/api/v1/simulation', payload, { method: 'POST' });
-export const selectSimulation = (sessionId: string) =>
-  requestJsonCamelCase<SimulationStatus>('/api/v1/simulation', { sessionId }, { method: 'PUT' });
 export const stopSimulation = (sessionId?: string) =>
   request<{ status: string }>(
     sessionId
