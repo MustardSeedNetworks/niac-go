@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.20](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.19...v0.95.20) (2026-09-07)
+
+
+### Bug Fixes
+
+* **ui:** route-change focus, guaranteed field labels, tokenised YAML editor, translated errors ([#1879](https://github.com/MustardSeedNetworks/niac-go/issues/1879)) ([b9d50eb](https://github.com/MustardSeedNetworks/niac-go/commit/b9d50ebb0eefcf3d06c57eef8c66ca914cfb5b1d))
+
 ## [0.95.19](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.18...v0.95.19) (2026-09-07)
 
 
