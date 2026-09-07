@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.17](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.16...v0.95.17) (2026-09-07)
+
+
+### Miscellaneous
+
+* **ci:** hold the wizard to the same device manifest as the editor ([#1861](https://github.com/MustardSeedNetworks/niac-go/issues/1861)) ([af81070](https://github.com/MustardSeedNetworks/niac-go/commit/af81070506ba0b4d02fa700c9cd8cdceb217acba))
+
 ## [0.95.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.15...v0.95.16) (2026-09-07)
 
 
