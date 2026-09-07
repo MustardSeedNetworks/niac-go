@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.22](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.21...v0.95.22) (2026-09-07)
+
+
+### Bug Fixes
+
+* **ui:** one primary action per page; rename automation to alerts ([#1885](https://github.com/MustardSeedNetworks/niac-go/issues/1885)) ([ebeed12](https://github.com/MustardSeedNetworks/niac-go/commit/ebeed12f1298e5c8df288a90a34f2c0e827c1c92)), closes [#1884](https://github.com/MustardSeedNetworks/niac-go/issues/1884)
+
+
+### Tests
+
+* **ui:** give the primary-action gate a bound sized for lazy pages ([#1888](https://github.com/MustardSeedNetworks/niac-go/issues/1888)) ([b43dff7](https://github.com/MustardSeedNetworks/niac-go/commit/b43dff77a9a6a7a4c9fd2472215b4205bf1821d5)), closes [#1887](https://github.com/MustardSeedNetworks/niac-go/issues/1887)
+
 ## [0.95.21](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.20...v0.95.21) (2026-09-07)
 
 
