@@ -7,6 +7,11 @@ authoring surface is docs/schemas/niac.schema.json (generated from
 converter.Config by `make schema`). This gate walks every leaf field in that
 schema and asks whether the UI can set it.
 
+The wizard is checked structurally rather than field by field: it renders the
+same generated DEVICE_SECTIONS manifest the editor does, so the editor's
+bindings transfer to it. This gate asserts that shared import and its unfiltered
+map, which is the property that makes the transfer true.
+
 A field is BOUND when ui/src/components/device-editor/schema-bindings.json
 maps its path to a component file that exists and mentions the field by its
 snake_case or camelCase name — the registry is evidence-checked, not trusted.
@@ -34,6 +39,46 @@ SCHEMA = "docs/schemas/niac.schema.json"
 REGISTRY = "ui/src/components/device-editor/schema-bindings.json"
 ALLOWLIST = "scripts/authoring-parity-allowlist.txt"
 BASELINE = "scripts/authoring-parity-baseline.txt"
+
+# The generated manifest both device-authoring surfaces render, and the wizard
+# component that must render all of it.
+SECTIONS = "ui/src/components/device-editor/generated/sections.generated.ts"
+WIZARD_DEVICE_EDITOR = "ui/src/components/wizard/DeviceProtocolsEditor.tsx"
+
+
+def wizard_renders_every_section(root: Path) -> str:
+    """Report why the wizard cannot author every device field, or "" when it can.
+
+    The owner decision this gate serves covers three surfaces -- the YAML file,
+    the device editor and the wizard -- but the registry above only describes
+    the editor. The wizard agrees with it today because it imports the same
+    generated manifest and maps over all of it; nothing enforced that. A filter,
+    a slice, or a "basic fields only" toggle in the wizard would leave this gate
+    green while a field became unreachable in one of the three surfaces.
+
+    Checking the import and the unfiltered map is coarse, and deliberately so:
+    it is the property that makes the editor's bindings transfer to the wizard.
+    """
+    editor = root / WIZARD_DEVICE_EDITOR
+    if not editor.exists():
+        return f"{WIZARD_DEVICE_EDITOR} is missing; the wizard cannot share the editor's fields"
+
+    text = editor.read_text(encoding="utf-8")
+    # The identifier alone is not evidence of the import: it survives in the
+    # comment and in the map call, so testing for it passed a file whose import
+    # line had been deleted. Match the import statement itself.
+    imports_manifest = re.search(
+        r"import\s*\{[^}]*\bDEVICE_SECTIONS\b[^}]*\}\s*from\s*['\"][^'\"]*sections\.generated['\"]",
+        text,
+    )
+    if not imports_manifest:
+        return (f"{WIZARD_DEVICE_EDITOR} no longer imports DEVICE_SECTIONS from the generated "
+                "manifest, so the wizard and the device editor can drift apart")
+    if "DEVICE_SECTIONS.map(" not in text:
+        return (f"{WIZARD_DEVICE_EDITOR} does not map over the whole DEVICE_SECTIONS manifest "
+                "(a filter or slice here silently drops fields from the wizard only)")
+
+    return ""
 
 
 def _resolve(node: dict, defs: dict) -> dict:
@@ -143,6 +188,10 @@ def run(root: Path, update: bool = False, list_only: bool = False, out=sys.stdou
         if path not in leaf_set:
             failed = True
             print(f"::error::allowlist names `{path}` but the schema has no such field", file=out)
+
+    if wizard_problem := wizard_renders_every_section(root):
+        failed = True
+        print(f"::error::{wizard_problem}", file=out)
 
     unbound = sorted(p for p in leaves if p not in registry and p not in allowed)
     if update:
