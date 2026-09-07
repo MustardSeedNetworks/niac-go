@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.18](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.17...v0.95.18) (2026-09-07)
+
+
+### Features
+
+* **ui:** put the scenario this browser reads in the header ([#1867](https://github.com/MustardSeedNetworks/niac-go/issues/1867)) ([05e3d34](https://github.com/MustardSeedNetworks/niac-go/commit/05e3d345af70afbebcc3e61a8a6c36022019f771))
+
+
+### Code Refactoring
+
+* **ui:** put the five hand-rolled overlays on the shared Modal ([#1865](https://github.com/MustardSeedNetworks/niac-go/issues/1865)) ([f7e4c81](https://github.com/MustardSeedNetworks/niac-go/commit/f7e4c813929a7634986a5666f1643da5e8ec2512))
+
 ## [0.95.17](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.16...v0.95.17) (2026-09-07)
 
 
