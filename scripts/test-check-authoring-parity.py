@@ -39,12 +39,20 @@ SCHEMA = {
 }
 
 
+WIZARD = """\
+import { DEVICE_SECTIONS } from '../device-editor/generated/sections.generated';
+
+export const DeviceProtocolsEditor = () => DEVICE_SECTIONS.map((section) => section.title);
+"""
+
+
 class Tree:
     def __init__(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         (self.root / "docs" / "schemas").mkdir(parents=True)
         (self.root / "ui" / "src" / "components" / "device-editor").mkdir(parents=True)
+        (self.root / "ui" / "src" / "components" / "wizard").mkdir(parents=True)
         (self.root / "scripts").mkdir()
         (self.root / "docs" / "schemas" / "niac.schema.json").write_text(json.dumps(SCHEMA))
         self.editor = self.root / "ui" / "src" / "components" / "device-editor"
@@ -56,6 +64,8 @@ class Tree:
             "devices[].snmp_agent.community": "components/device-editor/SnmpSection.tsx",
         }))
         (self.root / "scripts" / "authoring-parity-allowlist.txt").write_text("include_path  # resolved by the daemon\n")
+        self.wizard = self.root / "ui" / "src" / "components" / "wizard" / "DeviceProtocolsEditor.tsx"
+        self.wizard.write_text(WIZARD)
 
     def run(self, **kw) -> tuple[int, str]:
         out = io.StringIO()
@@ -106,6 +116,30 @@ class ParityGateTest(unittest.TestCase):
         code, out = t.run()
         self.assertEqual(code, 1)
         self.assertIn("remove them", out)
+
+    def test_missing_wizard_editor_fails(self) -> None:
+        t = Tree()
+        t.run(update=True)
+        t.wizard.unlink()
+        code, out = t.run()
+        self.assertEqual(code, 1)
+        self.assertIn("is missing", out)
+
+    def test_wizard_without_manifest_import_fails(self) -> None:
+        t = Tree()
+        t.run(update=True)
+        t.wizard.write_text("export const DeviceProtocolsEditor = () => DEVICE_SECTIONS.map((s) => s);")
+        code, out = t.run()
+        self.assertEqual(code, 1)
+        self.assertIn("no longer imports DEVICE_SECTIONS", out)
+
+    def test_wizard_filtering_the_manifest_fails(self) -> None:
+        t = Tree()
+        t.run(update=True)
+        t.wizard.write_text(WIZARD.replace("DEVICE_SECTIONS.map(", "DEVICE_SECTIONS.filter(Boolean).map("))
+        code, out = t.run()
+        self.assertEqual(code, 1)
+        self.assertIn("does not map over the whole", out)
 
 
 if __name__ == "__main__":

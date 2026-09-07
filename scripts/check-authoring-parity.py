@@ -68,7 +68,7 @@ def wizard_renders_every_section(root: Path) -> str:
     # comment and in the map call, so testing for it passed a file whose import
     # line had been deleted. Match the import statement itself.
     imports_manifest = re.search(
-        r"import\s*\{[^}]*\bDEVICE_SECTIONS\b[^}]*\}\s*from\s*['\"][^'\"]*sections\.generated['\"]",
+        rf"import\s*\{{[^}}]*\bDEVICE_SECTIONS\b[^}}]*\}}\s*from\s*['\"][^'\"]*{re.escape(Path(SECTIONS).stem)}['\"]",
         text,
     )
     if not imports_manifest:
