@@ -1,12 +1,7 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchUsableInterfaces,
-  selectSimulation,
-  startSimulation,
-  stopSimulation,
-} from '../api/client';
+import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
 import type {
   LibraryNetwork,
@@ -18,6 +13,7 @@ import type {
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { PreflightStep } from '../components/wizard/PreflightStep';
 import { iconSizes } from '../constants/sizes';
+import { useAppContext } from '../contexts/AppContext';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useUIStore } from '../stores/ui-store';
@@ -60,13 +56,22 @@ export const RuntimeControlPage: FC = () => {
   const [preparing, setPreparing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [selectingSessionId, setSelectingSessionId] = useState<string | null>(null);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [stopTarget, setStopTarget] = useState<SimulationStatus | null>(null);
   // Success-only: failures are surfaced as toasts (see showError below), not
   // a page-level banner.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const showError = useErrorToast();
+  const { sessionId, setSessionId, selectedSession, sessions } = useAppContext();
+  // Everything that describes "the running scenario" on this page describes
+  // the one this browser selected. Falling back to the daemon's top-level
+  // status keeps the two states it alone carries: no daemon (null) and a
+  // daemon with nothing running.
+  const shownSession = selectedSession ?? simStatus;
+  // Non-null exactly when a scenario is running, which is what the card below
+  // is gated on; naming it here keeps the gate and the thing it describes the
+  // same value.
+  const runningSession = shownSession?.running ? shownSession : null;
   const requestSequence = useRef(0);
 
   const invalidatePreparedRequest = useCallback(() => {
@@ -236,20 +241,15 @@ export const RuntimeControlPage: FC = () => {
     [simStatus],
   );
 
+  // Selecting a scenario is this browser's choice, the same one the header
+  // switcher makes: nothing is sent to the daemon, so switching here does not
+  // repoint the scenario another tab is reading.
   const handleSelect = useCallback(
-    async (target: SimulationStatus) => {
+    (target: SimulationStatus) => {
       if (!target.sessionId) return;
-      setSelectingSessionId(target.sessionId);
-      try {
-        await selectSimulation(target.sessionId);
-        refetchSimStatus();
-      } catch (err) {
-        showError(err);
-      } finally {
-        setSelectingSessionId(null);
-      }
+      setSessionId(target.sessionId);
     },
-    [refetchSimStatus, showError],
+    [setSessionId],
   );
 
   const handleStopConfirmed = useCallback(async () => {
@@ -271,7 +271,7 @@ export const RuntimeControlPage: FC = () => {
 
   return (
     <div className="stack-xl">
-      <RuntimeRollup simStatus={simStatus} loading={simLoading} />
+      <RuntimeRollup simStatus={shownSession} loading={simLoading} />
 
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
@@ -422,21 +422,21 @@ export const RuntimeControlPage: FC = () => {
         </Card>
       )}
 
-      {isDaemonMode && simStatus?.running && (
+      {isDaemonMode && runningSession && (
         <>
-          {(simStatus.sessions?.length ?? 0) > 1 && (
+          {sessions.length > 1 && (
             <ConcurrentSessionsPanel
-              sessions={simStatus.sessions ?? []}
+              sessions={sessions}
+              selectedSessionId={sessionId}
               stoppingSessionId={stopping ? (stopTarget?.sessionId ?? null) : null}
-              selectingSessionId={selectingSessionId}
               onSelect={handleSelect}
               onStop={handleStopClick}
             />
           )}
           <RunningSimulationCard
-            simStatus={simStatus}
+            simStatus={runningSession}
             stopping={stopping}
-            onStop={() => handleStopClick(simStatus)}
+            onStop={() => handleStopClick(runningSession)}
             message={successMessage}
           />
         </>

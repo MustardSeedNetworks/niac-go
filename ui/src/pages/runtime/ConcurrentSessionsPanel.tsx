@@ -9,16 +9,17 @@ import { formatNumber } from '../../utils/format';
 
 interface ConcurrentSessionsPanelProps {
   sessions: SimulationStatus[];
+  /** The scenario this browser is reading; the daemon has no say in it. */
+  selectedSessionId: string | null;
   stoppingSessionId: string | null;
-  selectingSessionId: string | null;
   onSelect: (session: SimulationStatus) => void;
   onStop: (session: SimulationStatus) => void;
 }
 
 export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
   sessions,
+  selectedSessionId,
   stoppingSessionId,
-  selectingSessionId,
   onSelect,
   onStop,
 }) => {
@@ -76,19 +77,18 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
                       </div>
                     ) : (
                       <Tag colorScheme="green">
-                        {session.selected
+                        {session.sessionId === selectedSessionId
                           ? t('runtime.sessions.selected')
                           : t('runtime.running.active')}
                       </Tag>
                     )}
                   </td>
                   <td className="px-cell py-row flex gap-compact">
-                    {!session.selected && (
+                    {session.sessionId !== selectedSessionId && (
                       <Button
                         size="xs"
                         variant="outline"
                         data-testid={`session-select-${session.sessionId}`}
-                        loading={selectingSessionId === session.sessionId}
                         onClick={() => onSelect(session)}
                       >
                         {t('runtime.sessions.select')}

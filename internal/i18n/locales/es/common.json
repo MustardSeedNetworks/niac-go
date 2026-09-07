@@ -34,11 +34,13 @@
     "discard": "Descartar",
     "autoFix": "Corrección automática"
   },
+  "session": {
+    "none": "Sin escenario en ejecución",
+    "switchLabel": "Escenario que lee este navegador"
+  },
   "status": {
     "loading": "Cargando...",
     "saving": "Guardando...",
-    "running": "Ejecutando",
-    "stopped": "Detenido",
     "ready": "Listo"
   },
   "labels": {

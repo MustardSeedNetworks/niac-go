@@ -25,7 +25,6 @@ const stopSimulation = vi.fn<(sessionId?: string) => Promise<void>>();
 const preflightSimulation =
   vi.fn<(request: SimulationPreflightRequest) => Promise<SimulationPreflightReport>>();
 const startSimulation = vi.fn<(request: SimulationRequest) => Promise<SimulationStatus>>();
-const selectSimulation = vi.fn<(sessionId: string) => Promise<SimulationStatus>>();
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>();
@@ -43,7 +42,6 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchTemplates: vi.fn(),
     preflightSimulation: (request: SimulationPreflightRequest) => preflightSimulation(request),
     startSimulation: (request: SimulationRequest) => startSimulation(request),
-    selectSimulation: (sessionId: string) => selectSimulation(sessionId),
     stopSimulation: (sessionId?: string) => stopSimulation(sessionId),
   };
 });
@@ -85,7 +83,6 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
       interfaces: [],
     });
     stopSimulation.mockResolvedValue(undefined);
-    selectSimulation.mockResolvedValue(running);
   });
 
   it('does not call stopSimulation until the confirm modal is accepted', async () => {
@@ -132,7 +129,7 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
       sessionId: 'warehouse',
       sessions: [
         { ...running, sessionId: 'hospital', physicalVlan: 200 },
-        { ...running, sessionId: 'warehouse', physicalVlan: 201, selected: true },
+        { ...running, sessionId: 'warehouse', physicalVlan: 201 },
       ],
     });
     renderPage();
@@ -143,19 +140,59 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
     await waitFor(() => expect(stopSimulation).toHaveBeenCalledWith('hospital'));
   });
 
-  it('selects one scenario as the target for runtime details', async () => {
+  // Selection is this browser's, not the daemon's: picking a scenario here
+  // rescopes this tab's runtime reads and sends nothing to the daemon, so a
+  // second tab keeps reading whatever scenario it had.
+  it('rescopes runtime reads to the scenario selected from the table', async () => {
     const client = await import('../api/client');
     vi.mocked(client.fetchSimulationStatus).mockResolvedValue({
       ...running,
       sessionId: 'warehouse',
       sessions: [
         { ...running, sessionId: 'hospital', physicalVlan: 200 },
-        { ...running, sessionId: 'warehouse', physicalVlan: 201, selected: true },
+        { ...running, sessionId: 'warehouse', physicalVlan: 201 },
+      ],
+    });
+    renderPage();
+    await waitFor(() => expect(client.fetchDevices).toHaveBeenCalledWith('warehouse'));
+
+    fireEvent.click(await screen.findByTestId('session-select-hospital'));
+
+    await waitFor(() => expect(client.fetchDevices).toHaveBeenCalledWith('hospital'));
+  });
+
+  // The running-scenario card sits directly under the table. Left on the
+  // daemon's top-level status it would name one scenario while the table
+  // marked another selected, and its Stop would stop the one it named.
+  it('describes and stops the selected scenario, not the daemon default', async () => {
+    const client = await import('../api/client');
+    vi.mocked(client.fetchSimulationStatus).mockResolvedValue({
+      ...running,
+      sessionId: 'warehouse',
+      interface: 'veth-warehouse',
+      sessions: [
+        { ...running, sessionId: 'hospital', interface: 'veth-hospital', physicalVlan: 200 },
+        { ...running, sessionId: 'warehouse', interface: 'veth-warehouse', physicalVlan: 201 },
       ],
     });
     renderPage();
     fireEvent.click(await screen.findByTestId('session-select-hospital'));
-    await waitFor(() => expect(selectSimulation).toHaveBeenCalledWith('hospital'));
+
+    // The rollup and the card both describe the run; neither may still be
+    // describing the daemon's default.
+    await waitFor(() => expect(screen.getAllByText('veth-hospital').length).toBeGreaterThan(0));
+    expect(screen.queryByText('veth-warehouse')).not.toBeInTheDocument();
+
+    // The card's Stop, not one of the table's per-row buttons.
+    const cardStop = screen
+      .getAllByRole('button', { name: /stop simulation/i })
+      .find((button) => !button.dataset.testid);
+    if (!cardStop) throw new Error('the running-scenario card has no Stop button');
+    fireEvent.click(cardStop);
+    await screen.findByText(/interrupt the current run/i);
+    act(() => fireEvent.click(screen.getByRole('button', { name: /^stop$/i })));
+
+    await waitFor(() => expect(stopSimulation).toHaveBeenCalledWith('hospital'));
   });
 });
 

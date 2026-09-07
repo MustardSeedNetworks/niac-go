@@ -1,8 +1,8 @@
 /**
- * HeaderBar.test.tsx — locks the shell sim-status chip (PR "Dashboard
- * honesty + shell sim-status"). The chip sits next to ConnectionStatus
- * and reflects the shared useSimulationStatus() poll — it must not spin
- * up its own independent fetch against /api/v1/simulation.
+ * HeaderBar.test.tsx — locks the shell's scenario indicator. It sits next to
+ * ConnectionStatus and reads the shared AppContext poll, so adding it must not
+ * spin up a second fetch against /api/v1/simulation. What it shows is
+ * SessionSwitcher's own test; this one covers the header wiring.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,12 +43,14 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response));
 });
 
-describe('HeaderBar sim-status chip', () => {
-  it('shows running when the shared simulation status poll reports running', async () => {
+describe('HeaderBar scenario indicator', () => {
+  it('names the running scenario from the shared simulation status poll', async () => {
     fetchSimulationStatus.mockResolvedValue({
       running: true,
+      sessionId: 'hospital',
       deviceCount: 2,
       uptimeSeconds: 10,
+      sessions: [{ running: true, sessionId: 'hospital', deviceCount: 2, uptimeSeconds: 10 }],
     });
 
     render(
@@ -57,11 +59,12 @@ describe('HeaderBar sim-status chip', () => {
       </AppProvider>,
     );
 
-    const chip = await screen.findByTestId('simulation-status-chip');
-    await waitFor(() => expect(chip).toHaveTextContent('Running'));
+    const switcher = await screen.findByTestId('session-switcher');
+    await waitFor(() => expect(switcher).toHaveTextContent('hospital'));
+    expect(fetchSimulationStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('shows stopped when the shared simulation status poll reports stopped', async () => {
+  it('stays on screen with no scenario running', async () => {
     fetchSimulationStatus.mockResolvedValue({
       running: false,
       deviceCount: 0,
@@ -74,7 +77,7 @@ describe('HeaderBar sim-status chip', () => {
       </AppProvider>,
     );
 
-    const chip = await screen.findByTestId('simulation-status-chip');
-    await waitFor(() => expect(chip).toHaveTextContent('Stopped'));
+    const switcher = await screen.findByTestId('session-switcher');
+    await waitFor(() => expect(switcher).toHaveTextContent('No scenario running'));
   });
 });

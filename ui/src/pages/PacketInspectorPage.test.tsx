@@ -27,27 +27,32 @@ vi.mock('../api/client', () => ({
 }));
 
 let capturedOnMessage: ((data: unknown) => void) | undefined;
+let capturedStreamSessionId: string | undefined;
 
 vi.mock('../hooks/useEventSource', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useEventSource')>();
   return {
     ...actual,
-    usePacketStream: (options: { onMessage?: (data: unknown) => void }) => {
+    usePacketStream: (options: { onMessage?: (data: unknown) => void; sessionId?: string }) => {
       capturedOnMessage = options.onMessage;
+      capturedStreamSessionId = options.sessionId;
       return { connected: true, reconnect: vi.fn() };
     },
   };
 });
 
-// The page consumes the shared sim-status poll via useSimulationStatus
-// (useAppState('simStatus') under an AppProvider). Mock the hook so this
-// unit test doesn't need the whole AppProvider + its fan of client polls.
-vi.mock('../hooks/useSimulationStatus', () => ({
-  useSimulationStatus: () => ({
-    data: { running: false },
-    loading: false,
-    error: null,
-    refetch: vi.fn(),
+// The page reads the scenario this browser picked from AppContext. Mock the
+// hook so this unit test doesn't need the whole AppProvider + its fan of
+// client polls; these cases all run with no scenario selected, so the live
+// stream comes from the standalone capture rather than a session.
+let selectedSessionId: string | null = null;
+
+vi.mock('../contexts/AppContext', () => ({
+  useAppContext: () => ({
+    sessionId: selectedSessionId,
+    selectedSession: selectedSessionId
+      ? { running: true, sessionId: selectedSessionId, interface: 'veth-hospital' }
+      : null,
   }),
 }));
 
@@ -64,6 +69,8 @@ describe('PacketInspectorPage — filtered export', () => {
     startStandaloneCapture.mockReset();
     stopStandaloneCapture.mockReset();
     capturedOnMessage = undefined;
+    capturedStreamSessionId = undefined;
+    selectedSessionId = null;
   });
 
   it('exports only the packets matching the active display filter', async () => {
@@ -234,5 +241,32 @@ describe('PacketInspectorPage — filtered export', () => {
       'aria-selected',
       'true',
     );
+  });
+});
+
+/**
+ * The daemon runs several scenarios at once and the packet stream is scoped to
+ * one of them. Before U3 the page streamed whichever session the daemon
+ * reported at the top level, so switching scenario in the shell left the
+ * operator watching another scenario's packets under the new scenario's name.
+ */
+describe('PacketInspectorPage — scenario scoping', () => {
+  beforeEach(() => {
+    fetchCaptureStatus.mockReset().mockResolvedValue({ running: false });
+    fetchSimulationStatus.mockReset().mockResolvedValue({ running: false });
+    fetchUsableInterfaces.mockReset().mockResolvedValue({ interfaces: [] });
+    capturedStreamSessionId = undefined;
+    selectedSessionId = 'hospital';
+  });
+
+  it('streams the scenario this browser selected, with its interface', async () => {
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(capturedStreamSessionId).toBe('hospital'));
+    expect(await screen.findByText(/veth-hospital/)).toBeInTheDocument();
   });
 });
