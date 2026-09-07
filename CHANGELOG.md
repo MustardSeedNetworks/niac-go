@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.23](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.22...v0.95.23) (2026-09-07)
+
+
+### Tests
+
+* **ui:** a story per route in three states, and the gate that keeps them ([#1891](https://github.com/MustardSeedNetworks/niac-go/issues/1891)) ([ea17f3a](https://github.com/MustardSeedNetworks/niac-go/commit/ea17f3a98c61b26a299396951a061a5490bea4b5)), closes [#1890](https://github.com/MustardSeedNetworks/niac-go/issues/1890)
+
 ## [0.95.22](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.21...v0.95.22) (2026-09-07)
 
 
