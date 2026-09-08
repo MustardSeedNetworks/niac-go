@@ -159,6 +159,8 @@ jobs:
               - 'scripts/tests/pre-commit-hook-test.sh'
               - 'scripts/tests/package-firewall-ownership-test.sh'
               - 'scripts/tests/release-content-integrity-test.sh'
+              - 'scripts/tests/file-size-gate-test.sh'
+              - 'scripts/check-file-size.sh'
 
   # ===========================================================================
   # Backend (Go)
@@ -1035,6 +1037,9 @@ jobs:
 
       - name: Test package firewall ownership lifecycle
         run: ./scripts/tests/package-firewall-ownership-test.sh
+
+      - name: Test file-size gate
+        run: ./scripts/tests/file-size-gate-test.sh
 
       - name: Check for sensitive files
         run: |
