@@ -129,6 +129,75 @@ supplied `dot1dBaseNumPorts`, so it only ever adds BRIDGE-MIB to a device that
 had none (`agent_added`). `registerConfiguredRoutes` writes `ipRoute*`, which is
 already inside substitution 3's `ip` subtree.
 
+## What the harness measures (row F1a)
+
+`TestWalkReplayFidelity` (`internal/protocols/snmp/fidelity_test.go`) loads each
+walk into a fresh agent, sweeps the result twice through the agent's own PDU
+path — a GET-NEXT chain and a GET-BULK sweep — and compares what comes back to
+the **parsed source**, never to an exported walk file: the two formatters
+disagree (`FormatWalkEntries` preserves Hex-STRING, `ExportToWalkFile` flattens
+every OctetString to STRING), so an export-based diff would report type changes
+that are the exporter's.
+
+Every source OID must be byte-identical or land in exactly one contract bucket.
+`NIAC_FIDELITY_REPORT_DIR` writes a per-walk JSON report; `NIAC_WALK_CORPUS`
+points the sweep at the off-repo corpus instead of the shipped set.
+
+### The shipped eighteen
+
+| | |
+| --- | --- |
+| kept | 65,744 |
+| substituted (by a signed bucket) | 3,591 |
+| unclassified | 424 |
+| dropped, type-changed | 0 |
+| GET-NEXT / GET-BULK disagreements | 0 |
+| ordering breaks | 0 |
+
+All 424 unclassified rows fall in seven columns, and every one is an audit
+finding above rather than a new defect class:
+
+| Column | Rows | Finding |
+| --- | --- | --- |
+| `1.3.6.1.2.1.2.2.1.6` (ifPhysAddress) | 194 | 2 |
+| `1.3.6.1.2.1.17.4.4.1.3/.4/.5` (dot1dTpPort) | 222 | 1 |
+| `1.3.6.1.2.1.47.1.1.1.1.11` (entPhysicalSerialNumber) | 4 | 2 |
+| `1.3.6.1.2.1.17.1.1.0` (dot1dBaseBridgeAddress) | 3 | 2 |
+| `1.0.8802.1.1.2.1.3.2.0` (lldpLocChassisId) | 1 | 2 |
+
+### The 745-walk corpus
+
+Run on the Mac against `niac-demo-catalog/walks/sanitized`:
+
+| | |
+| --- | --- |
+| walks | 745 |
+| kept | 23,272,081 |
+| substituted | 590,049 |
+| unclassified | 52,771 across 698 walks |
+| dropped, type-changed | 0 |
+| GET-NEXT / GET-BULK disagreements | 0 |
+| GET-NEXT returned OIDs out of order | **4 walks** |
+
+The unclassified columns are the same three findings at scale — ifPhysAddress
+35,118, the dot1dTpPort columns 13,379, entPhysicalSerialNumber 3,074,
+dot1dBaseBridgeAddress 526, the two lldpLoc chassis columns 547, and a tail
+including `ipNetToMediaPhysAddress`, which is another address rewrite.
+
+The four ordering breaks are all Cisco Nexus walks, and the OIDs in them are
+**symbolic** (`SNMPv2-MIB::sysORDescr.3`, `IP-MIB::icmpMsgStatsOutPkts.ipv6.3`)
+rather than numeric. `NormalizeKnownWalkOIDs` rewrites a fixed list of names,
+so anything outside it is stored as text and sorts as text — which is why a
+GET-NEXT chain goes backwards. A walk taken with plain `snmpwalk`, without
+`-On`, therefore replays in an order that breaks a scanner. That is the leading
+hypothesis for row F1b, not a conclusion.
+
+A harness correction worth recording: the first corpus run reported 1.29
+million dropped OIDs. Every one belonged to a walk whose sweep had hit a fixed
+step cap, so the OIDs the sweep never reached looked dropped. The budget is now
+derived from the walk's own size, and a sweep that still stops early is marked
+`incomplete` with its verdict counts cleared rather than reported.
+
 ## What F0 does not do
 
 No behaviour changes. The five predicates were lifted into the classifier and

@@ -26,6 +26,7 @@
 #   NIAC_WIRE_STATE  where results are kept  (default /var/lib/niac-wire)
 #   NIAC_WIRE_TOKEN  file holding a GitHub token with issues:write (optional)
 #   NIAC_WIRE_REPO_SLUG  owner/repo to file against (default MustardSeedNetworks/niac-go)
+#   NIAC_WALK_CORPUS  sanitized walk corpus for the fidelity sweep (optional)
 set -uo pipefail
 
 REPO="${NIAC_WIRE_REPO:-/var/lib/niac-wire/repo}"
@@ -55,6 +56,21 @@ printf 'wire-nightly: %s at %s\n' "$SLUG" "$commit" | tee -a "$log"
 start_epoch=$SECONDS
 go test -C "$REPO" -tags integration ./internal/wiretest/... -count=1 -v 2>&1 | tee -a "$log"
 status="${PIPESTATUS[0]}"
+
+# The walk-fidelity corpus sweep (plan row F1a) runs here rather than per-PR:
+# 745 sanitized walks take minutes, and the corpus is off-repo. It is a report,
+# not a gate — a corpus walk has no baseline to ratchet against — so its exit
+# status is recorded but does not fail the unit. Absent corpus, absent sweep:
+# the timer stays useful on a host that has never been given one.
+if [[ -n "${NIAC_WALK_CORPUS:-}" && -d "${NIAC_WALK_CORPUS}" ]]; then
+	printf 'wire-nightly: walk-fidelity corpus sweep over %s\n' "$NIAC_WALK_CORPUS" | tee -a "$log"
+	NIAC_FIDELITY_REPORT_DIR="${STATE}/fidelity" \
+		go test -C "$REPO" ./internal/protocols/snmp/ \
+		-run TestWalkReplayFidelity -count=1 -timeout 60m 2>&1 | tee -a "$log" || true
+else
+	printf 'wire-nightly: no NIAC_WALK_CORPUS; skipping the walk-fidelity sweep\n' | tee -a "$log"
+fi
+
 duration=$((SECONDS - start_epoch))
 
 finished="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
