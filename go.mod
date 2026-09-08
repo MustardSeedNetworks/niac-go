@@ -3,7 +3,7 @@ module github.com/MustardSeedNetworks/niac-go
 go 1.27.0
 
 require (
-	github.com/MustardSeedNetworks/foundation v0.5.2
+	github.com/MustardSeedNetworks/foundation v0.5.5
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gopacket/gopacket v1.7.1
