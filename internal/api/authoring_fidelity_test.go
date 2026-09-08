@@ -208,11 +208,13 @@ func TestAuthoringSurfacesReplayIdentically(t *testing.T) {
 	if first.Incomplete {
 		t.Fatal("the sweep stopped before end-of-MIB, so the report says nothing")
 	}
-	// F1a's measured baseline for this capture. Equal reports at the wrong
-	// number would mean all three surfaces regressed together.
-	const brocadeBaseline = 117
+	// Row F1b drove this capture to zero: every source OID now arrives
+	// byte-identical or inside a signed substitution. Equal reports at the
+	// wrong number would mean all three surfaces regressed together, and the
+	// four guards above are what stop a vacuous zero counting as success.
+	const brocadeBaseline = 0
 	if first.Unclassified != brocadeBaseline {
-		t.Errorf("%d unclassified rows, F1a baseline for this capture is %d\n%s",
+		t.Errorf("%d unclassified rows, F1b baseline for this capture is %d\n%s",
 			first.Unclassified, brocadeBaseline, strings.Join(first.Samples, "\n"))
 	}
 
