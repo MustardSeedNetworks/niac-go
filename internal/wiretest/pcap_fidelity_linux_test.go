@@ -85,10 +85,11 @@ const (
 	// The reading end needs the same generous kernel ring the product's own
 	// capture engine sets (internal/capture/capture.go). Measured, not
 	// guessed: with libpcap's default ring, one run in eight of the topspeed
-	// case lost frames — always to ps_drop, never in transit, the sender's
-	// count intact — because a 36-frame burst arrives faster than the reader
-	// drains it. That is the reader's ring overflowing, which is why the
-	// shortfall message below reports the drop counters.
+	// case lost the last four frames of the run — always to ps_drop, never in
+	// transit, the sender's count intact — because a 36-frame burst arrives
+	// faster than the reader drains it. A short read has two explanations that
+	// look identical from the outside, so the shortfall message below reports
+	// the drop counters and names which one it was.
 	fidelityRingBytes = 16 << 20
 )
 
@@ -275,13 +276,14 @@ func openFidelityWire(t *testing.T) (*capture.Engine, *pcap.Handle) {
 
 // primeCapture sends probe frames until one is read back.
 //
-// This is not a sleep in disguise: an activated libpcap handle on a freshly
-// created veth does not necessarily see the very next frame, and the first
-// cold run of these tests lost the opening four frames of a topspeed replay to
-// exactly that. Waiting for a *fixed* interval would be a guess; waiting for a
-// probe to complete the round trip proves the property the replay depends on.
-// The probe rides its own EtherType so it can never be counted as a replayed
-// frame, and readFidelityFrames drops any probe still sitting in the ring.
+// The package already documents the race this closes: a responder and a pcap
+// handle race on a freshly created veth (see dhcpExchange, which retransmits
+// for the same reason). This is not a sleep in disguise — waiting a fixed
+// interval would be a guess, while waiting for a probe to complete the round
+// trip proves the property the replay depends on, and turns a handle that
+// never carries into an immediate, named failure instead of a thirty-second
+// shortfall. The probe rides its own EtherType so it can never be counted as a
+// replayed frame, and readFrames drops any probe still sitting in the ring.
 func primeCapture(t *testing.T, engine *capture.Engine, handle *pcap.Handle) {
 	t.Helper()
 
