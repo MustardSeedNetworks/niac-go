@@ -51,11 +51,12 @@
   },
   "jargon": {
     "bpf": "Una expresión de Berkeley Packet Filter (BPF) aplicada por el motor de captura. Los paquetes que no coinciden se descartan antes de la captura — nunca llegan al búfer, a diferencia de un filtro de visualización.",
-    "pcap": "PCAP (packet capture) es el formato de archivo usado para grabar y reproducir el tráfico de red capturado en la red.",
-    "oid": "Un OID (object identifier) es la dirección numérica con puntos de un único valor en un árbol MIB de SNMP, p. ej. 1.3.6.1.2.1.1.1.0 para sysDescr.",
-    "snmpWalk": "Un SNMP walk es una secuencia guardada de pares OID/valor recopilada al recorrer el árbol MIB de un dispositivo con solicitudes GetNext. NIAC reproduce estos archivos para simular las respuestas SNMP de un dispositivo.",
     "fiveTuple": "Una 5-tuple es la combinación (protocolo, IP:puerto de origen, IP:puerto de destino) que identifica de forma única una conversación TCP/UDP.",
-    "librarySource": "los archivos starter vienen incluidos con NIAC, los archivos bundle proceden del paquete de contenido publicado (niac content install), y los archivos user se añadieron o editaron localmente."
+    "librarySource": "los archivos starter vienen incluidos con NIAC, los archivos bundle proceden del paquete de contenido publicado (niac content install), y los archivos user se añadieron o editaron localmente.",
+    "oid": "Un OID (object identifier) es la dirección numérica con puntos de un único valor en un árbol MIB de SNMP, p. ej. 1.3.6.1.2.1.1.1.0 para sysDescr.",
+    "pcap": "PCAP (packet capture) es el formato de archivo usado para grabar y reproducir el tráfico de red capturado en la red.",
+    "snmpWalk": "Un SNMP walk es una secuencia guardada de pares OID/valor recopilada al recorrer el árbol MIB de un dispositivo con solicitudes GetNext. NIAC reproduce estos archivos para simular las respuestas SNMP de un dispositivo.",
+    "walkProvenance": "De dónde procede el contenido de un walk. \"Capturado\" significa un walk SNMP de un dispositivo real, procesado por el sanitizador. \"Generado\" significa que NIAC lo construyó a partir de un perfil: responde, pero nunca se midió ningún dispositivo."
   },
   "faq": {
     "title": "Preguntas frecuentes"

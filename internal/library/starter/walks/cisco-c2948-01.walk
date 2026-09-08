@@ -1,3 +1,9 @@
+# Source: generated
+# Note: named for a Catalyst 2948 but not a capture of one. 65 lines:
+#   the system group plus a bare ifIndex column, with NIAC's own
+#   placeholder sysName and sysLocation, and no ifDescr, ifType,
+#   ifXTable or LLDP. Labelled by hand once, per the F4 row; F5
+#   replaces it with a real IOS capture.
 .1.3.6.1.2.1.1.1.0 = STRING: "Cisco Systems, Inc. WS-C2948.Cisco Catalyst Operating System Software, Version 6.3(7).Copyright (c) 1995-2002 by Cisco Systems, Inc.."
 .1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.5.42
 .1.3.6.1.2.1.1.3.0 = Timeticks: (16920765) 1 day, 23:00:07.65

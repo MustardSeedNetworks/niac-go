@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/sanitize"
+	"github.com/MustardSeedNetworks/niac-go/internal/walkmeta"
 )
 
 type sanitizeOptions struct {
@@ -261,7 +262,11 @@ func sanitizeFile(inputFile, outputFile string, mapping *sanitize.Mapping, opts 
 		return fmt.Errorf("failed to sanitize content: %w", err)
 	}
 
-	return writeSanitizedAtomic(outputFile, sanitized)
+	// A walk that reaches the sanitizer is a walk of a real device — that is
+	// what there is to sanitize. Declare it at the write boundary, so the
+	// catalog's provenance column is emitted by the tool rather than typed in
+	// by hand. A file that already says what it is keeps its own answer.
+	return writeSanitizedAtomic(outputFile, walkmeta.Ensure(sanitized, walkmeta.Captured))
 }
 
 // sanitizedFileMode is the permission for sanitized walk output: owner

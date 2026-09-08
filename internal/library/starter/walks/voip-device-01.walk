@@ -1,3 +1,4 @@
+# Source: captured
 .1.3.6.1.2.1.1.1.0 = STRING: "Hardware:7816H3, 1 Intel(R) Celeron(R) D CPU 3.20GHz, 2048 MB Memory: Software:UCOS 3.0.0.0-42"
 .1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.900
 .1.3.6.1.2.1.1.3.0 = Timeticks: (1152286119) 133 days, 8:47:41.19

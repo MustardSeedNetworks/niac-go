@@ -34,7 +34,8 @@
     "librarySource": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally.",
     "oid": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
     "pcap": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
-    "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses."
+    "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
+    "walkProvenance": "Where a walk's content came from. \"Captured\" means an SNMP walk of a real device, put through the sanitizer. \"Generated\" means NIAC built it from a profile — it answers, but no device was ever measured for it."
   },
   "overview": {
     "categoriesEmpty": "No categories match your search.",

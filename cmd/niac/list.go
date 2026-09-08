@@ -12,6 +12,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/walkmeta"
 )
 
 type listOptions struct {
@@ -224,8 +225,15 @@ func runListFiles(options *listOptions, kind library.Kind, prefix string) error 
 			continue
 		}
 		count++
-		fmt.Fprintf(os.Stdout, "  %-48s %10s source=%s\n",
+		// source= is where the file came from on this machine; content= is
+		// what the walk says about its own content, and is the honest answer
+		// to "is this a real capture?".
+		line := fmt.Sprintf("  %-48s %10s source=%s",
 			file.Name, content.HumanBytes(file.SizeBytes), file.Source)
+		if file.Provenance != walkmeta.Unknown {
+			line += " content=" + string(file.Provenance)
+		}
+		fmt.Fprintln(os.Stdout, line)
 	}
 	if count == 0 {
 		fmt.Fprintln(os.Stdout, "  none")
