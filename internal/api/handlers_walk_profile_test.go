@@ -75,7 +75,7 @@ SNMPv2-MIB::sysObjectID.0 = OID: .1.3.6.1.4.1.9.1.2238
 SNMPv2-MIB::sysName.0 = STRING: "private-access-01"
 IF-MIB::ifDescr.1 = STRING: "GigabitEthernet1/0/1"
 IF-MIB::ifType.1 = INTEGER: 6
-VENDOR-MIB::privateObject.0 = STRING: "preserved"
+.1.3.6.1.4.1.9.9.999.1.0 = STRING: "preserved"
 `
 	body, err := json.Marshal(walkImportRequest{Name: "symbolic.walk", Content: content})
 	if err != nil {
@@ -103,11 +103,42 @@ VENDOR-MIB::privateObject.0 = STRING: "preserved"
 	}
 	text := string(saved)
 	for _, expected := range []string{
-		".1.3.6.1.2.1.1.1.0", ".1.3.6.1.2.1.2.2.1.2.1", "VENDOR-MIB::privateObject.0",
+		".1.3.6.1.2.1.1.1.0", ".1.3.6.1.2.1.2.2.1.2.1", ".1.3.6.1.4.1.9.9.999.1.0",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Errorf("saved walk missing %q", expected)
 		}
+	}
+}
+
+// TestWalkImportRefusesNamesItCannotResolve is the other half of the rule
+// above. An unknown vendor object was previously "preserved" verbatim, which
+// looked like generosity and was not: gosnmp cannot marshal a non-numeric OID,
+// so one such row makes every SNMP response from a device backed by this walk
+// fail to encode, and the device answers nothing at all. Refusing the import
+// and naming `snmpwalk -On` is the only honest outcome.
+func TestWalkImportRefusesNamesItCannotResolve(t *testing.T) {
+	server := walkProfileTestServer(t)
+	content := `SNMPv2-MIB::sysDescr.0 = STRING: "Cisco IOS XE Switch"
+IF-MIB::ifDescr.1 = STRING: "GigabitEthernet1/0/1"
+VENDOR-MIB::privateObject.0 = STRING: "unservable"
+`
+	body, err := json.Marshal(walkImportRequest{Name: "unresolvable.walk", Content: content})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	recorder := httptest.NewRecorder()
+	server.handleWalkImport(
+		recorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/walk/import", bytes.NewReader(body)),
+	)
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422; body=%s", recorder.Code, recorder.Body.String())
+	}
+	// The operator has to be able to act on this without seeing the issue list,
+	// which is withheld because it quotes the uploaded lines.
+	if !strings.Contains(recorder.Body.String(), "-On") {
+		t.Errorf("refusal does not name the remedy: %s", recorder.Body.String())
 	}
 }
 

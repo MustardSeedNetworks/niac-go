@@ -14,10 +14,12 @@ import (
 // two lines are the two kinds it must refuse: a symbolic INDEX (`ipv6`), which
 // no name table can resolve, and an object from a MIB nothing ships.
 const symbolicWalk = `SNMPv2-MIB::sysDescr.0 = STRING: Cisco NX-OS(tm) n5000
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.12.3.1.3.1008
 SNMPv2-SMI::enterprises.9.12.3.1.3.1008 = INTEGER: 1
 SNMPv2-SMI::transmission.7.2.1.1.1 = INTEGER: 2
 IF-MIB::ifDescr.99 = STRING: Ethernet1/1
 IP-MIB::icmpMsgStatsOutPkts.ipv6.3 = Counter32: 5
+.1.3.6.1.2.1.99.1.0 = OID: FOO-MIB::unknownRoot.1
 FOO-MIB::barObject.1 = STRING: vendor private
 `
 
@@ -51,6 +53,7 @@ func TestLoadWalkFileRefusesUnresolvableSymbolicOIDs(t *testing.T) {
 	for oid, want := range map[string]string{
 		".1.3.6.1.4.1.9.12.3.1.3.1008": "1",
 		".1.3.6.1.2.1.10.7.2.1.1.1":    "2",
+		".1.3.6.1.2.1.1.2.0":           "1.3.6.1.4.1.9.12.3.1.3.1008",
 		".1.3.6.1.2.1.2.2.1.2.99":      "Ethernet1/1",
 	} {
 		value, err := agent.HandleGet(oid)
@@ -81,11 +84,21 @@ func assertEveryOIDReachesTheWire(t *testing.T, agent *Agent) {
 			continue
 		}
 
+		// The stored type and value, not a Null placeholder: an OID-typed
+		// value is named under the same rules as the key, and sysObjectID.0
+		// carrying `SNMPv2-SMI::enterprises.9.1.1` fails the marshaller in
+		// exactly the same way. A Null here would not see it.
+		held := agent.mib.Get(oid)
+		if held == nil {
+			t.Errorf("MIB lists %q but does not serve it", oid)
+
+			continue
+		}
 		packet := &gosnmp.SnmpPacket{
 			Version:   gosnmp.Version2c,
 			Community: "public",
 			PDUType:   gosnmp.GetResponse,
-			Variables: []gosnmp.SnmpPDU{{Name: oid, Type: gosnmp.Null}},
+			Variables: []gosnmp.SnmpPDU{{Name: oid, Type: held.Type, Value: held.Value}},
 		}
 		if _, err := packet.MarshalMsg(); err != nil {
 			t.Errorf("OID %q does not marshal onto the wire: %v", oid, err)
@@ -118,5 +131,54 @@ func assertGetNextVisitsEveryOIDInOrder(t *testing.T, agent *Agent) {
 
 	if visited != held {
 		t.Errorf("GET-NEXT chain visited %d OIDs, MIB holds %d", visited, held)
+	}
+}
+
+// TestValidateWalkAcceptsResolvableNamesAndRefusesTheRest pins the validator to
+// the same rule the parser now enforces, and the ValidLines semantics both
+// consumers depend on.
+//
+// `handlers_walk_profile.go` refuses an upload on `!Valid || ValidLines == 0`,
+// and `catalogsync.validateWalks` refuses a non-strict walk on `ValidLines == 0`.
+// A resolvable name is a warning, so a walk made only of those — the shape of
+// ui/e2e/fixtures/office.snmpwalk — must still count as usable.
+func TestValidateWalkAcceptsResolvableNamesAndRefusesTheRest(t *testing.T) {
+	resolvable, err := ValidateWalkContent("resolvable.walk",
+		[]byte("SNMPv2-MIB::sysName.0 = STRING: \"office-switch\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resolvable.Valid {
+		t.Error("a walk whose names all resolve must stay valid")
+	}
+	if resolvable.ValidLines != 1 {
+		t.Errorf("ValidLines = %d, want 1: a warning-only line still yields a binding",
+			resolvable.ValidLines)
+	}
+	if len(resolvable.Issues) != 1 || resolvable.Issues[0].Severity != "warning" {
+		t.Errorf("want one warning, got %+v", resolvable.Issues)
+	}
+	if want := ".1.3.6.1.2.1.1.5.0 = STRING: \"office-switch\""; resolvable.Issues[0].Suggestion != want {
+		t.Errorf("auto-fix = %q, want %q", resolvable.Issues[0].Suggestion, want)
+	}
+
+	// Each of these fails gosnmp's marshaller, so the row cannot be served:
+	// a symbolic table index, an object from a MIB nothing ships, an
+	// unresolvable OID *value*, and a mangled arc no case in validateOID
+	// used to catch. (A resolvable value such as SNMPv2-SMI::enterprises.9.1.1
+	// is a warning, not an error: the parser rewrites it and serves the row.)
+	for _, line := range []string{
+		"IP-MIB::icmpMsgStatsOutPkts.ipv6.3 = Counter32: 5",
+		"FOO-MIB::barObject.1 = STRING: vendor private",
+		".1.3.6.1.2.1.1.2.0 = OID: FOO-MIB::unknownRoot.1",
+		"1.3.6.1.2.1.4v6RouterAdvertSpinLock.0 = INTEGER: 1",
+	} {
+		result, resultErr := ValidateWalkContent("refused.walk", []byte(line+"\n"))
+		if resultErr != nil {
+			t.Fatal(resultErr)
+		}
+		if result.Valid {
+			t.Errorf("walk stayed valid despite an unservable row: %s", line)
+		}
 	}
 }

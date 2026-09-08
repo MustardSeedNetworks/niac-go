@@ -142,7 +142,16 @@ func processWalkLine(lineNum int, line string, result *ValidationResult) {
 	result.Issues = append(result.Issues, issues...)
 	if containsError(issues) {
 		result.Valid = false
+
+		return
 	}
+
+	// A line with only warnings or notes still yields a variable binding, and
+	// both consumers read ValidLines as "is there anything usable in here"
+	// before refusing an upload. Counting only issue-free lines made a
+	// one-line walk carrying a single cosmetic remark — a named OID, leading
+	// whitespace — indistinguishable from an empty file.
+	result.ValidLines++
 }
 
 // isSkippableLine reports walk metadata that does not represent a variable binding.
@@ -299,6 +308,14 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			Original: originalLine,
 			AutoFix:  false,
 		})
+	default:
+		// Anything else the parser would refuse — a mangled arc such as
+		// `1.3.6.1.2.1.4v6RouterAdvertSpinLock.0`. Asking NormalizeWalkOID
+		// rather than adding another case keeps the validator equal to the
+		// parser by construction instead of by two parallel case lists.
+		if _, resolved := NormalizeWalkOID(oid); !resolved {
+			issues = append(issues, symbolicOIDIssue(lineNum, oid, originalLine))
+		}
 	}
 
 	return issues
@@ -595,7 +612,13 @@ func validateIPAddressValue(lineNum int, valueStr, originalLine string) []Valida
 
 // validateOIDValue validates OID values.
 func validateOIDValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
-	if valueStr == "" || strings.HasPrefix(valueStr, ".") || strings.Contains(valueStr, "::") {
+	// A named value fails gosnmp's marshaller exactly as a named OID does —
+	// `sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.1.1` is the common case.
+	if strings.Contains(valueStr, "::") {
+		return []ValidationIssue{symbolicOIDIssue(lineNum, valueStr, originalLine)}
+	}
+
+	if valueStr == "" || strings.HasPrefix(valueStr, ".") {
 		return nil
 	}
 

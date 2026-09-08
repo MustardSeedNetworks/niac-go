@@ -333,12 +333,23 @@ func countRejectedRows(t *testing.T, path string) int {
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
-		oid, _, found := strings.Cut(trimmed, "=")
+		oid, rest, found := strings.Cut(trimmed, "=")
 		if !found {
 			continue
 		}
 		if _, resolved := NormalizeWalkOID(strings.TrimSpace(oid)); !resolved {
 			rejected++
+
+			continue
+		}
+		// An OID-typed *value* is named under the same rules as the key —
+		// `sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.1.1` — and is refused
+		// by the same resolver, so the count has to see it too.
+		if kind, value, split := strings.Cut(rest, ":"); split &&
+			strings.EqualFold(strings.TrimSpace(kind), "OID") {
+			if _, resolved := NormalizeWalkOID(strings.TrimSpace(value)); !resolved {
+				rejected++
+			}
 		}
 	}
 

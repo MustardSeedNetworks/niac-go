@@ -318,6 +318,20 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 	}, nil
 }
 
+// parseOIDValue parses an OID-typed value, which net-snmp names symbolically
+// under exactly the same rules as the OID on the left of the `=`. sysObjectID.0
+// is the common case — `OID: SNMPv2-SMI::enterprises.9.12.3.1.3.1008` — and a
+// name here fails gosnmp's marshaller just as surely as a name in the key, so
+// the row cannot be served either way.
+func parseOIDValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	numeric, resolved := NormalizeWalkOID(valueStr)
+	if !resolved {
+		return 0, nil, fmt.Errorf("%w: %s", ErrSymbolicOID, valueStr)
+	}
+
+	return gosnmp.ObjectIdentifier, strings.TrimPrefix(numeric, "."), nil
+}
+
 // parseTypeAndValue parses the type and value from a walk file entry.
 func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	switch typeStr {
@@ -336,7 +350,7 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	case "TIMETICKS":
 		return parseTimeticksValue(valueStr)
 	case snmpTypeOID, "OBJECT IDENTIFIER":
-		return gosnmp.ObjectIdentifier, strings.TrimPrefix(valueStr, "."), nil
+		return parseOIDValue(valueStr)
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
 		return gosnmp.IPAddress, valueStr, nil
 	case "BITS", "BIT STRING":

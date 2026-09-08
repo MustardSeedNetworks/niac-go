@@ -222,14 +222,31 @@ which is how these walks passed `niac sanitize --check` and the catalog-sync
 gate. A resolvable name is now a `warning` carrying the numeric form as an
 auto-fix; an unresolvable one is an `error` that names `snmpwalk -On`.
 
+An OID-typed **value** is named under the same rules as the key —
+`sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.12.3.1.3.1008` is the common
+case — and gosnmp rejects it identically, so `parseTypeAndValue` resolves and
+refuses it through the same function. `validateOIDValue` previously returned
+early on anything containing `::`.
+
+`ValidLines` now counts every line without an _error_ rather than every
+issue-free line. Both consumers read it as "is there anything usable here"
+before refusing (`handlers_walk_profile.go` on `!Valid || ValidLines == 0`,
+`catalogsync.validateWalks` on `ValidLines == 0`), and a walk whose every line
+carries one cosmetic remark — a resolvable name, leading whitespace — was
+indistinguishable from an empty file.
+
 Measured over the four Nexus walks, before and after:
 
 | Walk | Symbolic rows | Rejected after | Recovered | Ordering break |
 | --- | --- | --- | --- | --- |
-| `cisco-nexus-5000-05` | 34,990 | 10,028 | 24,962 | fixed |
-| `cisco-nexus-7000-02` | 16,430 | 1,390 | 15,040 | fixed |
-| `cisco-nexus-4000-02` | 3,765 | 519 | 3,246 | fixed |
+| `cisco-nexus-5000-05` | 34,990 | 10,216 | 24,774 | fixed |
+| `cisco-nexus-7000-02` | 16,430 | 1,405 | 15,025 | fixed |
+| `cisco-nexus-4000-02` | 3,765 | 522 | 3,243 | fixed |
 | `cisco-nexus-7000-01` | 1,139 | 1,139 | 0 | fixed |
+
+(`cisco-nexus-7000-01`'s rows are not symbolic names but mangled arcs —
+`1.3.6.1.2.1.4v6RouterAdvertSpinLock.0` — which look like a sanitizer artifact
+rather than anything net-snmp emits.)
 
 The harness gained a `rejected` count read from the raw file, because a
 rejected row is absent from _both_ sides of the comparison: without it,
