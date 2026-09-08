@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.26](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.25...v0.95.26) (2026-09-08)
+
+
+### Features
+
+* **library:** say which walks are captures and which NIAC generated ([#1906](https://github.com/MustardSeedNetworks/niac-go/issues/1906)) ([0222b2a](https://github.com/MustardSeedNetworks/niac-go/commit/0222b2af274fa64f0da08911b5d21c3901d7b934))
+
 ## [0.95.25](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.24...v0.95.25) (2026-09-08)
 
 
