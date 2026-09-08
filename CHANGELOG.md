@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.25](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.24...v0.95.25) (2026-09-08)
+
+
+### Tests
+
+* **ui:** pick the PCAP through the file chooser, not the hidden input ([#1903](https://github.com/MustardSeedNetworks/niac-go/issues/1903)) ([9a90d38](https://github.com/MustardSeedNetworks/niac-go/commit/9a90d38e69956d191a06e1a766007bf9941b1470)), closes [#1895](https://github.com/MustardSeedNetworks/niac-go/issues/1895)
+
 ## [0.95.24](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.23...v0.95.24) (2026-09-08)
 
 
