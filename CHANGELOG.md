@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.24](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.23...v0.95.24) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ui:** confirm before stopping a capture, and make an upload cancellable ([#1896](https://github.com/MustardSeedNetworks/niac-go/issues/1896)) ([f56b808](https://github.com/MustardSeedNetworks/niac-go/commit/f56b808f82283f7e32b289ee9c6aa9c9d27a1a57)), closes [#1895](https://github.com/MustardSeedNetworks/niac-go/issues/1895)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1898](https://github.com/MustardSeedNetworks/niac-go/issues/1898)) ([81c4546](https://github.com/MustardSeedNetworks/niac-go/commit/81c4546d57284f244dcfee7518a2a6b671d1fea1))
+* **deps:** update mustardseednetworks/.github action to v1.12.0 ([#1897](https://github.com/MustardSeedNetworks/niac-go/issues/1897)) ([6bace01](https://github.com/MustardSeedNetworks/niac-go/commit/6bace01f336bb084d7c519f49ffa9ea887f1936d))
+
 ## [0.95.23](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.22...v0.95.23) (2026-09-07)
 
 
