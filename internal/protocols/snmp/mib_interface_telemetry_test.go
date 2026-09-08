@@ -23,8 +23,8 @@ func TestInterfaceAndBridgeCountersSharePacketTelemetry(t *testing.T) {
 	seedInterfaceIdentity(t, agent, "GigabitEthernet1/0/5", "10005", "5")
 	seedInterfaceIdentity(t, agent, "GigabitEthernet1/0/6", "10006", "6")
 	agent.refreshAuthoredInterfaceMIBs()
-	agent.registerDot1dTpPortEntry(5)
-	agent.registerDot1dTpPortEntry(6)
+	agent.registerDot1dTpPortEntry(5, true)
+	agent.registerDot1dTpPortEntry(6, true)
 
 	telemetry.RecordInterfaceInbound("GigabitEthernet1/0/5", 128, false, false)
 	telemetry.RecordInterfaceInbound("GigabitEthernet1/0/5", 64, true, true)

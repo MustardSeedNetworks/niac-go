@@ -43,9 +43,10 @@ means.
 | `normalized` | The source line named its OID symbolically and was rewritten to numeric form on parse. Decided from the source text, so `Classify` never returns it. |
 | `agent_added` | On the wire but not in the source: MIB-II the agent synthesizes for every device. Only the harness sees both sides, so `Classify` never returns it. |
 
-### The five signed substitutions
+### The signed substitutions
 
-Owner sign-off 2026-09-05, all five accepted:
+Owner sign-off 2026-09-05, all five accepted; 6, 7 and 8 were added by the
+2026-09-08 ruling recorded below:
 
 > sysName from config; sysDescr/Contact/Location only when authored;
 > snmp group + ip/icmp/tcp/udp/egp live; LLDP/CDP/FDB neighbours dropped
@@ -59,6 +60,9 @@ Owner sign-off 2026-09-05, all five accepted:
 | 3 | `1.3.6.1.2.1.11` (snmp group) and the `ip`/`icmp`/`tcp`/`udp`/`egp` subtrees | `live` | always | skipped at load, then re-registered live |
 | 4 | LLDP remote systems, CDP cache, `dot1dTpFdbTable`, `dot1qFdbTable`, `dot1qTpFdbTable` | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 5 | `ifTable`/`ifXTable` rows for interfaces the scenario authored | `authored` (configuration columns) or `live` (counters) | only at an authored `ifIndex` | **loaded, then overwritten** after the load |
+| 6 | `ifPhysAddress.*`, `dot1dBaseBridgeAddress`, `lldpLocChassisId`, `entPhysicalSerialNumber.*` | `authored` | an authored MAC; the three addresses need an Ethernet one | **loaded, then overwritten** after the load |
+| 7 | `lldpLocPortTable` (`1.0.8802.1.1.2.1.3.7`) | `topology` | only when the device declares `trunk_ports` | skipped at load |
+| 8 | `dot1dTpPortTable` (`1.3.6.1.2.1.17.4.4`) | `authored` (port number, max info) or `live` (frame counters, discards) | only at a bridge port an authored interface sits behind, or any port under `trunk_ports` | **loaded, then overwritten** after the load |
 
 Substitution 5 splits within a single row. Configuration columns —
 `ifSpeed`, `ifHighSpeed`, `ifMtu`, `ifType`, `ifConnectorPresent`,
@@ -75,6 +79,27 @@ Two consequences worth stating because they are easy to assume the other way:
   indexes, and those two columns are how an authored interface is matched to a
   row in the first place.
 
+Substitution 6 exists for the same reason `sysName` does: two devices backed by
+one capture must not answer with one identity. It carries two conditions
+because the code does — any authored MAC seeds the derived serial numbers, but
+only a six-octet one can stand in for a link-layer address, so a device with a
+longer MAC keeps the capture's addresses and still gets its own serials.
+
+Substitution 8 is scoped the way substitution 5 is. A bridge port is not an
+ifIndex, so the contract reads `dot1dBasePortIfIndex` to learn which port each
+authored interface sits behind; ports outside that set arrive byte-identical,
+and a port the walk left bare still _gains_ the columns it lacks, which is
+`agent_added` rather than an overwrite.
+
+**Where the classifier is deliberately imprecise.** `Classify` takes an OID and
+no value, because `DropsFromWalk` has to answer from the same function while
+the loader is still reading the file. So substitutions 5, 6 and 8 are stated at
+the prefix, and a row inside one that happens to arrive byte-identical is
+reported as substituted rather than kept: over the shipped eighteen that is 78
+rows — 11 `ifPhysAddress` rows carrying no address and 67 empty
+`entPhysicalSerialNumber` rows, both of which the refresh skips. The report
+counts them honestly as substituted; it never reports a changed row as kept.
+
 ### Why substitution 5 is not a load-time skip
 
 `Classify` needs the `ifIndex` each authored interface holds, which is resolved
@@ -85,12 +110,30 @@ therefore be built _after_ the load. `DropsFromWalk` is deliberately narrower
 than `Classify != kept`: it answers only the index-independent substitutions
 (1–4), which is all the loader can decide while it is still reading the file.
 
-## Found during F0, unsigned
+## Found during F0, ruled on 2026-09-08 (row F1b)
 
 Auditing the writers that run after the load loop turned up three places that
-overwrite or delete OIDs a walk can carry, outside the five substitutions the
-owner signed. They are **not** in the classifier: row F1a will measure them as
-unclassified rows, which is the honest outcome, and the owner rules on each.
+overwrote or deleted OIDs a walk can carry, outside the five substitutions the
+owner signed. F1a measured them as unclassified rows — 424 over the shipped
+eighteen — and the owner ruled on 2026-09-08: **sign findings 2 and 3, fix
+finding 1.**
+
+- **Finding 2 is now signed substitution 6.** It is `sysName`'s own rationale
+  one layer down, and identity substitution was already accepted for the
+  `system` group.
+- **Finding 3 is now signed substitution 7.** It sits inside substitution 4's
+  `trunk_ports` gate and is a fourth prefix of a decision already made. Naming
+  it in `isSynthesizedTopologyOID` also changes the loader: `DropsFromWalk` now
+  skips those rows at load instead of loading them for
+  `refreshAuthoredDiscoveryMIBs` to delete a moment later. Nothing between the
+  two reads them, and the wire outcome is the same.
+- **Finding 1 was the defect, and is fixed** rather than signed: it fired with
+  no `trunk_ports` at all and against ports the scenario never mentioned. It is
+  now scoped to substitution 5's authored-`ifIndex` reach or substitution 4's
+  `trunk_ports` gate, and is signed within that scope as substitution 8. An
+  undeclared bridge port arrives byte-identical.
+
+The findings as they were measured:
 
 1. **`dot1dTpPortTable` (`1.3.6.1.2.1.17.4.4`) is overwritten for every bridge
    port the walk itself defines.** `refreshBridgePortCounters` runs after every
@@ -116,13 +159,19 @@ unclassified rows, which is the honest outcome, and the owner rules on each.
 
 Measured on a walk carrying `dot1dTpPortMaxInfo.1 = 9999`,
 `ifPhysAddress.1 = AA BB CC DD EE FF` and a captured `lldpLocPortDesc.1`,
-loaded by a device whose authored MAC is `00:11:22:33:44:55`:
+loaded by a device whose authored MAC is `00:11:22:33:44:55`, before the
+ruling and after it:
 
-| OID | Walk says | Served, no `trunk_ports` | Served, with `trunk_ports` |
+| OID | Walk says | No `trunk_ports`, port unauthored | With `trunk_ports` |
 | --- | --- | --- | --- |
-| `1.3.6.1.2.1.17.4.4.1.2.1` (`dot1dTpPortMaxInfo`) | 9999 | 1500 | 1500 |
+| `1.3.6.1.2.1.17.4.4.1.2.1` (`dot1dTpPortMaxInfo`) | 9999 | was 1500, **now 9999** | 1500 |
 | `1.3.6.1.2.1.2.2.1.6.1` (`ifPhysAddress`) | `aa:bb:cc:dd:ee:ff` | `00:11:22:33:44:55` | `00:11:22:33:44:55` |
 | `1.0.8802.1.1.2.1.3.7.1.3.1` (`lldpLocPortDesc`) | `captured-local-port` | `captured-local-port` | absent |
+
+`TestBridgePortTableSurvivesAnUndeclaredPort` and its three siblings
+(`internal/protocols/snmp/walk_bridge_port_test.go`) hold that first row down,
+in all four shapes: undeclared, authored, `trunk_ports`, and a port the walk
+left without a `dot1dTpPortTable` row at all.
 
 `initializeBridgeMIB` was audited and is clean: it returns early when the walk
 supplied `dot1dBaseNumPorts`, so it only ever adds BRIDGE-MIB to a device that
@@ -145,25 +194,34 @@ points the sweep at the off-repo corpus instead of the shipped set.
 
 ### The shipped eighteen
 
-| | |
-| --- | --- |
-| kept | 65,744 |
-| substituted (by a signed bucket) | 3,591 |
-| unclassified | 424 |
-| dropped, type-changed | 0 |
-| GET-NEXT / GET-BULK disagreements | 0 |
-| ordering breaks | 0 |
-
-All 424 unclassified rows fall in seven columns, and every one is an audit
-finding above rather than a new defect class:
-
-| Column | Rows | Finding |
+| | F1a, as measured | F1b, after the ruling |
 | --- | --- | --- |
-| `1.3.6.1.2.1.2.2.1.6` (ifPhysAddress) | 194 | 2 |
-| `1.3.6.1.2.1.17.4.4.1.3/.4/.5` (dot1dTpPort) | 222 | 1 |
-| `1.3.6.1.2.1.47.1.1.1.1.11` (entPhysicalSerialNumber) | 4 | 2 |
-| `1.3.6.1.2.1.17.1.1.0` (dot1dBaseBridgeAddress) | 3 | 2 |
-| `1.0.8802.1.1.2.1.3.2.0` (lldpLocChassisId) | 1 | 2 |
+| kept | 65,744 | **65,888** |
+| substituted (by a signed bucket) | 3,591 | **3,871** |
+| unclassified | 424 | **0** |
+| dropped, type-changed | 0 | 0 |
+| GET-NEXT / GET-BULK disagreements | 0 | 0 |
+| ordering breaks | 0 | 0 |
+
+`fidelityBaseline` in `fidelity_test.go` is now empty, and the harness fails
+just as loudly on a walk that has become _better_ than its entry as on one
+that has become worse, so the zero cannot rot into a stale allowance.
+
+The 424 rows accounted for exactly, and the movement is the ruling's:
+
+| Column | Rows | Finding | Now |
+| --- | --- | --- | --- |
+| `1.3.6.1.2.1.2.2.1.6` (ifPhysAddress) | 194 | 2 | substituted (6) |
+| `1.3.6.1.2.1.17.4.4.1.3/.4/.5` (dot1dTpPort) | 222 | 1 | kept — byte-identical |
+| `1.3.6.1.2.1.47.1.1.1.1.11` (entPhysicalSerialNumber) | 4 | 2 | substituted (6) |
+| `1.3.6.1.2.1.17.1.1.0` (dot1dBaseBridgeAddress) | 3 | 2 | substituted (6) |
+| `1.0.8802.1.1.2.1.3.2.0` (lldpLocChassisId) | 1 | 2 | substituted (6) |
+
+Finding 3 contributes no rows here: none of the eighteen is loaded by a device
+declaring `trunk_ports`, so substitution 7 has its own unit assertion instead.
+`kept` rises by 144 rather than 222 and `substituted` by 280 rather than 202
+because substitution 6 claims all 280 rows in its columns, 78 of which were
+already byte-identical — the prefix-level imprecision recorded above.
 
 ### The 745-walk corpus
 
@@ -179,7 +237,8 @@ Run on the Mac against `niac-demo-catalog/walks/sanitized`:
 | GET-NEXT / GET-BULK disagreements | 0 |
 | GET-NEXT returned OIDs out of order | **4 walks** |
 
-The unclassified columns are the same three findings at scale — ifPhysAddress
+Those corpus figures are F1a's, and predate this row: the same three findings
+at scale — ifPhysAddress
 35,118, the dot1dTpPort columns 13,379, entPhysicalSerialNumber 3,074,
 dot1dBaseBridgeAddress 526, the two lldpLoc chassis columns 547, and a tail
 including `ipNetToMediaPhysAddress`, which is another address rewrite.

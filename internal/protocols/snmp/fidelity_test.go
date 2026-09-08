@@ -113,25 +113,18 @@ func writeFidelityReport(t *testing.T, reports []FidelityReport) {
 	}
 }
 
-// fidelityBaseline is the ratchet. Row F1a merges red on purpose — the
-// harness has to land before the defects it finds can be fixed — but a walk
-// must never get *worse* than what was measured when it merged. Row F1b
-// drives every number here to zero; nothing may be added to this map without
-// a finding recorded alongside it in ~/.claude/plans/niac-replay-fidelity.md.
+// fidelityBaseline is the ratchet. Row F1a merged it red on purpose — the
+// harness had to land before the defects it found could be fixed — and row
+// F1b emptied it: every shipped walk now arrives byte-identical or inside a
+// signed substitution. It stays empty. Nothing may be added to this map
+// without a finding recorded alongside it in
+// ~/.claude/plans/niac-replay-fidelity.md, and the test fails just as loudly
+// on an entry that has become too generous as on one that is exceeded.
 //
 // The numbers are unclassified rows: a source OID that the contract says
 // should have arrived byte-identical and did not.
 func fidelityBaseline() map[string]int {
-	return map[string]int{
-		"3com-superstack-03.walk":         207,
-		"brocade-icx6610-24f-01.walk":     117,
-		"huawei-versatile-01.walk":        51,
-		"mikrotik-routeros-7161-chr.walk": 1,
-		"netgear-gsm7212-managed-01.walk": 13,
-		"oracle-linux-01.walk":            4,
-		"vmware-esxi-01.walk":             29,
-		"voip-device-01.walk":             2,
-	}
+	return map[string]int{}
 }
 
 // TestWalkReplayFidelity is the F1a harness over every shipped starter walk.
