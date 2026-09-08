@@ -94,7 +94,15 @@ test.describe('PCAP analyzer — cancelling an upload', () => {
     await page.route('**/api/v1/pcap/upload', () => new Promise(() => {}));
 
     await page.goto('/packets?view=files');
-    await page.waitForLoadState('domcontentloaded');
+    // A CSS selector for the hidden input matches before React has settled:
+    // `domcontentloaded` fires while the app is still behind AuthGate's
+    // "checking" state and the i18n namespace load, so files set into that
+    // first tree are discarded when it is replaced, and the analyzer stays
+    // empty for the rest of the test (the #1896 merge-queue ejection).
+    // The uploader's own translated, mounted state is the readiness signal:
+    // this button carries its accessible name only once `pages` has loaded,
+    // and is disabled only while no file is selected.
+    await expect(page.getByRole('button', { name: 'Analyze PCAP' })).toBeDisabled();
 
     await page.setInputFiles('input[type="file"]', {
       name: 'sample.pcap',
