@@ -5,7 +5,7 @@
  * full unfiltered packet buffer, ignoring whatever display filter the user
  * had dialed in. Export must write exactly the currently filtered packets.
  */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -268,5 +268,52 @@ describe('PacketInspectorPage — scenario scoping', () => {
 
     await waitFor(() => expect(capturedStreamSessionId).toBe('hospital'));
     expect(await screen.findByText(/veth-hospital/)).toBeInTheDocument();
+  });
+});
+
+describe('PacketInspectorPage — stop capture confirmation', () => {
+  beforeEach(() => {
+    fetchCaptureStatus.mockReset().mockResolvedValue({ running: true, interface: 'eth0' });
+    fetchSimulationStatus.mockReset().mockResolvedValue({ running: false });
+    fetchUsableInterfaces.mockReset().mockResolvedValue({ interfaces: [] });
+    startStandaloneCapture.mockReset();
+    stopStandaloneCapture.mockReset().mockResolvedValue(undefined);
+    selectedSessionId = null;
+  });
+
+  it('asks before stopping and does nothing if the operator backs out', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Stop capture' }));
+
+    // Stopping discards the live wire; it must not fire on the first click.
+    expect(stopStandaloneCapture).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog', { name: 'Stop the capture?' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(stopStandaloneCapture).not.toHaveBeenCalled();
+  });
+
+  it('stops the capture once the operator confirms', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Stop capture' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Stop the capture?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Stop capture' }));
+
+    await waitFor(() => expect(stopStandaloneCapture).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

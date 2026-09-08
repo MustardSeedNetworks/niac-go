@@ -25,6 +25,12 @@ interface PcapUploaderProps {
    * only renders the resulting determinate progress bar.
    */
   uploadProgress: number | null;
+  /**
+   * Abort the upload that is currently in flight. Only reachable while
+   * `uploadProgress` is non-null, which is exactly when there is something
+   * to abort.
+   */
+  onCancelUpload: () => void;
 }
 
 /** Maximum file size: 100MB */
@@ -83,6 +89,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   error,
   success,
   uploadProgress,
+  onCancelUpload,
 }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
@@ -251,6 +258,14 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
               <SmallText className="text-text-muted">
                 {t('libraryPcaps.uploader.uploadingProgress', { percent: uploadProgress })}
               </SmallText>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancelUpload}
+                leftIcon={<X className={iconSizes.md} />}
+              >
+                {t('libraryPcaps.uploader.cancelUpload')}
+              </Button>
             </div>
             <div
               className="h-2 w-full overflow-hidden rounded-full bg-bg-base/60"

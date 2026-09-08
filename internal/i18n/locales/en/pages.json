@@ -409,6 +409,7 @@
       "analyzeButton": "Analyze PCAP",
       "analyzing": "Analyzing…",
       "browseHint": "or click to browse ({{extensions}})",
+      "cancelUpload": "Cancel upload",
       "dragDropTitle": "Drag & drop PCAP file",
       "dropAriaLabel": "Drop PCAP file here or click to select",
       "dropToUpload": "Drop file to upload",
@@ -719,6 +720,9 @@
       "startCaptureButton": "Start capture",
       "startingLabel": "Starting…",
       "stopCaptureButton": "Stop capture",
+      "stopCaptureConfirmMessage": "The capture stops immediately and this interface goes back to idle. Frames already received stay in the viewer; export them first if you need them.",
+      "stopCaptureConfirmTitle": "Stop the capture?",
+      "stopCaptureStopping": "Stopping…",
       "summaryLabel": "Summary",
       "viewTabsAriaLabel": "Packets view"
     },
