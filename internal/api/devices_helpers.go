@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -134,7 +135,7 @@ func copyIPSlice(ips []net.IP) []net.IP {
 func (s *Server) createAndSaveDevice(
 	w http.ResponseWriter, r *http.Request, cfg *config.Config, req DeviceCreateRequest,
 ) (*config.Device, error) {
-	newDevice, err := createDeviceFromRequest(req)
+	newDevice, err := createDeviceFromRequest(req, s.authoredIncludeDir())
 	if err != nil {
 		s.logger.ErrorContext(
 			r.Context(),
@@ -182,6 +183,39 @@ func (s *Server) createAndSaveDevice(
 	return newDevice, nil
 }
 
+// authoredIncludeDir is the directory a device document's relative paths --
+// snmp_agent.walk_file above all -- resolve against, and which they are confined
+// to. It is the same base the config file's own loader uses: the config's
+// resolved include_path when it declares one, and otherwise the directory the
+// config lives in.
+//
+// Getting the base from the loaded config rather than from the config path
+// alone is what makes the editor able to save a device it can read. The editor
+// posts back the document the daemon serialized (DeviceDetailResponse.rawYaml),
+// which carries the *resolved* walk path -- for a library template that is
+// <root>/walks/x.walk, reached through `include_path: ../walks` from
+// <root>/networks. Confining that to <root>/networks would refuse the daemon's
+// own read-back.
+//
+// Without any base at all -- which is what this path had before -- it broke in
+// both directions instead: `walk_file: walks/x.walk`, the spelling every config
+// file and template uses, resolved against the daemon's working directory and
+// came back "walk file not found"; and an absolute path anywhere on the host
+// was accepted, because the containment check is skipped when there is no base.
+func (s *Server) authoredIncludeDir() string {
+	if cfg := s.currentConfig(); cfg != nil && cfg.IncludePath != "" {
+		// Already absolute: the loader resolves include_path against the
+		// config's directory when it builds the Config.
+		return cfg.IncludePath
+	}
+	if path := s.configPath(); path != "" {
+		return filepath.Dir(path)
+	}
+	// No config file to save to. "." still gives the loader a base to confine
+	// against, which is what an empty string does not.
+	return "."
+}
+
 // findDeviceIndex finds the index of a device by hostname, returns -1 if not found.
 func findDeviceIndex(devices []config.Device, hostname string) int {
 	for i, dev := range devices {
@@ -194,12 +228,12 @@ func findDeviceIndex(devices []config.Device, hostname string) int {
 }
 
 // updateDeviceFromYAML updates a device from raw YAML content.
-func updateDeviceFromYAML(rawYAML, hostname string) (*config.Device, error) {
+func updateDeviceFromYAML(rawYAML, hostname, includeDir string) (*config.Device, error) {
 	if validateErr := validateYAMLInput(rawYAML); validateErr != nil {
 		return nil, validateErr
 	}
 
-	return parseDeviceFromYAML(rawYAML, hostname)
+	return parseDeviceFromYAML(rawYAML, hostname, includeDir)
 }
 
 // applyPartialDeviceUpdate applies partial updates to a device.
@@ -389,7 +423,7 @@ func (s *Server) saveConfig(cfg *config.Config) error {
 	return nil
 }
 
-func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
+func createDeviceFromRequest(req DeviceCreateRequest, includeDir string) (*config.Device, error) {
 	dev := &config.Device{
 		Name: req.Hostname,
 		Type: req.Type,
@@ -443,7 +477,7 @@ func createDeviceFromRequest(req DeviceCreateRequest) (*config.Device, error) {
 	}
 
 	if req.RawYAML != "" {
-		parsed, err := parseDeviceFromYAML(req.RawYAML, req.Hostname)
+		parsed, err := parseDeviceFromYAML(req.RawYAML, req.Hostname, includeDir)
 		if err != nil {
 			return nil, err
 		}
@@ -477,7 +511,7 @@ func parseIP(s string) (net.IP, error) {
 // an operator who edited one line in the device editor got a device with its
 // addresses, agent and interfaces silently dropped - the read path serializes
 // all of them and the write path threw them away.
-func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
+func parseDeviceFromYAML(yamlStr, hostname, includeDir string) (*config.Device, error) {
 	// SECURITY FIX #153: Validate YAML input before parsing
 	if validateErr := validateYAMLInput(yamlStr); validateErr != nil {
 		return nil, fmt.Errorf("YAML validation failed: %w", validateErr)
@@ -509,7 +543,7 @@ func parseDeviceFromYAML(yamlStr, hostname string) (*config.Device, error) {
 	if marshalErr != nil {
 		return nil, fmt.Errorf("re-encode device: %w", marshalErr)
 	}
-	loaded, loadErr := config.LoadYAMLBytes(document)
+	loaded, loadErr := config.LoadYAMLBytesManaged(document, includeDir, nil)
 	if loadErr != nil {
 		return nil, fmt.Errorf("invalid device: %w", loadErr)
 	}

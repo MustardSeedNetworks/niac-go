@@ -753,7 +753,7 @@ func TestCreateDeviceFromRequest(t *testing.T) {
 			Hostname: "router1",
 			Type:     "router",
 		}
-		dev, err := createDeviceFromRequest(req)
+		dev, err := createDeviceFromRequest(req, ".")
 		if err != nil {
 			t.Fatalf("createDeviceFromRequest: %v", err)
 		}
@@ -772,7 +772,7 @@ func TestCreateDeviceFromRequest(t *testing.T) {
 			MAC:      "00:11:22:33:44:55",
 			IP:       "10.0.0.1",
 		}
-		dev, err := createDeviceFromRequest(req)
+		dev, err := createDeviceFromRequest(req, ".")
 		if err != nil {
 			t.Fatalf("createDeviceFromRequest: %v", err)
 		}
@@ -789,7 +789,7 @@ func TestCreateDeviceFromRequest(t *testing.T) {
 			Hostname: "test",
 			MAC:      "invalid",
 		}
-		_, err := createDeviceFromRequest(req)
+		_, err := createDeviceFromRequest(req, ".")
 		if err == nil {
 			t.Error("should fail with invalid MAC")
 		}
@@ -800,7 +800,7 @@ func TestCreateDeviceFromRequest(t *testing.T) {
 			Hostname: "test",
 			IP:       "not-an-ip",
 		}
-		_, err := createDeviceFromRequest(req)
+		_, err := createDeviceFromRequest(req, ".")
 		if err == nil {
 			t.Error("should fail with invalid IP")
 		}
@@ -816,7 +816,7 @@ func TestCreateDeviceFromRequestPersistsSNMPOverlay(t *testing.T) {
 			WalkFiles: []string{"cisco/base.walk", "cisco/vendor.walk"},
 			AddMibs:   []AddMibRequest{{OID: "1.3.6.1.4.1.9.1.1.0", Type: "STRING", Value: "9300"}},
 		},
-	})
+	}, ".")
 	if err != nil {
 		t.Fatalf("createDeviceFromRequest: %v", err)
 	}
@@ -835,7 +835,7 @@ func TestDeviceCRUDPersistsManagementConfiguration(t *testing.T) {
 			Enabled: true, Username: " admin ", PasswordEnv: " NIAC_TEST_SSH_PASSWORD ",
 		},
 		Syslog: &SyslogConfigRequest{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
-	})
+	}, ".")
 	if err != nil {
 		t.Fatalf("createDeviceFromRequest: %v", err)
 	}
@@ -1008,7 +1008,7 @@ func TestParseDeviceFromYAML(t *testing.T) {
 	t.Run("valid YAML", func(t *testing.T) {
 		yaml := `type: switch
 mac: "00:11:22:33:44:55"`
-		dev, err := parseDeviceFromYAML(yaml, "myswitch")
+		dev, err := parseDeviceFromYAML(yaml, "myswitch", ".")
 		if err != nil {
 			t.Fatalf("parseDeviceFromYAML: %v", err)
 		}
@@ -1021,14 +1021,14 @@ mac: "00:11:22:33:44:55"`
 	})
 
 	t.Run("empty YAML", func(t *testing.T) {
-		_, err := parseDeviceFromYAML("", "test")
+		_, err := parseDeviceFromYAML("", "test", ".")
 		if err == nil {
 			t.Error("parseDeviceFromYAML should fail for empty YAML")
 		}
 	})
 
 	t.Run("invalid YAML", func(t *testing.T) {
-		_, err := parseDeviceFromYAML("[invalid yaml {{}", "test")
+		_, err := parseDeviceFromYAML("[invalid yaml {{}", "test", ".")
 		if err == nil {
 			t.Error("parseDeviceFromYAML should fail for invalid YAML")
 		}

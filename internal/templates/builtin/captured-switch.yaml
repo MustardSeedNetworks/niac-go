@@ -1,0 +1,38 @@
+# Captured Switch Template
+# One switch replaying a real SNMP capture, with two site values overridden
+#
+# Use Case: replay a captured device instead of a synthesized one
+# Includes: walk_file against a shipped capture, add_mibs overrides
+#
+# `include_path` points at the library's walks/ directory, which sits beside
+# the networks/ directory this file is installed into. Every relative path in
+# this document resolves from there, and is confined to it.
+#
+# `add_mibs` is applied after the walk, so an entry naming an OID the capture
+# already carries replaces it. That is how one capture becomes a device on your
+# site rather than the device it was taken from.
+
+include_path: ../walks
+
+devices:
+  - name: closet-sw1
+    type: switch
+    mac: "02:00:00:00:10:01"
+    ips:
+      - "192.168.20.11"
+
+    lldp:
+      enabled: true
+      system_description: "Wiring closet access switch"
+
+    snmp_agent:
+      community: public
+      walk_file: brocade-icx6610-24f-01.walk
+      add_mibs:
+        # sysLocation and sysContact belong to your site, not to the capture.
+        - oid: 1.3.6.1.2.1.1.6.0
+          type: STRING
+          value: fixed(Building A, Wiring Closet 1)
+        - oid: 1.3.6.1.2.1.1.4.0
+          type: STRING
+          value: fixed(netops@example.com)

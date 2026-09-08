@@ -271,3 +271,72 @@ derived from the walk's own size, and a sweep that still stops early is marked
 No behaviour changes. The five predicates were lifted into the classifier and
 their call sites replaced; `go test ./internal/protocols/snmp` is unchanged and
 green. Measuring the contract is row F1a; fixing what it finds is F1b.
+
+## Authoring order and `add_mibs` precedence (row F8)
+
+A device's MIB is assembled once, in `Stack.initSNMPAgent`
+(`internal/protocols/stack_snmp.go`), in this order:
+
+1. **Walk files.** `snmp_agent.walk_file` and `snmp_agent.walk_files` are
+   de-duplicated into one list and each is loaded into the community agent,
+   in the order written. A later walk overwrites an OID an earlier one set.
+2. **Community includes.** `snmp_agent.community_includes` load into their own
+   per-community agents. They neither read from nor write to the base agent.
+3. **`add_mibs`.** Applied last of the authored inputs, so an entry naming an
+   OID a walk already carries **replaces** it. A walk is the base; `add_mibs`
+   is the override. `varimib(...)` and `sysuptime` install a value that is
+   computed per request rather than a fixed one.
+4. **Synthesized topology** — peer LLDP/CDP remote tables and the bridge FDB —
+   written after `add_mibs`, so an `add_mibs` entry inside those tables is
+   overwritten rather than honoured. Author neighbours with `trunk_ports`,
+   not with `add_mibs`.
+5. `Reindex`, which sorts the OID space the sweep walks.
+
+Asserted by `TestAddMibsOverrideWalkRows`
+(`internal/protocols/stack_snmp_addmib_precedence_test.go`).
+
+### Where a relative `walk_file` resolves
+
+`walk_file` is resolved against a base directory and confined to it: `..` is
+refused outright, and a resolved path outside the base is refused. The base is
+the surface's own home for the document:
+
+| Surface | Loader | Base directory |
+| --- | --- | --- |
+| Config file | `config.LoadYAML` | the config's resolved `include_path`, else the file's own directory |
+| Device editor (`rawYaml`) | `parseDeviceFromYAML` (`internal/api`) | the loaded config's `include_path`, else the directory of the config the daemon saves to |
+| Wizard (`configData`) | `config.LoadYAMLBytesManaged` | `inlineConfigDir()` (`internal/daemon`) |
+
+A shipped template lives in the library's `networks/` directory while the walks
+live beside it in `walks/`, so a template that wants a captured walk declares
+`include_path: ../walks` and then names the walk by filename. `include_path`
+shifts the base for every relative path in the document; it does not lift the
+containment rule.
+
+The editor is the one surface whose input is not the authored text: it posts
+back the document the daemon serialized for it, and that document carries the
+_resolved_ walk path with no `include_path` of its own. Its base therefore has
+to be the base the config was loaded with, not merely the config's directory —
+for a shipped template those differ by one level, and the narrower of the two
+refuses the daemon's own read-back.
+
+The editor's base was missing entirely until F8: it loaded the document with no
+base at all, which refused `walk_file: walks/x.walk` — the spelling every config
+file and template uses — as "walk file not found", and accepted an absolute path
+outside the config directory that the other two surfaces reject.
+
+Two gaps remain, both pre-existing and neither in this row's scope:
+
+- The **field-level device DTO** (`SNMPAgentRequest.walkFile`, used when a
+  request carries no `rawYaml`) stores the path verbatim — no resolution, no
+  containment, no existence check. The UI does not use this route; the API
+  accepts it.
+- The wizard's `configData` resolves against `inlineConfigDir()`, so a template
+  **pasted** into the wizard resolves `include_path: ../walks` relative to the
+  configs directory rather than the library. Starting the same template _by
+  name_ goes through the file loader and is unaffected.
+
+`TestAuthoringSurfacesReplayIdentically`
+(`internal/api/authoring_fidelity_test.go`) authors one device, loads it
+through all three surfaces, and requires the F1a fidelity report to be
+identical across them.

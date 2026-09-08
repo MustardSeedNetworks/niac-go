@@ -2,6 +2,7 @@ package templates_test
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,9 +14,10 @@ import (
 func TestList(t *testing.T) {
 	templates := tmpl.List()
 
-	expectedCount := 8
-	if len(templates) != expectedCount {
-		t.Errorf("Expected %d templates, got %d", expectedCount, len(templates))
+	// The named templates below are the assertion. A bare count only tells
+	// whoever adds the next template to bump the number.
+	if len(templates) == 0 {
+		t.Fatal("no templates found in the embedded tree")
 	}
 
 	// Verify each template has required fields
@@ -66,8 +68,15 @@ func TestList(t *testing.T) {
 func TestListNames(t *testing.T) {
 	names := tmpl.ListNames()
 
-	if len(names) != 8 {
-		t.Errorf("Expected 8 template names, got %d", len(names))
+	// Deliberately not a count: adding a template is routine, and a test that
+	// fails on the number rather than on a property teaches people to bump the
+	// number. List() reads the same embedded FS, so a name in one and not the
+	// other is the real defect.
+	if len(names) != len(tmpl.List()) {
+		t.Errorf("ListNames returned %d names, List returned %d templates", len(names), len(tmpl.List()))
+	}
+	if len(names) == 0 {
+		t.Fatal("no templates found in the embedded tree")
 	}
 
 	// Verify names are sorted
@@ -244,24 +253,46 @@ func loadTemplateAsConfig(t *testing.T, templateName string) *config.Config {
 	return cfg
 }
 
-// createTempConfigFile writes content to a temp file and returns the path.
+// createTempConfigFile writes content into the layout a template is installed
+// into -- networks/ beside walks/ -- and returns the path.
+//
+// The layout is the point, not scaffolding: a template that replays a capture
+// names it relative to its own file with `include_path: ../walks`, so a
+// template written to a bare temp directory cannot resolve its walk and looks
+// broken while working perfectly in the product.
 func createTempConfigFile(t *testing.T, content string) string {
 	t.Helper()
 
-	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
+	root := t.TempDir()
+	networks := filepath.Join(root, "networks")
+	walks := filepath.Join(root, "walks")
+	for _, dir := range []string{networks, walks} {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			t.Fatalf("create %s: %v", dir, err)
+		}
 	}
 
-	_, writeErr := tmpFile.WriteString(content)
-	if writeErr != nil {
-		_ = tmpFile.Close()
+	starter := filepath.Join("..", "library", "starter", "walks")
+	entries, err := os.ReadDir(starter)
+	if err != nil {
+		t.Fatalf("read starter walks: %v", err)
+	}
+	for _, entry := range entries {
+		capture, readErr := os.ReadFile(filepath.Join(starter, entry.Name()))
+		if readErr != nil {
+			t.Fatalf("read %s: %v", entry.Name(), readErr)
+		}
+		if writeErr := os.WriteFile(filepath.Join(walks, entry.Name()), capture, 0o600); writeErr != nil {
+			t.Fatalf("write %s: %v", entry.Name(), writeErr)
+		}
+	}
+
+	path := filepath.Join(networks, "niac-test.yaml")
+	if writeErr := os.WriteFile(path, []byte(content), 0o600); writeErr != nil {
 		t.Fatalf("Failed to write temp file: %v", writeErr)
 	}
 
-	_ = tmpFile.Close()
-
-	return tmpFile.Name()
+	return path
 }
 
 // assertConfigHasDevices verifies a config has at least one device.
