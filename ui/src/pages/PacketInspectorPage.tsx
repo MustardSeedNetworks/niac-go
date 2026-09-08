@@ -33,6 +33,7 @@ import { useErrorToast } from '../hooks/useErrorToast';
 import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
@@ -131,7 +132,25 @@ export const PacketInspectorPage: FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showColoringRules, setShowColoringRules] = useState(false);
   const [showStreamView, setShowStreamView] = useState(false);
+  // Stopping the standalone capture ends the only source of live frames on
+  // this page and cannot be undone without restarting on the interface, so
+  // it asks first.
+  const [showStopCaptureConfirm, setShowStopCaptureConfirm] = useState(false);
+  const [stoppingCapture, setStoppingCapture] = useState(false);
   const showError = useErrorToast();
+
+  const handleStopCaptureConfirmed = useCallback(async () => {
+    setStoppingCapture(true);
+    try {
+      await stopStandaloneCapture();
+      refetchCapture();
+      setShowStopCaptureConfirm(false);
+    } catch (err) {
+      showError(err);
+    } finally {
+      setStoppingCapture(false);
+    }
+  }, [refetchCapture, showError]);
 
   // Coloring rules
   const {
@@ -345,14 +364,7 @@ export const PacketInspectorPage: FC = () => {
                       variant="outline"
                       tone="red"
                       size="sm"
-                      onClick={async () => {
-                        try {
-                          await stopStandaloneCapture();
-                          refetchCapture();
-                        } catch (err) {
-                          showError(err);
-                        }
-                      }}
+                      onClick={() => setShowStopCaptureConfirm(true)}
                     >
                       {t('packets.inspector.stopCaptureButton')}
                     </Button>
@@ -513,6 +525,18 @@ export const PacketInspectorPage: FC = () => {
           )}
         </>
       )}
+
+      <ConfirmModal
+        isOpen={showStopCaptureConfirm}
+        onConfirm={handleStopCaptureConfirmed}
+        onCancel={() => setShowStopCaptureConfirm(false)}
+        title={t('packets.inspector.stopCaptureConfirmTitle')}
+        message={t('packets.inspector.stopCaptureConfirmMessage')}
+        confirmLabel={t('packets.inspector.stopCaptureButton')}
+        confirmingLabel={t('packets.inspector.stopCaptureStopping')}
+        cancelLabel={tCommon('buttons.cancel')}
+        confirming={stoppingCapture}
+      />
     </div>
   );
 };

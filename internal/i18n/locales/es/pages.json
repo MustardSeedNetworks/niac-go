@@ -795,7 +795,10 @@
       "standaloneBpfLabel": "Filtro BPF (opcional)",
       "standaloneBpfPlaceholder": "p. ej. tcp port 80",
       "startingLabel": "Iniciando…",
-      "startCaptureButton": "Iniciar captura"
+      "startCaptureButton": "Iniciar captura",
+      "stopCaptureConfirmTitle": "¿Detener la captura?",
+      "stopCaptureConfirmMessage": "La captura se detiene de inmediato y esta interfaz vuelve a estar inactiva. Las tramas ya recibidas permanecen en el visor; expórtelas primero si las necesita.",
+      "stopCaptureStopping": "Deteniendo…"
     },
     "hexDump": {
       "selectPacketPlaceholder": "Seleccione un paquete para ver el volcado hexadecimal",
@@ -1032,7 +1035,8 @@
       "analyzing": "Analizando…",
       "analyzeButton": "Analizar PCAP",
       "uploadingProgress": "Cargando… {{percent}}%",
-      "serverFileTooLarge": "Esta captura es demasiado grande para que el servidor la acepte (límite: {{size}}). Elija un archivo más pequeño."
+      "serverFileTooLarge": "Esta captura es demasiado grande para que el servidor la acepte (límite: {{size}}). Elija un archivo más pequeño.",
+      "cancelUpload": "Cancelar la carga"
     },
     "analyzer": {
       "pageHeading": "Análisis PCAP",

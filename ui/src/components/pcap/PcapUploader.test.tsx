@@ -23,6 +23,7 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error={null}
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={null}
       />,
     );
@@ -53,6 +54,7 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error={null}
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={null}
       />,
     );
@@ -76,11 +78,52 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error="Invalid file type. Please select a PCAP file (.pcap, .pcapng, .cap)"
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={null}
       />,
     );
 
     expect(screen.getByText(/Invalid file type/)).toBeInTheDocument();
+  });
+
+  it('offers cancel only while an upload is in flight, and while Clear is disabled', async () => {
+    const onCancelUpload = vi.fn();
+    const { rerender } = render(
+      <PcapUploader
+        onFileSelect={vi.fn()}
+        onAnalyze={vi.fn()}
+        onValidationError={vi.fn()}
+        isAnalyzing={true}
+        selectedFile={makeFile('capture.pcap', 1024)}
+        error={null}
+        success={null}
+        onCancelUpload={onCancelUpload}
+        uploadProgress={17}
+      />,
+    );
+
+    // Clear is disabled mid-analysis; cancelling the transfer must not be.
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();
+    const cancel = screen.getByRole('button', { name: 'Cancel upload' });
+    expect(cancel).toBeEnabled();
+    await userEvent.click(cancel);
+    expect(onCancelUpload).toHaveBeenCalledTimes(1);
+
+    // Nothing in flight: there is nothing to cancel.
+    rerender(
+      <PcapUploader
+        onFileSelect={vi.fn()}
+        onAnalyze={vi.fn()}
+        onValidationError={vi.fn()}
+        isAnalyzing={false}
+        selectedFile={makeFile('capture.pcap', 1024)}
+        error={null}
+        success={null}
+        onCancelUpload={onCancelUpload}
+        uploadProgress={null}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Cancel upload' })).toBeNull();
   });
 
   it('renders a determinate progress bar while uploadProgress is set', () => {
@@ -93,6 +136,7 @@ describe('PcapUploader', () => {
         selectedFile={makeFile('capture.pcap', 1024)}
         error={null}
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={42}
       />,
     );
@@ -112,6 +156,7 @@ describe('PcapUploader', () => {
         selectedFile={makeFile('capture.pcap', 1024)}
         error={null}
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={null}
       />,
     );
@@ -129,6 +174,7 @@ describe('PcapUploader', () => {
         selectedFile={null}
         error="This capture is too large for the server to accept (limit: 140.0 MB). Please choose a smaller file."
         success={null}
+        onCancelUpload={vi.fn()}
         uploadProgress={null}
       />,
     );

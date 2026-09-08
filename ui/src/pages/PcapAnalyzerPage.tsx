@@ -1,5 +1,5 @@
 import { Download, FileSearch, Info, Palette, Share2, Trash2 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchPcapAnalysis, uploadPcapWithProgress } from '../api/client';
 import { isApiError } from '../api/errors';
@@ -72,6 +72,17 @@ export const PcapAnalyzerPage: FC = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const showError = useErrorToast();
 
+  // Held for the life of one upload so the operator — or a navigation away
+  // from the page — can abort a capture that is still on the wire. The
+  // daemon holds analyses in memory and writes nothing until the whole body
+  // has arrived, so an aborted upload leaves it with nothing to clean up.
+  const uploadController = useRef<AbortController | null>(null);
+  useEffect(() => () => uploadController.current?.abort(), []);
+
+  const handleCancelUpload = useCallback(() => {
+    uploadController.current?.abort();
+  }, []);
+
   // Selected packet state
   const [selectedPacket, setSelectedPacket] = useState<PcapPacket | null>(null);
   const [highlightRange, setHighlightRange] = useState<[number, number] | undefined>(undefined);
@@ -122,6 +133,7 @@ export const PcapAnalyzerPage: FC = () => {
     setValidationError(null);
     setSuccess(null);
     setUploadProgress(0);
+    uploadController.current = new AbortController();
 
     try {
       // Convert file to base64 and upload to backend
@@ -129,6 +141,7 @@ export const PcapAnalyzerPage: FC = () => {
       const uploadResponse = await uploadPcapWithProgress(
         { filename: selectedFile.name, data: base64Data },
         setUploadProgress,
+        uploadController.current.signal,
       );
 
       if (!uploadResponse.success) {
@@ -147,6 +160,11 @@ export const PcapAnalyzerPage: FC = () => {
         setSelectedPacket(firstPacket);
       }
     } catch (err) {
+      // A cancel is the operator's own decision, not a failure: leave the
+      // page exactly as it was, with the file still selected to retry.
+      if ((err as Error).name === 'AbortError') {
+        return;
+      }
       // The server enforces its own upload size cap (independent of the
       // client-side MAX_FILE_SIZE check) — surface that specific failure
       // as a friendly, actionable inline message instead of a generic
@@ -158,6 +176,7 @@ export const PcapAnalyzerPage: FC = () => {
         showError(err);
       }
     } finally {
+      uploadController.current = null;
       setIsAnalyzing(false);
       setUploadProgress(null);
     }
@@ -244,6 +263,7 @@ export const PcapAnalyzerPage: FC = () => {
           error={validationError}
           success={success}
           uploadProgress={uploadProgress}
+          onCancelUpload={handleCancelUpload}
         />
       )}
 
