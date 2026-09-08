@@ -94,17 +94,19 @@ test.describe('PCAP analyzer — cancelling an upload', () => {
     await page.route('**/api/v1/pcap/upload', () => new Promise(() => {}));
 
     await page.goto('/packets?view=files');
-    // A CSS selector for the hidden input matches before React has settled:
-    // `domcontentloaded` fires while the app is still behind AuthGate's
-    // "checking" state and the i18n namespace load, so files set into that
-    // first tree are discarded when it is replaced, and the analyzer stays
-    // empty for the rest of the test (the #1896 merge-queue ejection).
-    // The uploader's own translated, mounted state is the readiness signal:
-    // this button carries its accessible name only once `pages` has loaded,
-    // and is disabled only while no file is selected.
+    // Pick the file the way a person does — click the drop zone and answer the
+    // file chooser it opens. Addressing the hidden <input> by CSS selector
+    // instead ejected this PR from the merge queue twice: the selector matches
+    // any input node that happens to be in the DOM, the change event is then
+    // lost if React replaces that node, and the analyzer silently stays empty
+    // (the disabled Analyze button below is what the failure snapshots showed).
+    // The chooser is bound to the element that was clicked, so there is no
+    // stale node to lose.
     await expect(page.getByRole('button', { name: 'Analyze PCAP' })).toBeDisabled();
 
-    await page.setInputFiles('input[type="file"]', {
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Drop PCAP file here or click to select' }).click();
+    await (await chooser).setFiles({
       name: 'sample.pcap',
       mimeType: 'application/vnd.tcpdump.pcap',
       buffer: Buffer.from('sample capture bytes'),
