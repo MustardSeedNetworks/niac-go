@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.27](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.26...v0.95.27) (2026-09-08)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-i18next to v17.0.13 ([#1907](https://github.com/MustardSeedNetworks/niac-go/issues/1907)) ([5340b7e](https://github.com/MustardSeedNetworks/niac-go/commit/5340b7e020a775df4c374a370b3c02f111772865))
+
+
+### Tests
+
+* **snmp:** measure whether a walk replays byte-identical ([#1911](https://github.com/MustardSeedNetworks/niac-go/issues/1911)) ([9a13cc7](https://github.com/MustardSeedNetworks/niac-go/commit/9a13cc7e502f77f62075bb0f9e46765ec37bd1ed)), closes [#1910](https://github.com/MustardSeedNetworks/niac-go/issues/1910)
+
+
+### Miscellaneous
+
+* **deps:** bump foundation to v0.5.5 ([#1913](https://github.com/MustardSeedNetworks/niac-go/issues/1913)) ([d61c642](https://github.com/MustardSeedNetworks/niac-go/commit/d61c64223e27ddaa4e29e9119b70f3948d12c788))
+* **deps:** lock file maintenance ([#1914](https://github.com/MustardSeedNetworks/niac-go/issues/1914)) ([f91ebb2](https://github.com/MustardSeedNetworks/niac-go/commit/f91ebb26c476dbfb01566d7ea0b365c4cd03f47b))
+
 ## [0.95.26](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.25...v0.95.26) (2026-09-08)
 
 
