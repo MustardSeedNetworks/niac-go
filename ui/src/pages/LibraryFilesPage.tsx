@@ -6,6 +6,7 @@ import {
   fetchLibraryWalks,
   type LibraryFileEntry,
   revertWalk,
+  type WalkProvenance,
 } from '../api/library-client';
 import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
 import { RequireScope } from '../components/ui/RequireScope';
@@ -125,6 +126,25 @@ function LibraryFilesView({ kind }: Props) {
       ),
       cell: (entry) => <SourceBadge source={entry.source} />,
     },
+    ...(kind === 'walks'
+      ? [
+          {
+            key: 'content',
+            header: (
+              <span className="inline-flex items-center gap-1">
+                {tPages('libraryFiles.contentHeader')}
+                <InfoPopover
+                  label={t('jargon.ariaLabel', { term: 'captured / generated' })}
+                  title="captured / generated"
+                >
+                  {tHelp('jargon.walkProvenance')}
+                </InfoPopover>
+              </span>
+            ),
+            cell: (entry: LibraryFileEntry) => <ProvenanceBadge provenance={entry.provenance} />,
+          },
+        ]
+      : []),
     {
       key: 'modified',
       header: tPages('libraryFiles.modifiedHeader'),
@@ -357,6 +377,33 @@ const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => 
       className={`inline-block rounded-full border px-cell py-0.5 text-[10px] font-medium capitalize ${styles[source]}`}
     >
       {labels[source]}
+    </span>
+  );
+};
+
+/**
+ * Half the shipped walks are generated rather than captured, and the catalog
+ * gave no way to tell — someone picking a vendor walk had no way to know
+ * nothing had ever measured a device of that model.
+ */
+const ProvenanceBadge: FC<{ provenance: LibraryFileEntry['provenance'] }> = ({ provenance }) => {
+  const { t } = useTranslation('pages');
+  if (!provenance) {
+    return <span className="text-xs text-text-muted">{t('libraryFiles.contentUnknown')}</span>;
+  }
+  const styles: Record<WalkProvenance, string> = {
+    captured: 'border-status-success/40 bg-status-success/10 text-status-success',
+    generated: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
+  };
+  const labels: Record<WalkProvenance, string> = {
+    captured: t('libraryFiles.contentCaptured'),
+    generated: t('libraryFiles.contentGenerated'),
+  };
+  return (
+    <span
+      className={`inline-block rounded-full border px-cell py-0.5 text-[10px] font-medium capitalize ${styles[provenance]}`}
+    >
+      {labels[provenance]}
     </span>
   );
 };

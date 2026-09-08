@@ -311,6 +311,10 @@
   },
   "libraryFiles": {
     "actionsHeader": "Actions",
+    "contentCaptured": "Captured",
+    "contentGenerated": "Generated",
+    "contentHeader": "Content",
+    "contentUnknown": "unknown",
     "editedTag": "edited",
     "fileCount_one": "{{count}} file",
     "fileCount_other": "{{count}} files",

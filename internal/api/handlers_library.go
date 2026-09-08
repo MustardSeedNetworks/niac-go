@@ -11,6 +11,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/sanitize"
+	"github.com/MustardSeedNetworks/niac-go/internal/walkmeta"
 )
 
 // libraryReady returns true if the on-disk library opened cleanly; the
@@ -435,6 +436,7 @@ func (s *Server) sanitizeWalk(name string) (library.FileEntry, sanitize.Stats, e
 		return library.FileEntry{}, sanitize.Stats{}, err
 	}
 
+	sanitized = walkmeta.Ensure(sanitized, walkmeta.Captured)
 	if writeErr := s.library.WriteFile(library.KindWalks, name, sanitized); writeErr != nil {
 		return library.FileEntry{}, sanitize.Stats{}, writeErr
 	}
