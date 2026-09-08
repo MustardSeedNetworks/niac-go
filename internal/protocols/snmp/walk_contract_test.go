@@ -18,6 +18,12 @@ func TestWalkContractClassify(t *testing.T) {
 		authoredIfIndexes:   map[string]struct{}{},
 	}
 	trunked := WalkContract{ownsTopology: true, authoredIfIndexes: map[string]struct{}{}}
+	addressed := WalkContract{
+		authoredMAC:         true,
+		authoredEthernetMAC: true,
+		authoredIfIndexes:   map[string]struct{}{},
+	}
+	longMAC := WalkContract{authoredMAC: true, authoredIfIndexes: map[string]struct{}{}}
 
 	cases := []struct {
 		name     string
@@ -50,7 +56,19 @@ func TestWalkContractClassify(t *testing.T) {
 		{"VLAN FDB counters drop under trunk_ports", trunked, ".1.3.6.1.2.1.17.7.1.2.1.1.2.210", BucketTopology},
 		{"VLAN FDB drops under trunk_ports", trunked, ".1.3.6.1.2.1.17.7.1.2.2.1.2.210.1.2.3.4.5.6", BucketTopology},
 		{"without trunk_ports the walk's neighbours stand", bare, ".1.0.8802.1.1.2.1.4.1.1.9.1.1", BucketKept},
-		{"the LLDP local port table is not a neighbour table", trunked, ".1.0.8802.1.1.2.1.3.7.1.3.1", BucketKept},
+		{"the LLDP local port table goes with them", trunked, ".1.0.8802.1.1.2.1.3.7.1.3.1", BucketTopology},
+		{"without trunk_ports the walk's local port table stands", bare, ".1.0.8802.1.1.2.1.3.7.1.3.1", BucketKept},
+		{"the LLDP chassis ID is identity, not the port table", bare, ".1.0.8802.1.1.2.1.3.2.0", BucketKept},
+
+		{"ifPhysAddress takes the authored MAC", addressed, ".1.3.6.1.2.1.2.2.1.6.1", BucketAuthored},
+		{"the bridge address takes the authored MAC", addressed, ".1.3.6.1.2.1.17.1.1.0", BucketAuthored},
+		{"the LLDP chassis ID takes the authored MAC", addressed, ".1.0.8802.1.1.2.1.3.2.0", BucketAuthored},
+		{"the serial number is derived from it", addressed, ".1.3.6.1.2.1.47.1.1.1.1.11.1", BucketAuthored},
+		{"a device with no MAC keeps the captured address", bare, ".1.3.6.1.2.1.2.2.1.6.1", BucketKept},
+		{"a device with no MAC keeps the captured serial", bare, ".1.3.6.1.2.1.47.1.1.1.1.11.1", BucketKept},
+		{"a neighbouring ENTITY-MIB column is untouched", addressed, ".1.3.6.1.2.1.47.1.1.1.1.10.1", BucketKept},
+		{"a non-Ethernet MAC cannot stand in for an address", longMAC, ".1.3.6.1.2.1.2.2.1.6.1", BucketKept},
+		{"but it still seeds the serial", longMAC, ".1.3.6.1.2.1.47.1.1.1.1.11.1", BucketAuthored},
 	}
 
 	for _, testCase := range cases {
@@ -153,5 +171,60 @@ func TestAgentWalkContractResolvesAuthoredInterfaces(t *testing.T) {
 	}
 	if got := contract.Classify(ifSpeed + ".99"); got != BucketKept {
 		t.Errorf("Classify(ifSpeed.99) = %s, want %s", got, BucketKept)
+	}
+}
+
+// TestWalkContractClassifiesBridgePortRows: finding 1 of the F0 audit,
+// narrowed by the owner on 2026-09-08 to substitution 5's authored-ifIndex
+// scope or substitution 4's trunk_ports gate. A bridge port outside both
+// arrives byte-identical.
+func TestWalkContractClassifiesBridgePortRows(t *testing.T) {
+	authored := WalkContract{
+		authoredIfIndexes:   map[string]struct{}{"1": {}},
+		authoredBridgePorts: map[string]struct{}{"1": {}},
+	}
+	trunked := WalkContract{ownsTopology: true, authoredIfIndexes: map[string]struct{}{}}
+
+	cases := []struct {
+		name     string
+		contract WalkContract
+		oid      string
+		want     Bucket
+	}{
+		{"the port index restates the scenario", authored, dot1dTpPort + ".1", BucketAuthored},
+		{"max info is the device's MTU", authored, dot1dTpPortMaxInfo + ".1", BucketAuthored},
+		{"in frames are this run's", authored, dot1dTpPortInFrames + ".1", BucketLive},
+		{"out frames are this run's", authored, dot1dTpPortOutFrames + ".1", BucketLive},
+		{"in discards are this run's", authored, dot1dTpPortInDiscards + ".1", BucketLive},
+		{"an undeclared port keeps the capture", authored, dot1dTpPortMaxInfo + ".9", BucketKept},
+		{"trunk_ports covers every port", trunked, dot1dTpPortMaxInfo + ".9", BucketAuthored},
+		{"and its counters with them", trunked, dot1dTpPortInFrames + ".9", BucketLive},
+		{"the base port table is not the tp port table", authored, dot1dBasePortIfIndex + ".1", BucketKept},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := testCase.contract.Classify(testCase.oid); got != testCase.want {
+				t.Errorf("Classify(%s) = %s, want %s", testCase.oid, got, testCase.want)
+			}
+		})
+	}
+}
+
+// TestAgentWalkContractResolvesAuthoredBridgePorts: the bridge port index is
+// not the ifIndex, so the contract has to walk dot1dBasePortIfIndex to learn
+// which ports the scenario's interfaces sit behind. Those rows come from the
+// walk, so the contract must be built after the load.
+func TestAgentWalkContractResolvesAuthoredBridgePorts(t *testing.T) {
+	agent := loadBridgePortWalk(t, func(device *config.Device) {
+		device.Interfaces = []config.Interface{{Name: "GigabitEthernet0/2"}}
+	})
+
+	contract := agent.WalkContract()
+	if _, authored := contract.authoredBridgePorts["2"]; !authored {
+		t.Errorf("bridge port 2 not resolved from the authored interface: %v", contract.authoredBridgePorts)
+	}
+	if _, authored := contract.authoredBridgePorts["1"]; authored {
+		t.Error("bridge port 1 claimed for an interface the scenario never authored")
 	}
 }

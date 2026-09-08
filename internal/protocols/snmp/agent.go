@@ -312,7 +312,11 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		a.initializeBridgeMIB()
 	}
 	a.registerLiveMIBIIProtocolCounters()
-	a.refreshBridgePortCounters()
+	// Rebuilt now the walk's own IF-MIB and BRIDGE-MIB indexes are in place:
+	// the contract built before the load could only see the synthesized
+	// ifTable, and a walk renumbers it.
+	loadedContract := a.WalkContract()
+	a.refreshBridgePortCounters(loadedContract)
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()

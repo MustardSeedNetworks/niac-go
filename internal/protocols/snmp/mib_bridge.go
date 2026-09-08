@@ -51,7 +51,14 @@ func (a *Agent) initializeBridgeMIB() {
 	}
 }
 
-func (a *Agent) refreshBridgePortCounters() {
+// refreshBridgePortCounters gives each bridge port the walk maps to an ifIndex
+// its dot1dTpPortTable row. The contract decides whether that row may overwrite
+// one the capture already carried: only a port an authored interface sits
+// behind, or any port once trunk_ports hands the agent the forwarding topology
+// (signed substitution 5's scope, narrowed here by the owner on 2026-09-08).
+// A port outside both keeps whatever the walk said, and gains only the columns
+// the walk left bare.
+func (a *Agent) refreshBridgePortCounters(contract WalkContract) {
 	entry := a.mib.Get(dot1dBaseNumPorts)
 	if entry == nil {
 		return
@@ -61,8 +68,9 @@ func (a *Agent) refreshBridgePortCounters() {
 		return
 	}
 	for port := 1; port <= numPorts; port++ {
-		if a.mib.Get(dot1dBasePortIfIndex+"."+strconv.Itoa(port)) != nil {
-			a.registerDot1dTpPortEntry(port)
+		portStr := strconv.Itoa(port)
+		if a.mib.Get(dot1dBasePortIfIndex+"."+portStr) != nil {
+			a.registerDot1dTpPortEntry(port, contract.substitutesBridgePort(portStr))
 		}
 	}
 }
@@ -208,25 +216,37 @@ func (a *Agent) registerDot1dTpGroup(device *config.Device, numPorts int, macByt
 
 	// Register port table entries
 	for portIdx := 1; portIdx <= numPorts; portIdx++ {
-		a.registerDot1dTpPortEntry(portIdx)
+		a.registerDot1dTpPortEntry(portIdx, true)
 	}
 }
 
-// registerDot1dTpPortEntry registers a single dot1dTpPortTable entry.
-func (a *Agent) registerDot1dTpPortEntry(portIdx int) {
+// registerDot1dTpPortEntry registers a single dot1dTpPortTable entry. With
+// overwrite false it only fills columns the MIB does not already hold, so a
+// capture's own row survives.
+func (a *Agent) registerDot1dTpPortEntry(portIdx int, overwrite bool) {
 	portStr := strconv.Itoa(portIdx)
+	set := func(oid string, value *OIDValue) {
+		if overwrite || a.mib.Get(oid) == nil {
+			a.mib.Set(oid, value)
+		}
+	}
+	setDynamic := func(oid string, value func() *OIDValue) {
+		if overwrite || a.mib.Get(oid) == nil {
+			a.mib.SetDynamic(oid, value)
+		}
+	}
 
-	a.mib.Set(dot1dTpPort+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: portIdx})
-	a.mib.Set(dot1dTpPortMaxInfo+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: DefaultMTU})
-	a.mib.SetDynamic(dot1dTpPortInFrames+"."+portStr, func() *OIDValue {
+	set(dot1dTpPort+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: portIdx})
+	set(dot1dTpPortMaxInfo+"."+portStr, &OIDValue{Type: gosnmp.Integer, Value: DefaultMTU})
+	setDynamic(dot1dTpPortInFrames+"."+portStr, func() *OIDValue {
 		stats := a.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
 		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.inUcast + stats.inNUcast)}
 	})
-	a.mib.SetDynamic(dot1dTpPortOutFrames+"."+portStr, func() *OIDValue {
+	setDynamic(dot1dTpPortOutFrames+"."+portStr, func() *OIDValue {
 		stats := a.interfaceSnapshot(a.interfaceNameForBridgePort(portStr))
 		return &OIDValue{Type: gosnmp.Counter32, Value: safeUint32FromUint64(stats.outUcast + stats.outNUcast)}
 	})
-	a.mib.Set(
+	set(
 		dot1dTpPortInDiscards+"."+portStr,
 		&OIDValue{Type: gosnmp.Counter32, Value: uint32(0)},
 	)

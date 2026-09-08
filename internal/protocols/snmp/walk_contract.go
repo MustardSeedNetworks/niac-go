@@ -56,6 +56,31 @@ func interfaceColumnBucket(column string) (Bucket, bool) {
 	return BucketKept, false
 }
 
+// bridgePortColumnBucket reports which substitution covers a dot1dTpPortTable
+// column on a bridge port the contract substitutes. registerDot1dTpPortEntry
+// restates the port index and the device's MTU from the scenario, and makes
+// the frame counters and the discard count report this run rather than the
+// capture's frozen totals.
+func bridgePortColumnBucket(column string) Bucket {
+	switch column {
+	case dot1dTpPortInFrames, dot1dTpPortOutFrames, dot1dTpPortInDiscards:
+		return BucketLive
+	default:
+		return BucketAuthored
+	}
+}
+
+// isAuthoredAddressOID reports whether oid holds a link-layer address that
+// refreshAuthoredPhysicalIdentity replaces with the scenario's own. It is
+// prefix-level: a row carrying no address is left alone by the refresh but
+// classified here anyway, the same imprecision substitution 5 accepts for an
+// authored interface row.
+func isAuthoredAddressOID(oid string) bool {
+	return strings.HasPrefix(oid, ifPhysAddress+".") ||
+		oid == dot1dBaseBridgeAddress ||
+		oid == lldpLocChassisID
+}
+
 // isLiveProtocolOID reports whether oid falls in a MIB-II protocol group the
 // agent always answers from its own live counters. A capture's totals would be
 // frozen, and would describe a different machine's traffic. The snmp group is
@@ -74,6 +99,7 @@ func isLiveProtocolOID(oid string) bool {
 func isSynthesizedTopologyOID(oid string) bool {
 	return underRoot(oid, lldpRemoteSystemsData) || // 1.0.8802.1.1.2.1.4 — LLDP-MIB neighbours
 		underRoot(oid, cdpCache) || // 1.3.6.1.4.1.9.9.23.1.2 — CDP cache neighbours
+		underRoot(oid, lldpLocPortTable) || // 1.0.8802.1.1.2.1.3.7 — LLDP local ports, rebuilt with them
 		underRoot(oid, dot1dTpFdbTable) || // 1.3.6.1.2.1.17.4.3 — bridge MAC→port
 		underRoot(oid, dot1qFDBTable) || // 1.3.6.1.2.1.17.7.1.2.1 — VLAN FDB counters
 		underRoot(oid, dot1qTpFDBTable) // 1.3.6.1.2.1.17.7.1.2.2 — VLAN MAC→port
@@ -97,11 +123,21 @@ type WalkContract struct {
 	authoredSysLocation bool
 	// ownsTopology is trunk_ports: without it the walk's own neighbours stand.
 	ownsTopology bool
+	// Signed substitution 6 has two conditions, because the code does: any
+	// authored MAC seeds the derived serial numbers, but only an Ethernet one
+	// can stand in for a link-layer address, so a device carrying a longer
+	// MAC keeps the capture's addresses.
+	authoredMAC         bool
+	authoredEthernetMAC bool
 	// authoredIfIndexes are the ifIndexes the MIB currently gives the
 	// interfaces the scenario authored, resolved through ifDescr/ifName. A
 	// walk can renumber them, so a contract used to judge what reached the
 	// wire must be built after the load, not before.
 	authoredIfIndexes map[string]struct{}
+	// authoredBridgePorts are the dot1dBasePort numbers sitting in front of
+	// those ifIndexes, read from the walk's own dot1dBasePortIfIndex rows. A
+	// bridge port index is not an ifIndex, so this needs its own lookup.
+	authoredBridgePorts map[string]struct{}
 }
 
 // WalkContract builds the contract for this agent's device, reading the
@@ -109,7 +145,10 @@ type WalkContract struct {
 // skip decision, which does not depend on those indexes; the fidelity harness
 // calls it again after the load, when the walk's own indexes are in place.
 func (a *Agent) WalkContract() WalkContract {
-	contract := WalkContract{authoredIfIndexes: map[string]struct{}{}}
+	contract := WalkContract{
+		authoredIfIndexes:   map[string]struct{}{},
+		authoredBridgePorts: map[string]struct{}{},
+	}
 	if a.device == nil {
 		return contract
 	}
@@ -117,12 +156,33 @@ func (a *Agent) WalkContract() WalkContract {
 	contract.authoredSysContact = a.device.SNMPConfig.SysContact != ""
 	contract.authoredSysLocation = a.device.SNMPConfig.SysLocation != ""
 	contract.ownsTopology = len(a.device.TrunkPorts) > 0
+	contract.authoredMAC = len(a.device.MACAddress) > 0
+	contract.authoredEthernetMAC = len(a.device.MACAddress) == MACAddressOctets
 	for _, iface := range a.device.Interfaces {
 		if index, ok := a.ifIndexForInterface(iface.Name); ok {
 			contract.authoredIfIndexes[index] = struct{}{}
 		}
 	}
+	a.resolveAuthoredBridgePorts(&contract)
 	return contract
+}
+
+// resolveAuthoredBridgePorts maps the authored ifIndexes onto bridge port
+// numbers through dot1dBasePortIfIndex. Those rows are the walk's, so this is
+// only meaningful on a contract built after the load.
+func (a *Agent) resolveAuthoredBridgePorts(contract *WalkContract) {
+	if len(contract.authoredIfIndexes) == 0 {
+		return
+	}
+	for _, oid := range a.mib.snapshotOIDs() {
+		port, isBasePort := strings.CutPrefix(oid, dot1dBasePortIfIndex+".")
+		if !isBasePort {
+			continue
+		}
+		if _, authored := contract.authoredIfIndexes[oidValueString(a.mib.Get(oid))]; authored {
+			contract.authoredBridgePorts[port] = struct{}{}
+		}
+	}
 }
 
 // Classify reports which substitution covers oid, or BucketKept when the walk's
@@ -137,9 +197,19 @@ func (c WalkContract) Classify(oid string) Bucket {
 		return BucketLive
 	case c.ownsTopology && isSynthesizedTopologyOID(oid):
 		return BucketTopology
+	case c.authoredEthernetMAC && isAuthoredAddressOID(oid):
+		return BucketAuthored
+	case c.authoredMAC && strings.HasPrefix(oid, entPhysicalSerialNumber+"."):
+		return BucketAuthored
 	}
 	column, index, split := splitInterfaceColumn(oid)
 	if !split {
+		return BucketKept
+	}
+	if underRoot(column, dot1dTpPortEntry) {
+		if c.substitutesBridgePort(index) {
+			return bridgePortColumnBucket(column)
+		}
 		return BucketKept
 	}
 	if _, authored := c.authoredIfIndexes[index]; !authored {
@@ -149,6 +219,18 @@ func (c WalkContract) Classify(oid string) Bucket {
 		return bucket
 	}
 	return BucketKept
+}
+
+// substitutesBridgePort reports whether the dot1dTpPortTable row for this
+// bridge port is the agent's to write. trunk_ports hands it the whole
+// forwarding topology; otherwise only a port an authored interface sits
+// behind is in scope, and every other port arrives byte-identical.
+func (c WalkContract) substitutesBridgePort(port string) bool {
+	if c.ownsTopology {
+		return true
+	}
+	_, authored := c.authoredBridgePorts[port]
+	return authored
 }
 
 // DropsFromWalk reports whether LoadWalkFile must not load oid at all, as
