@@ -62,6 +62,7 @@ sudo ./niac daemon
 | --- | --- |
 | `niac analyze-pcap <pcap-file>` | Summarise a packet capture by protocol |
 | `niac analyze-walk <walk-file>` | Analyze an SNMP walk file: device, interfaces, and LLDP/CDP neighbors |
+| `niac backup <archive.tar.gz>` | Archive the content library |
 | `niac completion [bash\|zsh\|fish\|powershell]` | Generate completion script |
 | `niac config` | Configuration management tools |
 | `niac content` | Install and inspect the on-disk content library |
@@ -75,8 +76,10 @@ sudo ./niac daemon
 | `niac mibzip` | Convert SNMP walk files to and from MibZip format |
 | `niac monitor` | Stream real-time statistics from a running NIAC simulation |
 | `niac neighbors [watch]` | Display neighbor discovery table from LLDP/CDP protocols |
+| `niac restore <archive.tar.gz>` | Restore a content library from a backup |
 | `niac sanitize <input-walk> <output-walk>` | Sanitize SNMP walk files with NIAC branding |
 | `niac status` | Query the status of a running NIAC simulation |
+| `niac support-bundle <bundle.tar.gz>` | Collect redacted diagnostics for support |
 | `niac template` | Manage configuration templates |
 | `niac topology` | Network topology management commands |
 | `niac validate <config-file>` | Validate a NIAC configuration file |

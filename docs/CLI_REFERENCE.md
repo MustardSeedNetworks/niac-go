@@ -23,6 +23,7 @@ Complete command-line reference for NIAC-Go.
 
 - [`niac analyze-pcap`](#niac-analyze-pcap) — summarise a packet capture by protocol
 - [`niac analyze-walk`](#niac-analyze-walk) — analyze an SNMP walk file: device, interfaces, and LLDP/CDP neighbors
+- [`niac backup`](#niac-backup) — archive the content library
 - [`niac completion`](#niac-completion) — generate completion script
 - [`niac config`](#niac-config) — configuration management tools
 - [`niac config diff`](#niac-config-diff) — compare two configurations
@@ -54,8 +55,10 @@ Complete command-line reference for NIAC-Go.
 - [`niac monitor`](#niac-monitor) — stream real-time statistics from a running NIAC simulation
 - [`niac neighbors`](#niac-neighbors) — display neighbor discovery table from LLDP/CDP protocols
 - [`niac neighbors watch`](#niac-neighbors-watch) — watch neighbor table for live updates
+- [`niac restore`](#niac-restore) — restore a content library from a backup
 - [`niac sanitize`](#niac-sanitize) — sanitize SNMP walk files with NIAC branding
 - [`niac status`](#niac-status) — query the status of a running NIAC simulation
+- [`niac support-bundle`](#niac-support-bundle) — collect redacted diagnostics for support
 - [`niac template`](#niac-template) — manage configuration templates
 - [`niac template apply`](#niac-template-apply) — validate and display template information
 - [`niac template list`](#niac-template-list) — list available templates
@@ -144,6 +147,43 @@ niac analyze-walk --show-neighbors device.walk
 
 # Write a Graphviz (DOT) neighbor graph
 niac analyze-walk --graphviz topology.dot device.walk
+```
+
+### `niac backup`
+
+Archive the content library.
+
+```text
+niac backup <archive.tar.gz> [flags]
+```
+
+```text
+Archive the content library -- networks, walks, captures and drafts --
+into a single compressed file.
+
+The archive holds authored content and nothing else. Certificates, the run
+history database and the daemon token stay behind: they are the identity of
+this host, not authored truth, and a backup carrying them would move a private
+key onto whatever machine restores it.
+
+Two backups of an unchanged library are byte-identical, so a diff of the
+archives is a diff of the content.
+```
+
+Flags:
+
+```text
+      --library string   Content library directory (default: the library NIAC would use)
+```
+
+Examples:
+
+```bash
+# Back the library up
+niac backup niac-library.tar.gz
+
+# Back up a library somewhere other than the default
+niac backup niac-library.tar.gz --library /var/lib/niac/library
 ```
 
 ### `niac completion`
@@ -1270,6 +1310,43 @@ niac neighbors watch --device router-1
 niac neighbors watch --protocol lldp
 ```
 
+### `niac restore`
+
+Restore a content library from a backup.
+
+```text
+niac restore <archive.tar.gz> [flags]
+```
+
+```text
+Restore a content library from an archive written by 'niac backup'.
+
+The archive is expanded beside the library and swapped in only once every
+entry has landed, so a truncated or refused archive leaves the existing
+library exactly as it was.
+
+Restoring replaces the whole library. An existing library that is not empty
+is refused unless --force is given. Stop the daemon first: a restore under a
+running daemon replaces content it holds open.
+```
+
+Flags:
+
+```text
+      --force            Replace an existing non-empty library
+      --library string   Content library directory (default: the library NIAC would use)
+```
+
+Examples:
+
+```bash
+# Restore into an empty or missing library
+niac restore niac-library.tar.gz
+
+# Replace an existing library
+niac restore niac-library.tar.gz --force
+```
+
 ### `niac sanitize`
 
 Sanitize SNMP walk files with NIAC branding.
@@ -1387,6 +1464,50 @@ if niac status > /dev/null 2>&1; then
 else
   echo "NIAC is not running"
 fi
+```
+
+### `niac support-bundle`
+
+Collect redacted diagnostics for support.
+
+```text
+niac support-bundle <bundle.tar.gz> [flags]
+```
+
+```text
+Collect a diagnostics bundle: build metadata, the host's interface
+inventory, the library's scenarios and, when named, a tail of the daemon log.
+
+Every credential is removed before anything is written. Scenario files are
+stripped over their typed fields -- SNMP communities, SNMPv3 auth and privacy
+passwords, FTP passwords -- and the log tail is scrubbed of those same values
+plus anything else shaped like a token or a password. Certificates are listed
+by name only; no key material is read.
+
+Read the bundle before sending it. It is your content, redacted, not
+anonymised: device names, addresses and topology are all still in it.
+```
+
+Flags:
+
+```text
+      --config stringArray   Scenario file to include, repeatable (default: every scenario in the library)
+      --library string       Content library directory (default: the library NIAC would use)
+      --log string           Daemon log file to include, scrubbed (default: none)
+```
+
+Examples:
+
+```bash
+# Bundle the library's scenarios and the host inventory
+niac support-bundle niac-support.tar.gz
+
+# Include a log captured from the service
+journalctl -u niac --no-pager > /tmp/niac.log
+niac support-bundle niac-support.tar.gz --log /tmp/niac.log
+
+# Bundle one scenario instead of the whole library
+niac support-bundle niac-support.tar.gz --config office.yaml
 ```
 
 ### `niac template`
