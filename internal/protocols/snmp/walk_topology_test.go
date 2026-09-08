@@ -24,32 +24,6 @@ const topoWalk = `.1.3.6.1.2.1.1.1.0 = STRING: "captured description"
 .1.3.6.1.2.1.17.7.1.4.5.1.1.9 = INTEGER: 220
 `
 
-func TestIsSynthesizedTopologyOID(t *testing.T) {
-	strip := []string{
-		"1.0.8802.1.1.2.1.4",                          // lldpRemoteSystemsData root
-		".1.0.8802.1.1.2.1.4.1.1.9.1.1",               // lldpRemTable entry (leading dot)
-		".1.3.6.1.4.1.9.9.23.1.2.1.1.6.1.1",           // cdpCacheTable entry
-		".1.3.6.1.2.1.17.4.3.1.2.1.2.3.4.5.6",         // dot1dTpFdbTable entry
-		".1.3.6.1.2.1.17.7.1.2.1.1.2.210",             // dot1qFdbTable entry
-		".1.3.6.1.2.1.17.7.1.2.2.1.2.210.1.2.3.4.5.6", // dot1qTpFdbTable entry
-	}
-	keep := []string{
-		".1.3.6.1.2.1.2.2.1.2.1",      // ifDescr (device content)
-		".1.0.8802.1.1.2.1.3.7.1.3.1", // LLDP *local* port — not a neighbour
-		".1.3.6.1.2.1.1.5.0",          // sysName
-	}
-	for _, oid := range strip {
-		if !isSynthesizedTopologyOID(oid) {
-			t.Errorf("%s should be a synthesized-topology OID", oid)
-		}
-	}
-	for _, oid := range keep {
-		if isSynthesizedTopologyOID(oid) {
-			t.Errorf("%s should NOT be stripped", oid)
-		}
-	}
-}
-
 // TestLoadWalkFileStripsTopologyWhenTrunkPortsDeclared: a device that authors
 // its links (trunk_ports) drops the walk's foreign neighbour/FDB tables so the
 // synthesized topology wins; device content survives either way.

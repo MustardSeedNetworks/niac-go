@@ -7,7 +7,6 @@ import (
 	"hash/crc32"
 	"log/slog"
 	"net"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -291,26 +290,14 @@ func (a *Agent) LoadWalkFile(filename string) error {
 		return fmt.Errorf("%w: %w", ErrFailedToParseWalkFile, err)
 	}
 
-	// When a device declares topology links (trunk_ports), NIAC synthesizes the
-	// neighbour/forwarding tables from them (see initializeNeighborMIBs, run at
-	// construction). A capture walk carries the *original* device's neighbours,
-	// which are foreign to this lab — so skip those tables on load and let the
-	// authored topology win. Without trunk_ports the walk's data stands.
-	skipTopology := a.ownsSynthesizedTopology()
+	// Which of the signed substitutions apply to this device. The contract is
+	// the single source of the prefix lists; the fidelity harness classifies
+	// what reaches the wire with the same one, so the two cannot drift.
+	contract := a.WalkContract()
 
 	loaded, skipped := 0, 0
 	for _, entry := range entries {
-		// A device's identity (sysName) is authored from its config name, not the
-		// captured device's name — otherwise every device sharing a walk collides
-		// under one name and a discovery tool merges them. sysDescr/location stay
-		// as the walk's authentic values.
-		if a.isAuthoredIdentityOID(entry.OID) || isAgentOwnedSNMPOID(entry.OID) ||
-			isLiveProtocolOID(entry.OID) {
-			skipped++
-
-			continue
-		}
-		if skipTopology && isSynthesizedTopologyOID(entry.OID) {
+		if contract.DropsFromWalk(entry.OID) {
 			skipped++
 
 			continue
@@ -329,7 +316,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
-	if a.ownsSynthesizedTopology() {
+	if contract.ownsTopology {
 		a.refreshAuthoredDiscoveryMIBs()
 	}
 	// The walk owns the authoritative IF-MIB indexes. Rebuild the configured
@@ -347,72 +334,6 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	}
 
 	return nil
-}
-
-func isLiveProtocolOID(oid string) bool {
-	oid = strings.TrimPrefix(oid, ".")
-	for _, root := range []string{ipMIBBase, icmpMIBRoot, tcpMIBRoot, udpMIBRoot, egpMIBRoot} {
-		if oid == root || strings.HasPrefix(oid, root+".") {
-			return true
-		}
-	}
-	return false
-}
-
-func isAgentOwnedSNMPOID(oid string) bool {
-	oid = strings.TrimPrefix(oid, ".")
-	return oid == snmpGroup || strings.HasPrefix(oid, snmpGroup+".")
-}
-
-// sysNameOID is SNMPv2-MIB::sysName.0 — a device's administrative identity,
-// always authored from the config rather than the capture walk.
-const (
-	authoredSysDescrOID    = "1.3.6.1.2.1.1.1.0"
-	authoredSysContactOID  = "1.3.6.1.2.1.1.4.0"
-	sysNameOID             = "1.3.6.1.2.1.1.5.0"
-	authoredSysLocationOID = "1.3.6.1.2.1.1.6.0"
-)
-
-// isAuthoredSysNameOID reports whether oid is sysName.0 (with or without the
-// leading dot walks use).
-func isAuthoredSysNameOID(oid string) bool {
-	return strings.TrimPrefix(oid, ".") == sysNameOID
-}
-
-func (a *Agent) isAuthoredIdentityOID(oid string) bool {
-	oid = strings.TrimPrefix(oid, ".")
-	if isAuthoredSysNameOID(oid) {
-		return true
-	}
-	return (oid == authoredSysDescrOID && a.device.SNMPConfig.SysDescr != "") ||
-		(oid == authoredSysContactOID && a.device.SNMPConfig.SysContact != "") ||
-		(oid == authoredSysLocationOID && a.device.SNMPConfig.SysLocation != "")
-}
-
-// ownsSynthesizedTopology reports whether this device's topology is authored
-// via trunk_ports (in which case walk topology tables are skipped).
-func (a *Agent) ownsSynthesizedTopology() bool {
-	return a.device != nil && len(a.device.TrunkPorts) > 0
-}
-
-// isSynthesizedTopologyOID reports whether oid falls under a MIB subtree that
-// trunk_ports synthesis owns — LLDP remote systems, CDP cache, and the bridge
-// forwarding DBs — and so must not be loaded from a capture walk. Handles the
-// optional leading dot in walk OIDs.
-func isSynthesizedTopologyOID(oid string) bool {
-	prefixes := []string{
-		lldpRemoteSystemsData, // 1.0.8802.1.1.2.1.4 — LLDP-MIB neighbours
-		cdpCache,              // 1.3.6.1.4.1.9.9.23.1.2 — CDP cache neighbours
-		dot1dTpFdbTable,       // 1.3.6.1.2.1.17.4.3 — bridge MAC→port
-		dot1qFDBTable,         // 1.3.6.1.2.1.17.7.1.2.1 — VLAN FDB counters
-		dot1qTpFDBTable,       // 1.3.6.1.2.1.17.7.1.2.2 — VLAN MAC→port
-	}
-
-	trimmed := strings.TrimPrefix(oid, ".")
-
-	return slices.ContainsFunc(prefixes, func(prefix string) bool {
-		return trimmed == prefix || strings.HasPrefix(trimmed, prefix+".")
-	})
 }
 
 // HandleGet processes an SNMP GET request.
