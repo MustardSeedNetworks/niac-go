@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.29](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.28...v0.95.29) (2026-09-08)
+
+
+### Bug Fixes
+
+* **api:** resolve a device's walk file the way its config does ([#1923](https://github.com/MustardSeedNetworks/niac-go/issues/1923)) ([36c3ec7](https://github.com/MustardSeedNetworks/niac-go/commit/36c3ec710d7595f42d60e4bf02ad9261a694adb0)), closes [#1918](https://github.com/MustardSeedNetworks/niac-go/issues/1918)
+* **snmp:** refuse walk OIDs that cannot reach the wire ([#1919](https://github.com/MustardSeedNetworks/niac-go/issues/1919)) ([9dd6739](https://github.com/MustardSeedNetworks/niac-go/commit/9dd673961ea62eeda673f160edbc0821d96539d1))
+
 ## [0.95.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.27...v0.95.28) (2026-09-08)
 
 
