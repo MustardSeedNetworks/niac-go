@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.27...v0.95.28) (2026-09-08)
+
+
+### Tests
+
+* **wiretest:** assert pcap playback fidelity on the wire ([#1917](https://github.com/MustardSeedNetworks/niac-go/issues/1917)) ([05d837c](https://github.com/MustardSeedNetworks/niac-go/commit/05d837c498f5750a3cd6bc424ae3f8e5ddcd5900))
+
 ## [0.95.27](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.26...v0.95.27) (2026-09-08)
 
 
