@@ -287,8 +287,9 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			}
 		}
 	case strings.Contains(oid, "::"):
-		// Named OID like SNMPv2-MIB::sysDescr.0 - valid format, no action needed.
-		return issues
+		// A named OID is not a valid format: the MIB is keyed numerically, and
+		// a name that cannot be resolved is dropped at load rather than served.
+		return append(issues, symbolicOIDIssue(lineNum, oid, originalLine))
 	case !strings.Contains(oid, "."):
 		// Check if it looks like a malformed OID
 		issues = append(issues, ValidationIssue{
@@ -301,6 +302,33 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 	}
 
 	return issues
+}
+
+// symbolicOIDIssue reports a walk line whose object is named rather than
+// numbered. Where the SMI lets the name be resolved the fix is mechanical and
+// offered as one; where it does not — an unknown MIB, or a symbolic table index
+// — the row cannot be replayed at all and the capture must be re-taken.
+func symbolicOIDIssue(lineNum int, oid, originalLine string) ValidationIssue {
+	numeric, resolved := NormalizeWalkOID(oid)
+	if !resolved {
+		return ValidationIssue{
+			Line:     lineNum,
+			Severity: "error",
+			Message: "OID is a name this walk cannot resolve to a number, so the " +
+				"row cannot be replayed; re-take the capture with `snmpwalk -On`",
+			Original: originalLine,
+			AutoFix:  false,
+		}
+	}
+
+	return ValidationIssue{
+		Line:       lineNum,
+		Severity:   "warning",
+		Message:    "OID is named rather than numeric; capture with `snmpwalk -On`",
+		Original:   originalLine,
+		Suggestion: strings.Replace(originalLine, oid, numeric, 1),
+		AutoFix:    true,
+	}
 }
 
 // validateType checks if the type is valid and properly formatted.

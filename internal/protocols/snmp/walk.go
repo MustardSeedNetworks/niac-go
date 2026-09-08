@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -197,6 +198,7 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	scanner.Buffer(make([]byte, 0, walkScanBufInitial), walkScanBufMax)
 
 	lineNum := 0
+	symbolic := 0       // rows refused because their object name is unresolvable
 	lastWasHex := false // previous entry came from a Hex-STRING (may continue)
 
 	for scanner.Scan() {
@@ -223,6 +225,9 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 
 		entry, parseErr := parseWalkLine(line)
 		if parseErr != nil {
+			if errors.Is(parseErr, ErrSymbolicOID) {
+				symbolic++
+			}
 			// Log error but continue parsing
 			logging.Debugf("Warning: line %d: %v", lineNum, parseErr)
 
@@ -236,6 +241,16 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	scanErr := scanner.Err()
 	if scanErr != nil {
 		return nil, fmt.Errorf("error reading walk file: %w", scanErr)
+	}
+
+	// One line per walk, not per row: a walk taken without -On can carry tens of
+	// thousands of these and a per-line debug message is invisible.
+	if symbolic > 0 {
+		logging.Warningf(
+			"walk file: %d of %d rows dropped, object names cannot be resolved "+
+				"to numeric OIDs; re-take the capture with `snmpwalk -On`",
+			symbolic, lineNum,
+		)
 	}
 
 	return entries, nil
@@ -263,7 +278,14 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 		return nil, ErrInvalidWalkFormat
 	}
 
-	oid := extractLineOID(line)
+	// The MIB is keyed by numeric OID and nothing downstream can recover from a
+	// name: a symbolic key breaks GET-NEXT ordering and cannot be marshalled
+	// onto the wire. Resolve what the SMI allows, refuse the rest here — the one
+	// point both ParseWalkFile and ParseWalkContent pass through.
+	oid, resolved := NormalizeWalkOID(extractLineOID(line))
+	if !resolved {
+		return nil, fmt.Errorf("%w: %s", ErrSymbolicOID, extractLineOID(line))
+	}
 	rest := strings.TrimSpace(parts[1])
 
 	// net-snmp emits zero-length octet strings with no type prefix, as

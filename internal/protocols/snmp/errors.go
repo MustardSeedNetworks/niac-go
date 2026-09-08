@@ -70,6 +70,7 @@ var (
 	ErrWalkFileIsDirectory    = errors.New("walk file path is a directory, not a file")
 	ErrInvalidWalkFormat      = errors.New("invalid format: missing '='")
 	ErrMissingColon           = errors.New("invalid format: missing ':'")
+	ErrSymbolicOID            = errors.New("object name cannot be resolved to a numeric OID")
 	ErrFailedToParseValue     = errors.New("failed to parse value")
 	ErrInvalidTimeticksFormat = errors.New("invalid Timeticks format")
 	ErrFailedToCreateWalkFile = errors.New("failed to create walk file")

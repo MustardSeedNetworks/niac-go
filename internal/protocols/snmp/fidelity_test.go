@@ -58,6 +58,11 @@ type fidelityReport struct {
 	// fixes, and a per-row list of 200 near-identical findings is noise.
 	ByColumn map[string]int `json:"unclassifiedByColumn,omitempty"`
 	Samples  []string       `json:"unclassifiedSamples,omitempty"`
+	// Rejected counts source lines the parser refused because their object name
+	// cannot be resolved to a number. Those rows leave the source as well as the
+	// wire, so without this count a walk that lost 16,430 of its 16,445 rows
+	// would report as byte-perfect.
+	Rejected int `json:"rejected,omitempty"`
 	// Incomplete means the sweep stopped before end-of-MIB, so the verdict
 	// counts below say nothing and are cleared.
 	Incomplete    bool   `json:"incomplete,omitempty"`
@@ -291,6 +296,7 @@ func runFidelity(t *testing.T, path string) fidelityReport {
 	bulk, bulkBreak := sweepGetBulk(agent, budget)
 
 	report := buildFidelityReport(filepath.Base(path), source, next, agent.WalkContract())
+	report.Rejected = countRejectedRows(t, path)
 	report.OrderingBreak = firstNonEmpty(nextBreak, bulkBreak)
 	if mismatch := diffSweeps(next, bulk); mismatch != "" {
 		report.SweepMismatch = mismatch
@@ -307,6 +313,36 @@ func runFidelity(t *testing.T, path string) fidelityReport {
 		report.Samples = nil
 	}
 	return report
+}
+
+// countRejectedRows counts the walk's own lines that never became source OIDs
+// because NormalizeWalkOID could not resolve their object name. It reads the
+// raw file rather than the parser's output for exactly that reason: a rejected
+// row is absent from both sides of the comparison, so only the file knows.
+func countRejectedRows(t *testing.T, path string) int {
+	t.Helper()
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+
+	rejected := 0
+	for line := range strings.SplitSeq(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		oid, _, found := strings.Cut(trimmed, "=")
+		if !found {
+			continue
+		}
+		if _, resolved := NormalizeWalkOID(strings.TrimSpace(oid)); !resolved {
+			rejected++
+		}
+	}
+
+	return rejected
 }
 
 func firstNonEmpty(values ...string) string {
@@ -394,30 +430,54 @@ func TestWalkReplayFidelity(t *testing.T) {
 			if report.SweepMismatch != "" {
 				t.Errorf("GET-NEXT and GET-BULK disagree: %s", report.SweepMismatch)
 			}
-			if corpus {
-				if report.Unclassified > 0 {
-					t.Logf("%d unclassified rows in %d columns", report.Unclassified, len(report.ByColumn))
-				}
-				return
-			}
-			allowed := fidelityBaseline()[name]
-			if report.Unclassified > allowed {
-				t.Errorf(
-					"%d unclassified rows, baseline %d — every source OID must arrive byte-identical or in one contract bucket\n%s",
-					report.Unclassified,
-					allowed,
-					strings.Join(report.Samples, "\n"),
-				)
-			}
-			if report.Unclassified < allowed {
-				t.Errorf(
-					"%d unclassified rows but the baseline still allows %d; lower the baseline in fidelityBaseline",
-					report.Unclassified, allowed,
-				)
-			}
+			assertFidelity(t, name, report, corpus)
 		})
 	}
 	writeFidelityReport(t, reports)
+}
+
+// assertFidelity judges one walk's report. A corpus run is a report rather
+// than a gate: it has no per-walk baseline to ratchet against.
+func assertFidelity(t *testing.T, name string, report fidelityReport, corpus bool) {
+	t.Helper()
+
+	// A rejected row never reaches the source side either, so the verdict
+	// counts cannot see it. None of the shipped eighteen has one; a corpus
+	// walk that does is the finding.
+	switch {
+	case report.Rejected == 0:
+	case corpus:
+		t.Logf("%d rows dropped, unresolvable object names", report.Rejected)
+	default:
+		t.Errorf(
+			"%d rows dropped: object names that cannot be resolved to numeric OIDs",
+			report.Rejected,
+		)
+	}
+
+	if corpus {
+		if report.Unclassified > 0 {
+			t.Logf("%d unclassified rows in %d columns", report.Unclassified, len(report.ByColumn))
+		}
+
+		return
+	}
+
+	allowed := fidelityBaseline()[name]
+	switch {
+	case report.Unclassified > allowed:
+		t.Errorf(
+			"%d unclassified rows, baseline %d — every source OID must arrive byte-identical or in one contract bucket\n%s",
+			report.Unclassified,
+			allowed,
+			strings.Join(report.Samples, "\n"),
+		)
+	case report.Unclassified < allowed:
+		t.Errorf(
+			"%d unclassified rows but the baseline still allows %d; lower the baseline in fidelityBaseline",
+			report.Unclassified, allowed,
+		)
+	}
 }
 
 // starterWalkPaths returns the walks under test: the 18 shipped ones by
