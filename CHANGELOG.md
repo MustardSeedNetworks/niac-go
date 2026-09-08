@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.31](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.30...v0.95.31) (2026-09-08)
+
+
+### Bug Fixes
+
+* **snmp:** narrow the bridge port refresh and sign the identity writers ([#1940](https://github.com/MustardSeedNetworks/niac-go/issues/1940)) ([8cf8597](https://github.com/MustardSeedNetworks/niac-go/commit/8cf859709cffa988d6de1e4946fe22a384210bd6))
+
 ## [0.95.30](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.29...v0.95.30) (2026-09-08)
 
 
