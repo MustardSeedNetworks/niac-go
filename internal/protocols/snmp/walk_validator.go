@@ -142,7 +142,16 @@ func processWalkLine(lineNum int, line string, result *ValidationResult) {
 	result.Issues = append(result.Issues, issues...)
 	if containsError(issues) {
 		result.Valid = false
+
+		return
 	}
+
+	// A line with only warnings or notes still yields a variable binding, and
+	// both consumers read ValidLines as "is there anything usable in here"
+	// before refusing an upload. Counting only issue-free lines made a
+	// one-line walk carrying a single cosmetic remark — a named OID, leading
+	// whitespace — indistinguishable from an empty file.
+	result.ValidLines++
 }
 
 // isSkippableLine reports walk metadata that does not represent a variable binding.
@@ -287,8 +296,9 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			}
 		}
 	case strings.Contains(oid, "::"):
-		// Named OID like SNMPv2-MIB::sysDescr.0 - valid format, no action needed.
-		return issues
+		// A named OID is not a valid format: the MIB is keyed numerically, and
+		// a name that cannot be resolved is dropped at load rather than served.
+		return append(issues, symbolicOIDIssue(lineNum, oid, originalLine))
 	case !strings.Contains(oid, "."):
 		// Check if it looks like a malformed OID
 		issues = append(issues, ValidationIssue{
@@ -298,9 +308,44 @@ func validateOID(lineNum int, oid, originalLine string) []ValidationIssue {
 			Original: originalLine,
 			AutoFix:  false,
 		})
+	default:
+		// Anything else the parser would refuse — a mangled arc such as
+		// `1.3.6.1.2.1.4v6RouterAdvertSpinLock.0`. Asking NormalizeWalkOID
+		// rather than adding another case keeps the validator equal to the
+		// parser by construction instead of by two parallel case lists.
+		if _, resolved := NormalizeWalkOID(oid); !resolved {
+			issues = append(issues, symbolicOIDIssue(lineNum, oid, originalLine))
+		}
 	}
 
 	return issues
+}
+
+// symbolicOIDIssue reports a walk line whose object is named rather than
+// numbered. Where the SMI lets the name be resolved the fix is mechanical and
+// offered as one; where it does not — an unknown MIB, or a symbolic table index
+// — the row cannot be replayed at all and the capture must be re-taken.
+func symbolicOIDIssue(lineNum int, oid, originalLine string) ValidationIssue {
+	numeric, resolved := NormalizeWalkOID(oid)
+	if !resolved {
+		return ValidationIssue{
+			Line:     lineNum,
+			Severity: "error",
+			Message: "OID is a name this walk cannot resolve to a number, so the " +
+				"row cannot be replayed; re-take the capture with `snmpwalk -On`",
+			Original: originalLine,
+			AutoFix:  false,
+		}
+	}
+
+	return ValidationIssue{
+		Line:       lineNum,
+		Severity:   "warning",
+		Message:    "OID is named rather than numeric; capture with `snmpwalk -On`",
+		Original:   originalLine,
+		Suggestion: strings.Replace(originalLine, oid, numeric, 1),
+		AutoFix:    true,
+	}
 }
 
 // validateType checks if the type is valid and properly formatted.
@@ -567,7 +612,13 @@ func validateIPAddressValue(lineNum int, valueStr, originalLine string) []Valida
 
 // validateOIDValue validates OID values.
 func validateOIDValue(lineNum int, valueStr, originalLine string) []ValidationIssue {
-	if valueStr == "" || strings.HasPrefix(valueStr, ".") || strings.Contains(valueStr, "::") {
+	// A named value fails gosnmp's marshaller exactly as a named OID does —
+	// `sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.1.1` is the common case.
+	if strings.Contains(valueStr, "::") {
+		return []ValidationIssue{symbolicOIDIssue(lineNum, valueStr, originalLine)}
+	}
+
+	if valueStr == "" || strings.HasPrefix(valueStr, ".") {
 		return nil
 	}
 

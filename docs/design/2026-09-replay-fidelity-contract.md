@@ -186,11 +186,79 @@ including `ipNetToMediaPhysAddress`, which is another address rewrite.
 
 The four ordering breaks are all Cisco Nexus walks, and the OIDs in them are
 **symbolic** (`SNMPv2-MIB::sysORDescr.3`, `IP-MIB::icmpMsgStatsOutPkts.ipv6.3`)
-rather than numeric. `NormalizeKnownWalkOIDs` rewrites a fixed list of names,
-so anything outside it is stored as text and sorts as text — which is why a
-GET-NEXT chain goes backwards. A walk taken with plain `snmpwalk`, without
-`-On`, therefore replays in an order that breaks a scanner. That is the leading
-hypothesis for row F1b, not a conclusion.
+rather than numeric. F1a offered "stored as text and sorts as text" as a
+hypothesis. Measured in row F1b, it is wrong in both halves, and the truth is
+worse — see below.
+
+## Symbolic OIDs (row F1b, fixed)
+
+A walk taken with plain `snmpwalk` rather than `snmpwalk -On` names its objects.
+`parseWalkLine` accepted any text before the `=` as an OID key, so those names
+became MIB keys verbatim. Two consequences, both measured:
+
+- **They do not sort as text.** `parseOIDParts` builds its arc list with
+  `strconv.Atoi` and _skips_ every arc that fails, so `SNMPv2-MIB::sysORDescr.3`
+  and `IP-MIB::icmpMsgStatsOutPkts.ipv6.3` both reduce to `[3]` and
+  `compareOIDs` returns **0** — they compare equal. The sorted list the GET-NEXT
+  binary search walks is therefore not ordered, and a chain through it goes
+  backwards or skips rows.
+- **They never reach the wire at all.** gosnmp cannot marshal a non-numeric OID:
+  `MarshalMsg` returns `unable to marshal OID: Invalid object identifier` and a
+  zero-byte packet. One such varbind fails the _whole_ response, so the agent
+  answers nothing and the scanner times out. This is a discovery-killing defect,
+  not a cosmetic ordering one.
+
+The fix makes "every OID the MIB holds is numeric" an invariant at the single
+point both `ParseWalkFile` and `ParseWalkContent` pass through. `NormalizeWalkOID`
+resolves what the SMI allows without a MIB compiler — an object in the fixed
+known set, or an RFC 2578 registration anchor (`SNMPv2-SMI::enterprises`,
+`SNMPv2-SMI::transmission`, the bare `iso.` form net-snmp prints with no MIBs
+loaded), each followed by a numeric tail. Anything else is refused at parse:
+an object from a MIB nothing ships, or a **symbolic table index** such as
+`IP-MIB::icmpMsgStatsOutPkts.ipv6.3`, which no name table can resolve.
+
+`validateOID` previously called a named OID "valid format, no action needed",
+which is how these walks passed `niac sanitize --check` and the catalog-sync
+gate. A resolvable name is now a `warning` carrying the numeric form as an
+auto-fix; an unresolvable one is an `error` that names `snmpwalk -On`.
+
+An OID-typed **value** is named under the same rules as the key —
+`sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.12.3.1.3.1008` is the common
+case — and gosnmp rejects it identically, so `parseTypeAndValue` resolves and
+refuses it through the same function. `validateOIDValue` previously returned
+early on anything containing `::`.
+
+`ValidLines` now counts every line without an _error_ rather than every
+issue-free line. Both consumers read it as "is there anything usable here"
+before refusing (`handlers_walk_profile.go` on `!Valid || ValidLines == 0`,
+`catalogsync.validateWalks` on `ValidLines == 0`), and a walk whose every line
+carries one cosmetic remark — a resolvable name, leading whitespace — was
+indistinguishable from an empty file.
+
+Measured over the four Nexus walks, before and after:
+
+| Walk | Symbolic rows | Rejected after | Recovered | Ordering break |
+| --- | --- | --- | --- | --- |
+| `cisco-nexus-5000-05` | 34,990 | 10,216 | 24,774 | fixed |
+| `cisco-nexus-7000-02` | 16,430 | 1,405 | 15,025 | fixed |
+| `cisco-nexus-4000-02` | 3,765 | 522 | 3,243 | fixed |
+| `cisco-nexus-7000-01` | 1,139 | 1,139 | 0 | fixed |
+
+(`cisco-nexus-7000-01`'s rows are not symbolic names but mangled arcs —
+`1.3.6.1.2.1.4v6RouterAdvertSpinLock.0` — which look like a sanitizer artifact
+rather than anything net-snmp emits.)
+
+The harness gained a `rejected` count read from the raw file, because a
+rejected row is absent from _both_ sides of the comparison: without it,
+`cisco-nexus-7000-02` would report as byte-perfect having lost 1,390 rows.
+
+**Left for the owner.** 240 distinct object names appear across those four
+walks, from 7 standard MIB modules; the anchors above resolve 63% of the rows
+and the fixed known set most of the rest, but standard objects outside it —
+`SNMPv2-MIB::sysUpTime`, `IF-MIB::ifInOctets` — are still refused. Shipping a
+~200-entry MIB-II name table would recover them and is new capability under the
+plan's rule 8, so it is a decision, not a fix. The alternative, and the one the
+error message states, is that a capture must be taken with `-On`.
 
 A harness correction worth recording: the first corpus run reported 1.29
 million dropped OIDs. Every one belonged to a walk whose sweep had hit a fixed

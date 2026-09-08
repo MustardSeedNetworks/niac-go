@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -197,6 +198,7 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	scanner.Buffer(make([]byte, 0, walkScanBufInitial), walkScanBufMax)
 
 	lineNum := 0
+	symbolic := 0       // rows refused because their object name is unresolvable
 	lastWasHex := false // previous entry came from a Hex-STRING (may continue)
 
 	for scanner.Scan() {
@@ -223,6 +225,9 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 
 		entry, parseErr := parseWalkLine(line)
 		if parseErr != nil {
+			if errors.Is(parseErr, ErrSymbolicOID) {
+				symbolic++
+			}
 			// Log error but continue parsing
 			logging.Debugf("Warning: line %d: %v", lineNum, parseErr)
 
@@ -236,6 +241,16 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	scanErr := scanner.Err()
 	if scanErr != nil {
 		return nil, fmt.Errorf("error reading walk file: %w", scanErr)
+	}
+
+	// One line per walk, not per row: a walk taken without -On can carry tens of
+	// thousands of these and a per-line debug message is invisible.
+	if symbolic > 0 {
+		logging.Warningf(
+			"walk file: %d of %d rows dropped, object names cannot be resolved "+
+				"to numeric OIDs; re-take the capture with `snmpwalk -On`",
+			symbolic, lineNum,
+		)
 	}
 
 	return entries, nil
@@ -263,7 +278,14 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 		return nil, ErrInvalidWalkFormat
 	}
 
-	oid := extractLineOID(line)
+	// The MIB is keyed by numeric OID and nothing downstream can recover from a
+	// name: a symbolic key breaks GET-NEXT ordering and cannot be marshalled
+	// onto the wire. Resolve what the SMI allows, refuse the rest here — the one
+	// point both ParseWalkFile and ParseWalkContent pass through.
+	oid, resolved := NormalizeWalkOID(extractLineOID(line))
+	if !resolved {
+		return nil, fmt.Errorf("%w: %s", ErrSymbolicOID, extractLineOID(line))
+	}
 	rest := strings.TrimSpace(parts[1])
 
 	// net-snmp emits zero-length octet strings with no type prefix, as
@@ -296,6 +318,20 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 	}, nil
 }
 
+// parseOIDValue parses an OID-typed value, which net-snmp names symbolically
+// under exactly the same rules as the OID on the left of the `=`. sysObjectID.0
+// is the common case — `OID: SNMPv2-SMI::enterprises.9.12.3.1.3.1008` — and a
+// name here fails gosnmp's marshaller just as surely as a name in the key, so
+// the row cannot be served either way.
+func parseOIDValue(valueStr string) (gosnmp.Asn1BER, any, error) {
+	numeric, resolved := NormalizeWalkOID(valueStr)
+	if !resolved {
+		return 0, nil, fmt.Errorf("%w: %s", ErrSymbolicOID, valueStr)
+	}
+
+	return gosnmp.ObjectIdentifier, strings.TrimPrefix(numeric, "."), nil
+}
+
 // parseTypeAndValue parses the type and value from a walk file entry.
 func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	switch typeStr {
@@ -314,7 +350,7 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	case "TIMETICKS":
 		return parseTimeticksValue(valueStr)
 	case snmpTypeOID, "OBJECT IDENTIFIER":
-		return gosnmp.ObjectIdentifier, strings.TrimPrefix(valueStr, "."), nil
+		return parseOIDValue(valueStr)
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
 		return gosnmp.IPAddress, valueStr, nil
 	case "BITS", "BIT STRING":

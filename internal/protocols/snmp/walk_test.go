@@ -166,12 +166,12 @@ func TestParseWalkFile_ValidFile(t *testing.T) {
 	walkFile := filepath.Join(tmpDir, "valid-walk.txt")
 
 	// Create a valid SNMP walk file
-	walkData := `SNMPv2-MIB::sysDescr.0 = STRING: "Cisco IOS Software"
-SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.1.1
-SNMPv2-MIB::sysUpTime.0 = Timeticks: (123456) 0:20:34.56
-SNMPv2-MIB::sysContact.0 = STRING: "admin@example.com"
-SNMPv2-MIB::sysName.0 = STRING: "router-1"
-SNMPv2-MIB::sysLocation.0 = STRING: "Data Center 1"
+	walkData := `.1.3.6.1.2.1.1.1.0 = STRING: "Cisco IOS Software"
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.1
+.1.3.6.1.2.1.1.3.0 = Timeticks: (123456) 0:20:34.56
+.1.3.6.1.2.1.1.4.0 = STRING: "admin@example.com"
+.1.3.6.1.2.1.1.5.0 = STRING: "router-1"
+.1.3.6.1.2.1.1.6.0 = STRING: "Data Center 1"
 `
 
 	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {
@@ -191,8 +191,8 @@ SNMPv2-MIB::sysLocation.0 = STRING: "Data Center 1"
 
 	// Verify first entry
 	if len(entries) > 0 {
-		if entries[0].OID != "SNMPv2-MIB::sysDescr.0" {
-			t.Errorf("Expected OID 'SNMPv2-MIB::sysDescr.0', got: %s", entries[0].OID)
+		if entries[0].OID != ".1.3.6.1.2.1.1.1.0" {
+			t.Errorf("Expected OID '.1.3.6.1.2.1.1.1.0', got: %s", entries[0].OID)
 		}
 
 		if entries[0].Type != gosnmp.OctetString {
@@ -313,7 +313,10 @@ func TestParseWalkFile_VariousOIDFormats(t *testing.T) {
 	tmpDir := t.TempDir()
 	walkFile := filepath.Join(tmpDir, "oid-formats.txt")
 
-	// Various OID formats
+	// Every form here is one the SMI resolves without a MIB compiler: a named
+	// object in the known set, an already-numeric OID, and the bare `iso`
+	// anchor net-snmp prints with no MIBs loaded. All four must arrive numeric —
+	// a name in the MIB cannot be marshalled onto the wire.
 	walkData := `SNMPv2-MIB::sysDescr.0 = STRING: "Named OID"
 .1.3.6.1.2.1.1.1.0 = STRING: "Numeric OID"
 IF-MIB::ifDescr.1 = STRING: "Interface Description"
@@ -329,8 +332,20 @@ iso.3.6.1.2.1.1.5.0 = STRING: "ISO prefix"
 		t.Fatalf("Failed to parse walk file: %v", err)
 	}
 
-	if len(entries) != 4 {
-		t.Errorf("Expected 4 entries, got %d", len(entries))
+	want := []string{
+		".1.3.6.1.2.1.1.1.0",
+		".1.3.6.1.2.1.1.1.0",
+		".1.3.6.1.2.1.2.2.1.2.1",
+		".1.3.6.1.2.1.1.5.0",
+	}
+	if len(entries) != len(want) {
+		t.Fatalf("Expected %d entries, got %d", len(want), len(entries))
+	}
+
+	for i, entry := range entries {
+		if entry.OID != want[i] {
+			t.Errorf("Entry %d: expected OID %s, got %s", i, want[i], entry.OID)
+		}
 	}
 }
 
@@ -340,14 +355,14 @@ func TestParseWalkFile_VariousDataTypes(t *testing.T) {
 	walkFile := filepath.Join(tmpDir, "data-types.txt")
 
 	// Various SNMP data types
-	walkData := `SNMPv2-MIB::sysDescr.0 = STRING: "String value"
-SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.9.1.1
-SNMPv2-MIB::sysUpTime.0 = Timeticks: (123456) 0:20:34.56
-IF-MIB::ifSpeed.1 = Gauge32: 1000000000
-IF-MIB::ifInOctets.1 = Counter32: 1234567890
-IF-MIB::ifInOctets.2 = Counter64: 9876543210
-SNMPv2-MIB::sysServices.0 = INTEGER: 72
-IF-MIB::ifAdminStatus.1 = INTEGER: 1
+	walkData := `.1.3.6.1.2.1.1.1.0 = STRING: "String value"
+.1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.1
+.1.3.6.1.2.1.1.3.0 = Timeticks: (123456) 0:20:34.56
+.1.3.6.1.2.1.2.2.1.5.1 = Gauge32: 1000000000
+.1.3.6.1.2.1.2.2.1.10.1 = Counter32: 1234567890
+.1.3.6.1.2.1.2.2.1.10.2 = Counter64: 9876543210
+.1.3.6.1.2.1.1.7.0 = INTEGER: 72
+.1.3.6.1.2.1.2.2.1.7.1 = INTEGER: 1
 `
 
 	if err := os.WriteFile(walkFile, []byte(walkData), 0o600); err != nil {

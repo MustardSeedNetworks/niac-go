@@ -148,7 +148,9 @@ func (s *Server) createWalkReview(
 			r,
 			http.StatusUnprocessableEntity,
 			"invalid_walk",
-			"Walk content is not valid net-snmp output",
+			"Walk content is not valid net-snmp output. If it names objects "+
+				"symbolically, re-take the capture with `snmpwalk -On`: a named "+
+				"OID cannot be encoded into an SNMP response.",
 			nil,
 		)
 		return
