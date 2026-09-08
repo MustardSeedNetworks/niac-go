@@ -172,7 +172,7 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 	newCfg := *deepCopyConfig(cfg)
 
 	if req.RawYAML != "" {
-		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname)
+		updatedDevice, parseErr := updateDeviceFromYAML(req.RawYAML, hostname, s.authoredIncludeDir())
 		if parseErr != nil {
 			line, msg := parseYAMLError(parseErr)
 			writeError(w, r, http.StatusBadRequest, "parse_failed", parseErr.Error(),

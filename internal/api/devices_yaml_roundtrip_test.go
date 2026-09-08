@@ -31,7 +31,7 @@ func TestSerializeDeviceToYAMLRoundTripsThroughTheParser(t *testing.T) {
 				t.Fatalf("serializeDeviceToYAML() error = %v", serErr)
 			}
 
-			reloaded, parseErr := parseDeviceFromYAML(string(serialized), dev.Name)
+			reloaded, parseErr := parseDeviceFromYAML(string(serialized), dev.Name, ".")
 			if parseErr != nil {
 				t.Fatalf("rawYaml read-back does not parse: %v\n%s", parseErr, serialized)
 			}

@@ -30,7 +30,7 @@ interfaces:
     oper_status: up
 `
 
-	device, err := parseDeviceFromYAML(document, "MED-ACC-SW02")
+	device, err := parseDeviceFromYAML(document, "MED-ACC-SW02", ".")
 	if err != nil {
 		t.Fatalf("parseDeviceFromYAML: %v", err)
 	}
@@ -55,7 +55,7 @@ interfaces:
 // document says - that is how a clone or a rename works.
 func TestTheRequestHostnameWins(t *testing.T) {
 	device, err := parseDeviceFromYAML(
-		"name: OLD-NAME\ntype: switch\nmac: \"00:00:0c:33:06:02\"\n", "NEW-NAME")
+		"name: OLD-NAME\ntype: switch\nmac: \"00:00:0c:33:06:02\"\n", "NEW-NAME", ".")
 	if err != nil {
 		t.Fatalf("parseDeviceFromYAML: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestTheRequestHostnameWins(t *testing.T) {
 // A document that is not a device must be refused rather than quietly yielding
 // an empty one.
 func TestAMalformedDeviceIsRefused(t *testing.T) {
-	if _, err := parseDeviceFromYAML("type: [not, a, string]\n", "X"); err == nil {
+	if _, err := parseDeviceFromYAML("type: [not, a, string]\n", "X", "."); err == nil {
 		t.Error("a malformed device parsed without error")
 	}
 }
@@ -76,7 +76,7 @@ func TestAMalformedDeviceIsRefused(t *testing.T) {
 // said so. The old reader accepted one and handed back something unusable; the
 // editor now hears about it while the operator is still looking at the document.
 func TestADeviceWithoutAMACIsRefused(t *testing.T) {
-	_, err := parseDeviceFromYAML("name: X\ntype: switch\n", "X")
+	_, err := parseDeviceFromYAML("name: X\ntype: switch\n", "X", ".")
 	if err == nil {
 		t.Fatal("a device with no MAC parsed without error")
 	}
@@ -88,7 +88,7 @@ func TestADeviceWithoutAMACIsRefused(t *testing.T) {
 // The reader still refuses what the security checks reject, unchanged.
 func TestValidationStillGuardsTheInput(t *testing.T) {
 	deep := strings.Repeat("a:\n  ", 200) + "  b: c\n"
-	if _, err := parseDeviceFromYAML(deep, "X"); err == nil {
+	if _, err := parseDeviceFromYAML(deep, "X", "."); err == nil {
 		t.Error("a deeply nested document parsed without error")
 	}
 }

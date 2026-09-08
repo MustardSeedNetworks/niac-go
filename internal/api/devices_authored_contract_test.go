@@ -43,7 +43,7 @@ func TestAuthoredDeviceReadBackIsLossless(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			authored := readAuthoredFixture(t, name)
 
-			first, err := parseDeviceFromYAML(authored, name)
+			first, err := parseDeviceFromYAML(authored, name, ".")
 			if err != nil {
 				t.Fatalf("the editor's YAML does not parse through the save path: %v", err)
 			}
@@ -52,7 +52,7 @@ func TestAuthoredDeviceReadBackIsLossless(t *testing.T) {
 			if err != nil {
 				t.Fatalf("serialize read-back: %v", err)
 			}
-			second, err := parseDeviceFromYAML(string(readBack), name)
+			second, err := parseDeviceFromYAML(string(readBack), name, ".")
 			if err != nil {
 				t.Fatalf("the read-back does not parse: %v\n%s", err, readBack)
 			}
@@ -77,7 +77,7 @@ func TestAuthoredDeviceRejectsUnknownKey(t *testing.T) {
 		"name: probe\ntype: switch\nmac: 00:11:22:33:44:55\nnot_a_field: 7\n",
 		"name: probe\ntype: switch\nmac: 00:11:22:33:44:55\nsnmp_agent:\n  sysnaem: typo\n",
 	} {
-		if _, err := parseDeviceFromYAML(doc, "probe"); err == nil {
+		if _, err := parseDeviceFromYAML(doc, "probe", "."); err == nil {
 			t.Errorf("unknown key accepted, so the editor would drop it silently:\n%s", doc)
 		}
 	}
@@ -88,7 +88,7 @@ func TestAuthoredDeviceRejectsUnknownKey(t *testing.T) {
 // `on` is a boolean there. Asserted as values, on the real fixture, so a
 // future bump of either YAML library fails here instead of in the field.
 func TestAuthoredDeviceScalarShapes(t *testing.T) {
-	device, err := parseDeviceFromYAML(readAuthoredFixture(t, "shape-probe"), "shape-probe")
+	device, err := parseDeviceFromYAML(readAuthoredFixture(t, "shape-probe"), "shape-probe", ".")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestAuthoredDeviceScalarShapes(t *testing.T) {
 func TestAuthoredDeviceOmitsDerivedProperties(t *testing.T) {
 	doc := "name: probe\ntype: switch\nmac: 00:11:22:33:44:55\nvlan: 10\nproperties:\n  site: clinic\n"
 
-	device, err := parseDeviceFromYAML(doc, "probe")
+	device, err := parseDeviceFromYAML(doc, "probe", ".")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -236,7 +236,7 @@ func TestDeviceEditorLoopCreatesFromDocument(t *testing.T) {
 				t.Fatalf("create answered %d: %s", rec.Code, rec.Body.String())
 			}
 
-			want, err := parseDeviceFromYAML(authored, name)
+			want, err := parseDeviceFromYAML(authored, name, ".")
 			if err != nil {
 				t.Fatalf("parse fixture: %v", err)
 			}
@@ -289,7 +289,7 @@ func newAuthoredDeviceServer(t *testing.T, name string) *Server {
 
 	// Loaded the same way the daemon loads it, so the server holds the device
 	// an author's file produces rather than one a test built by hand.
-	device, err := parseDeviceFromYAML(readAuthoredFixture(t, name), name)
+	device, err := parseDeviceFromYAML(readAuthoredFixture(t, name), name, ".")
 	if err != nil {
 		t.Fatalf("load fixture: %v", err)
 	}
