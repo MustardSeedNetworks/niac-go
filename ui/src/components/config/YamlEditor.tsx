@@ -7,13 +7,7 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language';
-import {
-  Annotation,
-  EditorState,
-  type Extension,
-  StateEffect,
-  StateField,
-} from '@codemirror/state';
+import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -35,7 +29,6 @@ import i18n from '../../i18n';
  * `setErrorLineEffect` and cleared by dispatching it with `line: null`.
  */
 const setErrorLineEffect = StateEffect.define<number | null>();
-const externalValueSync = Annotation.define<boolean>();
 
 const errorLineDecoration = Decoration.line({ class: 'cm-niac-error-line' });
 
@@ -261,10 +254,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
 
   // Callback changes must not recreate the editor and discard its pending input or history.
   const handleUpdate = useEffectEvent((update: ViewUpdate) => {
-    const userEdit = update.transactions.some(
-      (transaction) => transaction.docChanged && !transaction.annotation(externalValueSync),
-    );
-    if (userEdit && onChange) {
+    if (update.docChanged && onChange) {
       const newValue = update.state.doc.toString();
       onChange(newValue);
 
@@ -280,8 +270,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   // keystroke would destroy and recreate the whole CodeMirror view (losing
   // cursor position, focus, and undo history) each time `onChange` flows a
   // new value back in as a prop. External value changes (load, reset,
-  // discard) are instead applied by the sync effect below, which dispatches
-  // a targeted doc replacement instead of a full teardown.
+  // discard) replace editor state below without destroying the view.
   useEffect(() => {
     if (!containerRef.current) {
       return;
@@ -318,14 +307,13 @@ export const YamlEditor: FC<YamlEditorProps> = ({
 
     const currentValue = viewRef.current.state.doc.toString();
     if (currentValue !== value) {
-      viewRef.current.dispatch({
-        annotations: externalValueSync.of(true),
-        changes: {
-          from: 0,
-          to: currentValue.length,
-          insert: value,
-        },
-      });
+      // A newly loaded document must not inherit the previous document's undo history.
+      viewRef.current.setState(
+        EditorState.create({
+          doc: value,
+          extensions: [...extensions, EditorView.updateListener.of(handleUpdate)],
+        }),
+      );
     }
   }, [value]);
 
