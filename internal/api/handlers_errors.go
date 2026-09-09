@@ -39,10 +39,13 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		s.writeJSON(w, map[string]any{
-			"available_types": availableErrorTypes(),
-			"active_errors":   interfaceFaultResponse(stack.ActiveInterfaceFaults()),
-			"targets":         interfaceFaultTargetsResponse(stack.InterfaceFaultTargets()),
-			"info":            "Fault injection updates SNMP interface counters",
+			"available_types":        availableErrorTypes(),
+			"active_errors":          interfaceFaultResponse(stack.ActiveInterfaceFaults()),
+			"targets":                interfaceFaultTargetsResponse(stack.InterfaceFaultTargets()),
+			"available_device_types": availableDeviceErrorTypes(),
+			"active_device_errors":   deviceFaultResponse(stack.ActiveDeviceFaults()),
+			"device_targets":         deviceFaultTargetsResponse(stack.DeviceFaultTargets()),
+			"info":                   "Fault injection updates SNMP interface counters",
 		})
 	case http.MethodPost, http.MethodPut:
 		s.handleErrorInjection(w, r, stack)
@@ -69,12 +72,8 @@ func (s *Server) handleErrorInjection(
 		return
 	}
 
-	faultType, err := parseInterfaceFaultType(req.ErrorType)
+	err := s.applyFaultRequest(&req, stack)
 	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", err.Error(), nil)
-		return
-	}
-	if err = stack.SetInterfaceFault(req.Device, req.Interface, faultType, req.Value); err != nil {
 		writeInterfaceFaultError(w, r, err)
 		return
 	}
@@ -87,6 +86,24 @@ func (s *Server) handleErrorInjection(
 		"errorType": req.ErrorType,
 		"value":     req.Value,
 	})
+}
+
+// applyFaultRequest routes one injection onto the axis its error type names.
+func (s *Server) applyFaultRequest(
+	req *errorInjectionRequest, stack *protocols.Stack,
+) error {
+	if req.deviceScoped() {
+		faultType, err := parseDeviceFaultType(req.ErrorType)
+		if err != nil {
+			return err
+		}
+		return stack.SetDeviceFault(req.Device, faultType, req.Value)
+	}
+	faultType, err := parseInterfaceFaultType(req.ErrorType)
+	if err != nil {
+		return err
+	}
+	return stack.SetInterfaceFault(req.Device, req.Interface, faultType, req.Value)
 }
 
 // handleErrorClear handles DELETE requests to clear errors.
@@ -103,7 +120,10 @@ func (s *Server) handleErrorClear(
 	switch {
 	case device == "" && iface == "" && errorType == "":
 		stack.ClearAllInterfaceFaults()
+		stack.ClearAllDeviceFaults()
 		s.writeJSON(w, map[string]any{"success": true, "message": "all errors cleared"})
+	case device != "" && iface == "":
+		s.clearDeviceFaults(w, r, stack, device, errorType)
 	case device != "" && iface != "":
 		var err error
 		if errorType == "" {
@@ -132,10 +152,38 @@ func (s *Server) handleErrorClear(
 	default:
 		http.Error(
 			w,
-			"device and interface are required together; errorType is optional",
+			"an interface may only be cleared together with its device",
 			http.StatusBadRequest,
 		)
 	}
+}
+
+// clearDeviceFaults clears the device-scoped axis for one device: every
+// service fault, or one named type.
+func (s *Server) clearDeviceFaults(
+	w http.ResponseWriter,
+	r *http.Request,
+	stack *protocols.Stack,
+	device, errorType string,
+) {
+	var err error
+	if errorType == "" {
+		err = stack.ClearDeviceFaults(device)
+	} else {
+		var faultType devicestate.DeviceFaultType
+		faultType, err = parseDeviceFaultType(errorType)
+		if err == nil {
+			err = stack.SetDeviceFault(device, faultType, 0)
+		}
+	}
+	if err != nil {
+		writeInterfaceFaultError(w, r, err)
+		return
+	}
+	s.writeJSON(w, map[string]any{
+		"success": true, "message": "error cleared",
+		"device": device, "errorType": errorType,
+	})
 }
 
 func writeInterfaceFaultError(w http.ResponseWriter, r *http.Request, err error) {
@@ -148,6 +196,10 @@ func writeInterfaceFaultError(w http.ResponseWriter, r *http.Request, err error)
 		status, code = http.StatusConflict, "device_ambiguous"
 	case errors.Is(err, protocols.ErrFaultUnobservable):
 		code = "fault_not_observable"
+	case errors.Is(err, protocols.ErrFaultServiceAbsent):
+		code = "fault_service_absent"
+	case errors.Is(err, devicestate.ErrDeviceFaultTypeInvalid):
+		code = "fault_invalid"
 	case errors.Is(err, devicestate.ErrInterfaceNotFound):
 		code = "interface_not_found"
 	}

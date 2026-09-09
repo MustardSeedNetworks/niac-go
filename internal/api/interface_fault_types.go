@@ -7,13 +7,21 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
+// deviceFaultTargetResponse advertises which service outcomes one device can
+// serve; a device with no DHCP or DNS server is absent from the list.
+type deviceFaultTargetResponse struct {
+	Device     string   `json:"device"`
+	Address    string   `json:"address,omitempty"`
+	ErrorTypes []string `json:"errorTypes"`
+}
+
 type interfaceFaultTargetResponse struct {
 	Device     string   `json:"device"`
 	Address    string   `json:"address,omitempty"`
 	Interfaces []string `json:"interfaces"`
 }
 
-var errInterfaceFaultTypeInvalid = errors.New("unsupported interface fault type")
+var errInterfaceFaultTypeInvalid = errors.New("unsupported fault type")
 
 func availableErrorTypes() []map[string]string {
 	descriptions := map[devicestate.FaultType]string{
@@ -27,6 +35,53 @@ func availableErrorTypes() []map[string]string {
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {
 		result = append(result, map[string]string{
 			"type": definition.Label, "description": descriptions[definition.Type],
+		})
+	}
+	return result
+}
+
+// availableDeviceErrorTypes describes the device-scoped catalog: service
+// outcomes that change what a device answers rather than what its interface
+// counters report.
+func availableDeviceErrorTypes() []map[string]string {
+	descriptions := map[devicestate.DeviceFaultType]string{
+		devicestate.FaultDHCPNoOffer: "DHCP server consumes the Discover and sends no Offer",
+		devicestate.FaultDNSNXDomain: "DNS server answers every query with NXDOMAIN",
+		devicestate.FaultDNSTimeout:  "DNS server answers nothing at all",
+	}
+	result := make([]map[string]string, 0, len(descriptions))
+	for _, definition := range devicestate.DeviceFaultDefinitions() {
+		result = append(result, map[string]string{
+			"type": definition.Label, "description": descriptions[definition.Type],
+		})
+	}
+	return result
+}
+
+func deviceFaultResponse(
+	active map[string]map[devicestate.DeviceFaultType]int,
+) map[string]map[string]int {
+	result := make(map[string]map[string]int, len(active))
+	for device, faults := range active {
+		result[device] = make(map[string]int, len(faults))
+		for faultType, value := range faults {
+			result[device][faultType.Label()] = value
+		}
+	}
+	return result
+}
+
+func deviceFaultTargetsResponse(
+	targets []protocols.DeviceFaultTarget,
+) []deviceFaultTargetResponse {
+	result := make([]deviceFaultTargetResponse, 0, len(targets))
+	for _, target := range targets {
+		labels := make([]string, 0, len(target.Faults))
+		for _, faultType := range target.Faults {
+			labels = append(labels, faultType.Label())
+		}
+		result = append(result, deviceFaultTargetResponse{
+			Device: target.Device, Address: target.Address, ErrorTypes: labels,
 		})
 	}
 	return result
@@ -72,13 +127,32 @@ func (req *errorInjectionRequest) validationMessage() string {
 	switch {
 	case req.Device == "":
 		return "device is required"
-	case req.Interface == "":
-		return "interface is required"
 	case req.ErrorType == "":
 		return "errorType is required"
+	// A device-scoped fault names no interface: the outage belongs to the
+	// device's service, not to one of its ports.
+	case req.Interface == "" && !req.deviceScoped():
+		return "interface is required"
+	case req.Interface != "" && req.deviceScoped():
+		return "a device fault takes no interface"
 	case req.Value < 0 || req.Value > 100:
 		return "value must be between 0 and 100"
 	default:
 		return ""
 	}
+}
+
+// deviceScoped reports whether the named error type belongs to the
+// device-service catalog.
+func (req *errorInjectionRequest) deviceScoped() bool {
+	_, ok := devicestate.ParseDeviceFaultLabel(req.ErrorType)
+	return ok
+}
+
+func parseDeviceFaultType(value string) (devicestate.DeviceFaultType, error) {
+	faultType, ok := devicestate.ParseDeviceFaultLabel(value)
+	if !ok {
+		return "", errInterfaceFaultTypeInvalid
+	}
+	return faultType, nil
 }

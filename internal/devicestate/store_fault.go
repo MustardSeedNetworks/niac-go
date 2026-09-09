@@ -59,7 +59,7 @@ func (f FaultType) Label() string {
 	return ""
 }
 
-// ParseFaultLabel returns the supported fault type for an operator-facing label.
+// ParseFaultLabel returns the supported interface fault type for a label.
 func ParseFaultLabel(label string) (FaultType, bool) {
 	for _, definition := range interfaceFaultDefinitions() {
 		if definition.Label == label {
@@ -149,7 +149,9 @@ func (s *Store) ClearAllFaults() {
 }
 
 func validFaultType(faultType FaultType) bool {
-	return faultType.Label() != ""
+	return slices.ContainsFunc(interfaceFaultDefinitions(), func(definition FaultDefinition) bool {
+		return definition.Type == faultType
+	})
 }
 
 func interfaceExists(interfaces []Interface, name string) bool {

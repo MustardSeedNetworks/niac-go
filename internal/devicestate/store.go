@@ -20,7 +20,10 @@ type Snapshot struct {
 	Identity Identity
 	Network  Network
 	Faults   []InterfaceFault
-	Version  uint64
+	// DeviceFaults are service outcomes armed on the device as a whole,
+	// independent of any interface.
+	DeviceFaults []DeviceFault
+	Version      uint64
 }
 
 type configuration struct {
@@ -38,6 +41,7 @@ type Store struct {
 	events         []Event
 	checkpoints    map[string]checkpoint
 	faults         map[interfaceFaultKey]InterfaceFault
+	deviceFaults   map[DeviceFaultType]DeviceFault
 	changes        chan struct{}
 	changeSignal   chan<- struct{}
 	changeObserver func(Snapshot)
@@ -51,7 +55,8 @@ func NewStore(identity Identity) *Store {
 		running: initial, startup: initial, authored: initial, version: 1,
 		faults: make(
 			map[interfaceFaultKey]InterfaceFault,
-		), changes: make(chan struct{}, 1), now: time.Now,
+		), deviceFaults: make(map[DeviceFaultType]DeviceFault),
+		changes: make(chan struct{}, 1), now: time.Now,
 	}
 }
 
@@ -99,7 +104,9 @@ func (s *Store) snapshot(source configuration) Snapshot {
 	applyLinkDownFaults(network.Interfaces, s.faults)
 	return Snapshot{
 		Identity: source.identity, Network: network,
-		Faults: sortedInterfaceFaults(s.faults), Version: s.version,
+		Faults:       sortedInterfaceFaults(s.faults),
+		DeviceFaults: sortedDeviceFaults(s.deviceFaults),
+		Version:      s.version,
 	}
 }
 

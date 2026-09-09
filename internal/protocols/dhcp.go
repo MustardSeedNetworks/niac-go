@@ -443,17 +443,6 @@ func (h *DHCPHandler) parseDHCPPacket(pkt *Packet) *dhcpPacketInfo {
 	return info
 }
 
-// findServerDevice finds a suitable server device from the device list.
-func findServerDevice(devices []*config.Device) *config.Device {
-	for _, dev := range devices {
-		if dev != nil && dev.DHCPConfig != nil {
-			return dev
-		}
-	}
-
-	return nil
-}
-
 func (h *DHCPHandler) configuredServerIP() net.IP {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -483,6 +472,10 @@ func (h *DHCPHandler) handleDHCPDiscover(
 
 	if debugLevel >= DebugLevelInfo {
 		logger.Debug("DHCP: Processing Discover", "mac", info.dhcp.ClientHWAddr, "sn", serialNum)
+	}
+
+	if h.offerSuppressed(serverDevice, info, serialNum, debugLevel) {
+		return
 	}
 
 	lease, err := h.allocateLease(info.dhcp.ClientHWAddr, nil, info.hostname)

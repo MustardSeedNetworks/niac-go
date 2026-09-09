@@ -46,7 +46,7 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/api/v1/behaviors` | Current saved-timeline replay status |
 | `GET` | `/api/v1/version` | Version information |
 | `GET` | `/api/v1/errors` | Available error types and active error injections |
-| `POST` | `/api/v1/errors` | Inject network errors on device interfaces |
+| `POST` | `/api/v1/errors` | Inject an interface fault or a device-service fault |
 | `DELETE` | `/api/v1/errors` | Clear specific or all error injections |
 | `GET` | `/metrics` | Prometheus metrics endpoint (see [Monitoring Guide](MONITORING.md)) |
 
@@ -295,6 +295,10 @@ provides a Traffic Injection page with controls for injecting errors on device i
     {
       "type": "High Utilization",
       "description": "Interface bandwidth saturation (0-100%)"
+    },
+    {
+      "type": "Link Down",
+      "description": "Drop the link (non-zero takes the interface down)"
     }
   ],
   "info": "Fault injection updates SNMP interface counters",
@@ -312,9 +316,51 @@ provides a Traffic Injection page with controls for injecting errors on device i
         "Packet Discards": 25
       }
     }
+  },
+  "available_device_types": [
+    {
+      "type": "DHCP No Offer",
+      "description": "DHCP server consumes the Discover and sends no Offer"
+    },
+    {
+      "type": "DNS NXDOMAIN",
+      "description": "DNS server answers every query with NXDOMAIN"
+    },
+    {
+      "type": "DNS Timeout",
+      "description": "DNS server answers nothing at all"
+    }
+  ],
+  "device_targets": [
+    {
+      "device": "site-gateway",
+      "address": "192.168.1.1",
+      "errorTypes": ["DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout"]
+    }
+  ],
+  "active_device_errors": {
+    "site-gateway": {
+      "DNS NXDOMAIN": 1
+    }
   }
 }
 ```
+
+### Two fault axes
+
+Faults come in two scopes and the error type decides which one a request lands
+on. **Interface faults** perturb one port's SNMP telemetry and name an
+interface. **Device faults** are service outcomes — the device's DHCP or DNS
+server stops behaving — and name no interface, because the outage belongs to
+the service rather than to a port. A request that mixes the two (an interface
+with a device fault type, or a device fault type with no interface) is refused
+with `validation_failed` rather than reinterpreted.
+
+`device_targets` lists only the devices that actually run the affected
+service, with the fault types each can serve; arming a fault on a device that
+does not run that service is refused with `fault_service_absent`. Device
+faults change no MIB object: a faulted server keeps its inventory, interfaces
+and counters, and only its answers change.
 
 `POST /api/v1/errors` injects an error on a specific device interface:
 
@@ -332,8 +378,23 @@ per second. For utilization, it is the percentage of the authored interface
 speed applied to both input and output octet counters. Setting a fault to `0`
 clears only that fault type.
 
+`POST /api/v1/errors` with no `interface` arms a device fault:
+
+```json
+{
+  "device": "site-gateway",
+  "errorType": "DNS NXDOMAIN",
+  "value": 1
+}
+```
+
+A device fault is an outcome rather than a rate: any non-zero `value` arms it
+and `0` clears it, the same way `Link Down` behaves on the interface axis.
+
 `DELETE /api/v1/errors?device=edge-switch&interface=GigabitEthernet0/1&errorType=FCS%20Errors`
 clears one fault. Omitting `errorType` clears every fault on that interface.
+`DELETE /api/v1/errors?device=site-gateway` (no `interface`) clears that
+device's service faults; adding `errorType` clears one of them.
 
 `DELETE /api/v1/errors` (no query parameters) clears all active error injections.
 
