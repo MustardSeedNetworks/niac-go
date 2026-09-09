@@ -8,6 +8,10 @@ run against the shipped packs; the output is committed metadata only -- pack,
 role, PDU type, OID, request count. Addresses, community strings and payload
 values never leave this script.
 
+Target addresses and community strings are never emitted. OID instance indexes
+do carry addressing -- an ARP row is keyed by one -- but those are the packs'
+own synthetic ranges, which the scenario generator already publishes.
+
 The capture is large (a six-pack EtherScope discovery is ~250 MB) and lives on
 the lab host, which has neither tshark nor scapy, so the pcap reader and the
 SNMP BER decoder here are deliberately stdlib-only: the script is copied to the
