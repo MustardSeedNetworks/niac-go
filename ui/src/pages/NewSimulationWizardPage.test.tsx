@@ -240,9 +240,10 @@ describe('NewSimulationWizardPage — status', () => {
         renderWizard();
       }),
     );
-    await vi.waitFor(() => expect(screen.getByTestId('wizard-interface-select')).toBeVisible());
+    await vi.waitFor(() => expect(screen.getByTestId('wizard-interface-select')).toBeEnabled());
     const interfaceControl = screen.getByTestId('wizard-interface-select');
     fireEvent.change(interfaceControl, { target: { value: 'lo0' } });
+    expect(interfaceControl).toHaveValue('lo0');
     fireEvent.click(screen.getByTestId('wizard-start-empty'));
     vi.mocked(fetchSimulationStatus).mockRejectedValueOnce(new ApiError('Poll failed', 503));
     await Promise.resolve(
