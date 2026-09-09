@@ -11,7 +11,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type FC, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { fetchCaptureStatus, stopStandaloneCapture } from '../api/client';
@@ -43,9 +43,7 @@ import { PcapAnalyzerPage } from './PcapAnalyzerPage';
 import { packetFromStreamEvent } from './packets/packet-from-stream';
 import { StandaloneCaptureStarter } from './packets/StandaloneCaptureStarter';
 import { useCaptureExport, useFilteredJsonExport } from './packets/useCaptureExport';
-
-/** Maximum number of packets to buffer */
-const MAX_PACKETS = 100;
+import { MAX_PACKETS, usePacketBuffer } from './packets/usePacketBuffer';
 
 /**
  * Generate unique packet ID
@@ -120,7 +118,16 @@ export const PacketInspectorPage: FC = () => {
       : undefined;
 
   // Packet buffer state
-  const [packets, setPackets] = useState<Packet[]>([]);
+  const {
+    visible: packets,
+    retained,
+    paused: isPaused,
+    pending,
+    evicted,
+    appendPacket,
+    clearPackets,
+    togglePause: handlePauseToggle,
+  } = usePacketBuffer();
   const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null);
   const [highlightRange, setHighlightRange] = useState<[number, number] | undefined>(undefined);
 
@@ -129,7 +136,6 @@ export const PacketInspectorPage: FC = () => {
 
   // UI state
   const [autoScroll, setAutoScroll] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
   const [showColoringRules, setShowColoringRules] = useState(false);
   const [showStreamView, setShowStreamView] = useState(false);
   // Stopping the standalone capture ends the only source of live frames on
@@ -169,48 +175,29 @@ export const PacketInspectorPage: FC = () => {
   const handleExportPcap = useCaptureExport(exportSessionId);
   const handleExport = useFilteredJsonExport(filteredPackets);
 
-  // Ref to track pause state in callback
-  const isPausedRef = useRef(isPaused);
-  useEffect(() => {
-    isPausedRef.current = isPaused;
-  }, [isPaused]);
-
   // SSE connection (auto-reconnects)
   const { connected, reconnect } = usePacketStream({
     sessionId: simRunning ? (sessionId ?? undefined) : undefined,
-    onMessage: useCallback((data: unknown) => {
-      // Skip if paused
-      if (isPausedRef.current) {
-        return;
-      }
+    onMessage: useCallback(
+      (data: unknown) => {
+        if (!isPacketStreamEvent(data)) return;
 
-      if (!isPacketStreamEvent(data)) return;
+        const incoming = data.data;
 
-      const incoming = data.data;
+        const packet = packetFromStreamEvent(incoming, data.timestamp, generatePacketId());
 
-      const packet = packetFromStreamEvent(incoming, data.timestamp, generatePacketId());
-
-      setPackets((prev) => {
-        const updated = [...prev, packet];
-        // Keep only the last MAX_PACKETS
-        if (updated.length > MAX_PACKETS) {
-          return updated.slice(-MAX_PACKETS);
-        }
-        return updated;
-      });
-    }, []),
+        appendPacket(packet);
+      },
+      [appendPacket],
+    ),
   });
 
   // Clear all packets
   const handleClear = useCallback(() => {
-    setPackets([]);
+    clearPackets();
     setSelectedPacket(null);
-  }, []);
-
-  // Toggle pause state
-  const handlePauseToggle = useCallback(() => {
-    setIsPaused((prev) => !prev);
-  }, []);
+    setHighlightRange(undefined);
+  }, [clearPackets]);
 
   // Select packet handler
   const handleSelectPacket = useCallback((packet: Packet) => {
@@ -354,7 +341,7 @@ export const PacketInspectorPage: FC = () => {
                     size="sm"
                     onClick={handleClear}
                     leftIcon={<Trash2 className={iconSizes.md} />}
-                    disabled={packets.length === 0}
+                    disabled={retained.length === 0 && packets.length === 0}
                   >
                     {tCommon('buttons.clear')}
                   </Button>
@@ -449,6 +436,14 @@ export const PacketInspectorPage: FC = () => {
                     total: packets.length,
                   })}
                 </SmallText>
+                <SmallText className="text-text-muted" data-testid="packet-buffer-evictions">
+                  {t('packets.inspector.evictedCount', { count: evicted, limit: MAX_PACKETS })}
+                </SmallText>
+                {isPaused && pending > 0 && (
+                  <Tag colorScheme="yellow" data-testid="packet-buffer-pending">
+                    {t('packets.inspector.pendingCount', { count: pending })}
+                  </Tag>
+                )}
               </div>
             </CardContent>
           </Card>
