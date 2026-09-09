@@ -35,31 +35,26 @@ func TestStoreDeviceFaultsAreIndependentOfInterfaceFaults(t *testing.T) {
 	}
 }
 
-// Each axis refuses the other's fault types. One FaultType enum with two
-// catalogs is only safe if the setters disagree about what they accept:
-// otherwise a device-service outage could be filed against an interface and
-// would be reported as an interface event.
-func TestStoreFaultAxesRefuseEachOthersTypes(t *testing.T) {
+// The two axes are separate types, so passing one axis's constant to the
+// other's setter does not compile — that half of the confusion is
+// unrepresentable rather than tested. What remains testable is a value that
+// only looks like a fault type, which is what an operator-supplied label can
+// produce.
+func TestStoreDeviceFaultRefusesAnUnknownType(t *testing.T) {
 	store := faultStore()
 
-	err := store.SetInterfaceFault("Gi0/1", devicestate.FaultDNSNXDomain, 1)
-	if !errors.Is(err, devicestate.ErrFaultTypeInvalid) {
-		t.Fatalf("SetInterfaceFault(dns_nxdomain) error = %v, want ErrFaultTypeInvalid", err)
-	}
-
-	err = store.SetDeviceFault(devicestate.FaultFCS, 25)
+	err := store.SetDeviceFault(devicestate.DeviceFaultType("fcs_errors"), 25)
 	if !errors.Is(err, devicestate.ErrDeviceFaultTypeInvalid) {
-		t.Fatalf("SetDeviceFault(fcs) error = %v, want ErrDeviceFaultTypeInvalid", err)
+		t.Fatalf("SetDeviceFault(fcs_errors) error = %v, want ErrDeviceFaultTypeInvalid", err)
 	}
-	if snapshot := store.Snapshot(); len(snapshot.Faults) != 0 ||
-		len(snapshot.DeviceFaults) != 0 {
+	if snapshot := store.Snapshot(); len(snapshot.DeviceFaults) != 0 {
 		t.Fatalf("snapshot recorded a refused fault: %#v", snapshot)
 	}
 }
 
 func TestStoreDeviceFaultZeroClearsOnlyNamedFault(t *testing.T) {
 	store := faultStore()
-	for _, faultType := range []devicestate.FaultType{
+	for _, faultType := range []devicestate.DeviceFaultType{
 		devicestate.FaultDHCPNoOffer, devicestate.FaultDNSNXDomain,
 	} {
 		if err := store.SetDeviceFault(faultType, 1); err != nil {
@@ -138,23 +133,31 @@ func TestStoreDeviceFaultRecordsItsOwnEventKind(t *testing.T) {
 	}
 }
 
-func TestStoreDeviceFaultDefinitionsAreDistinctFromInterfaceCatalog(t *testing.T) {
-	deviceTypes := make(map[devicestate.FaultType]struct{})
+// Labels are what an operator sends, so they must be unambiguous across the
+// two catalogs even though the types are not.
+func TestStoreFaultCatalogsShareNoLabel(t *testing.T) {
+	deviceLabels := make(map[string]struct{})
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
 		if definition.Label == "" {
 			t.Fatalf("device fault %q has no label", definition.Type)
 		}
-		deviceTypes[definition.Type] = struct{}{}
+		if _, ok := devicestate.ParseDeviceFaultLabel(definition.Label); !ok {
+			t.Fatalf("device label %q does not parse back", definition.Label)
+		}
+		if _, clash := devicestate.ParseFaultLabel(definition.Label); clash {
+			t.Fatalf("device label %q also parses as an interface fault", definition.Label)
+		}
+		deviceLabels[definition.Label] = struct{}{}
 	}
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {
-		if _, clash := deviceTypes[definition.Type]; clash {
-			t.Fatalf("fault %q is in both catalogs", definition.Type)
+		if _, clash := deviceLabels[definition.Label]; clash {
+			t.Fatalf("label %q is in both catalogs", definition.Label)
 		}
 	}
-	for _, want := range []devicestate.FaultType{
+	for _, want := range []devicestate.DeviceFaultType{
 		devicestate.FaultDHCPNoOffer, devicestate.FaultDNSNXDomain, devicestate.FaultDNSTimeout,
 	} {
-		if _, present := deviceTypes[want]; !present {
+		if want.Label() == "" {
 			t.Fatalf("device catalog is missing %q", want)
 		}
 	}

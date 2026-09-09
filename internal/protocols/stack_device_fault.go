@@ -17,13 +17,13 @@ var ErrFaultServiceAbsent = errors.New("fault target does not run the affected s
 type DeviceFaultTarget struct {
 	Device  string
 	Address string
-	Faults  []devicestate.FaultType
+	Faults  []devicestate.DeviceFaultType
 }
 
 // SetDeviceFault arms one device-service fault on the stack-owned device state.
 func (s *Stack) SetDeviceFault(
 	deviceTarget string,
-	faultType devicestate.FaultType,
+	faultType devicestate.DeviceFaultType,
 	value int,
 ) error {
 	s.reloadMu.RLock()
@@ -32,11 +32,11 @@ func (s *Stack) SetDeviceFault(
 	if err != nil {
 		return err
 	}
-	// The store owns type validity; ask it first so an interface fault sent to
-	// this axis reports as the wrong type rather than as a missing service.
 	// A zero value clears, and clearing a fault the device could never serve
-	// is harmless; only arming one has to be refused.
-	if value != 0 && isDeviceFaultType(faultType) && !deviceServesFault(device, faultType) {
+	// is harmless; only arming one has to be refused. An unknown type has no
+	// label and belongs to the store to reject, not to this guard: otherwise a
+	// typo would report as a missing service.
+	if value != 0 && faultType.Label() != "" && !deviceServesFault(device, faultType) {
 		return ErrFaultServiceAbsent
 	}
 	return store.SetDeviceFault(faultType, value)
@@ -64,16 +64,16 @@ func (s *Stack) ClearAllDeviceFaults() {
 }
 
 // ActiveDeviceFaults returns a JSON-ready snapshot keyed by device name.
-func (s *Stack) ActiveDeviceFaults() map[string]map[devicestate.FaultType]int {
+func (s *Stack) ActiveDeviceFaults() map[string]map[devicestate.DeviceFaultType]int {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
-	result := make(map[string]map[devicestate.FaultType]int)
+	result := make(map[string]map[devicestate.DeviceFaultType]int)
 	for device, store := range s.deviceStates {
 		faults := store.Snapshot().DeviceFaults
 		if len(faults) == 0 {
 			continue
 		}
-		byType := make(map[devicestate.FaultType]int, len(faults))
+		byType := make(map[devicestate.DeviceFaultType]int, len(faults))
 		for _, fault := range faults {
 			byType[fault.Type] = fault.Value
 		}
@@ -108,7 +108,7 @@ func (s *Stack) DeviceFaultTargets() []DeviceFaultTarget {
 // deviceFaultActive reports whether a device-service fault is armed on device.
 // Protocol handlers call this per request, so it must stay cheap.
 func (s *Stack) deviceFaultActive(
-	device *config.Device, faultType devicestate.FaultType,
+	device *config.Device, faultType devicestate.DeviceFaultType,
 ) bool {
 	store := s.deviceStates[device]
 	return store != nil && store.DeviceFaultActive(faultType)
@@ -118,7 +118,7 @@ func (s *Stack) deviceFaultActive(
 // suppresses. Arming a DHCP fault on a device with no DHCP server would look
 // applied and do nothing, which is exactly the failure ErrFaultUnobservable
 // prevents on the interface axis.
-func deviceServesFault(device *config.Device, faultType devicestate.FaultType) bool {
+func deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
 	case devicestate.FaultDHCPNoOffer:
 		return device.DHCPConfig != nil
@@ -129,20 +129,13 @@ func deviceServesFault(device *config.Device, faultType devicestate.FaultType) b
 		// what make a device answer queries.
 		return device.DNSConfig != nil &&
 			(len(device.DNSConfig.ForwardRecords) > 0 || len(device.DNSConfig.ReverseRecords) > 0)
-	default:
-		return false
 	}
+
+	return false
 }
 
-func isDeviceFaultType(faultType devicestate.FaultType) bool {
-	return slices.ContainsFunc(
-		devicestate.DeviceFaultDefinitions(),
-		func(definition devicestate.FaultDefinition) bool { return definition.Type == faultType },
-	)
-}
-
-func servableDeviceFaults(device *config.Device) []devicestate.FaultType {
-	result := make([]devicestate.FaultType, 0, len(devicestate.DeviceFaultDefinitions()))
+func servableDeviceFaults(device *config.Device) []devicestate.DeviceFaultType {
+	result := make([]devicestate.DeviceFaultType, 0, len(devicestate.DeviceFaultDefinitions()))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
 		if deviceServesFault(device, definition.Type) {
 			result = append(result, definition.Type)

@@ -72,16 +72,7 @@ func (s *Server) handleErrorInjection(
 		return
 	}
 
-	faultType, err := parseInterfaceFaultType(req.ErrorType)
-	if err != nil {
-		writeError(w, r, http.StatusBadRequest, "validation_failed", err.Error(), nil)
-		return
-	}
-	if req.deviceScoped() {
-		err = stack.SetDeviceFault(req.Device, faultType, req.Value)
-	} else {
-		err = stack.SetInterfaceFault(req.Device, req.Interface, faultType, req.Value)
-	}
+	err := s.applyFaultRequest(&req, stack)
 	if err != nil {
 		writeInterfaceFaultError(w, r, err)
 		return
@@ -95,6 +86,24 @@ func (s *Server) handleErrorInjection(
 		"errorType": req.ErrorType,
 		"value":     req.Value,
 	})
+}
+
+// applyFaultRequest routes one injection onto the axis its error type names.
+func (s *Server) applyFaultRequest(
+	req *errorInjectionRequest, stack *protocols.Stack,
+) error {
+	if req.deviceScoped() {
+		faultType, err := parseDeviceFaultType(req.ErrorType)
+		if err != nil {
+			return err
+		}
+		return stack.SetDeviceFault(req.Device, faultType, req.Value)
+	}
+	faultType, err := parseInterfaceFaultType(req.ErrorType)
+	if err != nil {
+		return err
+	}
+	return stack.SetInterfaceFault(req.Device, req.Interface, faultType, req.Value)
 }
 
 // handleErrorClear handles DELETE requests to clear errors.
@@ -161,8 +170,8 @@ func (s *Server) clearDeviceFaults(
 	if errorType == "" {
 		err = stack.ClearDeviceFaults(device)
 	} else {
-		var faultType devicestate.FaultType
-		faultType, err = parseInterfaceFaultType(errorType)
+		var faultType devicestate.DeviceFaultType
+		faultType, err = parseDeviceFaultType(errorType)
 		if err == nil {
 			err = stack.SetDeviceFault(device, faultType, 0)
 		}

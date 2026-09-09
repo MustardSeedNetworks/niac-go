@@ -15,7 +15,7 @@ var ErrCheckpointNotFound = errors.New("checkpoint not found")
 type checkpoint struct {
 	config       configuration
 	faults       map[interfaceFaultKey]InterfaceFault
-	deviceFaults map[FaultType]DeviceFault
+	deviceFaults map[DeviceFaultType]DeviceFault
 }
 
 // SaveCheckpoint captures running configuration and active faults under name.

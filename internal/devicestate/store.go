@@ -41,7 +41,7 @@ type Store struct {
 	events         []Event
 	checkpoints    map[string]checkpoint
 	faults         map[interfaceFaultKey]InterfaceFault
-	deviceFaults   map[FaultType]DeviceFault
+	deviceFaults   map[DeviceFaultType]DeviceFault
 	changes        chan struct{}
 	changeSignal   chan<- struct{}
 	changeObserver func(Snapshot)
@@ -55,7 +55,7 @@ func NewStore(identity Identity) *Store {
 		running: initial, startup: initial, authored: initial, version: 1,
 		faults: make(
 			map[interfaceFaultKey]InterfaceFault,
-		), deviceFaults: make(map[FaultType]DeviceFault),
+		), deviceFaults: make(map[DeviceFaultType]DeviceFault),
 		changes: make(chan struct{}, 1), now: time.Now,
 	}
 }

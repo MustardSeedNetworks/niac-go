@@ -83,9 +83,9 @@ func TestStackDeviceFaultTargetValidation(t *testing.T) {
 		t.Fatalf("unknown device error = %v, want %v", err, ErrFaultDeviceNotFound)
 	}
 	if err := stack.SetDeviceFault(
-		"edge-1", devicestate.FaultFCS, 1,
+		"edge-1", devicestate.DeviceFaultType("fcs_errors"), 1,
 	); !errors.Is(err, devicestate.ErrDeviceFaultTypeInvalid) {
-		t.Fatalf("interface fault on the device axis = %v, want refusal", err)
+		t.Fatalf("unknown device fault type = %v, want refusal", err)
 	}
 }
 

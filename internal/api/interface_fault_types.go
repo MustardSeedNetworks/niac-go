@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -45,7 +44,7 @@ func availableErrorTypes() []map[string]string {
 // outcomes that change what a device answers rather than what its interface
 // counters report.
 func availableDeviceErrorTypes() []map[string]string {
-	descriptions := map[devicestate.FaultType]string{
+	descriptions := map[devicestate.DeviceFaultType]string{
 		devicestate.FaultDHCPNoOffer: "DHCP server consumes the Discover and sends no Offer",
 		devicestate.FaultDNSNXDomain: "DNS server answers every query with NXDOMAIN",
 		devicestate.FaultDNSTimeout:  "DNS server answers nothing at all",
@@ -60,7 +59,7 @@ func availableDeviceErrorTypes() []map[string]string {
 }
 
 func deviceFaultResponse(
-	active map[string]map[devicestate.FaultType]int,
+	active map[string]map[devicestate.DeviceFaultType]int,
 ) map[string]map[string]int {
 	result := make(map[string]map[string]int, len(active))
 	for device, faults := range active {
@@ -146,12 +145,14 @@ func (req *errorInjectionRequest) validationMessage() string {
 // deviceScoped reports whether the named error type belongs to the
 // device-service catalog.
 func (req *errorInjectionRequest) deviceScoped() bool {
-	faultType, ok := devicestate.ParseFaultLabel(req.ErrorType)
+	_, ok := devicestate.ParseDeviceFaultLabel(req.ErrorType)
+	return ok
+}
+
+func parseDeviceFaultType(value string) (devicestate.DeviceFaultType, error) {
+	faultType, ok := devicestate.ParseDeviceFaultLabel(value)
 	if !ok {
-		return false
+		return "", errInterfaceFaultTypeInvalid
 	}
-	return slices.ContainsFunc(
-		devicestate.DeviceFaultDefinitions(),
-		func(definition devicestate.FaultDefinition) bool { return definition.Type == faultType },
-	)
+	return faultType, nil
 }
