@@ -72,6 +72,7 @@ function selectedSourceKey(state: WizardState) {
  *   6. Finish    — hand off to runtime monitoring
  */
 export const NewSimulationWizardPage: FC = () => {
+  const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   const { data: simStatus } = useSimulationStatus();
   const showError = useErrorToast();
@@ -104,6 +105,7 @@ export const NewSimulationWizardPage: FC = () => {
   }));
 
   const prepareConfig = useCallback(async () => {
+    if (permission.disabled) return;
     setState((s) => ({ ...s, starting: true }));
     try {
       const sourceKey = selectedSourceKey(state);
@@ -146,10 +148,11 @@ export const NewSimulationWizardPage: FC = () => {
       showError(err);
       setState((s) => ({ ...s, starting: false }));
     }
-  }, [draft, draftSourceKey, discardDraft, state, showError, t]);
+  }, [draft, draftSourceKey, discardDraft, state, showError, t, permission.disabled]);
 
   const saveDraft = useCallback(async () => {
     if (!draft || !draftDirty) return true;
+    if (permission.disabled) return false;
     setState((s) => ({ ...s, saving: true }));
     try {
       const saved = await replaceScenarioDraft(draft.name, draft.revision, draftContent);
@@ -163,7 +166,7 @@ export const NewSimulationWizardPage: FC = () => {
     } finally {
       setState((s) => ({ ...s, saving: false }));
     }
-  }, [draft, draftContent, draftDirty, showError]);
+  }, [draft, draftContent, draftDirty, showError, permission.disabled]);
 
   const cancelWizard = useCallback(async () => {
     if (draft) await discardDraft(draft);
@@ -376,6 +379,7 @@ export const NewSimulationWizardPage: FC = () => {
             data-testid="wizard-next-button"
             disabled={!canProceed}
             onClick={() => void goNext()}
+            action={state.step === 0 ? 'edit' : undefined}
           >
             {state.step === 0 && state.starting
               ? t('newSimWizard.template.startingLabel')
@@ -390,3 +394,5 @@ export const NewSimulationWizardPage: FC = () => {
 };
 
 export default NewSimulationWizardPage;
+
+import { useActionPermission } from '../contexts/ScopeContext';
