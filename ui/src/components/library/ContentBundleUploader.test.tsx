@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
