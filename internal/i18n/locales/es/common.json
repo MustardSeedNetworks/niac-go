@@ -1,4 +1,11 @@
 {
+  "rollup": {
+    "idle": "Inactivo",
+    "ok": "Sin problemas",
+    "warn": "Degradado",
+    "crit": "Crítico",
+    "unknown": "Sin datos"
+  },
   "app": {
     "title": "NIAC",
     "name": "NIAC",

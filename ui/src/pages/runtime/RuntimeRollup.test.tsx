@@ -73,7 +73,8 @@ describe('RuntimeRollup', () => {
     const { container } = renderRollup({
       simStatus: { running: false, deviceCount: 0, uptimeSeconds: 0 },
     });
-    expect(state(container)).toBe('ok');
+    expect(state(container)).toBe('idle');
     expect(screen.getByText('No simulation is running')).toBeInTheDocument();
+    expect(screen.queryByText('All clear')).not.toBeInTheDocument();
   });
 });
