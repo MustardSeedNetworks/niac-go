@@ -5,6 +5,49 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.39](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.38...v0.95.39) (2026-09-09)
+
+
+### Features
+
+* **behavior:** author device-scoped faults in behavior timelines ([#1993](https://github.com/MustardSeedNetworks/niac-go/issues/1993)) ([4360db0](https://github.com/MustardSeedNetworks/niac-go/commit/4360db081efe4d7d094ead134930639cf3d68d8f))
+* **snmp:** serve POWER-ETHERNET-MIB and add the poe_loss fault ([#1973](https://github.com/MustardSeedNetworks/niac-go/issues/1973)) ([c920f16](https://github.com/MustardSeedNetworks/niac-go/commit/c920f16e5f1515704b3d68e57caa81f14cc94fc5))
+
+
+### Bug Fixes
+
+* expose complete paginated run history ([#1976](https://github.com/MustardSeedNetworks/niac-go/issues/1976)) ([5ce8b57](https://github.com/MustardSeedNetworks/niac-go/commit/5ce8b574905b4cbd48182809888f9884f5ce2d23))
+* **ui:** avoid reloading walk library on selection ([#1979](https://github.com/MustardSeedNetworks/niac-go/issues/1979)) ([e564d6d](https://github.com/MustardSeedNetworks/niac-go/commit/e564d6d9b99f5bc971372437799d3bf721b596be))
+* **ui:** distinguish wizard availability and failure states ([#1987](https://github.com/MustardSeedNetworks/niac-go/issues/1987)) ([132f0e7](https://github.com/MustardSeedNetworks/niac-go/commit/132f0e7a79a58ce545191bd674f071907782d6db))
+* **ui:** enforce action permissions without blocking inspection ([#1983](https://github.com/MustardSeedNetworks/niac-go/issues/1983)) ([655b16d](https://github.com/MustardSeedNetworks/niac-go/commit/655b16dd283673cc0184b653e47996bc9fc64861))
+* **ui:** guide first-run device authors into saved drafts ([#1996](https://github.com/MustardSeedNetworks/niac-go/issues/1996)) ([de34cf7](https://github.com/MustardSeedNetworks/niac-go/commit/de34cf77e293d02f836c34e1e16fb26f44f7d7a7))
+* **ui:** preserve packet capture and byte-range contracts ([#1981](https://github.com/MustardSeedNetworks/niac-go/issues/1981)) ([8c1b3fa](https://github.com/MustardSeedNetworks/niac-go/commit/8c1b3fa4d19cc9a5e0607621048fc5a342a8668a))
+* **ui:** preserve unsaved edits across device and wizard navigation ([#1991](https://github.com/MustardSeedNetworks/niac-go/issues/1991)) ([169cb41](https://github.com/MustardSeedNetworks/niac-go/commit/169cb4114ea730a2d3ab943f8a7c141e4301c817))
+* **ui:** show idle runtime as neutral ([#1975](https://github.com/MustardSeedNetworks/niac-go/issues/1975)) ([3b5c843](https://github.com/MustardSeedNetworks/niac-go/commit/3b5c843eea4fa614102c3da9e8c5a84eb2125d0e))
+
+
+### Code Refactoring
+
+* **ui:** share session-scoped query resources ([#1980](https://github.com/MustardSeedNetworks/niac-go/issues/1980)) ([f55b636](https://github.com/MustardSeedNetworks/niac-go/commit/f55b63660ea04eb7f108b1bcf21448028bbee97f))
+
+
+### Documentation
+
+* restate the v1.0 exit criteria and the post-v1 boundary ([#1986](https://github.com/MustardSeedNetworks/niac-go/issues/1986)) ([a202b28](https://github.com/MustardSeedNetworks/niac-go/commit/a202b28894e954fcc3a8486c7d19ba7adaa8fad1))
+
+
+### Tests
+
+* **scenario:** reuse pack fixtures across contract assertions ([#1990](https://github.com/MustardSeedNetworks/niac-go/issues/1990)) ([c573c09](https://github.com/MustardSeedNetworks/niac-go/commit/c573c09e7765d1507472fba3bb3bafc9621a01c2))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1977](https://github.com/MustardSeedNetworks/niac-go/issues/1977)) ([ace54e5](https://github.com/MustardSeedNetworks/niac-go/commit/ace54e573475ab6e3bbb75a67612b254dd5f9141))
+* **deps:** lock file maintenance ([#1982](https://github.com/MustardSeedNetworks/niac-go/issues/1982)) ([8d27719](https://github.com/MustardSeedNetworks/niac-go/commit/8d277194458e3adcaf796488806e046d57cb7f5d))
+* **deps:** lock file maintenance ([#1984](https://github.com/MustardSeedNetworks/niac-go/issues/1984)) ([8b0e0c0](https://github.com/MustardSeedNetworks/niac-go/commit/8b0e0c09f713fe51a1262c0eeaaf1eff17dd0204))
+* **deps:** refresh policy-eligible release dependencies ([#1994](https://github.com/MustardSeedNetworks/niac-go/issues/1994)) ([208a04d](https://github.com/MustardSeedNetworks/niac-go/commit/208a04d1df5730e347058c6a6cc34680b842ab2c))
+
 ## [0.95.38](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.37...v0.95.38) (2026-09-09)
 
 
