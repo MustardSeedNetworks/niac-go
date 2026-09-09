@@ -66,10 +66,7 @@ export const WalkAnalyzerPage: FC = () => {
         if (cancelled) return;
         setFiles(entries);
         setFilesError(null);
-        const firstEntry = entries[0];
-        if (firstEntry && !selectedFile) {
-          setSelectedFile(firstEntry.name);
-        }
+        setSelectedFile((current) => current || entries[0]?.name || '');
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -81,7 +78,7 @@ export const WalkAnalyzerPage: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedFile]);
+  }, []);
 
   const targetPath = customPath.trim() || selectedFile;
   const result = response?.result;

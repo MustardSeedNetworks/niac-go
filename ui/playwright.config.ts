@@ -38,11 +38,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // One retry diagnoses intermittent failures; CI's zero-flake budget still
   // rejects a retry-pass.
-  // workers 4 in CI (bumped from 2 in PR-N1) — GH Actions ubuntu-latest is
-  //   4-vCPU. fullyParallel + workers=4 fills the box and roughly halves
-  //   per-shard wall-clock under the seed cross-repo perf pattern.
+  // Leave capacity for browser rendering, trace capture and the real daemon.
+  // Four workers delayed WebKit actionability enough to exhaust the wizard
+  // journey's deadline even while its API requests remained responsive.
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 4 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   timeout: 30000,
   expect: {
     timeout: 10000,
