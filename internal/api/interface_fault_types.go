@@ -31,6 +31,7 @@ func availableErrorTypes() []map[string]string {
 		devicestate.FaultInterface:   "Generic interface errors (0-100)",
 		devicestate.FaultUtilization: "Interface bandwidth saturation (0-100%)",
 		devicestate.FaultLinkDown:    "Drop the link (non-zero takes the interface down)",
+		devicestate.FaultPoELoss:     "Cut the power this port supplies (non-zero faults the PSE port)",
 	}
 	result := make([]map[string]string, 0, len(descriptions))
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {

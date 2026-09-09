@@ -120,6 +120,7 @@ TITLES = {
     "map_to_ip": "Map to IP",
     "netbios": "NetBIOS",
     "os_fingerprint": "OS fingerprint",
+    "poe": "PoE",
     "port_channels": "Port channels",
     "snmpv3": "SNMPv3",
     "ssh": "SSH",
