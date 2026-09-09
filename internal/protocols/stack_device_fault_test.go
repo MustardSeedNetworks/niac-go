@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/gosnmp/gosnmp"
@@ -64,13 +65,16 @@ func TestStackDeviceFaultRefusesAbsentService(t *testing.T) {
 	if len(targets) != 1 {
 		t.Fatalf("targets = %#v, want the DNS server", targets)
 	}
-	for _, faultType := range targets[0].Faults {
-		if faultType == devicestate.FaultDHCPNoOffer {
-			t.Fatalf("device with no DHCP server advertises %s", faultType)
-		}
+	// The whole advertised set, not just the absence of the DHCP one: latency
+	// suppresses no service and so is offered on every device, and stating
+	// that here is what keeps a future universal fault from arriving unnoticed.
+	want := []devicestate.DeviceFaultType{
+		devicestate.FaultDNSNXDomain,
+		devicestate.FaultDNSTimeout,
+		devicestate.FaultLatency,
 	}
-	if len(targets[0].Faults) != 2 {
-		t.Fatalf("DNS server faults = %v, want the two DNS types", targets[0].Faults)
+	if !slices.Equal(targets[0].Faults, want) {
+		t.Fatalf("DNS server faults = %v, want %v", targets[0].Faults, want)
 	}
 }
 

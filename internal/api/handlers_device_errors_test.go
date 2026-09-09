@@ -15,7 +15,7 @@ import (
 )
 
 func TestAvailableDeviceErrorTypesAreServiceOutcomes(t *testing.T) {
-	want := []string{"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout"}
+	want := []string{"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency"}
 
 	types := availableDeviceErrorTypes()
 	got := make([]string, 0, len(types))
@@ -105,7 +105,10 @@ func TestHandleErrorsRefusesFaultForAnAbsentService(t *testing.T) {
 	}
 }
 
-func TestHandleErrorsAdvertisesOnlyServiceRunningDeviceTargets(t *testing.T) {
+// Service-backed outcomes are advertised only where the service runs; latency
+// suppresses no service, so it is offered everywhere. A client that offered
+// DHCP No Offer, or a gateway missing one of its own, is the failure here.
+func TestHandleErrorsAdvertisesDeviceTargetsByService(t *testing.T) {
 	server := createDeviceErrorTestServer(t)
 
 	recorder := httptest.NewRecorder()
@@ -117,14 +120,18 @@ func TestHandleErrorsAdvertisesOnlyServiceRunningDeviceTargets(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if len(response.Targets) != 1 || response.Targets[0].Device != "gateway" {
-		t.Fatalf("device targets = %#v, want only the gateway", response.Targets)
+	want := map[string][]string{
+		"client1": {"Latency"},
+		"gateway": {"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency"},
 	}
-	if !slices.Equal(
-		response.Targets[0].ErrorTypes,
-		[]string{"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout"},
-	) {
-		t.Fatalf("gateway error types = %v", response.Targets[0].ErrorTypes)
+	if len(response.Targets) != len(want) {
+		t.Fatalf("device targets = %#v, want %d", response.Targets, len(want))
+	}
+	for _, target := range response.Targets {
+		if !slices.Equal(target.ErrorTypes, want[target.Device]) {
+			t.Fatalf("%s error types = %v, want %v",
+				target.Device, target.ErrorTypes, want[target.Device])
+		}
 	}
 }
 

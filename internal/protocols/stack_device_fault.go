@@ -114,12 +114,29 @@ func (s *Stack) deviceFaultActive(
 	return store != nil && store.DeviceFaultActive(faultType)
 }
 
+// deviceFaultValue returns the armed value of a device-service fault, or zero
+// when it is not armed. Handlers call it per request, so it must stay cheap.
+func (s *Stack) deviceFaultValue(
+	device *config.Device, faultType devicestate.DeviceFaultType,
+) int {
+	store := s.deviceStates[device]
+	if store == nil {
+		return 0
+	}
+
+	return store.DeviceFaultValue(faultType)
+}
+
 // deviceServesFault reports whether the device runs the service a fault
 // suppresses. Arming a DHCP fault on a device with no DHCP server would look
 // applied and do nothing, which is exactly the failure ErrFaultUnobservable
 // prevents on the interface axis.
 func deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
+	case devicestate.FaultLatency:
+		// Latency suppresses no service: every simulated device answers the
+		// echo requests addressed to it, so every device can be made slow.
+		return true
 	case devicestate.FaultDHCPNoOffer:
 		return device.DHCPConfig != nil
 	case devicestate.FaultDNSNXDomain, devicestate.FaultDNSTimeout:

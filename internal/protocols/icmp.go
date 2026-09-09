@@ -513,7 +513,7 @@ func (h *ICMPHandler) sendEchoReply(
 		VLAN:         vlan, // reply on the VLAN the echo request arrived on
 	}
 
-	h.stack.Send(pkt)
+	h.sendEchoPacket(device, pkt)
 
 	return nil
 }
