@@ -184,7 +184,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -515,7 +515,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -575,7 +575,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -755,7 +755,7 @@ jobs:
       # Acquire::*::Timeout and no dpkg lock bound. On seed that consumed the
       # job's whole budget and ejected a release PR from the merge queue.
       - name: Install Chromium OS dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         timeout-minutes: 10
         with:
           # cd ui explicitly: the job's defaults.run.working-directory does not
@@ -830,7 +830,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -963,7 +963,7 @@ jobs:
   # Defined once in MustardSeedNetworks/.github (fleet-shared); ci-complete
   # still needs: [semgrep]. Edit the pinned version / config policy there.
   semgrep:
-    uses: MustardSeedNetworks/.github/.github/workflows/semgrep.yml@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+    uses: MustardSeedNetworks/.github/.github/workflows/semgrep.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
     permissions:
       contents: read
       # v1.8.0 publishes the all-severity SARIF to code scanning. The
@@ -1006,7 +1006,7 @@ jobs:
   # Defined once in MustardSeedNetworks/.github (fleet-shared); ci-complete
   # still needs: [ci-conformance].
   ci-conformance:
-    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
     permissions:
       contents: read
 
@@ -1259,7 +1259,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -1383,7 +1383,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -1430,7 +1430,7 @@ jobs:
             -o niac ./cmd/niac
 
       - name: Install Playwright OS dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
         # costs an ordinary run nothing.
@@ -1584,7 +1584,7 @@ jobs:
       # fails.
       - name: Enforce flake budget
         if: always()
-        uses: MustardSeedNetworks/.github/.github/actions/flake-budget@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/flake-budget@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         with:
           report: ui/playwright-report/results*.json
           budget: "0"
@@ -1617,7 +1617,7 @@ jobs:
   # severity, several of which encode deliberate decisions.
   codeql-alert-gate:
     name: CodeQL Alert Gate
-    uses: MustardSeedNetworks/.github/.github/workflows/codeql-alert-gate.yml@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+    uses: MustardSeedNetworks/.github/.github/workflows/codeql-alert-gate.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
     permissions:
       security-events: read
 
