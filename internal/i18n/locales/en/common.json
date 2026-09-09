@@ -1,9 +1,4 @@
 {
-  "permissions": {
-    "checking": "Checking permissions…",
-    "unavailable": "Permissions could not be verified. Reconnect before making changes.",
-    "denied": "Your token does not allow this action."
-  },
   "accessibility": {
     "clearSearch": "Clear search",
     "closeDialog": "Close dialog",
@@ -142,6 +137,11 @@
     "status": "Status",
     "type": "Type",
     "updatedAt": "Updated"
+  },
+  "permissions": {
+    "checking": "Checking permissions…",
+    "denied": "Your token does not allow this action.",
+    "unavailable": "Permissions could not be verified. Reconnect before making changes."
   },
   "plurals": {
     "conversationCount_one": "{{count}} conversation",
