@@ -22,7 +22,16 @@ test('an idle daemon is neutral rather than all-clear', async ({ page, request }
   const baseURL = `https://127.0.0.1:${await unusedPort()}`;
   const daemon = spawn(
     resolve('../niac'),
-    ['daemon', '--listen', new URL(baseURL).host, '--storage', 'disabled'],
+    [
+      'daemon',
+      '--listen',
+      new URL(baseURL).host,
+      '--storage',
+      'disabled',
+      // All localhost listeners use the suite's certificate identity.
+      '--cert-dir',
+      resolve('../certs'),
+    ],
     {
       env: {
         ...process.env,
