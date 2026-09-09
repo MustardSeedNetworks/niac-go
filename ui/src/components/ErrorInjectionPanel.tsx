@@ -16,6 +16,7 @@ import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export const ErrorInjectionPanel: FC = () => {
+  const permission = useActionPermission('inject');
   const { t } = useTranslation('errors');
   const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
     intervalMs: 5000,
@@ -92,6 +93,7 @@ export const ErrorInjectionPanel: FC = () => {
   );
 
   const onInject: SubmitHandler<ErrorInjectionFormFields> = async (values) => {
+    if (permission.disabled) return;
     setMessage(null);
     try {
       await injectError({
@@ -175,6 +177,7 @@ export const ErrorInjectionPanel: FC = () => {
           variant="ghost"
           tone="blue"
           onClick={() => handleClearSpecific(row.deviceIp, row.iface, row.errorType)}
+          action="inject"
           disabled={busy}
           aria-label={t('injection.clearOneAriaLabel', {
             deviceIp: row.deviceIp,
@@ -327,12 +330,13 @@ export const ErrorInjectionPanel: FC = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-default">
-              <Button type="submit" disabled={busy}>
+              <Button action="inject" type="submit" disabled={busy}>
                 {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
               </Button>
               <Button
                 type="button"
                 onClick={() => setShowClearAllConfirm(true)}
+                action="inject"
                 disabled={busy}
                 variant="secondary"
               >
@@ -362,6 +366,7 @@ export const ErrorInjectionPanel: FC = () => {
       <ConfirmModal
         isOpen={showClearAllConfirm}
         onConfirm={handleClearAllConfirm}
+        action="inject"
         onCancel={() => setShowClearAllConfirm(false)}
         title={t('injection.clearAllConfirmTitle')}
         message={t('injection.clearAllConfirmMessage')}
@@ -371,3 +376,5 @@ export const ErrorInjectionPanel: FC = () => {
     </div>
   );
 };
+
+import { useActionPermission } from '../contexts/ScopeContext';

@@ -304,6 +304,7 @@ const ConfigEditorCard: FC<{
               tone="violet"
               disabled={!dirty || saving}
               onClick={handleSave}
+              action="edit"
               title={t('devices.saveReloadTitle')}
             >
               {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
@@ -353,7 +354,7 @@ const WalkFileBrowser: FC<{
               <SmallText className="text-text-muted capitalize">{file.source}</SmallText>
             </div>
             <div className="flex items-center gap-tight">
-              <Button size="sm" variant="outline" onClick={() => onCopy(file.name)}>
+              <Button action="edit" size="sm" variant="outline" onClick={() => onCopy(file.name)}>
                 {t('devices.copyNameButton')}
               </Button>
               <Link

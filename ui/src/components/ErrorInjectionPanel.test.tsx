@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 /**
  * ErrorInjectionPanel.test.tsx — locks the ?errorType= deep-link preselect
  * added for the Dashboard's error-type catalog links (PR "Dashboard

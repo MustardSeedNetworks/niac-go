@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchDebugLevel, updateDebugLevel } from '../../api/client';
 import type { DebugLevel } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { useActionPermission } from '../../contexts/ScopeContext';
 import { H2, SmallText } from '../../ui/Typography';
 import { getErrorMessage } from '../../utils/format';
 
@@ -36,6 +37,7 @@ function useLevels(): LevelOption[] {
  * stack honors the new level live.
  */
 export const DebugLevelControl: FC = () => {
+  const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   const LEVELS = useLevels();
   const labelFor = useCallback(
@@ -101,7 +103,7 @@ export const DebugLevelControl: FC = () => {
     [level, saving],
   );
 
-  const disabled = loading || saving || level === null;
+  const disabled = loading || saving || level === null || permission.disabled;
 
   return (
     <div className="stack" data-testid="debug-level-control">
@@ -117,7 +119,11 @@ export const DebugLevelControl: FC = () => {
             const active = level === opt.value;
 
             return (
-              <label key={opt.value} title={opt.hint} className="cursor-pointer">
+              <label
+                key={opt.value}
+                title={permission.title ?? opt.hint}
+                className="cursor-pointer"
+              >
                 <input
                   type="radio"
                   name="debug-level"
