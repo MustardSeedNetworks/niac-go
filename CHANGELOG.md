@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.35](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.34...v0.95.35) (2026-09-09)
+
+
+### Features
+
+* **faults:** device-scoped fault axis with DHCP and DNS service outcomes ([#1959](https://github.com/MustardSeedNetworks/niac-go/issues/1959)) ([fd92698](https://github.com/MustardSeedNetworks/niac-go/commit/fd92698b0408ca4936cddbb25e40e8a8169a9ac4))
+
 ## [0.95.34](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.33...v0.95.34) (2026-09-09)
 
 
