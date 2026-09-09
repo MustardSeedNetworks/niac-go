@@ -222,6 +222,7 @@ func parsePacket(packet gopacket.Packet, num int) Packet {
 // wire spelling because that is the shape a browser already parses; this is the
 // one place that translates.
 func applyDecoded(pkt *Packet, decoded map[string]any) {
+	pkt.ByteRanges, _ = decoded["byte_ranges"].([]packetdecode.ByteRange)
 	if v, ok := decoded["protocol"].(string); ok && v != "" {
 		pkt.Protocol = v
 	}

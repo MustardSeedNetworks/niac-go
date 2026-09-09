@@ -31,6 +31,7 @@ export function packetFromStreamEvent(
       (incoming.payload as string) ||
       '',
     headers: incoming.headers as Record<string, unknown> | undefined,
+    byteRanges: (incoming.byteRanges ?? incoming.byte_ranges) as Packet['byteRanges'],
     physicalVlan:
       (incoming.physicalVlan as number | undefined) ??
       (incoming.physical_vlan as number | undefined),

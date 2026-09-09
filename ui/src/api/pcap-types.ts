@@ -3,7 +3,10 @@
  * Types for packet capture analysis
  */
 
+import type { PacketByteRange } from '../utils/protocol-byte-ranges';
+
 export interface PcapPacket {
+  byteRanges?: PacketByteRange[];
   id: string;
   number: number;
   timestamp: string;

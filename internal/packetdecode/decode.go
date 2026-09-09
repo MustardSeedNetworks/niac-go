@@ -59,6 +59,7 @@ func Enrich(out map[string]any, buf []byte) {
 		return
 	}
 	packet := gopacket.NewPacket(buf, layers.LayerTypeEthernet, gopacket.NoCopy)
+	out["byte_ranges"] = decodedRanges(packet)
 
 	// The Packet Inspector builds its layer tree from a nested `headers` map.
 	// Emitting only flat keys meant it never found an ethernet layer and showed

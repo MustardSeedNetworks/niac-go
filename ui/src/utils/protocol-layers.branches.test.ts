@@ -81,8 +81,8 @@ describe('ethernet layer', () => {
 
     expect(eth.fields[0]?.value).toBe('(not parsed)');
     // The byte offsets still hold, so the hex pane highlights the right range.
-    expect(eth.fields[0]?.byteStart).toBe(6);
-    expect(eth.fields[0]?.byteEnd).toBe(12);
+    expect(eth.fields[0]?.byteStart).toBeUndefined();
+    expect(eth.fields[0]?.byteEnd).toBeUndefined();
   });
 });
 
@@ -218,14 +218,14 @@ describe('application layers', () => {
 });
 
 describe('computeHeaderBoundary', () => {
-  it('clamps to the 14-byte Ethernet minimum', () => {
-    expect(computeHeaderBoundary([])).toBe(14);
+  it('claims no header bytes without a decoded range', () => {
+    expect(computeHeaderBoundary([])).toBe(0);
   });
 
   it('returns the highest byteEnd across every layer', () => {
     const layers = buildProtocolLayers(
       { ethernet: { srcMac: 'a', dstMac: 'b', etherType: '0x0800' }, ipv4: { src: 'x', dst: 'y' } },
-      {},
+      { byteRanges: [{ layer: 'ipv4', field: 'Destination', start: 30, end: 34 }] },
     );
 
     // The IPv4 destination ends at byte 34, past the Ethernet header.
@@ -233,6 +233,6 @@ describe('computeHeaderBoundary', () => {
   });
 
   it('ignores fields with no byte range', () => {
-    expect(computeHeaderBoundary([{ name: 'X', fields: [{ name: 'a', value: 'b' }] }])).toBe(14);
+    expect(computeHeaderBoundary([{ name: 'X', fields: [{ name: 'a', value: 'b' }] }])).toBe(0);
   });
 });

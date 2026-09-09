@@ -26,6 +26,7 @@ import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
+import { buildProtocolLayers, computeHeaderBoundary } from '../utils/protocol-layers';
 
 /**
  * Convert PcapPacket to Packet for PacketDetails component
@@ -43,6 +44,7 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
     summary: pcapPacket.info,
     rawData: pcapPacket.rawData || '',
     headers: pcapPacket.headers,
+    byteRanges: pcapPacket.byteRanges,
   };
 }
 
@@ -399,7 +401,9 @@ export const PcapAnalyzerPage: FC = () => {
                 <InspectorPane label={tPages('libraryPcaps.analyzer.hexDumpLabel')}>
                   <HexDumpViewer
                     rawData={selectedPacket?.rawData ?? ''}
-                    headerLength={14}
+                    headerLength={computeHeaderBoundary(
+                      buildProtocolLayers(selectedPacket?.headers, selectedPacket ?? {}),
+                    )}
                     highlightRange={highlightRange}
                   />
                 </InspectorPane>

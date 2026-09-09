@@ -10,19 +10,18 @@ import { describe, expect, it } from 'vitest';
 import { buildProtocolLayers, computeHeaderBoundary } from './protocol-layers';
 
 describe('computeHeaderBoundary', () => {
-  it('falls back to the Ethernet-only default when no layer has byte metadata', () => {
+  it('claims no header bytes when no layer has byte metadata', () => {
     const layers = buildProtocolLayers(undefined, { protocol: 'Unknown' });
-    expect(computeHeaderBoundary(layers)).toBe(14);
+    expect(computeHeaderBoundary(layers)).toBe(0);
   });
 
   it('extends the boundary through the IP header when no transport layer is present', () => {
     const layers = buildProtocolLayers(undefined, {
       protocol: 'Unknown',
+      byteRanges: [{ layer: 'ipv4', field: '', start: 14, end: 34 }],
       sourceIp: '10.0.0.1',
       destIp: '10.0.0.2',
     });
-    // Unparsed IP layer's Destination field is the last byte-annotated
-    // field, ending at byte 34.
     expect(computeHeaderBoundary(layers)).toBe(34);
   });
 
@@ -33,13 +32,13 @@ describe('computeHeaderBoundary', () => {
     };
     const layers = buildProtocolLayers(headers, {
       protocol: 'TCP',
+      byteRanges: [{ layer: 'tcp', field: '', start: 34, end: 54 }],
       sourceIp: '10.0.0.1',
       destIp: '10.0.0.2',
       sourcePort: 1234,
       destPort: 80,
     });
-    // TCP flags field is the last byte-annotated field: s=34, byteEnd = 34+14 = 48.
-    expect(computeHeaderBoundary(layers)).toBe(48);
+    expect(computeHeaderBoundary(layers)).toBe(54);
   });
 
   it('extends the boundary through a parsed UDP header', () => {
@@ -49,13 +48,13 @@ describe('computeHeaderBoundary', () => {
     };
     const layers = buildProtocolLayers(headers, {
       protocol: 'UDP',
+      byteRanges: [{ layer: 'udp', field: '', start: 34, end: 42 }],
       sourceIp: '10.0.0.1',
       destIp: '10.0.0.2',
       sourcePort: 53,
       destPort: 5353,
     });
-    // UDP length field ends at s+6 = 40.
-    expect(computeHeaderBoundary(layers)).toBe(40);
+    expect(computeHeaderBoundary(layers)).toBe(42);
   });
 
   it('does not extend the boundary for application-layer protocols like DNS', () => {
@@ -66,13 +65,12 @@ describe('computeHeaderBoundary', () => {
     };
     const layers = buildProtocolLayers(headers, {
       protocol: 'DNS',
+      byteRanges: [{ layer: 'udp', field: '', start: 34, end: 42 }],
       sourceIp: '10.0.0.1',
       destIp: '10.0.0.2',
       sourcePort: 53,
       destPort: 5353,
     });
-    // DNS fields carry no byte ranges, so the boundary stays at the end of
-    // the UDP header (s+4 = 38).
-    expect(computeHeaderBoundary(layers)).toBe(38);
+    expect(computeHeaderBoundary(layers)).toBe(42);
   });
 });

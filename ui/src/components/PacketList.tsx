@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
+import type { PacketByteRange } from '../utils/protocol-byte-ranges';
 import { getProtocolColor } from '../utils/protocol-colors';
 import { formatTimeByMode, getTimeDisplayLabel } from '../utils/time-display';
 
@@ -21,6 +22,7 @@ export interface Packet {
   summary: string;
   rawData: string; // Hex encoded raw packet data
   headers?: Record<string, unknown>;
+  byteRanges?: PacketByteRange[];
   physicalVlan?: number;
   ingressNetwork?: string;
   routeDecision?: string;

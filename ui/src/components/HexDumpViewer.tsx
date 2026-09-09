@@ -90,7 +90,12 @@ const HexRow = memo(
       }
 
       return (
-        <span key={globalIndex} className={`${className} ${idx === 7 ? 'mr-1' : ''}`}>
+        <span
+          key={globalIndex}
+          data-testid={`hex-byte-${globalIndex}`}
+          data-highlighted={isHighlighted}
+          className={`${className} ${idx === 7 ? 'mr-1' : ''}`}
+        >
           {formatByte(byte)}
           {idx < bytes.length - 1 ? ' ' : ''}
         </span>
