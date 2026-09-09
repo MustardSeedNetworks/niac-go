@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.36...v0.95.37) (2026-09-09)
+
+
+### Features
+
+* **faults:** latency device fault delaying ICMP echo replies ([#1963](https://github.com/MustardSeedNetworks/niac-go/issues/1963)) ([37e15b2](https://github.com/MustardSeedNetworks/niac-go/commit/37e15b2c93959f0e2fda82b4d843675467c2f5da)), closes [#1962](https://github.com/MustardSeedNetworks/niac-go/issues/1962)
+
 ## [0.95.36](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.35...v0.95.36) (2026-09-09)
 
 
