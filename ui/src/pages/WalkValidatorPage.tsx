@@ -68,10 +68,7 @@ export const WalkValidatorPage: FC = () => {
         if (cancelled) return;
         setFiles(entries);
         setFilesError(null);
-        const firstEntry = entries[0];
-        if (firstEntry && !selectedFile) {
-          setSelectedFile(firstEntry.name);
-        }
+        setSelectedFile((current) => current || entries[0]?.name || '');
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -83,7 +80,7 @@ export const WalkValidatorPage: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedFile]);
+  }, []);
 
   const targetPath = customPath.trim() || selectedFile;
 
@@ -247,6 +244,7 @@ export const WalkValidatorPage: FC = () => {
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
               <select
+                data-testid="walk-validator-picker"
                 value={selectedFile}
                 onChange={(e) => setSelectedFile(e.target.value)}
                 disabled={filesLoading || files.length === 0}
