@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.34](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.33...v0.95.34) (2026-09-09)
+
+
+### Features
+
+* **fidelity:** consumer OID demand matrix and coverage report (F3b, F3c) ([#1955](https://github.com/MustardSeedNetworks/niac-go/issues/1955)) ([a883675](https://github.com/MustardSeedNetworks/niac-go/commit/a883675ab722898d14d9886440cbd869ccb94448))
+
 ## [0.95.33](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.32...v0.95.33) (2026-09-09)
 
 
