@@ -124,6 +124,7 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
             rows={packets}
             columns={columns}
             getRowKey={(packet) => packet.id}
+            rowTestId={(packet) => `pcap-packet-${packet.number}`}
             onRowClick={onSelectPacket}
             rowStyle={getRowStyle}
             rowClassName={(packet) =>
