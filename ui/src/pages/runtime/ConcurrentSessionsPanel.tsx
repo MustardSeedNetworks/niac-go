@@ -98,6 +98,7 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
             data-testid={`session-stop-${session.sessionId}`}
             loading={stoppingSessionId === session.sessionId}
             onClick={() => onStop(session)}
+            action="stop"
           >
             {t('runtime.running.stopButton')}
           </Button>
