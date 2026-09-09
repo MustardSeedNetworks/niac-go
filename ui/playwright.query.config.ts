@@ -19,7 +19,8 @@ export default defineConfig({
     command:
       `cd .. && query_library=$(mktemp -d "\${TMPDIR:-/tmp}/niac-query.XXXXXX") && ` +
       "trap 'rm -rf \"$query_library\"' EXIT && trap 'exit 143' TERM && " +
-      'NIAC_LIBRARY_ROOT="$query_library" NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen 127.0.0.1:22445 ' +
+      'NIAC_LIBRARY_ROOT="$query_library/library" NIAC_CONFIGS_DIR="$query_library/configs" ' +
+      'NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen 127.0.0.1:22445 ' +
       '--storage disabled --attachment-policy e2e-query-a=access:200 ' +
       '--attachment-policy e2e-query-b=access:201',
     url: `${baseURL}/__version`,

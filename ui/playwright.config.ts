@@ -152,10 +152,14 @@ export default defineConfig({
           // binding with no approving policy fails preflight with
           // attachment_policy_denied, by design, so without this the
           // authoring journeys could only be driven as far as review.
-          `cd .. && NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen ${e2eHost}:${e2ePort} ` +
+          `cd .. && e2e_root=$(mktemp -d "\${TMPDIR:-/tmp}/niac-browser.XXXXXX") && ` +
+          "trap 'rm -rf \"$e2e_root\"' EXIT && trap 'exit 143' TERM && " +
+          'NIAC_LIBRARY_ROOT="$e2e_root/library" NIAC_CONFIGS_DIR="$e2e_root/configs" ' +
+          `NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon --listen ${e2eHost}:${e2ePort} ` +
           `--storage disabled --attachment-policy ${e2eSimInterface}=access:200`,
         url: `${baseURL}/__version`,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
+        gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
         timeout: 120000,
         ignoreHTTPSErrors: true,
       },

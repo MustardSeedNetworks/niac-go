@@ -18,7 +18,8 @@ export default defineConfig({
       `cd .. && history_root=$(mktemp -d "\${TMPDIR:-/tmp}/niac-history.XXXXXX") && ` +
       "trap 'rm -rf \"$history_root\"' EXIT && trap 'exit 143' TERM && " +
       'go run ./tests/fixtures/history "$history_root/runs.db" && ' +
-      'NIAC_LIBRARY_ROOT="$history_root/library" NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon ' +
+      'NIAC_LIBRARY_ROOT="$history_root/library" NIAC_CONFIGS_DIR="$history_root/configs" ' +
+      'NIAC_E2E_DRY_RUN_SIMULATION=1 ./niac daemon ' +
       '--listen 127.0.0.1:20445 --storage "$history_root/runs.db" ' +
       '--attachment-policy e2e-dry-run0=access:200',
     url: `${baseURL}/__version`,

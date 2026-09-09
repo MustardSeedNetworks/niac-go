@@ -35,9 +35,14 @@ export default defineConfig({
     storageState: undefined,
   },
   webServer: {
-    command: `cd .. && NIAC_API_TOKEN=${authToken} ./niac daemon --listen 127.0.0.1:${authPort} --storage disabled`,
+    command:
+      `cd .. && auth_root=$(mktemp -d "\${TMPDIR:-/tmp}/niac-auth.XXXXXX") && ` +
+      "trap 'rm -rf \"$auth_root\"' EXIT && trap 'exit 143' TERM && " +
+      'NIAC_LIBRARY_ROOT="$auth_root/library" NIAC_CONFIGS_DIR="$auth_root/configs" ' +
+      `NIAC_API_TOKEN=${authToken} ./niac daemon --listen 127.0.0.1:${authPort} --storage disabled`,
     url: `https://127.0.0.1:${authPort}/__version`,
     reuseExistingServer: false,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
     timeout: 120000,
     ignoreHTTPSErrors: true,
   },
