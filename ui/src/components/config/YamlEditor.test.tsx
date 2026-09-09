@@ -16,6 +16,25 @@ import { YamlEditor } from './YamlEditor';
 const CONTENT = 'devices:\n  - name: r1\n    type: router\n  - name: r2\n';
 
 describe('YamlEditor callback updates', () => {
+  it('does not undo a device selection into the previous device document', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <YamlEditor ariaLabel="Test YAML editor" value={CONTENT} onChange={onChange} />,
+    );
+    const textbox = screen.getByRole('textbox', { name: 'Test YAML editor' });
+    const view = EditorView.findFromDOM(textbox);
+    if (!view) throw new Error('YAML editor did not mount');
+    act(() => view.dispatch({ changes: { from: CONTENT.length, insert: '# old edit' } }));
+    const selected = 'name: r2\ntype: router\n';
+    rerender(<YamlEditor ariaLabel="Test YAML editor" value={selected} onChange={onChange} />);
+    onChange.mockClear();
+    act(() => {
+      expect(undo(view)).toBe(false);
+    });
+    expect(view.state.doc.toString()).toBe(selected);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('syncs externally selected content without reporting a user edit', () => {
     const onChange = vi.fn();
     const onValidationError = vi.fn();
