@@ -6,9 +6,10 @@
  * shared DeviceTable for that segment's devices — plus the empty states
  * for zero segments and a segment with zero devices.
  */
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SegmentSummary } from '../api/types';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n'; // initialise i18next before the page renders (uses t('segments.*'))
 import { SegmentsPage } from './SegmentsPage';
 

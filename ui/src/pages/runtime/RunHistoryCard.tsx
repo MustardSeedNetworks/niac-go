@@ -3,12 +3,12 @@ import { type FC, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
+import { useRunHistory } from '../../hooks/useRunHistory';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../../utils/format';
-import { useRunHistory } from './useRunHistory';
 
 /**
  * Run history for the daemon, alongside the session controls that produce it.

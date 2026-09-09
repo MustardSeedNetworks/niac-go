@@ -6,9 +6,10 @@
  * to `error.message`, and the two alert inputs are reachable by their visible
  * labels rather than only by placeholder.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
+import { renderWithResources as render } from '../test/renderWithResources';
 import { AlertsPage } from './AlertsPage';
 
 const fetchAlerts = vi.fn();
@@ -21,7 +22,7 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../contexts/AppContext', () => ({
-  useAppContext: () => ({ sessionId: null }),
+  useAppState: () => ({ data: null, error: null, loading: false, refetch: vi.fn() }),
 }));
 
 describe('AlertsPage', () => {

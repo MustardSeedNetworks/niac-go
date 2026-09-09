@@ -1579,6 +1579,10 @@ jobs:
         working-directory: ui
         run: npm run test:e2e:history
 
+      - name: Run shared-resource browser E2E tests
+        working-directory: ui
+        run: npm run test:e2e:query
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -1592,7 +1596,7 @@ jobs:
       # flake-free on the most recent green main run, so anything that starts
       # leaning on retries is a regression to fix, not a number to raise.
       #
-      # The glob covers the main, authenticated and persisted-history suites.
+      # Include every suite's distinct results*.json so none hides another's flakes.
       #
       # Runs after the upload so the report is retained even when this is what
       # fails.

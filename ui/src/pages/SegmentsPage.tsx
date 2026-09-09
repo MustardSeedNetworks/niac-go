@@ -1,13 +1,11 @@
 import { Layers } from 'lucide-react';
 import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchSegments } from '../api/client';
 import type { SegmentSummary } from '../api/types';
 import { DeviceTable } from '../components/DeviceTable';
-import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
+import { useSegmentsResource } from '../hooks/usePageResources';
 import { BaseCard } from '../ui/BaseCard';
 import { Tag } from '../ui/Tag';
 import { H3, SmallText } from '../ui/Typography';
@@ -34,14 +32,7 @@ export const SegmentsPage: FC = () => (
 const SegmentsListCard: FC = () => {
   const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
-  const {
-    data: segments,
-    loading,
-    error,
-  } = useApiResource(() => fetchSegments(sessionId ?? ''), [sessionId], {
-    intervalMs: POLL_INTERVALS.slow,
-    enabled: sessionId !== null,
-  });
+  const { data: segments, loading, error } = useSegmentsResource(sessionId);
 
   return (
     <BaseCard<SegmentSummary[]>

@@ -66,7 +66,9 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
   onSynthesized,
 }) => {
   const { t } = useTranslation('devices');
-  const { data: models, error: modelsError } = useApiResource(fetchSynthesizeWalkModels, []);
+  const { data: models, error: modelsError } = useApiResource(fetchSynthesizeWalkModels, [
+    'synthesize-models',
+  ]);
   const [selected, setSelected] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);

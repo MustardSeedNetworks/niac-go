@@ -1,17 +1,11 @@
 import { Database, FileBox, RefreshCw, RotateCcw, Search, Sparkles } from 'lucide-react';
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchLibraryPcaps,
-  fetchLibraryWalks,
-  type LibraryFileEntry,
-  revertWalk,
-  type WalkProvenance,
-} from '../api/library-client';
+import { type LibraryFileEntry, revertWalk, type WalkProvenance } from '../api/library-client';
 import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
 import { RequireScope } from '../components/ui/RequireScope';
-import { useApiResource } from '../hooks/useApiResource';
 import { useErrorToast } from '../hooks/useErrorToast';
+import { useLibraryResource } from '../hooks/usePageResources';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -46,8 +40,7 @@ function LibraryFilesView({ kind }: Props) {
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
   const { t: tPages } = useTranslation('pages');
-  const fetcher = kind === 'walks' ? fetchLibraryWalks : fetchLibraryPcaps;
-  const { data, loading, refetch, error } = useApiResource(fetcher, [], {
+  const { data, loading, refetch, error } = useLibraryResource(kind, {
     intervalMs: 30000,
     errorToast: true,
   });

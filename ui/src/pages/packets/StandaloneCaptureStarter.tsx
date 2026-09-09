@@ -1,10 +1,11 @@
 import { Activity } from 'lucide-react';
 import { type FC, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchUsableInterfaces, startStandaloneCapture } from '../../api/client';
+import { startStandaloneCapture } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
-import { useApiResource } from '../../hooks/useApiResource';
 import { useErrorToast } from '../../hooks/useErrorToast';
+import { useUsableInterfacesResource } from '../../hooks/usePageResources';
+import { useResourceError } from '../../hooks/useResourceError';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -26,9 +27,8 @@ export const StandaloneCaptureStarter: FC<{
 }> = ({ onStarted, navigateToSim }) => {
   const { t } = useTranslation('pages');
   // An empty picker and an unreachable daemon looked identical here.
-  const { data: interfacesResp } = useApiResource(fetchUsableInterfaces, [], {
-    errorToast: { title: t('packets.interfacesFailed') },
-  });
+  const { data: interfacesResp, error } = useUsableInterfacesResource();
+  useResourceError(error, t('packets.interfacesFailed'));
   const interfaces = interfacesResp?.interfaces ?? [];
   const [selectedIface, setSelectedIface] = useState('');
   const [bpfFilter, setBpfFilter] = useState('');

@@ -12,8 +12,11 @@
  * field the projection does not carry survives the load.
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ResourceProvider } from '../../contexts/ResourceProvider';
+import { useApiResource } from '../../hooks/useApiResource';
 
 const RAW_YAML = `name: LAB-EDGE-R1
 type: router
@@ -60,13 +63,91 @@ vi.mock('../../api/library-client', () => ({
 }));
 
 describe('useDeviceEditor — loading an existing device', () => {
-  beforeEach(() => {
+  it('does not overwrite an edited cached document when its refresh completes', async () => {
+    const { useDeviceEditor } = await import('./useDeviceEditor');
+    const { fetchConfigDevice } = await import('../../api/client');
+    type Response = Awaited<ReturnType<typeof fetchConfigDevice>>;
+    let resolveFresh: (response: Response) => void = () => {};
+    const fresh = new Promise<Response>((resolve) => {
+      resolveFresh = resolve;
+    });
+    vi.mocked(fetchConfigDevice).mockReturnValueOnce(fresh);
+    const client = new QueryClient();
+    const key = ['config-device', 'LAB-EDGE-R1', false] as const;
+    client.setQueryData(key, { hostname: 'LAB-EDGE-R1', rawYaml: RAW_YAML });
+    const { result, unmount } = renderHook(
+      () => ({
+        editor: useDeviceEditor(),
+        server: useApiResource(() => fetchConfigDevice('LAB-EDGE-R1'), key),
+      }),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      },
+    );
+    try {
+      await waitFor(() => expect(result.current.editor.device.name).toBe('LAB-EDGE-R1'));
+      act(() => result.current.editor.updateField('vendor', 'operator edit'));
+      const response = {
+        hostname: 'LAB-EDGE-R1',
+        mac: '00:00:0c:00:01:01',
+        type: 'router' as const,
+        rawYaml: `${RAW_YAML}vendor: refreshed\n`,
+      };
+      act(() => resolveFresh(response));
+      await waitFor(() => expect(result.current.server.data?.rawYaml).toBe(response.rawYaml));
+      expect(result.current.editor.device.vendor).toBe('operator edit');
+      expect(result.current.editor.isDirty).toBe(true);
+    } finally {
+      resolveFresh({
+        hostname: 'LAB-EDGE-R1',
+        mac: '00:00:0c:00:01:01',
+        type: 'router',
+        rawYaml: RAW_YAML,
+      });
+      unmount();
+      client.clear();
+    }
+  });
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { fetchConfigDevice } = await import('../../api/client');
+    vi.mocked(fetchConfigDevice).mockReset().mockResolvedValue({
+      hostname: 'LAB-EDGE-R1',
+      mac: '00:00:0c:00:01:01',
+      type: 'router',
+      rawYaml: RAW_YAML,
+    });
+  });
+
+  it('retains a saved document when the following refresh fails', async () => {
+    const { useDeviceEditor } = await import('./useDeviceEditor');
+    const { fetchConfigDevice } = await import('../../api/client');
+    mockUpdateDevice.mockResolvedValue({});
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: ResourceProvider });
+    await waitFor(() => expect(result.current.device.name).toBe('LAB-EDGE-R1'));
+    act(() => result.current.updateField('ips', ['192.0.2.10']));
+    vi.mocked(fetchConfigDevice).mockRejectedValueOnce(new Error('refresh unavailable'));
+
+    act(() => {
+      void result.current.handleSave();
+    });
+
+    await waitFor(() => expect(result.current.error?.message).toBe('refresh unavailable'));
+    expect(mockUpdateDevice).toHaveBeenCalledWith(
+      'LAB-EDGE-R1',
+      expect.stringContaining('192.0.2.10'),
+    );
+    expect(result.current.device.ips).toEqual(['192.0.2.10']);
+    expect(result.current.originalDevice?.ips).toEqual(['192.0.2.10']);
+    expect(result.current.isDirty).toBe(false);
   });
 
   it('populates the form from the authored document', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: ResourceProvider });
 
     await waitFor(() => expect(result.current.device.name).toBe('LAB-EDGE-R1'));
 
@@ -79,7 +160,7 @@ describe('useDeviceEditor — loading an existing device', () => {
 
   it('captures originalDevice so Discard has something to restore', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: ResourceProvider });
 
     await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
 
@@ -88,7 +169,7 @@ describe('useDeviceEditor — loading an existing device', () => {
 
   it('is not dirty until something is edited, so the guard stays quiet', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: ResourceProvider });
 
     await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
 
