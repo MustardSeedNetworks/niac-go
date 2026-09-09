@@ -104,7 +104,12 @@ test.describe('Error Scenarios', () => {
   });
 
   test('renders the devices empty state when the daemon returns no devices', async ({ page }) => {
-    await page.route('**/api/v1/devices', (route) =>
+    await page.route('**/api/v1/simulation', (route) =>
+      route.fulfill({
+        json: { running: true, sessionId: 'empty-scenario', interface: 'test0', deviceCount: 0 },
+      }),
+    );
+    await page.route('**/api/v1/sessions/empty-scenario/devices', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -112,11 +117,19 @@ test.describe('Error Scenarios', () => {
       }),
     );
 
+    const devicesResponse = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/v1/sessions/empty-scenario/devices',
+    );
     await page.goto('/devices');
+    const response = await devicesResponse;
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual([]);
 
     await expectShellSurvives(page);
-    // BaseCard swaps the table for its empty branch when the list is empty.
-    await expect(page.getByTestId('devices-card-empty')).toBeVisible({ timeout: 15000 });
+    // An empty response renders DeviceTable's empty state; BaseCard's null state
+    // would pass without any device request when no session was selected.
+    await expect(page.getByTestId('device-table-empty')).toBeVisible();
+    await expect(page.getByTestId('devices-card-empty')).toHaveCount(0);
   });
 
   test('shows the connect gate with an error on HTTP 400', async ({ page }) => {

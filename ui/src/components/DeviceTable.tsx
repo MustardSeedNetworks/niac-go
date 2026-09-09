@@ -89,7 +89,10 @@ export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTabl
       getRowKey={(device) => device.name}
       rowClassName={(device) => (device.name === selectedName ? 'bg-brand-accent/10' : '')}
       emptyMessage={
-        <div className="rounded-xl border border-surface-border bg-bg-base/50 pad-xl text-center text-text-muted">
+        <div
+          data-testid="device-table-empty"
+          className="rounded-xl border border-surface-border bg-bg-base/50 pad-xl text-center text-text-muted"
+        >
           {tCommon('emptyState.noDevicesConfigured')}
         </div>
       }

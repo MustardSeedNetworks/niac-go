@@ -109,9 +109,10 @@ make security
 make build
 ```
 
-Browser-channel CI runs installed Chrome and Edge for release candidates and
-on its scheduled workflow. Actual Safari and Brave evidence is recorded during
-release acceptance.
+CI runs the behavior-timeline, scenario-pack and device-editor journeys in
+installed Chrome and Edge alongside the full Chromium, WebKit and Firefox
+suites. Failed attempts retain traces even when a retry passes. Actual Safari
+and Brave evidence is recorded during release acceptance.
 
 ## Troubleshooting
 
