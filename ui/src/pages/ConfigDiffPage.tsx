@@ -27,6 +27,7 @@ import { FileUploadZone, type UploadedFile } from './config-diff/FileUploadZone'
  * - Export the merged result
  */
 export const ConfigDiffPage: FC = () => {
+  const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   // File state
   const [leftFile, setLeftFile] = useState<UploadedFile | null>(null);
@@ -312,7 +313,9 @@ export const ConfigDiffPage: FC = () => {
                 </div>
                 <Button
                   tone="violet"
+                  action="edit"
                   onClick={async () => {
+                    if (permission.disabled) return;
                     if (!(leftFile && rightFile)) return;
                     try {
                       const result = await apiMergeConfigs({
@@ -393,3 +396,5 @@ export const ConfigDiffPage: FC = () => {
     </div>
   );
 };
+
+import { useActionPermission } from '../contexts/ScopeContext';

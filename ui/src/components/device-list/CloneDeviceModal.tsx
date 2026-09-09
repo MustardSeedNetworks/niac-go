@@ -15,6 +15,7 @@ interface CloneDeviceModalProps {
 }
 
 export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone, onCancel }) => {
+  const permission = useActionPermission('edit');
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
   const titleId = useId();
@@ -32,6 +33,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
   });
 
   const onSubmit: SubmitHandler<CloneDeviceFormFields> = ({ newHostname }) => {
+    if (permission.disabled) return;
     onClone(newHostname);
   };
 
@@ -47,7 +49,7 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
           <Button variant="outline" type="button" onClick={onCancel}>
             {tCommon('buttons.cancel')}
           </Button>
-          <Button tone="violet" type="submit" form={formId} disabled={!isValid}>
+          <Button action="edit" tone="violet" type="submit" form={formId} disabled={!isValid}>
             {tCommon('buttons.clone')}
           </Button>
         </>
@@ -85,3 +87,5 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
     </Modal>
   );
 };
+
+import { useActionPermission } from '../../contexts/ScopeContext';

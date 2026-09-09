@@ -318,6 +318,7 @@ export const RuntimeControlPage: FC = () => {
                     />
                     <select
                       id="rc-interface"
+                      data-testid="runtime-interface"
                       value={simulationSettings.selectedInterface}
                       onChange={handleInterfaceChange}
                       disabled={interfacesLoading || interfaces.length === 0}
@@ -347,6 +348,8 @@ export const RuntimeControlPage: FC = () => {
                   size="md"
                   disabled={!hasValidConfig || preparing || starting}
                   onClick={handlePrepare}
+                  data-testid="runtime-prepare"
+                  action="edit"
                   leftIcon={<Activity className={iconSizes.md} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
@@ -449,6 +452,7 @@ export const RuntimeControlPage: FC = () => {
       <ConfirmModal
         isOpen={showStopConfirm}
         onConfirm={handleStopConfirmed}
+        action="stop"
         onCancel={() => {
           setShowStopConfirm(false);
           setStopTarget(null);

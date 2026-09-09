@@ -62,3 +62,4 @@ describe('BpfFilterBar', () => {
     );
   });
 });
+vi.mock('../contexts/ScopeContext', () => ({ useActionPermission: () => ({ disabled: false }) }));

@@ -177,6 +177,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             variant="outline"
             data-testid="wizard-preflight-check"
             onClick={() => void check()}
+            action="start"
             loading={checking}
             disabled={
               !attachment ||
@@ -191,6 +192,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
             tone="violet"
             data-testid="wizard-preflight-start"
             onClick={() => approvedPayload && onStart(approvedPayload)}
+            action="start"
             loading={starting}
             disabled={!approvedPayload || starting}
           >

@@ -304,6 +304,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
           size="lg"
           className="w-full"
           onClick={onAnalyze}
+          action="upload"
           disabled={!selectedFile || isAnalyzing}
           leftIcon={
             isAnalyzing ? (

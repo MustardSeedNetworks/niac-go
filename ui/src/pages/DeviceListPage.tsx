@@ -129,6 +129,7 @@ export const DeviceListPage: FC = () => {
       <ConfirmModal
         isOpen={showDeleteConfirm !== null}
         onConfirm={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
+        action="delete"
         onCancel={() => setShowDeleteConfirm(null)}
         title={t('list.deleteConfirmTitle')}
         message={t('list.deleteConfirmMessage', { hostname: showDeleteConfirm ?? '' })}
@@ -149,6 +150,7 @@ export const DeviceListPage: FC = () => {
       <ConfirmModal
         isOpen={showBulkDeleteConfirm}
         onConfirm={handleBulkDeleteConfirm}
+        action="delete"
         onCancel={() => setShowBulkDeleteConfirm(false)}
         title={t('list.bulkActions.confirmDeleteTitle')}
         message={t('list.bulkActions.confirmDeleteMessage', { count: selectedDevices.size })}

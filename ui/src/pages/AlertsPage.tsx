@@ -161,6 +161,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 tone="violet"
                 disabled={!dirty || saving}
                 onClick={commit}
+                action="edit"
                 title="Save alert config to the running daemon. Takes effect immediately — no restart required."
               >
                 {saving ? 'Saving…' : 'Save alerts'}

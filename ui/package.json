@@ -23,6 +23,7 @@
     "test:e2e:auth": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.auth.config.ts",
     "test:e2e:history": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.history.config.ts",
     "test:e2e:query": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.query.config.ts",
+    "test:e2e:permissions": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.permissions.config.ts",
     "test:e2e:fullstack": "NO_COLOR= node --disable-warning=DEP0205 ./node_modules/playwright/cli.js test --config=playwright.fullstack.config.ts --reporter=list",
     "i18n:extract": "i18next-cli extract",
     "i18n:check": "node scripts/check-i18n-extraction.ts",

@@ -30,6 +30,7 @@ export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
         size="sm"
         leftIcon={<Trash2 className="h-4 w-4" />}
         onClick={onDeleteSelected}
+        action="delete"
         className="text-status-error hover:text-status-error hover:bg-status-error/20"
       >
         {tDevices('list.bulkActions.deleteSelectedButton')}

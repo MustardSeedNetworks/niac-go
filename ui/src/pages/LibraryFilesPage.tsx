@@ -157,6 +157,7 @@ function LibraryFilesView({ kind }: Props) {
                   size="xs"
                   leftIcon={<Sparkles className="w-3.5 h-3.5" />}
                   onClick={() => sanitizeState.setSanitizeTarget(entry.name)}
+                  action="edit"
                   aria-label={tPages('libraryFiles.sanitizeLabel', { name: entry.name })}
                   data-testid={`sanitize-walk-${entry.name}`}
                 >
@@ -168,6 +169,7 @@ function LibraryFilesView({ kind }: Props) {
                     size="xs"
                     leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
                     onClick={() => setRevertTarget(entry.name)}
+                    action="edit"
                     aria-label={tPages('libraryFiles.revertLabel', { name: entry.name })}
                     data-testid={`revert-walk-${entry.name}`}
                   >
@@ -226,6 +228,7 @@ function LibraryFilesView({ kind }: Props) {
                     size="sm"
                     leftIcon={<Sparkles className="w-4 h-4" />}
                     onClick={() => sanitizeState.setBatchConfirmOpen(true)}
+                    action="edit"
                     data-testid="sanitize-selected-walks"
                   >
                     {tPages('libraryFiles.sanitizeSelectedButton')}
@@ -299,6 +302,7 @@ function LibraryFilesView({ kind }: Props) {
         <ConfirmModal
           isOpen={revertTarget !== null}
           onConfirm={() => void handleConfirmRevert()}
+          action="edit"
           onCancel={() => setRevertTarget(null)}
           title={tPages('libraryFiles.revertModalTitle')}
           message={
@@ -318,6 +322,7 @@ function LibraryFilesView({ kind }: Props) {
         <ConfirmModal
           isOpen={sanitizeState.sanitizeTarget !== null}
           onConfirm={() => void sanitizeState.confirmSanitize()}
+          action="edit"
           onCancel={() => sanitizeState.setSanitizeTarget(null)}
           title={tPages('libraryFiles.sanitizeModalTitle')}
           confirmTone="blue"
@@ -338,6 +343,7 @@ function LibraryFilesView({ kind }: Props) {
         <ConfirmModal
           isOpen={sanitizeState.batchConfirmOpen}
           onConfirm={() => void sanitizeState.confirmBatchSanitize()}
+          action="edit"
           onCancel={() => sanitizeState.setBatchConfirmOpen(false)}
           title={tPages('libraryFiles.sanitizeBatchModalTitle')}
           confirmTone="blue"

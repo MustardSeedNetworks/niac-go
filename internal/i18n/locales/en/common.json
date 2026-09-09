@@ -138,6 +138,11 @@
     "type": "Type",
     "updatedAt": "Updated"
   },
+  "permissions": {
+    "checking": "Checking permissions…",
+    "denied": "Your token does not allow this action.",
+    "unavailable": "Permissions could not be verified. Reconnect before making changes."
+  },
   "plurals": {
     "conversationCount_one": "{{count}} conversation",
     "conversationCount_other": "{{count}} conversations",

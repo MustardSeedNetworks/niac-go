@@ -93,6 +93,7 @@ export const WalkProfileReviewForm: FC<Props> = ({
         disabled={!valid || creating}
         loading={creating}
         onClick={() => void createProfile()}
+        action="edit"
         data-testid="walk-profile-create"
       >
         {t('walkAnalyzer.profile.createAction')}

@@ -348,6 +348,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
           loading={busy}
           data-testid="save-behaviors"
           onClick={() => void save()}
+          action="edit"
         >
           {t('newSimWizard.behaviors.save')}
         </Button>
