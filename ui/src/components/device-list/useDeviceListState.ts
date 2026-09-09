@@ -73,7 +73,7 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
     loading,
     error,
     refetch,
-  } = useApiResource(fetchConfigDevices, [], { intervalMs: 30000 });
+  } = useApiResource(fetchConfigDevices, ['config-devices'], { intervalMs: 30000 });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilterState] = useState<DeviceType | 'all'>('all');

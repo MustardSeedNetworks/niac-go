@@ -20,6 +20,12 @@ const API_TOKEN = import.meta.env.DEV ? (import.meta.env.VITE_API_TOKEN ?? '') :
 export const AUTH_FAILURE_EVENT = 'niac:authentication-required';
 
 let runtimeAPIToken = '';
+let authenticationGeneration = 0;
+let readGeneration = 0;
+
+export function invalidatePendingReads() {
+  readGeneration += 1;
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -66,11 +72,13 @@ const CSRF_TOKEN_PATH = '/api/v1/csrf-token';
 let csrfTokenPromise: Promise<string> | null = null;
 
 export function setRuntimeAPIToken(token: string) {
+  authenticationGeneration += 1;
   runtimeAPIToken = token;
   csrfTokenPromise = null;
 }
 
 export function clearRuntimeAPIToken() {
+  authenticationGeneration += 1;
   runtimeAPIToken = '';
   csrfTokenPromise = null;
 }
@@ -288,6 +296,9 @@ export async function request<T>(
         throw parseApiError(text, response.status, response.statusText);
       }
 
+      // A committed write must not reuse a read that began before it.
+      if (isStateChangingMethod(init.method)) invalidatePendingReads();
+
       // 204 No Content (e.g. DELETE /api/v1/library/networks/{name}) has no
       // body — calling response.json() on it throws a SyntaxError.
       if (response.status === 204) {
@@ -466,12 +477,13 @@ const inflightRequests = new Map<string, Promise<unknown>>();
  * when it settles, so subsequent calls go through normally.
  */
 export function deduplicatedGet<T>(path: string): Promise<T> {
-  const existing = inflightRequests.get(path);
+  const key = `${authenticationGeneration}:${readGeneration}:${path}`;
+  const existing = inflightRequests.get(key);
   if (existing) return existing as Promise<T>;
 
   const promise = request<T>(path).finally(() => {
-    inflightRequests.delete(path);
+    inflightRequests.delete(key);
   });
-  inflightRequests.set(path, promise);
+  inflightRequests.set(key, promise);
   return promise;
 }

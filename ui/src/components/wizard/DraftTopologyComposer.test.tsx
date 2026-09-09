@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode, useEffect, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../../api/library-client';
+import { renderWithResources as render } from '../../test/renderWithResources';
 import { required } from '../../test/required';
 import '../../i18n';
 import { DraftTopologyComposer } from './DraftTopologyComposer';

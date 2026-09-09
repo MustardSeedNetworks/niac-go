@@ -8,10 +8,11 @@
  * confirmation on Back, "Stay" keeps the user on the page, and "Leave"
  * proceeds with the navigation.
  */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
 import { DeviceEditorPage } from './DeviceEditorPage';
 

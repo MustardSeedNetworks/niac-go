@@ -1,9 +1,55 @@
+import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 describe('runtime bearer authentication', () => {
+  it.each(['/api/v1/auth/scope', '/api/v1/config'])(
+    'does not reuse the previous actor response for %s',
+    async (path) => {
+      let finishFirst: ((response: Response) => void) | undefined;
+      let finishSecond: ((response: Response) => void) | undefined;
+      mockFetch
+        .mockImplementationOnce(
+          () =>
+            new Promise<Response>((resolve) => {
+              finishFirst = resolve;
+            }),
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise<Response>((resolve) => {
+              finishSecond = resolve;
+            }),
+        );
+      const { deduplicatedGet, setRuntimeAPIToken, clearRuntimeAPIToken } = await import(
+        './requestCore'
+      );
+      setRuntimeAPIToken('first-actor');
+      const first = deduplicatedGet(path);
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      clearRuntimeAPIToken();
+      setRuntimeAPIToken('second-actor');
+      const second = deduplicatedGet(path);
+      try {
+        expect(second).not.toBe(first);
+        await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+        finishFirst?.(new Response(JSON.stringify({ actor: 'first' }), { status: 200 }));
+        await first;
+        expect(deduplicatedGet(path)).toBe(second);
+        finishSecond?.(new Response(JSON.stringify({ actor: 'second' }), { status: 200 }));
+        await expect(second).resolves.toEqual({ actor: 'second' });
+        const headers = mockFetch.mock.calls[1]?.[1]?.headers as Headers;
+        expect(headers.get('Authorization')).toBe('Bearer second-actor');
+      } finally {
+        finishFirst?.(new Response('{}'));
+        finishSecond?.(new Response('{}'));
+        await Promise.all([first, second]);
+      }
+    },
+  );
+
   beforeEach(async () => {
     mockFetch.mockReset();
     const { clearRuntimeAPIToken } = await import('./requestCore');

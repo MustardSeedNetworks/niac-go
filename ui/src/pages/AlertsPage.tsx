@@ -1,12 +1,13 @@
 import { BellRing } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchAlerts, fetchStats, updateAlerts } from '../api/client';
+import { updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
-import { useAppContext } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
+import { useAppState } from '../contexts/AppContext';
 import { useErrorToast } from '../hooks/useErrorToast';
+import { useAlertsResource } from '../hooks/usePageResources';
+import { useResourceError } from '../hooks/useResourceError';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { H2, P, SmallText } from '../ui/Typography';
@@ -18,14 +19,11 @@ import { H2, P, SmallText } from '../ui/Typography';
  */
 export const AlertsPage: FC = () => {
   const { t } = useTranslation('pages');
-  const { sessionId } = useAppContext();
   // The error count only decorates the alert card's helper text, so a failed
   // stats poll is a toast rather than a blocked page -- but it is not nothing:
   // silently showing zero recent errors reads as "all clear".
-  const { data: stats } = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
-    enabled: sessionId !== null,
-    errorToast: { title: t('alerts.statsFailed') },
-  });
+  const { data: stats, error } = useAppState('stats');
+  useResourceError(error, t('alerts.statsFailed'));
   const errorCount = stats?.stack.errors ?? 0;
 
   return (
@@ -40,10 +38,7 @@ export const AlertsPage: FC = () => {
  */
 const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
   const { t } = useTranslation('pages');
-  const { data, loading, error } = useApiResource(fetchAlerts, [], {
-    intervalMs: 15000,
-    errorToast: true,
-  });
+  const { data, loading, error, refetch } = useAlertsResource();
   const [threshold, setThreshold] = useState('');
   const [webhook, setWebhook] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -71,6 +66,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
         webhookUrl: webhook.trim(),
       };
       await updateAlerts(payload);
+      await refetch();
       setDirty(false);
       setSavedMessage('Alert configuration saved');
     } catch (err) {

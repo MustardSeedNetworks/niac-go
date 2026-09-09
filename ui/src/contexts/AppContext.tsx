@@ -21,6 +21,7 @@ import type {
 } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { useApiResource } from '../hooks/useApiResource';
+import { ResourceProvider } from './ResourceProvider';
 
 /**
  * Centralized state management using React Context.
@@ -68,12 +69,20 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  return (
+    <ResourceProvider>
+      <AppStateProvider>{children}</AppStateProvider>
+    </ResourceProvider>
+  );
+}
+
+function AppStateProvider({ children }: { children: ReactNode }) {
   // Which scenario this browser is reading. Adopts whichever session the
   // daemon reports until the operator picks one, then this browser keeps its
   // own choice regardless of what other tabs do.
   const [pinnedSessionId, setPinnedSessionId] = useState<string | null>(null);
 
-  const simStatus = useApiResource(fetchSimulationStatus, [], {
+  const simStatus = useApiResource(fetchSimulationStatus, ['simulation'], {
     intervalMs: POLL_INTERVALS.fast,
   });
   const sessions = useMemo(() => simStatus.data?.sessions ?? [], [simStatus.data]);
@@ -95,26 +104,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // refetch, not keep showing the previous one's devices. With no scenario
   // running there is nothing to read, so these resolve empty rather than
   // requesting a session that does not exist.
-  const stats = useApiResource(() => fetchStats(sessionId ?? ''), [sessionId], {
+  const stats = useApiResource(() => fetchStats(sessionId ?? ''), ['stats', sessionId], {
     intervalMs: POLL_INTERVALS.medium,
     enabled: sessionId !== null,
   });
-  const devices = useApiResource(() => fetchDevices(sessionId ?? ''), [sessionId], {
+  const devices = useApiResource(() => fetchDevices(sessionId ?? ''), ['devices', sessionId], {
     intervalMs: POLL_INTERVALS.slow,
     enabled: sessionId !== null,
   });
-  const history = useApiResource(fetchHistory, [], {
+  const history = useApiResource(fetchHistory, ['history', null], {
     intervalMs: POLL_INTERVALS.slow,
   });
-  const neighbors = useApiResource(() => fetchNeighbors(sessionId ?? ''), [sessionId], {
-    intervalMs: POLL_INTERVALS.medium,
-    enabled: sessionId !== null,
-  });
-  const version = useApiResource(fetchVersion, [], {
+  const neighbors = useApiResource(
+    () => fetchNeighbors(sessionId ?? ''),
+    ['neighbors', sessionId],
+    {
+      intervalMs: POLL_INTERVALS.medium,
+      enabled: sessionId !== null,
+    },
+  );
+  const version = useApiResource(fetchVersion, ['version'], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
-  const errorTypes = useApiResource(fetchErrorTypes, []);
-  const interfaces = useApiResource(fetchInterfaces, []);
+  const errorTypes = useApiResource(fetchErrorTypes, ['errors'], {
+    intervalMs: POLL_INTERVALS.medium,
+  });
+  const interfaces = useApiResource(fetchInterfaces, ['interfaces']);
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo(
@@ -167,7 +182,8 @@ export function useAppContext() {
 /**
  * Hook to access specific slice of state
  *
- * Prevents components from re-rendering when unrelated state changes.
+ * Context consumers re-render when the provider changes; resource requests
+ * are cached separately by their explicit query keys.
  */
 export function useAppState<K extends keyof AppContextValue>(key: K): AppContextValue[K] {
   const context = useAppContext();

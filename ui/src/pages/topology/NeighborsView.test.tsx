@@ -8,9 +8,11 @@
  * these assert the merged values and not just the row count.
  */
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NeighborRecord } from '../../api/api-response-types';
+import { useApiResource } from '../../hooks/useApiResource';
+import { renderWithResources as render } from '../../test/renderWithResources';
 import '../../i18n';
 import { NeighborsView } from './NeighborsView';
 
@@ -21,7 +23,8 @@ vi.mock('../../api/client', () => ({
 }));
 
 vi.mock('../../contexts/AppContext', () => ({
-  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+  useAppState: () =>
+    useApiResource(() => fetchNeighbors('test-session'), ['neighbors', 'test-session']),
 }));
 
 const neighbor = (over: Partial<NeighborRecord> = {}): NeighborRecord => ({
@@ -65,8 +68,8 @@ describe('loading and failure states', () => {
 
     render(<NeighborsView />);
 
-    await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
-    expect(screen.getByText(/no .*neighbou?r|none/i)).toBeDefined();
+    expect(await screen.findByText(/no .*neighbou?r|none/i)).toBeDefined();
+    expect(screen.queryByRole('table')).toBeNull();
   });
 });
 

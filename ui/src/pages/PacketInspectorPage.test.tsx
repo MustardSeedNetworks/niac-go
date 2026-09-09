@@ -5,10 +5,11 @@
  * full unfiltered packet buffer, ignoring whatever display filter the user
  * had dialed in. Export must write exactly the currently filtered packets.
  */
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n'; // initialise i18next before the page renders (uses t('packets.inspector.*'))
 import { PacketInspectorPage } from './PacketInspectorPage';
 

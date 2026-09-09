@@ -1,18 +1,19 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { FileCog, Server } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { parseDocument } from 'yaml';
-import { fetchConfig, fetchDevices, updateConfig } from '../api/client';
+import { updateConfig } from '../api/client';
 import { isApiError } from '../api/errors';
-import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
+import type { LibraryFileEntry } from '../api/library-client';
 import type { DeviceSummary } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
-import { useAppContext } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
+import { useAppState } from '../contexts/AppContext';
+import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
 import { BaseCard } from '../ui/BaseCard';
 import { Button, LinkButton } from '../ui/Button';
 import { CardRow } from '../ui/Card';
@@ -51,15 +52,7 @@ const DeviceListCard: FC<{
   onSelect: (name: string) => void;
 }> = ({ selected, onSelect }) => {
   const { t } = useTranslation('pages');
-  const { sessionId } = useAppContext();
-  const {
-    data: devices,
-    loading,
-    error,
-  } = useApiResource(() => fetchDevices(sessionId ?? ''), [sessionId], {
-    intervalMs: POLL_INTERVALS.slow,
-    enabled: sessionId !== null,
-  });
+  const { data: devices, loading, error } = useAppState('devices');
 
   return (
     <BaseCard<DeviceSummary[]>
@@ -116,15 +109,14 @@ const ConfigEditorCard: FC<{
   selected: string | null;
   onClearSelection: () => void;
 }> = ({ selected, onClearSelection }) => {
+  const queryClient = useQueryClient();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const { data, loading, error } = useApiResource(fetchConfig, [], {
-    intervalMs: POLL_INTERVALS.verySlow,
-  });
+  const { data, loading, error } = useConfigResource();
   // The walk list only populates a picker, so a failure is a toast rather than
   // a blocked editor -- but an empty picker and an unreachable library look the
   // same, and only one of them is the operator's problem.
-  const { data: walkFiles } = useApiResource(fetchLibraryWalks, [], {
+  const { data: walkFiles } = useLibraryResource('walks', {
     intervalMs: POLL_INTERVALS.verySlow,
     errorToast: { title: t('devices.walkListFailed') },
   });
@@ -197,6 +189,10 @@ const ConfigEditorCard: FC<{
     try {
       const content = fragment ? spliceDeviceFragment(data?.content ?? '', fragment, value) : value;
       const updated = await updateConfig({ content });
+      await queryClient.cancelQueries({ queryKey: ['config'], exact: true });
+      queryClient.setQueryData(['config'], updated);
+      await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+      await queryClient.invalidateQueries({ queryKey: ['config-device'] });
       // The whole-config pane shows what came back; the device pane keeps the
       // edited block, because the response is the whole file.
       if (!fragment) {
