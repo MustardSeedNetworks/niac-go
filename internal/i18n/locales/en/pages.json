@@ -605,6 +605,12 @@
       "subtitle": "Per-device protocol summary for the config you just built",
       "title": "Protocols"
     },
+    "status": {
+      "failed": "Simulation status request failed.",
+      "loading": "Checking simulation availability…",
+      "unavailable": "Cannot reach NIAC. Check the connection and that the daemon is running.",
+      "wrongMode": "Start NIAC in daemon mode to create a simulation."
+    },
     "steps": {
       "devices": "Devices",
       "finish": "Finish",
