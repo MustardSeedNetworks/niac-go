@@ -105,6 +105,7 @@ describe('DevicesPage — device detail', () => {
         renderPage();
       }),
     );
+    await vi.waitFor(() => expect(screen.getByTestId('device-select-api-router')).toBeVisible());
     fireEvent.click(screen.getByTestId('device-select-api-router'));
     const edited = 'name: api-router\ntype: firewall\n';
     fireEvent.change(editor(), { target: { value: edited } });
