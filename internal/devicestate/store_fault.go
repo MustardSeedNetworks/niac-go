@@ -49,9 +49,9 @@ func InterfaceFaultDefinitions() []FaultDefinition {
 	return interfaceFaultDefinitions()
 }
 
-// Label returns the operator-facing fault name.
+// Label returns the operator-facing fault name from either catalog.
 func (f FaultType) Label() string {
-	for _, definition := range interfaceFaultDefinitions() {
+	for _, definition := range faultDefinitions() {
 		if definition.Type == f {
 			return definition.Label
 		}
@@ -59,14 +59,19 @@ func (f FaultType) Label() string {
 	return ""
 }
 
-// ParseFaultLabel returns the supported fault type for an operator-facing label.
+// ParseFaultLabel returns the supported fault type for an operator-facing
+// label, from either catalog.
 func ParseFaultLabel(label string) (FaultType, bool) {
-	for _, definition := range interfaceFaultDefinitions() {
+	for _, definition := range faultDefinitions() {
 		if definition.Label == label {
 			return definition.Type, true
 		}
 	}
 	return "", false
+}
+
+func faultDefinitions() []FaultDefinition {
+	return append(interfaceFaultDefinitions(), deviceFaultDefinitions()...)
 }
 
 // InterfaceFault is one active condition on a simulated interface.
@@ -149,7 +154,9 @@ func (s *Store) ClearAllFaults() {
 }
 
 func validFaultType(faultType FaultType) bool {
-	return faultType.Label() != ""
+	return slices.ContainsFunc(interfaceFaultDefinitions(), func(definition FaultDefinition) bool {
+		return definition.Type == faultType
+	})
 }
 
 func interfaceExists(interfaces []Interface, name string) bool {

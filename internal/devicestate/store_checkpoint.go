@@ -13,8 +13,9 @@ var ErrCheckpointNotFound = errors.New("checkpoint not found")
 // what a scenario is doing, so a checkpoint that captured only configuration
 // restored a device that looked right and behaved wrong.
 type checkpoint struct {
-	config configuration
-	faults map[interfaceFaultKey]InterfaceFault
+	config       configuration
+	faults       map[interfaceFaultKey]InterfaceFault
+	deviceFaults map[FaultType]DeviceFault
 }
 
 // SaveCheckpoint captures running configuration and active faults under name.
@@ -26,8 +27,9 @@ func (s *Store) SaveCheckpoint(name string) {
 		s.checkpoints = make(map[string]checkpoint)
 	}
 	s.checkpoints[name] = checkpoint{
-		config: cloneConfiguration(s.running),
-		faults: cloneFaults(s.faults),
+		config:       cloneConfiguration(s.running),
+		faults:       cloneFaults(s.faults),
+		deviceFaults: cloneDeviceFaults(s.deviceFaults),
 	}
 	s.version++
 	s.recordEvent(EventCheckpointSaved, name)
@@ -45,6 +47,7 @@ func (s *Store) RestoreCheckpoint(name string) error {
 		return ErrCheckpointNotFound
 	}
 	s.faults = cloneFaults(saved.faults)
+	s.deviceFaults = cloneDeviceFaults(saved.deviceFaults)
 	s.replaceRunning(saved.config, EventCheckpointRestored, name)
 	return nil
 }

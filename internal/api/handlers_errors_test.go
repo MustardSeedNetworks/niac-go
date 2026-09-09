@@ -20,9 +20,11 @@ func TestAvailableErrorTypesOnlyAdvertiseObservableFaults(t *testing.T) {
 	// tester can see. Link Down qualifies: it drops the carrier, so the packet
 	// path stops forwarding, the CLI reports the port down and SNMP reports
 	// ifOperStatus down — proven in internal/devicestate's link-down tests.
-	// PoE, DHCP, DNS and latency faults were considered and left out: nothing
-	// in the runtime observes them today, so advertising them would offer a
-	// knob that does nothing.
+	// DHCP and DNS outcomes moved to the device catalog
+	// (availableDeviceErrorTypes) when P2-1 added the device-scoped axis: they
+	// are service outages, not interface counters, and no interface key fits
+	// them. PoE and latency are still absent for the original reason — nothing
+	// in the runtime observes them, so the knob would do nothing.
 	want := []string{
 		"FCS Errors",
 		"Packet Discards",

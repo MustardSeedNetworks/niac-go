@@ -23,6 +23,10 @@ const (
 	EventRouteUpdated       EventKind = "route.updated"
 	EventFaultUpdated       EventKind = "fault.updated"
 	EventFaultCleared       EventKind = "fault.cleared"
+	// Device faults carry their own kinds: a service outage must not reach an
+	// event consumer looking like an interface transition.
+	EventDeviceFaultUpdated EventKind = "device_fault.updated"
+	EventDeviceFaultCleared EventKind = "device_fault.cleared"
 )
 
 // Event records one committed state transition.

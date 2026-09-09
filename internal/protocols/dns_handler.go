@@ -35,6 +35,10 @@ func (h *DNSHandler) HandleQuery(
 		return
 	}
 
+	if h.dnsQuerySilenced(serverDevice) {
+		return
+	}
+
 	if h.handleNBSTATIfPresent(pkt, ipLayer, udpLayer, serverDevice, dns, packet, debugLevel) {
 		return
 	}
@@ -170,7 +174,7 @@ func (h *DNSHandler) buildDNSResponse(
 		response.ResponseCode = layers.DNSResponseCodeNoErr
 	}
 
-	return response
+	return h.applyNXDomainFault(response, serverDevice)
 }
 
 // extractSourceMAC extracts the source MAC address from the Ethernet layer.
@@ -326,6 +330,10 @@ func (h *DNSHandler) HandleQueryV6(
 		return
 	}
 
+	if h.dnsQuerySilenced(serverDevice) {
+		return
+	}
+
 	if h.handleNBSTATIfPresentV6(pkt, ipv6, udpLayer, serverDevice, dns, packet, debugLevel) {
 		return
 	}
@@ -397,7 +405,7 @@ func (h *DNSHandler) buildDNSResponseV6(
 		response.ResponseCode = layers.DNSResponseCodeNoErr
 	}
 
-	return response
+	return h.applyNXDomainFault(response, serverDevice)
 }
 
 // extractSourceMACWithValidation extracts the source MAC and validates the Ethernet layer.
