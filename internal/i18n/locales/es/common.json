@@ -1,4 +1,9 @@
 {
+  "unsaved": {
+    "discardMessage": "Descarta los cambios sin guardar o cancela para seguir editando.",
+    "title": "Cambios sin guardar",
+    "message": "Guarda los cambios antes de continuar, descártalos o cancela para seguir editando."
+  },
   "app": {
     "title": "NIAC",
     "name": "NIAC",

@@ -13,9 +13,9 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/errors';
+import { MemoryDataRouter } from '../test/MemoryDataRouter';
 import '../i18n';
 import { DevicesPage } from './DevicesPage';
 
@@ -80,9 +80,9 @@ describe('DevicesPage — config editor structured parse errors', () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const editor = await screen.findByLabelText('yaml-editor-stub');
@@ -106,9 +106,9 @@ describe('DevicesPage — config editor structured parse errors', () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const editor = await screen.findByLabelText('yaml-editor-stub');

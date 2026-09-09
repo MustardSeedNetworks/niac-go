@@ -17,9 +17,10 @@
  */
 import type { Decorator } from '@storybook/react-vite';
 import type { ComponentType } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { Route, Routes } from 'react-router';
 import { AppProvider } from '../../contexts/AppContext';
 import { ScopeProvider } from '../../contexts/ScopeContext';
+import { MemoryDataRouter } from '../MemoryDataRouter';
 import {
   type ApiRoutes,
   answeredRequests,
@@ -195,13 +196,13 @@ const shellDecorator: Decorator = (Story, context) => {
   const pattern = context.parameters.routePattern as string | undefined;
   const page = <Story />;
   return (
-    <MemoryRouter initialEntries={[(context.parameters.route as string) ?? '/']}>
+    <MemoryDataRouter initialEntries={[(context.parameters.route as string) ?? '/']}>
       <ScopeProvider>
         <AppProvider>
           <main>{pattern ? <Routes>{<Route path={pattern} element={page} />}</Routes> : page}</main>
         </AppProvider>
       </ScopeProvider>
-    </MemoryRouter>
+    </MemoryDataRouter>
   );
 };
 

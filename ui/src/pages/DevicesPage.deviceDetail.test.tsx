@@ -7,11 +7,13 @@
  * Selecting a device now opens that device's own block, and saving splices it
  * back into the config — which is still the only thing the daemon accepts.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryDataRouter } from '../test/MemoryDataRouter';
 import '../i18n';
+import { ApiError } from '../api/errors';
+import { POLL_INTERVALS } from '../constants/polling';
 import { DevicesPage } from './DevicesPage';
 
 const CONFIG = `# operator's note, must survive an edit
@@ -26,6 +28,7 @@ devices:
 `;
 
 const updateConfig = vi.fn();
+const fetchConfig = vi.fn();
 
 vi.mock('../contexts/AppContext', () => ({
   useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
@@ -37,13 +40,7 @@ vi.mock('../api/client', () => ({
       { name: 'api-router', type: 'router', ips: ['10.10.0.1'], protocols: ['snmp'] },
       { name: 'core-switch', type: 'switch', ips: [], protocols: [] },
     ]),
-  fetchConfig: () =>
-    Promise.resolve({
-      content: CONFIG,
-      path: '/tmp/config.yaml',
-      modifiedAt: '2026-01-01T00:00:00Z',
-      sizeBytes: CONFIG.length,
-    }),
+  fetchConfig: () => fetchConfig(),
   updateConfig: (...args: unknown[]) => updateConfig(...args),
 }));
 vi.mock('../api/library-client', () => ({
@@ -62,9 +59,9 @@ vi.mock('../components/config/YamlEditor', () => ({
 
 function renderPage() {
   return render(
-    <MemoryRouter>
+    <MemoryDataRouter>
       <DevicesPage />
-    </MemoryRouter>,
+    </MemoryDataRouter>,
   );
 }
 
@@ -72,6 +69,13 @@ const editor = () => screen.getByLabelText('yaml-editor-stub') as HTMLTextAreaEl
 
 describe('DevicesPage — device detail', () => {
   beforeEach(() => {
+    fetchConfig.mockReset();
+    fetchConfig.mockResolvedValue({
+      content: CONFIG,
+      path: '/tmp/config.yaml',
+      modifiedAt: '2026-01-01T00:00:00Z',
+      sizeBytes: CONFIG.length,
+    });
     updateConfig.mockReset();
     updateConfig.mockResolvedValue({
       content: CONFIG,
@@ -79,6 +83,34 @@ describe('DevicesPage — device detail', () => {
       modifiedAt: '2026-01-01T00:00:00Z',
       sizeBytes: CONFIG.length,
     });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    new Error('Config poll failed'),
+    new ApiError('Config poll failed', 400, 'config_read_failed'),
+  ])('keeps dirty edits and their navigation dialog accessible after %s', async (error) => {
+    vi.useFakeTimers();
+    await Promise.resolve(
+      act(async () => {
+        renderPage();
+      }),
+    );
+    fireEvent.click(screen.getByTestId('device-select-api-router'));
+    const edited = 'name: api-router\ntype: firewall\n';
+    fireEvent.change(editor(), { target: { value: edited } });
+    fetchConfig.mockRejectedValue(error);
+    await Promise.resolve(
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVALS.verySlow);
+      }),
+    );
+    expect(editor().value).toBe(edited);
+    expect(screen.getByRole('alert')).toHaveTextContent('Config poll failed');
+    fireEvent.click(screen.getByTestId('device-select-core-switch'));
+    expect(screen.getByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('unsaved-cancel'));
+    expect(editor().value).toBe(edited);
   });
 
   it('opens with the whole config, because nothing is selected yet', async () => {
@@ -158,4 +190,29 @@ describe('DevicesPage — device detail', () => {
     await waitFor(() => expect(editor().value).toContain('devices:'));
     expect(editor().value).toContain('core-switch');
   });
+
+  it.each(['cancel', 'discard', 'save', 'failed-save'])(
+    'guards device switching: %s',
+    async (choice) => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByTestId('device-select-api-router'));
+      await waitFor(() => expect(editor().value).toContain('name: api-router'));
+      const edited = 'name: api-router\ntype: firewall\n';
+      fireEvent.change(editor(), { target: { value: edited } });
+      await user.click(screen.getByTestId('device-select-core-switch'));
+      expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
+      if (choice === 'failed-save') updateConfig.mockRejectedValueOnce(new Error('Save refused'));
+      await user.click(screen.getByTestId(`unsaved-${choice === 'failed-save' ? 'save' : choice}`));
+      if (choice === 'cancel' || choice === 'failed-save') {
+        expect(editor().value).toBe(edited);
+        expect(screen.queryByRole('dialog')).toBe(
+          choice === 'cancel' ? null : screen.getByRole('dialog'),
+        );
+      } else {
+        await waitFor(() => expect(editor().value).toContain('name: core-switch'));
+        expect(updateConfig).toHaveBeenCalledTimes(choice === 'save' ? 1 : 0);
+      }
+    },
+  );
 });

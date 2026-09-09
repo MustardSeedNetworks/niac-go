@@ -14,6 +14,7 @@
 
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryDataRouter } from '../../test/MemoryDataRouter';
 
 const RAW_YAML = `name: LAB-EDGE-R1
 type: router
@@ -66,7 +67,7 @@ describe('useDeviceEditor — loading an existing device', () => {
 
   it('populates the form from the authored document', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: MemoryDataRouter });
 
     await waitFor(() => expect(result.current.device.name).toBe('LAB-EDGE-R1'));
 
@@ -79,7 +80,7 @@ describe('useDeviceEditor — loading an existing device', () => {
 
   it('captures originalDevice so Discard has something to restore', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: MemoryDataRouter });
 
     await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
 
@@ -88,7 +89,7 @@ describe('useDeviceEditor — loading an existing device', () => {
 
   it('is not dirty until something is edited, so the guard stays quiet', async () => {
     const { useDeviceEditor } = await import('./useDeviceEditor');
-    const { result } = renderHook(() => useDeviceEditor());
+    const { result } = renderHook(() => useDeviceEditor(), { wrapper: MemoryDataRouter });
 
     await waitFor(() => expect(result.current.originalDevice).not.toBeNull());
 

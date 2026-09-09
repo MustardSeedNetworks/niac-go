@@ -5,15 +5,16 @@
  * draft, edits update that draft, and runtime does not start until the final
  * preflight succeeds.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router';
+import { Link } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../api/library-client';
 import type { ScenarioGenerateRequest } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationStatus, Template } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
+import { MemoryDataRouter } from '../test/MemoryDataRouter';
 import '../i18n';
 import { NewSimulationWizardPage } from './NewSimulationWizardPage';
 
@@ -119,9 +120,10 @@ vi.mock('../components/wizard/DraftTopologyComposer', () => ({
 vi.mock('../components/wizard/ScenarioPackPicker', () => ({ ScenarioPackPicker: () => null }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <MemoryRouter>
+  <MemoryDataRouter>
+    <Link to="/devices">Leave wizard</Link>
     <AppProvider>{children}</AppProvider>
-  </MemoryRouter>
+  </MemoryDataRouter>
 );
 
 function renderWizard() {
@@ -132,6 +134,28 @@ async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('tab', { name: 'YAML' }));
   await waitFor(() => expect(screen.getByTestId('wizard-draft-editor')).toBeInTheDocument());
 }
+
+it('guards unsaved wizard edits when leaving through navigation', async () => {
+  const user = userEvent.setup();
+  await Promise.resolve(
+    act(async () => {
+      renderWizard();
+    }),
+  );
+  await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
+  await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+  await user.click(screen.getByTestId('wizard-start-empty'));
+  await user.click(screen.getByTestId('wizard-next-button'));
+  await openYamlEditor(user);
+  fireEvent.change(screen.getByTestId('wizard-draft-editor'), {
+    target: { value: 'devices: []\n# unsaved note' },
+  });
+  await user.click(screen.getByRole('link', { name: 'Leave wizard' }));
+  expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
+  await user.click(screen.getByTestId('unsaved-cancel'));
+  expect(screen.getByTestId('wizard-draft-editor')).toHaveValue('devices: []\n# unsaved note');
+  expect(replaceScenarioDraft).not.toHaveBeenCalled();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

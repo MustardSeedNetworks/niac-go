@@ -11,6 +11,8 @@ import {
 } from '../api/library-client';
 import { generateScenario } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
+import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
+import { useUnsavedChangesGuard } from '../components/device-editor/useUnsavedChangesGuard';
 import { DevicesStep } from '../components/wizard/DevicesStep';
 import { FinishStep } from '../components/wizard/FinishStep';
 import { NetworksStep } from '../components/wizard/NetworksStep';
@@ -79,6 +81,7 @@ export const NewSimulationWizardPage: FC = () => {
   const [draft, setDraft] = useState<ScenarioDraft | null>(null);
   const [draftContent, setDraftContent] = useState('');
   const [draftDirty, setDraftDirty] = useState(false);
+  const guard = useUnsavedChangesGuard(draftDirty);
   const [draftSourceKey, setDraftSourceKey] = useState<string | null>(null);
   const [startedSessionId, setStartedSessionId] = useState<string | null>(null);
 
@@ -211,7 +214,7 @@ export const NewSimulationWizardPage: FC = () => {
       variant="outline"
       data-testid="wizard-cancel-button"
       disabled={state.saving || state.starting}
-      onClick={() => void cancelWizard()}
+      onClick={() => guard.requestAction(() => void cancelWizard())}
     >
       {t('newSimWizard.cancelLabel')}
     </Button>
@@ -235,6 +238,24 @@ export const NewSimulationWizardPage: FC = () => {
 
   return (
     <div className="stack-xl">
+      <UnsavedChangesModal
+        open={guard.pending}
+        saving={state.saving}
+        onCancel={guard.cancelNavigate}
+        onDiscard={() => {
+          setDraftDirty(false);
+          guard.confirmNavigate();
+        }}
+        onSave={
+          guard.pendingPath
+            ? () => {
+                void saveDraft().then((saved) => {
+                  if (saved) guard.confirmNavigate();
+                });
+              }
+            : undefined
+        }
+      />
       <WizardStepper steps={steps} currentIndex={state.step} />
 
       <div data-testid="wizard-step-panel">
