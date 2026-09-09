@@ -1,0 +1,37 @@
+# The F2 wire round-trip network: one switch replaying a real capture.
+#
+# The layout mirrors the shipped captured-switch template — the config file
+# lives in networks/ and reaches the capture through `include_path: ../walks` —
+# because that is the base a walk-backed device is authored against in the
+# product. The test copies this file and the brocade capture into that layout
+# under a temporary NIAC_CONFIGS_DIR and starts the daemon from the path, so
+# nothing here depends on the inline-config base.
+#
+# The address sits on the same /24 the test end of the veth carries, so the
+# kernel can reach the device and gosnmp speaks to it the way a real manager
+# does. .2 is below the transit pool the hospital suite uses.
+include_path: ../walks
+
+networks:
+  - name: wire-transit
+    subnet: 10.254.200.0/24
+
+attachments:
+  - name: tester
+    connect: wire-transit
+
+devices:
+  - name: wire-brocade-01
+    type: switch
+    mac: "02:00:00:00:66:01"
+    icmp:
+      enabled: true
+    snmp_agent:
+      enabled: true
+      community: wire_public
+      walk_file: brocade-icx6610-24f-01.walk
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: wire-transit
+        address: 10.254.200.2/24
