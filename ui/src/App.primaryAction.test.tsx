@@ -19,10 +19,10 @@
  * findBy still returns the moment the header appears.
  */
 import { configure, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { ScopeProvider } from './contexts/ScopeContext';
+import { MemoryDataRouter } from './test/MemoryDataRouter';
 
 /**
  * Pages whose primary action only exists once their data has arrived —
@@ -136,11 +136,11 @@ afterEach(() => {
 describe('one primary action per page', () => {
   it.each(Object.entries(primaries))('%s has one primary action', async (path, primary) => {
     const { container } = render(
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryDataRouter initialEntries={[path]}>
         <ScopeProvider>
           <App />
         </ScopeProvider>
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
     // The routed page is lazy; wait for its header before counting.
     await screen.findByTestId('page-header-title');

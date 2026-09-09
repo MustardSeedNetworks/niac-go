@@ -19,6 +19,7 @@ const child = spawn(
       ...process.env,
       NIAC_E2E_DRY_RUN_SIMULATION: '1',
       NIAC_LIBRARY_ROOT: join(directory, 'library'),
+      NIAC_CONFIGS_DIR: join(directory, 'configs'),
     },
   },
 );

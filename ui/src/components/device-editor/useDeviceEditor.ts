@@ -110,6 +110,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
 
   const [device, setDevice] = useState<AuthoredDevice>(createEmptyDevice);
   const [originalDevice, setOriginalDevice] = useState<AuthoredDevice | null>(null);
+  const [savedDestination, setSavedDestination] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<DeviceFieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -161,7 +162,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   // set is not an edit, and comparing the in-memory objects would say it was.
   const yaml = useMemo(() => serializeAuthoredDevice(device), [device]);
   const isDirty = useMemo(() => {
-    if (isNewDevice) {
+    if (isNewDevice && originalDevice === null) {
       return Boolean(device.name?.trim());
     }
     return originalDevice !== null && yaml !== serializeAuthoredDevice(originalDevice);
@@ -247,9 +248,8 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
         await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
         await queryClient.invalidateQueries({ queryKey: ['config'] });
         setMessage({ type: 'success', text: t('editor.messages.createdSuccess') });
-        setTimeout(() => {
-          navigate(`/device-config/${encodeURIComponent(name)}`);
-        }, 500);
+        setOriginalDevice(device);
+        setSavedDestination(`/device-config/${encodeURIComponent(name)}`);
       } else {
         if (!hostname) {
           setMessage({ type: 'error', text: t('editor.messages.missingHostname') });
@@ -273,7 +273,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     } finally {
       setSaving(false);
     }
-  }, [device, yaml, hostname, isNewDevice, navigate, queryClient, t]);
+  }, [device, yaml, hostname, isNewDevice, queryClient, t]);
 
   const handleDelete = useCallback(async () => {
     if (!hostname || isNewDevice) {
@@ -286,29 +286,37 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       queryClient.removeQueries({ queryKey: ['config-device', hostname] });
       await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
       await queryClient.invalidateQueries({ queryKey: ['config'] });
-      navigate('/device-config');
+      setOriginalDevice(device);
+      setSavedDestination('/device-config');
     } catch (err) {
       setMessage({ type: 'error', text: getErrorMessage(err) });
       setDeleting(false);
     }
-  }, [hostname, isNewDevice, navigate, queryClient]);
+  }, [hostname, isNewDevice, device, queryClient]);
 
   const handleDiscard = useCallback(() => {
     if (isNewDevice) {
-      navigate('/device-config');
+      setOriginalDevice(device);
+      setSavedDestination('/device-config');
     } else if (originalDevice) {
       setDevice(originalDevice);
       setFieldErrors({});
       setMessage(null);
     }
-  }, [isNewDevice, originalDevice, navigate]);
+  }, [isNewDevice, originalDevice, device]);
 
   const {
     pendingPath: pendingLeavePath,
     requestNavigate: requestNavigateBackTo,
     confirmNavigate: confirmLeave,
     cancelNavigate: cancelLeave,
-  } = useUnsavedChangesGuard(isDirty, navigate);
+  } = useUnsavedChangesGuard(isDirty);
+  useEffect(() => {
+    if (savedDestination && !isDirty) {
+      setSavedDestination(null);
+      void navigate(savedDestination);
+    }
+  }, [savedDestination, isDirty, navigate]);
   const requestNavigateBack = useCallback(
     () => requestNavigateBackTo('/device-config'),
     [requestNavigateBackTo],

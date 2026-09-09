@@ -16,9 +16,10 @@ import {
   highlightActiveLineGutter,
   keymap,
   lineNumbers,
+  type ViewUpdate,
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { type FC, useCallback, useEffect, useMemo, useRef } from 'react';
+import { type FC, useEffect, useEffectEvent, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 
@@ -251,30 +252,25 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     return exts;
   }, [readOnly, placeholder, ariaLabel, showLineNumbers, showFoldGutter, lineWrapping]);
 
-  // Handle content updates
-  const handleUpdate = useCallback(
-    (update: { state: EditorState; docChanged: boolean }) => {
-      if (update.docChanged && onChange) {
-        const newValue = update.state.doc.toString();
-        onChange(newValue);
+  // Callback changes must not recreate the editor and discard its pending input or history.
+  const handleUpdate = useEffectEvent((update: ViewUpdate) => {
+    if (update.docChanged && onChange) {
+      const newValue = update.state.doc.toString();
+      onChange(newValue);
 
-        // Basic YAML validation
-        if (onValidationError) {
-          const errors = validateYaml(newValue);
-          onValidationError(errors);
-        }
+      if (onValidationError) {
+        const errors = validateYaml(newValue);
+        onValidationError(errors);
       }
-    },
-    [onChange, onValidationError],
-  );
+    }
+  });
 
   // Initialize editor. `value` is intentionally excluded from the deps
   // array: it seeds the initial doc only. Re-running this effect on every
   // keystroke would destroy and recreate the whole CodeMirror view (losing
   // cursor position, focus, and undo history) each time `onChange` flows a
   // new value back in as a prop. External value changes (load, reset,
-  // discard) are instead applied by the sync effect below, which dispatches
-  // a targeted doc replacement instead of a full teardown.
+  // discard) replace editor state below without destroying the view.
   useEffect(() => {
     if (!containerRef.current) {
       return;
@@ -301,7 +297,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [extensions, handleUpdate]);
+  }, [extensions]);
 
   // Update content when value prop changes externally
   useEffect(() => {
@@ -311,13 +307,13 @@ export const YamlEditor: FC<YamlEditorProps> = ({
 
     const currentValue = viewRef.current.state.doc.toString();
     if (currentValue !== value) {
-      viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: currentValue.length,
-          insert: value,
-        },
-      });
+      // A newly loaded document must not inherit the previous document's undo history.
+      viewRef.current.setState(
+        EditorState.create({
+          doc: value,
+          extensions: [...extensions, EditorView.updateListener.of(handleUpdate)],
+        }),
+      );
     }
   }, [value]);
 
