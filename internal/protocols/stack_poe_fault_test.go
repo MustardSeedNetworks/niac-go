@@ -95,7 +95,7 @@ func TestPoEFaultPerturbsOnlyItsNamedRows(t *testing.T) {
 	expected := map[string]string{
 		"1.3.6.1.2.1.105.1.1.1.6.1.1":  "detection status",
 		"1.3.6.1.2.1.105.1.1.1.10.1.1": "power class",
-		"1.3.6.1.2.1.105.1.3.1.4.1":    "chassis consumption",
+		"1.3.6.1.2.1.105.1.3.1.1.4.1":  "chassis consumption",
 		"1.3.6.1.2.1.2.2.1.8.1":        "ifOperStatus",
 	}
 	changed := changedOIDs(baseline, faulted)

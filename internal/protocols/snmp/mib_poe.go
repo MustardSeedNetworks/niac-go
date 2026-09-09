@@ -34,15 +34,18 @@ const (
 	pethPsePortOverLoadCounter          = pethPsePortEntry + ".13"
 	pethPsePortShortCounter             = pethPsePortEntry + ".14"
 
-	// pethMainPseTable (1.3.6.1.2.1.105.1.3), indexed group.
-	pethMainPseEntry            = pethObjects + ".3.1"
+	// pethMainPseTable (1.3.6.1.2.1.105.1.3.1), indexed group. The extra arc
+	// against the port table above is the MIB's own asymmetry: RFC 3621 hangs
+	// pethPsePortTable straight off pethObjects but puts pethMainPseTable under
+	// a pethMainPseObjects node first.
+	pethMainPseEntry            = pethObjects + ".3.1.1"
 	pethMainPsePower            = pethMainPseEntry + ".2"
 	pethMainPseOperStatus       = pethMainPseEntry + ".3"
 	pethMainPseConsumptionPower = pethMainPseEntry + ".4"
 	pethMainPseUsageThreshold   = pethMainPseEntry + ".5"
 
 	// pethNotificationControlTable (1.3.6.1.2.1.105.1.4), indexed group.
-	pethNotificationControlEnable = pethObjects + ".4.1.2"
+	pethNotificationControlEnable = pethObjects + ".4.1.1.2"
 )
 
 // POWER-ETHERNET-MIB enumerations (RFC 3621).

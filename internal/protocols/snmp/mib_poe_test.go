@@ -244,3 +244,37 @@ func TestPoEPortsCoverTrunkOnlyPorts(t *testing.T) {
 	wantInt(t, agent.mib.Get(pethMainPseConsumptionPower+"."+pethPseGroupIndex),
 		phoneDrawTenthWatts/config.PoETenthWattsPerWatt, "consumption")
 }
+
+// TestPoEOIDsMatchTheCorpusCaptures pins the numeric OIDs against what real
+// agents answer, taken from the PoE switches in `niac-demo-catalog`
+// (extreme-x440-8p, hp-j9574a, 3com-superstack). Every other test in this file
+// reads the same constants it writes, so a wrong OID would pass all of them and
+// still serve a table no manager can find. RFC 3621 is asymmetric -- the port
+// table hangs straight off pethObjects, the main and notification tables sit
+// under an extra objects node -- and the first draft of this file got that
+// wrong in both of the latter.
+func TestPoEOIDsMatchTheCorpusCaptures(t *testing.T) {
+	for _, testCase := range []struct{ object, want string }{
+		{pethPsePortAdminEnable, "1.3.6.1.2.1.105.1.1.1.3"},
+		{pethPsePortPowerPairsControlAbility, "1.3.6.1.2.1.105.1.1.1.4"},
+		{pethPsePortPowerPairs, "1.3.6.1.2.1.105.1.1.1.5"},
+		{pethPsePortDetectionStatus, "1.3.6.1.2.1.105.1.1.1.6"},
+		{pethPsePortPowerPriority, "1.3.6.1.2.1.105.1.1.1.7"},
+		{pethPsePortMPSAbsentCounter, "1.3.6.1.2.1.105.1.1.1.8"},
+		{pethPsePortType, "1.3.6.1.2.1.105.1.1.1.9"},
+		{pethPsePortPowerClassifications, "1.3.6.1.2.1.105.1.1.1.10"},
+		{pethPsePortInvalidSignatureCounter, "1.3.6.1.2.1.105.1.1.1.11"},
+		{pethPsePortPowerDeniedCounter, "1.3.6.1.2.1.105.1.1.1.12"},
+		{pethPsePortOverLoadCounter, "1.3.6.1.2.1.105.1.1.1.13"},
+		{pethPsePortShortCounter, "1.3.6.1.2.1.105.1.1.1.14"},
+		{pethMainPsePower, "1.3.6.1.2.1.105.1.3.1.1.2"},
+		{pethMainPseOperStatus, "1.3.6.1.2.1.105.1.3.1.1.3"},
+		{pethMainPseConsumptionPower, "1.3.6.1.2.1.105.1.3.1.1.4"},
+		{pethMainPseUsageThreshold, "1.3.6.1.2.1.105.1.3.1.1.5"},
+		{pethNotificationControlEnable, "1.3.6.1.2.1.105.1.4.1.1.2"},
+	} {
+		if testCase.object != testCase.want {
+			t.Errorf("OID = %s, want %s", testCase.object, testCase.want)
+		}
+	}
+}
