@@ -55,7 +55,12 @@ export const DeviceEditorPage: FC = () => {
     cancelLeave,
   } = useDeviceEditor();
   const { t } = useTranslation('devices');
-  const configuration = useApiResource(fetchConfigDevices, ['config-devices'], {
+  const {
+    data: configuration,
+    loading: configurationLoading,
+    error: configurationError,
+    refetch: refetchConfiguration,
+  } = useApiResource(fetchConfigDevices, ['config-devices'], {
     enabled: isNewDevice,
   });
 
@@ -67,11 +72,11 @@ export const DeviceEditorPage: FC = () => {
     [walkFiles],
   );
 
-  if (isNewDevice && configuration.loading) return <DeviceListLoadingState viewMode="cards" />;
-  if (isNewDevice && configuration.error) {
-    return <DeviceListErrorState error={configuration.error} onRetry={configuration.refetch} />;
+  if (isNewDevice && configurationLoading) return <DeviceListLoadingState viewMode="cards" />;
+  if (isNewDevice && configurationError) {
+    return <DeviceListErrorState error={configurationError} onRetry={refetchConfiguration} />;
   }
-  if (isNewDevice && configuration.data && !configuration.data.configurationLoaded) {
+  if (isNewDevice && configuration && !configuration.configurationLoaded) {
     return <DeviceConfigurationRequired />;
   }
 
