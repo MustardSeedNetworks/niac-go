@@ -24,8 +24,9 @@
  *   />
  */
 import type { FC, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
-export type RollupState = 'ok' | 'warn' | 'crit' | 'unknown';
+export type RollupState = 'ok' | 'warn' | 'crit' | 'unknown' | 'idle';
 
 export interface RollupFigure {
   label: string;
@@ -54,6 +55,12 @@ const STATE_STYLES: Record<
   RollupState,
   { edge: string; dot: string; kicker: string; wash: string }
 > = {
+  idle: {
+    edge: 'bg-text-muted',
+    dot: 'bg-text-muted',
+    kicker: 'text-text-secondary',
+    wash: '',
+  },
   ok: {
     edge: 'bg-status-success',
     dot: 'bg-status-success',
@@ -80,13 +87,6 @@ const STATE_STYLES: Record<
   },
 };
 
-const STATE_LABELS: Record<RollupState, string> = {
-  ok: 'All clear',
-  warn: 'Degraded',
-  crit: 'Critical',
-  unknown: 'No data',
-};
-
 export const StatusRollup: FC<StatusRollupProps> = ({
   state,
   headline,
@@ -95,6 +95,14 @@ export const StatusRollup: FC<StatusRollupProps> = ({
   actions,
   className = '',
 }) => {
+  const { t } = useTranslation('common');
+  const labels: Record<RollupState, string> = {
+    idle: t('rollup.idle'),
+    ok: t('rollup.ok'),
+    warn: t('rollup.warn'),
+    crit: t('rollup.crit'),
+    unknown: t('rollup.unknown'),
+  };
   const styles = STATE_STYLES[state];
   const shown = figures.slice(0, 4);
 
@@ -117,7 +125,7 @@ export const StatusRollup: FC<StatusRollupProps> = ({
               aria-hidden="true"
               className={`h-2 w-2 rounded-full motion-safe:animate-pulse ${styles.dot}`}
             />
-            <span className={styles.kicker}>{STATE_LABELS[state]}</span>
+            <span className={styles.kicker}>{labels[state]}</span>
           </p>
           <h2 className="mt-2 text-xl font-extrabold tracking-[-0.02em] text-text-primary">
             {headline}

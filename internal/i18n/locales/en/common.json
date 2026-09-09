@@ -152,6 +152,13 @@
     "packetCount_one": "{{count}} packet",
     "packetCount_other": "{{count}} packets"
   },
+  "rollup": {
+    "crit": "Critical",
+    "idle": "Idle",
+    "ok": "All clear",
+    "unknown": "No data",
+    "warn": "Degraded"
+  },
   "session": {
     "none": "No scenario running",
     "switchLabel": "Scenario this browser is reading"

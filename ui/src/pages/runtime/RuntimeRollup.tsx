@@ -33,7 +33,14 @@ export interface RuntimeRollupProps {
 export const RuntimeRollup: FC<RuntimeRollupProps> = ({ simStatus, loading }) => {
   const { t } = useTranslation('pages');
 
-  const state: RollupState = loading || !simStatus ? 'unknown' : simStatus.degraded ? 'warn' : 'ok';
+  const state: RollupState =
+    loading || !simStatus
+      ? 'unknown'
+      : simStatus.degraded
+        ? 'warn'
+        : simStatus.running
+          ? 'ok'
+          : 'idle';
 
   const headline = loading
     ? t('runtime.rollup.checking')
