@@ -28,6 +28,12 @@ func (t *reloadBlockingTarget) SetInterfaceFault(string, string, devicestate.Fau
 	return nil
 }
 
+func (t *reloadBlockingTarget) SetDeviceFault(
+	string, devicestate.DeviceFaultType, int,
+) error {
+	return nil
+}
+
 func TestSafeReloadDoesNotWaitForBehaviorWhileHoldingReloadLock(t *testing.T) {
 	cfg, topology, _ := forwardingFixture(t)
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))

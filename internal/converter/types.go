@@ -149,21 +149,26 @@ type BehaviorTraffic struct {
 	Utilization int `yaml:"utilization" validate:"gte=1,lte=100"`
 }
 
-// BehaviorFault sets one supported SNMP interface fault rate.
+// BehaviorFault sets one supported fault for the phase's duration. The scope
+// is the presence of `interface`: named, the fault is one interface's SNMP
+// telemetry; omitted, it is a device-service outcome, which has no interface
+// to be keyed by.
 type BehaviorFault struct {
-	// Device is the `name` of the device carrying the interface.
+	// Device is the `name` of the device carrying the fault.
 	Device string `yaml:"device" validate:"required"`
 
 	// Interface is the interface `name` on that device, as declared in its
-	// `interfaces` list.
-	Interface string `yaml:"interface" validate:"required"`
+	// `interfaces` list. Omit it for a device-scoped service fault.
+	Interface string `yaml:"interface,omitempty"`
 
-	// Type is the fault to inject. Interface-scoped only: these raise SNMP
-	// counters, they do not take a service (DHCP, DNS) out.
-	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization"`
+	// Type is the fault to inject. The first four are interface-scoped and
+	// raise SNMP counters; the last four are device-scoped service outcomes
+	// and are authored without an `interface`.
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization dhcp_no_offer dns_nxdomain dns_timeout latency"`
 
-	// Value is the rate or percentage, 1..100, applied while the phase runs.
-	Value int `yaml:"value" validate:"gte=1,lte=100"`
+	// Value is the rate or, for latency, the delay in milliseconds. The
+	// ceiling is the fault's own: 100 for a rate, 60000 for latency.
+	Value int `yaml:"value" validate:"gte=1,lte=60000"`
 }
 
 // Network declares one internal routed IPv4 network.

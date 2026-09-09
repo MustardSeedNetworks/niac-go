@@ -19,6 +19,16 @@ type Action struct {
 	Value     int
 }
 
+// DeviceAction is one authoritative device-service fault update. It is a
+// separate type from Action rather than an Action with an empty interface:
+// the two axes have separate setters, and a compiled action that could carry
+// either type would put the choice back at apply time.
+type DeviceAction struct {
+	Device string
+	Type   devicestate.DeviceFaultType
+	Value  int
+}
+
 // PhaseRef identifies one compiled phase while retaining its authored label.
 type PhaseRef struct {
 	ID    string
@@ -27,17 +37,19 @@ type PhaseRef struct {
 
 // Transition groups every action that occurs at one offset from runtime start.
 type Transition struct {
-	Offset      time.Duration
-	StartPhases []PhaseRef
-	EndPhases   []PhaseRef
-	Actions     []Action
+	Offset        time.Duration
+	StartPhases   []PhaseRef
+	EndPhases     []PhaseRef
+	Actions       []Action
+	DeviceActions []DeviceAction
 }
 
 type scheduledTransition struct {
-	offset  time.Duration
-	phase   PhaseRef
-	end     bool
-	actions []Action
+	offset        time.Duration
+	phase         PhaseRef
+	end           bool
+	actions       []Action
+	deviceActions []DeviceAction
 }
 
 // Compile produces a stable transition sequence for every finite repetition.
@@ -48,13 +60,14 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 		for repetition := range timeline.RepeatCount {
 			cycleStart := timeline.StartOffset + time.Duration(repetition)*cycleDuration
 			for phaseIndex, phase := range timeline.Phases {
-				actions := behaviorActions(phase)
+				actions, deviceActions := behaviorActions(phase)
 				phaseRef := PhaseRef{
 					ID:    fmt.Sprintf("%d:%d:%d", timelineIndex, repetition, phaseIndex),
 					Label: timeline.Name + ": " + phase.Name,
 				}
 				scheduled = append(scheduled, scheduledTransition{
-					offset: cycleStart + phase.StartOffset, phase: phaseRef, actions: actions,
+					offset: cycleStart + phase.StartOffset, phase: phaseRef,
+					actions: actions, deviceActions: deviceActions,
 				})
 				end := scheduledTransition{
 					offset: cycleStart + phase.StartOffset + phase.Duration,
@@ -62,6 +75,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 				}
 				if phase.Reset {
 					end.actions = resetActions(actions)
+					end.deviceActions = resetDeviceActions(deviceActions)
 				}
 				scheduled = append(scheduled, end)
 			}
@@ -90,8 +104,12 @@ func behaviorCycleDuration(phases []config.BehaviorPhase) time.Duration {
 	return duration
 }
 
-func behaviorActions(phase config.BehaviorPhase) []Action {
+// behaviorActions splits a phase across the two fault axes. An authored fault
+// with no interface is device-scoped; config validation has already refused
+// the mismatches, so the interface alone decides here.
+func behaviorActions(phase config.BehaviorPhase) ([]Action, []DeviceAction) {
 	actions := make([]Action, 0, len(phase.Traffic)+len(phase.Faults))
+	deviceActions := make([]DeviceAction, 0, len(phase.Faults))
 	for _, traffic := range phase.Traffic {
 		actions = append(actions, Action{
 			Device: traffic.Device, Interface: traffic.Interface,
@@ -99,16 +117,32 @@ func behaviorActions(phase config.BehaviorPhase) []Action {
 		})
 	}
 	for _, fault := range phase.Faults {
+		if fault.Interface == "" {
+			deviceActions = append(deviceActions, DeviceAction{
+				Device: fault.Device,
+				Type:   devicestate.DeviceFaultType(fault.Type), Value: fault.Value,
+			})
+			continue
+		}
 		actions = append(actions, Action{
 			Device: fault.Device, Interface: fault.Interface,
 			Type: devicestate.FaultType(fault.Type), Value: fault.Value,
 		})
 	}
-	return actions
+	return actions, deviceActions
 }
 
 func resetActions(actions []Action) []Action {
 	result := make([]Action, len(actions))
+	copy(result, actions)
+	for index := range result {
+		result[index].Value = 0
+	}
+	return result
+}
+
+func resetDeviceActions(actions []DeviceAction) []DeviceAction {
+	result := make([]DeviceAction, len(actions))
 	copy(result, actions)
 	for index := range result {
 		result[index].Value = 0
@@ -129,6 +163,7 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 			transition.StartPhases = append(transition.StartPhases, current.phase)
 		}
 		transition.Actions = append(transition.Actions, current.actions...)
+		transition.DeviceActions = append(transition.DeviceActions, current.deviceActions...)
 	}
 	return result
 }

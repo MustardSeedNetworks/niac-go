@@ -98,3 +98,38 @@ func TestCompileEndsNonResetPhaseWithoutClearingItsActions(t *testing.T) {
 		t.Fatalf("non-reset end transition = %+v", transitions[1])
 	}
 }
+
+// An authored fault with no interface compiles onto the device axis and is
+// cleared there when its phase resets, so a timeline can take a service out
+// and put it back without an operator touching the fault API.
+func TestCompilePutsAnInterfacelessFaultOnTheDeviceAxis(t *testing.T) {
+	transitions := behavior.Compile([]config.BehaviorTimeline{{
+		Name: "outage", RepeatCount: 1,
+		Phases: []config.BehaviorPhase{{
+			Name: "no-offer", Duration: time.Second, Reset: true,
+			Faults: []config.BehaviorFault{
+				{Device: "server-1", Type: "dhcp_no_offer", Value: 1},
+				{Device: "switch-1", Interface: "Gi0/1", Type: "fcs_errors", Value: 5},
+			},
+		}},
+	}})
+	if len(transitions) != 2 {
+		t.Fatalf("Compile() transition count = %d, want 2", len(transitions))
+	}
+
+	start := transitions[0]
+	if len(start.Actions) != 1 || start.Actions[0].Interface != "Gi0/1" {
+		t.Errorf("interface actions = %+v, want only the Gi0/1 fault", start.Actions)
+	}
+	want := behavior.DeviceAction{
+		Device: "server-1", Type: devicestate.FaultDHCPNoOffer, Value: 1,
+	}
+	if len(start.DeviceActions) != 1 || start.DeviceActions[0] != want {
+		t.Fatalf("device actions = %+v, want [%+v]", start.DeviceActions, want)
+	}
+
+	end := transitions[1]
+	if len(end.DeviceActions) != 1 || end.DeviceActions[0].Value != 0 {
+		t.Fatalf("reset end device actions = %+v, want the fault cleared", end.DeviceActions)
+	}
+}

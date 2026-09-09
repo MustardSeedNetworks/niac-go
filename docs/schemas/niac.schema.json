@@ -31,11 +31,11 @@
       "properties": {
         "device": {
           "type": "string",
-          "description": "Device is the `name` of the device carrying the interface."
+          "description": "Device is the `name` of the device carrying the fault."
         },
         "interface": {
           "type": "string",
-          "description": "Interface is the interface `name` on that device, as declared in its\n`interfaces` list."
+          "description": "Interface is the interface `name` on that device, as declared in its\n`interfaces` list. Omit it for a device-scoped service fault."
         },
         "type": {
           "type": "string",
@@ -43,24 +43,27 @@
             "fcs_errors",
             "packet_discards",
             "interface_errors",
-            "high_utilization"
+            "high_utilization",
+            "dhcp_no_offer",
+            "dns_nxdomain",
+            "dns_timeout",
+            "latency"
           ],
-          "description": "Type is the fault to inject. Interface-scoped only: these raise SNMP\ncounters, they do not take a service (DHCP, DNS) out."
+          "description": "Type is the fault to inject. The first four are interface-scoped and\nraise SNMP counters; the last four are device-scoped service outcomes\nand are authored without an `interface`."
         },
         "value": {
           "type": "integer",
-          "description": "Value is the rate or percentage, 1..100, applied while the phase runs."
+          "description": "Value is the rate or, for latency, the delay in milliseconds. The\nceiling is the fault's own: 100 for a rate, 60000 for latency."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "device",
-        "interface",
         "type",
         "value"
       ],
-      "description": "BehaviorFault sets one supported SNMP interface fault rate."
+      "description": "BehaviorFault sets one supported fault for the phase's duration."
     },
     "BehaviorPhase": {
       "properties": {

@@ -11,8 +11,9 @@ import (
 )
 
 type recordingTarget struct {
-	mu      sync.Mutex
-	actions []behavior.Action
+	mu            sync.Mutex
+	actions       []behavior.Action
+	deviceActions []behavior.DeviceAction
 }
 
 func (t *recordingTarget) SetInterfaceFault(
@@ -23,6 +24,19 @@ func (t *recordingTarget) SetInterfaceFault(
 	t.mu.Lock()
 	t.actions = append(t.actions, behavior.Action{
 		Device: device, Interface: iface, Type: faultType, Value: value,
+	})
+	t.mu.Unlock()
+	return nil
+}
+
+func (t *recordingTarget) SetDeviceFault(
+	device string,
+	faultType devicestate.DeviceFaultType,
+	value int,
+) error {
+	t.mu.Lock()
+	t.deviceActions = append(t.deviceActions, behavior.DeviceAction{
+		Device: device, Type: faultType, Value: value,
 	})
 	t.mu.Unlock()
 	return nil
@@ -193,4 +207,29 @@ func runToCompletion(t *testing.T, transitions []behavior.Transition) []behavior
 	target.mu.Lock()
 	defer target.mu.Unlock()
 	return append([]behavior.Action(nil), target.actions...)
+}
+
+// The runner drives both axes through the same transition list; a device
+// fault that compiled correctly but was never handed to its setter would
+// leave an authored outage inert.
+func TestRunnerAppliesDeviceFaults(t *testing.T) {
+	target := new(recordingTarget)
+	runner := behavior.New(target, []behavior.Transition{{
+		Offset: 0,
+		DeviceActions: []behavior.DeviceAction{{
+			Device: "server-1", Type: devicestate.FaultDNSNXDomain, Value: 1,
+		}},
+	}})
+	runner.Start()
+	deadline := time.Now().Add(time.Second)
+	for runner.Status().State != "completed" && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+
+	target.mu.Lock()
+	defer target.mu.Unlock()
+	if len(target.deviceActions) != 1 ||
+		target.deviceActions[0].Type != devicestate.FaultDNSNXDomain {
+		t.Fatalf("device actions applied = %+v, want one dns_nxdomain", target.deviceActions)
+	}
 }
