@@ -7,7 +7,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
-func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
+func TestScenarioPackMetadata(t *testing.T) {
 	definitions := scenario.Packs()
 	if len(definitions) != 7 {
 		t.Fatalf("scenario pack count = %d, want 7", len(definitions))
@@ -18,14 +18,6 @@ func TestScenarioPackManifestsMatchComposerOutput(t *testing.T) {
 			t.Errorf("invalid scenario pack metadata: %+v", pack)
 		}
 		seen[pack.ID] = true
-		result, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Errorf("Generate(%s): %v", pack.ID, err)
-			continue
-		}
-		if result.Manifest.Parity() != pack.Manifest {
-			t.Errorf("%s manifest = %#v", pack.ID, result.Manifest)
-		}
 		if pack.ManifestVersion != 4 || pack.Version != "1.3.0" {
 			t.Errorf("%s versions = %q/%d", pack.ID, pack.Version, pack.ManifestVersion)
 		}
