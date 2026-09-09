@@ -115,4 +115,39 @@ describe('RunHistoryCard', () => {
     expect(fetchHistory).toHaveBeenCalledTimes(3);
     expect(screen.getByTestId('history-newer')).toBeDisabled();
   });
+
+  it('shows an older-page failure and can return to the newest records', async () => {
+    const records = Array.from(
+      { length: 20 },
+      (_, index): HistoryRecord => ({
+        id: 40 - index,
+        configName: `run-${40 - index}`,
+        startedAt: '2026-09-04T12:00:00Z',
+        duration: '30s',
+        interface: 'lo0',
+        deviceCount: 1,
+        packetsReceived: 1,
+        packetsSent: 1,
+        errors: 0,
+      }),
+    );
+    fetchHistory.mockImplementation(async (before) => {
+      if (before !== undefined) throw new Error('History storage unavailable');
+      return records;
+    });
+    render(
+      <MemoryRouter>
+        <RunHistoryCard />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('run-21')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('history-older'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('History storage unavailable');
+    expect(screen.queryAllByTestId('history-run')).toHaveLength(0);
+    expect(screen.getByTestId('history-older')).toBeDisabled();
+    expect(screen.getByTestId('history-newer')).toBeEnabled();
+    fireEvent.click(screen.getByTestId('history-newer'));
+    expect(await screen.findByText('run-40')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
