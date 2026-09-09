@@ -101,7 +101,7 @@ func (s *Store) snapshot(source configuration) Snapshot {
 	// interface *is*. Projecting it here rather than writing through to stored
 	// state means clearing the fault restores the interface with no bookkeeping
 	// to get wrong, and every consumer sees it because they all read a snapshot.
-	applyLinkDownFaults(network.Interfaces, s.faults)
+	applyCarrierFaults(network.Interfaces, s.faults)
 	return Snapshot{
 		Identity: source.identity, Network: network,
 		Faults:       sortedInterfaceFaults(s.faults),

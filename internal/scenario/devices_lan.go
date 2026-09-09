@@ -6,6 +6,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 )
 
+// accessSwitchPoEBudgetWatts is the PoE the access-layer platform can supply: a
+// Cisco C9350-48HX with a single 1100 W supply reserves the rest for the system.
+const accessSwitchPoEBudgetWatts = 740
+
 func buildSiteLAN(request Request, site Site, siteIndex int, links linkMap) []converter.Device {
 	specs := make([]deviceSpec, 0,
 		request.Counts.CoreSwitches+request.Counts.DistributionSwitches+
@@ -88,6 +92,11 @@ func accessSwitch(site Site, index int) deviceSpec {
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
 		)},
 		vlan: vlanManagement,
+		// The access layer is the only PSE in a pack: phones, cameras and
+		// access points hang off it and advertise what they draw, so this is
+		// the switch a tester walks POWER-ETHERNET-MIB on. The budget is a
+		// C9350-48HX with one 1100 W supply.
+		poe: &converter.PoeConfig{BudgetWatts: accessSwitchPoEBudgetWatts},
 	}
 }
 

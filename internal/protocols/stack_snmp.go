@@ -142,6 +142,10 @@ func (s *Stack) peerResolver() snmp.PeerResolver {
 			Type:              device.Type,
 			SystemDescription: peerSystemDescription(device),
 		}
+		if draw := config.PoEDrawTenthWatts(device); draw > 0 {
+			peer.PoEDrawTenthWatts = draw
+			peer.PoEPriority = device.LLDPConfig.MED.Power.Priority
+		}
 		if device.CDPConfig != nil && device.CDPConfig.Enabled {
 			peer.CDPEnabled = true
 			peer.CDPPlatform = cdpPlatform(device)

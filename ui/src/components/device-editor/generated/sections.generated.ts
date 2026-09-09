@@ -941,6 +941,25 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "poe",
+    "title": "PoE",
+    "fields": [
+      {
+        "name": "budget_watts",
+        "title": "Budget watts",
+        "description": "BudgetWatts is the power the PSE can supply across all its ports\n(pethMainPsePower). Required when the block is present.",
+        "kind": "integer"
+      },
+      {
+        "name": "usage_threshold_percent",
+        "title": "Usage threshold percent",
+        "description": "UsageThresholdPercent is the percentage of the budget at which the PSE\nraises its usage alarm (pethMainPseUsageThreshold). Defaults to 80.",
+        "kind": "integer"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "http",
     "title": "HTTP",
     "fields": [

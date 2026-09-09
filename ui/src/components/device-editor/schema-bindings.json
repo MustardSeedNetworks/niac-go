@@ -192,6 +192,8 @@
   "devices[].os_fingerprint.ttl": "components/device-editor/generated/sections.generated.ts",
   "devices[].os_fingerprint.window_scale": "components/device-editor/generated/sections.generated.ts",
   "devices[].os_fingerprint.window_size": "components/device-editor/generated/sections.generated.ts",
+  "devices[].poe.budget_watts": "components/device-editor/generated/sections.generated.ts",
+  "devices[].poe.usage_threshold_percent": "components/device-editor/generated/sections.generated.ts",
   "devices[].port_channels[].id": "components/device-editor/generated/sections.generated.ts",
   "devices[].port_channels[].members[]": "components/device-editor/generated/sections.generated.ts",
   "devices[].port_channels[].mode": "components/device-editor/generated/sections.generated.ts",

@@ -433,6 +433,10 @@
           "$ref": "#/$defs/StpConfig",
           "description": "Stp makes the device participate in spanning tree, so a scanner sees\nbridge priorities and a root election."
         },
+        "poe": {
+          "$ref": "#/$defs/PoeConfig",
+          "description": "Poe supplies PoE to the devices behind this one's ports, which a tester\nreads as POWER-ETHERNET-MIB."
+        },
         "http": {
           "$ref": "#/$defs/HTTPConfig",
           "description": "HTTP serves a web listener with author-defined endpoints, which is what\nmakes a device identifiable as a server or an appliance."
@@ -1629,6 +1633,21 @@
       "additionalProperties": false,
       "type": "object",
       "description": "OSFingerprintConfig represents OS fingerprinting configuration for device simulation."
+    },
+    "PoeConfig": {
+      "properties": {
+        "budget_watts": {
+          "type": "integer",
+          "description": "BudgetWatts is the power the PSE can supply across all its ports\n(pethMainPsePower). Required when the block is present."
+        },
+        "usage_threshold_percent": {
+          "type": "integer",
+          "description": "UsageThresholdPercent is the percentage of the budget at which the PSE\nraises its usage alarm (pethMainPseUsageThreshold). Defaults to 80."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "PoeConfig models the device as a power-sourcing switch, which is what a tester reads out of POWER-ETHERNET-MIB when it asks how much of the budget a closet is using."
     },
     "PortChannel": {
       "properties": {

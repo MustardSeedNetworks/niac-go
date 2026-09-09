@@ -312,6 +312,23 @@ type StpConfig struct {
 	Version string `yaml:"version,omitempty"`
 }
 
+// PoeConfig models the device as a power-sourcing switch, which is what a
+// tester reads out of POWER-ETHERNET-MIB when it asks how much of the budget a
+// closet is using.
+//
+// Per-port draw is deliberately absent: it comes from the attached device's own
+// LLDP-MED `pd` power advertisement, so a phone's consumption is authored once
+// and both the frame a discovery tool decodes and the PSE table it walks agree.
+type PoeConfig struct {
+	// BudgetWatts is the power the PSE can supply across all its ports
+	// (pethMainPsePower). Required when the block is present.
+	BudgetWatts int `yaml:"budget_watts,omitempty"`
+
+	// UsageThresholdPercent is the percentage of the budget at which the PSE
+	// raises its usage alarm (pethMainPseUsageThreshold). Defaults to 80.
+	UsageThresholdPercent int `yaml:"usage_threshold_percent,omitempty"`
+}
+
 // IcmpConfig represents ICMP/ICMPv4 configuration.
 type IcmpConfig struct {
 	// Enabled answers ICMP echo requests, which is what makes the device

@@ -298,6 +298,7 @@ type Device struct {
 	EDPConfig           *EDPConfig           // EDP discovery protocol configuration
 	FDPConfig           *FDPConfig           // FDP discovery protocol configuration
 	STPConfig           *STPConfig           // STP/RSTP/MSTP configuration
+	PoEConfig           *PoEConfig           // POWER-ETHERNET-MIB power-sourcing budget
 	HTTPConfig          *HTTPConfig          // HTTP server configuration
 	FTPConfig           *FTPConfig           // FTP server configuration
 	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
@@ -598,6 +599,14 @@ type STPConfig struct {
 	MaxAge         uint16 // seconds (default: 20)
 	ForwardDelay   uint16 // seconds (default: 15)
 	Version        string // "stp", "rstp", "mstp" (default: "stp")
+}
+
+// PoEConfig holds the power-sourcing-equipment budget served as
+// POWER-ETHERNET-MIB. Per-port draw is not here: it is the attached device's own
+// LLDP-MED `pd` advertisement.
+type PoEConfig struct {
+	BudgetWatts           int // pethMainPsePower, watts
+	UsageThresholdPercent int // pethMainPseUsageThreshold, percent of the budget
 }
 
 // HTTPConfig holds HTTP server configuration.

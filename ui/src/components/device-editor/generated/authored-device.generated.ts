@@ -182,6 +182,10 @@ export interface AuthoredDevice {
       readonly forward_delay?: number;
       readonly version?: string;
     };
+  readonly poe?: {
+      readonly budget_watts?: number;
+      readonly usage_threshold_percent?: number;
+    };
   readonly http?: {
       readonly enabled?: boolean;
       readonly server_name?: string;

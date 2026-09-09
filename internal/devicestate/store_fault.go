@@ -26,6 +26,12 @@ const (
 	// is an outcome rather than a counter: the interface reports operationally
 	// down, stops forwarding, and disappears from neighbour discovery.
 	FaultLinkDown FaultType = "link_down"
+	// FaultPoELoss cuts the power the port supplies. Like link_down it is an
+	// outcome rather than a counter, and it takes the carrier with it -- a
+	// powered device with no power stops linking -- but it is distinguishable
+	// from an unplugged cable: POWER-ETHERNET-MIB reports the port faulted and
+	// the chassis consumption drops by what that device was drawing.
+	FaultPoELoss FaultType = "poe_loss"
 )
 
 // FaultDefinition is one supported interface fault and its operator-facing label.
@@ -41,6 +47,7 @@ func interfaceFaultDefinitions() []FaultDefinition {
 		{Type: FaultInterface, Label: "Interface Errors"},
 		{Type: FaultUtilization, Label: "High Utilization"},
 		{Type: FaultLinkDown, Label: "Link Down"},
+		{Type: FaultPoELoss, Label: "PoE Loss"},
 	}
 }
 
@@ -172,20 +179,33 @@ func sortedInterfaceFaults(faults map[interfaceFaultKey]InterfaceFault) []Interf
 	return result
 }
 
-// applyLinkDownFaults projects active link-down faults onto an interface list.
-// The carrier is what a link-down fault takes away; operational state follows
-// from it, the same way it does when an operator shuts a port.
-func applyLinkDownFaults(interfaces []Interface, faults map[interfaceFaultKey]InterfaceFault) {
-	if len(faults) == 0 {
-		return
+// isCarrierFault reports whether a fault takes the carrier away rather than
+// moving a counter. A cut cable and a cut power budget both end with the port
+// not linking; what separates them is POWER-ETHERNET-MIB, not the interface.
+func isCarrierFault(faultType FaultType) bool {
+	switch faultType {
+	case FaultLinkDown, FaultPoELoss:
+		return true
+	case FaultFCS, FaultDiscards, FaultInterface, FaultUtilization:
+		return false
 	}
-	for index := range interfaces {
-		key := interfaceFaultKey{
-			interfaceName: interfaces[index].Name, faultType: FaultLinkDown,
+
+	return false
+}
+
+// applyCarrierFaults projects active carrier-taking faults onto an interface
+// list. The carrier is what such a fault takes away; operational state follows
+// from it, the same way it does when an operator shuts a port.
+func applyCarrierFaults(interfaces []Interface, faults map[interfaceFaultKey]InterfaceFault) {
+	for key, fault := range faults {
+		if !isCarrierFault(key.faultType) || fault.Value <= 0 {
+			continue
 		}
-		if fault, active := faults[key]; active && fault.Value > 0 {
-			interfaces[index].CarrierUp = false
-			interfaces[index].OperUp = false
+		for index := range interfaces {
+			if interfaces[index].Name == key.interfaceName {
+				interfaces[index].CarrierUp = false
+				interfaces[index].OperUp = false
+			}
 		}
 	}
 }

@@ -1115,6 +1115,43 @@ snmpwalk -v3 -l authPriv -u niacadmin \
 snmptrapd -f -Lo
 ```
 
+#### Power over Ethernet (POWER-ETHERNET-MIB)
+
+A switch with a `poe` block answers POWER-ETHERNET-MIB (RFC 3621,
+`.1.3.6.1.2.1.105`), which is what a tester reads to see how much of a wiring
+closet's power budget is in use:
+
+```yaml
+devices:
+  - name: closet-sw-01
+    type: switch
+    poe:
+      budget_watts: 740
+      usage_threshold_percent: 80
+```
+
+| Object | Serves |
+| ------- | ----------- |
+| `pethMainPsePower` | `budget_watts` |
+| `pethMainPseConsumptionPower` | What the attached powered devices draw |
+| `pethMainPseUsageThreshold` | `usage_threshold_percent` (default 80) |
+| `pethPsePortDetectionStatus` | Per port: `deliveringPower`, `searching` or `fault` |
+| `pethPsePortPowerClassifications` | The 802.3af class implied by the draw |
+| `pethPsePortPowerPriority` | The powered device's advertised priority |
+
+Per-port draw is never authored on the switch. It comes from the attached
+device's own LLDP-MED `power` TLV with `device_type: pd`, so one number describes
+a phone both in the frame a discovery tool decodes and in the table it walks.
+See the PoE section of `AUTHORING_GUIDE.md`.
+
+The `poe_loss` fault reports the port `fault(4)` and removes its draw from the
+chassis consumption, which is what distinguishes it from `link_down`: both take
+the link down, only one of them explains why.
+
+A device backed by a capture walk that already carries POWER-ETHERNET-MIB keeps
+the captured table untouched — a real PSE is the authority on its own group
+count, port numbering and consumption.
+
 #### Best Practices
 
 - Use SNMPv3 in production (authentication and encryption)

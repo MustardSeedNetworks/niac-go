@@ -697,6 +697,17 @@ func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
 }
 
 // parseSTPConfig parses STP configuration from YAML.
+func parsePoEConfig(yamlPoE *converter.PoeConfig) *PoEConfig {
+	if yamlPoE == nil {
+		return nil
+	}
+
+	return &PoEConfig{
+		BudgetWatts:           yamlPoE.BudgetWatts,
+		UsageThresholdPercent: yamlPoE.UsageThresholdPercent,
+	}
+}
+
 func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 	if yamlStp == nil {
 		return nil

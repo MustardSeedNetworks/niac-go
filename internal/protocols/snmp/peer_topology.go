@@ -21,6 +21,11 @@ type PeerIdentity struct {
 	CDPEnabled        bool
 	CDPPlatform       string
 	CDPVersion        string
+	// PoEDrawTenthWatts is what this device advertises drawing from a PSE, in
+	// the LLDP-MED unit. Zero when it is not a powered device.
+	PoEDrawTenthWatts int
+	// PoEPriority is the powered device's advertised power priority.
+	PoEPriority string
 }
 
 // PeerResolver returns the identity for a remote device and interface. The

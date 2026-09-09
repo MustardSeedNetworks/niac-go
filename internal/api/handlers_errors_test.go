@@ -23,14 +23,21 @@ func TestAvailableErrorTypesOnlyAdvertiseObservableFaults(t *testing.T) {
 	// DHCP and DNS outcomes moved to the device catalog
 	// (availableDeviceErrorTypes) when P2-1 added the device-scoped axis: they
 	// are service outages, not interface counters, and no interface key fits
-	// them. PoE and latency are still absent for the original reason — nothing
-	// in the runtime observes them, so the knob would do nothing.
+	// Latency is still absent from THIS catalog for the original reason: it is a
+	// device-service outcome, and P2-1 put it in the device axis instead. PoE
+	// Loss earned its place in G2, which made it observable: it reports the
+	// port fault(4) in POWER-ETHERNET-MIB and takes that port's draw out of
+	// pethMainPseConsumptionPower, on top of dropping the carrier — proven in
+	// internal/protocols' TestPoEFaultPerturbsOnlyItsNamedRows, which pins the
+	// exact rows it moves. The stack refuses it on a port that supplies no
+	// power, so the knob is never offered where it would do nothing.
 	want := []string{
 		"FCS Errors",
 		"Packet Discards",
 		"Interface Errors",
 		"High Utilization",
 		"Link Down",
+		"PoE Loss",
 	}
 
 	types := availableErrorTypes()

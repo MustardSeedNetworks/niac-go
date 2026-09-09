@@ -26,6 +26,7 @@ type deviceSpec struct {
 	netbios    *converter.NetbiosConfig
 	iperf3     *converter.IPerf3Config
 	reflector  *converter.ReflectorConfig
+	poe        *converter.PoeConfig
 }
 
 func managedDevice(request Request, spec deviceSpec, links linkMap) converter.Device {
@@ -69,7 +70,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: managedDeviceTTL},
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
-		IPerf3: spec.iperf3, Reflector: spec.reflector,
+		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe,
 	}
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{

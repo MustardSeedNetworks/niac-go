@@ -60,6 +60,10 @@ func (g *snmpAgentGroup) interfaceFaultObservable(name string) bool {
 	return g != nil && g.baseAgent != nil && g.baseAgent.InterfaceFaultObservable(name)
 }
 
+func (g *snmpAgentGroup) poeFaultObservable(name string) bool {
+	return g != nil && g.baseAgent != nil && g.baseAgent.PoEFaultObservable(name)
+}
+
 func (g *snmpAgentGroup) Ensure(
 	community string,
 	device *config.Device,
@@ -112,6 +116,7 @@ func (g *snmpAgentGroup) SynthesizePeerTopologyAll(resolve snmp.PeerResolver) {
 
 	for _, agent := range g.agents {
 		agent.SynthesizePeerTopology(resolve)
+		agent.SynthesizePoEPower(resolve)
 	}
 }
 
