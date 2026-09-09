@@ -228,6 +228,7 @@ export const WalkAnalyzerPage: FC = () => {
               variant="outline"
               tone="blue"
               onClick={() => void run()}
+              action="edit"
               disabled={busy !== 'idle' || !targetPath}
               title="Parses the walk file into device identity, interfaces, and neighbors. Read-only — never modifies the file."
               data-testid="walk-analyzer-analyze-button"

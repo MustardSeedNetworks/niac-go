@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 /**
  * WalkAnalyzerPage.test.tsx — the SNMP walk analyzer.
  *

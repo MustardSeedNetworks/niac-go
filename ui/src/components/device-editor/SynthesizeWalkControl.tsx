@@ -141,6 +141,7 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
           <Button
             disabled={disabled || generating || selected === ''}
             onClick={() => void handleGenerate()}
+            action="edit"
             data-testid="synthesize-walk-generate"
           >
             {generating

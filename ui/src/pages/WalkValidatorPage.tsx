@@ -285,6 +285,7 @@ export const WalkValidatorPage: FC = () => {
             <Button
               type="button"
               onClick={() => void run('validating')}
+              action="edit"
               disabled={busy !== 'idle' || !targetPath}
               title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
             >
@@ -295,6 +296,7 @@ export const WalkValidatorPage: FC = () => {
               variant="outline"
               tone="red"
               onClick={() => setShowAutoFixConfirm(true)}
+              action="edit"
               disabled={busy !== 'idle' || !targetPath}
               title="Validate and rewrite the file in place. A .bak is created next to the original."
             >
@@ -304,6 +306,7 @@ export const WalkValidatorPage: FC = () => {
               type="button"
               variant="secondary"
               onClick={() => void runBatch()}
+              action="edit"
               disabled={batchBusy}
               title="Validate every walk file referenced by the running config in one pass."
             >
@@ -427,6 +430,7 @@ export const WalkValidatorPage: FC = () => {
       )}
 
       <ConfirmModal
+        action="edit"
         isOpen={showAutoFixConfirm}
         onConfirm={() => {
           setShowAutoFixConfirm(false);
