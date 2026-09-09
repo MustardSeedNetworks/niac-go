@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
 import { DeviceBulkActions } from '../components/device-list/DeviceBulkActions';
 import { DeviceCardView } from '../components/device-list/DeviceCardView';
+import { DeviceConfigurationRequired } from '../components/device-list/DeviceConfigurationRequired';
 import { DeviceListHeader } from '../components/device-list/DeviceListHeader';
 import {
   DeviceListEmptyState,
@@ -58,6 +59,10 @@ export const DeviceListPage: FC = () => {
     handleBulkDeleteConfirm,
     handleDeviceProtocols,
   } = useDeviceListState();
+
+  if (deviceList && !deviceList.configurationLoaded) {
+    return <DeviceConfigurationRequired />;
+  }
 
   return (
     <div className="stack-xl">

@@ -251,8 +251,9 @@ type DeviceCloneRequest struct {
 
 // DeviceListResponse represents the response for listing devices.
 type DeviceListResponse struct {
-	Devices    []DeviceResponse `json:"devices"`
-	TotalCount int              `json:"totalCount"`
+	Devices             []DeviceResponse `json:"devices"`
+	TotalCount          int              `json:"totalCount"`
+	ConfigurationLoaded bool             `json:"configurationLoaded"`
 }
 
 // DeviceBatchDeleteRequest represents a request to delete multiple devices
