@@ -105,6 +105,15 @@ test.describe('daemon-served GUI', () => {
       await page.goto('/devices');
       await expect(page.getByRole('cell', { name: 'sim-router-01', exact: true })).toBeVisible();
       await expect(page.getByRole('cell', { name: 'sim-switch-01', exact: true })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'YAML editor', exact: true })).toBeVisible();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          ),
+        )
+        .toBeLessThanOrEqual(0);
     } finally {
       await request.delete('/api/v1/simulation', { headers });
     }
