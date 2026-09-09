@@ -135,22 +135,25 @@ func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
 	}
 
 	budget := snmp.SweepBudget(0)
-	// Two healthy sweeps first: the agent's own SNMP-group counters
-	// (snmpInTotalReqVars and friends) move because a sweep happened, so a
-	// bare before/after comparison would fail on the measurement itself.
-	// Calibrating against a second healthy sweep names those rows instead of
-	// hard-coding a subtree to ignore.
-	first := sweepAgent(t, agent, budget)
+	// The agent's own values move on their own: sysUpTime is a clock and the
+	// SNMP group counts the sweep that reads it. Naming them by subtree would
+	// hard-code today's agent, so they are found instead — and the calibrating
+	// interval brackets the measured one (healthy, arm, faulted, clear,
+	// healthy), so any row that could drift while the fault was armed has
+	// necessarily drifted by the second healthy sweep too. Both kinds are
+	// monotonic, so that bracket is a guarantee rather than a wait.
 	baseline := sweepAgent(t, agent, budget)
-	volatile := changedOIDs(first, baseline)
 
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
 		if err := stack.SetDeviceFault("edge-1", definition.Type, 1); err != nil {
 			t.Fatalf("SetDeviceFault(%s) error = %v", definition.Type, err)
 		}
 	}
-
 	faulted := sweepAgent(t, agent, budget)
+	stack.ClearAllDeviceFaults()
+	settled := sweepAgent(t, agent, budget)
+
+	drifting := changedOIDs(baseline, settled)
 	if len(faulted) != len(baseline) {
 		t.Fatalf("row count changed under device faults: %d -> %d",
 			len(baseline), len(faulted))
@@ -162,7 +165,7 @@ func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
 			t.Fatalf("row %d OID changed: %s -> %s",
 				index, baseline[index].Name, faulted[index].Name)
 		}
-		if _, moves := volatile[baseline[index].Name]; moves {
+		if _, moves := drifting[baseline[index].Name]; moves {
 			continue
 		}
 		compared++
@@ -171,7 +174,7 @@ func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
 				baseline[index].Name, baseline[index].Value, faulted[index].Value)
 		}
 	}
-	// The volatile set must not swallow the walk: a calibration that excluded
+	// The drifting set must not swallow the walk: a calibration that excluded
 	// everything would make this test vacuous.
 	if compared < len(baseline)/2 {
 		t.Fatalf("only %d of %d rows were stable enough to compare",
@@ -192,7 +195,7 @@ func sweepAgent(t *testing.T, agent *snmp.Agent, budget int) []gosnmp.SnmpPDU {
 	return rows
 }
 
-// changedOIDs names the rows that move between two identical healthy sweeps.
+// changedOIDs names the rows whose value differs between two sweeps.
 func changedOIDs(first, second []gosnmp.SnmpPDU) map[string]struct{} {
 	changed := make(map[string]struct{})
 	values := make(map[string]any, len(first))
