@@ -68,10 +68,14 @@ export const ReplayControlPanel: FC = () => {
   // the file isn't in the legacy config-dir allow-list, so passing
   // bare library names like "sample.pcap" to startReplay works
   // without any further translation in the UI.
-  const { data: pcapFiles } = useApiResource(fetchLibraryPcaps, []);
-  const { data: replayStatus, refetch: refetchStatus } = useApiResource(fetchReplayStatus, [], {
-    intervalMs: 2000,
-  });
+  const { data: pcapFiles } = useApiResource(fetchLibraryPcaps, ['library', 'pcaps']);
+  const { data: replayStatus, refetch: refetchStatus } = useApiResource(
+    fetchReplayStatus,
+    ['replay'],
+    {
+      intervalMs: 2000,
+    },
+  );
 
   const [selectedFile, setSelectedFile] = useState('');
   const [loopMs, setLoopMs] = useState(0);

@@ -8,8 +8,9 @@
  * generic failure and the specific 422 "unsupported_combo" failure
  * surface a readable error.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderWithResources as render } from '../../test/renderWithResources';
 import '../../i18n';
 import { ApiError } from '../../api/errors';
 import type { ModelDescriptor } from '../../api/types';

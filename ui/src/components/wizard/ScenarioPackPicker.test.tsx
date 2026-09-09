@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultScenarioRequest, type ScenarioPack } from '../../api/scenario-client';
 import i18n from '../../i18n';
+import { renderWithResources as render } from '../../test/renderWithResources';
 import { ScenarioPackPicker } from './ScenarioPackPicker';
 
 const fetchScenarioPacks = vi.hoisted(() => vi.fn());

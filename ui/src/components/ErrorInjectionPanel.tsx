@@ -3,9 +3,9 @@ import { type FC, useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
-import { clearAllErrors, clearError, fetchErrorTypes, injectError } from '../api/client';
+import { clearAllErrors, clearError, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
-import { useApiResource } from '../hooks/useApiResource';
+import { useAppState } from '../contexts/AppContext';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -17,9 +17,7 @@ import { getErrorMessage } from '../utils/format';
 
 export const ErrorInjectionPanel: FC = () => {
   const { t } = useTranslation('errors');
-  const { data: errorInfo, refetch: refetchErrors } = useApiResource(fetchErrorTypes, [], {
-    intervalMs: 5000,
-  });
+  const { data: errorInfo, error, refetch: refetchErrors } = useAppState('errorTypes');
   // Deep-link support: the Dashboard's Error Injection quick action links
   // here with ?errorType=<type> so a specific error type arrives
   // preselected instead of duplicating this form on the dashboard itself.
@@ -72,6 +70,7 @@ export const ErrorInjectionPanel: FC = () => {
     text: string;
   } | null>(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const visibleMessage = error ? { type: 'error', text: getErrorMessage(error) } : message;
   const activeErrors = errorInfo?.activeErrors ?? {};
   const activeEntries = Object.entries(activeErrors) as [
     string,
@@ -313,15 +312,16 @@ export const ErrorInjectionPanel: FC = () => {
             </div>
 
             {/* Message Display */}
-            {message && (
+            {visibleMessage && (
               <div
+                role={visibleMessage.type === 'error' ? 'alert' : 'status'}
                 className={`pad-sm rounded ${
-                  message.type === 'success'
+                  visibleMessage.type === 'success'
                     ? 'bg-status-success/10 text-status-success border border-status-success/20'
                     : 'bg-status-error/10 text-status-error border border-status-error/20'
                 }`}
               >
-                {message.text}
+                {visibleMessage.text}
               </div>
             )}
 

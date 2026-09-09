@@ -15,7 +15,12 @@ interface ScenarioPackPickerProps {
 const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onChange }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const { data: packs, loading, error, refetch } = useApiResource(fetchScenarioPacks, []);
+  const {
+    data: packs,
+    loading,
+    error,
+    refetch,
+  } = useApiResource(fetchScenarioPacks, ['scenario-packs']);
   const selected = packs?.find((pack) => JSON.stringify(pack.request) === JSON.stringify(request));
 
   const renderPacks = (purpose: 'presentation' | 'stress') =>
