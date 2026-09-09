@@ -294,6 +294,9 @@ jobs:
       - name: Consumer demand extractor — SNMP request decoding
         run: python3 scripts/test-extract-oid-demand.py
 
+      - name: Wire nightly runner — reject stale or dirty checkouts
+        run: python3 scripts/test-wire-nightly.py
+
       # The device editor's forms are generated from the schema, so a struct
       # change that nobody regenerates for would silently stop being editable.
       - name: Device-editor manifest drift — generated forms match the schema
@@ -1517,7 +1520,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
 
       - name: Start backend server
         env:
