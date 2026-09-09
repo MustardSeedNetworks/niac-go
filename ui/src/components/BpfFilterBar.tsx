@@ -43,6 +43,7 @@ const BPF_PRESETS = [
  * Shows the active filter and provides presets for common filters.
  */
 export const BpfFilterBar: FC = memo(() => {
+  const permission = useActionPermission('edit');
   const { t } = useTranslation('common');
   const { t: tHelp } = useTranslation('help');
   const { t: tPages } = useTranslation('pages');
@@ -80,6 +81,7 @@ export const BpfFilterBar: FC = memo(() => {
 
   // Apply the filter
   const handleApply = useCallback(async () => {
+    if (permission.disabled) return;
     const trimmed = input.trim();
     if (!trimmed) return;
 
@@ -95,10 +97,11 @@ export const BpfFilterBar: FC = memo(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, tPages]);
+  }, [input, tPages, permission.disabled]);
 
   // Clear the filter
   const handleClear = useCallback(async () => {
+    if (permission.disabled) return;
     setIsLoading(true);
     setError(null);
 
@@ -112,7 +115,7 @@ export const BpfFilterBar: FC = memo(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [tPages]);
+  }, [tPages, permission.disabled]);
 
   // Apply preset
   const handlePreset = useCallback((filter: string) => {
@@ -169,6 +172,7 @@ export const BpfFilterBar: FC = memo(() => {
           variant="ghost"
           size="sm"
           onClick={handleApply}
+          action="edit"
           disabled={isLoading || !input.trim()}
         >
           {t('buttons.apply')}
@@ -180,6 +184,7 @@ export const BpfFilterBar: FC = memo(() => {
             variant="ghost"
             size="sm"
             onClick={handleClear}
+            action="edit"
             disabled={isLoading}
             leftIcon={<X className="h-3.5 w-3.5" />}
           >
@@ -224,3 +229,5 @@ export const BpfFilterBar: FC = memo(() => {
 });
 
 BpfFilterBar.displayName = 'BpfFilterBar';
+
+import { useActionPermission } from '../contexts/ScopeContext';
