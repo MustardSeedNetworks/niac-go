@@ -134,6 +134,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
                 variant="outline"
                 leftIcon={<Pencil className={iconSizes.md} />}
                 onClick={handleEditCopy}
+                action="edit"
                 disabled={editing || !content}
                 title={t('templates.previewModal.editCopyTitle')}
               >
