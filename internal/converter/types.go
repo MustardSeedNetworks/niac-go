@@ -335,6 +335,10 @@ type Device struct {
 	// bridge priorities and a root election.
 	Stp *StpConfig `yaml:"stp,omitempty"`
 
+	// Poe supplies PoE to the devices behind this one's ports, which a tester
+	// reads as POWER-ETHERNET-MIB.
+	Poe *PoeConfig `yaml:"poe,omitempty"`
+
 	// HTTP serves a web listener with author-defined endpoints, which is what
 	// makes a device identifiable as a server or an appliance.
 	HTTP *HTTPConfig `yaml:"http,omitempty"`

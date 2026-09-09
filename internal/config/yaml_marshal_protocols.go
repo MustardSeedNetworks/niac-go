@@ -230,6 +230,14 @@ func stpToYAML(cfg *STPConfig) *converter.StpConfig {
 	return &out
 }
 
+func poeToYAML(cfg *PoEConfig) *converter.PoeConfig {
+	if cfg == nil {
+		return nil
+	}
+	out := converter.PoeConfig(*cfg)
+	return &out
+}
+
 func httpToYAML(cfg *HTTPConfig) *converter.HTTPConfig {
 	if cfg == nil {
 		return nil

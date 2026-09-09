@@ -18,6 +18,7 @@ schema is right and this guide is a bug.
 - [Identity: name, type, mac and vendor](#identity-name-type-mac-and-vendor)
 - [Addressing: networks, interfaces and attachments](#addressing-networks-interfaces-and-attachments)
 - [Links and topology](#links-and-topology)
+- [PoE: who supplies power and who draws it](#poe-who-supplies-power-and-who-draws-it)
 - [Services](#services)
 - [Behaviour timelines](#behaviour-timelines)
 - [Rules that cost people a round trip](#rules-that-cost-people-a-round-trip)
@@ -253,6 +254,62 @@ about, because it is almost always an unfinished access port.
 `port_channels` bundle member interfaces into a LAG but draw no edge on their
 own. The edge comes from a `trunk_port` whose `interface` is
 `port-channel<id>`.
+
+## PoE: who supplies power and who draws it
+
+Power is authored in two halves, on two devices, and neither repeats the other.
+
+The switch declares the budget it can supply. That is all it declares: it does
+not list which ports are powered, because that follows from what is attached.
+
+```yaml
+devices:
+  - name: clinic-sw-01
+    type: switch
+    vendor: cisco
+    mac_suffix: 2
+    poe:
+      budget_watts: 740          # 4-4320; what the PSE can supply in total
+      usage_threshold_percent: 80  # optional, 1-99; defaults to 80
+    trunk_ports:
+      - interface: GigabitEthernet1/0/1
+        native_vlan: 1
+        remote_device: clinic-phone-01
+```
+
+The powered device declares what it draws, in its LLDP-MED power TLV — the same
+advertisement a discovery tool decodes off the wire:
+
+```yaml
+devices:
+  - name: clinic-phone-01
+    type: voip-phone
+    vendor: cisco
+    mac_suffix: 40
+    lldp:
+      enabled: true
+      med:
+        device_type: endpoint_class3
+        power:
+          device_type: pd        # "pd" draws power; "pse" supplies it
+          source: pse
+          priority: high
+          value_tenth_watts: 65  # 6.5 W, the TLV's own unit
+```
+
+A tester then walks POWER-ETHERNET-MIB (RFC 3621) on the switch and reads the
+budget, the consumption it adds up to, and per port whether power is being
+delivered, searching or faulted. `value_tenth_watts` also decides the port's
+reported power class.
+
+Two things to know:
+
+- The switch's ports come from `trunk_ports`, so a powered device only shows as
+  delivering power when a `trunk_ports` entry names it as the `remote_device`.
+- `niac validate` fails a config whose attached devices draw more than the
+  budget. A real switch would deny power to the last port rather than power it,
+  so an over-subscribed scenario replays a device you meant to be up as one that
+  never comes up.
 
 ## Services
 

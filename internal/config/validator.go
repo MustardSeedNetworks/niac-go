@@ -71,6 +71,8 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 				deviceMACs,
 			)
 		}
+		v.validatePoEBudgets(cfg)
+
 		return v.errors
 	}
 
@@ -98,6 +100,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 			)
 		}
 	}
+	v.validatePoEBudgets(cfg)
 
 	return v.errors
 }
@@ -161,6 +164,7 @@ func (v *Validator) validateDevice(
 	v.validateNetBIOSNames(device, prefix)
 	v.validatePortChannels(device, prefix)
 	v.validateTrunkPorts(device, prefix, knownNames)
+	v.validatePoE(device, prefix)
 }
 
 func (v *Validator) validateSSH(device *Device, prefix string) {

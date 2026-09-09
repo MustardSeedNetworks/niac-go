@@ -157,6 +157,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 			Platform:          "ICX",
 		},
 		STPConfig: &STPConfig{Enabled: true, BridgePriority: 4096, HelloTime: 2, Version: "rstp"},
+		PoEConfig: &PoEConfig{BudgetWatts: 370, UsageThresholdPercent: 65},
 		HTTPConfig: &HTTPConfig{
 			Enabled:    true,
 			ServerName: "edge",
@@ -242,6 +243,7 @@ func assertAuthoredRoutedDevice(t *testing.T, device *converter.Device, walk str
 		device.Interfaces[0].Address != "10.254.200.1/24" {
 		t.Fatalf("interface = %#v", device.Interfaces[0])
 	}
+	assertAuthoredPoE(t, device)
 	if device.Routes[0].NextHop != "10.254.200.2" || device.Routes[0].Via != "Gi0/0" {
 		t.Fatalf("route = %#v", device.Routes[0])
 	}
@@ -291,6 +293,7 @@ func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 	if device.Routes[0].NextHop != "10.254.200.2" || device.Interfaces[0].Network != "access" {
 		t.Fatalf("routed device lost: %#v %#v", device.Routes, device.Interfaces)
 	}
+	assertRuntimePoE(t, &device)
 	if device.SNMPConfig.Community != "NetAllyDemo" || device.SNMPConfig.WalkFile != walk {
 		t.Fatalf("SNMP identity lost: %#v", device.SNMPConfig)
 	}
@@ -362,4 +365,20 @@ func mustMAC(t *testing.T, value string) net.HardwareAddr {
 func mustParseMAC(value string) net.HardwareAddr {
 	address, _ := net.ParseMAC(value)
 	return address
+}
+
+func assertAuthoredPoE(t *testing.T, device *converter.Device) {
+	t.Helper()
+	if device.Poe == nil || device.Poe.BudgetWatts != 370 ||
+		device.Poe.UsageThresholdPercent != 65 {
+		t.Fatalf("PoE budget lost on save: %#v", device.Poe)
+	}
+}
+
+func assertRuntimePoE(t *testing.T, device *Device) {
+	t.Helper()
+	if device.PoEConfig == nil || device.PoEConfig.BudgetWatts != 370 ||
+		device.PoEConfig.UsageThreshold() != 65 {
+		t.Fatalf("PoE budget lost on load: %#v", device.PoEConfig)
+	}
 }

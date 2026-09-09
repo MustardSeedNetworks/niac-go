@@ -52,6 +52,11 @@ type Agent struct {
 	stateIPOIDs     map[string]struct{}
 	walkFaultName   string
 	walkFaultIndex  string
+	// poe is the published per-port power picture. It is an atomic pointer
+	// because the POWER-ETHERNET-MIB columns that read it are dynamic OIDs,
+	// which the MIB calls while holding its own lock; a mutex here would order
+	// the two locks against the way the rest of the agent takes them.
+	poe atomic.Pointer[poePower]
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.
@@ -96,6 +101,7 @@ func NewAgentWithCommunityAndTelemetry(
 	agent.initializeNeighborMIBs()
 	agent.refreshAuthoredInterfaceMIBs()
 	agent.initializeMIBIIProtocolGroups()
+	agent.initializePoEMIB()
 	agent.protocolStats.attachMIB(agent.mib)
 
 	return agent
@@ -317,6 +323,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	// ifTable, and a walk renumbers it.
 	loadedContract := a.WalkContract()
 	a.refreshBridgePortCounters(loadedContract)
+	a.refreshWalkedPoEMIB(walkOwnsPoE(entries))
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()

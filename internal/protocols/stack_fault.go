@@ -18,6 +18,9 @@ var (
 	// ErrFaultUnobservable means the target device exposes no SNMP interface
 	// counters a fault could visibly perturb.
 	ErrFaultUnobservable = errors.New("fault target has no observable SNMP interface counters")
+	// ErrFaultNoPSEPort means a PoE fault names a port that supplies no power,
+	// so cutting it would be indistinguishable from unplugging the cable.
+	ErrFaultNoPSEPort = errors.New("fault target port supplies no PoE")
 )
 
 // InterfaceFaultTarget describes one device's current fault-injection surface.
@@ -53,6 +56,10 @@ func (s *Stack) setInterfaceFaultAt(
 	}
 	if !s.snmpAgents[device].interfaceFaultObservable(interfaceName) {
 		return ErrFaultUnobservable
+	}
+	if faultType == devicestate.FaultPoELoss &&
+		!s.snmpAgents[device].poeFaultObservable(interfaceName) {
+		return ErrFaultNoPSEPort
 	}
 	s.advanceDeviceFaultTelemetry(device, now)
 	return store.SetInterfaceFault(interfaceName, faultType, value)

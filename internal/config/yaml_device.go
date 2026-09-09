@@ -411,6 +411,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.EDPConfig = parseEDPConfig(yamlDevice.Edp)
 	device.FDPConfig = parseFDPConfig(yamlDevice.Fdp)
 	device.STPConfig = parseSTPConfig(yamlDevice.Stp)
+	device.PoEConfig = parsePoEConfig(yamlDevice.Poe)
 
 	// Handle service protocols
 	device.HTTPConfig = parseHTTPConfig(yamlDevice.HTTP, device.Name)
