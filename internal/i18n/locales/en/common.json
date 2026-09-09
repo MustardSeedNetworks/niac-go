@@ -1,4 +1,9 @@
 {
+  "permissions": {
+    "checking": "Checking permissions…",
+    "unavailable": "Permissions could not be verified. Reconnect before making changes.",
+    "denied": "Your token does not allow this action."
+  },
   "accessibility": {
     "clearSearch": "Clear search",
     "closeDialog": "Close dialog",
