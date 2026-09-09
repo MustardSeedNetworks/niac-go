@@ -71,74 +71,76 @@ export const DeviceEditorPage: FC = () => {
 
   return (
     <div className="stack-xl">
-      <DeviceEditorHeader
-        device={device}
-        isNewDevice={isNewDevice}
-        isDirty={isDirty}
-        saving={saving}
-        deleting={deleting}
-        message={message}
-        showYamlPreview={showYamlPreview}
-        onToggleYamlPreview={() => setShowYamlPreview(!showYamlPreview)}
-        onDelete={() => setShowDeleteConfirm(true)}
-        onDiscard={handleDiscard}
-        onSave={handleSave}
-        onNavigateBack={requestNavigateBack}
-      />
+      <fieldset disabled={saving || deleting} className="stack-xl min-w-0">
+        <DeviceEditorHeader
+          device={device}
+          isNewDevice={isNewDevice}
+          isDirty={isDirty}
+          saving={saving}
+          deleting={deleting}
+          message={message}
+          showYamlPreview={showYamlPreview}
+          onToggleYamlPreview={() => setShowYamlPreview(!showYamlPreview)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onDiscard={handleDiscard}
+          onSave={handleSave}
+          onNavigateBack={requestNavigateBack}
+        />
 
-      {showYamlPreview && <YamlPreviewSection yamlContent={yaml} />}
+        {showYamlPreview && <YamlPreviewSection yamlContent={yaml} />}
 
-      <BasicSettingsSection
-        device={device}
-        isNewDevice={isNewDevice}
-        isExpanded={expandedSections.has('basic')}
-        onToggle={() => toggleSection('basic')}
-        onUpdate={updateField}
-        errors={fieldErrors}
-      />
+        <BasicSettingsSection
+          device={device}
+          isNewDevice={isNewDevice}
+          isExpanded={expandedSections.has('basic')}
+          onToggle={() => toggleSection('basic')}
+          onUpdate={updateField}
+          errors={fieldErrors}
+        />
 
-      <AdditionalIPsSection
-        device={device}
-        isExpanded={expandedSections.has('ips')}
-        onToggle={() => toggleSection('ips')}
-        onUpdate={updateField}
-        errors={fieldErrors}
-      />
+        <AdditionalIPsSection
+          device={device}
+          isExpanded={expandedSections.has('ips')}
+          onToggle={() => toggleSection('ips')}
+          onUpdate={updateField}
+          errors={fieldErrors}
+        />
 
-      {/* Every section the schema declares, in relevance order. None is
+        {/* Every section the schema declares, in relevance order. None is
           hidden: a section the form does not render is a field the author
           cannot reach, and the authoring-parity gate would still count it
           bound. */}
-      {sections.map((section) => (
-        <CollapsibleSection
-          key={section.key}
-          id={`${section.key}-section`}
-          title={t(`editor.sections.${section.key}.title`, { defaultValue: section.title })}
-          isExpanded={expandedSections.has(section.key)}
-          onToggle={() => toggleSection(section.key)}
-        >
-          <div className="stack-lg">
-            <SchemaSectionBody
-              section={section}
-              value={device[section.key as keyof typeof device] as AuthoredValue}
-              onChange={(next) => updateField(section.key as keyof typeof device, next)}
-              suggestions={suggestions}
-            />
-            {section.key === 'snmp_agent' && (
-              <SynthesizeWalkControl
-                hostname={device.name ?? hostname ?? ''}
-                disabled={isNewDevice}
-                onSynthesized={(walkPath) =>
-                  updateField('snmp_agent', {
-                    ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
-                    walk_file: walkPath,
-                  })
-                }
+        {sections.map((section) => (
+          <CollapsibleSection
+            key={section.key}
+            id={`${section.key}-section`}
+            title={t(`editor.sections.${section.key}.title`, { defaultValue: section.title })}
+            isExpanded={expandedSections.has(section.key)}
+            onToggle={() => toggleSection(section.key)}
+          >
+            <div className="stack-lg">
+              <SchemaSectionBody
+                section={section}
+                value={device[section.key as keyof typeof device] as AuthoredValue}
+                onChange={(next) => updateField(section.key as keyof typeof device, next)}
+                suggestions={suggestions}
               />
-            )}
-          </div>
-        </CollapsibleSection>
-      ))}
+              {section.key === 'snmp_agent' && (
+                <SynthesizeWalkControl
+                  hostname={device.name ?? hostname ?? ''}
+                  disabled={isNewDevice}
+                  onSynthesized={(walkPath) =>
+                    updateField('snmp_agent', {
+                      ...(typeof device.snmp_agent === 'object' ? device.snmp_agent : {}),
+                      walk_file: walkPath,
+                    })
+                  }
+                />
+              )}
+            </div>
+          </CollapsibleSection>
+        ))}
+      </fieldset>
 
       <ConfirmModal
         isOpen={showDeleteConfirm}

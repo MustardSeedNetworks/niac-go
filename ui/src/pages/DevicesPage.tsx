@@ -10,6 +10,11 @@ import type { LibraryFileEntry } from '../api/library-client';
 import type { DeviceSummary } from '../api/types';
 import { YamlEditor } from '../components/config/YamlEditor';
 import { DeviceTable } from '../components/DeviceTable';
+import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
+import {
+  type UnsavedChangesGuard,
+  useUnsavedChangesGuard,
+} from '../components/device-editor/useUnsavedChangesGuard';
 import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
@@ -35,11 +40,22 @@ import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
  */
 export const DevicesPage: FC = () => {
   const [selected, setSelected] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const guard = useUnsavedChangesGuard(dirty);
+  const select = (name: string | null) => {
+    if (name !== selected) guard.requestAction(() => setSelected(name));
+  };
 
   return (
     <div className="grid grid-cols-1 gap-spacious xl:grid-cols-2">
-      <DeviceListCard selected={selected} onSelect={setSelected} />
-      <ConfigEditorCard selected={selected} onClearSelection={() => setSelected(null)} />
+      <DeviceListCard selected={selected} onSelect={select} />
+      <ConfigEditorCard
+        selected={selected}
+        onClearSelection={() => select(null)}
+        dirty={dirty}
+        setDirty={setDirty}
+        guard={guard}
+      />
     </div>
   );
 };
@@ -108,7 +124,10 @@ function fragmentProblem(
 const ConfigEditorCard: FC<{
   selected: string | null;
   onClearSelection: () => void;
-}> = ({ selected, onClearSelection }) => {
+  dirty: boolean;
+  setDirty: (dirty: boolean) => void;
+  guard: UnsavedChangesGuard;
+}> = ({ selected, onClearSelection, dirty, setDirty, guard }) => {
   const queryClient = useQueryClient();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
@@ -121,7 +140,6 @@ const ConfigEditorCard: FC<{
     errorToast: { title: t('devices.walkListFailed') },
   });
   const [value, setValue] = useState('');
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{
     tone: 'success' | 'error';
@@ -148,13 +166,12 @@ const ConfigEditorCard: FC<{
     }
   }, [data, dirty, sourceText]);
 
-  // Switching subject discards an in-progress edit, so the pane never shows one
-  // device's YAML under another device's name.
+  // Selection changes only after the parent guard has saved or discarded edits.
   useEffect(() => {
     setDirty(false);
     setStatus(null);
     setErrorLine(null);
-  }, [selected]);
+  }, [selected, setDirty]);
 
   const handleChange = (newValue: string) => {
     setValue(newValue);
@@ -165,7 +182,7 @@ const ConfigEditorCard: FC<{
 
   const handleReset = () => {
     if (data) {
-      setValue(data.content);
+      setValue(sourceText);
       setDirty(false);
       setStatus(null);
       setErrorLine(null);
@@ -174,13 +191,13 @@ const ConfigEditorCard: FC<{
 
   const handleSave = async () => {
     if (!dirty || saving) {
-      return;
+      return !dirty;
     }
     if (fragment) {
       const problem = fragmentProblem(value);
       if (problem) {
         setStatus({ tone: 'error', message: t(`devices.${problem}`) });
-        return;
+        return false;
       }
     }
     setSaving(true);
@@ -203,6 +220,7 @@ const ConfigEditorCard: FC<{
         tone: 'success',
         message: fragment ? t('devices.deviceSaved') : t('devices.configSaved'),
       });
+      return true;
     } catch (err) {
       const detail = isApiError(err) ? err.details[0] : undefined;
       const line = detail?.line ?? null;
@@ -212,6 +230,7 @@ const ConfigEditorCard: FC<{
           : getErrorMessage(err);
       setErrorLine(line);
       setStatus({ tone: 'error', message });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -235,7 +254,7 @@ const ConfigEditorCard: FC<{
   const noConfigLoaded =
     isApiError(error) && (error.code === 'config_read_failed' || error.status === 400);
 
-  if (noConfigLoaded) {
+  if (noConfigLoaded && !data) {
     return (
       <BaseCard
         title={t('devices.yamlEditorTitle')}
@@ -253,75 +272,103 @@ const ConfigEditorCard: FC<{
   const editingDevice = fragment !== null;
 
   return (
-    <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
-      title={editingDevice ? t('devices.deviceEditorTitle') : t('devices.yamlEditorTitle')}
-      subtitle={editingDevice ? t('devices.deviceEditorSubtitle') : t('devices.yamlEditorSubtitle')}
-      icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
-      data={data}
-      loading={loading && !data}
-      error={error?.message}
-      getStatus={() => (dirty ? 'warning' : 'success')}
-      testId="config-editor-card"
-    >
-      {(cfg) => (
-        <>
-          {editingDevice ? (
-            <CardRow label={t('devices.selectedLabel')} value={selected ?? ''} mono />
-          ) : (
-            <>
-              <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
-              <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
-              <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
-            </>
-          )}
-          {fragmentMissing && (
-            <SmallText className="mt-heading text-status-warning" data-testid="fragment-missing">
-              {t('devices.deviceFragmentMissing')}
-            </SmallText>
-          )}
-          <YamlEditor
-            ariaLabel={t('devices.yamlEditorTitle')}
-            className="mt-heading"
-            height="18rem"
-            value={value}
-            onChange={handleChange}
-            readOnly={loading || saving}
-            errorLine={errorLine}
-          />
-          {status && (
-            <SmallText
-              className={status.tone === 'success' ? 'text-status-success' : 'text-status-error'}
-            >
-              {status.message}
-            </SmallText>
-          )}
-          <div className="flex flex-wrap gap-default mt-heading">
-            <Button
-              tone="violet"
-              disabled={!dirty || saving}
-              onClick={handleSave}
-              action="edit"
-              title={t('devices.saveReloadTitle')}
-            >
-              {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
-            </Button>
-            <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
-              {t('devices.discardChangesButton')}
-            </Button>
-            {selected !== null && (
-              <Button variant="outline" onClick={onClearSelection} data-testid="edit-whole-config">
-                {t('devices.wholeConfigButton')}
-              </Button>
-            )}
-          </div>
-          <SmallText className="mt-inline text-text-muted">
-            {t('devices.saveHelpTextPrefix')} <code>niac validate</code>
-            {t('devices.saveHelpTextSuffix')}
-          </SmallText>
-          <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
-        </>
+    <>
+      <UnsavedChangesModal
+        open={guard.pending}
+        error={status?.tone === 'error' ? status.message : undefined}
+        saving={saving}
+        onCancel={guard.cancelNavigate}
+        onDiscard={() => {
+          setDirty(false);
+          guard.confirmNavigate();
+        }}
+        onSave={() => {
+          void handleSave().then((saved) => {
+            if (saved) guard.confirmNavigate();
+          });
+        }}
+      />
+      {dirty && error && (
+        <p role="alert" className="text-status-error">
+          {error.message}
+        </p>
       )}
-    </BaseCard>
+      <BaseCard<{ content: string; path: string; modifiedAt: string; sizeBytes: number }>
+        title={editingDevice ? t('devices.deviceEditorTitle') : t('devices.yamlEditorTitle')}
+        subtitle={
+          editingDevice ? t('devices.deviceEditorSubtitle') : t('devices.yamlEditorSubtitle')
+        }
+        icon={<FileCog className={`${iconSizes.lg} text-status-success`} />}
+        data={data}
+        loading={loading && !data}
+        error={dirty ? undefined : error?.message}
+        getStatus={() => (dirty ? 'warning' : 'success')}
+        testId="config-editor-card"
+      >
+        {(cfg) => (
+          <>
+            {editingDevice ? (
+              <CardRow label={t('devices.selectedLabel')} value={selected ?? ''} mono />
+            ) : (
+              <>
+                <CardRow label={tCommon('labels.path')} value={cfg.path} mono />
+                <CardRow label={tCommon('labels.updatedAt')} value={formatTime(cfg.modifiedAt)} />
+                <CardRow label={tCommon('labels.size')} value={formatBytes(cfg.sizeBytes)} />
+              </>
+            )}
+            {fragmentMissing && (
+              <SmallText className="mt-heading text-status-warning" data-testid="fragment-missing">
+                {t('devices.deviceFragmentMissing')}
+              </SmallText>
+            )}
+            <YamlEditor
+              ariaLabel={t('devices.yamlEditorTitle')}
+              className="mt-heading"
+              height="18rem"
+              value={value}
+              onChange={handleChange}
+              readOnly={loading || saving}
+              errorLine={errorLine}
+            />
+            {status && (
+              <SmallText
+                className={status.tone === 'success' ? 'text-status-success' : 'text-status-error'}
+              >
+                {status.message}
+              </SmallText>
+            )}
+            <div className="flex flex-wrap gap-default mt-heading">
+              <Button
+                tone="violet"
+                disabled={!dirty || saving}
+                onClick={handleSave}
+                action="edit"
+                title={t('devices.saveReloadTitle')}
+              >
+                {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
+              </Button>
+              <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
+                {t('devices.discardChangesButton')}
+              </Button>
+              {selected !== null && (
+                <Button
+                  variant="outline"
+                  onClick={onClearSelection}
+                  data-testid="edit-whole-config"
+                >
+                  {t('devices.wholeConfigButton')}
+                </Button>
+              )}
+            </div>
+            <SmallText className="mt-inline text-text-muted">
+              {t('devices.saveHelpTextPrefix')} <code>niac validate</code>
+              {t('devices.saveHelpTextSuffix')}
+            </SmallText>
+            <WalkFileBrowser files={walkFiles ?? []} onCopy={handleWalkCopy} />
+          </>
+        )}
+      </BaseCard>
+    </>
   );
 };
 

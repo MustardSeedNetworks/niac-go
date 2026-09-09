@@ -3,7 +3,8 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router';
+import { createBrowserRouter } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
 import { ScopeProvider } from './contexts/ScopeContext';
@@ -22,14 +23,21 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <BrowserRouter>
+const router = createBrowserRouter([
+  {
+    path: '*',
+    element: (
       <AuthGate>
         <ScopeProvider>
           <App />
         </ScopeProvider>
       </AuthGate>
-    </BrowserRouter>
+    ),
+  },
+]);
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

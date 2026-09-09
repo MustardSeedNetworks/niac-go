@@ -19,9 +19,9 @@ vi.mock('../contexts/ScopeContext', () => ({
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/errors';
+import { MemoryDataRouter } from '../test/MemoryDataRouter';
 import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
 import { fetchDevices } from '../api/client';
@@ -88,9 +88,9 @@ describe('DevicesPage — config editor structured parse errors', () => {
     const user = userEvent.setup();
     const { unmount } = render(
       <QueryClientProvider client={client}>
-        <MemoryRouter>
+        <MemoryDataRouter>
           <DevicesPage />
-        </MemoryRouter>
+        </MemoryDataRouter>
       </QueryClientProvider>,
     );
     let resolveRead: (value: typeof configDocument) => void = () => {};
@@ -132,9 +132,9 @@ describe('DevicesPage — config editor structured parse errors', () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const editor = await screen.findByLabelText('yaml-editor-stub');
@@ -158,9 +158,9 @@ describe('DevicesPage — config editor structured parse errors', () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const editor = await screen.findByLabelText('yaml-editor-stub');

@@ -9,9 +9,9 @@
  */
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
-import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ResourceProvider } from '../../contexts/ResourceProvider';
+import { MemoryDataRouter } from '../../test/MemoryDataRouter';
 import { useDeviceEditor } from './useDeviceEditor';
 
 const mockNavigate = vi.fn();
@@ -42,7 +42,7 @@ vi.mock('../../api/library-client', () => ({
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }): React.ReactElement =>
-  createElement(ResourceProvider, null, createElement(MemoryRouter, null, children));
+  createElement(ResourceProvider, null, createElement(MemoryDataRouter, null, children));
 
 afterEach(() => {
   vi.clearAllMocks();

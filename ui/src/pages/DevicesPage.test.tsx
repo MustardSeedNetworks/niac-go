@@ -9,8 +9,8 @@
  *      to the existing "Copy name" button, so the name is actually usable.
  */
 import { screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { MemoryDataRouter } from '../test/MemoryDataRouter';
 import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
 import { fetchDevices } from '../api/client';
@@ -43,9 +43,9 @@ vi.mock('../api/library-client', () => ({
 describe('DevicesPage', () => {
   it('links to the Device Library for editing', async () => {
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const link = await screen.findByRole('link', { name: /edit in device library/i });
@@ -54,9 +54,9 @@ describe('DevicesPage', () => {
 
   it('links each walk file to the device editor SNMP section', async () => {
     render(
-      <MemoryRouter>
+      <MemoryDataRouter>
         <DevicesPage />
-      </MemoryRouter>,
+      </MemoryDataRouter>,
     );
 
     const link = await screen.findByRole('link', { name: /use in device editor/i });
