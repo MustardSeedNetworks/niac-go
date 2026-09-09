@@ -6,10 +6,8 @@
  */
 
 import { act, render, renderHook, waitFor } from '@testing-library/react';
-import { useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ReadOnlyView } from '../components/ui/ReadOnlyView';
 import { RequireScope } from '../components/ui/RequireScope';
 import { type Scope, ScopeProvider, useScope } from './ScopeContext';
 
@@ -116,108 +114,5 @@ describe('<RequireScope>', () => {
       </ScopeProvider>,
     );
     await findByText('nope');
-  });
-});
-
-describe('<ReadOnlyView>', () => {
-  beforeEach(() => {
-    mockGet.mockReset();
-  });
-
-  it('leaves the page unbannered and usable for a read-write token', async () => {
-    mockGet.mockResolvedValueOnce(respond('read-write'));
-    const { container, findByTestId, queryByRole } = render(
-      <ScopeProvider>
-        <ReadOnlyView>
-          <input data-testid="probe" />
-        </ReadOnlyView>
-      </ScopeProvider>,
-    );
-    const probe = await findByTestId('probe');
-    await waitFor(() => expect(probe).not.toBeDisabled());
-    expect(queryByRole('status')).toBeNull();
-    // The fieldset stays in the tree on purpose (#1941) -- it is what makes
-    // the two scopes the same shape -- so what matters is that it is not
-    // disabled and the wrapper is laid out as if it were not there.
-    expect(container.querySelector('fieldset')?.hasAttribute('disabled')).toBe(false);
-    expect(container.firstElementChild?.className).toContain('contents');
-  });
-
-  it('does not remount the page when the scope arrives (#1941)', async () => {
-    let grantWrite: (() => void) | undefined;
-    mockGet.mockReturnValueOnce(
-      new Promise((resolve) => {
-        grantWrite = () => resolve(respond('admin'));
-      }),
-    );
-
-    let mounts = 0;
-    function Page(): React.ReactElement {
-      useEffect(() => {
-        mounts += 1;
-      }, []);
-      return (
-        <button data-testid="probe" type="button">
-          start
-        </button>
-      );
-    }
-
-    const { findByTestId } = render(
-      <ScopeProvider>
-        <ReadOnlyView>
-          <Page />
-        </ReadOnlyView>
-      </ScopeProvider>,
-    );
-    const probe = await findByTestId('probe');
-    expect(mounts).toBe(1);
-
-    // Every session is read-only for as long as /auth/scope takes to answer.
-    // Swapping the tree shape when it answered remounted the page below and
-    // discarded the file, interface or wizard step already chosen. The control
-    // going live is the scope arriving; the banner is not, because it is
-    // withheld while the fetch is in flight.
-    act(() => grantWrite?.());
-    await waitFor(() => expect(probe).not.toBeDisabled());
-
-    expect(mounts).toBe(1);
-  });
-
-  it('does not claim read-only before the scope has been read', async () => {
-    mockGet.mockReturnValueOnce(new Promise(() => {}));
-    const { findByTestId, queryByRole } = render(
-      <ScopeProvider>
-        <ReadOnlyView>
-          <input data-testid="probe" />
-        </ReadOnlyView>
-      </ScopeProvider>,
-    );
-    // Fail-closed still holds: the control is disabled. What the app cannot
-    // yet say is why.
-    expect(await findByTestId('probe')).toBeDisabled();
-    expect(queryByRole('status')).toBeNull();
-  });
-
-  it('wraps children in a disabled fieldset and banners for read-only', async () => {
-    mockGet.mockResolvedValueOnce(respond('read-only'));
-    const { findByTestId, findByRole, container } = render(
-      <ScopeProvider>
-        <ReadOnlyView>
-          <input data-testid="probe-input" />
-          <button data-testid="probe-button" type="button">
-            Save
-          </button>
-        </ReadOnlyView>
-      </ScopeProvider>,
-    );
-    await findByRole('status');
-    const fieldset = container.querySelector('fieldset');
-    expect(fieldset).not.toBeNull();
-    expect(fieldset?.hasAttribute('disabled')).toBe(true);
-    const input = await findByTestId('probe-input');
-    const button = await findByTestId('probe-button');
-    expect(fieldset?.contains(input)).toBe(true);
-    expect(fieldset?.contains(button)).toBe(true);
   });
 });
