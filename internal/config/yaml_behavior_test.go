@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -219,5 +220,113 @@ func TestBehaviorTimelineValidationRejectsInvalidTargetsAndTiming(t *testing.T) 
 				t.Fatal("LoadYAMLBytes() accepted invalid behavior timeline")
 			}
 		})
+	}
+}
+
+// A phase fault with no interface is device-scoped: the axis P2-1 added for
+// service outcomes, authored rather than armed over the API. Omitting the
+// interface is the discriminator because a service outage has no interface to
+// be keyed by.
+func TestBehaviorTimelineAuthorsADeviceScopedFault(t *testing.T) {
+	yamlConfig := []byte(`
+networks:
+  - name: lan
+    subnet: 10.0.0.0/24
+devices:
+  - name: server-1
+    type: server
+    mac: "02:00:00:00:00:01"
+    interfaces: [{name: eth0, type: ethernet, network: lan, address: 10.0.0.5/24}]
+    dhcp:
+      pool_start: 10.0.0.100
+      pool_end: 10.0.0.199
+      subnet_mask: 255.255.255.0
+      router: 10.0.0.1
+behavior_timelines:
+  - name: outage
+    repeat_count: 1
+    phases:
+      - name: no-offer
+        duration_ms: 5000
+        reset: true
+        faults: [{device: server-1, type: dhcp_no_offer, value: 1}]
+`)
+
+	cfg, err := config.LoadYAMLBytes(yamlConfig)
+	if err != nil {
+		t.Fatalf("LoadYAMLBytes() error = %v", err)
+	}
+	fault := cfg.BehaviorTimelines[0].Phases[0].Faults[0]
+	if fault.Interface != "" {
+		t.Errorf("fault.Interface = %q, want empty — the fault is device-scoped", fault.Interface)
+	}
+	if fault.Type != "dhcp_no_offer" {
+		t.Errorf("fault.Type = %q, want dhcp_no_offer", fault.Type)
+	}
+}
+
+// A device-scoped fault named against an interface would claim a scope it does
+// not have, and an interface fault with no interface has nothing to apply to.
+// Both are refused at load rather than at apply time.
+func TestBehaviorTimelineRejectsMismatchedFaultScope(t *testing.T) {
+	for name, fault := range map[string]string{
+		"device fault with an interface": "{device: access-1, interface: Gi0/48, type: dhcp_no_offer, value: 1}",
+		"interface fault with none":      "{device: access-1, type: fcs_errors, value: 5}",
+	} {
+		t.Run(name, func(t *testing.T) {
+			yamlConfig := []byte(`
+devices:
+  - name: access-1
+    type: switch
+    mac: "02:00:00:00:00:01"
+    interfaces: [{name: Gi0/48}]
+behavior_timelines:
+  - name: mismatch
+    repeat_count: 1
+    phases:
+      - name: bad
+        duration_ms: 1000
+        faults: [` + fault + `]
+`)
+
+			_, err := config.LoadYAMLBytes(yamlConfig)
+			if !errors.Is(err, config.ErrBehaviorFaultScope) {
+				t.Fatalf("LoadYAMLBytes() error = %v, want %v", err, config.ErrBehaviorFaultScope)
+			}
+		})
+	}
+}
+
+// The rate faults stop at 100 and latency is milliseconds; a single ceiling
+// would either cap a delay at a tenth of a second or let a rate be authored
+// at 60000. The per-type ceiling is devicestate's, not this package's.
+func TestBehaviorTimelineAppliesThePerTypeFaultCeiling(t *testing.T) {
+	timeline := func(faultType string, value int) []byte {
+		return fmt.Appendf(nil, `
+networks:
+  - name: lan
+    subnet: 10.0.0.0/24
+devices:
+  - name: server-1
+    type: server
+    mac: "02:00:00:00:00:01"
+    interfaces: [{name: eth0, type: ethernet, network: lan, address: 10.0.0.5/24}]
+behavior_timelines:
+  - name: ceiling
+    repeat_count: 1
+    phases:
+      - name: apply
+        duration_ms: 1000
+        faults: [{device: server-1, type: %s, value: %d}]
+`, faultType, value)
+	}
+
+	if _, err := config.LoadYAMLBytes(timeline("latency", 2500)); err != nil {
+		t.Errorf("LoadYAMLBytes(latency 2500ms) error = %v, want accepted", err)
+	}
+	if _, err := config.LoadYAMLBytes(timeline("dns_nxdomain", 2500)); !errors.Is(
+		err, config.ErrBehaviorFaultValue,
+	) {
+		t.Errorf("LoadYAMLBytes(dns_nxdomain 2500) error = %v, want %v", err, config.ErrBehaviorFaultValue)
 	}
 }

@@ -1,0 +1,93 @@
+# A network whose DHCP outage is authored, not armed.
+#
+# P2-1's wire clause asks that an injected fault be observable on the wire. The
+# fault API can arm one, but a wire test cannot reach it: the harness drives the
+# daemon in process and a session's stack is unexported. A behavior timeline is
+# the authored route to the same state -- a phase fault with no `interface` is
+# device-scoped -- so this file needs no test-only accessor and is the same
+# shape an operator would write.
+#
+# The single phase suppresses the DHCP offer for its first 15 seconds and, being
+# a reset phase, clears it at the end. The test asserts both halves: silence
+# while the phase runs, and a lease from the authored pool once it has ended.
+#
+# The transit network is the wire's own 10.254.200.0/24 (see wire_linux_test.go,
+# clientCIDR) and the pool starts above the client's .50 so a lease can never
+# collide with it.
+networks:
+  - name: wire-transit
+    subnet: 10.254.200.0/24
+
+attachments:
+  - name: tester
+    connect: wire-transit
+
+devices:
+  # First in the list on purpose: DNSHandler.selectServerDevice walks the
+  # devices in order and stops at the first one deviceHasDNSRecords accepts,
+  # and that predicate is true for every YAML-loaded device (niac-go#1958 --
+  # parseDNSConfig(nil) returns a non-nil empty DNSConfig). With the router
+  # first, the router answers this resolver's queries and the fault authored
+  # here is never consulted.
+  - name: LAB-FAULT-DNS1
+    type: server
+    mac: "02:00:00:00:fa:02"
+    icmp:
+      enabled: true
+    dns:
+      forward_records:
+        - name: "host.fault.example"
+          ip: "10.254.200.90"
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: wire-transit
+        address: 10.254.200.2/24
+
+  - name: LAB-FAULT-R1
+    type: router
+    mac: "02:00:00:00:fa:01"
+    icmp:
+      enabled: true
+    snmp_agent:
+      enabled: true
+      community: fault_public
+      sysname: LAB-FAULT-R1
+    dhcp:
+      pool_start: 10.254.200.100
+      pool_end: 10.254.200.199
+      subnet_mask: 255.255.255.0
+      router: 10.254.200.1
+      server_identifier: 10.254.200.1
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: wire-transit
+        address: 10.254.200.1/24
+
+behavior_timelines:
+  - name: dhcp-outage
+    repeat_count: 1
+    phases:
+      - name: no-offer
+        duration_ms: 15000
+        reset: true
+        faults:
+          - device: LAB-FAULT-R1
+            type: dhcp_no_offer
+            value: 1
+
+  # Starts late and never resets, so the session has a healthy window first:
+  # the test resolves the authored name before the phase begins and again
+  # after it, and a resolver that answered NXDOMAIN either way -- a malformed
+  # query does exactly that -- fails on the first half.
+  - name: dns-outage
+    repeat_count: 1
+    phases:
+      - name: nxdomain
+        start_offset_ms: 10000
+        duration_ms: 86400000
+        faults:
+          - device: LAB-FAULT-DNS1
+            type: dns_nxdomain
+            value: 1

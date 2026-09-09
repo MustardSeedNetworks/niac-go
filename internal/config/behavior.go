@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 // Sentinel errors returned by behavior timeline validation, matched by
@@ -24,9 +26,19 @@ var (
 	// ErrBehaviorScheduleTooLarge means the timeline would exceed
 	// maxBehaviorScheduledActions once expanded into discrete scheduled actions.
 	ErrBehaviorScheduleTooLarge = errors.New("behavior schedule is too large")
+	// ErrBehaviorFaultScope means a phase fault names an interface for a
+	// device-scoped fault, or omits one for an interface-scoped fault.
+	ErrBehaviorFaultScope = errors.New("behavior fault scope does not match its type")
+	// ErrBehaviorFaultValue means a phase fault's value exceeds the ceiling
+	// its own type carries.
+	ErrBehaviorFaultValue = errors.New("behavior fault value is out of range")
 )
 
 const maxBehaviorScheduledActions = 100_000
+
+// interfaceFaultMax is the ceiling every interface-scoped fault shares: they
+// are all rates or percentages.
+const interfaceFaultMax = 100
 
 type behaviorTarget struct {
 	count      int
@@ -201,10 +213,64 @@ func validateBehaviorTimeline(timeline BehaviorTimeline, targets map[string]beha
 			}
 		}
 		for _, fault := range phase.Faults {
-			if err := validateBehaviorTarget(targets, fault.Device, fault.Interface); err != nil {
+			if err := validateBehaviorFault(targets, fault); err != nil {
 				return fmt.Errorf("phase %q fault: %w", phase.Name, err)
 			}
 		}
+	}
+	return nil
+}
+
+// validateBehaviorFault checks one authored fault against the device list and
+// against its own axis. The presence of an interface is the discriminator, so
+// a fault whose type and scope disagree is refused here rather than failing at
+// apply time inside a running session.
+func validateBehaviorFault(targets map[string]behaviorTarget, fault BehaviorFault) error {
+	deviceFault, isDeviceFault := deviceFaultDefinition(fault.Type)
+	switch {
+	case isDeviceFault && fault.Interface != "":
+		return fmt.Errorf(
+			"%w: %q is device-scoped and takes no interface", ErrBehaviorFaultScope, fault.Type,
+		)
+	case !isDeviceFault && fault.Interface == "":
+		return fmt.Errorf(
+			"%w: %q is interface-scoped and needs an interface", ErrBehaviorFaultScope, fault.Type,
+		)
+	}
+	ceiling := interfaceFaultMax
+	if isDeviceFault {
+		ceiling = deviceFault.MaxValue
+	}
+	if fault.Value > ceiling {
+		return fmt.Errorf(
+			"%w: %q accepts at most %d, got %d",
+			ErrBehaviorFaultValue, fault.Type, ceiling, fault.Value,
+		)
+	}
+	if isDeviceFault {
+		return validateBehaviorDevice(targets, fault.Device)
+	}
+	return validateBehaviorTarget(targets, fault.Device, fault.Interface)
+}
+
+// deviceFaultDefinition reports whether a fault type belongs to the
+// device-service axis, with the ceiling that type carries.
+func deviceFaultDefinition(faultType string) (devicestate.DeviceFaultDefinition, bool) {
+	for _, definition := range devicestate.DeviceFaultDefinitions() {
+		if string(definition.Type) == faultType {
+			return definition, true
+		}
+	}
+	return devicestate.DeviceFaultDefinition{}, false
+}
+
+func validateBehaviorDevice(targets map[string]behaviorTarget, device string) error {
+	target, found := targets[device]
+	if !found {
+		return fmt.Errorf("%w: device %q", ErrBehaviorTargetNotFound, device)
+	}
+	if target.count != 1 {
+		return fmt.Errorf("%w: device %q", ErrBehaviorTargetAmbiguous, device)
 	}
 	return nil
 }

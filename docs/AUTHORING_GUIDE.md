@@ -366,9 +366,33 @@ behavior_timelines:
             value: 5
 ```
 
-Faults here are interface-scoped: they raise SNMP counters. They do not take a
-service out — `fcs_errors`, `packet_discards`, `interface_errors` and
-`high_utilization` are the whole vocabulary.
+A fault's scope is whether it names an `interface`. Named, it is one
+interface's SNMP telemetry: `fcs_errors`, `packet_discards`,
+`interface_errors` and `high_utilization`, each a rate of 1..100.
+
+Omitted, it is a device-service outcome — the device answers differently
+rather than counting differently — and the vocabulary is `dhcp_no_offer`,
+`dns_nxdomain`, `dns_timeout` and `latency`. The first three are armed by any
+value of 1 or more; `latency` is a delay in milliseconds, up to 60000.
+
+```yaml
+behavior_timelines:
+  - name: dhcp-outage
+    repeat_count: 1
+    phases:
+      - name: no-offer
+        duration_ms: 15000
+        reset: true
+        faults:
+          - device: clinic-dhcp-01
+            type: dhcp_no_offer
+            value: 1
+```
+
+Naming an interface on a device-scoped fault, or omitting one on an
+interface-scoped fault, is refused when the config loads. A device fault
+needs a device that runs the service it suppresses — a `dns_nxdomain` on a
+device with no DNS records has nothing to make fail.
 
 ## Rules that cost people a round trip
 

@@ -81,6 +81,12 @@ func (r *clockTestTarget) SetInterfaceFault(
 	return nil
 }
 
+func (r *clockTestTarget) SetDeviceFault(
+	_ string, _ devicestate.DeviceFaultType, _ int,
+) error {
+	return nil
+}
+
 func (r *clockTestTarget) snapshot() []devicestate.FaultType {
 	r.mu.Lock()
 	defer r.mu.Unlock()

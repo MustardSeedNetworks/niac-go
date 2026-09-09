@@ -9,9 +9,12 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
-// Target applies one timeline action to authoritative device state.
+// Target applies one timeline action to authoritative device state. The two
+// setters are the two fault axes: interface telemetry and device service
+// outcomes.
 type Target interface {
 	SetInterfaceFault(string, string, devicestate.FaultType, int) error
+	SetDeviceFault(string, devicestate.DeviceFaultType, int) error
 }
 
 // Clock is the single time seam for timeline replay: both the timestamps a run
@@ -144,6 +147,14 @@ func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{})
 		for _, action := range transition.Actions {
 			if err := r.target.SetInterfaceFault(
 				action.Device, action.Interface, action.Type, action.Value,
+			); err != nil {
+				r.finish("failed", err.Error())
+				return
+			}
+		}
+		for _, action := range transition.DeviceActions {
+			if err := r.target.SetDeviceFault(
+				action.Device, action.Type, action.Value,
 			); err != nil {
 				r.finish("failed", err.Error())
 				return
