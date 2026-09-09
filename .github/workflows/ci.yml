@@ -1015,7 +1015,7 @@ jobs:
   # Defined once in MustardSeedNetworks/.github (fleet-shared); ci-complete
   # still needs: [ci-conformance].
   ci-conformance:
-    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-conformance.yml@1920efa9f091f05f20961ab6a07a9074c8344199 # approved optional idle policy
     permissions:
       contents: read
 
