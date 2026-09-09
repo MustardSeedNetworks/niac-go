@@ -9,20 +9,23 @@
 // precedent in the sibling repos.
 package capture
 
+import "github.com/MustardSeedNetworks/niac-go/internal/packetdecode"
+
 // Packet represents a single packet from a PCAP file.
 type Packet struct {
-	ID         string         `json:"id"`
-	Number     int            `json:"number"`
-	Timestamp  string         `json:"timestamp"`
-	SourceIP   string         `json:"sourceIp"`
-	DestIP     string         `json:"destIp"`
-	SourcePort *int           `json:"sourcePort,omitempty"`
-	DestPort   *int           `json:"destPort,omitempty"`
-	Protocol   string         `json:"protocol"`
-	Length     int            `json:"length"`
-	Info       string         `json:"info"`
-	RawData    string         `json:"rawData,omitempty"`
-	Headers    map[string]any `json:"headers,omitempty"`
+	ID         string                   `json:"id"`
+	Number     int                      `json:"number"`
+	Timestamp  string                   `json:"timestamp"`
+	SourceIP   string                   `json:"sourceIp"`
+	DestIP     string                   `json:"destIp"`
+	SourcePort *int                     `json:"sourcePort,omitempty"`
+	DestPort   *int                     `json:"destPort,omitempty"`
+	Protocol   string                   `json:"protocol"`
+	Length     int                      `json:"length"`
+	Info       string                   `json:"info"`
+	RawData    string                   `json:"rawData,omitempty"`
+	Headers    map[string]any           `json:"headers,omitempty"`
+	ByteRanges []packetdecode.ByteRange `json:"byteRanges,omitempty"`
 }
 
 // TimeRange represents the time span of a capture.

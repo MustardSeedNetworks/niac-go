@@ -1,3 +1,6 @@
+import { applyByteRanges, type PacketByteRange } from './protocol-byte-ranges';
+import { buildApplicationLayers, buildTransportLayer } from './protocol-layer-payload';
+
 export interface ProtocolField {
   name: string;
   value: string;
@@ -9,9 +12,11 @@ export interface ProtocolLayer {
   name: string;
   fields: ProtocolField[];
   expanded?: boolean;
+  byteEnd?: number;
 }
 
-interface PacketMeta {
+export interface PacketMeta {
+  byteRanges?: PacketByteRange[];
   timestamp?: string;
   protocol?: string;
   sourceIp?: string;
@@ -34,38 +39,42 @@ export function buildProtocolLayers(
 
   layers.push(buildFrameLayer(packet));
   layers.push(buildEthernetLayer(headers));
+  const vlan = headers?.dot1q as Record<string, unknown> | undefined;
+  if (vlan)
+    layers.push({
+      name: '802.1Q',
+      fields: [
+        { name: 'VLAN', value: String(vlan.vlanId) },
+        { name: 'Priority', value: String(vlan.priority) },
+      ],
+    });
   const ipLayer = buildIpLayer(headers, packet);
   if (ipLayer) layers.push(ipLayer);
   const transportLayer = buildTransportLayer(headers, packet);
   if (transportLayer) layers.push(transportLayer);
   layers.push(...buildApplicationLayers(headers, packet.protocol));
+  applyByteRanges(layers, packet.byteRanges);
 
   return layers;
 }
 
-/** Minimum header length: a bare Ethernet II frame is always 14 bytes. */
-const MIN_HEADER_LENGTH = 14;
-
 /**
  * Derive the header/payload byte boundary from a packet's protocol layers.
  *
- * Every layer up through the transport header (Ethernet, IP, TCP/UDP/ICMP)
- * annotates its fields with `byteStart`/`byteEnd`; application-layer fields
- * (DNS, ARP) do not, since their bytes belong to the payload. The boundary
- * is the highest `byteEnd` seen across all layers, i.e. the first payload
- * byte, clamped to the Ethernet header's fixed 14-byte minimum for packets
- * whose Ethernet layer couldn't be fully parsed (e.g. no EtherType field).
+ * Complete decoded layer ranges include options and extension headers. Without
+ * decoder metadata, no bytes are claimed as parsed headers.
  */
 export function computeHeaderBoundary(layers: ProtocolLayer[]): number {
   let boundary = 0;
   for (const layer of layers) {
+    boundary = Math.max(boundary, layer.byteEnd ?? 0);
     for (const field of layer.fields) {
       if (field.byteEnd !== undefined && field.byteEnd > boundary) {
         boundary = field.byteEnd;
       }
     }
   }
-  return Math.max(boundary, MIN_HEADER_LENGTH);
+  return boundary;
 }
 
 function buildFrameLayer(packet: PacketMeta): ProtocolLayer {
@@ -89,26 +98,20 @@ function buildEthernetLayer(headers: Record<string, unknown> | undefined): Proto
         {
           name: 'Source MAC',
           value: String(eth.srcMac ?? eth.src ?? ''),
-          byteStart: 6,
-          byteEnd: 12,
         },
         {
           name: 'Destination MAC',
           value: String(eth.dstMac ?? eth.dst ?? ''),
-          byteStart: 0,
-          byteEnd: 6,
         },
-        ...(eth.etherType
-          ? [{ name: 'EtherType', value: String(eth.etherType), byteStart: 12, byteEnd: 14 }]
-          : []),
+        ...(eth.etherType ? [{ name: 'EtherType', value: String(eth.etherType) }] : []),
       ],
     };
   }
   return {
     name: 'Ethernet II',
     fields: [
-      { name: 'Source MAC', value: '(not parsed)', byteStart: 6, byteEnd: 12 },
-      { name: 'Destination MAC', value: '(not parsed)', byteStart: 0, byteEnd: 6 },
+      { name: 'Source MAC', value: '(not parsed)' },
+      { name: 'Destination MAC', value: '(not parsed)' },
     ],
   };
 }
@@ -134,17 +137,15 @@ function buildIpLayer(
         {
           name: 'Source',
           value: String(ip.src ?? packet.sourceIp ?? ''),
-          byteStart: 26,
-          byteEnd: 30,
         },
         {
           name: 'Destination',
           value: String(ip.dst ?? packet.destIp ?? ''),
-          byteStart: 30,
-          byteEnd: 34,
         },
-        ...(ip.ttl !== undefined
-          ? [{ name: 'TTL', value: String(ip.ttl), byteStart: 22, byteEnd: 23 }]
+        ...(ip.ttl !== undefined ? [{ name: 'TTL', value: String(ip.ttl) }] : []),
+        ...(ip.hopLimit !== undefined ? [{ name: 'Hop Limit', value: String(ip.hopLimit) }] : []),
+        ...(ip.nextHeader !== undefined
+          ? [{ name: 'Next Header', value: String(ip.nextHeader) }]
           : []),
         ...(ip.protocol !== undefined ? [{ name: 'Protocol', value: String(ip.protocol) }] : []),
       ],
@@ -155,153 +156,11 @@ function buildIpLayer(
     return {
       name: 'Internet Protocol Version 4 (IPv4)',
       fields: [
-        { name: 'Source', value: packet.sourceIp, byteStart: 26, byteEnd: 30 },
-        { name: 'Destination', value: packet.destIp, byteStart: 30, byteEnd: 34 },
+        { name: 'Source', value: packet.sourceIp },
+        { name: 'Destination', value: packet.destIp },
       ],
     };
   }
 
   return null;
-}
-
-function buildTransportLayer(
-  headers: Record<string, unknown> | undefined,
-  packet: PacketMeta,
-): ProtocolLayer | null {
-  const proto = packet.protocol?.toUpperCase();
-  const tcp = headers?.tcp as Record<string, unknown> | undefined;
-  const udp = headers?.udp as Record<string, unknown> | undefined;
-  const icmp = headers?.icmp as Record<string, unknown> | undefined;
-
-  if (tcp || proto === 'TCP') return buildTcpLayer(tcp, packet);
-  if (udp || proto === 'UDP') return buildUdpLayer(udp, packet);
-  if (icmp || proto === 'ICMP') return buildIcmpLayer(icmp);
-  return null;
-}
-
-function buildTcpLayer(
-  tcp: Record<string, unknown> | undefined,
-  packet: PacketMeta,
-): ProtocolLayer {
-  const s = 34; // typical TCP header offset
-  return {
-    name: 'Transmission Control Protocol (TCP)',
-    fields: [
-      {
-        name: 'Source Port',
-        value: String(tcp?.srcPort ?? packet.sourcePort ?? ''),
-        byteStart: s,
-        byteEnd: s + 2,
-      },
-      {
-        name: 'Destination Port',
-        value: String(tcp?.dstPort ?? packet.destPort ?? ''),
-        byteStart: s + 2,
-        byteEnd: s + 4,
-      },
-      ...(tcp?.seq !== undefined
-        ? [{ name: 'Sequence Number', value: String(tcp.seq), byteStart: s + 4, byteEnd: s + 8 }]
-        : []),
-      ...(tcp?.ack !== undefined
-        ? [
-            {
-              name: 'Acknowledgment Number',
-              value: String(tcp.ack),
-              byteStart: s + 8,
-              byteEnd: s + 12,
-            },
-          ]
-        : []),
-      ...(tcp?.flags
-        ? [{ name: 'Flags', value: String(tcp.flags), byteStart: s + 13, byteEnd: s + 14 }]
-        : []),
-      ...(tcp?.window !== undefined ? [{ name: 'Window Size', value: String(tcp.window) }] : []),
-    ],
-  };
-}
-
-function buildUdpLayer(
-  udp: Record<string, unknown> | undefined,
-  packet: PacketMeta,
-): ProtocolLayer {
-  const s = 34;
-  return {
-    name: 'User Datagram Protocol (UDP)',
-    fields: [
-      {
-        name: 'Source Port',
-        value: String(udp?.srcPort ?? packet.sourcePort ?? ''),
-        byteStart: s,
-        byteEnd: s + 2,
-      },
-      {
-        name: 'Destination Port',
-        value: String(udp?.dstPort ?? packet.destPort ?? ''),
-        byteStart: s + 2,
-        byteEnd: s + 4,
-      },
-      ...(udp?.length !== undefined
-        ? [{ name: 'Length', value: String(udp.length), byteStart: s + 4, byteEnd: s + 6 }]
-        : []),
-    ],
-  };
-}
-
-function buildIcmpLayer(icmp: Record<string, unknown> | undefined): ProtocolLayer {
-  return {
-    name: 'Internet Control Message Protocol (ICMP)',
-    fields: [
-      ...(icmp?.type !== undefined
-        ? [{ name: 'Type', value: String(icmp.type), byteStart: 34, byteEnd: 35 }]
-        : []),
-      ...(icmp?.code !== undefined
-        ? [{ name: 'Code', value: String(icmp.code), byteStart: 35, byteEnd: 36 }]
-        : []),
-      ...(icmp?.id !== undefined ? [{ name: 'Identifier', value: String(icmp.id) }] : []),
-      ...(icmp?.seq !== undefined ? [{ name: 'Sequence', value: String(icmp.seq) }] : []),
-    ],
-  };
-}
-
-function buildApplicationLayers(
-  headers: Record<string, unknown> | undefined,
-  protocol: string | undefined,
-): ProtocolLayer[] {
-  const layers: ProtocolLayer[] = [];
-  const proto = protocol?.toUpperCase();
-  const dns = headers?.dns as Record<string, unknown> | undefined;
-  const arp = headers?.arp as Record<string, unknown> | undefined;
-
-  if (dns || proto === 'DNS') {
-    layers.push(buildDnsLayer(dns));
-  }
-  if (arp || proto === 'ARP') {
-    layers.push(buildArpLayer(arp));
-  }
-  return layers;
-}
-
-function buildDnsLayer(dns: Record<string, unknown> | undefined): ProtocolLayer {
-  return {
-    name: 'Domain Name System (DNS)',
-    fields: [
-      ...(dns?.id !== undefined ? [{ name: 'Transaction ID', value: String(dns.id) }] : []),
-      ...(dns?.qr !== undefined ? [{ name: 'QR', value: dns.qr ? 'Response' : 'Query' }] : []),
-      ...(dns?.questions ? [{ name: 'Questions', value: String(dns.questions) }] : []),
-      ...(dns?.answers ? [{ name: 'Answers', value: String(dns.answers) }] : []),
-    ],
-  };
-}
-
-function buildArpLayer(arp: Record<string, unknown> | undefined): ProtocolLayer {
-  return {
-    name: 'Address Resolution Protocol (ARP)',
-    fields: [
-      ...(arp?.operation !== undefined ? [{ name: 'Opcode', value: String(arp.operation) }] : []),
-      ...(arp?.senderMac ? [{ name: 'Sender MAC', value: String(arp.senderMac) }] : []),
-      ...(arp?.senderIp ? [{ name: 'Sender IP', value: String(arp.senderIp) }] : []),
-      ...(arp?.targetMac ? [{ name: 'Target MAC', value: String(arp.targetMac) }] : []),
-      ...(arp?.targetIp ? [{ name: 'Target IP', value: String(arp.targetIp) }] : []),
-    ],
-  };
 }

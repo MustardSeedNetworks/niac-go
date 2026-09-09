@@ -473,6 +473,11 @@ jobs:
           CGO_ENABLED: "0"
         run: go test ./internal/api/ -run 'AddrInUse|BindWithFallback' -v
 
+      - name: Test decoded packet metadata
+        env:
+          CGO_ENABLED: "0"
+        run: go test ./internal/packetdecode/ -v
+
   # Windows-tagged Go has never been linted: golangci-lint runs on ubuntu and
   # skips *_windows.go, and the Windows job runs build/vet/tests but no linter.
   # GOOS=windows makes golangci-lint compile and lint the whole Windows tree on

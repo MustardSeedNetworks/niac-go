@@ -74,6 +74,51 @@ describe('PacketInspectorPage — filtered export', () => {
     selectedSessionId = null;
   });
 
+  it('buffers five paused packets and reveals them on resume', async () => {
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Pause' }));
+    act(() => {
+      for (let index = 0; index < 5; index++)
+        capturedOnMessage?.({
+          type: 'packet',
+          timestamp: '2026-09-09T12:00:00Z',
+          data: { protocol: 'UDP', size: 64, summary: `paused-${index}` },
+        });
+    });
+    expect(screen.getByText('5 new')).toBeInTheDocument();
+    expect(screen.getByText('0 / 0 packets')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(screen.getByText('5 / 5 packets')).toBeInTheDocument();
+    expect(screen.getByText('paused-4')).toBeInTheDocument();
+    expect(screen.queryByText('5 new')).not.toBeInTheDocument();
+  });
+
+  it('discloses evictions and clears paused pending packets', async () => {
+    render(
+      <MemoryRouter>
+        <PacketInspectorPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Pause' }));
+    act(() => {
+      for (let index = 0; index < 150; index++)
+        capturedOnMessage?.({
+          type: 'packet',
+          timestamp: '2026-09-09T12:00:00Z',
+          data: { protocol: 'UDP', size: 64 },
+        });
+    });
+    expect(screen.getByText('50 evicted · 100 packet limit')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(screen.getByText('0 / 0 packets')).toBeInTheDocument();
+    expect(screen.getByText('0 evicted · 100 packet limit')).toBeInTheDocument();
+  });
+
   it('exports only the packets matching the active display filter', async () => {
     render(
       <MemoryRouter>

@@ -20,6 +20,7 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
     if (!packet) return [];
 
     const pkt = {
+      byteRanges: packet.byteRanges,
       timestamp: packet.timestamp,
       protocol: packet.protocol,
       sourceIp: packet.sourceIp ?? (packet as PcapPacket).sourceIp,

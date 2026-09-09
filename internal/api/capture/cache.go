@@ -65,6 +65,11 @@ func estimateResultSize(result *AnalysisResult) int64 {
 		size += int64(len(pkt.ID) + len(pkt.Timestamp) + len(pkt.SourceIP))
 		size += int64(len(pkt.DestIP) + len(pkt.Protocol) + len(pkt.Info))
 		size += int64(len(pkt.RawData)) // RawData is the main contributor
+		// Two string headers and two offsets per range, plus their text.
+		const byteRangeOverhead = 48
+		for _, span := range pkt.ByteRanges {
+			size += int64(byteRangeOverhead + len(span.Layer) + len(span.Field))
+		}
 		// Headers map estimate
 		for k, v := range pkt.Headers {
 			size += int64(len(k) + headerValueEstimate) // key + approximate value size
