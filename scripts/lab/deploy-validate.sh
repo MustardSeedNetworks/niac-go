@@ -73,14 +73,16 @@ resolve_version() {
 	[[ -n "$VERSION" ]] || die "could not resolve the latest release tag"
 }
 
-# deb or rpm, decided by what the host actually has rather than by its name.
+# deb or rpm, decided by the tool that INSTALLS rather than the one that queries:
+# dev-srv-fedora carries /usr/bin/dpkg with no apt-get behind it, and asking for
+# dpkg there picked the .deb and then failed at "sudo: apt-get: command not found".
 host_package_format() {
-	if on_host 'command -v dpkg' >/dev/null 2>&1; then
+	if on_host 'command -v apt-get' >/dev/null 2>&1; then
 		printf 'deb'
-	elif on_host 'command -v rpm' >/dev/null 2>&1; then
+	elif on_host 'command -v dnf' >/dev/null 2>&1 || on_host 'command -v yum' >/dev/null 2>&1; then
 		printf 'rpm'
 	else
-		die "host $HOST has neither dpkg nor rpm"
+		die "host $HOST has neither apt-get nor dnf/yum"
 	fi
 }
 
@@ -117,8 +119,8 @@ install_package() {
 	case "$format:$mode" in
 	deb:install) on_host "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y '$remote'" ;;
 	deb:reinstall) on_host "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --reinstall '$remote'" ;;
-	rpm:install) on_host "sudo dnf install -y --allowerasing '$remote'" ;;
-	rpm:reinstall) on_host "sudo dnf reinstall -y '$remote'" ;;
+	rpm:install) on_host "sudo \$(command -v dnf || command -v yum) install -y --allowerasing '$remote'" ;;
+	rpm:reinstall) on_host "sudo \$(command -v dnf || command -v yum) reinstall -y '$remote'" ;;
 	esac
 }
 
