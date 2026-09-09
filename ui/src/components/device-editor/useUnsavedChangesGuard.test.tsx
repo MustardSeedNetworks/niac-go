@@ -23,6 +23,21 @@ afterEach(() => {
 });
 
 describe('useUnsavedChangesGuard', () => {
+  it('blocks a sidebar navigation button until confirmed', () => {
+    const navigate = vi.fn();
+    const { result } = renderHook(() => useUnsavedChangesGuard(true, navigate));
+    const button = document.createElement('button');
+    button.dataset.navigationPath = '/devices';
+    const click = vi.fn();
+    button.addEventListener('click', click);
+    document.body.appendChild(button);
+    act(() => button.click());
+    expect(click).not.toHaveBeenCalled();
+    expect(result.current.pendingPath).toBe('/devices');
+    act(() => result.current.confirmNavigate());
+    expect(navigate).toHaveBeenCalledWith('/devices');
+    button.remove();
+  });
   it('navigates immediately via requestNavigate when not dirty', () => {
     const navigate = vi.fn();
     const { result } = renderHook(() => useUnsavedChangesGuard(false, navigate));

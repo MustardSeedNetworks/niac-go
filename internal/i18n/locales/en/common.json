@@ -170,5 +170,10 @@
     "requestFailedTitle": "Request failed",
     "streamDisconnectedMessage": "Reconnecting…",
     "streamDisconnectedTitle": "Log stream disconnected"
+  },
+  "unsaved": {
+    "discardMessage": "Discard the unsaved changes, or cancel to keep editing.",
+    "message": "Save your changes before continuing, discard them, or cancel to keep editing.",
+    "title": "Unsaved changes"
   }
 }

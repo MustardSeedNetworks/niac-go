@@ -72,6 +72,7 @@ const NavItemButton: FC<NavItemButtonProps> = ({ item, active, collapsed, onNavi
   <button
     type="button"
     onClick={() => onNavigate(item.path)}
+    data-navigation-path={item.path}
     onMouseEnter={() => prefetchRoute(item.path)}
     // Keyed by route so a spec names the destination rather than the label,
     // which is translated copy and changes without the navigation changing.

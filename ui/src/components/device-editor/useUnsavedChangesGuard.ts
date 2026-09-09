@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface UnsavedChangesGuard {
   /** Path awaiting confirmation, or null when no navigation is pending. */
   pendingPath: string | null;
+  pending: boolean;
+  requestAction: (action: () => void) => void;
   /** Navigate now if there are no unsaved changes; otherwise queue a confirmation. */
   requestNavigate: (path: string) => void;
   /** User confirmed leaving — discard the guard and navigate to the pending path. */
@@ -16,8 +18,8 @@ export interface UnsavedChangesGuard {
  *
  * Two escape hatches are covered:
  * - Same-tab navigation: a document-level capture-phase click listener
- *   intercepts clicks on internal `<a>` elements (the app's Sidebar/NavLink
- *   render anchors) while `isDirty` is true, so clicking away from the
+ *   intercepts internal links and marked navigation buttons while dirty,
+ *   so clicking away from the
  *   editor mid-edit surfaces a confirmation instead of silently discarding
  *   the in-progress changes. `requestNavigate` covers the editor's own
  *   "Back" button, which isn't an anchor.
@@ -37,6 +39,12 @@ export const useUnsavedChangesGuard = (
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ run: () => void } | null>(null);
+
+  const requestAction = useCallback((run: () => void) => {
+    if (isDirtyRef.current) setPendingAction({ run });
+    else run();
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -60,11 +68,11 @@ export const useUnsavedChangesGuard = (
         return;
       }
       const target = event.target as HTMLElement | null;
-      const anchor = target?.closest?.('a[href]');
+      const anchor = target?.closest?.('a[href], button[data-navigation-path]');
       if (!anchor || anchor.hasAttribute('target') || anchor.hasAttribute('download')) {
         return;
       }
-      const href = anchor.getAttribute('href');
+      const href = anchor.getAttribute('href') ?? anchor.getAttribute('data-navigation-path');
       if (!href || href.startsWith('#')) {
         return;
       }
@@ -78,6 +86,7 @@ export const useUnsavedChangesGuard = (
         return;
       }
       event.preventDefault();
+      event.stopPropagation();
       setPendingPath(`${url.pathname}${url.search}${url.hash}`);
     };
     document.addEventListener('click', handleClick, true);
@@ -96,14 +105,29 @@ export const useUnsavedChangesGuard = (
   );
 
   const confirmNavigate = useCallback(() => {
+    if (pendingAction) {
+      setPendingAction(null);
+      pendingAction.run();
+      return;
+    }
     if (pendingPath) {
       const target = pendingPath;
       setPendingPath(null);
       navigate(target);
     }
-  }, [pendingPath, navigate]);
+  }, [pendingPath, pendingAction, navigate]);
 
-  const cancelNavigate = useCallback(() => setPendingPath(null), []);
+  const cancelNavigate = useCallback(() => {
+    setPendingPath(null);
+    setPendingAction(null);
+  }, []);
 
-  return { pendingPath, requestNavigate, confirmNavigate, cancelNavigate };
+  return {
+    pendingPath,
+    pending: pendingPath !== null || pendingAction !== null,
+    requestAction,
+    requestNavigate,
+    confirmNavigate,
+    cancelNavigate,
+  };
 };
