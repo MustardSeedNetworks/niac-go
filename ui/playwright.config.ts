@@ -25,7 +25,7 @@ const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
  * - Replay functionality
  * - Network simulation
  *
- * Engines: Chromium and WebKit — the two the product targets. Actual Safari
+ * Engines: Chromium, WebKit and Firefox, plus installed Chrome and Edge. Actual Safari
  * remains a manual release-candidate gate because Playwright drives WebKit
  * rather than Safari itself.
  */
@@ -36,8 +36,8 @@ export default defineConfig({
   captureGitInfo: { commit: true, diff: false },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  // retries 1 (not 2) — one retry is enough to dodge transient flakes; the
-  //   second retry was costing ~30s × N flaky tests with no incremental signal.
+  // One retry diagnoses intermittent failures; CI's zero-flake budget still
+  // rejects a retry-pass.
   // workers 4 in CI (bumped from 2 in PR-N1) — GH Actions ubuntu-latest is
   //   4-vCPU. fullyParallel + workers=4 fills the box and roughly halves
   //   per-shard wall-clock under the seed cross-repo perf pattern.
@@ -56,7 +56,8 @@ export default defineConfig({
   use: {
     baseURL,
     storageState: 'playwright/.auth/user.json',
-    trace: 'on-first-retry',
+    // Keep the failing attempt; a trace of a successful retry cannot explain a flake.
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
     // Default: gated to local dev only. CI MUST hit real TLS per
@@ -114,17 +115,12 @@ export default defineConfig({
       testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
       use: { ...devices['Desktop Firefox'] },
     },
-    // Edge, because the authoring plan's Definition of Complete names Chrome,
-    // Edge and Safari as first-class authoring browsers and only two of the
-    // three were covered. `channel: 'msedge'` drives the real installed Edge
-    // rather than Chromium — the point is Edge's own integration, since the
-    // engine underneath is already exercised by the chromium project.
-    //
-    // Scoped to the authoring journey the criterion actually names — compose a
-    // scenario, edit a device, author a behaviour timeline — rather than the
-    // whole suite. Edge and Chromium share Blink, so running everything twice
-    // buys little; what is worth checking is that the journey completes in
-    // Edge's own shell.
+    // Installed browser channels cover authoring in the supported vendor builds.
+    {
+      name: 'chrome',
+      testMatch: /(behavior-timeline|scenario-pack|device-editor)\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
     {
       name: 'edge',
       testMatch: /(behavior-timeline|scenario-pack|device-editor)\.spec\.ts/,

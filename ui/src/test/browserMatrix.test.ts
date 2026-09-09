@@ -32,11 +32,22 @@ describe('browser support matrix', () => {
       'chromium',
       'webkit',
       'firefox',
+      'chrome',
       'edge',
       'tablet-safari',
       'mobile-chrome',
       'mobile-safari',
     ]);
+  });
+
+  it('drives the installed first-class browsers and retains failed attempts', () => {
+    expect(
+      criticalConfig.projects?.find((project) => project.name === 'chrome')?.use?.channel,
+    ).toBe('chrome');
+    expect(criticalConfig.projects?.find((project) => project.name === 'edge')?.use?.channel).toBe(
+      'msedge',
+    );
+    expect(criticalConfig.use?.trace).toBe('retain-on-failure');
   });
 
   // playwright.auth.config.ts spreads the base config, so it inherits this
