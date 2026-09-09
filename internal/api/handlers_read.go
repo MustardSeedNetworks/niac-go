@@ -121,13 +121,18 @@ func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	before, err := historyCursor(r)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_cursor", "before must be a positive run ID", nil)
+		return
+	}
 	if s.cfg.Storage == nil {
 		s.writeJSON(w, []storage.RunRecord{})
 
 		return
 	}
 
-	history, err := s.cfg.Storage.ListRuns(historyListLimit)
+	history, err := s.cfg.Storage.ListRunsBefore(historyListLimit, before)
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
 		s.logger.ErrorContext(r.Context(), "[API] Failed to list run history", "error", err)

@@ -34,6 +34,7 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchStats: vi.fn(),
     fetchDevices: vi.fn(),
     fetchHistory: vi.fn(),
+    fetchHistoryPage: vi.fn().mockResolvedValue([]),
     fetchNeighbors: vi.fn(),
     fetchVersion: vi.fn(),
     fetchErrorTypes: vi.fn(),
