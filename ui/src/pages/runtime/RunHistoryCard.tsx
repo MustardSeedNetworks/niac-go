@@ -70,7 +70,9 @@ export const RunHistoryCard: FC = () => {
               <SmallText className="text-text-muted italic">
                 {loading
                   ? t('common:status.loading')
-                  : t(hasNewer ? 'runtime.noOlderRuns' : 'runtime.noCapturedRuns')}
+                  : hasNewer
+                    ? t('runtime.noOlderRuns')
+                    : t('runtime.noCapturedRuns')}
               </SmallText>
             )
           )}
