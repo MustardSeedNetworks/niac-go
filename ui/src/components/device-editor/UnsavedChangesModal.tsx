@@ -43,7 +43,7 @@ export function UnsavedChangesModal({ open, saving, onSave, onDiscard, onCancel,
           {t('buttons.discard')}
         </Button>
         {onSave && (
-          <Button data-testid="unsaved-save" disabled={saving} onClick={onSave}>
+          <Button data-testid="unsaved-save" action="edit" disabled={saving} onClick={onSave}>
             {t('buttons.save')}
           </Button>
         )}
