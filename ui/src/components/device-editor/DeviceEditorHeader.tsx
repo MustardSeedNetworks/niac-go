@@ -86,6 +86,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
                 variant="outline"
                 leftIcon={<Trash2 className={iconSizes.md} />}
                 onClick={onDelete}
+                action="delete"
                 className="text-status-error hover:text-status-error border-status-error/30 hover:border-status-error/50"
                 disabled={deleting}
               >
@@ -105,6 +106,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
                 )
               }
               onClick={onSave}
+              action="edit"
               data-testid="device-editor-save"
               disabled={!isDirty || saving}
             >

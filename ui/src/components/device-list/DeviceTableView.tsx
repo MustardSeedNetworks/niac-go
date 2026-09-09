@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { deviceTypeColors, deviceTypeIcons } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { useDeviceList } from '../../contexts/DeviceListContext';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
@@ -72,14 +73,14 @@ export const DeviceTableView: FC = () => {
                   {/* Hostname */}
                   <div className="col-span-3 flex items-center gap-compact">
                     <DeviceIcon className={`${iconSizes.md} text-text-muted`} />
-                    <button
-                      type="button"
+                    <ActionButton
+                      action="edit"
                       onClick={() => onEdit(device.hostname)}
                       className="text-text-primary hover:text-brand-accent font-medium truncate"
                       title={t('list.openEditorTitle', { hostname: device.hostname })}
                     >
                       {device.hostname}
-                    </button>
+                    </ActionButton>
                   </div>
 
                   {/* Type */}
@@ -121,33 +122,33 @@ export const DeviceTableView: FC = () => {
 
                   {/* Actions */}
                   <div className="col-span-2 flex justify-end gap-tight">
-                    <button
-                      type="button"
+                    <ActionButton
+                      action="edit"
                       onClick={() => onEdit(device.hostname)}
                       className="pad-xs text-text-muted hover:text-brand-accent hover:bg-surface-hover rounded-lg transition-colors"
                       title={t('list.editDeviceTitle', { hostname: device.hostname })}
                       aria-label={t('list.editDeviceAria', { hostname: device.hostname })}
                     >
                       <Edit3 className={iconSizes.md} />
-                    </button>
-                    <button
-                      type="button"
+                    </ActionButton>
+                    <ActionButton
+                      action="edit"
                       onClick={() => onClone(device.hostname)}
                       className="pad-xs text-text-muted hover:text-status-info hover:bg-surface-hover rounded-lg transition-colors"
                       title={t('list.cloneDeviceTitle', { hostname: device.hostname })}
                       aria-label={t('list.cloneDeviceAria', { hostname: device.hostname })}
                     >
                       <Copy className={iconSizes.md} />
-                    </button>
-                    <button
-                      type="button"
+                    </ActionButton>
+                    <ActionButton
+                      action="delete"
                       onClick={() => onDelete(device.hostname)}
                       className="pad-xs text-text-muted hover:text-status-error hover:bg-surface-hover rounded-lg transition-colors"
                       title={t('list.deleteDeviceTitle', { hostname: device.hostname })}
                       aria-label={t('list.deleteDeviceAria', { hostname: device.hostname })}
                     >
                       <Trash2 className={iconSizes.md} />
-                    </button>
+                    </ActionButton>
                   </div>
                 </div>
               </div>
