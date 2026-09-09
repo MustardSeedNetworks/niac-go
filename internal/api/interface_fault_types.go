@@ -8,7 +8,8 @@ import (
 )
 
 // deviceFaultTargetResponse advertises which service outcomes one device can
-// serve; a device with no DHCP or DNS server is absent from the list.
+// serve; a device with no DHCP or DNS server offers only the outcomes that
+// need no service of their own, and one with no address at all is absent.
 type deviceFaultTargetResponse struct {
 	Device     string   `json:"device"`
 	Address    string   `json:"address,omitempty"`
@@ -48,6 +49,7 @@ func availableDeviceErrorTypes() []map[string]string {
 		devicestate.FaultDHCPNoOffer: "DHCP server consumes the Discover and sends no Offer",
 		devicestate.FaultDNSNXDomain: "DNS server answers every query with NXDOMAIN",
 		devicestate.FaultDNSTimeout:  "DNS server answers nothing at all",
+		devicestate.FaultLatency:     "Delay every ICMP echo reply (0-60000 ms)",
 	}
 	result := make([]map[string]string, 0, len(descriptions))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {

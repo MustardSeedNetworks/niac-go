@@ -72,13 +72,46 @@ func TestStoreDeviceFaultZeroClearsOnlyNamedFault(t *testing.T) {
 	}
 }
 
-func TestStoreDeviceFaultValueIsBounded(t *testing.T) {
+// Each fault type carries its own ceiling: a rate stops at 100, and latency
+// is milliseconds, so a shared 0-100 clamp would cap it at a tenth of a second
+// and silently rule out every delay a tester would notice.
+func TestStoreDeviceFaultValueIsBoundedPerType(t *testing.T) {
+	for _, definition := range devicestate.DeviceFaultDefinitions() {
+		t.Run(string(definition.Type), func(t *testing.T) {
+			store := faultStore()
+
+			if err := store.SetDeviceFault(
+				definition.Type, definition.MaxValue,
+			); err != nil {
+				t.Fatalf("SetDeviceFault(%d) error = %v", definition.MaxValue, err)
+			}
+			if got := store.DeviceFaultValue(definition.Type); got != definition.MaxValue {
+				t.Fatalf("DeviceFaultValue() = %d, want %d", got, definition.MaxValue)
+			}
+
+			if err := store.SetDeviceFault(
+				definition.Type, definition.MaxValue+1,
+			); !errors.Is(err, devicestate.ErrFaultValueInvalid) {
+				t.Fatalf("SetDeviceFault(%d) error = %v, want ErrFaultValueInvalid",
+					definition.MaxValue+1, err)
+			}
+		})
+	}
+}
+
+// Latency is the reason the ceiling became per-type; state the number the
+// rest of the stack relies on rather than leaving it to the loop above.
+func TestStoreLatencyFaultAcceptsMilliseconds(t *testing.T) {
 	store := faultStore()
 
-	if err := store.SetDeviceFault(devicestate.FaultDNSTimeout, 101); !errors.Is(
-		err, devicestate.ErrFaultValueInvalid,
-	) {
-		t.Fatalf("SetDeviceFault(101) error = %v, want ErrFaultValueInvalid", err)
+	if err := store.SetDeviceFault(devicestate.FaultLatency, 2500); err != nil {
+		t.Fatalf("SetDeviceFault(2500) error = %v", err)
+	}
+	if got := store.DeviceFaultValue(devicestate.FaultLatency); got != 2500 {
+		t.Fatalf("DeviceFaultValue() = %d, want 2500", got)
+	}
+	if got := store.DeviceFaultValue(devicestate.FaultDNSTimeout); got != 0 {
+		t.Fatalf("unarmed DeviceFaultValue() = %d, want 0", got)
 	}
 }
 

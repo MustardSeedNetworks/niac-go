@@ -23,7 +23,16 @@ const (
 	FaultDHCPNoOffer DeviceFaultType = "dhcp_no_offer"
 	FaultDNSNXDomain DeviceFaultType = "dns_nxdomain"
 	FaultDNSTimeout  DeviceFaultType = "dns_timeout"
+	FaultLatency     DeviceFaultType = "latency"
 )
+
+// faultRateMax bounds the fault types whose value is a percentage.
+const faultRateMax = 100
+
+// faultLatencyMaxMs bounds the latency fault, matching the reflector's own
+// latency ceiling (`config.ReflectorConfig.LatencyMs`, lte=60000) so an
+// operator meets one number for a delay however it is authored.
+const faultLatencyMaxMs = 60000
 
 // DeviceFault is one active service outcome on a simulated device.
 type DeviceFault struct {
@@ -31,17 +40,23 @@ type DeviceFault struct {
 	Value int
 }
 
-// DeviceFaultDefinition is one supported device fault and its label.
+// DeviceFaultDefinition is one supported device fault, its label and the
+// largest value it accepts. The ceiling belongs to the fault rather than to
+// the setter: the first three are rates and stop at 100, while latency is
+// milliseconds, and a shared clamp would silently cap it at a tenth of a
+// second.
 type DeviceFaultDefinition struct {
-	Type  DeviceFaultType
-	Label string
+	Type     DeviceFaultType
+	Label    string
+	MaxValue int
 }
 
 func deviceFaultDefinitions() []DeviceFaultDefinition {
 	return []DeviceFaultDefinition{
-		{Type: FaultDHCPNoOffer, Label: "DHCP No Offer"},
-		{Type: FaultDNSNXDomain, Label: "DNS NXDOMAIN"},
-		{Type: FaultDNSTimeout, Label: "DNS Timeout"},
+		{Type: FaultDHCPNoOffer, Label: "DHCP No Offer", MaxValue: faultRateMax},
+		{Type: FaultDNSNXDomain, Label: "DNS NXDOMAIN", MaxValue: faultRateMax},
+		{Type: FaultDNSTimeout, Label: "DNS Timeout", MaxValue: faultRateMax},
+		{Type: FaultLatency, Label: "Latency", MaxValue: faultLatencyMaxMs},
 	}
 }
 
@@ -73,10 +88,11 @@ func ParseDeviceFaultLabel(label string) (DeviceFaultType, bool) {
 // SetDeviceFault arms one device-service fault. A zero value clears only that
 // fault type.
 func (s *Store) SetDeviceFault(faultType DeviceFaultType, value int) error {
-	if !validDeviceFaultType(faultType) {
+	definition, known := deviceFaultDefinition(faultType)
+	if !known {
 		return ErrDeviceFaultTypeInvalid
 	}
-	if value < 0 || value > 100 {
+	if value < 0 || value > definition.MaxValue {
 		return ErrFaultValueInvalid
 	}
 
@@ -123,10 +139,26 @@ func (s *Store) DeviceFaultActive(faultType DeviceFaultType) bool {
 	return active && fault.Value > 0
 }
 
-func validDeviceFaultType(faultType DeviceFaultType) bool {
-	return slices.ContainsFunc(deviceFaultDefinitions(), func(definition DeviceFaultDefinition) bool {
-		return definition.Type == faultType
-	})
+// DeviceFaultValue returns the armed value of one device fault, or zero when
+// it is not armed. Latency needs the number rather than the bit that
+// DeviceFaultActive reports.
+func (s *Store) DeviceFaultValue(faultType DeviceFaultType) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.deviceFaults[faultType].Value
+}
+
+func deviceFaultDefinition(faultType DeviceFaultType) (DeviceFaultDefinition, bool) {
+	index := slices.IndexFunc(
+		deviceFaultDefinitions(), func(definition DeviceFaultDefinition) bool {
+			return definition.Type == faultType
+		})
+	if index < 0 {
+		return DeviceFaultDefinition{}, false
+	}
+
+	return deviceFaultDefinitions()[index], true
 }
 
 func cloneDeviceFaults(faults map[DeviceFaultType]DeviceFault) map[DeviceFaultType]DeviceFault {

@@ -329,13 +329,17 @@ provides a Traffic Injection page with controls for injecting errors on device i
     {
       "type": "DNS Timeout",
       "description": "DNS server answers nothing at all"
+    },
+    {
+      "type": "Latency",
+      "description": "Delay every ICMP echo reply (0-60000 ms)"
     }
   ],
   "device_targets": [
     {
       "device": "site-gateway",
       "address": "192.168.1.1",
-      "errorTypes": ["DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout"]
+      "errorTypes": ["DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency"]
     }
   ],
   "active_device_errors": {

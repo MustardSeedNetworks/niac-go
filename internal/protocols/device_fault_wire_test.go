@@ -1,9 +1,12 @@
 package protocols
 
 import (
+	"bytes"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -149,5 +152,159 @@ func dhcpDiscover(clientMAC net.HardwareAddr) *dhcpPacketInfo {
 			},
 		},
 		messageType: DHCPDiscover,
+	}
+}
+
+// Latency is the one device fault with nothing to suppress: the device still
+// answers, just late. So the assertion is a schedule, not a silence -- no
+// reply the instant the handler returns, a reply after the armed delay, and
+// an immediate reply again once it is cleared.
+func TestLatencyFaultDefersTheEchoReply(t *testing.T) {
+	// Generous because the flake budget is zero: the work between the handler
+	// returning and the "not yet" check below is microseconds, so the delay
+	// only has to survive a scheduler stall on a loaded runner.
+	const delay = 250 * time.Millisecond
+
+	stack, handler, device := newFaultedICMPHandler(t)
+	devices := []*config.Device{device}
+	request, ipLayer := echoRequest(device, 1)
+
+	handler.HandlePacket(request, ipLayer, devices)
+	assertEchoReply(t, mustEchoReply(t, stack), 1)
+
+	if err := stack.SetDeviceFault(
+		device.Name, devicestate.FaultLatency, int(delay.Milliseconds()),
+	); err != nil {
+		t.Fatalf("SetDeviceFault() error = %v", err)
+	}
+
+	faulted, faultedIP := echoRequest(device, 2)
+	start := time.Now()
+	handler.HandlePacket(faulted, faultedIP, devices)
+	select {
+	case pkt := <-stack.sendQueue:
+		t.Fatalf("latency fault did not defer the reply (sn=%d)", pkt.SerialNumber)
+	default:
+	}
+
+	// The reply is serialized before the delay starts, so the request's
+	// capture buffer -- reused on the next read -- may be gone by the time it
+	// is sent. Scribbling over it holds a later change to deferring the build
+	// to that same contract.
+	clear(faulted.Buffer)
+
+	reply := mustEchoReply(t, stack)
+	if elapsed := time.Since(start); elapsed < delay {
+		t.Fatalf("reply arrived after %s, want at least %s", elapsed, delay)
+	}
+	assertEchoReply(t, reply, 2)
+
+	if err := stack.SetDeviceFault(device.Name, devicestate.FaultLatency, 0); err != nil {
+		t.Fatalf("SetDeviceFault(clear) error = %v", err)
+	}
+	cleared, clearedIP := echoRequest(device, 3)
+	handler.HandlePacket(cleared, clearedIP, devices)
+	select {
+	case pkt := <-stack.sendQueue:
+		assertEchoReply(t, pkt, 3)
+	default:
+		t.Fatal("cleared fault still deferred the reply")
+	}
+}
+
+// echoRequestMAC is the tester's own MAC, and so the address every reply must
+// be addressed back to.
+func echoRequestMAC() net.HardwareAddr {
+	return net.HardwareAddr{0x02, 0x00, 0x14, 0x03, 0x00, 0x50}
+}
+
+func newFaultedICMPHandler(t *testing.T) (*Stack, *ICMPHandler, *config.Device) {
+	t.Helper()
+
+	cfg := &config.Config{Devices: []config.Device{{
+		Name:        "edge-1",
+		MACAddress:  net.HardwareAddr{0x02, 0x00, 0x14, 0x03, 0x00, 0x03},
+		IPAddresses: []net.IP{net.ParseIP("10.20.200.4")},
+		Interfaces:  []config.Interface{{Name: "Gi0/1", Address: "10.20.200.4/24", Speed: 100}},
+		SNMPConfig:  config.SNMPConfig{Community: "public"},
+	}}}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+
+	return stack, NewICMPHandler(stack), &cfg.Devices[0]
+}
+
+// echoRequest builds one ICMP echo request for device, using seq as both the
+// sequence number and the payload so a reply can be traced to its request.
+func echoRequest(device *config.Device, seq uint16) (*Packet, *layers.IPv4) {
+	ipLayer := &layers.IPv4{
+		Version: 4, IHL: 5, TTL: 64,
+		Protocol: layers.IPProtocolICMPv4,
+		SrcIP:    net.ParseIP("10.20.200.50").To4(),
+		DstIP:    device.IPAddresses[0].To4(),
+	}
+	buffer := gopacket.NewSerializeBuffer()
+	_ = gopacket.SerializeLayers(buffer,
+		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
+		&layers.Ethernet{
+			SrcMAC:       echoRequestMAC(),
+			DstMAC:       device.MACAddress,
+			EthernetType: layers.EthernetTypeIPv4,
+		},
+		ipLayer,
+		&layers.ICMPv4{
+			TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
+			Id:       0x4242, Seq: seq,
+		},
+		gopacket.Payload([]byte{byte(seq)}),
+	)
+
+	return &Packet{
+		Buffer: buffer.Bytes(), Length: len(buffer.Bytes()), SerialNumber: int(seq),
+	}, ipLayer
+}
+
+func mustEchoReply(t *testing.T, stack *Stack) *Packet {
+	t.Helper()
+
+	select {
+	case pkt := <-stack.sendQueue:
+		return pkt
+	case <-time.After(5 * time.Second):
+		t.Fatal("no ICMP echo reply queued")
+
+		return nil
+	}
+}
+
+func assertEchoReply(t *testing.T, pkt *Packet, seq uint16) {
+	t.Helper()
+
+	parsed := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	ethernet, ok := parsed.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	if !ok {
+		t.Fatalf("queued packet carries no Ethernet layer: % x", pkt.Buffer)
+	}
+	// The addresses are read straight out of the request's capture buffer, so
+	// they are what a reply that failed to own its bytes gets wrong.
+	if !bytes.Equal(ethernet.DstMAC, echoRequestMAC()) {
+		t.Fatalf("reply destination MAC = %s, want %s", ethernet.DstMAC, echoRequestMAC())
+	}
+
+	layer := parsed.Layer(layers.LayerTypeICMPv4)
+	if layer == nil {
+		t.Fatalf("queued packet carries no ICMP layer: % x", pkt.Buffer)
+	}
+	icmp, ok := layer.(*layers.ICMPv4)
+	if !ok {
+		t.Fatalf("ICMP layer type = %T", layer)
+	}
+	if icmp.TypeCode.Type() != layers.ICMPv4TypeEchoReply {
+		t.Fatalf("ICMP type = %d, want echo reply", icmp.TypeCode.Type())
+	}
+	if icmp.Seq != seq || icmp.Id != 0x4242 {
+		t.Fatalf("reply id=%d seq=%d, want id=16962 seq=%d", icmp.Id, icmp.Seq, seq)
+	}
+	if len(icmp.Payload) != 1 || icmp.Payload[0] != byte(seq) {
+		t.Fatalf("reply payload = % x, want %02x", icmp.Payload, seq)
 	}
 }
