@@ -115,7 +115,12 @@ export const StandaloneCaptureStarter: FC<{
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
-          <Button tone="violet" onClick={handleStart} disabled={!selectedIface || busy}>
+          <Button
+            action="start"
+            tone="violet"
+            onClick={handleStart}
+            disabled={!selectedIface || busy}
+          >
             {busy
               ? t('packets.inspector.startingLabel')
               : t('packets.inspector.startCaptureButton')}

@@ -365,6 +365,7 @@ export const PacketInspectorPage: FC = () => {
                       tone="red"
                       size="sm"
                       onClick={() => setShowStopCaptureConfirm(true)}
+                      action="stop"
                     >
                       {t('packets.inspector.stopCaptureButton')}
                     </Button>
@@ -529,6 +530,7 @@ export const PacketInspectorPage: FC = () => {
       <ConfirmModal
         isOpen={showStopCaptureConfirm}
         onConfirm={handleStopCaptureConfirmed}
+        action="stop"
         onCancel={() => setShowStopCaptureConfirm(false)}
         title={t('packets.inspector.stopCaptureConfirmTitle')}
         message={t('packets.inspector.stopCaptureConfirmMessage')}
