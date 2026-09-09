@@ -7,7 +7,13 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language';
-import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
+import {
+  Annotation,
+  EditorState,
+  type Extension,
+  StateEffect,
+  StateField,
+} from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -16,9 +22,10 @@ import {
   highlightActiveLineGutter,
   keymap,
   lineNumbers,
+  type ViewUpdate,
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { type FC, useCallback, useEffect, useMemo, useRef } from 'react';
+import { type FC, useEffect, useEffectEvent, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 
@@ -28,6 +35,7 @@ import i18n from '../../i18n';
  * `setErrorLineEffect` and cleared by dispatching it with `line: null`.
  */
 const setErrorLineEffect = StateEffect.define<number | null>();
+const externalValueSync = Annotation.define<boolean>();
 
 const errorLineDecoration = Decoration.line({ class: 'cm-niac-error-line' });
 
@@ -251,22 +259,21 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     return exts;
   }, [readOnly, placeholder, ariaLabel, showLineNumbers, showFoldGutter, lineWrapping]);
 
-  // Handle content updates
-  const handleUpdate = useCallback(
-    (update: { state: EditorState; docChanged: boolean }) => {
-      if (update.docChanged && onChange) {
-        const newValue = update.state.doc.toString();
-        onChange(newValue);
+  // Callback changes must not recreate the editor and discard its pending input or history.
+  const handleUpdate = useEffectEvent((update: ViewUpdate) => {
+    const userEdit = update.transactions.some(
+      (transaction) => transaction.docChanged && !transaction.annotation(externalValueSync),
+    );
+    if (userEdit && onChange) {
+      const newValue = update.state.doc.toString();
+      onChange(newValue);
 
-        // Basic YAML validation
-        if (onValidationError) {
-          const errors = validateYaml(newValue);
-          onValidationError(errors);
-        }
+      if (onValidationError) {
+        const errors = validateYaml(newValue);
+        onValidationError(errors);
       }
-    },
-    [onChange, onValidationError],
-  );
+    }
+  });
 
   // Initialize editor. `value` is intentionally excluded from the deps
   // array: it seeds the initial doc only. Re-running this effect on every
@@ -301,7 +308,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       view.destroy();
       viewRef.current = null;
     };
-  }, [extensions, handleUpdate]);
+  }, [extensions]);
 
   // Update content when value prop changes externally
   useEffect(() => {
@@ -312,6 +319,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
     const currentValue = viewRef.current.state.doc.toString();
     if (currentValue !== value) {
       viewRef.current.dispatch({
+        annotations: externalValueSync.of(true),
         changes: {
           from: 0,
           to: currentValue.length,
