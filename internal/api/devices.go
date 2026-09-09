@@ -85,8 +85,9 @@ func (s *Server) handleDeviceList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, DeviceListResponse{
-		Devices:    devices,
-		TotalCount: len(devices),
+		Devices:             devices,
+		TotalCount:          len(devices),
+		ConfigurationLoaded: true,
 	})
 }
 

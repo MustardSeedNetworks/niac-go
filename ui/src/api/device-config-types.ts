@@ -154,7 +154,8 @@ export type DeviceType =
  */
 export interface DeviceListResponse {
   devices: Device[];
-  total: number;
+  totalCount: number;
+  configurationLoaded: boolean;
 }
 
 /**

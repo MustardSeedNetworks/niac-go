@@ -232,6 +232,9 @@
     "states": {
       "addDevice": "Add Device",
       "clearFilters": "Clear Filters",
+      "configurationRequiredDescription": "No configuration is loaded. Create a saved simulation draft to add devices without changing a running network.",
+      "configurationRequiredTitle": "Create a scenario first",
+      "createDraft": "Create a saved draft",
       "emptyDescription": "Add your first device to start configuring your network simulation.",
       "emptyTitle": "No Devices Configured",
       "loadErrorTitle": "Failed to Load Devices",

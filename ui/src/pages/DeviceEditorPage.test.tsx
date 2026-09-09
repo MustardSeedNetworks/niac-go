@@ -21,6 +21,8 @@ vi.mock('../contexts/ScopeContext', () => ({
 }));
 
 vi.mock('../api/client', () => ({
+  fetchConfigDevices: () =>
+    Promise.resolve({ devices: [], totalCount: 0, configurationLoaded: true }),
   createDevice: vi.fn(),
   updateDevice: vi.fn(),
   deleteDevice: vi.fn(),

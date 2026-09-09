@@ -70,7 +70,7 @@ export const LOADED_ROUTES: ApiRoutes = {
   '/api/v1/debug/level': fixtures.debugLevel,
   '/api/v1/templates': fixtures.templates,
   '/api/v1/config': fixtures.configDocument,
-  '/api/v1/config/devices': { devices: [], total: 0 },
+  '/api/v1/config/devices': { devices: [], totalCount: 0, configurationLoaded: true },
   '/api/v1/config/schema': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     type: 'object',

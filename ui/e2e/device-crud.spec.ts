@@ -15,15 +15,16 @@ import { expect, test } from '@playwright/test';
  *    PR-N4) routes to /device-config/.
  *  - The /device-config/new form actually renders text inputs.
  *
- * Anything richer (validation errors, save round-trips, clone, delete
- * confirmation, search filtering) needs a real fake backend or seeded
- * data — better suited to a Vitest unit on the form component or a
- * fullstack tier spec. Adding deterministic mocks here is out of
- * scope for the cleanup pass.
+ * These checks declare an empty loaded configuration through an inventory
+ * fixture. The genuinely absent-configuration path is exercised against
+ * an isolated daemon in first-run.acceptance.ts.
  */
 
 test.describe('Device CRUD', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/config/devices', (route) =>
+      route.fulfill({ json: { devices: [], totalCount: 0, configurationLoaded: true } }),
+    );
     // `/devices` is the read-only Running Devices live view; the
     // Device Library (the page hosting <DeviceListHeader> + the Add
     // Device button) lives at `/device-config`. The original 14-test
@@ -37,7 +38,7 @@ test.describe('Device CRUD', () => {
     const addButton = page.getByTestId('device-add');
     await expect(addButton).toBeVisible();
     await addButton.click();
-    await expect(page).toHaveURL(/device-config/);
+    await expect(page).toHaveURL(/\/device-config\/new$/);
   });
 
   test('/device-config/new renders text inputs', async ({ page }) => {

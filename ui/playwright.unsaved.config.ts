@@ -5,7 +5,7 @@ const baseURL = 'https://127.0.0.1:20446';
 
 export default defineConfig({
   ...base,
-  testMatch: 'unsaved-changes.acceptance.ts',
+  testMatch: ['first-run.acceptance.ts', 'unsaved-changes.acceptance.ts'],
   globalSetup: undefined,
   fullyParallel: false,
   projects: [

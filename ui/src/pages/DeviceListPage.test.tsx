@@ -49,7 +49,11 @@ function renderPage() {
 
 describe('DeviceListPage — delete confirmation', () => {
   it('does not delete until the confirm modal is accepted', async () => {
-    fetchConfigDevices.mockResolvedValue({ devices, total: devices.length });
+    fetchConfigDevices.mockResolvedValue({
+      devices,
+      totalCount: devices.length,
+      configurationLoaded: true,
+    });
     renderPage();
 
     await waitFor(() => expect(screen.getByText('edge-01')).toBeInTheDocument());
@@ -61,7 +65,11 @@ describe('DeviceListPage — delete confirmation', () => {
   });
 
   it('cancel dismisses the modal without deleting', async () => {
-    fetchConfigDevices.mockResolvedValue({ devices, total: devices.length });
+    fetchConfigDevices.mockResolvedValue({
+      devices,
+      totalCount: devices.length,
+      configurationLoaded: true,
+    });
     renderPage();
 
     await waitFor(() => expect(screen.getByText('edge-01')).toBeInTheDocument());
@@ -75,7 +83,11 @@ describe('DeviceListPage — delete confirmation', () => {
   });
 
   it('confirming the modal deletes exactly the targeted device', async () => {
-    fetchConfigDevices.mockResolvedValue({ devices, total: devices.length });
+    fetchConfigDevices.mockResolvedValue({
+      devices,
+      totalCount: devices.length,
+      configurationLoaded: true,
+    });
     deleteDevice.mockResolvedValue(undefined);
     renderPage();
 
@@ -92,7 +104,11 @@ describe('DeviceListPage — delete confirmation', () => {
 
 describe('DeviceListPage — bulk delete', () => {
   it('sends every selected hostname in a single deleteDevices call', async () => {
-    fetchConfigDevices.mockResolvedValue({ devices, total: devices.length });
+    fetchConfigDevices.mockResolvedValue({
+      devices,
+      totalCount: devices.length,
+      configurationLoaded: true,
+    });
     deleteDevices.mockResolvedValue({
       results: [
         { hostname: 'edge-01', success: true },
@@ -119,7 +135,11 @@ describe('DeviceListPage — bulk delete', () => {
   });
 
   it('names the hostnames that failed on a partial-failure response', async () => {
-    fetchConfigDevices.mockResolvedValue({ devices, total: devices.length });
+    fetchConfigDevices.mockResolvedValue({
+      devices,
+      totalCount: devices.length,
+      configurationLoaded: true,
+    });
     deleteDevices.mockResolvedValue({
       results: [
         { hostname: 'edge-01', success: true },

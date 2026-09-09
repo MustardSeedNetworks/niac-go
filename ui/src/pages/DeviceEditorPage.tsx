@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fetchConfigDevices } from '../api/client';
 import {
   AdditionalIPsSection,
   BasicSettingsSection,
@@ -12,7 +13,13 @@ import {
   YamlPreviewSection,
 } from '../components/device-editor';
 import type { AuthoredValue } from '../components/device-editor/generated/authored-device.generated';
+import { DeviceConfigurationRequired } from '../components/device-list/DeviceConfigurationRequired';
+import {
+  DeviceListErrorState,
+  DeviceListLoadingState,
+} from '../components/device-list/DeviceListStates';
 import { CollapsibleSection } from '../components/form/CollapsibleSection';
+import { useApiResource } from '../hooks/useApiResource';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 export const DeviceEditorPage: FC = () => {
@@ -48,6 +55,14 @@ export const DeviceEditorPage: FC = () => {
     cancelLeave,
   } = useDeviceEditor();
   const { t } = useTranslation('devices');
+  const {
+    data: configuration,
+    loading: configurationLoading,
+    error: configurationError,
+    refetch: refetchConfiguration,
+  } = useApiResource(fetchConfigDevices, ['config-devices'], {
+    enabled: isNewDevice,
+  });
 
   // The one open string field the daemon resolves against a library. Offered
   // as suggestions rather than a closed list, because a config may reference a
@@ -56,6 +71,14 @@ export const DeviceEditorPage: FC = () => {
     () => ({ 'snmp_agent.walk_file': (walkFiles ?? []).map((file) => file.name) }),
     [walkFiles],
   );
+
+  if (isNewDevice && configurationLoading) return <DeviceListLoadingState viewMode="cards" />;
+  if (isNewDevice && configurationError) {
+    return <DeviceListErrorState error={configurationError} onRetry={refetchConfiguration} />;
+  }
+  if (isNewDevice && configuration && !configuration.configurationLoaded) {
+    return <DeviceConfigurationRequired />;
+  }
 
   if (!isNewDevice && (loading || error)) {
     return (
