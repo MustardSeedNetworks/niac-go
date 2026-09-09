@@ -54,7 +54,7 @@ jobs:
         uses: ./.github/actions/setup-go
 
       - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@4ffdaf668446e6ed6d4460d3267ef16ebde218d5 # v1.12.0
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         timeout-minutes: 10
         # A stalled Ubuntu mirror can hang apt for the whole job budget
         # without running a check, because apt waits forever on a dead
