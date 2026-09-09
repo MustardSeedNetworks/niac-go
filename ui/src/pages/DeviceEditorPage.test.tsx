@@ -16,6 +16,10 @@ import '../i18n';
 import { createDevice } from '../api/client';
 import { DeviceEditorPage } from './DeviceEditorPage';
 
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 vi.mock('../api/client', () => ({
   createDevice: vi.fn(),
   updateDevice: vi.fn(),

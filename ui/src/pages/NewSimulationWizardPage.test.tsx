@@ -240,6 +240,7 @@ describe('NewSimulationWizardPage — status', () => {
         renderWizard();
       }),
     );
+    await vi.waitFor(() => expect(screen.getByTestId('wizard-interface-select')).toBeVisible());
     const interfaceControl = screen.getByTestId('wizard-interface-select');
     fireEvent.change(interfaceControl, { target: { value: 'lo0' } });
     fireEvent.click(screen.getByTestId('wizard-start-empty'));
