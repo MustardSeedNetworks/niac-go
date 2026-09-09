@@ -180,7 +180,12 @@ export const ReplayControlPanel: FC = () => {
                   percentComplete={replayStatus.percentComplete}
                 />
               </div>
-              <Button onClick={handleStop} disabled={isSubmitting} variant="secondary">
+              <Button
+                action="stop"
+                onClick={handleStop}
+                disabled={isSubmitting}
+                variant="secondary"
+              >
                 {t('traffic.page.replayStopButton')}
               </Button>
             </div>
@@ -379,6 +384,7 @@ export const ReplayControlPanel: FC = () => {
             <Button
               variant="outline"
               onClick={handleStart}
+              action="start"
               disabled={isSubmitting}
               className="w-full"
             >

@@ -123,6 +123,7 @@ export const DevicesStep: FC<DevicesStepProps> = ({
                 disabled={!dirty || saving}
                 loading={saving}
                 onClick={() => void onSave()}
+                action="edit"
               >
                 {saving
                   ? t('newSimWizard.devices.savingLabel')

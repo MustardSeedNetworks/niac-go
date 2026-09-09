@@ -62,3 +62,6 @@ describe('PreflightStep validation failures', () => {
     expect(await screen.findByText('Simulation preflight failed')).toBeInTheDocument();
   });
 });
+vi.mock('../../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));

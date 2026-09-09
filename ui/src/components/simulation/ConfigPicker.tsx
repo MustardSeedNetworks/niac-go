@@ -5,6 +5,7 @@ import { fetchTemplateContent, fetchTemplates, importConfig } from '../../api/cl
 import { fetchLibraryNetworks } from '../../api/library-client';
 import type { LibraryNetwork, Template, TemplateContent } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { useActionPermission } from '../../contexts/ScopeContext';
 import { useFavorites } from '../../hooks/useFavorites';
 import { SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
@@ -186,6 +187,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   };
 
   const [convertingDsl, setConvertingDsl] = useState(false);
+  const conversionPermission = useActionPermission('admin');
   const [convertError, setConvertError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,6 +206,10 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     const isJavaDsl = /^\s*device\s+[\w.-]+\s*\{/m.test(head);
     if (!isJavaDsl) {
       onUpload(file);
+      return;
+    }
+    if (conversionPermission.disabled) {
+      setConvertError(conversionPermission.title ?? 'This conversion requires an admin token.');
       return;
     }
     setConvertingDsl(true);
@@ -276,6 +282,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('configPicker.searchPlaceholder')}
+            data-testid="config-picker-search"
             className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
         </div>

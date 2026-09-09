@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 /**
  * LibraryFilesPage.test.tsx — the walks/pcaps library browser.
  *

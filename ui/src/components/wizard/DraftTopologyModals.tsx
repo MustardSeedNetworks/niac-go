@@ -57,7 +57,7 @@ export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
             <Button variant="outline" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <Button tone="violet" disabled={!valid || busy} onClick={onSave}>
+            <Button action="edit" tone="violet" disabled={!valid || busy} onClick={onSave}>
               {t('newSimWizard.topology.addDevice')}
             </Button>
           </>
@@ -146,14 +146,14 @@ export const LinkEditorModal: FC<LinkEditorModalProps> = ({
         state && (
           <>
             {state.existing && (
-              <Button tone="red" disabled={busy} onClick={onDisconnect}>
+              <Button action="edit" tone="red" disabled={busy} onClick={onDisconnect}>
                 {t('newSimWizard.topology.disconnect')}
               </Button>
             )}
             <Button variant="outline" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <Button tone="violet" disabled={!valid || busy} onClick={onSave}>
+            <Button action="edit" tone="violet" disabled={!valid || busy} onClick={onSave}>
               {t('newSimWizard.topology.saveLink')}
             </Button>
           </>

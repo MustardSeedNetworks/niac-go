@@ -143,6 +143,7 @@ export const DeviceEditorPage: FC = () => {
       <ConfirmModal
         isOpen={showDeleteConfirm}
         onConfirm={handleDelete}
+        action="delete"
         onCancel={() => setShowDeleteConfirm(false)}
         title={t('list.deleteConfirmTitle')}
         message={t('list.deleteConfirmMessage', { hostname: device.name ?? '' })}

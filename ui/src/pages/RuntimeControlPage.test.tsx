@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 /**
  * RuntimeControlPage.test.tsx
  *
@@ -185,10 +190,7 @@ describe('RuntimeControlPage — stop-simulation confirmation', () => {
     expect(screen.queryByText('veth-warehouse')).not.toBeInTheDocument();
 
     // The card's Stop, not one of the table's per-row buttons.
-    const cardStop = screen
-      .getAllByRole('button', { name: /stop simulation/i })
-      .find((button) => !button.dataset.testid);
-    if (!cardStop) throw new Error('the running-scenario card has no Stop button');
+    const cardStop = screen.getByTestId('runtime-stop');
     fireEvent.click(cardStop);
     await screen.findByText(/interrupt the current run/i);
     act(() => fireEvent.click(screen.getByRole('button', { name: /^stop$/i })));

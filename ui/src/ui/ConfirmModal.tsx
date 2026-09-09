@@ -1,10 +1,12 @@
 import { AlertTriangle } from 'lucide-react';
 import { type FC, type ReactNode, useId } from 'react';
 import { iconSizes } from '../constants/sizes';
+import type { Action } from '../contexts/permissions';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
 export interface ConfirmModalProps {
+  action?: Action;
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -24,6 +26,7 @@ export interface ConfirmModalProps {
 }
 
 export const ConfirmModal: FC<ConfirmModalProps> = ({
+  action,
   isOpen,
   onConfirm,
   onCancel,
@@ -74,7 +77,7 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
           <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button tone={confirmTone} onClick={onConfirm} disabled={confirming}>
+          <Button action={action} tone={confirmTone} onClick={onConfirm} disabled={confirming}>
             {confirming ? (confirmingLabel ?? confirmLabel) : confirmLabel}
           </Button>
         </div>

@@ -105,6 +105,7 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
 }) => {
   const { t } = useTranslation('pages');
   const showError = useErrorToast();
+  const permission = useActionPermission('edit');
   const {
     data: profiles,
     error: profilesError,
@@ -153,6 +154,7 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
 
   const applyMutation = useCallback(
     async (mutation: DraftTopologyMutation) => {
+      if (permission.disabled) return false;
       setBusy(true);
       onBusyChange(true);
       try {
@@ -168,7 +170,16 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
         onBusyChange(false);
       }
     },
-    [draft.name, draft.revision, layoutedNodes, onBusyChange, onDraftUpdate, setNodes, showError],
+    [
+      draft.name,
+      draft.revision,
+      layoutedNodes,
+      onBusyChange,
+      onDraftUpdate,
+      setNodes,
+      showError,
+      permission.disabled,
+    ],
   );
 
   const openConnection = useCallback(
@@ -384,8 +395,8 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
             );
             if (link && link.reciprocal !== false) setLinkEditor(linkState(link));
           }}
-          nodesConnectable={!busy}
-          nodesDraggable={!busy}
+          nodesConnectable={!busy && !permission.disabled}
+          nodesDraggable={!busy && !permission.disabled}
           elementsSelectable={!busy}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
@@ -428,3 +439,5 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
     </div>
   );
 };
+
+import { useActionPermission } from '../../contexts/ScopeContext';

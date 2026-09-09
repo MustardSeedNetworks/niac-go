@@ -165,6 +165,8 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
             tone="red"
             disabled={stopping}
             onClick={onStop}
+            data-testid="runtime-stop"
+            action="stop"
             leftIcon={<Activity className={iconSizes.md} />}
           >
             {stopping ? t('runtime.running.stoppingLabel') : t('runtime.running.stopButton')}
@@ -180,6 +182,7 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
             variant="ghost"
             leftIcon={<Download className={iconSizes.md} />}
             onClick={handleDownload}
+            data-testid="runtime-download-yaml"
             title={t('runtime.running.downloadYamlTitle')}
           >
             {t('runtime.running.downloadYaml')}

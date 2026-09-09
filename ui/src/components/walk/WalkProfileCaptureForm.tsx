@@ -119,6 +119,7 @@ export const WalkProfileCaptureForm: FC<Props> = ({
           disabled={!capture.target || capturing}
           loading={capturing}
           onClick={() => void runCapture()}
+          action="start"
           data-testid="walk-profile-capture"
         >
           {t('walkAnalyzer.profile.captureAction')}

@@ -1,3 +1,8 @@
+// This isolated component fixture represents an authenticated operator.
+vi.mock('../contexts/ScopeContext', () => ({
+  useActionPermission: () => ({ disabled: false }),
+}));
+
 /**
  * ReplayControlPanel.test.tsx — Phase 5a live replay progress. Locks that
  * the status card renders a packets/bytes-sent progress bar while a replay

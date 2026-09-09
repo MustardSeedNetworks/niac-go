@@ -6,7 +6,6 @@ import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { ReadOnlyView } from './components/ui/ReadOnlyView';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelp } from './data/page-help';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
@@ -68,74 +67,63 @@ function AppShell() {
       onOpenSettings={() => setSettingsOpen(true)}
     >
       <ToastContainer />
-      {/* #762: a read-only-scoped token sees every page read-only via
-          one wrap. ReadOnlyView's HTML <fieldset disabled> propagates
-          `disabled` to every descendant button/input/select/textarea
-          so individual pages don't need to gate their own controls.
-          Read-write and admin tokens see no chrome change. */}
-      <ReadOnlyView>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {pages.map((page) => (
-              <Route
-                key={page.path}
-                path={page.path}
-                element={
-                  <PageWithErrorBoundary
-                    page={page}
-                    onOpenHelp={setHelpPath}
-                    titleRef={pageTitleRef}
-                  >
-                    <page.component />
-                  </PageWithErrorBoundary>
-                }
-              />
-            ))}
-            {/* Dynamic routes for the device editor — both reuse the
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {pages.map((page) => (
+            <Route
+              key={page.path}
+              path={page.path}
+              element={
+                <PageWithErrorBoundary page={page} onOpenHelp={setHelpPath} titleRef={pageTitleRef}>
+                  <page.component />
+                </PageWithErrorBoundary>
+              }
+            />
+          ))}
+          {/* Dynamic routes for the device editor — both reuse the
               same lazy-loaded component as the Device Library, but
               wear different page-header metadata. */}
-            <Route
-              path="/device-config/new"
-              element={
-                <PageWithErrorBoundary
-                  onOpenHelp={setHelpPath}
-                  titleRef={pageTitleRef}
-                  page={{
-                    path: '/device-config/new',
-                    label: t('deviceEditor.newLabel'),
-                    title: t('deviceEditor.newTitle'),
-                    description: t('deviceEditor.newDescription'),
-                    icon: Wrench,
-                    component: DeviceEditorPageRef,
-                  }}
-                >
-                  <DeviceEditorPageRef />
-                </PageWithErrorBoundary>
-              }
-            />
-            <Route
-              path="/device-config/:hostname"
-              element={
-                <PageWithErrorBoundary
-                  onOpenHelp={setHelpPath}
-                  titleRef={pageTitleRef}
-                  page={{
-                    path: '/device-config/:hostname',
-                    label: t('deviceEditor.editLabel'),
-                    title: t('deviceEditor.editTitle'),
-                    description: t('deviceEditor.editDescription'),
-                    icon: Wrench,
-                    component: DeviceEditorPageRef,
-                  }}
-                >
-                  <DeviceEditorPageRef />
-                </PageWithErrorBoundary>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace={true} />} />
-          </Routes>
-        </Suspense>
-      </ReadOnlyView>
+          <Route
+            path="/device-config/new"
+            element={
+              <PageWithErrorBoundary
+                onOpenHelp={setHelpPath}
+                titleRef={pageTitleRef}
+                page={{
+                  path: '/device-config/new',
+                  label: t('deviceEditor.newLabel'),
+                  title: t('deviceEditor.newTitle'),
+                  description: t('deviceEditor.newDescription'),
+                  icon: Wrench,
+                  component: DeviceEditorPageRef,
+                }}
+              >
+                <DeviceEditorPageRef />
+              </PageWithErrorBoundary>
+            }
+          />
+          <Route
+            path="/device-config/:hostname"
+            element={
+              <PageWithErrorBoundary
+                onOpenHelp={setHelpPath}
+                titleRef={pageTitleRef}
+                page={{
+                  path: '/device-config/:hostname',
+                  label: t('deviceEditor.editLabel'),
+                  title: t('deviceEditor.editTitle'),
+                  description: t('deviceEditor.editDescription'),
+                  icon: Wrench,
+                  component: DeviceEditorPageRef,
+                }}
+              >
+                <DeviceEditorPageRef />
+              </PageWithErrorBoundary>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace={true} />} />
+        </Routes>
+      </Suspense>
       <SettingsDrawer
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}

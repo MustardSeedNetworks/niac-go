@@ -185,6 +185,7 @@ export const ContentBundleUploader: FC = () => {
             tone="violet"
             size="sm"
             onClick={() => void handleInstall()}
+            action="admin"
             disabled={!selectedFile || installing}
             leftIcon={<PackageCheck className={iconSizes.md} />}
             data-testid="content-bundle-install"
