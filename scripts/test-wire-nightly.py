@@ -43,12 +43,15 @@ class NightlyTest(unittest.TestCase):
         git(self.origin, "commit", "-qm", value)
         return git(self.origin, "rev-parse", "HEAD")
 
-    def run_nightly(self, **extra):
+    def run_script(self, **extra):
         env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}",
                    NIAC_WIRE_REPO=str(self.repo), NIAC_WIRE_STATE=str(self.root / "state"),
                    NIAC_WIRE_TOKEN=str(self.root / "no-token"), NIAC_WALK_CORPUS="",
                    GO_CALLS=str(self.root / "go-calls"), **extra)
-        result = subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True)
+        return subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True)
+
+    def run_nightly(self, **extra):
+        result = self.run_script(**extra)
         record = json.loads((self.root / "state" / "last-run.json").read_text())
         return result, record
 
@@ -95,7 +98,7 @@ class NightlyTest(unittest.TestCase):
 
     def test_unwritable_history_cannot_pass(self):
         (self.root / "state" / "history.jsonl").mkdir(parents=True)
-        result, _ = self.run_nightly()
+        result = self.run_script()
         self.assertNotEqual(result.returncode, 0)
 
 

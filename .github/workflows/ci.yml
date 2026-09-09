@@ -183,7 +183,7 @@ jobs:
         id: go
         uses: ./.github/actions/setup-go
 
-      - name: Install libpcap-dev
+      - name: Install backend test dependencies
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
@@ -204,7 +204,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: libpcap-dev
+          packages: libpcap-dev ripgrep
 
       - name: Verify dependencies
         # ./.github/actions/setup-go already runs `go mod download`; this
