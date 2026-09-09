@@ -13,11 +13,23 @@
  * When not enabled, failures still populate `error` for the caller's own
  * UI, but never touch the notification store.
  */
-import { renderHook, waitFor } from '@testing-library/react';
+
+import type { RenderHookOptions } from '@testing-library/react';
+import { renderHook as renderRawHook, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ResourceProvider } from '../contexts/ResourceProvider';
+import { renderWithResources } from '../test/renderWithResources';
 import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { useApiResource } from './useApiResource';
+
+function renderHook<Result, Props>(
+  callback: (props: Props) => Result,
+  options?: RenderHookOptions<Props>,
+) {
+  return renderRawHook(callback, { ...options, wrapper: ResourceProvider });
+}
 
 describe('useApiResource errorToast option', () => {
   beforeEach(() => {
@@ -31,7 +43,7 @@ describe('useApiResource errorToast option', () => {
   it('does not touch the notification store when errorToast is unset', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('boom'));
 
-    const { result } = renderHook(() => useApiResource(fetcher, []));
+    const { result } = renderHook(() => useApiResource(fetcher, ['test-resource']));
 
     await waitFor(() => expect(result.current.error).not.toBeNull());
     expect(useUIStore.getState().notifications).toHaveLength(0);
@@ -41,7 +53,9 @@ describe('useApiResource errorToast option', () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('daemon unreachable'));
 
     const { result } = renderHook(() =>
-      useApiResource(fetcher, [], { errorToast: { title: 'Could not load devices' } }),
+      useApiResource(fetcher, ['test-resource'], {
+        errorToast: { title: 'Could not load devices' },
+      }),
     );
 
     await waitFor(() => expect(result.current.error).not.toBeNull());
@@ -58,14 +72,23 @@ describe('useApiResource errorToast option', () => {
   it('does not re-toast an identical error on repeated requests', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('daemon unreachable'));
 
-    const { result } = renderHook(() => useApiResource(fetcher, [], { errorToast: true }));
+    function Probe() {
+      const { refetch } = useApiResource(fetcher, ['test-resource'], { errorToast: true });
+      return (
+        <button type="button" onClick={refetch}>
+          Refresh
+        </button>
+      );
+    }
+    renderWithResources(<Probe />);
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-    expect(useUIStore.getState().notifications).toHaveLength(1);
+    await waitFor(() => expect(useUIStore.getState().notifications).toHaveLength(1));
 
-    void result.current.refetch();
-    void result.current.refetch();
-    void result.current.refetch();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
     // Same error message on every tick — still just the one toast.
@@ -80,7 +103,7 @@ describe('useApiResource errorToast option', () => {
       .mockRejectedValueOnce(new Error('second failure'));
 
     const { result, rerender } = renderHook(
-      ({ n }: { n: number }) => useApiResource(fetcher, [n], { errorToast: true }),
+      ({ n }: { n: number }) => useApiResource(fetcher, ['test-resource', n], { errorToast: true }),
       { initialProps: { n: 0 } },
     );
 
@@ -112,7 +135,7 @@ describe('useApiResource — stable identity across renders', () => {
     const fetcher = vi.fn(() => Promise.resolve('value'));
     const { rerender, result } = renderHook(() =>
       // A fresh object literal each render, exactly as the pages write it.
-      useApiResource(fetcher, [], { errorToast: { title: 'Failed' } }),
+      useApiResource(fetcher, ['test-resource'], { errorToast: { title: 'Failed' } }),
     );
 
     await waitFor(() => expect(result.current.data).toBe('value'));
@@ -125,7 +148,7 @@ describe('useApiResource — stable identity across renders', () => {
   it('fetches once when transform is declared inline', async () => {
     const fetcher = vi.fn(() => Promise.resolve(2));
     const { rerender, result } = renderHook(() =>
-      useApiResource(fetcher, [], { transform: (n: number) => n * 2 }),
+      useApiResource(fetcher, ['test-resource'], { transform: (n: number) => n * 2 }),
     );
 
     await waitFor(() => expect(result.current.data).toBe(4));

@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router';
@@ -10,6 +11,7 @@ import {
   updateDevice,
 } from '../../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../../api/library-client';
+import type { DeviceDetailResponse } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { AuthoredDeviceSchema } from '../../schemas/forms';
 import { parseAuthoredDevice, serializeAuthoredDevice } from '../../utils/authored-device-yaml';
@@ -103,6 +105,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
   const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const isNewDevice = hostname === 'new' || location.pathname === '/device-config/new';
 
   const [device, setDevice] = useState<AuthoredDevice>(createEmptyDevice);
@@ -130,15 +133,15 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       return Promise.resolve(null);
     }
     return fetchConfigDevice(hostname);
-  }, [hostname, isNewDevice]);
+  }, ['config-device', hostname, isNewDevice]);
 
-  const { data: walkFiles } = useApiResource(fetchLibraryWalks, []);
+  const { data: walkFiles } = useApiResource(fetchLibraryWalks, ['library', 'walks']);
 
   // Per-type editor schema. Re-fetches when the type changes; on error or
   // while loading the relevance order is simply the manifest's own.
   const { data: schema } = useApiResource(
     () => fetchDeviceEditorSchema(device.type ?? 'unknown'),
-    [device.type],
+    ['device-schema', device.type ?? 'unknown'],
   );
   const sections = useMemo(() => {
     const relevant = new Set(
@@ -153,8 +156,19 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     ];
   }, [schema]);
 
+  // The serialized document is both what a save sends and what the preview
+  // shows, so dirtiness is measured on it: clearing a field the author never
+  // set is not an edit, and comparing the in-memory objects would say it was.
+  const yaml = useMemo(() => serializeAuthoredDevice(device), [device]);
+  const isDirty = useMemo(() => {
+    if (isNewDevice) {
+      return Boolean(device.name?.trim());
+    }
+    return originalDevice !== null && yaml !== serializeAuthoredDevice(originalDevice);
+  }, [yaml, device.name, originalDevice, isNewDevice]);
+
   useEffect(() => {
-    if (!fetched) {
+    if (!fetched || isDirty) {
       return;
     }
     // A detail response without `rawYaml` is a device the daemon could not
@@ -167,7 +181,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     }
     setDevice(loaded);
     setOriginalDevice(loaded);
-  }, [fetched, t]);
+  }, [fetched, isDirty, t]);
 
   // Deep-link support: the Running Devices walk browser links here with
   // `#snmp` so a copied walk name can actually be used. Once the section
@@ -180,17 +194,6 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
       .getElementById('snmp_agent-section')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash, loading]);
-
-  // The serialized document is both what a save sends and what the preview
-  // shows, so dirtiness is measured on it: clearing a field the author never
-  // set is not an edit, and comparing the in-memory objects would say it was.
-  const yaml = useMemo(() => serializeAuthoredDevice(device), [device]);
-  const isDirty = useMemo(() => {
-    if (isNewDevice) {
-      return Boolean(device.name?.trim());
-    }
-    return originalDevice !== null && yaml !== serializeAuthoredDevice(originalDevice);
-  }, [yaml, device.name, originalDevice, isNewDevice]);
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
@@ -241,6 +244,8 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     try {
       if (isNewDevice) {
         await createDevice(name, yaml);
+        await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+        await queryClient.invalidateQueries({ queryKey: ['config'] });
         setMessage({ type: 'success', text: t('editor.messages.createdSuccess') });
         setTimeout(() => {
           navigate(`/device-config/${encodeURIComponent(name)}`);
@@ -252,6 +257,14 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
           return;
         }
         await updateDevice(hostname, yaml);
+        await queryClient.cancelQueries({ queryKey: ['config-device', hostname] });
+        queryClient.setQueryData<DeviceDetailResponse>(
+          ['config-device', hostname, false],
+          (previous) => (previous ? { ...previous, rawYaml: yaml } : undefined),
+        );
+        await queryClient.invalidateQueries({ queryKey: ['config-device', hostname] });
+        await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+        await queryClient.invalidateQueries({ queryKey: ['config'] });
         setMessage({ type: 'success', text: t('editor.messages.updatedSuccess') });
         setOriginalDevice(device);
       }
@@ -260,7 +273,7 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     } finally {
       setSaving(false);
     }
-  }, [device, yaml, hostname, isNewDevice, navigate, t]);
+  }, [device, yaml, hostname, isNewDevice, navigate, queryClient, t]);
 
   const handleDelete = useCallback(async () => {
     if (!hostname || isNewDevice) {
@@ -270,12 +283,15 @@ export const useDeviceEditor = (): UseDeviceEditorReturn => {
     setDeleting(true);
     try {
       await deleteDevice(hostname);
+      queryClient.removeQueries({ queryKey: ['config-device', hostname] });
+      await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+      await queryClient.invalidateQueries({ queryKey: ['config'] });
       navigate('/device-config');
     } catch (err) {
       setMessage({ type: 'error', text: getErrorMessage(err) });
       setDeleting(false);
     }
-  }, [hostname, isNewDevice, navigate]);
+  }, [hostname, isNewDevice, navigate, queryClient]);
 
   const handleDiscard = useCallback(() => {
     if (isNewDevice) {

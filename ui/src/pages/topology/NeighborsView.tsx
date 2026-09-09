@@ -1,8 +1,7 @@
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchNeighbors } from '../../api/client';
-import { useAppContext } from '../../contexts/AppContext';
-import { useApiResource } from '../../hooks/useApiResource';
+import { POLL_INTERVALS } from '../../constants/polling';
+import { useAppState } from '../../contexts/AppContext';
 import type { TFunction } from '../../i18n';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
@@ -17,8 +16,6 @@ import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 
 const PROTOCOL_FILTERS = ['all', 'CDP', 'LLDP', 'EDP', 'FDP'] as const;
 type ProtocolFilter = (typeof PROTOCOL_FILTERS)[number];
-
-const NEIGHBOR_POLL_MS = 5_000;
 
 const formatTtl = (ttlNs: number, tCommon: TFunction<'common'>, t: TFunction<'pages'>): string => {
   if (!ttlNs || ttlNs <= 0) return tCommon('format.dash');
@@ -40,15 +37,7 @@ const formatRelative = (iso: string, tCommon: TFunction<'common'>): string => {
 export const NeighborsView: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const { sessionId } = useAppContext();
-  const {
-    data: neighbors,
-    loading,
-    error,
-  } = useApiResource(() => fetchNeighbors(sessionId ?? ''), [sessionId], {
-    intervalMs: NEIGHBOR_POLL_MS,
-    enabled: sessionId !== null,
-  });
+  const { data: neighbors, loading, error } = useAppState('neighbors');
 
   const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all');
   const [search, setSearch] = useState('');
@@ -229,7 +218,7 @@ export const NeighborsView: FC = () => {
             />
             <span className="text-xs text-text-muted">
               {t('topology.neighbors.pollingStatus', {
-                seconds: NEIGHBOR_POLL_MS / 1000,
+                seconds: POLL_INTERVALS.medium / 1000,
                 count: neighbors?.length ?? 0,
               })}
             </span>

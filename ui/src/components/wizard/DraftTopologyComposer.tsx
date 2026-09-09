@@ -110,7 +110,7 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
     error: profilesError,
     loading: profilesLoading,
     refetch: refetchProfiles,
-  } = useApiResource(fetchScenarioProfiles, []);
+  } = useApiResource(fetchScenarioProfiles, ['scenario-profiles']);
   const [busy, setBusy] = useState(false);
   const [deviceEditor, setDeviceEditor] = useState<DeviceEditorState | null>(null);
   const flowRef = useRef<ReactFlowInstance<DeviceNodeType, LinkEdge> | null>(null);

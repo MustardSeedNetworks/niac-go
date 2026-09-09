@@ -17,10 +17,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
-import { fetchDevices, fetchNeighbors, fetchTopology } from '../api/client';
 import type { DeviceSummary } from '../api/types';
-import { useAppContext } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
+import { useAppContext, useAppState } from '../contexts/AppContext';
+import { useTopologyResource } from '../hooks/usePageResources';
+import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -81,27 +81,26 @@ export const TopologyPage: FC = () => {
   const { sessionId } = useAppContext();
 
   // Runtime reads name their session; nothing to read before one runs.
-  const poll = { intervalMs: 15000, enabled: sessionId !== null };
-  const session = sessionId ?? '';
   const {
     data: topology,
     loading: topologyLoading,
     error: topologyError,
     refetch: refetchTopology,
-  } = useApiResource(() => fetchTopology(session), [sessionId], poll);
+  } = useTopologyResource(sessionId);
   const {
     data: devices,
     loading: devicesLoading,
     error: devicesError,
     refetch: refetchDevices,
-  } = useApiResource(() => fetchDevices(session), [sessionId], poll);
+  } = useAppState('devices');
   // Neighbours enrich the graph rather than draw it, so a failure there is a
   // toast, not a blocked canvas.
-  const { data: neighbors, refetch: refetchNeighbors } = useApiResource(
-    () => fetchNeighbors(session),
-    [sessionId],
-    { ...poll, errorToast: { title: t('topology.page.neighborsFailed') } },
-  );
+  const {
+    data: neighbors,
+    error: neighborsError,
+    refetch: refetchNeighbors,
+  } = useAppState('neighbors');
+  useResourceError(neighborsError, t('topology.page.neighborsFailed'));
 
   const [nodes, setNodes, onNodesChange] = useNodesState<DeviceNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<LinkEdge>([]);

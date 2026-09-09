@@ -4,11 +4,12 @@
  * is running, and falls back to "unknown total" copy (never a fake 0%
  * bar) when the backend hasn't reported packetsTotal/percentComplete yet.
  */
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReplayState } from '../api/api-response-types';
 import { startReplay } from '../api/client';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
 import { ReplayControlPanel } from './ReplayControlPanel';
 
@@ -118,6 +119,7 @@ describe('ReplayControlPanel — live progress', () => {
     render(<ReplayControlPanel />);
 
     await screen.findByText('PCAP File');
+    await screen.findByRole('option', { name: /a\.pcap/ });
     await user.selectOptions(screen.getByLabelText('PCAP File'), 'a.pcap');
     await user.selectOptions(screen.getByLabelText('Rate Mode'), 'pps');
     await user.clear(screen.getByLabelText('Rate (pps)'));

@@ -6,16 +6,22 @@
  * form must land with that type already selected.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ErrorInjectionInfo } from '../api/types';
+import { renderWithResources as render } from '../test/renderWithResources';
 import { required } from '../test/required';
 import '../i18n';
+import { useApiResource } from '../hooks/useApiResource';
 import { ErrorInjectionPanel } from './ErrorInjectionPanel';
 
 const fetchErrorTypes = vi.fn<() => Promise<ErrorInjectionInfo>>();
 const clearError = vi.fn<(device: string, iface: string, errorType: string) => Promise<unknown>>();
+
+vi.mock('../contexts/AppContext', () => ({
+  useAppState: () => useApiResource(fetchErrorTypes, ['errors']),
+}));
 
 vi.mock('../api/client', () => ({
   fetchErrorTypes: () => fetchErrorTypes(),
@@ -41,6 +47,16 @@ describe('ErrorInjectionPanel', () => {
   beforeEach(() => {
     fetchErrorTypes.mockReset().mockResolvedValue(errorInfo);
     clearError.mockReset().mockResolvedValue({});
+  });
+
+  it('surfaces a failed fault catalog read', async () => {
+    fetchErrorTypes.mockRejectedValue(new Error('catalog unavailable'));
+    render(
+      <MemoryRouter>
+        <ErrorInjectionPanel />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('catalog unavailable');
   });
 
   it('preselects the error type from the ?errorType= query param', async () => {
@@ -85,6 +101,7 @@ describe('ErrorInjectionPanel', () => {
     );
 
     const deviceSelect = (await screen.findByLabelText('Device')) as HTMLSelectElement;
+    await screen.findByRole('option', { name: /sw-core/ });
     fireEvent.change(deviceSelect, { target: { value: 'sw-core' } });
 
     const interfaceSelect = (await screen.findByLabelText('Interface')) as HTMLSelectElement;
@@ -104,6 +121,7 @@ describe('ErrorInjectionPanel', () => {
     );
 
     const deviceSelect = (await screen.findByLabelText('Device')) as HTMLSelectElement;
+    await screen.findByRole('option', { name: /sw-edge/ });
     fireEvent.change(deviceSelect, { target: { value: 'sw-edge' } });
 
     expect(await screen.findByText('This device has no configured interfaces')).toBeInTheDocument();

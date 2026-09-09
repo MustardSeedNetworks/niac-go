@@ -11,31 +11,37 @@
  * pins the DevicesPage <-> ApiError.details wiring, so YamlEditor is
  * mocked to a prop-capturing stub (same pattern as ConfigPicker.test.tsx).
  */
-import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/errors';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
+import { fetchDevices } from '../api/client';
+import { useApiResource } from '../hooks/useApiResource';
 import { DevicesPage } from './DevicesPage';
 
 const updateConfig = vi.fn();
+const configDocument = {
+  content: 'devices: []',
+  path: '/tmp/config.yaml',
+  modifiedAt: '2026-01-01T00:00:00Z',
+  sizeBytes: 12,
+};
+const fetchConfig = vi.fn();
 
 // Runtime reads name their session, so a page rendered on its own has to say
 // which scenario it is looking at.
 vi.mock('../contexts/AppContext', () => ({
-  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+  useAppState: () =>
+    useApiResource(() => fetchDevices('test-session'), ['devices', 'test-session']),
 }));
 
 vi.mock('../api/client', () => ({
   fetchDevices: () => Promise.resolve([]),
-  fetchConfig: () =>
-    Promise.resolve({
-      content: 'devices: []',
-      path: '/tmp/config.yaml',
-      modifiedAt: '2026-01-01T00:00:00Z',
-      sizeBytes: 12,
-    }),
+  fetchConfig: () => fetchConfig(),
   updateConfig: (...args: unknown[]) => updateConfig(...args),
 }));
 vi.mock('../api/library-client', () => ({
@@ -68,7 +74,48 @@ vi.mock('../components/config/YamlEditor', () => ({
 describe('DevicesPage — config editor structured parse errors', () => {
   beforeEach(() => {
     updateConfig.mockReset();
+    fetchConfig.mockReset().mockResolvedValue(configDocument);
     latestErrorLine = undefined;
+  });
+
+  it('does not let a read started before save replace the accepted configuration', async () => {
+    const client = new QueryClient();
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <DevicesPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    let resolveRead: (value: typeof configDocument) => void = () => {};
+    const oldRead = new Promise<typeof configDocument>((resolve) => {
+      resolveRead = resolve;
+    });
+    try {
+      const editor = await screen.findByLabelText('yaml-editor-stub');
+      await waitFor(() => expect(editor).toHaveValue(configDocument.content));
+      fetchConfig.mockReturnValueOnce(oldRead);
+      let refresh: Promise<void> = Promise.resolve();
+      act(() => {
+        refresh = client.refetchQueries({ queryKey: ['config'], exact: true });
+      });
+      await waitFor(() => expect(fetchConfig).toHaveBeenCalledTimes(2));
+      await user.type(editor, '\n# saved');
+      const accepted = { ...configDocument, content: 'devices: []\n# saved' };
+      updateConfig.mockResolvedValue(accepted);
+      await user.click(screen.getByRole('button', { name: /save & reload simulation/i }));
+      await waitFor(() => expect(client.getQueryData(['config'])).toEqual(accepted));
+      act(() => resolveRead(configDocument));
+      await oldRead;
+      await refresh;
+      expect(client.getQueryData(['config'])).toEqual(accepted);
+      expect(editor).toHaveValue(accepted.content);
+    } finally {
+      resolveRead(configDocument);
+      unmount();
+      client.clear();
+    }
   });
 
   it('surfaces the line-numbered message and passes the line to the editor on save failure', async () => {

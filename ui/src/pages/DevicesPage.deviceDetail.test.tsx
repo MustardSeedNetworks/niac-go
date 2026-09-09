@@ -7,11 +7,14 @@
  * Selecting a device now opens that device's own block, and saving splices it
  * back into the config — which is still the only thing the daemon accepts.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
+import { fetchDevices } from '../api/client';
+import { useApiResource } from '../hooks/useApiResource';
 import { DevicesPage } from './DevicesPage';
 
 const CONFIG = `# operator's note, must survive an edit
@@ -28,7 +31,8 @@ devices:
 const updateConfig = vi.fn();
 
 vi.mock('../contexts/AppContext', () => ({
-  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+  useAppState: () =>
+    useApiResource(() => fetchDevices('test-session'), ['devices', 'test-session']),
 }));
 
 vi.mock('../api/client', () => ({

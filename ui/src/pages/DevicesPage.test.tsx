@@ -8,16 +8,20 @@
  *      device editor's SNMP section (`/device-config/new#snmp`) in addition
  *      to the existing "Copy name" button, so the name is actually usable.
  */
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
+import { fetchDevices } from '../api/client';
+import { useApiResource } from '../hooks/useApiResource';
 import { DevicesPage } from './DevicesPage';
 
 // Runtime reads name their session, so a page rendered on its own has to say
 // which scenario it is looking at.
 vi.mock('../contexts/AppContext', () => ({
-  useAppContext: () => ({ sessionId: 'test-session', setSessionId: vi.fn() }),
+  useAppState: () =>
+    useApiResource(() => fetchDevices('test-session'), ['devices', 'test-session']),
 }));
 
 vi.mock('../api/client', () => ({

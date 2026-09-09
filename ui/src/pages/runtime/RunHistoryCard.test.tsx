@@ -4,10 +4,12 @@
  * injection page to /runtime when the TUI's history viewer was removed, so the
  * anchor has to keep working from its new home.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HistoryRecord } from '../../api/types';
+import { useApiResource } from '../../hooks/useApiResource';
+import { renderWithResources as render } from '../../test/renderWithResources';
 import '../../i18n';
 import { RunHistoryCard } from './RunHistoryCard';
 
@@ -16,6 +18,10 @@ const fetchHistory = vi.fn<(before?: number) => Promise<HistoryRecord[]>>();
 vi.mock('../../api/client', () => ({
   fetchHistory: () => fetchHistory(),
   fetchHistoryPage: (before?: number) => fetchHistory(before),
+}));
+
+vi.mock('../../contexts/AppContext', () => ({
+  useAppState: () => useApiResource(() => fetchHistory(), ['history', null]),
 }));
 
 describe('RunHistoryCard', () => {
@@ -95,6 +101,7 @@ describe('RunHistoryCard', () => {
     );
     expect(await screen.findByText('run-21')).toBeInTheDocument();
     expect(screen.getAllByTestId('history-run')).toHaveLength(20);
+    expect(fetchHistory).toHaveBeenCalledTimes(1);
     const newest = records[0];
     if (!newest) throw new Error('Missing history fixture');
     records.unshift({ ...newest, id: 41, configName: 'new-run' });
@@ -102,8 +109,10 @@ describe('RunHistoryCard', () => {
     expect(await screen.findByText('run-1')).toBeInTheDocument();
     expect(screen.getAllByTestId('history-run')).toHaveLength(20);
     expect(fetchHistory).toHaveBeenLastCalledWith(21);
+    expect(fetchHistory).toHaveBeenCalledTimes(2);
     fireEvent.click(screen.getByTestId('history-newer'));
     expect(await screen.findByText('new-run')).toBeInTheDocument();
+    expect(fetchHistory).toHaveBeenCalledTimes(3);
     expect(screen.getByTestId('history-newer')).toBeDisabled();
   });
 });

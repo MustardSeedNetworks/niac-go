@@ -14,7 +14,7 @@ import {
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
-import { fetchCaptureStatus, stopStandaloneCapture } from '../api/client';
+import { stopStandaloneCapture } from '../api/client';
 import type { StandaloneCaptureStatus } from '../api/types';
 import { BpfFilterBar } from '../components/BpfFilterBar';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
@@ -23,14 +23,14 @@ import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
 import { type Packet, PacketList } from '../components/PacketList';
 import { StreamView } from '../components/StreamView';
-import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
-import { useApiResource } from '../hooks/useApiResource';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
+import { useCaptureResource } from '../hooks/usePageResources';
+import { useResourceError } from '../hooks/useResourceError';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -106,10 +106,12 @@ export const PacketInspectorPage: FC = () => {
   // the stream, the export and the interface readout with it.
   const { selectedSession, sessionId } = useAppContext();
   // A failed poll read as "not capturing" — so a running capture appeared to stop.
-  const { data: captureStatus, refetch: refetchCapture } = useApiResource(fetchCaptureStatus, [], {
-    intervalMs: POLL_INTERVALS.fast,
-    errorToast: { title: t('packets.captureStatusFailed') },
-  });
+  const {
+    data: captureStatus,
+    error: captureError,
+    refetch: refetchCapture,
+  } = useCaptureResource();
+  useResourceError(captureError, t('packets.captureStatusFailed'));
   const simRunning = sessionId !== null;
   const captureRunning = captureStatus?.running === true;
   const streamActive = simRunning || captureRunning;

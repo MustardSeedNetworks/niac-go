@@ -13,9 +13,10 @@
  * action confirms then calls sanitizeWalksBatch — both refetch on success
  * and surface a toast (success or, on partial batch failure, warning).
  */
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryFileEntry } from '../api/library-client';
+import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
 import { useUIStore } from '../stores/ui-store';
 import { ToastContainer } from '../ui/ToastContainer';
