@@ -50,7 +50,6 @@ const (
 
 // POWER-ETHERNET-MIB enumerations (RFC 3621).
 const (
-	pethPortDetectionDisabled        = 1
 	pethPortDetectionSearching       = 2
 	pethPortDetectionDeliveringPower = 3
 	pethPortDetectionFault           = 4

@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -277,4 +279,92 @@ func TestPoEOIDsMatchTheCorpusCaptures(t *testing.T) {
 			t.Errorf("OID = %s, want %s", testCase.object, testCase.want)
 		}
 	}
+}
+
+// TestPoESynthesizedForAWalkWithoutTheMIB covers the branch that guards the
+// replay-fidelity nightly. A walk-backed device gets nothing at construction,
+// because only the loaded capture can say whether it carries a PSE table and it
+// also owns the interface indexes the rows are keyed by. This is the half of
+// that decision where the capture has no PoE content: the table is synthesized
+// against the walk's own ifIndexes.
+//
+// `fortinet-fs-548d-fpoe-01.walk` is the fixture on purpose — a switch whose
+// model name says FPOE and whose capture carries not one `.1.3.6.1.2.1.105` row.
+func TestPoESynthesizedForAWalkWithoutTheMIB(t *testing.T) {
+	device := createTestDevice()
+	device.Name = "fortinet-1"
+	device.Type = "switch"
+	device.PoEConfig = &config.PoEConfig{BudgetWatts: 370}
+	// Copied into the test's own directory: the loader refuses a path with a
+	// parent traversal in it, which the starter-walk directory needs from here.
+	device.SNMPConfig.WalkFile = copyWalk(t,
+		filepath.Join("..", "..", "library", "starter", "walks",
+			"fortinet-fs-548d-fpoe-01.walk"))
+
+	agent := NewAgent(device, 0)
+	if value := agent.mib.Get(pethMainPsePower + "." + pethPseGroupIndex); value != nil {
+		t.Fatalf("a walk-backed device got a PSE table before its walk loaded: %v",
+			oidValueString(value))
+	}
+	if err := agent.LoadWalkFile(device.SNMPConfig.WalkFile); err != nil {
+		t.Fatalf("LoadWalkFile() error = %v", err)
+	}
+
+	wantInt(t, agent.mib.Get(pethMainPsePower+"."+pethPseGroupIndex), 370, "pethMainPsePower")
+	// The row must sit at the ifIndex the capture uses, not at one this agent
+	// invented: a manager correlates the PSE port with ifDescr.
+	wantInt(t, poePortOID(t, agent, pethPsePortAdminEnable, "GigabitEthernet1/0/1"),
+		TruthValueTrue, "pethPsePortAdminEnable on the walk's first port")
+	wantInt(t, poePortOID(t, agent, pethPsePortDetectionStatus, "GigabitEthernet1/0/1"),
+		pethPortDetectionSearching, "detection status with no peer resolved yet")
+}
+
+// The other half: a capture that already carries the MIB keeps it. A real PSE is
+// the authority on its own group count, port numbering and consumption, and
+// overwriting it would register as an unclassified substitution in the
+// replay-fidelity contract.
+func TestPoENotSynthesizedOverACaptureThatHasIt(t *testing.T) {
+	walk := filepath.Join(t.TempDir(), "pse.walk")
+	// The shape a real agent answers, taken from the corpus: group 1, ports
+	// numbered in the vendor's own space, and a chassis budget of its own.
+	captured := "" +
+		".1.3.6.1.2.1.1.5.0 = STRING: closet-1\r\n" +
+		".1.3.6.1.2.1.2.2.1.2.1001 = STRING: GigabitEthernet1/0/1\r\n" +
+		".1.3.6.1.2.1.2.2.1.3.1001 = INTEGER: 6\r\n" +
+		".1.3.6.1.2.1.105.1.1.1.6.1.1001 = INTEGER: 3\r\n" +
+		".1.3.6.1.2.1.105.1.3.1.1.2.1 = Gauge32: 170\r\n"
+	if err := os.WriteFile(walk, []byte(captured), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	device := createTestDevice()
+	device.Type = "switch"
+	device.PoEConfig = &config.PoEConfig{BudgetWatts: 370}
+	device.SNMPConfig.WalkFile = walk
+
+	agent := NewAgent(device, 0)
+	if err := agent.LoadWalkFile(walk); err != nil {
+		t.Fatalf("LoadWalkFile() error = %v", err)
+	}
+
+	wantInt(t, agent.mib.Get(pethMainPsePower+"."+pethPseGroupIndex), 170,
+		"pethMainPsePower — the capture's own budget, not the authored one")
+	wantInt(t, agent.mib.Get(pethPsePortDetectionStatus+"."+pethPseGroupIndex+".1001"),
+		pethPortDetectionDeliveringPower, "the capture's own detection status")
+	if value := agent.mib.Get(pethMainPseUsageThreshold + "." + pethPseGroupIndex); value != nil {
+		t.Errorf("synthesized a column the capture did not carry: %v", oidValueString(value))
+	}
+}
+
+func copyWalk(t *testing.T, source string) string {
+	t.Helper()
+	content, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatalf("read %s: %v", source, err)
+	}
+	destination := filepath.Join(t.TempDir(), filepath.Base(source))
+	if err = os.WriteFile(destination, content, 0o600); err != nil {
+		t.Fatalf("write %s: %v", destination, err)
+	}
+
+	return destination
 }
