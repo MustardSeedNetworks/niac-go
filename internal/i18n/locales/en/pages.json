@@ -828,7 +828,10 @@
     "recentRunsFailed": "Run history could not be read: {{error}}",
     "recentRunsTag": "History",
     "recentRunStats": "{{time}} · duration {{duration}} · RX {{rx}} · TX {{tx}}",
-    "recentRunsTitle": "Recent runs",
+    "recentRunsTitle": "Run history",
+    "newerRuns": "Newer runs",
+    "olderRuns": "Older runs",
+    "noOlderRuns": "No older retained runs.",
     "reviewConnectionLabel": "Review connection",
     "rollup": {
       "checking": "Checking the daemon",

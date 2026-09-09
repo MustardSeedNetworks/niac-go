@@ -166,7 +166,10 @@
       "running_other": "Simulando {{count}} dispositivos en {{iface}}",
       "uptimeLabel": "Tiempo activo"
     },
-    "recentRunsTitle": "Ejecuciones recientes",
+    "recentRunsTitle": "Historial de ejecuciones",
+    "newerRuns": "Ejecuciones más recientes",
+    "olderRuns": "Ejecuciones anteriores",
+    "noOlderRuns": "No hay ejecuciones anteriores guardadas.",
     "recentRunsTag": "Historial",
     "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
     "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",

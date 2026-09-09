@@ -211,6 +211,12 @@ func (s *Storage) AddRun(record RunRecord) error {
 // ListRuns returns the most recent run records up to the requested limit.
 // SECURITY FIX MEDIUM-2: Add timeout to prevent API hangs on slow storage.
 func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
+	return s.ListRunsBefore(limit, 0)
+}
+
+// ListRunsBefore returns a bounded page older than before (zero starts at newest).
+// Sequential IDs keep page boundaries stable when new runs arrive.
+func (s *Storage) ListRunsBefore(limit int, before uint64) ([]RunRecord, error) {
 	if s == nil || s.db == nil {
 		return nil, ErrStorageNotInitialised
 	}
@@ -235,7 +241,17 @@ func (s *Storage) ListRuns(limit int) ([]RunRecord, error) {
 		err := s.db.View(func(tx *bbolt.Tx) error {
 			cursor := tx.Bucket([]byte(runBucket)).Cursor()
 
-			for key, value := cursor.Last(); key != nil && len(records) < limit; key, value = cursor.Prev() {
+			key, value := cursor.Last()
+			if before > 0 {
+				key, _ = cursor.Seek(itob(before))
+				if key == nil {
+					key, value = cursor.Last()
+				} else {
+					key, value = cursor.Prev()
+				}
+			}
+
+			for ; key != nil && len(records) < limit; key, value = cursor.Prev() {
 				var rec RunRecord
 				err := json.Unmarshal(value, &rec)
 				if err != nil {

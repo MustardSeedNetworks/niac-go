@@ -2,16 +2,13 @@ import { History } from 'lucide-react';
 import { type FC, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
-import { fetchHistory } from '../../api/client';
-import { POLL_INTERVALS } from '../../constants/polling';
 import { iconSizes } from '../../constants/sizes';
-import { useApiResource } from '../../hooks/useApiResource';
+import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../../utils/format';
-
-const RECENT_RUN_LIMIT = 5;
+import { useRunHistory } from './useRunHistory';
 
 /**
  * Run history for the daemon, alongside the session controls that produce it.
@@ -19,10 +16,8 @@ const RECENT_RUN_LIMIT = 5;
  * now the single home for it.
  */
 export const RunHistoryCard: FC = () => {
-  const { t } = useTranslation('pages');
-  const { data: history, error } = useApiResource(fetchHistory, [], {
-    intervalMs: POLL_INTERVALS.slow,
-  });
+  const { t } = useTranslation(['pages', 'common']);
+  const { records: history, error, loading, hasOlder, hasNewer, older, newer } = useRunHistory();
   const location = useLocation();
 
   // The dashboard's "view all" link carries #recent-runs so it lands on the
@@ -45,9 +40,11 @@ export const RunHistoryCard: FC = () => {
         </div>
         <SmallText className="text-text-muted">{t('runtime.recentRunsDescription')}</SmallText>
         <div className="stack-sm text-sm text-text-secondary">
-          {(history ?? []).slice(0, RECENT_RUN_LIMIT).map((item) => (
+          {history.map((item) => (
             <div
               key={item.id}
+              data-testid="history-run"
+              data-run-id={item.id}
               className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm"
             >
               <p className="text-text-primary font-semibold">{item.configName}</p>
@@ -69,12 +66,34 @@ export const RunHistoryCard: FC = () => {
               {t('runtime.recentRunsFailed', { error: error.message })}
             </SmallText>
           ) : (
-            (!history || history.length === 0) && (
+            (loading || history.length === 0) && (
               <SmallText className="text-text-muted italic">
-                {t('runtime.noCapturedRuns')}
+                {loading
+                  ? t('common:status.loading')
+                  : t(hasNewer ? 'runtime.noOlderRuns' : 'runtime.noCapturedRuns')}
               </SmallText>
             )
           )}
+        </div>
+        <div className="flex-between">
+          <Button
+            data-testid="history-newer"
+            variant="outline"
+            size="sm"
+            onClick={newer}
+            disabled={loading || !hasNewer}
+          >
+            {t('runtime.newerRuns')}
+          </Button>
+          <Button
+            data-testid="history-older"
+            variant="outline"
+            size="sm"
+            onClick={older}
+            disabled={loading || !hasOlder}
+          >
+            {t('runtime.olderRuns')}
+          </Button>
         </div>
       </CardContent>
     </Card>

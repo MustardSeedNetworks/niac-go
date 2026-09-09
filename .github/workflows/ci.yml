@@ -1570,6 +1570,10 @@ jobs:
         working-directory: ui
         run: npm run test:e2e:auth
 
+      - name: Run persisted history browser acceptance
+        working-directory: ui
+        run: npm run test:e2e:history
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -1583,9 +1587,7 @@ jobs:
       # flake-free on the most recent green main run, so anything that starts
       # leaning on retries is a regression to fix, not a number to raise.
       #
-      # The glob covers BOTH suites -- the main run and the authenticated run,
-      # which writes results-auth.json. Globbing one file would have quietly
-      # excluded half the E2E surface.
+      # The glob covers the main, authenticated and persisted-history suites.
       #
       # Runs after the upload so the report is retained even when this is what
       # fails.

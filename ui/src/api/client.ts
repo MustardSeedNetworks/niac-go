@@ -87,6 +87,8 @@ export const fetchDevices = (sessionId: string) =>
 export const fetchSegments = (sessionId: string) =>
   deduplicatedGet<SegmentSummary[]>(sessionPath(sessionId, 'segments'));
 export const fetchHistory = () => deduplicatedGet<HistoryRecord[]>('/api/v1/history');
+export const fetchHistoryPage = (before?: number) =>
+  deduplicatedGet<HistoryRecord[]>(`/api/v1/history${before ? `?before=${before}` : ''}`);
 export const fetchNeighbors = (sessionId: string) =>
   deduplicatedGet<NeighborRecord[]>(sessionPath(sessionId, 'neighbors'));
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
