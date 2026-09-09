@@ -227,6 +227,7 @@ export const PacketInspectorPage: FC = () => {
       return undefined;
     }
     const layers = buildProtocolLayers(selectedPacket.headers, {
+      byteRanges: selectedPacket.byteRanges,
       timestamp: selectedPacket.timestamp,
       protocol: selectedPacket.protocol,
       sourceIp: selectedPacket.sourceIp,
@@ -440,8 +441,10 @@ export const PacketInspectorPage: FC = () => {
                   {t('packets.inspector.evictedCount', { count: evicted, limit: MAX_PACKETS })}
                 </SmallText>
                 {isPaused && pending > 0 && (
-                  <Tag colorScheme="yellow" data-testid="packet-buffer-pending">
-                    {t('packets.inspector.pendingCount', { count: pending })}
+                  <Tag colorScheme="yellow">
+                    <span data-testid="packet-buffer-pending">
+                      {t('packets.inspector.pendingCount', { count: pending })}
+                    </span>
                   </Tag>
                 )}
               </div>

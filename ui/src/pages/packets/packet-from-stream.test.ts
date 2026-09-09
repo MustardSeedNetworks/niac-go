@@ -31,6 +31,15 @@ const cdpEvent = {
 };
 
 describe('packetFromStreamEvent', () => {
+  it('preserves byte ranges from the SSE wire spelling', () => {
+    const byteRanges = [{ layer: 'tcp', field: 'Source Port', start: 38, end: 40 }];
+    const packet = packetFromStreamEvent(
+      { byte_ranges: byteRanges },
+      '2026-09-09T12:00:00Z',
+      'tagged',
+    );
+    expect(packet.byteRanges).toEqual(byteRanges);
+  });
   it('leaves addresses absent on a frame that has no IP layer', () => {
     const packet = packetFromStreamEvent(cdpEvent, '2026-08-23T14:30:15.000Z', 'p1');
 
