@@ -141,6 +141,15 @@ test.describe('Device Editor API wiring', () => {
         return;
       }
 
+      if (url.pathname === '/api/v1/config/devices/edge-switch-01' && request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ rawYaml: createPayload?.rawYaml }),
+        });
+        return;
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -164,7 +173,8 @@ test.describe('Device Editor API wiring', () => {
 
     await page.getByTestId('device-editor-save').click();
 
-    await expect(page.getByRole('alert')).toContainText('Device created successfully');
+    await expect(page).toHaveURL(/\/device-config\/edge-switch-01$/);
+    await expect(page.getByLabel('Hostname')).toHaveValue('edge-switch-01');
     expect(Object.keys(createPayload ?? {}).sort()).toEqual(['hostname', 'rawYaml']);
     expect(createPayload?.hostname).toBe('edge-switch-01');
     // The document is the daemon's own YAML — snake_case keys, and only the
