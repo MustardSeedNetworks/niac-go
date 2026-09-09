@@ -206,30 +206,38 @@ describe('NewSimulationWizardPage — status', () => {
   afterEach(() => vi.useRealTimers());
   it('preserves mounted editor state through a failed background poll and recovery', async () => {
     vi.useFakeTimers();
-    await act(async () => {
-      renderWizard();
-    });
+    await Promise.resolve(
+      act(async () => {
+        renderWizard();
+      }),
+    );
     const interfaceControl = screen.getByTestId('wizard-interface-select');
     fireEvent.change(interfaceControl, { target: { value: 'lo0' } });
     fireEvent.click(screen.getByTestId('wizard-start-empty'));
     vi.mocked(fetchSimulationStatus).mockRejectedValueOnce(new ApiError('Poll failed', 503));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
-    });
+    await Promise.resolve(
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
+      }),
+    );
     expect(screen.getByRole('alert')).toHaveTextContent('Poll failed');
     expect(screen.getByTestId('wizard-interface-select')).toBe(interfaceControl);
     expect(interfaceControl).toHaveValue('lo0');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
-    });
+    await Promise.resolve(
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
+      }),
+    );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByTestId('wizard-interface-select')).toBe(interfaceControl);
   });
-  it('waits for status without claiming the daemon is in the wrong mode', () => {
+  it('waits for status without claiming the daemon is in the wrong mode', async () => {
     vi.mocked(fetchSimulationStatus).mockImplementation(() => new Promise(() => {}));
     renderWizard();
-    expect(screen.getByTestId('wizard-status-notice')).toHaveTextContent(
-      'Checking simulation availability',
+    await waitFor(() =>
+      expect(screen.getByTestId('wizard-status-notice')).toHaveTextContent(
+        'Checking simulation availability',
+      ),
     );
     expect(screen.queryByText('Daemon Mode Not Detected')).not.toBeInTheDocument();
   });
