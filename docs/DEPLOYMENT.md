@@ -113,3 +113,28 @@ niac --help
 
 For API deployments, set `NIAC_API_TOKEN` and validate the health endpoint from
 the same host or trusted management network.
+
+### Automated deployment validation
+
+An install is not finished until the service answering on the host is provably
+the artifact the release published. `make deploy-validate` installs a released
+package over ssh and asserts that:
+
+- `/__version` reports the installed version,
+- `uiBuildHash` is non-empty, which is the only signal that the web UI was
+  embedded (a binary built outside the make pipeline reports an empty hash and
+  serves no UI), and
+- installing a second time, over the configuration and database the first
+  install left behind, does not leave the unit restarting.
+
+```bash
+make deploy-validate HOST=dev-srv-ubuntu
+make deploy-validate HOST=dev-srv-fedora RELEASE=v0.95.38
+make deploy-validate HOST=dev-srv-ubuntu PACKAGE=./dist/niac_0.95.38_amd64.deb
+```
+
+`HOST` is an ssh target with passwordless sudo and is required; deployment
+hosts are passed in rather than hardcoded. The assertions run on the host
+against the loopback listener, so a closed firewall does not read as a broken
+deployment. Packages themselves are built by goreleaser in CI — there is no
+local packaging target, and `deploy-validate` deliberately does not add one.
