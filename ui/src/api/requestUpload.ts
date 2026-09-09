@@ -2,6 +2,7 @@ import { ApiError, NetworkError, TimeoutError } from './errors';
 import {
   buildRequestHeaders,
   buildUrl,
+  invalidatePendingReads,
   notifyIfAuthenticationFailed,
   parseApiError,
   toCamelCase,
@@ -61,6 +62,7 @@ export function requestJsonWithProgress<T>(
         xhr.onload = () => {
           cleanup();
           if (xhr.status >= 200 && xhr.status < 300) {
+            invalidatePendingReads();
             try {
               resolve(toCamelCase(JSON.parse(xhr.responseText) as T));
             } catch {
