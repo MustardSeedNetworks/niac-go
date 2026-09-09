@@ -27,10 +27,12 @@ import {
   useEffect,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { deduplicatedGet } from '../api/requestCore';
+import { type Action, can as canPerform, type Scope } from './permissions';
 
 /** Allowed scope values, mirroring TokenScope.String() on the server. */
-export type Scope = 'read-only' | 'read-write' | 'admin';
+export type { Scope } from './permissions';
 
 const SCOPE_RANK: Record<Scope, number> = {
   'read-only': 1,
@@ -43,6 +45,7 @@ interface AuthScopeResponse {
 }
 
 interface ScopeContextValue {
+  can: (action: Action) => boolean;
   /** Latest /auth/scope fetch, or null while loading / on fetch error. */
   scope: Scope | null;
   /** True while the initial fetch is in flight. */
@@ -75,6 +78,8 @@ export function ScopeProvider({ children }: ScopeProviderProps): ReactElement {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setScope(null);
     setError(null);
     try {
       const fresh = await deduplicatedGet<AuthScopeResponse>('/api/v1/auth/scope');
@@ -93,12 +98,28 @@ export function ScopeProvider({ children }: ScopeProviderProps): ReactElement {
 
   const canWrite = scope !== null && SCOPE_RANK[scope] >= SCOPE_RANK['read-write'];
   const isAdmin = scope === 'admin';
+  const can = useCallback((action: Action) => canPerform(scope, action), [scope]);
 
   return (
-    <ScopeContext.Provider value={{ scope, loading, error, refresh, canWrite, isAdmin }}>
+    <ScopeContext.Provider value={{ scope, loading, error, refresh, canWrite, isAdmin, can }}>
       {children}
     </ScopeContext.Provider>
   );
+}
+
+export function useActionPermission(action?: Action): { disabled: boolean; title?: string } {
+  const { t } = useTranslation('common');
+  const context = useContext(ScopeContext);
+  if (!action || context?.can(action)) return { disabled: false };
+  return {
+    disabled: true,
+    title:
+      !context || context.loading
+        ? t('permissions.checking')
+        : context.error
+          ? t('permissions.unavailable')
+          : t('permissions.denied'),
+  };
 }
 
 /**

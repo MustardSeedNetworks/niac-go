@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
 import { Link, type LinkProps } from 'react-router';
 import { iconSizes } from '../constants/sizes';
+import type { Action } from '../contexts/permissions';
+import { useActionPermission } from '../contexts/ScopeContext';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
 type ButtonTone = 'violet' | 'red' | 'green' | 'blue' | 'gray';
@@ -8,6 +10,7 @@ type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 // React 19: ref is now a regular prop, no forwardRef needed
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  action?: Action;
   children: ReactNode;
   variant?: ButtonVariant;
   tone?: ButtonTone;
@@ -105,26 +108,32 @@ export const Button: FC<ButtonProps> = ({
   loading = false,
   className = '',
   disabled,
+  action,
   ref,
   ...props
-}) => (
-  <button
-    type="button"
-    ref={ref}
-    className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
-    disabled={disabled || loading}
-    data-variant={variant}
-    data-tone={tone}
-    {...props}
-  >
-    {loading ? <LoadingSpinner size={size} /> : leftIcon}
-    {children}
-    {!loading && rightIcon}
-  </button>
-);
+}) => {
+  const permission = useActionPermission(action);
+  return (
+    <button
+      type="button"
+      ref={ref}
+      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
+      disabled={disabled || loading || permission.disabled}
+      data-variant={variant}
+      data-tone={tone}
+      {...props}
+      title={permission.title ?? props.title}
+    >
+      {loading ? <LoadingSpinner size={size} /> : leftIcon}
+      {children}
+      {!loading && rightIcon}
+    </button>
+  );
+};
 
 // Icon button for compact actions
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  action?: Action;
   icon: ReactNode;
   'aria-label': string;
   variant?: 'ghost' | 'outline' | 'solid';
@@ -139,8 +148,10 @@ export const IconButton: FC<IconButtonProps> = ({
   tone = 'gray',
   size = 'md',
   className = '',
+  action,
   ...props
 }) => {
+  const permission = useActionPermission(action);
   const iconSizeStyles = {
     sm: 'p-1.5',
     md: 'pad-xs',
@@ -166,6 +177,8 @@ export const IconButton: FC<IconButtonProps> = ({
       type="button"
       className={`inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed ${iconSizeStyles[size]} ${variantBase[variant]} ${toneStyles[tone]} ${className}`}
       {...props}
+      disabled={props.disabled || permission.disabled}
+      title={permission.title ?? props.title}
     >
       {icon}
     </button>

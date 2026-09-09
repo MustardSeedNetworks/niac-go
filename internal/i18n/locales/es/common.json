@@ -1,4 +1,9 @@
 {
+  "permissions": {
+    "checking": "Comprobando permisos…",
+    "unavailable": "No se pudieron verificar los permisos. Vuelve a conectarte antes de realizar cambios.",
+    "denied": "Tu token no permite esta acción."
+  },
   "app": {
     "title": "NIAC",
     "name": "NIAC",
