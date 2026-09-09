@@ -141,6 +141,13 @@ test.describe('Device Editor API wiring', () => {
         return;
       }
 
+      if (url.pathname === '/api/v1/config/devices' && request.method() === 'GET') {
+        await route.fulfill({
+          json: { devices: [], totalCount: 0, configurationLoaded: true },
+        });
+        return;
+      }
+
       if (url.pathname === '/api/v1/config/devices/edge-switch-01' && request.method() === 'GET') {
         await route.fulfill({
           status: 200,
