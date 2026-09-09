@@ -176,6 +176,12 @@
     "noCapturedRuns": "Aún no hay ejecuciones capturadas."
   },
   "newSimWizard": {
+    "status": {
+      "loading": "Comprobando la disponibilidad de la simulación…",
+      "failed": "Falló la solicitud del estado de la simulación.",
+      "unavailable": "No se puede conectar con NIAC. Compruebe la conexión y que el daemon esté en ejecución.",
+      "wrongMode": "Inicie NIAC en modo daemon para crear una simulación."
+    },
     "backLabel": "Atrás",
     "behaviors": {
       "addFault": "Agregar falla",
