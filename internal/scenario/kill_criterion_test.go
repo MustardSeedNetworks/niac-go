@@ -16,8 +16,8 @@ import (
 // The composer shipped in #1163/#1165 and the criterion had never been executed
 // — a plan that names its own stopping condition and then never checks it is
 // just an intention. This runs it against every built-in pack rather than three,
-// because the packs ARE the representative scenarios and there is no reason to
-// sample when the whole set is cheap.
+// because every shipped pack is part of the authoring contract. Each pack is
+// generated and decoded once for validation, parity, utilization and identity checks.
 //
 // "Requires YAML repair" is read strictly: the generated config must load and
 // validate with no errors AND no warnings. A warning is something an operator
@@ -54,6 +54,12 @@ func TestEveryPackGeneratesWithoutYAMLRepair(t *testing.T) {
 			if got := generated.Manifest.Parity(); got != pack.Manifest {
 				t.Errorf("%q drifted from its manifest:\n got  %#v\n want %#v", pack.ID, got, pack.Manifest)
 			}
+			t.Run("utilization", func(t *testing.T) {
+				assertAuthoredUtilization(t, pack, cfg)
+			})
+			t.Run("announcements", func(t *testing.T) {
+				assertDeviceAnnouncements(t, pack.ID, cfg)
+			})
 		})
 	}
 }

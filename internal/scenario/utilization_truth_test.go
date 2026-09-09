@@ -24,30 +24,21 @@ const (
 // A demo network has to look busy. Authored utilization sits mostly in the
 // 50-70% band, peaks higher on a minority of interfaces, and leaves a few quiet
 // — always below the Link-Live warning threshold.
-func TestAuthoredUtilizationLooksBusy(t *testing.T) {
-	for _, pack := range scenario.Packs() {
-		steady, total := packUtilizationBands(t, pack)
-		if total == 0 {
-			t.Fatalf("%s authored no interface utilization", pack.ID)
-		}
-		if got := steady * 100 / total; got < wantSteadyPercent {
-			t.Errorf("%s steady-band utilization = %d%%, want at least %d%%",
-				pack.ID, got, wantSteadyPercent)
-		}
+func assertAuthoredUtilization(t *testing.T, pack scenario.Pack, cfg *config.Config) {
+	t.Helper()
+	steady, total := packUtilizationBands(t, pack, cfg)
+	if total == 0 {
+		t.Fatalf("%s authored no interface utilization", pack.ID)
+	}
+	if got := steady * 100 / total; got < wantSteadyPercent {
+		t.Errorf("%s steady-band utilization = %d%%, want at least %d%%",
+			pack.ID, got, wantSteadyPercent)
 	}
 }
 
-func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
+func packUtilizationBands(t *testing.T, pack scenario.Pack, cfg *config.Config) (int, int) {
 	t.Helper()
 	var steady, total int
-	result, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatalf("generate %s: %v", pack.ID, err)
-	}
-	cfg, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatalf("load %s: %v", pack.ID, err)
-	}
 	authored := make(map[string]bool, len(pack.Request.Congestion))
 	for _, link := range pack.Request.Congestion {
 		authored[link.Device+"|"+link.Interface] = true
@@ -81,30 +72,21 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack) (int, int) {
 // answer SNMP; personal computers deliberately do not, so that a discovery tool
 // files them as hosts rather than as managed infrastructure, and they announce
 // over NetBIOS or multicast DNS instead.
-func TestEveryDeviceAnnouncesItsName(t *testing.T) {
-	for _, pack := range scenario.Packs() {
-		result, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Fatalf("generate %s: %v", pack.ID, err)
-		}
-		cfg, err := config.LoadYAMLBytes(result.YAML)
-		if err != nil {
-			t.Fatalf("load %s: %v", pack.ID, err)
-		}
-		for index := range cfg.Devices {
-			device := &cfg.Devices[index]
-			switch {
-			case device.SNMPConfig.SysName != "":
-				if got := device.SNMPConfig.SysName; got != device.Name {
-					t.Errorf("%s %s sysName = %q, want %q", pack.ID, device.Name, got, device.Name)
-				}
-			case device.NetBIOSConfig != nil && device.NetBIOSConfig.Enabled:
-				assertAnnouncedName(t, pack.ID, device.Name, device.NetBIOSConfig.Name, netbiosNameLimit)
-			case device.MDNSConfig != nil && device.MDNSConfig.Enabled:
-				assertAnnouncedName(t, pack.ID, device.Name, device.MDNSConfig.Hostname, 0)
-			default:
-				t.Errorf("%s %s announces no name at all — it renders as a bare IP", pack.ID, device.Name)
+func assertDeviceAnnouncements(t *testing.T, packID string, cfg *config.Config) {
+	t.Helper()
+	for index := range cfg.Devices {
+		device := &cfg.Devices[index]
+		switch {
+		case device.SNMPConfig.SysName != "":
+			if got := device.SNMPConfig.SysName; got != device.Name {
+				t.Errorf("%s %s sysName = %q, want %q", packID, device.Name, got, device.Name)
 			}
+		case device.NetBIOSConfig != nil && device.NetBIOSConfig.Enabled:
+			assertAnnouncedName(t, packID, device.Name, device.NetBIOSConfig.Name, netbiosNameLimit)
+		case device.MDNSConfig != nil && device.MDNSConfig.Enabled:
+			assertAnnouncedName(t, packID, device.Name, device.MDNSConfig.Hostname, 0)
+		default:
+			t.Errorf("%s %s announces no name at all — it renders as a bare IP", packID, device.Name)
 		}
 	}
 }
