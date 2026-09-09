@@ -70,6 +70,7 @@ export const WalkProfileSource: FC<Props> = (props) => {
               disabled={!props.file || props.busy !== 'idle'}
               loading={props.busy === 'reading'}
               onClick={() => void props.runImport()}
+              action="upload"
               data-testid="walk-profile-import"
             >
               {t('walkAnalyzer.profile.importAction')}
