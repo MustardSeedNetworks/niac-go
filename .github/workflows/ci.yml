@@ -183,7 +183,7 @@ jobs:
         id: go
         uses: ./.github/actions/setup-go
 
-      - name: Install libpcap-dev
+      - name: Install backend test dependencies
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
         # 20 rather than 10: the release path may now take three attempts with
         # 90s then 180s between them. A backstop, not a wait -- raising it
@@ -204,7 +204,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: libpcap-dev
+          packages: libpcap-dev ripgrep
 
       - name: Verify dependencies
         # ./.github/actions/setup-go already runs `go mod download`; this
@@ -293,6 +293,9 @@ jobs:
       # decodes what it decoded then.
       - name: Consumer demand extractor — SNMP request decoding
         run: python3 scripts/test-extract-oid-demand.py
+
+      - name: Wire nightly runner — reject stale or dirty checkouts
+        run: python3 scripts/test-wire-nightly.py
 
       # The device editor's forms are generated from the schema, so a struct
       # change that nobody regenerates for would silently stop being editable.
@@ -1515,7 +1518,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
 
       - name: Start backend server
         env:

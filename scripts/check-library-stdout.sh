@@ -12,6 +12,11 @@
 
 set -uo pipefail
 
+if ! command -v rg >/dev/null; then
+  printf 'check-library-stdout: ripgrep is required\n' >&2
+  exit 127
+fi
+
 # Comments explaining the rule are not violations of it.
 matches=$(
   rg -n --glob '!*_test.go' --glob '!internal/logging/**' \

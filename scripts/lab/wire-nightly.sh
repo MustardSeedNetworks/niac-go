@@ -34,40 +34,51 @@ STATE="${NIAC_WIRE_STATE:-/var/lib/niac-wire}"
 TOKEN_FILE="${NIAC_WIRE_TOKEN:-/etc/niac-wire/github-token}"
 SLUG="${NIAC_WIRE_REPO_SLUG:-MustardSeedNetworks/niac-go}"
 
-mkdir -p "$STATE"
+mkdir -p "$STATE" || exit 73
 started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 log="${STATE}/last-run.log"
 
-# A clone of its own, never a developer's working checkout: this resets to the
-# fetched mainline on every run, which would discard whatever branch and
-# uncommitted work a session had open there.
-if [[ ! -d "$REPO/.git" ]]; then
-	printf 'wire-nightly: no dedicated clone at %s; create one with\n' "$REPO" >&2
-	printf '  git clone https://github.com/%s %s\n' "$SLUG" "$REPO" >&2
-	exit 78 # EX_CONFIG
-fi
+# Use a dedicated clean clone; preserve unexpected edits for the operator.
+prepare_repo() {
+	local changes expected
+	if [[ ! -d "$REPO/.git" ]]; then
+		printf 'wire-nightly: no dedicated clone at %s\n' "$REPO" >&2
+		return 78
+	fi
+	changes="$(git -C "$REPO" status --porcelain --untracked-files=all)" || return
+	if [[ -n "$changes" ]]; then
+		printf 'wire-nightly: refusing to test a dirty checkout; preserve and relocate its changes\n%s\n' "$changes" >&2
+		return 65
+	fi
+	git -C "$REPO" fetch --quiet origin main || return
+	expected="$(git -C "$REPO" rev-parse --verify 'FETCH_HEAD^{commit}')" || return
+	git -C "$REPO" -c advice.detachedHead=false checkout --quiet --detach "$expected" || return
+	commit="$(git -C "$REPO" rev-parse --verify HEAD)" || return
+	[[ "$commit" == "$expected" ]] || return 65
+}
 
-# Test the merged mainline.
-git -C "$REPO" fetch --quiet origin main 2>&1 | tee "$log"
-git -C "$REPO" -c advice.detachedHead=false checkout --quiet FETCH_HEAD 2>&1 | tee -a "$log"
-commit="$(git -C "$REPO" rev-parse --short HEAD)"
-
-printf 'wire-nightly: %s at %s\n' "$SLUG" "$commit" | tee -a "$log"
+commit=""
 start_epoch=$SECONDS
-go test -C "$REPO" -tags integration ./internal/wiretest/... -count=1 -v 2>&1 | tee -a "$log"
-status="${PIPESTATUS[0]}"
+prepare_repo >"$log" 2>&1
+status=$?
+cat "$log"
+if [[ "$status" -eq 0 ]]; then
+	printf 'wire-nightly: %s at %s\n' "$SLUG" "$commit" | tee -a "$log"
+	go test -C "$REPO" -tags integration ./internal/wiretest/... -count=1 -v 2>&1 | tee -a "$log"
+	status=$?
+fi
 
 # The walk-fidelity corpus sweep (plan row F1a) runs here rather than per-PR:
 # 745 sanitized walks take minutes, and the corpus is off-repo. It is a report,
 # not a gate — a corpus walk has no baseline to ratchet against — so its exit
 # status is recorded but does not fail the unit. Absent corpus, absent sweep:
 # the timer stays useful on a host that has never been given one.
-if [[ -n "${NIAC_WALK_CORPUS:-}" && -d "${NIAC_WALK_CORPUS}" ]]; then
+if [[ "$status" -eq 0 && -n "${NIAC_WALK_CORPUS:-}" && -d "${NIAC_WALK_CORPUS}" ]]; then
 	printf 'wire-nightly: walk-fidelity corpus sweep over %s\n' "$NIAC_WALK_CORPUS" | tee -a "$log"
 	NIAC_FIDELITY_REPORT_DIR="${STATE}/fidelity" \
 		go test -C "$REPO" ./internal/protocols/snmp/ \
 		-run TestWalkReplayFidelity -count=1 -timeout 60m 2>&1 | tee -a "$log" || true
-else
+elif [[ "$status" -eq 0 ]]; then
 	printf 'wire-nightly: no NIAC_WALK_CORPUS; skipping the walk-fidelity sweep\n' | tee -a "$log"
 fi
 
@@ -80,7 +91,7 @@ result=$([[ "$status" -eq 0 ]] && echo passed || echo failed)
 printf '{"startedAt":"%s","finishedAt":"%s","commit":"%s","result":"%s","exitCode":%d,"durationSeconds":%d}\n' \
 	"$started" "$finished" "$commit" "$result" "$status" "$duration" |
 	tee "${STATE}/last-run.json" |
-	cat >>"${STATE}/history.jsonl"
+	cat >>"${STATE}/history.jsonl" || exit 74
 
 if [[ "$status" -eq 0 ]]; then
 	printf 'wire-nightly: passed in %ss\n' "$duration"
