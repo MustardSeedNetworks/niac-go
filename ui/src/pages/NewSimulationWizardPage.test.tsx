@@ -10,14 +10,17 @@ vi.mock('../contexts/ScopeContext', () => ({
  * draft, edits update that draft, and runtime does not start until the final
  * preflight succeeds.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchSimulationStatus } from '../api/client';
+import { ApiError, NetworkError } from '../api/errors';
 import type { ScenarioDraft } from '../api/library-client';
 import type { ScenarioGenerateRequest } from '../api/scenario-client';
 import type { LibraryNetwork, SimulationStatus, Template } from '../api/types';
+import { POLL_INTERVALS } from '../constants/polling';
 import { AppProvider } from '../contexts/AppContext';
 import '../i18n';
 import { NewSimulationWizardPage } from './NewSimulationWizardPage';
@@ -140,6 +143,12 @@ async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(fetchSimulationStatus).mockResolvedValue({
+    running: true,
+    interface: 'lo0',
+    deviceCount: 0,
+    uptimeSeconds: 0,
+  });
   fetchUsableInterfaces.mockResolvedValue({
     interfaces: [{ name: 'lo0', addresses: ['127.0.0.1'], isUp: true, isLoopback: true }],
   });
@@ -195,6 +204,57 @@ beforeEach(() => {
       dhcpScopes: [],
     },
     diagnostics: [],
+  });
+});
+
+describe('NewSimulationWizardPage — status', () => {
+  afterEach(() => vi.useRealTimers());
+  it('preserves mounted editor state through a failed background poll and recovery', async () => {
+    vi.useFakeTimers();
+    await Promise.resolve(
+      act(async () => {
+        renderWizard();
+      }),
+    );
+    const interfaceControl = screen.getByTestId('wizard-interface-select');
+    fireEvent.change(interfaceControl, { target: { value: 'lo0' } });
+    fireEvent.click(screen.getByTestId('wizard-start-empty'));
+    vi.mocked(fetchSimulationStatus).mockRejectedValueOnce(new ApiError('Poll failed', 503));
+    await Promise.resolve(
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
+      }),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Poll failed');
+    expect(screen.getByTestId('wizard-interface-select')).toBe(interfaceControl);
+    expect(interfaceControl).toHaveValue('lo0');
+    await Promise.resolve(
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVALS.fast);
+      }),
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('wizard-interface-select')).toBe(interfaceControl);
+  });
+  it('waits for status without claiming the daemon is in the wrong mode', async () => {
+    vi.mocked(fetchSimulationStatus).mockImplementation(() => new Promise(() => {}));
+    renderWizard();
+    await waitFor(() =>
+      expect(screen.getByTestId('wizard-status-notice')).toHaveTextContent(
+        'Checking simulation availability',
+      ),
+    );
+    expect(screen.queryByText('Daemon Mode Not Detected')).not.toBeInTheDocument();
+  });
+  it.each([
+    { error: new ApiError('Forbidden status request', 403), text: 'Forbidden status request' },
+    { error: new NetworkError(), text: 'Cannot reach NIAC' },
+    { error: new ApiError('Not implemented', 501), text: 'Start NIAC in daemon mode' },
+  ])('explains $text', async ({ error, text }) => {
+    vi.mocked(fetchSimulationStatus).mockRejectedValue(error);
+    renderWizard();
+    expect(await screen.findByRole('alert')).toHaveTextContent(text);
+    expect(screen.queryByTestId('wizard-next-button')).not.toBeInTheDocument();
   });
 });
 

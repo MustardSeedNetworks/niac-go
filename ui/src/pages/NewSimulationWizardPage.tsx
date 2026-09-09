@@ -18,6 +18,7 @@ import { PreflightStep } from '../components/wizard/PreflightStep';
 import { ProtocolsStep } from '../components/wizard/ProtocolsStep';
 import { ReviewStep } from '../components/wizard/ReviewStep';
 import { TemplateStep } from '../components/wizard/TemplateStep';
+import { WizardStatusNotice } from '../components/wizard/WizardStatusNotice';
 import { WizardStepper } from '../components/wizard/WizardStepper';
 import {
   initialWizardState,
@@ -28,8 +29,6 @@ import {
 import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
-import { SmallText } from '../ui/Typography';
 import { reportError } from '../utils/error-reporter';
 import { fileToText } from '../utils/file';
 
@@ -74,7 +73,7 @@ function selectedSourceKey(state: WizardState) {
 export const NewSimulationWizardPage: FC = () => {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
-  const { data: simStatus } = useSimulationStatus();
+  const { data: simStatus, loading, error } = useSimulationStatus();
   const showError = useErrorToast();
   const [state, setState] = useState<WizardState>(initialWizardState);
   const [draft, setDraft] = useState<ScenarioDraft | null>(null);
@@ -225,19 +224,12 @@ export const NewSimulationWizardPage: FC = () => {
     state.step === 0 ? isTemplateStepComplete(state) && !state.starting : !state.saving;
 
   if (simStatus === null) {
-    return (
-      <Card className="border-status-warning/30 bg-status-warning/20">
-        <CardContent className="stack">
-          <SmallText className="text-status-warning">
-            {t('runtime.daemonModeWarning')} {t('runtime.daemonModeInstructions')}
-          </SmallText>
-        </CardContent>
-      </Card>
-    );
+    return <WizardStatusNotice loading={loading} error={error} />;
   }
 
   return (
     <div className="stack-xl">
+      {error && <WizardStatusNotice loading={loading} error={error} />}
       <WizardStepper steps={steps} currentIndex={state.step} />
 
       <div data-testid="wizard-step-panel">
