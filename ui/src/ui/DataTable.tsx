@@ -172,7 +172,7 @@ export function DataTable<T>({
         {columns.map((column) => (
           <th
             key={column.key}
-            className={`px-4 py-row-lg ${column.align === 'right' ? 'text-right' : 'text-left'} ${column.headerClassName ?? ''}`}
+            className={`relative px-4 py-row-lg ${column.align === 'right' ? 'text-right' : 'text-left'} ${column.headerClassName ?? ''}`}
           >
             {column.sortAccessor ? (
               <button
