@@ -140,10 +140,8 @@ func deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultT
 	case devicestate.FaultDHCPNoOffer:
 		return device.DHCPConfig != nil
 	case devicestate.FaultDNSNXDomain, devicestate.FaultDNSTimeout:
-		// A non-nil DNSConfig proves nothing: parseDNSConfig hands every
-		// YAML-loaded device an empty one, so a workstation that authored no
-		// `dns:` block would otherwise look like a DNS server. Records are
-		// what make a device answer queries.
+		// NXDOMAIN must change an otherwise successful lookup; an empty
+		// authored DNS service already returns NXDOMAIN for every name.
 		return device.DNSConfig != nil &&
 			(len(device.DNSConfig.ForwardRecords) > 0 || len(device.DNSConfig.ReverseRecords) > 0)
 	}

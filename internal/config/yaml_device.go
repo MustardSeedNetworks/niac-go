@@ -398,10 +398,11 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	// Handle DHCP configuration
 	device.DHCPConfig = parseDHCPConfig(yamlDevice.Dhcp)
 
-	// Handle DNS configuration
-	var err error
-	if device.DNSConfig, err = parseDNSConfig(yamlDevice.DNS, yamlDevice.Name); err != nil {
-		return err
+	if yamlDevice.DNS != nil {
+		var err error
+		if device.DNSConfig, err = parseDNSConfig(*yamlDevice.DNS, yamlDevice.Name); err != nil {
+			return err
+		}
 	}
 
 	// Handle discovery protocols
