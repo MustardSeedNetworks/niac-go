@@ -1454,7 +1454,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          command: cd ui && npx playwright install-deps chromium webkit firefox msedge
+          command: cd ui && npx playwright install-deps chromium webkit firefox chrome msedge
           command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
@@ -1465,10 +1465,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          # v2: the browser set gained msedge for the authoring-journey project
-          # (#1151). Without bumping this, a cache hit from before that change
-          # restores a browser directory with no Edge in it and the edge project
-          # fails on a runner that looks fully provisioned.
+          # Only bundled engines live here; vendor channels use system locations.
           key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: |
             playwright-browsers-v2-${{ runner.os }}-
@@ -1487,7 +1484,8 @@ jobs:
       # outage, ordinary CI still fails fast, because there a quick red is
       # worth more than waiting.
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        # Chrome and Edge install outside ~/.cache/ms-playwright. A cache hit
+        # only proves bundled engines exist, so always provision vendor channels.
         working-directory: ui
         timeout-minutes: 20
         env:
@@ -1498,7 +1496,7 @@ jobs:
 
           attempt=1
           while [ "$attempt" -le "$ATTEMPTS" ]; do
-            if npx playwright install chromium webkit firefox msedge; then
+            if npx playwright install chromium webkit firefox chrome msedge; then
               exit 0
             fi
 
