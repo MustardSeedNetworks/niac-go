@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.38](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.37...v0.95.38) (2026-09-09)
+
+
+### Bug Fixes
+
+* **ci:** reject stale nightly acceptance results ([#1966](https://github.com/MustardSeedNetworks/niac-go/issues/1966)) ([f4bd54b](https://github.com/MustardSeedNetworks/niac-go/commit/f4bd54bf08a0d68f55bd8eeb3c40c638962ec1c2))
+* **e2e:** isolate empty-device state and cover installed browsers ([#1968](https://github.com/MustardSeedNetworks/niac-go/issues/1968)) ([81f82b8](https://github.com/MustardSeedNetworks/niac-go/commit/81f82b8a2db9dd5909cdc070669046d4bdd6303e))
+* preserve absent DNS service configuration ([#1967](https://github.com/MustardSeedNetworks/niac-go/issues/1967)) ([9c4987e](https://github.com/MustardSeedNetworks/niac-go/commit/9c4987eef726c51b019070eae89f74881393f785))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @chromatic-com/storybook to v5.3.1 ([#1874](https://github.com/MustardSeedNetworks/niac-go/issues/1874)) ([e714a43](https://github.com/MustardSeedNetworks/niac-go/commit/e714a433c4205c32cd746c4150372836415be7e3))
+
 ## [0.95.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.36...v0.95.37) (2026-09-09)
 
 
