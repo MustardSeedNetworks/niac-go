@@ -524,13 +524,8 @@ func parseSingleDHCPLease(lease converter.DhcpLease) *DHCPLease {
 	return dhcpLease
 }
 
-// parseDNSConfig parses DNS configuration from YAML
-// Returns an empty DNSConfig if input is nil (not an error condition).
-func parseDNSConfig(yamlDNS *converter.DNSServer, deviceName string) (*DNSConfig, error) {
-	if yamlDNS == nil {
-		return &DNSConfig{}, nil
-	}
-
+// parseDNSConfig parses an authored DNS service configuration.
+func parseDNSConfig(yamlDNS converter.DNSServer, deviceName string) (*DNSConfig, error) {
 	dnsCfg := &DNSConfig{}
 
 	forwardRecords, err := parseDNSRecords(yamlDNS.ForwardRecords, deviceName)
