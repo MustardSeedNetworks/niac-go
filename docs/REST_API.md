@@ -414,6 +414,27 @@ increment `ifInDiscards` and `ifOutDiscards`; interface errors increment
 `ifInErrors` and `ifOutErrors`; utilization advances the 32-bit and 64-bit
 interface octet counters. All counters remain monotonic after a fault clears.
 
+### Link and Fault Syslog
+
+A device's enabled `syslog` configuration sends link transitions and fault
+updates/clears to its configured UDP collectors. These are
+[RFC 5424](https://www.rfc-editor.org/rfc/rfc5424.html) messages using the
+`local0` facility and the device's authored hostname, not the daemon host name.
+
+| Event | Severity | Message ID |
+| --- | --- | --- |
+| Operational link down | Warning | `LINK_DOWN` |
+| Operational link up | Notice | `LINK_UP` |
+| Interface or device fault set/changed | Warning | `FAULT_UPDATED` |
+| Interface or device fault cleared | Notice | `FAULT_CLEARED` |
+
+Description-only edits and other configuration events do not emit syslog.
+The message includes the authoritative event version, kind and quoted target;
+it does not infer an old event's fault value from today's state. Timestamps use
+UTC with at most six fractional digits. Structured data is `-`; target text is
+ASCII-escaped to preserve one message per event. Restored event history is not
+resent after recovery, while new transitions continue normally.
+
 ## Alerts
 
 Add `--alert-packets-threshold <n>` and optional `--alert-webhook https://...` to receive

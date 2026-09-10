@@ -1,0 +1,39 @@
+networks:
+  - name: wire-transit
+    subnet: 10.254.200.0/24
+  - name: access-lan
+    subnet: 10.254.201.0/24
+attachments:
+  - name: tester
+    connect: wire-transit
+devices:
+  - name: syslog-router
+    type: router
+    mac: "02:00:00:00:fb:01"
+    snmp_agent:
+      enabled: true
+      community: wire_public
+      sysname: LAB-SYSLOG-R1
+    syslog:
+      enabled: true
+      receivers: ["10.254.200.50:514"]
+    interfaces:
+      - name: Management0
+        network: wire-transit
+        address: 10.254.200.1/24
+      - name: Access1
+        network: access-lan
+        address: 10.254.201.1/24
+behavior_timelines:
+  - name: access-outage
+    start_offset_ms: 1000
+    repeat_count: 1
+    phases:
+      - name: link-loss
+        duration_ms: 1500
+        reset: true
+        faults:
+          - device: syslog-router
+            interface: Access1
+            type: link_down
+            value: 1
