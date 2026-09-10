@@ -52,6 +52,7 @@ type Agent struct {
 	stateIPOIDs             map[string]struct{}
 	walkFaultName           string
 	walkFaultIndex          string
+	resourceFaultBindings   map[string]resourceFaultBinding
 	interfaceChangeBindings map[string]interfaceChangeBinding
 	// poe is the published per-port power picture. It is an atomic pointer
 	// because the POWER-ETHERNET-MIB columns that read it are dynamic OIDs,
@@ -283,6 +284,7 @@ func simulatedUptimeBase(device *config.Device) time.Duration {
 // first GetNext (which runs on the stack's single decode goroutine). See
 // MIB.Reindex.
 func (a *Agent) Reindex() {
+	a.registerResourceFaults()
 	a.mu.Lock()
 	a.refreshDeviceStateInterfaceMIBs()
 	a.mu.Unlock()
@@ -331,6 +333,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
+	a.registerResourceFaults()
 	a.mu.Lock()
 	a.refreshDeviceStateInterfaceMIBs()
 	a.mu.Unlock()
