@@ -19,6 +19,7 @@ interface Option {
   label: string;
 }
 interface BehaviorFaultActionProps {
+  dhcpDevices: string[];
   action: DraftBehaviorFault;
   deviceOptions: Option[];
   interfaceOptions: (device: string) => Option[];
@@ -27,6 +28,7 @@ interface BehaviorFaultActionProps {
 }
 
 export function BehaviorFaultAction({
+  dhcpDevices,
   action,
   deviceOptions,
   interfaceOptions,
@@ -41,17 +43,26 @@ export function BehaviorFaultAction({
       <Select
         label={t('newSimWizard.behaviors.device')}
         value={action.device}
-        options={deviceOptions}
+        options={
+          action.type === 'duplicate_dhcp_offer'
+            ? [
+                { value: '', label: t('newSimWizard.behaviors.selectDhcpServer') },
+                ...deviceOptions.filter((device) => dhcpDevices.includes(device.value)),
+              ]
+            : deviceOptions
+        }
         onChange={(device) =>
           onChange(
-            isDeviceBehaviorFaultType(action.type)
-              ? { device, type: action.type, value: action.value }
-              : {
-                  device,
-                  type: action.type,
-                  value: action.value,
-                  interface: interfaceOptions(device)[0]?.value ?? '',
-                },
+            action.type === 'duplicate_dhcp_offer'
+              ? { device, type: action.type, address: action.address }
+              : isDeviceBehaviorFaultType(action.type)
+                ? { device, type: action.type, value: action.value }
+                : {
+                    device,
+                    type: action.type,
+                    value: action.value,
+                    interface: interfaceOptions(device)[0]?.value ?? '',
+                  },
           )
         }
       />
@@ -61,7 +72,7 @@ export function BehaviorFaultAction({
           value={action.interface ?? ''}
           options={interfaceOptions(action.device)}
           onChange={(interfaceName) => {
-            if (isInterfaceBehaviorFaultType(action.type))
+            if (action.type !== 'duplicate_dhcp_offer' && isInterfaceBehaviorFaultType(action.type))
               onChange({ ...action, type: action.type, interface: interfaceName });
           }}
         />
@@ -74,22 +85,34 @@ export function BehaviorFaultAction({
           label: t(`newSimWizard.behaviors.faults.${type}`),
         }))}
         onChange={(type) => {
-          if (isDeviceBehaviorFaultType(type))
+          if (type === 'duplicate_dhcp_offer')
+            onChange({
+              device: dhcpDevices.includes(action.device) ? action.device : (dhcpDevices[0] ?? ''),
+              type,
+              address: '',
+            });
+          else if (isDeviceBehaviorFaultType(type) && type !== 'duplicate_dhcp_offer')
             onChange({
               device: action.device,
               type,
-              value: type === 'captive_portal' ? 1 : action.value,
+              value: type === 'captive_portal' ? 1 : (action.value ?? 1),
             });
           else if (isInterfaceBehaviorFaultType(type))
             onChange({
               device: action.device,
               type,
               interface: action.interface ?? '',
-              value: type === 'link_down' ? 1 : action.value,
+              value: type === 'link_down' ? 1 : (action.value ?? 1),
             });
         }}
       />
-      {action.type === 'link_down' ? (
+      {action.type === 'duplicate_dhcp_offer' ? (
+        <Input
+          label={t('newSimWizard.behaviors.conflictAddress')}
+          value={action.address}
+          onChange={(event) => onChange({ ...action, address: event.target.value })}
+        />
+      ) : action.type === 'link_down' ? (
         <SmallText>{t('newSimWizard.behaviors.linkDownEffect')}</SmallText>
       ) : action.type === 'captive_portal' ? (
         <SmallText>{t('newSimWizard.behaviors.captivePortalEffect')}</SmallText>

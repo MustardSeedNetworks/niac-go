@@ -15,6 +15,7 @@ interface Option {
 }
 
 interface BehaviorPhaseActionsProps {
+  dhcpDevices: string[];
   phase: DraftBehaviorPhase;
   deviceOptions: Option[];
   deviceActions: DraftTopologyModel['deviceActions'];
@@ -25,6 +26,7 @@ interface BehaviorPhaseActionsProps {
 }
 
 export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
+  dhcpDevices,
   phase,
   deviceOptions,
   deviceActions,
@@ -107,6 +109,7 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
 
       {phase.faults.map((action, actionIndex) => (
         <BehaviorFaultAction
+          dhcpDevices={dhcpDevices}
           key={`fault-${actionIndex}`}
           action={action}
           deviceOptions={deviceOptions}

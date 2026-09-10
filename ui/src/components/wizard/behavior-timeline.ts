@@ -42,8 +42,18 @@ function fault(value: unknown): DraftBehaviorFault | null {
   const item = record(value);
   if (!item) return null;
   const type = text(item.type);
-  const fields = { device: text(item.device), value: integer(item.value) };
-  if (isDeviceBehaviorFaultType(type)) return { ...fields, type };
+  if (type === 'duplicate_dhcp_offer')
+    return {
+      device: text(item.device),
+      type,
+      address: item.value == null && item.interface == null ? text(item.address) : '',
+    };
+  const fields = {
+    device: text(item.device),
+    value: item.address == null ? integer(item.value) : 0,
+  };
+  if (isDeviceBehaviorFaultType(type) && type !== 'duplicate_dhcp_offer')
+    return { ...fields, type };
   if (isInterfaceBehaviorFaultType(type))
     return { ...fields, type, interface: text(item.interface) };
   return null;

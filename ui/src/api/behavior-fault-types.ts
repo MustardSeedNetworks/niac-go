@@ -1,3 +1,5 @@
+import * as v from 'valibot';
+
 export const interfaceBehaviorFaultTypes = [
   'fcs_errors',
   'packet_discards',
@@ -11,6 +13,7 @@ export const resourceBehaviorFaultTypes = [
   'disk_percent',
 ] as const;
 export const deviceBehaviorFaultTypes = [
+  'duplicate_dhcp_offer',
   'captive_portal',
   'dhcp_no_offer',
   'dns_nxdomain',
@@ -23,9 +26,12 @@ type InterfaceFaultType = (typeof interfaceBehaviorFaultTypes)[number];
 type DeviceFaultType = (typeof deviceBehaviorFaultTypes)[number];
 type ResourceFaultType = (typeof resourceBehaviorFaultTypes)[number];
 
-export type DraftBehaviorFault = { device: string; value: number } & (
-  | { type: InterfaceFaultType; interface: string }
-  | { type: DeviceFaultType; interface?: never }
+export type DraftBehaviorFault = { device: string } & (
+  | { type: 'duplicate_dhcp_offer'; address: string; value?: never; interface?: never }
+  | ({ value: number; address?: never } & (
+      | { type: InterfaceFaultType; interface: string }
+      | { type: Exclude<DeviceFaultType, 'duplicate_dhcp_offer'>; interface?: never }
+    ))
 );
 
 export const isDeviceBehaviorFaultType = (type: string): type is DeviceFaultType =>
@@ -37,11 +43,28 @@ export const isResourceBehaviorFaultType = (type: string): type is ResourceFault
 export const isInterfaceBehaviorFaultType = (type: string): type is InterfaceFaultType =>
   interfaceBehaviorFaultTypes.some((candidate) => candidate === type);
 
-export const behaviorFaultMaximum = (type: DraftBehaviorFault['type']) =>
-  type === 'captive_portal' ? 1 : type === 'latency' ? 60000 : 100;
+export const behaviorFaultMaximum = (
+  type: Exclude<DraftBehaviorFault['type'], 'duplicate_dhcp_offer'>,
+) => (type === 'captive_portal' ? 1 : type === 'latency' ? 60000 : 100);
 
-export const validBehaviorFault = (fault: DraftBehaviorFault) =>
-  Boolean(fault.device && (isDeviceBehaviorFaultType(fault.type) || fault.interface)) &&
-  Number.isInteger(fault.value) &&
-  fault.value >= 1 &&
-  fault.value <= behaviorFaultMaximum(fault.type);
+const faultIPv4 = v.pipe(v.string(), v.ipv4());
+export const validFaultAddress = (address: string) => {
+  if (!v.safeParse(faultIPv4, address).success) return false;
+  const first = Number(address.split('.')[0]);
+  return (first < 224 || first > 239) && address !== '0.0.0.0' && address !== '255.255.255.255';
+};
+
+export const validBehaviorFault = (fault: DraftBehaviorFault) => {
+  if (!fault.device) return false;
+  if (fault.type === 'duplicate_dhcp_offer')
+    return (
+      fault.value === undefined && fault.interface === undefined && validFaultAddress(fault.address)
+    );
+  return (
+    fault.address === undefined &&
+    Boolean(isDeviceBehaviorFaultType(fault.type) || fault.interface) &&
+    Number.isInteger(fault.value) &&
+    fault.value >= 1 &&
+    fault.value <= behaviorFaultMaximum(fault.type)
+  );
+};
