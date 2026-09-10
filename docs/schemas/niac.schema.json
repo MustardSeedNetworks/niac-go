@@ -27,6 +27,27 @@
       ],
       "description": "AddMib represents a MIB override or addition."
     },
+    "BehaviorAction": {
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "reboot",
+            "stp_topology_change"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "device",
+        "type"
+      ],
+      "description": "BehaviorAction performs a device operation without arming a fault."
+    },
     "BehaviorFault": {
       "properties": {
         "device": {
@@ -101,6 +122,13 @@
           },
           "type": "array",
           "description": "Faults injects SNMP-visible interface faults for the phase's duration."
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/BehaviorAction"
+          },
+          "type": "array",
+          "description": "Actions execute once on phase entry; reset does not undo them."
         }
       },
       "additionalProperties": false,
