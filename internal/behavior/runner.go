@@ -2,6 +2,7 @@ package behavior
 
 import (
 	"context"
+	"net/netip"
 	"slices"
 	"sync"
 	"time"
@@ -14,6 +15,8 @@ import (
 type Target interface {
 	SetInterfaceFault(string, string, devicestate.FaultType, int) error
 	SetDeviceFault(string, devicestate.DeviceFaultType, int) error
+	SetDeviceAddressFault(string, devicestate.DeviceFaultType, netip.Addr) error
+	ClearDeviceFault(string, devicestate.DeviceFaultType) error
 	ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error
 }
 

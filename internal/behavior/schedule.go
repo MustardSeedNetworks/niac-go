@@ -4,6 +4,7 @@ package behavior
 import (
 	"cmp"
 	"fmt"
+	"net/netip"
 	"slices"
 	"time"
 
@@ -24,9 +25,11 @@ type Action struct {
 // the two axes have separate setters, and a compiled action that could carry
 // either type would put the choice back at apply time.
 type DeviceAction struct {
-	Device string
-	Type   devicestate.DeviceFaultType
-	Value  int
+	Device  string
+	Type    devicestate.DeviceFaultType
+	Value   int
+	Address netip.Addr
+	Clear   bool
 }
 
 // OneShotAction carries a stable identity for a device operation within a simulation generation.
@@ -130,7 +133,7 @@ func behaviorActions(phase config.BehaviorPhase) ([]Action, []DeviceAction) {
 		if fault.Interface == "" {
 			deviceActions = append(deviceActions, DeviceAction{
 				Device: fault.Device,
-				Type:   devicestate.DeviceFaultType(fault.Type), Value: fault.Value,
+				Type:   devicestate.DeviceFaultType(fault.Type), Value: fault.Value, Address: fault.Address,
 			})
 			continue
 		}
@@ -156,6 +159,8 @@ func resetDeviceActions(actions []DeviceAction) []DeviceAction {
 	copy(result, actions)
 	for index := range result {
 		result[index].Value = 0
+		result[index].Address = netip.Addr{}
+		result[index].Clear = true
 	}
 	return result
 }

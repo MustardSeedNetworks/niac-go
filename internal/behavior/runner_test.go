@@ -1,6 +1,7 @@
 package behavior_test
 
 import (
+	"net/netip"
 	"slices"
 	"sync"
 	"testing"
@@ -14,6 +15,24 @@ type recordingTarget struct {
 	mu            sync.Mutex
 	actions       []behavior.Action
 	deviceActions []behavior.DeviceAction
+}
+
+func (t *recordingTarget) SetDeviceAddressFault(
+	device string,
+	kind devicestate.DeviceFaultType,
+	address netip.Addr,
+) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.deviceActions = append(t.deviceActions, behavior.DeviceAction{Device: device, Type: kind, Address: address})
+	return nil
+}
+
+func (t *recordingTarget) ClearDeviceFault(device string, kind devicestate.DeviceFaultType) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.deviceActions = append(t.deviceActions, behavior.DeviceAction{Device: device, Type: kind, Clear: true})
+	return nil
 }
 
 func (*recordingTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {

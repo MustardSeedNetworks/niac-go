@@ -2,6 +2,7 @@ package behavior_test
 
 import (
 	"context"
+	"net/netip"
 	"sync"
 	"testing"
 	"time"
@@ -71,6 +72,12 @@ type clockTestTarget struct {
 	mu      sync.Mutex
 	applied []devicestate.FaultType
 }
+
+func (*clockTestTarget) SetDeviceAddressFault(string, devicestate.DeviceFaultType, netip.Addr) error {
+	return nil
+}
+
+func (*clockTestTarget) ClearDeviceFault(string, devicestate.DeviceFaultType) error { return nil }
 
 func (*clockTestTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {
 	return nil
