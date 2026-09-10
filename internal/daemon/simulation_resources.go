@@ -77,7 +77,7 @@ func (d *Daemon) startTrunkSimulationResources(
 		return prepareDryRunSimulation(cfg, topology, d.cfg.DebugLevel, restore)
 	}
 
-	if err := protocols.ValidateConfiguredBehaviorActions(cfg); err != nil {
+	if err := protocols.ValidateConfiguredBehaviorTargets(cfg, topology); err != nil {
 		return simulationResources{}, err
 	}
 	managed := d.trunks[iface]
