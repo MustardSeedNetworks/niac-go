@@ -28,6 +28,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Device/link UI graph | `internal/topology/topology.go` | Projection only; preserves parallel endpoint pairs and authored interface telemetry, not a forwarding compiler |
 | Physical VLAN engines | `internal/protocols/stack_init.go` | ADR 0008 segments; not routed virtual networks |
 | Per-server DHCPv4 ownership | `internal/protocols/stack_dhcp.go` + `dhcp_selection.go` | Device-keyed lease, decline and option registries; ingress/attachment-scoped dispatch, selected-server requests and exact-address renewal; scoped FDB learning |
+| Effective interface addresses | `internal/config/interface_address.go` | Shared explicit-prefix/indexed-IP resolution and usable IPv4 host checks for authoring and runtime |
 | Routed reply Ethernet identity | `internal/protocols/stack.go` | One source for gateway/device source MAC, requester destination MAC, and ingress VLAN |
 | Final wire egress policy | `internal/protocols/stack_threads.go` | Last enforcement point for direct/access untagged frames and observer-visible bytes |
 | Operator attachment authorization | `internal/fabric/types.go` + `internal/daemon/daemon.go` | Exact interface/mode/access-VLAN policy; browser input cannot grant approval |
@@ -50,6 +51,8 @@ parallel implementation. It is intentionally organized by purpose.
 | Capability | Canonical location | Notes |
 | --- | --- | --- |
 | Authoritative mutable device state | `internal/devicestate` + `internal/protocols/stack_device_state.go` | The stack owns one concurrency-safe store per simulated device; management protocols consume that shared store rather than owning mutable copies |
+| Typed address fault outcomes | `internal/devicestate/store_address_fault.go` + `internal/protocols/stack_address_fault.go` | Duplicate DHCP offers name a peer-owned IPv4 address without changing canonical ownership or committing conflicting leases; explicit clearing preserves unrelated faults |
+| Address fault authoring and preflight | `internal/config/behavior_address.go` + `internal/protocols/behavior_validation.go` | Typed payload validation, effective peer ownership and selected attachment eligibility; live peer availability is checked at application/response time, not as a recovery prerequisite |
 | Observable interface faults | `internal/devicestate/store_fault.go` + `internal/protocols/stack_fault.go` + `internal/protocols/snmp/fault_telemetry.go` | One stack-owned fault catalog and state source drives API/TUI controls plus monotonic IF-MIB, IF-X, and EtherLike-MIB counters |
 | IOS-like command profile | `internal/devicecli` | Stateful command modes, help, operational rendering, configuration mutations, running/startup/checkpoint lifecycle, and explicit configuration events |
 | Virtual TCP byte streams | `internal/virtualtcp` | Buffered in-memory and packet-backed `net.Conn` implementations used by simulated stream protocols |
