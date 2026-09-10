@@ -61,6 +61,71 @@ describe('ErrorInjectionPanel', () => {
     clearError.mockReset().mockResolvedValue({});
   });
 
+  it.each(['0', '32'])(
+    'submits /%s as a typed mask without a numeric fault value',
+    async (prefix) => {
+      fetchErrorTypes.mockResolvedValue({
+        ...errorInfo,
+        availableTypes: [{ type: 'Bad Subnet Mask', description: 'Mask', valueKind: 'prefix' }],
+        targets: [
+          { device: 'client', interfaces: ['eth0'], errorTypes: { eth0: ['Bad Subnet Mask'] } },
+        ],
+      });
+      render(
+        <MemoryRouter>
+          <ErrorInjectionPanel />
+        </MemoryRouter>,
+      );
+      await screen.findByRole('option', { name: 'client' });
+      fireEvent.change(screen.getByLabelText('Device'), { target: { value: 'client' } });
+      fireEvent.change(screen.getByLabelText('Interface'), { target: { value: 'eth0' } });
+      fireEvent.change(screen.getByLabelText('Error Type'), {
+        target: { value: 'Bad Subnet Mask' },
+      });
+      const input = screen.getByTestId('interface-fault-prefix');
+      const submit = screen.getByTestId('apply-interface-fault');
+      expect(submit).toBeDisabled();
+      for (const value of ['-1', '33', '1.5', '']) {
+        fireEvent.change(input, { target: { value } });
+        expect(submit).toBeDisabled();
+      }
+      expect(injectError).not.toHaveBeenCalled();
+      fireEvent.change(input, { target: { value: prefix } });
+      expect(submit).toBeEnabled();
+      fireEvent.click(submit);
+      await waitFor(() =>
+        expect(injectError).toHaveBeenCalledWith({
+          device: 'client',
+          interface: 'eth0',
+          errorType: 'Bad Subnet Mask',
+          prefixBits: Number(prefix),
+        }),
+      );
+    },
+  );
+
+  it('renders /0 as active and clears only the selected mask', async () => {
+    fetchErrorTypes.mockResolvedValue({
+      ...errorInfo,
+      activeErrors: {
+        client: { eth0: { 'Bad Subnet Mask': { prefixBits: 0 }, 'FCS Errors': { value: 20 } } },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ErrorInjectionPanel />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('/0')).toBeInTheDocument();
+    expect(screen.getByText('20/s')).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button', { name: /Clear error on/ });
+    fireEvent.click(required(buttons[0], 'mask clear button'));
+    await waitFor(() =>
+      expect(clearError).toHaveBeenCalledWith('client', 'eth0', 'Bad Subnet Mask'),
+    );
+    expect(injectError).not.toHaveBeenCalled();
+  });
+
   it('submits an IPv4 conflict without a numeric value and rejects invalid addresses', async () => {
     fetchErrorTypes.mockResolvedValue({
       ...errorInfo,

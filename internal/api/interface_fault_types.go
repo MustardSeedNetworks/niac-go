@@ -29,6 +29,8 @@ var errInterfaceFaultTypeInvalid = errors.New("unsupported fault type")
 
 const duplicateIPLabel = "Duplicate IP"
 
+const badMaskLabel = "Bad Subnet Mask"
+
 func availableErrorTypes() []map[string]string {
 	descriptions := map[devicestate.FaultType]string{
 		devicestate.FaultFCS:         "Frame Check Sequence errors (0-100)",
@@ -48,6 +50,11 @@ func availableErrorTypes() []map[string]string {
 		"type":        duplicateIPLabel,
 		"description": "Answer ARP for an IPv4 address owned by a peer on the selected segment",
 		"valueKind":   "address",
+	})
+	result = append(result, map[string]string{
+		"type":        badMaskLabel,
+		"description": "Change the IPv4 host mask without changing its canonical address",
+		"valueKind":   "prefix",
 	})
 	return result
 }
@@ -124,8 +131,9 @@ func deviceFaultResponse(
 }
 
 type deviceFaultPayload struct {
-	Value   *int    `json:"value,omitempty"`
-	Address *string `json:"address,omitempty"`
+	Value      *int    `json:"value,omitempty"`
+	Address    *string `json:"address,omitempty"`
+	PrefixBits *int    `json:"prefixBits,omitempty"`
 }
 
 func deviceFaultTargetsResponse(
@@ -155,6 +163,7 @@ func parseInterfaceFaultType(value string) (devicestate.FaultType, error) {
 func interfaceFaultResponse(
 	active map[string]map[string]map[devicestate.FaultType]int,
 	addressed map[string][]devicestate.InterfaceAddressFault,
+	prefixes map[string][]devicestate.InterfacePrefixFault,
 ) map[string]map[string]map[string]deviceFaultPayload {
 	result := make(map[string]map[string]map[string]deviceFaultPayload, len(active))
 	for deviceIP, interfaces := range active {
@@ -177,7 +186,26 @@ func interfaceFaultResponse(
 			result[device][fault.Interface][duplicateIPLabel] = deviceFaultPayload{Address: new(fault.Address.String())}
 		}
 	}
+	for device, faults := range prefixes {
+		appendPrefixFaultResponse(result, device, faults)
+	}
 	return result
+}
+
+func appendPrefixFaultResponse(
+	result map[string]map[string]map[string]deviceFaultPayload,
+	device string,
+	faults []devicestate.InterfacePrefixFault,
+) {
+	if result[device] == nil {
+		result[device] = make(map[string]map[string]deviceFaultPayload)
+	}
+	for _, fault := range faults {
+		if result[device][fault.Interface] == nil {
+			result[device][fault.Interface] = make(map[string]deviceFaultPayload)
+		}
+		result[device][fault.Interface][badMaskLabel] = deviceFaultPayload{PrefixBits: new(fault.PrefixBits)}
+	}
 }
 
 func interfaceFaultTargetsResponse(
@@ -213,6 +241,12 @@ func (req *errorInjectionRequest) validationMessage() string {
 }
 
 func (req *errorInjectionRequest) payloadValidationMessage() string {
+	if req.ErrorType == badMaskLabel {
+		return validateMaskPayload(req.PrefixBits, req.Value, req.Address)
+	}
+	if req.PrefixBits != nil {
+		return "prefixBits requires a mask fault"
+	}
 	kind, _ := devicestate.ParseDeviceFaultLabel(req.ErrorType)
 	addressed := kind == devicestate.FaultDuplicateDHCPOffer || req.ErrorType == duplicateIPLabel
 	if message := validateFaultPayload(addressed, req.Value, req.Address); message != "" {
@@ -223,6 +257,16 @@ func (req *errorInjectionRequest) payloadValidationMessage() string {
 	}
 	if *req.Value < 0 || *req.Value > errorInjectionMaximum(req.ErrorType) {
 		return fmt.Sprintf("value must be between 0 and %d", errorInjectionMaximum(req.ErrorType))
+	}
+	return ""
+}
+
+func validateMaskPayload(prefix, value *int, address *string) string {
+	if prefix == nil || value != nil || address != nil {
+		return "mask fault requires prefixBits and no value or address"
+	}
+	if *prefix < 0 || *prefix > 32 {
+		return "prefixBits must be between 0 and 32"
 	}
 	return ""
 }

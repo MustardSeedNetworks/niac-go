@@ -42,26 +42,39 @@ function fault(value: unknown): DraftBehaviorFault | null {
   const item = record(value);
   if (!item) return null;
   const type = text(item.type);
+  if (type === 'bad_mask')
+    return {
+      device: text(item.device),
+      type,
+      interface: text(item.interface),
+      prefixBits:
+        item.value == null && item.address == null && typeof item.prefix_bits === 'number'
+          ? item.prefix_bits
+          : Number.NaN,
+    };
   if (type === 'duplicate_ip')
     return {
       device: text(item.device),
       type,
       interface: text(item.interface),
-      address: item.value == null ? text(item.address) : '',
+      address: item.value == null && item.prefix_bits == null ? text(item.address) : '',
     };
   if (type === 'duplicate_dhcp_offer')
     return {
       device: text(item.device),
       type,
-      address: item.value == null && item.interface == null ? text(item.address) : '',
+      address:
+        item.value == null && item.interface == null && item.prefix_bits == null
+          ? text(item.address)
+          : '',
     };
   const fields = {
     device: text(item.device),
-    value: item.address == null ? integer(item.value) : 0,
+    value: item.address == null && item.prefix_bits == null ? integer(item.value) : 0,
   };
   if (isDeviceBehaviorFaultType(type) && type !== 'duplicate_dhcp_offer')
     return { ...fields, type };
-  if (isInterfaceBehaviorFaultType(type) && type !== 'duplicate_ip')
+  if (isInterfaceBehaviorFaultType(type) && type !== 'duplicate_ip' && type !== 'bad_mask')
     return { ...fields, type, interface: text(item.interface) };
   return null;
 }

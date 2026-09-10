@@ -54,6 +54,9 @@
     "parseError": "No se pudo analizar el archivo walk"
   },
   "injection": {
+    "prefixLabel": "Longitud de la máscara de subred",
+    "prefixHelper": "Introduzca 0–32. /0 es una máscara activa; use Borrar para quitar el fallo.",
+    "prefixInvalid": "Introduzca un número entero entre 0 y 32.",
     "deviceLabel": "Dispositivo",
     "deviceSelectPlaceholder": "Seleccione un dispositivo...",
     "interfaceLabel": "Interfaz",

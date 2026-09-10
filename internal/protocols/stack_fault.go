@@ -118,6 +118,9 @@ func (s *Stack) InterfaceFaultTargets() []InterfaceFaultTarget {
 		}
 		for _, iface := range snapshot.Network.Interfaces {
 			kinds := s.interfaceFaultCapabilities(device, iface.Name, conflicts[device][iface.Name])
+			if s.maskInterfaceEligible(device, iface) {
+				kinds = append(kinds, "Bad Subnet Mask")
+			}
 			if len(kinds) != 0 {
 				target.Interfaces = append(target.Interfaces, iface.Name)
 				target.ErrorTypes[iface.Name] = kinds

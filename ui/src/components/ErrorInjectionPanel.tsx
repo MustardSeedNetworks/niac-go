@@ -47,9 +47,15 @@ export const ErrorInjectionPanel: FC = () => {
   const selectedDevice = watch('selectedDevice');
   const selectedInterface = watch('selectedInterface');
   const [address, setAddress] = useState('');
-  const addressed =
-    errorInfo?.availableTypes.find((type) => type.type === selectedErrorType)?.valueKind ===
-    'address';
+  const [prefix, setPrefix] = useState('');
+  const valueKind = errorInfo?.availableTypes.find(
+    (type) => type.type === selectedErrorType,
+  )?.valueKind;
+  const addressed = valueKind === 'address';
+  const prefixed = valueKind === 'prefix';
+  const prefixBits = Number(prefix);
+  const validPrefix =
+    prefix.trim() !== '' && Number.isInteger(prefixBits) && prefixBits >= 0 && prefixBits <= 32;
   const selectedTarget = errorInfo?.targets?.find((target) => target.device === selectedDevice);
   const supported = selectedTarget?.errorTypes[selectedInterface] ?? [];
 
@@ -100,7 +106,8 @@ export const ErrorInjectionPanel: FC = () => {
     if (
       permission.disabled ||
       !supported.includes(values.selectedErrorType) ||
-      (addressed && !validFaultAddress(address))
+      (addressed && !validFaultAddress(address)) ||
+      (prefixed && !validPrefix)
     )
       return;
     setMessage(null);
@@ -109,7 +116,7 @@ export const ErrorInjectionPanel: FC = () => {
         device: values.selectedDevice,
         interface: values.selectedInterface,
         errorType: values.selectedErrorType,
-        ...(addressed ? { address } : { value: values.errorValue }),
+        ...(addressed ? { address } : prefixed ? { prefixBits } : { value: values.errorValue }),
       });
       setMessage({ type: 'success', text: t('injection.injectSuccess') });
       refetchErrors();
@@ -172,8 +179,12 @@ export const ErrorInjectionPanel: FC = () => {
       header: t('injection.tableHeaderValue'),
       cell: (row) => (
         <Tag colorScheme="yellow">
-          {row.value.address ??
-            (row.errorType === 'High Utilization' ? `${row.value.value}%` : `${row.value.value}/s`)}
+          {row.value.prefixBits !== undefined
+            ? `/${row.value.prefixBits}`
+            : (row.value.address ??
+              (row.errorType === 'High Utilization'
+                ? `${row.value.value}%`
+                : `${row.value.value}/s`))}
         </Tag>
       ),
     },
@@ -311,6 +322,20 @@ export const ErrorInjectionPanel: FC = () => {
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                 />
+              ) : prefixed ? (
+                <Input
+                  data-testid="interface-fault-prefix"
+                  label={t('injection.prefixLabel')}
+                  hint={t('injection.prefixHelper')}
+                  error={prefix !== '' && !validPrefix ? t('injection.prefixInvalid') : undefined}
+                  type="number"
+                  min={0}
+                  max={32}
+                  step={1}
+                  value={prefix}
+                  onChange={(event) => setPrefix(event.target.value)}
+                  aria-invalid={prefix !== '' && !validPrefix}
+                />
               ) : (
                 <div>
                   <label htmlFor="error-value" className="block text-sm font-medium mb-2">
@@ -362,7 +387,8 @@ export const ErrorInjectionPanel: FC = () => {
                 disabled={
                   busy ||
                   !supported.includes(selectedErrorType) ||
-                  (addressed && !validFaultAddress(address))
+                  (addressed && !validFaultAddress(address)) ||
+                  (prefixed && !validPrefix)
                 }
               >
                 {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}

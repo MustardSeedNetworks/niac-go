@@ -208,6 +208,12 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 // a fault whose type and scope disagree is refused here rather than failing at
 // apply time inside a running session.
 func validateBehaviorFault(targets map[string]behaviorTarget, fault BehaviorFault) error {
+	if fault.Type == string(devicestate.FaultBadMask) {
+		return validateBehaviorMask(targets, fault)
+	}
+	if fault.PrefixBits != 0 {
+		return fmt.Errorf("%w: prefix_bits requires bad_mask", ErrBehaviorFaultValue)
+	}
 	if fault.Type == string(devicestate.FaultDuplicateIP) {
 		return validateBehaviorDuplicateIP(targets, fault)
 	}

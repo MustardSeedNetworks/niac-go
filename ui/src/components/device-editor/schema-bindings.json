@@ -8,6 +8,7 @@
   "behavior_timelines[].phases[].faults[].address": "components/wizard/BehaviorFaultAction.tsx",
   "behavior_timelines[].phases[].faults[].device": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].faults[].interface": "components/wizard/DraftBehaviorComposer.tsx",
+  "behavior_timelines[].phases[].faults[].prefix_bits": "components/wizard/BehaviorFaultAction.tsx",
   "behavior_timelines[].phases[].faults[].type": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].faults[].value": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].name": "components/wizard/DraftBehaviorComposer.tsx",

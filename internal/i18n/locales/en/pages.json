@@ -450,6 +450,7 @@
       "empty": "Add a timeline to make traffic and faults change automatically during the simulation.",
       "faultRate": "Rate (%)",
       "faults": {
+        "bad_mask": "Incorrect IPv4 subnet mask",
         "captive_portal": "Captive portal",
         "cpu_percent": "CPU utilization",
         "dhcp_no_offer": "DHCP no offer",
@@ -481,6 +482,7 @@
       },
       "phaseName": "Phase name",
       "phaseOffset": "Phase starts after (seconds)",
+      "prefixBits": "IPv4 prefix length (0–32)",
       "removeDeviceAction": "Remove device operation",
       "removeFault": "Remove fault",
       "removePhase": "Remove phase",

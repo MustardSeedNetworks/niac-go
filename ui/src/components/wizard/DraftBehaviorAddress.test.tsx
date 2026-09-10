@@ -68,6 +68,33 @@ function renderDraft(content = draft.content) {
   );
 }
 
+it('preserves an explicit zero prefix and requires a nonempty mask input', async () => {
+  renderDraft(`${draft.content.replace('ips: [192.0.2.1]', 'interfaces: [{name: eth0, address: 192.0.2.1/24}]')}
+behavior_timelines:
+  - name: Mask
+    repeat_count: 1
+    phases:
+      - name: Fault
+        duration_ms: 1000
+        faults:
+          - device: server
+            interface: eth0
+            type: bad_mask
+            prefix_bits: 0
+`);
+  const input = screen.getByLabelText('IPv4 prefix length (0–32)');
+  expect(input).toHaveValue(0);
+  await userEvent.clear(input);
+  expect(screen.getByTestId('save-behaviors')).toBeDisabled();
+  await userEvent.type(input, '0');
+  await userEvent.click(screen.getByTestId('save-behaviors'));
+  await waitFor(() => expect(replace).toHaveBeenCalledOnce());
+  const timelines: DraftBehaviorTimeline[] = replace.mock.calls[0]?.[2];
+  expect(timelines[0]?.phases[0]?.faults).toEqual([
+    { device: 'server', interface: 'eth0', type: 'bad_mask', prefixBits: 0 },
+  ]);
+});
+
 async function expectAddressSaved() {
   expect(screen.queryByLabelText('Interface')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Latency (milliseconds)')).not.toBeInTheDocument();

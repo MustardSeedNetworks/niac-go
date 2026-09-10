@@ -42,7 +42,10 @@ func behaviorFaultsToYAML(faults []BehaviorFault) []converter.BehaviorFault {
 		if action.Address.IsValid() || behaviorUsesAddress(action.Type) {
 			result[index].Address = new(action.Address.String())
 		}
-		if !behaviorUsesAddress(action.Type) || action.Value != 0 {
+		if action.Type == "bad_mask" {
+			result[index].PrefixBits = new(action.PrefixBits)
+		}
+		if (!behaviorUsesAddress(action.Type) && action.Type != "bad_mask") || action.Value != 0 {
 			result[index].Value = new(action.Value)
 		}
 	}
@@ -86,6 +89,9 @@ func convertBehaviorFaults(authored []converter.BehaviorFault) []BehaviorFault {
 		}
 		if fault.Value != nil {
 			result[index].Value = *fault.Value
+		}
+		if fault.PrefixBits != nil {
+			result[index].PrefixBits = *fault.PrefixBits
 		}
 	}
 	return result

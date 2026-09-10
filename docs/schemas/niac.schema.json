@@ -77,7 +77,8 @@
             "disk_percent",
             "captive_portal",
             "duplicate_dhcp_offer",
-            "duplicate_ip"
+            "duplicate_ip",
+            "bad_mask"
           ],
           "description": "Type is the fault to inject. Interface faults raise SNMP counters or\nforce a link down; device-scoped service outcomes omit `interface`."
         },
@@ -89,6 +90,12 @@
           "type": "string",
           "format": "ipv4",
           "description": "Address is the peer-owned unicast IPv4 address used by an addressed fault.\nAddress faults omit value; numeric faults omit address."
+        },
+        "prefix_bits": {
+          "type": "integer",
+          "maximum": 32,
+          "minimum": 0,
+          "description": "PrefixBits is explicit because /0 is an active mask, not a clear operation."
         }
       },
       "additionalProperties": false,

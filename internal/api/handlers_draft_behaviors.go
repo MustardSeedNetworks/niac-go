@@ -43,11 +43,12 @@ type draftBehaviorTraffic struct {
 }
 
 type draftBehaviorFault struct {
-	Device    string  `json:"device"`
-	Interface string  `json:"interface"`
-	Type      string  `json:"type"`
-	Value     *int    `json:"value"`
-	Address   *string `json:"address"`
+	Device     string  `json:"device"`
+	Interface  string  `json:"interface"`
+	Type       string  `json:"type"`
+	Value      *int    `json:"value"`
+	Address    *string `json:"address"`
+	PrefixBits *int    `json:"prefixBits"`
 }
 
 func (s *Server) handleLibraryDraftBehaviorsReplace(
@@ -149,6 +150,9 @@ func behaviorFaultsFromRequest(authored []draftBehaviorFault) []config.BehaviorF
 		if action.Address != nil {
 			result[index].Address = netip.MustParseAddr(*action.Address)
 		}
+		if action.PrefixBits != nil {
+			result[index].PrefixBits = *action.PrefixBits
+		}
 	}
 	return result
 }
@@ -157,16 +161,24 @@ func (request draftBehaviorsReplaceRequest) faultPayloadError() string {
 	for _, timeline := range request.Timelines {
 		for _, phase := range timeline.Phases {
 			for _, fault := range phase.Faults {
-				if message := validateFaultPayload(
-					fault.Type == string(devicestate.FaultDuplicateDHCPOffer) ||
-						fault.Type == string(devicestate.FaultDuplicateIP),
-					fault.Value,
-					fault.Address,
-				); message != "" {
+				if message := fault.payloadError(); message != "" {
 					return message
 				}
 			}
 		}
 	}
 	return ""
+}
+
+func (fault draftBehaviorFault) payloadError() string {
+	if fault.Type == string(devicestate.FaultBadMask) {
+		return validateMaskPayload(fault.PrefixBits, fault.Value, fault.Address)
+	}
+	if fault.PrefixBits != nil {
+		return "prefixBits requires a mask fault"
+	}
+	return validateFaultPayload(
+		fault.Type == string(devicestate.FaultDuplicateDHCPOffer) || fault.Type == string(devicestate.FaultDuplicateIP),
+		fault.Value, fault.Address,
+	)
 }

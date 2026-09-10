@@ -12,6 +12,12 @@ import (
 
 func (s *Stack) validateBehaviorAddressFaults(faults []config.BehaviorFault) error {
 	for _, fault := range faults {
+		if fault.Type == string(devicestate.FaultBadMask) {
+			if err := s.validateMaskBinding(fault); err != nil {
+				return err
+			}
+			continue
+		}
 		if fault.Type == string(devicestate.FaultDuplicateIP) {
 			if err := s.validateDuplicateIPBinding(fault); err != nil {
 				return err
@@ -21,20 +27,27 @@ func (s *Stack) validateBehaviorAddressFaults(faults []config.BehaviorFault) err
 		if fault.Type != string(devicestate.FaultDuplicateDHCPOffer) {
 			continue
 		}
-		device, _, err := s.interfaceFaultTarget(fault.Device)
-		if err != nil {
+		if err := s.validateDuplicateOfferBinding(fault); err != nil {
 			return err
 		}
-		if s.dhcpHandlers[device] == nil {
-			return fmt.Errorf("device %s: %w", fault.Device, ErrFaultServiceAbsent)
-		}
-		if s.fabric != nil {
-			// Binding eligibility is immutable; persisted link faults must not block recovery.
-			peer, found := s.fabric.interfacesByAddr[fault.Address]
-			if !found || peer.device == device || peer.network != s.fabric.attachmentNetwork ||
-				!slices.Contains(s.fabric.attachmentDHCP, device) {
-				return fmt.Errorf("device %s: %w", fault.Device, ErrFaultConflictAbsent)
-			}
+	}
+	return nil
+}
+
+func (s *Stack) validateDuplicateOfferBinding(fault config.BehaviorFault) error {
+	device, _, err := s.interfaceFaultTarget(fault.Device)
+	if err != nil {
+		return err
+	}
+	if s.dhcpHandlers[device] == nil {
+		return fmt.Errorf("device %s: %w", fault.Device, ErrFaultServiceAbsent)
+	}
+	if s.fabric != nil {
+		// Binding eligibility is immutable; persisted link faults must not block recovery.
+		peer, found := s.fabric.interfacesByAddr[fault.Address]
+		if !found || peer.device == device || peer.network != s.fabric.attachmentNetwork ||
+			!slices.Contains(s.fabric.attachmentDHCP, device) {
+			return fmt.Errorf("device %s: %w", fault.Device, ErrFaultConflictAbsent)
 		}
 	}
 	return nil
@@ -46,7 +59,8 @@ func ValidateConfiguredBehaviorTargets(cfg *config.Config, topology *fabric.Topo
 		for _, phase := range timeline.Phases {
 			hasAddressFault := slices.ContainsFunc(phase.Faults, func(fault config.BehaviorFault) bool {
 				return fault.Type == string(devicestate.FaultDuplicateDHCPOffer) ||
-					fault.Type == string(devicestate.FaultDuplicateIP)
+					fault.Type == string(devicestate.FaultDuplicateIP) ||
+					fault.Type == string(devicestate.FaultBadMask)
 			})
 			if len(phase.Actions) > 0 || hasAddressFault {
 				stack := NewStack(nil, cfg, logging.NewDebugConfig(0))

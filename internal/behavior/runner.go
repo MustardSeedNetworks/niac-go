@@ -19,6 +19,8 @@ type Target interface {
 	ClearDeviceFault(string, devicestate.DeviceFaultType) error
 	SetInterfaceAddressFault(string, devicestate.InterfaceAddressFault) error
 	ClearInterfaceAddressFault(string, string, devicestate.InterfaceAddressFaultType) error
+	SetInterfacePrefixFault(string, devicestate.InterfacePrefixFault) error
+	ClearInterfacePrefixFault(string, string, devicestate.InterfacePrefixFaultType) error
 	ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error
 }
 

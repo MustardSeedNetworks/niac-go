@@ -73,6 +73,14 @@ type clockTestTarget struct {
 	applied []devicestate.FaultType
 }
 
+func (*clockTestTarget) SetInterfacePrefixFault(string, devicestate.InterfacePrefixFault) error {
+	return nil
+}
+
+func (*clockTestTarget) ClearInterfacePrefixFault(string, string, devicestate.InterfacePrefixFaultType) error {
+	return nil
+}
+
 func (*clockTestTarget) SetDeviceAddressFault(string, devicestate.DeviceFaultType, netip.Addr) error {
 	return nil
 }

@@ -16,12 +16,48 @@ type recordingTarget struct {
 	actions        []behavior.Action
 	deviceActions  []behavior.DeviceAction
 	addressActions []behavior.InterfaceAddressAction
+	prefixActions  []behavior.InterfacePrefixAction
 }
 
-func (t *recordingTarget) SetInterfaceAddressFault(device string, fault devicestate.InterfaceAddressFault) error {
+func (t *recordingTarget) SetInterfacePrefixFault(
+	device string,
+	fault devicestate.InterfacePrefixFault,
+) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.addressActions = append(t.addressActions, behavior.InterfaceAddressAction{Device: device, Fault: fault})
+	t.prefixActions = append(
+		t.prefixActions,
+		behavior.InterfacePrefixAction{Device: device, Fault: fault},
+	)
+	return nil
+}
+
+func (t *recordingTarget) ClearInterfacePrefixFault(
+	device, iface string,
+	kind devicestate.InterfacePrefixFaultType,
+) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.prefixActions = append(
+		t.prefixActions,
+		behavior.InterfacePrefixAction{
+			Device: device, Clear: true,
+			Fault: devicestate.InterfacePrefixFault{Interface: iface, Type: kind},
+		},
+	)
+	return nil
+}
+
+func (t *recordingTarget) SetInterfaceAddressFault(
+	device string,
+	fault devicestate.InterfaceAddressFault,
+) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.addressActions = append(
+		t.addressActions,
+		behavior.InterfaceAddressAction{Device: device, Fault: fault},
+	)
 	return nil
 }
 
@@ -49,14 +85,20 @@ func (t *recordingTarget) SetDeviceAddressFault(
 ) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.deviceActions = append(t.deviceActions, behavior.DeviceAction{Device: device, Type: kind, Address: address})
+	t.deviceActions = append(
+		t.deviceActions,
+		behavior.DeviceAction{Device: device, Type: kind, Address: address},
+	)
 	return nil
 }
 
 func (t *recordingTarget) ClearDeviceFault(device string, kind devicestate.DeviceFaultType) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.deviceActions = append(t.deviceActions, behavior.DeviceAction{Device: device, Type: kind, Clear: true})
+	t.deviceActions = append(
+		t.deviceActions,
+		behavior.DeviceAction{Device: device, Type: kind, Clear: true},
+	)
 	return nil
 }
 
