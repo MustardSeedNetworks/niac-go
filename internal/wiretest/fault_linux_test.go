@@ -476,31 +476,40 @@ func echoRoundTrip(
 		if err := handle.WritePacketData(frame); err != nil {
 			t.Fatalf("writing echo request: %v", err)
 		}
-		attemptDeadline := time.After(faultEchoAttemptWindow)
-		for waiting := true; waiting; {
-			select {
-			case packet := <-packets:
-				layer := packet.Layer(layers.LayerTypeICMPv4)
-				if layer == nil {
-					continue
-				}
-				reply, ok := layer.(*layers.ICMPv4)
-				if !ok || reply.Id != id || reply.Seq != attemptSeq {
-					continue
-				}
-				if reply.TypeCode.Type() != layers.ICMPv4TypeEchoReply {
-					continue
-				}
-
-				return time.Since(sentAt)
-			case <-attemptDeadline:
-				waiting = false
-			}
+		if awaitEchoReply(packets, id, attemptSeq, faultEchoAttemptWindow) {
+			return time.Since(sentAt)
 		}
 	}
 	t.Fatalf("no echo reply from %s within %s", faultSlowAddr, faultEchoDeadline)
 
 	return 0
+}
+
+// awaitEchoReply reports whether the reply to one attempt arrived inside its
+// window. Every other ICMP frame on the wire -- a reply to an attempt already
+// abandoned, or a request of our own -- is skipped by id, sequence and type.
+func awaitEchoReply(
+	packets chan gopacket.Packet, id uint16, seq uint16, window time.Duration,
+) bool {
+	deadline := time.After(window)
+	for {
+		select {
+		case packet := <-packets:
+			layer := packet.Layer(layers.LayerTypeICMPv4)
+			if layer == nil {
+				continue
+			}
+			reply, ok := layer.(*layers.ICMPv4)
+			if !ok || reply.Id != id || reply.Seq != seq {
+				continue
+			}
+			if reply.TypeCode.Type() == layers.ICMPv4TypeEchoReply {
+				return true
+			}
+		case <-deadline:
+			return false
+		}
+	}
 }
 
 func echoFrame(t *testing.T, src net.HardwareAddr, id uint16, seq uint16) []byte {
