@@ -1,4 +1,8 @@
 import { parse } from 'yaml';
+import {
+  isDeviceBehaviorFaultType,
+  isInterfaceBehaviorFaultType,
+} from '../../api/behavior-fault-types';
 import type {
   DraftBehaviorFault,
   DraftBehaviorPhase,
@@ -32,23 +36,15 @@ function traffic(value: unknown): DraftBehaviorTraffic | null {
   };
 }
 
-const faultTypes = new Set<DraftBehaviorFault['type']>([
-  'fcs_errors',
-  'packet_discards',
-  'interface_errors',
-  'high_utilization',
-]);
-
 function fault(value: unknown): DraftBehaviorFault | null {
   const item = record(value);
-  const type = text(item?.type) as DraftBehaviorFault['type'];
-  if (!item || !faultTypes.has(type)) return null;
-  return {
-    device: text(item.device),
-    interface: text(item.interface),
-    type,
-    value: integer(item.value),
-  };
+  if (!item) return null;
+  const type = text(item.type);
+  const fields = { device: text(item.device), value: integer(item.value) };
+  if (isDeviceBehaviorFaultType(type)) return { ...fields, type };
+  if (isInterfaceBehaviorFaultType(type))
+    return { ...fields, type, interface: text(item.interface) };
+  return null;
 }
 
 function phase(value: unknown): DraftBehaviorPhase | null {

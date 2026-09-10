@@ -2,6 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
 
 describe('parseDraftBehaviorTimelines', () => {
+  it.each(['dhcp_no_offer', 'dns_nxdomain', 'dns_timeout', 'latency'])(
+    'preserves a device-scoped %s without inventing an interface',
+    (type) => {
+      const parsed = parseDraftBehaviorTimelines(`
+behavior_timelines:
+  - name: Service outage
+    repeat_count: 1
+    phases:
+      - name: Fault
+        duration_ms: 1000
+        faults:
+          - device: resolver-1
+            type: ${type}
+            value: ${type === 'latency' ? 60000 : 100}
+`);
+      expect(parsed[0]?.phases[0]?.faults).toEqual([
+        { device: 'resolver-1', type, value: type === 'latency' ? 60000 : 100 },
+      ]);
+    },
+  );
   it('reads saved behavior timelines from draft YAML', () => {
     expect(
       parseDraftBehaviorTimelines(`
