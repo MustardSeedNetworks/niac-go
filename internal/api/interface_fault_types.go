@@ -19,12 +19,15 @@ type deviceFaultTargetResponse struct {
 }
 
 type interfaceFaultTargetResponse struct {
-	Device     string   `json:"device"`
-	Address    string   `json:"address,omitempty"`
-	Interfaces []string `json:"interfaces"`
+	Device     string              `json:"device"`
+	Address    string              `json:"address,omitempty"`
+	Interfaces []string            `json:"interfaces"`
+	ErrorTypes map[string][]string `json:"errorTypes"`
 }
 
 var errInterfaceFaultTypeInvalid = errors.New("unsupported fault type")
+
+const duplicateIPLabel = "Duplicate IP"
 
 func availableErrorTypes() []map[string]string {
 	descriptions := map[devicestate.FaultType]string{
@@ -38,9 +41,14 @@ func availableErrorTypes() []map[string]string {
 	result := make([]map[string]string, 0, len(descriptions))
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {
 		result = append(result, map[string]string{
-			"type": definition.Label, "description": descriptions[definition.Type],
+			"type": definition.Label, "description": descriptions[definition.Type], "valueKind": "number",
 		})
 	}
+	result = append(result, map[string]string{
+		"type":        duplicateIPLabel,
+		"description": "Answer ARP for an IPv4 address owned by a peer on the selected segment",
+		"valueKind":   "address",
+	})
 	return result
 }
 
@@ -146,15 +154,27 @@ func parseInterfaceFaultType(value string) (devicestate.FaultType, error) {
 
 func interfaceFaultResponse(
 	active map[string]map[string]map[devicestate.FaultType]int,
-) map[string]map[string]map[string]int {
-	result := make(map[string]map[string]map[string]int, len(active))
+	addressed map[string][]devicestate.InterfaceAddressFault,
+) map[string]map[string]map[string]deviceFaultPayload {
+	result := make(map[string]map[string]map[string]deviceFaultPayload, len(active))
 	for deviceIP, interfaces := range active {
-		result[deviceIP] = make(map[string]map[string]int, len(interfaces))
+		result[deviceIP] = make(map[string]map[string]deviceFaultPayload, len(interfaces))
 		for interfaceName, faults := range interfaces {
-			result[deviceIP][interfaceName] = make(map[string]int, len(faults))
+			result[deviceIP][interfaceName] = make(map[string]deviceFaultPayload, len(faults))
 			for faultType, value := range faults {
-				result[deviceIP][interfaceName][faultType.Label()] = value
+				result[deviceIP][interfaceName][faultType.Label()] = deviceFaultPayload{Value: new(value)}
 			}
+		}
+	}
+	for device, faults := range addressed {
+		if result[device] == nil {
+			result[device] = make(map[string]map[string]deviceFaultPayload)
+		}
+		for _, fault := range faults {
+			if result[device][fault.Interface] == nil {
+				result[device][fault.Interface] = make(map[string]deviceFaultPayload)
+			}
+			result[device][fault.Interface][duplicateIPLabel] = deviceFaultPayload{Address: new(fault.Address.String())}
 		}
 	}
 	return result
@@ -166,7 +186,10 @@ func interfaceFaultTargetsResponse(
 	result := make([]interfaceFaultTargetResponse, 0, len(targets))
 	for _, target := range targets {
 		result = append(result, interfaceFaultTargetResponse{
-			Device: target.Device, Address: target.Address, Interfaces: target.Interfaces,
+			Device:     target.Device,
+			Address:    target.Address,
+			Interfaces: target.Interfaces,
+			ErrorTypes: target.ErrorTypes,
 		})
 	}
 	return result
@@ -191,10 +214,11 @@ func (req *errorInjectionRequest) validationMessage() string {
 
 func (req *errorInjectionRequest) payloadValidationMessage() string {
 	kind, _ := devicestate.ParseDeviceFaultLabel(req.ErrorType)
-	if message := validateFaultPayload(kind, req.Value, req.Address); message != "" {
+	addressed := kind == devicestate.FaultDuplicateDHCPOffer || req.ErrorType == duplicateIPLabel
+	if message := validateFaultPayload(addressed, req.Value, req.Address); message != "" {
 		return message
 	}
-	if kind == devicestate.FaultDuplicateDHCPOffer {
+	if addressed {
 		return ""
 	}
 	if *req.Value < 0 || *req.Value > errorInjectionMaximum(req.ErrorType) {
@@ -203,8 +227,8 @@ func (req *errorInjectionRequest) payloadValidationMessage() string {
 	return ""
 }
 
-func validateFaultPayload(kind devicestate.DeviceFaultType, value *int, addressText *string) string {
-	if kind != devicestate.FaultDuplicateDHCPOffer {
+func validateFaultPayload(addressed bool, value *int, addressText *string) string {
+	if !addressed {
 		if addressText != nil || value == nil {
 			return "numeric fault requires value and no address"
 		}

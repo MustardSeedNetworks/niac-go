@@ -9,6 +9,19 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
+// ActiveInterfaceAddressFaults returns addressed outcomes keyed by unique device name.
+func (s *Stack) ActiveInterfaceAddressFaults() map[string][]devicestate.InterfaceAddressFault {
+	s.reloadMu.RLock()
+	defer s.reloadMu.RUnlock()
+	result := make(map[string][]devicestate.InterfaceAddressFault)
+	for device, store := range s.deviceStates {
+		if faults := store.Snapshot().AddressFaults; len(faults) != 0 {
+			result[device.Name] = faults
+		}
+	}
+	return result
+}
+
 // SetInterfaceAddressFault arms an additional responder on one explicit interface.
 func (s *Stack) SetInterfaceAddressFault(target string, fault devicestate.InterfaceAddressFault) error {
 	s.reloadMu.RLock()

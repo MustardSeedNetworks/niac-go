@@ -158,7 +158,8 @@ func (request draftBehaviorsReplaceRequest) faultPayloadError() string {
 		for _, phase := range timeline.Phases {
 			for _, fault := range phase.Faults {
 				if message := validateFaultPayload(
-					devicestate.DeviceFaultType(fault.Type),
+					fault.Type == string(devicestate.FaultDuplicateDHCPOffer) ||
+						fault.Type == string(devicestate.FaultDuplicateIP),
 					fault.Value,
 					fault.Address,
 				); message != "" {

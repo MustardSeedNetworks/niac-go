@@ -38,6 +38,7 @@ func TestAvailableErrorTypesOnlyAdvertiseObservableFaults(t *testing.T) {
 		"High Utilization",
 		"Link Down",
 		"PoE Loss",
+		"Duplicate IP",
 	}
 
 	types := availableErrorTypes()
@@ -73,13 +74,13 @@ func TestHandleErrorsPersistsMultipleFaultTypesInDeviceState(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	server.handleErrors(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/errors", nil))
 	var response struct {
-		Active map[string]map[string]map[string]int `json:"active_errors"`
+		Active map[string]map[string]map[string]deviceFaultPayload `json:"active_errors"`
 	}
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	want := map[string]int{"FCS Errors": 25, "Packet Discards": 40}
-	if got := response.Active["router1"]["Management"]; !maps.Equal(got, want) {
+	if got := numericAPIFaults(t, response.Active)["router1"]["Management"]; !maps.Equal(got, want) {
 		t.Fatalf("active errors = %#v, want %#v", got, want)
 	}
 }
@@ -278,10 +279,31 @@ func getAPIFaults(t *testing.T, server *Server) map[string]map[string]map[string
 	recorder := httptest.NewRecorder()
 	server.handleErrors(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/errors", nil))
 	var response struct {
-		Active map[string]map[string]map[string]int `json:"active_errors"`
+		Active map[string]map[string]map[string]deviceFaultPayload `json:"active_errors"`
 	}
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	return response.Active
+	return numericAPIFaults(t, response.Active)
+}
+
+func numericAPIFaults(
+	t *testing.T,
+	active map[string]map[string]map[string]deviceFaultPayload,
+) map[string]map[string]map[string]int {
+	t.Helper()
+	result := make(map[string]map[string]map[string]int)
+	for device, interfaces := range active {
+		result[device] = make(map[string]map[string]int)
+		for iface, faults := range interfaces {
+			result[device][iface] = make(map[string]int)
+			for kind, payload := range faults {
+				if payload.Value == nil || payload.Address != nil {
+					t.Fatalf("unexpected numeric fault payload: %+v", payload)
+				}
+				result[device][iface][kind] = *payload.Value
+			}
+		}
+	}
+	return result
 }
