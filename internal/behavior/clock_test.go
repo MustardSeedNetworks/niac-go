@@ -72,6 +72,10 @@ type clockTestTarget struct {
 	applied []devicestate.FaultType
 }
 
+func (*clockTestTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {
+	return nil
+}
+
 func (r *clockTestTarget) SetInterfaceFault(
 	_, _ string, faultType devicestate.FaultType, _ int,
 ) error {
