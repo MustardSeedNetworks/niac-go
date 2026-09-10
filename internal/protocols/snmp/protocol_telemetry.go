@@ -3,6 +3,7 @@ package snmp
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -34,6 +35,7 @@ type ProtocolEvent struct {
 // ProtocolTelemetry is the per-device event source shared by every community
 // agent for that device.
 type ProtocolTelemetry struct {
+	startedAt                                                                     time.Time
 	ipInReceives, ipInDelivers, ipInUnknownProtos, ipForwDatagrams, ipOutRequests atomic.Uint32
 	ipReasmReqds, ipReasmOKs, ipReasmFails, ipFragCreates                         atomic.Uint32
 	icmpInMsgs, icmpOutMsgs                                                       atomic.Uint32
@@ -53,7 +55,8 @@ type ProtocolTelemetry struct {
 // NewProtocolTelemetry creates an empty per-device telemetry source.
 func NewProtocolTelemetry() *ProtocolTelemetry {
 	return &ProtocolTelemetry{
-		tcpFlows: newTCPFlowTracker(), mibs: make(map[*MIB]struct{}),
+		startedAt: time.Now(),
+		tcpFlows:  newTCPFlowTracker(), mibs: make(map[*MIB]struct{}),
 		dynamicTCP: make(map[*MIB]map[string]struct{}),
 	}
 }

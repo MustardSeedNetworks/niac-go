@@ -104,12 +104,14 @@ func (a *Agent) refreshDeviceStateInterfaceMIBs() {
 	if a.deviceState == nil {
 		return
 	}
+	a.restoreRemappedInterfaceChanges()
 	for _, iface := range a.deviceState.Snapshot().Network.Interfaces {
 		index, ok := a.ifIndexForInterface(iface.Name)
 		if !ok {
 			continue
 		}
 		interfaceName := iface.Name
+		a.registerInterfaceLastChange(interfaceName, index)
 		a.mib.SetDynamic(ifAdminStatus+"."+index, func() *OIDValue {
 			return &OIDValue{
 				Type:  gosnmp.Integer,

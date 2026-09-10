@@ -247,10 +247,8 @@ func (a *Agent) registerIfTableBasicOIDs(
 	// ifOperStatus (1 = up)
 	a.mib.Set(ifOperStatus+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: 1})
 
-	// ifLastChange (dynamic - timeticks since last status change)
-	a.mib.SetDynamic(ifLastChange+"."+idxStr, func() *OIDValue {
-		return &OIDValue{Type: gosnmp.TimeTicks, Value: uptimeTicks(time.Since(a.startTime))}
-	})
+	// The initial operational state predates management initialization.
+	a.mib.Set(ifLastChange+"."+idxStr, &OIDValue{Type: gosnmp.TimeTicks, Value: uint32(0)})
 
 	// ifSpecific (deprecated, but some tools expect it)
 	a.mib.Set(ifSpecific+"."+idxStr, &OIDValue{Type: gosnmp.ObjectIdentifier, Value: "0.0"})

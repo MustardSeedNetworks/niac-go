@@ -37,21 +37,22 @@ const (
 
 // Agent represents an SNMP agent instance for a device.
 type Agent struct {
-	device          *config.Device
-	mib             *MIB
-	community       string
-	startTime       time.Time
-	uptimeBase      time.Duration
-	debugLevel      int
-	logger          *slog.Logger
-	mu              sync.RWMutex
-	stats           snmpStats
-	protocolStats   *ProtocolTelemetry
-	deviceState     *devicestate.Store
-	stateMIBVersion atomic.Uint64
-	stateIPOIDs     map[string]struct{}
-	walkFaultName   string
-	walkFaultIndex  string
+	device                  *config.Device
+	mib                     *MIB
+	community               string
+	startTime               time.Time
+	uptimeBase              time.Duration
+	debugLevel              int
+	logger                  *slog.Logger
+	mu                      sync.RWMutex
+	stats                   snmpStats
+	protocolStats           *ProtocolTelemetry
+	deviceState             *devicestate.Store
+	stateMIBVersion         atomic.Uint64
+	stateIPOIDs             map[string]struct{}
+	walkFaultName           string
+	walkFaultIndex          string
+	interfaceChangeBindings map[string]interfaceChangeBinding
 	// poe is the published per-port power picture. It is an atomic pointer
 	// because the POWER-ETHERNET-MIB columns that read it are dynamic OIDs,
 	// which the MIB calls while holding its own lock; a mutex here would order
@@ -85,7 +86,7 @@ func NewAgentWithCommunityAndTelemetry(
 		device:        device,
 		mib:           NewMIB(),
 		community:     community,
-		startTime:     time.Now(),
+		startTime:     telemetry.startedAt,
 		uptimeBase:    simulatedUptimeBase(device),
 		debugLevel:    debugLevel,
 		logger:        slog.Default(),
@@ -282,6 +283,9 @@ func simulatedUptimeBase(device *config.Device) time.Duration {
 // first GetNext (which runs on the stack's single decode goroutine). See
 // MIB.Reindex.
 func (a *Agent) Reindex() {
+	a.mu.Lock()
+	a.refreshDeviceStateInterfaceMIBs()
+	a.mu.Unlock()
 	a.mib.Reindex()
 }
 
@@ -327,6 +331,9 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
+	a.mu.Lock()
+	a.refreshDeviceStateInterfaceMIBs()
+	a.mu.Unlock()
 	if contract.ownsTopology {
 		a.refreshAuthoredDiscoveryMIBs()
 	}

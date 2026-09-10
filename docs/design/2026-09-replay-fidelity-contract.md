@@ -70,6 +70,16 @@ Substitution 5 splits within a single row. Configuration columns —
 the scenario. The octet, packet, discard and error counters (32- and 64-bit)
 become dynamic and report this run's traffic.
 
+`ifLastChange` remains the captured value until the corresponding runtime
+interface actually changes operational state. It then reports the management
+uptime at that transition, not time since the transition or the current poll.
+Only that interface's timestamp is classified `live`; unrelated rows remain
+`kept`. Clearing a carrier fault is itself a transition if it restores the link.
+Synthetic unchanged interfaces report zero. Community agents share one uptime
+origin, and process recovery starts a fresh transition lifetime without replay.
+Renumbering captured interfaces restores any timestamp row no longer owned by
+the runtime interface. See defect #2013 and the RFC 2863 `ifLastChange` definition.
+
 Two consequences worth stating because they are easy to assume the other way:
 
 - **A row nobody authored keeps the capture's static counters.** The interface
