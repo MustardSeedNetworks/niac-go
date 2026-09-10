@@ -52,6 +52,7 @@ type Transition struct {
 	EndPhases      []PhaseRef
 	Actions        []Action
 	DeviceActions  []DeviceAction
+	AddressActions []InterfaceAddressAction
 	OneShotActions []OneShotAction
 }
 
@@ -61,6 +62,7 @@ type scheduledTransition struct {
 	end            bool
 	actions        []Action
 	deviceActions  []DeviceAction
+	addressActions []InterfaceAddressAction
 	oneShotActions []OneShotAction
 }
 
@@ -81,6 +83,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 					offset: cycleStart + phase.StartOffset, phase: phaseRef,
 					actions: actions, deviceActions: deviceActions,
 					oneShotActions: compileOneShotActions(phase.Actions, phaseRef.ID),
+					addressActions: interfaceAddressActions(phase, false),
 				})
 				end := scheduledTransition{
 					offset: cycleStart + phase.StartOffset + phase.Duration,
@@ -89,6 +92,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 				if phase.Reset {
 					end.actions = resetActions(actions)
 					end.deviceActions = resetDeviceActions(deviceActions)
+					end.addressActions = interfaceAddressActions(phase, true)
 				}
 				scheduled = append(scheduled, end)
 			}
@@ -130,6 +134,9 @@ func behaviorActions(phase config.BehaviorPhase) ([]Action, []DeviceAction) {
 		})
 	}
 	for _, fault := range phase.Faults {
+		if fault.Type == string(devicestate.FaultDuplicateIP) {
+			continue
+		}
 		if fault.Interface == "" {
 			deviceActions = append(deviceActions, DeviceAction{
 				Device: fault.Device,
@@ -179,6 +186,7 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 		}
 		transition.Actions = append(transition.Actions, current.actions...)
 		transition.DeviceActions = append(transition.DeviceActions, current.deviceActions...)
+		transition.AddressActions = append(transition.AddressActions, current.addressActions...)
 		transition.OneShotActions = append(transition.OneShotActions, current.oneShotActions...)
 	}
 	return result

@@ -79,6 +79,14 @@ func (*clockTestTarget) SetDeviceAddressFault(string, devicestate.DeviceFaultTyp
 
 func (*clockTestTarget) ClearDeviceFault(string, devicestate.DeviceFaultType) error { return nil }
 
+func (*clockTestTarget) SetInterfaceAddressFault(string, devicestate.InterfaceAddressFault) error {
+	return nil
+}
+
+func (*clockTestTarget) ClearInterfaceAddressFault(string, string, devicestate.InterfaceAddressFaultType) error {
+	return nil
+}
+
 func (*clockTestTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {
 	return nil
 }

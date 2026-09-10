@@ -44,6 +44,17 @@ func (t *reloadBlockingTarget) ClearDeviceFault(device string, kind devicestate.
 	return t.stack.ClearDeviceFault(device, kind)
 }
 
+func (t *reloadBlockingTarget) SetInterfaceAddressFault(device string, fault devicestate.InterfaceAddressFault) error {
+	return t.stack.SetInterfaceAddressFault(device, fault)
+}
+
+func (t *reloadBlockingTarget) ClearInterfaceAddressFault(
+	device, iface string,
+	kind devicestate.InterfaceAddressFaultType,
+) error {
+	return t.stack.ClearInterfaceAddressFault(device, iface, kind)
+}
+
 func (t *reloadBlockingTarget) ExecuteDeviceAction(
 	string,
 	devicestate.DeviceActionType,
