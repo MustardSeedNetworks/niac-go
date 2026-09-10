@@ -42,6 +42,8 @@ const interfaceFaultMax = 100
 
 type behaviorTarget struct {
 	device     Device
+	vlan       int
+	routed     bool
 	count      int
 	interfaces map[string]struct{}
 }
@@ -184,6 +186,11 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 			target := result[device.Name]
 			target.count++
 			target.device = device
+			target.vlan = device.VLAN
+			if len(cfg.Segments) > 0 {
+				target.vlan = segment.Tag
+			}
+			target.routed = len(cfg.Networks) > 0
 			if target.interfaces == nil {
 				target.interfaces = make(map[string]struct{}, len(device.Interfaces))
 			}
@@ -201,6 +208,9 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 // a fault whose type and scope disagree is refused here rather than failing at
 // apply time inside a running session.
 func validateBehaviorFault(targets map[string]behaviorTarget, fault BehaviorFault) error {
+	if fault.Type == string(devicestate.FaultDuplicateDHCPOffer) {
+		return validateBehaviorAddressFault(targets, fault)
+	}
 	deviceFault, isDeviceFault := deviceFaultDefinition(fault.Type)
 	switch {
 	case isDeviceFault && fault.Interface != "":
@@ -216,7 +226,7 @@ func validateBehaviorFault(targets map[string]behaviorTarget, fault BehaviorFaul
 	if isDeviceFault {
 		ceiling = deviceFault.MaxValue
 	}
-	if fault.Value > ceiling {
+	if fault.Value < 1 || fault.Value > ceiling || fault.Address.IsValid() {
 		return fmt.Errorf(
 			"%w: %q accepts at most %d, got %d",
 			ErrBehaviorFaultValue, fault.Type, ceiling, fault.Value,

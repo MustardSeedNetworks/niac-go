@@ -27,6 +27,7 @@ func newConfigValidator() *validator.Validate {
 	// Use yaml struct-tag names in error namespaces so messages read
 	// `devices[0].mac` instead of `Devices[0].MAC`.
 	v.RegisterTagNameFunc(yamlFieldName)
+	v.RegisterStructValidation(validateBehaviorFaultPayload, BehaviorFault{})
 	v.RegisterStructValidation(validateDHCPv4Options, DhcpServer{})
 
 	return v
