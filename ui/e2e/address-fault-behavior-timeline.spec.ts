@@ -36,6 +36,37 @@ async function openDraft(page: Page, content: string): Promise<ScenarioDraft> {
   return draft;
 }
 
+test('saves an imported interface conflict without changing its address or ownership', async ({
+  page,
+}) => {
+  const content = `${config.replace('ips: [192.0.2.1]', 'ips: [192.0.2.1]\n    interfaces: [{name: Management}]')}
+behavior_timelines:
+  - name: Conflict
+    repeat_count: 1
+    phases:
+      - name: ARP
+        duration_ms: 1000
+        reset: true
+        faults:
+          - device: dhcp-server
+            interface: Management
+            type: duplicate_ip
+            address: 192.0.2.20
+`;
+  await page.goto('/new-simulation');
+  await openDraft(page, content);
+  await expect(page.getByLabel('Conflict IPv4 address')).toHaveValue('192.0.2.20');
+  await expect(page.getByLabel('Fault', { exact: true })).toHaveValue('duplicate_ip');
+  const savedResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/behaviors') && response.request().method() === 'PUT',
+  );
+  await page.getByTestId('save-behaviors').click();
+  const response = await savedResponse;
+  expect(response.ok(), await response.text()).toBe(true);
+  const saved: ScenarioDraft = await response.json();
+  expect(parse(saved.content)).toEqual(parse(content));
+});
+
 test('saves and reopens an address fault without changing device inventory', async ({
   page,
   request,

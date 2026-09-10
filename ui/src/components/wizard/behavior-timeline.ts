@@ -42,6 +42,13 @@ function fault(value: unknown): DraftBehaviorFault | null {
   const item = record(value);
   if (!item) return null;
   const type = text(item.type);
+  if (type === 'duplicate_ip')
+    return {
+      device: text(item.device),
+      type,
+      interface: text(item.interface),
+      address: item.value == null ? text(item.address) : '',
+    };
   if (type === 'duplicate_dhcp_offer')
     return {
       device: text(item.device),
@@ -54,7 +61,7 @@ function fault(value: unknown): DraftBehaviorFault | null {
   };
   if (isDeviceBehaviorFaultType(type) && type !== 'duplicate_dhcp_offer')
     return { ...fields, type };
-  if (isInterfaceBehaviorFaultType(type))
+  if (isInterfaceBehaviorFaultType(type) && type !== 'duplicate_ip')
     return { ...fields, type, interface: text(item.interface) };
   return null;
 }

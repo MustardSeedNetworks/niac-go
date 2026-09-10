@@ -34,6 +34,30 @@ beforeEach(() => {
   replace.mockResolvedValue(draft);
 });
 
+it('preserves an interface conflict address when saving an imported timeline', async () => {
+  renderDraft(`${draft.content.replace('ips: [192.0.2.1]', 'ips: [192.0.2.1]\n    interfaces: [{name: Management}]')}
+behavior_timelines:
+  - name: Conflict
+    repeat_count: 1
+    phases:
+      - name: ARP
+        duration_ms: 1000
+        faults:
+          - device: server
+            interface: Management
+            type: duplicate_ip
+            address: 192.0.2.20
+`);
+  expect(screen.getByLabelText('Conflict IPv4 address')).toHaveValue('192.0.2.20');
+  expect(screen.getByLabelText('Interface')).toHaveTextContent('Management');
+  await userEvent.click(screen.getByTestId('save-behaviors'));
+  await waitFor(() => expect(replace).toHaveBeenCalledOnce());
+  const timelines: DraftBehaviorTimeline[] = replace.mock.calls[0]?.[2];
+  expect(timelines[0]?.phases[0]?.faults).toEqual([
+    { device: 'server', interface: 'Management', type: 'duplicate_ip', address: '192.0.2.20' },
+  ]);
+});
+
 function renderDraft(content = draft.content) {
   render(
     <DraftBehaviorComposer

@@ -55,14 +55,21 @@ export function BehaviorFaultAction({
           onChange(
             action.type === 'duplicate_dhcp_offer'
               ? { device, type: action.type, address: action.address }
-              : isDeviceBehaviorFaultType(action.type)
-                ? { device, type: action.type, value: action.value }
-                : {
+              : action.type === 'duplicate_ip'
+                ? {
                     device,
                     type: action.type,
-                    value: action.value,
+                    address: action.address,
                     interface: interfaceOptions(device)[0]?.value ?? '',
-                  },
+                  }
+                : isDeviceBehaviorFaultType(action.type)
+                  ? { device, type: action.type, value: action.value }
+                  : {
+                      device,
+                      type: action.type,
+                      value: action.value,
+                      interface: interfaceOptions(device)[0]?.value ?? '',
+                    },
           )
         }
       />
@@ -72,8 +79,17 @@ export function BehaviorFaultAction({
           value={action.interface ?? ''}
           options={interfaceOptions(action.device)}
           onChange={(interfaceName) => {
-            if (action.type !== 'duplicate_dhcp_offer' && isInterfaceBehaviorFaultType(action.type))
-              onChange({ ...action, type: action.type, interface: interfaceName });
+            if (action.type === 'duplicate_ip') onChange({ ...action, interface: interfaceName });
+            else if (
+              action.type !== 'duplicate_dhcp_offer' &&
+              isInterfaceBehaviorFaultType(action.type)
+            )
+              onChange({
+                device: action.device,
+                type: action.type,
+                value: action.value,
+                interface: interfaceName,
+              });
           }}
         />
       )}
@@ -91,13 +107,20 @@ export function BehaviorFaultAction({
               type,
               address: '',
             });
+          else if (type === 'duplicate_ip')
+            onChange({
+              device: action.device,
+              type,
+              interface: action.interface ?? '',
+              address: '',
+            });
           else if (isDeviceBehaviorFaultType(type) && type !== 'duplicate_dhcp_offer')
             onChange({
               device: action.device,
               type,
               value: type === 'captive_portal' ? 1 : (action.value ?? 1),
             });
-          else if (isInterfaceBehaviorFaultType(type))
+          else if (isInterfaceBehaviorFaultType(type) && type !== 'duplicate_ip')
             onChange({
               device: action.device,
               type,
@@ -106,7 +129,7 @@ export function BehaviorFaultAction({
             });
         }}
       />
-      {action.type === 'duplicate_dhcp_offer' ? (
+      {action.type === 'duplicate_dhcp_offer' || action.type === 'duplicate_ip' ? (
         <Input
           label={t('newSimWizard.behaviors.conflictAddress')}
           value={action.address}
