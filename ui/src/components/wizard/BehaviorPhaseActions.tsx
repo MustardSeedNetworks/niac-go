@@ -1,14 +1,11 @@
 import { Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import type {
-  DraftBehaviorFault,
-  DraftBehaviorPhase,
-  DraftBehaviorTraffic,
-} from '../../api/library-client';
+import type { DraftBehaviorPhase, DraftBehaviorTraffic } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Input, Select } from '../../ui/Input';
+import { BehaviorFaultAction } from './BehaviorFaultAction';
 
 interface Option {
   value: string;
@@ -23,13 +20,6 @@ interface BehaviorPhaseActionsProps {
   firstInterface: string;
   onChange: (phase: DraftBehaviorPhase) => void;
 }
-
-const faultTypes: DraftBehaviorFault['type'][] = [
-  'fcs_errors',
-  'packet_discards',
-  'interface_errors',
-  'high_utilization',
-];
 
 export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
   phase,
@@ -47,11 +37,6 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
     onChange({
       ...phase,
       traffic: phase.traffic.map((item, itemIndex) => (itemIndex === index ? update(item) : item)),
-    });
-  const updateFault = (index: number, update: (item: DraftBehaviorFault) => DraftBehaviorFault) =>
-    onChange({
-      ...phase,
-      faults: phase.faults.map((item, itemIndex) => (itemIndex === index ? update(item) : item)),
     });
 
   return (
@@ -111,74 +96,38 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
       ))}
 
       {phase.faults.map((action, actionIndex) => (
-        <div
+        <BehaviorFaultAction
           key={`fault-${actionIndex}`}
-          className="grid gap-default md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end"
-        >
-          <Select
-            label={t('newSimWizard.behaviors.device')}
-            value={action.device}
-            options={deviceOptions}
-            onChange={(device) =>
-              updateFault(actionIndex, (item) => ({
-                ...item,
-                device,
-                interface: interfaceOptions(device)[0]?.value ?? '',
-              }))
-            }
-          />
-          <Select
-            label={t('newSimWizard.behaviors.interface')}
-            value={action.interface}
-            options={interfaceOptions(action.device)}
-            onChange={(interfaceName) =>
-              updateFault(actionIndex, (item) => ({ ...item, interface: interfaceName }))
-            }
-          />
-          <Select
-            label={t('newSimWizard.behaviors.faultType')}
-            value={action.type}
-            options={faultTypes.map((type) => ({
-              value: type,
-              label: t(`newSimWizard.behaviors.faults.${type}`),
-            }))}
-            onChange={(type) =>
-              updateFault(actionIndex, (item) => ({
-                ...item,
-                type: type as DraftBehaviorFault['type'],
-              }))
-            }
-          />
-          <Input
-            label={t('newSimWizard.behaviors.faultRate')}
-            type="number"
-            min={1}
-            max={100}
-            value={action.value}
-            onChange={(event) =>
-              updateFault(actionIndex, (item) => ({
-                ...item,
-                value: Number(event.target.value),
-              }))
-            }
-          />
-          <Button
-            variant="outline"
-            tone="red"
-            aria-label={t('newSimWizard.behaviors.removeFault')}
-            onClick={() =>
-              onChange({
-                ...phase,
-                faults: phase.faults.filter((_, item) => item !== actionIndex),
-              })
-            }
-          >
-            <Trash2 className={iconSizes.md} />
-          </Button>
-        </div>
+          action={action}
+          deviceOptions={deviceOptions}
+          interfaceOptions={interfaceOptions}
+          onChange={(updated) =>
+            onChange({
+              ...phase,
+              faults: phase.faults.map((item, index) => (index === actionIndex ? updated : item)),
+            })
+          }
+          onRemove={() =>
+            onChange({ ...phase, faults: phase.faults.filter((_, index) => index !== actionIndex) })
+          }
+        />
       ))}
 
       <div className="flex flex-wrap gap-tight">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!firstDevice}
+          data-testid="add-device-fault"
+          onClick={() =>
+            onChange({
+              ...phase,
+              faults: [...phase.faults, { device: firstDevice, type: 'latency', value: 100 }],
+            })
+          }
+        >
+          {t('newSimWizard.behaviors.addDeviceFault')}
+        </Button>
         <Button
           size="sm"
           variant="outline"

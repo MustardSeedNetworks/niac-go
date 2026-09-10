@@ -1,3 +1,4 @@
+import type { DraftBehaviorFault } from './behavior-fault-types';
 import { deduplicatedGet, request, requestJson, requestJsonCamelCase } from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
@@ -129,12 +130,7 @@ export interface DraftBehaviorTraffic {
   utilization: number;
 }
 
-export interface DraftBehaviorFault {
-  device: string;
-  interface: string;
-  type: 'fcs_errors' | 'packet_discards' | 'interface_errors' | 'high_utilization';
-  value: number;
-}
+export type { DraftBehaviorFault } from './behavior-fault-types';
 
 export interface DraftBehaviorPhase {
   name: string;

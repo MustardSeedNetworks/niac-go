@@ -434,6 +434,7 @@
   "newSimWizard": {
     "backLabel": "Back",
     "behaviors": {
+      "addDeviceFault": "Add device fault",
       "addFault": "Add fault",
       "addPhase": "Add phase",
       "addTimeline": "Add timeline",
@@ -445,15 +446,20 @@
       "empty": "Add a timeline to make traffic and faults change automatically during the simulation.",
       "faultRate": "Rate (%)",
       "faults": {
+        "dhcp_no_offer": "DHCP no offer",
+        "dns_nxdomain": "DNS NXDOMAIN",
+        "dns_timeout": "DNS timeout",
         "fcs_errors": "FCS errors",
         "high_utilization": "High utilization",
         "interface_errors": "Interface errors",
+        "latency": "Latency",
         "packet_discards": "Packet discards"
       },
       "faultType": "Fault",
       "help": "Schedule realistic traffic and link conditions. The same timeline replays identically after every restart.",
       "interface": "Interface",
-      "needsInterface": "Add at least one interface to a device before scheduling behaviors — timelines target a device interface.",
+      "latencyMs": "Latency (milliseconds)",
+      "needsDevice": "Add a device before scheduling behaviors. Traffic and interface faults also require an interface.",
       "phaseName": "Phase name",
       "phaseOffset": "Phase starts after (seconds)",
       "removeFault": "Remove fault",

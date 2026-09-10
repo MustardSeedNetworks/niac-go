@@ -1,6 +1,7 @@
 import { Activity, Plus, Save, Trash2 } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { validBehaviorFault } from '../../api/behavior-fault-types';
 import {
   type DraftBehaviorPhase,
   type DraftBehaviorTimeline,
@@ -49,15 +50,12 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
     value: device.name,
     label: device.name,
   }));
-  // The first device is not necessarily a usable one: the Start-empty seed puts
-  // an interfaceless host at position 0, which left this step permanently
-  // disabled however many switches were added afterwards (#1491). Seed from the
-  // first device that actually has an interface, since that is what a timeline
-  // targets.
+  // Prefer an interface-backed traffic seed; device faults also work on hosts
+  // without authored interfaces.
   const seedDevice = topology.devices.find(
     (device) => (topology.interfaces[device.name] ?? []).length > 0,
   );
-  const firstDevice = seedDevice?.name ?? '';
+  const firstDevice = seedDevice?.name ?? topology.devices[0]?.name ?? '';
   const firstInterface = firstDevice ? (topology.interfaces[firstDevice]?.[0]?.name ?? '') : '';
   const interfaceOptions = (device: string) =>
     (topology.interfaces[device] ?? []).map((iface) => ({ value: iface.name, label: iface.name }));
@@ -112,7 +110,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
             startOffsetMs: 0,
             durationMs: 30_000,
             reset: true,
-            traffic: firstDevice
+            traffic: firstInterface
               ? [{ device: firstDevice, interface: firstInterface, utilization: 75 }]
               : [],
             faults: [],
@@ -141,10 +139,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
               action.utilization >= 1 &&
               action.utilization <= 100,
           ) &&
-          phase.faults.every(
-            (action) =>
-              action.device && action.interface && action.value >= 1 && action.value <= 100,
-          ),
+          phase.faults.every(validBehaviorFault),
       ),
   );
 
@@ -169,13 +164,8 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
         <Button
           variant="outline"
           leftIcon={<Plus className={iconSizes.md} />}
-          disabled={busy || !firstDevice || !firstInterface}
-          // A timeline targets a device interface, so there is nothing to
-          // schedule until one exists. Without this the empty state told the
-          // user to click a permanently disabled button (D4).
-          title={
-            !firstDevice || !firstInterface ? t('newSimWizard.behaviors.needsInterface') : undefined
-          }
+          disabled={busy || !firstDevice}
+          title={!firstDevice ? t('newSimWizard.behaviors.needsDevice') : undefined}
           onClick={addTimeline}
           data-testid="add-timeline"
         >
@@ -189,9 +179,9 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
           <SmallText className="mt-tight text-text-muted">
             {t('newSimWizard.behaviors.empty')}
           </SmallText>
-          {(!firstDevice || !firstInterface) && (
+          {!firstDevice && (
             <SmallText className="mt-tight block text-text-muted">
-              {t('newSimWizard.behaviors.needsInterface')}
+              {t('newSimWizard.behaviors.needsDevice')}
             </SmallText>
           )}
         </div>
