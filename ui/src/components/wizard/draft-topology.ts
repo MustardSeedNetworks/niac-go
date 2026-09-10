@@ -1,4 +1,5 @@
 import { parse } from 'yaml';
+import type { DraftBehaviorAction } from '../../api/behavior-timeline-types';
 import type { DeviceSummary, TopologyLink } from '../../api/types';
 
 export interface DraftInterface {
@@ -16,6 +17,7 @@ export interface DraftTopologyModel {
   segmentByDevice: Record<string, number>;
   segmented: boolean;
   configBacked: boolean;
+  deviceActions: Record<string, DraftBehaviorAction['type'][]>;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -110,6 +112,25 @@ function deviceProtocols(device: UnknownRecord) {
   return fields.filter(([field]) => asRecord(device[field]) !== null).map(([, label]) => label);
 }
 
+function authoredDeviceActions(device: UnknownRecord): DraftBehaviorAction['type'][] {
+  const snmp = asRecord(device.snmp_agent);
+  const v3 = asRecord(device.snmpv3);
+  const enabled =
+    (snmp?.enabled !== false && asString(snmp?.community).trim() !== '') ||
+    (v3?.enabled === true && Array.isArray(v3.users) && v3.users.length > 0);
+  if (!enabled) return [];
+  return asRecord(device.stp)?.enabled === true ? ['reboot', 'stp_topology_change'] : ['reboot'];
+}
+
+function actionTargets(records: UnknownRecord[]): DraftTopologyModel['deviceActions'] {
+  const result = new Map<string, DraftBehaviorAction['type'][]>();
+  for (const device of records) {
+    const name = asString(device.name);
+    result.set(name, result.has(name) ? [] : authoredDeviceActions(device));
+  }
+  return Object.fromEntries(result);
+}
+
 function declaredTopology(devices: UnknownRecord[]) {
   const links = new Set<string>();
   const trunkByDirection = new Map<string, UnknownRecord>();
@@ -151,6 +172,7 @@ export function parseDraftTopology(content: string): DraftTopologyModel {
   const devices: DeviceSummary[] = [];
   const links: TopologyLink[] = [];
   const interfaces: Record<string, DraftInterface[]> = {};
+  const deviceActions = actionTargets(records);
   const positions: Record<string, { x: number; y: number }> = {};
   const seenLinks = new Set<string>();
   const {
@@ -236,5 +258,14 @@ export function parseDraftTopology(content: string): DraftTopologyModel {
       });
     }
   }
-  return { devices, links, interfaces, positions, segmentByDevice, segmented, configBacked };
+  return {
+    devices,
+    links,
+    interfaces,
+    positions,
+    segmentByDevice,
+    segmented,
+    configBacked,
+    deviceActions,
+  };
 }
