@@ -39,6 +39,7 @@ func TestAvailableErrorTypesOnlyAdvertiseObservableFaults(t *testing.T) {
 		"Link Down",
 		"PoE Loss",
 		"Duplicate IP",
+		"Bad Subnet Mask",
 	}
 
 	types := availableErrorTypes()

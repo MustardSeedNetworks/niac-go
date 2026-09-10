@@ -69,8 +69,9 @@ func TestStackInterfaceFaultRejectsDeviceWithoutSNMPCounters(t *testing.T) {
 		t.Fatalf("unobservable fault was persisted: %#v", stack.ActiveInterfaceFaults())
 	}
 	targets := stack.InterfaceFaultTargets()
-	if len(targets) != 1 || len(targets[0].Interfaces) != 0 {
-		t.Fatalf("unobservable interfaces advertised: %#v", targets)
+	if len(targets) != 1 || !slices.Equal(targets[0].Interfaces, []string{"Gi0/1"}) ||
+		!slices.Equal(targets[0].ErrorTypes["Gi0/1"], []string{"Bad Subnet Mask"}) {
+		t.Fatalf("expected only the independent host mask capability: %#v", targets)
 	}
 }
 

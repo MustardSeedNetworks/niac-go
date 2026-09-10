@@ -11,11 +11,12 @@ import (
 
 // errorInjectionRequest represents a request to inject an error.
 type errorInjectionRequest struct {
-	Device    string  `json:"device"`
-	Interface string  `json:"interface"`
-	ErrorType string  `json:"errorType"`
-	Value     *int    `json:"value,omitempty"`
-	Address   *string `json:"address,omitempty"`
+	Device     string  `json:"device"`
+	Interface  string  `json:"interface"`
+	ErrorType  string  `json:"errorType"`
+	Value      *int    `json:"value,omitempty"`
+	Address    *string `json:"address,omitempty"`
+	PrefixBits *int    `json:"prefixBits,omitempty"`
 }
 
 // validate validates the error injection request fields.
@@ -45,6 +46,7 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 			"active_errors": interfaceFaultResponse(
 				stack.ActiveInterfaceFaults(),
 				stack.ActiveInterfaceAddressFaults(),
+				stack.ActiveInterfacePrefixFaults(),
 			),
 			"targets":                interfaceFaultTargetsResponse(stack.InterfaceFaultTargets()),
 			"available_device_types": availableDeviceErrorTypes(),
@@ -90,9 +92,12 @@ func (s *Server) handleErrorInjection(
 		"interface": req.Interface,
 		"errorType": req.ErrorType,
 	}
-	if req.Address != nil {
+	switch {
+	case req.PrefixBits != nil:
+		response["prefixBits"] = *req.PrefixBits
+	case req.Address != nil:
 		response["address"] = *req.Address
-	} else {
+	default:
 		response["value"] = *req.Value
 	}
 	s.writeJSON(w, response)
@@ -102,6 +107,11 @@ func (s *Server) handleErrorInjection(
 func (s *Server) applyFaultRequest(
 	req *errorInjectionRequest, stack *protocols.Stack,
 ) error {
+	if req.ErrorType == badMaskLabel {
+		return stack.SetInterfacePrefixFault(req.Device, devicestate.InterfacePrefixFault{
+			Interface: req.Interface, Type: devicestate.FaultBadMask, PrefixBits: *req.PrefixBits,
+		})
+	}
 	if req.ErrorType == duplicateIPLabel {
 		return stack.SetInterfaceAddressFault(req.Device, devicestate.InterfaceAddressFault{
 			Interface: req.Interface, Type: devicestate.FaultDuplicateIP, Address: netip.MustParseAddr(*req.Address),
@@ -149,6 +159,8 @@ func (s *Server) handleErrorClear(
 			err = stack.ClearInterfaceFaults(device, iface)
 		case duplicateIPLabel:
 			err = stack.ClearInterfaceAddressFault(device, iface, devicestate.FaultDuplicateIP)
+		case badMaskLabel:
+			err = stack.ClearInterfacePrefixFault(device, iface, devicestate.FaultBadMask)
 		default:
 			var faultType devicestate.FaultType
 			faultType, err = parseInterfaceFaultType(errorType)

@@ -22,7 +22,7 @@ func TestInterfaceAddressFaultTargetsDoNotRequireSNMP(t *testing.T) {
 			continue
 		}
 		if !slices.Equal(target.Interfaces, []string{"Management"}) ||
-			!slices.Equal(target.ErrorTypes["Management"], []string{duplicateIPLabel}) {
+			!slices.Equal(target.ErrorTypes["Management"], []string{duplicateIPLabel, badMaskLabel}) {
 			t.Fatalf("address-only target advertised incorrect capabilities: %+v", target)
 		}
 		return
