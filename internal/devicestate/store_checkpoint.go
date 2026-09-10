@@ -17,6 +17,7 @@ type checkpoint struct {
 	config        configuration
 	faults        map[interfaceFaultKey]InterfaceFault
 	addressFaults map[interfaceAddressFaultKey]InterfaceAddressFault
+	prefixFaults  map[interfacePrefixFaultKey]InterfacePrefixFault
 	deviceFaults  map[DeviceFaultType]DeviceFault
 }
 
@@ -33,6 +34,7 @@ func (s *Store) SaveCheckpoint(name string) {
 		config:        cloneConfiguration(s.running),
 		faults:        cloneFaults(s.faults),
 		addressFaults: maps.Clone(s.addressFaults),
+		prefixFaults:  maps.Clone(s.prefixFaults),
 		deviceFaults:  cloneDeviceFaults(s.deviceFaults),
 	}
 	s.version++
@@ -52,6 +54,7 @@ func (s *Store) RestoreCheckpoint(name string) error {
 	}
 	s.faults = cloneFaults(saved.faults)
 	s.addressFaults = maps.Clone(saved.addressFaults)
+	s.prefixFaults = maps.Clone(saved.prefixFaults)
 	s.deviceFaults = cloneDeviceFaults(saved.deviceFaults)
 	// Restoring telemetry does not rewind the generation's consumed actions.
 	s.telemetry = saved.telemetry

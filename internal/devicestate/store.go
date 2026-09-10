@@ -23,6 +23,7 @@ type Snapshot struct {
 	Network       Network
 	Faults        []InterfaceFault
 	AddressFaults []InterfaceAddressFault
+	PrefixFaults  []InterfacePrefixFault
 	// DeviceFaults are service outcomes armed on the device as a whole,
 	// independent of any interface.
 	DeviceFaults []DeviceFault
@@ -45,6 +46,7 @@ type Store struct {
 	checkpoints          map[string]checkpoint
 	faults               map[interfaceFaultKey]InterfaceFault
 	addressFaults        map[interfaceAddressFaultKey]InterfaceAddressFault
+	prefixFaults         map[interfacePrefixFaultKey]InterfacePrefixFault
 	deviceFaults         map[DeviceFaultType]DeviceFault
 	changes              chan struct{}
 	changeSignal         chan<- struct{}
@@ -64,6 +66,7 @@ func NewStore(identity Identity) *Store {
 			map[interfaceFaultKey]InterfaceFault,
 		), deviceFaults: make(map[DeviceFaultType]DeviceFault),
 		addressFaults: make(map[interfaceAddressFaultKey]InterfaceAddressFault),
+		prefixFaults:  make(map[interfacePrefixFaultKey]InterfacePrefixFault),
 		changes:       make(chan struct{}, 1), now: time.Now,
 	}
 }
@@ -114,6 +117,7 @@ func (s *Store) snapshot(source configuration) Snapshot {
 		Identity: source.identity, Network: network,
 		Faults:        sortedInterfaceFaults(s.faults),
 		AddressFaults: sortedAddressFaults(s.addressFaults),
+		PrefixFaults:  sortedPrefixFaults(s.prefixFaults),
 		DeviceFaults:  sortedDeviceFaults(s.deviceFaults),
 		Version:       s.version,
 	}
