@@ -1,6 +1,8 @@
 package protocols
 
 import (
+	"net/http"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
@@ -42,7 +44,7 @@ func captivePortalResponse(request *HTTPRequest) []byte {
 		"<body><h1>Captive portal</h1><p>This simulated network requires portal access.</p>" +
 		"<p>No sign-in information is collected.</p></body></html>"
 	response := buildHTTPResponse(httpStatusOK, "NIAC", contentTypeHTML, body)
-	if request.Method == "HEAD" {
+	if request.Method == http.MethodHead {
 		return response[:len(response)-len(body)]
 	}
 	return response
