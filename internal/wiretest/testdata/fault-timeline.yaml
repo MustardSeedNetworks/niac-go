@@ -1,4 +1,4 @@
-# A network whose DHCP outage is authored, not armed.
+# A network whose outages are authored, not armed.
 #
 # P2-1's wire clause asks that an injected fault be observable on the wire. The
 # fault API can arm one, but a wire test cannot reach it: the harness drives the
@@ -7,9 +7,11 @@
 # device-scoped -- so this file needs no test-only accessor and is the same
 # shape an operator would write.
 #
-# The single phase suppresses the DHCP offer for its first 15 seconds and, being
-# a reset phase, clears it at the end. The test asserts both halves: silence
-# while the phase runs, and a lease from the authored pool once it has ended.
+# One timeline per device-scoped fault type. Every phase that suppresses a
+# service is a reset phase, so each test can assert all three halves: the
+# service healthy first, the fault while the phase runs, and the service back
+# once it has ended. Silence alone is what a broken server also produces, and a
+# fault sampled with no healthy control is a fault the test never saw arrive.
 #
 # The transit network is the wire's own 10.254.200.0/24 (see wire_linux_test.go,
 # clientCIDR) and the pool starts above the client's .50 so a lease can never
@@ -65,6 +67,20 @@ devices:
         network: wire-transit
         address: 10.254.200.1/24
 
+  # Last on purpose, and it authors no DNS: selectServerDevice stops at the
+  # first device with a DNSConfig (see the LAB-FAULT-DNS1 note), so a device
+  # placed ahead of the resolver would answer the resolver's queries.
+  - name: LAB-FAULT-SLOW
+    type: server
+    mac: "02:00:00:00:fa:04"
+    icmp:
+      enabled: true
+    interfaces:
+      - name: Ethernet1/1
+        type: ethernet
+        network: wire-transit
+        address: 10.254.200.4/24
+
 behavior_timelines:
   - name: dhcp-outage
     repeat_count: 1
@@ -77,17 +93,47 @@ behavior_timelines:
             type: dhcp_no_offer
             value: 1
 
-  # Starts late and never resets, so the session has a healthy window first:
-  # the test resolves the authored name before the phase begins and again
-  # after it, and a resolver that answered NXDOMAIN either way -- a malformed
-  # query does exactly that -- fails on the first half.
+  # Both DNS faults on one timeline, because both have to be armed on
+  # LAB-FAULT-DNS1: niac-go#1958 means the first device with a DNSConfig
+  # answers every query, so a second resolver device would never be consulted
+  # and its fault would never be reached.
+  #
+  # Each phase opens after a healthy window and, for timeout, closes into
+  # another one. A resolver that answered the same way with no fault armed --
+  # a malformed query reads as NXDOMAIN, and an unreachable server reads as a
+  # timeout -- fails on the healthy half rather than passing as a fault it
+  # never saw.
   - name: dns-outage
     repeat_count: 1
     phases:
-      - name: nxdomain
+      - name: timeout
         start_offset_ms: 10000
+        duration_ms: 15000
+        reset: true
+        faults:
+          - device: LAB-FAULT-DNS1
+            type: dns_timeout
+            value: 1
+
+      - name: nxdomain
+        start_offset_ms: 40000
         duration_ms: 86400000
         faults:
           - device: LAB-FAULT-DNS1
             type: dns_nxdomain
             value: 1
+
+  # Latency suppresses nothing: the device still answers, just late, which is
+  # what a tester measures as round-trip time. 3000 ms is far enough above a
+  # veth's own round trip that the assertion is a lower bound and never a
+  # ceiling -- an assertion a loaded nightly runner cannot fail spuriously.
+  - name: slow-echo
+    repeat_count: 1
+    phases:
+      - name: slow
+        start_offset_ms: 10000
+        duration_ms: 86400000
+        faults:
+          - device: LAB-FAULT-SLOW
+            type: latency
+            value: 3000

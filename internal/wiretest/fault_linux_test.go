@@ -34,15 +34,46 @@ const (
 	faultRouterIP     = "10.254.200.1"
 	faultPhaseSeconds = 15 // testdata/fault-timeline.yaml: duration_ms
 
-	// The resolver whose phase arms dns_nxdomain for the whole session, and
-	// a name it authors an A record for -- so the NXDOMAIN is the fault
-	// rewriting a successful answer, not an empty zone answering normally.
+	// The resolver both DNS phases are armed on, and a name it authors an A
+	// record for -- so the NXDOMAIN is the fault rewriting a successful
+	// answer, not an empty zone answering normally.
 	faultDNSAddr     = "10.254.200.2"
 	faultDNSName     = "host.fault.example"
 	faultDNSRecordIP = "10.254.200.90"
 
-	// testdata/fault-timeline.yaml: the dns-outage phase's start_offset_ms.
-	faultDNSPhaseStart = 10 * time.Second
+	// testdata/fault-timeline.yaml: the dns-outage phases' start_offset_ms.
+	// The timeout phase resets at 25s, so the recovery lookup has the window
+	// between it and the nxdomain phase to itself.
+	faultDNSTimeoutStart = 10 * time.Second
+	faultDNSTimeoutEnd   = 25 * time.Second
+	faultNXDomainStart   = 40 * time.Second
+
+	// The device whose only fault is latency, and the delay its phase authors.
+	// The assertion is a lower bound: a reply that took at least this long
+	// minus a tolerance was held back, and no upper bound is asserted at all,
+	// so a loaded runner cannot fail it.
+	faultSlowAddr         = "10.254.200.4"
+	faultSlowMAC          = "02:00:00:00:fa:04"
+	faultLatencyStart     = 10 * time.Second
+	faultLatencyAuthored  = 3000 * time.Millisecond
+	faultLatencyTolerance = 200 * time.Millisecond
+
+	// How long a healthy lookup is given before it counts as lost.
+	faultResolveWindow = 20 * time.Second
+
+	// The echo request is retransmitted per attempt window; the deadline caps
+	// the whole exchange. The attempt window has to clear the authored delay,
+	// or the faulted reply would arrive after the attempt that asked for it.
+	faultEchoAttemptWindow = 10 * time.Second
+	faultEchoDeadline      = 30 * time.Second
+
+	// Attempt sequence numbers are strided by call, so a reply to a retransmit
+	// of the healthy ping can never be mistaken for the faulted one.
+	faultEchoSeqStride = 100
+
+	// wire_linux_test.go: clientCIDR, the address the kernel holds on the test
+	// end of the veth and the source a reply is sent back to.
+	faultClientAddr = "10.254.200.50"
 
 	// The window the DISCOVER goes unanswered in. Well inside the phase, so a
 	// slow start cannot make a legitimate silence look like a late answer.
@@ -256,11 +287,7 @@ func TestAuthoredDeviceFaultRewritesDNSOnTheWire(t *testing.T) {
 	}
 
 	// The phase begins at its authored offset from the session start.
-	if remaining := time.Until(
-		started.Add(faultDNSPhaseStart + 2*time.Second),
-	); remaining > 0 {
-		time.Sleep(remaining)
-	}
+	sleepUntil(started.Add(faultNXDomainStart + 2*time.Second))
 
 	faulted := resolveOverTheWire(t, conn, 0xfa02)
 	if faulted.ResponseCode != layers.DNSResponseCodeNXDomain {
@@ -275,9 +302,26 @@ func TestAuthoredDeviceFaultRewritesDNSOnTheWire(t *testing.T) {
 }
 
 // resolveOverTheWire asks the simulated resolver for the authored name and
-// returns its response, retransmitting the way a resolver does: the first
-// datagram can be lost to ARP resolution on a fresh veth.
+// fails when nothing comes back. It is tryResolveOverTheWire with the silence
+// treated as the error it is everywhere except the timeout fault's own window.
 func resolveOverTheWire(t *testing.T, conn net.Conn, id uint16) layers.DNS {
+	t.Helper()
+
+	response, answered := tryResolveOverTheWire(t, conn, id, faultResolveWindow)
+	if !answered {
+		t.Fatalf("no DNS response from %s within %s", faultDNSAddr, faultResolveWindow)
+	}
+
+	return response
+}
+
+// tryResolveOverTheWire asks the simulated resolver for the authored name and
+// reports whether it answered, retransmitting the way a resolver does: the
+// first datagram can be lost to ARP resolution on a fresh veth, and under the
+// timeout fault every datagram goes unanswered by design.
+func tryResolveOverTheWire(
+	t *testing.T, conn net.Conn, id uint16, window time.Duration,
+) (layers.DNS, bool) {
 	t.Helper()
 
 	query := &layers.DNS{
@@ -295,7 +339,7 @@ func resolveOverTheWire(t *testing.T, conn net.Conn, id uint16) layers.DNS {
 		t.Fatalf("serializing the query: %v", serErr)
 	}
 
-	deadline := time.Now().Add(20 * time.Second)
+	deadline := time.Now().Add(window)
 	for time.Now().Before(deadline) {
 		if _, writeErr := conn.Write(buf.Bytes()); writeErr != nil {
 			t.Fatalf("sending the query: %v", writeErr)
@@ -312,13 +356,175 @@ func resolveOverTheWire(t *testing.T, conn net.Conn, id uint16) layers.DNS {
 		); decodeErr != nil {
 			t.Fatalf("decoding the response: %v", decodeErr)
 		}
+		// A reply to an earlier query -- the one the retransmit replaced --
+		// would otherwise be read as an answer to this one.
 		if response.ID != id {
 			continue
 		}
 
-		return response
+		return response, true
 	}
-	t.Fatalf("no DNS response from %s within the deadline", faultDNSAddr)
 
-	return layers.DNS{}
+	return layers.DNS{}, false
+}
+
+// sleepUntil waits for a moment measured from the session start, which is what
+// the authored timeline's offsets are measured against too.
+func sleepUntil(moment time.Time) {
+	if remaining := time.Until(moment); remaining > 0 {
+		time.Sleep(remaining)
+	}
+}
+
+// The timeout fault is the silence shape the DHCP assertion proves for leases,
+// on a service that answers over UDP: the resolver returns no packet at all,
+// which is what a client measures as a timeout. All three halves are asserted,
+// because silence on its own is also what an unreachable server produces.
+func TestAuthoredDeviceFaultSilencesDNSOnTheWire(t *testing.T) {
+	_, started := startFaultTimeline(t)
+
+	conn, err := net.DialTimeout("udp", faultDNSAddr+":53", 5*time.Second)
+	if err != nil {
+		t.Fatalf("dialling the simulated resolver: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+
+	healthy := resolveOverTheWire(t, conn, 0xfa11)
+	if healthy.ResponseCode != layers.DNSResponseCodeNoErr || len(healthy.Answers) == 0 {
+		t.Fatalf(
+			"healthy lookup of %s = %v with %d answers, want NoError with the authored A record",
+			faultDNSName, healthy.ResponseCode, len(healthy.Answers),
+		)
+	}
+
+	// Well inside the phase, so neither a late start nor the retransmits can
+	// put the window's far end past the phase's own reset.
+	sleepUntil(started.Add(faultDNSTimeoutStart + 3*time.Second))
+	if silenced, answered := tryResolveOverTheWire(
+		t, conn, 0xfa12, faultSilenceWindow,
+	); answered {
+		t.Fatalf(
+			"lookup of %s answered %v under the authored dns_timeout phase, want no reply at all",
+			faultDNSName, silenced.ResponseCode,
+		)
+	}
+
+	// The phase is a reset phase: the same resolver that went silent answers
+	// again once it ends, which is what separates a fault from a dead server.
+	sleepUntil(started.Add(faultDNSTimeoutEnd + time.Second))
+	recovered := resolveOverTheWire(t, conn, 0xfa13)
+	if recovered.ResponseCode != layers.DNSResponseCodeNoErr || len(recovered.Answers) == 0 {
+		t.Fatalf(
+			"lookup after the phase = %v with %d answers, want the authored A record back",
+			recovered.ResponseCode, len(recovered.Answers),
+		)
+	}
+	if got := recovered.Answers[0].IP.String(); got != faultDNSRecordIP {
+		t.Fatalf("lookup after the phase answered %s, want the authored %s", got, faultDNSRecordIP)
+	}
+}
+
+// Latency is the one device fault that suppresses nothing, so it is the one
+// whose assertion is a measurement rather than a presence check. The bound is
+// one-sided on purpose: a reply held back for at least the authored delay
+// proves the fault applied, while any ceiling would be an assertion about the
+// runner's load rather than about niac.
+func TestAuthoredDeviceFaultDelaysEchoOnTheWire(t *testing.T) {
+	_, started := startFaultTimeline(t)
+
+	handle := openClient(t)
+	src := clientMAC(t)
+
+	healthy := echoRoundTrip(t, handle, src, 0xfa21, 1)
+	if healthy >= faultLatencyAuthored/2 {
+		t.Fatalf(
+			"healthy echo round trip = %s, already at half the authored delay %s; "+
+				"the measurement cannot distinguish the fault",
+			healthy, faultLatencyAuthored,
+		)
+	}
+
+	sleepUntil(started.Add(faultLatencyStart + 2*time.Second))
+	delayed := echoRoundTrip(t, handle, src, 0xfa21, 2)
+	if floor := faultLatencyAuthored - faultLatencyTolerance; delayed < floor {
+		t.Fatalf(
+			"echo round trip under the authored %s latency phase = %s, want at least %s "+
+				"(healthy was %s)",
+			faultLatencyAuthored, delayed, floor, healthy,
+		)
+	}
+}
+
+// echoRoundTrip pings the slow device and returns how long its reply took.
+//
+// The request is addressed to the authored MAC directly rather than resolved
+// by the kernel: an ARP exchange folded into the first measurement would be
+// read as latency the fault never caused.
+func echoRoundTrip(
+	t *testing.T, handle *pcap.Handle, src net.HardwareAddr, id uint16, seq uint16,
+) time.Duration {
+	t.Helper()
+
+	packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()
+	deadline := time.Now().Add(faultEchoDeadline)
+	for attempt := uint16(0); time.Now().Before(deadline); attempt++ {
+		// A new sequence number per attempt, so a reply to the attempt we
+		// already gave up on is not timed against this attempt's clock.
+		attemptSeq := seq*faultEchoSeqStride + attempt
+		frame := echoFrame(t, src, id, attemptSeq)
+		sentAt := time.Now()
+		if err := handle.WritePacketData(frame); err != nil {
+			t.Fatalf("writing echo request: %v", err)
+		}
+		attemptDeadline := time.After(faultEchoAttemptWindow)
+		for waiting := true; waiting; {
+			select {
+			case packet := <-packets:
+				layer := packet.Layer(layers.LayerTypeICMPv4)
+				if layer == nil {
+					continue
+				}
+				reply, ok := layer.(*layers.ICMPv4)
+				if !ok || reply.Id != id || reply.Seq != attemptSeq {
+					continue
+				}
+				if reply.TypeCode.Type() != layers.ICMPv4TypeEchoReply {
+					continue
+				}
+
+				return time.Since(sentAt)
+			case <-attemptDeadline:
+				waiting = false
+			}
+		}
+	}
+	t.Fatalf("no echo reply from %s within %s", faultSlowAddr, faultEchoDeadline)
+
+	return 0
+}
+
+func echoFrame(t *testing.T, src net.HardwareAddr, id uint16, seq uint16) []byte {
+	t.Helper()
+
+	dstMAC, err := net.ParseMAC(faultSlowMAC)
+	if err != nil {
+		t.Fatalf("parsing the authored MAC %s: %v", faultSlowMAC, err)
+	}
+	eth := &layers.Ethernet{
+		SrcMAC: src, DstMAC: dstMAC, EthernetType: layers.EthernetTypeIPv4,
+	}
+	ip := &layers.IPv4{
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolICMPv4,
+		SrcIP:    net.ParseIP(faultClientAddr),
+		DstIP:    net.ParseIP(faultSlowAddr),
+	}
+	icmp := &layers.ICMPv4{
+		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
+		Id:       id,
+		Seq:      seq,
+	}
+
+	return serialize(t, eth, ip, icmp, gopacket.Payload([]byte("niac-wiretest")))
 }
