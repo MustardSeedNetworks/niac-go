@@ -19,14 +19,19 @@ type hostEgressRoute struct {
 	target netip.Addr
 }
 
+func hostMaskRole(device *config.Device) bool {
+	switch device.Type {
+	case "router", "layer3-switch", "firewall":
+		return false
+	default:
+		return true
+	}
+}
+
 func (s *Stack) hostPacketRoute(packet *Packet) (hostEgressRoute, bool, error) {
 	var empty hostEgressRoute
 	device := packet.generatedHost
-	if device == nil {
-		return empty, false, nil
-	}
-	switch device.Type {
-	case "router", "layer3-switch", "firewall":
+	if device == nil || !hostMaskRole(device) {
 		return empty, false, nil
 	}
 	store := s.deviceStates[device]
