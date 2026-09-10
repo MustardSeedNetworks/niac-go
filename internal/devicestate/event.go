@@ -55,7 +55,9 @@ func (s *Store) EventsAfter(version uint64) ([]Event, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if len(s.events) > 0 && version+1 < s.events[0].Version {
+	// The authored seed has a version but does not produce a transition.
+	version = max(version, initialStoreVersion)
+	if len(s.events) > 0 && version < s.events[0].Version && s.events[0].Version-version > 1 {
 		return cloneEvents(s.events), false
 	}
 	for index, event := range s.events {

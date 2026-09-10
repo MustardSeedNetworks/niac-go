@@ -2,10 +2,31 @@ package devicestate_test
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
+
+func TestEventsAfterHandlesInitialAndFutureCursors(t *testing.T) {
+	store := devicestate.NewStore(devicestate.Identity{Hostname: "edge-1"})
+	store.ReplaceNetwork(devicestate.Network{})
+	for _, tc := range []struct {
+		name   string
+		cursor uint64
+		count  int
+	}{
+		{"initial", 0, 1},
+		{"future", math.MaxUint64, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			events, complete := store.EventsAfter(tc.cursor)
+			if !complete || len(events) != tc.count {
+				t.Fatalf("EventsAfter(%d) = %d events, complete=%t", tc.cursor, len(events), complete)
+			}
+		})
+	}
+}
 
 func TestEventStreamPreservesExactInterfaceTransition(t *testing.T) {
 	store := devicestate.NewStore(devicestate.Identity{Hostname: "edge-1"})

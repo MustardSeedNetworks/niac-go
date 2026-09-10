@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const initialStoreVersion = 1
+
 // ErrConcurrentUpdate indicates that state changed while an update callback ran.
 var ErrConcurrentUpdate = errors.New("device state changed during update")
 
@@ -52,7 +54,7 @@ type Store struct {
 func NewStore(identity Identity) *Store {
 	initial := configuration{identity: identity}
 	return &Store{
-		running: initial, startup: initial, authored: initial, version: 1,
+		running: initial, startup: initial, authored: initial, version: initialStoreVersion,
 		faults: make(
 			map[interfaceFaultKey]InterfaceFault,
 		), deviceFaults: make(map[DeviceFaultType]DeviceFault),
