@@ -27,6 +27,7 @@ func newConfigValidator() *validator.Validate {
 	// Use yaml struct-tag names in error namespaces so messages read
 	// `devices[0].mac` instead of `Devices[0].MAC`.
 	v.RegisterTagNameFunc(yamlFieldName)
+	v.RegisterStructValidation(validateDHCPv4Options, DhcpServer{})
 
 	return v
 }
@@ -62,6 +63,16 @@ func formatFieldError(fe validator.FieldError) string {
 		return fmt.Sprintf("%s is required", fe.Namespace())
 	case "ip":
 		return fmt.Sprintf("%s: %q is not a valid IP address", fe.Namespace(), fe.Value())
+	case "ipv4":
+		return fmt.Sprintf("%s: %q is not a valid IPv4 address", fe.Namespace(), fe.Value())
+	case "ipv4_mask":
+		return fmt.Sprintf("%s: %q is not a contiguous IPv4 subnet mask", fe.Namespace(), fe.Value())
+	case "dhcp_pool":
+		return fmt.Sprintf(
+			"%s: pool endpoints must be paired IPv4 addresses in ascending order with at most %d addresses",
+			fe.Namespace(),
+			MaxDHCPv4PoolSize,
+		)
 	case "mac":
 		return fmt.Sprintf("%s: %q is not a valid MAC address", fe.Namespace(), fe.Value())
 	case "oneof":

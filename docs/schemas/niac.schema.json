@@ -571,6 +571,7 @@
       "properties": {
         "client_ip": {
           "type": "string",
+          "format": "ipv4",
           "description": "ClientIP is the address reserved for the matching client."
         },
         "mac_addr_value": {
@@ -600,30 +601,37 @@
         },
         "subnet_mask": {
           "type": "string",
-          "description": "SubnetMask is option 1, the mask offered to clients."
+          "format": "ipv4",
+          "description": "SubnetMask is option 1, a contiguous IPv4 mask offered to clients."
         },
         "router": {
           "type": "string",
+          "format": "ipv4",
           "description": "Router is option 3, the default gateway offered to clients."
         },
         "domain_name_server": {
           "type": "string",
+          "format": "ipv4",
           "description": "DomainNameServer is option 6, the DNS server offered to clients."
         },
         "next_server_ip": {
           "type": "string",
+          "format": "ipv4",
           "description": "NextServerIP is the siaddr field, the TFTP server a booting client\nshould fetch its image from."
         },
         "server_identifier": {
           "type": "string",
+          "format": "ipv4",
           "description": "ServerIdentifier is option 54, this server's own address."
         },
         "pool_start": {
           "type": "string",
-          "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it."
+          "format": "ipv4",
+          "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it.\nSupply both IPv4 endpoints, with PoolStart no greater than PoolEnd."
         },
         "pool_end": {
           "type": "string",
+          "format": "ipv4",
           "description": "PoolEnd is the last address of the dynamic pool."
         },
         "ntp_servers": {
