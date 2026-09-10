@@ -19,7 +19,7 @@ func prepareDryRunSimulation(
 	if err := applyRuntimeState(stack, restore); err != nil {
 		return simulationResources{}, err
 	}
-	if err := stack.ValidateBehaviorActions(); err != nil {
+	if err := stack.ValidateBehaviorTargets(); err != nil {
 		return simulationResources{}, err
 	}
 	_, cancel := context.WithCancel(context.Background())
@@ -32,7 +32,7 @@ func startSimulationStack(
 	iface string, cfg *config.Config, topology *fabric.Topology, debugLevel int,
 	restore restoreRuntimeState,
 ) (*capture.Engine, *protocols.Stack, context.CancelFunc, error) {
-	if err := protocols.ValidateConfiguredBehaviorActions(cfg); err != nil {
+	if err := protocols.ValidateConfiguredBehaviorTargets(cfg, topology); err != nil {
 		return nil, nil, nil, err
 	}
 	engine, err := capture.New(iface, debugLevel)

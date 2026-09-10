@@ -13,7 +13,7 @@ func (s *Stack) Start() error {
 		}
 		return ErrStackAlreadyRunning
 	}
-	if err := s.ValidateBehaviorActions(); err != nil {
+	if err := s.ValidateBehaviorTargets(); err != nil {
 		return err
 	}
 	s.started = true

@@ -33,7 +33,7 @@ func TestBehaviorValidationRejectsMissingScalarBeforeStart(t *testing.T) {
 		},
 	}
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	if err := stack.ValidateBehaviorActions(); err == nil {
+	if err := stack.ValidateBehaviorTargets(); err == nil {
 		t.Fatal("missing STP MIB accepted")
 	}
 	if err := stack.Start(); err == nil {

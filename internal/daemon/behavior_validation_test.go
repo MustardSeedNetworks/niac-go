@@ -28,7 +28,10 @@ func TestUnavailableActionRejectedBeforeCapture(t *testing.T) {
 			},
 		},
 	}
-	if err := protocols.ValidateConfiguredBehaviorActions(cfg); !errors.Is(err, protocols.ErrDeviceActionUnobservable) {
+	if err := protocols.ValidateConfiguredBehaviorTargets(cfg, nil); !errors.Is(
+		err,
+		protocols.ErrDeviceActionUnobservable,
+	) {
 		t.Fatalf("validation=%v", err)
 	}
 	engine, stack, cancel, err := startSimulationStack("no-such-interface", cfg, nil, 0, nil)
