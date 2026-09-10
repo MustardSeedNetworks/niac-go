@@ -20,10 +20,11 @@ type deviceIPv4Index struct {
 func (s *Stack) registerDeviceState(device *config.Device, table *DeviceTable) {
 	store := devicestate.NewStore(deviceIdentity(device))
 	s.deviceStates[device] = store
+	dhcp := s.dhcpHandlers[device]
 	store.SetChangeObserver(func(snapshot devicestate.Snapshot) {
 		s.indexDeviceIPv4(table, device, snapshot.Network)
-		if device.DHCPConfig != nil && device.DHCPConfig.ServerIdentifier == nil {
-			s.dhcpHandler.updateDerivedServerIP(device, s.firstStateIPv4Address(device))
+		if dhcp != nil && device.DHCPConfig.ServerIdentifier == nil {
+			dhcp.updateDerivedServerIP(device, dhcpStateAddress(snapshot.Network))
 		}
 	})
 }
