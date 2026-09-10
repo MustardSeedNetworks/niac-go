@@ -67,6 +67,38 @@ behavior_timelines:
   expect(parse(saved.content)).toEqual(parse(content));
 });
 
+test('saves an explicit zero mask without changing canonical addressing', async ({ page }) => {
+  const content = `${config.replace('ips: [192.0.2.1]', 'interfaces: [{name: eth0, address: 192.0.2.1/24}]')}
+behavior_timelines:
+  - name: Mask
+    repeat_count: 1
+    phases:
+      - name: Fault
+        duration_ms: 1000
+        reset: true
+        faults:
+          - device: dhcp-server
+            interface: eth0
+            type: bad_mask
+            prefix_bits: 0
+`;
+  await page.goto('/new-simulation');
+  await openDraft(page, content);
+  const mask = page.getByLabel('IPv4 prefix length (0–32)');
+  await expect(mask).toHaveValue('0');
+  await mask.fill('');
+  await expect(page.getByTestId('save-behaviors')).toBeDisabled();
+  await mask.fill('0');
+  const savedResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/behaviors') && response.request().method() === 'PUT',
+  );
+  await page.getByTestId('save-behaviors').click();
+  const response = await savedResponse;
+  expect(response.ok(), await response.text()).toBe(true);
+  const saved: ScenarioDraft = await response.json();
+  expect(parse(saved.content)).toEqual(parse(content));
+});
+
 test('saves and reopens an address fault without changing device inventory', async ({
   page,
   request,
