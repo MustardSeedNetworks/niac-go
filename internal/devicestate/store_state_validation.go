@@ -87,8 +87,7 @@ func validStateInterfaceFaults(faults []InterfaceFault, interfaces []Interface) 
 func validStateDeviceFaults(faults []DeviceFault) bool {
 	seen := make(map[DeviceFaultType]bool, len(faults))
 	for _, fault := range faults {
-		definition, known := deviceFaultDefinition(fault.Type)
-		if seen[fault.Type] || !known || fault.Value <= 0 || fault.Value > definition.MaxValue {
+		if seen[fault.Type] || !validDeviceFault(fault) {
 			return false
 		}
 		seen[fault.Type] = true

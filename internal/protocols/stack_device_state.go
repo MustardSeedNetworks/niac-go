@@ -162,17 +162,14 @@ func flatDeviceNetworkState(device *config.Device) devicestate.Network {
 	interfaces := make([]devicestate.Interface, 0, max(len(device.Interfaces), len(device.IPAddresses)))
 	routes := make([]devicestate.Route, 0, len(device.Routes)+len(device.IPAddresses))
 	for index, authored := range device.Interfaces {
-		address := parseFlatPrefix(authored.Address)
-		if !address.IsValid() && index < len(device.IPAddresses) {
-			address = deviceIPPrefix(device.IPAddresses[index])
-		}
+		address := config.DeviceInterfaceAddress(*device, index)
 		interfaces = append(interfaces, flatDeviceInterfaceState(authored, address))
 		if address.IsValid() {
 			routes = append(routes, connectedRoute(address, authored.Name))
 		}
 	}
 	for index := len(device.Interfaces); index < len(device.IPAddresses); index++ {
-		address := deviceIPPrefix(device.IPAddresses[index])
+		address := config.DeviceInterfaceAddress(*device, index)
 		if !address.IsValid() {
 			continue
 		}
@@ -211,14 +208,6 @@ func flatDeviceInterfaceState(authored config.Interface, address netip.Prefix) d
 func parseFlatPrefix(value string) netip.Prefix {
 	prefix, _ := netip.ParsePrefix(strings.TrimSpace(value))
 	return prefix
-}
-
-func deviceIPPrefix(value []byte) netip.Prefix {
-	address, ok := netip.AddrFromSlice(value)
-	if !ok {
-		return netip.Prefix{}
-	}
-	return netip.PrefixFrom(address.Unmap(), address.Unmap().BitLen())
 }
 
 func connectedRoute(address netip.Prefix, via string) devicestate.Route {

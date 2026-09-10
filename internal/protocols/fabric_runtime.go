@@ -43,8 +43,6 @@ type fabricRoute struct {
 	connected   bool
 }
 
-const ipv4PointToPointPrefixBits = 30
-
 type fabricResolution struct {
 	device         *config.Device
 	replySourceMAC net.HardwareAddr
@@ -126,30 +124,10 @@ func (r *fabricRuntime) acceptsIPv4Source(sourceIP, destinationIP net.IP, protoc
 	}
 	for _, network := range r.topology.Networks {
 		if network.Name == r.attachmentNetwork {
-			return validAttachmentHost(network.Prefix, source)
+			return config.ValidIPv4Host(network.Prefix, source)
 		}
 	}
 	return false
-}
-
-func validAttachmentHost(prefix netip.Prefix, address netip.Addr) bool {
-	if !prefix.IsValid() || !prefix.Addr().Is4() || !prefix.Contains(address) {
-		return false
-	}
-	if prefix.Bits() > ipv4PointToPointPrefixBits {
-		return true
-	}
-	network := prefix.Masked().Addr().As4()
-	host := address.As4()
-	if host == network {
-		return false
-	}
-	mask := net.CIDRMask(prefix.Bits(), address.BitLen())
-	broadcast := network
-	for index := range broadcast {
-		broadcast[index] |= ^mask[index]
-	}
-	return host != broadcast
 }
 
 func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {

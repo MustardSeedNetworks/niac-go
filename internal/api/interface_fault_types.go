@@ -55,14 +55,15 @@ type deviceFaultTypeResponse struct {
 // counters report.
 func availableDeviceErrorTypes() []deviceFaultTypeResponse {
 	descriptions := map[devicestate.DeviceFaultType]string{
-		devicestate.FaultDHCPNoOffer:   "DHCP server consumes the Discover and sends no Offer",
-		devicestate.FaultDNSNXDomain:   "DNS server answers every query with NXDOMAIN",
-		devicestate.FaultDNSTimeout:    "DNS server answers nothing at all",
-		devicestate.FaultLatency:       "Delay every ICMP echo reply (0-60000 ms)",
-		devicestate.FaultCPUPercent:    "Set processor utilization (1-100%; zero clears)",
-		devicestate.FaultMemoryPercent: "Set used memory as a percentage of capacity (1-100%; zero clears)",
-		devicestate.FaultDiskPercent:   "Set used disk storage as a percentage of capacity (1-100%; zero clears)",
-		devicestate.FaultCaptivePortal: "Redirect HTTP requests to a local portal (1 enables; zero clears)",
+		devicestate.FaultDuplicateDHCPOffer: "Offer an IPv4 address already owned by a peer on the DHCP server's network",
+		devicestate.FaultDHCPNoOffer:        "DHCP server consumes the Discover and sends no Offer",
+		devicestate.FaultDNSNXDomain:        "DNS server answers every query with NXDOMAIN",
+		devicestate.FaultDNSTimeout:         "DNS server answers nothing at all",
+		devicestate.FaultLatency:            "Delay every ICMP echo reply (0-60000 ms)",
+		devicestate.FaultCPUPercent:         "Set processor utilization (1-100%; zero clears)",
+		devicestate.FaultMemoryPercent:      "Set used memory as a percentage of capacity (1-100%; zero clears)",
+		devicestate.FaultDiskPercent:        "Set used disk storage as a percentage of capacity (1-100%; zero clears)",
+		devicestate.FaultCaptivePortal:      "Redirect HTTP requests to a local portal (1 enables; zero clears)",
 	}
 	result := make([]deviceFaultTypeResponse, 0, len(descriptions))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
@@ -76,6 +77,8 @@ func availableDeviceErrorTypes() []deviceFaultTypeResponse {
 
 func deviceFaultValueKind(kind devicestate.DeviceFaultType) string {
 	switch kind {
+	case devicestate.FaultDuplicateDHCPOffer:
+		return "address"
 	case devicestate.FaultLatency:
 		return "milliseconds"
 	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
