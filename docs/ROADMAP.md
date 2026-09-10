@@ -54,8 +54,10 @@ v0.95.45. Captive-portal authoring and live device-fault controls merged in
 PR #2021, with real TCP isolation/clearing and saved-configuration browser
 checks. Reboot/STP implementation passes isolated Linux packet tests for
 notifications, telemetry, no replay of actions recorded in recovered state,
-and scenario VLAN tags;
-UI parity and final integration review remain in progress. DHCP isolation
+and scenario VLAN tags. Authoring, save and re-import pass Chromium, WebKit,
+installed Chrome and Edge checks with zero retries. Native Linux checks also
+verify rejection of unsupported actions before capture or reload. Full-suite
+verification and the action PR remain in progress. DHCP isolation
 and explicit address faults remain uncompleted.
 The phase boxes below track acceptance, not individual implementation merges.
 
