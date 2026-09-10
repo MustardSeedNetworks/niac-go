@@ -3,6 +3,7 @@ package protocols
 import (
 	"net"
 	"net/netip"
+	"slices"
 	"testing"
 	"time"
 
@@ -12,6 +13,12 @@ import (
 
 func TestDuplicateIPRoutedRequiresSelectedInterface(t *testing.T) {
 	stack, _ := isolationRoutedDHCP(t)
+	for _, target := range stack.InterfaceFaultTargets() {
+		if target.Device == "edge" && (!slices.Contains(target.ErrorTypes["outside"], "Duplicate IP") ||
+			slices.Contains(target.ErrorTypes["inside"], "Duplicate IP")) {
+			t.Fatalf("incorrect routed eligibility: %+v", target)
+		}
+	}
 	fault := devicestate.InterfaceAddressFault{
 		Interface: "inside", Type: devicestate.FaultDuplicateIP, Address: netip.MustParseAddr("10.10.200.3"),
 	}
