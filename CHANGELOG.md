@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * simulate conflicting DHCP offers end to end ([#2034](https://github.com/MustardSeedNetworks/niac-go/issues/2034)) ([51b2940](https://github.com/MustardSeedNetworks/niac-go/commit/51b294033d943127b2e7e8b6166d24330303ef9a))
 * simulate duplicate IP faults end to end ([#2037](https://github.com/MustardSeedNetworks/niac-go/issues/2037)) ([c4584d3](https://github.com/MustardSeedNetworks/niac-go/commit/c4584d399093f30f475b3e70cb8cfc9f86f1a957))
 
+
+### Bug Fixes
+
+* **deps:** update dependency i18next to v26.4.2 ([#2039](https://github.com/MustardSeedNetworks/niac-go/issues/2039)) ([a3ab761](https://github.com/MustardSeedNetworks/niac-go/commit/a3ab761882f973619a4677a8dd41bee7414954ca))
+
 ## [0.95.49](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.48...v0.95.49) (2026-09-10)
 
 
