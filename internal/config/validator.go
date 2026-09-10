@@ -159,6 +159,7 @@ func (v *Validator) validateDevice(
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
+	v.validateDHCPv4(device.DHCPConfig, prefix+".dhcp")
 	v.validateTTLConfig(device, prefix)
 	v.validateSNMPAccessList(device, prefix)
 	v.validateNetBIOSNames(device, prefix)

@@ -384,7 +384,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "subnet_mask",
         "title": "Subnet mask",
-        "description": "SubnetMask is option 1, the mask offered to clients.",
+        "description": "SubnetMask is option 1, a contiguous IPv4 mask offered to clients.",
         "kind": "string"
       },
       {
@@ -414,7 +414,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "pool_start",
         "title": "Pool start",
-        "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it.",
+        "description": "PoolStart is the first address of the dynamic pool. The pool must sit\ninside a routed network this config declares, or preflight rejects it.\nSupply both IPv4 endpoints, with PoolStart no greater than PoolEnd.",
         "kind": "string"
       },
       {

@@ -19,31 +19,32 @@ type DhcpServer struct {
 	// ClientLeases are fixed reservations handed to matching clients.
 	ClientLeases []DhcpLease `yaml:"client_leases,omitempty" validate:"omitempty,dive"`
 
-	// SubnetMask is option 1, the mask offered to clients.
-	SubnetMask string `yaml:"subnet_mask,omitempty"`
+	// SubnetMask is option 1, a contiguous IPv4 mask offered to clients.
+	SubnetMask string `yaml:"subnet_mask,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// Router is option 3, the default gateway offered to clients.
-	Router string `yaml:"router,omitempty"`
+	Router string `yaml:"router,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// DomainNameServer is option 6, the DNS server offered to clients.
-	DomainNameServer string `yaml:"domain_name_server,omitempty"`
+	DomainNameServer string `yaml:"domain_name_server,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// NextServerIP is the siaddr field, the TFTP server a booting client
 	// should fetch its image from.
-	NextServerIP string `yaml:"next_server_ip,omitempty"`
+	NextServerIP string `yaml:"next_server_ip,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// ServerIdentifier is option 54, this server's own address.
-	ServerIdentifier string `yaml:"server_identifier,omitempty"`
+	ServerIdentifier string `yaml:"server_identifier,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// PoolStart is the first address of the dynamic pool. The pool must sit
 	// inside a routed network this config declares, or preflight rejects it.
-	PoolStart string `yaml:"pool_start,omitempty"`
+	// Supply both IPv4 endpoints, with PoolStart no greater than PoolEnd.
+	PoolStart string `yaml:"pool_start,omitempty" validate:"required_with=PoolEnd,omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// PoolEnd is the last address of the dynamic pool.
-	PoolEnd string `yaml:"pool_end,omitempty"`
+	PoolEnd string `yaml:"pool_end,omitempty" validate:"required_with=PoolStart,omitempty,ipv4" jsonschema:"format=ipv4"`
 
 	// NTPServers is option 42, the NTP servers offered to clients.
-	NTPServers []string `yaml:"ntp_servers,omitempty"`
+	NTPServers []string `yaml:"ntp_servers,omitempty" validate:"omitempty,dive,ipv4"`
 
 	// DomainSearch is option 119, the domain search list.
 	DomainSearch []string `yaml:"domain_search,omitempty"`
@@ -74,7 +75,7 @@ type DhcpServer struct {
 // DhcpLease represents a DHCP client lease.
 type DhcpLease struct {
 	// ClientIP is the address reserved for the matching client.
-	ClientIP string `yaml:"client_ip" validate:"required,ip"`
+	ClientIP string `yaml:"client_ip" validate:"required,ipv4" jsonschema:"format=ipv4"`
 
 	// MacAddrValue is the client MAC the reservation matches.
 	MacAddrValue string `yaml:"mac_addr_value,omitempty"`

@@ -14,6 +14,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
@@ -213,13 +214,13 @@ func (h *DHCPHandler) SetStaticLeases(leases []config.DHCPLease) {
 	h.staticLeases = leases
 }
 
-// MaxPoolSize is the maximum number of IPs allowed in a DHCP pool.
-const MaxPoolSize = 65536 // 2^16 IPs (reasonable for simulation)
-
 // generateIPPool creates a list of available IPs
-// Returns error if pool size exceeds MaxPoolSize or if range is invalid
+// Returns error if the configured pool size limit is exceeded or the range is invalid
 // SECURITY FIX MEDIUM-1: Validates range to prevent integer overflow.
 func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
+	if start.To4() == nil || end.To4() == nil {
+		return nil, fmt.Errorf("%w: endpoints must be IPv4 addresses", ErrDHCPPoolInvalid)
+	}
 	startInt := binary.BigEndian.Uint32(start.To4())
 	endInt := binary.BigEndian.Uint32(end.To4())
 
@@ -232,18 +233,21 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 	// Calculate pool size (safe because endInt >= startInt)
 	// Using uint64 to prevent overflow even for max range (2^32 - 1)
 	size := uint64(endInt) - uint64(startInt) + 1
-	if size > MaxPoolSize {
+	if size > converter.MaxDHCPv4PoolSize {
 		return nil, fmt.Errorf("%w: size %d exceeds maximum %d (range: %s to %s)",
-			ErrDHCPPoolSizeExceeded, size, MaxPoolSize, start, end)
+			ErrDHCPPoolSizeExceeded, size, converter.MaxDHCPv4PoolSize, start, end)
 	}
 
 	// Pre-allocate slice with exact capacity
 	pool := make([]net.IP, 0, size)
 
-	for i := startInt; i <= endInt; i++ {
+	for i := startInt; ; i++ {
 		ip := make(net.IP, dhcpIPv4Len)
 		binary.BigEndian.PutUint32(ip, i)
 		pool = append(pool, ip)
+		if i == endInt {
+			break
+		}
 	}
 
 	return pool, nil

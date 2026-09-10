@@ -9,6 +9,7 @@ parallel implementation. It is intentionally organized by purpose.
 | --- | --- | --- |
 | YAML authoring DTO | `internal/converter/types.go` | Source for generated YAML schema |
 | YAML field validation | `internal/converter/validate.go` | Shape validation using YAML field names |
+| DHCPv4 authoring validation | `internal/converter/validate_dhcp.go` + `internal/config/validator_dhcp.go` | Shared contiguous-mask and paired ordered-pool checks; IPv4-only option values rejected before conversion or startup |
 | Runtime config loading | `internal/config/yaml_load.go` | One file/bytes conversion pipeline |
 | Daemon runtime recovery | `internal/daemon/runtime_generation.go` + `runtime_state.go` | Generation-qualified snapshots are staged before the launch manifest commit; replacement cannot recover a previous run's faults |
 | Daemon state-file containment | `internal/daemon/state_file.go` + `inline_config.go` | Atomic state writes and staged rollback use directory capabilities; request paths never select cleanup roots |
