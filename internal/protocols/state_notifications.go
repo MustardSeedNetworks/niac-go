@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/netip"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -661,12 +660,7 @@ func (m *stateNotificationManager) sendColdStarts() {
 }
 
 func (m *stateNotificationManager) sendEvent(device *config.Device, event devicestate.Event) {
-	if device.SyslogConfig != nil && device.SyslogConfig.Enabled {
-		payload := []byte(formatSyslog(m.hostname(device), event))
-		for _, receiver := range device.SyslogConfig.Receivers {
-			m.send(device, receiver, syslogPort, payload)
-		}
-	}
+	m.sendSyslog(device, event)
 	if event.Kind != devicestate.EventInterfaceUpdated || event.Interface == nil || event.PreviousInterface == nil {
 		return
 	}
@@ -842,36 +836,6 @@ func normalizeReceiver(receiver string, defaultPort int) string {
 		return receiver
 	}
 	return net.JoinHostPort(receiver, strconv.Itoa(defaultPort))
-}
-
-func formatSyslog(hostname string, event devicestate.Event) string {
-	timestamp := event.Timestamp.UTC().Format(time.RFC3339Nano)
-	data := fmt.Sprintf(
-		`[niac version="%d" kind="%s" target="%s"]`,
-		event.Version, syslogEscape(string(event.Kind)), syslogEscape(event.Target),
-	)
-	return fmt.Sprintf(
-		"<133>1 %s %s niac - CONFIG %s configuration state changed",
-		timestamp, syslogHostname(hostname), data,
-	)
-}
-
-func syslogHostname(hostname string) string {
-	if len(hostname) == 0 || len(hostname) > 255 {
-		return "-"
-	}
-	for index := range len(hostname) {
-		if hostname[index] < 33 || hostname[index] > 126 {
-			return "-"
-		}
-	}
-	return hostname
-}
-
-func syslogEscape(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, `"`, `\"`)
-	return strings.ReplaceAll(value, `]`, `\]`)
 }
 
 // v3Engine returns the device's SNMPv3 authoritative engine, which is also its

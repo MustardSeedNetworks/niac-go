@@ -100,8 +100,8 @@ func assertRecordedSyslog(
 	payload := string(datagram.payload)
 	if datagram.device != device || datagram.vlan != 200 || datagram.sourcePort != syslogPort ||
 		datagram.address != "192.0.2.10:514" ||
-		!strings.Contains(payload, fmt.Sprintf(`version="%d"`, event.Version)) ||
-		!strings.Contains(payload, `kind="interface.updated"`) {
+		!strings.Contains(payload, fmt.Sprintf(`version=%d`, event.Version)) ||
+		!strings.Contains(payload, `kind=interface.updated`) || !strings.Contains(payload, " niac - LINK_DOWN - ") {
 		t.Fatalf("SYSLOG datagram = %q to %q", payload, datagram.address)
 	}
 }
@@ -117,7 +117,6 @@ func matchesLinkDownTrap(packet *gosnmp.SnmpPacket, version uint64) bool {
 
 func TestInterfaceDescriptionChangeDoesNotEmitLinkTrap(t *testing.T) {
 	device := notificationTestDevice()
-	device.SyslogConfig = nil
 	store := devicestate.NewStore(devicestate.Identity{Hostname: "edge-1"})
 	store.ReplaceNetwork(devicestate.Network{Interfaces: []devicestate.Interface{{
 		Name: "Gi0/1", Address: netip.MustParsePrefix("10.0.0.1/24"), AdminUp: true, OperUp: true,
@@ -142,7 +141,6 @@ func TestInterfaceDescriptionChangeDoesNotEmitLinkTrap(t *testing.T) {
 
 func TestAdministrativeChangeWithoutOperationalTransitionDoesNotEmitLinkTrap(t *testing.T) {
 	device := notificationTestDevice()
-	device.SyslogConfig = nil
 	store := devicestate.NewStore(devicestate.Identity{Hostname: "edge-1"})
 	store.ReplaceNetwork(devicestate.Network{Interfaces: []devicestate.Interface{{
 		Name: "Gi0/1", AdminUp: true, OperUp: true,
@@ -201,7 +199,10 @@ func TestLinkTrapReportsIndependentAdminAndOperationalStatus(t *testing.T) {
 }
 
 func TestFormatSyslogUsesNilValueForInvalidHostname(t *testing.T) {
-	event := devicestate.Event{Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)}
+	event := devicestate.Event{
+		Kind:      devicestate.EventFaultCleared,
+		Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC),
+	}
 	for _, hostname := range []string{"", "edge router", "edge\nrouter", strings.Repeat("a", 256), "routér"} {
 		t.Run(hostname, func(t *testing.T) {
 			message := formatSyslog(hostname, event)
@@ -213,7 +214,10 @@ func TestFormatSyslogUsesNilValueForInvalidHostname(t *testing.T) {
 }
 
 func TestFormatSyslogPreservesValidHostname(t *testing.T) {
-	event := devicestate.Event{Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)}
+	event := devicestate.Event{
+		Kind:      devicestate.EventFaultCleared,
+		Timestamp: time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC),
+	}
 	message := formatSyslog("edge-1.example", event)
 	if !strings.HasPrefix(message, "<133>1 2026-07-22T12:00:00Z edge-1.example niac ") {
 		t.Fatalf("formatSyslog() = %q", message)
