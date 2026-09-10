@@ -51,7 +51,8 @@
             "latency",
             "cpu_percent",
             "memory_percent",
-            "disk_percent"
+            "disk_percent",
+            "captive_portal"
           ],
           "description": "Type is the fault to inject. Interface faults raise SNMP counters or\nforce a link down; device-scoped service outcomes omit `interface`."
         },
