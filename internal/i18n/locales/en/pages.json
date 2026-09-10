@@ -441,6 +441,7 @@
       "addTimeline": "Add timeline",
       "addTraffic": "Add traffic",
       "captivePortalEffect": "Redirects HTTP requests to the simulated captive portal.",
+      "conflictAddress": "Conflict IPv4 address",
       "defaultPhase": "Busy period",
       "defaultTimeline": "Business day",
       "device": "Device",
@@ -455,6 +456,7 @@
         "disk_percent": "Disk space used",
         "dns_nxdomain": "DNS NXDOMAIN",
         "dns_timeout": "DNS timeout",
+        "duplicate_dhcp_offer": "Duplicate DHCP offer",
         "fcs_errors": "FCS errors",
         "high_utilization": "High utilization",
         "interface_errors": "Interface errors",
@@ -487,6 +489,7 @@
       "reset": "Reset traffic and faults when complete",
       "resourcePercent": "Utilization (%)",
       "save": "Save behaviors",
+      "selectDhcpServer": "Select a DHCP server",
       "startsAfter": "Starts after (seconds)",
       "timelineName": "Timeline name",
       "utilization": "Utilization (%)"
