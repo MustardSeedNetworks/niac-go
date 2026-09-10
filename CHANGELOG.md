@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.42](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.41...v0.95.42) (2026-09-10)
+
+
+### Features
+
+* recover committed simulation runtime state ([#2008](https://github.com/MustardSeedNetworks/niac-go/issues/2008)) ([28af0c5](https://github.com/MustardSeedNetworks/niac-go/commit/28af0c5f6965701a2c5523aa4b68a66408b44ad2))
+
 ## [0.95.41](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.40...v0.95.41) (2026-09-10)
 
 
