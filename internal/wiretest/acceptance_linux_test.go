@@ -3,10 +3,8 @@
 package wiretest_test
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"net"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,53 +12,57 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/acceptance/harness"
 	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
-	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
+	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // P3-1's sequence -- start, checkpoint, mutate, reset, stop -- against the
 // binary a release ships, on a real wire.
 //
-// The unprivileged half of this lives in internal/acceptance/harness and can
-// only reach the routes that need no running scenario. Starting one needs a
-// NIC and raw sockets, so the full sequence belongs here, where the namespace
-// and the veth pair already exist.
+// The unprivileged half lives in internal/acceptance/harness and can only
+// reach the routes that need no running scenario. Starting one needs a NIC and
+// raw sockets, so the full sequence belongs here, where the namespace and the
+// veth pair already exist.
 //
 // Every assertion is on the wire, not on the API's own account of itself: the
 // daemon reporting a fault cleared is the same daemon that reported it armed,
-// and a reset that only convinced the API would be invisible to a consumer.
+// and a reset that convinced only the API would be invisible to a consumer.
+//
+// The scenario is the resource-pressure template, and the device is its
+// *healthy* peer: DEMO-APP01 is driven by the template's own timeline, so a
+// value read there could not be attributed to this test's fault. DEMO-APP02
+// stays at its authored baseline unless something here changes it.
 const (
-	acceptanceSession   = "acceptance"
-	acceptanceDevice    = "e2e-rtr-01"
-	acceptanceAddr      = "10.77.0.1"
-	acceptanceOID       = ".1.3.6.1.2.1.1.5.0" // sysName.0
-	acceptanceCommunity = "e2e_public"
-	acceptanceSNMPPort  = 161
+	acceptanceSession = "acceptance"
+	acceptanceDevice  = "DEMO-APP02"
+	acceptanceAddr    = "10.254.200.12"
+	acceptanceCommand = "resource_demo"
 
-	// A latency well past the SNMP timeout below, so a faulted device is
-	// silent within the window rather than merely slow.
-	acceptanceLatencyMS = 5000
-	// POST /api/v1/errors takes the fault's display label, not its type.
-	acceptanceLatencyLabel = "Latency"
-	acceptanceSNMPWait     = 2 * time.Second
-	// The reply has to arrive within this after a reset, or the reset did
-	// not take.
-	acceptanceRecovery = 20 * time.Second
+	// hrProcessorLoad.1 -- the value the CPU fault drives, and one this
+	// device's walk actually advertises.
+	acceptanceCPUOID = "1.3.6.1.2.1.25.3.3.1.2.1"
+	// resource-pressure.yaml: DEMO-APP02's authored load, and the value a
+	// reset has to return exactly.
+	acceptanceCPUBaseline = 18
+	// Far enough from the baseline that no rounding or drift could produce it.
+	acceptanceCPUFaulted = 95
+	// POST /api/v1/errors matches the fault's display label, not its type.
+	acceptanceCPULabel = "CPU Utilization"
+
+	acceptanceSNMPTimeout = time.Second
+	acceptanceSNMPRetries = 2
+	// A fault reaches the agent through the MIB, not the request path, so a
+	// value can lag the API's answer by a poll.
+	acceptanceSettle = 15 * time.Second
 )
 
-func startAcceptanceDaemon(t *testing.T) (*harness.Daemon, *config.Device) {
+func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	t.Helper()
 	requireWire(t)
 
-	pack := acceptancePack(t)
-	generated, err := scenario.Generate(pack.Request)
+	template, err := templates.Get("resource-pressure")
 	if err != nil {
-		t.Fatalf("scenario.Generate(hospital): %v", err)
-	}
-	authored, err := config.LoadYAMLBytes(generated.YAML)
-	if err != nil {
-		t.Fatalf("loading the generated hospital YAML: %v", err)
+		t.Fatalf("templates.Get(resource-pressure): %v", err)
 	}
 
 	daemon, err := harness.Start(t.Context(), harness.Options{
@@ -81,10 +83,10 @@ func startAcceptanceDaemon(t *testing.T) (*harness.Daemon, *config.Device) {
 	request := cliclient.SimulationRequest{
 		SessionID:      acceptanceSession,
 		Interface:      simIface,
-		Attachment:     pack.Request.AttachmentName,
+		Attachment:     "tester",
 		AttachmentMode: fabric.ModeAccess,
 		AccessVLAN:     accessVLAN,
-		ConfigData:     string(generated.YAML),
+		ConfigData:     template.Content,
 	}
 	report, err := daemon.Client.PreflightSimulation(t.Context(), request)
 	if err != nil {
@@ -97,34 +99,20 @@ func startAcceptanceDaemon(t *testing.T) (*harness.Daemon, *config.Device) {
 		t.Fatalf("start: %v\n%s", err, daemon.Log())
 	}
 
-	return daemon, edgeRouter(t, authored)
-}
-
-func acceptancePack(t *testing.T) scenario.Pack {
-	t.Helper()
-	for _, candidate := range scenario.Packs() {
-		if candidate.ID == "hospital" {
-			return candidate
-		}
-	}
-	t.Fatal("no pack with id \"hospital\"; scenario.Packs() no longer ships it")
-
-	return scenario.Pack{}
+	return daemon
 }
 
 // The whole sequence in one test, because the halves prove nothing apart: a
-// device that answers before the fault says nothing about the reset, and one
-// that answers after it says nothing unless it had actually gone quiet.
+// device at its baseline says nothing about the reset unless it had actually
+// moved, and a moved value says nothing unless it came back.
 func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
-	daemon, edge := startAcceptanceDaemon(t)
+	daemon := startAcceptanceDaemon(t)
 	ctx := t.Context()
-	community := edge.SNMPConfig.Community
-	if community == "" {
-		t.Fatalf("%s has no authored SNMP community", edge.Name)
-	}
+	client := dialAcceptanceHost(t)
 
-	if !answersSNMP(t, community, acceptanceSNMPWait) {
-		t.Fatalf("the scenario never answered SNMP before the checkpoint\n%s", daemon.Log())
+	if load := acceptanceCPU(t, client); load != acceptanceCPUBaseline {
+		t.Fatalf("%s load = %d before the checkpoint, want %d\n%s",
+			acceptanceDevice, load, acceptanceCPUBaseline, daemon.Log())
 	}
 
 	devices, err := daemon.Client.SaveCheckpoint(ctx, acceptanceSession, "healthy")
@@ -136,26 +124,17 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	}
 
 	err = daemon.Client.SetDeviceFault(ctx, cliclient.DeviceFaultRequest{
-		Device: edge.Name, Type: acceptanceLatencyLabel, Value: acceptanceLatencyMS,
+		Device: acceptanceDevice, Type: acceptanceCPULabel, Value: acceptanceCPUFaulted,
 	})
 	if err != nil {
-		t.Fatalf("inject latency: %v\n%s", err, daemon.Log())
+		t.Fatalf("arm the CPU fault: %v\n%s", err, daemon.Log())
 	}
-	if answersSNMP(t, community, acceptanceSNMPWait) {
-		t.Fatal("the device answered inside the window while a 5s latency was armed")
-	}
+	awaitAcceptanceCPU(t, client, acceptanceCPUFaulted, daemon)
 
 	if err = daemon.Client.RestoreCheckpoint(ctx, acceptanceSession, "healthy"); err != nil {
 		t.Fatalf("restore the checkpoint: %v\n%s", err, daemon.Log())
 	}
-	deadline := time.Now().Add(acceptanceRecovery)
-	recovered := false
-	for time.Now().Before(deadline) && !recovered {
-		recovered = answersSNMP(t, community, acceptanceSNMPWait)
-	}
-	if !recovered {
-		t.Fatalf("the device never answered again after the reset\n%s", daemon.Log())
-	}
+	awaitAcceptanceCPU(t, client, acceptanceCPUBaseline, daemon)
 
 	if err = daemon.Client.StopSimulation(ctx, acceptanceSession); err != nil {
 		t.Fatalf("stop the session: %v\n%s", err, daemon.Log())
@@ -171,33 +150,49 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	}
 }
 
-// answersSNMP reports whether the authored router replies to a sysName GET
-// inside the window. A timeout is the expected answer while a fault is armed,
-// so it is a result rather than a failure.
-func answersSNMP(t *testing.T, community string, within time.Duration) bool {
+func dialAcceptanceHost(t *testing.T) *gosnmp.GoSNMP {
 	t.Helper()
 	client := &gosnmp.GoSNMP{
-		Target:    transitGateway,
-		Port:      acceptanceSNMPPort,
-		Community: community,
-		Version:   gosnmp.Version2c,
-		Timeout:   within,
-		Retries:   0,
-		Context:   context.Background(),
+		Target: acceptanceAddr, Port: 161, Community: acceptanceCommand,
+		Version: gosnmp.Version2c,
+		Timeout: acceptanceSNMPTimeout, Retries: acceptanceSNMPRetries,
 	}
 	if err := client.Connect(); err != nil {
-		t.Fatalf("connect to %s: %v", transitGateway, err)
+		t.Fatalf("connect to %s: %v", acceptanceAddr, err)
 	}
-	defer client.Conn.Close()
+	t.Cleanup(func() { _ = client.Conn.Close() })
 
-	result, err := client.Get([]string{acceptanceOID})
+	return client
+}
+
+func acceptanceCPU(t *testing.T, client *gosnmp.GoSNMP) int64 {
+	t.Helper()
+	result, err := client.Get([]string{acceptanceCPUOID})
 	if err != nil {
-		var timeout net.Error
-		if errors.As(err, &timeout) && timeout.Timeout() {
-			return false
-		}
-		t.Fatalf("SNMP GET %s: %v", acceptanceOID, err)
+		t.Fatalf("SNMP GET %s on %s: %v", acceptanceCPUOID, acceptanceAddr, err)
+	}
+	if len(result.Variables) != 1 {
+		t.Fatalf("SNMP GET %s returned %d variables", acceptanceCPUOID, len(result.Variables))
+	}
+	value, err := strconv.ParseInt(fmt.Sprint(gosnmp.ToBigInt(result.Variables[0].Value)), 10, 64)
+	if err != nil {
+		t.Fatalf("%s is not an integer: %#v", acceptanceCPUOID, result.Variables[0].Value)
 	}
 
-	return len(result.Variables) == 1 && result.Variables[0].Value != nil
+	return value
+}
+
+func awaitAcceptanceCPU(t *testing.T, client *gosnmp.GoSNMP, want int64, daemon *harness.Daemon) {
+	t.Helper()
+	deadline := time.Now().Add(acceptanceSettle)
+	var load int64
+	for time.Now().Before(deadline) {
+		load = acceptanceCPU(t, client)
+		if load == want {
+			return
+		}
+		time.Sleep(acceptanceSNMPTimeout)
+	}
+	t.Fatalf("%s load = %d after %s, want %d\n%s",
+		acceptanceDevice, load, acceptanceSettle, want, daemon.Log())
 }
