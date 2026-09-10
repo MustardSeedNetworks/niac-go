@@ -17,7 +17,7 @@ import (
 func TestAvailableDeviceErrorTypesAreServiceOutcomes(t *testing.T) {
 	want := []string{
 		"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency",
-		"CPU Utilization", "Memory Utilization", "Disk Utilization", "Captive Portal",
+		"CPU Utilization", "Memory Utilization", "Disk Utilization", "Captive Portal", "Duplicate DHCP Offer",
 	}
 
 	types := availableDeviceErrorTypes()
@@ -45,11 +45,11 @@ func TestHandleErrorsInjectsAndClearsADeviceFault(t *testing.T) {
 	server := createDeviceErrorTestServer(t)
 
 	postDeviceFault(t, server, errorInjectionRequest{
-		Device: "gateway", ErrorType: "DNS NXDOMAIN", Value: 1,
+		Device: "gateway", ErrorType: "DNS NXDOMAIN", Value: new(1),
 	}, http.StatusOK)
 
 	active := getAPIDeviceFaults(t, server)
-	if active["gateway"]["DNS NXDOMAIN"] != 1 {
+	if value := active["gateway"]["DNS NXDOMAIN"].Value; value == nil || *value != 1 {
 		t.Fatalf("active device faults = %#v", active)
 	}
 
@@ -71,11 +71,11 @@ func TestHandleErrorsRejectsMixedAxisRequests(t *testing.T) {
 	server := createDeviceErrorTestServer(t)
 
 	postDeviceFault(t, server, errorInjectionRequest{
-		Device: "gateway", Interface: "eth0", ErrorType: "DNS Timeout", Value: 1,
+		Device: "gateway", Interface: "eth0", ErrorType: "DNS Timeout", Value: new(1),
 	}, http.StatusBadRequest)
 
 	postDeviceFault(t, server, errorInjectionRequest{
-		Device: "gateway", ErrorType: "FCS Errors", Value: 25,
+		Device: "gateway", ErrorType: "FCS Errors", Value: new(25),
 	}, http.StatusBadRequest)
 }
 
@@ -85,7 +85,7 @@ func TestHandleErrorsRefusesFaultForAnAbsentService(t *testing.T) {
 	server := createDeviceErrorTestServer(t)
 
 	body, err := json.Marshal(errorInjectionRequest{
-		Device: "client1", ErrorType: "DHCP No Offer", Value: 1,
+		Device: "client1", ErrorType: "DHCP No Offer", Value: new(1),
 	})
 	if err != nil {
 		t.Fatalf("marshal request: %v", err)
@@ -125,7 +125,7 @@ func TestHandleErrorsAdvertisesDeviceTargetsByService(t *testing.T) {
 
 	want := map[string][]string{
 		"client1": {"Latency"},
-		"gateway": {"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency"},
+		"gateway": {"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency", "Duplicate DHCP Offer"},
 	}
 	if len(response.Targets) != len(want) {
 		t.Fatalf("device targets = %#v, want %d", response.Targets, len(want))
@@ -156,13 +156,13 @@ func postDeviceFault(
 	}
 }
 
-func getAPIDeviceFaults(t *testing.T, server *Server) map[string]map[string]int {
+func getAPIDeviceFaults(t *testing.T, server *Server) map[string]map[string]deviceFaultPayload {
 	t.Helper()
 
 	recorder := httptest.NewRecorder()
 	server.handleErrors(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/errors", nil))
 	var response struct {
-		Active map[string]map[string]int `json:"active_device_errors"`
+		Active map[string]map[string]deviceFaultPayload `json:"active_device_errors"`
 	}
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode response: %v", err)

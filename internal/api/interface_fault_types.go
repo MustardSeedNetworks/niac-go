@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -46,7 +47,7 @@ func availableErrorTypes() []map[string]string {
 type deviceFaultTypeResponse struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
-	MaxValue    int    `json:"maxValue"`
+	MaxValue    *int   `json:"maxValue,omitempty"`
 	ValueKind   string `json:"valueKind"`
 }
 
@@ -69,9 +70,14 @@ func availableDeviceErrorTypes() []deviceFaultTypeResponse {
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
 		result = append(result, deviceFaultTypeResponse{
 			Type: definition.Label, Description: descriptions[definition.Type],
-			MaxValue: definition.MaxValue, ValueKind: deviceFaultValueKind(definition.Type),
+			MaxValue: new(definition.MaxValue), ValueKind: deviceFaultValueKind(definition.Type),
 		})
 	}
+	result = append(result, deviceFaultTypeResponse{
+		Type:        devicestate.FaultDuplicateDHCPOffer.Label(),
+		Description: descriptions[devicestate.FaultDuplicateDHCPOffer],
+		ValueKind:   deviceFaultValueKind(devicestate.FaultDuplicateDHCPOffer),
+	})
 	return result
 }
 
@@ -91,16 +97,27 @@ func deviceFaultValueKind(kind devicestate.DeviceFaultType) string {
 }
 
 func deviceFaultResponse(
-	active map[string]map[devicestate.DeviceFaultType]int,
-) map[string]map[string]int {
-	result := make(map[string]map[string]int, len(active))
+	active map[string]map[devicestate.DeviceFaultType]devicestate.DeviceFault,
+) map[string]map[string]deviceFaultPayload {
+	result := make(map[string]map[string]deviceFaultPayload, len(active))
 	for device, faults := range active {
-		result[device] = make(map[string]int, len(faults))
-		for faultType, value := range faults {
-			result[device][faultType.Label()] = value
+		result[device] = make(map[string]deviceFaultPayload, len(faults))
+		for faultType, fault := range faults {
+			payload := deviceFaultPayload{}
+			if faultType == devicestate.FaultDuplicateDHCPOffer {
+				payload.Address = new(fault.Address.String())
+			} else {
+				payload.Value = new(fault.Value)
+			}
+			result[device][faultType.Label()] = payload
 		}
 	}
 	return result
+}
+
+type deviceFaultPayload struct {
+	Value   *int    `json:"value,omitempty"`
+	Address *string `json:"address,omitempty"`
 }
 
 func deviceFaultTargetsResponse(
@@ -167,11 +184,40 @@ func (req *errorInjectionRequest) validationMessage() string {
 		return "interface is required"
 	case req.Interface != "" && req.deviceScoped():
 		return "a device fault takes no interface"
-	case req.Value < 0 || req.Value > errorInjectionMaximum(req.ErrorType):
-		return fmt.Sprintf("value must be between 0 and %d", errorInjectionMaximum(req.ErrorType))
 	default:
+		return req.payloadValidationMessage()
+	}
+}
+
+func (req *errorInjectionRequest) payloadValidationMessage() string {
+	kind, _ := devicestate.ParseDeviceFaultLabel(req.ErrorType)
+	if message := validateFaultPayload(kind, req.Value, req.Address); message != "" {
+		return message
+	}
+	if kind == devicestate.FaultDuplicateDHCPOffer {
 		return ""
 	}
+	if *req.Value < 0 || *req.Value > errorInjectionMaximum(req.ErrorType) {
+		return fmt.Sprintf("value must be between 0 and %d", errorInjectionMaximum(req.ErrorType))
+	}
+	return ""
+}
+
+func validateFaultPayload(kind devicestate.DeviceFaultType, value *int, addressText *string) string {
+	if kind != devicestate.FaultDuplicateDHCPOffer {
+		if addressText != nil || value == nil {
+			return "numeric fault requires value and no address"
+		}
+		return ""
+	}
+	if addressText == nil || value != nil {
+		return "address fault requires address and no value"
+	}
+	address, err := netip.ParseAddr(*addressText)
+	if err != nil || !devicestate.ValidFaultAddress(address) {
+		return "address must be a unicast IPv4 address"
+	}
+	return ""
 }
 
 func errorInjectionMaximum(label string) int {
