@@ -91,6 +91,9 @@ func (s *Store) RestoreState(state State) error {
 	s.checkpoints = importCheckpoints(state.Checkpoints)
 	s.events = cloneEvents(state.Events)
 	s.version = state.Version
+	// Recovery starts a new management lifetime, without replaying transitions.
+	s.interfaceTransitions = nil
+	s.updateInterfaceTransitions()
 	observer := s.changeObserver
 	restored := s.snapshot(s.running)
 	s.mu.Unlock()

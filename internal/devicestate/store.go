@@ -35,19 +35,20 @@ type configuration struct {
 
 // Store serializes device-state reads and transactions.
 type Store struct {
-	mu             sync.RWMutex
-	running        configuration
-	startup        configuration
-	authored       configuration
-	version        uint64
-	events         []Event
-	checkpoints    map[string]checkpoint
-	faults         map[interfaceFaultKey]InterfaceFault
-	deviceFaults   map[DeviceFaultType]DeviceFault
-	changes        chan struct{}
-	changeSignal   chan<- struct{}
-	changeObserver func(Snapshot)
-	now            func() time.Time
+	mu                   sync.RWMutex
+	running              configuration
+	startup              configuration
+	authored             configuration
+	version              uint64
+	events               []Event
+	checkpoints          map[string]checkpoint
+	faults               map[interfaceFaultKey]InterfaceFault
+	deviceFaults         map[DeviceFaultType]DeviceFault
+	changes              chan struct{}
+	changeSignal         chan<- struct{}
+	changeObserver       func(Snapshot)
+	now                  func() time.Time
+	interfaceTransitions map[string]interfaceTransition
 }
 
 // NewStore creates a store seeded with authored device identity.
