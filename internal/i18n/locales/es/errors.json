@@ -1,4 +1,17 @@
 {
+  "deviceFault": {
+    "apply": "Aplicar fallo de dispositivo",
+    "armed": "Activado",
+    "clear": "Borrar",
+    "clearOne": "Borrar {{type}} en {{device}}",
+    "milliseconds": "Retardo (milisegundos)",
+    "percent": "Utilización (%)",
+    "selectTarget": "Seleccionar un dispositivo",
+    "selectType": "Seleccionar un fallo de dispositivo",
+    "target": "Dispositivo de destino del fallo",
+    "title": "Fallos de dispositivo",
+    "type": "Fallo de dispositivo"
+  },
   "generic": {
     "unknown": "Ocurrió un error desconocido",
     "network": "Error de red — verifique su conexión",
