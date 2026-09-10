@@ -34,6 +34,16 @@ func (t *reloadBlockingTarget) SetDeviceFault(
 	return nil
 }
 
+func (t *reloadBlockingTarget) SetDeviceAddressFault(
+	device string, kind devicestate.DeviceFaultType, address netip.Addr,
+) error {
+	return t.stack.SetDeviceAddressFault(device, kind, address)
+}
+
+func (t *reloadBlockingTarget) ClearDeviceFault(device string, kind devicestate.DeviceFaultType) error {
+	return t.stack.ClearDeviceFault(device, kind)
+}
+
 func (t *reloadBlockingTarget) ExecuteDeviceAction(
 	string,
 	devicestate.DeviceActionType,

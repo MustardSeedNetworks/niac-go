@@ -129,7 +129,7 @@ func TestCompilePutsAnInterfacelessFaultOnTheDeviceAxis(t *testing.T) {
 	}
 
 	end := transitions[1]
-	if len(end.DeviceActions) != 1 || end.DeviceActions[0].Value != 0 {
+	if len(end.DeviceActions) != 1 || !end.DeviceActions[0].Clear {
 		t.Fatalf("reset end device actions = %+v, want the fault cleared", end.DeviceActions)
 	}
 }
