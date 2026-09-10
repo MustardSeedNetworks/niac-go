@@ -7,6 +7,7 @@ export const interfaceBehaviorFaultTypes = [
   'high_utilization',
   'link_down',
   'duplicate_ip',
+  'bad_mask',
 ] as const;
 export const resourceBehaviorFaultTypes = [
   'cpu_percent',
@@ -28,10 +29,17 @@ type DeviceFaultType = (typeof deviceBehaviorFaultTypes)[number];
 type ResourceFaultType = (typeof resourceBehaviorFaultTypes)[number];
 
 export type DraftBehaviorFault = { device: string } & (
-  | { type: 'duplicate_dhcp_offer'; address: string; value?: never; interface?: never }
-  | { type: 'duplicate_ip'; address: string; value?: never; interface: string }
-  | ({ value: number; address?: never } & (
-      | { type: Exclude<InterfaceFaultType, 'duplicate_ip'>; interface: string }
+  | { type: 'bad_mask'; prefixBits: number; interface: string; value?: never; address?: never }
+  | {
+      type: 'duplicate_dhcp_offer';
+      address: string;
+      value?: never;
+      interface?: never;
+      prefixBits?: never;
+    }
+  | { type: 'duplicate_ip'; address: string; value?: never; interface: string; prefixBits?: never }
+  | ({ value: number; address?: never; prefixBits?: never } & (
+      | { type: Exclude<InterfaceFaultType, 'duplicate_ip' | 'bad_mask'>; interface: string }
       | { type: Exclude<DeviceFaultType, 'duplicate_dhcp_offer'>; interface?: never }
     ))
 );
@@ -46,7 +54,7 @@ export const isInterfaceBehaviorFaultType = (type: string): type is InterfaceFau
   interfaceBehaviorFaultTypes.some((candidate) => candidate === type);
 
 export const behaviorFaultMaximum = (
-  type: Exclude<DraftBehaviorFault['type'], 'duplicate_dhcp_offer' | 'duplicate_ip'>,
+  type: Exclude<DraftBehaviorFault['type'], 'duplicate_dhcp_offer' | 'duplicate_ip' | 'bad_mask'>,
 ) => (type === 'captive_portal' ? 1 : type === 'latency' ? 60000 : 100);
 
 const faultIPv4 = v.pipe(v.string(), v.ipv4());
@@ -58,6 +66,15 @@ export const validFaultAddress = (address: string) => {
 
 export const validBehaviorFault = (fault: DraftBehaviorFault) => {
   if (!fault.device) return false;
+  if (fault.type === 'bad_mask')
+    return (
+      fault.value === undefined &&
+      fault.address === undefined &&
+      Boolean(fault.interface) &&
+      Number.isInteger(fault.prefixBits) &&
+      fault.prefixBits >= 0 &&
+      fault.prefixBits <= 32
+    );
   if (fault.type === 'duplicate_ip')
     return (
       fault.value === undefined && Boolean(fault.interface) && validFaultAddress(fault.address)

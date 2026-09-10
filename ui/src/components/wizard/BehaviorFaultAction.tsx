@@ -55,21 +55,28 @@ export function BehaviorFaultAction({
           onChange(
             action.type === 'duplicate_dhcp_offer'
               ? { device, type: action.type, address: action.address }
-              : action.type === 'duplicate_ip'
+              : action.type === 'bad_mask'
                 ? {
                     device,
                     type: action.type,
-                    address: action.address,
+                    prefixBits: action.prefixBits,
                     interface: interfaceOptions(device)[0]?.value ?? '',
                   }
-                : isDeviceBehaviorFaultType(action.type)
-                  ? { device, type: action.type, value: action.value }
-                  : {
+                : action.type === 'duplicate_ip'
+                  ? {
                       device,
                       type: action.type,
-                      value: action.value,
+                      address: action.address,
                       interface: interfaceOptions(device)[0]?.value ?? '',
-                    },
+                    }
+                  : isDeviceBehaviorFaultType(action.type)
+                    ? { device, type: action.type, value: action.value }
+                    : {
+                        device,
+                        type: action.type,
+                        value: action.value,
+                        interface: interfaceOptions(device)[0]?.value ?? '',
+                      },
           )
         }
       />
@@ -79,7 +86,8 @@ export function BehaviorFaultAction({
           value={action.interface ?? ''}
           options={interfaceOptions(action.device)}
           onChange={(interfaceName) => {
-            if (action.type === 'duplicate_ip') onChange({ ...action, interface: interfaceName });
+            if (action.type === 'duplicate_ip' || action.type === 'bad_mask')
+              onChange({ ...action, interface: interfaceName });
             else if (
               action.type !== 'duplicate_dhcp_offer' &&
               isInterfaceBehaviorFaultType(action.type)
@@ -107,6 +115,13 @@ export function BehaviorFaultAction({
               type,
               address: '',
             });
+          else if (type === 'bad_mask')
+            onChange({
+              device: action.device,
+              type,
+              interface: action.interface ?? '',
+              prefixBits: 32,
+            });
           else if (type === 'duplicate_ip')
             onChange({
               device: action.device,
@@ -120,7 +135,11 @@ export function BehaviorFaultAction({
               type,
               value: type === 'captive_portal' ? 1 : (action.value ?? 1),
             });
-          else if (isInterfaceBehaviorFaultType(type) && type !== 'duplicate_ip')
+          else if (
+            isInterfaceBehaviorFaultType(type) &&
+            type !== 'duplicate_ip' &&
+            type !== 'bad_mask'
+          )
             onChange({
               device: action.device,
               type,
@@ -129,7 +148,22 @@ export function BehaviorFaultAction({
             });
         }}
       />
-      {action.type === 'duplicate_dhcp_offer' || action.type === 'duplicate_ip' ? (
+      {action.type === 'bad_mask' ? (
+        <Input
+          label={t('newSimWizard.behaviors.prefixBits')}
+          type="number"
+          min={0}
+          max={32}
+          step={1}
+          value={Number.isNaN(action.prefixBits) ? '' : action.prefixBits}
+          onChange={(event) =>
+            onChange({
+              ...action,
+              prefixBits: event.target.value === '' ? Number.NaN : Number(event.target.value),
+            })
+          }
+        />
+      ) : action.type === 'duplicate_dhcp_offer' || action.type === 'duplicate_ip' ? (
         <Input
           label={t('newSimWizard.behaviors.conflictAddress')}
           value={action.address}

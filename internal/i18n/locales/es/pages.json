@@ -199,6 +199,7 @@
       "addTraffic": "Agregar tráfico",
       "captivePortalEffect": "Redirige las solicitudes HTTP al portal cautivo simulado.",
       "conflictAddress": "Dirección IPv4 en conflicto",
+      "prefixBits": "Longitud del prefijo IPv4 (0–32)",
       "selectDhcpServer": "Seleccione un servidor DHCP",
       "defaultPhase": "Período ocupado",
       "defaultTimeline": "Día laboral",
@@ -210,6 +211,7 @@
       "faults": {
         "duplicate_dhcp_offer": "Oferta DHCP duplicada",
         "duplicate_ip": "Dirección IPv4 duplicada",
+        "bad_mask": "Máscara de subred IPv4 incorrecta",
         "captive_portal": "Portal cautivo",
         "cpu_percent": "Utilización de CPU",
         "dhcp_no_offer": "DHCP sin oferta",
