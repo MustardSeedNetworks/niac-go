@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.46](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.45...v0.95.46) (2026-09-10)
+
+
+### Features
+
+* add captive portal and live device fault controls ([#2021](https://github.com/MustardSeedNetworks/niac-go/issues/2021)) ([c8f5508](https://github.com/MustardSeedNetworks/niac-go/commit/c8f55089fa1a97c9e7fc17fb86e8aca0cfb9570b))
+
 ## [0.95.45](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.44...v0.95.45) (2026-09-10)
 
 
