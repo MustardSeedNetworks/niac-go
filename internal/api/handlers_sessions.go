@@ -139,7 +139,9 @@ func (s *Server) sessionResourceHandler(resource string) (sessionHandler, bool) 
 		// Two segments deep: dispatchSessionSubpath cuts the session ID off
 		// the front and leaves the rest whole, so the key is the full
 		// resource path.
-		"capture/export": s.handleSessionCaptureExport,
+		"capture/export":      s.handleSessionCaptureExport,
+		"checkpoints":         s.handleSessionCheckpoints,
+		"checkpoints/restore": s.handleSessionCheckpointRestore,
 	}
 	handler, ok := handlers[resource]
 	return handler, ok

@@ -129,6 +129,9 @@ GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
 GET /api/v1/sessions/{id}/capture/export    its retained frames as pcapng
+GET /api/v1/sessions/{id}/checkpoints       the checkpoints it can restore
+POST /api/v1/sessions/{id}/checkpoints      save one under {"name": "..."}
+POST /api/v1/sessions/{id}/checkpoints/restore  return to {"name": "..."}
 DELETE /api/v1/sessions/{id}                stop that session
 ```
 
@@ -146,6 +149,28 @@ To learn which NIC a session runs on, read that session's entry in
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.
 A stream subscribed without `sessionId` receives the selected session only.
+
+### Checkpointing a scenario
+
+A checkpoint captures every device's running configuration and its active
+faults, so an acceptance run can save a healthy scenario, inject a fault,
+assert the consumer sees it, restore, and assert it is gone:
+
+```bash
+curl -sk -X POST -H "Authorization: Bearer $NIAC_API_TOKEN" \
+  -H "X-Csrf-Token: $CSRF" -H 'Content-Type: application/json' \
+  -d '{"name":"healthy"}' \
+  https://localhost:8445/api/v1/sessions/hospital/checkpoints
+```
+
+A save covers the whole session, and a restore refuses unless every device
+holds that name — a half-restored scenario is a state that never existed.
+Restoring an unknown name answers `404 checkpoint_not_found`.
+
+Restoring returns device state, not the clock: a timeline action the scenario
+has already consumed stays consumed, and the device's uptime keeps running.
+Rewinding a scenario completely means stopping the session and starting it
+again.
 
 ### Exporting a capture
 
