@@ -47,7 +47,7 @@ export const RunHistoryCard: FC = () => {
               data-run-id={item.id}
               className="rounded-lg border border-surface-border bg-bg-base/50 pad-sm"
             >
-              <p className="text-text-primary font-semibold">{item.configName}</p>
+              <p className="text-text-primary font-semibold wrap-anywhere">{item.configName}</p>
               <SmallText className="text-text-muted">
                 {t('runtime.recentRunStats', {
                   time: formatTime(item.startedAt),

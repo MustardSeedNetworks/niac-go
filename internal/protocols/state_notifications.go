@@ -584,6 +584,20 @@ func notificationsEnabled(device *config.Device) bool {
 		(device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled))
 }
 
+// skipRestoredHistory advances every registration past the events its store
+// already holds. Recovery restores a device's event history verbatim, and the
+// dispatcher would otherwise send the whole of it as traps -- re-announcing a
+// link-down the manager already reported before the crash, to an NMS that
+// still has it. The events stay readable as history; only their notification
+// is withheld.
+func (m *stateNotificationManager) skipRestoredHistory() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, registration := range m.registrations {
+		registration.cursor = registration.store.Version()
+	}
+}
+
 func (m *stateNotificationManager) Reset() {
 	m.mu.Lock()
 	for _, registration := range m.registrations {

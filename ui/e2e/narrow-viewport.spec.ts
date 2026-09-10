@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { checkLongHistoryLayout } from './support/history-layout';
 
 /**
  * Narrow-viewport overflow guard (#1483).
@@ -26,6 +27,10 @@ const WIDTHS = [
 for (const viewport of WIDTHS) {
   test.describe(`${viewport.name} (${viewport.width}px)`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
+
+    test('long run names preserve layout and mobile navigation', async ({ page }) => {
+      await checkLongHistoryLayout(page);
+    });
 
     for (const route of ROUTES) {
       test(`${route} does not scroll horizontally`, async ({ page }) => {

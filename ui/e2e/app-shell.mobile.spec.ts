@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { checkLongHistoryLayout } from './support/history-layout';
 import { openMobileSidebar, sidebar } from './support/sidebar';
 
 /**
@@ -14,6 +15,10 @@ import { openMobileSidebar, sidebar } from './support/sidebar';
  * devices would multiply E2E wall-clock for very little signal (#1320).
  */
 test.describe('app shell on small screens', () => {
+  test('long run names preserve layout and mobile navigation', async ({ page }) => {
+    await checkLongHistoryLayout(page);
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');

@@ -46,6 +46,7 @@ func TestConfigDebugLevelReachesTheSimulation(t *testing.T) {
 			_ *fabric.Topology,
 			_ bool,
 			debugLevel int,
+			_ restoreRuntimeState,
 		) (simulationResources, error) {
 			got = debugLevel
 

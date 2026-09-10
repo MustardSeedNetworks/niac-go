@@ -150,7 +150,7 @@ func TestRecoverActiveSimulationFailsClosedForStaleConfig(t *testing.T) {
 			SessionID:  "default",
 			Interface:  "recovery0",
 			ConfigPath: filepath.Join(t.TempDir(), "missing.yaml"),
-		}}},
+		}, Generation: "00000000000000000000000000000001"}},
 		SavedAt: time.Now().UTC(),
 	}
 	writeActiveSimulationFixture(t, recoveryPath, state)
@@ -171,22 +171,22 @@ func TestRecoverActiveSimulationPreservesFailedSessionIntent(t *testing.T) {
 	t.Setenv(e2eDryRunEnv, "true")
 	configDir := t.TempDir()
 	t.Setenv("NIAC_CONFIGS_DIR", configDir)
-	validPath := filepath.Join(configDir, "valid.yaml")
-	if err := os.WriteFile(validPath, []byte(validRecoveryConfig), 0o600); err != nil {
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	first := recoveryTestDaemon(t, recoveryPath)
+	if err := first.StartSimulation(api.SimulationRequest{
+		SessionID: "valid", Interface: "recovery0", ConfigData: validRecoveryConfig,
+	}); err != nil {
 		t.Fatal(err)
 	}
-	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
-	state := activeSimulationState{
-		SchemaVersion: activeSimulationSchemaVersion,
-		Sessions: []activeSimulationEntry{
-			{Request: api.SimulationRequest{SessionID: "valid", Interface: "recovery0", ConfigPath: validPath}},
-			{Request: api.SimulationRequest{
-				SessionID: "missing", Interface: "recovery1",
-				ConfigPath: filepath.Join(configDir, "missing.yaml"),
-			}},
-		},
-		SavedAt: time.Now().UTC(),
+	stopRuntimeStateWriter(first.simulation)
+	state, err := readRecoveryState(recoveryPath)
+	if err != nil {
+		t.Fatal(err)
 	}
+	missing := activeSimulationEntry{Request: api.SimulationRequest{
+		SessionID: "missing", Interface: "recovery1", ConfigPath: filepath.Join(configDir, "missing.yaml"),
+	}, Generation: "00000000000000000000000000000001"}
+	state.Sessions = append(state.Sessions, missing)
 	writeActiveSimulationFixture(t, recoveryPath, state)
 	daemon := recoveryTestDaemon(t, recoveryPath)
 	daemon.recoverActiveSimulation()
@@ -208,6 +208,9 @@ func TestRecoverActiveSimulationPreservesFailedSessionIntent(t *testing.T) {
 	if len(persisted.Sessions) != 1 || persisted.Sessions[0].Request.SessionID != "missing" {
 		t.Fatalf("persisted sessions after stop = %#v, want failed intent", persisted.Sessions)
 	}
+	if persisted.Sessions[0].Generation != missing.Generation {
+		t.Fatal("stopping another session lost the failed recovery generation")
+	}
 }
 
 func TestRecoverActiveSimulationRechecksAttachmentPolicy(t *testing.T) {
@@ -227,7 +230,7 @@ func TestRecoverActiveSimulationRechecksAttachmentPolicy(t *testing.T) {
 			Attachment:     "tester",
 			AttachmentMode: fabric.ModeDirect,
 			ConfigPath:     configPath,
-		}}},
+		}, Generation: "00000000000000000000000000000001"}},
 		SavedAt: time.Now().UTC(),
 	})
 

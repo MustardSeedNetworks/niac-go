@@ -108,7 +108,6 @@ type Daemon struct {
 	sessions   *sessionRegistry
 	trunks     map[string]*managedTrunkCapture
 	recovery   *api.SimulationRecovery
-	recovering bool
 	// startSimulation is injectable so replacement failure and cleanup are deterministic in tests.
 	startSimulation simulationStarter
 	// capture is the optional standalone packet-capture session that
@@ -139,6 +138,10 @@ type Simulation struct {
 	replay api.ReplayManager
 	cancel context.CancelFunc
 	close  func()
+	// runtimeCancel stops the durable runtime-state writer for this session.
+	runtimeCancel     context.CancelFunc
+	runtimeDone       <-chan struct{}
+	runtimeGeneration string
 }
 
 type simulationResources struct {
@@ -150,12 +153,19 @@ type simulationResources struct {
 	rollback func()
 }
 
+// restoreRuntimeState reinstalls durable runtime state on a freshly configured
+// stack. It runs after the compiled fabric is installed and before the stack
+// starts, so no protocol answers from the compiled state a crashed session had
+// already moved away from.
+type restoreRuntimeState func(*protocols.Stack) error
+
 type simulationStarter func(
 	string,
 	*config.Config,
 	*fabric.Topology,
 	bool,
 	int,
+	restoreRuntimeState,
 ) (simulationResources, error)
 
 // NewDaemon creates a new daemon instance.
@@ -348,7 +358,7 @@ const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 
 // loadSimulationConfig resolves either inline ConfigData or a cleaned ConfigPath into a Config.
 //
-// Inline data is written to a deterministic file under the user-configs
+// Inline data is written to a unique file under the user-configs
 // directory so the rest of the daemon — GET /api/v1/config, the running-
 // config YAML editor, "Download YAML" — has a real path to read from.
 // Without this, those surfaces returned config_read_failed because they
@@ -511,58 +521,8 @@ func (d *Daemon) compileSimulationFabric(
 	return compiledFabricFromReport(report)
 }
 
-// inlineConfigName is the deterministic filename used to materialise inline
-// (uploaded / template-derived) config data on disk. Overwritten on every
-// start so the daemon doesn't accumulate stale files; the simulation-stop
-// path leaves it in place so the user can still download the YAML after.
-const inlineConfigName = "_running.inline.yaml"
-
-// defaultSessionID names the unnamed session, whose inline config keeps the
-// fixed inlineConfigName rather than a per-session filename.
+// defaultSessionID names the unnamed session.
 const defaultSessionID = "default"
-
-// persistInlineConfig writes the inline YAML to disk so the rest of the
-// daemon has a real configPath to operate on. Returns the absolute path
-// it was written to.
-func persistInlineConfig(content string) (string, error) {
-	return persistInlineSessionConfig(content, defaultSessionID)
-}
-
-// persistInlineSessionConfig writes an inline configuration to the configs
-// directory under a filename built from sessionID.
-//
-// The id is checked here rather than trusted from the caller. The HTTP handler
-// validates it, but the crash-recovery path calls StartSimulation with a request
-// deserialised from active-simulation.json and never reaches those validators,
-// so an id that got onto disk by any means would otherwise be interpolated
-// straight into a path. Rejecting it at the sink makes the guarantee independent
-// of which caller arrives.
-func persistInlineSessionConfig(content, sessionID string) (string, error) {
-	if sessionID != defaultSessionID && !api.ValidSessionID(sessionID) {
-		return "", fmt.Errorf("%w: %q", errInvalidInlineSessionID, sessionID)
-	}
-
-	cleanDir, dirErr := inlineConfigDir()
-	if dirErr != nil {
-		return "", dirErr
-	}
-	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
-		return "", fmt.Errorf("create configs dir: %w", err)
-	}
-	name := inlineConfigName
-	if sessionID != defaultSessionID {
-		name = fmt.Sprintf("_running.%s.inline.yaml", sessionID)
-	}
-	path := filepath.Join(cleanDir, name)
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-		return "", fmt.Errorf("write inline config: %w", err)
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve inline config path: %w", err)
-	}
-	return abs, nil
-}
 
 func inlineConfigDir() (string, error) {
 	rawDir := os.Getenv("NIAC_CONFIGS_DIR")
@@ -603,6 +563,14 @@ func simulationInterfaceDiagnostic(interfaceName string, dryRun bool) *fabric.Di
 
 // StartSimulation starts a new simulation.
 func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
+	generation, err := newRuntimeGeneration()
+	if err != nil {
+		return err
+	}
+	return d.startGeneration(req, generation, false)
+}
+
+func (d *Daemon) startGeneration(req api.SimulationRequest, generation string, recovering bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	sessionID, binding, err := d.prepareSessionStart(req)
@@ -631,38 +599,44 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	}
 	compiled := compiledFabric.topology
 	active := d.sessions.get(sessionID)
-	resources, err := d.startResourcesForRequest(req, cfg, compiled, dryRun, active != nil)
+	var restore restoreRuntimeState
+	if recovering {
+		restore = d.runtimeStateRestorer(sessionID, generation)
+	}
+	resources, err := d.startResourcesForRequest(
+		req, cfg, compiled, dryRun, active != nil, restore,
+	)
 	if err != nil {
 		resources.stop()
 		return err
 	}
+	committed := false
 	if req.ConfigData != "" {
-		configPath, err = persistInlineSessionConfig(req.ConfigData, sessionID)
+		var finish func(bool)
+		configPath, finish, err = stageInlineSessionConfig(req.ConfigData, sessionID)
 		if err != nil {
 			resources.abort()
 			return fmt.Errorf("persist inline config: %w", err)
 		}
+		defer func() { finish(committed) }()
 	}
 
 	replacement := newSimulation(sessionID, binding, req, configPath, cfg, compiled, resources)
-	if persistErr := d.persistActiveSimulation(sessionID, replacement.Request); persistErr != nil {
+	replacement.runtimeGeneration = generation
+	if persistErr := d.commitSimulationGeneration(replacement, recovering); persistErr != nil {
 		resources.abort()
+		d.clearRuntimeState(sessionID, generation)
 		return fmt.Errorf("persist active simulation: %w", persistErr)
 	}
+	committed = true
 
-	active = d.sessions.replace(sessionID, replacement)
-	// Adopt the new session as the default for unscoped readers only when
-	// nothing else holds that spot, or when this start replaces the session
-	// already in it. Adopting unconditionally meant launching a second
-	// scenario silently repointed everyone watching the first.
-	adopt := d.simulation == nil || d.simulation.SessionID == sessionID
-	if adopt {
-		d.simulation = replacement
-	}
-	d.publishSimulation(replacement, adopt)
+	active = d.publishSimulation(replacement)
 	if active != nil {
 		d.stopSimulation(active)
+		d.clearRuntimeState(active.SessionID, active.runtimeGeneration)
 	}
+
+	d.startRuntimeStateWriter(replacement)
 
 	logging.Successf("✓ Simulation started on %s with %d devices", req.Interface, len(cfg.Devices))
 	d.startConfiguredReplay(resources.replay, cfg, configPath, dryRun)
@@ -685,31 +659,6 @@ func (d *Daemon) prepareSessionStart(req api.SimulationRequest) (string, fabric.
 		return "", fabric.Binding{}, err
 	}
 	return sessionID, binding, nil
-}
-
-func (d *Daemon) startResourcesForRequest(
-	req api.SimulationRequest,
-	cfg *config.Config,
-	compiled *fabric.Topology,
-	dryRun bool,
-	replacing bool,
-) (simulationResources, error) {
-	// A trunk port carries a native VLAN, so NIAC models one for its own
-	// attachment too (D19). An access-mode session receives untagged frames, so
-	// it joins the shared trunk capture in the native slot (key 0) rather than
-	// opening a competing handle on the same interface. Direct mode is
-	// unisolated ownership of the whole interface and keeps its own capture.
-	if req.AttachmentMode == fabric.ModeTrunk {
-		return d.startTrunkSimulationResources(
-			req.Interface, req.AccessVLAN, cfg, compiled, dryRun, replacing,
-		)
-	}
-	if req.AttachmentMode == fabric.ModeAccess && !dryRun && d.trunks[req.Interface] != nil {
-		return d.startTrunkSimulationResources(
-			req.Interface, nativeVLANKey, cfg, compiled, dryRun, replacing,
-		)
-	}
-	return d.startSimulation(req.Interface, cfg, compiled, dryRun, d.cfg.DebugLevel)
 }
 
 func newSimulation(
@@ -834,18 +783,22 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 		}
 	}
 	d.stopSimulation(sim)
+	d.settleRuntimeState(sim, clearIntent)
 
 	logging.Infof("Simulation stopped")
 
 	return nil
 }
 
-// publishSimulation makes a session readable through the API. adopt also makes
-// it the default the unscoped surface reports; clients that name their session
-// are unaffected either way.
-func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
-	if d.apiServer == nil || sim == nil {
-		return
+// Publishing a second session must not redirect unscoped readers from the first.
+func (d *Daemon) publishSimulation(sim *Simulation) *Simulation {
+	active := d.sessions.replace(sim.SessionID, sim)
+	adopt := d.simulation == nil || d.simulation.SessionID == sim.SessionID
+	if adopt {
+		d.simulation = sim
+	}
+	if d.apiServer == nil {
+		return active
 	}
 	d.apiServer.UpdateSimulationSession(
 		sim.SessionID,
@@ -858,6 +811,7 @@ func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
 	if adopt {
 		d.apiServer.SelectSimulation(sim.SessionID)
 	}
+	return active
 }
 
 // SelectSimulation makes one running session the target of runtime API surfaces.
@@ -876,6 +830,7 @@ func (d *Daemon) SelectSimulation(sessionID string) error {
 }
 
 func (d *Daemon) stopSimulation(sim *Simulation) {
+	stopRuntimeStateWriter(sim)
 	simulationResources{
 		engine: sim.engine,
 		stack:  sim.stack,

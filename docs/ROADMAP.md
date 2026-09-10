@@ -13,6 +13,28 @@ Every exit criterion below is that sentence made checkable. A criterion is met
 only when its verification has actually run and its output is recorded --
 merged code is not evidence.
 
+## Approved Delivery Order
+
+Complete and verify a release at each boundary before advancing to the next
+phase. Fix defects found during implementation and acceptance; a passing retry
+does not close a flaky test.
+
+The closeout also covers all other remaining pre-v1 plan items: routing MIB
+content, consumer-demand coverage, capture-backed packs after their prerequisites,
+and the final P6 release gate. Recheck recorded completions against their evidence;
+do not silently omit a prerequisite because it belongs to an earlier phase.
+
+| Phase | Remaining scope | Completion evidence |
+| --- | --- | --- |
+| P2 — Faults | Runtime recovery, link/fault syslog, and the remaining device-outcome faults. | Fault/state recovery tests, real-wire assertions, and a verified phase release. |
+| P3 — Second consumer | Authenticated release-binary harness, six-pack consumer comparisons, and CI orchestration. | Zero findings plus three consecutive green scheduled runs, followed by a verified phase release. |
+| P5 — Product hardening | Install/upgrade paths, authoring and routing content, platform/browser matrix, support materials, and flake closure. | Per-platform evidence, ten consecutive qualifying green merge-queue runs, required owner acceptance, and a verified phase release. |
+
+The v1 readiness plan tracks individual tasks and acceptance evidence. Preserve
+human sign-off and new-operator usability requirements; automated checks cannot
+stand in for those observations. Deferred v1.1 work remains outside this sequence.
+The final v1.0 release remains gated by every exit criterion below.
+
 ## Pre-1.0 Exit Criteria
 
 ### Replay fidelity

@@ -29,8 +29,9 @@ func TestPreflightSimulationDoesNotPersistInlineConfig(t *testing.T) {
 	if !report.Safe {
 		t.Fatalf("safe = false, diagnostics = %#v", report.Diagnostics)
 	}
-	if _, err = os.Stat(filepath.Join(dir, inlineConfigName)); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("inline config stat error = %v, want not exist", err)
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("preflight wrote files: entries=%v, error=%v", entries, err)
 	}
 }
 
@@ -342,7 +343,7 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 	t.Setenv(e2eDryRunEnv, "true")
 	dir := t.TempDir()
 	t.Setenv("NIAC_CONFIGS_DIR", dir)
-	path := filepath.Join(dir, inlineConfigName)
+	path := filepath.Join(dir, "accepted.inline.yaml")
 	const accepted = "accepted configuration\n"
 	if err := os.WriteFile(path, []byte(accepted), 0o600); err != nil {
 		t.Fatalf("seed running config: %v", err)
@@ -361,6 +362,10 @@ func TestUnsafeReplacementDoesNotPersistRejectedInlineConfig(t *testing.T) {
 	}
 	if string(got) != accepted {
 		t.Fatalf("running config = %q, want %q", got, accepted)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("rejected replacement wrote files: entries=%v, error=%v", entries, err)
 	}
 }
 

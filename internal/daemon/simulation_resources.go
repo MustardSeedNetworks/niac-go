@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
@@ -16,21 +17,48 @@ import (
 // capture engine or trunk transport, the protocol stack, and the cancel that
 // stops them. Split out of daemon.go, which owns the daemon's own lifecycle.
 
+func (d *Daemon) startResourcesForRequest(
+	req api.SimulationRequest,
+	cfg *config.Config,
+	compiled *fabric.Topology,
+	dryRun bool,
+	replacing bool,
+	restore restoreRuntimeState,
+) (simulationResources, error) {
+	// Access-mode sessions join an existing shared capture in the native
+	// slot; a competing direct capture would receive the same frames twice.
+	if req.AttachmentMode == fabric.ModeTrunk {
+		return d.startTrunkSimulationResources(
+			req.Interface, req.AccessVLAN, cfg, compiled, dryRun, replacing, restore,
+		)
+	}
+	if req.AttachmentMode == fabric.ModeAccess && !dryRun && d.trunks[req.Interface] != nil {
+		return d.startTrunkSimulationResources(
+			req.Interface, nativeVLANKey, cfg, compiled, dryRun, replacing, restore,
+		)
+	}
+	return d.startSimulation(req.Interface, cfg, compiled, dryRun, d.cfg.DebugLevel, restore)
+}
+
 func startSimulationResources(
 	iface string,
 	cfg *config.Config,
 	topology *fabric.Topology,
 	dryRun bool,
 	debugLevel int,
+	restore restoreRuntimeState,
 ) (simulationResources, error) {
 	if dryRun {
 		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(debugLevel))
 		stack.ConfigureFabric(topology)
+		if err := applyRuntimeState(stack, restore); err != nil {
+			return simulationResources{}, err
+		}
 		_, cancel := context.WithCancel(context.Background())
 		return simulationResources{stack: stack, cancel: cancel}, nil
 	}
 
-	engine, stack, cancel, err := startSimulationStack(iface, cfg, topology, debugLevel)
+	engine, stack, cancel, err := startSimulationStack(iface, cfg, topology, debugLevel, restore)
 	if err != nil {
 		return simulationResources{}, err
 	}
@@ -49,10 +77,14 @@ func (d *Daemon) startTrunkSimulationResources(
 	topology *fabric.Topology,
 	dryRun bool,
 	replacing bool,
+	restore restoreRuntimeState,
 ) (simulationResources, error) {
 	if dryRun {
 		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(d.cfg.DebugLevel))
 		stack.ConfigureFabric(topology)
+		if err := applyRuntimeState(stack, restore); err != nil {
+			return simulationResources{}, err
+		}
 		_, cancel := context.WithCancel(context.Background())
 		return simulationResources{stack: stack, cancel: cancel}, nil
 	}
@@ -88,14 +120,21 @@ func (d *Daemon) startTrunkSimulationResources(
 		cfg,
 		logging.NewDebugConfig(d.cfg.DebugLevel),
 	)
-	stack.ConfigureFabric(topology)
-	if err = stack.Start(); err != nil {
+	releaseTransport := func() {
 		if previous != nil {
 			managed.capture.restore(vlan, transport, previous)
 		} else {
 			managed.capture.unregister(vlan, transport)
 		}
 		d.closeUnusedTrunk(iface)
+	}
+	stack.ConfigureFabric(topology)
+	if err = applyRuntimeState(stack, restore); err != nil {
+		releaseTransport()
+		return simulationResources{}, err
+	}
+	if err = stack.Start(); err != nil {
+		releaseTransport()
 		return simulationResources{}, fmt.Errorf("start protocol stack: %w", err)
 	}
 	_, cancel := context.WithCancel(context.Background())
@@ -173,6 +212,7 @@ func (resources simulationResources) abort() {
 // Returns (engine, stack, cancel, err). Cleans up on failure.
 func startSimulationStack(
 	iface string, cfg *config.Config, topology *fabric.Topology, debugLevel int,
+	restore restoreRuntimeState,
 ) (*capture.Engine, *protocols.Stack, context.CancelFunc, error) {
 	engine, err := capture.New(iface, debugLevel)
 	if err != nil {
@@ -187,6 +227,12 @@ func startSimulationStack(
 	// retained for future context plumbing.
 	_, cancel := context.WithCancel(context.Background())
 
+	if restoreErr := applyRuntimeState(stack, restore); restoreErr != nil {
+		cancel()
+		engine.Close()
+		return nil, nil, nil, restoreErr
+	}
+
 	if startErr := stack.Start(); startErr != nil {
 		cancel()
 		engine.Close()
@@ -194,4 +240,16 @@ func startSimulationStack(
 	}
 
 	return engine, stack, cancel, nil
+}
+
+// applyRuntimeState runs the recovery restore, if there is one, between the
+// compiled fabric being installed and the stack starting.
+func applyRuntimeState(stack *protocols.Stack, restore restoreRuntimeState) error {
+	if restore == nil {
+		return nil
+	}
+	if err := restore(stack); err != nil {
+		return fmt.Errorf("restore runtime state: %w", err)
+	}
+	return nil
 }
