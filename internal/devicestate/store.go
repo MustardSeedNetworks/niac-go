@@ -19,9 +19,10 @@ type Identity struct {
 
 // Snapshot is an immutable point-in-time view of device state.
 type Snapshot struct {
-	Identity Identity
-	Network  Network
-	Faults   []InterfaceFault
+	Identity      Identity
+	Network       Network
+	Faults        []InterfaceFault
+	AddressFaults []InterfaceAddressFault
 	// DeviceFaults are service outcomes armed on the device as a whole,
 	// independent of any interface.
 	DeviceFaults []DeviceFault
@@ -43,6 +44,7 @@ type Store struct {
 	events               []Event
 	checkpoints          map[string]checkpoint
 	faults               map[interfaceFaultKey]InterfaceFault
+	addressFaults        map[interfaceAddressFaultKey]InterfaceAddressFault
 	deviceFaults         map[DeviceFaultType]DeviceFault
 	changes              chan struct{}
 	changeSignal         chan<- struct{}
@@ -61,7 +63,8 @@ func NewStore(identity Identity) *Store {
 		faults: make(
 			map[interfaceFaultKey]InterfaceFault,
 		), deviceFaults: make(map[DeviceFaultType]DeviceFault),
-		changes: make(chan struct{}, 1), now: time.Now,
+		addressFaults: make(map[interfaceAddressFaultKey]InterfaceAddressFault),
+		changes:       make(chan struct{}, 1), now: time.Now,
 	}
 }
 
@@ -109,9 +112,10 @@ func (s *Store) snapshot(source configuration) Snapshot {
 	applyCarrierFaults(network.Interfaces, s.faults)
 	return Snapshot{
 		Identity: source.identity, Network: network,
-		Faults:       sortedInterfaceFaults(s.faults),
-		DeviceFaults: sortedDeviceFaults(s.deviceFaults),
-		Version:      s.version,
+		Faults:        sortedInterfaceFaults(s.faults),
+		AddressFaults: sortedAddressFaults(s.addressFaults),
+		DeviceFaults:  sortedDeviceFaults(s.deviceFaults),
+		Version:       s.version,
 	}
 }
 

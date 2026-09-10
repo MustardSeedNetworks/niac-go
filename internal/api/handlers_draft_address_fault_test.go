@@ -16,6 +16,9 @@ func TestDraftAddressFaultPayloadRoundTrip(t *testing.T) {
 		valid   bool
 	}{
 		{`"type":"duplicate_dhcp_offer","address":"192.0.2.20"`, true},
+		{`"type":"duplicate_ip","interface":"Management","address":"192.0.2.20"`, true},
+		{`"type":"duplicate_ip","address":"192.0.2.20"`, false},
+		{`"type":"duplicate_ip","interface":"Management","address":"192.0.2.20","value":0`, false},
 		{`"type":"duplicate_dhcp_offer","address":"192.0.2.20","value":0`, false},
 		{`"type":"duplicate_dhcp_offer","address":"bad"`, false},
 		{`"type":"duplicate_dhcp_offer","address":"192.0.2.30"`, false},
@@ -28,6 +31,7 @@ func TestDraftAddressFaultPayloadRoundTrip(t *testing.T) {
   - name: server
     mac: '02:00:00:00:00:01'
     ips: [192.0.2.1]
+    interfaces: [{name: Management}]
     dhcp: {pool_start: 192.0.2.100, pool_end: 192.0.2.110}
   - name: peer
     mac: '02:00:00:00:00:02'

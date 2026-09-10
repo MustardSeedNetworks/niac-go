@@ -80,8 +80,8 @@ const history: HistoryRecord[] = [
 
 const errorInfo: ErrorInjectionInfo = {
   availableTypes: [
-    { type: 'drop', description: 'Drop packets' },
-    { type: 'delay', description: 'Delay packets' },
+    { type: 'drop', description: 'Drop packets', valueKind: 'number' },
+    { type: 'delay', description: 'Delay packets', valueKind: 'number' },
   ],
   info: 'Inject errors on a device interface.',
 };

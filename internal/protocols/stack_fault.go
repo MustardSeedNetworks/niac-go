@@ -28,6 +28,7 @@ type InterfaceFaultTarget struct {
 	Device     string
 	Address    string
 	Interfaces []string
+	ErrorTypes map[string][]string
 }
 
 // SetInterfaceFault applies one fault to the stack-owned device state.
@@ -103,16 +104,23 @@ func (s *Stack) ActiveInterfaceFaults() map[string]map[string]map[devicestate.Fa
 func (s *Stack) InterfaceFaultTargets() []InterfaceFaultTarget {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
-	result := make([]InterfaceFaultTarget, 0, len(s.deviceStates))
+	states := make(map[*config.Device]devicestate.Snapshot, len(s.deviceStates))
 	for device, store := range s.deviceStates {
-		snapshot := store.Snapshot()
+		states[device] = store.Snapshot()
+	}
+	conflicts := s.interfaceConflictTargets(states)
+	result := make([]InterfaceFaultTarget, 0, len(s.deviceStates))
+	for device, snapshot := range states {
 		target := InterfaceFaultTarget{
 			Device:     device.Name,
 			Interfaces: make([]string, 0, len(snapshot.Network.Interfaces)),
+			ErrorTypes: make(map[string][]string),
 		}
 		for _, iface := range snapshot.Network.Interfaces {
-			if s.snmpAgents[device].interfaceFaultObservable(iface.Name) {
+			kinds := s.interfaceFaultCapabilities(device, iface.Name, conflicts[device][iface.Name])
+			if len(kinds) != 0 {
 				target.Interfaces = append(target.Interfaces, iface.Name)
+				target.ErrorTypes[iface.Name] = kinds
 			}
 			if target.Address == "" && iface.Address.IsValid() {
 				target.Address = iface.Address.Addr().Unmap().String()
@@ -131,6 +139,21 @@ func (s *Stack) InterfaceFaultTargets() []InterfaceFaultTarget {
 		return 0
 	})
 	return result
+}
+
+func (s *Stack) interfaceFaultCapabilities(device *config.Device, iface string, conflict bool) []string {
+	kinds := make([]string, 0)
+	if s.snmpAgents[device].interfaceFaultObservable(iface) {
+		for _, definition := range devicestate.InterfaceFaultDefinitions() {
+			if definition.Type != devicestate.FaultPoELoss || s.snmpAgents[device].poeFaultObservable(iface) {
+				kinds = append(kinds, definition.Label)
+			}
+		}
+	}
+	if conflict {
+		kinds = append(kinds, "Duplicate IP")
+	}
+	return kinds
 }
 
 // InterfaceFaultTarget returns the first observable interface from a device's current state.

@@ -9,8 +9,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
-// ErrFaultConflictAbsent means the requested address has no active peer owner on the server's segment.
-var ErrFaultConflictAbsent = errors.New("fault address must belong to an active peer on the DHCP server's segment")
+// ErrFaultConflictAbsent means the requested address has no active peer owner on the target's segment.
+var ErrFaultConflictAbsent = errors.New("fault address must belong to an active peer on the target's segment")
 
 // SetDeviceAddressFault arms an explicitly addressed service outcome.
 func (s *Stack) SetDeviceAddressFault(deviceTarget string, kind devicestate.DeviceFaultType, address netip.Addr) error {
@@ -26,7 +26,7 @@ func (s *Stack) SetDeviceAddressFault(deviceTarget string, kind devicestate.Devi
 	if s.dhcpHandlers[device] == nil {
 		return ErrFaultServiceAbsent
 	}
-	if !s.duplicateOfferPeer(device, address) {
+	if !s.activeConflictPeer(device, address) {
 		return ErrFaultConflictAbsent
 	}
 	return store.SetDeviceAddressFault(kind, address)
@@ -43,7 +43,7 @@ func (s *Stack) ClearDeviceFault(deviceTarget string, kind devicestate.DeviceFau
 	return store.ClearDeviceFault(kind)
 }
 
-func (s *Stack) duplicateOfferPeer(server *config.Device, address netip.Addr) bool {
+func (s *Stack) activeConflictPeer(server *config.Device, address netip.Addr) bool {
 	if !address.Is4() {
 		return false
 	}
@@ -80,7 +80,7 @@ func (h *DHCPHandler) offerAddress(mac net.HardwareAddr, hostname string) (net.I
 	if store := h.stack.deviceStates[h.serverDevice]; store != nil {
 		address := store.DeviceFaultAddress(devicestate.FaultDuplicateDHCPOffer)
 		if address.IsValid() {
-			if !h.stack.duplicateOfferPeer(h.serverDevice, address) {
+			if !h.stack.activeConflictPeer(h.serverDevice, address) {
 				return nil, ErrFaultConflictAbsent
 			}
 			return net.IP(address.AsSlice()), nil

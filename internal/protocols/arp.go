@@ -121,9 +121,9 @@ func (h *ARPHandler) targetDevices(targetIP net.IP, vlan int) []*config.Device {
 		if !ok {
 			return nil
 		}
-		return []*config.Device{device}
+		return h.stack.appendConflictResponders([]*config.Device{device}, targetIP, vlan)
 	}
-	return h.stack.devicesForStateIPv4(vlan, targetIP)
+	return h.stack.appendConflictResponders(h.stack.devicesForStateIPv4(vlan, targetIP), targetIP, vlan)
 }
 
 // logARPRequest logs an ARP request at verbose debug level.

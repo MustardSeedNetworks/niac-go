@@ -12,9 +12,34 @@ import (
 )
 
 type recordingTarget struct {
-	mu            sync.Mutex
-	actions       []behavior.Action
-	deviceActions []behavior.DeviceAction
+	mu             sync.Mutex
+	actions        []behavior.Action
+	deviceActions  []behavior.DeviceAction
+	addressActions []behavior.InterfaceAddressAction
+}
+
+func (t *recordingTarget) SetInterfaceAddressFault(device string, fault devicestate.InterfaceAddressFault) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.addressActions = append(t.addressActions, behavior.InterfaceAddressAction{Device: device, Fault: fault})
+	return nil
+}
+
+func (t *recordingTarget) ClearInterfaceAddressFault(
+	device, iface string,
+	kind devicestate.InterfaceAddressFaultType,
+) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.addressActions = append(
+		t.addressActions,
+		behavior.InterfaceAddressAction{
+			Device: device,
+			Fault:  devicestate.InterfaceAddressFault{Interface: iface, Type: kind},
+			Clear:  true,
+		},
+	)
+	return nil
 }
 
 func (t *recordingTarget) SetDeviceAddressFault(

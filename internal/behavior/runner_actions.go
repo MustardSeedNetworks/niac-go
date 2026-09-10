@@ -19,6 +19,16 @@ func (r *Runner) applyTransition(ctx context.Context, transition Transition) boo
 			return false
 		}
 	}
+	for _, action := range transition.AddressActions {
+		if ctx.Err() != nil {
+			r.finish("stopped", "")
+			return false
+		}
+		if err := r.applyInterfaceAddressFault(action); err != nil {
+			r.finish("failed", err.Error())
+			return false
+		}
+	}
 	for _, action := range transition.OneShotActions {
 		if ctx.Err() != nil {
 			r.finish("stopped", "")

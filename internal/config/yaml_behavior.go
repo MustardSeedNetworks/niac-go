@@ -39,10 +39,10 @@ func behaviorFaultsToYAML(faults []BehaviorFault) []converter.BehaviorFault {
 	result := make([]converter.BehaviorFault, len(faults))
 	for index, action := range faults {
 		result[index] = converter.BehaviorFault{Device: action.Device, Interface: action.Interface, Type: action.Type}
-		if action.Address.IsValid() || action.Type == string(devicestate.FaultDuplicateDHCPOffer) {
+		if action.Address.IsValid() || behaviorUsesAddress(action.Type) {
 			result[index].Address = new(action.Address.String())
 		}
-		if action.Type != string(devicestate.FaultDuplicateDHCPOffer) || action.Value != 0 {
+		if !behaviorUsesAddress(action.Type) || action.Value != 0 {
 			result[index].Value = new(action.Value)
 		}
 	}

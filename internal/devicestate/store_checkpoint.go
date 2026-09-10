@@ -13,10 +13,11 @@ var ErrCheckpointNotFound = errors.New("checkpoint not found")
 // what a scenario is doing, so a checkpoint that captured only configuration
 // restored a device that looked right and behaved wrong.
 type checkpoint struct {
-	telemetry    DeviceTelemetry
-	config       configuration
-	faults       map[interfaceFaultKey]InterfaceFault
-	deviceFaults map[DeviceFaultType]DeviceFault
+	telemetry     DeviceTelemetry
+	config        configuration
+	faults        map[interfaceFaultKey]InterfaceFault
+	addressFaults map[interfaceAddressFaultKey]InterfaceAddressFault
+	deviceFaults  map[DeviceFaultType]DeviceFault
 }
 
 // SaveCheckpoint captures running configuration and active faults under name.
@@ -28,10 +29,11 @@ func (s *Store) SaveCheckpoint(name string) {
 		s.checkpoints = make(map[string]checkpoint)
 	}
 	s.checkpoints[name] = checkpoint{
-		telemetry:    s.telemetry,
-		config:       cloneConfiguration(s.running),
-		faults:       cloneFaults(s.faults),
-		deviceFaults: cloneDeviceFaults(s.deviceFaults),
+		telemetry:     s.telemetry,
+		config:        cloneConfiguration(s.running),
+		faults:        cloneFaults(s.faults),
+		addressFaults: maps.Clone(s.addressFaults),
+		deviceFaults:  cloneDeviceFaults(s.deviceFaults),
 	}
 	s.version++
 	s.recordEvent(EventCheckpointSaved, name)
@@ -49,6 +51,7 @@ func (s *Store) RestoreCheckpoint(name string) error {
 		return ErrCheckpointNotFound
 	}
 	s.faults = cloneFaults(saved.faults)
+	s.addressFaults = maps.Clone(saved.addressFaults)
 	s.deviceFaults = cloneDeviceFaults(saved.deviceFaults)
 	// Restoring telemetry does not rewind the generation's consumed actions.
 	s.telemetry = saved.telemetry

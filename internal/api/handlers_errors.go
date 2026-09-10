@@ -41,8 +41,11 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		s.writeJSON(w, map[string]any{
-			"available_types":        availableErrorTypes(),
-			"active_errors":          interfaceFaultResponse(stack.ActiveInterfaceFaults()),
+			"available_types": availableErrorTypes(),
+			"active_errors": interfaceFaultResponse(
+				stack.ActiveInterfaceFaults(),
+				stack.ActiveInterfaceAddressFaults(),
+			),
 			"targets":                interfaceFaultTargetsResponse(stack.InterfaceFaultTargets()),
 			"available_device_types": availableDeviceErrorTypes(),
 			"active_device_errors":   deviceFaultResponse(stack.ActiveDeviceFaults()),
@@ -99,6 +102,11 @@ func (s *Server) handleErrorInjection(
 func (s *Server) applyFaultRequest(
 	req *errorInjectionRequest, stack *protocols.Stack,
 ) error {
+	if req.ErrorType == duplicateIPLabel {
+		return stack.SetInterfaceAddressFault(req.Device, devicestate.InterfaceAddressFault{
+			Interface: req.Interface, Type: devicestate.FaultDuplicateIP, Address: netip.MustParseAddr(*req.Address),
+		})
+	}
 	if req.deviceScoped() {
 		faultType, err := parseDeviceFaultType(req.ErrorType)
 		if err != nil {
@@ -136,9 +144,12 @@ func (s *Server) handleErrorClear(
 		s.clearDeviceFaults(w, r, stack, device, errorType)
 	case device != "" && iface != "":
 		var err error
-		if errorType == "" {
+		switch errorType {
+		case "":
 			err = stack.ClearInterfaceFaults(device, iface)
-		} else {
+		case duplicateIPLabel:
+			err = stack.ClearInterfaceAddressFault(device, iface, devicestate.FaultDuplicateIP)
+		default:
 			var faultType devicestate.FaultType
 			faultType, err = parseInterfaceFaultType(errorType)
 			if err == nil {

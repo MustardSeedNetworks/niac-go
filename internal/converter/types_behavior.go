@@ -80,14 +80,14 @@ type BehaviorFault struct {
 
 	// Type is the fault to inject. Interface faults raise SNMP counters or
 	// force a link down; device-scoped service outcomes omit `interface`.
-	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent captive_portal duplicate_dhcp_offer"`
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent captive_portal duplicate_dhcp_offer duplicate_ip"`
 
 	// Value is the rate, resource percentage, or latency in milliseconds. Link down
 	// is an outcome: any accepted nonzero value enables it. The ceiling is
 	// 100 for interface faults and service rates, 60000 for latency.
 	Value *int `yaml:"value,omitempty" validate:"omitempty,gte=1,lte=60000"`
 
-	// Address is the peer-owned unicast IPv4 address offered by duplicate_dhcp_offer.
+	// Address is the peer-owned unicast IPv4 address used by an addressed fault.
 	// Address faults omit value; numeric faults omit address.
 	Address *string `yaml:"address,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
 }

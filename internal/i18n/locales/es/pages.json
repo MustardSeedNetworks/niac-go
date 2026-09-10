@@ -209,6 +209,7 @@
       "faultType": "Falla",
       "faults": {
         "duplicate_dhcp_offer": "Oferta DHCP duplicada",
+        "duplicate_ip": "Dirección IPv4 duplicada",
         "captive_portal": "Portal cautivo",
         "cpu_percent": "Utilización de CPU",
         "dhcp_no_offer": "DHCP sin oferta",

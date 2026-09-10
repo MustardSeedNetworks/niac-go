@@ -14,6 +14,7 @@ vi.mock('../contexts/ScopeContext', () => ({
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { injectError } from '../api/client';
 import type { ErrorInjectionInfo } from '../api/types';
 import { renderWithResources as render } from '../test/renderWithResources';
 import { required } from '../test/required';
@@ -38,20 +39,62 @@ vi.mock('../api/client', () => ({
 
 const errorInfo: ErrorInjectionInfo = {
   availableTypes: [
-    { type: 'drop', description: 'Drop packets' },
-    { type: 'delay', description: 'Delay packets' },
+    { type: 'drop', description: 'Drop packets', valueKind: 'number' },
+    { type: 'delay', description: 'Delay packets', valueKind: 'number' },
   ],
   info: 'Inject errors on a device interface.',
   targets: [
-    { device: 'sw-core', address: '10.0.0.1', interfaces: ['Gi0/1', 'Gi0/2'] },
-    { device: 'sw-edge', address: '10.0.0.2', interfaces: [] },
+    {
+      device: 'sw-core',
+      address: '10.0.0.1',
+      interfaces: ['Gi0/1', 'Gi0/2'],
+      errorTypes: { 'Gi0/1': ['drop', 'delay'], 'Gi0/2': ['drop', 'delay'] },
+    },
+    { device: 'sw-edge', address: '10.0.0.2', interfaces: [], errorTypes: {} },
   ],
 };
 
 describe('ErrorInjectionPanel', () => {
   beforeEach(() => {
+    vi.mocked(injectError).mockReset();
     fetchErrorTypes.mockReset().mockResolvedValue(errorInfo);
     clearError.mockReset().mockResolvedValue({});
+  });
+
+  it('submits an IPv4 conflict without a numeric value and rejects invalid addresses', async () => {
+    fetchErrorTypes.mockResolvedValue({
+      ...errorInfo,
+      availableTypes: [
+        ...errorInfo.availableTypes,
+        { type: 'Duplicate IP', description: 'Conflict', valueKind: 'address' },
+      ],
+      targets: [{ device: 'client', interfaces: ['eth0'], errorTypes: { eth0: ['Duplicate IP'] } }],
+    });
+    render(
+      <MemoryRouter>
+        <ErrorInjectionPanel />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('option', { name: 'client' });
+    fireEvent.change(screen.getByLabelText('Device'), { target: { value: 'client' } });
+    fireEvent.change(screen.getByLabelText('Interface'), { target: { value: 'eth0' } });
+    fireEvent.change(screen.getByLabelText('Error Type'), { target: { value: 'Duplicate IP' } });
+    const input = screen.getByLabelText(/IPv4/);
+    const submit = screen.getByRole('button', { name: 'Inject Error' });
+    fireEvent.change(input, { target: { value: '224.0.0.1' } });
+    expect(submit).toBeDisabled();
+    expect(injectError).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '192.0.2.20' } });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    await waitFor(() =>
+      expect(injectError).toHaveBeenCalledWith({
+        device: 'client',
+        interface: 'eth0',
+        errorType: 'Duplicate IP',
+        address: '192.0.2.20',
+      }),
+    );
   });
 
   it('surfaces a failed fault catalog read', async () => {
@@ -139,7 +182,7 @@ describe('ErrorInjectionPanel', () => {
       ...errorInfo,
       activeErrors: {
         'sw-core': {
-          'Gi0/1': { 'FCS Errors': 25, 'Packet Discards': 40 },
+          'Gi0/1': { 'FCS Errors': { value: 25 }, 'Packet Discards': { value: 40 } },
         },
       },
     });
@@ -153,5 +196,31 @@ describe('ErrorInjectionPanel', () => {
     const clearButtons = await screen.findAllByRole('button', { name: /Clear error on/ });
     fireEvent.click(required(clearButtons[0], 'a clear button'));
     await waitFor(() => expect(clearError).toHaveBeenCalledWith('sw-core', 'Gi0/1', 'FCS Errors'));
+  });
+
+  it('renders an addressed interface fault and clears only that named fault', async () => {
+    fetchErrorTypes.mockResolvedValue({
+      ...errorInfo,
+      activeErrors: {
+        'sw-core': {
+          'Gi0/1': {
+            'Duplicate IP': { address: '192.0.2.20' },
+            'High Utilization': { value: 70 },
+          },
+        },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ErrorInjectionPanel />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('192.0.2.20')).toBeInTheDocument();
+    expect(screen.getByText('70%')).toBeInTheDocument();
+    const buttons = await screen.findAllByRole('button', { name: /Clear error on/ });
+    fireEvent.click(required(buttons[0], 'address fault clear'));
+    await waitFor(() =>
+      expect(clearError).toHaveBeenCalledWith('sw-core', 'Gi0/1', 'Duplicate IP'),
+    );
   });
 });

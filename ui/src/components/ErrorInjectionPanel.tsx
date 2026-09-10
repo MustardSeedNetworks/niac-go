@@ -3,6 +3,7 @@ import { type FC, useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
+import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearAllErrors, clearError, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useAppState } from '../contexts/AppContext';
@@ -11,6 +12,7 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { Input } from '../ui/Input';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
@@ -43,7 +45,13 @@ export const ErrorInjectionPanel: FC = () => {
   });
   const selectedErrorType = watch('selectedErrorType');
   const selectedDevice = watch('selectedDevice');
+  const selectedInterface = watch('selectedInterface');
+  const [address, setAddress] = useState('');
+  const addressed =
+    errorInfo?.availableTypes.find((type) => type.type === selectedErrorType)?.valueKind ===
+    'address';
   const selectedTarget = errorInfo?.targets?.find((target) => target.device === selectedDevice);
+  const supported = selectedTarget?.errorTypes[selectedInterface] ?? [];
 
   // The previously selected interface may not exist on a newly selected
   // device — clear it rather than silently submitting a stale value.
@@ -73,10 +81,7 @@ export const ErrorInjectionPanel: FC = () => {
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const visibleMessage = error ? { type: 'error', text: getErrorMessage(error) } : message;
   const activeErrors = errorInfo?.activeErrors ?? {};
-  const activeEntries = Object.entries(activeErrors) as [
-    string,
-    Record<string, Record<string, number>>,
-  ][];
+  const activeEntries = Object.entries(activeErrors);
 
   // The wire shape is device -> interface -> errorType -> value; the table
   // wants one row per leaf.
@@ -92,14 +97,19 @@ export const ErrorInjectionPanel: FC = () => {
   );
 
   const onInject: SubmitHandler<ErrorInjectionFormFields> = async (values) => {
-    if (permission.disabled) return;
+    if (
+      permission.disabled ||
+      !supported.includes(values.selectedErrorType) ||
+      (addressed && !validFaultAddress(address))
+    )
+      return;
     setMessage(null);
     try {
       await injectError({
         device: values.selectedDevice,
         interface: values.selectedInterface,
         errorType: values.selectedErrorType,
-        value: values.errorValue,
+        ...(addressed ? { address } : { value: values.errorValue }),
       });
       setMessage({ type: 'success', text: t('injection.injectSuccess') });
       refetchErrors();
@@ -162,7 +172,8 @@ export const ErrorInjectionPanel: FC = () => {
       header: t('injection.tableHeaderValue'),
       cell: (row) => (
         <Tag colorScheme="yellow">
-          {row.errorType === 'High Utilization' ? `${row.value}%` : `${row.value}/s`}
+          {row.value.address ??
+            (row.errorType === 'High Utilization' ? `${row.value.value}%` : `${row.value.value}/s`)}
         </Tag>
       ),
     },
@@ -190,7 +201,7 @@ export const ErrorInjectionPanel: FC = () => {
   ];
 
   return (
-    <div className="stack-lg">
+    <div className="stack-lg" data-testid="interface-fault-panel">
       {/* Injection Form */}
       <Card>
         <CardContent>
@@ -268,7 +279,11 @@ export const ErrorInjectionPanel: FC = () => {
                 >
                   <option value="">{t('injection.errorTypeSelectPlaceholder')}</option>
                   {errorInfo?.availableTypes?.map((type: ErrorType) => (
-                    <option key={type.type} value={type.type}>
+                    <option
+                      key={type.type}
+                      value={type.type}
+                      disabled={!!selectedInterface && !supported.includes(type.type)}
+                    >
                       {type.type}
                     </option>
                   ))}
@@ -290,28 +305,38 @@ export const ErrorInjectionPanel: FC = () => {
               </div>
 
               {/* Value Slider */}
-              <div>
-                <label htmlFor="error-value" className="block text-sm font-medium mb-2">
-                  {t('injection.valueLabel', {
-                    value:
-                      selectedErrorType === 'High Utilization'
-                        ? `${errorValue}%`
-                        : `${errorValue}/s`,
-                  })}
-                </label>
-                <input
-                  id="error-value"
-                  type="range"
-                  min="0"
-                  max="100"
-                  {...register('errorValue', { valueAsNumber: true })}
-                  className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
+              {addressed ? (
+                <Input
+                  label={t('deviceFault.conflictAddress')}
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
                 />
-                <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
-                {errors.errorValue ? (
-                  <p className="text-xs text-status-error mt-tight">{errors.errorValue.message}</p>
-                ) : null}
-              </div>
+              ) : (
+                <div>
+                  <label htmlFor="error-value" className="block text-sm font-medium mb-2">
+                    {t('injection.valueLabel', {
+                      value:
+                        selectedErrorType === 'High Utilization'
+                          ? `${errorValue}%`
+                          : `${errorValue}/s`,
+                    })}
+                  </label>
+                  <input
+                    id="error-value"
+                    type="range"
+                    min="0"
+                    max="100"
+                    {...register('errorValue', { valueAsNumber: true })}
+                    className="w-full h-2 bg-bg-elevated rounded-lg appearance-none cursor-pointer"
+                  />
+                  <SmallText className="text-text-muted">{t('injection.valueHelper')}</SmallText>
+                  {errors.errorValue ? (
+                    <p className="text-xs text-status-error mt-tight">
+                      {errors.errorValue.message}
+                    </p>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* Message Display */}
@@ -330,7 +355,16 @@ export const ErrorInjectionPanel: FC = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-default">
-              <Button action="inject" type="submit" disabled={busy}>
+              <Button
+                action="inject"
+                type="submit"
+                data-testid="apply-interface-fault"
+                disabled={
+                  busy ||
+                  !supported.includes(selectedErrorType) ||
+                  (addressed && !validFaultAddress(address))
+                }
+              >
                 {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
               </Button>
               <Button

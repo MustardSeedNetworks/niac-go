@@ -14,7 +14,7 @@ func validateBehaviorFaultPayload(validation validator.StructLevel) {
 	if !ok {
 		return
 	}
-	if fault.Type == "duplicate_dhcp_offer" {
+	if fault.Type == "duplicate_dhcp_offer" || fault.Type == "duplicate_ip" {
 		if fault.Value != nil {
 			validation.ReportError(fault.Value, "value", "Value", "excluded", "")
 		}
