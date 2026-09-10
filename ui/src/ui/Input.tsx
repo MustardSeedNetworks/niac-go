@@ -1,4 +1,11 @@
-import type { FC, InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } from 'react';
+import {
+  type FC,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 
 // Base input styles
 const inputBaseStyles =
@@ -29,7 +36,8 @@ export const Input: FC<InputProps> = ({
   ref,
   ...props
 }) => {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const hasError = !!error;
 
   return (
@@ -90,7 +98,8 @@ export const Textarea: FC<TextareaProps> = ({
   ref,
   ...props
 }) => {
-  const textareaId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const textareaId = id ?? generatedId;
   const hasError = !!error;
 
   return (
@@ -151,7 +160,8 @@ export const Select: FC<SelectProps> = ({
   ref,
   ...props
 }) => {
-  const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const selectId = id ?? generatedId;
   const hasError = !!error;
 
   return (
@@ -212,7 +222,8 @@ export const Checkbox: FC<CheckboxProps> = ({
   ref,
   ...props
 }) => {
-  const checkboxId = id || label.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const checkboxId = id ?? generatedId;
 
   return (
     <div className={`flex items-start gap-default ${containerClassName}`}>
@@ -256,7 +267,8 @@ export const Toggle: FC<ToggleProps> = ({
   ref,
   ...props
 }) => {
-  const toggleId = id || label.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const toggleId = id ?? generatedId;
 
   return (
     <div className={`flex-between gap-comfortable ${containerClassName}`}>
@@ -321,7 +333,8 @@ export const SearchInput: FC<SearchInputProps> = ({
   ref,
   ...props
 }) => {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || 'search-input';
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const hasValue = value !== undefined && value !== '';
 
   const handleClear = () => {
