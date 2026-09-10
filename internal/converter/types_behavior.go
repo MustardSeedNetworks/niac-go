@@ -46,8 +46,10 @@ type BehaviorPhase struct {
 
 // BehaviorAction performs a device operation without arming a fault.
 type BehaviorAction struct {
+	// Device names one uniquely identified simulated device in the configuration.
 	Device string `yaml:"device" validate:"required"`
-	Type   string `yaml:"type"   validate:"required,oneof=reboot stp_topology_change"`
+	// Type selects a one-shot operation; neither a fault value nor an interface applies.
+	Type string `yaml:"type" validate:"required,oneof=reboot stp_topology_change"`
 }
 
 // BehaviorTraffic sets observable utilization on one simulated interface.

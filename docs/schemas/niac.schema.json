@@ -30,14 +30,16 @@
     "BehaviorAction": {
       "properties": {
         "device": {
-          "type": "string"
+          "type": "string",
+          "description": "Device names one uniquely identified simulated device in the configuration."
         },
         "type": {
           "type": "string",
           "enum": [
             "reboot",
             "stp_topology_change"
-          ]
+          ],
+          "description": "Type selects a one-shot operation; neither a fault value nor an interface applies."
         }
       },
       "additionalProperties": false,
@@ -107,7 +109,7 @@
         },
         "reset": {
           "type": "boolean",
-          "description": "Reset clears the traffic and faults set by earlier phases before this\none applies its own, instead of layering on top of them."
+          "description": "Reset clears this phase's traffic and faults when its duration ends."
         },
         "traffic": {
           "items": {
@@ -121,7 +123,7 @@
             "$ref": "#/$defs/BehaviorFault"
           },
           "type": "array",
-          "description": "Faults injects SNMP-visible interface faults for the phase's duration."
+          "description": "Faults applies interface telemetry or device-service outcomes."
         },
         "actions": {
           "items": {
@@ -137,7 +139,7 @@
         "name",
         "duration_ms"
       ],
-      "description": "BehaviorPhase applies traffic and faults at a deterministic offset."
+      "description": "BehaviorPhase applies traffic, faults and one-shot operations at a deterministic offset."
     },
     "BehaviorTimeline": {
       "properties": {
