@@ -36,6 +36,7 @@ func (h *DNSHandler) handleNBSTATQuery(
 	}
 
 	return h.stack.udpHandler.SendUDP(
+		serverDevice,
 		serverDeviceIP(serverDevice, false),
 		ipLayer.SrcIP,
 		dnsPort,

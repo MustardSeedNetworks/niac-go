@@ -338,6 +338,15 @@ func (s *Stack) sendThread() {
 
 // sendPacket sends a packet to the network.
 func (s *Stack) sendPacket(pkt *Packet) {
+	prepared, err := s.prepareHostEgress(pkt)
+	if err != nil {
+		s.recordSendError(pkt, err)
+		return
+	}
+	if prepared == nil && pkt != nil {
+		return
+	}
+	pkt = prepared
 	frame, wireVLAN, err := s.finalizeEgressFrame(pkt)
 	if err != nil {
 		if errors.Is(err, errDiscoveryOffAttachment) {

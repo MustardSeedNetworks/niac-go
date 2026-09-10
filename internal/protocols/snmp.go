@@ -228,6 +228,7 @@ func (h *SNMPHandler) sendResponse(
 	}
 
 	err := h.stack.udpHandler.SendUDP(
+		device,
 		srcIP, dstIP,
 		uint16(udp.DstPort), uint16(udp.SrcPort),
 		payload,

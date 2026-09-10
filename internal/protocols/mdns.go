@@ -112,6 +112,7 @@ func (h *MDNSHandler) respond(
 	}
 
 	err := h.stack.udpHandler.SendUDP(
+		device,
 		deviceIP.To4(), ipLayer.SrcIP.To4(),
 		MDNSPort, uint16(udp.SrcPort),
 		buf.Bytes(), device.MACAddress, eth.SrcMAC, pkt.VLAN,

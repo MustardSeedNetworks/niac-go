@@ -374,11 +374,12 @@ func (h *TCPHandler) sendSerializedPacket(
 	h.stack.mu.Unlock()
 
 	pkt := &Packet{
-		Buffer:       data,
-		Length:       len(data),
-		SerialNumber: serialNum,
-		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		Buffer:        data,
+		Length:        len(data),
+		SerialNumber:  serialNum,
+		Device:        device,
+		VLAN:          vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		generatedHost: device,
 	}
 
 	h.stack.Send(pkt)

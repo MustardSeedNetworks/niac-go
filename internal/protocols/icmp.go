@@ -111,7 +111,7 @@ func (h *ICMPHandler) handleAddressMaskRequest(
 		if !h.stack.deviceOwnsIPv4(device, srcIP) {
 			srcIP = h.stack.firstStateIPv4Address(device)
 		}
-		h.sendAddressMaskReply(device, srcIP, dstIP, replyDstMAC, icmp)
+		h.sendAddressMaskReply(device, srcIP, dstIP, replyDstMAC, icmp, pkt.VLAN)
 	}
 }
 
@@ -122,6 +122,7 @@ func (h *ICMPHandler) sendAddressMaskReply(
 	dstIP net.IP,
 	replyDstMAC net.HardwareAddr,
 	icmp *layers.ICMPv4,
+	vlan int,
 ) {
 	if device.ICMPConfig == nil || device.ICMPConfig.AddressMaskReply == nil {
 		return
@@ -135,7 +136,7 @@ func (h *ICMPHandler) sendAddressMaskReply(
 		return
 	}
 
-	mask := device.ICMPConfig.AddressMaskReply.To4()
+	mask := h.effectiveAddressMask(device, srcIP)
 	if mask == nil {
 		return
 	}
@@ -154,6 +155,7 @@ func (h *ICMPHandler) sendAddressMaskReply(
 		icmpReply,
 		mask,
 		device,
+		vlan,
 	)
 	if err != nil && h.stack.GetDebugLevel() >= DebugLevelInfo {
 		logging.Debugf("ICMP: Address Mask Reply failed: %v", err)
@@ -194,6 +196,7 @@ func (h *ICMPHandler) handleRouterSolicitation(
 			icmpReply,
 			payload,
 			device,
+			0,
 		)
 		if err != nil {
 			if debugLevel >= DebugLevelInfo {
@@ -241,6 +244,7 @@ func (h *ICMPHandler) sendICMPWithPayload(
 	icmpLayer *layers.ICMPv4,
 	payload []byte,
 	device *config.Device,
+	vlan int,
 ) error {
 	ttl := defaultTTLIPv4
 	if device != nil && device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
@@ -288,6 +292,10 @@ func (h *ICMPHandler) sendICMPWithPayload(
 		Length:       len(buf.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan,
+	}
+	if icmpLayer.TypeCode.Type() == layers.ICMPv4TypeAddressMaskReply {
+		pkt.generatedHost = device
 	}
 	h.stack.Send(pkt)
 
@@ -506,11 +514,12 @@ func (h *ICMPHandler) sendEchoReply(
 
 	// Create and send packet
 	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		Device:       device,
-		VLAN:         vlan, // reply on the VLAN the echo request arrived on
+		Buffer:        buffer.Bytes(),
+		Length:        len(buffer.Bytes()),
+		SerialNumber:  serialNum,
+		Device:        device,
+		VLAN:          vlan, // reply on the VLAN the echo request arrived on
+		generatedHost: device,
 	}
 
 	h.sendEchoPacket(device, pkt)
@@ -525,6 +534,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 	code uint8,
 	originalPacket []byte,
 	vlan int,
+	device *config.Device,
 ) error {
 	// Build Ethernet header
 	eth := &layers.Ethernet{
@@ -579,10 +589,12 @@ func (h *ICMPHandler) SendICMPUnreachable(
 
 	// Create and send packet
 	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		Buffer:        buffer.Bytes(),
+		Length:        len(buffer.Bytes()),
+		SerialNumber:  serialNum,
+		VLAN:          vlan, // reply on the VLAN the request arrived on (tagged or untagged)
+		Device:        device,
+		generatedHost: device,
 	}
 
 	h.stack.Send(pkt)

@@ -432,11 +432,12 @@ func (h *HTTPHandler) sendResponse(
 
 	// Create and send packet
 	responsePkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		Device:       device,
-		VLAN:         identity.vlan,
+		Buffer:        buffer.Bytes(),
+		Length:        len(buffer.Bytes()),
+		SerialNumber:  serialNum,
+		Device:        device,
+		VLAN:          identity.vlan,
+		generatedHost: device,
 	}
 
 	h.stack.Send(responsePkt)

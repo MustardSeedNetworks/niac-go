@@ -11,7 +11,8 @@ func (a *Agent) refreshDeviceStateIPMIBs(snapshot devicestate.Snapshot) {
 		a.mib.Delete(oid)
 	}
 	a.stateIPOIDs = make(map[string]struct{})
-	for _, iface := range snapshot.Network.Interfaces {
+	network := snapshot.EffectiveHostNetwork()
+	for _, iface := range network.Interfaces {
 		if !iface.Address.IsValid() || !iface.Address.Addr().Is4() {
 			continue
 		}
@@ -28,7 +29,7 @@ func (a *Agent) refreshDeviceStateIPMIBs(snapshot devicestate.Snapshot) {
 			a.stateIPOIDs[column+"."+address] = struct{}{}
 		}
 	}
-	for _, route := range snapshot.Network.Routes {
+	for _, route := range network.Routes {
 		if !route.Destination.IsValid() || !route.Destination.Addr().Is4() {
 			continue
 		}

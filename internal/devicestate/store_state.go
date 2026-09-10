@@ -21,6 +21,7 @@ type Checkpoint struct {
 	Configuration   Configuration
 	InterfaceFaults []InterfaceFault
 	AddressFaults   []InterfaceAddressFault
+	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
 }
 
@@ -39,6 +40,7 @@ type State struct {
 	Startup         Configuration
 	InterfaceFaults []InterfaceFault
 	AddressFaults   []InterfaceAddressFault
+	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
 	Checkpoints     []Checkpoint
 	Events          []Event
@@ -72,6 +74,7 @@ func (s *Store) ExportState() State {
 		Startup:         exportConfiguration(s.startup),
 		InterfaceFaults: sortedInterfaceFaults(s.faults),
 		AddressFaults:   sortedAddressFaults(s.addressFaults),
+		PrefixFaults:    sortedPrefixFaults(s.prefixFaults),
 		DeviceFaults:    sortedDeviceFaults(s.deviceFaults),
 		Checkpoints:     exportCheckpoints(s.checkpoints),
 		Events:          cloneEvents(s.events),
@@ -96,6 +99,7 @@ func (s *Store) RestoreState(state State) error {
 	s.startup = importConfiguration(state.Startup)
 	s.faults = importInterfaceFaults(state.InterfaceFaults)
 	s.addressFaults = importAddressFaults(state.AddressFaults)
+	s.prefixFaults = importPrefixFaults(state.PrefixFaults)
 	s.deviceFaults = importDeviceFaults(state.DeviceFaults)
 	s.telemetry = state.Telemetry
 	s.consumedActions = importConsumedActions(state.ConsumedActions)
@@ -141,6 +145,7 @@ func exportCheckpoints(saved map[string]checkpoint) []Checkpoint {
 			Configuration:   exportConfiguration(point.config),
 			InterfaceFaults: sortedInterfaceFaults(point.faults),
 			AddressFaults:   sortedAddressFaults(point.addressFaults),
+			PrefixFaults:    sortedPrefixFaults(point.prefixFaults),
 			DeviceFaults:    sortedDeviceFaults(point.deviceFaults),
 		})
 	}
@@ -155,6 +160,7 @@ func importCheckpoints(saved []Checkpoint) map[string]checkpoint {
 			config:        importConfiguration(point.Configuration),
 			faults:        importInterfaceFaults(point.InterfaceFaults),
 			addressFaults: importAddressFaults(point.AddressFaults),
+			prefixFaults:  importPrefixFaults(point.PrefixFaults),
 			deviceFaults:  importDeviceFaults(point.DeviceFaults),
 		}
 	}

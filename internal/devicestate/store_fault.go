@@ -130,6 +130,12 @@ func (s *Store) ClearInterfaceFaults(interfaceName string) error {
 		return ErrInterfaceNotFound
 	}
 	changed := false
+	for key := range s.prefixFaults {
+		if key.interfaceName == interfaceName {
+			delete(s.prefixFaults, key)
+			changed = true
+		}
+	}
 	for key := range s.addressFaults {
 		if key.interfaceName == interfaceName {
 			delete(s.addressFaults, key)
@@ -153,11 +159,12 @@ func (s *Store) ClearInterfaceFaults(interfaceName string) error {
 func (s *Store) ClearAllFaults() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.faults) == 0 && len(s.addressFaults) == 0 {
+	if len(s.faults) == 0 && len(s.addressFaults) == 0 && len(s.prefixFaults) == 0 {
 		return
 	}
 	clear(s.faults)
 	clear(s.addressFaults)
+	clear(s.prefixFaults)
 	s.version++
 	s.recordEvent(EventFaultCleared, "*")
 }
