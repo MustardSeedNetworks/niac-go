@@ -309,32 +309,6 @@ func buildHTTPResponse(statusCode int, serverName, contentType, body string) []b
 	return []byte(response.String())
 }
 
-// generateResponse generates an HTTP response.
-func (h *HTTPHandler) generateResponse(request *HTTPRequest, devices []*config.Device) []byte {
-	info := getHTTPDeviceInfo(devices)
-	customEndpoint := findCustomEndpoint(info.device, request)
-
-	var body string
-	var statusCode int
-	var contentType string
-
-	if customEndpoint != nil {
-		statusCode = customEndpoint.StatusCode
-		if statusCode == 0 {
-			statusCode = httpStatusOK
-		}
-		contentType = customEndpoint.ContentType
-		if contentType == "" {
-			contentType = contentTypeHTML
-		}
-		body = customEndpoint.Body
-	} else {
-		body, statusCode, contentType = h.generateDefaultBody(request.Path, info)
-	}
-
-	return buildHTTPResponse(statusCode, info.serverName, contentType, body)
-}
-
 // getStatusText returns HTTP status text for a status code.
 func getStatusText(code int) string {
 	switch code {
