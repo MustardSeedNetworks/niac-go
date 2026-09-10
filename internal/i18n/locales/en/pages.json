@@ -446,7 +446,9 @@
       "empty": "Add a timeline to make traffic and faults change automatically during the simulation.",
       "faultRate": "Rate (%)",
       "faults": {
+        "cpu_percent": "CPU utilization",
         "dhcp_no_offer": "DHCP no offer",
+        "disk_percent": "Disk space used",
         "dns_nxdomain": "DNS NXDOMAIN",
         "dns_timeout": "DNS timeout",
         "fcs_errors": "FCS errors",
@@ -454,6 +456,7 @@
         "interface_errors": "Interface errors",
         "latency": "Latency",
         "link_down": "Link down",
+        "memory_percent": "Memory utilization",
         "packet_discards": "Packet discards"
       },
       "faultType": "Fault",
@@ -470,6 +473,7 @@
       "removeTraffic": "Remove traffic",
       "repetitions": "Repetitions",
       "reset": "Reset when complete",
+      "resourcePercent": "Utilization (%)",
       "save": "Save behaviors",
       "startsAfter": "Starts after (seconds)",
       "timelineName": "Timeline name",
