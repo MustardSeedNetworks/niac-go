@@ -19,6 +19,7 @@ func validateState(state State, authored []Interface) error {
 		Telemetry:       state.Telemetry,
 		Configuration:   state.Running,
 		InterfaceFaults: state.InterfaceFaults,
+		AddressFaults:   state.AddressFaults,
 		DeviceFaults:    state.DeviceFaults,
 	}
 	if !validStateCheckpoint(current, authored) {
@@ -67,6 +68,7 @@ func validStateCheckpoint(point Checkpoint, authored []Interface) bool {
 	return validDeviceTelemetry(point.Telemetry) &&
 		validStateInterfaces(point.Configuration.Network.Interfaces, authored) &&
 		validStateInterfaceFaults(point.InterfaceFaults, authored) &&
+		validStateAddressFaults(point.AddressFaults, authored) &&
 		validStateDeviceFaults(point.DeviceFaults)
 }
 

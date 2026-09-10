@@ -20,6 +20,7 @@ type Checkpoint struct {
 	Name            string
 	Configuration   Configuration
 	InterfaceFaults []InterfaceFault
+	AddressFaults   []InterfaceAddressFault
 	DeviceFaults    []DeviceFault
 }
 
@@ -37,6 +38,7 @@ type State struct {
 	Running         Configuration
 	Startup         Configuration
 	InterfaceFaults []InterfaceFault
+	AddressFaults   []InterfaceAddressFault
 	DeviceFaults    []DeviceFault
 	Checkpoints     []Checkpoint
 	Events          []Event
@@ -69,6 +71,7 @@ func (s *Store) ExportState() State {
 		Running:         exportConfiguration(s.running),
 		Startup:         exportConfiguration(s.startup),
 		InterfaceFaults: sortedInterfaceFaults(s.faults),
+		AddressFaults:   sortedAddressFaults(s.addressFaults),
 		DeviceFaults:    sortedDeviceFaults(s.deviceFaults),
 		Checkpoints:     exportCheckpoints(s.checkpoints),
 		Events:          cloneEvents(s.events),
@@ -92,6 +95,7 @@ func (s *Store) RestoreState(state State) error {
 	s.running = importConfiguration(state.Running)
 	s.startup = importConfiguration(state.Startup)
 	s.faults = importInterfaceFaults(state.InterfaceFaults)
+	s.addressFaults = importAddressFaults(state.AddressFaults)
 	s.deviceFaults = importDeviceFaults(state.DeviceFaults)
 	s.telemetry = state.Telemetry
 	s.consumedActions = importConsumedActions(state.ConsumedActions)
@@ -136,6 +140,7 @@ func exportCheckpoints(saved map[string]checkpoint) []Checkpoint {
 			Name:            name,
 			Configuration:   exportConfiguration(point.config),
 			InterfaceFaults: sortedInterfaceFaults(point.faults),
+			AddressFaults:   sortedAddressFaults(point.addressFaults),
 			DeviceFaults:    sortedDeviceFaults(point.deviceFaults),
 		})
 	}
@@ -146,10 +151,11 @@ func importCheckpoints(saved []Checkpoint) map[string]checkpoint {
 	result := make(map[string]checkpoint, len(saved))
 	for _, point := range saved {
 		result[point.Name] = checkpoint{
-			telemetry:    point.Telemetry,
-			config:       importConfiguration(point.Configuration),
-			faults:       importInterfaceFaults(point.InterfaceFaults),
-			deviceFaults: importDeviceFaults(point.DeviceFaults),
+			telemetry:     point.Telemetry,
+			config:        importConfiguration(point.Configuration),
+			faults:        importInterfaceFaults(point.InterfaceFaults),
+			addressFaults: importAddressFaults(point.AddressFaults),
+			deviceFaults:  importDeviceFaults(point.DeviceFaults),
 		}
 	}
 	return result
