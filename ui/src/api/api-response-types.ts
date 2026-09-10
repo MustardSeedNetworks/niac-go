@@ -288,6 +288,12 @@ export interface ErrorType {
 }
 
 export interface ErrorInjectionInfo {
+  availableDeviceTypes?: (ErrorType & {
+    maxValue: number;
+    valueKind: 'toggle' | 'percent' | 'milliseconds';
+  })[];
+  deviceTargets?: { device: string; address?: string; errorTypes: string[] }[];
+  activeDeviceErrors?: Record<string, Record<string, number>>;
   availableTypes: ErrorType[];
   info: string;
   targets?: {

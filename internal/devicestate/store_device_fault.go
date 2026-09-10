@@ -26,6 +26,7 @@ const (
 	FaultCPUPercent    DeviceFaultType = "cpu_percent"
 	FaultMemoryPercent DeviceFaultType = "memory_percent"
 	FaultDiskPercent   DeviceFaultType = "disk_percent"
+	FaultCaptivePortal DeviceFaultType = "captive_portal"
 )
 
 // faultRateMax bounds the fault types whose value is a percentage.
@@ -60,6 +61,7 @@ func deviceFaultDefinitions() []DeviceFaultDefinition {
 		{Type: FaultCPUPercent, Label: "CPU Utilization", MaxValue: faultRateMax},
 		{Type: FaultMemoryPercent, Label: "Memory Utilization", MaxValue: faultRateMax},
 		{Type: FaultDiskPercent, Label: "Disk Utilization", MaxValue: faultRateMax},
+		{Type: FaultCaptivePortal, Label: "Captive Portal", MaxValue: 1},
 	}
 }
 

@@ -5,6 +5,19 @@
     "saveFailed": "Failed to save changes",
     "uploadFailed": "Failed to upload file"
   },
+  "deviceFault": {
+    "apply": "Apply device fault",
+    "armed": "Armed",
+    "clear": "Clear",
+    "clearOne": "Clear {{type}} on {{device}}",
+    "milliseconds": "Delay (milliseconds)",
+    "percent": "Utilization (%)",
+    "selectTarget": "Select a device",
+    "selectType": "Select a device fault",
+    "target": "Device fault target",
+    "title": "Device faults",
+    "type": "Device fault"
+  },
   "generic": {
     "forbidden": "Permission denied",
     "invalidRequest": "Invalid request",

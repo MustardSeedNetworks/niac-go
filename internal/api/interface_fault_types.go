@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -42,10 +43,17 @@ func availableErrorTypes() []map[string]string {
 	return result
 }
 
+type deviceFaultTypeResponse struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	MaxValue    int    `json:"maxValue"`
+	ValueKind   string `json:"valueKind"`
+}
+
 // availableDeviceErrorTypes describes the device-scoped catalog: service
 // outcomes that change what a device answers rather than what its interface
 // counters report.
-func availableDeviceErrorTypes() []map[string]string {
+func availableDeviceErrorTypes() []deviceFaultTypeResponse {
 	descriptions := map[devicestate.DeviceFaultType]string{
 		devicestate.FaultDHCPNoOffer:   "DHCP server consumes the Discover and sends no Offer",
 		devicestate.FaultDNSNXDomain:   "DNS server answers every query with NXDOMAIN",
@@ -54,14 +62,29 @@ func availableDeviceErrorTypes() []map[string]string {
 		devicestate.FaultCPUPercent:    "Set processor utilization (1-100%; zero clears)",
 		devicestate.FaultMemoryPercent: "Set used memory as a percentage of capacity (1-100%; zero clears)",
 		devicestate.FaultDiskPercent:   "Set used disk storage as a percentage of capacity (1-100%; zero clears)",
+		devicestate.FaultCaptivePortal: "Redirect HTTP requests to a local portal (1 enables; zero clears)",
 	}
-	result := make([]map[string]string, 0, len(descriptions))
+	result := make([]deviceFaultTypeResponse, 0, len(descriptions))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
-		result = append(result, map[string]string{
-			"type": definition.Label, "description": descriptions[definition.Type],
+		result = append(result, deviceFaultTypeResponse{
+			Type: definition.Label, Description: descriptions[definition.Type],
+			MaxValue: definition.MaxValue, ValueKind: deviceFaultValueKind(definition.Type),
 		})
 	}
 	return result
+}
+
+func deviceFaultValueKind(kind devicestate.DeviceFaultType) string {
+	switch kind {
+	case devicestate.FaultLatency:
+		return "milliseconds"
+	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
+		return "percent"
+	case devicestate.FaultDHCPNoOffer, devicestate.FaultDNSNXDomain,
+		devicestate.FaultDNSTimeout, devicestate.FaultCaptivePortal:
+		return "toggle"
+	}
+	return ""
 }
 
 func deviceFaultResponse(
@@ -141,12 +164,23 @@ func (req *errorInjectionRequest) validationMessage() string {
 		return "interface is required"
 	case req.Interface != "" && req.deviceScoped():
 		return "a device fault takes no interface"
-	case req.Value < 0 || req.Value > 100:
-		return "value must be between 0 and 100"
+	case req.Value < 0 || req.Value > errorInjectionMaximum(req.ErrorType):
+		return fmt.Sprintf("value must be between 0 and %d", errorInjectionMaximum(req.ErrorType))
 	default:
 		return ""
 	}
 }
+
+func errorInjectionMaximum(label string) int {
+	for _, definition := range devicestate.DeviceFaultDefinitions() {
+		if definition.Label == label {
+			return definition.MaxValue
+		}
+	}
+	return defaultErrorInjectionMaximum
+}
+
+const defaultErrorInjectionMaximum = 100
 
 // deviceScoped reports whether the named error type belongs to the
 // device-service catalog.

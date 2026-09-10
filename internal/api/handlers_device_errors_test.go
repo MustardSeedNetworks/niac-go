@@ -17,16 +17,16 @@ import (
 func TestAvailableDeviceErrorTypesAreServiceOutcomes(t *testing.T) {
 	want := []string{
 		"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency",
-		"CPU Utilization", "Memory Utilization", "Disk Utilization",
+		"CPU Utilization", "Memory Utilization", "Disk Utilization", "Captive Portal",
 	}
 
 	types := availableDeviceErrorTypes()
 	got := make([]string, 0, len(types))
 	for _, faultType := range types {
-		if faultType["description"] == "" {
-			t.Fatalf("device fault %q has no description", faultType["type"])
+		if faultType.Description == "" {
+			t.Fatalf("device fault %q has no description", faultType.Type)
 		}
-		got = append(got, faultType["type"])
+		got = append(got, faultType.Type)
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("device fault types = %v, want %v", got, want)

@@ -114,6 +114,7 @@ func TestStackClearDeviceFaultsLeavesInterfaceFaults(t *testing.T) {
 func newDeviceFaultTestStack() (*Stack, *config.Device) {
 	device := faultTestDevice("edge-1")
 	device.SNMPConfig.AddMibs = resourceFaultTestMIBs()
+	device.HTTPConfig = &config.HTTPConfig{Enabled: true}
 	device.DHCPConfig = &config.DHCPConfig{
 		PoolStart: net.IP{192, 0, 2, 100}, PoolEnd: net.IP{192, 0, 2, 110},
 	}

@@ -133,6 +133,8 @@ func (s *Stack) deviceFaultValue(
 // prevents on the interface axis.
 func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
+	case devicestate.FaultCaptivePortal:
+		return device.HTTPConfig != nil && device.HTTPConfig.Enabled
 	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
 		return s.snmpAgents[device].resourceFaultObservable(faultType, snmpEnabled(device.SNMPConfig))
 	case devicestate.FaultLatency:
