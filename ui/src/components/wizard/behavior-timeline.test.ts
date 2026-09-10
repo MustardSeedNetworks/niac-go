@@ -3,6 +3,24 @@ import { stringify } from 'yaml';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
 
 describe('parseDraftBehaviorTimelines', () => {
+  it('preserves ordered one-shot operations without adding fault fields', () => {
+    const actions = [
+      { device: 'edge-1', type: 'stp_topology_change' },
+      { device: 'edge-2', type: 'reboot' },
+    ];
+    const parsed = parseDraftBehaviorTimelines(
+      stringify({
+        behavior_timelines: [
+          {
+            name: 'Maintenance',
+            repeat_count: 2,
+            phases: [{ name: 'Changes', duration_ms: 1000, reset: true, actions }],
+          },
+        ],
+      }),
+    );
+    expect(parsed[0]?.phases[0]?.actions).toEqual(actions);
+  });
   it('round-trips all resource faults without dropping them or adding interfaces', () => {
     const faults = [
       { device: 'hospital-server-1', type: 'cpu_percent', value: 1 },
@@ -88,6 +106,7 @@ behavior_timelines:
             startOffsetMs: 0,
             durationMs: 30000,
             reset: true,
+            actions: [],
             traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 82 }],
             faults: [
               {
