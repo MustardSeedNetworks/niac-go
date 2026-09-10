@@ -8,9 +8,9 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
-// ErrBehaviorAddressTarget means an address fault lacks a DHCP target or a peer owner in its network.
+// ErrBehaviorAddressTarget means an address fault lacks an eligible target or a peer owner in its network.
 var ErrBehaviorAddressTarget = errors.New(
-	"address fault requires a DHCP server and a peer-owned address in the same network",
+	"address fault requires an eligible target and a peer-owned address in the same network",
 )
 
 func validateBehaviorAddressFault(targets map[string]behaviorTarget, fault BehaviorFault) error {
