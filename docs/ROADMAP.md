@@ -64,7 +64,16 @@ implemented. Eight browser tests pass across Chromium, WebKit, installed Chrome
 and Edge with no retries. The native Linux ARP test verifies exact healthy and
 conflicting identities, other-VLAN isolation and recovery after clearing.
 This is implementation evidence, not native Safari or external-tester acceptance.
-Bad-mask implementation and remaining consumer acceptance are still open.
+Bad-mask host routing now has isolated native Linux packet evidence for healthy
+replies, gateway selection under a narrow mask, no-route drops and recovery.
+Typed configuration, scheduler and API tests preserve an active /0 separately
+from explicit clearing. Notification retries re-evaluate current source and
+attachment eligibility. Twenty targeted browser cases pass across Chromium,
+WebKit, installed Chrome and Edge with zero retries, skips or flakes. They
+verify saved mask configuration, /0 and /32 live apply/clear, independent
+utilization retention, and 320-pixel light/dark layouts. Native Safari and
+final consumer acceptance remain open; this is not a completed phase or an
+external-tester acceptance claim.
 The phase boxes below track acceptance, not individual implementation merges.
 
 DHCP isolation verification (2026-09-10): per-server configuration, lease
