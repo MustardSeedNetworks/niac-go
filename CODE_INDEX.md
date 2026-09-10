@@ -26,6 +26,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Fabric domain and diagnostics | `internal/fabric/types.go` | Physical binding is distinct from virtual networks |
 | Device/link UI graph | `internal/topology/topology.go` | Projection only; preserves parallel endpoint pairs and authored interface telemetry, not a forwarding compiler |
 | Physical VLAN engines | `internal/protocols/stack_init.go` | ADR 0008 segments; not routed virtual networks |
+| Per-server DHCPv4 ownership | `internal/protocols/stack_dhcp.go` + `dhcp_selection.go` | Device-keyed lease, decline and option registries; ingress/attachment-scoped dispatch, selected-server requests and exact-address renewal; scoped FDB learning |
 | Routed reply Ethernet identity | `internal/protocols/stack.go` | One source for gateway/device source MAC, requester destination MAC, and ingress VLAN |
 | Final wire egress policy | `internal/protocols/stack_threads.go` | Last enforcement point for direct/access untagged frames and observer-visible bytes |
 | Operator attachment authorization | `internal/fabric/types.go` + `internal/daemon/daemon.go` | Exact interface/mode/access-VLAN policy; browser input cannot grant approval |

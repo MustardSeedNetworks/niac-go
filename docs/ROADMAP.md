@@ -61,6 +61,12 @@ verification and the action PR remain in progress. DHCP isolation
 and explicit address faults remain uncompleted.
 The phase boxes below track acceptance, not individual implementation merges.
 
+DHCP isolation verification (2026-09-10): per-server configuration, lease
+ownership, selected-server replies and VLAN isolation pass native Linux race
+and packet tests. The packet test covers four servers on two VLANs, including
+fault clearing and healthy-peer behavior. Duplicate-offer and address-conflict
+faults are still separate remaining work; this is not phase acceptance.
+
 - [x] Injected interface faults are observable through IF-MIB and
       EtherLike-MIB counters while preserving monotonic counter behavior.
 - [ ] Every fault type is asserted on the wire, and its MIB effect is named as
