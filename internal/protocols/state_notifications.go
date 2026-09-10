@@ -23,6 +23,7 @@ const (
 	snmpCentisecond             = 10 * time.Millisecond
 	syslogPort                  = 514
 	maxPendingNeighborDatagrams = 64
+	maxPendingNeighborTotal     = 256
 	notificationNeighborRetries = 4
 	notificationNeighborRetry   = 500 * time.Millisecond
 	notificationNeighborTTL     = 5 * time.Minute
@@ -54,6 +55,7 @@ type pendingNotification struct {
 
 type notificationNeighborResolution struct {
 	notifications []pendingNotification
+	hostPackets   []*Packet
 	attempts      int
 	timer         *time.Timer
 }
@@ -271,6 +273,10 @@ func (s *stackDatagramSender) notificationDestinationMAC(
 		len(resolved.MACAddress) == SizeOfMac {
 		return resolved.MACAddress, nil
 	}
+	return s.learnedNeighborMAC(vlan, target), nil
+}
+
+func (s *stackDatagramSender) learnedNeighborMAC(vlan int, target netip.Addr) net.HardwareAddr {
 	key := newNotificationNeighborKey(vlan, target)
 	s.mu.Lock()
 	neighbor, found := s.neighbors[key]
@@ -280,16 +286,16 @@ func (s *stackDatagramSender) notificationDestinationMAC(
 	}
 	s.mu.Unlock()
 	if !found {
-		return nil, nil
+		return nil
 	}
-	return append(net.HardwareAddr(nil), neighbor.mac...), nil
+	return append(net.HardwareAddr(nil), neighbor.mac...)
 }
 
 func (s *stackDatagramSender) resolveNeighbor(notification pendingNotification, target netip.Addr) error {
 	key := newNotificationNeighborKey(notification.vlan, target)
 	s.mu.Lock()
 	resolution := s.pending[key]
-	if resolution != nil && len(resolution.notifications) >= maxPendingNeighborDatagrams {
+	if s.neighborQueueFull(resolution) {
 		s.mu.Unlock()
 		return fmt.Errorf("notification neighbor queue for %s is full", target)
 	}
@@ -298,7 +304,9 @@ func (s *stackDatagramSender) resolveNeighbor(notification pendingNotification, 
 		s.mu.Unlock()
 		return nil
 	}
-	s.pending[key] = &notificationNeighborResolution{notifications: []pendingNotification{notification}}
+	s.pending[key] = &notificationNeighborResolution{
+		notifications: []pendingNotification{notification},
+	}
 	s.mu.Unlock()
 	s.probeNeighbor(key)
 	return nil
@@ -307,7 +315,16 @@ func (s *stackDatagramSender) resolveNeighbor(notification pendingNotification, 
 func (s *stackDatagramSender) probeNeighbor(key notificationNeighborKey) {
 	s.mu.Lock()
 	resolution := s.pending[key]
-	if resolution == nil {
+	s.mu.Unlock()
+	s.probeNeighborResolution(key, resolution)
+}
+
+func (s *stackDatagramSender) probeNeighborResolution(
+	key notificationNeighborKey,
+	resolution *notificationNeighborResolution,
+) {
+	s.mu.Lock()
+	if resolution == nil || s.pending[key] != resolution {
 		s.mu.Unlock()
 		return
 	}
@@ -317,14 +334,19 @@ func (s *stackDatagramSender) probeNeighbor(key notificationNeighborKey) {
 		slog.Warn("notification neighbor resolution timed out", "target", key.address, "vlan", key.vlan)
 		return
 	}
-	notification := resolution.notifications[0]
 	resolution.attempts++
 	s.mu.Unlock()
+	notification, current := s.currentNeighborProbe(key, resolution)
+	if !current {
+		return
+	}
 
 	frame, err := s.neighborProbeFrame(notification, key.address)
 	if err != nil {
 		s.mu.Lock()
-		delete(s.pending, key)
+		if s.pending[key] == resolution {
+			delete(s.pending, key)
+		}
 		s.mu.Unlock()
 		slog.Warn("build notification neighbor probe", "target", key.address, "error", err)
 		return
@@ -333,7 +355,7 @@ func (s *stackDatagramSender) probeNeighbor(key notificationNeighborKey) {
 
 	s.mu.Lock()
 	if current := s.pending[key]; current == resolution {
-		current.timer = time.AfterFunc(notificationNeighborRetry, func() { s.probeNeighbor(key) })
+		current.timer = time.AfterFunc(notificationNeighborRetry, func() { s.probeNeighborResolution(key, resolution) })
 	}
 	s.mu.Unlock()
 }
@@ -415,6 +437,11 @@ func (s *stackDatagramSender) observeNeighbor(vlan int, address netip.Addr, mac 
 	s.mu.Unlock()
 	if resolution == nil {
 		return
+	}
+	for _, packet := range resolution.hostPackets {
+		if err := s.stack.send(packet); err != nil {
+			slog.Debug("resolved host packet rejected", "error", err)
+		}
 	}
 	for _, notification := range resolution.notifications {
 		if err := s.emitNotification(
