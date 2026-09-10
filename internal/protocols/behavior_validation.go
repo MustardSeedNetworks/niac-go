@@ -12,6 +12,12 @@ import (
 
 func (s *Stack) validateBehaviorAddressFaults(faults []config.BehaviorFault) error {
 	for _, fault := range faults {
+		if fault.Type == string(devicestate.FaultDuplicateIP) {
+			if err := s.validateDuplicateIPBinding(fault); err != nil {
+				return err
+			}
+			continue
+		}
 		if fault.Type != string(devicestate.FaultDuplicateDHCPOffer) {
 			continue
 		}
@@ -39,7 +45,8 @@ func ValidateConfiguredBehaviorTargets(cfg *config.Config, topology *fabric.Topo
 	for _, timeline := range cfg.BehaviorTimelines {
 		for _, phase := range timeline.Phases {
 			hasAddressFault := slices.ContainsFunc(phase.Faults, func(fault config.BehaviorFault) bool {
-				return fault.Type == string(devicestate.FaultDuplicateDHCPOffer)
+				return fault.Type == string(devicestate.FaultDuplicateDHCPOffer) ||
+					fault.Type == string(devicestate.FaultDuplicateIP)
 			})
 			if len(phase.Actions) > 0 || hasAddressFault {
 				stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
