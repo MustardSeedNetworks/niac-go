@@ -100,6 +100,7 @@ func (s *Store) appendEvent(event Event) {
 }
 
 func (s *Store) signalChange() {
+	s.updateInterfaceTransitions()
 	if s.changeObserver != nil {
 		s.changeObserver(s.snapshot(s.running))
 	}
