@@ -74,6 +74,9 @@ func DeviceFaultDefinitions() []DeviceFaultDefinition {
 
 // Label returns the operator-facing device-fault name.
 func (f DeviceFaultType) Label() string {
+	if f == FaultDuplicateDHCPOffer {
+		return "Duplicate DHCP Offer"
+	}
 	for _, definition := range deviceFaultDefinitions() {
 		if definition.Type == f {
 			return definition.Label
@@ -84,6 +87,9 @@ func (f DeviceFaultType) Label() string {
 
 // ParseDeviceFaultLabel returns the device fault type for an operator-facing label.
 func ParseDeviceFaultLabel(label string) (DeviceFaultType, bool) {
+	if label == FaultDuplicateDHCPOffer.Label() {
+		return FaultDuplicateDHCPOffer, true
+	}
 	for _, definition := range deviceFaultDefinitions() {
 		if definition.Label == label {
 			return definition.Type, true

@@ -17,7 +17,7 @@ func TestDeviceFaultRequestUsesCatalogBounds(t *testing.T) {
 		{"CPU Utilization", 100, true},
 		{"CPU Utilization", 101, false},
 	} {
-		req := errorInjectionRequest{Device: "server-1", ErrorType: tc.kind, Value: tc.value}
+		req := errorInjectionRequest{Device: "server-1", ErrorType: tc.kind, Value: new(tc.value)}
 		if message := req.validationMessage(); (message == "") != tc.valid {
 			t.Errorf("%s value%d: %q, valid=%v", tc.kind, tc.value, message, tc.valid)
 		}
@@ -35,8 +35,14 @@ func TestDeviceFaultCatalogDescribesControls(t *testing.T) {
 		"Disk Utilization": {100, "percent"}, "Captive Portal": {1, "toggle"},
 	}
 	for _, entry := range availableDeviceErrorTypes() {
+		if entry.Type == "Duplicate DHCP Offer" {
+			if entry.ValueKind != "address" || entry.MaxValue != nil {
+				t.Fatalf("address fault has numeric metadata: %+v", entry)
+			}
+			continue
+		}
 		value, ok := want[entry.Type]
-		if !ok || value.max != entry.MaxValue || value.kind != entry.ValueKind {
+		if !ok || entry.MaxValue == nil || value.max != *entry.MaxValue || value.kind != entry.ValueKind {
 			t.Errorf("unexpected control metadata: %+v", entry)
 		}
 		delete(want, entry.Type)

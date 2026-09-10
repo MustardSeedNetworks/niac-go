@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -42,10 +43,11 @@ type draftBehaviorTraffic struct {
 }
 
 type draftBehaviorFault struct {
-	Device    string `json:"device"`
-	Interface string `json:"interface"`
-	Type      string `json:"type"`
-	Value     int    `json:"value"`
+	Device    string  `json:"device"`
+	Interface string  `json:"interface"`
+	Type      string  `json:"type"`
+	Value     *int    `json:"value"`
+	Address   *string `json:"address"`
 }
 
 func (s *Server) handleLibraryDraftBehaviorsReplace(
@@ -59,6 +61,10 @@ func (s *Server) handleLibraryDraftBehaviorsReplace(
 	}
 	var request draftBehaviorsReplaceRequest
 	if !decodeJSONStrict(w, r, &request, MaxRequestBodySize) {
+		return
+	}
+	if message := request.faultPayloadError(); message != "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", message, nil)
 		return
 	}
 	draft, err := s.library.ReadDraft(name)
@@ -135,8 +141,31 @@ func behaviorFaultsFromRequest(authored []draftBehaviorFault) []config.BehaviorF
 	result := make([]config.BehaviorFault, len(authored))
 	for index, action := range authored {
 		result[index] = config.BehaviorFault{
-			Device: action.Device, Interface: action.Interface, Type: action.Type, Value: action.Value,
+			Device: action.Device, Interface: action.Interface, Type: action.Type,
+		}
+		if action.Value != nil {
+			result[index].Value = *action.Value
+		}
+		if action.Address != nil {
+			result[index].Address = netip.MustParseAddr(*action.Address)
 		}
 	}
 	return result
+}
+
+func (request draftBehaviorsReplaceRequest) faultPayloadError() string {
+	for _, timeline := range request.Timelines {
+		for _, phase := range timeline.Phases {
+			for _, fault := range phase.Faults {
+				if message := validateFaultPayload(
+					devicestate.DeviceFaultType(fault.Type),
+					fault.Value,
+					fault.Address,
+				); message != "" {
+					return message
+				}
+			}
+		}
+	}
+	return ""
 }

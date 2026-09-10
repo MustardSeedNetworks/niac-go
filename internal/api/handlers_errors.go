@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"net/netip"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -10,10 +11,11 @@ import (
 
 // errorInjectionRequest represents a request to inject an error.
 type errorInjectionRequest struct {
-	Device    string `json:"device"`
-	Interface string `json:"interface"`
-	ErrorType string `json:"errorType"`
-	Value     int    `json:"value"`
+	Device    string  `json:"device"`
+	Interface string  `json:"interface"`
+	ErrorType string  `json:"errorType"`
+	Value     *int    `json:"value,omitempty"`
+	Address   *string `json:"address,omitempty"`
 }
 
 // validate validates the error injection request fields.
@@ -78,14 +80,19 @@ func (s *Server) handleErrorInjection(
 		return
 	}
 
-	s.writeJSON(w, map[string]any{
+	response := map[string]any{
 		"success":   true,
 		"message":   "error injected successfully",
 		"device":    req.Device,
 		"interface": req.Interface,
 		"errorType": req.ErrorType,
-		"value":     req.Value,
-	})
+	}
+	if req.Address != nil {
+		response["address"] = *req.Address
+	} else {
+		response["value"] = *req.Value
+	}
+	s.writeJSON(w, response)
 }
 
 // applyFaultRequest routes one injection onto the axis its error type names.
@@ -97,13 +104,16 @@ func (s *Server) applyFaultRequest(
 		if err != nil {
 			return err
 		}
-		return stack.SetDeviceFault(req.Device, faultType, req.Value)
+		if faultType == devicestate.FaultDuplicateDHCPOffer {
+			return stack.SetDeviceAddressFault(req.Device, faultType, netip.MustParseAddr(*req.Address))
+		}
+		return stack.SetDeviceFault(req.Device, faultType, *req.Value)
 	}
 	faultType, err := parseInterfaceFaultType(req.ErrorType)
 	if err != nil {
 		return err
 	}
-	return stack.SetInterfaceFault(req.Device, req.Interface, faultType, req.Value)
+	return stack.SetInterfaceFault(req.Device, req.Interface, faultType, *req.Value)
 }
 
 // handleErrorClear handles DELETE requests to clear errors.
@@ -173,7 +183,7 @@ func (s *Server) clearDeviceFaults(
 		var faultType devicestate.DeviceFaultType
 		faultType, err = parseDeviceFaultType(errorType)
 		if err == nil {
-			err = stack.SetDeviceFault(device, faultType, 0)
+			err = stack.ClearDeviceFault(device, faultType)
 		}
 	}
 	if err != nil {

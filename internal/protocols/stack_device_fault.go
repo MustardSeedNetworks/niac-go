@@ -64,18 +64,18 @@ func (s *Stack) ClearAllDeviceFaults() {
 }
 
 // ActiveDeviceFaults returns a JSON-ready snapshot keyed by device name.
-func (s *Stack) ActiveDeviceFaults() map[string]map[devicestate.DeviceFaultType]int {
+func (s *Stack) ActiveDeviceFaults() map[string]map[devicestate.DeviceFaultType]devicestate.DeviceFault {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
-	result := make(map[string]map[devicestate.DeviceFaultType]int)
+	result := make(map[string]map[devicestate.DeviceFaultType]devicestate.DeviceFault)
 	for device, store := range s.deviceStates {
 		faults := store.Snapshot().DeviceFaults
 		if len(faults) == 0 {
 			continue
 		}
-		byType := make(map[devicestate.DeviceFaultType]int, len(faults))
+		byType := make(map[devicestate.DeviceFaultType]devicestate.DeviceFault, len(faults))
 		for _, fault := range faults {
-			byType[fault.Type] = fault.Value
+			byType[fault.Type] = fault
 		}
 		result[device.Name] = byType
 	}
@@ -133,6 +133,9 @@ func (s *Stack) deviceFaultValue(
 // prevents on the interface axis.
 func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
+	case devicestate.FaultDuplicateDHCPOffer:
+		return s.dhcpHandlers[device] != nil &&
+			(s.fabric == nil || slices.Contains(s.fabric.attachmentDHCP, device))
 	case devicestate.FaultCaptivePortal:
 		return device.HTTPConfig != nil && device.HTTPConfig.Enabled
 	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
@@ -159,6 +162,9 @@ func (s *Stack) servableDeviceFaults(device *config.Device) []devicestate.Device
 		if s.deviceServesFault(device, definition.Type) {
 			result = append(result, definition.Type)
 		}
+	}
+	if s.deviceServesFault(device, devicestate.FaultDuplicateDHCPOffer) {
+		result = append(result, devicestate.FaultDuplicateDHCPOffer)
 	}
 	return result
 }

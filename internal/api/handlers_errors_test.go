@@ -55,7 +55,7 @@ func TestHandleErrorsPersistsMultipleFaultTypesInDeviceState(t *testing.T) {
 	server := createErrorTestServer(t)
 	for faultType, value := range map[string]int{"FCS Errors": 25, "Packet Discards": 40} {
 		body, err := json.Marshal(errorInjectionRequest{
-			Device: "router1", Interface: "Management", ErrorType: faultType, Value: value,
+			Device: "router1", Interface: "Management", ErrorType: faultType, Value: new(value),
 		})
 		if err != nil {
 			t.Fatalf("marshal request: %v", err)
@@ -189,7 +189,7 @@ func TestHandleErrorsRejectsInvalidTargetsAndValues(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			server := createErrorTestServer(t)
 			body, err := json.Marshal(errorInjectionRequest{
-				Device: test.device, Interface: test.iface, ErrorType: "FCS Errors", Value: test.value,
+				Device: test.device, Interface: test.iface, ErrorType: "FCS Errors", Value: new(test.value),
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -248,7 +248,7 @@ func TestParseInterfaceFaultType(t *testing.T) {
 func injectAPIFault(t *testing.T, server *Server, faultType string, value int) {
 	t.Helper()
 	body, err := json.Marshal(errorInjectionRequest{
-		Device: "router1", Interface: "Management", ErrorType: faultType, Value: value,
+		Device: "router1", Interface: "Management", ErrorType: faultType, Value: new(value),
 	})
 	if err != nil {
 		t.Fatal(err)
