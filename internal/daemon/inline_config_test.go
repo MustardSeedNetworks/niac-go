@@ -53,16 +53,15 @@ func TestPersistInlineSessionConfig_RejectsSessionIDsThatEscapeTheDirectory(t *t
 }
 
 // TestPersistInlineSessionConfig_WritesValidSessions is the positive half: the
-// ids the API accepts still produce a per-session file, and the unnamed session
-// keeps the fixed filename.
+// ids the API accepts produce independently persisted launches.
 func TestPersistInlineSessionConfig_WritesValidSessions(t *testing.T) {
 	tests := []struct {
 		sessionID string
 		wantName  string
 	}{
-		{defaultSessionID, inlineConfigName},
-		{"lab-01", "_running.lab-01.inline.yaml"},
-		{"a", "_running.a.inline.yaml"},
+		{defaultSessionID, "_running.default."},
+		{"lab-01", "_running.lab-01."},
+		{"a", "_running.a."},
 	}
 
 	for _, tt := range tests {
@@ -77,8 +76,9 @@ func TestPersistInlineSessionConfig_WritesValidSessions(t *testing.T) {
 				t.Fatalf("persistInlineSessionConfig(%q): %v", tt.sessionID, err)
 			}
 
-			if got := filepath.Base(path); got != tt.wantName {
-				t.Errorf("filename = %q, want %q", got, tt.wantName)
+			if got := filepath.Base(path); !strings.HasPrefix(got, tt.wantName) ||
+				!validRuntimeGeneration(strings.TrimSuffix(strings.TrimPrefix(got, tt.wantName), ".inline.yaml")) {
+				t.Errorf("filename = %q, want unique launch below %q", got, tt.wantName)
 			}
 			if !filepath.IsAbs(path) {
 				t.Errorf("path = %q, want an absolute path", path)
