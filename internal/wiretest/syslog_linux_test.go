@@ -38,18 +38,7 @@ func TestAuthoredLinkFaultEmitsSyslogOnTheWire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if d.GetStatus().Running {
-			if stopErr := d.StopSimulation(""); stopErr != nil {
-				t.Error(stopErr)
-			}
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if shutdownErr := d.Shutdown(ctx); shutdownErr != nil {
-			t.Error(shutdownErr)
-		}
-	})
+	t.Cleanup(func() { shutdownSyslogDaemon(t, d) })
 	if err = d.StartSimulation(api.SimulationRequest{
 		SessionID: "wiretest-syslog", Interface: simIface, Attachment: "tester",
 		AttachmentMode: fabric.ModeAccess, AccessVLAN: accessVLAN, ConfigData: string(data),
@@ -60,30 +49,52 @@ func TestAuthoredLinkFaultEmitsSyslogOnTheWire(t *testing.T) {
 		t.Fatal(err)
 	}
 	var previous uint64
-	for _, expected := range []struct{ priority, messageID, kind string }{
+	for _, expected := range []syslogExpectation{
 		{"<132>1", "FAULT_UPDATED", "fault.updated"},
 		{"<133>1", "FAULT_CLEARED", "fault.cleared"},
 	} {
-		buffer := make([]byte, 2048)
-		count, source, readErr := collector.ReadFromUDP(buffer)
-		if readErr != nil {
-			t.Fatalf("receive %s: %v", expected.messageID, readErr)
-		}
-		message := string(buffer[:count])
-		fields := strings.Fields(message)
-		if source.IP.String() != "10.254.200.1" || source.Port != 514 || len(fields) != 10 ||
-			fields[0] != expected.priority || fields[2] != "LAB-SYSLOG-R1" || fields[3] != "niac" ||
-			fields[4] != "-" || fields[5] != expected.messageID || fields[6] != "-" ||
-			fields[8] != "kind="+expected.kind || fields[9] != `target="Access1:link_down"` {
-			t.Fatalf("unexpected syslog from %s: %q", source, message)
-		}
-		if _, parseErr := time.Parse(time.RFC3339Nano, fields[1]); parseErr != nil {
-			t.Fatalf("invalid timestamp: %q", fields[1])
-		}
+		fields := receiveSyslog(t, collector, expected)
 		version, parseErr := strconv.ParseUint(strings.TrimPrefix(fields[7], "version="), 10, 64)
 		if parseErr != nil || version <= previous {
 			t.Fatalf("event version did not increase: %q after %d", fields[7], previous)
 		}
 		previous = version
+	}
+}
+
+type syslogExpectation struct{ priority, messageID, kind string }
+
+func receiveSyslog(t *testing.T, collector *net.UDPConn, expected syslogExpectation) []string {
+	t.Helper()
+	buffer := make([]byte, 2048)
+	count, source, err := collector.ReadFromUDP(buffer)
+	if err != nil {
+		t.Fatalf("receive %s: %v", expected.messageID, err)
+	}
+	message := string(buffer[:count])
+	fields := strings.Fields(message)
+	if source.IP.String() != "10.254.200.1" || source.Port != 514 || len(fields) != 10 ||
+		fields[0] != expected.priority || fields[2] != "LAB-SYSLOG-R1" || fields[3] != "niac" ||
+		fields[4] != "-" || fields[5] != expected.messageID || fields[6] != "-" ||
+		fields[8] != "kind="+expected.kind || fields[9] != `target="Access1:link_down"` {
+		t.Fatalf("unexpected syslog from %s: %q", source, message)
+	}
+	if _, err = time.Parse(time.RFC3339Nano, fields[1]); err != nil {
+		t.Fatalf("invalid timestamp: %q", fields[1])
+	}
+	return fields
+}
+
+func shutdownSyslogDaemon(t *testing.T, d *daemon.Daemon) {
+	t.Helper()
+	if d.GetStatus().Running {
+		if err := d.StopSimulation(""); err != nil {
+			t.Error(err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := d.Shutdown(ctx); err != nil {
+		t.Error(err)
 	}
 }
