@@ -14,6 +14,21 @@ func validateBehaviorFaultPayload(validation validator.StructLevel) {
 	if !ok {
 		return
 	}
+	if fault.Type == "bad_mask" {
+		if fault.PrefixBits == nil {
+			validation.ReportError(fault.PrefixBits, "prefix_bits", "PrefixBits", "required", "")
+		}
+		if fault.Value != nil {
+			validation.ReportError(fault.Value, "value", "Value", "excluded", "")
+		}
+		if fault.Address != nil {
+			validation.ReportError(fault.Address, "address", "Address", "excluded", "")
+		}
+		return
+	}
+	if fault.PrefixBits != nil {
+		validation.ReportError(fault.PrefixBits, "prefix_bits", "PrefixBits", "excluded", "")
+	}
 	if fault.Type == "duplicate_dhcp_offer" || fault.Type == "duplicate_ip" {
 		if fault.Value != nil {
 			validation.ReportError(fault.Value, "value", "Value", "excluded", "")

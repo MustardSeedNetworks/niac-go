@@ -80,7 +80,7 @@ type BehaviorFault struct {
 
 	// Type is the fault to inject. Interface faults raise SNMP counters or
 	// force a link down; device-scoped service outcomes omit `interface`.
-	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent captive_portal duplicate_dhcp_offer duplicate_ip"`
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent captive_portal duplicate_dhcp_offer duplicate_ip bad_mask"`
 
 	// Value is the rate, resource percentage, or latency in milliseconds. Link down
 	// is an outcome: any accepted nonzero value enables it. The ceiling is
@@ -90,4 +90,7 @@ type BehaviorFault struct {
 	// Address is the peer-owned unicast IPv4 address used by an addressed fault.
 	// Address faults omit value; numeric faults omit address.
 	Address *string `yaml:"address,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
+
+	// PrefixBits is explicit because /0 is an active mask, not a clear operation.
+	PrefixBits *int `yaml:"prefix_bits,omitempty" validate:"omitempty,gte=0,lte=32" jsonschema:"minimum=0,maximum=32"`
 }

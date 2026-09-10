@@ -41,9 +41,10 @@ type BehaviorTraffic struct {
 
 // BehaviorFault sets one supported interface or device-service outcome.
 type BehaviorFault struct {
-	Device    string
-	Interface string
-	Type      string
-	Value     int
-	Address   netip.Addr
+	Device     string
+	Interface  string
+	Type       string
+	Value      int
+	Address    netip.Addr
+	PrefixBits int
 }
