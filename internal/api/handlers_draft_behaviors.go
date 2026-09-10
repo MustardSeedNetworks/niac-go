@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
@@ -26,6 +27,12 @@ type draftBehaviorPhase struct {
 	Reset         bool                   `json:"reset"`
 	Traffic       []draftBehaviorTraffic `json:"traffic"`
 	Faults        []draftBehaviorFault   `json:"faults"`
+	Actions       []draftBehaviorAction  `json:"actions"`
+}
+
+type draftBehaviorAction struct {
+	Device string                       `json:"device"`
+	Type   devicestate.DeviceActionType `json:"type"`
 }
 
 type draftBehaviorTraffic struct {
@@ -99,8 +106,17 @@ func behaviorTimelinesFromRequest(authored []draftBehaviorTimeline) []config.Beh
 				Duration: time.Duration(phase.DurationMS) * time.Millisecond, Reset: phase.Reset,
 				Traffic: behaviorTrafficFromRequest(phase.Traffic),
 				Faults:  behaviorFaultsFromRequest(phase.Faults),
+				Actions: behaviorActionsFromRequest(phase.Actions),
 			}
 		}
+	}
+	return result
+}
+
+func behaviorActionsFromRequest(authored []draftBehaviorAction) []config.BehaviorAction {
+	result := make([]config.BehaviorAction, len(authored))
+	for index, action := range authored {
+		result[index] = config.BehaviorAction{Device: action.Device, Type: action.Type}
 	}
 	return result
 }
