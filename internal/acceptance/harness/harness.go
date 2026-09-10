@@ -61,6 +61,11 @@ type Options struct {
 	// Root holds the daemon's certificates, configs and library. The caller
 	// owns its lifetime; t.TempDir() is the usual answer.
 	Root string
+	// AttachmentPolicies are --attachment-policy values, in the daemon's own
+	// spelling: INTERFACE=direct, INTERFACE=access:VLAN or
+	// INTERFACE=trunk:VLAN,... A routed attachment is refused without one, so
+	// a run that starts a scenario on a real interface has to name it.
+	AttachmentPolicies []string
 }
 
 // Start launches the daemon and waits until it answers. The caller must call
@@ -91,11 +96,15 @@ func Start(ctx context.Context, options Options) (*Daemon, error) {
 	}
 	defer logFile.Close()
 
-	command := exec.CommandContext(ctx, binary, "daemon",
+	arguments := []string{"daemon",
 		"--listen", address,
 		"--storage", "disabled",
 		"--cert-dir", filepath.Join(root, "certs"),
-	)
+	}
+	for _, policy := range options.AttachmentPolicies {
+		arguments = append(arguments, "--attachment-policy", policy)
+	}
+	command := exec.CommandContext(ctx, binary, arguments...)
 	command.Env = append(os.Environ(),
 		"NIAC_API_TOKEN="+token,
 		"NIAC_CONFIGS_DIR="+filepath.Join(root, "configs"),
