@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,7 +14,9 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/acceptance/harness"
 	"github.com/MustardSeedNetworks/niac-go/internal/cliclient"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 // P3-1's sequence -- start, checkpoint, mutate, reset, stop -- against the
@@ -47,13 +47,18 @@ const (
 	acceptanceRecovery = 20 * time.Second
 )
 
-func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
+func startAcceptanceDaemon(t *testing.T) (*harness.Daemon, *config.Device) {
 	t.Helper()
 	requireWire(t)
 
-	yamlBytes, err := os.ReadFile(filepath.Join("testdata", "authored-network.yaml"))
+	pack := acceptancePack(t)
+	generated, err := scenario.Generate(pack.Request)
 	if err != nil {
-		t.Fatalf("reading the authored network: %v", err)
+		t.Fatalf("scenario.Generate(hospital): %v", err)
+	}
+	authored, err := config.LoadYAMLBytes(generated.YAML)
+	if err != nil {
+		t.Fatalf("loading the generated hospital YAML: %v", err)
 	}
 
 	daemon, err := harness.Start(t.Context(), harness.Options{
@@ -74,10 +79,10 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	request := cliclient.SimulationRequest{
 		SessionID:      acceptanceSession,
 		Interface:      simIface,
-		Attachment:     "tester",
+		Attachment:     pack.Request.AttachmentName,
 		AttachmentMode: fabric.ModeAccess,
 		AccessVLAN:     accessVLAN,
-		ConfigData:     string(yamlBytes),
+		ConfigData:     string(generated.YAML),
 	}
 	report, err := daemon.Client.PreflightSimulation(t.Context(), request)
 	if err != nil {
@@ -90,17 +95,33 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 		t.Fatalf("start: %v\n%s", err, daemon.Log())
 	}
 
-	return daemon
+	return daemon, edgeRouter(t, authored)
+}
+
+func acceptancePack(t *testing.T) scenario.Pack {
+	t.Helper()
+	for _, candidate := range scenario.Packs() {
+		if candidate.ID == "hospital" {
+			return candidate
+		}
+	}
+	t.Fatal("no pack with id \"hospital\"; scenario.Packs() no longer ships it")
+
+	return scenario.Pack{}
 }
 
 // The whole sequence in one test, because the halves prove nothing apart: a
 // device that answers before the fault says nothing about the reset, and one
 // that answers after it says nothing unless it had actually gone quiet.
 func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
-	daemon := startAcceptanceDaemon(t)
+	daemon, edge := startAcceptanceDaemon(t)
 	ctx := t.Context()
+	community := edge.SNMPConfig.Community
+	if community == "" {
+		t.Fatalf("%s has no authored SNMP community", edge.Name)
+	}
 
-	if !answersSNMP(t, acceptanceSNMPWait) {
+	if !answersSNMP(t, community, acceptanceSNMPWait) {
 		t.Fatalf("the scenario never answered SNMP before the checkpoint\n%s", daemon.Log())
 	}
 
@@ -113,12 +134,12 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	}
 
 	err = daemon.Client.SetDeviceFault(ctx, cliclient.DeviceFaultRequest{
-		Device: acceptanceDevice, Type: "latency", Value: acceptanceLatencyMS,
+		Device: edge.Name, Type: "latency", Value: acceptanceLatencyMS,
 	})
 	if err != nil {
 		t.Fatalf("inject latency: %v\n%s", err, daemon.Log())
 	}
-	if answersSNMP(t, acceptanceSNMPWait) {
+	if answersSNMP(t, community, acceptanceSNMPWait) {
 		t.Fatal("the device answered inside the window while a 5s latency was armed")
 	}
 
@@ -128,7 +149,7 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	deadline := time.Now().Add(acceptanceRecovery)
 	recovered := false
 	for time.Now().Before(deadline) && !recovered {
-		recovered = answersSNMP(t, acceptanceSNMPWait)
+		recovered = answersSNMP(t, community, acceptanceSNMPWait)
 	}
 	if !recovered {
 		t.Fatalf("the device never answered again after the reset\n%s", daemon.Log())
@@ -151,19 +172,19 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 // answersSNMP reports whether the authored router replies to a sysName GET
 // inside the window. A timeout is the expected answer while a fault is armed,
 // so it is a result rather than a failure.
-func answersSNMP(t *testing.T, within time.Duration) bool {
+func answersSNMP(t *testing.T, community string, within time.Duration) bool {
 	t.Helper()
 	client := &gosnmp.GoSNMP{
-		Target:    acceptanceAddr,
+		Target:    transitGateway,
 		Port:      acceptanceSNMPPort,
-		Community: acceptanceCommunity,
+		Community: community,
 		Version:   gosnmp.Version2c,
 		Timeout:   within,
 		Retries:   0,
 		Context:   context.Background(),
 	}
 	if err := client.Connect(); err != nil {
-		t.Fatalf("connect to %s: %v", net.JoinHostPort(acceptanceAddr, "161"), err)
+		t.Fatalf("connect to %s: %v", transitGateway, err)
 	}
 	defer client.Conn.Close()
 
