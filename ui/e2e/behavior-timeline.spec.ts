@@ -129,6 +129,7 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
               { device: 'access-1', type: 'latency', value: 60000 },
               { device: 'access-1', interface: 'Gi1/0/1', type: 'link_down', value: 1 },
             ],
+            actions: [],
           },
         ],
       },
