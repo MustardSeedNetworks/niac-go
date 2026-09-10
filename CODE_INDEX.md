@@ -56,6 +56,9 @@ parallel implementation. It is intentionally organized by purpose.
 | Device resource fault projection | `internal/devicestate/store_device_fault.go` + `internal/protocols/snmp/resource_fault.go` | CPU, memory and disk percentages override eligible HOST-RESOURCES values; clearing restores captured or custom dynamic baselines, including final MIB override precedence |
 | State notification output | `internal/protocols/state_notifications.go` | Authoritative transitions drive RFC 5424 SYSLOG plus SNMPv2c coldStart/linkUp/linkDown notifications; nonfunctional synthetic threshold traps are not part of the schema |
 | Management syslog | `internal/protocols/syslog.go` | RFC 5424 link/fault filtering and safe authored-hostname messages |
+| One-shot device operations | `internal/devicestate/store_device_action.go` + `internal/behavior/runner_actions.go` | Consumed operation identities survive recovery and checkpoint rollback; phase reset does not rearm them |
+| Reboot and STP telemetry | `internal/protocols/snmp/device_action.go` + `internal/protocols/state_device_action_notifications.go` | Shared device reboot epoch, retained STP baselines and event-driven notifications; SNMPv3 engine lifetime remains separate |
+| Draft behavior authoring | `internal/api/handlers_draft_behaviors.go` | Revision-checked replacement shares config validation and preserves one-shot operations without fault values |
 
 ## Simulation lifecycle API
 
