@@ -524,43 +524,6 @@ func (d *Daemon) compileSimulationFabric(
 // defaultSessionID names the unnamed session.
 const defaultSessionID = "default"
 
-// persistInlineConfig writes the inline YAML to disk so the rest of the
-// daemon has a real configPath to operate on. Returns the absolute path
-// it was written to.
-func persistInlineConfig(content string) (string, error) {
-	return persistInlineSessionConfig(content, defaultSessionID)
-}
-
-// Persist each inline launch separately so failed replacement cannot overwrite
-// the configuration referenced by the previous generation's recovery record.
-func persistInlineSessionConfig(content, sessionID string) (string, error) {
-	if sessionID != defaultSessionID && !api.ValidSessionID(sessionID) {
-		return "", fmt.Errorf("%w: %q", errInvalidInlineSessionID, sessionID)
-	}
-
-	cleanDir, dirErr := inlineConfigDir()
-	if dirErr != nil {
-		return "", dirErr
-	}
-	if err := os.MkdirAll(cleanDir, 0o750); err != nil {
-		return "", fmt.Errorf("create configs dir: %w", err)
-	}
-	generation, err := newRuntimeGeneration()
-	if err != nil {
-		return "", err
-	}
-	name := fmt.Sprintf("_running.%s.%s.inline.yaml", sessionID, generation)
-	path := filepath.Join(cleanDir, name)
-	if err = writeStateFile(path, []byte(content)); err != nil {
-		return "", fmt.Errorf("write inline config: %w", err)
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve inline config path: %w", err)
-	}
-	return abs, nil
-}
-
 func inlineConfigDir() (string, error) {
 	rawDir := os.Getenv("NIAC_CONFIGS_DIR")
 	if rawDir == "" {
@@ -647,32 +610,27 @@ func (d *Daemon) startGeneration(req api.SimulationRequest, generation string, r
 		resources.stop()
 		return err
 	}
+	committed := false
 	if req.ConfigData != "" {
-		configPath, err = persistInlineSessionConfig(req.ConfigData, sessionID)
+		var finish func(bool)
+		configPath, finish, err = stageInlineSessionConfig(req.ConfigData, sessionID)
 		if err != nil {
 			resources.abort()
 			return fmt.Errorf("persist inline config: %w", err)
 		}
+		defer func() { finish(committed) }()
 	}
 
 	replacement := newSimulation(sessionID, binding, req, configPath, cfg, compiled, resources)
 	replacement.runtimeGeneration = generation
 	if persistErr := d.commitSimulationGeneration(replacement, recovering); persistErr != nil {
 		resources.abort()
-		d.discardPendingGeneration(replacement, req.ConfigData != "")
+		d.clearRuntimeState(sessionID, generation)
 		return fmt.Errorf("persist active simulation: %w", persistErr)
 	}
+	committed = true
 
-	active = d.sessions.replace(sessionID, replacement)
-	// Adopt the new session as the default for unscoped readers only when
-	// nothing else holds that spot, or when this start replaces the session
-	// already in it. Adopting unconditionally meant launching a second
-	// scenario silently repointed everyone watching the first.
-	adopt := d.simulation == nil || d.simulation.SessionID == sessionID
-	if adopt {
-		d.simulation = replacement
-	}
-	d.publishSimulation(replacement, adopt)
+	active = d.publishSimulation(replacement)
 	if active != nil {
 		d.stopSimulation(active)
 		d.clearRuntimeState(active.SessionID, active.runtimeGeneration)
@@ -832,12 +790,15 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 	return nil
 }
 
-// publishSimulation makes a session readable through the API. adopt also makes
-// it the default the unscoped surface reports; clients that name their session
-// are unaffected either way.
-func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
-	if d.apiServer == nil || sim == nil {
-		return
+// Publishing a second session must not redirect unscoped readers from the first.
+func (d *Daemon) publishSimulation(sim *Simulation) *Simulation {
+	active := d.sessions.replace(sim.SessionID, sim)
+	adopt := d.simulation == nil || d.simulation.SessionID == sim.SessionID
+	if adopt {
+		d.simulation = sim
+	}
+	if d.apiServer == nil {
+		return active
 	}
 	d.apiServer.UpdateSimulationSession(
 		sim.SessionID,
@@ -850,6 +811,7 @@ func (d *Daemon) publishSimulation(sim *Simulation, adopt bool) {
 	if adopt {
 		d.apiServer.SelectSimulation(sim.SessionID)
 	}
+	return active
 }
 
 // SelectSimulation makes one running session the target of runtime API surfaces.

@@ -95,7 +95,7 @@ func TestRecoveryRejectsEmptyCommittedRuntimeState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = writeStateFile(d.runtimeStateFile(defaultSessionID, generation), data); err != nil {
+	if err = writeStateFile(filepath.Dir(path), runtimeStateName(defaultSessionID, generation), data); err != nil {
 		t.Fatal(err)
 	}
 	restarted := recoveryTestDaemon(t, path)

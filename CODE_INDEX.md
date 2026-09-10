@@ -11,6 +11,7 @@ parallel implementation. It is intentionally organized by purpose.
 | YAML field validation | `internal/converter/validate.go` | Shape validation using YAML field names |
 | Runtime config loading | `internal/config/yaml_load.go` | One file/bytes conversion pipeline |
 | Daemon runtime recovery | `internal/daemon/runtime_generation.go` + `runtime_state.go` | Generation-qualified snapshots are staged before the launch manifest commit; replacement cannot recover a previous run's faults |
+| Daemon state-file containment | `internal/daemon/state_file.go` + `inline_config.go` | Atomic state writes and staged rollback use directory capabilities; request paths never select cleanup roots |
 | Vendor-authored MAC identity | `internal/converter/types.go` + `internal/config/yaml_device.go` | `vendor` plus optional `mac_suffix` is resolved through the embedded IEEE registry while preserving the authored form on export |
 | Routed YAML adapters | `internal/config/yaml_fabric.go` | Converts authoring DTOs into runtime config |
 | Complete-config validation | `internal/config/validator.go` | Existing device validation; not routed semantics |

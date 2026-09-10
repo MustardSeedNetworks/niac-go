@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestPersistInlineSessionConfig_RejectsSessionIDsThatEscapeTheDirectory is why
+// TestStageInlineSessionConfigRejectsEscapingIDs is why
 // the session id is validated here rather than trusted from the caller.
 //
 // The id becomes part of the inline config's filename. The HTTP handler checks
@@ -17,7 +17,7 @@ import (
 // has to live at the sink. Each id below either escapes the configs directory or
 // puts a character in the filename that has no business there; none may reach
 // the filesystem.
-func TestPersistInlineSessionConfig_RejectsSessionIDsThatEscapeTheDirectory(t *testing.T) {
+func TestStageInlineSessionConfigRejectsEscapingIDs(t *testing.T) {
 	ids := []string{
 		"../../etc/evil",
 		"..",
@@ -36,9 +36,12 @@ func TestPersistInlineSessionConfig_RejectsSessionIDsThatEscapeTheDirectory(t *t
 			dir := t.TempDir()
 			t.Setenv("NIAC_CONFIGS_DIR", dir)
 
-			path, err := persistInlineSessionConfig("devices: []\n", id)
+			path, finish, err := stageInlineSessionConfig("devices: []\n", id)
+			if finish != nil {
+				finish(false)
+			}
 			if err == nil {
-				t.Fatalf("persistInlineSessionConfig(%q) wrote %q, want a refusal", id, path)
+				t.Fatalf("stageInlineSessionConfig(%q) wrote %q, want a refusal", id, path)
 			}
 			if !errors.Is(err, errInvalidInlineSessionID) {
 				t.Errorf("error = %v, want errInvalidInlineSessionID", err)
@@ -52,9 +55,9 @@ func TestPersistInlineSessionConfig_RejectsSessionIDsThatEscapeTheDirectory(t *t
 	}
 }
 
-// TestPersistInlineSessionConfig_WritesValidSessions is the positive half: the
+// TestStageInlineSessionConfigWritesValidSessions is the positive half: the
 // ids the API accepts produce independently persisted launches.
-func TestPersistInlineSessionConfig_WritesValidSessions(t *testing.T) {
+func TestStageInlineSessionConfigWritesValidSessions(t *testing.T) {
 	tests := []struct {
 		sessionID string
 		wantName  string
@@ -71,10 +74,11 @@ func TestPersistInlineSessionConfig_WritesValidSessions(t *testing.T) {
 
 			const content = "devices: []\n"
 
-			path, err := persistInlineSessionConfig(content, tt.sessionID)
+			path, finish, err := stageInlineSessionConfig(content, tt.sessionID)
 			if err != nil {
-				t.Fatalf("persistInlineSessionConfig(%q): %v", tt.sessionID, err)
+				t.Fatalf("stageInlineSessionConfig(%q): %v", tt.sessionID, err)
 			}
+			finish(true)
 
 			if got := filepath.Base(path); !strings.HasPrefix(got, tt.wantName) ||
 				!validRuntimeGeneration(strings.TrimSuffix(strings.TrimPrefix(got, tt.wantName), ".inline.yaml")) {

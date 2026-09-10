@@ -4,9 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
-
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 const runtimeGenerationBytes = 16
@@ -41,13 +38,4 @@ func (d *Daemon) commitSimulationGeneration(sim *Simulation, recovering bool) er
 		return err
 	}
 	return d.persistActiveSimulation(sim)
-}
-
-func (d *Daemon) discardPendingGeneration(sim *Simulation, inline bool) {
-	d.clearRuntimeState(sim.SessionID, sim.runtimeGeneration)
-	if inline {
-		if err := os.Remove(sim.ConfigPath); err != nil {
-			logging.Warningf("Could not remove uncommitted inline configuration: %v", err)
-		}
-	}
 }

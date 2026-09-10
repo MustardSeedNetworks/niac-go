@@ -55,22 +55,26 @@ func runtimeStatePath(stateDir, sessionID, generation string) string {
 }
 
 func (d *Daemon) runtimeStateFile(sessionID, generation string) string {
-	directory := d.runtimeStateDir()
-	// Session IDs reach here from the API, so the path is built only from one
-	// the API's own grammar accepts -- lowercase, digits and hyphens, which
-	// cannot name a parent directory.
-	if directory == "" || !api.ValidSessionID(sessionID) || !validRuntimeGeneration(generation) {
+	name := runtimeStateName(sessionID, generation)
+	if d.cfg.RecoveryPath == "" || name == "" {
 		return ""
 	}
-	return filepath.Join(directory, sessionID+"."+generation+".json")
+	return filepath.Join(filepath.Dir(d.cfg.RecoveryPath), name)
+}
+
+func runtimeStateName(sessionID, generation string) string {
+	if !api.ValidSessionID(sessionID) || !validRuntimeGeneration(generation) {
+		return ""
+	}
+	return filepath.Join(runtimeStateDirName, sessionID+"."+generation+".json")
 }
 
 func (d *Daemon) writeRuntimeState(sessionID, generation string, stack *protocols.Stack) error {
 	if d.cfg.RecoveryPath == "" {
 		return nil
 	}
-	path := d.runtimeStateFile(sessionID, generation)
-	if path == "" || stack == nil {
+	name := runtimeStateName(sessionID, generation)
+	if name == "" || stack == nil {
 		return errors.New("runtime state requires a valid session, generation and stack")
 	}
 	record := runtimeStateRecord{
@@ -87,16 +91,18 @@ func (d *Daemon) writeRuntimeState(sessionID, generation string, stack *protocol
 	if len(data)+1 > maxRuntimeStateSize {
 		return fmt.Errorf("runtime state exceeds %d bytes", maxRuntimeStateSize)
 	}
-	return writeStateFile(path, append(data, '\n'))
+	return writeStateFile(filepath.Dir(d.cfg.RecoveryPath), name, append(data, '\n'))
 }
 
-func (d *Daemon) loadRuntimeState(sessionID, generation string) (map[string]devicestate.State, error) {
+func (d *Daemon) loadRuntimeState(
+	sessionID, generation string,
+) (map[string]devicestate.State, error) {
 	empty := map[string]devicestate.State{}
-	path := d.runtimeStateFile(sessionID, generation)
-	if path == "" {
+	name := runtimeStateName(sessionID, generation)
+	if d.cfg.RecoveryPath == "" || name == "" {
 		return empty, errors.New("runtime state requires a valid session and generation")
 	}
-	record, err := readRuntimeStateRecord(path)
+	record, err := readRuntimeStateRecord(filepath.Dir(d.cfg.RecoveryPath), name)
 	if err != nil {
 		return empty, err
 	}
@@ -110,17 +116,23 @@ func (d *Daemon) loadRuntimeState(sessionID, generation string) (map[string]devi
 }
 
 func (d *Daemon) clearRuntimeState(sessionID, generation string) {
-	path := d.runtimeStateFile(sessionID, generation)
-	if path == "" {
+	name := runtimeStateName(sessionID, generation)
+	if d.cfg.RecoveryPath == "" || name == "" {
 		return
 	}
-	if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, fs.ErrNotExist) {
+	if removeErr := removeStateFile(filepath.Dir(d.cfg.RecoveryPath), name); removeErr != nil &&
+		!errors.Is(removeErr, fs.ErrNotExist) {
 		logging.Warningf("Could not remove runtime state for session %s: %v", sessionID, removeErr)
 	}
 }
 
-func readRuntimeStateRecord(path string) (runtimeStateRecord, error) {
-	info, statErr := os.Lstat(path)
+func readRuntimeStateRecord(directory, name string) (runtimeStateRecord, error) {
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		return runtimeStateRecord{}, err
+	}
+	defer func() { _ = root.Close() }()
+	info, statErr := root.Lstat(name)
 	if statErr != nil {
 		return runtimeStateRecord{}, statErr
 	}
@@ -130,7 +142,7 @@ func readRuntimeStateRecord(path string) (runtimeStateRecord, error) {
 	if info.Size() > maxRuntimeStateSize {
 		return runtimeStateRecord{}, errors.New("runtime state exceeds the maximum size")
 	}
-	file, openErr := os.Open(path)
+	file, openErr := root.Open(name)
 	if openErr != nil {
 		return runtimeStateRecord{}, openErr
 	}

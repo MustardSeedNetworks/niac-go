@@ -112,49 +112,14 @@ func (d *Daemon) persistSimulationRequests(requests map[string]activeSimulationE
 }
 
 func writeRecoveryState(path string, data []byte) error {
-	return writeStateFile(path, data)
-}
-
-// writeStateFile replaces a daemon state file atomically: a crash during the
-// write leaves the previous record, never a half-written one.
-func writeStateFile(path string, data []byte) error {
-	directory := filepath.Dir(path)
-	if mkdirErr := os.MkdirAll(directory, 0o750); mkdirErr != nil {
-		return fmt.Errorf("create state directory: %w", mkdirErr)
-	}
-	temp, createErr := os.CreateTemp(directory, ".state-")
-	if createErr != nil {
-		return fmt.Errorf("create state file: %w", createErr)
-	}
-	tempPath := temp.Name()
-	defer func() { _ = os.Remove(tempPath) }()
-
-	if chmodErr := temp.Chmod(recoveryFileMode); chmodErr != nil {
-		_ = temp.Close()
-		return fmt.Errorf("secure state file: %w", chmodErr)
-	}
-	if _, writeErr := temp.Write(data); writeErr != nil {
-		_ = temp.Close()
-		return fmt.Errorf("write state file: %w", writeErr)
-	}
-	if syncErr := temp.Sync(); syncErr != nil {
-		_ = temp.Close()
-		return fmt.Errorf("sync state file: %w", syncErr)
-	}
-	if closeErr := temp.Close(); closeErr != nil {
-		return fmt.Errorf("close state file: %w", closeErr)
-	}
-	if renameErr := os.Rename(tempPath, path); renameErr != nil {
-		return fmt.Errorf("replace state file: %w", renameErr)
-	}
-	return nil
+	return writeStateFile(filepath.Dir(path), filepath.Base(path), data)
 }
 
 func (d *Daemon) clearActiveSimulation() error {
 	if d.cfg.RecoveryPath == "" {
 		return nil
 	}
-	removeErr := os.Remove(d.cfg.RecoveryPath)
+	removeErr := removeStateFile(filepath.Dir(d.cfg.RecoveryPath), filepath.Base(d.cfg.RecoveryPath))
 	if removeErr != nil && !errors.Is(removeErr, fs.ErrNotExist) {
 		return removeErr
 	}
