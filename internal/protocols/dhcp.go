@@ -255,6 +255,9 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 
 // allocateLease allocates or renews a lease.
 func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, hostname string) (*DHCPLease, error) {
+	if h.conflictsWithOffer(requestedIP) {
+		return nil, ErrNoAvailableIPAddresses
+	}
 	mac = slices.Clone(mac)
 	requestedIP = slices.Clone(requestedIP)
 	h.mu.Lock()
@@ -466,7 +469,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 		return
 	}
 
-	lease, err := h.allocateLease(info.dhcp.ClientHWAddr, nil, info.hostname)
+	address, err := h.offerAddress(info.dhcp.ClientHWAddr, info.hostname)
 	if err != nil {
 		if debugLevel >= 1 {
 			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to allocate IP: %v sn=%d", err, serialNum)
@@ -478,7 +481,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 	offerErr := h.SendDHCPOffer(
 		info.dhcp.Xid,
 		info.dhcp.ClientHWAddr,
-		lease.IP,
+		address,
 		h.configuredServerIP(),
 		serverDevice.MACAddress,
 		info.vlan,
@@ -495,7 +498,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 
 	if debugLevel >= debugLevelInfo {
 		logging.ProtocolDebugf("DHCP", debugLevel, debugLevelInfo, "Sent Offer IP=%s to %s sn=%d",
-			lease.IP, info.dhcp.ClientHWAddr, serialNum)
+			address, info.dhcp.ClientHWAddr, serialNum)
 	}
 }
 
@@ -505,6 +508,9 @@ func (h *DHCPHandler) handleDHCPDiscover(
 // silently ACKed for a substitute. Takes the read lock; the pool/lease helpers
 // it calls assume the caller holds it.
 func (h *DHCPHandler) canGrantRequestedIP(mac net.HardwareAddr, ip net.IP) bool {
+	if h.conflictsWithOffer(ip) {
+		return false
+	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.canGrantRequestedIPLocked(mac, ip)
