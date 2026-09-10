@@ -537,6 +537,8 @@ type stateNotificationRegistration struct {
 	interfaceIndex func(string) (int, bool)
 	vlan           int
 	cursor         uint64
+	uptime         func() uint32
+	recovered      bool
 }
 
 type stateNotificationManager struct {
@@ -571,15 +573,20 @@ func (m *stateNotificationManager) Register(
 		return
 	}
 	store.SetChangeSignal(m.wake)
+	var uptime func() uint32
+	if group := m.stack.getSNMPAgents(device); group != nil && group.baseAgent != nil {
+		uptime = group.baseAgent.UptimeTicks
+	}
 	m.mu.Lock()
 	m.registrations[device] = &stateNotificationRegistration{
-		device: device, store: store, interfaceIndex: interfaceIndex, vlan: vlan,
+		device: device, store: store, interfaceIndex: interfaceIndex, vlan: vlan, uptime: uptime,
 	}
 	m.mu.Unlock()
 }
 
 func notificationsEnabled(device *config.Device) bool {
 	return device != nil && ((device.SyslogConfig != nil && device.SyslogConfig.Enabled) ||
+		(device.STPConfig != nil && device.STPConfig.Enabled) ||
 		(device.SNMPConfig.Traps != nil && device.SNMPConfig.Traps.Enabled))
 }
 
@@ -594,6 +601,7 @@ func (m *stateNotificationManager) skipRestoredHistory() {
 	defer m.mu.Unlock()
 	for _, registration := range m.registrations {
 		registration.cursor = registration.store.Version()
+		registration.recovered = true
 	}
 }
 
@@ -652,56 +660,12 @@ func (m *stateNotificationManager) sendColdStarts() {
 	defer m.mu.Unlock()
 	for _, registration := range m.registrations {
 		traps := registration.device.SNMPConfig.Traps
-		if traps == nil || traps.ColdStart == nil || !traps.ColdStart.Enabled || !traps.ColdStart.OnStartup {
+		if registration.recovered || traps == nil || traps.ColdStart == nil || !traps.ColdStart.Enabled ||
+			!traps.ColdStart.OnStartup {
 			continue
 		}
 		m.sendTrap(registration.device, snmp.OIDColdStart, nil, registration.store.Snapshot().Version)
 	}
-}
-
-func (m *stateNotificationManager) sendEvent(device *config.Device, event devicestate.Event) {
-	m.sendSyslog(device, event)
-	if event.Kind != devicestate.EventInterfaceUpdated || event.Interface == nil || event.PreviousInterface == nil {
-		return
-	}
-	if event.Interface.OperUp == event.PreviousInterface.OperUp {
-		return
-	}
-	traps := device.SNMPConfig.Traps
-	if traps == nil || traps.LinkState == nil || !traps.LinkState.Enabled {
-		return
-	}
-	up := event.Interface.OperUp
-	if (up && !traps.LinkState.LinkUp) || (!up && !traps.LinkState.LinkDown) {
-		return
-	}
-	oid := snmp.OIDLinkDown
-	operStatus := snmp.IfStatusDown
-	if up {
-		oid = snmp.OIDLinkUp
-		operStatus = snmp.IfStatusUp
-	}
-	adminStatus := snmp.IfStatusDown
-	if event.Interface.AdminUp {
-		adminStatus = snmp.IfStatusUp
-	}
-	index := event.InterfaceIndex
-	if registration := m.registrations[device]; registration != nil && registration.interfaceIndex != nil {
-		resolved, found := registration.interfaceIndex(event.Interface.Name)
-		if !found {
-			slog.Warn("skip link notification without IF-MIB index", "device", device.Name,
-				"interface", event.Interface.Name)
-			return
-		}
-		index = resolved
-	}
-	variables := []gosnmp.SnmpPDU{
-		{Name: fmt.Sprintf(".1.3.6.1.2.1.2.2.1.1.%d", index), Type: gosnmp.Integer, Value: index},
-		{Name: fmt.Sprintf(".1.3.6.1.2.1.2.2.1.7.%d", index), Type: gosnmp.Integer, Value: adminStatus},
-		{Name: fmt.Sprintf(".1.3.6.1.2.1.2.2.1.8.%d", index), Type: gosnmp.Integer, Value: operStatus},
-		{Name: fmt.Sprintf(".1.3.6.1.2.1.2.2.1.2.%d", index), Type: gosnmp.OctetString, Value: event.Interface.Name},
-	}
-	m.sendTrap(device, oid, variables, event.Version)
 }
 
 func (m *stateNotificationManager) sendTrap(
@@ -718,7 +682,7 @@ func (m *stateNotificationManager) sendTrap(
 	if community == "" {
 		community = config.DefaultSNMPCommunity
 	}
-	uptime := safeconv.Uint32FromInt64(int64(time.Since(m.started) / snmpCentisecond))
+	uptime := m.notificationUptime(device)
 	requestID := safeconv.Uint32FromUint64(version)
 	vars := []gosnmp.SnmpPDU{
 		{Name: ".1.3.6.1.2.1.1.3.0", Type: gosnmp.TimeTicks, Value: uptime},
