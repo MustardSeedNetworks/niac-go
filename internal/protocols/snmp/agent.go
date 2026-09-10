@@ -54,6 +54,7 @@ type Agent struct {
 	walkFaultIndex          string
 	resourceFaultBindings   map[string]resourceFaultBinding
 	interfaceChangeBindings map[string]interfaceChangeBinding
+	deviceActionBindings    map[string]deviceActionBinding
 	// poe is the published per-port power picture. It is an atomic pointer
 	// because the POWER-ETHERNET-MIB columns that read it are dynamic OIDs,
 	// which the MIB calls while holding its own lock; a mutex here would order
@@ -285,8 +286,10 @@ func simulatedUptimeBase(device *config.Device) time.Duration {
 // MIB.Reindex.
 func (a *Agent) Reindex() {
 	a.registerResourceFaults()
+	a.registerDeviceActions()
 	a.mu.Lock()
 	a.refreshDeviceStateInterfaceMIBs()
+	a.registerUnmappedRebootTimestamps()
 	a.mu.Unlock()
 	a.mib.Reindex()
 }
@@ -334,8 +337,10 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
 	a.registerResourceFaults()
+	a.registerDeviceActions()
 	a.mu.Lock()
 	a.refreshDeviceStateInterfaceMIBs()
+	a.registerUnmappedRebootTimestamps()
 	a.mu.Unlock()
 	if contract.ownsTopology {
 		a.refreshAuthoredDiscoveryMIBs()
