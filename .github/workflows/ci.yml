@@ -478,6 +478,11 @@ jobs:
           CGO_ENABLED: "0"
         run: go test ./internal/packetdecode/ -v
 
+      - name: Test recovery filesystem confinement
+        env:
+          CGO_ENABLED: "0"
+        run: go test ./internal/daemon/ -run 'Test(StateWriteCannotTraverseOutsideRoot|InlineFinishRetainsOriginalDirectoryCapability|RuntimeCleanupCannotFollowEscapedDirectory)$' -count=1 -v
+
   # Windows-tagged Go has never been linted: golangci-lint runs on ubuntu and
   # skips *_windows.go, and the Windows job runs build/vet/tests but no linter.
   # GOOS=windows makes golangci-lint compile and lint the whole Windows tree on
