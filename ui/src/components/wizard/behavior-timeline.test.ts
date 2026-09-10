@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
 
 describe('parseDraftBehaviorTimelines', () => {
+  it('preserves an interface-scoped link-down fault', () => {
+    const parsed = parseDraftBehaviorTimelines(`
+behavior_timelines:
+  - name: Link outage
+    repeat_count: 1
+    phases:
+      - name: Down
+        duration_ms: 1000
+        faults: [{device: edge-1, interface: eth0, type: link_down, value: 1}]
+`);
+    expect(parsed[0]?.phases[0]?.faults).toEqual([
+      { device: 'edge-1', interface: 'eth0', type: 'link_down', value: 1 },
+    ]);
+  });
   it.each(['dhcp_no_offer', 'dns_nxdomain', 'dns_timeout', 'latency'])(
     'preserves a device-scoped %s without inventing an interface',
     (type) => {

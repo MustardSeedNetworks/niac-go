@@ -161,13 +161,13 @@ type BehaviorFault struct {
 	// `interfaces` list. Omit it for a device-scoped service fault.
 	Interface string `yaml:"interface,omitempty"`
 
-	// Type is the fault to inject. The first four are interface-scoped and
-	// raise SNMP counters; the last four are device-scoped service outcomes
-	// and are authored without an `interface`.
-	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization dhcp_no_offer dns_nxdomain dns_timeout latency"`
+	// Type is the fault to inject. Interface faults raise SNMP counters or
+	// force a link down; device-scoped service outcomes omit `interface`.
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency"`
 
-	// Value is the rate or, for latency, the delay in milliseconds. The
-	// ceiling is the fault's own: 100 for a rate, 60000 for latency.
+	// Value is the rate or, for latency, the delay in milliseconds. Link down
+	// is an outcome: any accepted nonzero value enables it. The ceiling is
+	// 100 for interface faults and service rates, 60000 for latency.
 	Value int `yaml:"value" validate:"gte=1,lte=60000"`
 }
 
@@ -385,7 +385,7 @@ type Device struct {
 	// start.
 	SSH *SSHConfig `yaml:"ssh,omitempty"`
 
-	// Syslog sends this device's state-change messages to RFC 5424
+	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`
 

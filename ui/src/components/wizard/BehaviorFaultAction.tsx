@@ -11,6 +11,7 @@ import {
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Input, Select } from '../../ui/Input';
+import { SmallText } from '../../ui/Typography';
 
 interface Option {
   value: string;
@@ -79,23 +80,27 @@ export function BehaviorFaultAction({
               device: action.device,
               type,
               interface: action.interface ?? '',
-              value: action.value,
+              value: type === 'link_down' ? 1 : action.value,
             });
         }}
       />
-      <Input
-        label={
-          action.type === 'latency'
-            ? t('newSimWizard.behaviors.latencyMs')
-            : t('newSimWizard.behaviors.faultRate')
-        }
-        type="number"
-        min={1}
-        max={behaviorFaultMaximum(action.type)}
-        step={1}
-        value={action.value}
-        onChange={(event) => onChange({ ...action, value: Number(event.target.value) })}
-      />
+      {action.type === 'link_down' ? (
+        <SmallText>{t('newSimWizard.behaviors.linkDownEffect')}</SmallText>
+      ) : (
+        <Input
+          label={
+            action.type === 'latency'
+              ? t('newSimWizard.behaviors.latencyMs')
+              : t('newSimWizard.behaviors.faultRate')
+          }
+          type="number"
+          min={1}
+          max={behaviorFaultMaximum(action.type)}
+          step={1}
+          value={action.value}
+          onChange={(event) => onChange({ ...action, value: Number(event.target.value) })}
+        />
+      )}
       <Button
         variant="outline"
         tone="red"

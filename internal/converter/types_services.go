@@ -26,7 +26,7 @@ func (SSHConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
 	}
 }
 
-// SyslogConfig sends configuration-state messages to RFC 5424 collectors.
+// SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least
 	// one receiver is required.
