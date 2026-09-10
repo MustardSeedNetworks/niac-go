@@ -396,7 +396,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 		Length:       len(buf),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         h.deviceVLAN(device),
+		VLAN:         h.stack.discoveryVLAN(device),
 	}
 	h.stack.Send(pkt)
 
@@ -405,21 +405,6 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	}
 
 	return nil
-}
-
-func (h *STPHandler) deviceVLAN(device *config.Device) int {
-	h.stack.configMu.RLock()
-	defer h.stack.configMu.RUnlock()
-	if h.stack.config != nil {
-		for _, segment := range h.stack.config.Segments {
-			for index := range segment.Devices {
-				if &segment.Devices[index] == device {
-					return segment.Tag
-				}
-			}
-		}
-	}
-	return device.VLAN
 }
 
 // makeBridgeID creates a bridge ID from priority and MAC address.

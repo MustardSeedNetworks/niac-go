@@ -24,6 +24,6 @@ func (h *STPHandler) SendTopologyChange(device *config.Device) error {
 		[]byte{0, 7, stpLLCDSAP, stpLLCSSAP, stpLLCControl, 0, 0, STPVersion, BPDUTypeTCN},
 	)
 	return h.stack.send(
-		&Packet{Buffer: frame, Length: len(frame), Device: device, VLAN: h.deviceVLAN(device)},
+		&Packet{Buffer: frame, Length: len(frame), Device: device, VLAN: h.stack.discoveryVLAN(device)},
 	)
 }

@@ -157,9 +157,11 @@ func (h *EDPHandler) Stop() {
 
 // sendAdvertisements sends EDP advertisements for all devices.
 func (h *EDPHandler) sendAdvertisements() {
+	h.stack.reloadMu.RLock()
+	defer h.stack.reloadMu.RUnlock()
 	debugLevel := h.stack.GetDebugLevel()
 
-	devices := h.stack.GetDevices().GetAll()
+	devices := h.stack.AllDevices()
 	for _, device := range devices {
 		if len(device.MACAddress) == 0 {
 			continue
