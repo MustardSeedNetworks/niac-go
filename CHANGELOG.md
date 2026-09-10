@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.49](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.48...v0.95.49) (2026-09-10)
+
+
+### Features
+
+* model typed address fault state ([#2033](https://github.com/MustardSeedNetworks/niac-go/issues/2033)) ([70c8c1e](https://github.com/MustardSeedNetworks/niac-go/commit/70c8c1ed73596c6eb6454fb7c38ab4962eccdbe2))
+
 ## [0.95.48](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.47...v0.95.48) (2026-09-10)
 
 
