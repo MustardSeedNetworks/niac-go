@@ -53,6 +53,7 @@ type Transition struct {
 	Actions        []Action
 	DeviceActions  []DeviceAction
 	AddressActions []InterfaceAddressAction
+	PrefixActions  []InterfacePrefixAction
 	OneShotActions []OneShotAction
 }
 
@@ -63,6 +64,7 @@ type scheduledTransition struct {
 	actions        []Action
 	deviceActions  []DeviceAction
 	addressActions []InterfaceAddressAction
+	prefixActions  []InterfacePrefixAction
 	oneShotActions []OneShotAction
 }
 
@@ -84,6 +86,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 					actions: actions, deviceActions: deviceActions,
 					oneShotActions: compileOneShotActions(phase.Actions, phaseRef.ID),
 					addressActions: interfaceAddressActions(phase, false),
+					prefixActions:  interfacePrefixActions(phase, false),
 				})
 				end := scheduledTransition{
 					offset: cycleStart + phase.StartOffset + phase.Duration,
@@ -93,6 +96,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 					end.actions = resetActions(actions)
 					end.deviceActions = resetDeviceActions(deviceActions)
 					end.addressActions = interfaceAddressActions(phase, true)
+					end.prefixActions = interfacePrefixActions(phase, true)
 				}
 				scheduled = append(scheduled, end)
 			}
@@ -134,7 +138,7 @@ func behaviorActions(phase config.BehaviorPhase) ([]Action, []DeviceAction) {
 		})
 	}
 	for _, fault := range phase.Faults {
-		if fault.Type == string(devicestate.FaultDuplicateIP) {
+		if fault.Type == string(devicestate.FaultDuplicateIP) || fault.Type == string(devicestate.FaultBadMask) {
 			continue
 		}
 		if fault.Interface == "" {
@@ -187,6 +191,7 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 		transition.Actions = append(transition.Actions, current.actions...)
 		transition.DeviceActions = append(transition.DeviceActions, current.deviceActions...)
 		transition.AddressActions = append(transition.AddressActions, current.addressActions...)
+		transition.PrefixActions = append(transition.PrefixActions, current.prefixActions...)
 		transition.OneShotActions = append(transition.OneShotActions, current.oneShotActions...)
 	}
 	return result

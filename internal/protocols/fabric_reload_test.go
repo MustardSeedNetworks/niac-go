@@ -40,11 +40,31 @@ func (t *reloadBlockingTarget) SetDeviceAddressFault(
 	return t.stack.SetDeviceAddressFault(device, kind, address)
 }
 
-func (t *reloadBlockingTarget) ClearDeviceFault(device string, kind devicestate.DeviceFaultType) error {
+func (t *reloadBlockingTarget) ClearDeviceFault(
+	device string,
+	kind devicestate.DeviceFaultType,
+) error {
 	return t.stack.ClearDeviceFault(device, kind)
 }
 
-func (t *reloadBlockingTarget) SetInterfaceAddressFault(device string, fault devicestate.InterfaceAddressFault) error {
+func (t *reloadBlockingTarget) SetInterfacePrefixFault(
+	device string,
+	fault devicestate.InterfacePrefixFault,
+) error {
+	return t.stack.SetInterfacePrefixFault(device, fault)
+}
+
+func (t *reloadBlockingTarget) ClearInterfacePrefixFault(
+	device, iface string,
+	kind devicestate.InterfacePrefixFaultType,
+) error {
+	return t.stack.ClearInterfacePrefixFault(device, iface, kind)
+}
+
+func (t *reloadBlockingTarget) SetInterfaceAddressFault(
+	device string,
+	fault devicestate.InterfaceAddressFault,
+) error {
 	return t.stack.SetInterfaceAddressFault(device, fault)
 }
 

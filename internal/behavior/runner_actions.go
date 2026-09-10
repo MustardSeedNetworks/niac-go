@@ -29,6 +29,9 @@ func (r *Runner) applyTransition(ctx context.Context, transition Transition) boo
 			return false
 		}
 	}
+	if !r.applyPrefixActions(ctx, transition.PrefixActions) {
+		return false
+	}
 	for _, action := range transition.OneShotActions {
 		if ctx.Err() != nil {
 			r.finish("stopped", "")
