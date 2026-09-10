@@ -51,21 +51,27 @@ The final v1.0 release remains gated by every exit criterion below.
 
 Implementation checkpoint (2026-09-10): resource telemetry is merged in
 v0.95.45. Captive-portal authoring and live device-fault controls merged in
-PR #2021, with real TCP isolation/clearing and saved-configuration browser
-checks. Reboot/STP implementation passes isolated Linux packet tests for
+PR #2021 and published v0.95.46, with real TCP isolation/clearing and saved-configuration browser
+checks. Reboot/STP PR #2025 merged at d94569cb with green merge-group CI,
+including actual browser tests. Isolated Linux packet tests verify
 notifications, telemetry, no replay of actions recorded in recovered state,
 and scenario VLAN tags. Authoring, save and re-import pass Chromium, WebKit,
 installed Chrome and Edge checks with zero retries. Native Linux checks also
-verify rejection of unsupported actions before capture or reload. Full-suite
-verification and the action PR remain in progress. DHCP isolation
-and explicit address faults remain uncompleted.
+verify rejection of unsupported actions before capture or reload. DHCP isolation
+PR #2027 and authoring-safety PR #2028 remain in the delivery sequence.
+Duplicate IP and bad-mask outcomes remain uncompleted.
 The phase boxes below track acceptance, not individual implementation merges.
 
 DHCP isolation verification (2026-09-10): per-server configuration, lease
 ownership, selected-server replies and VLAN isolation pass native Linux race
 and packet tests. The packet test covers four servers on two VLANs, including
-fault clearing and healthy-peer behavior. Duplicate-offer and address-conflict
-faults are still separate remaining work; this is not phase acceptance.
+fault clearing and healthy-peer behavior. Duplicate-offer implementation now
+has typed configuration/API/UI payloads, exact clearing, recovery and selected
+attachment preflight. Native protocol race checks passed 1,630 tests and both
+DHCP wire tests passed without skips. Twelve browser checks passed with no
+retries across Chromium, installed Chrome/Edge and WebKit; this does not verify
+native Safari. Full repository gates and PR delivery remain open. No whole-P2
+or consumer-topology acceptance is claimed.
 
 - [x] Injected interface faults are observable through IF-MIB and
       EtherLike-MIB counters while preserving monotonic counter behavior.
