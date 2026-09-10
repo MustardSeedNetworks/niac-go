@@ -25,7 +25,7 @@ and the final P6 release gate. Recheck recorded completions against their eviden
 do not silently omit a prerequisite because it belongs to an earlier phase.
 
 | Phase | Remaining scope | Completion evidence |
-|---|---|---|
+| --- | --- | --- |
 | P2 — Faults | Runtime recovery, link/fault syslog, and the remaining device-outcome faults. | Fault/state recovery tests, real-wire assertions, and a verified phase release. |
 | P3 — Second consumer | Authenticated release-binary harness, six-pack consumer comparisons, and CI orchestration. | Zero findings plus three consecutive green scheduled runs, followed by a verified phase release. |
 | P5 — Product hardening | Install/upgrade paths, authoring and routing content, platform/browser matrix, support materials, and flake closure. | Per-platform evidence, ten consecutive qualifying green merge-queue runs, required owner acceptance, and a verified phase release. |
