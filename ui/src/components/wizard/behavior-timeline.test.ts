@@ -28,7 +28,7 @@ describe('parseDraftBehaviorTimelines', () => {
       { device: 'hospital-server-1', type: 'disk_percent', value: 100 },
       { device: 'access-1', interface: 'eth0', type: 'link_down', value: 1 },
     ];
-    const authored = (actions: typeof faults) =>
+    const authored = (actions: unknown) =>
       stringify({
         behavior_timelines: [
           { name: 'Resource pressure', phases: [{ name: 'Busy', faults: actions }] },
