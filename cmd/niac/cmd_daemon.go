@@ -368,7 +368,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		return err
 	}
 
-	logging.Infof("Starting NIAC Daemon v%s", info.version)
+	logging.Infof("Starting NIAC Daemon %s", info.version)
 	logging.Infof("Web UI will be available at https://%s", listenAddr)
 	authEnabled := token != "" || tokenFile != ""
 	switch {

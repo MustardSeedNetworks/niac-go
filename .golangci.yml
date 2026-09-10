@@ -19,6 +19,7 @@ run:
   # on every platform — a silent "false clear", not a pass.
   build-tags:
     - integration
+    - acceptance
   modules-download-mode: readonly
   allow-parallel-runners: true
   relative-path-mode: gomod

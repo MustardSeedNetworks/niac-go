@@ -16,8 +16,9 @@ import (
 
 // A session running a real stack, so the checkpoint handlers act on device
 // state rather than on a stub that cannot disagree with the daemon.
-func serverWithRunningSession(t *testing.T, id string) (*Server, *protocols.Stack) {
+func serverWithRunningSession(t *testing.T) (*Server, *protocols.Stack) {
 	t.Helper()
+	const id = "hospital"
 	cfg := &config.Config{Devices: []config.Device{{
 		Name: "edge-1", IPAddresses: []net.IP{{192, 0, 2, 1}},
 		Interfaces: []config.Interface{{Name: "Gi0/1", Address: "192.0.2.1/24", Speed: 100}},
@@ -49,7 +50,7 @@ func checkpointCall(
 }
 
 func TestSessionCheckpointSaveListAndRestore(t *testing.T) {
-	server, stack := serverWithRunningSession(t, "hospital")
+	server, stack := serverWithRunningSession(t)
 	base := "/api/v1/sessions/hospital/checkpoints"
 
 	recorder := checkpointCall(t, server, http.MethodPost, base, `{"name":"healthy"}`)
@@ -87,7 +88,7 @@ func TestSessionCheckpointSaveListAndRestore(t *testing.T) {
 // Restoring a name nothing saved is the harness's own mistake, and answering
 // 200 would let an acceptance run assert against a scenario it never reset.
 func TestSessionCheckpointRestoreUnknownNameIs404(t *testing.T) {
-	server, _ := serverWithRunningSession(t, "hospital")
+	server, _ := serverWithRunningSession(t)
 
 	recorder := checkpointCall(t, server,
 		http.MethodPost, "/api/v1/sessions/hospital/checkpoints/restore", `{"name":"absent"}`)
@@ -97,7 +98,7 @@ func TestSessionCheckpointRestoreUnknownNameIs404(t *testing.T) {
 }
 
 func TestSessionCheckpointRejectsAnEmptyName(t *testing.T) {
-	server, _ := serverWithRunningSession(t, "hospital")
+	server, _ := serverWithRunningSession(t)
 
 	recorder := checkpointCall(t, server,
 		http.MethodPost, "/api/v1/sessions/hospital/checkpoints", `{"name":""}`)
@@ -121,7 +122,7 @@ func TestSessionCheckpointWithoutAStackIs409(t *testing.T) {
 }
 
 func TestSessionCheckpointRejectsAnUnsupportedMethod(t *testing.T) {
-	server, _ := serverWithRunningSession(t, "hospital")
+	server, _ := serverWithRunningSession(t)
 
 	recorder := checkpointCall(t, server,
 		http.MethodPut, "/api/v1/sessions/hospital/checkpoints", `{"name":"healthy"}`)

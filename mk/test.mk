@@ -123,6 +123,23 @@ test-hooks: ## Run repository script regression tests
 	@./scripts/tests/file-size-gate-test.sh
 
 # =============================================================================
+# Acceptance (shipped binary)
+# =============================================================================
+
+# The acceptance suite drives a built artifact as a subprocess, so it sees the
+# embedded UI, the version ldflags, the TLS listener and the auth middleware —
+# none of which exist in a package test that links the daemon in. `build` is a
+# prerequisite because a stale binary would report on the wrong tree; point
+# NIAC_ACCEPTANCE_BINARY at a downloaded release to check one of those instead.
+test-acceptance: build ## Drive the built binary through its authenticated API
+	@echo ""
+	@echo "🔌 Running acceptance tests against ./$(BINARY_NAME)..."
+	@NIAC_ACCEPTANCE_BINARY="$(CURDIR)/$(BINARY_NAME)" \
+		go test -tags acceptance ./internal/acceptance/harness/... -count=1
+	@echo ""
+	@echo "✅ Acceptance tests complete"
+
+# =============================================================================
 # E2E Tests
 # =============================================================================
 

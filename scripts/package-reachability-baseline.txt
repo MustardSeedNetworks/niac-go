@@ -1,2 +1,2 @@
-
+internal/acceptance/harness          # test-only — drives the built binary as a subprocess (make test-acceptance)
 internal/device                      # unwired — nothing imports it
