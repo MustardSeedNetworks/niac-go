@@ -288,12 +288,16 @@ export interface ErrorType {
 }
 
 export interface ErrorInjectionInfo {
-  availableDeviceTypes?: (ErrorType & {
-    maxValue: number;
-    valueKind: 'toggle' | 'percent' | 'milliseconds';
-  })[];
+  availableDeviceTypes?: (ErrorType &
+    (
+      | {
+          maxValue: number;
+          valueKind: 'toggle' | 'percent' | 'milliseconds';
+        }
+      | { valueKind: 'address'; maxValue?: never }
+    ))[];
   deviceTargets?: { device: string; address?: string; errorTypes: string[] }[];
-  activeDeviceErrors?: Record<string, Record<string, number>>;
+  activeDeviceErrors?: Record<string, Record<string, DeviceFaultPayload>>;
   availableTypes: ErrorType[];
   info: string;
   targets?: {
@@ -309,6 +313,10 @@ export interface ErrorInjectionInfo {
     };
   };
 }
+
+export type DeviceFaultPayload =
+  | { value: number; address?: never }
+  | { address: string; value?: never };
 
 // The host's capture NICs. Which NIC a given session runs on is that
 // session's fact, not a NIC's: read it from SessionSummary.interface.

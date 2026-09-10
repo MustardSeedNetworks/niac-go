@@ -39,6 +39,9 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
   const { t } = useTranslation('pages');
   const showError = useErrorToast();
   const topology = useMemo(() => parseDraftTopology(draft.content), [draft.content]);
+  const dhcpDevices = topology.devices
+    .filter((device) => device.protocols.includes('DHCP'))
+    .map((device) => device.name);
   const [timelines, setTimelines] = useState<DraftBehaviorTimeline[]>(() =>
     parseDraftBehaviorTimelines(draft.content),
   );
@@ -124,10 +127,14 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
   const valid =
     validBehaviorTimelines(timelines) &&
     timelines.every((timeline) =>
-      timeline.phases.every((phase) =>
-        phase.actions.every((action) =>
-          topology.deviceActions[action.device]?.includes(action.type),
-        ),
+      timeline.phases.every(
+        (phase) =>
+          phase.faults.every(
+            (fault) => fault.type !== 'duplicate_dhcp_offer' || dhcpDevices.includes(fault.device),
+          ) &&
+          phase.actions.every((action) =>
+            topology.deviceActions[action.device]?.includes(action.type),
+          ),
       ),
     );
 
@@ -302,6 +309,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
               </div>
 
               <BehaviorPhaseActions
+                dhcpDevices={dhcpDevices}
                 phase={phase}
                 deviceOptions={deviceOptions}
                 deviceActions={topology.deviceActions}
