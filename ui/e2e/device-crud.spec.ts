@@ -25,16 +25,10 @@ test.describe('Device CRUD', () => {
     await page.route('**/api/v1/config/devices', (route) =>
       route.fulfill({ json: { devices: [], totalCount: 0, configurationLoaded: true } }),
     );
-    // `/devices` is the read-only Running Devices live view; the
-    // Device Library (the page hosting <DeviceListHeader> + the Add
-    // Device button) lives at `/device-config`. The original 14-test
-    // file went to `/devices` and never tripped this because every
-    // assertion was gated by `if-visible` (see PR-NAC2 description).
-    await page.goto('/device-config');
-    await page.waitForLoadState('domcontentloaded');
   });
 
   test('Add Device button routes to /device-config/', async ({ page }) => {
+    await page.goto('/device-config');
     const addButton = page.getByTestId('device-add');
     await expect(addButton).toBeVisible();
     await addButton.click();
