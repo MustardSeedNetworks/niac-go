@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -44,4 +45,5 @@ type BehaviorFault struct {
 	Interface string
 	Type      string
 	Value     int
+	Address   netip.Addr
 }

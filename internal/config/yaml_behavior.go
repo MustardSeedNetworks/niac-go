@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
@@ -37,7 +38,13 @@ func behaviorTrafficToYAML(traffic []BehaviorTraffic) []converter.BehaviorTraffi
 func behaviorFaultsToYAML(faults []BehaviorFault) []converter.BehaviorFault {
 	result := make([]converter.BehaviorFault, len(faults))
 	for index, action := range faults {
-		result[index] = converter.BehaviorFault(action)
+		result[index] = converter.BehaviorFault{Device: action.Device, Interface: action.Interface, Type: action.Type}
+		if action.Address.IsValid() || action.Type == string(devicestate.FaultDuplicateDHCPOffer) {
+			result[index].Address = new(action.Address.String())
+		}
+		if action.Type != string(devicestate.FaultDuplicateDHCPOffer) || action.Value != 0 {
+			result[index].Value = new(action.Value)
+		}
 	}
 	return result
 }
@@ -72,7 +79,14 @@ func convertBehaviorTraffic(authored []converter.BehaviorTraffic) []BehaviorTraf
 func convertBehaviorFaults(authored []converter.BehaviorFault) []BehaviorFault {
 	result := make([]BehaviorFault, len(authored))
 	for index, fault := range authored {
-		result[index] = BehaviorFault(fault)
+		result[index] = BehaviorFault{Device: fault.Device, Interface: fault.Interface, Type: fault.Type}
+		if fault.Address != nil {
+			// Converter validation has already checked the address syntax.
+			result[index].Address = netip.MustParseAddr(*fault.Address)
+		}
+		if fault.Value != nil {
+			result[index].Value = *fault.Value
+		}
 	}
 	return result
 }
