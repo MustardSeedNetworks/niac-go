@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"maps"
+	"net/netip"
 	"slices"
 )
 
@@ -39,8 +40,9 @@ const faultLatencyMaxMs = 60000
 
 // DeviceFault is one active service outcome on a simulated device.
 type DeviceFault struct {
-	Type  DeviceFaultType
-	Value int
+	Type    DeviceFaultType
+	Value   int
+	Address netip.Addr
 }
 
 // DeviceFaultDefinition is one supported device fault, its label and the
@@ -100,25 +102,10 @@ func (s *Store) SetDeviceFault(faultType DeviceFaultType, value int) error {
 	if value < 0 || value > definition.MaxValue {
 		return ErrFaultValueInvalid
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	current, exists := s.deviceFaults[faultType]
 	if value == 0 {
-		if !exists {
-			return nil
-		}
-		delete(s.deviceFaults, faultType)
-		s.version++
-		s.recordEvent(EventDeviceFaultCleared, string(faultType))
-		return nil
+		return s.ClearDeviceFault(faultType)
 	}
-	if exists && current.Value == value {
-		return nil
-	}
-	s.deviceFaults[faultType] = DeviceFault{Type: faultType, Value: value}
-	s.version++
-	s.recordEvent(EventDeviceFaultUpdated, string(faultType))
+	s.setDeviceFault(DeviceFault{Type: faultType, Value: value})
 	return nil
 }
 
@@ -140,8 +127,8 @@ func (s *Store) ClearDeviceFaults() {
 func (s *Store) DeviceFaultActive(faultType DeviceFaultType) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	fault, active := s.deviceFaults[faultType]
-	return active && fault.Value > 0
+	_, active := s.deviceFaults[faultType]
+	return active
 }
 
 // DeviceFaultValue returns the armed value of one device fault, or zero when
