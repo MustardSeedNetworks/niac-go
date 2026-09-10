@@ -64,6 +64,23 @@ func (g *snmpAgentGroup) poeFaultObservable(name string) bool {
 	return g != nil && g.baseAgent != nil && g.baseAgent.PoEFaultObservable(name)
 }
 
+func (g *snmpAgentGroup) resourceFaultObservable(fault devicestate.DeviceFaultType, v2Enabled bool) bool {
+	if g == nil {
+		return false
+	}
+	if g.v3Agent != nil && g.v3Agent.ResourceFaultObservable(fault) {
+		return true
+	}
+	if v2Enabled {
+		for _, agent := range g.agents {
+			if agent.ResourceFaultObservable(fault) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (g *snmpAgentGroup) Ensure(
 	community string,
 	device *config.Device,

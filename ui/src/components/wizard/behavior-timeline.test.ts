@@ -1,7 +1,26 @@
 import { describe, expect, it } from 'vitest';
+import { stringify } from 'yaml';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
 
 describe('parseDraftBehaviorTimelines', () => {
+  it('round-trips all resource faults without dropping them or adding interfaces', () => {
+    const faults = [
+      { device: 'hospital-server-1', type: 'cpu_percent', value: 1 },
+      { device: 'hospital-server-1', type: 'memory_percent', value: 50 },
+      { device: 'hospital-server-1', type: 'disk_percent', value: 100 },
+      { device: 'access-1', interface: 'eth0', type: 'link_down', value: 1 },
+    ];
+    const authored = (actions: typeof faults) =>
+      stringify({
+        behavior_timelines: [
+          { name: 'Resource pressure', phases: [{ name: 'Busy', faults: actions }] },
+        ],
+      });
+    const parsed = parseDraftBehaviorTimelines(authored(faults));
+    expect(parsed[0]?.phases[0]?.faults).toEqual(faults);
+    const reloaded = parseDraftBehaviorTimelines(authored(parsed[0]?.phases[0]?.faults ?? []));
+    expect(reloaded).toEqual(parsed);
+  });
   it('preserves an interface-scoped link-down fault', () => {
     const parsed = parseDraftBehaviorTimelines(`
 behavior_timelines:

@@ -53,6 +53,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Virtual TCP byte streams | `internal/virtualtcp` | Buffered in-memory and packet-backed `net.Conn` implementations used by simulated stream protocols |
 | Simulated SSH transport | `internal/devicecli/ssh_server.go` + `internal/protocols/tcp_ssh.go` | Explicit per-device credentials, isolated command sessions, and SSH termination through the virtual IPv4/TCP packet path |
 | Shared-state SNMP projection | `internal/protocols/snmp/device_state*.go` | Dynamic hostname, discovery identity, interface status/alias, IP address, and route values derived from authoritative state |
+| Device resource fault projection | `internal/devicestate/store_device_fault.go` + `internal/protocols/snmp/resource_fault.go` | CPU, memory and disk percentages override eligible HOST-RESOURCES values; clearing restores captured or custom dynamic baselines, including final MIB override precedence |
 | State notification output | `internal/protocols/state_notifications.go` | Authoritative transitions drive RFC 5424 SYSLOG plus SNMPv2c coldStart/linkUp/linkDown notifications; nonfunctional synthetic threshold traps are not part of the schema |
 | Management syslog | `internal/protocols/syslog.go` | RFC 5424 link/fault filtering and safe authored-hostname messages |
 

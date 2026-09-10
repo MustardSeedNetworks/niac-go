@@ -48,13 +48,16 @@
             "dhcp_no_offer",
             "dns_nxdomain",
             "dns_timeout",
-            "latency"
+            "latency",
+            "cpu_percent",
+            "memory_percent",
+            "disk_percent"
           ],
           "description": "Type is the fault to inject. Interface faults raise SNMP counters or\nforce a link down; device-scoped service outcomes omit `interface`."
         },
         "value": {
           "type": "integer",
-          "description": "Value is the rate or, for latency, the delay in milliseconds. Link down\nis an outcome: any accepted nonzero value enables it. The ceiling is\n100 for interface faults and service rates, 60000 for latency."
+          "description": "Value is the rate, resource percentage, or latency in milliseconds. Link down\nis an outcome: any accepted nonzero value enables it. The ceiling is\n100 for interface faults and service rates, 60000 for latency."
         }
       },
       "additionalProperties": false,

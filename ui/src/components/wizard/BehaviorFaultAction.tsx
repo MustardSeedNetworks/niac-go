@@ -7,6 +7,7 @@ import {
   interfaceBehaviorFaultTypes,
   isDeviceBehaviorFaultType,
   isInterfaceBehaviorFaultType,
+  isResourceBehaviorFaultType,
 } from '../../api/behavior-fault-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -91,7 +92,9 @@ export function BehaviorFaultAction({
           label={
             action.type === 'latency'
               ? t('newSimWizard.behaviors.latencyMs')
-              : t('newSimWizard.behaviors.faultRate')
+              : isResourceBehaviorFaultType(action.type)
+                ? t('newSimWizard.behaviors.resourcePercent')
+                : t('newSimWizard.behaviors.faultRate')
           }
           type="number"
           min={1}

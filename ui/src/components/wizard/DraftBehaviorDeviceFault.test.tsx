@@ -27,28 +27,39 @@ beforeEach(() => {
   replace.mockResolvedValue(draft);
 });
 
-it.each(['dhcp_no_offer', 'dns_nxdomain', 'dns_timeout', 'latency'])(
-  'saves %s without an interface and preserves the selected value',
-  async (type) => {
-    const user = userEvent.setup();
-    render(<DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
-    await user.click(screen.getByTestId('add-timeline'));
-    await user.click(screen.getByTestId('add-device-fault'));
-    await user.selectOptions(screen.getByLabelText('Fault'), type);
-    expect(screen.queryByLabelText('Interface')).not.toBeInTheDocument();
-    const value = type === 'latency' ? 60000 : 100;
-    const input = screen.getByLabelText(type === 'latency' ? 'Latency (milliseconds)' : 'Rate (%)');
-    fireEvent.change(input, { target: { value: String(value + 1) } });
-    expect(screen.getByTestId('save-behaviors')).toBeDisabled();
-    fireEvent.change(input, { target: { value: '1.5' } });
-    expect(screen.getByTestId('save-behaviors')).toBeDisabled();
-    fireEvent.change(input, { target: { value: String(value) } });
-    await user.click(screen.getByTestId('save-behaviors'));
-    await waitFor(() => expect(replace).toHaveBeenCalledOnce());
-    const timelines: DraftBehaviorTimeline[] = replace.mock.calls[0]?.[2];
-    expect(timelines[0]?.phases[0]?.faults).toEqual([{ device: 'resolver-1', type, value }]);
-  },
-);
+it.each([
+  'dhcp_no_offer',
+  'dns_nxdomain',
+  'dns_timeout',
+  'latency',
+  'cpu_percent',
+  'memory_percent',
+  'disk_percent',
+])('saves %s without an interface and preserves the selected value', async (type) => {
+  const user = userEvent.setup();
+  render(<DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+  await user.click(screen.getByTestId('add-timeline'));
+  await user.click(screen.getByTestId('add-device-fault'));
+  await user.selectOptions(screen.getByLabelText('Fault'), type);
+  expect(screen.queryByLabelText('Interface')).not.toBeInTheDocument();
+  const value = type === 'latency' ? 60000 : 100;
+  const input = screen.getByLabelText(
+    type === 'latency'
+      ? 'Latency (milliseconds)'
+      : type.endsWith('_percent')
+        ? 'Utilization (%)'
+        : 'Rate (%)',
+  );
+  fireEvent.change(input, { target: { value: String(value + 1) } });
+  expect(screen.getByTestId('save-behaviors')).toBeDisabled();
+  fireEvent.change(input, { target: { value: '1.5' } });
+  expect(screen.getByTestId('save-behaviors')).toBeDisabled();
+  fireEvent.change(input, { target: { value: String(value) } });
+  await user.click(screen.getByTestId('save-behaviors'));
+  await waitFor(() => expect(replace).toHaveBeenCalledOnce());
+  const timelines: DraftBehaviorTimeline[] = replace.mock.calls[0]?.[2];
+  expect(timelines[0]?.phases[0]?.faults).toEqual([{ device: 'resolver-1', type, value }]);
+});
 
 it('keeps imported device faults when saving a loaded timeline', async () => {
   const content = `${draft.content}

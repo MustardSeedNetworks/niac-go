@@ -163,9 +163,9 @@ type BehaviorFault struct {
 
 	// Type is the fault to inject. Interface faults raise SNMP counters or
 	// force a link down; device-scoped service outcomes omit `interface`.
-	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency"`
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent"`
 
-	// Value is the rate or, for latency, the delay in milliseconds. Link down
+	// Value is the rate, resource percentage, or latency in milliseconds. Link down
 	// is an outcome: any accepted nonzero value enables it. The ceiling is
 	// 100 for interface faults and service rates, 60000 for latency.
 	Value int `yaml:"value" validate:"gte=1,lte=60000"`
