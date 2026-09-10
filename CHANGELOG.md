@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.41](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.40...v0.95.41) (2026-09-10)
+
+
+### Features
+
+* **ui:** author device-scoped behavior faults ([#2004](https://github.com/MustardSeedNetworks/niac-go/issues/2004)) ([aadc1d9](https://github.com/MustardSeedNetworks/niac-go/commit/aadc1d99791a3e7489d762bd56a042ac68c168b2))
+
+
+### Tests
+
+* **wiretest:** assert dns_timeout and latency on the real wire ([#2002](https://github.com/MustardSeedNetworks/niac-go/issues/2002)) ([0bc1db7](https://github.com/MustardSeedNetworks/niac-go/commit/0bc1db746d1e6f7f09faf5fb258bb36e08b5d7a2))
+
 ## [0.95.40](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.39...v0.95.40) (2026-09-09)
 
 
