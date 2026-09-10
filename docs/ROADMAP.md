@@ -58,8 +58,13 @@ notifications, telemetry, no replay of actions recorded in recovered state,
 and scenario VLAN tags. Authoring, save and re-import pass Chromium, WebKit,
 installed Chrome and Edge checks with zero retries. Native Linux checks also
 verify rejection of unsupported actions before capture or reload. DHCP isolation
-PR #2027 and authoring-safety PR #2028 remain in the delivery sequence.
-Duplicate IP and bad-mask outcomes remain uncompleted.
+PR #2027 and authoring-safety PR #2028 are merged.
+Duplicate-IP configuration, typed API/UI controls and independent clearing are
+implemented. Eight browser tests pass across Chromium, WebKit, installed Chrome
+and Edge with no retries. The native Linux ARP test verifies exact healthy and
+conflicting identities, other-VLAN isolation and recovery after clearing.
+This is implementation evidence, not native Safari or external-tester acceptance.
+Bad-mask implementation and remaining consumer acceptance are still open.
 The phase boxes below track acceptance, not individual implementation merges.
 
 DHCP isolation verification (2026-09-10): per-server configuration, lease
