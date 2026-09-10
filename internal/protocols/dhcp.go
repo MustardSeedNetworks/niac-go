@@ -249,33 +249,6 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 	return pool, nil
 }
 
-// findAvailableIP finds an available IP address
-// Note: Caller must hold h.mu lock.
-func (h *DHCPHandler) findAvailableIP() net.IP {
-	// Check each IP in pool
-	for _, ip := range h.ipPool {
-		if _, declined := h.declined[ip.String()]; declined {
-			continue // client reported this address in use (DHCPDECLINE)
-		}
-
-		inUse := false
-
-		for _, lease := range h.leases {
-			if lease.IP.Equal(ip) && time.Now().Before(lease.Expiry) {
-				inUse = true
-
-				break
-			}
-		}
-
-		if !inUse {
-			return ip
-		}
-	}
-
-	return nil
-}
-
 // allocateLease allocates or renews a lease.
 func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, hostname string) (*DHCPLease, error) {
 	mac = slices.Clone(mac)
