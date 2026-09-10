@@ -402,8 +402,12 @@ device's service faults; adding `errorType` clears one of them.
 
 `DELETE /api/v1/errors` (no query parameters) clears all active error injections.
 
-Error injections persist until explicitly cleared or NIAC is restarted. The Web UI displays
-active errors in real-time and allows clearing individual interfaces or all errors at once.
+Error injections persist until explicitly cleared or the simulation is explicitly
+stopped and started again. Daemon restart recovery restores the last saved fault
+state; orderly shutdown flushes final state, while a daemon process crash can lose changes since
+the last completed periodic save. See [Daemon Simulation Recovery](DEPLOYMENT.md#daemon-simulation-recovery).
+The Web UI displays active errors in real-time and allows clearing individual
+interfaces or all errors at once.
 
 FCS faults increment `dot3StatsFCSErrors` and `ifInErrors`; packet discards
 increment `ifInDiscards` and `ifOutDiscards`; interface errors increment

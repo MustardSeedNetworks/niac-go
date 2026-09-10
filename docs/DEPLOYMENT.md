@@ -55,13 +55,38 @@ this record, and the next daemon start restores the simulation only after the
 attachment policy, host interface, configuration, runtime requirements, and
 routed preflight all pass.
 
-An explicit simulation stop removes the record. If recovery fails, NIAC keeps
+Recovery also restores running/startup device configuration, active interface
+and device faults, named checkpoints, and retained device event history from
+the session's runtime record. Restored historical events are not retransmitted
+as new traps or syslog messages. Protocol timers and authored behavior timelines
+start again; this is not a suspended-process image.
+
+An orderly daemon shutdown stops producers and flushes final device state.
+While running, changed state is saved periodically (every two seconds when
+the writer is scheduled). A process crash recovers the last completed save, so recent
+changes can be lost; slow or failing storage can extend that window. A write
+failure is logged rather than silently treated as successful persistence.
+
+Each replacement uses a distinct generation of runtime and inline configuration
+files. The launch record selects the committed generation, so an interrupted
+replacement cannot combine a new launch with an old run's saved faults.
+
+An explicit simulation Stop removes that session's recovery intent and runtime
+record. A subsequent Start begins from the authored configuration with no
+previous runtime faults. If recovery fails, NIAC keeps
 the API available, leaves the simulation stopped, and reports an actionable
 `recovery` object from `GET /api/v1/simulation`. Correct the reported condition
 or remove the named state file before restarting the daemon.
 
 Writes use a synchronized temporary file followed by an atomic replacement.
 An interrupted temporary write is ignored on the next start.
+This covers daemon process failure, not host power loss or storage failure;
+directory entries are not synchronized for a power-loss durability guarantee.
+
+Recovery files use a validated private schema. Before upgrading from an older
+pre-1.0 build that saved only launch intent, stop its simulations and start them
+again after the upgrade. Launch-only records cannot recover runtime data that
+was never saved and are rejected rather than reported as successful recovery.
 
 ## Signal Handling
 
