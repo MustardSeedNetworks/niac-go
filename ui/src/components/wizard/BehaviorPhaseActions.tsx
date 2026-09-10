@@ -6,6 +6,7 @@ import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Input, Select } from '../../ui/Input';
 import { BehaviorFaultAction } from './BehaviorFaultAction';
+import { BehaviorOneShotActions } from './BehaviorOneShotActions';
 
 interface Option {
   value: string;
@@ -41,6 +42,12 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
 
   return (
     <>
+      <BehaviorOneShotActions
+        actions={phase.actions}
+        deviceOptions={deviceOptions}
+        firstDevice={firstDevice}
+        onChange={(actions) => onChange({ ...phase, actions })}
+      />
       {phase.traffic.map((action, actionIndex) => (
         <div
           key={`traffic-${actionIndex}`}
