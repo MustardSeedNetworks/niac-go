@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.47](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.46...v0.95.47) (2026-09-10)
+
+
+### Features
+
+* add observable one-shot device operations ([#2025](https://github.com/MustardSeedNetworks/niac-go/issues/2025)) ([d94569c](https://github.com/MustardSeedNetworks/niac-go/commit/d94569cbab8c506ce549366e2e45111a7261cefb))
+
+
+### Bug Fixes
+
+* isolate DHCP state across simulated servers ([#2027](https://github.com/MustardSeedNetworks/niac-go/issues/2027)) ([5641aba](https://github.com/MustardSeedNetworks/niac-go/commit/5641aba990ab3d3a4d3441cdc669f7acacb75b8b))
+
+
+### Miscellaneous
+
+* **deps:** update dependency postcss to v8.5.28 ([#1876](https://github.com/MustardSeedNetworks/niac-go/issues/1876)) ([ac9604f](https://github.com/MustardSeedNetworks/niac-go/commit/ac9604feedf839d89654bf9a4b97d3889005c75a))
+
 ## [0.95.46](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.45...v0.95.46) (2026-09-10)
 
 
