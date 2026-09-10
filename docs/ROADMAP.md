@@ -70,8 +70,10 @@ has typed configuration/API/UI payloads, exact clearing, recovery and selected
 attachment preflight. Native protocol race checks passed 1,630 tests and both
 DHCP wire tests passed without skips. Twelve browser checks passed with no
 retries across Chromium, installed Chrome/Edge and WebKit; this does not verify
-native Safari. Full repository gates and PR delivery remain open. No whole-P2
-or consumer-topology acceptance is claimed.
+native Safari. After integrating the DHCP validation fixes, schema generation,
+lint, formatting, security, full tests and build pass; the rebuilt browser run
+also passes all twelve checks without retries. PR delivery remains open. No
+whole-P2 or consumer-topology acceptance is claimed.
 
 - [x] Injected interface faults are observable through IF-MIB and
       EtherLike-MIB counters while preserving monotonic counter behavior.
