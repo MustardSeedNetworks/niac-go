@@ -49,6 +49,8 @@ type Store struct {
 	changeObserver       func(Snapshot)
 	now                  func() time.Time
 	interfaceTransitions map[string]interfaceTransition
+	telemetry            DeviceTelemetry
+	consumedActions      map[string]DeviceActionType
 }
 
 // NewStore creates a store seeded with authored device identity.

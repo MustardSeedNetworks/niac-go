@@ -16,6 +16,7 @@ type Configuration struct {
 
 // Checkpoint is one saved scenario point in a durable state record.
 type Checkpoint struct {
+	Telemetry       DeviceTelemetry
 	Name            string
 	Configuration   Configuration
 	InterfaceFaults []InterfaceFault
@@ -31,6 +32,8 @@ type Checkpoint struct {
 // stale copy of it would make ResetAuthored return a device to a scenario the
 // file no longer describes.
 type State struct {
+	Telemetry       DeviceTelemetry
+	ConsumedActions []ConsumedDeviceAction
 	Running         Configuration
 	Startup         Configuration
 	InterfaceFaults []InterfaceFault
@@ -61,6 +64,8 @@ func (s *Store) ExportState() State {
 	defer s.mu.RUnlock()
 
 	return State{
+		Telemetry:       s.telemetry,
+		ConsumedActions: exportConsumedActions(s.consumedActions),
 		Running:         exportConfiguration(s.running),
 		Startup:         exportConfiguration(s.startup),
 		InterfaceFaults: sortedInterfaceFaults(s.faults),
@@ -88,6 +93,8 @@ func (s *Store) RestoreState(state State) error {
 	s.startup = importConfiguration(state.Startup)
 	s.faults = importInterfaceFaults(state.InterfaceFaults)
 	s.deviceFaults = importDeviceFaults(state.DeviceFaults)
+	s.telemetry = state.Telemetry
+	s.consumedActions = importConsumedActions(state.ConsumedActions)
 	s.checkpoints = importCheckpoints(state.Checkpoints)
 	s.events = cloneEvents(state.Events)
 	s.version = state.Version
@@ -125,6 +132,7 @@ func exportCheckpoints(saved map[string]checkpoint) []Checkpoint {
 	for _, name := range names {
 		point := saved[name]
 		result = append(result, Checkpoint{
+			Telemetry:       point.telemetry,
 			Name:            name,
 			Configuration:   exportConfiguration(point.config),
 			InterfaceFaults: sortedInterfaceFaults(point.faults),
@@ -138,6 +146,7 @@ func importCheckpoints(saved []Checkpoint) map[string]checkpoint {
 	result := make(map[string]checkpoint, len(saved))
 	for _, point := range saved {
 		result[point.Name] = checkpoint{
+			telemetry:    point.Telemetry,
 			config:       importConfiguration(point.Configuration),
 			faults:       importInterfaceFaults(point.InterfaceFaults),
 			deviceFaults: importDeviceFaults(point.DeviceFaults),
