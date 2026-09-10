@@ -335,58 +335,6 @@ func (s *Stack) allowDHCP() bool {
 	return s.fabric == nil || s.fabric.attachmentDHCP != nil
 }
 
-// Start begins a single-use protocol stack. A stopped stack cannot be restarted.
-func (s *Stack) Start() error {
-	s.lifecycleMu.Lock()
-	defer s.lifecycleMu.Unlock()
-
-	if s.started {
-		if s.stopped {
-			return ErrStackStopped
-		}
-		return ErrStackAlreadyRunning
-	}
-	s.started = true
-	s.running.Store(true)
-
-	// Start receive thread
-	s.wg.Add(1)
-
-	go s.receiveThread()
-
-	// Start decode thread
-	s.wg.Add(1)
-
-	go s.decodeThread()
-
-	// Start send thread
-	s.wg.Add(1)
-
-	go s.sendThread()
-
-	// Start babble thread (periodic packet generation)
-	s.wg.Add(1)
-
-	go s.babbleThread()
-
-	s.wg.Go(func() { s.notifications.Run(s.stopChan) })
-
-	// Start discovery protocol periodic advertisements
-	s.lldpHandler.Start()
-	s.cdpHandler.Start()
-	s.edpHandler.Start()
-	s.fdpHandler.Start()
-	s.startNeighborCleanupLoop()
-	s.startSessionCleanupLoop()
-	s.startBehaviorTimelines()
-
-	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
-		logging.Debugf("Protocol stack started")
-	}
-
-	return nil
-}
-
 // Stop permanently transitions the protocol stack out of service.
 func (s *Stack) Stop() {
 	s.lifecycleMu.Lock()
@@ -555,6 +503,9 @@ func (s *Stack) AllDevices() []*config.Device {
 func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	if cfg == nil {
 		return ErrNilConfig
+	}
+	if err := ValidateConfiguredBehaviorActions(cfg); err != nil {
+		return err
 	}
 
 	s.reloadLifecycleMu.Lock()

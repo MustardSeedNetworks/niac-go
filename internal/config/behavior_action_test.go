@@ -46,7 +46,8 @@ func TestBehaviorActionValidation(t *testing.T) {
 		{"distinct", []BehaviorAction{{Device: "switch", Type: devicestate.ActionReboot}, {Device: "switch", Type: devicestate.ActionSTPTopologyChange}}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			targets := map[string]behaviorTarget{"switch": {count: 1}, "ambiguous": {count: 2}}
+			device := Device{SNMPConfig: SNMPConfig{Community: "reader"}, STPConfig: &STPConfig{Enabled: true}}
+			targets := map[string]behaviorTarget{"switch": {count: 1, device: device}, "ambiguous": {count: 2}}
 			if err := validateBehaviorActions(targets, tc.actions); !errors.Is(err, tc.want) {
 				t.Fatalf("got %v, want %v", err, tc.want)
 			}

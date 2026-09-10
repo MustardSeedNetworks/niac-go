@@ -46,6 +46,8 @@ func actionTimeline(actions string) []byte {
   - name: switch-1
     type: switch
     mac: "02:00:00:00:00:01"
+    snmp_agent: {community: reader}
+    stp: {enabled: true}
 behavior_timelines:
   - name: actions
     repeat_count: 1

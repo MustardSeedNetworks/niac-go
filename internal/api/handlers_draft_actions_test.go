@@ -30,7 +30,7 @@ func TestDraftOneShotActions(t *testing.T) {
 			lib := attachDraftLibrary(t, server)
 			draft, err := lib.CreateDraft(
 				"actions",
-				"devices:\n  - name: switch\n    type: switch\n    mac: '02:00:00:00:00:01'\n",
+				"devices:\n  - name: switch\n    type: switch\n    mac: '02:00:00:00:00:01'\n    snmp_agent: {community: reader}\n    stp: {enabled: true}\n",
 			)
 			if err != nil {
 				t.Fatal(err)

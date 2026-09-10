@@ -136,7 +136,7 @@ func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.D
 	case devicestate.FaultCaptivePortal:
 		return device.HTTPConfig != nil && device.HTTPConfig.Enabled
 	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
-		return s.snmpAgents[device].resourceFaultObservable(faultType, snmpEnabled(device.SNMPConfig))
+		return s.snmpAgents[device].resourceFaultObservable(faultType, config.SNMPv2Enabled(device.SNMPConfig))
 	case devicestate.FaultLatency:
 		// Latency suppresses no service: every simulated device answers the
 		// echo requests addressed to it, so every device can be made slow.

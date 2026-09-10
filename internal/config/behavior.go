@@ -41,6 +41,7 @@ const maxBehaviorScheduledActions = 100_000
 const interfaceFaultMax = 100
 
 type behaviorTarget struct {
+	device     Device
 	count      int
 	interfaces map[string]struct{}
 }
@@ -182,6 +183,7 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 		for _, device := range segment.Devices {
 			target := result[device.Name]
 			target.count++
+			target.device = device
 			if target.interfaces == nil {
 				target.interfaces = make(map[string]struct{}, len(device.Interfaces))
 			}

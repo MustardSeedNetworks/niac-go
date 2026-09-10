@@ -12,8 +12,8 @@ import (
 )
 
 func (s *Stack) initSNMPAgent(device *config.Device) {
-	v2Enabled := snmpEnabled(device.SNMPConfig)
-	v3Enabled := snmpv3Enabled(device.SNMPv3Config)
+	v2Enabled := config.SNMPv2Enabled(device.SNMPConfig)
+	v3Enabled := config.SNMPv3Enabled(device.SNMPv3Config)
 	if !v2Enabled && !v3Enabled {
 		return
 	}
@@ -191,7 +191,7 @@ func (s *Stack) initSNMPv3Engine(
 	baseAgent *snmp.Agent,
 	debugLevel int,
 ) {
-	if !snmpv3Enabled(device.SNMPv3Config) {
+	if !config.SNMPv3Enabled(device.SNMPv3Config) {
 		return
 	}
 
@@ -212,19 +212,6 @@ func (s *Stack) initSNMPv3Engine(
 
 	group.v3 = engine
 	group.v3Agent = baseAgent
-}
-
-// snmpv3Enabled reports whether a device has usable SNMPv3 USM configuration.
-func snmpv3Enabled(cfg *config.SNMPv3Config) bool {
-	return cfg != nil && cfg.Enabled && len(cfg.Users) > 0
-}
-
-func snmpEnabled(cfg config.SNMPConfig) bool {
-	if cfg.Enabled != nil && !*cfg.Enabled {
-		return false
-	}
-
-	return strings.TrimSpace(cfg.Community) != ""
 }
 
 func (s *Stack) getSNMPAgents(device *config.Device) *snmpAgentGroup {
@@ -274,7 +261,7 @@ func formatMACForFDB(mac net.HardwareAddr) (string, string) {
 
 // updateDeviceFDBTables updates FDB tables for a single device.
 func (s *Stack) updateDeviceFDBTables(device *config.Device, decMac, hexMac string) {
-	if !snmpEnabled(device.SNMPConfig) {
+	if !config.SNMPv2Enabled(device.SNMPConfig) {
 		return
 	}
 

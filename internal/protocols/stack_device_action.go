@@ -2,6 +2,9 @@ package protocols
 
 import (
 	"errors"
+	"fmt"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
@@ -21,6 +24,14 @@ func (s *Stack) ExecuteDeviceAction(
 	if err != nil {
 		return err
 	}
+	if err = s.validateDeviceAction(device, kind); err != nil {
+		return err
+	}
+	_, err = store.ExecuteDeviceAction(kind, id)
+	return err
+}
+
+func (s *Stack) validateDeviceAction(device *config.Device, kind devicestate.DeviceActionType) error {
 	if kind != devicestate.ActionReboot && kind != devicestate.ActionSTPTopologyChange {
 		return devicestate.ErrDeviceActionInvalid
 	}
@@ -28,11 +39,39 @@ func (s *Stack) ExecuteDeviceAction(
 		(device.STPConfig == nil || !device.STPConfig.Enabled) {
 		return ErrDeviceActionUnobservable
 	}
-	if !s.snmpAgents[device].deviceActionObservable(kind, snmpEnabled(device.SNMPConfig)) {
+	if !s.snmpAgents[device].deviceActionObservable(kind, config.SNMPv2Enabled(device.SNMPConfig)) {
 		return ErrDeviceActionUnobservable
 	}
-	_, err = store.ExecuteDeviceAction(kind, id)
-	return err
+	return nil
+}
+
+// ValidateBehaviorActions verifies served scalar inventory without executing operations.
+func (s *Stack) ValidateBehaviorActions() error {
+	s.reloadMu.RLock()
+	defer s.reloadMu.RUnlock()
+	if s.config == nil {
+		return nil
+	}
+	for _, timeline := range s.config.BehaviorTimelines {
+		for _, phase := range timeline.Phases {
+			for _, action := range phase.Actions {
+				device, _, err := s.interfaceFaultTarget(action.Device)
+				if err == nil {
+					err = s.validateDeviceAction(device, action.Type)
+				}
+				if err != nil {
+					return fmt.Errorf(
+						"timeline %s phase %s device %s: %w",
+						timeline.Name,
+						phase.Name,
+						action.Device,
+						err,
+					)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (g *snmpAgentGroup) deviceActionObservable(

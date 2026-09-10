@@ -46,6 +46,11 @@ var ErrBehaviorActionInvalid = errors.New("invalid behavior action")
 // ErrBehaviorActionDuplicate indicates a repeated device operation in one phase.
 var ErrBehaviorActionDuplicate = errors.New("duplicate behavior action")
 
+// ErrBehaviorActionUnavailable indicates disabled protocols required by an operation.
+var ErrBehaviorActionUnavailable = errors.New(
+	"device operation requires served SNMP and enabled STP for topology changes",
+)
+
 func validateBehaviorActions(targets map[string]behaviorTarget, actions []BehaviorAction) error {
 	seen := make(map[BehaviorAction]struct{}, len(actions))
 	for _, action := range actions {
@@ -54,6 +59,11 @@ func validateBehaviorActions(targets map[string]behaviorTarget, actions []Behavi
 		}
 		if err := validateBehaviorDevice(targets, action.Device); err != nil {
 			return err
+		}
+		device := targets[action.Device].device
+		if (!SNMPv2Enabled(device.SNMPConfig) && !SNMPv3Enabled(device.SNMPv3Config)) ||
+			(action.Type == devicestate.ActionSTPTopologyChange && (device.STPConfig == nil || !device.STPConfig.Enabled)) {
+			return fmt.Errorf("%w: %s", ErrBehaviorActionUnavailable, action.Device)
 		}
 		if _, exists := seen[action]; exists {
 			return fmt.Errorf("%w: %s %s", ErrBehaviorActionDuplicate, action.Device, action.Type)

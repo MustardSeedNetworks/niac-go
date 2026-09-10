@@ -1464,9 +1464,9 @@ func TestStackSNMPEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := snmpEnabled(tt.cfg)
+			got := config.SNMPv2Enabled(tt.cfg)
 			if got != tt.want {
-				t.Errorf("snmpEnabled() = %v, want %v", got, tt.want)
+				t.Errorf("config.SNMPv2Enabled() = %v, want %v", got, tt.want)
 			}
 		})
 	}
