@@ -286,7 +286,7 @@ func recoveryTestDaemon(t *testing.T, recoveryPath string) *Daemon {
 	if newErr != nil {
 		t.Fatalf("NewDaemon() error = %v", newErr)
 	}
-	daemon.apiServer = api.NewServer(api.ServerConfig{})
+	daemon.apiServer = api.NewServer(api.ServerConfig{LibraryRoot: t.TempDir()})
 	t.Cleanup(func() {
 		daemon.mu.Lock()
 		if daemon.simulation != nil {
