@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.48](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.47...v0.95.48) (2026-09-10)
+
+
+### Tests
+
+* isolate direct device form navigation ([#2031](https://github.com/MustardSeedNetworks/niac-go/issues/2031)) ([eedd6ab](https://github.com/MustardSeedNetworks/niac-go/commit/eedd6abb6d5d21a707c10fb4a0e816d9b50b75a9))
+
 ## [0.95.47](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.46...v0.95.47) (2026-09-10)
 
 
