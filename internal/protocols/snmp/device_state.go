@@ -56,6 +56,8 @@ func (a *Agent) bindDeviceState(state *devicestate.Store) {
 	a.refreshDeviceStateIPMIBs(snapshot)
 	a.replaceTransportListeners(deviceStateIPv4Addresses(snapshot))
 	a.stateMIBVersion.Store(snapshot.Version)
+	a.registerDeviceActions()
+	a.registerUnmappedRebootTimestamps()
 }
 
 func (a *Agent) syncDeviceStateMIBs() {

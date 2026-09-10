@@ -16,6 +16,10 @@ type recordingTarget struct {
 	deviceActions []behavior.DeviceAction
 }
 
+func (*recordingTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {
+	return nil
+}
+
 func (t *recordingTarget) SetInterfaceFault(
 	device, iface string,
 	faultType devicestate.FaultType,

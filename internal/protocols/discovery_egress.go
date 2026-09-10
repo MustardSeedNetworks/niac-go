@@ -35,6 +35,7 @@ func isDiscoveryAdvertisement(frame []byte) bool {
 	}
 	destination := net.HardwareAddr(frame[:SizeOfMac]).String()
 	return strings.EqualFold(destination, LLDPMulticastMAC) ||
+		strings.EqualFold(destination, STPMulticastMAC) ||
 		strings.EqualFold(destination, CDPMulticastMAC) ||
 		strings.EqualFold(destination, EDPMulticastMAC) ||
 		strings.EqualFold(destination, FDPMulticastMAC)

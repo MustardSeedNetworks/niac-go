@@ -29,6 +29,13 @@ type DeviceAction struct {
 	Value  int
 }
 
+// OneShotAction carries a stable identity for a device operation within a simulation generation.
+type OneShotAction struct {
+	Device string
+	Type   devicestate.DeviceActionType
+	ID     string
+}
+
 // PhaseRef identifies one compiled phase while retaining its authored label.
 type PhaseRef struct {
 	ID    string
@@ -37,19 +44,21 @@ type PhaseRef struct {
 
 // Transition groups every action that occurs at one offset from runtime start.
 type Transition struct {
-	Offset        time.Duration
-	StartPhases   []PhaseRef
-	EndPhases     []PhaseRef
-	Actions       []Action
-	DeviceActions []DeviceAction
+	Offset         time.Duration
+	StartPhases    []PhaseRef
+	EndPhases      []PhaseRef
+	Actions        []Action
+	DeviceActions  []DeviceAction
+	OneShotActions []OneShotAction
 }
 
 type scheduledTransition struct {
-	offset        time.Duration
-	phase         PhaseRef
-	end           bool
-	actions       []Action
-	deviceActions []DeviceAction
+	offset         time.Duration
+	phase          PhaseRef
+	end            bool
+	actions        []Action
+	deviceActions  []DeviceAction
+	oneShotActions []OneShotAction
 }
 
 // Compile produces a stable transition sequence for every finite repetition.
@@ -68,6 +77,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 				scheduled = append(scheduled, scheduledTransition{
 					offset: cycleStart + phase.StartOffset, phase: phaseRef,
 					actions: actions, deviceActions: deviceActions,
+					oneShotActions: compileOneShotActions(phase.Actions, phaseRef.ID),
 				})
 				end := scheduledTransition{
 					offset: cycleStart + phase.StartOffset + phase.Duration,
@@ -164,6 +174,17 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 		}
 		transition.Actions = append(transition.Actions, current.actions...)
 		transition.DeviceActions = append(transition.DeviceActions, current.deviceActions...)
+		transition.OneShotActions = append(transition.OneShotActions, current.oneShotActions...)
+	}
+	return result
+}
+
+func compileOneShotActions(actions []config.BehaviorAction, phaseID string) []OneShotAction {
+	result := make([]OneShotAction, len(actions))
+	for index, action := range actions {
+		result[index] = OneShotAction{
+			Device: action.Device, Type: action.Type, ID: fmt.Sprintf("%s:%d", phaseID, index),
+		}
 	}
 	return result
 }

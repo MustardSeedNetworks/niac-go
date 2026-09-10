@@ -190,9 +190,11 @@ func (h *LLDPHandler) Stop() {
 
 // sendAdvertisements sends LLDP advertisements for all devices.
 func (h *LLDPHandler) sendAdvertisements() {
+	h.stack.reloadMu.RLock()
+	defer h.stack.reloadMu.RUnlock()
 	debugLevel := h.stack.GetDebugLevel()
 
-	devices := h.stack.GetDevices().GetAll()
+	devices := h.stack.AllDevices()
 	for _, device := range devices {
 		if len(device.MACAddress) == 0 {
 			continue
@@ -595,7 +597,7 @@ func (h *LLDPHandler) sendFrame(device *config.Device, lldpPayload []byte) error
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         device.VLAN, // advertise on the device's access VLAN
+		VLAN:         h.stack.discoveryVLAN(device),
 	}
 
 	h.stack.Send(pkt)

@@ -3,7 +3,9 @@ import {
   isDeviceBehaviorFaultType,
   isInterfaceBehaviorFaultType,
 } from '../../api/behavior-fault-types';
+import { isBehaviorActionType } from '../../api/behavior-timeline-types';
 import type {
+  DraftBehaviorAction,
   DraftBehaviorFault,
   DraftBehaviorPhase,
   DraftBehaviorTimeline,
@@ -55,6 +57,9 @@ function phase(value: unknown): DraftBehaviorPhase | null {
     startOffsetMs: integer(item.start_offset_ms),
     durationMs: integer(item.duration_ms),
     reset: item.reset === true,
+    actions: Array.isArray(item.actions)
+      ? item.actions.map(operation).filter((entry): entry is DraftBehaviorAction => entry !== null)
+      : [],
     traffic: Array.isArray(item.traffic)
       ? item.traffic.map(traffic).filter((entry): entry is DraftBehaviorTraffic => entry !== null)
       : [],
@@ -62,6 +67,13 @@ function phase(value: unknown): DraftBehaviorPhase | null {
       ? item.faults.map(fault).filter((entry): entry is DraftBehaviorFault => entry !== null)
       : [],
   };
+}
+
+function operation(value: unknown): DraftBehaviorAction | null {
+  const item = record(value);
+  if (!item) return null;
+  const type = text(item.type);
+  return isBehaviorActionType(type) ? { device: text(item.device), type } : null;
 }
 
 function timeline(value: unknown): DraftBehaviorTimeline | null {

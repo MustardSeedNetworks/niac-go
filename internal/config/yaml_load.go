@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 	"github.com/MustardSeedNetworks/niac-go/internal/oui"
@@ -340,38 +339,4 @@ func createBaseConfig(yamlConfig *converter.Config) *Config {
 	}
 
 	return cfg
-}
-
-func convertBehaviorTimelines(authored []converter.BehaviorTimeline) []BehaviorTimeline {
-	result := make([]BehaviorTimeline, len(authored))
-	for timelineIndex, timeline := range authored {
-		result[timelineIndex] = BehaviorTimeline{
-			Name: timeline.Name, StartOffset: time.Duration(timeline.StartOffsetMS) * time.Millisecond,
-			RepeatCount: timeline.RepeatCount, Phases: make([]BehaviorPhase, len(timeline.Phases)),
-		}
-		for phaseIndex, phase := range timeline.Phases {
-			result[timelineIndex].Phases[phaseIndex] = BehaviorPhase{
-				Name: phase.Name, StartOffset: time.Duration(phase.StartOffsetMS) * time.Millisecond,
-				Duration: time.Duration(phase.DurationMS) * time.Millisecond, Reset: phase.Reset,
-				Traffic: convertBehaviorTraffic(phase.Traffic), Faults: convertBehaviorFaults(phase.Faults),
-			}
-		}
-	}
-	return result
-}
-
-func convertBehaviorTraffic(authored []converter.BehaviorTraffic) []BehaviorTraffic {
-	result := make([]BehaviorTraffic, len(authored))
-	for index, traffic := range authored {
-		result[index] = BehaviorTraffic(traffic)
-	}
-	return result
-}
-
-func convertBehaviorFaults(authored []converter.BehaviorFault) []BehaviorFault {
-	result := make([]BehaviorFault, len(authored))
-	for index, fault := range authored {
-		result[index] = BehaviorFault(fault)
-	}
-	return result
 }

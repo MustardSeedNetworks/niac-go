@@ -6,6 +6,8 @@ import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Input, Select } from '../../ui/Input';
 import { BehaviorFaultAction } from './BehaviorFaultAction';
+import { BehaviorOneShotActions } from './BehaviorOneShotActions';
+import type { DraftTopologyModel } from './draft-topology';
 
 interface Option {
   value: string;
@@ -15,6 +17,7 @@ interface Option {
 interface BehaviorPhaseActionsProps {
   phase: DraftBehaviorPhase;
   deviceOptions: Option[];
+  deviceActions: DraftTopologyModel['deviceActions'];
   interfaceOptions: (device: string) => Option[];
   firstDevice: string;
   firstInterface: string;
@@ -24,6 +27,7 @@ interface BehaviorPhaseActionsProps {
 export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
   phase,
   deviceOptions,
+  deviceActions,
   interfaceOptions,
   firstDevice,
   firstInterface,
@@ -41,6 +45,12 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
 
   return (
     <>
+      <BehaviorOneShotActions
+        actions={phase.actions}
+        deviceOptions={deviceOptions}
+        deviceActions={deviceActions}
+        onChange={(actions) => onChange({ ...phase, actions })}
+      />
       {phase.traffic.map((action, actionIndex) => (
         <div
           key={`traffic-${actionIndex}`}

@@ -19,8 +19,8 @@ var (
 	// ErrBehaviorTargetAmbiguous means a timeline's target string matches more
 	// than one device/interface.
 	ErrBehaviorTargetAmbiguous = errors.New("behavior target is ambiguous")
-	// ErrBehaviorPhaseEmpty means a phase declares neither traffic nor faults.
-	ErrBehaviorPhaseEmpty = errors.New("behavior phase has no traffic or faults")
+	// ErrBehaviorPhaseEmpty means a phase declares no traffic, faults or actions.
+	ErrBehaviorPhaseEmpty = errors.New("behavior phase has no traffic, faults or actions")
 	// ErrBehaviorPhaseOverlap means two phases for the same target overlap in time.
 	ErrBehaviorPhaseOverlap = errors.New("behavior phases overlap")
 	// ErrBehaviorScheduleTooLarge means the timeline would exceed
@@ -41,6 +41,7 @@ const maxBehaviorScheduledActions = 100_000
 const interfaceFaultMax = 100
 
 type behaviorTarget struct {
+	device     Device
 	count      int
 	interfaces map[string]struct{}
 }
@@ -75,6 +76,7 @@ func validateBehaviorScheduleSize(timelines []BehaviorTimeline) error {
 			if phase.Reset {
 				applications *= 2
 			}
+			applications += int64(len(phase.Actions))
 			scheduledActions += applications * int64(timeline.RepeatCount)
 			if scheduledActions > maxBehaviorScheduledActions {
 				return fmt.Errorf(
@@ -181,6 +183,7 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 		for _, device := range segment.Devices {
 			target := result[device.Name]
 			target.count++
+			target.device = device
 			if target.interfaces == nil {
 				target.interfaces = make(map[string]struct{}, len(device.Interfaces))
 			}
@@ -191,34 +194,6 @@ func behaviorTargets(cfg *Config) map[string]behaviorTarget {
 		}
 	}
 	return result
-}
-
-func validateBehaviorTimeline(timeline BehaviorTimeline, targets map[string]behaviorTarget) error {
-	phases := append([]BehaviorPhase(nil), timeline.Phases...)
-	slices.SortFunc(phases, func(left, right BehaviorPhase) int {
-		return cmp.Compare(left.StartOffset, right.StartOffset)
-	})
-	var previousEnd int64
-	for index, phase := range phases {
-		if index > 0 && phase.StartOffset.Nanoseconds() < previousEnd {
-			return fmt.Errorf("%w: phase %q", ErrBehaviorPhaseOverlap, phase.Name)
-		}
-		previousEnd = (phase.StartOffset + phase.Duration).Nanoseconds()
-		if len(phase.Traffic) == 0 && len(phase.Faults) == 0 {
-			return fmt.Errorf("%w: %q", ErrBehaviorPhaseEmpty, phase.Name)
-		}
-		for _, traffic := range phase.Traffic {
-			if err := validateBehaviorTarget(targets, traffic.Device, traffic.Interface); err != nil {
-				return fmt.Errorf("phase %q traffic: %w", phase.Name, err)
-			}
-		}
-		for _, fault := range phase.Faults {
-			if err := validateBehaviorFault(targets, fault); err != nil {
-				return fmt.Errorf("phase %q fault: %w", phase.Name, err)
-			}
-		}
-	}
-	return nil
 }
 
 // validateBehaviorFault checks one authored fault against the device list and

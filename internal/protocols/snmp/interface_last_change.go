@@ -10,6 +10,12 @@ type interfaceChangeBinding struct {
 
 func (a *Agent) interfaceLastChangeTicks(name string) (uint32, bool) {
 	changed := a.deviceState.InterfaceLastChange(name)
+	if boot := a.deviceState.DeviceTelemetry().RebootedAt; !boot.IsZero() {
+		if changed.IsZero() || changed.Before(boot) {
+			return 0, true
+		}
+		return uptimeTicks(changed.Sub(boot)), true
+	}
 	if changed.IsZero() || changed.Before(a.startTime) {
 		return 0, false
 	}
@@ -59,6 +65,7 @@ func (a *Agent) restoreRemappedInterfaceChanges() {
 		}
 		a.mib.mu.Unlock()
 		delete(a.interfaceChangeBindings, oid)
+		a.registerDeviceActionOID(oid)
 	}
 }
 

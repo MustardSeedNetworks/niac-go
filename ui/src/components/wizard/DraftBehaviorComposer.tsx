@@ -1,7 +1,6 @@
 import { Activity, Plus, Save, Trash2 } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { validBehaviorFault } from '../../api/behavior-fault-types';
 import {
   type DraftBehaviorPhase,
   type DraftBehaviorTimeline,
@@ -15,6 +14,7 @@ import { Input } from '../../ui/Input';
 import { SmallText } from '../../ui/Typography';
 import { BehaviorPhaseActions } from './BehaviorPhaseActions';
 import { parseDraftBehaviorTimelines } from './behavior-timeline';
+import { validBehaviorTimelines } from './behavior-validation';
 import { parseDraftTopology } from './draft-topology';
 
 interface DraftBehaviorComposerProps {
@@ -93,6 +93,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
           reset: true,
           traffic: [],
           faults: [],
+          actions: [],
         },
       ],
     }));
@@ -114,34 +115,21 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
               ? [{ device: firstDevice, interface: firstInterface, utilization: 75 }]
               : [],
             faults: [],
+            actions: [],
           },
         ],
       },
     ]);
 
-  const valid = timelines.every(
-    (timeline) =>
-      timeline.name.trim() &&
-      timeline.repeatCount >= 1 &&
-      timeline.repeatCount <= 1000 &&
-      timeline.startOffsetMs >= 0 &&
-      timeline.phases.length > 0 &&
-      timeline.phases.every(
-        (phase) =>
-          phase.name.trim() &&
-          phase.startOffsetMs >= 0 &&
-          phase.durationMs > 0 &&
-          phase.traffic.length + phase.faults.length > 0 &&
-          phase.traffic.every(
-            (action) =>
-              action.device &&
-              action.interface &&
-              action.utilization >= 1 &&
-              action.utilization <= 100,
-          ) &&
-          phase.faults.every(validBehaviorFault),
+  const valid =
+    validBehaviorTimelines(timelines) &&
+    timelines.every((timeline) =>
+      timeline.phases.every((phase) =>
+        phase.actions.every((action) =>
+          topology.deviceActions[action.device]?.includes(action.type),
+        ),
       ),
-  );
+    );
 
   const save = async () => {
     setBusy(true);
@@ -316,6 +304,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
               <BehaviorPhaseActions
                 phase={phase}
                 deviceOptions={deviceOptions}
+                deviceActions={topology.deviceActions}
                 interfaceOptions={interfaceOptions}
                 firstDevice={firstDevice}
                 firstInterface={firstInterface}

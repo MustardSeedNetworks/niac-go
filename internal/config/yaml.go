@@ -5,7 +5,6 @@ import (
 	"net"
 	"slices"
 	"strconv"
-	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -54,40 +53,6 @@ func configToYAML(cfg *Config) converter.Config {
 		out.DiscoveryProtocols = discoveryProtocolsToYAML(cfg.DiscoveryProtocols)
 	}
 	return out
-}
-
-func behaviorTimelinesToYAML(timelines []BehaviorTimeline) []converter.BehaviorTimeline {
-	result := make([]converter.BehaviorTimeline, len(timelines))
-	for timelineIndex, timeline := range timelines {
-		result[timelineIndex] = converter.BehaviorTimeline{
-			Name: timeline.Name, StartOffsetMS: int(timeline.StartOffset / time.Millisecond),
-			RepeatCount: timeline.RepeatCount, Phases: make([]converter.BehaviorPhase, len(timeline.Phases)),
-		}
-		for phaseIndex, phase := range timeline.Phases {
-			result[timelineIndex].Phases[phaseIndex] = converter.BehaviorPhase{
-				Name: phase.Name, StartOffsetMS: int(phase.StartOffset / time.Millisecond),
-				DurationMS: int(phase.Duration / time.Millisecond), Reset: phase.Reset,
-				Traffic: behaviorTrafficToYAML(phase.Traffic), Faults: behaviorFaultsToYAML(phase.Faults),
-			}
-		}
-	}
-	return result
-}
-
-func behaviorTrafficToYAML(traffic []BehaviorTraffic) []converter.BehaviorTraffic {
-	result := make([]converter.BehaviorTraffic, len(traffic))
-	for index, action := range traffic {
-		result[index] = converter.BehaviorTraffic(action)
-	}
-	return result
-}
-
-func behaviorFaultsToYAML(faults []BehaviorFault) []converter.BehaviorFault {
-	result := make([]converter.BehaviorFault, len(faults))
-	for index, action := range faults {
-		result[index] = converter.BehaviorFault(action)
-	}
-	return result
 }
 
 func networksToYAML(networks []Network) []converter.Network {

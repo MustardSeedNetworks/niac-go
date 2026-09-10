@@ -327,10 +327,18 @@ func appendBPDUTimers(buf []byte, params stpParams) []byte {
 	buf = append(buf, byte(maxAgeScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(maxAgeScaled))
 
 	helloTimeScaled := params.helloTime * stpTimerScale
-	buf = append(buf, byte(helloTimeScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(helloTimeScaled))
+	buf = append(
+		buf,
+		byte(helloTimeScaled>>stpBridgeIDShift8),
+		safeconv.ByteFromUint16(helloTimeScaled),
+	)
 
 	forwardDelayScaled := params.forwardDelay * stpTimerScale
-	buf = append(buf, byte(forwardDelayScaled>>stpBridgeIDShift8), safeconv.ByteFromUint16(forwardDelayScaled))
+	buf = append(
+		buf,
+		byte(forwardDelayScaled>>stpBridgeIDShift8),
+		safeconv.ByteFromUint16(forwardDelayScaled),
+	)
 
 	return buf
 }
@@ -383,7 +391,13 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 	serialNum := h.stack.serialNumber
 	h.stack.mu.Unlock()
 
-	pkt := &Packet{Buffer: buf, Length: len(buf), SerialNumber: serialNum}
+	pkt := &Packet{
+		Buffer:       buf,
+		Length:       len(buf),
+		SerialNumber: serialNum,
+		Device:       device,
+		VLAN:         h.stack.discoveryVLAN(device),
+	}
 	h.stack.Send(pkt)
 
 	if h.debugLevel >= DebugLevelInfo {

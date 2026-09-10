@@ -128,10 +128,25 @@ func sendDiscoveryFrame(dstMACString string, device *config.Device, payload []by
 		Length:       len(frame),
 		SerialNumber: serialNum,
 		Device:       device,
-		VLAN:         device.VLAN, // advertise on the device's access VLAN
+		VLAN:         stack.discoveryVLAN(device),
 	}
 
 	stack.Send(pkt)
 
 	return nil
+}
+
+func (s *Stack) discoveryVLAN(device *config.Device) int {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+	if s.config != nil {
+		for _, segment := range s.config.Segments {
+			for index := range segment.Devices {
+				if &segment.Devices[index] == device {
+					return segment.Tag
+				}
+			}
+		}
+	}
+	return device.VLAN
 }

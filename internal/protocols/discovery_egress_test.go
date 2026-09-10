@@ -85,6 +85,11 @@ func TestRoutedDiscoveryRejectsUnknownDeviceIdentity(t *testing.T) {
 
 func discoveryAdvertisers() map[string]func(*Stack) {
 	return map[string]func(*Stack){
+		"STP": func(stack *Stack) {
+			for _, device := range stack.AllDevices() {
+				_ = stack.stpHandler.SendConfigBPDU(device)
+			}
+		},
 		"LLDP": func(stack *Stack) { stack.lldpHandler.sendAdvertisements() },
 		"CDP":  func(stack *Stack) { stack.cdpHandler.sendAdvertisements() },
 		"EDP":  func(stack *Stack) { stack.edpHandler.sendAdvertisements() },

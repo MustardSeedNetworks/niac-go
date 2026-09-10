@@ -49,13 +49,7 @@ func startSimulationResources(
 	restore restoreRuntimeState,
 ) (simulationResources, error) {
 	if dryRun {
-		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(debugLevel))
-		stack.ConfigureFabric(topology)
-		if err := applyRuntimeState(stack, restore); err != nil {
-			return simulationResources{}, err
-		}
-		_, cancel := context.WithCancel(context.Background())
-		return simulationResources{stack: stack, cancel: cancel}, nil
+		return prepareDryRunSimulation(cfg, topology, debugLevel, restore)
 	}
 
 	engine, stack, cancel, err := startSimulationStack(iface, cfg, topology, debugLevel, restore)
@@ -80,15 +74,12 @@ func (d *Daemon) startTrunkSimulationResources(
 	restore restoreRuntimeState,
 ) (simulationResources, error) {
 	if dryRun {
-		stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(d.cfg.DebugLevel))
-		stack.ConfigureFabric(topology)
-		if err := applyRuntimeState(stack, restore); err != nil {
-			return simulationResources{}, err
-		}
-		_, cancel := context.WithCancel(context.Background())
-		return simulationResources{stack: stack, cancel: cancel}, nil
+		return prepareDryRunSimulation(cfg, topology, d.cfg.DebugLevel, restore)
 	}
 
+	if err := protocols.ValidateConfiguredBehaviorActions(cfg); err != nil {
+		return simulationResources{}, err
+	}
 	managed := d.trunks[iface]
 	if managed == nil {
 		engine, err := capture.New(iface, d.cfg.DebugLevel)
@@ -206,50 +197,4 @@ func (resources simulationResources) abort() {
 		resources.rollback()
 	}
 	resources.stop()
-}
-
-// startSimulationStack creates the capture engine and starts the protocol stack.
-// Returns (engine, stack, cancel, err). Cleans up on failure.
-func startSimulationStack(
-	iface string, cfg *config.Config, topology *fabric.Topology, debugLevel int,
-	restore restoreRuntimeState,
-) (*capture.Engine, *protocols.Stack, context.CancelFunc, error) {
-	engine, err := capture.New(iface, debugLevel)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("create capture engine: %w", err)
-	}
-
-	stack := protocols.NewStack(engine, cfg, logging.NewDebugConfig(debugLevel))
-	stack.ConfigureFabric(topology)
-
-	// Lifecycle cancel used by StopSimulation. Stack.Start() does not accept a context,
-	// so the stop signal flows via Stack.Stop() and engine.Close(). The cancel is
-	// retained for future context plumbing.
-	_, cancel := context.WithCancel(context.Background())
-
-	if restoreErr := applyRuntimeState(stack, restore); restoreErr != nil {
-		cancel()
-		engine.Close()
-		return nil, nil, nil, restoreErr
-	}
-
-	if startErr := stack.Start(); startErr != nil {
-		cancel()
-		engine.Close()
-		return nil, nil, nil, fmt.Errorf("start protocol stack: %w", startErr)
-	}
-
-	return engine, stack, cancel, nil
-}
-
-// applyRuntimeState runs the recovery restore, if there is one, between the
-// compiled fabric being installed and the stack starting.
-func applyRuntimeState(stack *protocols.Stack, restore restoreRuntimeState) error {
-	if restore == nil {
-		return nil
-	}
-	if err := restore(stack); err != nil {
-		return fmt.Errorf("restore runtime state: %w", err)
-	}
-	return nil
 }

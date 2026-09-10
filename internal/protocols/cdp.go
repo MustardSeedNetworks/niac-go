@@ -179,10 +179,12 @@ func (h *CDPHandler) Stop() {
 
 // sendAdvertisements sends CDP advertisements for all devices.
 func (h *CDPHandler) sendAdvertisements() {
+	h.stack.reloadMu.RLock()
+	defer h.stack.reloadMu.RUnlock()
 	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
 
-	devices := h.stack.GetDevices().GetAll()
+	devices := h.stack.AllDevices()
 	for _, device := range devices {
 		if len(device.MACAddress) == 0 {
 			continue

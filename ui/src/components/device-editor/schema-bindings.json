@@ -2,6 +2,8 @@
   "attachments[].connect": "components/wizard/NetworksStep.tsx",
   "attachments[].name": "components/wizard/NetworksStep.tsx",
   "behavior_timelines[].name": "components/wizard/DraftBehaviorComposer.tsx",
+  "behavior_timelines[].phases[].actions[].device": "components/wizard/BehaviorOneShotActions.tsx",
+  "behavior_timelines[].phases[].actions[].type": "components/wizard/BehaviorOneShotActions.tsx",
   "behavior_timelines[].phases[].duration_ms": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].faults[].device": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].faults[].interface": "components/wizard/DraftBehaviorComposer.tsx",

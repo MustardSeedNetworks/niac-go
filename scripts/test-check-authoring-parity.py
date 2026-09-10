@@ -47,8 +47,9 @@ export const DeviceProtocolsEditor = () => DEVICE_SECTIONS.map((section) => sect
 
 
 class Tree:
-    def __init__(self) -> None:
+    def __init__(self, test: unittest.TestCase) -> None:
         self.tmp = tempfile.TemporaryDirectory()
+        test.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         (self.root / "docs" / "schemas").mkdir(parents=True)
         (self.root / "ui" / "src" / "components" / "device-editor").mkdir(parents=True)
@@ -80,7 +81,7 @@ class ParityGateTest(unittest.TestCase):
                                   "devices[].snmp_agent.walk_file", "include_path"])
 
     def test_unbound_without_baseline_fails_then_update_passes(self) -> None:
-        t = Tree()
+        t = Tree(self)
         code, out = t.run()
         self.assertEqual(code, 1)
         self.assertIn("devices[].snmp_agent.walk_file", out)
@@ -90,7 +91,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("7 schema fields, 2 bound, 1 allow-listed, 4 unbound", out)
 
     def test_binding_without_evidence_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         (t.editor / "SnmpSection.tsx").write_text("nothing here")
         code, out = t.run()
@@ -98,7 +99,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("not evidenced", out)
 
     def test_binding_to_missing_file_or_unknown_path_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         t.registry.write_text(json.dumps({"devices[].name": "components/device-editor/Gone.tsx", "devices[].nope": "x"}))
         code, out = t.run()
@@ -107,7 +108,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("no such field", out)
 
     def test_stale_baseline_entry_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         (t.editor / "SnmpSection.tsx").write_text("community walkFile")
         reg = json.loads(t.registry.read_text())
@@ -118,7 +119,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("remove them", out)
 
     def test_missing_wizard_editor_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         t.wizard.unlink()
         code, out = t.run()
@@ -126,7 +127,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("is missing", out)
 
     def test_wizard_without_manifest_import_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         t.wizard.write_text("export const DeviceProtocolsEditor = () => DEVICE_SECTIONS.map((s) => s);")
         code, out = t.run()
@@ -134,7 +135,7 @@ class ParityGateTest(unittest.TestCase):
         self.assertIn("no longer imports DEVICE_SECTIONS", out)
 
     def test_wizard_filtering_the_manifest_fails(self) -> None:
-        t = Tree()
+        t = Tree(self)
         t.run(update=True)
         t.wizard.write_text(WIZARD.replace("DEVICE_SECTIONS.map(", "DEVICE_SECTIONS.filter(Boolean).map("))
         code, out = t.run()

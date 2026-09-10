@@ -2,6 +2,36 @@ import { describe, expect, it } from 'vitest';
 import { parseDraftTopology } from './draft-topology';
 
 describe('parseDraftTopology', () => {
+  it('requires authored SNMP service and STP for action eligibility, including v3-only targets', () => {
+    const model = parseDraftTopology(`devices:
+  - {name: absent}
+  - {name: empty-community, snmp_agent: {community: '  '}}
+  - {name: disabled, snmp_agent: {enabled: false, community: demo}}
+  - {name: reboot, snmp_agent: {community: demo}}
+  - {name: stp, snmp_agent: {community: demo}, stp: {enabled: true}}
+  - {name: v3, snmp_agent: {enabled: false}, snmpv3: {enabled: true, users: [{username: reader}]}, stp: {enabled: true}}
+  - {name: empty-v3, snmpv3: {enabled: true, users: []}}
+`);
+    expect(model.deviceActions).toEqual({
+      absent: [],
+      'empty-community': [],
+      disabled: [],
+      reboot: ['reboot'],
+      stp: ['reboot', 'stp_topology_change'],
+      v3: ['reboot', 'stp_topology_change'],
+      'empty-v3': [],
+    });
+  });
+
+  it('rejects ambiguous action targets across segments', () => {
+    const model = parseDraftTopology(`segments:
+  - tag: 200
+    devices: [{name: duplicate, snmp_agent: {community: demo}}]
+  - tag: 300
+    devices: [{name: duplicate, snmp_agent: {community: demo}}]
+`);
+    expect(model.deviceActions.duplicate).toEqual([]);
+  });
   it('projects devices, reciprocal parallel links, interfaces, and saved positions', () => {
     const model = parseDraftTopology(`
 devices:
@@ -104,6 +134,7 @@ segments:
 
   it('treats a valid device-less document as an editable empty topology', () => {
     expect(parseDraftTopology('{}')).toEqual({
+      deviceActions: {},
       devices: [],
       links: [],
       interfaces: {},

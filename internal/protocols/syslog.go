@@ -57,7 +57,8 @@ func syslogEvent(event devicestate.Event) (int, string) {
 	case devicestate.EventNetworkInstalled, devicestate.EventIdentityUpdated,
 		devicestate.EventStartupSaved, devicestate.EventStartupReloaded, devicestate.EventStartupErased,
 		devicestate.EventAuthoredReset, devicestate.EventCheckpointSaved, devicestate.EventCheckpointRestored,
-		devicestate.EventVLANUpdated, devicestate.EventRouterUpdated, devicestate.EventRouteUpdated:
+		devicestate.EventVLANUpdated, devicestate.EventRouterUpdated, devicestate.EventRouteUpdated,
+		devicestate.EventDeviceRebooted, devicestate.EventSTPTopologyChanged:
 		return 0, ""
 	default:
 		return 0, ""

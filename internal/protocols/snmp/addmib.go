@@ -341,5 +341,10 @@ func castIntegral(asnType gosnmp.Asn1BER, value int64) any {
 }
 
 func (a *Agent) sysUpTimeTicks() uint32 {
+	if a.deviceState != nil {
+		if boot := a.deviceState.DeviceTelemetry().RebootedAt; !boot.IsZero() {
+			return uptimeTicks(time.Since(boot))
+		}
+	}
 	return uptimeTicks(a.uptimeBase + time.Since(a.startTime))
 }

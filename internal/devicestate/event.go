@@ -28,6 +28,8 @@ const (
 	// like an interface transition.
 	EventDeviceFaultUpdated EventKind = "device_fault.updated"
 	EventDeviceFaultCleared EventKind = "device_fault.cleared"
+	EventDeviceRebooted     EventKind = "device.rebooted"
+	EventSTPTopologyChanged EventKind = "stp.topology_changed"
 )
 
 // Event records one committed state transition.

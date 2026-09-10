@@ -11,10 +11,12 @@ func (s *Store) ValidateState(state State) error {
 }
 
 func validateState(state State, authored []Interface) error {
-	if !validStateHistory(state) || !validStateInterfaces(state.Startup.Network.Interfaces, authored) {
+	if !validStateHistory(state) || !validActionState(state) ||
+		!validStateInterfaces(state.Startup.Network.Interfaces, authored) {
 		return ErrStateInvalid
 	}
 	current := Checkpoint{
+		Telemetry:       state.Telemetry,
 		Configuration:   state.Running,
 		InterfaceFaults: state.InterfaceFaults,
 		DeviceFaults:    state.DeviceFaults,
@@ -33,7 +35,8 @@ func validateState(state State, authored []Interface) error {
 }
 
 func validStateHistory(state State) bool {
-	if state.Version == 0 || state.Version == math.MaxUint64 || len(state.Events) > maxEventHistory {
+	if state.Version == 0 || state.Version == math.MaxUint64 ||
+		len(state.Events) > maxEventHistory {
 		return false
 	}
 	var previous uint64
@@ -61,7 +64,8 @@ func validStateInterfaces(interfaces, authored []Interface) bool {
 }
 
 func validStateCheckpoint(point Checkpoint, authored []Interface) bool {
-	return validStateInterfaces(point.Configuration.Network.Interfaces, authored) &&
+	return validDeviceTelemetry(point.Telemetry) &&
+		validStateInterfaces(point.Configuration.Network.Interfaces, authored) &&
 		validStateInterfaceFaults(point.InterfaceFaults, authored) &&
 		validStateDeviceFaults(point.DeviceFaults)
 }
@@ -70,7 +74,8 @@ func validStateInterfaceFaults(faults []InterfaceFault, interfaces []Interface) 
 	seen := make(map[interfaceFaultKey]bool, len(faults))
 	for _, fault := range faults {
 		key := interfaceFaultKey{interfaceName: fault.Interface, faultType: fault.Type}
-		if seen[key] || !validFaultType(fault.Type) || fault.Value <= 0 || fault.Value > faultRateMax ||
+		if seen[key] || !validFaultType(fault.Type) || fault.Value <= 0 ||
+			fault.Value > faultRateMax ||
 			!interfaceExists(interfaces, fault.Interface) {
 			return false
 		}

@@ -137,9 +137,10 @@ type WalkContract struct {
 	// authoredBridgePorts are the dot1dBasePort numbers sitting in front of
 	// those ifIndexes, read from the walk's own dot1dBasePortIfIndex rows. A
 	// bridge port index is not an ifIndex, so this needs its own lookup.
-	authoredBridgePorts  map[string]struct{}
-	activeResourceOIDs   map[string]struct{}
-	changedInterfaceOIDs map[string]struct{}
+	authoredBridgePorts    map[string]struct{}
+	activeResourceOIDs     map[string]struct{}
+	changedInterfaceOIDs   map[string]struct{}
+	activeDeviceActionOIDs map[string]struct{}
 }
 
 // WalkContract builds the contract for this agent's device, reading the
@@ -168,6 +169,7 @@ func (a *Agent) WalkContract() WalkContract {
 	a.resolveAuthoredBridgePorts(&contract)
 	contract.activeResourceOIDs = a.activeResourceOIDs()
 	contract.changedInterfaceOIDs = a.changedInterfaceOIDs()
+	contract.activeDeviceActionOIDs = a.activeDeviceActionOIDs()
 	return contract
 }
 
@@ -194,6 +196,9 @@ func (a *Agent) resolveAuthoredBridgePorts(contract *WalkContract) {
 // BucketAgentAdded: neither is decidable from a numeric OID alone.
 func (c WalkContract) Classify(oid string) Bucket {
 	oid = strings.TrimPrefix(oid, ".")
+	if _, active := c.activeDeviceActionOIDs[oid]; active {
+		return BucketLive
+	}
 	if _, armed := c.activeResourceOIDs[oid]; armed {
 		return BucketLive
 	}

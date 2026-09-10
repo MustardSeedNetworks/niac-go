@@ -44,15 +44,16 @@ func TestEndpointUtilizationVariesAcrossDevices(t *testing.T) {
 	values := map[float64]bool{}
 	count := 0
 
-	forEachPackDevice(t, func(_ string, device *config.Device) {
+	cfg := generatePack(t, "hospital")
+	for _, device := range cfg.Devices {
 		if device.Properties["role"] != "nurse-station" {
-			return
+			continue
 		}
 		for _, iface := range device.Interfaces {
 			values[iface.InUtilization] = true
 			count++
 		}
-	})
+	}
 
 	if count == 0 {
 		t.Fatal("no endpoint interfaces to measure")
@@ -83,11 +84,12 @@ func TestGeneratedDeviceNamesAreUnique(t *testing.T) {
 // the machine; only the building/floor/slot tail is packed.
 func TestCompactNameShape(t *testing.T) {
 	var found string
-	forEachPackDevice(t, func(pack string, device *config.Device) {
-		if pack == "enterprise-scale" && device.Properties["role"] == "workstation" && found == "" {
+	cfg := generatePack(t, "enterprise-scale")
+	for _, device := range cfg.Devices {
+		if device.Properties["role"] == "workstation" && found == "" {
 			found = device.Name
 		}
-	})
+	}
 
 	if found == "" {
 		t.Fatal("the enterprise pack generated no workstation")

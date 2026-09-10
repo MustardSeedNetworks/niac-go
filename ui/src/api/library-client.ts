@@ -1,4 +1,4 @@
-import type { DraftBehaviorFault } from './behavior-fault-types';
+import type { DraftBehaviorTimeline } from './behavior-timeline-types';
 import { deduplicatedGet, request, requestJson, requestJsonCamelCase } from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
@@ -124,29 +124,13 @@ export type DraftTopologyMutation =
     }
   | { operation: 'move_device'; position: { device: string; x: number; y: number } };
 
-export interface DraftBehaviorTraffic {
-  device: string;
-  interface: string;
-  utilization: number;
-}
-
 export type { DraftBehaviorFault } from './behavior-fault-types';
-
-export interface DraftBehaviorPhase {
-  name: string;
-  startOffsetMs: number;
-  durationMs: number;
-  reset: boolean;
-  traffic: DraftBehaviorTraffic[];
-  faults: DraftBehaviorFault[];
-}
-
-export interface DraftBehaviorTimeline {
-  name: string;
-  startOffsetMs: number;
-  repeatCount: number;
-  phases: DraftBehaviorPhase[];
-}
+export type {
+  DraftBehaviorAction,
+  DraftBehaviorPhase,
+  DraftBehaviorTimeline,
+  DraftBehaviorTraffic,
+} from './behavior-timeline-types';
 
 export const fetchScenarioDrafts = () =>
   deduplicatedGet<ScenarioDraftEntry[]>('/api/v1/library/drafts');
