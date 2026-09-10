@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/gopacket/gopacket/layers"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // TestSendDNSResponseEchoesVLAN verifies a DNS reply is queued on the request's
@@ -15,10 +17,11 @@ func TestSendDNSResponseEchoesVLAN(t *testing.T) {
 	for _, vlan := range []int{0, 200} {
 		stack := newTestStackInternal(t)
 		h := NewDNSHandler(stack)
+		device := &config.Device{Name: "dns-host"}
 
 		response := &layers.DNS{ID: 1, QR: true, AA: true, ResponseCode: layers.DNSResponseCodeNoErr}
 
-		err := h.SendDNSResponse(response,
+		err := h.SendDNSResponse(device, response,
 			net.ParseIP("10.20.200.2"), net.ParseIP("10.20.200.250"),
 			net.HardwareAddr{0x02, 0x00, 0x14, 0x03, 0x00, 0x01},
 			net.HardwareAddr{0xaa, 0xaa, 0xaa, 0x00, 0x00, 0x01},
@@ -29,6 +32,9 @@ func TestSendDNSResponseEchoesVLAN(t *testing.T) {
 
 		select {
 		case pkt := <-stack.sendQueue:
+			if pkt.generatedHost != device || pkt.Device != device {
+				t.Fatal("DNS response lost authored host provenance")
+			}
 			if pkt.VLAN != vlan {
 				t.Errorf("DNS reply VLAN = %d, want %d (must echo the request VLAN)", pkt.VLAN, vlan)
 			}

@@ -339,6 +339,7 @@ func (h *NetBIOSHandler) sendNameQueryResponse(
 
 	// Build and send UDP packet
 	_ = h.stack.udpHandler.SendUDP( // error is non-critical for simulation
+		device,
 		deviceIP.To4(),
 		dstIP.To4(),
 		NetBIOSNameServicePort,
@@ -742,6 +743,7 @@ func (h *NetBIOSHandler) sendNodeStatusResponse(
 	buf.Write(body.Bytes())
 
 	_ = h.stack.udpHandler.SendUDP(
+		device,
 		deviceIP.To4(), dstIP.To4(),
 		NetBIOSNameServicePort, replyPort,
 		buf.Bytes(), h.stack.replySourceMAC(reqPkt, device), dstMAC, reqPkt.VLAN,

@@ -209,6 +209,7 @@ func (h *UDPHandler) sendPortUnreachable(
 		layers.ICMPv4CodePort,
 		original,
 		identity.vlan,
+		device,
 	)
 }
 
@@ -240,6 +241,7 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 	}
 
 	request := udpProxyRequest{
+		device:  device,
 		address: net.JoinHostPort(device.MapToIP.String(), strconv.Itoa(int(udp.DstPort))),
 		payload: slices.Clone(udp.Payload),
 		srcIP:   slices.Clone(srcIP),
@@ -256,6 +258,7 @@ func (h *UDPHandler) proxyToMap(device *config.Device, ipLayer *layers.IPv4, udp
 }
 
 type udpProxyRequest struct {
+	device  *config.Device
 	address string
 	payload []byte
 	srcIP   []byte
@@ -315,6 +318,7 @@ func (h *UDPHandler) runProxy(ctx context.Context, request udpProxyRequest) {
 	}
 
 	_ = h.SendUDP(
+		request.device,
 		request.srcIP,
 		request.dstIP,
 		request.srcPort,
@@ -367,18 +371,20 @@ func (h *UDPHandler) Stop() {
 
 // SendUDP sends a UDP packet with a default (zero) ToS byte.
 func (h *UDPHandler) SendUDP(
+	device *config.Device,
 	srcIP, dstIP []byte,
 	srcPort, dstPort uint16,
 	payload []byte,
 	srcMAC, dstMAC []byte,
 	vlan int,
 ) error {
-	return h.sendUDPWithTOS(srcIP, dstIP, srcPort, dstPort, payload, srcMAC, dstMAC, vlan, 0)
+	return h.sendUDPWithTOS(device, srcIP, dstIP, srcPort, dstPort, payload, srcMAC, dstMAC, vlan, 0)
 }
 
 // sendUDPWithTOS sends a UDP packet, stamping the IPv4 ToS byte. tos lets the
 // reflector path preserve/alter DiffServ marking; other callers pass 0.
 func (h *UDPHandler) sendUDPWithTOS(
+	device *config.Device,
 	srcIP, dstIP []byte,
 	srcPort, dstPort uint16,
 	payload []byte,
@@ -436,10 +442,12 @@ func (h *UDPHandler) sendUDPWithTOS(
 
 	// Create and send packet
 	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		VLAN:         vlan, // reply on the VLAN the request arrived on
+		Buffer:        buffer.Bytes(),
+		Length:        len(buffer.Bytes()),
+		SerialNumber:  serialNum,
+		VLAN:          vlan, // reply on the VLAN the request arrived on
+		Device:        device,
+		generatedHost: device,
 	}
 
 	h.stack.Send(pkt)
@@ -494,6 +502,7 @@ func (h *UDPHandler) tryReflect(pkt *Packet, ipLayer *layers.IPv4, udp *layers.U
 
 	send := func() {
 		_ = h.sendUDPWithTOS(
+			device,
 			srcIP, dstIP, srcPort, dstPort, payload,
 			identity.source, identity.destination, identity.vlan, tos,
 		)
