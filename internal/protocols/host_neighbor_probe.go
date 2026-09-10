@@ -5,6 +5,7 @@ import "log/slog"
 func (s *stackDatagramSender) currentNeighborProbe(
 	key notificationNeighborKey,
 	resolution *notificationNeighborResolution,
+	reloadHeld bool,
 ) (pendingNotification, bool) {
 	s.mu.Lock()
 	if s.pending[key] != resolution {
@@ -18,9 +19,13 @@ func (s *stackDatagramSender) currentNeighborProbe(
 	}
 	packet := resolution.hostPackets[0]
 	s.mu.Unlock()
-	s.stack.reloadMu.RLock()
+	if !reloadHeld {
+		s.stack.reloadMu.RLock()
+	}
 	route, handled, err := s.stack.hostPacketRoute(packet)
-	s.stack.reloadMu.RUnlock()
+	if !reloadHeld {
+		s.stack.reloadMu.RUnlock()
+	}
 	s.mu.Lock()
 	if s.pending[key] != resolution {
 		s.mu.Unlock()

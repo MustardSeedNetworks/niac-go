@@ -44,20 +44,23 @@ type notificationNeighbor struct {
 }
 
 type pendingNotification struct {
-	egressDevice                *config.Device
-	vlan                        int
-	source, destination         netip.Addr
-	neighborSource              netip.Addr
-	routed                      bool
-	sourcePort, destinationPort uint16
-	payload                     []byte
+	originDevice                   *config.Device
+	originInterface, originNetwork string
+	egressDevice                   *config.Device
+	vlan                           int
+	source, destination            netip.Addr
+	neighborSource                 netip.Addr
+	routed                         bool
+	sourcePort, destinationPort    uint16
+	payload                        []byte
 }
 
 type notificationNeighborResolution struct {
-	notifications []pendingNotification
-	hostPackets   []*Packet
-	attempts      int
-	timer         *time.Timer
+	notifications  []pendingNotification
+	refreshVersion uint64
+	hostPackets    []*Packet
+	attempts       int
+	timer          *time.Timer
 }
 
 type stackDatagramSender struct {
@@ -93,39 +96,10 @@ func (s *stackDatagramSender) Send(
 	if err != nil {
 		return err
 	}
-	source, target := s.notificationRoute(device, destination)
-	if !source.IsValid() || len(device.MACAddress) != SizeOfMac {
-		return fmt.Errorf("device %q has no active notification source for %s", device.Name, destination)
-	}
-	egressDevice, neighborSource, target, routed := s.notificationEgress(
-		device,
-		source,
-		destination,
-		target,
-		vlan,
-	)
-	destinationMAC, err := s.notificationDestinationMAC(egressDevice, vlan, destination, target)
-	if err != nil {
-		return err
-	}
-	if destinationMAC == nil {
-		return s.resolveNeighbor(pendingNotification{
-			egressDevice: egressDevice, vlan: vlan,
-			source: source, destination: destination, neighborSource: neighborSource, routed: routed,
-			sourcePort: sourcePort, destinationPort: port, payload: append([]byte(nil), payload...),
-		}, target)
-	}
-	return s.emitNotification(
-		egressDevice,
-		vlan,
-		source,
-		destination,
-		sourcePort,
-		port,
-		destinationMAC,
-		payload,
-		routed,
-	)
+	return s.sendNotificationIntent(pendingNotification{
+		originDevice: device, vlan: vlan, destination: destination,
+		sourcePort: sourcePort, destinationPort: port, payload: append([]byte(nil), payload...),
+	}, false)
 }
 
 func (s *stackDatagramSender) notificationEgress(
@@ -172,15 +146,7 @@ func parseNotificationReceiver(address string) (netip.Addr, uint16, error) {
 	return destination.Unmap(), uint16(port), nil
 }
 
-func (s *stackDatagramSender) notificationRoute(
-	device *config.Device,
-	destination netip.Addr,
-) (netip.Addr, netip.Addr) {
-	state := s.stack.deviceStates[device]
-	if state == nil {
-		return netip.Addr{}, netip.Addr{}
-	}
-	snapshot := state.Snapshot()
+func notificationSnapshotRoute(snapshot devicestate.Snapshot, destination netip.Addr) (netip.Addr, netip.Addr) {
 	source, bestBits := notificationConnectedSource(snapshot.Network.Interfaces, destination)
 	route := notificationStaticRoute(snapshot.Network.Routes, destination, bestBits)
 	if route.NextHop.IsValid() {
@@ -196,7 +162,7 @@ func (s *stackDatagramSender) notificationRoute(
 	if !hasNotificationSubnet(snapshot.Network.Interfaces, destination) {
 		for _, iface := range snapshot.Network.Interfaces {
 			if iface.AdminUp && iface.OperUp && iface.Address.IsValid() &&
-				iface.Address.Addr().Is4() == destination.Is4() {
+				iface.Address.Addr().Is4() == destination.Is4() && !notificationFaultedInterface(snapshot, iface.Name) {
 				return iface.Address.Addr(), destination
 			}
 		}
@@ -292,36 +258,62 @@ func (s *stackDatagramSender) learnedNeighborMAC(vlan int, target netip.Addr) ne
 }
 
 func (s *stackDatagramSender) resolveNeighbor(notification pendingNotification, target netip.Addr) error {
+	return s.queueNotificationNeighbor(notification, target, false)
+}
+
+func (s *stackDatagramSender) queueNotificationNeighbor(
+	notification pendingNotification, target netip.Addr, reloadHeld bool,
+) error {
+	s.stack.lifecycleMu.RLock()
+	if s.stack.stopped {
+		s.stack.lifecycleMu.RUnlock()
+		return ErrStackStopped
+	}
 	key := newNotificationNeighborKey(notification.vlan, target)
 	s.mu.Lock()
 	resolution := s.pending[key]
 	if s.neighborQueueFull(resolution) {
 		s.mu.Unlock()
+		s.stack.lifecycleMu.RUnlock()
 		return fmt.Errorf("notification neighbor queue for %s is full", target)
 	}
 	if resolution != nil {
 		resolution.notifications = append(resolution.notifications, notification)
 		s.mu.Unlock()
+		s.stack.lifecycleMu.RUnlock()
 		return nil
 	}
 	s.pending[key] = &notificationNeighborResolution{
 		notifications: []pendingNotification{notification},
 	}
 	s.mu.Unlock()
-	s.probeNeighbor(key)
+	s.stack.lifecycleMu.RUnlock()
+	s.probeNeighborWithLock(key, reloadHeld)
 	return nil
 }
 
 func (s *stackDatagramSender) probeNeighbor(key notificationNeighborKey) {
+	s.probeNeighborWithLock(key, false)
+}
+
+func (s *stackDatagramSender) probeNeighborWithLock(key notificationNeighborKey, reloadHeld bool) {
 	s.mu.Lock()
 	resolution := s.pending[key]
 	s.mu.Unlock()
-	s.probeNeighborResolution(key, resolution)
+	s.sendNeighborProbe(key, resolution, reloadHeld)
 }
 
 func (s *stackDatagramSender) probeNeighborResolution(
 	key notificationNeighborKey,
 	resolution *notificationNeighborResolution,
+) {
+	s.sendNeighborProbe(key, resolution, false)
+}
+
+func (s *stackDatagramSender) sendNeighborProbe(
+	key notificationNeighborKey,
+	resolution *notificationNeighborResolution,
+	reloadHeld bool,
 ) {
 	s.mu.Lock()
 	if resolution == nil || s.pending[key] != resolution {
@@ -336,7 +328,7 @@ func (s *stackDatagramSender) probeNeighborResolution(
 	}
 	resolution.attempts++
 	s.mu.Unlock()
-	notification, current := s.currentNeighborProbe(key, resolution)
+	notification, current := s.currentNeighborProbe(key, resolution, reloadHeld)
 	if !current {
 		return
 	}
@@ -355,7 +347,7 @@ func (s *stackDatagramSender) probeNeighborResolution(
 
 	s.mu.Lock()
 	if current := s.pending[key]; current == resolution {
-		current.timer = time.AfterFunc(notificationNeighborRetry, func() { s.probeNeighborResolution(key, resolution) })
+		current.timer = time.AfterFunc(notificationNeighborRetry, func() { s.retryNeighborResolution(key, resolution) })
 	}
 	s.mu.Unlock()
 }
@@ -444,6 +436,12 @@ func (s *stackDatagramSender) observeNeighbor(vlan int, address netip.Addr, mac 
 		}
 	}
 	for _, notification := range resolution.notifications {
+		if notification.originDevice != nil {
+			if err := s.sendNotificationIntent(notification, true); err != nil {
+				slog.Debug("resolved notification intent rejected", "error", err)
+			}
+			continue
+		}
 		if err := s.emitNotification(
 			notification.egressDevice,
 			notification.vlan,
