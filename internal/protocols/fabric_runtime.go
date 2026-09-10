@@ -17,7 +17,7 @@ type fabricRuntime struct {
 	devicesByName     map[string]*config.Device
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
 	attachmentRouters []fabricRouter
-	attachmentDHCP    *config.Device
+	attachmentDHCP    []*config.Device
 	deviceStates      map[*config.Device]*devicestate.Store
 }
 
@@ -155,8 +155,7 @@ func validAttachmentHost(prefix netip.Prefix, address netip.Addr) bool {
 func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {
 	for _, scope := range scopes {
 		if scope.Network == r.attachmentNetwork {
-			r.attachmentDHCP = r.devicesByName[scope.Device]
-			return
+			r.attachmentDHCP = append(r.attachmentDHCP, r.devicesByName[scope.Device])
 		}
 	}
 }

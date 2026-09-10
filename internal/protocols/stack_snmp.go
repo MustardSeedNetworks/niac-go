@@ -230,15 +230,18 @@ func (s *Stack) interfaceIndexResolver(device *config.Device) func(string) (int,
 	return group.interfaceIndex
 }
 
-func (s *Stack) updateFDBTables(mac net.HardwareAddr) {
-	if s == nil || len(mac) == 0 {
+func (s *Stack) updateFDBTables(mac net.HardwareAddr, table *DeviceTable) {
+	if s == nil || len(mac) == 0 || table == nil {
 		return
 	}
 
 	decMac, hexMac := formatMACForFDB(mac)
 
-	for _, device := range s.devices.GetForwardingDevices() {
+	for _, device := range table.GetForwardingDevices() {
 		if device == nil {
+			continue
+		}
+		if s.fabric != nil && !s.fabric.deviceOnAttachment(device) {
 			continue
 		}
 

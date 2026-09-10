@@ -88,7 +88,9 @@ type DHCPHandler struct {
 	poolStart          net.IP
 	poolEnd            net.IP
 	serverDevice       *config.Device
+	deviceTable        *DeviceTable
 	serverIP           net.IP
+	nextServerIP       net.IP
 	subnetMask         net.IP
 	gateway            net.IP
 	dnsServers         []net.IP
@@ -190,6 +192,7 @@ func (h *DHCPHandler) Reset() {
 	h.poolEnd = nil
 	h.serverDevice = nil
 	h.serverIP = nil
+	h.nextServerIP = nil
 	h.subnetMask = getDefaultSubnetMask()
 	h.gateway = nil
 	h.dnsServers = nil
@@ -246,37 +249,15 @@ func (h *DHCPHandler) generateIPPool(start, end net.IP) ([]net.IP, error) {
 	return pool, nil
 }
 
-// findAvailableIP finds an available IP address
-// Note: Caller must hold h.mu lock.
-func (h *DHCPHandler) findAvailableIP() net.IP {
-	// Check each IP in pool
-	for _, ip := range h.ipPool {
-		if _, declined := h.declined[ip.String()]; declined {
-			continue // client reported this address in use (DHCPDECLINE)
-		}
-
-		inUse := false
-
-		for _, lease := range h.leases {
-			if lease.IP.Equal(ip) && time.Now().Before(lease.Expiry) {
-				inUse = true
-
-				break
-			}
-		}
-
-		if !inUse {
-			return ip
-		}
-	}
-
-	return nil
-}
-
 // allocateLease allocates or renews a lease.
 func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, hostname string) (*DHCPLease, error) {
+	mac = slices.Clone(mac)
+	requestedIP = slices.Clone(requestedIP)
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if requestedIP != nil && !h.canGrantRequestedIPLocked(mac, requestedIP) {
+		return nil, ErrNoAvailableIPAddresses
+	}
 
 	macStr := mac.String()
 
@@ -291,7 +272,7 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 				existing.Hostname = hostname
 			}
 
-			return existing, nil
+			return cloneDHCPLease(existing), nil
 		}
 
 		lease := &DHCPLease{
@@ -303,11 +284,14 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 		}
 		h.leases[macStr] = lease
 
-		return lease, nil
+		return cloneDHCPLease(lease), nil
 	}
 
 	// Check if client already has a lease
 	if existing, ok := h.leases[macStr]; ok {
+		if requestedIP != nil {
+			existing.IP = requestedIP
+		}
 		// Renew existing lease
 		existing.Expiry = time.Now().Add(DefaultLeaseTime)
 		// Update hostname if provided
@@ -315,7 +299,7 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 			existing.Hostname = hostname
 		}
 
-		return existing, nil
+		return cloneDHCPLease(existing), nil
 	}
 
 	// Find available IP
@@ -341,7 +325,7 @@ func (h *DHCPHandler) allocateLease(mac net.HardwareAddr, requestedIP net.IP, ho
 
 	h.leases[macStr] = lease
 
-	return lease, nil
+	return cloneDHCPLease(lease), nil
 }
 
 // matchStaticLease finds a matching static lease IP for the given MAC.
@@ -519,7 +503,10 @@ func (h *DHCPHandler) handleDHCPDiscover(
 func (h *DHCPHandler) canGrantRequestedIP(mac net.HardwareAddr, ip net.IP) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	return h.canGrantRequestedIPLocked(mac, ip)
+}
 
+func (h *DHCPHandler) canGrantRequestedIPLocked(mac net.HardwareAddr, ip net.IP) bool {
 	// A statically-bound client may only have its static address.
 	if staticIP := h.matchStaticLease(mac); staticIP != nil {
 		return staticIP.Equal(ip)
@@ -553,6 +540,9 @@ func (h *DHCPHandler) handleDHCPRequest(
 	}
 
 	requestedIP := getRequestedIP(info.dhcp)
+	if requestedIP == nil && !info.dhcp.ClientIP.IsUnspecified() {
+		requestedIP = info.dhcp.ClientIP
+	}
 
 	// A REQUEST names the address the client intends to use. If we cannot lease
 	// exactly that address, reject with a NAK — a real server never substitutes
@@ -599,11 +589,9 @@ func (h *DHCPHandler) handleDHCPRequest(
 }
 
 // HandlePacket processes a DHCP packet.
-func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, _ *layers.UDP, devices []*config.Device) {
+func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4) {
 	logger := slog.Default()
 	debugLevel := h.stack.GetDebugLevel()
-
-	h.stack.IncrementStat("dhcp_requests")
 
 	info := h.parseDHCPPacket(pkt)
 	if info == nil {
@@ -623,12 +611,15 @@ func (h *DHCPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, _ *layers.
 			"sn", pkt.SerialNumber)
 	}
 
-	serverDevice := findServerDevice(devices)
+	serverDevice := h.serverDevice
 	if serverDevice == nil {
 		if debugLevel >= DebugLevelInfo {
 			logger.Debug("DHCP: No server device configured", "sn", pkt.SerialNumber)
 		}
 
+		return
+	}
+	if !h.acceptsDHCPRequest(info) {
 		return
 	}
 
@@ -712,7 +703,9 @@ func (h *DHCPHandler) dispatchDHCPMessage(
 		}
 
 		h.mu.Lock()
-		delete(h.leases, info.dhcp.ClientHWAddr.String())
+		if lease := h.leases[info.dhcp.ClientHWAddr.String()]; lease != nil && lease.IP.Equal(info.dhcp.ClientIP) {
+			delete(h.leases, info.dhcp.ClientHWAddr.String())
+		}
 		h.mu.Unlock()
 	case DHCPInform:
 		h.handleDHCPInform(info, serverDevice, serialNum, debugLevel)
@@ -754,7 +747,7 @@ func (h *DHCPHandler) updateFDBTables(mac net.HardwareAddr) {
 		return
 	}
 
-	h.stack.updateFDBTables(mac)
+	h.stack.updateFDBTables(mac, h.deviceTable)
 }
 
 // SendDHCPOffer sends a DHCP Offer message.
@@ -1015,8 +1008,10 @@ func (h *DHCPHandler) sendDHCPResponse(
 
 	// A NAK never conveys an address; yiaddr must be zero (RFC 2131 §4.3.2).
 	yourIP := assignedIP
+	nextServer := h.nextServerIP
 	if msgType == DHCPNak {
 		yourIP = net.IPv4zero
+		nextServer = net.IPv4zero
 	}
 
 	dhcp := &layers.DHCPv4{
@@ -1030,7 +1025,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 		Flags:        dhcpBroadcastFlag,
 		ClientIP:     net.IPv4zero,
 		YourClientIP: yourIP,
-		NextServerIP: net.IPv4zero,
+		NextServerIP: nextServer,
 		RelayAgentIP: net.IPv4zero,
 		ClientHWAddr: clientMAC,
 	}

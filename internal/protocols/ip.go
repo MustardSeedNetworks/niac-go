@@ -157,8 +157,8 @@ func (h *IPHandler) getTargetDevices(
 }
 
 func (h *IPHandler) getFabricTarget(ip *layers.IPv4, pkt *Packet) []*config.Device {
-	if ip.DstIP.Equal(net.IPv4bcast) && h.stack.fabric.attachmentDHCP != nil {
-		return []*config.Device{h.stack.fabric.attachmentDHCP}
+	if ip.DstIP.Equal(net.IPv4bcast) && len(h.stack.fabric.attachmentDHCP) > 0 {
+		return h.stack.fabric.attachmentDHCP
 	}
 	dst, ok := netip.AddrFromSlice(ip.DstIP)
 	if !ok {

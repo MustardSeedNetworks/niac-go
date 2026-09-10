@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"net"
 	"net/netip"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -131,9 +132,7 @@ func (s *Stack) resetDeviceState() {
 	s.stateDeviceIPv4 = make(map[*config.Device]deviceIPv4Index)
 	s.stateIPv4Mu.Unlock()
 
-	if s.dhcpHandler != nil {
-		s.dhcpHandler.Reset()
-	}
+	s.dhcpHandlers = make(map[*config.Device]*DHCPHandler)
 
 	if s.dhcpv6Handler != nil {
 		s.dhcpv6Handler.Reset()
@@ -150,10 +149,10 @@ func (s *Stack) resetDeviceState() {
 // registerDevice registers a single device with all relevant handlers,
 // targeting the stack's single flat device table (the no-segments path).
 func (s *Stack) registerDevice(device *config.Device) {
+	s.configureDHCPServer(device, s.devices)
 	s.registerDeviceState(device, s.devices)
 	s.registerDeviceAddresses(device, s.devices)
 	s.registerDeviceFeatures(device, s.devices)
-	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
 	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), device.VLAN)
 
@@ -171,10 +170,10 @@ func (s *Stack) registerDevice(device *config.Device) {
 // by *config.Device pointer, not by table, so it coexists safely across
 // segments even when two segments reuse the same IP.
 func (s *Stack) registerSegmentDevice(device *config.Device, table *DeviceTable, vlan int) {
+	s.configureDHCPServer(device, table)
 	s.registerDeviceState(device, table)
 	s.registerDeviceAddresses(device, table)
 	s.registerDeviceFeatures(device, table)
-	s.configureDHCPServer(device)
 	s.initSNMPAgent(device)
 	s.notifications.Register(device, s.deviceStates[device], s.interfaceIndexResolver(device), vlan)
 
@@ -209,13 +208,20 @@ func (s *Stack) registerDeviceFeatures(device *config.Device, table *DeviceTable
 }
 
 // configureDHCPServer configures DHCP server for a device if it has DHCP config.
-func (s *Stack) configureDHCPServer(device *config.Device) {
+func (s *Stack) configureDHCPServer(device *config.Device, table *DeviceTable) {
 	if device.DHCPConfig == nil {
 		return
 	}
+	handler := NewDHCPHandler(s)
+	handler.deviceTable = table
+	if len(device.DHCPConfig.SubnetMask) > 0 {
+		handler.subnetMask = net.IP(device.DHCPConfig.SubnetMask)
+	}
+	handler.nextServerIP = device.DHCPConfig.NextServerIP
+	s.dhcpHandlers[device] = handler
 
 	if device.DHCPConfig.PoolStart != nil && device.DHCPConfig.PoolEnd != nil {
-		s.dhcpHandler.SetPool(device.DHCPConfig.PoolStart, device.DHCPConfig.PoolEnd)
+		handler.SetPool(device.DHCPConfig.PoolStart, device.DHCPConfig.PoolEnd)
 	}
 
 	serverIP := device.DHCPConfig.ServerIdentifier
@@ -223,7 +229,7 @@ func (s *Stack) configureDHCPServer(device *config.Device) {
 		serverIP = device.IPAddresses[0]
 	}
 
-	s.dhcpHandler.setServerConfig(
+	handler.setServerConfig(
 		device,
 		serverIP,
 		device.DHCPConfig.Router,
@@ -231,14 +237,14 @@ func (s *Stack) configureDHCPServer(device *config.Device) {
 		device.DHCPConfig.DomainName,
 	)
 
-	s.dhcpHandler.SetAdvancedOptions(
+	handler.SetAdvancedOptions(
 		device.DHCPConfig.NTPServers,
 		device.DHCPConfig.DomainSearch,
 		device.DHCPConfig.TFTPServerName,
 		device.DHCPConfig.BootfileName,
 		device.DHCPConfig.VendorSpecific,
 	)
-	s.dhcpHandler.SetStaticLeases(device.DHCPConfig.ClientLeases)
+	handler.SetStaticLeases(device.DHCPConfig.ClientLeases)
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		logging.Debugf("Configured DHCP server for device %s", device.Name)

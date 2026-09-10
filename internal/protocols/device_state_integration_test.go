@@ -189,7 +189,7 @@ func TestFlatCLIAddressAndShutdownChangePacketDelivery(t *testing.T) {
 	if got := stack.tcpHandler.findDeviceWithIP(targets, newAddress); got != device {
 		t.Fatalf("new address TCP device = %#v", got)
 	}
-	if serverIP := stack.dhcpHandler.DHCPHandlerServerIP(); !serverIP.Equal(newAddress) {
+	if serverIP := stack.dhcpHandlers[device].DHCPHandlerServerIP(); !serverIP.Equal(newAddress) {
 		t.Fatalf("DHCP server address = %v, want %v", serverIP, newAddress)
 	}
 	assertAddressMaskReplySource(t, stack, device, newAddress)

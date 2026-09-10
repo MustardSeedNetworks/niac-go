@@ -188,17 +188,12 @@ func BenchmarkLLDPManagementAddressTLV(b *testing.B) {
 
 // BenchmarkDHCPDiscover benchmarks processing DHCP DISCOVER messages.
 func BenchmarkDHCPDiscover(b *testing.B) {
-	cfg := &config.Config{}
 	debugConfig := logging.NewDebugConfig(0)
-	stack := protocols.NewStack(nil, cfg, debugConfig)
-	handler := protocols.NewDHCPHandler(stack)
 
 	// Configure DHCP handler
 	serverIP := net.ParseIP("192.168.1.1")
 	gateway := net.ParseIP("192.168.1.1")
 	dns := []net.IP{net.ParseIP("8.8.8.8")}
-	handler.SetServerConfig(serverIP, gateway, dns, "example.com")
-	handler.SetPool(net.ParseIP("192.168.1.100"), net.ParseIP("192.168.1.200"))
 
 	// Create DHCP server device
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
@@ -206,8 +201,14 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 		Name:        "dhcp-server",
 		MACAddress:  serverMAC,
 		IPAddresses: []net.IP{serverIP},
+		DHCPConfig: &config.DHCPConfig{
+			ServerIdentifier: serverIP, Router: gateway,
+			DomainNameServer: dns, DomainName: "example.com",
+			PoolStart: net.ParseIP("192.168.1.100"), PoolEnd: net.ParseIP("192.168.1.200"),
+		},
 	}
-	devices := []*config.Device{device}
+	stack := protocols.NewStack(nil, &config.Config{Devices: []config.Device{*device}}, debugConfig)
+	handler := protocols.NewIPHandler(stack)
 
 	// Build DHCP DISCOVER packet
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
@@ -260,7 +261,7 @@ func BenchmarkDHCPDiscover(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		handler.HandlePacket(pkt, ip, udp, devices)
+		handler.HandlePacket(pkt)
 	}
 }
 

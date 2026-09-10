@@ -92,7 +92,7 @@ type Stack struct {
 	udpHandler         *UDPHandler
 	tcpHandler         *TCPHandler
 	dnsHandler         *DNSHandler
-	dhcpHandler        *DHCPHandler
+	dhcpHandlers       map[*config.Device]*DHCPHandler
 	dhcpv6Handler      *DHCPv6Handler
 	httpHandler        *HTTPHandler
 	ftpHandler         *FTPHandler
@@ -247,7 +247,6 @@ func newStack(
 	stack.udpHandler = NewUDPHandler(stack)
 	stack.tcpHandler = NewTCPHandler(stack)
 	stack.dnsHandler = NewDNSHandler(stack)
-	stack.dhcpHandler = NewDHCPHandler(stack)
 	stack.dhcpv6Handler = NewDHCPv6Handler(stack)
 	stack.httpHandler = NewHTTPHandler(stack)
 	stack.ftpHandler = NewFTPHandler(stack)
@@ -281,10 +280,6 @@ func (s *Stack) ConfigureFabric(topology *fabric.Topology) {
 		return
 	}
 	s.fabric.bindDeviceStates(s.deviceStates)
-	s.dhcpHandler = NewDHCPHandler(s)
-	if s.fabric.attachmentDHCP != nil {
-		s.configureDHCPServer(s.fabric.attachmentDHCP)
-	}
 }
 
 func (s *Stack) replySourceMAC(pkt *Packet, device *config.Device) net.HardwareAddr {
@@ -332,7 +327,7 @@ func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
 }
 
 func (s *Stack) allowDHCP() bool {
-	return s.fabric == nil || s.fabric.attachmentDHCP != nil
+	return s.fabric == nil || len(s.fabric.attachmentDHCP) > 0
 }
 
 // Stop permanently transitions the protocol stack out of service.
@@ -532,10 +527,6 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 		s.configureDeviceStates(replacementTopology)
 		s.fabric = newFabricRuntime(replacementTopology, cfg)
 		s.fabric.bindDeviceStates(s.deviceStates)
-		s.dhcpHandler = NewDHCPHandler(s)
-		if s.fabric.attachmentDHCP != nil {
-			s.configureDHCPServer(s.fabric.attachmentDHCP)
-		}
 	} else {
 		s.configureDeviceStates(nil)
 	}
@@ -620,11 +611,6 @@ func (s *Stack) GetProtocolDebugLevel(protocol string) int {
 // GetDebugConfig returns the debug configuration.
 func (s *Stack) GetDebugConfig() *logging.DebugConfig {
 	return s.debugConfig
-}
-
-// GetDHCPHandler returns the DHCP handler for configuration.
-func (s *Stack) GetDHCPHandler() *DHCPHandler {
-	return s.dhcpHandler
 }
 
 // GetDHCPv6Handler returns the DHCPv6 handler for configuration.

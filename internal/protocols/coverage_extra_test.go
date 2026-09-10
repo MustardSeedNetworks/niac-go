@@ -454,30 +454,6 @@ func TestDNSSendDNSResponseV6(t *testing.T) {
 
 // ---------- DHCP tests ----------
 
-func TestDHCPFindServerDevice(t *testing.T) {
-	// No devices
-	if findServerDevice(nil) != nil {
-		t.Error("expected nil for empty device list")
-	}
-
-	// Device without DHCP configuration
-	devs := []*config.Device{{Name: "d1"}}
-	if findServerDevice(devs) != nil {
-		t.Error("expected nil for device without DHCP configuration")
-	}
-
-	// An addressed non-server must not be selected ahead of the DHCP device.
-	devs = []*config.Device{
-		{Name: "addressed", IPAddresses: []net.IP{net.ParseIP("10.0.0.1")}},
-		nil,
-		{Name: "d1", DHCPConfig: &config.DHCPConfig{}},
-	}
-	got := findServerDevice(devs)
-	if got == nil || got.Name != "d1" {
-		t.Error("expected d1 to be returned")
-	}
-}
-
 func TestDHCPGetRequestedIP(t *testing.T) {
 	dhcp := &layers.DHCPv4{
 		Options: []layers.DHCPOption{
@@ -2720,8 +2696,8 @@ func TestDHCPv6BuildResponse(t *testing.T) {
 func TestStackAccessors(t *testing.T) {
 	stack := newTestStackInternal(t)
 
-	if stack.GetDHCPHandler() == nil {
-		t.Error("expected non-nil DHCP handler")
+	if stack.dhcpHandlers == nil {
+		t.Error("expected initialized per-device DHCP registry")
 	}
 	if stack.GetDHCPv6Handler() == nil {
 		t.Error("expected non-nil DHCPv6 handler")
@@ -3362,7 +3338,8 @@ func TestDHCPHandlePacket(t *testing.T) {
 	}
 
 	// Should not panic
-	h.HandlePacket(pkt, ipLayer, udpLayer, []*config.Device{serverDev})
+	h.setServerConfig(serverDev, net.ParseIP("10.0.0.1"), net.ParseIP("10.0.0.1"), nil, "example.com")
+	h.HandlePacket(pkt, ipLayer)
 }
 
 // ---------- DHCPv6 serializeOption ----------

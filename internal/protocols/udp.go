@@ -140,7 +140,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	case UDPPortDHCP:
 		// DHCP server port
 		if h.stack.allowDHCP() {
-			h.stack.dhcpHandler.HandlePacket(pkt, ipLayer, udp, devices)
+			h.stack.handleDHCPPacket(pkt, ipLayer, devices)
 		}
 	case UDPPortSNMP:
 		h.handleSNMP(pkt, ipLayer, udp, devices)
