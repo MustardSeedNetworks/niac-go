@@ -49,6 +49,12 @@ The final v1.0 release remains gated by every exit criterion below.
 
 ### Faults
 
+Implementation checkpoint (2026-09-10): resource telemetry is merged in
+v0.95.45. Captive-portal authoring and live device-fault controls are under
+review, with real TCP isolation/clearing and saved-configuration browser
+checks. Reboot/STP events, DHCP isolation and explicit address faults remain.
+The phase boxes below track acceptance, not individual implementation merges.
+
 - [x] Injected interface faults are observable through IF-MIB and
       EtherLike-MIB counters while preserving monotonic counter behavior.
 - [ ] Every fault type is asserted on the wire, and its MIB effect is named as
