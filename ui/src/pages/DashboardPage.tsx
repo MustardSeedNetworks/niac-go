@@ -283,7 +283,7 @@ export const DashboardPage: FC = () => {
                       {t('dashboard.recentRuns.deviceCountShort', { value: item.deviceCount })}
                     </Tag>
                   </div>
-                  <p className="text-text-primary font-medium text-sm truncate">
+                  <p className="text-text-primary font-medium text-sm wrap-anywhere">
                     {item.configName}
                   </p>
                   <div className="flex gap-default mt-tight text-xs text-text-muted">
