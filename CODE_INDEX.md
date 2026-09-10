@@ -59,6 +59,8 @@ parallel implementation. It is intentionally organized by purpose.
 | One-shot device operations | `internal/devicestate/store_device_action.go` + `internal/behavior/runner_actions.go` | Consumed operation identities survive recovery and checkpoint rollback; phase reset does not rearm them |
 | Reboot and STP telemetry | `internal/protocols/snmp/device_action.go` + `internal/protocols/state_device_action_notifications.go` | Shared device reboot epoch, retained STP baselines and event-driven notifications; SNMPv3 engine lifetime remains separate |
 | Draft behavior authoring | `internal/api/handlers_draft_behaviors.go` | Revision-checked replacement shares config validation and preserves one-shot operations without fault values |
+| Device operation eligibility | `internal/config/snmp_availability.go` + `internal/protocols/behavior_validation.go` | Shared served-protocol checks and actual scalar inventory validation before capture, startup and reload |
+| Segmented discovery advertisements | `internal/protocols/discovery_helpers.go` | Shared explicit-segment VLAN identity for discovery frames and STP operations |
 
 ## Simulation lifecycle API
 
@@ -67,7 +69,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Simulation request contract | `internal/api/server.go` | Shared start and preflight request fields |
 | Simulation request validation | `internal/api/validation.go` | Interface/config source boundary validation |
 | Simulation lifecycle handlers | `internal/api/handlers_simulation.go` | Strict decoder and standard error envelope |
-| Scenario generation API | `internal/api/handlers_scenario.go` | Licensed profile catalog and CSRF-protected deterministic generation boundary; generated YAML remains a draft input and does not mutate runtime |
+| Scenario generation API | `internal/api/handlers_scenario.go` | Profile catalog and CSRF-protected deterministic generation boundary; generated YAML remains a draft input and does not mutate runtime |
 | Draft topology mutations | `internal/drafttopology` + `internal/api/handlers_draft_topology.go` | Typed add, connect, disconnect, move, and link-property edits; reciprocal peer ports and draft revisions remain authoritative |
 | Route security policy | `internal/api/routes.go` | Methods, rate limits, and CSRF are registered here |
 | Config preparation and start | `internal/daemon/daemon.go` | Preflight must not persist or open capture |
