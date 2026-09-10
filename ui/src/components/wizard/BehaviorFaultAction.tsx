@@ -75,7 +75,11 @@ export function BehaviorFaultAction({
         }))}
         onChange={(type) => {
           if (isDeviceBehaviorFaultType(type))
-            onChange({ device: action.device, type, value: action.value });
+            onChange({
+              device: action.device,
+              type,
+              value: type === 'captive_portal' ? 1 : action.value,
+            });
           else if (isInterfaceBehaviorFaultType(type))
             onChange({
               device: action.device,
@@ -87,6 +91,8 @@ export function BehaviorFaultAction({
       />
       {action.type === 'link_down' ? (
         <SmallText>{t('newSimWizard.behaviors.linkDownEffect')}</SmallText>
+      ) : action.type === 'captive_portal' ? (
+        <SmallText>{t('newSimWizard.behaviors.captivePortalEffect')}</SmallText>
       ) : (
         <Input
           label={

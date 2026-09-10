@@ -11,6 +11,7 @@ export const resourceBehaviorFaultTypes = [
   'disk_percent',
 ] as const;
 export const deviceBehaviorFaultTypes = [
+  'captive_portal',
   'dhcp_no_offer',
   'dns_nxdomain',
   'dns_timeout',
@@ -37,7 +38,7 @@ export const isInterfaceBehaviorFaultType = (type: string): type is InterfaceFau
   interfaceBehaviorFaultTypes.some((candidate) => candidate === type);
 
 export const behaviorFaultMaximum = (type: DraftBehaviorFault['type']) =>
-  type === 'latency' ? 60000 : 100;
+  type === 'captive_portal' ? 1 : type === 'latency' ? 60000 : 100;
 
 export const validBehaviorFault = (fault: DraftBehaviorFault) =>
   Boolean(fault.device && (isDeviceBehaviorFaultType(fault.type) || fault.interface)) &&

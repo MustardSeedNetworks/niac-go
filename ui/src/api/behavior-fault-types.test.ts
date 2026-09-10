@@ -11,6 +11,18 @@ import {
 
 const resources = ['cpu_percent', 'memory_percent', 'disk_percent'] as const;
 
+it('validates captive portal as a binary device outcome', () => {
+  const type: string = 'captive_portal';
+  expect(isDeviceBehaviorFaultType(type)).toBe(true);
+  expect(isInterfaceBehaviorFaultType(type)).toBe(false);
+  if (!isDeviceBehaviorFaultType(type)) throw new Error('Expected device-scoped captive portal');
+  expect(behaviorFaultMaximum(type)).toBe(1);
+  expect(validBehaviorFault({ device: 'gateway-1', type, value: 1 })).toBe(true);
+  for (const value of [0, -1, 2, 100, 1.5]) {
+    expect(validBehaviorFault({ device: 'gateway-1', type, value })).toBe(false);
+  }
+});
+
 describe('resource behavior faults', () => {
   it.each(resources)('authors %s on the device without an interface', (type) => {
     expect(deviceBehaviorFaultTypes).toContain(type);
