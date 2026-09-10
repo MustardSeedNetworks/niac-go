@@ -133,6 +133,9 @@ func (s *Stack) deviceFaultValue(
 // prevents on the interface axis.
 func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
+	case devicestate.FaultDuplicateDHCPOffer:
+		return s.dhcpHandlers[device] != nil &&
+			(s.fabric == nil || slices.Contains(s.fabric.attachmentDHCP, device))
 	case devicestate.FaultCaptivePortal:
 		return device.HTTPConfig != nil && device.HTTPConfig.Enabled
 	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
