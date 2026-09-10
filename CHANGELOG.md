@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.51](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.50...v0.95.51) (2026-09-10)
+
+
+### Features
+
+* implement host mask fault runtime ([#2040](https://github.com/MustardSeedNetworks/niac-go/issues/2040)) ([b965deb](https://github.com/MustardSeedNetworks/niac-go/commit/b965deb6bb03104e91c8d5840c152e1a65c0c83d))
+
 ## [0.95.50](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.49...v0.95.50) (2026-09-10)
 
 
