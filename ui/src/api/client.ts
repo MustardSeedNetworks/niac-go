@@ -1,3 +1,4 @@
+import type { InterfaceFaultPayload } from './api-response-types';
 import {
   deduplicatedGet,
   request,
@@ -248,7 +249,7 @@ export const injectError = (
     device: string;
     interface: string;
     errorType: string;
-  } & ({ value: number; address?: never } | { address: string; value?: never }),
+  } & InterfaceFaultPayload,
 ) =>
   requestJson<{
     success: boolean;
@@ -258,6 +259,7 @@ export const injectError = (
     errorType: string;
     value?: number;
     address?: string;
+    prefixBits?: number;
   }>('/api/v1/errors', payload, { method: 'POST' });
 
 export const clearError = (device: string, iface: string, errorType: string) =>

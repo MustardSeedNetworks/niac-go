@@ -29,6 +29,9 @@
     "unknown": "An unknown error occurred"
   },
   "injection": {
+    "prefixLabel": "Subnet mask length",
+    "prefixHelper": "Enter 0–32. /0 is an active mask; use Clear to remove the fault.",
+    "prefixInvalid": "Enter a whole number from 0 to 32.",
     "activeErrorsTitle": "Active Errors",
     "clearAllButton": "Clear All Errors",
     "clearAllConfirmLabel": "Clear All",
