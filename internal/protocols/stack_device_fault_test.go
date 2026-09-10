@@ -3,7 +3,6 @@ package protocols
 import (
 	"errors"
 	"net"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -114,6 +113,7 @@ func TestStackClearDeviceFaultsLeavesInterfaceFaults(t *testing.T) {
 
 func newDeviceFaultTestStack() (*Stack, *config.Device) {
 	device := faultTestDevice("edge-1")
+	device.SNMPConfig.AddMibs = resourceFaultTestMIBs()
 	device.DHCPConfig = &config.DHCPConfig{
 		PoolStart: net.IP{192, 0, 2, 100}, PoolEnd: net.IP{192, 0, 2, 110},
 	}
@@ -124,14 +124,9 @@ func newDeviceFaultTestStack() (*Stack, *config.Device) {
 	return NewStack(nil, cfg, logging.NewDebugConfig(0)), &cfg.Devices[0]
 }
 
-// F7: every fault type must have its MIB effect stated. These three have
-// none — a DHCP server that stops offering and a DNS server that answers
-// NXDOMAIN both keep their inventory, interfaces and counters — so the
-// assertion is that nothing leaks: an armed device fault leaves the walk the
-// agent serves byte-identical. A future device fault with a real MIB effect
-// (P2-4's hrProcessorLoad, sysUpTime reset) fails here and must instead be
-// classified as a named substitution.
-func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
+// F7: only the three named resource rows change under device faults. Service
+// failures leave the MIB unchanged, and clearing restores every resource row.
+func TestDeviceFaultMIBEffectsAreNamedSubstitutions(t *testing.T) {
 	stack, device := newDeviceFaultTestStack()
 	agent := stack.snmpAgents[device].baseAgent
 	if agent == nil {
@@ -139,13 +134,6 @@ func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
 	}
 
 	budget := snmp.SweepBudget(0)
-	// The agent's own values move on their own: sysUpTime is a clock and the
-	// SNMP group counts the sweep that reads it. Naming them by subtree would
-	// hard-code today's agent, so they are found instead — and the calibrating
-	// interval brackets the measured one (healthy, arm, faulted, clear,
-	// healthy), so any row that could drift while the fault was armed has
-	// necessarily drifted by the second healthy sweep too. Both kinds are
-	// monotonic, so that bracket is a guarantee rather than a wait.
 	baseline := sweepAgent(t, agent, budget)
 
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
@@ -154,35 +142,21 @@ func TestDeviceFaultsDoNotPerturbTheServedMIB(t *testing.T) {
 		}
 	}
 	faulted := sweepAgent(t, agent, budget)
+	contract := agent.WalkContract()
 	stack.ClearAllDeviceFaults()
 	settled := sweepAgent(t, agent, budget)
-
-	drifting := changedOIDs(baseline, settled)
-	if len(faulted) != len(baseline) {
-		t.Fatalf("row count changed under device faults: %d -> %d",
-			len(baseline), len(faulted))
+	expected := map[string]string{
+		"1.3.6.1.2.1.25.3.3.1.2.1": "1",
+		"1.3.6.1.2.1.25.2.3.1.6.2": "10",
+		"1.3.6.1.2.1.25.2.3.1.6.3": "100",
 	}
-
-	compared := 0
-	for index := range baseline {
-		if baseline[index].Name != faulted[index].Name {
-			t.Fatalf("row %d OID changed: %s -> %s",
-				index, baseline[index].Name, faulted[index].Name)
-		}
-		if _, moves := drifting[baseline[index].Name]; moves {
-			continue
-		}
-		compared++
-		if !reflect.DeepEqual(baseline[index].Value, faulted[index].Value) {
-			t.Fatalf("row %s value changed under device faults: %v -> %v",
-				baseline[index].Name, baseline[index].Value, faulted[index].Value)
-		}
+	if err := compareDeviceFaultMIBRows(baseline, faulted, settled, expected); err != nil {
+		t.Fatal(err)
 	}
-	// The drifting set must not swallow the walk: a calibration that excluded
-	// everything would make this test vacuous.
-	if compared < len(baseline)/2 {
-		t.Fatalf("only %d of %d rows were stable enough to compare",
-			compared, len(baseline))
+	for oid := range expected {
+		if contract.Classify(oid) != snmp.BucketLive {
+			t.Fatalf("resource substitution not classified live: %s", oid)
+		}
 	}
 }
 
@@ -197,20 +171,4 @@ func sweepAgent(t *testing.T, agent *snmp.Agent, budget int) []gosnmp.SnmpPDU {
 		t.Fatal("sweep returned nothing to compare")
 	}
 	return rows
-}
-
-// changedOIDs names the rows whose value differs between two sweeps.
-func changedOIDs(first, second []gosnmp.SnmpPDU) map[string]struct{} {
-	changed := make(map[string]struct{})
-	values := make(map[string]any, len(first))
-	for _, row := range first {
-		values[row.Name] = row.Value
-	}
-	for _, row := range second {
-		if previous, seen := values[row.Name]; !seen ||
-			!reflect.DeepEqual(previous, row.Value) {
-			changed[row.Name] = struct{}{}
-		}
-	}
-	return changed
 }

@@ -64,6 +64,21 @@ Owner sign-off 2026-09-05, all five accepted; 6, 7 and 8 were added by the
 | 7 | `lldpLocPortTable` (`1.0.8802.1.1.2.1.3.7`) | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 8 | `dot1dTpPortTable` (`1.3.6.1.2.1.17.4.4`) | `authored` (port number, max info) or `live` (frame counters, discards) | only at a bridge port an authored interface sits behind, or any port under `trunk_ports` | **loaded, then overwritten** after the load |
 
+### P2-4 resource-fault substitutions
+
+The owner-authorized P2-4 fault outcomes add a conditional `live` substitution:
+only registered numeric `hrProcessorLoad` rows while `cpu_percent` is armed,
+and `hrStorageUsed` rows with a valid positive Integer32 capacity and RAM or
+fixed-disk type while the matching `memory_percent` or `disk_percent` is armed.
+CPU load is the authored percentage; storage usage is capacity times percentage
+divided by 100, rounded down. Zero clears the fault rather than forcing 0% usage.
+
+This is an exact-row substitution, not permission to replace the whole
+HOST-RESOURCES-MIB subtree. Capacity, allocation units, other storage types and
+absent resource rows remain unchanged. Resource rows are never dropped during
+walk loading. Clearing returns them to `kept` and restores the original static
+value or dynamic callback, including overrides applied after the capture.
+
 Substitution 5 splits within a single row. Configuration columns —
 `ifSpeed`, `ifHighSpeed`, `ifMtu`, `ifType`, `ifConnectorPresent`,
 `ifAdminStatus`, `ifOperStatus`, `ifAlias`, `dot3StatsDuplexStatus` — come from

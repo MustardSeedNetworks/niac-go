@@ -47,10 +47,13 @@ func availableErrorTypes() []map[string]string {
 // counters report.
 func availableDeviceErrorTypes() []map[string]string {
 	descriptions := map[devicestate.DeviceFaultType]string{
-		devicestate.FaultDHCPNoOffer: "DHCP server consumes the Discover and sends no Offer",
-		devicestate.FaultDNSNXDomain: "DNS server answers every query with NXDOMAIN",
-		devicestate.FaultDNSTimeout:  "DNS server answers nothing at all",
-		devicestate.FaultLatency:     "Delay every ICMP echo reply (0-60000 ms)",
+		devicestate.FaultDHCPNoOffer:   "DHCP server consumes the Discover and sends no Offer",
+		devicestate.FaultDNSNXDomain:   "DNS server answers every query with NXDOMAIN",
+		devicestate.FaultDNSTimeout:    "DNS server answers nothing at all",
+		devicestate.FaultLatency:       "Delay every ICMP echo reply (0-60000 ms)",
+		devicestate.FaultCPUPercent:    "Set processor utilization (1-100%; zero clears)",
+		devicestate.FaultMemoryPercent: "Set used memory as a percentage of capacity (1-100%; zero clears)",
+		devicestate.FaultDiskPercent:   "Set used disk storage as a percentage of capacity (1-100%; zero clears)",
 	}
 	result := make([]map[string]string, 0, len(descriptions))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {

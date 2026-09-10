@@ -16,14 +16,16 @@ var ErrDeviceFaultTypeInvalid = errors.New("invalid device fault type")
 // other's setters in the first place.
 type DeviceFaultType string
 
-// Device fault types. These change what a device's protocol handlers answer,
-// not what its interface telemetry reports. A non-zero value arms the fault
-// the way link-down does.
+// Device faults affect service outcomes or resource telemetry. Zero clears
+// the fault; positive values arm it without changing interface-fault state.
 const (
-	FaultDHCPNoOffer DeviceFaultType = "dhcp_no_offer"
-	FaultDNSNXDomain DeviceFaultType = "dns_nxdomain"
-	FaultDNSTimeout  DeviceFaultType = "dns_timeout"
-	FaultLatency     DeviceFaultType = "latency"
+	FaultDHCPNoOffer   DeviceFaultType = "dhcp_no_offer"
+	FaultDNSNXDomain   DeviceFaultType = "dns_nxdomain"
+	FaultDNSTimeout    DeviceFaultType = "dns_timeout"
+	FaultLatency       DeviceFaultType = "latency"
+	FaultCPUPercent    DeviceFaultType = "cpu_percent"
+	FaultMemoryPercent DeviceFaultType = "memory_percent"
+	FaultDiskPercent   DeviceFaultType = "disk_percent"
 )
 
 // faultRateMax bounds the fault types whose value is a percentage.
@@ -41,10 +43,8 @@ type DeviceFault struct {
 }
 
 // DeviceFaultDefinition is one supported device fault, its label and the
-// largest value it accepts. The ceiling belongs to the fault rather than to
-// the setter: the first three are rates and stop at 100, while latency is
-// milliseconds, and a shared clamp would silently cap it at a tenth of a
-// second.
+// largest value it accepts. Percentages stop at 100, while latency is
+// milliseconds and needs its own ceiling.
 type DeviceFaultDefinition struct {
 	Type     DeviceFaultType
 	Label    string
@@ -57,6 +57,9 @@ func deviceFaultDefinitions() []DeviceFaultDefinition {
 		{Type: FaultDNSNXDomain, Label: "DNS NXDOMAIN", MaxValue: faultRateMax},
 		{Type: FaultDNSTimeout, Label: "DNS Timeout", MaxValue: faultRateMax},
 		{Type: FaultLatency, Label: "Latency", MaxValue: faultLatencyMaxMs},
+		{Type: FaultCPUPercent, Label: "CPU Utilization", MaxValue: faultRateMax},
+		{Type: FaultMemoryPercent, Label: "Memory Utilization", MaxValue: faultRateMax},
+		{Type: FaultDiskPercent, Label: "Disk Utilization", MaxValue: faultRateMax},
 	}
 }
 

@@ -36,7 +36,7 @@ func (s *Stack) SetDeviceFault(
 	// is harmless; only arming one has to be refused. An unknown type has no
 	// label and belongs to the store to reject, not to this guard: otherwise a
 	// typo would report as a missing service.
-	if value != 0 && faultType.Label() != "" && !deviceServesFault(device, faultType) {
+	if value != 0 && faultType.Label() != "" && !s.deviceServesFault(device, faultType) {
 		return ErrFaultServiceAbsent
 	}
 	return store.SetDeviceFault(faultType, value)
@@ -89,7 +89,7 @@ func (s *Stack) DeviceFaultTargets() []DeviceFaultTarget {
 	defer s.reloadMu.RUnlock()
 	result := make([]DeviceFaultTarget, 0, len(s.deviceStates))
 	for device, store := range s.deviceStates {
-		faults := servableDeviceFaults(device)
+		faults := s.servableDeviceFaults(device)
 		if len(faults) == 0 {
 			continue
 		}
@@ -131,8 +131,10 @@ func (s *Stack) deviceFaultValue(
 // suppresses. Arming a DHCP fault on a device with no DHCP server would look
 // applied and do nothing, which is exactly the failure ErrFaultUnobservable
 // prevents on the interface axis.
-func deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
+func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultType) bool {
 	switch faultType {
+	case devicestate.FaultCPUPercent, devicestate.FaultMemoryPercent, devicestate.FaultDiskPercent:
+		return s.snmpAgents[device].resourceFaultObservable(faultType, snmpEnabled(device.SNMPConfig))
 	case devicestate.FaultLatency:
 		// Latency suppresses no service: every simulated device answers the
 		// echo requests addressed to it, so every device can be made slow.
@@ -149,10 +151,10 @@ func deviceServesFault(device *config.Device, faultType devicestate.DeviceFaultT
 	return false
 }
 
-func servableDeviceFaults(device *config.Device) []devicestate.DeviceFaultType {
+func (s *Stack) servableDeviceFaults(device *config.Device) []devicestate.DeviceFaultType {
 	result := make([]devicestate.DeviceFaultType, 0, len(devicestate.DeviceFaultDefinitions()))
 	for _, definition := range devicestate.DeviceFaultDefinitions() {
-		if deviceServesFault(device, definition.Type) {
+		if s.deviceServesFault(device, definition.Type) {
 			result = append(result, definition.Type)
 		}
 	}

@@ -15,7 +15,10 @@ import (
 )
 
 func TestAvailableDeviceErrorTypesAreServiceOutcomes(t *testing.T) {
-	want := []string{"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency"}
+	want := []string{
+		"DHCP No Offer", "DNS NXDOMAIN", "DNS Timeout", "Latency",
+		"CPU Utilization", "Memory Utilization", "Disk Utilization",
+	}
 
 	types := availableDeviceErrorTypes()
 	got := make([]string, 0, len(types))
