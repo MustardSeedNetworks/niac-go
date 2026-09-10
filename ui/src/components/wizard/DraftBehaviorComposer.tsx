@@ -121,7 +121,15 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
       },
     ]);
 
-  const valid = validBehaviorTimelines(timelines);
+  const valid =
+    validBehaviorTimelines(timelines) &&
+    timelines.every((timeline) =>
+      timeline.phases.every((phase) =>
+        phase.actions.every((action) =>
+          topology.deviceActions[action.device]?.includes(action.type),
+        ),
+      ),
+    );
 
   const save = async () => {
     setBusy(true);
@@ -296,6 +304,7 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
               <BehaviorPhaseActions
                 phase={phase}
                 deviceOptions={deviceOptions}
+                deviceActions={topology.deviceActions}
                 interfaceOptions={interfaceOptions}
                 firstDevice={firstDevice}
                 firstInterface={firstInterface}

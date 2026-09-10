@@ -20,11 +20,53 @@ const draft: ScenarioDraft = {
   modifiedAt: '',
   sizeBytes: 0,
   content:
-    'devices:\n  - name: switch-1\n    type: switch\n    mac: 02:00:00:00:00:10\n  - name: switch-2\n    type: switch\n    mac: 02:00:00:00:00:11\n',
+    'devices:\n  - name: switch-1\n    type: switch\n    snmp_agent: {community: demo}\n    stp: {enabled: true}\n    mac: 02:00:00:00:00:10\n  - name: switch-2\n    type: switch\n    snmp_agent: {community: demo}\n    stp: {enabled: true}\n    mac: 02:00:00:00:00:11\n',
 };
 beforeEach(() => {
   replace.mockReset();
   replace.mockResolvedValue(draft);
+});
+
+it('offers only eligible operation targets and blocks an imported ineligible action', async () => {
+  const content = `devices:
+  - {name: disabled, snmp_agent: {enabled: false}, stp: {enabled: true}}
+  - {name: reboot-only, snmp_agent: {community: demo}}
+  - {name: eligible, snmp_agent: {community: demo}, stp: {enabled: true}}
+behavior_timelines:
+  - name: Maintenance
+    repeat_count: 1
+    phases:
+      - name: Changes
+        duration_ms: 1000
+        actions: [{device: reboot-only, type: stp_topology_change}]
+`;
+  render(
+    <DraftBehaviorComposer
+      draft={{ ...draft, content }}
+      onDraftUpdate={vi.fn()}
+      onBusyChange={vi.fn()}
+    />,
+  );
+  expect(screen.getByTestId('save-behaviors')).toBeDisabled();
+  const row = within(screen.getByTestId('behavior-device-action'));
+  expect(
+    within(row.getByLabelText('Device')).queryByRole('option', { name: 'disabled' }),
+  ).not.toBeInTheDocument();
+  await userEvent.selectOptions(row.getByLabelText('Device'), 'eligible');
+  expect(screen.getByTestId('save-behaviors')).toBeEnabled();
+});
+
+it('disables adding an operation when SNMP is disabled on every device', async () => {
+  render(
+    <DraftBehaviorComposer
+      draft={{ ...draft, content: 'devices: [{name: offline, snmp_agent: {enabled: false}}]' }}
+      onDraftUpdate={vi.fn()}
+      onBusyChange={vi.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByTestId('add-timeline'));
+  expect(screen.getByTestId('add-device-action')).toBeDisabled();
+  expect(screen.getByRole('alert')).toHaveTextContent('Choose a device with an enabled SNMP agent');
 });
 
 it.each(['reboot', 'stp_topology_change'])(

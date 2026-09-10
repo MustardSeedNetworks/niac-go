@@ -53,7 +53,8 @@ Implementation checkpoint (2026-09-10): resource telemetry is merged in
 v0.95.45. Captive-portal authoring and live device-fault controls merged in
 PR #2021, with real TCP isolation/clearing and saved-configuration browser
 checks. Reboot/STP implementation passes isolated Linux packet tests for
-notifications, telemetry, recovery without replay and scenario VLAN tags;
+notifications, telemetry, no replay of actions recorded in recovered state,
+and scenario VLAN tags;
 UI parity and final integration review remain in progress. DHCP isolation
 and explicit address faults remain uncompleted.
 The phase boxes below track acceptance, not individual implementation merges.

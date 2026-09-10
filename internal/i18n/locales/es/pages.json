@@ -188,7 +188,8 @@
       "addDeviceAction": "Agregar operación de dispositivo",
       "removeDeviceAction": "Eliminar operación de dispositivo",
       "operation": "Operación",
-      "operationEffect": "Se ejecuta una vez al inicio de la fase, incluida cada repetición. Restablecer la fase no deshace las operaciones de dispositivo.",
+      "operationEffect": "Se ejecuta al inicio de la fase, incluida cada repetición. Restablecer la fase no deshace las operaciones. La recuperación omite las operaciones registradas en el último estado guardado; un fallo antes de guardar puede repetirlas. Los datos SNMP capturados se comprueban al iniciar la simulación.",
+      "ineligibleOperation": "Elija un dispositivo con un agente SNMP habilitado. Los cambios de topología también requieren STP habilitado.",
       "duplicateOperation": "Elija un dispositivo y evite repetir la misma operación en ese dispositivo dentro de esta fase.",
       "operations": { "reboot": "Reiniciar", "stp_topology_change": "Cambio de topología STP" },
       "latencyMs": "Latency (milisegundos)",
@@ -219,7 +220,7 @@
         "interface_errors": "Errores de interfaz",
         "packet_discards": "Descartes de paquetes"
       },
-      "help": "Programa tráfico, fallas y operaciones de dispositivo. La recuperación no repite las operaciones de dispositivo que ya finalizaron.",
+      "help": "Programa tráfico, fallas y operaciones de dispositivo. La recuperación continúa desde el último estado guardado.",
       "interface": "Interfaz",
       "linkDownEffect": "Fuerza la caída del enlace de la interfaz seleccionada.",
       "needsDevice": "Agregue un dispositivo antes de programar comportamientos. El tráfico y las fallas de interfaz también requieren una interfaz.",

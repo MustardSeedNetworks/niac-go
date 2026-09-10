@@ -69,6 +69,7 @@ describe('DraftBehaviorComposer', () => {
             reset: true,
             traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
             faults: [],
+            actions: [],
           },
         ],
       },
