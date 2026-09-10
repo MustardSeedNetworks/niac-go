@@ -27,7 +27,7 @@ func TestStackDeviceFaultCoversEveryType(t *testing.T) {
 			if !stack.deviceFaultActive(device, definition.Type) {
 				t.Fatalf("fault %s is not active on the device state", definition.Type)
 			}
-			if got := stack.ActiveDeviceFaults()["edge-1"][definition.Type]; got != 1 {
+			if got := stack.ActiveDeviceFaults()["edge-1"][definition.Type].Value; got != 1 {
 				t.Fatalf("ActiveDeviceFaults()[%s] = %d, want 1", definition.Type, got)
 			}
 

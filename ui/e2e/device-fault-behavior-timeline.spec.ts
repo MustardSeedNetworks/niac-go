@@ -30,7 +30,7 @@ test('applies and clears device faults through the real daemon', async ({ page, 
     await expect(panel.getByText('Armed', { exact: true })).toBeVisible();
     const active = await request.get(`${baseURL}/api/v1/errors`);
     expect(await active.json()).toMatchObject({
-      active_device_errors: { 'portal-host': { 'Captive Portal': 1 } },
+      active_device_errors: { 'portal-host': { 'Captive Portal': { value: 1 } } },
     });
     await panel.getByRole('button', { name: 'Clear Captive Portal on portal-host' }).click();
     await expect(panel.getByText('Armed', { exact: true })).toHaveCount(0);
@@ -40,7 +40,7 @@ test('applies and clears device faults through the real daemon', async ({ page, 
     await expect(panel.getByText('60000 ms', { exact: true })).toBeVisible();
     const delayed = await request.get(`${baseURL}/api/v1/errors`);
     expect(await delayed.json()).toMatchObject({
-      active_device_errors: { 'portal-host': { Latency: 60000 } },
+      active_device_errors: { 'portal-host': { Latency: { value: 60000 } } },
     });
   });
 });

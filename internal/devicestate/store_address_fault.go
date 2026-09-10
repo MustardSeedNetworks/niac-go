@@ -16,7 +16,7 @@ func (s *Store) SetDeviceAddressFault(kind DeviceFaultType, address netip.Addr) 
 	if kind != FaultDuplicateDHCPOffer {
 		return ErrDeviceFaultTypeInvalid
 	}
-	if !validFaultAddress(address) {
+	if !ValidFaultAddress(address) {
 		return ErrFaultAddressInvalid
 	}
 	s.setDeviceFault(DeviceFault{Type: kind, Address: address})
@@ -56,14 +56,15 @@ func (s *Store) setDeviceFault(fault DeviceFault) {
 	s.recordEvent(EventDeviceFaultUpdated, string(fault.Type))
 }
 
-func validFaultAddress(address netip.Addr) bool {
+// ValidFaultAddress checks the address payload shared by authoring and runtime state.
+func ValidFaultAddress(address netip.Addr) bool {
 	return address.Is4() && !address.IsUnspecified() && !address.IsMulticast() &&
 		address != netip.AddrFrom4([4]byte{255, 255, 255, 255})
 }
 
 func validDeviceFault(fault DeviceFault) bool {
 	if fault.Type == FaultDuplicateDHCPOffer {
-		return fault.Value == 0 && validFaultAddress(fault.Address)
+		return fault.Value == 0 && ValidFaultAddress(fault.Address)
 	}
 	definition, known := deviceFaultDefinition(fault.Type)
 	return known && fault.Address == (netip.Addr{}) && fault.Value > 0 && fault.Value <= definition.MaxValue

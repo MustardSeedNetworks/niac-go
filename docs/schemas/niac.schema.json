@@ -75,21 +75,26 @@
             "cpu_percent",
             "memory_percent",
             "disk_percent",
-            "captive_portal"
+            "captive_portal",
+            "duplicate_dhcp_offer"
           ],
           "description": "Type is the fault to inject. Interface faults raise SNMP counters or\nforce a link down; device-scoped service outcomes omit `interface`."
         },
         "value": {
           "type": "integer",
           "description": "Value is the rate, resource percentage, or latency in milliseconds. Link down\nis an outcome: any accepted nonzero value enables it. The ceiling is\n100 for interface faults and service rates, 60000 for latency."
+        },
+        "address": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "Address is the peer-owned unicast IPv4 address offered by duplicate_dhcp_offer.\nAddress faults omit value; numeric faults omit address."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "device",
-        "type",
-        "value"
+        "type"
       ],
       "description": "BehaviorFault sets one supported fault for the phase's duration."
     },

@@ -70,6 +70,7 @@ FLEET_DEFAULTS = "components/wizard/FleetDefaultsEditor.tsx"
 BEHAVIOR_COMPOSER = "components/wizard/DraftBehaviorComposer.tsx"
 
 CONFIG_BOUND = {
+    "behavior_timelines[].phases[].faults[].address": "components/wizard/BehaviorFaultAction.tsx",
     "networks[].name": NETWORKS_STEP,
     "networks[].subnet": NETWORKS_STEP,
     "networks[].virtual_vlan": NETWORKS_STEP,

@@ -499,10 +499,6 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	if cfg == nil {
 		return ErrNilConfig
 	}
-	if err := ValidateConfiguredBehaviorActions(cfg); err != nil {
-		return err
-	}
-
 	s.reloadLifecycleMu.Lock()
 	defer s.reloadLifecycleMu.Unlock()
 
@@ -517,6 +513,9 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 		replacementTopology = &report.Topology
 	}
 	s.reloadMu.RUnlock()
+	if err := ValidateConfiguredBehaviorTargets(cfg, replacementTopology); err != nil {
+		return err
+	}
 	s.stopBehaviorTimelines()
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()

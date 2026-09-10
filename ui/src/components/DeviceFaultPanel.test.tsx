@@ -16,12 +16,26 @@ const state = vi.hoisted(() => ({
       { type: 'Captive Portal', description: 'Redirect HTTP', maxValue: 1, valueKind: 'toggle' },
       { type: 'CPU Utilization', description: 'CPU load', maxValue: 100, valueKind: 'percent' },
       { type: 'Latency', description: 'Delay echoes', maxValue: 60000, valueKind: 'milliseconds' },
+      {
+        type: 'Duplicate DHCP Offer',
+        description: 'Offer a peer-owned address',
+        valueKind: 'address',
+      },
     ],
     deviceTargets: [
-      { device: 'gateway', errorTypes: ['Captive Portal', 'CPU Utilization', 'Latency'] },
+      {
+        device: 'gateway',
+        errorTypes: ['Captive Portal', 'CPU Utilization', 'Latency', 'Duplicate DHCP Offer'],
+      },
       { device: 'client', errorTypes: ['Latency'] },
     ],
-    activeDeviceErrors: { gateway: { 'Captive Portal': 1, 'CPU Utilization': 87 } },
+    activeDeviceErrors: {
+      gateway: {
+        'Captive Portal': { value: 1 },
+        'CPU Utilization': { value: 87 },
+        'Duplicate DHCP Offer': { address: '192.0.2.20' },
+      },
+    },
   },
 }));
 vi.mock('../contexts/AppContext', () => ({
@@ -36,6 +50,41 @@ beforeEach(() => {
   state.disabled = false;
   state.inject.mockReset();
   state.clear.mockReset();
+});
+
+it('submits and clears an address fault without a numeric value', async () => {
+  render(
+    <MemoryRouter>
+      <TrafficInjectionPage />
+    </MemoryRouter>,
+  );
+  fireEvent.change(screen.getByLabelText('Device fault target'), { target: { value: 'gateway' } });
+  fireEvent.change(screen.getByLabelText('Device fault'), {
+    target: { value: 'Duplicate DHCP Offer' },
+  });
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+  expect(screen.getByTestId('apply-device-fault')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Conflict IPv4 address'), {
+    target: { value: '224.0.0.1' },
+  });
+  expect(screen.getByTestId('apply-device-fault')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Conflict IPv4 address'), {
+    target: { value: '192.0.2.20' },
+  });
+  fireEvent.click(screen.getByTestId('apply-device-fault'));
+  await waitFor(() =>
+    expect(state.inject).toHaveBeenCalledWith({
+      device: 'gateway',
+      interface: '',
+      errorType: 'Duplicate DHCP Offer',
+      address: '192.0.2.20',
+    }),
+  );
+  expect(screen.getByText('192.0.2.20')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear Duplicate DHCP Offer on gateway' }));
+  await waitFor(() =>
+    expect(state.clear).toHaveBeenCalledWith('gateway', '', 'Duplicate DHCP Offer'),
+  );
 });
 
 it.each([

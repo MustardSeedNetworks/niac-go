@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { DeviceFaultPayload } from '../api/api-response-types';
+import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearError, injectError } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
@@ -16,6 +18,7 @@ export function DeviceFaultPanel() {
   const [device, setDevice] = useState('');
   const [faultType, setFaultType] = useState('');
   const [value, setValue] = useState(1);
+  const [address, setAddress] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const target = data?.deviceTargets?.find((entry) => entry.device === device);
@@ -26,9 +29,11 @@ export function DeviceFaultPanel() {
   const disabled = permission.disabled || busy || loading || Boolean(error);
   const valid = Boolean(
     fault &&
-      Number.isInteger(submittedValue) &&
-      submittedValue >= 1 &&
-      submittedValue <= fault.maxValue,
+      (fault.valueKind === 'address'
+        ? validFaultAddress(address)
+        : Number.isInteger(submittedValue) &&
+          submittedValue >= 1 &&
+          submittedValue <= fault.maxValue),
   );
   const active = Object.entries(data?.activeDeviceErrors ?? {}).flatMap(([name, faults]) =>
     Object.entries(faults).map(([type, amount]) => ({ device: name, type, amount })),
@@ -39,7 +44,12 @@ export function DeviceFaultPanel() {
     setBusy(true);
     setFailure('');
     try {
-      await injectError({ device, interface: '', errorType: faultType, value: submittedValue });
+      const target = { device, interface: '', errorType: faultType };
+      await injectError(
+        fault?.valueKind === 'address'
+          ? { ...target, address }
+          : { ...target, value: submittedValue },
+      );
       refetch();
     } catch (cause) {
       setFailure(getErrorMessage(cause));
@@ -62,7 +72,9 @@ export function DeviceFaultPanel() {
     }
   }
 
-  function displayValue(type: string, amount: number) {
+  function displayValue(type: string, payload: DeviceFaultPayload) {
+    if (payload.address !== undefined) return payload.address;
+    const amount = payload.value;
     const kind = data?.availableDeviceTypes?.find((entry) => entry.type === type)?.valueKind;
     if (kind === 'toggle') return amount > 0 ? t('deviceFault.armed') : t('deviceFault.clear');
     if (kind === 'percent') return `${amount}%`;
@@ -88,6 +100,7 @@ export function DeviceFaultPanel() {
             setDevice(next);
             setFaultType('');
             setValue(1);
+            setAddress('');
           }}
         />
         <Select
@@ -100,10 +113,18 @@ export function DeviceFaultPanel() {
           onChange={(next) => {
             setFaultType(next);
             setValue(1);
+            setAddress('');
           }}
         />
         {fault && <SmallText>{fault.description}</SmallText>}
-        {fault && fault.valueKind !== 'toggle' && (
+        {fault?.valueKind === 'address' && (
+          <Input
+            label={t('deviceFault.conflictAddress')}
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+          />
+        )}
+        {fault && fault.valueKind !== 'toggle' && fault.valueKind !== 'address' && (
           <Input
             type="number"
             label={

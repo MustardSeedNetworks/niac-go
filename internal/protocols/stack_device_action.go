@@ -45,8 +45,8 @@ func (s *Stack) validateDeviceAction(device *config.Device, kind devicestate.Dev
 	return nil
 }
 
-// ValidateBehaviorActions verifies served scalar inventory without executing operations.
-func (s *Stack) ValidateBehaviorActions() error {
+// ValidateBehaviorTargets verifies observable targets without applying behavior.
+func (s *Stack) ValidateBehaviorTargets() error {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
 	if s.config == nil {
@@ -54,6 +54,9 @@ func (s *Stack) ValidateBehaviorActions() error {
 	}
 	for _, timeline := range s.config.BehaviorTimelines {
 		for _, phase := range timeline.Phases {
+			if err := s.validateBehaviorAddressFaults(phase.Faults); err != nil {
+				return fmt.Errorf("timeline %s phase %s: %w", timeline.Name, phase.Name, err)
+			}
 			for _, action := range phase.Actions {
 				device, _, err := s.interfaceFaultTarget(action.Device)
 				if err == nil {

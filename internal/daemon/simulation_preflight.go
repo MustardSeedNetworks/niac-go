@@ -17,10 +17,10 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 	if err != nil {
 		return fabric.NewReport(), err
 	}
-	if err = protocols.ValidateConfiguredBehaviorActions(cfg); err != nil {
-		return fabric.NewReport(), err
-	}
 	if !fabric.IsRouted(cfg) {
+		if err = protocols.ValidateConfiguredBehaviorTargets(cfg, nil); err != nil {
+			return fabric.NewReport(), err
+		}
 		if req.AttachmentMode == fabric.ModeTrunk {
 			return fabric.CompilePhysicalBinding(d.bindingFromRequest(req)), nil
 		}
@@ -28,5 +28,11 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 		report.Safe = true
 		return report, nil
 	}
-	return fabric.Compile(cfg, d.bindingFromRequest(req)), nil
+	report := fabric.Compile(cfg, d.bindingFromRequest(req))
+	if report.Safe {
+		if err = protocols.ValidateConfiguredBehaviorTargets(cfg, &report.Topology); err != nil {
+			return fabric.NewReport(), err
+		}
+	}
+	return report, nil
 }
