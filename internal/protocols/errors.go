@@ -7,7 +7,7 @@ var ErrDeviceMissingMACOrIP = errors.New("device missing MAC or IP address")
 
 // Sentinel errors for DHCP.
 var (
-	ErrDHCPPoolInvalid               = errors.New("invalid DHCP pool: end IP < start IP")
+	ErrDHCPPoolInvalid               = errors.New("invalid DHCP pool")
 	ErrDHCPPoolSizeExceeded          = errors.New("DHCP pool size exceeds maximum")
 	ErrNoAvailableIPAddresses        = errors.New("no available IP addresses")
 	ErrTooManyDomainSearchEntries    = errors.New("too many domain search entries")
