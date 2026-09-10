@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.45](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.44...v0.95.45) (2026-09-10)
+
+
+### Features
+
+* model observable resource pressure faults ([#2018](https://github.com/MustardSeedNetworks/niac-go/issues/2018)) ([2c4ac42](https://github.com/MustardSeedNetworks/niac-go/commit/2c4ac42bb1ba598a6cb4ca59ea28b639ef79ca6f))
+
 ## [0.95.44](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.43...v0.95.44) (2026-09-10)
 
 
