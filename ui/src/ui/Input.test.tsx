@@ -1,10 +1,7 @@
 /**
  * Tests for the shared form primitives.
  *
- * Each component derives its element id from the label when no id is given, and
- * that id is what ties the <label> to its control. A broken derivation is
- * invisible on screen and breaks every screen reader and every label-based
- * query, so it is asserted directly rather than through appearance.
+ * Labels must identify their own controls, even when labels repeat.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -20,15 +17,66 @@ import {
   Toggle,
 } from './Input';
 
+const labeledControls = [
+  { name: 'Input', control: (label: string, id?: string) => <Input label={label} id={id} /> },
+  { name: 'Textarea', control: (label: string, id?: string) => <Textarea label={label} id={id} /> },
+  {
+    name: 'Select',
+    control: (label: string, id?: string) => <Select label={label} id={id} options={[]} />,
+  },
+  { name: 'Checkbox', control: (label: string, id?: string) => <Checkbox label={label} id={id} /> },
+  {
+    name: 'Toggle',
+    control: (label: string, id?: string) => (
+      <Toggle label={label} id={id} checked={false} readOnly={true} />
+    ),
+  },
+  {
+    name: 'SearchInput',
+    control: (label: string, id?: string) => <SearchInput label={label} id={id} />,
+  },
+];
+
+describe.each(labeledControls)('$name label associations', ({ control }) => {
+  it('associates repeated labels with separate controls', () => {
+    render(
+      <>
+        {control('Repeated')}
+        {control('Repeated')}
+      </>,
+    );
+
+    const fields = screen.getAllByLabelText('Repeated');
+    expect(fields).toHaveLength(2);
+    const ids = fields.map((field) => field.id);
+    expect(ids).not.toContain('');
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('preserves an explicitly provided id', () => {
+    render(control('Named', 'provided-id'));
+
+    expect(screen.getByLabelText('Named').id).toBe('provided-id');
+  });
+
+  it('keeps the generated id when the label changes', () => {
+    const { rerender } = render(control('Before'));
+    const id = screen.getByLabelText('Before').id;
+    rerender(control('After'));
+
+    expect(screen.getByLabelText('After').id).toBe(id);
+  });
+});
+
 describe('Input', () => {
-  it('derives an id from the label and associates the two', () => {
+  it('generates an id and associates the label', () => {
     render(<Input label="Device Name" />);
 
     const field = screen.getByLabelText('Device Name');
-    expect(field.id).toBe('device-name');
+    expect(field.id).not.toBe('');
   });
 
-  it('prefers an explicit id over the derived one', () => {
+  it('prefers an explicit id over the generated one', () => {
     render(<Input label="Device Name" id="explicit" />);
 
     expect(screen.getByLabelText('Device Name').id).toBe('explicit');
@@ -87,10 +135,10 @@ describe('Input', () => {
 });
 
 describe('Textarea', () => {
-  it('derives an id from the label', () => {
+  it('generates an id for the label', () => {
     render(<Textarea label="Notes Field" />);
 
-    expect(screen.getByLabelText('Notes Field').id).toBe('notes-field');
+    expect(screen.getByLabelText('Notes Field').id).not.toBe('');
   });
 
   it('shows the error in preference to the hint', () => {
@@ -154,10 +202,10 @@ describe('Select', () => {
 });
 
 describe('Checkbox', () => {
-  it('derives an id from the label and associates the two', () => {
+  it('generates an id and associates the label', () => {
     render(<Checkbox label="Enable SNMP" />);
 
-    expect(screen.getByLabelText('Enable SNMP').id).toBe('enable-snmp');
+    expect(screen.getByLabelText('Enable SNMP').id).not.toBe('');
   });
 
   it('renders an optional description', () => {
@@ -174,6 +222,26 @@ describe('Checkbox', () => {
 });
 
 describe('Toggle', () => {
+  it('changes only the clicked toggle when labels repeat', () => {
+    const firstChange = vi.fn();
+    const secondChange = vi.fn();
+    render(
+      <>
+        <Toggle label="Repeated" checked={false} onChange={firstChange} />
+        <Toggle label="Repeated" checked={false} onChange={secondChange} />
+      </>,
+    );
+
+    const secondSwitch = screen.getAllByRole('switch')[1];
+    if (!secondSwitch) {
+      throw new Error('Second toggle switch is missing');
+    }
+    fireEvent.click(secondSwitch);
+
+    expect(secondChange).toHaveBeenCalledOnce();
+    expect(firstChange).not.toHaveBeenCalled();
+  });
+
   it('exposes its state through role=switch', () => {
     render(<Toggle label="Babble" checked={true} readOnly={true} />);
 

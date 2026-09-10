@@ -54,6 +54,7 @@ parallel implementation. It is intentionally organized by purpose.
 | Simulated SSH transport | `internal/devicecli/ssh_server.go` + `internal/protocols/tcp_ssh.go` | Explicit per-device credentials, isolated command sessions, and SSH termination through the virtual IPv4/TCP packet path |
 | Shared-state SNMP projection | `internal/protocols/snmp/device_state*.go` | Dynamic hostname, discovery identity, interface status/alias, IP address, and route values derived from authoritative state |
 | State notification output | `internal/protocols/state_notifications.go` | Authoritative transitions drive RFC 5424 SYSLOG plus SNMPv2c coldStart/linkUp/linkDown notifications; nonfunctional synthetic threshold traps are not part of the schema |
+| Management syslog | `internal/protocols/syslog.go` | RFC 5424 link/fault filtering and safe authored-hostname messages |
 
 ## Simulation lifecycle API
 

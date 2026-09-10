@@ -95,6 +95,10 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await page.getByLabel('Latency (milliseconds)').fill('60001');
   await expect(page.getByTestId('save-behaviors')).toBeDisabled();
   await page.getByLabel('Latency (milliseconds)').fill('60000');
+  await page.getByTestId('add-interface-fault').click();
+  await page.getByLabel('Fault', { exact: true }).last().selectOption('link_down');
+  await expect(page.getByText('Forces the selected interface link down.')).toBeVisible();
+  await expect(page.getByLabel('Rate (%)', { exact: true })).toHaveCount(0);
   await expect(page.getByTestId('save-behaviors')).toBeEnabled();
   // Wait on the response itself rather than polling a closure flag: the wait is
   // armed before the click, so it cannot miss a fast response, and a failure
@@ -121,7 +125,10 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
             durationMs: 30000,
             reset: true,
             traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
-            faults: [{ device: 'access-1', type: 'latency', value: 60000 }],
+            faults: [
+              { device: 'access-1', type: 'latency', value: 60000 },
+              { device: 'access-1', interface: 'Gi1/0/1', type: 'link_down', value: 1 },
+            ],
           },
         ],
       },

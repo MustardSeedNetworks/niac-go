@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"net/netip"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -39,6 +40,9 @@ func TestRestoreDeviceStatesWithholdsRestoredHistoryFromNotifications(t *testing
 
 	fresh := runtimeStateTestStack(t)
 	freshDevice := runtimeStateTestDevice(fresh)
+	freshDevice.SyslogConfig = &config.SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.99:514"}}
+	sender := &recordingDatagramSender{}
+	fresh.notifications.sender = sender
 	fresh.notifications.Register(
 		freshDevice, fresh.deviceStates[freshDevice],
 		func(string) (int, bool) { return 1, true }, 0,
@@ -59,6 +63,18 @@ func TestRestoreDeviceStatesWithholdsRestoredHistoryFromNotifications(t *testing
 	pending, _ := fresh.deviceStates[freshDevice].EventsAfter(registration.cursor)
 	if len(pending) != 0 {
 		t.Fatalf("restored history left %d events to announce: %#v", len(pending), pending)
+	}
+	fresh.notifications.dispatchPending()
+	if len(sender.datagrams) != 0 {
+		t.Fatal("recovery resent retained notification history")
+	}
+	if err := fresh.deviceStates[freshDevice].SetInterfaceFault("eth0", devicestate.FaultLinkDown, 0); err != nil {
+		t.Fatal(err)
+	}
+	fresh.notifications.dispatchPending()
+	if len(sender.datagrams) != 1 ||
+		!strings.Contains(string(sender.datagrams[0].payload), `kind=fault.cleared target="eth0:link_down"`) {
+		t.Fatalf("expected only the new clearing notification, got %+v", sender.datagrams)
 	}
 }
 

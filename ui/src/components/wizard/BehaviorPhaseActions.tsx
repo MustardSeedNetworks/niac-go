@@ -162,6 +162,7 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
               ],
             })
           }
+          data-testid="add-interface-fault"
         >
           {t('newSimWizard.behaviors.addFault')}
         </Button>

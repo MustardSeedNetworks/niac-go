@@ -3,6 +3,7 @@ export const interfaceBehaviorFaultTypes = [
   'packet_discards',
   'interface_errors',
   'high_utilization',
+  'link_down',
 ] as const;
 export const deviceBehaviorFaultTypes = [
   'dhcp_no_offer',

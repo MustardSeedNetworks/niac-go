@@ -44,16 +44,17 @@
             "packet_discards",
             "interface_errors",
             "high_utilization",
+            "link_down",
             "dhcp_no_offer",
             "dns_nxdomain",
             "dns_timeout",
             "latency"
           ],
-          "description": "Type is the fault to inject. The first four are interface-scoped and\nraise SNMP counters; the last four are device-scoped service outcomes\nand are authored without an `interface`."
+          "description": "Type is the fault to inject. Interface faults raise SNMP counters or\nforce a link down; device-scoped service outcomes omit `interface`."
         },
         "value": {
           "type": "integer",
-          "description": "Value is the rate or, for latency, the delay in milliseconds. The\nceiling is the fault's own: 100 for a rate, 60000 for latency."
+          "description": "Value is the rate or, for latency, the delay in milliseconds. Link down\nis an outcome: any accepted nonzero value enables it. The ceiling is\n100 for interface faults and service rates, 60000 for latency."
         }
       },
       "additionalProperties": false,
@@ -482,7 +483,7 @@
         },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
-          "description": "Syslog sends this device's state-change messages to RFC 5424\ncollectors."
+          "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
         },
         "iperf3": {
           "$ref": "#/$defs/IPerf3Config",
@@ -2023,7 +2024,7 @@
       "required": [
         "enabled"
       ],
-      "description": "SyslogConfig sends configuration-state messages to RFC 5424 collectors."
+      "description": "SyslogConfig sends link and fault events to RFC 5424 collectors."
     },
     "TTLConfig": {
       "properties": {
