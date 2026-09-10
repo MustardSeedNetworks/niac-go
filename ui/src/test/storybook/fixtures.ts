@@ -198,15 +198,25 @@ export const interfaces: InterfacesResponse = {
 export const errorTypes: ErrorInjectionInfo = {
   info: 'Injected errors persist until cleared.',
   availableTypes: [
-    { type: 'crc', description: 'CRC / FCS errors on the selected interface' },
-    { type: 'drop', description: 'Silently discard frames' },
-    { type: 'latency', description: 'Delay responses' },
+    { type: 'crc', description: 'CRC / FCS errors on the selected interface', valueKind: 'number' },
+    { type: 'drop', description: 'Silently discard frames', valueKind: 'number' },
+    { type: 'latency', description: 'Delay responses', valueKind: 'number' },
   ],
   targets: [
-    { device: 'core-sw-01', address: '10.0.0.2', interfaces: ['GigabitEthernet1/0/1'] },
-    { device: 'edge-rtr-01', address: '10.0.0.1', interfaces: ['GigabitEthernet0/0/0'] },
+    {
+      device: 'core-sw-01',
+      address: '10.0.0.2',
+      interfaces: ['GigabitEthernet1/0/1'],
+      errorTypes: { 'GigabitEthernet1/0/1': ['crc', 'drop'] },
+    },
+    {
+      device: 'edge-rtr-01',
+      address: '10.0.0.1',
+      interfaces: ['GigabitEthernet0/0/0'],
+      errorTypes: { 'GigabitEthernet0/0/0': ['crc', 'drop'] },
+    },
   ],
-  activeErrors: { 'core-sw-01': { 'GigabitEthernet1/0/1': { crc: 42 } } },
+  activeErrors: { 'core-sw-01': { 'GigabitEthernet1/0/1': { crc: { value: 42 } } } },
 };
 
 export const alerts: AlertConfig = { packetsThreshold: 10_000, webhookUrl: '' };

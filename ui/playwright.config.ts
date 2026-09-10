@@ -118,12 +118,14 @@ export default defineConfig({
     // Installed browser channels cover authoring in the supported vendor builds.
     {
       name: 'chrome',
-      testMatch: /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges)\.spec\.ts/,
+      testMatch:
+        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
     {
       name: 'edge',
-      testMatch: /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges)\.spec\.ts/,
+      testMatch:
+        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault)\.spec\.ts/,
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
     },
     {

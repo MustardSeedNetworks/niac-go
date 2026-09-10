@@ -298,17 +298,18 @@ export interface ErrorInjectionInfo {
     ))[];
   deviceTargets?: { device: string; address?: string; errorTypes: string[] }[];
   activeDeviceErrors?: Record<string, Record<string, DeviceFaultPayload>>;
-  availableTypes: ErrorType[];
+  availableTypes: (ErrorType & { valueKind: 'number' | 'address' })[];
   info: string;
   targets?: {
     device: string;
     address?: string;
     interfaces: string[];
+    errorTypes: Record<string, string[]>;
   }[];
   activeErrors?: {
     [device: string]: {
       [interfaceName: string]: {
-        [errorType: string]: number;
+        [errorType: string]: DeviceFaultPayload;
       };
     };
   };

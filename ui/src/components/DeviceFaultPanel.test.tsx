@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   clear: vi.fn(),
   refetch: vi.fn(),
   data: {
+    availableTypes: [],
+    info: 'Device fault fixture',
     availableDeviceTypes: [
       { type: 'Captive Portal', description: 'Redirect HTTP', maxValue: 1, valueKind: 'toggle' },
       { type: 'CPU Utilization', description: 'CPU load', maxValue: 100, valueKind: 'percent' },
