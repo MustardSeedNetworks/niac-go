@@ -99,6 +99,10 @@ CONFIG_BOUND = {
         f"behavior_timelines[].phases[].faults[].{field}": BEHAVIOR_COMPOSER
         for field in ("device", "interface", "type", "value")
     },
+    **{
+        f"behavior_timelines[].phases[].actions[].{field}": "components/wizard/BehaviorOneShotActions.tsx"
+        for field in ("device", "type")
+    },
 }
 
 HAND_BOUND_PATHS = dict(HAND_BOUND.values())
