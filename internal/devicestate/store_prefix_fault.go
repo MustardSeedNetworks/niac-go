@@ -28,6 +28,13 @@ type interfacePrefixFaultKey struct {
 	faultType     InterfacePrefixFaultType
 }
 
+// HasInterfacePrefixFaults avoids cloning network state on healthy packet paths.
+func (s *Store) HasInterfacePrefixFaults() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.prefixFaults) != 0
+}
+
 // SetInterfacePrefixFault arms a mask outcome; zero bits does not clear it.
 func (s *Store) SetInterfacePrefixFault(fault InterfacePrefixFault) error {
 	if fault.Type != FaultBadMask {

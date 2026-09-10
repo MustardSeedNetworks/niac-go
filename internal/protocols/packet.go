@@ -20,8 +20,11 @@ type Packet struct {
 	Timestamp            time.Time
 	LoopTime             time.Duration // For periodic packets
 	Device               any           // Associated device
-	VLAN                 int           // -1 if no VLAN
-	VLANTagged           bool          // true when the received wire frame carried 802.1Q
+	generatedHost        *config.Device
+	hostEgressInterface  string
+	hostEgressNetwork    string
+	VLAN                 int  // -1 if no VLAN
+	VLANTagged           bool // true when the received wire frame carried 802.1Q
 	fabricReplySourceMAC net.HardwareAddr
 	fabricFirstHopIP     net.IP
 	fabricFirstHopMAC    net.HardwareAddr
@@ -104,6 +107,9 @@ func (p *Packet) Clone() *Packet {
 		Timestamp:            p.Timestamp,
 		LoopTime:             p.LoopTime,
 		Device:               p.Device,
+		generatedHost:        p.generatedHost,
+		hostEgressInterface:  p.hostEgressInterface,
+		hostEgressNetwork:    p.hostEgressNetwork,
 		VLAN:                 p.VLAN,
 		VLANTagged:           p.VLANTagged,
 		fabricReplySourceMAC: cloneMAC(p.fabricReplySourceMAC),
