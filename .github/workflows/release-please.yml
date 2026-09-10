@@ -213,8 +213,11 @@ jobs:
             grep -q "already queued to merge" /tmp/arm.log || exit 1
           }
 
-      # Belt and braces: the guard above should make this unreachable, but the
-      # guard is a heuristic about branch parentage and this is the fact itself.
+      # Belt and braces: the guard above is a heuristic about branch
+      # parentage evaluated when auto-merge is armed, so it cannot see a
+      # commit that lands between arming and the queue taking the PR. CI's
+      # `Release Notes` job closes that window by running the same check on
+      # the merge-queue tree; this is the last word, on the tag itself.
       - name: Verify the tag's contents match its changelog entry
         if: steps.release.outputs.release_created
         env:

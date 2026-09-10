@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * model typed address fault state ([#2033](https://github.com/MustardSeedNetworks/niac-go/issues/2033)) ([70c8c1e](https://github.com/MustardSeedNetworks/niac-go/commit/70c8c1ed73596c6eb6454fb7c38ab4962eccdbe2))
 
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2035](https://github.com/MustardSeedNetworks/niac-go/issues/2035)) ([5d03239](https://github.com/MustardSeedNetworks/niac-go/commit/5d03239dd253c6442895c6b596e3c70f008aa54a))
+
 ## [0.95.48](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.47...v0.95.48) (2026-09-10)
 
 
@@ -43,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 * isolate DHCP state across simulated servers ([#2027](https://github.com/MustardSeedNetworks/niac-go/issues/2027)) ([5641aba](https://github.com/MustardSeedNetworks/niac-go/commit/5641aba990ab3d3a4d3441cdc669f7acacb75b8b))
+* reject invalid DHCPv4 configuration before startup ([#2028](https://github.com/MustardSeedNetworks/niac-go/issues/2028)) ([0d14cb4](https://github.com/MustardSeedNetworks/niac-go/commit/0d14cb4debc5d5ed9b62d49acba220818d46986a))
 
 
 ### Miscellaneous
@@ -76,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 * verify link and fault syslog end to end ([#2009](https://github.com/MustardSeedNetworks/niac-go/issues/2009)) ([c8be368](https://github.com/MustardSeedNetworks/niac-go/commit/c8be3682fe7570a269256afe2b3a3f4f419fe27c))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2012](https://github.com/MustardSeedNetworks/niac-go/issues/2012)) ([00d35be](https://github.com/MustardSeedNetworks/niac-go/commit/00d35beb1fa8859b705880dc4f081774f06fc54a))
 
 ## [0.95.42](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.41...v0.95.42) (2026-09-10)
 
@@ -158,7 +169,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous
 
+* **deps:** lock file maintenance ([#1969](https://github.com/MustardSeedNetworks/niac-go/issues/1969)) ([f96b285](https://github.com/MustardSeedNetworks/niac-go/commit/f96b285b2ecef1f74706212f647ee49082ff340f))
 * **deps:** update dependency @chromatic-com/storybook to v5.3.1 ([#1874](https://github.com/MustardSeedNetworks/niac-go/issues/1874)) ([e714a43](https://github.com/MustardSeedNetworks/niac-go/commit/e714a433c4205c32cd746c4150372836415be7e3))
+* **deps:** update storybook monorepo to v10.6.0 ([#1970](https://github.com/MustardSeedNetworks/niac-go/issues/1970)) ([612dcd9](https://github.com/MustardSeedNetworks/niac-go/commit/612dcd9bfbff43040eb69c562f9797dad3682c3a))
 
 ## [0.95.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.36...v0.95.37) (2026-09-09)
 
@@ -195,6 +208,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **wiretest:** compare a replayed capture against its source over UDP (F2) ([#1948](https://github.com/MustardSeedNetworks/niac-go/issues/1948)) ([ed51752](https://github.com/MustardSeedNetworks/niac-go/commit/ed51752dfc6242404f60bf47c029161af3b5d2b1)), closes [#1947](https://github.com/MustardSeedNetworks/niac-go/issues/1947)
 
+
+### Miscellaneous
+
+* **deps:** update mustardseednetworks/.github action to v1.13.0 ([#1949](https://github.com/MustardSeedNetworks/niac-go/issues/1949)) ([5267d0f](https://github.com/MustardSeedNetworks/niac-go/commit/5267d0f20d2d7d7b848630f700d22afdcb5234ec))
+
 ## [0.95.32](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.31...v0.95.32) (2026-09-08)
 
 
@@ -209,6 +227,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **snmp:** narrow the bridge port refresh and sign the identity writers ([#1940](https://github.com/MustardSeedNetworks/niac-go/issues/1940)) ([8cf8597](https://github.com/MustardSeedNetworks/niac-go/commit/8cf859709cffa988d6de1e4946fe22a384210bd6))
 
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1938](https://github.com/MustardSeedNetworks/niac-go/issues/1938)) ([b77b93b](https://github.com/MustardSeedNetworks/niac-go/commit/b77b93bae11909896871280fbd132b740dae9842))
+
 ## [0.95.30](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.29...v0.95.30) (2026-09-08)
 
 
@@ -222,6 +245,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 * **api:** resolve a device's walk file the way its config does ([#1923](https://github.com/MustardSeedNetworks/niac-go/issues/1923)) ([36c3ec7](https://github.com/MustardSeedNetworks/niac-go/commit/36c3ec710d7595f42d60e4bf02ad9261a694adb0)), closes [#1918](https://github.com/MustardSeedNetworks/niac-go/issues/1918)
+* **deps:** update dependency @xyflow/react to v12.11.6 ([#1924](https://github.com/MustardSeedNetworks/niac-go/issues/1924)) ([4999070](https://github.com/MustardSeedNetworks/niac-go/commit/4999070111c5f97a94e42db5837ed26e8d3ac5e0))
+* **deps:** update go dependencies ([#1925](https://github.com/MustardSeedNetworks/niac-go/issues/1925)) ([2f46ad3](https://github.com/MustardSeedNetworks/niac-go/commit/2f46ad38fa9fc24d9c4762c5961f9ea01df83f0b))
 * **snmp:** refuse walk OIDs that cannot reach the wire ([#1919](https://github.com/MustardSeedNetworks/niac-go/issues/1919)) ([9dd6739](https://github.com/MustardSeedNetworks/niac-go/commit/9dd673961ea62eeda673f160edbc0821d96539d1))
 
 ## [0.95.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.27...v0.95.28) (2026-09-08)
@@ -256,8 +281,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **library:** say which walks are captures and which NIAC generated ([#1906](https://github.com/MustardSeedNetworks/niac-go/issues/1906)) ([0222b2a](https://github.com/MustardSeedNetworks/niac-go/commit/0222b2af274fa64f0da08911b5d21c3901d7b934))
 
+
+### Miscellaneous
+
+* **deps:** update dependency lint-staged to v17.5.0 ([#1909](https://github.com/MustardSeedNetworks/niac-go/issues/1909)) ([ad4a378](https://github.com/MustardSeedNetworks/niac-go/commit/ad4a378607a232e1780953c8f7987b7e9c19f67e))
+
 ## [0.95.25](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.24...v0.95.25) (2026-09-08)
 
+
+### Code Refactoring
+
+* **snmp:** one classifier for the walk substitution contract ([#1902](https://github.com/MustardSeedNetworks/niac-go/issues/1902)) ([a78b082](https://github.com/MustardSeedNetworks/niac-go/commit/a78b082f8c53fc1725ce08b0cf4a6ac08c1d00f5))
 
 ### Tests
 
@@ -274,10 +308,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous
 
 * **deps:** lock file maintenance ([#1898](https://github.com/MustardSeedNetworks/niac-go/issues/1898)) ([81c4546](https://github.com/MustardSeedNetworks/niac-go/commit/81c4546d57284f244dcfee7518a2a6b671d1fea1))
+* **deps:** lock file maintenance ([#1899](https://github.com/MustardSeedNetworks/niac-go/issues/1899)) ([b5fcb0f](https://github.com/MustardSeedNetworks/niac-go/commit/b5fcb0fa7e685df3c9c12fc55f4a0cfca4dddcd4))
 * **deps:** update mustardseednetworks/.github action to v1.12.0 ([#1897](https://github.com/MustardSeedNetworks/niac-go/issues/1897)) ([6bace01](https://github.com/MustardSeedNetworks/niac-go/commit/6bace01f336bb084d7c519f49ffa9ea887f1936d))
 
 ## [0.95.23](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.22...v0.95.23) (2026-09-07)
 
+
+### Bug Fixes
+
+* **ui:** stop the unbounded fetch loop the page stories exposed ([#1893](https://github.com/MustardSeedNetworks/niac-go/issues/1893)) ([e3cc285](https://github.com/MustardSeedNetworks/niac-go/commit/e3cc2855e3f8d7a10965153d7ffaade4f900ef72))
 
 ### Tests
 
@@ -295,6 +334,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **ui:** give the primary-action gate a bound sized for lazy pages ([#1888](https://github.com/MustardSeedNetworks/niac-go/issues/1888)) ([b43dff7](https://github.com/MustardSeedNetworks/niac-go/commit/b43dff77a9a6a7a4c9fd2472215b4205bf1821d5)), closes [#1887](https://github.com/MustardSeedNetworks/niac-go/issues/1887)
 
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1886](https://github.com/MustardSeedNetworks/niac-go/issues/1886)) ([682642c](https://github.com/MustardSeedNetworks/niac-go/commit/682642c5cbe1de9d81f4e7f8299ce6f8b24286a9))
+
 ## [0.95.21](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.20...v0.95.21) (2026-09-07)
 
 
@@ -308,6 +352,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 * **ui:** route-change focus, guaranteed field labels, tokenised YAML editor, translated errors ([#1879](https://github.com/MustardSeedNetworks/niac-go/issues/1879)) ([b9d50eb](https://github.com/MustardSeedNetworks/niac-go/commit/b9d50ebb0eefcf3d06c57eef8c66ca914cfb5b1d))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#1880](https://github.com/MustardSeedNetworks/niac-go/issues/1880)) ([b845185](https://github.com/MustardSeedNetworks/niac-go/commit/b8451859d77355fefa79679031eb81bba2d01fc1))
 
 ## [0.95.19](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.18...v0.95.19) (2026-09-07)
 
@@ -339,6 +388,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous
 
 * **ci:** hold the wizard to the same device manifest as the editor ([#1861](https://github.com/MustardSeedNetworks/niac-go/issues/1861)) ([af81070](https://github.com/MustardSeedNetworks/niac-go/commit/af81070506ba0b4d02fa700c9cd8cdceb217acba))
+* **deps:** lock file maintenance ([#1864](https://github.com/MustardSeedNetworks/niac-go/issues/1864)) ([53ec747](https://github.com/MustardSeedNetworks/niac-go/commit/53ec7476a03e55e21396d944f825bfc0f701259b))
 
 ## [0.95.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.15...v0.95.16) (2026-09-07)
 
@@ -367,6 +417,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous
 
 * **deps:** lock file maintenance ([#1853](https://github.com/MustardSeedNetworks/niac-go/issues/1853)) ([ee89f90](https://github.com/MustardSeedNetworks/niac-go/commit/ee89f904bfebd0bbc744836605da2d149476395f))
+* **deps:** lock file maintenance ([#1854](https://github.com/MustardSeedNetworks/niac-go/issues/1854)) ([d38e4f0](https://github.com/MustardSeedNetworks/niac-go/commit/d38e4f01957a599ed2762a3c00a36eeb2d0417ba))
 
 ## [0.95.12](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.11...v0.95.12) (2026-09-06)
 
@@ -397,9 +448,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **netbios:** send routed NBSTAT replies from the gateway MAC ([#1843](https://github.com/MustardSeedNetworks/niac-go/issues/1843)) ([9fcfdd8](https://github.com/MustardSeedNetworks/niac-go/commit/9fcfdd8415d2378a89e5ff2d0625634783f43e2d))
 
 
+### Documentation
+
+* **lab:** record the EtherScope acceptance of all six packs on 0.95.6 ([#1844](https://github.com/MustardSeedNetworks/niac-go/issues/1844)) ([d18144b](https://github.com/MustardSeedNetworks/niac-go/commit/d18144bac7e7ef271c47d6f72046530e74787493))
+
 ### Continuous Integration
 
 * install the pinned golangci-lint when the local version differs ([#1839](https://github.com/MustardSeedNetworks/niac-go/issues/1839)) ([c1d1d7a](https://github.com/MustardSeedNetworks/niac-go/commit/c1d1d7a4ec141c693d4af06b8f7187ec8328ead5))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.5.12 ([#1845](https://github.com/MustardSeedNetworks/niac-go/issues/1845)) ([4730000](https://github.com/MustardSeedNetworks/niac-go/commit/4730000c8420a119f9aed76bf0d5859f1c4e7152))
 
 ## [0.95.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.7...v0.95.8) (2026-09-06)
 
@@ -411,10 +471,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.95.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.6...v0.95.7) (2026-09-06)
 
 
+### Features
+
+* **scenario:** phones and cameras in the packs so LLDP-MED is visible ([#1836](https://github.com/MustardSeedNetworks/niac-go/issues/1836)) ([ec59e04](https://github.com/MustardSeedNetworks/niac-go/commit/ec59e04a949a730eb60ca636e16910b921c4fde9))
+
 ### Bug Fixes
 
 * **ci:** do not arm auto-merge on a release PR that no longer describes main ([#1831](https://github.com/MustardSeedNetworks/niac-go/issues/1831)) ([26702d8](https://github.com/MustardSeedNetworks/niac-go/commit/26702d8085c6f107cbb33cf0b2b67a24a996f77d))
 
+
+### Continuous Integration
+
+* retry a failed main run once so a flake cannot hold a release ([#1807](https://github.com/MustardSeedNetworks/niac-go/issues/1807)) ([516d394](https://github.com/MustardSeedNetworks/niac-go/commit/516d394fc9481941c45b04f361a53588578d0949))
 
 ### Miscellaneous
 
@@ -435,6 +503,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 * **lldp:** advertise LLDP-MED so endpoints identify themselves ([#1824](https://github.com/MustardSeedNetworks/niac-go/issues/1824)) ([22d321d](https://github.com/MustardSeedNetworks/niac-go/commit/22d321d2342a92340a09a25c9e2ef170e22eb4dd))
+* **snmp:** send v3 notifications and acknowledged informs ([#1826](https://github.com/MustardSeedNetworks/niac-go/issues/1826)) ([2743ed3](https://github.com/MustardSeedNetworks/niac-go/commit/2743ed30aa6be012d4412f9cd64a46de22751684))
 
 ## [0.95.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.3...v0.95.4) (2026-09-05)
 
