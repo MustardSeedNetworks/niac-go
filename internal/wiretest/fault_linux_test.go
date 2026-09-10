@@ -434,8 +434,12 @@ func TestAuthoredDeviceFaultDelaysEchoOnTheWire(t *testing.T) {
 
 	handle := openClient(t)
 	src := clientMAC(t)
+	// One packet source for the whole test: each one runs a goroutine that
+	// keeps draining the shared handle, so a second would compete with this
+	// one for the reply and buffer whatever it won out of reach.
+	packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()
 
-	healthy := echoRoundTrip(t, handle, src, 0xfa21, 1)
+	healthy := echoRoundTrip(t, handle, packets, src, 0xfa21, 1)
 	if healthy >= faultLatencyAuthored/2 {
 		t.Fatalf(
 			"healthy echo round trip = %s, already at half the authored delay %s; "+
@@ -445,7 +449,7 @@ func TestAuthoredDeviceFaultDelaysEchoOnTheWire(t *testing.T) {
 	}
 
 	sleepUntil(started.Add(faultLatencyStart + 2*time.Second))
-	delayed := echoRoundTrip(t, handle, src, 0xfa21, 2)
+	delayed := echoRoundTrip(t, handle, packets, src, 0xfa21, 2)
 	if floor := faultLatencyAuthored - faultLatencyTolerance; delayed < floor {
 		t.Fatalf(
 			"echo round trip under the authored %s latency phase = %s, want at least %s "+
@@ -461,11 +465,15 @@ func TestAuthoredDeviceFaultDelaysEchoOnTheWire(t *testing.T) {
 // by the kernel: an ARP exchange folded into the first measurement would be
 // read as latency the fault never caused.
 func echoRoundTrip(
-	t *testing.T, handle *pcap.Handle, src net.HardwareAddr, id uint16, seq uint16,
+	t *testing.T,
+	handle *pcap.Handle,
+	packets chan gopacket.Packet,
+	src net.HardwareAddr,
+	id uint16,
+	seq uint16,
 ) time.Duration {
 	t.Helper()
 
-	packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()
 	deadline := time.Now().Add(faultEchoDeadline)
 	for attempt := uint16(0); time.Now().Before(deadline); attempt++ {
 		// A new sequence number per attempt, so a reply to the attempt we
