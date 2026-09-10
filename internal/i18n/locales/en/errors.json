@@ -10,6 +10,7 @@
     "armed": "Armed",
     "clear": "Clear",
     "clearOne": "Clear {{type}} on {{device}}",
+    "conflictAddress": "Conflict IPv4 address",
     "milliseconds": "Delay (milliseconds)",
     "percent": "Utilization (%)",
     "selectTarget": "Select a device",

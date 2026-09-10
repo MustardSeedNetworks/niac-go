@@ -198,6 +198,8 @@
       "addTimeline": "Agregar cronograma",
       "addTraffic": "Agregar tráfico",
       "captivePortalEffect": "Redirige las solicitudes HTTP al portal cautivo simulado.",
+      "conflictAddress": "Dirección IPv4 en conflicto",
+      "selectDhcpServer": "Seleccione un servidor DHCP",
       "defaultPhase": "Período ocupado",
       "defaultTimeline": "Día laboral",
       "device": "Dispositivo",
@@ -206,6 +208,7 @@
       "faultRate": "Tasa (%)",
       "faultType": "Falla",
       "faults": {
+        "duplicate_dhcp_offer": "Oferta DHCP duplicada",
         "captive_portal": "Portal cautivo",
         "cpu_percent": "Utilización de CPU",
         "dhcp_no_offer": "DHCP sin oferta",
