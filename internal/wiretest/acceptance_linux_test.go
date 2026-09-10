@@ -41,7 +41,9 @@ const (
 	// A latency well past the SNMP timeout below, so a faulted device is
 	// silent within the window rather than merely slow.
 	acceptanceLatencyMS = 5000
-	acceptanceSNMPWait  = 2 * time.Second
+	// POST /api/v1/errors takes the fault's display label, not its type.
+	acceptanceLatencyLabel = "Latency"
+	acceptanceSNMPWait     = 2 * time.Second
 	// The reply has to arrive within this after a reset, or the reset did
 	// not take.
 	acceptanceRecovery = 20 * time.Second
@@ -134,7 +136,7 @@ func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	}
 
 	err = daemon.Client.SetDeviceFault(ctx, cliclient.DeviceFaultRequest{
-		Device: edge.Name, Type: "latency", Value: acceptanceLatencyMS,
+		Device: edge.Name, Type: acceptanceLatencyLabel, Value: acceptanceLatencyMS,
 	})
 	if err != nil {
 		t.Fatalf("inject latency: %v\n%s", err, daemon.Log())

@@ -70,7 +70,7 @@ func TestReleasedBinaryRefusesAnUnauthenticatedMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = anonymous.SetDeviceFault(t.Context(), cliclient.DeviceFaultRequest{
-		Device: "edge-1", Type: "latency", Value: 250,
+		Device: "edge-1", Type: "Latency", Value: 250,
 	})
 	if err == nil {
 		t.Fatal("an unauthenticated fault injection succeeded")

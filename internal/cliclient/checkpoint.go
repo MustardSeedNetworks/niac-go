@@ -12,6 +12,10 @@ import (
 
 // DeviceFaultRequest arms or clears one device-scoped fault. A zero Value
 // clears the fault, which is how the daemon's own surface spells it.
+//
+// Type is the fault's display label -- "Latency", "DHCP No Offer" -- because
+// that is what POST /api/v1/errors matches on; the underlying type string
+// ("latency") is refused as an interface fault with no interface.
 type DeviceFaultRequest struct {
 	Device string `json:"device"`
 	Type   string `json:"errorType"`
