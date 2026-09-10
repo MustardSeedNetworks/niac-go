@@ -91,6 +91,11 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
   await behaviorsTab.click();
   await expect(behaviorsTab).toHaveAttribute('aria-selected', 'true');
   await page.getByTestId('add-timeline').click();
+  await page.getByTestId('add-device-fault').click();
+  await page.getByLabel('Latency (milliseconds)').fill('60001');
+  await expect(page.getByTestId('save-behaviors')).toBeDisabled();
+  await page.getByLabel('Latency (milliseconds)').fill('60000');
+  await expect(page.getByTestId('save-behaviors')).toBeEnabled();
   // Wait on the response itself rather than polling a closure flag: the wait is
   // armed before the click, so it cannot miss a fast response, and a failure
   // names the request that never arrived.
@@ -116,7 +121,7 @@ test('authors and saves a deterministic behavior timeline', async ({ page }) => 
             durationMs: 30000,
             reset: true,
             traffic: [{ device: 'access-1', interface: 'Gi1/0/1', utilization: 75 }],
-            faults: [],
+            faults: [{ device: 'access-1', type: 'latency', value: 60000 }],
           },
         ],
       },

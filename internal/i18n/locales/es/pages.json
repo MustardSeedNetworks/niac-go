@@ -184,6 +184,8 @@
     },
     "backLabel": "Atrás",
     "behaviors": {
+      "addDeviceFault": "Agregar falla de dispositivo",
+      "latencyMs": "Latency (milisegundos)",
       "addFault": "Agregar falla",
       "addPhase": "Agregar fase",
       "addTimeline": "Agregar cronograma",
@@ -196,6 +198,10 @@
       "faultRate": "Tasa (%)",
       "faultType": "Falla",
       "faults": {
+        "dhcp_no_offer": "DHCP sin oferta",
+        "dns_nxdomain": "DNS NXDOMAIN",
+        "dns_timeout": "Tiempo de espera DNS agotado",
+        "latency": "Latency",
         "fcs_errors": "Errores FCS",
         "high_utilization": "Utilización alta",
         "interface_errors": "Errores de interfaz",
@@ -203,7 +209,7 @@
       },
       "help": "Programa tráfico y condiciones de enlace realistas. El mismo cronograma se repite de forma idéntica después de cada reinicio.",
       "interface": "Interfaz",
-      "needsInterface": "Agregue al menos una interfaz a un dispositivo antes de programar comportamientos: las líneas de tiempo apuntan a una interfaz de dispositivo.",
+      "needsDevice": "Agregue un dispositivo antes de programar comportamientos. El tráfico y las fallas de interfaz también requieren una interfaz.",
       "phaseName": "Nombre de fase",
       "phaseOffset": "La fase comienza después de (segundos)",
       "removeFault": "Quitar falla",

@@ -146,7 +146,7 @@ describe('DraftBehaviorComposer with an interfaceless first device', () => {
     ]);
   });
 
-  it('stays disabled when no device has an interface', () => {
+  it('allows a device-only timeline when no device has an interface', async () => {
     render(
       <DraftBehaviorComposer
         draft={{ ...draft, content: 'devices:\n  - name: new-device\n    type: host\n' }}
@@ -155,6 +155,11 @@ describe('DraftBehaviorComposer with an interfaceless first device', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Add timeline' })).toBeDisabled();
+    const user = userEvent.setup();
+    expect(screen.getByRole('button', { name: 'Add timeline' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Add timeline' }));
+    await user.click(screen.getByRole('button', { name: 'Add device fault' }));
+    expect(screen.getByRole('button', { name: 'Add traffic' })).toBeDisabled();
+    expect(screen.getByTestId('save-behaviors')).toBeEnabled();
   });
 });
