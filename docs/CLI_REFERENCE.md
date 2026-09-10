@@ -57,6 +57,11 @@ Complete command-line reference for NIAC-Go.
 - [`niac neighbors watch`](#niac-neighbors-watch) — watch neighbor table for live updates
 - [`niac restore`](#niac-restore) — restore a content library from a backup
 - [`niac sanitize`](#niac-sanitize) — sanitize SNMP walk files with NIAC branding
+- [`niac simulation`](#niac-simulation) — control scenarios through the running NIAC daemon
+- [`niac simulation preflight`](#niac-simulation-preflight) — validate a scenario through the daemon
+- [`niac simulation select`](#niac-simulation-select) — select the scenario used by global status views
+- [`niac simulation start`](#niac-simulation-start) — start a scenario through the daemon
+- [`niac simulation stop`](#niac-simulation-stop) — stop one running scenario
 - [`niac status`](#niac-status) — query the status of a running NIAC simulation
 - [`niac support-bundle`](#niac-support-bundle) — collect redacted diagnostics for support
 - [`niac template`](#niac-template) — manage configuration templates
@@ -1408,6 +1413,129 @@ niac sanitize --mapping-file ip-map.json device.walk output.walk
 
 # Check walks are safe to ship (exit 1 when any is not)
 niac sanitize --check internal/library/starter/walks/*.walk
+```
+
+### `niac simulation`
+
+Control scenarios through the running NIAC daemon.
+
+```text
+niac simulation
+```
+
+```text
+Preflight, start, select, and stop scenarios through the running NIAC daemon.
+```
+
+Flags:
+
+```text
+      --api string      Daemon API address (default: https://127.0.0.1:8445, or NIAC_API_URL)
+      --cacert string   Daemon certificate to trust (default: the local daemon's own, when visible)
+      --insecure        Skip TLS verification, for a daemon whose certificate this host cannot see
+```
+
+Examples:
+
+```bash
+niac simulation start -i eth0 --config clinic.yaml --session clinic
+niac simulation stop clinic
+```
+
+### `niac simulation preflight`
+
+Validate a scenario through the daemon.
+
+```text
+niac simulation preflight [flags]
+```
+
+```text
+Compile and validate a managed scenario without changing daemon state.
+```
+
+Flags:
+
+```text
+      --access-vlan uint16   Physical VLAN for access mode
+      --attachment string    Attachment name from the scenario
+      --config string        Managed scenario configuration path
+  -i, --interface string     Physical network interface
+      --mode string          Attachment mode: direct, access, or trunk
+      --session string       Scenario session ID
+      --template string      Built-in scenario template name
+```
+
+Examples:
+
+```bash
+niac simulation preflight -i eth0 --config clinic.yaml --session clinic
+```
+
+### `niac simulation select`
+
+Select the scenario used by global status views.
+
+```text
+niac simulation select <session>
+```
+
+```text
+Select which running scenario the daemon exposes through global status views.
+```
+
+Examples:
+
+```bash
+niac simulation select clinic
+```
+
+### `niac simulation start`
+
+Start a scenario through the daemon.
+
+```text
+niac simulation start [flags]
+```
+
+```text
+Start a managed scenario through the daemon's simulation registry.
+```
+
+Flags:
+
+```text
+      --access-vlan uint16   Physical VLAN for access mode
+      --attachment string    Attachment name from the scenario
+      --config string        Managed scenario configuration path
+  -i, --interface string     Physical network interface
+      --mode string          Attachment mode: direct, access, or trunk
+      --session string       Scenario session ID
+      --template string      Built-in scenario template name
+```
+
+Examples:
+
+```bash
+niac simulation start -i eth0 --config clinic.yaml --session clinic
+```
+
+### `niac simulation stop`
+
+Stop one running scenario.
+
+```text
+niac simulation stop <session>
+```
+
+```text
+Stop one managed scenario by its session ID without restarting the daemon.
+```
+
+Examples:
+
+```bash
+niac simulation stop clinic
 ```
 
 ### `niac status`
