@@ -63,6 +63,11 @@ func TestWalkContractClassify(t *testing.T) {
 		{"ifPhysAddress takes the authored MAC", addressed, ".1.3.6.1.2.1.2.2.1.6.1", BucketAuthored},
 		{"the bridge address takes the authored MAC", addressed, ".1.3.6.1.2.1.17.1.1.0", BucketAuthored},
 		{"the LLDP chassis ID takes the authored MAC", addressed, ".1.0.8802.1.1.2.1.3.2.0", BucketAuthored},
+		// refreshLLDPChassisIdentity writes the subtype with the value: a MAC
+		// served under subtype 7 (locallyAssigned) would describe itself
+		// wrongly. 28 of the corpus's Cisco captures declare 7.
+		{"the chassis ID subtype follows it", addressed, ".1.0.8802.1.1.2.1.3.1.0", BucketAuthored},
+		{"a device with no MAC keeps the captured subtype", bare, ".1.0.8802.1.1.2.1.3.1.0", BucketKept},
 		{"the serial number is derived from it", addressed, ".1.3.6.1.2.1.47.1.1.1.1.11.1", BucketAuthored},
 		{"a device with no MAC keeps the captured address", bare, ".1.3.6.1.2.1.2.2.1.6.1", BucketKept},
 		{"a device with no MAC keeps the captured serial", bare, ".1.3.6.1.2.1.47.1.1.1.1.11.1", BucketKept},
