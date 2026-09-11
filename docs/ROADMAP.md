@@ -101,9 +101,18 @@ whole-P2 or consumer-topology acceptance is claimed.
 
 ### Second consumer
 
+Harness verification (2026-09-11, v0.95.53): the `linux-amd64` archive was
+downloaded from the release, its SHA-256 checked against the signed manifest,
+and `internal/acceptance/harness` drove that exact artifact — not a local
+build. Four checks pass unprivileged (build identity from `/__version`, an
+unauthenticated mutation refused, a checkpoint on an absent session refused, a
+preflight that starts nothing), and the full start/checkpoint/mutate/reset/stop
+sequence passes on the wire, asserting the reset on an SNMP value rather than
+on the API's own account of itself.
+
 - [x] A network analyzer discovers all six scenario packs with zero findings,
       recorded with per-pack analysis identifiers.
-- [ ] An authenticated harness drives start, reset, mutate, checkpoint and
+- [x] An authenticated harness drives start, reset, mutate, checkpoint and
       stop over the API against a release-built binary.
 - [ ] A second product's collectors, topology and alert consumers run against
       all six packs with zero findings, orchestrated from CI on three
