@@ -75,10 +75,16 @@ func bridgePortColumnBucket(column string) Bucket {
 // prefix-level: a row carrying no address is left alone by the refresh but
 // classified here anyway, the same imprecision substitution 5 accepts for an
 // authored interface row.
+//
+// The chassis-ID subtype is here because refreshLLDPChassisIdentity writes it
+// with the value it describes: a MAC served under subtype 7 (locallyAssigned)
+// would misdescribe itself. 28 of the corpus's Cisco captures declare 7, and
+// without this every one of them reports an unclassified row.
 func isAuthoredAddressOID(oid string) bool {
 	return strings.HasPrefix(oid, ifPhysAddress+".") ||
 		oid == dot1dBaseBridgeAddress ||
-		oid == lldpLocChassisID
+		oid == lldpLocChassisID ||
+		oid == lldpLocChassisIDSubtype
 }
 
 // isLiveProtocolOID reports whether oid falls in a MIB-II protocol group the

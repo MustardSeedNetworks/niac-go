@@ -60,7 +60,7 @@ Owner sign-off 2026-09-05, all five accepted; 6, 7 and 8 were added by the
 | 3 | `1.3.6.1.2.1.11` (snmp group) and the `ip`/`icmp`/`tcp`/`udp`/`egp` subtrees | `live` | always | skipped at load, then re-registered live |
 | 4 | LLDP remote systems, CDP cache, `dot1dTpFdbTable`, `dot1qFdbTable`, `dot1qTpFdbTable` | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 5 | `ifTable`/`ifXTable` rows for interfaces the scenario authored | `authored` (configuration columns) or `live` (counters) | only at an authored `ifIndex` | **loaded, then overwritten** after the load |
-| 6 | `ifPhysAddress.*`, `dot1dBaseBridgeAddress`, `lldpLocChassisId`, `entPhysicalSerialNumber.*` | `authored` | an authored MAC; the three addresses need an Ethernet one | **loaded, then overwritten** after the load |
+| 6 | `ifPhysAddress.*`, `dot1dBaseBridgeAddress`, `lldpLocChassisId`, `lldpLocChassisIdSubtype`, `entPhysicalSerialNumber.*` | `authored` | an authored MAC; the three addresses need an Ethernet one | **loaded, then overwritten** after the load |
 | 7 | `lldpLocPortTable` (`1.0.8802.1.1.2.1.3.7`) | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 8 | `dot1dTpPortTable` (`1.3.6.1.2.1.17.4.4`) | `authored` (port number, max info) or `live` (frame counters, discards) | only at a bridge port an authored interface sits behind, or any port under `trunk_ports` | **loaded, then overwritten** after the load |
 
@@ -109,6 +109,20 @@ one capture must not answer with one identity. It carries two conditions
 because the code does — any authored MAC seeds the derived serial numbers, but
 only a six-octet one can stand in for a link-layer address, so a device with a
 longer MAC keeps the capture's addresses and still gets its own serials.
+
+**Amendment, owner 2026-09-11: substitution 6 covers `lldpLocChassisIdSubtype`.**
+The substitution named the chassis ID and not the subtype one arc above it, but
+`refreshLLDPChassisIdentity` has always written both together, and it has to:
+a MAC served under subtype 7 (`locallyAssigned`) misdescribes itself. So this
+names what the code already does rather than allowing anything new — no
+behaviour changed with the amendment.
+
+It surfaced because no starter walk carried the row. 28 of the 82 Cisco
+captures in the corpus that hold a BGP peer table declare subtype 7, and every
+one of them reported an unclassified row until the contract had a bucket for
+it. Declining the amendment would have meant shipping only subtype-4 captures,
+of which the corpus holds two distinct devices, both larger than the ones with
+subtype 7.
 
 Substitution 8 is scoped the way substitution 5 is. A bridge port is not an
 ifIndex, so the contract reads `dot1dBasePortIfIndex` to learn which port each
