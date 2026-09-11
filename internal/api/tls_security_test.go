@@ -91,6 +91,12 @@ func (*nilDaemonController) PreflightSimulation(SimulationRequest) (fabric.Repor
 func (*nilDaemonController) StartSimulation(SimulationRequest) error {
 	return nil
 }
+func (*nilDaemonController) AttachmentPolicies() []fabric.PhysicalAttachmentPolicy { return nil }
+
+func (*nilDaemonController) SimulationAttachments(SimulationRequest) (SimulationAttachments, error) {
+	return SimulationAttachments{}, nil
+}
+
 func (*nilDaemonController) StopSimulation(string) error   { return nil }
 func (*nilDaemonController) SelectSimulation(string) error { return nil }
 func (*nilDaemonController) GetStatus() SimulationStatus   { return SimulationStatus{} }

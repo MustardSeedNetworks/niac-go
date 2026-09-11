@@ -382,8 +382,21 @@ func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
 			handler: s.handleInterfaces,
 			methods: []string{http.MethodGet},
 		},
+		{
+			path:    "/api/v1/attachment-policies",
+			handler: s.handleAttachmentPolicies,
+			methods: []string{http.MethodGet},
+		},
 		{path: "/api/v1/runtime", handler: s.handleRuntime, methods: []string{http.MethodGet}},
 		{path: "/api/v1/behaviors", handler: s.handleBehaviors, methods: []string{http.MethodGet}},
+		{
+			path:         "/api/v1/simulation/attachments",
+			handler:      s.handleSimulationAttachments,
+			methods:      []string{http.MethodPost},
+			maxBodyBytes: MaxScenarioRequestBodySize,
+			rl:           rlWrite,
+			csrf:         true,
+		},
 		{
 			path:         "/api/v1/simulation/preflight",
 			handler:      s.handleSimulationPreflight,

@@ -114,12 +114,16 @@ export type {
   UpdateDeviceRequest,
 } from './device-config-types';
 export type {
+  AttachmentMode,
+  AttachmentPoliciesResponse,
+  AttachmentPolicy,
   FabricBinding,
   FabricDhcpScope,
   FabricDiagnostic,
   FabricInterface,
   FabricNetwork,
   FabricRoute,
+  SimulationAttachments,
   SimulationPreflightReport,
   SimulationPreflightRequest,
 } from './fabric-types';

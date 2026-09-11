@@ -1,4 +1,5 @@
 import type { InterfaceFaultPayload } from './api-response-types';
+import type { AttachmentPoliciesResponse, SimulationAttachments } from './fabric-types';
 import {
   deduplicatedGet,
   request,
@@ -289,6 +290,12 @@ export const fetchInterfaces = () => deduplicatedGet<InterfacesResponse>('/api/v
 export const fetchUsableInterfaces = () =>
   deduplicatedGet<InterfacesResponse>('/api/v1/interfaces?filter=usable');
 export const fetchSimulationStatus = () => deduplicatedGet<SimulationStatus>('/api/v1/simulation');
+export const fetchAttachmentPolicies = () =>
+  deduplicatedGet<AttachmentPoliciesResponse>('/api/v1/attachment-policies');
+export const fetchSimulationAttachments = (payload: SimulationRequest) =>
+  requestJsonCamelCase<SimulationAttachments>('/api/v1/simulation/attachments', payload, {
+    method: 'POST',
+  });
 export const preflightSimulation = (payload: SimulationPreflightRequest) =>
   requestJsonCamelCase<SimulationPreflightReport>('/api/v1/simulation/preflight', payload, {
     method: 'POST',

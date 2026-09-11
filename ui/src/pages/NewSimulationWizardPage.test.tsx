@@ -84,6 +84,12 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchTemplates: () => fetchTemplates(),
     startSimulation: (payload: unknown) => startSimulation(payload),
     preflightSimulation: (payload: unknown) => preflightSimulation(payload),
+    // AP-0: the binding inputs read their choices from the daemon instead of
+    // defaulting to a typed `tester` no generated scenario answers to.
+    fetchAttachmentPolicies: () =>
+      Promise.resolve({ policies: [{ interface: 'lo0', mode: 'access', accessVlan: 200 }] }),
+    fetchSimulationAttachments: () =>
+      Promise.resolve({ routed: true, attachments: ['cyberscope'] }),
   };
 });
 
@@ -215,7 +221,7 @@ beforeEach(() => {
     safe: true,
     topology: {
       binding: {
-        attachment: 'tester',
+        attachment: 'cyberscope',
         interface: 'lo0',
         mode: 'access',
         accessVlan: 200,

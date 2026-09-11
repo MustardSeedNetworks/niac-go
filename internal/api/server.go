@@ -417,6 +417,12 @@ type TrunkCaptureHealth struct {
 // DaemonController interface for daemon mode operations.
 type DaemonController interface {
 	PreflightSimulation(req SimulationRequest) (fabric.Report, error)
+	// AttachmentPolicies are the operator-approved physical bindings the
+	// daemon was started with; SimulationAttachments names the logical
+	// attachments one prepared configuration declares. Together they are what
+	// a client needs to offer a real binding instead of a guessed one.
+	AttachmentPolicies() []fabric.PhysicalAttachmentPolicy
+	SimulationAttachments(req SimulationRequest) (SimulationAttachments, error)
 	StartSimulation(req SimulationRequest) error
 	StopSimulation(sessionID string) error
 	SelectSimulation(sessionID string) error
