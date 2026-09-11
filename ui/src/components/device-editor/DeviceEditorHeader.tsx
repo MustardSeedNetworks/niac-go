@@ -1,8 +1,7 @@
 import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DeviceType } from '../../api/types';
-import { deviceTypeIcons } from '../../constants/device-types';
+import { deviceTypeIcons, normalizeDeviceType } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
@@ -46,8 +45,8 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
 }) => {
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
-  const deviceType = device.type ?? 'unknown';
-  const DeviceIcon = deviceTypeIcons[deviceType as DeviceType] ?? deviceTypeIcons.unknown;
+  const deviceType = normalizeDeviceType(device.type);
+  const DeviceIcon = deviceTypeIcons[deviceType];
 
   return (
     <Card className="border-surface-border bg-bg-surface/70">

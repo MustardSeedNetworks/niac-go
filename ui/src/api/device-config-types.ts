@@ -135,15 +135,26 @@ export interface DeviceInterface {
   vlans?: number[];
 }
 
-export type DeviceType =
-  | 'router'
-  | 'switch'
-  | 'access_point'
-  | 'firewall'
-  | 'server'
-  | 'workstation'
-  | 'iot'
-  | 'unknown';
+/**
+ * Every device type the UI knows, in the order operators see them.
+ *
+ * The union below is derived from this tuple rather than declared beside it,
+ * so a new type cannot be added to one and missed by the other — and the
+ * icon/colour maps in constants/device-types.ts can be checked exhaustively
+ * at runtime against the same list.
+ */
+export const DEVICE_TYPES = [
+  'router',
+  'switch',
+  'access_point',
+  'firewall',
+  'server',
+  'workstation',
+  'iot',
+  'unknown',
+] as const;
+
+export type DeviceType = (typeof DEVICE_TYPES)[number];
 
 // ============================================================================
 // Device API Response Types
