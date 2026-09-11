@@ -18,6 +18,12 @@ export function sidebar(page: Page, surface: SidebarSurface = 'desktop'): Locato
   return page.getByTestId(`sidebar-${surface}`);
 }
 
+/**
+ * Long enough for the 300ms slide to move the edge between samples, short
+ * enough that a parked drawer is confirmed immediately.
+ */
+const settleSampleMs = 120;
+
 /** The drawer's left edge; negative while it is parked off-screen. */
 async function drawerEdge(drawer: Locator): Promise<number> {
   return (await drawer.boundingBox())?.x ?? Number.NEGATIVE_INFINITY;
@@ -42,20 +48,33 @@ async function drawerEdge(drawer: Locator): Promise<number> {
  *    drawer never appears. That is a 2-7% failure under parallel load, which on
  *    a flake budget of 0 is a red job.
  *
- * So: wait until it is definitively closed, then open it, then wait until it
- * has arrived. Waiting on the real state at each step rather than on a proxy
- * that is true too early.
+ * So: wait until the drawer has stopped moving, toggle it only if it is
+ * actually closed, then wait until it has arrived. Waiting on the real state
+ * at each step rather than on a proxy that is true too early.
+ *
+ * 3. Requiring it to *start* closed was itself a flake. The second call in a
+ *    journey follows a navigation, and the close runs from an effect on
+ *    location.pathname — so on a loaded webkit the drawer can still be at
+ *    edge 0 when the poll starts, and a poll for "definitively closed" then
+ *    cannot succeed however long it waits. That is
+ *    app-shell.mobile.spec.ts:62 failing with `Expected: < 0, Received: 0`
+ *    after ten seconds. What this helper owes its caller is an open drawer,
+ *    not a particular history, so an already-open one is returned as is.
  */
 export async function openMobileSidebar(page: Page): Promise<Locator> {
   const drawer = sidebar(page, 'mobile');
 
   await expect
-    .poll(() => drawerEdge(drawer), {
-      message: 'mobile drawer never settled closed, so the toggle would re-close it',
+    .poll(() => settledDrawerEdge(drawer), {
+      message: 'mobile drawer never stopped moving, so a toggle would race it',
     })
-    .toBeLessThan(0);
+    .not.toBeNull();
 
-  await page.getByTestId('mobile-menu-toggle').click();
+  // Only toggle a drawer that is parked off-screen. Clicking an open one
+  // closes it, which is the failure this replaced.
+  if ((await drawerEdge(drawer)) < 0) {
+    await page.getByTestId('mobile-menu-toggle').click();
+  }
 
   await expect
     .poll(() => drawerEdge(drawer), {
@@ -64,4 +83,18 @@ export async function openMobileSidebar(page: Page): Promise<Locator> {
     .toBeGreaterThanOrEqual(0);
 
   return drawer;
+}
+
+/**
+ * The drawer's edge once two consecutive samples agree, or null while it is
+ * still in flight. The transition runs 300ms, so two samples a frame apart
+ * distinguish "parked" from "sliding" without asserting a direction — which is
+ * what lets the caller accept a drawer that is already open.
+ */
+async function settledDrawerEdge(drawer: Locator): Promise<number | null> {
+  const first = await drawerEdge(drawer);
+  await drawer.page().waitForTimeout(settleSampleMs);
+  const second = await drawerEdge(drawer);
+
+  return first === second ? second : null;
 }
