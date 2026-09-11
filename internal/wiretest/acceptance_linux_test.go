@@ -60,6 +60,16 @@ const (
 
 func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	t.Helper()
+
+	return startAcceptanceDaemonIn(t, t.TempDir())
+}
+
+// startAcceptanceDaemonIn starts the scenario under a caller-owned root. The
+// daemon writes its recovery record beside the library, so a restart that
+// reuses the root is what can prove recovery -- a fresh root would prove only
+// that the daemon starts.
+func startAcceptanceDaemonIn(t *testing.T, root string) *harness.Daemon {
+	t.Helper()
 	requireWire(t)
 
 	template, err := templates.Get("resource-pressure")
@@ -68,7 +78,7 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	}
 
 	daemon, err := harness.Start(t.Context(), harness.Options{
-		Root:       t.TempDir(),
+		Root:       root,
 		BinaryPath: acceptanceBinary(t),
 		AttachmentPolicies: []string{
 			fmt.Sprintf("%s=access:%d", simIface, accessVLAN),
@@ -222,4 +232,45 @@ func awaitAcceptanceCPU(t *testing.T, client *gosnmp.GoSNMP, want int64, daemon 
 	}
 	t.Fatalf("%s load = %d after %s, want %d\n%s",
 		acceptanceDevice, load, acceptanceSettle, want, daemon.Log())
+}
+
+// P2-2 asks for recovery to hold against a phase release, not only in package
+// tests: a daemon that comes back must restore the scenario it was running
+// before replay starts.
+//
+// The daemon is killed rather than asked to stop, because a deliberate Stop is
+// specified to begin fresh -- only an abrupt exit should recover. Recovery is
+// from the last completed periodic save, so this asserts the session and its
+// device state return; it is not a power-loss guarantee.
+func TestReleasedBinaryRecoversItsSessionAfterAnAbruptExit(t *testing.T) {
+	root := t.TempDir()
+	daemon := startAcceptanceDaemonIn(t, root)
+
+	if load := acceptanceCPU(t, dialAcceptanceHost(t)); load != acceptanceCPUBaseline {
+		t.Fatalf("%s load = %d before the restart, want %d\n%s",
+			acceptanceDevice, load, acceptanceCPUBaseline, daemon.Log())
+	}
+	if err := daemon.Stop(); err != nil {
+		t.Fatalf("kill the daemon: %v", err)
+	}
+
+	recovered := startAcceptanceDaemonIn(t, root)
+	sessions, err := recovered.Client.Sessions(t.Context())
+	if err != nil {
+		t.Fatalf("list sessions after recovery: %v\n%s", err, recovered.Log())
+	}
+	found := false
+	for _, session := range sessions {
+		if session.SessionID == acceptanceSession {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("session %s did not come back: %+v\n%s",
+			acceptanceSession, sessions, recovered.Log())
+	}
+
+	// Serving again is the point: a recovered record that never reaches the
+	// wire would satisfy the API and nothing else.
+	awaitAcceptanceCPU(t, dialAcceptanceHost(t), acceptanceCPUBaseline, recovered)
 }
