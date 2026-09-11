@@ -78,6 +78,7 @@ sudo ./niac daemon
 | `niac neighbors [watch]` | Display neighbor discovery table from LLDP/CDP protocols |
 | `niac restore <archive.tar.gz>` | Restore a content library from a backup |
 | `niac sanitize <input-walk> <output-walk>` | Sanitize SNMP walk files with NIAC branding |
+| `niac simulation` | Control scenarios through the running NIAC daemon |
 | `niac status` | Query the status of a running NIAC simulation |
 | `niac support-bundle <bundle.tar.gz>` | Collect redacted diagnostics for support |
 | `niac template` | Manage configuration templates |

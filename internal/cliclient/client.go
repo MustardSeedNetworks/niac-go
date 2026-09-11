@@ -36,6 +36,8 @@ var (
 	// ErrUnauthorized reports that the daemon wanted a token this client did
 	// not present.
 	ErrUnauthorized = errors.New("the daemon requires an API token")
+	// ErrForbidden reports that the supplied token cannot mutate daemon state.
+	ErrForbidden = errors.New("the daemon token lacks read-write scope")
 	// ErrRequestFailed reports a non-2xx answer that is not an auth failure.
 	ErrRequestFailed = errors.New("daemon request failed")
 )
@@ -57,7 +59,7 @@ type Config struct {
 	Insecure bool
 }
 
-// Client is a read-only view of a running daemon.
+// Client provides typed access to a running daemon.
 type Client struct {
 	baseURL  string
 	token    string
@@ -164,21 +166,7 @@ func (c *Client) open(ctx context.Context, path string) (io.ReadCloser, error) {
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		if _, ok := errors.AsType[*net.OpError](err); ok {
-			return nil, fmt.Errorf("%w at %s: is the daemon running?",
-				ErrDaemonUnreachable, c.baseURL)
-		}
-
-		var certErr *tls.CertificateVerificationError
-		if errors.As(err, &certErr) && c.certPath != "" {
-			// Naming the certificate that was tried turns "unknown authority"
-			// into something an operator can act on: it is usually a stale one
-			// left by an earlier run, and --cacert points at the right file.
-			return nil, fmt.Errorf("%w: trusted %s, which the daemon at %s does not match: %w",
-				ErrRequestFailed, c.certPath, c.baseURL, err)
-		}
-
-		return nil, fmt.Errorf("request %s: %w", path, err)
+		return nil, c.transportError(path, err)
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		_ = resp.Body.Close()
@@ -192,4 +180,17 @@ func (c *Client) open(ctx context.Context, path string) (io.ReadCloser, error) {
 	}
 
 	return resp.Body, nil
+}
+
+func (c *Client) transportError(path string, err error) error {
+	if _, ok := errors.AsType[*net.OpError](err); ok {
+		return fmt.Errorf("%w at %s: is the daemon running?", ErrDaemonUnreachable, c.baseURL)
+	}
+	var certErr *tls.CertificateVerificationError
+	if errors.As(err, &certErr) && c.certPath != "" {
+		return fmt.Errorf("%w: trusted %s, which the daemon at %s does not match: %w",
+			ErrRequestFailed, c.certPath, c.baseURL, err)
+	}
+
+	return fmt.Errorf("request %s: %w", path, err)
 }

@@ -28,6 +28,7 @@ func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
 		addRestoreCommand,
 		addSanitizeCommand,
 		addServiceCommand,
+		addSimulationCommand,
 		addStatusCommand,
 		addSupportBundleCommand,
 		addTemplateCommand,
