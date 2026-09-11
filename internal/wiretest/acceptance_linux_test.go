@@ -64,18 +64,23 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	return startAcceptanceDaemonIn(t, t.TempDir())
 }
 
-// startAcceptanceDaemonIn starts the scenario under a caller-owned root. The
-// daemon writes its recovery record beside the library, so a restart that
-// reuses the root is what can prove recovery -- a fresh root would prove only
-// that the daemon starts.
+// startAcceptanceDaemonIn launches the daemon under a caller-owned root and
+// starts the scenario on it.
 func startAcceptanceDaemonIn(t *testing.T, root string) *harness.Daemon {
 	t.Helper()
-	requireWire(t)
+	daemon := launchAcceptanceDaemon(t, root)
+	startAcceptanceScenario(t, daemon)
 
-	template, err := templates.Get("resource-pressure")
-	if err != nil {
-		t.Fatalf("templates.Get(resource-pressure): %v", err)
-	}
+	return daemon
+}
+
+// launchAcceptanceDaemon starts only the process, with no scenario. Recovery
+// has to be observed on a daemon that was never told to start anything --
+// otherwise the test starts the session itself and passes whether or not
+// recovery works at all.
+func launchAcceptanceDaemon(t *testing.T, root string) *harness.Daemon {
+	t.Helper()
+	requireWire(t)
 
 	daemon, err := harness.Start(t.Context(), harness.Options{
 		Root:       root,
@@ -93,6 +98,18 @@ func startAcceptanceDaemonIn(t *testing.T, root string) *harness.Daemon {
 		}
 	})
 
+	return daemon
+}
+
+// startAcceptanceScenario brings the resource-pressure template up on a
+// launched daemon.
+func startAcceptanceScenario(t *testing.T, daemon *harness.Daemon) {
+	t.Helper()
+
+	template, err := templates.Get("resource-pressure")
+	if err != nil {
+		t.Fatalf("templates.Get(resource-pressure): %v", err)
+	}
 	request := cliclient.SimulationRequest{
 		SessionID:      acceptanceSession,
 		Interface:      simIface,
@@ -111,8 +128,6 @@ func startAcceptanceDaemonIn(t *testing.T, root string) *harness.Daemon {
 	if _, err = daemon.Client.StartSimulation(t.Context(), request); err != nil {
 		t.Fatalf("start: %v\n%s", err, daemon.Log())
 	}
-
-	return daemon
 }
 
 // The whole sequence in one test, because the halves prove nothing apart: a
@@ -254,7 +269,7 @@ func TestReleasedBinaryRecoversItsSessionAfterAnAbruptExit(t *testing.T) {
 		t.Fatalf("kill the daemon: %v", err)
 	}
 
-	recovered := startAcceptanceDaemonIn(t, root)
+	recovered := launchAcceptanceDaemon(t, root)
 	sessions, err := recovered.Client.Sessions(t.Context())
 	if err != nil {
 		t.Fatalf("list sessions after recovery: %v\n%s", err, recovered.Log())
