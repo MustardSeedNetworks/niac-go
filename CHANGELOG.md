@@ -5,6 +5,36 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.54](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.53...v0.95.54) (2026-09-11)
+
+
+### Features
+
+* publish the RFC 4292 routing table ([#2069](https://github.com/MustardSeedNetworks/niac-go/issues/2069)) ([e8d125a](https://github.com/MustardSeedNetworks/niac-go/commit/e8d125a6633bc52b1470163246b852f1b03c3f34))
+* **ui:** offer the approved attachment binding instead of guessing it ([#2073](https://github.com/MustardSeedNetworks/niac-go/issues/2073)) ([45a6b2d](https://github.com/MustardSeedNetworks/niac-go/commit/45a6b2d40b82e266089a0878cfd1b38df8af8410)), closes [#2071](https://github.com/MustardSeedNetworks/niac-go/issues/2071)
+
+
+### Bug Fixes
+
+* link libpcap statically so the rpm runs on Fedora ([#2057](https://github.com/MustardSeedNetworks/niac-go/issues/2057)) ([cbaad8d](https://github.com/MustardSeedNetworks/niac-go/commit/cbaad8d3b0c8f4163ab564afd7b1dc1e5d086a35))
+
+
+### Documentation
+
+* record the harness criterion as met against a real release ([#2072](https://github.com/MustardSeedNetworks/niac-go/issues/2072)) ([a48f994](https://github.com/MustardSeedNetworks/niac-go/commit/a48f99449a336b2bee4888e3405364ecdc01bef7))
+* record the platform matrix with per-cell output ([#2074](https://github.com/MustardSeedNetworks/niac-go/issues/2074)) ([55a94b7](https://github.com/MustardSeedNetworks/niac-go/commit/55a94b7e3fc6b20000757db9648a5af631655751))
+
+
+### Tests
+
+* **e2e:** give every wizard draft its own name ([#2064](https://github.com/MustardSeedNetworks/niac-go/issues/2064)) ([986bd1c](https://github.com/MustardSeedNetworks/niac-go/commit/986bd1ce0e5a177468acae777fee3cec6983c626))
+* **e2e:** let the mobile drawer helper accept an already-open drawer ([#2078](https://github.com/MustardSeedNetworks/niac-go/issues/2078)) ([ed8fb87](https://github.com/MustardSeedNetworks/niac-go/commit/ed8fb879813ca76eb7c7d3eaaa411d49ffcebe20))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.73.1 ([#2076](https://github.com/MustardSeedNetworks/niac-go/issues/2076)) ([7603bdf](https://github.com/MustardSeedNetworks/niac-go/commit/7603bdf5cfa14ff3ba7be6b0cd314be750cf656e))
+
 ## [0.95.53](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.52...v0.95.53) (2026-09-11)
 
 
