@@ -17,10 +17,34 @@ const config = `devices:
     ips: [192.0.2.20]
 `;
 
+// A draft is keyed by the name of the file the wizard uploaded, and creating
+// one that already exists is a 409. Two things made that reachable: these
+// tests run in parallel against one daemon and every one of them uploaded
+// `address-conflict.yaml`, and the wizard's own cleanup is deliberately
+// fire-and-forget (`discardDraft` logs and swallows), so a reupload can beat
+// the delete of the draft it is replacing. Either way `openDraft` failed on
+// its own ok() assertion -- the flake that ejected merge-queue run 34537475562.
+//
+// A fresh name per call removes both: no create can collide with another
+// test, with a repeat of itself, or with a delete still in flight. The reopen
+// case asserts that content round-trips, not that the draft keeps its
+// identity, so a new name there changes nothing it checks.
+// The counter is per worker process, so the worker index has to be in the
+// name too: two workers running repeats of one test would otherwise both
+// start at 1 and collide again.
+let draftSequence = 0;
+
+function draftName(): string {
+  draftSequence += 1;
+  const info = test.info();
+  const slug = info.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  return `address-conflict-${slug}-w${info.workerIndex}-${draftSequence}.yaml`;
+}
+
 async function openDraft(page: Page, content: string): Promise<ScenarioDraft> {
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
   await page.getByLabel('Upload local file').setInputFiles({
-    name: 'address-conflict.yaml',
+    name: draftName(),
     mimeType: 'application/yaml',
     buffer: Buffer.from(content),
   });
