@@ -96,7 +96,8 @@ func Start(ctx context.Context, options Options) (*Daemon, error) {
 	}
 	defer logFile.Close()
 
-	arguments := []string{"daemon",
+	arguments := []string{
+		"daemon",
 		"--listen", address,
 		"--storage", "disabled",
 		"--cert-dir", filepath.Join(root, "certs"),
