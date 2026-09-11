@@ -28,7 +28,7 @@ import (
 // as no table. So this walks the table over UDP and rebuilds each route from
 // its OID, then compares that against what the scenario authored.
 const (
-	inetRouteTarget    = "10.254.201.1"
+	inetRouteTarget    = "10.254.200.60"
 	inetRouteCommunity = "route_demo"
 	inetRouteTable     = ".1.3.6.1.2.1.4.24.7.1"
 	inetRouteIfIndex   = inetRouteTable + ".7"
@@ -56,9 +56,13 @@ func startInetRouteScenario(t *testing.T) {
 	// The two gateways exist because the fabric refuses a route whose next hop
 	// is not a configured peer -- an authored route that points nowhere is a
 	// scenario defect, and the validator says so before the replay starts.
+	//
+	// Everything sits on the transit /24 the test end of the veth carries
+	// (wire_linux_test.go: clientCIDR), above the addresses the other suites
+	// use, so the kernel can reach the agent and nothing collides.
 	body := fmt.Sprintf(`networks:
   - name: route-lan
-    subnet: 10.254.201.0/24
+    subnet: 10.254.200.0/24
 attachments:
   - name: tester
     connect: route-lan
@@ -78,10 +82,10 @@ devices:
     routes:
       - destination: 0.0.0.0/0
         via: Ethernet1
-        next_hop: 10.254.201.254
+        next_hop: 10.254.200.61
       - destination: 192.0.2.0/24
         via: Ethernet1
-        next_hop: 10.254.201.253
+        next_hop: 10.254.200.62
   - name: ROUTE-GW1
     type: router
     mac: "02:00:00:00:c0:fe"
@@ -89,7 +93,7 @@ devices:
       - name: Ethernet1
         type: ethernet
         network: route-lan
-        address: 10.254.201.254/24
+        address: 10.254.200.61/24
   - name: ROUTE-GW2
     type: router
     mac: "02:00:00:00:c0:fd"
@@ -97,7 +101,7 @@ devices:
       - name: Ethernet1
         type: ethernet
         network: route-lan
-        address: 10.254.201.253/24
+        address: 10.254.200.62/24
 `, inetRouteCommunity, inetRouteTarget)
 	if err := os.WriteFile(configPath, []byte(body), 0o600); err != nil {
 		t.Fatalf("write the scenario: %v", err)
@@ -148,9 +152,9 @@ func TestInetCidrRouteTableIsWalkableAndMatchesTheAuthoredRoutes(t *testing.T) {
 	// interface address implies. A connected route has no next hop, which
 	// RFC 4292 spells as the unspecified address.
 	for _, want := range []authoredRoute{
-		{destination: "0.0.0.0", prefixLen: 0, nextHop: "10.254.201.254"},
-		{destination: "192.0.2.0", prefixLen: 24, nextHop: "10.254.201.253"},
-		{destination: "10.254.201.0", prefixLen: 24, nextHop: "0.0.0.0"},
+		{destination: "0.0.0.0", prefixLen: 0, nextHop: "10.254.200.61"},
+		{destination: "192.0.2.0", prefixLen: 24, nextHop: "10.254.200.62"},
+		{destination: "10.254.200.0", prefixLen: 24, nextHop: "0.0.0.0"},
 	} {
 		if _, ok := got[want]; !ok {
 			t.Errorf("no row for %s/%d via %s; rebuilt rows: %v",
