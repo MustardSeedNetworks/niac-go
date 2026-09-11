@@ -18,6 +18,12 @@ import type { DeviceNode } from './types';
 export interface Tier {
   /** Operator-facing name for the band. */
   label: 'Core' | 'Distribution' | 'Access';
+  /**
+   * Which distribution band this is, counting down from core, when the graph
+   * has more than one of them. Undefined on Core, on Access, and on a lone
+   * distribution band — a number there would imply siblings that don't exist.
+   */
+  depth?: number;
   /** Canvas y of the band's top edge. */
   y: number;
   /** Band height in canvas units. */
@@ -57,8 +63,14 @@ export function deriveTiers(nodes: DeviceNode[]): Tier[] {
     return [];
   }
 
+  // Core and Access are the first and last rank; everything between is a
+  // distribution layer. More than one of those and the name alone stops
+  // identifying a band, so they carry their position too.
+  const distributionCount = Math.max(ranks.length - 2, 0);
+
   return ranks.map((rank, index) => ({
     label: labelFor(index, ranks.length),
+    ...(distributionCount > 1 && index > 0 && index < ranks.length - 1 ? { depth: index } : {}),
     y: Math.min(...rank) - BAND_PADDING,
     height: Math.max(...rank) - Math.min(...rank) + NODE_HEIGHT + BAND_PADDING * 2,
     deviceCount: rank.length,

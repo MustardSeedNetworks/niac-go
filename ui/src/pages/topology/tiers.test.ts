@@ -22,15 +22,45 @@ describe('deriveTiers', () => {
     expect(tiers[1]?.deviceCount).toBe(2);
   });
 
-  it('labels every band between the first and last Distribution', () => {
+  it('labels the single band between the first and last Distribution, unnumbered', () => {
+    const tiers = deriveTiers([node('core-1', 40), node('dist-1', 460), node('acc-1', 880)]);
+
+    expect(tiers.map((t) => t.label)).toEqual(['Core', 'Distribution', 'Access']);
+    expect(tiers[1]?.depth).toBeUndefined();
+  });
+
+  // A six-rank graph drew four bands all reading "Distribution", with nothing
+  // on screen to tell them apart or to say which sat above which (#2061).
+  it('numbers the distribution bands when there is more than one', () => {
     const tiers = deriveTiers([
       node('core-1', 40),
       node('dist-1', 460),
       node('dist-2', 880),
-      node('acc-1', 1300),
+      node('dist-3', 1300),
+      node('acc-1', 1720),
     ]);
 
-    expect(tiers.map((t) => t.label)).toEqual(['Core', 'Distribution', 'Distribution', 'Access']);
+    expect(tiers.map((t) => t.label)).toEqual([
+      'Core',
+      'Distribution',
+      'Distribution',
+      'Distribution',
+      'Access',
+    ]);
+    expect(tiers.map((t) => t.depth)).toEqual([undefined, 1, 2, 3, undefined]);
+  });
+
+  it('gives every band a distinct identity so none is ambiguous on screen', () => {
+    const tiers = deriveTiers([
+      node('core-1', 40),
+      node('dist-1', 460),
+      node('dist-2', 880),
+      node('dist-3', 1300),
+      node('acc-1', 1720),
+    ]);
+
+    const identities = tiers.map((t) => `${t.label}${t.depth ?? ''}`);
+    expect(new Set(identities).size).toBe(tiers.length);
   });
 
   // A flat graph has no hierarchy to show. Drawing one band labelled "Core"
