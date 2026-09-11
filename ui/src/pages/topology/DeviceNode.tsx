@@ -14,19 +14,24 @@ interface DeviceNodeProps {
 }
 
 /**
- * DeviceNode renders a network device in the topology graph.
- * Displays device icon, name, type, IPs, and protocols.
+ * DeviceNode renders a network device as a symbol with its name beneath it.
+ *
+ * It used to be a 280x180 card carrying the name, the type, the first IP and
+ * up to three protocol chips. At any zoom that fits a real scenario the cards
+ * were the diagram — the shape of the network was the thing you could not see
+ * (#2056). The symbol carries the device type, the label carries identity, and
+ * everything that left the canvas is still on the node's own tooltip and
+ * accessible name, one hover away rather than one click.
  */
 export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const { t } = useTranslation('pages');
   const deviceType = data.type ?? 'unknown';
-  const Icon = getTopologyDeviceIcon(deviceType);
+  const Symbol = getTopologyDeviceIcon(deviceType);
   const color = getTopologyDeviceColor(deviceType);
 
-  // The card truncates the device name and shows `+N` overflow for IPs and
-  // protocols, so the full data is invisible without a tooltip. Build a
-  // multi-line description and surface it through both title (native hover
-  // tooltip) and aria-label (screen readers).
+  // The node shows a symbol and a name, so IPs and protocols are invisible
+  // without this. Surfaced through both title (native hover tooltip) and
+  // aria-label (screen readers).
   const tooltipLines: string[] = [
     t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type }),
   ];
@@ -46,20 +51,11 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
       data-testid="topology-device-node"
       title={tooltip}
       aria-label={tooltip}
-      className={`
-        relative px-4 py-row-lg rounded-xl border-2 transition-all duration-200 text-left
-        ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-base' : ''}
-        hover:shadow-lg hover:shadow-scrim/30
-      `}
-      style={{
-        backgroundColor: 'var(--color-bg-elevated)',
-        borderColor: selected ? color : 'var(--color-border-muted)',
-        // Wide enough that 16-char device names (niac-core-sw-01) fit
-        // without "..." truncation, capped so packed layouts still
-        // breathe. Layout step width below is tuned to this.
-        minWidth: '200px',
-        maxWidth: '260px',
-      }}
+      className="group relative flex flex-col items-center gap-tight bg-transparent"
+      // Sized to NODE_WIDTH in layout.ts, which is what dagre spaces on. The
+      // label is allowed two lines beneath a fixed-height symbol, so every
+      // node occupies the same box whatever its name.
+      style={{ width: '112px' }}
       onClick={() => data.onClick?.(data.label)}
     >
       {/* ReactFlow edge anchors. Without these handles the canvas
@@ -80,57 +76,32 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
         className="!w-2 !h-2 !bg-brand-accent !border-0"
       />
 
-      {/* Icon and name */}
-      <div className="flex items-center gap-default">
-        <div
-          className="pad-xs rounded-lg"
-          style={{
-            backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
-          }}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div
-            data-testid="topology-device-label"
-            className="font-semibold text-text-primary text-sm truncate"
-          >
-            {data.label}
-          </div>
-          <div className="text-xs text-text-muted capitalize">{data.type}</div>
-        </div>
+      {/* The symbol is the node. The plate behind it keeps a light glyph
+          legible over a dark canvas and gives selection somewhere to land
+          that is not the glyph's own silhouette. */}
+      <div
+        className={`
+          flex-center rounded-2xl border-2 transition-all duration-200
+          group-hover:shadow-lg group-hover:shadow-scrim/30
+          ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-base' : ''}
+        `}
+        style={{
+          width: '64px',
+          height: '64px',
+          color,
+          borderColor: selected ? color : 'var(--color-border-muted)',
+          backgroundColor: `color-mix(in srgb, ${color} 14%, var(--color-bg-elevated))`,
+        }}
+      >
+        <Symbol className="w-8 h-8" />
       </div>
 
-      {/* IPs */}
-      {data.ips && data.ips.length > 0 && (
-        <div className="mt-inline pt-2 border-t border-surface-border">
-          <div className="text-xs font-mono text-text-muted truncate">
-            {data.ips[0]}
-            {data.ips.length > 1 && (
-              <span className="text-text-muted"> +{data.ips.length - 1}</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Protocols */}
-      {data.protocols && data.protocols.length > 0 && (
-        <div className="mt-inline flex flex-wrap gap-tight">
-          {data.protocols.slice(0, 3).map((proto) => (
-            <span
-              key={proto}
-              className="px-1.5 py-0.5 text-[10px] rounded-md bg-surface-hover text-text-secondary"
-            >
-              {proto}
-            </span>
-          ))}
-          {data.protocols.length > 3 && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded-md bg-surface-hover text-text-muted">
-              +{data.protocols.length - 3}
-            </span>
-          )}
-        </div>
-      )}
+      <div
+        data-testid="topology-device-label"
+        className="w-full text-center text-xs font-medium leading-tight text-text-primary line-clamp-2 break-words"
+      >
+        {data.label}
+      </div>
     </button>
   );
 });
