@@ -15,7 +15,7 @@ build. A cell with no recorded output is not a cell that passed; it says
 | Platform | Artifact | Runs | Serves HTTPS | Embedded UI | Capture |
 | --- | --- | --- | --- | --- | --- |
 | macOS 26 (Apple Silicon) | `darwin-arm64.tar.gz` | yes | yes | yes | not taken |
-| Ubuntu 24.04 (x86_64) | `linux-amd64.tar.gz` | yes | yes | yes | yes |
+| Ubuntu 24.04 (x86_64) | `linux-amd64.tar.gz`, `.deb` | yes | yes | yes | yes |
 | Fedora 44 (x86_64) | `x86_64.rpm` | **no — see below** | — | — | — |
 | Windows 11 (x86_64) | `windows-amd64.zip` | yes | yes | yes | not taken — no Npcap |
 | Docker | image | not taken | — | — | — |
@@ -76,6 +76,29 @@ $ sudo NIAC_ACCEPTANCE_BINARY=/tmp/relcheck/niac \
     go test -tags integration ./internal/wiretest/ -run TestReleasedBinaryCheckpointsMutatesAndResets
 --- PASS: TestReleasedBinaryCheckpointsMutatesAndResets (1.46s)
 ```
+
+### Package install and upgrade
+
+`make deploy-validate` installed the `.deb` over an existing **0.95.38**, so
+this is a real cross-version upgrade rather than the same-version no-op that
+cannot prove an upgrade path:
+
+```text
+$ make deploy-validate HOST=dev-srv-ubuntu RELEASE=v0.95.53
+{
+  "commitFull": "45bd8e140896d50db31fa85b206f9b9bd5d382f4",
+  "platform": "linux/amd64",
+  "uiBuildHash": "c5f0f6cb7ab77b7366b26d01c3f27997",
+  "version": "0.95.53"
+}
+PASS /__version still correct after installing over an existing configuration
+
+==> Watching for a restart loop for 30s
+PASS niac.service active, NRestarts unchanged at 0
+```
+
+That covers the "install must not crash-loop an existing config" clause
+directly — the failure seed#377 taught us to check for.
 
 ## Fedora 44, x86_64 (`dev-srv-fedora`) — FAILS on this release
 
