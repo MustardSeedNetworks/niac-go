@@ -90,7 +90,7 @@
     "@vitest/browser-playwright": "4.1.11",
     "@vitest/coverage-v8": "4.1.11",
     "axe-core": "4.13.0",
-    "i18next-cli": "1.72.4",
+    "i18next-cli": "1.73.1",
     "jsdom": "30.0.1",
     "playwright": "1.62.1",
     "postcss": "8.5.28",
