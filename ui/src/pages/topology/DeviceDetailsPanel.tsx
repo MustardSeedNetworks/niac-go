@@ -8,10 +8,7 @@
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
-import {
-  topologyDeviceColors as deviceColors,
-  getTopologyDeviceIcon,
-} from '../../constants/device-types';
+import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import { Button } from '../../ui/Button';
 import { Tag } from '../../ui/Tag';
 
@@ -32,9 +29,9 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
     return null;
   }
 
-  const deviceType = device.type?.toLowerCase() || 'unknown';
+  const deviceType = device.type ?? 'unknown';
   const Icon = getTopologyDeviceIcon(deviceType);
-  const color = deviceColors[deviceType] || deviceColors.unknown;
+  const color = getTopologyDeviceColor(deviceType);
 
   return (
     <div className="absolute top-4 right-4 w-80 bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl pad shadow-2xl z-50">

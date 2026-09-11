@@ -1,7 +1,11 @@
 import { Copy, Edit3, Trash2 } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { deviceTypeColors, deviceTypeIcons } from '../../constants/device-types';
+import {
+  deviceTypeColors,
+  deviceTypeIcons,
+  normalizeDeviceType,
+} from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { useDeviceList } from '../../contexts/DeviceListContext';
 import { ActionButton } from '../../ui/ActionButton';
@@ -46,11 +50,7 @@ export const DeviceTableView: FC = () => {
         {/* Device rows */}
         <div className="divide-y divide-knob/5">
           {devices.map((device) => {
-            // Defensive: wild device types like "ap" / "access-point" aren't
-            // in the DeviceType union; fall back to 'unknown' so the lookup
-            // can't be undefined.
-            const safeType =
-              device.type && device.type in deviceTypeIcons ? device.type : 'unknown';
+            const safeType = normalizeDeviceType(device.type);
             const DeviceIcon = deviceTypeIcons[safeType];
             const typeColor = deviceTypeColors[safeType];
             const deviceProtocols = getDeviceProtocols(device);

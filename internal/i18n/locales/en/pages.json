@@ -1015,6 +1015,7 @@
     "legend": {
       "deviceTypeAccessPoint": "Access Point",
       "deviceTypeFirewall": "Firewall",
+      "deviceTypeIot": "IoT",
       "deviceTypeRouter": "Router",
       "deviceTypeServer": "Server",
       "deviceTypesHeading": "Device Types",

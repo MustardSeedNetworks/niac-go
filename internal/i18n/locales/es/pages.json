@@ -551,6 +551,7 @@
       "deviceTypeFirewall": "Firewall",
       "deviceTypeServer": "Servidor",
       "deviceTypeWorkstation": "Estación de trabajo",
+      "deviceTypeIot": "IoT",
       "deviceTypeAccessPoint": "Punto de acceso",
       "hideLegend": "Ocultar leyenda"
     },

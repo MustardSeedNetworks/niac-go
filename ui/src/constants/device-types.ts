@@ -1,59 +1,67 @@
 /**
  * Shared device type constants
  *
- * Centralized definitions for device types, icons, colors, and labels
- * used across the application.
+ * One icon, one topology colour and one tag colour per device type, keyed on
+ * the `DeviceType` union. There were previously two parallel families — one
+ * union-keyed for the device list, one loose-string-keyed for the topology
+ * canvas — which disagreed: an `access_point` was absent from the topology map
+ * and drew the `unknown` glyph on the canvas while the legend, which passed
+ * the hyphenated alias, drew a Wifi glyph for the same device (#2052).
+ *
+ * A device type reaches the UI as a free string authored in YAML, so aliases
+ * are resolved on the way in by `normalizeDeviceType` rather than by giving
+ * the maps extra keys — the maps stay exhaustive over the union, and the
+ * exhaustiveness is checked.
  */
 
-import {
-  Cpu,
-  HardDrive,
-  Laptop,
-  Monitor,
-  Network,
-  Router,
-  Server,
-  Shield,
-  Wifi,
-} from 'lucide-react';
+import { CircleHelp, Cpu, Monitor, Network, Router, Server, Shield, Wifi } from 'lucide-react';
 import type { FC } from 'react';
-import type { DeviceType } from '../api/types';
+import { DEVICE_TYPES, type DeviceType } from '../api/device-config-types';
 
 // Icon type for lucide-react components
 type LucideIcon = FC<{ className?: string }>;
 
-/**
- * Device type icons mapping
- * Maps device types to their corresponding lucide-react icons
- */
+/** Device type icons, one per type, shared by every surface. */
 export const deviceTypeIcons: Record<DeviceType, LucideIcon> = {
   router: Router,
-  switch: Server,
+  switch: Network,
   access_point: Wifi,
   firewall: Shield,
-  server: HardDrive,
+  server: Server,
   workstation: Monitor,
   iot: Cpu,
-  unknown: Server,
+  unknown: CircleHelp,
 };
 
 /**
- * Extended device icons for topology view
- * Includes additional aliases and network-specific mappings
+ * Spellings that appear in authored YAML and in older configs, mapped to the
+ * canonical type. Lookup is case-insensitive, so only distinct spellings
+ * belong here — not capitalisation variants.
  */
-export const topologyDeviceIcons: Record<string, LucideIcon> = {
-  router: Router,
-  switch: Network,
-  firewall: Shield,
-  server: Server,
-  workstation: Laptop,
-  'access-point': Wifi,
-  accessPoint: Wifi,
-  ap: Wifi,
-  iot: Cpu,
-  storage: HardDrive,
-  unknown: Network,
+const deviceTypeAliases: Record<string, DeviceType> = {
+  ap: 'access_point',
+  'access-point': 'access_point',
+  accesspoint: 'access_point',
+  host: 'workstation',
+  pc: 'workstation',
+  client: 'workstation',
 };
+
+/**
+ * normalizeDeviceType resolves a device type as authored into one of the
+ * canonical types. An unrecognised value becomes `unknown` — the UI draws a
+ * question mark rather than guessing at a device it has no mapping for.
+ */
+export function normalizeDeviceType(raw: string | undefined | null): DeviceType {
+  if (!raw) {
+    return 'unknown';
+  }
+  const lowered = raw.toLowerCase();
+  if ((DEVICE_TYPES as readonly string[]).includes(lowered)) {
+    return lowered as DeviceType;
+  }
+  return deviceTypeAliases[lowered] ?? 'unknown';
+}
 
 /**
  * Tag color scheme type for UI components
@@ -78,17 +86,14 @@ export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
  * Device type CSS custom property colors for topology view
  * Uses CSS variables defined in the theme
  */
-export const topologyDeviceColors: Record<string, string> = {
+export const topologyDeviceColors: Record<DeviceType, string> = {
   router: 'var(--color-device-router)',
   switch: 'var(--color-device-switch)',
+  access_point: 'var(--color-device-ap)',
   firewall: 'var(--color-device-firewall)',
   server: 'var(--color-device-server)',
   workstation: 'var(--color-device-workstation)',
-  'access-point': 'var(--color-device-ap)',
-  accessPoint: 'var(--color-device-ap)',
-  ap: 'var(--color-device-ap)',
   iot: 'var(--color-device-iot)',
-  storage: 'var(--color-device-storage)',
   unknown: 'var(--color-device-unknown)',
 };
 
@@ -106,41 +111,30 @@ export const deviceTypeOptions: { value: DeviceType; label: string }[] = [
   { value: 'unknown', label: 'Unknown' },
 ];
 
-/**
- * Get device icon by type with fallback
- */
+/** Get the icon for a device type as authored. */
 export function getDeviceIcon(type: DeviceType | string): LucideIcon {
-  // `type in map` narrows the key, not the value that comes back, so each
-  // lookup is read once and tested rather than probed and then re-read.
-  return deviceTypeIcons[type as DeviceType] ?? topologyDeviceIcons[type] ?? Server;
+  return deviceTypeIcons[normalizeDeviceType(type)];
 }
 
 /**
  * Get the topology icon for a device type.
  *
- * The two topology components each had this lookup inline with an `unknown`
- * fallback that was itself an open-Record read — so the fallback needed a
- * fallback. It belongs here, next to the map and the Server default.
+ * Kept as its own name because the topology surfaces call it, but it now
+ * resolves through the same map as every other surface — the two maps
+ * disagreeing is the defect this replaced.
  */
 export function getTopologyDeviceIcon(type: string): LucideIcon {
-  return topologyDeviceIcons[type] ?? topologyDeviceIcons.unknown ?? Server;
+  return deviceTypeIcons[normalizeDeviceType(type)];
 }
 
-/**
- * Get device color by type with fallback
- */
+/** Get the tag colour scheme for a device type as authored. */
 export function getDeviceColor(type: DeviceType | string): TagColorScheme {
-  if (type in deviceTypeColors) {
-    return deviceTypeColors[type as DeviceType];
-  }
-  return 'gray';
+  return deviceTypeColors[normalizeDeviceType(type)];
 }
 
-/**
- * Get topology device color (CSS variable) by type with fallback
- */
+/** Get the topology colour (a CSS variable) for a device type as authored. */
 export function getTopologyDeviceColor(type: string): string {
-  return topologyDeviceColors[type] ?? topologyDeviceColors.unknown ?? 'var(--color-text-muted)';
+  return topologyDeviceColors[normalizeDeviceType(type)];
 }
 
 /**

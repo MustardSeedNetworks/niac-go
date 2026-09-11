@@ -10,13 +10,11 @@
  * encoding, this legend needs the matching update.
  */
 
-import { Eye, EyeOff, Network } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  topologyDeviceColors as deviceColors,
-  topologyDeviceIcons as deviceIcons,
-} from '../../constants/device-types';
+import type { DeviceType } from '../../api/device-config-types';
+import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import { UTILIZATION_CRITICAL_COLOR, UTILIZATION_HIGH_COLOR } from './layout';
 
 interface TopologyLegendProps {
@@ -24,14 +22,18 @@ interface TopologyLegendProps {
   onToggle: () => void;
 }
 
-const DEVICE_TYPES = [
+// Canonical `DeviceType` values, not the aliases the maps used to accept: the
+// legend previously keyed on 'access-point' while the canvas keyed on
+// 'access_point', so the same device drew a different glyph in each (#2052).
+const LEGEND_DEVICE_TYPES = [
   { type: 'router', labelKey: 'deviceTypeRouter' },
   { type: 'switch', labelKey: 'deviceTypeSwitch' },
   { type: 'firewall', labelKey: 'deviceTypeFirewall' },
   { type: 'server', labelKey: 'deviceTypeServer' },
   { type: 'workstation', labelKey: 'deviceTypeWorkstation' },
-  { type: 'access-point', labelKey: 'deviceTypeAccessPoint' },
-] as const;
+  { type: 'access_point', labelKey: 'deviceTypeAccessPoint' },
+  { type: 'iot', labelKey: 'deviceTypeIot' },
+] as const satisfies readonly { type: DeviceType; labelKey: string }[];
 
 // Matches DeviceNode.tsx's statusColor map (bg-status-success /
 // bg-bg-muted / bg-status-warning) — kept as CSS custom properties so
@@ -101,9 +103,9 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                 {t('topology.legend.deviceTypesHeading')}
               </div>
               <div className="space-y-1.5">
-                {DEVICE_TYPES.map(({ type, labelKey }) => {
-                  const Icon = deviceIcons[type] || Network;
-                  const color = deviceColors[type];
+                {LEGEND_DEVICE_TYPES.map(({ type, labelKey }) => {
+                  const Icon = getTopologyDeviceIcon(type);
+                  const color = getTopologyDeviceColor(type);
                   return (
                     <div key={type} className="flex items-center gap-compact">
                       <div className="w-4 h-4 flex-center">

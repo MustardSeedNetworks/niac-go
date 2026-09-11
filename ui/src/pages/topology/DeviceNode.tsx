@@ -5,10 +5,7 @@
 import { Handle, Position } from '@xyflow/react';
 import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  topologyDeviceColors as deviceColors,
-  getTopologyDeviceIcon,
-} from '../../constants/device-types';
+import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import type { DeviceNodeData } from './types';
 
 interface DeviceNodeProps {
@@ -22,9 +19,9 @@ interface DeviceNodeProps {
  */
 export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const { t } = useTranslation('pages');
-  const deviceType = (data.type as string)?.toLowerCase() || 'unknown';
+  const deviceType = data.type ?? 'unknown';
   const Icon = getTopologyDeviceIcon(deviceType);
-  const color = deviceColors[deviceType] || deviceColors.unknown;
+  const color = getTopologyDeviceColor(deviceType);
 
   // The card truncates the device name and shows `+N` overflow for IPs and
   // protocols, so the full data is invisible without a tooltip. Build a
