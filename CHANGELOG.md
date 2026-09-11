@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.52](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.51...v0.95.52) (2026-09-11)
+
+
+### Features
+
+* author and control host subnet mask faults ([#2041](https://github.com/MustardSeedNetworks/niac-go/issues/2041)) ([7f2271d](https://github.com/MustardSeedNetworks/niac-go/commit/7f2271df29e30382be3e1c46dd4a65eeaf5555bd))
+* control simulations through the daemon from the CLI ([#2047](https://github.com/MustardSeedNetworks/niac-go/issues/2047)) ([8543765](https://github.com/MustardSeedNetworks/niac-go/commit/8543765d0271f1c82e33599324df2a042009a3ce))
+
+
+### Bug Fixes
+
+* stop release PRs from tagging commits their changelog omits ([#2046](https://github.com/MustardSeedNetworks/niac-go/issues/2046)) ([d718443](https://github.com/MustardSeedNetworks/niac-go/commit/d71844345103e34ff5b84eb3aa7ffd1d9587f98b))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2049](https://github.com/MustardSeedNetworks/niac-go/issues/2049)) ([d1e4b79](https://github.com/MustardSeedNetworks/niac-go/commit/d1e4b79dfc860dbc521cd1f669a44ee5eba2de1b))
+
 ## [0.95.51](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.50...v0.95.51) (2026-09-10)
 
 
