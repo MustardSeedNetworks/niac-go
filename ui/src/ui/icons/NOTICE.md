@@ -9,16 +9,16 @@
 
 The symbols used, and the device type each serves:
 
-| Device type    | Material symbol   |
+| Device type | Material symbol |
 | -------------- | ----------------- |
-| `router`       | `router`          |
-| `switch`       | `lan`             |
-| `access_point` | `wifi_tethering`  |
-| `firewall`     | `security`        |
-| `server`       | `dns`             |
-| `workstation`  | `desktop_windows` |
-| `iot`          | `sensors`         |
-| `unknown`      | `help`            |
+| `router` | `router` |
+| `switch` | `lan` |
+| `access_point` | `wifi_tethering` |
+| `firewall` | `security` |
+| `server` | `dns` |
+| `workstation` | `desktop_windows` |
+| `iot` | `sensors` |
+| `unknown` | `help` |
 
 The paths are unmodified; only the surrounding `<svg>` element is ours, so that
 the glyphs inherit `currentColor` and carry no accessible name of their own
