@@ -5,6 +5,28 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.53](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.52...v0.95.53) (2026-09-11)
+
+
+### Features
+
+* drive the shipped binary through an acceptance harness ([#2051](https://github.com/MustardSeedNetworks/niac-go/issues/2051)) ([ce9b13e](https://github.com/MustardSeedNetworks/niac-go/commit/ce9b13e42fd912c86c61f7607b05d38558d2e08e))
+* ship router walks carrying BGP4-MIB and OSPF-MIB ([#2055](https://github.com/MustardSeedNetworks/niac-go/issues/2055)) ([6888ec8](https://github.com/MustardSeedNetworks/niac-go/commit/6888ec898c7e8196e4b7aaf507918ef0458291c4))
+* **ui:** draw topology nodes as device symbols instead of cards ([#2059](https://github.com/MustardSeedNetworks/niac-go/issues/2059)) ([13ca480](https://github.com/MustardSeedNetworks/niac-go/commit/13ca4802b7ed58d5f99a5646e2faf52bd0df3eed))
+
+
+### Bug Fixes
+
+* **deps:** update codemirror ([#2060](https://github.com/MustardSeedNetworks/niac-go/issues/2060)) ([c264337](https://github.com/MustardSeedNetworks/niac-go/commit/c2643376d520f2d889f0e321ce01cf2bdcc1a850))
+* **ui:** key device icons on the canonical type, not on aliases ([#2053](https://github.com/MustardSeedNetworks/niac-go/issues/2053)) ([7919e57](https://github.com/MustardSeedNetworks/niac-go/commit/7919e5735369d5dcb3d120fb47851b8e537dde3a)), closes [#2052](https://github.com/MustardSeedNetworks/niac-go/issues/2052)
+* **ui:** number the topology distribution bands so each is identifiable ([#2062](https://github.com/MustardSeedNetworks/niac-go/issues/2062)) ([29cef71](https://github.com/MustardSeedNetworks/niac-go/commit/29cef71a0d29863c8bf49b3efaf12f2872761a6f)), closes [#2061](https://github.com/MustardSeedNetworks/niac-go/issues/2061)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2058](https://github.com/MustardSeedNetworks/niac-go/issues/2058)) ([008e668](https://github.com/MustardSeedNetworks/niac-go/commit/008e6682feaf907e99755d8030a846a04b807d6e))
+* **deps:** lock file maintenance ([#2066](https://github.com/MustardSeedNetworks/niac-go/issues/2066)) ([218d994](https://github.com/MustardSeedNetworks/niac-go/commit/218d994f064f4278aad58a451a9714067993f63b))
+
 ## [0.95.52](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.51...v0.95.52) (2026-09-11)
 
 
