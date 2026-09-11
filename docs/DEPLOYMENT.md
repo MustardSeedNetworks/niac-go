@@ -14,11 +14,10 @@ tar -xzf niac-linux-amd64.tar.gz
 sudo install -m 0755 niac-linux-amd64/niac /usr/local/bin/niac
 ```
 
-Install packet capture dependencies:
-
-```bash
-sudo apt-get install libpcap0.8
-```
+The released Linux binaries and packages link libpcap statically, so there is
+no capture library to install: they depend on the C library alone and run on
+both Debian and Red Hat families. Building from source still needs the
+development headers (`libpcap-dev` / `libpcap-devel`).
 
 For service operation, use the bundled `systemd/niac.service` as a starting
 point and adjust paths, user, interface, and config locations for the host.
