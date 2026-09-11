@@ -37,8 +37,9 @@ const RANK_EPSILON = 120;
 /** Vertical padding so a band reads as a band and not as a tight box. */
 const BAND_PADDING = 60;
 
-/** Approximate node height, so a band encloses the cards it sits behind. */
-const NODE_HEIGHT = 180;
+/** Node height, so a band encloses the nodes it sits behind. Matches
+ * NODE_HEIGHT in layout.ts — the symbol plate plus a two-line label. */
+const NODE_HEIGHT = 96;
 
 /**
  * deriveTiers groups laid-out nodes into ranked bands, top to bottom.
@@ -106,10 +107,10 @@ function labelFor(index: number, total: number): Tier['label'] {
   return 'Distribution';
 }
 
-/** DeviceNode's max width — bands must clear the widest card. */
-const NODE_WIDTH = 280;
+/** DeviceNode's width — bands must clear the node at the right edge. */
+const NODE_WIDTH = 112;
 
-/** Breathing room between a band's edge and the cards inside it. */
+/** Breathing room between a band's edge and the nodes inside it. */
 const BAND_MARGIN = 80;
 
 /** Where the bands start and how wide they run. */

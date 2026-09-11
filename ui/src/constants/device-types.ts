@@ -14,23 +14,38 @@
  * exhaustiveness is checked.
  */
 
-import { CircleHelp, Cpu, Monitor, Network, Router, Server, Shield, Wifi } from 'lucide-react';
 import type { FC } from 'react';
 import { DEVICE_TYPES, type DeviceType } from '../api/device-config-types';
+import {
+  AccessPointSymbol,
+  FirewallSymbol,
+  IotSymbol,
+  RouterSymbol,
+  ServerSymbol,
+  SwitchSymbol,
+  UnknownSymbol,
+  WorkstationSymbol,
+} from '../ui/icons/deviceSymbols';
 
-// Icon type for lucide-react components
-type LucideIcon = FC<{ className?: string }>;
+/** Shape shared by the vendored device symbols and by lucide-react icons. */
+type IconComponent = FC<{ className?: string }>;
 
-/** Device type icons, one per type, shared by every surface. */
-export const deviceTypeIcons: Record<DeviceType, LucideIcon> = {
-  router: Router,
-  switch: Network,
-  access_point: Wifi,
-  firewall: Shield,
-  server: Server,
-  workstation: Monitor,
-  iot: Cpu,
-  unknown: CircleHelp,
+/**
+ * Device type icons, one per type, shared by every surface.
+ *
+ * These are the vendored device symbols rather than lucide glyphs: lucide is a
+ * general-purpose UI set, so at canvas size a switch and a server came out as
+ * near-identical boxes. See ui/icons/NOTICE.md.
+ */
+export const deviceTypeIcons: Record<DeviceType, IconComponent> = {
+  router: RouterSymbol,
+  switch: SwitchSymbol,
+  access_point: AccessPointSymbol,
+  firewall: FirewallSymbol,
+  server: ServerSymbol,
+  workstation: WorkstationSymbol,
+  iot: IotSymbol,
+  unknown: UnknownSymbol,
 };
 
 /**
@@ -112,7 +127,7 @@ export const deviceTypeOptions: { value: DeviceType; label: string }[] = [
 ];
 
 /** Get the icon for a device type as authored. */
-export function getDeviceIcon(type: DeviceType | string): LucideIcon {
+export function getDeviceIcon(type: DeviceType | string): IconComponent {
   return deviceTypeIcons[normalizeDeviceType(type)];
 }
 
@@ -123,7 +138,7 @@ export function getDeviceIcon(type: DeviceType | string): LucideIcon {
  * resolves through the same map as every other surface — the two maps
  * disagreeing is the defect this replaced.
  */
-export function getTopologyDeviceIcon(type: string): LucideIcon {
+export function getTopologyDeviceIcon(type: string): IconComponent {
   return deviceTypeIcons[normalizeDeviceType(type)];
 }
 

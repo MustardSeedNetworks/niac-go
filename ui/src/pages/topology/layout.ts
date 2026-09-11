@@ -38,18 +38,28 @@ export const LAYOUT_MODES: { mode: LayoutMode; label: string; description: strin
   },
 ];
 
-// Card-sized tuneables for the grid layout below. Tuned to the
-// DeviceNode max-width (260 px) plus the trunk-edge label band that
-// floats between cards. NODE_GAP_X is generous so labels like
-// "Gi0/1 ↔ Gi0/1 (VLANs 1-30)" sit comfortably without overrunning
-// either card.
-const NODE_WIDTH = 280;
-const NODE_HEIGHT = 180;
+// The node's own footprint: DeviceNode is a 64 px symbol plate over a label
+// allowed two lines, inside a fixed 112 px width, so every node occupies this
+// box whatever its name is.
+const NODE_WIDTH = 112;
+const NODE_HEIGHT = 96;
+
+// Separation is sized by the edge labels, not by the nodes — "Gi0/1 ↔ Gi0/1 ·
+// VLANs 1-30" is the widest thing between two nodes and did not shrink when
+// the cards became symbols. Deriving these from the node size (as they were,
+// when the node was card-sized) tied two unrelated things together, so
+// shrinking the node would have squeezed the labels.
 const NODE_GAP_X = 160;
 const NODE_GAP_Y = 100;
 
+/** Horizontal room between two nodes on the same rank, for a trunk label. */
+const NODE_SEPARATION = 180;
+
+/** Vertical room between ranks, for the per-endpoint interface labels. */
+const RANK_SEPARATION = 160;
+
 // Left margin so the legend Panel (rendered as a top-left overlay,
-// ~260 px wide) doesn't obscure the first column of cards.
+// ~260 px wide) doesn't obscure the first column of nodes.
 const LAYOUT_LEFT_OFFSET = 280;
 const LAYOUT_TOP_OFFSET = 40;
 
@@ -122,18 +132,19 @@ function gridLayout(devices: DeviceSummary[]): DeviceNode[] {
  */
 function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
   const g = new dagre.graphlib.Graph();
-  // Spacing tuned by trial against the kitchen-sink template:
-  //  - nodesep doubled (160 → 320) so siblings on the same rank
-  //    don't crowd each other; the trunk-edge floating labels
-  //    ("Gi0/1 ↔ Gi0/1 · VLANs 1-30") sit comfortably between cards.
-  //  - ranksep tripled (100+60 → 280) so the per-side interface
-  //    labels at each edge endpoint clear the cards above and below.
-  //  - edgesep added so dagre doesn't collapse parallel edges between
-  //    two ranks into a visual stack.
+  // Spacing tuned by trial against the kitchen-sink template, and sized by the
+  // edge labels rather than by the nodes:
+  //  - NODE_SEPARATION so siblings on the same rank don't crowd each other;
+  //    the trunk-edge floating labels ("Gi0/1 ↔ Gi0/1 · VLANs 1-30") sit
+  //    comfortably between them.
+  //  - RANK_SEPARATION so the per-side interface labels at each edge endpoint
+  //    clear the nodes above and below.
+  //  - edgesep so dagre doesn't collapse parallel edges between two ranks
+  //    into a visual stack.
   g.setGraph({
     rankdir: 'TB',
-    nodesep: NODE_GAP_X * 2,
-    ranksep: NODE_GAP_Y + 180,
+    nodesep: NODE_SEPARATION,
+    ranksep: RANK_SEPARATION,
     edgesep: 60,
     marginx: LAYOUT_LEFT_OFFSET,
     marginy: LAYOUT_TOP_OFFSET,
