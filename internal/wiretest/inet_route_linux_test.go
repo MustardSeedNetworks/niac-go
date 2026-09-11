@@ -52,6 +52,10 @@ func startInetRouteScenario(t *testing.T) {
 	// Three routes with different shapes: a connected subnet (no next hop), a
 	// static default, and a static to a remote network. A table that only ever
 	// emitted one shape would pass a weaker fixture.
+	//
+	// The two gateways exist because the fabric refuses a route whose next hop
+	// is not a configured peer -- an authored route that points nowhere is a
+	// scenario defect, and the validator says so before the replay starts.
 	body := fmt.Sprintf(`networks:
   - name: route-lan
     subnet: 10.254.201.0/24
@@ -78,6 +82,22 @@ devices:
       - destination: 192.0.2.0/24
         via: Ethernet1
         next_hop: 10.254.201.253
+  - name: ROUTE-GW1
+    type: router
+    mac: "02:00:00:00:c0:fe"
+    interfaces:
+      - name: Ethernet1
+        type: ethernet
+        network: route-lan
+        address: 10.254.201.254/24
+  - name: ROUTE-GW2
+    type: router
+    mac: "02:00:00:00:c0:fd"
+    interfaces:
+      - name: Ethernet1
+        type: ethernet
+        network: route-lan
+        address: 10.254.201.253/24
 `, inetRouteCommunity, inetRouteTarget)
 	if err := os.WriteFile(configPath, []byte(body), 0o600); err != nil {
 		t.Fatalf("write the scenario: %v", err)
