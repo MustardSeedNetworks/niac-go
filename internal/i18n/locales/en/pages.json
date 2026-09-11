@@ -1079,7 +1079,8 @@
     "tiers": {
       "access": "Access",
       "core": "Core",
-      "distribution": "Distribution"
+      "distribution": "Distribution",
+      "distributionNumbered": "Distribution {{depth}}"
     },
     "title": "Topology",
     "trunkEdge": {

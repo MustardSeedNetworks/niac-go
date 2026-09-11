@@ -22,6 +22,13 @@ const LABEL_KEYS = {
   Access: 'topology.tiers.access',
 } as const satisfies Record<Tier['label'], string>;
 
+/**
+ * A distribution band that has siblings is named with its position. Separate
+ * key rather than appending a number to the translated noun: word order is the
+ * translator's to decide, not ours.
+ */
+const NUMBERED_DISTRIBUTION_KEY = 'topology.tiers.distributionNumbered';
+
 interface TierBandProps {
   tier: Tier;
   /** Canvas x of the band's left edge. */
@@ -42,6 +49,7 @@ export const TierBand: FC<TierBandProps> = ({ tier, left, width }) => {
     <div
       data-testid="topology-tier-band"
       data-tier={tier.label}
+      data-tier-depth={tier.depth}
       aria-hidden="true"
       className="pointer-events-none absolute rounded-2xl border border-border-muted"
       style={{
@@ -53,7 +61,9 @@ export const TierBand: FC<TierBandProps> = ({ tier, left, width }) => {
       }}
     >
       <span className="absolute left-4 top-3 text-xs uppercase tracking-wide text-fg-muted">
-        {t(LABEL_KEYS[tier.label])}
+        {tier.depth === undefined
+          ? t(LABEL_KEYS[tier.label])
+          : t(NUMBERED_DISTRIBUTION_KEY, { depth: tier.depth })}
         {' · '}
         <span className="figure">{tier.deviceCount}</span>
       </span>
@@ -77,8 +87,7 @@ export const TierBands: FC<TierBandsProps> = ({ tiers, left, width }) => {
   return (
     <ViewportPortal>
       {tiers.map((tier, index) => (
-        // Bands are positional, not identified — two Distribution bands are
-        // distinguished only by rank, so the index is the honest key.
+        // Bands are positional, not identified, so the index is the honest key.
         <TierBand key={`${tier.label}-${index}`} tier={tier} left={left} width={width} />
       ))}
     </ViewportPortal>

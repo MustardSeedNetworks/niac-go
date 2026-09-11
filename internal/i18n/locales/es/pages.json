@@ -487,7 +487,8 @@
     "tiers": {
       "access": "Acceso",
       "core": "Core",
-      "distribution": "Distribución"
+      "distribution": "Distribución",
+      "distributionNumbered": "Distribución {{depth}}"
     },
     "title": "Topología",
     "description": "Gráfico visual de la red configurada y la tabla de vecinos {{protocols}} en vivo.",
