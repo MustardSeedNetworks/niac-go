@@ -1,8 +1,38 @@
 import type { SimulationRequest } from './api-response-types';
 
+export type AttachmentMode = 'direct' | 'access' | 'trunk';
+
+/**
+ * One physical binding the operator approved when starting the daemon
+ * (--attachment-policy). A start outside this set is refused with
+ * attachment_policy_denied, so the picker offers these rather than free input.
+ *
+ * accessVlan carries the single approved VLAN in access mode; allowedVlans
+ * carries the trunk's approved tag set. Direct mode carries neither.
+ */
+export interface AttachmentPolicy {
+  interface: string;
+  mode: AttachmentMode;
+  accessVlan?: number;
+  allowedVlans?: number[];
+}
+
+export interface AttachmentPoliciesResponse {
+  policies: AttachmentPolicy[] | null;
+}
+
+/**
+ * The attachments a prepared scenario declares. `routed` is false for a flat
+ * scenario, which binds no attachment at all and so must not be asked for one.
+ */
+export interface SimulationAttachments {
+  routed: boolean;
+  attachments: string[] | null;
+}
+
 export type SimulationPreflightRequest = SimulationRequest & {
   attachment: string;
-  attachmentMode: 'direct' | 'access' | 'trunk';
+  attachmentMode: AttachmentMode;
 };
 
 export interface FabricBinding {

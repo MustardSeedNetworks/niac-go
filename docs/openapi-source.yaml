@@ -133,6 +133,21 @@ operations:
     summary: Stop and remove one session
     pathTemplate: /api/v1/sessions/{id}
     tags: [Sessions]
+  GET /api/v1/attachment-policies:
+    summary: Physical attachments the operator approved
+    description: >
+      The daemon's --attachment-policy set: which host interface may be bound,
+      in which mode, and on which VLANs. A start outside this set is refused
+      with attachment_policy_denied, so a client offers a binding from here
+      rather than guessing one.
+    tags: [Simulation]
+  POST /api/v1/simulation/attachments:
+    summary: Logical attachments a configuration declares
+    description: >
+      Names the attachments in the prepared scenario, identified the same way a
+      start identifies it. Changes no runtime state. `routed` is false for a
+      flat scenario, which binds no attachment at all.
+    tags: [Simulation]
   POST /api/v1/simulation/preflight:
     summary: Validate a simulation request without starting it
     description: >

@@ -46,6 +46,12 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchInterfaces: vi.fn(),
     fetchUsableInterfaces: vi.fn(),
     fetchTemplates: vi.fn(),
+    // AP-0: the binding inputs read their choices from the daemon instead of
+    // defaulting to a typed `tester` no generated scenario answers to.
+    fetchAttachmentPolicies: () =>
+      Promise.resolve({ policies: [{ interface: 'eth0', mode: 'access', accessVlan: 200 }] }),
+    fetchSimulationAttachments: () =>
+      Promise.resolve({ routed: true, attachments: ['cyberscope'] }),
     preflightSimulation: (request: SimulationPreflightRequest) => preflightSimulation(request),
     startSimulation: (request: SimulationRequest) => startSimulation(request),
     stopSimulation: (sessionId?: string) => stopSimulation(sessionId),
@@ -235,7 +241,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
       safe: true,
       topology: {
         binding: {
-          attachment: 'tester',
+          attachment: 'cyberscope',
           interface: 'eth0',
           mode: 'access',
           physicalVlan: 200,
@@ -270,7 +276,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
       expect(preflightSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
         templateName: 'labs/routed.yaml',
-        attachment: 'tester',
+        attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,
       }),
@@ -283,7 +289,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
       expect(startSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
         templateName: 'labs/routed.yaml',
-        attachment: 'tester',
+        attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,
       }),

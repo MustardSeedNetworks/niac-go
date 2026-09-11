@@ -8,6 +8,12 @@ import { PreflightStep } from './PreflightStep';
 const preflightSimulation = vi.fn();
 vi.mock('../../api/client', () => ({
   preflightSimulation: (payload: unknown) => preflightSimulation(payload),
+  // The binding inputs read their choices from the daemon (AP-0); this suite
+  // is about what preflight does with the answer, so approve one binding and
+  // name one attachment.
+  fetchAttachmentPolicies: () =>
+    Promise.resolve({ policies: [{ interface: 'eth0', mode: 'access', accessVlan: 200 }] }),
+  fetchSimulationAttachments: () => Promise.resolve({ routed: true, attachments: ['cyberscope'] }),
 }));
 
 /**

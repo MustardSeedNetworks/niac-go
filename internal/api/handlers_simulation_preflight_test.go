@@ -15,20 +15,34 @@ import (
 )
 
 type preflightDaemon struct {
-	request   SimulationRequest
-	report    fabric.Report
-	err       error
-	startErr  error
-	stopErr   error
-	selectErr error
-	selected  string
-	stopped   string
-	started   bool
+	request        SimulationRequest
+	report         fabric.Report
+	err            error
+	policies       []fabric.PhysicalAttachmentPolicy
+	attachments    SimulationAttachments
+	attachmentsErr error
+	startErr       error
+	stopErr        error
+	selectErr      error
+	selected       string
+	stopped        string
+	started        bool
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
 	d.request = req
 	return d.report, d.err
+}
+
+func (d *preflightDaemon) AttachmentPolicies() []fabric.PhysicalAttachmentPolicy {
+	return d.policies
+}
+
+func (d *preflightDaemon) SimulationAttachments(
+	req SimulationRequest,
+) (SimulationAttachments, error) {
+	d.request = req
+	return d.attachments, d.attachmentsErr
 }
 
 func TestHandleSimulationPreflightReturnsManagedPathValidationError(t *testing.T) {
