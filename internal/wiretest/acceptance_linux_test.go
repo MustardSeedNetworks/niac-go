@@ -4,6 +4,8 @@ package wiretest_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -66,7 +68,8 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 	}
 
 	daemon, err := harness.Start(t.Context(), harness.Options{
-		Root: t.TempDir(),
+		Root:       t.TempDir(),
+		BinaryPath: acceptanceBinary(t),
 		AttachmentPolicies: []string{
 			fmt.Sprintf("%s=access:%d", simIface, accessVLAN),
 		},
@@ -105,6 +108,30 @@ func startAcceptanceDaemon(t *testing.T) *harness.Daemon {
 // The whole sequence in one test, because the halves prove nothing apart: a
 // device at its baseline says nothing about the reset unless it had actually
 // moved, and a moved value says nothing unless it came back.
+// acceptanceBinary names the binary to drive. The rest of this suite tests the
+// tree it was built from, so the tree's own `make build` output is the right
+// subject here, and the whole suite runs from one nightly that already
+// produces it. NIAC_ACCEPTANCE_BINARY overrides it to check a downloaded
+// release instead.
+//
+// harness.Start refuses to invent a binary, so naming one explicitly is what
+// keeps that refusal from failing a nightly that never set the variable.
+func acceptanceBinary(t *testing.T) string {
+	t.Helper()
+	if fromEnv := os.Getenv(harness.BinaryEnv); fromEnv != "" {
+		return fromEnv
+	}
+	built, err := filepath.Abs(filepath.Join("..", "..", "niac"))
+	if err != nil {
+		t.Fatalf("resolve the built binary: %v", err)
+	}
+	if _, statErr := os.Stat(built); statErr != nil {
+		t.Fatalf("no binary to drive: %v (run `make build`, or set %s)", statErr, harness.BinaryEnv)
+	}
+
+	return built
+}
+
 func TestReleasedBinaryCheckpointsMutatesAndResets(t *testing.T) {
 	daemon := startAcceptanceDaemon(t)
 	ctx := t.Context()

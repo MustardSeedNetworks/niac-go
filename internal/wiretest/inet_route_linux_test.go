@@ -167,8 +167,8 @@ func TestInetCidrRouteTableIsWalkableAndMatchesTheAuthoredRoutes(t *testing.T) {
 // is the assertion that matters: if the index were malformed the values would
 // still arrive and mean nothing.
 //
-// The index after the column is
-// destType, destLen, dest…, pfxLen, policyLen, policy…, hopType, hopLen, hop…
+// The index after the column is destType, destLen, dest…, pfxLen, policyLen,
+// policy…, hopType, hopLen, hop… — every part of it load-bearing.
 func parseInetRouteIndex(t *testing.T, oid string) authoredRoute {
 	t.Helper()
 	suffix := strings.TrimPrefix(oid, inetRouteIfIndex+".")
