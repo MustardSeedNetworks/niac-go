@@ -91,3 +91,22 @@ func sameInterface(left, right Interface) bool {
 		slices.Equal(left.VLANs, right.VLANs) && left.AdminUp == right.AdminUp &&
 		left.OperUp == right.OperUp && left.CarrierUp == right.CarrierUp
 }
+
+// CheckpointNames lists the checkpoints this device holds.
+func (s *Store) CheckpointNames() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return slices.Sorted(maps.Keys(s.checkpoints))
+}
+
+// HasCheckpoint reports whether this device can restore name. A stack-wide
+// restore checks every device before it changes any, so a scenario cannot end
+// up half reset.
+func (s *Store) HasCheckpoint(name string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	_, ok := s.checkpoints[name]
+	return ok
+}
