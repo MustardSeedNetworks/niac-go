@@ -214,6 +214,23 @@ const (
 	// IPRouteProtoNetMgmt is the protocol value for configured routes (3).
 	IPRouteProtoNetMgmt = 3
 
+	// inetAddressTypeIPv4 is InetAddressType "ipv4" (1), RFC 4001. NIAC's
+	// route table is IPv4-only today, so every index carries this.
+	inetAddressTypeIPv4 = 1
+
+	// InetCidrRouteTypeLocal is RFC 4292's route type for a destination on a
+	// directly attached subnet (3). It is ipRouteTable's "direct" under a
+	// different name, and the numbers happen to coincide.
+	InetCidrRouteTypeLocal = 3
+
+	// InetCidrRouteTypeRemote is RFC 4292's route type for a destination
+	// reached through a next hop (4).
+	InetCidrRouteTypeRemote = 4
+
+	// rowStatusActive is RowStatus "active" (1). Every route NIAC publishes is
+	// in service; the table is read-only, so no other state is reachable.
+	rowStatusActive = 1
+
 	// BridgeTypeTransparent is the bridge type for transparent-only bridges (2).
 	BridgeTypeTransparent = 2
 

@@ -102,9 +102,11 @@ func (a *Agent) registerLiveIPScalars() {
 }
 
 // registerConfiguredRoutes exposes the scenario's connected and static routes
-// through the MIB-II ipRouteTable.  CyberScope uses this table for path and
-// gateway presentation, so the replay must describe the same routing fabric as
-// the packet resolver.
+// through both route tables: the deprecated MIB-II ipRouteTable, which
+// CyberScope and other older managers read for path and gateway presentation,
+// and RFC 4292's inetCidrRouteTable, which is what a current manager asks for.
+// Both are written from this one walk over the authored routes, so a consumer
+// cannot be told two different things about the same fabric.
 func (a *Agent) registerConfiguredRoutes(device *config.Device) {
 	a.registerIPAddrTableEntries(device)
 	for _, iface := range device.Interfaces {
@@ -155,6 +157,8 @@ func (a *Agent) registerRoute(
 	a.mib.Set(ipRouteProto+"."+destination, &OIDValue{Type: gosnmp.Integer, Value: proto})
 	a.mib.Set(ipRouteAge+"."+destination, &OIDValue{Type: gosnmp.Integer, Value: 0})
 	a.mib.Set(ipRouteInfo+"."+destination, &OIDValue{Type: gosnmp.ObjectIdentifier, Value: "0.0"})
+
+	a.registerInetCidrRoute(net.ParseIP(destination), mask, ifIndex, nextHop, routeType, proto)
 }
 
 // InterfaceIndex resolves an interface name through the active IF-MIB.

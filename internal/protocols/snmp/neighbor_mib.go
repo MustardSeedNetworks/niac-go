@@ -86,6 +86,25 @@ const (
 	ipRouteInfo    = ipRouteEntry + ".12"
 	ipRouteMetric5 = ipRouteEntry + ".13"
 
+	// inetCidrRouteTable (1.3.6.1.2.1.4.24.7), RFC 4292. The current routing
+	// table: a manager doing path analysis reads this one, and ipRouteTable
+	// above is deprecated. Columns 1-6 are the INDEX and not-accessible, so
+	// only 7-17 are ever published.
+	ipForwardMIB           = ipMIBBase + ".24"
+	inetCidrRouteTable     = ipForwardMIB + ".7"
+	inetCidrRouteEntry     = inetCidrRouteTable + ".1"
+	inetCidrRouteIfIndex   = inetCidrRouteEntry + ".7"
+	inetCidrRouteType      = inetCidrRouteEntry + ".8"
+	inetCidrRouteProto     = inetCidrRouteEntry + ".9"
+	inetCidrRouteAge       = inetCidrRouteEntry + ".10"
+	inetCidrRouteNextHopAS = inetCidrRouteEntry + ".11"
+	inetCidrRouteMetric1   = inetCidrRouteEntry + ".12"
+	inetCidrRouteMetric2   = inetCidrRouteEntry + ".13"
+	inetCidrRouteMetric3   = inetCidrRouteEntry + ".14"
+	inetCidrRouteMetric4   = inetCidrRouteEntry + ".15"
+	inetCidrRouteMetric5   = inetCidrRouteEntry + ".16"
+	inetCidrRouteStatus    = inetCidrRouteEntry + ".17"
+
 	// ipNetToMediaTable (1.3.6.1.2.1.4.22) - ARP table.
 	ipNetToMediaTable       = ipMIBBase + ".22"
 	ipNetToMediaEntry       = ipNetToMediaTable + ".1"
