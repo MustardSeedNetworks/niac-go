@@ -246,3 +246,37 @@ func TestGetInterface_InterfaceFields(t *testing.T) {
 		}
 	}
 }
+
+// Windows names every capture adapter `\Device\NPF_{GUID}`, which matches none
+// of the Unix prefixes. The filter therefore returned nothing on every Windows
+// host, so `niac list interfaces` printed "No interfaces found" whether or not
+// Npcap was installed — and an operator reads that as "capture does not work".
+//
+// Found on dev-win11-02 once Npcap was finally installed: `--all` listed the
+// real adapter at 10.44.30.71, the default listed nothing.
+func TestWindowsAdapterNamesAreUsable(t *testing.T) {
+	t.Parallel()
+
+	names := []string{
+		`\Device\NPF_{F80DEA5F-E104-40C9-A1FC-005A964883D5}`,
+		`\Device\NPF_Loopback`,
+	}
+
+	for _, name := range names {
+		if !IsUsableInterface(name) {
+			t.Errorf("IsUsableInterface(%q) = false; Windows capture adapters are unreachable", name)
+		}
+	}
+}
+
+// The filter still has to reject what it always rejected, or it stops being a
+// filter: a name that is not a capture adapter must not become usable.
+func TestNonCaptureNamesStayUnusable(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"", "docker0", "virbr0", `\Device\Something`} {
+		if IsUsableInterface(name) {
+			t.Errorf("IsUsableInterface(%q) = true; the filter no longer filters", name)
+		}
+	}
+}

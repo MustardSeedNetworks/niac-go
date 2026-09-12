@@ -103,6 +103,12 @@ func getUsableInterfacePrefixes() []string {
 		"wlan", // Linux WiFi
 		"wlp",  // Linux WiFi (systemd naming)
 		"lo",   // Loopback (lo, lo0)
+		// Windows names every capture adapter through the NPF driver rather
+		// than by link type, so one prefix covers ethernet, Wi-Fi and the
+		// loopback adapter. Without it the filter matched nothing on Windows
+		// and `niac list interfaces` reported none, which reads as "capture
+		// does not work" rather than "this list is Unix-only".
+		`\Device\NPF_`,
 	}
 }
 
