@@ -221,6 +221,13 @@ func TestHospitalSaturationReadsAboveTheWarningLine(t *testing.T) {
 		t.Errorf("%s utilization = %.1f%%, want at least %.0f%%: the authored finding is invisible",
 			saturated, hot, warningPercent)
 	}
+	// An interface cannot carry more than its own line rate, and asserting only
+	// a floor passes on nonsense: this read 158.0% until the generated band was
+	// authored away from under the saturation fault, because the runtime adds a
+	// fault's rate to whatever the interface already carries.
+	if hot > 100 {
+		t.Errorf("%s utilization = %.1f%%, which no interface can report", saturated, hot)
+	}
 
 	calm := utilizationPercent(t, client, healthy, sampleWindow)
 	if calm >= warningPercent {

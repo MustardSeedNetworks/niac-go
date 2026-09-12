@@ -403,6 +403,16 @@ func applyFaults(authored *converter.Config, faults []PackFault) error {
 		iface.Faults = append(iface.Faults, converter.InterfaceFault{
 			Type: fault.Type, Value: fault.Value,
 		})
+		// A saturation fault is a rate, and the runtime adds it to whatever the
+		// interface already carries. Leaving the generated band underneath it
+		// reports the sum: measured, an 88% fault on the hospital's 70% band
+		// served 158% utilization, which is not a number any interface can
+		// report. Authoring the band away restores what the retired
+		// Request.Congestion did by assignment.
+		if fault.Type == faultHighUtilization {
+			iface.InUtilization = 0
+			iface.OutUtilization = 0
+		}
 	}
 
 	return nil
