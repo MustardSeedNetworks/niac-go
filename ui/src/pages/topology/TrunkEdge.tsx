@@ -175,7 +175,14 @@ export const TrunkEdge: FC<EdgeProps> = ({
   // fraction of a short one are different amounts of room. An edge alone
   // cannot know how many siblings crowd its device, so createEdges supplies
   // the index and the edge turns it into a position.
-  const edgeLength = pathLength(edgePath, Math.hypot(targetX - sourceX, targetY - sourceY));
+  // Two different lengths, for two different questions. Where a label goes
+  // follows the path, so it sits on the line. Whether it fits is about how far
+  // apart the devices are: a smoothstep path between two close devices loops
+  // and is long, and measuring room along it says there is space where the
+  // gap between the nodes has none — which is how labels ended up on the
+  // leaves packed under a switch.
+  const pathTotal = pathLength(edgePath, Math.hypot(targetX - sourceX, targetY - sourceY));
+  const edgeLength = Math.hypot(targetX - sourceX, targetY - sourceY);
   const sourceAlong = LABEL_START + (linkData.sourceSiblingIndex ?? 0) * LABEL_ROW;
   const targetAlong = LABEL_START + (linkData.targetSiblingIndex ?? 0) * LABEL_ROW;
 
@@ -185,13 +192,13 @@ export const TrunkEdge: FC<EdgeProps> = ({
       y: sourceY + (targetY - sourceY) * (edgeLength === 0 ? 0 : distance / edgeLength),
     });
   const left = at(sourceAlong);
-  const right = at(edgeLength - targetAlong);
+  const right = at(pathTotal - targetAlong);
   // The middle label is placed at the path's midpoint by length, in the same
   // measure as the end labels, rather than at ReactFlow's labelX/labelY — that
   // is the path's geometric centre, which on a smoothstep run sits somewhere
   // else entirely, so reserving room around it as if it were the midpoint let
   // an end label land on top of it.
-  const middle = at(edgeLength / 2);
+  const middle = at(pathTotal / 2);
 
   // A label is drawn when its slot fits: its own stacked position, plus the
   // text it has to hold, has to stay clear of the line's middle label and of
@@ -199,6 +206,11 @@ export const TrunkEdge: FC<EdgeProps> = ({
   // arrangement that would show it legibly, so it is left out rather than
   // drawn over its neighbour.
   const middleNeeds = labelLength(middleLabel);
+  // The middle label needs the devices themselves to be far enough apart to
+  // leave clear space between them. Two devices a leaf-gap apart have none,
+  // and the label was drawn over one of them.
+  const clearSpan = edgeLength - LABEL_START * 2;
+  const middleFits = clearSpan >= middleNeeds;
   const roomForEnds = (edgeLength - middleNeeds) / 2;
   const sourceFits = sourceAlong + labelLength(linkData.sourceInterface ?? '') / 2 <= roomForEnds;
   const targetFits = targetAlong + labelLength(linkData.targetInterface ?? '') / 2 <= roomForEnds;
@@ -222,7 +234,7 @@ export const TrunkEdge: FC<EdgeProps> = ({
               opacity={focusOpacity}
             />
           )}
-          {middleLabel && (
+          {middleFits && middleLabel && (
             <MiddleLabel x={middle.x} y={middle.y} text={middleLabel} opacity={focusOpacity} />
           )}
           {targetFits && linkData.targetInterface && (

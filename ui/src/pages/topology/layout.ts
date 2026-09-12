@@ -52,6 +52,11 @@ export const NODE_HEIGHT = 96;
 const NODE_GAP_X = 160;
 const NODE_GAP_Y = 100;
 
+/** Space between leaves packed under one device. Tighter than a rank: these
+ * are siblings on the same switch, and the block reads as one group. */
+const LEAF_GAP_X = 28;
+const LEAF_GAP_Y = 34;
+
 /** Horizontal room between two nodes on the same rank, for a trunk label. */
 const NODE_SEPARATION = 180;
 
@@ -116,6 +121,69 @@ function gridLayout(devices: DeviceSummary[]): DeviceNode[] {
 }
 
 /**
+ * Devices whose only link is to one other device, grouped by that device.
+ *
+ * Most of a real network is leaves: the hospital pack is 78 devices and 56 of
+ * them are an access point, a phone or a workstation hanging off one switch.
+ * Ranked with everything else they land side by side on the deepest rank, so
+ * the graph comes out about 5,000 units wide and six ranks tall — a shape no
+ * screen can show at once, and the reason the packs were unreadable (#2106).
+ *
+ * A device with no links at all is not a leaf: it has no parent to sit under,
+ * and dagre still has to place it.
+ */
+function leavesByParent(devices: DeviceSummary[], links: TopologyLink[]): Map<string, string[]> {
+  const present = new Set(devices.map((device) => device.name));
+  const neighbours = new Map<string, Set<string>>();
+  for (const link of links) {
+    if (!present.has(link.source) || !present.has(link.target)) {
+      continue;
+    }
+    const add = (from: string, to: string): void => {
+      const set = neighbours.get(from) ?? new Set<string>();
+      set.add(to);
+      neighbours.set(from, set);
+    };
+    add(link.source, link.target);
+    add(link.target, link.source);
+  }
+
+  const grouped = new Map<string, string[]>();
+  for (const device of devices) {
+    const peers = neighbours.get(device.name);
+    if (!peers || peers.size !== 1) {
+      continue;
+    }
+    const [parent] = [...peers];
+    // A pair of devices linked only to each other are each other's only peer.
+    // Packing one under the other would be arbitrary, so leave both ranked.
+    if (parent === undefined || (neighbours.get(parent)?.size ?? 0) <= 1) {
+      continue;
+    }
+    grouped.set(parent, [...(grouped.get(parent) ?? []), device.name]);
+  }
+  return grouped;
+}
+
+/** The grid a device's leaves are packed into, in columns and rows. */
+function leafGrid(count: number): { columns: number; rows: number } {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+  return { columns, rows: Math.ceil(count / columns) };
+}
+
+/** The footprint a device needs: itself, plus the block of leaves beneath it. */
+function packedSize(leafCount: number): { width: number; height: number } {
+  if (leafCount === 0) {
+    return { width: NODE_WIDTH, height: NODE_HEIGHT };
+  }
+  const { columns, rows } = leafGrid(leafCount);
+  return {
+    width: Math.max(NODE_WIDTH, columns * NODE_WIDTH + (columns - 1) * LEAF_GAP_X),
+    height: NODE_HEIGHT + LEAF_GAP_Y + rows * NODE_HEIGHT + (rows - 1) * LEAF_GAP_Y,
+  };
+}
+
+/**
  * hierarchicalLayout runs dagre's network-simplex ranking algorithm
  * top-to-bottom. Each device gets a row determined by its longest
  * incoming-edge path from a root; siblings get spread horizontally.
@@ -151,8 +219,17 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   });
   g.setDefaultEdgeLabel(() => ({}));
 
+  // Leaves are packed under their parent rather than ranked, and the parent is
+  // sized to hold them so dagre reserves the room rather than overlapping the
+  // block with whatever it ranks next.
+  const leaves = leavesByParent(devices, links);
+  const packed = new Set([...leaves.values()].flat());
+
   for (const device of devices) {
-    g.setNode(device.name, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    if (packed.has(device.name)) {
+      continue;
+    }
+    g.setNode(device.name, packedSize(leaves.get(device.name)?.length ?? 0));
   }
   // Dedup parallel edges between the same node pair — dagre's ranking
   // doesn't benefit from seeing the same pair twice (we already merge
@@ -160,6 +237,7 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   // adjacencies can echo a trunk).
   const seenEdgePairs = new Set<string>();
   for (const link of links) {
+    if (packed.has(link.source) || packed.has(link.target)) continue;
     const key = [link.source, link.target].sort().join('|');
     if (seenEdgePairs.has(key)) continue;
     seenEdgePairs.add(key);
@@ -168,19 +246,45 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
 
   dagre.layout(g);
 
-  return devices.map((device) => {
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const device of devices) {
+    if (packed.has(device.name)) {
+      continue;
+    }
     const node = g.node(device.name);
-    // Dagre positions reference the centre of the box; ReactFlow
-    // positions reference the top-left. Offset accordingly.
-    const x = (node?.x ?? 0) - NODE_WIDTH / 2;
-    const y = (node?.y ?? 0) - NODE_HEIGHT / 2;
-    return {
-      id: device.name,
-      type: 'device',
-      position: { x, y },
-      data: makeData(device),
-    };
-  });
+    const children = leaves.get(device.name) ?? [];
+    const size = packedSize(children.length);
+    // Dagre positions reference the centre of the box it was given, which for
+    // a device with leaves is the whole block. The device sits at the top of
+    // that block, centred, with its leaves filling the rest.
+    const boxLeft = (node?.x ?? 0) - size.width / 2;
+    const boxTop = (node?.y ?? 0) - size.height / 2;
+    positions.set(device.name, {
+      x: boxLeft + size.width / 2 - NODE_WIDTH / 2,
+      y: boxTop,
+    });
+
+    if (children.length === 0) {
+      continue;
+    }
+    const { columns } = leafGrid(children.length);
+    const blockWidth = columns * NODE_WIDTH + (columns - 1) * LEAF_GAP_X;
+    const blockLeft = boxLeft + (size.width - blockWidth) / 2;
+    const blockTop = boxTop + NODE_HEIGHT + LEAF_GAP_Y;
+    children.forEach((name, index) => {
+      positions.set(name, {
+        x: blockLeft + (index % columns) * (NODE_WIDTH + LEAF_GAP_X),
+        y: blockTop + Math.floor(index / columns) * (NODE_HEIGHT + LEAF_GAP_Y),
+      });
+    });
+  }
+
+  return devices.map((device) => ({
+    id: device.name,
+    type: 'device',
+    position: positions.get(device.name) ?? { x: LAYOUT_LEFT_OFFSET, y: LAYOUT_TOP_OFFSET },
+    data: makeData(device),
+  }));
 }
 
 /** Common DeviceNodeData shape used by every layout fn. */
