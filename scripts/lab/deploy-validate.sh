@@ -13,6 +13,11 @@
 #   3. Installing over an existing configuration does not crash-loop the
 #      service. A fresh install exercises none of the upgrade path; the second
 #      install runs against the certs, database and config the first one left.
+#   4. The daemon can still start a simulation afterwards. Clauses 1-3 all
+#      passed on CT304 while #2092 left the simulator unable to start anything:
+#      state written under an older recovery schema stayed on disk and turned
+#      every start into a generic 500. A deployment that answers /__version and
+#      cannot simulate is not a working deployment.
 #
 # The assertions are made ON the host over ssh, against the loopback listener,
 # so a closed firewall is not mistaken for a broken deployment.
@@ -208,5 +213,38 @@ on_host 'systemctl is-active --quiet niac.service' ||
 [[ "$BEFORE_RESTARTS" == "$AFTER_RESTARTS" ]] ||
 	die "niac.service restarted during the upgrade window (NRestarts $BEFORE_RESTARTS -> $AFTER_RESTARTS): crash loop"
 pass "niac.service active, NRestarts unchanged at $AFTER_RESTARTS"
+
+step "Checking recovery left nothing that blocks a simulation start"
+# recovery is a field on the simulation status, not its own route.
+SIM_STATE="$(on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/simulation" 2>/dev/null || true)"
+RECOVERY_VERDICT="$(printf '%s' "$SIM_STATE" | python3 -c '
+import json, sys
+
+raw = sys.stdin.read().strip()
+if not raw:
+    print("UNREADABLE no simulation status")
+    raise SystemExit
+try:
+    status = json.loads(raw)
+except json.JSONDecodeError as err:
+    print(f"UNREADABLE {err}")
+    raise SystemExit
+recovery = status.get("recovery") or {}
+state = recovery.get("state", "")
+message = recovery.get("message", "")
+if status.get("running"):
+    print("RUNNING a simulation is running after the upgrade")
+elif state == "failed" and "set aside" not in message:
+    # This is the #2092 shape: recovery refused the state and left it on disk,
+    # so every later start returns a generic 500 while /__version looks fine.
+    print(f"BLOCKED {message}")
+else:
+    print("CLEAR no simulation was running and nothing blocks a start")
+')"
+case "$RECOVERY_VERDICT" in
+RUNNING*) pass "${RECOVERY_VERDICT#RUNNING }" ;;
+CLEAR*) pass "${RECOVERY_VERDICT#CLEAR }" ;;
+*) die "recovery left state that blocks every simulation start: ${RECOVERY_VERDICT#* }" ;;
+esac
 
 printf '\n\033[32mdeploy-validate: %s on %s\033[0m\n' "$VERSION" "$HOST"
