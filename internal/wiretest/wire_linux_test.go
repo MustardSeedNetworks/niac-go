@@ -41,6 +41,9 @@ const (
 	// The pack's transit network. clientCIDR is below the authored DHCP pool
 	// (.100-.199) so it can never collide with a lease the simulation hands out.
 	clientCIDR = "10.254.200.50/24"
+	// simulatedSites covers every generated site network; the packs address
+	// sites out of 10/8 and the transit network is carved from it.
+	simulatedSites = "10.0.0.0/8"
 )
 
 // TestMain builds the namespace once, then re-executes this test binary inside
@@ -100,6 +103,14 @@ func setupNamespace() error {
 		{"netns", "exec", wireNS, "ip", "link", "set", testIface, "up"},
 		{"netns", "exec", wireNS, "ip", "link", "set", simIface, "up"},
 		{"netns", "exec", wireNS, "ip", "addr", "add", clientCIDR, "dev", testIface},
+		// A tester on this segment reaches the simulated sites the way any
+		// host does: through the edge router. Without this route the client
+		// can only talk to devices on the transit network itself, and a pack's
+		// findings all sit on site-internal devices.
+		{
+			"netns", "exec", wireNS, "ip", "route", "add", simulatedSites,
+			"via", transitGateway, "dev", testIface,
+		},
 	}
 	for _, args := range steps {
 		if out, err := exec.Command("ip", args...).CombinedOutput(); err != nil {
