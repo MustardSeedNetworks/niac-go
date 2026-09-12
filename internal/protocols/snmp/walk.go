@@ -189,9 +189,17 @@ func ParseWalkContent(content []byte) ([]WalkEntry, error) {
 }
 
 func parseWalk(reader io.Reader) ([]WalkEntry, error) {
+	// snmpsim recordings and net-snmp walks both reach every caller through
+	// here, and the format is decided by content rather than by file name: a
+	// caller may hold either under any extension.
+	buffered := bufio.NewReaderSize(reader, snmprecSniffWindow)
+	if contentIsSnmprec(buffered) {
+		return parseSnmprec(buffered)
+	}
+
 	var entries []WalkEntry
 
-	scanner := bufio.NewScanner(reader)
+	scanner := bufio.NewScanner(buffered)
 	// net-snmp wraps long Hex-STRING and multi-line octet-string values across
 	// several lines; a 30k-OID switch walk can carry lines well over the 64KiB
 	// default token size, so grow the buffer to avoid a mid-walk scan error.

@@ -69,6 +69,7 @@ var (
 	ErrWalkFileSymlink        = errors.New("walk file cannot be a symbolic link")
 	ErrWalkFileIsDirectory    = errors.New("walk file path is a directory, not a file")
 	ErrInvalidWalkFormat      = errors.New("invalid format: missing '='")
+	ErrInvalidSnmprecLine     = errors.New("invalid recording line: want OID|tag|value")
 	ErrMissingColon           = errors.New("invalid format: missing ':'")
 	ErrSymbolicOID            = errors.New("object name cannot be resolved to a numeric OID")
 	ErrFailedToParseValue     = errors.New("failed to parse value")
