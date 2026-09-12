@@ -13,11 +13,17 @@
 #   3. Installing over an existing configuration does not crash-loop the
 #      service. A fresh install exercises none of the upgrade path; the second
 #      install runs against the certs, database and config the first one left.
-#   4. The daemon can still start a simulation afterwards. Clauses 1-3 all
-#      passed on CT304 while #2092 left the simulator unable to start anything:
-#      state written under an older recovery schema stayed on disk and turned
-#      every start into a generic 500. A deployment that answers /__version and
-#      cannot simulate is not a working deployment.
+#   4. The daemon can still start a simulation afterwards, and the one that was
+#      running before the upgrade survived it. Clauses 1-3 all passed on CT304
+#      while #2092 left the simulator unable to start anything: state written
+#      under an older recovery schema stayed on disk and turned every start
+#      into a generic 500. A deployment that answers /__version and cannot
+#      simulate is not a working deployment, and only a real start says so —
+#      reading recovery's own verdict cannot, because a host where nothing was
+#      running reports a clean one either way.
+#
+# The simulations run on throwaway dummy interfaces created for the run and
+# deleted afterwards, so nothing this script starts reaches the host's network.
 #
 # The assertions are made ON the host over ssh, against the loopback listener,
 # so a closed firewall is not mistaken for a broken deployment.
@@ -133,6 +139,75 @@ install_package() {
 # dying and being restarted by Restart=on-failure increments it.
 restart_count() { on_host 'systemctl show niac.service -p NRestarts --value'; }
 
+# Everything the simulation assertions create, removed on any exit path so a
+# failed run leaves no session holding an interface and no dummy link behind.
+PROBE_INTERFACES=()
+PROBE_SESSIONS=()
+
+release_probes() {
+	local session iface
+	for session in ${PROBE_SESSIONS+"${PROBE_SESSIONS[@]}"}; do
+		on_host "niac simulation stop '$session' --insecure" >/dev/null 2>&1 || true
+	done
+	for iface in ${PROBE_INTERFACES+"${PROBE_INTERFACES[@]}"}; do
+		on_host "sudo ip link delete '$iface'" >/dev/null 2>&1 || true
+	done
+}
+
+# A dummy link is a real interface to libpcap, attached to nothing. Starting a
+# pack on the host's own NIC would put a fleet of invented devices onto the lab
+# network, which is not something a validation run may do.
+probe_interface() {
+	local iface="$1"
+	on_host "sudo ip link delete '$iface' 2>/dev/null; sudo ip link add '$iface' type dummy && sudo ip link set '$iface' up" ||
+		die "could not create the dummy interface $iface on $HOST (is the dummy module available?)"
+	PROBE_INTERFACES+=("$iface")
+}
+
+# The first scenario the daemon itself offers, so this script never needs to
+# know where the library lives.
+library_scenario() {
+	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/library/networks" |
+		python3 -c '
+import json, sys
+
+entries = json.load(sys.stdin)
+if not entries:
+    sys.exit("the daemon offers no library scenario to start")
+print(entries[0]["name"])
+'
+}
+
+# Start by name, which is the only spelling an operator has: where the library
+# sits is the daemon own business (#2124). A release predating that fix refuses
+# it, so name the missing fix rather than report a broken deployment.
+start_simulation() {
+	local iface="$1" session="$2" scenario="$3" out
+	if ! out="$(on_host "niac simulation start -i '$iface' --config '$scenario.yaml' --session '$session' --insecure" 2>&1)"; then
+		printf '%s\n' "$out" >&2
+		case "$out" in
+		*"NIAC-managed storage"*)
+			die "the daemon refused a scenario named without a path: this release predates #2124"
+			;;
+		esac
+		die "starting $scenario on $iface as session $session failed"
+	fi
+	PROBE_SESSIONS+=("$session")
+}
+
+assert_sessions_running() {
+	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/sessions" |
+		python3 -c '
+import json, sys
+
+want = set(sys.argv[1:])
+running = {session["sessionId"] for session in json.load(sys.stdin)}
+missing = sorted(want - running)
+if missing:
+    sys.exit(f"sessions {missing} are not running; the daemon reports {sorted(running)}")
+' "$@"
+}
+
 fetch_version_json() {
 	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/__version"
 }
@@ -195,9 +270,20 @@ wait_healthy
 assert_version_payload
 pass "/__version reports $(strip_v "$VERSION") with a non-empty uiBuildHash"
 
+trap release_probes EXIT
+
+# A running simulation is the rest of the "existing configuration": it writes
+# recovery state, and that state is what the upgrade has to carry forward.
+step "Start a simulation, so the upgrade runs against recovery state"
+SCENARIO="$(library_scenario)"
+probe_interface niac-dv-pre
+start_simulation niac-dv-pre deploy-validate-pre "$SCENARIO"
+assert_sessions_running deploy-validate-pre
+pass "$SCENARIO runs as deploy-validate-pre on niac-dv-pre"
+
 # Everything the first install left behind — /etc/niac, the database, the
-# self-signed certificate — is now the "existing configuration" the second
-# install has to survive.
+# self-signed certificate, and now the recovery state of a running session — is
+# the "existing configuration" the second install has to survive.
 step "Install 2 of 2, over the configuration the first one created"
 BEFORE_RESTARTS="$(restart_count)"
 install_package "$REMOTE_PACKAGE" "$FORMAT" reinstall
@@ -246,5 +332,18 @@ RUNNING*) pass "${RECOVERY_VERDICT#RUNNING }" ;;
 CLEAR*) pass "${RECOVERY_VERDICT#CLEAR }" ;;
 *) die "recovery left state that blocks every simulation start: ${RECOVERY_VERDICT#* }" ;;
 esac
+
+step "The simulation running before the upgrade survived it"
+assert_sessions_running deploy-validate-pre
+pass "deploy-validate-pre recovered across the upgrade"
+
+# The assertion #2092 needed and nothing here made: a start, after the upgrade,
+# against the recovery state the upgrade inherited. A second dummy interface,
+# because one interface carries one session.
+step "A simulation still starts after the upgrade"
+probe_interface niac-dv-post
+start_simulation niac-dv-post deploy-validate-post "$SCENARIO"
+assert_sessions_running deploy-validate-pre deploy-validate-post
+pass "$SCENARIO started as deploy-validate-post after the upgrade"
 
 printf '\n\033[32mdeploy-validate: %s on %s\033[0m\n' "$VERSION" "$HOST"
