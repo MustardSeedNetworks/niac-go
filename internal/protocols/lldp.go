@@ -13,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
@@ -110,19 +111,14 @@ type LLDPHandler struct {
 	running         bool
 }
 
-// lldpDefaultEnabledForType reports whether LLDP advertisements
-// should be emitted by default when LLDPConfig is nil. Switches,
-// routers, APs, firewalls, and VoIP phones all run LLDP out of the
-// box on real hardware; hosts and servers don't unless explicitly
-// configured.
+// lldpDefaultEnabledForType reports whether LLDP advertisements should be
+// emitted by default when LLDPConfig is nil.
+//
+// This used to carry its own list of spellings, and listed `voip_phone` where
+// the schema says `voip-phone` — so a hand-authored phone fell to the default
+// and silently stopped advertising the LLDP-MED that tells it its voice VLAN.
 func lldpDefaultEnabledForType(deviceType string) bool {
-	switch strings.ToLower(deviceType) {
-	case "switch", "layer3-switch", "router", "ap", "access-point", "access_point",
-		"wireless-ap", "wireless_ap", "firewall", "voip_phone":
-		return true
-	default:
-		return false
-	}
+	return deviceclass.RunsLLDPByDefault(deviceclass.Parse(deviceType))
 }
 
 // NewLLDPHandler creates a new LLDP handler.
@@ -453,30 +449,31 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 		enabled      uint16
 	)
 
-	switch strings.ToLower(device.Type) {
-	case "router":
+	switch deviceclass.Parse(device.Type) {
+	case deviceclass.Router:
 		capabilities = LLDPCapRouter | LLDPCapBridge
 		enabled = LLDPCapRouter
-	case "layer3-switch":
+	case deviceclass.Layer3Switch:
 		capabilities = LLDPCapRouter | LLDPCapBridge
 		enabled = capabilities
-	case "switch":
+	case deviceclass.Switch:
 		capabilities = LLDPCapBridge | LLDPCapRouter
 		enabled = LLDPCapBridge
-	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
+	case deviceclass.AP, deviceclass.AccessPoint:
 		capabilities = LLDPCapWLANAP | LLDPCapBridge
 		enabled = LLDPCapWLANAP
-	case "firewall":
+	case deviceclass.Firewall:
 		// A firewall forwards IP, so it is a router to a neighbour's eyes. It
 		// used to fall through to the default and advertise station-only,
 		// which told every discovery tool the opposite (#2096). Bridge is not
 		// claimed: transparent mode exists, but nothing here models it.
 		capabilities = LLDPCapRouter
 		enabled = LLDPCapRouter
-	case "phone", "voip-phone":
+	case deviceclass.VoipPhone:
 		capabilities = LLDPCapTelephone | LLDPCapStationOnly
 		enabled = LLDPCapTelephone
-	default:
+	case deviceclass.Server, deviceclass.Host, deviceclass.Workstation,
+		deviceclass.IoT, deviceclass.Printer, deviceclass.Unknown:
 		capabilities = LLDPCapStationOnly
 		enabled = LLDPCapStationOnly
 	}

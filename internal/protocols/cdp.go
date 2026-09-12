@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"log/slog"
 	"math"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
@@ -412,22 +412,23 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 	// Determine capabilities based on device type
 	var capabilities uint32
 
-	switch strings.ToLower(device.Type) {
-	case deviceTypeRouter:
+	switch deviceclass.Parse(device.Type) {
+	case deviceclass.Router:
 		capabilities = CDPCapRouter | CDPCapIGMPCapable
-	case deviceTypeLayer3Switch:
+	case deviceclass.Layer3Switch:
 		capabilities = CDPCapRouter | CDPCapSwitch | CDPCapIGMPCapable
-	case deviceTypeSwitch:
+	case deviceclass.Switch:
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
-	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
+	case deviceclass.AP, deviceclass.AccessPoint:
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
-	case "firewall":
+	case deviceclass.Firewall:
 		// Matches the LLDP capability TLV: a firewall routes, and announcing
 		// it as a host contradicted that on the same wire (#2096).
 		capabilities = CDPCapRouter
-	case "phone", "voip-phone":
+	case deviceclass.VoipPhone:
 		capabilities = CDPCapPhone | CDPCapHost
-	default:
+	case deviceclass.Server, deviceclass.Host, deviceclass.Workstation,
+		deviceclass.IoT, deviceclass.Printer, deviceclass.Unknown:
 		capabilities = CDPCapHost
 	}
 

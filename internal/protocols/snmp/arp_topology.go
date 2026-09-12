@@ -2,7 +2,8 @@ package snmp
 
 import (
 	"net"
-	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 )
 
 // ARPBinding is an authoritative IP-to-MAC association from the simulated fleet.
@@ -38,13 +39,11 @@ func (a *Agent) SynthesizeARPTable(bindings []ARPBinding) {
 	}
 }
 
+// isForwardingDevice reports whether this device routes between subnets, which
+// is what decides whether its ARP cache describes a topology. The name predates
+// the distinction: a switch forwards frames without routing, and is excluded.
 func isForwardingDevice(deviceType string) bool {
-	switch strings.ToLower(strings.TrimSpace(deviceType)) {
-	case "router", "layer3-switch", "firewall":
-		return true
-	default:
-		return false
-	}
+	return deviceclass.RoutesIP(deviceclass.Parse(deviceType))
 }
 
 func (a *Agent) connectedARPInterfaces() []arpInterface {

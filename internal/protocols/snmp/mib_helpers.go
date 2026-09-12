@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 )
 
 const (
@@ -68,19 +70,20 @@ func getCapabilitiesBitfield(deviceType string) int {
 	// Bit 5: Telephone
 	// Bit 6: DOCSIS cable device
 	// Bit 7: Station Only
-	deviceTypeLower := strings.ToLower(deviceType)
-
-	switch deviceTypeLower {
-	case "router", "layer3-switch", "firewall":
+	switch deviceclass.Parse(deviceType) {
+	case deviceclass.Router, deviceclass.Layer3Switch, deviceclass.Firewall:
 		return CapabilityRouterBridge // Router + Bridge
-	case "switch":
+	case deviceclass.Switch:
 		return CapabilityBridge // Bridge
-	case "ap", "access-point", "access_point":
+	case deviceclass.AP, deviceclass.AccessPoint:
 		return CapabilityWLANAP // WLAN AP
-	case "phone", "voip-phone", "voip_phone":
+	case deviceclass.VoipPhone:
 		return CapabilityTelephoneStation // Telephone + Station Only
-	case "server", "host":
+	case deviceclass.Server, deviceclass.Host, deviceclass.Workstation,
+		deviceclass.IoT, deviceclass.Printer:
 		return CapabilityStationOnly // Station Only
+	case deviceclass.Unknown:
+		return LLDPCapabilityOther
 	default:
 		return LLDPCapabilityOther
 	}
@@ -88,16 +91,21 @@ func getCapabilitiesBitfield(deviceType string) int {
 
 func cdpCapabilities(deviceType string) []byte {
 	var capabilities uint32
-	switch strings.ToLower(deviceType) {
-	case "router":
+	switch deviceclass.Parse(deviceType) {
+	case deviceclass.Router:
 		capabilities = cdpCapabilityRouter | cdpCapabilityIGMP
-	case "layer3-switch":
+	case deviceclass.Layer3Switch:
 		capabilities = cdpCapabilityRouter | cdpCapabilitySwitch | cdpCapabilityIGMP
-	case "switch", "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
+	case deviceclass.Switch, deviceclass.AP, deviceclass.AccessPoint:
 		capabilities = cdpCapabilitySwitch | cdpCapabilityIGMP
-	case "phone", "voip-phone":
+	case deviceclass.Firewall:
+		// Had no case here and fell to host, the same hole the LLDP and CDP
+		// TLVs carried (#2096). A firewall routes.
+		capabilities = cdpCapabilityRouter
+	case deviceclass.VoipPhone:
 		capabilities = cdpCapabilityPhone | cdpCapabilityHost
-	default:
+	case deviceclass.Server, deviceclass.Host, deviceclass.Workstation,
+		deviceclass.IoT, deviceclass.Printer, deviceclass.Unknown:
 		capabilities = cdpCapabilityHost
 	}
 	encoded := make([]byte, cdpCapabilitiesByteCount)

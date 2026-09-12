@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
+
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -244,21 +246,24 @@ func synthVendor(vendor string) synth.Vendor {
 }
 
 func synthDeviceType(deviceType string) synth.DeviceType {
-	switch strings.ToLower(strings.TrimSpace(deviceType)) {
-	case "switch", "layer3-switch":
+	switch deviceclass.Parse(deviceType) {
+	case deviceclass.Switch, deviceclass.Layer3Switch:
 		return synth.TypeSwitch
-	case "router":
+	case deviceclass.Router:
 		return synth.TypeRouter
-	case "firewall":
+	case deviceclass.Firewall:
 		return synth.TypeFirewall
-	case "ap", "access-point", "access_point":
+	case deviceclass.AP, deviceclass.AccessPoint:
 		return synth.TypeAccessPoint
-	case "server":
+	case deviceclass.Server:
 		return synth.TypeServer
-	case "printer":
+	case deviceclass.Printer:
 		return synth.TypePrinter
-	case "phone", "voip-phone", "voip_phone":
+	case deviceclass.VoipPhone:
 		return synth.TypeVoIPPhone
+	case deviceclass.Host, deviceclass.Workstation, deviceclass.IoT,
+		deviceclass.Unknown:
+		return synth.TypeHost
 	default:
 		return synth.TypeHost
 	}
