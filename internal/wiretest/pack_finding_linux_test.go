@@ -207,11 +207,14 @@ func TestHospitalSaturationReadsAboveTheWarningLine(t *testing.T) {
 		warningPercent = 80.0
 		sampleWindow   = 2 * time.Second
 		saturated      = "HundredGigabitEthernet1/0/49"
-		healthy        = "HundredGigabitEthernet1/0/1"
 	)
 
 	authored := startPack(t, "hospital")
 	client := dialDevice(t, authored, "MED-ACC-SW02")
+	// Discovered rather than named: both of this switch's uplinks carry the
+	// finding, so the comparison port has to be whatever else the pack
+	// generated, and hard-coding one only pins a name that can move.
+	healthy := anyOtherPhysicalInterface(t, client, saturated)
 
 	hot := utilizationPercent(t, client, saturated, sampleWindow)
 	if hot < warningPercent {
@@ -246,4 +249,32 @@ func utilizationPercent(
 	elapsed := time.Since(start).Seconds()
 
 	return float64(second-first) * 8 / elapsed / (float64(speedMbps) * 1_000_000) * 100
+}
+
+// anyOtherPhysicalInterface returns a generated interface that is neither the
+// one under test nor a VLAN pseudo-interface, so the healthy comparison is made
+// against a real port.
+func anyOtherPhysicalInterface(t *testing.T, client *gosnmp.GoSNMP, exclude string) string {
+	t.Helper()
+	rows, err := client.WalkAll(oidIfDescr)
+	if err != nil {
+		t.Fatalf("walking ifDescr on %s: %v", client.Target, err)
+	}
+	for _, row := range rows {
+		octets, ok := row.Value.([]byte)
+		if !ok {
+			continue
+		}
+		name := string(octets)
+		// 1/0/50 is this switch's other uplink and carries the finding too.
+		if name == exclude || strings.HasPrefix(name, "Vlan") ||
+			strings.HasSuffix(name, "1/0/50") {
+			continue
+		}
+
+		return name
+	}
+	t.Fatalf("%s generated no interface to compare against", client.Target)
+
+	return ""
 }
