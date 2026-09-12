@@ -370,6 +370,9 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   //
   // Invisible on desktop, where the drawer is display:none at lg+, which is why
   // it survived until something drove a real phone viewport (#1320).
+  // Backstop for a navigation this component did not start — browser back and
+  // forward. A click-driven navigation has already closed the drawer, so this
+  // sets an unchanged value and React bails out of the re-render.
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
@@ -394,7 +397,15 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       version={version}
       onCollapse={() => setCollapsed(true)}
       onExpand={() => setCollapsed(false)}
-      onNavigate={(p) => navigate(p)}
+      onNavigate={(p) => {
+        // Close with the click that caused the navigation, not from an
+        // observer that fires whenever React gets to it. The effect below
+        // still closes the drawer for history navigation, but by then this
+        // has already set the same value, so it cannot surprise anything
+        // that looked at the drawer in between (#2083).
+        setMobileOpen(false);
+        navigate(p);
+      }}
       isActive={isActive}
       onOpenHelp={onOpenHelp}
       onOpenSettings={onOpenSettings}
