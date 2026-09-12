@@ -71,6 +71,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
 		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe,
+		Syslog: siteSyslog(spec),
 	}
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{
