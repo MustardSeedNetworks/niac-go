@@ -48,6 +48,7 @@ import {
   writeSavedLayoutMode,
 } from './topology';
 import { CanvasState } from './topology/CanvasState';
+import { placedEdges } from './topology/labelPlacement';
 import { reframeAfterPaint } from './topology/reframe';
 import { TrunkEdge } from './topology/TrunkEdge';
 
@@ -264,15 +265,11 @@ export const TopologyPage: FC = () => {
     );
 
     const layoutedNodes = layoutNodes(visibleDevices, visibleLinks, layoutMode);
-    const layoutedEdges = createEdges(visibleLinks).map((edge) => ({
-      ...edge,
-      data: {
-        ...edge.data,
-        showLabels,
-        focusOpacity: edgeOpacity(edge.source, edge.target),
-        hovered: hoveredEdgeId === edge.id,
-      },
-    }));
+    const layoutedEdges = placedEdges(layoutedNodes, createEdges(visibleLinks), {
+      showLabels,
+      focusOpacity: edgeOpacity,
+      hoveredEdgeId,
+    });
 
     // Preserve user-dragged positions across the 15s data poll. For each
     // device that's already on canvas, keep its current position rather
