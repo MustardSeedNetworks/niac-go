@@ -62,10 +62,9 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 //
 // Anything that is not a plain filename is left alone for the caller's own
 // path handling to resolve and the containment checks to judge. Roots are
-// searched in order, so a user config shadows a starter of the same name, and
-// the join is re-checked for containment before the filesystem is touched --
-// the same ordering ResolveManagedConfigPath uses for symlinks, so no call is
-// ever made against a path that has not been proven inside a root.
+// searched in order, so a user config shadows a starter of the same name. The
+// match is made against each root's own directory entries, so the path handed
+// back is one the root already held rather than one built from the request.
 func resolveBareNameInRoots(name string, roots []string) (string, bool) {
 	if !isPlainFileName(name) {
 		return "", false
@@ -74,11 +73,22 @@ func resolveBareNameInRoots(name string, roots []string) (string, bool) {
 		if root == "" {
 			continue
 		}
-		candidate, err := filepath.Abs(filepath.Join(root, name))
-		if err != nil || !pathWithinAnyRoot(candidate, roots, false) {
+		entries, err := os.ReadDir(root)
+		if err != nil {
 			continue
 		}
-		if info, statErr := os.Stat(candidate); statErr == nil && info.Mode().IsRegular() {
+		for _, entry := range entries {
+			if entry.Name() != name || !entry.Type().IsRegular() {
+				continue
+			}
+			// Joined with the directory entry's own name rather than the
+			// caller's string: what is returned is a file this root was
+			// already holding, which is what "selected from NIAC-managed
+			// storage" means, and no path is ever built out of the request.
+			candidate, absErr := filepath.Abs(filepath.Join(root, entry.Name()))
+			if absErr != nil {
+				continue
+			}
 			return candidate, true
 		}
 	}
