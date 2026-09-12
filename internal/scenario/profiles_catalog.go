@@ -72,6 +72,18 @@ func endpointProfiles() []DeviceProfile {
 			"Android Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("barcode-printer", "printer", "zebra", "ZT411", "Zebra industrial printer",
 			"Link-OS", synth.VendorGeneric, synth.TypePrinter),
+		// Every site prints. A hospital prints wristbands and specimen labels
+		// at the point of care; an office prints on a shared multifunction
+		// device down the corridor. Both answer IPP and both are exactly what
+		// a discovery tool is expected to file as a printer, which is why
+		// leaving them out of five of the seven verticals made those maps
+		// read as networks nobody works in.
+		newProfile("label-printer", "printer", "zebra", "ZD621",
+			"Zebra healthcare label printer", "Link-OS",
+			synth.VendorGeneric, synth.TypePrinter),
+		newProfile("office-printer", "printer", "hewlett packard",
+			"LaserJet Enterprise MFP M634", "Shared office multifunction printer",
+			"HP FutureSmart", synth.VendorGeneric, synth.TypePrinter),
 		newProfile(
 			"plc",
 			"iot",

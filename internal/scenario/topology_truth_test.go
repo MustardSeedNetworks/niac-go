@@ -15,8 +15,11 @@ func assertEnterpriseDeviceMix(t *testing.T, cfg *config.Config) {
 			site + "-WAN-R": 2, site + "-FW": 2, site + "-CORE-SW": 2, site + "-DIST-SW": 4,
 			site + "-ACC-SW": 16, site + "-SRV-SW": 2, site + "-WAP-": 32,
 		}
+		// A printer fills an endpoint slot like any other wired client, so it
+		// counts here — otherwise adding one to the rotation reads as the site
+		// having lost clients rather than gained a printer.
 		wiredClients := countNamed(cfg, site+"-WS-") + countNamed(cfg, site+"-LAP-") +
-			countNamed(cfg, site+"-MBP-")
+			countNamed(cfg, site+"-MBP-") + countNamed(cfg, site+"-PRN-")
 		if wiredClients != 64 {
 			t.Errorf("%s wired clients = %d, want 64", site, wiredClients)
 		}

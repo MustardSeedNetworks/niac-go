@@ -20,6 +20,14 @@ type endpointKind struct {
 	windowSize       uint16
 }
 
+// endpointKinds is the rotation wiredEndpointKind walks in order, so the list
+// expresses two things at once: how common a kind is, by how often it appears,
+// and whether a small site gets one at all, by how early.
+//
+// Both matter. Adding a printer to a three-kind vertical made a quarter of its
+// endpoints printers. Putting it last in a ten-kind rotation gave campus and
+// service-provider none at all, because those sites have eight endpoints and
+// the index never reached it. A printer sits mid-rotation for that reason.
 func endpointKinds(profile string) []endpointKind {
 	pc := func(role, prefix, osType string) endpointKind {
 		kind := endpointKind{
@@ -38,15 +46,18 @@ func endpointKinds(profile string) []endpointKind {
 			windowSize: unixTCPWindowSize,
 		}
 	}
-
 	switch profile {
 	case "hospital":
 		return []endpointKind{
 			pc("nurse-station", "NURSE", "windows"),
 			appliance("infusion-pump", "PUMP"),
+			appliance("philips-patient-monitor", "PHMX850"),
+			pc("nurse-station", "NURSE", "windows"),
+			appliance("ge-patient-monitor", "GEB850"),
+			appliance("label-printer", "LABEL"),
+			appliance("infusion-pump", "PUMP"),
 			appliance("mr-system", "MRI"),
 			appliance("philips-patient-monitor", "PHMX850"),
-			appliance("ge-patient-monitor", "GEB850"),
 		}
 	case "warehouse":
 		return []endpointKind{
@@ -57,6 +68,11 @@ func endpointKinds(profile string) []endpointKind {
 		return []endpointKind{
 			appliance("plc", "PLC"),
 			appliance("hmi", "HMI"),
+			appliance("plc", "PLC"),
+			appliance("robot-controller", "ROBOT"),
+			appliance("plc", "PLC"),
+			appliance("barcode-printer", "LABEL"),
+			appliance("hmi", "HMI"),
 			appliance("robot-controller", "ROBOT"),
 		}
 	case "retail":
@@ -66,15 +82,44 @@ func endpointKinds(profile string) []endpointKind {
 			appliance("digital-signage", "SIGN"),
 		}
 	case "service-provider":
-		return []endpointKind{pc("noc-workstation", "NOC", "windows")}
+		return []endpointKind{
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			appliance("office-printer", "PRN"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+			pc("noc-workstation", "NOC", "windows"),
+		}
 	case "enterprise":
 		return []endpointKind{
 			pc("workstation", "WS", "windows"),
 			pc("windows-laptop", "LAP", "windows"),
+			pc("workstation", "WS", "windows"),
 			pc("macbook", "MBP", "darwin"),
+			pc("workstation", "WS", "windows"),
+			appliance("office-printer", "PRN"),
+			pc("windows-laptop", "LAP", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("macbook", "MBP", "darwin"),
+			pc("windows-laptop", "LAP", "windows"),
 		}
 	default:
-		return []endpointKind{pc("workstation", "WS", "windows")}
+		return []endpointKind{
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			appliance("office-printer", "PRN"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+			pc("workstation", "WS", "windows"),
+		}
 	}
 }
 
