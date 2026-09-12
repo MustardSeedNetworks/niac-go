@@ -1,4 +1,13 @@
 {
+  "deviceAction": {
+    "action": "Acción del dispositivo",
+    "executed": "Se ejecutó {{action}} en {{device}}",
+    "run": "Ejecutar acción del dispositivo",
+    "selectAction": "Elige una acción del dispositivo",
+    "selectTarget": "Elige un dispositivo",
+    "target": "Dispositivo objetivo de la acción",
+    "title": "Acciones del dispositivo"
+  },
   "deviceFault": {
     "conflictAddress": "Dirección IPv4 en conflicto",
     "apply": "Aplicar fallo de dispositivo",

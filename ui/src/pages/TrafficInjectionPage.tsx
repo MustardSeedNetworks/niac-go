@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DeviceActionPanel } from '../components/DeviceActionPanel';
 import { DeviceFaultPanel } from '../components/DeviceFaultPanel';
 import { ErrorInjectionPanel } from '../components/ErrorInjectionPanel';
 import { ReplayControlPanel } from '../components/ReplayControlPanel';
@@ -17,6 +18,7 @@ export const TrafficInjectionPage: FC = () => {
         </div>
         <ErrorInjectionPanel />
         <DeviceFaultPanel />
+        <DeviceActionPanel />
       </div>
 
       {/* PCAP Replay */}

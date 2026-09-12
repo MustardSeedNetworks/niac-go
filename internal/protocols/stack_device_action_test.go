@@ -91,3 +91,31 @@ func TestStackDeviceActionRejectsInvalidTargetAndKind(t *testing.T) {
 		}
 	}
 }
+
+// Two distinct identities both land. The store collapses a repeat of one
+// identity so a replayed timeline phase fires once; an operator clicking the
+// same action twice is two intents, and the injection route gives each its own
+// identity precisely so both reach the device.
+func TestDistinctIdentitiesBothConsume(t *testing.T) {
+	device := faultTestDevice("edge-1")
+	device.Type = "switch"
+	enabled := true
+	device.SNMPConfig.Enabled = &enabled
+	stack := NewStack(
+		nil,
+		&config.Config{Devices: []config.Device{device}},
+		logging.NewDebugConfig(0),
+	)
+
+	for _, id := range []string{"first", "second"} {
+		if err := stack.ExecuteDeviceAction(device.Name, devicestate.ActionReboot, id); err != nil {
+			t.Fatalf("reboot %s: %v", id, err)
+		}
+	}
+
+	for _, state := range stack.ExportDeviceStates() {
+		if consumed := len(state.ConsumedActions); consumed != 2 {
+			t.Fatalf("consumed actions = %d, want 2", consumed)
+		}
+	}
+}
