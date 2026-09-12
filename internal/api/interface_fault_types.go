@@ -313,3 +313,57 @@ func parseDeviceFaultType(value string) (devicestate.DeviceFaultType, error) {
 	}
 	return faultType, nil
 }
+
+// deviceActionResponse advertises one operation an operator can run. Actions
+// are named by their raw type rather than by a label, unlike the fault
+// catalogs: the authoring surface already speaks `reboot` and
+// `stp_topology_change`, and inventing a second vocabulary for the same two
+// operations is how the fault catalogs ended up needing a parser.
+type deviceActionResponse struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+}
+
+// deviceActionTargetResponse advertises which operations one device can publish.
+type deviceActionTargetResponse struct {
+	Device  string   `json:"device"`
+	Address string   `json:"address,omitempty"`
+	Actions []string `json:"actions"`
+}
+
+// availableDeviceActions describes the one-shot operations: things a device
+// does once rather than conditions it holds. They belong on the injection
+// screen beside the faults because an operator reaching for "make this device
+// reboot" is doing the same job as one reaching for "make DNS fail" -- and
+// until they were advertised here, the only way to run either was to author a
+// behavior timeline and wait for it.
+func availableDeviceActions() []deviceActionResponse {
+	descriptions := map[devicestate.DeviceActionType]string{
+		devicestate.ActionReboot: "Restart the device: sysUpTime returns to zero and a coldStart is emitted",
+		devicestate.ActionSTPTopologyChange: "Signal a spanning-tree topology change " +
+			"(requires STP enabled on the device)",
+	}
+	result := make([]deviceActionResponse, 0, len(devicestate.DeviceActionTypes()))
+	for _, kind := range devicestate.DeviceActionTypes() {
+		result = append(result, deviceActionResponse{
+			Type: string(kind), Description: descriptions[kind],
+		})
+	}
+
+	return result
+}
+
+func deviceActionTargetsResponse(targets []protocols.DeviceActionTarget) []deviceActionTargetResponse {
+	result := make([]deviceActionTargetResponse, 0, len(targets))
+	for _, target := range targets {
+		actions := make([]string, 0, len(target.Actions))
+		for _, kind := range target.Actions {
+			actions = append(actions, string(kind))
+		}
+		result = append(result, deviceActionTargetResponse{
+			Device: target.Device, Address: target.Address, Actions: actions,
+		})
+	}
+
+	return result
+}

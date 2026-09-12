@@ -5,6 +5,15 @@
     "saveFailed": "Failed to save changes",
     "uploadFailed": "Failed to upload file"
   },
+  "deviceAction": {
+    "action": "Device action",
+    "executed": "Ran {{action}} on {{device}}",
+    "run": "Run device action",
+    "selectAction": "Select a device action",
+    "selectTarget": "Select a device",
+    "target": "Device action target",
+    "title": "Device actions"
+  },
   "deviceFault": {
     "apply": "Apply device fault",
     "armed": "Armed",

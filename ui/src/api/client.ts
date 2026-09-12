@@ -263,6 +263,15 @@ export const injectError = (
     prefixBits?: number;
   }>('/api/v1/errors', payload, { method: 'POST' });
 
+/** Run one operation against a device now. Unlike a fault this arms nothing:
+ * the device does the thing once and the effect shows up in what it reports. */
+export const executeDeviceAction = (device: string, action: string) =>
+  requestJson<{ device: string; action: string; status: string }>(
+    '/api/v1/errors/actions',
+    { device, action },
+    { method: 'POST' },
+  );
+
 export const clearError = (device: string, iface: string, errorType: string) =>
   request<{
     success: boolean;

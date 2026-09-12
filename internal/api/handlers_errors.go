@@ -52,6 +52,8 @@ func (s *Server) handleErrors(w http.ResponseWriter, r *http.Request) {
 			"available_device_types": availableDeviceErrorTypes(),
 			"active_device_errors":   deviceFaultResponse(stack.ActiveDeviceFaults()),
 			"device_targets":         deviceFaultTargetsResponse(stack.DeviceFaultTargets()),
+			"available_actions":      availableDeviceActions(),
+			"action_targets":         deviceActionTargetsResponse(stack.DeviceActionTargets()),
 			"info":                   "Fault injection updates SNMP interface counters",
 		})
 	case http.MethodPost, http.MethodPut:

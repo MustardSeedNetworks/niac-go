@@ -297,6 +297,9 @@ export interface ErrorInjectionInfo {
       | { valueKind: 'address'; maxValue?: never }
     ))[];
   deviceTargets?: { device: string; address?: string; errorTypes: string[] }[];
+  /** One-shot operations a device can run, rather than conditions it holds. */
+  availableActions?: { type: string; description: string }[];
+  actionTargets?: { device: string; address?: string; actions: string[] }[];
   activeDeviceErrors?: Record<string, Record<string, DeviceFaultPayload>>;
   availableTypes: (ErrorType & { valueKind: 'number' | 'address' | 'prefix' })[];
   info: string;

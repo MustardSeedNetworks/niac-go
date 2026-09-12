@@ -1,8 +1,10 @@
 package protocols
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 
@@ -32,7 +34,7 @@ func (s *Stack) ExecuteDeviceAction(
 }
 
 func (s *Stack) validateDeviceAction(device *config.Device, kind devicestate.DeviceActionType) error {
-	if kind != devicestate.ActionReboot && kind != devicestate.ActionSTPTopologyChange {
+	if !slices.Contains(devicestate.DeviceActionTypes(), kind) {
 		return devicestate.ErrDeviceActionInvalid
 	}
 	if kind == devicestate.ActionSTPTopologyChange &&
@@ -95,4 +97,40 @@ func (g *snmpAgentGroup) deviceActionObservable(
 		}
 	}
 	return false
+}
+
+// DeviceActionTarget is one device and the operations it can actually publish.
+// A topology change needs STP enabled and every action needs an agent that can
+// report its effect, so the set differs per device the way the fault sets do.
+type DeviceActionTarget struct {
+	Device  string
+	Address string
+	Actions []devicestate.DeviceActionType
+}
+
+// DeviceActionTargets lists the devices an operator can act on, with the
+// operations each one supports.
+func (s *Stack) DeviceActionTargets() []DeviceActionTarget {
+	s.reloadMu.RLock()
+	defer s.reloadMu.RUnlock()
+	result := make([]DeviceActionTarget, 0, len(s.deviceStates))
+	for device, store := range s.deviceStates {
+		actions := make([]devicestate.DeviceActionType, 0, len(devicestate.DeviceActionTypes()))
+		for _, kind := range devicestate.DeviceActionTypes() {
+			if s.validateDeviceAction(device, kind) == nil {
+				actions = append(actions, kind)
+			}
+		}
+		if len(actions) == 0 {
+			continue
+		}
+		result = append(result, DeviceActionTarget{
+			Device: device.Name, Address: firstDeviceAddress(store.Snapshot()), Actions: actions,
+		})
+	}
+	slices.SortFunc(result, func(left, right DeviceActionTarget) int {
+		return cmp.Compare(left.Device, right.Device)
+	})
+
+	return result
 }
