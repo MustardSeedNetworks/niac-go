@@ -22,6 +22,9 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve configuration path: %w", err)
 	}
+	if bare, ok := resolveBareNameInRoots(path, roots); ok {
+		absPath = bare
+	}
 	if !pathWithinAnyRoot(absPath, roots, false) {
 		return "", ErrPathOutsideManagedRoots
 	}
@@ -47,6 +50,37 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	}
 
 	return realPath, nil
+}
+
+// resolveBareNameInRoots searches the managed roots for a configuration named
+// without any directory part, which is the only spelling an operator has: the
+// roots hold the shipped scenarios, and their location is the daemon's own
+// business. Without this a bare name was made absolute against the daemon's
+// working directory, so on an installed host (cwd /var/lib/niac, library under
+// the service user's home) nothing shipped could be named and `--config
+// basic-network.yaml` was refused as outside managed storage.
+//
+// A name containing a separator is left alone: the caller meant a path, and
+// resolving it here would let a root's name prefix reach into a sibling. Roots
+// are searched in order, so a user config shadows a starter of the same name.
+func resolveBareNameInRoots(name string, roots []string) (string, bool) {
+	if name == "" || strings.ContainsAny(name, `/\`) {
+		return "", false
+	}
+	for _, root := range roots {
+		if root == "" {
+			continue
+		}
+		candidate := filepath.Join(root, name)
+		if info, err := os.Stat(candidate); err == nil && info.Mode().IsRegular() {
+			abs, absErr := filepath.Abs(candidate)
+			if absErr != nil {
+				continue
+			}
+			return abs, true
+		}
+	}
+	return "", false
 }
 
 func hasParentTraversal(path string) bool {

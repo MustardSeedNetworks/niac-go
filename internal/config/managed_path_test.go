@@ -146,3 +146,69 @@ func TestResolveManagedConfigPath_SymlinkInsideRootStillResolves(t *testing.T) {
 		t.Errorf("resolved path = %q, want %q", got, want)
 	}
 }
+
+// TestResolveManagedConfigPath_ResolvesBareNameFromRoots is the operator case
+// the roots list has always claimed to serve. `simulationConfigRoots` calls
+// them "the directories a simulation config may be named out of", but the
+// resolver only ever made a relative name absolute against the daemon's
+// working directory and then checked containment — so on an installed host
+// (cwd /var/lib/niac, library under ~niac/.niac/library/networks) no shipped
+// scenario could be named at all, and `niac simulation start --config
+// basic-network.yaml` answered "configuration must be selected from
+// NIAC-managed storage".
+func TestResolveManagedConfigPath_ResolvesBareNameFromRoots(t *testing.T) {
+	first := t.TempDir()
+	second := t.TempDir()
+	path := writeFile(t, filepath.Join(second, "basic-network.yaml"))
+
+	got, err := config.ResolveManagedConfigPath("basic-network.yaml", []string{first, second})
+	if err != nil {
+		t.Fatalf("ResolveManagedConfigPath: %v", err)
+	}
+
+	want, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+	if got != want {
+		t.Errorf("resolved path = %q, want %q", got, want)
+	}
+}
+
+// TestResolveManagedConfigPath_BareNameTakesTheFirstRoot pins the precedence:
+// roots are searched in the order given, so a user config shadows a starter of
+// the same name rather than resolving arbitrarily.
+func TestResolveManagedConfigPath_BareNameTakesTheFirstRoot(t *testing.T) {
+	first := t.TempDir()
+	second := t.TempDir()
+	winner := writeFile(t, filepath.Join(first, "sim.yaml"))
+	writeFile(t, filepath.Join(second, "sim.yaml"))
+
+	got, err := config.ResolveManagedConfigPath("sim.yaml", []string{first, second})
+	if err != nil {
+		t.Fatalf("ResolveManagedConfigPath: %v", err)
+	}
+
+	want, err := filepath.EvalSymlinks(winner)
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+	if got != want {
+		t.Errorf("resolved path = %q, want %q", got, want)
+	}
+}
+
+// TestResolveManagedConfigPath_BareNameNotInAnyRootIsRefused keeps the
+// containment guarantee: searching the roots must not become a way to reach a
+// file the roots do not hold, including one sitting in the working directory.
+func TestResolveManagedConfigPath_BareNameNotInAnyRootIsRefused(t *testing.T) {
+	root := t.TempDir()
+	cwd := t.TempDir()
+	writeFile(t, filepath.Join(cwd, "elsewhere.yaml"))
+	t.Chdir(cwd)
+
+	got, err := config.ResolveManagedConfigPath("elsewhere.yaml", []string{root})
+	if !errors.Is(err, config.ErrPathOutsideManagedRoots) {
+		t.Fatalf("resolved %q with err %v, want ErrPathOutsideManagedRoots", got, err)
+	}
+}
