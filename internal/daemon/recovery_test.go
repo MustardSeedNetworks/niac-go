@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -272,8 +274,13 @@ func TestRecoverActiveSimulationReportsInvalidState(t *testing.T) {
 	daemon.recoverActiveSimulation()
 	status := daemon.GetStatus()
 	if status.Recovery == nil || status.Recovery.State != recoveryStateFailed ||
-		!strings.Contains(status.Recovery.Message, "decode recovery state") {
+		!strings.Contains(status.Recovery.Message, "decode") {
 		t.Fatalf("recovery status = %#v", status.Recovery)
+	}
+	// Truncated state is unreadable, so it is set aside for the same reason a
+	// stale schema is: whatever is left behind would poison every later start.
+	if _, statErr := os.Stat(recoveryPath); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("undecodable state left in place: stat err = %v", statErr)
 	}
 }
 
@@ -330,3 +337,104 @@ devices:
         network: lab
         address: 192.0.2.10/24
 `
+
+// An upgrade that bumps the recovery schema must carry the running sessions
+// forward, not strand them (#2092, owner 2026-09-12: "schema updates should
+// update"). Schema 3 added a per-session runtime generation; a schema 2 file
+// has everything else, so it migrates by minting one.
+func TestRecoveryStateMigratesSchemaTwoForward(t *testing.T) {
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	stale := `{"schemaVersion":2,"savedAt":"2026-09-01T00:00:00Z","sessions":[` +
+		`{"request":{"sessionId":"campus","interface":"eth0","configPath":"/tmp/campus.yaml"}}]}`
+	if writeErr := os.WriteFile(recoveryPath, []byte(stale), 0o600); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+
+	state, err := readRecoveryState(recoveryPath)
+	if err != nil {
+		t.Fatalf("readRecoveryState() error = %v, want a migrated state", err)
+	}
+	if state.SchemaVersion != activeSimulationSchemaVersion {
+		t.Errorf("SchemaVersion = %d, want %d", state.SchemaVersion, activeSimulationSchemaVersion)
+	}
+	if len(state.Sessions) != 1 {
+		t.Fatalf("got %d sessions, want 1", len(state.Sessions))
+	}
+	if state.Sessions[0].Request.SessionID != "campus" {
+		t.Errorf("SessionID = %q, want \"campus\"", state.Sessions[0].Request.SessionID)
+	}
+	// The migration has to mint a generation, because validation rejects an
+	// empty one and the whole point is that the session survives.
+	if !validRuntimeGeneration(state.Sessions[0].Generation) {
+		t.Errorf("Generation = %q, want a freshly minted one", state.Sessions[0].Generation)
+	}
+}
+
+// State this build cannot migrate is stale, not recoverable. It must be set
+// aside so the daemon carries on: leaving it in place made every later start
+// fail, and deploy-validate passed throughout that outage.
+func TestRecoverActiveSimulationQuarantinesUnmigratableState(t *testing.T) {
+	recoveryDir := t.TempDir()
+	recoveryPath := filepath.Join(recoveryDir, activeSimulationFileName)
+	stale := []byte(`{"schemaVersion":99,"savedAt":"2026-09-01T00:00:00Z","sessions":[]}`)
+	if writeErr := os.WriteFile(recoveryPath, stale, 0o600); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+
+	daemon := recoveryTestDaemon(t, recoveryPath)
+	daemon.recoverActiveSimulation()
+
+	if _, statErr := os.Stat(recoveryPath); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Fatalf("stale state left in place: stat err = %v", statErr)
+	}
+	matches, globErr := filepath.Glob(recoveryPath + ".unusable-*")
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("got %d quarantined copies, want 1", len(matches))
+	}
+	kept, readErr := os.ReadFile(matches[0])
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(kept) != string(stale) {
+		t.Error("quarantined copy does not match the original bytes")
+	}
+
+	status := daemon.GetStatus()
+	if status.Recovery == nil || status.Recovery.State != recoveryStateFailed {
+		t.Fatalf("recovery status = %#v", status.Recovery)
+	}
+	// The operator's next question is "where did it go", so the message answers
+	// it. The old wording told them to remove a file themselves.
+	for _, want := range []string{"set aside", filepath.Base(matches[0])} {
+		if !strings.Contains(status.Recovery.Message, want) {
+			t.Errorf("message %q does not mention %q", status.Recovery.Message, want)
+		}
+	}
+}
+
+// The defect in #2092 was not the refusal to recover — that part is correct —
+// but that the rejected file then poisoned the write path: persisting a new
+// session reads the existing file first, so every POST /api/v1/simulation
+// failed with a generic 500 until an operator moved the file by hand.
+func TestPersistingASessionSurvivesUnusableState(t *testing.T) {
+	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
+	if writeErr := os.WriteFile(
+		recoveryPath,
+		[]byte(`{"schemaVersion":99,"savedAt":"2026-09-01T00:00:00Z","sessions":[]}`),
+		0o600,
+	); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+
+	daemon := recoveryTestDaemon(t, recoveryPath)
+	requests, err := daemon.persistedSimulationRequests()
+	if err != nil {
+		t.Fatalf("persistedSimulationRequests() error = %v, want a fresh start", err)
+	}
+	if len(requests) != 0 {
+		t.Fatalf("got %d carried-over requests, want 0", len(requests))
+	}
+}
