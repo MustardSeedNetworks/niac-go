@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.56](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.55...v0.95.56) (2026-09-12)
+
+
+### Features
+
+* **scenario:** generate the pack parity table and stop descriptions restating counts ([#2087](https://github.com/MustardSeedNetworks/niac-go/issues/2087)) ([efe6d2e](https://github.com/MustardSeedNetworks/niac-go/commit/efe6d2e2ce23b047c61f64dc0cf273fcda33b482)), closes [#2086](https://github.com/MustardSeedNetworks/niac-go/issues/2086)
+* serve the routing table the consumer actually reads ([#2081](https://github.com/MustardSeedNetworks/niac-go/issues/2081)) ([1a6cad9](https://github.com/MustardSeedNetworks/niac-go/commit/1a6cad93f62b796ced5e225e47c987ade2848d77))
+
+
+### Bug Fixes
+
+* keep niac running across an RPM upgrade ([#2085](https://github.com/MustardSeedNetworks/niac-go/issues/2085)) ([a63a3fe](https://github.com/MustardSeedNetworks/niac-go/commit/a63a3fe43379002ec263947ba752e7b0b10f2f7d))
+
 ## [0.95.55](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.54...v0.95.55) (2026-09-12)
 
 
