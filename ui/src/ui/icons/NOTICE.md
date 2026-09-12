@@ -16,8 +16,12 @@ The symbols used, and the device type each serves:
 | `access_point` | `wifi_tethering` |
 | `firewall` | `security` |
 | `server` | `dns` |
+| `host` | `computer` |
 | `workstation` | `desktop_windows` |
 | `iot` | `sensors` |
+| `layer3-switch` | `account_tree` |
+| `printer` | `print` |
+| `voip-phone` | `phone_in_talk` |
 | `unknown` | `help` |
 
 The paths are unmodified; only the surrounding `<svg>` element is ours, so that

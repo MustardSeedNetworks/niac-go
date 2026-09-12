@@ -995,6 +995,21 @@
       "tooltipProtocols": "Protocols: {{protocols}}",
       "tooltipSummary": "{{label}} ({{type}})"
     },
+    "deviceTypes": {
+      "access-point": "Access Point",
+      "ap": "Access Point",
+      "firewall": "Firewall",
+      "host": "Host",
+      "iot": "IoT",
+      "layer3-switch": "Layer 3 Switch",
+      "printer": "Printer",
+      "router": "Router",
+      "server": "Server",
+      "switch": "Switch",
+      "unknown": "Unknown",
+      "voip-phone": "VoIP Phone",
+      "workstation": "Workstation"
+    },
     "header": {
       "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
       "graphTabLabel": "Graph",
@@ -1017,14 +1032,7 @@
     },
     "label": "Topology",
     "legend": {
-      "deviceTypeAccessPoint": "Access Point",
-      "deviceTypeFirewall": "Firewall",
-      "deviceTypeIot": "IoT",
-      "deviceTypeRouter": "Router",
-      "deviceTypeServer": "Server",
       "deviceTypesHeading": "Device Types",
-      "deviceTypeSwitch": "Switch",
-      "deviceTypeWorkstation": "Workstation",
       "directionDouble": "Bidirectional (trunk/LAG)",
       "directionHeading": "Direction",
       "directionSingle": "Single (access link)",

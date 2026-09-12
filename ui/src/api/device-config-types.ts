@@ -3,6 +3,7 @@
  * Core device interface and API request/response types
  */
 
+import type { AuthoredDevice } from '../components/device-editor/generated/authored-device.generated';
 import type {
   CDPConfig,
   EDPConfig,
@@ -136,25 +137,23 @@ export interface DeviceInterface {
 }
 
 /**
- * Every device type the UI knows, in the order operators see them.
+ * The device types an author may write, straight from the daemon's schema.
  *
- * The union below is derived from this tuple rather than declared beside it,
- * so a new type cannot be added to one and missed by the other — and the
- * icon/colour maps in constants/device-types.ts can be checked exhaustively
- * at runtime against the same list.
+ * This was a hand-written union that had drifted three values short of the
+ * `oneof` the daemon actually validates, so `layer3-switch`, `printer` and
+ * `voip-phone` drew a question mark while `access_point` — which this file
+ * called canonical — was rejected by `niac validate` (#2095). The schema is
+ * generated into `authored-device.generated.ts`; deriving from it means the
+ * two cannot disagree again.
  */
-export const DEVICE_TYPES = [
-  'router',
-  'switch',
-  'access_point',
-  'firewall',
-  'server',
-  'workstation',
-  'iot',
-  'unknown',
-] as const;
+export type AuthoredDeviceType = NonNullable<AuthoredDevice['type']>;
 
-export type DeviceType = (typeof DEVICE_TYPES)[number];
+/**
+ * What the UI draws for a device, which is the authored vocabulary plus the
+ * absent case. `type` is `omitempty`, so a device with no type is a real state
+ * the map has to render — but `unknown` is not a value anyone can author.
+ */
+export type DeviceType = AuthoredDeviceType | 'unknown';
 
 // ============================================================================
 // Device API Response Types

@@ -191,7 +191,10 @@
       "operationEffect": "Se ejecuta al inicio de la fase, incluida cada repetición. Restablecer la fase no deshace las operaciones. La recuperación omite las operaciones registradas en el último estado guardado; un fallo antes de guardar puede repetirlas. Los datos SNMP capturados se comprueban al iniciar la simulación.",
       "ineligibleOperation": "Elija un dispositivo con un agente SNMP habilitado. Los cambios de topología también requieren STP habilitado.",
       "duplicateOperation": "Elija un dispositivo y evite repetir la misma operación en ese dispositivo dentro de esta fase.",
-      "operations": { "reboot": "Reiniciar", "stp_topology_change": "Cambio de topología STP" },
+      "operations": {
+        "reboot": "Reiniciar",
+        "stp_topology_change": "Cambio de topología STP"
+      },
       "latencyMs": "Latency (milisegundos)",
       "addFault": "Agregar falla",
       "addPhase": "Agregar fase",
@@ -551,13 +554,6 @@
       "directionDouble": "Bidireccional (trunk/LAG)",
       "showLegend": "Mostrar leyenda",
       "legendHeading": "Leyenda",
-      "deviceTypeRouter": "Router",
-      "deviceTypeSwitch": "Switch",
-      "deviceTypeFirewall": "Firewall",
-      "deviceTypeServer": "Servidor",
-      "deviceTypeWorkstation": "Estación de trabajo",
-      "deviceTypeIot": "IoT",
-      "deviceTypeAccessPoint": "Punto de acceso",
       "hideLegend": "Ocultar leyenda"
     },
     "actionsMenu": {
@@ -617,6 +613,21 @@
       "rowSource": "Origen",
       "sourceDiscovered": "Detectado (LLDP/CDP/EDP/FDP)",
       "sourceDeclared": "Declarado (trunk_ports)"
+    },
+    "deviceTypes": {
+      "access-point": "Punto de acceso",
+      "ap": "Punto de acceso",
+      "firewall": "Firewall",
+      "host": "Host",
+      "iot": "IoT",
+      "layer3-switch": "Switch de capa 3",
+      "printer": "Impresora",
+      "router": "Router",
+      "server": "Servidor",
+      "switch": "Switch",
+      "unknown": "Desconocido",
+      "voip-phone": "Teléfono VoIP",
+      "workstation": "Estación de trabajo"
     }
   },
   "alerts": {

@@ -15,22 +15,6 @@
 import type { Device } from '../api/device-config-types';
 
 /**
- * UI device types mapped onto the daemon's `oneof` validation set.
- *
- * `unknown` is deliberately absent: the daemon does not accept it, so emitting
- * it fails validation. Omitting the key lets the rest of the device load.
- */
-const DAEMON_DEVICE_TYPE: Record<string, string> = {
-  router: 'router',
-  switch: 'switch',
-  access_point: 'access-point',
-  firewall: 'firewall',
-  server: 'server',
-  workstation: 'workstation',
-  iot: 'iot',
-};
-
-/**
  * A block's populated fields, or null when it has none.
  *
  * An empty block is emitted as a bare key — `dhcp:` — which unmarshals to a
@@ -119,7 +103,12 @@ export const toDaemonDevice = (device: Device): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
 
   put(out, 'name', device.hostname);
-  if (device.type) put(out, 'type', DAEMON_DEVICE_TYPE[device.type]);
+  // `DeviceType` is the daemon's own vocabulary plus `unknown`, which stands
+  // for an absent type and is not a value the daemon accepts — omitting the
+  // key lets the rest of the device load. This used to be a translation table
+  // that rewrote the UI's spelling on the way out, which is what let the two
+  // vocabularies drift apart unnoticed (#2095).
+  if (device.type && device.type !== 'unknown') put(out, 'type', device.type);
   put(out, 'mac', device.mac);
 
   // The daemon has no scalar `ip`; a single address is the first entry of

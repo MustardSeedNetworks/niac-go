@@ -15,6 +15,8 @@ import {
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { normalizeDeviceType } from '../constants/device-types';
+import { useDeviceTypeLabels } from '../hooks/useDeviceTypeLabels';
 import '@xyflow/react/dist/style.css';
 import { Network, Radar, RefreshCw } from 'lucide-react';
 import type { DeviceSummary } from '../api/types';
@@ -76,6 +78,7 @@ const edgeTypes: EdgeTypes = {
  */
 export const TopologyPage: FC = () => {
   const { t } = useTranslation('pages');
+  const deviceTypeLabels = useDeviceTypeLabels();
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const { sessionId } = useAppContext();
@@ -246,7 +249,7 @@ export const TopologyPage: FC = () => {
       if (hiddenDevices.has(device.name)) {
         return false;
       }
-      if (activeTypes.size > 0 && !activeTypes.has((device.type || 'unknown').toLowerCase())) {
+      if (activeTypes.size > 0 && !activeTypes.has(normalizeDeviceType(device.type))) {
         return false;
       }
       if (q && !device.name.toLowerCase().includes(q)) {
@@ -362,7 +365,9 @@ export const TopologyPage: FC = () => {
   const availableTypes = useMemo(() => {
     if (!devices) return [];
     const set = new Set<string>();
-    for (const d of devices) set.add((d.type || 'unknown').toLowerCase());
+    // Normalised, so `ap` and `access-point` — the same device, two spellings
+    // the schema both accepts — produce one chip rather than two identical ones.
+    for (const d of devices) set.add(normalizeDeviceType(d.type));
     return [...set].sort();
   }, [devices]);
 
@@ -690,13 +695,13 @@ export const TopologyPage: FC = () => {
                             ? t('topology.header.typeFilterHideTitle', { type })
                             : t('topology.header.typeFilterShowTitle', { type })
                         }
-                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors ${
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                           active
                             ? 'border-status-info/40 bg-status-info/20 text-status-info'
                             : 'border-surface-border bg-bg-base/40 text-text-muted hover:bg-surface-hover hover:text-text-primary'
                         }`}
                       >
-                        {type}
+                        {deviceTypeLabels[normalizeDeviceType(type)]}
                       </button>
                     );
                   })}

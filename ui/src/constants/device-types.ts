@@ -15,15 +15,20 @@
  */
 
 import type { FC } from 'react';
-import { DEVICE_TYPES, type DeviceType } from '../api/device-config-types';
+import type { AuthoredDeviceType, DeviceType } from '../api/device-config-types';
+import { DEVICE_TYPES } from '../components/device-editor/generated/sections.generated';
 import {
   AccessPointSymbol,
   FirewallSymbol,
+  HostSymbol,
   IotSymbol,
+  Layer3SwitchSymbol,
+  PrinterSymbol,
   RouterSymbol,
   ServerSymbol,
   SwitchSymbol,
   UnknownSymbol,
+  VoipPhoneSymbol,
   WorkstationSymbol,
 } from '../ui/icons/deviceSymbols';
 
@@ -40,11 +45,16 @@ type IconComponent = FC<{ className?: string }>;
 export const deviceTypeIcons: Record<DeviceType, IconComponent> = {
   router: RouterSymbol,
   switch: SwitchSymbol,
-  access_point: AccessPointSymbol,
+  'layer3-switch': Layer3SwitchSymbol,
+  ap: AccessPointSymbol,
+  'access-point': AccessPointSymbol,
   firewall: FirewallSymbol,
   server: ServerSymbol,
+  host: HostSymbol,
   workstation: WorkstationSymbol,
   iot: IotSymbol,
+  printer: PrinterSymbol,
+  'voip-phone': VoipPhoneSymbol,
   unknown: UnknownSymbol,
 };
 
@@ -53,11 +63,19 @@ export const deviceTypeIcons: Record<DeviceType, IconComponent> = {
  * canonical type. Lookup is case-insensitive, so only distinct spellings
  * belong here — not capitalisation variants.
  */
-const deviceTypeAliases: Record<string, DeviceType> = {
-  ap: 'access_point',
-  'access-point': 'access_point',
-  accesspoint: 'access_point',
-  host: 'workstation',
+const deviceTypeAliases: Record<string, AuthoredDeviceType> = {
+  // `ap` is a schema value in its own right, not a misspelling — the schema
+  // accepts both spellings for one device. Folding it here rather than letting
+  // it pass through is what stops the UI offering two identical "Access Point"
+  // filters for what an operator thinks of as one kind of device.
+  ap: 'access-point',
+  // The runtime's own LLDP/CDP capability switches accept these spellings
+  // (internal/protocols/lldp.go, cdp.go), so the map does too.
+  access_point: 'access-point',
+  accesspoint: 'access-point',
+  'wireless-ap': 'access-point',
+  wireless_ap: 'access-point',
+  phone: 'voip-phone',
   pc: 'workstation',
   client: 'workstation',
 };
@@ -71,11 +89,15 @@ export function normalizeDeviceType(raw: string | undefined | null): DeviceType 
   if (!raw) {
     return 'unknown';
   }
+  // Aliases resolve first: some of them, like `ap`, are themselves schema
+  // values, so a membership check ahead of this would pass them through
+  // unfolded.
   const lowered = raw.toLowerCase();
-  if ((DEVICE_TYPES as readonly string[]).includes(lowered)) {
-    return lowered as DeviceType;
+  const alias = deviceTypeAliases[lowered];
+  if (alias !== undefined) {
+    return alias;
   }
-  return deviceTypeAliases[lowered] ?? 'unknown';
+  return DEVICE_TYPES.includes(lowered) ? (lowered as AuthoredDeviceType) : 'unknown';
 }
 
 /**
@@ -89,11 +111,16 @@ export type TagColorScheme = 'blue' | 'green' | 'purple' | 'yellow' | 'red' | 'g
 export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
   router: 'blue',
   switch: 'green',
-  access_point: 'purple',
+  'layer3-switch': 'green',
+  ap: 'purple',
+  'access-point': 'purple',
   firewall: 'red',
   server: 'yellow',
+  host: 'gray',
   workstation: 'gray',
   iot: 'purple',
+  printer: 'yellow',
+  'voip-phone': 'blue',
   unknown: 'gray',
 };
 
@@ -104,11 +131,16 @@ export const deviceTypeColors: Record<DeviceType, TagColorScheme> = {
 export const topologyDeviceColors: Record<DeviceType, string> = {
   router: 'var(--color-device-router)',
   switch: 'var(--color-device-switch)',
-  access_point: 'var(--color-device-ap)',
+  'layer3-switch': 'var(--color-device-layer3-switch)',
+  ap: 'var(--color-device-ap)',
+  'access-point': 'var(--color-device-ap)',
   firewall: 'var(--color-device-firewall)',
   server: 'var(--color-device-server)',
+  host: 'var(--color-device-host)',
   workstation: 'var(--color-device-workstation)',
   iot: 'var(--color-device-iot)',
+  printer: 'var(--color-device-printer)',
+  'voip-phone': 'var(--color-device-voip-phone)',
   unknown: 'var(--color-device-unknown)',
 };
 
@@ -118,11 +150,14 @@ export const topologyDeviceColors: Record<DeviceType, string> = {
 export const deviceTypeOptions: { value: DeviceType; label: string }[] = [
   { value: 'router', label: 'Router' },
   { value: 'switch', label: 'Switch' },
-  { value: 'access_point', label: 'Access Point' },
+  { value: 'layer3-switch', label: 'Layer 3 Switch' },
+  { value: 'access-point', label: 'Access Point' },
   { value: 'firewall', label: 'Firewall' },
   { value: 'server', label: 'Server' },
   { value: 'workstation', label: 'Workstation' },
   { value: 'iot', label: 'IoT Device' },
+  { value: 'printer', label: 'Printer' },
+  { value: 'voip-phone', label: 'VoIP Phone' },
   { value: 'unknown', label: 'Unknown' },
 ];
 
