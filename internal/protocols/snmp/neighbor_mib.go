@@ -86,6 +86,33 @@ const (
 	ipRouteInfo    = ipRouteEntry + ".12"
 	ipRouteMetric5 = ipRouteEntry + ".13"
 
+	// ipCidrRouteTable (1.3.6.1.2.1.4.24.4), RFC 2096. The table a real
+	// consumer reads: seed's routing collector walks exactly this prefix, and
+	// its own package doc says the RFC 4292 table "lands when an IPv6 customer
+	// asks for it". Serving only .21 and .7 meant seed saw a router with no
+	// routes at all.
+	//
+	// Unlike RFC 4292, the four index columns here are accessible, and a real
+	// device returns all sixteen (zte-zxr10-ros-01 in the walk corpus).
+	ipCidrRouteTable     = ipForwardMIB + ".4"
+	ipCidrRouteEntry     = ipCidrRouteTable + ".1"
+	ipCidrRouteDest      = ipCidrRouteEntry + ".1"
+	ipCidrRouteMask      = ipCidrRouteEntry + ".2"
+	ipCidrRouteTos       = ipCidrRouteEntry + ".3"
+	ipCidrRouteNextHop   = ipCidrRouteEntry + ".4"
+	ipCidrRouteIfIndex   = ipCidrRouteEntry + ".5"
+	ipCidrRouteType      = ipCidrRouteEntry + ".6"
+	ipCidrRouteProto     = ipCidrRouteEntry + ".7"
+	ipCidrRouteAge       = ipCidrRouteEntry + ".8"
+	ipCidrRouteInfo      = ipCidrRouteEntry + ".9"
+	ipCidrRouteNextHopAS = ipCidrRouteEntry + ".10"
+	ipCidrRouteMetric1   = ipCidrRouteEntry + ".11"
+	ipCidrRouteMetric2   = ipCidrRouteEntry + ".12"
+	ipCidrRouteMetric3   = ipCidrRouteEntry + ".13"
+	ipCidrRouteMetric4   = ipCidrRouteEntry + ".14"
+	ipCidrRouteMetric5   = ipCidrRouteEntry + ".15"
+	ipCidrRouteStatus    = ipCidrRouteEntry + ".16"
+
 	// inetCidrRouteTable (1.3.6.1.2.1.4.24.7), RFC 4292. The current routing
 	// table: a manager doing path analysis reads this one, and ipRouteTable
 	// above is deprecated. Columns 1-6 are the INDEX and not-accessible, so
