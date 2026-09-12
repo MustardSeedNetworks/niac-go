@@ -7,6 +7,7 @@
 devices:
   # IoT Gateway
   - name: iot-gateway
+    type: router
     mac: "00:AA:BB:CC:01:01"
     ips:
       - "192.168.100.1"
@@ -30,6 +31,7 @@ devices:
 
   # Temperature Sensor 1
   - name: temp-sensor-01
+    type: iot
     mac: "00:AA:BB:CC:10:01"
     ips:
       - "192.168.100.10"
@@ -44,6 +46,7 @@ devices:
 
   # Motion Sensor
   - name: motion-sensor-01
+    type: iot
     mac: "00:AA:BB:CC:20:01"
     ips:
       - "192.168.100.20"
@@ -57,6 +60,7 @@ devices:
 
   # Smart Light
   - name: smart-light-01
+    type: iot
     mac: "00:AA:BB:CC:30:01"
     ips:
       - "192.168.100.30"
@@ -70,6 +74,7 @@ devices:
 
   # Smart Thermostat
   - name: thermostat-01
+    type: iot
     mac: "00:AA:BB:CC:40:01"
     ips:
       - "192.168.100.40"
@@ -83,6 +88,7 @@ devices:
 
   # IP Camera
   - name: camera-01
+    type: iot
     mac: "00:AA:BB:CC:50:01"
     ips:
       - "192.168.100.50"
@@ -96,6 +102,7 @@ devices:
 
   # IoT Hub
   - name: iot-hub
+    type: iot
     mac: "00:AA:BB:CC:99:01"
     ips:
       - "192.168.100.100"

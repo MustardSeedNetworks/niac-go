@@ -7,6 +7,7 @@
 devices:
   # Gateway Router
   - name: office-router
+    type: router
     mac: "00:50:56:A1:01:01"
     ips:
       - "192.168.10.1"
@@ -29,6 +30,7 @@ devices:
 
   # Core Switch
   - name: office-switch
+    type: switch
     mac: "00:50:56:A1:02:01"
     ips:
       - "192.168.10.2"
@@ -47,6 +49,7 @@ devices:
 
   # Wireless Access Point
   - name: office-ap-01
+    type: access-point
     mac: "00:50:56:A1:03:01"
     ips:
       - "192.168.10.10"
@@ -61,6 +64,7 @@ devices:
 
   # DHCP and DNS Server
   - name: office-server
+    type: server
     mac: "00:50:56:A1:10:01"
     ips:
       - "192.168.10.100"

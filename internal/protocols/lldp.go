@@ -466,6 +466,13 @@ func (h *LLDPHandler) buildSystemCapabilitiesTLV(device *config.Device) []byte {
 	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = LLDPCapWLANAP | LLDPCapBridge
 		enabled = LLDPCapWLANAP
+	case "firewall":
+		// A firewall forwards IP, so it is a router to a neighbour's eyes. It
+		// used to fall through to the default and advertise station-only,
+		// which told every discovery tool the opposite (#2096). Bridge is not
+		// claimed: transparent mode exists, but nothing here models it.
+		capabilities = LLDPCapRouter
+		enabled = LLDPCapRouter
 	case "phone", "voip-phone":
 		capabilities = LLDPCapTelephone | LLDPCapStationOnly
 		enabled = LLDPCapTelephone
