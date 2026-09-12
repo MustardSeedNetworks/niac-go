@@ -16,7 +16,7 @@ Demand: 1214 distinct (OID, PDU) pairs from `consumer-oid-demand.tsv`.
 Demand is grouped by registration authority: one group per MIB-II group,
 one per enterprise, five arcs for everything else.
 
-530 of them no walk serves and the agent does: live state such as
+535 of them no walk serves and the agent does: live state such as
 `ipNetToMediaTable`, which `arp_topology.go` fills from authoritative fleet
 bindings on a forwarding device. Those are not capture holes and are listed
 apart from the ones that are.
@@ -31,6 +31,7 @@ read as capture coverage and nothing else.
 | `.1.3.6.1.2.1.4.22` | 301 |
 | `.1.3.6.1.2.1.4.21` | 151 |
 | `.1.3.6.1.2.1.4.20` | 78 |
+| `.1.3.6.1.2.1.4.24` | 5 |
 
 ## Demand neither the agent nor any shipped walk answers
 
@@ -38,9 +39,6 @@ These are holes in the shipped set, not in any one walk.
 
 | Subtree | Distinct demands |
 | --- | --- |
-| `.1.3.6.1.4.1.9.5` | 9 |
-| `.1.3.6.1.4.1.9.10` | 8 |
-| `.1.3.6.1.2.1.4.24` | 5 |
 | `.1.3.6.1.2.1.68.1` | 5 |
 | `.1.3.6.1.4.1.14179.1` | 5 |
 | `.1.3.6.1.4.1.14823.2` | 2 |
@@ -67,6 +65,9 @@ the two columns answer different questions and a pack needs both.
 
 | Walk | Served OIDs | Group present | Verbatim | Largest holes |
 | --- | --- | --- | --- | --- |
+| cisco-c3750-03.walk | 66796 | 608 / 1214 | 142 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.2.1.4.20` (78) |
+| cisco-c3560-01-r58.walk | 31787 | 606 / 1214 | 130 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.2.1.4.20` (78) |
+| cisco-c3750-02-r64.walk | 32202 | 606 / 1214 | 129 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.2.1.4.20` (78) |
 | mikrotik-routeros-7161-chr.walk | 588 | 539 / 1214 | 76 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.2.1.4.20` (78) |
 | brocade-icx6610-24f-01.walk | 23067 | 523 / 1214 | 364 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | 3com-superstack-03.walk | 16115 | 446 / 1214 | 97 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
@@ -75,16 +76,16 @@ the two columns answer different questions and a pack needs both.
 | vmware-esxi-01.walk | 4202 | 352 / 1214 | 322 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | netgear-gsm7212-managed-01.walk | 1319 | 341 / 1214 | 166 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | oracle-linux-01.walk | 8861 | 339 / 1214 | 125 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
-| cisco-c2948-01.walk | 208 | 337 / 1214 | 45 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
+| fortinet-fs-548d-fpoe-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | hpe-aruba-2930f-48g-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
+| extreme-x465-48w-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | juniper-qfx5100-48s-01.walk | 414 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | meraki-ms425-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
-| fortinet-fs-548d-fpoe-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
-| extreme-x465-48w-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | dell-s5248f-on-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
+| cisco-c2948-01.walk | 208 | 337 / 1214 | 45 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | paloalto-pa-01.walk | 202 | 337 / 1214 | 87 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
-| aruba-cx8360-48y8c-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 | arista-7280sr3-48yc8-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
+| aruba-cx8360-48y8c-01.walk | 412 | 337 / 1214 | 103 | `.1.3.6.1.2.1.4.22` (301), `.1.3.6.1.2.1.4.21` (151), `.1.3.6.1.4.1.9.9` (99) |
 
 ## Per catalog role
 
@@ -94,12 +95,12 @@ says which capture would suit the role, not which one it uses.
 
 | Role | Distinct demands | Best walk | Answered |
 | --- | --- | --- | --- |
-| access-point | 164 | mikrotik-routeros-7161-chr.walk | 112 |
-| firewall | 350 | mikrotik-routeros-7161-chr.walk | 221 |
-| host | 111 | mikrotik-routeros-7161-chr.walk | 76 |
-| iot | 111 | mikrotik-routeros-7161-chr.walk | 76 |
-| layer3-switch | 841 | mikrotik-routeros-7161-chr.walk | 453 |
-| printer | 111 | mikrotik-routeros-7161-chr.walk | 76 |
-| router | 437 | mikrotik-routeros-7161-chr.walk | 256 |
-| server | 174 | mikrotik-routeros-7161-chr.walk | 122 |
-| switch | 667 | mikrotik-routeros-7161-chr.walk | 511 |
+| access-point | 164 | cisco-c3750-03.walk | 134 |
+| firewall | 350 | cisco-c3750-03.walk | 226 |
+| host | 111 | cisco-c3750-03.walk | 81 |
+| iot | 111 | cisco-c3750-03.walk | 81 |
+| layer3-switch | 841 | cisco-c3750-03.walk | 475 |
+| printer | 111 | cisco-c3750-03.walk | 81 |
+| router | 437 | cisco-c3750-03.walk | 278 |
+| server | 174 | cisco-c3750-03.walk | 144 |
+| switch | 667 | cisco-c3750-03.walk | 580 |
