@@ -5,6 +5,35 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.57](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.56...v0.95.57) (2026-09-12)
+
+
+### Features
+
+* **api:** inject a device action from the problems screen ([#2093](https://github.com/MustardSeedNetworks/niac-go/issues/2093)) ([cc37063](https://github.com/MustardSeedNetworks/niac-go/commit/cc370635110ebc89aaa522d776f4c6e7e27edd3d))
+* **scenario:** author faults the scenario starts in ([#2090](https://github.com/MustardSeedNetworks/niac-go/issues/2090)) ([e499a45](https://github.com/MustardSeedNetworks/niac-go/commit/e499a45c5a1b7d3f21debb0e45cc65883911ed48))
+* **scenario:** give every pack one finding, and assert each on the wire ([#2108](https://github.com/MustardSeedNetworks/niac-go/issues/2108)) ([40a8432](https://github.com/MustardSeedNetworks/niac-go/commit/40a8432f9569a5c908441c64378b09da167e9b95))
+* **scenario:** point every pack's devices at a collector ([#2109](https://github.com/MustardSeedNetworks/niac-go/issues/2109)) ([5708d54](https://github.com/MustardSeedNetworks/niac-go/commit/5708d54c8819ec596db228b3cb28849579143141)), closes [#2105](https://github.com/MustardSeedNetworks/niac-go/issues/2105)
+* **snmp:** read snmpsim recordings alongside net-snmp walks ([#2099](https://github.com/MustardSeedNetworks/niac-go/issues/2099)) ([5e28b67](https://github.com/MustardSeedNetworks/niac-go/commit/5e28b67dca35ed6f208dd711d7a9c3ee6f2d1e38))
+
+
+### Bug Fixes
+
+* **capture:** recognise Windows adapter names ([#2118](https://github.com/MustardSeedNetworks/niac-go/issues/2118)) ([ad2db16](https://github.com/MustardSeedNetworks/niac-go/commit/ad2db16da7078cd23986ed95b07e2472b9be5924)), closes [#2117](https://github.com/MustardSeedNetworks/niac-go/issues/2117)
+* **daemon:** migrate recovery state forward instead of stranding a start ([#2102](https://github.com/MustardSeedNetworks/niac-go/issues/2102)) ([95bfbd4](https://github.com/MustardSeedNetworks/niac-go/commit/95bfbd48fdc5e6810c7ccc427f05116552b9b918)), closes [#2092](https://github.com/MustardSeedNetworks/niac-go/issues/2092)
+* stop a silent device owning a neighbour it never discovered ([#2116](https://github.com/MustardSeedNetworks/niac-go/issues/2116)) ([6037ac9](https://github.com/MustardSeedNetworks/niac-go/commit/6037ac9e70fcb2e1cfed9caa8f954de53f7a12c0)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+* stop simulated infrastructure announcing itself as end stations ([#2101](https://github.com/MustardSeedNetworks/niac-go/issues/2101)) ([ce0c1ce](https://github.com/MustardSeedNetworks/niac-go/commit/ce0c1ce1e1fbded373b48c4746109ac0fbfe0972)), closes [#2096](https://github.com/MustardSeedNetworks/niac-go/issues/2096)
+* **ui:** draw every device type the daemon accepts ([#2100](https://github.com/MustardSeedNetworks/niac-go/issues/2100)) ([18e8eda](https://github.com/MustardSeedNetworks/niac-go/commit/18e8edafa9f340ca78569a228c04ed5af76f76d4)), closes [#2095](https://github.com/MustardSeedNetworks/niac-go/issues/2095)
+* **ui:** pack a device's leaves beneath it so the graph fits a screen ([#2110](https://github.com/MustardSeedNetworks/niac-go/issues/2110)) ([7e7c133](https://github.com/MustardSeedNetworks/niac-go/commit/7e7c133e91a9dbd2ff51b29832f3e84831f95e40))
+* **ui:** place every edge label with the whole graph in view ([#2112](https://github.com/MustardSeedNetworks/niac-go/issues/2112)) ([5c55164](https://github.com/MustardSeedNetworks/niac-go/commit/5c551644763b7e196d525f91a85450ba491ec656))
+* **ui:** stop topology edge labels landing on each other and on devices ([#2103](https://github.com/MustardSeedNetworks/niac-go/issues/2103)) ([1b1a158](https://github.com/MustardSeedNetworks/niac-go/commit/1b1a1583523472f1c2ee1c0031e669b4669b8da7)), closes [#2097](https://github.com/MustardSeedNetworks/niac-go/issues/2097)
+* **ui:** wrap a rank too wide for a screen ([#2111](https://github.com/MustardSeedNetworks/niac-go/issues/2111)) ([ebdef55](https://github.com/MustardSeedNetworks/niac-go/commit/ebdef55910eb449377c130afe701994f91bd274b)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
+
+### Code Refactoring
+
+* give device types one vocabulary instead of twelve ([#2115](https://github.com/MustardSeedNetworks/niac-go/issues/2115)) ([a1262a0](https://github.com/MustardSeedNetworks/niac-go/commit/a1262a05bc3d0d24da7012f616e83d18ab132b6c)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
 ## [0.95.56](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.55...v0.95.56) (2026-09-12)
 
 
