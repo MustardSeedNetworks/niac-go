@@ -324,6 +324,9 @@ type Device struct {
 	// behaviour phases target by name.
 	Interfaces []Interface `yaml:"interfaces,omitempty" validate:"omitempty,dive"`
 
+	// Faults are the device-service conditions this device starts in.
+	Faults []DeviceFault `yaml:"faults,omitempty" validate:"omitempty,max=16,dive"`
+
 	// Routes are static IPv4 routes this device advertises and forwards on.
 	Routes []Route `yaml:"routes,omitempty" validate:"omitempty,dive"`
 
@@ -395,6 +398,34 @@ type Interface struct {
 
 	// VLANs are the VLAN ids carried on this port when it is a switch port.
 	VLANs []int `yaml:"vlans,omitempty"`
+
+	// Faults are the conditions this interface starts in. They are armed before
+	// the simulation serves anything, so a scenario can describe a network that
+	// is already broken rather than one that breaks on a schedule.
+	Faults []InterfaceFault `yaml:"faults,omitempty" validate:"omitempty,max=16,dive"`
+}
+
+// InterfaceFault is one authored interface condition. Scope is structural: a
+// fault listed under an interface is interface-scoped, so nothing has to name
+// the interface again and a device-service outcome cannot be written here.
+type InterfaceFault struct {
+	// Type is the interface fault to arm.
+	Type string `yaml:"type" validate:"required,oneof=fcs_errors packet_discards interface_errors high_utilization link_down poe_loss"`
+
+	// Value is the rate, 1..100. Omit it for link_down and poe_loss: a dead
+	// link has no magnitude, and a number there would imply one.
+	Value *int `yaml:"value,omitempty" validate:"omitempty,gte=1,lte=100"`
+}
+
+// DeviceFault is one authored device-service condition. A service outage has no
+// interface to be keyed by, which is why it is listed on the device.
+type DeviceFault struct {
+	// Type is the device fault to arm.
+	Type string `yaml:"type" validate:"required,oneof=dhcp_no_offer dns_nxdomain dns_timeout latency cpu_percent memory_percent disk_percent captive_portal"`
+
+	// Value is the rate, or for latency the delay in milliseconds. The ceiling
+	// is the fault's own: 100 for a rate, 60000 for latency.
+	Value *int `yaml:"value,omitempty" validate:"omitempty,gte=1,lte=60000"`
 }
 
 // Route declares an IPv4 static route through a named device interface.

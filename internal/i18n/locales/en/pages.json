@@ -464,6 +464,7 @@
         "interface_errors": "Interface errors",
         "latency": "Latency",
         "link_down": "Link down",
+        "poe_loss": "PoE loss",
         "memory_percent": "Memory utilization",
         "packet_discards": "Packet discards"
       },

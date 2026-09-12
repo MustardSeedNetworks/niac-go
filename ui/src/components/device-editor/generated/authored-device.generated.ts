@@ -348,6 +348,14 @@ export interface AuthoredDevice {
       readonly in_utilization?: number;
       readonly out_utilization?: number;
       readonly vlans?: readonly number[];
+      readonly faults?: readonly {
+          readonly type?: 'fcs_errors' | 'packet_discards' | 'interface_errors' | 'high_utilization' | 'link_down' | 'poe_loss';
+          readonly value?: number;
+        }[];
+    }[];
+  readonly faults?: readonly {
+      readonly type?: 'dhcp_no_offer' | 'dns_nxdomain' | 'dns_timeout' | 'latency' | 'cpu_percent' | 'memory_percent' | 'disk_percent' | 'captive_portal';
+      readonly value?: number;
     }[];
   readonly routes?: readonly {
       readonly destination?: string;

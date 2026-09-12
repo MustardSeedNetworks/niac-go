@@ -267,6 +267,7 @@ func newStack(
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
 	stack.configureDeviceStates(nil)
+	stack.applyAuthoredFaults(cfg)
 	stack.configureBehaviorTimelines(cfg)
 
 	return stack
@@ -529,6 +530,11 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	} else {
 		s.configureDeviceStates(nil)
 	}
+
+	// A reload rebuilds every device store from scratch, so the authored
+	// conditions have to be re-armed or the running scenario would quietly
+	// stop matching its own configuration.
+	s.applyAuthoredFaults(cfg)
 
 	if s.neighbors != nil {
 		s.neighbors.reset()
