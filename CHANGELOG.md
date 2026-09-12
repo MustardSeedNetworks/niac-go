@@ -5,6 +5,21 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.57](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.56...v0.95.57) (2026-09-12)
+
+
+### Features
+
+* **api:** inject a device action from the problems screen ([#2093](https://github.com/MustardSeedNetworks/niac-go/issues/2093)) ([cc37063](https://github.com/MustardSeedNetworks/niac-go/commit/cc370635110ebc89aaa522d776f4c6e7e27edd3d))
+* **scenario:** author faults the scenario starts in ([#2090](https://github.com/MustardSeedNetworks/niac-go/issues/2090)) ([e499a45](https://github.com/MustardSeedNetworks/niac-go/commit/e499a45c5a1b7d3f21debb0e45cc65883911ed48))
+* **snmp:** read snmpsim recordings alongside net-snmp walks ([#2099](https://github.com/MustardSeedNetworks/niac-go/issues/2099)) ([5e28b67](https://github.com/MustardSeedNetworks/niac-go/commit/5e28b67dca35ed6f208dd711d7a9c3ee6f2d1e38))
+
+
+### Bug Fixes
+
+* stop simulated infrastructure announcing itself as end stations ([#2101](https://github.com/MustardSeedNetworks/niac-go/issues/2101)) ([ce0c1ce](https://github.com/MustardSeedNetworks/niac-go/commit/ce0c1ce1e1fbded373b48c4746109ac0fbfe0972)), closes [#2096](https://github.com/MustardSeedNetworks/niac-go/issues/2096)
+* **ui:** stop topology edge labels landing on each other and on devices ([#2103](https://github.com/MustardSeedNetworks/niac-go/issues/2103)) ([1b1a158](https://github.com/MustardSeedNetworks/niac-go/commit/1b1a1583523472f1c2ee1c0031e669b4669b8da7)), closes [#2097](https://github.com/MustardSeedNetworks/niac-go/issues/2097)
+
 ## [0.95.56](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.55...v0.95.56) (2026-09-12)
 
 
