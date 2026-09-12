@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/netip"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
@@ -15,8 +17,7 @@ func validateBehaviorMask(targets map[string]behaviorTarget, fault BehaviorFault
 		return fmt.Errorf("%w: bad_mask requires only prefix_bits from 0 through 32", ErrBehaviorFaultValue)
 	}
 	device := targets[fault.Device].device
-	switch device.Type {
-	case "router", "layer3-switch", "firewall":
+	if deviceclass.RoutesIP(deviceclass.Parse(device.Type)) {
 		return fmt.Errorf("%w: bad_mask requires a host interface", ErrBehaviorFaultScope)
 	}
 	for _, iface := range device.Interfaces {

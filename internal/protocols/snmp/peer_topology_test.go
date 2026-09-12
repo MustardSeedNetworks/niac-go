@@ -307,8 +307,11 @@ func TestCDPPeerCapabilitiesMatchDeviceAdvertisement(t *testing.T) {
 		{deviceType: "router", want: []byte{0, 0, 0, 0x21}},
 		{deviceType: "layer3-switch", want: []byte{0, 0, 0, 0x29}},
 		{deviceType: "access-point", want: []byte{0, 0, 0, 0x28}},
-		{deviceType: "firewall", want: []byte{0, 0, 0, 0x10}},
-		{deviceType: "voip_phone", want: []byte{0, 0, 0, 0x10}},
+		// A firewall routes; it used to have no case here and fall to host,
+		// the same hole the LLDP and CDP TLVs carried (#2096). These two
+		// expectations pinned that hole rather than catching it.
+		{deviceType: "firewall", want: []byte{0, 0, 0, 0x01}},
+		{deviceType: "voip_phone", want: []byte{0, 0, 0, 0x90}},
 		{deviceType: "custom", want: []byte{0, 0, 0, 0x10}},
 	}
 	for _, tt := range tests {

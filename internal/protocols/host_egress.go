@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/netip"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
+
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
@@ -20,12 +22,7 @@ type hostEgressRoute struct {
 }
 
 func hostMaskRole(device *config.Device) bool {
-	switch device.Type {
-	case "router", "layer3-switch", "firewall":
-		return false
-	default:
-		return true
-	}
+	return !deviceclass.RoutesIP(deviceclass.Parse(device.Type))
 }
 
 func (s *Stack) hostPacketRoute(packet *Packet) (hostEgressRoute, bool, error) {

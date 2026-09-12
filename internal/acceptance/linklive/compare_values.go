@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 )
 
 func contains(values []string, want string) bool {
@@ -30,17 +32,19 @@ func normalizeHostname(value string) string {
 }
 
 func displayedType(deviceType string) string {
-	switch deviceType {
-	case "switch", "layer3-switch":
+	switch deviceclass.Parse(deviceType) {
+	case deviceclass.Switch, deviceclass.Layer3Switch:
 		return "Switch"
-	case "router", "firewall":
+	case deviceclass.Router, deviceclass.Firewall:
 		return "Router"
-	case "ap", "access-point":
+	case deviceclass.AP, deviceclass.AccessPoint:
 		return "AP"
-	case "host", "workstation", "iot":
+	case deviceclass.Host, deviceclass.Workstation, deviceclass.IoT:
 		return "Host/Client"
-	case "printer":
+	case deviceclass.Printer:
 		return "Printer"
+	case deviceclass.Server, deviceclass.VoipPhone, deviceclass.Unknown:
+		return ""
 	default:
 		return ""
 	}

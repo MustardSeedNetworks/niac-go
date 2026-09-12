@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 )
 
 var profileRoleRE = regexp.MustCompile(`^[a-z][a-z0-9-]{1,47}$`)
@@ -81,10 +83,21 @@ func validProfileWalk(name string) bool {
 		!strings.Contains(name, "..") && !strings.Contains(name, `\`)
 }
 
+// validProfileDeviceType reports whether a walk profile may claim this device
+// type. It is deliberately a subset of the schema vocabulary — a profile
+// describes a captured device, and nothing has ever captured a `layer3-switch`
+// or an `iot` into one. Parsing through deviceclass means the subset is
+// expressed in the same vocabulary as everything else rather than a fourth
+// list of spellings.
 func validProfileDeviceType(deviceType string) bool {
-	switch deviceType {
-	case "switch", "router", "firewall", "access-point", "host", "server", "voip-phone", "printer":
+	switch deviceclass.Parse(deviceType) {
+	case deviceclass.Switch, deviceclass.Router, deviceclass.Firewall,
+		deviceclass.AccessPoint, deviceclass.Host, deviceclass.Server,
+		deviceclass.VoipPhone, deviceclass.Printer:
 		return true
+	case deviceclass.AP, deviceclass.Layer3Switch, deviceclass.Workstation,
+		deviceclass.IoT, deviceclass.Unknown:
+		return false
 	default:
 		return false
 	}
