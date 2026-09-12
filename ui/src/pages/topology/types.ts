@@ -29,6 +29,20 @@ export interface LinkEdgeData extends Record<string, unknown> {
   sourceInterface?: string;
   /** Local interface name on the edge's target device (e.g. "Gi0/1"). */
   targetInterface?: string;
+  /**
+   * This edge's position among the edges sharing its source (or target)
+   * device, counting from zero.
+   *
+   * Every edge used to place its interface labels at a fixed fraction of its
+   * own length. Edges leaving one device therefore put their labels at the
+   * same radius around it and landed on top of each other — a switch with four
+   * downlinks produced four overlapping interface names. The index is assigned
+   * in `createEdges`, the only place that can see an edge's siblings; what it
+   * means in pixels is decided by the edge, the only place that knows how long
+   * it is.
+   */
+  sourceSiblingIndex?: number;
+  targetSiblingIndex?: number;
   linkType?: 'trunk' | 'access' | 'lag' | 'standard';
   status?: 'up' | 'down' | 'degraded';
   /** When false, the custom edge component hides all its labels —

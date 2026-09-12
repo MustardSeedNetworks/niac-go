@@ -261,3 +261,41 @@ describe('utilisation styling', () => {
     expect(edge.style.strokeWidth).toBe(3);
   });
 });
+
+describe('createEdges — interface label crowding', () => {
+  // Every edge used to place its interface labels at a fixed fraction of its
+  // own length, so the edges touching one device put their labels at the same
+  // radius around it and overlapped. Measured on a graph with three switches
+  // fanning out to eleven devices: 8 overlapping label pairs before, 0 after.
+  const links: TopologyLink[] = [
+    { source: 'core-sw-01', target: 'dist-sw-01', label: 'a' },
+    { source: 'dist-sw-01', target: 'ap-01', label: 'b' },
+    { source: 'dist-sw-01', target: 'ap-02', label: 'c' },
+    { source: 'dist-sw-01', target: 'ap-03', label: 'd' },
+  ];
+
+  it('gives the edges leaving one device a distinct row each', () => {
+    const edges = createEdges(links);
+    const rows = edges.slice(1).map((edge) => edge.data?.sourceSiblingIndex);
+
+    expect(rows).toEqual([1, 2, 3]);
+    expect(new Set(rows).size).toBe(rows.length);
+  });
+
+  // The label of an edge arriving at a device sits in the same place as the
+  // label of an edge leaving it, so the two ends share one sequence. Counting
+  // them separately put an arriving label on top of a departing one.
+  it('counts arriving and departing edges against the same device', () => {
+    const edges = createEdges(links);
+
+    expect(edges[0]?.data?.targetSiblingIndex).toBe(0);
+    expect(edges[1]?.data?.sourceSiblingIndex).toBe(1);
+  });
+
+  it('starts a fresh sequence at each device', () => {
+    const edges = createEdges(links);
+
+    expect(edges[1]?.data?.targetSiblingIndex).toBe(0);
+    expect(edges[2]?.data?.targetSiblingIndex).toBe(0);
+  });
+});
