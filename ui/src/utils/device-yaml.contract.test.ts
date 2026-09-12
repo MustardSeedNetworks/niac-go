@@ -30,7 +30,7 @@ const FIXTURE = join(
 const contractDevice: Device = {
   hostname: 'contract-sw1',
   mac: '00:11:22:33:44:55',
-  type: 'access_point',
+  type: 'access-point',
   ip: '10.0.0.1',
   ips: ['10.0.0.1', '10.0.0.2'],
   vlan: 10,

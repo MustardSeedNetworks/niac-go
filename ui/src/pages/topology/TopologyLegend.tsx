@@ -13,8 +13,13 @@
 import { Eye, EyeOff } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DeviceType } from '../../api/device-config-types';
-import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
+import { DEVICE_TYPES as SCHEMA_DEVICE_TYPES } from '../../components/device-editor/generated/sections.generated';
+import {
+  getTopologyDeviceColor,
+  getTopologyDeviceIcon,
+  normalizeDeviceType,
+} from '../../constants/device-types';
+import { useDeviceTypeLabels } from '../../hooks/useDeviceTypeLabels';
 import { UTILIZATION_CRITICAL_COLOR, UTILIZATION_HIGH_COLOR } from './layout';
 
 interface TopologyLegendProps {
@@ -22,18 +27,10 @@ interface TopologyLegendProps {
   onToggle: () => void;
 }
 
-// Canonical `DeviceType` values, not the aliases the maps used to accept: the
-// legend previously keyed on 'access-point' while the canvas keyed on
-// 'access_point', so the same device drew a different glyph in each (#2052).
-const LEGEND_DEVICE_TYPES = [
-  { type: 'router', labelKey: 'deviceTypeRouter' },
-  { type: 'switch', labelKey: 'deviceTypeSwitch' },
-  { type: 'firewall', labelKey: 'deviceTypeFirewall' },
-  { type: 'server', labelKey: 'deviceTypeServer' },
-  { type: 'workstation', labelKey: 'deviceTypeWorkstation' },
-  { type: 'access_point', labelKey: 'deviceTypeAccessPoint' },
-  { type: 'iot', labelKey: 'deviceTypeIot' },
-] as const satisfies readonly { type: DeviceType; labelKey: string }[];
+// Every type an author can write, from the generated schema vocabulary, so a
+// new device type appears here without anyone remembering to add it. `ap` is
+// the same device as `access-point` and would draw a duplicate row.
+const LEGEND_DEVICE_TYPES: readonly string[] = SCHEMA_DEVICE_TYPES.filter((type) => type !== 'ap');
 
 // Matches DeviceNode.tsx's statusColor map (bg-status-success /
 // bg-bg-muted / bg-status-warning) — kept as CSS custom properties so
@@ -61,6 +58,7 @@ const UTILIZATION_TIERS = [
  */
 export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
   const { t } = useTranslation('pages');
+  const deviceTypeLabels = useDeviceTypeLabels();
   if (!show) {
     return (
       <button
@@ -103,7 +101,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                 {t('topology.legend.deviceTypesHeading')}
               </div>
               <div className="space-y-1.5">
-                {LEGEND_DEVICE_TYPES.map(({ type, labelKey }) => {
+                {LEGEND_DEVICE_TYPES.map((type) => {
                   const Icon = getTopologyDeviceIcon(type);
                   const color = getTopologyDeviceColor(type);
                   return (
@@ -112,7 +110,7 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
                         <Icon className="w-4 h-4 text-current" />
                       </div>
                       <span className="text-xs text-text-secondary">
-                        {t(`topology.legend.${labelKey}`)}
+                        {deviceTypeLabels[normalizeDeviceType(type)]}
                       </span>
                       <div
                         className="w-2 h-2 rounded-full ml-auto"

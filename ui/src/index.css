@@ -138,6 +138,10 @@
   --color-device-workstation: #6b7280;
   --color-device-ap: #a855f7;
   --color-device-iot: #14b8a6;
+  --color-device-host: #64748b;
+  --color-device-layer3-switch: #10b981;
+  --color-device-printer: #eab308;
+  --color-device-voip-phone: #0ea5e9;
   --color-device-unknown: #94a3b8;
 
   /* ========================================

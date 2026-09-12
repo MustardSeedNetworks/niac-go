@@ -9,7 +9,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { DEVICE_TYPES } from '../api/device-config-types';
+import type { DeviceType } from '../api/device-config-types';
+import { DEVICE_TYPES as SCHEMA_TYPES } from '../components/device-editor/generated/sections.generated';
 import {
   getDeviceColor,
   getDeviceIcon,
@@ -19,45 +20,63 @@ import {
 } from './device-types';
 
 describe('device type coverage', () => {
-  it.each(DEVICE_TYPES)('%s has its own topology icon', (type) => {
+  it.each([...SCHEMA_TYPES, 'unknown'] as DeviceType[])('%s has its own topology icon', (type) => {
     if (type === 'unknown') {
       return;
     }
     expect(getTopologyDeviceIcon(type)).not.toBe(getTopologyDeviceIcon('unknown'));
   });
 
-  it.each(DEVICE_TYPES)('%s has its own topology colour', (type) => {
-    if (type === 'unknown') {
-      return;
-    }
-    expect(getTopologyDeviceColor(type)).not.toBe(getTopologyDeviceColor('unknown'));
-  });
+  it.each([...SCHEMA_TYPES, 'unknown'] as DeviceType[])(
+    '%s has its own topology colour',
+    (type) => {
+      if (type === 'unknown') {
+        return;
+      }
+      expect(getTopologyDeviceColor(type)).not.toBe(getTopologyDeviceColor('unknown'));
+    },
+  );
 
-  it.each(DEVICE_TYPES)('%s has a tag colour', (type) => {
+  it.each([...SCHEMA_TYPES, 'unknown'] as DeviceType[])('%s has a tag colour', (type) => {
     expect(getDeviceColor(type)).toBeTruthy();
   });
 });
 
 describe('surfaces agree on a device type', () => {
-  it.each(DEVICE_TYPES)('%s draws the same glyph on the canvas and in a list', (type) => {
-    expect(getTopologyDeviceIcon(type)).toBe(getDeviceIcon(type));
-  });
+  it.each([...SCHEMA_TYPES, 'unknown'] as DeviceType[])(
+    '%s draws the same glyph on the canvas and in a list',
+    (type) => {
+      expect(getTopologyDeviceIcon(type)).toBe(getDeviceIcon(type));
+    },
+  );
 });
 
 describe('normalizeDeviceType', () => {
-  it.each(DEVICE_TYPES)('leaves the canonical value %s alone', (type) => {
-    expect(normalizeDeviceType(type)).toBe(type);
+  // `ap` is the exception: the schema accepts it and `access-point` for the
+  // same device, and the UI folds them so an operator is not offered two
+  // identical filters for one kind of device.
+  it.each(([...SCHEMA_TYPES, 'unknown'] as DeviceType[]).filter((type) => type !== 'ap'))(
+    'leaves the canonical value %s alone',
+    (type) => {
+      expect(normalizeDeviceType(type)).toBe(type);
+    },
+  );
+
+  it('folds ap onto access-point', () => {
+    expect(normalizeDeviceType('ap')).toBe('access-point');
   });
 
   // Authored YAML in the tree uses these spellings; the daemon passes a device
   // type through as written, so the UI is where they have to converge.
   it.each([
-    ['ap', 'access_point'],
-    ['access-point', 'access_point'],
-    ['accessPoint', 'access_point'],
-    ['host', 'workstation'],
+    ['access_point', 'access-point'],
+    ['accessPoint', 'access-point'],
+    ['wireless-ap', 'access-point'],
+    ['phone', 'voip-phone'],
+    ['pc', 'workstation'],
     ['Router', 'router'],
     ['SWITCH', 'switch'],
+    ['LAYER3-SWITCH', 'layer3-switch'],
   ])('resolves the alias %s to %s', (raw, canonical) => {
     expect(normalizeDeviceType(raw)).toBe(canonical);
   });
@@ -67,6 +86,6 @@ describe('normalizeDeviceType', () => {
   });
 
   it('resolves an alias to the same icon as its canonical type', () => {
-    expect(getTopologyDeviceIcon('ap')).toBe(getTopologyDeviceIcon('access_point'));
+    expect(getTopologyDeviceIcon('access_point')).toBe(getTopologyDeviceIcon('access-point'));
   });
 });
