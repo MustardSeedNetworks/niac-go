@@ -7,6 +7,7 @@
 devices:
   # Test Router - Full protocol stack
   - name: test-router-01
+    type: router
     mac: "00:DE:AD:BE:EF:01"
     ips:
       - "10.0.0.1"
@@ -40,6 +41,7 @@ devices:
 
   # Test Switch
   - name: test-switch-01
+    type: switch
     mac: "00:DE:AD:BE:EF:02"
     ips:
       - "10.0.0.2"
@@ -72,6 +74,7 @@ devices:
 
   # Test Server
   - name: test-server-01
+    type: server
     mac: "00:DE:AD:BE:EF:10"
     ips:
       - "10.0.0.100"
@@ -124,6 +127,7 @@ devices:
 
   # Test Client 1
   - name: test-client-01
+    type: workstation
     mac: "00:DE:AD:BE:EF:20"
     ips:
       - "10.0.0.201"
@@ -135,6 +139,7 @@ devices:
 
   # Test Client 2
   - name: test-client-02
+    type: workstation
     mac: "00:DE:AD:BE:EF:21"
     ips:
       - "10.0.0.202"

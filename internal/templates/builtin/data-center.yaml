@@ -7,6 +7,7 @@
 devices:
   # Core Router 1
   - name: dc-core-rtr-01
+    type: router
     mac: "00:0C:29:DC:01:01"
     ips:
       - "10.1.0.1"
@@ -28,6 +29,7 @@ devices:
 
   # Core Router 2
   - name: dc-core-rtr-02
+    type: router
     mac: "00:0C:29:DC:01:02"
     ips:
       - "10.1.0.2"
@@ -43,6 +45,7 @@ devices:
 
   # Distribution Switch 1
   - name: dc-dist-sw-01
+    type: switch
     mac: "00:0C:29:DC:02:01"
     ips:
       - "10.1.1.1"
@@ -60,6 +63,7 @@ devices:
 
   # Distribution Switch 2
   - name: dc-dist-sw-02
+    type: switch
     mac: "00:0C:29:DC:02:02"
     ips:
       - "10.1.1.2"
@@ -77,6 +81,7 @@ devices:
 
   # Access Switch
   - name: dc-access-sw-01
+    type: switch
     mac: "00:0C:29:DC:03:01"
     ips:
       - "10.1.2.1"
@@ -94,6 +99,7 @@ devices:
 
   # Web Server
   - name: dc-web-01
+    type: server
     mac: "00:0C:29:DC:10:01"
     ips:
       - "10.1.10.10"
@@ -107,6 +113,7 @@ devices:
 
   # Infrastructure Server (DNS/DHCP)
   - name: dc-infra-01
+    type: server
     mac: "00:0C:29:DC:10:03"
     ips:
       - "10.1.10.100"

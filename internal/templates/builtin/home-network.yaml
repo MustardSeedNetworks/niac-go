@@ -7,6 +7,7 @@
 devices:
   # Home Gateway/Router
   - name: home-gateway
+    type: router
     mac: "00:AA:00:BB:00:01"
     ips:
       - "192.168.1.1"
@@ -41,6 +42,7 @@ devices:
 
   # Mesh WiFi Main
   - name: wifi-main
+    type: access-point
     mac: "00:AA:00:BB:01:01"
     ips:
       - "192.168.1.2"
@@ -54,6 +56,7 @@ devices:
 
   # NAS - Network Attached Storage
   - name: home-nas
+    type: server
     mac: "00:AA:00:BB:10:01"
     ips:
       - "192.168.1.10"
@@ -67,6 +70,7 @@ devices:
 
   # Network Printer
   - name: home-printer
+    type: printer
     mac: "00:AA:00:BB:20:01"
     ips:
       - "192.168.1.20"
@@ -83,6 +87,7 @@ devices:
 
   # Smart TV
   - name: smart-tv
+    type: iot
     mac: "00:AA:00:BB:30:01"
     ips:
       - "192.168.1.30"
@@ -92,6 +97,7 @@ devices:
 
   # Security Camera
   - name: security-cam-01
+    type: iot
     mac: "00:AA:00:BB:40:01"
     ips:
       - "192.168.1.40"
@@ -101,6 +107,7 @@ devices:
 
   # Smart Speaker
   - name: smart-speaker
+    type: iot
     mac: "00:AA:00:BB:50:01"
     ips:
       - "192.168.1.50"
@@ -110,6 +117,7 @@ devices:
 
   # Gaming Console
   - name: game-console
+    type: host
     mac: "00:AA:00:BB:60:01"
     ips:
       - "192.168.1.60"
@@ -119,6 +127,7 @@ devices:
 
   # Home Automation Hub
   - name: home-hub
+    type: iot
     mac: "00:AA:00:BB:80:01"
     ips:
       - "192.168.1.80"

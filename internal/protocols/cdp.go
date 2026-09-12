@@ -421,6 +421,10 @@ func (h *CDPHandler) buildCapabilitiesTLV(device *config.Device) []byte {
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
 	case "ap", "access-point", "access_point", "wireless-ap", "wireless_ap":
 		capabilities = CDPCapSwitch | CDPCapIGMPCapable
+	case "firewall":
+		// Matches the LLDP capability TLV: a firewall routes, and announcing
+		// it as a host contradicted that on the same wire (#2096).
+		capabilities = CDPCapRouter
 	case "phone", "voip-phone":
 		capabilities = CDPCapPhone | CDPCapHost
 	default:

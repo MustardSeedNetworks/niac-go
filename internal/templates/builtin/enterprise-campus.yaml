@@ -7,6 +7,7 @@
 devices:
   # Campus Core Router 1
   - name: campus-core-01
+    type: router
     mac: "00:1C:2E:3A:01:01"
     ips:
       - "10.0.0.1"
@@ -28,6 +29,7 @@ devices:
 
   # Campus Core Router 2
   - name: campus-core-02
+    type: router
     mac: "00:1C:2E:3A:01:02"
     ips:
       - "10.0.0.2"
@@ -47,6 +49,7 @@ devices:
 
   # Building A Distribution
   - name: bldg-a-dist-01
+    type: switch
     mac: "00:1C:2E:3A:10:01"
     ips:
       - "10.10.0.1"
@@ -64,6 +67,7 @@ devices:
 
   # Building A Access Floor 1
   - name: bldg-a-fl1-sw-01
+    type: switch
     mac: "00:1C:2E:3A:11:01"
     ips:
       - "10.10.1.1"
@@ -81,6 +85,7 @@ devices:
 
   # Building B Distribution
   - name: bldg-b-dist-01
+    type: switch
     mac: "00:1C:2E:3A:20:01"
     ips:
       - "10.20.0.1"
@@ -98,6 +103,7 @@ devices:
 
   # Campus DNS/DHCP Server
   - name: campus-dns-01
+    type: server
     mac: "00:1C:2E:3A:60:01"
     ips:
       - "10.0.10.100"
