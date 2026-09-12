@@ -464,9 +464,9 @@
         "interface_errors": "Interface errors",
         "latency": "Latency",
         "link_down": "Link down",
-        "poe_loss": "PoE loss",
         "memory_percent": "Memory utilization",
-        "packet_discards": "Packet discards"
+        "packet_discards": "Packet discards",
+        "poe_loss": "PoE loss"
       },
       "faultType": "Fault",
       "help": "Schedule traffic, faults, and device operations. Recovery resumes from the last saved runtime state.",
