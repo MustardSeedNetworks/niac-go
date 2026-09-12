@@ -299,3 +299,76 @@ describe('createEdges — interface label crowding', () => {
     expect(edges[2]?.data?.targetSiblingIndex).toBe(0);
   });
 });
+
+describe('layoutNodes — packing leaves under their device', () => {
+  const star = (leaves: number): { devices: DeviceSummary[]; links: TopologyLink[] } => ({
+    devices: [
+      { name: 'sw-01', type: 'switch', ips: [], protocols: [] },
+      ...Array.from({ length: leaves }, (_, i) => ({
+        name: `ap-${i}`,
+        type: 'access-point',
+        ips: [],
+        protocols: [],
+      })),
+    ],
+    links: Array.from({ length: leaves }, (_, i) => ({
+      source: 'sw-01',
+      target: `ap-${i}`,
+      label: 'Gi1/0/1',
+    })),
+  });
+
+  // Sixteen access points ranked side by side are sixteen node-widths of
+  // canvas; the hospital pack put 56 of them on one rank and came out eight
+  // times wider than it was tall (#2106).
+  it('keeps a device and its leaves in a block rather than a row', () => {
+    const { devices, links } = star(16);
+    const nodes = layoutNodes(devices, links, 'hierarchical');
+    const xs = nodes.map((node) => node.position.x);
+    const spread = Math.max(...xs) - Math.min(...xs);
+
+    expect(spread).toBeLessThan(16 * 112);
+  });
+
+  it('puts the leaves below the device they hang off', () => {
+    const { devices, links } = star(4);
+    const nodes = layoutNodes(devices, links, 'hierarchical');
+    const parent = nodes.find((node) => node.id === 'sw-01');
+    expect(parent).toBeDefined();
+
+    for (const leaf of nodes.filter((node) => node.id !== 'sw-01')) {
+      expect(leaf.position.y).toBeGreaterThan(parent?.position.y ?? 0);
+    }
+  });
+
+  // A device with no links has no parent to sit under, and one of a linked
+  // pair is not a leaf of the other — packing either would be arbitrary.
+  it('leaves an unlinked device to the ranking', () => {
+    const nodes = layoutNodes(
+      [
+        { name: 'sw-01', type: 'switch', ips: [], protocols: [] },
+        { name: 'orphan', type: 'server', ips: [], protocols: [] },
+        { name: 'ap-0', type: 'access-point', ips: [], protocols: [] },
+      ],
+      [{ source: 'sw-01', target: 'ap-0', label: 'Gi1/0/1' }],
+      'hierarchical',
+    );
+
+    expect(nodes).toHaveLength(3);
+    expect(nodes.every((node) => Number.isFinite(node.position.x))).toBe(true);
+  });
+
+  it('does not pack either half of a linked pair', () => {
+    const nodes = layoutNodes(
+      [
+        { name: 'a', type: 'switch', ips: [], protocols: [] },
+        { name: 'b', type: 'switch', ips: [], protocols: [] },
+      ],
+      [{ source: 'a', target: 'b', label: 'Gi1/0/1' }],
+      'hierarchical',
+    );
+    const [first, second] = nodes;
+
+    expect(first?.position.y).not.toBe(second?.position.y);
+  });
+});
