@@ -212,3 +212,20 @@ func TestResolveManagedConfigPath_BareNameNotInAnyRootIsRefused(t *testing.T) {
 		t.Fatalf("resolved %q with err %v, want ErrPathOutsideManagedRoots", got, err)
 	}
 }
+
+// TestResolveManagedConfigPath_BareNameRejectsNonPlainNames pins the barrier
+// that makes the root search safe: only a plain filename is searched for, so
+// the join can never leave the root it is made against.
+func TestResolveManagedConfigPath_BareNameRejectsNonPlainNames(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "sim.yaml"))
+
+	for _, name := range []string{"..", ".", ".hidden.yaml", "sim yaml", "sim;yaml", "sim*.yaml"} {
+		t.Run(name, func(t *testing.T) {
+			got, err := config.ResolveManagedConfigPath(name, []string{root})
+			if err == nil {
+				t.Fatalf("ResolveManagedConfigPath(%q) resolved to %q, want a refusal", name, got)
+			}
+		})
+	}
+}
