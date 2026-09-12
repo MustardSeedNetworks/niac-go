@@ -59,10 +59,11 @@ func TestManifestRecordsInterfaceTruth(t *testing.T) {
 		t.Error("interface truth carries no digest")
 	}
 	// The guided hospital story saturates both uplinks of MED-ACC-SW02 and the
-	// matching distribution ends, deliberately above the 80% warning line.
-	if len(manifest.Interfaces.Congested) != 4 {
-		t.Errorf("congested interfaces = %d, want 4: %+v",
-			len(manifest.Interfaces.Congested), manifest.Interfaces.Congested)
+	// matching distribution ends, now as four armed high_utilization faults
+	// rather than a static band, so the injection screen can clear them.
+	if len(manifest.Interfaces.Faults) != 4 {
+		t.Errorf("authored faults = %d, want 4: %+v",
+			len(manifest.Interfaces.Faults), manifest.Interfaces.Faults)
 	}
 }
 

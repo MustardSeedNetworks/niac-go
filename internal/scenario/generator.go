@@ -19,9 +19,7 @@ import (
 )
 
 const (
-	// congestionWarningPercent is the utilization at which Link-Live raises an
 	// interface Warning; a pack authors its trouble spots at or above it.
-	congestionWarningPercent = 80
 
 	// neighborSettleCycles is how many advertisement intervals a consumer waits
 	// before a neighbour table is trustworthy: one to transmit, one to prove
@@ -68,7 +66,7 @@ func Generate(request Request) (Result, error) {
 		}},
 		Devices: buildDevices(request, links),
 	}
-	if err := applyCongestion(&authored, request.Congestion); err != nil {
+	if err := applyFaults(&authored, request.Faults); err != nil {
 		return Result{}, fmt.Errorf("%w: %w", ErrInvalidRequest, err)
 	}
 	if err := converter.ValidateConfig(&authored); err != nil {
@@ -204,35 +202,42 @@ func buildIdentity(request Request) (Identity, error) {
 }
 
 // buildInterfaceTruth digests the operational facts an ifTable collector reads,
-// and lifts out the authored congestion because that is the whole of the
-// behaviour a pack currently authors.
+// and lifts out every authored fault so the manifest carries a pack's finding
+// as expected truth rather than leaving a consumer to infer it.
 func buildInterfaceTruth(authored *converter.Config) InterfaceTruth {
 	lines := make([]string, 0)
-	congested := make([]CongestedLink, 0)
+	faults := make([]PackFault, 0)
 	for _, device := range authored.Devices {
+		for _, fault := range device.Faults {
+			faults = append(faults, PackFault{
+				Device: device.Name, Type: fault.Type, Value: fault.Value,
+			})
+		}
 		for _, iface := range device.Interfaces {
 			lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%s|%s|%s|%d",
 				device.Name, iface.Name, iface.Type, iface.Speed, iface.Duplex,
 				iface.AdminStatus, iface.OperStatus, iface.MTU))
-			if iface.InUtilization >= congestionWarningPercent ||
-				iface.OutUtilization >= congestionWarningPercent {
-				congested = append(congested, CongestedLink{
+			for _, fault := range iface.Faults {
+				faults = append(faults, PackFault{
 					Device: device.Name, Interface: iface.Name,
-					InUtilization: iface.InUtilization, OutUtilization: iface.OutUtilization,
+					Type: fault.Type, Value: fault.Value,
 				})
 			}
 		}
 	}
 	sort.Strings(lines)
-	sort.Slice(congested, func(i, j int) bool {
-		if congested[i].Device != congested[j].Device {
-			return congested[i].Device < congested[j].Device
+	sort.Slice(faults, func(i, j int) bool {
+		if faults[i].Device != faults[j].Device {
+			return faults[i].Device < faults[j].Device
+		}
+		if faults[i].Interface != faults[j].Interface {
+			return faults[i].Interface < faults[j].Interface
 		}
 
-		return congested[i].Interface < congested[j].Interface
+		return faults[i].Type < faults[j].Type
 	})
 
-	return InterfaceTruth{Count: len(lines), SHA256: hashLines(lines), Congested: congested}
+	return InterfaceTruth{Count: len(lines), SHA256: hashLines(lines), Faults: faults}
 }
 
 // buildObservations records what each SEED collector should find. A collector
@@ -372,18 +377,52 @@ func transit(site Site, kind string, siteIndex int) (string, string, int) {
 		fmt.Sprintf("203.0.113.%d/29", base), base
 }
 
-// applyCongestion replaces the generated band on the interfaces a pack calls
-// out as its trouble spots. An interface that does not exist is a typo, and a
-// typo that quietly leaves the map healthy is the one outcome worth failing on:
-// the whole point of the story is that an engineer finds it.
-func applyCongestion(authored *converter.Config, links []CongestedLink) error {
-	for _, link := range links {
-		iface := findAuthoredInterface(authored, link.Device, link.Interface)
-		if iface == nil {
-			return fmt.Errorf("congested link %s %s does not exist", link.Device, link.Interface)
+// applyFaults arms the conditions a pack starts in. A device or interface that
+// does not exist is a typo, and a typo that quietly leaves the map healthy is
+// the one outcome worth failing on: the whole point of a pack's finding is that
+// an engineer finds it.
+func applyFaults(authored *converter.Config, faults []PackFault) error {
+	for _, fault := range faults {
+		if fault.Interface == "" {
+			device := findAuthoredDevice(authored, fault.Device)
+			if device == nil {
+				return fmt.Errorf("authored fault device %s does not exist", fault.Device)
+			}
+			device.Faults = append(device.Faults, converter.DeviceFault{
+				Type: fault.Type, Value: fault.Value,
+			})
+
+			continue
 		}
-		iface.InUtilization = link.InUtilization
-		iface.OutUtilization = link.OutUtilization
+		iface := findAuthoredInterface(authored, fault.Device, fault.Interface)
+		if iface == nil {
+			return fmt.Errorf(
+				"authored fault interface %s %s does not exist", fault.Device, fault.Interface,
+			)
+		}
+		iface.Faults = append(iface.Faults, converter.InterfaceFault{
+			Type: fault.Type, Value: fault.Value,
+		})
+		// A saturation fault is a rate, and the runtime adds it to whatever the
+		// interface already carries. Leaving the generated band underneath it
+		// reports the sum: measured, an 88% fault on the hospital's 70% band
+		// served 158% utilization, which is not a number any interface can
+		// report. Authoring the band away restores what the retired
+		// Request.Congestion did by assignment.
+		if fault.Type == faultHighUtilization {
+			iface.InUtilization = 0
+			iface.OutUtilization = 0
+		}
+	}
+
+	return nil
+}
+
+func findAuthoredDevice(authored *converter.Config, name string) *converter.Device {
+	for index := range authored.Devices {
+		if authored.Devices[index].Name == name {
+			return &authored.Devices[index]
+		}
 	}
 
 	return nil

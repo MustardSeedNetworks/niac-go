@@ -39,9 +39,12 @@ func assertAuthoredUtilization(t *testing.T, pack scenario.Pack, cfg *config.Con
 func packUtilizationBands(t *testing.T, pack scenario.Pack, cfg *config.Config) (int, int) {
 	t.Helper()
 	var steady, total int
-	authored := make(map[string]bool, len(pack.Request.Congestion))
-	for _, link := range pack.Request.Congestion {
-		authored[link.Device+"|"+link.Interface] = true
+	// A pack's finding is armed at runtime now, so the authored band under it
+	// stays in the steady range; the map on disk is healthy and the fault is
+	// what a consumer sees.
+	authored := make(map[string]bool, len(pack.Request.Faults))
+	for _, fault := range pack.Request.Faults {
+		authored[fault.Device+"|"+fault.Interface] = true
 	}
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]

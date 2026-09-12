@@ -142,26 +142,29 @@ const (
 	AccessLayerChain AccessLayer = "chain"
 )
 
-// CongestedLink is one authored trouble spot: a link the guided demo is meant
-// to find. It replaces the generated utilization band on one interface, which is
-// how a pack tells a story rather than rendering uniformly healthy.
-type CongestedLink struct {
-	Device         string  `json:"device"`
-	Interface      string  `json:"interface"`
-	InUtilization  float64 `json:"inUtilization"`
-	OutUtilization float64 `json:"outUtilization"`
+// PackFault is one condition a pack starts in. Scope is structural, matching
+// the authored config: naming an interface makes it interface-scoped, leaving
+// it empty makes it device-scoped. A pack that ships healthy has none.
+type PackFault struct {
+	Device    string `json:"device"`
+	Interface string `json:"interface,omitempty"`
+	Type      string `json:"type"`
+	// Value is the rate, or for latency the delay in milliseconds. Omit it for
+	// the conditions that have no magnitude — a dead link or a lost PoE budget
+	// is not 40% dead.
+	Value *int `json:"value,omitempty"`
 }
 
 // Request is the complete deterministic fleet-generation contract.
 type Request struct {
-	Sites           []Site          `json:"sites"`
-	Counts          Counts          `json:"counts"`
-	Domain          string          `json:"domain"`
-	SNMPCommunity   string          `json:"snmpCommunity"`
-	AttachmentName  string          `json:"attachmentName"`
-	EndpointProfile string          `json:"endpointProfile,omitempty"`
-	AccessLayer     AccessLayer     `json:"accessLayer,omitempty"`
-	Congestion      []CongestedLink `json:"congestion,omitempty"`
+	Sites           []Site      `json:"sites"`
+	Counts          Counts      `json:"counts"`
+	Domain          string      `json:"domain"`
+	SNMPCommunity   string      `json:"snmpCommunity"`
+	AttachmentName  string      `json:"attachmentName"`
+	EndpointProfile string      `json:"endpointProfile,omitempty"`
+	AccessLayer     AccessLayer `json:"accessLayer,omitempty"`
+	Faults          []PackFault `json:"faults,omitempty"`
 }
 
 // ManifestSchemaVersion is the version of the manifest document. Version 3
@@ -219,9 +222,9 @@ type Identity struct {
 // covers the operational facts a collector actually reads, so an edit to speed,
 // duplex, or either status changes it while a cosmetic edit does not.
 type InterfaceTruth struct {
-	Count     int             `json:"count"`
-	SHA256    string          `json:"sha256"`
-	Congested []CongestedLink `json:"congested,omitempty"`
+	Count  int         `json:"count"`
+	SHA256 string      `json:"sha256"`
+	Faults []PackFault `json:"faults,omitempty"`
 }
 
 // Observation is what one SEED collector should find against this scenario.
