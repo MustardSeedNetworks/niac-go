@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.55](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.54...v0.95.55) (2026-09-12)
+
+
+### Bug Fixes
+
+* run the static libpcap step under bash ([#2079](https://github.com/MustardSeedNetworks/niac-go/issues/2079)) ([ea19076](https://github.com/MustardSeedNetworks/niac-go/commit/ea1907601d97210e1b007519d8b7eb7a3f56a6f6))
+
+
+### Tests
+
+* verify recovery against the release binary ([#2075](https://github.com/MustardSeedNetworks/niac-go/issues/2075)) ([55154f6](https://github.com/MustardSeedNetworks/niac-go/commit/55154f6ea5dea89aa78abb841a8289588ad3ab10))
+
 ## [0.95.54](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.53...v0.95.54) (2026-09-11)
 
 
