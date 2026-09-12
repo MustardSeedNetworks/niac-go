@@ -159,6 +159,7 @@ func (a *Agent) registerRoute(
 	a.mib.Set(ipRouteInfo+"."+destination, &OIDValue{Type: gosnmp.ObjectIdentifier, Value: "0.0"})
 
 	a.registerInetCidrRoute(net.ParseIP(destination), mask, ifIndex, nextHop, routeType, proto)
+	a.registerIPCidrRoute(net.ParseIP(destination), mask, ifIndex, nextHop, routeType, proto)
 }
 
 // InterfaceIndex resolves an interface name through the active IF-MIB.

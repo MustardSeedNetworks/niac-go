@@ -32,6 +32,9 @@ const (
 	inetRouteCommunity = "route_demo"
 	inetRouteTable     = ".1.3.6.1.2.1.4.24.7.1"
 	inetRouteIfIndex   = inetRouteTable + ".7"
+	// RFC 2096's table, which is the one seed's routing collector walks.
+	cidrRouteTable   = ".1.3.6.1.2.1.4.24.4.1"
+	cidrRouteNextHop = cidrRouteTable + ".4"
 
 	inetRouteSweepTimeout = 60 * time.Second
 )
@@ -137,7 +140,7 @@ func TestInetCidrRouteTableIsWalkableAndMatchesTheAuthoredRoutes(t *testing.T) {
 	startInetRouteScenario(t)
 	client := dialInetRouteHost(t)
 
-	rows := walkInetRouteColumn(t, client)
+	rows := walkColumn(t, client, inetRouteIfIndex)
 	if len(rows) == 0 {
 		t.Fatal("inetCidrRouteTable returned no rows; a modern manager sees no routes")
 	}
@@ -220,25 +223,60 @@ func dialInetRouteHost(t *testing.T) *gosnmp.GoSNMP {
 	return client
 }
 
-// walkInetRouteColumn sweeps one column, because every row carries the whole
+// walkColumn sweeps one column, because every row carries the whole
 // index and one column is enough to enumerate the table.
-func walkInetRouteColumn(t *testing.T, client *gosnmp.GoSNMP) []gosnmp.SnmpPDU {
+func walkColumn(t *testing.T, client *gosnmp.GoSNMP, root string) []gosnmp.SnmpPDU {
 	t.Helper()
 	done := make(chan struct{})
 	var results []gosnmp.SnmpPDU
 	var err error
 	go func() {
 		defer close(done)
-		results, err = client.BulkWalkAll(inetRouteIfIndex)
+		results, err = client.BulkWalkAll(root)
 	}()
 	select {
 	case <-done:
 	case <-time.After(inetRouteSweepTimeout):
-		t.Fatalf("walking %s did not finish within %s", inetRouteIfIndex, inetRouteSweepTimeout)
+		t.Fatalf("walking %s did not finish within %s", root, inetRouteSweepTimeout)
 	}
 	if err != nil {
-		t.Fatalf("walking %s: %v", inetRouteIfIndex, err)
+		t.Fatalf("walking %s: %v", root, err)
 	}
 
 	return results
+}
+
+// The RFC 2096 table on the wire. NIAC served .21 and .24.7 and nothing at
+// .24.4, which is where seed's routing collector looks -- so a replayed router
+// reported no routes to the one consumer that matters, and no test on either
+// side could see it.
+//
+// This asserts the next hop *column*, because that is the field path analysis
+// needs and the one a mis-shaped index drops silently: seed answers a wrong
+// index by discarding the row without an error.
+func TestIPCidrRouteTableServesTheConsumersTableOnTheWire(t *testing.T) {
+	startInetRouteScenario(t)
+	client := dialInetRouteHost(t)
+
+	rows := walkColumn(t, client, cidrRouteNextHop)
+	if len(rows) == 0 {
+		t.Fatal("ipCidrRouteTable returned no rows; seed's collector sees no routes")
+	}
+
+	nextHops := make(map[string]bool, len(rows))
+	for _, pdu := range rows {
+		// Thirteen index fields is what seed's parseRouteOID requires.
+		index := strings.TrimPrefix(pdu.Name, cidrRouteNextHop+".")
+		if fields := len(strings.Split(index, ".")); fields != 13 {
+			t.Errorf("%s has %d index fields, want 13", pdu.Name, fields)
+		}
+		if address, ok := pdu.Value.(string); ok {
+			nextHops[address] = true
+		}
+	}
+	for _, want := range []string{"10.254.200.61", "10.254.200.62", "0.0.0.0"} {
+		if !nextHops[want] {
+			t.Errorf("no route with next hop %s; got %v", want, nextHops)
+		}
+	}
 }
