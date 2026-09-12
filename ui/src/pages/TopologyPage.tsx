@@ -48,6 +48,7 @@ import {
   writeSavedLayoutMode,
 } from './topology';
 import { CanvasState } from './topology/CanvasState';
+import { placeLabels } from './topology/labelPlacement';
 import { reframeAfterPaint } from './topology/reframe';
 import { TrunkEdge } from './topology/TrunkEdge';
 
@@ -264,13 +265,17 @@ export const TopologyPage: FC = () => {
     );
 
     const layoutedNodes = layoutNodes(visibleDevices, visibleLinks, layoutMode);
-    const layoutedEdges = createEdges(visibleLinks).map((edge) => ({
+    const builtEdges = createEdges(visibleLinks);
+    // Labels are placed once, with every device and every other label in view.
+    const placements = placeLabels(layoutedNodes, builtEdges);
+    const layoutedEdges = builtEdges.map((edge) => ({
       ...edge,
       data: {
         ...edge.data,
         showLabels,
         focusOpacity: edgeOpacity(edge.source, edge.target),
         hovered: hoveredEdgeId === edge.id,
+        labelPlacement: placements.get(edge.id),
       },
     }));
 
