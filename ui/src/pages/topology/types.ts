@@ -8,6 +8,16 @@ import type { Edge, Node } from '@xyflow/react';
  * Data for device nodes in the topology graph
  */
 export interface DeviceNodeData extends Record<string, unknown> {
+  /**
+   * Which rank the hierarchical layout put this device in, counting from the
+   * top.
+   *
+   * The tier bands used to recover this from the device's y position, which
+   * worked only while one rank was one row. A rank too wide for a screen is
+   * now wrapped onto several rows, and reading y would report each row as a
+   * tier of its own.
+   */
+  rank?: number;
   label: string;
   type: string;
   ips?: string[];

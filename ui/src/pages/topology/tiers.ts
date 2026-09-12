@@ -78,8 +78,28 @@ export function deriveTiers(nodes: DeviceNode[]): Tier[] {
   }));
 }
 
-/** groupByRank buckets node y positions into ascending ranks. */
+/**
+ * groupByRank buckets nodes into ascending ranks.
+ *
+ * The layout records the rank it assigned, which is the honest source: a rank
+ * too wide for a screen is wrapped onto several rows, so its members no longer
+ * share a y. Bucketing by y is kept for the layouts that assign no rank.
+ */
 function groupByRank(nodes: DeviceNode[]): number[][] {
+  const ranked = nodes.filter((node) => typeof node.data.rank === 'number');
+  if (ranked.length === nodes.length && nodes.length > 0) {
+    const byRank = new Map<number, number[]>();
+    for (const node of nodes) {
+      const rank = node.data.rank as number;
+      byRank.set(rank, [...(byRank.get(rank) ?? []), node.position.y]);
+    }
+    return [...byRank.entries()].sort(([a], [b]) => a - b).map(([, ys]) => ys);
+  }
+  return groupByPosition(nodes);
+}
+
+/** groupByPosition buckets node y positions into ascending ranks. */
+function groupByPosition(nodes: DeviceNode[]): number[][] {
   const [firstY, ...restY] = nodes.map((n) => n.position.y).sort((a, b) => a - b);
 
   // No nodes means no ranks. The previous form seeded the first bucket with

@@ -151,7 +151,7 @@ function leavesByParent(devices: DeviceSummary[], links: TopologyLink[]): Map<st
   const grouped = new Map<string, string[]>();
   for (const device of devices) {
     const peers = neighbours.get(device.name);
-    if (!peers || peers.size !== 1) {
+    if (peers?.size !== 1) {
       continue;
     }
     const [parent] = [...peers];
@@ -246,45 +246,108 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
 
   dagre.layout(g);
 
-  const positions = new Map<string, { x: number; y: number }>();
-  for (const device of devices) {
-    if (packed.has(device.name)) {
-      continue;
-    }
-    const node = g.node(device.name);
-    const children = leaves.get(device.name) ?? [];
-    const size = packedSize(children.length);
-    // Dagre positions reference the centre of the box it was given, which for
-    // a device with leaves is the whole block. The device sits at the top of
-    // that block, centred, with its leaves filling the rest.
-    const boxLeft = (node?.x ?? 0) - size.width / 2;
-    const boxTop = (node?.y ?? 0) - size.height / 2;
-    positions.set(device.name, {
-      x: boxLeft + size.width / 2 - NODE_WIDTH / 2,
-      y: boxTop,
-    });
+  // Dagre is used for what it is good at — which rank a device belongs to, and
+  // the order of devices within it. Placement is ours, because dagre lays a
+  // rank out as one row however wide it gets: enterprise-scale ranks 48
+  // switches together, about 14,000 units across against a graph 2,500 tall,
+  // which is a horizontal smear on any screen (#2106).
+  const ranks = rankOrder(devices, packed, g);
 
-    if (children.length === 0) {
-      continue;
+  // A rank wider than this wraps onto another row, the way a paragraph does.
+  // The width comes from the device count rather than being picked: the same
+  // sqrt that gridLayout uses, which keeps a graph roughly as wide as it is
+  // tall whatever its size.
+  const wrapColumns = Math.max(1, Math.ceil(Math.sqrt(ranks.flat().length)));
+
+  const rows: string[][] = [];
+  const rowRank: number[] = [];
+  ranks.forEach((rank, index) => {
+    for (let start = 0; start < rank.length; start += wrapColumns) {
+      rows.push(rank.slice(start, start + wrapColumns));
+      rowRank.push(index);
     }
-    const { columns } = leafGrid(children.length);
-    const blockWidth = columns * NODE_WIDTH + (columns - 1) * LEAF_GAP_X;
-    const blockLeft = boxLeft + (size.width - blockWidth) / 2;
-    const blockTop = boxTop + NODE_HEIGHT + LEAF_GAP_Y;
-    children.forEach((name, index) => {
-      positions.set(name, {
-        x: blockLeft + (index % columns) * (NODE_WIDTH + LEAF_GAP_X),
-        y: blockTop + Math.floor(index / columns) * (NODE_HEIGHT + LEAF_GAP_Y),
-      });
-    });
-  }
+  });
+
+  const sizeOf = (name: string): { width: number; height: number } =>
+    packedSize(leaves.get(name)?.length ?? 0);
+  const rowWidth = (row: string[]): number =>
+    row.reduce((total, name) => total + sizeOf(name).width, 0) +
+    Math.max(0, row.length - 1) * NODE_SEPARATION;
+  const widest = Math.max(...rows.map(rowWidth), NODE_WIDTH);
+
+  const positions = new Map<string, { x: number; y: number }>();
+  const rankOf = new Map<string, number>();
+  let cursorY = LAYOUT_TOP_OFFSET;
+
+  rows.forEach((row, rowIndex) => {
+    // Rows are centred on each other so a wrapped rank reads as one band
+    // rather than drifting left.
+    let cursorX = LAYOUT_LEFT_OFFSET + (widest - rowWidth(row)) / 2;
+    let tallest = NODE_HEIGHT;
+
+    for (const name of row) {
+      const size = sizeOf(name);
+      tallest = Math.max(tallest, size.height);
+      positions.set(name, { x: cursorX + size.width / 2 - NODE_WIDTH / 2, y: cursorY });
+      rankOf.set(name, rowRank[rowIndex] ?? 0);
+
+      const children = leaves.get(name) ?? [];
+      if (children.length > 0) {
+        const { columns } = leafGrid(children.length);
+        const blockWidth = columns * NODE_WIDTH + (columns - 1) * LEAF_GAP_X;
+        const blockLeft = cursorX + (size.width - blockWidth) / 2;
+        const blockTop = cursorY + NODE_HEIGHT + LEAF_GAP_Y;
+        children.forEach((child, index) => {
+          positions.set(child, {
+            x: blockLeft + (index % columns) * (NODE_WIDTH + LEAF_GAP_X),
+            y: blockTop + Math.floor(index / columns) * (NODE_HEIGHT + LEAF_GAP_Y),
+          });
+          rankOf.set(child, (rowRank[rowIndex] ?? 0) + 1);
+        });
+      }
+      cursorX += size.width + NODE_SEPARATION;
+    }
+    cursorY += tallest + RANK_SEPARATION;
+  });
 
   return devices.map((device) => ({
     id: device.name,
-    type: 'device',
+    type: 'device' as const,
     position: positions.get(device.name) ?? { x: LAYOUT_LEFT_OFFSET, y: LAYOUT_TOP_OFFSET },
-    data: makeData(device),
+    data: { ...makeData(device), rank: rankOf.get(device.name) ?? 0 },
   }));
+}
+
+/**
+ * The ranked devices dagre produced, top rank first and in dagre's own
+ * left-to-right order within each rank.
+ *
+ * Dagre centres a rank's nodes on one y, but a device sized to hold a block of
+ * leaves is taller than its neighbours, so those y values drift. Devices are
+ * bucketed rather than grouped by exact value, the same way the tier bands do
+ * it.
+ */
+function rankOrder(
+  devices: DeviceSummary[],
+  packed: Set<string>,
+  g: dagre.graphlib.Graph,
+): string[][] {
+  const placed = devices
+    .filter((device) => !packed.has(device.name))
+    .map((device) => ({ name: device.name, node: g.node(device.name) }))
+    .filter((entry) => entry.node !== undefined)
+    .sort((left, right) => left.node.y - right.node.y || left.node.x - right.node.x);
+
+  const ranks: string[][] = [];
+  let anchor = Number.NaN;
+  for (const entry of placed) {
+    if (Number.isNaN(anchor) || entry.node.y - anchor > NODE_HEIGHT) {
+      anchor = entry.node.y;
+      ranks.push([]);
+    }
+    ranks[ranks.length - 1]?.push(entry.name);
+  }
+  return ranks;
 }
 
 /** Common DeviceNodeData shape used by every layout fn. */
