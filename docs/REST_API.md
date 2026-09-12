@@ -54,13 +54,15 @@ Include `Authorization: Bearer <token>` or append `?token=<token>` when authenti
 
 ### Scenario generation
 
-`GET /api/v1/scenario/packs` returns six versioned composer presets with frozen
-device, network, and link manifests. `GET /api/v1/scenario/profiles` returns the
+`GET /api/v1/scenario/packs` returns the versioned composer presets with their
+frozen manifests. The count is not restated here because it drifts: the packs
+themselves are the list, and `/api/v1/scenario/packs` is how to read it. `GET /api/v1/scenario/profiles` returns the
 role profiles used by the visual authoring flow. `POST
 /api/v1/scenario/generate` accepts camelCase sites, infrastructure counts,
 endpoint repeat counts, a domain, an SNMP community, and an attachment name. It
 returns portable YAML plus a manifest containing device, network, and link
-counts and deterministic SHA-256 fingerprints.
+counts and deterministic SHA-256 fingerprints over the device names, the
+networks, the links, and the ifTable truth a collector polls.
 
 Generation is side-effect free: it does not replace the active configuration,
 start a simulation, or save a draft. The returned `content` can be reviewed and

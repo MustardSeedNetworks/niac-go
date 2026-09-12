@@ -28,6 +28,7 @@ const hospital: ScenarioPack = {
     deviceNamesSha256: 'devices',
     networksSha256: 'networks',
     linksSha256: 'links',
+    interfacesSha256: 'interfaces',
   },
 };
 
@@ -54,7 +55,12 @@ describe('ScenarioPackPicker', () => {
     await user.click(await screen.findByTestId('scenario-pack-hospital'));
 
     expect(onChange).toHaveBeenCalledWith(hospital.request);
-    expect(screen.getByText(/Version 1.2.0 · 75 devices · 88 links/)).toBeVisible();
+    // The counts come from the pack, never from the prose: the four sites and
+    // 128 radios are the default request's own shape (16 access switches x 2
+    // radios x 4 sites), which is why a description may not restate them.
+    expect(
+      screen.getByText(/Version 1.2.0 · 4 sites · 75 devices · 128 access points · 88 links/),
+    ).toBeVisible();
   });
 
   it('renders localized pack metadata', async () => {
@@ -63,7 +69,7 @@ describe('ScenarioPackPicker', () => {
     render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={vi.fn()} />);
 
     expect(await screen.findByText('Red hospitalaria')).toBeVisible();
-    expect(screen.getByText(/Centro médico de un solo sitio/)).toBeVisible();
+    expect(screen.getByText(/Centro médico con acceso cableado resiliente/)).toBeVisible();
   });
 
   it('separates presentation maps from scale workloads', async () => {

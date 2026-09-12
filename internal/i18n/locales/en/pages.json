@@ -535,31 +535,31 @@
       "invalid": "Resolve the fleet values before continuing.",
       "packMetadata": {
         "campus": {
-          "description": "Four readable sites with core, distribution, access, Wi-Fi 7, workstation, and service layers.",
+          "description": "Readable campus sites, each wide and shallow: closets land straight on a collapsed core, with Wi-Fi 7, workstation, and service layers.",
           "name": "Enterprise campus"
         },
         "enterprise-scale": {
-          "description": "Four-site, 531-device stress workload for discovery and scale testing; not intended as a presentation map.",
+          "description": "Multi-site stress workload for discovery and scale testing; not intended as a presentation map.",
           "name": "Enterprise scale reference"
         },
         "hospital": {
-          "description": "Single-site medical center with resilient wired access, 30 Wi-Fi 7 APs, clinical clients, and local services.",
+          "description": "Medical center with resilient wired access, Wi-Fi 7 coverage, clinical clients, and local services.",
           "name": "Hospital network"
         },
         "manufacturing": {
-          "description": "Single production plant with resilient switching, 30 Wi-Fi 7 APs, wired stations, and local services.",
+          "description": "Production plant with resilient switching, Wi-Fi 7 coverage, wired stations, and local services.",
           "name": "Manufacturing plant"
         },
         "retail": {
-          "description": "Two retail sites with wireless point-of-sale coverage and local business services.",
+          "description": "A back office, and a store whose lanes chain off each other, with wireless point-of-sale coverage and local business services.",
           "name": "Retail network"
         },
         "service-provider": {
-          "description": "Three metro points of presence with distribution, access, service, and wired-client layers.",
+          "description": "Metro points of presence, each handing its access nodes off a ring, with service, wireless, and wired-client layers.",
           "name": "Service provider network"
         },
         "warehouse": {
-          "description": "Single-site fulfillment center with 30 Wi-Fi 7 APs, wired stations, local services, and redundant uplinks.",
+          "description": "Fulfillment center covering a large open floor from a few closets, with long-range Wi-Fi 7 radios, wired stations, local services, and redundant uplinks.",
           "name": "Warehouse network"
         }
       },
@@ -567,7 +567,7 @@
       "packsHelp": "Choose a realistic starting point, then adjust any site or device count below.",
       "packsLoading": "Loading scenario packs…",
       "packsTitle": "Start with a scenario pack",
-      "packSummary": "Version {{version}} · {{devices}} devices · {{links}} links",
+      "packSummary": "Version {{version}} · {{sites}} sites · {{devices}} devices · {{accessPoints}} access points · {{links}} links",
       "presentationPacksTitle": "Presentation-ready maps",
       "removeSite": "Remove site",
       "select": "Use generated fleet",

@@ -55,6 +55,10 @@ export interface ScenarioParity {
   deviceNamesSha256: string;
   networksSha256: string;
   linksSha256: string;
+  /** Digest of the ifTable truth a collector polls: speed, duplex, both
+   * statuses and the utilization band. Pinned alongside the others so an edit
+   * that moves an interface a consumer reads trips the contract. */
+  interfacesSha256: string;
 }
 
 /**
