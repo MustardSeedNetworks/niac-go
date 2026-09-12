@@ -24,11 +24,19 @@ const (
 	oidIfInErrors  = ".1.3.6.1.2.1.2.2.1.14"
 	oidIfInDiscard = ".1.3.6.1.2.1.2.2.1.13"
 	oidIfHCInOcts  = ".1.3.6.1.2.1.31.1.1.1.6"
+	oidIfHighSpeed = ".1.3.6.1.2.1.31.1.1.1.15"
 )
 
 // Each pack ships one finding (P2-7). Authoring it is not enough: a finding a
 // consumer cannot see on the wire is not a finding, so each counter-shaped one
 // is polled here through SNMP exactly as a collector would.
+//
+// Only columns that read zero on a healthy interface belong here. "The counter
+// moved" is vacuous for octets, which climb on every interface from its
+// baseline utilization band whether or not anything is wrong — measured: with
+// the hospital fault removed, ifHCInOctets still moved 537,145,210 to
+// 9,297,379,472 and the assertion passed. Saturation is asserted as a rate
+// instead, below.
 //
 // The device under test is site-internal, reachable only because the namespace
 // now routes through the edge router the way a real tester on that segment
@@ -43,7 +51,6 @@ func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 	}{
 		{"manufacturing", "PLT-ACC-SW01", "HundredGigabitEthernet1/0/49", "ifInErrors", oidIfInErrors},
 		{"campus", "NTH-ACC-SW01", "HundredGigabitEthernet1/0/49", "ifInDiscards", oidIfInDiscard},
-		{"hospital", "MED-ACC-SW02", "HundredGigabitEthernet1/0/49", "ifHCInOctets", oidIfHCInOcts},
 	}
 
 	for _, testCase := range cases {
@@ -189,4 +196,54 @@ func counterAt(t *testing.T, client *gosnmp.GoSNMP, column, index string) uint64
 	}
 
 	return gosnmp.ToBigInt(result.Variables[0].Value).Uint64()
+}
+
+// Saturation is a rate, not a count. The hospital's imaging uplinks are meant
+// to read above the line where Link-Live raises an interface warning, and the
+// rest of the same switch is meant to stay under it — a map that is amber
+// everywhere teaches an engineer as little as one that is green everywhere.
+func TestHospitalSaturationReadsAboveTheWarningLine(t *testing.T) {
+	const (
+		warningPercent = 80.0
+		sampleWindow   = 2 * time.Second
+		saturated      = "HundredGigabitEthernet1/0/49"
+		healthy        = "HundredGigabitEthernet1/0/1"
+	)
+
+	authored := startPack(t, "hospital")
+	client := dialDevice(t, authored, "MED-ACC-SW02")
+
+	hot := utilizationPercent(t, client, saturated, sampleWindow)
+	if hot < warningPercent {
+		t.Errorf("%s utilization = %.1f%%, want at least %.0f%%: the authored finding is invisible",
+			saturated, hot, warningPercent)
+	}
+
+	calm := utilizationPercent(t, client, healthy, sampleWindow)
+	if calm >= warningPercent {
+		t.Errorf("%s utilization = %.1f%%, want below %.0f%%: an amber map everywhere hides the finding",
+			healthy, calm, warningPercent)
+	}
+	t.Logf("MED-ACC-SW02: %s at %.1f%%, %s at %.1f%%", saturated, hot, healthy, calm)
+}
+
+// utilizationPercent derives the inbound rate the way a collector does, from
+// two octet samples and the interface's reported speed.
+func utilizationPercent(
+	t *testing.T, client *gosnmp.GoSNMP, name string, window time.Duration,
+) float64 {
+	t.Helper()
+	index := interfaceIndex(t, client, name)
+	speedMbps := counterAt(t, client, oidIfHighSpeed, index)
+	if speedMbps == 0 {
+		t.Fatalf("%s reports ifHighSpeed 0; a rate cannot be derived", name)
+	}
+
+	first := counterAt(t, client, oidIfHCInOcts, index)
+	start := time.Now()
+	time.Sleep(window)
+	second := counterAt(t, client, oidIfHCInOcts, index)
+	elapsed := time.Since(start).Seconds()
+
+	return float64(second-first) * 8 / elapsed / (float64(speedMbps) * 1_000_000) * 100
 }
