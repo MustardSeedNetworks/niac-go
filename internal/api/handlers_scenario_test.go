@@ -80,8 +80,12 @@ func TestScenarioGenerationHandlersReturnValidatedFleet(t *testing.T) {
 	if err = json.NewDecoder(generateRecorder.Body).Decode(&response); err != nil {
 		t.Fatalf("decode generated scenario: %v", err)
 	}
-	if response.Manifest.DeviceCount != 543 {
-		t.Fatalf("device count = %d, want 543", response.Manifest.DeviceCount)
+	// The count comes from the pack the request was taken from, not a literal:
+	// a third copy of 543 lived here and had to be edited by hand every time the
+	// generator moved.
+	wantDevices := enterpriseScalePack(t).Manifest.DeviceCount
+	if response.Manifest.DeviceCount != wantDevices {
+		t.Fatalf("device count = %d, want %d", response.Manifest.DeviceCount, wantDevices)
 	}
 	if _, err = config.LoadYAMLBytes([]byte(response.Content)); err != nil {
 		t.Fatalf("generated content does not load: %v", err)
@@ -122,4 +126,16 @@ func TestScenarioRoutesCarryTemplateAuthoringPolicy(t *testing.T) {
 		generate.Admin {
 		t.Fatalf("generate policy = %+v, want config_templates+csrf+rateLimited", generate)
 	}
+}
+
+func enterpriseScalePack(t *testing.T) scenario.Pack {
+	t.Helper()
+	for _, pack := range scenario.Packs() {
+		if pack.ID == "enterprise-scale" {
+			return pack
+		}
+	}
+	t.Fatal("no enterprise-scale pack")
+
+	return scenario.Pack{}
 }

@@ -154,7 +154,7 @@ func TestPackManifestKeepsItsPublishedShape(t *testing.T) {
 	}
 	want := []string{
 		"deviceCount", "networkCount", "linkCount",
-		"deviceNamesSha256", "networksSha256", "linksSha256",
+		"deviceNamesSha256", "networksSha256", "linksSha256", "interfacesSha256",
 	}
 	if len(decoded.Manifest) != len(want) {
 		t.Fatalf("pack manifest keys = %v, want exactly %v", decoded.Manifest, want)

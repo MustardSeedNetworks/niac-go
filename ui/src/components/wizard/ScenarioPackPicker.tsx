@@ -1,11 +1,23 @@
 import { Boxes } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchScenarioPacks, type ScenarioGenerateRequest } from '../../api/scenario-client';
+import {
+  fetchScenarioPacks,
+  type ScenarioGenerateRequest,
+  type ScenarioPack,
+} from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { useApiResource } from '../../hooks/useApiResource';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
+
+// packAccessPoints counts the radios a pack generates. It is derived here
+// rather than read from the manifest because the manifest pins the parity
+// contract -- device, network and link totals -- not a census by role.
+const packAccessPoints = (pack: ScenarioPack): number =>
+  pack.request.sites.length *
+  pack.request.counts.accessSwitches *
+  pack.request.counts.accessPointsPerAccess;
 
 interface ScenarioPackPickerProps {
   request: ScenarioGenerateRequest;
@@ -49,8 +61,10 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onCha
           </SmallText>
           <SmallText className="mt-tight block text-brand-accent">
             {t('newSimWizard.fleet.packSummary', {
+              accessPoints: packAccessPoints(pack),
               devices: pack.manifest.deviceCount,
               links: pack.manifest.linkCount,
+              sites: pack.request.sites.length,
               version: pack.version,
             })}
           </SmallText>

@@ -24,15 +24,13 @@ func TestGenerateEnterpriseReferenceMatchesAcceptedTopology(t *testing.T) {
 		t.Fatal("same request produced different YAML")
 	}
 
-	want := scenario.Parity{
-		DeviceCount:       543,
-		NetworkCount:      39,
-		LinkCount:         634,
-		DeviceNamesSHA256: "8514a6d423b598a11d6ebc6edfc399c978883b831106e8c187e681619229346f",
-		NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
-		// Routed WAN edges carry no VLAN metadata; switched links retain their trunks.
-		LinksSHA256: "4c1acbf07eccc6464a4a86d8a53f867fdaa1cc7374d18b881bf30487a98713e6",
-	}
+	// The accepted shape is the enterprise-scale pack's own frozen row, read
+	// rather than restated: this test used to keep a second copy of the six
+	// pinned values, so re-signing the pack meant editing a test that was
+	// supposed to be checking it independently. What it checks is that the
+	// reference request and the pack agree -- routed WAN edges carry no VLAN
+	// metadata while switched links retain their trunks, and both digests say so.
+	want := packParityFor(t, "enterprise-scale")
 	if first.Manifest.Parity() != want {
 		t.Fatalf("manifest = %#v, want %#v", first.Manifest.Parity(), want)
 	}
@@ -188,4 +186,17 @@ func ExampleGenerate() {
 	result, _ := scenario.Generate(scenario.EnterpriseReferenceRequest())
 	fmt.Println(result.Manifest.DeviceCount)
 	// Output: 543
+}
+
+// packParityFor returns one built-in pack's frozen parity row.
+func packParityFor(t *testing.T, id string) scenario.Parity {
+	t.Helper()
+	for _, pack := range scenario.Packs() {
+		if pack.ID == id {
+			return pack.Manifest
+		}
+	}
+	t.Fatalf("no built-in pack %q", id)
+
+	return scenario.Parity{}
 }

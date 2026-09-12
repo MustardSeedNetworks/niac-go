@@ -188,6 +188,13 @@ const (
 // Parity is the frozen authored-truth contract a pack pins: the counts and
 // digests that must not drift. It is deliberately comparable, so a pack can
 // assert equality against a freshly generated scenario in one expression.
+//
+// InterfacesSHA256 joined the pinned set once the packs began authoring faults:
+// it covers the operational facts a collector reads -- speed, duplex, both
+// statuses and the utilization band -- so an edit that moves an interface a
+// consumer polls trips the contract. Without it the ifTable was the one piece of
+// authored truth a change could move silently, since the manifest test asserted
+// only that the digest was non-empty.
 type Parity struct {
 	DeviceCount       int    `json:"deviceCount"`
 	NetworkCount      int    `json:"networkCount"`
@@ -195,6 +202,7 @@ type Parity struct {
 	DeviceNamesSHA256 string `json:"deviceNamesSha256"`
 	NetworksSHA256    string `json:"networksSha256"`
 	LinksSHA256       string `json:"linksSha256"`
+	InterfacesSHA256  string `json:"interfacesSha256"`
 }
 
 // Identity is the reproducible input that produced a scenario. Generation is
@@ -262,7 +270,7 @@ func (m Manifest) Parity() Parity {
 	return Parity{
 		DeviceCount: m.DeviceCount, NetworkCount: m.NetworkCount, LinkCount: m.LinkCount,
 		DeviceNamesSHA256: m.DeviceNamesSHA256, NetworksSHA256: m.NetworksSHA256,
-		LinksSHA256: m.LinksSHA256,
+		LinksSHA256: m.LinksSHA256, InterfacesSHA256: m.Interfaces.SHA256,
 	}
 }
 

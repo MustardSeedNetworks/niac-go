@@ -280,7 +280,7 @@
       "domain": "Dominio DNS",
       "help": "Comienza con el diseño empresarial validado y ajusta los sitios y las cantidades. NIAC asigna identidades, direcciones, puertos, VLAN, servicios y enlaces de forma coherente.",
       "invalid": "Corrige los valores de la flota antes de continuar.",
-      "packSummary": "Versión {{version}} · {{devices}} dispositivos · {{links}} enlaces",
+      "packSummary": "Versión {{version}} · {{sites}} sitios · {{devices}} dispositivos · {{accessPoints}} puntos de acceso · {{links}} enlaces",
       "packsError": "No se pudieron cargar los paquetes de escenarios.",
       "packsHelp": "Elige un punto de partida realista y luego ajusta cualquier sitio o cantidad de dispositivos.",
       "packsLoading": "Cargando paquetes de escenarios…",
@@ -291,31 +291,31 @@
       "packMetadata": {
         "hospital": {
           "name": "Red hospitalaria",
-          "description": "Centro médico de un solo sitio con acceso cableado resiliente, 30 puntos de acceso Wi-Fi 7, clientes clínicos y servicios locales."
+          "description": "Centro médico con acceso cableado resiliente, cobertura Wi-Fi 7, clientes clínicos y servicios locales."
         },
         "warehouse": {
           "name": "Red de almacenes",
-          "description": "Centro logístico de un solo sitio con 30 puntos de acceso Wi-Fi 7, estaciones cableadas, servicios locales y enlaces redundantes."
+          "description": "Centro logístico que cubre una gran superficie diáfana desde unos pocos armarios, con radios Wi-Fi 7 de largo alcance, estaciones cableadas, servicios locales y enlaces redundantes."
         },
         "campus": {
           "name": "Campus empresarial",
-          "description": "Cuatro sitios legibles con capas de núcleo, distribución, acceso, Wi-Fi 7, estaciones de trabajo y servicios."
+          "description": "Sedes de campus legibles, anchas y poco profundas: los armarios llegan directamente a un núcleo colapsado, con capas Wi-Fi 7, de estaciones de trabajo y de servicios."
         },
         "enterprise-scale": {
           "name": "Referencia empresarial a escala",
-          "description": "Carga de esfuerzo de cuatro sitios y 531 dispositivos para pruebas de descubrimiento y escala; no está destinada a mapas de presentación."
+          "description": "Carga de esfuerzo multisitio para pruebas de descubrimiento y escala; no está destinada a mapas de presentación."
         },
         "retail": {
           "name": "Red minorista",
-          "description": "Dos sitios comerciales con cobertura inalámbrica para puntos de venta y servicios empresariales locales."
+          "description": "Una oficina administrativa y una tienda cuyas cajas se encadenan entre sí, con cobertura inalámbrica para puntos de venta y servicios empresariales locales."
         },
         "manufacturing": {
           "name": "Planta de fabricación",
-          "description": "Planta de producción de un solo sitio con conmutación resiliente, 30 puntos de acceso Wi-Fi 7, estaciones cableadas y servicios locales."
+          "description": "Planta de producción con conmutación resiliente, cobertura Wi-Fi 7, estaciones cableadas y servicios locales."
         },
         "service-provider": {
           "name": "Red de proveedor de servicios",
-          "description": "Tres puntos de presencia metropolitanos con capas de distribución, acceso, servicios y clientes cableados."
+          "description": "Puntos de presencia metropolitanos, cada cual entregando sus nodos de acceso desde un anillo, con capas de servicios, inalámbrica y de clientes cableados."
         }
       },
       "removeSite": "Quitar sitio",
