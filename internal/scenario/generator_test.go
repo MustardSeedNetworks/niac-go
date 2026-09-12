@@ -84,7 +84,7 @@ func TestGenerateHonorsFleetRepeatControls(t *testing.T) {
 			t.Fatalf("%s access points = %d, want 12", site.Code, got)
 		}
 		got := countNamed(cfg, site.Code+"-WS-") + countNamed(cfg, site.Code+"-LAP-") +
-			countNamed(cfg, site.Code+"-MBP-")
+			countNamed(cfg, site.Code+"-MBP-") + countNamed(cfg, site.Code+"-PRN-")
 		if got != 20 {
 			t.Fatalf("%s wired clients = %d, want 20", site.Code, got)
 		}
