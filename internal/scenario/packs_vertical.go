@@ -22,6 +22,7 @@ func retailScenarioPack() Pack {
 			retailAccessPointsPerAccess,
 			retailWorkstationsPerAccess,
 		),
+		storeDHCPNoOffer()...,
 	)
 	// A store runs its lanes off one another rather than home-running each till.
 	pack.Request.AccessLayer = AccessLayerChain
@@ -37,6 +38,7 @@ func manufacturingScenarioPack() Pack {
 		packSites(industrialSiteOctet, packSite{code: "PLT", location: "Production Plant"}),
 		packCounts(manufacturingAccessSwitches, manufacturingAccessPointsPerAccess,
 			manufacturingWorkstationsPerAccess),
+		ringSegmentFCSErrors()...,
 	)
 	// A plant runs its cells off a fiber ring, not a home run per closet.
 	pack.Request.AccessLayer = AccessLayerRing
@@ -56,6 +58,7 @@ func serviceProviderScenarioPack() Pack {
 			packSite{code: "SFO", location: "San Francisco Metro POP"},
 		),
 		packCounts(providerAccessSwitches, providerAccessPointsPerAccess, providerWorkstationsPerAccess),
+		popUplinkLatency()...,
 	)
 	// A metro POP hands its access nodes off a ring.
 	pack.Request.AccessLayer = AccessLayerRing

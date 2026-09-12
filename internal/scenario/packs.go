@@ -73,6 +73,7 @@ func customerScenarioPacks() []Pack {
 				warehouseAccessPointsPerAccess,
 				warehouseWorkstationsPerAccess,
 			),
+			dockAccessPointPoELoss()...,
 		),
 		campusScenarioPack(),
 		newScenarioPack(
@@ -119,35 +120,42 @@ func hospitalScenarioPack() Pack {
 			hospitalWorkstationsPerAccess,
 		),
 	)
-	pack.Request.Congestion = imagingCongestion()
+	pack.Request.Faults = imagingSaturation()
 
 	return pack
 }
 
-func imagingCongestion() []CongestedLink {
+func imagingSaturation() []PackFault {
 	const (
-		saturated = 88.0
-		busy      = 84.0
+		saturated = 88
+		busy      = 84
 	)
 
-	return []CongestedLink{
+	return []PackFault{
 		{
 			Device: "MED-ACC-SW02", Interface: "HundredGigabitEthernet1/0/49",
-			InUtilization: saturated, OutUtilization: busy,
+			Type: faultHighUtilization, Value: faultValue(saturated),
 		},
 		{
 			Device: "MED-ACC-SW02", Interface: "HundredGigabitEthernet1/0/50",
-			InUtilization: busy, OutUtilization: saturated,
+			Type: faultHighUtilization, Value: faultValue(busy),
 		},
 		{
 			Device: "MED-DIST-SW01", Interface: "HundredGigabitEthernet1/0/4",
-			InUtilization: busy, OutUtilization: saturated,
+			Type: faultHighUtilization, Value: faultValue(busy),
 		},
 		{
 			Device: "MED-DIST-SW02", Interface: "HundredGigabitEthernet1/0/4",
-			InUtilization: saturated, OutUtilization: busy,
+			Type: faultHighUtilization, Value: faultValue(saturated),
 		},
 	}
+}
+
+// faultValue names the pointer so a pack reads as a sentence. A nil value is
+// meaningful — it marks a condition with no magnitude — so the pointer cannot
+// be dropped.
+func faultValue(percent int) *int {
+	return new(percent)
 }
 
 func campusScenarioPack() Pack {
@@ -164,6 +172,7 @@ func campusScenarioPack() Pack {
 			packSite{code: "ADM", location: "Administration Campus"},
 		),
 		campusCounts(),
+		closetUplinkDiscards()...,
 	)
 	// A campus is wide and shallow; its closets land on the core directly.
 	pack.Request.AccessLayer = AccessLayerCollapsedCore
@@ -181,6 +190,7 @@ func newScenarioPack(
 	domain string,
 	sites []Site,
 	counts Counts,
+	faults ...PackFault,
 ) Pack {
 	manifest, pinned := packParity()[id]
 	if !pinned {
@@ -194,6 +204,7 @@ func newScenarioPack(
 			Sites: sites, Counts: counts, Domain: domain,
 			SNMPCommunity: defaultCommunity, AttachmentName: defaultAttachmentName,
 			EndpointProfile: packEndpointProfile(id),
+			Faults:          faults,
 		},
 		Manifest: manifest,
 	}
