@@ -15,7 +15,7 @@
  */
 
 import { NODE_HEIGHT, NODE_WIDTH } from './layout';
-import type { DeviceNode, LinkEdge } from './types';
+import type { DeviceNode, LinkEdge, LinkEdgeData } from './types';
 
 /** A label box in canvas units, centred on (x, y). */
 interface Box {
@@ -173,4 +173,37 @@ export function placeLabels(
   }
 
   return placements;
+}
+
+/** What the page knows about an edge that placement does not. */
+interface EdgePresentation {
+  showLabels: boolean;
+  focusOpacity: (source: string, target: string) => number;
+  hoveredEdgeId: string | null;
+}
+
+/**
+ * placedEdges runs the placement pass over the laid-out graph and hands each
+ * edge its own result, alongside the presentation state the page owns.
+ *
+ * Assembling this on the page meant the page had to know that placement is a
+ * whole-graph pass and that an edge reads its result out of `data`. It only
+ * needs to know that labels are placed.
+ */
+export function placedEdges(
+  nodes: DeviceNode[],
+  edges: LinkEdge[],
+  presentation: EdgePresentation,
+): LinkEdge[] {
+  const placements = placeLabels(nodes, edges);
+  return edges.map((edge) => ({
+    ...edge,
+    data: {
+      ...(edge.data as LinkEdgeData),
+      showLabels: presentation.showLabels,
+      focusOpacity: presentation.focusOpacity(edge.source, edge.target),
+      hovered: presentation.hoveredEdgeId === edge.id,
+      labelPlacement: placements.get(edge.id),
+    },
+  }));
 }
