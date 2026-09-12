@@ -29,7 +29,15 @@ import i18n from '../../i18n';
 import { TrunkEdge } from './TrunkEdge';
 import type { LinkEdgeData } from './types';
 
-function renderEdge(data: Partial<LinkEdgeData> = {}) {
+// A rank separation plus a node, which is the shortest edge the hierarchical
+// layout actually produces. Edges shorter than their own labels suppress them,
+// so a toy 200x100 edge would hide the very labels these tests assert.
+const REALISTIC_EDGE = { sourceX: 0, sourceY: 0, targetX: 200, targetY: 600 };
+
+function renderEdge(
+  data: Partial<LinkEdgeData> = {},
+  geometry: typeof REALISTIC_EDGE = REALISTIC_EDGE,
+) {
   return render(
     <I18nextProvider i18n={i18n}>
       <ReactFlowProvider>
@@ -38,10 +46,10 @@ function renderEdge(data: Partial<LinkEdgeData> = {}) {
             id="e1"
             source="a"
             target="b"
-            sourceX={0}
-            sourceY={0}
-            targetX={200}
-            targetY={100}
+            sourceX={geometry.sourceX}
+            sourceY={geometry.sourceY}
+            targetX={geometry.targetX}
+            targetY={geometry.targetY}
             sourcePosition={Position.Bottom}
             targetPosition={Position.Top}
             data={data as LinkEdgeData}
@@ -131,6 +139,29 @@ describe('per-side interface labels', () => {
     const { container } = renderEdge({});
 
     expect(container.textContent).not.toContain('Gi0/');
+  });
+
+  // The labels of edges meeting at one device are stacked a row apart, and a
+  // short edge has no room for the stack — drawing them anyway is what put
+  // four interface names on top of each other (#2097). Leaving them out is the
+  // intended outcome, not a gap.
+  it('leaves the interface names out when the edge is too short to hold them', () => {
+    const { container } = renderEdge(
+      { sourceInterface: 'Gi0/1', targetInterface: 'Gi0/2' },
+      { sourceX: 0, sourceY: 0, targetX: 40, targetY: 40 },
+    );
+
+    expect(container.textContent).not.toContain('Gi0/1');
+    expect(container.textContent).not.toContain('Gi0/2');
+  });
+
+  it('stacks the labels of edges sharing a device a row apart', () => {
+    const first = renderEdge({ sourceInterface: 'Gi0/1', sourceSiblingIndex: 0 });
+    const firstBox = first.container.querySelector('div');
+    const second = renderEdge({ sourceInterface: 'Gi0/1', sourceSiblingIndex: 1 });
+    const secondBox = second.container.querySelector('div');
+
+    expect(firstBox?.getAttribute('style')).not.toBe(secondBox?.getAttribute('style'));
   });
 });
 

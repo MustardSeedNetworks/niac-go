@@ -41,8 +41,8 @@ export const LAYOUT_MODES: { mode: LayoutMode; label: string; description: strin
 // The node's own footprint: DeviceNode is a 64 px symbol plate over a label
 // allowed two lines, inside a fixed 112 px width, so every node occupies this
 // box whatever its name is.
-const NODE_WIDTH = 112;
-const NODE_HEIGHT = 96;
+export const NODE_WIDTH = 112;
+export const NODE_HEIGHT = 96;
 
 // Separation is sized by the edge labels, not by the nodes — "Gi0/1 ↔ Gi0/1 ·
 // VLANs 1-30" is the widest thing between two nodes and did not shrink when
@@ -274,7 +274,35 @@ export function getEdgeColor(data: LinkEdgeData): string {
  * display label — the label is human-friendly text and rarely
  * contains the literal "trunk" / "1G" keywords the old parser needed.
  */
+/**
+ * siblingIndices numbers each edge among all the edges touching its source
+ * device, and again among all those touching its target.
+ *
+ * Counted per device, not per device-and-end. What crowds a switch is every
+ * label that wants to sit next to it, and that is both the edges leaving it
+ * and the edges arriving at it — measuring showed an arriving edge's target
+ * label landing on a departing edge's source label when the two ends were
+ * counted separately.
+ */
+function siblingIndices(links: TopologyLink[]): { source: number[]; target: number[] } {
+  const seen = new Map<string, number>();
+  const next = (device: string): number => {
+    const index = seen.get(device) ?? 0;
+    seen.set(device, index + 1);
+    return index;
+  };
+  const source: number[] = [];
+  const target: number[] = [];
+  for (const link of links) {
+    source.push(next(link.source));
+    target.push(next(link.target));
+  }
+  return { source, target };
+}
+
 export function createEdges(links: TopologyLink[]): LinkEdge[] {
+  const siblings = siblingIndices(links);
+
   return links.map((link, index) => {
     const data: LinkEdgeData = {
       label: link.label,
@@ -291,6 +319,8 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
     // per-side labels float between line and device card.
     data.sourceInterface = link.sourceInterface;
     data.targetInterface = link.targetInterface;
+    data.sourceSiblingIndex = siblings.source[index];
+    data.targetSiblingIndex = siblings.target[index];
     data.vlans = link.vlans;
     data.discovered = link.discovered;
     data.utilizationPercent = link.utilizationPercent;
