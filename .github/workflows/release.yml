@@ -402,6 +402,11 @@ jobs:
         env:
           LIBPCAP_VERSION: "1.10.7"
           LIBPCAP_SHA256: 0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31
+        # Container run steps default to `sh` (dash), which rejects
+        # `set -o pipefail`; force bash (present in goreleaser-cross). Without
+        # this the step dies on its own first line with "Illegal option -o
+        # pipefail" and no release is built — which is what v0.95.54 did.
+        shell: bash
         # The released .rpm crash-looped on every Fedora/RHEL host (#1999).
         # One cgo binary is built here and packaged as both .deb and .rpm, and
         # this container is Debian-family, so it linked Debian's libpcap
