@@ -47,3 +47,23 @@ func validateBehaviorFaultPayload(validation validator.StructLevel) {
 		validation.ReportError(fault.Address, "address", "Address", "excluded", "")
 	}
 }
+
+// validateAuthoredInterfaceFault enforces the one thing the type tags cannot:
+// link_down and poe_loss have no magnitude, so authoring a value for either
+// would invent one. Every other interface fault is a rate and needs one.
+func validateAuthoredInterfaceFault(validation validator.StructLevel) {
+	fault, ok := reflect.TypeAssert[InterfaceFault](validation.Current())
+	if !ok {
+		return
+	}
+	if fault.Type == string(devicestate.FaultLinkDown) || fault.Type == string(devicestate.FaultPoELoss) {
+		if fault.Value != nil {
+			validation.ReportError(fault.Value, "value", "Value", "excluded", "")
+		}
+
+		return
+	}
+	if fault.Value == nil {
+		validation.ReportError(fault.Value, "value", "Value", "required", "")
+	}
+}

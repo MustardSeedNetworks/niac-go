@@ -28,6 +28,7 @@ func newConfigValidator() *validator.Validate {
 	// `devices[0].mac` instead of `Devices[0].MAC`.
 	v.RegisterTagNameFunc(yamlFieldName)
 	v.RegisterStructValidation(validateBehaviorFaultPayload, BehaviorFault{})
+	v.RegisterStructValidation(validateAuthoredInterfaceFault, InterfaceFault{})
 	v.RegisterStructValidation(validateDHCPv4Options, DhcpServer{})
 
 	return v

@@ -220,6 +220,7 @@
         "dns_timeout": "Tiempo de espera DNS agotado",
         "latency": "Latency",
         "link_down": "Enlace caído",
+        "poe_loss": "Pérdida de PoE",
         "memory_percent": "Utilización de memoria",
         "fcs_errors": "Errores FCS",
         "high_utilization": "Utilización alta",

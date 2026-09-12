@@ -255,6 +255,7 @@ type Device struct {
 	TTLConfig           *TTLConfig // ICMP TTL timeout behavior (traceroute simulation)
 	VLAN                int        // Optional VLAN membership (Java Vlan)
 	Interfaces          []Interface
+	Faults              []DeviceFault
 	Routes              []Route
 	SNMPConfig          SNMPConfig
 	DHCPConfig          *DHCPConfig          // DHCP server configuration
@@ -399,6 +400,22 @@ type Interface struct {
 	InUtilization  float64 // percentage of interface capacity
 	OutUtilization float64 // percentage of interface capacity
 	VLANs          []int
+	Faults         []InterfaceFault
+}
+
+// InterfaceFault is one condition the scenario starts in, on this interface.
+// It is applied before the simulation serves anything, so an authored fault is
+// true at the first poll rather than arriving with a behavior phase.
+type InterfaceFault struct {
+	Type  string
+	Value int
+}
+
+// DeviceFault is one device-service condition the scenario starts in. It has no
+// interface because a service outage has nowhere to be keyed by one.
+type DeviceFault struct {
+	Type  string
+	Value int
 }
 
 // SNMPConfig holds SNMP configuration.

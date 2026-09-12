@@ -20,6 +20,7 @@ schema is right and this guide is a bug.
 - [Links and topology](#links-and-topology)
 - [PoE: who supplies power and who draws it](#poe-who-supplies-power-and-who-draws-it)
 - [Services](#services)
+- [Faults the scenario starts in](#faults-the-scenario-starts-in)
 - [Behaviour timelines](#behaviour-timelines)
 - [Rules that cost people a round trip](#rules-that-cost-people-a-round-trip)
 - [Validating your work](#validating-your-work)
@@ -340,6 +341,52 @@ discovery_protocols:
     enabled: true
     interval: 30
 ```
+
+## Faults the scenario starts in
+
+A timeline describes a network that breaks on a schedule. Most of the time what
+you want is a network that is _already_ broken — the condition a tool is meant
+to find is true before anything is polled, with no operator action and no
+waiting. Those are authored where they live.
+
+An interface carries its own conditions:
+
+```yaml
+devices:
+  - name: clinic-sw-01
+    interfaces:
+      - name: GigabitEthernet1/0/24
+        address: 10.20.0.24/24
+        speed: 1000
+        faults:
+          - type: fcs_errors
+            value: 25
+          - type: link_down
+```
+
+`fcs_errors`, `packet_discards`, `interface_errors` and `high_utilization` are
+rates and take a `value` of 1 to 100. `link_down` and `poe_loss` take none: a
+dead link has no magnitude, and writing a number there would invent one.
+
+A device carries the service outcomes, which have no interface to be keyed by:
+
+```yaml
+devices:
+  - name: clinic-dhcp-01
+    faults:
+      - type: dhcp_no_offer
+        value: 100
+```
+
+`latency` is milliseconds and reaches 60000; every other device fault is a rate
+and stops at 100.
+
+Authored faults meet the same eligibility rules as an injected one: a counter
+fault on an interface no agent reports, a PoE fault on a port supplying no
+power, or a DNS fault on a device serving no DNS is refused and logged rather
+than silently armed. They are the starting state, not a lock — an operator can
+override or clear any of them at runtime, and a reload restores what the file
+says.
 
 ## Behaviour timelines
 

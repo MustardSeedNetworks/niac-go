@@ -28,6 +28,17 @@ func (s *Stack) SetDeviceFault(
 ) error {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
+
+	return s.setDeviceFaultNoLock(deviceTarget, faultType, value)
+}
+
+// setDeviceFaultNoLock is the body, without the reload lock -- see
+// setInterfaceFaultNoLock for why the authored-fault pass needs it.
+func (s *Stack) setDeviceFaultNoLock(
+	deviceTarget string,
+	faultType devicestate.DeviceFaultType,
+	value int,
+) error {
 	device, store, err := s.interfaceFaultTarget(deviceTarget)
 	if err != nil {
 		return err

@@ -48,6 +48,22 @@ func (s *Stack) setInterfaceFaultAt(
 ) error {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
+
+	return s.setInterfaceFaultNoLock(deviceIP, interfaceName, faultType, value, now)
+}
+
+// setInterfaceFaultNoLock is the body, without the reload lock. Its two callers
+// are the public setter, which takes the lock for reading, and the authored-fault
+// pass, which runs either during construction (nothing else can see the stack
+// yet) or from inside a reload that already holds the lock for writing.
+// sync.RWMutex is not reentrant, so the reload path going back through the
+// public setter deadlocks against itself -- which is what happened.
+func (s *Stack) setInterfaceFaultNoLock(
+	deviceIP, interfaceName string,
+	faultType devicestate.FaultType,
+	value int,
+	now time.Time,
+) error {
 	device, store, err := s.interfaceFaultTarget(deviceIP)
 	if err != nil {
 		return err

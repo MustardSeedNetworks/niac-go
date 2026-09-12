@@ -49,9 +49,45 @@ func convertYAMLDevice(yamlDevice converter.Device, includePath string, registry
 	device.TrunkPorts = convertTrunkPorts(yamlDevice.TrunkPorts)
 	device.PortChannels = convertPortChannels(yamlDevice.PortChannels)
 	device.Interfaces = convertInterfaces(yamlDevice.Interfaces)
+	device.Faults = convertDeviceFaults(yamlDevice.Faults)
 	device.Routes = convertRoutes(yamlDevice.Routes)
 
 	return device, nil
+}
+
+// convertInterfaceFaults carries the authored interface conditions across.
+// An on/off fault authors no value -- there is no magnitude to a dead link --
+// so it arrives here as zero and becomes one, the value the store reads as armed.
+func convertInterfaceFaults(in []converter.InterfaceFault) []InterfaceFault {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]InterfaceFault, len(in))
+	for i, fault := range in {
+		out[i] = InterfaceFault{Type: fault.Type, Value: authoredFaultValue(fault.Value)}
+	}
+
+	return out
+}
+
+func convertDeviceFaults(in []converter.DeviceFault) []DeviceFault {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]DeviceFault, len(in))
+	for i, fault := range in {
+		out[i] = DeviceFault{Type: fault.Type, Value: authoredFaultValue(fault.Value)}
+	}
+
+	return out
+}
+
+func authoredFaultValue(value *int) int {
+	if value == nil {
+		return 1
+	}
+
+	return *value
 }
 
 func convertInterfaces(in []converter.Interface) []Interface {
@@ -74,6 +110,7 @@ func convertInterfaces(in []converter.Interface) []Interface {
 			InUtilization:  iface.InUtilization,
 			OutUtilization: iface.OutUtilization,
 			VLANs:          iface.VLANs,
+			Faults:         convertInterfaceFaults(iface.Faults),
 		}
 	}
 	return out

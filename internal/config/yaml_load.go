@@ -119,6 +119,9 @@ func buildConfigFromYAML(yamlConfig *converter.Config, configDir string, roots [
 	if err = validateBehaviorTargets(cfg); err != nil {
 		return nil, err
 	}
+	if err = validateAuthoredFaults(cfg); err != nil {
+		return nil, err
+	}
 
 	// A config must describe at least one device somewhere — either flat, or
 	// inline in a segment. (Segments that only reference a `config:` file are

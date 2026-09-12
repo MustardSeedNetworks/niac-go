@@ -6,6 +6,7 @@ export const interfaceBehaviorFaultTypes = [
   'interface_errors',
   'high_utilization',
   'link_down',
+  'poe_loss',
   'duplicate_ip',
   'bad_mask',
 ] as const;

@@ -1872,6 +1872,63 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "description": "VLANs are the VLAN ids carried on this port when it is a switch port.",
         "kind": "scalarList",
         "itemKind": "integer"
+      },
+      {
+        "name": "faults",
+        "title": "Faults",
+        "description": "Faults are the conditions this interface starts in. They are armed before\nthe simulation serves anything, so a scenario can describe a network that\nis already broken rather than one that breaks on a schedule.",
+        "kind": "objectList",
+        "fields": [
+          {
+            "name": "type",
+            "title": "Type",
+            "description": "Type is the interface fault to arm.",
+            "kind": "enum",
+            "options": [
+              "fcs_errors",
+              "packet_discards",
+              "interface_errors",
+              "high_utilization",
+              "link_down",
+              "poe_loss"
+            ]
+          },
+          {
+            "name": "value",
+            "title": "Value",
+            "description": "Value is the rate, 1..100. Omit it for link_down and poe_loss: a dead\nlink has no magnitude, and a number there would imply one.",
+            "kind": "integer"
+          }
+        ]
+      }
+    ],
+    "kind": "objectList"
+  },
+  {
+    "key": "faults",
+    "title": "Faults",
+    "fields": [
+      {
+        "name": "type",
+        "title": "Type",
+        "description": "Type is the device fault to arm.",
+        "kind": "enum",
+        "options": [
+          "dhcp_no_offer",
+          "dns_nxdomain",
+          "dns_timeout",
+          "latency",
+          "cpu_percent",
+          "memory_percent",
+          "disk_percent",
+          "captive_portal"
+        ]
+      },
+      {
+        "name": "value",
+        "title": "Value",
+        "description": "Value is the rate, or for latency the delay in milliseconds. The ceiling\nis the fault's own: 100 for a rate, 60000 for latency.",
+        "kind": "integer"
       }
     ],
     "kind": "objectList"
