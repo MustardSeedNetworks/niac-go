@@ -22,6 +22,9 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve configuration path: %w", err)
 	}
+	if bare, ok := resolveBareNameInRoots(path, roots); ok {
+		absPath = bare
+	}
 	if !pathWithinAnyRoot(absPath, roots, false) {
 		return "", ErrPathOutsideManagedRoots
 	}
@@ -47,6 +50,75 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	}
 
 	return realPath, nil
+}
+
+// resolveBareNameInRoots searches the managed roots for a configuration named
+// without any directory part, which is the only spelling an operator has: the
+// roots hold the shipped scenarios, and where they live is the daemon's own
+// business. Without this a bare name was made absolute against the daemon's
+// working directory, so on an installed host (cwd /var/lib/niac, library under
+// the service user's home) nothing shipped could be named at all and `--config
+// basic-network.yaml` was refused as outside managed storage.
+//
+// Anything that is not a plain filename is left alone for the caller's own
+// path handling to resolve and the containment checks to judge. Roots are
+// searched in order, so a user config shadows a starter of the same name. The
+// match is made against each root's own directory entries, so the path handed
+// back is one the root already held rather than one built from the request.
+func resolveBareNameInRoots(name string, roots []string) (string, bool) {
+	if !isPlainFileName(name) {
+		return "", false
+	}
+	for _, root := range roots {
+		if root == "" {
+			continue
+		}
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.Name() != name || !entry.Type().IsRegular() {
+				continue
+			}
+			// Joined with the directory entry's own name rather than the
+			// caller's string: what is returned is a file this root was
+			// already holding, which is what "selected from NIAC-managed
+			// storage" means, and no path is ever built out of the request.
+			candidate, absErr := filepath.Abs(filepath.Join(root, entry.Name()))
+			if absErr != nil {
+				continue
+			}
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+// isPlainFileName reports whether name is a bare filename that cannot leave the
+// directory it is joined to: no separator, no "." or ".." spelling, no leading
+// dot, and only the characters the library already allows a stored file to
+// carry (internal/library.validateName). Stated as one predicate so the barrier
+// is visible to a reader and to static analysis, rather than inferred from the
+// join.
+func isPlainFileName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if strings.HasPrefix(name, ".") {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case r == '.' || r == '_' || r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func hasParentTraversal(path string) bool {
