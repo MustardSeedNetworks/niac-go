@@ -16,7 +16,6 @@ const (
 	snmpTypeString                                  = "STRING"
 	apRadioCount                                    = 4
 	dot11PhyColumns                                 = 3
-	dot11PHYTypeOFDM                                = 4
 	dot11StationMediumOccupancyLimitColumn          = 2
 	dot11StationCFPollableColumn                    = 3
 	dot11StationCFPPeriodColumn                     = 4
@@ -173,15 +172,17 @@ func apDot11CapabilityMIBs() []converter.AddMib {
 }
 
 func apDot11PhyMIBs(site string) []converter.AddMib {
-	mibs := make([]converter.AddMib, 0, apRadioCount*dot11PhyColumns)
-	for radio := 1; radio <= apRadioCount; radio++ {
-		suffix := fmt.Sprintf(".%d", radio)
+	radios := apRadioPlan()
+	mibs := make([]converter.AddMib, 0, len(radios)*dot11PhyColumns)
+	for index, radio := range radios {
+		// dot11 table indices are 1-based; Dot11Radio0 is row 1.
+		suffix := fmt.Sprintf(".%d", index+1)
 		mibs = append(
 			mibs,
 			converter.AddMib{
 				OID:   "1.2.840.10036.2.1.1.1" + suffix,
 				Type:  snmpTypeInteger,
-				Value: strconv.Itoa(dot11PHYTypeOFDM),
+				Value: strconv.Itoa(radio.phyType),
 			},
 			converter.AddMib{
 				OID:   "1.2.840.10036.2.1.1.2" + suffix,

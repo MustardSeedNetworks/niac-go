@@ -2,10 +2,12 @@ package scenario_test
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 func assertEnterpriseDeviceMix(t *testing.T, cfg *config.Config) {
@@ -105,13 +107,19 @@ func assertCompleteAPRadioMIBs(t *testing.T, device *config.Device, stationIDs m
 				t.Errorf("%s radio %d omits PHY column %d", device.Name, radio, column)
 			}
 		}
+		// Each radio reports its own PHY, from the same plan that sets its
+		// interface speed. This used to assert OFDM(4) — 802.11a — on every
+		// radio of an access point whose sysDescr calls it Wi-Fi 7, so the
+		// assertion pinned the contradiction rather than catching it.
 		phyType := mibs[fmt.Sprintf("1.2.840.10036.2.1.1.1.%d", radio)]
-		if phyType.Type != "INTEGER" || phyType.Value != "4" {
+		wantPHY := strconv.Itoa(scenario.APRadioPHYTypeForTest(radio - 1))
+		if phyType.Type != "INTEGER" || phyType.Value != wantPHY {
 			t.Errorf(
-				"%s radio %d PHY type = %+v, want INTEGER OFDM(4)",
+				"%s radio %d PHY type = %+v, want INTEGER %s",
 				device.Name,
 				radio,
 				phyType,
+				wantPHY,
 			)
 		}
 	}
