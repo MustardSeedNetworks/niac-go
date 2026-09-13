@@ -5,6 +5,30 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.58](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.57...v0.95.58) (2026-09-13)
+
+
+### Features
+
+* **scenario:** every vertical prints ([#2123](https://github.com/MustardSeedNetworks/niac-go/issues/2123)) ([c6b0863](https://github.com/MustardSeedNetworks/niac-go/commit/c6b0863595b2de902df1b655f4d2d8cf62fcb8c4)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
+
+### Bug Fixes
+
+* **config:** resolve a bare scenario name out of the managed roots ([#2126](https://github.com/MustardSeedNetworks/niac-go/issues/2126)) ([6abc5bf](https://github.com/MustardSeedNetworks/niac-go/commit/6abc5bfcddc307fa8a02faf4c539bf31a8b24471))
+* **daemon:** resolve a template name out of the library when no template dir has it ([#2128](https://github.com/MustardSeedNetworks/niac-go/issues/2128)) ([cb7d1d5](https://github.com/MustardSeedNetworks/niac-go/commit/cb7d1d5231de131ef14c6f353d86629e88257ae6)), closes [#2125](https://github.com/MustardSeedNetworks/niac-go/issues/2125)
+
+
+### Tests
+
+* **daemon:** read the capture status before consulting the deadline ([#2130](https://github.com/MustardSeedNetworks/niac-go/issues/2130)) ([5f8f90c](https://github.com/MustardSeedNetworks/niac-go/commit/5f8f90cffb00cf664273aa18608063b6be4e5268)), closes [#2129](https://github.com/MustardSeedNetworks/niac-go/issues/2129)
+* **scenario:** gate that every declared link can actually be discovered ([#2119](https://github.com/MustardSeedNetworks/niac-go/issues/2119)) ([e81fb8f](https://github.com/MustardSeedNetworks/niac-go/commit/e81fb8fdbef752e389e98a557241003b2e535315)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
+
+### Miscellaneous
+
+* **deps:** regenerate ui lock file with platform binaries intact ([#2121](https://github.com/MustardSeedNetworks/niac-go/issues/2121)) ([87f0ed0](https://github.com/MustardSeedNetworks/niac-go/commit/87f0ed0176332e6b978856a7969f6aff27f1c009)), closes [#2120](https://github.com/MustardSeedNetworks/niac-go/issues/2120)
+
 ## [0.95.57](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.56...v0.95.57) (2026-09-12)
 
 
