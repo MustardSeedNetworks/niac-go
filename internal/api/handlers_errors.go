@@ -109,12 +109,12 @@ func (s *Server) handleErrorInjection(
 func (s *Server) applyFaultRequest(
 	req *errorInjectionRequest, stack *protocols.Stack,
 ) error {
-	if req.ErrorType == badMaskLabel {
+	if req.ErrorType == devicestate.FaultBadMask.Label() {
 		return stack.SetInterfacePrefixFault(req.Device, devicestate.InterfacePrefixFault{
 			Interface: req.Interface, Type: devicestate.FaultBadMask, PrefixBits: *req.PrefixBits,
 		})
 	}
-	if req.ErrorType == duplicateIPLabel {
+	if req.ErrorType == devicestate.FaultDuplicateIP.Label() {
 		return stack.SetInterfaceAddressFault(req.Device, devicestate.InterfaceAddressFault{
 			Interface: req.Interface, Type: devicestate.FaultDuplicateIP, Address: netip.MustParseAddr(*req.Address),
 		})
@@ -159,9 +159,9 @@ func (s *Server) handleErrorClear(
 		switch errorType {
 		case "":
 			err = stack.ClearInterfaceFaults(device, iface)
-		case duplicateIPLabel:
+		case devicestate.FaultDuplicateIP.Label():
 			err = stack.ClearInterfaceAddressFault(device, iface, devicestate.FaultDuplicateIP)
-		case badMaskLabel:
+		case devicestate.FaultBadMask.Label():
 			err = stack.ClearInterfacePrefixFault(device, iface, devicestate.FaultBadMask)
 		default:
 			var faultType devicestate.FaultType

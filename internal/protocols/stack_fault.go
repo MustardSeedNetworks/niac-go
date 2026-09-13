@@ -135,7 +135,7 @@ func (s *Stack) InterfaceFaultTargets() []InterfaceFaultTarget {
 		for _, iface := range snapshot.Network.Interfaces {
 			kinds := s.interfaceFaultCapabilities(device, iface.Name, conflicts[device][iface.Name])
 			if s.maskInterfaceEligible(device, iface) {
-				kinds = append(kinds, "Bad Subnet Mask")
+				kinds = append(kinds, devicestate.FaultBadMask.Label())
 			}
 			if len(kinds) != 0 {
 				target.Interfaces = append(target.Interfaces, iface.Name)
@@ -170,7 +170,7 @@ func (s *Stack) interfaceFaultCapabilities(device *config.Device, iface string, 
 		}
 	}
 	if conflict {
-		kinds = append(kinds, "Duplicate IP")
+		kinds = append(kinds, devicestate.FaultDuplicateIP.Label())
 	}
 	return kinds
 }

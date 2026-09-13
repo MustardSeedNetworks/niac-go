@@ -13,6 +13,15 @@ type InterfacePrefixFaultType string
 // FaultBadMask overrides a host's local-network mask without moving its address.
 const FaultBadMask InterfacePrefixFaultType = "bad_mask"
 
+// Label returns the operator-facing name of a prefix fault. See
+// InterfaceAddressFaultType.Label for why it lives beside the constant.
+func (t InterfacePrefixFaultType) Label() string {
+	if t == FaultBadMask {
+		return "Bad Subnet Mask"
+	}
+	return ""
+}
+
 // ErrFaultPrefixInvalid indicates an invalid IPv4 mask length or target.
 var ErrFaultPrefixInvalid = errors.New("prefix fault requires an IPv4 interface and mask length 0 through 32")
 
