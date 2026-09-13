@@ -221,16 +221,27 @@ func (f *fakeCaptureEngine) Close() {
 	f.closes.Add(1)
 }
 
+// waitForCaptureStatus polls until the daemon reports the wanted Running
+// state. The condition is read before the deadline is consulted, so the helper
+// cannot fail without having looked: every state it waits for is set
+// synchronously under d.mu by StartCapture or StopCapture, and the wait exists
+// only for the runner goroutine's own transitions. Ejected #2122 from the merge
+// queue (#2129) with "capture Running did not become true" while the daemon held
+// exactly the right session -- the old one-second budget was set at the top of
+// the function and, under -race on a loaded runner, could already be spent
+// before the first read.
 func waitForCaptureStatus(t *testing.T, d *Daemon, running bool) {
 	t.Helper()
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
+	deadline := time.Now().Add(30 * time.Second)
+	for {
 		if d.GetCaptureStatus().Running == running {
 			return
 		}
+		if time.Now().After(deadline) {
+			t.Fatalf("capture Running did not become %v", running)
+		}
 		time.Sleep(time.Millisecond)
 	}
-	t.Fatalf("capture Running did not become %v", running)
 }
 
 // newTestDaemon builds a Daemon with the minimum scaffolding needed to
