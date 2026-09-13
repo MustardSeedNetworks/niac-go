@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 func TestMaskFaultRequestValidation(t *testing.T) {
@@ -56,7 +58,7 @@ func TestMaskFaultAPIApplyReadClear(t *testing.T) {
 	if err := json.Unmarshal(read.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	payload := response.Active["client1"]["Management"][badMaskLabel]
+	payload := response.Active["client1"]["Management"][devicestate.FaultBadMask.Label()]
 	if payload.PrefixBits == nil || *payload.PrefixBits != 0 || payload.Value != nil ||
 		payload.Address != nil {
 		t.Fatalf("wrong active mask: %+v", payload)

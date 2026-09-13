@@ -27,10 +27,6 @@ type interfaceFaultTargetResponse struct {
 
 var errInterfaceFaultTypeInvalid = errors.New("unsupported fault type")
 
-const duplicateIPLabel = "Duplicate IP"
-
-const badMaskLabel = "Bad Subnet Mask"
-
 func availableErrorTypes() []map[string]string {
 	descriptions := map[devicestate.FaultType]string{
 		devicestate.FaultFCS:         "Frame Check Sequence errors (0-100)",
@@ -47,12 +43,12 @@ func availableErrorTypes() []map[string]string {
 		})
 	}
 	result = append(result, map[string]string{
-		"type":        duplicateIPLabel,
+		"type":        devicestate.FaultDuplicateIP.Label(),
 		"description": "Answer ARP for an IPv4 address owned by a peer on the selected segment",
 		"valueKind":   "address",
 	})
 	result = append(result, map[string]string{
-		"type":        badMaskLabel,
+		"type":        devicestate.FaultBadMask.Label(),
 		"description": "Change the IPv4 host mask without changing its canonical address",
 		"valueKind":   "prefix",
 	})
@@ -183,7 +179,9 @@ func interfaceFaultResponse(
 			if result[device][fault.Interface] == nil {
 				result[device][fault.Interface] = make(map[string]deviceFaultPayload)
 			}
-			result[device][fault.Interface][duplicateIPLabel] = deviceFaultPayload{Address: new(fault.Address.String())}
+			result[device][fault.Interface][devicestate.FaultDuplicateIP.Label()] = deviceFaultPayload{
+				Address: new(fault.Address.String()),
+			}
 		}
 	}
 	for device, faults := range prefixes {
@@ -204,7 +202,9 @@ func appendPrefixFaultResponse(
 		if result[device][fault.Interface] == nil {
 			result[device][fault.Interface] = make(map[string]deviceFaultPayload)
 		}
-		result[device][fault.Interface][badMaskLabel] = deviceFaultPayload{PrefixBits: new(fault.PrefixBits)}
+		result[device][fault.Interface][devicestate.FaultBadMask.Label()] = deviceFaultPayload{
+			PrefixBits: new(fault.PrefixBits),
+		}
 	}
 }
 
@@ -241,14 +241,14 @@ func (req *errorInjectionRequest) validationMessage() string {
 }
 
 func (req *errorInjectionRequest) payloadValidationMessage() string {
-	if req.ErrorType == badMaskLabel {
+	if req.ErrorType == devicestate.FaultBadMask.Label() {
 		return validateMaskPayload(req.PrefixBits, req.Value, req.Address)
 	}
 	if req.PrefixBits != nil {
 		return "prefixBits requires a mask fault"
 	}
 	kind, _ := devicestate.ParseDeviceFaultLabel(req.ErrorType)
-	addressed := kind == devicestate.FaultDuplicateDHCPOffer || req.ErrorType == duplicateIPLabel
+	addressed := kind == devicestate.FaultDuplicateDHCPOffer || req.ErrorType == devicestate.FaultDuplicateIP.Label()
 	if message := validateFaultPayload(addressed, req.Value, req.Address); message != "" {
 		return message
 	}

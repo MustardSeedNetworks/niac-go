@@ -12,6 +12,19 @@ type InterfaceAddressFaultType string
 // FaultDuplicateIP adds a conflict responder without replacing canonical ownership.
 const FaultDuplicateIP InterfaceAddressFaultType = "duplicate_ip"
 
+// Label returns the operator-facing name of an addressed interface fault. The
+// two payload-bearing interface faults carry their names here, beside the
+// constants, for the same reason the numeric ones do: the name was written out
+// as a literal in the runtime's capability list and again as a constant in the
+// API layer, so the catalog had two spellings of each with nothing holding them
+// together.
+func (t InterfaceAddressFaultType) Label() string {
+	if t == FaultDuplicateIP {
+		return "Duplicate IP"
+	}
+	return ""
+}
+
 // InterfaceAddressFault keeps addressed outcomes separate from numeric interface rates.
 type InterfaceAddressFault struct {
 	Interface string

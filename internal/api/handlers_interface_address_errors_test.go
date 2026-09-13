@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
@@ -22,7 +23,10 @@ func TestInterfaceAddressFaultTargetsDoNotRequireSNMP(t *testing.T) {
 			continue
 		}
 		if !slices.Equal(target.Interfaces, []string{"Management"}) ||
-			!slices.Equal(target.ErrorTypes["Management"], []string{duplicateIPLabel, badMaskLabel}) {
+			!slices.Equal(
+				target.ErrorTypes["Management"],
+				[]string{devicestate.FaultDuplicateIP.Label(), devicestate.FaultBadMask.Label()},
+			) {
 			t.Fatalf("address-only target advertised incorrect capabilities: %+v", target)
 		}
 		return

@@ -78,9 +78,9 @@ func TestInjectionSurfaceOffersEveryDeviceAction(t *testing.T) {
 func faultLabel(faultType string) string {
 	switch faultType {
 	case string(devicestate.FaultDuplicateIP):
-		return duplicateIPLabel
+		return devicestate.FaultDuplicateIP.Label()
 	case string(devicestate.FaultBadMask):
-		return badMaskLabel
+		return devicestate.FaultBadMask.Label()
 	}
 	for _, definition := range devicestate.InterfaceFaultDefinitions() {
 		if string(definition.Type) == faultType {
