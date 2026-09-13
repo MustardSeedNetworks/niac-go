@@ -147,18 +147,29 @@ package over ssh and asserts that:
 - `/__version` reports the installed version,
 - `uiBuildHash` is non-empty, which is the only signal that the web UI was
   embedded (a binary built outside the make pipeline reports an empty hash and
-  serves no UI), and
-- installing a second time, over the configuration and database the first
-  install left behind, does not leave the unit restarting.
+  serves no UI),
+- upgrading over the configuration, database and recovery state an **older**
+  release left behind does not leave the unit restarting, and
+- the daemon still starts a simulation afterwards, and the one that was running
+  before the upgrade survived it.
+
+That last pair is why the first install is the previous release rather than the
+same package twice: a reinstall of identical bytes crosses no version boundary,
+so nothing an older build wrote is ever carried forward. The simulations run on
+throwaway `dummy` interfaces the script creates and deletes, so nothing it
+starts reaches the host's network.
 
 ```bash
 make deploy-validate HOST=dev-srv-ubuntu
 make deploy-validate HOST=dev-srv-fedora RELEASE=v0.95.38
+make deploy-validate HOST=dev-srv-ubuntu FROM_RELEASE=v0.95.57
+make deploy-validate HOST=dev-srv-ubuntu FROM_RELEASE=none   # same-version reinstall
 make deploy-validate HOST=dev-srv-ubuntu PACKAGE=./dist/niac_0.95.38_amd64.deb
 ```
 
 `HOST` is an ssh target with passwordless sudo and is required; deployment
-hosts are passed in rather than hardcoded. The assertions run on the host
+hosts are passed in rather than hardcoded. `FROM_RELEASE` names the build
+installed first and defaults to the release immediately before `RELEASE`. The assertions run on the host
 against the loopback listener, so a closed firewall does not read as a broken
 deployment. Packages themselves are built by goreleaser in CI — there is no
 local packaging target, and `deploy-validate` deliberately does not add one.
