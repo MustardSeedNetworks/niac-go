@@ -375,11 +375,31 @@ func loadSimulationConfig(
 		// refs that resolve to sibling directories (e.g. examples/
 		// device_walks_sanitized/...). Fetching the YAML text and
 		// POSTing it as ConfigData would lose that context.
+		roots := simulationConfigRoots()
 		templatePath := templates.Find(req.TemplateName)
 		if templatePath == "" {
-			return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
+			// The template directories templates.Find walks are a
+			// development-tree and system-install idea; the deb and rpm
+			// create none of them. What an installed host has is the
+			// library, which first run seeds with exactly the scenarios
+			// `niac template list` advertises -- and which is also where
+			// their `include_path: ../walks` resolves from, so loading one
+			// from there keeps the directory context this case exists for.
+			// Composed here rather than inside templates.Dirs(), which is a
+			// leaf over stdlib and may not know about the library.
+			//
+			// Only existence is asked here; the name itself is handed on, so
+			// the load resolves and confines it exactly as a named ConfigPath
+			// is. Passing the resolved real path instead would fail the
+			// pre-symlink containment check wherever a root sits under a
+			// symlinked directory, which is every macOS /var.
+			candidate := req.TemplateName + ".yaml"
+			if _, libraryErr := config.ResolveManagedConfigPath(candidate, roots); libraryErr != nil {
+				return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
+			}
+			templatePath = candidate
 		}
-		cfg, managedPath, err := config.LoadYAMLManaged(templatePath, simulationConfigRoots())
+		cfg, managedPath, err := config.LoadYAMLManaged(templatePath, roots)
 		if err != nil {
 			return nil, "", fmt.Errorf("load template %q: %w", req.TemplateName, err)
 		}
