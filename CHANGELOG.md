@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.60](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.59...v0.95.60) (2026-09-13)
+
+
+### Bug Fixes
+
+* **scenario:** an access point's radios report what they actually are ([#2137](https://github.com/MustardSeedNetworks/niac-go/issues/2137)) ([dfc9550](https://github.com/MustardSeedNetworks/niac-go/commit/dfc95507cafc7da5423bf175e798366879902fd5)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
+
+### Tests
+
+* **scenario:** gate every device protocol and fault type against the packs ([#2140](https://github.com/MustardSeedNetworks/niac-go/issues/2140)) ([5fcbfb6](https://github.com/MustardSeedNetworks/niac-go/commit/5fcbfb609d2f91976d8826ec49101e5e076beab5)), closes [#2139](https://github.com/MustardSeedNetworks/niac-go/issues/2139)
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.5.13 ([#2134](https://github.com/MustardSeedNetworks/niac-go/issues/2134)) ([9ccc42b](https://github.com/MustardSeedNetworks/niac-go/commit/9ccc42bdd00e83fd9470858b04a9a63812ad001c))
+* **deps:** update dependency lint-staged to v17.5.1 ([#2135](https://github.com/MustardSeedNetworks/niac-go/issues/2135)) ([a93c0ed](https://github.com/MustardSeedNetworks/niac-go/commit/a93c0ed59acd13c0a0a478e4434cf91fe0255908))
+
 ## [0.95.59](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.58...v0.95.59) (2026-09-13)
 
 
