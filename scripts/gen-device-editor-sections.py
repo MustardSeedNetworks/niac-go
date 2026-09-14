@@ -68,6 +68,7 @@ GENERATED_COMPONENT = "components/device-editor/generated/sections.generated.ts"
 NETWORKS_STEP = "components/wizard/NetworksStep.tsx"
 FLEET_DEFAULTS = "components/wizard/FleetDefaultsEditor.tsx"
 BEHAVIOR_COMPOSER = "components/wizard/DraftBehaviorComposer.tsx"
+ATTACHMENT_POOL = "components/wizard/AttachmentPoolEditor.tsx"
 
 CONFIG_BOUND = {
     "behavior_timelines[].phases[].faults[].prefix_bits": "components/wizard/BehaviorFaultAction.tsx",
@@ -77,6 +78,11 @@ CONFIG_BOUND = {
     "networks[].virtual_vlan": NETWORKS_STEP,
     "attachments[].name": NETWORKS_STEP,
     "attachments[].connect": NETWORKS_STEP,
+    "attachments[].at.device": ATTACHMENT_POOL,
+    "attachments[].at.ports[]": ATTACHMENT_POOL,
+    "attachments[].pins[].mac": ATTACHMENT_POOL,
+    "attachments[].pins[].device": ATTACHMENT_POOL,
+    "attachments[].pins[].interface": ATTACHMENT_POOL,
     "capture_playbacks[].file_name": FLEET_DEFAULTS,
     "capture_playbacks[].loop_time": FLEET_DEFAULTS,
     "capture_playbacks[].scale_time": FLEET_DEFAULTS,

@@ -1,5 +1,5 @@
 import { Network, Plus, Trash2, Wand2 } from 'lucide-react';
-import { type FC, useMemo } from 'react';
+import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -7,6 +7,7 @@ import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
 import { FormField } from '../form/FormField';
+import { AttachmentPoolEditor } from './AttachmentPoolEditor';
 import { setDeviceAddress } from './device-addressing';
 import {
   type AuthoredAttachment,
@@ -38,6 +39,12 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
   const { t } = useTranslation('pages');
   const model = useMemo(() => parseNetworkModel(content), [content]);
 
+  // A pool with no ports yet is not expressible in the document: the daemon
+  // refuses an empty `ports:` list, and this step's whole design is that the
+  // draft stays loadable after every keystroke. So the half-built pool lives
+  // here until it has a port, and the document takes it from there.
+  const [drafts, setDrafts] = useState<Record<number, Partial<AuthoredAttachment>>>({});
+
   const writeNetworks = (networks: AuthoredNetwork[]) =>
     onChange(spliceConfigSection(content, 'networks', serializeNetworks(networks)));
 
@@ -49,6 +56,36 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
 
   const updateAttachment = (index: number, patch: Partial<AuthoredAttachment>) =>
     writeAttachments(model.attachments.map((a, i) => (i === index ? { ...a, ...patch } : a)));
+
+  const poolOf = (index: number, attachment: AuthoredAttachment) =>
+    attachment.at ?? drafts[index]?.at;
+
+  // The document keeps what it can express; the draft keeps the rest, so a pin
+  // still being typed is not lost on the next re-parse.
+  const attachmentWithDraft = (index: number, attachment: AuthoredAttachment) => ({
+    ...attachment,
+    at: poolOf(index, attachment),
+    pins: attachment.pins ?? drafts[index]?.pins,
+  });
+
+  const selectAttachmentForm = (index: number, form: string) => {
+    if (form === 'ports') {
+      setDrafts({ ...drafts, [index]: { at: { device: '', ports: [] } } });
+      return;
+    }
+    const { [index]: _removed, ...rest } = drafts;
+    setDrafts(rest);
+    updateAttachment(index, {
+      connect: model.networks[0]?.name ?? '',
+      at: undefined,
+      pins: [],
+    });
+  };
+
+  const updateAttachmentPool = (index: number, patch: Partial<AuthoredAttachment>) => {
+    setDrafts({ ...drafts, [index]: { ...drafts[index], ...patch } });
+    updateAttachment(index, patch);
+  };
 
   const assign = (device: string, networkName: string) => {
     const network = model.networks.find((candidate) => candidate.name === networkName);
@@ -203,22 +240,41 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
                 />
               </FormField>
               <FormField
-                label={t('newSimWizard.networks.attachmentConnect')}
-                htmlFor={`attachment-connect-${index}`}
+                label={t('newSimWizard.networks.attachmentForm')}
+                htmlFor={`attachment-form-${index}`}
               >
                 <select
-                  id={`attachment-connect-${index}`}
+                  id={`attachment-form-${index}`}
+                  data-testid={`attachment-form-${index}`}
                   className={inputClassName}
-                  value={attachment.connect}
-                  onChange={(event) => updateAttachment(index, { connect: event.target.value })}
+                  value={poolOf(index, attachment) ? 'ports' : 'network'}
+                  onChange={(event) => selectAttachmentForm(index, event.target.value)}
                 >
-                  {model.networks.map((network) => (
-                    <option key={network.name} value={network.name}>
-                      {network.name}
-                    </option>
-                  ))}
+                  <option value="network">
+                    {t('newSimWizard.networks.attachmentFormNetwork')}
+                  </option>
+                  <option value="ports">{t('newSimWizard.networks.attachmentFormPorts')}</option>
                 </select>
               </FormField>
+              {poolOf(index, attachment) === undefined && (
+                <FormField
+                  label={t('newSimWizard.networks.attachmentConnect')}
+                  htmlFor={`attachment-connect-${index}`}
+                >
+                  <select
+                    id={`attachment-connect-${index}`}
+                    className={inputClassName}
+                    value={attachment.connect}
+                    onChange={(event) => updateAttachment(index, { connect: event.target.value })}
+                  >
+                    {model.networks.map((network) => (
+                      <option key={network.name} value={network.name}>
+                        {network.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              )}
               <Button
                 variant="outline"
                 data-testid={`attachments-remove-${index}`}
@@ -226,6 +282,15 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
               >
                 <Trash2 className={iconSizes.sm} /> {t('newSimWizard.networks.remove')}
               </Button>
+              {poolOf(index, attachment) !== undefined && (
+                <AttachmentPoolEditor
+                  index={index}
+                  attachment={attachmentWithDraft(index, attachment)}
+                  devices={model.devices}
+                  onChange={(patch) => updateAttachmentPool(index, patch)}
+                  inputClassName={inputClassName}
+                />
+              )}
             </div>
           ))}
         </CardContent>

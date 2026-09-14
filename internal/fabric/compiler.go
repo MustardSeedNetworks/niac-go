@@ -53,6 +53,8 @@ func newScenarioCompiler(cfg *config.Config, binding Binding) *scenarioCompiler 
 func (c *scenarioCompiler) compileScenario() Report {
 	c.compileNetworks()
 	c.compileDevices()
+	c.compileAttachments()
+	c.bindPoolNetwork()
 	c.report.Safe = len(c.report.Diagnostics) == 0
 	return c.report
 }
@@ -92,6 +94,9 @@ func (c *scenarioCompiler) compileBinding() {
 		if attachment.Name != c.binding.Attachment {
 			continue
 		}
+		// A port-scoped attachment's network is resolved from its pool, which
+		// needs the networks and devices compiled first, so the binding takes
+		// it in compileScenario rather than here.
 		c.report.Topology.Binding = CompiledBinding{
 			Binding: c.binding, Network: attachment.Network, WireTagged: c.binding.Mode == ModeTrunk,
 		}
@@ -163,6 +168,21 @@ func (c *scenarioCompiler) checkOverlap(field string, candidate Network) {
 	for _, network := range c.report.Topology.Networks {
 		if network.Prefix.Overlaps(candidate.Prefix) {
 			c.add(CodeOverlappingNetworks, field+".subnet", "network prefixes must not overlap")
+			return
+		}
+	}
+}
+
+// bindPoolNetwork gives the binding the network its attachment's pool resolved
+// to. The runtime derives the DHCP server and the first hop from this, so a
+// port-scoped attachment that left it empty would serve a client nothing.
+func (c *scenarioCompiler) bindPoolNetwork() {
+	if c.binding.Attachment == "" || c.report.Topology.Binding.Network != "" {
+		return
+	}
+	for _, attachment := range c.report.Topology.Attachments {
+		if attachment.Name == c.binding.Attachment {
+			c.report.Topology.Binding.Network = attachment.Network
 			return
 		}
 	}

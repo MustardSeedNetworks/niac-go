@@ -48,8 +48,15 @@ describe('parseNetworkModel', () => {
         interfaceName: 'GigabitEthernet0/0/1',
         network: 'clinic-lan',
         address: '10.20.0.1/24',
+        ports: [{ name: 'GigabitEthernet0/0/1', vlan: null, occupied: false }],
       },
-      { device: 'clinic-srv-01', interfaceName: null, network: null, address: null },
+      {
+        device: 'clinic-srv-01',
+        interfaceName: null,
+        network: null,
+        address: null,
+        ports: [],
+      },
     ]);
   });
 

@@ -27,6 +27,52 @@
       ],
       "description": "AddMib represents a MIB override or addition."
     },
+    "AttachmentPin": {
+      "properties": {
+        "mac": {
+          "type": "string",
+          "description": "MAC is the client's hardware address."
+        },
+        "device": {
+          "type": "string",
+          "description": "Device is the `devices[].name` carrying the pinned port. It must be the\npool's own device."
+        },
+        "interface": {
+          "type": "string",
+          "description": "Interface is the `interfaces[].name` this client always appears on. It\nmust be one of the pool's ports."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "mac",
+        "device",
+        "interface"
+      ],
+      "description": "AttachmentPin fixes one client to one port -- \"this CyberScope is always sw2 Gi1/0/1\"."
+    },
+    "AttachmentPort": {
+      "properties": {
+        "device": {
+          "type": "string",
+          "description": "Device is the `devices[].name` carrying the pool."
+        },
+        "ports": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Ports are `interfaces[].name` values on that device. Each must be free:\na port already named by a `trunk_ports` entry is carrying a link, not\nwaiting for a tester."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "device",
+        "ports"
+      ],
+      "description": "AttachmentPort is the pool of free ports an attachment offers, all on one device."
+    },
     "BehaviorAction": {
       "properties": {
         "device": {
@@ -1561,16 +1607,26 @@
         },
         "connect": {
           "type": "string",
-          "description": "Connect is the `networks[].name` this attachment exposes to the host.\nWhether the host interface may actually carry it is decided at start\nagainst the daemon's attachment policy, which reports\n`attachment_policy_denied` or `host_interface_unavailable`;\n`niac validate` has no host binding and cannot check those."
+          "description": "Connect is the `networks[].name` this attachment exposes to the host.\nWhether the host interface may actually carry it is decided at start\nagainst the daemon's attachment policy, which reports\n`attachment_policy_denied` or `host_interface_unavailable`;\n`niac validate` has no host binding and cannot check those.\n\nExactly one of `connect` and `at` is set. A network-scoped attachment\ncannot say where on that network the tester appears, which is what `at`\nexists for."
+        },
+        "at": {
+          "$ref": "#/$defs/AttachmentPort",
+          "description": "At places the attachment on a pool of free switch ports instead of on a\nnetwork. LLDP is link-local, so the neighbour a tester reports is the\ndevice at the other end of its cable -- a network-scoped attachment gets\nthat adjacency wrong by construction."
+        },
+        "pins": {
+          "items": {
+            "$ref": "#/$defs/AttachmentPin"
+          },
+          "type": "array",
+          "description": "Pins fix one client MAC to one port in the pool. Without a pin a client\ntakes whichever free port the runtime assigns it."
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "name",
-        "connect"
+        "name"
       ],
-      "description": "LogicalAttachment names the virtual network exposed by a deployment binding."
+      "description": "LogicalAttachment says where a session's binding lands inside the scenario: on a whole network (`connect`) or on a pool of free ports (`at`)."
     },
     "MdnsConfig": {
       "properties": {

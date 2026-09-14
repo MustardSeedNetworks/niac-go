@@ -109,7 +109,8 @@ type Network struct {
 	VirtualVLAN int `yaml:"virtual_vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
 }
 
-// LogicalAttachment names the virtual network exposed by a deployment binding.
+// LogicalAttachment says where a session's binding lands inside the scenario:
+// on a whole network (`connect`) or on a pool of free ports (`at`).
 type LogicalAttachment struct {
 	// Name labels this attachment. It is what a session's binding selects the
 	// attachment by at start time, not a network name — a binding naming an
@@ -122,7 +123,48 @@ type LogicalAttachment struct {
 	// against the daemon's attachment policy, which reports
 	// `attachment_policy_denied` or `host_interface_unavailable`;
 	// `niac validate` has no host binding and cannot check those.
-	Connect string `yaml:"connect" validate:"required"`
+	//
+	// Exactly one of `connect` and `at` is set. A network-scoped attachment
+	// cannot say where on that network the tester appears, which is what `at`
+	// exists for.
+	Connect string `yaml:"connect,omitempty"`
+
+	// At places the attachment on a pool of free switch ports instead of on a
+	// network. LLDP is link-local, so the neighbour a tester reports is the
+	// device at the other end of its cable -- a network-scoped attachment gets
+	// that adjacency wrong by construction.
+	At *AttachmentPort `yaml:"at,omitempty"`
+
+	// Pins fix one client MAC to one port in the pool. Without a pin a client
+	// takes whichever free port the runtime assigns it.
+	Pins []AttachmentPin `yaml:"pins,omitempty" validate:"omitempty,max=64,dive"`
+}
+
+// AttachmentPort is the pool of free ports an attachment offers, all on one
+// device.
+type AttachmentPort struct {
+	// Device is the `devices[].name` carrying the pool.
+	Device string `yaml:"device" validate:"required"`
+
+	// Ports are `interfaces[].name` values on that device. Each must be free:
+	// a port already named by a `trunk_ports` entry is carrying a link, not
+	// waiting for a tester.
+	Ports []string `yaml:"ports" validate:"required,max=64"`
+}
+
+// AttachmentPin fixes one client to one port -- "this CyberScope is always
+// sw2 Gi1/0/1".
+type AttachmentPin struct {
+	// MAC is the client's hardware address.
+	MAC string `yaml:"mac" validate:"required,mac"`
+
+	// Device is the `devices[].name` carrying the pinned port. It must be the
+	// pool's own device.
+	Device string `yaml:"device" validate:"required"`
+
+	// Interface is the `interfaces[].name` this client always appears on. It
+	// must be one of the pool's ports.
+	Interface string `yaml:"interface" validate:"required"`
 }
 
 // Segment binds a device set to a VLAN tag for multi-VLAN playback. Exactly one

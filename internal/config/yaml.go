@@ -68,7 +68,32 @@ func networksToYAML(networks []Network) []converter.Network {
 func attachmentsToYAML(attachments []LogicalAttachment) []converter.LogicalAttachment {
 	out := make([]converter.LogicalAttachment, len(attachments))
 	for i, attachment := range attachments {
-		out[i] = converter.LogicalAttachment{Name: attachment.Name, Connect: attachment.Network}
+		out[i] = converter.LogicalAttachment{
+			Name:    attachment.Name,
+			Connect: attachment.Network,
+			At:      attachmentPortToYAML(attachment.At),
+			Pins:    attachmentPinsToYAML(attachment.Pins),
+		}
+	}
+	return out
+}
+
+func attachmentPortToYAML(at *AttachmentPort) *converter.AttachmentPort {
+	if at == nil {
+		return nil
+	}
+	return &converter.AttachmentPort{Device: at.Device, Ports: slices.Clone(at.Ports)}
+}
+
+func attachmentPinsToYAML(pins []AttachmentPin) []converter.AttachmentPin {
+	if len(pins) == 0 {
+		return nil
+	}
+	out := make([]converter.AttachmentPin, len(pins))
+	for i, pin := range pins {
+		out[i] = converter.AttachmentPin{
+			MAC: pin.MAC, Device: pin.Device, Interface: pin.Interface,
+		}
 	}
 	return out
 }

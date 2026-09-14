@@ -55,6 +55,23 @@ const (
 	CodeInvalidDHCPOption        DiagnosticCode = "invalid_dhcp_option"
 	CodeReservedDHCPAddress      DiagnosticCode = "reserved_dhcp_address"
 	CodeDHCPAddressCollision     DiagnosticCode = "dhcp_address_collision"
+
+	// CodeAttachmentFormAmbiguous and the codes below it are the
+	// attachment-pool findings. All of them describe the scenario file, so none
+	// belongs on bindingDiagnosticCodes().
+	CodeAttachmentFormAmbiguous         DiagnosticCode = "attachment_form_ambiguous"
+	CodeUnknownAttachmentDevice         DiagnosticCode = "unknown_attachment_device"
+	CodeUnknownAttachmentPort           DiagnosticCode = "unknown_attachment_port"
+	CodeDuplicateAttachmentPort         DiagnosticCode = "duplicate_attachment_port"
+	CodeAttachmentPoolEmpty             DiagnosticCode = "attachment_pool_empty"
+	CodeAttachmentPortOccupied          DiagnosticCode = "attachment_port_occupied"
+	CodeAttachmentPortVLANUnresolved    DiagnosticCode = "attachment_port_vlan_unresolved"
+	CodeAttachmentPortNetworkUnresolved DiagnosticCode = "attachment_port_network_unresolved"
+	CodeAttachmentPortNetworkAmbiguous  DiagnosticCode = "attachment_port_network_ambiguous"
+	CodeAttachmentPoolNetworksDiffer    DiagnosticCode = "attachment_pool_networks_differ"
+	CodeAttachmentPinOutsidePool        DiagnosticCode = "attachment_pin_outside_pool"
+	CodeAttachmentPinDuplicate          DiagnosticCode = "attachment_pin_duplicate"
+	CodeInvalidAttachmentPinMAC         DiagnosticCode = "invalid_attachment_pin_mac"
 )
 
 // bindingDiagnosticCodes are the findings that describe a physical deployment
@@ -150,13 +167,44 @@ type DHCPScope struct {
 	Router  netip.Addr `json:"router,omitzero"`
 }
 
+// AttachmentPort is one free port a tester can appear on, with the network
+// that port lands a client on already resolved.
+//
+// VLAN here is the *port* VLAN -- which network, DHCP scope and gateway a
+// client gets inside the scenario. It is a different namespace from the wire
+// VLAN on Binding, which describes how the NIAC host is cabled upstream. The
+// two are independent and must never be compared.
+type AttachmentPort struct {
+	Device    string `json:"device"`
+	Interface string `json:"interface"`
+	VLAN      uint16 `json:"vlan,omitempty"`
+	Network   string `json:"network"`
+}
+
+// AttachmentPin is one client MAC fixed to one port of the pool.
+type AttachmentPin struct {
+	MAC       string `json:"mac"`
+	Device    string `json:"device"`
+	Interface string `json:"interface"`
+}
+
+// CompiledAttachment is a port-scoped attachment with every port resolved.
+type CompiledAttachment struct {
+	Name    string           `json:"name"`
+	Device  string           `json:"device"`
+	Network string           `json:"network"`
+	Ports   []AttachmentPort `json:"ports"`
+	Pins    []AttachmentPin  `json:"pins,omitempty"`
+}
+
 // Topology is the immutable result consumed by preflight and later forwarding.
 type Topology struct {
-	Binding    CompiledBinding `json:"binding"`
-	Networks   []Network       `json:"networks"`
-	Interfaces []Interface     `json:"interfaces"`
-	Routes     []Route         `json:"routes"`
-	DHCPScopes []DHCPScope     `json:"dhcpScopes"`
+	Binding     CompiledBinding      `json:"binding"`
+	Networks    []Network            `json:"networks"`
+	Interfaces  []Interface          `json:"interfaces"`
+	Routes      []Route              `json:"routes"`
+	DHCPScopes  []DHCPScope          `json:"dhcpScopes"`
+	Attachments []CompiledAttachment `json:"attachments"`
 }
 
 // NewTopology returns a Topology whose collections are empty slices rather
@@ -165,10 +213,11 @@ type Topology struct {
 // consumer doing `topology.networks.length` must never be handed null (D6).
 func NewTopology() Topology {
 	return Topology{
-		Networks:   []Network{},
-		Interfaces: []Interface{},
-		Routes:     []Route{},
-		DHCPScopes: []DHCPScope{},
+		Networks:    []Network{},
+		Interfaces:  []Interface{},
+		Routes:      []Route{},
+		DHCPScopes:  []DHCPScope{},
+		Attachments: []CompiledAttachment{},
 	}
 }
 

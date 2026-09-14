@@ -30,6 +30,7 @@ describe('setDeviceAddress', () => {
       interfaceName: 'GigabitEthernet0/0/1',
       network: 'clinic-lan',
       address: '10.20.0.1/24',
+      ports: [{ name: 'GigabitEthernet0/0/1', vlan: null, occupied: false }],
     });
     expect(result).toContain('speed: 1000');
   });
@@ -43,6 +44,7 @@ describe('setDeviceAddress', () => {
       interfaceName: 'Ethernet1/1',
       network: 'clinic-lan',
       address: '10.20.0.10/24',
+      ports: [{ name: 'Ethernet1/1', vlan: null, occupied: false }],
     });
   });
 
