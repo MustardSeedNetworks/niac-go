@@ -4,6 +4,7 @@ import { type FC, useId } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
+import { useActionPermission } from '../../contexts/ScopeContext';
 import { type CloneDeviceFormFields, CloneDeviceSchema } from '../../schemas/forms';
 import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
@@ -87,5 +88,3 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
     </Modal>
   );
 };
-
-import { useActionPermission } from '../../contexts/ScopeContext';

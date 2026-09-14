@@ -9,6 +9,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { FileCode } from 'lucide-react';
 import { useState } from 'react';
+import { expect, userEvent, within } from 'storybook/test';
 import { iconSizes } from '../constants/sizes';
 import { Button } from './Button';
 import { Modal } from './Modal';
@@ -145,5 +146,47 @@ export const HeaderAndFooterRegions: Story = {
         ))}
       </div>
     ),
+  },
+};
+
+/**
+ * The focus trap, in a browser that has a layout.
+ *
+ * `useFocusTrap` decides what is focusable with `offsetParent !== null`, which
+ * jsdom reports as null for every element — so under vitest the trap finds
+ * nothing focusable and does nothing, and a Tab assertion there is either a
+ * false failure or a vacuous pass. This story is the real check: Tab walks past
+ * every control in the dialog and focus never reaches the backdrop button that
+ * sits outside it.
+ */
+export const FocusTrapKeepsTabInside: Story = {
+  args: {
+    isOpen: true,
+    title: 'Focus stays here',
+    onClose: () => undefined,
+    footer: (
+      <>
+        <Button variant="outline">Cancel</Button>
+        <Button tone="violet">Confirm</Button>
+      </>
+    ),
+    children: (
+      <label className="stack-sm block">
+        <span className="text-text-secondary text-sm">Hostname</span>
+        <input
+          className="w-full rounded-lg border border-surface-border bg-bg-base/60 pad-sm text-sm"
+          defaultValue="edge-1-copy"
+        />
+      </label>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const dialog = await within(canvasElement).findByRole('dialog');
+
+    // More stops than the dialog holds, so the wrap-around is exercised too.
+    for (let stop = 0; stop < 8; stop++) {
+      await userEvent.tab();
+      await expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
   },
 };
