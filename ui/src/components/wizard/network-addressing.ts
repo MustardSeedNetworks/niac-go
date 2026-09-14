@@ -14,9 +14,34 @@ export interface AuthoredNetwork {
   virtualVlan?: number;
 }
 
+/** A pool of free ports on one device — where a tester actually appears. */
+export interface AuthoredAttachmentPool {
+  device: string;
+  ports: string[];
+}
+
+/** One client MAC fixed to one port of the pool. */
+export interface AuthoredAttachmentPin {
+  mac: string;
+  device: string;
+  interface: string;
+}
+
 export interface AuthoredAttachment {
   name: string;
+  /** The network form. Empty when the attachment uses a port pool instead. */
   connect: string;
+  at?: AuthoredAttachmentPool;
+  pins?: AuthoredAttachmentPin[];
+}
+
+/** One port on a device, as the attachment-pool picker needs to see it. */
+export interface AuthoredDevicePort {
+  name: string;
+  /** The port's access VLAN, or null when it carries none or several. */
+  vlan: number | null;
+  /** True when a trunk port or port-channel already uses it. */
+  occupied: boolean;
 }
 
 export interface DeviceAddressing {
@@ -26,6 +51,8 @@ export interface DeviceAddressing {
   network: string | null;
   /** Prefix form, e.g. 10.20.0.5/24. */
   address: string | null;
+  /** Every port the device declares, for the attachment-pool picker. */
+  ports: AuthoredDevicePort[];
 }
 
 export interface NetworkModel {
@@ -63,9 +90,45 @@ function readAttachments(node: unknown): AuthoredAttachment[] {
     if (!isMap(item)) continue;
     const name = scalar(item.get('name'));
     if (!name) continue;
-    attachments.push({ name, connect: scalar(item.get('connect')) ?? '' });
+    const at = readAttachmentPool(item.get('at'));
+    const pins = readAttachmentPins(item.get('pins'));
+    attachments.push({
+      name,
+      connect: scalar(item.get('connect')) ?? '',
+      ...(at ? { at } : {}),
+      ...(pins.length > 0 ? { pins } : {}),
+    });
   }
   return attachments;
+}
+
+function readAttachmentPool(node: unknown): AuthoredAttachmentPool | null {
+  if (!isMap(node)) return null;
+  const device = scalar(node.get('device'));
+  if (!device) return null;
+  const ports = node.get('ports');
+  const names: string[] = [];
+  if (isSeq(ports)) {
+    for (const port of ports.items) {
+      const value = scalar(port);
+      if (value) names.push(value);
+    }
+  }
+  return { device, ports: names };
+}
+
+function readAttachmentPins(node: unknown): AuthoredAttachmentPin[] {
+  if (!isSeq(node)) return [];
+  const pins: AuthoredAttachmentPin[] = [];
+  for (const item of node.items) {
+    if (!isMap(item)) continue;
+    const mac = scalar(item.get('mac'));
+    const device = scalar(item.get('device'));
+    const port = scalar(item.get('interface'));
+    if (!mac || !device || !port) continue;
+    pins.push({ mac, device, interface: port });
+  }
+  return pins;
 }
 
 function readDeviceAddressing(node: unknown): DeviceAddressing[] {
@@ -82,9 +145,53 @@ function readDeviceAddressing(node: unknown): DeviceAddressing[] {
       interfaceName: first ? scalar(first.get('name')) : null,
       network: first ? scalar(first.get('network')) : null,
       address: first ? scalar(first.get('address')) : null,
+      ports: readDevicePorts(interfaces, item.get('trunk_ports'), item.get('port_channels')),
     });
   }
   return devices;
+}
+
+function readDevicePorts(
+  interfaces: unknown,
+  trunkPorts: unknown,
+  portChannels: unknown,
+): AuthoredDevicePort[] {
+  if (!isSeq(interfaces)) return [];
+  const used = new Set<string>();
+  if (isSeq(trunkPorts)) {
+    for (const trunk of trunkPorts.items) {
+      if (!isMap(trunk)) continue;
+      const name = scalar(trunk.get('interface'));
+      if (name) used.add(name);
+    }
+  }
+  if (isSeq(portChannels)) {
+    for (const channel of portChannels.items) {
+      if (!isMap(channel)) continue;
+      const members = channel.get('members');
+      if (!isSeq(members)) continue;
+      for (const member of members.items) {
+        const name = scalar(member);
+        if (name) used.add(name);
+      }
+    }
+  }
+  const ports: AuthoredDevicePort[] = [];
+  for (const item of interfaces.items) {
+    if (!isMap(item)) continue;
+    const name = scalar(item.get('name'));
+    if (!name) continue;
+    ports.push({ name, vlan: accessVlan(item.get('vlans')), occupied: used.has(name) });
+  }
+  return ports;
+}
+
+/** accessVlan is the port's single VLAN, or null -- a port carrying several is
+ * a trunk, and the network behind it is not decidable from the port alone. */
+function accessVlan(node: unknown): number | null {
+  if (!isSeq(node) || node.items.length !== 1) return null;
+  const value = Number(scalar(node.items[0]));
+  return Number.isInteger(value) && value >= 1 && value <= 4094 ? value : null;
 }
 
 /** parseNetworkModel reads the step's slice of a config. Returns empty lists
@@ -121,6 +228,28 @@ export function serializeAttachments(attachments: AuthoredAttachment[]): string 
   const lines = ['attachments:'];
   for (const attachment of attachments) {
     lines.push(`  - name: ${attachment.name}`);
+    // Exactly one form reaches the file. An attachment carrying both, or a
+    // pool with no ports, is one the daemon refuses -- so the half-written
+    // state stays in the editor rather than in the scenario.
+    const ports = attachment.at?.ports.filter((port) => port !== '') ?? [];
+    if (attachment.at && ports.length > 0) {
+      lines.push('    at:');
+      lines.push(`      device: ${attachment.at.device}`);
+      lines.push('      ports:');
+      for (const port of ports) lines.push(`        - ${port}`);
+      let pinned = false;
+      for (const pin of attachment.pins ?? []) {
+        if (!pin.mac || !pin.interface) continue;
+        if (!pinned) lines.push('    pins:');
+        pinned = true;
+        // Quoted: a MAC still being typed can look like a number to YAML
+        // ("00" reads back as 0), which silently rewrites the author's input.
+        lines.push(`      - mac: "${pin.mac}"`);
+        lines.push(`        device: ${pin.device || attachment.at.device}`);
+        lines.push(`        interface: ${pin.interface}`);
+      }
+      continue;
+    }
     lines.push(`    connect: ${attachment.connect}`);
   }
   return `${lines.join('\n')}\n`;

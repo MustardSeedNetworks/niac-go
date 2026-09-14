@@ -1,6 +1,10 @@
 package config
 
-import "github.com/MustardSeedNetworks/niac-go/internal/converter"
+import (
+	"slices"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
+)
 
 func convertNetworks(in []converter.Network) []Network {
 	out := make([]Network, len(in))
@@ -15,7 +19,30 @@ func convertNetworks(in []converter.Network) []Network {
 func convertLogicalAttachments(in []converter.LogicalAttachment) []LogicalAttachment {
 	out := make([]LogicalAttachment, len(in))
 	for i, attachment := range in {
-		out[i] = LogicalAttachment{Name: attachment.Name, Network: attachment.Connect}
+		out[i] = LogicalAttachment{
+			Name:    attachment.Name,
+			Network: attachment.Connect,
+			At:      convertAttachmentPort(attachment.At),
+			Pins:    convertAttachmentPins(attachment.Pins),
+		}
+	}
+	return out
+}
+
+func convertAttachmentPort(in *converter.AttachmentPort) *AttachmentPort {
+	if in == nil {
+		return nil
+	}
+	return &AttachmentPort{Device: in.Device, Ports: slices.Clone(in.Ports)}
+}
+
+func convertAttachmentPins(in []converter.AttachmentPin) []AttachmentPin {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]AttachmentPin, len(in))
+	for i, pin := range in {
+		out[i] = AttachmentPin{MAC: pin.MAC, Device: pin.Device, Interface: pin.Interface}
 	}
 	return out
 }

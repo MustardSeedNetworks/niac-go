@@ -114,10 +114,27 @@ type Network struct {
 	VirtualVLAN int
 }
 
-// LogicalAttachment identifies the virtual network exposed at start time.
+// LogicalAttachment identifies where a session's binding lands inside the
+// scenario. Exactly one of Network (the whole network) and At (a pool of free
+// ports on one device) is set.
 type LogicalAttachment struct {
 	Name    string
 	Network string
+	At      *AttachmentPort
+	Pins    []AttachmentPin
+}
+
+// AttachmentPort is a pool of free ports on one device.
+type AttachmentPort struct {
+	Device string
+	Ports  []string
+}
+
+// AttachmentPin fixes one client MAC to one port in its attachment's pool.
+type AttachmentPin struct {
+	MAC       string
+	Device    string
+	Interface string
 }
 
 // Route declares an IPv4 static route through a named device interface.

@@ -1,6 +1,11 @@
 {
+  "attachments[].at.device": "components/wizard/AttachmentPoolEditor.tsx",
+  "attachments[].at.ports[]": "components/wizard/AttachmentPoolEditor.tsx",
   "attachments[].connect": "components/wizard/NetworksStep.tsx",
   "attachments[].name": "components/wizard/NetworksStep.tsx",
+  "attachments[].pins[].device": "components/wizard/AttachmentPoolEditor.tsx",
+  "attachments[].pins[].interface": "components/wizard/AttachmentPoolEditor.tsx",
+  "attachments[].pins[].mac": "components/wizard/AttachmentPoolEditor.tsx",
   "behavior_timelines[].name": "components/wizard/DraftBehaviorComposer.tsx",
   "behavior_timelines[].phases[].actions[].device": "components/wizard/BehaviorOneShotActions.tsx",
   "behavior_timelines[].phases[].actions[].type": "components/wizard/BehaviorOneShotActions.tsx",

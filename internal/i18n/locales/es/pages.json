@@ -360,7 +360,19 @@
       "subnet": "Subred",
       "title": "Redes",
       "unaddressed": "sin dirección",
-      "virtualVlan": "VLAN"
+      "virtualVlan": "VLAN",
+      "attachmentForm": "Forma de la conexión",
+      "attachmentFormNetwork": "Una red completa",
+      "attachmentFormPorts": "Puertos de reserva en un dispositivo",
+      "attachmentDevice": "Dispositivo que porta los puertos",
+      "attachmentDeviceEmpty": "Elige un dispositivo",
+      "attachmentNoFreePorts": "Este dispositivo no tiene ningún puerto de acceso de reserva. Cada puerto que declara ya porta un enlace o un cliente.",
+      "attachmentPortsHelp": "Elige los puertos donde se puede conectar un probador. La VLAN mostrada es la del puerto, dentro del escenario.",
+      "attachmentPortVlan": "VLAN {{vlan}}",
+      "attachmentPinsHelp": "Fija un cliente a un puerto para determinar dónde aparece siempre.",
+      "attachmentPinAdd": "Fijar un cliente",
+      "attachmentPinMac": "MAC del cliente",
+      "attachmentPinPort": "Puerto"
     },
     "nextLabel": "Siguiente",
     "preflight": {
