@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.63](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.62...v0.95.63) (2026-09-14)
+
+
+### Tests
+
+* **ui:** prove the modal focus trap where a browser can see it ([#2150](https://github.com/MustardSeedNetworks/niac-go/issues/2150)) ([2c70556](https://github.com/MustardSeedNetworks/niac-go/commit/2c70556f56467edfd3e677ec52c9ccca04a77853))
+
+
+### Continuous Integration
+
+* **release:** arm the release PR only after two merged PRs ([#2147](https://github.com/MustardSeedNetworks/niac-go/issues/2147)) ([63f44d8](https://github.com/MustardSeedNetworks/niac-go/commit/63f44d85d588c3a6599591d8534ca40d53ea6747)), closes [#2145](https://github.com/MustardSeedNetworks/niac-go/issues/2145)
+
 ## [0.95.62](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.61...v0.95.62) (2026-09-14)
 
 
