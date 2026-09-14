@@ -89,6 +89,20 @@ lint, formatting, security, full tests and build pass; the rebuilt browser run
 also passes all twelve checks without retries. PR delivery remains open. No
 whole-P2 or consumer-topology acceptance is claimed.
 
+Syslog verification (2026-09-12, `v0.95.56`): a worktree at the released tag
+`10c8f2f2` on `dev-srv-ubuntu`, real Linux over a real wire, received the
+message for an injected `link_down` carrying the authored hostname --
+`TestAuthoredLinkFaultEmitsSyslogOnTheWire` PASS 2.54s, recorded in #2010.
+Emission works and no shipped scenario authors syslog, so an operator reaches
+it only by authoring one; that gap is #2105 and belongs to pack content.
+
+Recovery stays unticked deliberately. `TestRuntimeStateSurvivesDaemonRestart`
+asserts the restored faults and the event sequence position by position, and
+PR #2075 added `TestReleasedBinaryRecoversItsSessionAfterAnAbruptExit` to the
+wire suite, but that test has no recorded run against a published release
+carrying all of P2 -- #2075 says so itself. The criterion is met when that
+output exists.
+
 - [x] Injected interface faults are observable through IF-MIB and
       EtherLike-MIB counters while preserving monotonic counter behavior.
 - [ ] Every fault type is asserted on the wire, and its MIB effect is named as
@@ -96,7 +110,7 @@ whole-P2 or consumer-topology acceptance is claimed.
       not own.
 - [ ] Fault and runtime state survive checkpoint, restart and recovery with an
       identical event sequence.
-- [ ] Link and fault events are emitted as RFC 5424 syslog from the same seam
+- [x] Link and fault events are emitted as RFC 5424 syslog from the same seam
       as the existing traps.
 
 ### Second consumer
@@ -120,6 +134,14 @@ on the API's own account of itself.
 
 ### Release candidate
 
+Flake-budget verification (2026-09-14): ten consecutive `merge_group` CI runs,
+`34733457607` 09-13T02:36 through `34818457794` 09-14T07:34, each ran `E2E
+Browser Tests` to success with `Enforce flake budget` green. The gate is live
+rather than vacuous: run `34712743077` failed on that same step with `flaky: 1`.
+One CI run in that window failed and it was not the browser suite: run
+`34760574344` at 09-13T13:42 failed on `Release Notes`, with its `E2E Browser
+Tests` job green.
+
 - [x] Route, schema, output-encoding, token-discipline and i18n gates are
       enforced in CI rather than asserted in review.
 - [ ] Lint, formatting, unit, integration, browser, security, package, install
@@ -127,7 +149,7 @@ on the API's own account of itself.
 - [ ] Install and first-run succeed on deb, rpm, pkg, Windows and a container
       image, without crash-looping an existing configuration.
 - [ ] The platform matrix is recorded with per-cell command output.
-- [ ] The browser suite holds a zero flake budget across ten consecutive
+- [x] The browser suite holds a zero flake budget across ten consecutive
       merge-queue runs.
 
 ### Documentation and authoring
