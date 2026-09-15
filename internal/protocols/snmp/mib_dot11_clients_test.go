@@ -217,3 +217,29 @@ func dot11ClientOIDs(agent *Agent) []string {
 
 	return found
 }
+
+// TestDot11ClientTableWalksInOneSweep is the closest thing to the wire this
+// package can run: an NMS reads the table with GETNEXT, and the index is long
+// enough -- an ifIndex, a length-prefixed SSID and six MAC octets -- that an
+// agent ordering OIDs as text rather than as arcs would put column 15 before
+// column 2, and the walk would stop at the first row it thinks it has passed.
+// Both stations must be reachable, once each, in ascending order.
+func TestDot11ClientTableWalksInOneSweep(t *testing.T) {
+	agent := NewAgent(wifiAPWithClients(), 0)
+
+	var walked []string
+	for oid, _ := agent.mib.GetNext(cDot11AssociationRoot); strings.HasPrefix(
+		oid, cDot11AssociationRoot+"."); oid, _ = agent.mib.GetNext(oid) {
+		if previous := len(walked) - 1; previous >= 0 &&
+			compareOIDs(walked[previous], oid) >= 0 {
+			t.Fatalf("GETNEXT went backwards: %s after %s", oid, walked[previous])
+		}
+		walked = append(walked, oid)
+	}
+
+	reached := append([]string(nil), walked...)
+	sort.Strings(reached)
+	if want := dot11ClientOIDs(agent); !equalStrings(reached, want) {
+		t.Errorf("GETNEXT reached:\n got %v\nwant %v", reached, want)
+	}
+}
