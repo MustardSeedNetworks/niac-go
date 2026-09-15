@@ -202,3 +202,112 @@ func TestWiFiBandsMatchTheParserVocabulary(t *testing.T) {
 		}
 	}
 }
+
+func validClient() WiFiClient {
+	return WiFiClient{
+		MAC:               "02:c0:17:a4:03:6b",
+		IPAddress:         "10.20.220.51",
+		AssociatedSeconds: 115286,
+		SignalDBM:         -55,
+		SignalQualityPct:  83,
+	}
+}
+
+func TestValidateWiFiClient(t *testing.T) {
+	for _, testCase := range []struct {
+		name   string
+		client func(WiFiClient) WiFiClient
+		field  string
+	}{
+		{"a station as authored", func(c WiFiClient) WiFiClient { return c }, ""},
+		{
+			"a MAC that is not a MAC",
+			func(c WiFiClient) WiFiClient { c.MAC = "02:c0:17:a4:03"; return c },
+			"wifi.radios[0].clients[0].mac",
+		},
+		{
+			"a multicast MAC",
+			func(c WiFiClient) WiFiClient { c.MAC = "01:c0:17:a4:03:6b"; return c },
+			"wifi.radios[0].clients[0].mac",
+		},
+		{
+			"an address that is not IPv4",
+			func(c WiFiClient) WiFiClient { c.IPAddress = "2001:db8::1"; return c },
+			"wifi.radios[0].clients[0].ip_address",
+		},
+		{
+			"no address at all",
+			func(c WiFiClient) WiFiClient { c.IPAddress = ""; return c },
+			"wifi.radios[0].clients[0].ip_address",
+		},
+		{
+			"a station that has been associated for no time",
+			func(c WiFiClient) WiFiClient { c.AssociatedSeconds = 0; return c },
+			"wifi.radios[0].clients[0].associated_seconds",
+		},
+		{
+			"a signal written as a positive number",
+			func(c WiFiClient) WiFiClient { c.SignalDBM = 55; return c },
+			"wifi.radios[0].clients[0].signal_dbm",
+		},
+		{
+			"a signal below any receive sensitivity",
+			func(c WiFiClient) WiFiClient { c.SignalDBM = -101; return c },
+			"wifi.radios[0].clients[0].signal_dbm",
+		},
+		{
+			"a quality over one hundred percent",
+			func(c WiFiClient) WiFiClient { c.SignalQualityPct = 101; return c },
+			"wifi.radios[0].clients[0].signal_quality_pct",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			radio := validRadio()
+			radio.Clients = []WiFiClient{testCase.client(validClient())}
+			cfg := &Config{Devices: []Device{wifiAP(radio)}}
+
+			if testCase.field == "" {
+				if message := anyWiFiError(t, cfg); message != "" {
+					t.Errorf("rejected a valid station: %s", message)
+				}
+
+				return
+			}
+			if message := errorFor(t, cfg, testCase.field); message == "" {
+				t.Errorf("accepted %s, want an error on %s", testCase.name, testCase.field)
+			}
+		})
+	}
+}
+
+// TestValidateWiFiClientsShareAMAC: the MAC is part of the row index, so two
+// stations sharing one collapse into a single row reporting whichever was
+// authored last.
+func TestValidateWiFiClientsShareAMAC(t *testing.T) {
+	radio := validRadio()
+	radio.Clients = []WiFiClient{validClient(), validClient()}
+	cfg := &Config{Devices: []Device{wifiAP(radio)}}
+
+	if message := errorFor(t, cfg, "wifi.radios[0].clients[1].mac"); message == "" {
+		t.Error("accepted two stations with one MAC on the same radio")
+	}
+}
+
+// TestValidateWiFiClientsMayRepeatAcrossRadios is the other side of that: the
+// index carries the radio's ifIndex too, so the same station associated to two
+// radios is two rows. It is what a roam looks like mid-flight.
+func TestValidateWiFiClientsMayRepeatAcrossRadios(t *testing.T) {
+	first := validRadio()
+	first.Clients = []WiFiClient{validClient()}
+	second := validRadio()
+	second.Interface = "Dot11Radio1"
+	second.BSSID = "00:0c:ce:88:23:c8"
+	second.Band = "5GHz"
+	second.Channel = 149
+	second.Clients = []WiFiClient{validClient()}
+	cfg := &Config{Devices: []Device{wifiAP(first, second)}}
+
+	if message := anyWiFiError(t, cfg); message != "" {
+		t.Errorf("rejected one station on two radios: %s", message)
+	}
+}

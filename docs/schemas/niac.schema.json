@@ -2335,6 +2335,40 @@
       ],
       "description": "TrunkPort declares a VLAN-tagged trunk link to a neighbouring device."
     },
+    "WifiClient": {
+      "properties": {
+        "mac": {
+          "type": "string",
+          "description": "MAC is the station's own address. It is part of the row index, so two\nclients of one radio cannot share it."
+        },
+        "ip_address": {
+          "type": "string",
+          "description": "IPAddress is the station's IPv4 address (cDot11ClientIpAddress)."
+        },
+        "associated_seconds": {
+          "type": "integer",
+          "description": "AssociatedSeconds is how long the station has been associated\n(cDot11ClientUpTime), in seconds."
+        },
+        "signal_dbm": {
+          "type": "integer",
+          "description": "SignalDBM is the strength of the last frame heard from the station\n(cDot11ClientSignalStrength), in dBm. It is negative."
+        },
+        "signal_quality_pct": {
+          "type": "integer",
+          "description": "SignalQualityPct is that frame's quality (cDot11ClientSigQuality), as\nthe percentage the MIB defines it in."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "mac",
+        "ip_address",
+        "associated_seconds",
+        "signal_dbm",
+        "signal_quality_pct"
+      ],
+      "description": "WifiClient is one station associated to a radio, as an NMS reads it: CISCO-DOT11-ASSOCIATION-MIB, indexed by the radio's ifIndex, the SSID it associated on and its own MAC."
+    },
     "WifiConfig": {
       "properties": {
         "radios": {
@@ -2379,6 +2413,13 @@
         "tx_power_dbm": {
           "type": "integer",
           "description": "TxPowerDBM is the radio's transmit power in dBm, reported as the\nmilliwatts IEEE802dot11-MIB asks for."
+        },
+        "clients": {
+          "items": {
+            "$ref": "#/$defs/WifiClient"
+          },
+          "type": "array",
+          "description": "Clients are the stations associated to this radio. A radio with none is\na radio nobody is on, which is a thing an AP says all the time."
         }
       },
       "additionalProperties": false,

@@ -625,6 +625,19 @@ type WiFiRadio struct {
 	Band       string // 2.4GHz, 5GHz or 6GHz
 	Channel    int    // channel number in the band's own numbering
 	TxPowerDBM int    // transmit power in dBm, reported to the MIB in milliwatts
+
+	Clients []WiFiClient // stations associated to this radio
+}
+
+// WiFiClient is one station associated to a radio, served as
+// CISCO-DOT11-ASSOCIATION-MIB. The standard IEEE802dot11-MIB has no client
+// table at all, so the vendor family is the only way to say this on the wire.
+type WiFiClient struct {
+	MAC               string // the station's own MAC, and part of the row index
+	IPAddress         string // cDot11ClientIpAddress, IPv4
+	AssociatedSeconds int    // cDot11ClientUpTime, seconds since it associated
+	SignalDBM         int    // cDot11ClientSignalStrength, dBm
+	SignalQualityPct  int    // cDot11ClientSigQuality, percent
 }
 
 // HTTPConfig holds HTTP server configuration.

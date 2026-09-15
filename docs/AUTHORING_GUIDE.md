@@ -367,8 +367,57 @@ Three things to know:
   trunked uplink holds ifIndex 1 on that uplink and its radios start at 2. Read
   the ifIndex from IF-MIB rather than counting the `interfaces:` entries.
 
-Not authored here yet: the wireless clients, association and roam events, and
-the controller's aggregated view of its APs.
+### The stations associated to a radio
+
+A radio with no `clients` is a radio nobody is on, which is a thing an AP says
+all the time. Authoring them is how a tester sees who is there:
+
+```yaml
+devices:
+  - name: clinic-ap-01
+    type: ap
+    vendor: cisco
+    mac_suffix: 30
+    interfaces:
+      - name: Dot11Radio0
+        type: ieee80211
+    wifi:
+      radios:
+        - interface: Dot11Radio0
+          ssid: clinic-corp
+          bssid: "00:0c:ce:88:23:c7"
+          band: 2.4GHz
+          channel: 6
+          tx_power_dbm: 17
+          clients:
+            - mac: "02:c0:17:a4:03:6b"      # the station's own address
+              ip_address: 10.20.220.51
+              associated_seconds: 115286    # how long it has been on
+              signal_dbm: -55               # -100 to -20
+              signal_quality_pct: 83        # 1 to 100
+```
+
+These are read from CISCO-DOT11-ASSOCIATION-MIB (`1.3.6.1.4.1.9.9.273`), not
+from IEEE802dot11-MIB: the standard MIB says what a radio _is_ and has no
+client table at all, so a vendor family is the only surface that can report a
+station. Each row is keyed by the radio's ifIndex, the SSID the station
+associated on, and the station's own MAC — which is why one station may be
+authored on two radios (that is what a roam looks like mid-flight) and not
+twice on one.
+
+Two things to know:
+
+- **Signal quality, not SNR.** The MIB has `cDot11ClientSigQuality`, a
+  percentage, and no signal-to-noise object. SNR is not something this surface
+  can say, so it is authored as the quality the MIB defines rather than
+  derived from a noise floor nothing measures.
+- **Only what the capture proves is served.** The AIR-AP1200 walk in the
+  corpus answers the rate sets, the association identifier and the cipher
+  columns too. Nothing authors them, and a plausible default in a discovery
+  tool's report is worse than a gap.
+
+Not authored here yet: association and roam events, and the controller's
+aggregated view of its APs.
 
 ## Services
 
