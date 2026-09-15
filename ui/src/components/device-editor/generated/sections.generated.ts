@@ -1009,6 +1009,44 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
             "title": "Tx power dbm",
             "description": "TxPowerDBM is the radio's transmit power in dBm, reported as the\nmilliwatts IEEE802dot11-MIB asks for.",
             "kind": "integer"
+          },
+          {
+            "name": "clients",
+            "title": "Clients",
+            "description": "Clients are the stations associated to this radio. A radio with none is\na radio nobody is on, which is a thing an AP says all the time.",
+            "kind": "objectList",
+            "fields": [
+              {
+                "name": "mac",
+                "title": "Mac",
+                "description": "MAC is the station's own address. It is part of the row index, so two\nclients of one radio cannot share it.",
+                "kind": "string"
+              },
+              {
+                "name": "ip_address",
+                "title": "Ip address",
+                "description": "IPAddress is the station's IPv4 address (cDot11ClientIpAddress).",
+                "kind": "string"
+              },
+              {
+                "name": "associated_seconds",
+                "title": "Associated seconds",
+                "description": "AssociatedSeconds is how long the station has been associated\n(cDot11ClientUpTime), in seconds.",
+                "kind": "integer"
+              },
+              {
+                "name": "signal_dbm",
+                "title": "Signal dbm",
+                "description": "SignalDBM is the strength of the last frame heard from the station\n(cDot11ClientSignalStrength), in dBm. It is negative.",
+                "kind": "integer"
+              },
+              {
+                "name": "signal_quality_pct",
+                "title": "Signal quality pct",
+                "description": "SignalQualityPct is that frame's quality (cDot11ClientSigQuality), as\nthe percentage the MIB defines it in.",
+                "kind": "integer"
+              }
+            ]
           }
         ]
       }

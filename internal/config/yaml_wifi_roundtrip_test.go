@@ -1,6 +1,7 @@
 package config
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -23,6 +24,12 @@ const wifiScenarioYAML = `devices:
           band: 2.4GHz
           channel: 6
           tx_power_dbm: 17
+          clients:
+            - mac: "02:c0:17:a4:03:6b"
+              ip_address: 10.20.220.51
+              associated_seconds: 115286
+              signal_dbm: -55
+              signal_quality_pct: 83
         - interface: Dot11Radio1
           ssid: corp-wifi
           bssid: "00:0c:ce:88:23:c8"
@@ -47,6 +54,11 @@ func TestWiFiRadiosSurviveASaveAndLoad(t *testing.T) {
 	}
 	if !strings.Contains(string(saved), "tx_power_dbm: 20") {
 		t.Fatalf("radios lost on save:\n%s", saved)
+	}
+	// The stations are nested inside a radio, which is where a marshaller that
+	// walks only the radio's scalar fields drops them silently.
+	if !strings.Contains(string(saved), "signal_quality_pct: 83") {
+		t.Fatalf("associated stations lost on save:\n%s", saved)
 	}
 
 	reloaded, err := LoadYAMLBytes(saved)
@@ -84,8 +96,15 @@ func assertAuthoredRadios(t *testing.T, cfg *Config) {
 		Band:       "2.4GHz",
 		Channel:    6,
 		TxPowerDBM: 17,
+		Clients: []WiFiClient{{
+			MAC:               "02:c0:17:a4:03:6b",
+			IPAddress:         "10.20.220.51",
+			AssociatedSeconds: 115286,
+			SignalDBM:         -55,
+			SignalQualityPct:  83,
+		}},
 	}
-	if first != want {
+	if !reflect.DeepEqual(first, want) {
 		t.Errorf("first radio = %#v, want %#v", first, want)
 	}
 }

@@ -495,9 +495,11 @@ type Dhcpv6Pool struct {
 // is authored truth; nothing here is inferred from the device type.
 //
 // One SSID per radio, because that is what the standard MIB can say: it carries
-// a single dot11DesiredSSID per interface and has no BSS table. Multi-BSS, the
-// client table, roams and controller aggregation are the later W1 slices, and
-// they need a vendor MIB family rather than this one.
+// a single dot11DesiredSSID per interface and has no BSS table. The associated
+// clients of a radio are here too, but they are reported from a vendor family
+// (CISCO-DOT11-ASSOCIATION-MIB) for the same reason: the standard MIB has no
+// client table. Multi-BSS, roams and controller aggregation are the later W1
+// slices.
 type WifiConfig struct {
 	// Radios is one entry per radio interface. A device with the block and no
 	// radio is an authoring mistake rather than an AP with nothing to say.
@@ -528,4 +530,38 @@ type WifiRadio struct {
 	// TxPowerDBM is the radio's transmit power in dBm, reported as the
 	// milliwatts IEEE802dot11-MIB asks for.
 	TxPowerDBM int `yaml:"tx_power_dbm" validate:"required,gte=1,lte=30"`
+
+	// Clients are the stations associated to this radio. A radio with none is
+	// a radio nobody is on, which is a thing an AP says all the time.
+	Clients []WifiClient `yaml:"clients,omitempty" validate:"omitempty,dive"`
+}
+
+// WifiClient is one station associated to a radio, as an NMS reads it:
+// CISCO-DOT11-ASSOCIATION-MIB, indexed by the radio's ifIndex, the SSID it
+// associated on and its own MAC. The standard IEEE802dot11-MIB carries no
+// client table, so this is the one MIB family that can report a station.
+//
+// Signal quality rather than SNR: the MIB has cDot11ClientSigQuality, a
+// percentage, and no signal-to-noise object, so SNR is not something this
+// surface can say. Roams, association state and the cipher columns are the
+// later W1 slices.
+type WifiClient struct {
+	// MAC is the station's own address. It is part of the row index, so two
+	// clients of one radio cannot share it.
+	MAC string `yaml:"mac" validate:"required,mac"`
+
+	// IPAddress is the station's IPv4 address (cDot11ClientIpAddress).
+	IPAddress string `yaml:"ip_address" validate:"required,ipv4"`
+
+	// AssociatedSeconds is how long the station has been associated
+	// (cDot11ClientUpTime), in seconds.
+	AssociatedSeconds int `yaml:"associated_seconds" validate:"required,gte=1"`
+
+	// SignalDBM is the strength of the last frame heard from the station
+	// (cDot11ClientSignalStrength), in dBm. It is negative.
+	SignalDBM int `yaml:"signal_dbm" validate:"required,gte=-100,lte=-20"`
+
+	// SignalQualityPct is that frame's quality (cDot11ClientSigQuality), as
+	// the percentage the MIB defines it in.
+	SignalQualityPct int `yaml:"signal_quality_pct" validate:"required,gte=1,lte=100"`
 }

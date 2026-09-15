@@ -108,6 +108,7 @@ func NewAgentWithCommunityAndTelemetry(
 	agent.initializeMIBIIProtocolGroups()
 	agent.initializePoEMIB()
 	agent.initializeDot11MIB()
+	agent.initializeDot11ClientMIB()
 	agent.protocolStats.attachMIB(agent.mib)
 
 	return agent
@@ -341,6 +342,7 @@ func (a *Agent) LoadWalkFile(filename string) error {
 	a.refreshWalkedPoEMIB(walkOwnsPoE(entries))
 	a.refreshAuthoredInterfaceMIBs()
 	a.refreshWalkedDot11MIB(walkOwnsDot11(entries))
+	a.refreshWalkedDot11ClientMIB(walkOwnsDot11Clients(entries))
 	a.refreshAuthoredPhysicalIdentity()
 	a.registerWalkStateFaultCounters()
 	a.registerResourceFaults()

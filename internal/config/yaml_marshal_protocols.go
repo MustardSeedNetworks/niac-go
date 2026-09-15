@@ -244,7 +244,28 @@ func wifiToYAML(cfg *WiFiConfig) *converter.WifiConfig {
 	}
 	out := &converter.WifiConfig{Radios: make([]converter.WifiRadio, 0, len(cfg.Radios))}
 	for _, radio := range cfg.Radios {
-		out.Radios = append(out.Radios, converter.WifiRadio(radio))
+		out.Radios = append(out.Radios, converter.WifiRadio{
+			Interface:  radio.Interface,
+			SSID:       radio.SSID,
+			BSSID:      radio.BSSID,
+			Band:       radio.Band,
+			Channel:    radio.Channel,
+			TxPowerDBM: radio.TxPowerDBM,
+			Clients:    wifiClientsToYAML(radio.Clients),
+		})
+	}
+
+	return out
+}
+
+func wifiClientsToYAML(clients []WiFiClient) []converter.WifiClient {
+	if len(clients) == 0 {
+		return nil
+	}
+
+	out := make([]converter.WifiClient, 0, len(clients))
+	for _, client := range clients {
+		out = append(out, converter.WifiClient(client))
 	}
 
 	return out

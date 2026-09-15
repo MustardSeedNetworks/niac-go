@@ -23,6 +23,18 @@ const (
 	wifiRadioInterfaceType = "ieee80211"
 )
 
+// Bounds on what an associated station reports. The signal floor is below any
+// usable receive sensitivity and the ceiling is a station on top of the AP, so
+// a sign slip or a milliwatt value is caught rather than replayed.
+const (
+	minClientSignalDBM = -100
+	maxClientSignalDBM = -20
+
+	// maxSignalQualityPct is the percentage cDot11ClientSigQuality is defined
+	// in.
+	maxSignalQualityPct = 100
+)
+
 // Channel numbering per band. A band's range is the whole numbering, not a
 // per-domain channel plan: which channels a country permits is a regulatory
 // question the scenario does not model, and rejecting a channel that is legal
@@ -118,6 +130,78 @@ func (v *Validator) validateWiFiRadio(
 		v.addError(prefix+".tx_power_dbm", fmt.Sprintf(
 			"transmit power must be between %d and %d dBm, got %d",
 			minWiFiTxPowerDBM, maxWiFiTxPowerDBM, radio.TxPowerDBM))
+	}
+
+	v.validateWiFiClients(radio, prefix)
+}
+
+// validateWiFiClients checks the stations associated to one radio. Their MACs
+// have to differ: the MAC is part of the row index, so two clients sharing one
+// makes a single row that reports whichever was authored last.
+func (v *Validator) validateWiFiClients(radio *WiFiRadio, prefix string) {
+	associated := make(map[string]int, len(radio.Clients))
+	for index := range radio.Clients {
+		v.validateWiFiClient(
+			&radio.Clients[index],
+			fmt.Sprintf("%s.clients[%d]", prefix, index),
+			associated,
+		)
+	}
+}
+
+func (v *Validator) validateWiFiClient(
+	client *WiFiClient,
+	prefix string,
+	associated map[string]int,
+) {
+	v.validateWiFiClientAddress(client, prefix, associated)
+
+	if client.AssociatedSeconds < 1 {
+		v.addError(prefix+".associated_seconds", fmt.Sprintf(
+			"a station that is associated has been so for at least a second, got %d",
+			client.AssociatedSeconds))
+	}
+
+	if client.SignalDBM < minClientSignalDBM || client.SignalDBM > maxClientSignalDBM {
+		v.addError(prefix+".signal_dbm", fmt.Sprintf(
+			"signal strength must be between %d and %d dBm, got %d",
+			minClientSignalDBM, maxClientSignalDBM, client.SignalDBM))
+	}
+
+	if client.SignalQualityPct < 1 || client.SignalQualityPct > maxSignalQualityPct {
+		v.addError(prefix+".signal_quality_pct", fmt.Sprintf(
+			"signal quality is a percentage of 1 to %d, got %d",
+			maxSignalQualityPct, client.SignalQualityPct))
+	}
+}
+
+func (v *Validator) validateWiFiClientAddress(
+	client *WiFiClient,
+	prefix string,
+	associated map[string]int,
+) {
+	address, err := net.ParseMAC(client.MAC)
+	switch {
+	case err != nil:
+		v.addError(prefix+".mac",
+			fmt.Sprintf("MAC %q is not a MAC address", client.MAC))
+	case address[0]&1 == 1:
+		v.addError(prefix+".mac", fmt.Sprintf(
+			"MAC %s is a group address; a station associates from its own unicast MAC",
+			client.MAC))
+	default:
+		key := address.String()
+		if first, taken := associated[key]; taken {
+			v.addError(prefix+".mac", fmt.Sprintf(
+				"MAC %s is already the station at index %d of this radio", key, first))
+		} else {
+			associated[key] = len(associated)
+		}
+	}
+
+	if ip := net.ParseIP(client.IPAddress); ip == nil || ip.To4() == nil {
+		v.addError(prefix+".ip_address", fmt.Sprintf(
+			"IP address %q is not an IPv4 address", client.IPAddress))
 	}
 }
 

@@ -194,6 +194,13 @@ export interface AuthoredDevice {
           readonly band?: '2.4GHz' | '5GHz' | '6GHz';
           readonly channel?: number;
           readonly tx_power_dbm?: number;
+          readonly clients?: readonly {
+              readonly mac?: string;
+              readonly ip_address?: string;
+              readonly associated_seconds?: number;
+              readonly signal_dbm?: number;
+              readonly signal_quality_pct?: number;
+            }[];
         }[];
     };
   readonly http?: {
