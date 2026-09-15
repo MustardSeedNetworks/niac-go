@@ -54,6 +54,7 @@ function AppShell() {
   // on the pathname, so anything living in it is remounted by the very
   // navigation it would have to remember.
   const pageTitleRef = useRef<HTMLHeadingElement>(null);
+  const { pathname } = useLocation();
 
   useKeyboardShortcuts(() => setHelpOpen(true));
   useFocusOnRouteChange(pageTitleRef);
@@ -67,7 +68,17 @@ function AppShell() {
       onOpenSettings={() => setSettingsOpen(true)}
     >
       <ToastContainer />
-      <Suspense fallback={<PageLoader />}>
+      {/* Keyed on the route so a suspending navigation mounts a NEW boundary.
+          Every page is lazy(), and React Router updates in a transition: a
+          transition that suspends against an EXISTING boundary keeps the whole
+          previous tree on screen with no fallback, while the router has already
+          pushed the new URL synchronously. The rail, the header and the body
+          then describe a page the operator has navigated away from, for as long
+          as the chunk takes -- which reads as a tap that did nothing, and left
+          the mobile shell spec clicking a layout that was about to move
+          (#2151). A newly mounted boundary shows its fallback instead, so the
+          shell commits at the new location and only the page body waits. */}
+      <Suspense key={pathname} fallback={<PageLoader />}>
         <Routes>
           {pages.map((page) => (
             <Route
