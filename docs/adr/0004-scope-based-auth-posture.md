@@ -50,3 +50,13 @@ decision rather than incidental.
 ## Related issues and PRs
 
 - #798 (govulncheck pin), #800 (route-policy registry that locks in the wrapping)
+
+## Amendment 2026-09-14 — CSRF manager in `foundation`, scope model in `internal/api/auth`
+
+The scope model, `RequiredScopeForMethod` and `auth()` moved to
+`internal/api/auth` under ADR 0006; `adminProtect` still guards
+`/api/v1/config/import`. The per-session CSRF manager this ADR describes as a
+local `CSRFManager` keyed by `sha256(bearer)` is now
+`github.com/MustardSeedNetworks/foundation/pkg/csrf` (fleet shared security
+core, 2026-07-10), imported by `internal/api/server.go`; the posture is
+unchanged.

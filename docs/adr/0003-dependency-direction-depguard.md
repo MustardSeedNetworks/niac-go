@@ -36,3 +36,10 @@ gate.
 ## Related issues and PRs
 
 - #799 (this rule)
+
+## Amendment 2026-09-14 — six inward packages
+
+`domain-core-inward-only` now guards `internal/protocols`, `converter`,
+`device`, `mibdb`, `topology` and `fabric` (`.golangci.yml`); `topology` and
+`fabric` were added with ADR 0009 without updating this list. The direction
+rule is unchanged.

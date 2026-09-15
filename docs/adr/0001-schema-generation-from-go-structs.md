@@ -2,7 +2,7 @@
 
 | Status | Date | Decider |
 | --- | --- | --- |
-| Partially implemented | 2026-05-25 | @krisarmstrong |
+| Accepted (amended 2026-09-14) | 2026-05-25 | @krisarmstrong |
 
 ## Context
 
@@ -74,3 +74,13 @@ because it would encode a false API contract.
 
 - Issue #665 proposed schema generation.
 - PR #682 introduced the NIAC generator and drift gate.
+
+## Amendment 2026-09-14 — implemented, and two more consumers
+
+Every implementation-contract bullet above is met and CI-gated: the generator
+is `cmd/niac-schema`, `make schema` regenerates, and `ci.yml` fails on drift.
+Two consumers built on the same generator since: the authoring-parity gate
+(P1b-1) and the schema-generated device-editor forms with their manifest drift
+check (P1b-2). "Partially implemented" described the 2026-05 state and was
+never updated. Schema generation and config validation remain separate
+surfaces; the validator story is P1b-4, not this ADR.
