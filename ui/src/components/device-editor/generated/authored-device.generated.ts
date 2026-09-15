@@ -186,6 +186,16 @@ export interface AuthoredDevice {
       readonly budget_watts?: number;
       readonly usage_threshold_percent?: number;
     };
+  readonly wifi?: {
+      readonly radios?: readonly {
+          readonly interface?: string;
+          readonly ssid?: string;
+          readonly bssid?: string;
+          readonly band?: '2.4GHz' | '5GHz' | '6GHz';
+          readonly channel?: number;
+          readonly tx_power_dbm?: number;
+        }[];
+    };
   readonly http?: {
       readonly enabled?: boolean;
       readonly server_name?: string;

@@ -489,3 +489,43 @@ type Dhcpv6Pool struct {
 	// RangeEnd is the last address handed out.
 	RangeEnd string `yaml:"range_end,omitempty"`
 }
+
+// WifiConfig models the radios of an access point as an NMS reads them:
+// IEEE802dot11-MIB, indexed by the ifIndex of the radio interface. Every field
+// is authored truth; nothing here is inferred from the device type.
+//
+// One SSID per radio, because that is what the standard MIB can say: it carries
+// a single dot11DesiredSSID per interface and has no BSS table. Multi-BSS, the
+// client table, roams and controller aggregation are the later W1 slices, and
+// they need a vendor MIB family rather than this one.
+type WifiConfig struct {
+	// Radios is one entry per radio interface. A device with the block and no
+	// radio is an authoring mistake rather than an AP with nothing to say.
+	Radios []WifiRadio `yaml:"radios,omitempty" validate:"required,dive"`
+}
+
+// WifiRadio is one radio of an access point.
+type WifiRadio struct {
+	// Interface names the radio this describes. It must be an interface of the
+	// same device, of type ieee80211: the dot11 tables are indexed by its
+	// ifIndex, so a radio with no interface has nowhere to be reported.
+	Interface string `yaml:"interface" validate:"required"`
+
+	// SSID is the network the radio serves (dot11DesiredSSID), 1 to 32 octets.
+	SSID string `yaml:"ssid" validate:"required,max=32"`
+
+	// BSSID is the radio's own MAC (dot11MACAddress, dot11StationID, and the
+	// ifPhysAddress of its interface -- one address, reported once).
+	BSSID string `yaml:"bssid" validate:"required,mac"`
+
+	// Band is 2.4GHz, 5GHz or 6GHz. It selects both the PHY type the radio
+	// reports and which table carries its channel.
+	Band string `yaml:"band" validate:"required,oneof=2.4GHz 5GHz 6GHz"`
+
+	// Channel is the operating channel number, in the band's own numbering.
+	Channel int `yaml:"channel" validate:"required,gte=1"`
+
+	// TxPowerDBM is the radio's transmit power in dBm, reported as the
+	// milliwatts IEEE802dot11-MIB asks for.
+	TxPowerDBM int `yaml:"tx_power_dbm" validate:"required,gte=1,lte=30"`
+}

@@ -141,6 +141,7 @@ func deviceToYAML(device *Device) converter.Device {
 		Fdp:           fdpToYAML(device.FDPConfig),
 		Stp:           stpToYAML(device.STPConfig),
 		Poe:           poeToYAML(device.PoEConfig),
+		Wifi:          wifiToYAML(device.WiFiConfig),
 		HTTP:          httpToYAML(device.HTTPConfig),
 		Ftp:           ftpToYAML(device.FTPConfig),
 		Netbios:       netbiosToYAML(device.NetBIOSConfig),

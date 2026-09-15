@@ -283,6 +283,7 @@ type Device struct {
 	FDPConfig           *FDPConfig           // FDP discovery protocol configuration
 	STPConfig           *STPConfig           // STP/RSTP/MSTP configuration
 	PoEConfig           *PoEConfig           // POWER-ETHERNET-MIB power-sourcing budget
+	WiFiConfig          *WiFiConfig          // IEEE802dot11-MIB radios: SSID, BSSID, band, channel, power
 	HTTPConfig          *HTTPConfig          // HTTP server configuration
 	FTPConfig           *FTPConfig           // FTP server configuration
 	NetBIOSConfig       *NetBIOSConfig       // NetBIOS service configuration
@@ -607,6 +608,23 @@ type STPConfig struct {
 type PoEConfig struct {
 	BudgetWatts           int // pethMainPsePower, watts
 	UsageThresholdPercent int // pethMainPseUsageThreshold, percent of the budget
+}
+
+// WiFiConfig holds the radios of an access point, served as IEEE802dot11-MIB
+// and indexed by the ifIndex of each radio's interface.
+type WiFiConfig struct {
+	Radios []WiFiRadio
+}
+
+// WiFiRadio is one authored radio: the interface it lives on, the network it
+// serves and how it is transmitting.
+type WiFiRadio struct {
+	Interface  string // an ieee80211 interface of the same device
+	SSID       string // dot11DesiredSSID, 1-32 octets
+	BSSID      string // dot11MACAddress, dot11StationID and the interface's ifPhysAddress
+	Band       string // 2.4GHz, 5GHz or 6GHz
+	Channel    int    // channel number in the band's own numbering
+	TxPowerDBM int    // transmit power in dBm, reported to the MIB in milliwatts
 }
 
 // HTTPConfig holds HTTP server configuration.

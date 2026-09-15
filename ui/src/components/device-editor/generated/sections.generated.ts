@@ -960,6 +960,62 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "wifi",
+    "title": "Wifi",
+    "fields": [
+      {
+        "name": "radios",
+        "title": "Radios",
+        "description": "Radios is one entry per radio interface. A device with the block and no\nradio is an authoring mistake rather than an AP with nothing to say.",
+        "kind": "objectList",
+        "fields": [
+          {
+            "name": "interface",
+            "title": "Interface",
+            "description": "Interface names the radio this describes. It must be an interface of the\nsame device, of type ieee80211: the dot11 tables are indexed by its\nifIndex, so a radio with no interface has nowhere to be reported.",
+            "kind": "string"
+          },
+          {
+            "name": "ssid",
+            "title": "Ssid",
+            "description": "SSID is the network the radio serves (dot11DesiredSSID), 1 to 32 octets.",
+            "kind": "string"
+          },
+          {
+            "name": "bssid",
+            "title": "Bssid",
+            "description": "BSSID is the radio's own MAC (dot11MACAddress, dot11StationID, and the\nifPhysAddress of its interface -- one address, reported once).",
+            "kind": "string"
+          },
+          {
+            "name": "band",
+            "title": "Band",
+            "description": "Band is 2.4GHz, 5GHz or 6GHz. It selects both the PHY type the radio\nreports and which table carries its channel.",
+            "kind": "enum",
+            "options": [
+              "2.4GHz",
+              "5GHz",
+              "6GHz"
+            ]
+          },
+          {
+            "name": "channel",
+            "title": "Channel",
+            "description": "Channel is the operating channel number, in the band's own numbering.",
+            "kind": "integer"
+          },
+          {
+            "name": "tx_power_dbm",
+            "title": "Tx power dbm",
+            "description": "TxPowerDBM is the radio's transmit power in dBm, reported as the\nmilliwatts IEEE802dot11-MIB asks for.",
+            "kind": "integer"
+          }
+        ]
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "http",
     "title": "HTTP",
     "fields": [
