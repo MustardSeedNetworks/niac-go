@@ -277,12 +277,6 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "ratelimit is a leaf — per-IP limiter + middleware factories take injected ClientIPFunc/ErrorFunc, so it never imports the api transport layer"
-        "api-csrf-isolated":
-          files:
-            - "**/internal/api/csrf/**"
-          deny:
-            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
-              desc: "csrf is a leaf — per-session token manager + Protect factory (injected ErrorFunc), so it never imports the api transport layer"
         "api-sse-isolated":
           files:
             - "**/internal/api/sse/**"
@@ -301,7 +295,7 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "templates is a leaf — the on-disk template discovery/parse/load engine over stdlib only; the Server composes it inward (templates.Dirs/Scan/Find/Load/SaveConfig), never the reverse"
-        # internal/api/auth has NO isolation rule by design. Unlike the four
+        # internal/api/auth has NO isolation rule by design. Unlike the five
         # leaves above, auth COMPOSES siblings (internal/api/tokenstore +
         # ratelimit), and a deny on "internal/api" prefix-matches those sibling
         # packages too. It's also redundant: internal/api imports auth
