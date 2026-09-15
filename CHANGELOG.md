@@ -5,6 +5,15 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.66](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.65...v0.95.66) (2026-09-15)
+
+
+### Bug Fixes
+
+* **api:** trust forwarding headers only from operator-named proxies ([#2196](https://github.com/MustardSeedNetworks/niac-go/issues/2196)) ([04dc76b](https://github.com/MustardSeedNetworks/niac-go/commit/04dc76bc0c11c654e2fdc7c41aa1133279c50092)), closes [#2174](https://github.com/MustardSeedNetworks/niac-go/issues/2174)
+* **scenario:** carry the config Generate already built instead of decoding it twice ([#2183](https://github.com/MustardSeedNetworks/niac-go/issues/2183)) ([c4c205e](https://github.com/MustardSeedNetworks/niac-go/commit/c4c205ef64dc6b881fcb2c51d4876481c9c12d39))
+* **ui:** name the Fault Injection page once, everywhere it is linked ([#2201](https://github.com/MustardSeedNetworks/niac-go/issues/2201)) ([620793d](https://github.com/MustardSeedNetworks/niac-go/commit/620793d8ff359a02881813217e25974836690e71))
+
 ## [0.95.65](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.64...v0.95.65) (2026-09-15)
 
 
