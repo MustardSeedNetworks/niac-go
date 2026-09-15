@@ -238,6 +238,18 @@ func poeToYAML(cfg *PoEConfig) *converter.PoeConfig {
 	return &out
 }
 
+func wifiToYAML(cfg *WiFiConfig) *converter.WifiConfig {
+	if cfg == nil {
+		return nil
+	}
+	out := &converter.WifiConfig{Radios: make([]converter.WifiRadio, 0, len(cfg.Radios))}
+	for _, radio := range cfg.Radios {
+		out.Radios = append(out.Radios, converter.WifiRadio(radio))
+	}
+
+	return out
+}
+
 func httpToYAML(cfg *HTTPConfig) *converter.HTTPConfig {
 	if cfg == nil {
 		return nil

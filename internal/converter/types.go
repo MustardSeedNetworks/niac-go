@@ -308,6 +308,10 @@ type Device struct {
 	// reads as POWER-ETHERNET-MIB.
 	Poe *PoeConfig `yaml:"poe,omitempty"`
 
+	// Wifi gives the device's radios the SSID, BSSID, band, channel and
+	// transmit power an NMS reads as IEEE802dot11-MIB.
+	Wifi *WifiConfig `yaml:"wifi,omitempty"`
+
 	// HTTP serves a web listener with author-defined endpoints, which is what
 	// makes a device identifiable as a server or an appliance.
 	HTTP *HTTPConfig `yaml:"http,omitempty"`

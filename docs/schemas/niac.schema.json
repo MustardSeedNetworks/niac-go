@@ -535,6 +535,10 @@
           "$ref": "#/$defs/PoeConfig",
           "description": "Poe supplies PoE to the devices behind this one's ports, which a tester\nreads as POWER-ETHERNET-MIB."
         },
+        "wifi": {
+          "$ref": "#/$defs/WifiConfig",
+          "description": "Wifi gives the device's radios the SSID, BSSID, band, channel and\ntransmit power an NMS reads as IEEE802dot11-MIB."
+        },
         "http": {
           "$ref": "#/$defs/HTTPConfig",
           "description": "HTTP serves a web listener with author-defined endpoints, which is what\nmakes a device identifiable as a server or an appliance."
@@ -2330,6 +2334,64 @@
         "interface"
       ],
       "description": "TrunkPort declares a VLAN-tagged trunk link to a neighbouring device."
+    },
+    "WifiConfig": {
+      "properties": {
+        "radios": {
+          "items": {
+            "$ref": "#/$defs/WifiRadio"
+          },
+          "type": "array",
+          "description": "Radios is one entry per radio interface. A device with the block and no\nradio is an authoring mistake rather than an AP with nothing to say."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "WifiConfig models the radios of an access point as an NMS reads them: IEEE802dot11-MIB, indexed by the ifIndex of the radio interface."
+    },
+    "WifiRadio": {
+      "properties": {
+        "interface": {
+          "type": "string",
+          "description": "Interface names the radio this describes. It must be an interface of the\nsame device, of type ieee80211: the dot11 tables are indexed by its\nifIndex, so a radio with no interface has nowhere to be reported."
+        },
+        "ssid": {
+          "type": "string",
+          "description": "SSID is the network the radio serves (dot11DesiredSSID), 1 to 32 octets."
+        },
+        "bssid": {
+          "type": "string",
+          "description": "BSSID is the radio's own MAC (dot11MACAddress, dot11StationID, and the\nifPhysAddress of its interface -- one address, reported once)."
+        },
+        "band": {
+          "type": "string",
+          "enum": [
+            "2.4GHz",
+            "5GHz",
+            "6GHz"
+          ],
+          "description": "Band is 2.4GHz, 5GHz or 6GHz. It selects both the PHY type the radio\nreports and which table carries its channel."
+        },
+        "channel": {
+          "type": "integer",
+          "description": "Channel is the operating channel number, in the band's own numbering."
+        },
+        "tx_power_dbm": {
+          "type": "integer",
+          "description": "TxPowerDBM is the radio's transmit power in dBm, reported as the\nmilliwatts IEEE802dot11-MIB asks for."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "interface",
+        "ssid",
+        "bssid",
+        "band",
+        "channel",
+        "tx_power_dbm"
+      ],
+      "description": "WifiRadio is one radio of an access point."
     }
   },
   "title": "NIAC configuration",

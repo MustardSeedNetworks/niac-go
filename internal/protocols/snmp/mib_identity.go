@@ -40,9 +40,15 @@ func (a *Agent) refreshPhysicalAddresses(oids []string, mac []byte) {
 		oidValueBytes(a.mib.Get(lldpLocChassisID)),
 	}
 	primary := a.primaryPhysicalAddress(oids)
+	radios := a.authoredRadioAddresses()
 	for _, oid := range oids {
 		value := oidValueBytes(a.mib.Get(oid))
 		if !strings.HasPrefix(oid, ifPhysAddress+".") || !hasPhysicalAddress(value) {
+			continue
+		}
+		if bssid, authored := radios[strings.TrimPrefix(oid, ifPhysAddress+".")]; authored {
+			a.mib.Set(oid, &OIDValue{Type: gosnmp.OctetString, Value: bssid})
+
 			continue
 		}
 		address := derivedPhysicalAddress(mac, oid)

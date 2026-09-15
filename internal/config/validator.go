@@ -72,6 +72,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 			)
 		}
 		v.validatePoEBudgets(cfg)
+		v.validateWiFiBSSIDs(cfg)
 
 		return v.errors
 	}
@@ -101,6 +102,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		}
 	}
 	v.validatePoEBudgets(cfg)
+	v.validateWiFiBSSIDs(cfg)
 
 	return v.errors
 }
@@ -166,6 +168,7 @@ func (v *Validator) validateDevice(
 	v.validatePortChannels(device, prefix)
 	v.validateTrunkPorts(device, prefix, knownNames)
 	v.validatePoE(device, prefix)
+	v.validateWiFi(device, prefix)
 }
 
 func (v *Validator) validateSSH(device *Device, prefix string) {

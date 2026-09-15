@@ -312,6 +312,60 @@ Two things to know:
   so an over-subscribed scenario replays a device you meant to be up as one that
   never comes up.
 
+## Wi-Fi: the radios of an access point
+
+An `ap` with no `wifi` block is an Ethernet host with a wireless-sounding
+device type: it answers nothing about a radio. The block is what makes it an
+access point to an NMS.
+
+```yaml
+devices:
+  - name: clinic-ap-01
+    type: ap
+    vendor: cisco
+    mac_suffix: 30
+    interfaces:
+      - name: Dot11Radio0
+        type: ieee80211        # required: the dot11 tables are keyed by this
+      - name: Dot11Radio1      # interface's ifIndex
+        type: ieee80211
+    wifi:
+      radios:
+        - interface: Dot11Radio0
+          ssid: clinic-corp
+          bssid: "00:0c:ce:88:23:c7"   # the radio's own MAC
+          band: 2.4GHz                 # 2.4GHz, 5GHz or 6GHz
+          channel: 6                   # in the band's own numbering
+          tx_power_dbm: 17             # 1-30
+        - interface: Dot11Radio1
+          ssid: clinic-corp
+          bssid: "00:0c:ce:88:23:c8"
+          band: 5GHz
+          channel: 149
+          tx_power_dbm: 20
+```
+
+A tester then walks IEEE802dot11-MIB (the `1.2.840.10036` tree, not a mib-2
+subtree) and reads the SSID, the radio's address, its PHY type, its transmit
+power and its channel — each row at the ifIndex of the radio interface, so the
+radio correlates with the port a discovery tool already knows.
+
+Three things to know:
+
+- **One SSID per radio.** The standard MIB carries a single `dot11DesiredSSID`
+  per interface and has no BSS table, so a second SSID on one radio has nowhere
+  to be reported. Multi-BSS waits for the vendor MIB families.
+- **The BSSID is the radio's address everywhere.** It is what IF-MIB reports as
+  that interface's `ifPhysAddress` as well, because a radio with two addresses
+  is a finding a tester would raise. It must be unique across the scenario.
+- **The band decides which object carries the channel**: 2.4 GHz answers
+  `dot11CurrentChannel` from the DSSS table, 5 and 6 GHz answer
+  `dot11CurrentFrequency` from the OFDM table. That is the MIB's own split, and
+  it is what a real AP capture does.
+
+Not authored here yet: the wireless clients, association and roam events, and
+the controller's aggregated view of its APs.
+
 ## Services
 
 Each service is a block on the device. They are independent — a device can
