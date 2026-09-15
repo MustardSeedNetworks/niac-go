@@ -1,6 +1,6 @@
 # ADR 0008: Multi-VLAN playback — N sim engines behind one L2 demux
 
-**Status:** Proposed (revised 2026-07-04)
+**Status:** Amended (2026-09-14) — shipped in a different shape; see the amendment
 
 ## Context
 
@@ -123,3 +123,21 @@ this on port contention; none does.
 - Supersedes this ADR's prior "segments / per-segment device table" framing with
   the sharper "N engines behind one L2 demux" model.
 - Tracking epic: #882.
+
+## Amendment 2026-09-14 — what shipped is the per-segment table, not N engines
+
+The 2026-07-04 revision rejected the "segments / per-segment device table"
+framing in favour of N independent sim engines behind one L2 demux. Production
+shipped the rejected framing and has served it since before July: one `Stack`
+owns one `PacketTransport` and one set of protocol handlers, and VLAN
+isolation is `segmentTables map[int]*DeviceTable` built from the config's
+`segments:` list (`internal/protocols/stack.go`, `stack_init.go`), exposed at
+`GET /api/v1/segments`. The "real lift" — splitting `Stack`'s I/O ownership
+from its sim logic — was not done for this feature.
+
+The N-engine shape does exist, at a different granularity:
+`internal/daemon/trunk_capture.go` demuxes one physical trunk capture by
+802.1Q tag into per-_session_ transports (AP-0/AP-1), so several scenarios
+share one NIC. That is cross-session trunk sharing, not intra-scenario
+segments. If per-segment engines inside one scenario are still wanted, that is
+a new ADR; this one records the design that is live.

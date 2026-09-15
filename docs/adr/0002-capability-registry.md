@@ -48,3 +48,11 @@ Supporting mechanisms:
 ## Related issues and PRs
 
 - #800 (this registry: `route.go`, `/__capabilities`, `check-route-policy.sh`)
+
+## Amendment 2026-09-14 — no `feature` step
+
+The canonical chain above names a `feature` step and the struct a `feature`
+field for the license gate. Both went with runtime licensing (#1203, ADR 0005).
+The chain today is `recover → auth → rateLimit → csrf → admin → methodGate →
+bodyLimit → handler` and `apiRoute` is `{path, handler, methods, maxBodyBytes,
+rl, csrf, admin}` (`internal/api/route.go`). Everything else stands.

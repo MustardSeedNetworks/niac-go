@@ -1,6 +1,6 @@
 # ADR 0009: Routed fabric separated from physical attachments
 
-**Status:** Accepted (2026-07-20)
+**Status:** Accepted (2026-07-20); amended 2026-09-14
 
 ## Context
 
@@ -97,3 +97,16 @@ release gates.
 - ADR 0003: dependency direction enforced by depguard.
 - ADR 0008: multi-VLAN segment playback.
 - `docs/design/2026-07-routed-virtual-lab-plan.md`.
+
+## Amendment 2026-09-14 — three deferred clauses have shipped
+
+- `trunk` is no longer "a future attachment policy": `ModeTrunk` is declared in
+  `internal/fabric/types.go`, compiled in `compiler.go`, applied in
+  `internal/protocols/fabric_runtime.go` and validated in `internal/api/validation.go`.
+- Forwarding is no longer disabled: routed frames are forwarded and counted
+  (`FabricForwarded`, `internal/protocols/state_notifications.go`).
+- "One logical external attachment" is now a pool: `config.Attachments` is a
+  list of `LogicalAttachment` each naming a device, a set of free ports and MAC
+  pins (AP-0 #2073, AP-1 #2143; design in the attachment-point plan). The
+  separation this ADR decided — routed fabric apart from physical attachment —
+  is unchanged; the attachment noun went from singular to pool.

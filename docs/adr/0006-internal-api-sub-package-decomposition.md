@@ -1,6 +1,6 @@
 # ADR 0006: Decompose `internal/api` into isolated sub-packages
 
-**Status:** Accepted (2026-06-08)
+**Status:** Accepted (2026-06-08); amended 2026-09-14
 
 ## Context
 
@@ -57,3 +57,14 @@ the package directly.
   qualifier change plus one depguard rule, instead of a single 13k-LOC churn.
 - The remaining four extractions (ratelimit, csrf, sse, auth) follow in their own
   PRs; the auth extraction is last because it depends on tokenstore/ratelimit/csrf.
+
+## Amendment 2026-09-14 — what was actually extracted
+
+Seven leaves exist under `internal/api/`: `tokenstore`, `ratelimit`, `sse`,
+`capture`, `templates`, `auth` and — until the 2026-07-10 move to
+`foundation/pkg/csrf` — `csrf`. `capture` and `templates` were extracted after
+this ADR and are isolated by depguard like the others; `auth` deliberately has
+no isolation rule (see the `.golangci.yml` comment). The `api-csrf-isolated`
+rule still targets `internal/api/csrf/**`, a directory that no longer exists,
+so it matches nothing; delete the rule or the comment that counts "four leaves"
+next time `.golangci.yml` is touched.
