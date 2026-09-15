@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"slices"
 	"sync"
 	"time"
@@ -324,6 +325,9 @@ type ServerConfig struct {
 	// (~/.niac/library by default, /var/lib/niac/library when packaged).
 	// If empty, the daemon picks a sensible default via library.DefaultRoot().
 	LibraryRoot string
+	// TrustedProxies are the CIDRs whose forwarding headers Server.clientIP
+	// may believe (#2174). Empty leaves loopback as the only trusted hop.
+	TrustedProxies []netip.Prefix
 }
 
 // SimulationRequest represents a request to start a simulation.

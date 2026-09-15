@@ -19,7 +19,7 @@ func (s *Server) authDeps() auth.Deps {
 		Addr:            s.cfg.Addr,
 		SecurityHeaders: addSecurityHeaders,
 		RequestID:       generateRequestID,
-		ClientIP:        getClientIP,
+		ClientIP:        s.clientIP,
 		WriteErr:        simpleErr,
 		NonLoopback:     addrIsNonLoopback,
 	}

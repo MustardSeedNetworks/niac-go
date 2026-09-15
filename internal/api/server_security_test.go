@@ -357,40 +357,44 @@ func TestPanicRecovery_NormalOperation(t *testing.T) {
 
 // TestGetClientIP_DirectConnection verifies IP extraction from direct connections.
 func TestGetClientIP_DirectConnection(t *testing.T) {
+	srv := serverWithTrustedProxies(t, "")
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "192.168.1.100:54321"
 
-	ip := getClientIP(req)
-
-	if ip != "192.168.1.100" {
+	if ip := srv.clientIP(req); ip != "192.168.1.100" {
 		t.Errorf("Expected IP 192.168.1.100, got: %s", ip)
 	}
 }
 
-// TestGetClientIP_XForwardedFor verifies IP extraction from X-Forwarded-For header.
+// TestGetClientIP_XForwardedFor pins the chain semantics at the security
+// boundary: a listed proxy is believed, and the left-most entry — the one the
+// client itself controls — is not the answer.
 func TestGetClientIP_XForwardedFor(t *testing.T) {
+	srv := serverWithTrustedProxies(t, "10.0.0.0/8")
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Forwarded-For", "203.0.113.5, 198.51.100.1")
 
-	ip := getClientIP(req)
-
-	// Should use first IP from X-Forwarded-For
-	if ip != "203.0.113.5" {
-		t.Errorf("Expected IP 203.0.113.5, got: %s", ip)
+	if ip := srv.clientIP(req); ip != "198.51.100.1" {
+		t.Errorf("Expected IP 198.51.100.1, got: %s", ip)
 	}
 }
 
-// TestGetClientIP_XRealIP verifies IP extraction from X-Real-IP header.
+// TestGetClientIP_XRealIP verifies X-Real-IP is read from a listed proxy and
+// ignored from a private peer that is not one.
 func TestGetClientIP_XRealIP(t *testing.T) {
+	srv := serverWithTrustedProxies(t, "10.0.0.0/8")
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.RemoteAddr = "10.0.0.1:54321"
 	req.Header.Set("X-Real-IP", "203.0.113.10")
 
-	ip := getClientIP(req)
-
-	if ip != "203.0.113.10" {
+	if ip := srv.clientIP(req); ip != "203.0.113.10" {
 		t.Errorf("Expected IP 203.0.113.10, got: %s", ip)
+	}
+
+	unlisted := serverWithTrustedProxies(t, "")
+	if ip := unlisted.clientIP(req); ip != "10.0.0.1" {
+		t.Errorf("Expected the socket address 10.0.0.1 from an unlisted peer, got: %s", ip)
 	}
 }
 

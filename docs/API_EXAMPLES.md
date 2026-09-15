@@ -617,6 +617,26 @@ The API enforces rate limiting:
 
 When rate limited, you'll receive HTTP 429 with retry information in the `X-Request-ID` header for tracing.
 
+### Which IP a request counts against
+
+The bucket is keyed on the immediate TCP peer. `X-Forwarded-For` and
+`X-Real-IP` are honoured only when that peer is a trusted hop: a loopback
+address, or a CIDR you listed in `NIAC_TRUSTED_PROXIES`.
+
+```bash
+# The daemon sits behind a reverse proxy on 10.0.0.0/24
+export NIAC_TRUSTED_PROXIES=10.0.0.0/24,192.168.7.5/32
+niac daemon --listen 0.0.0.0
+```
+
+Unset — the default — leaves loopback as the only trusted hop, which is right
+for the shipped configuration: NIAC terminates its own TLS and ships no proxy.
+A malformed list, or one containing a prefix that covers every address
+(`0.0.0.0/0`, `::/0`), fails at startup rather than being ignored.
+
+The header is read right to left, because each proxy appends the peer it saw
+and the left-most entry is whatever the original client chose to send.
+
 ## Request Tracing
 
 All API responses include an `X-Request-ID` header for debugging:
