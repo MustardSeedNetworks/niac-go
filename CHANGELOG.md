@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.65](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.64...v0.95.65) (2026-09-15)
+
+
+### Features
+
+* **scenario:** author every pack access point's radios and key its dot11 rows by ifIndex ([#2168](https://github.com/MustardSeedNetworks/niac-go/issues/2168)) ([9721a89](https://github.com/MustardSeedNetworks/niac-go/commit/9721a89c4df96b4b5e95810d6e5d0037ab8db992))
+* **wifi:** author the stations associated to a radio and serve them as CISCO-DOT11-ASSOCIATION-MIB ([#2171](https://github.com/MustardSeedNetworks/niac-go/issues/2171)) ([06605a2](https://github.com/MustardSeedNetworks/niac-go/commit/06605a243627584f2aeaa160caf6e1d47481b60e))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2172](https://github.com/MustardSeedNetworks/niac-go/issues/2172)) ([f5f3f5c](https://github.com/MustardSeedNetworks/niac-go/commit/f5f3f5c4fe9bf5623a890fc787b29822ce966b50))
+
 ## [0.95.64](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.63...v0.95.64) (2026-09-15)
 
 
