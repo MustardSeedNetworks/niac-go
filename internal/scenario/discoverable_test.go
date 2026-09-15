@@ -50,11 +50,7 @@ type discoveryPort struct {
 // actually discovered when the scenario runs — needs the wire harness.
 func TestDeclaredLinksAreDiscoverable(t *testing.T) {
 	for _, pack := range scenario.Packs() {
-		result, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Fatalf("generate %s: %v", pack.ID, err)
-		}
-		assertDiscoverable(t, "pack:"+pack.ID, parseDoc(t, result.YAML))
+		assertDiscoverable(t, "pack:"+pack.ID, parseDoc(t, generatedPack(t, pack).YAML))
 	}
 
 	for _, meta := range tmpl.List() {

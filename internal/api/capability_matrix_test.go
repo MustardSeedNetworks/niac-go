@@ -254,10 +254,6 @@ func packConfig(t *testing.T, pack scenario.Pack) *config.Config {
 	if err != nil {
 		t.Fatalf("generate %s: %v", pack.ID, err)
 	}
-	cfg, err := config.LoadYAMLBytes(generated.YAML)
-	if err != nil {
-		t.Fatalf("load %s: %v", pack.ID, err)
-	}
 
-	return cfg
+	return generated.Config
 }

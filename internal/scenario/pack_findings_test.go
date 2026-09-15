@@ -82,10 +82,7 @@ func TestManifestCarriesTheAuthoredFindings(t *testing.T) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		result, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Fatalf("%s: %v", pack.ID, err)
-		}
+		result := generatedPack(t, pack)
 		got := len(result.Manifest.Interfaces.Faults)
 		if got != len(pack.Request.Faults) {
 			t.Errorf("%s: manifest carries %d faults, authored %d",

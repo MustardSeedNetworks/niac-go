@@ -10,10 +10,7 @@ import (
 
 func generateHospital(t *testing.T) scenario.Manifest {
 	t.Helper()
-	result, err := scenario.Generate(hospitalPack(t).Request)
-	if err != nil {
-		t.Fatalf("Generate() error = %v", err)
-	}
+	result := generatedPack(t, hospitalPack(t))
 
 	return result.Manifest
 }

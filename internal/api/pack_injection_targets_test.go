@@ -3,7 +3,6 @@ package api
 import (
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
@@ -44,10 +43,7 @@ func packStack(t *testing.T, pack scenario.Pack) (*protocols.Stack, int) {
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}
-	cfg, err := config.LoadYAMLBytes(generated.YAML)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
+	cfg := generated.Config
 
 	return protocols.NewStack(nil, cfg, logging.NewDebugConfig(0)), len(cfg.Devices)
 }

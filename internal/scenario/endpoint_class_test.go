@@ -105,16 +105,7 @@ func TestCompactNameShape(t *testing.T) {
 
 func packDevices(t *testing.T, pack scenario.Pack) *config.Config {
 	t.Helper()
-	result, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatalf("generate %s: %v", pack.ID, err)
-	}
-	cfg, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatalf("load %s: %v", pack.ID, err)
-	}
-
-	return cfg
+	return packConfig(t, pack)
 }
 
 func forEachPackDevice(t *testing.T, visit func(pack string, device *config.Device)) {

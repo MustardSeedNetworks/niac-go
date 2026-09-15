@@ -162,14 +162,7 @@ func TestVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T) {
 		if !found {
 			continue
 		}
-		result, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Fatalf("Generate(%s): %v", pack.ID, err)
-		}
-		cfg, err := config.LoadYAMLBytes(result.YAML)
-		if err != nil {
-			t.Fatalf("LoadYAMLBytes(%s): %v", pack.ID, err)
-		}
+		cfg := packConfig(t, pack)
 		seen := make(map[string]bool)
 		for _, device := range cfg.Devices {
 			seen[device.Properties["role"]] = true

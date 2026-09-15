@@ -2,6 +2,8 @@
 // from typed customer authoring requests.
 package scenario
 
+import "github.com/MustardSeedNetworks/niac-go/internal/config"
+
 const (
 	defaultDomain            = "demo.lab"
 	defaultCommunity         = "NetAllyDemo"
@@ -281,4 +283,11 @@ func (m Manifest) Parity() Parity {
 type Result struct {
 	YAML     []byte   `json:"-"`
 	Manifest Manifest `json:"manifest"`
+	// Config is the runtime config Generate decoded from YAML and validated
+	// on the way to building the manifest. It is carried rather than
+	// discarded because decoding a generated pack is expensive -- roughly
+	// 5 MB through yaml.v3, and an order of magnitude worse under the race
+	// detector -- and every caller that wanted it was decoding the same
+	// bytes a second time (#2167).
+	Config *config.Config `json:"-"`
 }

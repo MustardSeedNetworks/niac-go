@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 // The point of the MED work is what a discovery tool sees, so assert on a
@@ -95,14 +94,7 @@ func TestAccessPointSerialsAreUnique(t *testing.T) {
 func hospitalDevices(t *testing.T) []config.Device {
 	t.Helper()
 
-	result, err := scenario.Generate(hospitalPack(t).Request)
-	if err != nil {
-		t.Fatalf("Generate(hospital): %v", err)
-	}
-	cfg, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatalf("loading the generated pack: %v", err)
-	}
+	cfg := packConfig(t, hospitalPack(t))
 
 	return cfg.Devices
 }
