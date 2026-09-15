@@ -189,6 +189,10 @@ func TestDot11SynthesizedForAWalkWithoutIt(t *testing.T) {
 	wantString(t, agent.mib.Get(oracleDesiredSSID+".11"), "corp-wifi",
 		"dot11DesiredSSID at the capture's own ifIndex")
 	wantInt(t, agent.mib.Get(oracleCurrentChannel+".11"), 6, "dot11CurrentChannel")
+	// The walk path runs several more refreshes after the dot11 one, and one of
+	// them rewrites ifPhysAddress: the BSSID has to survive all of them, or a
+	// walk-backed AP reports two addresses for one radio.
+	wantMAC(t, agent, ifPhysAddress+".11", "00:0c:ce:88:23:c7")
 }
 
 // The other half: a capture that already carries IEEE802dot11-MIB keeps it. The

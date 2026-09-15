@@ -162,6 +162,28 @@ func milliwattsFromDBM(dBm int) int {
 	return int(math.Round(math.Pow(decibelDecade, float64(dBm)/decibelDecade)))
 }
 
+// authoredRadioAddresses maps the ifIndex of every authored radio to its BSSID.
+// Anything that rewrites interface addresses consults this first: the BSSID is
+// authored truth about one interface, while a derived address is a stand-in for
+// an interface nobody said anything about, so the radio keeps its own.
+func (a *Agent) authoredRadioAddresses() map[string][]byte {
+	if a.device == nil || a.device.WiFiConfig == nil {
+		return nil
+	}
+	radios := make(map[string][]byte, len(a.device.WiFiConfig.Radios))
+	for _, radio := range a.device.WiFiConfig.Radios {
+		index, ok := a.ifIndexForInterface(radio.Interface)
+		if !ok {
+			continue
+		}
+		if bssid, err := net.ParseMAC(radio.BSSID); err == nil {
+			radios[index] = bssid
+		}
+	}
+
+	return radios
+}
+
 func macValue(address net.HardwareAddr) *OIDValue {
 	return &OIDValue{Type: gosnmp.OctetString, Value: []byte(address)}
 }
