@@ -249,3 +249,14 @@ protocols:labels.
 # the daemon's WebSocket reports disconnect, computed via state
 # transition rather than a literal t() call.
 settings:network.disconnected
+
+# DashboardPage.tsx — the quick-action tiles are generated from a destination
+# table (`quickActions`), so each tile's copy is reached by
+# t(action.descriptionKey) rather than a literal key the analyzer can read.
+# The tile's NAME is not here: it is the destination page's own
+# `pages:<page>.title`, already preserved above for usePages(). Listed key by
+# key, not as a `pages:dashboard.quickActions.` prefix, so the sibling keys in
+# that object (title, startSimulationLabel) stay under the unused-key report.
+pages:dashboard.quickActions.faultInjectionDescription
+pages:dashboard.quickActions.debugConsoleDescription
+pages:dashboard.quickActions.viewTopologyDescription

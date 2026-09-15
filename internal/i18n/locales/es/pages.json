@@ -24,14 +24,9 @@
       "dhcpLabel": "DHCP"
     },
     "quickActions": {
+      "faultInjectionDescription": "Inyecte errores y reproduzca archivos PCAP",
       "title": "Acciones rápidas",
-      "errorInjectionLabel": "Inyección de errores",
-      "errorInjectionDescription": "Inyecte errores de red",
-      "debugConsoleLabel": "Consola de depuración",
       "debugConsoleDescription": "Vea los registros en vivo",
-      "trafficInjectionLabel": "Inyección de tráfico",
-      "trafficInjectionDescription": "Reproduzca archivos PCAP",
-      "viewTopologyLabel": "Ver topología",
       "viewTopologyDescription": "Gráfico de red",
       "startSimulationLabel": "Iniciar una simulación"
     },
@@ -46,7 +41,7 @@
     },
     "errorPanel": {
       "title": "Tipos de inyección de errores",
-      "clickHint": "Seleccione un tipo para inyectarlo en la página de Tráfico."
+      "clickHint": "Seleccione un tipo para inyectarlo en la página de Inyección de fallos."
     },
     "eyebrow": "Simulación",
     "rollup": {

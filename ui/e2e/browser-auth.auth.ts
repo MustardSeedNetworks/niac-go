@@ -27,7 +27,10 @@ test('authenticates production REST and SSE traffic without persisting the beare
     )
     .toBe(true);
 
-  await page.getByRole('link', { name: /Debug/i }).click();
+  // The Logs quick action, scoped to the tile grid: the page header, the nav
+  // rail and the tile all name /debug, and the tile is the one this test drove
+  // when it was still labelled "Debug Console".
+  await page.getByTestId('quick-actions').getByRole('link', { name: /Logs/i }).click();
   await expect
     .poll(() =>
       protectedResponses.some(
