@@ -44,7 +44,7 @@ tools-go: ## Install Go development tools
 	@echo "Installing gosec..."
 	@go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
 	@echo "Installing gofumpt..."
-	@go install mvdan.cc/gofumpt@v0.11.0
+	@go install mvdan.cc/gofumpt@v0.12.0
 	@echo "Installing goimports..."
 	@go install golang.org/x/tools/cmd/goimports@v0.49.0
 	@echo "Installing gotestsum..."
