@@ -5,6 +5,32 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.64](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.63...v0.95.64) (2026-09-15)
+
+
+### Features
+
+* **wifi:** author an access point's radios and serve them as IEEE802dot11-MIB ([#2166](https://github.com/MustardSeedNetworks/niac-go/issues/2166)) ([fe465d3](https://github.com/MustardSeedNetworks/niac-go/commit/fe465d3d8263ca88ce4f33ef0bc84763a3a359ba))
+
+
+### Bug Fixes
+
+* **ui:** keep the shell on the page the URL names during a lazy navigation ([#2155](https://github.com/MustardSeedNetworks/niac-go/issues/2155)) ([639da77](https://github.com/MustardSeedNetworks/niac-go/commit/639da7747a4d492834ab0e5b6958f51e1b15456d))
+
+
+### Documentation
+
+* **adr:** record what shipped on 0001-0004, 0006, 0008, 0009 ([#2160](https://github.com/MustardSeedNetworks/niac-go/issues/2160)) ([667407f](https://github.com/MustardSeedNetworks/niac-go/commit/667407fb5e3b0322ffec397ba02f519bd22df778)), closes [#2159](https://github.com/MustardSeedNetworks/niac-go/issues/2159)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2122](https://github.com/MustardSeedNetworks/niac-go/issues/2122)) ([ed10e26](https://github.com/MustardSeedNetworks/niac-go/commit/ed10e260da8ce282072b0600573a5d7179596347))
+* **deps:** lock file maintenance ([#2157](https://github.com/MustardSeedNetworks/niac-go/issues/2157)) ([35b7108](https://github.com/MustardSeedNetworks/niac-go/commit/35b710890e204c4af0fd6ef36d2ac5c2ef3ccfc3))
+* **deps:** lock file maintenance ([#2164](https://github.com/MustardSeedNetworks/niac-go/issues/2164)) ([29886ff](https://github.com/MustardSeedNetworks/niac-go/commit/29886ff247a1bbf21f0d6b11f66887025d36d11f))
+* **deps:** update module mvdan.cc/gofumpt to v0.12.0 ([#2152](https://github.com/MustardSeedNetworks/niac-go/issues/2152)) ([625df50](https://github.com/MustardSeedNetworks/niac-go/commit/625df5072d3f504e80936510bc64d888108de615))
+* **lint:** drop the depguard rule for internal/api/csrf, a directory that no longer exists ([#2161](https://github.com/MustardSeedNetworks/niac-go/issues/2161)) ([dd4e066](https://github.com/MustardSeedNetworks/niac-go/commit/dd4e0667b1e68efbe1ea7d95d0cba90d2f371944))
+
 ## [0.95.63](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.62...v0.95.63) (2026-09-14)
 
 
