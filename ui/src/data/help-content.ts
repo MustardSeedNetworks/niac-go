@@ -258,9 +258,9 @@ finds. Both are read-only by default.`,
   errors: {
     id: 'errors',
     name: 'Errors',
-    fullName: 'Error Injection',
+    fullName: 'Fault Injection',
     summary: 'Make a simulated device misbehave to test monitoring tooling.',
-    description: `Error injection lets you push a running simulated device into a
+    description: `Fault injection lets you push a running simulated device into a
 faulted state without restarting the daemon. The Web UI and the API
 set per-interface FCS errors, packet discards, interface errors, or utilization.
 The simulated SNMP agent advances the corresponding interface counters, so a
@@ -2741,11 +2741,11 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject 50% FCS errors',
-        command: 'Traffic > Error Injection > router-1 > FCS errors > 50',
+        command: 'Fault Injection > Error Injection > router-1 > FCS errors > 50',
       },
       {
         desc: 'Clear',
-        command: 'Traffic > Error Injection > router-1 > FCS errors > Clear',
+        command: 'Fault Injection > Error Injection > router-1 > FCS errors > Clear',
       },
     ],
     tips: ['Pair with `high_utilization` to mimic a saturating link that’s also breaking.'],
@@ -2782,7 +2782,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject discards',
-        command: 'Traffic > Error Injection > switch-2 > Packet discards > 25',
+        command: 'Fault Injection > Error Injection > switch-2 > Packet discards > 25',
       },
     ],
     tips: ['Combine with iperf3 throughput claims to simulate realistic load + loss.'],
@@ -2805,7 +2805,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: 'Inject',
-        command: 'Traffic > Error Injection > router-1 > Interface errors > 15',
+        command: 'Fault Injection > Error Injection > router-1 > Interface errors > 15',
       },
     ],
     tips: [],
@@ -2828,7 +2828,7 @@ const errorItems: HelpItem[] = [
     examples: [
       {
         desc: '90% link utilization',
-        command: 'Traffic > Error Injection > switch-2 > Utilization > 90',
+        command: 'Fault Injection > Error Injection > switch-2 > Utilization > 90',
       },
     ],
     tips: ['Combine with `packet_discards` to mimic a saturating-link congestion scenario.'],
@@ -3353,7 +3353,7 @@ export const glossary: GlossaryEntry[] = [
     category: 'niac',
   },
   {
-    term: 'Error injection',
+    term: 'Fault injection',
     definition:
       'Forcing a simulated device into a faulted state at runtime through the Web UI or the API.',
     category: 'niac',
@@ -3417,7 +3417,7 @@ export const shortcuts: Shortcut[] = [
   { keys: ['g', 'l'], description: 'Go to Logs', category: 'navigation' },
   { keys: ['g', 'p'], description: 'Go to Packets', category: 'navigation' },
   { keys: ['g', 'w'], description: 'Go to SNMP Walks', category: 'navigation' },
-  { keys: ['g', 'i'], description: 'Go to Traffic / Injection', category: 'navigation' },
+  { keys: ['g', 'i'], description: 'Go to Fault Injection', category: 'navigation' },
   { keys: ['g', 'c'], description: 'Go to Compare & Merge', category: 'navigation' },
 
   // Actions
@@ -3459,7 +3459,7 @@ export const faq: FAQEntry[] = [
     id: 'faq-inject-packet-loss',
     question: 'How do I inject packet loss?',
     answer:
-      'Open Error Injection on the Web UI traffic page, choose the device, and set Packet Discards from 0 to 100. The simulated device’s ifInDiscards / ifOutDiscards counters increment at that rate so monitoring tooling sees realistic packet drops. Use the same panel’s clear action to stop it.',
+      'Open the Error Injection panel on the Web UI Fault Injection page, choose the device, and set Packet Discards from 0 to 100. The simulated device’s ifInDiscards / ifOutDiscards counters increment at that rate so monitoring tooling sees realistic packet drops. Use the same panel’s clear action to stop it.',
     tags: ['inject', 'loss', 'errors'],
   },
   {

@@ -300,7 +300,7 @@ replay requests without shelling into the host.
 ### Error Injection
 
 NIAC supports runtime error injection for testing and simulation scenarios. The Web UI
-provides a Traffic Injection page with controls for injecting errors on device interfaces.
+provides a Fault Injection page with controls for injecting errors on device interfaces.
 
 `GET /api/v1/errors` returns available error types and currently active injections:
 

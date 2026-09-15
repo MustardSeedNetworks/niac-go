@@ -12,6 +12,8 @@
  *     labeled pair, not one smuggled into the other's helper text
  *   - a "Start a Simulation" quick action links to /runtime
  */
+
+import enPages from '@locales/en/pages.json';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -191,10 +193,44 @@ describe('DashboardPage', () => {
     expect(container.querySelector('[data-state]')).toHaveAttribute('data-state', 'warn');
   });
 
+  it('names every quick action by its destination page title, and every one is a link (#2186)', async () => {
+    renderDashboard();
+    const actions = await screen.findByTestId('quick-actions');
+    const links = within(actions).getAllByRole('link');
+
+    // Every tile is a link: no tile is a local toggle wearing a card's clothes.
+    expect(within(actions).queryAllByRole('button')).toHaveLength(0);
+    expect(links.length).toBeGreaterThan(0);
+
+    // The expected name is the destination page's own title, read from the
+    // locale file the page header renders — not a second English literal.
+    const titleByPath: Record<string, string> = {
+      '/traffic': enPages.traffic.title,
+      '/debug': enPages.debug.title,
+      '/topology': enPages.topology.title,
+    };
+
+    for (const link of links) {
+      const path = link.getAttribute('href') ?? '';
+      const title = titleByPath[path];
+      if (title === undefined) {
+        throw new Error(`quick action links to ${path}, which is not a registered page`);
+      }
+      expect(link).toHaveTextContent(title);
+    }
+
+    // One tile per destination: the page's own rule is that a label may not
+    // appear twice on it (see the rollup's primary action), so the two tiles
+    // that used to lead to /traffic under two names are now one.
+    const labels = links.map((l) => l.textContent);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(links.filter((l) => l.getAttribute('href') === '/traffic')).toHaveLength(1);
+  });
+
   it('deep-links each catalog error type to /traffic with the type preselected, instead of an inline form', async () => {
     renderDashboard();
-    const toggle = await screen.findByText('Error Injection');
-    toggle.closest('button')?.click();
+    const toggle = await screen.findByRole('button', { name: /Error Injection Types/ });
+    toggle.click();
 
     const dropLink = await screen.findByText('drop');
     expect(dropLink.closest('a')).toHaveAttribute('href', '/traffic?errorType=drop');

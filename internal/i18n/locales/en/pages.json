@@ -140,22 +140,17 @@
   "dashboard": {
     "description": "Live counters, run snapshots, and quick actions for the active NIAC stack.",
     "errorPanel": {
-      "clickHint": "Select a type to inject it on the Traffic page.",
+      "clickHint": "Select a type to inject it on the Fault Injection page.",
       "title": "Error Injection Types"
     },
     "eyebrow": "Simulation",
     "label": "Dashboard",
     "quickActions": {
       "debugConsoleDescription": "View live logs",
-      "debugConsoleLabel": "Debug Console",
-      "errorInjectionDescription": "Inject network errors",
-      "errorInjectionLabel": "Error Injection",
+      "faultInjectionDescription": "Inject errors and replay PCAP files",
       "startSimulationLabel": "Start a Simulation",
       "title": "Quick Actions",
-      "trafficInjectionDescription": "Replay PCAP files",
-      "trafficInjectionLabel": "Traffic Injection",
-      "viewTopologyDescription": "Network graph",
-      "viewTopologyLabel": "View Topology"
+      "viewTopologyDescription": "Network graph"
     },
     "recentRuns": {
       "deviceCountShort": "{{value}} dev",

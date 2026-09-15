@@ -1,5 +1,7 @@
 import {
   Activity,
+  ChevronDown,
+  ChevronRight,
   Network,
   Play,
   PlugZap,
@@ -20,6 +22,42 @@ import { type RollupState, StatusRollup } from '../ui/StatusRollup';
 import { Tag } from '../ui/Tag';
 import { AccentLink, H2 } from '../ui/Typography';
 import { formatNumber, formatTime, formatUptime } from '../utils/format';
+
+/**
+ * quickActions is the destination list, not the copy: each tile is named by
+ * the title of the page it opens, read from the same locale key the page
+ * header renders, so the dashboard cannot call a page something the page does
+ * not call itself (#2186). Only the one-line description is written here.
+ * DashboardPage.test.tsx resolves each tile's expected name from its `path`,
+ * so a `titleKey` naming a different page fails there, and it holds the page's
+ * own rule that one label may not appear twice (see the rollup action below).
+ */
+const quickActions = [
+  {
+    path: '/traffic',
+    titleKey: 'traffic.title',
+    icon: PlugZap,
+    iconClass: 'text-status-warning',
+    tileClass: 'bg-status-warning/20',
+    descriptionKey: 'dashboard.quickActions.faultInjectionDescription',
+  },
+  {
+    path: '/debug',
+    titleKey: 'debug.title',
+    icon: Terminal,
+    iconClass: 'text-brand-accent',
+    tileClass: 'bg-brand-primary/20',
+    descriptionKey: 'dashboard.quickActions.debugConsoleDescription',
+  },
+  {
+    path: '/topology',
+    titleKey: 'topology.title',
+    icon: Network,
+    iconClass: 'text-status-success',
+    tileClass: 'bg-status-success/20',
+    descriptionKey: 'dashboard.quickActions.viewTopologyDescription',
+  },
+] as const;
 
 /**
  * Dashboard Page - Command Center
@@ -187,77 +225,34 @@ export const DashboardPage: FC = () => {
               <Zap className={`${iconSizes.lg} text-brand-accent`} />
               {t('dashboard.quickActions.title')}
             </H2>
-            <div className="grid gap-default sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setShowErrorCatalog(!showErrorCatalog)}
-                aria-expanded={showErrorCatalog}
-                className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group"
-              >
-                <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-warning/20 flex-center group-hover:scale-110 transition-transform">
-                  <PlugZap className={`${iconSizes.lg} text-status-warning`} />
-                </div>
-                <div>
-                  <p className="font-medium text-text-primary">
-                    {t('dashboard.quickActions.errorInjectionLabel')}
-                  </p>
-                  <p className="text-sm text-text-muted">
-                    {t('dashboard.quickActions.errorInjectionDescription')}
-                  </p>
-                </div>
-              </button>
-
-              <AccentLink to="/debug" className="no-underline">
-                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-brand-primary/20 flex-center group-hover:scale-110 transition-transform">
-                    <Terminal className={`${iconSizes.lg} text-brand-accent`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {t('dashboard.quickActions.debugConsoleLabel')}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {t('dashboard.quickActions.debugConsoleDescription')}
-                    </p>
-                  </div>
-                </div>
-              </AccentLink>
-
-              <AccentLink to="/traffic" className="no-underline">
-                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-info/20 flex-center group-hover:scale-110 transition-transform">
-                    <Activity className={`${iconSizes.lg} text-status-info`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {t('dashboard.quickActions.trafficInjectionLabel')}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {t('dashboard.quickActions.trafficInjectionDescription')}
-                    </p>
-                  </div>
-                </div>
-              </AccentLink>
-
-              <AccentLink to="/topology" className="no-underline">
-                <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-status-success/20 flex-center group-hover:scale-110 transition-transform">
-                    <Network className={`${iconSizes.lg} text-status-success`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {t('dashboard.quickActions.viewTopologyLabel')}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {t('dashboard.quickActions.viewTopologyDescription')}
-                    </p>
-                  </div>
-                </div>
-              </AccentLink>
+            <div className="grid gap-default sm:grid-cols-2" data-testid="quick-actions">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <AccentLink key={action.path} to={action.path} className="no-underline">
+                    <div className="flex items-center gap-default rounded-lg border border-surface-border bg-surface-hover pad text-left hover:bg-surface-hover hover:border-brand-primary/30 transition-all group">
+                      <div
+                        className={`flex-shrink-0 h-10 w-10 rounded-lg ${action.tileClass} flex-center group-hover:scale-110 transition-transform`}
+                      >
+                        <Icon className={`${iconSizes.lg} ${action.iconClass}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary">{t(action.titleKey)}</p>
+                        <p className="text-sm text-text-muted">{t(action.descriptionKey)}</p>
+                      </div>
+                    </div>
+                  </AccentLink>
+                );
+              })}
             </div>
 
-            {showErrorCatalog && errorInfo && (
-              <ErrorTypeCatalog errorTypes={errorInfo.availableTypes} info={errorInfo.info} />
+            {errorInfo && (
+              <ErrorTypeCatalog
+                errorTypes={errorInfo.availableTypes}
+                info={errorInfo.info}
+                expanded={showErrorCatalog}
+                onToggle={() => setShowErrorCatalog(!showErrorCatalog)}
+              />
             )}
           </CardContent>
         </Card>
@@ -325,35 +320,58 @@ export const DashboardPage: FC = () => {
  * rather than duplicating the injection form here. One injection surface,
  * not two.
  */
-const ErrorTypeCatalog = memo(({ errorTypes, info }: { errorTypes: ErrorType[]; info: string }) => {
-  const { t } = useTranslation('pages');
-  return (
-    <div className="mt-content rounded-xl border border-status-warning/20 bg-status-warning/10 pad">
-      <div className="mb-heading flex items-start gap-compact">
-        <PlugZap className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
-        <div>
-          <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
-          <p className="text-sm text-status-warning/80">{info}</p>
-          <p className="text-xs text-status-warning/70 mt-tight">
-            {t('dashboard.errorPanel.clickHint')}
-          </p>
-        </div>
+const ErrorTypeCatalog = memo(
+  ({
+    errorTypes,
+    info,
+    expanded,
+    onToggle,
+  }: {
+    errorTypes: ErrorType[];
+    info: string;
+    expanded: boolean;
+    onToggle: () => void;
+  }) => {
+    const { t } = useTranslation('pages');
+    return (
+      <div className="mt-content rounded-xl border border-status-warning/20 bg-status-warning/10 pad">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex w-full items-start gap-compact text-left focus:outline-none focus:ring-2 focus:ring-brand-primary rounded-lg"
+        >
+          {expanded ? (
+            <ChevronDown className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
+          ) : (
+            <ChevronRight className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
+          )}
+          <div>
+            <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
+            <p className="text-sm text-status-warning/80">{info}</p>
+            <p className="text-xs text-status-warning/70 mt-tight">
+              {t('dashboard.errorPanel.clickHint')}
+            </p>
+          </div>
+        </button>
+        {expanded && (
+          <div className="mt-heading grid gap-compact sm:grid-cols-2 lg:grid-cols-3">
+            {errorTypes.map((errorType) => (
+              <AccentLink
+                key={errorType.type}
+                to={`/traffic?errorType=${encodeURIComponent(errorType.type)}`}
+                className="block no-underline rounded-lg border border-surface-border bg-bg-surface/50 pad-sm hover:border-brand-primary/30 transition-colors"
+              >
+                <p className="font-semibold text-text-primary">{errorType.type}</p>
+                <p className="text-sm text-text-muted">{errorType.description}</p>
+              </AccentLink>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="grid gap-compact sm:grid-cols-2 lg:grid-cols-3">
-        {errorTypes.map((errorType) => (
-          <AccentLink
-            key={errorType.type}
-            to={`/traffic?errorType=${encodeURIComponent(errorType.type)}`}
-            className="block no-underline rounded-lg border border-surface-border bg-bg-surface/50 pad-sm hover:border-brand-primary/30 transition-colors"
-          >
-            <p className="font-semibold text-text-primary">{errorType.type}</p>
-            <p className="text-sm text-text-muted">{errorType.description}</p>
-          </AccentLink>
-        ))}
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 ErrorTypeCatalog.displayName = 'ErrorTypeCatalog';
 
