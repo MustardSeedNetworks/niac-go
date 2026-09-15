@@ -1,11 +1,7 @@
 import { Boxes } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  fetchScenarioPacks,
-  type ScenarioGenerateRequest,
-  type ScenarioPack,
-} from '../../api/scenario-client';
+import { fetchScenarioPacks, type ScenarioPack } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { useApiResource } from '../../hooks/useApiResource';
 import { Button } from '../../ui/Button';
@@ -20,11 +16,14 @@ const packAccessPoints = (pack: ScenarioPack): number =>
   pack.request.counts.accessPointsPerAccess;
 
 interface ScenarioPackPickerProps {
-  request: ScenarioGenerateRequest;
-  onChange: (request: ScenarioGenerateRequest) => void;
+  selectedPackId: string | null;
+  onSelectPack: (pack: ScenarioPack) => void;
 }
 
-const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onChange }) => {
+const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({
+  selectedPackId,
+  onSelectPack,
+}) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const {
@@ -33,7 +32,6 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onCha
     error,
     refetch,
   } = useApiResource(fetchScenarioPacks, ['scenario-packs']);
-  const selected = packs?.find((pack) => JSON.stringify(pack.request) === JSON.stringify(request));
 
   const renderPacks = (purpose: 'presentation' | 'stress') =>
     packs
@@ -43,13 +41,14 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({ request, onCha
           key={pack.id}
           type="button"
           data-testid={`scenario-pack-${pack.id}`}
-          aria-pressed={selected?.id === pack.id}
+          data-wizard-source="pack"
+          aria-pressed={selectedPackId === pack.id}
           className={`min-h-11 rounded-lg border p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary ${
-            selected?.id === pack.id
+            selectedPackId === pack.id
               ? 'border-brand-accent bg-brand-primary/15'
               : 'border-surface-border bg-bg-base/50 hover:bg-surface-hover'
           }`}
-          onClick={() => onChange(pack.request)}
+          onClick={() => onSelectPack(pack)}
         >
           <span className="block font-medium text-text-primary">
             {t(`newSimWizard.fleet.packMetadata.${pack.id}.name`, { defaultValue: pack.name })}

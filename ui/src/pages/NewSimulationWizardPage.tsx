@@ -297,12 +297,27 @@ export const NewSimulationWizardPage: FC = () => {
               setState((s) => ({
                 ...s,
                 source: 'generated',
+                fleetPackId: null,
                 template: null,
                 userConfig: null,
                 uploadFile: null,
               }))
             }
-            onFleetChange={(fleetRequest) => setState((s) => ({ ...s, fleetRequest }))}
+            onSelectPack={(pack) =>
+              setState((s) => ({
+                ...s,
+                source: 'generated',
+                fleetPackId: pack.id,
+                fleetRequest: pack.request,
+                template: null,
+                userConfig: null,
+                uploadFile: null,
+              }))
+            }
+            // Tuning any generator field means this is no longer that pack.
+            onFleetChange={(fleetRequest) =>
+              setState((s) => ({ ...s, fleetRequest, fleetPackId: null }))
+            }
             onInterfaceChange={(iface: string) =>
               setState((s) => ({ ...s, selectedInterface: iface }))
             }

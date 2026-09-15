@@ -43,6 +43,13 @@ export interface WizardState {
   userConfig: LibraryNetwork | null;
   uploadFile: File | null;
   fleetRequest: ScenarioGenerateRequest;
+  /**
+   * The scenario pack `fleetRequest` came from, or null when the operator is
+   * tuning the generator by hand. A pack and the hand-tuned fleet are two ways
+   * of choosing the same starting point, so only one of them is ever the
+   * selection; editing any generator field drops the pack (#2185).
+   */
+  fleetPackId: string | null;
   selectedInterface: string;
   starting: boolean;
   saving: boolean;
@@ -55,6 +62,7 @@ export const initialWizardState: WizardState = {
   userConfig: null,
   uploadFile: null,
   fleetRequest: defaultScenarioRequest(),
+  fleetPackId: null,
   selectedInterface: '',
   starting: false,
   saving: false,

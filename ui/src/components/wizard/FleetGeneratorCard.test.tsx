@@ -14,8 +14,10 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={defaultScenarioRequest()}
         selected={false}
+        selectedPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
+        onSelectPack={vi.fn()}
       />,
     );
 
@@ -37,8 +39,10 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={defaultScenarioRequest()}
         selected
+        selectedPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
+        onSelectPack={vi.fn()}
       />,
     );
 
@@ -58,8 +62,10 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={defaultScenarioRequest()}
         selected
+        selectedPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
+        onSelectPack={vi.fn()}
       />,
     );
 
