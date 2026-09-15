@@ -373,6 +373,16 @@ A radio with no `clients` is a radio nobody is on, which is a thing an AP says
 all the time. Authoring them is how a tester sees who is there:
 
 ```yaml
+devices:
+  - name: clinic-ap-01
+    type: ap
+    vendor: cisco
+    mac_suffix: 30
+    interfaces:
+      - name: Dot11Radio0
+        type: ieee80211
+    wifi:
+      radios:
         - interface: Dot11Radio0
           ssid: clinic-corp
           bssid: "00:0c:ce:88:23:c7"
