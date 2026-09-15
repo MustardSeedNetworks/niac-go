@@ -135,7 +135,7 @@ func accessPointInterfaces(site Site, address string) []converter.Interface {
 		interfaces = append(interfaces, converter.Interface{
 			Name: name, Type: "ieee80211", MTU: standardMTU, Speed: radio.speedMbps,
 			AdminStatus: "up", OperStatus: "up",
-			Description:   name + " " + radio.band,
+			Description:   name + " " + radio.label,
 			InUtilization: inUtilization, OutUtilization: outUtilization,
 		})
 	}

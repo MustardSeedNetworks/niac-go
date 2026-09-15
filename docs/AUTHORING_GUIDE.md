@@ -362,6 +362,10 @@ Three things to know:
   `dot11CurrentChannel` from the DSSS table, 5 and 6 GHz answer
   `dot11CurrentFrequency` from the OFDM table. That is the MIB's own split, and
   it is what a real AP capture does.
+- **The ifIndex is not the radio's position in the list.** A device's trunk
+  ports are numbered before its authored interfaces, so an access point with a
+  trunked uplink holds ifIndex 1 on that uplink and its radios start at 2. Read
+  the ifIndex from IF-MIB rather than counting the `interfaces:` entries.
 
 Not authored here yet: the wireless clients, association and roam events, and
 the controller's aggregated view of its APs.

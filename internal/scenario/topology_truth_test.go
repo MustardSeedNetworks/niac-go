@@ -2,11 +2,11 @@ package scenario_test
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
@@ -57,15 +57,18 @@ func assertCoreTypes(t *testing.T, cfg *config.Config, site string) {
 
 func assertAPDiscoveryIdentity(t *testing.T, cfg *config.Config) {
 	t.Helper()
-	const wirelessMarker = "1.2.840.10036.4.5.1.1.1"
-	stationIDs := make(map[string]string)
+	// The radios' own identity is the authored wifi block's, served by the
+	// runtime; what stays an add_mibs row is the chassis ENTITY-MIB row a
+	// discovery tool reads the model from.
+	const apModelRow = "1.3.6.1.2.1.47.1.1.1.1.13.1"
+	bssids := make(map[string]string)
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
 		if !strings.Contains(device.Name, "-WAP-") {
 			continue
 		}
-		if !hasMIB(device, wirelessMarker) {
-			t.Errorf("%s omits standardized wireless discovery identity", device.Name)
+		if !hasMIB(device, apModelRow) {
+			t.Errorf("%s omits its ENTITY-MIB model row", device.Name)
 		}
 		for radio := range 4 {
 			name := fmt.Sprintf("Dot11Radio%d", radio)
@@ -74,55 +77,85 @@ func assertAPDiscoveryIdentity(t *testing.T, cfg *config.Config) {
 				t.Errorf("%s omits IEEE 802.11 interface %s", device.Name, name)
 			}
 		}
-		assertCompleteAPRadioMIBs(t, device, stationIDs)
+		assertCompleteAPRadioMIBs(t, device, bssids)
 	}
 }
 
-func assertCompleteAPRadioMIBs(t *testing.T, device *config.Device, stationIDs map[string]string) {
+func assertCompleteAPRadioMIBs(t *testing.T, device *config.Device, bssids map[string]string) {
 	t.Helper()
 	const (
-		radioCount         = 4
-		stationColumnCount = 23
-		phyColumnCount     = 3
+		radioCount = 4
+		// Station columns 1 and 9 -- the station ID and the desired SSID --
+		// belong to the authored radio and are served from the wifi block, so
+		// they are not add_mibs rows.
+		firstStationColumn = 2
+		lastStationColumn  = 23
+		desiredSSIDColumn  = 9
+		// dot11OperationTable's first column is the radio's MAC and the PHY
+		// table's is the PHY type, both the authored radio's; what remains on
+		// both is columns 2 and 3.
+		firstPairedColumn = 2
+		lastPairedColumn  = 3
 	)
+	if device.WiFiConfig == nil || len(device.WiFiConfig.Radios) != radioCount {
+		t.Fatalf("%s authors %d radios, want %d",
+			device.Name, len(wifiRadios(device)), radioCount)
+	}
 	mibs := make(map[string]config.AddMib, len(device.SNMPConfig.AddMibs))
 	for _, mib := range device.SNMPConfig.AddMibs {
 		mibs[strings.TrimPrefix(mib.OID, ".")] = mib
 	}
-	for radio := 1; radio <= radioCount; radio++ {
-		for column := 1; column <= stationColumnCount; column++ {
-			oid := fmt.Sprintf("1.2.840.10036.1.1.1.%d.%d", column, radio)
-			if _, exists := mibs[oid]; !exists {
-				t.Errorf("%s radio %d omits station column %d", device.Name, radio, column)
+	agent := snmp.NewAgent(device, 0)
+	for radio, authored := range device.WiFiConfig.Radios {
+		// The rows are keyed by the interface's ifIndex, which is not the
+		// radio's position: the access point's trunked uplink takes ifIndex 1.
+		index := radioIfIndex(t, agent, device, authored.Interface)
+		for column := firstStationColumn; column <= lastStationColumn; column++ {
+			if column == desiredSSIDColumn {
+				continue
 			}
+			assertRadioRow(t, device, mibs, "1.2.840.10036.1.1.1", column, index)
 		}
-		station := mibs[fmt.Sprintf("1.2.840.10036.1.1.1.1.%d", radio)].Value
-		if owner, exists := stationIDs[station]; exists {
-			t.Errorf("station ID %s belongs to both %s and %s", station, owner, device.Name)
+		for column := firstPairedColumn; column <= lastPairedColumn; column++ {
+			assertRadioRow(t, device, mibs, "1.2.840.10036.2.1.1", column, index)
+			assertRadioRow(t, device, mibs, "1.2.840.10036.4.1.1", column, index)
 		}
-		stationIDs[station] = device.Name
-		for column := 1; column <= phyColumnCount; column++ {
-			oid := fmt.Sprintf("1.2.840.10036.2.1.1.%d.%d", column, radio)
-			if _, exists := mibs[oid]; !exists {
-				t.Errorf("%s radio %d omits PHY column %d", device.Name, radio, column)
-			}
+		if owner, exists := bssids[authored.BSSID]; exists {
+			t.Errorf("BSSID %s belongs to both %s and %s", authored.BSSID, owner, device.Name)
 		}
-		// Each radio reports its own PHY, from the same plan that sets its
-		// interface speed. This used to assert OFDM(4) — 802.11a — on every
-		// radio of an access point whose sysDescr calls it Wi-Fi 7, so the
-		// assertion pinned the contradiction rather than catching it.
-		phyType := mibs[fmt.Sprintf("1.2.840.10036.2.1.1.1.%d", radio)]
-		wantPHY := strconv.Itoa(scenario.APRadioPHYTypeForTest(radio - 1))
-		if phyType.Type != "INTEGER" || phyType.Value != wantPHY {
-			t.Errorf(
-				"%s radio %d PHY type = %+v, want INTEGER %s",
-				device.Name,
-				radio,
-				phyType,
-				wantPHY,
-			)
+		bssids[authored.BSSID] = device.Name
+		// Each radio reports the band of the same plan that sets its interface
+		// speed. The PHY type used to be restated here as a value the plan
+		// declared -- vht(8) on a table whose first column is the radio's MAC
+		// -- so the assertion pinned the contradiction rather than catching it.
+		if want := scenario.APRadioBandForTest(radio); authored.Band != want {
+			t.Errorf("%s radio %d band = %q, want %q",
+				device.Name, radio, authored.Band, want)
 		}
 	}
+}
+
+func assertRadioRow(
+	t *testing.T,
+	device *config.Device,
+	mibs map[string]config.AddMib,
+	table string,
+	column int,
+	ifIndex string,
+) {
+	t.Helper()
+	oid := fmt.Sprintf("%s.%d.%s", table, column, ifIndex)
+	if _, exists := mibs[oid]; !exists {
+		t.Errorf("%s ifIndex %s omits %s column %d", device.Name, ifIndex, table, column)
+	}
+}
+
+func wifiRadios(device *config.Device) []config.WiFiRadio {
+	if device.WiFiConfig == nil {
+		return nil
+	}
+
+	return device.WiFiConfig.Radios
 }
 
 func hasMIB(device *config.Device, oid string) bool {
