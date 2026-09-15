@@ -34,11 +34,6 @@ func unauthoredProtocols() map[string]string {
 		"EDPConfig": "P5-9: vendor-specific, deliberately unauthored for v1",
 		"FDPConfig": "P5-9: vendor-specific, deliberately unauthored for v1",
 
-		// W1's pack half. The block exists and the runtime serves it; the
-		// generator does not author it yet, so every pack AP is still an
-		// Ethernet host with an `ap` device type.
-		"WiFiConfig": "#2165: W1 slice 2 authors radios on the packs' access points",
-
 		// Authored by no shipped content at all, and owned by no row.
 		"Babble":    "#2138: authored nowhere; no row owns it",
 		"MapToIP":   "#2138: authored nowhere; no row owns it",

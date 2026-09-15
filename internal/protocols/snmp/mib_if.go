@@ -51,14 +51,38 @@ func (a *Agent) initializeIFMIB() {
 }
 
 func synthesizedInterfaceNames(device *config.Device) []string {
-	seen := make(map[string]struct{}, len(device.TrunkPorts)+len(device.Interfaces))
-	names := make([]string, 0, len(seen))
+	trunks := make([]string, 0, len(device.TrunkPorts))
 	for _, trunk := range device.TrunkPorts {
-		appendUniqueInterface(&names, seen, trunk.Interface)
+		trunks = append(trunks, trunk.Interface)
 	}
-	for _, authored := range device.Interfaces {
-		appendUniqueInterface(&names, seen, authored.Name)
+	authored := make([]string, 0, len(device.Interfaces))
+	for _, iface := range device.Interfaces {
+		authored = append(authored, iface.Name)
 	}
+
+	return SynthesizedInterfaceOrder(trunks, authored)
+}
+
+// SynthesizedInterfaceOrder is the order an agent gives a device's interfaces,
+// and therefore the ifIndex each one gets: position N is ifIndex N+1. Trunk
+// ports come first because a device may carry ports it never authored, and the
+// authored list is appended after, de-duplicated.
+//
+// It is exported because anything that writes a row keyed by ifIndex has to
+// agree with it. The scenario generator's IEEE802dot11-MIB rows did not -- they
+// numbered the radios 1..4 while the access point's trunked uplink held
+// ifIndex 1, so every dot11 row sat one interface off and the last radio had
+// none at all.
+func SynthesizedInterfaceOrder(trunkPorts, authored []string) []string {
+	seen := make(map[string]struct{}, len(trunkPorts)+len(authored))
+	names := make([]string, 0, len(trunkPorts)+len(authored))
+	for _, name := range trunkPorts {
+		appendUniqueInterface(&names, seen, name)
+	}
+	for _, name := range authored {
+		appendUniqueInterface(&names, seen, name)
+	}
+
 	return names
 }
 
