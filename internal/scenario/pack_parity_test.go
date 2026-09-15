@@ -44,10 +44,7 @@ func packParity() map[string]Parity {
 	return map[string]Parity{
 `)
 	for _, pack := range scenario.Packs() {
-		generated, err := scenario.Generate(pack.Request)
-		if err != nil {
-			t.Fatalf("generate %s: %v", pack.ID, err)
-		}
+		generated := generatedPack(t, pack)
 		parity := generated.Manifest.Parity()
 		fmt.Fprintf(&out, "\t\t%q: {\n", pack.ID)
 		fmt.Fprintf(&out, "\t\t\tDeviceCount: %d, NetworkCount: %d, LinkCount: %d,\n",

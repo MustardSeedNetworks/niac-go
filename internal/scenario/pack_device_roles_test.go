@@ -32,10 +32,7 @@ func packDeviceRoles(t *testing.T) []packDeviceRole {
 
 	var rows []packDeviceRole
 	for _, pack := range scenario.Packs() {
-		result, genErr := scenario.Generate(pack.Request)
-		if genErr != nil {
-			t.Fatalf("generate %s: %v", pack.ID, genErr)
-		}
+		result := generatedPack(t, pack)
 		var doc struct {
 			Devices []struct {
 				Name       string `yaml:"name"`

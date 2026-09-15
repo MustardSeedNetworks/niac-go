@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
@@ -35,14 +34,7 @@ func TestHospitalCatalogIncludesPhilipsAndGEPatientMonitors(t *testing.T) {
 
 func TestHospitalPackGeneratesPhilipsAndGEPatientMonitors(t *testing.T) {
 	pack := hospitalPack(t)
-	result, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg := packConfig(t, pack)
 
 	want := map[string]struct {
 		namePrefix string

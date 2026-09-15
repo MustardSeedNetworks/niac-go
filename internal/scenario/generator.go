@@ -93,7 +93,7 @@ func Generate(request Request) (Result, error) {
 	manifest := buildManifest(&authored)
 	manifest.Identity = identity
 
-	return Result{YAML: data, Manifest: manifest}, nil
+	return Result{YAML: data, Manifest: manifest, Config: runtimeConfig}, nil
 }
 
 func buildDevices(request Request, links linkMap) []converter.Device {
