@@ -79,7 +79,7 @@ func TestAdminProtect_Matrix(t *testing.T) {
 				called = true
 				w.WriteHeader(http.StatusOK)
 			})
-			gated := auth.AdminProtect(server.logger, getClientIP, simpleErr, probe)
+			gated := auth.AdminProtect(server.logger, server.clientIP, simpleErr, probe)
 
 			req := c.setup(httptest.NewRequest(http.MethodPost, "/api/v1/config/import", nil))
 			w := httptest.NewRecorder()

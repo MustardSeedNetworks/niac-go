@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,6 +88,10 @@ type Config struct {
 	// auto-generation under CertDir.
 	CertFile string
 	KeyFile  string
+	// TrustedProxies are the CIDRs whose X-Forwarded-For may name the client
+	// the per-IP rate limiter counts against (#2174). Empty leaves loopback
+	// as the only trusted hop.
+	TrustedProxies []netip.Prefix
 	// AttachmentPolicies are operator-owned permissions for routed physical bindings.
 	AttachmentPolicies []fabric.PhysicalAttachmentPolicy
 	// DebugLevel is the verbosity every simulation starts at, 0 (quiet) to 3
@@ -229,6 +234,7 @@ func (d *Daemon) Start() error {
 		CertDir:                        d.cfg.CertDir,
 		CertFile:                       d.cfg.CertFile,
 		KeyFile:                        d.cfg.KeyFile,
+		TrustedProxies:                 d.cfg.TrustedProxies,
 		SuppressUnauthenticatedWarning: e2eDryRunSimulation(),
 		// Stack, Config, etc. will be nil until simulation starts
 	}

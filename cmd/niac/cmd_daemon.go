@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
@@ -182,6 +184,31 @@ func resolveDaemonTokenFile(o *daemonOptions) string {
 		return o.tokenFile
 	}
 	return os.Getenv("NIAC_API_TOKEN_FILE")
+}
+
+// resolveDaemonTrustedProxies reads NIAC_TRUSTED_PROXIES, the CIDRs whose
+// X-Forwarded-For may name the client the per-IP rate limiter counts against
+// (#2174).
+//
+// Unset — the default — leaves loopback as the only trusted hop, so the
+// setting is additive and cannot loosen a deployment that does not use it. A
+// malformed or all-trusting list is a startup failure rather than a setting
+// that is silently ignored: an operator who believes their proxy is trusted
+// and is wrong gets one shared bucket for every client, which is the
+// awkwardness this exists to remove.
+func resolveDaemonTrustedProxies() ([]netip.Prefix, error) {
+	trustedProxies, err := api.ParseTrustedProxies(os.Getenv(api.TrustedProxiesEnv))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", api.TrustedProxiesEnv, err)
+	}
+	if len(trustedProxies) > 0 {
+		logging.Infof(
+			"Trusted proxies configured — forwarding headers from these peers key rate limits: %v",
+			trustedProxies,
+		)
+	}
+
+	return trustedProxies, nil
 }
 
 func resolveDaemonListen(o *daemonOptions) string {
@@ -368,6 +395,11 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		return err
 	}
 
+	trustedProxies, err := resolveDaemonTrustedProxies()
+	if err != nil {
+		return err
+	}
+
 	logging.Infof("Starting NIAC Daemon %s", info.version)
 	logging.Infof("Web UI will be available at https://%s", listenAddr)
 	authEnabled := token != "" || tokenFile != ""
@@ -401,6 +433,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		CertDir:             certDir,
 		AttachmentPolicies:  attachmentPolicies,
 		DebugLevel:          options.debugLevel,
+		TrustedProxies:      trustedProxies,
 	}
 
 	// Sanity-check the listen address up front so we fail with the helpful

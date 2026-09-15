@@ -114,7 +114,7 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 		h = s.methodGate(rt.methods, h)
 	}
 	if rt.admin {
-		h = auth.AdminProtect(s.logger, getClientIP, simpleErr, h)
+		h = auth.AdminProtect(s.logger, s.clientIP, simpleErr, h)
 	}
 	if rt.csrf {
 		h = csrf.Protect(s.csrf, simpleErr, h)
@@ -123,13 +123,13 @@ func (s *Server) register(mux *http.ServeMux, rt apiRoute) {
 	case rlNone:
 		// no rate limiter
 	case rlWrite:
-		h = ratelimit.Write(s.writeLimiter, s.logger, getClientIP, simpleErr, h)
+		h = ratelimit.Write(s.writeLimiter, s.logger, s.clientIP, simpleErr, h)
 	case rlWalk:
-		h = ratelimit.Walk(s.walkLimiter, s.logger, getClientIP, simpleErr, h)
+		h = ratelimit.Walk(s.walkLimiter, s.logger, s.clientIP, simpleErr, h)
 	case rlUpload:
-		h = ratelimit.Upload(s.uploadLimiter, s.logger, getClientIP, simpleErr, h)
+		h = ratelimit.Upload(s.uploadLimiter, s.logger, s.clientIP, simpleErr, h)
 	case rlFile:
-		h = ratelimit.File(s.fileLimiter, s.logger, getClientIP, simpleErr, h)
+		h = ratelimit.File(s.fileLimiter, s.logger, s.clientIP, simpleErr, h)
 	}
 	h = auth.Middleware(s.authDeps(), h)
 	h = s.recoverMiddleware(h)
