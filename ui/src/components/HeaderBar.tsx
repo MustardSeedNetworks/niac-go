@@ -18,6 +18,7 @@ import type { FC, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
+import { Tooltip } from '../ui/Tooltip';
 import { SessionSwitcher } from './SessionSwitcher';
 
 export const HeaderBar: FC = (): ReactElement => {
@@ -42,19 +43,20 @@ export const HeaderBar: FC = (): ReactElement => {
       {/* Right slot: theme toggle only (no profiles / interfaces in NIAC).
        * Settings + Help live in the sidebar footer; see stem/ui/SHELL.md. */}
       <div className="flex items-center gap-tight">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="pad-xs rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-          title={themeToggleLabel}
-          aria-label={themeToggleLabel}
-        >
-          {isDark ? (
-            <Sun className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Moon className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
+        <Tooltip text={themeToggleLabel}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="pad-xs rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+            aria-label={themeToggleLabel}
+          >
+            {isDark ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </Tooltip>
       </div>
     </>
   );

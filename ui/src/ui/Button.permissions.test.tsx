@@ -23,8 +23,7 @@ it('fails closed for native actions when scope lookup fails', async () => {
     </ScopeProvider>,
   );
   await waitFor(() =>
-    expect(screen.getByText('Delete')).toHaveAttribute(
-      'title',
+    expect(screen.getByText('Delete')).toHaveAccessibleDescription(
       'Permissions could not be verified. Reconnect before making changes.',
     ),
   );
@@ -47,12 +46,11 @@ it('gates confirmation actions without trapping the viewer in the dialog', async
     </ScopeProvider>,
   );
   await waitFor(() =>
-    expect(screen.getByText('Confirm')).toHaveAttribute(
-      'title',
+    expect(screen.getByText('Confirm')).toHaveAccessibleDescription(
       'Your token does not allow this action.',
     ),
   );
-  expect(screen.getByText('Confirm')).toBeDisabled();
+  expect(screen.getByText('Confirm')).toHaveAttribute('aria-disabled', 'true');
   expect(screen.getByText('Cancel')).toBeEnabled();
 });
 
@@ -69,10 +67,9 @@ it('keeps viewer filters and exports usable while disabling writes with a reason
       <Button action="export">Export</Button>
     </ScopeProvider>,
   );
-  await waitFor(() => expect(screen.getByText('Export')).toBeEnabled());
-  expect(screen.getByText('Start')).toBeDisabled();
-  expect(screen.getByText('Start')).toHaveAttribute(
-    'title',
+  await waitFor(() => expect(screen.getByText('Export')).not.toHaveAttribute('aria-disabled'));
+  expect(screen.getByText('Start')).toHaveAttribute('aria-disabled', 'true');
+  expect(screen.getByText('Start')).toHaveAccessibleDescription(
     'Your token does not allow this action.',
   );
   fireEvent.click(screen.getByText('Start'));
@@ -98,8 +95,8 @@ it('fails closed until scope arrives without remounting the page', async () => {
       <Page />
     </ScopeProvider>,
   );
-  expect(screen.getByText('Start')).toBeDisabled();
+  expect(screen.getByText('Start')).toHaveAttribute('aria-disabled', 'true');
   resolve({ scope: 'read-write' });
-  await waitFor(() => expect(screen.getByText('Start')).toBeEnabled());
+  await waitFor(() => expect(screen.getByText('Start')).not.toHaveAttribute('aria-disabled'));
   expect(mounted).toHaveBeenCalledOnce();
 });

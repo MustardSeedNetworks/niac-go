@@ -1,3 +1,4 @@
+import { Tooltip } from '../../ui/Tooltip';
 /**
  * Device Details Panel Component
  *
@@ -50,15 +51,16 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
             <p className="text-sm text-text-muted capitalize">{device.type}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-text-muted hover:text-text-primary text-xl"
-          title={t('topology.deviceDetails.closeTitle')}
-          aria-label={t('topology.deviceDetails.closeAriaLabel')}
-        >
-          &times;
-        </button>
+        <Tooltip text={t('topology.deviceDetails.closeTitle')}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary text-xl"
+            aria-label={t('topology.deviceDetails.closeAriaLabel')}
+          >
+            &times;
+          </button>
+        </Tooltip>
       </div>
 
       {device.ips && device.ips.length > 0 && (

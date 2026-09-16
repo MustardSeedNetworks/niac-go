@@ -14,6 +14,7 @@ import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { InfoPopover } from '../ui/InfoPopover';
+import { Tooltip } from '../ui/Tooltip';
 
 type Severity = 'error' | 'warning' | 'info';
 
@@ -243,24 +244,28 @@ export const WalkValidatorPage: FC = () => {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
-              <select
-                data-testid="walk-validator-picker"
-                value={selectedFile}
-                onChange={(e) => setSelectedFile(e.target.value)}
-                disabled={filesLoading || files.length === 0}
-                title="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
-                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+              <Tooltip
+                text="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
+                className="w-full"
               >
-                {filesLoading && <option>Loading…</option>}
-                {!filesLoading && files.length === 0 && (
-                  <option>{t('walkValidator.noWalksFound')}</option>
-                )}
-                {files.map((f) => (
-                  <option key={f.name} value={f.name}>
-                    {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
-                  </option>
-                ))}
-              </select>
+                <select
+                  data-testid="walk-validator-picker"
+                  value={selectedFile}
+                  onChange={(e) => setSelectedFile(e.target.value)}
+                  disabled={filesLoading || files.length === 0}
+                  className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+                >
+                  {filesLoading && <option>Loading…</option>}
+                  {!filesLoading && files.length === 0 && (
+                    <option>{t('walkValidator.noWalksFound')}</option>
+                  )}
+                  {files.map((f) => (
+                    <option key={f.name} value={f.name}>
+                      {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
+                    </option>
+                  ))}
+                </select>
+              </Tooltip>
               {filesError && (
                 <span className="mt-tight block text-xs text-status-error">{filesError}</span>
               )}
@@ -268,14 +273,18 @@ export const WalkValidatorPage: FC = () => {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.pastePathLabel')}</span>
-              <input
-                type="text"
-                value={customPath}
-                onChange={(e) => setCustomPath(e.target.value)}
-                placeholder="/srv/niac/walks/cisco-c9300.walk"
-                title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
-              />
+              <Tooltip
+                text="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
+                className="w-full"
+              >
+                <input
+                  type="text"
+                  value={customPath}
+                  onChange={(e) => setCustomPath(e.target.value)}
+                  placeholder="/srv/niac/walks/cisco-c9300.walk"
+                  className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
+                />
+              </Tooltip>
             </label>
           </div>
 
@@ -356,14 +365,18 @@ export const WalkValidatorPage: FC = () => {
             {issues.length > 0 && (
               <label className="block text-sm">
                 <span className="text-text-secondary">{t('walkValidator.oidFilterLabel')}</span>
-                <input
-                  type="text"
-                  value={oidFilter}
-                  onChange={(e) => setOidFilter(e.target.value)}
-                  placeholder={t('walkValidator.oidFilterPlaceholder')}
-                  title="Filters the full issue list by OID substring before applying the display cap below."
-                  className="mt-tight w-full max-w-sm rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
-                />
+                <Tooltip
+                  text="Filters the full issue list by OID substring before applying the display cap below."
+                  className="w-full"
+                >
+                  <input
+                    type="text"
+                    value={oidFilter}
+                    onChange={(e) => setOidFilter(e.target.value)}
+                    placeholder={t('walkValidator.oidFilterPlaceholder')}
+                    className="mt-tight w-full max-w-sm rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
+                  />
+                </Tooltip>
               </label>
             )}
 

@@ -1,64 +1,129 @@
-import { type FC, type ReactNode, useId, useState } from 'react';
+import {
+  type ButtonHTMLAttributes,
+  cloneElement,
+  type FC,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
+
+type Description = { 'aria-describedby': string };
 
 export interface TooltipProps {
-  /** Hover text. If omitted, the wrapper renders children unchanged. */
   text?: ReactNode;
-  /** Where to place the bubble relative to the trigger. Defaults to "top". */
   side?: 'top' | 'bottom' | 'left' | 'right';
-  /** Trigger element(s). */
-  children: ReactNode;
-  /** Optional class on the wrapper span. */
+  children: ReactNode | ((description: Description) => ReactNode);
   className?: string;
 }
 
-const sideClass: Record<NonNullable<TooltipProps['side']>, string> = {
-  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-  bottom: 'top-full left-1/2 -translate-x-1/2 mt-inline',
-  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-  right: 'left-full top-1/2 -translate-y-1/2 ml-inline',
-};
+// Nested inputs use the render form to put the description on the focusable control.
+function describedChild(children: TooltipProps['children'], id: string): ReactNode {
+  if (typeof children === 'function') return children({ 'aria-describedby': id });
+  if (!isValidElement(children)) return children;
+  const child = children as ReactElement<ButtonHTMLAttributes<HTMLButtonElement>>;
+  const existing = child.props['aria-describedby'];
+  const description = { 'aria-describedby': existing ? `${existing} ${id}` : id };
+  if (child.type !== 'button' || !child.props.disabled) return cloneElement(child, description);
+  // Keep an unavailable action in the tab order so its reason can be read.
+  return cloneElement(child, {
+    ...description,
+    disabled: false,
+    'aria-disabled': true,
+    className: `${child.props.className ?? ''} aria-disabled:opacity-50 aria-disabled:cursor-not-allowed`,
+    onClick: (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+  });
+}
 
-/**
- * Minimal CSS-only tooltip with proper a11y wiring.
- *
- * Why a custom one rather than @radix-ui/react-tooltip:
- *   - No extra runtime dep for what is a 30-line component.
- *   - Native `title=` is fine for plain strings; this primitive is for
- *     formatted / multi-line / linked tooltip content (e.g. "Auto-fix
- *     rewrites the file in place — a .bak is created next to the original").
- *
- * a11y: the wrapper exposes aria-describedby pointing at a hidden bubble
- * that screen readers announce. Keyboard focus on the trigger reveals the
- * bubble (we use `:focus-within` semantics via Tailwind's `peer` pattern,
- * which doesn't require JS state when hover/focus suffice).
- */
 export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, className = '' }) => {
   const id = useId();
-  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  const bubbleRef = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const open = (hovered || focused) && !dismissed;
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const reposition = () => {
+      const trigger = wrapperRef.current?.querySelector<HTMLElement>(`[aria-describedby~="${id}"]`);
+      const bubble = bubbleRef.current;
+      if (!trigger || !bubble) return;
+      const anchor = trigger.getBoundingClientRect();
+      const bounds = bubble.getBoundingClientRect();
+      let top = anchor.top - bounds.height;
+      let left = anchor.left + (anchor.width - bounds.width) / 2;
+      if (side === 'bottom') top = anchor.bottom;
+      if (side === 'left' || side === 'right') {
+        top = anchor.top + (anchor.height - bounds.height) / 2;
+        left = side === 'left' ? anchor.left - bounds.width : anchor.right;
+      }
+      // Keep the bubble inside the viewport, including the collapsed sidebar.
+      setPosition({
+        top: Math.max(0, Math.min(top, window.innerHeight - bounds.height)),
+        left: Math.max(0, Math.min(left, window.innerWidth - bounds.width)),
+      });
+    };
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [id, open, side, text]);
 
   if (text == null || text === '') {
-    return <>{children}</>;
+    return <>{typeof children === 'function' ? children({ 'aria-describedby': '' }) : children}</>;
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: hover-only enrichment; a11y comes from aria-describedby below
+    // biome-ignore lint/a11y/noStaticElementInteractions: events bubble from the described focusable trigger
     <span
-      className={`relative inline-flex ${className}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+      ref={wrapperRef}
+      className={`contents ${className}`}
+      onMouseEnter={() => {
+        setHovered(true);
+        setDismissed(false);
+      }}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => {
+        setFocused(true);
+        setDismissed(false);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && open) {
+          setDismissed(true);
+          event.stopPropagation();
+        }
+      }}
     >
-      <span aria-describedby={id} className="inline-flex">
-        {children}
-      </span>
-      <span
-        id={id}
-        role="tooltip"
-        className={`pointer-events-none absolute z-50 max-w-xs whitespace-normal rounded-md bg-bg-base/95 px-cell py-compact text-xs text-text-primary ring-1 ring-knob/10 transition-opacity duration-100 ${sideClass[side]} ${open ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {text}
-      </span>
+      {describedChild(children, id)}
+      {createPortal(
+        <span
+          ref={bubbleRef}
+          id={id}
+          role="tooltip"
+          hidden={!open}
+          style={position}
+          className="fixed z-[60] w-max max-w-[min(20rem,100vw)] whitespace-normal rounded-md bg-bg-base/95 px-cell py-compact text-xs text-text-primary ring-1 ring-knob/10"
+        >
+          {text}
+        </span>,
+        document.body,
+      )}
     </span>
   );
 };

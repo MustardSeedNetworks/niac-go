@@ -3,6 +3,7 @@ import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from
 import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel } from '../api/types';
 import { iconSizes } from '../constants/sizes';
+import { Tooltip } from '../ui/Tooltip';
 import { copyToClipboard } from '../utils/file';
 
 /**
@@ -243,19 +244,20 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
         </button>
 
         {/* Copy button */}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="shrink-0 p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
-          title={t('debug.copyLogEntry')}
-          aria-label={t('debug.copyLogEntry')}
-        >
-          {copied ? (
-            <Check className={`${iconSizes.sm} text-status-success`} />
-          ) : (
-            <Copy className={iconSizes.sm} />
-          )}
-        </button>
+        <Tooltip text={t('debug.copyLogEntry')}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="shrink-0 p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
+            aria-label={t('debug.copyLogEntry')}
+          >
+            {copied ? (
+              <Check className={`${iconSizes.sm} text-status-success`} />
+            ) : (
+              <Copy className={iconSizes.sm} />
+            )}
+          </button>
+        </Tooltip>
       </div>
 
       {/* Expanded details */}
@@ -284,20 +286,21 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
                 <span className="text-xs font-medium text-text-muted">
                   {t('debug.detailsLabel')}
                 </span>
-                <button
-                  type="button"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (log.details) {
-                      await navigator.clipboard.writeText(formatDetails(log.details));
-                    }
-                  }}
-                  className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
-                  title={t('debug.copyDetailsJson')}
-                  aria-label={t('debug.copyDetailsJson')}
-                >
-                  <Copy className={iconSizes.xs} />
-                </button>
+                <Tooltip text={t('debug.copyDetailsJson')}>
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (log.details) {
+                        await navigator.clipboard.writeText(formatDetails(log.details));
+                      }
+                    }}
+                    className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-secondary transition-colors"
+                    aria-label={t('debug.copyDetailsJson')}
+                  >
+                    <Copy className={iconSizes.xs} />
+                  </button>
+                </Tooltip>
               </div>
               <pre className="pad-sm text-xs font-mono text-text-secondary overflow-x-auto">
                 {formatDetails(log.details ?? {})}

@@ -26,6 +26,7 @@ import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import {
   ActionsMenu,
@@ -531,36 +532,38 @@ export const TopologyPage: FC = () => {
                 role="tablist"
                 aria-label={t('topology.header.viewTabsAriaLabel')}
               >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={view === 'graph'}
-                  onClick={() => setView('graph')}
-                  title={t('topology.header.graphTabTitle')}
-                  className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
-                    view === 'graph'
-                      ? 'bg-status-info/20 text-status-info'
-                      : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-                  }`}
-                >
-                  <Network className="w-3.5 h-3.5" />
-                  {t('topology.header.graphTabLabel')}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={view === 'neighbors'}
-                  onClick={() => setView('neighbors')}
-                  title={t('topology.header.neighborsTabTitle')}
-                  className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
-                    view === 'neighbors'
-                      ? 'bg-status-info/20 text-status-info'
-                      : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-                  }`}
-                >
-                  <Radar className="w-3.5 h-3.5" />
-                  {t('topology.header.neighborsTabLabel')}
-                </button>
+                <Tooltip text={t('topology.header.graphTabTitle')}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'graph'}
+                    onClick={() => setView('graph')}
+                    className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
+                      view === 'graph'
+                        ? 'bg-status-info/20 text-status-info'
+                        : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+                    }`}
+                  >
+                    <Network className="w-3.5 h-3.5" />
+                    {t('topology.header.graphTabLabel')}
+                  </button>
+                </Tooltip>
+                <Tooltip text={t('topology.header.neighborsTabTitle')}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'neighbors'}
+                    onClick={() => setView('neighbors')}
+                    className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
+                      view === 'neighbors'
+                        ? 'bg-status-info/20 text-status-info'
+                        : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+                    }`}
+                  >
+                    <Radar className="w-3.5 h-3.5" />
+                    {t('topology.header.neighborsTabLabel')}
+                  </button>
+                </Tooltip>
               </div>
               <Button
                 size="sm"
@@ -623,23 +626,23 @@ export const TopologyPage: FC = () => {
                     {LAYOUT_MODES.map((entry) => {
                       const active = layoutMode === entry.mode;
                       return (
-                        <button
-                          key={entry.mode}
-                          type="button"
-                          aria-pressed={active}
-                          aria-label={t('topology.header.layoutModeAriaLabel', {
-                            label: entry.label,
-                          })}
-                          title={entry.description}
-                          onClick={() => handleLayoutModeChange(entry.mode)}
-                          className={`rounded px-2.5 py-compact text-xs font-medium transition-colors ${
-                            active
-                              ? 'bg-status-info/20 text-status-info'
-                              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-                          }`}
-                        >
-                          {entry.label}
-                        </button>
+                        <Tooltip text={entry.description} key={entry.mode}>
+                          <button
+                            type="button"
+                            aria-pressed={active}
+                            aria-label={t('topology.header.layoutModeAriaLabel', {
+                              label: entry.label,
+                            })}
+                            onClick={() => handleLayoutModeChange(entry.mode)}
+                            className={`rounded px-2.5 py-compact text-xs font-medium transition-colors ${
+                              active
+                                ? 'bg-status-info/20 text-status-info'
+                                : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+                            }`}
+                          >
+                            {entry.label}
+                          </button>
+                        </Tooltip>
                       );
                     })}
                   </div>
@@ -648,13 +651,15 @@ export const TopologyPage: FC = () => {
                       route, so a different browser/profile starts from
                       the default layout. Hidden below `lg` to keep the
                       toolbar from wrapping on narrow viewports. */}
-                  <SmallText
-                    className="hidden lg:inline text-text-muted"
-                    title={t('topology.header.layoutPersistenceHint')}
-                    data-testid="topology-layout-persistence-note"
-                  >
-                    {t('topology.header.layoutPersistenceNote')}
-                  </SmallText>
+                  <Tooltip text={t('topology.header.layoutPersistenceHint')}>
+                    <button
+                      type="button"
+                      className="hidden lg:inline text-xs text-text-muted rounded focus-visible:outline-2 focus-visible:outline-brand-accent"
+                      data-testid="topology-layout-persistence-note"
+                    >
+                      {t('topology.header.layoutPersistenceNote')}
+                    </button>
+                  </Tooltip>
                 </>
               )}
             </div>
@@ -682,35 +687,39 @@ export const TopologyPage: FC = () => {
                   {availableTypes.map((type) => {
                     const active = activeTypes.has(type);
                     return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => toggleType(type)}
-                        aria-pressed={active}
-                        title={
+                      <Tooltip
+                        text={
                           active
                             ? t('topology.header.typeFilterHideTitle', { type })
                             : t('topology.header.typeFilterShowTitle', { type })
                         }
-                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                          active
-                            ? 'border-status-info/40 bg-status-info/20 text-status-info'
-                            : 'border-surface-border bg-bg-base/40 text-text-muted hover:bg-surface-hover hover:text-text-primary'
-                        }`}
+                        key={type}
                       >
-                        {deviceTypeLabels[normalizeDeviceType(type)]}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleType(type)}
+                          aria-pressed={active}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                            active
+                              ? 'border-status-info/40 bg-status-info/20 text-status-info'
+                              : 'border-surface-border bg-bg-base/40 text-text-muted hover:bg-surface-hover hover:text-text-primary'
+                          }`}
+                        >
+                          {deviceTypeLabels[normalizeDeviceType(type)]}
+                        </button>
+                      </Tooltip>
                     );
                   })}
                   {activeTypes.size > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTypes(new Set())}
-                      title={t('topology.header.clearTypeFiltersTitle')}
-                      className="rounded-full px-cell py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
-                    >
-                      {tCommon('buttons.clear')}
-                    </button>
+                    <Tooltip text={t('topology.header.clearTypeFiltersTitle')}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTypes(new Set())}
+                        className="rounded-full px-cell py-0.5 text-[11px] font-medium text-text-muted hover:text-text-primary underline-offset-2 hover:underline"
+                      >
+                        {tCommon('buttons.clear')}
+                      </button>
+                    </Tooltip>
                   )}
                 </div>
               )}

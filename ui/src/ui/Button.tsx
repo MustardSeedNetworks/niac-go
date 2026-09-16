@@ -3,6 +3,7 @@ import { Link, type LinkProps } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 import type { Action } from '../contexts/permissions';
 import { useActionPermission } from '../contexts/ScopeContext';
+import { Tooltip } from './Tooltip';
 
 type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'secondary';
 type ButtonTone = 'violet' | 'red' | 'green' | 'blue' | 'gray';
@@ -23,7 +24,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseStyles =
-  'inline-flex items-center justify-center gap-compact font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-base disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
+  'inline-flex items-center justify-center gap-compact font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-base disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:cursor-not-allowed active:scale-[0.98]';
 
 const sizeStyles: Record<ButtonSize, string> = {
   xs: 'px-cell py-compact text-xs',
@@ -108,27 +109,30 @@ export const Button: FC<ButtonProps> = ({
   loading = false,
   className = '',
   disabled,
+  title,
   action,
   ref,
   ...props
 }) => {
   const permission = useActionPermission(action);
-  return (
+  const hint = permission.title ?? title;
+  const unavailable = disabled || loading || permission.disabled;
+  const button = (
     <button
       type="button"
       ref={ref}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
-      disabled={disabled || loading || permission.disabled}
+      disabled={unavailable}
       data-variant={variant}
       data-tone={tone}
       {...props}
-      title={permission.title ?? props.title}
     >
       {loading ? <LoadingSpinner size={size} /> : leftIcon}
       {children}
       {!loading && rightIcon}
     </button>
   );
+  return <Tooltip text={hint}>{button}</Tooltip>;
 };
 
 // Icon button for compact actions
@@ -149,9 +153,12 @@ export const IconButton: FC<IconButtonProps> = ({
   size = 'md',
   className = '',
   action,
+  title,
   ...props
 }) => {
   const permission = useActionPermission(action);
+  const hint = permission.title ?? title;
+  const unavailable = props.disabled || permission.disabled;
   const iconSizeStyles = {
     sm: 'p-1.5',
     md: 'pad-xs',
@@ -172,17 +179,17 @@ export const IconButton: FC<IconButtonProps> = ({
     gray: 'text-text-muted hover:text-text-primary',
   };
 
-  return (
+  const button = (
     <button
       type="button"
-      className={`inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed ${iconSizeStyles[size]} ${variantBase[variant]} ${toneStyles[tone]} ${className}`}
+      className={`inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:cursor-not-allowed ${iconSizeStyles[size]} ${variantBase[variant]} ${toneStyles[tone]} ${className}`}
       {...props}
-      disabled={props.disabled || permission.disabled}
-      title={permission.title ?? props.title}
+      disabled={unavailable}
     >
       {icon}
     </button>
   );
+  return <Tooltip text={hint}>{button}</Tooltip>;
 };
 
 interface LinkButtonProps extends Omit<LinkProps, 'className'> {

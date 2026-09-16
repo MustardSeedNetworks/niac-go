@@ -5,6 +5,7 @@ import { useAppState } from '../../contexts/AppContext';
 import type { TFunction } from '../../i18n';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
+import { Tooltip } from '../../ui/Tooltip';
 
 /**
  * NeighborsView renders the live CDP / LLDP / EDP / FDP discovery table —
@@ -183,11 +184,8 @@ export const NeighborsView: FC = () => {
                 const count = p === 'all' ? (neighbors?.length ?? 0) : (protocolCounts[p] ?? 0);
                 const active = protocolFilter === p;
                 return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setProtocolFilter(p)}
-                    title={
+                  <Tooltip
+                    text={
                       p === 'all'
                         ? t('topology.neighbors.filterShowAllTitle')
                         : t('topology.neighbors.filterByProtocolTitle', {
@@ -195,27 +193,34 @@ export const NeighborsView: FC = () => {
                             count: protocolCounts[p] ?? 0,
                           })
                     }
-                    className={`rounded px-3 py-compact text-xs font-medium ${
-                      active
-                        ? 'bg-status-info/20 text-status-info ring-1 ring-status-info/40'
-                        : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
-                    }`}
+                    key={p}
                   >
-                    {p === 'all' ? t('topology.neighbors.filterAllLabel') : p}
-                    <span className="ml-1.5 text-[10px] text-text-muted">{count}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setProtocolFilter(p)}
+                      className={`rounded px-3 py-compact text-xs font-medium ${
+                        active
+                          ? 'bg-status-info/20 text-status-info ring-1 ring-status-info/40'
+                          : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
+                      }`}
+                    >
+                      {p === 'all' ? t('topology.neighbors.filterAllLabel') : p}
+                      <span className="ml-1.5 text-[10px] text-text-muted">{count}</span>
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('topology.neighbors.searchPlaceholder')}
-              title={t('topology.neighbors.searchTitle')}
-              className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
-              aria-label={t('topology.neighbors.searchAriaLabel')}
-            />
+            <Tooltip text={t('topology.neighbors.searchTitle')}>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('topology.neighbors.searchPlaceholder')}
+                className="ml-auto w-64 rounded border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
+                aria-label={t('topology.neighbors.searchAriaLabel')}
+              />
+            </Tooltip>
             <span className="text-xs text-text-muted">
               {t('topology.neighbors.pollingStatus', {
                 seconds: POLL_INTERVALS.medium / 1000,

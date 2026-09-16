@@ -26,9 +26,9 @@ it('prevents a viewer from saving through the unsaved-edit guard while allowing 
 
   const button = screen.getByTestId('unsaved-save');
   await waitFor(() =>
-    expect(button).toHaveAttribute('title', 'Your token does not allow this action.'),
+    expect(button).toHaveAccessibleDescription('Your token does not allow this action.'),
   );
-  expect(button).toBeDisabled();
+  expect(button).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(button);
   expect(save).not.toHaveBeenCalled();
   expect(screen.getByTestId('unsaved-discard')).toBeEnabled();

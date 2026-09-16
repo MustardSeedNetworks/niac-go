@@ -10,6 +10,7 @@ import { useAlertsResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import { Tooltip } from '../ui/Tooltip';
 import { H2, P, SmallText } from '../ui/Typography';
 
 /**
@@ -122,37 +123,46 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 <label htmlFor="alert-packet-threshold" className="text-sm text-text-muted">
                   {t('alerts.page.packetThresholdLabel')}
                 </label>
-                <input
-                  id="alert-packet-threshold"
-                  className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-                  type="number"
-                  min="0"
-                  placeholder="100000"
-                  value={threshold}
-                  title="Total packet count that triggers the alert. 0 or blank disables the alert."
-                  onChange={(event) => {
-                    setThreshold(event.target.value);
-                    setDirty(true);
-                    setSavedMessage(null);
-                  }}
-                />
+                <Tooltip
+                  text="Total packet count that triggers the alert. 0 or blank disables the alert."
+                  className="w-full"
+                >
+                  <input
+                    id="alert-packet-threshold"
+                    data-testid="alert-packet-threshold"
+                    className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                    type="number"
+                    min="0"
+                    placeholder="100000"
+                    value={threshold}
+                    onChange={(event) => {
+                      setThreshold(event.target.value);
+                      setDirty(true);
+                      setSavedMessage(null);
+                    }}
+                  />
+                </Tooltip>
               </div>
               <div>
                 <label htmlFor="alert-webhook-url" className="text-sm text-text-muted">
                   {t('alerts.page.webhookUrlLabel')}
                 </label>
-                <input
-                  id="alert-webhook-url"
-                  className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-                  placeholder="https://hooks.example.com/niac"
-                  value={webhook}
-                  title="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
-                  onChange={(event) => {
-                    setWebhook(event.target.value);
-                    setDirty(true);
-                    setSavedMessage(null);
-                  }}
-                />
+                <Tooltip
+                  text="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
+                  className="w-full"
+                >
+                  <input
+                    id="alert-webhook-url"
+                    className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+                    placeholder="https://hooks.example.com/niac"
+                    value={webhook}
+                    onChange={(event) => {
+                      setWebhook(event.target.value);
+                      setDirty(true);
+                      setSavedMessage(null);
+                    }}
+                  />
+                </Tooltip>
               </div>
             </div>
             {savedMessage && <SmallText className="text-status-success">{savedMessage}</SmallText>}

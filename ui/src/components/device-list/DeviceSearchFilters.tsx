@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { Tooltip } from '../../ui/Tooltip';
 
 interface DeviceSearchFiltersProps {
   searchQuery: string;
@@ -89,32 +90,34 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
 
       {/* View toggle */}
       <div className="flex items-center gap-tight p-1 rounded-lg bg-bg-base/60 border border-surface-border">
-        <button
-          type="button"
-          onClick={() => onViewModeChange('table')}
-          className={`pad-xs rounded-md transition-colors ${
-            viewMode === 'table'
-              ? 'bg-brand-primary text-text-primary'
-              : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-          }`}
-          title={t('list.tableViewTitle')}
-          aria-label={t('list.tableViewTitle')}
-        >
-          <LayoutList className={iconSizes.md} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onViewModeChange('cards')}
-          className={`pad-xs rounded-md transition-colors ${
-            viewMode === 'cards'
-              ? 'bg-brand-primary text-text-primary'
-              : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-          }`}
-          title={t('list.cardViewTitle')}
-          aria-label={t('list.cardViewTitle')}
-        >
-          <LayoutGrid className={iconSizes.md} />
-        </button>
+        <Tooltip text={t('list.tableViewTitle')}>
+          <button
+            type="button"
+            onClick={() => onViewModeChange('table')}
+            className={`pad-xs rounded-md transition-colors ${
+              viewMode === 'table'
+                ? 'bg-brand-primary text-text-primary'
+                : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+            }`}
+            aria-label={t('list.tableViewTitle')}
+          >
+            <LayoutList className={iconSizes.md} />
+          </button>
+        </Tooltip>
+        <Tooltip text={t('list.cardViewTitle')}>
+          <button
+            type="button"
+            onClick={() => onViewModeChange('cards')}
+            className={`pad-xs rounded-md transition-colors ${
+              viewMode === 'cards'
+                ? 'bg-brand-primary text-text-primary'
+                : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+            }`}
+            aria-label={t('list.cardViewTitle')}
+          >
+            <LayoutGrid className={iconSizes.md} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ import { useTranslation } from 'react-i18next';
 import { useBuildVersion } from '../hooks/useBuildVersion';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn, drawer, layout, spacing } from '../styles/theme';
+import { Tooltip } from '../ui/Tooltip';
 import { FAQSection } from './help-drawer/FAQSection';
 import { GlossarySection } from './help-drawer/GlossarySection';
 import { ItemListSection } from './help-drawer/ItemListSection';
@@ -128,7 +129,7 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
           role="dialog"
           aria-modal="true"
           aria-label={t('drawer.drawerAriaLabel')}
-          className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
+          className={cn(drawer.content, drawer.size.lg, 'max-w-full animate-slide-in-right')}
         >
           {/* Header */}
           <div className="sticky top-0 bg-bg-surface border-b border-surface-border z-10">
@@ -137,13 +138,18 @@ export function HelpDrawer({ isOpen, onClose, section }: HelpDrawerProps): React
                 <HelpCircle className="w-5 h-5 text-brand-accent" aria-hidden="true" />
                 <div>
                   <h2 className="heading-3 text-text-primary">{t('drawer.title')}</h2>
-                  <p
-                    className="caption text-text-muted"
-                    data-testid="help-drawer-version"
-                    title={`commit ${buildVersion.commit} · built ${buildVersion.buildTime}`}
+                  <Tooltip
+                    text={`commit ${buildVersion.commit} · built ${buildVersion.buildTime}`}
+                    side="bottom"
                   >
-                    NIAC v{buildVersion.version}
-                  </p>
+                    <button
+                      type="button"
+                      className="caption text-text-muted min-h-8 rounded focus-visible:outline-2 focus-visible:outline-brand-accent"
+                      data-testid="help-drawer-version"
+                    >
+                      NIAC v{buildVersion.version}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
               <button

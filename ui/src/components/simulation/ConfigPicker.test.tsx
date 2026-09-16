@@ -97,7 +97,7 @@ describe('ConfigPicker — TemplatePreviewModal Copy YAML', () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByTitle('Preview YAML'));
+    await user.click(await screen.findByRole('button', { name: 'Preview YAML' }));
     await user.click(await screen.findByRole('button', { name: /Copy YAML/i }));
 
     expect(copyToClipboard).toHaveBeenCalledWith('devices:\n  - name: r1\n');

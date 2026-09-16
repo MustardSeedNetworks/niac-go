@@ -104,7 +104,7 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
       target: { value: 'edge-01' },
     });
 
-    fireEvent.click(screen.getByTitle('Back to device list'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to device list' }));
 
     expect(screen.getByText(/leave without saving/i)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/device-config/new');
@@ -123,7 +123,7 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
       target: { value: 'edge-01' },
     });
 
-    fireEvent.click(screen.getByTitle('Back to device list'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to device list' }));
     fireEvent.click(screen.getByRole('button', { name: /^leave$/i }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/device-config'));
@@ -134,7 +134,7 @@ describe('DeviceEditorPage — unsaved-changes navigation guard', () => {
     await waitFor(() => expect(screen.getByLabelText(/hostname/i)).toBeInTheDocument());
     await flushPendingEffects();
 
-    fireEvent.click(screen.getByTitle('Back to device list'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to device list' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/device-config'));
     expect(screen.queryByText(/leave without saving/i)).not.toBeInTheDocument();
