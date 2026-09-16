@@ -34,11 +34,11 @@
    * ======================================== */
   --color-brand-primary: var(--color-brand-primary);
   --color-brand-accent: var(--color-brand-accent);
-  --color-brand-gold: var(--color-brand-gold);
+  --color-accent-gold: var(--color-accent-gold);
 
   /* (Legacy --color-brand-50..950 flat ramp aliases removed in Phase 7 of
    * the 2026-05-22 brand audit. Audit grep showed zero consumers in src/.
-   * Components reference brand-primary / brand-accent / brand-gold directly.) */
+   * Components reference brand-primary / brand-accent / accent-gold directly.) */
 
   /* ========================================
    * Surface Colors — semantic elevation tokens
@@ -173,12 +173,16 @@
   /* ========================================
    * Log Level Colors (Syslog/RFC 5424)
    * ======================================== */
-  --color-log-trace: #64748b;
-  --color-log-debug: #06b6d4;
-  --color-log-info: #3b82f6;
-  --color-log-warn: #f59e0b;
-  --color-log-error: #ef4444;
-  --color-log-fatal: #dc2626;
+  /* Shared, not NIAC's: the values live in theme/msn-shared.css. These were
+   * literal copies that only lost to the canonical because the @import sits
+   * above this block — three of the six (debug, info, warn) already disagreed
+   * with it. Map them like every other shared token so there is one source. */
+  --color-log-trace: var(--color-log-trace);
+  --color-log-debug: var(--color-log-debug);
+  --color-log-info: var(--color-log-info);
+  --color-log-warn: var(--color-log-warn);
+  --color-log-error: var(--color-log-error);
+  --color-log-fatal: var(--color-log-fatal);
 
   /* ========================================
    * Syntax Highlighting (One Dark Standard)
@@ -237,7 +241,7 @@
    *   scrim:        modal/drawer backdrops via bg-scrim/N (constant black).
    *   knob:         toggle thumbs / text on saturated brand bg (constant white).
    * ======================================== */
-  --color-surface-deep: #020617;
+  --color-surface-deep: var(--color-surface-deep); /* shared; was a stale cold #020617 */
   --color-scrim: #000000;
   --color-knob: #ffffff;
 
@@ -291,7 +295,7 @@ body {
   background:
     radial-gradient(
       1200px 600px at 80% -10%,
-      color-mix(in oklab, var(--color-brand-gold) 8%, transparent),
+      color-mix(in oklab, var(--color-accent-gold) 8%, transparent),
       transparent
     ),
     radial-gradient(
