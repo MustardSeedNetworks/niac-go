@@ -89,7 +89,11 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
       const bounds = bubble.getBoundingClientRect();
       let top = anchor.top - bounds.height;
       let left = anchor.left + (anchor.width - bounds.width) / 2;
-      if (side === 'bottom') top = anchor.bottom;
+      if (side === 'top' && top < 0) top = anchor.bottom;
+      if (side === 'bottom') {
+        top = anchor.bottom;
+        if (top + bounds.height > window.innerHeight) top = anchor.top - bounds.height;
+      }
       if (side === 'left' || side === 'right') {
         top = anchor.top + (anchor.height - bounds.height) / 2;
         left = side === 'left' ? anchor.left - bounds.width : anchor.right;

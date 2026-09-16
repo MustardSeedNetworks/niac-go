@@ -89,6 +89,46 @@ describe('Tooltip', () => {
     },
   );
 
+  it.each([
+    { side: 'top' as const, top: 0, bottom: 40, expectedTop: 40 },
+    { side: 'bottom' as const, top: 740, bottom: 768, expectedTop: 710 },
+  ])(
+    'keeps a $side tooltip off its trigger at the viewport edge',
+    async ({ side, top, bottom, expectedTop }) => {
+      const user = userEvent.setup();
+      render(
+        <Tooltip text={REASON} side={side}>
+          <button type="button">Start</button>
+        </Tooltip>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Start' });
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+        x: 100,
+        y: top,
+        top,
+        bottom,
+        left: 100,
+        right: 200,
+        width: 100,
+        height: bottom - top,
+        toJSON: () => ({}),
+      });
+      vi.spyOn(bubble(), 'getBoundingClientRect').mockReturnValue({
+        x: 0,
+        y: 0,
+        top: 0,
+        bottom: 30,
+        left: 0,
+        right: 200,
+        width: 200,
+        height: 30,
+        toJSON: () => ({}),
+      });
+      await user.tab();
+      expect(bubble()).toHaveStyle({ top: `${expectedTop}px` });
+    },
+  );
+
   it('stays open while the trigger is focused after the pointer leaves', async () => {
     const user = userEvent.setup();
     renderTooltip();
