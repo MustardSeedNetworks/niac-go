@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.68](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.67...v0.95.68) (2026-09-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency valibot to v1.5.0 ([#2215](https://github.com/MustardSeedNetworks/niac-go/issues/2215)) ([c941ffd](https://github.com/MustardSeedNetworks/niac-go/commit/c941ffd5258e3486e8a794e1fa2d0b631cf3baf4))
+* **theme:** adopt the canonical fleet theme and hue set C ([#2213](https://github.com/MustardSeedNetworks/niac-go/issues/2213)) ([eabc37b](https://github.com/MustardSeedNetworks/niac-go/commit/eabc37b69e5d2cf4e0bc29a77e7f69d0db9c454e))
+
+
+### Miscellaneous
+
+* **deps:** update github/codeql-action action to v4.38.0 ([#2214](https://github.com/MustardSeedNetworks/niac-go/issues/2214)) ([523f303](https://github.com/MustardSeedNetworks/niac-go/commit/523f303696623261ee0934a01d28c6eb78b3af2a))
+
 ## [0.95.67](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.66...v0.95.67) (2026-09-16)
 
 
