@@ -102,7 +102,15 @@ type libraryNetworkUploadRequest struct {
 
 func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Request) {
 	var req libraryNetworkUploadRequest
-	if !decodeJSONStrict(w, r, &req, MaxRequestBodySize) {
+	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
+		return
+	}
+	// The body cap covers worst-case JSON escaping; the YAML itself is bounded
+	// separately at the size a scenario may actually be, the same pair of
+	// limits a draft carries.
+	if len(req.Content) > MaxScenarioConfigSize {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Network content is too large",
+			[]ErrorDetail{{Field: "content", Issue: "max_size_exceeded"}})
 		return
 	}
 	// The library used to accept anything that was non-empty, so a scenario

@@ -212,11 +212,17 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 			csrf:         true,
 		},
 		{
-			path:    "/api/v1/library/networks",
-			handler: s.handleLibraryNetworks,
-			methods: []string{http.MethodGet, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			// The saved network is a generated scenario, so this route
+			// carries the authored-scenario body cap the drafts, preflight
+			// and simulation routes carry. On the 1 MiB default, five of the
+			// seven shipped packs answered 413 and could not be kept in the
+			// library the daemon starts from (#2203).
+			path:         "/api/v1/library/networks",
+			handler:      s.handleLibraryNetworks,
+			methods:      []string{http.MethodGet, http.MethodPost},
+			maxBodyBytes: MaxScenarioRequestBodySize,
+			rl:           rlWrite,
+			csrf:         true,
 		},
 		{
 			path:    "/api/v1/library/networks/",
