@@ -113,20 +113,26 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     // The prerequisite is required, not hoped for: a zero-node page must fail
     // here rather than skip past the assertions below.
     await expect(nodes).toHaveCount(DEVICES.length);
+    // React Flow hides a node until it has measured it — the wrapper carries
+    // `visibility: hidden` — and a hidden element is not focusable, so focus()
+    // would be a silent no-op. toHaveCount only proves attachment, which is why
+    // this needs its own wait: on Linux WebKit the measure had not landed and
+    // the focus assertion burned its full timeout.
+    await expect(nodes.first()).toBeVisible();
 
     for (let i = 0; i < DEVICES.length; i++) {
       const node = nodes.nth(i);
       const aria = await node.getAttribute('aria-label');
       expect(aria, `node ${i} has no accessible name`).toBeTruthy();
       // Tab-order membership is asserted on the element, not by a Shift+Tab /
-      // Tab round trip. React Flow wraps every node in a div[tabindex="0"], and
-      // whether such a non-control joins sequential focus navigation is
-      // engine-specific: Linux WebKit skips it, so the round trip measured the
-      // browser's focus model rather than this node's reachability and failed
-      // there on the first node alone, while macOS WebKit and Chromium passed.
-      // A non-disabled <button> with tabIndex >= 0 is the contract the round
-      // trip was standing in for — and it is the one .focus() cannot fake, since
-      // a tabindex="-1" node answers .focus() and is still unreachable by Tab.
+      // Tab round trip. React Flow wraps every node in its own div[tabindex="0"]
+      // that precedes this button, so the round trip's Shift+Tab landed on that
+      // wrapper and depended on whether a given engine puts a non-control in
+      // sequential focus navigation — it measured the browser's focus model
+      // rather than this node's reachability. A non-disabled <button> with
+      // tabIndex >= 0 is the contract it stood in for, and it is the one
+      // .focus() cannot fake: a tabindex="-1" node answers .focus() and is
+      // still unreachable by Tab.
       expect(
         await node.evaluate((el) => (el as HTMLButtonElement).tabIndex),
         `node ${i} is not in the tab order`,
@@ -135,6 +141,7 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
         await node.evaluate((el) => (el as HTMLButtonElement).disabled),
         `node ${i} is disabled`,
       ).toBe(false);
+      await expect(node).toBeVisible();
       await node.focus();
       await expect(node).toBeFocused();
       const descriptionId = await node.getAttribute('aria-describedby');
