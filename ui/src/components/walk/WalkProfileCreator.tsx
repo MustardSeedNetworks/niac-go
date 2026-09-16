@@ -165,7 +165,11 @@ export const WalkProfileCreator: FC = () => {
         />
         {error && <ApiErrorMessage message={error} details={errorDetails} />}
         {createdRole && (
-          <p role="status" className="text-sm text-status-success">
+          <p
+            role="status"
+            data-testid="walk-profile-created"
+            className="text-sm text-status-success"
+          >
             {t('walkAnalyzer.profile.created', { role: createdRole })}
           </p>
         )}

@@ -69,8 +69,8 @@ test.describe('Language switching', () => {
     // ES marker: Dashboard's translated label is "Panel" per
     // pages.dashboard.label in es/pages.json + the TM. The sidebar
     // shows this label, and so does the page header title.
-    // See above for why `.last()` rather than `.first()`.
-    await expect(page.getByText(/Panel/).last()).toBeVisible();
+    await expect(page.getByTestId('page-header-title')).toHaveText('Panel');
+    await expect(page.getByTestId('page-header-title')).toBeVisible();
   });
 
   test('translates the dashboard rollup', async ({ page }) => {

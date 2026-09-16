@@ -1,5 +1,6 @@
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import { request } from '../api/requestCore';
+import { Tooltip } from './Tooltip';
 
 type Status = 'connected' | 'disconnected' | 'checking';
 
@@ -45,11 +46,20 @@ export const ConnectionStatus: FC = () => {
   }, [checkConnection]);
 
   return (
-    <div className="flex items-center gap-compact" title={STATUS_LABELS[status]}>
-      <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status]}`} />
-      <span className="text-xs text-text-muted">
-        {status === 'connected' ? 'Online' : status === 'disconnected' ? 'Offline' : '...'}
-      </span>
-    </div>
+    <Tooltip text={STATUS_LABELS[status]}>
+      <button
+        type="button"
+        data-testid="connection-status"
+        aria-label={STATUS_LABELS[status]}
+        className="flex min-h-8 items-center gap-compact rounded focus-visible:outline-2 focus-visible:outline-brand-accent"
+      >
+        <span role="status" className="flex items-center gap-compact">
+          <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status]}`} />
+          <span className="text-xs text-text-muted">
+            {status === 'connected' ? 'Online' : status === 'disconnected' ? 'Offline' : '...'}
+          </span>
+        </span>
+      </button>
+    </Tooltip>
   );
 };

@@ -21,6 +21,7 @@ import { ChevronRight, HelpCircle } from 'lucide-react';
 import { createElement, type FC, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 import { iconSizes } from '../constants/sizes';
+import { Tooltip } from './Tooltip';
 
 interface BreadcrumbItem {
   label: string;
@@ -128,15 +129,16 @@ export const PageHeader: FC<PageHeaderProps> = ({
           ) : null}
           {actions}
           {onHelp ? (
-            <button
-              type="button"
-              onClick={onHelp}
-              aria-label={`Open help for ${title}`}
-              title={`What is ${title}?`}
-              className="rounded-full p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
-            >
-              <HelpCircle className={iconSizes.lg} />
-            </button>
+            <Tooltip text={`What is ${title}?`}>
+              <button
+                type="button"
+                onClick={onHelp}
+                aria-label={`Open help for ${title}`}
+                className="rounded-full p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
+              >
+                <HelpCircle className={iconSizes.lg} />
+              </button>
+            </Tooltip>
           ) : null}
         </div>
       </div>

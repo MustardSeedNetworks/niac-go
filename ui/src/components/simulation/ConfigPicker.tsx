@@ -7,6 +7,7 @@ import type { LibraryNetwork, Template, TemplateContent } from '../../api/types'
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { useFavorites } from '../../hooks/useFavorites';
+import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
 import { TemplatePreviewModal } from '../TemplatePreviewModal';
@@ -235,28 +236,33 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       {/* Upload + clear */}
       <div className="flex flex-wrap items-center gap-compact">
         <div className="flex-1" />
-        <label
-          htmlFor="config-upload"
-          className={`flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-compact text-xs font-medium text-text-primary hover:bg-surface-hover ${
-            convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
-          }`}
-          title={t('configPicker.pickFromDiskTitle')}
-        >
-          <FileUp className={iconSizes.sm} />
-          {convertingDsl
-            ? t('configPicker.converting')
-            : uploadFile
-              ? t('configPicker.replaceLocalFile')
-              : t('configPicker.uploadLocalFile')}
-        </label>
-        <input
-          id="config-upload"
-          type="file"
-          accept=".yaml,.yml,.cfg,.conf,.txt"
-          onChange={handleFileChange}
-          disabled={convertingDsl}
-          className="sr-only"
-        />
+        <Tooltip text={t('configPicker.pickFromDiskTitle')}>
+          {(description) => (
+            <label
+              htmlFor="config-upload"
+              className={`relative flex items-center gap-1.5 rounded border border-surface-border bg-bg-surface/60 px-3 py-compact text-xs font-medium text-text-primary hover:bg-surface-hover focus-within:ring-2 focus-within:ring-brand-accent ${
+                convertingDsl ? 'cursor-wait opacity-60' : 'cursor-pointer'
+              }`}
+            >
+              <FileUp className={iconSizes.sm} />
+              {convertingDsl
+                ? t('configPicker.converting')
+                : uploadFile
+                  ? t('configPicker.replaceLocalFile')
+                  : t('configPicker.uploadLocalFile')}
+              <input
+                {...description}
+                id="config-upload"
+                data-testid="config-upload"
+                type="file"
+                accept=".yaml,.yml,.cfg,.conf,.txt"
+                onChange={handleFileChange}
+                disabled={convertingDsl}
+                className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              />
+            </label>
+          )}
+        </Tooltip>
         {uploadFile && (
           <button
             type="button"

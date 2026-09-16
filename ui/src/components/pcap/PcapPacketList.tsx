@@ -5,6 +5,7 @@ import { useTimeDisplay } from '../../hooks/useTimeDisplay';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { Tag } from '../../ui/Tag';
+import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { getProtocolColor } from '../../utils/protocol-colors';
 import { formatTimeByMode, getTimeDisplayLabel } from '../../utils/time-display';
@@ -42,14 +43,15 @@ export const PcapPacketList: FC<PcapPacketListProps> = memo(
       {
         key: 'time',
         header: (
-          <button
-            type="button"
-            onClick={cycleTimeMode}
-            title={t('packets.list.cycleTimeModeTitle')}
-            className="uppercase tracking-wide hover:text-brand-accent"
-          >
-            {getTimeDisplayLabel(timeMode)}
-          </button>
+          <Tooltip text={t('packets.list.cycleTimeModeTitle')}>
+            <button
+              type="button"
+              onClick={cycleTimeMode}
+              className="uppercase tracking-wide hover:text-brand-accent"
+            >
+              {getTimeDisplayLabel(timeMode)}
+            </button>
+          </Tooltip>
         ),
         cellClassName: 'text-text-secondary text-xs font-mono',
         cell: (packet) => {

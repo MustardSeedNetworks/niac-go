@@ -1,3 +1,4 @@
+import { Tooltip } from '../../ui/Tooltip';
 /**
  * Custom Device Node Component for React Flow topology visualization
  */
@@ -30,8 +31,8 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const color = getTopologyDeviceColor(deviceType);
 
   // The node shows a symbol and a name, so IPs and protocols are invisible
-  // without this. Surfaced through both title (native hover tooltip) and
-  // aria-label (screen readers).
+  // without this. The same details are available on hover, focus, and through
+  // the accessible name.
   const tooltipLines: string[] = [
     t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type }),
   ];
@@ -46,63 +47,64 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const tooltip = tooltipLines.join('\n');
 
   return (
-    <button
-      type="button"
-      data-testid="topology-device-node"
-      title={tooltip}
-      aria-label={tooltip}
-      className="group relative flex flex-col items-center gap-tight bg-transparent"
-      // Sized to NODE_WIDTH in layout.ts, which is what dagre spaces on. The
-      // label is allowed two lines beneath a fixed-height symbol, so every
-      // node occupies the same box whatever its name.
-      style={{ width: '112px' }}
-      onClick={() => data.onClick?.(data.label)}
-    >
-      {/* ReactFlow edge anchors. Without these handles the canvas
+    <Tooltip text={tooltip}>
+      <button
+        type="button"
+        data-testid="topology-device-node"
+        aria-label={tooltip}
+        className="group relative flex flex-col items-center gap-tight bg-transparent"
+        // Sized to NODE_WIDTH in layout.ts, which is what dagre spaces on. The
+        // label is allowed two lines beneath a fixed-height symbol, so every
+        // node occupies the same box whatever its name.
+        style={{ width: '112px' }}
+        onClick={() => data.onClick?.(data.label)}
+      >
+        {/* ReactFlow edge anchors. Without these handles the canvas
           renders nodes fine but every edge silently fails to draw —
           there's no spot for the line to attach to.
           Default handles only (left=target, right=source) so edges
           always route left-to-right deterministically. Extra
           top/bottom handles confused ReactFlow's auto-routing into
           drawing edges out the side of the card. */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!w-2 !h-2 !bg-brand-accent !border-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-2 !h-2 !bg-brand-accent !border-0"
-      />
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-2 !h-2 !bg-brand-accent !border-0"
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!w-2 !h-2 !bg-brand-accent !border-0"
+        />
 
-      {/* The symbol is the node. The plate behind it keeps a light glyph
+        {/* The symbol is the node. The plate behind it keeps a light glyph
           legible over a dark canvas and gives selection somewhere to land
           that is not the glyph's own silhouette. */}
-      <div
-        className={`
+        <div
+          className={`
           flex-center rounded-2xl border-2 transition-all duration-200
           group-hover:shadow-lg group-hover:shadow-scrim/30
           ${selected ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-base' : ''}
         `}
-        style={{
-          width: '64px',
-          height: '64px',
-          color,
-          borderColor: selected ? color : 'var(--color-border-muted)',
-          backgroundColor: `color-mix(in srgb, ${color} 14%, var(--color-bg-elevated))`,
-        }}
-      >
-        <Symbol className="w-8 h-8" />
-      </div>
+          style={{
+            width: '64px',
+            height: '64px',
+            color,
+            borderColor: selected ? color : 'var(--color-border-muted)',
+            backgroundColor: `color-mix(in srgb, ${color} 14%, var(--color-bg-elevated))`,
+          }}
+        >
+          <Symbol className="w-8 h-8" />
+        </div>
 
-      <div
-        data-testid="topology-device-label"
-        className="w-full text-center text-xs font-medium leading-tight text-text-primary line-clamp-2 break-words"
-      >
-        {data.label}
-      </div>
-    </button>
+        <div
+          data-testid="topology-device-label"
+          className="w-full text-center text-xs font-medium leading-tight text-text-primary line-clamp-2 break-words"
+        >
+          {data.label}
+        </div>
+      </button>
+    </Tooltip>
   );
 });
 

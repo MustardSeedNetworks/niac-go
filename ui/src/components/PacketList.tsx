@@ -2,6 +2,7 @@ import { type FC, memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
+import { Tooltip } from '../ui/Tooltip';
 import { SmallText } from '../ui/Typography';
 import type { PacketByteRange } from '../utils/protocol-byte-ranges';
 import { getProtocolColor } from '../utils/protocol-colors';
@@ -123,14 +124,15 @@ export const PacketList: FC<PacketListProps> = memo(
 
     return (
       <div className="h-full flex flex-col">
-        <button
-          type="button"
-          onClick={cycleTimeMode}
-          className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
-          title={t('packets.list.cycleTimeModeTitle')}
-        >
-          {t('packets.list.modeLabel')} {getTimeDisplayLabel(timeMode)}
-        </button>
+        <Tooltip text={t('packets.list.cycleTimeModeTitle')}>
+          <button
+            type="button"
+            onClick={cycleTimeMode}
+            className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
+          >
+            {t('packets.list.modeLabel')} {getTimeDisplayLabel(timeMode)}
+          </button>
+        </Tooltip>
         <div
           ref={scrollContainerRef}
           className={`flex-1 overflow-y-auto stack-xs pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}

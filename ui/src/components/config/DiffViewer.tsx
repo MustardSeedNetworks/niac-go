@@ -3,6 +3,7 @@ import { type FC, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
+import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { DiffBlockComponent } from './diff-viewer/DiffBlock';
 import { DiffBlockOverlayComponent } from './diff-viewer/DiffBlockOverlay';
@@ -91,36 +92,38 @@ const ViewModeToggle: FC<{
       className="flex rounded border border-surface-border bg-bg-surface/60 p-0.5"
       aria-label={t('configDiff.viewModeLabel')}
     >
-      <button
-        type="button"
-        data-testid="diff-view-mode-block"
-        aria-pressed={viewMode === 'block'}
-        title={t('configDiff.blockViewOption')}
-        onClick={() => onChange('block')}
-        className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
-          viewMode === 'block'
-            ? 'bg-brand-primary/20 text-brand-accent'
-            : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-        }`}
-      >
-        <Columns2 className={iconSizes.xs} />
-        {t('configDiff.blockViewOption')}
-      </button>
-      <button
-        type="button"
-        data-testid="diff-view-mode-overlay"
-        aria-pressed={viewMode === 'overlay'}
-        title={t('configDiff.overlayViewOption')}
-        onClick={() => onChange('overlay')}
-        className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
-          viewMode === 'overlay'
-            ? 'bg-brand-primary/20 text-brand-accent'
-            : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-        }`}
-      >
-        <AlignJustify className={iconSizes.xs} />
-        {t('configDiff.overlayViewOption')}
-      </button>
+      <Tooltip text={t('configDiff.blockViewOption')}>
+        <button
+          type="button"
+          data-testid="diff-view-mode-block"
+          aria-pressed={viewMode === 'block'}
+          onClick={() => onChange('block')}
+          className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
+            viewMode === 'block'
+              ? 'bg-brand-primary/20 text-brand-accent'
+              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+          }`}
+        >
+          <Columns2 className={iconSizes.xs} />
+          {t('configDiff.blockViewOption')}
+        </button>
+      </Tooltip>
+      <Tooltip text={t('configDiff.overlayViewOption')}>
+        <button
+          type="button"
+          data-testid="diff-view-mode-overlay"
+          aria-pressed={viewMode === 'overlay'}
+          onClick={() => onChange('overlay')}
+          className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
+            viewMode === 'overlay'
+              ? 'bg-brand-primary/20 text-brand-accent'
+              : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+          }`}
+        >
+          <AlignJustify className={iconSizes.xs} />
+          {t('configDiff.overlayViewOption')}
+        </button>
+      </Tooltip>
     </fieldset>
   );
 };

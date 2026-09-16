@@ -65,5 +65,5 @@ test('imports, reviews, and creates a reusable walk profile', async ({ page }) =
   await expect(page.getByTestId('walk-profile-review')).toBeVisible();
   await page.getByLabel('Profile role').fill('office-access');
   await page.getByTestId('walk-profile-create').click();
-  await expect(page.getByRole('status')).toContainText('office-access');
+  await expect(page.getByTestId('walk-profile-created')).toContainText('office-access');
 });

@@ -5,6 +5,7 @@ import { fetchDebugLevel, updateDebugLevel } from '../../api/client';
 import type { DebugLevel } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
+import { Tooltip } from '../../ui/Tooltip';
 import { H2, SmallText } from '../../ui/Typography';
 import { getErrorMessage } from '../../utils/format';
 
@@ -119,31 +120,39 @@ export const DebugLevelControl: FC = () => {
             const active = level === opt.value;
 
             return (
-              <label
-                key={opt.value}
-                title={permission.title ?? opt.hint}
-                className="cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="debug-level"
-                  value={opt.value}
-                  checked={active}
-                  disabled={disabled}
-                  onChange={() => void apply(opt.value)}
-                  data-testid={`debug-level-${opt.value}`}
-                  className="peer sr-only"
-                />
-                <span
-                  className={`block rounded border px-3 py-compact-md text-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand-accent ${
-                    active
-                      ? 'border-brand-accent bg-brand-accent/15 text-text-primary'
-                      : 'border-surface-border bg-bg-base/60 text-text-muted hover:text-text-primary'
-                  } ${disabled ? 'opacity-50' : ''}`}
-                >
-                  {opt.label}
-                </span>
-              </label>
+              <Tooltip key={opt.value} text={permission.title ?? opt.hint}>
+                {(description) => (
+                  <label className="cursor-pointer">
+                    <input
+                      {...description}
+                      type="radio"
+                      name="debug-level"
+                      value={opt.value}
+                      checked={active}
+                      disabled={loading || saving || level === null}
+                      aria-disabled={permission.disabled || undefined}
+                      onClick={(event) => {
+                        if (permission.disabled) event.preventDefault();
+                        else description.onClick();
+                      }}
+                      onChange={() => {
+                        if (!permission.disabled) void apply(opt.value);
+                      }}
+                      data-testid={`debug-level-${opt.value}`}
+                      className="peer sr-only"
+                    />
+                    <span
+                      className={`block rounded border px-3 py-compact-md text-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand-accent ${
+                        active
+                          ? 'border-brand-accent bg-brand-accent/15 text-text-primary'
+                          : 'border-surface-border bg-bg-base/60 text-text-muted hover:text-text-primary'
+                      } ${disabled ? 'opacity-50' : ''}`}
+                    >
+                      {opt.label}
+                    </span>
+                  </label>
+                )}
+              </Tooltip>
             );
           })}
         </div>

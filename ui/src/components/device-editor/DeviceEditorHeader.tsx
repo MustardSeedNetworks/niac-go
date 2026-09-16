@@ -6,6 +6,7 @@ import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
+import { Tooltip } from '../../ui/Tooltip';
 import { H2, SmallText } from '../../ui/Typography';
 import type { AuthoredDevice } from './generated/authored-device.generated';
 
@@ -53,14 +54,16 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
       <CardContent className="stack-lg">
         <div className="flex flex-wrap items-center justify-between gap-comfortable">
           <div className="flex items-center gap-default">
-            <button
-              type="button"
-              onClick={onNavigateBack}
-              className="pad-xs text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
-              title={t('editor.header.backTitle')}
-            >
-              <ArrowLeft className={iconSizes.lg} />
-            </button>
+            <Tooltip text={t('editor.header.backTitle')}>
+              <button
+                type="button"
+                onClick={onNavigateBack}
+                className="pad-xs text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+                aria-label={t('editor.header.backTitle')}
+              >
+                <ArrowLeft className={iconSizes.lg} />
+              </button>
+            </Tooltip>
             <DeviceIcon className={`${iconSizes.xl} text-brand-accent`} />
             <div>
               <H2>{isNewDevice ? t('editor.newDevice') : device.name || t('editor.editDevice')}</H2>

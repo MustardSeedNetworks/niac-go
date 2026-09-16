@@ -25,10 +25,19 @@ test.describe('Debug Console Page', () => {
   });
 
   test('should expose a reconnect / connection status control', async ({ page }) => {
-    // The header has a button whose title reflects either
-    // "Connected to log stream" or "Click to reconnect" — both reachable
-    // via the title attribute.
-    const statusButton = page.locator('button[title*="log stream"], button[title*="reconnect"]');
-    await expect(statusButton.first()).toBeVisible({ timeout: 5000 });
+    const statusButton = page.getByTestId('debug-connection-status');
+    await expect(statusButton).toBeVisible();
+    await statusButton.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(statusButton).toBeFocused();
+    await expect(statusButton).toHaveAccessibleDescription(
+      /Connected to log stream|Click to reconnect/,
+    );
+    await expect(
+      page.getByRole('tooltip').filter({ hasText: /Connected to log stream|Click to reconnect/ }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(statusButton).toBeFocused();
   });
 });

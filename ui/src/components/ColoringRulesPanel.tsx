@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Tooltip } from '../ui/Tooltip';
 import { SmallText } from '../ui/Typography';
 import type { ColoringRule } from '../utils/coloring-rules';
 import { generateRuleId } from '../utils/coloring-rules';
@@ -71,52 +72,62 @@ const RuleRow: FC<{
       />
 
       {/* Foreground color */}
-      <input
-        type="color"
-        value={rule.foreground}
-        onChange={(e) => onChange({ ...rule, foreground: e.target.value })}
-        className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
-        title="Text color"
-      />
+      <Tooltip text="Text color">
+        <input
+          type="color"
+          value={rule.foreground}
+          onChange={(e) => onChange({ ...rule, foreground: e.target.value })}
+          className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
+          aria-label="Text color"
+        />
+      </Tooltip>
 
       {/* Background color */}
-      <input
-        type="color"
-        value={rule.background}
-        onChange={(e) => onChange({ ...rule, background: e.target.value })}
-        className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
-        title="Background color"
-      />
+      <Tooltip text="Background color">
+        <input
+          type="color"
+          value={rule.background}
+          onChange={(e) => onChange({ ...rule, background: e.target.value })}
+          className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
+          aria-label="Background color"
+        />
+      </Tooltip>
 
       {/* Move buttons */}
-      <button
-        type="button"
-        onClick={onMoveUp}
-        disabled={isFirst}
-        className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-        title="Move up"
-      >
-        <ArrowUp className={iconSizes.sm} />
-      </button>
-      <button
-        type="button"
-        onClick={onMoveDown}
-        disabled={isLast}
-        className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-        title="Move down"
-      >
-        <ArrowDown className={iconSizes.sm} />
-      </button>
+      <Tooltip text="Move up">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={isFirst}
+          className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Move up"
+        >
+          <ArrowUp className={iconSizes.sm} />
+        </button>
+      </Tooltip>
+      <Tooltip text="Move down">
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={isLast}
+          className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Move down"
+        >
+          <ArrowDown className={iconSizes.sm} />
+        </button>
+      </Tooltip>
 
       {/* Delete */}
-      <button
-        type="button"
-        onClick={onDelete}
-        className="p-1 text-text-muted hover:text-status-error"
-        title="Delete rule"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      <Tooltip text="Delete rule">
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-1 text-text-muted hover:text-status-error"
+          aria-label="Delete rule"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </Tooltip>
     </div>
   );
 });

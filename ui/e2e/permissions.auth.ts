@@ -20,11 +20,15 @@ test('viewer can filter and navigate but cannot prepare or start a simulation', 
   const search = page.getByTestId('config-picker-search');
   await search.fill('office');
   await expect(search).toHaveValue('office');
-  await expect(page.getByTestId('runtime-prepare')).toBeDisabled();
-  await expect(page.getByTestId('runtime-prepare')).toHaveAttribute(
-    'title',
-    /token does not allow/,
-  );
+  const prepare = page.getByTestId('runtime-prepare');
+  await expect(prepare).toBeDisabled();
+  await prepare.focus();
+  await expect(prepare).toBeFocused();
+  await expect(prepare).toHaveAccessibleDescription(/token does not allow/);
+  await expect(page.getByRole('tooltip')).toHaveText(/token does not allow/);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('wizard-preflight-check')).toHaveCount(0);
 });
 
 test('operator can start while a viewer can inspect and export but not stop', async ({

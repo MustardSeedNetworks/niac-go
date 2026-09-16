@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from 'react';
+import { Tooltip } from '../../ui/Tooltip';
 
 /**
  * One half of the grid/list view-density toggle. Two of these live
@@ -11,17 +12,19 @@ export const ViewToggle: FC<{
   icon: ReactNode;
   label: string;
 }> = ({ active, onClick, icon, label }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-pressed={active}
-    title={label}
-    className={`rounded px-cell py-compact transition-colors ${
-      active
-        ? 'bg-brand-primary/20 text-brand-accent'
-        : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
-    }`}
-  >
-    {icon}
-  </button>
+  <Tooltip text={label}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      className={`rounded px-cell py-compact transition-colors ${
+        active
+          ? 'bg-brand-primary/20 text-brand-accent'
+          : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
+      }`}
+    >
+      {icon}
+    </button>
+  </Tooltip>
 );

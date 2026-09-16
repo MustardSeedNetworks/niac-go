@@ -12,6 +12,7 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { Tag } from '../ui/Tag';
+import { Tooltip } from '../ui/Tooltip';
 
 // Maximum number of logs to buffer
 const MAX_LOG_BUFFER = 1000;
@@ -220,19 +221,24 @@ export const DebugConsolePage: FC = () => {
                 }
                 aria-expanded={showDebugSettings}
                 aria-controls="debug-settings-panel"
+                data-testid="debug-level-toggle"
               >
                 {t('debug.debugLevelButton')}
               </Button>
               {/* Connection Status */}
-              <button
-                type="button"
-                onClick={reconnect}
-                className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
-                title={connected ? t('debug.connectedTitle') : t('debug.clickToReconnectTitle')}
+              <Tooltip
+                text={connected ? t('debug.connectedTitle') : t('debug.clickToReconnectTitle')}
               >
-                <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
-                <Tag colorScheme={connectionStatus.color}>{connectionStatus.label}</Tag>
-              </button>
+                <button
+                  type="button"
+                  data-testid="debug-connection-status"
+                  onClick={reconnect}
+                  className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
+                >
+                  <span className={`h-2 w-2 rounded-full ${connectionStatus.indicator}`} />
+                  <Tag colorScheme={connectionStatus.color}>{connectionStatus.label}</Tag>
+                </button>
+              </Tooltip>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 
 /**
  * Modal hit-testing E2E — regression guard for D8.
@@ -20,13 +20,9 @@ import { expect, test } from '@playwright/test';
  */
 
 /** Resolve what the browser would actually deliver a click to, at an element's centre. */
-async function hitTestCentre(
-  page: import('@playwright/test').Page,
-  selector: string,
-): Promise<{ isSelf: boolean; actual: string }> {
-  return page.evaluate((sel) => {
-    const el = document.querySelector(sel);
-    if (!el) return { isSelf: false, actual: 'element-not-found' };
+async function hitTestCentre(button: Locator): Promise<{ isSelf: boolean; actual: string }> {
+  await button.scrollIntoViewIfNeeded();
+  return button.evaluate((el) => {
     const r = el.getBoundingClientRect();
     const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     const isSelf = hit === el || el.contains(hit);
@@ -34,7 +30,7 @@ async function hitTestCentre(
       ? 'self'
       : `${hit?.tagName ?? 'none'}[${hit?.getAttribute('aria-label') ?? hit?.className ?? ''}]`;
     return { isSelf, actual };
-  }, selector);
+  });
 }
 
 test.describe('Modal buttons are reachable by mouse', () => {
@@ -53,7 +49,7 @@ test.describe('Modal buttons are reachable by mouse', () => {
 
     for (let i = 0; i < count; i++) {
       const label = (await buttons.nth(i).innerText()).trim() || `button ${i}`;
-      const result = await hitTestCentre(page, `[role="dialog"] button:nth-of-type(${i + 1})`);
+      const result = await hitTestCentre(buttons.nth(i));
       expect(result.isSelf, `dialog button "${label}" is covered by ${result.actual}`).toBe(true);
     }
   });

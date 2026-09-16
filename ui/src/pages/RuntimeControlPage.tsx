@@ -20,6 +20,7 @@ import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
@@ -316,31 +317,32 @@ export const RuntimeControlPage: FC = () => {
                     <Network
                       className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.md} text-text-muted`}
                     />
-                    <select
-                      id="rc-interface"
-                      data-testid="runtime-interface"
-                      value={simulationSettings.selectedInterface}
-                      onChange={handleInterfaceChange}
-                      disabled={interfacesLoading || interfaces.length === 0}
-                      title={t('runtime.interfaceTitle')}
-                      className="w-full rounded border border-surface-border bg-bg-elevated py-row pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {interfacesLoading && (
-                        <option value="">{t('runtime.interfaceLoadingOption')}</option>
-                      )}
-                      {!interfacesLoading && interfaces.length === 0 && (
-                        <option value="">{t('runtime.noUsableInterfaces')}</option>
-                      )}
-                      {!interfacesLoading && interfaces.length > 0 && (
-                        <option value="">{t('runtime.interfaceSelectPrompt')}</option>
-                      )}
-                      {interfaces.map((iface) => (
-                        <option key={iface.name} value={iface.name}>
-                          {iface.name}
-                          {iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <Tooltip text={t('runtime.interfaceTitle')} className="w-full">
+                      <select
+                        id="rc-interface"
+                        data-testid="runtime-interface"
+                        value={simulationSettings.selectedInterface}
+                        onChange={handleInterfaceChange}
+                        disabled={interfacesLoading || interfaces.length === 0}
+                        className="w-full rounded border border-surface-border bg-bg-elevated py-row pl-10 pr-3 text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {interfacesLoading && (
+                          <option value="">{t('runtime.interfaceLoadingOption')}</option>
+                        )}
+                        {!interfacesLoading && interfaces.length === 0 && (
+                          <option value="">{t('runtime.noUsableInterfaces')}</option>
+                        )}
+                        {!interfacesLoading && interfaces.length > 0 && (
+                          <option value="">{t('runtime.interfaceSelectPrompt')}</option>
+                        )}
+                        {interfaces.map((iface) => (
+                          <option key={iface.name} value={iface.name}>
+                            {iface.name}
+                            {iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </Tooltip>
                   </div>
                 </div>
                 <Button

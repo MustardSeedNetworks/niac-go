@@ -1,3 +1,4 @@
+import { Tooltip } from '../ui/Tooltip';
 // Copyright (c) 2025 Mustard Seed Networks. All rights reserved.
 
 /**
@@ -268,30 +269,34 @@ function AppearanceSection(): ReactElement {
           );
         })}
       </div>
-      <button
-        type="button"
-        onClick={toggleTheme}
-        title={isDark ? t('appearance.switchToLight') : t('appearance.switchToDark')}
-        className={cn(
-          'mt-heading w-full flex-between gap-compact p-2.5 rounded-lg border transition-colors',
-          'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
-        )}
+      <Tooltip
+        text={isDark ? t('appearance.switchToLight') : t('appearance.switchToDark')}
+        className="w-full"
       >
-        <span className="text-sm">{t('appearance.quickToggle')}</span>
-        <span className="flex items-center gap-1.5 text-xs text-text-muted">
-          {isDark ? (
-            <>
-              <Sun className="w-4 h-4" aria-hidden="true" />
-              {t('appearance.light')}
-            </>
-          ) : (
-            <>
-              <Moon className="w-4 h-4" aria-hidden="true" />
-              {t('appearance.dark')}
-            </>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className={cn(
+            'mt-heading w-full flex-between gap-compact p-2.5 rounded-lg border transition-colors',
+            'border-surface-border bg-surface-hover hover:bg-surface-base text-text-primary',
           )}
-        </span>
-      </button>
+        >
+          <span className="text-sm">{t('appearance.quickToggle')}</span>
+          <span className="flex items-center gap-1.5 text-xs text-text-muted">
+            {isDark ? (
+              <>
+                <Sun className="w-4 h-4" aria-hidden="true" />
+                {t('appearance.light')}
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4" aria-hidden="true" />
+                {t('appearance.dark')}
+              </>
+            )}
+          </span>
+        </button>
+      </Tooltip>
       <p className="text-xs text-text-muted mt-inline">{t('appearance.persistenceNote')}</p>
     </Section>
   );

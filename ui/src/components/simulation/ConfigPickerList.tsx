@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
+import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import {
   type ConfigItem,
@@ -138,26 +139,27 @@ const FavoriteStar: FC<{
     ? t('configPicker.removeFromFavorites')
     : t('configPicker.addToFavorites');
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle(itemKey);
-      }}
-      aria-pressed={favorited}
-      aria-label={label}
-      title={label}
-      className={`rounded p-1 transition-colors ${
-        favorited
-          ? 'text-status-warning hover:text-status-warning'
-          : 'text-text-muted hover:text-status-warning'
-      } ${compact ? '' : 'hover:bg-surface-hover'}`}
-    >
-      <Star
-        className={compact ? iconSizes.sm : iconSizes.md}
-        fill={favorited ? 'currentColor' : 'none'}
-      />
-    </button>
+    <Tooltip text={label}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(itemKey);
+        }}
+        aria-pressed={favorited}
+        aria-label={label}
+        className={`rounded p-1 transition-colors ${
+          favorited
+            ? 'text-status-warning hover:text-status-warning'
+            : 'text-text-muted hover:text-status-warning'
+        } ${compact ? '' : 'hover:bg-surface-hover'}`}
+      >
+        <Star
+          className={compact ? iconSizes.sm : iconSizes.md}
+          fill={favorited ? 'currentColor' : 'none'}
+        />
+      </button>
+    </Tooltip>
   );
 };
 
@@ -226,34 +228,38 @@ const ConfigCard: FC<SharedItemProps> = ({
             <span>{t('configPicker.selectedLabel')}</span>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => onSelect(item)}
-            className="flex-1 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
-            title={t('configPicker.selectNetworkTitle')}
-          >
-            {t('configPicker.selectButton')}
-          </button>
+          <Tooltip text={t('configPicker.selectNetworkTitle')} className="flex-1">
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="flex-1 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
+            >
+              {t('configPicker.selectButton')}
+            </button>
+          </Tooltip>
         )}
         {item.kind === 'builtin' && (
-          <button
-            type="button"
-            onClick={() => onView(item)}
-            className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover"
-            title={t('configPicker.previewYamlTitle')}
-          >
-            <Eye className={iconSizes.sm} />
-          </button>
+          <Tooltip text={t('configPicker.previewYamlTitle')}>
+            <button
+              type="button"
+              onClick={() => onView(item)}
+              className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover"
+              aria-label={t('configPicker.previewYamlTitle')}
+            >
+              <Eye className={iconSizes.sm} />
+            </button>
+          </Tooltip>
         )}
         {item.kind === 'local' && (
-          <button
-            type="button"
-            onClick={onClearLocal}
-            className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error hover:bg-status-error/20"
-            title={t('configPicker.dropLocalFileTitle')}
-          >
-            {t('configPicker.clearButton')}
-          </button>
+          <Tooltip text={t('configPicker.dropLocalFileTitle')}>
+            <button
+              type="button"
+              onClick={onClearLocal}
+              className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error hover:bg-status-error/20"
+            >
+              {t('configPicker.clearButton')}
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>
@@ -284,54 +290,54 @@ const ConfigRow: FC<SharedItemProps> = ({
           compact
         />
       )}
-      <button
-        type="button"
-        onClick={() => onSelect(item)}
-        className="flex-1 text-left"
-        title={t('configPicker.selectItemTitle', { name: item.name })}
-      >
-        <div className="flex items-center gap-compact">
-          <span className="font-medium text-text-primary">{item.name}</span>
-          {item.kind !== 'local' && (
-            <Tag colorScheme="purple" className="text-[10px]">
-              {t('configPicker.deviceCount', { count: item.deviceCount })}
-            </Tag>
+      <Tooltip text={t('configPicker.selectItemTitle', { name: item.name })} className="flex-1">
+        <button type="button" onClick={() => onSelect(item)} className="flex-1 text-left">
+          <div className="flex items-center gap-compact">
+            <span className="font-medium text-text-primary">{item.name}</span>
+            {item.kind !== 'local' && (
+              <Tag colorScheme="purple" className="text-[10px]">
+                {t('configPicker.deviceCount', { count: item.deviceCount })}
+              </Tag>
+            )}
+            {item.kind === 'local' && (
+              <Tag colorScheme="blue" className="text-[10px]">
+                {t('configPicker.localTag')}
+              </Tag>
+            )}
+          </div>
+          {item.description && (
+            <SmallText
+              className={`mt-0.5 line-clamp-1 text-text-muted ${
+                item.kind === 'saved' ? 'font-mono text-[11px] text-text-muted' : ''
+              }`}
+            >
+              {item.description}
+            </SmallText>
           )}
-          {item.kind === 'local' && (
-            <Tag colorScheme="blue" className="text-[10px]">
-              {t('configPicker.localTag')}
-            </Tag>
-          )}
-        </div>
-        {item.description && (
-          <SmallText
-            className={`mt-0.5 line-clamp-1 text-text-muted ${
-              item.kind === 'saved' ? 'font-mono text-[11px] text-text-muted' : ''
-            }`}
-          >
-            {item.description}
-          </SmallText>
-        )}
-      </button>
-      {item.kind === 'builtin' && (
-        <button
-          type="button"
-          onClick={() => onView(item)}
-          className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
-          title={t('configPicker.previewTemplateYamlTitle')}
-        >
-          <Eye className={iconSizes.md} />
         </button>
+      </Tooltip>
+      {item.kind === 'builtin' && (
+        <Tooltip text={t('configPicker.previewTemplateYamlTitle')}>
+          <button
+            type="button"
+            onClick={() => onView(item)}
+            className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
+            aria-label={t('configPicker.previewTemplateYamlTitle')}
+          >
+            <Eye className={iconSizes.md} />
+          </button>
+        </Tooltip>
       )}
       {item.kind === 'local' && (
-        <button
-          type="button"
-          onClick={onClearLocal}
-          className="text-xs font-medium text-status-error hover:text-status-error"
-          title={t('configPicker.dropLocalFileTitle')}
-        >
-          {t('configPicker.clearButton')}
-        </button>
+        <Tooltip text={t('configPicker.dropLocalFileTitle')}>
+          <button
+            type="button"
+            onClick={onClearLocal}
+            className="text-xs font-medium text-status-error hover:text-status-error"
+          >
+            {t('configPicker.clearButton')}
+          </button>
+        </Tooltip>
       )}
     </li>
   );

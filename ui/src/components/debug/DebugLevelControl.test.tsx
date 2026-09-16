@@ -7,6 +7,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ScopeProvider } from '../../contexts/ScopeContext';
 import { DebugLevelControl } from './DebugLevelControl';
 
 const fetchDebugLevel = vi.fn();
@@ -15,6 +16,10 @@ const updateDebugLevel = vi.fn();
 vi.mock('../../api/client', () => ({
   fetchDebugLevel: () => fetchDebugLevel(),
   updateDebugLevel: (payload: unknown) => updateDebugLevel(payload),
+}));
+
+vi.mock('../../api/requestCore', () => ({
+  deduplicatedGet: vi.fn(async () => ({ scope: 'admin' })),
 }));
 
 describe('DebugLevelControl', () => {
@@ -26,7 +31,11 @@ describe('DebugLevelControl', () => {
   it('marks the current level from the API as selected', async () => {
     fetchDebugLevel.mockResolvedValue({ level: 'info', defaultLevel: 'basic' });
 
-    render(<DebugLevelControl />);
+    render(
+      <ScopeProvider>
+        <DebugLevelControl />
+      </ScopeProvider>,
+    );
 
     const infoRadio = await screen.findByTestId('debug-level-info');
     await waitFor(() => expect(infoRadio).toBeChecked());
@@ -37,7 +46,11 @@ describe('DebugLevelControl', () => {
     fetchDebugLevel.mockResolvedValue({ level: 'basic', defaultLevel: 'basic' });
     updateDebugLevel.mockResolvedValue({ level: 'trace', defaultLevel: 'basic' });
 
-    render(<DebugLevelControl />);
+    render(
+      <ScopeProvider>
+        <DebugLevelControl />
+      </ScopeProvider>,
+    );
 
     await waitFor(() => expect(screen.getByTestId('debug-level-basic')).toBeChecked());
 
@@ -50,7 +63,11 @@ describe('DebugLevelControl', () => {
   it('surfaces an error and disables the control when the level is unavailable', async () => {
     fetchDebugLevel.mockRejectedValue(new Error('no active simulation'));
 
-    render(<DebugLevelControl />);
+    render(
+      <ScopeProvider>
+        <DebugLevelControl />
+      </ScopeProvider>,
+    );
 
     const offButton = await screen.findByTestId('debug-level-off');
     await waitFor(() => expect(offButton).toBeDisabled());

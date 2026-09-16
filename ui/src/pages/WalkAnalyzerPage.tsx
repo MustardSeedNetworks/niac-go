@@ -7,6 +7,7 @@ import { WalkProfileCreator } from '../components/walk/WalkProfileCreator';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { Tooltip } from '../ui/Tooltip';
 import { formatBitsPerSecond } from '../utils/format';
 
 const STATUS_BADGE: Record<string, string> = {
@@ -182,24 +183,28 @@ export const WalkAnalyzerPage: FC = () => {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.fromWalksDir')}</span>
-              <select
-                value={selectedFile}
-                onChange={(e) => setSelectedFile(e.target.value)}
-                disabled={filesLoading || files.length === 0}
-                title="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to analyze a walk outside this directory."
-                data-testid="walk-analyzer-picker"
-                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+              <Tooltip
+                text="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to analyze a walk outside this directory."
+                className="w-full"
               >
-                {filesLoading && <option>Loading…</option>}
-                {!filesLoading && files.length === 0 && (
-                  <option>{t('walkAnalyzer.noWalksFound')}</option>
-                )}
-                {files.map((f) => (
-                  <option key={f.name} value={f.name}>
-                    {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
-                  </option>
-                ))}
-              </select>
+                <select
+                  value={selectedFile}
+                  onChange={(e) => setSelectedFile(e.target.value)}
+                  disabled={filesLoading || files.length === 0}
+                  data-testid="walk-analyzer-picker"
+                  className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
+                >
+                  {filesLoading && <option>Loading…</option>}
+                  {!filesLoading && files.length === 0 && (
+                    <option>{t('walkAnalyzer.noWalksFound')}</option>
+                  )}
+                  {files.map((f) => (
+                    <option key={f.name} value={f.name}>
+                      {f.name} ({Math.round(f.sizeBytes / 1024)} KB)
+                    </option>
+                  ))}
+                </select>
+              </Tooltip>
               {filesError && (
                 <span className="mt-tight block text-xs text-status-error">{filesError}</span>
               )}
@@ -207,15 +212,19 @@ export const WalkAnalyzerPage: FC = () => {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.pastePathLabel')}</span>
-              <input
-                type="text"
-                value={customPath}
-                onChange={(e) => setCustomPath(e.target.value)}
-                placeholder="/srv/niac/walks/cisco-c9300.walk"
-                title="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                data-testid="walk-analyzer-path-input"
-                className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
-              />
+              <Tooltip
+                text="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
+                className="w-full"
+              >
+                <input
+                  type="text"
+                  value={customPath}
+                  onChange={(e) => setCustomPath(e.target.value)}
+                  placeholder="/srv/niac/walks/cisco-c9300.walk"
+                  data-testid="walk-analyzer-path-input"
+                  className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-status-info focus:outline-none"
+                />
+              </Tooltip>
             </label>
           </div>
 

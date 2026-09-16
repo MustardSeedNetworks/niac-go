@@ -23,6 +23,7 @@ import { Card, CardContent } from '../ui/Card';
 import { InfoPopover } from '../ui/InfoPopover';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
+import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
 import { fileToBase64 } from '../utils/file';
@@ -303,42 +304,45 @@ export const PcapAnalyzerPage: FC = () => {
                 <div className="flex flex-wrap items-center gap-compact">
                   {/* View Mode Toggle */}
                   <div className="flex rounded-lg border border-surface-border bg-bg-base/50 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('packets')}
-                      title={tPages('libraryPcaps.analyzer.tabPacketsTitle')}
-                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
-                        viewMode === 'packets'
-                          ? 'bg-brand-primary text-text-primary'
-                          : 'text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      {tPages('libraryPcaps.analyzer.tabPackets')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('stats')}
-                      title={tPages('libraryPcaps.analyzer.tabStatsTitle')}
-                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
-                        viewMode === 'stats'
-                          ? 'bg-brand-primary text-text-primary'
-                          : 'text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      {tPages('libraryPcaps.analyzer.tabStats')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('conversations')}
-                      title={tPages('libraryPcaps.analyzer.tabConversationsTitle')}
-                      className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
-                        viewMode === 'conversations'
-                          ? 'bg-brand-primary text-text-primary'
-                          : 'text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      {tPages('libraryPcaps.analyzer.tabConversations')}
-                    </button>
+                    <Tooltip text={tPages('libraryPcaps.analyzer.tabPacketsTitle')}>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('packets')}
+                        className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
+                          viewMode === 'packets'
+                            ? 'bg-brand-primary text-text-primary'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {tPages('libraryPcaps.analyzer.tabPackets')}
+                      </button>
+                    </Tooltip>
+                    <Tooltip text={tPages('libraryPcaps.analyzer.tabStatsTitle')}>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('stats')}
+                        className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
+                          viewMode === 'stats'
+                            ? 'bg-brand-primary text-text-primary'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {tPages('libraryPcaps.analyzer.tabStats')}
+                      </button>
+                    </Tooltip>
+                    <Tooltip text={tPages('libraryPcaps.analyzer.tabConversationsTitle')}>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('conversations')}
+                        className={`px-3 py-compact-md text-sm rounded-md transition-colors ${
+                          viewMode === 'conversations'
+                            ? 'bg-brand-primary text-text-primary'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {tPages('libraryPcaps.analyzer.tabConversations')}
+                      </button>
+                    </Tooltip>
                   </div>
 
                   <Button

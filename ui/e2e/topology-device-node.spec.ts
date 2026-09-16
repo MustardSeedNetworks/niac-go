@@ -5,7 +5,7 @@ import { disableAnimations } from './helpers/auth';
  * Topology DeviceNode tooltip contract.
  *
  * The card truncates the device name and shows `+N` overflow for IPs and
- * protocols, so `title` (hover) and `aria-label` (screen reader) are the only
+ * protocols, so the tooltip (hover/focus) and accessible name are the only
  * places the full values are reachable. That is the contract worth pinning.
  *
  * This spec used to call `test.skip` when the graph rendered zero nodes,
@@ -104,7 +104,7 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     await disableAnimations(page);
   });
 
-  test('every node carries the testid and identical title and aria-label', async ({ page }) => {
+  test('every node exposes its details on keyboard focus', async ({ page }) => {
     await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
     await page.goto('/topology');
     await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
@@ -113,14 +113,46 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     // The prerequisite is required, not hoped for: a zero-node page must fail
     // here rather than skip past the assertions below.
     await expect(nodes).toHaveCount(DEVICES.length);
+    // React Flow hides a node until it has measured it — the wrapper carries
+    // `visibility: hidden` — and a hidden element is not focusable, so focus()
+    // would be a silent no-op. toHaveCount only proves attachment, which is why
+    // this needs its own wait: on Linux WebKit the measure had not landed and
+    // the focus assertion burned its full timeout.
+    await expect(nodes.first()).toBeVisible();
 
     for (let i = 0; i < DEVICES.length; i++) {
       const node = nodes.nth(i);
-      const title = await node.getAttribute('title');
       const aria = await node.getAttribute('aria-label');
-      expect(title, `node ${i} has no title`).toBeTruthy();
-      // The hover tooltip and the screen-reader name must be the same text.
-      expect(aria, `node ${i} aria-label differs from title`).toBe(title);
+      expect(aria, `node ${i} has no accessible name`).toBeTruthy();
+      // Tab-order membership is asserted on the element, not by a Shift+Tab /
+      // Tab round trip. React Flow wraps every node in its own div[tabindex="0"]
+      // that precedes this button, so the round trip's Shift+Tab landed on that
+      // wrapper and depended on whether a given engine puts a non-control in
+      // sequential focus navigation — it measured the browser's focus model
+      // rather than this node's reachability. A non-disabled <button> with
+      // tabIndex >= 0 is the contract it stood in for, and it is the one
+      // .focus() cannot fake: a tabindex="-1" node answers .focus() and is
+      // still unreachable by Tab.
+      expect(
+        await node.evaluate((el) => (el as HTMLButtonElement).tabIndex),
+        `node ${i} is not in the tab order`,
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        await node.evaluate((el) => (el as HTMLButtonElement).disabled),
+        `node ${i} is disabled`,
+      ).toBe(false);
+      await expect(node).toBeVisible();
+      await node.focus();
+      await expect(node).toBeFocused();
+      const descriptionId = await node.getAttribute('aria-describedby');
+      expect(descriptionId).toBeTruthy();
+      const tooltip = page.locator(`[id="${descriptionId}"]`);
+      await expect(tooltip).toHaveRole('tooltip');
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveText(aria ?? '');
+      await page.keyboard.press('Escape');
+      await expect(tooltip).toBeHidden();
+      await expect(node).toBeFocused();
     }
   });
 
@@ -130,20 +162,45 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('topology-device-node')).toHaveCount(DEVICES.length);
 
+    // React Flow frames the graph with JavaScript after two animation frames;
+    // disabling CSS animations does not stop that viewport movement.
+    await page.locator('.react-flow__viewport').evaluate(
+      (viewport) =>
+        new Promise<void>((resolve) => {
+          let previous = '';
+          let stableFrames = 0;
+          const observe = () => {
+            const transform = getComputedStyle(viewport).transform;
+            stableFrames = transform === previous ? stableFrames + 1 : 0;
+            previous = transform;
+            if (stableFrames >= 3) resolve();
+            else requestAnimationFrame(observe);
+          };
+          requestAnimationFrame(observe);
+        }),
+    );
+
     // Asserted by value. The previous version only checked that an "IPs:"
     // section was non-empty *if it was present*, which passes for a node that
     // dropped every address.
     for (const device of DEVICES) {
       const node = page.getByTestId('topology-device-node').filter({ hasText: device.name });
-      await expect(node).toHaveAttribute('title', expectedTooltip(device));
+      await node.hover();
+      const descriptionId = await node.getAttribute('aria-describedby');
+      expect(descriptionId).toBeTruthy();
+      const tooltip = page.locator(`[id="${descriptionId}"]`);
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveText(expectedTooltip(device));
       await expect(node).toHaveAttribute('aria-label', expectedTooltip(device));
     }
 
     // Every IP must survive the card's `+N` overflow into the tooltip.
     const core = page.getByTestId('topology-device-node').filter({ hasText: 'core-sw-01' });
-    const coreTitle = (await core.getAttribute('title')) ?? '';
+    const coreDescriptionId = await core.getAttribute('aria-describedby');
+    expect(coreDescriptionId).toBeTruthy();
+    const coreText = await page.locator(`[id="${coreDescriptionId}"]`).textContent();
     for (const ip of DEVICES[0].ips) {
-      expect(coreTitle, `tooltip dropped ${ip}`).toContain(ip);
+      expect(coreText, `tooltip dropped ${ip}`).toContain(ip);
     }
   });
 
@@ -157,9 +214,14 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     // to require it, and could not notice the contradiction because it always
     // skipped. Pin the removal so it cannot come back.
     for (let i = 0; i < DEVICES.length; i++) {
-      const title =
-        (await page.getByTestId('topology-device-node').nth(i).getAttribute('title')) ?? '';
-      expect(title, 'tooltip must not claim a device status').not.toMatch(
+      const descriptionId = await page
+        .getByTestId('topology-device-node')
+        .nth(i)
+        .getAttribute('aria-describedby');
+      expect(descriptionId).toBeTruthy();
+      const description = await page.locator(`[id="${descriptionId}"]`).textContent();
+      expect(description).toBeTruthy();
+      expect(description, 'tooltip must not claim a device status').not.toMatch(
         /\b(online|offline|warning)\b/i,
       );
     }
