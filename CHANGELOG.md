@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.69](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.68...v0.95.69) (2026-09-16)
+
+
+### Bug Fixes
+
+* **api:** save every shipped scenario pack as a named network ([#2210](https://github.com/MustardSeedNetworks/niac-go/issues/2210)) ([f64ff9f](https://github.com/MustardSeedNetworks/niac-go/commit/f64ff9f671445837c3ac04b8a84b3179eb985b0d))
+* **ui:** make tooltip explanations keyboard accessible ([#2206](https://github.com/MustardSeedNetworks/niac-go/issues/2206)) ([4bc9745](https://github.com/MustardSeedNetworks/niac-go/commit/4bc97453d3913fe8b92c2e944ef1a798ab18de30))
+
 ## [0.95.68](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.67...v0.95.68) (2026-09-16)
 
 
