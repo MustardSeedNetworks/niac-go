@@ -10,24 +10,28 @@
  * 2. This file (theme.ts) - TypeScript tokens and utility functions
  * 3. Tailwind v4 @theme directive - CSS-first utility class generation
  *
- * BRAND COLORS (anchors constant across light + dark per 2026-05-22 audit):
- * - Primary:        Indigo #4f46e5 (Tailwind indigo-600) - filled buttons, glows
- * - Primary-strong: Indigo #3730a3 (indigo-700) - text/links on light surfaces (AA)
- * - Primary-soft:   Indigo #a5b4fc (indigo-300) - text/links on dark surfaces (AA)
- * - Brand-gold:     Mustard #d4a017 - cross-brand accent, warning, focus
+ * BRAND COLORS (fleet hue set C, owner 2026-09-15; values in
+ * theme/product-niac.css — this block had drifted a full generation behind it,
+ * still naming the #4f46e5 indigo the CSS left in 2026-05):
+ * - Primary:       Violet #6a3fa8 light / #9569d3 dark - filled buttons, glows
+ * - Accent:        Violet #56328a light / #b492e3 dark - gradient second stop
+ * - Text-accent:   #6a3fa8 light / #b492e3 dark - text and links
+ * - Accent-gold:   Mustard #8a6208 light / #b88a1e dark - eyebrows, accent icons.
+ *   Shared across the fleet in theme/msn-shared.css; it was a per-product
+ *   --color-brand-gold with the same value in all four repos until UI-FLEET-1.
  *
- * STATUS COLORS (tied to brand; constant across modes):
- * - Success: #4caf50 (= seed-500)
- * - Warning: #d4a017 (= mustard-500, brand cross-accent)
- * - Danger:  #ef4444 (coral red)
- * - Info:    #1976d2 (= stem-500)
+ * STATUS COLORS (fleet-shared in theme/msn-shared.css, not NIAC's to set):
+ * - Success: #2a7146 light / #3cb46e dark
+ * - Warning: #8a6208 light / #ca9721 dark
+ * - Danger:  #b93a3a light / #de8787 dark
+ * - Info:    #1263a8 light / #5da5e5 dark
  *
- * MODULE ACCENTS (5 differentiated hues, constant across modes):
- * - Topology:  #4f46e5 indigo  - network map / graph view
- * - Protocols: #0d9488 teal    - protocol stack, packet types
- * - Analyze:   #c026d3 fuchsia - capture inspection
- * - Inject:    #e11d48 rose    - traffic generation
- * - Templates: #d97706 amber   - saved configs / library
+ * MODULE ACCENTS (5 differentiated hues):
+ * - Topology:  #6a3fa8 violet  - network map / graph view (= the brand anchor)
+ * - Protocols: #0b6b62 teal    - protocol stack, packet types
+ * - Analyze:   #9333a8 fuchsia - capture inspection
+ * - Inject:    #b4143c rose    - traffic generation
+ * - Templates: #96450a amber   - saved configs / library
  *
  * DEVICE COLORS (NIAC-specific, orthogonal to brand — see themeDeviceColors.ts):
  * Router, Switch, Firewall, Server, Workstation, AP, IoT, Unknown.
