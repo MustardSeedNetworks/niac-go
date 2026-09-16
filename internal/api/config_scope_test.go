@@ -34,7 +34,7 @@ func checkConfigReplacementScope(t *testing.T, scope tokenstore.TokenScope, meth
 	req := httptest.NewRequest(method, "/api/v1/config",
 		strings.NewReader(`{"content":`+strconvJSON(updatedConfigYAML)+`}`))
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-CSRF-Token", testCSRFToken(t, server, token))
+	req.Header.Set("X-Csrf-Token", testCSRFToken(t, server, token))
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	denied := method != http.MethodGet && scope != tokenstore.ScopeAdmin
