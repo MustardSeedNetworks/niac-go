@@ -44,6 +44,7 @@ function describedChild(children: TooltipProps['children'], id: string): ReactNo
 
 export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, className = '' }) => {
   const id = useId();
+  const hasText = text != null && text !== '';
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const bubbleRef = useRef<HTMLSpanElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -53,7 +54,7 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
   const open = (hovered || focused) && !dismissed;
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || !hasText) return;
     const reposition = () => {
       const trigger = wrapperRef.current?.querySelector<HTMLElement>(`[aria-describedby~="${id}"]`);
       const bubble = bubbleRef.current;
@@ -80,11 +81,7 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
-  }, [id, open, side, text]);
-
-  if (text == null || text === '') {
-    return <>{typeof children === 'function' ? children({ 'aria-describedby': '' }) : children}</>;
-  }
+  }, [hasText, id, open, side, text]);
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: events bubble from the described focusable trigger
@@ -104,26 +101,31 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && open) {
+        if (event.key === 'Escape' && open && hasText) {
           setDismissed(true);
           event.stopPropagation();
         }
       }}
     >
-      {describedChild(children, id)}
-      {createPortal(
-        <span
-          ref={bubbleRef}
-          id={id}
-          role="tooltip"
-          hidden={!open}
-          style={position}
-          className="fixed z-[60] w-max max-w-[min(20rem,100vw)] whitespace-normal rounded-md bg-bg-base/95 px-cell py-compact text-xs text-text-primary ring-1 ring-knob/10"
-        >
-          {text}
-        </span>,
-        document.body,
-      )}
+      {hasText
+        ? describedChild(children, id)
+        : typeof children === 'function'
+          ? children({ 'aria-describedby': '' })
+          : children}
+      {hasText &&
+        createPortal(
+          <span
+            ref={bubbleRef}
+            id={id}
+            role="tooltip"
+            hidden={!open}
+            style={position}
+            className="fixed z-[60] w-max max-w-[min(20rem,100vw)] whitespace-normal rounded-md bg-bg-base/95 px-cell py-compact text-xs text-text-primary ring-1 ring-knob/10"
+          >
+            {text}
+          </span>,
+          document.body,
+        )}
     </span>
   );
 };

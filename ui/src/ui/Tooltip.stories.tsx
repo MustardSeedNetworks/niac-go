@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { expect, fn, userEvent, within } from 'storybook/test';
 import { Tooltip } from './Tooltip';
 
@@ -104,5 +105,27 @@ export const UnavailableAction: Story = {
     await userEvent.click(button);
     await expect(activate).not.toHaveBeenCalled();
     await expect(submit).not.toHaveBeenCalled();
+  },
+};
+
+export const ExplanationCleared: Story = {
+  render: () => {
+    const [text, setText] = useState<string | undefined>('Press Enter to acknowledge.');
+    return (
+      <Tooltip text={text}>
+        <button type="button" onClick={() => setText(undefined)}>
+          Acknowledge
+        </button>
+      </Tooltip>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole('button', { name: 'Acknowledge' });
+    await userEvent.tab();
+    await expect(button).toHaveFocus();
+    await expect(button).toHaveAccessibleDescription('Press Enter to acknowledge.');
+    await userEvent.keyboard('{Enter}');
+    await expect(button).toHaveFocus();
+    await expect(button).not.toHaveAccessibleDescription();
   },
 };

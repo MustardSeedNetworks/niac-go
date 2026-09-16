@@ -89,6 +89,20 @@ describe('Tooltip', () => {
     expect(bubble()).toBeVisible();
   });
 
+  it('preserves focus when a permission explanation disappears', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderTooltip();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Start' })).toHaveFocus();
+    rerender(
+      <Tooltip>
+        <button type="button">Start</button>
+      </Tooltip>,
+    );
+    expect(screen.getByRole('button', { name: 'Start' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Start' })).not.toHaveAccessibleDescription();
+  });
+
   it('keeps a description the caller already set', () => {
     render(
       <>
