@@ -118,9 +118,24 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
       const node = nodes.nth(i);
       const aria = await node.getAttribute('aria-label');
       expect(aria, `node ${i} has no accessible name`).toBeTruthy();
+      // Tab-order membership is asserted on the element, not by a Shift+Tab /
+      // Tab round trip. React Flow wraps every node in a div[tabindex="0"], and
+      // whether such a non-control joins sequential focus navigation is
+      // engine-specific: Linux WebKit skips it, so the round trip measured the
+      // browser's focus model rather than this node's reachability and failed
+      // there on the first node alone, while macOS WebKit and Chromium passed.
+      // A non-disabled <button> with tabIndex >= 0 is the contract the round
+      // trip was standing in for — and it is the one .focus() cannot fake, since
+      // a tabindex="-1" node answers .focus() and is still unreachable by Tab.
+      expect(
+        await node.evaluate((el) => (el as HTMLButtonElement).tabIndex),
+        `node ${i} is not in the tab order`,
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        await node.evaluate((el) => (el as HTMLButtonElement).disabled),
+        `node ${i} is disabled`,
+      ).toBe(false);
       await node.focus();
-      await page.keyboard.press('Shift+Tab');
-      await page.keyboard.press('Tab');
       await expect(node).toBeFocused();
       const descriptionId = await node.getAttribute('aria-describedby');
       expect(descriptionId).toBeTruthy();
