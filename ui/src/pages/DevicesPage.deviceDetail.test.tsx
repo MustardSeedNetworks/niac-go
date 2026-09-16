@@ -36,6 +36,7 @@ devices:
 `;
 
 const updateConfig = vi.fn();
+const updateDevice = vi.fn();
 const fetchConfig = vi.fn();
 
 vi.mock('../contexts/AppContext', () => ({
@@ -51,6 +52,7 @@ vi.mock('../api/client', () => ({
     ]),
   fetchConfig: () => fetchConfig(),
   updateConfig: (...args: unknown[]) => updateConfig(...args),
+  updateDevice: (...args: unknown[]) => updateDevice(...args),
 }));
 vi.mock('../api/library-client', () => ({
   fetchLibraryWalks: () => Promise.resolve([]),
@@ -86,6 +88,8 @@ describe('DevicesPage — device detail', () => {
       sizeBytes: CONFIG.length,
     });
     updateConfig.mockReset();
+    updateDevice.mockReset();
+    updateDevice.mockResolvedValue({ success: true });
     updateConfig.mockResolvedValue({
       content: CONFIG,
       path: '/tmp/config.yaml',
@@ -141,7 +145,7 @@ describe('DevicesPage — device detail', () => {
     expect(editor().value).not.toContain('devices:');
   });
 
-  it('splices the edit back into the whole config, preserving what it did not touch', async () => {
+  it('sends only the edited device to the device route, never the whole config', async () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByTestId('device-select-api-router');
@@ -152,12 +156,18 @@ describe('DevicesPage — device detail', () => {
     await user.type(editor(), 'name: api-router{enter}type: firewall');
     await user.click(screen.getByRole('button', { name: /save|reload|guardar/i }));
 
-    await waitFor(() => expect(updateConfig).toHaveBeenCalledTimes(1));
-    const sent = updateConfig.mock.calls[0]?.[0] as { content: string };
-    expect(sent.content).toContain("# operator's note, must survive an edit");
-    expect(sent.content).toContain('  - name: api-router\n    type: firewall');
-    expect(sent.content).toContain('  - name: core-switch');
-    expect(sent.content).not.toContain('10.10.0.1');
+    // #2173: a per-device edit goes to the device route, which stays at
+    // read-write. It must NOT be spliced into the whole document and sent to
+    // PUT /api/v1/config, which now replaces the topology and needs admin.
+    await waitFor(() => expect(updateDevice).toHaveBeenCalledTimes(1));
+    const [hostname, rawYaml] = updateDevice.mock.calls[0] as [string, string];
+    expect(hostname).toBe('api-router');
+    expect(rawYaml).toContain('name: api-router');
+    expect(rawYaml).toContain('type: firewall');
+    expect(rawYaml).not.toContain('10.10.0.1');
+    // Only this device's block leaves the browser: no sibling, no whole file.
+    expect(rawYaml).not.toContain('core-switch');
+    expect(updateConfig).not.toHaveBeenCalled();
   });
 
   it('refuses a fragment that does not parse, instead of writing it to the config', async () => {
@@ -212,7 +222,7 @@ describe('DevicesPage — device detail', () => {
       fireEvent.change(editor(), { target: { value: edited } });
       await user.click(screen.getByTestId('device-select-core-switch'));
       expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
-      if (choice === 'failed-save') updateConfig.mockRejectedValueOnce(new Error('Save refused'));
+      if (choice === 'failed-save') updateDevice.mockRejectedValueOnce(new Error('Save refused'));
       await user.click(screen.getByTestId(`unsaved-${choice === 'failed-save' ? 'save' : choice}`));
       if (choice === 'cancel' || choice === 'failed-save') {
         expect(editor().value).toBe(edited);
@@ -221,7 +231,7 @@ describe('DevicesPage — device detail', () => {
         );
       } else {
         await waitFor(() => expect(editor().value).toContain('name: core-switch'));
-        expect(updateConfig).toHaveBeenCalledTimes(choice === 'save' ? 1 : 0);
+        expect(updateDevice).toHaveBeenCalledTimes(choice === 'save' ? 1 : 0);
       }
     },
   );

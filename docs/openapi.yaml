@@ -613,6 +613,7 @@ paths:
             tags:
                 - Configuration
         patch:
+            description: Requires an admin-scoped token.
             operationId: patchApiV1Config
             responses:
                 "401":
@@ -626,7 +627,7 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                    description: Missing or invalid CSRF token.
+                    description: Admin scope required, or CSRF token missing or invalid.
                 "405":
                     content:
                         application/json:
@@ -658,6 +659,7 @@ paths:
             tags:
                 - Configuration
         post:
+            description: Requires an admin-scoped token.
             operationId: postApiV1Config
             responses:
                 "401":
@@ -671,7 +673,7 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                    description: Missing or invalid CSRF token.
+                    description: Admin scope required, or CSRF token missing or invalid.
                 "405":
                     content:
                         application/json:
@@ -703,6 +705,7 @@ paths:
             tags:
                 - Configuration
         put:
+            description: Requires an admin-scoped token.
             operationId: putApiV1Config
             responses:
                 "401":
@@ -716,7 +719,7 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                    description: Missing or invalid CSRF token.
+                    description: Admin scope required, or CSRF token missing or invalid.
                 "405":
                     content:
                         application/json:
