@@ -47,14 +47,16 @@ describe('ScenarioPackPicker', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('loads a versioned pack into the editable composer', async () => {
+  it('reports the pack itself as the chosen starting point', async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={onChange} />);
+    const onSelectPack = vi.fn();
+    render(<ScenarioPackPicker selectedPackId={null} onSelectPack={onSelectPack} />);
 
     await user.click(await screen.findByTestId('scenario-pack-hospital'));
 
-    expect(onChange).toHaveBeenCalledWith(hospital.request);
+    // The pack, not just its request: loading the counts without recording the
+    // choice left the wizard with no source at all (#2185).
+    expect(onSelectPack).toHaveBeenCalledWith(hospital);
     // The counts come from the pack, never from the prose: the four sites and
     // 128 radios are the default request's own shape (16 access switches x 2
     // radios x 4 sites), which is why a description may not restate them.
@@ -66,7 +68,7 @@ describe('ScenarioPackPicker', () => {
   it('renders localized pack metadata', async () => {
     await i18n.changeLanguage('es');
 
-    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={vi.fn()} />);
+    render(<ScenarioPackPicker selectedPackId={null} onSelectPack={vi.fn()} />);
 
     expect(await screen.findByText('Red hospitalaria')).toBeVisible();
     expect(screen.getByText(/Centro médico con acceso cableado resiliente/)).toBeVisible();
@@ -75,11 +77,26 @@ describe('ScenarioPackPicker', () => {
   it('separates presentation maps from scale workloads', async () => {
     fetchScenarioPacks.mockResolvedValueOnce([enterpriseScale, hospital]);
 
-    render(<ScenarioPackPicker request={defaultScenarioRequest()} onChange={vi.fn()} />);
+    render(<ScenarioPackPicker selectedPackId={null} onSelectPack={vi.fn()} />);
 
     expect(await screen.findByText('Presentation-ready maps')).toBeVisible();
     expect(screen.getByText('Scale testing')).toBeVisible();
     expect(screen.getByTestId('scenario-pack-hospital')).toBeVisible();
     expect(screen.getByTestId('scenario-pack-enterprise-scale')).toBeVisible();
+  });
+
+  it('marks only the chosen pack as pressed', async () => {
+    fetchScenarioPacks.mockResolvedValueOnce([enterpriseScale, hospital]);
+
+    render(<ScenarioPackPicker selectedPackId="hospital" onSelectPack={vi.fn()} />);
+
+    expect(await screen.findByTestId('scenario-pack-hospital')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByTestId('scenario-pack-enterprise-scale')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 });

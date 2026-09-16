@@ -2,6 +2,7 @@ import { Network } from 'lucide-react';
 import { type FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
+import type { ScenarioPack } from '../../api/scenario-client';
 import type { LibraryNetwork, NetworkInterface, Template } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
@@ -17,6 +18,7 @@ interface TemplateStepProps {
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
   onSelectFleet: () => void;
+  onSelectPack: (pack: ScenarioPack) => void;
   onFleetChange: (request: WizardState['fleetRequest']) => void;
   onInterfaceChange: (iface: string) => void;
 }
@@ -34,6 +36,7 @@ export const TemplateStep: FC<TemplateStepProps> = ({
   onUpload,
   onSelectEmpty,
   onSelectFleet,
+  onSelectPack,
   onFleetChange,
   onInterfaceChange,
 }) => {
@@ -107,6 +110,8 @@ export const TemplateStep: FC<TemplateStepProps> = ({
             <button
               type="button"
               data-testid="wizard-start-empty"
+              data-wizard-source="empty"
+              aria-pressed={state.source === 'empty'}
               onClick={onSelectEmpty}
               className={`rounded border px-3 py-row text-xs font-medium ${
                 state.source === 'empty'
@@ -123,9 +128,11 @@ export const TemplateStep: FC<TemplateStepProps> = ({
 
       <FleetGeneratorCard
         request={state.fleetRequest}
-        selected={state.source === 'generated'}
+        selected={state.source === 'generated' && state.fleetPackId === null}
+        selectedPackId={state.source === 'generated' ? state.fleetPackId : null}
         onChange={onFleetChange}
         onSelect={onSelectFleet}
+        onSelectPack={onSelectPack}
       />
 
       <ConfigPicker

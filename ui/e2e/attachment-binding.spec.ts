@@ -170,7 +170,6 @@ test('starts a generated pack without typing any part of the binding', async ({ 
   await page.getByTestId('wizard-interface-select').selectOption('lo0');
   await page.getByTestId('scenario-pack-hospital').click();
   await expect(page.getByTestId('fleet-domain')).toHaveValue('care.example');
-  await page.getByTestId('wizard-select-fleet').click();
   for (let step = 0; step < 5; step += 1) {
     await page.getByTestId('wizard-next-button').click();
   }

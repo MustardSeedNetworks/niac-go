@@ -5,6 +5,7 @@ import {
   isScenarioRequestValid,
   type ScenarioCounts,
   type ScenarioGenerateRequest,
+  type ScenarioPack,
 } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -14,9 +15,12 @@ import { ScenarioPackPicker } from './ScenarioPackPicker';
 
 interface FleetGeneratorCardProps {
   request: ScenarioGenerateRequest;
+  /** True only for the hand-tuned fleet; a pack selection highlights its own card. */
   selected: boolean;
+  selectedPackId: string | null;
   onChange: (request: ScenarioGenerateRequest) => void;
   onSelect: () => void;
+  onSelectPack: (pack: ScenarioPack) => void;
 }
 
 const countFields: Array<keyof ScenarioCounts> = [
@@ -47,8 +51,10 @@ const countLimits: Record<keyof ScenarioCounts, { min: number; max: number; step
 export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
   request,
   selected,
+  selectedPackId,
   onChange,
   onSelect,
+  onSelectPack,
 }) => {
   const { t } = useTranslation('pages');
   const updateCount = (field: keyof ScenarioCounts, value: number) => {
@@ -94,6 +100,8 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
             variant="outline"
             className="min-h-11"
             data-testid="wizard-select-fleet"
+            data-wizard-source="generated"
+            aria-pressed={selected}
             disabled={!isScenarioRequestValid(request)}
             onClick={onSelect}
           >
@@ -101,7 +109,7 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
           </Button>
         </div>
 
-        <ScenarioPackPicker request={request} onChange={onChange} />
+        <ScenarioPackPicker selectedPackId={selectedPackId} onSelectPack={onSelectPack} />
 
         <div className="grid gap-default md:grid-cols-3">
           {(['domain', 'snmpCommunity', 'attachmentName'] as const).map((field) => (

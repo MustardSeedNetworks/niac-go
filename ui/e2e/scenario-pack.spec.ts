@@ -128,7 +128,31 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
   await page.getByTestId('wizard-interface-select').selectOption('lo0');
   await page.getByTestId('scenario-pack-hospital').click();
   await expect(page.getByTestId('fleet-domain')).toHaveValue('care.example');
+  const selectedSources = page.locator(
+    '[data-testid="wizard-step-panel"] [data-wizard-source][aria-pressed="true"]',
+  );
+  await expect(selectedSources).toHaveCount(1);
+  await expect(page.getByTestId('scenario-pack-hospital')).toHaveAttribute('aria-pressed', 'true');
+
   await page.getByTestId('wizard-select-fleet').click();
+  await expect(selectedSources).toHaveCount(1);
+  await expect(page.getByTestId('wizard-select-fleet')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('scenario-pack-hospital')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.getByTestId('scenario-pack-hospital').click();
+  await page.getByTestId('fleet-domain').fill('custom.example');
+  await expect(selectedSources).toHaveCount(1);
+  await expect(page.getByTestId('wizard-select-fleet')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('scenario-pack-hospital')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.getByTestId('wizard-start-empty').click();
+  await expect(selectedSources).toHaveCount(1);
+  await expect(page.getByTestId('wizard-start-empty')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('scenario-pack-hospital').click();
+  await expect(selectedSources).toHaveCount(1);
+  await expect(page.getByTestId('scenario-pack-hospital')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('fleet-domain')).toHaveValue('care.example');
   await page.getByTestId('wizard-next-button').click();
 
   await expect.poll(() => generated).toBe(true);
