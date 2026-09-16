@@ -2050,7 +2050,7 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-                    description: Request body larger than 1048576 bytes.
+                    description: Request body larger than 62915584 bytes.
                 "429":
                     content:
                         application/json:
