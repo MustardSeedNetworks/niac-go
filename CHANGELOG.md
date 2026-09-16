@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.67](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.66...v0.95.67) (2026-09-16)
+
+
+### Bug Fixes
+
+* **ui:** keep one wizard starting point selected ([#2205](https://github.com/MustardSeedNetworks/niac-go/issues/2205)) ([c45af1d](https://github.com/MustardSeedNetworks/niac-go/commit/c45af1dc1c23aabb3939cecd5bf48d8d40fb8c88))
+
+
+### Miscellaneous
+
+* **deps:** update node.js to v26.8.2 ([#2207](https://github.com/MustardSeedNetworks/niac-go/issues/2207)) ([48e6d0c](https://github.com/MustardSeedNetworks/niac-go/commit/48e6d0c1c956b5ff959e196551a4df3dfd36551d))
+
 ## [0.95.66](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.65...v0.95.66) (2026-09-15)
 
 
