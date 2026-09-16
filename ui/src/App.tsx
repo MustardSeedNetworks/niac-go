@@ -7,7 +7,7 @@ import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
-import { pageHelp } from './data/page-help';
+import { pageHelpRoutes } from './data/page-help';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useNavGroups } from './navGroups';
@@ -173,7 +173,7 @@ const PageWithErrorBoundary = memo(
     const location = useLocation();
     // Dynamic routes (the per-device editor) carry no page help; they get no
     // (?) rather than one that opens on someone else's content.
-    const documented = page.path in pageHelp;
+    const documented = pageHelpRoutes.includes(page.path);
     return (
       <PageErrorBoundary key={location.pathname}>
         <section className="stack-xl">

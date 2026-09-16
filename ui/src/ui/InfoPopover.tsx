@@ -14,18 +14,8 @@ export interface InfoPopoverProps {
 }
 
 /**
- * Click/focus-triggered jargon-disclosure popover.
- *
- * Unlike Tooltip.tsx (hover-only, for formatted enrichment on elements that
- * are already operable another way), InfoPopover is the trigger itself: a
- * small "i" button that opens a dismissable panel explaining a technical
- * term inline. Needed because hover-only disclosure is unusable for
- * keyboard/touch/screen-reader users, and jargon definitions are the
- * primary content here, not a bonus hint.
- *
- * a11y: button toggles `aria-expanded` and `aria-controls`; the panel is
- * `role="dialog"` with `aria-labelledby`/`aria-describedby`. Escape closes
- * and returns focus to the trigger; a mousedown outside the panel closes it.
+ * Inline disclosure for longer definitions. Escape returns focus to the
+ * trigger; clicking outside dismisses the panel.
  */
 export const InfoPopover: FC<InfoPopoverProps> = ({ label, title, children, className = '' }) => {
   const [open, setOpen] = useState(false);

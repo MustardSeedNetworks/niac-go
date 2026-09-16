@@ -7,12 +7,12 @@
  * reference, and the page header's (?) opens the drawer straight to it.
  *
  * Page titles come from the `pages` namespace, so this list is translated
- * even though the help bodies are English.
+ * along with the short help bodies.
  */
 
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { pageHelp } from '../../data/page-help';
+import { getPageHelp, type PageHelpBlock } from '../../data/page-help';
 import { usePages } from '../../pageRegistry';
 import { cn } from '../../styles/theme';
 import { PageHelpBody } from './PageHelpBody';
@@ -25,8 +25,7 @@ interface PagesSectionProps {
 }
 
 /** Flattened block text, for matching a search query against page content. */
-function bodyText(path: string): string {
-  const blocks = pageHelp[path] ?? [];
+function bodyText(blocks: PageHelpBlock[]): string {
   const parts: string[] = [];
   for (const block of blocks) {
     if (block.kind === 'paragraph' || block.kind === 'heading') {
@@ -48,12 +47,15 @@ export function PagesSection({
   onSelectPath,
 }: PagesSectionProps): ReactElement {
   const { t } = useTranslation('help');
+  const pageHelp = getPageHelp(t);
   const documented = usePages().filter((page) => pageHelp[page.path]);
 
   const query = searchQuery.trim().toLowerCase();
   const matches = query
     ? documented.filter(
-        (page) => page.title.toLowerCase().includes(query) || bodyText(page.path).includes(query),
+        (page) =>
+          page.title.toLowerCase().includes(query) ||
+          bodyText(pageHelp[page.path] ?? []).includes(query),
       )
     : documented;
 

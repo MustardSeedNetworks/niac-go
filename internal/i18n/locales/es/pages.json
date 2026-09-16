@@ -325,7 +325,8 @@
       "siteOctet": "Octeto de dirección",
       "sites": "Sitios",
       "snmpCommunity": "Comunidad SNMP",
-      "title": "Generar una flota multisitio"
+      "title": "Generar una flota multisitio",
+      "customize": "Personalizar el conjunto generado"
     },
     "fleetDefaults": {
       "captureHelp": "Reproduce una captura grabada junto a los dispositivos simulados. Solo una captura: el runtime reproduce exactamente una y el cargador rechaza más.",
@@ -410,7 +411,10 @@
       "startEmpty": "Empezar vacío",
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
       "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
-      "startingLabel": "Preparando borrador…"
+      "startingLabel": "Preparando borrador…",
+      "startingPoint": "Punto de partida",
+      "browseLibrary": "Explorar biblioteca",
+      "librarySelection": "Seleccionado: {{name}} — cambiar selección"
     },
     "title": "Nueva simulación",
     "topology": {
@@ -1177,7 +1181,19 @@
     "dropLocalFileTitle": "Descartar el archivo local",
     "selectItemTitle": "Seleccionar {{name}}",
     "localTag": "Local",
-    "previewTemplateYamlTitle": "Vista previa del YAML de la plantilla"
+    "previewTemplateYamlTitle": "Vista previa del YAML de la plantilla",
+    "family": "Tipo de dispositivo",
+    "allFamilies": "Todos los tipos",
+    "families": {
+      "basic": "Básico",
+      "router": "Router",
+      "switch": "Switch",
+      "access-point": "Punto de acceso",
+      "server": "Servidor",
+      "firewall": "Cortafuegos",
+      "complete": "Red completa",
+      "custom": "Personalizado"
+    }
   },
   "libraryFiles": {
     "actionsHeader": "Acciones",

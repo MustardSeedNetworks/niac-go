@@ -49,15 +49,6 @@
     "contents": "Páginas",
     "empty": "Ninguna página coincide con esa búsqueda."
   },
-  "jargon": {
-    "bpf": "Una expresión de Berkeley Packet Filter (BPF) aplicada por el motor de captura. Los paquetes que no coinciden se descartan antes de la captura — nunca llegan al búfer, a diferencia de un filtro de visualización.",
-    "fiveTuple": "Una 5-tuple es la combinación (protocolo, IP:puerto de origen, IP:puerto de destino) que identifica de forma única una conversación TCP/UDP.",
-    "librarySource": "los archivos starter vienen incluidos con NIAC, los archivos bundle proceden del paquete de contenido publicado (niac content install), y los archivos user se añadieron o editaron localmente.",
-    "oid": "Un OID (object identifier) es la dirección numérica con puntos de un único valor en un árbol MIB de SNMP, p. ej. 1.3.6.1.2.1.1.1.0 para sysDescr.",
-    "pcap": "PCAP (packet capture) es el formato de archivo usado para grabar y reproducir el tráfico de red capturado en la red.",
-    "snmpWalk": "Un SNMP walk es una secuencia guardada de pares OID/valor recopilada al recorrer el árbol MIB de un dispositivo con solicitudes GetNext. NIAC reproduce estos archivos para simular las respuestas SNMP de un dispositivo.",
-    "walkProvenance": "De dónde procede el contenido de un walk. \"Capturado\" significa un walk SNMP de un dispositivo real, procesado por el sanitizador. \"Generado\" significa que NIAC lo construyó a partir de un perfil: responde, pero nunca se midió ningún dispositivo."
-  },
   "faq": {
     "title": "Preguntas frecuentes"
   },
@@ -68,5 +59,646 @@
   },
   "shortcuts": {
     "note": "Los atajos de teclado son contextuales y pueden variar según la página actual."
+  },
+  "glossaryCategories": {
+    "protocol": "Protocolos",
+    "concept": "Conceptos",
+    "device": "Tipos de dispositivo",
+    "niac": "Términos de NIAC",
+    "security": "Seguridad"
+  },
+  "glossary": {
+    "arp": {
+      "term": "ARP",
+      "definition": "Address Resolution Protocol (RFC 826). Asocia direcciones IPv4 con direcciones MAC en un enlace Ethernet local."
+    },
+    "cdp": {
+      "term": "CDP",
+      "definition": "Cisco Discovery Protocol. Protocolo de descubrimiento de capa 2 de Cisco; anuncia la identidad, las capacidades y la plataforma del dispositivo cada 60 segundos."
+    },
+    "dhcp": {
+      "term": "DHCP",
+      "definition": "Dynamic Host Configuration Protocol (RFC 2131). Asigna direcciones IP, puertas de enlace, servidores DNS y otros parámetros de red a los clientes."
+    },
+    "dhcpv6": {
+      "term": "DHCPv6",
+      "definition": "Variante de DHCP para IPv6 (RFC 8415). Tiene dos modos: con estado (asigna direcciones) y sin estado (solo opciones, como complemento de SLAAC)."
+    },
+    "discover": {
+      "term": "DISCOVER",
+      "definition": "Primer mensaje DHCPv4: el cliente difunde una solicitud de dirección IP. Le siguen OFFER, REQUEST y ACK."
+    },
+    "offer": {
+      "term": "OFFER",
+      "definition": "Segundo mensaje DHCPv4: el servidor responde a DISCOVER con una propuesta de concesión."
+    },
+    "request": {
+      "term": "REQUEST",
+      "definition": "Tercer mensaje DHCPv4: el cliente confirma que desea la concesión ofrecida."
+    },
+    "ack": {
+      "term": "ACK",
+      "definition": "Cuarto mensaje DHCPv4: el servidor confirma la concesión."
+    },
+    "dns": {
+      "term": "DNS",
+      "definition": "Domain Name System (RFC 1035). Convierte nombres en direcciones IP (registros A y AAAA) y direcciones IP en nombres (PTR)."
+    },
+    "aRecord": {
+      "term": "Registro A",
+      "definition": "Registro DNS que asocia un nombre con una dirección IPv4."
+    },
+    "aaaa": {
+      "term": "AAAA",
+      "definition": "Registro DNS que asocia un nombre con una dirección IPv6."
+    },
+    "ptr": {
+      "term": "PTR",
+      "definition": "Registro de búsqueda inversa de DNS: convierte una dirección IP en un nombre."
+    },
+    "recursiveResolver": {
+      "term": "Resolutor recursivo",
+      "definition": "Servidor DNS que recorre la jerarquía de nombres para resolver consultas del cliente. NIAC no actúa como resolutor recursivo."
+    },
+    "authoritativeServer": {
+      "term": "Servidor autoritativo",
+      "definition": "Servidor DNS que conserva los registros de una zona. NIAC actúa como servidor autoritativo para las zonas configuradas."
+    },
+    "edp": {
+      "term": "EDP",
+      "definition": "Extreme Discovery Protocol: protocolo de descubrimiento de capa 2 de Extreme Networks, anterior a LLDP."
+    },
+    "fdp": {
+      "term": "FDP",
+      "definition": "Foundry Discovery Protocol: protocolo de descubrimiento de Foundry, Brocade y Ruckus."
+    },
+    "ftp": {
+      "term": "FTP",
+      "definition": "File Transfer Protocol (RFC 959). NIAC implementa el anuncio y el intercambio inicial, sin transferir archivos reales."
+    },
+    "http": {
+      "term": "HTTP",
+      "definition": "Hypertext Transfer Protocol. NIAC incluye un servidor HTTP/1.1 mínimo con rutas configurables."
+    },
+    "icmp": {
+      "term": "ICMP",
+      "definition": "Internet Control Message Protocol: mensajes de ping, traceroute e informes de error."
+    },
+    "icmpv6": {
+      "term": "ICMPv6",
+      "definition": "Versión de ICMP para IPv6. Incluye Neighbor Discovery (ND), que sustituye a ARP en IPv6."
+    },
+    "iperf3": {
+      "term": "iperf3",
+      "definition": "Protocolo de medición del throughput de red. NIAC implementa el canal de control, pero no realiza pruebas reales de throughput."
+    },
+    "lacp": {
+      "term": "LACP",
+      "definition": "Link Aggregation Control Protocol (IEEE 802.1AX). Permite que varios enlaces físicos funcionen como un único enlace lógico."
+    },
+    "lldp": {
+      "term": "LLDP",
+      "definition": "Link Layer Discovery Protocol (IEEE 802.1AB). Estándar de descubrimiento de capa 2 independiente del fabricante que sustituye a CDP."
+    },
+    "mdns": {
+      "term": "mDNS",
+      "definition": "Multicast DNS (RFC 6762). Bonjour y Avahi lo utilizan para descubrir servicios en la red local."
+    },
+    "netbios": {
+      "term": "NetBIOS",
+      "definition": "Protocolo clásico de nombres y servicios de Windows (RFC 1001/1002). NIAC responde a consultas de nombres NBSTAT."
+    },
+    "snmp": {
+      "term": "SNMP",
+      "definition": "Simple Network Management Protocol. Permite consultar y supervisar el estado de los dispositivos mediante OID."
+    },
+    "snmpv1": {
+      "term": "SNMPv1",
+      "definition": "Versión original de SNMP (RFC 1157). Usa autenticación mediante cadena de comunidad, contadores de 32 bits y notificaciones sin confirmación."
+    },
+    "snmpv2c": {
+      "term": "SNMPv2c",
+      "definition": "SNMP v2 con autenticación mediante cadena de comunidad (RFC 3416/3418). Añade GetBulk y contadores de 64 bits."
+    },
+    "snmpv3": {
+      "term": "SNMPv3",
+      "definition": "SNMP con autenticación basada en USM y cifrado opcional (RFC 3414/3826)."
+    },
+    "stpRSTPMSTP": {
+      "term": "STP / RSTP / MSTP",
+      "definition": "Familia Spanning Tree Protocol (IEEE 802.1D / 802.1w / 802.1s). Evita bucles mediante el intercambio de BPDU."
+    },
+    "tcp": {
+      "term": "TCP",
+      "definition": "Transmission Control Protocol: transporte fiable y ordenado utilizado por HTTP, FTP y otros protocolos."
+    },
+    "udp": {
+      "term": "UDP",
+      "definition": "User Datagram Protocol: transporte ligero sin conexión utilizado por DNS, SNMP y DHCP."
+    },
+    "bridge": {
+      "term": "Puente",
+      "definition": "Dispositivo que reenvía tramas entre dos o más segmentos LAN en la capa 2. Los switches son puentes de varios puertos."
+    },
+    "broadcastDomain": {
+      "term": "Dominio de difusión",
+      "definition": "Conjunto de dispositivos que reciben las tramas de difusión de los demás. Una VLAN define un dominio de difusión."
+    },
+    "bpdu": {
+      "term": "BPDU",
+      "definition": "Bridge Protocol Data Unit: tramas que intercambia STP para negociar una topología sin bucles."
+    },
+    "bpf": {
+      "term": "BPF",
+      "definition": "Expresión Berkeley Packet Filter (BPF) aplicada por el motor de captura. Los paquetes que no coinciden se descartan antes de la captura: nunca llegan al búfer, a diferencia de un filtro de visualización."
+    },
+    "capabilityTLV": {
+      "term": "TLV de capacidades",
+      "definition": "En LLDP/CDP, un TLV que anuncia el tipo de dispositivo: router, puente, AP o estación."
+    },
+    "chassisID": {
+      "term": "ID de chasis",
+      "definition": "En LLDP, identificador único del chasis del dispositivo, normalmente su dirección MAC."
+    },
+    "communityString": {
+      "term": "Cadena de comunidad",
+      "definition": "Secreto compartido utilizado para autenticar solicitudes SNMPv1/v2c. El valor histórico «public» es inseguro."
+    },
+    "defaultGateway": {
+      "term": "Puerta de enlace predeterminada",
+      "definition": "Router al que un equipo envía el tráfico destinado a otras subredes."
+    },
+    "eui64": {
+      "term": "EUI-64",
+      "definition": "Método para generar un identificador de interfaz de 64 bits a partir de una MAC de 48 bits; se usa para autoconfigurar direcciones IPv6 de enlace local."
+    },
+    "frame": {
+      "term": "Trama",
+      "definition": "Paquete de capa 2: la unidad de datos que utiliza Ethernet."
+    },
+    "gateway": {
+      "term": "Puerta de enlace",
+      "definition": "Término general para un router que conecta redes distintas."
+    },
+    "inform": {
+      "term": "Inform",
+      "definition": "Notificación SNMP con confirmación de recepción. Añade fiabilidad porque el receptor debe confirmar que la recibió."
+    },
+    "ipcSocket": {
+      "term": "Socket IPC",
+      "definition": "Socket de dominio Unix que utiliza la CLI de niac para comunicarse con el servicio en ejecución. Ruta predeterminada: `/tmp/niac.sock`."
+    },
+    "jumboFrame": {
+      "term": "Trama jumbo",
+      "definition": "Trama Ethernet con una MTU mayor que los 1500 bytes habituales; en redes de almacenamiento suele ser de 9000 bytes."
+    },
+    "lease": {
+      "term": "Concesión",
+      "definition": "Dirección IP asignada por DHCP junto con su duración. Al caducar, el cliente debe renovarla o liberarla."
+    },
+    "macAddress": {
+      "term": "Dirección MAC",
+      "definition": "Dirección Media Access Control. Identificador de 48 bits por interfaz de red, con formato aa:bb:cc:dd:ee:ff."
+    },
+    "mib": {
+      "term": "MIB",
+      "definition": "Management Information Base. Esquema que describe el significado de los OID de SNMP."
+    },
+    "mtu": {
+      "term": "MTU",
+      "definition": "Maximum Transmission Unit: la mayor carga útil que una interfaz puede transportar en una trama; en Ethernet suele ser de 1500 bytes."
+    },
+    "multicast": {
+      "term": "Multidifusión",
+      "definition": "Tramas enviadas a una dirección de grupo: un emisor y varios receptores. LLDP, CDP, STP y mDNS utilizan multidifusión."
+    },
+    "oid": {
+      "term": "OID",
+      "definition": "Un OID (identificador de objeto) es la dirección numérica separada por puntos de un valor en el árbol MIB de SNMP; por ejemplo, 1.3.6.1.2.1.1.1.0 para sysDescr."
+    },
+    "option82": {
+      "term": "Opción 82",
+      "definition": "Opción de información del agente de retransmisión DHCP. Permite informar al servidor del puerto por el que llegó el cliente."
+    },
+    "oui": {
+      "term": "OUI",
+      "definition": "Organizationally Unique Identifier: los primeros 24 bits de una dirección MAC, que identifican al fabricante."
+    },
+    "pcap": {
+      "term": "PCAP",
+      "definition": "PCAP (captura de paquetes) es el formato de archivo utilizado para registrar y reproducir el tráfico capturado en la red."
+    },
+    "poe": {
+      "term": "PoE",
+      "definition": "Power over Ethernet (IEEE 802.3af/at/bt). Suministra energía a los dispositivos a través del cable de datos."
+    },
+    "portChannel": {
+      "term": "Canal de puertos",
+      "definition": "Grupo de interfaces físicas presentado como una única interfaz lógica. Se negocia mediante LACP."
+    },
+    "rawSocket": {
+      "term": "Socket sin procesar",
+      "definition": "Socket que entrega tramas de capa 2 o 3 sin el procesamiento de protocolos del sistema operativo. NIAC necesita estos sockets, que normalmente requieren root."
+    },
+    "relayAgent": {
+      "term": "Agente de retransmisión",
+      "definition": "Dispositivo que reenvía solicitudes DHCP entre subredes: DHCP DISCOVER es una difusión y los routers no reenvían difusiones."
+    },
+    "sysdescr": {
+      "term": "sysDescr",
+      "definition": "SNMP sysDescr.0: cadena con la descripción del propio dispositivo. Las herramientas la utilizan para identificar al fabricante."
+    },
+    "trap": {
+      "term": "Trap",
+      "definition": "Mensaje SNMP que un dispositivo envía a un receptor configurado sin una solicitud previa. Inform es una notificación con confirmación."
+    },
+    "tlv": {
+      "term": "TLV",
+      "definition": "Type-Length-Value. Codificación utilizada por LLDP, CDP y las opciones DHCP: un tipo, una longitud y los datos."
+    },
+    "trunk": {
+      "term": "Enlace trunk",
+      "definition": "Puerto que transporta varias VLAN, con cada trama etiquetada mediante 802.1Q."
+    },
+    "ttl": {
+      "term": "TTL",
+      "definition": "Time-To-Live: valor que limita el tiempo durante el que un paquete o anuncio LLDP se considera válido."
+    },
+    "vlan": {
+      "term": "VLAN",
+      "definition": "Virtual LAN (IEEE 802.1Q). Permite dividir una red física en varios dominios de difusión."
+    },
+    "accessPointAP": {
+      "term": "Punto de acceso (AP)",
+      "definition": "Dispositivo inalámbrico que conecta clientes Wi-Fi con una LAN cableada."
+    },
+    "firewall": {
+      "term": "Cortafuegos",
+      "definition": "Dispositivo que aplica una política de seguridad al tráfico entre zonas."
+    },
+    "host": {
+      "term": "Equipo",
+      "definition": "Sistema final de propósito general en la red: PC, servidor o sensor IoT."
+    },
+    "nms": {
+      "term": "NMS",
+      "definition": "Network Management System: plataforma que consulta y supervisa dispositivos, como SolarWinds, LibreNMS o Zabbix."
+    },
+    "router": {
+      "term": "Router",
+      "definition": "Dispositivo que reenvía paquetes entre redes en la capa 3."
+    },
+    "switch": {
+      "term": "Switch",
+      "definition": "Puente de varios puertos que reenvía tramas Ethernet según las tablas de direcciones MAC."
+    },
+    "workstation": {
+      "term": "Estación de trabajo",
+      "definition": "Equipo de un usuario final: ordenador de escritorio o portátil."
+    },
+    "deviceSimulator": {
+      "term": "Simulador de dispositivos",
+      "definition": "NIAC simula uno o más dispositivos de red en una interfaz real."
+    },
+    "daemonMode": {
+      "term": "Modo servicio",
+      "definition": "NIAC se ejecuta de forma continua con la interfaz web integrada activa. Se inicia con `niac daemon`."
+    },
+    "singleShotMode": {
+      "term": "Modo de ejecución única",
+      "definition": "NIAC ejecuta una configuración en primer plano y después termina. Se inicia con `niac daemon --once <iface> <config>`."
+    },
+    "topologyConfig": {
+      "term": "Configuración de topología",
+      "definition": "Archivo YAML que describe la red simulada: dispositivos, protocolos y VLAN."
+    },
+    "faultInjection": {
+      "term": "Inyección de fallos",
+      "definition": "Provocar un fallo en un dispositivo simulado durante la ejecución mediante la interfaz web o la API."
+    },
+    "walkFile": {
+      "term": "Archivo de walk SNMP",
+      "definition": "Archivo de texto con líneas SNMP `OID = TYPE: VALUE` que usa el agente SNMP de NIAC para generar respuestas realistas."
+    },
+    "captureBuffer": {
+      "term": "Búfer de captura",
+      "definition": "PCAP circular en memoria del servicio. Use `niac dump` para guardarlo en disco."
+    },
+    "template": {
+      "term": "Plantilla",
+      "definition": "Configuración YAML inicial incluida para un tipo de dispositivo habitual. Se enumeran con `niac template list`."
+    },
+    "persona": {
+      "term": "Perfil de dispositivo",
+      "definition": "Tipo de dispositivo (router / switch / firewall / server / ap / iot / unknown) que aplica valores predeterminados adecuados."
+    },
+    "apiToken": {
+      "term": "Token de API",
+      "definition": "Token Bearer que protege la API REST del servicio NIAC. Se establece mediante la variable de entorno NIAC_API_TOKEN."
+    },
+    "rawSocketPrivilege": {
+      "term": "Permiso de socket sin procesar",
+      "definition": "Permiso del sistema operativo necesario para abrir sockets de capa 2 o 3. Normalmente root, o CAP_NET_RAW en Linux."
+    },
+    "fiveTuple": {
+      "term": "5-tupla",
+      "definition": "Combinación de protocolo, IP:puerto de origen e IP:puerto de destino que identifica de forma única una conversación TCP/UDP."
+    },
+    "librarySource": {
+      "term": "Origen de la biblioteca",
+      "definition": "Los archivos starter se incluyen con NIAC, los bundle proceden del paquete de contenido publicado (`niac content install`) y los user se añaden o editan localmente."
+    },
+    "snmpWalk": {
+      "term": "Walk SNMP",
+      "definition": "Un walk SNMP es una secuencia guardada de pares OID/valor obtenida al recorrer el árbol MIB de un dispositivo con solicitudes GetNext. NIAC reproduce estos archivos para simular las respuestas SNMP del dispositivo."
+    },
+    "walkProvenance": {
+      "term": "Procedencia del walk",
+      "definition": "Origen del contenido del walk. «Capturado» procede de un walk SNMP de un dispositivo real y pasa por el proceso de eliminación de datos sensibles. «Generado» se crea a partir de un perfil: responde, pero no se ha medido ningún dispositivo real."
+    },
+    "scenarioPack": {
+      "term": "Paquete de escenario",
+      "definition": "Punto de partida con versión para una red completa, como un hospital o un campus. Seleccione un paquete en Nueva simulación para crear un borrador editable."
+    },
+    "draft": {
+      "term": "Borrador",
+      "definition": "Configuración de simulación guardada y editable. Los cambios del borrador no modifican la simulación en ejecución; revíselo e inícielo cuando esté listo."
+    },
+    "session": {
+      "term": "Sesión",
+      "definition": "Simulación en ejecución, iniciada desde una configuración revisada en una interfaz seleccionada. Detenga la sesión para detener sus dispositivos simulados."
+    },
+    "fleet": {
+      "term": "Conjunto de dispositivos",
+      "definition": "Colección de dispositivos simulados de una red. Genérela eligiendo las sedes y las cantidades de dispositivos; después edítela en el asistente."
+    }
+  },
+  "pageHelp": {
+    "dashboard": {
+      "block0": {
+        "text": "Vista en tiempo real del servicio: contadores de paquetes por protocolo, simulaciones recientes, cantidad de dispositivos y estado reciente de las alertas."
+      },
+      "block1": {
+        "text": "Dónde continuar"
+      },
+      "block2": {
+        "item0": {
+          "term": "Simulación",
+          "description": "para iniciar o detener una ejecución."
+        },
+        "item1": {
+          "term": "Dispositivos activos",
+          "description": "para ver los dispositivos de la configuración en ejecución."
+        },
+        "item2": {
+          "term": "Paquetes",
+          "description": "para observar el tráfico en tiempo real."
+        },
+        "item3": {
+          "term": "Alertas",
+          "description": "para establecer el umbral y el destino del webhook."
+        }
+      }
+    },
+    "runtime": {
+      "block0": {
+        "text": "Inicie, detenga e inspeccione la simulación. Elija una interfaz de red y una configuración YAML; el servicio creará los perfiles de dispositivo solicitados en esa interfaz."
+      },
+      "block1": {
+        "text": "Consejos"
+      },
+      "block2": {
+        "item0": "**Descargar YAML** exporta la configuración en ejecución. Sirve para guardar el resultado de las importaciones y las plantillas e incorporarlo al control de versiones.",
+        "item1": "`capture_playbacks:` en el YAML inicia automáticamente una reproducción PCAP junto con la simulación. **Tráfico** permite cambiar el archivo durante la ejecución.",
+        "item2": "Use `lo0` (macOS) o `lo` (Linux) para realizar pruebas locales seguras."
+      }
+    },
+    "new_simulation": {
+      "block0": {
+        "text": "Cree un borrador editable a partir de un paquete de escenario, un conjunto generado de dispositivos, una plantilla, un YAML cargado o un lienzo en blanco. Elija un punto de partida y después revise los dispositivos, las redes, los enlaces y los protocolos."
+      },
+      "block1": {
+        "text": "Revisar antes de iniciar"
+      },
+      "block2": {
+        "text": "Los cambios permanecen en el borrador hasta que inicie la simulación. Resuelva las comprobaciones de Revisión, elija una interfaz e inicie cuando esté listo. Puede guardar el borrador en la biblioteca de redes sin iniciarlo."
+      }
+    },
+    "devices": {
+      "block0": {
+        "text": "Dispositivos que se ejecutan actualmente en el servicio, obtenidos del YAML con el que se inició. Solo lectura."
+      },
+      "block1": {
+        "text": "Para editar"
+      },
+      "block2": {
+        "text": "Para modificar las definiciones guardadas, vaya a **Dispositivos** en Biblioteca. Para sustituir toda la red activa, reinicie la simulación desde **Simulación**."
+      }
+    },
+    "segments": {
+      "block0": {
+        "text": "Dispositivos agrupados por segmento VLAN, tal como los describe el YAML activo. Una configuración sin bloque `segments:` muestra un único segmento «Sin etiquetar» con todos los dispositivos. Solo lectura."
+      },
+      "block1": {
+        "text": "Dónde continuar"
+      },
+      "block2": {
+        "item0": {
+          "term": "Dispositivos activos",
+          "description": "muestra los mismos dispositivos en una sola lista."
+        },
+        "item1": {
+          "term": "Topología",
+          "description": "muestra los enlaces entre ellos."
+        }
+      }
+    },
+    "device_config": {
+      "block0": {
+        "text": "Biblioteca de configuraciones de dispositivos guardadas. Los cambios actualizan el YAML en disco, pero no la simulación en ejecución; inicie una simulación nueva para cargarlos."
+      },
+      "block1": {
+        "text": "Acciones habituales"
+      },
+      "block2": {
+        "item0": {
+          "term": "Hacer clic en un dispositivo",
+          "description": "abre el editor visual."
+        },
+        "item1": {
+          "term": "Clonar",
+          "description": "duplica un dispositivo con un nombre de host nuevo."
+        },
+        "item2": {
+          "term": "Selección múltiple",
+          "description": "marque las casillas de las filas y después elimine los dispositivos desde la barra de herramientas."
+        }
+      }
+    },
+    "topology": {
+      "block0": {
+        "text": "Gráfico de la topología configurada: los dispositivos y los enlaces declarados en el YAML (`trunk_ports:`, `port_channels:`, etc.). Úselo para revisar el diseño antes de iniciar la simulación."
+      },
+      "block1": {
+        "text": "Descubrimiento en vivo y diseño"
+      },
+      "block2": {
+        "text": "El gráfico muestra el **diseño** del YAML; la tabla de vecinos muestra las adyacencias que se formaron durante la ejecución mediante CDP / LLDP / EDP / FDP. Permite detectar referencias `remote_device` mal escritas."
+      },
+      "block3": {
+        "text": "Exportar"
+      },
+      "block4": {
+        "text": "Exporte la topología como imagen PNG, instantánea JSON o, desde el servicio en ejecución, como Graphviz `.dot` o GraphML para usarla en Graphviz, yEd o gephi."
+      }
+    },
+    "alerts": {
+      "block0": {
+        "text": "El servicio envía una alerta por webhook cuando el total de paquetes supera el umbral configurado. Permite detectar tráfico excesivo causado por un perfil de dispositivo mal configurado."
+      },
+      "block1": {
+        "text": "Seguridad del webhook"
+      },
+      "block2": {
+        "text": "La protección SSRF controla los destinos del webhook: rechaza direcciones IP privadas, de bucle local y de enlace local. Si el servicio se inició con `--webhook-allowed-host`, solo permite esos nombres de host. Configure la lista de permitidos en lugar de depender del filtro de IP implícito; consulte [SECURITY.md](https://github.com/MustardSeedNetworks/niac-go/blob/main/SECURITY.md)."
+      },
+      "block3": {
+        "text": "Desactivar alertas"
+      },
+      "block4": {
+        "text": "Deje el umbral vacío o establézcalo en 0 para desactivar las alertas de paquetes."
+      }
+    },
+    "traffic": {
+      "block0": {
+        "text": "Inyecte fallos controlados en los contadores de interfaz de la simulación para comprobar la reacción de los sistemas de supervisión. Utiliza `POST /api/v1/errors`."
+      },
+      "block1": {
+        "text": "Fallos habituales"
+      },
+      "block2": {
+        "item0": {
+          "term": "Errores FCS",
+          "description": "incrementa los contadores de errores de comprobación de trama y de entrada."
+        },
+        "item1": {
+          "term": "Paquetes descartados",
+          "description": "incrementa los contadores de descartes de entrada y salida."
+        },
+        "item2": {
+          "term": "Utilización",
+          "description": "incrementa los contadores de octetos según un porcentaje de la velocidad de la interfaz."
+        }
+      },
+      "block3": {
+        "text": "Los errores se eliminan al detener la simulación o al usar la acción de limpiar de este panel."
+      }
+    },
+    "debug": {
+      "block0": {
+        "text": "Registro en vivo del servicio mediante Server-Sent Events de `/api/v1/stream/logs`. Pause para congelar el búfer, filtre por protocolo o gravedad y ajuste los niveles de depuración por protocolo (0=silencio, 3=detallado)."
+      },
+      "block1": {
+        "text": "Niveles de depuración por protocolo"
+      },
+      "block2": {
+        "text": "Equivale a las opciones `--debug-arp`, `--debug-icmp` y `--debug-snmp` de la CLI. Los niveles se aplican inmediatamente a los protocolos en ejecución."
+      }
+    },
+    "packets": {
+      "block0": {
+        "text": "Captura en vivo"
+      },
+      "block1": {
+        "text": "Muestra los paquetes que ve el servicio desde `/api/v1/stream/packets`: hexadecimal, campos decodificados, filtro BPF, pausa y guardado PCAP. Si la página va lenta, limite el filtro BPF a un protocolo o a la IP de un dispositivo."
+      },
+      "block2": {
+        "text": "Archivos PCAP"
+      },
+      "block3": {
+        "text": "Abra la pestaña **Archivos PCAP** para inspeccionar una captura: desglose de protocolos, estadísticas por conversación y decodificación de cada paquete. Equivale a `niac analyze-pcap` en la CLI."
+      }
+    },
+    "config_diff": {
+      "block0": {
+        "text": "Dos formas de combinar configuraciones YAML:"
+      },
+      "block1": {
+        "item0": {
+          "term": "Bloque a bloque (parte superior)",
+          "description": "elija izquierda o derecha para cada bloque de diferencias. Resulta útil para revisar un cambio pequeño y concreto."
+        },
+        "item1": {
+          "term": "Combinación por superposición en el servidor (tarjeta inferior)",
+          "description": "usa las mismas reglas que `niac config merge`: los dispositivos de la superposición SUSTITUYEN a los de la base con el mismo nombre; los nuevos se añaden y los exclusivos de la base se conservan. Útil para aplicar un parche a una configuración base."
+        }
+      }
+    },
+    "walk_validator": {
+      "block0": {
+        "text": "Un archivo de walk es una captura `snmpwalk`: una lista de líneas OID = valor que NIAC reproduce mediante su agente SNMP simulado. Esta página usa el mismo validador que `niac analyze-walk` en la CLI."
+      },
+      "block1": {
+        "text": "Qué informa Validar"
+      },
+      "block2": {
+        "item0": {
+          "term": "error",
+          "description": "la línea tiene un formato que impide al analizador reproducirla."
+        },
+        "item1": {
+          "term": "advertencia",
+          "description": "campo probablemente incorrecto, como un tipo sospechoso o una codificación incompatible."
+        },
+        "item2": {
+          "term": "información",
+          "description": "detalle de estilo, como una cadena sin comillas. La reproducción sigue funcionando."
+        }
+      },
+      "block3": {
+        "text": "Corrección automática"
+      },
+      "block4": {
+        "text": "La corrección automática reescribe el archivo walk. Antes crea una copia `.bak` junto al original para poder restaurarlo. Vuelva a validar después de corregir."
+      }
+    },
+    "walk_analyzer": {
+      "block0": {
+        "text": "Extrae la identidad del dispositivo, el inventario de interfaces y los vecinos LLDP/CDP de un archivo de walk con el mismo motor que `niac analyze-walk`. Solo lectura; nunca modifica el archivo."
+      },
+      "block1": {
+        "text": "Qué extrae"
+      },
+      "block2": {
+        "item0": {
+          "term": "Dispositivo",
+          "description": "sysName, sysDescr, sysObjectID y, cuando existen, sysContact/sysLocation (SNMPv2-MIB)."
+        },
+        "item1": {
+          "term": "Interfaces",
+          "description": "índice, nombre, tipo, velocidad, estado administrativo y operativo, y dirección MAC (IF-MIB / ifXTable)."
+        },
+        "item2": {
+          "term": "Vecinos",
+          "description": "adyacencias descubiertas mediante LLDP-MIB o CISCO-CDP-MIB."
+        }
+      }
+    },
+    "library_walks": {
+      "block0": {
+        "text": "Muestra los archivos `.walk` de `~/.niac/library/walks/` o de `/var/lib/niac/library/walks/` en instalaciones empaquetadas. Añada archivos directamente o ejecute `niac content install` para obtener el paquete publicado para esta versión."
+      },
+      "block1": {
+        "text": "La sección SNMP del editor de dispositivos utiliza la misma lista para su selector de archivos walk; cualquier archivo que aparezca aquí puede seleccionarse al configurar un dispositivo."
+      }
+    },
+    "library_pcaps": {
+      "block0": {
+        "text": "Muestra las capturas de `~/.niac/library/pcaps/`. Puede añadir archivos directamente o usar `niac content install`, igual que en la biblioteca de archivos walk."
+      },
+      "block1": {
+        "text": "Las páginas Paquetes y Tráfico reutilizarán esta lista en sus selectores PCAP: una captura añadida aquí estará disponible donde el servicio necesite seleccionarla."
+      }
+    }
   }
 }

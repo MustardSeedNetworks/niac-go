@@ -41,12 +41,14 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   onSelectUserConfig,
   onUpload,
   uploadFile,
+  filterByDeviceFamily = false,
 }) => {
   const { t } = useTranslation('pages');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [family, setFamily] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
   const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
 
@@ -112,7 +114,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       });
     }
     return list;
-  }, [templates, userConfigs, uploadFile]);
+  }, [templates, userConfigs, uploadFile, t]);
 
   /**
    * Searching narrows the list and keeps results alphabetical regardless
@@ -124,8 +126,22 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
    */
   const sections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const matchesQuery = (item: ConfigItem) =>
-      !q || item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
+    const matchesQuery = (item: ConfigItem) => {
+      if (
+        filterByDeviceFamily &&
+        family &&
+        (item.kind !== 'builtin' || item.template.type !== family)
+      )
+        return false;
+      const searchable = [item.name, item.description];
+      if (item.kind === 'builtin')
+        searchable.push(
+          item.template.displayName ?? '',
+          item.template.vendor ?? '',
+          ...(item.template.tags ?? []),
+        );
+      return !q || searchable.some((value) => value.toLowerCase().includes(q));
+    };
 
     const byName = (a: ConfigItem, b: ConfigItem) => a.name.localeCompare(b.name);
 
@@ -139,7 +155,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     const favorites = matched.filter((i) => isFavorite(i.key)).sort(byName);
     const all = matched.filter((i) => !isFavorite(i.key)).sort(byName);
     return { local, favorites, all };
-  }, [items, isFavorite, search]);
+  }, [items, isFavorite, search, family, filterByDeviceFamily]);
 
   const updateViewMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -280,8 +296,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       )}
 
       {/* Search + view toggle */}
-      <div className="flex items-center gap-compact">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-compact">
+        <div className="relative min-w-48 flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
@@ -292,6 +308,35 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
         </div>
+        {filterByDeviceFamily && (
+          <label className="stack-xs text-xs text-text-muted">
+            {t('configPicker.family')}
+            <select
+              data-testid="config-picker-family"
+              value={family}
+              onChange={(event) => setFamily(event.target.value)}
+              className="min-h-11 rounded border border-surface-border bg-bg-surface px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-brand-primary"
+            >
+              <option value="">{t('configPicker.allFamilies')}</option>
+              {(
+                [
+                  'basic',
+                  'router',
+                  'switch',
+                  'access-point',
+                  'server',
+                  'firewall',
+                  'complete',
+                  'custom',
+                ] as const
+              ).map((type) => (
+                <option key={type} value={type}>
+                  {t(`configPicker.families.${type}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <fieldset
           className="flex rounded border border-surface-border bg-bg-surface/60 p-0.5"
           aria-label={t('configPicker.viewDensityLabel')}
@@ -322,7 +367,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         onToggleFavorite={toggleFavorite}
         onView={handleViewItem}
         onClearLocal={handleClearLocal}
-        searching={search.trim().length > 0}
+        searching={search.trim().length > 0 || family.length > 0}
       />
 
       {previewTemplate && (

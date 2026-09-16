@@ -5,9 +5,9 @@ import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/c
 import { isApiError } from '../api/errors';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
-import { InfoPopover } from '../ui/InfoPopover';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
+import { GlossaryPopover } from './GlossaryPopover';
 
 /**
  * Extract the server-reported reason a BPF filter was rejected. When the
@@ -45,7 +45,6 @@ const BPF_PRESETS = [
 export const BpfFilterBar: FC = memo(() => {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('common');
-  const { t: tHelp } = useTranslation('help');
   const { t: tPages } = useTranslation('pages');
   const [input, setInput] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
@@ -142,9 +141,7 @@ export const BpfFilterBar: FC = memo(() => {
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Filter className={`${iconSizes.md} text-text-muted`} />
           {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-status-success" />}
-          <InfoPopover label={t('jargon.ariaLabel', { term: 'BPF' })} title="BPF">
-            {tHelp('jargon.bpf')}
-          </InfoPopover>
+          <GlossaryPopover term="bpf" />
         </div>
 
         {/* Input */}

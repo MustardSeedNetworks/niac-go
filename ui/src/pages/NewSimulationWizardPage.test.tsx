@@ -455,7 +455,10 @@ describe('NewSimulationWizardPage — step navigation', () => {
 
     await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
+    await user.click(screen.getByTestId('wizard-source-tab-library'));
     await user.click(await screen.findByRole('button', { name: 'Select' }));
+    expect(screen.getByTestId('wizard-selected-library')).toHaveTextContent(template.name);
+    await user.click(screen.getByTestId('fleet-customize'));
     await user.clear(screen.getByTestId('fleet-domain'));
     await user.type(screen.getByTestId('fleet-domain'), 'edited.example');
     await user.click(screen.getByTestId('wizard-next-button'));

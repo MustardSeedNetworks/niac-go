@@ -14,6 +14,379 @@
     "documentationLink": "Full documentation",
     "reportIssue": "Report an issue"
   },
+  "glossary": {
+    "aaaa": {
+      "definition": "DNS record mapping a name to an IPv6 address (\"quad-A\").",
+      "term": "AAAA"
+    },
+    "accessPointAP": {
+      "definition": "A wireless device that bridges Wi-Fi clients onto a wired LAN.",
+      "term": "Access Point (AP)"
+    },
+    "ack": {
+      "definition": "Fourth DHCPv4 message: server commits the lease.",
+      "term": "ACK"
+    },
+    "apiToken": {
+      "definition": "Bearer token gating the NIAC daemon’s REST API. Set via NIAC_API_TOKEN environment variable.",
+      "term": "API token"
+    },
+    "aRecord": {
+      "definition": "DNS record mapping a name to an IPv4 address.",
+      "term": "A record"
+    },
+    "arp": {
+      "definition": "Address Resolution Protocol (RFC 826). Maps IPv4 addresses to MAC addresses on a local Ethernet link.",
+      "term": "ARP"
+    },
+    "authoritativeServer": {
+      "definition": "A DNS server that holds the actual records for a zone. NIAC IS one of these (for configured zones).",
+      "term": "Authoritative server"
+    },
+    "bpdu": {
+      "definition": "Bridge Protocol Data Unit — the frames exchanged by STP to negotiate a loop-free topology.",
+      "term": "BPDU"
+    },
+    "bpf": {
+      "definition": "A Berkeley Packet Filter (BPF) expression applied by the capture engine. Packets that don't match are dropped before capture — they never reach the buffer, unlike a display filter.",
+      "term": "BPF"
+    },
+    "bridge": {
+      "definition": "A device that forwards frames between two or more LAN segments at Layer 2. Switches are multi-port bridges.",
+      "term": "Bridge"
+    },
+    "broadcastDomain": {
+      "definition": "The set of devices that receive each other’s broadcast frames. A VLAN defines a broadcast domain.",
+      "term": "Broadcast domain"
+    },
+    "capabilityTLV": {
+      "definition": "In LLDP/CDP, a TLV announcing what the device is (router, bridge, AP, station-only).",
+      "term": "Capability TLV"
+    },
+    "captureBuffer": {
+      "definition": "The daemon’s in-memory rolling pcap. Use `niac dump` to flush it to disk.",
+      "term": "Capture buffer"
+    },
+    "cdp": {
+      "definition": "Cisco Discovery Protocol. Cisco’s proprietary L2 discovery protocol; emits frames every 60s announcing device identity, capabilities, and platform.",
+      "term": "CDP"
+    },
+    "chassisID": {
+      "definition": "In LLDP, a unique identifier for the device chassis — usually its MAC address.",
+      "term": "Chassis ID"
+    },
+    "communityString": {
+      "definition": "The shared secret used to authenticate SNMPv1/v2c requests. \"public\" is the historical default and is insecure.",
+      "term": "Community string"
+    },
+    "daemonMode": {
+      "definition": "NIAC running long-lived, with the embedded web UI active. Started with `niac daemon`.",
+      "term": "Daemon mode"
+    },
+    "defaultGateway": {
+      "definition": "The router an end-host sends off-subnet traffic to.",
+      "term": "Default gateway"
+    },
+    "deviceSimulator": {
+      "definition": "NIAC, in one phrase — a tool that pretends to be one or more network devices on a real interface.",
+      "term": "Device simulator"
+    },
+    "dhcp": {
+      "definition": "Dynamic Host Configuration Protocol (RFC 2131). Hands out IP addresses, gateways, DNS servers, and other network parameters to clients.",
+      "term": "DHCP"
+    },
+    "dhcpv6": {
+      "definition": "IPv6 variant of DHCP (RFC 8415). Two modes: stateful (assigns addresses) and stateless (options-only, complementing SLAAC).",
+      "term": "DHCPv6"
+    },
+    "discover": {
+      "definition": "First DHCPv4 message: client broadcasts \"I need an IP.\" Followed by OFFER, REQUEST, ACK.",
+      "term": "DISCOVER"
+    },
+    "dns": {
+      "definition": "Domain Name System (RFC 1035). Translates names to IPs (A, AAAA records) and reverse (PTR).",
+      "term": "DNS"
+    },
+    "draft": {
+      "definition": "A saved, editable simulation configuration. Editing a draft does not change the running simulation; review and start it when it is ready.",
+      "term": "Draft"
+    },
+    "edp": {
+      "definition": "Extreme Discovery Protocol — Extreme Networks’ proprietary L2 discovery, pre-dating LLDP.",
+      "term": "EDP"
+    },
+    "eui64": {
+      "definition": "A method to generate a 64-bit interface ID from a 48-bit MAC, used to autoconfigure IPv6 link-local addresses.",
+      "term": "EUI-64"
+    },
+    "faultInjection": {
+      "definition": "Forcing a simulated device into a faulted state at runtime through the Web UI or the API.",
+      "term": "Fault injection"
+    },
+    "fdp": {
+      "definition": "Foundry Discovery Protocol — Foundry/Brocade/Ruckus proprietary discovery.",
+      "term": "FDP"
+    },
+    "firewall": {
+      "definition": "A device that enforces a security policy on traffic between zones.",
+      "term": "Firewall"
+    },
+    "fiveTuple": {
+      "definition": "A 5-tuple is the (protocol, source IP:port, destination IP:port) combination that uniquely identifies a TCP/UDP conversation.",
+      "term": "5-tuple"
+    },
+    "fleet": {
+      "definition": "The collection of simulated devices in a network. Generate a fleet by choosing sites and device counts, then edit it in the wizard.",
+      "term": "Fleet"
+    },
+    "frame": {
+      "definition": "A Layer-2 packet — the unit Ethernet works in.",
+      "term": "Frame"
+    },
+    "ftp": {
+      "definition": "File Transfer Protocol (RFC 959). NIAC implements only the banner / handshake, not real file transfer.",
+      "term": "FTP"
+    },
+    "gateway": {
+      "definition": "Loose term for a router that connects different networks.",
+      "term": "Gateway"
+    },
+    "host": {
+      "definition": "A general-purpose end-system on the network — PC, server, IoT sensor.",
+      "term": "Host"
+    },
+    "http": {
+      "definition": "Hypertext Transfer Protocol. NIAC ships a minimal HTTP/1.1 responder with configurable endpoints.",
+      "term": "HTTP"
+    },
+    "icmp": {
+      "definition": "Internet Control Message Protocol — ping, traceroute, error reports.",
+      "term": "ICMP"
+    },
+    "icmpv6": {
+      "definition": "IPv6 version of ICMP. Includes Neighbor Discovery (ND), which replaces ARP for v6.",
+      "term": "ICMPv6"
+    },
+    "inform": {
+      "definition": "An SNMP \"trap with ack\" — the receiver must acknowledge receipt. Adds reliability.",
+      "term": "Inform"
+    },
+    "ipcSocket": {
+      "definition": "Unix-domain socket used by the niac CLI to talk to the running daemon. Default path `/tmp/niac.sock`.",
+      "term": "IPC socket"
+    },
+    "iperf3": {
+      "definition": "Network throughput-measurement protocol. NIAC speaks the control channel but does not perform real throughput tests.",
+      "term": "iperf3"
+    },
+    "jumboFrame": {
+      "definition": "Ethernet frame larger than the standard 1500-byte MTU — commonly 9000 bytes for storage networks.",
+      "term": "Jumbo frame"
+    },
+    "lacp": {
+      "definition": "Link Aggregation Control Protocol (IEEE 802.1AX). Lets multiple physical links act as one logical link.",
+      "term": "LACP"
+    },
+    "lease": {
+      "definition": "A DHCP-assigned IP plus duration. When the lease expires, the client must renew or release it.",
+      "term": "Lease"
+    },
+    "librarySource": {
+      "definition": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally.",
+      "term": "Library source"
+    },
+    "lldp": {
+      "definition": "Link Layer Discovery Protocol (IEEE 802.1AB). Vendor-neutral L2 discovery — the standard CDP replacement.",
+      "term": "LLDP"
+    },
+    "macAddress": {
+      "definition": "Media Access Control address. 48-bit unique-per-NIC identifier formatted aa:bb:cc:dd:ee:ff.",
+      "term": "MAC address"
+    },
+    "mdns": {
+      "definition": "Multicast DNS (RFC 6762). Used by Bonjour / Avahi for local-network service discovery.",
+      "term": "mDNS"
+    },
+    "mib": {
+      "definition": "Management Information Base. The schema describing what SNMP OIDs mean.",
+      "term": "MIB"
+    },
+    "mtu": {
+      "definition": "Maximum Transmission Unit — the largest payload an interface can carry in one frame (default 1500 on Ethernet).",
+      "term": "MTU"
+    },
+    "multicast": {
+      "definition": "Frames sent to a group address — one sender, many receivers. LLDP, CDP, STP, mDNS all use multicast.",
+      "term": "Multicast"
+    },
+    "netbios": {
+      "definition": "Legacy Windows name/service protocol (RFC 1001/1002). NIAC answers NBSTAT name queries.",
+      "term": "NetBIOS"
+    },
+    "nms": {
+      "definition": "Network Management System — a platform that polls / monitors devices (SolarWinds, LibreNMS, Zabbix, etc.).",
+      "term": "NMS"
+    },
+    "offer": {
+      "definition": "Second DHCPv4 message: server responds to DISCOVER with a candidate lease.",
+      "term": "OFFER"
+    },
+    "oid": {
+      "definition": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
+      "term": "OID"
+    },
+    "option82": {
+      "definition": "DHCP relay-agent information option. Lets a DHCP relay tell the server which port the client showed up on.",
+      "term": "Option 82"
+    },
+    "oui": {
+      "definition": "Organizationally Unique Identifier — the first 24 bits of a MAC, identifying the vendor.",
+      "term": "OUI"
+    },
+    "pcap": {
+      "definition": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
+      "term": "PCAP"
+    },
+    "persona": {
+      "definition": "A device-type setting (router / switch / firewall / server / ap / iot / unknown) that applies sensible defaults.",
+      "term": "Persona"
+    },
+    "poe": {
+      "definition": "Power over Ethernet (IEEE 802.3af/at/bt). Carries power to devices over the data cable.",
+      "term": "PoE"
+    },
+    "portChannel": {
+      "definition": "A bundle of physical interfaces presented as one logical interface. Negotiated with LACP.",
+      "term": "Port-channel"
+    },
+    "ptr": {
+      "definition": "DNS reverse-lookup record — IP to name.",
+      "term": "PTR"
+    },
+    "rawSocket": {
+      "definition": "A socket that delivers L2 or L3 frames without OS protocol processing. NIAC needs raw sockets, which usually requires root.",
+      "term": "Raw socket"
+    },
+    "rawSocketPrivilege": {
+      "definition": "The OS permission needed to open Layer-2 / Layer-3 raw sockets. Typically root, or CAP_NET_RAW on Linux.",
+      "term": "Raw-socket privilege"
+    },
+    "recursiveResolver": {
+      "definition": "A DNS server that chases queries down through the hierarchy on the client’s behalf. NIAC is NOT one of these.",
+      "term": "Recursive resolver"
+    },
+    "relayAgent": {
+      "definition": "A device that forwards DHCP requests across subnets (because DHCP DISCOVER is broadcast and broadcasts don’t cross routers).",
+      "term": "Relay agent"
+    },
+    "request": {
+      "definition": "Third DHCPv4 message: client confirms it wants the offered lease.",
+      "term": "REQUEST"
+    },
+    "router": {
+      "definition": "A device that forwards packets between networks at Layer 3.",
+      "term": "Router"
+    },
+    "scenarioPack": {
+      "definition": "A versioned starting point for a complete network, such as a hospital or campus. Select a pack in New Simulation to create an editable draft.",
+      "term": "Scenario pack"
+    },
+    "session": {
+      "definition": "One running simulation, started from a reviewed configuration on a selected interface. Stop the session to stop its simulated devices.",
+      "term": "Session"
+    },
+    "singleShotMode": {
+      "definition": "NIAC running one config to exit, foreground. Started with `niac daemon --once <iface> <config>`.",
+      "term": "Single-shot mode"
+    },
+    "snmp": {
+      "definition": "Simple Network Management Protocol. Query and monitor device state via OIDs.",
+      "term": "SNMP"
+    },
+    "snmpv1": {
+      "definition": "Original SNMP (RFC 1157). Community-string auth, 32-bit counters, lossy traps.",
+      "term": "SNMPv1"
+    },
+    "snmpv2c": {
+      "definition": "SNMP v2 with community-string auth (RFC 3416/3418). Adds GetBulk and 64-bit counters.",
+      "term": "SNMPv2c"
+    },
+    "snmpv3": {
+      "definition": "SNMP with USM-based authentication and optional encryption (RFC 3414/3826).",
+      "term": "SNMPv3"
+    },
+    "snmpWalk": {
+      "definition": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
+      "term": "SNMP walk"
+    },
+    "stpRSTPMSTP": {
+      "definition": "Spanning Tree Protocol family (IEEE 802.1D / 802.1w / 802.1s). Loop prevention via BPDU exchange.",
+      "term": "STP / RSTP / MSTP"
+    },
+    "switch": {
+      "definition": "A multi-port bridge — forwards Ethernet frames between ports based on MAC tables.",
+      "term": "Switch"
+    },
+    "sysdescr": {
+      "definition": "SNMP sysDescr.0 — the device’s self-description string. Tools fingerprint vendors from this.",
+      "term": "sysDescr"
+    },
+    "tcp": {
+      "definition": "Transmission Control Protocol — reliable, ordered transport. Underlies HTTP, FTP, etc.",
+      "term": "TCP"
+    },
+    "template": {
+      "definition": "A built-in starter YAML config for a common device type. List with `niac template list`.",
+      "term": "Template"
+    },
+    "tlv": {
+      "definition": "Type-Length-Value. The encoding LLDP / CDP / DHCP options use — a tag, a length, then the data.",
+      "term": "TLV"
+    },
+    "topologyConfig": {
+      "definition": "The YAML file that describes the simulated network: devices, protocols, VLANs.",
+      "term": "Topology config"
+    },
+    "trap": {
+      "definition": "An unsolicited SNMP message from a device to a configured receiver. Inform = trap with acknowledgement.",
+      "term": "Trap"
+    },
+    "trunk": {
+      "definition": "A port carrying multiple VLANs, with each frame tagged using 802.1Q.",
+      "term": "Trunk"
+    },
+    "ttl": {
+      "definition": "Time-To-Live — a value that limits how long a packet or LLDP advertisement is considered valid.",
+      "term": "TTL"
+    },
+    "udp": {
+      "definition": "User Datagram Protocol — lightweight, connectionless transport. Underlies DNS, SNMP, DHCP.",
+      "term": "UDP"
+    },
+    "vlan": {
+      "definition": "Virtual LAN (IEEE 802.1Q). A way to partition one physical network into multiple broadcast domains.",
+      "term": "VLAN"
+    },
+    "walkFile": {
+      "definition": "A text file holding SNMP `OID = TYPE: VALUE` lines, used to drive NIAC’s SNMP agent for realistic responses.",
+      "term": "Walk file"
+    },
+    "walkProvenance": {
+      "definition": "Where a walk's content came from. \"Captured\" means an SNMP walk of a real device, put through the sanitizer. \"Generated\" means NIAC built it from a profile — it answers, but no device was ever measured for it.",
+      "term": "Walk provenance"
+    },
+    "workstation": {
+      "definition": "An end-user host — desktop, laptop.",
+      "term": "Workstation"
+    }
+  },
+  "glossaryCategories": {
+    "concept": "Concepts",
+    "device": "Device types",
+    "niac": "NIAC-specific",
+    "protocol": "Protocols",
+    "security": "Security"
+  },
   "itemCard": {
     "examples": "Examples",
     "metricBadLabel": "bad:",
@@ -28,15 +401,6 @@
     "whenToUse": "When to use",
     "yamlFields": "YAML fields"
   },
-  "jargon": {
-    "bpf": "A Berkeley Packet Filter (BPF) expression applied by the capture engine. Packets that don't match are dropped before capture — they never reach the buffer, unlike a display filter.",
-    "fiveTuple": "A 5-tuple is the (protocol, source IP:port, destination IP:port) combination that uniquely identifies a TCP/UDP conversation.",
-    "librarySource": "starter files ship with NIAC, bundle files come from the published content bundle (niac content install), and user files were added or edited locally.",
-    "oid": "An OID (object identifier) is the dotted-numeric address of a single value in an SNMP MIB tree, e.g. 1.3.6.1.2.1.1.1.0 for sysDescr.",
-    "pcap": "PCAP (packet capture) is the file format used to record and replay network traffic captured on the wire.",
-    "snmpWalk": "An SNMP walk is a saved sequence of OID/value pairs collected by walking a device's MIB tree with GetNext requests. NIAC replays these files to simulate a device's SNMP responses.",
-    "walkProvenance": "Where a walk's content came from. \"Captured\" means an SNMP walk of a real device, put through the sanitizer. \"Generated\" means NIAC built it from a profile — it answers, but no device was ever measured for it."
-  },
   "overview": {
     "categoriesEmpty": "No categories match your search.",
     "categoriesTitle": "Help categories",
@@ -46,6 +410,274 @@
     "webUiQuickRefTitle": "Web UI quick reference",
     "whatNiacDoesBody": "NIAC (Network In A Can) simulates one or more network devices on a real host interface. It answers ARP, ICMP, LLDP, CDP, SNMP, DHCP, DNS, HTTP, FTP and other protocols so a discovery tool, NMS, or monitoring platform sees the simulated devices as if they were physical hardware. Use it for tooling validation, training labs, and reproducer environments without standing up real gear.",
     "whatNiacDoesTitle": "What NIAC does"
+  },
+  "pageHelp": {
+    "alerts": {
+      "block0": {
+        "text": "The daemon emits an alert webhook when the total packet count crosses the configured threshold. Useful for catching runaway traffic from a misconfigured device persona."
+      },
+      "block1": {
+        "text": "Webhook security"
+      },
+      "block2": {
+        "text": "Outbound webhook destinations are gated by an SSRF defence: raw private / loopback / link-local IPs are rejected, and if the daemon was started with `--webhook-allowed-host`, only those hostnames are allowed. Set the allowlist in production rather than relying on the implicit IP filter — see [SECURITY.md](https://github.com/MustardSeedNetworks/niac-go/blob/main/SECURITY.md)."
+      },
+      "block3": {
+        "text": "Disabling alerts"
+      },
+      "block4": {
+        "text": "Leave the threshold blank or set it to 0 to disable packet alerts entirely."
+      }
+    },
+    "config_diff": {
+      "block0": {
+        "text": "Two ways to merge two YAML configs:"
+      },
+      "block1": {
+        "item0": {
+          "description": "choose left or right for each diff block. Best when reviewing a small targeted change.",
+          "term": "Block-by-block (top of page)"
+        },
+        "item1": {
+          "description": "same semantics as `niac config merge`: overlay devices REPLACE base devices with the same name; new devices are appended; base-only devices are kept. Best when applying a patch to a base config.",
+          "term": "Server-side overlay merge (bottom card)"
+        }
+      }
+    },
+    "dashboard": {
+      "block0": {
+        "text": "Real-time view of the running daemon: packet counters per protocol, recent simulation runs, device count, and recent alert state."
+      },
+      "block1": {
+        "text": "Where to go from here"
+      },
+      "block2": {
+        "item0": {
+          "description": "to start/stop a run.",
+          "term": "Simulation"
+        },
+        "item1": {
+          "description": "to see what the running config produced.",
+          "term": "Running Devices"
+        },
+        "item2": {
+          "description": "to watch traffic in real time.",
+          "term": "Packets"
+        },
+        "item3": {
+          "description": "to set the threshold and webhook target.",
+          "term": "Alerts"
+        }
+      }
+    },
+    "debug": {
+      "block0": {
+        "text": "Live log tail from the daemon (Server-Sent Events from `/api/v1/stream/logs`). Pause to freeze the buffer, filter by protocol or severity, set per-protocol debug levels (0=quiet, 3=verbose)."
+      },
+      "block1": {
+        "text": "Per-protocol debug levels"
+      },
+      "block2": {
+        "text": "Equivalent of the CLI's `--debug-arp` / `--debug-icmp` / `--debug-snmp` family of flags. Levels are applied to the running stack immediately."
+      }
+    },
+    "device_config": {
+      "block0": {
+        "text": "Your library of saved device configurations. Edits here update the YAML stored on disk but don't push to the running simulation — start a new simulation to load the changes."
+      },
+      "block1": {
+        "text": "Common actions"
+      },
+      "block2": {
+        "item0": {
+          "description": "open the visual editor.",
+          "term": "Click a device"
+        },
+        "item1": {
+          "description": "duplicate a device with a new hostname.",
+          "term": "Clone"
+        },
+        "item2": {
+          "description": "checkbox in each row, then bulk-delete from the toolbar.",
+          "term": "Bulk select"
+        }
+      }
+    },
+    "devices": {
+      "block0": {
+        "text": "What's currently running on the daemon, derived from the YAML the daemon was started with. Read-only."
+      },
+      "block1": {
+        "text": "For editing"
+      },
+      "block2": {
+        "text": "To modify saved device definitions, go to **Devices** (under Library). To swap the running network wholesale, restart the simulation from **Simulation**."
+      }
+    },
+    "library_pcaps": {
+      "block0": {
+        "text": "Shows every capture under `~/.niac/library/pcaps/`. Same ingress paths as the walk library: drop files directly or use `niac content install`."
+      },
+      "block1": {
+        "text": "The Packets and Traffic pages will reuse this listing for their PCAP pickers — the unified library means a PCAP added here is visible everywhere the daemon needs to pick one without extra plumbing."
+      }
+    },
+    "library_walks": {
+      "block0": {
+        "text": "Shows every `.walk` file under `~/.niac/library/walks/` (or `/var/lib/niac/library/walks/` on packaged installs). Drop files in directly, or run `niac content install` to fetch the published bundle for this binary's version."
+      },
+      "block1": {
+        "text": "The SNMP section on the Device editor uses the same endpoint to populate its walk picker, so anything that shows up here is immediately selectable when configuring a device."
+      }
+    },
+    "new_simulation": {
+      "block0": {
+        "text": "Build an editable draft from a scenario pack, generated fleet, template, uploaded YAML, or blank canvas. Choose one starting point, then review devices, networks, links, and protocols."
+      },
+      "block1": {
+        "text": "Review before starting"
+      },
+      "block2": {
+        "text": "Changes stay in the draft until you start the simulation. Resolve the checks on Review, choose an interface, and start when ready. You can save the draft to your network library without starting it."
+      }
+    },
+    "packets": {
+      "block0": {
+        "text": "Live capture"
+      },
+      "block1": {
+        "text": "Streams every packet the daemon sees from `/api/v1/stream/packets` — hex + decoded fields, BPF filter, freeze frame, save to PCAP. If the page lags, narrow the BPF filter (e.g. limit to a single protocol or device IP)."
+      },
+      "block2": {
+        "text": "PCAP files"
+      },
+      "block3": {
+        "text": "Switch to the **PCAP files** tab to open and inspect a captured file — protocol breakdown, per-conversation stats, full per-packet decode. Equivalent of `niac analyze-pcap` on the CLI."
+      }
+    },
+    "runtime": {
+      "block0": {
+        "text": "Start, stop, and inspect the simulation. Pick a network interface, point to a YAML config, and the daemon spawns the requested device personas on that interface."
+      },
+      "block1": {
+        "text": "Tips"
+      },
+      "block2": {
+        "item0": "**Download YAML** exports the running config — equivalent to the legacy CLI's runtime config dump. Useful for capturing the merged result of imports / template usage and committing it to source control.",
+        "item1": "`capture_playbacks:` in the YAML auto-starts a PCAP replay alongside the sim. **Traffic** lets you switch the playback file at runtime.",
+        "item2": "Use `lo0` (macOS) / `lo` (Linux) for safe local testing."
+      }
+    },
+    "segments": {
+      "block0": {
+        "text": "Devices grouped by VLAN segment (ADR 0008), exactly as the active YAML config describes them. A flat config with no `segments:` block still reports one \"Untagged\" segment containing every device. Read-only."
+      },
+      "block1": {
+        "text": "Where to go from here"
+      },
+      "block2": {
+        "item0": {
+          "description": "shows the same devices as a single flat list.",
+          "term": "Running Devices"
+        },
+        "item1": {
+          "description": "shows the links between them.",
+          "term": "Topology"
+        }
+      }
+    },
+    "topology": {
+      "block0": {
+        "text": "Visual graph of the configured topology — devices and the links you declared in the YAML ( `trunk_ports:`, `port_channels:`, etc.). Use this to sanity-check your design before starting the simulation."
+      },
+      "block1": {
+        "text": "Live discovery vs design"
+      },
+      "block2": {
+        "text": "The graph shows the **design** from your YAML; the neighbor table shows which adjacencies actually formed at runtime via CDP / LLDP / EDP / FDP — useful for catching mistyped `remote_device` references."
+      },
+      "block3": {
+        "text": "Export"
+      },
+      "block4": {
+        "text": "Topology can be exported from the export button as a PNG image, a JSON snapshot, or — rendered server-side from the running daemon — Graphviz `.dot` or GraphML for use in Graphviz, yEd, or gephi."
+      }
+    },
+    "traffic": {
+      "block0": {
+        "text": "Inject controlled interface counter faults into the running simulation to test how upstream monitoring reacts. Drives `POST /api/v1/errors`."
+      },
+      "block1": {
+        "text": "Common faults"
+      },
+      "block2": {
+        "item0": {
+          "description": "increments frame-check and inbound error counters.",
+          "term": "FCS errors"
+        },
+        "item1": {
+          "description": "increments inbound and outbound discard counters.",
+          "term": "Packet discards"
+        },
+        "item2": {
+          "description": "advances octet counters at a percentage of interface speed.",
+          "term": "Utilization"
+        }
+      },
+      "block3": {
+        "text": "Errors clear when you stop the simulation or use the clear action in this panel."
+      }
+    },
+    "walk_analyzer": {
+      "block0": {
+        "text": "Parses a walk file into device identity, interface inventory, and LLDP/CDP neighbor adjacencies — the same engine as `niac analyze-walk`. Read-only; never modifies the file."
+      },
+      "block1": {
+        "text": "What it extracts"
+      },
+      "block2": {
+        "item0": {
+          "description": "sysName, sysDescr, sysObjectID, and sysContact/sysLocation when present (SNMPv2-MIB).",
+          "term": "Device"
+        },
+        "item1": {
+          "description": "index, name, type, speed, admin/oper status, and MAC address (IF-MIB / ifXTable).",
+          "term": "Interfaces"
+        },
+        "item2": {
+          "description": "adjacencies discovered via LLDP-MIB or CISCO-CDP-MIB.",
+          "term": "Neighbors"
+        }
+      }
+    },
+    "walk_validator": {
+      "block0": {
+        "text": "A \"walk file\" is an `snmpwalk` capture — a flat list of OID = value lines that NIAC replays via its simulated SNMP agent. This page wraps the same validator the CLI's `niac analyze-walk` uses."
+      },
+      "block1": {
+        "text": "What \"Validate\" reports"
+      },
+      "block2": {
+        "item0": {
+          "description": "line is malformed enough that the parser can't replay it.",
+          "term": "error"
+        },
+        "item1": {
+          "description": "likely-wrong field (suspicious type, encoding mismatch).",
+          "term": "warning"
+        },
+        "item2": {
+          "description": "stylistic (e.g. unquoted strings). Replay still works.",
+          "term": "info"
+        }
+      },
+      "block3": {
+        "text": "Auto-fix"
+      },
+      "block4": {
+        "text": "Auto-fix rewrites the walk in place. A `.bak` next to the original is created before the rewrite so you can roll back. Re-run Validate after fixing to confirm."
+      }
+    }
   },
   "pages": {
     "contents": "Pages",

@@ -128,3 +128,24 @@ describe('takenAddresses', () => {
     ]);
   });
 });
+
+it('reads AP management addressing after its unaddressed radios', () => {
+  const model = parseNetworkModel(`devices:
+  - name: MED-AP01
+    interfaces:
+      - name: Dot11Radio0
+        type: ieee80211
+      - name: Dot11Radio1
+        type: ieee80211
+      - name: mGigabitEthernet0
+        type: ethernet
+        network: MED-mgmt
+        address: 10.51.200.101/24
+`);
+  expect(model.devices[0]).toMatchObject({
+    device: 'MED-AP01',
+    interfaceName: 'mGigabitEthernet0',
+    network: 'MED-mgmt',
+    address: '10.51.200.101/24',
+  });
+});

@@ -1,5 +1,5 @@
 import { Network } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
@@ -43,6 +43,17 @@ export const TemplateStep: FC<TemplateStepProps> = ({
   const { t } = useTranslation('pages');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'start' | 'library'>('start');
+  const startTab = useRef<HTMLButtonElement>(null);
+  const libraryTab = useRef<HTMLButtonElement>(null);
+  const returnToStart = () => {
+    setTab('start');
+    startTab.current?.focus();
+  };
+  const openLibrary = () => {
+    setTab('library');
+    libraryTab.current?.focus();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -126,22 +137,93 @@ export const TemplateStep: FC<TemplateStepProps> = ({
         </CardContent>
       </Card>
 
-      <FleetGeneratorCard
-        request={state.fleetRequest}
-        selected={state.source === 'generated' && state.fleetPackId === null}
-        selectedPackId={state.source === 'generated' ? state.fleetPackId : null}
-        onChange={onFleetChange}
-        onSelect={onSelectFleet}
-        onSelectPack={onSelectPack}
-      />
-
-      <ConfigPicker
-        selection={selection}
-        onSelectTemplate={onSelectTemplate}
-        onSelectUserConfig={onSelectUserConfig}
-        onUpload={onUpload}
-        uploadFile={state.uploadFile}
-      />
+      <div
+        role="tablist"
+        aria-label={t('newSimWizard.template.startingPoint')}
+        className="flex gap-compact"
+      >
+        {(['start', 'library'] as const).map((value) => (
+          <button
+            key={value}
+            ref={value === 'start' ? startTab : libraryTab}
+            type="button"
+            id={`wizard-source-tab-${value}`}
+            data-testid={`wizard-source-tab-${value}`}
+            role="tab"
+            aria-selected={tab === value}
+            aria-controls="wizard-source-panel"
+            tabIndex={tab === value ? 0 : -1}
+            onClick={() => setTab(value)}
+            onKeyDown={(event) => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const next =
+                event.key === 'Home'
+                  ? 'start'
+                  : event.key === 'End'
+                    ? 'library'
+                    : tab === 'start'
+                      ? 'library'
+                      : 'start';
+              if (next === 'start') returnToStart();
+              else openLibrary();
+            }}
+            className={`min-h-11 rounded border px-4 py-row text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${tab === value ? 'border-brand-accent text-brand-accent bg-brand-primary/10' : 'border-surface-border text-text-primary'}`}
+          >
+            {t(`newSimWizard.template.${value === 'start' ? 'startingPoint' : 'browseLibrary'}`)}
+          </button>
+        ))}
+      </div>
+      <div
+        id="wizard-source-panel"
+        role="tabpanel"
+        aria-labelledby={`wizard-source-tab-${tab}`}
+        data-testid="wizard-source-panel"
+        className="stack-lg"
+      >
+        {tab === 'start' ? (
+          <>
+            {selection.source && (
+              <button
+                type="button"
+                data-wizard-source="library"
+                aria-pressed="true"
+                onClick={openLibrary}
+                data-testid="wizard-selected-library"
+                className="rounded border border-brand-accent bg-brand-primary/10 p-4 text-left text-text-primary focus-visible:outline-2 focus-visible:outline-brand-primary"
+              >
+                {t('newSimWizard.template.librarySelection', { name: selection.name })}
+              </button>
+            )}
+            <FleetGeneratorCard
+              request={state.fleetRequest}
+              selected={state.source === 'generated' && state.fleetPackId === null}
+              selectedPackId={state.source === 'generated' ? state.fleetPackId : null}
+              onChange={onFleetChange}
+              onSelect={onSelectFleet}
+              onSelectPack={onSelectPack}
+            />
+          </>
+        ) : (
+          <ConfigPicker
+            selection={selection}
+            onSelectTemplate={(template) => {
+              onSelectTemplate(template);
+              returnToStart();
+            }}
+            onSelectUserConfig={(config) => {
+              onSelectUserConfig(config);
+              returnToStart();
+            }}
+            onUpload={(file) => {
+              onUpload(file);
+              if (file) returnToStart();
+            }}
+            uploadFile={state.uploadFile}
+            filterByDeviceFamily
+          />
+        )}
+      </div>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { isMap, isSeq, parseDocument, type Scalar } from 'yaml';
+import { deviceAddressInterface } from './device-addressing';
 
 /**
  * The Networks step's view of a config: the routed networks, the attachments
@@ -46,7 +47,7 @@ export interface AuthoredDevicePort {
 
 export interface DeviceAddressing {
   device: string;
-  /** First interface's name, which is what auto-assign addresses. */
+  /** Addressed interface, or the wired interface used for a new address. */
   interfaceName: string | null;
   network: string | null;
   /** Prefix form, e.g. 10.20.0.5/24. */
@@ -139,7 +140,7 @@ function readDeviceAddressing(node: unknown): DeviceAddressing[] {
     const device = scalar(item.get('name'));
     if (!device) continue;
     const interfaces = item.get('interfaces');
-    const first = isSeq(interfaces) && isMap(interfaces.items[0]) ? interfaces.items[0] : null;
+    const first = deviceAddressInterface(interfaces);
     devices.push({
       device,
       interfaceName: first ? scalar(first.get('name')) : null,

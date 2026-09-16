@@ -6,8 +6,8 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import '../../i18n';
-import { pageHelp } from '../../data/page-help';
+import { getPageHelp } from '../../data/page-help';
+import i18n from '../../i18n';
 import { HelpDrawer } from '../HelpDrawer';
 import { PageHelpBody } from './PageHelpBody';
 
@@ -47,7 +47,7 @@ describe('page help in the drawer', () => {
   });
 
   it('carries no leftover markup from the JSX it was converted from', () => {
-    const text = JSON.stringify(pageHelp);
+    const text = JSON.stringify(getPageHelp(i18n.getFixedT('en', 'help')));
     expect(text).not.toMatch(/<\/?(p|h4|ul|li|strong|code|em|a)\b/);
   });
 });
