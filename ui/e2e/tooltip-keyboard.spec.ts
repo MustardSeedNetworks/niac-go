@@ -144,3 +144,47 @@ test('collapsed navigation keeps every name and reveals its label on focus', asy
   await simulation.click();
   await expect(page).toHaveURL(/\/runtime$/);
 });
+
+test('Escape dismisses a hover-only tooltip before closing its modal', async ({ page }) => {
+  await page.goto('/runtime');
+  await sidebar(page, 'desktop').getByTestId('sidebar-help-button').click();
+  const drawer = page.getByTestId('help-drawer');
+  const version = page.getByTestId('help-drawer-version');
+  const close = page.getByTestId('help-drawer-close');
+  await expect(version).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+  await version.hover();
+  const descriptionId = await version.getAttribute('aria-describedby');
+  expect(descriptionId).toBeTruthy();
+  const tooltip = page.locator(`[id="${descriptionId}"]`);
+  await expect(tooltip).toBeVisible();
+  await expect(version).not.toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toBeHidden();
+  await expect(close).toBeFocused();
+  await expect(drawer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+});
+
+test('activating Help clears its tooltip so Escape closes the drawer once focus leaves version', async ({
+  page,
+}) => {
+  await page.goto('/runtime');
+  const help = sidebar(page, 'desktop').getByTestId('sidebar-help-button');
+  const descriptionId = await help.getAttribute('aria-describedby');
+  expect(descriptionId).toBeTruthy();
+  const tooltip = page.locator(`[id="${descriptionId}"]`);
+  await help.hover();
+  await expect(tooltip).toBeVisible();
+  await help.click();
+  const drawer = page.getByTestId('help-drawer');
+  await expect(drawer).toBeVisible();
+  await expect(tooltip).toBeHidden();
+  await expect(page.getByTestId('help-drawer-version')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByTestId('help-drawer-close')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+});

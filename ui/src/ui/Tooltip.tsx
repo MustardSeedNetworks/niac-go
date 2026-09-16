@@ -5,6 +5,7 @@ import {
   isValidElement,
   type ReactElement,
   type ReactNode,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -12,7 +13,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-type Description = { 'aria-describedby': string };
+type Description = { 'aria-describedby': string; onClick: () => void };
 
 export interface TooltipProps {
   text?: ReactNode;
@@ -22,13 +23,27 @@ export interface TooltipProps {
 }
 
 // Nested inputs use the render form to put the description on the focusable control.
-function describedChild(children: TooltipProps['children'], id: string): ReactNode {
-  if (typeof children === 'function') return children({ 'aria-describedby': id });
+function describedChild(
+  children: TooltipProps['children'],
+  id: string,
+  onActivate: () => void,
+): ReactNode {
+  if (typeof children === 'function') {
+    return children({ 'aria-describedby': id, onClick: onActivate });
+  }
   if (!isValidElement(children)) return children;
   const child = children as ReactElement<ButtonHTMLAttributes<HTMLButtonElement>>;
   const existing = child.props['aria-describedby'];
   const description = { 'aria-describedby': existing ? `${existing} ${id}` : id };
-  if (child.type !== 'button' || !child.props.disabled) return cloneElement(child, description);
+  if (child.type !== 'button' || !child.props.disabled) {
+    return cloneElement(child, {
+      ...description,
+      onClick: (event) => {
+        child.props.onClick?.(event);
+        onActivate();
+      },
+    });
+  }
   // Keep an unavailable action in the tab order so its reason can be read.
   return cloneElement(child, {
     ...description,
@@ -52,6 +67,17 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
   const [focused, setFocused] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const open = (hovered || focused) && !dismissed;
+
+  useEffect(() => {
+    if (!open || !hasText) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setDismissed(true);
+      event.stopPropagation();
+    };
+    document.addEventListener('keydown', dismiss, true);
+    return () => document.removeEventListener('keydown', dismiss, true);
+  }, [hasText, open]);
 
   useLayoutEffect(() => {
     if (!open || !hasText) return;
@@ -100,17 +126,11 @@ export const Tooltip: FC<TooltipProps> = ({ text, side = 'top', children, classN
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && open && hasText) {
-          setDismissed(true);
-          event.stopPropagation();
-        }
-      }}
     >
       {hasText
-        ? describedChild(children, id)
+        ? describedChild(children, id, () => setDismissed(true))
         : typeof children === 'function'
-          ? children({ 'aria-describedby': '' })
+          ? children({ 'aria-describedby': '', onClick: () => setDismissed(true) })
           : children}
       {hasText &&
         createPortal(

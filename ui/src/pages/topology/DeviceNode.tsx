@@ -31,8 +31,8 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
   const color = getTopologyDeviceColor(deviceType);
 
   // The node shows a symbol and a name, so IPs and protocols are invisible
-  // without this. Surfaced through both title (native hover tooltip) and
-  // aria-label (screen readers).
+  // without this. The same details are available on hover, focus, and through
+  // the accessible name.
   const tooltipLines: string[] = [
     t('topology.deviceNode.tooltipSummary', { label: data.label, type: data.type }),
   ];

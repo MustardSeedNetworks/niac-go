@@ -231,6 +231,7 @@ export const DebugConsolePage: FC = () => {
               >
                 <button
                   type="button"
+                  data-testid="debug-connection-status"
                   onClick={reconnect}
                   className="flex items-center gap-compact rounded-lg border border-surface-border bg-bg-base/50 px-3 py-compact-md text-sm transition-colors hover:bg-bg-elevated/50"
                 >

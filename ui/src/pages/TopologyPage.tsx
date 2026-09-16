@@ -68,10 +68,6 @@ const edgeTypes: EdgeTypes = {
   trunk: TrunkEdge,
 };
 
-// Persistence helpers (positions + layout mode) live in
-// ./topology/persistence.ts so this file stays under the 800-line
-// file-size red-flag threshold.
-
 /**
  * TopologyPage renders the network graph with the device-node and
  * link-edge presenters defined in ./topology. The page itself owns

@@ -133,6 +133,7 @@ export const DebugLevelControl: FC = () => {
                       aria-disabled={permission.disabled || undefined}
                       onClick={(event) => {
                         if (permission.disabled) event.preventDefault();
+                        else description.onClick();
                       }}
                       onChange={() => {
                         if (!permission.disabled) void apply(opt.value);

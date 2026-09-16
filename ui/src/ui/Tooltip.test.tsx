@@ -31,6 +31,64 @@ describe('Tooltip', () => {
     expect(trigger).toHaveFocus();
   });
 
+  it('dismisses a hover-only explanation before outer Escape handlers without moving focus', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Other control</button>
+        <Tooltip text={REASON}>
+          <button type="button">Start</button>
+        </Tooltip>
+      </>,
+    );
+    const other = screen.getByRole('button', { name: 'Other control' });
+    const outerEscape = vi.fn();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') outerEscape();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    try {
+      await user.tab();
+      await user.hover(screen.getByRole('button', { name: 'Start' }));
+      expect(other).toHaveFocus();
+      expect(bubble()).toBeVisible();
+      await user.keyboard('{Escape}');
+      expect(bubble()).not.toBeVisible();
+      expect(other).toHaveFocus();
+      expect(outerEscape).not.toHaveBeenCalled();
+      await user.keyboard('{Escape}');
+      expect(outerEscape).toHaveBeenCalledTimes(1);
+    } finally {
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  });
+
+  it.each(['pointer', 'Enter', 'Space'])(
+    'dismisses after %s activates an enabled trigger without moving focus',
+    async (activation) => {
+      const user = userEvent.setup();
+      const action = vi.fn((event: React.MouseEvent) => event.stopPropagation());
+      render(
+        <Tooltip text="Open help">
+          <button type="button" onClick={action}>
+            Help
+          </button>
+        </Tooltip>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Help' });
+      await user.hover(trigger);
+      expect(bubble()).toBeVisible();
+      if (activation === 'pointer') await user.click(trigger);
+      else {
+        await user.tab();
+        await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ');
+      }
+      expect(action).toHaveBeenCalledTimes(1);
+      expect(trigger).toHaveFocus();
+      expect(bubble()).not.toBeVisible();
+    },
+  );
+
   it('stays open while the trigger is focused after the pointer leaves', async () => {
     const user = userEvent.setup();
     renderTooltip();
@@ -67,6 +125,7 @@ describe('Tooltip', () => {
     fireEvent.click(trigger);
     expect(action).not.toHaveBeenCalled();
     expect(submit).not.toHaveBeenCalled();
+    expect(bubble()).toBeVisible();
   });
 
   it('describes a nested input without changing its label when the bubble opens', async () => {

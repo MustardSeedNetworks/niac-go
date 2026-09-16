@@ -31,8 +31,12 @@ export const Top: Story = {
     const button = canvas.getByRole('button', { name: 'Show details' });
     const tooltip = within(document.body).getByRole('tooltip', { hidden: true });
     await expect(tooltip).not.toBeVisible();
+    const originalFocus = document.activeElement;
     await userEvent.hover(button);
     await expect(tooltip).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+    await expect(tooltip).not.toBeVisible();
+    await expect(document.activeElement).toBe(originalFocus);
     await userEvent.unhover(button);
     await expect(tooltip).not.toBeVisible();
     await userEvent.tab();
