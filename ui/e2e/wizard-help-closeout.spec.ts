@@ -4,6 +4,10 @@ import type { LibraryNetwork, Template } from '../src/api/template-types';
 import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
 test('Hospital pack preserves its AP uplinks through Networks and Review', async ({ page }) => {
+  // The pack builds and addresses ~250 devices before Review. Chromium walks it
+  // in ~20s and WebKit in ~27s, but Firefox needs ~40s, past the 30s default.
+  // Same budget as the other pack-building wizard spec.
+  test.setTimeout(90000);
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
   const packs: ScenarioPack[] = await (await page.request.get('/api/v1/scenario/packs')).json();
@@ -62,7 +66,15 @@ for (const theme of ['light', 'dark']) {
   }) => {
     await page.addInitScript((value) => localStorage.setItem('niac-theme', value), theme);
     await page.goto('/');
-    await page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button').click();
+    // Open it the way a keyboard user does. The close assertion at the end of
+    // this test is that focus returns to the trigger, and the focus trap
+    // restores whatever held focus when it armed — so the trigger has to hold
+    // focus for that to mean anything. WebKit on macOS does not focus a
+    // <button> on click (platform convention), which leaves the trap
+    // restoring to <body> and says nothing about the drawer.
+    const helpButton = page.getByTestId('sidebar-desktop').getByTestId('sidebar-help-button');
+    await helpButton.focus();
+    await page.keyboard.press('Enter');
     const drawer = page.getByTestId('help-drawer');
     const close = page.getByTestId('help-drawer-close');
     await expect(drawer).toBeVisible();
