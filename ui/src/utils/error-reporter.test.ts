@@ -65,6 +65,41 @@ describe('client error reporter', () => {
     }
   });
 
+  // The reporter is the only caller that wants the CSRF fetch to stay quiet, and
+  // fetchCSRFToken caches one promise for every caller: an operator's write that
+  // arrives while a background report is fetching the token joins that fetch. It
+  // must still learn that the session is gone.
+  it('still signs the operator out when an operator write joins the report CSRF fetch', async () => {
+    const authFailure = vi.fn();
+    window.addEventListener(AUTH_FAILURE_EVENT, authFailure);
+    let finishCSRF: ((response: Response) => void) | undefined;
+    mockFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes('/api/v1/csrf-token')) {
+        return new Promise<Response>((resolve) => {
+          finishCSRF = resolve;
+        });
+      }
+      return new Response('', { status: 204 });
+    });
+
+    try {
+      const { reportError } = await import('./error-reporter');
+      const { request } = await import('../api/requestCore');
+      fillBatch(reportError);
+      await vi.waitFor(() => expect(callTo('/api/v1/csrf-token')).toBeDefined());
+
+      const operatorWrite = request('/api/v1/simulation', { method: 'POST' });
+      const settled = operatorWrite.catch(() => undefined);
+      await vi.waitFor(() => expect(finishCSRF).toBeDefined());
+      finishCSRF?.(new Response('unauthorized', { status: 401 }));
+      await settled;
+
+      expect(authFailure).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(AUTH_FAILURE_EVENT, authFailure);
+    }
+  });
+
   it('does not sign the operator out when the CSRF token itself is refused', async () => {
     const authFailure = vi.fn();
     window.addEventListener(AUTH_FAILURE_EVENT, authFailure);
