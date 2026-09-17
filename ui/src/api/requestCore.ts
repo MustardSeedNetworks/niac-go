@@ -132,7 +132,6 @@ async function fetchCSRFToken() {
       credentials: 'same-origin',
     });
     if (!response.ok) {
-      notifyIfAuthenticationFailed(response.status);
       const text = await response.text();
       throw new ApiError(text || response.statusText, response.status);
     }
@@ -171,10 +170,54 @@ export async function buildRequestHeaders(path: string, init: RequestInit) {
     headers.set('Authorization', `Bearer ${token}`);
   }
   if (isStateChangingMethod(init.method) && path !== CSRF_TOKEN_PATH) {
-    headers.set('X-Csrf-Token', await fetchCSRFToken());
+    // One cached promise serves every caller, so the 401 notification belongs to
+    // the operator-initiated consumer rather than to the fetch: a write that
+    // joins a background report's in-flight token fetch must still sign the
+    // operator out, and the background report itself must not.
+    try {
+      headers.set('X-Csrf-Token', await fetchCSRFToken());
+    } catch (error) {
+      if (error instanceof ApiError) {
+        notifyIfAuthenticationFailed(error.status);
+      }
+      throw error;
+    }
   }
 
   return headers;
+}
+
+/**
+ * sendBackgroundReport posts telemetry the operator did not ask for -- today
+ * the ErrorBoundary's crash reports. It carries the same bearer token and CSRF
+ * header as request(), because /api/v1/client-errors is an authenticated,
+ * CSRF-protected route, but it deliberately drops the two behaviours that
+ * belong to an operator-initiated call: a 401 here must not log the operator
+ * out (the report may outlive the session that produced it) -- which is why the
+ * logout notification lives in buildRequestHeaders and not in fetchCSRFToken --
+ * and a failed report is not worth a retry.
+ */
+export async function sendBackgroundReport(path: string, payload: unknown): Promise<void> {
+  try {
+    const headers = new Headers({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    });
+    const token = activeAPIToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    headers.set('X-Csrf-Token', await fetchCSRFToken());
+
+    await fetch(buildUrl(path), {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Best effort: a crash report that cannot be delivered is dropped.
+  }
 }
 
 export async function validateRuntimeAuthentication() {
