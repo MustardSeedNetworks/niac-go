@@ -13,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 )
 
 const (
@@ -53,6 +54,7 @@ const nativeVLANKey uint16 = 0
 type trunkPhysicalCapture interface {
 	StartCaptureContext(context.Context, func(gopacket.Packet)) error
 	SendPacket([]byte) error
+	Stats() (capture.Stats, error)
 	Close()
 }
 
@@ -329,6 +331,15 @@ func (*trunkSessionTransport) SetFilter(value string) error {
 }
 
 func (*trunkSessionTransport) Filter() string { return "" }
+
+// Stats reports the shared trunk handle's link-layer counters. Every session
+// on a trunk reads the same numbers because they share one libpcap handle:
+// the ring overflows for the port, not for a VLAN. Attributing the loss per
+// session would be a fiction, and reporting nothing would tell an operator
+// that a lossy trunk is healthy.
+func (t *trunkSessionTransport) Stats() (capture.Stats, error) {
+	return t.parent.physical.Stats()
+}
 
 func (t *trunkSessionTransport) close() {
 	t.once.Do(func() { close(t.closed) })

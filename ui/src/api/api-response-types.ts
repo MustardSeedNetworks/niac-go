@@ -19,6 +19,12 @@ export interface StackStatsResponse {
     dhcpRequests: number;
     snmpQueries: number;
     errors: number;
+    /**
+     * Frames the capture ring and the interface dropped before the
+     * simulator saw them. Non-zero means packetsReceived is an undercount.
+     */
+    packetsDropped: number;
+    packetsIfDropped: number;
   };
 }
 
@@ -409,6 +415,12 @@ export interface StandaloneCaptureStatus {
   startedAt?: string;
   lastError?: string;
   packets: number;
+  /**
+   * Frames lost before libpcap delivered them. `packets` counts only what
+   * was delivered, so these are the only sign the capture is incomplete.
+   */
+  packetsDropped: number;
+  packetsIfDropped: number;
 }
 
 export interface StandaloneCaptureRequest {

@@ -43,6 +43,11 @@ type packetHandle interface {
 	Close()
 }
 
+// ErrEngineClosed is returned by Stats after the engine has been closed.
+// Simulation teardown closes the engine while the stats surfaces are still
+// being polled, so this is an expected outcome, not a failure.
+var ErrEngineClosed = errors.New("capture engine is closed")
+
 // Engine handles packet capture and injection.
 type Engine struct {
 	interfaceName string
@@ -50,6 +55,17 @@ type Engine struct {
 	debugLevel    int
 	activeFilter  string
 	filterMu      sync.RWMutex
+
+	// statsMu serialises Stats against Close. gopacket's pcap_stats passes
+	// the raw handle pointer to C without checking it, and Close nils that
+	// pointer, so a stats read racing a shutdown would call into libpcap
+	// with NULL. Every read surface polls Stats, and simulation teardown
+	// closes the engine while they are still live.
+	statsMu sync.Mutex
+	closed  bool
+	// warnedDrops is the highest total loss already reported, so a polled
+	// Stats warns once per increase instead of once per call.
+	warnedDrops uint64
 
 	// lookupInterface resolves interfaceName to its OS interface. A nil value
 	// means net.InterfaceByName, which is what every production path uses.
@@ -135,6 +151,11 @@ func openLiveFallback(interfaceName string) (*pcap.Handle, error) {
 
 // Close closes the capture engine.
 func (e *Engine) Close() {
+	e.statsMu.Lock()
+	defer e.statsMu.Unlock()
+
+	e.closed = true
+
 	if e.handle != nil {
 		e.handle.Close()
 	}
@@ -254,14 +275,73 @@ func (e *Engine) Filter() string {
 	return e.activeFilter
 }
 
-// Stats returns capture statistics.
-func (e *Engine) Stats() (*pcap.Stats, error) {
-	stats, err := e.handle.Stats()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
+// Stats is a snapshot of the libpcap ring counters. The pcap types stay
+// inside this package so every caller can read a drop count without linking
+// cgo, and the counts are unsigned because a caller comparing them against
+// delivered-packet totals should never have to reason about -1.
+type Stats struct {
+	PacketsReceived  uint64
+	PacketsDropped   uint64
+	PacketsIfDropped uint64
+}
+
+// Stats returns the link-layer capture counters. PacketsDropped is what the
+// kernel ring discarded and PacketsIfDropped what the interface itself did;
+// either being non-zero means the frames the product counted are an
+// undercount, so Stats warns once per increase rather than letting a lossy
+// capture read as complete.
+func (e *Engine) Stats() (Stats, error) {
+	e.statsMu.Lock()
+	defer e.statsMu.Unlock()
+
+	if e.closed {
+		return Stats{}, ErrEngineClosed
 	}
 
+	raw, err := e.handle.Stats()
+	if err != nil {
+		return Stats{}, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	stats := Stats{
+		PacketsReceived:  toCounter(raw.PacketsReceived),
+		PacketsDropped:   toCounter(raw.PacketsDropped),
+		PacketsIfDropped: toCounter(raw.PacketsIfDropped),
+	}
+	e.warnOnNewDrops(stats)
+
 	return stats, nil
+}
+
+// toCounter widens libpcap's counters, which gopacket declares as int over an
+// unsigned C u_int. The negative branch cannot come from libpcap; it is the
+// conversion guard a signed-to-unsigned widening needs, and zero is the only
+// honest answer for a count that cannot be represented.
+func toCounter(v int) uint64 {
+	if v < 0 {
+		return 0
+	}
+
+	return uint64(v)
+}
+
+// warnOnNewDrops logs each time the loss grows. Stats is polled by every
+// read surface, so warning unconditionally on a non-zero count would put a
+// line in the log per request; warning on an increase reports each new loss
+// exactly once. Called with statsMu held.
+func (e *Engine) warnOnNewDrops(stats Stats) {
+	total := stats.PacketsDropped + stats.PacketsIfDropped
+	if total <= e.warnedDrops {
+		return
+	}
+	e.warnedDrops = total
+
+	slog.Default().Warn("Capture dropped packets; reported counts are an undercount",
+		"interface", e.interfaceName,
+		"packetsReceived", stats.PacketsReceived,
+		"packetsDropped", stats.PacketsDropped,
+		"packetsIfDropped", stats.PacketsIfDropped,
+	)
 }
 
 // SendARP sends an ARP packet.

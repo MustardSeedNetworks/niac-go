@@ -114,6 +114,8 @@ export const stats: StackStatsResponse = {
   stack: {
     packetsSent: 18_402,
     packetsReceived: 17_918,
+    packetsDropped: 0,
+    packetsIfDropped: 0,
     arpRequests: 640,
     arpReplies: 638,
     icmpRequests: 120,
@@ -283,7 +285,12 @@ export const configDocument: ConfigDocument = {
   content: 'devices:\n  - hostname: core-sw-01\n    type: switch\n',
 };
 
-export const captureStatus: StandaloneCaptureStatus = { running: false, packets: 0 };
+export const captureStatus: StandaloneCaptureStatus = {
+  running: false,
+  packets: 0,
+  packetsDropped: 0,
+  packetsIfDropped: 0,
+};
 
 export const replayState: ReplayState = {
   running: false,

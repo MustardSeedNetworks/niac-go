@@ -576,7 +576,12 @@ func (s *Server) handleRuntime(w http.ResponseWriter, _ *http.Request) {
 		"device_count":     0,
 		"packets_sent":     stats.PacketsSent,
 		"packets_received": stats.PacketsReceived,
-		"uptime_seconds":   time.Since(s.startTime).Seconds(),
+		// Non-zero loss means packets_received is an undercount; the UI and
+		// any scraper need both numbers to tell a complete capture apart
+		// from a lossy one.
+		"packets_dropped":    stats.PacketsDropped,
+		"packets_if_dropped": stats.PacketsIfDropped,
+		"uptime_seconds":     time.Since(s.startTime).Seconds(),
 	}
 
 	if cfg != nil {

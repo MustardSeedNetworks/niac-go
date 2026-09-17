@@ -11,6 +11,7 @@ import (
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
@@ -19,6 +20,7 @@ var errCaptureLoopExited = errors.New("capture loop exited unexpectedly")
 type captureEngine interface {
 	SetFilter(string) error
 	StartCaptureContext(context.Context, func(gopacket.Packet)) error
+	Stats() (capture.Stats, error)
 	Close()
 }
 
@@ -172,11 +174,18 @@ func (d *Daemon) GetCaptureStatus() api.CaptureStatus {
 	if d.capture == nil {
 		return api.CaptureStatus{Running: false, LastError: d.captureLastError}
 	}
+	// A failed Stats read leaves the loss counters at zero rather than
+	// failing the status: the engine warns on its own, and a status that
+	// errors is worse than one missing two counters.
+	stats, _ := d.capture.engine.Stats()
+
 	return api.CaptureStatus{
-		Running:   true,
-		Interface: d.capture.iface,
-		Filter:    d.capture.filter,
-		StartedAt: d.capture.startedAt.Format(time.RFC3339),
-		Packets:   d.capture.packets.Load(),
+		Running:          true,
+		Interface:        d.capture.iface,
+		Filter:           d.capture.filter,
+		StartedAt:        d.capture.startedAt.Format(time.RFC3339),
+		Packets:          d.capture.packets.Load(),
+		PacketsDropped:   stats.PacketsDropped,
+		PacketsIfDropped: stats.PacketsIfDropped,
 	}
 }

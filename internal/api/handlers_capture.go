@@ -27,6 +27,12 @@ type CaptureStatus struct {
 	// Packets is the running count of packets the capture has observed
 	// since it started. Updated by the capture loop.
 	Packets uint64 `json:"packets"`
+	// PacketsDropped and PacketsIfDropped are the capture ring's and the
+	// interface's own loss counters. Packets counts frames libpcap already
+	// delivered, so a non-zero value here is the only sign that the capture
+	// is incomplete.
+	PacketsDropped   uint64 `json:"packetsDropped"`
+	PacketsIfDropped uint64 `json:"packetsIfDropped"`
 }
 
 // CaptureController is the daemon-side surface the API server uses to

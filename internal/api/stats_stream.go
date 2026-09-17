@@ -28,6 +28,10 @@ type statsStackPayload struct {
 	SNMPQueries           uint64 `json:"snmpQueries"`
 	Errors                uint64 `json:"errors"`
 	UDPProxyOverloadDrops uint64 `json:"udpProxyOverloadDrops"`
+	// PacketsDropped and PacketsIfDropped are the capture ring's own loss
+	// counters. Non-zero means PacketsReceived is an undercount.
+	PacketsDropped   uint64 `json:"packetsDropped"`
+	PacketsIfDropped uint64 `json:"packetsIfDropped"`
 }
 
 // sessionStatsPayload builds one named session's stats for the session
@@ -89,6 +93,8 @@ func buildStatsPayload(
 			SNMPQueries:           stats.SNMPQueries,
 			Errors:                stats.Errors,
 			UDPProxyOverloadDrops: stats.UDPProxyOverloadDrops,
+			PacketsDropped:        stats.PacketsDropped,
+			PacketsIfDropped:      stats.PacketsIfDropped,
 		},
 	}, true
 }

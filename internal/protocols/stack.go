@@ -145,6 +145,13 @@ type PacketTransport interface {
 	Filter() string
 }
 
+// TransportStats is implemented by transports whose link layer keeps its own
+// counters. A libpcap capture does; a trunk VLAN slice sharing one handle
+// does not, so the stack asks for it rather than requiring it.
+type TransportStats interface {
+	Stats() (capture.Stats, error)
+}
+
 // PacketObserver receives every packet the stack handles. Direction is
 // "rx" for inbound (just decoded) or "tx" for outbound (about to send).
 //
@@ -173,6 +180,14 @@ type Statistics struct {
 	FabricForwarded       uint64
 	FabricDrops           uint64
 	UDPProxyOverloadDrops uint64
+
+	// PacketsDropped and PacketsIfDropped are the link layer's own loss
+	// counters, read from the transport at snapshot time rather than
+	// incremented here: the stack never sees a frame libpcap discarded, so
+	// without them PacketsReceived reads as a complete capture. Zero when
+	// the transport keeps no such counters.
+	PacketsDropped   uint64
+	PacketsIfDropped uint64
 }
 
 // configUsesVLANs reports whether any device is assigned a VLAN. When true the
@@ -549,13 +564,18 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 	return nil
 }
 
-// GetStats returns current statistics (copy without mutex).
+// GetStats returns current statistics (copy without mutex), including the
+// transport's link-layer loss counters when it reports any.
 func (s *Stack) GetStats() Statistics {
+	dropped, ifDropped := s.transportDrops()
+
 	s.stats.mu.RLock()
 	defer s.stats.mu.RUnlock()
 
 	// Return copy of data without mutex
 	return Statistics{
+		PacketsDropped:        dropped,
+		PacketsIfDropped:      ifDropped,
 		PacketsReceived:       s.stats.PacketsReceived,
 		PacketsSent:           s.stats.PacketsSent,
 		ARPRequests:           s.stats.ARPRequests,
@@ -571,6 +591,23 @@ func (s *Stack) GetStats() Statistics {
 		FabricDrops:           s.stats.FabricDrops,
 		UDPProxyOverloadDrops: s.stats.UDPProxyOverloadDrops,
 	}
+}
+
+// transportDrops reads the link layer's loss counters. A transport that keeps
+// none, or one whose handle has already closed, contributes zero — a stats
+// read must not fail because the counters are unavailable.
+func (s *Stack) transportDrops() (dropped, ifDropped uint64) {
+	reporter, ok := s.capture.(TransportStats)
+	if !ok {
+		return 0, 0
+	}
+
+	stats, err := reporter.Stats()
+	if err != nil {
+		return 0, 0
+	}
+
+	return stats.PacketsDropped, stats.PacketsIfDropped
 }
 
 func (s *Stack) recordUDPProxyOverloadDrop() {
