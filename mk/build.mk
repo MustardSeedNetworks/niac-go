@@ -12,7 +12,7 @@
 
 .PHONY: build build-frontend build-frontend-quiet build-backend build-backend-quiet \
         run dev dev-frontend frontend-deps converter quick \
-        check-frontend-exists verify-build
+        check-frontend-exists verify-build verify-binary
 
 # =============================================================================
 # Main Build Target
@@ -74,10 +74,19 @@ check-frontend-exists: ## Verify frontend assets exist before backend build
 		exit 1; \
 	fi
 
-verify-build: build ## Verify build produces valid binary with embedded UI
+verify-build: build ## Build, then verify the binary runs and carries the UI
+	@$(MAKE) --no-print-directory verify-binary
+
+# Split from verify-build so the checks can run against a binary this Makefile
+# did not just build: as one target the version check compared a binary built
+# from $(VERSION) against $(VERSION) and could never disagree. Every check here
+# now exits non-zero; the old `|| true` and the version WARNING meant a binary
+# that crashed on every invocation, or reported a version nothing injected,
+# passed verification (#2181).
+verify-binary: ## Verify ./niac runs, embeds the UI and reports $(VERSION)
 	@printf "$(BOLD)$(CYAN)=== Build Verification ===$(RESET)\n"
 	@printf "Checking binary version...\n"
-	@./$(BINARY_NAME) version || ./$(BINARY_NAME) --version || true
+	@./$(BINARY_NAME) version
 	@printf "\n"
 	@printf "Checking embedded UI...\n"
 	@if strings ./$(BINARY_NAME) 2>/dev/null | grep -q "index.html"; then \
@@ -88,10 +97,11 @@ verify-build: build ## Verify build produces valid binary with embedded UI
 	fi
 	@printf "\n"
 	@printf "Checking version injection...\n"
-	@if ./$(BINARY_NAME) version 2>&1 | grep -q "$(VERSION)" || ./$(BINARY_NAME) --version 2>&1 | grep -q "$(VERSION)"; then \
+	@if ./$(BINARY_NAME) version 2>&1 | grep -q "$(VERSION)"; then \
 		printf "$(GREEN)✓ Version embedded correctly$(RESET)\n"; \
 	else \
-		printf "$(YELLOW)⚠ Version may not match exactly (expected: $(VERSION))$(RESET)\n"; \
+		printf "$(RED)ERROR: version mismatch (expected: $(VERSION), got: $$(./$(BINARY_NAME) version 2>&1))$(RESET)\n"; \
+		exit 1; \
 	fi
 	@printf "\n$(GREEN)✓ Build verification complete$(RESET)\n"
 
