@@ -110,23 +110,32 @@ func TestRunConfigExportWithValidation(t *testing.T) {
 	}
 }
 
-// The shipped example is the first configuration most operators run, and it
-// spent months failing validation because nothing exercised it (#2179). This
-// test is that check: it validates the file in the repository, not a copy.
+// The shipped examples are the first configuration most operators run, and
+// configs/ spent eight months holding one that failed validation because
+// nothing exercised it (#2179). This test is that check: it validates every
+// example in the repository, not a copy, so a new one cannot rot either.
 func TestRunValidateAcceptsTheShippedExample(t *testing.T) {
 	// config.Load refuses a relative path containing "..", so the repository
-	// file is named absolutely.
-	example, err := filepath.Abs(filepath.Join("..", "..", "configs", "niac.example.yaml"))
+	// files are named absolutely.
+	dir, err := filepath.Abs(filepath.Join("..", "..", "configs"))
 	if err != nil {
-		t.Fatalf("resolving the shipped example: %v", err)
+		t.Fatalf("resolving configs/: %v", err)
 	}
-	if _, statErr := os.Stat(example); statErr != nil {
-		t.Fatalf("shipped example is missing: %v", statErr)
+	examples, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
+	if err != nil {
+		t.Fatalf("listing configs/: %v", err)
+	}
+	if len(examples) == 0 {
+		t.Fatal("configs/ holds no example configuration")
 	}
 
-	root := newTestValidateRoot()
-	root.SetArgs([]string{"validate", example})
-	if execErr := root.Execute(); execErr != nil {
-		t.Errorf("validate %s: %v", example, execErr)
+	for _, example := range examples {
+		t.Run(filepath.Base(example), func(t *testing.T) {
+			root := newTestValidateRoot()
+			root.SetArgs([]string{"validate", example})
+			if execErr := root.Execute(); execErr != nil {
+				t.Errorf("validate %s: %v", example, execErr)
+			}
+		})
 	}
 }
