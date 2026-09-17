@@ -170,7 +170,9 @@ export const TemplateStep: FC<TemplateStepProps> = ({
             }}
             className={`min-h-11 rounded border px-4 py-row text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${tab === value ? 'border-brand-accent text-brand-accent bg-brand-primary/10' : 'border-surface-border text-text-primary'}`}
           >
-            {t(`newSimWizard.template.${value === 'start' ? 'startingPoint' : 'browseLibrary'}`)}
+            {value === 'start'
+              ? t('newSimWizard.template.startingPoint')
+              : t('newSimWizard.template.browseLibrary')}
           </button>
         ))}
       </div>

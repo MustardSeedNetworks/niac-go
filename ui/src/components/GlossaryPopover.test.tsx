@@ -1,6 +1,6 @@
 import enHelp from '@locales/en/help.json';
 import esHelp from '@locales/es/help.json';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getGlossary } from '../data/glossary';
@@ -24,9 +24,7 @@ afterEach(async () => {
 
 describe.each(['en', 'es'] as const)('inline glossary definitions — %s', (language) => {
   it.each(inlineTerms)('%s uses the Help glossary heading and definition', async (term) => {
-    await act(async () => {
-      await i18n.changeLanguage(language);
-    });
+    await i18n.changeLanguage(language);
     const catalog = language === 'en' ? enHelp : esHelp;
     const definition = catalog.glossary[term];
     const glossaryEntry = getGlossary(i18n.getFixedT(language, 'help')).find(

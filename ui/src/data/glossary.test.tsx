@@ -1,6 +1,6 @@
 import enHelp from '@locales/en/help.json';
 import esHelp from '@locales/es/help.json';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GlossarySection } from '../components/help-drawer/GlossarySection';
 import i18n from '../i18n';
@@ -29,11 +29,7 @@ describe.each(['en', 'es'] as const)('shared glossary — %s', (language) => {
   });
 
   it('renders the same definition that inline explanations use', async () => {
-    await Promise.resolve(
-      act(async () => {
-        await i18n.changeLanguage(language);
-      }),
-    );
+    await i18n.changeLanguage(language);
     render(<GlossarySection searchQuery="BPF" />);
     const term = screen.getByText('BPF');
     expect(term.parentElement).not.toBeNull();
@@ -44,11 +40,7 @@ describe.each(['en', 'es'] as const)('shared glossary — %s', (language) => {
   });
 
   it('searches translated definitions and terms', async () => {
-    await Promise.resolve(
-      act(async () => {
-        await i18n.changeLanguage(language);
-      }),
-    );
+    await i18n.changeLanguage(language);
     render(<GlossarySection searchQuery={catalog.glossary.draft.term} />);
     expect(screen.getByText(catalog.glossary.draft.term)).toBeVisible();
     expect(screen.getByText(catalog.glossary.draft.definition)).toBeVisible();

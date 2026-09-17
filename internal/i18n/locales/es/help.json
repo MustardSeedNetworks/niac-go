@@ -414,7 +414,7 @@
     },
     "walkProvenance": {
       "term": "Procedencia del walk",
-      "definition": "Origen del contenido del walk. «Capturado» procede de un walk SNMP de un dispositivo real y pasa por el proceso de eliminación de datos sensibles. «Generado» se crea a partir de un perfil: responde, pero no se ha medido ningún dispositivo real."
+      "definition": "Origen del contenido del walk. «Capturado» procede de un walk SNMP de un dispositivo real y pasa por el proceso de eliminación de datos sensibles. «Generado» significa que NIAC lo creó a partir de un perfil: responde, pero no se ha medido ningún dispositivo real."
     },
     "scenarioPack": {
       "term": "Paquete de escenario",
