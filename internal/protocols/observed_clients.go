@@ -24,8 +24,9 @@ const observedClientTTL = 300 * time.Second
 // yet, and an always-empty field would read as "unplaced" rather than
 // "unimplemented". It arrives with the runtime placement work (AP-2).
 type ObservedClient struct {
-	MAC       string    `json:"mac"`
-	IP        string    `json:"ip,omitempty"`
+	MAC string `json:"mac"`
+	IP  string `json:"ip,omitempty"`
+	// VLAN is the tag the client's frames carried, absent when untagged.
 	VLAN      int       `json:"vlan,omitempty"`
 	FirstSeen time.Time `json:"firstSeen"`
 	LastSeen  time.Time `json:"lastSeen"`
@@ -134,7 +135,14 @@ func (s *Stack) recordObservedClient(pkt *Packet) {
 		return
 	}
 
-	s.observedClients.observe(src, sourceAddressClaimedBy(pkt), pkt.VLAN)
+	// Packet.VLAN is -1 for an untagged frame, a parser sentinel rather than a
+	// VLAN; reporting it would tell a consumer the client sits on VLAN -1.
+	vlan := 0
+	if pkt.VLANTagged {
+		vlan = pkt.VLAN
+	}
+
+	s.observedClients.observe(src, sourceAddressClaimedBy(pkt), vlan)
 }
 
 // isUnicastMAC rejects the all-zero address and any group address: neither can

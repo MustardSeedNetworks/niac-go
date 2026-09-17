@@ -208,3 +208,48 @@ func TestObservedClientsAreClearedWhenTheSessionStops(t *testing.T) {
 		t.Fatalf("GetObservedClients() = %+v after Stop, want no entries", clients)
 	}
 }
+
+// taggedARPFrame wraps the ARP request in an 802.1Q tag, which shifts every
+// layer-3 offset by the tag's length — the production path for an access-VLAN
+// attachment.
+func taggedARPFrame(src net.HardwareAddr, vlan int) *Packet {
+	inner := arpRequestFrame(src)
+	frame := make([]byte, 0, inner.Length+dot1qTagLen)
+	frame = append(frame, inner.Buffer[:SizeOfMac*ethTypeOffsetMult]...)
+	frame = append(frame, 0x81, 0x00, byte(vlan>>8), byte(vlan&0xff))
+	frame = append(frame, inner.Buffer[SizeOfMac*ethTypeOffsetMult:inner.Length]...)
+
+	pkt, _ := ParsePacket(frame, 3)
+	return pkt
+}
+
+func TestObservedClientsReadATaggedFrameAtTheRightOffsets(t *testing.T) {
+	stack := observedClientStack(t)
+	stack.decodePacket(taggedARPFrame(clientMAC(), 200))
+
+	clients := stack.GetObservedClients()
+	if len(clients) != 1 {
+		t.Fatalf("GetObservedClients() = %d entries, want 1", len(clients))
+	}
+	if clients[0].IP != testClientIP {
+		t.Errorf("IP = %q, want %q — the 802.1Q tag shifts the sender address", clients[0].IP, testClientIP)
+	}
+	if clients[0].VLAN != 200 {
+		t.Errorf("VLAN = %d, want 200", clients[0].VLAN)
+	}
+}
+
+func TestObservedClientsReportNoVLANForAnUntaggedFrame(t *testing.T) {
+	// Packet.VLAN is -1 for an untagged frame — a parser sentinel, not a VLAN.
+	// Letting it reach the API would tell a consumer the client is on VLAN -1.
+	stack := observedClientStack(t)
+	stack.decodePacket(arpRequestFrame(clientMAC()))
+
+	clients := stack.GetObservedClients()
+	if len(clients) != 1 {
+		t.Fatalf("GetObservedClients() = %d entries, want 1", len(clients))
+	}
+	if clients[0].VLAN != 0 {
+		t.Errorf("VLAN = %d, want 0 for a frame that carried no tag", clients[0].VLAN)
+	}
+}
