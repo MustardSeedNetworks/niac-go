@@ -128,6 +128,7 @@ GET /api/v1/sessions/{id}/devices           its device inventory
 GET /api/v1/sessions/{id}/interfaces        its simulated devices' interfaces
 GET /api/v1/sessions/{id}/segments          its VLAN segments
 GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
+GET /api/v1/sessions/{id}/clients           the client MACs seen on its wire
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
 GET /api/v1/sessions/{id}/capture/export    its retained frames as pcapng

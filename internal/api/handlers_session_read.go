@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
@@ -63,6 +65,29 @@ func (s *Server) handleSessionNeighbors(w http.ResponseWriter, r *http.Request, 
 		neighbors = []protocols.NeighborRecord{}
 	}
 	s.writeJSON(w, neighbors)
+}
+
+// handleSessionClients reports every MAC seen sourcing traffic into this
+// session — the answer to "who is attached to this scenario right now". It is
+// a wire observation, not configuration: the scenario's own devices are not
+// listed, and a client that never DHCPs or advertises discovery still is.
+func (s *Server) handleSessionClients(w http.ResponseWriter, r *http.Request, session sessionRuntime) {
+	if !requireGet(w, r) {
+		return
+	}
+	stack := session.stack()
+	if stack == nil {
+		s.writeJSON(w, []protocols.ObservedClient{})
+		return
+	}
+	clients := stack.GetObservedClients()
+	if clients == nil {
+		clients = []protocols.ObservedClient{}
+	}
+	slices.SortFunc(clients, func(a, b protocols.ObservedClient) int {
+		return strings.Compare(a.MAC, b.MAC)
+	})
+	s.writeJSON(w, clients)
 }
 
 // sessionInterfaceResponse names the device an interface belongs to, which the

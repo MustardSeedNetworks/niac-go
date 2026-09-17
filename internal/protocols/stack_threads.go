@@ -181,6 +181,8 @@ func (s *Stack) decodePacket(pkt *Packet) {
 		return
 	}
 
+	s.recordObservedClient(pkt)
+
 	// Try MAC-based routing first (multicast protocols)
 	if s.routeByMAC(pkt) {
 		return

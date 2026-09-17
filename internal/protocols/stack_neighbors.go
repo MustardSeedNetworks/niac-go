@@ -29,6 +29,7 @@ func (s *Stack) startNeighborCleanupLoop() {
 			select {
 			case <-ticker.C:
 				s.neighbors.cleanupExpired()
+				s.observedClients.cleanupExpired()
 			case <-s.stopChan:
 				return
 			}
