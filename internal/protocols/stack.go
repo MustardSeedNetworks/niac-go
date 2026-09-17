@@ -107,6 +107,7 @@ type Stack struct {
 	healthCheckHandler *HealthCheckHandler
 	iperf3Handler      *IPerf3Handler
 	neighbors          *neighborTable
+	observedClients    *observedClientTable
 
 	// Statistics
 	stats *Statistics
@@ -236,17 +237,18 @@ func newStack(
 	bufferSize := DefaultQueueBufferSize
 
 	stack := &Stack{
-		capture:     captureEngine,
-		config:      cfg,
-		devices:     NewDeviceTable(),
-		sendQueue:   make(chan *Packet, bufferSize),
-		recvQueue:   make(chan *Packet, bufferSize),
-		stats:       &Statistics{},
-		stopChan:    make(chan struct{}),
-		debugConfig: debugConfig,
-		snmpAgents:  make(map[*config.Device]*snmpAgentGroup),
-		neighbors:   newNeighborTable(),
-		vlanMode:    configUsesVLANs(cfg),
+		capture:         captureEngine,
+		config:          cfg,
+		devices:         NewDeviceTable(),
+		sendQueue:       make(chan *Packet, bufferSize),
+		recvQueue:       make(chan *Packet, bufferSize),
+		stats:           &Statistics{},
+		stopChan:        make(chan struct{}),
+		debugConfig:     debugConfig,
+		snmpAgents:      make(map[*config.Device]*snmpAgentGroup),
+		neighbors:       newNeighborTable(),
+		observedClients: newObservedClientTable(),
+		vlanMode:        configUsesVLANs(cfg),
 	}
 	stack.notifications = newStateNotificationManager(stack)
 
@@ -368,6 +370,11 @@ func (s *Stack) Stop() {
 	close(s.stopChan)
 	s.notifications.Reset()
 	s.wg.Wait()
+
+	// The table describes who was attached to this session; the session is
+	// over. Unlike the neighbour table it deliberately survives a config
+	// reload, which changes the scenario but not who is plugged into it.
+	s.observedClients.reset()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		logging.Debugf("Protocol stack stopped")
