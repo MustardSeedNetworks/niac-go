@@ -7,11 +7,12 @@
  * the empty-state copy of all three at once.
  */
 
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchTemplates, fetchUsableInterfaces } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
 import type { InterfacesResponse, LibraryNetwork, Template } from '../../api/types';
+import { useUIStore } from '../../stores/ui-store';
 import { renderWithResources } from '../../test/renderWithResources';
 import { SimulationSection } from './SimulationSection';
 
@@ -57,6 +58,9 @@ function resolveAll(): void {
 describe('SimulationSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The store is a module singleton: without this, the tab one test selects
+    // is the tab the next test opens on.
+    useUIStore.getState().resetSimulationSettings();
     resolveAll();
   });
 
@@ -94,7 +98,7 @@ describe('SimulationSection', () => {
     renderWithResources(<SimulationSection />);
 
     await screen.findByText('hospital');
-    screen.getByRole('tab', { name: 'My Configs' }).click();
+    fireEvent.click(screen.getByRole('button', { name: 'My Configs' }));
 
     const alert = await screen.findByTestId('simulation-configs-error');
     expect(alert).toHaveTextContent(/token expired/);
@@ -105,7 +109,7 @@ describe('SimulationSection', () => {
     mocks.templates.mockRejectedValueOnce(new Error('500 internal error'));
     renderWithResources(<SimulationSection />);
 
-    (await screen.findByTestId('simulation-templates-retry')).click();
+    fireEvent.click(await screen.findByTestId('simulation-templates-retry'));
 
     await waitFor(() => expect(screen.getByText('hospital')).toBeInTheDocument());
     expect(mocks.templates).toHaveBeenCalledTimes(2);

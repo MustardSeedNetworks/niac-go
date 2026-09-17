@@ -12,15 +12,18 @@
  * - File upload for quick config override
  */
 
-import { FileUp, FolderOpen, LayoutTemplate, Network, PlugZap } from 'lucide-react';
+import { AlertCircle, FileUp, FolderOpen, LayoutTemplate, Network, PlugZap } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchTemplates, fetchUsableInterfaces } from '../../api/client';
+import { fetchTemplates } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { LibraryNetwork, NetworkInterface, Template } from '../../api/types';
+import type { LibraryNetwork, Template } from '../../api/types';
+import { useApiResource } from '../../hooks/useApiResource';
+import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
 import { cn } from '../../styles/theme';
+import { getErrorMessage } from '../../utils/format';
 
 type ConfigTab = 'templates' | 'configs' | 'upload';
 
@@ -55,10 +58,27 @@ const CONFIG_TABS: ConfigTabButton[] = [
 export function SimulationSection(): ReactElement {
   const { t } = useTranslation('settings');
   const { simulationSettings, setSimulationSettings } = useUIStore();
-  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Three independent resources, not one `Promise.all`: a failure of any one
+  // of them used to blank all three lists and read as "you have none" (#2177).
+  const {
+    data: interfacesData,
+    loading: interfacesLoading,
+    error: interfacesError,
+    refetch: refetchInterfaces,
+  } = useUsableInterfacesResource();
+  const {
+    data: templates,
+    loading: templatesLoading,
+    error: templatesError,
+    refetch: refetchTemplates,
+  } = useApiResource(fetchTemplates, ['templates']);
+  const {
+    data: userConfigs,
+    loading: userConfigsLoading,
+    error: userConfigsError,
+    refetch: refetchUserConfigs,
+  } = useApiResource(fetchLibraryNetworks, ['library', 'networks']);
+  const interfaces = interfacesData?.interfaces ?? [];
   const [activeTab, setActiveTab] = useState<ConfigTab>(() => {
     // Set initial tab based on current config source
     switch (simulationSettings.configSource) {
@@ -72,29 +92,6 @@ export function SimulationSection(): ReactElement {
         return 'templates';
     }
   });
-
-  // Fetch data on mount
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [interfacesResp, templatesResp, configsResp] = await Promise.all([
-          fetchUsableInterfaces(),
-          fetchTemplates(),
-          fetchLibraryNetworks(),
-        ]);
-        setInterfaces(interfacesResp.interfaces);
-        setTemplates(templatesResp);
-        setUserConfigs(configsResp);
-      } catch (err) {
-        console.error('Failed to load simulation settings data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   const handleInterfaceChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -153,7 +150,7 @@ export function SimulationSection(): ReactElement {
             id="sim-interface"
             value={simulationSettings.selectedInterface}
             onChange={handleInterfaceChange}
-            disabled={loading}
+            disabled={interfacesLoading}
             className={cn(
               'w-full pl-10 pr-4 py-row text-sm',
               'bg-bg-elevated border border-surface-border rounded-lg',
@@ -170,7 +167,17 @@ export function SimulationSection(): ReactElement {
             ))}
           </select>
         </div>
-        <p className="text-xs text-text-muted">{t('simulation.interfaceHelper')}</p>
+        {interfacesError ? (
+          <LoadError
+            testId="simulation-interfaces"
+            message={t('simulation.loadFailedInterfaces', {
+              error: getErrorMessage(interfacesError),
+            })}
+            onRetry={refetchInterfaces}
+          />
+        ) : (
+          <p className="text-xs text-text-muted">{t('simulation.interfaceHelper')}</p>
+        )}
       </div>
 
       {/* Config Source Tabs */}
@@ -202,31 +209,51 @@ export function SimulationSection(): ReactElement {
 
       {/* Tab Content */}
       <div className="min-h-[120px]">
-        {loading && (
-          <div className="flex-center py-8 text-text-muted text-sm">{t('simulation.loading')}</div>
-        )}
+        {activeTab === 'templates' &&
+          (templatesLoading ? (
+            <Loading />
+          ) : templatesError ? (
+            <LoadError
+              testId="simulation-templates"
+              message={t('simulation.loadFailedTemplates', {
+                error: getErrorMessage(templatesError),
+              })}
+              onRetry={refetchTemplates}
+            />
+          ) : (
+            <TemplateList
+              templates={templates ?? []}
+              selectedName={
+                simulationSettings.configSource === 'template' ? simulationSettings.configName : ''
+              }
+              onSelect={handleTemplateSelect}
+            />
+          ))}
 
-        {!loading && activeTab === 'templates' && (
-          <TemplateList
-            templates={templates}
-            selectedName={
-              simulationSettings.configSource === 'template' ? simulationSettings.configName : ''
-            }
-            onSelect={handleTemplateSelect}
-          />
-        )}
+        {activeTab === 'configs' &&
+          (userConfigsLoading ? (
+            <Loading />
+          ) : userConfigsError ? (
+            <LoadError
+              testId="simulation-configs"
+              message={t('simulation.loadFailedUserConfigs', {
+                error: getErrorMessage(userConfigsError),
+              })}
+              onRetry={refetchUserConfigs}
+            />
+          ) : (
+            <UserConfigList
+              configs={userConfigs ?? []}
+              selectedName={
+                simulationSettings.configSource === 'userConfig'
+                  ? simulationSettings.configName
+                  : ''
+              }
+              onSelect={handleUserConfigSelect}
+            />
+          ))}
 
-        {!loading && activeTab === 'configs' && (
-          <UserConfigList
-            configs={userConfigs}
-            selectedName={
-              simulationSettings.configSource === 'userConfig' ? simulationSettings.configName : ''
-            }
-            onSelect={handleUserConfigSelect}
-          />
-        )}
-
-        {!loading && activeTab === 'upload' && <UploadSection />}
+        {activeTab === 'upload' && <UploadSection />}
       </div>
 
       {/* Current Selection Display */}
@@ -252,6 +279,42 @@ export function SimulationSection(): ReactElement {
 // =============================================================================
 // Sub-components
 // =============================================================================
+
+function Loading(): ReactElement {
+  const { t } = useTranslation('settings');
+  return <div className="flex-center py-8 text-text-muted text-sm">{t('simulation.loading')}</div>;
+}
+
+interface LoadErrorProps {
+  testId: string;
+  message: string;
+  onRetry: () => void;
+}
+
+/** A load failure states that it failed and offers the one action that helps. */
+function LoadError({ testId, message, onRetry }: LoadErrorProps): ReactElement {
+  const { t } = useTranslation('settings');
+  return (
+    <div
+      role="alert"
+      data-testid={`${testId}-error`}
+      className="flex items-start gap-compact rounded-lg border border-status-error/30 bg-status-error/20 pad-sm"
+    >
+      <AlertCircle className="mt-tight w-4 h-4 shrink-0 text-status-error" aria-hidden="true" />
+      <div className="stack-xs">
+        <p className="text-sm text-status-error">{message}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          data-testid={`${testId}-retry`}
+          className="text-xs font-medium text-status-error underline underline-offset-2"
+        >
+          {t('simulation.retry')}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface TemplateListProps {
   templates: Template[];
