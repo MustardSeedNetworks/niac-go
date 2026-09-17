@@ -71,7 +71,6 @@ func (c *scenarioCompiler) compileAttachmentPool(
 			"attachment pool lists no ports")
 		return CompiledAttachment{}, false
 	}
-	domain := c.broadcastDomain(device)
 	compiled := CompiledAttachment{
 		Name:   attachment.Name,
 		Device: device.Name,
@@ -87,7 +86,7 @@ func (c *scenarioCompiler) compileAttachmentPool(
 			continue
 		}
 		seen[name] = struct{}{}
-		port, resolved := c.compileAttachmentPoolPort(device, name, portField, domain)
+		port, resolved := c.compileAttachmentPoolPort(device, name, portField)
 		if !resolved {
 			ok = false
 			continue
@@ -129,7 +128,6 @@ func (c *scenarioCompiler) resolvePoolNetwork(compiled *CompiledAttachment, fiel
 func (c *scenarioCompiler) compileAttachmentPoolPort(
 	device *config.Device,
 	name, field string,
-	domain map[string]struct{},
 ) (AttachmentPort, bool) {
 	iface := interfaceByName(device, name)
 	if iface == nil {
@@ -148,7 +146,7 @@ func (c *scenarioCompiler) compileAttachmentPoolPort(
 			"port carries no single access VLAN, so the network behind it is undecidable")
 		return AttachmentPort{}, false
 	}
-	network, resolved := c.networkServingVLAN(vlan, domain)
+	network, resolved := c.networkServingVLAN(vlan, c.broadcastDomain(device, vlan))
 	switch resolved {
 	case vlanNetworkResolved:
 		return AttachmentPort{
@@ -214,14 +212,17 @@ const (
 	vlanNetworkAmbiguous
 )
 
-// networkServingVLAN finds the network a VLAN carries inside one broadcast
-// domain, by looking for the layer-3 interface that serves it.
+// networkServingVLAN finds the network a VLAN carries inside that VLAN's
+// broadcast domain, by looking for the layer-3 interface that serves it.
 //
 // The VLAN id alone cannot answer this: measured over the seven generated
 // packs, every one reuses its VLAN ids across sites -- a four-site campus has
 // four different networks on VLAN 210 -- so a lookup keyed on virtual_vlan
 // across the whole scenario is ambiguous by construction. The domain is what
-// makes it decidable.
+// makes it decidable, and it has to be the domain *of this VLAN*: a domain
+// that crossed routed links was still the whole scenario, which is the defect
+// AP-3 hit. Every pack reuses VLAN 200 on lab-transit as well, so even a
+// single-site pack was ambiguous.
 func (c *scenarioCompiler) networkServingVLAN(
 	vlan uint16,
 	domain map[string]struct{},
@@ -252,11 +253,24 @@ func (c *scenarioCompiler) networkServingVLAN(
 	}
 }
 
-// broadcastDomain is every device reachable from the starting device over
-// authored links, itself included. It walks trunk ports because that is how an
-// edge is authored -- there is no separate links section -- and skips fdb_only
-// ports, which record a learned endpoint rather than an infrastructure link.
-func (c *scenarioCompiler) broadcastDomain(from *config.Device) map[string]struct{} {
+// broadcastDomain is every device that one VLAN reaches from the starting
+// device, itself included. It walks trunk ports because that is how an edge is
+// authored -- there is no separate links section.
+//
+// Only a link that carries the VLAN extends its domain. Two kinds of link are
+// therefore not followed, and both matter:
+//
+//   - fdb_only ports, which record a learned endpoint rather than an
+//     infrastructure link;
+//   - any link that does not carry this VLAN -- in particular a routed one,
+//     which carries no layer-2 state at all (no VLANs, no native VLAN). A
+//     router terminates layer 2; following its links merged every site of a
+//     multi-site pack into one "domain", and with VLAN ids reused per site the
+//     network behind a free access port was then ambiguous by construction.
+func (c *scenarioCompiler) broadcastDomain(
+	from *config.Device,
+	vlan uint16,
+) map[string]struct{} {
 	domain := map[string]struct{}{from.Name: {}}
 	queue := []string{from.Name}
 	for len(queue) > 0 {
@@ -268,7 +282,7 @@ func (c *scenarioCompiler) broadcastDomain(from *config.Device) map[string]struc
 		}
 		for _, trunk := range device.TrunkPorts {
 			neighbour := trunk.RemoteDevice
-			if neighbour == "" || trunk.FDBOnly {
+			if neighbour == "" || trunk.FDBOnly || !trunkCarriesVLAN(trunk, vlan) {
 				continue
 			}
 			if _, seen := domain[neighbour]; seen {
@@ -279,6 +293,21 @@ func (c *scenarioCompiler) broadcastDomain(from *config.Device) map[string]struc
 		}
 	}
 	return domain
+}
+
+// trunkCarriesVLAN reports whether a link forwards one VLAN, tagged in its
+// allowed list or untagged as its native VLAN. An empty allowed list is not
+// "every VLAN" here: config.IsRoutedTopologyLink reads the same shape as a
+// routed link, and the qbridge MIB already builds a device's VLAN list that
+// way, so the two agree.
+func trunkCarriesVLAN(trunk config.TrunkPort, vlan uint16) bool {
+	// Compared as int: the authored fields are int and the caller's VLAN came
+	// from accessVLAN, which has already bounded it to 1..4094.
+	want := int(vlan)
+	if trunk.NativeVLAN == want {
+		return true
+	}
+	return slices.Contains(trunk.VLANs, want)
 }
 
 func (c *scenarioCompiler) deviceByName(name string) *config.Device {

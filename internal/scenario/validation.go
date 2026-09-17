@@ -146,7 +146,7 @@ func validateCounts(c Counts, accessLayer AccessLayer) error {
 		return errors.New("access points per access switch must be between 0 and 9")
 	}
 	if c.WorkstationsPerAccess > maxWorkstationsPerAccess {
-		return errors.New("workstations per access switch must be between 0 and 39")
+		return errors.New("workstations per access switch must be between 0 and 33")
 	}
 	if c.WirelessControllers > maxWirelessControllers {
 		return errors.New("wireless controller count must be between 0 and 8")

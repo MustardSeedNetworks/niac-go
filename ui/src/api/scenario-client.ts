@@ -233,7 +233,11 @@ export const isScenarioRequestValid = (request: ScenarioGenerateRequest) => {
     counts.accessPointsPerAccess >= 0 &&
     counts.accessPointsPerAccess <= 9 &&
     counts.workstationsPerAccess >= 0 &&
-    counts.workstationsPerAccess <= 39 &&
+    // 33, not the platform's 48: every access switch reserves four ports as a
+    // spare-port pool for the tester (AP-3), and internal/scenario derives the
+    // same bound from sparePortFirst. A higher ceiling here would offer counts
+    // the daemon then refuses.
+    counts.workstationsPerAccess <= 33 &&
     counts.wirelessControllers >= 0 &&
     counts.wirelessControllers <= 8 &&
     counts.accessSwitches * counts.accessPointsPerAccess <= 154 &&

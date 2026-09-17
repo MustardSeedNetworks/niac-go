@@ -58,6 +58,22 @@ describe('scenario generator client', () => {
     expect(isScenarioRequestValid(request)).toBe(false);
   });
 
+  // The wired-client ceiling is 33 rather than the platform's 48 because every
+  // access switch reserves four ports as the tester's spare-port pool (AP-3).
+  // internal/scenario derives the same number from sparePortFirst; offering a
+  // higher count here would let the wizard submit one the daemon refuses.
+  it('stops the wired-client count where the spare-port pool begins', async () => {
+    const { defaultScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
+    const request = defaultScenarioRequest();
+    request.counts.accessSwitches = 1;
+
+    request.counts.workstationsPerAccess = 33;
+    expect(isScenarioRequestValid(request)).toBe(true);
+
+    request.counts.workstationsPerAccess = 34;
+    expect(isScenarioRequestValid(request)).toBe(false);
+  });
+
   it('matches the generator integer and UTF-8 byte limits', async () => {
     const { defaultScenarioRequest, isScenarioRequestValid } = await import('./scenario-client');
     const request = defaultScenarioRequest();

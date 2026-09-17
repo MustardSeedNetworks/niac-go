@@ -181,7 +181,15 @@ func assertAuthoredInterfacesAndLinks(t *testing.T, cfg *config.Config) {
 		for _, iface := range device.Interfaces {
 			if iface.MTU == 0 || iface.Speed == 0 ||
 				(iface.Type == "ethernet" && iface.Duplex != "full") ||
-				iface.AdminStatus != "up" || iface.OperStatus != "up" {
+				iface.AdminStatus != "up" {
+				t.Errorf("%s %s lacks explicit link state: %+v", device.Name, iface.Name, iface)
+			}
+			if isSparePort(iface) {
+				assertSparePortIsNotConnected(t, device.Name, iface)
+
+				continue
+			}
+			if iface.OperStatus != "up" {
 				t.Errorf("%s %s lacks explicit link state: %+v", device.Name, iface.Name, iface)
 			}
 			if iface.Type == "ethernet" && (iface.InUtilization <= 0 || iface.OutUtilization <= 0) {
@@ -191,6 +199,30 @@ func assertAuthoredInterfacesAndLinks(t *testing.T, cfg *config.Config) {
 	}
 	assertAuthoredLinks(t, cfg)
 	assertRoutedEdgesUntagged(t, cfg)
+}
+
+// A spare port is the one interface that is meant to look idle: nothing is
+// plugged into it until a tester is, so a real switch reports it
+// administratively up, operationally down, with no counters moving. AP-3
+// authors four of them per access and server switch; AP-2 is what brings the
+// one it places a client on up. Asserting that shape here rather than
+// exempting it keeps the invariant a statement about the whole pack.
+func isSparePort(iface config.Interface) bool {
+	return iface.Description == "Spare access port"
+}
+
+func assertSparePortIsNotConnected(t *testing.T, device string, iface config.Interface) {
+	t.Helper()
+	if iface.OperStatus != "down" {
+		t.Errorf("%s %s is a spare port reporting oper %q, want down: %+v",
+			device, iface.Name, iface.OperStatus, iface)
+	}
+	if iface.InUtilization != 0 || iface.OutUtilization != 0 {
+		t.Errorf("%s %s is a spare port carrying traffic: %+v", device, iface.Name, iface)
+	}
+	if iface.Address != "" {
+		t.Errorf("%s %s is a spare port with an address: %+v", device, iface.Name, iface)
+	}
 }
 
 func assertRoutedEdgesUntagged(t *testing.T, cfg *config.Config) {

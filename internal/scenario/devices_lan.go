@@ -88,9 +88,9 @@ func accessSwitch(site Site, index int) deviceSpec {
 		name: accessName(site, index), role: "access", index: index,
 		ips: []string{address}, site: &site,
 		sysDescr: fmt.Sprintf("Cisco C9350-48HX %s multigigabit access %d", site.Code, index),
-		interfaces: []converter.Interface{newInterface(
+		interfaces: append([]converter.Interface{newInterface(
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
-		)},
+		)}, sparePorts("GigabitEthernet1/0/", vlanData, speedOneGigabit)...),
 		vlan: vlanManagement,
 		// The access layer is the only PSE in a pack: phones, cameras and
 		// access points hang off it and advertise what they draw, so this is
@@ -106,9 +106,9 @@ func serverSwitch(site Site, index int) deviceSpec {
 		name: numberedName(site.Code+"-SRV-SW", index), role: "server-switch", index: index,
 		ips: []string{address}, site: &site,
 		sysDescr: fmt.Sprintf("Cisco Nexus 93180YC-FX3 %s server leaf %d", site.Code, index),
-		interfaces: []converter.Interface{newInterface(
+		interfaces: append([]converter.Interface{newInterface(
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
-		)},
+		)}, sparePorts("TenGigabitEthernet1/0/", vlanServers, speedTenGigabit)...),
 		vlan: vlanManagement,
 	}
 }

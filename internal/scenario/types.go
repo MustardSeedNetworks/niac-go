@@ -16,7 +16,10 @@ const (
 	maxAccessSwitches        = 20
 	maxServerSwitches        = 8
 	maxAccessPointsPerAccess = 9
-	maxWorkstationsPerAccess = 39
+	// Bounded by the spare-port block rather than by the platform's 48 ports:
+	// every access switch keeps sparePortCount ports free for a tester (AP-3),
+	// so the client range stops one port below sparePortFirst.
+	maxWorkstationsPerAccess = sparePortFirst - workstationPortOffset - 1
 	maxWirelessControllers   = 8
 	maxScenarioDomainLength  = 237
 	maxSNMPCommunityLength   = 255
