@@ -5,6 +5,15 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.73](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.72...v0.95.73) (2026-09-17)
+
+
+### Bug Fixes
+
+* **configs:** ship an example configuration that validates (D-NIAC-6) ([#2243](https://github.com/MustardSeedNetworks/niac-go/issues/2243)) ([e931331](https://github.com/MustardSeedNetworks/niac-go/commit/e9313318dd4f5e170e9b93b2f2bdddd06e103c28))
+* **e2e:** bring the Playwright matrix back to the fleet policy (D-NIAC-18) ([#2248](https://github.com/MustardSeedNetworks/niac-go/issues/2248)) ([94278e0](https://github.com/MustardSeedNetworks/niac-go/commit/94278e0d1e1ac7d88e38b8732b60e8b54d314689)), closes [#2247](https://github.com/MustardSeedNetworks/niac-go/issues/2247)
+* **ui:** show a load failure in Settings &gt; Simulation instead of the empty state (D-NIAC-5) ([#2241](https://github.com/MustardSeedNetworks/niac-go/issues/2241)) ([c77d273](https://github.com/MustardSeedNetworks/niac-go/commit/c77d273d52ec85f22a7e990bda31ce05696f6596)), closes [#2177](https://github.com/MustardSeedNetworks/niac-go/issues/2177)
+
 ## [0.95.72](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.71...v0.95.72) (2026-09-17)
 
 
