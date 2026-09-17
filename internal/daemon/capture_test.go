@@ -11,6 +11,7 @@ import (
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 )
 
 // TestStartCapture_RejectsWhenSimulationRunning makes sure the daemon
@@ -82,6 +83,7 @@ func TestGetCaptureStatus_ReportsRunningSession(t *testing.T) {
 		filter:    "tcp port 80",
 		startedAt: started,
 		cancel:    func() {},
+		engine:    &fakeCaptureEngine{},
 	}
 	d.capture.packets.Store(42)
 
@@ -208,7 +210,21 @@ func TestStandaloneCaptureOldRunnerCannotClearReplacement(t *testing.T) {
 }
 
 type fakeCaptureEngine struct {
-	closes atomic.Int32
+	closes   atomic.Int32
+	stats    capture.Stats
+	statsErr error
+}
+
+// errFakeCaptureStats is the failure a fakeCaptureEngine reports when it is
+// configured to refuse its counters.
+var errFakeCaptureStats = errors.New("fake engine cannot report stats")
+
+func (f *fakeCaptureEngine) Stats() (capture.Stats, error) {
+	if f.statsErr != nil {
+		return capture.Stats{}, f.statsErr
+	}
+
+	return f.stats, nil
 }
 
 func (f *fakeCaptureEngine) SetFilter(string) error { return nil }

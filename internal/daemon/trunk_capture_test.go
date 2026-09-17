@@ -9,11 +9,16 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 )
 
 type fakeTrunkPhysical struct {
-	sent []byte
+	sent  []byte
+	stats capture.Stats
 }
+
+func (f *fakeTrunkPhysical) Stats() (capture.Stats, error) { return f.stats, nil }
 
 func (*fakeTrunkPhysical) StartCaptureContext(context.Context, func(gopacket.Packet)) error {
 	return nil

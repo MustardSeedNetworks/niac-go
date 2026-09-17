@@ -40,6 +40,20 @@ func writeBasicMetrics(w io.Writer, stats *protocols.Statistics, deviceCount int
 		"counter",
 		stats.SNMPQueries,
 	)
+	writePrometheusMetric(
+		w,
+		"niac_packets_dropped_total",
+		"Packets dropped by the capture ring before the simulator saw them",
+		"counter",
+		stats.PacketsDropped,
+	)
+	writePrometheusMetric(
+		w,
+		"niac_packets_if_dropped_total",
+		"Packets dropped by the capture interface before the capture ring",
+		"counter",
+		stats.PacketsIfDropped,
+	)
 	writePrometheusMetric(w, "niac_errors_total", "Total errors", "counter", stats.Errors)
 	writePrometheusMetric(
 		w,

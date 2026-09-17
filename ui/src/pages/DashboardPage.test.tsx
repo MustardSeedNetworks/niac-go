@@ -55,6 +55,8 @@ const stats: StackStatsResponse = {
   stack: {
     packetsSent: 200,
     packetsReceived: 1000,
+    packetsDropped: 0,
+    packetsIfDropped: 0,
     arpRequests: 0,
     arpReplies: 0,
     icmpRequests: 0,

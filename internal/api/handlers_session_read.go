@@ -144,7 +144,12 @@ func (s *Server) handleSessionRuntime(w http.ResponseWriter, r *http.Request, se
 		"device_count":     deviceCount,
 		"packets_sent":     stats.PacketsSent,
 		"packets_received": stats.PacketsReceived,
-		"uptime_seconds":   time.Since(s.startTime).Seconds(),
+		// Non-zero loss means packets_received is an undercount. The
+		// unscoped /runtime is the one going away, so the session runtime
+		// is the surface that has to carry these.
+		"packets_dropped":    stats.PacketsDropped,
+		"packets_if_dropped": stats.PacketsIfDropped,
+		"uptime_seconds":     time.Since(s.startTime).Seconds(),
 	}
 	if path := session.configPath(); path != "" {
 		runtimeInfo["config_name"] = filepath.Base(path)
