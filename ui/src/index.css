@@ -325,8 +325,14 @@ body {
  *   <span className="caption">Metadata</span>
  * ============================================================================ */
 @layer components {
+  /* Stepped down one rung (was text-2xl sm:text-3xl) in the desktop density
+     pass: a 30px bold title above a 14px description read as a banner rather
+     than a heading, and cost the page a line of height on every route
+     (UI-NIAC-19). The fleet's other products take the same step, so one
+     page-title scale holds across seed / stem / NIAC. Weight, tracking and
+     colour are the design language and are unchanged. */
   .heading-1 {
-    @apply text-2xl sm:text-3xl font-bold text-text-primary leading-tight tracking-tight;
+    @apply text-xl sm:text-2xl font-bold text-text-primary leading-tight tracking-tight;
   }
   .heading-2 {
     @apply text-xl sm:text-2xl font-semibold text-text-primary leading-snug;
@@ -529,7 +535,9 @@ body {
 
   /* Centered content padding */
   .py-centered {
-    @apply py-12;
+    /* 32px, was 48px: 96px of padding around one sentence left every empty
+       panel reading as a dead region (UI-NIAC-19). */
+    @apply py-8;
   }
 
   /* Left margins */

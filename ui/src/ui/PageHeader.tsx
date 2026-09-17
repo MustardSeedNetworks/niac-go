@@ -97,13 +97,13 @@ export const PageHeader: FC<PageHeaderProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`mb-section animate-fade-in ${className}`}>
+    <div className={`mb-content animate-fade-in ${className}`}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumb items={breadcrumbs} className="mb-heading" />
+        <Breadcrumb items={breadcrumbs} className="mb-tight" />
       )}
-      <div className="flex flex-wrap items-start justify-between gap-comfortable">
+      <div className="flex flex-wrap items-start justify-between gap-default">
         <div className="flex items-center gap-default">
-          {icon ? createElement(icon, { className: `h-8 w-8 ${iconColorClass}` }) : null}
+          {icon ? createElement(icon, { className: `h-6 w-6 ${iconColorClass}` }) : null}
           <div>
             {eyebrow ? (
               <p className="kicker mb-1" data-testid="page-header-eyebrow">
