@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.71](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.70...v0.95.71) (2026-09-17)
+
+
+### Features
+
+* **protocols:** learn every client on the wire, not only DHCP and discovery emitters ([#2229](https://github.com/MustardSeedNetworks/niac-go/issues/2229)) ([5fb3d6d](https://github.com/MustardSeedNetworks/niac-go/commit/5fb3d6dadfe652d81161154adcf509e7327ba661))
+* **scenario:** land the tester on a free access port, not the lab edge transit link ([#2234](https://github.com/MustardSeedNetworks/niac-go/issues/2234)) ([e4a5e75](https://github.com/MustardSeedNetworks/niac-go/commit/e4a5e75c584e958976c6d47cf965367a1f34bbfc))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2204](https://github.com/MustardSeedNetworks/niac-go/issues/2204)) ([79c236d](https://github.com/MustardSeedNetworks/niac-go/commit/79c236d3f7e3d9aca63fe930caab1a23a1c47c7b))
+* **deps:** update dependency i18next-cli to v1.73.2 ([#2230](https://github.com/MustardSeedNetworks/niac-go/issues/2230)) ([eeca532](https://github.com/MustardSeedNetworks/niac-go/commit/eeca5328be6bd56ab8890cb2247b015b18ce0699))
+
 ## [0.95.70](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.69...v0.95.70) (2026-09-17)
 
 
