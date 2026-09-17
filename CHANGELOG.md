@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.74](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.73...v0.95.74) (2026-09-17)
+
+
+### Bug Fixes
+
+* **ci:** make the binary verification able to fail (D-NIAC-7) ([#2251](https://github.com/MustardSeedNetworks/niac-go/issues/2251)) ([c65ba83](https://github.com/MustardSeedNetworks/niac-go/commit/c65ba835e0e644d2eca1a5f62e020c607208cfd3)), closes [#2181](https://github.com/MustardSeedNetworks/niac-go/issues/2181)
+* **ui:** desktop clarity and density pass ([#2227](https://github.com/MustardSeedNetworks/niac-go/issues/2227)) ([#2250](https://github.com/MustardSeedNetworks/niac-go/issues/2250)) ([02d1bc4](https://github.com/MustardSeedNetworks/niac-go/commit/02d1bc469c3983dd5658eb435747ebac539e63e4))
+
 ## [0.95.73](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.72...v0.95.73) (2026-09-17)
 
 
