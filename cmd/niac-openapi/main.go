@@ -348,7 +348,9 @@ func newOperation(rt api.RoutePolicy, method, docPath string) operation {
 	if rt.CSRF && !safeMethod(method) {
 		responses["403"] = errorResponse("Missing or invalid CSRF token.")
 	}
-	if rt.Admin {
+	// AdminProtect exempts safe methods, so an admin route's GET is readable
+	// by any admitted scope — same shape as the CSRF branch above.
+	if rt.Admin && !safeMethod(method) {
 		responses["403"] = errorResponse("Admin scope required, or CSRF token missing or invalid.")
 	}
 	if rt.RateLimited {
@@ -374,7 +376,7 @@ func newOperation(rt api.RoutePolicy, method, docPath string) operation {
 			map[string]any{"BearerAuth": []any{}, "CsrfToken": []any{}},
 		}
 	}
-	if rt.Admin {
+	if rt.Admin && !safeMethod(method) {
 		op["description"] = "Requires an admin-scoped token."
 	}
 	return op

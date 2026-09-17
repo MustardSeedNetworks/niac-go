@@ -46,9 +46,13 @@ test('device switching and wizard navigation preserve edits until explicitly res
   expect(invalidEdit).not.toBe(edited);
   await editor.fill(invalidEdit);
   await page.getByTestId('device-select-e2e-sw-01').click();
+  // #2173: a per-device save goes to the device route, which stays at
+  // read-write. PUT /api/v1/config is now the whole-topology replacement and
+  // needs an admin token, so it is no longer the request this edit produces.
   const refused = page.waitForResponse(
     (response) =>
-      response.url().endsWith('/api/v1/config') && response.request().method() === 'PUT',
+      response.url().includes('/api/v1/config/devices/') &&
+      response.request().method() === 'PUT',
   );
   await page.getByTestId('unsaved-save').click();
   expect((await refused).status()).toBe(400);

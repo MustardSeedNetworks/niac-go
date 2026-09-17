@@ -206,7 +206,17 @@ func (s *Server) handleDeviceUpdate(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	if err := s.saveConfig(&newCfg); err != nil {
+	// The operator authored this block as text, so persist it as text:
+	// re-serialising the whole config to store one device's edit deletes the
+	// comments and spacing they wrote elsewhere in the file (#2173).
+	var saveErr error
+	if req.RawYAML != "" {
+		saveErr = s.saveDeviceEditPreservingText(&newCfg, hostname, req.RawYAML)
+	} else {
+		saveErr = s.saveConfig(&newCfg)
+	}
+
+	if saveErr != nil {
 		writeError(w, r, http.StatusInternalServerError, "save_failed", "Failed to save configuration", nil)
 		return
 	}

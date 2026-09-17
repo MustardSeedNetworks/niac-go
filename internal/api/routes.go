@@ -100,15 +100,23 @@ func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 // registerWriteProtectedRoutes registers state-changing routes (write rate
-// limit + CSRF; /config/import additionally requires an admin-scoped token).
+// limit + CSRF). Whole-topology replacement additionally requires an
+// admin-scoped token: /api/v1/config and /config/import. AdminProtect exempts
+// safe methods, so /api/v1/config still serves GET to a read-only token.
 func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 	s.registerAll(mux, []apiRoute{
+		// #2173: PUT/PATCH/POST here replace the entire topology and the
+		// on-disk config in one shot, which is what ScopeAdmin exists for
+		// (tokenstore.ScopeAdmin's doc, #743). GET stays readable to any
+		// admitted scope because AdminProtect exempts safe methods. Routine
+		// per-device edits are NOT this route — they go to /config/devices/.
 		{
 			path:    "/api/v1/config",
 			handler: s.handleConfig,
 			methods: []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodPost},
 			rl:      rlWrite,
 			csrf:    true,
+			admin:   true,
 		},
 		{
 			path:    "/api/v1/config/devices",

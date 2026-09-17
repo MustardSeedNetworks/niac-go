@@ -4,7 +4,7 @@ import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { parseDocument } from 'yaml';
-import { updateConfig } from '../api/client';
+import { updateConfig, updateDevice } from '../api/client';
 import { isApiError } from '../api/errors';
 import type { LibraryFileEntry } from '../api/library-client';
 import type { DeviceSummary } from '../api/types';
@@ -23,7 +23,7 @@ import { BaseCard } from '../ui/BaseCard';
 import { Button, LinkButton } from '../ui/Button';
 import { CardRow } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
-import { findDeviceFragment, spliceDeviceFragment } from '../utils/device-fragment';
+import { findDeviceFragment } from '../utils/device-fragment';
 import { copyToClipboard } from '../utils/file';
 import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
 
@@ -204,15 +204,23 @@ const ConfigEditorCard: FC<{
     setStatus(null);
     setErrorLine(null);
     try {
-      const content = fragment ? spliceDeviceFragment(data?.content ?? '', fragment, value) : value;
-      const updated = await updateConfig({ content });
-      await queryClient.cancelQueries({ queryKey: ['config'], exact: true });
-      queryClient.setQueryData(['config'], updated);
-      await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
-      await queryClient.invalidateQueries({ queryKey: ['config-device'] });
-      // The whole-config pane shows what came back; the device pane keeps the
-      // edited block, because the response is the whole file.
-      if (!fragment) {
+      if (fragment && selected) {
+        // #2173: a per-device edit goes to the device route, which stays at
+        // read-write. Splicing the block into the whole document and PUTting
+        // /api/v1/config would make routine device editing need an admin
+        // token, because that endpoint replaces the entire topology.
+        await updateDevice(selected, value);
+        await queryClient.invalidateQueries({ queryKey: ['config'], exact: true });
+        await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+        await queryClient.invalidateQueries({ queryKey: ['config-device'] });
+        // The device pane keeps the edited block; the daemon reserialises the
+        // file, so there is no whole-file response to show here.
+      } else {
+        const updated = await updateConfig({ content: value });
+        await queryClient.cancelQueries({ queryKey: ['config'], exact: true });
+        queryClient.setQueryData(['config'], updated);
+        await queryClient.invalidateQueries({ queryKey: ['config-devices'] });
+        await queryClient.invalidateQueries({ queryKey: ['config-device'] });
         setValue(updated.content);
       }
       setDirty(false);
@@ -342,7 +350,10 @@ const ConfigEditorCard: FC<{
                 tone="violet"
                 disabled={!dirty || saving}
                 onClick={handleSave}
-                action="edit"
+                // #2173: the same control saves either one device or the whole
+                // document. A whole-document save is a topology replacement and
+                // needs admin; a per-device save stays a routine operator edit.
+                action={fragment ? 'edit' : 'admin'}
                 title={t('devices.saveReloadTitle')}
               >
                 {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}

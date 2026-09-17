@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -390,6 +391,84 @@ func coalesceInterfaceUpdates(
 func isAllowedInterfaceValue(value string, allowed ...string) bool {
 	value = strings.ToLower(strings.TrimSpace(value))
 	return slices.Contains(allowed, value)
+}
+
+// saveDeviceEditPreservingText persists a single device's edit as a byte
+// splice of the file on disk, so the comments and spacing an operator wrote
+// everywhere else in the config survive. Re-serialising the whole config to
+// store one device's change deletes them silently, which is what a per-device
+// save used to do once it stopped going through the whole-config endpoint
+// (#2173).
+//
+// It falls back to saveConfig when the device's block cannot be located or the
+// splice would not parse back to the same devices: a re-serialised file is
+// still correct, just less faithful, and that beats writing a file we cannot
+// account for. Partial (non-YAML) device updates stay on saveConfig — they
+// carry no operator text for that device.
+func (s *Server) saveDeviceEditPreservingText(cfg *config.Config, hostname, rawYAML string) error {
+	source, readErr := os.ReadFile(s.configPath())
+	if readErr != nil {
+		return s.saveConfig(cfg)
+	}
+
+	fragment, found := config.FindDeviceFragment(string(source), hostname)
+	if !found {
+		s.logger.Warn("[API] Device block not found in the config text; re-serialising",
+			"device", hostname)
+
+		return s.saveConfig(cfg)
+	}
+
+	spliced := config.SpliceDeviceFragment(string(source), fragment, rawYAML)
+	if !sameDeviceNames(spliced, cfg) {
+		s.logger.Warn("[API] Spliced config did not describe the same devices; re-serialising",
+			"device", hostname)
+
+		return s.saveConfig(cfg)
+	}
+
+	if writeErr := s.writeConfigFile(spliced); writeErr != nil {
+		s.logger.Error("[API] Failed to write config file", "error", writeErr)
+
+		return writeErr
+	}
+
+	s.replaceConfig(cfg)
+
+	if s.cfg.ApplyConfig != nil {
+		if applyErr := s.cfg.ApplyConfig(cfg); applyErr != nil {
+			s.logger.Warn("[API] Failed to apply config", "error", applyErr)
+		}
+	}
+
+	return nil
+}
+
+// sameDeviceNames reports whether spliced YAML still lists exactly the devices
+// cfg does, in order. The splice is textual, so this is what proves the file
+// about to be written still describes the configuration that was validated.
+func sameDeviceNames(spliced string, cfg *config.Config) bool {
+	var probe struct {
+		Devices []struct {
+			Name string `yaml:"name"`
+		} `yaml:"devices"`
+	}
+
+	if err := yaml.Unmarshal([]byte(spliced), &probe); err != nil {
+		return false
+	}
+
+	if len(probe.Devices) != len(cfg.Devices) {
+		return false
+	}
+
+	for i := range probe.Devices {
+		if probe.Devices[i].Name != cfg.Devices[i].Name {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *Server) saveConfig(cfg *config.Config) error {

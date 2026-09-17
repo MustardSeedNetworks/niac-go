@@ -168,10 +168,17 @@ func Middleware(d Deps, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// AdminProtect wraps handlers that require ScopeAdmin (typically destructive
-// whole-config operations like /api/v1/config/import). Middleware must run
-// upstream — AdminProtect reads the scope it stashed; an unstashed context is
-// treated as 403 so missing wiring fails closed rather than silently bypassing.
+// AdminProtect wraps handlers that require ScopeAdmin (destructive
+// whole-config operations like replacing the topology via /api/v1/config).
+// Middleware must run upstream — AdminProtect reads the scope it stashed; an
+// unstashed context is treated as 403 so missing wiring fails closed rather
+// than silently bypassing.
+//
+// Safe methods are exempt, so a route that serves both a read and a
+// destructive write can carry one admin flag without putting its GET behind
+// admin too. This mirrors csrf.Protect, which skips safe methods for the same
+// reason, and it reuses RequiredScopeForMethod so "safe" is defined in exactly
+// one place.
 func AdminProtect(
 	logger *slog.Logger,
 	clientIP ClientIPFunc,
@@ -179,6 +186,12 @@ func AdminProtect(
 	next http.HandlerFunc,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if tokenstore.RequiredScopeForMethod(r.Method) == tokenstore.ScopeReadOnly {
+			next(w, r)
+
+			return
+		}
+
 		scope, ok := ScopeFromContext(r.Context())
 		if !ok || scope < tokenstore.ScopeAdmin {
 			writeErr(w, r, http.StatusForbidden, "forbidden",
