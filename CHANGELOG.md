@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.70](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.69...v0.95.70) (2026-09-17)
+
+
+### Bug Fixes
+
+* **api:** require admin scope to replace the whole config ([#2221](https://github.com/MustardSeedNetworks/niac-go/issues/2221)) ([0cf3f37](https://github.com/MustardSeedNetworks/niac-go/commit/0cf3f37405f8ed2ae35614bcae42be08f688c710))
+* **capture:** surface libpcap ring drops so a lossy capture cannot read as complete ([#2226](https://github.com/MustardSeedNetworks/niac-go/issues/2226)) ([123395b](https://github.com/MustardSeedNetworks/niac-go/commit/123395b06bc25e0d21a33a30e1b207639ebdfff6))
+
+
+### Miscellaneous
+
+* **theme:** re-copy the canonical fleet theme ([#2223](https://github.com/MustardSeedNetworks/niac-go/issues/2223)) ([0d4ed2c](https://github.com/MustardSeedNetworks/niac-go/commit/0d4ed2c2066cbc7e6169b780031b41541fbaa570)), closes [#2222](https://github.com/MustardSeedNetworks/niac-go/issues/2222)
+
 ## [0.95.69](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.68...v0.95.69) (2026-09-16)
 
 
