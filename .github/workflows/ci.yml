@@ -1365,7 +1365,21 @@ jobs:
             -o niac-${{ matrix.os }}-${{ matrix.arch }} ./cmd/niac
 
       - name: Verify binary
-        run: ./niac-${{ matrix.os }}-${{ matrix.arch }} --help || ./niac-${{ matrix.os }}-${{ matrix.arch }} version || echo "Binary runs"
+        # The trailing `|| echo "Binary runs"` exited 0, so a binary that
+        # crashed on both invocations was reported as running and nothing in
+        # the build job proved a niac artifact starts at all (#2181). The
+        # matrix is native linux/amd64 on a Linux runner by design -- the
+        # comment on this job's `runs-on` says release.yml owns the arm64
+        # cross-build -- so the binary must actually execute here. A future
+        # cross-target gates this step on the runner being able to run it; it
+        # never restores a fallback that swallows the error.
+        run: |
+          BIN="./niac-${{ matrix.os }}-${{ matrix.arch }}"
+          # `version` exercises the real cobra command and prints the ldflags
+          # the previous step injected, so it proves startup and metadata at
+          # once; --help proves the command tree still builds.
+          "${BIN}" version
+          "${BIN}" --help > /dev/null
 
       - name: Verify UIBuildHash embedded (Universal Build Contract)
         # seed and stem both verify this; niac injected the ldflag but never
