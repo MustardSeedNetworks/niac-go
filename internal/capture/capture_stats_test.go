@@ -7,10 +7,12 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 )
 
-// TestEngineStatsNegativeCountersClampToZero covers the one way libpcap can
-// hand back a value uint64 cannot hold: pcap.Stats is signed, and a platform
-// that does not implement a counter reports -1 rather than 0.
-func TestEngineStatsNegativeCountersClampToZero(t *testing.T) {
+// TestEngineStatsWidensNegativeCountersToZero pins the signed-to-unsigned
+// widening guard. gopacket declares pcap.Stats' fields as int over C's
+// unsigned u_int, so libpcap itself cannot produce a negative; the guard
+// exists because the conversion needs one, and zero is the only honest
+// answer for a count uint64 cannot represent.
+func TestEngineStatsWidensNegativeCountersToZero(t *testing.T) {
 	engine, handle := newFakeEngine(0)
 	handle.stats = pcap.Stats{PacketsReceived: 5, PacketsDropped: -1, PacketsIfDropped: -1}
 
