@@ -88,6 +88,9 @@ async function readSavedDraft(request: APIRequestContext, saved: ScenarioDraft) 
 
 async function reopenSavedYaml(page: Page, content: string) {
   await selectInterface(page);
+  // #2195 put the library behind a tab; the upload control lives inside it and
+  // the 'start' tab is the default, so it has to be opened before uploading.
+  await page.getByTestId('wizard-source-tab-library').click();
   await page.getByLabel('Upload local file').setInputFiles({
     name: 'resource-pressure-saved.yaml',
     mimeType: 'application/yaml',
@@ -109,6 +112,8 @@ test('persists resource faults and reopens saved YAML through the real daemon', 
 }) => {
   await page.goto('/new-simulation');
   await selectInterface(page);
+  // The picker is in the library tab too (#2195), not just the upload control.
+  await page.getByTestId('wizard-source-tab-library').click();
   await page.getByTestId('config-picker-search').fill('resource-pressure');
   await page.getByRole('button', { name: 'Select', exact: true }).click();
   const original = await prepareDraft(page);
