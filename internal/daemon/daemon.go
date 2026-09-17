@@ -263,6 +263,16 @@ func (d *Daemon) Start() error {
 	return nil
 }
 
+// BoundAddr is the address the API listener actually bound to, which is not
+// the configured one when the +1..+9 port fallback fired. It is empty before
+// Start. Callers publish it so a second start can name the holder's real port.
+func (d *Daemon) BoundAddr() string {
+	if d.apiServer == nil {
+		return ""
+	}
+	return d.apiServer.BoundAddr()
+}
+
 // ReloadTokens re-reads the configured token source (file or env) and
 // publishes the new token set to the API server. Returns the rotated
 // token count and any error encountered while loading. On error the
