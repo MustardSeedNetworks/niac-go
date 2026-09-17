@@ -3,18 +3,21 @@ import { checkLongHistoryLayout } from './support/history-layout';
 import { openMobileSidebar, sidebar } from './support/sidebar';
 
 /**
- * The small-screen smoke subset.
+ * The narrow-viewport smoke subset.
  *
- * Runs on tablet-safari, mobile-chrome and mobile-safari only — the desktop
- * projects ignore this file. It covers the three things a viewport can break
- * that nothing else here would notice: the shell renders, the primary
+ * Runs on the two policy engines at a phone-width viewport (owner 2026-09-15:
+ * everything works at 390×844). It covers the three things a viewport can
+ * break that nothing else here would notice: the shell renders, the primary
  * navigation is reachable and operable, and the main journey completes.
  *
- * Deliberately narrow. The full suite stays on desktop because most of what it
- * asserts is viewport-independent, and running all 26 spec files on three more
- * devices would multiply E2E wall-clock for very little signal (#1320).
+ * A viewport, not a device project: E2E_CONVENTIONS.md covers the narrow
+ * layout obligation on the engines already tested and bans phone/tablet
+ * presets. Before #2247 this file ran on three device projects that the
+ * desktop projects ignored, and it was the reason those projects existed.
  */
 test.describe('app shell on small screens', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
   test('long run names preserve layout and mobile navigation', async ({ page }) => {
     await checkLongHistoryLayout(page);
   });
@@ -51,9 +54,8 @@ test.describe('app shell on small screens', () => {
     const devices = nav.getByTestId('nav-item-devices');
     await expect(devices).toBeVisible();
 
-    // Tapping, not clicking: these projects emulate touch, and a control that
-    // is covered by an overlay or below a 44px target fails here and nowhere
-    // else.
+    // A control covered by the drawer's overlay or pushed off a 390px layout
+    // fails here and nowhere else.
     await devices.click();
     await expect(page).toHaveURL(/\/devices$/);
     await expect(page.getByTestId('page-header-title')).toBeVisible();

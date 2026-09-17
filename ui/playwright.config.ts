@@ -25,7 +25,9 @@ const baseURL = process.env.E2E_BASE_URL ?? `https://${e2eHost}:${e2ePort}`;
  * - Replay functionality
  * - Network simulation
  *
- * Engines: Chromium, WebKit and Firefox, plus installed Chrome and Edge. Actual Safari
+ * Engines: Chromium and WebKit, the fleet policy in
+ * msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md. Chromium stands in for
+ * Chrome and Edge (both Blink); WebKit stands in for Safari. Actual Safari
  * remains a manual release-candidate gate because Playwright drives WebKit
  * rather than Safari itself.
  */
@@ -71,77 +73,25 @@ export default defineConfig({
     ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === 'true' || !process.env.CI,
   },
   projects: [
-    // ── Supported breakpoint matrix ──────────────────────────────────────
-    // This list is the contract, not an accumulation. The product is expected
-    // to work on desktop, tablet and phone; before this, every project used a
-    // `Desktop *` preset, so no phone or tablet layout was exercised on any
-    // run and a mobile-only regression shipped green (#1320).
-    //
-    //   desktop  chromium · webkit · firefox   full suite
-    //   tablet   iPad (gen 7)                  smoke subset
-    //   phone    Pixel 7 · iPhone 15           smoke subset
-    //
-    // Real device presets, not `setViewportSize` inside a desktop project: a
-    // narrow window is not a phone. The presets bring the right user agent,
-    // touch support and input modality, which is what decides whether a
-    // control is reachable at all.
-    //
-    // The small screens run only `*.mobile.spec.ts` — the app shell, primary
-    // navigation and the main journey. Running the full suite on five
-    // projects would multiply E2E wall-clock for coverage that is mostly
-    // viewport-independent.
+    // Two engines, by fleet policy (E2E_CONVENTIONS.md "Browser coverage").
+    // This list once grew to eight -- Firefox, installed Chrome and Edge, and
+    // three phone/tablet presets -- each justified by docs/WEBUI.md rather
+    // than the fleet doc (#2247). Narrow layouts are covered by a viewport
+    // inside app-shell.mobile.spec.ts on these same engines, not by a device
+    // project: the obligation is a responsive layout, not a phone.
     {
       name: 'chromium',
-      testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'webkit',
       // three-way-authoring drives a *started* simulation, and the daemon
       // serves one at a time -- a second concurrent start answers 409. Running
-      // it on more than one engine at once would have the projects stopping
-      // each other's session, which is a race, not coverage. The UI half of
-      // the same journey runs on every engine via wizard-authoring.spec.ts.
-      testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
+      // it on both engines at once would have the projects stopping each
+      // other's session, which is a race, not coverage. The UI half of the
+      // same journey runs on both engines via wizard-authoring.spec.ts.
+      testIgnore: [/three-way-authoring\.spec\.ts/],
       use: { ...devices['Desktop Safari'] },
-    },
-    // Gecko. docs/WEBUI.md lists Firefox under "Engine CI — critical journeys
-    // on relevant pull requests", but it was never in this list, so the only
-    // independent-engine coverage the table promised did not exist. Chromium
-    // and WebKit are Blink and WebKit; nothing here exercised a third engine.
-    {
-      name: 'firefox',
-      // See the webkit note: one started simulation at a time.
-      testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
-      use: { ...devices['Desktop Firefox'] },
-    },
-    // Installed browser channels cover authoring in the supported vendor builds.
-    {
-      name: 'chrome',
-      testMatch:
-        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault|interface-mask-fault)\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    },
-    {
-      name: 'edge',
-      testMatch:
-        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault|interface-mask-fault)\.spec\.ts/,
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'tablet-safari',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['iPad (gen 7)'] },
-    },
-    {
-      name: 'mobile-chrome',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['Pixel 7'] },
-    },
-    {
-      name: 'mobile-safari',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['iPhone 15'] },
     },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).

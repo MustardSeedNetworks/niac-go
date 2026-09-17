@@ -143,9 +143,8 @@ and [Monitoring](MONITORING.md).
 
 ## Which browsers are supported?
 
-Chrome stable, Edge stable, and current Safari are first-class. Firefox is an
-automated independent-engine compatibility target. Brave receives a focused
-pre-release smoke test with default Shields. See [Web UI](WEBUI.md).
+Chrome stable, Edge stable, and current Safari. Automated tests run on the
+Chromium and WebKit engines, which cover all three. See [Web UI](WEBUI.md).
 
 ## Why is the UI not updating?
 

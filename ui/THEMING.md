@@ -72,6 +72,5 @@ For a theme change:
 4. check text and control contrast; and
 5. run visual tests at supported desktop and mobile widths.
 
-Chrome, Edge, and Safari are first-class browser targets. Firefox remains an
-independent compatibility engine, and Brave receives a privacy-default smoke
-test before release.
+Chrome, Edge, and Safari are the supported browsers; Playwright covers them
+on the Chromium and WebKit engines.
