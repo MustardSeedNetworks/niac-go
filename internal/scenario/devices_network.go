@@ -25,7 +25,7 @@ func labEdge(request Request, links linkMap) converter.Device {
 				"lab-transit",
 				transitGateway+"/24",
 				speedTenGigabit,
-				"CyberScope VLAN 200 attachment",
+				"Isolated lab transit",
 			),
 			newInterface(
 				"HundredGigabitEthernet0/0/1",

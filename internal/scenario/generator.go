@@ -60,11 +60,9 @@ func Generate(request Request) (Result, error) {
 
 	links := buildLinks(request)
 	authored := converter.Config{
-		Networks: buildNetworks(request),
-		Attachments: []converter.LogicalAttachment{{
-			Name: request.AttachmentName, Connect: "lab-transit",
-		}},
-		Devices: buildDevices(request, links),
+		Networks:    buildNetworks(request),
+		Attachments: []converter.LogicalAttachment{testerAttachment(request)},
+		Devices:     buildDevices(request, links),
 	}
 	if err := applyFaults(&authored, request.Faults); err != nil {
 		return Result{}, fmt.Errorf("%w: %w", ErrInvalidRequest, err)
@@ -94,6 +92,24 @@ func Generate(request Request) (Result, error) {
 	manifest.Identity = identity
 
 	return Result{YAML: data, Manifest: manifest, Config: runtimeConfig}, nil
+}
+
+// testerAttachment puts the tester where a technician actually plugs one in:
+// the spare-port pool on the first site's first access switch.
+//
+// It was the lab edge router's transit link, which nobody patches into, and
+// which put every tester on one pack in the same place. The access tier is the
+// default rather than the only choice -- every access and server switch offers
+// a pool, and an operator or AP-4 can name another one.
+func testerAttachment(request Request) converter.LogicalAttachment {
+	site := request.Sites[0]
+	return converter.LogicalAttachment{
+		Name: request.AttachmentName,
+		At: &converter.AttachmentPort{
+			Device: accessName(site, 1),
+			Ports:  sparePortNames("GigabitEthernet1/0/"),
+		},
+	}
 }
 
 func buildDevices(request Request, links linkMap) []converter.Device {
