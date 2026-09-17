@@ -24,13 +24,21 @@ requests also use the per-session CSRF token returned by the daemon.
 
 | Tier | Browsers | Release evidence |
 | --- | --- | --- |
-| First class | Chrome stable, Edge stable, Safari current | Critical journeys in the installed browsers |
-| Engine CI | Playwright Chromium, WebKit, Firefox | Critical journeys on relevant pull requests |
-| Compatibility | Firefox current | Independent-engine coverage and reproduced defect fixes |
-| Best effort | Brave current | Pre-release smoke test with default Shields |
+| Engine CI | Playwright Chromium, WebKit | Every pull request, both engines |
+| First class | Chrome stable, Edge stable, Safari current | Covered by the engines above; exercised by hand at release |
+| Best effort | Firefox current, Brave current | Pre-release smoke test; reproduced defect fixes |
 
-Playwright WebKit is automated coverage, not proof of Safari compatibility.
-Release candidates must also be exercised in actual Safari.
+Chromium is Chrome and Edge — one engine, so CI does not drive the installed
+vendor builds separately. Playwright WebKit is automated coverage, not proof of
+Safari compatibility: release candidates must also be exercised in actual Safari.
+
+The two engines are the whole automated list, per
+`msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md`, which governs all four
+products: "No other browsers … If a future customer commitment requires another
+browser, file an issue and amend this doc first." This table previously promised
+Firefox engine CI and installed-Chrome/Edge journeys; NIAC was the last repo
+still configured that way and is now aligned with seed, stem and trellis
+(#2246).
 
 The critical journey includes authentication, navigation, routed preflight,
 start/stop/restart, live topology and statistics, SSE reconnection, offline
@@ -109,10 +117,11 @@ make security
 make build
 ```
 
-CI runs the behavior-timeline, scenario-pack and device-editor journeys in
-installed Chrome and Edge alongside the full Chromium, WebKit and Firefox
-suites. Failed attempts retain traces even when a retry passes. Actual Safari
-and Brave evidence is recorded during release acceptance.
+CI runs the full suite on Chromium and WebKit. The small-screen subset
+(`*.mobile.spec.ts`) runs under Chromium with the Pixel 7 device preset, so it
+keeps the touch support and user agent that decide whether a control is
+reachable. Failed attempts retain traces even when a retry passes. Actual
+Safari, Firefox and Brave evidence is recorded during release acceptance.
 
 ## Troubleshooting
 

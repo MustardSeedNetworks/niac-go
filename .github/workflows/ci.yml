@@ -1503,7 +1503,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          command: cd ui && npx playwright install-deps chromium webkit firefox chrome msedge
+          command: cd ui && npx playwright install-deps chromium webkit
           command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
@@ -1545,7 +1545,7 @@ jobs:
 
           attempt=1
           while [ "$attempt" -le "$ATTEMPTS" ]; do
-            if npx playwright install chromium webkit firefox chrome msedge; then
+            if npx playwright install chromium webkit; then
               exit 0
             fi
 

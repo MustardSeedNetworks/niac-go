@@ -1,19 +1,30 @@
-import { expect, test } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
 import { checkLongHistoryLayout } from './support/history-layout';
 import { openMobileSidebar, sidebar } from './support/sidebar';
 
 /**
  * The small-screen smoke subset.
  *
- * Runs on tablet-safari, mobile-chrome and mobile-safari only — the desktop
- * projects ignore this file. It covers the three things a viewport can break
- * that nothing else here would notice: the shell renders, the primary
- * navigation is reachable and operable, and the main journey completes.
+ * It covers the three things a viewport can break that nothing else here would
+ * notice: the shell renders, the primary navigation is reachable and operable,
+ * and the main journey completes.
+ *
+ * The device preset lives here rather than in a project of its own. There used
+ * to be tablet-safari / mobile-chrome / mobile-safari projects, but
+ * E2E_CONVENTIONS allows chromium and webkit only across all four products
+ * (#2246). What that policy bans is browser projects, not device emulation —
+ * and the reason the presets existed is still right: a narrow window is not a
+ * phone, because the user agent, touch support and input modality are what
+ * decide whether a control is reachable at all. So this file keeps a real
+ * preset, Pixel 7, which is a Chromium device and therefore runs under the
+ * chromium project. The webkit project ignores this file.
  *
  * Deliberately narrow. The full suite stays on desktop because most of what it
- * asserts is viewport-independent, and running all 26 spec files on three more
+ * asserts is viewport-independent, and running all 26 spec files on more
  * devices would multiply E2E wall-clock for very little signal (#1320).
  */
+test.use({ ...devices['Pixel 7'] });
+
 test.describe('app shell on small screens', () => {
   test('long run names preserve layout and mobile navigation', async ({ page }) => {
     await checkLongHistoryLayout(page);

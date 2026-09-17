@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import authConfig from '../../playwright.auth.config';
 import criticalConfig from '../../playwright.config';
 
+/** Browsers `E2E_CONVENTIONS.md` names explicitly as not to be configured. */
+const BANNED_BROWSERS = ['firefox', 'chrome', 'edge', 'msedge', 'tablet', 'mobile'] as const;
+
 function projectNames(config: {
   projects?: Array<{ name?: string }> | readonly { name?: string }[];
 }): string[] {
@@ -10,77 +13,79 @@ function projectNames(config: {
 
 describe('browser support matrix', () => {
   // Exact equality, not a subset check: this guard exists to make matrix drift
-  // loud in both directions. Adding an engine is a CI-time decision, and
-  // quietly dropping one would otherwise look like a passing suite.
-  // firefox joined the list in #1637. docs/WEBUI.md had listed it under
-  // "Engine CI" and again under Compatibility as the independent-engine
-  // coverage, while the config ran Blink and WebKit only -- so the third engine
-  // the table promised twice was never exercised. This guard is what makes that
-  // addition a recorded decision rather than a silent one.
+  // loud in both directions. Quietly dropping an engine would otherwise look
+  // like a passing suite, and adding one has to be a recorded decision.
   //
-  // The three small-screen projects joined in #1320. Every project had been a
-  // `Desktop *` preset, so no phone or tablet layout was exercised on any run
-  // and a mobile-only regression shipped green.
+  // The list is not this repo's to choose. `E2E_CONVENTIONS.md` is the single
+  // source of truth for all four products: "Chromium AND WebKit run on every
+  // PR … No other browsers. Delete Firefox, mobile-chrome, mobile-safari,
+  // tablet, edge from playwright.config.ts projects arrays. If a future
+  // customer commitment requires another browser, file an issue and amend this
+  // doc first." Chromium covers Chrome and Edge — one engine.
   //
-  // `edge` joined for the scenario-authoring epic (#1151), whose Definition of
-  // Complete names Chrome, Edge and Safari as first-class authoring browsers.
-  // Only two of the three were covered. It runs the real installed Edge via
-  // `channel: 'msedge'`, not Chromium — the Blink engine is already exercised
-  // by the chromium project, so what this adds is Edge's own shell.
-  it('gates exactly the engines and form factors the product targets', () => {
-    expect(projectNames(criticalConfig)).toEqual([
-      'chromium',
-      'webkit',
-      'firefox',
-      'chrome',
-      'edge',
-      'tablet-safari',
-      'mobile-chrome',
-      'mobile-safari',
-    ]);
+  // This test used to assert the opposite: it pinned an eight-project matrix
+  // (firefox from #1637, the three small-screen projects from #1320, edge from
+  // #1151) and so held niac out of policy while seed, stem and trellis all ran
+  // two. Amending the doc first is the route to changing this list (#2246).
+  it('gates exactly the two engines the fleet policy allows', () => {
+    expect(projectNames(criticalConfig)).toEqual(['chromium', 'webkit']);
   });
 
-  it('drives the installed first-class browsers and retains failed attempts', () => {
-    expect(
-      criticalConfig.projects?.find((project) => project.name === 'chrome')?.use?.channel,
-    ).toBe('chrome');
-    expect(criticalConfig.projects?.find((project) => project.name === 'edge')?.use?.channel).toBe(
-      'msedge',
-    );
-    expect(criticalConfig.use?.trace).toBe('retain-on-failure');
-  });
-
-  // playwright.auth.config.ts spreads the base config, so it inherits this
-  // matrix — and a project's own testMatch beats the config-level one, which
-  // silently dragged the small-screen smoke file into the auth suite where it
-  // ran against a token-gated daemon and failed nine times. The auth suite is a
-  // three-engine check; nothing about it is form-factor dependent.
-  it('keeps the auth suite on the desktop engines only', () => {
-    expect(projectNames(authConfig)).toEqual(['chromium', 'webkit', 'firefox']);
-  });
-
-  // The split is the cost control that makes the added projects affordable: the
-  // full suite runs on the three desktop engines, and every other project is
-  // narrowed to a subset by testMatch. A project that silently lost its filter
-  // would run all 26 spec files on four more browsers.
-  it('runs the full suite on the desktop engines and a subset everywhere else', () => {
+  // Named separately from the equality check above so a failure says *why*
+  // rather than just printing two arrays: a project named for a banned browser,
+  // or a `channel` driving an installed vendor build, is the specific thing the
+  // policy forbids.
+  it('configures no banned browser, by name or by channel', () => {
     const projects = (criticalConfig.projects ?? []) as Array<{
       name?: string;
-      testMatch?: unknown;
-      testIgnore?: unknown;
+      use?: { channel?: string };
     }>;
 
     for (const project of projects) {
-      const isDesktop = ['chromium', 'webkit', 'firefox'].includes(project.name ?? '');
-      if (isDesktop) {
-        expect(project.testIgnore, `${project.name} must ignore *.mobile.spec.ts`).toBeDefined();
-        expect(
-          project.testMatch,
-          `${project.name} must not be filtered to one file`,
-        ).toBeUndefined();
-      } else {
-        expect(project.testMatch, `${project.name} must match only *.mobile.spec.ts`).toBeDefined();
+      const name = (project.name ?? '').toLowerCase();
+      for (const banned of BANNED_BROWSERS) {
+        expect(name, `project "${project.name}" names a browser the policy excludes`).not.toContain(
+          banned,
+        );
       }
+      expect(
+        project.use?.channel,
+        `project "${project.name}" drives an installed browser channel`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('retains failed attempts for diagnosis', () => {
+    expect(criticalConfig.use?.trace).toBe('retain-on-failure');
+  });
+
+  // playwright.auth.config.ts derives its projects from this config rather than
+  // restating them, so the policy reaches it without a second list to keep in
+  // step. It must land on the same two engines.
+  it('keeps the auth suite on the same two engines', () => {
+    expect(projectNames(authConfig)).toEqual(['chromium', 'webkit']);
+  });
+
+  // Small-screen coverage did not leave with the phone and tablet projects: it
+  // moved into the spec, which sets a real device preset with
+  // `test.use({ ...devices['Pixel 7'] })`. The policy bans browser projects,
+  // not device emulation, and a narrow window is not a phone — the user agent,
+  // touch support and input modality are what decide whether a control is
+  // reachable. Pixel 7 is a Chromium device, so the spec runs under chromium.
+  //
+  // What this asserts is the consequence for the matrix: no project may be
+  // narrowed to a single file any more. A project carrying its own testMatch
+  // is how the form-factor projects were kept affordable, and one reappearing
+  // means the old matrix is creeping back.
+  it('runs the full suite on both engines, with no per-file project', () => {
+    const projects = (criticalConfig.projects ?? []) as Array<{
+      name?: string;
+      testMatch?: unknown;
+    }>;
+
+    expect(projects.length).toBeGreaterThan(0);
+    for (const project of projects) {
+      expect(project.testMatch, `${project.name} must not be filtered to one file`).toBeUndefined();
     }
   });
 });

@@ -71,28 +71,34 @@ export default defineConfig({
     ignoreHTTPSErrors: process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS === 'true' || !process.env.CI,
   },
   projects: [
-    // ── Supported breakpoint matrix ──────────────────────────────────────
-    // This list is the contract, not an accumulation. The product is expected
-    // to work on desktop, tablet and phone; before this, every project used a
-    // `Desktop *` preset, so no phone or tablet layout was exercised on any
-    // run and a mobile-only regression shipped green (#1320).
+    // ── The browser contract ─────────────────────────────────────────────
+    // Chromium and WebKit, and nothing else. This is not a local preference:
+    // `msn-docs-internal/05-Engineering/E2E_CONVENTIONS.md` is the single
+    // source of truth for all four products and says so in as many words —
+    // "No other browsers. Delete Firefox, mobile-chrome, mobile-safari,
+    // tablet, edge from playwright.config.ts projects arrays. If a future
+    // customer commitment requires another browser, file an issue and amend
+    // this doc first." Chromium covers Chrome and Edge (one engine); WebKit
+    // covers Safari. seed, stem and trellis have carried exactly these two
+    // for months; niac was the last repo still running eight (#2246).
     //
-    //   desktop  chromium · webkit · firefox   full suite
-    //   tablet   iPad (gen 7)                  smoke subset
-    //   phone    Pixel 7 · iPhone 15           smoke subset
+    // What the extra projects actually bought: firefox contributed two
+    // failures that were Gecko reporting `clientWidth: 0` for a span the
+    // other two engines measure at 276px, and `make test-e2e-install`
+    // installs chromium and webkit only — so on a clean machine the firefox
+    // projects produced 119 instant "executable doesn't exist" failures and
+    // taught everyone to ignore a red E2E run.
     //
-    // Real device presets, not `setViewportSize` inside a desktop project: a
-    // narrow window is not a phone. The presets bring the right user agent,
-    // touch support and input modality, which is what decides whether a
-    // control is reachable at all.
-    //
-    // The small screens run only `*.mobile.spec.ts` — the app shell, primary
-    // navigation and the main journey. Running the full suite on five
-    // projects would multiply E2E wall-clock for coverage that is mostly
-    // viewport-independent.
+    // Small screens did NOT go away with the phone and tablet projects. The
+    // objection the old comment raised is right — a narrow window is not a
+    // phone, because the user agent, touch support and input modality are
+    // what decide whether a control is reachable — so `*.mobile.spec.ts`
+    // keeps a real device preset via `test.use({ ...devices['Pixel 7'] })`,
+    // applied inside chromium. The policy bans browser projects, not device
+    // emulation, and Pixel 7 is a Chromium device, so that spec runs with the
+    // touch and user agent it needs on a browser the policy allows.
     {
       name: 'chromium',
-      testIgnore: /.*\.mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -102,46 +108,10 @@ export default defineConfig({
       // it on more than one engine at once would have the projects stopping
       // each other's session, which is a race, not coverage. The UI half of
       // the same journey runs on every engine via wizard-authoring.spec.ts.
+      // `*.mobile.spec.ts` carries its own Chromium device preset, so it is
+      // ignored here rather than being run at a desktop Safari viewport.
       testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
       use: { ...devices['Desktop Safari'] },
-    },
-    // Gecko. docs/WEBUI.md lists Firefox under "Engine CI — critical journeys
-    // on relevant pull requests", but it was never in this list, so the only
-    // independent-engine coverage the table promised did not exist. Chromium
-    // and WebKit are Blink and WebKit; nothing here exercised a third engine.
-    {
-      name: 'firefox',
-      // See the webkit note: one started simulation at a time.
-      testIgnore: [/.*\.mobile\.spec\.ts/, /three-way-authoring\.spec\.ts/],
-      use: { ...devices['Desktop Firefox'] },
-    },
-    // Installed browser channels cover authoring in the supported vendor builds.
-    {
-      name: 'chrome',
-      testMatch:
-        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault|interface-mask-fault)\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    },
-    {
-      name: 'edge',
-      testMatch:
-        /(behavior-timeline|scenario-pack|device-editor|packet-byte-ranges|interface-address-fault|interface-mask-fault)\.spec\.ts/,
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'tablet-safari',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['iPad (gen 7)'] },
-    },
-    {
-      name: 'mobile-chrome',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['Pixel 7'] },
-    },
-    {
-      name: 'mobile-safari',
-      testMatch: /.*\.mobile\.spec\.ts/,
-      use: { ...devices['iPhone 15'] },
     },
   ],
   // Explicit E2E_BASE_URL adopts an operator-managed daemon (CI uses 8445).
