@@ -109,3 +109,24 @@ func TestRunConfigExportWithValidation(t *testing.T) {
 		t.Errorf("config export failed: %v", err)
 	}
 }
+
+// The shipped example is the first configuration most operators run, and it
+// spent months failing validation because nothing exercised it (#2179). This
+// test is that check: it validates the file in the repository, not a copy.
+func TestRunValidateAcceptsTheShippedExample(t *testing.T) {
+	// config.Load refuses a relative path containing "..", so the repository
+	// file is named absolutely.
+	example, err := filepath.Abs(filepath.Join("..", "..", "configs", "niac.example.yaml"))
+	if err != nil {
+		t.Fatalf("resolving the shipped example: %v", err)
+	}
+	if _, statErr := os.Stat(example); statErr != nil {
+		t.Fatalf("shipped example is missing: %v", statErr)
+	}
+
+	root := newTestValidateRoot()
+	root.SetArgs([]string{"validate", example})
+	if execErr := root.Execute(); execErr != nil {
+		t.Errorf("validate %s: %v", example, execErr)
+	}
+}
