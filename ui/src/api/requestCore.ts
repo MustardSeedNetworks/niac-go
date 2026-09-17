@@ -116,7 +116,7 @@ function isStateChangingMethod(method: string | undefined) {
   );
 }
 
-async function fetchCSRFToken() {
+async function fetchCSRFToken(notifyOnAuthFailure = true) {
   if (csrfTokenPromise) return csrfTokenPromise;
 
   csrfTokenPromise = (async () => {
@@ -132,7 +132,9 @@ async function fetchCSRFToken() {
       credentials: 'same-origin',
     });
     if (!response.ok) {
-      notifyIfAuthenticationFailed(response.status);
+      if (notifyOnAuthFailure) {
+        notifyIfAuthenticationFailed(response.status);
+      }
       const text = await response.text();
       throw new ApiError(text || response.statusText, response.status);
     }
@@ -175,6 +177,38 @@ export async function buildRequestHeaders(path: string, init: RequestInit) {
   }
 
   return headers;
+}
+
+/**
+ * sendBackgroundReport posts telemetry the operator did not ask for -- today
+ * the ErrorBoundary's crash reports. It carries the same bearer token and CSRF
+ * header as request(), because /api/v1/client-errors is an authenticated,
+ * CSRF-protected route, but it deliberately drops the two behaviours that
+ * belong to an operator-initiated call: a 401 here must not log the operator
+ * out (the report may outlive the session that produced it), and a failed
+ * report is not worth a retry.
+ */
+export async function sendBackgroundReport(path: string, payload: unknown): Promise<void> {
+  try {
+    const headers = new Headers({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    });
+    const token = activeAPIToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    headers.set('X-Csrf-Token', await fetchCSRFToken(false));
+
+    await fetch(buildUrl(path), {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Best effort: a crash report that cannot be delivered is dropped.
+  }
 }
 
 export async function validateRuntimeAuthentication() {

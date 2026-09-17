@@ -7,6 +7,8 @@
  * FIX #190: No client-side error logging
  */
 
+import { sendBackgroundReport } from '../api/requestCore';
+
 interface ErrorReport {
   message: string;
   stack?: string;
@@ -33,15 +35,11 @@ function flush(): void {
     return;
   }
 
-  // In production, send to client telemetry endpoint if available
-  void fetch('/api/v1/client-errors', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({ errors: reports }),
-  }).catch(() => {
-    // Silently drop if endpoint unavailable
-  });
+  // In production, send to the client telemetry endpoint. The route is
+  // authenticated and CSRF-protected, so the report goes through the shared
+  // request layer's header builder rather than a bare fetch -- without it
+  // every report was rejected with a 401 nobody saw.
+  void sendBackgroundReport('/api/v1/client-errors', { errors: reports });
 }
 
 function scheduleFlush(): void {
