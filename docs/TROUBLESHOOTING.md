@@ -2,6 +2,10 @@
 
 Common issues, error messages, and solutions for NIAC-Go.
 
+Commands below that read `examples/` assume the shared demo catalog has been
+fetched with `./scripts/sync-demo-catalog.sh --sync`; without it `examples/`
+holds only its README.
+
 ## Table of Contents
 
 - [Configuration Errors](#configuration-errors)

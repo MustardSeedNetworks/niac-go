@@ -841,4 +841,4 @@ devices:
 - [Topology Configuration Guide](TOPOLOGY_GUIDE.md) - Port-channels and trunks
 - [Environment Simulation Guide](ENVIRONMENTS.md) - Complete examples
 - [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues
-- [Examples](../examples/) - Ready-to-use configurations
+- [Shared Demo Catalog](SHARED_DEMO_CATALOG.md) - How to fetch the ready-to-use configurations

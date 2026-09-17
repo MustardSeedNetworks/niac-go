@@ -1037,7 +1037,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.hooks == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.c == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.hooks == 'true' || needs.changes.outputs.docs == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1047,6 +1047,12 @@ jobs:
         run: |
           chmod +x scripts/check-file-size.sh
           ./scripts/check-file-size.sh
+
+      # The `docs` path filter had no consumer before this: no job ran on a
+      # docs-only change, so the gate this step calls would never have fired
+      # for exactly the edits it guards.
+      - name: Docs-truth gate — documented env vars, links and examples/ paths exist
+        run: python3 scripts/check-docs-truth.py
 
       - name: Test pre-commit hook
         run: ./scripts/tests/pre-commit-hook-test.sh
