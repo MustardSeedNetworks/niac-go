@@ -1503,7 +1503,7 @@ jobs:
           # fast: there a quick red is worth more than riding out an outage.
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          command: cd ui && npx playwright install-deps chromium webkit firefox chrome msedge
+          command: cd ui && npx playwright install-deps chromium webkit
           command-timeout: '270'
 
       # Restore always; save only from the default branch. Caches are scoped
@@ -1514,7 +1514,6 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          # Only bundled engines live here; vendor channels use system locations.
           key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: |
             playwright-browsers-v2-${{ runner.os }}-
@@ -1533,8 +1532,8 @@ jobs:
       # outage, ordinary CI still fails fast, because there a quick red is
       # worth more than waiting.
       - name: Install Playwright browsers
-        # Chrome and Edge install outside ~/.cache/ms-playwright. A cache hit
-        # only proves bundled engines exist, so always provision vendor channels.
+        # Chromium and WebKit only, per E2E_CONVENTIONS.md (#2247). A cache
+        # hit makes this a no-op; a miss downloads both engines.
         working-directory: ui
         timeout-minutes: 20
         env:
@@ -1545,7 +1544,7 @@ jobs:
 
           attempt=1
           while [ "$attempt" -le "$ATTEMPTS" ]; do
-            if npx playwright install chromium webkit firefox chrome msedge; then
+            if npx playwright install chromium webkit; then
               exit 0
             fi
 

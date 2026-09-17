@@ -22,15 +22,16 @@ requests also use the per-session CSRF token returned by the daemon.
 
 ## Browser support
 
-| Tier | Browsers | Release evidence |
-| --- | --- | --- |
-| First class | Chrome stable, Edge stable, Safari current | Critical journeys in the installed browsers |
-| Engine CI | Playwright Chromium, WebKit, Firefox | Critical journeys on relevant pull requests |
-| Compatibility | Firefox current | Independent-engine coverage and reproduced defect fixes |
-| Best effort | Brave current | Pre-release smoke test with default Shields |
+Chrome stable, Edge stable and current Safari are the supported browsers,
+the same across every Mustard Seed Networks product. Playwright drives two
+engines on every pull request: Chromium, which stands in for Chrome and Edge
+(both Blink), and WebKit, which stands in for Safari. The policy lives in the
+fleet engineering docs (`E2E_CONVENTIONS.md`, "Browser coverage"); adding a
+browser or engine needs an issue and an amendment there first, not a change
+here.
 
 Playwright WebKit is automated coverage, not proof of Safari compatibility.
-Release candidates must also be exercised in actual Safari.
+Release candidates are also exercised in actual Safari and Edge.
 
 The critical journey includes authentication, navigation, routed preflight,
 start/stop/restart, live topology and statistics, SSE reconnection, offline
@@ -109,10 +110,9 @@ make security
 make build
 ```
 
-CI runs the behavior-timeline, scenario-pack and device-editor journeys in
-installed Chrome and Edge alongside the full Chromium, WebKit and Firefox
-suites. Failed attempts retain traces even when a retry passes. Actual Safari
-and Brave evidence is recorded during release acceptance.
+CI runs the suite on Chromium and WebKit. Failed attempts retain traces even
+when a retry passes. Actual Safari and Edge evidence is recorded during
+release acceptance.
 
 ## Troubleshooting
 

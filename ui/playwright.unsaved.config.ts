@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 import base from './playwright.config';
 
 const baseURL = 'https://127.0.0.1:20446';
@@ -8,13 +8,9 @@ export default defineConfig({
   testMatch: ['first-run.acceptance.ts', 'unsaved-changes.acceptance.ts'],
   globalSetup: undefined,
   fullyParallel: false,
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
-    { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-  ],
+  // Derived from the base matrix rather than restated: this file once carried
+  // its own five-engine list while the base ran a different eight (#2247).
+  projects: (base.projects ?? []).map(({ testIgnore: _testIgnore, ...project }) => project),
   workers: 1,
   retries: 0,
   reporter: [['list'], ['json', { outputFile: 'playwright-report/results-unsaved.json' }]],
