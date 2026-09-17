@@ -596,7 +596,7 @@ func (s *Stack) GetStats() Statistics {
 // transportDrops reads the link layer's loss counters. A transport that keeps
 // none, or one whose handle has already closed, contributes zero — a stats
 // read must not fail because the counters are unavailable.
-func (s *Stack) transportDrops() (dropped, ifDropped uint64) {
+func (s *Stack) transportDrops() (uint64, uint64) {
 	reporter, ok := s.capture.(TransportStats)
 	if !ok {
 		return 0, 0
