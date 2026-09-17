@@ -1,0 +1,60 @@
+# NIAC configuration example — the smallest scenario that runs.
+#
+# Copy this file to niac.yaml, adjust the addresses to your lab subnet, then:
+#
+#   niac validate niac.yaml
+#   sudo niac daemon --once en0 niac.yaml --duration 60s
+#
+# A scenario is a list of devices NIAC answers for on the wire. Every device
+# needs a name, a type and an identity — either an explicit `mac`, or a
+# `vendor` plus `mac_suffix`, never both. Everything else switches on the
+# protocols that device answers. `docs/AUTHORING_GUIDE.md` documents the keys,
+# and `docs/examples/clinic-branch.yaml` is a complete hand-authored scenario
+# with VLANs, servers and an access point.
+
+devices:
+  - name: example-rtr-01
+    type: router
+    vendor: cisco
+    mac_suffix: 1
+    ips:
+      - "192.0.2.1"
+    icmp:
+      enabled: true
+    lldp:
+      enabled: true
+      system_description: "Cisco ISR 1100 example edge"
+      port_description: "GigabitEthernet0/0/1"
+    snmp_agent:
+      enabled: true
+      community: "public"
+      sysname: "example-rtr-01"
+      sysdescr: "Cisco IOS XE Software, ISR1100 17.9.4a"
+      syslocation: "Example lab"
+      syscontact: "netops@example.com"
+
+  - name: example-sw-01
+    type: switch
+    vendor: cisco
+    mac_suffix: 2
+    ips:
+      - "192.0.2.2"
+    icmp:
+      enabled: true
+    lldp:
+      enabled: true
+      system_description: "Cisco Catalyst 9200 example access"
+      port_description: "GigabitEthernet1/0/1"
+    snmp_agent:
+      enabled: true
+      community: "public"
+      sysname: "example-sw-01"
+      sysdescr: "Cisco IOS Software, C9200 17.9.4a"
+
+  - name: example-host-01
+    type: host
+    mac: "02:00:5e:00:53:10"
+    ips:
+      - "192.0.2.10"
+    icmp:
+      enabled: true
