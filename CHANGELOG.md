@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.72](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.71...v0.95.72) (2026-09-17)
+
+
+### Bug Fixes
+
+* **deps:** update frontend toolchain ([#2237](https://github.com/MustardSeedNetworks/niac-go/issues/2237)) ([d04f84a](https://github.com/MustardSeedNetworks/niac-go/commit/d04f84a3ce788f98921c75d5dc2e355fb6c955ff))
+* **ui:** send client crash reports with auth and CSRF headers (D-NIAC-4) ([#2236](https://github.com/MustardSeedNetworks/niac-go/issues/2236)) ([5d0c2cf](https://github.com/MustardSeedNetworks/niac-go/commit/5d0c2cfb4df1bdaa2eacb4ddf5f6f4068e50e6b3))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2235](https://github.com/MustardSeedNetworks/niac-go/issues/2235)) ([42e36b0](https://github.com/MustardSeedNetworks/niac-go/commit/42e36b0926b7a2cd3658cf3614a00cb979b18fbb))
+* **deps:** lock file maintenance ([#2238](https://github.com/MustardSeedNetworks/niac-go/issues/2238)) ([c3a0575](https://github.com/MustardSeedNetworks/niac-go/commit/c3a0575a89682ef482884e98adf98c69f74954ce))
+
 ## [0.95.71](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.70...v0.95.71) (2026-09-17)
 
 
