@@ -75,6 +75,14 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		return withExitCode(onceExitConfig, err)
 	}
 
+	// Before the runtime exists, so a run refused for sharing a data directory
+	// has opened nothing.
+	lock, err := onceInstanceLock()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = lock.Release() }()
+
 	d, err := daemon.NewDaemon(daemon.Config{
 		// No listener: a one-shot run is a foreground process, not a service,
 		// and binding a port would make two concurrent runs collide on it.

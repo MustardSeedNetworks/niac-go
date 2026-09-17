@@ -1983,7 +1983,9 @@ path.
 - `--access-vlan <id>` - VLAN for access or trunk mode
 
 Exit codes: 0 the run completed, 1 the run failed, 2 the configuration was
-refused.
+refused -- which includes a daemon already running on this data directory,
+since a one-shot run cannot share it. Use `niac simulation start` to run
+against the daemon instead.
 
 ### Examples
 

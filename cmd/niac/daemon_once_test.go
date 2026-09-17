@@ -4,6 +4,10 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/instance"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 )
 
 func TestOnceArgsAcceptsThePositionalForm(t *testing.T) {
@@ -76,9 +80,49 @@ func TestOnceExitCodesAreDistinct(t *testing.T) {
 		t.Fatalf("success exit code = %d, want 0", onceExitOK)
 	}
 
-	err := withExitCode(onceExitConfig, errors.New("bad config"))
-	var coded codedError
-	if !errors.As(err, &coded) || coded.code != onceExitConfig {
-		t.Fatalf("withExitCode did not carry the config exit code: %#v", err)
+	// One row per cause a caller branches on. `--once` refused because a
+	// daemon holds the data directory is a config refusal, not a crash: the
+	// run is unretryable until the operator stops the daemon or uses
+	// `niac simulation start` (#2254).
+	for _, tc := range []struct {
+		cause string
+		err   error
+		want  int
+	}{
+		{"a config the daemon refused", withExitCode(onceExitConfig, errors.New("bad config")), onceExitConfig},
+		{"a run that failed", withExitCode(onceExitRuntime, errors.New("stack died")), onceExitRuntime},
+		{"another instance holds the data directory", heldDataDirectoryError(t), onceExitConfig},
+	} {
+		t.Run(tc.cause, func(t *testing.T) {
+			var coded codedError
+			if !errors.As(tc.err, &coded) {
+				t.Fatalf("%s does not carry an exit code: %#v", tc.cause, tc.err)
+			}
+			if coded.code != tc.want {
+				t.Fatalf("%s exits %d, want %d", tc.cause, coded.code, tc.want)
+			}
+		})
 	}
+}
+
+// heldDataDirectoryError is the error a one-shot run actually produces while
+// another instance holds the data directory, rather than a hand-made stand-in
+// that would pass whatever onceInstanceLock did.
+func heldDataDirectoryError(t *testing.T) error {
+	t.Helper()
+
+	isolateDataDir(t)
+
+	held, err := instance.Acquire(daemon.DefaultDataDir())
+	if err != nil {
+		t.Fatalf("acquiring the lock for the test holder: %v", err)
+	}
+	t.Cleanup(func() { _ = held.Release() })
+
+	lock, onceErr := onceInstanceLock()
+	if onceErr == nil {
+		_ = lock.Release()
+		t.Fatal("a one-shot run took the lock while another instance held it")
+	}
+	return onceErr
 }

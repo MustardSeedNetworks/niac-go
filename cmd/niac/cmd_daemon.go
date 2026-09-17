@@ -383,26 +383,10 @@ func parseTrunkVLANs(value, text string) ([]uint16, error) {
 	return vlans, nil
 }
 
-func runDaemon(options *daemonOptions, info versionInfo) error {
-	logging.InitColors(true)
-
-	listenAddr := resolveDaemonListen(options)
-	token := resolveDaemonAPIToken(options)
-	tokenFile := resolveDaemonTokenFile(options)
-	certDir := resolveDaemonCertDir(options)
-	attachmentPolicies, err := parseAttachmentPolicies(options.attachmentPolicies)
-	if err != nil {
-		return err
-	}
-
-	trustedProxies, err := resolveDaemonTrustedProxies()
-	if err != nil {
-		return err
-	}
-
-	logging.Infof("Starting NIAC Daemon %s", info.version)
-	logging.Infof("Web UI will be available at https://%s", listenAddr)
-	authEnabled := token != "" || tokenFile != ""
+// logDaemonAuthMode announces which token source is in force and reports
+// whether any is, so the non-loopback gate below reads one name instead of
+// re-deriving it.
+func logDaemonAuthMode(token, tokenFile string) bool {
 	switch {
 	case tokenFile != "":
 		logging.Infof("API authentication enabled (token file: %s; SIGHUP rotates)", tokenFile)
@@ -415,7 +399,40 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 		logging.Warningf(
 			"         Use NIAC_API_TOKEN env var for production or network-exposed deployments.",
 		)
+		return false
 	}
+	return true
+}
+
+func runDaemon(options *daemonOptions, info versionInfo) error {
+	logging.InitColors(true)
+
+	// First, before anything is resolved, opened or bound: a second daemon on
+	// this data directory would otherwise bind a fallback port and then write
+	// the first one's database, library and recovery record.
+	lock, err := acquireInstanceLock()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = lock.Release() }()
+
+	listenAddr := resolveDaemonListen(options)
+	token := resolveDaemonAPIToken(options)
+	tokenFile := resolveDaemonTokenFile(options)
+	certDir := resolveDaemonCertDir(options)
+	attachmentPolicies, policyErr := parseAttachmentPolicies(options.attachmentPolicies)
+	if policyErr != nil {
+		return policyErr
+	}
+
+	trustedProxies, proxyErr := resolveDaemonTrustedProxies()
+	if proxyErr != nil {
+		return proxyErr
+	}
+
+	logging.Infof("Starting NIAC Daemon %s", info.version)
+	logging.Infof("Web UI will be available at https://%s", listenAddr)
+	authEnabled := logDaemonAuthMode(token, tokenFile)
 
 	cfg := daemon.Config{
 		ListenAddr:          listenAddr,
@@ -449,14 +466,18 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 				"If you want loopback-only (no auth), set --listen=127.0.0.1")
 	}
 
-	d, err := daemon.NewDaemon(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create daemon: %w", err)
+	d, newErr := daemon.NewDaemon(cfg)
+	if newErr != nil {
+		return fmt.Errorf("failed to create daemon: %w", newErr)
 	}
 
 	if startErr := d.Start(); startErr != nil {
 		return fmt.Errorf("failed to start daemon: %w", startErr)
 	}
+
+	// The port is only knowable now: the listener may have walked past a busy
+	// one, and the holder's record should name where it actually answers.
+	publishBoundPort(lock, d.BoundAddr())
 
 	logging.Successf("✓ Daemon started successfully")
 	logging.Infof("Press Ctrl+C to stop (SIGHUP rotates tokens without restart)")

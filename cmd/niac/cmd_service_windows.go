@@ -77,6 +77,15 @@ func (p *niacProgram) run() {
 		storagePath = expanded
 	}
 
+	// The service is a third way to start a runtime on this data directory,
+	// and `niac daemon` on the same machine must not start underneath it.
+	lock, lockErr := acquireInstanceLock()
+	if lockErr != nil {
+		logging.Errorf("Refusing to start: %v", lockErr)
+		return
+	}
+	defer func() { _ = lock.Release() }()
+
 	d, err := daemon.NewDaemon(daemon.Config{
 		ListenAddr:   listen,
 		Token:        resolveAPIToken(""),
@@ -100,6 +109,8 @@ func (p *niacProgram) run() {
 		logging.Errorf("Failed to start daemon: %v", startErr)
 		return
 	}
+
+	publishBoundPort(lock, d.BoundAddr())
 
 	logging.Infof("NiAC daemon started as Windows service")
 

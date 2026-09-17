@@ -41,9 +41,17 @@ type activeSimulationEntry struct {
 	Generation string                `json:"generation"`
 }
 
+// DefaultDataDir returns the directory NIAC keeps its state under: the
+// library's parent. It is the single-instance lock's key, so every process
+// that builds a runtime -- the daemon, the Windows service and a `--once` run
+// -- derives it the same way and cannot disagree about who is alone.
+func DefaultDataDir() string {
+	return filepath.Dir(library.DefaultRoot())
+}
+
 // DefaultRecoveryPath returns the platform-aware daemon recovery record path.
 func DefaultRecoveryPath() string {
-	return filepath.Join(filepath.Dir(library.DefaultRoot()), "state", activeSimulationFileName)
+	return filepath.Join(DefaultDataDir(), "state", activeSimulationFileName)
 }
 
 func (d *Daemon) persistActiveSimulation(sim *Simulation) error {
