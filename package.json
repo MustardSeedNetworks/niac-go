@@ -1,6 +1,6 @@
 {
   "name": "niac",
-  "version": "0.95.77",
+  "version": "0.95.78",
   "private": true,
   "description": "NIAC - Network In A Can device simulator - Mustard Seed Networks",
   "type": "module",
