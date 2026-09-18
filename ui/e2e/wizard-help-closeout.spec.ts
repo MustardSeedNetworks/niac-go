@@ -5,12 +5,13 @@ import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
 test('Hospital pack preserves its AP uplinks through Networks and Review', async ({ page }) => {
   // The pack builds and addresses ~250 devices before Review, and rendering that
-  // many addressing rows is what costs: chromium ~17s, webkit ~21s, firefox
-  // 49-53s alone and ~66s while the other engines run beside it. 90s was not
-  // enough — firefox hit exactly that on a CI runner and passed only on retry,
-  // which the job's zero flake budget fails. Sized to roughly 3x the measured
-  // cost rather than just above it, since the shortfall was contention.
-  test.setTimeout(180000);
+  // many addressing rows is the cost: chromium 21.4s, webkit 22.0s on the
+  // chromium+webkit matrix #2248 settled on. The 30s default is too tight and
+  // 90s was not enough either — on the old matrix firefox took ~66s under
+  // contention, hit exactly 90s on a CI runner and passed only on retry, which
+  // the job's zero flake budget fails. Held at 4-5x the measured cost, because
+  // what broke the budget last time was runner contention, not the work itself.
+  test.setTimeout(120000);
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
   const packs: ScenarioPack[] = await (await page.request.get('/api/v1/scenario/packs')).json();
@@ -46,10 +47,10 @@ test('Hospital pack preserves its AP uplinks through Networks and Review', async
   await expect(page.getByTestId('addressing-assign-all')).toBeDisabled();
   // Read the uplinks in one pass, the same way the addresses above are read.
   // The per-AP loop this replaces made two awaited round trips per device; the
-  // batch covers every device rather than only the APs. It is not what fixed the
-  // firefox flake — firefox measured 59s with the loop and 49-53s without, so
-  // the cost is rendering the rows, not the assertions. Kept because asserting
-  // more in fewer round trips is the better test either way.
+  // batch covers every device rather than only the APs. It was not what fixed
+  // the flake that prompted it — the engine measured 59s with the loop and
+  // 49-53s without, so the cost is rendering the rows, not the assertions.
+  // Kept because asserting more in fewer round trips is the better test anyway.
   const networks = page.getByTestId(/^addressing-network-/);
   await expect(networks).toHaveCount(model.devices.length);
   expect(
