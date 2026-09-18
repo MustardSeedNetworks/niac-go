@@ -4,10 +4,13 @@ import type { LibraryNetwork, Template } from '../src/api/template-types';
 import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
 test('Hospital pack preserves its AP uplinks through Networks and Review', async ({ page }) => {
-  // The pack builds and addresses ~250 devices before Review. Chromium walks it
-  // in ~20s and WebKit in ~27s, but Firefox needs ~40s, past the 30s default.
-  // Same budget as the other pack-building wizard spec.
-  test.setTimeout(90000);
+  // The pack builds and addresses ~250 devices before Review, and rendering that
+  // many addressing rows is what costs: chromium ~17s, webkit ~21s, firefox
+  // 49-53s alone and ~66s while the other engines run beside it. 90s was not
+  // enough — firefox hit exactly that on a CI runner and passed only on retry,
+  // which the job's zero flake budget fails. Sized to roughly 3x the measured
+  // cost rather than just above it, since the shortfall was contention.
+  test.setTimeout(180000);
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
   const packs: ScenarioPack[] = await (await page.request.get('/api/v1/scenario/packs')).json();
@@ -41,15 +44,20 @@ test('Hospital pack preserves its AP uplinks through Networks and Review', async
   for (const device of model.devices) expect(device.address).toBeTruthy();
   expect(await addresses.allTextContents()).toEqual(model.devices.map((device) => device.address));
   await expect(page.getByTestId('addressing-assign-all')).toBeDisabled();
-  for (const device of accessPoints) {
-    expect(device.address).toBeTruthy();
-    await expect(page.getByTestId(`addressing-address-${device.device}`)).toHaveText(
-      device.address ?? '',
-    );
-    await expect(page.getByTestId(`addressing-network-${device.device}`)).toHaveValue(
-      device.network ?? '',
-    );
-  }
+  // Read the uplinks in one pass, the same way the addresses above are read.
+  // The per-AP loop this replaces made two awaited round trips per device; the
+  // batch covers every device rather than only the APs. It is not what fixed the
+  // firefox flake — firefox measured 59s with the loop and 49-53s without, so
+  // the cost is rendering the rows, not the assertions. Kept because asserting
+  // more in fewer round trips is the better test either way.
+  const networks = page.getByTestId(/^addressing-network-/);
+  await expect(networks).toHaveCount(model.devices.length);
+  expect(
+    await networks.evaluateAll((elements) =>
+      elements.map((element) => (element as HTMLInputElement | HTMLSelectElement).value),
+    ),
+  ).toEqual(model.devices.map((device) => device.network ?? ''));
+  for (const device of accessPoints) expect(device.address).toBeTruthy();
   await page.getByTestId('wizard-next-button').click();
   await expect(page.getByTestId('wizard-step-protocols')).toHaveAttribute('data-status', 'active');
   await page.getByTestId('wizard-next-button').click();
