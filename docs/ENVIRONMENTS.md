@@ -3,6 +3,11 @@
 This guide demonstrates how to simulate complete network environments using NIAC-Go, from small branch offices to
 large data centers.
 
+The `examples/` paths below come from the shared demo catalog, which is not in
+this repository: `examples/` ships holding only its README. Run
+`./scripts/sync-demo-catalog.sh --sync` once before following any of them --
+see [Shared Demo Catalog](SHARED_DEMO_CATALOG.md).
+
 ## Table of Contents
 
 - [Overview](#overview)

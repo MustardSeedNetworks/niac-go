@@ -3,6 +3,10 @@
 This guide covers network topology configuration in NIAC-Go, including port-channels (Link Aggregation Groups), trunk
 ports with VLAN tagging, and multi-device topologies.
 
+The `examples/topology/` scenarios cited below come from the shared demo
+catalog: run `./scripts/sync-demo-catalog.sh --sync` first, because `examples/`
+ships holding only its README.
+
 **Added in:** v1.23.0
 
 ## Table of Contents
@@ -394,4 +398,4 @@ devices:
 - [Protocol Combinations Guide](PROTOCOL_GUIDE.md) - Using topology with LLDP/CDP/SNMP
 - [Environment Simulation Guide](ENVIRONMENTS.md) - Complete topology examples
 - [API Reference](API_REFERENCE.md) - Complete YAML schema
-- [Examples](../examples/topology/) - Ready-to-use configurations
+- [Shared Demo Catalog](SHARED_DEMO_CATALOG.md) - How to fetch the ready-to-use configurations

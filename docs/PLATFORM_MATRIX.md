@@ -174,10 +174,9 @@ docker not usable
 
 ## Browsers
 
-The browser matrix is exercised per-PR by the Playwright suite across Chromium,
-WebKit, installed Chrome and installed Edge. Native Safari acceptance is
-recorded separately in the v1 plan and is an owner-run check, not an automated
-one.
+The browser matrix is exercised per-PR by the Playwright suite on Chromium
+and WebKit, the fleet policy. Native Safari and Edge acceptance is recorded
+separately in the v1 plan and is an owner-run check, not an automated one.
 
 ## What closing this row still needs
 

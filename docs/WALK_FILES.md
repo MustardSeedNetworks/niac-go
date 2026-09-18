@@ -6,8 +6,10 @@ authoritative runtime state projected by those MIBs.
 
 ## Catalog layout
 
-Store fixtures below `examples/walks/<vendor>/`. Use lowercase names that
-identify the vendor, model family, and software family:
+Store fixtures below `examples/walks/<vendor>/`. That directory is generated
+from the shared demo catalog by `./scripts/sync-demo-catalog.sh --sync`, so add
+a fixture in the catalog repository rather than committing it here. Use
+lowercase names that identify the vendor, model family, and software family:
 
 ```text
 examples/walks/

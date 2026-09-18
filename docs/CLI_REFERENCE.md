@@ -1983,7 +1983,9 @@ path.
 - `--access-vlan <id>` - VLAN for access or trunk mode
 
 Exit codes: 0 the run completed, 1 the run failed, 2 the configuration was
-refused.
+refused -- which includes a daemon already running on this data directory,
+since a one-shot run cannot share it. Use `niac simulation start` to run
+against the daemon instead.
 
 ### Examples
 
@@ -2113,21 +2115,30 @@ production environments.
 
 ## Environment Variables
 
-NIAC-Go respects the following environment variables:
+NIAC-Go reads the following environment variables:
 
 - `NO_COLOR` - Disable color output (set to any value)
-- `NIAC_DEBUG` - Default debug level (0-3)
-- `NIAC_INTERFACE` - Default network interface
+- `NIAC_API_TOKEN` - Bearer token for the daemon's API; preferred over
+  `--api-token`, which leaves the value in `ps`
+- `NIAC_API_TOKEN_FILE` - Path to a 0600 JSON file of scoped tokens; overrides
+  `NIAC_API_TOKEN`
+- `NIAC_LISTEN_ADDR` - Default listen address for `niac daemon`
+- `NIAC_STORAGE_PATH` - Default run-history database path
+- `NIAC_CERT_DIR` - Directory holding the TLS certificate and key
+- `NIAC_TRUSTED_PROXIES` - Comma-separated CIDRs whose forwarded-for header is
+  believed
 - Per-device SSH password variables named by `devices[].ssh.password_env`
+
+Debug level and interface are flags, not environment variables: `--debug` on
+`niac daemon`, and `--interface` on `niac simulation start` and `niac dump`.
 
 Example:
 
 ```bash
 export NO_COLOR=1
-export NIAC_DEBUG=2
-export NIAC_INTERFACE=en0
+export NIAC_API_TOKEN=$(openssl rand -base64 32)
 
-niac my-config.yaml  # Uses environment defaults
+niac daemon --listen 0.0.0.0:8445
 ```
 
 ## Simulated Device CLI
@@ -2176,5 +2187,5 @@ event display. Type `?` or a command prefix followed by `?` for contextual help.
 ## See Also
 
 - [Configuration schema](schemas/niac.schema.json)
-- [Examples](../examples/)
+- [Shared Demo Catalog](SHARED_DEMO_CATALOG.md)
 - [Troubleshooting](TROUBLESHOOTING.md)

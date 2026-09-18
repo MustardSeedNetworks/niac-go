@@ -2,7 +2,6 @@ import { defineConfig } from '@playwright/test';
 import baseConfig from './playwright.config';
 
 const baseURL = 'https://127.0.0.1:22445';
-const desktopProjects = new Set(['chromium', 'webkit', 'firefox', 'chrome', 'edge']);
 
 export default defineConfig({
   ...baseConfig,
@@ -11,9 +10,11 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: [['list'], ['json', { outputFile: 'playwright-report/results-query.json' }]],
-  projects: (baseConfig.projects ?? [])
-    .filter((project) => desktopProjects.has(project.name ?? ''))
-    .map(({ testMatch: _testMatch, testIgnore: _testIgnore, ...project }) => project),
+  // The config-level testMatch above scopes this run to one file, so the
+  // base projects' own filters are stripped rather than inherited.
+  projects: (baseConfig.projects ?? []).map(
+    ({ testMatch: _testMatch, testIgnore: _testIgnore, ...project }) => project,
+  ),
   use: { ...baseConfig.use, baseURL, storageState: undefined, ignoreHTTPSErrors: true },
   webServer: {
     command:

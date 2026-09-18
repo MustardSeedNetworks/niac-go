@@ -317,9 +317,8 @@ vendor-specific MIBs.
 
 ## Related Documentation
 
-- [SNMP Agent Configuration](../examples/snmp/)
-- [Walk File Format](WALK_FILE_FORMAT.md)
-- [NIAC-Go Branding Guidelines](NIAC_GO_CORP_BRANDING.md)
+- [SNMP Walks](SNMP_WALKS.md)
+- [Walk File Format](WALK_FILES.md)
 - [CLI Reference](CLI_REFERENCE.md)
 
 ## Version History

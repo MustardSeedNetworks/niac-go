@@ -5,6 +5,48 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.76](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.75...v0.95.76) (2026-09-18)
+
+
+### Bug Fixes
+
+* **daemon:** guard the data directory with a single-instance lock ([#2260](https://github.com/MustardSeedNetworks/niac-go/issues/2260)) ([e2083d1](https://github.com/MustardSeedNetworks/niac-go/commit/e2083d1b0cbdbe38e9d8891e8109226d45bb3c0b))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2261](https://github.com/MustardSeedNetworks/niac-go/issues/2261)) ([1275bfd](https://github.com/MustardSeedNetworks/niac-go/commit/1275bfd1011c16a23354704e705c50274439da13))
+
+## [0.95.75](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.74...v0.95.75) (2026-09-17)
+
+
+### Bug Fixes
+
+* **docs:** make the operator docs describe things that exist, and gate it ([#2253](https://github.com/MustardSeedNetworks/niac-go/issues/2253)) ([bb951bf](https://github.com/MustardSeedNetworks/niac-go/commit/bb951bf81297ae00e0fcbb0f5dc55ddd2d2494ed)), closes [#2180](https://github.com/MustardSeedNetworks/niac-go/issues/2180)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2240](https://github.com/MustardSeedNetworks/niac-go/issues/2240)) ([fc8f00b](https://github.com/MustardSeedNetworks/niac-go/commit/fc8f00b8806c80a33c7c7ea076ee63001f82c91b))
+* **deps:** lock file maintenance ([#2259](https://github.com/MustardSeedNetworks/niac-go/issues/2259)) ([b1ca497](https://github.com/MustardSeedNetworks/niac-go/commit/b1ca497c74009b96ac4a00cce79870314aef1564))
+
+## [0.95.74](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.73...v0.95.74) (2026-09-17)
+
+
+### Bug Fixes
+
+* **ci:** make the binary verification able to fail (D-NIAC-7) ([#2251](https://github.com/MustardSeedNetworks/niac-go/issues/2251)) ([c65ba83](https://github.com/MustardSeedNetworks/niac-go/commit/c65ba835e0e644d2eca1a5f62e020c607208cfd3)), closes [#2181](https://github.com/MustardSeedNetworks/niac-go/issues/2181)
+* **ui:** desktop clarity and density pass ([#2227](https://github.com/MustardSeedNetworks/niac-go/issues/2227)) ([#2250](https://github.com/MustardSeedNetworks/niac-go/issues/2250)) ([02d1bc4](https://github.com/MustardSeedNetworks/niac-go/commit/02d1bc469c3983dd5658eb435747ebac539e63e4))
+
+## [0.95.73](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.72...v0.95.73) (2026-09-17)
+
+
+### Bug Fixes
+
+* **configs:** ship an example configuration that validates (D-NIAC-6) ([#2243](https://github.com/MustardSeedNetworks/niac-go/issues/2243)) ([e931331](https://github.com/MustardSeedNetworks/niac-go/commit/e9313318dd4f5e170e9b93b2f2bdddd06e103c28))
+* **e2e:** bring the Playwright matrix back to the fleet policy (D-NIAC-18) ([#2248](https://github.com/MustardSeedNetworks/niac-go/issues/2248)) ([94278e0](https://github.com/MustardSeedNetworks/niac-go/commit/94278e0d1e1ac7d88e38b8732b60e8b54d314689)), closes [#2247](https://github.com/MustardSeedNetworks/niac-go/issues/2247)
+* **ui:** show a load failure in Settings &gt; Simulation instead of the empty state (D-NIAC-5) ([#2241](https://github.com/MustardSeedNetworks/niac-go/issues/2241)) ([c77d273](https://github.com/MustardSeedNetworks/niac-go/commit/c77d273d52ec85f22a7e990bda31ce05696f6596)), closes [#2177](https://github.com/MustardSeedNetworks/niac-go/issues/2177)
+
 ## [0.95.72](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.71...v0.95.72) (2026-09-17)
 
 

@@ -3,6 +3,10 @@
 NIAC can serve captured SNMP OID/value pairs from walk files. Use captured data
 only when the built-in simulated MIBs do not cover the required device profile.
 
+The `examples/walks/` fixtures named below live in the shared demo catalog, not
+in this repository. Run `./scripts/sync-demo-catalog.sh --sync` to populate
+`examples/`.
+
 ## Create a walk
 
 Capture the narrowest useful subtree. Never commit credentials or a raw

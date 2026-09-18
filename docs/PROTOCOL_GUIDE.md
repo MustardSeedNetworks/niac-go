@@ -3,6 +3,10 @@
 This guide covers all 21 protocols supported by NIAC-Go, including
 configuration examples, use cases, and best practices.
 
+The `examples/` files referenced throughout arrive with the shared demo
+catalog: run `./scripts/sync-demo-catalog.sh --sync` to populate `examples/`,
+which ships holding only its README.
+
 ## Table of Contents
 
 - [Overview](#overview)
