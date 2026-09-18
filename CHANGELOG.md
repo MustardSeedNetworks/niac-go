@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.77](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.76...v0.95.77) (2026-09-18)
+
+
+### Bug Fixes
+
+* **library:** give library content one writer behind the daemon ([#2265](https://github.com/MustardSeedNetworks/niac-go/issues/2265)) ([e7f9134](https://github.com/MustardSeedNetworks/niac-go/commit/e7f9134e23853d9c13f1be2dc31750e96f2923a5)), closes [#2255](https://github.com/MustardSeedNetworks/niac-go/issues/2255)
+* **ui:** finish the adopted wizard and help work and bring it up to the gates ([#2245](https://github.com/MustardSeedNetworks/niac-go/issues/2245)) ([9fceb74](https://github.com/MustardSeedNetworks/niac-go/commit/9fceb74d19e03c10e948854a218623812170114e))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2266](https://github.com/MustardSeedNetworks/niac-go/issues/2266)) ([169ab50](https://github.com/MustardSeedNetworks/niac-go/commit/169ab50f96ea52d1336a53a3e25da23d52e67ffd))
+
 ## [0.95.76](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.75...v0.95.76) (2026-09-18)
 
 
