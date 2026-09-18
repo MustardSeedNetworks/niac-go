@@ -526,6 +526,12 @@ The bundle's top-level directories must be one of: networks, walks,
 pcaps. Anything else is rejected. Each entry is re-rooted under
 <library>/<kind>/ before any file is touched, so a malicious bundle
 cannot escape the library.
+
+A running daemon owns its library, so the bundle is handed to it over
+its API and installed there; --root cannot be honoured in that case.
+With no daemon running, the install happens here, holding the same
+single-instance lock a daemon takes, so one cannot start into a
+half-installed library.
 ```
 
 Flags:
@@ -534,7 +540,7 @@ Flags:
       --bundle string   Local bundle file to install (required)
       --dry-run         Print what would be installed without writing files
       --force           Overwrite your own files and any bundle file you have edited (default: preserve them)
-      --root string     Library root (default: NIAC_LIBRARY_ROOT or ~/.niac/library)
+      --root string     Library root when no daemon is running (default: NIAC_LIBRARY_ROOT or ~/.niac/library)
 ```
 
 Examples:

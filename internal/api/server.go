@@ -321,10 +321,10 @@ type ServerConfig struct {
 	// SuppressUnauthenticatedWarning is reserved for controlled test
 	// harnesses that intentionally bind loopback with auth disabled.
 	SuppressUnauthenticatedWarning bool
-	// LibraryRoot is the on-disk root the unified library reads from
-	// (~/.niac/library by default, /var/lib/niac/library when packaged).
-	// If empty, the daemon picks a sensible default via library.DefaultRoot().
+	// LibraryRoot is the root the unified library reads from; empty takes
+	// library.DefaultRoot(). InstallPack writes to it — see PackInstallFunc.
 	LibraryRoot string
+	InstallPack PackInstallFunc
 	// TrustedProxies are the CIDRs whose forwarding headers Server.clientIP
 	// may believe (#2174). Empty leaves loopback as the only trusted hop.
 	TrustedProxies []netip.Prefix

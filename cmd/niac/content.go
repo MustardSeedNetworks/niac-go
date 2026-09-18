@@ -1,14 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/instance"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
+	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // addContentCommand wires `niac content {install,list}` onto root. The
@@ -62,7 +68,13 @@ from a local file — no network access is made.
 The bundle's top-level directories must be one of: networks, walks,
 pcaps. Anything else is rejected. Each entry is re-rooted under
 <library>/<kind>/ before any file is touched, so a malicious bundle
-cannot escape the library.`,
+cannot escape the library.
+
+A running daemon owns its library, so the bundle is handed to it over
+its API and installed there; --root cannot be honoured in that case.
+With no daemon running, the install happens here, holding the same
+single-instance lock a daemon takes, so one cannot start into a
+half-installed library.`,
 		Example: `  # Install from a local bundle
   niac content install --bundle ./niac-content-v0.66.41.tar.gz
 
@@ -80,7 +92,8 @@ cannot escape the library.`,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&root, "root", "", "Library root (default: NIAC_LIBRARY_ROOT or ~/.niac/library)")
+	cmd.Flags().StringVar(&root, "root", "",
+		"Library root when no daemon is running (default: NIAC_LIBRARY_ROOT or ~/.niac/library)")
 	cmd.Flags().StringVar(&bundlePath, "bundle", "", "Local bundle file to install (required)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would be installed without writing files")
 	cmd.Flags().BoolVar(&force, "force", false,
@@ -95,13 +108,95 @@ type contentInstallArgs struct {
 	force            bool
 }
 
+// runContentInstall installs a bundle into whichever library owns the data
+// directory — the running daemon's, through its API, or this host's, under the
+// single-instance lock.
+//
+// A daemon has the library open, and content.Extract decides per file whether
+// to overwrite or preserve. An install that walked in beside it wrote into a
+// tree with a live reader and no arbitration; one that fought a second CLI
+// left both bundles half-applied. So the writer is singular: the daemon when
+// one runs, this process when none does and it holds the lock that says so.
 func runContentInstall(args contentInstallArgs) error {
+	holder, running, err := instance.Probe(daemon.DefaultDataDir())
+	if err != nil {
+		return fmt.Errorf("check for a running instance: %w", err)
+	}
+	if running {
+		return installThroughDaemon(args, holder)
+	}
+
+	return installLocally(args)
+}
+
+// installThroughDaemon hands the bundle to the instance that owns the data
+// directory. A holder that has published no port is not serving an API —
+// `niac daemon --once` is one — and guessing a port would send the bundle to
+// whatever else is listening, so the refusal names what is in the way.
+func installThroughDaemon(args contentInstallArgs, holder instance.Info) error {
+	held := &instance.HeldError{Dir: daemon.DefaultDataDir(), PID: holder.PID, Port: holder.Port}
+	if holder.Port == 0 {
+		return fmt.Errorf("%w: it is not serving an API, so the bundle cannot be handed to it", held)
+	}
+	if args.root != "" {
+		return fmt.Errorf(
+			"%w: it installs into its own library, so --root cannot be honoured; drop --root or stop it",
+			held)
+	}
+
+	bundle, err := os.ReadFile(args.bundlePath) // #nosec G304 -- the operator's own --bundle path; see openLocalBundle
+	if err != nil {
+		return fmt.Errorf("open --bundle %s: %w", args.bundlePath, err)
+	}
+
+	client, err := newCLIClient(fmt.Sprintf("https://127.0.0.1:%d", holder.Port), "", false)
+	if err != nil {
+		return fmt.Errorf("reach the running daemon: %w", err)
+	}
+
+	fmt.Fprintf(os.Stdout, "Installing %s through the daemon at %s\n", args.bundlePath, client.BaseURL())
+
+	result, err := client.InstallPack(
+		context.Background(), filepath.Base(args.bundlePath), bundle, args.force, args.dryRun)
+	if err != nil {
+		return fmt.Errorf("install through the daemon: %w", err)
+	}
+
+	perKind := make(map[library.Kind]int, len(result.PerKind))
+	for kind, n := range result.PerKind {
+		perKind[library.Kind(kind)] = n
+	}
+	printInstallSummary(args.dryRun, content.Manifest{
+		Files:       result.Files,
+		Directories: result.Directories,
+		Bytes:       result.Bytes,
+		PerKind:     perKind,
+		Preserved:   result.Preserved,
+	})
+
+	return nil
+}
+
+// installLocally does the work in this process, holding the single-instance
+// lock for the whole extraction so a daemon cannot start into the tree
+// half-way through it.
+func installLocally(args contentInstallArgs) error {
+	lock, err := acquireInstanceLock()
+	if err != nil {
+		return fmt.Errorf("take the instance lock: %w", err)
+	}
+	defer func() {
+		if releaseErr := lock.Release(); releaseErr != nil {
+			logging.Warningf("could not release the instance lock: %v", releaseErr)
+		}
+	}()
+
 	libRoot := args.root
 	if libRoot == "" {
 		libRoot = library.DefaultRoot()
 	}
-	if _, err := library.Open(libRoot); err != nil {
-		return fmt.Errorf("prepare library at %s: %w", libRoot, err)
+	if _, openErr := library.Open(libRoot); openErr != nil {
+		return fmt.Errorf("prepare library at %s: %w", libRoot, openErr)
 	}
 
 	source, sourceLabel, cleanup, err := openLocalBundle(args.bundlePath)
@@ -113,7 +208,7 @@ func runContentInstall(args contentInstallArgs) error {
 
 	fmt.Fprintf(os.Stdout, "Installing %s into %s\n", sourceLabel, libRoot)
 
-	manifest, err := content.Extract(source, libRoot, content.ExtractOptions{
+	manifest, err := daemon.InstallPack(source, libRoot, content.ExtractOptions{
 		DryRun: args.dryRun,
 		Force:  args.force,
 	})
@@ -121,8 +216,14 @@ func runContentInstall(args contentInstallArgs) error {
 		return fmt.Errorf("extract bundle: %w", err)
 	}
 
+	printInstallSummary(args.dryRun, manifest)
+
+	return nil
+}
+
+func printInstallSummary(dryRun bool, manifest content.Manifest) {
 	verb := "Installed"
-	if args.dryRun {
+	if dryRun {
 		verb = "Would install"
 	}
 	fmt.Fprintf(os.Stdout, "%s %d files (%s) across %d directories\n",
@@ -137,7 +238,6 @@ func runContentInstall(args contentInstallArgs) error {
 			"Kept %d existing file(s) the bundle also ships; re-run with --force to replace them\n",
 			manifest.Preserved)
 	}
-	return nil
 }
 
 func openLocalBundle(path string) (io.ReadCloser, string, func(), error) {
