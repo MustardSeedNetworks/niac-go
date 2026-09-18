@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.78](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.77...v0.95.78) (2026-09-18)
+
+
+### Bug Fixes
+
+* **walks:** give every generated walk its own vendor sysObjectID ([#2269](https://github.com/MustardSeedNetworks/niac-go/issues/2269)) ([e7160a1](https://github.com/MustardSeedNetworks/niac-go/commit/e7160a1bd61bb539c500260962442b76cbd20218)), closes [#2154](https://github.com/MustardSeedNetworks/niac-go/issues/2154)
+
+
+### Continuous Integration
+
+* skip the golangci-lint action cache so lint reflects the tree ([#2267](https://github.com/MustardSeedNetworks/niac-go/issues/2267)) ([aa4dd0f](https://github.com/MustardSeedNetworks/niac-go/commit/aa4dd0f78b00636f3b9970a9d4b86bd3ebf14700)), closes [#1942](https://github.com/MustardSeedNetworks/niac-go/issues/1942)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2270](https://github.com/MustardSeedNetworks/niac-go/issues/2270)) ([e96e92e](https://github.com/MustardSeedNetworks/niac-go/commit/e96e92e2a94f8d8883eebeec8d6ca46969053e32))
+
 ## [0.95.77](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.76...v0.95.77) (2026-09-18)
 
 
