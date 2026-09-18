@@ -194,9 +194,15 @@ test('the starting point stays compact and the library supports keyboard, search
   const networksResponse = await page.request.get('/api/v1/library/networks');
   expect(networksResponse.ok()).toBe(true);
   const networks: LibraryNetwork[] = await networksResponse.json();
-  expect(templates.length + networks.length).toBe(32);
+  // Derived, not pinned: this asserted a literal 32 and broke the moment the
+  // shipped template set grew to 33. The claim is that the picker renders every
+  // template and saved network the API returns — which the testid comparison
+  // below states exactly — so the count follows the API. The lower bound keeps
+  // an empty library from making both assertions vacuous.
+  const expectedCards = templates.length + networks.length;
+  expect(expectedCards).toBeGreaterThan(0);
   const allCards = page.getByTestId(/^config-item-/);
-  await expect(allCards).toHaveCount(32);
+  await expect(allCards).toHaveCount(expectedCards);
   expect(
     (
       await allCards.evaluateAll((elements) =>
