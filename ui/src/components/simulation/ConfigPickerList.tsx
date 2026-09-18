@@ -188,6 +188,7 @@ const ConfigCard: FC<SharedItemProps> = ({
 
   return (
     <div
+      data-testid={`config-item-${item.key}`}
       className={`flex flex-col gap-default rounded-lg border pad-sm transition-colors ${
         selected
           ? 'border-brand-accent/50 bg-brand-primary/10'
@@ -278,6 +279,7 @@ const ConfigRow: FC<SharedItemProps> = ({
   const { t } = useTranslation('pages');
   return (
     <li
+      data-testid={`config-item-${item.key}`}
       className={`flex items-center gap-default px-3 py-row transition-colors ${
         selected ? 'bg-brand-primary/10' : 'hover:bg-surface-hover'
       }`}

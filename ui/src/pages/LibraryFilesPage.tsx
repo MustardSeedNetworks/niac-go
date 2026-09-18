@@ -2,6 +2,7 @@ import { Database, FileBox, RefreshCw, RotateCcw, Search, Sparkles } from 'lucid
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type LibraryFileEntry, revertWalk, type WalkProvenance } from '../api/library-client';
+import { GlossaryPopover } from '../components/GlossaryPopover';
 import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
 import { RequireScope } from '../components/ui/RequireScope';
 import { useErrorToast } from '../hooks/useErrorToast';
@@ -11,7 +12,6 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn, type DataTableSelection } from '../ui/DataTable';
-import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 
@@ -37,8 +37,6 @@ interface Props {
 }
 
 function LibraryFilesView({ kind }: Props) {
-  const { t } = useTranslation('common');
-  const { t: tHelp } = useTranslation('help');
   const { t: tPages } = useTranslation('pages');
   const { data, loading, refetch, error } = useLibraryResource(kind, {
     intervalMs: 30000,
@@ -109,12 +107,7 @@ function LibraryFilesView({ kind }: Props) {
       header: (
         <span className="inline-flex items-center gap-1">
           {tPages('libraryFiles.sourceHeader')}
-          <InfoPopover
-            label={t('jargon.ariaLabel', { term: 'starter / bundle / user' })}
-            title="starter / bundle / user"
-          >
-            {tHelp('jargon.librarySource')}
-          </InfoPopover>
+          <GlossaryPopover term="librarySource" />
         </span>
       ),
       cell: (entry) => <SourceBadge source={entry.source} />,
@@ -126,12 +119,7 @@ function LibraryFilesView({ kind }: Props) {
             header: (
               <span className="inline-flex items-center gap-1">
                 {tPages('libraryFiles.contentHeader')}
-                <InfoPopover
-                  label={t('jargon.ariaLabel', { term: 'captured / generated' })}
-                  title="captured / generated"
-                >
-                  {tHelp('jargon.walkProvenance')}
-                </InfoPopover>
+                <GlossaryPopover term="walkProvenance" />
               </span>
             ),
             cell: (entry: LibraryFileEntry) => <ProvenanceBadge provenance={entry.provenance} />,

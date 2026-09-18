@@ -8,34 +8,26 @@ import { Network } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GLOSSARY } from '../../data/help-content';
-import type { GlossaryEntry } from './types';
+import { type GlossaryEntry, getGlossary } from '../../data/glossary';
 
 interface GlossarySectionProps {
   searchQuery: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  protocol: 'Protocols',
-  concept: 'Concepts',
-  device: 'Device Types',
-  niac: 'NIAC-Specific',
-  security: 'Security',
-};
-
 export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactElement {
   const { t } = useTranslation('help');
   const filteredGlossary = useMemo(() => {
-    if (!searchQuery.trim()) return GLOSSARY;
+    const glossary = getGlossary(t);
+    if (!searchQuery.trim()) return glossary;
     const query = searchQuery.toLowerCase();
-    return GLOSSARY.filter(
+    return glossary.filter(
       (entry) =>
         entry.term.toLowerCase().includes(query) || entry.definition.toLowerCase().includes(query),
     );
-  }, [searchQuery]);
+  }, [searchQuery, t]);
 
   const groupedEntries = useMemo(() => {
-    const groups: Record<string, GlossaryEntry[]> = {
+    const groups: Record<GlossaryEntry['category'], GlossaryEntry[]> = {
       protocol: [],
       concept: [],
       device: [],
@@ -43,10 +35,7 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
       security: [],
     };
     for (const entry of filteredGlossary) {
-      const bucket = groups[entry.category];
-      if (bucket) {
-        bucket.push(entry);
-      }
+      groups[entry.category].push(entry);
     }
     return groups;
   }, [filteredGlossary]);
@@ -61,13 +50,13 @@ export function GlossarySection({ searchQuery }: GlossarySectionProps): ReactEle
             <div key={category} className="stack-sm">
               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-compact">
                 <Network className="w-4 h-4 text-brand-accent" />
-                {CATEGORY_LABELS[category]}
+                {t(`glossaryCategories.${category as GlossaryEntry['category']}`)}
               </h3>
-              <div className="stack-xs">
+              <dl className="stack-xs">
                 {entries.map((entry) => (
                   <GlossaryItem key={entry.term} entry={entry} />
                 ))}
-              </div>
+              </dl>
             </div>
           ) : null,
         )

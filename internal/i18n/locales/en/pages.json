@@ -106,6 +106,7 @@
   },
   "configPicker": {
     "addToFavorites": "Add to favorites",
+    "allFamilies": "All families",
     "allNetworksSection": "All networks",
     "cardView": "Card view",
     "clearButton": "Clear",
@@ -114,6 +115,17 @@
     "deviceCount_one": "{{count}} device",
     "deviceCount_other": "{{count}} devices",
     "dropLocalFileTitle": "Drop the local file",
+    "families": {
+      "access-point": "Access point",
+      "basic": "Basic",
+      "complete": "Complete network",
+      "custom": "Custom",
+      "firewall": "Firewall",
+      "router": "Router",
+      "server": "Server",
+      "switch": "Switch"
+    },
+    "family": "Device family",
     "favoritesSection": "Favorites",
     "javaDslConvertFailed": "Couldn't auto-convert Java DSL",
     "javaDslConvertFailedWithReason": "Couldn't auto-convert Java DSL: {{reason}}",
@@ -526,6 +538,7 @@
         "wirelessControllers": "Wireless controllers per site",
         "workstationsPerAccess": "Wired workstations per access switch"
       },
+      "customize": "Customize the generated fleet",
       "domain": "DNS domain",
       "help": "Start with the validated enterprise design, then adjust sites and device counts. NIAC assigns identities, addressing, ports, VLANs, services, and links consistently.",
       "invalid": "Resolve the fleet values before continuing.",
@@ -662,11 +675,14 @@
       "template": "Template"
     },
     "template": {
+      "browseLibrary": "Browse library",
       "errorNoSource": "Pick a template, saved config, upload, or Start empty first",
       "help": "Pick a starting config below, or start empty and add devices in the next step.",
       "interfaceLabel": "Network interface",
+      "librarySelection": "Selected: {{name}} — change selection",
       "startEmpty": "Start empty",
-      "startingLabel": "Preparing draft…"
+      "startingLabel": "Preparing draft…",
+      "startingPoint": "Starting point"
     },
     "title": "New Simulation",
     "topology": {

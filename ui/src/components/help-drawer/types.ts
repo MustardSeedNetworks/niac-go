@@ -13,7 +13,6 @@ export type {
   Example,
   FAQEntry,
   Feature,
-  GlossaryEntry,
   HelpItem,
   Metric,
   Parameter,

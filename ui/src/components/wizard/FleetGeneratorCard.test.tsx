@@ -21,6 +21,7 @@ describe('FleetGeneratorCard', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('fleet-customize'));
     const accessSwitches = screen.getByRole('spinbutton', {
       name: 'Access switches per site',
     });
@@ -46,6 +47,7 @@ describe('FleetGeneratorCard', () => {
       />,
     );
 
+    await user.click(screen.getByTestId('fleet-customize'));
     expect(screen.getByRole('button', { name: 'Add site' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Remove site' }));
     expect(onChange).toHaveBeenCalledWith(
@@ -69,6 +71,7 @@ describe('FleetGeneratorCard', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('fleet-customize'));
     fireEvent.change(
       screen.getByRole('spinbutton', { name: 'Redundant WAN, firewall, and core pairs' }),
       { target: { value: '1' } },

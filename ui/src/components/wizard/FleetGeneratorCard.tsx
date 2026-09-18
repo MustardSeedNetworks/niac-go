@@ -111,116 +111,126 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
 
         <ScenarioPackPicker selectedPackId={selectedPackId} onSelectPack={onSelectPack} />
 
-        <div className="grid gap-default md:grid-cols-3">
-          {(['domain', 'snmpCommunity', 'attachmentName'] as const).map((field) => (
-            <label key={field} className="stack-xs text-xs text-text-muted">
-              {t(`newSimWizard.fleet.${field}`)}
-              <input
-                data-testid={`fleet-${field}`}
-                className={inputClass}
-                value={request[field]}
-                maxLength={field === 'domain' ? 237 : field === 'snmpCommunity' ? 255 : 64}
-                onChange={(event) => onChange({ ...request, [field]: event.target.value })}
-              />
-            </label>
-          ))}
-        </div>
-
-        <div className="stack-sm">
-          <div className="flex items-center justify-between gap-default">
-            <span className="text-sm font-medium text-text-primary">
-              {t('newSimWizard.fleet.sites')}
-            </span>
-            <div className="flex gap-sm">
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                disabled={request.sites.length === 1}
-                onClick={() => onChange({ ...request, sites: request.sites.slice(0, -1) })}
-              >
-                {t('newSimWizard.fleet.removeSite')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                disabled={request.sites.length === 4}
-                onClick={() => {
-                  const next = request.sites.length + 1;
-                  onChange({
-                    ...request,
-                    sites: [
-                      ...request.sites,
-                      { code: `SITE${next}`, octet: 239 + next, location: `Site ${next}` },
-                    ],
-                  });
-                }}
-              >
-                {t('newSimWizard.fleet.addSite')}
-              </Button>
-            </div>
-          </div>
-          {request.sites.map((site, index) => (
-            <div key={index} className="grid gap-default md:grid-cols-[1fr_8rem_2fr]">
-              <label className="stack-xs text-xs text-text-muted">
-                {t('newSimWizard.fleet.siteCode')}
+        <details className="stack-default">
+          <summary
+            data-testid="fleet-customize"
+            className="cursor-pointer rounded py-row text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-brand-primary"
+          >
+            {t('newSimWizard.fleet.customize')}
+          </summary>
+          <div className="grid gap-default md:grid-cols-3">
+            {(['domain', 'snmpCommunity', 'attachmentName'] as const).map((field) => (
+              <label key={field} className="stack-xs text-xs text-text-muted">
+                {t(`newSimWizard.fleet.${field}`)}
                 <input
+                  data-testid={`fleet-${field}`}
                   className={inputClass}
-                  value={site.code}
-                  onChange={(event) => updateSite(index, 'code', event.target.value.toUpperCase())}
+                  value={request[field]}
+                  maxLength={field === 'domain' ? 237 : field === 'snmpCommunity' ? 255 : 64}
+                  onChange={(event) => onChange({ ...request, [field]: event.target.value })}
                 />
               </label>
-              <label className="stack-xs text-xs text-text-muted">
-                {t('newSimWizard.fleet.siteOctet')}
+            ))}
+          </div>
+
+          <div className="stack-sm">
+            <div className="flex items-center justify-between gap-default">
+              <span className="text-sm font-medium text-text-primary">
+                {t('newSimWizard.fleet.sites')}
+              </span>
+              <div className="flex gap-sm">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={request.sites.length === 1}
+                  onClick={() => onChange({ ...request, sites: request.sites.slice(0, -1) })}
+                >
+                  {t('newSimWizard.fleet.removeSite')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={request.sites.length === 4}
+                  onClick={() => {
+                    const next = request.sites.length + 1;
+                    onChange({
+                      ...request,
+                      sites: [
+                        ...request.sites,
+                        { code: `SITE${next}`, octet: 239 + next, location: `Site ${next}` },
+                      ],
+                    });
+                  }}
+                >
+                  {t('newSimWizard.fleet.addSite')}
+                </Button>
+              </div>
+            </div>
+            {request.sites.map((site, index) => (
+              <div key={index} className="grid gap-default md:grid-cols-[1fr_8rem_2fr]">
+                <label className="stack-xs text-xs text-text-muted">
+                  {t('newSimWizard.fleet.siteCode')}
+                  <input
+                    className={inputClass}
+                    value={site.code}
+                    onChange={(event) =>
+                      updateSite(index, 'code', event.target.value.toUpperCase())
+                    }
+                  />
+                </label>
+                <label className="stack-xs text-xs text-text-muted">
+                  {t('newSimWizard.fleet.siteOctet')}
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={1}
+                    max={253}
+                    value={site.octet}
+                    onChange={(event) => updateSite(index, 'octet', Number(event.target.value))}
+                  />
+                </label>
+                <label className="stack-xs text-xs text-text-muted">
+                  {t('newSimWizard.fleet.siteLocation')}
+                  <input
+                    className={inputClass}
+                    value={site.location}
+                    onChange={(event) => updateSite(index, 'location', event.target.value)}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-default sm:grid-cols-2 lg:grid-cols-3">
+            {countFields.map((field) => (
+              <label key={field} className="stack-xs text-xs text-text-muted">
+                {t(`newSimWizard.fleet.counts.${field}`)}
                 <input
                   className={inputClass}
                   type="number"
-                  min={1}
-                  max={253}
-                  value={site.octet}
-                  onChange={(event) => updateSite(index, 'octet', Number(event.target.value))}
+                  min={countLimits[field].min}
+                  max={
+                    field === 'accessPointsPerAccess'
+                      ? Math.min(9, Math.floor(154 / request.counts.accessSwitches))
+                      : field === 'workstationsPerAccess'
+                        ? Math.min(39, Math.floor(79 / request.counts.accessSwitches))
+                        : countLimits[field].max
+                  }
+                  step={countLimits[field].step}
+                  value={request.counts[field]}
+                  onChange={(event) => updateCount(field, Number(event.target.value))}
                 />
               </label>
-              <label className="stack-xs text-xs text-text-muted">
-                {t('newSimWizard.fleet.siteLocation')}
-                <input
-                  className={inputClass}
-                  value={site.location}
-                  onChange={(event) => updateSite(index, 'location', event.target.value)}
-                />
-              </label>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-default sm:grid-cols-2 lg:grid-cols-3">
-          {countFields.map((field) => (
-            <label key={field} className="stack-xs text-xs text-text-muted">
-              {t(`newSimWizard.fleet.counts.${field}`)}
-              <input
-                className={inputClass}
-                type="number"
-                min={countLimits[field].min}
-                max={
-                  field === 'accessPointsPerAccess'
-                    ? Math.min(9, Math.floor(154 / request.counts.accessSwitches))
-                    : field === 'workstationsPerAccess'
-                      ? Math.min(39, Math.floor(79 / request.counts.accessSwitches))
-                      : countLimits[field].max
-                }
-                step={countLimits[field].step}
-                value={request.counts[field]}
-                onChange={(event) => updateCount(field, Number(event.target.value))}
-              />
-            </label>
-          ))}
-        </div>
-        {!isScenarioRequestValid(request) && (
-          <SmallText role="alert" className="text-status-error">
-            {t('newSimWizard.fleet.invalid')}
-          </SmallText>
-        )}
+            ))}
+          </div>
+          {!isScenarioRequestValid(request) && (
+            <SmallText role="alert" className="text-status-error">
+              {t('newSimWizard.fleet.invalid')}
+            </SmallText>
+          )}
+        </details>
       </CardContent>
     </Card>
   );

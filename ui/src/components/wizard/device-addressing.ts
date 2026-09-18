@@ -1,6 +1,18 @@
 import { isMap, isSeq, parseDocument } from 'yaml';
 import { findDeviceFragment, spliceDeviceFragment } from '../../utils/device-fragment';
 
+/** APs list their radios before their management uplink. Keep an existing
+ * address/network on its interface; a new address belongs on a wired port. */
+export function deviceAddressInterface(interfaces: unknown) {
+  if (!isSeq(interfaces)) return undefined;
+  const ports = interfaces.items.filter(isMap);
+  return (
+    ports.find((port) => typeof port.get('address') === 'string' && port.get('address') !== '') ??
+    ports.find((port) => typeof port.get('network') === 'string' && port.get('network') !== '') ??
+    ports.find((port) => port.get('type') !== 'ieee80211')
+  );
+}
+
 /**
  * setDeviceAddress puts a device on a network at a given address.
  *
@@ -9,8 +21,8 @@ import { findDeviceFragment, spliceDeviceFragment } from '../../utils/device-fra
  * between them are copied through untouched. Within the block the `yaml`
  * Document is edited in place, which keeps that device's own comments too.
  *
- * The address is written to the device's first interface, creating the
- * interface list when the device has none. `address` is expected in prefix
+ * The address stays on the device's addressed interface, or its first wired
+ * interface. A wired interface is created if it only has radios. `address` is expected in prefix
  * form -- the fabric compiler requires an interface address to carry its
  * network's prefix length.
  */
@@ -31,17 +43,14 @@ export function setDeviceAddress(
   }
 
   const interfaces = doc.get('interfaces');
-  if (!isSeq(interfaces) || interfaces.items.length === 0) {
-    doc.set('interfaces', [
-      { name: 'Ethernet1/1', type: 'ethernet', network: networkName, address },
-    ]);
+  const target = deviceAddressInterface(interfaces);
+  if (target) {
+    target.set('network', networkName);
+    target.set('address', address);
   } else {
-    const first = interfaces.items[0];
-    if (!isMap(first)) {
-      return configText;
-    }
-    first.set('network', networkName);
-    first.set('address', address);
+    const wired = { name: 'Ethernet1/1', type: 'ethernet', network: networkName, address };
+    if (isSeq(interfaces)) interfaces.add(doc.createNode(wired));
+    else doc.set('interfaces', [wired]);
   }
 
   return spliceDeviceFragment(configText, fragment, String(doc));

@@ -43,6 +43,9 @@ function draftName(): string {
 
 async function openDraft(page: Page, content: string): Promise<ScenarioDraft> {
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
+  // #2195 put the library behind a tab; the upload control lives inside it and
+  // the 'start' tab is the default, so it has to be opened before uploading.
+  await page.getByTestId('wizard-source-tab-library').click();
   await page.getByLabel('Upload local file').setInputFiles({
     name: draftName(),
     mimeType: 'application/yaml',

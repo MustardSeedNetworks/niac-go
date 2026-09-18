@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Card, CardContent } from '../ui/Card';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { InfoPopover } from '../ui/InfoPopover';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import {
@@ -13,6 +12,7 @@ import {
 } from '../utils/conversations';
 import { formatBytes, formatDurationSeconds } from '../utils/format';
 import { getProtocolColor } from '../utils/protocol-colors';
+import { GlossaryPopover } from './GlossaryPopover';
 import type { Packet } from './PacketList';
 
 interface ConversationListProps {
@@ -29,7 +29,6 @@ interface ConversationListProps {
 export const ConversationList: FC<ConversationListProps> = memo(
   ({ packets, onSelectConversation }) => {
     const { t } = useTranslation('common');
-    const { t: tHelp } = useTranslation('help');
     const { t: tPages } = useTranslation('pages');
     const conversations = useMemo(() => extractConversations(packets), [packets]);
 
@@ -102,9 +101,7 @@ export const ConversationList: FC<ConversationListProps> = memo(
             <SmallText className="text-text-muted flex items-center gap-1">
               {t('plurals.conversationCount', { count: conversations.length })}
               <span>{t('jargon.groupedByTerm', { term: '5-tuple' })}</span>
-              <InfoPopover label={t('jargon.ariaLabel', { term: '5-tuple' })} title="5-tuple">
-                {tHelp('jargon.fiveTuple')}
-              </InfoPopover>
+              <GlossaryPopover term="fiveTuple" />
             </SmallText>
             <SmallText className="text-text-muted">
               {tPages('packets.conversations.clickToFilterHint')}
