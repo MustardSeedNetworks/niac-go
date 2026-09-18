@@ -8,12 +8,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
@@ -97,6 +99,11 @@ func newLibraryInstallServer(t *testing.T, scope tokenstore.TokenScope) (*Server
 		t.Fatalf("open library: %v", err)
 	}
 	server.library = lib
+	// The daemon supplies the installer in production (its InstallPack
+	// method, over the same content.Extract). internal/daemon imports this
+	// package, so a test in it stands in with the same call rather than
+	// importing back.
+	server.cfg.InstallPack = content.Extract
 
 	mux := http.NewServeMux()
 	server.registerAPIRoutes(mux)
@@ -211,5 +218,23 @@ func TestLibraryInstall_BodyTooLarge(t *testing.T) {
 	}
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want 413; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestLibraryInstall_NoInstallerWired covers a server built without a daemon
+// behind it. Library content has one writer; a server that was given none
+// says so rather than extracting on its own behalf.
+func TestLibraryInstall_NoInstallerWired(t *testing.T) {
+	server, mux, token := newLibraryInstallServer(t, tokenstore.ScopeAdmin)
+	server.cfg.InstallPack = nil
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, libraryInstallRequest(t, server, token, validBundleJSONBody(t)))
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "install_unavailable") {
+		t.Fatalf("body = %s, want the install_unavailable cause", rec.Body.String())
 	}
 }
