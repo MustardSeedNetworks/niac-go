@@ -95,6 +95,16 @@ block RGB_HSL_COLOR \
   '\b(rgba?|hsla?)\([0-9]' \
   'Use a CSS theme variable; for white/black overlays use color-mix(var(--color-knob|scrim))'
 
+# The theme switches on a .dark class over CSS custom properties, so every
+# token is already mode-aware: `text-text-muted` resolves to the light or the
+# dark value on its own. A Tailwind `dark:` variant restates that switch in the
+# markup, where it is invisible to the palette rules above and drifts — which is
+# how ErrorBoundary.tsx kept a light-mode-only `text-text-disabled` (3.03:1)
+# on real copy long after the rest of the UI moved (#2187).
+block TAILWIND_DARK_VARIANT \
+  '(^|[[:space:]"'"'"'`{])dark:[a-z]' \
+  'Drop the dark: variant and use the semantic token — it is already mode-aware'
+
 # UNDEFINED_TOKEN — every referenced color token must resolve to a --color-*
 # defined in index.css. Catches typos / renamed tokens that compile to nothing
 # and silently render no color (invisible to the palette/hex rules above).
