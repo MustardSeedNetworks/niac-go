@@ -29,6 +29,7 @@ const RuleRow: FC<{
   isFirst: boolean;
   isLast: boolean;
 }> = memo(({ rule, onChange, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) => {
+  const { t } = useTranslation();
   const filterError = rule.filter ? validate(rule.filter) : null;
 
   return (
@@ -55,7 +56,7 @@ const RuleRow: FC<{
         value={rule.name}
         onChange={(e) => onChange({ ...rule, name: e.target.value })}
         className="w-24 bg-transparent border-b border-surface-border text-sm text-text-primary focus:outline-none focus:border-brand-accent px-1"
-        placeholder="Name"
+        placeholder={t('coloringRules.namePlaceholder')}
       />
 
       {/* Filter expression */}
@@ -68,62 +69,62 @@ const RuleRow: FC<{
             ? 'border-status-error/60 focus:border-status-error'
             : 'border-surface-border focus:border-brand-accent'
         }`}
-        placeholder="Filter expression"
+        placeholder={t('coloringRules.filterPlaceholder')}
       />
 
       {/* Foreground color */}
-      <Tooltip text="Text color">
+      <Tooltip text={t('coloringRules.textColor')}>
         <input
           type="color"
           value={rule.foreground}
           onChange={(e) => onChange({ ...rule, foreground: e.target.value })}
           className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
-          aria-label="Text color"
+          aria-label={t('coloringRules.textColor')}
         />
       </Tooltip>
 
       {/* Background color */}
-      <Tooltip text="Background color">
+      <Tooltip text={t('coloringRules.backgroundColor')}>
         <input
           type="color"
           value={rule.background}
           onChange={(e) => onChange({ ...rule, background: e.target.value })}
           className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
-          aria-label="Background color"
+          aria-label={t('coloringRules.backgroundColor')}
         />
       </Tooltip>
 
       {/* Move buttons */}
-      <Tooltip text="Move up">
+      <Tooltip text={t('coloringRules.moveUp')}>
         <button
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
           className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-          aria-label="Move up"
+          aria-label={t('coloringRules.moveUp')}
         >
           <ArrowUp className={iconSizes.sm} />
         </button>
       </Tooltip>
-      <Tooltip text="Move down">
+      <Tooltip text={t('coloringRules.moveDown')}>
         <button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
           className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-          aria-label="Move down"
+          aria-label={t('coloringRules.moveDown')}
         >
           <ArrowDown className={iconSizes.sm} />
         </button>
       </Tooltip>
 
       {/* Delete */}
-      <Tooltip text="Delete rule">
+      <Tooltip text={t('coloringRules.deleteRule')}>
         <button
           type="button"
           onClick={onDelete}
           className="p-1 text-text-muted hover:text-status-error"
-          aria-label="Delete rule"
+          aria-label={t('coloringRules.deleteRule')}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -192,14 +193,14 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
         ...prev,
         {
           id: generateRuleId(),
-          name: 'New Rule',
+          name: t('coloringRules.newRuleName'),
           filter: '',
           foreground: '#ffffff',
           background: '#374151',
           enabled: true,
         },
       ]);
-    }, []);
+    }, [t]);
 
     const handleApply = useCallback(() => {
       onRulesChange(localRules);
