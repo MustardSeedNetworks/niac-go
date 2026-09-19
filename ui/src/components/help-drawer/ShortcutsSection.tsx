@@ -96,7 +96,7 @@ function ShortcutItem({ shortcut }: ShortcutItemProps): ReactElement {
             >
               {key}
             </kbd>
-            {idx < shortcut.keys.length - 1 && <span className="text-text-disabled mx-0.5">+</span>}
+            {idx < shortcut.keys.length - 1 && <span className="text-text-muted mx-0.5">+</span>}
           </span>
         ))}
       </div>

@@ -17,6 +17,10 @@
   --color-on-brand: #ffffff;
   --color-on-danger: #ffffff;
   --color-on-success: #ffffff;
+  /* The only on-* foreground the dark block did not flip: it was a constant
+     #ffffff in index.css, so every blue fill carried white text in dark mode
+     at 2.63:1 (#2187). 6.22:1 on the light info fill. */
+  --color-on-info: #ffffff;
 
   --color-node-switch: #6a3fa8;
   --color-node-router: #0d5fb0;
@@ -63,6 +67,7 @@
   --color-on-brand: #181611;
   --color-on-danger: #181611;
   --color-on-success: #181611;
+  --color-on-info: #181611; /* 6.87:1 on the dark info fill, 5.31:1 on its hover */
 
   --color-node-switch: #9569d3;
   --color-node-router: #64b5f6;
