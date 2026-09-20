@@ -709,6 +709,11 @@
       "replayStopError": "Error al detener la reproducción",
       "replayStarting": "Iniciando…",
       "replayStartButton": "Iniciar reproducción"
+    },
+    "idle": {
+      "headline": "No hay ninguna simulación en ejecución",
+      "body": "La inyección de fallos y la reproducción de PCAP actúan sobre los dispositivos de una simulación en ejecución, así que todavía no hay nada sobre lo que actuar. Inicie una simulación y estos controles volverán con ella.",
+      "startAction": "Iniciar una simulación"
     }
   },
   "debug": {
