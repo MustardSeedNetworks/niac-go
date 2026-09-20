@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.79...v0.95.80) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ui:** localize sidebar and coloring-rule controls, correct the schema FAQ route ([#2276](https://github.com/MustardSeedNetworks/niac-go/issues/2276)) ([1821b07](https://github.com/MustardSeedNetworks/niac-go/commit/1821b07282260d6d588c350e3102726ea2a439c8))
+* **ui:** stop painting real copy in the disabled colour, and text on its own fill ([#2280](https://github.com/MustardSeedNetworks/niac-go/issues/2280)) ([1320752](https://github.com/MustardSeedNetworks/niac-go/commit/1320752240873b09de14d369d5edc8cb4861b2d3)), closes [#2187](https://github.com/MustardSeedNetworks/niac-go/issues/2187)
+
+
+### Miscellaneous
+
+* **ci:** set persist-credentials false on the build-ui checkout ([#2279](https://github.com/MustardSeedNetworks/niac-go/issues/2279)) ([bb6046f](https://github.com/MustardSeedNetworks/niac-go/commit/bb6046f1b3dda13e702f36736f52e85ccb5bf67d)), closes [#2182](https://github.com/MustardSeedNetworks/niac-go/issues/2182)
+
 ## [0.95.79](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.78...v0.95.79) (2026-09-19)
 
 
