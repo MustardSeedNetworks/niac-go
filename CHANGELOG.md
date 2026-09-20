@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.81](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.80...v0.95.81) (2026-09-20)
+
+
+### Features
+
+* **ui:** every route names itself the same way in the trail and the tab ([#2282](https://github.com/MustardSeedNetworks/niac-go/issues/2282)) ([c3a8ac4](https://github.com/MustardSeedNetworks/niac-go/commit/c3a8ac48eaaba8a219bc53efc260fb69ee124295)), closes [#2189](https://github.com/MustardSeedNetworks/niac-go/issues/2189)
+* **ui:** Fault Injection says why it is idle instead of disabling everything ([#2281](https://github.com/MustardSeedNetworks/niac-go/issues/2281)) ([c85ad72](https://github.com/MustardSeedNetworks/niac-go/commit/c85ad728030e429cfece07d3779fb0ee5e491330)), closes [#2188](https://github.com/MustardSeedNetworks/niac-go/issues/2188)
+
 ## [0.95.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.79...v0.95.80) (2026-09-20)
 
 
