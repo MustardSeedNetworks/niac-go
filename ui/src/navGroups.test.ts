@@ -87,3 +87,33 @@ describe('navGroups regroup (Tools/System split)', () => {
     ]);
   });
 });
+
+describe('sidebar icons', () => {
+  const { result: navResult } = renderHook(() => useNavGroups());
+  const { result: pagesResult } = renderHook(() => usePages());
+
+  it('gives every sidebar item its own icon', () => {
+    // Two routes wearing the same glyph makes the sidebar unreadable at a
+    // glance, which is the whole job of an icon rail (#2189: /packets and
+    // /library/pcaps both shipped FileBox).
+    const byIcon = new Map<unknown, string[]>();
+    for (const group of navResult.current) {
+      for (const item of group.items) {
+        byIcon.set(item.icon, [...(byIcon.get(item.icon) ?? []), item.path]);
+      }
+    }
+    const shared = [...byIcon.values()].filter((paths) => paths.length > 1);
+    expect(shared, `routes sharing one icon: ${JSON.stringify(shared)}`).toEqual([]);
+  });
+
+  it('shows the same icon for a route as its page header does', () => {
+    // The sidebar and the page header are two views of one route; declaring
+    // the icon twice is how they drift apart.
+    const pageIcons = new Map(pagesResult.current.map((page) => [page.path, page.icon]));
+    for (const group of navResult.current) {
+      for (const item of group.items) {
+        expect(item.icon, `${item.path} sidebar icon`).toBe(pageIcons.get(item.path));
+      }
+    }
+  });
+});

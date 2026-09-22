@@ -1130,6 +1130,11 @@
   },
   "traffic": {
     "description": "Inject controlled errors into the running simulation and replay captured {{format}} files.",
+    "idle": {
+      "body": "Fault injection and PCAP replay act on a running simulation's devices, so there is nothing here to act on yet. Start a simulation and these controls come back with it.",
+      "headline": "No simulation is running",
+      "startAction": "Start a Simulation"
+    },
     "label": "Fault Injection",
     "page": {
       "errorInjectionDescription": "Inject network errors on device interfaces for testing and simulation scenarios.",

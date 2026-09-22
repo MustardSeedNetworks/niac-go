@@ -53,9 +53,17 @@
   },
   "coloringRules": {
     "addRule": "Add Rule",
+    "backgroundColor": "Background color",
+    "deleteRule": "Delete rule",
     "empty": "No coloring rules defined.",
+    "filterPlaceholder": "Filter expression",
     "help": "Rules are evaluated top-to-bottom. First matching rule determines the row color.",
+    "moveDown": "Move down",
+    "moveUp": "Move up",
+    "namePlaceholder": "Name",
+    "newRuleName": "New rule",
     "resetDefaults": "Reset Defaults",
+    "textColor": "Text color",
     "title": "Coloring Rules"
   },
   "commandPalette": {

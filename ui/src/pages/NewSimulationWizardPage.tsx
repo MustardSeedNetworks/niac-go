@@ -33,15 +33,12 @@ import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { Button } from '../ui/Button';
 import { reportError } from '../utils/error-reporter';
 import { fileToText } from '../utils/file';
+import { newDraftName } from './wizard-draft-name';
 
 // An empty start is genuinely empty. The placeholder host this used to seed
 // was indistinguishable from a device the author had added, so it either
 // shipped into the scenario or had to be found and deleted first.
 const EMPTY_CONFIG_YAML = 'devices: []\n';
-
-function newDraftName(now = new Date()) {
-  return `scenario-${now.toISOString().replaceAll(/[-:.TZ]/g, '')}`;
-}
 
 /**
  * Steps that edit the draft's content and so must save before navigating.

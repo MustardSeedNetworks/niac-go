@@ -40,8 +40,16 @@ const state = vi.hoisted(() => ({
     },
   },
 }));
+// The page reads two different slices of app state through useAppState: the
+// injectable-error catalog these tests are about, and the simulation status
+// the page uses to decide whether there is anything to inject into at all
+// (#2188). A key-blind mock answered the second with the first, which reads
+// as "nothing running" and renders the idle empty state instead of the panel.
 vi.mock('../contexts/AppContext', () => ({
-  useAppState: () => ({ data: state.data, refetch: state.refetch }),
+  useAppState: (key?: string) =>
+    key === 'simStatus'
+      ? { data: { running: true, sessionId: 'default', deviceCount: 2, uptimeSeconds: 60 } }
+      : { data: state.data, refetch: state.refetch },
 }));
 vi.mock('../contexts/ScopeContext', () => ({
   useActionPermission: () => ({ disabled: state.disabled }),

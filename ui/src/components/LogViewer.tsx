@@ -239,7 +239,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
 
           {/* Source (if available) */}
           {log.source && (
-            <span className="shrink-0 text-text-disabled text-xs font-mono">{log.source}</span>
+            <span className="shrink-0 text-text-muted text-xs font-mono">{log.source}</span>
           )}
         </button>
 
@@ -358,7 +358,7 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
           </div>
           <div>
             <p className="text-text-muted font-medium">{t('debug.noLogsToDisplay')}</p>
-            <p className="mt-tight text-sm text-text-disabled">{t('debug.noLogsHint')}</p>
+            <p className="mt-tight text-sm text-text-muted">{t('debug.noLogsHint')}</p>
           </div>
         </div>
       </div>

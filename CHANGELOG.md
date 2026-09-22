@@ -5,6 +5,41 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.83](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.82...v0.95.83) (2026-09-22)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/gopacket/gopacket to v1.7.2 ([#2287](https://github.com/MustardSeedNetworks/niac-go/issues/2287)) ([9880ad9](https://github.com/MustardSeedNetworks/niac-go/commit/9880ad930220a14caaccd5351deca1ae8d57e84a))
+
+## [0.95.82](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.81...v0.95.82) (2026-09-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-i18next to v17.0.14 ([#2285](https://github.com/MustardSeedNetworks/niac-go/issues/2285)) ([c2e4b83](https://github.com/MustardSeedNetworks/niac-go/commit/c2e4b8371ab13a246226d1d176e2a1f81e17cbbf))
+
+## [0.95.81](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.80...v0.95.81) (2026-09-20)
+
+
+### Features
+
+* **ui:** every route names itself the same way in the trail and the tab ([#2282](https://github.com/MustardSeedNetworks/niac-go/issues/2282)) ([c3a8ac4](https://github.com/MustardSeedNetworks/niac-go/commit/c3a8ac48eaaba8a219bc53efc260fb69ee124295)), closes [#2189](https://github.com/MustardSeedNetworks/niac-go/issues/2189)
+* **ui:** Fault Injection says why it is idle instead of disabling everything ([#2281](https://github.com/MustardSeedNetworks/niac-go/issues/2281)) ([c85ad72](https://github.com/MustardSeedNetworks/niac-go/commit/c85ad728030e429cfece07d3779fb0ee5e491330)), closes [#2188](https://github.com/MustardSeedNetworks/niac-go/issues/2188)
+
+## [0.95.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.79...v0.95.80) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ui:** localize sidebar and coloring-rule controls, correct the schema FAQ route ([#2276](https://github.com/MustardSeedNetworks/niac-go/issues/2276)) ([1821b07](https://github.com/MustardSeedNetworks/niac-go/commit/1821b07282260d6d588c350e3102726ea2a439c8))
+* **ui:** stop painting real copy in the disabled colour, and text on its own fill ([#2280](https://github.com/MustardSeedNetworks/niac-go/issues/2280)) ([1320752](https://github.com/MustardSeedNetworks/niac-go/commit/1320752240873b09de14d369d5edc8cb4861b2d3)), closes [#2187](https://github.com/MustardSeedNetworks/niac-go/issues/2187)
+
+
+### Miscellaneous
+
+* **ci:** set persist-credentials false on the build-ui checkout ([#2279](https://github.com/MustardSeedNetworks/niac-go/issues/2279)) ([bb6046f](https://github.com/MustardSeedNetworks/niac-go/commit/bb6046f1b3dda13e702f36736f52e85ccb5bf67d)), closes [#2182](https://github.com/MustardSeedNetworks/niac-go/issues/2182)
+
 ## [0.95.79](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.78...v0.95.79) (2026-09-19)
 
 

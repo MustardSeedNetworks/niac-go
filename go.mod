@@ -6,7 +6,7 @@ require (
 	github.com/MustardSeedNetworks/foundation v0.5.10
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.4
-	github.com/gopacket/gopacket v1.7.1
+	github.com/gopacket/gopacket v1.7.2
 	github.com/gosnmp/gosnmp v1.44.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kardianos/service v1.3.0
