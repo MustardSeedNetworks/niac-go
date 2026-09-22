@@ -325,7 +325,8 @@
       "siteOctet": "Octeto de dirección",
       "sites": "Sitios",
       "snmpCommunity": "Comunidad SNMP",
-      "title": "Generar una flota multisitio"
+      "title": "Generar una flota multisitio",
+      "customize": "Personalizar el conjunto generado"
     },
     "fleetDefaults": {
       "captureHelp": "Reproduce una captura grabada junto a los dispositivos simulados. Solo una captura: el runtime reproduce exactamente una y el cargador rechaza más.",
@@ -410,7 +411,10 @@
       "startEmpty": "Empezar vacío",
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
       "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
-      "startingLabel": "Preparando borrador…"
+      "startingLabel": "Preparando borrador…",
+      "startingPoint": "Punto de partida",
+      "browseLibrary": "Explorar biblioteca",
+      "librarySelection": "Seleccionado: {{name}} — cambiar selección"
     },
     "title": "Nueva simulación",
     "topology": {
@@ -660,9 +664,9 @@
       "errorInjectionDescription": "Inyecte errores de red en las interfaces de los dispositivos para pruebas y escenarios de simulación.",
       "pcapReplayTitle": "Reproducción de PCAP",
       "pcapReplayDescription": "Reproduzca tráfico de paquetes capturado con controles de bucle y temporización para pruebas.",
-      "replayProgressLabel": "{{sent}} / {{total}} packets ({{percent}}%)",
+      "replayProgressLabel": "{{sent}} / {{total}} paquetes ({{percent}}%)",
       "replayProgressBytes": "{{bytes}} enviados",
-      "replayProgressUnknown": "Enviando packets… (total desconocido)",
+      "replayProgressUnknown": "Enviando paquetes… (total desconocido)",
       "replayStatusRunning": "En ejecución",
       "replayStarted": "Iniciado: {{time}}",
       "replayStartedUnknown": "Desconocido",
@@ -689,7 +693,7 @@
       "replayRateModeMbps": "Límite de throughput (Mbps)",
       "replayRateModeHelp": "Tiempo respeta la temporización de captura (× Escala de tiempo); los demás la anulan",
       "replayPpsLabel": "Tasa (pps)",
-      "replayPpsHelp": "packets por segundo",
+      "replayPpsHelp": "paquetes por segundo",
       "replayMbpsLabel": "Límite de throughput (Mbps)",
       "replayMbpsHelp": "Megabits por segundo",
       "replayLoopCountLabel": "Recuento de bucles",
@@ -697,7 +701,7 @@
       "replayLoopCountHelp": "0 = sin límite, N = detener tras N pasadas",
       "replayBpfLabel": "Filtro BPF",
       "replayBpfPlaceholder": "p. ej. udp port 53 (vacío = reproducir todo)",
-      "replayBpfHelp": "filtro estilo tcpdump; reproducir solo los packets coincidentes",
+      "replayBpfHelp": "filtro estilo tcpdump; reproducir solo los paquetes coincidentes",
       "replayNoFileError": "Seleccione un archivo PCAP",
       "replayStartSuccess": "Reproducción iniciada correctamente",
       "replayStartError": "Error al iniciar la reproducción",
@@ -705,6 +709,11 @@
       "replayStopError": "Error al detener la reproducción",
       "replayStarting": "Iniciando…",
       "replayStartButton": "Iniciar reproducción"
+    },
+    "idle": {
+      "headline": "No hay ninguna simulación en ejecución",
+      "body": "La inyección de fallos y la reproducción de PCAP actúan sobre los dispositivos de una simulación en ejecución, así que todavía no hay nada sobre lo que actuar. Inicie una simulación y estos controles volverán con ella.",
+      "startAction": "Iniciar una simulación"
     }
   },
   "debug": {
@@ -1177,7 +1186,19 @@
     "dropLocalFileTitle": "Descartar el archivo local",
     "selectItemTitle": "Seleccionar {{name}}",
     "localTag": "Local",
-    "previewTemplateYamlTitle": "Vista previa del YAML de la plantilla"
+    "previewTemplateYamlTitle": "Vista previa del YAML de la plantilla",
+    "family": "Tipo de dispositivo",
+    "allFamilies": "Todos los tipos",
+    "families": {
+      "basic": "Básico",
+      "router": "Router",
+      "switch": "Switch",
+      "access-point": "Punto de acceso",
+      "server": "Servidor",
+      "firewall": "Cortafuegos",
+      "complete": "Red completa",
+      "custom": "Personalizado"
+    }
   },
   "libraryFiles": {
     "actionsHeader": "Acciones",

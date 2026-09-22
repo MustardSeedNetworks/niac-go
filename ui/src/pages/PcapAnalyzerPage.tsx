@@ -7,6 +7,7 @@ import type { PcapAnalysisResult, PcapPacket } from '../api/types';
 import { ColoringRulesPanel } from '../components/ColoringRulesPanel';
 import { ConversationList } from '../components/ConversationList';
 import { FilterBar } from '../components/FilterBar';
+import { GlossaryPopover } from '../components/GlossaryPopover';
 import { HexDumpViewer } from '../components/HexDumpViewer';
 import { PacketDetails } from '../components/PacketDetails';
 import type { Packet } from '../components/PacketList';
@@ -20,7 +21,6 @@ import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
-import { InfoPopover } from '../ui/InfoPopover';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { Tooltip } from '../ui/Tooltip';
@@ -60,7 +60,6 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
  */
 export const PcapAnalyzerPage: FC = () => {
   const { t } = useTranslation('common');
-  const { t: tHelp } = useTranslation('help');
   const { t: tPages } = useTranslation('pages');
 
   // File and analysis state
@@ -282,9 +281,7 @@ export const PcapAnalyzerPage: FC = () => {
                   <H2 className="flex items-center gap-compact">
                     <FileSearch className={`${iconSizes.lg} text-brand-accent`} />
                     {tPages('libraryPcaps.analyzer.pageHeading')}
-                    <InfoPopover label={t('jargon.ariaLabel', { term: 'PCAP' })} title="PCAP">
-                      {tHelp('jargon.pcap')}
-                    </InfoPopover>
+                    <GlossaryPopover term="pcap" />
                   </H2>
                   <Tag colorScheme="green">
                     {tPages('libraryPcaps.analyzer.packetsCountTag', {

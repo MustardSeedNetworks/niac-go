@@ -8,12 +8,12 @@ import type {
   WalkValidationResponse,
   WalkValidationResult,
 } from '../api/types';
+import { GlossaryPopover } from '../components/GlossaryPopover';
 import { useErrorToast } from '../hooks/useErrorToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { InfoPopover } from '../ui/InfoPopover';
 import { Tooltip } from '../ui/Tooltip';
 
 type Severity = 'error' | 'warning' | 'info';
@@ -39,7 +39,6 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 export const WalkValidatorPage: FC = () => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const { t: tHelp } = useTranslation('help');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
@@ -218,12 +217,7 @@ export const WalkValidatorPage: FC = () => {
           <header>
             <h2 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
-              <InfoPopover
-                label={tCommon('jargon.ariaLabel', { term: 'SNMP walk' })}
-                title="SNMP walk"
-              >
-                {tHelp('jargon.snmpWalk')}
-              </InfoPopover>
+              <GlossaryPopover term="snmpWalk" />
             </h2>
             <p className="text-sm text-text-muted">
               <Trans
@@ -231,11 +225,7 @@ export const WalkValidatorPage: FC = () => {
                 ns="pages"
                 components={{
                   code: <code />,
-                  oid: (
-                    <InfoPopover label={tCommon('jargon.ariaLabel', { term: 'OID' })} title="OID">
-                      {tHelp('jargon.oid')}
-                    </InfoPopover>
-                  ),
+                  oid: <GlossaryPopover term="oid" />,
                 }}
               />
             </p>

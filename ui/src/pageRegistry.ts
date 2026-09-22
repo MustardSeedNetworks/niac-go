@@ -9,6 +9,7 @@ import {
   Layers,
   Network,
   PlugZap,
+  ScanSearch,
   Server,
   ShieldCheck,
   Terminal,
@@ -209,7 +210,7 @@ const staticPages: PageDef[] = [
     path: '/packets',
     i18nKey: 'packets',
     interpolation: { format: 'PCAP' },
-    icon: FileBox,
+    icon: ScanSearch,
     component: PacketInspectorPage,
   },
   {

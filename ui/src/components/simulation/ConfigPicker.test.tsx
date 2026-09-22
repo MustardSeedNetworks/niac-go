@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -68,7 +68,7 @@ const template: Template = {
   type: 'router',
 };
 
-describe('ConfigPicker — TemplatePreviewModal Copy YAML', () => {
+describe('ConfigPicker', () => {
   beforeEach(() => {
     fetchTemplates.mockReset().mockResolvedValue([template]);
     fetchLibraryNetworks.mockReset().mockResolvedValue([]);
@@ -101,5 +101,58 @@ describe('ConfigPicker — TemplatePreviewModal Copy YAML', () => {
     await user.click(await screen.findByRole('button', { name: /Copy YAML/i }));
 
     expect(copyToClipboard).toHaveBeenCalledWith('devices:\n  - name: r1\n');
+  });
+
+  it('searches names, display labels, vendors and tags together with the device family', async () => {
+    const user = userEvent.setup();
+    const templates: Template[] = [
+      {
+        name: 'edge-a',
+        displayName: 'Campus core',
+        description: '',
+        vendor: 'Acme',
+        type: 'switch',
+        tags: ['distribution'],
+        deviceCount: 1,
+      },
+      { name: 'edge-b', description: '', vendor: 'Other', type: 'router', deviceCount: 1 },
+    ];
+    fetchTemplates.mockResolvedValue(templates);
+    const select = vi.fn();
+    render(
+      <MemoryRouter>
+        <ConfigPicker
+          selection={{ source: null, name: '' }}
+          onSelectTemplate={select}
+          onSelectUserConfig={vi.fn()}
+          onUpload={vi.fn()}
+          uploadFile={null}
+          filterByDeviceFamily
+        />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId('config-item-builtin:edge-a');
+    expect(screen.getAllByTestId(/^config-item-builtin:/)).toHaveLength(2);
+    const search = screen.getByTestId('config-picker-search');
+    for (const query of ['CAMPUS', 'Acme', 'distribution', 'edge-a']) {
+      await user.clear(search);
+      await user.type(search, query);
+      expect(screen.getAllByTestId(/^config-item-builtin:/)).toHaveLength(1);
+      expect(screen.getByTestId('config-item-builtin:edge-a')).toBeVisible();
+    }
+    await user.clear(search);
+    const family = screen.getByTestId('config-picker-family');
+    await user.selectOptions(family, 'router');
+    expect(screen.getAllByTestId(/^config-item-builtin:/)).toHaveLength(1);
+    expect(screen.getByTestId('config-item-builtin:edge-b')).toBeVisible();
+    await user.type(search, 'Acme');
+    expect(screen.queryAllByTestId(/^config-item-builtin:/)).toHaveLength(0);
+    await user.selectOptions(family, 'switch');
+    await user.click(
+      within(screen.getByTestId('config-item-builtin:edge-a')).getByRole('button', {
+        name: 'Select',
+      }),
+    );
+    expect(select).toHaveBeenCalledExactlyOnceWith(templates[0]);
   });
 });

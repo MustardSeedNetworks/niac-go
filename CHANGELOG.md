@@ -5,6 +5,91 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.83](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.82...v0.95.83) (2026-09-22)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/gopacket/gopacket to v1.7.2 ([#2287](https://github.com/MustardSeedNetworks/niac-go/issues/2287)) ([9880ad9](https://github.com/MustardSeedNetworks/niac-go/commit/9880ad930220a14caaccd5351deca1ae8d57e84a))
+
+## [0.95.82](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.81...v0.95.82) (2026-09-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-i18next to v17.0.14 ([#2285](https://github.com/MustardSeedNetworks/niac-go/issues/2285)) ([c2e4b83](https://github.com/MustardSeedNetworks/niac-go/commit/c2e4b8371ab13a246226d1d176e2a1f81e17cbbf))
+
+## [0.95.81](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.80...v0.95.81) (2026-09-20)
+
+
+### Features
+
+* **ui:** every route names itself the same way in the trail and the tab ([#2282](https://github.com/MustardSeedNetworks/niac-go/issues/2282)) ([c3a8ac4](https://github.com/MustardSeedNetworks/niac-go/commit/c3a8ac48eaaba8a219bc53efc260fb69ee124295)), closes [#2189](https://github.com/MustardSeedNetworks/niac-go/issues/2189)
+* **ui:** Fault Injection says why it is idle instead of disabling everything ([#2281](https://github.com/MustardSeedNetworks/niac-go/issues/2281)) ([c85ad72](https://github.com/MustardSeedNetworks/niac-go/commit/c85ad728030e429cfece07d3779fb0ee5e491330)), closes [#2188](https://github.com/MustardSeedNetworks/niac-go/issues/2188)
+
+## [0.95.80](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.79...v0.95.80) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ui:** localize sidebar and coloring-rule controls, correct the schema FAQ route ([#2276](https://github.com/MustardSeedNetworks/niac-go/issues/2276)) ([1821b07](https://github.com/MustardSeedNetworks/niac-go/commit/1821b07282260d6d588c350e3102726ea2a439c8))
+* **ui:** stop painting real copy in the disabled colour, and text on its own fill ([#2280](https://github.com/MustardSeedNetworks/niac-go/issues/2280)) ([1320752](https://github.com/MustardSeedNetworks/niac-go/commit/1320752240873b09de14d369d5edc8cb4861b2d3)), closes [#2187](https://github.com/MustardSeedNetworks/niac-go/issues/2187)
+
+
+### Miscellaneous
+
+* **ci:** set persist-credentials false on the build-ui checkout ([#2279](https://github.com/MustardSeedNetworks/niac-go/issues/2279)) ([bb6046f](https://github.com/MustardSeedNetworks/niac-go/commit/bb6046f1b3dda13e702f36736f52e85ccb5bf67d)), closes [#2182](https://github.com/MustardSeedNetworks/niac-go/issues/2182)
+
+## [0.95.79](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.78...v0.95.79) (2026-09-19)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-hook-form to v7.88.0 ([#2273](https://github.com/MustardSeedNetworks/niac-go/issues/2273)) ([b35c999](https://github.com/MustardSeedNetworks/niac-go/commit/b35c99919fadef55c91df61cb0019164c9d82959))
+* **deps:** update dependency yaml to v2.9.1 ([#2272](https://github.com/MustardSeedNetworks/niac-go/issues/2272)) ([526ed94](https://github.com/MustardSeedNetworks/niac-go/commit/526ed9417f3ef8807218acca0b5622f4f97d3dc3))
+
+## [0.95.78](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.77...v0.95.78) (2026-09-18)
+
+
+### Bug Fixes
+
+* **walks:** give every generated walk its own vendor sysObjectID ([#2269](https://github.com/MustardSeedNetworks/niac-go/issues/2269)) ([e7160a1](https://github.com/MustardSeedNetworks/niac-go/commit/e7160a1bd61bb539c500260962442b76cbd20218)), closes [#2154](https://github.com/MustardSeedNetworks/niac-go/issues/2154)
+
+
+### Continuous Integration
+
+* skip the golangci-lint action cache so lint reflects the tree ([#2267](https://github.com/MustardSeedNetworks/niac-go/issues/2267)) ([aa4dd0f](https://github.com/MustardSeedNetworks/niac-go/commit/aa4dd0f78b00636f3b9970a9d4b86bd3ebf14700)), closes [#1942](https://github.com/MustardSeedNetworks/niac-go/issues/1942)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2270](https://github.com/MustardSeedNetworks/niac-go/issues/2270)) ([e96e92e](https://github.com/MustardSeedNetworks/niac-go/commit/e96e92e2a94f8d8883eebeec8d6ca46969053e32))
+
+## [0.95.77](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.76...v0.95.77) (2026-09-18)
+
+
+### Bug Fixes
+
+* **library:** give library content one writer behind the daemon ([#2265](https://github.com/MustardSeedNetworks/niac-go/issues/2265)) ([e7f9134](https://github.com/MustardSeedNetworks/niac-go/commit/e7f9134e23853d9c13f1be2dc31750e96f2923a5)), closes [#2255](https://github.com/MustardSeedNetworks/niac-go/issues/2255)
+* **ui:** finish the adopted wizard and help work and bring it up to the gates ([#2245](https://github.com/MustardSeedNetworks/niac-go/issues/2245)) ([9fceb74](https://github.com/MustardSeedNetworks/niac-go/commit/9fceb74d19e03c10e948854a218623812170114e))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2266](https://github.com/MustardSeedNetworks/niac-go/issues/2266)) ([169ab50](https://github.com/MustardSeedNetworks/niac-go/commit/169ab50f96ea52d1336a53a3e25da23d52e67ffd))
+
+## [0.95.76](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.75...v0.95.76) (2026-09-18)
+
+
+### Bug Fixes
+
+* **daemon:** guard the data directory with a single-instance lock ([#2260](https://github.com/MustardSeedNetworks/niac-go/issues/2260)) ([e2083d1](https://github.com/MustardSeedNetworks/niac-go/commit/e2083d1b0cbdbe38e9d8891e8109226d45bb3c0b))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2261](https://github.com/MustardSeedNetworks/niac-go/issues/2261)) ([1275bfd](https://github.com/MustardSeedNetworks/niac-go/commit/1275bfd1011c16a23354704e705c50274439da13))
+
 ## [0.95.75](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.74...v0.95.75) (2026-09-17)
 
 

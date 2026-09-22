@@ -260,3 +260,11 @@ settings:network.disconnected
 pages:dashboard.quickActions.faultInjectionDescription
 pages:dashboard.quickActions.debugConsoleDescription
 pages:dashboard.quickActions.viewTopologyDescription
+
+# data/glossary.ts iterates its typed key/category table; glossary.test.tsx
+# enforces exact catalog membership and locale parity (no orphaned terms).
+help:glossary.
+help:glossaryCategories.
+
+# ConfigPicker maps the finite template family IDs to localized option labels.
+pages:configPicker.families.

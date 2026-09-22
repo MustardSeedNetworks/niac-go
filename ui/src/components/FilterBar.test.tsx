@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
 import { FilterBar } from './FilterBar';
 
@@ -28,6 +28,19 @@ const chip = (name: string) => screen.getByRole('button', { name: new RegExp(`^$
 const current = () => screen.getByTestId('value').textContent;
 
 describe('FilterBar quick protocol chips', () => {
+  it('does not leave a state update scheduled after blur', () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<Harness />);
+
+      fireEvent.blur(screen.getByRole('textbox'));
+      expect(vi.getTimerCount()).toBe(0);
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('combines two protocols with OR, not AND', async () => {
     const user = userEvent.setup();
     render(<Harness />);

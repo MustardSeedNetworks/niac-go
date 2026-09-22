@@ -140,6 +140,7 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
   await expect(page.getByTestId('scenario-pack-hospital')).toHaveAttribute('aria-pressed', 'false');
 
   await page.getByTestId('scenario-pack-hospital').click();
+  await page.getByTestId('fleet-customize').click();
   await page.getByTestId('fleet-domain').fill('custom.example');
   await expect(selectedSources).toHaveCount(1);
   await expect(page.getByTestId('wizard-select-fleet')).toHaveAttribute('aria-pressed', 'true');

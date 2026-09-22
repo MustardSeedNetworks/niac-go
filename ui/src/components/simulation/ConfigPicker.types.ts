@@ -83,6 +83,8 @@ export interface Selection {
 }
 
 export interface ConfigPickerProps {
+  /** Show the wizard library's device-family filter. */
+  filterByDeviceFamily?: boolean;
   /** The currently selected config. */
   selection: Selection;
   /** Called when the user picks a built-in template. */

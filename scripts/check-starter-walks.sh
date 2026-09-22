@@ -48,3 +48,97 @@ if [[ ${#unlabelled[@]} -gt 0 ]]; then
 	printf '::error::walk has no "# Source: captured|generated" header: %s\n' "${unlabelled[@]}" >&2
 	exit 1
 fi
+
+# A walk whose sysDescr names one vendor and whose sysObjectID names another
+# is wrong by construction, and it is wrong invisibly: sysDescr is prose that
+# reads correct, while sysObjectID is the OID every analyser actually keys
+# vendor on. Nine generated walks described an Aruba, an Arista, a Dell and a
+# Palo Alto firewall while advertising Cisco's .1.3.6.1.4.1.9.1.1719, so seed,
+# Link-Live and an EtherScope all reported Cisco for them (#2154).
+#
+# The rule is the enterprise arc -- .1.3.6.1.4.1.<pen> -- against the vendor
+# named in sysDescr. Numbers are IANA private enterprise numbers
+# (https://www.iana.org/assignments/enterprise-numbers.txt, 2026-09-17).
+# Order matters: the first pattern that matches wins, so "Cisco Meraki" is
+# tested before "Cisco", and ArubaOS-CX (HPE, 47196) before the ProCurve-
+# lineage "HPE Aruba 2930F" (HP, 11), which share the word Aruba.
+vendor_rules=(
+	'Cisco Meraki|29671'
+	'ArubaOS-CX|47196'
+	'HPE Aruba|ProCurve|HP J|11'
+	'Arista Networks|30065'
+	'Juniper Networks|2636'
+	'ExtremeXOS|Extreme Networks|1916'
+	'FortiSwitch|FortiGate|Fortinet|12356'
+	'Dell EMC Networking|Dell Networking|674'
+	'Palo Alto Networks|25461'
+	'Brocade|Foundry|IronWare|1991'
+	'Huawei|2011'
+	'RouterOS|MikroTik|14988'
+	'VMware|6876'
+	'3Com|43'
+	'GSM7212|NETGEAR|Netgear|4526'
+	# A Cisco Unified Communications appliance: the sysDescr is
+	# "Hardware:7816H3 ... Software:UCOS 3.0.0.0-42" and names no vendor at
+	# all. UCOS and the MCS 78xx hardware are Cisco's.
+	'UCOS|9'
+	# net-snmp on a general-purpose OS reports the net-snmp agent's own OID,
+	# not the distributor's.
+	'Linux|8072'
+	# Plain "Cisco" last: every Cisco product string above starts with it.
+	'Cisco|9'
+)
+
+identity_failures=0
+for walk in "${walks[@]}"; do
+	# grep -a: three captured walks carry bytes that make grep treat them as
+	# binary, and without it the check would silently pass over them.
+	sysdescr=$(grep -a -m1 '^\.1\.3\.6\.1\.2\.1\.1\.1\.0 ' "$walk" | tr -d '\r' || true)
+	sysobjectid=$(grep -a -m1 '^\.1\.3\.6\.1\.2\.1\.1\.2\.0 ' "$walk" | tr -d '\r' | sed 's/.*= OID: *//' || true)
+
+	if [[ -z "$sysdescr" || -z "$sysobjectid" ]]; then
+		printf '::error::%s: no sysDescr or no sysObjectID; a walk with no identity cannot be checked\n' "$walk" >&2
+		identity_failures=$((identity_failures + 1))
+		continue
+	fi
+
+	expected=""
+	matched=""
+	for rule in "${vendor_rules[@]}"; do
+		pattern=${rule%|*}
+		pen=${rule##*|}
+		if printf '%s' "$sysdescr" | grep -qE "$pattern"; then
+			expected=$pen
+			matched=$pattern
+			break
+		fi
+	done
+
+	if [[ -z "$expected" ]]; then
+		# Unmatched is an error, not a skip: a silent pass is how a new walk
+		# would enter the corpus unchecked.
+		printf '::error::%s: no vendor rule matches its sysDescr (%s); add one to vendor_rules\n' \
+			"$walk" "${sysdescr#*= STRING: }" >&2
+		identity_failures=$((identity_failures + 1))
+		continue
+	fi
+
+	# Field 7 of ".1.3.6.1.4.1.<pen>...." is the enterprise number.
+	actual=$(printf '%s' "$sysobjectid" | sed -n 's/^\.\{0,1\}1\.3\.6\.1\.4\.1\.\([0-9][0-9]*\).*/\1/p')
+	if [[ -z "$actual" ]]; then
+		printf '::error::%s: sysObjectID %s is not under .1.3.6.1.4.1 (private enterprises)\n' \
+			"$walk" "$sysobjectid" >&2
+		identity_failures=$((identity_failures + 1))
+	elif [[ "$actual" != "$expected" ]]; then
+		printf '::error::%s: sysDescr matches /%s/ (enterprise %s) but sysObjectID %s is enterprise %s\n' \
+			"$walk" "$matched" "$expected" "$sysobjectid" "$actual" >&2
+		identity_failures=$((identity_failures + 1))
+	fi
+done
+
+if [[ $identity_failures -gt 0 ]]; then
+	printf '::error::%d walk(s) failed the sysDescr/sysObjectID vendor check\n' "$identity_failures" >&2
+	exit 1
+fi
+
+printf '✓ %d walks: sysObjectID enterprise arc agrees with sysDescr\n' "${#walks[@]}"

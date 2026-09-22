@@ -389,7 +389,7 @@ function UserConfigList({ configs, selectedName, onSelect }: UserConfigListProps
       <div className="text-center py-8">
         <FolderOpen className="w-8 h-8 text-text-disabled mx-auto mb-2" />
         <p className="text-sm text-text-muted">{t('simulation.noUserConfigs')}</p>
-        <p className="text-xs text-text-disabled mt-tight">{t('simulation.noUserConfigsHint')}</p>
+        <p className="text-xs text-text-muted mt-tight">{t('simulation.noUserConfigsHint')}</p>
       </div>
     );
   }
@@ -475,7 +475,7 @@ function UploadSection(): ReactElement {
           <span className="text-sm text-text-muted">
             {selectedFile ? selectedFile.name : t('simulation.uploadPrompt')}
           </span>
-          <span className="text-xs text-text-disabled mt-tight">
+          <span className="text-xs text-text-muted mt-tight">
             {t('simulation.uploadFileTypes')}
           </span>
         </label>

@@ -8,6 +8,7 @@ import {
   Layers,
   Network,
   PlugZap,
+  ScanSearch,
   Server,
   ShieldCheck,
   Terminal,
@@ -72,7 +73,7 @@ export function useNavGroups(): SidebarNavGroup[] {
       {
         label: t('groups.inspect'),
         items: [
-          { path: '/packets', label: t('packets.label'), icon: FileBox },
+          { path: '/packets', label: t('packets.label'), icon: ScanSearch },
           { path: '/debug', label: t('debug.label'), icon: Terminal },
         ],
       },

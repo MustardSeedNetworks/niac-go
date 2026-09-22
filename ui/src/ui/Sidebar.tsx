@@ -174,12 +174,12 @@ const SidebarHeader: FC<SidebarHeaderProps> = ({ collapsed, onCollapse }) => {
         ) : null}
       </div>
       {!collapsed ? (
-        <Tooltip text="Collapse sidebar">
+        <Tooltip text={t('accessibility.collapseSidebar')}>
           <button
             type="button"
             onClick={onCollapse}
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors lg:flex hidden"
-            aria-label="Collapse sidebar"
+            aria-label={t('accessibility.collapseSidebar')}
           >
             <ChevronLeft className={iconSizes.md} />
           </button>
@@ -343,13 +343,13 @@ const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
         </div>
         <span className="font-display font-bold text-text-primary">{t('app.title')}</span>
       </div>
-      <Tooltip text={mobileOpen ? 'Close menu' : 'Open menu'}>
+      <Tooltip text={mobileOpen ? t('accessibility.closeMenu') : t('accessibility.openMenu')}>
         <button
           type="button"
           onClick={toggleMobile}
           data-testid="mobile-menu-toggle"
           className="pad-xs rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-label={mobileOpen ? t('accessibility.closeMenu') : t('accessibility.openMenu')}
         >
           {mobileOpen ? <X className={iconSizes.lg} /> : <Menu className={iconSizes.lg} />}
         </button>
@@ -442,7 +442,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
           type="button"
           className="lg:hidden fixed inset-0 z-40 bg-scrim/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
-          aria-label="Close menu"
+          aria-label={t('accessibility.closeMenu')}
         />
       ) : null}
 

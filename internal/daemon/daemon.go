@@ -108,6 +108,9 @@ type Daemon struct {
 	apiServer *api.Server
 	storage   *storage.Storage
 
+	// packInstallMu serialises library-content installs; see InstallPack.
+	packInstallMu sync.Mutex
+
 	mu         sync.RWMutex
 	simulation *Simulation
 	sessions   *sessionRegistry
@@ -236,6 +239,7 @@ func (d *Daemon) Start() error {
 		KeyFile:                        d.cfg.KeyFile,
 		TrustedProxies:                 d.cfg.TrustedProxies,
 		SuppressUnauthenticatedWarning: e2eDryRunSimulation(),
+		InstallPack:                    d.InstallPack,
 		// Stack, Config, etc. will be nil until simulation starts
 	}
 

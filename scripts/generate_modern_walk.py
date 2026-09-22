@@ -13,11 +13,33 @@ import argparse
 import sys
 from datetime import datetime
 
-# Device templates with realistic OID responses
+# Device templates with realistic OID responses.
+#
+# `sysobjectid` and `sysservices` are per model, never per vendor and never
+# defaulted. The enterprise arc of each sysObjectID is the vendor's IANA
+# private enterprise number (enterprise-numbers.txt, 2026-09-17): Cisco 9,
+# HP 11, Extreme 1916, Juniper 2636, Dell 674, Fortinet 12356, Palo Alto
+# 25461, Meraki 29671, Arista 30065, HPE (ArubaOS-CX) 47196. `scripts/
+# check-starter-walks.sh` enforces exactly that arc against each walk's
+# sysDescr, so a new template with the wrong one cannot ship.
+#
+# Below the enterprise arc these are the vendor's documented product branch,
+# not a model-specific leaf, except where the leaf is sourced (the QFX5100-48S
+# and Catalyst 9300-48P values are). Inventing a precise-looking leaf we
+# cannot verify would repeat #2154 in a form that is harder to notice.
+#
+# `sysservices` is the RFC 1213 bit sum (1 physical, 2 datalink, 4 internet,
+# 8 end-to-end, 64 applications). The modelled switches are L3-capable, so
+# they report 6 -- the value the captured Cisco C3560/C3750 walks in this
+# corpus report -- and the PA-440 firewall reports 76 (internet, end-to-end,
+# applications). The old universal 78 claimed application-layer services for
+# every access switch.
 DEVICE_TEMPLATES = {
     "cisco": {
         "c3850-48p": {
             "model": "WS-C3850-48P",
+            "sysobjectid": ".1.3.6.1.4.1.9.1",
+            "sysservices": 6,
             "description": "Cisco IOS Software, C3850 Software (C3850-UNIVERSALK9-M), Version 16.12.4, RELEASE SOFTWARE (fc5)",
             "ports": 48,
             "stacking": True,
@@ -31,6 +53,8 @@ DEVICE_TEMPLATES = {
         },
         "c3650-48p": {
             "model": "WS-C3650-48PD",
+            "sysobjectid": ".1.3.6.1.4.1.9.1",
+            "sysservices": 6,
             "description": "Cisco IOS Software, C3650 Software (C3650-UNIVERSALK9-M), Version 16.12.4, RELEASE SOFTWARE (fc5)",
             "ports": 48,
             "stacking": True,
@@ -39,6 +63,8 @@ DEVICE_TEMPLATES = {
         },
         "c9300-48p": {
             "model": "C9300-48P",
+            "sysobjectid": ".1.3.6.1.4.1.9.1.2697",
+            "sysservices": 6,
             "description": "Cisco IOS Software [Gibraltar], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.6.3, RELEASE SOFTWARE (fc4)",
             "ports": 48,
             "stacking": True,
@@ -52,6 +78,8 @@ DEVICE_TEMPLATES = {
         },
         "n9k-c9300": {
             "model": "N9K-C9300",
+            "sysobjectid": ".1.3.6.1.4.1.9.12.3.1.3",
+            "sysservices": 6,
             "description": "Cisco Nexus Operating System (NX-OS) Software, Version 9.3(8)",
             "ports": 32,
             "stacking": False,
@@ -62,6 +90,8 @@ DEVICE_TEMPLATES = {
     "juniper": {
         "ex4300-48p": {
             "model": "EX4300-48P",
+            "sysobjectid": ".1.3.6.1.4.1.2636.1.1.1.2",
+            "sysservices": 6,
             "description": "Juniper Networks, Inc. ex4300-48p Ethernet Switch, kernel JUNOS 20.4R3.8, Build date: 2021-10-15",
             "ports": 48,
             "stacking": True,
@@ -70,6 +100,8 @@ DEVICE_TEMPLATES = {
         },
         "qfx5100-48s": {
             "model": "QFX5100-48S",
+            "sysobjectid": ".1.3.6.1.4.1.2636.1.1.1.4.82.5",
+            "sysservices": 6,
             "description": "Juniper Networks, Inc. qfx5100-48s-6q Ethernet Switch, kernel JUNOS 20.4R3.8",
             "ports": 48,
             "stacking": False,
@@ -80,6 +112,8 @@ DEVICE_TEMPLATES = {
     "aruba": {
         "cx6300-48g": {
             "model": "JL762A",
+            "sysobjectid": ".1.3.6.1.4.1.47196.4.1.1.3",
+            "sysservices": 6,
             "description": "Aruba CX 6300 48G 4SFP56 Switch, ArubaOS-CX FL.10.10.1010",
             "ports": 48,
             "stacking": True,
@@ -88,6 +122,8 @@ DEVICE_TEMPLATES = {
         },
         "cx8360-48y8c": {
             "model": "JL706A",
+            "sysobjectid": ".1.3.6.1.4.1.47196.4.1.1.3",
+            "sysservices": 6,
             "description": "Aruba CX 8360-48Y8C Switch, ArubaOS-CX FL.10.10.1010",
             "ports": 48,
             "stacking": False,
@@ -98,6 +134,8 @@ DEVICE_TEMPLATES = {
     "extreme": {
         "x465-48w": {
             "model": "X465-48W",
+            "sysobjectid": ".1.3.6.1.4.1.1916.2",
+            "sysservices": 6,
             "description": "ExtremeXOS (X465-48W) version 32.3.1.4 by release-manager on Thu Nov  4 19:18:03 EDT 2021",
             "ports": 48,
             "stacking": True,
@@ -108,6 +146,8 @@ DEVICE_TEMPLATES = {
     "paloalto": {
         "pa-440": {
             "model": "PA-440",
+            "sysobjectid": ".1.3.6.1.4.1.25461.2.3",
+            "sysservices": 76,
             "description": "Palo Alto Networks PA-440 firewall, PAN-OS 10.2.3",
             "ports": 8,
             "stacking": False,
@@ -118,6 +158,8 @@ DEVICE_TEMPLATES = {
     "hpe": {
         "aruba-2930f-48g": {
             "model": "JL262A",
+            "sysobjectid": ".1.3.6.1.4.1.11.2.3.7.11",
+            "sysservices": 6,
             "description": "HPE Aruba 2930F 48G 4SFP+ Switch, FL.16.11.0009",
             "ports": 48,
             "stacking": True,
@@ -126,6 +168,8 @@ DEVICE_TEMPLATES = {
         },
         "aruba-6300m-48g": {
             "model": "JL659A",
+            "sysobjectid": ".1.3.6.1.4.1.47196.4.1.1.3",
+            "sysservices": 6,
             "description": "HPE Aruba CX 6300M 48G Class 4 PoE 4SFP56 Switch, ArubaOS-CX FL.10.11.1020",
             "ports": 48,
             "stacking": True,
@@ -136,6 +180,8 @@ DEVICE_TEMPLATES = {
     "arista": {
         "7050sx3-48yc12": {
             "model": "7050SX3-48YC12",
+            "sysobjectid": ".1.3.6.1.4.1.30065.1",
+            "sysservices": 6,
             "description": "Arista Networks EOS version 4.28.3M",
             "ports": 48,
             "stacking": False,
@@ -144,6 +190,8 @@ DEVICE_TEMPLATES = {
         },
         "7280sr3-48yc8": {
             "model": "7280SR3-48YC8",
+            "sysobjectid": ".1.3.6.1.4.1.30065.1",
+            "sysservices": 6,
             "description": "Arista Networks EOS version 4.28.3M",
             "ports": 48,
             "stacking": False,
@@ -154,6 +202,8 @@ DEVICE_TEMPLATES = {
     "dell": {
         "n3248te-on": {
             "model": "N3248TE-ON",
+            "sysobjectid": ".1.3.6.1.4.1.674.11000.5000.100.2.1",
+            "sysservices": 6,
             "description": "Dell EMC Networking N3248TE-ON, OS10 Enterprise 10.5.3.4",
             "ports": 48,
             "stacking": True,
@@ -167,6 +217,8 @@ DEVICE_TEMPLATES = {
         },
         "s5248f-on": {
             "model": "S5248F-ON",
+            "sysobjectid": ".1.3.6.1.4.1.674.11000.5000.100.2.1",
+            "sysservices": 6,
             "description": "Dell EMC Networking S5248F-ON, OS10 Enterprise 10.5.3.4",
             "ports": 48,
             "stacking": True,
@@ -182,6 +234,8 @@ DEVICE_TEMPLATES = {
     "fortinet": {
         "fs-448e-fpoe": {
             "model": "FS-448E-FPOE",
+            "sysobjectid": ".1.3.6.1.4.1.12356",
+            "sysservices": 6,
             "description": "FortiSwitch-448E-FPOE v7.2.3,build0517,221201 (GA)",
             "ports": 48,
             "stacking": True,
@@ -190,6 +244,8 @@ DEVICE_TEMPLATES = {
         },
         "fs-548d-fpoe": {
             "model": "FS-548D-FPOE",
+            "sysobjectid": ".1.3.6.1.4.1.12356",
+            "sysservices": 6,
             "description": "FortiSwitch-548D-FPOE v7.2.3,build0517,221201 (GA)",
             "ports": 48,
             "stacking": True,
@@ -200,6 +256,8 @@ DEVICE_TEMPLATES = {
     "meraki": {
         "ms390-48uxb": {
             "model": "MS390-48UXB",
+            "sysobjectid": ".1.3.6.1.4.1.29671.2",
+            "sysservices": 6,
             "description": "Cisco Meraki MS390-48UXB Cloud-Managed Aggregation Switch, firmware 15.21",
             "ports": 48,
             "stacking": True,
@@ -208,6 +266,8 @@ DEVICE_TEMPLATES = {
         },
         "ms425-48": {
             "model": "MS425-48",
+            "sysobjectid": ".1.3.6.1.4.1.29671.2",
+            "sysservices": 6,
             "description": "Cisco Meraki MS425-48 Cloud-Managed Aggregation Switch, firmware 15.21",
             "ports": 48,
             "stacking": True,
@@ -222,14 +282,17 @@ def generate_system_mib(device_info, hostname="niac-device-01"):
     """Generate System MIB (.1.3.6.1.2.1.1.x) entries."""
     lines = []
     lines.append(f".1.3.6.1.2.1.1.1.0 = STRING: {device_info['description']}")
-    lines.append(
-        ".1.3.6.1.2.1.1.2.0 = OID: .1.3.6.1.4.1.9.1.1719"
-    )  # sysObjectID (Cisco)
+    # Subscripted, not .get(): a template with no sysObjectID must stop the
+    # generator. Defaulting these two is how nine walks came to describe an
+    # Aruba, an Arista and a Palo Alto firewall while advertising a Cisco
+    # switch OID -- sysObjectID is what an analyser keys vendor on, so the
+    # walks read correct until something machine-read them (#2154).
+    lines.append(f".1.3.6.1.2.1.1.2.0 = OID: {device_info['sysobjectid']}")
     lines.append(".1.3.6.1.2.1.1.3.0 = Timeticks: (123456789) 14 days, 6:56:07.89")
     lines.append(".1.3.6.1.2.1.1.4.0 = STRING: Network Administrator")
     lines.append(f".1.3.6.1.2.1.1.5.0 = STRING: {hostname}")
     lines.append(".1.3.6.1.2.1.1.6.0 = STRING: NiAC-Go Simulated Device")
-    lines.append(".1.3.6.1.2.1.1.7.0 = INTEGER: 78")  # Services
+    lines.append(f".1.3.6.1.2.1.1.7.0 = INTEGER: {device_info['sysservices']}")
     return lines
 
 
@@ -335,8 +398,10 @@ def generate_walk_file(vendor, model, output_file, hostname="niac-device-01"):
     lines = []
 
     # Header comment
-    lines.append(f"# SNMP Walk File for {vendor.title()} {device_info['model']}")
+    # Source first, matching the shipped corpus, so regenerating a starter
+    # walk produces a diff of only what changed.
     lines.append("# Source: generated")
+    lines.append(f"# SNMP Walk File for {vendor.title()} {device_info['model']}")
     lines.append("# Generated by NiAC-Go walk file generator")
     lines.append(f"# Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"# Hostname: {hostname}")

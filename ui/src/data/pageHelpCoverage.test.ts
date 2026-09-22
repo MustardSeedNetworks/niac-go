@@ -1,28 +1,47 @@
-/**
- * Holds GUI help completeness in CI.
- *
- * The page header's (?) opens the drawer on `pageHelp[page.path]`, so a route
- * without an entry silently loses its help button, and an entry without a
- * route is content nothing can reach. Both are failures here rather than
- * discoveries in the UI.
- */
+import enHelp from '@locales/en/help.json';
+import esHelp from '@locales/es/help.json';
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import '../i18n';
+import { describe, expect, it, vi } from 'vitest';
+import i18n from '../i18n';
 import { usePages } from '../pageRegistry';
-import { pageHelp } from './page-help';
+import { getPageHelp, pageHelpRoutes } from './page-help';
 
-describe('page help — route coverage', () => {
-  const { result } = renderHook(() => usePages());
-  const paths = result.current.map((page) => page.path);
+const leaves = (value: object, prefix = ''): string[] =>
+  Object.entries(value).flatMap(([key, child]) =>
+    typeof child === 'object' && child !== null
+      ? leaves(child, `${prefix}${key}.`)
+      : [`${prefix}${key}`],
+  );
 
-  it('every route has page help', () => {
-    const missing = paths.filter((path) => !pageHelp[path]);
-    expect(missing, `add an entry to data/page-help.ts for: ${missing.join(', ')}`).toEqual([]);
+describe.each(['en', 'es'] as const)('page help — %s', (language) => {
+  it('covers every route in both directions', () => {
+    const { result } = renderHook(() => usePages());
+    const paths = result.current.map((page) => page.path).sort((a, b) => a.localeCompare(b));
+    const help = getPageHelp(i18n.getFixedT(language, 'help'));
+    expect(Object.keys(help).sort((a, b) => a.localeCompare(b))).toEqual(paths);
+    expect([...pageHelpRoutes].sort((a, b) => a.localeCompare(b))).toEqual(paths);
+    for (const blocks of Object.values(help)) expect(blocks.length).toBeGreaterThan(0);
   });
 
-  it('every page-help entry belongs to a route', () => {
-    const orphaned = Object.keys(pageHelp).filter((path) => !paths.includes(path));
-    expect(orphaned, `these entries match no route: ${orphaned.join(', ')}`).toEqual([]);
+  it('renders every short page-help key without orphans or fallback keys', () => {
+    const translation = { t: i18n.getFixedT(language, 'help') };
+    const spy = vi.spyOn(translation, 't');
+    getPageHelp(translation.t);
+    const used = new Set(spy.mock.calls.map(([key]) => String(key)));
+    const catalog = language === 'en' ? enHelp : esHelp;
+    expect([...used].sort((a, b) => a.localeCompare(b))).toEqual(
+      leaves(catalog.pageHelp, 'pageHelp.').sort((a, b) => a.localeCompare(b)),
+    );
+    for (const key of used)
+      expect(i18n.exists(key, { lng: language, ns: 'help', fallbackLng: false })).toBe(true);
   });
+});
+
+it('keeps English and Spanish short-help keys in parity', () => {
+  expect(leaves(esHelp.pageHelp).sort((a, b) => a.localeCompare(b))).toEqual(
+    leaves(enHelp.pageHelp).sort((a, b) => a.localeCompare(b)),
+  );
+  expect(leaves(esHelp.glossary).sort((a, b) => a.localeCompare(b))).toEqual(
+    leaves(enHelp.glossary).sort((a, b) => a.localeCompare(b)),
+  );
 });
