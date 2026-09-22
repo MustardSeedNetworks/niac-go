@@ -8,6 +8,7 @@ import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
+import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useNavGroups } from './navGroups';
@@ -56,6 +57,7 @@ function AppShell() {
   const pageTitleRef = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
 
+  useDocumentTitle();
   useKeyboardShortcuts(() => setHelpOpen(true));
   useFocusOnRouteChange(pageTitleRef);
 

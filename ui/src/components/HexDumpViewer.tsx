@@ -141,7 +141,9 @@ const HexRow = memo(
         </span>
 
         {/* Separator */}
-        <span className="text-text-disabled mx-2">|</span>
+        <span className="text-text-muted mx-2" aria-hidden="true">
+          |
+        </span>
 
         {/* ASCII column */}
         <span className="w-16 flex-shrink-0 text-right">{asciiChars}</span>

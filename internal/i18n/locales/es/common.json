@@ -186,6 +186,14 @@
     "help": "Las reglas se evalúan de arriba abajo. La primera regla coincidente determina el color de la fila.",
     "empty": "No hay reglas de color definidas.",
     "addRule": "Agregar regla",
-    "resetDefaults": "Restablecer valores predeterminados"
+    "resetDefaults": "Restablecer valores predeterminados",
+    "textColor": "Color del texto",
+    "backgroundColor": "Color de fondo",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "deleteRule": "Eliminar regla",
+    "namePlaceholder": "Nombre",
+    "filterPlaceholder": "Expresión de filtro",
+    "newRuleName": "Regla nueva"
   }
 }

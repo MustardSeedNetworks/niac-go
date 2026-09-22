@@ -157,7 +157,7 @@
         "macSuffixHelp": "Distingue dispositivos del mismo fabricante; sin él comparten una dirección"
       },
       "cdp": {
-        "title": "CDP (Cisco Discovery Protocol)"
+        "title": "CDP (protocolo de descubrimiento de Cisco)"
       },
       "device": {
         "title": "Dispositivo"
@@ -172,10 +172,10 @@
         "title": "Servidor DNS"
       },
       "edp": {
-        "title": "EDP (Extreme Discovery Protocol)"
+        "title": "EDP (protocolo de descubrimiento de Extreme)"
       },
       "fdp": {
-        "title": "FDP (Foundry Discovery Protocol)"
+        "title": "FDP (protocolo de descubrimiento de Foundry)"
       },
       "ftp": {
         "title": "Servidor FTP"
@@ -196,7 +196,7 @@
         "title": "iPerf3"
       },
       "lldp": {
-        "title": "LLDP (Link Layer Discovery Protocol)"
+        "title": "LLDP (protocolo de descubrimiento de capa de enlace)"
       },
       "mdns": {
         "title": "mDNS"
@@ -208,7 +208,7 @@
         "title": "Huella del sistema operativo"
       },
       "port_channels": {
-        "title": "Port Channels"
+        "title": "Canales de puertos"
       },
       "properties": {
         "title": "Propiedades"
@@ -229,7 +229,7 @@
         "title": "SSH"
       },
       "stp": {
-        "title": "STP (Spanning Tree Protocol)"
+        "title": "STP (protocolo de árbol de expansión)"
       },
       "synthesizeWalk": {
         "label": "Sintetizar walk base",
