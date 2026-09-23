@@ -35,13 +35,16 @@ import { useNavigate } from 'react-router';
 import { fetchInterfaces } from '../api/client';
 import type { NetworkInterface } from '../api/types';
 import { iconSizes } from '../constants/sizes';
+import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { useFocusTrap } from '../hooks/useFocusTrap';
-import { type Theme, useTheme } from '../hooks/useTheme';
+import type { Theme, useTheme } from '../hooks/useTheme';
 import { cn, drawer, layout, spacing } from '../styles/theme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { SimulationSection } from './settings/SimulationSection';
 
 interface SettingsDrawerProps {
+  connectionStatus: ConnectionState;
+  themeState: ReturnType<typeof useTheme>;
   isOpen: boolean;
   onClose: () => void;
   version?: string;
@@ -66,6 +69,8 @@ const TABS: TabConfig[] = [
 ];
 
 export function SettingsDrawer({
+  connectionStatus,
+  themeState,
   isOpen,
   onClose,
   version = '0.0.0',
@@ -152,8 +157,8 @@ export function SettingsDrawer({
           {/* Content */}
           <div className={cn(spacing.drawer, 'stack-xl')}>
             {activeTab === 'simulation' && <SimulationSection />}
-            {activeTab === 'appearance' && <AppearanceSection />}
-            {activeTab === 'network' && <NetworkSection />}
+            {activeTab === 'appearance' && <AppearanceSection themeState={themeState} />}
+            {activeTab === 'network' && <NetworkSection status={connectionStatus} />}
             {activeTab === 'debug' && <DebugSection onClose={onClose} />}
             {activeTab === 'about' && <AboutSection version={version} />}
           </div>
@@ -203,9 +208,9 @@ const SettingRow = ({ label, description, children }: SettingRowProps): ReactEle
 // Appearance Section
 // =============================================================================
 
-function AppearanceSection(): ReactElement {
+function AppearanceSection({ themeState }: Pick<SettingsDrawerProps, 'themeState'>): ReactElement {
   const { t } = useTranslation('settings');
-  const { theme, setTheme, isDark, toggleTheme } = useTheme();
+  const { theme, setTheme, isDark, toggleTheme } = themeState;
 
   const options: Array<{
     id: Theme;
@@ -318,7 +323,7 @@ function deriveInterfaceType(name: string): string {
   return 'Other';
 }
 
-function NetworkSection(): ReactElement {
+function NetworkSection({ status }: { status: ConnectionState }): ReactElement {
   const { t } = useTranslation('settings');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
@@ -372,7 +377,7 @@ function NetworkSection(): ReactElement {
           </code>
         </SettingRow>
         <SettingRow label="Connection" description={t('network.websocketDescription')}>
-          <ConnectionStatus />
+          <ConnectionStatus status={status} />
         </SettingRow>
       </Section>
     </>

@@ -55,7 +55,7 @@ describe('HeaderBar scenario indicator', () => {
 
     render(
       <AppProvider>
-        <HeaderBar />
+        <HeaderBar status="connected" isDark toggleTheme={vi.fn()} />
       </AppProvider>,
     );
 
@@ -73,7 +73,7 @@ describe('HeaderBar scenario indicator', () => {
 
     render(
       <AppProvider>
-        <HeaderBar />
+        <HeaderBar status="connected" isDark toggleTheme={vi.fn()} />
       </AppProvider>,
     );
 

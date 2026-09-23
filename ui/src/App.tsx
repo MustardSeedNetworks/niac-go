@@ -8,9 +8,11 @@ import { HelpDrawer } from './components/HelpDrawer';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
+import { useConnectionStatus } from './hooks/useConnectionStatus';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useTheme } from './hooks/useTheme';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
@@ -41,6 +43,9 @@ export default function App() {
 }
 
 function AppShell() {
+  const status = useConnectionStatus();
+  const themeState = useTheme();
+  const { isDark, toggleTheme } = themeState;
   const { t } = useTranslation('pages');
   const { data: version } = useAppState('version');
   const navGroups = useNavGroups();
@@ -65,7 +70,7 @@ function AppShell() {
     <SidebarLayout
       groups={navGroups}
       version={version?.version}
-      topBar={<HeaderBar />}
+      topBar={<HeaderBar status={status} isDark={isDark} toggleTheme={toggleTheme} />}
       onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
@@ -138,6 +143,8 @@ function AppShell() {
         </Routes>
       </Suspense>
       <SettingsDrawer
+        connectionStatus={status}
+        themeState={themeState}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         version={version?.version}

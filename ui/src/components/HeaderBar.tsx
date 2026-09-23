@@ -16,14 +16,19 @@
 import { Moon, Network, Sun } from 'lucide-react';
 import type { FC, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../hooks/useTheme';
+import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { Tooltip } from '../ui/Tooltip';
 import { SessionSwitcher } from './SessionSwitcher';
 
-export const HeaderBar: FC = (): ReactElement => {
+interface HeaderBarProps {
+  status: ConnectionState;
+  isDark: boolean;
+  toggleTheme: () => void;
+}
+
+export const HeaderBar: FC<HeaderBarProps> = ({ status, isDark, toggleTheme }): ReactElement => {
   const { t } = useTranslation('common');
-  const { isDark, toggleTheme } = useTheme();
   const themeToggleLabel = isDark
     ? t('accessibility.switchToLightMode')
     : t('accessibility.switchToDarkMode');
@@ -36,7 +41,7 @@ export const HeaderBar: FC = (): ReactElement => {
           <Network className="h-5 w-5 text-text-inverse" aria-hidden="true" />
         </div>
         <span className="font-display font-bold text-text-primary truncate">NIAC</span>
-        <ConnectionStatus />
+        <ConnectionStatus status={status} />
         <SessionSwitcher />
       </div>
 
