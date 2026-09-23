@@ -1,12 +1,13 @@
-import type { ChangeEvent, FC, ReactElement } from 'react';
+import type { FC, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppContext } from '../contexts/AppContext';
+import { Select } from '../ui/Input';
 
 /**
  * SessionSwitcher — which scenario this browser is reading, in the shell.
  *
  * A NIAC daemon runs several scenarios at once, and every runtime read is
- * scoped to one of them. The switcher lives in the header rather than on the
+ * scoped to one of them. The switcher lives in the rail rather than on the
  * runtime page so the answer to "which scenario am I looking at?" is on screen
  * wherever the operator is, and so switching does not mean navigating away
  * from the page they are reading.
@@ -18,10 +19,6 @@ export const SessionSwitcher: FC = (): ReactElement => {
   const { t } = useTranslation('common');
   const { sessionId, setSessionId, sessions } = useAppContext();
 
-  const handleChange = (event: ChangeEvent<HTMLSelectElement>): void => {
-    setSessionId(event.target.value);
-  };
-
   return (
     <div className="flex items-center gap-compact min-w-0" data-testid="session-switcher">
       <span
@@ -29,19 +26,15 @@ export const SessionSwitcher: FC = (): ReactElement => {
         aria-hidden="true"
       />
       {sessions.length > 1 ? (
-        <select
+        <Select
           value={sessionId ?? ''}
-          onChange={handleChange}
+          onChange={setSessionId}
           aria-label={t('session.switchLabel')}
           data-testid="session-switcher-select"
-          className="max-w-[12rem] bg-transparent text-xs text-text-muted border border-border-default rounded-md px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-status-info"
-        >
-          {sessions.map((session) => (
-            <option key={session.sessionId} value={session.sessionId}>
-              {session.sessionId}
-            </option>
-          ))}
-        </select>
+          containerClassName="min-w-0 flex-1"
+          className="min-h-11 text-xs"
+          options={sessions.flatMap(({ sessionId: id }) => (id ? [{ value: id, label: id }] : []))}
+        />
       ) : (
         <span className="text-xs text-text-muted truncate">{sessionId ?? t('session.none')}</span>
       )}
