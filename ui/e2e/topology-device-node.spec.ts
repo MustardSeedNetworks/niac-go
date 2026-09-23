@@ -166,6 +166,7 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     await nodes.nth(0).focus();
     await page.keyboard.press('Tab');
     await expect(nodes.nth(1)).toBeFocused();
+    await expect(nodes.nth(1)).toHaveAttribute('aria-label', expectedTooltip(DEVICES[1]));
     await page.keyboard.press('Shift+Tab');
     await expect(nodes.nth(0)).toBeFocused();
 
