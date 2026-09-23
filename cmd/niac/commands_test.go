@@ -160,6 +160,29 @@ devices:
 	}
 }
 
+// #2202: the status is what `niac validate` would say, and an invalid row
+// carries its first error, so a network that cannot start does not read ok.
+func TestRunListScenariosReportsLoaderRejection(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "networks", "old.yaml"), []byte(`devices:
+  - name: router-1
+    type: router
+    mac: "00:50:56:A1:01:01"
+    ip: "192.168.10.1"
+`))
+
+	output := captureStdout(t, func() {
+		if err := runListScenarios(&listOptions{root: root}); err != nil {
+			t.Fatalf("runListScenarios: %v", err)
+		}
+	})
+
+	want := `status=invalid error="line 5: field ip not found in type converter.Device"`
+	if !strings.Contains(output, want) {
+		t.Fatalf("output missing %q:\n%s", want, output)
+	}
+}
+
 func TestRunListFilesFiltersWalkPrefix(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, "walks", "cisco", "switch.walk"), []byte("oid = STRING: x\n"))
