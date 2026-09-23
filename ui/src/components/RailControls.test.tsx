@@ -1,15 +1,17 @@
-/**
- * HeaderBar.test.tsx — locks the shell's scenario indicator. It sits next to
- * ConnectionStatus and reads the shared AppContext poll, so adding it must not
- * spin up a second fetch against /api/v1/simulation. What it shows is
- * SessionSwitcher's own test; this one covers the header wiring.
- */
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SimulationStatus } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
+import { useConnectionStatus } from '../hooks/useConnectionStatus';
 import '../i18n';
-import { HeaderBar } from './HeaderBar';
+import { RailControls } from './RailControls';
+
+const controls = {
+  collapsed: false,
+  status: 'connected',
+  isDark: true,
+  toggleTheme: vi.fn(),
+} as const;
 
 const fetchSimulationStatus = vi.fn<() => Promise<SimulationStatus>>();
 const fetchStats = vi.fn();
@@ -40,10 +42,35 @@ beforeEach(() => {
   fetchErrorTypes.mockReset().mockResolvedValue({ availableTypes: [], info: '' });
   fetchInterfaces.mockReset().mockResolvedValue({ interfaces: [] });
   fetchSimulationStatus.mockReset();
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}')));
 });
 
-describe('HeaderBar scenario indicator', () => {
+function PairedRails() {
+  const status = useConnectionStatus();
+  return (
+    <>
+      <RailControls {...controls} status={status} />
+      <RailControls {...controls} status={status} collapsed />
+    </>
+  );
+}
+
+describe('RailControls scenario indicator', () => {
+  it('shares one connection check between both rail surfaces', async () => {
+    fetchSimulationStatus.mockResolvedValue({ running: false, deviceCount: 0, uptimeSeconds: 0 });
+    render(
+      <AppProvider>
+        <PairedRails />
+      </AppProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getAllByTestId('connection-status')[0]).toHaveAccessibleName(
+        'Connected to backend',
+      ),
+    );
+    expect(screen.getAllByTestId('connection-status')).toHaveLength(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
   it('names the running scenario from the shared simulation status poll', async () => {
     fetchSimulationStatus.mockResolvedValue({
       running: true,
@@ -55,7 +82,7 @@ describe('HeaderBar scenario indicator', () => {
 
     render(
       <AppProvider>
-        <HeaderBar status="connected" isDark toggleTheme={vi.fn()} />
+        <RailControls {...controls} />
       </AppProvider>,
     );
 
@@ -73,7 +100,7 @@ describe('HeaderBar scenario indicator', () => {
 
     render(
       <AppProvider>
-        <HeaderBar status="connected" isDark toggleTheme={vi.fn()} />
+        <RailControls {...controls} />
       </AppProvider>,
     );
 

@@ -3,8 +3,8 @@ import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
-import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
+import { RailControls } from './components/RailControls';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
@@ -70,7 +70,14 @@ function AppShell() {
     <SidebarLayout
       groups={navGroups}
       version={version?.version}
-      topBar={<HeaderBar status={status} isDark={isDark} toggleTheme={toggleTheme} />}
+      railControls={(collapsed) => (
+        <RailControls
+          collapsed={collapsed}
+          status={status}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
+        />
+      )}
       onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
@@ -185,7 +192,7 @@ const PageWithErrorBoundary = memo(
     const documented = pageHelpRoutes.includes(page.path);
     return (
       <PageErrorBoundary key={location.pathname}>
-        <section className="stack-xl">
+        <section className="stack-xl" data-testid="page-frame">
           <Breadcrumbs />
           <PageHeader
             titleRef={titleRef}

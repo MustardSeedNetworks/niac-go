@@ -96,8 +96,8 @@ test('file upload, static status, and help version have keyboard descriptions at
   await page.goto('/runtime');
   await checkTooltip(page, page.getByTestId('config-upload'));
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await checkTooltip(page, page.getByTestId('connection-status').filter({ visible: true }));
   await page.getByTestId('mobile-menu-toggle').click();
+  await checkTooltip(page, sidebar(page, 'mobile').getByTestId('connection-status'));
   await sidebar(page, 'mobile').getByTestId('sidebar-help-button').click();
   const drawer = page.getByTestId('help-drawer');
   await expect(drawer).toBeInViewport({ ratio: 1 });
