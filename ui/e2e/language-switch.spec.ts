@@ -23,15 +23,13 @@ import { expect, test } from '@playwright/test';
 
 const LOCAL_STORAGE_KEY = 'niac-language';
 
+// Each test navigates exactly once. Every test starts in a fresh context with
+// an empty storage state (global-setup.ts), so there is nothing to clear first.
+// A clearing navigation in a beforeEach made this spec flaky in WebKit (#2225):
+// its page had fired load, but the app's follow-up API fetches were still in
+// flight when the test's own goto('/') cancelled them, and WebKit then
+// intermittently aborted that navigation or never fired its load event.
 test.describe('Language switching', () => {
-  test.beforeEach(async ({ page }) => {
-    // Start from a clean storage state so the default-detection path
-    // is what each test exercises (rather than carried-over preferences
-    // from another spec file in the same run).
-    await page.goto('/');
-    await page.evaluate((key) => localStorage.removeItem(key), LOCAL_STORAGE_KEY);
-  });
-
   test('renders English by default and sets <html lang="en">', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
