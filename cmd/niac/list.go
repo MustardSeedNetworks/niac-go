@@ -115,7 +115,13 @@ func newListScenariosCmd(options *listOptions) *cobra.Command {
 		Short: "List runnable scenarios",
 		Long: `List runnable scenario sources. Built-in templates are always
 available. Installed library networks are shown when the content library can
-be opened.`,
+be opened.
+
+Each library network's status is what "niac validate" reports for it; an
+invalid one carries its first error. Opening the library replaces a starter
+network an earlier release wrote that this one can no longer load, keeping the
+replaced file once beside it with an .orig suffix. User networks are never
+rewritten.`,
 		Example: `  # List built-in and installed scenarios
   niac list scenarios
 
