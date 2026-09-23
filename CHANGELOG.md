@@ -5,6 +5,26 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.84](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.83...v0.95.84) (2026-09-23)
+
+
+### Bug Fixes
+
+* **ci:** lock dead-code dependencies ([#2289](https://github.com/MustardSeedNetworks/niac-go/issues/2289)) ([25ffeb5](https://github.com/MustardSeedNetworks/niac-go/commit/25ffeb520baa13e52b481d5af5ebe54a171181b8))
+* **deps:** update codemirror ([#2291](https://github.com/MustardSeedNetworks/niac-go/issues/2291)) ([81accd5](https://github.com/MustardSeedNetworks/niac-go/commit/81accd517bee79d1711dcf4ccd7e57246862cb06))
+* **deps:** update dependency react-router to v8.4.0 ([#2292](https://github.com/MustardSeedNetworks/niac-go/issues/2292)) ([35905e7](https://github.com/MustardSeedNetworks/niac-go/commit/35905e71993d3bebd81144d6679ccd8722c5245f))
+* **deps:** update dependency tailwind-merge to v3.7.0 ([#2277](https://github.com/MustardSeedNetworks/niac-go/issues/2277)) ([0036fa6](https://github.com/MustardSeedNetworks/niac-go/commit/0036fa63cf8ef16b0aa5053a7c1d121c0fae82b2))
+* **ui:** isolate draft names and blur state ([#2293](https://github.com/MustardSeedNetworks/niac-go/issues/2293)) ([ad76359](https://github.com/MustardSeedNetworks/niac-go/commit/ad76359dd10b817118019edfa8e176c9511d391b))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2271](https://github.com/MustardSeedNetworks/niac-go/issues/2271)) ([c1b48e9](https://github.com/MustardSeedNetworks/niac-go/commit/c1b48e988c6baa812b42ba53db1464f7f7f5e63f))
+* **deps:** lock file maintenance ([#2295](https://github.com/MustardSeedNetworks/niac-go/issues/2295)) ([f6c4af7](https://github.com/MustardSeedNetworks/niac-go/commit/f6c4af7f4ffba83fe8ed3f5339314db946d2a089))
+* **deps:** update commitlint monorepo to v21.2.3 ([#2290](https://github.com/MustardSeedNetworks/niac-go/issues/2290)) ([096209b](https://github.com/MustardSeedNetworks/niac-go/commit/096209b914fbf0fb551f62cc446ce82a3fc32e85))
+* **deps:** update dependency @biomejs/biome to v2.5.14 ([#2275](https://github.com/MustardSeedNetworks/niac-go/issues/2275)) ([bb46e48](https://github.com/MustardSeedNetworks/niac-go/commit/bb46e4811f7536d5b6acea765cb4626c15d2eb1d))
+* **deps:** update dependency @testing-library/dom to v10.4.2 ([#2263](https://github.com/MustardSeedNetworks/niac-go/issues/2263)) ([7dd60e4](https://github.com/MustardSeedNetworks/niac-go/commit/7dd60e49894b2182163a8ae1588337a8f8dada62))
+
 ## [0.95.83](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.82...v0.95.83) (2026-09-22)
 
 
