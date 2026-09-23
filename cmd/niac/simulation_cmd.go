@@ -56,9 +56,10 @@ func newSimulationPreflightCommand(options *simulationCLIOptions) *cobra.Command
 func newSimulationStartCommand(options *simulationCLIOptions) *cobra.Command {
 	command := &cobra.Command{
 		Use: "start", Short: "Start a scenario through the daemon",
-		Long:    "Start a managed scenario through the daemon's simulation registry.",
-		Example: "  niac simulation start -i eth0 --config clinic.yaml --session clinic",
-		Args:    cobra.NoArgs,
+		Long: "Start a managed scenario through the daemon's simulation registry.",
+		Example: `  niac simulation start -i eth0 --config clinic.yaml --session clinic
+  niac simulation start -i eth0 --config clinic.yaml --attachment-mode access --access-vlan 200`,
+		Args: cobra.NoArgs,
 	}
 	addSimulationRequestFlags(command, options)
 	command.RunE = func(cmd *cobra.Command, _ []string) error {
@@ -73,8 +74,9 @@ func addSimulationRequestFlags(command *cobra.Command, options *simulationCLIOpt
 	command.Flags().StringVar(&options.template, "template", "", "Built-in scenario template name")
 	command.Flags().StringVar(&options.session, "session", "", "Scenario session ID")
 	command.Flags().StringVar(&options.attachment, "attachment", "", "Attachment name from the scenario")
-	command.Flags().StringVar(&options.mode, "mode", "", "Attachment mode: direct, access, or trunk")
-	command.Flags().Uint16Var(&options.accessVLAN, "access-vlan", 0, "Physical VLAN for access mode")
+	command.Flags().StringVar(&options.mode, "attachment-mode", "",
+		"Physical binding mode: direct, access, or trunk (default: the interface's only approved policy)")
+	command.Flags().Uint16Var(&options.accessVLAN, "access-vlan", 0, "The VLAN for access or trunk mode")
 	_ = command.MarkFlagRequired("interface")
 }
 

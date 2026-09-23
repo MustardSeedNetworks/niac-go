@@ -106,6 +106,13 @@ func (c *scenarioCompiler) compileBinding() {
 }
 
 func (c *scenarioCompiler) validateBindingMode() {
+	if c.binding.Mode == "" {
+		// No policy can approve an unset mode, so a policy denial here would
+		// blame the operator for a binding the caller never gave.
+		c.add(CodeInvalidAttachmentMode, "mode",
+			"attachment mode is required: direct, access, or trunk (access and trunk also take a VLAN)")
+		return
+	}
 	if !c.binding.PolicyApproved {
 		c.add(
 			CodeAttachmentPolicyDenied,

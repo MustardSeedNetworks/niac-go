@@ -35,7 +35,24 @@ func runSimulationPreflight(ctx context.Context, options *simulationCLIOptions) 
 	if err != nil {
 		return err
 	}
+	if options.mode == "" && reportsUnsetMode(report) {
+		_, _ = fmt.Fprintln(os.Stderr, unsetModeHint)
+	}
 	return writePreflightReport(os.Stdout, report)
+}
+
+// unsetModeHint names the flags behind the daemon's surface-neutral
+// "attachment mode is required" diagnostic.
+const unsetModeHint = "The daemon's policy for this interface approves no single binding, so name one: " +
+	"--attachment-mode direct|access|trunk, plus --access-vlan for access or trunk."
+
+func reportsUnsetMode(report *fabric.Report) bool {
+	for _, diagnostic := range report.Diagnostics {
+		if diagnostic.Code == fabric.CodeInvalidAttachmentMode {
+			return true
+		}
+	}
+	return false
 }
 
 func runSimulationStart(ctx context.Context, options *simulationCLIOptions) error {
