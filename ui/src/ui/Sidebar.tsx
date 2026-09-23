@@ -51,7 +51,7 @@ interface SidebarLayoutProps {
    */
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
-  topBar?: ReactNode;
+  railControls?: (collapsed: boolean) => ReactNode;
 }
 
 const STORAGE_KEY = 'niac-sidebar-collapsed';
@@ -195,6 +195,7 @@ interface SidebarFooterProps {
   onOpenHelp?: () => void;
   onOpenSettings?: () => void;
   onExpand: () => void;
+  railControls?: (collapsed: boolean) => ReactNode;
 }
 
 const SidebarFooter: FC<SidebarFooterProps> = ({
@@ -203,10 +204,14 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   onOpenHelp,
   onOpenSettings,
   onExpand,
+  railControls,
 }) => {
   const { t } = useTranslation();
   return (
-    <div className={`px-3 py-4 border-t border-surface-border ${collapsed ? 'text-center' : ''}`}>
+    <div
+      className={`py-4 border-t border-surface-border ${collapsed ? 'px-2 text-center' : 'px-3'}`}
+    >
+      {railControls?.(collapsed)}
       <div className={`${collapsed ? 'stack-sm' : 'flex items-center gap-compact'} mb-heading`}>
         {onOpenHelp ? (
           <FooterIconButton
@@ -251,6 +256,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           <button
             type="button"
             onClick={onExpand}
+            data-testid="sidebar-expand"
             className="mt-inline p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors"
             aria-label={t('footer.expandSidebar')}
           >
@@ -263,6 +269,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
 };
 
 interface SidebarBodyProps {
+  railControls?: (collapsed: boolean) => ReactNode;
   groups: SidebarNavGroup[];
   collapsed: boolean;
   version?: string;
@@ -275,6 +282,7 @@ interface SidebarBodyProps {
 }
 
 const SidebarBody: FC<SidebarBodyProps> = ({
+  railControls,
   groups,
   collapsed,
   version,
@@ -323,6 +331,7 @@ const SidebarBody: FC<SidebarBodyProps> = ({
         onOpenHelp={onOpenHelp}
         onOpenSettings={onOpenSettings}
         onExpand={onExpand}
+        railControls={railControls}
       />
     </>
   );
@@ -364,7 +373,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   children,
   onOpenHelp,
   onOpenSettings,
-  topBar,
+  railControls,
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -404,10 +413,10 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   // getByTestId calls resolving to one element. That kept the desktop tests
   // simple and left the mobile navigation undrivable — nothing could open it,
   // so no test could reach any mobile layout (#1320).
-  const body = () => (
+  const body = (railCollapsed: boolean) => (
     <SidebarBody
       groups={groups}
-      collapsed={collapsed}
+      collapsed={railCollapsed}
       version={version}
       onCollapse={() => setCollapsed(true)}
       onExpand={() => setCollapsed(false)}
@@ -423,6 +432,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       isActive={isActive}
       onOpenHelp={onOpenHelp}
       onOpenSettings={onOpenSettings}
+      railControls={railControls}
     />
   );
 
@@ -448,11 +458,12 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
 
       <aside
         data-testid="sidebar-mobile"
+        inert={!mobileOpen}
         className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-surface-raised/95 backdrop-blur-xl border-r border-surface-border transform transition-transform duration-300 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">{body()}</div>
+        <div className="flex flex-col h-full">{body(false)}</div>
       </aside>
 
       <aside
@@ -464,7 +475,7 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
           collapsed ? 'w-16' : 'w-56'
         }`}
       >
-        {body()}
+        {body(collapsed)}
       </aside>
 
       <main
@@ -473,7 +484,6 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
           collapsed ? 'lg:pl-16' : 'lg:pl-56'
         }`}
       >
-        {topBar}
         <div className="pad sm:pad-lg lg:pad-xl">{children}</div>
       </main>
     </div>
