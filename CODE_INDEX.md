@@ -3,6 +3,14 @@
 This index records shared capabilities that must be checked before adding a
 parallel implementation. It is intentionally organized by purpose.
 
+## Authentication state publication
+
+`internal/authstate.Publish` durably replaces `auth.json` in an explicit,
+existing absolute operator-controlled directory. It creates private files before
+writing credentials, preserves native Windows owner/SYSTEM access control and
+reports uncertain durability for a future caller to fence until reload. This
+primitive does not yet enable human authentication or define its stored schema.
+
 ## Configuration loading and validation
 
 | Capability | Canonical location | Notes |
