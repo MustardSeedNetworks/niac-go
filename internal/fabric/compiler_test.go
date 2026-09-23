@@ -3,6 +3,7 @@ package fabric_test
 import (
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -159,6 +160,20 @@ func TestCompileRejectsUnsafeBindings(t *testing.T) {
 			}
 			assertDiagnostic(t, report, tt.code)
 		})
+	}
+}
+
+// An unset mode cannot match any policy, so reporting the policy denial too
+// blamed the operator for a binding the caller never gave (niac-go#2211).
+func TestCompileReportsAnUnsetModeAsTheOnlyBindingFault(t *testing.T) {
+	report := fabric.Compile(referenceConfig(), fabric.Binding{Attachment: "tester", Interface: "eth0"})
+	if report.Safe || len(report.Diagnostics) != 1 {
+		t.Fatalf("Compile() diagnostics = %#v, want exactly one", report.Diagnostics)
+	}
+	diagnostic := report.Diagnostics[0]
+	if diagnostic.Code != fabric.CodeInvalidAttachmentMode ||
+		!strings.Contains(diagnostic.Message, "required") {
+		t.Fatalf("diagnostic = %#v, want the unset mode named as required", diagnostic)
 	}
 }
 

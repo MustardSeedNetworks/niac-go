@@ -1469,13 +1469,13 @@ Compile and validate a managed scenario without changing daemon state.
 Flags:
 
 ```text
-      --access-vlan uint16   Physical VLAN for access mode
-      --attachment string    Attachment name from the scenario
-      --config string        Managed scenario configuration path
-  -i, --interface string     Physical network interface
-      --mode string          Attachment mode: direct, access, or trunk
-      --session string       Scenario session ID
-      --template string      Built-in scenario template name
+      --access-vlan uint16       The VLAN for access or trunk mode
+      --attachment string        Attachment name from the scenario
+      --attachment-mode string   Physical binding mode: direct, access, or trunk (default: the interface's only approved policy)
+      --config string            Managed scenario configuration path
+  -i, --interface string         Physical network interface
+      --session string           Scenario session ID
+      --template string          Built-in scenario template name
 ```
 
 Examples:
@@ -1517,19 +1517,20 @@ Start a managed scenario through the daemon's simulation registry.
 Flags:
 
 ```text
-      --access-vlan uint16   Physical VLAN for access mode
-      --attachment string    Attachment name from the scenario
-      --config string        Managed scenario configuration path
-  -i, --interface string     Physical network interface
-      --mode string          Attachment mode: direct, access, or trunk
-      --session string       Scenario session ID
-      --template string      Built-in scenario template name
+      --access-vlan uint16       The VLAN for access or trunk mode
+      --attachment string        Attachment name from the scenario
+      --attachment-mode string   Physical binding mode: direct, access, or trunk (default: the interface's only approved policy)
+      --config string            Managed scenario configuration path
+  -i, --interface string         Physical network interface
+      --session string           Scenario session ID
+      --template string          Built-in scenario template name
 ```
 
 Examples:
 
 ```bash
 niac simulation start -i eth0 --config clinic.yaml --session clinic
+niac simulation start -i eth0 --config clinic.yaml --attachment-mode access --access-vlan 200
 ```
 
 ### `niac simulation stop`

@@ -335,6 +335,9 @@ type SimulationRequest struct {
 	SessionID      string                `json:"sessionId,omitempty"`
 	Interface      string                `json:"interface"`
 	Attachment     string                `json:"attachment,omitempty"`
+	// AttachmentMode and AccessVLAN bind the attachment to the interface.
+	// Left unset, the daemon takes them from its attachment policy when that
+	// policy approves exactly one binding on the interface.
 	AttachmentMode fabric.AttachmentMode `json:"attachmentMode,omitempty"`
 	AccessVLAN     uint16                `json:"accessVlan,omitempty"`
 	ConfigPath     string                `json:"configPath,omitempty"`
