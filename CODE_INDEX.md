@@ -98,6 +98,8 @@ primitive does not yet enable human authentication or define its stored schema.
 
 | Capability | Canonical location | Notes |
 | --- | --- | --- |
+| Shell rail controls | `ui/src/components/RailControls.tsx` | Shared desktop/mobile presentation; state is owned by AppShell |
+| Daemon reachability | `ui/src/hooks/useConnectionStatus.ts` | Timed health check with request and timer cleanup; AppShell shares the result between rail surfaces and network settings |
 | Guided simulation flow | `ui/src/pages/NewSimulationWizardPage.tsx` | Extend instead of creating another lab builder |
 | Draft topology composer | `ui/src/components/wizard/DraftTopologyComposer.tsx` + `draft-topology.ts` | Visual-first, revision-safe device/link/position editing; YAML remains the advanced source view |
 | Walk profile review | `ui/src/components/walk/WalkProfileCreator.tsx` | Import or cancelable direct capture, request-only credential clearing, inferred evidence review, and explicit profile creation |
