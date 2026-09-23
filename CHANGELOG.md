@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.86](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.85...v0.95.86) (2026-09-23)
+
+
+### Features
+
+* **auth:** add protected state publication ([#2308](https://github.com/MustardSeedNetworks/niac-go/issues/2308)) ([4c9c684](https://github.com/MustardSeedNetworks/niac-go/commit/4c9c684332fa0fc25817bbef2a70a73f1daf21d7))
+
+
+### Bug Fixes
+
+* **ui:** complete simulation settings tab accessibility ([#2303](https://github.com/MustardSeedNetworks/niac-go/issues/2303)) ([5d1f435](https://github.com/MustardSeedNetworks/niac-go/commit/5d1f435d88be3808e10c4e292d65f2ecd4a71298))
+* **ui:** share shell connection and theme state ([#2306](https://github.com/MustardSeedNetworks/niac-go/issues/2306)) ([f0ebec5](https://github.com/MustardSeedNetworks/niac-go/commit/f0ebec59f29c69a06efa5590396402de3bb45b5d))
+* **ui:** use shared simulation interface picker ([#2305](https://github.com/MustardSeedNetworks/niac-go/issues/2305)) ([24bba81](https://github.com/MustardSeedNetworks/niac-go/commit/24bba812c855f4c643cd0a8e5d89c7b12f020af3))
+
+
+### Miscellaneous
+
+* **deps:** update dependency markdownlint-cli2 to v0.23.3 ([#2310](https://github.com/MustardSeedNetworks/niac-go/issues/2310)) ([5f64894](https://github.com/MustardSeedNetworks/niac-go/commit/5f648945d0d7b09b095917d3afd23c60d680b267))
+
 ## [0.95.85](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.84...v0.95.85) (2026-09-23)
 
 
