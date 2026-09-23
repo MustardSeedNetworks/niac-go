@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.85](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.84...v0.95.85) (2026-09-23)
+
+
+### Bug Fixes
+
+* confine trust-anchor writes for strict lint ([#2299](https://github.com/MustardSeedNetworks/niac-go/issues/2299)) ([721a18d](https://github.com/MustardSeedNetworks/niac-go/commit/721a18d73318820a3ed5b5b73cb838f0ca74264b))
+
+
+### Miscellaneous
+
+* **deps:** update node.js to v26.9.0 ([#2296](https://github.com/MustardSeedNetworks/niac-go/issues/2296)) ([7fadac1](https://github.com/MustardSeedNetworks/niac-go/commit/7fadac18a593f7a34e6f955046eb0e43c70a8f63))
+
 ## [0.95.84](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.83...v0.95.84) (2026-09-23)
 
 
