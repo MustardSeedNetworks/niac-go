@@ -98,7 +98,7 @@ describe('SimulationSection', () => {
     renderWithResources(<SimulationSection />);
 
     await screen.findByText('hospital');
-    fireEvent.click(screen.getByRole('button', { name: 'My Configs' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'My Configs' }));
 
     const alert = await screen.findByTestId('simulation-configs-error');
     expect(alert).toHaveTextContent(/token expired/);
@@ -114,5 +114,76 @@ describe('SimulationSection', () => {
     await waitFor(() => expect(screen.getByText('hospital')).toBeInTheDocument());
     expect(mocks.templates).toHaveBeenCalledTimes(2);
     expect(mocks.interfaces).toHaveBeenCalledTimes(1);
+  });
+
+  describe('config-source tabs', () => {
+    // The switcher declared `role="tablist"` over three plain buttons: a screen
+    // reader was promised tabs that did not exist, and the keyboard had no way
+    // between them (#2242).
+    const tabNames = ['Templates', 'My Configs', 'Upload'];
+    const tab = (name: string) => screen.getByRole('tab', { name });
+
+    it('exposes three tabs, one selected, controlling one panel', async () => {
+      renderWithResources(<SimulationSection />);
+      await screen.findByText('hospital');
+
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(tabNames);
+      expect(screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-selected'))).toEqual([
+        'true',
+        'false',
+        'false',
+      ]);
+
+      const templates = tab('Templates');
+      const panel = screen.getByRole('tabpanel');
+      for (const sourceTab of screen.getAllByRole('tab')) {
+        expect(sourceTab).toHaveAttribute('aria-controls', panel.id);
+      }
+      expect(panel).toHaveAttribute('aria-labelledby', templates.id);
+      expect(templates).toHaveAttribute('aria-controls', panel.id);
+
+      // The pairing has to follow the selection, not name one tab forever.
+      const upload = tab('Upload');
+      fireEvent.click(upload);
+      const uploadPanel = screen.getByRole('tabpanel');
+      expect(uploadPanel).toHaveAttribute('aria-labelledby', upload.id);
+      expect(upload).toHaveAttribute('aria-controls', uploadPanel.id);
+    });
+
+    it('moves selection with the arrow keys and wraps, per the APG tab pattern', async () => {
+      renderWithResources(<SimulationSection />);
+      await screen.findByText('hospital');
+      const templates = tab('Templates');
+      const configs = tab('My Configs');
+      const upload = tab('Upload');
+
+      templates.focus();
+      fireEvent.keyDown(templates, { key: 'ArrowRight' });
+      expect(configs).toHaveAttribute('aria-selected', 'true');
+      expect(configs).toHaveFocus();
+
+      fireEvent.keyDown(configs, { key: 'ArrowLeft' });
+      expect(templates).toHaveAttribute('aria-selected', 'true');
+
+      fireEvent.keyDown(templates, { key: 'ArrowLeft' });
+      expect(upload).toHaveAttribute('aria-selected', 'true');
+      expect(upload).toHaveFocus();
+
+      fireEvent.keyDown(upload, { key: 'Home' });
+      expect(templates).toHaveAttribute('aria-selected', 'true');
+
+      fireEvent.keyDown(templates, { key: 'End' });
+      expect(upload).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('keeps one tab stop for the whole tablist (roving tabindex)', async () => {
+      renderWithResources(<SimulationSection />);
+      await screen.findByText('hospital');
+
+      expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1, -1]);
+
+      fireEvent.click(screen.getByRole('tab', { name: 'Upload' }));
+      expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, -1, 0]);
+    });
   });
 });

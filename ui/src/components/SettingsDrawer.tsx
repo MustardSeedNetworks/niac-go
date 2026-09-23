@@ -100,7 +100,7 @@ export function SettingsDrawer({
           aria-modal="true"
           aria-labelledby="settings-drawer-title"
           data-testid="settings-drawer"
-          className={cn(drawer.content, drawer.size.lg, 'animate-slide-in-right')}
+          className={cn(drawer.content, drawer.size.lg, 'max-w-full animate-slide-in-right')}
         >
           {/* Header */}
           <div className="sticky top-0 bg-bg-surface border-b border-surface-border px-4 py-row-lg flex-between z-10">
@@ -125,8 +125,8 @@ export function SettingsDrawer({
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-surface-border px-cell">
-            <nav className="flex gap-tight -mb-px">
+          <div className="border-b border-surface-border px-cell overflow-x-auto">
+            <nav className="flex min-w-max gap-tight">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -136,7 +136,7 @@ export function SettingsDrawer({
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'flex items-center gap-compact px-3 py-2.5 text-sm font-medium transition-colors',
-                    'border-b-2 -mb-[2px]',
+                    'border-b-2',
                     activeTab === tab.id
                       ? 'border-brand-primary text-text-primary'
                       : 'border-transparent text-text-muted hover:text-text-primary hover:border-surface-border',

@@ -27,6 +27,9 @@ import { getErrorMessage } from '../../utils/format';
 
 type ConfigTab = 'templates' | 'configs' | 'upload';
 
+const tabId = (tab: ConfigTab) => `sim-config-tab-${tab}`;
+const panelId = 'sim-config-panel';
+
 interface ConfigTabButton {
   id: ConfigTab;
   labelKey: 'simulation.tabTemplates' | 'simulation.tabMyConfigs' | 'simulation.tabUpload';
@@ -111,6 +114,27 @@ export function SimulationSection(): ReactElement {
     [setSimulationSettings],
   );
 
+  // Automatic activation is immediate: switching tabs does not initiate a fetch.
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      const ids = CONFIG_TABS.map((tab) => tab.id);
+      const current = ids.indexOf(activeTab);
+      const target = {
+        ArrowRight: ids[(current + 1) % ids.length],
+        ArrowLeft: ids[(current - 1 + ids.length) % ids.length],
+        Home: ids[0],
+        End: ids[ids.length - 1],
+      }[e.key];
+      if (target === undefined) {
+        return;
+      }
+      e.preventDefault();
+      handleTabChange(target);
+      document.getElementById(tabId(target))?.focus();
+    },
+    [activeTab, handleTabChange],
+  );
+
   const handleTemplateSelect = useCallback(
     (template: Template) => {
       setSimulationSettings({
@@ -182,33 +206,49 @@ export function SimulationSection(): ReactElement {
 
       {/* Config Source Tabs */}
       <div className="stack">
-        <span className="block text-sm text-text-muted">{t('simulation.configurationLabel')}</span>
+        <span id="sim-config-label" className="block text-sm text-text-muted">
+          {t('simulation.configurationLabel')}
+        </span>
         <div
           className="flex border border-surface-border rounded-lg overflow-hidden"
           role="tablist"
+          aria-labelledby="sim-config-label"
         >
           {CONFIG_TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              id={tabId(tab.id)}
+              aria-selected={activeTab === tab.id}
+              aria-controls={panelId}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => handleTabChange(tab.id)}
+              onKeyDown={handleTabKeyDown}
               className={cn(
                 'flex-1 flex-center gap-1.5 px-3 py-row text-xs font-medium',
                 'transition-colors',
                 activeTab === tab.id
-                  ? 'bg-brand-primary text-text-primary'
+                  ? 'bg-brand-primary text-on-brand'
                   : 'bg-bg-elevated text-text-muted hover:bg-bg-elevated hover:text-text-primary',
               )}
             >
               {tab.icon}
-              <span className="hidden sm:inline">{t(tab.labelKey)}</span>
+              <span className="sr-only sm:not-sr-only">{t(tab.labelKey)}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[120px]">
+      <div
+        className="min-h-[120px]"
+        role="tabpanel"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Owner-approved; empty panels need a keyboard entry point per https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+        tabIndex={0}
+        id={panelId}
+        aria-labelledby={tabId(activeTab)}
+      >
         {activeTab === 'templates' &&
           (templatesLoading ? (
             <Loading />
