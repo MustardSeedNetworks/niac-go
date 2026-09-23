@@ -155,6 +155,9 @@ func runListScenarios(options *listOptions) error {
 		}
 		fmt.Fprintf(os.Stdout, "  %-24s devices=%d source=%s status=%s",
 			network.Name, network.DeviceCount, network.Source, status)
+		if network.Error != "" {
+			fmt.Fprintf(os.Stdout, " error=%q", network.Error)
+		}
 		if network.Description != "" {
 			fmt.Fprintf(os.Stdout, " - %s", network.Description)
 		}

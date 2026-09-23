@@ -2,6 +2,7 @@ package library
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -56,6 +57,51 @@ func (l *Library) bootstrapStarterPack() error {
 		}
 	}
 
+	return nil
+}
+
+// refreshStaleStarters replaces each starter network on disk that the current
+// release can no longer load with its embedded template.
+//
+// bootstrapStarterPack writes the starters once, into an empty library, so a
+// library written by an earlier schema kept starters that failed to load after
+// every upgrade while they still looked runnable (#2202). A starter the
+// operator customised and that still loads is theirs and stays. One that no
+// longer loads is replaced, and its bytes are kept once in "<name>.yaml.orig"
+// so a customisation is never silently lost. A missing starter is not
+// re-created: a library that already has content is otherwise left alone.
+func (l *Library) refreshStaleStarters() error {
+	root, err := l.openNetworksRoot()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
+	for _, name := range templates.ListNames() {
+		tmpl, getErr := templates.Get(name)
+		if getErr != nil {
+			return fmt.Errorf("read starter template %s: %w", name, getErr)
+		}
+		leaf := name + ".yaml"
+		current, readErr := root.ReadFile(leaf)
+		if errors.Is(readErr, fs.ErrNotExist) {
+			continue
+		}
+		if readErr != nil {
+			return fmt.Errorf("read starter %s: %w", leaf, readErr)
+		}
+		if string(current) == tmpl.Content || networkProblem(filepath.Join(root.Name(), leaf)) == "" {
+			continue
+		}
+		if _, statErr := root.Stat(leaf + originalSuffix); errors.Is(statErr, fs.ErrNotExist) {
+			if writeErr := root.WriteFile(leaf+originalSuffix, current, libraryFileMode); writeErr != nil {
+				return fmt.Errorf("preserve starter %s: %w", leaf, writeErr)
+			}
+		}
+		if writeErr := root.WriteFile(leaf, []byte(tmpl.Content), libraryFileMode); writeErr != nil {
+			return fmt.Errorf("refresh starter %s: %w", leaf, writeErr)
+		}
+	}
 	return nil
 }
 
