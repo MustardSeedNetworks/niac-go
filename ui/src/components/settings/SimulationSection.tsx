@@ -12,7 +12,7 @@
  * - File upload for quick config override
  */
 
-import { AlertCircle, FileUp, FolderOpen, LayoutTemplate, Network, PlugZap } from 'lucide-react';
+import { AlertCircle, FileUp, FolderOpen, LayoutTemplate, PlugZap } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
 import { cn } from '../../styles/theme';
+import { Select } from '../../ui/Input';
 import { getErrorMessage } from '../../utils/format';
 
 type ConfigTab = 'templates' | 'configs' | 'upload';
@@ -96,13 +97,6 @@ export function SimulationSection(): ReactElement {
     }
   });
 
-  const handleInterfaceChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSimulationSettings({ selectedInterface: e.target.value });
-    },
-    [setSimulationSettings],
-  );
-
   const handleTabChange = useCallback(
     (tab: ConfigTab) => {
       setActiveTab(tab);
@@ -168,29 +162,21 @@ export function SimulationSection(): ReactElement {
         <label htmlFor="sim-interface" className="block text-sm text-text-muted">
           {t('simulation.interfaceLabel')}
         </label>
-        <div className="relative">
-          <Network className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-          <select
-            id="sim-interface"
-            value={simulationSettings.selectedInterface}
-            onChange={handleInterfaceChange}
-            disabled={interfacesLoading}
-            className={cn(
-              'w-full pl-10 pr-4 py-row text-sm',
-              'bg-bg-elevated border border-surface-border rounded-lg',
-              'text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            <option value="">{t('simulation.interfacePlaceholder')}</option>
-            {interfaces.map((iface) => (
-              <option key={iface.name} value={iface.name}>
-                {iface.name}
-                {iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          id="sim-interface"
+          data-testid="simulation-interface"
+          value={simulationSettings.selectedInterface}
+          onChange={(selectedInterface) => setSimulationSettings({ selectedInterface })}
+          disabled={interfacesLoading}
+          className="min-h-11 text-sm"
+          options={[
+            { value: '', label: t('simulation.interfacePlaceholder') },
+            ...interfaces.map((iface) => ({
+              value: iface.name,
+              label: `${iface.name}${iface.addresses.length > 0 ? ` (${iface.addresses[0]})` : ''}`,
+            })),
+          ]}
+        />
         {interfacesError ? (
           <LoadError
             testId="simulation-interfaces"

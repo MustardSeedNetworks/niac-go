@@ -73,6 +73,17 @@ describe('SimulationSection', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('selects and clears the interface with the shared picker', async () => {
+    renderWithResources(<SimulationSection />);
+    await screen.findByRole('option', { name: /eth0/ });
+    const picker = screen.getByRole('combobox', { name: 'Network Interface' });
+    fireEvent.change(picker, { target: { value: 'eth0' } });
+    expect(useUIStore.getState().simulationSettings.selectedInterface).toBe('eth0');
+    fireEvent.change(picker, { target: { value: '' } });
+    expect(useUIStore.getState().simulationSettings.selectedInterface).toBe('');
+    expect(picker).toHaveClass('appearance-none', 'min-h-11');
+  });
+
   it('shows a load failure for the interfaces, not an empty picker', async () => {
     mocks.interfaces.mockRejectedValue(new Error('daemon unreachable'));
     renderWithResources(<SimulationSection />);
