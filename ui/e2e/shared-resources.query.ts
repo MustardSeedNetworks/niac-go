@@ -61,7 +61,7 @@ test('shares device polling and clears previous-session data before the next res
       // Delay transport only: the daemon still supplies the entire response.
       await route.continue();
     });
-    await page.getByTestId('session-switcher-select').selectOption('query-b');
+    await nav.getByTestId('session-switcher-select').selectOption('query-b');
     await pending.promise;
     await expect(page.getByTestId('device-select-query-a-router')).toHaveCount(0);
     await expect(page.getByTestId('device-select-query-b-router')).toHaveCount(0);
