@@ -127,6 +127,7 @@ test('collapsed navigation keeps every name and reveals its label on focus', asy
   await page.goto('/');
   const nav = sidebar(page);
   const buttons = nav.locator('[data-testid^="nav-item-"]');
+  await expect(buttons.first()).toBeVisible();
   const names = await buttons.evaluateAll((elements) =>
     elements.map((element) => ({
       id: element.getAttribute('data-testid') ?? '',
