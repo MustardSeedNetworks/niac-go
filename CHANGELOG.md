@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.88](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.87...v0.95.88) (2026-09-23)
+
+
+### Bug Fixes
+
+* **cli:** bind a simulation start like daemon --once, defaulting from policy ([#2321](https://github.com/MustardSeedNetworks/niac-go/issues/2321)) ([1679067](https://github.com/MustardSeedNetworks/niac-go/commit/167906731656b3021acdba4c4a3edcabdb3768e0))
+* **e2e:** navigate once per language-switch test so WebKit cannot abort it ([#2323](https://github.com/MustardSeedNetworks/niac-go/issues/2323)) ([afc5825](https://github.com/MustardSeedNetworks/niac-go/commit/afc5825633cc086821341da15c68bdcad11a2d78)), closes [#2225](https://github.com/MustardSeedNetworks/niac-go/issues/2225)
+
 ## [0.95.87](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.86...v0.95.87) (2026-09-23)
 
 
