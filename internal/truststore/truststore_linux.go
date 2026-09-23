@@ -108,12 +108,9 @@ const trustAnchorMode os.FileMode = 0o644
 // trustAnchorMode so update-ca-certificates / update-ca-trust can
 // find and read it.
 //
-// dst is bounded under root via [filepath.Rel] before any I/O. Both
-// arguments originate from detectLinuxStore's hardcoded candidate
-// list, so the bound is a defense-in-depth check rather than a
-// security-critical gate, but it also forces [filepath.Clean]
-// normalization right before [os.WriteFile] which is what gosec G703
-// requires to clear path-traversal taint analysis.
+// Both paths originate from detectLinuxStore's hardcoded candidate list.
+// Root confines writes even when an existing anchor is a symlink; chmod
+// uses the opened file so a path replacement cannot redirect it.
 func writeAnchorFile(root, dst string, pem []byte) (string, error) {
 	cleanRoot := filepath.Clean(root)
 	cleanDst := filepath.Clean(dst)
@@ -124,11 +121,25 @@ func writeAnchorFile(root, dst string, pem []byte) (string, error) {
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("anchor path %q escapes %q", dst, root)
 	}
-	if err := os.WriteFile(cleanDst, pem, 0o600); err != nil {
-		return "", fmt.Errorf("write %s: %w", cleanDst, err)
+	store, err := os.OpenRoot(cleanRoot)
+	if err != nil {
+		return "", fmt.Errorf("open trust store %s: %w", cleanRoot, err)
 	}
-	if err := os.Chmod(cleanDst, trustAnchorMode); err != nil {
-		return "", fmt.Errorf("chmod %s: %w", cleanDst, err)
+	defer store.Close()
+	const initialAnchorMode = 0o600
+	anchor, err := store.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, initialAnchorMode)
+	if err != nil {
+		return "", fmt.Errorf("open %s: %w", cleanDst, err)
+	}
+	defer anchor.Close()
+	if _, writeErr := anchor.Write(pem); writeErr != nil {
+		return "", fmt.Errorf("write %s: %w", cleanDst, writeErr)
+	}
+	if chmodErr := anchor.Chmod(trustAnchorMode); chmodErr != nil {
+		return "", fmt.Errorf("chmod %s: %w", cleanDst, chmodErr)
+	}
+	if closeErr := anchor.Close(); closeErr != nil {
+		return "", fmt.Errorf("close %s: %w", cleanDst, closeErr)
 	}
 	return cleanDst, nil
 }

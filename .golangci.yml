@@ -546,57 +546,9 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
-      # TEMPORARY (tooling lag): golangci-lint 2.12.2 (latest, built with
-      # go1.26.2) bundles a staticcheck that does not recognize
-      # testing.T.Fatal as terminating under Go 1.26.5, producing SA5011
-      # false-positives on the idiomatic `if x == nil { t.Fatal(...) }; x.field`
-      # pattern (49 sites, all in _test.go). The code is correct — t.Fatal
-      # calls runtime.Goexit. Introduced with the Go 1.26.5 bump for
-      # GO-2026-4970. REMOVE this rule when golangci-lint ships a Go
-      # 1.26.5-compatible release (warn-unused: true above will flag it as
-      # unused once that lands, as a reminder).
-      - text: 'SA5011'
-        path: '_test\.go'
-        linters: [ staticcheck ]
-      - source: 'TODO'
-        linters: [ godot ]
       # revive's package-comment and exported-comment rules are NOT excluded:
       # they were, which made revive look like a gate it was not. The findings
       # they surface were fixed rather than suppressed.
-      - text: 'package comment should be of the form ".+"'
-        source: '// ?(nolint|TODO)'
-        linters: [ revive ]
-      - text: 'comment on exported \S+ \S+ should be of the form ".+"'
-        source: '// ?(nolint|TODO)'
-        linters: [ revive, staticcheck ]
-      - text: 'avoid meaningless package names'
-        path: 'internal/api/'
-        linters: [ revive ]
-      # internal/truststore writes trust-anchor PEMs into the four OS-specific
-      # CA directories (Debian/Ubuntu, RHEL/Fedora, Arch, openSUSE). The
-      # destination is computed by detectLinuxStore from a hardcoded
-      # candidate list, then filepath.Clean'd and bounded under its root
-      # via filepath.Rel before writing. gosec G703 cannot follow that
-      # provenance and reports the os.WriteFile call as taint-derived. The
-      # write is preceded by an explicit containment check — see
-      # writeAnchorFile in truststore_linux.go.
-      - text: 'G703: Path traversal via taint analysis'
-        path: 'internal/truststore/truststore_linux\.go'
-        linters: [ gosec ]
-      # internal/api/tls.go's httpToHTTPSRedirectHandler reads r.Host
-      # (client-controlled), strips the port, and reuses it as the host
-      # portion of the HTTPS Location. The only user-controlled portion
-      # that becomes path/query is r.URL.RequestURI(), which is also the
-      # exact value http.Redirect echoes. This is the standard
-      # HTTP→HTTPS upgrade pattern — same as seed and stem — and the
-      # browser sees a same-origin redirect modulo scheme+port. gosec
-      # G710's taint analysis cannot distinguish this from an arbitrary
-      # open-redirect sink. Mitigation lives in the deployment (don't
-      # expose 8044 to untrusted hosts) and the server config (operators
-      # set --listen= explicitly).
-      - text: 'G710: Open redirect via taint analysis'
-        path: 'internal/api/tls\.go'
-        linters: [ gosec ]
       # schema.go uses intPtr/floatPtr helpers for nullable JSON Schema
       # fields. modernize suggests inlining to Go 1.24 `new(x)` but that
       # syntax can't infer *float64 from int literals (`new(1)` is *int);
@@ -630,10 +582,6 @@ linters:
           - noctx
           - usestdlibvars
           - wrapcheck
-      # cmd/niac tests must use package main to test unexported functions.
-      - path: 'cmd/.*_test\.go'
-        linters:
-          - testpackage
       # Integration tests have their own package organization.
       - path: 'tests/integration/.*_test\.go'
         linters:
@@ -642,17 +590,6 @@ linters:
       - path: 'internal/daemon/.*_test\.go'
         linters:
           - testpackage
-      # IPC tests require access to unexported functions.
-      - path: 'internal/ipc/.*_test\.go'
-        linters:
-          - testpackage
-      # usetesting wants t.TempDir() here, but a Unix socket path is capped near
-      # 104 bytes by sun_path and t.TempDir()'s per-test directory overruns it:
-      # every socket test fails on darwin with "bind: invalid argument" before
-      # the client under test is reached.
-      - path: 'internal/ipc/client_test\.go'
-        linters:
-          - usetesting
       # Capture tests require internal testing for race condition handling.
       - path: 'internal/capture/.*_test\.go'
         linters:
@@ -689,10 +626,6 @@ linters:
       - path: 'internal/protocols/.*_test\.go'
         linters:
           - testpackage
-      # Build-time ldflags injection variables (standard Go pattern).
-      - path: 'cmd/niac/root\.go'
-        linters:
-          - gochecknoglobals
       # Logging color codes are package-level constants (immutable after init).
       - path: 'internal/logging/colors\.go'
         linters:
