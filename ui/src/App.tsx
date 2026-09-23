@@ -3,14 +3,16 @@ import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
-import { HeaderBar } from './components/HeaderBar';
 import { HelpDrawer } from './components/HelpDrawer';
+import { RailControls } from './components/RailControls';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
+import { useConnectionStatus } from './hooks/useConnectionStatus';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useTheme } from './hooks/useTheme';
 import { useNavGroups } from './navGroups';
 import { DeviceEditorPageRef, type PageConfig, usePages } from './pageRegistry';
 import { Breadcrumbs } from './ui/Breadcrumbs';
@@ -41,6 +43,9 @@ export default function App() {
 }
 
 function AppShell() {
+  const status = useConnectionStatus();
+  const themeState = useTheme();
+  const { isDark, toggleTheme } = themeState;
   const { t } = useTranslation('pages');
   const { data: version } = useAppState('version');
   const navGroups = useNavGroups();
@@ -65,7 +70,14 @@ function AppShell() {
     <SidebarLayout
       groups={navGroups}
       version={version?.version}
-      topBar={<HeaderBar />}
+      railControls={(collapsed) => (
+        <RailControls
+          collapsed={collapsed}
+          status={status}
+          isDark={isDark}
+          toggleTheme={toggleTheme}
+        />
+      )}
       onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
@@ -138,6 +150,7 @@ function AppShell() {
         </Routes>
       </Suspense>
       <SettingsDrawer
+        themeState={themeState}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         version={version?.version}
@@ -178,7 +191,7 @@ const PageWithErrorBoundary = memo(
     const documented = pageHelpRoutes.includes(page.path);
     return (
       <PageErrorBoundary key={location.pathname}>
-        <section className="stack-xl">
+        <section className="stack-xl" data-testid="page-frame">
           <Breadcrumbs />
           <PageHeader
             titleRef={titleRef}

@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Scenario switcher (U3) E2E.
  *
  * A NIAC daemon runs several scenarios at once and every runtime read is
- * scoped to one of them. The switcher lives in the header so the operator can
+ * scoped to one of them. The switcher lives in the rail so the operator can
  * see which scenario they are reading, and change it, from any page.
  *
  * The assertion is the request URL rather than what is on screen: two
@@ -30,17 +30,13 @@ const scoped = /\/api\/v1\/sessions\/([a-z0-9-]+)\//;
  * the switch; waiting for one more read first means the window under test is
  * steady state.
  */
-async function expectStableOn(
-  page: import('@playwright/test').Page,
-  reads: string[],
-  sessionId: string,
-): Promise<void> {
+async function expectStableOn(reads: string[], sessionId: string): Promise<void> {
   reads.length = 0;
   await expect.poll(() => reads.length).toBeGreaterThan(0);
   expect(reads.filter((path) => scoped.exec(path)?.[1] !== sessionId)).toEqual([]);
 }
 
-test('switches every runtime read to the scenario picked in the header', async ({ page }) => {
+test('switches every runtime read to the scenario picked in the rail', async ({ page }) => {
   const reads: string[] = [];
 
   await page.route('**/api/v1/simulation', async (route) => {
@@ -86,7 +82,7 @@ test('switches every runtime read to the scenario picked in the header', async (
   // Both sidebars are in the DOM; drive the desktop one at this viewport.
   const nav = page.getByTestId('sidebar-desktop');
 
-  const switcher = page.getByTestId('session-switcher-select');
+  const switcher = nav.getByTestId('session-switcher-select');
   await expect(switcher).toBeVisible({ timeout: 10000 });
   await expect(switcher).toHaveValue('hospital');
   await expect
@@ -104,7 +100,7 @@ test('switches every runtime read to the scenario picked in the header', async (
     .poll(() => reads.some((path) => path === '/api/v1/sessions/warehouse/devices'))
     .toBe(true);
   expect(page.url()).toBe(urlBeforeSwitch);
-  await expectStableOn(page, reads, 'warehouse');
+  await expectStableOn(reads, 'warehouse');
 
   // Topology reads the same selection, reached by in-app navigation: the
   // selection is this browser's and lives in the running app, so the switch
@@ -112,11 +108,11 @@ test('switches every runtime read to the scenario picked in the header', async (
   reads.length = 0;
   await nav.getByTestId('nav-item-topology').click();
   await expect(page).toHaveURL(/\/topology$/);
-  await expect(page.getByTestId('session-switcher-select')).toHaveValue('warehouse');
+  await expect(nav.getByTestId('session-switcher-select')).toHaveValue('warehouse');
   await expect
     .poll(() => reads.some((path) => path === '/api/v1/sessions/warehouse/topology'))
     .toBe(true);
-  await expectStableOn(page, reads, 'warehouse');
+  await expectStableOn(reads, 'warehouse');
 
   // Packets is scoped through the stream URL rather than a /sessions/ read:
   // before U3 it subscribed to whichever session the daemon reported, so the

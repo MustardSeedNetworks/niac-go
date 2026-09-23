@@ -13,7 +13,7 @@ import { useAppState } from '../contexts/AppContext';
  * (see contexts/AppContext.tsx); this hook is a thin, readable alias over
  * `useAppState('simStatus')` so call sites read as
  * `const { data: simStatus } = useSimulationStatus();` instead of the more
- * generic `useAppState('simStatus')`. HeaderBar's status chip, the
+ * generic `useAppState('simStatus')`. The rail's status chip, the
  * Dashboard status banner, RuntimeControlPage's start/stop controls, and
  * PacketInspectorPage's active-interface detection all consume this one
  * poller.
