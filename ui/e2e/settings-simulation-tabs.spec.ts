@@ -39,6 +39,11 @@ for (const width of [1280, 390]) {
         'true',
       );
       await drawer.getByRole('tab', { name: 'Simulation', exact: true }).click();
+      const interfacePicker = drawer.getByTestId('simulation-interface');
+      await expect(interfacePicker).toHaveCSS('appearance', 'none');
+      expect(
+        await interfacePicker.evaluate((element) => element.getBoundingClientRect().height),
+      ).toBeGreaterThanOrEqual(44);
       const tabs = drawer.getByRole('tablist', { name: 'Configuration' });
       const templates = tabs.getByRole('tab', { name: 'Templates', exact: true });
       const configs = tabs.getByRole('tab', { name: 'My Configs', exact: true });
