@@ -273,21 +273,28 @@ export const TopologyPage: FC = () => {
     // than blowing it away with the freshly-computed layout. Brand-new
     // devices that arrived since last render get the fresh layout slot.
     // Also pulls any previously-saved positions out of localStorage so
-    // drags survive a page reload.
+    // drags survive a page reload. React Flow's selection is carried over
+    // the same way: a node click changes the neighbourhood focus, which
+    // re-runs this effect, and a fresh node would drop the selection the
+    // click just made — and with it keyboard moves, which act on it.
     setNodes((current) => {
-      const positionByName = new Map<string, { x: number; y: number }>();
-      for (const node of current) {
-        positionByName.set(node.id, node.position);
-      }
+      const currentByName = new Map(current.map((node) => [node.id, node]));
       const stored = layoutPersistence.loadPositions();
       return layoutedNodes.map((node) => {
-        const existing = positionByName.get(node.id);
+        const existing = currentByName.get(node.id);
         const saved = stored[node.id];
-        const position = existing ?? saved ?? node.position;
+        const position = existing?.position ?? saved ?? node.position;
         return {
           ...node,
           position,
+          selected: existing?.selected,
           style: { ...node.style, opacity: nodeOpacity(node.id) },
+          // DeviceNode's button is the node's tab stop and carries its name.
+          // React Flow's wrapper would be a second, unnamed stop before it, so
+          // it leaves the tab order but stays focusable: its keyboard
+          // select-and-move handler still hears the keys bubbling up from the
+          // button, where nodesFocusable={false} would detach it.
+          domAttributes: { tabIndex: -1 },
         };
       });
     });
