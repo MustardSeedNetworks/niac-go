@@ -124,15 +124,10 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
       const node = nodes.nth(i);
       const aria = await node.getAttribute('aria-label');
       expect(aria, `node ${i} has no accessible name`).toBeTruthy();
-      // Tab-order membership is asserted on the element, not by a Shift+Tab /
-      // Tab round trip. React Flow wraps every node in its own div[tabindex="0"]
-      // that precedes this button, so the round trip's Shift+Tab landed on that
-      // wrapper and depended on whether a given engine puts a non-control in
-      // sequential focus navigation — it measured the browser's focus model
-      // rather than this node's reachability. A non-disabled <button> with
-      // tabIndex >= 0 is the contract it stood in for, and it is the one
-      // .focus() cannot fake: a tabindex="-1" node answers .focus() and is
-      // still unreachable by Tab.
+      // Tab-order membership is asserted on the element here; the live Tab /
+      // Shift+Tab walk between nodes is the next test's. A non-disabled
+      // <button> with tabIndex >= 0 is the one contract .focus() cannot fake: a
+      // tabindex="-1" node answers .focus() and is still unreachable by Tab.
       expect(
         await node.evaluate((el) => (el as HTMLButtonElement).tabIndex),
         `node ${i} is not in the tab order`,
@@ -154,6 +149,81 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
       await expect(tooltip).toBeHidden();
       await expect(node).toBeFocused();
     }
+  });
+
+  test('each node is one named tab stop and still moves by keyboard', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
+
+    const nodes = page.getByTestId('topology-device-node');
+    await expect(nodes).toHaveCount(DEVICES.length);
+    await expect(nodes.first()).toBeVisible();
+
+    // A live tab-order probe, not an attribute check: React Flow wraps every
+    // node in its own div, and when that wrapper is a tab stop it sits between
+    // one node's button and the next with no accessible name.
+    await nodes.nth(0).focus();
+    await page.keyboard.press('Tab');
+    await expect(nodes.nth(1)).toBeFocused();
+    await expect(nodes.nth(1)).toHaveAttribute('aria-label', expectedTooltip(DEVICES[1]));
+    await page.keyboard.press('Shift+Tab');
+    await expect(nodes.nth(0)).toBeFocused();
+
+    // Keyboard dragging is React Flow's: Enter selects the node and the arrow
+    // keys move the selection. Its handler sits on the wrapper, so this proves
+    // the keys still reach it from the button that holds focus.
+    const wrapper = page.getByTestId(`rf__node-${DEVICES[0].name}`);
+    const before = await wrapper.evaluate((el) => getComputedStyle(el).transform);
+    await page.keyboard.press('Enter');
+    // The page rebuilds its nodes on every data poll and filter change, and
+    // the selection has to survive that pass, not merely appear before it. A
+    // search both devices match forces the pass without waiting for a poll.
+    await page.getByRole('searchbox').fill('r');
+    await expect(wrapper).toHaveClass(/\bselected\b/);
+    await nodes.nth(0).focus();
+    await expect(nodes.nth(0)).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect
+      .poll(() => wrapper.evaluate((el) => getComputedStyle(el).transform))
+      .not.toBe(before);
+  });
+
+  test('a node rebuild never hides the canvas or drops a focused node', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    const nodes = page.getByTestId('topology-device-node');
+    await expect(nodes).toHaveCount(DEVICES.length);
+    await expect(nodes.first()).toBeVisible();
+
+    // React Flow hides a node it has no measured size for until its resize
+    // observer reports again. A rebuild that drops that size blanks every node
+    // for a frame or more, and a hidden button loses focus. Whether the gap is
+    // long enough to see depends on the engine, so watch for the style itself.
+    await page.evaluate(() => {
+      const w = window as typeof window & { hiddenNodes?: string[] };
+      w.hiddenNodes = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          const el = record.target as HTMLElement;
+          if (el.classList.contains('react-flow__node') && el.style.visibility === 'hidden') {
+            w.hiddenNodes?.push(el.dataset.id ?? '?');
+          }
+        }
+      }).observe(document.querySelector('.react-flow__nodes') as Node, {
+        attributes: true,
+        attributeFilter: ['style'],
+        subtree: true,
+      });
+    });
+    // A search both devices match forces the pass without waiting for a poll.
+    await page.getByRole('searchbox').fill('r');
+    await expect(nodes).toHaveCount(DEVICES.length);
+    await nodes.nth(0).focus();
+    await expect(nodes.nth(0)).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as typeof window & { hiddenNodes?: string[] }).hiddenNodes),
+    ).toEqual([]);
   });
 
   test('the tooltip carries the full label, type, IPs and protocols', async ({ page }) => {
