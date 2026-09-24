@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 )
 
 const (
@@ -43,7 +44,7 @@ func (c *scenarioCompiler) compileInterfaces(device *config.Device) map[string]I
 		}
 		compiled[iface.Name] = iface
 		c.report.Topology.Interfaces = append(c.report.Topology.Interfaces, iface)
-		if device.Type == "router" || device.Type == "layer3-switch" {
+		if deviceclass.RoutesIP(deviceclass.Parse(device.Type)) {
 			c.report.Topology.Routes = append(c.report.Topology.Routes, Route{
 				Device: device.Name, Destination: c.networks[iface.Network].Prefix,
 				Via: iface.Name, Connected: true,
