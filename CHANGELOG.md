@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.91](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.90...v0.95.91) (2026-09-24)
+
+
+### Features
+
+* **snmp:** printers answer Printer-MIB and list themselves as an hrDevice printer ([#2336](https://github.com/MustardSeedNetworks/niac-go/issues/2336)) ([55f1232](https://github.com/MustardSeedNetworks/niac-go/commit/55f1232b93c42a14618c99cd87aea63af33e1071))
+
+
+### Bug Fixes
+
+* **ui:** give each topology node one named tab stop ([#2320](https://github.com/MustardSeedNetworks/niac-go/issues/2320)) ([8eb8a44](https://github.com/MustardSeedNetworks/niac-go/commit/8eb8a443be677eead4b4ddbc83002e1d5c8cd5dc))
+* **wiretest:** follow the pack tester to its spare-port attachment; route through layer-3 gateways ([#2338](https://github.com/MustardSeedNetworks/niac-go/issues/2338)) ([c56928a](https://github.com/MustardSeedNetworks/niac-go/commit/c56928ae236fb2548db90d4551f0e4c5f57dd465))
+
 ## [0.95.90](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.89...v0.95.90) (2026-09-24)
 
 
