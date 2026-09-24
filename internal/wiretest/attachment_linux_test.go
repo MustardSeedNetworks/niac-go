@@ -56,22 +56,7 @@ func resolveAttachment(t *testing.T, authored *config.Config, name string) packA
 		t.Fatalf("attachment %q resolved to no network", name)
 	}
 
-	var prefix netip.Prefix
-	for _, network := range topology.Networks {
-		if network.Name == attachment.network {
-			prefix = network.Prefix
-		}
-	}
-	var scope *fabric.DHCPScope
-	for index := range topology.DHCPScopes {
-		if topology.DHCPScopes[index].Network == attachment.network {
-			scope = &topology.DHCPScopes[index]
-		}
-	}
-	if !prefix.IsValid() || scope == nil || !scope.Router.IsValid() {
-		t.Fatalf("attachment network %q has no prefix, DHCP scope or router (prefix %v, scope %+v)",
-			attachment.network, prefix, scope)
-	}
+	prefix, scope := attachmentScope(t, topology, attachment.network)
 	attachment.gateway = scope.Router
 	attachment.dhcpServer = deviceNamed(t, authored, scope.Device)
 
@@ -92,15 +77,40 @@ func resolveAttachment(t *testing.T, authored *config.Config, name string) packA
 	if attachment.gatewayDevice == nil {
 		t.Fatalf("no device on %q owns the scope's router %s", attachment.network, scope.Router)
 	}
+	attachment.client = freeAddressBelow(t, prefix, scope.Start, taken)
+	return attachment
+}
 
-	for addr := prefix.Masked().Addr().Next(); prefix.Contains(addr) && addr.Less(scope.Start); addr = addr.Next() {
+// attachmentScope returns the attachment network's prefix and the DHCP scope
+// that serves it; the scope's router is the tester's gateway.
+func attachmentScope(t *testing.T, topology fabric.Topology, network string) (netip.Prefix, fabric.DHCPScope) {
+	t.Helper()
+	var prefix netip.Prefix
+	for _, candidate := range topology.Networks {
+		if candidate.Name == network {
+			prefix = candidate.Prefix
+		}
+	}
+	for _, scope := range topology.DHCPScopes {
+		if scope.Network == network && prefix.IsValid() && scope.Router.IsValid() {
+			return prefix, scope
+		}
+	}
+	t.Fatalf("attachment network %q has no prefix, or no DHCP scope with a router (prefix %v)", network, prefix)
+	return netip.Prefix{}, fabric.DHCPScope{}
+}
+
+// freeAddressBelow is the first host address on prefix below the DHCP pool
+// that no simulated interface holds.
+func freeAddressBelow(t *testing.T, prefix netip.Prefix, poolStart netip.Addr, taken map[netip.Addr]bool) netip.Prefix {
+	t.Helper()
+	for addr := prefix.Masked().Addr().Next(); prefix.Contains(addr) && addr.Less(poolStart); addr = addr.Next() {
 		if !taken[addr] {
-			attachment.client = netip.PrefixFrom(addr, prefix.Bits())
-			return attachment
+			return netip.PrefixFrom(addr, prefix.Bits())
 		}
 	}
 	t.Fatalf("no free address below the DHCP pool on %s", prefix)
-	return packAttachment{}
+	return netip.Prefix{}
 }
 
 // join moves the test end onto the attachment network for the rest of the
@@ -115,9 +125,9 @@ func (a packAttachment) join(t *testing.T) {
 
 func readdress(t *testing.T, cidr, gateway string) {
 	t.Helper()
-	run(t, "ip", "addr", "flush", "dev", testIface)
-	run(t, "ip", "addr", "add", cidr, "dev", testIface)
-	run(t, "ip", "route", "replace", simulatedSites, "via", gateway, "dev", testIface)
+	ip(t, "addr", "flush", "dev", testIface)
+	ip(t, "addr", "add", cidr, "dev", testIface)
+	ip(t, "route", "replace", simulatedSites, "via", gateway, "dev", testIface)
 }
 
 // advertisedName is what a device puts in its LLDP system name.
