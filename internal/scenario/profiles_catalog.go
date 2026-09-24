@@ -39,7 +39,13 @@ func campusProfiles() []DeviceProfile {
 }
 
 func endpointProfiles() []DeviceProfile {
+	// The Network Management Card's sysObjectID is what the SNMP agent keys
+	// UPS-MIB on; a generic one would leave the pack's UPS answering as a host.
+	ups := newProfile("ups", "iot", "apc", "Smart-UPS SRT 3000", "APC Web/SNMP Management Card",
+		"AOS 2.6.1.8", synth.VendorGeneric, synth.TypeHost)
+	ups.SysObjectID = "1.3.6.1.4.1.318.1.3.27"
 	return []DeviceProfile{
+		ups,
 		newProfile("workstation", "host", "dell", "OptiPlex 7020", "Dell OptiPlex 7020",
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("windows-laptop", "host", "dell", "Latitude 7450", "Dell Latitude 7450",
