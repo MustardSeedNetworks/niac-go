@@ -182,10 +182,48 @@ test.describe('Topology — DeviceNode tooltip contract', () => {
     await page.getByRole('searchbox').fill('r');
     await expect(wrapper).toHaveClass(/\bselected\b/);
     await nodes.nth(0).focus();
+    await expect(nodes.nth(0)).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect
       .poll(() => wrapper.evaluate((el) => getComputedStyle(el).transform))
       .not.toBe(before);
+  });
+
+  test('a node rebuild never hides the canvas or drops a focused node', async ({ page }) => {
+    await serveTopology(page, { devices: DEVICES, topology: TOPOLOGY });
+    await page.goto('/topology');
+    const nodes = page.getByTestId('topology-device-node');
+    await expect(nodes).toHaveCount(DEVICES.length);
+    await expect(nodes.first()).toBeVisible();
+
+    // React Flow hides a node it has no measured size for until its resize
+    // observer reports again. A rebuild that drops that size blanks every node
+    // for a frame or more, and a hidden button loses focus. Whether the gap is
+    // long enough to see depends on the engine, so watch for the style itself.
+    await page.evaluate(() => {
+      const w = window as typeof window & { hiddenNodes?: string[] };
+      w.hiddenNodes = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          const el = record.target as HTMLElement;
+          if (el.classList.contains('react-flow__node') && el.style.visibility === 'hidden') {
+            w.hiddenNodes?.push(el.dataset.id ?? '?');
+          }
+        }
+      }).observe(document.querySelector('.react-flow__nodes') as Node, {
+        attributes: true,
+        attributeFilter: ['style'],
+        subtree: true,
+      });
+    });
+    // A search both devices match forces the pass without waiting for a poll.
+    await page.getByRole('searchbox').fill('r');
+    await expect(nodes).toHaveCount(DEVICES.length);
+    await nodes.nth(0).focus();
+    await expect(nodes.nth(0)).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as typeof window & { hiddenNodes?: string[] }).hiddenNodes),
+    ).toEqual([]);
   });
 
   test('the tooltip carries the full label, type, IPs and protocols', async ({ page }) => {

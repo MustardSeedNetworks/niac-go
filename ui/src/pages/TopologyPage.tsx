@@ -268,11 +268,11 @@ export const TopologyPage: FC = () => {
       hoveredEdgeId,
     });
 
-    // Preserve user-dragged positions and selection across the 15s data poll
-    // (keyboard moves act on the selection). A device already on canvas keeps
-    // its current position rather than the freshly-computed layout; brand-new
-    // devices get the fresh slot. Saved positions come from localStorage so
-    // drags survive a page reload.
+    // Carry position, selection and measured size across the 15s data poll:
+    // keyboard moves act on the selection, and React Flow hides a node with no
+    // size, blanking the canvas and dropping focus. New devices get the fresh
+    // layout slot; saved positions come from localStorage so drags survive a
+    // page reload.
     setNodes((current) => {
       const currentByName = new Map(current.map((node) => [node.id, node]));
       const stored = layoutPersistence.loadPositions();
@@ -284,6 +284,7 @@ export const TopologyPage: FC = () => {
           ...node,
           position,
           selected: existing?.selected,
+          measured: existing?.measured,
           style: { ...node.style, opacity: nodeOpacity(node.id) },
           // DeviceNode's button is the named tab stop. The wrapper leaves the
           // tab order but stays focusable, so its select-and-move key handler
