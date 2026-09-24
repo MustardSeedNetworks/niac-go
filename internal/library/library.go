@@ -106,8 +106,9 @@ func DefaultRoot() string {
 }
 
 // Open resolves the library root, ensures the three subdirectories
-// exist, and unpacks the embedded starter packs into networks/ and
-// walks/ if those directories are brand new. The returned Library is
+// exist, unpacks the embedded starter packs into networks/ and walks/
+// if those directories are brand new, and replaces any starter network
+// an earlier release wrote that this one can no longer load. The returned Library is
 // ready for List/Read calls; callers MUST handle the returned error
 // before using it.
 func Open(root string) (*Library, error) {
@@ -130,6 +131,13 @@ func Open(root string) (*Library, error) {
 	if bootstrapErr := lib.bootstrapWalks(); bootstrapErr != nil {
 		_ = lib.draftRoot.Close()
 		return nil, fmt.Errorf("bootstrap starter walks: %w", bootstrapErr)
+	}
+
+	// After the walks, because a starter that names a captured walk resolves
+	// it beside networks/ and would otherwise read as unloadable.
+	if refreshErr := lib.refreshStaleStarters(); refreshErr != nil {
+		_ = lib.draftRoot.Close()
+		return nil, fmt.Errorf("refresh starter networks: %w", refreshErr)
 	}
 
 	return lib, nil

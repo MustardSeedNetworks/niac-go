@@ -585,7 +585,7 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 	if err != nil {
 		return err
 	}
-	return d.startGeneration(req, generation, false)
+	return d.startGeneration(d.withDefaultBinding(req), generation, false)
 }
 
 func (d *Daemon) startGeneration(req api.SimulationRequest, generation string, recovering bool) error {

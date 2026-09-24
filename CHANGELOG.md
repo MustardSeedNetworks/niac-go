@@ -5,6 +5,30 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.88](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.87...v0.95.88) (2026-09-23)
+
+
+### Bug Fixes
+
+* **cli:** bind a simulation start like daemon --once, defaulting from policy ([#2321](https://github.com/MustardSeedNetworks/niac-go/issues/2321)) ([1679067](https://github.com/MustardSeedNetworks/niac-go/commit/167906731656b3021acdba4c4a3edcabdb3768e0))
+* **e2e:** navigate once per language-switch test so WebKit cannot abort it ([#2323](https://github.com/MustardSeedNetworks/niac-go/issues/2323)) ([afc5825](https://github.com/MustardSeedNetworks/niac-go/commit/afc5825633cc086821341da15c68bdcad11a2d78)), closes [#2225](https://github.com/MustardSeedNetworks/niac-go/issues/2225)
+
+## [0.95.87](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.86...v0.95.87) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.103.0 ([#2314](https://github.com/MustardSeedNetworks/niac-go/issues/2314)) ([06862fe](https://github.com/MustardSeedNetworks/niac-go/commit/06862fe65252724573d560ae84b7f97d320ef1fe))
+* **deps:** update dependency @tanstack/react-query to v5.103.1 ([#2318](https://github.com/MustardSeedNetworks/niac-go/issues/2318)) ([3f9ffed](https://github.com/MustardSeedNetworks/niac-go/commit/3f9ffed27a6fdff4d3e7149f5d800816c0bed86d))
+* **deps:** update dependency lucide-react to v1.46.0 ([#2315](https://github.com/MustardSeedNetworks/niac-go/issues/2315)) ([dba6e0f](https://github.com/MustardSeedNetworks/niac-go/commit/dba6e0f64c6ce74ab9eb06b0d4f565851656dff9))
+* **library:** refresh starters an earlier schema wrote and list what validate refuses ([#2311](https://github.com/MustardSeedNetworks/niac-go/issues/2311)) ([d6de354](https://github.com/MustardSeedNetworks/niac-go/commit/d6de354f059fb9fb4992b2c4dea7f7d720337b58)), closes [#2202](https://github.com/MustardSeedNetworks/niac-go/issues/2202)
+* **ui:** move shell controls into the rail ([#2307](https://github.com/MustardSeedNetworks/niac-go/issues/2307)) ([8335f0a](https://github.com/MustardSeedNetworks/niac-go/commit/8335f0ae7d2e5371b8cfe804b5011c5cc6a2cdfb))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.74.0 ([#2313](https://github.com/MustardSeedNetworks/niac-go/issues/2313)) ([b791c31](https://github.com/MustardSeedNetworks/niac-go/commit/b791c3188866bcf6560dcea1b985e0a287ddc927))
+
 ## [0.95.86](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.85...v0.95.86) (2026-09-23)
 
 

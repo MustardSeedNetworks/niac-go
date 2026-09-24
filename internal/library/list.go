@@ -61,8 +61,8 @@ type FileEntry struct {
 
 // ListNetworks enumerates every YAML in networks/, parses metadata
 // from each file's header comment block, and returns the rows sorted
-// by name. Files that fail to parse get Valid=false with an error
-// message instead of crashing the whole list.
+// by name. A file `niac validate` would refuse gets Valid=false with
+// its first error instead of crashing the whole list.
 func (l *Library) ListNetworks() ([]NetworkEntry, error) {
 	dir := l.SubDir(KindNetworks)
 	entries, err := os.ReadDir(dir)
@@ -103,32 +103,17 @@ func (l *Library) networkEntryFor(filename string) (NetworkEntry, error) {
 	}
 
 	desc, useCase := parseHeaderMetadata(data)
-	deviceCount, parseErr := countDevices(data)
-	if parseErr != nil {
-		// Returning the parse error in-band (Valid=false + Error=…) is
-		// deliberate — the row still appears in the list and the UI
-		// renders a "broken" badge instead of the whole call 5xxing.
-		return NetworkEntry{ //nolint:nilerr // structured surfacing
-			Name:        trimYAMLExt(filename),
-			Description: desc,
-			UseCase:     useCase,
-			ModifiedAt:  info.ModTime().UTC(),
-			SizeBytes:   info.Size(),
-			Source:      l.detectSource(filename),
-			Valid:       false,
-			Error:       parseErr.Error(),
-		}, nil
-	}
-
+	problem := networkProblem(path)
 	return NetworkEntry{
 		Name:        trimYAMLExt(filename),
 		Description: desc,
 		UseCase:     useCase,
-		DeviceCount: deviceCount,
+		DeviceCount: countDevices(data),
 		ModifiedAt:  info.ModTime().UTC(),
 		SizeBytes:   info.Size(),
 		Source:      l.detectSource(filename),
-		Valid:       true,
+		Valid:       problem == "",
+		Error:       problem,
 	}, nil
 }
 
@@ -476,16 +461,16 @@ func (l *Library) detectSource(filename string) Source {
 }
 
 // countDevices parses just enough of the YAML to count entries under
-// devices:. Falls back to a 0 with a clear error if the document
-// shape is wrong, so the row still appears in the list.
-func countDevices(data []byte) (int, error) {
+// devices:, so a row the loader rejects still shows its size. A document
+// that does not parse at all counts as 0; networkProblem reports why.
+func countDevices(data []byte) int {
 	var doc struct {
 		Devices []map[string]any `yaml:"devices"`
 	}
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return 0, fmt.Errorf("yaml parse: %w", err)
+		return 0
 	}
-	return len(doc.Devices), nil
+	return len(doc.Devices)
 }
 
 func trimYAMLExt(name string) string {
