@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.89](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.88...v0.95.89) (2026-09-24)
+
+
+### Bug Fixes
+
+* **build:** make verify-binary assert the embedded UI, not a source literal ([#2325](https://github.com/MustardSeedNetworks/niac-go/issues/2325)) ([fa4c0a9](https://github.com/MustardSeedNetworks/niac-go/commit/fa4c0a9955b87c8be21f61a141f1c3bff6c78595)), closes [#2324](https://github.com/MustardSeedNetworks/niac-go/issues/2324)
+* **ui:** give pill text a -strong token measured on its own wash ([#2329](https://github.com/MustardSeedNetworks/niac-go/issues/2329)) ([2c871bb](https://github.com/MustardSeedNetworks/niac-go/commit/2c871bb88aca9c87bdc72d7f5e2acc53d69df703))
+
+
+### Tests
+
+* **api:** ratchet internal/api's domain imports per file ([#2326](https://github.com/MustardSeedNetworks/niac-go/issues/2326)) ([f75c332](https://github.com/MustardSeedNetworks/niac-go/commit/f75c33260616a7af3dd27fa9c2a6a13f7b74fbe0)), closes [#2256](https://github.com/MustardSeedNetworks/niac-go/issues/2256)
+
+
+### Miscellaneous
+
+* **deps:** update dependency jsdom to v30.1.0 ([#2328](https://github.com/MustardSeedNetworks/niac-go/issues/2328)) ([01fc4d7](https://github.com/MustardSeedNetworks/niac-go/commit/01fc4d753a023d719a8e7b2c948bbdaada301aa7))
+
 ## [0.95.88](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.87...v0.95.88) (2026-09-23)
 
 
