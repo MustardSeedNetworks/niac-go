@@ -83,13 +83,17 @@ verify-build: build ## Build, then verify the binary runs and carries the UI
 # now exits non-zero; the old `|| true` and the version WARNING meant a binary
 # that crashed on every invocation, or reported a version nothing injected,
 # passed verification (#2181).
+# The UI check matches the embed table's own file names (ui/index.html and
+# the ui/assets/ directory), which exist only when those files were embedded.
+# A bare "index.html" also matches a Go string constant, so it passed a binary
+# built with nothing but ui/.gitkeep.
 verify-binary: ## Verify ./niac runs, embeds the UI and reports $(VERSION)
 	@printf "$(BOLD)$(CYAN)=== Build Verification ===$(RESET)\n"
 	@printf "Checking binary version...\n"
 	@./$(BINARY_NAME) version
 	@printf "\n"
 	@printf "Checking embedded UI...\n"
-	@if strings ./$(BINARY_NAME) 2>/dev/null | grep -q "index.html"; then \
+	@if grep -qaF 'ui/index.html' ./$(BINARY_NAME) && grep -qaF 'ui/assets/' ./$(BINARY_NAME); then \
 		printf "$(GREEN)✓ UI embedded correctly$(RESET)\n"; \
 	else \
 		printf "$(RED)ERROR: UI not embedded!$(RESET)\n"; \
