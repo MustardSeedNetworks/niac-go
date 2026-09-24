@@ -1156,6 +1156,27 @@ A device backed by a capture walk that already carries POWER-ETHERNET-MIB keeps
 the captured table untouched — a real PSE is the authority on its own group
 count, port numbering and consumption.
 
+#### Printers (Printer-MIB)
+
+A device with `type: printer` answers Printer-MIB (RFC 3805,
+`.1.3.6.1.2.1.43`) and lists itself in HOST-RESOURCES-MIB's device table as a
+printer. Discovery tools send every device a GETNEXT at `.1.3.6.1.2.1.43` and
+file the ones that answer inside it as printers, so this is what makes a
+printer read as a printer rather than a host. Nothing is authored for it.
+
+| Object | Serves |
+| ------- | ----------- |
+| `hrDeviceType` | `hrDevicePrinter` |
+| `hrDeviceDescr` | The device's `sysDescr` |
+| `hrDeviceStatus` | `running` |
+| `hrPrinterStatus` | `idle` |
+| `prtGeneralPrinterName` | The device's `sysName` |
+| `prtGeneralReset` | `notResetting` |
+
+A walk-backed printer keeps a captured Printer-MIB untouched. One whose capture
+carries none gets the rows above at the first `hrDeviceIndex` after the
+capture's own devices.
+
 #### Best Practices
 
 - Use SNMPv3 in production (authentication and encryption)
