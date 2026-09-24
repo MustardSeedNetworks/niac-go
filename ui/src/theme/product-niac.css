@@ -24,15 +24,11 @@
 
   /* Pill text (UI-FLEET-3, .github#74). A hue's own wash pulls the ground
    * toward it, so the bare hue drops under 4.5:1 as 12px text on a /20 wash.
-   * Each value is the same hue, darkened by the smallest step to 4.6:1 on its
-   * /5-/20 wash over every surface; pillText.test.ts measures it. The status
-   * four are the fleet's values and move to msn-shared.css once all four
-   * products use them. A pill's wash is always brand-primary, never
-   * brand-accent: this token is measured on brand-primary's wash only. */
-  --color-status-success-strong: #235e3a;
-  --color-status-warning-strong: #6d4e07;
-  --color-status-error-strong: #932e2e;
-  --color-status-info-strong: #0f548f;
+   * The brand value is the same hue, darkened by the smallest step to 4.6:1
+   * on its /5-/20 wash over every surface; pillText.test.ts measures it. The
+   * status four live in msn-shared.css. A pill's wash is always
+   * brand-primary, never brand-accent: this token is measured on
+   * brand-primary's wash only. */
   --color-brand-primary-strong: #633b9e;
 
   --color-node-switch: #6a3fa8;
@@ -84,10 +80,6 @@
 
   /* Pill text, lightened by the smallest step to 4.6:1 on a /20 wash over
    * the hover surface. Bare #9569d3 is 2.68:1 there. */
-  --color-status-success-strong: #56c785;
-  --color-status-warning-strong: #deab34;
-  --color-status-error-strong: #e5a2a2;
-  --color-status-info-strong: #7eb8ea;
   --color-brand-primary-strong: #ba9de2;
 
   --color-node-switch: #9569d3;
