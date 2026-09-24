@@ -1,17 +1,21 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
 
 // TestRoutePolicyManifest verifies the capability registry exposes every route
@@ -280,5 +284,45 @@ func TestRequestIDIsOnePerRequest(t *testing.T) {
 	}
 	if named < 2 {
 		t.Errorf("%d log fields named the request, want the access log and auth's refusal:\n%s", named, logs.String())
+	}
+}
+
+// TestSSEStreamsThroughTheRegistrar pins that the registrar's response-writer
+// wrapping keeps streaming alive: the stream's first event reaches the client
+// while the handler is still running, which only happens if Flush gets through
+// the access-log and recovery wrappers to net/http's writer.
+func TestSSEStreamsThroughTheRegistrar(t *testing.T) {
+	server, _, token := newTestServerWithAuth(t)
+	server.sseHub = sse.NewHub(sse.Config{})
+	go server.sseHub.Run()
+	t.Cleanup(server.sseHub.Stop)
+	ts := httptest.NewServer(server.apiHandler())
+	t.Cleanup(ts.Close)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/api/v1/stream/logs", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatalf("GET /api/v1/stream/logs: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "text/event-stream" {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	line, err := bufio.NewReader(resp.Body).ReadString('\n')
+	if err != nil {
+		t.Fatalf("no event arrived before the deadline: %v", err)
+	}
+	if line != "event: connected\n" {
+		t.Errorf("first line = %q, want the connected event", line)
 	}
 }
