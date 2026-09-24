@@ -1177,6 +1177,31 @@ A walk-backed printer keeps a captured Printer-MIB untouched. One whose capture
 carries none gets the rows above at the first `hrDeviceIndex` after the
 capture's own devices.
 
+#### UPS (UPS-MIB)
+
+A device whose `sysObjectID` is an APC Network Management Card's
+(`1.3.6.1.4.1.318.1.3.27`, set with `properties.sysObjectID`) answers UPS-MIB
+(RFC 1628, `.1.3.6.1.2.1.33`). A manager that sees that sysObjectID walks
+UPS-MIB next, and a device that answers there is filed as power equipment. It
+reports a UPS on mains with a full battery:
+
+| Object | Serves |
+| ------- | ----------- |
+| `upsIdentManufacturer` | `American Power Conversion Corp.` |
+| `upsIdentModel` | `properties.model`, or the device's `sysDescr` |
+| `upsIdentAgentSoftwareVersion` | `properties.software` |
+| `upsIdentName` | The device's `sysName` |
+| `upsBatteryStatus` | `batteryNormal` |
+| `upsSecondsOnBattery` | `0` |
+| `upsEstimatedMinutesRemaining` | `42` |
+| `upsEstimatedChargeRemaining` | `100` |
+| `upsOutputSource` | `normal` |
+| `upsAlarmsPresent` | `0` |
+
+The input, output and bypass line tables are not served: they need voltages and
+loads nothing authors. A walk-backed UPS keeps a captured UPS-MIB untouched; one
+whose capture carries only its system group gets the objects above.
+
 #### Best Practices
 
 - Use SNMPv3 in production (authentication and encryption)
