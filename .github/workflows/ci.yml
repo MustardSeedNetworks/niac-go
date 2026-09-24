@@ -1508,19 +1508,9 @@ jobs:
         working-directory: ui
         run: npm ci
 
+      # Shared with the phone-width job below, so both run one binary recipe.
       - name: Build backend
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          UI_BUILD_HASH=$(find internal/api/ui -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum 2>/dev/null | cut -d' ' -f1)
-          go build -trimpath -buildvcs=false \
-            -ldflags="-s -w \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Version=${VERSION} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.Commit=${COMMIT} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.BuildTime=${BUILD_TIME} \
-              -X github.com/MustardSeedNetworks/niac-go/internal/version.UIBuildHash=${UI_BUILD_HASH}" \
-            -o niac ./cmd/niac
+        run: ./scripts/build-backend-e2e.sh
 
       - name: Install Playwright OS dependencies
         uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
@@ -1617,14 +1607,9 @@ jobs:
           # Backend is HTTPS-only since #663 (the --http flag was removed and
           # the legacy HTTP listener deleted). Self-signed cert auto-generated
           # on first start. Use canonical TLS port 8445 per CLAUDE.md.
-          # --attachment-policy is what lets an authoring E2E reach *start*:
-          # a binding with no approving policy fails preflight with
-          # attachment_policy_denied, by design. playwright.config.ts sets
-          # the same flag for the local webServer, but CI starts the daemon
-          # itself, so it has to be set in both places or the specs pass
-          # locally and fail here.
-          nohup ./niac daemon --listen 127.0.0.1:8445 \
-            --attachment-policy e2e-dry-run0=access:200 > server.log 2>&1 &
+          # e2e-daemon.sh carries the attachment policy and says why; the
+          # phone-width job below starts the same daemon.
+          nohup ./scripts/e2e-daemon.sh 8445 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
             if curl -skf https://localhost:8445/__version 2>/dev/null; then
@@ -1718,6 +1703,27 @@ jobs:
   # High alerts with every check green. Scoped to CodeQL rather than "any High
   # alert": the code-scanning tab also carries Scorecard *scores* at High
   # severity, several of which encode deliberate decisions.
+  # Phone width (owner 2026-09-15: everything works at 390x844). The fleet's one
+  # definition of "works" lives in MustardSeedNetworks/.github; this job points
+  # it at niac's own daemon, started by the same script as the E2E job. niac
+  # has no sign-in on loopback, so there is no setup-command or storage-state.
+  # No primary-action-testid: niac marks a page's primary with data-variant,
+  # not a test id (App.primaryAction.test.tsx counts them). `routes` must equal
+  # pageRegistry's paths — src/pageRegistry.test.tsx fails when they diverge.
+  phone-width:
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.ci_infra == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: MustardSeedNetworks/.github/.github/workflows/phone-width.yml@042e037814c114aadc2b8b2caaedfba8e0149018 # .github#88, untagged
+    with:
+      base-url: https://127.0.0.1:8445
+      prepare-command: ./scripts/build-backend-e2e.sh
+      start-command: ./scripts/e2e-daemon.sh 8445
+      routes: '["/", "/runtime", "/new-simulation", "/devices", "/segments", "/device-config", "/topology", "/alerts", "/traffic", "/debug", "/packets", "/config-diff", "/walk-validator", "/walk-analyzer", "/library/walks", "/library/pcaps"]'
+      rail-testid: sidebar-desktop
+
   codeql-alert-gate:
     name: CodeQL Alert Gate
     uses: MustardSeedNetworks/.github/.github/workflows/codeql-alert-gate.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
@@ -1749,6 +1755,7 @@ jobs:
       - docs
       - build
       - e2e
+      - phone-width
       - i18n
       - storybook
       - codeql-alert-gate

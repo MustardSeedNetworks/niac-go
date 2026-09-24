@@ -456,11 +456,15 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
         />
       ) : null}
 
+      {/* Closed, it is `invisible` as well as off-canvas and inert: parked at
+          x -288..0 it still painted a box the fleet's 390px gate reads as
+          content leaving the viewport. Visibility transitions with the slide,
+          so it only hides once the drawer is out of view. */}
       <aside
         data-testid="sidebar-mobile"
         inert={!mobileOpen}
-        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-surface-raised/95 backdrop-blur-xl border-r border-surface-border transform transition-transform duration-300 ease-in-out ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-surface-raised/95 backdrop-blur-xl border-r border-surface-border transform transition-[transform,visibility] duration-300 ease-in-out ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full invisible'
         }`}
       >
         <div className="flex flex-col h-full">{body(false)}</div>
