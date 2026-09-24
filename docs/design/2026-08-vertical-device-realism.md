@@ -79,8 +79,8 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 
 `TestPackDeviceRoleMix` pins the resulting per-pack role counts.
 
-Device counts per pack are unchanged (hospital 75, warehouse 69, manufacturing
-69, campus 155, retail 95, service-provider 87, enterprise-scale 531). More
+Device counts per pack are unchanged by the mix; the pinned counts live in
+`internal/scenario/packs_parity.go`. More
 device _types_, same device _count_.
 
 ## Common tier
