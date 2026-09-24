@@ -64,6 +64,14 @@ status=$?
 cat "$log"
 if [[ "$status" -eq 0 ]]; then
 	printf 'wire-nightly: %s at %s\n' "$SLUG" "$commit" | tee -a "$log"
+	# The released-binary acceptance tests drive this tree's own `make build`
+	# output (internal/wiretest/acceptance_linux_test.go). Without it they fail
+	# before starting, which read as a product failure every night from
+	# 2026-09-12 (niac-go#2335).
+	make -C "$REPO" build 2>&1 | tee -a "$log"
+	status=$?
+fi
+if [[ "$status" -eq 0 ]]; then
 	go test -C "$REPO" -tags integration ./internal/wiretest/... -count=1 -v 2>&1 | tee -a "$log"
 	status=$?
 fi

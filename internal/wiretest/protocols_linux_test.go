@@ -20,15 +20,12 @@ import (
 // matters operationally: an address outside the authored pool, or an ACK that
 // contradicts the OFFER it followed.
 func TestDHCPLeaseComesFromTheAuthoredPool(t *testing.T) {
-	authored := startHospital(t)
-	edge := edgeRouter(t, authored)
-	if edge.DHCPConfig == nil {
-		t.Fatalf(
-			"%s has no authored DHCP server; the pack no longer serves leases on the transit network",
-			edgeRouterName,
-		)
+	_, attachment := startPack(t, "hospital")
+	server := attachment.dhcpServer
+	if server.DHCPConfig == nil {
+		t.Fatalf("%s serves the %s scope but authors no DHCP server", server.Name, attachment.network)
 	}
-	poolStart, poolEnd := edge.DHCPConfig.PoolStart, edge.DHCPConfig.PoolEnd
+	poolStart, poolEnd := server.DHCPConfig.PoolStart, server.DHCPConfig.PoolEnd
 
 	handle := openClient(t)
 	src := clientMAC(t)
@@ -53,8 +50,8 @@ func TestDHCPLeaseComesFromTheAuthoredPool(t *testing.T) {
 			offered,
 		)
 	}
-	if router := dhcpOptionIP(ack, layers.DHCPOptRouter); !router.Equal(edge.DHCPConfig.Router) {
-		t.Errorf("DHCPACK router option = %s, want the authored %s", router, edge.DHCPConfig.Router)
+	if router := dhcpOptionIP(ack, layers.DHCPOptRouter); !router.Equal(server.DHCPConfig.Router) {
+		t.Errorf("DHCPACK router option = %s, want the authored %s", router, server.DHCPConfig.Router)
 	}
 }
 
@@ -172,18 +169,18 @@ func dhcpExchange(
 
 // LLDP is unsolicited: nothing the test sends causes it. This asserts the
 // simulation advertises itself on its own timer, and that the system name it
-// puts on the wire is the authored device name rather than a placeholder.
+// puts on the wire is an authored device name rather than a placeholder.
 //
-// Only the edge router's advertisement can arrive here — validateDiscoveryEgress
-// drops discovery frames from devices that are not on the attachment network,
-// so a hospital-site switch's LLDP never reaches this wire.
+// validateDiscoveryEgress drops discovery frames from devices with no
+// interface on the attachment network, so only those devices can be heard
+// here. Until per-client placement (AP-2) narrows that to the tester's own
+// access switch, any of them is a correct speaker.
 func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
-	authored := startHospital(t)
-	edge := edgeRouter(t, authored)
+	_, attachment := startPack(t, "hospital")
 
-	want := edge.Name
-	if edge.SNMPConfig.SysName != "" {
-		want = edge.SNMPConfig.SysName
+	want := make([]string, 0, len(attachment.onNetwork))
+	for _, device := range attachment.onNetwork {
+		want = append(want, advertisedName(device))
 	}
 
 	handle := openClient(t)
@@ -201,10 +198,11 @@ func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 			if !ok || lldp.SysName == "" {
 				continue
 			}
-			if lldp.SysName != want {
+			if !slices.Contains(want, lldp.SysName) {
 				t.Fatalf(
-					"LLDP system name on the wire = %q, want the authored %q",
+					"LLDP system name on the wire = %q, want one of the devices on %s: %v",
 					lldp.SysName,
+					attachment.network,
 					want,
 				)
 			}
@@ -220,16 +218,17 @@ func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 // synthesized names looks identical to a correct one under a count assertion.
 // Compare the ifDescr values against the authored interface list instead.
 func TestSNMPWalkReturnsAuthoredInterfaceNames(t *testing.T) {
-	authored := startHospital(t)
-	edge := edgeRouter(t, authored)
+	_, attachment := startPack(t, "hospital")
+	gateway := attachment.gatewayDevice
+	target := attachment.gateway.String()
 
-	community := edge.SNMPConfig.Community
+	community := gateway.SNMPConfig.Community
 	if community == "" {
-		t.Fatal("the edge router has no authored SNMP community")
+		t.Fatalf("%s has no authored SNMP community", gateway.Name)
 	}
 
 	client := &gosnmp.GoSNMP{
-		Target:    transitGateway,
+		Target:    target,
 		Port:      161,
 		Community: community,
 		Version:   gosnmp.Version2c,
@@ -237,14 +236,14 @@ func TestSNMPWalkReturnsAuthoredInterfaceNames(t *testing.T) {
 		Retries:   4,
 	}
 	if err := client.Connect(); err != nil {
-		t.Fatalf("connecting to %s: %v", transitGateway, err)
+		t.Fatalf("connecting to %s: %v", target, err)
 	}
 	t.Cleanup(func() { _ = client.Conn.Close() })
 
 	const ifDescr = ".1.3.6.1.2.1.2.2.1.2"
 	results, err := client.WalkAll(ifDescr)
 	if err != nil {
-		t.Fatalf("walking ifDescr on %s: %v", transitGateway, err)
+		t.Fatalf("walking ifDescr on %s: %v", target, err)
 	}
 	if len(results) == 0 {
 		t.Fatalf("ifDescr walk returned no rows; the SNMP agent is not answering on the wire")
@@ -259,7 +258,7 @@ func TestSNMPWalkReturnsAuthoredInterfaceNames(t *testing.T) {
 
 	// TrunkPorts are synthesized ahead of Interfaces, so an authored interface
 	// missing from the walk is the failure worth naming precisely.
-	for _, iface := range edge.Interfaces {
+	for _, iface := range gateway.Interfaces {
 		if !slices.Contains(got, iface.Name) {
 			t.Errorf(
 				"authored interface %q is absent from the ifDescr walk; got %v",

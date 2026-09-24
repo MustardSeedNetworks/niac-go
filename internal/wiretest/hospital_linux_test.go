@@ -3,7 +3,6 @@
 package wiretest_test
 
 import (
-	"context"
 	"net"
 	"testing"
 	"time"
@@ -11,101 +10,15 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcap"
-
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
-	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
-// The pack binds to a routed fabric whose transit network is the physical wire.
-// Devices inside the hospital site sit behind the edge router and are only
-// reachable across a route, and discovery frames from them are dropped before
-// egress by validateDiscoveryEgress. LAB-EDGE-R1 is the device actually on the
-// attachment network, so it is the one observable from this end of the veth.
+// transitGateway is the edge router on the transit network the authored
+// fixtures in this package attach to. A generated pack attaches its tester
+// elsewhere -- a spare access port -- and startPack reads where from the pack.
 const (
-	edgeRouterName = "LAB-EDGE-R1"
 	transitGateway = "10.254.200.1"
-	clientAddr     = "10.254.200.50" // below the authored DHCP pool, so it collides with nothing
 	accessVLAN     = 200
 )
-
-// startHospital generates the hospital pack the way the product does and starts
-// it on the simulated end of the wire. The generated YAML is the authored truth
-// every assertion below reads, so the thing under test and the thing compared
-// against are one artifact; a hand-written config here would be an oracle, not
-// the product.
-func startHospital(t *testing.T) *config.Config {
-	t.Helper()
-	requireWire(t)
-
-	var pack scenario.Pack
-	for _, candidate := range scenario.Packs() {
-		if candidate.ID == "hospital" {
-			pack = candidate
-			break
-		}
-	}
-	if pack.ID == "" {
-		t.Fatal("no pack with id \"hospital\"; scenario.Packs() no longer ships it")
-	}
-
-	result, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatalf("scenario.Generate(hospital): %v", err)
-	}
-	authored, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatalf("loading the generated hospital YAML: %v", err)
-	}
-
-	// Without this the daemon persists the inline config into the invoking
-	// user's real ~/.niac/configs.
-	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
-
-	d, err := daemon.NewDaemon(daemon.Config{
-		StoragePath: "disabled",
-		AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
-			Interface: simIface, Mode: fabric.ModeAccess, AccessVLAN: accessVLAN,
-		}},
-	})
-	if err != nil {
-		t.Fatalf("daemon.NewDaemon: %v", err)
-	}
-	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest",
-		Interface:      simIface,
-		Attachment:     pack.Request.AttachmentName,
-		AttachmentMode: fabric.ModeAccess,
-		AccessVLAN:     accessVLAN,
-		ConfigData:     string(result.YAML),
-	}); startErr != nil {
-		t.Fatalf("StartSimulation on %s: %v", simIface, startErr)
-	}
-	t.Cleanup(func() {
-		if stopErr := d.StopSimulation(""); stopErr != nil {
-			t.Errorf("StopSimulation: %v", stopErr)
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_ = d.Shutdown(ctx)
-	})
-	return authored
-}
-
-// edgeRouter returns the authored edge router or fails; a renamed device should
-// report as exactly that rather than as a nil dereference.
-func edgeRouter(t *testing.T, cfg *config.Config) *config.Device {
-	t.Helper()
-	for index := range cfg.Devices {
-		if cfg.Devices[index].Name == edgeRouterName {
-			return &cfg.Devices[index]
-		}
-	}
-	t.Fatalf("no device named %q in the generated config", edgeRouterName)
-	return nil
-}
 
 // openClient opens libpcap on the test end with immediate delivery, so a reply
 // is readable as soon as it arrives instead of sitting in a buffer.
@@ -150,11 +63,12 @@ func serialize(t *testing.T, ls ...gopacket.SerializableLayer) []byte {
 
 // ARP is the cheapest end-to-end proof that the simulation is on the wire: it
 // exercises capture, device lookup and frame injection, and its answer carries
-// an authored field — the device's MAC — that a count-based assertion would
-// miss entirely.
-func TestARPAnswersWithAuthoredEdgeRouterMAC(t *testing.T) {
-	authored := startHospital(t)
-	edge := edgeRouter(t, authored)
+// an authored field -- the gateway's MAC -- that a count-based assertion would
+// miss entirely. The gateway is the first hop a tester on the pack's attachment
+// port resolves, which is what a technician's tool does first.
+func TestARPAnswersWithTheAttachmentGatewayMAC(t *testing.T) {
+	_, attachment := startPack(t, "hospital")
+	gateway := attachment.gatewayDevice
 
 	handle := openClient(t)
 	src := clientMAC(t)
@@ -171,17 +85,17 @@ func TestARPAnswersWithAuthoredEdgeRouterMAC(t *testing.T) {
 		ProtAddressSize:   4,
 		Operation:         layers.ARPRequest,
 		SourceHwAddress:   src,
-		SourceProtAddress: net.ParseIP(clientAddr).To4(),
+		SourceProtAddress: attachment.client.Addr().AsSlice(),
 		DstHwAddress:      net.HardwareAddr{0, 0, 0, 0, 0, 0},
-		DstProtAddress:    net.ParseIP(transitGateway).To4(),
+		DstProtAddress:    attachment.gateway.AsSlice(),
 	}
 	frame := serialize(t, eth, arp)
 
-	reply := awaitARPReply(t, handle, frame, net.ParseIP(transitGateway).To4())
+	reply := awaitARPReply(t, handle, frame, attachment.gateway.AsSlice())
 
-	if got := net.HardwareAddr(reply.SourceHwAddress).String(); got != edge.MACAddress.String() {
+	if got := net.HardwareAddr(reply.SourceHwAddress).String(); got != gateway.MACAddress.String() {
 		t.Errorf("ARP reply for %s came from MAC %s, want the authored %s MAC %s",
-			transitGateway, got, edgeRouterName, edge.MACAddress)
+			attachment.gateway, got, gateway.Name, gateway.MACAddress)
 	}
 }
 
