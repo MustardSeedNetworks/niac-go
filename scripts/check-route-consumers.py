@@ -33,7 +33,7 @@ from pathlib import Path
 API_PREFIX = "/api/v1"
 BASELINE = "scripts/route-consumer-baseline.txt"
 
-ROUTE_LITERAL = re.compile(r'path:\s*(APIVersionPrefix\s*\+\s*)?"([^"]+)"')
+ROUTE_LITERAL = re.compile(r'\bPath:\s*(APIVersionPrefix\s*\+\s*)?"([^"]+)"')
 DIRECT_HANDLE = re.compile(r'HandleFunc\("(/api/[^"]+)"')
 SESSION_RESOURCE = re.compile(r'^\s*"([\w-]+)":\s*s\.handle', re.M)
 # Consumers are scanned for any `/api/` path, not only `/api/v1/`: a call to a

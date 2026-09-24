@@ -1,11 +1,15 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 )
@@ -16,8 +20,7 @@ import (
 func TestRoutePolicyManifest(t *testing.T) {
 	server, _, _ := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	req := httptest.NewRequest(http.MethodGet, "/__capabilities", nil)
 	rec := httptest.NewRecorder()
@@ -27,7 +30,7 @@ func TestRoutePolicyManifest(t *testing.T) {
 		t.Fatalf("GET /__capabilities: status = %d, want 200", rec.Code)
 	}
 
-	var views []RoutePolicy
+	var views []route.Policy
 	if err := json.Unmarshal(rec.Body.Bytes(), &views); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
@@ -35,25 +38,25 @@ func TestRoutePolicyManifest(t *testing.T) {
 		t.Fatal("expected a non-empty route manifest")
 	}
 
-	byPath := make(map[string]RoutePolicy, len(views))
+	byPath := make(map[string]route.Policy, len(views))
 	for _, v := range views {
 		byPath[v.Path] = v
 	}
 
 	// Whole-topology import is admin-scoped + CSRF-protected + write-limited.
 	imp, impOK := byPath["/api/v1/config/import"]
-	if !impOK || !imp.Admin || !imp.CSRF || !imp.RateLimited {
+	if !impOK || imp.Scope != scopeAdmin || !imp.CSRF || !imp.RateLimited {
 		t.Errorf("/api/v1/config/import policy = %+v, want admin+csrf+rateLimited", imp)
 	}
 	// Whole-library install (#897 L3b) is the same admin-class shape as
 	// config/import — it replaces networks/walks/pcaps content wholesale.
 	inst, instOK := byPath["/api/v1/library/install"]
-	if !instOK || !inst.Admin || !inst.CSRF || !inst.RateLimited {
+	if !instOK || inst.Scope != scopeAdmin || !inst.CSRF || !inst.RateLimited {
 		t.Errorf("/api/v1/library/install policy = %+v, want admin+csrf+rateLimited", inst)
 	}
 	// A safe read carries none of those.
 	rd, rdOK := byPath["/api/v1/topology"]
-	if !rdOK || rd.Admin || rd.CSRF || rd.RateLimited {
+	if !rdOK || rd.Scope != "" || rd.CSRF || rd.RateLimited {
 		t.Errorf("/api/v1/topology policy = %+v, want no admin/csrf/rateLimited", rd)
 	}
 }
@@ -79,7 +82,7 @@ func TestErrorsRoutePolicy(t *testing.T) {
 func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 	byPath := fetchRouteManifest(t)
 
-	// Every route must record a non-zero body cap (register() defaults 0 to
+	// Every route must record a non-zero body cap (the registrar defaults 0 to
 	// MaxRequestBodySize) and must declare its accepted methods.
 	for _, v := range byPath {
 		if v.MaxBodyBytes == 0 {
@@ -142,12 +145,11 @@ func TestRoutePolicyManifestMethodAndBody(t *testing.T) {
 
 // fetchRouteManifest registers the full route table and returns the
 // /__capabilities manifest keyed by path.
-func fetchRouteManifest(t *testing.T) map[string]RoutePolicy {
+func fetchRouteManifest(t *testing.T) map[string]route.Policy {
 	t.Helper()
 	server, _, _ := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	req := httptest.NewRequest(http.MethodGet, "/__capabilities", nil)
 	rec := httptest.NewRecorder()
@@ -156,29 +158,28 @@ func fetchRouteManifest(t *testing.T) map[string]RoutePolicy {
 		t.Fatalf("GET /__capabilities: status = %d, want 200", rec.Code)
 	}
 
-	var views []RoutePolicy
+	var views []route.Policy
 	if err := json.Unmarshal(rec.Body.Bytes(), &views); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
-	byPath := make(map[string]RoutePolicy, len(views))
+	byPath := make(map[string]route.Policy, len(views))
 	for _, v := range views {
 		byPath[v.Path] = v
 	}
 	return byPath
 }
 
-// TestMethodGateRejectsWrongMethod verifies register()'s methodGate returns 405
+// TestMethodGateRejectsWrongMethod verifies the registrar's method gate returns 405
 // with an Allow header for a method outside the route's declared set, exercising
 // the declarative path that replaced the in-handler guards.
 func TestMethodGateRejectsWrongMethod(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	// /api/v1/topology is GET-only; a DELETE (with a read-write bearer so it
 	// clears auth's scope-by-method check) must 405 with Allow: GET from the
-	// registry's methodGate, not pass through to the handler.
+	// registry's method gate, not pass through to the handler.
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/topology", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
@@ -195,8 +196,7 @@ func TestMethodGateRejectsWrongMethod(t *testing.T) {
 func TestSPAIsPublicButAPIRemainsAuthenticated(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	spaReq := httptest.NewRequest(http.MethodGet, "https://niac.example/", nil)
 	spaRec := httptest.NewRecorder()
@@ -231,5 +231,54 @@ func TestSPAIsPublicButAPIRemainsAuthenticated(t *testing.T) {
 	}
 	if got := missingRec.Header().Get("Content-Type"); got != "application/json" {
 		t.Errorf("GET unknown /api path Content-Type = %q, want application/json", got)
+	}
+}
+
+// TestRequestIDIsOnePerRequest pins that the registrar's request ID is the
+// only one: the client's X-Request-ID, the error body's requestId and every
+// log line about the request (the access log and auth's refusal) name the
+// same value, so an operator can join a client report to the log.
+func TestRequestIDIsOnePerRequest(t *testing.T) {
+	server, _, _ := newTestServerWithAuth(t)
+	var logs bytes.Buffer
+	server.logger = slog.New(slog.NewJSONHandler(&logs, nil))
+	handler := server.apiHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/scope", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("GET /api/v1/auth/scope without bearer: status = %d, want 401", rec.Code)
+	}
+	id := rec.Header().Get("X-Request-ID")
+	if id == "" {
+		t.Fatal("response carries no X-Request-ID")
+	}
+	var body ErrorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode error body: %v", err)
+	}
+	if body.RequestID != id {
+		t.Errorf("error body requestId = %q, want the header's %q", body.RequestID, id)
+	}
+
+	named := 0
+	for line := range bytes.Lines(logs.Bytes()) {
+		var entry map[string]any
+		if err := json.Unmarshal(line, &entry); err != nil {
+			t.Fatalf("log line is not JSON: %s", line)
+		}
+		for _, key := range []string{"request_id", "requestID"} {
+			if got, ok := entry[key]; ok {
+				named++
+				if got != id {
+					t.Errorf("log %q names %s = %v, want %q", entry["msg"], key, got, id)
+				}
+			}
+		}
+	}
+	if named < 2 {
+		t.Errorf("%d log fields named the request, want the access log and auth's refusal:\n%s", named, logs.String())
 	}
 }

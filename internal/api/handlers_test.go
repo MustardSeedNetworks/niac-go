@@ -406,27 +406,6 @@ func TestWriteErrorWithDetails(t *testing.T) {
 	}
 }
 
-func TestRecoverMiddleware(t *testing.T) {
-	server, _ := createTestServer(t)
-
-	// Handler that panics
-	panicHandler := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		panic("test panic")
-	})
-
-	recovered := server.recoverMiddleware(panicHandler)
-
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	rec := httptest.NewRecorder()
-
-	// Should not panic
-	recovered(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
-}
-
 func TestCSRFProtection(t *testing.T) {
 	server, _ := createTestServer(t)
 	// #1257: per-session CSRF manager; mint the loopback-bypass

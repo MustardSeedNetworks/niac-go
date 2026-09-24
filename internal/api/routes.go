@@ -4,47 +4,55 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
 
-// registerAPIRoutes registers all API endpoints on the provided mux.
+// registerAPIRoutes registers every endpoint on reg.
 //
-// Every /api route is installed through the capability registry (register /
-// registerAll in route.go), which composes its policy — auth, rate limiting,
-// CSRF, admin scope — in one canonical order so a route cannot
-// ship without it. scripts/check-route-policy.sh enforces this. Only the
-// unauthenticated introspection endpoints (/__version, /__capabilities) are
-// registered directly. The SPA shell is also public so it can collect a bearer
-// token in browser memory before calling the protected API.
-func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
-	// Unauthenticated introspection (no auth wrapper).
-	mux.HandleFunc("/__version", s.recoverMiddleware(s.handleBuildVersion))
-	mux.HandleFunc("/__capabilities", s.recoverMiddleware(s.handleRoutePolicyManifest))
-
-	// Top-level authenticated reads + the CSRF-token endpoint.
-	s.registerAll(mux, []apiRoute{
-		{path: "/api/v1/csrf-token", handler: s.handleCSRFToken, methods: []string{http.MethodGet}},
-		{path: "/api/v1/stats", handler: s.handleStats, methods: []string{http.MethodGet}},
-		{path: "/api/v1/devices", handler: s.handleDevices, methods: []string{http.MethodGet}},
-		{path: "/api/v1/history", handler: s.handleHistory, methods: []string{http.MethodGet}},
+// Every route — the SPA shell and the introspection endpoints included — is
+// installed through the capability registry, which composes its policy (rate
+// limiting, auth, method gate, CSRF, admin scope, body cap) in one canonical
+// order so a route cannot ship without it. scripts/check-route-policy.sh
+// enforces this. /__version and /__capabilities are deliberately
+// unauthenticated deployment introspection. The SPA shell is also public so it
+// can collect a bearer token in browser memory before calling the protected
+// API.
+func (s *Server) registerAPIRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
+		{Path: "/__version", Handler: s.handleBuildVersion, Methods: []string{http.MethodGet}},
+		{Path: "/__capabilities", Handler: reg.ServeManifest, Methods: []string{http.MethodGet}},
 	})
 
-	s.registerSessionRoutes(mux)
-	s.registerWriteProtectedRoutes(mux)
-	s.registerReadOnlyRoutes(mux)
-	s.registerLibraryRoutes(mux)
-	s.registerScenarioRoutes(mux)
-	s.registerWalkRoutes(mux)
-	s.registerPcapRoutes(mux)
-	s.registerSSERoutes(mux)
+	// Top-level authenticated reads + the CSRF-token endpoint.
+	reg.RegisterAll([]route.Route{
+		{Path: "/api/v1/csrf-token", Handler: s.handleCSRFToken, Auth: true, Methods: []string{http.MethodGet}},
+		{Path: "/api/v1/stats", Handler: s.handleStats, Auth: true, Methods: []string{http.MethodGet}},
+		{Path: "/api/v1/devices", Handler: s.handleDevices, Auth: true, Methods: []string{http.MethodGet}},
+		{Path: "/api/v1/history", Handler: s.handleHistory, Auth: true, Methods: []string{http.MethodGet}},
+	})
+
+	s.registerSessionRoutes(reg)
+	s.registerWriteProtectedRoutes(reg)
+	s.registerReadOnlyRoutes(reg)
+	s.registerLibraryRoutes(reg)
+	s.registerScenarioRoutes(reg)
+	s.registerWalkRoutes(reg)
+	s.registerPcapRoutes(reg)
+	s.registerSSERoutes(reg)
 
 	// Metrics require auth (#172).
-	s.registerAll(mux, []apiRoute{
-		{path: "/metrics", handler: s.handleMetrics, methods: []string{http.MethodGet}},
+	reg.RegisterAll([]route.Route{
+		{Path: "/metrics", Handler: s.handleMetrics, Auth: true, Methods: []string{http.MethodGet}},
 		{
-			path:    "/api/",
-			handler: s.handleAPINotFound,
-			methods: []string{
+			Path:    "/api/",
+			Handler: s.handleAPINotFound,
+			Auth:    true,
+			// Hidden: a catch-all whose every method would document as an
+			// operation a client could call.
+			Hidden: true,
+			Methods: []string{
 				http.MethodGet,
 				http.MethodHead,
 				http.MethodPost,
@@ -59,38 +67,45 @@ func (s *Server) registerAPIRoutes(mux *http.ServeMux) {
 	// Static assets contain no privileged data. Serving the shell without auth
 	// lets the browser prompt for a token; all data still comes from protected
 	// /api routes and the token never enters a URL.
-	mux.HandleFunc("/", s.recoverMiddleware(
-		withSecurityHeaders(
-			s.methodGate([]string{http.MethodGet, http.MethodHead}, s.serveSPA()),
-		),
-	))
+	// Hidden: the shell is not an API operation, and its every-path pattern
+	// would otherwise document as one.
+	reg.Register(route.Route{
+		Path:    "/",
+		Handler: withSecurityHeaders(s.serveSPA()),
+		Methods: []string{http.MethodGet, http.MethodHead},
+		Hidden:  true,
+	})
 }
 
-func (s *Server) registerScenarioRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerScenarioRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:    "/api/v1/scenario/packs",
-			handler: s.handleScenarioPacks,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/scenario/packs",
+			Handler: s.handleScenarioPacks,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/scenario/profiles",
-			handler: s.handleScenarioProfiles,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/scenario/profiles",
+			Handler: s.handleScenarioProfiles,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/scenario/profiles/captured",
-			handler: s.handleCapturedProfileCreate,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/scenario/profiles/captured",
+			Handler: s.handleCapturedProfileCreate,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/scenario/generate",
-			handler: s.handleScenarioGenerate,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/scenario/generate",
+			Handler: s.handleScenarioGenerate,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 	})
 }
@@ -103,95 +118,105 @@ func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
 // limit + CSRF). Whole-topology replacement additionally requires an
 // admin-scoped token: /api/v1/config and /config/import. AdminProtect exempts
 // safe methods, so /api/v1/config still serves GET to a read-only token.
-func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerWriteProtectedRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		// #2173: PUT/PATCH/POST here replace the entire topology and the
 		// on-disk config in one shot, which is what ScopeAdmin exists for
 		// (tokenstore.ScopeAdmin's doc, #743). GET stays readable to any
 		// admitted scope because AdminProtect exempts safe methods. Routine
 		// per-device edits are NOT this route — they go to /config/devices/.
 		{
-			path:    "/api/v1/config",
-			handler: s.handleConfig,
-			methods: []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
-			admin:   true,
+			Path:    "/api/v1/config",
+			Handler: s.handleConfig,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
+			Scope:   scopeAdmin,
 		},
 		{
-			path:    "/api/v1/config/devices",
-			handler: s.handleDevicesV2,
-			methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/config/devices",
+			Handler: s.handleDevicesV2,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/config/devices/",
-			handler: s.handleDevicesV2,
-			methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/config/devices/",
+			Handler: s.handleDevicesV2,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/config/merge",
-			handler: s.handleConfigMerge,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/config/merge",
+			Handler: s.handleConfigMerge,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		// #743: whole-topology replacement is admin-class (an admin-scoped token
 		// in addition to read-write); routine per-device edits / configs CRUD
 		// stay at ScopeReadWrite because they are normal operator actions.
 		{
-			path:    "/api/v1/config/import",
-			handler: s.handleConfigImport,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
-			admin:   true,
+			Path:    "/api/v1/config/import",
+			Handler: s.handleConfigImport,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
+			Scope:   scopeAdmin,
 		},
 		// Replay accepts inline PCAP payloads (handleReplay POST decodes up to
 		// MaxPCAPUploadBodySize, which accounts for base64 + JSON envelope
 		// overhead on top of the MaxPCAPUploadSize raw cap), so the registry
 		// cap must match that, not 1MB.
 		{
-			path:         "/api/v1/replay",
-			handler:      s.handleReplay,
-			methods:      []string{http.MethodGet, http.MethodPost, http.MethodDelete},
-			maxBodyBytes: MaxPCAPUploadBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/replay",
+			Handler:      s.handleReplay,
+			Auth:         true,
+			Methods:      []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+			MaxBodyBytes: MaxPCAPUploadBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:    "/api/v1/alerts",
-			handler: s.handleAlerts,
-			methods: []string{http.MethodGet, http.MethodPut, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/alerts",
+			Handler: s.handleAlerts,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPut, http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		// Global debug verbosity (GET current + default, PUT to set). The stack
 		// reads the global level live, so PUT takes effect with no restart.
 		{
-			path:    "/api/v1/debug/level",
-			handler: s.handleDebugLevel,
-			methods: []string{http.MethodGet, http.MethodPut},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/debug/level",
+			Handler: s.handleDebugLevel,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPut},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/capture/filter",
-			handler: s.handleCaptureFilter,
-			methods: []string{http.MethodGet, http.MethodPut, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/capture/filter",
+			Handler: s.handleCaptureFilter,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPut, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		// Standalone packet capture (POST=start, DELETE=stop, GET=status).
 		{
-			path:    "/api/v1/capture",
-			handler: s.handleStandaloneCapture,
-			methods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/capture",
+			Handler: s.handleStandaloneCapture,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 	})
 }
@@ -201,23 +226,25 @@ func (s *Server) registerWriteProtectedRoutes(mux *http.ServeMux) {
 // (revert, sanitize) that carry write rate limit + CSRF like the networks
 // POST above. Split out of registerReadOnlyRoutes to keep both under the
 // funlen cap as the library surface grows (#950).
-func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerLibraryRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:         "/api/v1/library/drafts",
-			handler:      s.handleLibraryDrafts,
-			methods:      []string{http.MethodGet, http.MethodPost},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/library/drafts",
+			Handler:      s.handleLibraryDrafts,
+			Auth:         true,
+			Methods:      []string{http.MethodGet, http.MethodPost},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:         "/api/v1/library/drafts/",
-			handler:      s.handleLibraryDraftByName,
-			methods:      []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/library/drafts/",
+			Handler:      s.handleLibraryDraftByName,
+			Auth:         true,
+			Methods:      []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
 			// The saved network is a generated scenario, so this route
@@ -225,56 +252,63 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 			// and simulation routes carry. On the 1 MiB default, five of the
 			// seven shipped packs answered 413 and could not be kept in the
 			// library the daemon starts from (#2203).
-			path:         "/api/v1/library/networks",
-			handler:      s.handleLibraryNetworks,
-			methods:      []string{http.MethodGet, http.MethodPost},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/library/networks",
+			Handler:      s.handleLibraryNetworks,
+			Auth:         true,
+			Methods:      []string{http.MethodGet, http.MethodPost},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:    "/api/v1/library/networks/",
-			handler: s.handleLibraryNetworkByName,
-			methods: []string{http.MethodGet, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/library/networks/",
+			Handler: s.handleLibraryNetworkByName,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/library/walks",
-			handler: s.handleLibraryWalks,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/library/walks",
+			Handler: s.handleLibraryWalks,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		// Revert mutates the walk on disk (restores + removes the .orig
 		// sidecar), so — like the networks POST above — it carries write
 		// rate limit + CSRF rather than being GET-only like its sibling.
 		{
-			path:    "/api/v1/library/walks/revert",
-			handler: s.handleLibraryWalkRevert,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/library/walks/revert",
+			Handler: s.handleLibraryWalkRevert,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		// Sanitize mutates the walk on disk (preserves the original, then
 		// overwrites with a scrubbed copy — see library.PreserveOriginal),
 		// so it carries the same write rate limit + CSRF as revert (#950).
 		{
-			path:    "/api/v1/library/walks/sanitize",
-			handler: s.handleLibraryWalkSanitize,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/library/walks/sanitize",
+			Handler: s.handleLibraryWalkSanitize,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/library/walks/sanitize-batch",
-			handler: s.handleLibraryWalkSanitizeBatch,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/library/walks/sanitize-batch",
+			Handler: s.handleLibraryWalkSanitizeBatch,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/library/pcaps",
-			handler: s.handleLibraryPcaps,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/library/pcaps",
+			Handler: s.handleLibraryPcaps,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		// Install accepts a gzip-tar content bundle (base64 in the JSON body,
 		// like /api/v1/pcap/upload) and extracts it over the whole library —
@@ -283,13 +317,14 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 		// admin-scoped token (#897 L3b), plus the larger body cap the base64
 		// expansion needs (see MaxLibraryInstallBodySize).
 		{
-			path:         "/api/v1/library/install",
-			handler:      s.handleLibraryInstall,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxLibraryInstallBodySize,
-			rl:           rlWrite,
-			csrf:         true,
-			admin:        true,
+			Path:         "/api/v1/library/install",
+			Handler:      s.handleLibraryInstall,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxLibraryInstallBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
+			Scope:        scopeAdmin,
 		},
 	})
 }
@@ -297,244 +332,273 @@ func (s *Server) registerLibraryRoutes(mux *http.ServeMux) {
 // registerReadOnlyRoutes registers reads plus the mutating CRUD endpoints that
 // historically shared this group; the mutating ones carry write rate limit +
 // CSRF (#740). csrfProtect internally skips GET, so reads pass through.
-func (s *Server) registerReadOnlyRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerReadOnlyRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:    "/api/v1/config/schema",
-			handler: s.handleConfigSchema,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/config/schema",
+			Handler: s.handleConfigSchema,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/files",
-			handler: s.handleFiles,
-			methods: []string{http.MethodGet},
-			rl:      rlFile,
+			Path:    "/api/v1/files",
+			Handler: s.handleFiles,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitFile,
 		},
 		// Templates ship with the product and are read-only; only "use" mutates,
 		// so only it carries write rate limit + CSRF.
 		{
-			path:    "/api/v1/templates",
-			handler: s.handleTemplates,
-			methods: []string{http.MethodGet},
-			rl:      rlFile,
+			Path:    "/api/v1/templates",
+			Handler: s.handleTemplates,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitFile,
 		},
 		{
-			path:    "/api/v1/templates/use",
-			handler: s.handleTemplateUse,
-			methods: []string{http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/templates/use",
+			Handler: s.handleTemplateUse,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/templates/",
-			handler: s.handleTemplateByName,
-			methods: []string{http.MethodGet},
-			rl:      rlFile,
+			Path:    "/api/v1/templates/",
+			Handler: s.handleTemplateByName,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitFile,
 		},
 		// Per-device actions. synthesize-walk (#546 p2) mutates the library +
 		// running config YAML, so this path carries write rate limit + CSRF;
 		// csrf.Protect skips safe GETs, so the read-only interfaces action
 		// (#897 p5f) added alongside it isn't CSRF-gated in practice.
 		{
-			path:    "/api/v1/devices/",
-			handler: s.dispatchDeviceSubpath,
-			methods: []string{http.MethodGet, http.MethodPost},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/devices/",
+			Handler: s.dispatchDeviceSubpath,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		// Read-only catalogs / schemas.
 		{
-			path:    "/api/v1/synthesize-walk/models",
-			handler: s.handleSynthesizeWalkModels,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/synthesize-walk/models",
+			Handler: s.handleSynthesizeWalkModels,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/device-schemas",
-			handler: s.handleDeviceEditorSchema,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/device-schemas",
+			Handler: s.handleDeviceEditorSchema,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/device-schemas/",
-			handler: s.handleDeviceEditorSchema,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/device-schemas/",
+			Handler: s.handleDeviceEditorSchema,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 	})
-	s.registerTopologyReadOnlyRoutes(mux)
+	s.registerTopologyReadOnlyRoutes(reg)
 }
 
-func (s *Server) registerTopologyReadOnlyRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
-		{path: "/api/v1/topology", handler: s.handleTopology, methods: []string{http.MethodGet}},
+func (s *Server) registerTopologyReadOnlyRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
+		{Path: "/api/v1/topology", Handler: s.handleTopology, Auth: true, Methods: []string{http.MethodGet}},
 		{
-			path:    "/api/v1/topology/export",
-			handler: s.handleTopologyExport,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/topology/export",
+			Handler: s.handleTopologyExport,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
-		{path: "/api/v1/segments", handler: s.handleSegments, methods: []string{http.MethodGet}},
+		{Path: "/api/v1/segments", Handler: s.handleSegments, Auth: true, Methods: []string{http.MethodGet}},
 		{
-			path:         "/api/v1/client-errors",
-			handler:      s.handleClientErrors,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/client-errors",
+			Handler:      s.handleClientErrors,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:    "/api/v1/errors",
-			handler: s.handleErrors,
-			methods: []string{
+			Path:    "/api/v1/errors",
+			Handler: s.handleErrors,
+			Auth:    true,
+			Methods: []string{
 				http.MethodGet,
 				http.MethodPost,
 				http.MethodPut,
 				http.MethodDelete,
 			},
-			rl:   rlWrite,
-			csrf: true,
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 		{
-			path:         "/api/v1/errors/actions",
-			handler:      s.handleDeviceAction,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/errors/actions",
+			Handler:      s.handleDeviceAction,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:    "/api/v1/interfaces",
-			handler: s.handleInterfaces,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/interfaces",
+			Handler: s.handleInterfaces,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/attachment-policies",
-			handler: s.handleAttachmentPolicies,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/attachment-policies",
+			Handler: s.handleAttachmentPolicies,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
-		{path: "/api/v1/runtime", handler: s.handleRuntime, methods: []string{http.MethodGet}},
-		{path: "/api/v1/behaviors", handler: s.handleBehaviors, methods: []string{http.MethodGet}},
+		{Path: "/api/v1/runtime", Handler: s.handleRuntime, Auth: true, Methods: []string{http.MethodGet}},
+		{Path: "/api/v1/behaviors", Handler: s.handleBehaviors, Auth: true, Methods: []string{http.MethodGet}},
 		{
-			path:         "/api/v1/simulation/attachments",
-			handler:      s.handleSimulationAttachments,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
-		},
-		{
-			path:         "/api/v1/simulation/preflight",
-			handler:      s.handleSimulationPreflight,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/simulation/attachments",
+			Handler:      s.handleSimulationAttachments,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
 		{
-			path:         "/api/v1/simulation",
-			handler:      s.handleSimulation,
-			methods:      []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-			maxBodyBytes: MaxScenarioRequestBodySize,
-			rl:           rlWrite,
-			csrf:         true,
+			Path:         "/api/v1/simulation/preflight",
+			Handler:      s.handleSimulationPreflight,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
 		},
-		{path: "/api/v1/version", handler: s.handleVersion, methods: []string{http.MethodGet}},
-		{path: "/api/v1/neighbors", handler: s.handleNeighbors, methods: []string{http.MethodGet}},
+		{
+			Path:         "/api/v1/simulation",
+			Handler:      s.handleSimulation,
+			Auth:         true,
+			Methods:      []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+			MaxBodyBytes: MaxScenarioRequestBodySize,
+			Limiter:      limitWrite,
+			CSRF:         true,
+		},
+		{Path: "/api/v1/version", Handler: s.handleVersion, Auth: true, Methods: []string{http.MethodGet}},
+		{Path: "/api/v1/neighbors", Handler: s.handleNeighbors, Auth: true, Methods: []string{http.MethodGet}},
 		// #762: scope discovery — safe GET, no CSRF / write wrappers needed.
-		{path: "/api/v1/auth/scope", handler: s.handleAuthScope, methods: []string{http.MethodGet}},
+		{Path: "/api/v1/auth/scope", Handler: s.handleAuthScope, Auth: true, Methods: []string{http.MethodGet}},
 	})
 }
 
 // registerWalkRoutes registers SNMP walk validation endpoints (walk rate limit).
-func (s *Server) registerWalkRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerWalkRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:         "/api/v1/walk/import",
-			handler:      s.handleWalkImport,
-			methods:      []string{http.MethodPost},
-			rl:           rlWalk,
-			csrf:         true,
-			maxBodyBytes: MaxWalkImportBodySize,
+			Path:         "/api/v1/walk/import",
+			Handler:      s.handleWalkImport,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			Limiter:      limitWalk,
+			CSRF:         true,
+			MaxBodyBytes: MaxWalkImportBodySize,
 		},
 		{
-			path:    "/api/v1/walk/capture-profile",
-			handler: s.handleWalkCaptureProfile,
-			methods: []string{http.MethodPost},
-			rl:      rlWalk,
-			csrf:    true,
+			Path:    "/api/v1/walk/capture-profile",
+			Handler: s.handleWalkCaptureProfile,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWalk,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/walk/validate",
-			handler: s.handleWalkValidation,
-			methods: []string{http.MethodPost},
-			rl:      rlWalk,
-			csrf:    true,
+			Path:    "/api/v1/walk/validate",
+			Handler: s.handleWalkValidation,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWalk,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/walk/analyze",
-			handler: s.handleWalkAnalyze,
-			methods: []string{http.MethodPost},
-			rl:      rlWalk,
-			csrf:    true,
+			Path:    "/api/v1/walk/analyze",
+			Handler: s.handleWalkAnalyze,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWalk,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/walk/fix",
-			handler: s.handleWalkValidation,
-			methods: []string{http.MethodPost},
-			rl:      rlWalk,
-			csrf:    true,
+			Path:    "/api/v1/walk/fix",
+			Handler: s.handleWalkValidation,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWalk,
+			CSRF:    true,
 		},
 		{
-			path:    "/api/v1/walk/list",
-			handler: s.handleWalkList,
-			methods: []string{http.MethodGet},
-			rl:      rlWalk,
+			Path:    "/api/v1/walk/list",
+			Handler: s.handleWalkList,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitWalk,
 		},
 		{
-			path:    "/api/v1/walk/validate-all",
-			handler: s.handleWalkBatchValidate,
-			methods: []string{http.MethodPost},
-			rl:      rlWalk,
-			csrf:    true,
+			Path:    "/api/v1/walk/validate-all",
+			Handler: s.handleWalkBatchValidate,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWalk,
+			CSRF:    true,
 		},
 	})
 }
 
 // registerPcapRoutes registers PCAP analysis endpoints. Upload is
 // additionally rate-limited + CSRF-protected.
-func (s *Server) registerPcapRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerPcapRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		// Upload decodes a base64 PCAP payload up to MaxPCAPUploadSize (100MB
 		// raw) via decodeJSONStrict, but the base64-encoded JSON body is
 		// larger than that (~137MB); the registry cap must match
 		// MaxPCAPUploadBodySize so it never truncates a valid capture before
 		// the handler reads it.
 		{
-			path:         "/api/v1/pcap/upload",
-			handler:      s.handlePcapUpload,
-			methods:      []string{http.MethodPost},
-			maxBodyBytes: MaxPCAPUploadBodySize,
-			rl:           rlUpload,
-			csrf:         true,
+			Path:         "/api/v1/pcap/upload",
+			Handler:      s.handlePcapUpload,
+			Auth:         true,
+			Methods:      []string{http.MethodPost},
+			MaxBodyBytes: MaxPCAPUploadBodySize,
+			Limiter:      limitUpload,
+			CSRF:         true,
 		},
 		{
-			path:    "/api/v1/pcap/",
-			handler: s.handlePcapAnalysis,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/pcap/",
+			Handler: s.handlePcapAnalysis,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 	})
 }
 
 // registerSSERoutes registers Server-Sent Events streams (auth only).
-func (s *Server) registerSSERoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerSSERoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:    "/api/v1/stream/packets",
-			handler: s.handleSSEPackets,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/stream/packets",
+			Handler: s.handleSSEPackets,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
-		{path: "/api/v1/stream/logs", handler: s.handleSSELogs, methods: []string{http.MethodGet}},
+		{Path: "/api/v1/stream/logs", Handler: s.handleSSELogs, Auth: true, Methods: []string{http.MethodGet}},
 		{
-			path:    "/api/v1/stream/status",
-			handler: s.handleSSEStatus,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/stream/status",
+			Handler: s.handleSSEStatus,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 	})
 }

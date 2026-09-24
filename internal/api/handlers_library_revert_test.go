@@ -119,9 +119,9 @@ func TestHandleLibraryWalkRevertRejectsNonPost(t *testing.T) {
 	server, _ := newLibraryTestServer(t)
 
 	// Method gating moved from the handler to the route registry (ADR-0002);
-	// exercise the methodGate wrapper register() composes for the POST-only
+	// exercise the method gate the registrar composes for the POST-only
 	// /api/v1/library/walks/revert route.
-	gated := server.methodGate([]string{http.MethodPost}, server.handleLibraryWalkRevert)
+	gated := throughRegistrar([]string{http.MethodPost}, server.handleLibraryWalkRevert)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/library/walks/revert", nil)
 	rec := httptest.NewRecorder()
 	gated(rec, req)

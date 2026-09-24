@@ -142,7 +142,6 @@ const (
 	ErrMsgRequestBodyTooLarge = "http: request body too large"
 
 	// Validation and limit constants.
-	requestIDBytes      = 16          // bytes for unique request ID
 	maxURLLength        = 2048        // max webhook URL length
 	maxInterfaceNameLen = 15          // Linux IFNAMSIZ limit
 	maxPathLength       = 4096        // max file path length
@@ -451,7 +450,6 @@ type Server struct {
 	captureController  CaptureController
 	startTime          time.Time
 	rateLimiter        *ratelimit.RateLimiter
-	routeManifest      []apiRoute // capability registry: routes registered via register() (route.go)
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
@@ -797,9 +795,7 @@ func (s *Server) warnIfUnauthenticated() {
 // startAPIListener binds the API listener (with port-fallback per #69)
 // and serves TLS.
 func (s *Server) startAPIListener() error {
-	mux := http.NewServeMux()
-	s.registerAPIRoutes(mux)
-	s.httpServer = newSecureHTTPServer(s.cfg.Addr, mux)
+	s.httpServer = newSecureHTTPServer(s.cfg.Addr, s.apiHandler())
 
 	// Bind before launching the serve goroutine so a fatal bind error
 	// (e.g. permission denied, or all fallback ports taken) surfaces

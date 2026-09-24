@@ -244,26 +244,3 @@ func serverWithTrustedProxies(t *testing.T, list string) *Server {
 
 	return &Server{cfg: ServerConfig{TrustedProxies: trusted}}
 }
-
-func TestGenerateRequestID(t *testing.T) {
-	// Test that request ID is generated
-	id1 := generateRequestID()
-	if id1 == "" {
-		t.Error("generateRequestID() returned empty string")
-	}
-
-	// Should be hex encoded (apply De Morgan's law for clarity)
-	for _, c := range id1 {
-		isDigit := c >= '0' && c <= '9'
-		isHexLetter := c >= 'a' && c <= 'f'
-		if !isDigit && !isHexLetter {
-			t.Errorf("generateRequestID() contains non-hex character: %c", c)
-		}
-	}
-
-	// Each call should return unique ID
-	id2 := generateRequestID()
-	if id1 == id2 {
-		t.Error("generateRequestID() returned same ID twice")
-	}
-}

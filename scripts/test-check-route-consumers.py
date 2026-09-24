@@ -19,11 +19,11 @@ spec.loader.exec_module(gate)
 
 ROUTES_GO = '''package api
 func (s *Server) registerRoutes() {
-	s.registerAll(mux, []apiRoute{
-		{path: "/api/v1/config", handler: s.handleConfig},
-		{path: APIVersionPrefix + "/profiles/", handler: s.handleProfiles},
-		{path: "GET /api/v1/updates/check", handler: s.handleUpdateCheck},
-		{path: "/api/v1/orphan", handler: s.handleOrphan},
+	reg.RegisterAll([]route.Route{
+		{Path: "/api/v1/config", Handler: s.handleConfig},
+		{Path: APIVersionPrefix + "/profiles/", Handler: s.handleProfiles},
+		{Path: "GET /api/v1/updates/check", Handler: s.handleUpdateCheck},
+		{Path: "/api/v1/orphan", Handler: s.handleOrphan},
 	})
 }
 '''
@@ -46,7 +46,7 @@ class Tree:
         (self.root / "scripts").mkdir()
         (self.root / "internal" / "api" / "routes.go").write_text(ROUTES_GO)
         (self.root / "internal" / "api" / "handlers_sessions.go").write_text(SESSIONS_GO)
-        (self.root / "internal" / "api" / "routes_test.go").write_text('{path: "/api/v1/only-in-test"}')
+        (self.root / "internal" / "api" / "routes_test.go").write_text('{Path: "/api/v1/only-in-test"}')
         (self.root / "ui" / "src" / "client.ts").write_text(
             "const updates = '/api/v1/updates';\n"
             "api.get('/api/v1/config');\n"

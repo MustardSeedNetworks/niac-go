@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -18,15 +20,16 @@ func TestAuthMiddleware_PublicPaths_NoAuthRequired(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.SetTokens([]tokenstore.ScopedToken{{Value: "rw-secret", Scope: tokenstore.ScopeReadWrite}})
 	server.rateLimiter = ratelimit.NewRateLimiter(100, 200)
+	server.csrf = csrf.NewManager()
+	t.Cleanup(server.csrf.Stop)
 
-	// /__version is wired without s.auth() in registerAPIRoutes, so it
-	// reaches the handler directly. The test mirrors that wiring by
-	// invoking the build-version handler without the auth wrapper.
+	// /__version is registered without Auth, so a request carrying no bearer
+	// reaches the handler through the real route table.
 	req := httptest.NewRequest(http.MethodGet, "/__version", nil)
 	req.RemoteAddr = "192.168.1.1:1234"
 	rec := httptest.NewRecorder()
 
-	server.recoverMiddleware(server.handleBuildVersion)(rec, req)
+	server.apiHandler().ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("/__version unauthed: status = %d, want 200", rec.Code)

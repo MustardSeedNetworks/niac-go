@@ -6,30 +6,34 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
 )
 
 // registerSessionRoutes registers the session-scoped runtime surface. Both
-// entries go through the shared register() path, so they pick up auth, CSRF
+// entries go through the shared registrar, so they pick up auth, CSRF
 // and rate limiting the same way every other route does.
 //
 // The read surfaces beneath /api/v1/sessions/{id}/ are GET-only and enforce
-// that per resource. They still carry csrf/rlWrite at the route entry because
+// that per resource. They still carry CSRF and the write limiter at the route entry because
 // this subtree will also carry mutating resources (replay, capture filter,
 // errors, debug) as they migrate; a GET is CSRF-exempt in practice, so the
 // stricter tuple costs reads nothing and cannot be forgotten later.
-func (s *Server) registerSessionRoutes(mux *http.ServeMux) {
-	s.registerAll(mux, []apiRoute{
+func (s *Server) registerSessionRoutes(reg *route.Registrar) {
+	reg.RegisterAll([]route.Route{
 		{
-			path:    "/api/v1/sessions",
-			handler: s.handleSessions,
-			methods: []string{http.MethodGet},
+			Path:    "/api/v1/sessions",
+			Handler: s.handleSessions,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
 		},
 		{
-			path:    "/api/v1/sessions/",
-			handler: s.dispatchSessionSubpath,
-			methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-			rl:      rlWrite,
-			csrf:    true,
+			Path:    "/api/v1/sessions/",
+			Handler: s.dispatchSessionSubpath,
+			Auth:    true,
+			Methods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+			Limiter: limitWrite,
+			CSRF:    true,
 		},
 	})
 }

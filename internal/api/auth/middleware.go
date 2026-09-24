@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 )
@@ -34,23 +36,21 @@ type Deps struct {
 	Logger          *slog.Logger
 	Addr            string
 	SecurityHeaders func(http.ResponseWriter, *http.Request)
-	RequestID       func() string
 	ClientIP        ClientIPFunc
 	WriteErr        ErrorFunc
 	NonLoopback     func(addr string) (bool, error)
 }
 
-// Middleware wraps a handler with request-ID tagging, security headers, per-IP
-// rate limiting, bearer-token authentication, and scope enforcement. It stashes
+// Middleware wraps a handler with security headers, per-IP rate limiting,
+// bearer-token authentication, and scope enforcement. It stashes
 // the resolved scope on the request context (see WithScope) for downstream
 // gates like AdminProtect. Logic is unchanged from the previous *Server method;
 // only the dependencies are now injected.
 func Middleware(d Deps, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// FEATURE #118: unique request ID for tracing.
-		requestID := d.RequestID()
-		r.Header.Set("X-Request-ID", requestID)
-		w.Header().Set("X-Request-ID", requestID)
+		// The registrar assigned the request ID (and set X-Request-ID) before
+		// this middleware runs; log lines quote the same one the client got.
+		requestID := route.RequestID(r.Context())
 
 		d.SecurityHeaders(w, r)
 
@@ -200,7 +200,7 @@ func AdminProtect(
 				"[API] Forbidden request: admin scope required",
 				"event", "auth.forbidden",
 				"reason", "scope",
-				"requestID", r.Header.Get("X-Request-ID"),
+				"requestID", route.RequestID(r.Context()),
 				"clientIP", clientIP(r),
 				"userAgent", r.UserAgent(),
 				"path", r.URL.Path,

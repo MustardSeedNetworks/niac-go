@@ -274,7 +274,7 @@ func TestDraftTopologyMutationRequiresRevisionAndPreservesDraftOnFailure(t *test
 
 func TestDraftTopologyRouteUsesDraftWritePolicy(t *testing.T) {
 	policy := fetchRouteManifest(t)["/api/v1/library/drafts/"]
-	if !policy.CSRF || !policy.RateLimited || policy.Admin {
+	if !policy.CSRF || !policy.RateLimited || policy.Scope != "" {
 		t.Fatalf("draft topology route policy = %+v, want csrf+rateLimited without admin", policy)
 	}
 
@@ -285,8 +285,7 @@ func TestDraftTopologyRouteUsesDraftWritePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDraft: %v", err)
 	}
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 	body := `{"operation":"move_device","position":{"device":"core-1","x":10,"y":20}}`
 	req := draftRequest(
 		http.MethodPatch,

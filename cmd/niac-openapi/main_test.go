@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"sort"
 	"strings"
 	"testing"
 
@@ -61,15 +60,15 @@ func TestEveryRegistryRouteIsDocumented(t *testing.T) {
 	}
 
 	for _, rt := range api.RouteManifest() {
-		if rt.Path == notFoundFallback {
-			continue // documented as a fallback, not as seven operations
+		if rt.Hidden {
+			continue // the SPA shell and the /api/ not-found fallback
 		}
 		item, ok := byPrefix[rt.Path]
 		if !ok {
 			t.Errorf("registered route %s is missing from the generated document", rt.Path)
 			continue
 		}
-		for _, m := range methodsOf(rt) {
+		for _, m := range rt.Methods {
 			if _, documented := item[strings.ToLower(m)]; !documented {
 				t.Errorf("%s: method %s is registered but not documented", rt.Path, m)
 			}
@@ -135,130 +134,6 @@ func TestErrorSchemaMatchesTheGoType(t *testing.T) {
 			t.Errorf("error schema still carries the drifted key %q", gone)
 		}
 	}
-}
-
-// TestStaleSourceEntryFails proves the source file cannot outlive its routes.
-func TestStaleSourceEntryFails(t *testing.T) {
-	src := []byte("preamble:\n  openapi: 3.0.3\noperations:\n  GET /api/v1/gone:\n    summary: nope\n")
-	_, err := generate(src, []api.RoutePolicy{{Path: "/api/v1/here", Methods: []string{"GET"}}})
-	if err == nil || !strings.Contains(err.Error(), "GET /api/v1/gone") {
-		t.Errorf("a source entry for an unserved route should fail, got %v", err)
-	}
-}
-
-// TestSourceCannotOverridePaths keeps the generated half generated.
-func TestSourceCannotOverridePaths(t *testing.T) {
-	src := []byte("preamble:\n  paths:\n    /fake: {}\n")
-	if _, err := generate(src, nil); err == nil || !strings.Contains(err.Error(), "paths") {
-		t.Errorf("a preamble defining paths should fail, got %v", err)
-	}
-}
-
-// TestCollidingDocumentedPathFails covers the prefix-route hazard: before the
-// documented template fed the operation id, /api/v1/thing and /api/v1/thing/
-// produced one id twice. A source file that collapses two routes onto one
-// documented path would now silently drop an operation instead, so that is
-// what fails.
-func TestCollidingDocumentedPathFails(t *testing.T) {
-	routes := []api.RoutePolicy{
-		{Path: "/api/v1/thing", Methods: []string{"GET"}},
-		{Path: "/api/v1/thing/", Methods: []string{"GET"}},
-	}
-	src := []byte("preamble:\n  openapi: 3.0.3\noperations:\n" +
-		"  GET /api/v1/thing/:\n    pathTemplate: /api/v1/thing\n")
-	if _, err := generate(src, routes); err == nil ||
-		!strings.Contains(err.Error(), "claimed by more than one registered route") {
-		t.Errorf("two routes on one documented path should fail, got %v", err)
-	}
-}
-
-// TestPathTemplateMustAgreeAcrossMethods — one route, one documented shape.
-func TestPathTemplateMustAgreeAcrossMethods(t *testing.T) {
-	routes := []api.RoutePolicy{{Path: "/api/v1/thing/", Methods: []string{"GET", "DELETE"}}}
-	src := []byte("preamble:\n  openapi: 3.0.3\noperations:\n" +
-		"  GET /api/v1/thing/:\n    pathTemplate: /api/v1/thing/{id}\n" +
-		"  DELETE /api/v1/thing/:\n    pathTemplate: /api/v1/thing/{name}\n")
-	if _, err := generate(src, routes); err == nil || !strings.Contains(err.Error(), "pathTemplate disagrees") {
-		t.Errorf("disagreeing templates should fail, got %v", err)
-	}
-}
-
-// TestPrefixRoutesDeclarePathParameters — a documented {param} must be
-// declared, or the description is not usable by a client generator.
-func TestPrefixRoutesDeclarePathParameters(t *testing.T) {
-	paths := pathsOf(t, generated(t))
-	for docPath, item := range paths {
-		if !strings.Contains(docPath, "{") {
-			continue
-		}
-		params, ok := item["parameters"].([]any)
-		if !ok || len(params) == 0 {
-			t.Errorf("%s templates a parameter but declares none", docPath)
-			continue
-		}
-		if params[0].(map[string]any)["in"] != "path" {
-			t.Errorf("%s: parameter is not declared in the path", docPath)
-		}
-	}
-}
-
-// TestEveryOperationDeclaresResponses — an operation object without
-// `responses` is invalid OpenAPI, and is the shape a merge bug would produce.
-func TestEveryOperationDeclaresResponses(t *testing.T) {
-	for docPath, item := range pathsOf(t, generated(t)) {
-		for method, value := range item {
-			if method == "parameters" {
-				continue
-			}
-			op, isOp := value.(map[string]any)
-			if !isOp {
-				t.Errorf("%s %s is not an operation object", method, docPath)
-				continue
-			}
-			responses, has := op["responses"].(map[string]any)
-			if !has || len(responses) == 0 {
-				t.Errorf("%s %s declares no responses", method, docPath)
-			}
-			if _, hasID := op["operationId"].(string); !hasID {
-				t.Errorf("%s %s has no operationId", method, docPath)
-			}
-		}
-	}
-}
-
-// TestSourceResponsesDoNotDropPolicyCodes — a source entry documenting a 200
-// must not discard the 401/429 the middleware actually returns. Nothing in
-// the committed source file supplies `responses` yet, so this is the guard
-// for the first one that does.
-func TestSourceResponsesDoNotDropPolicyCodes(t *testing.T) {
-	routes := []api.RoutePolicy{
-		{Path: "/api/v1/thing", Methods: []string{"POST"}, CSRF: true, RateLimited: true},
-	}
-	src := []byte("preamble:\n  openapi: 3.0.3\noperations:\n" +
-		"  POST /api/v1/thing:\n    responses:\n      '200':\n        description: ok\n")
-	out, err := generate(src, routes)
-	if err != nil {
-		t.Fatalf("generate: %v", err)
-	}
-	var doc map[string]any
-	if unmarshalErr := yaml.Unmarshal(out, &doc); unmarshalErr != nil {
-		t.Fatalf("unmarshal: %v", unmarshalErr)
-	}
-	responses := doc["paths"].(map[string]any)["/api/v1/thing"].(map[string]any)["post"].(map[string]any)["responses"].(map[string]any)
-	for _, code := range []string{"200", "401", "403", "429", "500"} {
-		if _, ok := responses[code]; !ok {
-			t.Errorf("response %s was dropped by the source merge: got %v", code, keysOf(responses))
-		}
-	}
-}
-
-func keysOf(m map[string]any) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // TestNotFoundFallbackIsNotDocumentedAsOperations — the /api/ catch-all

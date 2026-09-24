@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"runtime/debug"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/auth"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
@@ -18,7 +17,6 @@ func (s *Server) authDeps() auth.Deps {
 		Logger:          s.logger,
 		Addr:            s.cfg.Addr,
 		SecurityHeaders: addSecurityHeaders,
-		RequestID:       generateRequestID,
 		ClientIP:        s.clientIP,
 		WriteErr:        simpleErr,
 		NonLoopback:     addrIsNonLoopback,
@@ -88,28 +86,6 @@ func addSecurityHeaders(w http.ResponseWriter, r *http.Request) {
 func withSecurityHeaders(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		addSecurityHeaders(w, r)
-		next(w, r)
-	}
-}
-
-// recoverMiddleware recovers from panics in HTTP handlers to prevent server crashes
-// SECURITY FIX #2.8.1: Add panic recovery to prevent single malformed request from crashing API.
-func (s *Server) recoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				requestID := r.Header.Get("X-Request-ID")
-				// Log panic with stack trace
-				s.logger.ErrorContext(r.Context(), "[API] PANIC recovered", "requestID", requestID, "error", err)
-				s.logger.ErrorContext(r.Context(), "[API] Stack trace", "stack", string(debug.Stack()))
-
-				// Return 500 error to client
-				writeError(w, r, http.StatusInternalServerError,
-					"internal_server_error",
-					"An internal error occurred. Please try again later.", nil)
-			}
-		}()
-
 		next(w, r)
 	}
 }

@@ -176,7 +176,7 @@ func TestHandleLibraryWalkSanitizeUnavailable(t *testing.T) {
 func TestHandleLibraryWalkSanitizeRejectsNonPost(t *testing.T) {
 	server, _ := newLibraryTestServer(t)
 
-	gated := server.methodGate([]string{http.MethodPost}, server.handleLibraryWalkSanitize)
+	gated := throughRegistrar([]string{http.MethodPost}, server.handleLibraryWalkSanitize)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/library/walks/sanitize", nil)
 	rec := httptest.NewRecorder()
 	gated(rec, req)

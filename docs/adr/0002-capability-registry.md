@@ -56,3 +56,26 @@ field for the license gate. Both went with runtime licensing (#1203, ADR 0005).
 The chain today is `recover → auth → rateLimit → csrf → admin → methodGate →
 bodyLimit → handler` and `apiRoute` is `{path, handler, methods, maxBodyBytes,
 rl, csrf, admin}` (`internal/api/route.go`). Everything else stands.
+
+## Amendment 2026-09-24 — the registry is foundation's
+
+The registrar now lives once for the fleet in foundation
+`pkg/httpserver/route` (#2257). NIAC declares `route.Route{Path, Handler,
+Methods, MaxBodyBytes, Auth, CSRF, Scope, Limiter, Hidden}` values in
+`internal/api/routes.go`; `internal/api/route.go` supplies only NIAC's error
+envelope, auth middleware, the meaning of the `admin` scope and its four
+limiters. The canonical order is the shared one: `limiter → auth →
+methodGate → csrf → scope → bodyLimit → handler`, inside a request ID, an
+access log line and panic recovery around the whole mux. Three behaviours move
+with it: a per-route limiter now refuses before the token is checked (a flood
+gets 429, not 401), a wrong method answers 405 before CSRF or scope is
+demanded, and every request gets one INFO access log line.
+
+Every route goes through the registrar, including `/__version`,
+`/__capabilities` (`Auth: false`) and the SPA shell (`Auth: false`,
+`Hidden: true`). `/__capabilities` serves foundation's `route.Policy`, so an
+admin route reports `"scope": "admin"` rather than `"admin": true`, and `auth`
+and `hidden` are new keys. `cmd/niac-openapi` renders through foundation's
+emitter, and `docs/openapi.yaml` is byte-identical to before.
+`scripts/check-route-policy.sh` now fails on any ServeMux or literal-pattern
+registration under `internal/api`, not only `/api/` ones.

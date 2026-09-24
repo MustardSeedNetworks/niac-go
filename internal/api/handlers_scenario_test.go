@@ -118,12 +118,12 @@ func TestScenarioRoutesCarryTemplateAuthoringPolicy(t *testing.T) {
 	}
 	captured := routes["/api/v1/scenario/profiles/captured"]
 	if !captured.CSRF || !captured.RateLimited ||
-		captured.Admin {
+		captured.Scope != "" {
 		t.Fatalf("captured profile policy = %+v, want config_templates+csrf+rateLimited", captured)
 	}
 	generate := routes["/api/v1/scenario/generate"]
 	if !generate.CSRF || !generate.RateLimited ||
-		generate.Admin {
+		generate.Scope != "" {
 		t.Fatalf("generate policy = %+v, want config_templates+csrf+rateLimited", generate)
 	}
 }

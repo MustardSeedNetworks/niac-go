@@ -23,7 +23,7 @@ import (
 // that calls the handler directly cannot see the defect this file covers
 // (#2203: the named-network route kept the 1 MiB default while every other
 // YAML-bearing route carries the authored-scenario cap).
-func newPackLibraryMux(t *testing.T) (*Server, *http.ServeMux, string, string) {
+func newPackLibraryMux(t *testing.T) (*Server, http.Handler, string, string) {
 	t.Helper()
 	server, _, token := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
@@ -37,8 +37,7 @@ func newPackLibraryMux(t *testing.T) (*Server, *http.ServeMux, string, string) {
 	server.library = lib
 	server.logger = slog.Default()
 
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	return server, mux, token, root
 }
@@ -46,7 +45,7 @@ func newPackLibraryMux(t *testing.T) (*Server, *http.ServeMux, string, string) {
 func packPost(
 	t *testing.T,
 	server *Server,
-	mux *http.ServeMux,
+	mux http.Handler,
 	token, path string,
 	payload any,
 ) *httptest.ResponseRecorder {
@@ -62,7 +61,7 @@ func packPost(
 func packPostRaw(
 	t *testing.T,
 	server *Server,
-	mux *http.ServeMux,
+	mux http.Handler,
 	token, path string,
 	body []byte,
 ) *httptest.ResponseRecorder {
