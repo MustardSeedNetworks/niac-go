@@ -11,11 +11,8 @@ import (
 // 1628, which is what makes the device a UPS on its map.
 const APCUPSSysObjectID = "1.3.6.1.4.1.318.1.3.27"
 
-// upsAgents maps the sysObjectID of every UPS agent NIAC models to the
-// manufacturer that agent reports in upsIdentManufacturer.
-func upsAgents() map[string]string {
-	return map[string]string{APCUPSSysObjectID: "American Power Conversion Corp."}
-}
+// apcManufacturer is what an APC card reports in upsIdentManufacturer.
+const apcManufacturer = "American Power Conversion Corp."
 
 // UPS-MIB (RFC 1628). Only objects NIAC can state truthfully for a UPS on
 // mains with a charged battery are served: the input, output and bypass line
@@ -77,9 +74,7 @@ func walkOwnsUPS(entries []WalkEntry) bool {
 }
 
 func (a *Agent) registerUPSMIB() {
-	sysObjectID := strings.TrimPrefix(oidValueString(a.mib.Get("1.3.6.1.2.1.1.2.0")), ".")
-	manufacturer, ok := upsAgents()[sysObjectID]
-	if !ok {
+	if strings.TrimPrefix(oidValueString(a.mib.Get("1.3.6.1.2.1.1.2.0")), ".") != APCUPSSysObjectID {
 		return
 	}
 
@@ -88,7 +83,7 @@ func (a *Agent) registerUPSMIB() {
 		model = oidValueString(a.mib.Get("1.3.6.1.2.1.1.1.0"))
 	}
 
-	a.mib.Set(upsIdentManufacturer, &OIDValue{Type: gosnmp.OctetString, Value: manufacturer})
+	a.mib.Set(upsIdentManufacturer, &OIDValue{Type: gosnmp.OctetString, Value: apcManufacturer})
 	a.mib.Set(upsIdentModel, &OIDValue{Type: gosnmp.OctetString, Value: model})
 	a.mib.Set(upsIdentAgentSoftwareVersion, &OIDValue{
 		Type: gosnmp.OctetString, Value: a.device.Properties["software"],
