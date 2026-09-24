@@ -184,8 +184,8 @@ export const ConfigDiffPage: FC = () => {
             <div
               className={`flex items-center gap-compact rounded-lg pad-sm ${
                 message.type === 'success'
-                  ? 'border border-status-success/30 bg-status-success/10 text-status-success'
-                  : 'border border-status-error/30 bg-status-error/10 text-status-error'
+                  ? 'border border-status-success/30 bg-status-success/10 text-status-success-strong'
+                  : 'border border-status-error/30 bg-status-error/10 text-status-error-strong'
               }`}
               role="alert"
             >

@@ -328,12 +328,12 @@ function LoadError({ testId, message, onRetry }: LoadErrorProps): ReactElement {
     >
       <AlertCircle className="mt-tight w-4 h-4 shrink-0 text-status-error" aria-hidden="true" />
       <div className="stack-xs">
-        <p className="text-sm text-status-error">{message}</p>
+        <p className="text-sm text-status-error-strong">{message}</p>
         <button
           type="button"
           onClick={onRetry}
           data-testid={`${testId}-retry`}
-          className="text-xs font-medium text-status-error underline underline-offset-2"
+          className="text-xs font-medium text-status-error-strong underline underline-offset-2"
         >
           {t('simulation.retry')}
         </button>

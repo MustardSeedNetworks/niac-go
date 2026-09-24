@@ -58,7 +58,7 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({
               defaultValue: pack.description,
             })}
           </SmallText>
-          <SmallText className="mt-tight block text-brand-accent">
+          <SmallText className="mt-tight block text-brand-primary-strong">
             {t('newSimWizard.fleet.packSummary', {
               accessPoints: packAccessPoints(pack),
               devices: pack.manifest.deviceCount,

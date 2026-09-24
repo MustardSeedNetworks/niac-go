@@ -22,7 +22,7 @@ export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
 
   return (
     <div className="flex items-center gap-comfortable pad-sm rounded-lg bg-brand-primary/10 border border-brand-primary/30">
-      <span className="text-sm text-brand-accent">
+      <span className="text-sm text-brand-primary-strong">
         {tCommon('plurals.deviceCountSelected', { count: selectedCount })}
       </span>
       <Button
@@ -31,7 +31,7 @@ export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
         leftIcon={<Trash2 className="h-4 w-4" />}
         onClick={onDeleteSelected}
         action="delete"
-        className="text-status-error hover:text-status-error hover:bg-status-error/20"
+        className="text-status-error-strong hover:text-status-error-strong hover:bg-status-error/20"
       >
         {tDevices('list.bulkActions.deleteSelectedButton')}
       </Button>

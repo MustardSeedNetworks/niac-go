@@ -159,17 +159,17 @@ export class PageErrorBoundary extends ErrorBoundary {
           <div className="flex items-start gap-comfortable">
             <AlertCircle className={`${iconSizes.xl} flex-shrink-0 text-status-error`} />
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-status-error">
+              <h3 className="text-sm font-medium text-status-error-strong">
                 <Trans i18nKey="errorBoundary.pageTitle" ns="common" />
               </h3>
-              <p className="mt-tight text-sm text-status-error">
+              <p className="mt-tight text-sm text-status-error-strong">
                 <Trans i18nKey="errorBoundary.pageDescription" ns="common" />
               </p>
               <div className="mt-content flex gap-compact">
                 <button
                   type="button"
                   onClick={this.handleRetry}
-                  className="text-sm font-medium text-status-error hover:underline"
+                  className="text-sm font-medium text-status-error-strong hover:underline"
                 >
                   <Trans i18nKey="errorBoundary.retry" ns="common" />
                 </button>

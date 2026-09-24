@@ -11,14 +11,14 @@ import { Tooltip } from '../ui/Tooltip';
 import { formatBitsPerSecond } from '../utils/format';
 
 const STATUS_BADGE: Record<string, string> = {
-  up: 'bg-status-success/20 text-status-success ring-status-success/40',
-  down: 'bg-status-error/20 text-status-error ring-status-error/40',
-  testing: 'bg-status-warning/20 text-status-warning ring-status-warning/40',
+  up: 'bg-status-success/20 text-status-success-strong ring-status-success/40',
+  down: 'bg-status-error/20 text-status-error-strong ring-status-error/40',
+  testing: 'bg-status-warning/20 text-status-warning-strong ring-status-warning/40',
 };
 
 const PROTOCOL_BADGE: Record<string, string> = {
-  lldp: 'bg-status-info/20 text-status-info ring-status-info/40',
-  cdp: 'bg-brand-primary/20 text-brand-accent ring-brand-primary/40',
+  lldp: 'bg-status-info/20 text-status-info-strong ring-status-info/40',
+  cdp: 'bg-brand-primary/20 text-brand-primary-strong ring-brand-primary/40',
 };
 
 const FALLBACK_BADGE = 'bg-bg-muted/20 text-text-secondary ring-surface-border/40';

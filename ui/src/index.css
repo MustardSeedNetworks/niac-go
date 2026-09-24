@@ -33,6 +33,7 @@
    * :root and .dark blocks below.
    * ======================================== */
   --color-brand-primary: var(--color-brand-primary);
+  --color-brand-primary-strong: var(--color-brand-primary-strong);
   --color-brand-accent: var(--color-brand-accent);
   --color-accent-gold: var(--color-accent-gold);
 
@@ -85,6 +86,12 @@
   --color-status-warning: var(--color-status-warning);
   --color-status-error: var(--color-status-error);
   --color-status-info: var(--color-status-info);
+
+  /* Pill text — the hue's text on its own wash (see product-niac.css). */
+  --color-status-success-strong: var(--color-status-success-strong);
+  --color-status-warning-strong: var(--color-status-warning-strong);
+  --color-status-error-strong: var(--color-status-error-strong);
+  --color-status-info-strong: var(--color-status-info-strong);
 
   /* Legacy ramped status utilities — mapped to canonical hex so
    * `text-success-400`, `bg-error-500`, etc. continue to render. */
@@ -987,31 +994,6 @@ body {
   border: 1px solid var(--color-surface-border);
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-}
-
-/* Status badges with proper contrast — use canonical status hex */
-.badge-success {
-  background-color: color-mix(in srgb, var(--color-status-success) 15%, transparent);
-  color: var(--color-status-success);
-  border: 1px solid color-mix(in srgb, var(--color-status-success) 30%, transparent);
-}
-
-.badge-warning {
-  background-color: color-mix(in srgb, var(--color-status-warning) 15%, transparent);
-  color: var(--color-status-warning);
-  border: 1px solid color-mix(in srgb, var(--color-status-warning) 30%, transparent);
-}
-
-.badge-error {
-  background-color: color-mix(in srgb, var(--color-status-error) 15%, transparent);
-  color: var(--color-status-error);
-  border: 1px solid color-mix(in srgb, var(--color-status-error) 30%, transparent);
-}
-
-.badge-info {
-  background-color: color-mix(in srgb, var(--color-status-info) 15%, transparent);
-  color: var(--color-status-info);
-  border: 1px solid color-mix(in srgb, var(--color-status-info) 30%, transparent);
 }
 
 @keyframes ping {

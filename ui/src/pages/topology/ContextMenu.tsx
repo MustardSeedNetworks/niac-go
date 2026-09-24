@@ -122,7 +122,7 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
               item.disabled
                 ? 'text-text-disabled cursor-not-allowed'
                 : item.destructive
-                  ? 'text-status-error hover:bg-status-error/15 hover:text-status-error'
+                  ? 'text-status-error-strong hover:bg-status-error/15 hover:text-status-error-strong'
                   : 'hover:bg-surface-hover hover:text-text-primary'
             }`}
           >

@@ -200,7 +200,7 @@ export const NeighborsView: FC = () => {
                       onClick={() => setProtocolFilter(p)}
                       className={`rounded px-3 py-compact text-xs font-medium ${
                         active
-                          ? 'bg-status-info/20 text-status-info ring-1 ring-status-info/40'
+                          ? 'bg-status-info/20 text-status-info-strong ring-1 ring-status-info/40'
                           : 'bg-bg-elevated/60 text-text-secondary hover:bg-bg-elevated'
                       }`}
                     >

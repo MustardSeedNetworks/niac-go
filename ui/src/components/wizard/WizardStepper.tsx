@@ -24,9 +24,9 @@ export const WizardStepper: FC<WizardStepperProps> = ({ steps, currentIndex }) =
             data-status={status}
             className={`flex items-center gap-compact rounded-full border px-3 py-compact text-xs font-medium ${
               status === 'active'
-                ? 'border-brand-accent bg-brand-primary/20 text-brand-accent'
+                ? 'border-brand-accent bg-brand-primary/20 text-brand-primary-strong'
                 : status === 'done'
-                  ? 'border-status-success/40 bg-status-success/10 text-status-success'
+                  ? 'border-status-success/40 bg-status-success/10 text-status-success-strong'
                   : 'border-surface-border bg-bg-surface/40 text-text-muted'
             }`}
           >

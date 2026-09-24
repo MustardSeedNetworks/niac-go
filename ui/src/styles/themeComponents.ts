@@ -23,9 +23,9 @@ export const button = {
     outline:
       'border border-border-muted text-text-secondary hover:bg-bg-elevated hover:border-brand-primary/50',
     danger:
-      'bg-status-error/20 text-status-error border border-status-error/30 hover:bg-status-error/30',
+      'bg-status-error/10 text-status-error-strong border border-status-error/30 hover:bg-status-error/20',
     success:
-      'bg-status-success/20 text-status-success border border-status-success/30 hover:bg-status-success/30',
+      'bg-status-success/10 text-status-success-strong border border-status-success/30 hover:bg-status-success/20',
   },
 
   size: {
@@ -80,13 +80,13 @@ export const badge = {
 
   variant: {
     default: 'bg-bg-elevated text-text-secondary',
-    success: 'bg-status-success/20 text-status-success border border-status-success/30',
-    warning: 'bg-status-warning/20 text-status-warning border border-status-warning/30',
-    error: 'bg-status-error/20 text-status-error border border-status-error/30',
-    info: 'bg-status-info/20 text-status-info border border-status-info/30',
-    primary: 'bg-brand-primary/20 text-brand-accent border border-brand-primary/30',
-    new: 'bg-status-success/20 text-status-success',
-    beta: 'bg-status-warning/20 text-status-warning',
+    success: 'bg-status-success/20 text-status-success-strong border border-status-success/30',
+    warning: 'bg-status-warning/20 text-status-warning-strong border border-status-warning/30',
+    error: 'bg-status-error/20 text-status-error-strong border border-status-error/30',
+    info: 'bg-status-info/20 text-status-info-strong border border-status-info/30',
+    primary: 'bg-brand-primary/20 text-brand-primary-strong border border-brand-primary/30',
+    new: 'bg-status-success/20 text-status-success-strong',
+    beta: 'bg-status-warning/20 text-status-warning-strong',
   },
 
   size: {
@@ -100,10 +100,10 @@ export const alert = {
   base: 'px-4 py-3 rounded-lg border',
 
   variant: {
-    error: 'bg-status-error/10 border-status-error/20 text-status-error',
-    warning: 'bg-status-warning/10 border-status-warning/20 text-status-warning',
-    success: 'bg-status-success/10 border-status-success/20 text-status-success',
-    info: 'bg-status-info/10 border-status-info/20 text-status-info',
+    error: 'bg-status-error/10 border-status-error/20 text-status-error-strong',
+    warning: 'bg-status-warning/10 border-status-warning/20 text-status-warning-strong',
+    success: 'bg-status-success/10 border-status-success/20 text-status-success-strong',
+    info: 'bg-status-info/10 border-status-info/20 text-status-info-strong',
   },
 } as const;
 

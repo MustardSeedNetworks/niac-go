@@ -227,7 +227,7 @@ export const ContentBundleUploader: FC = () => {
             data-testid="content-bundle-error"
           >
             <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-status-error`} />
-            <SmallText className="text-status-error">{validationError}</SmallText>
+            <SmallText className="text-status-error-strong">{validationError}</SmallText>
           </div>
         )}
       </CardContent>

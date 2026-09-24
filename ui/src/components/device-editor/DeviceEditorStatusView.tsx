@@ -44,10 +44,10 @@ export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
             <div className="flex items-start gap-default">
               <AlertCircle className="mt-tight h-5 w-5 text-status-error" />
               <div>
-                <p className="font-semibold text-status-error">
+                <p className="font-semibold text-status-error-strong">
                   {t('editor.statusView.failedTitle')}
                 </p>
-                <SmallText className="text-status-error/90">{error.message}</SmallText>
+                <SmallText className="text-status-error-strong">{error.message}</SmallText>
                 <div className="flex gap-compact mt-heading">
                   <Button variant="outline" size="sm" onClick={onRetry}>
                     {t('list.states.retry')}

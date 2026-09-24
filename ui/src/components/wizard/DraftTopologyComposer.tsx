@@ -358,7 +358,7 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
       </div>
       {profilesError && (
         <div className="flex items-center justify-between gap-default rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2">
-          <SmallText className="text-status-error">
+          <SmallText className="text-status-error-strong">
             {t('newSimWizard.topology.profileLoadError')}
           </SmallText>
           <Button

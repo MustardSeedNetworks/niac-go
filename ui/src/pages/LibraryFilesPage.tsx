@@ -350,9 +350,9 @@ function LibraryFilesView({ kind }: Props) {
 const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => {
   const { t } = useTranslation('pages');
   const styles: Record<LibraryFileEntry['source'], string> = {
-    starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-accent',
-    bundle: 'border-status-info/40 bg-status-info/10 text-status-info',
-    user: 'border-status-success/40 bg-status-success/10 text-status-success',
+    starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-primary-strong',
+    bundle: 'border-status-info/40 bg-status-info/10 text-status-info-strong',
+    user: 'border-status-success/40 bg-status-success/10 text-status-success-strong',
   };
   const labels: Record<LibraryFileEntry['source'], string> = {
     starter: t('libraryFiles.sourceStarter'),
@@ -379,8 +379,8 @@ const ProvenanceBadge: FC<{ provenance: LibraryFileEntry['provenance'] }> = ({ p
     return <span className="text-xs text-text-muted">{t('libraryFiles.contentUnknown')}</span>;
   }
   const styles: Record<WalkProvenance, string> = {
-    captured: 'border-status-success/40 bg-status-success/10 text-status-success',
-    generated: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
+    captured: 'border-status-success/40 bg-status-success/10 text-status-success-strong',
+    generated: 'border-status-warning/40 bg-status-warning/10 text-status-warning-strong',
   };
   const labels: Record<WalkProvenance, string> = {
     captured: t('libraryFiles.contentCaptured'),

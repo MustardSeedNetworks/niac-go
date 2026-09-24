@@ -287,14 +287,14 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
         {error && (
           <div className="flex items-center gap-compact rounded-lg border border-status-error/30 bg-status-error/20 pad-sm">
             <AlertCircle className={`${iconSizes.lg} flex-shrink-0 text-status-error`} />
-            <SmallText className="text-status-error">{error}</SmallText>
+            <SmallText className="text-status-error-strong">{error}</SmallText>
           </div>
         )}
 
         {success && (
           <div className="flex items-center gap-compact rounded-lg border border-status-success/30 bg-status-success/20 pad-sm">
             <CheckCircle className={`${iconSizes.lg} flex-shrink-0 text-status-success`} />
-            <SmallText className="text-status-success">{success}</SmallText>
+            <SmallText className="text-status-success-strong">{success}</SmallText>
           </div>
         )}
 

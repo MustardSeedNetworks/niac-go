@@ -116,7 +116,7 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
             </div>
             <div>
               <p className="font-semibold text-text-primary">{file.name}</p>
-              <SmallText className="text-status-success">
+              <SmallText className="text-status-success-strong">
                 {t('configDiff.fileSummary', {
                   size: formatBytes(file.size),
                   lines: file.content.split('\n').length,

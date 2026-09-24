@@ -126,7 +126,7 @@ export const TemplateStep: FC<TemplateStepProps> = ({
               onClick={onSelectEmpty}
               className={`rounded border px-3 py-row text-xs font-medium ${
                 state.source === 'empty'
-                  ? 'border-brand-accent bg-brand-primary/20 text-brand-accent'
+                  ? 'border-brand-accent bg-brand-primary/20 text-brand-primary-strong'
                   : 'border-surface-border bg-bg-surface/60 text-text-primary hover:bg-surface-hover'
               }`}
             >
@@ -168,7 +168,7 @@ export const TemplateStep: FC<TemplateStepProps> = ({
               if (next === 'start') returnToStart();
               else openLibrary();
             }}
-            className={`min-h-11 rounded border px-4 py-row text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${tab === value ? 'border-brand-accent text-brand-accent bg-brand-primary/10' : 'border-surface-border text-text-primary'}`}
+            className={`min-h-11 rounded border px-4 py-row text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${tab === value ? 'border-brand-accent text-brand-primary-strong bg-brand-primary/10' : 'border-surface-border text-text-primary'}`}
           >
             {value === 'start'
               ? t('newSimWizard.template.startingPoint')
