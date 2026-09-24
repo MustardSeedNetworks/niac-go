@@ -30,13 +30,13 @@ const LEVEL_COLORS: Record<
 > = {
   error: {
     bg: 'bg-status-error/10',
-    text: 'text-status-error',
+    text: 'text-status-error-strong',
     border: 'border-status-error/30',
     accent: 'bg-status-error',
   },
   warn: {
     bg: 'bg-status-warning/10',
-    text: 'text-status-warning',
+    text: 'text-status-warning-strong',
     border: 'border-status-warning/30',
     accent: 'bg-status-warning',
   },
@@ -56,9 +56,9 @@ const LEVEL_COLORS: Record<
 
 // Level badge colors
 const LEVEL_BADGE_COLORS: Record<LogLevelKey, string> = {
-  error: 'bg-status-error/20 text-status-error border-status-error/30',
-  warn: 'bg-status-warning/20 text-status-warning border-status-warning/30',
-  info: 'bg-status-info/20 text-status-info border-status-info/30',
+  error: 'bg-status-error/20 text-status-error-strong border-status-error/30',
+  warn: 'bg-status-warning/20 text-status-warning-strong border-status-warning/30',
+  info: 'bg-status-info/20 text-status-info-strong border-status-info/30',
   debug: 'bg-bg-muted/20 text-text-muted border-border-muted/30',
 };
 
@@ -117,7 +117,10 @@ function highlightText(text: string, query: string): React.ReactNode {
       offset += part.length;
       if (part.toLowerCase() === query.toLowerCase()) {
         return (
-          <mark key={key} className="bg-status-warning/40 text-status-warning rounded px-0.5">
+          <mark
+            key={key}
+            className="bg-status-warning/20 text-status-warning-strong rounded px-0.5"
+          >
             {part}
           </mark>
         );
@@ -228,7 +231,7 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
           </span>
 
           {/* Protocol Badge */}
-          <span className="shrink-0 rounded border border-brand-primary/30 bg-brand-primary/20 px-1.5 py-0.5 text-xs font-semibold text-brand-accent">
+          <span className="shrink-0 rounded border border-brand-primary/30 bg-brand-primary/20 px-1.5 py-0.5 text-xs font-semibold text-brand-primary-strong">
             {log.protocol}
           </span>
 

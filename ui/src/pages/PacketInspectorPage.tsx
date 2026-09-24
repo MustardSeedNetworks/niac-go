@@ -268,7 +268,7 @@ export const PacketInspectorPage: FC = () => {
           onClick={() => setSearchParams({}, { replace: true })}
           className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'live'
-              ? 'bg-brand-primary/20 text-brand-accent'
+              ? 'bg-brand-primary/20 text-brand-primary-strong'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >
@@ -282,7 +282,7 @@ export const PacketInspectorPage: FC = () => {
           onClick={() => setSearchParams({ view: 'files' }, { replace: true })}
           className={`flex items-center gap-1.5 rounded px-3 py-compact-md text-xs font-medium transition-colors ${
             view === 'files'
-              ? 'bg-brand-primary/20 text-brand-accent'
+              ? 'bg-brand-primary/20 text-brand-primary-strong'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >

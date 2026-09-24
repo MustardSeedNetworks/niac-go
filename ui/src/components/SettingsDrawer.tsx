@@ -256,7 +256,7 @@ function AppearanceSection({ themeState }: Pick<SettingsDrawerProps, 'themeState
                 className={cn(
                   'w-8 h-8 rounded-lg flex-center',
                   selected
-                    ? 'bg-brand-primary/15 text-brand-primary'
+                    ? 'bg-brand-primary/15 text-brand-primary-strong'
                     : 'bg-surface-hover text-text-secondary',
                 )}
               >
@@ -372,7 +372,7 @@ function NetworkSection({ status }: { status: ConnectionState }): ReactElement {
           label={t('network.backendUrl')}
           description={t('network.backendUrlDescription')}
         >
-          <code className="text-xs text-brand-accent bg-brand-primary/10 px-cell py-compact rounded">
+          <code className="text-xs text-brand-primary-strong bg-brand-primary/10 px-cell py-compact rounded">
             {window.location.origin}
           </code>
         </SettingRow>

@@ -371,8 +371,8 @@ export const ReplayControlPanel: FC = () => {
               aria-live="polite"
               className={`pad-sm rounded ${
                 message.type === 'success'
-                  ? 'bg-status-success/10 text-status-success border border-status-success/20'
-                  : 'bg-status-error/10 text-status-error border border-status-error/20'
+                  ? 'bg-status-success/10 text-status-success-strong border border-status-success/20'
+                  : 'bg-status-error/10 text-status-error-strong border border-status-error/20'
               }`}
             >
               {message.text}

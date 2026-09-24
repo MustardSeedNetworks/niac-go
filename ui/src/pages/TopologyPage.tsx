@@ -536,7 +536,7 @@ export const TopologyPage: FC = () => {
                     onClick={() => setView('graph')}
                     className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                       view === 'graph'
-                        ? 'bg-status-info/20 text-status-info'
+                        ? 'bg-status-info/20 text-status-info-strong'
                         : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                     }`}
                   >
@@ -552,7 +552,7 @@ export const TopologyPage: FC = () => {
                     onClick={() => setView('neighbors')}
                     className={`flex items-center gap-1.5 rounded px-3 py-compact text-xs font-medium transition-colors ${
                       view === 'neighbors'
-                        ? 'bg-status-info/20 text-status-info'
+                        ? 'bg-status-info/20 text-status-info-strong'
                         : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                     }`}
                   >
@@ -632,7 +632,7 @@ export const TopologyPage: FC = () => {
                             onClick={() => handleLayoutModeChange(entry.mode)}
                             className={`rounded px-2.5 py-compact text-xs font-medium transition-colors ${
                               active
-                                ? 'bg-status-info/20 text-status-info'
+                                ? 'bg-status-info/20 text-status-info-strong'
                                 : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                             }`}
                           >
@@ -697,7 +697,7 @@ export const TopologyPage: FC = () => {
                           aria-pressed={active}
                           className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                             active
-                              ? 'border-status-info/40 bg-status-info/20 text-status-info'
+                              ? 'border-status-info/40 bg-status-info/20 text-status-info-strong'
                               : 'border-surface-border bg-bg-base/40 text-text-muted hover:bg-surface-hover hover:text-text-primary'
                           }`}
                         >

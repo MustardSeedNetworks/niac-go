@@ -189,9 +189,9 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
         )}
 
         {error && (
-          <div className="rounded-lg border border-status-error/30 bg-status-error/10 pad text-status-error">
+          <div className="rounded-lg border border-status-error/30 bg-status-error/10 pad text-status-error-strong">
             <p className="font-semibold">{t('templates.previewModal.loadFailed')}</p>
-            <SmallText className="text-status-error">{error.message}</SmallText>
+            <SmallText className="text-status-error-strong">{error.message}</SmallText>
           </div>
         )}
 

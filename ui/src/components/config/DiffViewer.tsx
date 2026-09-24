@@ -100,7 +100,7 @@ const ViewModeToggle: FC<{
           onClick={() => onChange('block')}
           className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
             viewMode === 'block'
-              ? 'bg-brand-primary/20 text-brand-accent'
+              ? 'bg-brand-primary/20 text-brand-primary-strong'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >
@@ -116,7 +116,7 @@ const ViewModeToggle: FC<{
           onClick={() => onChange('overlay')}
           className={`flex items-center gap-tight rounded px-cell py-compact text-xs transition-colors ${
             viewMode === 'overlay'
-              ? 'bg-brand-primary/20 text-brand-accent'
+              ? 'bg-brand-primary/20 text-brand-primary-strong'
               : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
           }`}
         >

@@ -22,11 +22,15 @@
  *
  * STATUS COLORS (fleet-shared in theme/msn-shared.css, not NIAC's to set):
  * - Success: #2a7146 light / #3cb46e dark
- * - Warning: #8a6208 light / #ca9721 dark
- * - Danger:  #b93a3a light / #de8787 dark
+ * - Warning: #845e08 light / #ca9721 dark
+ * - Danger:  #b43939 light / #de8787 dark
  * - Info:    #1263a8 light / #5da5e5 dark
  *
- * MODULE ACCENTS (5 differentiated hues):
+ * PILL TEXT: text on a same-hue wash (bg-status-error/20, bg-brand-primary/10)
+ * is the hue's -strong token, never the bare hue (product-niac.css,
+ * pillText.test.ts). Washes under pill text stop at /20.
+ *
+ * MODULE ACCENTS (5 differentiated hues, icons and chart series only):
  * - Topology:  #6a3fa8 violet  - network map / graph view (= the brand anchor)
  * - Protocols: #0b6b62 teal    - protocol stack, packet types
  * - Analyze:   #9333a8 fuchsia - capture inspection
@@ -48,7 +52,6 @@
 export { alert, badge, button, card, drawer, icon, input, modal, status } from './themeComponents';
 export { deviceColor, linkSpeedColor, protocolColor } from './themeDeviceColors';
 export { border, layout, radius } from './themeLayout';
-export { moduleColor } from './themeModuleColors';
 export { spacing } from './themeSpacing';
 export { typography } from './themeTypography';
 export {

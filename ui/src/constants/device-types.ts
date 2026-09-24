@@ -200,11 +200,11 @@ export function getDeviceLabel(type: DeviceType): string {
  * Used for icon backgrounds and text colors
  */
 const deviceColorClasses: Record<TagColorScheme, { bg: string; text: string }> = {
-  blue: { bg: 'bg-status-info/20', text: 'text-status-info' },
-  green: { bg: 'bg-status-success/20', text: 'text-status-success' },
-  purple: { bg: 'bg-brand-primary/20', text: 'text-brand-accent' },
-  yellow: { bg: 'bg-status-warning/20', text: 'text-status-warning' },
-  red: { bg: 'bg-status-error/20', text: 'text-status-error' },
+  blue: { bg: 'bg-status-info/20', text: 'text-status-info-strong' },
+  green: { bg: 'bg-status-success/20', text: 'text-status-success-strong' },
+  purple: { bg: 'bg-brand-primary/20', text: 'text-brand-primary-strong' },
+  yellow: { bg: 'bg-status-warning/20', text: 'text-status-warning-strong' },
+  red: { bg: 'bg-status-error/20', text: 'text-status-error-strong' },
   gray: { bg: 'bg-bg-muted/20', text: 'text-text-muted' },
 };
 

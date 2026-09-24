@@ -86,7 +86,7 @@ const HexRow = memo(
 
       let className = isHeader ? 'text-status-info' : 'text-text-secondary';
       if (isHighlighted) {
-        className = 'text-status-warning bg-status-warning/40 rounded-sm';
+        className = 'text-status-warning-strong bg-status-warning/20 rounded-sm';
       }
 
       return (
@@ -119,7 +119,7 @@ const HexRow = memo(
 
       let asciiClass = isHeader ? 'text-status-info' : 'text-text-secondary';
       if (isHighlighted) {
-        asciiClass = 'text-status-warning bg-status-warning/40';
+        asciiClass = 'text-status-warning-strong bg-status-warning/20';
       }
 
       return (

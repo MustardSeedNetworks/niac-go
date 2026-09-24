@@ -20,7 +20,7 @@ export const ViewToggle: FC<{
       aria-label={label}
       className={`rounded px-cell py-compact transition-colors ${
         active
-          ? 'bg-brand-primary/20 text-brand-accent'
+          ? 'bg-brand-primary/20 text-brand-primary-strong'
           : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
       }`}
     >

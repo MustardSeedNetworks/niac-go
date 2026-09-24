@@ -281,10 +281,10 @@ export const RuntimeControlPage: FC = () => {
             <div className="flex items-start gap-default">
               <BellRing className={`mt-tight ${iconSizes.lg} text-status-warning`} />
               <div>
-                <p className="font-semibold text-status-warning">
+                <p className="font-semibold text-status-warning-strong">
                   {t('runtime.daemonModeWarning')}
                 </p>
-                <SmallText className="text-status-warning/90">
+                <SmallText className="text-status-warning-strong">
                   {t('runtime.daemonModeInstructions')}
                 </SmallText>
                 <code className="mt-inline block rounded bg-scrim/40 pad-sm font-mono text-sm text-status-warning">

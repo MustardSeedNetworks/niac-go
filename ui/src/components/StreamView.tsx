@@ -159,8 +159,8 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
               key={`${segment.timestamp}-${idx}`}
               className={`flex items-start gap-tight px-3 py-compact-md rounded whitespace-pre-wrap break-all ${
                 segment.isClient
-                  ? 'bg-status-info/30 text-status-info border-l-2 border-status-info'
-                  : 'bg-status-error/30 text-status-error border-l-2 border-status-error'
+                  ? 'bg-status-info/20 text-status-info-strong border-l-2 border-status-info'
+                  : 'bg-status-error/20 text-status-error-strong border-l-2 border-status-error'
               }`}
             >
               {/* Non-color direction cue: color alone doesn't work for colorblind

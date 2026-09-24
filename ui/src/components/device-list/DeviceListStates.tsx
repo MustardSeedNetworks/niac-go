@@ -52,8 +52,10 @@ export const DeviceListErrorState: FC<ErrorStateProps> = ({ error, onRetry }) =>
         <div className="flex items-start gap-default">
           <AlertCircle className="mt-tight h-5 w-5 text-status-error" />
           <div>
-            <p className="font-semibold text-status-error">{t('list.states.loadErrorTitle')}</p>
-            <SmallText className="text-status-error/90">{error.message}</SmallText>
+            <p className="font-semibold text-status-error-strong">
+              {t('list.states.loadErrorTitle')}
+            </p>
+            <SmallText className="text-status-error-strong">{error.message}</SmallText>
             <Button variant="outline" size="sm" className="mt-heading" onClick={onRetry}>
               {t('list.states.retry')}
             </Button>

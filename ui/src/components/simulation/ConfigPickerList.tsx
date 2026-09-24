@@ -183,8 +183,8 @@ const ConfigCard: FC<SharedItemProps> = ({
     item.kind === 'builtin'
       ? (TEMPLATE_TYPE_TINT[item.template.type] ?? TEMPLATE_TYPE_TINT.custom)
       : item.kind === 'saved'
-        ? 'bg-status-success/15 text-status-success border-status-success/30'
-        : 'bg-status-info/15 text-status-info border-status-info/30';
+        ? 'bg-status-success/15 text-status-success-strong border-status-success/30'
+        : 'bg-status-info/15 text-status-info-strong border-status-info/30';
 
   return (
     <div
@@ -224,7 +224,7 @@ const ConfigCard: FC<SharedItemProps> = ({
       </div>
       <div className="flex gap-compact">
         {selected ? (
-          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/30 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/60">
+          <div className="flex flex-1 items-center justify-center gap-1.5 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-primary-strong ring-1 ring-brand-accent/60">
             <Check className={iconSizes.sm} />
             <span>{t('configPicker.selectedLabel')}</span>
           </div>
@@ -233,7 +233,7 @@ const ConfigCard: FC<SharedItemProps> = ({
             <button
               type="button"
               onClick={() => onSelect(item)}
-              className="flex-1 rounded bg-brand-primary/20 px-cell py-compact-md text-xs font-medium text-brand-accent ring-1 ring-brand-accent/40 hover:bg-brand-primary/30"
+              className="flex-1 rounded bg-brand-primary/10 px-cell py-compact-md text-xs font-medium text-brand-primary-strong ring-1 ring-brand-accent/40 hover:bg-brand-primary/20"
             >
               {t('configPicker.selectButton')}
             </button>
@@ -256,7 +256,7 @@ const ConfigCard: FC<SharedItemProps> = ({
             <button
               type="button"
               onClick={onClearLocal}
-              className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error hover:bg-status-error/20"
+              className="rounded border border-status-error/30 bg-status-error/10 px-cell py-compact-md text-xs font-medium text-status-error-strong hover:bg-status-error/20"
             >
               {t('configPicker.clearButton')}
             </button>

@@ -15,19 +15,19 @@ export function getDiffStyles(type: DiffType): DiffStyleSet {
       return {
         bg: 'bg-status-success/10',
         border: 'border-status-success/30',
-        text: 'text-status-success',
+        text: 'text-status-success-strong',
       };
     case 'removed':
       return {
         bg: 'bg-status-error/10',
         border: 'border-status-error/30',
-        text: 'text-status-error',
+        text: 'text-status-error-strong',
       };
     case 'modified':
       return {
         bg: 'bg-status-warning/10',
         border: 'border-status-warning/30',
-        text: 'text-status-warning',
+        text: 'text-status-warning-strong',
       };
     default:
       return {

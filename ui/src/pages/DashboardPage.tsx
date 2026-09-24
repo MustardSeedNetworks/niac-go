@@ -347,9 +347,11 @@ const ErrorTypeCatalog = memo(
             <ChevronRight className={`mt-0.5 ${iconSizes.lg} text-status-warning`} />
           )}
           <div>
-            <p className="font-semibold text-status-warning">{t('dashboard.errorPanel.title')}</p>
-            <p className="text-sm text-status-warning/80">{info}</p>
-            <p className="text-xs text-status-warning/70 mt-tight">
+            <p className="font-semibold text-status-warning-strong">
+              {t('dashboard.errorPanel.title')}
+            </p>
+            <p className="text-sm text-status-warning-strong">{info}</p>
+            <p className="text-xs text-status-warning-strong mt-tight">
               {t('dashboard.errorPanel.clickHint')}
             </p>
           </div>

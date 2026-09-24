@@ -11,7 +11,6 @@ and constraints rather than duplicating every token value.
 - `src/styles/theme.ts` exports typed token groups for TSX code.
 - `src/styles/themeDeviceColors.ts` owns topology device, link, and protocol
   colors.
-- `src/styles/themeModuleColors.ts` owns module accents.
 - `src/hooks/useTheme.ts` owns theme selection and persistence.
 
 Components should consume semantic utilities or exported role tokens. Do not
@@ -19,10 +18,10 @@ repeat raw brand or status hex values in component code.
 
 ## Brand and module roles
 
-NIAC's primary brand color is indigo. Mustard is the shared cross-product
-accent. Module colors distinguish topology, protocols, analysis, injection,
-and configuration surfaces; they are accents for icons, badges, and legends,
-not card backgrounds.
+NIAC's primary brand color is violet (`src/theme/product-niac.css`). Mustard
+is the shared cross-product accent. Module colors distinguish topology,
+protocols, analysis, injection, and configuration surfaces; they are accents
+for icons, chart series, and legends, not card backgrounds or text.
 
 Status colors retain one meaning across themes:
 
@@ -32,6 +31,13 @@ Status colors retain one meaning across themes:
 - blue for information.
 
 Status must also have text or an icon. Color alone cannot carry meaning.
+
+Text on a wash of its own hue (a pill, an alert, a selected row:
+`bg-status-error/10`, `bg-brand-primary/20`) uses the hue's `-strong` token,
+never the bare hue, which drops under 4.5:1 there. Washes under pill text stop
+at `/20`, brand washes use `brand-primary`, and icons keep the bare hue.
+`src/theme/pillText.test.ts` measures the tokens and fails markup that breaks
+the rule.
 
 ## Surfaces and text
 

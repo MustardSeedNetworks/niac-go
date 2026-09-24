@@ -167,7 +167,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
             explicitly instead of letting it happen quietly. */}
         {stats.totalChanges > 0 && !stats.isComplete && (
           <div
-            className="flex items-start gap-compact rounded-lg border border-status-warning/30 bg-status-warning/10 pad-sm text-sm text-status-warning"
+            className="flex items-start gap-compact rounded-lg border border-status-warning/30 bg-status-warning/10 pad-sm text-sm text-status-warning-strong"
             role="alert"
           >
             <AlertCircle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />

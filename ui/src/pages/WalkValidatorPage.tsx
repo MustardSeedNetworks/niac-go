@@ -19,9 +19,9 @@ import { Tooltip } from '../ui/Tooltip';
 type Severity = 'error' | 'warning' | 'info';
 
 const SEVERITY_BADGE: Record<Severity, string> = {
-  error: 'bg-status-error/20 text-status-error ring-status-error/40',
-  warning: 'bg-status-warning/20 text-status-warning ring-status-warning/40',
-  info: 'bg-status-info/20 text-status-info ring-status-info/40',
+  error: 'bg-status-error/20 text-status-error-strong ring-status-error/40',
+  warning: 'bg-status-warning/20 text-status-warning-strong ring-status-warning/40',
+  info: 'bg-status-info/20 text-status-info-strong ring-status-info/40',
 };
 
 const SEVERITY_ORDER: Severity[] = ['error', 'warning', 'info'];
@@ -191,8 +191,8 @@ export const WalkValidatorPage: FC = () => {
         <span
           className={`rounded px-cell py-0.5 text-[10px] font-medium ring-1 ${
             result.valid
-              ? 'bg-status-success/20 text-status-success ring-status-success/40'
-              : 'bg-status-error/20 text-status-error ring-status-error/40'
+              ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
+              : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
           }`}
         >
           {result.valid
@@ -331,8 +331,8 @@ export const WalkValidatorPage: FC = () => {
               <span
                 className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
                   response.result.valid
-                    ? 'bg-status-success/20 text-status-success ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error ring-status-error/40'
+                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
+                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
                 }`}
               >
                 {response.result.valid ? 'VALID' : 'INVALID'}
@@ -346,7 +346,7 @@ export const WalkValidatorPage: FC = () => {
                 </span>
               ))}
               {typeof response.result.fixedCount === 'number' && (
-                <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success ring-1 ring-status-success/40">
+                <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success-strong ring-1 ring-status-success/40">
                   fixed: {response.result.fixedCount}
                 </span>
               )}
@@ -405,8 +405,8 @@ export const WalkValidatorPage: FC = () => {
               <span
                 className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
                   batchResponse.success
-                    ? 'bg-status-success/20 text-status-success ring-status-success/40'
-                    : 'bg-status-error/20 text-status-error ring-status-error/40'
+                    ? 'bg-status-success/20 text-status-success-strong ring-status-success/40'
+                    : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
                 }`}
               >
                 {batchResponse.success

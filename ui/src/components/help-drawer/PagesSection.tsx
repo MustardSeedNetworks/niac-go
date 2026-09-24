@@ -77,7 +77,7 @@ export function PagesSection({
             className={cn(
               'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               page.path === current.path
-                ? 'bg-brand-primary/10 text-brand-primary'
+                ? 'bg-brand-primary/10 text-brand-primary-strong'
                 : 'text-text-muted hover:bg-surface-hover hover:text-text-primary',
             )}
           >
