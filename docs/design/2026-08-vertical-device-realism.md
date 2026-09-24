@@ -61,6 +61,24 @@ Endpoints are therefore **weighted**: common devices repeat, signature devices
 appear once or twice. Weights stay deterministic so the Link-Live comparator
 still works from authored truth.
 
+Each site's wired endpoint slots are filled in two passes
+(`internal/scenario/endpoint_mix.go`): every kind first gets its per-site floor,
+then the remaining slots are shared by weight with the largest-remainder method.
+A signature device has a floor and no weight, so it stays at one per site as a
+site grows; a common device has a weight, so it grows with the site. The weights
+are ratios within one vertical, not counts, so resizing a pack re-scales them.
+
+| Vertical | One per site | Floor 1, then weighted | Weighted only |
+| --- | --- | --- | --- |
+| Hospital | MRI, UPS | label printer 1 | infusion pump 5, Philips monitor 3, nurse station 3, GE monitor 2 |
+| Warehouse | UPS | label printer 1 | rugged handheld 3 |
+| Manufacturing | UPS, label printer | robot controller 1 | PLC 4, HMI 2 |
+| Retail | UPS | — | POS 2, receipt printer 2, signage 1 |
+| Service provider | UPS, office printer | — | NOC workstation 1 |
+| Campus, enterprise-scale | UPS | office printer 1 | workstation 5, laptop 3, Mac 2 |
+
+`TestPackDeviceRoleMix` pins the resulting per-pack role counts.
+
 Device counts per pack are unchanged (hospital 75, warehouse 69, manufacturing
 69, campus 155, retail 95, service-provider 87, enterprise-scale 531). More
 device _types_, same device _count_.

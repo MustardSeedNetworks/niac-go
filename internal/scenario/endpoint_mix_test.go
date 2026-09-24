@@ -88,21 +88,25 @@ func TestEveryPackSiteCarriesAUPSThatAnswersUPSMIB(t *testing.T) {
 			}
 		}
 		for index := range cfg.Devices {
-			device := &cfg.Devices[index]
-			if device.Properties["role"] != "ups" {
-				continue
-			}
-			if got := device.Properties["sysObjectID"]; got != apcNetworkManagementCard {
-				t.Errorf("%s %s: sysObjectID = %q, want %q", pack.ID, device.Name, got, apcNetworkManagementCard)
-			}
-			if device.SNMPConfig.SysName == "" {
-				t.Errorf("%s %s: UPS has no SNMP agent", pack.ID, device.Name)
-				continue
-			}
-			next, _, err := snmp.NewAgent(device, 0).HandleGetNext(upsMIB)
-			if err != nil || !strings.HasPrefix(next, upsMIB+".") {
-				t.Errorf("%s %s: GETNEXT %s = %q, %v; want a UPS-MIB object", pack.ID, device.Name, upsMIB, next, err)
+			if cfg.Devices[index].Properties["role"] == "ups" {
+				checkPackUPS(t, pack.ID, &cfg.Devices[index])
 			}
 		}
+	}
+}
+
+func checkPackUPS(t *testing.T, pack string, device *config.Device) {
+	t.Helper()
+
+	if got := device.Properties["sysObjectID"]; got != apcNetworkManagementCard {
+		t.Errorf("%s %s: sysObjectID = %q, want %q", pack, device.Name, got, apcNetworkManagementCard)
+	}
+	if device.SNMPConfig.SysName == "" {
+		t.Errorf("%s %s: UPS has no SNMP agent", pack, device.Name)
+		return
+	}
+	next, _, err := snmp.NewAgent(device, 0).HandleGetNext(upsMIB)
+	if err != nil || !strings.HasPrefix(next, upsMIB+".") {
+		t.Errorf("%s %s: GETNEXT %s = %q, %v; want a UPS-MIB object", pack, device.Name, upsMIB, next, err)
 	}
 }
