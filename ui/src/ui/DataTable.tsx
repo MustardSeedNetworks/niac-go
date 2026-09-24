@@ -15,6 +15,10 @@ import { useVirtualScroll } from '../hooks/useVirtualScroll';
  * which consumers were migrated and which were deliberately left as-is.
  * `PacketList` (a stack of button cards), `LogViewer` (expandable stream)
  * and `device-list/DeviceTableView` (a CSS grid) stay off it by design.
+ *
+ * A table wider than a phone scrolls inside its own frame, and the frame
+ * says so with `data-phone-width-exempt`: the fleet's 390px gate cannot tell
+ * a deliberate horizontal scroller from content leaving the viewport.
  */
 export interface DataTableColumn<T> {
   /** Stable identifier, also used as the React key for the header cell. */
@@ -241,6 +245,7 @@ export function DataTable<T>({
       <div
         className={`min-w-0 overflow-x-auto rounded-xl border border-surface-border ${containerClassName ?? ''}`.trimEnd()}
         data-testid={testId}
+        data-phone-width-exempt="table-scroll"
       >
         <table className="min-w-full divide-y divide-knob/10 text-sm">
           {renderHeader()}
@@ -257,7 +262,11 @@ export function DataTable<T>({
       <div className="bg-bg-surface/60 px-4 py-row text-xs text-text-muted">
         {virtualization.renderStatus(virtualScroll.visibleItems.length, rows.length)}
       </div>
-      <div {...virtualScroll.containerProps} className="overflow-auto">
+      <div
+        {...virtualScroll.containerProps}
+        className="overflow-auto"
+        data-phone-width-exempt="table-scroll"
+      >
         <div {...virtualScroll.spacerProps}>
           <div {...virtualScroll.contentProps}>
             <table className="min-w-full divide-y divide-knob/10 text-sm">

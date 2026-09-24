@@ -205,7 +205,7 @@ function LibraryFilesView({ kind }: Props) {
               </div>
             </div>
 
-            <div className="flex items-center gap-compact">
+            <div className="flex min-w-0 items-center gap-compact">
               {kind === 'walks' && sanitizeState.selected.size > 0 && (
                 <>
                   <SmallText className="text-text-muted">
@@ -223,7 +223,7 @@ function LibraryFilesView({ kind }: Props) {
                   </Button>
                 </>
               )}
-              <div className="relative">
+              <div className="relative min-w-0 flex-1 sm:flex-none">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                 <input
                   type="search"
@@ -231,7 +231,7 @@ function LibraryFilesView({ kind }: Props) {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={tPages('libraryFiles.searchPlaceholder')}
                   aria-label={tPages('libraryFiles.filterAriaLabel')}
-                  className="w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
+                  className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 pl-7 pr-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
                 />
               </div>
               <Button

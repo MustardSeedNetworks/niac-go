@@ -43,6 +43,20 @@ test.describe('app shell on small screens', () => {
     ).toBeLessThanOrEqual(overflow.clientWidth + 1);
   });
 
+  test('the closed drawer is hidden, not parked off-screen', async ({ page }) => {
+    const drawer = sidebar(page, 'mobile');
+    const toggle = page.getByTestId('mobile-menu-toggle');
+
+    // Off-canvas alone left the drawer painted at x -288..0, which the fleet's
+    // 390px gate fails as content leaving the viewport.
+    await expect(drawer).toBeHidden();
+
+    await toggle.click();
+    await expect(drawer).toBeVisible();
+    await toggle.click();
+    await expect(drawer).toBeHidden();
+  });
+
   test('primary navigation is reachable and operable', async ({ page }) => {
     const isPhone = (page.viewportSize()?.width ?? 0) < 1024;
 
