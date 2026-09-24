@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.92](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.91...v0.95.92) (2026-09-24)
+
+
+### Features
+
+* **snmp:** an APC Network Management Card answers UPS-MIB ([#2342](https://github.com/MustardSeedNetworks/niac-go/issues/2342)) ([d6123a9](https://github.com/MustardSeedNetworks/niac-go/commit/d6123a97907438151a7f60ca86c9546a0761e77a))
+
+
+### Bug Fixes
+
+* **ui:** re-copy canonical msn-shared.css with the status pill text tokens ([#2341](https://github.com/MustardSeedNetworks/niac-go/issues/2341)) ([df7e430](https://github.com/MustardSeedNetworks/niac-go/commit/df7e430350e285c7aadfd3a18304a3ebbbf297cc)), closes [#2340](https://github.com/MustardSeedNetworks/niac-go/issues/2340)
+
+
+### Tests
+
+* **ui:** lock page-first shell acceptance ([#2317](https://github.com/MustardSeedNetworks/niac-go/issues/2317)) ([d8b9171](https://github.com/MustardSeedNetworks/niac-go/commit/d8b917198f16268c1650d14eeaefafd26e028a14))
+
 ## [0.95.91](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.90...v0.95.91) (2026-09-24)
 
 
