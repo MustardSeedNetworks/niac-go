@@ -16,10 +16,11 @@ Demand: 1214 distinct (OID, PDU) pairs from `consumer-oid-demand.tsv`.
 Demand is grouped by registration authority: one group per MIB-II group,
 one per enterprise, five arcs for everything else.
 
-535 of them no walk serves and the agent does: live state such as
+536 of them no walk serves and the agent does: live state such as
 `ipNetToMediaTable`, which `arp_topology.go` fills from authoritative fleet
-bindings on a forwarding device. Those are not capture holes and are listed
-apart from the ones that are.
+bindings on a forwarding device, and Printer-MIB, which every printer serves
+from its type. Those are not capture holes and are listed apart from the
+ones that are.
 
 ## Demand the agent answers without a walk
 
@@ -32,6 +33,7 @@ read as capture coverage and nothing else.
 | `.1.3.6.1.2.1.4.21` | 151 |
 | `.1.3.6.1.2.1.4.20` | 78 |
 | `.1.3.6.1.2.1.4.24` | 5 |
+| `.1.3.6.1.2.1.43` | 1 |
 
 ## Demand neither the agent nor any shipped walk answers
 
@@ -47,7 +49,6 @@ These are holes in the shipped set, not in any one walk.
 | `.1.3.6.1.2.1.16.11` | 1 |
 | `.1.3.6.1.2.1.17.3` | 1 |
 | `.1.3.6.1.2.1.26.2` | 1 |
-| `.1.3.6.1.2.1.43` | 1 |
 | `.1.3.6.1.2.1.67.1` | 1 |
 
 ## Per starter walk

@@ -90,11 +90,12 @@ func servedOIDs(t *testing.T, path string) []string {
 
 // agentOwnedOIDs is what a device answers with no walk loaded at all: the MIB
 // the agent synthesises from the authored device plus its live runtime state.
-// The fixture is a forwarding device with one neighbour binding because that is
-// the only shape that exercises SynthesizeARPTable (arp_topology.go) -- a bare
-// device leaves ipNetToMediaTable empty, and measuring against that would
-// report the instrument's largest demand block as a capture hole when it is
-// runtime state a running pack does serve.
+// The first fixture is a forwarding device with one neighbour binding because
+// that is the only shape that exercises SynthesizeARPTable (arp_topology.go) --
+// a bare device leaves ipNetToMediaTable empty, and measuring against that
+// would report the instrument's largest demand block as a capture hole when it
+// is runtime state a running pack does serve. The second is a printer, the one
+// role whose type alone adds a MIB (Printer-MIB) that no walk carries.
 func agentOwnedOIDs(t *testing.T) []string {
 	t.Helper()
 
@@ -116,7 +117,12 @@ func agentOwnedOIDs(t *testing.T) []string {
 			"live-state demand as a capture hole", ipNetToMediaTable)
 	}
 
-	return sweepOIDs(agent)
+	printer := createTestDevice()
+	printer.Type = "printer"
+	served := append(sweepOIDs(agent), sweepOIDs(NewAgent(printer, 0))...)
+	sort.Strings(served)
+
+	return served
 }
 
 // sweepOIDs walks an agent and returns what it answered, spelled the way walk
@@ -309,8 +315,9 @@ func writeCoverageReport(
 	report.WriteString("one per enterprise, five arcs for everything else.\n\n")
 	fmt.Fprintf(&report, "%d of them no walk serves and the agent does: live state such as\n"+
 		"`ipNetToMediaTable`, which `arp_topology.go` fills from authoritative fleet\n"+
-		"bindings on a forwarding device. Those are not capture holes and are listed\n"+
-		"apart from the ones that are.\n\n", agentTotal)
+		"bindings on a forwarding device, and Printer-MIB, which every printer serves\n"+
+		"from its type. Those are not capture holes and are listed apart from the\n"+
+		"ones that are.\n\n", agentTotal)
 
 	report.WriteString("## Demand the agent answers without a walk\n\n")
 	report.WriteString("Runtime state, not capture content. Listed so the walk tables below are\n")
