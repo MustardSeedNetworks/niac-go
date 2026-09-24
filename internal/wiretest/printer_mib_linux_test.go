@@ -42,7 +42,12 @@ func TestPackPrinterAnswersThePrinterProbeOnTheWire(t *testing.T) {
 		t.Fatalf("GET %s on %s: %v", hrDeviceTypeOID, printerName, err)
 	}
 	if value, _ := kind.Variables[0].Value.(string); value != hrDevicePrinterOID {
-		t.Errorf("%s hrDeviceType.1 = %v, want hrDevicePrinter %s", printerName, kind.Variables[0].Value, hrDevicePrinterOID)
+		t.Errorf(
+			"%s hrDeviceType.1 = %v, want hrDevicePrinter %s",
+			printerName,
+			kind.Variables[0].Value,
+			hrDevicePrinterOID,
+		)
 	}
 	t.Logf("%s: GETNEXT %s -> %s = %v; hrDeviceType.1 = %v", printerName, printerMIBRootOID,
 		probe.Variables[0].Name, probe.Variables[0].Value, kind.Variables[0].Value)
