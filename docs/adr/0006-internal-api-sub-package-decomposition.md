@@ -28,7 +28,8 @@ Extract the cohesive concerns into sibling leaf packages under
   `internal/api` transport layer;
 - is composed inward by the `Server` (and, where relevant, `internal/daemon`),
   which holds the concrete manager and wires it into the declarative route
-  registry (`register()`/`registerAll()` in `route.go`/`routes.go`). The
+  registry (foundation's `route.Registrar`, configured in `route.go`, tables
+  in `routes.go`). The
   registry, `/__capabilities`, and the middleware composition order are
   unchanged — only _where the building blocks live_ changes.
 

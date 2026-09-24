@@ -1,37 +1,34 @@
 #!/usr/bin/env bash
 # check-route-policy.sh — capability-registry enforcement gate.
 #
-# Every API route MUST be registered through the capability registry
-# (register / registerAll in internal/api/route.go), which composes its
-# per-route policy — auth, rate limiting, CSRF, admin scope, license feature —
-# in ONE canonical order. Hand-wrapping a route directly via
-# mux.HandleFunc("/api/...") bypasses that composition and is how a mutating
-# route can silently ship without CSRF or scope enforcement (the foot-gun the
-# audit flagged in the old registerReadOnlyRoutes mix).
+# Every route MUST be registered through foundation's route.Registrar
+# (Register / RegisterAll; niac's table is internal/api/routes.go), which
+# composes its per-route policy — rate limiting, auth, method gate, CSRF, admin
+# scope, body cap — in ONE canonical order. A ServeMux of our own, or a direct
+# Handle/HandleFunc with a pattern, bypasses that composition and is how a
+# mutating route can silently ship without CSRF or scope enforcement.
 #
-# This gate fails if any "/api/..." path is registered directly instead of via
-# register(). register() installs routes with a variable path (rt.path), so it
-# never matches; only direct literal registrations do. The unauthenticated
-# introspection endpoints (/__version, /__capabilities) and the SPA/metrics
-# catch-alls are not /api/ literals and are intentionally direct.
+# This is foundation's pkg/httpserver/route/check-route-policy.sh rule with the
+# registration pattern anchored to a string literal: the shared script's bare
+# `\.Handle\(` also matches slog.Handler.Handle (internal/api/sse), so niac
+# keeps this copy until foundation#70 lands and then runs the shared one.
 #
 # Run locally: scripts/check-route-policy.sh
 set -euo pipefail
 
 API_DIR="internal/api"
 
-violations=$(grep -rnE 'mux\.HandleFunc\("/api/' "$API_DIR"/*.go \
-	| grep -v '_test.go' || true)
+violations=$(grep -rnE --include='*.go' --exclude='*_test.go' \
+	'http\.NewServeMux\(|\.Handle(Func)?\("' "$API_DIR" || true)
 
 if [[ -n "$violations" ]]; then
-	echo "❌ Route-policy gate: API routes must be registered through the"
-	echo "   capability registry (registerAll/register in route.go), not via a"
-	echo "   raw mux.HandleFunc(\"/api/...\"). A direct registration skips the"
-	echo "   auth/rate-limit/CSRF/scope composition. Add an apiRoute{} entry to"
-	echo "   the appropriate register*Routes function instead."
+	echo "❌ Route-policy gate: register every route through route.Registrar"
+	echo "   (Register / RegisterAll), not a ServeMux of your own. A direct"
+	echo "   registration skips the rate-limit/auth/CSRF/scope composition."
+	echo "   Add a route.Route entry to the appropriate register*Routes function."
 	echo ""
 	echo "$violations"
 	exit 1
 fi
 
-echo "✓ Route-policy gate: all /api routes go through the capability registry."
+echo "✓ Route-policy gate: all routes go through the capability registry."

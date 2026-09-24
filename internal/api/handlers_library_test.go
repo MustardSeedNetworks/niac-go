@@ -114,9 +114,9 @@ func TestHandleLibraryWalksRejectsNonGet(t *testing.T) {
 	server, _ := newLibraryTestServer(t)
 
 	// Method gating moved from the handler to the route registry (ADR-0002);
-	// exercise the methodGate wrapper register() composes for the GET-only
+	// exercise the method gate the registrar composes for the GET-only
 	// /api/v1/library/walks route.
-	gated := server.methodGate([]string{http.MethodGet}, server.handleLibraryWalks)
+	gated := throughRegistrar([]string{http.MethodGet}, server.handleLibraryWalks)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/library/walks", nil)
 	rec := httptest.NewRecorder()
 	gated(rec, req)

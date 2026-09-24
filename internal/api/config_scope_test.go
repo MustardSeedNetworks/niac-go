@@ -27,8 +27,7 @@ func checkConfigReplacementScope(t *testing.T, scope tokenstore.TokenScope, meth
 	server, _, token := newLibraryInstallServer(t, scope)
 	var logs bytes.Buffer
 	server.logger = slog.New(slog.NewJSONHandler(&logs, nil))
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 	before := readScopeConfig(t, server)
 	beforeConfig := server.cfg.Config
 	req := httptest.NewRequest(method, "/api/v1/config",

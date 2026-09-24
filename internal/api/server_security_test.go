@@ -270,13 +270,10 @@ func TestAuth_NoAuthRequired(t *testing.T) {
 	}
 }
 
-// TestPanicRecovery_NilPointerPanic verifies panic recovery catches nil pointer panics.
+// TestPanicRecovery_NilPointerPanic verifies a handler panic is answered in
+// niac's JSON error envelope: the registrar recovers it, and the envelope is
+// the error function niac hands the registrar.
 func TestPanicRecovery_NilPointerPanic(t *testing.T) {
-	server, tmpDir, _ := newTestServerWithAuth(t)
-
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	// Create a handler that deliberately panics
 	panicHandler := func(_ http.ResponseWriter, _ *http.Request) {
 		panic("intentional panic for testing recovery middleware")
 	}
@@ -284,8 +281,7 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 
-	// Wrap with recovery middleware
-	handler := server.recoverMiddleware(panicHandler)
+	handler := throughRegistrar(nil, panicHandler)
 	handler(w, req)
 
 	// Should recover and return 500
@@ -302,56 +298,6 @@ func TestPanicRecovery_NilPointerPanic(t *testing.T) {
 
 	if response.Error != "internal_server_error" {
 		t.Errorf("Expected error code 'internal_server_error', got: %s", response.Error)
-	}
-}
-
-// TestPanicRecovery_ArrayOutOfBounds verifies panic recovery catches array panics.
-func TestPanicRecovery_ArrayOutOfBounds(t *testing.T) {
-	server, tmpDir, _ := newTestServerWithAuth(t)
-
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	// Create a handler that panics with array out of bounds
-	panicHandler := func(_ http.ResponseWriter, _ *http.Request) {
-		arr := []int{1, 2, 3}
-		_ = arr[10]
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	w := httptest.NewRecorder()
-
-	handler := server.recoverMiddleware(panicHandler)
-	handler(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("Panic should be recovered with 500, got: %d", w.Code)
-	}
-}
-
-// TestPanicRecovery_NormalOperation verifies recovery doesn't affect normal requests.
-func TestPanicRecovery_NormalOperation(t *testing.T) {
-	server, tmpDir, _ := newTestServerWithAuth(t)
-
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	// Normal handler that doesn't panic
-	normalHandler := func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	w := httptest.NewRecorder()
-
-	handler := server.recoverMiddleware(normalHandler)
-	handler(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Normal request should succeed, got: %d", w.Code)
-	}
-
-	if w.Body.String() != "OK" {
-		t.Errorf("Expected body 'OK', got: %s", w.Body.String())
 	}
 }
 
@@ -616,7 +562,7 @@ func generateTestToken() string {
 
 // TestCSRFWiring_TemplatesAndLibraryNetworks is the #740 regression test
 // (extended for #897 L4's library-networks unification): it drives
-// requests through the real mux (registerAPIRoutes) to prove the
+// requests through the real route table (apiHandler) to prove the
 // library-networks mutating endpoints actually have csrfProtect in their
 // middleware chain. A POST without the X-Csrf-Token header must be
 // rejected with 403 — if someone removes csrfProtect from routes.go, this
@@ -636,8 +582,7 @@ func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 	// newTestServerWithAuth doesn't initialize — set it so the full mux
 	// chain doesn't nil-panic before reaching csrfProtect.
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	for _, path := range []string{"/api/v1/library/networks"} {
 		t.Run("POST "+path+" without CSRF -> 403", func(t *testing.T) {
@@ -682,8 +627,7 @@ func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 func TestTemplateRoutesRejectMutation(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	server.fileLimiter = ratelimit.NewRateLimiter(FileRateLimit, FileBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 
 	cases := []struct {
 		method string

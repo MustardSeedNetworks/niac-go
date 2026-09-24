@@ -1,8 +1,6 @@
 package api
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -129,12 +127,4 @@ func isTrustedHop(addr netip.Addr, trusted []netip.Prefix) bool {
 	}
 
 	return false
-}
-
-// generateRequestID creates a unique request ID for tracing.
-func generateRequestID() string {
-	b := make([]byte, requestIDBytes)
-	_, _ = rand.Read(b) // crypto/rand read errors will result in zero bytes, still usable
-
-	return hex.EncodeToString(b)
 }

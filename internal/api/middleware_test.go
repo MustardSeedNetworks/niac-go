@@ -47,45 +47,6 @@ devices:
 	}
 }
 
-func TestRecoverMiddlewareReturnsInternalError(t *testing.T) {
-	server := createTestServerForMiddleware(t)
-
-	handler := http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		panic("test panic message")
-	})
-
-	wrapped := server.recoverMiddleware(handler)
-
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	rec := httptest.NewRecorder()
-
-	// Should not panic - middleware catches it
-	wrapped(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestRecoverMiddlewareNoPanic(t *testing.T) {
-	server := createTestServerForMiddleware(t)
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-	})
-
-	wrapped := server.recoverMiddleware(handler)
-
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	rec := httptest.NewRecorder()
-
-	wrapped(rec, req)
-
-	if rec.Code != http.StatusCreated {
-		t.Errorf("status = %d, want %d", rec.Code, http.StatusCreated)
-	}
-}
-
 func TestCSRFProtectionGETAllowed(t *testing.T) {
 	server := createTestServerForMiddleware(t)
 	server.csrf = csrf.NewManager()

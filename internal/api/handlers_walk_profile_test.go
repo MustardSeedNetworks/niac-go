@@ -237,7 +237,7 @@ func TestWalkProfileRoutesCarryBoundedAuthoringPolicy(t *testing.T) {
 	captureRoute := routes["/api/v1/walk/capture-profile"]
 	if !captureRoute.CSRF ||
 		!captureRoute.RateLimited ||
-		captureRoute.Admin {
+		captureRoute.Scope != "" {
 		t.Fatalf("walk capture policy = %+v", captureRoute)
 	}
 }

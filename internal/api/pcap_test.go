@@ -125,9 +125,9 @@ func TestHandlePcapUploadMethodNotAllowed(t *testing.T) {
 	server, _ := newTestServer(t)
 
 	// Method gating moved from the handler to the route registry (ADR-0002).
-	// Exercise the same methodGate wrapper register() composes for the
+	// Exercise the same method gate the registrar composes for the
 	// POST-only /api/v1/pcap/upload route.
-	gated := server.methodGate([]string{http.MethodPost}, server.handlePcapUpload)
+	gated := throughRegistrar([]string{http.MethodPost}, server.handlePcapUpload)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/pcap/upload", nil)
@@ -184,9 +184,9 @@ func TestHandlePcapAnalysisMethodNotAllowed(t *testing.T) {
 	server, _ := newTestServer(t)
 
 	// Method gating moved from the handler to the route registry (ADR-0002).
-	// Exercise the methodGate wrapper register() composes for the GET-only
+	// Exercise the method gate the registrar composes for the GET-only
 	// /api/v1/pcap/ route.
-	gated := server.methodGate([]string{http.MethodGet}, server.handlePcapAnalysis)
+	gated := throughRegistrar([]string{http.MethodGet}, server.handlePcapAnalysis)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/pcap/test-id", nil)

@@ -1,7 +1,7 @@
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/MustardSeedNetworks/foundation v0.5.10 h1:CiXSAkwT+mmyheiLHZOPokAZkMmRqeVAsnyazE65tQc=
-github.com/MustardSeedNetworks/foundation v0.5.10/go.mod h1:C3vkWnvfq11/KeXQ9ItE+iotbkKMJ1o/l7GNKs/x0IE=
+github.com/MustardSeedNetworks/foundation v0.5.19 h1:dzrr+W2/2bNE7R4GL/0Q3lZ4U3wwSznFaFr/LPsK6OY=
+github.com/MustardSeedNetworks/foundation v0.5.19/go.mod h1:pUS7Wo1acXUmOBKiyLr+iM7+slCb+M1dMTAIas8a4kk=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
 github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
 github.com/buger/jsonparser v1.6.1 h1:I0phFv0PlbLHnM7TZAVjZ2MJ2/eWRTDyuO7GLR98IEs=

@@ -37,17 +37,19 @@ func writeError(
 	errorCode, message string,
 	details []ErrorDetail,
 ) {
+	// The registrar assigns X-Request-ID; the body quotes it so a client
+	// report can be joined to the log line below.
+	requestID := r.Header.Get("X-Request-ID")
 	response := ErrorResponse{
 		Error:     errorCode,
 		Message:   message,
 		Details:   details,
+		RequestID: requestID,
 		Timestamp: time.Now(),
 		Path:      r.URL.Path,
 		Method:    r.Method,
 	}
 
-	// FEATURE #118: Include request ID in error logging
-	requestID := r.Header.Get("X-Request-ID")
 	if requestID != "" {
 		logger := slog.Default()
 		logger.ErrorContext(r.Context(),

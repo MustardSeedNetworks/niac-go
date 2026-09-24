@@ -347,8 +347,7 @@ func TestDraftRoutesEnforceAuthScopeCSRFAndWriteRatePolicy(t *testing.T) {
 	server, _, rwToken := newTestServerWithAuth(t)
 	attachDraftLibrary(t, server)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 	body := fmt.Sprintf(`{"name":"secure","content":%s}`, strconvJSON(baseConfigYAML))
 
 	unauthRec := httptest.NewRecorder()
@@ -389,7 +388,7 @@ func TestDraftRoutesEnforceAuthScopeCSRFAndWriteRatePolicy(t *testing.T) {
 	}
 
 	policy := fetchRouteManifest(t)["/api/v1/library/drafts"]
-	if !policy.CSRF || !policy.RateLimited || policy.Admin {
+	if !policy.CSRF || !policy.RateLimited || policy.Scope != "" {
 		t.Fatalf("draft route policy = %+v, want csrf+rateLimited without admin", policy)
 	}
 }

@@ -76,13 +76,13 @@ func validBundleJSONBody(t *testing.T) []byte {
 	return body
 }
 
-// newLibraryInstallServer wires a real mux (registerAPIRoutes) with an
+// newLibraryInstallServer wires the real route table (apiHandler) with an
 // opened library rooted at a tmp dir and the write rate limiter the
 // registry chain needs before it reaches csrf/admin checks — the same
 // setup TestCSRFWiring_TemplatesAndLibraryNetworks uses. scope selects the
 // bearer token's scope so tests can exercise both the admin-token success
 // path and the non-admin rejection path.
-func newLibraryInstallServer(t *testing.T, scope tokenstore.TokenScope) (*Server, *http.ServeMux, string) {
+func newLibraryInstallServer(t *testing.T, scope tokenstore.TokenScope) (*Server, http.Handler, string) {
 	t.Helper()
 	server, tmpDir := newTestServer(t)
 	server.rateLimiter = ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst)
@@ -105,8 +105,7 @@ func newLibraryInstallServer(t *testing.T, scope tokenstore.TokenScope) (*Server
 	// importing back.
 	server.cfg.InstallPack = content.Extract
 
-	mux := http.NewServeMux()
-	server.registerAPIRoutes(mux)
+	mux := server.apiHandler()
 	_ = tmpDir
 	return server, mux, token
 }
