@@ -32,7 +32,7 @@ func TestWireExistsAndIsUp(t *testing.T) {
 func TestNoSimulatedAddressIsOnAKernelInterface(t *testing.T) {
 	requireWire(t)
 
-	out := run(t, "ip", "-4", "-br", "addr", "show")
+	out := ip(t, "-4", "-br", "addr", "show")
 	if strings.Contains(out, transitGateway+"/") {
 		t.Errorf(
 			"the simulated gateway %s is assigned to a kernel interface, so the kernel can answer for it:\n%s",

@@ -36,6 +36,9 @@ class NightlyTest(unittest.TestCase):
         go = self.bin / "go"
         go.write_text('#!/bin/sh\nprintf ran >> "$GO_CALLS"\nexit "${GO_STATUS:-0}"\n')
         go.chmod(0o755)
+        make = self.bin / "make"
+        make.write_text('#!/bin/sh\nprintf built >> "$MAKE_CALLS"\nexit "${MAKE_STATUS:-0}"\n')
+        make.chmod(0o755)
 
     def commit(self, value):
         (self.origin / "input").write_text(value)
@@ -47,7 +50,8 @@ class NightlyTest(unittest.TestCase):
         env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}",
                    NIAC_WIRE_REPO=str(self.repo), NIAC_WIRE_STATE=str(self.root / "state"),
                    NIAC_WIRE_TOKEN=str(self.root / "no-token"), NIAC_WALK_CORPUS="",
-                   GO_CALLS=str(self.root / "go-calls"), **extra)
+                   GO_CALLS=str(self.root / "go-calls"),
+                   MAKE_CALLS=str(self.root / "make-calls"), **extra)
         return subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True)
 
     def run_nightly(self, **extra):
@@ -59,6 +63,7 @@ class NightlyTest(unittest.TestCase):
         result, record = self.run_nightly()
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(record["result"], "failed")
+        self.assertFalse((self.root / "make-calls").exists())
         self.assertFalse((self.root / "go-calls").exists())
 
     def test_clean_checkout_tests_fetched_commit(self):
@@ -66,7 +71,16 @@ class NightlyTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(record["commit"], self.expected)
         self.assertEqual(record["result"], "passed")
+        self.assertTrue((self.root / "make-calls").exists())
         self.assertTrue((self.root / "go-calls").exists())
+
+    # The released-binary tests drive the tree's own build, so a tree that
+    # does not build must fail the night without reaching the suite.
+    def test_build_failure_is_recorded_and_never_tested(self):
+        result, record = self.run_nightly(MAKE_STATUS="2")
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertEqual(record["result"], "failed")
+        self.assertFalse((self.root / "go-calls").exists())
 
     def test_dirty_checkout_is_preserved_and_never_tested(self):
         (self.repo / "input").write_text("operator edits")

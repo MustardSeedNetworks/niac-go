@@ -869,6 +869,16 @@ func routedTaggedSNMPRequest(t *testing.T, testerMAC, routerMAC net.HardwareAddr
 
 func forwardingFixture(t *testing.T) (*config.Config, *fabric.Topology, net.HardwareAddr) {
 	t.Helper()
+	return forwardingFixtureThrough(t, "router")
+}
+
+// forwardingFixtureThrough puts a device of gatewayType between the attachment
+// network and the internal one.
+func forwardingFixtureThrough(
+	t *testing.T,
+	gatewayType string,
+) (*config.Config, *fabric.Topology, net.HardwareAddr) {
+	t.Helper()
 	routerMAC := mustForwardingMAC(t, "02:00:00:00:00:01")
 	cfg := &config.Config{
 		Networks: []config.Network{
@@ -878,7 +888,7 @@ func forwardingFixture(t *testing.T) (*config.Config, *fabric.Topology, net.Hard
 		Attachments: []config.LogicalAttachment{{Name: "tester", Network: "attachment"}},
 		Devices: []config.Device{
 			{
-				Name: "edge", Type: "router", MACAddress: routerMAC,
+				Name: "edge", Type: gatewayType, MACAddress: routerMAC,
 				Interfaces: []config.Interface{
 					{Name: "outside", Network: "attachment", Address: "10.10.200.1/24"},
 					{Name: "inside", Network: "internal", Address: "10.20.0.1/24"},
@@ -937,6 +947,40 @@ func TestFabricResolutionRejectsAttachmentWithoutCurrentAddress(t *testing.T) {
 	}
 	if resolution, found := stack.fabric.resolveIPv4(netip.MustParseAddr("10.20.0.10"), routerMAC); found {
 		t.Fatalf("resolution = %#v, want no route without a current attachment address", resolution)
+	}
+}
+
+// A tester on an access port reaches the rest of the site through that VLAN's
+// gateway, and in every generated pack that gateway is a core layer-3 switch,
+// not a router. Resolving only through type "router" left every off-VLAN
+// address unreachable from the default attachment (niac-go#2335).
+func TestFabricResolutionRoutesThroughEveryLayer3GatewayType(t *testing.T) {
+	cases := []struct {
+		gatewayType string
+		routes      bool
+	}{
+		{"router", true},
+		{"layer3-switch", true},
+		{"firewall", true},
+		// A layer-2 switch with an address on both networks is managed on
+		// both, and still moves no packet between them.
+		{"switch", false},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.gatewayType, func(t *testing.T) {
+			cfg, topology, gatewayMAC := forwardingFixtureThrough(t, testCase.gatewayType)
+			stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+			stack.ConfigureFabric(topology)
+
+			resolution, found := stack.fabric.resolveIPv4(netip.MustParseAddr("10.20.0.10"), gatewayMAC)
+			if found != testCase.routes {
+				t.Fatalf("routed through a %s: found = %v, want %v (resolution %#v)",
+					testCase.gatewayType, found, testCase.routes, resolution)
+			}
+			if found && (!resolution.routed || resolution.firstHopIP != netip.MustParseAddr("10.10.200.1")) {
+				t.Fatalf("resolution = %#v, want routed with first hop 10.10.200.1", resolution)
+			}
+		})
 	}
 }
 

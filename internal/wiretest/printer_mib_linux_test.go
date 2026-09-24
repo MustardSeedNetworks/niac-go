@@ -3,17 +3,10 @@
 package wiretest_test
 
 import (
-	"context"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/gosnmp/gosnmp"
-
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
-	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // P4-4: the probe an EtherScope sends every device it discovers is one GETNEXT
@@ -21,94 +14,61 @@ import (
 // answering inside the subtree is filed as a printer; a switch answering
 // outside it is filed as not one. Both ends are asserted, because an agent that
 // answered .43 for every device would pass the first alone.
+//
+// Both are pack devices, probed from the pack's own attachment port: the
+// printer across the data VLAN, and the access switch the tester is plugged
+// into across the route to its management address.
 const (
-	printerTarget      = "10.254.200.70"
-	printerSwitch      = "10.254.200.71"
-	printerCommunity   = "wire_printer"
 	printerMIBRootOID  = ".1.3.6.1.2.1.43"
 	hrDeviceTypeOID    = ".1.3.6.1.2.1.25.3.2.1.2.1"
 	hrDevicePrinterOID = ".1.3.6.1.2.1.25.3.1.5"
 )
 
-func TestPrinterAnswersThePrinterProbeOnTheWire(t *testing.T) {
-	startPrinterWire(t)
+func TestPackPrinterAnswersThePrinterProbeOnTheWire(t *testing.T) {
+	authored, _ := startPack(t, "hospital")
+	printerName := firstDeviceOfType(t, authored, "printer")
+	switchName := authored.Attachments[0].At.Device
 
-	printer := dialPrinterWire(t, printerTarget)
+	printer := dialDevice(t, authored, printerName)
 	probe, err := printer.GetNext([]string{printerMIBRootOID})
 	if err != nil || len(probe.Variables) != 1 {
-		t.Fatalf("GETNEXT %s on the printer: %v", printerMIBRootOID, err)
+		t.Fatalf("GETNEXT %s on %s: %v", printerMIBRootOID, printerName, err)
 	}
 	if name := probe.Variables[0].Name; !strings.HasPrefix(name, printerMIBRootOID+".") {
-		t.Fatalf("the printer answered GETNEXT %s with %s, outside the Printer-MIB", printerMIBRootOID, name)
+		t.Fatalf("%s answered GETNEXT %s with %s, outside the Printer-MIB", printerName, printerMIBRootOID, name)
 	}
 	kind, err := printer.Get([]string{hrDeviceTypeOID})
 	if err != nil || len(kind.Variables) != 1 {
-		t.Fatalf("GET %s on the printer: %v", hrDeviceTypeOID, err)
+		t.Fatalf("GET %s on %s: %v", hrDeviceTypeOID, printerName, err)
 	}
 	if value, _ := kind.Variables[0].Value.(string); value != hrDevicePrinterOID {
-		t.Errorf("hrDeviceType.1 = %v, want hrDevicePrinter %s", kind.Variables[0].Value, hrDevicePrinterOID)
+		t.Errorf(
+			"%s hrDeviceType.1 = %v, want hrDevicePrinter %s",
+			printerName,
+			kind.Variables[0].Value,
+			hrDevicePrinterOID,
+		)
 	}
-	t.Logf("printer: GETNEXT %s -> %s = %v; hrDeviceType.1 = %v", printerMIBRootOID,
+	t.Logf("%s: GETNEXT %s -> %s = %v; hrDeviceType.1 = %v", printerName, printerMIBRootOID,
 		probe.Variables[0].Name, probe.Variables[0].Value, kind.Variables[0].Value)
 
-	notPrinter, err := dialPrinterWire(t, printerSwitch).GetNext([]string{printerMIBRootOID})
+	notPrinter, err := dialDevice(t, authored, switchName).GetNext([]string{printerMIBRootOID})
 	if err != nil || len(notPrinter.Variables) != 1 {
-		t.Fatalf("GETNEXT %s on the switch: %v", printerMIBRootOID, err)
+		t.Fatalf("GETNEXT %s on %s: %v", printerMIBRootOID, switchName, err)
 	}
 	if name := notPrinter.Variables[0].Name; strings.HasPrefix(name, printerMIBRootOID+".") {
-		t.Errorf("the switch answered GETNEXT %s with %s", printerMIBRootOID, name)
+		t.Errorf("%s answered GETNEXT %s with %s", switchName, printerMIBRootOID, name)
 	}
-	t.Logf("switch: GETNEXT %s -> %s", printerMIBRootOID, notPrinter.Variables[0].Name)
+	t.Logf("%s: GETNEXT %s -> %s", switchName, printerMIBRootOID, notPrinter.Variables[0].Name)
 }
 
-func startPrinterWire(t *testing.T) {
+func firstDeviceOfType(t *testing.T, cfg *config.Config, deviceType string) string {
 	t.Helper()
-	requireWire(t)
-
-	root := t.TempDir()
-	configPath := filepath.Join(root, "printer-wire.yaml")
-	copyFile(t, filepath.Join("testdata", "printer-wire.yaml"), configPath)
-	t.Setenv("NIAC_CONFIGS_DIR", root)
-
-	d, err := daemon.NewDaemon(daemon.Config{
-		StoragePath: "disabled",
-		AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
-			Interface: simIface, Mode: fabric.ModeAccess, AccessVLAN: accessVLAN,
-		}},
-	})
-	if err != nil {
-		t.Fatalf("daemon.NewDaemon: %v", err)
-	}
-	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest-printer",
-		Interface:      simIface,
-		Attachment:     "tester",
-		AttachmentMode: fabric.ModeAccess,
-		AccessVLAN:     accessVLAN,
-		ConfigPath:     configPath,
-	}); startErr != nil {
-		t.Fatalf("StartSimulation on %s: %v", simIface, startErr)
-	}
-	t.Cleanup(func() {
-		if stopErr := d.StopSimulation(""); stopErr != nil {
-			t.Errorf("StopSimulation: %v", stopErr)
+	for index := range cfg.Devices {
+		if cfg.Devices[index].Type == deviceType {
+			return cfg.Devices[index].Name
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_ = d.Shutdown(ctx)
-	})
-}
-
-func dialPrinterWire(t *testing.T, target string) *gosnmp.GoSNMP {
-	t.Helper()
-	client := &gosnmp.GoSNMP{
-		Target: target, Port: 161, Community: printerCommunity,
-		Version: gosnmp.Version2c, Timeout: 5 * time.Second, Retries: 3,
 	}
-	if err := client.Connect(); err != nil {
-		t.Fatalf("connect to %s: %v", target, err)
-	}
-	t.Cleanup(func() { _ = client.Conn.Close() })
-
-	return client
+	t.Fatalf("the generated pack has no device of type %q", deviceType)
+	return ""
 }

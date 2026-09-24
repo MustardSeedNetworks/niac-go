@@ -142,13 +142,13 @@ func requireWire(t *testing.T) {
 	}
 }
 
-// run executes a command and fails the test with the combined output, which is
-// where ip puts its actual reason for refusing.
-func run(t *testing.T, name string, args ...string) string {
+// ip runs iproute2 and fails the test with the combined output, which is where
+// ip puts its actual reason for refusing.
+func ip(t *testing.T, args ...string) string {
 	t.Helper()
-	out, err := exec.Command(name, args...).CombinedOutput()
+	out, err := exec.Command("ip", args...).CombinedOutput()
 	if err != nil {
-		t.Fatalf("%s %s: %v\n%s", name, strings.Join(args, " "), err, out)
+		t.Fatalf("ip %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
 	return string(out)
 }

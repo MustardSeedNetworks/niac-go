@@ -38,9 +38,9 @@ const (
 // 9,297,379,472 and the assertion passed. Saturation is asserted as a rate
 // instead, below.
 //
-// The device under test is site-internal, reachable only because the namespace
-// now routes through the edge router the way a real tester on that segment
-// does.
+// The device under test is site-internal, reachable only because the test end
+// sits on the pack's attachment port and routes through its gateway, the way a
+// real tester plugged in there does.
 func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 	cases := []struct {
 		pack      string
@@ -55,7 +55,7 @@ func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.pack, func(t *testing.T) {
-			authored := startPack(t, testCase.pack)
+			authored, _ := startPack(t, testCase.pack)
 			client := dialDevice(t, authored, testCase.device)
 			index := interfaceIndex(t, client, testCase.iface)
 
@@ -77,8 +77,11 @@ func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 }
 
 // startPack generates and starts one shipped pack the way the product does, so
-// the thing under test is the artifact a customer runs.
-func startPack(t *testing.T, id string) *config.Config {
+// the thing under test is the artifact a customer runs, and puts the test end
+// on the pack's attachment port. The generated YAML is the authored truth every
+// assertion reads, so the thing under test and the thing compared against are
+// one artifact; a hand-written config here would be an oracle, not the product.
+func startPack(t *testing.T, id string) (*config.Config, packAttachment) {
 	t.Helper()
 	requireWire(t)
 
@@ -103,6 +106,11 @@ func startPack(t *testing.T, id string) *config.Config {
 		t.Fatalf("loading the generated %s YAML: %v", id, err)
 	}
 
+	attachment := resolveAttachment(t, authored, pack.Request.AttachmentName)
+	attachment.join(t)
+
+	// Without this the daemon persists the inline config into the invoking
+	// user's real ~/.niac/configs.
 	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
 	d, err := daemon.NewDaemon(daemon.Config{
 		StoragePath: "disabled",
@@ -114,7 +122,7 @@ func startPack(t *testing.T, id string) *config.Config {
 		t.Fatalf("daemon.NewDaemon: %v", err)
 	}
 	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest-finding-" + id,
+		SessionID:      "wiretest-" + id,
 		Interface:      simIface,
 		Attachment:     pack.Request.AttachmentName,
 		AttachmentMode: fabric.ModeAccess,
@@ -132,7 +140,7 @@ func startPack(t *testing.T, id string) *config.Config {
 		_ = d.Shutdown(ctx)
 	})
 
-	return authored
+	return authored, attachment
 }
 
 func dialDevice(t *testing.T, authored *config.Config, name string) *gosnmp.GoSNMP {
@@ -209,7 +217,7 @@ func TestHospitalSaturationReadsAboveTheWarningLine(t *testing.T) {
 		saturated      = "HundredGigabitEthernet1/0/49"
 	)
 
-	authored := startPack(t, "hospital")
+	authored, _ := startPack(t, "hospital")
 	client := dialDevice(t, authored, "MED-ACC-SW02")
 	// Discovered rather than named: both of this switch's uplinks carry the
 	// finding, so the comparison port has to be whatever else the pack

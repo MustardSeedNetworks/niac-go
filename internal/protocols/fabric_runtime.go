@@ -6,6 +6,7 @@ import (
 	"net/netip"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
@@ -155,7 +156,8 @@ func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
 	routers := make(map[string]*fabricRouter)
 	for _, iface := range topology.Interfaces {
 		device := r.devicesByName[iface.Device]
-		if iface.Network != r.attachmentNetwork || device == nil || device.Type != "router" {
+		if iface.Network != r.attachmentNetwork || device == nil ||
+			!deviceclass.RoutesIP(deviceclass.Parse(device.Type)) {
 			continue
 		}
 		router := &fabricRouter{
