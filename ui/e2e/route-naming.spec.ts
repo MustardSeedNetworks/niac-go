@@ -1,5 +1,6 @@
 import enPages from '@locales/en/pages.json' with { type: 'json' };
 import { expect, test } from '@playwright/test';
+import { expectPageFirst } from './support/shell-layout';
 
 /**
  * Every route names itself the same way twice (UI-NIAC-5, niac-go#2189).
@@ -38,19 +39,28 @@ const ROUTES = [
 /** A crumb an operator reads: no lowercase slug, no hyphen standing for a space. */
 const TITLE_CASE = /^[A-Z0-9]/;
 
-for (const { path, label } of ROUTES) {
-  test(`${path} names itself in the trail and the tab`, async ({ page }) => {
-    await page.goto(path);
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  for (const { path, label } of ROUTES) {
+    test(`${path} names itself and starts with its page header at ${viewport.width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto(path);
 
-    const crumbs = page.locator('nav[aria-label="Breadcrumb"] [data-crumb]');
-    await expect(crumbs.last()).toHaveText(label);
-    for (const text of await crumbs.allTextContents()) {
-      expect(text, `${path} crumb "${text}"`).toMatch(TITLE_CASE);
-      expect(text, `${path} crumb "${text}" is a URL slug`).not.toContain('-');
-    }
+      const crumbs = page.locator('nav[aria-label="Breadcrumb"] [data-crumb]');
+      await expect(crumbs.last()).toHaveText(label);
+      for (const text of await crumbs.allTextContents()) {
+        expect(text, `${path} crumb "${text}"`).toMatch(TITLE_CASE);
+        expect(text, `${path} crumb "${text}" is a URL slug`).not.toContain('-');
+      }
 
-    await expect(page).toHaveTitle(`${label} | ${enPages.app?.name ?? 'NIAC'}`);
-  });
+      await expect(page).toHaveTitle(`${label} | ${enPages.app?.name ?? 'NIAC'}`);
+      await expectPageFirst(page);
+    });
+  }
 }
 
 test('the dashboard is the product, with no trail above it', async ({ page }) => {
