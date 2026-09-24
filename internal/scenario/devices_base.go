@@ -144,6 +144,7 @@ func endpointDevice(
 			SysDescr:    profile.Platform + ", " + profile.Software,
 			SysLocation: site.Location, SysContact: "netops@" + request.Domain,
 		}
+		device.Properties["sysObjectID"] = profile.SysObjectID
 	}
 	if kind.osType == "windows" {
 		device.Netbios = &converter.NetbiosConfig{

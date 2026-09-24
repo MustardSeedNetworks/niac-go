@@ -3,17 +3,12 @@
 package wiretest_test
 
 import (
-	"context"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gosnmp/gosnmp"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
-	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // P4-4: a manager that finds an APC Network Management Card walks RFC 1628 next.
@@ -21,97 +16,57 @@ import (
 // outside it is not. Both ends are asserted, because an agent that answered
 // .33 for every device would pass the first alone.
 //
-// No pack carries a UPS yet, so the probe runs against an authored UPS and
-// switch on the transit network.
+// Both are pack devices, probed from the pack's own attachment port: the site's
+// UPS across the data VLAN, and the access switch the tester is plugged into.
 const (
-	upsTarget         = "10.254.200.72"
-	upsSwitch         = "10.254.200.73"
-	upsCommunity      = "wire_ups"
 	upsMIBRootOID     = ".1.3.6.1.2.1.33"
 	upsIdentManufOID  = ".1.3.6.1.2.1.33.1.1.1.0"
 	upsBatteryStatOID = ".1.3.6.1.2.1.33.1.2.1.0"
 	batteryNormal     = 2
 )
 
-func TestUPSAnswersTheUPSMIBOnTheWire(t *testing.T) {
-	startUPSWire(t)
+func TestPackUPSAnswersTheUPSMIBOnTheWire(t *testing.T) {
+	authored, _ := startPack(t, "hospital")
+	upsName := firstDeviceWithRole(t, authored, "ups")
+	switchName := authored.Attachments[0].At.Device
 
-	ups := dialUPSWire(t, upsTarget)
+	ups := dialDevice(t, authored, upsName)
 	probe, err := ups.GetNext([]string{upsMIBRootOID})
 	if err != nil || len(probe.Variables) != 1 {
-		t.Fatalf("GETNEXT %s on the UPS: %v", upsMIBRootOID, err)
+		t.Fatalf("GETNEXT %s on %s: %v", upsMIBRootOID, upsName, err)
 	}
 	if name := probe.Variables[0].Name; name != upsIdentManufOID {
-		t.Fatalf("the UPS answered GETNEXT %s with %s, want %s", upsMIBRootOID, name, upsIdentManufOID)
+		t.Fatalf("%s answered GETNEXT %s with %s, want %s", upsName, upsMIBRootOID, name, upsIdentManufOID)
 	}
 	battery, err := ups.Get([]string{upsBatteryStatOID})
 	if err != nil || len(battery.Variables) != 1 {
-		t.Fatalf("GET %s on the UPS: %v", upsBatteryStatOID, err)
+		t.Fatalf("GET %s on %s: %v", upsBatteryStatOID, upsName, err)
 	}
 	if value := gosnmp.ToBigInt(battery.Variables[0].Value).Int64(); value != batteryNormal {
-		t.Errorf("upsBatteryStatus = %d, want batteryNormal %d", value, batteryNormal)
+		t.Errorf("%s upsBatteryStatus = %d, want batteryNormal %d", upsName, value, batteryNormal)
 	}
-	t.Logf("ups: GETNEXT %s -> %s = %s; upsBatteryStatus = %v", upsMIBRootOID,
+	t.Logf("%s: GETNEXT %s -> %s = %s; upsBatteryStatus = %v", upsName, upsMIBRootOID,
 		probe.Variables[0].Name, probe.Variables[0].Value, battery.Variables[0].Value)
 
-	notUPS, err := dialUPSWire(t, upsSwitch).GetNext([]string{upsMIBRootOID})
+	notUPS, err := dialDevice(t, authored, switchName).GetNext([]string{upsMIBRootOID})
 	if err != nil || len(notUPS.Variables) != 1 {
-		t.Fatalf("GETNEXT %s on the switch: %v", upsMIBRootOID, err)
+		t.Fatalf("GETNEXT %s on %s: %v", upsMIBRootOID, switchName, err)
 	}
 	if name := notUPS.Variables[0].Name; strings.HasPrefix(name, upsMIBRootOID+".") {
-		t.Errorf("the switch answered GETNEXT %s with %s", upsMIBRootOID, name)
+		t.Errorf("%s answered GETNEXT %s with %s", switchName, upsMIBRootOID, name)
 	}
-	t.Logf("switch: GETNEXT %s -> %s", upsMIBRootOID, notUPS.Variables[0].Name)
+	t.Logf("%s: GETNEXT %s -> %s", switchName, upsMIBRootOID, notUPS.Variables[0].Name)
 }
 
-func startUPSWire(t *testing.T) {
+// firstDeviceWithRole finds a device by its generator role. A UPS is typed iot
+// like the pack's clinical devices, so its type alone does not pick it out.
+func firstDeviceWithRole(t *testing.T, cfg *config.Config, role string) string {
 	t.Helper()
-	requireWire(t)
-
-	root := t.TempDir()
-	configPath := filepath.Join(root, "ups-wire.yaml")
-	copyFile(t, filepath.Join("testdata", "ups-wire.yaml"), configPath)
-	t.Setenv("NIAC_CONFIGS_DIR", root)
-
-	d, err := daemon.NewDaemon(daemon.Config{
-		StoragePath: "disabled",
-		AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
-			Interface: simIface, Mode: fabric.ModeAccess, AccessVLAN: accessVLAN,
-		}},
-	})
-	if err != nil {
-		t.Fatalf("daemon.NewDaemon: %v", err)
-	}
-	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest-ups",
-		Interface:      simIface,
-		Attachment:     "tester",
-		AttachmentMode: fabric.ModeAccess,
-		AccessVLAN:     accessVLAN,
-		ConfigPath:     configPath,
-	}); startErr != nil {
-		t.Fatalf("StartSimulation on %s: %v", simIface, startErr)
-	}
-	t.Cleanup(func() {
-		if stopErr := d.StopSimulation(""); stopErr != nil {
-			t.Errorf("StopSimulation: %v", stopErr)
+	for index := range cfg.Devices {
+		if cfg.Devices[index].Properties["role"] == role {
+			return cfg.Devices[index].Name
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_ = d.Shutdown(ctx)
-	})
-}
-
-func dialUPSWire(t *testing.T, target string) *gosnmp.GoSNMP {
-	t.Helper()
-	client := &gosnmp.GoSNMP{
-		Target: target, Port: 161, Community: upsCommunity,
-		Version: gosnmp.Version2c, Timeout: 5 * time.Second, Retries: 3,
 	}
-	if err := client.Connect(); err != nil {
-		t.Fatalf("connect to %s: %v", target, err)
-	}
-	t.Cleanup(func() { _ = client.Conn.Close() })
-
-	return client
+	t.Fatalf("the generated pack has no device with role %q", role)
+	return ""
 }
