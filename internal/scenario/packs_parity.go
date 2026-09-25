@@ -55,10 +55,10 @@ func packParity() map[string]Parity {
 		},
 		"service-provider": {
 			DeviceCount: 126, NetworkCount: 30, LinkCount: 146,
-			DeviceNamesSHA256: "784bb762b3c3c65844c94712b51213a9af562c2c76cd7eb0fe3e4e037a9fab69",
+			DeviceNamesSHA256: "6872f0399e287bdf9814624a1f0bc2cd712fc510963cc7fea6f99dd85b8e8a6a",
 			NetworksSHA256:    "79fcb26f2a9f506a24540a583ae570b5c25e1dcf8a63ccfa21946b4912fc7720",
-			LinksSHA256:       "f345b20aaaf36cde44530104865a25ea32b5741872777ca36168d4b9488bca58",
-			InterfacesSHA256:  "31b5fa1ef91beda60276f19f4eca30d75343ccadf5b153f6cecf1172b919ac76",
+			LinksSHA256:       "b084e74a3fe8a99d85617fb08e84aaec202eb0a0bd12e754b67588015d7f23d9",
+			InterfacesSHA256:  "c6deaf227382788c434003eb8dba440b69bac5968e45c79d12fc8f072c5f4d7f",
 		},
 	}
 }

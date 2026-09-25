@@ -125,6 +125,9 @@ func verticalMix(profile string) []endpointShare {
 		return []endpointShare{
 			siteUPS(),
 			{kind: appliance("office-printer", "PRN"), atLeast: 1},
+			{kind: appliance("olt", "OLT"), atLeast: 1},
+			{kind: appliance("ont", "ONT"), atLeast: 1},
+			{kind: appliance("cpe-router", "CPE"), atLeast: 1},
 			{kind: personalComputer("noc-workstation", "NOC", "windows"), weight: weightRare},
 		}
 	case "enterprise":

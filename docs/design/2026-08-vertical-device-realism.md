@@ -74,7 +74,7 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 | Warehouse | UPS | label printer 1 | rugged handheld 3 |
 | Manufacturing | UPS, label printer | robot controller 1 | PLC 4, HMI 2 |
 | Retail | UPS | — | POS 2, receipt printer 2, signage 1 |
-| Service provider | UPS, office printer | — | NOC workstation 1 |
+| Service provider | UPS, office printer, OLT, ONT, CPE router | — | NOC workstation 1 |
 | Campus, enterprise-scale | UPS | office printer 1 | workstation 5, laptop 3, Mac 2 |
 
 Every vertical also carries the closet tier, sized by site rather than by
@@ -200,8 +200,12 @@ back-office server.
 **Campus** — client tier and common tier, deliberately plain. This pack shows
 scale and clean structure rather than exotic devices.
 
-**Service provider** — NOC workstation, test head, OLT, ONT, CPE router. The
-current pack holds only a NOC workstation, which is the thinnest of the seven.
+**Service provider** — NOC workstation, test head, OLT, ONT, CPE router. Each
+POP carries the access tier as appliances that answer SNMP as themselves: a
+Calix E9-2 OLT, and the reference Calix GigaPoint ONT and Adtran NetVanta CPE
+router its technicians turn subscribers up against. They are typed `iot`:
+router or switch would make each a forwarding device, and each is a
+single-homed endpoint on the POP's data VLAN. The test head is not built.
 
 ## Topology shape
 
