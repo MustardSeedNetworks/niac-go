@@ -16,12 +16,16 @@ import (
 // the order the clients were first seen. A placement is sticky for the session:
 // a client that falls silent keeps its port, as a tester left plugged in does.
 type clientPlacement struct {
-	mu       sync.Mutex
+	mu sync.Mutex
+	// device carries the whole pool: an attachment names one switch.
+	device   string
 	ports    []fabric.AttachmentPort
 	pins     map[string]int
 	reserved []bool
 	taken    []bool
 	assigned map[string]int
+	// earliest is the port of the first client placed, -1 until there is one.
+	earliest int
 	// exhausted is set once a client found no free port, so the log says so
 	// once per session rather than on every frame that client sends.
 	exhausted bool
@@ -29,6 +33,8 @@ type clientPlacement struct {
 
 func newClientPlacement(attachment fabric.CompiledAttachment) *clientPlacement {
 	placement := &clientPlacement{
+		device:   attachment.Device,
+		earliest: -1,
 		ports:    append([]fabric.AttachmentPort(nil), attachment.Ports...),
 		pins:     make(map[string]int, len(attachment.Pins)),
 		reserved: make([]bool, len(attachment.Ports)),
@@ -73,6 +79,9 @@ func (p *clientPlacement) assign(mac string) (fabric.AttachmentPort, bool) {
 
 	p.taken[index] = true
 	p.assigned[mac] = index
+	if p.earliest < 0 {
+		p.earliest = index
+	}
 
 	return p.ports[index], true
 }
@@ -99,12 +108,31 @@ func (p *clientPlacement) lookup(mac string) (fabric.AttachmentPort, bool) {
 	return p.ports[index], true
 }
 
+// advertisedPort is the port the pool's switch names in its discovery
+// advertisements. A switch sends one per port, but every client here shares
+// one wire and hears every frame, so one advertisement has to serve them all:
+// it names the earliest-placed client's port and, before anyone is placed,
+// the port the next unpinned client will take, which is where a passive
+// listener lands once it transmits.
+func (p *clientPlacement) advertisedPort() fabric.AttachmentPort {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	index := p.earliest
+	if index < 0 {
+		index = max(p.firstFreePort(), 0)
+	}
+
+	return p.ports[index]
+}
+
 func (p *clientPlacement) reset() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	clear(p.taken)
 	clear(p.assigned)
+	p.earliest = -1
 	p.exhausted = false
 }
 

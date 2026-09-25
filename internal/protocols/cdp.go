@@ -383,19 +383,11 @@ func (h *CDPHandler) buildAddressesTLV(device *config.Device) []byte {
 
 // buildPortIDTLV builds the Port ID TLV.
 func (h *CDPHandler) buildPortIDTLV(device *config.Device) []byte {
-	var portID []byte
-
-	// Use port ID from config if available
-	switch {
-	case device.CDPConfig != nil && device.CDPConfig.PortID != "":
-		portID = []byte(device.CDPConfig.PortID)
-	case len(device.Interfaces) > 0 && device.Interfaces[0].Name != "":
-		// Try to use first interface name if available
-		portID = []byte(device.Interfaces[0].Name)
-	default:
-		// Fall back to a generic port name
-		portID = []byte("Port 1")
+	authored := ""
+	if device.CDPConfig != nil {
+		authored = device.CDPConfig.PortID
 	}
+	portID := []byte(h.stack.advertisedPortName(device, authored, "Port 1"))
 
 	length := min(cdpTLVHeaderSize+len(portID), cdpMaxUint16)
 

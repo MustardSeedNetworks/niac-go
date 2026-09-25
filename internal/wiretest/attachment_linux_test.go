@@ -30,9 +30,11 @@ type packAttachment struct {
 	// dhcpServer serves the attachment network's scope.
 	dhcpServer *config.Device
 	// onNetwork is every device with an interface on the attachment network.
-	// Until per-client placement (AP-2) narrows discovery egress to the
-	// tester's own switch, any of them may advertise on the wire.
 	onNetwork []*config.Device
+	// ports is the pool in assignment order, each with the network it lands a
+	// client on, and topology the compile they were resolved in.
+	ports    []fabric.AttachmentPort
+	topology fabric.Topology
 }
 
 // resolveAttachment compiles the pack with the binding the harness starts it
@@ -51,7 +53,12 @@ func resolveAttachment(t *testing.T, authored *config.Config, name string) packA
 		t.Fatalf("compiling the pack for attachment %q: %+v", name, report.Diagnostics)
 	}
 	topology := report.Topology
-	attachment := packAttachment{network: topology.Binding.Network}
+	attachment := packAttachment{network: topology.Binding.Network, topology: topology}
+	for _, compiled := range topology.Attachments {
+		if compiled.Name == name {
+			attachment.ports = compiled.Ports
+		}
+	}
 	if attachment.network == "" {
 		t.Fatalf("attachment %q resolved to no network", name)
 	}

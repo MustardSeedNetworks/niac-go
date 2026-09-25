@@ -324,15 +324,7 @@ func (h *LLDPHandler) buildPortIDTLV(device *config.Device) []byte {
 	// Use interface name or device name as port ID
 	subtype := byte(LLDPPortIDSubtypeInterfaceName)
 
-	var portID []byte
-
-	// Try to use first interface name if available
-	if len(device.Interfaces) > 0 && device.Interfaces[0].Name != "" {
-		portID = []byte(device.Interfaces[0].Name)
-	} else {
-		// Fall back to device name
-		portID = []byte(device.Name)
-	}
+	portID := []byte(h.stack.advertisedPortName(device, "", device.Name))
 
 	length := min(1+len(portID), lldpMaxTLVLength) // subtype + port ID, clamped to 9-bit max
 

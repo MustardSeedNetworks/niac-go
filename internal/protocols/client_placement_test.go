@@ -123,6 +123,11 @@ func placementCoreSwitch() config.Device {
 
 func placementStack(t *testing.T, pins ...config.AttachmentPin) *Stack {
 	t.Helper()
+	return placementStackOn(t, idleTransport{}, pins...)
+}
+
+func placementStackOn(t *testing.T, transport PacketTransport, pins ...config.AttachmentPin) *Stack {
+	t.Helper()
 	cfg := &config.Config{
 		Networks: []config.Network{
 			{Name: "med-mgmt", Subnet: "10.51.200.0/24", VirtualVLAN: 200},
@@ -142,7 +147,7 @@ func placementStack(t *testing.T, pins ...config.AttachmentPin) *Stack {
 	if !report.Safe {
 		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
 	}
-	stack := NewStackWithTransport(idleTransport{}, cfg, logging.NewDebugConfig(0))
+	stack := NewStackWithTransport(transport, cfg, logging.NewDebugConfig(0))
 	stack.ConfigureFabric(&report.Topology)
 	return stack
 }
