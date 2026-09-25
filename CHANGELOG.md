@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.95](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.94...v0.95.95) (2026-09-25)
+
+
+### Features
+
+* **scenario:** give each vertical's application slot its workload server ([#2352](https://github.com/MustardSeedNetworks/niac-go/issues/2352)) ([29b6b90](https://github.com/MustardSeedNetworks/niac-go/commit/29b6b90b73113cfcc01260e72d365b697c243069))
+
+
+### Code Refactoring
+
+* **api:** run foundation's shared route-policy gate ([#2355](https://github.com/MustardSeedNetworks/niac-go/issues/2355)) ([b2824cb](https://github.com/MustardSeedNetworks/niac-go/commit/b2824cb6593b8cd32f67967ebd203bd4b29a7096))
+
 ## [0.95.94](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.93...v0.95.94) (2026-09-25)
 
 
