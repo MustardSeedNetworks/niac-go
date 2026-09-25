@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.94](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.93...v0.95.94) (2026-09-25)
+
+
+### Features
+
+* **api:** serve through foundation's httpserver.Listen ([#2351](https://github.com/MustardSeedNetworks/niac-go/issues/2351)) ([7740665](https://github.com/MustardSeedNetworks/niac-go/commit/7740665a8383046bab795a160f84265bebab856d))
+* **scenario:** add the closet tier (rack PDU, door controller) to every vertical's mix ([#2348](https://github.com/MustardSeedNetworks/niac-go/issues/2348)) ([f57dc2f](https://github.com/MustardSeedNetworks/niac-go/commit/f57dc2fd63351ded8d0f33264de2841c07b8c607))
+
 ## [0.95.93](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.92...v0.95.93) (2026-09-25)
 
 
