@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.93](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.92...v0.95.93) (2026-09-25)
+
+
+### Features
+
+* **scenario:** weight each vertical's endpoint mix and give every site a UPS ([#2346](https://github.com/MustardSeedNetworks/niac-go/issues/2346)) ([d7b8d96](https://github.com/MustardSeedNetworks/niac-go/commit/d7b8d962e3d5ca9cda08f6b2ad10b72ff5abbd03))
+
+
+### Continuous Integration
+
+* adopt the fleet phone-width gate against niac's daemon ([#2345](https://github.com/MustardSeedNetworks/niac-go/issues/2345)) ([102a0ff](https://github.com/MustardSeedNetworks/niac-go/commit/102a0ff8d3309c260f22efe8cc866aaaf722d10e)), closes [#2344](https://github.com/MustardSeedNetworks/niac-go/issues/2344)
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.74.1 ([#2339](https://github.com/MustardSeedNetworks/niac-go/issues/2339)) ([6911047](https://github.com/MustardSeedNetworks/niac-go/commit/6911047258c5dccc93c94012af8022ee8cad876d))
+
 ## [0.95.92](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.91...v0.95.92) (2026-09-24)
 
 
