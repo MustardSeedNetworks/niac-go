@@ -375,6 +375,9 @@ func (s *Stack) Stop() {
 	// over. Unlike the neighbour table it deliberately survives a config
 	// reload, which changes the scenario but not who is plugged into it.
 	s.observedClients.reset()
+	if s.fabric != nil && s.fabric.placement != nil {
+		s.fabric.placement.reset()
+	}
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
 		logging.Debugf("Protocol stack stopped")

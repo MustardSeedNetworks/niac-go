@@ -149,6 +149,14 @@ whatever session a client is looking at, and carries no `current_interface`.
 To learn which NIC a session runs on, read that session's entry in
 `GET /api/v1/sessions`.
 
+`GET /api/v1/sessions/{id}/clients` also says where each client is plugged in
+when the session's attachment is a port pool: `device` and `interface` name the
+pool port it was given. A pinned MAC always gets its pin; every other client
+takes the first free port in the pool's order, in the order the clients were
+first seen, and keeps it until the session stops. Both fields are absent for a
+network-scoped attachment, and for a client that arrived after every port was
+taken.
+
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.
 A stream subscribed without `sessionId` receives the selected session only.
