@@ -79,3 +79,8 @@ and `hidden` are new keys. `cmd/niac-openapi` renders through foundation's
 emitter, and `docs/openapi.yaml` is byte-identical to before.
 `scripts/check-route-policy.sh` now fails on any ServeMux or literal-pattern
 registration under `internal/api`, not only `/api/` ones.
+
+**Amended 2026-09-25 (#2257):** NIAC's copy of the gate is deleted. CI
+runs foundation's `pkg/httpserver/route/check-route-policy.sh` from the pinned
+module copy (foundation v0.6.1, which anchors the registration pattern to a
+string literal so `slog.Handler.Handle` no longer matches, foundation#70).

@@ -282,7 +282,10 @@ jobs:
           python3 scripts/check-page-stories.py
 
       - name: Route-policy gate (capability registry)
-        run: ./scripts/check-route-policy.sh
+        # foundation's rule, run from the pinned module copy so the gate and
+        # the registrar it enforces move on one version. The module cache
+        # drops the executable bit, hence `bash`.
+        run: bash "$(go list -f '{{.Dir}}' github.com/MustardSeedNetworks/foundation/pkg/httpserver/route)/check-route-policy.sh" internal/api
 
       - name: JSON wire-casing gate — camelCase ratchet (ADR-0007)
         run: ./scripts/check-json-casing.sh

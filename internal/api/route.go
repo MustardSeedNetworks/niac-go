@@ -6,8 +6,8 @@ package api
 // gate, CSRF, admin scope, body cap — in its one canonical order, wrapped in
 // request ID, access log and panic recovery. This file only supplies what the
 // order does not decide: niac's error envelope, its auth middleware, what the
-// admin scope means, and its four limiters. scripts/check-route-policy.sh
-// enforces that every /api route goes through the Registrar.
+// admin scope means, and its four limiters. foundation's check-route-policy.sh
+// (a CI gate) enforces that every route goes through the Registrar.
 
 import (
 	"fmt"
