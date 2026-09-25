@@ -27,18 +27,18 @@ func checkEndpointAllocation(t *testing.T, profile string, slots int) {
 	total, floors := 0, 0
 	for index, share := range mix {
 		total += counts[index]
-		floors += share.atLeast
+		floors += share.floor(slots)
 		allocated[share.kind.role] += counts[index]
 	}
 	if total != slots {
 		t.Errorf("%q at %d slots: allocated %d", profile, slots, total)
 	}
 	for index, share := range mix {
-		if slots >= floors && counts[index] < share.atLeast {
+		if slots >= floors && counts[index] < share.floor(slots) {
 			t.Errorf("%q at %d slots: %s = %d, below its floor %d",
-				profile, slots, share.kind.role, counts[index], share.atLeast)
+				profile, slots, share.kind.role, counts[index], share.floor(slots))
 		}
-		if share.weight == 0 && counts[index] > share.atLeast {
+		if share.weight == 0 && counts[index] > share.floor(slots) {
 			t.Errorf("%q at %d slots: signature %s grew to %d", profile, slots, share.kind.role, counts[index])
 		}
 	}
@@ -73,4 +73,30 @@ func roles(kinds []endpointKind) []string {
 		out = append(out, kind.role)
 	}
 	return out
+}
+
+// The closet tier grows with the site: a rack PDU per 16 wired endpoints and a
+// door controller per 32. A site too small for one keeps its own devices, so
+// the six-slot warehouse still has three handhelds, while a 64-slot enterprise
+// site carries four PDUs and two controllers.
+func TestClosetTierScalesWithTheSite(t *testing.T) {
+	for _, tc := range []struct {
+		profile string
+		slots   int
+		want    map[string]int
+	}{
+		{profile: "warehouse", slots: 6, want: map[string]int{"pdu": 0, "badge-controller": 0, "rugged-handheld": 3}},
+		{profile: "hospital", slots: 18, want: map[string]int{"pdu": 1, "badge-controller": 0, "mr-system": 1}},
+		{profile: "enterprise", slots: 64, want: map[string]int{"pdu": 4, "badge-controller": 2, "ups": 1}},
+	} {
+		got := map[string]int{}
+		for _, kind := range siteEndpointKinds(tc.profile, tc.slots) {
+			got[kind.role]++
+		}
+		for role, want := range tc.want {
+			if got[role] != want {
+				t.Errorf("%s at %d slots: %s = %d, want %d", tc.profile, tc.slots, role, got[role], want)
+			}
+		}
+	}
 }

@@ -13,10 +13,10 @@ func packParity() map[string]Parity {
 	return map[string]Parity{
 		"hospital": {
 			DeviceCount: 78, NetworkCount: 12, LinkCount: 88,
-			DeviceNamesSHA256: "c3ccbe11be7b6d9785b342c2256307fa97b766868cde8be5f648daef9b759627",
+			DeviceNamesSHA256: "db760b42cbcf5fa89c3664ac58c155e982432ed570675bb95643f7a9a21aaa3f",
 			NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
-			LinksSHA256:       "1817480a7e41fc30cb3dcc9eb6969556ca1cd251a353e1e0629c425140e6e669",
-			InterfacesSHA256:  "2f7cf64649f2aa6a60eb9b559ca37ebc551046bcdf40b3df133ef9b46980e22a",
+			LinksSHA256:       "9b8cf35641877716fe7a9b84bcbe51a68f732187dc421c89ad4b0035407f835b",
+			InterfacesSHA256:  "0f5cedca9139f9af31fbe7d004cefbab9d72e81e4030afe2c97563abbe5899f3",
 		},
 		"warehouse": {
 			DeviceCount: 60, NetworkCount: 12, LinkCount: 67,
@@ -34,10 +34,10 @@ func packParity() map[string]Parity {
 		},
 		"enterprise-scale": {
 			DeviceCount: 543, NetworkCount: 39, LinkCount: 634,
-			DeviceNamesSHA256: "774f273a5a7d30d7f6d5ca147643e06092b79d9b3f7ee2621a1b060c180a86fd",
+			DeviceNamesSHA256: "dac6ff5f47442b977e1b69125ea7ea58f67635af8e7e2dd5efdb7ec084f5af45",
 			NetworksSHA256:    "e879b7ba38e40f925809edc3bf98d2044959df5d2f76d492e6f2019cbcba5555",
-			LinksSHA256:       "64fe2cfc2d440885ebd11680a6aa27e02ae51e8f200be9452c38481c038f8e8f",
-			InterfacesSHA256:  "41d49fb1175c923b0394b43956c52994dd27684ea6d17e3f1b1e7692c86cdccb",
+			LinksSHA256:       "172c6c7b71001914e8d58a9d832f1eda4f97e60c112e7aa4d6a6e1ecaee8beed",
+			InterfacesSHA256:  "692f57107960d321486744d10eca31256c6f6cf32413fff4f2de1f578555d7b5",
 		},
 		"retail": {
 			DeviceCount: 101, NetworkCount: 21, LinkCount: 112,

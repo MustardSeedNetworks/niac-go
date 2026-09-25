@@ -52,6 +52,7 @@ func EnterpriseReferenceRequest() Request {
 func Profiles() []DeviceProfile {
 	profiles := networkProfiles()
 	profiles = append(profiles, campusProfiles()...)
+	profiles = append(profiles, closetProfiles()...)
 	profiles = append(profiles, endpointProfiles()...)
 	return append(profiles, patientMonitorProfiles()...)
 }

@@ -157,8 +157,12 @@ func parseLine(line string) (prefix, string, bool) {
 
 func vendorSearch(vendor string) string {
 	switch strings.ToLower(strings.TrimSpace(vendor)) {
+	case "apc":
+		return "american power conversion"
 	case "aruba":
 		return "hewlett packard enterprise"
+	case "axis":
+		return "axis communications"
 	case "meraki":
 		return "cisco meraki"
 	case "mikrotik":

@@ -77,6 +77,13 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 | Service provider | UPS, office printer | — | NOC workstation 1 |
 | Campus, enterprise-scale | UPS | office printer 1 | workstation 5, laptop 3, Mac 2 |
 
+Every vertical also carries the closet tier, sized by site rather than by
+weight: one metered rack PDU per 16 wired endpoints and one door controller per
+32, taken after the vertical's own floors. A site with fewer than 16 endpoints
+has neither, so the six-slot warehouse keeps its three handhelds; today the
+hospital carries one PDU and each enterprise-scale site four PDUs and two
+controllers. The resized packs of P-PACK-1 will give every vertical both.
+
 `TestPackDeviceRoleMix` pins the resulting per-pack role counts.
 
 Device counts per pack are unchanged by the mix; the pinned counts live in
@@ -99,6 +106,15 @@ more phones on a campus, more UPS in a hospital riser.
 | Conference room | Cisco Room Kit, Poly Studio | SIP, CDP |
 | NAS | Synology, QNAP | SMB, SNMP |
 | Badge reader | HID, Lenel | SNMP |
+
+A badge reader has no address of its own; it hangs off a door controller on
+RS-485, so the controller (HID Aero) is the device that appears on the network.
+
+A device's vendor also chooses its MAC prefix. The registry matches the vendor
+name as a substring and keeps the lowest prefix, so the short names `apc` and
+`axis` are mapped explicitly; without that the UPS reported Adapcom as its
+manufacturer and the camera Galaxis. `TestEveryProfileVendorAllocatesItsOwnOUI`
+names the organization every profile's vendor must resolve to.
 
 ## Server and storage tier
 

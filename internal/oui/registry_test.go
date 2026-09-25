@@ -114,3 +114,26 @@ func BenchmarkAllocateCachedVendor(b *testing.B) {
 		}
 	}
 }
+
+// A vendor search is a substring match that keeps the lowest prefix, so a short
+// name can land inside an unrelated organization's: "apc" first matches
+// Adapcom and "axis" Galaxis. A discovery tool that looks the MAC up then files
+// the device under that stranger's name.
+func TestEmbeddedRegistryAllocatesShortVendorNamesTheirOwnPrefix(t *testing.T) {
+	registry, err := oui.LoadEmbedded()
+	if err != nil {
+		t.Fatalf("LoadEmbedded() error = %v", err)
+	}
+	for vendor, want := range map[string]string{
+		"apc":  "AMERICAN POWER CONVERSION CORP",
+		"axis": "Axis Communications AB",
+	} {
+		mac, allocateErr := registry.Allocate(vendor, 1)
+		if allocateErr != nil {
+			t.Fatalf("Allocate(%q) error = %v", vendor, allocateErr)
+		}
+		if got, _ := registry.Lookup(mac); got != want {
+			t.Errorf("Allocate(%q) = %s, registered to %q; want %q", vendor, mac, got, want)
+		}
+	}
+}
