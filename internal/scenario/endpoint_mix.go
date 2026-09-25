@@ -11,10 +11,26 @@ import "sort"
 // carries weight, so it grows with the site. That is the realism doc's "many
 // of a few things and one of several others", and it holds at P-PACK-1's
 // sizes as well as today's, where a repeating rotation did not.
+//
+// every raises the floor with the site: one per that many slots. The
+// closet-level common tier is sized that way, because a site does not need a
+// second rack PDU until it has a second closet of endpoints, and a floor of one
+// would take a third of a six-slot warehouse's handhelds to pay for one.
 type endpointShare struct {
 	kind    endpointKind
 	atLeast int
+	every   int
 	weight  int
+}
+
+// floor is how many of this kind a site of slots endpoints gets before any
+// slot is shared by weight.
+func (share endpointShare) floor(slots int) int {
+	if share.every == 0 {
+		return share.atLeast
+	}
+
+	return share.atLeast + slots/share.every
 }
 
 func personalComputer(role, prefix, osType string) endpointKind {
@@ -52,7 +68,27 @@ func siteUPS() endpointShare {
 	return endpointShare{kind: appliance("ups", "UPS"), atLeast: 1}
 }
 
+// closetTier is the rest of the common tier every vertical carries: a metered
+// rack PDU per wiring closet's worth of endpoints and a door controller per two.
+// It sits last in each mix, so on a site too small for its own devices the
+// vertical's signature kinds keep their floors first.
+func closetTier() []endpointShare {
+	return []endpointShare{
+		{kind: appliance("pdu", "PDU"), every: endpointsPerPDU},
+		{kind: appliance("badge-controller", "DOOR"), every: endpointsPerBadgeController},
+	}
+}
+
+const (
+	endpointsPerPDU             = 16
+	endpointsPerBadgeController = 32
+)
+
 func endpointMix(profile string) []endpointShare {
+	return append(verticalMix(profile), closetTier()...)
+}
+
+func verticalMix(profile string) []endpointShare {
 	switch profile {
 	case "hospital":
 		return []endpointShare{
@@ -124,7 +160,7 @@ func allocateEndpoints(mix []endpointShare, slots int) []int {
 	remaining := slots
 	totalWeight := 0
 	for index, share := range mix {
-		counts[index] = min(share.atLeast, remaining)
+		counts[index] = min(share.floor(slots), remaining)
 		remaining -= counts[index]
 		totalWeight += share.weight
 	}

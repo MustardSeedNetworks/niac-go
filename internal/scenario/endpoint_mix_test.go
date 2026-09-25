@@ -68,7 +68,8 @@ func TestHospitalMixKeepsSignatureDevicesRareAtScale(t *testing.T) {
 
 func isWiredEndpoint(role string) bool {
 	switch role {
-	case "nurse-station", "philips-patient-monitor", "ge-patient-monitor", "label-printer", "mr-system", "ups":
+	case "nurse-station", "philips-patient-monitor", "ge-patient-monitor", "label-printer", "mr-system", "ups",
+		"pdu", "badge-controller":
 		return true
 	default:
 		return false

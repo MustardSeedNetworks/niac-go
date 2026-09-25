@@ -101,10 +101,10 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"enterprise-scale": {
 			"access-point":  128,
 			"firewall":      8,
-			"host":          224,
-			"iot":           8,
+			"host":          204,
+			"iot":           32,
 			"layer3-switch": 8,
-			"printer":       28,
+			"printer":       24,
 			"router":        11,
 			"server":        32,
 			"switch":        88,

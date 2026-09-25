@@ -38,7 +38,9 @@ func campusProfiles() []DeviceProfile {
 	}
 }
 
-func endpointProfiles() []DeviceProfile {
+// closetProfiles are the common tier's power and door devices, which every
+// vertical carries whatever else it runs.
+func closetProfiles() []DeviceProfile {
 	// The Network Management Card's sysObjectID is what the SNMP agent keys
 	// UPS-MIB on; a generic one would leave the pack's UPS answering as a host.
 	ups := newProfile("ups", "iot", "apc", "Smart-UPS SRT 3000", "APC Web/SNMP Management Card",
@@ -46,6 +48,18 @@ func endpointProfiles() []DeviceProfile {
 	ups.SysObjectID = "1.3.6.1.4.1.318.1.3.27"
 	return []DeviceProfile{
 		ups,
+		newProfile("pdu", "iot", "apc", "AP8841", "APC Metered Rack PDU 2G",
+			"Rack PDU firmware", synth.VendorGeneric, synth.TypeHost),
+		// The networked half of a badge system is the door controller; the
+		// readers hang off it on RS-485 and have no address of their own.
+		newProfile("badge-controller", "iot", "hid global", "Aero X1100A",
+			"HID Aero intelligent door controller", "Embedded controller firmware",
+			synth.VendorGeneric, synth.TypeHost),
+	}
+}
+
+func endpointProfiles() []DeviceProfile {
+	return []DeviceProfile{
 		newProfile("workstation", "host", "dell", "OptiPlex 7020", "Dell OptiPlex 7020",
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("windows-laptop", "host", "dell", "Latitude 7450", "Dell Latitude 7450",
