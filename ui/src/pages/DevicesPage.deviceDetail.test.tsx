@@ -101,7 +101,7 @@ describe('DevicesPage — device detail', () => {
 
   it.each([
     new Error('Config poll failed'),
-    new ApiError('Config poll failed', 400, 'config_read_failed'),
+    new ApiError('Config poll failed', 500, 'config_read_failed'),
   ])('keeps dirty edits and their navigation dialog accessible after %s', async (error) => {
     vi.useFakeTimers();
     await Promise.resolve(
@@ -125,6 +125,24 @@ describe('DevicesPage — device detail', () => {
     expect(screen.getByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('unsaved-cancel'));
     expect(editor().value).toBe(edited);
+  });
+
+  it('shows the idle prompt, not an error, when no scenario is loaded', async () => {
+    fetchConfig.mockRejectedValue(
+      new ApiError('No scenario is loaded', 503, 'no_active_simulation'),
+    );
+    renderPage();
+    expect(await screen.findByText(/No simulation is running/)).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('surfaces a real config read failure instead of the idle prompt', async () => {
+    fetchConfig.mockRejectedValue(
+      new ApiError('Failed to read configuration', 500, 'config_read_failed'),
+    );
+    renderPage();
+    expect(await screen.findByText('Failed to read configuration')).toBeVisible();
+    expect(screen.queryByText(/No simulation is running/)).not.toBeInTheDocument();
   });
 
   it('opens with the whole config, because nothing is selected yet', async () => {

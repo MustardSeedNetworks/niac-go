@@ -8,9 +8,9 @@ raw values.
 Three tiers, **one** source of truth for values, **one** derivation direction:
 
 ```text
-Primitive   Tailwind's built-in palette (indigo-600 = #4f46e5)   ← never referenced directly in app code
+Primitive   Tailwind's built-in palette (indigo-600, gray-500)   ← never referenced directly in app code
    ↓ alias
-Semantic    index.css @theme + :root/.dark                       ← THE source of truth for VALUES
+Semantic    theme/*.css: @theme + :root/.dark                    ← THE source of truth for VALUES
             brand-*, status-*, surface-*, text-*, module-*,
             device-*, link-*, proto-*, syntax-*, chart-1..10,
             log-*, scrim, knob, on-brand/on-danger/on-info
@@ -21,7 +21,7 @@ Component   index.css @layer components + the TS class-token
 
 **Two invariants (enforced by `scripts/check-token-discipline.sh`):**
 
-1. **Values flow one direction** — defined once in `index.css`, everything else
+1. **Values flow one direction** — defined once in `theme/`, everything else
    references them. Never hand-copy a hex sideways into a `.ts`/`.tsx` file.
 2. **App code names only semantic / component tokens** — never a primitive
    palette utility (`bg-gray-500`, `text-pink-400`) and never a raw hex.
@@ -40,5 +40,5 @@ Component   index.css @layer components + the TS class-token
 flip light↔dark via the cascade. NIAC has no `<canvas>` drawing, so (unlike seed)
 it needs no JS token-reader; the topology graph is SVG.
 
-**Brand:** NIAC's anchor is **indigo** `#4f46e5` (`niac-500`). The five feature
+**Brand:** NIAC's anchor is **violet** (`brand-primary`, fleet hue set C). The five feature
 modules have their own accents (`--color-module-{topology,protocols,analyze,inject,templates}`).

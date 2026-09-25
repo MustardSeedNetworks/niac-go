@@ -256,11 +256,11 @@ const ConfigEditorCard: FC<{
     }
   };
 
-  // The daemon returns config_read_failed when no simulation has been
-  // started yet (no path is loaded). That's a normal empty state, not
-  // an error worth surfacing — render a clean prompt to go pick one.
-  const noConfigLoaded =
-    isApiError(error) && (error.code === 'config_read_failed' || error.status === 400);
+  // With no scenario loaded the daemon answers no_active_simulation, the
+  // same idle 503 as every runtime route. That's a normal empty state, not
+  // an error worth surfacing — render a clean prompt to go pick one. A real
+  // read failure (config_read_failed) still surfaces as an error.
+  const noConfigLoaded = isApiError(error) && error.code === 'no_active_simulation';
 
   if (noConfigLoaded && !data) {
     return (
@@ -271,6 +271,7 @@ const ConfigEditorCard: FC<{
         data={null}
         emptyMessage={t('devices.noConfigMessage')}
         getStatus={() => 'success'}
+        testId="config-editor-idle"
       >
         {() => null}
       </BaseCard>

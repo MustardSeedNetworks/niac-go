@@ -2,7 +2,7 @@
 """resolve-token-refs.py — undefined design-token gate.
 
 Every semantic color token referenced as a Tailwind utility (bg-/text-/
-border-/ring-/...) MUST resolve to a --color-* defined in index.css. An
+border-/ring-/...) MUST resolve to a --color-* defined in index.css or theme/*.css. An
 undefined token (e.g. bg-status-danger when only --color-status-error exists)
 compiles to nothing and silently renders no color, so the palette/hex guard in
 check-token-discipline.sh cannot see it. This check closes that gap.
@@ -17,7 +17,9 @@ import sys
 from pathlib import Path
 
 target = Path(sys.argv[1] if len(sys.argv) > 1 else "ui/src")
-css = (target / "index.css").read_text()
+css = "\n".join(
+    p.read_text() for p in [target / "index.css", *sorted((target / "theme").glob("*.css"))]
+)
 
 # Defined --color-* names from :root / .dark / @theme — the source of truth.
 defined = set(re.findall(r"--color-([a-z0-9-]+)\s*:", css))

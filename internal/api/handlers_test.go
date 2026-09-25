@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
@@ -279,6 +280,32 @@ func TestHandleConfig(t *testing.T) {
 			t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 		}
 	})
+}
+
+// With no scenario loaded, a config read or write is the same idle condition
+// as every other runtime route, so it answers the same 503 — not a 400 that
+// blames the request (#2192).
+func TestHandleConfigIdleMatchesRuntimeRoutes(t *testing.T) {
+	server, _ := createTestServer(t)
+	server.cfg.ConfigPath = ""
+	server.cfg.Stack = nil
+
+	errorsRec := httptest.NewRecorder()
+	server.handleErrors(errorsRec, httptest.NewRequest(http.MethodGet, "/api/v1/errors", nil))
+	if errorsRec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("idle /errors = %d, want %d", errorsRec.Code, http.StatusServiceUnavailable)
+	}
+
+	for _, method := range []string{http.MethodGet, http.MethodPut} {
+		t.Run(method, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			server.handleConfig(rec, httptest.NewRequest(method, "/api/v1/config",
+				strings.NewReader(`{"content":"devices: []"}`)))
+			if rec.Code != errorsRec.Code {
+				t.Errorf("idle %s /config = %d, want %d: %s", method, rec.Code, errorsRec.Code, rec.Body.String())
+			}
+		})
+	}
 }
 
 func TestHandleErrors(t *testing.T) {

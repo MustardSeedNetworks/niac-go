@@ -126,8 +126,11 @@ function AppStateProvider({ children }: { children: ReactNode }) {
   const version = useApiResource(fetchVersion, ['version'], {
     intervalMs: POLL_INTERVALS.verySlow,
   });
+  // The fault catalogue lives on the running stack; idle, every request is a
+  // guaranteed 503.
   const errorTypes = useApiResource(fetchErrorTypes, ['errors'], {
     intervalMs: POLL_INTERVALS.medium,
+    enabled: simStatus.data?.running === true,
   });
   const interfaces = useApiResource(fetchInterfaces, ['interfaces']);
 

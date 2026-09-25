@@ -157,8 +157,20 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// writeConfigNotLoaded answers a config read or write while no scenario is
+// loaded. That is the same idle condition every other runtime route reports
+// as 503, not a malformed request.
+func writeConfigNotLoaded(w http.ResponseWriter, r *http.Request) {
+	writeError(w, r, http.StatusServiceUnavailable, "no_active_simulation",
+		"No scenario is loaded", nil)
+}
+
 func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 	doc, status, err := s.readConfigDocument()
+	if errors.Is(err, ErrConfigPathNotAvailable) {
+		writeConfigNotLoaded(w, r)
+		return
+	}
 	if err != nil {
 		// SECURITY FIX MEDIUM-6: Don't expose internal error details
 		s.logger.ErrorContext(r.Context(), "[API] Failed to read config", "error", err)
@@ -175,7 +187,7 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 
 	if s.configPath() == "" {
-		http.Error(w, "config path not available", http.StatusBadRequest)
+		writeConfigNotLoaded(w, r)
 		return
 	}
 

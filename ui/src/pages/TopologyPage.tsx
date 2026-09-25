@@ -792,7 +792,7 @@ export const TopologyPage: FC = () => {
                     variant={BackgroundVariant.Dots}
                     gap={20}
                     size={1}
-                    color="#ffffff0d"
+                    color="color-mix(in srgb, var(--color-text-primary) 12%, transparent)"
                   />
                   <Controls showZoom={true} showFitView={true} showInteractive={false} />
 

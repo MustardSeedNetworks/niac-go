@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { type FC, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
+import { RULE_SWATCHES } from '../theme/coloringRuleSwatches';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Tooltip } from '../ui/Tooltip';
@@ -195,8 +196,7 @@ export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
           id: generateRuleId(),
           name: t('coloringRules.newRuleName'),
           filter: '',
-          foreground: '#ffffff',
-          background: '#374151',
+          ...RULE_SWATCHES.newRule,
           enabled: true,
         },
       ]);
