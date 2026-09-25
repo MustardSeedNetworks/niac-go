@@ -234,6 +234,12 @@ func (s *Stack) updateFDBTables(mac net.HardwareAddr, table *DeviceTable) {
 	if s == nil || len(mac) == 0 || table == nil {
 		return
 	}
+	// A pool-bound session has already placed this client on its own port
+	// (placeObservedClient); the authored constant port would also put it on
+	// every other forwarding device on the attachment network.
+	if s.fabric != nil && s.fabric.placement != nil {
+		return
+	}
 
 	decMac, hexMac := formatMACForFDB(mac)
 

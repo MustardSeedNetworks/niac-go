@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"net"
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -121,6 +122,27 @@ func (g *snmpAgentGroup) ReindexAll() {
 	for _, agent := range g.agents {
 		agent.Reindex()
 	}
+}
+
+// placeLearnedClient learns mac on interfaceName in every agent of the device:
+// the community agents share one bridge, and an SNMPv3-only device answers
+// from its base agent alone. It reports whether any agent could place it.
+func (g *snmpAgentGroup) placeLearnedClient(mac net.HardwareAddr, interfaceName string, vlan int) bool {
+	if g == nil {
+		return false
+	}
+
+	placed := false
+	baseListed := false
+	for _, agent := range g.agents {
+		placed = agent.PlaceLearnedClient(mac, interfaceName, vlan) || placed
+		baseListed = baseListed || agent == g.baseAgent
+	}
+	if !baseListed {
+		placed = g.baseAgent.PlaceLearnedClient(mac, interfaceName, vlan) || placed
+	}
+
+	return placed
 }
 
 // SynthesizePeerTopologyAll fills each agent's CDP peer addresses and downstream

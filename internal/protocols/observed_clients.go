@@ -20,12 +20,14 @@ const observedClientTTL = 300 * time.Second
 // contributes here instead, which makes this the answer to "who is attached to
 // this scenario right now".
 //
-// The port a client is placed on is deliberately absent: nothing assigns one
-// yet, and an always-empty field would read as "unplaced" rather than
-// "unimplemented". It arrives with the runtime placement work (AP-2).
+// Device and Interface name the pool port the client is plugged into. Both are
+// empty when the session's attachment names a network rather than a pool, or
+// when every port of the pool was already taken.
 type ObservedClient struct {
-	MAC string `json:"mac"`
-	IP  string `json:"ip,omitempty"`
+	MAC       string `json:"mac"`
+	IP        string `json:"ip,omitempty"`
+	Device    string `json:"device,omitempty"`
+	Interface string `json:"interface,omitempty"`
 	// VLAN is the tag the client's frames carried, absent when untagged.
 	VLAN      int       `json:"vlan,omitempty"`
 	FirstSeen time.Time `json:"firstSeen"`
@@ -112,7 +114,22 @@ func (s *Stack) GetObservedClients() []ObservedClient {
 		return nil
 	}
 
-	return s.observedClients.list()
+	clients := s.observedClients.list()
+
+	s.reloadMu.RLock()
+	defer s.reloadMu.RUnlock()
+
+	if s.fabric == nil || s.fabric.placement == nil {
+		return clients
+	}
+	for i := range clients {
+		if port, ok := s.fabric.placement.lookup(clients[i].MAC); ok {
+			clients[i].Device = port.Device
+			clients[i].Interface = port.Interface
+		}
+	}
+
+	return clients
 }
 
 // recordObservedClient learns the source of one accepted frame. It runs after
@@ -143,6 +160,7 @@ func (s *Stack) recordObservedClient(pkt *Packet) {
 	}
 
 	s.observedClients.observe(src, sourceAddressClaimedBy(pkt), vlan)
+	s.placeObservedClient(src)
 }
 
 // isUnicastMAC rejects the all-zero address and any group address: neither can

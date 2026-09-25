@@ -20,6 +20,9 @@ type fabricRuntime struct {
 	attachmentRouters []fabricRouter
 	attachmentDHCP    []*config.Device
 	deviceStates      map[*config.Device]*devicestate.Store
+	// placement is set when the bound attachment is a port pool; a
+	// network-scoped attachment names no port to place a client on.
+	placement *clientPlacement
 }
 
 type fabricEndpoint struct {
@@ -86,6 +89,11 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	runtime.indexInterfaces(topology.Interfaces)
 	runtime.indexAttachmentRouters(topology)
 	runtime.indexAttachmentDHCP(topology.DHCPScopes)
+	for _, attachment := range topology.Attachments {
+		if attachment.Name == topology.Binding.Attachment {
+			runtime.placement = newClientPlacement(attachment)
+		}
+	}
 
 	return runtime
 }
