@@ -13,7 +13,9 @@ https://localhost:8445
 ```
 
 The daemon is HTTPS-only. A development installation uses a self-signed
-certificate unless the operator installs a trusted local certificate.
+certificate unless the operator installs a trusted local certificate. A
+plain `http://` request to the daemon's port is answered with a redirect to
+`https://` on the same port and is served nothing else.
 
 When authentication is enabled, the UI asks for the bearer token in the active
 tab. The token is kept in memory, is never placed in a URL or persistent

@@ -180,3 +180,31 @@ func TestFormatFingerprint(t *testing.T) {
 		t.Errorf("formatFingerprint(%x) = %q, want %q", in, got, want)
 	}
 }
+
+// The listener serves the operator's pair only when both halves are set, so a
+// half-configured pair must fingerprint the generated certificate it actually
+// serves, not the orphaned cert file.
+func TestActiveCertPathMirrorsTheServedCertificate(t *testing.T) {
+	t.Parallel()
+
+	generated, _ := DefaultCertPaths("/certs")
+	cases := []struct {
+		name string
+		cfg  ServerConfig
+		want string
+	}{
+		{"operator pair", ServerConfig{CertDir: "/certs", CertFile: "/op.crt", KeyFile: "/op.key"}, "/op.crt"},
+		{"cert without key", ServerConfig{CertDir: "/certs", CertFile: "/op.crt"}, generated},
+		{"key without cert", ServerConfig{CertDir: "/certs", KeyFile: "/op.key"}, generated},
+		{"no operator pair", ServerConfig{CertDir: "/certs"}, generated},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			s := &Server{cfg: tc.cfg}
+			if got := s.activeCertPath(); got != tc.want {
+				t.Errorf("activeCertPath() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

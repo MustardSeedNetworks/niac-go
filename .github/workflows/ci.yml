@@ -473,17 +473,17 @@ jobs:
           CGO_ENABLED: "0"
         run: go vet ./internal/api/...
 
-      # server_port_fallback_windows.go is the only file with Windows-specific
-      # logic in this package; this both links it and exercises it.
+      # The listener's Windows-specific logic (the WinNAT-reserved port walk) is
+      # foundation's httpserver; this starts the daemon's API on it for real.
       #
-      # Scoped to those tests rather than the whole package: validateReplayRequest
+      # Scoped to that test rather than the whole package: validateReplayRequest
       # compiles a BPF filter, which reaches libpcap and needs wpcap.dll, and
       # windows-latest has no Npcap. Build and Vet above already cover the rest of
       # the package compiling on Windows.
       - name: Test
         env:
           CGO_ENABLED: "0"
-        run: go test ./internal/api/ -run 'AddrInUse|BindWithFallback' -v
+        run: go test ./internal/api/ -run '^TestStartServesHTTP2AndRedirectsPlaintext$' -v
 
       - name: Test decoded packet metadata
         env:

@@ -13,14 +13,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver"
 )
 
 // pemCertBlockType is the PEM block header used for X.509 certificates.
-// The standard library does not expose a constant for this string; defining
-// one here lets the cert-template encoder and the fingerprint decoder share
-// a single source of truth.
+// The standard library does not expose a constant for this string.
 const pemCertBlockType = "CERTIFICATE"
 
 // errEmptyCertPath is returned when the configured cert path is empty
@@ -128,9 +129,27 @@ func formatFingerprint(digest []byte) string {
 	return string(out)
 }
 
-// activeCertPath returns the cert file path the server will use.
+// defaultCertDir holds the self-signed pair when --cert-dir is not set.
+// Relative to the working directory so a developer running `./niac daemon`
+// from the repo root sees the artifact; it is also httpserver.Listen's default.
+const defaultCertDir = "certs"
+
+// DefaultCertPaths returns the self-signed cert+key paths httpserver.Listen
+// uses inside certDir. `niac install-ca` and the CLI client read the same
+// file. When certDir is empty, the package default (`certs/`) is used.
+func DefaultCertPaths(certDir string) (string, string) {
+	if certDir == "" {
+		certDir = defaultCertDir
+	}
+	return filepath.Join(certDir, httpserver.DefaultCertFileName),
+		filepath.Join(certDir, httpserver.DefaultKeyFileName)
+}
+
+// activeCertPath returns the certificate file the listener serves. It mirrors
+// httpserver.Listen's own choice — the operator's pair only when both halves
+// are set — so /__version fingerprints the certificate that is actually served.
 func (s *Server) activeCertPath() string {
-	if s.cfg.CertFile != "" {
+	if s.cfg.CertFile != "" && s.cfg.KeyFile != "" {
 		return s.cfg.CertFile
 	}
 	cert, _ := DefaultCertPaths(s.cfg.CertDir)

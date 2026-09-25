@@ -15,10 +15,18 @@ report_matches() {
   fi
 }
 
+# The one listener is foundation's httpserver.Listen, which only ever returns a
+# TLS listener (a plaintext request gets a 308 to https and nothing else). Any
+# other bind in these files is a second, plaintext way in.
 report_matches \
   "Alternate API or metrics listener support found:" \
-  'MetricsAddr|EnableTLS|metricsServer|\.Serve\(' \
+  'MetricsAddr|EnableTLS|metricsServer|ListenAndServe|net\.Listen\(|\.Listen\(ctx|httpserver\.Bind' \
   internal/api/server.go internal/api/tls_fingerprint.go internal/daemon/daemon.go
+
+if ! rg -q 'httpserver\.Listen\(' internal/api/server.go; then
+  printf '%s\n\n' "The API no longer binds through httpserver.Listen (internal/api/server.go)."
+  fail=1
+fi
 
 report_matches \
   "Obsolete run-mode listener flag found:" \

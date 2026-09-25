@@ -22,7 +22,6 @@ package api
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -40,6 +39,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api/capture"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
+	"github.com/MustardSeedNetworks/foundation/pkg/httpserver"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
@@ -645,7 +645,7 @@ func (s *Server) TokenScopeCounts() (int, int, int) {
 }
 
 // BoundAddr returns the address the API listener actually bound to.
-// This is the post-bindWithFallback address (which may differ from
+// This is the address the listener actually bound (which may differ from
 // ServerConfig.Addr when a port-fallback kicks in or "127.0.0.1:0"
 // was used). Returns "" when the listener is not running. Used by
 // tests that need to issue HTTP requests against a randomly-bound
@@ -722,26 +722,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// resolveTLSCertPaths returns the cert+key paths the listener should
-// load. When the explicit ServerConfig.CertFile/KeyFile are set we use
-// them as-is; otherwise we fall back to the auto-generated pair under
-// CertDir (creating it on first start).
-func (s *Server) resolveTLSCertPaths() (string, string, error) {
-	if s.cfg.CertFile != "" && s.cfg.KeyFile != "" {
-		return s.cfg.CertFile, s.cfg.KeyFile, nil
-	}
-	certPath, keyPath := DefaultCertPaths(s.cfg.CertDir)
-	c, k, err := ensureSelfSignedCert(certPath, keyPath)
-	if err != nil {
-		return "", "", err
-	}
-	// Populate ServerConfig.CertFile/KeyFile so /__version's fingerprint
-	// lookup hits the same path the listener loaded.
-	s.cfg.CertFile = c
-	s.cfg.KeyFile = k
-	return c, k, nil
-}
-
 // checkStartupPreconditions enforces that the API server can only run
 // when either a daemon controller is attached or the stack+config pair
 // is wired up. Extracted from Start to keep its cognitive complexity
@@ -792,42 +772,31 @@ func (s *Server) warnIfUnauthenticated() {
 	s.logger.Info("Example: export NIAC_API_TOKEN=$(openssl rand -base64 32)")
 }
 
-// startAPIListener binds the API listener (with port-fallback per #69)
-// and serves TLS.
+// startAPIListener binds foundation's HTTPS listener (port fallback per #69,
+// TLS 1.3, the self-signed default and the same-port plaintext redirect) and
+// serves on it. The bind is synchronous so a fatal error (permission denied,
+// every fallback port taken, an unusable certificate) reaches Start's caller
+// instead of disappearing into a background log.
 func (s *Server) startAPIListener() error {
-	s.httpServer = newSecureHTTPServer(s.cfg.Addr, s.apiHandler())
-
-	// Bind before launching the serve goroutine so a fatal bind error
-	// (e.g. permission denied, or all fallback ports taken) surfaces
-	// synchronously instead of disappearing into a background log.
-	apiLn, apiAddr, bindErr := bindWithFallback(context.Background(), s.logger, s.cfg.Addr)
-	if bindErr != nil {
-		return fmt.Errorf("API server bind: %w", bindErr)
+	ln, err := httpserver.Listen(context.Background(), httpserver.Config{
+		Addr:     s.cfg.Addr,
+		CertFile: s.cfg.CertFile,
+		KeyFile:  s.cfg.KeyFile,
+		CertDir:  s.cfg.CertDir,
+		Cert: httpserver.CertOptions{
+			CommonName: "NIAC Self-Signed",
+			DNSNames:   []string{"localhost", "niac.local"},
+		},
+		Logger: s.logger,
+	})
+	if err != nil {
+		return fmt.Errorf("API server listen: %w", err)
 	}
-	s.httpServer.Addr = apiAddr
-
-	if err := s.serveAPI(apiLn); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// serveAPI starts the API listener in TLS mode. It resolves cert paths
-// up front and closes the listener on
-// resolution failure so we don't leak a half-bound socket back to
-// Start's error path.
-func (s *Server) serveAPI(ln net.Listener) error {
-	certFile, keyFile, certErr := s.resolveTLSCertPaths()
-	if certErr != nil {
-		_ = ln.Close()
-		return fmt.Errorf("resolve TLS cert: %w", certErr)
-	}
-	s.httpServer.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS13}
+	s.httpServer = newSecureHTTPServer(ln.Addr().String(), s.apiHandler())
 	go func() {
-		if err := s.httpServer.ServeTLS(ln, certFile, keyFile); err != nil &&
-			!errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("API server (TLS) stopped", "error", err)
+		if serveErr := s.httpServer.Serve(ln); serveErr != nil &&
+			!errors.Is(serveErr, http.ErrServerClosed) {
+			s.logger.Error("API server (TLS) stopped", "error", serveErr)
 		}
 	}()
 	return nil
