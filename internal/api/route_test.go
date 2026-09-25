@@ -20,7 +20,7 @@ import (
 
 // TestRoutePolicyManifest verifies the capability registry exposes every route
 // via /__capabilities and records each route's policy correctly. The registry
-// is the single source of truth that scripts/check-route-policy.sh enforces.
+// is the single source of truth that foundation's check-route-policy.sh enforces.
 func TestRoutePolicyManifest(t *testing.T) {
 	server, _, _ := newTestServerWithAuth(t)
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)

@@ -14,7 +14,7 @@ import (
 // Every route — the SPA shell and the introspection endpoints included — is
 // installed through the capability registry, which composes its policy (rate
 // limiting, auth, method gate, CSRF, admin scope, body cap) in one canonical
-// order so a route cannot ship without it. scripts/check-route-policy.sh
+// order so a route cannot ship without it. foundation's check-route-policy.sh
 // enforces this. /__version and /__capabilities are deliberately
 // unauthenticated deployment introspection. The SPA shell is also public so it
 // can collect a bearer token in browser memory before calling the protected
