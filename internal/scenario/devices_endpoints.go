@@ -8,7 +8,41 @@ import (
 )
 
 func serviceRoles() []string {
-	return []string{"DNS", "DHCP", "APP", "FILE", "NMS", "PERF"}
+	return []string{"DNS", "DHCP", workloadServiceRole, "FILE", "NMS", "PERF"}
+}
+
+// workloadServiceRole is the service slot a vertical fills with the system it
+// runs on. The other five are infrastructure every site has; this one is
+// usually the busiest and most recognisable server on a discovery map, so a
+// hospital's reads as its PACS archive rather than as a generic app server.
+const workloadServiceRole = "APP"
+
+// serviceIdentity names a site service and describes it in sysDescr. Only the
+// workload slot varies by vertical; campus keeps a plain application server,
+// which is the realism doc's "deliberately ordinary".
+func serviceIdentity(profile, role string) (string, string) {
+	if role != workloadServiceRole {
+		return role, role + " service"
+	}
+	switch profile {
+	case "hospital":
+		return "PACS", "PACS archive"
+	case "manufacturing":
+		return "HIST", "SCADA historian"
+	case "warehouse":
+		return "WMS", "warehouse management system"
+	case "retail":
+		return "BOS", "retail back-office server"
+	case "service-provider":
+		return "PROV", "subscriber provisioning server"
+	default:
+		return role, role + " service"
+	}
+}
+
+func serviceName(profile, role string) string {
+	name, _ := serviceIdentity(profile, role)
+	return name
 }
 
 func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.Device {
@@ -37,12 +71,13 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 func serviceServer(request Request, site Site, role string, index int, links linkMap) converter.Device {
 	vlan, network := servicePlacement(role)
 	address := siteIP(site, vlan, serviceHostOffset+index)
+	name, description := serviceIdentity(request.EndpointProfile, role)
 	spec := deviceSpec{
-		name: site.Code + "-" + role + "01", role: "server", index: index,
+		name: site.Code + "-" + name + "01", role: "server", index: index,
 		ips: []string{address}, site: &site,
-		sysDescr: fmt.Sprintf("Dell PowerEdge R660 %s %s service", site.Code, role),
+		sysDescr: fmt.Sprintf("Dell PowerEdge R660 %s %s", site.Code, description),
 		interfaces: []converter.Interface{newInterface(
-			"eth0", siteNetworkName(site, network), address+"/24", speedTenGigabit, role+" service uplink",
+			"eth0", siteNetworkName(site, network), address+"/24", speedTenGigabit, name+" service uplink",
 		)},
 		vlan: vlan,
 	}
@@ -71,7 +106,7 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 			PoolStart:        siteIP(site, vlanData, dhcpPoolStartHost),
 			PoolEnd:          siteIP(site, vlanData, dhcpPoolEndHost),
 		}
-	case "APP":
+	case workloadServiceRole:
 		spec.http = &converter.HTTPConfig{Enabled: true, ServerName: "Microsoft-IIS/10.0"}
 	case "FILE":
 		spec.netbios = &converter.NetbiosConfig{
@@ -101,8 +136,9 @@ func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 	for index, role := range roles {
 		vlan, _ := servicePlacement(role)
 		records = append(records, converter.DNSRecord{
-			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code), strings.ToLower(role), request.Domain),
-			IP:   siteIP(site, vlan, serviceHostOffset+index+1), TTL: dnsRecordTTL,
+			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code),
+				strings.ToLower(serviceName(request.EndpointProfile, role)), request.Domain),
+			IP: siteIP(site, vlan, serviceHostOffset+index+1), TTL: dnsRecordTTL,
 		})
 	}
 	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {

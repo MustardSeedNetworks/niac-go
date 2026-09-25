@@ -153,6 +153,16 @@ workstation.
 
 **Service provider** — NMS, RADIUS/AAA, provisioning, DNS resolvers.
 
+Each site's application service slot carries its vertical's workload system
+(`internal/scenario/devices_endpoints.go`): `PACS01` in the hospital, `HIST01`
+(SCADA historian) in manufacturing, `WMS01` in the warehouse, `BOS01` (back
+office) in retail and `PROV01` (subscriber provisioning) at a service provider.
+Campus and enterprise-scale keep `APP01`. The slot's address, port and device
+count are unchanged; the device name, its DNS record and its `sysDescr` say what
+it runs. The rest of this tier (EMR, LIS, MES, storage and virtualisation hosts)
+would add devices beyond the pinned counts, so it is not built by renaming the
+infrastructure floor.
+
 ## Client tier
 
 Shared across campus, retail, hospital and service-provider packs.

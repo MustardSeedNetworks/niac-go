@@ -13,17 +13,17 @@ func packParity() map[string]Parity {
 	return map[string]Parity{
 		"hospital": {
 			DeviceCount: 78, NetworkCount: 12, LinkCount: 88,
-			DeviceNamesSHA256: "db760b42cbcf5fa89c3664ac58c155e982432ed570675bb95643f7a9a21aaa3f",
+			DeviceNamesSHA256: "46c28440c57ff99f25216bc20286f8ae09a3d04272a2e20772ac3ba18a649f61",
 			NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
-			LinksSHA256:       "9b8cf35641877716fe7a9b84bcbe51a68f732187dc421c89ad4b0035407f835b",
-			InterfacesSHA256:  "0f5cedca9139f9af31fbe7d004cefbab9d72e81e4030afe2c97563abbe5899f3",
+			LinksSHA256:       "63f43abb122c94a332bd460df99a8ff84f82845b95e39d97ecb55332f6274d19",
+			InterfacesSHA256:  "3ff4b0b4b509e4c01877cebb2a17eb284b6a36e9e0fb2a5a6e78134adc0f1631",
 		},
 		"warehouse": {
 			DeviceCount: 60, NetworkCount: 12, LinkCount: 67,
-			DeviceNamesSHA256: "d79f10a6b555116f90b6221c0eea8a77c02dbd18732a9b53488fabb23cd2aef1",
+			DeviceNamesSHA256: "52281ee3f2e104f4b0a97c14f8f1253f701da66fdf698bda3d3422d22501d463",
 			NetworksSHA256:    "4b45bbf256fb1440d30d2149f3691664404012f192d5f98f788bcc0c413e90b5",
-			LinksSHA256:       "051a8ce01cb701e5289e23f3871d76f5412f7a2d775024aba3c5eda9a5c43be3",
-			InterfacesSHA256:  "91634842a9f4587c1d22a4b7fc0d4e3eab8d1e43615f5256191eb1255f5370b1",
+			LinksSHA256:       "a16f0e7ff9fcb8650c460b4e46731ccbb91adf38f2b92964f82479ccb96a838e",
+			InterfacesSHA256:  "8662fd092411fb5f2db5be1967356fe5874238cc6e4409d1a9079f2ce7f65ed5",
 		},
 		"campus": {
 			DeviceCount: 159, NetworkCount: 39, LinkCount: 186,
@@ -41,24 +41,24 @@ func packParity() map[string]Parity {
 		},
 		"retail": {
 			DeviceCount: 101, NetworkCount: 21, LinkCount: 112,
-			DeviceNamesSHA256: "0dded5f5e9c3bcd2f837b48c437d4cfb88c5d03c4e7796c64005d30c118e4f76",
+			DeviceNamesSHA256: "f35cb6d65b01776862b97e05d66081a1a26180c8163044c07ce65bdcd2dc9de0",
 			NetworksSHA256:    "88cdfbd6e21a58552873afe83c93dac96b7fae0a28166ecb319475dbcc38d25b",
-			LinksSHA256:       "4f4d6f25499c52c0538bcd968d0fde2643347e4fec32cec1aa38e0612e15e2b5",
-			InterfacesSHA256:  "af24a41838c8aa2fa0664388c42f7c38c986de5caf3cfb649c5f02d4b560c2dc",
+			LinksSHA256:       "b41d3130bfcc83ee049b889065acc4b43b0afa7385c7b5600e4a7422e475e2dd",
+			InterfacesSHA256:  "907aff7bca283a204316c48c875514e5924465553c2a0a38738aff749145ba84",
 		},
 		"manufacturing": {
 			DeviceCount: 72, NetworkCount: 12, LinkCount: 78,
-			DeviceNamesSHA256: "307523e2ee66c979c1a32644eee0bee3d310f557a589c8990dfd1b26c1f5f23d",
+			DeviceNamesSHA256: "9205c24547e673d157c96d7bf23d9236945a5dcd6df48d569f5102295b2e46ab",
 			NetworksSHA256:    "cc9ba550031f67fef5933891d5ff0dbd2aada452ba380493a2b52c830f25d0f8",
-			LinksSHA256:       "d8768465da1cd53133d161f73d4788b48e031167617e1cf09d1025a9d13b479b",
-			InterfacesSHA256:  "a21dab2d789c1d306ad3ed1635bb6c1cc03a4a3e191b2a61604ae33facf8d3ae",
+			LinksSHA256:       "0b1db0426cc66d17eff6fd0eb794d099d1f4edfcb8104596fbaeec9bca66f01c",
+			InterfacesSHA256:  "446dd0674a44a556af1934c5361f1cb8fc8a00e7943a4a6203912cdcc760efc4",
 		},
 		"service-provider": {
 			DeviceCount: 126, NetworkCount: 30, LinkCount: 146,
-			DeviceNamesSHA256: "14dc13bd50f4651b047e3a1d42bc8707c6bdc456517dd881c3b35ec236505b59",
+			DeviceNamesSHA256: "784bb762b3c3c65844c94712b51213a9af562c2c76cd7eb0fe3e4e037a9fab69",
 			NetworksSHA256:    "79fcb26f2a9f506a24540a583ae570b5c25e1dcf8a63ccfa21946b4912fc7720",
-			LinksSHA256:       "51725db14f8ca23c9dab8524ef8ea0eca438fa910873b7ac64e1d4de18168b84",
-			InterfacesSHA256:  "96d0fde4561e29c0655b8e470472d5d9f6d5df9e37b13c73401c3c08293d539d",
+			LinksSHA256:       "f345b20aaaf36cde44530104865a25ea32b5741872777ca36168d4b9488bca58",
+			InterfacesSHA256:  "31b5fa1ef91beda60276f19f4eca30d75343ccadf5b153f6cecf1172b919ac76",
 		},
 	}
 }
