@@ -100,3 +100,28 @@ func TestClosetTierScalesWithTheSite(t *testing.T) {
 		}
 	}
 }
+
+// A service provider's POP is where its access network terminates: the OLT
+// that lights the PON, and the reference ONT and CPE router its technicians
+// turn subscribers up against. Each is an appliance, so it answers SNMP as
+// itself, and each is a signature device, so a POP carries one of each
+// however many NOC workstations it has.
+func TestServiceProviderPOPCarriesItsAccessTier(t *testing.T) {
+	for _, slots := range []int{8, 64} {
+		got := map[string]int{}
+		for _, kind := range siteEndpointKinds("service-provider", slots) {
+			got[kind.role]++
+			if kind.personalComputer && kind.role != "noc-workstation" {
+				t.Errorf("%d slots: %s is laid out as a personal computer, so it answers no SNMP", slots, kind.role)
+			}
+		}
+		for _, role := range []string{"olt", "ont", "cpe-router"} {
+			if got[role] != 1 {
+				t.Errorf("%d slots: %s = %d, want 1", slots, role, got[role])
+			}
+		}
+		if got["noc-workstation"] <= got["olt"] {
+			t.Errorf("%d slots: noc-workstation = %d, want more than one per OLT", slots, got["noc-workstation"])
+		}
+	}
+}

@@ -148,8 +148,8 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"service-provider": {
 			"access-point":  24,
 			"firewall":      6,
-			"host":          18,
-			"iot":           6,
+			"host":          9,
+			"iot":           15,
 			"layer3-switch": 6,
 			"printer":       3,
 			"router":        9,

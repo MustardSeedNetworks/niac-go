@@ -158,6 +158,17 @@ func endpointProfiles() []DeviceProfile {
 			synth.VendorGeneric,
 			synth.TypeHost,
 		),
+		// A POP's access tier: the OLT that terminates the PON, and the
+		// reference ONT and CPE router technicians turn subscribers up
+		// against. All three are typed iot: router or switch would make each a
+		// forwarding device (deviceclass.Forwards), and here each is a
+		// single-homed endpoint on the POP's data VLAN.
+		newProfile("olt", "iot", "calix", "E9-2", "Calix E9-2 Intelligent Edge optical line terminal",
+			"AXOS", synth.VendorGeneric, synth.TypeHost),
+		newProfile("ont", "iot", "calix", "GigaPoint 803G", "Calix GigaPoint 803G optical network terminal",
+			"Calix ONT firmware", synth.VendorGeneric, synth.TypeHost),
+		newProfile("cpe-router", "iot", "adtran", "NetVanta 3140", "Adtran NetVanta 3140 business router",
+			"AOS", synth.VendorGeneric, synth.TypeHost),
 		newProfile("server", "server", "dell", "PowerEdge R660", "Dell PowerEdge R660",
 			"Ubuntu Server 26.04", synth.VendorGeneric, synth.TypeServer),
 		newProfile("controller", "server", "cisco", "Catalyst 9800-L", "Cisco Catalyst 9800-L",

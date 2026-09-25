@@ -15,9 +15,11 @@ import (
 func TestEveryProfileVendorAllocatesItsOwnOUI(t *testing.T) {
 	want := map[string]string{
 		"apc":                 "AMERICAN POWER CONVERSION CORP",
+		"adtran":              "Adtran Inc",
 		"apple":               "Apple, Inc.",
 		"axis":                "Axis Communications AB",
 		"baxter":              "Baxter International Inc",
+		"calix":               "Calix Networks",
 		"cisco":               "Cisco Systems, Inc",
 		"dell":                "Dell EMC",
 		"fanuc robotics":      "FANUC ROBOTICS NORTH AMERICA, Inc.",
