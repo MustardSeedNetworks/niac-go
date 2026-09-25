@@ -245,7 +245,10 @@ func addSiteEndpoints(links linkMap, site Site, request Request) {
 		}
 	}
 
-	services := []string{"DNS01", "DHCP01", "APP01", "FILE01", "NMS01", "PERF01"}
+	services := make([]string, 0, len(serviceRoles())+counts.WirelessControllers)
+	for _, role := range serviceRoles() {
+		services = append(services, serviceName(request.EndpointProfile, role)+"01")
+	}
 	for index := 1; index <= counts.WirelessControllers; index++ {
 		services = append(services, fmt.Sprintf("WLC%02d", index))
 	}
