@@ -10,7 +10,8 @@ package main
 //	sudo niac install-ca --uninstall      # remove it
 //	     niac install-ca --print-fingerprint
 //
-// The default cert path mirrors EnsureSelfSignedCert's output so a freshly
+// The default cert path is where the daemon's listener generates its
+// self-signed pair (api.DefaultCertPaths), so a freshly
 // started `niac daemon` (TLS on) leaves a cert at certs/server.crt that
 // `install-ca` finds without an explicit --cert flag.
 

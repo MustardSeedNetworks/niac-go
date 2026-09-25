@@ -129,7 +129,7 @@ func TestStart_NonLoopbackWithoutTokenRefused(t *testing.T) {
 	}
 }
 
-func TestStartRequiresTLSAndRejectsPlaintext(t *testing.T) {
+func TestStartServesHTTP2AndRedirectsPlaintext(t *testing.T) {
 	certDir := t.TempDir()
 	s := NewServer(ServerConfig{
 		Addr:                           "127.0.0.1:0",
@@ -159,10 +159,13 @@ func TestStartRequiresTLSAndRejectsPlaintext(t *testing.T) {
 		t.Fatal("generated certificate could not be added to root pool")
 	}
 	client := &http.Client{
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS13,
-			RootCAs:    roots,
-		}},
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS13,
+				RootCAs:    roots,
+			},
+			ForceAttemptHTTP2: true,
+		},
 		Timeout: 2 * time.Second,
 	}
 	_, port, err := net.SplitHostPort(s.BoundAddr())
@@ -182,14 +185,28 @@ func TestStartRequiresTLSAndRejectsPlaintext(t *testing.T) {
 		t.Errorf("close HTTPS response: %v", closeErr)
 	}
 
-	plainClient := &http.Client{Timeout: 2 * time.Second}
-	plainResp, plainErr := plainClient.Get("http://" + testAddr + "/health")
-	if plainErr != nil {
-		return
+	if resp.TLS == nil || resp.TLS.NegotiatedProtocol != "h2" {
+		t.Errorf("HTTPS listener did not negotiate HTTP/2: %+v", resp.TLS)
+	}
+
+	// A plaintext request on the TLS port is answered with a redirect to https
+	// on the same port and nothing else.
+	plainClient := &http.Client{
+		Timeout: 2 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	plainResp, err := plainClient.Get("http://" + testAddr + "/health")
+	if err != nil {
+		t.Fatalf("plaintext request: %v", err)
 	}
 	defer plainResp.Body.Close()
-	if plainResp.StatusCode >= http.StatusOK && plainResp.StatusCode < http.StatusMultipleChoices {
-		t.Fatalf("plaintext HTTP request returned success status %d", plainResp.StatusCode)
+	if plainResp.StatusCode != http.StatusPermanentRedirect {
+		t.Fatalf("plaintext status = %d, want %d", plainResp.StatusCode, http.StatusPermanentRedirect)
+	}
+	if got, want := plainResp.Header.Get("Location"), "https://"+testAddr+"/health"; got != want {
+		t.Errorf("Location = %q, want %q", got, want)
 	}
 }
 

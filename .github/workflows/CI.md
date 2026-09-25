@@ -16,7 +16,7 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `changes` | Path filtering | Decides which downstream jobs run |
 | `backend` | Go checks | lint, vet, staticcheck, fmt, tests, coverage floor |
 | `backend-darwin` | Go checks (macOS) | Builds, vets and tests on `macos-latest`; the only compiler for `*_darwin.go` |
-| `backend-windows` | Go checks (Windows) | Builds, vets and runs the port-fallback tests on `windows-latest` |
+| `backend-windows` | Go checks (Windows) | Builds, vets and starts the API listener on `windows-latest` |
 | `race` | Go race detector | `go test -race`, split from `backend` so it fails distinctly |
 | `capture-rawsocket` | Raw-socket boundary (Linux) | Runs the `rawsocket`-tagged capture tests, which need CAP_NET_RAW |
 | `build-ui` | Build UI (shared artifact) | Builds the frontend once; `backend` and `race` consume the artifact |
