@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.96](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.95...v0.95.96) (2026-09-25)
+
+
+### Features
+
+* **protocols:** learn each pool client on its own port ([#2362](https://github.com/MustardSeedNetworks/niac-go/issues/2362)) ([cb02cb3](https://github.com/MustardSeedNetworks/niac-go/commit/cb02cb33b1372c444e9d8186adfdde8d7e99891b))
+* **scenario:** give each service-provider POP its access tier ([#2359](https://github.com/MustardSeedNetworks/niac-go/issues/2359)) ([47a5a9b](https://github.com/MustardSeedNetworks/niac-go/commit/47a5a9b2e9efcc069e9c64c4cf542509f016ef57))
+
 ## [0.95.95](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.94...v0.95.95) (2026-09-25)
 
 
