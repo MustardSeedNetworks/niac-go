@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.97](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.96...v0.95.97) (2026-09-26)
+
+
+### Features
+
+* **protocols:** advertise at pool clients from their own switch only ([#2364](https://github.com/MustardSeedNetworks/niac-go/issues/2364)) ([3a02227](https://github.com/MustardSeedNetworks/niac-go/commit/3a02227470e294013703e3e6cb57d8fe99a916e1))
+* **protocols:** originate BPDUs from one elected spanning tree per site ([#2369](https://github.com/MustardSeedNetworks/niac-go/issues/2369)) ([3b35104](https://github.com/MustardSeedNetworks/niac-go/commit/3b351044de91d0a2a6f86ac7b0ee33d5ba72ac29))
+
+
+### Bug Fixes
+
+* **ui:** theme-owned colour values and a quiet idle UI ([#2358](https://github.com/MustardSeedNetworks/niac-go/issues/2358)) ([5d783b4](https://github.com/MustardSeedNetworks/niac-go/commit/5d783b4b35aa7a8d06957c94616090645306edf0))
+
+
+### Miscellaneous
+
+* **deps:** bump toolchain to Go 1.27.1, Node 26.10.0, golangci-lint 2.14.0 ([#2367](https://github.com/MustardSeedNetworks/niac-go/issues/2367)) ([65c0599](https://github.com/MustardSeedNetworks/niac-go/commit/65c0599df04010b9b5d7fb6ffaedb445cf9b69b1))
+
 ## [0.95.96](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.95...v0.95.96) (2026-09-25)
 
 
