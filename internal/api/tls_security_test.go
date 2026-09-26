@@ -97,6 +97,9 @@ func (*nilDaemonController) SimulationAttachments(SimulationRequest) (Simulation
 	return SimulationAttachments{}, nil
 }
 
+func (*nilDaemonController) PinAttachmentClient(string, AttachmentPin) error {
+	return nil
+}
 func (*nilDaemonController) StopSimulation(string) error   { return nil }
 func (*nilDaemonController) SelectSimulation(string) error { return nil }
 func (*nilDaemonController) GetStatus() SimulationStatus   { return SimulationStatus{} }

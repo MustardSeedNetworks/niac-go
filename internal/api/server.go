@@ -427,6 +427,9 @@ type DaemonController interface {
 	AttachmentPolicies() []fabric.PhysicalAttachmentPolicy
 	SimulationAttachments(req SimulationRequest) (SimulationAttachments, error)
 	StartSimulation(req SimulationRequest) error
+	// PinAttachmentClient fixes one client MAC to one pool port of a running
+	// session's attachment and restarts that session on it.
+	PinAttachmentClient(sessionID string, pin AttachmentPin) error
 	StopSimulation(sessionID string) error
 	SelectSimulation(sessionID string) error
 	GetStatus() SimulationStatus

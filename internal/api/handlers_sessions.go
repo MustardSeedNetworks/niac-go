@@ -139,6 +139,7 @@ func (s *Server) sessionResourceHandler(resource string) (sessionHandler, bool) 
 		"segments":   s.handleSessionSegments,
 		"neighbors":  s.handleSessionNeighbors,
 		"clients":    s.handleSessionClients,
+		"pins":       s.handleSessionPins,
 		"stats":      s.handleSessionStats,
 		"runtime":    s.handleSessionRuntime,
 		// Two segments deep: dispatchSessionSubpath cuts the session ID off
