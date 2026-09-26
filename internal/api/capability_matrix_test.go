@@ -23,7 +23,6 @@ func unauthoredProtocols() map[string]string {
 		// from a pack; the rest are reachable from nothing.
 		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in template does)",
 		"SSHConfig":    "P5-9: no pack authors the SSH command service",
-		"SNMPv3Config": "P5-9: no pack authors SNMPv3 USM users alongside v2c",
 		"ICMPv6Config": "P5-9: no pack authors dual-stack ICMPv6",
 		"PortChannels": "P5-9: no pack authors a LAG, and IF-MIB has no aggregate for one yet",
 

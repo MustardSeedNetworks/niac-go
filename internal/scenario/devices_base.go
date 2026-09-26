@@ -73,6 +73,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
 		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp,
 		Syslog: siteSyslog(spec),
+		Snmpv3: packSNMPv3(),
 	}
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{
@@ -361,3 +362,19 @@ const (
 	// 0.1 W units: 25.5 W, an 802.3at class 4 device.
 	apPowerTenthWatts = 255
 )
+
+// packSNMPv3 is the USM user every managed device serves alongside the v2c
+// community. Endpoint appliances stay v2c-only: the v3 surface is the
+// infrastructure an NMS is configured to poll securely.
+func packSNMPv3() *converter.Snmpv3Config {
+	return &converter.Snmpv3Config{
+		Enabled: true,
+		Users: []converter.Snmpv3User{{
+			Username:     defaultSNMPv3User,
+			AuthProtocol: "sha256",
+			AuthPassword: defaultSNMPv3AuthKey,
+			PrivProtocol: "aes",
+			PrivPassword: defaultSNMPv3PrivKey,
+		}},
+	}
+}
