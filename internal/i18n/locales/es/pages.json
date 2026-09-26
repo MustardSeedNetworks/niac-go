@@ -168,7 +168,20 @@
     "recentRunsTag": "Historial",
     "recentRunsDescription": "Ejecuciones de simulación pasadas registradas por el daemon.",
     "recentRunStats": "{{time}} · duración {{duration}} · RX {{rx}} · TX {{tx}}",
-    "noCapturedRuns": "Aún no hay ejecuciones capturadas."
+    "noCapturedRuns": "Aún no hay ejecuciones capturadas.",
+    "clients": {
+      "title": "Clientes conectados",
+      "help": "Cada MAC que ha enviado una trama a este escenario en los últimos cinco minutos, y el puerto del escenario al que está conectada. Un cliente no muestra puerto cuando la conexión nombra una red en lugar de un grupo de puertos, o cuando todos los puertos del grupo están ocupados.",
+      "mac": "MAC",
+      "ip": "Dirección IP",
+      "device": "Dispositivo",
+      "port": "Puerto",
+      "lastSeen": "Visto por última vez",
+      "notPlaced": "Sin ubicar",
+      "loading": "Cargando clientes conectados…",
+      "empty": "Ningún cliente ha enviado todavía una trama a este escenario.",
+      "loadError": "No se pudieron cargar los clientes conectados: {{error}}"
+    }
   },
   "newSimWizard": {
     "status": {
