@@ -163,7 +163,7 @@ export const StatusCard: FC<StatusCardProps> = ({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: Interactive role is conditionally applied based on onClick presence
     <div
-      className={`rounded-xl ${variantStyles[variant]} pad sm:pad-lg
+      className={`rounded-xl ${variantStyles[variant]} pad
         transition-all hover:border-surface-border touch-manipulation
         focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base outline-none
         ${isInteractive ? 'cursor-pointer active:scale-[0.98]' : ''}
