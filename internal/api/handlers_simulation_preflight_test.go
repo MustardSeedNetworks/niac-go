@@ -27,6 +27,9 @@ type preflightDaemon struct {
 	selected       string
 	stopped        string
 	started        bool
+	pinned         AttachmentPin
+	pinSession     string
+	pinErr         error
 }
 
 func (d *preflightDaemon) PreflightSimulation(req SimulationRequest) (fabric.Report, error) {
@@ -43,6 +46,11 @@ func (d *preflightDaemon) SimulationAttachments(
 ) (SimulationAttachments, error) {
 	d.request = req
 	return d.attachments, d.attachmentsErr
+}
+
+func (d *preflightDaemon) PinAttachmentClient(sessionID string, pin AttachmentPin) error {
+	d.pinSession, d.pinned = sessionID, pin
+	return d.pinErr
 }
 
 func TestHandleSimulationPreflightReturnsManagedPathValidationError(t *testing.T) {

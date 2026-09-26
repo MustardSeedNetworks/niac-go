@@ -129,6 +129,7 @@ GET /api/v1/sessions/{id}/interfaces        its simulated devices' interfaces
 GET /api/v1/sessions/{id}/segments          its VLAN segments
 GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
 GET /api/v1/sessions/{id}/clients           the client MACs seen on its wire
+POST /api/v1/sessions/{id}/pins             pin a client to a pool port
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
 GET /api/v1/sessions/{id}/capture/export    its retained frames as pcapng
@@ -156,6 +157,18 @@ takes the first free port in the pool's order, in the order the clients were
 first seen, and keeps it until the session stops. Both fields are absent for a
 network-scoped attachment, and for a client that arrived after every port was
 taken.
+
+`POST /api/v1/sessions/{id}/pins` moves one client to another port of the
+pool, with `{"mac": "...", "device": "...", "interface": "..."}`. The pin is
+written into the scenario file the session runs — the same
+`attachments[].pins` the editor authors, replacing any earlier pin of that MAC
+— and the session restarts on it, so every client of that session is placed
+afresh and the moved tester has to renew its lease; other sessions are not
+touched.
+A port outside the pool, or one another MAC is pinned to, answers
+`400 preflight_failed` with the compiler's diagnostic, and a network-scoped
+attachment answers `409 attachment_pool_required`. Either way the scenario
+file and the running session are left as they were.
 
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.

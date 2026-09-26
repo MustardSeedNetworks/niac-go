@@ -591,6 +591,10 @@ func (d *Daemon) StartSimulation(req api.SimulationRequest) error {
 func (d *Daemon) startGeneration(req api.SimulationRequest, generation string, recovering bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	return d.startGenerationLocked(req, generation, recovering)
+}
+
+func (d *Daemon) startGenerationLocked(req api.SimulationRequest, generation string, recovering bool) error {
 	sessionID, binding, err := d.prepareSessionStart(req)
 	if err != nil {
 		return err
