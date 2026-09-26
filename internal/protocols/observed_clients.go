@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
@@ -149,6 +150,10 @@ func (s *Stack) recordObservedClient(pkt *Packet) {
 	// libpcap reports the simulation's own outbound frames on the same
 	// handle, so without this the table fills with the scenario itself.
 	if s.devicesFor(pkt.VLAN).GetByMAC(src) != nil {
+		return
+	}
+	// Nor is the host's own NIC something plugged into the scenario.
+	if s.fabric != nil && bytes.Equal(src, s.fabric.hostMAC) {
 		return
 	}
 

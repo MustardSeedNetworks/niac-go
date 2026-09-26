@@ -295,3 +295,45 @@ func TestNetworkScopedAttachmentPlacesNoClient(t *testing.T) {
 		}
 	}
 }
+
+// The NIAC host's kernel talks on the bound NIC too -- IPv6 router
+// solicitations, MLD reports -- and libpcap hands those frames over like any
+// client's. They came from the near end of the real cable, not from anything
+// plugged into the scenario, and must not take a pool port. On the wire this
+// raced the test end for the pool's first port.
+func TestTheHostsOwnNICIsNotAClient(t *testing.T) {
+	stack := placementStack(t)
+	host, client := placementClient(7), placementClient(1)
+	stack.fabric.hostMAC = host
+	sendFrom(stack, host, "10.51.210.107")
+	sendFrom(stack, client, "10.51.210.101")
+
+	if got, _ := stack.fabric.placement.lookup(client.String()); got.Interface != "GigabitEthernet1/0/43" {
+		t.Errorf("first client landed on %q, want the pool's first port", got.Interface)
+	}
+	for _, observed := range stack.GetObservedClients() {
+		if observed.MAC == host.String() {
+			t.Errorf("host NIC %s recorded as a client on %s %s", host, observed.Device, observed.Interface)
+		}
+	}
+}
+
+func TestFabricRuntimeKnowsTheBoundNIC(t *testing.T) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("net.Interfaces() = %v", err)
+	}
+	for _, iface := range interfaces {
+		if len(iface.HardwareAddr) != 6 {
+			continue
+		}
+		runtime := newFabricRuntime(&fabric.Topology{
+			Binding: fabric.CompiledBinding{Binding: fabric.Binding{Interface: iface.Name}},
+		}, &config.Config{})
+		if runtime.hostMAC.String() != iface.HardwareAddr.String() {
+			t.Errorf("bound to %s, hostMAC = %q, want %s", iface.Name, runtime.hostMAC, iface.HardwareAddr)
+		}
+		return
+	}
+	t.Skip("this host has no Ethernet interface to bind")
+}
