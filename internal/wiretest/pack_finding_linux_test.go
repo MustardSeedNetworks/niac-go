@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+	"gopkg.in/yaml.v3"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
@@ -81,7 +83,7 @@ func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 // on the pack's attachment port. The generated YAML is the authored truth every
 // assertion reads, so the thing under test and the thing compared against are
 // one artifact; a hand-written config here would be an oracle, not the product.
-func startPack(t *testing.T, id string) (*config.Config, packAttachment) {
+func startPack(t *testing.T, id string, pins ...converter.AttachmentPin) (*config.Config, packAttachment) {
 	t.Helper()
 	requireWire(t)
 
@@ -100,6 +102,9 @@ func startPack(t *testing.T, id string) (*config.Config, packAttachment) {
 	result, err := scenario.Generate(pack.Request)
 	if err != nil {
 		t.Fatalf("scenario.Generate(%s): %v", id, err)
+	}
+	if len(pins) > 0 {
+		result.YAML = pinClients(t, result.YAML, pins)
 	}
 	authored, err := config.LoadYAMLBytes(result.YAML)
 	if err != nil {
@@ -141,6 +146,22 @@ func startPack(t *testing.T, id string) (*config.Config, packAttachment) {
 	})
 
 	return authored, attachment
+}
+
+// pinClients adds pins to the pack's one attachment, as an operator fixing a
+// tester to a port would.
+func pinClients(t *testing.T, data []byte, pins []converter.AttachmentPin) []byte {
+	t.Helper()
+	var doc converter.Config
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("reading the generated pack: %v", err)
+	}
+	doc.Attachments[0].Pins = append(doc.Attachments[0].Pins, pins...)
+	pinned, err := yaml.Marshal(doc)
+	if err != nil {
+		t.Fatalf("writing the pinned pack: %v", err)
+	}
+	return pinned
 }
 
 func dialDevice(t *testing.T, authored *config.Config, name string) *gosnmp.GoSNMP {

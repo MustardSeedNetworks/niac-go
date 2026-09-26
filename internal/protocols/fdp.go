@@ -290,18 +290,11 @@ func (h *FDPHandler) buildDeviceIDTLV(device *config.Device) []byte {
 
 // buildPortTLV builds the Port TLV.
 func (h *FDPHandler) buildPortTLV(device *config.Device) []byte {
-	var portName []byte
-
-	// Use port ID from config if available
-	switch {
-	case device.FDPConfig != nil && device.FDPConfig.PortID != "":
-		portName = []byte(device.FDPConfig.PortID)
-	case len(device.Interfaces) > 0 && device.Interfaces[0].Name != "":
-		// Try to use first interface name if available
-		portName = []byte(device.Interfaces[0].Name)
-	default:
-		portName = []byte("Port 1")
+	authored := ""
+	if device.FDPConfig != nil {
+		authored = device.FDPConfig.PortID
 	}
+	portName := []byte(h.stack.advertisedPortName(device, authored, "Port 1"))
 
 	length := min(fdpTLVHeaderSize+len(portName), fdpMaxLen)
 

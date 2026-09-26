@@ -23,6 +23,10 @@ type fabricRuntime struct {
 	// placement is set when the bound attachment is a port pool; a
 	// network-scoped attachment names no port to place a client on.
 	placement *clientPlacement
+	// hostMAC is the bound NIC's own address, the NIAC host's end of the real
+	// cable. Its kernel talks on that link too, and libpcap reports those
+	// frames like any client's.
+	hostMAC net.HardwareAddr
 }
 
 type fabricEndpoint struct {
@@ -79,6 +83,7 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 			DHCPScopes: append([]fabric.DHCPScope(nil), topology.DHCPScopes...),
 		},
 		attachmentNetwork: topology.Binding.Network,
+		hostMAC:           interfaceMAC(topology.Binding.Interface),
 		devicesByName:     make(map[string]*config.Device, len(cfg.Devices)),
 		interfacesByAddr:  make(map[netip.Addr]fabricEndpoint, len(topology.Interfaces)),
 	}
@@ -458,6 +463,17 @@ func (r *fabricRuntime) interfaceAvailable(device *config.Device, name string) b
 		}
 	}
 	return false
+}
+
+// interfaceMAC is the hardware address of the named host interface, or nil when
+// this host has no such interface; a session bound to one could not capture
+// on it anyway, so there is nothing of its own to tell apart.
+func interfaceMAC(name string) net.HardwareAddr {
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		return nil
+	}
+	return iface.HardwareAddr
 }
 
 func cloneMAC(mac net.HardwareAddr) net.HardwareAddr {

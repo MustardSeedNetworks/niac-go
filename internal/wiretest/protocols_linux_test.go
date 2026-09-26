@@ -171,17 +171,11 @@ func dhcpExchange(
 // simulation advertises itself on its own timer, and that the system name it
 // puts on the wire is an authored device name rather than a placeholder.
 //
-// validateDiscoveryEgress drops discovery frames from devices with no
-// interface on the attachment network, so only those devices can be heard
-// here. Until per-client placement (AP-2) narrows that to the tester's own
-// access switch, any of them is a correct speaker.
+// The tester's own switch is the only device at the other end of its cable,
+// so it is the only one that may be heard here.
 func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
-	_, attachment := startPack(t, "hospital")
-
-	want := make([]string, 0, len(attachment.onNetwork))
-	for _, device := range attachment.onNetwork {
-		want = append(want, advertisedName(device))
-	}
+	authored, _ := startPack(t, "hospital")
+	want := advertisedName(deviceNamed(t, authored, authored.Attachments[0].At.Device))
 
 	handle := openClient(t)
 	packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()
@@ -198,13 +192,8 @@ func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 			if !ok || lldp.SysName == "" {
 				continue
 			}
-			if !slices.Contains(want, lldp.SysName) {
-				t.Fatalf(
-					"LLDP system name on the wire = %q, want one of the devices on %s: %v",
-					lldp.SysName,
-					attachment.network,
-					want,
-				)
+			if lldp.SysName != want {
+				t.Fatalf("LLDP system name on the wire = %q, want the tester's switch %q", lldp.SysName, want)
 			}
 			return
 		case <-deadline:
