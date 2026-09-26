@@ -99,6 +99,7 @@ type Stack struct {
 	netbiosHandler     *NetBIOSHandler
 	mdnsHandler        *MDNSHandler
 	stpHandler         *STPHandler
+	spanningTree       map[*config.Device]stpPosition
 	lldpHandler        *LLDPHandler
 	cdpHandler         *CDPHandler
 	edpHandler         *EDPHandler
@@ -360,6 +361,7 @@ func (s *Stack) Stop() {
 	s.lifecycleMu.Unlock()
 
 	// Stop discovery protocol handlers
+	s.stpHandler.Stop()
 	s.lldpHandler.Stop()
 	s.cdpHandler.Stop()
 	s.edpHandler.Stop()

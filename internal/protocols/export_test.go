@@ -12,6 +12,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // ---- Exported internal types for testing ----
@@ -509,9 +510,14 @@ func (h *NetBIOSHandler) DecodeNetBIOSName(data []byte) (string, byte, int) {
 
 // ---- STPHandler exports ----
 
+// SNMPGet reads oid from device's base SNMP agent.
+func (s *Stack) SNMPGet(device *config.Device, oid string) (*snmp.OIDValue, error) {
+	return s.snmpAgents[device].baseAgent.HandleGet(oid)
+}
+
 // MakeBridgeID exposes makeBridgeID for testing.
 func (h *STPHandler) MakeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
-	return h.makeBridgeID(priority, mac)
+	return makeBridgeID(priority, mac)
 }
 
 // STPHandlerBridgePriority returns the bridge priority for testing.

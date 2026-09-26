@@ -27,6 +27,7 @@ type deviceSpec struct {
 	iperf3     *converter.IPerf3Config
 	reflector  *converter.ReflectorConfig
 	poe        *converter.PoeConfig
+	stp        *converter.StpConfig
 }
 
 func managedDevice(request Request, spec deviceSpec, links linkMap) converter.Device {
@@ -70,7 +71,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: managedDeviceTTL},
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
-		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe,
+		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp,
 		Syslog: siteSyslog(spec),
 	}
 	if platform != "" {

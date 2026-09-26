@@ -66,7 +66,19 @@ func coreSwitch(site Site, siteIndex, index int) deviceSpec {
 			fmt.Sprintf("203.0.113.%d", coreBase+index),
 		)},
 		vlan: vlanManagement,
+		stp:  coreSpanningTree(index),
 	}
+}
+
+// coreSpanningTree makes the first core the root and the second its standby,
+// the priorities `spanning-tree root primary` and `secondary` set. Every other
+// switch keeps the default priority and elects them.
+func coreSpanningTree(index int) *converter.StpConfig {
+	priority := uint16(stpRootPrimaryPriority)
+	if index > 1 {
+		priority = stpRootSecondaryPriority
+	}
+	return &converter.StpConfig{Enabled: true, BridgePriority: priority}
 }
 
 func distributionSwitch(site Site, index int) deviceSpec {
@@ -79,6 +91,7 @@ func distributionSwitch(site Site, index int) deviceSpec {
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
 		)},
 		vlan: vlanManagement,
+		stp:  &converter.StpConfig{Enabled: true},
 	}
 }
 
@@ -92,6 +105,7 @@ func accessSwitch(site Site, index int) deviceSpec {
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
 		)}, sparePorts("GigabitEthernet1/0/", vlanData, speedOneGigabit)...),
 		vlan: vlanManagement,
+		stp:  &converter.StpConfig{Enabled: true},
 		// The access layer is the only PSE in a pack: phones, cameras and
 		// access points hang off it and advertise what they draw, so this is
 		// the switch a tester walks POWER-ETHERNET-MIB on. The budget is a
@@ -110,6 +124,7 @@ func serverSwitch(site Site, index int) deviceSpec {
 			"Vlan200", siteNetworkName(site, "mgmt"), address+"/24", speedHundredGigabit, "Network management",
 		)}, sparePorts("TenGigabitEthernet1/0/", vlanServers, speedTenGigabit)...),
 		vlan: vlanManagement,
+		stp:  &converter.StpConfig{Enabled: true},
 	}
 }
 

@@ -63,6 +63,10 @@ const (
 	DefaultForwardDelay = 15
 )
 
+// stpOriginationTick is how often origination checks for due BPDUs; hello
+// times are whole seconds.
+const stpOriginationTick = time.Second
+
 // STP encoding constants.
 const (
 	stpMinPacketSize    = 38     // Minimum STP packet size (Ethernet + LLC + BPDU)
@@ -93,19 +97,14 @@ type STPHandler struct {
 
 	debugLevel int
 
-	// Bridge configuration
+	// Defaults for a device that authors no value of its own.
 	bridgePriority uint16
+	helloTime      uint16
+	maxAge         uint16
+	forwardDelay   uint16
 
-	// Root bridge info
-	rootID       uint64 // Priority + MAC
-	rootPathCost uint32
-
-	// Timers
-	helloTime    uint16
-	maxAge       uint16
-	forwardDelay uint16
-
-	lastBPDUTime time.Time
+	running  bool
+	stopChan chan struct{}
 }
 
 // NewSTPHandler creates a new STP handler.
@@ -117,8 +116,78 @@ func NewSTPHandler(stack *Stack, debugLevel int) *STPHandler {
 		helloTime:      DefaultHelloTime,
 		maxAge:         DefaultMaxAge,
 		forwardDelay:   DefaultForwardDelay,
-		lastBPDUTime:   time.Now(),
 	}
+}
+
+// Start begins originating Configuration BPDUs from every STP-enabled device,
+// each at its own hello time. Safe to call again after Stop.
+func (h *STPHandler) Start() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.running {
+		return
+	}
+	h.stopChan = make(chan struct{})
+	h.running = true
+	stop := h.stopChan
+
+	go func() {
+		due := h.sendDueBPDUs(time.Now(), nil)
+		ticker := time.NewTicker(stpOriginationTick)
+		defer ticker.Stop()
+		for {
+			select {
+			case now := <-ticker.C:
+				due = h.sendDueBPDUs(now, due)
+			case <-stop:
+				return
+			}
+		}
+	}()
+}
+
+// Stop halts BPDU origination. Safe to call multiple times.
+func (h *STPHandler) Stop() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if !h.running {
+		return
+	}
+	close(h.stopChan)
+	h.running = false
+}
+
+// sendDueBPDUs sends a BPDU from each STP-enabled device that is due by now and
+// returns when each is next due. The next time is the last one plus the hello
+// time, not now plus it, so tick jitter cannot stretch a 2 s hello to 3 s. A
+// device that cannot advertise at the client is skipped here rather than
+// refused at egress, which would count every hello as a fabric drop.
+func (h *STPHandler) sendDueBPDUs(now time.Time, due map[*config.Device]time.Time) map[*config.Device]time.Time {
+	h.stack.reloadMu.RLock()
+	defer h.stack.reloadMu.RUnlock()
+
+	next := make(map[*config.Device]time.Time, len(due))
+	for _, device := range h.stack.AllDevices() {
+		if !stpEnabled(device) || (h.stack.fabric != nil && !h.stack.fabric.advertisesAtClient(device)) {
+			continue
+		}
+		at, scheduled := due[device]
+		if scheduled && now.Before(at) {
+			next[device] = at
+			continue
+		}
+		if err := h.SendConfigBPDU(device); err != nil && h.debugLevel >= DebugLevelInfo {
+			logging.Debugf("STP: BPDU from %s not sent: %v", device.Name, err)
+		}
+		hello := time.Duration(h.getSTPParams(device).helloTime) * time.Second
+		if !scheduled || now.Sub(at) >= hello {
+			at = now
+		}
+		next[device] = at.Add(hello)
+	}
+	return next
 }
 
 // HandlePacket processes an STP/RSTP BPDU packet.
@@ -171,8 +240,6 @@ func (h *STPHandler) HandlePacket(pkt *Packet) {
 			version, bpduType, pkt.SerialNumber)
 	}
 
-	h.lastBPDUTime = time.Now()
-
 	switch bpduType {
 	case BPDUTypeConfig:
 		h.handleConfigBPDU(pkt, offset)
@@ -198,15 +265,14 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 		return
 	}
 
+	// Only logged: the simulated bridges' positions come from the authored
+	// topology (electSpanningTree), and libpcap hands back the stack's own
+	// BPDUs too.
 	flags := data[4]
 	rootID := binary.BigEndian.Uint64(data[5:13])
 	rootPathCost := binary.BigEndian.Uint32(data[13:17])
 	bridgeID := binary.BigEndian.Uint64(data[17:25])
 	portID := binary.BigEndian.Uint16(data[25:27])
-	messageAge := binary.BigEndian.Uint16(data[27:29])
-	maxAge := binary.BigEndian.Uint16(data[29:31])
-	helloTime := binary.BigEndian.Uint16(data[31:33])
-	forwardDelay := binary.BigEndian.Uint16(data[33:35])
 
 	if h.debugLevel >= DebugLevelInfo {
 		tcFlag := (flags & BPDUFlagTopologyChange) != 0
@@ -223,16 +289,6 @@ func (h *STPHandler) handleConfigBPDU(pkt *Packet, offset int) {
 			pkt.SerialNumber,
 		)
 	}
-
-	// Store information for potential response generation
-	h.rootID = rootID
-	h.rootPathCost = rootPathCost
-	h.helloTime = helloTime
-	h.maxAge = maxAge
-	h.forwardDelay = forwardDelay
-
-	// Update message age tracking
-	_ = messageAge // Store if needed for aging
 }
 
 // handleTCN processes a Topology Change Notification BPDU.
@@ -254,12 +310,14 @@ type stpParams struct {
 
 // getSTPParams extracts STP parameters from device config with defaults from handler.
 func (h *STPHandler) getSTPParams(device *config.Device) stpParams {
+	h.mu.RLock()
 	p := stpParams{
 		bridgePriority: h.bridgePriority,
 		helloTime:      h.helloTime,
 		maxAge:         h.maxAge,
 		forwardDelay:   h.forwardDelay,
 	}
+	h.mu.RUnlock()
 
 	if device.STPConfig == nil {
 		return p
@@ -365,14 +423,14 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 
 	buf := buildBPDUHeader(dstMAC, device.MACAddress, flags)
 
-	// Root ID and Bridge ID (we are root)
-	bridgeID := h.makeBridgeID(params.bridgePriority, device.MACAddress)
-	buf = appendBridgeID(buf, bridgeID)
-
-	// Root Path Cost (4 bytes of zero)
-	buf = append(buf, stpPaddingByte, stpPaddingByte, stpPaddingByte, stpPaddingByte)
-
-	// Bridge ID
+	// A device outside the elected tree (STP not enabled) speaks as a root.
+	bridgeID := makeBridgeID(params.bridgePriority, device.MACAddress)
+	position, elected := h.stack.spanningTree[device]
+	if !elected {
+		position = stpPosition{root: bridgeID}
+	}
+	buf = appendBridgeID(buf, position.root)
+	buf = binary.BigEndian.AppendUint32(buf, position.cost)
 	buf = appendBridgeID(buf, bridgeID)
 
 	// Port ID (2 bytes)
@@ -408,7 +466,7 @@ func (h *STPHandler) SendConfigBPDU(device *config.Device) error {
 }
 
 // makeBridgeID creates a bridge ID from priority and MAC address.
-func (h *STPHandler) makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
+func makeBridgeID(priority uint16, mac net.HardwareAddr) uint64 {
 	bridgeID := uint64(priority) << stpBridgeIDShift48
 	for i := range min(SizeOfMac, len(mac)) {
 		shift := stpBridgeIDShift40 - i*stpMACBytesShift

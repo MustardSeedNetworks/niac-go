@@ -159,6 +159,16 @@ func (g *snmpAgentGroup) SynthesizePeerTopologyAll(resolve snmp.PeerResolver) {
 	}
 }
 
+func (g *snmpAgentGroup) SynthesizeSpanningTreeAll(position snmp.SpanningTreePosition) {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.SynthesizeSpanningTree(position)
+	}
+}
+
 func (g *snmpAgentGroup) SynthesizeARPTableAll(bindings []snmp.ARPBinding) {
 	if g == nil {
 		return

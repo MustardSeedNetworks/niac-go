@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"maps"
 	"net"
 	"net/netip"
 
@@ -55,6 +56,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	if len(cfg.Segments) > 0 {
 		s.initializeSegments(cfg)
 	} else {
+		s.spanningTree = electSpanningTree(cfg.Devices)
 		for i := range cfg.Devices {
 			device := &cfg.Devices[i]
 			s.registerDevice(device)
@@ -84,6 +86,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 // rejects them before normal stack construction.
 func (s *Stack) initializeSegments(cfg *config.Config) {
 	s.segmentTables = make(map[int]*DeviceTable)
+	s.spanningTree = make(map[*config.Device]stpPosition)
 	segments := cfg.NormalizedSegments()
 	duplicateTags := config.DuplicateSegmentTags(segments)
 
@@ -93,6 +96,7 @@ func (s *Stack) initializeSegments(cfg *config.Config) {
 		}
 
 		segTable := NewDeviceTable()
+		maps.Copy(s.spanningTree, electSpanningTree(seg.Devices))
 
 		for i := range seg.Devices {
 			device := &seg.Devices[i]
