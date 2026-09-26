@@ -180,7 +180,17 @@
       "notPlaced": "Sin ubicar",
       "loading": "Cargando clientes conectados…",
       "empty": "Ningún cliente ha enviado todavía una trama a este escenario.",
-      "loadError": "No se pudieron cargar los clientes conectados: {{error}}"
+      "loadError": "No se pudieron cargar los clientes conectados: {{error}}",
+      "move": {
+        "choosePort": "Elija un puerto libre",
+        "client": "Cliente",
+        "failed": "No se pudo mover el cliente: {{error}}",
+        "help": "Fije un cliente a otro puerto del grupo de este escenario. El escenario se reinicia con la nueva fijación, por lo que los clientes no fijados pueden quedar en otro puerto.",
+        "moved": "{{mac}} fijado a {{device}} {{port}}. El escenario se reinició.",
+        "noFreePort": "Ningún puerto libre en el grupo",
+        "port": "Puerto del grupo",
+        "submit": "Mover cliente"
+      }
     }
   },
   "newSimWizard": {

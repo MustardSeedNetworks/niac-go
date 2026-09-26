@@ -857,6 +857,16 @@
       "loadError": "Could not load attached clients: {{error}}",
       "loading": "Loading attached clients…",
       "mac": "MAC",
+      "move": {
+        "choosePort": "Choose a free port",
+        "client": "Client",
+        "failed": "Could not move the client: {{error}}",
+        "help": "Pin a client to another port of this scenario's pool. The scenario restarts on the new pin, so clients that are not pinned may land on a different port.",
+        "moved": "Pinned {{mac}} to {{device}} {{port}}. The scenario restarted.",
+        "noFreePort": "No free pool port",
+        "port": "Pool port",
+        "submit": "Move client"
+      },
       "notPlaced": "Not placed",
       "port": "Port",
       "title": "Attached clients"

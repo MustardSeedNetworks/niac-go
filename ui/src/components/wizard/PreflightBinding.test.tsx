@@ -40,6 +40,7 @@ beforeEach(() => {
       interfaces: [],
       routes: [],
       dhcpScopes: [],
+      attachments: [],
     },
     diagnostics: [],
   });

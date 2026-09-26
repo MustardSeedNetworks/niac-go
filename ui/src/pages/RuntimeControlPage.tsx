@@ -445,7 +445,9 @@ export const RuntimeControlPage: FC = () => {
             onStop={() => handleStopClick(runningSession)}
             message={successMessage}
           />
-          {sessionId && <AttachedClientsCard sessionId={sessionId} />}
+          {sessionId && (
+            <AttachedClientsCard sessionId={sessionId} fabric={runningSession.fabric} />
+          )}
         </>
       )}
 

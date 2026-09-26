@@ -72,6 +72,28 @@ export interface FabricDhcpScope {
   router?: string;
 }
 
+export interface AttachmentPort {
+  device: string;
+  interface: string;
+  vlan?: number;
+  network: string;
+}
+
+export interface AttachmentPin {
+  mac: string;
+  device: string;
+  interface: string;
+}
+
+/** A port-pool attachment with every free port resolved (internal/fabric). */
+export interface CompiledAttachment {
+  name: string;
+  device: string;
+  network: string;
+  ports: AttachmentPort[] | null;
+  pins?: AttachmentPin[];
+}
+
 export interface FabricDiagnostic {
   code: string;
   field: string;
@@ -94,6 +116,7 @@ export interface SimulationPreflightReport {
     interfaces: FabricInterface[] | null;
     routes: FabricRoute[] | null;
     dhcpScopes: FabricDhcpScope[] | null;
+    attachments: CompiledAttachment[] | null;
   };
   diagnostics: FabricDiagnostic[] | null;
 }

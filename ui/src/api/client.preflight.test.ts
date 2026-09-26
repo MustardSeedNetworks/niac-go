@@ -32,6 +32,7 @@ describe('simulation preflight client', () => {
               interfaces: [],
               routes: [],
               dhcpScopes: [],
+              attachments: [],
             },
             diagnostics: [],
           }),

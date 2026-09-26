@@ -115,8 +115,11 @@ export type {
 } from './device-config-types';
 export type {
   AttachmentMode,
+  AttachmentPin,
   AttachmentPoliciesResponse,
   AttachmentPolicy,
+  AttachmentPort,
+  CompiledAttachment,
   FabricBinding,
   FabricDhcpScope,
   FabricDiagnostic,
