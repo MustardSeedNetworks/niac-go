@@ -156,7 +156,14 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, fmt.Errorf("invalid walk file path: %w", err)
 	}
 
-	// Ensure file exists and is a regular file (not a symlink or directory)
+	// Ensure file exists and is a regular file (not a symlink or directory).
+	// #nosec G703 -- ParseWalkFile is shared by CLI tools that intentionally
+	// accept an arbitrary operator-named file (mibzip, analyze) and by
+	// config/API paths that already confine the path to a base directory
+	// before calling in (internal/config.validateWalkFilePath,
+	// internal/api.Server.validateWalkFilePath); the cleanPath ".." check
+	// above and the symlink/directory rejection below are this function's
+	// own defense-in-depth, not the sole guard.
 	fileInfo, err := os.Lstat(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access walk file: %w", err)
@@ -172,7 +179,7 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, ErrWalkFileIsDirectory
 	}
 
-	file, err := os.Open(absPath)
+	file, err := os.Open(absPath) // #nosec G703 -- see the Lstat rationale above
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %w", err)
 	}

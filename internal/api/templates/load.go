@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+// ErrTemplateNotFound is returned by Load when no template matches the
+// requested name. Callers that need to distinguish "not found" (404) from
+// a read failure (500) should check for it with errors.Is.
+var ErrTemplateNotFound = errors.New("template not found")
+
 // Find searches for a template by name across all template directories
 // and returns its absolute path, or empty string if not found. It is
 // used both by the HTTP content/use handlers and by the daemon's
@@ -42,7 +47,7 @@ func Find(name string) string {
 func Load(name string) ([]byte, string, error) {
 	templatePath := Find(name)
 	if templatePath == "" {
-		return nil, "", fmt.Errorf("template not found: %s", name)
+		return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, name)
 	}
 
 	content, err := os.ReadFile(filepath.Clean(templatePath))

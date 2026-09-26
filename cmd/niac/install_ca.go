@@ -132,7 +132,7 @@ func resolveCertPath(p string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve cert path: %w", err)
 	}
-	_, statErr := os.Stat(abs)
+	_, statErr := os.Stat(abs) // #nosec G703 -- the operator's own --cert path; same class as content.go's --bundle
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
 			return "", fmt.Errorf(

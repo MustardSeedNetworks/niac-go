@@ -26,7 +26,7 @@ Linux provides the best performance and most complete feature support.
 
 - **Minimum OS**: Ubuntu 20.04, RHEL 8, Debian 11, or equivalent
 - **Architecture**: x86_64, ARM64
-- **Go Version**: 1.27.0+
+- **Go Version**: 1.27.1+
 - **Dependencies**: libpcap-dev
 
 ### Installation
@@ -75,7 +75,7 @@ macOS provides full functionality with some performance considerations.
 
 - **Minimum OS**: macOS 10.15 (Catalina) or later
 - **Architecture**: x86_64 (Intel), ARM64 (Apple Silicon)
-- **Go Version**: 1.27.0+
+- **Go Version**: 1.27.1+
 - **Dependencies**: libpcap (included with Xcode Command Line Tools)
 
 ### Installation
@@ -119,7 +119,7 @@ Windows provides full functionality with Npcap dependency.
 
 - **Minimum OS**: Windows 10 version 1903 or later, Windows 11
 - **Architecture**: x86_64 (AMD64)
-- **Go Version**: 1.27.0+
+- **Go Version**: 1.27.1+
 - **Dependencies**: Npcap (https://npcap.com)
 
 ### Installation

@@ -1,10 +1,9 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
@@ -63,16 +62,12 @@ func (s *Server) handleTemplateContent(w http.ResponseWriter, r *http.Request, n
 		return
 	}
 
-	// Search for template using recursive search
-	foundPath := templates.Find(name)
-
-	if foundPath == "" {
-		writeError(w, r, http.StatusNotFound, "not_found", "Template not found: "+name, nil)
-		return
-	}
-
-	content, err := os.ReadFile(filepath.Clean(foundPath))
+	content, _, err := templates.Load(name)
 	if err != nil {
+		if errors.Is(err, templates.ErrTemplateNotFound) {
+			writeError(w, r, http.StatusNotFound, "not_found", "Template not found: "+name, nil)
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "read_error", "Failed to read template", nil)
 		return
 	}

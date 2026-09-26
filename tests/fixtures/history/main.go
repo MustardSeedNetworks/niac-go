@@ -17,6 +17,7 @@ func main() {
 		log.Fatal("usage: history <new database path>")
 	}
 	path := filepath.Clean(os.Args[1])
+	// #nosec G703 -- test-fixture db path is the developer's own CLI argument.
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		log.Fatal("history fixture requires a new database")
 	}
