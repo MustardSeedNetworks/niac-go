@@ -51,8 +51,7 @@ test('device switching and wizard navigation preserve edits until explicitly res
   // needs an admin token, so it is no longer the request this edit produces.
   const refused = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/v1/config/devices/') &&
-      response.request().method() === 'PUT',
+      response.url().includes('/api/v1/config/devices/') && response.request().method() === 'PUT',
   );
   await page.getByTestId('unsaved-save').click();
   expect((await refused).status()).toBe(400);

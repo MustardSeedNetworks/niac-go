@@ -201,6 +201,8 @@ func resolveBinary(override string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve %s: %w", binary, err)
 	}
+	// #nosec G703 -- test-harness binary path from an env var the developer
+	// running the suite sets themselves.
 	if _, err = os.Stat(absolute); err != nil {
 		return "", fmt.Errorf("%s: %w", BinaryEnv, err)
 	}

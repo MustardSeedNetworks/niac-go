@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "26.9.0",
-    "npm": "12.0.2"
+    "node": "26.10.0",
+    "npm": "12.1.0"
   },
   "scripts": {
     "dev": "node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js",
@@ -71,7 +71,7 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.13",
+    "@biomejs/biome": "2.5.14",
     "@chromatic-com/storybook": "5.3.1",
     "@playwright/test": "1.63.0",
     "@storybook/addon-a11y": "10.6.0",
@@ -83,7 +83,7 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
-    "@types/node": "26.5.1",
+    "@types/node": "26.6.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
@@ -101,7 +101,7 @@
     "vite": "8.3.0",
     "vitest": "4.1.11"
   },
-  "packageManager": "npm@12.0.2",
+  "packageManager": "npm@12.1.0",
   "overrides": {
     "@codemirror/state": "6.7.5",
     "nanoid": "6.0.1",

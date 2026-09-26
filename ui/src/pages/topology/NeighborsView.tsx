@@ -98,7 +98,7 @@ export const NeighborsView: FC = () => {
       }
       if (!existing.protocols.includes(n.protocol)) {
         existing.protocols.push(n.protocol);
-        existing.protocols.sort();
+        existing.protocols.sort((a, b) => a.localeCompare(b));
       }
       // Most recent wins for the variable fields.
       if (Number.isFinite(tsMs) && tsMs > existing.lastSeenMs) {
