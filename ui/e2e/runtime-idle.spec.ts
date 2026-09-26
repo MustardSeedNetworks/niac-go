@@ -27,8 +27,11 @@ test('an idle UI asks nothing of the stack and reads the idle config calmly', as
     expect(config.status()).toBe(errors.status());
 
     const catalogueReads: string[] = [];
+    const configReads: string[] = [];
     page.on('request', (req) => {
-      if (new URL(req.url()).pathname === '/api/v1/errors') catalogueReads.push(req.url());
+      const { pathname } = new URL(req.url());
+      if (pathname === '/api/v1/errors') catalogueReads.push(req.url());
+      if (pathname === '/api/v1/config') configReads.push(req.url());
     });
     await page.goto(`${baseURL}/devices`);
     await expect(page.getByTestId('config-editor-idle-empty')).toBeVisible();
@@ -36,5 +39,8 @@ test('an idle UI asks nothing of the stack and reads the idle config calmly', as
     // An enabled poll fires on mount, before the config answer that renders
     // the prompt above, so by now it would have been sent.
     expect(catalogueReads).toEqual([]);
+    // The idle answer is final. Retried as a transient 5xx, the editor sat on
+    // a spinner through the whole backoff before the prompt could render.
+    expect(configReads).toHaveLength(1);
   });
 });
