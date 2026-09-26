@@ -205,11 +205,10 @@ describe('API Client', () => {
       vi.stubGlobal('setTimeout', origSetTimeout);
     });
 
-    it('retries on 5xx errors', async () => {
-      // First two calls return 500, third succeeds
+    it('retries on transient 5xx errors', async () => {
       mockFetch
         .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' })
-        .mockResolvedValueOnce({ ok: false, status: 503, statusText: 'Service Unavailable' })
+        .mockResolvedValueOnce({ ok: false, status: 502, statusText: 'Bad Gateway' })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ version: '1.0' }),
@@ -219,6 +218,26 @@ describe('API Client', () => {
       const result = await fetchVersion();
       expect(result).toHaveProperty('version', '1.0');
       expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    // Every 503 the daemon sends is a state answer (no scenario running, no
+    // library), never overload. Retrying it held idle pages on a spinner for
+    // the full 1+2+4 s backoff before they could show their idle state.
+    it('does not retry a 503', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        text: () =>
+          Promise.resolve('{"error":"no_active_simulation","message":"No scenario is loaded"}'),
+      });
+
+      const { fetchConfig } = await import('./client');
+      await expect(fetchConfig()).rejects.toMatchObject({
+        status: 503,
+        code: 'no_active_simulation',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('does not retry on 4xx errors', async () => {

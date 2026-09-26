@@ -25,7 +25,7 @@ func (s *Server) readConfigDocument() (*configDocument, int, error) {
 	// SECURITY FIX #161: Thread-safe access to ConfigPath
 	cfgPath := s.configPath()
 	if cfgPath == "" {
-		return nil, http.StatusBadRequest, ErrConfigPathNotAvailable
+		return nil, http.StatusServiceUnavailable, ErrConfigPathNotAvailable
 	}
 
 	data, err := os.ReadFile(cfgPath)

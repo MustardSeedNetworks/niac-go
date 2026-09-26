@@ -7,7 +7,7 @@ import { ApiError, type ApiErrorDetail, NetworkError, TimeoutError } from './err
  *   - case conversion (toCamelCase in; nothing converts on the way out)
  *   - bearer token + CSRF header injection
  *   - timeout + signal forwarding
- *   - retry-with-backoff for 5xx and network errors
+ *   - retry-with-backoff for transient 5xx (not 503) and network errors
  *   - in-flight GET deduplication
  *
  * Endpoint wrappers live in endpoints.ts and import request / requestJson
@@ -265,9 +265,11 @@ function isRetryableError(error: unknown): boolean {
   return error instanceof TypeError;
 }
 
-// FIX #175: Check if a response status is retryable.
+// FIX #175: Check if a response status is retryable. A 503 is excluded: the
+// daemon uses it only to say it is not in the state the route needs (no
+// scenario running, library unavailable), which a retry cannot change.
 function isRetryableStatus(status: number): boolean {
-  return status >= 500;
+  return status >= 500 && status !== 503;
 }
 
 // FIX #179: Accept optional signal parameter to allow caller-provided AbortController.
@@ -313,7 +315,7 @@ export async function request<T>(
       clearTimeout(timeout);
 
       if (!response.ok) {
-        // FIX #175: Retry on 5xx, don't retry on 4xx
+        // FIX #175: Retry on transient 5xx, don't retry on 4xx
         if (isRetryableStatus(response.status) && networkRetries < retry.maxRetries) {
           retryDelay = retry.baseDelay * 2 ** networkRetries;
           networkRetries += 1;

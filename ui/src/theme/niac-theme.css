@@ -1,0 +1,242 @@
+/* NIAC's Tailwind @theme: registers every --color-* utility and holds the
+ * theme-neutral values (device, link, protocol, chart, neutral ramps). Values
+ * that change with the theme live in product-niac.css and msn-shared.css and
+ * are mapped here by name; hex lives only in this directory. */
+
+@theme {
+  /* ========================================
+   * Font Families
+   * (v4 uses --font-* prefix to generate font-* utilities)
+   * ======================================== */
+  --font-display: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-body: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ========================================
+   * Brand Colors — Mustard Seed Networks
+   * Semantic tokens (no numeric ramp). Light/dark values live in
+   * :root and .dark blocks below.
+   * ======================================== */
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-primary-strong: var(--color-brand-primary-strong);
+  --color-brand-accent: var(--color-brand-accent);
+  --color-accent-gold: var(--color-accent-gold);
+
+  /* (Legacy --color-brand-50..950 flat ramp aliases removed in Phase 7 of
+   * the 2026-05-22 brand audit. Audit grep showed zero consumers in src/.
+   * Components reference brand-primary / brand-accent / accent-gold directly.) */
+
+  /* ========================================
+   * Surface Colors — semantic elevation tokens
+   * (light/dark values in :root / .dark blocks)
+   * ======================================== */
+  --color-surface-base: var(--color-surface-base);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-border: var(--color-surface-border);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-sunken: var(--color-surface-sunken);
+
+  /* Legacy bg-* aliases — kept so existing utilities still compile.
+   * Components should migrate to bg-surface-* over time. */
+  --color-bg-base: var(--color-surface-base);
+  --color-bg-surface: var(--color-surface-raised);
+  --color-bg-elevated: var(--color-surface-raised);
+  --color-bg-overlay: var(--color-surface-hover);
+  --color-bg-muted: var(--color-surface-hover);
+
+  /* ========================================
+   * Text Colors (WCAG AA contrast)
+   * ======================================== */
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-inverse: var(--color-text-inverse);
+
+  /* ========================================
+   * Border Colors
+   * Legacy aliases kept; new code should use border-surface-border.
+   * ======================================== */
+  --color-border-default: var(--color-surface-border);
+  --color-border-subtle: var(--color-surface-border);
+  --color-border-muted: var(--color-surface-border);
+  --color-border-focus: var(--color-brand-primary);
+  --color-border-error: var(--color-status-error);
+
+  /* ========================================
+   * Status Colors — canonical hex values shared across seed/stem/niac.
+   * INDUSTRY STANDARD (do not change). Identical in light and dark.
+   * ======================================== */
+  --color-status-success: var(--color-status-success);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-error: var(--color-status-error);
+  --color-status-info: var(--color-status-info);
+
+  /* Pill text — the hue's text on its own wash (see product-niac.css). */
+  --color-status-success-strong: var(--color-status-success-strong);
+  --color-status-warning-strong: var(--color-status-warning-strong);
+  --color-status-error-strong: var(--color-status-error-strong);
+  --color-status-info-strong: var(--color-status-info-strong);
+
+  /* Legacy ramped status utilities — mapped to canonical hex so
+   * `text-success-400`, `bg-error-500`, etc. continue to render. */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-400: var(--color-status-success);
+  --color-success-500: var(--color-status-success);
+  --color-success-600: var(--color-status-success);
+  --color-success-900: #14532d;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-400: var(--color-status-warning);
+  --color-warning-500: var(--color-status-warning);
+  --color-warning-600: var(--color-status-warning);
+  --color-warning-900: #78350f;
+
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-400: var(--color-status-error);
+  --color-error-500: var(--color-status-error);
+  --color-error-600: var(--color-status-error);
+  --color-error-900: #7f1d1d;
+
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-400: var(--color-status-info);
+  --color-info-500: var(--color-status-info);
+  --color-info-600: var(--color-status-info);
+  --color-info-900: #1e3a8a;
+
+  /* ========================================
+   * Module Accents — NIAC feature modules. Values live in
+   * theme/product-niac.css, per theme. For icons, badges, and legend
+   * swatches only — never for card backgrounds.
+   * pattern (5 distinct hues, not a mono-anchor ramp).
+   * ======================================== */
+  --color-module-topology: var(--color-module-topology);
+  --color-module-protocols: var(--color-module-protocols);
+  --color-module-analyze: var(--color-module-analyze);
+  --color-module-inject: var(--color-module-inject);
+  --color-module-templates: var(--color-module-templates);
+
+  /* ========================================
+   * Device Type Colors (Topology) — NIAC-specific, theme-neutral
+   * ======================================== */
+  --color-device-router: #3b82f6;
+  --color-device-switch: #22c55e;
+  --color-device-firewall: #ef4444;
+  --color-device-server: #f97316;
+  --color-device-workstation: #6b7280;
+  --color-device-ap: #a855f7;
+  --color-device-iot: #14b8a6;
+  --color-device-host: #64748b;
+  --color-device-layer3-switch: #10b981;
+  --color-device-printer: #eab308;
+  --color-device-voip-phone: #0ea5e9;
+  --color-device-unknown: #94a3b8;
+
+  /* ========================================
+   * Link Speed Colors (Topology)
+   * ======================================== */
+  --color-link-10m: #94a3b8;
+  --color-link-100m: #22c55e;
+  --color-link-1g: #3b82f6;
+  --color-link-10g: #a855f7;
+  --color-link-25g: #f97316;
+  --color-link-40g: #ec4899;
+  --color-link-100g: #eab308;
+  --color-link-trunk: #06b6d4;
+
+  /* ========================================
+   * Protocol Colors
+   * ======================================== */
+  --color-proto-arp: #22c55e;
+  --color-proto-icmp: #3b82f6;
+  --color-proto-dns: #a855f7;
+  --color-proto-dhcp: #f97316;
+  --color-proto-snmp: #14b8a6;
+  --color-proto-lldp: #ec4899;
+  --color-proto-cdp: #eab308;
+  --color-proto-http: #6366f1;
+  --color-proto-tcp: #06b6d4;
+  --color-proto-udp: #8b5cf6;
+
+  /* ========================================
+   * Log Level Colors (Syslog/RFC 5424)
+   * ======================================== */
+  /* Shared, not NIAC's: the values live in theme/msn-shared.css. These were
+   * literal copies that only lost to the canonical because the @import sits
+   * above this block — three of the six (debug, info, warn) already disagreed
+   * with it. Map them like every other shared token so there is one source. */
+  --color-log-trace: var(--color-log-trace);
+  --color-log-debug: var(--color-log-debug);
+  --color-log-info: var(--color-log-info);
+  --color-log-warn: var(--color-log-warn);
+  --color-log-error: var(--color-log-error);
+  --color-log-fatal: var(--color-log-fatal);
+
+  /* ========================================
+   * Syntax Highlighting (per theme in product-niac.css)
+   * ======================================== */
+  --color-syntax-keyword: var(--color-syntax-keyword);
+  --color-syntax-string: var(--color-syntax-string);
+  --color-syntax-number: var(--color-syntax-number);
+  --color-syntax-property: var(--color-syntax-property);
+  --color-syntax-comment: var(--color-syntax-comment);
+  --color-syntax-punctuation: var(--color-syntax-punctuation);
+
+  /* ========================================
+   * Data Visualization (Tableau/D3 categorical)
+   * ======================================== */
+  --color-chart-1: #3b82f6;
+  --color-chart-2: #22c55e;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #ef4444;
+  --color-chart-5: #8b5cf6;
+  --color-chart-6: #06b6d4;
+  --color-chart-7: #ec4899;
+  --color-chart-8: #f97316;
+  --color-chart-9: #14b8a6;
+  --color-chart-10: #6366f1;
+
+  /* ========================================
+   * Neutral Scale (Gray) — unchanged
+   * ======================================== */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ========================================
+   * Animations
+   * ======================================== */
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-slide-down: slideDown 0.2s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+
+  /* ========================================
+   * Phase 0 harmonization additions (parity with seed/stem).
+   *   surface-deep: gradient terminus for the shared shell.
+   *   scrim:        modal/drawer backdrops via bg-scrim/N (constant black).
+   *   knob:         toggle thumbs / text on saturated brand bg (constant white).
+   * ======================================== */
+  --color-surface-deep: var(--color-surface-deep); /* shared; was a stale cold #020617 */
+  --color-scrim: var(--color-scrim);
+  --color-knob: var(--color-knob);
+
+  /* On-color foregrounds — AA text/icon on a filled brand/status surface.
+   * NIAC's brand (indigo) and status-error/info fills are saturated, so these
+   * are white. Constant across modes. Replaces bare text-white on buttons. */
+  --color-on-brand: var(--color-on-brand);
+  --color-on-danger: var(--color-on-danger);
+  --color-on-info: var(--color-on-info);
+}

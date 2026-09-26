@@ -2,6 +2,7 @@ package api
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -246,8 +247,10 @@ func TestReadConfigDocumentNoPath(t *testing.T) {
 	if err == nil {
 		t.Error("readConfigDocument() should fail when no path")
 	}
-	if status != 400 {
-		t.Errorf("status = %d, want 400", status)
+	// No path loaded is the idle condition, reported as 503 like every other
+	// runtime read (#2192).
+	if status != http.StatusServiceUnavailable {
+		t.Errorf("status = %d, want %d", status, http.StatusServiceUnavailable)
 	}
 }
 

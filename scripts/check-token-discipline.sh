@@ -18,12 +18,9 @@
 #     have semantic replacements. Pre-existing debt; surfaced for burn-down.
 #
 # Scope: *.tsx / *.ts under ui/src/, EXCEPT test files (.test/.spec/.stories/
-# .mock), token definition sites (styles/, constants/), and the documented
-# domain-rendering palettes (intentional, not theme colors):
-#   utils/coloring-rules.ts                topology color-rule preset swatches
-#   components/ColoringRulesPanel.tsx      coloring-rule default swatches
-#   pages/topology/layout.ts               topology graph edge colors
-#   pages/TopologyPage.tsx                 topology graph canvas background
+# .mock) and token definition sites (theme/, styles/, constants/). The
+# packet-list colouring swatches are hex by necessity (<input type="color">)
+# and live in theme/coloringRuleSwatches.ts for that reason.
 #
 # Portability: BLOCKING rules use POSIX ERE (GNU + BSD/macOS grep). ADVISORY
 # rules use PCRE lookbehind (-P, GNU grep); on BSD grep they report nothing,
@@ -45,8 +42,8 @@ else
   exit 2
 fi
 
-# Definition sites, tests, and documented domain-rendering palettes.
-EXCLUDE_RE='\.(test|spec|stories|mock)\.(ts|tsx):|/styles/|/constants/|/coloring-rules\.ts:|/ColoringRulesPanel\.tsx:|topology/layout\.ts:|/TopologyPage\.tsx:'
+# Definition sites and tests.
+EXCLUDE_RE='\.(test|spec|stories|mock)\.(ts|tsx):|/theme/|/styles/|/constants/'
 
 FAIL_COUNT=0
 
@@ -95,6 +92,21 @@ block RGB_HSL_COLOR \
   '\b(rgba?|hsla?)\([0-9]' \
   'Use a CSS theme variable; for white/black overlays use color-mix(var(--color-knob|scrim))'
 
+# Stylesheets: every colour value lives in ui/src/theme/, so a stylesheet
+# elsewhere (index.css, a component sheet) names tokens and never a value.
+css_hex=$(grep -rEn --include='*.css' -- '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' "$TARGET" 2>/dev/null \
+  | grep -v '/theme/' || true)
+if [ -n "$css_hex" ]; then
+  css_count=$(printf '%s\n' "$css_hex" | grep -c .)
+  FAIL_COUNT=$((FAIL_COUNT + css_count))
+  echo "============================================================"
+  echo "[BLOCK: CSS_HEX_OUTSIDE_THEME] $css_count violation(s)"
+  echo "  fix: define the value in ui/src/theme/ and reference it as var(--color-*)"
+  echo "------------------------------------------------------------"
+  printf '%s\n' "$css_hex" | head -10
+  echo ""
+fi
+
 # The theme switches on a .dark class over CSS custom properties, so every
 # token is already mode-aware: `text-text-muted` resolves to the light or the
 # dark value on its own. A Tailwind `dark:` variant restates that switch in the
@@ -106,7 +118,7 @@ block TAILWIND_DARK_VARIANT \
   'Drop the dark: variant and use the semantic token — it is already mode-aware'
 
 # UNDEFINED_TOKEN — every referenced color token must resolve to a --color-*
-# defined in index.css. Catches typos / renamed tokens that compile to nothing
+# defined in index.css or theme/*.css. Catches typos / renamed tokens that compile to nothing
 # and silently render no color (invisible to the palette/hex rules above).
 if command -v python3 >/dev/null 2>&1; then
   resolve_out=$(python3 "$(dirname "$0")/resolve-token-refs.py" "$TARGET" 2>/dev/null)
@@ -114,8 +126,8 @@ if command -v python3 >/dev/null 2>&1; then
     rc_count=$(printf '%s\n' "$resolve_out" | grep -c 'undefined token:')
     FAIL_COUNT=$((FAIL_COUNT + rc_count))
     echo "============================================================"
-    echo "[BLOCK: UNDEFINED_TOKEN] $rc_count token(s) referenced but not defined in index.css"
-    echo "  fix: define the --color-* in index.css, or use the correct token name"
+    echo "[BLOCK: UNDEFINED_TOKEN] $rc_count token(s) referenced but not defined in index.css or theme/"
+    echo "  fix: define the --color-* in ui/src/theme/, or use the correct token name"
     echo "------------------------------------------------------------"
     printf '%s\n' "$resolve_out"
     echo ""

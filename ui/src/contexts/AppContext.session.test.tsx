@@ -12,6 +12,7 @@ import { AppProvider, useAppContext } from './AppContext';
 
 const fetchSimulationStatus = vi.fn<() => Promise<SimulationStatus>>();
 const fetchDevices = vi.fn<(sessionId: string) => Promise<unknown[]>>();
+const fetchErrorTypes = vi.fn<() => Promise<unknown>>();
 
 vi.mock('../api/client', () => ({
   fetchSimulationStatus: () => fetchSimulationStatus(),
@@ -20,7 +21,7 @@ vi.mock('../api/client', () => ({
   fetchNeighbors: () => Promise.resolve([]),
   fetchHistory: () => Promise.resolve([]),
   fetchVersion: () => Promise.resolve({}),
-  fetchErrorTypes: () => Promise.resolve({}),
+  fetchErrorTypes: () => fetchErrorTypes(),
   fetchInterfaces: () => Promise.resolve({ interfaces: [] }),
 }));
 
@@ -48,6 +49,7 @@ describe('AppContext session scoping', () => {
   beforeEach(() => {
     fetchSimulationStatus.mockReset();
     fetchDevices.mockReset().mockResolvedValue([]);
+    fetchErrorTypes.mockReset().mockResolvedValue({});
   });
 
   it('reads no session while nothing is running', async () => {
@@ -57,6 +59,8 @@ describe('AppContext session scoping', () => {
     await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent('none'));
     // Requesting a session that does not exist would 404 on every poll.
     expect(fetchDevices).not.toHaveBeenCalled();
+    // The fault catalogue is served by the running stack: idle it is a 503.
+    expect(fetchErrorTypes).not.toHaveBeenCalled();
   });
 
   it('adopts the running session and scopes runtime reads to it', async () => {
@@ -69,6 +73,7 @@ describe('AppContext session scoping', () => {
 
     await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent('hospital'));
     await waitFor(() => expect(fetchDevices).toHaveBeenCalledWith('hospital'));
+    await waitFor(() => expect(fetchErrorTypes).toHaveBeenCalled());
   });
 
   it('keeps this browser on the session it picked', async () => {

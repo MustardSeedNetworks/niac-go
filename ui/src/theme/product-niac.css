@@ -50,16 +50,17 @@
    * The YAML editor is the only place NIAC renders code, and CodeMirror
    * paints from JS rather than from utility classes, so its palette has to
    * exist as tokens or the editor stays a dark slab in a light page.
-   * Values are the One Light / One Dark pairs the editor already used for
-   * dark; only the light half is new. */
+   * Hues are One Light / One Dark, with lightness moved until each token is
+   * 4.5:1 on every surface: the editor is transparent, so it sits on any of
+   * them (syntaxText.test.ts). One Light as shipped fell to 2.49 (string). */
   --color-syntax-keyword: #a626a4;
-  --color-syntax-string: #50a14f;
-  --color-syntax-number: #986801;
-  --color-syntax-atom: #0184bc;
-  --color-syntax-property: #e45649;
-  --color-syntax-comment: #a0a1a7;
+  --color-syntax-string: #207523;
+  --color-syntax-number: #885d01;
+  --color-syntax-atom: #076c9a;
+  --color-syntax-property: #bd3028;
+  --color-syntax-comment: #64656c;
   --color-syntax-punctuation: #383a42;
-  --color-syntax-meta: #4078f2;
+  --color-syntax-meta: #285dd5;
 }
 
 .dark {
@@ -99,8 +100,8 @@
   --color-syntax-string: #98c379;
   --color-syntax-number: #d19a66;
   --color-syntax-atom: #56b6c2;
-  --color-syntax-property: #e06c75;
-  --color-syntax-comment: #5c6370;
+  --color-syntax-property: #e6717a;
+  --color-syntax-comment: #8e95a2;
   --color-syntax-punctuation: #abb2bf;
   --color-syntax-meta: #61afef;
 }

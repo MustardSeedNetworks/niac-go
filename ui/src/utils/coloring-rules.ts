@@ -1,3 +1,4 @@
+import { RULE_SWATCHES } from '../theme/coloringRuleSwatches';
 import { safeGetItem, safeSetItem } from './storage';
 
 const STORAGE_KEY = 'niac-coloring-rules';
@@ -18,48 +19,42 @@ const DEFAULT_RULES: ColoringRule[] = [
     id: 'rule-tcp-syn',
     name: 'TCP SYN',
     filter: 'tcp.flags.syn',
-    foreground: '#bbf7d0',
-    background: '#14532d',
+    ...RULE_SWATCHES.tcpSyn,
     enabled: true,
   },
   {
     id: 'rule-tcp-rst',
     name: 'TCP RST/FIN',
     filter: 'tcp.flags.rst || tcp.flags.fin',
-    foreground: '#fecaca',
-    background: '#7f1d1d',
+    ...RULE_SWATCHES.tcpRstFin,
     enabled: true,
   },
   {
     id: 'rule-dns',
     name: 'DNS',
     filter: 'dns',
-    foreground: '#bfdbfe',
-    background: '#1e3a5f',
+    ...RULE_SWATCHES.dns,
     enabled: true,
   },
   {
     id: 'rule-arp',
     name: 'ARP',
     filter: 'arp',
-    foreground: '#fef08a',
-    background: '#422006',
+    ...RULE_SWATCHES.arp,
     enabled: true,
   },
   {
     id: 'rule-icmp',
     name: 'ICMP',
     filter: 'icmp',
-    foreground: '#a5f3fc',
-    background: '#164e63',
+    ...RULE_SWATCHES.icmp,
     enabled: true,
   },
   {
     id: 'rule-http-error',
     name: 'HTTP Errors',
     filter: 'protocol == "HTTP" && frame.len > 0',
-    foreground: '#fed7aa',
-    background: '#431407',
+    ...RULE_SWATCHES.httpError,
     enabled: false,
   },
 ];

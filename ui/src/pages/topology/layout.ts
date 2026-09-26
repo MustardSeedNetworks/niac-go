@@ -552,11 +552,9 @@ export function createEdges(links: TopologyLink[]): LinkEdge[] {
  */
 // Utilization edge colors, exported so the topology legend documents the
 // exact same palette the graph renders — single source of truth, no drift
-// between the swatch and the wire. (This file is an allow-listed domain
-// palette in check-token-discipline.sh; the legend imports these instead of
-// re-hardcoding the hex.)
-export const UTILIZATION_HIGH_COLOR = '#f59e0b'; // amber-500, 60–84%
-export const UTILIZATION_CRITICAL_COLOR = '#ef4444'; // red-500, >= 85%
+// between the swatch and the wire.
+export const UTILIZATION_HIGH_COLOR = 'var(--color-status-warning)'; // 60–84%
+export const UTILIZATION_CRITICAL_COLOR = 'var(--color-status-error)'; // >= 85%
 
 function utilizationStyle(
   utilisation: number | undefined,
