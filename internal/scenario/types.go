@@ -4,6 +4,14 @@ package scenario
 
 import "github.com/MustardSeedNetworks/niac-go/internal/config"
 
+// The USM user managed devices serve beside the community. Simulated and
+// published in PROTOCOL_GUIDE.md, like the community.
+const (
+	defaultSNMPv3User    = "netops"
+	defaultSNMPv3AuthKey = "NetAllyDemoAuth"
+	defaultSNMPv3PrivKey = "NetAllyDemoPriv"
+)
+
 const (
 	defaultDomain            = "demo.lab"
 	defaultCommunity         = "NetAllyDemo"
