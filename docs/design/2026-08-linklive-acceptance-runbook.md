@@ -152,6 +152,8 @@ ip route add 10.51.0.0/16 via 10.254.200.1 dev vmbr0.200
 
 snmpget -v2c -c NetAllyDemo 10.254.200.1  1.3.6.1.2.1.1.5.0   # LAB-EDGE-R1
 snmpget -v2c -c NetAllyDemo 10.51.200.21  1.3.6.1.2.1.1.5.0   # an access switch
+snmpget -v3 -l authPriv -u netops -a SHA-256 -A NetAllyDemoAuth -x AES -X NetAllyDemoPriv \
+  10.51.200.21 1.3.6.1.2.1.1.5.0                            # the same switch over v3
 ```
 
 If those answer, the simulation is fine. Discovery Settings → SNMP will still

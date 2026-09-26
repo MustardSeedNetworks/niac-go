@@ -60,6 +60,9 @@ func TestEveryPackGeneratesWithoutYAMLRepair(t *testing.T) {
 			t.Run("announcements", func(t *testing.T) {
 				assertDeviceAnnouncements(t, pack.ID, cfg)
 			})
+			t.Run("snmpv3", func(t *testing.T) {
+				assertPackSNMPv3(t, cfg)
+			})
 		})
 	}
 }

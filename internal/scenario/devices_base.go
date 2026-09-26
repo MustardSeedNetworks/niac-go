@@ -73,6 +73,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
 		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp,
 		Syslog: siteSyslog(spec),
+		Snmpv3: packSNMPv3(),
 	}
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{
@@ -361,3 +362,23 @@ const (
 	// 0.1 W units: 25.5 W, an 802.3at class 4 device.
 	apPowerTenthWatts = 255
 )
+
+// packSNMPv3 is the USM user every managed device serves alongside the v2c
+// community. Endpoint appliances stay v2c-only: the v3 surface is the
+// infrastructure an NMS is configured to poll securely. Like the community,
+// these are simulated credentials, published in PROTOCOL_GUIDE.md so a
+// discovery tool can be configured to poll a scenario over v3.
+func packSNMPv3() *converter.Snmpv3Config {
+	return &converter.Snmpv3Config{
+		Enabled: true,
+		// gosec and gitleaks read these as secrets; they are the published demo
+		// values above.
+		Users: []converter.Snmpv3User{{ //nolint:gosec // G101: published simulated credentials
+			Username:     "netops",
+			AuthProtocol: "sha256",
+			AuthPassword: "NetAllyDemoAuth", // gitleaks:allow
+			PrivProtocol: "aes",
+			PrivPassword: "NetAllyDemoPriv", // gitleaks:allow
+		}},
+	}
+}

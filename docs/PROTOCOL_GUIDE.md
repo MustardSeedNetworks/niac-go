@@ -1110,6 +1110,13 @@ snmpv3:
 The same walk data served over v1/v2c is served over v3 — the security model
 only governs authentication and encryption, not the MIB.
 
+The scenario packs author one v3 user on every switch, router, firewall,
+access point, controller and server, alongside the v2c community: `netops`,
+authPriv, SHA-256 with passphrase `NetAllyDemoAuth` and AES-128 with
+`NetAllyDemoPriv`. Endpoint appliances (printers, UPSes, clinical and
+industrial devices) stay v2c-only. A wrong passphrase gets no answer rather
+than a `usmStatsWrongDigests` report (#2370).
+
 #### Testing
 
 ```bash
