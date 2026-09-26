@@ -452,6 +452,7 @@ linters:
         - os.Mkdir.*
         - os.OpenFile
         - os.WriteFile
+        - pathconfine.WriteFile
         - prometheus.ExponentialBuckets.*
         - prometheus.LinearBuckets
 

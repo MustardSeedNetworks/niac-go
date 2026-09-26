@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 )
 
 // ErrPathTraversal is returned when a user-provided path contains parent-directory traversal.
@@ -29,16 +31,15 @@ func validateCLIPath(p string) (string, error) {
 	return cleaned, nil
 }
 
-// writeSafeFile writes data to a CLI-validated path with 0600 permissions.
-// The path is re-cleaned inside this helper to break gosec's taint analysis.
+// writeSafeFile writes data to a CLI-validated path with 0600 permissions,
+// through an os.Root rooted at the path's own parent directory so the write
+// cannot follow a symlink escaping that directory.
 func writeSafeFile(path string, data []byte) error {
-	safePath := filepath.Clean(path)
-	return os.WriteFile(safePath, data, 0o600) // #nosec G703 -- path cleaned via filepath.Clean
+	return pathconfine.WriteFile(path, data, 0o600)
 }
 
-// statSafeFile checks whether a CLI-validated path exists.
-// The path is re-cleaned inside this helper to break gosec's taint analysis.
+// statSafeFile checks whether a CLI-validated path exists, through an
+// os.Root rooted at the path's own parent directory.
 func statSafeFile(path string) (os.FileInfo, error) {
-	safePath := filepath.Clean(path)
-	return os.Stat(safePath)
+	return pathconfine.Stat(path)
 }

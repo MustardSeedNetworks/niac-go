@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 	"github.com/MustardSeedNetworks/niac-go/internal/truststore"
 )
 
@@ -132,7 +133,7 @@ func resolveCertPath(p string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve cert path: %w", err)
 	}
-	_, statErr := os.Stat(abs) // #nosec G703 -- the operator's own --cert path; same class as content.go's --bundle
+	_, statErr := pathconfine.Stat(abs)
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
 			return "", fmt.Errorf(
