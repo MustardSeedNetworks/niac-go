@@ -156,7 +156,7 @@ test('a switch shows who is on its tester ports and moves one client to another 
       pin: { mac: first, device: 'MED-ACC-SW02', interface: 'GigabitEthernet1/0/45' },
     },
   ]);
-  await expect(occupant('GigabitEthernet1/0/45')).toHaveText('Free');
+  await expect(occupant('GigabitEthernet1/0/45')).toHaveText('Available');
   await expect(occupant('GigabitEthernet1/0/46')).toHaveText(second);
 
   await page.getByTestId('rf__node-MED-ACC-SW02').click();

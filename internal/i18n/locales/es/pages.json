@@ -622,7 +622,7 @@
       "pool": {
         "title": "Puertos para probadores",
         "help": "Los puertos de este dispositivo donde se puede conectar un probador. La VLAN es la del puerto, dentro del escenario, no la VLAN del cable.",
-        "free": "Libre",
+        "free": "Disponible",
         "heldFor": "Reservado para {{mac}}"
       }
     },

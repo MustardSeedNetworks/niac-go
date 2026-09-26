@@ -79,7 +79,7 @@ describe('DeviceAttachmentPool', () => {
 
     await waitFor(() => expect(occupant('GigabitEthernet1/0/45')).toHaveTextContent(here));
     expect(fetchSessionClients).toHaveBeenCalledWith('hospital');
-    expect(occupant('GigabitEthernet1/0/46')).toHaveTextContent('Free');
+    expect(occupant('GigabitEthernet1/0/46')).toHaveTextContent('Available');
     expect(occupant('GigabitEthernet1/0/47')).toHaveTextContent(`Held for ${absent}`);
     // SW02's ports, and the client on one of them, belong to SW02's panel.
     expect(
@@ -120,7 +120,7 @@ describe('DeviceAttachmentPool', () => {
     fetchSessionClients.mockResolvedValue([client(there, 'MED-ACC-SW02', 'GigabitEthernet1/0/46')]);
     render(<DeviceAttachmentPool sessionId="hospital" pool={pool()} device="MED-ACC-SW01" />);
 
-    expect(await screen.findAllByText('Free')).toHaveLength(3);
+    expect(await screen.findAllByText('Available')).toHaveLength(3);
     expect(screen.queryByTestId('attached-client-move')).not.toBeInTheDocument();
   });
 
