@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 )
 
 // ValidationIssue represents a single issue found in a walk file.
@@ -59,14 +61,16 @@ func ValidateWalkContent(filename string, content []byte) (*ValidationResult, er
 }
 
 // writeValidatedFile writes data with 0600 perms to a path that has already been
-// validated upstream. The defensive checks here are belt-and-suspenders so static
-// analysers (gosec, CodeQL) can see the path is bounded.
+// validated upstream (absPath from validateAndResolvePath, or that path plus a
+// ".bak" suffix). It writes through pathconfine, which opens an os.Root rooted
+// at the path's parent directory so a symlink planted at the destination can't
+// redirect the write outside that directory.
 func writeValidatedFile(path string, data []byte) error {
 	safePath := filepath.Clean(path)
 	if !filepath.IsAbs(safePath) || strings.Contains(safePath, "..") {
 		return fmt.Errorf("walk output path failed safety check: %s", safePath)
 	}
-	return os.WriteFile(safePath, data, 0o600) //nolint:gosec // G703: path validated above and upstream
+	return pathconfine.WriteFile(safePath, data, 0o600)
 }
 
 // validateAndResolvePath validates the path for security issues and returns the absolute path.

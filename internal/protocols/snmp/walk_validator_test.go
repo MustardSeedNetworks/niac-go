@@ -89,3 +89,52 @@ func TestValidateWalkLine_OIDMatchesExtractLineOID(t *testing.T) {
 		})
 	}
 }
+
+// TestWriteValidatedFile verifies the normal case (write lands at the given
+// path) and that a symlink planted at the destination pointing outside its
+// directory is rejected rather than followed — the TOCTOU escape
+// pathconfine.WriteFile exists to close.
+func TestWriteValidatedFile(t *testing.T) {
+	t.Run("writes to the given path", func(t *testing.T) {
+		dir := t.TempDir()
+		target := filepath.Join(dir, "out.walk")
+
+		if err := writeValidatedFile(target, []byte("data")); err != nil {
+			t.Fatalf("writeValidatedFile() error = %v", err)
+		}
+
+		got, err := os.ReadFile(filepath.Clean(target))
+		if err != nil {
+			t.Fatalf("read back: %v", err)
+		}
+		if string(got) != "data" {
+			t.Errorf("content = %q, want %q", got, "data")
+		}
+	})
+
+	t.Run("rejects a symlink escaping its directory", func(t *testing.T) {
+		dir := t.TempDir()
+		outside := t.TempDir()
+		secret := filepath.Join(outside, "secret.walk")
+		if err := os.WriteFile(secret, []byte("original"), 0o600); err != nil {
+			t.Fatalf("seed secret file: %v", err)
+		}
+
+		link := filepath.Join(dir, "link.walk")
+		if err := os.Symlink(secret, link); err != nil {
+			t.Skipf("symlinks unavailable: %v", err)
+		}
+
+		if err := writeValidatedFile(link, []byte("clobbered")); err == nil {
+			t.Fatal("writeValidatedFile() followed a symlink escaping its directory, want error")
+		}
+
+		got, err := os.ReadFile(filepath.Clean(secret))
+		if err != nil {
+			t.Fatalf("read back: %v", err)
+		}
+		if string(got) != "original" {
+			t.Errorf("symlink target was modified: content = %q, want %q", got, "original")
+		}
+	})
+}
