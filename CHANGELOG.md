@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.95.98](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.97...v0.95.98) (2026-09-26)
+
+
+### Features
+
+* **ui:** list attached clients and the port each landed on (AP-4 slice 1) ([#2373](https://github.com/MustardSeedNetworks/niac-go/issues/2373)) ([2d7c584](https://github.com/MustardSeedNetworks/niac-go/commit/2d7c584b2057f4910a350e2cde43170a3d175ef4))
+
+
+### Continuous Integration
+
+* **conformance:** pin the policy repo past the OIDC fix ([#2375](https://github.com/MustardSeedNetworks/niac-go/issues/2375)) ([5e30d0f](https://github.com/MustardSeedNetworks/niac-go/commit/5e30d0fc4b6060aeaf746a78dd305edd421aa7d9)), closes [#2374](https://github.com/MustardSeedNetworks/niac-go/issues/2374)
+
 ## [0.95.97](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.96...v0.95.97) (2026-09-26)
 
 
