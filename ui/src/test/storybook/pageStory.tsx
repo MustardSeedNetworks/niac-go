@@ -91,6 +91,7 @@ export const LOADED_ROUTES: ApiRoutes = {
   [sessionResource('devices')]: fixtures.devices,
   [sessionResource('segments')]: fixtures.segments,
   [sessionResource('neighbors')]: fixtures.neighbors,
+  [sessionResource('clients')]: fixtures.clients,
   [sessionResource('topology')]: fixtures.topology,
 };
 
@@ -113,6 +114,7 @@ export const EMPTY_ROUTES: ApiRoutes = {
   [sessionResource('devices')]: [],
   [sessionResource('segments')]: [],
   [sessionResource('neighbors')]: [],
+  [sessionResource('clients')]: [],
   [sessionResource('topology')]: { nodes: [], links: [] },
 };
 

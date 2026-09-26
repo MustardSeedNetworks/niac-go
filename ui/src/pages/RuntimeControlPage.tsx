@@ -24,6 +24,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
 import { AdvancedSection } from './runtime/AdvancedSection';
+import { AttachedClientsCard } from './runtime/AttachedClientsCard';
 import { ConcurrentSessionsPanel } from './runtime/ConcurrentSessionsPanel';
 import { RunHistoryCard } from './runtime/RunHistoryCard';
 import { RunningSimulationCard } from './runtime/RunningSimulationCard';
@@ -444,6 +445,7 @@ export const RuntimeControlPage: FC = () => {
             onStop={() => handleStopClick(runningSession)}
             message={successMessage}
           />
+          {sessionId && <AttachedClientsCard sessionId={sessionId} />}
         </>
       )}
 

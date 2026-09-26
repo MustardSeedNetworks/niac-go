@@ -1,5 +1,9 @@
 import type { InterfaceFaultPayload } from './api-response-types';
-import type { AttachmentPoliciesResponse, SimulationAttachments } from './fabric-types';
+import type {
+  AttachmentPoliciesResponse,
+  ObservedClient,
+  SimulationAttachments,
+} from './fabric-types';
 import {
   deduplicatedGet,
   request,
@@ -93,6 +97,8 @@ export const fetchHistoryPage = (before?: number) =>
   deduplicatedGet<HistoryRecord[]>(`/api/v1/history${before ? `?before=${before}` : ''}`);
 export const fetchNeighbors = (sessionId: string) =>
   deduplicatedGet<NeighborRecord[]>(sessionPath(sessionId, 'neighbors'));
+export const fetchSessionClients = (sessionId: string) =>
+  deduplicatedGet<ObservedClient[]>(sessionPath(sessionId, 'clients'));
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
 export const updateConfig = (payload: ConfigUpdateRequest) =>
   requestJson<ConfigDocument>('/api/v1/config', payload, { method: 'PUT' });

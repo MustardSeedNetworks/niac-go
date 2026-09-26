@@ -21,6 +21,7 @@ import type {
   InterfacesResponse,
   LibraryNetwork,
   NeighborRecord,
+  ObservedClient,
   ReplayState,
   SegmentSummary,
   SessionSummary,
@@ -164,6 +165,19 @@ export const neighbors: NeighborRecord[] = [
     managementAddress: '10.0.0.1',
     lastSeen: '2026-09-07T09:59:00Z',
     ttl: 120,
+  },
+];
+
+export const clients: ObservedClient[] = [
+  {
+    mac: '00:c0:17:00:00:01',
+    ip: '10.0.0.50',
+    device: 'core-sw-01',
+    interface: 'GigabitEthernet1/0/45',
+    firstSeen: '2026-09-07T09:55:00Z',
+    lastSeen: '2026-09-07T09:59:30Z',
+    expireAt: '2026-09-07T10:04:30Z',
+    frames: 212,
   },
 ];
 

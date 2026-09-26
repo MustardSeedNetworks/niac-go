@@ -105,3 +105,22 @@ export interface SimulationFabricStatus {
   received: number;
   transmitted: number;
 }
+
+/**
+ * One MAC seen sourcing traffic into a session (GET
+ * /api/v1/sessions/{id}/clients). `device` and `interface` name the pool
+ * port the client landed on; both are absent when the attachment names a
+ * network rather than a pool, or when every pool port was already taken.
+ * `vlan` is the wire tag the client's frames carried, absent when untagged.
+ */
+export interface ObservedClient {
+  mac: string;
+  ip?: string;
+  device?: string;
+  interface?: string;
+  vlan?: number;
+  firstSeen: string;
+  lastSeen: string;
+  expireAt: string;
+  frames: number;
+}

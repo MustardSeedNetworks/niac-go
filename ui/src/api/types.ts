@@ -123,6 +123,7 @@ export type {
   FabricInterface,
   FabricNetwork,
   FabricRoute,
+  ObservedClient,
   SimulationAttachments,
   SimulationPreflightReport,
   SimulationPreflightRequest,

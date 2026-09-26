@@ -848,6 +848,19 @@
   "runtime": {
     "advancedHint": "(global protocol debug level)",
     "advancedLabel": "Advanced",
+    "clients": {
+      "device": "Device",
+      "empty": "No client has sent a frame into this scenario yet.",
+      "help": "Every MAC that has sent a frame into this scenario in the last five minutes, and the scenario port it is plugged into. A client shows no port when the attachment names a network rather than a port pool, or when every pool port is taken.",
+      "ip": "IP address",
+      "lastSeen": "Last seen",
+      "loadError": "Could not load attached clients: {{error}}",
+      "loading": "Loading attached clients…",
+      "mac": "MAC",
+      "notPlaced": "Not placed",
+      "port": "Port",
+      "title": "Attached clients"
+    },
     "configSourceConfig": "config",
     "configSourceTemplate": "template",
     "configUploadSuffix": "(upload)",
