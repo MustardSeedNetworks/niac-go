@@ -16,6 +16,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 )
 
 // SNMP type name constants for walk file parsing and formatting.
@@ -157,14 +158,16 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 	}
 
 	// Ensure file exists and is a regular file (not a symlink or directory).
-	// #nosec G703 -- ParseWalkFile is shared by CLI tools that intentionally
-	// accept an arbitrary operator-named file (mibzip, analyze) and by
-	// config/API paths that already confine the path to a base directory
-	// before calling in (internal/config.validateWalkFilePath,
-	// internal/api.Server.validateWalkFilePath); the cleanPath ".." check
-	// above and the symlink/directory rejection below are this function's
-	// own defense-in-depth, not the sole guard.
-	fileInfo, err := os.Lstat(absPath)
+	// ParseWalkFile is shared by CLI tools that intentionally accept an
+	// arbitrary operator-named file (mibzip, analyze) and by config/API paths
+	// that already confine the path to a base directory before calling in
+	// (internal/config.validateWalkFilePath, internal/api.Server.validateWalkFilePath).
+	// pathconfine.Lstat/Open resolve absPath through an os.Root rooted at its
+	// own parent directory, so even a symlink swapped in between the two
+	// calls below cannot resolve to a location outside that directory; the
+	// cleanPath ".." check above and the symlink/directory rejection below
+	// remain this function's own defense-in-depth, not the sole guard.
+	fileInfo, err := pathconfine.Lstat(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access walk file: %w", err)
 	}
@@ -179,7 +182,7 @@ func ParseWalkFile(filename string) ([]WalkEntry, error) {
 		return nil, ErrWalkFileIsDirectory
 	}
 
-	file, err := os.Open(absPath) // #nosec G703 -- see the Lstat rationale above
+	file, err := pathconfine.Open(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open walk file: %w", err)
 	}
