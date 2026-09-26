@@ -107,10 +107,7 @@ func (a *Agent) registerDot1dBasePortEntry(portIdx int) {
 
 // registerDot1dStpGroup registers dot1dStp OIDs when STP is enabled.
 func (a *Agent) registerDot1dStpGroup(stp *config.STPConfig, numPorts int, macBytes []byte) {
-	priority := int(stp.BridgePriority)
-	if priority == 0 {
-		priority = 32768
-	}
+	priority := stpPriority(stp.BridgePriority)
 
 	bridgeID := a.buildBridgeID(priority, macBytes)
 

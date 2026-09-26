@@ -66,6 +66,8 @@ const (
 	dhcpPoolStartHost           = 100
 	dhcpPoolEndHost             = 199
 	managedDeviceTTL            = 255
+	stpRootPrimaryPriority      = 24576
+	stpRootSecondaryPriority    = 28672
 	windowsTTL                  = 128
 	windowsTCPWindowSize        = 64240
 	windowsMSS                  = 1460

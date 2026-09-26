@@ -696,7 +696,7 @@ func parseFDPConfig(yamlFdp *converter.FdpConfig) *FDPConfig {
 	return fdpCfg
 }
 
-// parseSTPConfig parses STP configuration from YAML.
+// parsePoEConfig parses the PSE budget from YAML.
 func parsePoEConfig(yamlPoE *converter.PoeConfig) *PoEConfig {
 	if yamlPoE == nil {
 		return nil
@@ -708,6 +708,7 @@ func parsePoEConfig(yamlPoE *converter.PoeConfig) *PoEConfig {
 	}
 }
 
+// parseSTPConfig parses STP configuration from YAML.
 func parseSTPConfig(yamlStp *converter.StpConfig) *STPConfig {
 	if yamlStp == nil {
 		return nil

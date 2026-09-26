@@ -42,6 +42,7 @@ func (s *Stack) Start() error {
 	s.wg.Go(func() { s.notifications.Run(s.stopChan) })
 
 	// Start discovery protocol periodic advertisements
+	s.stpHandler.Start()
 	s.lldpHandler.Start()
 	s.cdpHandler.Start()
 	s.edpHandler.Start()

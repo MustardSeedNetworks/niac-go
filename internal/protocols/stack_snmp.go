@@ -77,16 +77,31 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 		}
 	}
 
-	// Now that the MIB is loaded, fill downstream bridge FDB entries from the
-	// fleet roster (a host MAC on the access port it hangs off) so a scanner can
-	// answer "nearest switch/port" for discovered hosts.
+	s.synthesizeFleetTopology(device, group, v2Enabled)
+	s.snmpAgents[device] = group
+}
+
+// synthesizeFleetTopology fills what an agent cannot know from its own device
+// once its MIB is loaded: downstream bridge FDB entries from the fleet roster
+// (a host MAC on the access port it hangs off, so a scanner can answer "nearest
+// switch/port"), the ARP table, and the device's place in the spanning tree.
+// An SNMPv3-only device's base agent is outside the community group, so it is
+// filled separately.
+func (s *Stack) synthesizeFleetTopology(device *config.Device, group *snmpAgentGroup, v2Enabled bool) {
 	arpBindings := s.arpBindings()
+	position, elected := s.spanningTree[device]
 	if !v2Enabled {
-		baseAgent.SynthesizePeerTopology(s.peerResolver())
-		baseAgent.SynthesizeARPTable(arpBindings)
+		group.baseAgent.SynthesizePeerTopology(s.peerResolver())
+		group.baseAgent.SynthesizeARPTable(arpBindings)
+		if elected {
+			group.baseAgent.SynthesizeSpanningTree(position.snmp())
+		}
 	}
 	group.SynthesizePeerTopologyAll(s.peerResolver())
 	group.SynthesizeARPTableAll(arpBindings)
+	if elected {
+		group.SynthesizeSpanningTreeAll(position.snmp())
+	}
 
 	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
 	// Build the sorted OID indexes eagerly so the first GetNext of a discovery
@@ -94,11 +109,9 @@ func (s *Stack) initSNMPAgent(device *config.Device) {
 	// which would stall SNMP responses fleet-wide when a scanner walks every
 	// device at once.
 	if !v2Enabled {
-		baseAgent.Reindex()
+		group.baseAgent.Reindex()
 	}
 	group.ReindexAll()
-
-	s.snmpAgents[device] = group
 }
 
 func configuredWalkFiles(cfg config.SNMPConfig) []string {

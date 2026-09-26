@@ -318,7 +318,18 @@ devices:
 | `hello_time` | integer | No | 2 | BPDU interval (1-10 seconds) |
 | `max_age` | integer | No | 20 | BPDU max age (6-40 seconds) |
 | `forward_delay` | integer | No | 15 | Forward delay (4-30 seconds) |
-| `version` | string | No | "rstp" | STP version: stp, rstp, mstp |
+| `version` | string | No | "stp" | STP version: stp, rstp, mstp |
+
+#### What the Simulation Sends
+
+Every device with `enabled: true` sends an IEEE 802.1D Configuration BPDU every
+`hello_time` seconds, whatever `version` says. The root, the root path cost and
+the root port come from one election over the `trunk_ports` that join
+STP-enabled devices: the lowest bridge ID (priority, then MAC) is root, and
+every other bridge takes its cheapest path there, each link costing 4. The
+`dot1dStp` group reports the same tree, so a BPDU and an SNMP poll of the same
+switch agree. Received BPDUs are logged, not acted on. The scenario packs make
+each site's first core the root (24576) and its second the standby (28672).
 
 #### STP Versions
 

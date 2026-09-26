@@ -18,10 +18,9 @@ import (
 // side, so a protocol added to the runtime cannot arrive unnoticed.
 func unauthoredProtocols() map[string]string {
 	return map[string]string{
-		// P5-9 owns the protocol surface no pack authors. STP is authored by five
-		// built-in templates and FTP by one, so those two are reachable from the
-		// shipped library but not from a pack; the rest are reachable from nothing.
-		"STPConfig":    "P5-9: no pack authors spanning tree (5 built-in templates do)",
+		// P5-9 owns the protocol surface no pack authors. FTP is authored by one
+		// built-in template, so it is reachable from the shipped library but not
+		// from a pack; the rest are reachable from nothing.
 		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in template does)",
 		"SSHConfig":    "P5-9: no pack authors the SSH command service",
 		"SNMPv3Config": "P5-9: no pack authors SNMPv3 USM users alongside v2c",
