@@ -1,5 +1,6 @@
 import type { InterfaceFaultPayload } from './api-response-types';
 import type {
+  AttachmentPin,
   AttachmentPoliciesResponse,
   ObservedClient,
   SimulationAttachments,
@@ -99,6 +100,9 @@ export const fetchNeighbors = (sessionId: string) =>
   deduplicatedGet<NeighborRecord[]>(sessionPath(sessionId, 'neighbors'));
 export const fetchSessionClients = (sessionId: string) =>
   deduplicatedGet<ObservedClient[]>(sessionPath(sessionId, 'clients'));
+// Restarts the session on the new pin, so every unpinned client is placed afresh.
+export const pinSessionClient = (sessionId: string, pin: AttachmentPin) =>
+  requestJsonCamelCase<AttachmentPin>(sessionPath(sessionId, 'pins'), pin, { method: 'POST' });
 export const fetchConfig = () => deduplicatedGet<ConfigDocument>('/api/v1/config');
 export const updateConfig = (payload: ConfigUpdateRequest) =>
   requestJson<ConfigDocument>('/api/v1/config', payload, { method: 'PUT' });

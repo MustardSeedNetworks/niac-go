@@ -99,6 +99,7 @@ describe('RunningSimulationCard', () => {
                   },
                 ],
                 dhcpScopes: [],
+                attachments: [],
               },
               forwarded: 12,
               drops: 3,

@@ -160,6 +160,7 @@ test('starts a generated pack without typing any part of the binding', async ({ 
           interfaces: [],
           routes: [],
           dhcpScopes: [],
+          attachments: [],
         },
         diagnostics: [],
       },

@@ -252,6 +252,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
         interfaces: [],
         routes: [],
         dhcpScopes: [],
+        attachments: [],
       },
       diagnostics: [],
     });

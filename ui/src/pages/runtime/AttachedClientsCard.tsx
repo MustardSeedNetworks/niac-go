@@ -1,16 +1,18 @@
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSessionClients } from '../../api/client';
-import type { ObservedClient } from '../../api/types';
+import type { ObservedClient, SimulationStatus } from '../../api/types';
 import { POLL_INTERVALS } from '../../constants/polling';
 import { useApiResource } from '../../hooks/useApiResource';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { H2, SmallText } from '../../ui/Typography';
 import { useFormatRelativeTime } from '../../utils/format';
+import { AttachedClientMove } from './AttachedClientMove';
 
 interface AttachedClientsCardProps {
   sessionId: string;
+  fabric?: SimulationStatus['fabric'];
 }
 
 /**
@@ -18,16 +20,22 @@ interface AttachedClientsCardProps {
  * session saw on the wire, placed on the pool port the runtime assigned it,
  * so two testers on one scenario read as two cables into two ports.
  */
-export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId }) => {
+export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId, fabric }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const formatRelative = useFormatRelativeTime();
-  const { data: clients, error } = useApiResource(
-    () => fetchSessionClients(sessionId),
-    ['clients', sessionId],
-    { intervalMs: POLL_INTERVALS.medium },
-  );
+  const {
+    data: clients,
+    error,
+    refetch,
+  } = useApiResource(() => fetchSessionClients(sessionId), ['clients', sessionId], {
+    intervalMs: POLL_INTERVALS.medium,
+  });
 
+  // Only a port-pool attachment has ports to move a client between.
+  const pool = fabric?.topology.attachments?.find(
+    (attachment) => attachment.name === fabric.topology.binding.attachment,
+  );
   const notPlaced = t('runtime.clients.notPlaced');
   const columns: DataTableColumn<ObservedClient>[] = [
     {
@@ -80,15 +88,25 @@ export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId })
             {t('runtime.clients.loadError', { error: error.message })}
           </SmallText>
         ) : (
-          <DataTable
-            rows={clients ?? []}
-            columns={columns}
-            getRowKey={(client) => client.mac}
-            rowTestId={(client) => `attached-client-${client.mac}`}
-            loading={clients === null}
-            loadingMessage={t('runtime.clients.loading')}
-            emptyMessage={t('runtime.clients.empty')}
-          />
+          <>
+            <DataTable
+              rows={clients ?? []}
+              columns={columns}
+              getRowKey={(client) => client.mac}
+              rowTestId={(client) => `attached-client-${client.mac}`}
+              loading={clients === null}
+              loadingMessage={t('runtime.clients.loading')}
+              emptyMessage={t('runtime.clients.empty')}
+            />
+            {pool && clients && clients.length > 0 && (
+              <AttachedClientMove
+                sessionId={sessionId}
+                pool={pool}
+                clients={clients}
+                onMoved={refetch}
+              />
+            )}
+          </>
         )}
       </CardContent>
     </Card>
