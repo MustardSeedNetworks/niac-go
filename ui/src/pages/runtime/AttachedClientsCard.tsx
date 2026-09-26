@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { H2, SmallText } from '../../ui/Typography';
 import { useFormatRelativeTime } from '../../utils/format';
 import { AttachedClientMove } from './AttachedClientMove';
+import { sessionPool } from './sessionPool';
 
 interface AttachedClientsCardProps {
   sessionId: string;
@@ -32,10 +33,7 @@ export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId, f
     intervalMs: POLL_INTERVALS.medium,
   });
 
-  // Only a port-pool attachment has ports to move a client between.
-  const pool = fabric?.topology.attachments?.find(
-    (attachment) => attachment.name === fabric.topology.binding.attachment,
-  );
+  const pool = sessionPool(fabric);
   const notPlaced = t('runtime.clients.notPlaced');
   const columns: DataTableColumn<ObservedClient>[] = [
     {

@@ -1034,7 +1034,13 @@
     "description": "Visual graph of the configured network plus the live {{protocols}} neighbor table.",
     "deviceDetails": {
       "closeAriaLabel": "Close device details",
-      "closeTitle": "Close the device details panel and return to the topology view"
+      "closeTitle": "Close the device details panel and return to the topology view",
+      "pool": {
+        "free": "Available",
+        "heldFor": "Held for {{mac}}",
+        "help": "The ports on this device a tester can be patched into. The VLAN is the port’s own, inside the scenario, not the VLAN on the wire.",
+        "title": "Tester ports"
+      }
     },
     "deviceNode": {
       "tooltipIps": "IPs: {{ips}}",

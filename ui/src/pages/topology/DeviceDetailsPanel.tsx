@@ -10,8 +10,11 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
+import { useAppContext } from '../../contexts/AppContext';
 import { Button } from '../../ui/Button';
 import { Tag } from '../../ui/Tag';
+import { sessionPool } from '../runtime/sessionPool';
+import { DeviceAttachmentPool } from './DeviceAttachmentPool';
 
 interface DeviceDetailsPanelProps {
   device: DeviceSummary | null;
@@ -26,6 +29,7 @@ interface DeviceDetailsPanelProps {
 export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClose, onEdit }) => {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
+  const { sessionId, selectedSession } = useAppContext();
   if (!device) {
     return null;
   }
@@ -33,9 +37,11 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
   const deviceType = device.type ?? 'unknown';
   const Icon = getTopologyDeviceIcon(deviceType);
   const color = getTopologyDeviceColor(deviceType);
+  const pool = sessionPool(selectedSession?.fabric);
+  const onPool = pool?.ports?.some((port) => port.device === device.name) ?? false;
 
   return (
-    <div className="absolute top-4 right-4 w-80 bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl pad shadow-2xl z-50">
+    <div className="absolute top-4 right-4 w-80 max-h-[calc(100%-2rem)] overflow-y-auto bg-bg-elevated/95 backdrop-blur-sm border border-surface-border rounded-xl pad shadow-2xl z-50">
       <div className="flex items-start justify-between mb-content">
         <div className="flex items-center gap-default">
           <div
@@ -91,6 +97,10 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
             ))}
           </div>
         </div>
+      )}
+
+      {sessionId && pool && onPool && (
+        <DeviceAttachmentPool sessionId={sessionId} pool={pool} device={device.name} />
       )}
 
       <div className="flex gap-compact">
