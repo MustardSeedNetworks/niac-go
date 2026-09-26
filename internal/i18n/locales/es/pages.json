@@ -618,7 +618,13 @@
     },
     "deviceDetails": {
       "closeTitle": "Cerrar el panel de detalles del dispositivo y volver a la vista de topología",
-      "closeAriaLabel": "Cerrar detalles del dispositivo"
+      "closeAriaLabel": "Cerrar detalles del dispositivo",
+      "pool": {
+        "title": "Puertos para probadores",
+        "help": "Los puertos de este dispositivo donde se puede conectar un probador. La VLAN es la del puerto, dentro del escenario, no la VLAN del cable.",
+        "free": "Libre",
+        "heldFor": "Reservado para {{mac}}"
+      }
     },
     "deviceNode": {
       "tooltipSummary": "{{label}} ({{type}})",

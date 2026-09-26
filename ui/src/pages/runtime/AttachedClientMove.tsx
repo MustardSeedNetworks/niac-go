@@ -12,6 +12,8 @@ interface AttachedClientMoveProps {
   sessionId: string;
   pool: CompiledAttachment;
   clients: readonly ObservedClient[];
+  /** Offer only the clients on this device; every client still holds its port. */
+  device?: string;
   onMoved: () => void;
 }
 
@@ -42,10 +44,12 @@ export const AttachedClientMove: FC<AttachedClientMoveProps> = ({
   sessionId,
   pool,
   clients,
+  device,
   onMoved,
 }) => {
   const { t } = useTranslation('pages');
-  const [mac, setMac] = useState(clients[0]?.mac ?? '');
+  const movable = device ? clients.filter((client) => client.device === device) : clients;
+  const [mac, setMac] = useState(movable[0]?.mac ?? '');
   const [port, setPort] = useState('');
   const [moving, setMoving] = useState(false);
   const [moved, setMoved] = useState<string | null>(null);
@@ -55,7 +59,7 @@ export const AttachedClientMove: FC<AttachedClientMoveProps> = ({
   } | null>(null);
 
   // The selected client can expire out of the list between polls.
-  const selectedMac = clients.some((client) => client.mac === mac) ? mac : (clients[0]?.mac ?? '');
+  const selectedMac = movable.some((client) => client.mac === mac) ? mac : (movable[0]?.mac ?? '');
   const ports = freePorts(pool, clients, selectedMac);
   const target = ports.find((candidate) => portKey(candidate.device, candidate.interface) === port);
 
@@ -108,7 +112,7 @@ export const AttachedClientMove: FC<AttachedClientMoveProps> = ({
               setPort('');
             }}
           >
-            {clients.map((client) => (
+            {movable.map((client) => (
               <option key={client.mac} value={client.mac}>
                 {client.mac}
               </option>
