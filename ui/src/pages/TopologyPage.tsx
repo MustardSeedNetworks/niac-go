@@ -668,7 +668,7 @@ export const TopologyPage: FC = () => {
               filtering UI. Stays inside the header card so the toolbar
               groups visually with the title/buttons row above. */}
           {view === 'graph' && (
-            <div className="mt-heading flex flex-col gap-compact sm:flex-row sm:items-center sm:gap-comfortable">
+            <div className="mt-heading flex flex-col gap-compact sm:flex-row sm:items-center">
               <input
                 type="search"
                 value={search}

@@ -303,6 +303,11 @@ jobs:
           python3 scripts/test-check-authoring-parity.py
           python3 scripts/check-authoring-parity.py
 
+      - name: Variants on @layer components classes
+        run: |
+          python3 scripts/test-check-component-variants.py
+          python3 scripts/check-component-variants.py
+
       # The consumer demand matrix (plan row F3) is cut from a capture that is
       # not in the repo, so only this self-test can say the BER decoder still
       # decodes what it decoded then.
