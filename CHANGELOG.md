@@ -5,6 +5,28 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.96.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.98...v0.96.0) (2026-09-27)
+
+
+### Features
+
+* **api:** re-pin an attached client to a pool port (AP-4 slice 2) ([#2379](https://github.com/MustardSeedNetworks/niac-go/issues/2379)) ([030c52c](https://github.com/MustardSeedNetworks/niac-go/commit/030c52cf008ba51b9c89a9afa2e05b27829a5e4d))
+* **scenario:** serve SNMPv3 authPriv on every managed pack device ([#2371](https://github.com/MustardSeedNetworks/niac-go/issues/2371)) ([2660bb4](https://github.com/MustardSeedNetworks/niac-go/commit/2660bb491d5f927c17eef48c80e0d132e3b9c53f))
+* **ui:** move an attached client to a free pool port (AP-4 slice 3) ([#2388](https://github.com/MustardSeedNetworks/niac-go/issues/2388)) ([a8788c1](https://github.com/MustardSeedNetworks/niac-go/commit/a8788c150068b87e6e8fa420f390879275f37f88))
+* **ui:** show and move a switch's attached clients on the topology page (AP-4 slice 4) ([#2390](https://github.com/MustardSeedNetworks/niac-go/issues/2390)) ([7a199f5](https://github.com/MustardSeedNetworks/niac-go/commit/7a199f506b7563c5c2626f8aa7b8ab5e5625af39))
+
+
+### Bug Fixes
+
+* **security:** replace G703 nosec suppressions with os.Root confinement ([#2384](https://github.com/MustardSeedNetworks/niac-go/issues/2384)) ([b13b73e](https://github.com/MustardSeedNetworks/niac-go/commit/b13b73e01caa9db60a1ee83caee9e41c57ea2b0b)), closes [#2383](https://github.com/MustardSeedNetworks/niac-go/issues/2383)
+* **security:** route walk_validator write through pathconfine ([#2387](https://github.com/MustardSeedNetworks/niac-go/issues/2387)) ([f7e0cb7](https://github.com/MustardSeedNetworks/niac-go/commit/f7e0cb79284992949e27750987d79304aed87352))
+* **ui:** drop variants on [@layer](https://github.com/layer) components classes and gate them ([#2378](https://github.com/MustardSeedNetworks/niac-go/issues/2378)) ([a5234ec](https://github.com/MustardSeedNetworks/niac-go/commit/a5234ece90662f4b0f5a3e6e4d6da6bf34807aad)), closes [#2377](https://github.com/MustardSeedNetworks/niac-go/issues/2377)
+
+
+### Miscellaneous
+
+* **release:** bump minor for feat: while below 1.0 ([#2382](https://github.com/MustardSeedNetworks/niac-go/issues/2382)) ([f168da8](https://github.com/MustardSeedNetworks/niac-go/commit/f168da8cb988236ff4304e6516dc9abfa952f511)), closes [#2381](https://github.com/MustardSeedNetworks/niac-go/issues/2381)
+
 ## [0.95.98](https://github.com/MustardSeedNetworks/niac-go/compare/v0.95.97...v0.95.98) (2026-09-26)
 
 
