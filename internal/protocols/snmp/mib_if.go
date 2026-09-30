@@ -24,6 +24,7 @@ const (
 	interfaceTypeLoopback  = 24
 	interfaceTypeTunnel    = 131
 	interfaceTypeL2VLAN    = 135
+	interfaceTypeLAG       = 161 // ieee8023adLag
 	averageFrameOctets     = 900
 	bitsPerOctet           = 8
 	nonUnicastPacketRatio  = 20
@@ -36,15 +37,26 @@ func (a *Agent) initializeIFMIB() {
 		return
 	}
 	names := synthesizedInterfaceNames(device)
+	bundles := portChannelBundles(device, names)
+	names = withPortBundles(names, bundles)
 	count := len(names)
 	if count == 0 {
 		count = 1
 		names = []string{"Management"}
 	}
+	speeds := make(map[string]uint64, len(bundles))
+	for _, bundle := range bundles {
+		speeds[bundle.aggregate] = bundleSpeedBps(device, bundle)
+	}
 	a.mib.Set(ifNumber, &OIDValue{Type: gosnmp.Integer, Value: count})
 	for index, name := range names {
-		a.createInterfaceEntry(index+1, name, device.MACAddress.String(), getInterfaceSpeed(name))
+		speed, ok := speeds[name]
+		if !ok {
+			speed = getInterfaceSpeed(name)
+		}
+		a.createInterfaceEntry(index+1, name, device.MACAddress.String(), speed)
 	}
+	a.initializeIfStackTable(names, bundles)
 	if a.debugLevel >= DebugLevelMinimum {
 		slog.Default().Info("Initialized IF-MIB", "interfaces", count, "device", device.Name)
 	}
@@ -188,6 +200,8 @@ func interfaceTypeFor(name, configured string) int {
 		return interfaceTypeLoopback
 	case strings.HasPrefix(strings.ToLower(name), "tunnel"):
 		return interfaceTypeTunnel
+	case strings.HasPrefix(strings.ToLower(name), "port-channel"):
+		return interfaceTypeLAG
 	default:
 		return interfaceTypeEthernet
 	}
@@ -591,9 +605,6 @@ func (a *Agent) registerIfXTableProperties(idxStr, interfaceName string, speedBp
 
 	// ifPromiscuousMode (2 = false)
 	a.mib.Set(ifPromiscuousMode+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: TruthValueFalse})
-
-	// ifConnectorPresent (1 = true)
-	a.mib.Set(ifConnectorPresent+"."+idxStr, &OIDValue{Type: gosnmp.Integer, Value: TruthValueTrue})
 
 	// ifAlias - interface description/alias
 	a.mib.Set(ifAlias+"."+idxStr, &OIDValue{Type: gosnmp.OctetString, Value: interfaceName})

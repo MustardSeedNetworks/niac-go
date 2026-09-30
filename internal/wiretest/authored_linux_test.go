@@ -40,15 +40,22 @@ const (
 
 func startAuthoredNetwork(t *testing.T) *config.Config {
 	t.Helper()
+	return startAuthoredFile(t, "authored-network.yaml", "wiretest-authored")
+}
+
+// startAuthoredFile runs one testdata network, sent inline the way the UI
+// sends a scenario, bound to the tester's access port.
+func startAuthoredFile(t *testing.T, file, sessionID string) *config.Config {
+	t.Helper()
 	requireWire(t)
 
-	yamlBytes, err := os.ReadFile(filepath.Join("testdata", "authored-network.yaml"))
+	yamlBytes, err := os.ReadFile(filepath.Join("testdata", file))
 	if err != nil {
-		t.Fatalf("reading the authored network: %v", err)
+		t.Fatalf("reading %s: %v", file, err)
 	}
 	authored, err := config.LoadYAMLBytes(yamlBytes)
 	if err != nil {
-		t.Fatalf("loading the authored network: %v", err)
+		t.Fatalf("loading %s: %v", file, err)
 	}
 
 	// Without this the daemon persists the inline config into the invoking
@@ -65,7 +72,7 @@ func startAuthoredNetwork(t *testing.T) *config.Config {
 		t.Fatalf("daemon.NewDaemon: %v", err)
 	}
 	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest-authored",
+		SessionID:      sessionID,
 		Interface:      simIface,
 		Attachment:     "tester",
 		AttachmentMode: fabric.ModeAccess,
