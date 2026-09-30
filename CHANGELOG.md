@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.97.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.96.4...v0.97.0) (2026-09-30)
+
+
+### Features
+
+* **snmp:** publish a port-channel as an ieee8023adLag over its members ([#2405](https://github.com/MustardSeedNetworks/niac-go/issues/2405)) ([fb97941](https://github.com/MustardSeedNetworks/niac-go/commit/fb979419b055a7400fe4ac7fce1efeedd3e17e48))
+
+
+### Bug Fixes
+
+* **attachment:** report the session's port pool in the fabric status ([#2400](https://github.com/MustardSeedNetworks/niac-go/issues/2400)) ([c688181](https://github.com/MustardSeedNetworks/niac-go/commit/c6881812e3227b652fc712fee2e983406ddfe727))
+
+
+### Continuous Integration
+
+* **i18n:** gate hardcoded copy with the shared i18n check ([#2404](https://github.com/MustardSeedNetworks/niac-go/issues/2404)) ([029b442](https://github.com/MustardSeedNetworks/niac-go/commit/029b4429b0879ec82125925759d148bc3d8aeff8)), closes [#2402](https://github.com/MustardSeedNetworks/niac-go/issues/2402)
+
 ## [0.96.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.96.3...v0.96.4) (2026-09-30)
 
 
