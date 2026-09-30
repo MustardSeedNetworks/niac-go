@@ -387,7 +387,8 @@ type Icmpv6Config struct {
 
 // Icmpv6RouterAdvertisement configures IPv6 router advertisements.
 type Icmpv6RouterAdvertisement struct {
-	// Period is the seconds between advertisements.
+	// Period is the seconds between unsolicited advertisements to all-nodes;
+	// 0 is RFC 4861's default of 600.
 	Period int `yaml:"period,omitempty"`
 
 	// CurHopLimit is the hop limit clients should adopt.

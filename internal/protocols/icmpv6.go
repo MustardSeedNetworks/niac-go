@@ -2,10 +2,12 @@ package protocols
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
@@ -90,6 +92,9 @@ const (
 type ICMPv6Handler struct {
 	stack      *Stack
 	debugLevel atomic.Int32
+
+	mu       sync.Mutex
+	stopChan chan struct{} // non-nil while RA origination runs
 }
 
 // NewICMPv6Handler creates a new ICMPv6 handler.
@@ -312,7 +317,11 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 	}
 
 	// Find device with target IPv6
-	devices := h.stack.devicesFor(pkt.VLAN).GetByIPv6(targetIP)
+	table := h.stack.devicesFor(pkt.VLAN)
+	devices := table.GetByIPv6(targetIP)
+	if len(devices) == 0 {
+		devices = devicesAtLinkLocal(table, targetIP)
+	}
 	if len(devices) == 0 {
 		if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 			logging.Debugf("ICMPv6: No device for target %s sn=%d", targetIP, pkt.SerialNumber)
@@ -430,11 +439,7 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 			continue
 		}
 
-		srcIP := firstIPv6Address(device)
-		if srcIP == nil {
-			continue
-		}
-		err := h.sendRouterAdvertisement(pkt.VLAN, device, srcIP, ipv6.SrcIP, dstMAC)
+		err := h.sendRouterAdvertisement(pkt.VLAN, device, ipv6.SrcIP, dstMAC)
 		if err != nil {
 			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				logging.Debugf(
@@ -462,10 +467,14 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 func (h *ICMPv6Handler) sendRouterAdvertisement(
 	vlan int,
 	device *config.Device,
-	srcIP, dstIP net.IP,
+	dstIP net.IP,
 	dstMAC net.HardwareAddr,
 ) error {
-	body := h.buildRouterAdvertisementBody(device, srcIP)
+	srcIP := linkLocalAddress(device)
+	if srcIP == nil {
+		return errors.New("no link-local source address")
+	}
+	body := h.buildRouterAdvertisementBody(device, firstIPv6Address(device))
 	icmpv6 := &layers.ICMPv6{
 		TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeRouterAdvertisement, 0),
 	}
@@ -482,10 +491,10 @@ func (h *ICMPv6Handler) sendRouterAdvertisement(
 	)
 }
 
-func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, srcIP net.IP) []byte {
+func (h *ICMPv6Handler) buildRouterAdvertisementBody(device *config.Device, prefixIP net.IP) []byte {
 	raCfg := getRAConfig(device)
 	bodyHeader := buildRAHeader(device, raCfg)
-	options := buildRAOptions(device, raCfg, srcIP)
+	options := buildRAOptions(device, raCfg, prefixIP)
 
 	payload := make([]byte, len(bodyHeader)+len(options))
 	copy(payload, bodyHeader)
@@ -567,7 +576,7 @@ func getRATimers(raCfg *config.Icmpv6RouterAdvertisement) (uint32, uint32) {
 }
 
 // buildRAOptions builds the router advertisement options.
-func buildRAOptions(device *config.Device, raCfg *config.Icmpv6RouterAdvertisement, srcIP net.IP) []byte {
+func buildRAOptions(device *config.Device, raCfg *config.Icmpv6RouterAdvertisement, prefixIP net.IP) []byte {
 	options := make([]byte, 0, icmpv6OptionsCapacity)
 
 	// Source link-layer option
@@ -578,7 +587,7 @@ func buildRAOptions(device *config.Device, raCfg *config.Icmpv6RouterAdvertiseme
 	options = appendMTUOption(options, raCfg)
 
 	// Prefix options
-	options = appendPrefixOptions(options, raCfg, srcIP)
+	options = appendPrefixOptions(options, raCfg, prefixIP)
 
 	return options
 }
@@ -596,12 +605,12 @@ func appendMTUOption(options []byte, raCfg *config.Icmpv6RouterAdvertisement) []
 	return append(options, mtu...)
 }
 
-func appendPrefixOptions(options []byte, raCfg *config.Icmpv6RouterAdvertisement, srcIP net.IP) []byte {
+func appendPrefixOptions(options []byte, raCfg *config.Icmpv6RouterAdvertisement, prefixIP net.IP) []byte {
 	if raCfg != nil && len(raCfg.PrefixInfo) > 0 {
 		return appendConfiguredPrefixes(options, raCfg.PrefixInfo)
 	}
 
-	return appendDefaultPrefix(options, srcIP)
+	return appendDefaultPrefix(options, prefixIP)
 }
 
 func appendConfiguredPrefixes(options []byte, prefixes []config.Icmpv6PrefixInfo) []byte {
@@ -641,8 +650,8 @@ func appendSinglePrefix(options []byte, p *config.Icmpv6PrefixInfo) []byte {
 	return append(options, p.Prefix.To16()...)
 }
 
-func appendDefaultPrefix(options []byte, srcIP net.IP) []byte {
-	prefix := deriveIPv6Prefix(srcIP, icmpv6DefaultPrefixLen)
+func appendDefaultPrefix(options []byte, prefixIP net.IP) []byte {
+	prefix := deriveIPv6Prefix(prefixIP, icmpv6DefaultPrefixLen)
 
 	options = append(options, ICMPv6OptPrefixInfo, icmpv6PrefixInfoOptLen)
 	options = append(options, byte(icmpv6DefaultPrefixLen))

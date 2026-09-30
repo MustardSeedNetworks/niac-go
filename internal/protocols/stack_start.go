@@ -43,6 +43,7 @@ func (s *Stack) Start() error {
 
 	// Start discovery protocol periodic advertisements
 	s.stpHandler.Start()
+	s.icmpv6Handler.Start()
 	s.lldpHandler.Start()
 	s.cdpHandler.Start()
 	s.edpHandler.Start()

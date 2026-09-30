@@ -362,6 +362,7 @@ func (s *Stack) Stop() {
 
 	// Stop discovery protocol handlers
 	s.stpHandler.Stop()
+	s.icmpv6Handler.Stop()
 	s.lldpHandler.Stop()
 	s.cdpHandler.Stop()
 	s.edpHandler.Stop()

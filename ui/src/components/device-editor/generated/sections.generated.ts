@@ -1468,7 +1468,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
           {
             "name": "period",
             "title": "Period",
-            "description": "Period is the seconds between advertisements.",
+            "description": "Period is the seconds between unsolicited advertisements to all-nodes;\n0 is RFC 4861's default of 600.",
             "kind": "integer"
           },
           {
