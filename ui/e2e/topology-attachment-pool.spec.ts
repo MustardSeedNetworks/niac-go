@@ -106,8 +106,8 @@ test('a switch shows who is on its tester ports and moves one client to another 
     if (resource === 'pins' && route.request().method() === 'POST') {
       const pin = route.request().postDataJSON();
       pins.push({ path: url.pathname, pin });
-      // The daemon restarts the session with the pinned client on its new
-      // port; the stub keeps the other client where it was.
+      // The daemon moves the pinned client to its new port on the running
+      // session, and every other client stays where it was.
       clients = [seen(first, pin.device, pin.interface), clients[1]];
       await route.fulfill({ json: pin });
       return;
@@ -148,7 +148,7 @@ test('a switch shows who is on its tester ports and moves one client to another 
   await move.getByTestId('attached-client-move-submit').click();
 
   await expect(move.getByRole('status')).toHaveText(
-    `Pinned ${first} to MED-ACC-SW02 GigabitEthernet1/0/45. The scenario restarted.`,
+    `Pinned ${first} to MED-ACC-SW02 GigabitEthernet1/0/45.`,
   );
   expect(pins).toEqual([
     {

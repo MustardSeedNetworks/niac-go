@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -74,6 +75,11 @@ func TestSessionPinRefusals(t *testing.T) {
 			name: "not a pool", method: http.MethodPost, path: "/api/v1/sessions/hospital/pins",
 			body: valid, daemonErr: ErrAttachmentPoolRequired,
 			wantCode: http.StatusConflict, wantError: "attachment_pool_required",
+		},
+		{
+			name: "another client holds the port", method: http.MethodPost, path: "/api/v1/sessions/hospital/pins",
+			body: valid, daemonErr: fmt.Errorf("%w: MED-ACC-SW01 Gi1/0/20", ErrAttachmentPortOccupied),
+			wantCode: http.StatusConflict, wantError: "attachment_port_occupied",
 		},
 		{
 			name: "compile refuses the pin", method: http.MethodPost, path: "/api/v1/sessions/hospital/pins",

@@ -1,12 +1,27 @@
 package protocols
 
 import (
+	"errors"
+	"fmt"
 	"net"
+	"slices"
 	"sync"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
+
+// ErrAttachmentPortOccupied refuses a re-pin onto a port another client is
+// plugged into.
+var ErrAttachmentPortOccupied = errors.New("another client is plugged into that port")
+
+// errAttachmentPoolNotBound refuses a re-pin on a session whose binding does
+// not land on a port pool.
+var errAttachmentPoolNotBound = errors.New("the session is not bound to an attachment pool")
+
+// errAttachmentPinMissing refuses a re-pin whose recompiled pool has no pin
+// for the client being moved.
+var errAttachmentPinMissing = errors.New("the attachment pool has no pin for this client")
 
 // clientPlacement decides which pool port each client MAC is plugged into.
 //
@@ -36,22 +51,68 @@ func newClientPlacement(attachment fabric.CompiledAttachment) *clientPlacement {
 		device:   attachment.Device,
 		earliest: -1,
 		ports:    append([]fabric.AttachmentPort(nil), attachment.Ports...),
-		pins:     make(map[string]int, len(attachment.Pins)),
-		reserved: make([]bool, len(attachment.Ports)),
 		taken:    make([]bool, len(attachment.Ports)),
 		assigned: make(map[string]int),
 	}
-	for _, pin := range attachment.Pins {
-		for index, port := range placement.ports {
+	placement.pins, placement.reserved = placement.resolvePins(attachment.Pins)
+
+	return placement
+}
+
+func (p *clientPlacement) resolvePins(pins []fabric.AttachmentPin) (map[string]int, []bool) {
+	indexes := make(map[string]int, len(pins))
+	reserved := make([]bool, len(p.ports))
+	for _, pin := range pins {
+		for index, port := range p.ports {
 			if port.Device == pin.Device && port.Interface == pin.Interface {
-				placement.pins[pin.MAC] = index
-				placement.reserved[index] = true
+				indexes[pin.MAC] = index
+				reserved[index] = true
 				break
 			}
 		}
 	}
 
-	return placement
+	return indexes, reserved
+}
+
+// clientMove is where a re-pinned client was plugged in and where it is now.
+// A client not yet seen has no port to leave, so from is unset.
+type clientMove struct {
+	from, to fabric.AttachmentPort
+	placed   bool
+}
+
+// repin replaces the pool's pins with the recompiled set, which fixes mac to
+// a new port, and moves mac there if it is already plugged in. Every other
+// client stays where it is: a port another client holds is refused rather
+// than taken from it, as a real port with a cable in it would be.
+func (p *clientPlacement) repin(pins []fabric.AttachmentPin, mac string) (clientMove, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	indexes, reserved := p.resolvePins(pins)
+	target, ok := indexes[mac]
+	if !ok {
+		return clientMove{}, fmt.Errorf("%w: %s", errAttachmentPinMissing, mac)
+	}
+	current, placed := p.assigned[mac]
+	if p.taken[target] && (!placed || current != target) {
+		return clientMove{}, fmt.Errorf("%w: %s %s",
+			ErrAttachmentPortOccupied, p.ports[target].Device, p.ports[target].Interface)
+	}
+
+	p.pins, p.reserved = indexes, reserved
+	if !placed {
+		return clientMove{to: p.ports[target]}, nil
+	}
+	p.taken[current] = false
+	p.taken[target] = true
+	p.assigned[mac] = target
+	if p.earliest == current {
+		p.earliest = target
+	}
+
+	return clientMove{from: p.ports[current], to: p.ports[target], placed: true}, nil
 }
 
 // assign gives mac its port on first sight and returns it. It reports false
@@ -156,4 +217,47 @@ func (s *Stack) placeObservedClient(mac net.HardwareAddr) {
 		logging.Debugf("Attachment: %s on %s %s has no bridge row to learn it on",
 			mac, port.Device, port.Interface)
 	}
+}
+
+// RepinAttachedClient moves one client to its new pin on the running session.
+// topology is the session's scenario recompiled with that pin, so the compile
+// has already refused a pin outside the pool or on another client's pin.
+//
+// Nothing is rebuilt: a reload would reset every DHCP handler, SNMP agent and
+// placement, and so unplug every other client along with this one. Only the
+// pool's pins and the pool switch's forwarding entry for mac change, and the
+// client keeps its lease.
+func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareAddr) error {
+	s.reloadMu.Lock()
+	defer s.reloadMu.Unlock()
+
+	if s.fabric == nil || s.fabric.placement == nil {
+		return errAttachmentPoolNotBound
+	}
+	index := slices.IndexFunc(topology.Attachments, func(attachment fabric.CompiledAttachment) bool {
+		return attachment.Name == s.fabric.binding.Attachment
+	})
+	if index < 0 {
+		return errAttachmentPoolNotBound
+	}
+	move, err := s.fabric.placement.repin(topology.Attachments[index].Pins, mac.String())
+	if err != nil {
+		return err
+	}
+	s.fabric.topology.Attachments = slices.Clone(topology.Attachments)
+	if !move.placed || move.from == move.to {
+		return nil
+	}
+
+	// Every pool port lands on one network, so the move keeps the client's
+	// VLAN and the entry keyed by it: placing it rewrites its port.
+	agents := s.snmpAgents[s.fabric.devicesByName[move.to.Device]]
+	if !agents.placeLearnedClient(mac, move.to.Interface, int(move.to.VLAN)) {
+		logging.Debugf("Attachment: %s on %s %s has no bridge row to learn it on",
+			mac, move.to.Device, move.to.Interface)
+	}
+	logging.Infof("Attachment: moved %s from %s to %s on %s",
+		mac, move.from.Interface, move.to.Interface, move.to.Device)
+
+	return nil
 }

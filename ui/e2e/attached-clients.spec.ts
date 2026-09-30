@@ -141,9 +141,8 @@ test('re-pins one client to a free pool port and leaves the other where it was',
     if (resource === 'pins' && route.request().method() === 'POST') {
       const pin = route.request().postDataJSON();
       pins.push({ path: url.pathname, pin });
-      // The daemon restarts the session with the pinned client on its new
-      // port. The stub keeps the other client where it was; a real restart
-      // may re-place an unpinned client until AP-6 reloads in place.
+      // The daemon moves the pinned client to its new port on the running
+      // session, and every other client stays where it was.
       clients = [
         seen(first, pin.device, pin.interface),
         seen(second, 'MED-ACC-SW01', 'GigabitEthernet1/0/46'),
@@ -173,7 +172,7 @@ test('re-pins one client to a free pool port and leaves the other where it was',
   await move.getByTestId('attached-client-move-submit').click();
 
   await expect(move.getByRole('status')).toHaveText(
-    `Pinned ${first} to MED-ACC-SW02 GigabitEthernet1/0/45. The scenario restarted.`,
+    `Pinned ${first} to MED-ACC-SW02 GigabitEthernet1/0/45.`,
   );
   expect(pins).toEqual([
     {

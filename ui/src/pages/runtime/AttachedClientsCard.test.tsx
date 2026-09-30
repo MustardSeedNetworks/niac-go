@@ -201,7 +201,7 @@ describe('AttachedClientsCard', () => {
       fireEvent.click(screen.getByTestId('attached-client-move-submit'));
 
       expect(await screen.findByRole('status')).toHaveTextContent(
-        'Pinned 00:c0:17:00:00:02 to MED-ACC-SW02 GigabitEthernet1/0/46. The scenario restarted.',
+        'Pinned 00:c0:17:00:00:02 to MED-ACC-SW02 GigabitEthernet1/0/46.',
       );
       expect(pinSessionClient).toHaveBeenCalledWith('hospital', {
         mac: '00:c0:17:00:00:02',

@@ -185,8 +185,8 @@
         "choosePort": "Elija un puerto libre",
         "client": "Cliente",
         "failed": "No se pudo mover el cliente: {{error}}",
-        "help": "Fije un cliente a otro puerto del grupo de este escenario. El escenario se reinicia con la nueva fijación, por lo que los clientes no fijados pueden quedar en otro puerto.",
-        "moved": "{{mac}} fijado a {{device}} {{port}}. El escenario se reinició.",
+        "help": "Fije un cliente a otro puerto del grupo de este escenario. El cliente se mueve en el escenario en ejecución y los demás clientes conservan su puerto.",
+        "moved": "{{mac}} fijado a {{device}} {{port}}.",
         "noFreePort": "Ningún puerto libre en el grupo",
         "port": "Puerto del grupo",
         "submit": "Mover cliente"

@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 import { withIsolatedDaemon } from './isolated-daemon';
 
 /**
- * AP-4: the move works however the tester's NIC is bound. The re-pin restarts
- * the session from its own start request, so a restart that dropped the mode or
- * the wire VLAN would land the session on another binding, or be refused by
- * the policy that admitted it.
+ * AP-4 and AP-6: the move works however the tester's NIC is bound, and it
+ * moves the client on the running session. A restart would drop every other
+ * client's port and lease, and one that lost the mode or the wire VLAN would
+ * land the session on another binding.
  *
  * Everything but the clients read is the real dry-run daemon: the dry run
  * captures no wire, so it observes no client.
@@ -144,11 +144,12 @@ for (const binding of bindings) {
         await portPicker.selectOption({ label: 'MED-ACC-SW01 GigabitEthernet1/0/21' });
         await move.getByTestId('attached-client-move-submit').click();
         await expect(move.getByRole('status')).toHaveText(
-          `Pinned ${moving} to MED-ACC-SW01 GigabitEthernet1/0/21. The scenario restarted.`,
+          `Pinned ${moving} to MED-ACC-SW01 GigabitEthernet1/0/21.`,
         );
 
         const after = await session();
         expect(after.running).toBe(true);
+        expect(after.startedAt).toBe(before.startedAt);
         expect(after.sessionId).toBe('hospital');
         expect(after.attachmentMode).toBe(binding.mode);
         expect(after.physicalVlan).toBe(binding.vlan);
