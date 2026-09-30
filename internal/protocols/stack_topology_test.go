@@ -42,6 +42,26 @@ func TestRuntimeFabricTopologyTracksCLIState(t *testing.T) {
 	}
 }
 
+// The runtime page and the topology page read the session's port pool from
+// this topology to offer a client move; a copy without it hides the move.
+func TestRuntimeFabricTopologyCarriesTheAttachmentPool(t *testing.T) {
+	stack := placementStackOn(t, &discoveryCapture{}, config.AttachmentPin{
+		MAC: placementClient(9).String(), Device: placementAccess, Interface: "GigabitEthernet1/0/43",
+	})
+
+	topology, ok := stack.RuntimeFabricTopology()
+	if !ok {
+		t.Fatal("RuntimeFabricTopology() unavailable")
+	}
+	if len(topology.Attachments) != 1 {
+		t.Fatalf("attachments = %#v, want the cyberscope pool", topology.Attachments)
+	}
+	pool := topology.Attachments[0]
+	if pool.Name != "cyberscope" || len(pool.Ports) != len(placementPool()) || len(pool.Pins) != 1 {
+		t.Fatalf("pool = %#v, want cyberscope with %d ports and its pin", pool, len(placementPool()))
+	}
+}
+
 func TestRuntimeTopologyTracksCLIInterfaceShutdown(t *testing.T) {
 	cfg := &config.Config{Devices: []config.Device{
 		{

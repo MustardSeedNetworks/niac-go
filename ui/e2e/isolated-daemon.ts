@@ -19,6 +19,7 @@ async function unusedPort(): Promise<number> {
 export async function withIsolatedDaemon(
   request: APIRequestContext,
   check: (baseURL: string) => Promise<void>,
+  attachmentPolicy = 'e2e-dry-run0=access:200',
 ) {
   const root = await mkdtemp(resolve(tmpdir(), 'niac-browser-isolated-'));
   try {
@@ -34,7 +35,7 @@ export async function withIsolatedDaemon(
         '--cert-dir',
         resolve('../certs'),
         '--attachment-policy',
-        'e2e-dry-run0=access:200',
+        attachmentPolicy,
       ],
       {
         env: {
