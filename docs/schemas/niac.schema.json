@@ -1234,7 +1234,7 @@
       "properties": {
         "period": {
           "type": "integer",
-          "description": "Period is the seconds between advertisements."
+          "description": "Period is the seconds between unsolicited advertisements to all-nodes;\n0 is RFC 4861's default of 600."
         },
         "cur_hop_limit": {
           "type": "integer",

@@ -1,0 +1,34 @@
+# P5-9: a dual-stack gateway that advertises itself every three seconds, the
+# way a router with `ipv6 nd ra interval 3` does. The prefix is on-link only,
+# so the client end learns the router without autoconfiguring an address.
+#
+# .6 keeps clear of brocade-wire.yaml (.2), router-wire.yaml (.3),
+# lag-wire.yaml (.4, .5) and the transit pool the hospital suite uses.
+networks:
+  - name: wire-transit
+    subnet: 10.254.200.0/24
+
+attachments:
+  - name: tester
+    connect: wire-transit
+
+devices:
+  - name: wire-ra-gw-01
+    type: router
+    mac: "02:00:00:00:6b:01"
+    ips: [10.254.200.6, "fd00:254:200::6"]
+    icmpv6:
+      enabled: true
+      router_advertisement:
+        period: 3
+        prefix_info:
+          - prefix: "fd00:254:200::"
+            prefix_length: 64
+            onlink: 1
+            valid_lifetime: 86400
+            preferred_lifetime: 14400
+    interfaces:
+      - name: GigabitEthernet0/0
+        type: ethernet
+        network: wire-transit
+        address: 10.254.200.6/24
