@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net"
 	"net/netip"
+	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
@@ -76,11 +77,12 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	runtime := &fabricRuntime{
 		binding: topology.Binding,
 		topology: fabric.Topology{
-			Binding:    topology.Binding,
-			Networks:   append([]fabric.Network(nil), topology.Networks...),
-			Interfaces: append([]fabric.Interface(nil), topology.Interfaces...),
-			Routes:     append([]fabric.Route(nil), topology.Routes...),
-			DHCPScopes: append([]fabric.DHCPScope(nil), topology.DHCPScopes...),
+			Binding:     topology.Binding,
+			Networks:    slices.Clone(topology.Networks),
+			Interfaces:  slices.Clone(topology.Interfaces),
+			Routes:      slices.Clone(topology.Routes),
+			DHCPScopes:  slices.Clone(topology.DHCPScopes),
+			Attachments: slices.Clone(topology.Attachments),
 		},
 		attachmentNetwork: topology.Binding.Network,
 		hostMAC:           interfaceMAC(topology.Binding.Interface),
