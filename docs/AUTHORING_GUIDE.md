@@ -275,7 +275,9 @@ about, because it is almost always an unfinished access port.
 
 `port_channels` bundle member interfaces into a LAG but draw no edge on their
 own. The edge comes from a `trunk_port` whose `interface` is
-`port-channel<id>`.
+`port-channel<id>`. In SNMP the bundle is its own interface, `ifType` 161
+(`ieee8023adLag`), whose speed is the sum of its members, and `ifStackTable`
+lists it over each member.
 
 ## PoE: who supplies power and who draws it
 
