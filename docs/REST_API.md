@@ -162,13 +162,16 @@ taken.
 pool, with `{"mac": "...", "device": "...", "interface": "..."}`. The pin is
 written into the scenario file the session runs — the same
 `attachments[].pins` the editor authors, replacing any earlier pin of that MAC
-— and the session restarts on it, so every client of that session is placed
-afresh and the moved tester has to renew its lease; other sessions are not
-touched.
+— and the client moves on the running session. The session is not
+restarted: every other client keeps its port and lease, the session keeps
+its binding and wire tag, and other sessions are not touched. The pool
+switch's forwarding table reports the MAC on the new port, and its LLDP
+advertisement follows the move when the moved client is the one it names.
 A port outside the pool, or one another MAC is pinned to, answers
-`400 preflight_failed` with the compiler's diagnostic, and a network-scoped
-attachment answers `409 attachment_pool_required`. Either way the scenario
-file and the running session are left as they were.
+`400 preflight_failed` with the compiler's diagnostic. A port another client
+is plugged into answers `409 attachment_port_occupied`, and a
+network-scoped attachment answers `409 attachment_pool_required`. Either way
+the scenario file and the running session are left as they were.
 
 Live streams take the session as a query parameter:
 `/api/v1/stream/packets?sessionId={id}`.

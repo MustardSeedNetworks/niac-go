@@ -861,8 +861,8 @@
         "choosePort": "Choose a free port",
         "client": "Client",
         "failed": "Could not move the client: {{error}}",
-        "help": "Pin a client to another port of this scenario's pool. The scenario restarts on the new pin, so clients that are not pinned may land on a different port.",
-        "moved": "Pinned {{mac}} to {{device}} {{port}}. The scenario restarted.",
+        "help": "Pin a client to another port of this scenario's pool. The client moves on the running scenario, and every other client keeps its port.",
+        "moved": "Pinned {{mac}} to {{device}} {{port}}.",
         "noFreePort": "No free pool port",
         "port": "Pool port",
         "submit": "Move client"

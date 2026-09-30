@@ -128,7 +128,14 @@ func placementStack(t *testing.T, pins ...config.AttachmentPin) *Stack {
 
 func placementStackOn(t *testing.T, transport PacketTransport, pins ...config.AttachmentPin) *Stack {
 	t.Helper()
-	cfg := &config.Config{
+	cfg := placementConfig(pins...)
+	stack := NewStackWithTransport(transport, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(compilePlacement(t, cfg))
+	return stack
+}
+
+func placementConfig(pins ...config.AttachmentPin) *config.Config {
+	return &config.Config{
 		Networks: []config.Network{
 			{Name: "med-mgmt", Subnet: "10.51.200.0/24", VirtualVLAN: 200},
 			{Name: "med-data", Subnet: "10.51.210.0/24", VirtualVLAN: placementDataVLAN},
@@ -140,6 +147,10 @@ func placementStackOn(t *testing.T, transport PacketTransport, pins ...config.At
 		}},
 		Devices: []config.Device{placementAccessSwitch(), placementCoreSwitch(), placementNeighbourSwitch()},
 	}
+}
+
+func compilePlacement(t *testing.T, cfg *config.Config) *fabric.Topology {
+	t.Helper()
 	report := fabric.Compile(cfg, fabric.Binding{
 		Attachment: "cyberscope", Interface: "eth0", Mode: fabric.ModeAccess,
 		AccessVLAN: 200, PolicyApproved: true,
@@ -147,9 +158,7 @@ func placementStackOn(t *testing.T, transport PacketTransport, pins ...config.At
 	if !report.Safe {
 		t.Fatalf("Compile() diagnostics = %#v", report.Diagnostics)
 	}
-	stack := NewStackWithTransport(transport, cfg, logging.NewDebugConfig(0))
-	stack.ConfigureFabric(&report.Topology)
-	return stack
+	return &report.Topology
 }
 
 // sendFrom drives one frame from mac through decodePacket, the funnel every

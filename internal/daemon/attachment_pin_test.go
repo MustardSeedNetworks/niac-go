@@ -76,7 +76,7 @@ func poolPin(mac, port string) api.AttachmentPin {
 	return api.AttachmentPin{MAC: mac, Device: "MED-ACC-SW01", Interface: port}
 }
 
-func TestPinAttachmentClientWritesThePinAndRestartsTheSession(t *testing.T) {
+func TestPinAttachmentClientMovesTheClientWithoutARestart(t *testing.T) {
 	daemon := startPinTestSimulation(t, pinPoolScenario)
 	before := daemon.simulation
 
@@ -84,12 +84,8 @@ func TestPinAttachmentClientWritesThePinAndRestartsTheSession(t *testing.T) {
 		poolPin(pinnedClient, "GigabitEthernet1/0/20")); err != nil {
 		t.Fatalf("PinAttachmentClient() error = %v", err)
 	}
-	if daemon.simulation == before {
-		t.Fatal("the session was not restarted on the new pin")
-	}
-	if daemon.simulation.ConfigPath != before.ConfigPath {
-		t.Errorf("session moved to %q, want its own scenario %q",
-			daemon.simulation.ConfigPath, before.ConfigPath)
+	if daemon.simulation != before {
+		t.Fatal("the re-pin restarted the session")
 	}
 	want := []config.AttachmentPin{
 		config.AttachmentPin(poolPin("00:c0:17:00:00:02", "GigabitEthernet1/0/22")),
@@ -98,8 +94,16 @@ func TestPinAttachmentClientWritesThePinAndRestartsTheSession(t *testing.T) {
 	if got := sessionPins(t, daemon); !reflect.DeepEqual(got, want) {
 		t.Errorf("pins on disk = %#v, want %#v", got, want)
 	}
-	if got := daemon.simulation.cfg.Attachments[0].Pins; !reflect.DeepEqual(got, want) {
-		t.Errorf("pins the restarted session runs = %#v, want %#v", got, want)
+	status := daemon.GetStatus()
+	if status.Fabric == nil || len(status.Fabric.Topology.Attachments) != 1 {
+		t.Fatalf("status fabric = %#v, want the session's one pool", status.Fabric)
+	}
+	var running []config.AttachmentPin
+	for _, pin := range status.Fabric.Topology.Attachments[0].Pins {
+		running = append(running, config.AttachmentPin(pin))
+	}
+	if !reflect.DeepEqual(running, want) {
+		t.Errorf("pins the running session reports = %#v, want %#v", running, want)
 	}
 }
 
@@ -166,33 +170,6 @@ func TestPinAttachmentClientRefusalLeavesScenarioAndSessionIntact(t *testing.T) 
 				t.Errorf("a refused pin rewrote the scenario:\n%s", after)
 			}
 		})
-	}
-}
-
-func TestPinAttachmentClientRestoresTheScenarioWhenTheRestartFails(t *testing.T) {
-	daemon := startPinTestSimulation(t, pinPoolScenario)
-	active := daemon.simulation
-	original, err := os.ReadFile(active.ConfigPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	injected := errors.New("injected startup failure")
-	daemon.startSimulation = func(
-		string, *config.Config, *fabric.Topology, bool, int, restoreRuntimeState,
-	) (simulationResources, error) {
-		return simulationResources{cancel: func() {}}, injected
-	}
-
-	err = daemon.PinAttachmentClient(defaultSessionID, poolPin(pinnedClient, "GigabitEthernet1/0/20"))
-
-	if !errors.Is(err, injected) {
-		t.Fatalf("PinAttachmentClient() error = %v, want %v", err, injected)
-	}
-	if daemon.simulation != active {
-		t.Error("a failed restart replaced the running session")
-	}
-	if after, _ := os.ReadFile(active.ConfigPath); string(after) != string(original) {
-		t.Errorf("a failed restart left the new pin on disk:\n%s", after)
 	}
 }
 

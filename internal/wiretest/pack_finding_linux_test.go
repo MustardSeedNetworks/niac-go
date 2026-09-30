@@ -85,6 +85,16 @@ func TestEachPackFindingIsVisibleOnTheWire(t *testing.T) {
 // one artifact; a hand-written config here would be an oracle, not the product.
 func startPack(t *testing.T, id string, pins ...converter.AttachmentPin) (*config.Config, packAttachment) {
 	t.Helper()
+	authored, attachment, _ := startPackDaemon(t, id, pins...)
+	return authored, attachment
+}
+
+// startPackDaemon is startPack for a test that also drives the daemon running
+// the pack, under the session ID packSession names.
+func startPackDaemon(
+	t *testing.T, id string, pins ...converter.AttachmentPin,
+) (*config.Config, packAttachment, *daemon.Daemon) {
+	t.Helper()
 	requireWire(t)
 
 	var pack scenario.Pack
@@ -127,7 +137,7 @@ func startPack(t *testing.T, id string, pins ...converter.AttachmentPin) (*confi
 		t.Fatalf("daemon.NewDaemon: %v", err)
 	}
 	if startErr := d.StartSimulation(api.SimulationRequest{
-		SessionID:      "wiretest-" + id,
+		SessionID:      packSession(id),
 		Interface:      simIface,
 		Attachment:     pack.Request.AttachmentName,
 		AttachmentMode: fabric.ModeAccess,
@@ -145,8 +155,10 @@ func startPack(t *testing.T, id string, pins ...converter.AttachmentPin) (*confi
 		_ = d.Shutdown(ctx)
 	})
 
-	return authored, attachment
+	return authored, attachment, d
 }
+
+func packSession(id string) string { return "wiretest-" + id }
 
 // pinClients adds pins to the pack's one attachment, as an operator fixing a
 // tester to a port would.

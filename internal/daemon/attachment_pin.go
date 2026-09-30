@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,17 +13,22 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
 
 // PinAttachmentClient fixes one client MAC to one port of the session's
-// attachment pool and restarts the session on it. The pin is written into the
-// scenario file the session runs, the same `attachments[].pins` the editor
-// authors, so the move survives the restart and the next start alike.
+// attachment pool and moves it there on the running session. The pin is
+// written into the scenario file the session runs, the same
+// `attachments[].pins` the editor authors, so the move survives the next start.
 //
-// The restart is an ordinary start of the same session, so the amended scenario
-// passes every check a start makes: a pin outside the pool, or one that collides
-// with another pin, is refused by the compile before the running session is
-// replaced. Any refusal puts the file back as it was.
+// The amended scenario is compiled exactly as a start compiles it, so a pin
+// outside the pool, or one that collides with another pin, is refused before
+// the running session is touched. The move itself changes one client's port
+// and nothing else: every other client keeps its port and lease, and the
+// session keeps its binding, so a trunk session keeps its wire tag and its
+// siblings on the same NIC never notice. Any refusal puts the file back as it
+// was.
 func (d *Daemon) PinAttachmentClient(sessionID string, pin api.AttachmentPin) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -33,10 +39,6 @@ func (d *Daemon) PinAttachmentClient(sessionID string, pin api.AttachmentPin) er
 	req := active.Request
 	if req.Attachment == "" {
 		return api.ErrAttachmentPoolRequired
-	}
-	generation, err := newRuntimeGeneration()
-	if err != nil {
-		return err
 	}
 	original, err := os.ReadFile(active.ConfigPath)
 	if err != nil {
@@ -50,10 +52,35 @@ func (d *Daemon) PinAttachmentClient(sessionID string, pin api.AttachmentPin) er
 	if err = writeStateFile(directory, name, amended); err != nil {
 		return fmt.Errorf("write scenario: %w", err)
 	}
-	if err = d.startGenerationLocked(req, generation, false); err != nil {
+	topology, err := d.movePinnedClient(active, pin.MAC)
+	if err != nil {
 		return d.restoreScenario(directory, name, original, err)
 	}
+	active.fabric = topology
 	return nil
+}
+
+func (d *Daemon) movePinnedClient(active *Simulation, mac string) (*fabric.Topology, error) {
+	cfg, _, err := loadAuthorizedSimulationConfig(active.Request)
+	if err != nil {
+		return nil, err
+	}
+	compiled, err := d.compileSimulationFabric(cfg, active.Request)
+	if err != nil {
+		return nil, err
+	}
+	hardware, err := net.ParseMAC(mac)
+	if err != nil {
+		return nil, fmt.Errorf("pin MAC: %w", err)
+	}
+	err = active.stack.RepinAttachedClient(compiled.topology, hardware)
+	if errors.Is(err, protocols.ErrAttachmentPortOccupied) {
+		return nil, fmt.Errorf("%w: %w", api.ErrAttachmentPortOccupied, err)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return compiled.topology, nil
 }
 
 func (d *Daemon) restoreScenario(directory, name string, original []byte, cause error) error {
