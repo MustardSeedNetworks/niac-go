@@ -1,0 +1,83 @@
+# Baseline for the shared i18n gate's copy check (check-copy.py in
+# MustardSeedNetworks/.github) — hardcoded English copy in shapes its JSX-text
+# check cannot see (a copy-bearing prop value, a prose string literal). This
+# file may only SHRINK: a new site fails CI, and an entry that no longer
+# matches must be deleted so the list cannot drift into fiction.
+#
+# Entries are `<file> <kind> <text>`, with no line number on purpose, so a
+# change above a site does not re-point it. Grouped by kind of site, one reason
+# per group.
+
+# --- Not copy
+# Product names beside their version numbers, a font family in the editor's
+# font stack, the ErrorInjectionPanel error-type identifier it compares
+# against, and the error thrown before i18n loads when the root element is
+# missing. None is read as prose by an operator; they stay as they are.
+ui/src/components/ErrorInjectionPanel.tsx literal High Utilization
+ui/src/components/SettingsDrawer.tsx copy-prop label=React
+ui/src/components/SettingsDrawer.tsx copy-prop label=TypeScript
+ui/src/components/config/YamlEditor.tsx literal Liberation Mono
+ui/src/main.tsx literal Root element not found
+
+# --- ui/src/ui/
+# Shared primitives with English default aria-labels and status labels, so
+# every page that uses them reads English to a screen reader in Spanish.
+# Tracked as #2403.
+ui/src/ui/Alert.tsx copy-prop aria-label=Dismiss alert
+ui/src/ui/Alert.tsx literal Dismiss alert
+ui/src/ui/BaseCard.tsx literal No data available
+ui/src/ui/Breadcrumbs.tsx copy-prop aria-label=Breadcrumb
+ui/src/ui/Breadcrumbs.tsx copy-prop aria-label=Home
+ui/src/ui/ConnectionStatus.tsx literal Backend unreachable
+ui/src/ui/ConnectionStatus.tsx literal Checking connection...
+ui/src/ui/ConnectionStatus.tsx literal Connected to backend
+ui/src/ui/Input.tsx copy-prop aria-label=Clear search
+ui/src/ui/Input.tsx literal Clear search
+ui/src/ui/PageHeader.tsx copy-prop aria-label=Breadcrumb
+ui/src/ui/StatusConfig.tsx literal Status: error
+ui/src/ui/StatusConfig.tsx literal Status: loading
+ui/src/ui/StatusConfig.tsx literal Status: success
+ui/src/ui/StatusConfig.tsx literal Status: unknown
+ui/src/ui/StatusConfig.tsx literal Status: warning
+ui/src/ui/ToastContainer.tsx copy-prop aria-label=Dismiss notification
+ui/src/ui/ToastContainer.tsx literal Dismiss notification
+
+# --- ui/src/pages/
+# Alerts and the walk tools: tooltips, field help, validation and success
+# messages that were never moved into the locale files. Tracked as #2403.
+ui/src/pages/AlertsPage.tsx copy-prop text=Total packet count that triggers the alert. 0 or blank disables the alert.
+ui/src/pages/AlertsPage.tsx copy-prop title=Discard unsaved changes and reload the saved values.
+ui/src/pages/AlertsPage.tsx copy-prop title=Save alert config to the running daemon. Takes effect immediately — no restart required.
+ui/src/pages/AlertsPage.tsx literal Alert configuration saved
+ui/src/pages/AlertsPage.tsx literal Discard unsaved changes and reload the saved values.
+ui/src/pages/AlertsPage.tsx literal Save alert config to the running daemon. Takes effect immediately — no restart required.
+ui/src/pages/AlertsPage.tsx literal Save alerts
+ui/src/pages/AlertsPage.tsx literal Total packet count that triggers the alert. 0 or blank disables the alert.
+ui/src/pages/WalkAnalyzerPage.tsx copy-prop label=Interfaces
+ui/src/pages/WalkAnalyzerPage.tsx copy-prop label=Logical
+ui/src/pages/WalkAnalyzerPage.tsx copy-prop label=Neighbors
+ui/src/pages/WalkAnalyzerPage.tsx copy-prop label=Physical
+ui/src/pages/WalkAnalyzerPage.tsx copy-prop title=Parses the walk file into device identity, interfaces, and neighbors. Read-only — never modifies the file.
+ui/src/pages/WalkAnalyzerPage.tsx literal Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected.
+ui/src/pages/WalkAnalyzerPage.tsx literal Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to analyze a walk outside this directory.
+ui/src/pages/WalkAnalyzerPage.tsx literal Parses the walk file into device identity, interfaces, and neighbors. Read-only — never modifies the file.
+ui/src/pages/WalkAnalyzerPage.tsx literal Pick a walk file or enter a path first.
+ui/src/pages/WalkValidatorPage.tsx copy-prop text=Filters the full issue list by OID substring before applying the display cap below.
+ui/src/pages/WalkValidatorPage.tsx copy-prop title=Validate and rewrite the file in place. A .bak is created next to the original.
+ui/src/pages/WalkValidatorPage.tsx copy-prop title=Validate every walk file referenced by the running config in one pass.
+ui/src/pages/WalkValidatorPage.tsx literal Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected.
+ui/src/pages/WalkValidatorPage.tsx literal Filters the full issue list by OID substring before applying the display cap below.
+ui/src/pages/WalkValidatorPage.tsx literal Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory.
+ui/src/pages/WalkValidatorPage.tsx literal Pick a walk file or enter a path first.
+ui/src/pages/WalkValidatorPage.tsx literal Validate and rewrite the file in place. A .bak is created next to the original.
+ui/src/pages/WalkValidatorPage.tsx literal Validate every walk file referenced by the running config in one pass.
+
+# --- ui/src/components/ ui/src/contexts/
+# A settings row label, a dismiss button, a shortcut category name, and two
+# error messages shown to the operator. Tracked as #2403.
+ui/src/components/SettingsDrawer.tsx copy-prop label=Connection
+ui/src/components/device-list/DeviceStatusMessage.tsx copy-prop aria-label=Dismiss message
+ui/src/components/device-list/DeviceStatusMessage.tsx literal Dismiss message
+ui/src/components/help-drawer/ShortcutsSection.tsx literal Terminal UI
+ui/src/components/simulation/ConfigPicker.tsx literal This conversion requires an admin token.
+ui/src/contexts/ScopeContext.tsx literal Failed to load token scope
