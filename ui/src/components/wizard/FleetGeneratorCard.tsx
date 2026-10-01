@@ -3,6 +3,8 @@ import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   isScenarioRequestValid,
+  maxSiteAccessPoints,
+  maxSiteWorkstations,
   type ScenarioCounts,
   type ScenarioGenerateRequest,
   type ScenarioPack,
@@ -44,7 +46,7 @@ const countLimits: Record<keyof ScenarioCounts, { min: number; max: number; step
   accessSwitches: { min: 1, max: 20 },
   serverSwitches: { min: 1, max: 8 },
   accessPointsPerAccess: { min: 0, max: 9 },
-  workstationsPerAccess: { min: 0, max: 39 },
+  workstationsPerAccess: { min: 0, max: 33 },
   wirelessControllers: { min: 0, max: 8 },
 };
 
@@ -66,9 +68,12 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
     if (field === 'accessSwitches') {
       counts.accessPointsPerAccess = Math.min(
         counts.accessPointsPerAccess,
-        Math.floor(154 / value),
+        Math.floor(maxSiteAccessPoints / value),
       );
-      counts.workstationsPerAccess = Math.min(counts.workstationsPerAccess, Math.floor(79 / value));
+      counts.workstationsPerAccess = Math.min(
+        counts.workstationsPerAccess,
+        Math.floor(maxSiteWorkstations / value),
+      );
     }
     onChange({ ...request, counts });
   };
@@ -213,9 +218,15 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
                   min={countLimits[field].min}
                   max={
                     field === 'accessPointsPerAccess'
-                      ? Math.min(9, Math.floor(154 / request.counts.accessSwitches))
+                      ? Math.min(
+                          countLimits[field].max,
+                          Math.floor(maxSiteAccessPoints / request.counts.accessSwitches),
+                        )
                       : field === 'workstationsPerAccess'
-                        ? Math.min(39, Math.floor(79 / request.counts.accessSwitches))
+                        ? Math.min(
+                            countLimits[field].max,
+                            Math.floor(maxSiteWorkstations / request.counts.accessSwitches),
+                          )
                         : countLimits[field].max
                   }
                   step={countLimits[field].step}

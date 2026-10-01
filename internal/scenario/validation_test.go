@@ -72,8 +72,8 @@ func TestGenerateRejectsImpossibleFleetCounts(t *testing.T) {
 		{"AP port limit", "access points per access switch must be between 0 and 9", func(r *scenario.Request) {
 			r.Counts.AccessPointsPerAccess = 10
 		}},
-		{"workstation pool", "site workstation count must not exceed 79", func(r *scenario.Request) {
-			r.Counts.WorkstationsPerAccess = 5
+		{"workstation pool", "site workstation count must not exceed 180", func(r *scenario.Request) {
+			r.Counts.AccessSwitches, r.Counts.WorkstationsPerAccess = 20, 10
 		}},
 	}
 	for _, test := range tests {

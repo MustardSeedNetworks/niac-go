@@ -568,7 +568,7 @@
           "name": "Service provider network"
         },
         "warehouse": {
-          "description": "Fulfillment center covering a large open floor from a few closets, with long-range Wi-Fi 7 radios, wired stations, local services, and redundant uplinks.",
+          "description": "Fulfillment center covering a large open floor with dense long-range Wi-Fi 7 radios, rugged handhelds, local services, and redundant uplinks.",
           "name": "Warehouse network"
         }
       },

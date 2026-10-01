@@ -60,9 +60,11 @@ describe('FleetGeneratorCard', () => {
 
   it('keeps redundant layers and endpoint totals valid', () => {
     const onChange = vi.fn();
+    const request = defaultScenarioRequest();
+    request.counts.workstationsPerAccess = 12;
     render(
       <FleetGeneratorCard
-        request={defaultScenarioRequest()}
+        request={request}
         selected
         selectedPackId={null}
         onChange={onChange}
@@ -87,8 +89,13 @@ describe('FleetGeneratorCard', () => {
     });
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        counts: expect.objectContaining({ accessSwitches: 20, workstationsPerAccess: 3 }),
+        counts: expect.objectContaining({ accessSwitches: 20, workstationsPerAccess: 9 }),
       }),
     );
+    // Sixteen access switches share the site's 180 wired endpoints, so the
+    // per-switch input stops at eleven, below the spare-port ceiling of 33.
+    expect(
+      screen.getByRole('spinbutton', { name: 'Wired workstations per access switch' }),
+    ).toHaveAttribute('max', '11');
   });
 });

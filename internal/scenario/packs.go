@@ -63,23 +63,7 @@ func scenarioPackDefinitions() []Pack {
 func customerScenarioPacks() []Pack {
 	return []Pack{
 		hospitalScenarioPack(),
-		newScenarioPack(
-			"warehouse",
-			"Warehouse network",
-			"Fulfillment center covering a large open floor from a few closets, with "+
-				"long-range Wi-Fi 7 radios, wired stations, local services, and redundant uplinks.",
-			MapPurposePresentation,
-			"fulfillment.example",
-			packSites(warehouseSiteOctet,
-				packSite{code: "FUL", location: "Regional Fulfillment Center"},
-			),
-			packCounts(
-				warehouseAccessSwitches,
-				warehouseAccessPointsPerAccess,
-				warehouseWorkstationsPerAccess,
-			),
-			dockAccessPointPoELoss()...,
-		),
+		warehouseScenarioPack(),
 		campusScenarioPack(),
 		newScenarioPack(
 			"enterprise-scale",
@@ -129,6 +113,29 @@ func hospitalScenarioPack() Pack {
 	)
 	pack.Version = resizedPackVersion
 	pack.Request.Faults = imagingSaturation()
+
+	return pack
+}
+
+func warehouseScenarioPack() Pack {
+	pack := newScenarioPack(
+		"warehouse",
+		"Warehouse network",
+		"Fulfillment center covering a large open floor with dense long-range Wi-Fi 7 "+
+			"radios, rugged handhelds, local services, and redundant uplinks.",
+		MapPurposePresentation,
+		"fulfillment.example",
+		packSites(warehouseSiteOctet,
+			packSite{code: "FUL", location: "Regional Fulfillment Center"},
+		),
+		packCounts(
+			warehouseAccessSwitches,
+			warehouseAccessPointsPerAccess,
+			warehouseWorkstationsPerAccess,
+		),
+		dockAccessPointPoELoss()...,
+	)
+	pack.Version = resizedPackVersion
 
 	return pack
 }
