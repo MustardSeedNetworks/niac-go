@@ -1,5 +1,6 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 
 export type AlertStatus = 'success' | 'error' | 'warning' | 'info';
@@ -42,6 +43,7 @@ const statusConfig: Record<
 };
 
 export const Alert: FC<AlertProps> = ({ status, children, onDismiss, className = '' }) => {
+  const { t } = useTranslation('common');
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -57,7 +59,7 @@ export const Alert: FC<AlertProps> = ({ status, children, onDismiss, className =
           type="button"
           onClick={onDismiss}
           className="ml-auto text-current hover:opacity-70 transition-opacity"
-          aria-label="Dismiss alert"
+          aria-label={t('accessibility.dismissAlert')}
         >
           <X className={iconSizes.md} />
         </button>

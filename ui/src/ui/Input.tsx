@@ -6,6 +6,7 @@ import {
   type TextareaHTMLAttributes,
   useId,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Base input styles
 const inputBaseStyles =
@@ -333,6 +334,7 @@ export const SearchInput: FC<SearchInputProps> = ({
   ref,
   ...props
 }) => {
+  const { t } = useTranslation('common');
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const hasValue = value !== undefined && value !== '';
@@ -382,7 +384,7 @@ export const SearchInput: FC<SearchInputProps> = ({
           type="search"
           value={value}
           onChange={onChange}
-          placeholder={props.placeholder || 'Search...'}
+          placeholder={props.placeholder || t('labels.search')}
           className={`
             ${inputBaseStyles}
             ${inputBorderStyles}
@@ -399,7 +401,7 @@ export const SearchInput: FC<SearchInputProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            aria-label="Clear search"
+            aria-label={t('accessibility.clearSearch')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/50 rounded"
           >
             <svg

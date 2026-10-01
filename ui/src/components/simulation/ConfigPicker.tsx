@@ -226,7 +226,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       return;
     }
     if (conversionPermission.disabled) {
-      setConvertError(conversionPermission.title ?? 'This conversion requires an admin token.');
+      setConvertError(conversionPermission.title);
       return;
     }
     setConvertingDsl(true);

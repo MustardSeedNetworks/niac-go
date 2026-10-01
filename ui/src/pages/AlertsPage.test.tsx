@@ -56,4 +56,20 @@ describe('AlertsPage', () => {
     // daemon's own message stays verbatim.
     expect(screen.queryByText(/Unable to load alerts/)).not.toBeInTheDocument();
   });
+
+  it('localizes the actions, the field help and the intro link (niac-go#2403)', async () => {
+    fetchAlerts.mockResolvedValue({ packetsThreshold: 100, webhookUrl: '' });
+    await i18n.changeLanguage('es');
+    render(<AlertsPage />);
+
+    expect(await screen.findByRole('button', { name: 'Guardar alertas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Restablecer' })).toBeInTheDocument();
+    // Trans fills the link from the locale string; the target must survive.
+    expect(screen.getByRole('link', { name: 'SECURITY.md' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('SECURITY.md'),
+    );
+    expect(screen.getByText('--webhook-allowed-host').tagName).toBe('CODE');
+    expect(screen.queryByText(/Save alerts|Reset/)).not.toBeInTheDocument();
+  });
 });

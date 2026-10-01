@@ -1,5 +1,6 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import { type FC, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { type Notification, useUIStore } from '../stores/ui-store';
 
@@ -20,6 +21,7 @@ const TOAST_STYLES: Record<Notification['type'], string> = {
 };
 
 const Toast: FC<{ notification: Notification }> = ({ notification }) => {
+  const { t } = useTranslation('common');
   const removeNotification = useUIStore((s) => s.removeNotification);
   const Icon = TOAST_ICONS[notification.type];
   const duration = notification.duration ?? DEFAULT_DURATION_MS;
@@ -53,7 +55,7 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
         type="button"
         onClick={() => removeNotification(notification.id)}
         className="flex-shrink-0 p-1 rounded hover:bg-surface-hover transition-colors"
-        aria-label="Dismiss notification"
+        aria-label={t('accessibility.dismissNotification')}
       >
         <X className={iconSizes.md} />
       </button>

@@ -58,7 +58,12 @@
     "noShortcuts": "Ningún atajo coincide con su búsqueda."
   },
   "shortcuts": {
-    "note": "Los atajos de teclado son contextuales y pueden variar según la página actual."
+    "note": "Los atajos de teclado son contextuales y pueden variar según la página actual.",
+    "categories": {
+      "actions": "Acciones",
+      "general": "General",
+      "navigation": "Navegación"
+    }
   },
   "glossaryCategories": {
     "protocol": "Protocolos",

@@ -1,5 +1,6 @@
 import { AlertCircle, X } from 'lucide-react';
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 
 export interface StatusMessage {
@@ -13,6 +14,7 @@ interface DeviceStatusMessageProps {
 }
 
 export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onDismiss }) => {
+  const { t } = useTranslation('common');
   if (!message) {
     return null;
   }
@@ -32,7 +34,7 @@ export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onD
         type="button"
         onClick={onDismiss}
         className="ml-auto text-current hover:opacity-70"
-        aria-label="Dismiss message"
+        aria-label={t('accessibility.dismissMessage')}
       >
         <X className="h-4 w-4" />
       </button>

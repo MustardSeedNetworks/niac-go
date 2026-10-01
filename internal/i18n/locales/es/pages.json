@@ -677,7 +677,16 @@
     "description": "Configure los umbrales de alerta y los destinos de webhook para el daemon en ejecución.",
     "page": {
       "packetThresholdLabel": "Umbral de paquetes",
-      "webhookUrlLabel": "URL del webhook"
+      "webhookUrlLabel": "URL del webhook",
+      "intro": "El daemon envía un webhook cuando el número total de paquetes supera el umbral. Los cambios se aplican de inmediato, sin reiniciar. Deje el umbral vacío o en 0 para desactivar las alertas de paquetes. Si está definida, la lista de permitidos <code>--webhook-allowed-host</code> del daemon también limita adónde puede ir el webhook (consulte <policy>SECURITY.md</policy>).",
+      "packetThresholdHelp": "Número total de paquetes que dispara la alerta. Vacío o 0 desactiva la alerta.",
+      "webhookUrlHelp": "El daemon envía JSON por POST a esta dirección al superar el umbral. Use http(s), no una dirección privada, de loopback ni link-local.",
+      "saved": "Configuración de alertas guardada",
+      "saveButton": "Guardar alertas",
+      "savingButton": "Guardando…",
+      "saveHelp": "Guarda en el daemon en ejecución. Se aplica de inmediato, sin reiniciar.",
+      "resetButton": "Restablecer",
+      "resetHelp": "Descarta los cambios sin guardar y vuelve a cargar los valores guardados."
     },
     "alertPolicy": "Política de alertas",
     "recentErrors": "Contador de errores recientes:",
@@ -1065,7 +1074,23 @@
     "showingFiltered": "Mostrando los primeros {{shown}} de {{filtered}} problemas coincidentes ({{total}} en total) — corrija automáticamente para eliminarlos todos.",
     "fromWalksDir": "Del directorio walks/",
     "noIssues": "No se informaron problemas.",
-    "engineNote": "El mismo motor que <code>niac analyze-walk</code>. Validate detecta líneas mal formadas, OID faltantes<oid/> y cadenas sin comillas; fix reescribe el archivo automáticamente."
+    "engineNote": "El mismo motor que <code>niac analyze-walk</code>. Validate detecta líneas mal formadas, OID faltantes<oid/> y cadenas sin comillas; fix reescribe el archivo automáticamente.",
+    "fromWalksDirHelp": "Archivos walk del directorio walks de la biblioteca. Para validar un archivo fuera de él, pegue su ruta abajo.",
+    "pastePathHelp": "Ruta absoluta a un archivo walk. Se usa en lugar de la lista de arriba. Se rechazan las rutas fuera de los directorios permitidos.",
+    "pickFirst": "Primero elija un archivo walk o introduzca una ruta.",
+    "validateButton": "Validar",
+    "validatingButton": "Validando…",
+    "validateHelp": "Comprueba el walk y enumera los problemas por línea. Nunca modifica el archivo.",
+    "autoFixButton": "Corregir automáticamente",
+    "fixingButton": "Corrigiendo…",
+    "autoFixHelp": "Valida y reescribe el archivo en su lugar. El original se conserva como .bak junto a él.",
+    "validateAllHelp": "Valida de una vez todos los archivos walk que usa la configuración en ejecución.",
+    "oidFilterHelp": "Filtra todos los problemas por subcadena de OID antes de aplicar el límite de visualización de abajo.",
+    "resultHeading": "Resultado",
+    "lineSummary": "{{total}} líneas, {{valid}} válidas",
+    "resultValid": "VÁLIDO",
+    "resultInvalid": "NO VÁLIDO",
+    "fixedCount": "corregidos: {{fixed}}"
   },
   "walkAnalyzer": {
     "label": "Analizador de Walk",
@@ -1113,7 +1138,32 @@
     "localInterface": "Interfaz local",
     "protocol": "Protocolo",
     "remoteDevice": "Dispositivo remoto",
-    "remoteInterface": "Interfaz remota"
+    "remoteInterface": "Interfaz remota",
+    "fromWalksDirHelp": "Archivos walk del directorio walks de la biblioteca. Para analizar un archivo fuera de él, pegue su ruta abajo.",
+    "pastePathHelp": "Ruta absoluta a un archivo walk. Se usa en lugar de la lista de arriba. Se rechazan las rutas fuera de los directorios permitidos.",
+    "pickFirst": "Primero elija un archivo walk o introduzca una ruta.",
+    "analyzeButton": "Analizar",
+    "analyzingButton": "Analizando…",
+    "analyzeHelp": "Lee el archivo walk y extrae la identidad del dispositivo, las interfaces y los vecinos. Nunca modifica el archivo.",
+    "deviceHeading": "Dispositivo",
+    "statisticsHeading": "Estadísticas",
+    "interfacesHeading": "Interfaces",
+    "neighborsHeading": "Vecinos",
+    "stats": {
+      "interfaces": "Interfaces",
+      "physical": "Físicas",
+      "logical": "Lógicas",
+      "neighbors": "Vecinos"
+    },
+    "interfacesTable": {
+      "index": "Índice",
+      "name": "Nombre",
+      "type": "Tipo",
+      "speed": "Velocidad",
+      "admin": "Admin.",
+      "oper": "Oper.",
+      "description": "Descripción"
+    }
   },
   "libraryWalks": {
     "label": "Walks",

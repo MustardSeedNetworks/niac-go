@@ -18,6 +18,7 @@
  */
 
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getSizeConfig, getStatusConfig, type SizeKey, type Status } from './StatusConfig';
 
 export type { Status };
@@ -46,7 +47,16 @@ export const StatusBadge: FC<StatusBadgeProps> = ({
   size = 'md',
   className = '',
 }) => {
+  const { t } = useTranslation('common');
   const config = getStatusConfig(status);
+  const labels: Record<Status, string> = {
+    success: t('statusLabel.success'),
+    warning: t('statusLabel.warning'),
+    error: t('statusLabel.error'),
+    unknown: t('statusLabel.unknown'),
+    loading: t('statusLabel.loading'),
+  };
+  const label = labels[status];
   const sizes = getSizeConfig(size);
 
   if (variant === 'dot') {
@@ -57,7 +67,7 @@ export const StatusBadge: FC<StatusBadgeProps> = ({
       <span
         className={`inline-block rounded-full ${sizes.dot} ${dotBgColor} ${className}`}
         role="img"
-        aria-label={config.label}
+        aria-label={label}
       />
     );
   }
@@ -66,7 +76,7 @@ export const StatusBadge: FC<StatusBadgeProps> = ({
     <span
       className={`inline-flex items-center justify-center rounded-full ${config.color} ${config.bgColor} ${sizes.padding} ${className}`}
       role="img"
-      aria-label={config.label}
+      aria-label={label}
     >
       <span className={sizes.icon} aria-hidden="true">
         {config.icon}

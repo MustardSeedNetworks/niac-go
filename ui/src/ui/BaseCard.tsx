@@ -35,6 +35,7 @@
 
 import type React from 'react';
 import type { FC, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CardValue, type Status, StatusCard } from './Card';
 import { Skeleton } from './Skeleton';
 
@@ -112,11 +113,12 @@ export function BaseCard<T>({
   getStatus,
   children,
   loadingContent,
-  emptyMessage = 'No data available',
+  emptyMessage,
   className,
   onClick,
   testId,
 }: BaseCardProps<T>): React.JSX.Element {
+  const { t } = useTranslation('common');
   // Loading state (highest priority)
   if (loading) {
     return (
@@ -164,7 +166,7 @@ export function BaseCard<T>({
         {/* Test hook: the empty branch is otherwise selectable only by its
             translated message, which breaks under the es locale. */}
         <div data-testid={testId ? `${testId}-empty` : undefined}>
-          <CardValue value={emptyMessage} size="md" />
+          <CardValue value={emptyMessage ?? t('emptyState.noData')} size="md" />
         </div>
       </StatusCard>
     );

@@ -16,15 +16,15 @@ interface ShortcutsSectionProps {
   searchQuery: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  general: 'General',
-  navigation: 'Navigation',
-  actions: 'Actions',
-  tui: 'Terminal UI',
-};
+type Category = Shortcut['category'];
 
 export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactElement {
   const { t } = useTranslation('help');
+  const categoryLabels: Record<Category, string> = {
+    general: t('shortcuts.categories.general'),
+    navigation: t('shortcuts.categories.navigation'),
+    actions: t('shortcuts.categories.actions'),
+  };
   const filteredShortcuts = useMemo(() => {
     if (!searchQuery.trim()) return SHORTCUTS;
     const query = searchQuery.toLowerCase();
@@ -36,19 +36,15 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
   }, [searchQuery]);
 
   const groupedShortcuts = useMemo(() => {
-    const groups: Record<string, Shortcut[]> = {
+    const groups: Record<Category, Shortcut[]> = {
       general: [],
       navigation: [],
       actions: [],
-      tui: [],
     };
     for (const shortcut of filteredShortcuts) {
-      const bucket = groups[shortcut.category];
-      if (bucket) {
-        bucket.push(shortcut);
-      }
+      groups[shortcut.category].push(shortcut);
     }
-    return groups;
+    return Object.entries(groups) as [Category, Shortcut[]][];
   }, [filteredShortcuts]);
 
   return (
@@ -56,12 +52,12 @@ export function ShortcutsSection({ searchQuery }: ShortcutsSectionProps): ReactE
       {filteredShortcuts.length === 0 ? (
         <p className="text-sm text-text-muted py-4 text-center">{t('search.noShortcuts')}</p>
       ) : (
-        Object.entries(groupedShortcuts).map(([category, shortcuts]) =>
+        groupedShortcuts.map(([category, shortcuts]) =>
           shortcuts.length > 0 ? (
             <div key={category} className="stack-sm">
               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-compact">
                 <Command className="w-4 h-4 text-brand-accent" />
-                {CATEGORY_LABELS[category]}
+                {categoryLabels[category]}
               </h3>
               <div className="stack-xs">
                 {shortcuts.map((shortcut) => (

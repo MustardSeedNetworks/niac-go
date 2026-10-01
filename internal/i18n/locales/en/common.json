@@ -1,5 +1,6 @@
 {
   "accessibility": {
+    "breadcrumb": "Breadcrumb",
     "clearSearch": "Clear search",
     "closeDialog": "Close dialog",
     "closeDrawer": "Close drawer",
@@ -7,7 +8,11 @@
     "closeMenu": "Close menu",
     "closeSettings": "Close settings",
     "collapseSidebar": "Collapse sidebar",
+    "dismissAlert": "Dismiss alert",
+    "dismissMessage": "Dismiss message",
+    "dismissNotification": "Dismiss notification",
     "expandSidebar": "Expand sidebar",
+    "home": "Home",
     "openDrawer": "Open drawer",
     "openHelp": "Open help",
     "openMenu": "Open menu",
@@ -76,7 +81,15 @@
     "openHelp": "Open Help",
     "openSettings": "Open Settings"
   },
+  "connection": {
+    "checking": "Checking connection...",
+    "connected": "Connected to backend",
+    "disconnected": "Backend unreachable",
+    "offline": "Offline",
+    "online": "Online"
+  },
   "emptyState": {
+    "noData": "No data available",
     "noDevicesConfigured": "No devices defined in the loaded configuration.",
     "noDevicesFound": "No devices found",
     "noItems": "No items to display",
@@ -141,6 +154,7 @@
     "interface": "Interface",
     "interfaces": "Interfaces",
     "path": "Path",
+    "search": "Search...",
     "size": "Size",
     "status": "Status",
     "type": "Type",
@@ -180,6 +194,13 @@
     "loading": "Loading...",
     "ready": "Ready",
     "saving": "Saving..."
+  },
+  "statusLabel": {
+    "error": "Status: error",
+    "loading": "Status: loading",
+    "success": "Status: success",
+    "unknown": "Status: unknown",
+    "warning": "Status: warning"
   },
   "table": {
     "selectAll": "Select all",

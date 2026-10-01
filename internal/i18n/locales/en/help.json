@@ -689,6 +689,11 @@
     "noShortcuts": "No shortcuts match your search."
   },
   "shortcuts": {
+    "categories": {
+      "actions": "Actions",
+      "general": "General",
+      "navigation": "Navigation"
+    },
     "note": "Keyboard shortcuts are contextual and may vary based on the current page."
   },
   "tabs": {

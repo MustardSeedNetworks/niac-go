@@ -25,7 +25,10 @@ function renderAt(path: string) {
 
 function trail(): string[] {
   return Array.from(
-    screen.getByRole('navigation', { name: 'Breadcrumb' }).querySelectorAll('[data-crumb]'),
+    // The landmark name follows the language too (niac-go#2403).
+    screen
+      .getByRole('navigation', { name: i18n.t('common:accessibility.breadcrumb') })
+      .querySelectorAll('[data-crumb]'),
   ).map((node) => node.textContent?.trim() ?? '');
 }
 

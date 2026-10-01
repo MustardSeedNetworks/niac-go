@@ -63,7 +63,8 @@
     "backendUrl": "URL del backend",
     "backendUrlDescription": "Dirección del servidor backend de NIAC",
     "websocketDescription": "Transmisión de eventos en tiempo real",
-    "disconnected": "Desconectado"
+    "disconnected": "Desconectado",
+    "connectionLabel": "Conexión"
   },
   "debug": {
     "devToolsTitle": "Herramientas de desarrollador",
@@ -81,6 +82,7 @@
     "github": "GitHub",
     "website": "Sitio web",
     "version": "Versión",
-    "build": "Compilación"
+    "build": "Compilación",
+    "production": "Producción"
   }
 }

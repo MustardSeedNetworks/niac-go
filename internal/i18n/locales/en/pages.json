@@ -6,7 +6,16 @@
     "loadError": "Unable to load alerts: {{message}}",
     "loadingAlerts": "Loading alert configuration…",
     "page": {
+      "intro": "The daemon sends a webhook when the total packet count crosses the threshold. Changes take effect immediately, with no restart. Leave the threshold blank or 0 to turn packet alerts off. When set, the daemon's <code>--webhook-allowed-host</code> allowlist also limits where the webhook can go (see <policy>SECURITY.md</policy>).",
+      "packetThresholdHelp": "Total packet count that triggers the alert. Blank or 0 turns the alert off.",
       "packetThresholdLabel": "Packet threshold",
+      "resetButton": "Reset",
+      "resetHelp": "Discard unsaved changes and reload the saved values.",
+      "saveButton": "Save alerts",
+      "saved": "Alert configuration saved",
+      "saveHelp": "Saves to the running daemon. Takes effect immediately, with no restart.",
+      "savingButton": "Saving…",
+      "webhookUrlHelp": "The daemon POSTs JSON here when the threshold is crossed. Use http(s), not a private, loopback or link-local address.",
       "webhookUrlLabel": "Webhook URL"
     },
     "recentErrors": "Recent errors counter:",
@@ -1217,16 +1226,34 @@
     "title": "Fault Injection"
   },
   "walkAnalyzer": {
+    "analyzeButton": "Analyze",
+    "analyzeHelp": "Reads the walk file into device identity, interfaces and neighbors. Never changes the file.",
+    "analyzingButton": "Analyzing…",
     "description": "Parse an SNMP walk file into device identity, interface inventory, and LLDP/CDP neighbor adjacencies.",
+    "deviceHeading": "Device",
     "engineNote": "Same engine as <code>niac analyze-walk</code>. Parses SNMPv2-MIB, IF-MIB/ifXTable, LLDP-MIB, and CISCO-CDP-MIB into device identity, interface inventory, and neighbor adjacencies.",
     "fromWalksDir": "From walks/ directory",
+    "fromWalksDirHelp": "Walk files in the library walks directory. To analyze a file outside it, paste its path below.",
+    "interfacesHeading": "Interfaces",
+    "interfacesTable": {
+      "admin": "Admin",
+      "description": "Description",
+      "index": "Index",
+      "name": "Name",
+      "oper": "Oper",
+      "speed": "Speed",
+      "type": "Type"
+    },
     "label": "Walk Analyzer",
     "localInterface": "Local Interface",
+    "neighborsHeading": "Neighbors",
     "noInterfacesFound": "No interfaces found.",
     "noNeighborsFound": "No LLDP/CDP neighbors found.",
     "noWalksFound": "No walks found",
     "pageTitle": "Walk Analyzer",
+    "pastePathHelp": "Absolute path to a walk file. Used instead of the list above. Paths outside the allowed directories are rejected.",
     "pastePathLabel": "Or paste an absolute path",
+    "pickFirst": "Pick a walk file or enter a path first.",
     "profile": {
       "authPassword": "Authentication password",
       "authProtocol": "Authentication protocol",
@@ -1262,11 +1289,20 @@
     "protocol": "Protocol",
     "remoteDevice": "Remote Device",
     "remoteInterface": "Remote Interface",
+    "statisticsHeading": "Statistics",
+    "stats": {
+      "interfaces": "Interfaces",
+      "logical": "Logical",
+      "neighbors": "Neighbors",
+      "physical": "Physical"
+    },
     "title": "Walk Analyzer"
   },
   "walkValidator": {
+    "autoFixButton": "Auto-fix",
     "autoFixConfirmMessage": "This rewrites \"{{file}}\" in place. A .bak backup of the original is created alongside it before any changes are written.",
     "autoFixConfirmTitle": "Auto-fix walk file?",
+    "autoFixHelp": "Validates and rewrites the file in place. The original is kept as a .bak beside it.",
     "batchEmpty": "No walk files are referenced by the running config.",
     "batchHeading": "All configured walk files",
     "batchStatusInvalid": "Invalid",
@@ -1278,7 +1314,10 @@
     },
     "description": "Validate and auto-fix {{protocol}} walk files used by the simulated {{protocol}} agents.",
     "engineNote": "Same engine as <code>niac analyze-walk</code>. Validate detects malformed lines, missing OIDs<oid/>, and unquoted strings; fix auto-rewrites the file in place.",
+    "fixedCount": "fixed: {{fixed}}",
+    "fixingButton": "Fixing…",
     "fromWalksDir": "From walks/ directory",
+    "fromWalksDirHelp": "Walk files in the library walks directory. To validate a file outside it, paste its path below.",
     "issuesTable": {
       "line": "Line",
       "message": "Message",
@@ -1287,16 +1326,27 @@
       "severity": "Severity"
     },
     "label": "{{protocol}} Walks",
+    "lineSummary": "{{total}} lines, {{valid}} valid",
     "noIssues": "No issues reported.",
     "noMatchingIssues": "No issues match that OID filter.",
     "noWalksFound": "No walks found",
+    "oidFilterHelp": "Filters all issues by OID substring before the display limit below is applied.",
     "oidFilterLabel": "Filter by OID",
     "oidFilterPlaceholder": "e.g. .1.3.6.1.2.1.1",
     "pageTitle": "SNMP Walks",
+    "pastePathHelp": "Absolute path to a walk file. Used instead of the list above. Paths outside the allowed directories are rejected.",
     "pastePathLabel": "Or paste an absolute path",
+    "pickFirst": "Pick a walk file or enter a path first.",
+    "resultHeading": "Result",
+    "resultInvalid": "INVALID",
+    "resultValid": "VALID",
     "showingFiltered": "Showing first {{shown}} of {{filtered}} matching issues ({{total}} total) — auto-fix to clear them all.",
     "title": "{{protocol}} Walks",
     "validateAllButton": "Validate all",
-    "validatingAllButton": "Validating all…"
+    "validateAllHelp": "Validates every walk file the running config uses, in one pass.",
+    "validateButton": "Validate",
+    "validateHelp": "Checks the walk and lists problems by line. Never changes the file.",
+    "validatingAllButton": "Validating all…",
+    "validatingButton": "Validating…"
   }
 }
