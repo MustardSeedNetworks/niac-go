@@ -317,6 +317,9 @@ jobs:
       - name: Wire nightly runner — reject stale or dirty checkouts
         run: python3 scripts/test-wire-nightly.py
 
+      - name: validate-touched — selection and gate table
+        run: python3 scripts/test-validate-touched.py
+
       # The device editor's forms are generated from the schema, so a struct
       # change that nobody regenerates for would silently stop being editable.
       - name: Device-editor manifest drift — generated forms match the schema

@@ -1,6 +1,7 @@
 # Build caches (never commit)
 .gocache/
 .gomodcache/
+__pycache__/
 
 # Binaries
 /niac
