@@ -146,18 +146,20 @@ func TestCampusCollapsesTheCore(t *testing.T) {
 }
 
 // A store runs its lanes off one another rather than home-running each till to
-// the back office, so the access tier is a chain with a single uplink.
+// the back office, so the access tier is a chain with a single uplink, and
+// every lane switch the pack generates sits on it.
 func TestRetailStoreChainsItsLanes(t *testing.T) {
 	cfg := generatePack(t, "retail")
+	nodes := packRequest(t, "retail").Counts.AccessSwitches
 
-	for index := 1; index < 4; index++ {
+	for index := 1; index < nodes; index++ {
 		name := numbered("STR-ACC-SW", index)
 		next := numbered("STR-ACC-SW", index+1)
 		if !adjacent(cfg, name, next) {
 			t.Errorf("%s is not chained to %s", name, next)
 		}
 	}
-	if adjacent(cfg, "STR-ACC-SW04", "STR-ACC-SW01") {
+	if adjacent(cfg, numbered("STR-ACC-SW", nodes), "STR-ACC-SW01") {
 		t.Error("the lane chain closes into a ring")
 	}
 	if uplinks := countUplinks(cfg, "STR-ACC-SW", "STR-DIST-SW"); uplinks != 2 {
