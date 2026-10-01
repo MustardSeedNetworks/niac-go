@@ -14,9 +14,9 @@ const (
 	campusAccessSwitches               = 4
 	campusAccessPointsPerAccess        = 2
 	campusWorkstationsPerAccess        = 2
-	retailAccessSwitches               = 4
+	retailAccessSwitches               = 8
 	retailAccessPointsPerAccess        = 3
-	retailWorkstationsPerAccess        = 3
+	retailWorkstationsPerAccess        = 9
 	manufacturingAccessSwitches        = 18
 	manufacturingAccessPointsPerAccess = 3
 	manufacturingWorkstationsPerAccess = 9

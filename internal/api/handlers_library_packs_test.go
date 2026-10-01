@@ -29,7 +29,6 @@ func newPackLibraryMux(t *testing.T) (*Server, http.Handler, string, string) {
 	server.writeLimiter = ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst)
 
 	root := t.TempDir()
-	t.Setenv("NIAC_LIBRARY_ROOT", root)
 	lib, err := library.Open(root)
 	if err != nil {
 		t.Fatalf("open library: %v", err)
@@ -83,6 +82,7 @@ func packPostRaw(
 // draft creates are asserted in the same loop because they already worked and
 // must keep working: the two routes carry one YAML contract.
 func TestEveryScenarioPackSavesThroughTheRegisteredNamedNetworkRoute(t *testing.T) {
+	t.Parallel()
 	server, mux, token, root := newPackLibraryMux(t)
 
 	packs := scenario.Packs()
@@ -90,8 +90,12 @@ func TestEveryScenarioPackSavesThroughTheRegisteredNamedNetworkRoute(t *testing.
 		t.Fatalf("packs = %d, want the seven shipped packs", len(packs))
 	}
 
+	// Each pack is about 5 MB of YAML parsed by three routes, and the cost grows
+	// with every resized pack, so the packs run side by side; they share the
+	// server and write distinct library entries.
 	for _, pack := range packs {
 		t.Run(pack.ID, func(t *testing.T) {
+			t.Parallel()
 			generated := packPost(t, server, mux, token, "/api/v1/scenario/generate", pack.Request)
 			if generated.Code != http.StatusOK {
 				t.Fatalf("generate %s: status = %d, want 200; body=%s",

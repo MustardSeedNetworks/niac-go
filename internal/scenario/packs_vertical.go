@@ -26,6 +26,7 @@ func retailScenarioPack() Pack {
 	)
 	// A store runs its lanes off one another rather than home-running each till.
 	pack.Request.AccessLayer = AccessLayerChain
+	pack.Version = resizedPackVersion
 
 	return pack
 }

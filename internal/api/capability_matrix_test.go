@@ -8,6 +8,8 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
@@ -78,22 +80,20 @@ func deviceProtocolCapabilities() []string {
 }
 
 // authoredProtocols reports, for each capability, the packs that set it.
-func authoredProtocols(t *testing.T) map[string][]string {
-	t.Helper()
+func authoredProtocols(packs []generatedPack) map[string][]string {
 	deviceType := reflect.TypeFor[config.Device]()
 	authored := map[string][]string{}
-	for _, pack := range scenario.Packs() {
-		cfg := packConfig(t, pack)
+	for _, pack := range packs {
 		seen := map[string]bool{}
-		for i := range cfg.Devices {
-			device := reflect.ValueOf(cfg.Devices[i])
+		for i := range pack.cfg.Devices {
+			device := reflect.ValueOf(pack.cfg.Devices[i])
 			for f := range deviceType.NumField() {
 				name := deviceType.Field(f).Name
 				if seen[name] || device.Field(f).IsZero() {
 					continue
 				}
 				seen[name] = true
-				authored[name] = append(authored[name], pack.ID)
+				authored[name] = append(authored[name], pack.id)
 			}
 		}
 	}
@@ -101,13 +101,59 @@ func authoredProtocols(t *testing.T) map[string][]string {
 	return authored
 }
 
-// TestEveryDeviceProtocolIsAuthoredOrExcluded is the durable half of the
+// TestShippedPacks runs every check that walks all the shipped packs over one
+// generation of each. Generation grows with pack size and is about ten times
+// slower under the race detector, and each check generating the packs again
+// (the fault check twice) took the package's -race run from 375 to 468 of
+// CI's 600 s as P-PACK-1 resized them. The packs are shared, so the checks
+// only read them.
+func TestShippedPacks(t *testing.T) {
+	packs := generateShippedPacks(t)
+
+	t.Run("every device protocol is authored or excluded", func(t *testing.T) {
+		checkEveryDeviceProtocolIsAuthoredOrExcluded(t, packs)
+	})
+	t.Run("every fault type is reachable or excluded", func(t *testing.T) {
+		checkEveryFaultTypeIsReachableOrExcluded(t, packs)
+	})
+	t.Run("every pack offers something to inject", func(t *testing.T) {
+		checkEveryPackOffersSomethingToInject(t, packs)
+	})
+}
+
+// generatedPack is one shipped pack's config and the runtime stack over it.
+type generatedPack struct {
+	id    string
+	cfg   *config.Config
+	stack *protocols.Stack
+}
+
+func generateShippedPacks(t *testing.T) []generatedPack {
+	t.Helper()
+	packs := make([]generatedPack, 0, len(scenario.Packs()))
+	for _, pack := range scenario.Packs() {
+		generated, err := scenario.Generate(pack.Request)
+		if err != nil {
+			t.Fatalf("generate %s: %v", pack.ID, err)
+		}
+		packs = append(packs, generatedPack{
+			id:    pack.ID,
+			cfg:   generated.Config,
+			stack: protocols.NewStack(nil, generated.Config, logging.NewDebugConfig(0)),
+		})
+	}
+
+	return packs
+}
+
+// checkEveryDeviceProtocolIsAuthoredOrExcluded is the durable half of the
 // 2026-09-11 audit. That audit happened because nothing measured what the packs
 // author against what the runtime can serve, so the Wi-Fi tier could be scenery
 // and syslog could work while no scenario emitted any. A capability is either
 // demonstrated by a pack or carries a written reason why not.
-func TestEveryDeviceProtocolIsAuthoredOrExcluded(t *testing.T) {
-	authored := authoredProtocols(t)
+func checkEveryDeviceProtocolIsAuthoredOrExcluded(t *testing.T, packs []generatedPack) {
+	t.Helper()
+	authored := authoredProtocols(packs)
 
 	var missing, stale []string
 	for _, capability := range deviceProtocolCapabilities() {
@@ -137,8 +183,7 @@ func TestEveryDeviceProtocolIsAuthoredOrExcluded(t *testing.T) {
 // every other fault is meant to be injected during a demo, not baked in. A
 // catalog entry that is neither authored nor offered anywhere is one an
 // operator has no way to produce.
-func reachableFaults(t *testing.T) map[string][]string {
-	t.Helper()
+func reachableFaults(packs []generatedPack) map[string][]string {
 	canonical := faultTypesByLabel()
 	reachable := map[string]map[string]bool{}
 	note := func(name, pack string) {
@@ -151,9 +196,9 @@ func reachableFaults(t *testing.T) map[string][]string {
 		reachable[name][pack] = true
 	}
 
-	for _, pack := range scenario.Packs() {
-		noteAuthoredFaults(t, pack, note)
-		noteInjectableFaults(t, pack, note)
+	for _, pack := range packs {
+		noteAuthoredFaults(pack, note)
+		noteInjectableFaults(pack, note)
 	}
 
 	result := map[string][]string{}
@@ -168,35 +213,31 @@ func reachableFaults(t *testing.T) map[string][]string {
 }
 
 // noteAuthoredFaults records the faults a pack writes into its own scenario.
-func noteAuthoredFaults(t *testing.T, pack scenario.Pack, note func(name, pack string)) {
-	t.Helper()
-	cfg := packConfig(t, pack)
-	for i := range cfg.Devices {
-		for _, fault := range cfg.Devices[i].Faults {
-			note(fault.Type, pack.ID+" (authored)")
+func noteAuthoredFaults(pack generatedPack, note func(name, pack string)) {
+	for i := range pack.cfg.Devices {
+		for _, fault := range pack.cfg.Devices[i].Faults {
+			note(fault.Type, pack.id+" (authored)")
 		}
-		for _, iface := range cfg.Devices[i].Interfaces {
+		for _, iface := range pack.cfg.Devices[i].Interfaces {
 			for _, fault := range iface.Faults {
-				note(fault.Type, pack.ID+" (authored)")
+				note(fault.Type, pack.id+" (authored)")
 			}
 		}
 	}
 }
 
 // noteInjectableFaults records the faults a pack offers an operator to inject.
-func noteInjectableFaults(t *testing.T, pack scenario.Pack, note func(name, pack string)) {
-	t.Helper()
-	stack, _ := packStack(t, pack)
-	for _, target := range stack.InterfaceFaultTargets() {
+func noteInjectableFaults(pack generatedPack, note func(name, pack string)) {
+	for _, target := range pack.stack.InterfaceFaultTargets() {
 		for _, labels := range target.ErrorTypes {
 			for _, label := range labels {
-				note(label, pack.ID+" (injectable)")
+				note(label, pack.id+" (injectable)")
 			}
 		}
 	}
-	for _, target := range stack.DeviceFaultTargets() {
+	for _, target := range pack.stack.DeviceFaultTargets() {
 		for _, faultType := range target.Faults {
-			note(string(faultType), pack.ID+" (injectable)")
+			note(string(faultType), pack.id+" (injectable)")
 		}
 	}
 }
@@ -220,9 +261,10 @@ func faultTypesByLabel() map[string]string {
 	return byLabel
 }
 
-// TestEveryFaultTypeIsReachableOrExcluded is the fault half of the matrix.
-func TestEveryFaultTypeIsReachableOrExcluded(t *testing.T) {
-	reachable := reachableFaults(t)
+// checkEveryFaultTypeIsReachableOrExcluded is the fault half of the matrix.
+func checkEveryFaultTypeIsReachableOrExcluded(t *testing.T, packs []generatedPack) {
+	t.Helper()
+	reachable := reachableFaults(packs)
 
 	var missing, stale []string
 	for _, faultType := range devicestate.AuthorableFaultTypes() {
@@ -243,14 +285,4 @@ func TestEveryFaultTypeIsReachableOrExcluded(t *testing.T) {
 		t.Errorf("recorded as unreachable, but a pack now reaches them -- drop the entry:\n  %s",
 			strings.Join(stale, "\n  "))
 	}
-}
-
-func packConfig(t *testing.T, pack scenario.Pack) *config.Config {
-	t.Helper()
-	generated, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatalf("generate %s: %v", pack.ID, err)
-	}
-
-	return generated.Config
 }

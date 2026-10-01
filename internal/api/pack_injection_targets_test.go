@@ -3,9 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 // A pack that offers nothing to inject is a demo bed an operator cannot break
@@ -20,32 +18,21 @@ import (
 // The counts are deliberately not pinned: what matters is that each axis is
 // non-empty, not that it holds a particular number that would have to be
 // re-signed with every pack change.
-func TestEveryPackOffersSomethingToInject(t *testing.T) {
-	for _, pack := range scenario.Packs() {
-		t.Run(pack.ID, func(t *testing.T) {
-			stack, devices := packStack(t, pack)
-			if interfaceFaultOffers(stack) == 0 {
-				t.Errorf("no device offers an interface fault, of %d in the pack", devices)
+func checkEveryPackOffersSomethingToInject(t *testing.T, packs []generatedPack) {
+	t.Helper()
+	for _, pack := range packs {
+		t.Run(pack.id, func(t *testing.T) {
+			if interfaceFaultOffers(pack.stack) == 0 {
+				t.Errorf("no device offers an interface fault, of %d in the pack", len(pack.cfg.Devices))
 			}
-			if len(stack.DeviceFaultTargets()) == 0 {
+			if len(pack.stack.DeviceFaultTargets()) == 0 {
 				t.Error("no device offers a service fault")
 			}
-			if len(stack.DeviceActionTargets()) == 0 {
+			if len(pack.stack.DeviceActionTargets()) == 0 {
 				t.Error("no device offers an action")
 			}
 		})
 	}
-}
-
-func packStack(t *testing.T, pack scenario.Pack) (*protocols.Stack, int) {
-	t.Helper()
-	generated, err := scenario.Generate(pack.Request)
-	if err != nil {
-		t.Fatalf("generate: %v", err)
-	}
-	cfg := generated.Config
-
-	return protocols.NewStack(nil, cfg, logging.NewDebugConfig(0)), len(cfg.Devices)
 }
 
 func interfaceFaultOffers(stack *protocols.Stack) int {
