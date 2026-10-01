@@ -2,10 +2,11 @@ import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 /**
- * The sidebar is mounted twice — a mobile drawer and a desktop rail — and both
- * stay in the DOM at every viewport, because the responsive classes toggle
- * display rather than mount. Every sidebar testid therefore exists twice, and
- * an unscoped getByTestId('sidebar-help-button') trips strict mode.
+ * The sidebar has two surfaces — a mobile drawer and a desktop rail. The rail
+ * stays in the DOM at every viewport, because the responsive classes toggle
+ * display rather than mount, and the drawer renders the same body while it is
+ * open. Every sidebar testid then exists twice, and an unscoped
+ * getByTestId('sidebar-help-button') trips strict mode.
  *
  * So a spec has to say which surface it means. That is the point: a test that
  * does not know whether it is driving the phone drawer or the desktop rail is
