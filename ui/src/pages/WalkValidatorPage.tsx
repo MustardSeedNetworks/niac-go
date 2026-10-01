@@ -101,7 +101,7 @@ export const WalkValidatorPage: FC = () => {
   const run = useCallback(
     async (action: 'validating' | 'fixing') => {
       if (!targetPath) {
-        setError('Pick a walk file or enter a path first.');
+        setError(t('walkValidator.pickFirst'));
         return;
       }
       setError(null);
@@ -117,7 +117,7 @@ export const WalkValidatorPage: FC = () => {
         setBusy('idle');
       }
     },
-    [targetPath],
+    [targetPath, t],
   );
 
   const runBatch = useCallback(async () => {
@@ -234,10 +234,7 @@ export const WalkValidatorPage: FC = () => {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.fromWalksDir')}</span>
-              <Tooltip
-                text="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to validate a walk outside this directory."
-                className="w-full"
-              >
+              <Tooltip text={t('walkValidator.fromWalksDirHelp')} className="w-full">
                 <select
                   data-testid="walk-validator-picker"
                   value={selectedFile}
@@ -263,10 +260,7 @@ export const WalkValidatorPage: FC = () => {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkValidator.pastePathLabel')}</span>
-              <Tooltip
-                text="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="w-full"
-              >
+              <Tooltip text={t('walkValidator.pastePathHelp')} className="w-full">
                 <input
                   type="text"
                   value={customPath}
@@ -284,9 +278,11 @@ export const WalkValidatorPage: FC = () => {
               onClick={() => void run('validating')}
               action="edit"
               disabled={busy !== 'idle' || !targetPath}
-              title="Read-only validation: parses the walk and returns per-line issues. Doesn't modify the file."
+              title={t('walkValidator.validateHelp')}
             >
-              {busy === 'validating' ? 'Validating…' : 'Validate'}
+              {busy === 'validating'
+                ? t('walkValidator.validatingButton')
+                : t('walkValidator.validateButton')}
             </Button>
             <Button
               type="button"
@@ -295,9 +291,11 @@ export const WalkValidatorPage: FC = () => {
               onClick={() => setShowAutoFixConfirm(true)}
               action="edit"
               disabled={busy !== 'idle' || !targetPath}
-              title="Validate and rewrite the file in place. A .bak is created next to the original."
+              title={t('walkValidator.autoFixHelp')}
             >
-              {busy === 'fixing' ? 'Fixing…' : 'Auto-fix'}
+              {busy === 'fixing'
+                ? t('walkValidator.fixingButton')
+                : t('walkValidator.autoFixButton')}
             </Button>
             <Button
               type="button"
@@ -305,7 +303,7 @@ export const WalkValidatorPage: FC = () => {
               onClick={() => void runBatch()}
               action="edit"
               disabled={batchBusy}
-              title="Validate every walk file referenced by the running config in one pass."
+              title={t('walkValidator.validateAllHelp')}
             >
               {batchBusy
                 ? t('walkValidator.validatingAllButton')
@@ -324,9 +322,14 @@ export const WalkValidatorPage: FC = () => {
         <Card className="border-surface-border bg-bg-surface/70">
           <CardContent className="stack-lg">
             <header className="flex flex-wrap items-baseline gap-comfortable">
-              <h2 className="heading-3 text-text-primary">{response.message ?? 'Result'}</h2>
+              <h2 className="heading-3 text-text-primary">
+                {response.message ?? t('walkValidator.resultHeading')}
+              </h2>
               <span className="text-sm text-text-muted">
-                {response.result.totalLines} lines, {response.result.validLines} valid
+                {t('walkValidator.lineSummary', {
+                  total: response.result.totalLines,
+                  valid: response.result.validLines,
+                })}
               </span>
               <span
                 className={`rounded px-cell py-0.5 text-xs font-medium ring-1 ${
@@ -335,7 +338,9 @@ export const WalkValidatorPage: FC = () => {
                     : 'bg-status-error/20 text-status-error-strong ring-status-error/40'
                 }`}
               >
-                {response.result.valid ? 'VALID' : 'INVALID'}
+                {response.result.valid
+                  ? t('walkValidator.resultValid')
+                  : t('walkValidator.resultInvalid')}
               </span>
               {SEVERITY_ORDER.map((sev) => (
                 <span
@@ -347,7 +352,7 @@ export const WalkValidatorPage: FC = () => {
               ))}
               {typeof response.result.fixedCount === 'number' && (
                 <span className="rounded bg-status-success/20 px-cell py-0.5 text-xs font-medium text-status-success-strong ring-1 ring-status-success/40">
-                  fixed: {response.result.fixedCount}
+                  {t('walkValidator.fixedCount', { fixed: response.result.fixedCount })}
                 </span>
               )}
             </header>
@@ -355,10 +360,7 @@ export const WalkValidatorPage: FC = () => {
             {issues.length > 0 && (
               <label className="block text-sm">
                 <span className="text-text-secondary">{t('walkValidator.oidFilterLabel')}</span>
-                <Tooltip
-                  text="Filters the full issue list by OID substring before applying the display cap below."
-                  className="w-full"
-                >
+                <Tooltip text={t('walkValidator.oidFilterHelp')} className="w-full">
                   <input
                     type="text"
                     value={oidFilter}

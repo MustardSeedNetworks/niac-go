@@ -15,9 +15,9 @@ vi.mock('../contexts/ScopeContext', () => ({
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { required } from '../test/required';
-import '../i18n';
+import i18n from '../i18n';
 import { useUIStore } from '../stores/ui-store';
+import { required } from '../test/required';
 import { ToastContainer } from '../ui/ToastContainer';
 import { WalkValidatorPage } from './WalkValidatorPage';
 
@@ -215,5 +215,23 @@ describe('WalkValidatorPage — OID column and filter', () => {
 
     await waitFor(() => expect(screen.queryByText('.1.3.6.1.2.1.1.5.0')).not.toBeInTheDocument());
     expect(screen.getByText('.1.3.6.1.4.1.9.1.1')).toBeInTheDocument();
+  });
+
+  it('localizes the actions and the result summary (niac-go#2403)', async () => {
+    await i18n.changeLanguage('es');
+    try {
+      fetchLibraryWalks.mockResolvedValue(files);
+      validateWalk.mockResolvedValueOnce(validateResult);
+      render(<WalkValidatorPage />);
+
+      await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
+      expect(screen.getByRole('button', { name: 'Corregir automáticamente' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Validar' }));
+
+      expect(await screen.findByText('2 líneas, 0 válidas')).toBeInTheDocument();
+      expect(screen.getByText('NO VÁLIDO')).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

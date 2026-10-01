@@ -1,6 +1,6 @@
 import { BellRing } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { type FC, type ReactNode, useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -69,7 +69,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       await updateAlerts(payload);
       await refetch();
       setDirty(false);
-      setSavedMessage('Alert configuration saved');
+      setSavedMessage(t('alerts.page.saved'));
     } catch (err) {
       showError(err);
     } finally {
@@ -95,17 +95,14 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
           {t('alerts.alertPolicy')}
         </H2>
         <P className="text-text-secondary">
-          The daemon fires a webhook when total packet count crosses the threshold. Updates take
-          effect immediately — no CLI restart required. Leave the threshold blank or zero to disable
-          packet alerts entirely. The webhook destination is also gated by the daemon's{' '}
-          <code>--webhook-allowed-host</code> allowlist when set (see{' '}
-          <a
-            href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
-            className="text-brand-accent underline"
-          >
-            SECURITY.md
-          </a>
-          ).
+          <Trans
+            i18nKey="alerts.page.intro"
+            ns="pages"
+            components={{
+              code: <code />,
+              policy: <SecurityPolicyLink />,
+            }}
+          />
         </P>
         <SmallText className="text-text-muted">
           {t('alerts.recentErrors')} <strong className="text-text-secondary">{recentErrors}</strong>
@@ -123,10 +120,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 <label htmlFor="alert-packet-threshold" className="text-sm text-text-muted">
                   {t('alerts.page.packetThresholdLabel')}
                 </label>
-                <Tooltip
-                  text="Total packet count that triggers the alert. 0 or blank disables the alert."
-                  className="w-full"
-                >
+                <Tooltip text={t('alerts.page.packetThresholdHelp')} className="w-full">
                   <input
                     id="alert-packet-threshold"
                     data-testid="alert-packet-threshold"
@@ -147,10 +141,7 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 <label htmlFor="alert-webhook-url" className="text-sm text-text-muted">
                   {t('alerts.page.webhookUrlLabel')}
                 </label>
-                <Tooltip
-                  text="POST'd JSON when the threshold trips. Must be http(s) and not point at a private/loopback/link-local IP. The daemon's --webhook-allowed-host flag further locks this down."
-                  className="w-full"
-                >
+                <Tooltip text={t('alerts.page.webhookUrlHelp')} className="w-full">
                   <input
                     id="alert-webhook-url"
                     className="mt-tight w-full rounded-lg border border-surface-border bg-bg-base/60 pad-xs text-sm text-text-primary focus:border-brand-accent focus:outline-none"
@@ -172,17 +163,17 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
                 disabled={!dirty || saving}
                 onClick={commit}
                 action="edit"
-                title="Save alert config to the running daemon. Takes effect immediately — no restart required."
+                title={t('alerts.page.saveHelp')}
               >
-                {saving ? 'Saving…' : 'Save alerts'}
+                {saving ? t('alerts.page.savingButton') : t('alerts.page.saveButton')}
               </Button>
               <Button
                 variant="outline"
                 disabled={!dirty || saving}
                 onClick={reset}
-                title="Discard unsaved changes and reload the saved values."
+                title={t('alerts.page.resetHelp')}
               >
-                Reset
+                {t('alerts.page.resetButton')}
               </Button>
             </div>
           </>
@@ -191,5 +182,15 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
     </Card>
   );
 };
+
+// Trans fills the link text from the locale string.
+const SecurityPolicyLink: FC<{ children?: ReactNode }> = ({ children }) => (
+  <a
+    href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
+    className="text-brand-accent underline"
+  >
+    {children}
+  </a>
+);
 
 export default AlertsPage;

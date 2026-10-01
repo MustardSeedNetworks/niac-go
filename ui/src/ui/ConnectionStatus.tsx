@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { Tooltip } from './Tooltip';
 
@@ -8,28 +9,33 @@ const STATUS_STYLES: Record<ConnectionState, string> = {
   checking: 'bg-status-warning animate-pulse',
 };
 
-const STATUS_LABELS: Record<ConnectionState, string> = {
-  connected: 'Connected to backend',
-  disconnected: 'Backend unreachable',
-  checking: 'Checking connection...',
-};
-
 export const ConnectionStatus: FC<{ status: ConnectionState; compact?: boolean }> = ({
   status,
   compact = false,
 }) => {
+  const { t } = useTranslation('common');
+  const labels: Record<ConnectionState, string> = {
+    connected: t('connection.connected'),
+    disconnected: t('connection.disconnected'),
+    checking: t('connection.checking'),
+  };
+  const label = labels[status];
   return (
-    <Tooltip text={STATUS_LABELS[status]}>
+    <Tooltip text={label}>
       <button
         type="button"
         data-testid="connection-status"
-        aria-label={STATUS_LABELS[status]}
+        aria-label={label}
         className={`flex min-h-11 min-w-11 items-center gap-compact rounded focus-visible:outline-2 focus-visible:outline-brand-accent ${compact ? 'w-full justify-center' : ''}`}
       >
         <span role="status" className="flex items-center gap-compact">
           <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status]}`} />
           <span className={compact ? 'sr-only' : 'text-xs text-text-muted'}>
-            {status === 'connected' ? 'Online' : status === 'disconnected' ? 'Offline' : '...'}
+            {status === 'connected'
+              ? t('connection.online')
+              : status === 'disconnected'
+                ? t('connection.offline')
+                : '...'}
           </span>
         </span>
       </button>

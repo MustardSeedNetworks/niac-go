@@ -15,7 +15,6 @@ interface StatusConfigItem {
   readonly icon: ReactNode;
   readonly color: string;
   readonly bgColor: string;
-  readonly label: string;
 }
 
 // Centralized status configuration - icons, colors, and labels
@@ -33,7 +32,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     ),
     color: 'text-status-success',
     bgColor: 'bg-status-success/15',
-    label: 'Status: success',
   },
   warning: {
     icon: (
@@ -47,7 +45,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     ),
     color: 'text-status-warning',
     bgColor: 'bg-status-warning/15',
-    label: 'Status: warning',
   },
   error: {
     icon: (
@@ -61,7 +58,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     ),
     color: 'text-status-error',
     bgColor: 'bg-status-error/15',
-    label: 'Status: error',
   },
   unknown: {
     icon: (
@@ -75,7 +71,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     ),
     color: 'text-text-muted',
     bgColor: 'bg-bg-muted/15',
-    label: 'Status: unknown',
   },
   loading: {
     icon: (
@@ -98,7 +93,6 @@ export const statusConfig: Record<Status, StatusConfigItem> = {
     ),
     color: 'text-status-info',
     bgColor: 'bg-status-info/15',
-    label: 'Status: loading',
   },
 };
 

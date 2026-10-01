@@ -86,7 +86,7 @@ export function ScopeProvider({ children }: ScopeProviderProps): ReactElement {
       setScope(fresh.scope);
     } catch (err) {
       setScope(null);
-      setError(err instanceof Error ? err.message : 'Failed to load token scope');
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,9 @@ export function ScopeProvider({ children }: ScopeProviderProps): ReactElement {
   );
 }
 
-export function useActionPermission(action?: Action): { disabled: boolean; title?: string } {
+export function useActionPermission(
+  action?: Action,
+): { disabled: false; title?: undefined } | { disabled: true; title: string } {
   const { t } = useTranslation('common');
   const context = useContext(ScopeContext);
   if (!action || context?.can(action)) return { disabled: false };

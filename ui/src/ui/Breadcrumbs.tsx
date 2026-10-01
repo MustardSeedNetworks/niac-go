@@ -39,6 +39,7 @@ function isGroupPath(path: string): path is GroupPath {
 export const Breadcrumbs: FC = () => {
   const location = useLocation();
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const pages = usePages();
   const pathSegments = location.pathname.split('/').filter(Boolean);
 
@@ -65,13 +66,13 @@ export const Breadcrumbs: FC = () => {
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={tCommon('accessibility.breadcrumb')}
       className="flex items-center gap-tight text-sm text-text-muted mb-content"
     >
       <Link
         to="/"
         className="flex items-center gap-tight hover:text-text-primary transition-colors"
-        aria-label="Home"
+        aria-label={tCommon('accessibility.home')}
       >
         <Home className={iconSizes.sm} />
       </Link>

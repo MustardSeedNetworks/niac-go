@@ -89,26 +89,38 @@ export const WalkAnalyzerPage: FC = () => {
   const interfaceColumns: DataTableColumn<(typeof interfaces)[number]>[] = [
     {
       key: 'index',
-      header: 'Index',
+      header: t('walkAnalyzer.interfacesTable.index'),
       headerClassName: 'w-16',
       cellClassName: 'font-mono text-xs text-text-muted',
       cell: (iface) => iface.index,
     },
-    { key: 'name', header: 'Name', cell: (iface) => iface.name || '—' },
+    {
+      key: 'name',
+      header: t('walkAnalyzer.interfacesTable.name'),
+      cell: (iface) => iface.name || '—',
+    },
     {
       key: 'type',
-      header: 'Type',
+      header: t('walkAnalyzer.interfacesTable.type'),
       cellClassName: 'text-text-muted',
       cell: (iface) => iface.type || '—',
     },
     {
       key: 'speed',
-      header: 'Speed',
+      header: t('walkAnalyzer.interfacesTable.speed'),
       cellClassName: 'font-mono text-xs',
       cell: (iface) => formatBitsPerSecond(iface.speed),
     },
-    { key: 'admin', header: 'Admin', cell: (iface) => renderStatusBadge(iface.adminStatus) },
-    { key: 'oper', header: 'Oper', cell: (iface) => renderStatusBadge(iface.operStatus) },
+    {
+      key: 'admin',
+      header: t('walkAnalyzer.interfacesTable.admin'),
+      cell: (iface) => renderStatusBadge(iface.adminStatus),
+    },
+    {
+      key: 'oper',
+      header: t('walkAnalyzer.interfacesTable.oper'),
+      cell: (iface) => renderStatusBadge(iface.operStatus),
+    },
     {
       key: 'mac',
       header: 'MAC',
@@ -117,7 +129,7 @@ export const WalkAnalyzerPage: FC = () => {
     },
     {
       key: 'description',
-      header: 'Description',
+      header: t('walkAnalyzer.interfacesTable.description'),
       cellClassName: 'text-text-muted',
       cell: (iface) => iface.description || '—',
     },
@@ -151,7 +163,7 @@ export const WalkAnalyzerPage: FC = () => {
 
   const run = useCallback(async () => {
     if (!targetPath) {
-      setError('Pick a walk file or enter a path first.');
+      setError(t('walkAnalyzer.pickFirst'));
       return;
     }
     setError(null);
@@ -164,7 +176,7 @@ export const WalkAnalyzerPage: FC = () => {
     } finally {
       setBusy('idle');
     }
-  }, [targetPath]);
+  }, [targetPath, t]);
 
   return (
     <div className="stack-xl">
@@ -183,10 +195,7 @@ export const WalkAnalyzerPage: FC = () => {
           <div className="grid gap-comfortable md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.fromWalksDir')}</span>
-              <Tooltip
-                text="Hydrated from /api/v1/library/walks (the sandboxed walks directory). Use the absolute-path field to analyze a walk outside this directory."
-                className="w-full"
-              >
+              <Tooltip text={t('walkAnalyzer.fromWalksDirHelp')} className="w-full">
                 <select
                   value={selectedFile}
                   onChange={(e) => setSelectedFile(e.target.value)}
@@ -212,10 +221,7 @@ export const WalkAnalyzerPage: FC = () => {
 
             <label className="block text-sm">
               <span className="text-text-secondary">{t('walkAnalyzer.pastePathLabel')}</span>
-              <Tooltip
-                text="Absolute path to a walk file. Takes precedence over the dropdown selection. The path is bounded server-side; ../ traversal is rejected."
-                className="w-full"
-              >
+              <Tooltip text={t('walkAnalyzer.pastePathHelp')} className="w-full">
                 <input
                   type="text"
                   value={customPath}
@@ -236,10 +242,12 @@ export const WalkAnalyzerPage: FC = () => {
               onClick={() => void run()}
               action="edit"
               disabled={busy !== 'idle' || !targetPath}
-              title="Parses the walk file into device identity, interfaces, and neighbors. Read-only — never modifies the file."
+              title={t('walkAnalyzer.analyzeHelp')}
               data-testid="walk-analyzer-analyze-button"
             >
-              {busy === 'analyzing' ? 'Analyzing…' : 'Analyze'}
+              {busy === 'analyzing'
+                ? t('walkAnalyzer.analyzingButton')
+                : t('walkAnalyzer.analyzeButton')}
             </Button>
             {error && (
               <span className="text-sm text-status-error" role="alert">
@@ -254,7 +262,7 @@ export const WalkAnalyzerPage: FC = () => {
         <div className="stack-xl" data-testid="walk-analyzer-results">
           <Card className="border-surface-border bg-bg-surface/70">
             <CardContent className="stack">
-              <h2 className="heading-3 text-text-primary">Device</h2>
+              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.deviceHeading')}</h2>
               <CardRow label="sysName" value={result.device.sysname || '—'} mono />
               <CardRow label="sysDescr" value={result.device.sysdescr || '—'} />
               <CardRow label="sysObjectID" value={result.device.sysobjectid || '—'} mono />
@@ -269,12 +277,24 @@ export const WalkAnalyzerPage: FC = () => {
 
           <Card className="border-surface-border bg-bg-surface/70">
             <CardContent className="stack">
-              <h2 className="heading-3 text-text-primary">Statistics</h2>
+              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.statisticsHeading')}</h2>
               <div className="grid grid-cols-2 gap-comfortable sm:grid-cols-4">
-                <CardValue label="Interfaces" value={result.statistics.totalInterfaces} />
-                <CardValue label="Physical" value={result.statistics.physicalInterfaces} />
-                <CardValue label="Logical" value={result.statistics.logicalInterfaces} />
-                <CardValue label="Neighbors" value={result.statistics.totalNeighbors} />
+                <CardValue
+                  label={t('walkAnalyzer.stats.interfaces')}
+                  value={result.statistics.totalInterfaces}
+                />
+                <CardValue
+                  label={t('walkAnalyzer.stats.physical')}
+                  value={result.statistics.physicalInterfaces}
+                />
+                <CardValue
+                  label={t('walkAnalyzer.stats.logical')}
+                  value={result.statistics.logicalInterfaces}
+                />
+                <CardValue
+                  label={t('walkAnalyzer.stats.neighbors')}
+                  value={result.statistics.totalNeighbors}
+                />
               </div>
             </CardContent>
           </Card>
@@ -284,7 +304,7 @@ export const WalkAnalyzerPage: FC = () => {
             data-testid="walk-analyzer-interfaces-table"
           >
             <CardContent className="stack-lg">
-              <h2 className="heading-3 text-text-primary">Interfaces</h2>
+              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.interfacesHeading')}</h2>
               {interfaces.length === 0 ? (
                 <p className="text-sm text-text-muted">{t('walkAnalyzer.noInterfacesFound')}</p>
               ) : (
@@ -304,7 +324,7 @@ export const WalkAnalyzerPage: FC = () => {
             data-testid="walk-analyzer-neighbors-table"
           >
             <CardContent className="stack-lg">
-              <h2 className="heading-3 text-text-primary">Neighbors</h2>
+              <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.neighborsHeading')}</h2>
               {neighbors.length === 0 ? (
                 <p className="text-sm text-text-muted">{t('walkAnalyzer.noNeighborsFound')}</p>
               ) : (

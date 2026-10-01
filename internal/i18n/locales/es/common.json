@@ -69,7 +69,8 @@
     "updatedAt": "Actualizado",
     "size": "Tamaño",
     "path": "Ruta",
-    "devices": "Dispositivos"
+    "devices": "Dispositivos",
+    "search": "Buscar..."
   },
   "accessibility": {
     "openHelp": "Abrir ayuda",
@@ -86,7 +87,12 @@
     "switchToLightMode": "Cambiar a modo claro",
     "switchToDarkMode": "Cambiar a modo oscuro",
     "clearSearch": "Limpiar búsqueda",
-    "skipToMainContent": "Saltar al contenido principal"
+    "skipToMainContent": "Saltar al contenido principal",
+    "breadcrumb": "Ruta de navegación",
+    "dismissAlert": "Descartar alerta",
+    "dismissMessage": "Descartar mensaje",
+    "dismissNotification": "Descartar notificación",
+    "home": "Inicio"
   },
   "footer": {
     "version": "Versión",
@@ -102,7 +108,8 @@
     "noItems": "No hay elementos para mostrar",
     "noPackets": "Aún no se han capturado paquetes",
     "noLogs": "Aún no hay registros",
-    "noDevicesConfigured": "No hay dispositivos definidos en la configuración cargada."
+    "noDevicesConfigured": "No hay dispositivos definidos en la configuración cargada.",
+    "noData": "No hay datos disponibles"
   },
   "table": {
     "showingResults": "Mostrando {{shown}} de {{total}} resultados",
@@ -195,5 +202,19 @@
     "namePlaceholder": "Nombre",
     "filterPlaceholder": "Expresión de filtro",
     "newRuleName": "Regla nueva"
+  },
+  "connection": {
+    "checking": "Comprobando la conexión...",
+    "connected": "Conectado al servidor",
+    "disconnected": "Servidor inaccesible",
+    "offline": "Sin conexión",
+    "online": "En línea"
+  },
+  "statusLabel": {
+    "error": "Estado: error",
+    "loading": "Estado: cargando",
+    "success": "Estado: correcto",
+    "unknown": "Estado: desconocido",
+    "warning": "Estado: advertencia"
   }
 }
