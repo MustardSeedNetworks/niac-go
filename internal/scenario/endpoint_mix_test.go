@@ -18,14 +18,7 @@ const (
 func endpointRoleCounts(t *testing.T, request scenario.Request) (map[string]map[string]int, *config.Config) {
 	t.Helper()
 
-	result, err := scenario.Generate(request)
-	if err != nil {
-		t.Fatalf("Generate() error = %v", err)
-	}
-	cfg, err := config.LoadYAMLBytes(result.YAML)
-	if err != nil {
-		t.Fatalf("generated YAML does not load: %v", err)
-	}
+	cfg := generatedRequest(t, "endpoint mix", request).Config
 	counts := map[string]map[string]int{}
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]

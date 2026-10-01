@@ -1,6 +1,8 @@
 package scenario_test
 
 import (
+	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -18,17 +20,47 @@ import (
 //
 // Generate now carries the config it built, so these two helpers are all a
 // test needs.
+//
+// Generating was still most of the package's cost, because about thirty tests
+// walk every pack and each walk generated all seven again: -race took 509 of
+// CI's 600 s, and P-PACK-1's larger packs ran it past the limit (#2349). So a
+// test binary generates each distinct request once. The result is shared, so
+// it is read-only: a test that needs to change a generated config changes the
+// request instead, which is a different key.
+var generatedPacks sync.Map
+
+type packGeneration struct {
+	once   sync.Once
+	result scenario.Result
+	err    error
+}
 
 // generatedPack generates a pack, failing the test if it cannot.
 func generatedPack(t *testing.T, pack scenario.Pack) scenario.Result {
 	t.Helper()
 
-	result, err := scenario.Generate(pack.Request)
+	return generatedRequest(t, pack.ID, pack.Request)
+}
+
+// generatedRequest generates request once per test binary, failing the test if
+// it cannot. label names the request in a failure.
+func generatedRequest(t *testing.T, label string, request scenario.Request) scenario.Result {
+	t.Helper()
+
+	key, err := json.Marshal(request)
 	if err != nil {
-		t.Fatalf("generate %s: %v", pack.ID, err)
+		t.Fatalf("key %s: %v", label, err)
+	}
+	entry, _ := generatedPacks.LoadOrStore(string(key), &packGeneration{})
+	generation, _ := entry.(*packGeneration)
+	generation.once.Do(func() {
+		generation.result, generation.err = scenario.Generate(request)
+	})
+	if generation.err != nil {
+		t.Fatalf("generate %s: %v", label, generation.err)
 	}
 
-	return result
+	return generation.result
 }
 
 // packConfig is the generated pack's runtime config.
