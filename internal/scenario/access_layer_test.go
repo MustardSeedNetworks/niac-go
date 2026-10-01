@@ -40,15 +40,18 @@ func TestManufacturingRingJoinsDistributionTwice(t *testing.T) {
 }
 
 // Hospital's shape is the one already validated against Link-Live, so every
-// access switch there still dual-homes into the distribution pair.
+// access switch in both buildings still dual-homes into its own building's
+// distribution pair.
 func TestHospitalAccessLayerStaysDualHomed(t *testing.T) {
 	cfg := generatePack(t, "hospital")
 
-	if uplinks := countUplinks(cfg, "MED-ACC-SW", "MED-DIST-SW"); uplinks != 12 {
-		t.Errorf("access-to-distribution uplinks = %d, want 12", uplinks)
-	}
-	if adjacent(cfg, "MED-ACC-SW01", "MED-ACC-SW02") {
-		t.Error("hospital access switches are linked to each other")
+	for _, building := range []string{"MED", "MEDB"} {
+		if uplinks := countUplinks(cfg, building+"-ACC-SW", building+"-DIST-SW"); uplinks != 16 {
+			t.Errorf("%s access-to-distribution uplinks = %d, want 16", building, uplinks)
+		}
+		if adjacent(cfg, building+"-ACC-SW01", building+"-ACC-SW02") {
+			t.Errorf("%s access switches are linked to each other", building)
+		}
 	}
 }
 

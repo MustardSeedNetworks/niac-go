@@ -12,11 +12,11 @@ package scenario
 func packParity() map[string]Parity {
 	return map[string]Parity{
 		"hospital": {
-			DeviceCount: 78, NetworkCount: 12, LinkCount: 88,
-			DeviceNamesSHA256: "46c28440c57ff99f25216bc20286f8ae09a3d04272a2e20772ac3ba18a649f61",
-			NetworksSHA256:    "af29ba1bf3ae3a58f46809ba0e126fa436ea4e78193842f8ce12b9d276686b30",
-			LinksSHA256:       "634eaaf747f693f6246e31ba86dfe004c4e6d33ec5114766e22d304416a36a3a",
-			InterfacesSHA256:  "b7b1b92acd4a2b7d2cb9b79d25d47df677ec8d0a3c41b90fbaf4a4c181caa675",
+			DeviceCount: 253, NetworkCount: 21, LinkCount: 278,
+			DeviceNamesSHA256: "46c5b3aa53545f042b7dda398008dd8fa972b289e5fc29cc34dbb2cbf5d1715c",
+			NetworksSHA256:    "6ea6e41e8bbd4c0ff83c09975f1bdee646231ecb89b8dc57fd15516ce5debb57",
+			LinksSHA256:       "57b98c6eae8062f0451869556079cfd798b4322f5bb10769f277f154e94317a0",
+			InterfacesSHA256:  "962538c057cedb309adb27cd1b5c699360eb998cfd50663585669993233fb0a0",
 		},
 		"warehouse": {
 			DeviceCount: 60, NetworkCount: 12, LinkCount: 67,

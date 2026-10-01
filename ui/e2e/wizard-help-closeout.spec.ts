@@ -4,14 +4,15 @@ import type { ScenarioDraft, ScenarioPack } from '../src/api/scenario-client';
 import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
 test('Hospital pack preserves its AP uplinks through Networks and Review', async ({ page }) => {
-  // The pack builds and addresses ~250 devices before Review, and rendering that
-  // many addressing rows is the cost: chromium 21.4s, webkit 22.0s on the
-  // chromium+webkit matrix #2248 settled on. The 30s default is too tight and
-  // 90s was not enough either — on the old matrix firefox took ~66s under
-  // contention, hit exactly 90s on a CI runner and passed only on retry, which
-  // the job's zero flake budget fails. Held at 4-5x the measured cost, because
-  // what broke the budget last time was runner contention, not the work itself.
-  test.setTimeout(120000);
+  // The pack builds and addresses 253 devices before Review, and rendering that
+  // many addressing rows and protocol editors is the cost: chromium 30.3s,
+  // webkit 45.1s with both engines running at once, on P-PACK-1's two-building
+  // hospital. The 30s default is too tight and 90s was not enough either — on
+  // the old matrix firefox took ~66s under contention, hit exactly 90s on a CI
+  // runner and passed only on retry, which the job's zero flake budget fails.
+  // Held at 4-5x the measured cost, because what broke the budget last time was
+  // runner contention, not the work itself.
+  test.setTimeout(200000);
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption({ index: 1 });
   const packs: ScenarioPack[] = await (await page.request.get('/api/v1/scenario/packs')).json();

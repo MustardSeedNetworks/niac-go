@@ -1,9 +1,9 @@
 package scenario
 
 const (
-	hospitalAccessSwitches        = 6
-	hospitalAccessPointsPerAccess = 5
-	hospitalWorkstationsPerAccess = 3
+	hospitalAccessSwitches        = 8
+	hospitalAccessPointsPerAccess = 3
+	hospitalWorkstationsPerAccess = 9
 	// A warehouse covers a large open floor from a few wiring closets, so it
 	// has far fewer access switches than a hospital or a plant and fans a
 	// dense set of long-range radios off each one. Its endpoints are mostly
