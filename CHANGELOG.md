@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.99.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.98.0...v0.99.0) (2026-10-01)
+
+
+### Features
+
+* **scenario:** bundle core-distribution uplinks as port-channels (P5-9) ([#2413](https://github.com/MustardSeedNetworks/niac-go/issues/2413)) ([faeafd1](https://github.com/MustardSeedNetworks/niac-go/commit/faeafd1a0ecd472a3a7980eeb46102181f1dcaaa))
+* **ui:** say "scenario" everywhere and remove /api/v1/templates (R-E) ([#2412](https://github.com/MustardSeedNetworks/niac-go/issues/2412)) ([e511a72](https://github.com/MustardSeedNetworks/niac-go/commit/e511a724ef75585dc4ac2975f089621d0ee7a1a5)), closes [#2219](https://github.com/MustardSeedNetworks/niac-go/issues/2219)
+
 ## [0.98.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.97.0...v0.98.0) (2026-10-01)
 
 
