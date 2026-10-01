@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.100.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.99.0...v0.100.0) (2026-10-01)
+
+
+### Features
+
+* **scenario:** resize the hospital pack to a two-building medical center ([#2416](https://github.com/MustardSeedNetworks/niac-go/issues/2416)) ([e303dee](https://github.com/MustardSeedNetworks/niac-go/commit/e303dee08557c94cbae88a9e9e8551e864a99bc3))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @lezer/highlight to v1.2.4 ([#2417](https://github.com/MustardSeedNetworks/niac-go/issues/2417)) ([93cae3c](https://github.com/MustardSeedNetworks/niac-go/commit/93cae3c18de8fa73f1667bfa7164712628658419))
+* **deps:** update dependency lucide-react to v1.48.0 ([#2418](https://github.com/MustardSeedNetworks/niac-go/issues/2418)) ([a282731](https://github.com/MustardSeedNetworks/niac-go/commit/a28273165ee52954968b3235a9b86cba60e14707))
+
 ## [0.99.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.98.0...v0.99.0) (2026-10-01)
 
 
