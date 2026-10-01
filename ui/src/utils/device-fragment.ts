@@ -59,6 +59,59 @@ function trimTrailingBlankLines(source: string, start: number, end: number): num
   return trimmed;
 }
 
+/** The config's device list items, or null when the config does not parse or
+ * has no `devices` list. */
+function deviceItems(configText: string): unknown[] | null {
+  const doc = parseDocument(configText);
+  if (doc.errors.length > 0) {
+    return null;
+  }
+  const devices = doc.get('devices');
+  return isSeq(devices) ? devices.items : null;
+}
+
+/** The byte range of the device list item at index, or null when its range or
+ * its `- ` marker cannot be read. */
+function fragmentAt(configText: string, items: unknown[], index: number): DeviceFragment | null {
+  const range = (items[index] as Node).range;
+  if (!range) {
+    return null;
+  }
+  const [nodeStart, valueEnd] = range;
+  const start = lineStart(configText, nodeStart);
+
+  // Bounded by where the next device starts, not by scanning forward from
+  // this one's value-end. A block map's value-end can already sit on the
+  // following line, and scanning from there swallowed the next device's
+  // `- name:` line whenever the two were adjacent -- which is how the
+  // daemon writes every config it saves, since yaml.Marshal puts no blank
+  // line between sequence items. Splicing that fragment back deleted the
+  // following device and grafted its fields onto this one.
+  const nextStart = nextItemStart(configText, items[index + 1]);
+  const end =
+    nextStart === null
+      ? blockEnd(configText, start, valueEnd)
+      : trimTrailingBlankLines(configText, start, nextStart);
+  const block = configText.slice(start, end);
+
+  // The first line carries the `- ` marker; the rest are indented to line up
+  // past it. Both come off so the pane shows a device, not a list item.
+  const markerMatch = /^(\s*)-\s+/.exec(block);
+  if (!markerMatch) {
+    return null;
+  }
+  const indent = markerMatch[1] ?? '';
+  const bodyIndent = ' '.repeat(markerMatch[0].length);
+  const text = block
+    .split('\n')
+    .map((line, lineIndex) =>
+      lineIndex === 0 ? line.slice(markerMatch[0].length) : stripPrefix(line, bodyIndent),
+    )
+    .join('\n');
+
+  return { text, start, end, indent };
+}
+
 /**
  * findDeviceFragment locates one device in the whole-config YAML by name.
  * Returns null when the config does not parse, has no `devices` list, or has
@@ -66,58 +119,34 @@ function trimTrailingBlankLines(source: string, start: number, end: number): num
  * rather than showing a pane built on a guess.
  */
 export function findDeviceFragment(configText: string, deviceName: string): DeviceFragment | null {
-  const doc = parseDocument(configText);
-  if (doc.errors.length > 0) {
-    return null;
-  }
-  const devices = doc.get('devices');
-  if (!isSeq(devices)) {
-    return null;
-  }
+  const items = deviceItems(configText);
+  const index = items?.findIndex((item) => isMap(item) && item.get('name') === deviceName) ?? -1;
+  return items && index !== -1 ? fragmentAt(configText, items, index) : null;
+}
 
-  for (const [index, item] of devices.items.entries()) {
-    if (!isMap(item) || item.get('name') !== deviceName) {
+/**
+ * findDeviceFragments locates every device in one parse, keyed by name, the
+ * first device winning a duplicated name as findDeviceFragment's does. A view
+ * over every device must use this: calling findDeviceFragment per device
+ * re-parses the whole config each time, which took the wizard's Protocols step
+ * 160 s to open on a 253-device scenario.
+ */
+export function findDeviceFragments(configText: string): Map<string, DeviceFragment> {
+  const fragments = new Map<string, DeviceFragment>();
+  const items = deviceItems(configText) ?? [];
+  const seen = new Set<unknown>();
+  for (const [index, item] of items.entries()) {
+    const name = isMap(item) ? item.get('name') : undefined;
+    if (typeof name !== 'string' || seen.has(name)) {
       continue;
     }
-    const range = (item as Node).range;
-    if (!range) {
-      return null;
+    seen.add(name);
+    const fragment = fragmentAt(configText, items, index);
+    if (fragment) {
+      fragments.set(name, fragment);
     }
-    const [nodeStart, valueEnd] = range;
-    const start = lineStart(configText, nodeStart);
-
-    // Bounded by where the next device starts, not by scanning forward from
-    // this one's value-end. A block map's value-end can already sit on the
-    // following line, and scanning from there swallowed the next device's
-    // `- name:` line whenever the two were adjacent -- which is how the
-    // daemon writes every config it saves, since yaml.Marshal puts no blank
-    // line between sequence items. Splicing that fragment back deleted the
-    // following device and grafted its fields onto this one.
-    const nextStart = nextItemStart(configText, devices.items[index + 1]);
-    const end =
-      nextStart === null
-        ? blockEnd(configText, start, valueEnd)
-        : trimTrailingBlankLines(configText, start, nextStart);
-    const block = configText.slice(start, end);
-
-    // The first line carries the `- ` marker; the rest are indented to line up
-    // past it. Both come off so the pane shows a device, not a list item.
-    const markerMatch = /^(\s*)-\s+/.exec(block);
-    if (!markerMatch) {
-      return null;
-    }
-    const indent = markerMatch[1] ?? '';
-    const bodyIndent = ' '.repeat(markerMatch[0].length);
-    const text = block
-      .split('\n')
-      .map((line, index) =>
-        index === 0 ? line.slice(markerMatch[0].length) : stripPrefix(line, bodyIndent),
-      )
-      .join('\n');
-
-    return { text, start, end, indent };
   }
-  return null;
+  return fragments;
 }
 
 /** Removes prefix from line when present; blank lines pass through. */
