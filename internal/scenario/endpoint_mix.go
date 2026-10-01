@@ -15,7 +15,7 @@ import "sort"
 // every raises the floor with the site: one per that many slots. The
 // closet-level common tier is sized that way, because a site does not need a
 // second rack PDU until it has a second closet of endpoints, and a floor of one
-// would take a third of a six-slot warehouse's handhelds to pay for one.
+// would take a third of a six-slot site's handhelds to pay for one.
 type endpointShare struct {
 	kind    endpointKind
 	atLeast int

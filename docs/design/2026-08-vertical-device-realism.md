@@ -80,10 +80,10 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 Every vertical also carries the closet tier, sized by site rather than by
 weight: one metered rack PDU per 16 wired endpoints and one door controller per
 32, taken after the vertical's own floors. A site with fewer than 16 endpoints
-has neither, so the six-slot warehouse keeps its three handhelds; today each
-of the hospital's two buildings and each enterprise-scale site carries four
-PDUs and two controllers. The rest of P-PACK-1's resized packs will give every
-vertical both.
+has neither, so a small site keeps its own devices. Today each of the
+hospital's two buildings and each enterprise-scale site carries four PDUs and
+two controllers, and the warehouse nine PDUs and four controllers. The rest of
+P-PACK-1's resized packs will give every vertical both.
 
 `TestPackDeviceRoleMix` pins the resulting per-pack role counts.
 

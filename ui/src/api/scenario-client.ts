@@ -179,6 +179,11 @@ const validDomain = (domain: string) =>
 
 const utf8Length = (value: string) => new TextEncoder().encode(value).length;
 
+// Per-site endpoint ceilings, mirroring internal/scenario's maxSiteAccessPoints
+// and maxSiteWorkstations.
+export const maxSiteAccessPoints = 154;
+export const maxSiteWorkstations = 180;
+
 export const isScenarioRequestValid = (request: ScenarioGenerateRequest) => {
   if (request.sites.length < 1 || request.sites.length > 4 || !validDomain(request.domain)) {
     return false;
@@ -240,8 +245,8 @@ export const isScenarioRequestValid = (request: ScenarioGenerateRequest) => {
     counts.workstationsPerAccess <= 33 &&
     counts.wirelessControllers >= 0 &&
     counts.wirelessControllers <= 8 &&
-    counts.accessSwitches * counts.accessPointsPerAccess <= 154 &&
-    counts.accessSwitches * counts.workstationsPerAccess <= 79
+    counts.accessSwitches * counts.accessPointsPerAccess <= maxSiteAccessPoints &&
+    counts.accessSwitches * counts.workstationsPerAccess <= maxSiteWorkstations
   );
 };
 

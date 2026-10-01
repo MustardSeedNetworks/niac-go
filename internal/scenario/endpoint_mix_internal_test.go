@@ -77,7 +77,7 @@ func roles(kinds []endpointKind) []string {
 
 // The closet tier grows with the site: a rack PDU per 16 wired endpoints and a
 // door controller per 32. A site too small for one keeps its own devices, so
-// the six-slot warehouse still has three handhelds, while a 64-slot enterprise
+// a six-slot warehouse still has three handhelds, while a 64-slot enterprise
 // site carries four PDUs and two controllers.
 func TestClosetTierScalesWithTheSite(t *testing.T) {
 	for _, tc := range []struct {

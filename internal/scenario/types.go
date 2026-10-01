@@ -18,7 +18,7 @@ const (
 	defaultAttachmentName    = "cyberscope"
 	maxSites                 = 4
 	maxSiteAccessPoints      = 154
-	maxSiteWorkstations      = 79
+	maxSiteWorkstations      = 180
 	maxRedundantPeers        = 2
 	maxDistributionSwitches  = 8
 	maxAccessSwitches        = 20
@@ -63,16 +63,18 @@ const (
 	minimumRingNodes = 3
 	// The ring ports sit above the access-point range and below the uplinks, so
 	// a ring switch keeps the same port plan as a dual-homed one.
-	ringEastPort                = "TenGigabitEthernet1/0/47"
-	ringWestPort                = "TenGigabitEthernet1/0/48"
-	coreServerPortOffset        = 8
-	workstationPortOffset       = 9
-	serverPortOffset            = 11
-	primaryCoreGatewayHost      = 2
-	dnsServerHost               = 10
-	dhcpServerHost              = 11
-	dhcpPoolStartHost           = 100
-	dhcpPoolEndHost             = 199
+	ringEastPort           = "TenGigabitEthernet1/0/47"
+	ringWestPort           = "TenGigabitEthernet1/0/48"
+	coreServerPortOffset   = 8
+	workstationPortOffset  = 9
+	serverPortOffset       = 11
+	primaryCoreGatewayHost = 2
+	dnsServerHost          = 10
+	dhcpServerHost         = 11
+	// The data network's pool starts above the last statically addressed
+	// endpoint a site can hold, so a lease never duplicates a simulated device.
+	dhcpPoolStartHost           = workstationHostOffset + maxSiteWorkstations + 1
+	dhcpPoolEndHost             = 250
 	managedDeviceTTL            = 255
 	stpRootPrimaryPriority      = 24576
 	stpRootSecondaryPriority    = 28672

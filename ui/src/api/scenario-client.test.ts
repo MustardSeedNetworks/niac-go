@@ -41,8 +41,9 @@ describe('scenario generator client', () => {
     expect(isScenarioRequestValid(request)).toBe(true);
 
     request.counts.accessSwitches = 20;
+    request.counts.workstationsPerAccess = 10;
     expect(isScenarioRequestValid(request)).toBe(false);
-    request.counts.workstationsPerAccess = 3;
+    request.counts.workstationsPerAccess = 9;
     expect(isScenarioRequestValid(request)).toBe(true);
 
     request.counts.firewalls = 1;

@@ -19,7 +19,7 @@ func TestScenarioPackMetadata(t *testing.T) {
 		}
 		seen[pack.ID] = true
 		want := "1.3.0"
-		if pack.ID == "hospital" {
+		if pack.ID == "hospital" || pack.ID == "warehouse" {
 			want = "1.4.0"
 		}
 		if pack.ManifestVersion != 4 || pack.Version != want {

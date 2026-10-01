@@ -4,14 +4,13 @@ const (
 	hospitalAccessSwitches        = 8
 	hospitalAccessPointsPerAccess = 3
 	hospitalWorkstationsPerAccess = 9
-	// A warehouse covers a large open floor from a few wiring closets, so it
-	// has far fewer access switches than a hospital or a plant and fans a
-	// dense set of long-range radios off each one. Its endpoints are mostly
-	// wireless handhelds rather than wired. This is what makes its map read
-	// differently from the other single-site verticals.
-	warehouseAccessSwitches            = 3
-	warehouseAccessPointsPerAccess     = maxAccessPointsPerAccess
-	warehouseWorkstationsPerAccess     = 2
+	// A warehouse covers a large open floor, so it fans more long-range
+	// radios off each closet than the other packs do and its endpoints are
+	// mostly rugged handhelds. That density is what makes its map read
+	// differently from the other single-site verticals at the same size.
+	warehouseAccessSwitches            = 15
+	warehouseAccessPointsPerAccess     = 5
+	warehouseWorkstationsPerAccess     = 10
 	campusAccessSwitches               = 4
 	campusAccessPointsPerAccess        = 2
 	campusWorkstationsPerAccess        = 2
