@@ -8,6 +8,11 @@ const (
 	retailSiteOctet             = 81
 	industrialSiteOctet         = 91
 	serviceProviderSiteOctet    = 101
+
+	// P-PACK-1 resizes the presentation packs one per PR, so a resized pack
+	// carries the new version and the rest keep the old one until theirs lands.
+	packVersion        = "1.3.0"
+	resizedPackVersion = "1.4.0"
 )
 
 type packSite struct {
@@ -103,16 +108,18 @@ func packSites(firstOctet int, definitions ...packSite) []Site {
 // hospitalScenarioPack is the guided demo, so it is the one pack that carries a
 // story: the imaging closet saturates both of its uplinks, and both ends of
 // both links report it. Everything else stays healthy, because a finding only
-// reads as a finding when it is the exception on the map.
+// reads as a finding when it is the exception on the map. It is a regional
+// medical center of two buildings, each with its own closets and services.
 func hospitalScenarioPack() Pack {
 	pack := newScenarioPack(
 		"hospital",
 		"Hospital network",
-		"Medical center with resilient wired access, Wi-Fi 7 coverage, clinical clients, and local services.",
+		"Two-building medical center with resilient wired access, Wi-Fi 7 coverage, clinical clients, and local services.",
 		MapPurposePresentation,
 		"care.example",
 		packSites(hospitalSiteOctet,
 			packSite{code: "MED", location: "Regional Medical Center"},
+			packSite{code: "MEDB", location: "Regional Medical Center, Building B"},
 		),
 		packCounts(
 			hospitalAccessSwitches,
@@ -120,6 +127,7 @@ func hospitalScenarioPack() Pack {
 			hospitalWorkstationsPerAccess,
 		),
 	)
+	pack.Version = resizedPackVersion
 	pack.Request.Faults = imagingSaturation()
 
 	return pack
@@ -198,7 +206,7 @@ func newScenarioPack(
 	}
 
 	return Pack{
-		ID: id, Version: "1.3.0", ManifestVersion: scenarioPackManifestVersion,
+		ID: id, Version: packVersion, ManifestVersion: scenarioPackManifestVersion,
 		Name: name, Description: description, MapPurpose: purpose,
 		Request: Request{
 			Sites: sites, Counts: counts, Domain: domain,

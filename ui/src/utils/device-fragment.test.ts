@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findDeviceFragment, spliceDeviceFragment } from './device-fragment';
+import { findDeviceFragment, findDeviceFragments, spliceDeviceFragment } from './device-fragment';
 
 // A config that carries the things a naive splice destroys: comments above and
 // inside a device, a trailing device after the target, blank lines, and a
@@ -69,6 +69,34 @@ ips:
 
   it('returns null for YAML that does not parse, rather than guessing', () => {
     expect(findDeviceFragment('devices:\n  - name: [unclosed\n', 'api-router')).toBeNull();
+  });
+});
+
+describe('findDeviceFragments', () => {
+  it('returns the same fragment for every device that findDeviceFragment does', () => {
+    const fragments = findDeviceFragments(CONFIG);
+    expect([...fragments.keys()]).toEqual(['api-router', 'core-switch']);
+    for (const [name, fragment] of fragments) {
+      expect(fragment).toEqual(findDeviceFragment(CONFIG, name));
+    }
+  });
+
+  it('keeps the first device of a duplicated name, as findDeviceFragment does', () => {
+    const duplicated = `devices:
+  - name: edge
+    type: router
+  - name: edge
+    type: switch
+`;
+    expect(findDeviceFragments(duplicated).get('edge')).toEqual(
+      findDeviceFragment(duplicated, 'edge'),
+    );
+    expect(findDeviceFragments(duplicated).get('edge')?.text).toContain('router');
+  });
+
+  it('is empty for YAML that does not parse or has no devices list', () => {
+    expect(findDeviceFragments('devices: [unterminated').size).toBe(0);
+    expect(findDeviceFragments('segments:\n  - vlan: 10\n').size).toBe(0);
   });
 });
 

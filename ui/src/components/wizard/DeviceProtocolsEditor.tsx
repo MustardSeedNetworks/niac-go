@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { parseAuthoredDevice, serializeAuthoredDevice } from '../../utils/authored-device-yaml';
-import { findDeviceFragment, spliceDeviceFragment } from '../../utils/device-fragment';
+import {
+  type DeviceFragment,
+  findDeviceFragments,
+  spliceDeviceFragment,
+} from '../../utils/device-fragment';
 import type {
   AuthoredDevice,
   AuthoredValue,
@@ -41,24 +45,24 @@ export const DeviceProtocolsEditor: FC<DeviceProtocolsEditorProps> = ({
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const authored = useMemo(() => {
-    const byName = new Map<string, AuthoredDevice>();
+    const fragments = findDeviceFragments(content);
+    const byName = new Map<string, { fragment: DeviceFragment; device: AuthoredDevice }>();
     for (const name of devices) {
-      const fragment = findDeviceFragment(content, name);
+      const fragment = fragments.get(name);
       // No fragment means the config did not parse or the device is not in
       // it; either way there is nothing to author, and a device that is
       // present always yields at least an empty document.
       if (!fragment) continue;
-      byName.set(name, parseAuthoredDevice(fragment.text));
+      byName.set(name, { fragment, device: parseAuthoredDevice(fragment.text) });
     }
     return byName;
   }, [content, devices]);
 
   const updateSection = (name: string, sectionKey: string, value: AuthoredValue) => {
-    const fragment = findDeviceFragment(content, name);
-    const device = authored.get(name);
-    if (!fragment || !device) return;
-    const next: AuthoredDevice = { ...device, [sectionKey]: value };
-    onChange(spliceDeviceFragment(content, fragment, serializeAuthoredDevice(next)));
+    const entry = authored.get(name);
+    if (!entry) return;
+    const next: AuthoredDevice = { ...entry.device, [sectionKey]: value };
+    onChange(spliceDeviceFragment(content, entry.fragment, serializeAuthoredDevice(next)));
   };
 
   if (devices.length === 0) {
@@ -74,7 +78,7 @@ export const DeviceProtocolsEditor: FC<DeviceProtocolsEditorProps> = ({
   return (
     <div className="stack" data-testid="wizard-protocols-editor">
       {devices.map((name) => {
-        const device = authored.get(name);
+        const device = authored.get(name)?.device;
         if (!device) return null;
         return (
           <Card key={name} className="border-surface-border bg-bg-surface/70">

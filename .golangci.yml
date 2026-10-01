@@ -631,6 +631,12 @@ linters:
       - path: 'internal/logging/colors\.go'
         linters:
           - gochecknoglobals
+      # The pack fixture generates each scenario request once per test binary
+      # and shares the read-only result; regenerating per test ran -race past
+      # the per-package timeout (#2349).
+      - path: 'internal/scenario/pack_fixture_test\.go'
+        linters:
+          - gochecknoglobals
       # Device random source is a package-level singleton.
       - path: 'internal/device/random\.go'
         linters:

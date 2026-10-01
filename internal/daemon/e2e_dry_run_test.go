@@ -52,40 +52,54 @@ func TestScenarioPacksStartInRuntime(t *testing.T) {
 
 	for _, pack := range scenario.Packs() {
 		t.Run(pack.ID, func(t *testing.T) {
-			const interfaceName = "missing-e2e-interface"
-			d, err := NewDaemon(Config{
-				StoragePath: "disabled",
-				AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
-					Interface: interfaceName, Mode: fabric.ModeAccess, AccessVLAN: 200,
-				}},
-			})
-			if err != nil {
-				t.Fatalf("NewDaemon(): %v", err)
-			}
-			d.apiServer = api.NewServer(api.ServerConfig{})
-
-			result, err := scenario.Generate(pack.Request)
-			if err != nil {
-				t.Fatalf("Generate(): %v", err)
-			}
-			err = d.StartSimulation(api.SimulationRequest{
-				Interface:      interfaceName,
-				Attachment:     pack.Request.AttachmentName,
-				AttachmentMode: fabric.ModeAccess,
-				AccessVLAN:     200,
-				ConfigData:     string(result.YAML),
-			})
-			if err != nil {
-				t.Fatalf("StartSimulation(): %v", err)
-			}
-
-			status := d.GetStatus()
-			if !status.Running || status.DeviceCount != result.Manifest.DeviceCount {
-				t.Fatalf("status = %#v, want running with %d devices", status, result.Manifest.DeviceCount)
-			}
-			if err = d.StopSimulation(""); err != nil {
-				t.Fatalf("StopSimulation(): %v", err)
-			}
+			preflightAndStartPack(t, pack)
 		})
+	}
+}
+
+// preflightAndStartPack sends one pack through preflight and then start with
+// the same request, which is the order the wizard and the CLI both follow.
+func preflightAndStartPack(t *testing.T, pack scenario.Pack) {
+	t.Helper()
+	const interfaceName = "missing-e2e-interface"
+	d, err := NewDaemon(Config{
+		StoragePath: "disabled",
+		AttachmentPolicies: []fabric.PhysicalAttachmentPolicy{{
+			Interface: interfaceName, Mode: fabric.ModeAccess, AccessVLAN: 200,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("NewDaemon(): %v", err)
+	}
+	d.apiServer = api.NewServer(api.ServerConfig{})
+
+	result, err := scenario.Generate(pack.Request)
+	if err != nil {
+		t.Fatalf("Generate(): %v", err)
+	}
+	req := api.SimulationRequest{
+		Interface:      interfaceName,
+		Attachment:     pack.Request.AttachmentName,
+		AttachmentMode: fabric.ModeAccess,
+		AccessVLAN:     200,
+		ConfigData:     string(result.YAML),
+	}
+	report, err := d.PreflightSimulation(req)
+	if err != nil {
+		t.Fatalf("PreflightSimulation(): %v", err)
+	}
+	if !report.Safe {
+		t.Fatalf("preflight diagnostics = %#v, want safe", report.Diagnostics)
+	}
+	if err = d.StartSimulation(req); err != nil {
+		t.Fatalf("StartSimulation(): %v", err)
+	}
+
+	status := d.GetStatus()
+	if !status.Running || status.DeviceCount != result.Manifest.DeviceCount {
+		t.Fatalf("status = %#v, want running with %d devices", status, result.Manifest.DeviceCount)
+	}
+	if err = d.StopSimulation(""); err != nil {
+		t.Fatalf("StopSimulation(): %v", err)
 	}
 }
