@@ -5,6 +5,27 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.101.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.100.0...v0.101.0) (2026-10-01)
+
+
+### Features
+
+* **scenario:** resize the manufacturing pack to the presentation design ([#2426](https://github.com/MustardSeedNetworks/niac-go/issues/2426)) ([e3c3b7e](https://github.com/MustardSeedNetworks/niac-go/commit/e3c3b7ed4c4ff8211f9b1a768c736cb0b7c83b6e))
+* **scenario:** resize the retail pack to the presentation design ([#2428](https://github.com/MustardSeedNetworks/niac-go/issues/2428)) ([03a65b2](https://github.com/MustardSeedNetworks/niac-go/commit/03a65b2a0cb49af6e85f0ba2e02da2f2153f6bea))
+* **scenario:** resize the warehouse pack and raise the site endpoint cap ([#2422](https://github.com/MustardSeedNetworks/niac-go/issues/2422)) ([573732d](https://github.com/MustardSeedNetworks/niac-go/commit/573732d855d920c848ea19cfdb07c85d5b1042ce))
+
+
+### Bug Fixes
+
+* **ui:** mount the phone drawer's rail only while it is open ([#2427](https://github.com/MustardSeedNetworks/niac-go/issues/2427)) ([21782e7](https://github.com/MustardSeedNetworks/niac-go/commit/21782e77a8a729e5021d95b36bd7bed4f162d07e)), closes [#2284](https://github.com/MustardSeedNetworks/niac-go/issues/2284)
+* **ui:** translate the 50 copy sites the shared gate baselined ([#2421](https://github.com/MustardSeedNetworks/niac-go/issues/2421)) ([7c5c6e5](https://github.com/MustardSeedNetworks/niac-go/commit/7c5c6e508e614a21972ae14d6af23cd451ed2d34)), closes [#2403](https://github.com/MustardSeedNetworks/niac-go/issues/2403)
+
+
+### Miscellaneous
+
+* **deps:** update dependency vite to v8.3.1 ([#2424](https://github.com/MustardSeedNetworks/niac-go/issues/2424)) ([1ab3309](https://github.com/MustardSeedNetworks/niac-go/commit/1ab3309681fa248655e228d894cada2be90a9506))
+* **deps:** update github/codeql-action action to v4.38.2 ([#2420](https://github.com/MustardSeedNetworks/niac-go/issues/2420)) ([75a2bbf](https://github.com/MustardSeedNetworks/niac-go/commit/75a2bbf2312ad40964000e7004e3b9bceebf660a))
+
 ## [0.100.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.99.0...v0.100.0) (2026-10-01)
 
 
