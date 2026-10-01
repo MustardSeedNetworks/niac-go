@@ -1,4 +1,4 @@
-# Captured Pair Template
+# Captured Pair
 # Two switches replaying the same capture, told apart by add_mibs
 #
 # Use Case: build a fleet from one capture without re-capturing per device

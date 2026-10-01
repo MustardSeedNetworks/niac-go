@@ -20,7 +20,7 @@
  * pillText.test.ts). Washes under pill text stop at /20.
  *
  * MODULE ACCENTS (icons and chart series only): module-topology (= the brand
- * anchor), module-protocols, module-analyze, module-inject, module-templates.
+ * anchor), module-protocols, module-analyze, module-inject, module-scenarios.
  *
  * DEVICE COLORS (NIAC-specific, orthogonal to brand — see themeDeviceColors.ts):
  * Router, Switch, Firewall, Server, Workstation, AP, IoT, Unknown.

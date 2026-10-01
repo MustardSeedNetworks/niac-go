@@ -19,9 +19,9 @@ import (
 func unauthoredProtocols() map[string]string {
 	return map[string]string{
 		// P5-9 owns the protocol surface no pack authors. FTP is authored by one
-		// built-in template, so it is reachable from the shipped library but not
+		// built-in scenario, so it is reachable from the shipped library but not
 		// from a pack; the rest are reachable from nothing.
-		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in template does)",
+		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in scenario does)",
 		"SSHConfig":    "P5-9: no pack authors the SSH command service",
 		"ICMPv6Config": "P5-9: no pack authors dual-stack ICMPv6",
 		"PortChannels": "P5-9: no pack authors a LAG, and IF-MIB has no aggregate for one yet",
@@ -43,13 +43,13 @@ func unauthoredProtocols() map[string]string {
 func unreachableFaults() map[string]string {
 	return map[string]string{
 		// The three resource alarms are demonstrated by the resource-pressure
-		// built-in template, which authors all three on one device beside a healthy
+		// built-in scenario, which authors all three on one device beside a healthy
 		// control (internal/templates/builtin/resource-pressure.yaml). They are a
 		// state a device is driven into rather than a fault a steady-state pack
 		// carries, and the packs deliberately do not offer them.
-		"cpu_percent":    "demonstrated by the resource-pressure built-in template",
-		"memory_percent": "demonstrated by the resource-pressure built-in template",
-		"disk_percent":   "demonstrated by the resource-pressure built-in template",
+		"cpu_percent":    "demonstrated by the resource-pressure built-in scenario",
+		"memory_percent": "demonstrated by the resource-pressure built-in scenario",
+		"disk_percent":   "demonstrated by the resource-pressure built-in scenario",
 	}
 }
 

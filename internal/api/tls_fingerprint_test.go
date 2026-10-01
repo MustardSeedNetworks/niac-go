@@ -28,7 +28,7 @@ func makeTestCertPEM(t *testing.T) ([]byte, []byte) {
 	if err != nil {
 		t.Fatalf("generate key: %v", err)
 	}
-	template := x509.Certificate{
+	spec := x509.Certificate{
 		SerialNumber:          big.NewInt(42),
 		Subject:               pkix.Name{CommonName: "niac-test-fp"},
 		NotBefore:             time.Now().Add(-time.Hour),
@@ -37,7 +37,7 @@ func makeTestCertPEM(t *testing.T) ([]byte, []byte) {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	der, certErr := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	der, certErr := x509.CreateCertificate(rand.Reader, &spec, &spec, &key.PublicKey, key)
 	if certErr != nil {
 		t.Fatalf("create certificate: %v", certErr)
 	}

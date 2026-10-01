@@ -1,7 +1,7 @@
 /**
  * One failed fetch must read as a failure, not as "you have none" (#2177).
  *
- * The three lists this section shows — usable interfaces, templates and saved
+ * The three lists this section shows — usable interfaces, built-in scenarios and saved
  * configs — used to load through one `Promise.all` whose only failure handling
  * was `console.error`, so a daemon 500, a timeout or an expired token rendered
  * the empty-state copy of all three at once.
@@ -9,15 +9,15 @@
 
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchTemplates, fetchUsableInterfaces } from '../../api/client';
+import { fetchBuiltinScenarios, fetchUsableInterfaces } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { InterfacesResponse, LibraryNetwork, Template } from '../../api/types';
+import type { BuiltinScenario, InterfacesResponse, LibraryNetwork } from '../../api/types';
 import { useUIStore } from '../../stores/ui-store';
 import { renderWithResources } from '../../test/renderWithResources';
 import { SimulationSection } from './SimulationSection';
 
 vi.mock('../../api/client', () => ({
-  fetchTemplates: vi.fn(),
+  fetchBuiltinScenarios: vi.fn(),
   fetchUsableInterfaces: vi.fn(),
 }));
 vi.mock('../../api/library-client', () => ({
@@ -28,7 +28,7 @@ const interfaces: InterfacesResponse = {
   interfaces: [{ name: 'eth0', description: 'Ethernet', addresses: ['10.0.0.5/24'] }],
 };
 
-const templates: Template[] = [
+const builtins: BuiltinScenario[] = [
   { name: 'hospital', description: 'Hospital pack', deviceCount: 12, type: 'basic' },
 ];
 
@@ -45,13 +45,13 @@ const userConfigs: LibraryNetwork[] = [
 
 const mocks = {
   interfaces: vi.mocked(fetchUsableInterfaces),
-  templates: vi.mocked(fetchTemplates),
+  builtins: vi.mocked(fetchBuiltinScenarios),
   userConfigs: vi.mocked(fetchLibraryNetworks),
 };
 
 function resolveAll(): void {
   mocks.interfaces.mockResolvedValue(interfaces);
-  mocks.templates.mockResolvedValue(templates);
+  mocks.builtins.mockResolvedValue(builtins);
   mocks.userConfigs.mockResolvedValue(userConfigs);
 }
 
@@ -69,7 +69,7 @@ describe('SimulationSection', () => {
 
     expect(await screen.findByRole('option', { name: /eth0/ })).toBeInTheDocument();
     expect(await screen.findByText('hospital')).toBeInTheDocument();
-    expect(screen.queryByText('No templates available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No built-in scenarios available')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -94,13 +94,13 @@ describe('SimulationSection', () => {
     expect(await screen.findByText('hospital')).toBeInTheDocument();
   });
 
-  it('shows a load failure for the templates, not "no templates available"', async () => {
-    mocks.templates.mockRejectedValue(new Error('500 internal error'));
+  it('shows a load failure for the built-in scenarios, not "no built-in scenarios available"', async () => {
+    mocks.builtins.mockRejectedValue(new Error('500 internal error'));
     renderWithResources(<SimulationSection />);
 
-    const alert = await screen.findByTestId('simulation-templates-error');
+    const alert = await screen.findByTestId('simulation-builtins-error');
     expect(alert).toHaveTextContent(/500 internal error/);
-    expect(screen.queryByText('No templates available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No built-in scenarios available')).not.toBeInTheDocument();
     expect(await screen.findByRole('option', { name: /eth0/ })).toBeInTheDocument();
   });
 
@@ -117,13 +117,13 @@ describe('SimulationSection', () => {
   });
 
   it('retries only the resource that failed', async () => {
-    mocks.templates.mockRejectedValueOnce(new Error('500 internal error'));
+    mocks.builtins.mockRejectedValueOnce(new Error('500 internal error'));
     renderWithResources(<SimulationSection />);
 
-    fireEvent.click(await screen.findByTestId('simulation-templates-retry'));
+    fireEvent.click(await screen.findByTestId('simulation-builtins-retry'));
 
     await waitFor(() => expect(screen.getByText('hospital')).toBeInTheDocument());
-    expect(mocks.templates).toHaveBeenCalledTimes(2);
+    expect(mocks.builtins).toHaveBeenCalledTimes(2);
     expect(mocks.interfaces).toHaveBeenCalledTimes(1);
   });
 
@@ -131,7 +131,7 @@ describe('SimulationSection', () => {
     // The switcher declared `role="tablist"` over three plain buttons: a screen
     // reader was promised tabs that did not exist, and the keyboard had no way
     // between them (#2242).
-    const tabNames = ['Templates', 'My Configs', 'Upload'];
+    const tabNames = ['Built-in', 'My Configs', 'Upload'];
     const tab = (name: string) => screen.getByRole('tab', { name });
 
     it('exposes three tabs, one selected, controlling one panel', async () => {
@@ -145,13 +145,13 @@ describe('SimulationSection', () => {
         'false',
       ]);
 
-      const templates = tab('Templates');
+      const builtins = tab('Built-in');
       const panel = screen.getByRole('tabpanel');
       for (const sourceTab of screen.getAllByRole('tab')) {
         expect(sourceTab).toHaveAttribute('aria-controls', panel.id);
       }
-      expect(panel).toHaveAttribute('aria-labelledby', templates.id);
-      expect(templates).toHaveAttribute('aria-controls', panel.id);
+      expect(panel).toHaveAttribute('aria-labelledby', builtins.id);
+      expect(builtins).toHaveAttribute('aria-controls', panel.id);
 
       // The pairing has to follow the selection, not name one tab forever.
       const upload = tab('Upload');
@@ -164,26 +164,26 @@ describe('SimulationSection', () => {
     it('moves selection with the arrow keys and wraps, per the APG tab pattern', async () => {
       renderWithResources(<SimulationSection />);
       await screen.findByText('hospital');
-      const templates = tab('Templates');
+      const builtins = tab('Built-in');
       const configs = tab('My Configs');
       const upload = tab('Upload');
 
-      templates.focus();
-      fireEvent.keyDown(templates, { key: 'ArrowRight' });
+      builtins.focus();
+      fireEvent.keyDown(builtins, { key: 'ArrowRight' });
       expect(configs).toHaveAttribute('aria-selected', 'true');
       expect(configs).toHaveFocus();
 
       fireEvent.keyDown(configs, { key: 'ArrowLeft' });
-      expect(templates).toHaveAttribute('aria-selected', 'true');
+      expect(builtins).toHaveAttribute('aria-selected', 'true');
 
-      fireEvent.keyDown(templates, { key: 'ArrowLeft' });
+      fireEvent.keyDown(builtins, { key: 'ArrowLeft' });
       expect(upload).toHaveAttribute('aria-selected', 'true');
       expect(upload).toHaveFocus();
 
       fireEvent.keyDown(upload, { key: 'Home' });
-      expect(templates).toHaveAttribute('aria-selected', 'true');
+      expect(builtins).toHaveAttribute('aria-selected', 'true');
 
-      fireEvent.keyDown(templates, { key: 'End' });
+      fireEvent.keyDown(builtins, { key: 'End' });
       expect(upload).toHaveAttribute('aria-selected', 'true');
     });
 

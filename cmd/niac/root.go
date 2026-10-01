@@ -83,8 +83,8 @@ making simulated devices appear real on the network.
 
 Perfect for testing network management systems, monitoring tools,
 and network discovery without physical hardware.`,
-		Example: `  # Quick start with template
-  niac template use router router.yaml
+		Example: `  # Quick start with scenario
+  niac scenario use router router.yaml
   niac validate router.yaml
   sudo niac daemon --once en0 router.yaml --duration 60s
 
@@ -94,8 +94,8 @@ and network discovery without physical hardware.`,
   # Serve the web UI and API
   sudo niac daemon
 
-  # List available templates
-  niac template list
+  # List available scenarios
+  niac scenario list
 
   # Generate shell completion
   niac completion bash > /etc/bash_completion.d/niac`,

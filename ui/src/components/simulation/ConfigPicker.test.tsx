@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Template } from '../../api/template-types';
+import type { BuiltinScenario } from '../../api/builtin-scenario-types';
 import '../../i18n';
 import { ConfigPicker } from './ConfigPicker';
 
@@ -34,15 +34,15 @@ Object.defineProperty(globalThis, 'localStorage', {
   writable: true,
 });
 
-const fetchTemplates = vi.fn();
+const fetchBuiltinScenarios = vi.fn();
 const fetchLibraryNetworks = vi.fn();
-const fetchTemplateContent = vi.fn();
+const fetchBuiltinScenarioContent = vi.fn();
 const importConfig = vi.fn();
 const copyToClipboard = vi.fn();
 
 vi.mock('../../api/client', () => ({
-  fetchTemplates: () => fetchTemplates(),
-  fetchTemplateContent: (name: string) => fetchTemplateContent(name),
+  fetchBuiltinScenarios: () => fetchBuiltinScenarios(),
+  fetchBuiltinScenarioContent: (name: string) => fetchBuiltinScenarioContent(name),
   importConfig: (...args: unknown[]) => importConfig(...args),
 }));
 vi.mock('../../api/library-client', () => ({
@@ -53,7 +53,7 @@ vi.mock('../../utils/file', () => ({
   copyToClipboard: (value: string) => copyToClipboard(value),
 }));
 
-// TemplatePreviewModal renders the CodeMirror-backed YamlViewer, which
+// ScenarioPreviewModal renders the CodeMirror-backed YamlViewer, which
 // requires a real ResizeObserver constructor that jsdom/the shared test
 // setup doesn't provide. Stub it out — this test only cares about the
 // Copy YAML wiring, not the editor widget.
@@ -61,7 +61,7 @@ vi.mock('../config/YamlEditor', () => ({
   YamlViewer: ({ value }: { value: string }) => <pre>{value}</pre>,
 }));
 
-const template: Template = {
+const builtin: BuiltinScenario = {
   name: 'basic-router',
   description: 'A basic router',
   deviceCount: 1,
@@ -70,17 +70,17 @@ const template: Template = {
 
 describe('ConfigPicker', () => {
   beforeEach(() => {
-    fetchTemplates.mockReset().mockResolvedValue([template]);
+    fetchBuiltinScenarios.mockReset().mockResolvedValue([builtin]);
     fetchLibraryNetworks.mockReset().mockResolvedValue([]);
-    fetchTemplateContent.mockReset();
+    fetchBuiltinScenarioContent.mockReset();
     importConfig.mockReset();
     copyToClipboard.mockReset().mockResolvedValue(undefined);
   });
 
-  it('copies the previewed template YAML to the clipboard instead of no-oping', async () => {
+  it('copies the previewed built-in scenario YAML to the clipboard instead of no-oping', async () => {
     const user = userEvent.setup();
-    fetchTemplateContent.mockResolvedValue({
-      name: template.name,
+    fetchBuiltinScenarioContent.mockResolvedValue({
+      name: builtin.name,
       content: 'devices:\n  - name: r1\n',
       format: 'yaml',
     });
@@ -89,7 +89,7 @@ describe('ConfigPicker', () => {
       <MemoryRouter>
         <ConfigPicker
           selection={{ source: null, name: '' }}
-          onSelectTemplate={vi.fn()}
+          onSelectBuiltin={vi.fn()}
           onSelectUserConfig={vi.fn()}
           onUpload={vi.fn()}
           uploadFile={null}
@@ -105,7 +105,7 @@ describe('ConfigPicker', () => {
 
   it('searches names, display labels, vendors and tags together with the device family', async () => {
     const user = userEvent.setup();
-    const templates: Template[] = [
+    const builtins: BuiltinScenario[] = [
       {
         name: 'edge-a',
         displayName: 'Campus core',
@@ -117,13 +117,13 @@ describe('ConfigPicker', () => {
       },
       { name: 'edge-b', description: '', vendor: 'Other', type: 'router', deviceCount: 1 },
     ];
-    fetchTemplates.mockResolvedValue(templates);
+    fetchBuiltinScenarios.mockResolvedValue(builtins);
     const select = vi.fn();
     render(
       <MemoryRouter>
         <ConfigPicker
           selection={{ source: null, name: '' }}
-          onSelectTemplate={select}
+          onSelectBuiltin={select}
           onSelectUserConfig={vi.fn()}
           onUpload={vi.fn()}
           uploadFile={null}
@@ -153,6 +153,6 @@ describe('ConfigPicker', () => {
         name: 'Select',
       }),
     );
-    expect(select).toHaveBeenCalledExactlyOnceWith(templates[0]);
+    expect(select).toHaveBeenCalledExactlyOnceWith(builtins[0]);
   });
 });

@@ -41,4 +41,4 @@ flip light↔dark via the cascade. NIAC has no `<canvas>` drawing, so (unlike se
 it needs no JS token-reader; the topology graph is SVG.
 
 **Brand:** NIAC's anchor is **violet** (`brand-primary`, fleet hue set C). The five feature
-modules have their own accents (`--color-module-{topology,protocols,analyze,inject,templates}`).
+modules have their own accents (`--color-module-{topology,protocols,analyze,inject,scenarios}`).

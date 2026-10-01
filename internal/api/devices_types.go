@@ -184,8 +184,7 @@ type DeviceCreateRequest struct {
 	MapToIP          string                  `json:"mapToIp,omitempty"`
 	Interfaces       []DeviceInterfaceUpdate `json:"interfaces,omitempty"`
 	InterfaceDetails []DeviceInterfaceUpdate `json:"interfaceDetails,omitempty"`
-	Template         string                  `json:"template,omitempty"` // Use template as base
-	RawYAML          string                  `json:"rawYaml,omitempty"`  // Advanced: full YAML
+	RawYAML          string                  `json:"rawYaml,omitempty"` // Advanced: full YAML
 	SNMPAgent        *SNMPAgentRequest       `json:"snmpAgent,omitempty"`
 	SSH              *SSHConfigRequest       `json:"ssh,omitempty"`
 	Syslog           *SyslogConfigRequest    `json:"syslog,omitempty"`

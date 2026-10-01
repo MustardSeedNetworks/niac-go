@@ -16,7 +16,7 @@ import (
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/builtins"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -33,10 +33,10 @@ var (
 	ErrInterfaceNotExist        = errors.New("interface does not exist")
 	ErrConfigDataExceedsMaxSize = errors.New("config data exceeds maximum size")
 	ErrConfigPathOrDataRequired = errors.New(
-		"either config_path, config_data, or template_name must be provided",
+		"either config_path, config_data, or scenario_name must be provided",
 	)
 	ErrNoSimulationRunning     = errors.New("no simulation running")
-	ErrTemplateNotFound        = errors.New("template not found")
+	ErrScenarioNotFound        = errors.New("built-in scenario not found")
 	ErrInvalidSimulationConfig = errors.New("simulation configuration failed semantic validation")
 
 	// errInvalidInlineSessionID rejects a session id that would be
@@ -388,24 +388,24 @@ func loadSimulationConfig(
 	persistInline bool,
 ) (*config.Config, string, error) {
 	switch {
-	case req.TemplateName != "":
-		// Loading templates by name preserves the template's own
+	case req.ScenarioName != "":
+		// Loading built-in scenarios by name preserves the scenario's own
 		// directory as the include_path base — needed for vendor
-		// templates with `include_path: ".."` plus relative walk_file
+		// scenarios with `include_path: ".."` plus relative walk_file
 		// refs that resolve to sibling directories (e.g. examples/
 		// device_walks_sanitized/...). Fetching the YAML text and
 		// POSTing it as ConfigData would lose that context.
 		roots := simulationConfigRoots()
-		templatePath := templates.Find(req.TemplateName)
-		if templatePath == "" {
-			// The template directories templates.Find walks are a
+		scenarioPath := builtins.Find(req.ScenarioName)
+		if scenarioPath == "" {
+			// The scenario directories builtins.Find walks are a
 			// development-tree and system-install idea; the deb and rpm
 			// create none of them. What an installed host has is the
 			// library, which first run seeds with exactly the scenarios
-			// `niac template list` advertises -- and which is also where
+			// `niac scenario list` advertises -- and which is also where
 			// their `include_path: ../walks` resolves from, so loading one
 			// from there keeps the directory context this case exists for.
-			// Composed here rather than inside templates.Dirs(), which is a
+			// Composed here rather than inside builtins.Dirs(), which is a
 			// leaf over stdlib and may not know about the library.
 			//
 			// Only existence is asked here; the name itself is handed on, so
@@ -413,15 +413,15 @@ func loadSimulationConfig(
 			// is. Passing the resolved real path instead would fail the
 			// pre-symlink containment check wherever a root sits under a
 			// symlinked directory, which is every macOS /var.
-			candidate := req.TemplateName + ".yaml"
+			candidate := req.ScenarioName + ".yaml"
 			if _, libraryErr := config.ResolveManagedConfigPath(candidate, roots); libraryErr != nil {
-				return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, req.TemplateName)
+				return nil, "", fmt.Errorf("%w: %s", ErrScenarioNotFound, req.ScenarioName)
 			}
-			templatePath = candidate
+			scenarioPath = candidate
 		}
-		cfg, managedPath, err := config.LoadYAMLManaged(templatePath, roots)
+		cfg, managedPath, err := config.LoadYAMLManaged(scenarioPath, roots)
 		if err != nil {
-			return nil, "", fmt.Errorf("load template %q: %w", req.TemplateName, err)
+			return nil, "", fmt.Errorf("load scenario %q: %w", req.ScenarioName, err)
 		}
 		return cfg, managedPath, nil
 	case req.ConfigData != "":
@@ -486,7 +486,7 @@ func simulationConfigRoots() []string {
 			os.ExpandEnv("$HOME/.niac/configs"),
 		)
 	}
-	return append(roots, templates.Dirs()...)
+	return append(roots, builtins.Dirs()...)
 }
 
 func loadValidSimulationConfig(
@@ -696,7 +696,7 @@ func newSimulation(
 	intent.SessionID = sessionID
 	intent.ConfigPath = configPath
 	intent.ConfigData = ""
-	intent.TemplateName = ""
+	intent.ScenarioName = ""
 	return &Simulation{
 		SessionID:  sessionID,
 		Request:    intent,

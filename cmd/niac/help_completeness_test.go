@@ -5,7 +5,7 @@ package main
 // Walks the full cobra command tree — the same tree main() builds, via
 // buildDocsRoot — and asserts every command has a non-empty
 // Short, Long, and Example, and every flag has a non-empty Usage. The audit
-// flagged template / license / content subcommands as missing some of these;
+// flagged scenario / license / content subcommands as missing some of these;
 // this test catches the next regression automatically.
 
 import (

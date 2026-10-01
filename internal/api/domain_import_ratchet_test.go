@@ -55,6 +55,7 @@ func apiDomainImports() map[string][]string {
 			"internal/storage",
 		},
 		"handlers_scenario.go":            {"internal/scenario"},
+		"handlers_scenario_builtins.go":   {"internal/config"},
 		"handlers_segments.go":            {"internal/config"},
 		"handlers_session_capture.go":     {"internal/capture", "internal/capturering"},
 		"handlers_session_checkpoints.go": {"internal/devicestate", "internal/protocols"},
@@ -101,7 +102,6 @@ func apiDomainImports() map[string][]string {
 		},
 		"sse/packet_observer.go": {"internal/packetdecode", "internal/protocols"},
 		"stats_stream.go":        {"internal/protocols"},
-		"templates.go":           {"internal/config"},
 		"validation.go": {
 			"internal/capture",
 			"internal/config",

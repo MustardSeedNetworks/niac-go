@@ -9,61 +9,61 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
-func TestTemplateList(t *testing.T) {
-	// Test that we can list templates
-	templateList := templates.List()
+func TestScenarioList(t *testing.T) {
+	// Test that we can list scenarios
+	scenarioList := templates.List()
 
-	if len(templateList) == 0 {
-		t.Error("Expected at least one template, got none")
+	if len(scenarioList) == 0 {
+		t.Error("Expected at least one scenario, got none")
 	}
 
-	// Verify template structure
-	for _, tmpl := range templateList {
+	// Verify scenario structure
+	for _, tmpl := range scenarioList {
 		if tmpl.Name == "" {
-			t.Error("Template name should not be empty")
+			t.Error("Scenario name should not be empty")
 		}
 		if tmpl.Description == "" {
-			t.Error("Template description should not be empty")
+			t.Error("Scenario description should not be empty")
 		}
 	}
 }
 
-func TestTemplateGet(t *testing.T) {
-	t.Run("Get basic-network template", func(t *testing.T) {
+func TestScenarioGet(t *testing.T) {
+	t.Run("Get basic-network scenario", func(t *testing.T) {
 		tmpl, err := templates.Get("basic-network")
 		if err != nil {
-			t.Fatalf("Unexpected error getting template: %v", err)
+			t.Fatalf("Unexpected error getting scenario: %v", err)
 		}
 
-		assertTemplateValid(t, tmpl)
+		assertScenarioValid(t, tmpl)
 	})
 
-	t.Run("Get non-existent template", func(t *testing.T) {
-		_, err := templates.Get("nonexistent-template-xyz")
+	t.Run("Get non-existent scenario", func(t *testing.T) {
+		_, err := templates.Get("nonexistent-scenario-xyz")
 		if err == nil {
-			t.Error("Expected error for non-existent template, got nil")
+			t.Error("Expected error for non-existent scenario, got nil")
 		}
 	})
 }
 
-// assertTemplateValid validates that a template has required fields.
-func assertTemplateValid(t *testing.T, tmpl *templates.Template) {
+// assertScenarioValid validates that a scenario has required fields.
+func assertScenarioValid(t *testing.T, tmpl *templates.Template) {
 	t.Helper()
 
 	if tmpl == nil {
-		t.Fatal("Expected template, got nil")
+		t.Fatal("Expected scenario, got nil")
 	}
 
 	if tmpl.Name == "" {
-		t.Error("Template name should not be empty")
+		t.Error("Scenario name should not be empty")
 	}
 
 	if tmpl.Content == "" {
-		t.Error("Template content should not be empty")
+		t.Error("Scenario content should not be empty")
 	}
 }
 
-func TestTemplateUseFileCreation(t *testing.T) {
+func TestScenarioUseFileCreation(t *testing.T) {
 	t.Run("Create basic-network config", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		outputFile := filepath.Join(tmpDir, "basic.yaml")
@@ -73,24 +73,24 @@ func TestTemplateUseFileCreation(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 
-		assertTemplateWriteable(t, tmpl, outputFile)
+		assertScenarioWriteable(t, tmpl, outputFile)
 	})
 
-	t.Run("Non-existent template", func(t *testing.T) {
-		_, err := templates.Get("invalid-template")
+	t.Run("Non-existent scenario", func(t *testing.T) {
+		_, err := templates.Get("invalid-scenario")
 		if err == nil {
-			t.Error("Expected error for invalid template, got nil")
+			t.Error("Expected error for invalid scenario, got nil")
 		}
 	})
 }
 
-// assertTemplateWriteable writes a template to file and validates it.
-func assertTemplateWriteable(t *testing.T, tmpl *templates.Template, outputFile string) {
+// assertScenarioWriteable writes a scenario to file and validates it.
+func assertScenarioWriteable(t *testing.T, tmpl *templates.Template, outputFile string) {
 	t.Helper()
 
 	err := os.WriteFile(outputFile, []byte(tmpl.Content), 0o644)
 	if err != nil {
-		t.Fatalf("Failed to write template: %v", err)
+		t.Fatalf("Failed to write scenario: %v", err)
 	}
 
 	if _, statErr := os.Stat(outputFile); os.IsNotExist(statErr) {
@@ -103,11 +103,11 @@ func assertTemplateWriteable(t *testing.T, tmpl *templates.Template, outputFile 
 	}
 
 	if len(content) == 0 {
-		t.Error("Template content should not be empty")
+		t.Error("Scenario content should not be empty")
 	}
 }
 
-func TestTemplateFileOverwrite(t *testing.T) {
+func TestScenarioFileOverwrite(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "overwrite-test.yaml")
 
@@ -118,13 +118,13 @@ func TestTemplateFileOverwrite(t *testing.T) {
 		t.Fatalf("Failed to create initial file: %v", err)
 	}
 
-	// Get template
+	// Get scenario
 	tmpl, err := templates.Get("basic-network")
 	if err != nil {
-		t.Fatalf("Failed to get template: %v", err)
+		t.Fatalf("Failed to get scenario: %v", err)
 	}
 
-	// Overwrite with template
+	// Overwrite with scenario
 	err = os.WriteFile(outputFile, []byte(tmpl.Content), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to overwrite file: %v", err)
@@ -137,63 +137,63 @@ func TestTemplateFileOverwrite(t *testing.T) {
 	}
 
 	if string(content) == string(initialContent) {
-		t.Error("File should have been overwritten with template content")
+		t.Error("File should have been overwritten with scenario content")
 	}
 
 	if string(content) != tmpl.Content {
-		t.Error("File content does not match template")
+		t.Error("File content does not match scenario")
 	}
 }
 
-func TestTemplateContentValidity(t *testing.T) {
-	// Get a template and verify its content is valid YAML
+func TestScenarioContentValidity(t *testing.T) {
+	// Get a scenario and verify its content is valid YAML
 	tmpl, err := templates.Get("basic-network")
 	if err != nil {
-		t.Fatalf("Failed to get template: %v", err)
+		t.Fatalf("Failed to get scenario: %v", err)
 	}
 
 	// Basic check - should contain 'devices:'
 	if tmpl.Content == "" {
-		t.Error("Template content is empty")
+		t.Error("Scenario content is empty")
 	}
 
-	// Templates should be YAML format
+	// Scenarios should be YAML format
 	// This is a simple check - actual validation happens in config package
 	if !strings.Contains(tmpl.Content, "devices:") && !strings.Contains(tmpl.Content, "device:") {
-		t.Error("Template should contain 'devices:' key")
+		t.Error("Scenario should contain 'devices:' key")
 	}
 }
 
-func TestAllTemplatesLoadable(t *testing.T) {
-	// Test that all available templates can be loaded
-	templateList := templates.List()
+func TestAllScenariosLoadable(t *testing.T) {
+	// Test that all available scenarios can be loaded
+	scenarioList := templates.List()
 
-	for _, info := range templateList {
+	for _, info := range scenarioList {
 		t.Run("Load_"+info.Name, func(t *testing.T) {
 			tmpl, err := templates.Get(info.Name)
 			if err != nil {
-				t.Errorf("Failed to load template %s: %v", info.Name, err)
+				t.Errorf("Failed to load scenario %s: %v", info.Name, err)
 				return
 			}
 
 			if tmpl.Name != info.Name {
-				t.Errorf("Template name mismatch: got %s, want %s", tmpl.Name, info.Name)
+				t.Errorf("Scenario name mismatch: got %s, want %s", tmpl.Name, info.Name)
 			}
 
 			if tmpl.Content == "" {
-				t.Errorf("Template %s has empty content", info.Name)
+				t.Errorf("Scenario %s has empty content", info.Name)
 			}
 		})
 	}
 }
 
-func TestTemplateInvalidDirectory(t *testing.T) {
-	// Try to write template to invalid directory
+func TestScenarioInvalidDirectory(t *testing.T) {
+	// Try to write scenario to invalid directory
 	invalidPath := "/nonexistent/directory/config.yaml"
 
 	tmpl, err := templates.Get("basic-network")
 	if err != nil {
-		t.Fatalf("Failed to get template: %v", err)
+		t.Fatalf("Failed to get scenario: %v", err)
 	}
 
 	err = os.WriteFile(invalidPath, []byte(tmpl.Content), 0o644)
@@ -202,13 +202,13 @@ func TestTemplateInvalidDirectory(t *testing.T) {
 	}
 }
 
-func TestTemplateFilePermissions(t *testing.T) {
+func TestScenarioFilePermissions(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "perms-test.yaml")
 
 	tmpl, err := templates.Get("basic-network")
 	if err != nil {
-		t.Fatalf("Failed to get template: %v", err)
+		t.Fatalf("Failed to get scenario: %v", err)
 	}
 
 	// Write with 0644 permissions

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
+import type { BuiltinScenario, LibraryNetwork } from '../src/api/builtin-scenario-types';
 import type { ScenarioDraft, ScenarioPack } from '../src/api/scenario-client';
-import type { LibraryNetwork, Template } from '../src/api/template-types';
 import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
 test('Hospital pack preserves its AP uplinks through Networks and Review', async ({ page }) => {
@@ -188,18 +188,18 @@ test('the starting point stays compact and the library supports keyboard, search
   await page.keyboard.press('ArrowRight');
   await expect(library).toBeFocused();
   await expect(library).toHaveAttribute('aria-selected', 'true');
-  const templateResponse = await page.request.get('/api/v1/templates');
-  expect(templateResponse.ok()).toBe(true);
-  const templates: Template[] = await templateResponse.json();
+  const builtinsResponse = await page.request.get('/api/v1/scenario/builtins');
+  expect(builtinsResponse.ok()).toBe(true);
+  const builtins: BuiltinScenario[] = await builtinsResponse.json();
   const networksResponse = await page.request.get('/api/v1/library/networks');
   expect(networksResponse.ok()).toBe(true);
   const networks: LibraryNetwork[] = await networksResponse.json();
   // Derived, not pinned: this asserted a literal 32 and broke the moment the
-  // shipped template set grew to 33. The claim is that the picker renders every
-  // template and saved network the API returns — which the testid comparison
+  // shipped built-in scenario set grew to 33. The claim is that the picker renders every
+  // built-in scenario and saved network the API returns — which the testid comparison
   // below states exactly — so the count follows the API. The lower bound keeps
   // an empty library from making both assertions vacuous.
-  const expectedCards = templates.length + networks.length;
+  const expectedCards = builtins.length + networks.length;
   expect(expectedCards).toBeGreaterThan(0);
   const allCards = page.getByTestId(/^config-item-/);
   await expect(allCards).toHaveCount(expectedCards);
@@ -211,12 +211,12 @@ test('the starting point stays compact and the library supports keyboard, search
     ).sort((a, b) => a.localeCompare(b)),
   ).toEqual(
     [
-      ...templates.map((template) => `config-item-builtin:${template.name}`),
+      ...builtins.map((builtin) => `config-item-builtin:${builtin.name}`),
       ...networks.map((network) => `config-item-saved:${network.name}`),
     ].sort((a, b) => a.localeCompare(b)),
   );
   const cards = page.getByTestId(/^config-item-builtin:/);
-  await expect(cards).toHaveCount(templates.length);
+  await expect(cards).toHaveCount(builtins.length);
   expect(
     (
       await cards.evaluateAll((elements) =>
@@ -224,8 +224,8 @@ test('the starting point stays compact and the library supports keyboard, search
       )
     ).sort((a, b) => a.localeCompare(b)),
   ).toEqual(
-    templates
-      .map((template) => `config-item-builtin:${template.name}`)
+    builtins
+      .map((builtin) => `config-item-builtin:${builtin.name}`)
       .sort((a, b) => a.localeCompare(b)),
   );
   await page.keyboard.press('Tab');
@@ -237,17 +237,17 @@ test('the starting point stays compact and the library supports keyboard, search
   const family = page.getByTestId('config-picker-family');
   await expect(family).toBeFocused();
 
-  const selected = templates.find((template) => template.vendor);
+  const selected = builtins.find((builtin) => builtin.vendor);
   expect(selected?.vendor).toBeTruthy();
-  if (!selected?.vendor) throw new Error('No vendor template in the library');
+  if (!selected?.vendor) throw new Error('No vendor scenario in the library');
   await search.fill(selected.vendor);
   await expect(cards).not.toHaveCount(0);
-  expect(await cards.count()).toBeLessThan(templates.length);
+  expect(await cards.count()).toBeLessThan(builtins.length);
   await expect(page.getByTestId(`config-item-builtin:${selected.name}`)).toBeVisible();
   await search.fill('');
   await family.selectOption(selected.type);
   await expect(cards).toHaveCount(
-    templates.filter((template) => template.type === selected.type).length,
+    builtins.filter((builtin) => builtin.type === selected.type).length,
   );
   await search.fill(selected.name);
   const card = page.getByTestId(`config-item-builtin:${selected.name}`);

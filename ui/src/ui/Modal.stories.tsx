@@ -134,7 +134,7 @@ export const HeaderAndFooterRegions: Story = {
     footer: (
       <>
         <Button variant="outline">Close</Button>
-        <Button tone="violet">Use template</Button>
+        <Button tone="violet">Use scenario</Button>
       </>
     ),
     children: (

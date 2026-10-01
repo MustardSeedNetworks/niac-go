@@ -63,7 +63,7 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		return withExitCode(onceExitConfig, err)
 	}
 
-	// A scenario or template name resolves like a path, the convenience the
+	// A built-in scenario or library network name resolves like a path, the convenience the
 	// deleted `run` command carried.
 	source, err := resolveConfigSource(configPath)
 	if err != nil {

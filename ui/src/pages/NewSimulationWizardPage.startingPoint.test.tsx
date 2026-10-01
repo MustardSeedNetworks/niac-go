@@ -6,7 +6,7 @@ vi.mock('../contexts/ScopeContext', () => ({
 /**
  * NewSimulationWizardPage.startingPoint.test.tsx
  *
- * The template step offers several ways into the same wizard -- a scenario
+ * The scenario step offers several ways into the same wizard -- a scenario
  * pack, the generated fleet tuned by hand, a blank start -- and exactly one of
  * them can be the starting point Next will build. Kept apart from
  * NewSimulationWizardPage.test.tsx, which mocks the pack picker away to cover
@@ -56,7 +56,7 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchVersion: vi.fn(),
     fetchErrorTypes: vi.fn(),
     fetchInterfaces: vi.fn(),
-    fetchTemplates: vi.fn().mockResolvedValue([]),
+    fetchBuiltinScenarios: vi.fn().mockResolvedValue([]),
     fetchUsableInterfaces: vi.fn().mockResolvedValue({
       interfaces: [{ name: 'lo0', addresses: ['127.0.0.1'], isUp: true, isLoopback: true }],
     }),
@@ -66,7 +66,7 @@ vi.mock('../api/client', async (importOriginal) => {
 vi.mock('../api/library-client', () => ({
   fetchLibraryNetworks: vi.fn().mockResolvedValue([]),
   createScenarioDraft: vi.fn(),
-  createScenarioDraftFromTemplate: vi.fn(),
+  createScenarioDraftFromBuiltin: vi.fn(),
   replaceScenarioDraft: vi.fn(),
   deleteScenarioDraft: vi.fn(),
 }));

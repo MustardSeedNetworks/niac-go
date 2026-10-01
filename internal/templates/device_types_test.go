@@ -13,7 +13,7 @@ import (
 // An absent device type is not a cosmetic gap: buildSystemCapabilitiesTLV and
 // buildCapabilitiesTLV both switch on it and fall to a default of
 // LLDPCapStationOnly / CDPCapHost. Eight of the eleven builtin templates once
-// shipped with no type on any device, so `niac template use enterprise-campus`
+// shipped with no type on any device, so `niac scenario use enterprise-campus`
 // produced a campus whose core routers announced themselves to every discovery
 // tool as end stations (#2096).
 func TestBuiltinTemplatesTypeEveryDevice(t *testing.T) {

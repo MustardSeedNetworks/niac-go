@@ -338,14 +338,14 @@ type SimulationRequest struct {
 	AccessVLAN     uint16                `json:"accessVlan,omitempty"`
 	ConfigPath     string                `json:"configPath,omitempty"`
 	ConfigData     string                `json:"configData,omitempty"`
-	// TemplateName, when set, tells the daemon to load a built-in
-	// template directly from disk by name. This preserves the template's
-	// own directory as the include_path base, which matters for templates
+	// ScenarioName, when set, tells the daemon to load a built-in
+	// scenario directly from disk by name. This preserves the scenario's
+	// own directory as the include_path base, which matters for scenarios
 	// like vendors/paloalto-firewall.yaml that reference walk files via
 	// `include_path: ".."` plus a relative `walk_file:` path. Fetching the
-	// template content and POSTing it as ConfigData would lose that
+	// scenario content and POSTing it as ConfigData would lose that
 	// directory context and trip the walk-file path-traversal guard.
-	TemplateName string `json:"templateName,omitempty"`
+	ScenarioName string `json:"scenarioName,omitempty"`
 }
 
 // SimulationStatus represents the current simulation status.

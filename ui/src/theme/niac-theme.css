@@ -118,7 +118,7 @@
   --color-module-protocols: var(--color-module-protocols);
   --color-module-analyze: var(--color-module-analyze);
   --color-module-inject: var(--color-module-inject);
-  --color-module-templates: var(--color-module-templates);
+  --color-module-scenarios: var(--color-module-scenarios);
 
   /* ========================================
    * Device Type Colors (Topology) — NIAC-specific, theme-neutral

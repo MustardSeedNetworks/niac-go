@@ -89,7 +89,7 @@ describe('scenario draft client', () => {
     expect(deleteHeaders.get('If-Match')).toBe('"revision-2"');
   });
 
-  it('creates template drafts without flattening resources in the browser', async () => {
+  it('creates built-in scenario drafts without flattening resources in the browser', async () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -109,14 +109,14 @@ describe('scenario draft client', () => {
           }),
       });
 
-    const { createScenarioDraftFromTemplate } = await import('./library-client');
-    await createScenarioDraftFromTemplate('switch-draft', 'catalyst-9300-48p');
+    const { createScenarioDraftFromBuiltin } = await import('./library-client');
+    await createScenarioDraftFromBuiltin('switch-draft', 'catalyst-9300-48p');
 
     expect(mockFetch.mock.calls[1]?.[1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({
         name: 'switch-draft',
-        templateName: 'catalyst-9300-48p',
+        scenarioName: 'catalyst-9300-48p',
       }),
     });
   });

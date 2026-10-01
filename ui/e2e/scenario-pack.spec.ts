@@ -64,7 +64,7 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
       },
     }),
   );
-  await page.route('**/api/v1/templates', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/scenario/builtins', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/library/networks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/scenario/packs', (route) =>
     route.fulfill({

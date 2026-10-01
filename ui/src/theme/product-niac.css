@@ -44,7 +44,7 @@
   --color-module-protocols: #0b6b62;
   --color-module-analyze: #9333a8;
   --color-module-inject: #b4143c;
-  --color-module-templates: #96450a;
+  --color-module-scenarios: #96450a;
 
   /* ---- editor syntax (One Light) -------------------------------------
    * The YAML editor is the only place NIAC renders code, and CodeMirror
@@ -93,7 +93,7 @@
   --color-module-protocols: #2dd4bf;
   --color-module-analyze: #e879f9;
   --color-module-inject: #fb7185;
-  --color-module-templates: #fbbf24;
+  --color-module-scenarios: #fbbf24;
 
   /* ---- editor syntax (One Dark) --------------------------------------- */
   --color-syntax-keyword: #c678dd;

@@ -57,7 +57,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
   const [routed, setRouted] = useState(true);
   const [discovering, setDiscovering] = useState(true);
 
-  const { interface: interfaceName, configData, configPath, templateName } = request;
+  const { interface: interfaceName, configData, configPath, scenarioName } = request;
 
   useEffect(() => {
     let current = true;
@@ -76,7 +76,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
   useEffect(() => {
     let current = true;
     setDiscovering(true);
-    fetchSimulationAttachments({ interface: interfaceName, configData, configPath, templateName })
+    fetchSimulationAttachments({ interface: interfaceName, configData, configPath, scenarioName })
       .then((response) => {
         if (!current) return;
         setRouted(response.routed);
@@ -96,7 +96,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
     return () => {
       current = false;
     };
-  }, [interfaceName, configData, configPath, templateName]);
+  }, [interfaceName, configData, configPath, scenarioName]);
 
   const options = useMemo(
     () => bindingOptions(policies ?? [], interfaceName),
@@ -123,7 +123,7 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
   }, [approvedVlans]);
 
   // Each label is looked up by a literal key: the extraction gate reads t()
-  // calls statically, and a template-literal key silently drops the string
+  // calls statically, and an interpolated key silently drops the string
   // from every catalog.
   const modeLabel = (available: AttachmentMode): string => {
     switch (available) {

@@ -62,8 +62,6 @@ export type ModalType =
   | 'device-clone'
   | 'config-import'
   | 'config-export'
-  | 'template-select'
-  | 'template-upload'
   | 'simulation-start'
   | 'simulation-stop'
   | 'replay-start'
@@ -88,7 +86,7 @@ export interface Notification {
 }
 
 // Simulation settings for Settings-driven workflow
-export type ConfigSource = 'template' | 'userConfig' | 'upload';
+export type ConfigSource = 'builtin' | 'userConfig' | 'upload';
 
 export interface SimulationSettings {
   selectedInterface: string;
@@ -100,7 +98,7 @@ const DEFAULT_DEBUG_CONSOLE_HEIGHT = 300;
 
 const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
   selectedInterface: '',
-  configSource: 'template',
+  configSource: 'builtin',
   configName: '',
 };
 

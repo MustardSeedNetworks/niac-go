@@ -16,7 +16,7 @@ const meta: Meta<typeof SimulationSection> = {
 export default meta;
 type Story = StoryObj<typeof SimulationSection>;
 
-export const Templates: Story = { play: settled() };
+export const Builtins: Story = { play: settled() };
 
 export const SavedConfigurations: Story = {
   play: async ({ canvasElement }) => {

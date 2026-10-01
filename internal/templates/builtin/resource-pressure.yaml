@@ -1,4 +1,4 @@
-# Resource Pressure Template
+# Resource Pressure
 # Two application servers with independent resource telemetry.
 # Use Case: demonstrate CPU, memory and disk alerts with a healthy control.
 # Includes: two processors, 16 GiB RAM, 256 GiB disk, timed faults and reset.

@@ -81,7 +81,7 @@
     "startTitleReady": "Inicia la simulación en la interfaz seleccionada con la configuración elegida",
     "configurationLabel": "Configuración:",
     "configUploadSuffix": "(carga)",
-    "configSourceTemplate": "plantilla",
+    "configSourceBuiltin": "escenario integrado",
     "configSourceConfig": "configuración",
     "pickConfigHint": "Elija una opción abajo — Iniciar se habilita en cuanto lo haga",
     "errorNoInterface": "Seleccione una interfaz arriba",
@@ -427,13 +427,13 @@
       "preflight": "Conexión",
       "protocols": "Protocolos",
       "review": "Revisión",
-      "template": "Plantilla"
+      "scenario": "Escenario"
     },
-    "template": {
+    "start": {
       "interfaceLabel": "Interfaz de red",
       "startEmpty": "Empezar vacío",
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
-      "errorNoSource": "Elige una plantilla, configuración guardada, archivo subido, o Empezar vacío primero",
+      "errorNoSource": "Elige un escenario integrado, configuración guardada, archivo subido, o Empezar vacío primero",
       "startingLabel": "Preparando borrador…",
       "startingPoint": "Punto de partida",
       "browseLibrary": "Explorar biblioteca",
@@ -1165,24 +1165,22 @@
       "maxSizeTag": "Máximo 100 MB"
     }
   },
-  "templates": {
-    "previewModal": {
-      "editCopyFailed": "No se pudo crear una copia editable",
-      "defaultDescription": "Vista previa de la plantilla de configuración",
-      "deviceCount_one": "{{count}} dispositivo",
-      "deviceCount_other": "{{count}} dispositivos",
-      "loading": "Cargando contenido de la plantilla...",
-      "loadFailed": "Error al cargar la plantilla",
-      "copyYaml": "Copiar YAML",
-      "download": "Descargar",
-      "closeButton": "Cerrar",
-      "editCopyTitle": "Clone esta plantilla en sus configuraciones guardadas y abra el editor de dispositivos",
-      "cloning": "Clonando…",
-      "editCopy": "Personalizar primero",
-      "pickTemplate": "Usar tal cual",
-      "pickTemplateTitle": "Seleccione esta plantilla como la configuración activa para ejecutarla sin cambios",
-      "yamlEditorAria": "Vista previa YAML de la plantilla, solo lectura"
-    }
+  "scenarioPreview": {
+    "editCopyFailed": "No se pudo crear una copia editable",
+    "defaultDescription": "Vista previa del escenario integrado",
+    "deviceCount_one": "{{count}} dispositivo",
+    "deviceCount_other": "{{count}} dispositivos",
+    "loading": "Cargando escenario…",
+    "loadFailed": "Error al cargar el escenario",
+    "copyYaml": "Copiar YAML",
+    "download": "Descargar",
+    "closeButton": "Cerrar",
+    "editCopyTitle": "Copie este escenario en sus configuraciones guardadas y abra el editor de dispositivos",
+    "cloning": "Clonando…",
+    "editCopy": "Personalizar primero",
+    "useAsIs": "Usar tal cual",
+    "useAsIsTitle": "Ejecute este escenario sin cambios como configuración activa",
+    "yamlEditorAria": "Vista previa YAML del escenario, solo lectura"
   },
   "configPicker": {
     "localFileSize": "{{size}} KB archivo local",
@@ -1215,7 +1213,7 @@
     "dropLocalFileTitle": "Descartar el archivo local",
     "selectItemTitle": "Seleccionar {{name}}",
     "localTag": "Local",
-    "previewTemplateYamlTitle": "Vista previa del YAML de la plantilla",
+    "previewBuiltinYamlTitle": "Vista previa del YAML del escenario",
     "family": "Tipo de dispositivo",
     "allFamilies": "Todos los tipos",
     "families": {

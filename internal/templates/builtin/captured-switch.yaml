@@ -1,4 +1,4 @@
-# Captured Switch Template
+# Captured Switch
 # One switch replaying a real SNMP capture, with two site values overridden
 #
 # Use Case: replay a captured device instead of a synthesized one

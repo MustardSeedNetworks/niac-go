@@ -46,7 +46,7 @@ type SimulationRequest struct {
 	AccessVLAN     uint16                `json:"accessVlan,omitempty"`
 	ConfigPath     string                `json:"configPath,omitempty"`
 	ConfigData     string                `json:"configData,omitempty"`
-	TemplateName   string                `json:"templateName,omitempty"`
+	ScenarioName   string                `json:"scenarioName,omitempty"`
 }
 
 // PreflightSimulation compiles a scenario without changing daemon state.

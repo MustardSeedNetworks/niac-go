@@ -2,8 +2,8 @@ import { Copy, Download, FileCode, Pencil } from 'lucide-react';
 import { type FC, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { applyTemplate } from '../api/client';
-import type { Template, TemplateContent } from '../api/types';
+import { copyBuiltinScenario } from '../api/client';
+import type { BuiltinScenario, BuiltinScenarioContent } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -12,18 +12,18 @@ import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 import { YamlViewer } from './config/YamlEditor';
 
-interface TemplatePreviewModalProps {
-  template: Template | null;
-  content: TemplateContent | null;
+interface ScenarioPreviewModalProps {
+  builtin: BuiltinScenario | null;
+  content: BuiltinScenarioContent | null;
   loading: boolean;
   error: Error | null;
   onClose: () => void;
-  onUse: (template: Template) => void;
+  onUse: (builtin: BuiltinScenario) => void;
   onCopy: () => void;
 }
 
-export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
-  template,
+export const ScenarioPreviewModal: FC<ScenarioPreviewModalProps> = ({
+  builtin,
   content,
   loading,
   error,
@@ -37,18 +37,18 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Edit a copy: clone the template to a fresh user config and jump the
+  // Edit a copy: copy the scenario to a fresh user config and jump the
   // user into the Device Library so they can tweak it before running. The
   // first device in the cloned config is opened in the visual editor so
   // there's something concrete to land on.
   const handleEditCopy = async () => {
-    if (!template || editing) return;
+    if (!builtin || editing) return;
     setEditing(true);
     setEditError(null);
     try {
-      const newName = `${template.name}-edit`;
-      await applyTemplate({
-        templateName: template.name,
+      const newName = `${builtin.name}-edit`;
+      await copyBuiltinScenario({
+        scenarioName: builtin.name,
         newConfigName: newName,
       });
       onClose();
@@ -56,13 +56,13 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
       // the editor; the new config is now in the saved-configs list.
       navigate('/device-config');
     } catch (err) {
-      setEditError(getErrorMessage(err) || t('templates.previewModal.editCopyFailed'));
+      setEditError(getErrorMessage(err) || t('scenarioPreview.editCopyFailed'));
     } finally {
       setEditing(false);
     }
   };
 
-  if (!template) {
+  if (!builtin) {
     return null;
   }
 
@@ -75,7 +75,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${template.name}.yaml`;
+    link.download = `${builtin.name}.yaml`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -95,10 +95,10 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
           </div>
           <div>
             <h2 id={titleId} className="heading-3 text-text-primary">
-              {template.name}
+              {builtin.name}
             </h2>
             <SmallText className="text-text-muted">
-              {template.description || t('templates.previewModal.defaultDescription')}
+              {builtin.description || t('scenarioPreview.defaultDescription')}
             </SmallText>
           </div>
         </div>
@@ -113,7 +113,7 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               onClick={onCopy}
               disabled={!content}
             >
-              {t('templates.previewModal.copyYaml')}
+              {t('scenarioPreview.copyYaml')}
             </Button>
             <Button
               variant="ghost"
@@ -122,13 +122,13 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
               onClick={handleDownload}
               disabled={!content}
             >
-              {t('templates.previewModal.download')}
+              {t('scenarioPreview.download')}
             </Button>
           </div>
           <div className="flex flex-col items-end gap-tight">
             <div className="flex gap-compact">
               <Button variant="outline" onClick={onClose}>
-                {t('templates.previewModal.closeButton')}
+                {t('scenarioPreview.closeButton')}
               </Button>
               <Button
                 variant="outline"
@@ -136,18 +136,16 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
                 onClick={handleEditCopy}
                 action="edit"
                 disabled={editing || !content}
-                title={t('templates.previewModal.editCopyTitle')}
+                title={t('scenarioPreview.editCopyTitle')}
               >
-                {editing
-                  ? t('templates.previewModal.cloning')
-                  : t('templates.previewModal.editCopy')}
+                {editing ? t('scenarioPreview.cloning') : t('scenarioPreview.editCopy')}
               </Button>
               <Button
                 tone="violet"
-                onClick={() => onUse(template)}
-                title={t('templates.previewModal.pickTemplateTitle')}
+                onClick={() => onUse(builtin)}
+                title={t('scenarioPreview.useAsIsTitle')}
               >
-                {t('templates.previewModal.pickTemplate')}
+                {t('scenarioPreview.useAsIs')}
               </Button>
             </div>
             {editError && (
@@ -162,17 +160,17 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
       <div className="stack-lg">
         <div className="flex flex-wrap items-center gap-default">
           <Tag colorScheme="purple">
-            {t('templates.previewModal.deviceCount', { count: template.deviceCount })}
+            {t('scenarioPreview.deviceCount', { count: builtin.deviceCount })}
           </Tag>
           <Tag colorScheme="gray" className="capitalize">
-            {template.type}
+            {builtin.type}
           </Tag>
           {content && (
             <Tag colorScheme="blue" className="uppercase">
               {content.format}
             </Tag>
           )}
-          {template.tags?.map((tag) => (
+          {builtin.tags?.map((tag) => (
             <Tag key={tag} colorScheme="gray" className="text-xs">
               {tag}
             </Tag>
@@ -183,21 +181,21 @@ export const TemplatePreviewModal: FC<TemplatePreviewModalProps> = ({
           <div className="flex-center py-centered">
             <div className="flex items-center gap-default text-text-muted">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
-              <span>{t('templates.previewModal.loading')}</span>
+              <span>{t('scenarioPreview.loading')}</span>
             </div>
           </div>
         )}
 
         {error && (
           <div className="rounded-lg border border-status-error/30 bg-status-error/10 pad text-status-error-strong">
-            <p className="font-semibold">{t('templates.previewModal.loadFailed')}</p>
+            <p className="font-semibold">{t('scenarioPreview.loadFailed')}</p>
             <SmallText className="text-status-error-strong">{error.message}</SmallText>
           </div>
         )}
 
         {content && !loading && !error && (
           <YamlViewer
-            ariaLabel={t('templates.previewModal.yamlEditorAria')}
+            ariaLabel={t('scenarioPreview.yamlEditorAria')}
             value={content.content}
             height="auto"
             minHeight="200px"

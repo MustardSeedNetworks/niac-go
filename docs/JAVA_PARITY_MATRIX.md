@@ -29,8 +29,8 @@ leave users worse off for the same baseline workflow.
 | Show active injected errors | Java interactive menu | `niac status` | Error injection/status pages | Covered |
 | List available adapters/interfaces | Java no-arg run prints adapters | `niac list interfaces` | `/runtime` and packet inspector use `/api/v1/interfaces` | Covered |
 | Show usage/help/version | Java `--help`, `--version`, usage on missing args, demo `help` | Cobra help/man/completion/version | Page help drawer | Covered |
-| Run named demo scenario | Demo wrapper `run <scenario>` | `niac daemon --once <iface> <scenario>` resolves built-in templates or library networks | Template/config picker support | Covered |
-| List demo scenarios | Demo wrapper `list scenarios` | `niac list scenarios` | Template picker/library pages | Covered |
+| Run named demo scenario | Demo wrapper `run <scenario>` | `niac daemon --once <iface> <scenario>` resolves built-in scenarios or library networks | Scenario/config picker support | Covered |
+| List demo scenarios | Demo wrapper `list scenarios` | `niac list scenarios` | Scenario picker/library pages | Covered |
 | List device walks by vendor | Demo wrapper `list walks`, `walk <vendor>` | `niac list walks [vendor-or-prefix]` | Library walks page | Covered |
 | List packet captures | Demo wrapper `list captures` | `niac list captures` | Library PCAPs + packet inspector | Covered |
 | Convert text walk to binary MIB zip | `fluke.niac.MibZip` | `niac mibzip compress`, `expand`, and `inspect` | Not applicable | Covered |
@@ -41,7 +41,7 @@ Completed CLI parity work:
 
 - `niac list interfaces`, `niac list scenarios`, `niac list walks`, and
   `niac list captures` cover the Java/demo listing workflows.
-- `niac daemon --once <iface> <scenario>` resolves built-in templates and
+- `niac daemon --once <iface> <scenario>` resolves built-in scenarios and
   default-library network names in addition to direct config file paths.
 - `niac mibzip compress`, `niac mibzip expand`, and `niac mibzip inspect`
   cover the legacy Java `fluke.niac.MibZip` workflow and add validation

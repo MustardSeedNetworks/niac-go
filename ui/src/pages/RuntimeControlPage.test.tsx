@@ -20,7 +20,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SimulationPreflightReport, SimulationPreflightRequest } from '../api/fabric-types';
-import type { SimulationRequest, SimulationStatus, Template } from '../api/types';
+import type { BuiltinScenario, SimulationRequest, SimulationStatus } from '../api/types';
 import { AppProvider } from '../contexts/AppContext';
 import '../i18n';
 import { useUIStore } from '../stores/ui-store';
@@ -45,7 +45,7 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchErrorTypes: vi.fn(),
     fetchInterfaces: vi.fn(),
     fetchUsableInterfaces: vi.fn(),
-    fetchTemplates: vi.fn(),
+    fetchBuiltinScenarios: vi.fn(),
     // AP-0: the binding inputs read their choices from the daemon instead of
     // defaulting to a typed `tester` no generated scenario answers to.
     fetchAttachmentPolicies: () =>
@@ -211,7 +211,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     useUIStore.getState().reset();
     useUIStore.getState().setSimulationSettings({
       selectedInterface: 'eth0',
-      configSource: 'template',
+      configSource: 'builtin',
       configName: '',
     });
     const client = await import('../api/client');
@@ -229,13 +229,13 @@ describe('RuntimeControlPage — routed start preflight', () => {
     vi.mocked(client.fetchUsableInterfaces).mockResolvedValue({
       interfaces: [{ name: 'eth0', description: 'Ethernet', addresses: [] }],
     });
-    vi.mocked(client.fetchTemplates).mockResolvedValue([
+    vi.mocked(client.fetchBuiltinScenarios).mockResolvedValue([
       {
         name: 'labs/routed.yaml',
         description: 'Routed acceptance fixture',
         deviceCount: 3,
         type: 'router',
-      } satisfies Template,
+      } satisfies BuiltinScenario,
     ]);
     preflightSimulation.mockResolvedValue({
       safe: true,
@@ -264,7 +264,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     });
   });
 
-  it('preflights the selected routed template and starts with the approved binding', async () => {
+  it('preflights the selected routed built-in scenario and starts with the approved binding', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -276,7 +276,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     await waitFor(() =>
       expect(preflightSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
-        templateName: 'labs/routed.yaml',
+        scenarioName: 'labs/routed.yaml',
         attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,
@@ -289,7 +289,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
     await waitFor(() =>
       expect(startSimulation).toHaveBeenCalledWith({
         interface: 'eth0',
-        templateName: 'labs/routed.yaml',
+        scenarioName: 'labs/routed.yaml',
         attachment: 'cyberscope',
         attachmentMode: 'access',
         accessVlan: 200,

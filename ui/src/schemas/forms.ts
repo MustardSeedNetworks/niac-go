@@ -42,25 +42,6 @@ export const CloneDeviceSchema = v.object({
 export type CloneDeviceFormFields = v.InferOutput<typeof CloneDeviceSchema>;
 
 /**
- * Upload-template modal: name + description + YAML content + category.
- * The Go side does YAML parsing; this layer just blocks empty
- * submissions and overly long names.
- */
-export const UploadTemplateSchema = v.object({
-  name: v.pipe(
-    v.string(),
-    v.trim(),
-    v.minLength(1, 'Template name is required'),
-    v.maxLength(64, 'Name is too long (max 64 chars)'),
-  ),
-  description: v.pipe(v.string(), v.maxLength(256, 'Description is too long (max 256 chars)')),
-  content: v.pipe(v.string(), v.minLength(1, 'Template content is required')),
-  type: v.picklist(['basic', 'router', 'switch', 'access-point', 'server', 'complete', 'custom']),
-});
-
-export type UploadTemplateFormFields = v.InferOutput<typeof UploadTemplateSchema>;
-
-/**
  * Error injection form: device + interface + error type + percentage value.
  * Used by ErrorInjectionPanel. The Go side validates the (device,
  * interface, errorType) tuple against the simulation registry.

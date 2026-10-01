@@ -80,7 +80,7 @@ export const glossaryCategories = {
   faultInjection: 'niac',
   walkFile: 'niac',
   captureBuffer: 'niac',
-  template: 'niac',
+  builtinScenario: 'niac',
   persona: 'niac',
   apiToken: 'security',
   rawSocketPrivilege: 'security',

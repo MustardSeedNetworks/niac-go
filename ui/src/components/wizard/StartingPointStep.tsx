@@ -3,7 +3,7 @@ import { type FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
-import type { LibraryNetwork, NetworkInterface, Template } from '../../api/types';
+import type { BuiltinScenario, LibraryNetwork, NetworkInterface } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -11,9 +11,9 @@ import { ConfigPicker } from '../simulation/ConfigPicker';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
 import type { WizardState } from './wizard-types';
 
-interface TemplateStepProps {
+interface StartingPointStepProps {
   state: WizardState;
-  onSelectTemplate: (template: Template) => void;
+  onSelectBuiltin: (builtin: BuiltinScenario) => void;
   onSelectUserConfig: (config: LibraryNetwork) => void;
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
@@ -24,14 +24,14 @@ interface TemplateStepProps {
 }
 
 /**
- * Step 1 — pick a starting config (built-in template, saved config, local
+ * Step 1 — pick a starting config (built-in scenario, saved config, local
  * upload, or blank) and the network interface the simulation will use after
  * authoring and preflight. The selected content is copied into a revisioned
  * draft; this step never changes the daemon's active configuration.
  */
-export const TemplateStep: FC<TemplateStepProps> = ({
+export const StartingPointStep: FC<StartingPointStepProps> = ({
   state,
-  onSelectTemplate,
+  onSelectBuiltin,
   onSelectUserConfig,
   onUpload,
   onSelectEmpty,
@@ -77,12 +77,12 @@ export const TemplateStep: FC<TemplateStepProps> = ({
     source:
       state.uploadFile || state.source === 'upload'
         ? ('upload' as const)
-        : state.source === 'template' || state.source === 'userConfig'
+        : state.source === 'builtin' || state.source === 'userConfig'
           ? state.source
           : null,
     name: state.uploadFile
       ? state.uploadFile.name
-      : (state.template?.name ?? state.userConfig?.name ?? ''),
+      : (state.builtin?.name ?? state.userConfig?.name ?? ''),
   };
 
   return (
@@ -93,7 +93,7 @@ export const TemplateStep: FC<TemplateStepProps> = ({
             <Network className={`${iconSizes.lg} text-brand-accent`} />
             <div className="min-w-[14rem] flex-1">
               <label htmlFor="wizard-interface" className="block text-xs text-text-muted">
-                {t('newSimWizard.template.interfaceLabel')}
+                {t('newSimWizard.start.interfaceLabel')}
               </label>
               <select
                 id="wizard-interface"
@@ -130,16 +130,16 @@ export const TemplateStep: FC<TemplateStepProps> = ({
                   : 'border-surface-border bg-bg-surface/60 text-text-primary hover:bg-surface-hover'
               }`}
             >
-              {t('newSimWizard.template.startEmpty')}
+              {t('newSimWizard.start.startEmpty')}
             </button>
           </div>
-          <SmallText className="text-text-muted">{t('newSimWizard.template.help')}</SmallText>
+          <SmallText className="text-text-muted">{t('newSimWizard.start.help')}</SmallText>
         </CardContent>
       </Card>
 
       <div
         role="tablist"
-        aria-label={t('newSimWizard.template.startingPoint')}
+        aria-label={t('newSimWizard.start.startingPoint')}
         className="flex gap-compact"
       >
         {(['start', 'library'] as const).map((value) => (
@@ -171,8 +171,8 @@ export const TemplateStep: FC<TemplateStepProps> = ({
             className={`min-h-11 rounded border px-4 py-row text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${tab === value ? 'border-brand-accent text-brand-primary-strong bg-brand-primary/10' : 'border-surface-border text-text-primary'}`}
           >
             {value === 'start'
-              ? t('newSimWizard.template.startingPoint')
-              : t('newSimWizard.template.browseLibrary')}
+              ? t('newSimWizard.start.startingPoint')
+              : t('newSimWizard.start.browseLibrary')}
           </button>
         ))}
       </div>
@@ -194,7 +194,7 @@ export const TemplateStep: FC<TemplateStepProps> = ({
                 data-testid="wizard-selected-library"
                 className="rounded border border-brand-accent bg-brand-primary/10 p-4 text-left text-text-primary focus-visible:outline-2 focus-visible:outline-brand-primary"
               >
-                {t('newSimWizard.template.librarySelection', { name: selection.name })}
+                {t('newSimWizard.start.librarySelection', { name: selection.name })}
               </button>
             )}
             <FleetGeneratorCard
@@ -209,8 +209,8 @@ export const TemplateStep: FC<TemplateStepProps> = ({
         ) : (
           <ConfigPicker
             selection={selection}
-            onSelectTemplate={(template) => {
-              onSelectTemplate(template);
+            onSelectBuiltin={(builtin) => {
+              onSelectBuiltin(builtin);
               returnToStart();
             }}
             onSelectUserConfig={(config) => {

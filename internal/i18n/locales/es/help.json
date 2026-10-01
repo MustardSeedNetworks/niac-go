@@ -384,9 +384,9 @@
       "term": "Búfer de captura",
       "definition": "PCAP circular en memoria del servicio. Use `niac dump` para guardarlo en disco."
     },
-    "template": {
-      "term": "Plantilla",
-      "definition": "Configuración YAML inicial incluida para un tipo de dispositivo habitual. Se enumeran con `niac template list`."
+    "builtinScenario": {
+      "term": "Escenario integrado",
+      "definition": "Un escenario pequeño escrito a mano que se incluye con NIAC (de 2 a 9 dispositivos). Se enumeran con `niac scenario list`."
     },
     "persona": {
       "term": "Perfil de dispositivo",
@@ -468,14 +468,14 @@
         "text": "Consejos"
       },
       "block2": {
-        "item0": "**Descargar YAML** exporta la configuración en ejecución. Sirve para guardar el resultado de las importaciones y las plantillas e incorporarlo al control de versiones.",
+        "item0": "**Descargar YAML** exporta la configuración en ejecución. Sirve para guardar el resultado de las importaciones y los escenarios integrados e incorporarlo al control de versiones.",
         "item1": "`capture_playbacks:` en el YAML inicia automáticamente una reproducción PCAP junto con la simulación. **Tráfico** permite cambiar el archivo durante la ejecución.",
         "item2": "Use `lo0` (macOS) o `lo` (Linux) para realizar pruebas locales seguras."
       }
     },
     "new_simulation": {
       "block0": {
-        "text": "Cree un borrador editable a partir de un paquete de escenario, un conjunto generado de dispositivos, una plantilla, un YAML cargado o un lienzo en blanco. Elija un punto de partida y después revise los dispositivos, las redes, los enlaces y los protocolos."
+        "text": "Cree un borrador editable a partir de un paquete de escenario, un conjunto generado de dispositivos, un escenario integrado, un YAML cargado o un lienzo en blanco. Elija un punto de partida y después revise los dispositivos, las redes, los enlaces y los protocolos."
       },
       "block1": {
         "text": "Revisar antes de iniciar"

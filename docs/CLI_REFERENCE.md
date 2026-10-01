@@ -38,7 +38,7 @@ Complete command-line reference for NIAC-Go.
 - [`niac content list`](#niac-content-list) — list what's installed in the library
 - [`niac daemon`](#niac-daemon) — run NIAC in daemon mode with web UI control
 - [`niac dump`](#niac-dump) — dump captured packets from a running NIAC simulation
-- [`niac init`](#niac-init) — interactive template wizard for quick configuration setup
+- [`niac init`](#niac-init) — interactive scenario wizard for quick configuration setup
 - [`niac install-ca`](#niac-install-ca) — install NIAC's self-signed root certificate into the OS trust store
 - [`niac list`](#niac-list) — list interfaces and demo content
 - [`niac list captures`](#niac-list-captures) — list packet captures
@@ -57,6 +57,11 @@ Complete command-line reference for NIAC-Go.
 - [`niac neighbors watch`](#niac-neighbors-watch) — watch neighbor table for live updates
 - [`niac restore`](#niac-restore) — restore a content library from a backup
 - [`niac sanitize`](#niac-sanitize) — sanitize SNMP walk files with NIAC branding
+- [`niac scenario`](#niac-scenario) — manage built-in scenarios
+- [`niac scenario apply`](#niac-scenario-apply) — validate and display scenario information
+- [`niac scenario list`](#niac-scenario-list) — list available scenarios
+- [`niac scenario show`](#niac-scenario-show) — show scenario contents
+- [`niac scenario use`](#niac-scenario-use) — copy scenario to a new file
 - [`niac simulation`](#niac-simulation) — control scenarios through the running NIAC daemon
 - [`niac simulation preflight`](#niac-simulation-preflight) — validate a scenario through the daemon
 - [`niac simulation select`](#niac-simulation-select) — select the scenario used by global status views
@@ -64,11 +69,6 @@ Complete command-line reference for NIAC-Go.
 - [`niac simulation stop`](#niac-simulation-stop) — stop one running scenario
 - [`niac status`](#niac-status) — query the status of a running NIAC simulation
 - [`niac support-bundle`](#niac-support-bundle) — collect redacted diagnostics for support
-- [`niac template`](#niac-template) — manage configuration templates
-- [`niac template apply`](#niac-template-apply) — validate and display template information
-- [`niac template list`](#niac-template-list) — list available templates
-- [`niac template show`](#niac-template-show) — show template contents
-- [`niac template use`](#niac-template-use) — copy template to a new file
 - [`niac topology`](#niac-topology) — network topology management commands
 - [`niac topology export`](#niac-topology-export) — export current network topology
 - [`niac validate`](#niac-validate) — validate a NIAC configuration file
@@ -365,7 +365,7 @@ niac config generate [output-file]
 Interactive configuration generator for NIAC.
 
 Prompts you for all configuration details and generates a complete YAML
-configuration file. More detailed than 'niac init' template wizard.
+configuration file. More detailed than 'niac init' scenario wizard.
 
 The generator will ask you for:
   - Network name and subnet
@@ -728,18 +728,18 @@ niac dump --session hospital --pcap arp.pcapng --filter arp --count 200
 
 ### `niac init`
 
-Interactive template wizard for quick configuration setup.
+Interactive scenario wizard for quick configuration setup.
 
 ```text
 niac init [output-file]
 ```
 
 ```text
-Interactive wizard that helps you choose the right template and create
+Interactive wizard that helps you choose the right scenario and create
 a configuration file for your network simulation needs.
 
 The wizard will ask about your network type, size, and requirements,
-then suggest the most appropriate template.
+then suggest the most appropriate scenario.
 ```
 
 Examples:
@@ -824,7 +824,7 @@ List the same operator-facing resources the legacy Java demo
 wrapper exposed: network interfaces, runnable scenarios, SNMP walks, and
 packet captures.
 
-Scenario output includes built-in templates and installed library networks.
+Scenario output includes built-in scenarios and installed library networks.
 Walk and capture output reads the on-disk content library.
 ```
 
@@ -911,7 +911,7 @@ niac list scenarios
 ```
 
 ```text
-List runnable scenario sources. Built-in templates are always
+List runnable scenario sources. Built-in scenarios are always
 available. Installed library networks are shown when the content library can
 be opened.
 
@@ -1427,6 +1427,139 @@ niac sanitize --mapping-file ip-map.json device.walk output.walk
 niac sanitize --check internal/library/starter/walks/*.walk
 ```
 
+### `niac scenario`
+
+Manage built-in scenarios.
+
+```text
+niac scenario
+```
+
+```text
+List, show, and copy the built-in scenarios that ship with NIAC.
+```
+
+Examples:
+
+```bash
+# List all available scenarios
+niac scenario list
+
+# Show scenario contents
+niac scenario show basic-network
+
+# Create config from scenario
+niac scenario use small-office office.yaml
+
+# Apply scenario directly (validate and display info)
+niac scenario apply data-center
+```
+
+### `niac scenario apply`
+
+Validate and display scenario information.
+
+```text
+niac scenario apply <scenario-name>
+```
+
+```text
+Validate a scenario and display its configuration details.
+This command loads the scenario, validates it, and shows what devices
+and protocols it contains without creating a file.
+```
+
+Examples:
+
+```bash
+# Validate basic network scenario
+niac scenario apply basic-network
+
+# Check data center scenario
+niac scenario apply data-center
+
+# Verify IoT network configuration
+niac scenario apply iot-network
+```
+
+### `niac scenario list`
+
+List available scenarios.
+
+```text
+niac scenario list
+```
+
+```text
+Print every bundled scenario name with a one-line description.
+They cover common small networks (basic-network, small-office, data-center,
+iot-network, etc.) and are the fastest path to a runnable YAML config.
+```
+
+Examples:
+
+```bash
+# List all scenarios with descriptions
+niac scenario list
+```
+
+### `niac scenario show`
+
+Show scenario contents.
+
+```text
+niac scenario show <scenario-name>
+```
+
+```text
+Print the YAML body of a named scenario to stdout. Useful for
+inspecting what a scenario will produce or piping it into another tool
+without writing to disk.
+```
+
+Examples:
+
+```bash
+# Show basic network scenario
+niac scenario show basic-network
+
+# Show small office scenario
+niac scenario show small-office
+
+# Pipe to file
+niac scenario show data-center > my-config.yaml
+```
+
+### `niac scenario use`
+
+Copy scenario to a new file.
+
+```text
+niac scenario use <scenario-name> <output-file>
+```
+
+```text
+Copy a named scenario's body into a new YAML file at the given
+output path. The output file becomes the starting point you edit and run
+with 'niac daemon --once'; the scenario itself is unchanged.
+```
+
+Examples:
+
+```bash
+# Create small office config
+niac scenario use small-office office.yaml
+
+# Create IoT network config
+niac scenario use iot-network sensors.yaml
+
+# Create data center config
+niac scenario use data-center dc.yaml
+
+# Quick workflow
+niac scenario use basic-network config.yaml && niac validate config.yaml
+```
+
 ### `niac simulation`
 
 Control scenarios through the running NIAC daemon.
@@ -1474,8 +1607,8 @@ Flags:
       --attachment-mode string   Physical binding mode: direct, access, or trunk (default: the interface's only approved policy)
       --config string            Managed scenario configuration path
   -i, --interface string         Physical network interface
+      --scenario string          Built-in scenario name
       --session string           Scenario session ID
-      --template string          Built-in scenario template name
 ```
 
 Examples:
@@ -1522,8 +1655,8 @@ Flags:
       --attachment-mode string   Physical binding mode: direct, access, or trunk (default: the interface's only approved policy)
       --config string            Managed scenario configuration path
   -i, --interface string         Physical network interface
+      --scenario string          Built-in scenario name
       --session string           Scenario session ID
-      --template string          Built-in scenario template name
 ```
 
 Examples:
@@ -1649,139 +1782,6 @@ niac support-bundle niac-support.tar.gz --log /tmp/niac.log
 
 # Bundle one scenario instead of the whole library
 niac support-bundle niac-support.tar.gz --config office.yaml
-```
-
-### `niac template`
-
-Manage configuration templates.
-
-```text
-niac template
-```
-
-```text
-List, show, and use pre-built configuration templates for common scenarios.
-```
-
-Examples:
-
-```bash
-# List all available templates
-niac template list
-
-# Show template contents
-niac template show basic-network
-
-# Create config from template
-niac template use small-office office.yaml
-
-# Apply template directly (validate and display info)
-niac template apply data-center
-```
-
-### `niac template apply`
-
-Validate and display template information.
-
-```text
-niac template apply <template-name>
-```
-
-```text
-Validate a template and display its configuration details.
-This command loads the template, validates it, and shows what devices
-and protocols it contains without creating a file.
-```
-
-Examples:
-
-```bash
-# Validate basic network template
-niac template apply basic-network
-
-# Check data center template
-niac template apply data-center
-
-# Verify IoT network configuration
-niac template apply iot-network
-```
-
-### `niac template list`
-
-List available templates.
-
-```text
-niac template list
-```
-
-```text
-Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
-```
-
-Examples:
-
-```bash
-# List all templates with descriptions
-niac template list
-```
-
-### `niac template show`
-
-Show template contents.
-
-```text
-niac template show <template-name>
-```
-
-```text
-Print the YAML body of a named template to stdout. Useful for
-inspecting what a template will produce or piping it into another tool
-without writing to disk.
-```
-
-Examples:
-
-```bash
-# Show basic network template
-niac template show basic-network
-
-# Show small office template
-niac template show small-office
-
-# Pipe to file
-niac template show data-center > my-config.yaml
-```
-
-### `niac template use`
-
-Copy template to a new file.
-
-```text
-niac template use <template-name> <output-file>
-```
-
-```text
-Copy a named template's body into a new YAML file at the given
-output path. The output file becomes the starting point you edit and run
-with 'niac daemon --once'; the template itself is unchanged.
-```
-
-Examples:
-
-```bash
-# Create small office config
-niac template use small-office office.yaml
-
-# Create IoT network config
-niac template use iot-network sensors.yaml
-
-# Create data center config
-niac template use data-center dc.yaml
-
-# Quick workflow
-niac template use basic-network config.yaml && niac validate config.yaml
 ```
 
 ### `niac topology`
@@ -1982,7 +1982,7 @@ that `daemon` enforces.
 niac daemon --once <interface> <config-file-or-scenario> [flags]
 ```
 
-A config argument that is not a file resolves against the built-in templates
+A config argument that is not a file resolves against the built-in scenarios
 and then the installed content library, so a scenario name works in place of a
 path.
 
@@ -2020,11 +2020,11 @@ niac validate config.yaml
 
 ### Complete Workflows
 
-#### 1. Quick Start with Template
+#### 1. Quick Start with a Built-in Scenario
 
 ```bash
-# Create a router config from template
-niac template use router my-router.yaml
+# Create a router config from a built-in scenario
+niac scenario use router my-router.yaml
 
 # Validate the configuration
 niac validate my-router.yaml
@@ -2056,8 +2056,8 @@ echo "✅ All configurations valid"
 #### 3. Development Workflow
 
 ```bash
-# 1. Create config from template
-niac template use complete lab-network.yaml
+# 1. Create config from a built-in scenario
+niac scenario use complete lab-network.yaml
 
 # 2. Edit configuration
 niac config edit lab-network.yaml

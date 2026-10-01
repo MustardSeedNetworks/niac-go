@@ -36,7 +36,7 @@ const (
 	// ScopeAdmin grants ScopeReadWrite plus the right to perform
 	// destructive whole-config operations like /api/v1/config/import
 	// which replaces the entire device topology in one shot (#743).
-	// Existing /api/v1/devices/{host} edits, configs/templates CRUD,
+	// Existing /api/v1/devices/{host} edits, config and scenario CRUD,
 	// etc. stay at ScopeReadWrite because they're routine operator
 	// actions, not topology-replacement events.
 	ScopeAdmin

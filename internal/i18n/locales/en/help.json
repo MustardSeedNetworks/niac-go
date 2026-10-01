@@ -59,6 +59,10 @@
       "definition": "The set of devices that receive each other’s broadcast frames. A VLAN defines a broadcast domain.",
       "term": "Broadcast domain"
     },
+    "builtinScenario": {
+      "definition": "A small hand-authored scenario that ships with NIAC (2 to 9 devices). List them with `niac scenario list`.",
+      "term": "Built-in scenario"
+    },
     "capabilityTLV": {
       "definition": "In LLDP/CDP, a TLV announcing what the device is (router, bridge, AP, station-only).",
       "term": "Capability TLV"
@@ -335,10 +339,6 @@
       "definition": "Transmission Control Protocol — reliable, ordered transport. Underlies HTTP, FTP, etc.",
       "term": "TCP"
     },
-    "template": {
-      "definition": "A built-in starter YAML config for a common device type. List with `niac template list`.",
-      "term": "Template"
-    },
     "tlv": {
       "definition": "Type-Length-Value. The encoding LLDP / CDP / DHCP options use — a tag, a length, then the data.",
       "term": "TLV"
@@ -532,7 +532,7 @@
     },
     "new_simulation": {
       "block0": {
-        "text": "Build an editable draft from a scenario pack, generated fleet, template, uploaded YAML, or blank canvas. Choose one starting point, then review devices, networks, links, and protocols."
+        "text": "Build an editable draft from a scenario pack, generated fleet, built-in scenario, uploaded YAML, or blank canvas. Choose one starting point, then review devices, networks, links, and protocols."
       },
       "block1": {
         "text": "Review before starting"
@@ -563,7 +563,7 @@
         "text": "Tips"
       },
       "block2": {
-        "item0": "**Download YAML** exports the running config — equivalent to the legacy CLI's runtime config dump. Useful for capturing the merged result of imports / template usage and committing it to source control.",
+        "item0": "**Download YAML** exports the running config — equivalent to the legacy CLI's runtime config dump. Useful for capturing the merged result of imports / built-in scenario copies and committing it to source control.",
         "item1": "`capture_playbacks:` in the YAML auto-starts a PCAP replay alongside the sim. **Traffic** lets you switch the playback file at runtime.",
         "item2": "Use `lo0` (macOS) / `lo` (Linux) for safe local testing."
       }

@@ -7,7 +7,7 @@ import (
 )
 
 type simulationCLIOptions struct {
-	api, caCert, iface, config, template, session, attachment, mode string
+	api, caCert, iface, config, scenario, session, attachment, mode string
 	accessVLAN                                                      uint16
 	insecure                                                        bool
 }
@@ -71,7 +71,7 @@ func newSimulationStartCommand(options *simulationCLIOptions) *cobra.Command {
 func addSimulationRequestFlags(command *cobra.Command, options *simulationCLIOptions) {
 	command.Flags().StringVarP(&options.iface, "interface", "i", "", "Physical network interface")
 	command.Flags().StringVar(&options.config, "config", "", "Managed scenario configuration path")
-	command.Flags().StringVar(&options.template, "template", "", "Built-in scenario template name")
+	command.Flags().StringVar(&options.scenario, "scenario", "", "Built-in scenario name")
 	command.Flags().StringVar(&options.session, "session", "", "Scenario session ID")
 	command.Flags().StringVar(&options.attachment, "attachment", "", "Attachment name from the scenario")
 	command.Flags().StringVar(&options.mode, "attachment-mode", "",

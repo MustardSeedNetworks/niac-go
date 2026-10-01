@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
 import { SelectedNetworkPreview } from './SelectedNetworkPreview';
 
-const fetchTemplateContent = vi.fn();
+const fetchBuiltinScenarioContent = vi.fn();
 const fetchLibraryNetworkContent = vi.fn();
 
 vi.mock('../../api/client', () => ({
-  fetchTemplateContent: (name: string) => fetchTemplateContent(name),
+  fetchBuiltinScenarioContent: (name: string) => fetchBuiltinScenarioContent(name),
 }));
 vi.mock('../../api/library-client', () => ({
   fetchLibraryNetworkContent: (name: string) => fetchLibraryNetworkContent(name),
@@ -15,14 +15,14 @@ vi.mock('../../api/library-client', () => ({
 
 describe('SelectedNetworkPreview', () => {
   beforeEach(() => {
-    fetchTemplateContent.mockReset();
+    fetchBuiltinScenarioContent.mockReset();
     fetchLibraryNetworkContent.mockReset();
   });
 
   it('shows the empty-devices message for a valid config with no devices', async () => {
-    fetchTemplateContent.mockResolvedValue({ content: 'devices: []\n' });
+    fetchBuiltinScenarioContent.mockResolvedValue({ content: 'devices: []\n' });
 
-    render(<SelectedNetworkPreview source="template" name="empty.yaml" />);
+    render(<SelectedNetworkPreview source="builtin" name="empty.yaml" />);
 
     expect(
       await screen.findByText('Picked config has no devices — nothing will run.'),
@@ -30,9 +30,11 @@ describe('SelectedNetworkPreview', () => {
   });
 
   it('surfaces a distinct line-numbered parse-error message for malformed YAML instead of the empty-devices message', async () => {
-    fetchTemplateContent.mockResolvedValue({ content: 'devices: [\n  - broken: [unterminated' });
+    fetchBuiltinScenarioContent.mockResolvedValue({
+      content: 'devices: [\n  - broken: [unterminated',
+    });
 
-    render(<SelectedNetworkPreview source="template" name="broken.yaml" />);
+    render(<SelectedNetworkPreview source="builtin" name="broken.yaml" />);
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     // yaml's YAMLParseError reports the unterminated flow sequence on line 2
@@ -45,11 +47,11 @@ describe('SelectedNetworkPreview', () => {
   });
 
   it('lists devices from a valid config', async () => {
-    fetchTemplateContent.mockResolvedValue({
+    fetchBuiltinScenarioContent.mockResolvedValue({
       content: 'devices:\n  - name: router1\n    type: router\n    ip: 10.0.0.1\n',
     });
 
-    render(<SelectedNetworkPreview source="template" name="valid.yaml" />);
+    render(<SelectedNetworkPreview source="builtin" name="valid.yaml" />);
 
     expect(await screen.findByText('router1')).toBeInTheDocument();
   });

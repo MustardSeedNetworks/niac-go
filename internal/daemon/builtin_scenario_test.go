@@ -8,14 +8,14 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 )
 
-// TestLoadSimulationConfigResolvesATemplateFromTheLibrary is the installed-host
-// case. `niac template list` advertises ten built-in scenarios, and every one of
-// them answered "template not found" through the daemon: templates.Find walks
-// on-disk template directories (cmd/niac/templates, examples,
+// TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary is the installed-host
+// case. `niac scenario list` advertises ten built-in scenarios, and every one of
+// them answered "template not found" through the daemon: the loader walked
+// on-disk scenario directories (cmd/niac/templates, examples,
 // /usr/share/niac/templates) and the deb and rpm ship none of them —
 // `dpkg -L niac | grep templ` is empty. What does ship is the library, which
 // first run seeds with exactly those scenarios.
-func TestLoadSimulationConfigResolvesATemplateFromTheLibrary(t *testing.T) {
+func TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary(t *testing.T) {
 	root := t.TempDir()
 	networks := filepath.Join(root, "networks")
 	if err := os.Mkdir(networks, 0o750); err != nil {
@@ -32,7 +32,7 @@ func TestLoadSimulationConfigResolvesATemplateFromTheLibrary(t *testing.T) {
 	}
 
 	_, resolved, loadErr := loadSimulationConfig(
-		api.SimulationRequest{TemplateName: "home-network"}, false)
+		api.SimulationRequest{ScenarioName: "home-network"}, false)
 	if loadErr != nil {
 		t.Fatalf("loadSimulationConfig() error = %v", loadErr)
 	}
@@ -41,10 +41,10 @@ func TestLoadSimulationConfigResolvesATemplateFromTheLibrary(t *testing.T) {
 	}
 }
 
-// TestLoadSimulationConfigRejectsAnUnknownTemplate keeps the refusal: a name in
-// neither a template directory nor the library is still not found, rather than
+// TestLoadSimulationConfigRejectsAnUnknownScenario keeps the refusal: a name in
+// neither a scenario directory nor the library is still not found, rather than
 // resolving to whatever the working directory happens to hold.
-func TestLoadSimulationConfigRejectsAnUnknownTemplate(t *testing.T) {
+func TestLoadSimulationConfigRejectsAnUnknownScenario(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "networks"), 0o750); err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestLoadSimulationConfigRejectsAnUnknownTemplate(t *testing.T) {
 	t.Chdir(cwd)
 
 	if _, _, err := loadSimulationConfig(
-		api.SimulationRequest{TemplateName: "sneaky"}, false); err == nil {
-		t.Fatal("loadSimulationConfig() resolved a template outside every root")
+		api.SimulationRequest{ScenarioName: "sneaky"}, false); err == nil {
+		t.Fatal("loadSimulationConfig() resolved a scenario outside every root")
 	}
 }

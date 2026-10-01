@@ -136,7 +136,7 @@
     "noDescription": "No description",
     "noMatches": "Nothing matches. Try a different search or upload a local YAML with the button above.",
     "pickFromDiskTitle": "Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted.",
-    "previewTemplateYamlTitle": "Preview the template YAML",
+    "previewBuiltinYamlTitle": "Preview the scenario YAML",
     "previewYamlTitle": "Preview YAML",
     "removeFromFavorites": "Remove from favorites",
     "replaceLocalFile": "Replace local file",
@@ -659,6 +659,16 @@
       "subtitle": "Per-device protocol summary for the config you just built",
       "title": "Protocols"
     },
+    "start": {
+      "browseLibrary": "Browse library",
+      "errorNoSource": "Pick a built-in scenario, saved config, upload, or Start empty first",
+      "help": "Pick a starting config below, or start empty and add devices in the next step.",
+      "interfaceLabel": "Network interface",
+      "librarySelection": "Selected: {{name}} — change selection",
+      "startEmpty": "Start empty",
+      "startingLabel": "Preparing draft…",
+      "startingPoint": "Starting point"
+    },
     "status": {
       "failed": "Simulation status request failed.",
       "loading": "Checking simulation availability…",
@@ -672,17 +682,7 @@
       "preflight": "Connection",
       "protocols": "Protocols",
       "review": "Review",
-      "template": "Template"
-    },
-    "template": {
-      "browseLibrary": "Browse library",
-      "errorNoSource": "Pick a template, saved config, upload, or Start empty first",
-      "help": "Pick a starting config below, or start empty and add devices in the next step.",
-      "interfaceLabel": "Network interface",
-      "librarySelection": "Selected: {{name}} — change selection",
-      "startEmpty": "Start empty",
-      "startingLabel": "Preparing draft…",
-      "startingPoint": "Starting point"
+      "scenario": "Scenario"
     },
     "title": "New Simulation",
     "topology": {
@@ -871,8 +871,8 @@
       "port": "Port",
       "title": "Attached clients"
     },
+    "configSourceBuiltin": "built-in scenario",
     "configSourceConfig": "config",
-    "configSourceTemplate": "template",
     "configUploadSuffix": "(upload)",
     "configurationLabel": "Configuration:",
     "daemonModeInstructions": "To use simulation controls, start NIAC in daemon mode:",
@@ -980,6 +980,23 @@
     "stopSuccess": "Simulation stopped",
     "title": "Simulation"
   },
+  "scenarioPreview": {
+    "cloning": "Cloning…",
+    "closeButton": "Close",
+    "copyYaml": "Copy YAML",
+    "defaultDescription": "Built-in scenario preview",
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices",
+    "download": "Download",
+    "editCopy": "Customize first",
+    "editCopyFailed": "Failed to create editable copy",
+    "editCopyTitle": "Copy this scenario to your saved configs and open the device editor",
+    "loadFailed": "Failed to load scenario",
+    "loading": "Loading scenario…",
+    "useAsIs": "Use as-is",
+    "useAsIsTitle": "Run this scenario unchanged as the active configuration",
+    "yamlEditorAria": "Scenario YAML preview, read only"
+  },
   "segments": {
     "description": "Read-only view of the devices in each VLAN segment the active config describes.",
     "deviceNoun_one": "device",
@@ -990,25 +1007,6 @@
     "title": "Segments",
     "untaggedHeader": "Untagged",
     "vlanHeader": "VLAN {{tag}}"
-  },
-  "templates": {
-    "previewModal": {
-      "cloning": "Cloning…",
-      "closeButton": "Close",
-      "copyYaml": "Copy YAML",
-      "defaultDescription": "Configuration template preview",
-      "deviceCount_one": "{{count}} device",
-      "deviceCount_other": "{{count}} devices",
-      "download": "Download",
-      "editCopy": "Customize first",
-      "editCopyFailed": "Failed to create editable copy",
-      "editCopyTitle": "Clone this template to your saved configs and open the device editor",
-      "loadFailed": "Failed to load template",
-      "loading": "Loading template content...",
-      "pickTemplate": "Use as-is",
-      "pickTemplateTitle": "Select this template as the active configuration to run unchanged",
-      "yamlEditorAria": "Template YAML preview, read only"
-    }
   },
   "topology": {
     "actionsMenu": {

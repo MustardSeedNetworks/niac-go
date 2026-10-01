@@ -1,4 +1,4 @@
-package templates
+package builtins
 
 import (
 	"io/fs"
@@ -36,7 +36,7 @@ func TestSplitTags(t *testing.T) {
 	}
 }
 
-func TestDetermineTemplateType(t *testing.T) {
+func TestDetermineScenarioType(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name     string
@@ -51,17 +51,17 @@ func TestDetermineTemplateType(t *testing.T) {
 		{"firewall by name", "/x/asa.yaml", "asa", typeFirewall},
 		{"server by name", "/x/server.yaml", "server", typeServer},
 		{"complete by name", "/x/full.yaml", "full", typeComplete},
-		{"services by path", "/templates/services/dns.yaml", "dns", typeServer},
-		{"combinations by path", "/templates/combinations/x.yaml", "x", typeComplete},
-		{"vendors by path", "/templates/vendors/x.yaml", "x", typeCustom},
-		{"default basic", "/templates/misc/thing.yaml", "thing", typeBasic},
-		{"name beats path", "/templates/services/edge-router.yaml", "edge-router", typeRouter},
+		{"services by path", "/scenarios/services/dns.yaml", "dns", typeServer},
+		{"combinations by path", "/scenarios/combinations/x.yaml", "x", typeComplete},
+		{"vendors by path", "/scenarios/vendors/x.yaml", "x", typeCustom},
+		{"default basic", "/scenarios/misc/thing.yaml", "thing", typeBasic},
+		{"name beats path", "/scenarios/services/edge-router.yaml", "edge-router", typeRouter},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := determineTemplateType(tc.path, tc.fileName); got != tc.want {
-				t.Errorf("determineTemplateType(%q,%q) = %q, want %q", tc.path, tc.fileName, got, tc.want)
+			if got := determineScenarioType(tc.path, tc.fileName); got != tc.want {
+				t.Errorf("determineScenarioType(%q,%q) = %q, want %q", tc.path, tc.fileName, got, tc.want)
 			}
 		})
 	}
@@ -74,11 +74,11 @@ func TestGenerateTags(t *testing.T) {
 		path string
 		want []string // order-independent membership check
 	}{
-		{"no matches", "/templates/plain/thing.yaml", nil},
-		{"router path", "/templates/router/x.yaml", []string{"router"}},
-		{"firewall maps to security", "/templates/firewall/x.yaml", []string{"security"}},
-		{"vendor cisco", "/templates/cisco/x.yaml", []string{"cisco"}},
-		{"path + vendor", "/templates/router/cisco-edge.yaml", []string{"router", "cisco"}},
+		{"no matches", "/scenarios/plain/thing.yaml", nil},
+		{"router path", "/scenarios/router/x.yaml", []string{"router"}},
+		{"firewall maps to security", "/scenarios/firewall/x.yaml", []string{"security"}},
+		{"vendor cisco", "/scenarios/cisco/x.yaml", []string{"cisco"}},
+		{"path + vendor", "/scenarios/router/cisco-edge.yaml", []string{"router", "cisco"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -215,7 +215,7 @@ func TestExtractDescription(t *testing.T) {
 	}
 }
 
-func TestParseTemplateFile_FrontMatterWins(t *testing.T) {
+func TestParseScenarioFile_FrontMatterWins(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "edge-router.yaml")
@@ -229,7 +229,7 @@ func TestParseTemplateFile_FrontMatterWins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tmpl := parseTemplateFile(path)
+	tmpl := parseScenarioFile(path)
 	if tmpl.Name != "edge-router" {
 		t.Errorf("Name = %q, want edge-router", tmpl.Name)
 	}
@@ -253,7 +253,7 @@ func TestParseTemplateFile_FrontMatterWins(t *testing.T) {
 	}
 }
 
-func TestParseTemplateFile_InfersFromNameWhenNoFrontMatter(t *testing.T) {
+func TestParseScenarioFile_InfersFromNameWhenNoFrontMatter(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "core-switch.yaml")
@@ -261,11 +261,11 @@ func TestParseTemplateFile_InfersFromNameWhenNoFrontMatter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tmpl := parseTemplateFile(path)
+	tmpl := parseScenarioFile(path)
 	if tmpl.Type != typeSwitch {
 		t.Errorf("Type = %q, want %q", tmpl.Type, typeSwitch)
 	}
-	if tmpl.Description != "core-switch configuration template" {
+	if tmpl.Description != "core-switch scenario" {
 		t.Errorf("Description = %q (expected synthesized fallback)", tmpl.Description)
 	}
 	if tmpl.DeviceCount != 2 {
@@ -291,7 +291,7 @@ func TestScan(t *testing.T) {
 		t.Fatalf("Scan error: %v", err)
 	}
 	if len(got) != 3 { // .txt skipped, 3 yaml found
-		t.Fatalf("Scan found %d templates, want 3: %v", len(got), got)
+		t.Fatalf("Scan found %d scenarios, want 3: %v", len(got), got)
 	}
 	names := make([]string, len(got))
 	for i, tmpl := range got {
@@ -304,33 +304,33 @@ func TestScan(t *testing.T) {
 	}
 }
 
-func TestShippedTemplatesAreValid(t *testing.T) {
-	templateRoot, err := filepath.Abs(filepath.Join("..", "..", "..", "cmd", "niac", "templates"))
+func TestShippedScenariosAreValid(t *testing.T) {
+	scenarioRoot, err := filepath.Abs(filepath.Join("..", "..", "..", "cmd", "niac", "templates"))
 	if err != nil {
-		t.Fatalf("resolve shipped template path: %v", err)
+		t.Fatalf("resolve shipped scenario path: %v", err)
 	}
-	templateList, err := Scan(templateRoot)
+	scenarioList, err := Scan(scenarioRoot)
 	if err != nil {
-		t.Fatalf("scan shipped templates: %v", err)
+		t.Fatalf("scan shipped scenarios: %v", err)
 	}
-	if len(templateList) == 0 {
-		t.Fatal("no shipped templates found")
+	if len(scenarioList) == 0 {
+		t.Fatal("no shipped scenarios found")
 	}
-	t.Setenv("NIAC_TEMPLATES_DIR", templateRoot)
+	t.Setenv("NIAC_TEMPLATES_DIR", scenarioRoot)
 
-	validated, err := validateShippedTemplates(t, templateRoot)
+	validated, err := validateShippedScenarios(t, scenarioRoot)
 	if err != nil {
-		t.Fatalf("walk shipped templates: %v", err)
+		t.Fatalf("walk shipped scenarios: %v", err)
 	}
-	if validated != len(templateList) {
-		t.Fatalf("validated %d shipped templates, scan found %d", validated, len(templateList))
+	if validated != len(scenarioList) {
+		t.Fatalf("validated %d shipped scenarios, scan found %d", validated, len(scenarioList))
 	}
 }
 
-func validateShippedTemplates(t *testing.T, templateRoot string) (int, error) {
+func validateShippedScenarios(t *testing.T, scenarioRoot string) (int, error) {
 	t.Helper()
 	validated := 0
-	err := filepath.WalkDir(templateRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(scenarioRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -340,37 +340,37 @@ func validateShippedTemplates(t *testing.T, templateRoot string) (int, error) {
 		}
 		validated++
 		name := strings.TrimSuffix(filepath.Base(path), extension)
-		t.Run(name, func(t *testing.T) { validateShippedTemplate(t, name, path) })
+		t.Run(name, func(t *testing.T) { validateShippedScenario(t, name, path) })
 		return nil
 	})
 	return validated, err
 }
 
-func validateShippedTemplate(t *testing.T, name, templatePath string) {
+func validateShippedScenario(t *testing.T, name, scenarioPath string) {
 	t.Helper()
 	content, loadedPath, err := Load(name)
 	if err != nil {
-		t.Fatalf("select shipped template: %v", err)
+		t.Fatalf("select shipped scenario: %v", err)
 	}
-	if loadedPath != templatePath {
-		t.Fatalf("selected %q, want %q", loadedPath, templatePath)
+	if loadedPath != scenarioPath {
+		t.Fatalf("selected %q, want %q", loadedPath, scenarioPath)
 	}
 	cfg, err := config.LoadYAMLBytes(content)
 	if err != nil {
-		t.Fatalf("parse selected template: %v", err)
+		t.Fatalf("parse selected scenario: %v", err)
 	}
-	result := config.NewValidator(templatePath).Validate(cfg)
+	result := config.NewValidator(scenarioPath).Validate(cfg)
 	if result.HasErrors() {
 		t.Fatal(result.Format())
 	}
-	assertShippedTemplateBehavior(t, templatePath, cfg)
+	assertShippedScenarioBehavior(t, scenarioPath, cfg)
 }
 
-func assertShippedTemplateBehavior(t *testing.T, templatePath string, cfg *config.Config) {
+func assertShippedScenarioBehavior(t *testing.T, scenarioPath string, cfg *config.Config) {
 	t.Helper()
-	expectedOID := expectedVendorObjectID(filepath.Base(templatePath))
-	if strings.Contains(templatePath, "vendor-templates") && expectedOID == "" {
-		t.Fatalf("vendor template %q has no expected sysObjectID", templatePath)
+	expectedOID := expectedVendorObjectID(filepath.Base(scenarioPath))
+	if strings.Contains(scenarioPath, "vendor-templates") && expectedOID == "" {
+		t.Fatalf("vendor scenario %q has no expected sysObjectID", scenarioPath)
 	}
 	for _, device := range cfg.Devices {
 		if device.LLDPConfig != nil && device.LLDPConfig.PortDescription != "" {
@@ -420,14 +420,14 @@ func TestFindAndLoad(t *testing.T) {
 	// case-insensitive match
 	found := Find("MyRouter")
 	if found == "" {
-		t.Fatal("Find returned empty for existing template")
+		t.Fatal("Find returned empty for existing scenario")
 	}
 	if filepath.Base(found) != "myrouter.yaml" {
 		t.Errorf("Find = %q, want myrouter.yaml", found)
 	}
 
 	if Find("nonexistent") != "" {
-		t.Error("Find returned non-empty for missing template")
+		t.Error("Find returned non-empty for missing scenario")
 	}
 
 	content, path, err := Load("myrouter")
@@ -442,7 +442,7 @@ func TestFindAndLoad(t *testing.T) {
 	}
 
 	if _, _, loadErr := Load("nope"); loadErr == nil {
-		t.Error("Load of missing template should error")
+		t.Error("Load of missing scenario should error")
 	}
 }
 
@@ -452,7 +452,7 @@ func TestSaveConfig(t *testing.T) {
 
 	content := []byte("devices:\n  - name: r1\n")
 
-	// derives name from templateName when newConfigName empty
+	// derives name from scenarioName when newConfigName empty
 	path, err := SaveConfig("router", "", content)
 	if err != nil {
 		t.Fatalf("SaveConfig error: %v", err)
