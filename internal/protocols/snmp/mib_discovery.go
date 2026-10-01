@@ -11,6 +11,39 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
+// discoveryPort is one link LLDP and CDP run over. The protocols are per
+// physical link, so a trunk over a port-channel is one port per member: a real
+// switch lists a neighbour on each member and none on the bundle. The trunk's
+// Interface is the physical port; until the fleet resolves the peer's members,
+// RemoteInterface still names the peer's bundle.
+type discoveryPort struct {
+	trunk config.TrunkPort
+	// member is the port's position in its bundle, which pairs it with the
+	// peer's member at the same position. -1 when the trunk is not bundled.
+	member int
+}
+
+func (port discoveryPort) hasNeighbour() bool {
+	return port.trunk.RemoteDevice != "" && !port.trunk.FDBOnly
+}
+
+func discoveryPorts(device *config.Device) []discoveryPort {
+	ports := make([]discoveryPort, 0, len(device.TrunkPorts))
+	for _, trunk := range device.TrunkPorts {
+		channel, bundled := config.PortChannelFor(device, trunk.Interface)
+		if !bundled || trunk.FDBOnly {
+			ports = append(ports, discoveryPort{trunk: trunk, member: -1})
+			continue
+		}
+		for member, name := range channel.Members {
+			port := trunk
+			port.Interface = name
+			ports = append(ports, discoveryPort{trunk: port, member: member})
+		}
+	}
+	return ports
+}
+
 func (a *Agent) initializeLLDPLocalMIB() {
 	logger := slog.Default()
 	device := a.device
@@ -69,9 +102,9 @@ func (a *Agent) initializeLLDPLocalMIB() {
 	})
 
 	// Local port entries
-	for idx, trunk := range device.TrunkPorts {
-		portNum := a.discoveryIfIndex(trunk.Interface, idx+1)
-		a.createLLDPLocalPortEntry(portNum, trunk.Interface, lldp.PortDescription)
+	for idx, port := range discoveryPorts(device) {
+		portNum := a.discoveryIfIndex(port.trunk.Interface, idx+1)
+		a.createLLDPLocalPortEntry(portNum, port.trunk.Interface, lldp.PortDescription)
 	}
 
 	if a.debugLevel >= DebugLevelMinimum {
@@ -118,16 +151,16 @@ func (a *Agent) initializeLLDPRemoteMIB() {
 
 	remIndex := 1
 
-	for portIdx, trunk := range device.TrunkPorts {
-		if trunk.RemoteDevice == "" || trunk.FDBOnly {
+	for portIdx, port := range discoveryPorts(device) {
+		if !port.hasNeighbour() {
 			continue
 		}
 
-		portNum := a.discoveryIfIndex(trunk.Interface, portIdx+1)
+		portNum := a.discoveryIfIndex(port.trunk.Interface, portIdx+1)
 		timeMark := 0 // lldpRemTimeMark
 
 		// Create remote entry
-		a.createLLDPRemoteEntry(timeMark, portNum, remIndex, trunk)
+		a.createLLDPRemoteEntry(timeMark, portNum, remIndex, port.trunk)
 
 		remIndex++
 	}
@@ -233,13 +266,13 @@ func (a *Agent) initializeCDPMIB() {
 	// CDP Cache entries (neighbors)
 	deviceIndex := 1
 
-	for ifIdx, trunk := range device.TrunkPorts {
-		if trunk.RemoteDevice == "" || trunk.FDBOnly {
+	for ifIdx, port := range discoveryPorts(device) {
+		if !port.hasNeighbour() {
 			continue
 		}
 
-		ifIndex := a.discoveryIfIndex(trunk.Interface, ifIdx+1)
-		a.createCDPCacheEntry(ifIndex, deviceIndex, trunk, cdp)
+		ifIndex := a.discoveryIfIndex(port.trunk.Interface, ifIdx+1)
+		a.createCDPCacheEntry(ifIndex, deviceIndex, port.trunk, cdp)
 
 		deviceIndex++
 	}

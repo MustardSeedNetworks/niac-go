@@ -75,6 +75,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Syslog: siteSyslog(spec),
 		Snmpv3: packSNMPv3(),
 	}
+	device.PortChannels = authoredPortChannels(links[spec.name])
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{
 			Enabled: true, SystemDescription: platform + " - " + spec.name,
@@ -216,7 +217,25 @@ func addLinkedInterfaces(interfaces []converter.Interface, links []link) []conve
 		byName[interfaces[index].Name] = index
 	}
 	for _, peer := range links {
+		bundleSpeed := 0
+		for position, member := range peer.members {
+			speed := interfaceSpeed(member)
+			bundleSpeed += speed
+			iface := newInterface(member, "", "", speed,
+				fmt.Sprintf("to %s %s", peer.remoteDevice, peer.remoteMembers[position]))
+			iface.VLANs = append([]int(nil), peer.vlans...)
+			interfaces = append(interfaces, iface)
+		}
 		description := fmt.Sprintf("to %s %s", peer.remoteDevice, peer.remoteInterface)
+		if peer.channel > 0 {
+			// The aggregate is typed by its name, as ieee8023adLag; an
+			// ethernet type would override that.
+			iface := newInterface(peer.localInterface, "", "", bundleSpeed, description)
+			iface.Type = ""
+			iface.VLANs = append([]int(nil), peer.vlans...)
+			interfaces = append(interfaces, iface)
+			continue
+		}
 		if index, found := byName[peer.localInterface]; found {
 			interfaces[index].Description = description
 			interfaces[index].VLANs = append([]int(nil), peer.vlans...)
@@ -284,6 +303,19 @@ func utilizationBand(seed int) float64 {
 	default:
 		return float64(quietFloor + seed%quietSpread)
 	}
+}
+
+func authoredPortChannels(links []link) []converter.PortChannel {
+	var channels []converter.PortChannel
+	for _, peer := range links {
+		if peer.channel == 0 {
+			continue
+		}
+		channels = append(channels, converter.PortChannel{
+			ID: peer.channel, Members: append([]string(nil), peer.members...), Mode: "active",
+		})
+	}
+	return channels
 }
 
 func authoredTrunkPorts(links []link) []converter.TrunkPort {

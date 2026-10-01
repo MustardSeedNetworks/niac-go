@@ -26,6 +26,10 @@ type PeerIdentity struct {
 	PoEDrawTenthWatts int
 	// PoEPriority is the powered device's advertised power priority.
 	PoEPriority string
+	// BundleMembers are the device's member ports, in order, when the
+	// interface it was resolved for is a port-channel. A local member pairs
+	// with the member at its own position.
+	BundleMembers []string
 }
 
 // PeerResolver returns the identity for a remote device and interface. The
@@ -58,35 +62,19 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 		return
 	}
 
-	changed := false
 	maxPort := 0
 
 	// Infer the capture's bridgePort→ifIndex offset once, up front, from its own
 	// table. Sampling per-port would drift as we add rows below.
 	offset, hasOffset := a.basePortOffset()
 
-	remoteIndex := 0
-	for portIndex, trunk := range a.device.TrunkPorts {
-		if trunk.RemoteDevice == "" {
+	changed := a.synthesizePeerDiscovery(resolve)
+	for _, trunk := range a.device.TrunkPorts {
+		if trunk.RemoteDevice == "" || !a.supportsBridgeLink(trunk) {
 			continue
-		}
-
-		if !trunk.FDBOnly {
-			remoteIndex++
 		}
 		peer, ok := resolve(trunk.RemoteDevice, trunk.RemoteInterface)
 		if !ok {
-			continue
-		}
-
-		changed = a.setPeerDiscoveryIdentity(
-			trunk,
-			peer,
-			portIndex+1,
-			remoteIndex,
-		) || changed
-
-		if !a.supportsBridgeLink(trunk) {
 			continue
 		}
 		if trunk.Interface == "" || len(peer.MAC) == 0 {
@@ -114,6 +102,31 @@ func (a *Agent) SynthesizePeerTopology(resolve PeerResolver) {
 		a.raiseBaseNumPorts(maxPort)
 		a.mib.Reindex()
 	}
+}
+
+// synthesizePeerDiscovery fills each neighbour row with its resolved peer. A
+// bundle member learns its remote port here: the peer's member at its own
+// position, which the agent could not know from its own device.
+func (a *Agent) synthesizePeerDiscovery(resolve PeerResolver) bool {
+	changed := false
+	remoteIndex := 0
+	for portIndex, port := range discoveryPorts(a.device) {
+		if !port.hasNeighbour() {
+			continue
+		}
+
+		remoteIndex++
+		peer, ok := resolve(port.trunk.RemoteDevice, port.trunk.RemoteInterface)
+		if !ok {
+			continue
+		}
+		if port.member >= 0 && port.member < len(peer.BundleMembers) {
+			port.trunk.RemoteInterface = peer.BundleMembers[port.member]
+		}
+
+		changed = a.setPeerDiscoveryIdentity(port.trunk, peer, portIndex+1, remoteIndex) || changed
+	}
+	return changed
 }
 
 func (a *Agent) supportsSynthesizedBridgeMIB() bool {
@@ -198,6 +211,9 @@ func (a *Agent) setLLDPPeerIdentity(
 	entry := lldpRemTable + ".1"
 	a.mib.Set(entry+".4."+row, &OIDValue{Type: gosnmp.Integer, Value: ChassisIDSubtypeMAC})
 	a.mib.Set(entry+".5."+row, &OIDValue{Type: gosnmp.OctetString, Value: peer.MAC})
+	// A bundle member's remote port is only known once the peer is resolved.
+	a.mib.Set(entry+".7."+row, &OIDValue{Type: gosnmp.OctetString, Value: trunk.RemoteInterface})
+	a.mib.Set(entry+".8."+row, &OIDValue{Type: gosnmp.OctetString, Value: trunk.RemoteInterface})
 	if peer.SystemDescription != "" {
 		a.mib.Set(entry+".10."+row, &OIDValue{
 			Type: gosnmp.OctetString, Value: peer.SystemDescription,

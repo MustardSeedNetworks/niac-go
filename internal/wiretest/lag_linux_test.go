@@ -68,3 +68,59 @@ func TestPortChannelReportsAsALAGOverItsMembersOnTheWire(t *testing.T) {
 	t.Logf("port-channel1 = ifIndex %s (ifType %d) over %v; ifStackTable %v",
 		aggregate, ifTypeLAG, members, got)
 }
+
+// The pack half of the clause: a distribution switch in a built-in pack
+// reaches its core over a bundle, so a poller sees the LAG there without any
+// authored test file, and LLDP names the core's member ports, not the bundle.
+const oidLldpRemPortID = ".1.0.8802.1.1.2.1.4.1.1.7"
+
+func TestPackDistributionUplinkIsALAGOnTheWire(t *testing.T) {
+	authored, _ := startPack(t, "hospital")
+	const distribution, core = "MED-DIST-SW02", "MED-CORE-SW01"
+	client := dialDevice(t, authored, distribution)
+
+	aggregate := interfaceIndex(t, client, "Port-channel1")
+	members := []string{
+		interfaceIndex(t, client, "HundredGigabitEthernet1/0/1"),
+		interfaceIndex(t, client, "HundredGigabitEthernet2/0/1"),
+	}
+	got, err := client.Get([]string{oidIfType + "." + aggregate})
+	if err != nil || len(got.Variables) != 1 {
+		t.Fatalf("GET ifType.%s: %v", aggregate, err)
+	}
+	if value := gosnmp.ToBigInt(got.Variables[0].Value).Int64(); value != ifTypeLAG {
+		t.Fatalf("%s Port-channel1 ifType = %d, want %d", distribution, value, ifTypeLAG)
+	}
+	stack := make(map[string]bool)
+	for _, pdu := range walkSubtree(t, client, oidIfStackStatus) {
+		stack[strings.TrimPrefix(pdu.Name, oidIfStackStatus+".")] = true
+	}
+	for _, member := range members {
+		if !stack[aggregate+"."+member] {
+			t.Errorf("ifStackTable has no row %s.%s", aggregate, member)
+		}
+	}
+
+	remotePorts := make(map[string][]string)
+	for _, pdu := range walkSubtree(t, client, oidLldpRemPortID) {
+		// lldpRemEntry is indexed timeMark.localPort.remIndex.
+		index := strings.Split(strings.TrimPrefix(pdu.Name, oidLldpRemPortID+"."), ".")
+		if octets, ok := pdu.Value.([]byte); ok && len(index) == 3 {
+			remotePorts[index[1]] = append(remotePorts[index[1]], string(octets))
+		}
+	}
+	if ports := remotePorts[aggregate]; len(ports) != 0 {
+		t.Errorf("LLDP lists a neighbour on the bundle itself: %v", ports)
+	}
+	// DIST-SW02 lands on the core's second bundle, so its members are not
+	// named like the distribution switch's own.
+	want := []string{"HundredGigabitEthernet1/0/2", "HundredGigabitEthernet2/0/2"}
+	for position, member := range members {
+		if ports := remotePorts[member]; !slices.Equal(ports, want[position:position+1]) {
+			t.Errorf("LLDP neighbour on member ifIndex %s = %v, want %s %s",
+				member, ports, core, want[position])
+		}
+	}
+	t.Logf("%s Port-channel1 = ifIndex %s (ifType %d) over %v; LLDP per member %v",
+		distribution, aggregate, ifTypeLAG, members, remotePorts)
+}
