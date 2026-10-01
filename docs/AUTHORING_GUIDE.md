@@ -277,7 +277,11 @@ about, because it is almost always an unfinished access port.
 own. The edge comes from a `trunk_port` whose `interface` is
 `port-channel<id>`. In SNMP the bundle is its own interface, `ifType` 161
 (`ieee8023adLag`), whose speed is the sum of its members, and `ifStackTable`
-lists it over each member.
+lists it over each member. LLDP and CDP run per physical link, so the
+neighbour tables list the peer on each member port, never on the bundle. A
+member pairs with the peer bundle's member at the same position in `members`,
+so list both ends in cabling order. The built-in packs join each distribution
+switch to each core switch this way, over two members on separate line cards.
 
 ## PoE: who supplies power and who draws it
 

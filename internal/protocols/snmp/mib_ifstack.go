@@ -32,7 +32,7 @@ type portBundle struct {
 func portChannelBundles(device *config.Device, listed []string) []portBundle {
 	bundles := make([]portBundle, 0, len(device.PortChannels))
 	for _, channel := range device.PortChannels {
-		aggregate := "port-channel" + strconv.Itoa(channel.ID)
+		aggregate := channel.Name()
 		for _, name := range listed {
 			if strings.EqualFold(name, aggregate) {
 				aggregate = name

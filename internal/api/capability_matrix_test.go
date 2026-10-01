@@ -24,7 +24,6 @@ func unauthoredProtocols() map[string]string {
 		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in scenario does)",
 		"SSHConfig":    "P5-9: no pack authors the SSH command service",
 		"ICMPv6Config": "P5-9: no pack authors dual-stack ICMPv6",
-		"PortChannels": "P5-9: no pack authors a LAG, and IF-MIB has no aggregate for one yet",
 
 		// Extreme and Foundry discovery. Vendor-specific, and vendor diversity is
 		// out of scope for v1 while the newer models have no walks -- P5-9 records

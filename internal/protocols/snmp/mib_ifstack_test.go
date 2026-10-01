@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"maps"
+	"net"
 	"slices"
 	"strconv"
 	"strings"
@@ -116,5 +117,72 @@ func TestSynthesizedLogicalInterfaceHasNoConnector(t *testing.T) {
 			t.Fatalf("no ifTable row for %s", name)
 		}
 		assertMIBValue(t, agent, ifConnectorPresent+"."+strconv.Itoa(index), want[name])
+	}
+}
+
+// LLDP and CDP run per physical link, so a manager reading a port-channel's
+// neighbours finds one on each member, paired with the peer's member at the
+// same position, and none on the bundle. The forwarding table still learns the
+// peer on the bundle: that is the bridge port.
+func TestPortChannelNeighboursAreListedPerMember(t *testing.T) {
+	device := createTestDevice()
+	device.Type = "switch"
+	device.LLDPConfig = &config.LLDPConfig{Enabled: true}
+	device.CDPConfig = &config.CDPConfig{Enabled: true}
+	device.Interfaces = []config.Interface{{Name: "HundredGigabitEthernet1/0/1"}, {Name: "HundredGigabitEthernet2/0/1"}}
+	device.PortChannels = []config.PortChannel{{
+		ID: 1, Members: []string{"HundredGigabitEthernet1/0/1", "HundredGigabitEthernet2/0/1"}, Mode: "active",
+	}}
+	device.TrunkPorts = []config.TrunkPort{{
+		Interface: "Port-channel1", RemoteDevice: "CORE-SW01", RemoteInterface: "Port-channel3",
+		VLANs: []int{100, 200}, NativeVLAN: 100,
+	}}
+
+	agent := NewAgent(device, 0)
+	coreMAC, _ := net.ParseMAC("aa:bb:cc:00:00:51")
+	peerMembers := []string{"HundredGigabitEthernet1/0/3", "HundredGigabitEthernet2/0/3"}
+	agent.SynthesizePeerTopology(func(name, interfaceName string) (PeerIdentity, bool) {
+		if name != "CORE-SW01" || interfaceName != "Port-channel3" {
+			t.Errorf("resolved %s %s, want the trunk's peer bundle", name, interfaceName)
+		}
+		return PeerIdentity{MAC: coreMAC, Type: "switch", CDPEnabled: true, BundleMembers: peerMembers}, true
+	})
+
+	index := func(name string) string {
+		t.Helper()
+		ifIndex, ok := agent.InterfaceIndex(name)
+		if !ok {
+			t.Fatalf("no ifTable row for %s", name)
+		}
+		return strconv.Itoa(ifIndex)
+	}
+	members := []string{index("HundredGigabitEthernet1/0/1"), index("HundredGigabitEthernet2/0/1")}
+	bundle := index("Port-channel1")
+	for position, member := range members {
+		lldpRow := "0." + member + "." + strconv.Itoa(position+1)
+		assertMIBValue(t, agent, lldpRemTable+".1.7."+lldpRow, peerMembers[position])
+		assertMIBValue(t, agent, lldpRemTable+".1.9."+lldpRow, "CORE-SW01")
+		assertMIBValue(t, agent, lldpLocPortTable+".1.3."+member, device.PortChannels[0].Members[position])
+		cdpRow := member + "." + strconv.Itoa(position+1)
+		assertMIBValue(t, agent, cdpCacheTable+".1.7."+cdpRow, peerMembers[position])
+	}
+	for _, oid := range agent.mib.AllOIDs() {
+		for _, table := range []string{lldpRemTable + ".1.7.0." + bundle + ".", cdpCacheTable + ".1.7." + bundle + "."} {
+			if strings.HasPrefix(oid, table) {
+				t.Errorf("bundle %s carries a neighbour row %s", bundle, oid)
+			}
+		}
+	}
+	if value := agent.mib.Get(lldpLocPortTable + ".1.3." + bundle); value != nil {
+		t.Errorf("LLDP runs on the bundle: %v", value.Value)
+	}
+
+	port := agent.mib.Get(dot1dTpFdbPort + "." + macBytesToOIDIndex(coreMAC))
+	if port == nil {
+		t.Fatal("peer MAC not learned")
+	}
+	bridgePort, ok := agent.bridgePortForInterface("Port-channel1", 0, false)
+	if !ok || port.Value != bridgePort {
+		t.Fatalf("peer learned on bridge port %v, want the bundle's %d", port.Value, bridgePort)
 	}
 }

@@ -15,6 +15,11 @@ type link struct {
 	remoteInterface string
 	vlans           []int
 	fdbOnly         bool
+	// channel is the port-channel number when the link is a bundle; members
+	// are its physical ports, paired by position with remoteMembers.
+	channel       int
+	members       []string
+	remoteMembers []string
 }
 
 type linkMap map[string][]link
@@ -54,6 +59,31 @@ func addEdge(links linkMap, left, right endpoint, vlans []int) {
 		localInterface: right.interfaceName, remoteDevice: left.device,
 		remoteInterface: left.interfaceName, vlans: rightVLANs,
 	})
+}
+
+// bundleEnd is one side of a port-channel: its channel number on that device
+// and its member ports.
+type bundleEnd struct {
+	device  string
+	channel int
+	members []string
+}
+
+func (end bundleEnd) interfaceName() string {
+	return fmt.Sprintf("Port-channel%d", end.channel)
+}
+
+// addBundle joins two devices over a port-channel. The trunk is the bundle, so
+// spanning tree, the bridge and the fabric see one link; the members carry the
+// per-port discovery protocols.
+func addBundle(links linkMap, left, right bundleEnd) {
+	addEdge(links,
+		endpoint{left.device, left.interfaceName()},
+		endpoint{right.device, right.interfaceName()}, nil)
+	leftLink := &links[left.device][len(links[left.device])-1]
+	leftLink.channel, leftLink.members, leftLink.remoteMembers = left.channel, left.members, right.members
+	rightLink := &links[right.device][len(links[right.device])-1]
+	rightLink.channel, rightLink.members, rightLink.remoteMembers = right.channel, right.members, left.members
 }
 
 func addFDB(links linkMap, sw, interfaceName, remote, remoteInterface string, vlan int) {
@@ -97,9 +127,9 @@ func addSiteLAN(links linkMap, site Site, request Request) {
 	for distribution := 1; distribution <= counts.DistributionSwitches; distribution++ {
 		distName := numberedName(site.Code+"-DIST-SW", distribution)
 		for coreIndex, coreName := range cores {
-			addEdge(links,
-				endpoint{coreName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", distribution)},
-				endpoint{distName, fmt.Sprintf("HundredGigabitEthernet1/0/%d", coreIndex+1)}, nil)
+			addBundle(links,
+				bundleEnd{coreName, distribution, uplinkMembers(distribution)},
+				bundleEnd{distName, coreIndex + 1, uplinkMembers(coreIndex + 1)})
 		}
 	}
 
@@ -146,6 +176,16 @@ func addSiteLAN(links linkMap, site Site, request Request) {
 	}
 
 	addServerSwitches(links, site, counts)
+}
+
+// uplinkMembers spreads a core-distribution bundle over two line cards, the
+// way it is cabled so that losing a card leaves the bundle up. Port 1/0/n keeps
+// the number the unbundled uplink had.
+func uplinkMembers(port int) []string {
+	return []string{
+		fmt.Sprintf("HundredGigabitEthernet1/0/%d", port),
+		fmt.Sprintf("HundredGigabitEthernet2/0/%d", port),
+	}
 }
 
 func addServerSwitches(links linkMap, site Site, counts Counts) {
