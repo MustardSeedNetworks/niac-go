@@ -7,10 +7,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
-func TestDescribeTemplate(t *testing.T) {
+func TestDescribeScenario(t *testing.T) {
 	tmpl := &templates.Template{
-		Name:        "test-template",
-		Description: "A test template",
+		Name:        "test-scenario",
+		Description: "A test scenario",
 		UseCase:     "Testing purposes",
 		Content:     "devices: []",
 	}
@@ -18,10 +18,10 @@ func TestDescribeTemplate(t *testing.T) {
 	// Should not panic
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("describeTemplate panicked: %v", r)
+			t.Errorf("describeScenario panicked: %v", r)
 		}
 	}()
-	describeTemplate(tmpl)
+	describeScenario(tmpl)
 }
 
 func TestDescribeDevices(t *testing.T) {
@@ -44,7 +44,7 @@ func TestDescribeDevices(t *testing.T) {
 			t.Errorf("describeDevices panicked: %v", r)
 		}
 	}()
-	describeDevices("test-template", devices)
+	describeDevices("test-scenario", devices)
 }
 
 func TestDescribeDeviceInfo(t *testing.T) {
@@ -83,45 +83,45 @@ func TestDescribeDeviceInfo(t *testing.T) {
 	}
 }
 
-func TestLoadAndValidateTemplate(t *testing.T) {
-	t.Run("valid template", func(t *testing.T) {
+func TestLoadAndValidateScenario(t *testing.T) {
+	t.Run("valid scenario", func(t *testing.T) {
 		tmpl, err := templates.Get("basic-network")
 		if err != nil {
-			t.Skip("basic-network template not available")
+			t.Skip("basic-network scenario not available")
 		}
 
-		cfg, cleanup, loadErr := loadAndValidateTemplate(tmpl)
+		cfg, cleanup, loadErr := loadAndValidateScenario(tmpl)
 		defer cleanup()
 
 		if loadErr != nil {
-			t.Errorf("loadAndValidateTemplate() error = %v", loadErr)
+			t.Errorf("loadAndValidateScenario() error = %v", loadErr)
 		}
 		if cfg == nil {
 			t.Error("Expected non-nil config")
 		}
 	})
 
-	t.Run("invalid template content", func(t *testing.T) {
+	t.Run("invalid scenario content", func(t *testing.T) {
 		tmpl := &templates.Template{
 			Name:    "invalid",
 			Content: "not: valid: yaml: [[[[",
 		}
 
-		_, cleanup, loadErr := loadAndValidateTemplate(tmpl)
+		_, cleanup, loadErr := loadAndValidateScenario(tmpl)
 		defer cleanup()
 
 		if loadErr == nil {
-			t.Error("Expected error for invalid template content")
+			t.Error("Expected error for invalid scenario content")
 		}
 	})
 }
 
-func TestRunTemplateList(t *testing.T) {
+func TestRunScenarioList(t *testing.T) {
 	// Should not panic
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("runTemplateList panicked: %v", r)
+			t.Errorf("runScenarioList panicked: %v", r)
 		}
 	}()
-	runTemplateList()
+	runScenarioList()
 }

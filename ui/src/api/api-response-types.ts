@@ -439,10 +439,10 @@ export interface SimulationRequest {
   configPath?: string;
   configData?: string;
   /**
-   * Built-in template to load directly from disk. Mutually exclusive
+   * Built-in scenario to load directly from disk. Mutually exclusive
    * with configPath / configData. Lets the daemon resolve relative
-   * include_path / walk_file references against the template's own
+   * include_path / walk_file references against the scenario's own
    * source directory rather than the inline-config cache.
    */
-  templateName?: string;
+  scenarioName?: string;
 }

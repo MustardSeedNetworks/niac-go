@@ -1,5 +1,5 @@
 # Display: Juniper Mist AP43 (Wi-Fi 6)
-# Description: Cloud-managed Wi-Fi 6 access point. Mist is API-first — SNMP support is minimal but LLDP toward the wired switch works. Use this template for AP placement / link-layer simulations, not for management-plane testing.
+# Description: Cloud-managed Wi-Fi 6 access point. Mist is API-first — SNMP support is minimal but LLDP toward the wired switch works. Use this scenario for AP placement / link-layer simulations, not for management-plane testing.
 # Type: access-point
 # Vendor: juniper
 # Tags: juniper, mist, access-point, wifi6, ap43

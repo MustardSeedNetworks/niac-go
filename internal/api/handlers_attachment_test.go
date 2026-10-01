@@ -97,7 +97,7 @@ func TestHandleSimulationAttachmentsNamesTheConfigsAttachments(t *testing.T) {
 
 	server.handleSimulationAttachments(rec, httptest.NewRequest(
 		http.MethodPost, "/api/v1/simulation/attachments",
-		strings.NewReader(`{"interface":"eth0","templateName":"hospital"}`),
+		strings.NewReader(`{"interface":"eth0","scenarioName":"hospital"}`),
 	))
 
 	if rec.Code != http.StatusOK {
@@ -111,7 +111,7 @@ func TestHandleSimulationAttachmentsNamesTheConfigsAttachments(t *testing.T) {
 		response.Attachments[0] != "cyberscope" {
 		t.Fatalf("response = %#v", response)
 	}
-	if daemon.request.TemplateName != "hospital" {
+	if daemon.request.ScenarioName != "hospital" {
 		t.Fatalf("daemon saw request %#v", daemon.request)
 	}
 }

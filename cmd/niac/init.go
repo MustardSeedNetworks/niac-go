@@ -21,12 +21,12 @@ const defaultInitOutputFile = "config.yaml"
 func addInitCommand(root *cobra.Command, _ *serviceOptions) {
 	initCmd := &cobra.Command{
 		Use:   "init [output-file]",
-		Short: "Interactive template wizard for quick configuration setup",
-		Long: `Interactive wizard that helps you choose the right template and create
+		Short: "Interactive scenario wizard for quick configuration setup",
+		Long: `Interactive wizard that helps you choose the right scenario and create
 a configuration file for your network simulation needs.
 
 The wizard will ask about your network type, size, and requirements,
-then suggest the most appropriate template.`,
+then suggest the most appropriate scenario.`,
 		Example: fmt.Sprintf(
 			"  # Start interactive wizard\n  niac init\n\n  # Start wizard with specific output file\n  niac init my-network.yaml\n\n  # Quick workflow\n  niac init && niac validate %s",
 			defaultInitOutputFile,
@@ -48,18 +48,18 @@ func runInit(args []string) error {
 	if err != nil {
 		return stopIfCancelled(err)
 	}
-	selectedTemplate, templateDesc := mapNetworkTypeToTemplate(networkType)
+	selectedScenario, scenarioDesc := mapNetworkTypeToScenario(networkType)
 
 	fmt.Fprintln(os.Stdout)
-	color.Green("Selected: %s", templateDesc)
+	color.Green("Selected: %s", scenarioDesc)
 	fmt.Fprintln(os.Stdout)
 
-	tmpl, err := templates.Get(selectedTemplate)
+	tmpl, err := templates.Get(selectedScenario)
 	if err != nil {
-		return fmt.Errorf("loading template: %w", err)
+		return fmt.Errorf("loading scenario: %w", err)
 	}
 
-	printTemplateDetails(tmpl)
+	printScenarioDetails(tmpl)
 
 	outputFile, err := promptOutputFile(reader, args)
 	if err != nil {
@@ -79,7 +79,7 @@ func runInit(args []string) error {
 		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
-	printInitSuccess(outputFile, selectedTemplate)
+	printInitSuccess(outputFile, selectedScenario)
 
 	return nil
 }
@@ -89,11 +89,11 @@ func printInitHeader() {
 	_, _ = color.New(color.Bold, color.FgCyan).
 		Println("\n+============================================================+")
 	_, _ = color.New(color.Bold, color.FgCyan).
-		Println("|         NIAC Configuration Template Wizard                |")
+		Println("|         NIAC Configuration Scenario Wizard                |")
 	_, _ = color.New(color.Bold, color.FgCyan).
 		Print("+============================================================+\n")
 
-	fmt.Fprintln(os.Stdout, "This wizard will help you choose the right template for your")
+	fmt.Fprintln(os.Stdout, "This wizard will help you choose the right scenario for your")
 	fmt.Fprint(os.Stdout, "network simulation.\n")
 }
 
@@ -120,9 +120,9 @@ func promptNetworkType(reader *bufio.Reader) (string, error) {
 	)
 }
 
-// mapNetworkTypeToTemplate maps user selection to template name and description.
-func mapNetworkTypeToTemplate(networkType string) (string, string) {
-	templateMap := map[string][2]string{
+// mapNetworkTypeToScenario maps user selection to scenario name and description.
+func mapNetworkTypeToScenario(networkType string) (string, string) {
+	scenarioMap := map[string][2]string{
 		"a": {"basic-network", "Basic Network - Simple router and switch setup"},
 		"b": {"small-office", "Small Office - Router, switch, AP, and services"},
 		"c": {"data-center", "Data Center - Multiple routers, switches, and servers"},
@@ -133,15 +133,15 @@ func mapNetworkTypeToTemplate(networkType string) (string, string) {
 		"h": {"test-lab", "Test Lab - Comprehensive protocol testing"},
 	}
 
-	if entry, ok := templateMap[networkType]; ok {
+	if entry, ok := scenarioMap[networkType]; ok {
 		return entry[0], entry[1]
 	}
 	return "basic-network", "Basic Network - Simple router and switch setup"
 }
 
-// printTemplateDetails displays information about the selected template.
-func printTemplateDetails(tmpl *templates.Template) {
-	_, _ = fmt.Fprintln(os.Stdout, color.YellowString("Template Details:"))
+// printScenarioDetails displays information about the selected scenario.
+func printScenarioDetails(tmpl *templates.Template) {
+	_, _ = fmt.Fprintln(os.Stdout, color.YellowString("Scenario Details:"))
 	fmt.Fprintf(os.Stdout, "  Name: %s\n", tmpl.Name)
 	fmt.Fprintf(os.Stdout, "  Description: %s\n", tmpl.Description)
 	fmt.Fprintf(os.Stdout, "  Use case: %s\n", tmpl.UseCase)
@@ -177,7 +177,7 @@ func confirmOverwriteIfExists(reader *bufio.Reader, outputFile string) (bool, er
 }
 
 // printInitSuccess displays success message and next steps.
-func printInitSuccess(outputFile, selectedTemplate string) {
+func printInitSuccess(outputFile, selectedScenario string) {
 	fmt.Fprintln(os.Stdout)
 	color.Green("Successfully created %s", outputFile)
 	fmt.Fprintln(os.Stdout)
@@ -199,7 +199,7 @@ func printInitSuccess(outputFile, selectedTemplate string) {
 	)
 	_, _ = fmt.Fprintf(os.Stdout,
 		"     %s\n",
-		color.CyanString("niac template apply %s", selectedTemplate),
+		color.CyanString("niac scenario apply %s", selectedScenario),
 	)
 	fmt.Fprintln(os.Stdout)
 }

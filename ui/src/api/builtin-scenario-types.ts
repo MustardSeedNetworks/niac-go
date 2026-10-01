@@ -1,12 +1,11 @@
 /**
- * Template Types
- * Types for configuration templates
+ * Built-in scenario types
  */
 
-export interface Template {
-  /** Filename-derived identifier — pass this to /templates/{name} and /templates/use. */
+export interface BuiltinScenario {
+  /** Filename-derived identifier — pass this to /scenario/builtins/{name} and /scenario/builtins/copy. */
   name: string;
-  /** Optional human-readable label from the template's "# Display: ..." front-matter. */
+  /** Optional human-readable label from the scenario's "# Display: ..." front-matter. */
   displayName?: string;
   description: string;
   deviceCount: number;
@@ -20,10 +19,9 @@ export interface Template {
     | 'complete'
     | 'custom';
   /**
-   * Optional vendor key from the template's "# Vendor: ..." front-matter
-   * (e.g. "cisco", "juniper"). When present, the Templates page groups
-   * by vendor heading instead of generic type. Used by the vendor
-   * template pack under cmd/niac/templates/vendor-templates/.
+   * Optional vendor key from the scenario's "# Vendor: ..." front-matter
+   * (e.g. "cisco", "juniper"). When present, the picker groups
+   * by vendor heading instead of generic type, as the vendor scenarios do.
    */
   vendor?: string;
   tags?: string[];
@@ -31,33 +29,20 @@ export interface Template {
   modifiedAt?: string;
 }
 
-export interface TemplateContent {
+export interface BuiltinScenarioContent {
   name: string;
   content: string;
   format: 'yaml' | 'json';
 }
 
-export interface UseTemplateRequest {
-  templateName: string;
+export interface CopyBuiltinScenarioRequest {
+  scenarioName: string;
   newConfigName?: string;
 }
 
-export interface UseTemplateResponse {
+export interface CopyBuiltinScenarioResponse {
   success: boolean;
   configPath: string;
-  message: string;
-}
-
-export interface UploadTemplateRequest {
-  name: string;
-  description: string;
-  content: string;
-  type?: Template['type'];
-}
-
-export interface UploadTemplateResponse {
-  success: boolean;
-  template: Template;
   message: string;
 }
 

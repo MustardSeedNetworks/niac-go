@@ -1,20 +1,18 @@
-// Package templates holds the on-disk configuration-template discovery,
-// parsing, and loading engine extracted from the internal/api monolith
-// (ADR-0006). It walks the filesystem template directories, parses YAML
-// front-matter into structured metadata, and materialises a chosen
-// template into a saved config — all with no dependency on the api
-// transport layer, which composes it inward.
+// Package builtins discovers, parses and loads the built-in scenarios: the
+// hand-authored YAML files shipped under cmd/niac/templates (and the
+// installed, per-user and NIAC_TEMPLATES_DIR copies of that tree). It
+// parses their front-matter into catalogue metadata and copies a chosen
+// scenario into a saved config, with no dependency on the api transport
+// layer, which composes it inward (ADR-0006).
 //
-// This is distinct from the sibling internal/templates package, which is
-// the embedded builtin template library compiled into the binary. This
-// leaf is the runtime on-disk engine (development trees, system install
-// paths, and the NIAC_TEMPLATES_DIR override) used by the
-// /api/v1/templates HTTP surface and the daemon's StartSimulation path.
-package templates
+// This is distinct from internal/templates, the embedded library compiled
+// into the binary for the CLI. This leaf is the on-disk engine behind the
+// /api/v1/scenario/builtins surface and the daemon's StartSimulation path.
+package builtins
 
 import "os"
 
-// Template type constants matching the UI interface.
+// Scenario type constants matching the UI interface.
 const (
 	typeBasic       = "basic"
 	typeRouter      = "router"
@@ -26,36 +24,36 @@ const (
 	typeCustom      = "custom"
 )
 
-// Template represents a configuration template.
+// Scenario is one built-in scenario's catalogue entry.
 //
 // Name is the stable filename-derived identifier ("minimal", "router")
-// used by the /api/v1/templates/{name} and /api/v1/templates/use APIs.
+// used by /api/v1/scenario/builtins/{name} and /api/v1/scenario/builtins/copy.
 // DisplayName is the human-readable label optionally provided via the
 // front-matter "# Display: ..." line; clients should prefer it for UI
 // rendering and fall back to Name when absent.
-type Template struct {
+type Scenario struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"displayName,omitempty"`
 	Description string `json:"description"`
 	DeviceCount int    `json:"deviceCount"`
 	Type        string `json:"type"`
-	// Vendor is populated from the template's "# Vendor: ..."
+	// Vendor is populated from the scenario's "# Vendor: ..."
 	// front-matter, lowercased. When non-empty the UI groups the
-	// template under a vendor heading instead of (or alongside) the
-	// generic type-based grouping — useful for the vendor template
+	// scenario under a vendor heading instead of (or alongside) the
+	// generic type-based grouping — useful for the vendor scenario
 	// pack shipped under cmd/niac/templates/vendor-templates/.
 	Vendor string   `json:"vendor,omitempty"`
 	Tags   []string `json:"tags,omitempty"`
 }
 
-// Content represents the full content of a template.
+// Content represents the full content of a scenario.
 type Content struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
 	Format  string `json:"format"`
 }
 
-// Dirs returns the directories to scan for templates. It checks multiple
+// Dirs returns the directories to scan for scenarios. It checks multiple
 // locations for compatibility with both development and installed
 // deployments. A NIAC_TEMPLATES_DIR override, when set, takes precedence.
 func Dirs() []string {

@@ -1,4 +1,4 @@
-package templates
+package builtins
 
 import (
 	"errors"
@@ -10,16 +10,16 @@ import (
 	"strings"
 )
 
-// ErrTemplateNotFound is returned by Load when no template matches the
+// ErrNotFound is returned by Load when no scenario matches the
 // requested name. Callers that need to distinguish "not found" (404) from
 // a read failure (500) should check for it with errors.Is.
-var ErrTemplateNotFound = errors.New("template not found")
+var ErrNotFound = errors.New("built-in scenario not found")
 
-// Find searches for a template by name across all template directories
+// Find searches for a scenario by name across all scenario directories
 // and returns its absolute path, or empty string if not found. It is
-// used both by the HTTP content/use handlers and by the daemon's
-// StartSimulation path, which loads a template directly off disk so that
-// include_path resolves against the template's own source directory.
+// used both by the HTTP content and copy handlers and by the daemon's
+// StartSimulation path, which loads a scenario directly off disk so that
+// include_path resolves against the scenario's own source directory.
 func Find(name string) string {
 	for _, dir := range Dirs() {
 		var found string
@@ -42,30 +42,30 @@ func Find(name string) string {
 	return ""
 }
 
-// Load finds and reads a template by name, returning its raw content and
+// Load finds and reads a scenario by name, returning its raw content and
 // resolved on-disk path.
 func Load(name string) ([]byte, string, error) {
-	templatePath := Find(name)
-	if templatePath == "" {
-		return nil, "", fmt.Errorf("%w: %s", ErrTemplateNotFound, name)
+	scenarioPath := Find(name)
+	if scenarioPath == "" {
+		return nil, "", fmt.Errorf("%w: %s", ErrNotFound, name)
 	}
 
-	content, err := os.ReadFile(filepath.Clean(templatePath))
+	content, err := os.ReadFile(filepath.Clean(scenarioPath))
 	if err != nil {
-		return nil, "", errors.New("failed to read template")
+		return nil, "", errors.New("failed to read built-in scenario")
 	}
 
-	return content, templatePath, nil
+	return content, scenarioPath, nil
 }
 
-// SaveConfig writes template content to a new config file under the
+// SaveConfig writes scenario content to a new config file under the
 // configs/ directory. newConfigName is optional; when empty a name is
-// derived from templateName. The resolved absolute config path is
+// derived from scenarioName. The resolved absolute config path is
 // returned.
-func SaveConfig(templateName, newConfigName string, content []byte) (string, error) {
+func SaveConfig(scenarioName, newConfigName string, content []byte) (string, error) {
 	configName := newConfigName
 	if configName == "" {
-		configName = templateName + "-config"
+		configName = scenarioName + "-config"
 	}
 
 	configName = SanitizeConfigName(configName)
@@ -103,7 +103,7 @@ var configNameUnsafe = regexp.MustCompile(`[^a-zA-Z0-9\-_]`)
 
 // SanitizeConfigName removes unsafe characters from a config name,
 // replacing each with a dash. It is a shared config-file utility used by
-// both the template-use handler and the api config-create handler.
+// both the scenario-copy handler and the api config-create handler.
 func SanitizeConfigName(name string) string {
 	// Only allow alphanumeric, dash, underscore
 	return configNameUnsafe.ReplaceAllString(name, "-")

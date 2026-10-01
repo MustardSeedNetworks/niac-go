@@ -19,7 +19,7 @@ import { fetchSimulationStatus } from '../api/client';
 import { ApiError, NetworkError } from '../api/errors';
 import type { ScenarioDraft } from '../api/library-client';
 import type { ScenarioGenerateRequest } from '../api/scenario-client';
-import type { LibraryNetwork, SimulationStatus, Template } from '../api/types';
+import type { BuiltinScenario, LibraryNetwork, SimulationStatus } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { AppProvider } from '../contexts/AppContext';
 import { MemoryDataRouter } from '../test/MemoryDataRouter';
@@ -50,11 +50,11 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 const startSimulation = vi.fn<(payload: unknown) => Promise<SimulationStatus>>();
 const preflightSimulation = vi.fn();
 const fetchUsableInterfaces = vi.fn();
-const fetchTemplates = vi.fn<() => Promise<Template[]>>();
+const fetchBuiltinScenarios = vi.fn<() => Promise<BuiltinScenario[]>>();
 const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
 const createScenarioDraft = vi.fn<(name: string, content: string) => Promise<ScenarioDraft>>();
-const createScenarioDraftFromTemplate =
-  vi.fn<(name: string, templateName: string) => Promise<ScenarioDraft>>();
+const createScenarioDraftFromBuiltin =
+  vi.fn<(name: string, scenarioName: string) => Promise<ScenarioDraft>>();
 const deleteScenarioDraft = vi.fn<(name: string, revision: string) => Promise<void>>();
 const replaceScenarioDraft =
   vi.fn<(name: string, revision: string, content: string) => Promise<ScenarioDraft>>();
@@ -81,7 +81,7 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchInterfaces: vi.fn(),
     // Wizard-specific
     fetchUsableInterfaces: () => fetchUsableInterfaces(),
-    fetchTemplates: () => fetchTemplates(),
+    fetchBuiltinScenarios: () => fetchBuiltinScenarios(),
     startSimulation: (payload: unknown) => startSimulation(payload),
     preflightSimulation: (payload: unknown) => preflightSimulation(payload),
     // AP-0: the binding inputs read their choices from the daemon instead of
@@ -96,8 +96,8 @@ vi.mock('../api/client', async (importOriginal) => {
 vi.mock('../api/library-client', () => ({
   fetchLibraryNetworks: () => fetchLibraryNetworks(),
   createScenarioDraft: (name: string, content: string) => createScenarioDraft(name, content),
-  createScenarioDraftFromTemplate: (name: string, templateName: string) =>
-    createScenarioDraftFromTemplate(name, templateName),
+  createScenarioDraftFromBuiltin: (name: string, scenarioName: string) =>
+    createScenarioDraftFromBuiltin(name, scenarioName),
   replaceScenarioDraft: (name: string, revision: string, content: string) =>
     replaceScenarioDraft(name, revision, content),
   deleteScenarioDraft: (name: string, revision: string) => deleteScenarioDraft(name, revision),
@@ -182,7 +182,7 @@ beforeEach(() => {
   fetchUsableInterfaces.mockResolvedValue({
     interfaces: [{ name: 'lo0', addresses: ['127.0.0.1'], isUp: true, isLoopback: true }],
   });
-  fetchTemplates.mockResolvedValue([]);
+  fetchBuiltinScenarios.mockResolvedValue([]);
   fetchLibraryNetworks.mockResolvedValue([]);
   createScenarioDraft.mockResolvedValue({
     name: 'scenario-20260728-120000',
@@ -192,7 +192,7 @@ beforeEach(() => {
     modifiedAt: '2026-07-28T12:00:00Z',
     sizeBytes: emptyDraftContent.length,
   });
-  createScenarioDraftFromTemplate.mockResolvedValue({
+  createScenarioDraftFromBuiltin.mockResolvedValue({
     name: 'scenario-20260728-120000',
     content: emptyDraftContent,
     format: 'yaml',
@@ -397,7 +397,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     );
     expect(startSimulation).not.toHaveBeenCalled();
 
-    expect(screen.getByTestId('wizard-step-template')).toHaveAttribute('data-status', 'done');
+    expect(screen.getByTestId('wizard-step-scenario')).toHaveAttribute('data-status', 'done');
     expect(screen.getByTestId('wizard-step-networks')).toHaveAttribute('data-status', 'active');
 
     await user.click(screen.getByTestId('wizard-back-button'));
@@ -443,31 +443,31 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(startSimulation).not.toHaveBeenCalled();
   });
 
-  it('keeps a selected template while generated fleet fields are edited', async () => {
+  it('keeps a selected built-in scenario while generated fleet fields are edited', async () => {
     const user = userEvent.setup();
-    const template: Template = {
+    const builtin: BuiltinScenario = {
       name: 'branch-router',
       description: 'Branch router',
       deviceCount: 1,
       type: 'router',
     };
-    fetchTemplates.mockResolvedValue([template]);
+    fetchBuiltinScenarios.mockResolvedValue([builtin]);
     renderWizard();
 
     await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-source-tab-library'));
     await user.click(await screen.findByRole('button', { name: 'Select' }));
-    expect(screen.getByTestId('wizard-selected-library')).toHaveTextContent(template.name);
+    expect(screen.getByTestId('wizard-selected-library')).toHaveTextContent(builtin.name);
     await user.click(screen.getByTestId('fleet-customize'));
     await user.clear(screen.getByTestId('fleet-domain'));
     await user.type(screen.getByTestId('fleet-domain'), 'edited.example');
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(createScenarioDraftFromTemplate).toHaveBeenCalledTimes(1));
-    expect(createScenarioDraftFromTemplate).toHaveBeenCalledWith(
+    await waitFor(() => expect(createScenarioDraftFromBuiltin).toHaveBeenCalledTimes(1));
+    expect(createScenarioDraftFromBuiltin).toHaveBeenCalledWith(
       expect.stringMatching(/^scenario-/),
-      template.name,
+      builtin.name,
     );
     expect(generateScenario).not.toHaveBeenCalled();
   });
@@ -548,7 +548,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('preflight unavailable');
     expect(screen.getByTestId('wizard-preflight-start')).toBeDisabled();
 
-    // Back to the template step, however many steps that is.
+    // Back to the scenario step, however many steps that is.
     while (screen.queryByTestId('wizard-interface-select') === null) {
       await user.click(screen.getByTestId('wizard-back-button'));
     }

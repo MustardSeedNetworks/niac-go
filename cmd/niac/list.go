@@ -30,7 +30,7 @@ func addListCommand(root *cobra.Command, _ *serviceOptions) {
 wrapper exposed: network interfaces, runnable scenarios, SNMP walks, and
 packet captures.
 
-Scenario output includes built-in templates and installed library networks.
+Scenario output includes built-in scenarios and installed library networks.
 Walk and capture output reads the on-disk content library.`,
 		Example: `  # List usable network interfaces
   niac list interfaces
@@ -113,7 +113,7 @@ func newListScenariosCmd(options *listOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "scenarios",
 		Short: "List runnable scenarios",
-		Long: `List runnable scenario sources. Built-in templates are always
+		Long: `List runnable scenario sources. Built-in scenarios are always
 available. Installed library networks are shown when the content library can
 be opened.
 
@@ -134,7 +134,7 @@ rewritten.`,
 }
 
 func runListScenarios(options *listOptions) error {
-	fmt.Fprintln(os.Stdout, "Built-in templates:")
+	fmt.Fprintln(os.Stdout, "Built-in scenarios:")
 	for _, tmpl := range templates.List() {
 		fmt.Fprintf(os.Stdout, "  %-24s %s\n", tmpl.Name, tmpl.Description)
 	}

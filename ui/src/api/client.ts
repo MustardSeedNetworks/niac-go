@@ -16,10 +16,14 @@ import {
 import { requestJsonWithProgress } from './requestUpload';
 import type {
   AlertConfig,
+  BuiltinScenario,
+  BuiltinScenarioContent,
   CloneDeviceRequest,
   ConfigDocument,
   ConfigSchema,
   ConfigUpdateRequest,
+  CopyBuiltinScenarioRequest,
+  CopyBuiltinScenarioResponse,
   CreateDeviceRequest,
   DebugLevelResponse,
   DeviceBatchDeleteRequest,
@@ -50,13 +54,9 @@ import type {
   StandaloneCaptureStatus,
   SynthesizeWalkRequest,
   SynthesizeWalkResponse,
-  Template,
-  TemplateContent,
   TopologyGraph,
   UpdateDebugLevelRequest,
   UpdateDeviceRequest,
-  UseTemplateRequest,
-  UseTemplateResponse,
   VersionInfo,
   WalkAnalyzeResponse,
   WalkBatchValidationResponse,
@@ -69,7 +69,7 @@ import type {
  * conversion, and request deduplication to requestCore.ts.
  *
  * Functions are grouped by domain (stats / config / replay / alerts
- * / files / templates / etc.); call sites import directly from this file.
+ * / files / scenarios / etc.); call sites import directly from this file.
  */
 
 // =====================================================================
@@ -344,16 +344,19 @@ export const stopStandaloneCapture = () =>
   });
 
 // =====================================================================
-// Templates
+// Built-in scenarios
 // =====================================================================
 
-export const fetchTemplates = () => deduplicatedGet<Template[]>('/api/v1/templates');
+export const fetchBuiltinScenarios = () =>
+  deduplicatedGet<BuiltinScenario[]>('/api/v1/scenario/builtins');
 
-export const fetchTemplateContent = (name: string) =>
-  request<TemplateContent>(`/api/v1/templates/${encodeURIComponent(name)}`);
+export const fetchBuiltinScenarioContent = (name: string) =>
+  request<BuiltinScenarioContent>(`/api/v1/scenario/builtins/${encodeURIComponent(name)}`);
 
-export const applyTemplate = (payload: UseTemplateRequest) =>
-  requestJson<UseTemplateResponse>('/api/v1/templates/use', payload, { method: 'POST' });
+export const copyBuiltinScenario = (payload: CopyBuiltinScenarioRequest) =>
+  requestJson<CopyBuiltinScenarioResponse>('/api/v1/scenario/builtins/copy', payload, {
+    method: 'POST',
+  });
 
 // =====================================================================
 // Global debug level

@@ -21,9 +21,9 @@ import (
 
 // Sentinel errors for template operations.
 var (
-	ErrTemplateNotFound       = errors.New("template not found")
-	ErrTemplateContentEmpty   = errors.New("template content is empty")
-	ErrTemplateMissingDevices = errors.New("template must contain 'devices:' section")
+	ErrTemplateNotFound       = errors.New("built-in scenario not found")
+	ErrTemplateContentEmpty   = errors.New("built-in scenario content is empty")
+	ErrTemplateMissingDevices = errors.New("built-in scenario must contain 'devices:' section")
 )
 
 //go:embed builtin/*.yaml

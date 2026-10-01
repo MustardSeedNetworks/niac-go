@@ -85,6 +85,30 @@ func (s *Server) registerScenarioRoutes(reg *route.Registrar) {
 			Auth:    true,
 			Methods: []string{http.MethodGet},
 		},
+		// Built-in scenarios ship with the product and are read-only; only
+		// "copy" mutates, so only it carries write rate limit + CSRF.
+		{
+			Path:    "/api/v1/scenario/builtins",
+			Handler: s.handleBuiltinScenarios,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitFile,
+		},
+		{
+			Path:    builtinScenariosPath + "copy",
+			Handler: s.handleBuiltinScenarioCopy,
+			Auth:    true,
+			Methods: []string{http.MethodPost},
+			Limiter: limitWrite,
+			CSRF:    true,
+		},
+		{
+			Path:    builtinScenariosPath,
+			Handler: s.handleBuiltinScenarioByName,
+			Auth:    true,
+			Methods: []string{http.MethodGet},
+			Limiter: limitFile,
+		},
 		{
 			Path:    "/api/v1/scenario/profiles",
 			Handler: s.handleScenarioProfiles,
@@ -343,30 +367,6 @@ func (s *Server) registerReadOnlyRoutes(reg *route.Registrar) {
 		{
 			Path:    "/api/v1/files",
 			Handler: s.handleFiles,
-			Auth:    true,
-			Methods: []string{http.MethodGet},
-			Limiter: limitFile,
-		},
-		// Templates ship with the product and are read-only; only "use" mutates,
-		// so only it carries write rate limit + CSRF.
-		{
-			Path:    "/api/v1/templates",
-			Handler: s.handleTemplates,
-			Auth:    true,
-			Methods: []string{http.MethodGet},
-			Limiter: limitFile,
-		},
-		{
-			Path:    "/api/v1/templates/use",
-			Handler: s.handleTemplateUse,
-			Auth:    true,
-			Methods: []string{http.MethodPost},
-			Limiter: limitWrite,
-			CSRF:    true,
-		},
-		{
-			Path:    "/api/v1/templates/",
-			Handler: s.handleTemplateByName,
 			Auth:    true,
 			Methods: []string{http.MethodGet},
 			Limiter: limitFile,

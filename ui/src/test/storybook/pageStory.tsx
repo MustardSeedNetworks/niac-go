@@ -68,7 +68,7 @@ export const LOADED_ROUTES: ApiRoutes = {
   '/api/v1/capture': fixtures.captureStatus,
   '/api/v1/capture/filter': { active: false, filter: '' },
   '/api/v1/debug/level': fixtures.debugLevel,
-  '/api/v1/templates': fixtures.templates,
+  '/api/v1/scenario/builtins': fixtures.builtins,
   '/api/v1/config': fixtures.configDocument,
   '/api/v1/config/devices': { devices: [], totalCount: 0, configurationLoaded: true },
   '/api/v1/config/schema': {
@@ -105,7 +105,7 @@ export const EMPTY_ROUTES: ApiRoutes = {
   '/api/v1/sessions': [],
   '/api/v1/simulation': fixtures.simulationIdle,
   '/api/v1/history': [],
-  '/api/v1/templates': [],
+  '/api/v1/scenario/builtins': [],
   '/api/v1/library/walks': [],
   '/api/v1/library/pcaps': [],
   '/api/v1/library/networks': [],

@@ -32,7 +32,7 @@ const (
 
 	// Other constants.
 	protocolCapacity      = 9
-	templatePadOffset     = 2
+	scenarioPadOffset     = 2
 	minPageLen            = 20
 	maxDeviceCount        = 20 // maximum devices in generated config
 	millisecondsThreshold = 1000

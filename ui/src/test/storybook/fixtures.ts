@@ -13,6 +13,7 @@
 import type { LibraryFileEntry } from '../../api/library-client';
 import type {
   AlertConfig,
+  BuiltinScenario,
   ConfigDocument,
   DebugLevelResponse,
   DeviceSummary,
@@ -28,7 +29,6 @@ import type {
   SimulationStatus,
   StackStatsResponse,
   StandaloneCaptureStatus,
-  Template,
   TopologyGraph,
   VersionInfo,
 } from '../../api/types';
@@ -279,7 +279,7 @@ export const libraryNetworks: LibraryNetwork[] = [
   },
 ];
 
-export const templates: Template[] = [
+export const builtins: BuiltinScenario[] = [
   {
     name: 'switch-basic',
     displayName: 'Basic switch',

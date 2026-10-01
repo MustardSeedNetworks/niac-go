@@ -7,8 +7,8 @@ import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import {
   type ConfigItem,
-  TEMPLATE_TYPE_ICON,
-  TEMPLATE_TYPE_TINT,
+  SCENARIO_TYPE_ICON,
+  SCENARIO_TYPE_TINT,
   type ViewMode,
 } from './ConfigPicker.types';
 
@@ -175,13 +175,13 @@ const ConfigCard: FC<SharedItemProps> = ({
   const { t } = useTranslation('pages');
   const Icon =
     item.kind === 'builtin'
-      ? (TEMPLATE_TYPE_ICON[item.template.type] ?? FileCode)
+      ? (SCENARIO_TYPE_ICON[item.builtin.type] ?? FileCode)
       : item.kind === 'saved'
         ? FolderOpen
         : HardDrive;
   const tint =
     item.kind === 'builtin'
-      ? (TEMPLATE_TYPE_TINT[item.template.type] ?? TEMPLATE_TYPE_TINT.custom)
+      ? (SCENARIO_TYPE_TINT[item.builtin.type] ?? SCENARIO_TYPE_TINT.custom)
       : item.kind === 'saved'
         ? 'bg-status-success/15 text-status-success-strong border-status-success/30'
         : 'bg-status-info/15 text-status-info-strong border-status-info/30';
@@ -216,7 +216,7 @@ const ConfigCard: FC<SharedItemProps> = ({
           </Tag>
         )}
         {item.kind === 'builtin' &&
-          item.template.tags?.slice(0, 2).map((tag) => (
+          item.builtin.tags?.slice(0, 2).map((tag) => (
             <Tag key={tag} colorScheme="gray" className="text-[10px]">
               {tag}
             </Tag>
@@ -319,12 +319,12 @@ const ConfigRow: FC<SharedItemProps> = ({
         </button>
       </Tooltip>
       {item.kind === 'builtin' && (
-        <Tooltip text={t('configPicker.previewTemplateYamlTitle')}>
+        <Tooltip text={t('configPicker.previewBuiltinYamlTitle')}>
           <button
             type="button"
             onClick={() => onView(item)}
             className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
-            aria-label={t('configPicker.previewTemplateYamlTitle')}
+            aria-label={t('configPicker.previewBuiltinYamlTitle')}
           >
             <Eye className={iconSizes.md} />
           </button>

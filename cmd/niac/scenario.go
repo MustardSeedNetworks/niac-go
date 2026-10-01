@@ -12,123 +12,123 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
-func addTemplateCommand(root *cobra.Command, _ *serviceOptions) {
-	templateCmd := &cobra.Command{
-		Use:   "template",
-		Short: "Manage configuration templates",
-		Long:  `List, show, and use pre-built configuration templates for common scenarios.`,
-		Example: `  # List all available templates
-  niac template list
+func addScenarioCommand(root *cobra.Command, _ *serviceOptions) {
+	scenarioCmd := &cobra.Command{
+		Use:   "scenario",
+		Short: "Manage built-in scenarios",
+		Long:  `List, show, and copy the built-in scenarios that ship with NIAC.`,
+		Example: `  # List all available scenarios
+  niac scenario list
 
-  # Show template contents
-  niac template show basic-network
+  # Show scenario contents
+  niac scenario show basic-network
 
-  # Create config from template
-  niac template use small-office office.yaml
+  # Create config from scenario
+  niac scenario use small-office office.yaml
 
-  # Apply template directly (validate and display info)
-  niac template apply data-center`,
+  # Apply scenario directly (validate and display info)
+  niac scenario apply data-center`,
 	}
 
-	templateListCmd := &cobra.Command{
+	scenarioListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List available templates",
-		Long: `Print every bundled template name with a one-line description.
-Templates cover common scenarios (basic-network, small-office, data-center,
+		Short: "List available scenarios",
+		Long: `Print every bundled scenario name with a one-line description.
+They cover common small networks (basic-network, small-office, data-center,
 iot-network, etc.) and are the fastest path to a runnable YAML config.`,
-		Example: `  # List all templates with descriptions
-  niac template list`,
+		Example: `  # List all scenarios with descriptions
+  niac scenario list`,
 		Run: func(_ *cobra.Command, _ []string) {
-			runTemplateList()
+			runScenarioList()
 		},
 	}
 
-	templateShowCmd := &cobra.Command{
-		Use:   "show <template-name>",
-		Short: "Show template contents",
-		Long: `Print the YAML body of a named template to stdout. Useful for
-inspecting what a template will produce or piping it into another tool
+	scenarioShowCmd := &cobra.Command{
+		Use:   "show <scenario-name>",
+		Short: "Show scenario contents",
+		Long: `Print the YAML body of a named scenario to stdout. Useful for
+inspecting what a scenario will produce or piping it into another tool
 without writing to disk.`,
-		Example: `  # Show basic network template
-  niac template show basic-network
+		Example: `  # Show basic network scenario
+  niac scenario show basic-network
 
-  # Show small office template
-  niac template show small-office
+  # Show small office scenario
+  niac scenario show small-office
 
   # Pipe to file
-  niac template show data-center > my-config.yaml`,
+  niac scenario show data-center > my-config.yaml`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runTemplateShow(args)
+			return runScenarioShow(args)
 		},
 	}
 
-	templateUseCmd := &cobra.Command{
-		Use:   "use <template-name> <output-file>",
-		Short: "Copy template to a new file",
-		Long: `Copy a named template's body into a new YAML file at the given
+	scenarioUseCmd := &cobra.Command{
+		Use:   "use <scenario-name> <output-file>",
+		Short: "Copy scenario to a new file",
+		Long: `Copy a named scenario's body into a new YAML file at the given
 output path. The output file becomes the starting point you edit and run
-with 'niac daemon --once'; the template itself is unchanged.`,
+with 'niac daemon --once'; the scenario itself is unchanged.`,
 		Example: `  # Create small office config
-  niac template use small-office office.yaml
+  niac scenario use small-office office.yaml
 
   # Create IoT network config
-  niac template use iot-network sensors.yaml
+  niac scenario use iot-network sensors.yaml
 
   # Create data center config
-  niac template use data-center dc.yaml
+  niac scenario use data-center dc.yaml
 
   # Quick workflow
-  niac template use basic-network config.yaml && niac validate config.yaml`,
+  niac scenario use basic-network config.yaml && niac validate config.yaml`,
 		Args: cobra.ExactArgs(argsCountTwo),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runTemplateUse(args)
+			return runScenarioUse(args)
 		},
 	}
 
-	templateApplyCmd := &cobra.Command{
-		Use:   "apply <template-name>",
-		Short: "Validate and display template information",
-		Long: `Validate a template and display its configuration details.
-This command loads the template, validates it, and shows what devices
+	scenarioApplyCmd := &cobra.Command{
+		Use:   "apply <scenario-name>",
+		Short: "Validate and display scenario information",
+		Long: `Validate a scenario and display its configuration details.
+This command loads the scenario, validates it, and shows what devices
 and protocols it contains without creating a file.`,
-		Example: `  # Validate basic network template
-  niac template apply basic-network
+		Example: `  # Validate basic network scenario
+  niac scenario apply basic-network
 
-  # Check data center template
-  niac template apply data-center
+  # Check data center scenario
+  niac scenario apply data-center
 
   # Verify IoT network configuration
-  niac template apply iot-network`,
+  niac scenario apply iot-network`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runTemplateApply(args)
+			return runScenarioApply(args)
 		},
 	}
 
-	templateCmd.AddCommand(templateListCmd)
-	templateCmd.AddCommand(templateShowCmd)
-	templateCmd.AddCommand(templateUseCmd)
-	templateCmd.AddCommand(templateApplyCmd)
-	root.AddCommand(templateCmd)
+	scenarioCmd.AddCommand(scenarioListCmd)
+	scenarioCmd.AddCommand(scenarioShowCmd)
+	scenarioCmd.AddCommand(scenarioUseCmd)
+	scenarioCmd.AddCommand(scenarioApplyCmd)
+	root.AddCommand(scenarioCmd)
 }
 
-func runTemplateList() {
-	templateList := templates.List()
+func runScenarioList() {
+	scenarioList := templates.List()
 
-	_, _ = color.New(color.Bold).Println("Available Templates:")
+	_, _ = color.New(color.Bold).Println("Available Scenarios:")
 	fmt.Fprintln(os.Stdout)
 
 	// Find longest name for alignment
 	maxLen := 0
-	for _, t := range templateList {
+	for _, t := range scenarioList {
 		if len(t.Name) > maxLen {
 			maxLen = len(t.Name)
 		}
 	}
 
-	for _, t := range templateList {
-		_, _ = color.New(color.FgCyan).Printf("  %-*s", maxLen+templatePadOffset, t.Name)
+	for _, t := range scenarioList {
+		_, _ = color.New(color.FgCyan).Printf("  %-*s", maxLen+scenarioPadOffset, t.Name)
 		fmt.Fprintf(os.Stdout, " - %s\n", t.Description)
 		if t.UseCase != "" {
 			fmt.Fprintf(os.Stdout, "  %*s   Use case: %s\n", maxLen, "", t.UseCase)
@@ -137,25 +137,25 @@ func runTemplateList() {
 
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Usage:")
-	fmt.Fprintln(os.Stdout, "  niac template show <template-name>         # View template content")
-	fmt.Fprintln(os.Stdout, "  niac template use <template-name> <file>   # Create config from template")
-	fmt.Fprintln(os.Stdout, "  niac template apply <template-name>        # Validate and show template info")
+	fmt.Fprintln(os.Stdout, "  niac scenario show <scenario-name>         # View scenario content")
+	fmt.Fprintln(os.Stdout, "  niac scenario use <scenario-name> <file>   # Create config from scenario")
+	fmt.Fprintln(os.Stdout, "  niac scenario apply <scenario-name>        # Validate and show scenario info")
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Quick start:")
-	fmt.Fprintln(os.Stdout, "  niac init                                  # Interactive template wizard")
+	fmt.Fprintln(os.Stdout, "  niac init                                  # Interactive scenario wizard")
 }
 
-func runTemplateShow(args []string) error {
-	templateName := args[0]
+func runScenarioShow(args []string) error {
+	scenarioName := args[0]
 
-	tmpl, err := templates.Get(templateName)
+	tmpl, err := templates.Get(scenarioName)
 	if err != nil {
 		fmt.Fprintln(os.Stdout)
-		fmt.Fprintln(os.Stdout, "Available templates:")
+		fmt.Fprintln(os.Stdout, "Available scenarios:")
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		return fmt.Errorf("loading template: %w", err)
+		return fmt.Errorf("loading scenario: %w", err)
 	}
 
 	fmt.Fprint(os.Stdout, tmpl.Content)
@@ -163,8 +163,8 @@ func runTemplateShow(args []string) error {
 	return nil
 }
 
-func runTemplateUse(args []string) error {
-	templateName := args[0]
+func runScenarioUse(args []string) error {
+	scenarioName := args[0]
 	outputFile, pathErr := validateCLIPath(args[1])
 	if pathErr != nil {
 		return fmt.Errorf("invalid output path: %w", pathErr)
@@ -175,15 +175,15 @@ func runTemplateUse(args []string) error {
 		return fmt.Errorf("%w: %s", errOutputExists, outputFile)
 	}
 
-	// Get template
-	tmpl, err := templates.Get(templateName)
+	// Get scenario
+	tmpl, err := templates.Get(scenarioName)
 	if err != nil {
 		fmt.Fprintln(os.Stdout)
-		fmt.Fprintln(os.Stdout, "Available templates:")
+		fmt.Fprintln(os.Stdout, "Available scenarios:")
 		for _, name := range templates.ListNames() {
 			fmt.Fprintf(os.Stdout, "  - %s\n", name)
 		}
-		return fmt.Errorf("loading template: %w", err)
+		return fmt.Errorf("loading scenario: %w", err)
 	}
 
 	// Write to file
@@ -191,7 +191,7 @@ func runTemplateUse(args []string) error {
 		return fmt.Errorf("writing file: %w", writeErr)
 	}
 
-	color.Green("✓ Created %s from %s template", outputFile, templateName)
+	color.Green("✓ Created %s from %s scenario", outputFile, scenarioName)
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintf(os.Stdout, "Description: %s\n", tmpl.Description)
 	fmt.Fprintf(os.Stdout, "Use case: %s\n", tmpl.UseCase)
@@ -203,40 +203,40 @@ func runTemplateUse(args []string) error {
 	return nil
 }
 
-func runTemplateApply(args []string) error {
-	templateName := args[0]
+func runScenarioApply(args []string) error {
+	scenarioName := args[0]
 
-	tmpl, err := templates.Get(templateName)
+	tmpl, err := templates.Get(scenarioName)
 	if err != nil {
-		return fmt.Errorf("loading template: %w", err)
+		return fmt.Errorf("loading scenario: %w", err)
 	}
 
-	describeTemplate(tmpl)
+	describeScenario(tmpl)
 
-	cfg, cleanup, loadErr := loadAndValidateTemplate(tmpl)
+	cfg, cleanup, loadErr := loadAndValidateScenario(tmpl)
 	defer cleanup()
 	if loadErr != nil {
-		return fmt.Errorf("template validation failed: %w", loadErr)
+		return fmt.Errorf("scenario validation failed: %w", loadErr)
 	}
 
-	color.Green("✓ Template is valid")
+	color.Green("✓ Scenario is valid")
 	fmt.Fprintln(os.Stdout)
 
-	describeDevices(templateName, cfg.Devices)
+	describeDevices(scenarioName, cfg.Devices)
 
 	return nil
 }
 
-func describeTemplate(tmpl *templates.Template) {
-	_, _ = color.New(color.Bold).Printf("Template: %s\n", tmpl.Name)
+func describeScenario(tmpl *templates.Template) {
+	_, _ = color.New(color.Bold).Printf("Scenario: %s\n", tmpl.Name)
 	fmt.Fprintf(os.Stdout, "Description: %s\n", tmpl.Description)
 	fmt.Fprintf(os.Stdout, "Use case: %s\n", tmpl.UseCase)
 	fmt.Fprintln(os.Stdout)
-	_, _ = color.New(color.Bold).Println("Validating template...")
+	_, _ = color.New(color.Bold).Println("Validating scenario...")
 }
 
-func loadAndValidateTemplate(tmpl *templates.Template) (*config.Config, func(), error) {
-	tmpFile, err := os.CreateTemp("", "niac-template-*.yaml")
+func loadAndValidateScenario(tmpl *templates.Template) (*config.Config, func(), error) {
+	tmpFile, err := os.CreateTemp("", "niac-scenario-*.yaml")
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("error creating temporary file: %w", err)
 	}
@@ -258,7 +258,7 @@ func loadAndValidateTemplate(tmpl *templates.Template) (*config.Config, func(), 
 	return cfg, cleanup, nil
 }
 
-func describeDevices(templateName string, devices []config.Device) {
+func describeDevices(scenarioName string, devices []config.Device) {
 	_, _ = color.New(color.Bold).Println("Configuration Summary:")
 	fmt.Fprintf(os.Stdout, "  Devices: %d\n", len(devices))
 	fmt.Fprintln(os.Stdout)
@@ -267,8 +267,8 @@ func describeDevices(templateName string, devices []config.Device) {
 		describeDeviceInfo(device)
 	}
 	fmt.Fprintln(os.Stdout)
-	fmt.Fprintln(os.Stdout, "To use this template:")
-	fmt.Fprintf(os.Stdout, "  niac template use %s config.yaml\n", templateName)
+	fmt.Fprintln(os.Stdout, "To use this scenario:")
+	fmt.Fprintf(os.Stdout, "  niac scenario use %s config.yaml\n", scenarioName)
 	fmt.Fprintln(os.Stdout, "  sudo niac daemon --once en0 config.yaml")
 }
 

@@ -23,7 +23,7 @@ func addGenerateCommand(configCmd *cobra.Command) {
 		Long: `Interactive configuration generator for NIAC.
 
 Prompts you for all configuration details and generates a complete YAML
-configuration file. More detailed than 'niac init' template wizard.
+configuration file. More detailed than 'niac init' scenario wizard.
 
 The generator will ask you for:
   - Network name and subnet

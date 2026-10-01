@@ -31,7 +31,7 @@ func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
 		addSimulationCommand,
 		addStatusCommand,
 		addSupportBundleCommand,
-		addTemplateCommand,
+		addScenarioCommand,
 		addTopologyCommand,
 		addValidateCommand,
 		func(root *cobra.Command, _ *serviceOptions) { addVersionCommand(root, info) },

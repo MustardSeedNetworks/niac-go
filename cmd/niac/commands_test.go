@@ -99,13 +99,13 @@ func TestAddStatusCommand(t *testing.T) {
 	}
 }
 
-func TestAddTemplateCommand(t *testing.T) {
+func TestAddScenarioCommand(t *testing.T) {
 	root, services := newTestRoot()
-	addTemplateCommand(root, services)
+	addScenarioCommand(root, services)
 
-	cmd := findSubcommand(root, "template")
+	cmd := findSubcommand(root, "scenario")
 	if cmd == nil {
-		t.Fatal("Expected template command to be registered")
+		t.Fatal("Expected scenario command to be registered")
 	}
 
 	// Check subcommands
@@ -113,7 +113,7 @@ func TestAddTemplateCommand(t *testing.T) {
 	for _, name := range subcommands {
 		sub := findSubcommand(cmd, name)
 		if sub == nil {
-			t.Errorf("Expected template subcommand %q", name)
+			t.Errorf("Expected scenario subcommand %q", name)
 		}
 	}
 }
@@ -152,8 +152,8 @@ devices:
 		}
 	})
 
-	if !strings.Contains(output, "Built-in templates:") {
-		t.Fatalf("output missing built-in templates section:\n%s", output)
+	if !strings.Contains(output, "Built-in scenarios:") {
+		t.Fatalf("output missing built-in scenarios section:\n%s", output)
 	}
 	if !strings.Contains(output, "lab") {
 		t.Fatalf("output missing library scenario:\n%s", output)

@@ -2,7 +2,7 @@ import { Eye, Router, Server, Wifi } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, YAMLParseError } from 'yaml';
-import { fetchTemplateContent } from '../../api/client';
+import { fetchBuiltinScenarioContent } from '../../api/client';
 import { fetchLibraryNetworkContent } from '../../api/library-client';
 import type { DeviceSummary } from '../../api/types';
 import { DeviceTable } from '../../components/DeviceTable';
@@ -19,7 +19,7 @@ import { H2, SmallText } from '../../ui/Typography';
  * device with type, MAC, and IPs — so the user can verify their choice
  * before committing.
  *
- *   source 'template'    → fetchTemplateContent(name)
+ *   source 'builtin'    → fetchBuiltinScenarioContent(name)
  *   source 'userConfig'  → fetchLibraryNetworkContent(name)
  *   source 'upload'      → read the File directly
  *   content (raw YAML)   → skip the fetch entirely and preview it as-is
@@ -158,8 +158,8 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
     const loader: Promise<string> =
       source === 'upload' && uploadFile
         ? uploadFile.text()
-        : source === 'template'
-          ? fetchTemplateContent(name).then((c) => c.content)
+        : source === 'builtin'
+          ? fetchBuiltinScenarioContent(name).then((c) => c.content)
           : source === 'userConfig'
             ? fetchLibraryNetworkContent(name).then((c) => c.content)
             : Promise.resolve('');

@@ -6,8 +6,8 @@
  *
  * Features:
  * - Interface selector (filtered to usable: eth, wifi, loopback)
- * - Config source tabs (Templates / My Configs / Upload)
- * - Template picker with search
+ * - Config source tabs (Built-in / My Configs / Upload)
+ * - Built-in scenario picker with search
  * - User config picker
  * - File upload for quick config override
  */
@@ -16,9 +16,9 @@ import { AlertCircle, FileUp, FolderOpen, LayoutTemplate, PlugZap } from 'lucide
 import type { ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchTemplates } from '../../api/client';
+import { fetchBuiltinScenarios } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { LibraryNetwork, Template } from '../../api/types';
+import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
@@ -26,24 +26,24 @@ import { cn } from '../../styles/theme';
 import { Select } from '../../ui/Input';
 import { getErrorMessage } from '../../utils/format';
 
-type ConfigTab = 'templates' | 'configs' | 'upload';
+type ConfigTab = 'builtins' | 'configs' | 'upload';
 
 const tabId = (tab: ConfigTab) => `sim-config-tab-${tab}`;
 const panelId = 'sim-config-panel';
 
 interface ConfigTabButton {
   id: ConfigTab;
-  labelKey: 'simulation.tabTemplates' | 'simulation.tabMyConfigs' | 'simulation.tabUpload';
+  labelKey: 'simulation.tabBuiltins' | 'simulation.tabMyConfigs' | 'simulation.tabUpload';
   icon: ReactElement;
   source: ConfigSource;
 }
 
 const CONFIG_TABS: ConfigTabButton[] = [
   {
-    id: 'templates',
-    labelKey: 'simulation.tabTemplates',
+    id: 'builtins',
+    labelKey: 'simulation.tabBuiltins',
     icon: <LayoutTemplate className="w-4 h-4" />,
-    source: 'template',
+    source: 'builtin',
   },
   {
     id: 'configs',
@@ -71,11 +71,11 @@ export function SimulationSection(): ReactElement {
     refetch: refetchInterfaces,
   } = useUsableInterfacesResource();
   const {
-    data: templates,
-    loading: templatesLoading,
-    error: templatesError,
-    refetch: refetchTemplates,
-  } = useApiResource(fetchTemplates, ['templates']);
+    data: builtins,
+    loading: builtinsLoading,
+    error: builtinsError,
+    refetch: refetchBuiltins,
+  } = useApiResource(fetchBuiltinScenarios, ['builtins']);
   const {
     data: userConfigs,
     loading: userConfigsLoading,
@@ -86,14 +86,14 @@ export function SimulationSection(): ReactElement {
   const [activeTab, setActiveTab] = useState<ConfigTab>(() => {
     // Set initial tab based on current config source
     switch (simulationSettings.configSource) {
-      case 'template':
-        return 'templates';
+      case 'builtin':
+        return 'builtins';
       case 'userConfig':
         return 'configs';
       case 'upload':
         return 'upload';
       default:
-        return 'templates';
+        return 'builtins';
     }
   });
 
@@ -130,10 +130,10 @@ export function SimulationSection(): ReactElement {
   );
 
   const handleTemplateSelect = useCallback(
-    (template: Template) => {
+    (builtin: BuiltinScenario) => {
       setSimulationSettings({
-        configSource: 'template',
-        configName: template.name,
+        configSource: 'builtin',
+        configName: builtin.name,
       });
     },
     [setSimulationSettings],
@@ -235,22 +235,22 @@ export function SimulationSection(): ReactElement {
         id={panelId}
         aria-labelledby={tabId(activeTab)}
       >
-        {activeTab === 'templates' &&
-          (templatesLoading ? (
+        {activeTab === 'builtins' &&
+          (builtinsLoading ? (
             <Loading />
-          ) : templatesError ? (
+          ) : builtinsError ? (
             <LoadError
-              testId="simulation-templates"
-              message={t('simulation.loadFailedTemplates', {
-                error: getErrorMessage(templatesError),
+              testId="simulation-builtins"
+              message={t('simulation.loadFailedBuiltins', {
+                error: getErrorMessage(builtinsError),
               })}
-              onRetry={refetchTemplates}
+              onRetry={refetchBuiltins}
             />
           ) : (
-            <TemplateList
-              templates={templates ?? []}
+            <BuiltinList
+              builtins={builtins ?? []}
               selectedName={
-                simulationSettings.configSource === 'template' ? simulationSettings.configName : ''
+                simulationSettings.configSource === 'builtin' ? simulationSettings.configName : ''
               }
               onSelect={handleTemplateSelect}
             />
@@ -290,8 +290,8 @@ export function SimulationSection(): ReactElement {
             {simulationSettings.configName}
             <span className="text-text-muted ml-inline">
               (
-              {simulationSettings.configSource === 'template'
-                ? t('simulation.selectedConfigSourceTemplate')
+              {simulationSettings.configSource === 'builtin'
+                ? t('simulation.selectedConfigSourceBuiltin')
                 : t('simulation.selectedConfigSourceUserConfig')}
               )
             </span>
@@ -342,17 +342,17 @@ function LoadError({ testId, message, onRetry }: LoadErrorProps): ReactElement {
   );
 }
 
-interface TemplateListProps {
-  templates: Template[];
+interface BuiltinListProps {
+  builtins: BuiltinScenario[];
   selectedName: string;
-  onSelect: (template: Template) => void;
+  onSelect: (builtin: BuiltinScenario) => void;
 }
 
-function TemplateList({ templates, selectedName, onSelect }: TemplateListProps): ReactElement {
+function BuiltinList({ builtins, selectedName, onSelect }: BuiltinListProps): ReactElement {
   const { t } = useTranslation('settings');
   const [search, setSearch] = useState('');
 
-  const filteredTemplates = templates.filter(
+  const filteredBuiltins = builtins.filter(
     (tpl) =>
       tpl.name.toLowerCase().includes(search.toLowerCase()) ||
       tpl.description.toLowerCase().includes(search.toLowerCase()),
@@ -362,7 +362,7 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
     <div className="stack-sm">
       <input
         type="text"
-        placeholder={t('simulation.searchTemplatesPlaceholder')}
+        placeholder={t('simulation.searchBuiltinsPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className={cn(
@@ -373,27 +373,27 @@ function TemplateList({ templates, selectedName, onSelect }: TemplateListProps):
         )}
       />
       <div className="max-h-[200px] overflow-y-auto stack-xs">
-        {filteredTemplates.length === 0 && (
+        {filteredBuiltins.length === 0 && (
           <p className="text-sm text-text-muted py-4 text-center">
-            {search ? t('simulation.noTemplatesMatchSearch') : t('simulation.noTemplatesAvailable')}
+            {search ? t('simulation.noBuiltinsMatchSearch') : t('simulation.noBuiltinsAvailable')}
           </p>
         )}
-        {filteredTemplates.map((template) => (
+        {filteredBuiltins.map((builtin) => (
           <button
-            key={template.name}
+            key={builtin.name}
             type="button"
-            onClick={() => onSelect(template)}
+            onClick={() => onSelect(builtin)}
             className={cn(
               'w-full text-left px-3 py-row rounded-lg transition-colors',
-              selectedName === template.name
+              selectedName === builtin.name
                 ? 'bg-brand-primary/30 border border-brand-primary/50'
                 : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
             )}
           >
-            <div className="text-sm text-text-primary font-medium">{template.name}</div>
-            <div className="text-xs text-text-muted truncate">{template.description}</div>
+            <div className="text-sm text-text-primary font-medium">{builtin.name}</div>
+            <div className="text-xs text-text-muted truncate">{builtin.description}</div>
             <div className="text-xs text-text-muted mt-tight">
-              {t('simulation.deviceCount', { count: template.deviceCount })}
+              {t('simulation.deviceCount', { count: builtin.deviceCount })}
             </div>
           </button>
         ))}

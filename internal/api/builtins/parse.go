@@ -1,4 +1,4 @@
-package templates
+package builtins
 
 import (
 	"io/fs"
@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-// Scan walks baseDir for YAML template files and returns the parsed
+// Scan walks baseDir for YAML scenario files and returns the parsed
 // metadata for each. Entries that error or that are not .yaml/.yml are
 // skipped; the walk continues.
-func Scan(baseDir string) ([]Template, error) {
-	var found []Template
+func Scan(baseDir string) ([]Scenario, error) {
+	var found []Scenario
 
 	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, walkErr error) error {
 		// Skip entries with errors
@@ -25,16 +25,16 @@ func Scan(baseDir string) ([]Template, error) {
 			return nil
 		}
 
-		found = append(found, parseTemplateFile(path))
+		found = append(found, parseScenarioFile(path))
 		return nil
 	})
 
 	return found, err
 }
 
-// parseTemplateFile extracts template metadata from a file.
+// parseScenarioFile extracts scenario metadata from a file.
 //
-// Templates can opt-in to a small front-matter block at the very top of
+// Scenarios can opt-in to a small front-matter block at the very top of
 // the YAML for richer UI metadata. The parser walks consecutive comment
 // lines and recognises:
 //
@@ -44,7 +44,7 @@ func Scan(baseDir string) ([]Template, error) {
 // When present these win over the legacy "first non-empty comment line"
 // heuristic. The keys are case-insensitive and the rest of the file is
 // untouched.
-func parseTemplateFile(path string) Template {
+func parseScenarioFile(path string) Scenario {
 	// Extract name from filename without extension
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 
@@ -54,7 +54,7 @@ func parseTemplateFile(path string) Template {
 
 	description := meta["description"]
 	if description == "" {
-		// Fall back to the legacy first-comment heuristic for templates
+		// Fall back to the legacy first-comment heuristic for scenarios
 		// that haven't been migrated yet.
 		description = extractDescription(path)
 	}
@@ -63,16 +63,16 @@ func parseTemplateFile(path string) Template {
 		if base == "" {
 			base = name
 		}
-		description = base + " configuration template"
+		description = base + " scenario"
 	}
 
 	// Count devices in the YAML file
 	deviceCount := CountDevicesInFile(path)
 
 	// Determine type: front-matter wins, otherwise infer from name+path.
-	templateType := strings.ToLower(strings.TrimSpace(meta["type"]))
-	if templateType == "" {
-		templateType = determineTemplateType(path, name)
+	scenarioType := strings.ToLower(strings.TrimSpace(meta["type"]))
+	if scenarioType == "" {
+		scenarioType = determineScenarioType(path, name)
 	}
 
 	// Tags: front-matter "tags:" comma-separated wins, otherwise infer.
@@ -85,12 +85,12 @@ func parseTemplateFile(path string) Template {
 	// stable regardless of how the YAML author cased it.
 	vendor := strings.ToLower(strings.TrimSpace(meta["vendor"]))
 
-	return Template{
+	return Scenario{
 		Name:        name,
 		DisplayName: displayName,
 		Description: description,
 		DeviceCount: deviceCount,
-		Type:        templateType,
+		Type:        scenarioType,
 		Vendor:      vendor,
 		Tags:        tags,
 	}
@@ -118,7 +118,7 @@ func splitTags(raw string) []string {
 // are lowercased; values are trimmed.
 func extractFrontMatter(path string) map[string]string {
 	// filepath.Clean keeps gosec G304 quiet — callers walk a
-	// server-owned templates directory, but cleaning is cheap and
+	// server-owned scenarios directory, but cleaning is cheap and
 	// satisfies the linter without a //nolint exception.
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -149,7 +149,7 @@ func extractFrontMatter(path string) map[string]string {
 }
 
 // CountDevicesInFile counts the number of devices defined in a YAML
-// config. It is a shared config-file utility: both the template parser
+// config. It is a shared config-file utility: both the scenario parser
 // and the user-config parser in the api package use it.
 func CountDevicesInFile(path string) int {
 	data, err := os.ReadFile(filepath.Clean(path))
@@ -172,8 +172,8 @@ func CountDevicesInFile(path string) int {
 	return count
 }
 
-// determineTemplateType determines the template type from its path and name.
-func determineTemplateType(path, name string) string {
+// determineScenarioType determines the scenario type from its path and name.
+func determineScenarioType(path, name string) string {
 	pathLower := strings.ToLower(path)
 	nameLower := strings.ToLower(name)
 

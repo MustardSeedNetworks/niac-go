@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
 import type {
+  BuiltinScenario,
   LibraryNetwork,
   NetworkInterface,
   SimulationRequest,
   SimulationStatus,
-  Template,
 } from '../api/types';
 import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { PreflightStep } from '../components/wizard/PreflightStep';
@@ -112,10 +112,10 @@ export const RuntimeControlPage: FC = () => {
   );
 
   const handleSelectTemplate = useCallback(
-    (template: Template) => {
+    (builtin: BuiltinScenario) => {
       setSimulationSettings({
-        configSource: 'template',
-        configName: template.name,
+        configSource: 'builtin',
+        configName: builtin.name,
       });
       setQuickUploadFile(null);
       invalidatePreparedRequest();
@@ -140,7 +140,7 @@ export const RuntimeControlPage: FC = () => {
       setQuickUploadFile(file);
       invalidatePreparedRequest();
       if (file) {
-        // Picking an upload clears any previously-selected template / config so
+        // Picking an upload clears any previously-selected built-in scenario / config so
         // the start handler doesn't get confused about which source wins.
         setSimulationSettings({
           configSource: 'upload',
@@ -174,21 +174,21 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       let configData: string | undefined;
-      let templateName: string | undefined;
+      let scenarioName: string | undefined;
 
       // Handle quick upload file
       if (quickUploadFile) {
         configData = await fileToText(quickUploadFile);
       }
-      // Handle template — pass the template name so the daemon loads
-      // the YAML directly from disk. This preserves the template's own
+      // Built-in scenario — pass its name so the daemon loads
+      // the YAML directly from disk. This preserves the scenario's own
       // directory as the include_path base, which matters for vendor
-      // templates that reference walk files via relative paths.
+      // scenarios that reference walk files via relative paths.
       // Fetching the content and sending it inline used to trip the
-      // walk-file path-traversal guard for templates like
+      // walk-file path-traversal guard for scenarios like
       // vendors/paloalto-firewall.yaml.
-      else if (simulationSettings.configSource === 'template') {
-        templateName = simulationSettings.configName;
+      else if (simulationSettings.configSource === 'builtin') {
+        scenarioName = simulationSettings.configName;
       }
       // Handle a saved library network — the library confines entries
       // behind an os.Root keyed by name (internal/library/list.go), so
@@ -204,7 +204,7 @@ export const RuntimeControlPage: FC = () => {
         payload: {
           interface: simulationSettings.selectedInterface,
           configData: configData,
-          templateName: templateName,
+          scenarioName: scenarioName,
         },
         sequence,
       });
@@ -382,7 +382,7 @@ export const RuntimeControlPage: FC = () => {
                 <SmallText className="text-status-success">
                   {quickUploadFile
                     ? `${quickUploadFile.name} ${t('runtime.configUploadSuffix')}`
-                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'template' ? t('runtime.configSourceTemplate') : t('runtime.configSourceConfig')})`}
+                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'builtin' ? t('runtime.configSourceBuiltin') : t('runtime.configSourceConfig')})`}
                 </SmallText>
               ) : (
                 <SmallText className="italic text-text-muted">
@@ -396,7 +396,7 @@ export const RuntimeControlPage: FC = () => {
                 source: quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null),
                 name: quickUploadFile ? quickUploadFile.name : simulationSettings.configName,
               }}
-              onSelectTemplate={handleSelectTemplate}
+              onSelectBuiltin={handleSelectTemplate}
               onSelectUserConfig={handleSelectUserConfig}
               onUpload={handleUpload}
               uploadFile={quickUploadFile}

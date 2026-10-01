@@ -42,7 +42,7 @@ import (
 // "identical" here means identical in the same terms F1a reports.
 //
 // Before this landed the editor was the odd one out in both directions:
-// `walk_file: walks/x.walk` -- the spelling every config file and template uses
+// `walk_file: walks/x.walk` -- the spelling every config file and built-in scenario uses
 // -- was refused as "walk file not found", and an absolute path outside the
 // config directory, which the other two surfaces reject, was accepted.
 
@@ -255,11 +255,11 @@ func TestTheEditorRefusesAWalkOutsideTheConfigDirectory(t *testing.T) {
 const precedenceWalkLine = ".1.3.6.1.2.1.1.1.0 = STRING: \"outside\"\n"
 
 // A device the daemon can read, the daemon must be able to save. The shipped
-// walk-backed templates reach their captures through `include_path: ../walks`,
+// walk-backed scenarios reach their captures through `include_path: ../walks`,
 // so the read-back document names a walk one directory *up* from the config --
 // which a base of the config's own directory refuses. This is the case that
 // broke when the editor was first given a base at all.
-func TestATemplateDeviceSurvivesAnEditorRoundTrip(t *testing.T) {
+func TestABuiltinScenarioDeviceSurvivesAnEditorRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	if _, err := library.Open(root); err != nil {
 		t.Fatalf("bootstrap library: %v", err)
@@ -270,7 +270,7 @@ func TestATemplateDeviceSurvivesAnEditorRoundTrip(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cfg, err := config.LoadYAML(filepath.Join(networks, name+".yaml"))
 			if err != nil {
-				t.Fatalf("load template: %v", err)
+				t.Fatalf("load scenario: %v", err)
 			}
 			server := &Server{cfg: ServerConfig{
 				ConfigPath: filepath.Join(networks, name+".yaml"),

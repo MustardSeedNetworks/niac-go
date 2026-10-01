@@ -205,7 +205,7 @@ visualization in the web UI that derives links from LLDP/CDP neighbor entries.`,
     fullName: 'NIAC CLI Subcommands',
     summary: 'Every command the niac binary exposes.',
     description: `NIAC is a single binary with a Cobra-based CLI. Top-level
-subcommands cover the full lifecycle: \`init\`/\`generate\`/\`template\` for
+subcommands cover the full lifecycle: \`init\`/\`generate\`/\`scenario\` for
 creating configs, \`validate\` for checking them, \`daemon\`/\`run\`
 for executing simulations, \`status\`/\`monitor\`/\`logs\`/\`dump\` for observing a
 running daemon, \`neighbors\` for the LLDP/CDP
@@ -217,7 +217,7 @@ table, \`analyze-pcap\`/\`analyze-walk\`/\`sanitize\` for offline tools, and
       'cmd-init',
       'cmd-generate',
       'cmd-validate',
-      'cmd-template',
+      'cmd-scenario',
       'cmd-status',
       'cmd-monitor',
       'cmd-logs',
@@ -281,7 +281,7 @@ const deviceItems: HelpItem[] = [
     laymanDesc:
       'The "router" type tells NIAC to act like a Cisco-style routing box — it shows up in LLDP and CDP as a router, answers pings on every configured IP, and responds to SNMP polls for the standard router OIDs.',
     whenToUse:
-      'Validating routing protocol discovery, NMS template detection for routers, or testing tooling that special-cases L3 devices.',
+      'Validating routing protocol discovery, NMS device-type detection for routers, or testing tooling that special-cases L3 devices.',
     whenNotToUse:
       'You only need a thing that responds to ping. Use the `host` or `unknown` type instead — less protocol noise on the wire.',
     parameters: [],
@@ -315,7 +315,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Minimal router persona',
-        command: 'niac template use router router.yaml && sudo niac daemon --once en0 router.yaml',
+        command: 'niac scenario use router router.yaml && sudo niac daemon --once en0 router.yaml',
       },
       {
         desc: 'Validate a router config before running it',
@@ -341,7 +341,7 @@ const deviceItems: HelpItem[] = [
     laymanDesc:
       'The "switch" type makes NIAC act like a managed L2 switch. It runs spanning-tree, tags VLAN traffic, advertises bridge capabilities to neighbors, and answers SNMP for switch-style OIDs (bridge MIB, RFC 2674, etc.).',
     whenToUse:
-      'Testing topology discovery, STP-aware tools, switch-template detection in an NMS, or VLAN configurations.',
+      'Testing topology discovery, STP-aware tools, switch-type detection in an NMS, or VLAN configurations.',
     whenNotToUse:
       'Validating routing behavior — the switch persona doesn’t do routing; use a router or pair both.',
     parameters: [],
@@ -375,7 +375,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Spin up a single access switch',
-        command: 'niac template use switch switch.yaml && sudo niac daemon --once en0 switch.yaml',
+        command: 'niac scenario use switch switch.yaml && sudo niac daemon --once en0 switch.yaml',
       },
       {
         desc: 'Make this switch the STP root',
@@ -418,7 +418,7 @@ const deviceItems: HelpItem[] = [
         defaultValue: '"NIAC firewall"',
         required: false,
         description:
-          'SNMP sysDescr string. Match a real vendor string to drive template detection.',
+          'SNMP sysDescr string. Match a real vendor string to drive NMS device-type detection.',
         example: 'sys_descr: "Palo Alto Networks PA-3220"',
       },
     ],
@@ -435,7 +435,7 @@ const deviceItems: HelpItem[] = [
     ],
     tips: [
       'Real firewalls rarely run CDP — disable it for a more authentic shape.',
-      'Set sysObjectID to a vendor-appropriate OID to drive proper template detection.',
+      'Set sysObjectID to a vendor-appropriate OID to drive proper NMS device-type detection.',
     ],
     seeAlso: ['device-router', 'proto-snmpv2c'],
   },
@@ -476,7 +476,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Web server with custom homepage',
-        command: 'niac template use server server.yaml && sudo niac daemon --once en0 server.yaml',
+        command: 'niac scenario use server server.yaml && sudo niac daemon --once en0 server.yaml',
       },
       {
         desc: 'Server with a JSON API',
@@ -567,7 +567,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Cisco Aironet 9120 AP',
-        command: 'niac template use ap ap.yaml && sudo niac daemon --once en0 ap.yaml',
+        command: 'niac scenario use ap ap.yaml && sudo niac daemon --once en0 ap.yaml',
       },
       {
         desc: 'AP with SNMP walk reflecting real radio counters',
@@ -587,9 +587,9 @@ const deviceItems: HelpItem[] = [
     category: 'devices',
     summary: 'Bare-minimum endpoint: ARP, ICMP, optional tiny HTTP.',
     techDesc:
-      'The `host` type (alias `iot` in templates) enables only ARP and ICMP by default. Useful for modeling sensor-class endpoints. Optionally enable HTTP with a single endpoint to mimic an IoT device’s telemetry endpoint, or a stripped LLDP TLV set for tools that expect every endpoint to announce itself.',
+      'The `host` type (alias `iot` in built-in scenarios) enables only ARP and ICMP by default. Useful for modeling sensor-class endpoints. Optionally enable HTTP with a single endpoint to mimic an IoT device’s telemetry endpoint, or a stripped LLDP TLV set for tools that expect every endpoint to announce itself.',
     laymanDesc:
-      'The "iot" template is for cameras, sensors, badge readers — things that mostly just answer ping and maybe serve a tiny JSON API.',
+      'The "iot" scenario is for cameras, sensors, badge readers — things that mostly just answer ping and maybe serve a tiny JSON API.',
     whenToUse:
       'Building dense networks of stub endpoints, or stress-testing tools that have to scan many low-talk devices.',
     whenNotToUse:
@@ -601,7 +601,7 @@ const deviceItems: HelpItem[] = [
         type: 'string',
         defaultValue: '"host"',
         required: true,
-        description: 'Bare-minimum host persona; templates name this `iot`.',
+        description: 'Bare-minimum host persona; built-in scenarios name this `iot`.',
         example: 'type: host',
       },
     ],
@@ -609,7 +609,7 @@ const deviceItems: HelpItem[] = [
     examples: [
       {
         desc: 'Temperature sensor with /data endpoint',
-        command: 'niac template use iot sensor.yaml && sudo niac daemon --once en0 sensor.yaml',
+        command: 'niac scenario use iot sensor.yaml && sudo niac daemon --once en0 sensor.yaml',
       },
       {
         desc: 'Fifty bare endpoints for scanner stress test',
@@ -2051,9 +2051,9 @@ const commandItems: HelpItem[] = [
     name: 'niac init',
     standard: 'niac CLI',
     category: 'commands',
-    summary: 'Interactive wizard — picks a template and customizes it.',
+    summary: 'Interactive wizard — picks a built-in scenario and customizes it.',
     techDesc:
-      'Walks the user through template selection (router / switch / ap / iot / server), persona naming, IP assignment, and writes a starting YAML. Faster than `generate` for "I just need something to run".',
+      'Walks the user through scenario selection (router / switch / ap / iot / server), persona naming, IP assignment, and writes a starting YAML. Faster than `generate` for "I just need something to run".',
     laymanDesc: 'A friendly question-and-answer wizard that produces a working config file.',
     whenToUse: 'First-time users, quick demos.',
     whenNotToUse: 'You already know exactly what you want — hand-write YAML.',
@@ -2082,7 +2082,7 @@ const commandItems: HelpItem[] = [
       },
     ],
     tips: ['You can always run it again — it doesn’t overwrite without prompting.'],
-    seeAlso: ['cmd-generate', 'cmd-template', 'cmd-validate'],
+    seeAlso: ['cmd-generate', 'cmd-scenario', 'cmd-validate'],
   },
   {
     id: 'cmd-generate',
@@ -2105,7 +2105,7 @@ const commandItems: HelpItem[] = [
       },
     ],
     tips: ['Pipe answers from a file for repeatable generation in CI.'],
-    seeAlso: ['cmd-init', 'cmd-template'],
+    seeAlso: ['cmd-init', 'cmd-scenario'],
   },
   {
     id: 'cmd-validate',
@@ -2147,13 +2147,13 @@ const commandItems: HelpItem[] = [
     seeAlso: ['cmd-daemon-once', 'cmd-init'],
   },
   {
-    id: 'cmd-template',
-    name: 'niac template',
+    id: 'cmd-scenario',
+    name: 'niac scenario',
     standard: 'niac CLI',
     category: 'commands',
-    summary: 'Manage built-in YAML templates.',
+    summary: 'Manage built-in scenarios.',
     techDesc:
-      'Subcommands: `template list` (show available templates), `template use <name> <output>` (copy a template into the cwd), `template show <name>` (cat to stdout).',
+      'Subcommands: `scenario list` (show the built-in scenarios), `scenario use <name> <output>` (copy one into the cwd), `scenario show <name>` (print it to stdout), `scenario apply <name>` (validate and summarize it).',
     laymanDesc: 'Browse the built-in starter configs and copy one into your project.',
     whenToUse: 'Spinning up a new simulation.',
     whenNotToUse: 'You already have a config.',
@@ -2162,16 +2162,18 @@ const commandItems: HelpItem[] = [
     metrics: [],
     examples: [
       {
-        desc: 'List templates',
-        command: 'niac template list',
+        desc: 'List built-in scenarios',
+        command: 'niac scenario list',
         output: 'router  switch  ap  iot  server  minimal  complete',
       },
       {
-        desc: 'Copy router template locally',
-        command: 'niac template use router router.yaml',
+        desc: 'Copy the router scenario locally',
+        command: 'niac scenario use router router.yaml',
       },
     ],
-    tips: ['Templates are versioned with the binary — update NIAC, update the starting configs.'],
+    tips: [
+      'Built-in scenarios are versioned with the binary — update NIAC, update the starting configs.',
+    ],
     seeAlso: ['cmd-init'],
   },
   {

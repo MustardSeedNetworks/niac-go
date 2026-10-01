@@ -1,7 +1,7 @@
 /**
  * migrated-dialogs.a11y.test.tsx — the five overlays that were hand-rolled (#1863).
  *
- * StreamView, ColoringRulesPanel, MergePreviewModal, TemplatePreviewModal and
+ * StreamView, ColoringRulesPanel, MergePreviewModal, ScenarioPreviewModal and
  * CloneDeviceModal each drew their own `fixed inset-0` overlay beside `Modal`.
  * Two of them had no `role="dialog"` at all, two named themselves with a
  * literal `id="modal-title"` (a duplicate the moment a second dialog mounts),
@@ -17,12 +17,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
-import type { PcapPacket, Template } from '../api/types';
+import type { BuiltinScenario, PcapPacket } from '../api/types';
 import { ColoringRulesPanel } from './ColoringRulesPanel';
 import { MergePreviewModal } from './config/MergeControls';
 import { CloneDeviceModal } from './device-list/CloneDeviceModal';
+import { ScenarioPreviewModal } from './ScenarioPreviewModal';
 import { StreamView } from './StreamView';
-import { TemplatePreviewModal } from './TemplatePreviewModal';
 
 const packet: PcapPacket = {
   id: '1',
@@ -38,7 +38,7 @@ const packet: PcapPacket = {
   rawData: '68656c6c6f',
 };
 
-const template: Template = {
+const builtin: BuiltinScenario = {
   name: 'hospital',
   description: 'Hospital pack',
   type: 'switch',
@@ -71,8 +71,8 @@ const dialogs: Array<[string, (onClose: () => void) => React.ReactElement]> = [
   [
     'hospital',
     (onClose) => (
-      <TemplatePreviewModal
-        template={template}
+      <ScenarioPreviewModal
+        builtin={builtin}
         content={null}
         loading={false}
         error={null}
@@ -90,7 +90,7 @@ const dialogs: Array<[string, (onClose: () => void) => React.ReactElement]> = [
   ],
 ];
 
-// TemplatePreviewModal navigates on "edit a copy", so every dialog is rendered
+// ScenarioPreviewModal navigates on "edit a copy", so every dialog is rendered
 // under a router rather than special-casing one of them.
 function renderInRouter(element: React.ReactElement) {
   return render(<MemoryRouter>{element}</MemoryRouter>);

@@ -1,6 +1,6 @@
 import { Building2, FileCode, Globe, Router, Server, Shield, Wifi } from 'lucide-react';
 import type { FC } from 'react';
-import type { LibraryNetwork, Template } from '../../api/types';
+import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
 
 /**
  * Shared types + helpers for the ConfigPicker family of components.
@@ -16,7 +16,7 @@ export type ViewMode = 'grid' | 'list';
 export const VIEW_PREF_KEY = 'niac.configs.viewMode';
 export const FAVORITES_STORAGE_KEY = 'niac.configs.favorites';
 
-export const TEMPLATE_TYPE_ICON: Record<Template['type'], FC<{ className?: string }>> = {
+export const SCENARIO_TYPE_ICON: Record<BuiltinScenario['type'], FC<{ className?: string }>> = {
   basic: Globe,
   router: Router,
   switch: FileCode,
@@ -27,7 +27,7 @@ export const TEMPLATE_TYPE_ICON: Record<Template['type'], FC<{ className?: strin
   custom: FileCode,
 };
 
-export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
+export const SCENARIO_TYPE_TINT: Record<BuiltinScenario['type'], string> = {
   basic: 'bg-status-info/15 text-status-info-strong border-status-info/30',
   router: 'bg-status-warning/15 text-status-warning-strong border-status-warning/30',
   switch: 'bg-status-success/15 text-status-success-strong border-status-success/30',
@@ -40,7 +40,7 @@ export const TEMPLATE_TYPE_TINT: Record<Template['type'], string> = {
 
 /**
  * ConfigItem is one row in the unified Configs list, regardless of
- * whether the underlying source is a built-in template, a saved user
+ * whether the underlying source is a built-in scenario, a saved user
  * config, or a one-shot local upload.
  */
 export type ConfigItem =
@@ -50,7 +50,7 @@ export type ConfigItem =
       name: string;
       description: string;
       deviceCount: number;
-      template: Template;
+      builtin: BuiltinScenario;
     }
   | {
       kind: 'saved';
@@ -78,7 +78,7 @@ export type ConfigItem =
  * fetchLibraryNetworkContent(name) and sends it inline.
  */
 export interface Selection {
-  source: 'template' | 'userConfig' | 'upload' | null;
+  source: 'builtin' | 'userConfig' | 'upload' | null;
   name: string;
 }
 
@@ -87,8 +87,8 @@ export interface ConfigPickerProps {
   filterByDeviceFamily?: boolean;
   /** The currently selected config. */
   selection: Selection;
-  /** Called when the user picks a built-in template. */
-  onSelectTemplate: (template: Template) => void;
+  /** Called when the user picks a built-in scenario. */
+  onSelectBuiltin: (builtin: BuiltinScenario) => void;
   /** Called when the user picks a saved (user) network from the library. */
   onSelectUserConfig: (config: LibraryNetwork) => void;
   /** Called when the user uploads a file (or clears it). */

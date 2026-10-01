@@ -193,14 +193,14 @@ func (s *Server) createAndSaveDevice(
 // Getting the base from the loaded config rather than from the config path
 // alone is what makes the editor able to save a device it can read. The editor
 // posts back the document the daemon serialized (DeviceDetailResponse.rawYaml),
-// which carries the *resolved* walk path -- for a library template that is
+// which carries the *resolved* walk path -- for a library scenario that is
 // <root>/walks/x.walk, reached through `include_path: ../walks` from
 // <root>/networks. Confining that to <root>/networks would refuse the daemon's
 // own read-back.
 //
 // Without any base at all -- which is what this path had before -- it broke in
 // both directions instead: `walk_file: walks/x.walk`, the spelling every config
-// file and template uses, resolved against the daemon's working directory and
+// file and built-in scenario uses, resolved against the daemon's working directory and
 // came back "walk file not found"; and an absolute path anywhere on the host
 // was accepted, because the containment check is skipped when there is no base.
 func (s *Server) authoredIncludeDir() string {

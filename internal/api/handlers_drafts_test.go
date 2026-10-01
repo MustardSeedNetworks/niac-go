@@ -278,16 +278,16 @@ func TestDraftBehaviorReplacementRejectsUnknownTarget(t *testing.T) {
 	}
 }
 
-func TestDraftCreateFromTemplateMaterializesRelativeResources(t *testing.T) {
+func TestDraftCreateFromBuiltinScenarioMaterializesRelativeResources(t *testing.T) {
 	server, _ := newTestServer(t)
 	lib := attachDraftLibrary(t, server)
-	templateDir := t.TempDir()
-	t.Setenv("NIAC_TEMPLATES_DIR", templateDir)
-	walkPath := filepath.Join(templateDir, "switch.walk")
+	scenarioDir := t.TempDir()
+	t.Setenv("NIAC_TEMPLATES_DIR", scenarioDir)
+	walkPath := filepath.Join(scenarioDir, "switch.walk")
 	if err := os.WriteFile(walkPath, []byte("SNMPv2-MIB::sysName.0 = STRING: access-1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	templateYAML := `include_path: "."
+	scenarioYAML := `include_path: "."
 devices:
   - name: access-1
     type: switch
@@ -296,7 +296,7 @@ devices:
       community: "public"
       walk_file: "switch.walk"
 `
-	if err := os.WriteFile(filepath.Join(templateDir, "relative.yaml"), []byte(templateYAML), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(scenarioDir, "relative.yaml"), []byte(scenarioYAML), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -304,28 +304,28 @@ devices:
 	server.handleLibraryDrafts(rec, draftRequest(
 		http.MethodPost,
 		"/api/v1/library/drafts",
-		`{"name":"from-template","templateName":"relative"}`,
+		`{"name":"from-builtin","scenarioName":"relative"}`,
 		"",
 	))
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create status = %d, body=%s", rec.Code, rec.Body.String())
 	}
-	draft, err := lib.ReadDraft("from-template")
+	draft, err := lib.ReadDraft("from-builtin")
 	if err != nil {
 		t.Fatalf("ReadDraft() error = %v", err)
 	}
-	resolvedTemplateDir, err := filepath.EvalSymlinks(templateDir)
+	resolvedScenarioDir, err := filepath.EvalSymlinks(scenarioDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(draft.Content, "include_path: "+resolvedTemplateDir) {
+	if !strings.Contains(draft.Content, "include_path: "+resolvedScenarioDir) {
 		t.Fatalf(
 			"materialized draft does not contain resolved include path %q:\n%s",
-			resolvedTemplateDir,
+			resolvedScenarioDir,
 			draft.Content,
 		)
 	}
-	resolvedWalkPath := filepath.Join(resolvedTemplateDir, filepath.Base(walkPath))
+	resolvedWalkPath := filepath.Join(resolvedScenarioDir, filepath.Base(walkPath))
 	if !strings.Contains(draft.Content, resolvedWalkPath) {
 		t.Fatalf(
 			"materialized draft does not contain resolved walk path %q:\n%s",
@@ -337,7 +337,7 @@ devices:
 		t.Fatalf("materialized draft is not independently loadable: %v", loadErr)
 	}
 	if _, loadErr := config.LoadYAMLBytesManaged(
-		[]byte(draft.Content), t.TempDir(), []string{templateDir},
+		[]byte(draft.Content), t.TempDir(), []string{scenarioDir},
 	); loadErr != nil {
 		t.Fatalf("materialized draft does not survive managed inline loading: %v", loadErr)
 	}

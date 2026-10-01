@@ -3,7 +3,7 @@ import {
   isScenarioRequestValid,
   type ScenarioGenerateRequest,
 } from '../../api/scenario-client';
-import type { LibraryNetwork, Template } from '../../api/types';
+import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
 
 /**
  * NewSimulationWizard step identifiers, in stepper order. Kept as a
@@ -14,7 +14,7 @@ import type { LibraryNetwork, Template } from '../../api/types';
  * before it can put them on a network.
  */
 export const WIZARD_STEPS = [
-  'template',
+  'scenario',
   'devices',
   'networks',
   'protocols',
@@ -27,9 +27,9 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number];
 /**
  * Where the starting config comes from. 'empty' has no existing-UI
  * equivalent — it's a one-line addition (a blank devices: [] skeleton)
- * so the wizard doesn't force a template pick.
+ * so the wizard doesn't force a scenario pick.
  */
-export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty' | 'generated';
+export type WizardSource = 'builtin' | 'userConfig' | 'upload' | 'empty' | 'generated';
 
 /**
  * WizardState is held locally in the container. Draft content and its
@@ -39,7 +39,7 @@ export type WizardSource = 'template' | 'userConfig' | 'upload' | 'empty' | 'gen
 export interface WizardState {
   step: number;
   source: WizardSource | null;
-  template: Template | null;
+  builtin: BuiltinScenario | null;
   userConfig: LibraryNetwork | null;
   uploadFile: File | null;
   fleetRequest: ScenarioGenerateRequest;
@@ -58,7 +58,7 @@ export interface WizardState {
 export const initialWizardState: WizardState = {
   step: 0,
   source: null,
-  template: null,
+  builtin: null,
   userConfig: null,
   uploadFile: null,
   fleetRequest: defaultScenarioRequest(),
@@ -69,10 +69,10 @@ export const initialWizardState: WizardState = {
 };
 
 /** Step 1 is complete once a source is picked and an interface chosen. */
-export function isTemplateStepComplete(state: WizardState): boolean {
+export function isStartingPointStepComplete(state: WizardState): boolean {
   if (!state.selectedInterface) return false;
   if (state.source === 'empty') return true;
-  if (state.source === 'template') return state.template !== null;
+  if (state.source === 'builtin') return state.builtin !== null;
   if (state.source === 'userConfig') return state.userConfig !== null;
   if (state.source === 'upload') return state.uploadFile !== null;
   if (state.source === 'generated') return isScenarioRequestValid(state.fleetRequest);

@@ -21,7 +21,7 @@ func simulationClient(options *simulationCLIOptions) (*cliclient.Client, error) 
 func simulationRequest(options *simulationCLIOptions) cliclient.SimulationRequest {
 	return cliclient.SimulationRequest{
 		SessionID: options.session, Interface: options.iface, ConfigPath: options.config,
-		TemplateName: options.template, Attachment: options.attachment,
+		ScenarioName: options.scenario, Attachment: options.attachment,
 		AttachmentMode: fabric.AttachmentMode(options.mode), AccessVLAN: options.accessVLAN,
 	}
 }

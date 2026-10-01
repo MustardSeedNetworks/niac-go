@@ -170,7 +170,7 @@ export const TopologyPage: FC = () => {
   // ReactFlow instance handle — captured on init so we can call
   // fitView() programmatically when the simulation changes
   // underneath us (different config loaded → new device set).
-  // Without this, switching templates left the canvas zoomed in
+  // Without this, switching scenarios left the canvas zoomed in
   // on wherever the prior layout had pushed the viewport, and
   // operators interpreted that as a stale render.
   const rfInstance = useRef<ReactFlowInstance<DeviceNodeType, LinkEdge> | null>(null);

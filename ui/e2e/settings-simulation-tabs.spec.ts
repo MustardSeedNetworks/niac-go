@@ -45,15 +45,15 @@ for (const width of [1280, 390]) {
         await interfacePicker.evaluate((element) => element.getBoundingClientRect().height),
       ).toBeGreaterThanOrEqual(44);
       const tabs = drawer.getByRole('tablist', { name: 'Configuration' });
-      const templates = tabs.getByRole('tab', { name: 'Templates', exact: true });
+      const builtins = tabs.getByRole('tab', { name: 'Built-in', exact: true });
       const configs = tabs.getByRole('tab', { name: 'My Configs', exact: true });
       const upload = tabs.getByRole('tab', { name: 'Upload', exact: true });
-      await expect(templates).toHaveAttribute('aria-selected', 'true');
+      await expect(builtins).toHaveAttribute('aria-selected', 'true');
       await expect(configs).toHaveAccessibleName('My Configs');
       await expect(upload).toHaveAccessibleName('Upload');
       await page.screenshot({ path: test.info().outputPath('simulation-tabs.png') });
-      await templates.focus();
-      await templates.press('ArrowRight');
+      await builtins.focus();
+      await builtins.press('ArrowRight');
       await expect(configs).toBeFocused();
       await expect(configs).toHaveAttribute('aria-selected', 'true');
       await expect(drawer.getByRole('tabpanel', { name: 'My Configs' })).toBeVisible();
@@ -63,13 +63,13 @@ for (const width of [1280, 390]) {
       await configs.press('End');
       await expect(upload).toBeFocused();
       await upload.press('ArrowRight');
-      await expect(templates).toBeFocused();
-      await templates.press('ArrowLeft');
+      await expect(builtins).toBeFocused();
+      await builtins.press('ArrowLeft');
       await expect(upload).toBeFocused();
       await upload.press('Home');
-      await expect(templates).toBeFocused();
-      await templates.press('Tab');
-      await expect(drawer.getByRole('tabpanel', { name: 'Templates' })).toBeFocused();
+      await expect(builtins).toBeFocused();
+      await builtins.press('Tab');
+      await expect(drawer.getByRole('tabpanel', { name: 'Built-in' })).toBeFocused();
     });
   });
 }

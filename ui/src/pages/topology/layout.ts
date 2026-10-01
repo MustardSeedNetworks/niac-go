@@ -200,7 +200,7 @@ function packedSize(leafCount: number): { width: number; height: number } {
  */
 function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): DeviceNode[] {
   const g = new dagre.graphlib.Graph();
-  // Spacing tuned by trial against the kitchen-sink template, and sized by the
+  // Spacing tuned by trial against the kitchen-sink scenario, and sized by the
   // edge labels rather than by the nodes:
   //  - NODE_SEPARATION so siblings on the same rank don't crowd each other;
   //    the trunk-edge floating labels ("Gi0/1 ↔ Gi0/1 · VLANs 1-30") sit

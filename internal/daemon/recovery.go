@@ -334,7 +334,7 @@ func readRecoveryState(path string) (activeSimulationState, error) {
 			)
 		}
 		seen[request.SessionID] = struct{}{}
-		if request.ConfigData != "" || request.TemplateName != "" {
+		if request.ConfigData != "" || request.ScenarioName != "" {
 			return activeSimulationState{}, errors.New(
 				"recovery state must reference persisted configuration paths",
 			)

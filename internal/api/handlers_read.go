@@ -79,8 +79,8 @@ func ipAddressesToStrings(ips []net.IP) []string {
 
 // deviceSummary builds the JSON view of a device shared by /api/v1/devices and
 // /api/v1/segments: name/type/ips/protocols, plus MAC + vendor/model when the
-// vendor-template metadata is present (otherwise that YAML would be invisible to
-// operators browsing the device or segment lists).
+// YAML sets them (otherwise they would be invisible to operators browsing the
+// device or segment lists).
 func deviceSummary(dev *config.Device) map[string]any {
 	entry := map[string]any{
 		"name":      dev.Name,

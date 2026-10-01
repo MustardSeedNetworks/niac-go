@@ -13,7 +13,7 @@ import (
 type configSource struct {
 	data []byte
 	// label names the source for the run summary: a file path, or
-	// "template:<name>" / "library:<name>" for a resolved scenario.
+	// "builtin:<name>" / "library:<name>" for a resolved scenario.
 	label string
 	// path is the file the document was read from, empty for a resolved
 	// scenario. The daemon resolves relative capture-playback paths against
@@ -22,7 +22,7 @@ type configSource struct {
 }
 
 // resolveConfigSource reads a literal config file first. If the path does not
-// exist, it falls back to a built-in template or an installed library network
+// exist, it falls back to a built-in scenario or an installed library network
 // of the same name -- the Java demo wrapper's "run a named scenario"
 // convenience, kept when `run` was deleted in favour of `daemon --once`.
 //
@@ -42,7 +42,7 @@ func resolveConfigSource(ref string) (configSource, error) {
 	}
 
 	if tmpl, err := templates.Get(ref); err == nil {
-		return configSource{data: []byte(tmpl.Content), label: "template:" + tmpl.Name}, nil
+		return configSource{data: []byte(tmpl.Content), label: "builtin:" + tmpl.Name}, nil
 	}
 
 	lib, err := library.Open(library.DefaultRoot())

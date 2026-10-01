@@ -1,16 +1,16 @@
 import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchTemplateContent, fetchTemplates, importConfig } from '../../api/client';
+import { fetchBuiltinScenarioContent, fetchBuiltinScenarios, importConfig } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { LibraryNetwork, Template, TemplateContent } from '../../api/types';
+import type { BuiltinScenario, BuiltinScenarioContent, LibraryNetwork } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { useFavorites } from '../../hooks/useFavorites';
 import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
 import { copyToClipboard } from '../../utils/file';
-import { TemplatePreviewModal } from '../TemplatePreviewModal';
+import { ScenarioPreviewModal } from '../ScenarioPreviewModal';
 import {
   type ConfigItem,
   type ConfigPickerProps,
@@ -37,14 +37,14 @@ export type { ConfigPickerProps } from './ConfigPicker.types';
  */
 export const ConfigPicker: FC<ConfigPickerProps> = ({
   selection,
-  onSelectTemplate,
+  onSelectBuiltin,
   onSelectUserConfig,
   onUpload,
   uploadFile,
   filterByDeviceFamily = false,
 }) => {
   const { t } = useTranslation('pages');
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [builtins, setBuiltins] = useState<BuiltinScenario[]>([]);
   const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -52,18 +52,18 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
   const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
 
-  // Preview modal state (built-in templates only)
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
-  const [previewContent, setPreviewContent] = useState<TemplateContent | null>(null);
+  // Preview modal state (built-in scenarios only)
+  const [previewScenario, setPreviewScenario] = useState<BuiltinScenario | null>(null);
+  const [previewContent, setPreviewContent] = useState<BuiltinScenarioContent | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchTemplates(), fetchLibraryNetworks()])
+    Promise.all([fetchBuiltinScenarios(), fetchLibraryNetworks()])
       .then(([t, u]) => {
         if (cancelled) return;
-        setTemplates(t);
+        setBuiltins(t);
         setUserConfigs(u);
       })
       .catch(() => {
@@ -103,18 +103,18 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         config: c,
       });
     }
-    for (const t of templates) {
+    for (const t of builtins) {
       list.push({
         kind: 'builtin',
         key: `builtin:${t.name}`,
         name: t.name,
         description: t.description,
         deviceCount: t.deviceCount,
-        template: t,
+        builtin: t,
       });
     }
     return list;
-  }, [templates, userConfigs, uploadFile, t]);
+  }, [builtins, userConfigs, uploadFile, t]);
 
   /**
    * Searching narrows the list and keeps results alphabetical regardless
@@ -130,15 +130,15 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       if (
         filterByDeviceFamily &&
         family &&
-        (item.kind !== 'builtin' || item.template.type !== family)
+        (item.kind !== 'builtin' || item.builtin.type !== family)
       )
         return false;
       const searchable = [item.name, item.description];
       if (item.kind === 'builtin')
         searchable.push(
-          item.template.displayName ?? '',
-          item.template.vendor ?? '',
-          ...(item.template.tags ?? []),
+          item.builtin.displayName ?? '',
+          item.builtin.vendor ?? '',
+          ...(item.builtin.tags ?? []),
         );
       return !q || searchable.some((value) => value.toLowerCase().includes(q));
     };
@@ -163,7 +163,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   };
 
   const handleSelectItem = (item: ConfigItem) => {
-    if (item.kind === 'builtin') onSelectTemplate(item.template);
+    if (item.kind === 'builtin') onSelectBuiltin(item.builtin);
     else if (item.kind === 'saved') onSelectUserConfig(item.config);
     // local items are already "selected" — RuntimeControlPage tracks them as
     // the upload file. Selecting again is a no-op.
@@ -175,12 +175,12 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
 
   const handleViewItem = async (item: ConfigItem) => {
     if (item.kind !== 'builtin') return; // Only built-ins have an inline preview today
-    setPreviewTemplate(item.template);
+    setPreviewScenario(item.builtin);
     setPreviewContent(null);
     setPreviewError(null);
     setPreviewLoading(true);
     try {
-      const content = await fetchTemplateContent(item.template.name);
+      const content = await fetchBuiltinScenarioContent(item.builtin.name);
       setPreviewContent(content);
     } catch (err) {
       setPreviewError(err as Error);
@@ -190,14 +190,14 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   };
 
   const closePreview = () => {
-    setPreviewTemplate(null);
+    setPreviewScenario(null);
     setPreviewContent(null);
     setPreviewError(null);
   };
 
   const isItemSelected = (item: ConfigItem): boolean => {
     if (item.kind === 'builtin')
-      return selection.source === 'template' && selection.name === item.name;
+      return selection.source === 'builtin' && selection.name === item.name;
     if (item.kind === 'saved')
       return selection.source === 'userConfig' && selection.name === item.name;
     return selection.source === 'upload';
@@ -370,16 +370,16 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         searching={search.trim().length > 0 || family.length > 0}
       />
 
-      {previewTemplate && (
-        <TemplatePreviewModal
-          template={previewTemplate}
+      {previewScenario && (
+        <ScenarioPreviewModal
+          builtin={previewScenario}
           content={previewContent}
           loading={previewLoading}
           error={previewError}
           onClose={closePreview}
           onUse={(t) => {
             closePreview();
-            onSelectTemplate(t);
+            onSelectBuiltin(t);
           }}
           onCopy={async () => {
             await copyToClipboard(previewContent?.content ?? '');

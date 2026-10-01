@@ -215,9 +215,8 @@ operations:
   DELETE /api/v1/library/networks/:
     pathTemplate: /api/v1/library/networks/{name}
     tags: [Library]
-  GET /api/v1/templates/:
-    pathTemplate: /api/v1/templates/{name}
-    tags: [Templates]
+  GET /api/v1/scenario/builtins/:
+    pathTemplate: /api/v1/scenario/builtins/{name}
   GET /api/v1/device-schemas/:
     pathTemplate: /api/v1/device-schemas/{name}
     tags: [Devices]

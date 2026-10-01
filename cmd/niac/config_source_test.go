@@ -22,23 +22,23 @@ func TestResolveConfigSourceFileWins(t *testing.T) {
 	}
 }
 
-// `run` resolved a bare scenario name against the built-in templates; `--once`
+// `run` resolved a bare scenario name against the built-in scenarios; `--once`
 // inherits that, or the Java parity matrix's "run named demo scenario" row
 // regresses.
-func TestResolveConfigSourceTemplate(t *testing.T) {
+func TestResolveConfigSourceScenario(t *testing.T) {
 	source, err := resolveConfigSource("basic-network")
 	if err != nil {
-		t.Fatalf("resolveConfigSource(template): %v", err)
+		t.Fatalf("resolveConfigSource(scenario): %v", err)
 	}
-	if source.label != "template:basic-network" {
-		t.Fatalf("label = %q, want template:basic-network", source.label)
+	if source.label != "builtin:basic-network" {
+		t.Fatalf("label = %q, want builtin:basic-network", source.label)
 	}
 	if !strings.Contains(string(source.data), "devices:") {
-		t.Fatalf("template document has no devices: %q", source.data)
+		t.Fatalf("scenario document has no devices: %q", source.data)
 	}
-	// A template is not a file, so nothing may resolve relative paths against it.
+	// A scenario is not a file, so nothing may resolve relative paths against it.
 	if source.path != "" {
-		t.Fatalf("path = %q, want empty for a template", source.path)
+		t.Fatalf("path = %q, want empty for a scenario", source.path)
 	}
 }
 

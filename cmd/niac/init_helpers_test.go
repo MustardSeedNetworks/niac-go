@@ -17,19 +17,19 @@ func TestPrintInitHeader(t *testing.T) {
 	printInitHeader()
 }
 
-func TestPrintTemplateDetails(t *testing.T) {
+func TestPrintScenarioDetails(t *testing.T) {
 	tmpl := &templates.Template{
-		Name:        "test-template",
+		Name:        "test-scenario",
 		Description: "Test description",
 		UseCase:     "Testing",
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("printTemplateDetails panicked: %v", r)
+			t.Errorf("printScenarioDetails panicked: %v", r)
 		}
 	}()
-	printTemplateDetails(tmpl)
+	printScenarioDetails(tmpl)
 }
 
 func TestPrintInitSuccess(t *testing.T) {
@@ -75,7 +75,7 @@ func TestConfirmOverwriteIfExistsNoFile(t *testing.T) {
 	}
 }
 
-func TestMapNetworkTypeToTemplate(t *testing.T) {
+func TestMapNetworkTypeToScenario(t *testing.T) {
 	tests := []struct {
 		name         string
 		networkType  string
@@ -97,12 +97,12 @@ func TestMapNetworkTypeToTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			name, desc := mapNetworkTypeToTemplate(tt.networkType)
+			name, desc := mapNetworkTypeToScenario(tt.networkType)
 			if name != tt.expectedName {
-				t.Errorf("mapNetworkTypeToTemplate(%q) name = %q, want %q", tt.networkType, name, tt.expectedName)
+				t.Errorf("mapNetworkTypeToScenario(%q) name = %q, want %q", tt.networkType, name, tt.expectedName)
 			}
 			if tt.expectDesc && desc == "" {
-				t.Errorf("mapNetworkTypeToTemplate(%q) desc is empty", tt.networkType)
+				t.Errorf("mapNetworkTypeToScenario(%q) desc is empty", tt.networkType)
 			}
 		})
 	}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/templates"
+	"github.com/MustardSeedNetworks/niac-go/internal/api/builtins"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
@@ -15,7 +15,7 @@ import (
 type draftCreateRequest struct {
 	Name         string `json:"name"`
 	Content      string `json:"content"`
-	TemplateName string `json:"templateName"`
+	ScenarioName string `json:"scenarioName"`
 }
 
 type draftReplaceRequest struct {
@@ -123,10 +123,10 @@ func (s *Server) prepareDraftContent(
 	w http.ResponseWriter, r *http.Request, req draftCreateRequest,
 ) (string, bool) {
 	hasContent := strings.TrimSpace(req.Content) != ""
-	hasTemplate := strings.TrimSpace(req.TemplateName) != ""
-	if hasContent == hasTemplate {
+	hasScenario := strings.TrimSpace(req.ScenarioName) != ""
+	if hasContent == hasScenario {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			"Exactly one of content or templateName is required", nil)
+			"Exactly one of content or scenarioName is required", nil)
 		return "", false
 	}
 	if hasContent {
@@ -138,15 +138,15 @@ func (s *Server) prepareDraftContent(
 		return content, s.validateDraftContent(w, r, content)
 	}
 
-	_, templatePath, err := templates.Load(req.TemplateName)
+	_, scenarioPath, err := builtins.Load(req.ScenarioName)
 	if err != nil {
-		writeError(w, r, http.StatusNotFound, "not_found", "Template not found", nil)
+		writeError(w, r, http.StatusNotFound, "not_found", "Scenario not found", nil)
 		return "", false
 	}
-	cfg, _, err := config.LoadYAMLManaged(templatePath, templates.Dirs())
+	cfg, _, err := config.LoadYAMLManaged(scenarioPath, builtins.Dirs())
 	if err != nil {
-		s.logger.ErrorContext(r.Context(), "[API] Draft template validation failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "config_invalid", "Template configuration is invalid", nil)
+		s.logger.ErrorContext(r.Context(), "[API] Draft scenario validation failed", "error", err)
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Scenario configuration is invalid", nil)
 		return "", false
 	}
 	if !s.authorizeConfigEntitlements(w, r, cfg) {
@@ -157,13 +157,13 @@ func (s *Server) prepareDraftContent(
 	// Preserve that resolved base when moving the YAML into draft storage so
 	// inline preflight can enforce that each resource remains inside it.
 	if cfg.CapturePlayback != nil && !filepath.IsAbs(cfg.CapturePlayback.FileName) {
-		cfg.CapturePlayback.FileName = filepath.Join(filepath.Dir(templatePath), cfg.CapturePlayback.FileName)
+		cfg.CapturePlayback.FileName = filepath.Join(filepath.Dir(scenarioPath), cfg.CapturePlayback.FileName)
 	}
 	materialized, err := config.MarshalConfigYAML(cfg)
 	if err != nil {
-		s.logger.ErrorContext(r.Context(), "[API] Draft template materialization failed", "error", err)
+		s.logger.ErrorContext(r.Context(), "[API] Draft scenario materialization failed", "error", err)
 		writeError(w, r, http.StatusInternalServerError, "draft_materialization_failed",
-			"Failed to prepare template draft", nil)
+			"Failed to prepare scenario draft", nil)
 		return "", false
 	}
 	return string(materialized), true

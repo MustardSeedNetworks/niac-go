@@ -25,11 +25,11 @@ work for the lab host.
 
 ## How do I create and validate a configuration?
 
-Start from a shipped template or a YAML example, then validate it:
+Start from a built-in scenario or a YAML example, then validate it:
 
 ```bash
-niac template list
-niac template use minimal lab.yaml
+niac scenario list
+niac scenario use minimal lab.yaml
 niac validate lab.yaml
 ```
 
@@ -68,7 +68,7 @@ simulators to the same production-facing interface.
 ## How many devices can I simulate?
 
 One configuration may carry up to 1,000 devices, enforced across CLI, API, UI,
-import, template, configuration mutation, and runtime-start paths. The daemon
+import, built-in scenario, configuration mutation, and runtime-start paths. The daemon
 additionally bounds concurrent sessions and total devices across everything
 running at once.
 

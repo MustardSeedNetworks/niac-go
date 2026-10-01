@@ -560,7 +560,7 @@ func generateTestToken() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-// TestCSRFWiring_TemplatesAndLibraryNetworks is the #740 regression test
+// TestCSRFWiring_LibraryNetworks is the #740 regression test
 // (extended for #897 L4's library-networks unification): it drives
 // requests through the real route table (apiHandler) to prove the
 // library-networks mutating endpoints actually have csrfProtect in their
@@ -568,10 +568,10 @@ func generateTestToken() string {
 // rejected with 403 — if someone removes csrfProtect from routes.go, this
 // fails.
 //
-// /api/v1/templates is no longer in this list: templates ship with the
-// product and are read-only, so the path exposes no mutating method. See
-// TestTemplateRoutesRejectMutation.
-func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
+// The built-in scenario catalogue is not in this list: it ships with the
+// product and is read-only, so its paths expose no mutating method beyond
+// copy. See TestBuiltinScenarioRoutesRejectMutation.
+func TestCSRFWiring_LibraryNetworks(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	lib, err := library.Open(t.TempDir())
 	if err != nil {
@@ -618,13 +618,14 @@ func TestCSRFWiring_TemplatesAndLibraryNetworks(t *testing.T) {
 	}
 }
 
-// TestTemplateRoutesRejectMutation locks in that the template paths expose no
-// mutating method. Upload and delete previously existed as registered routes
-// that only ever returned 501 — CSRF-protected, rate-limited surface that
-// could not succeed. They were removed rather than implemented: templates ship
-// with the product and are read-only. If someone re-adds a mutating method
-// here it needs csrfProtect, so this test fails loudly first.
-func TestTemplateRoutesRejectMutation(t *testing.T) {
+// TestBuiltinScenarioRoutesRejectMutation locks in that the built-in scenario
+// paths expose no mutating method besides copy. Upload and delete previously
+// existed as registered routes that only ever returned 501 — CSRF-protected,
+// rate-limited surface that could not succeed. They were removed rather than
+// implemented: built-in scenarios ship with the product and are read-only. If
+// someone re-adds a mutating method here it needs csrfProtect, so this test
+// fails loudly first.
+func TestBuiltinScenarioRoutesRejectMutation(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	server.fileLimiter = ratelimit.NewRateLimiter(FileRateLimit, FileBurst)
 	mux := server.apiHandler()
@@ -633,8 +634,8 @@ func TestTemplateRoutesRejectMutation(t *testing.T) {
 		method string
 		path   string
 	}{
-		{http.MethodPost, "/api/v1/templates"},
-		{http.MethodDelete, "/api/v1/templates/example.yaml"},
+		{http.MethodPost, "/api/v1/scenario/builtins"},
+		{http.MethodDelete, "/api/v1/scenario/builtins/example.yaml"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
@@ -645,7 +646,7 @@ func TestTemplateRoutesRejectMutation(t *testing.T) {
 			mux.ServeHTTP(rec, req)
 
 			if rec.Code != http.StatusMethodNotAllowed {
-				t.Errorf("%s %s: status = %d, want 405 (no mutating template surface)",
+				t.Errorf("%s %s: status = %d, want 405 (no mutating built-in scenario surface)",
 					tc.method, tc.path, rec.Code)
 			}
 		})

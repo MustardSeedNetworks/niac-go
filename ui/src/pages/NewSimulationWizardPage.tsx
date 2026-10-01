@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../api/client';
 import {
   createScenarioDraft,
-  createScenarioDraftFromTemplate,
+  createScenarioDraftFromBuiltin,
   deleteScenarioDraft,
   fetchLibraryNetworkContent,
   replaceScenarioDraft,
   type ScenarioDraft,
 } from '../api/library-client';
 import { generateScenario } from '../api/scenario-client';
-import type { LibraryNetwork, SimulationRequest, Template } from '../api/types';
+import type { BuiltinScenario, LibraryNetwork, SimulationRequest } from '../api/types';
 import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
 import { useUnsavedChangesGuard } from '../components/device-editor/useUnsavedChangesGuard';
 import { DevicesStep } from '../components/wizard/DevicesStep';
@@ -19,12 +19,12 @@ import { NetworksStep } from '../components/wizard/NetworksStep';
 import { PreflightStep } from '../components/wizard/PreflightStep';
 import { ProtocolsStep } from '../components/wizard/ProtocolsStep';
 import { ReviewStep } from '../components/wizard/ReviewStep';
-import { TemplateStep } from '../components/wizard/TemplateStep';
+import { StartingPointStep } from '../components/wizard/StartingPointStep';
 import { WizardStatusNotice } from '../components/wizard/WizardStatusNotice';
 import { WizardStepper } from '../components/wizard/WizardStepper';
 import {
   initialWizardState,
-  isTemplateStepComplete,
+  isStartingPointStepComplete,
   WIZARD_STEPS,
   type WizardState,
 } from '../components/wizard/wizard-types';
@@ -50,7 +50,7 @@ const EMPTY_CONFIG_YAML = 'devices: []\n';
 const CONTENT_EDITING_STEPS = new Set(['devices', 'networks', 'protocols']);
 
 function selectedSourceKey(state: WizardState) {
-  if (state.source === 'template' && state.template) return `template:${state.template.name}`;
+  if (state.source === 'builtin' && state.builtin) return `builtin:${state.builtin.name}`;
   if (state.source === 'userConfig' && state.userConfig) return `network:${state.userConfig.name}`;
   if (state.source === 'upload' && state.uploadFile) {
     return `upload:${state.uploadFile.name}:${state.uploadFile.size}:${state.uploadFile.lastModified}`;
@@ -62,7 +62,7 @@ function selectedSourceKey(state: WizardState) {
 /**
  * NewSimulationWizard sequences draft authoring and runtime activation:
  *
- *   1. Template  — ConfigPicker (pick a template / saved config / upload / empty)
+ *   1. Scenario — ConfigPicker (pick a built-in scenario / saved config / upload / empty)
  *   2. Devices   — edit and revision-save the isolated draft
  *   3. Protocols — inspect identities and configured services
  *   4. Review    — review the exact saved draft revision
@@ -118,8 +118,8 @@ export const NewSimulationWizardPage: FC = () => {
       const draftName = newDraftName();
       let created: ScenarioDraft;
 
-      if (state.source === 'template' && state.template) {
-        created = await createScenarioDraftFromTemplate(draftName, state.template.name);
+      if (state.source === 'builtin' && state.builtin) {
+        created = await createScenarioDraftFromBuiltin(draftName, state.builtin.name);
       } else if (state.source === 'userConfig' && state.userConfig) {
         const content = (await fetchLibraryNetworkContent(state.userConfig.name)).content;
         created = await createScenarioDraft(draftName, content);
@@ -131,7 +131,7 @@ export const NewSimulationWizardPage: FC = () => {
         const generated = await generateScenario(state.fleetRequest);
         created = await createScenarioDraft(draftName, generated.content);
       } else {
-        throw new Error(t('newSimWizard.template.errorNoSource'));
+        throw new Error(t('newSimWizard.start.errorNoSource'));
       }
 
       // Changing the source mid-wizard used to leave the previous draft behind
@@ -221,7 +221,7 @@ export const NewSimulationWizardPage: FC = () => {
 
   const currentStep = WIZARD_STEPS[state.step];
   const canProceed =
-    state.step === 0 ? isTemplateStepComplete(state) && !state.starting : !state.saving;
+    state.step === 0 ? isStartingPointStepComplete(state) && !state.starting : !state.saving;
 
   if (simStatus === null) {
     return <WizardStatusNotice loading={loading} error={error} />;
@@ -252,13 +252,13 @@ export const NewSimulationWizardPage: FC = () => {
 
       <div data-testid="wizard-step-panel">
         {state.step === 0 && (
-          <TemplateStep
+          <StartingPointStep
             state={state}
-            onSelectTemplate={(template: Template) =>
+            onSelectBuiltin={(builtin: BuiltinScenario) =>
               setState((s) => ({
                 ...s,
-                source: 'template',
-                template,
+                source: 'builtin',
+                builtin,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -268,7 +268,7 @@ export const NewSimulationWizardPage: FC = () => {
                 ...s,
                 source: 'userConfig',
                 userConfig,
-                template: null,
+                builtin: null,
                 uploadFile: null,
               }))
             }
@@ -277,7 +277,7 @@ export const NewSimulationWizardPage: FC = () => {
                 ...s,
                 source: file ? 'upload' : s.source,
                 uploadFile: file,
-                template: file ? null : s.template,
+                builtin: file ? null : s.builtin,
                 userConfig: file ? null : s.userConfig,
               }))
             }
@@ -285,7 +285,7 @@ export const NewSimulationWizardPage: FC = () => {
               setState((s) => ({
                 ...s,
                 source: 'empty',
-                template: null,
+                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -295,7 +295,7 @@ export const NewSimulationWizardPage: FC = () => {
                 ...s,
                 source: 'generated',
                 fleetPackId: null,
-                template: null,
+                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -306,7 +306,7 @@ export const NewSimulationWizardPage: FC = () => {
                 source: 'generated',
                 fleetPackId: pack.id,
                 fleetRequest: pack.request,
-                template: null,
+                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -407,7 +407,7 @@ export const NewSimulationWizardPage: FC = () => {
             action={state.step === 0 ? 'edit' : undefined}
           >
             {state.step === 0 && state.starting
-              ? t('newSimWizard.template.startingLabel')
+              ? t('newSimWizard.start.startingLabel')
               : currentStep === 'devices' && state.saving
                 ? t('newSimWizard.devices.savingLabel')
                 : t('newSimWizard.nextLabel')}

@@ -65,10 +65,10 @@ func TestRoutePolicyManifest(t *testing.T) {
 	}
 }
 
-func TestTemplateUseRoutePolicy(t *testing.T) {
-	use, ok := fetchRouteManifest(t)["/api/v1/templates/use"]
-	if !ok || !use.CSRF || !use.RateLimited {
-		t.Errorf("/api/v1/templates/use policy = %+v, want csrf+rateLimited", use)
+func TestBuiltinScenarioCopyRoutePolicy(t *testing.T) {
+	copyRoute, ok := fetchRouteManifest(t)["/api/v1/scenario/builtins/copy"]
+	if !ok || !copyRoute.CSRF || !copyRoute.RateLimited {
+		t.Errorf("/api/v1/scenario/builtins/copy policy = %+v, want csrf+rateLimited", copyRoute)
 	}
 }
 
