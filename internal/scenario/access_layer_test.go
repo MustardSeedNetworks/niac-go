@@ -167,14 +167,15 @@ func TestRetailStoreChainsItsLanes(t *testing.T) {
 	}
 }
 
-// A metro POP hands its access nodes off a ring, and every pack keeps the full
-// spine including radios and a controller pair - service provider was the one
-// pack generating neither.
+// A metro POP hands every access node the pack generates off a ring, and every
+// pack keeps the full spine including radios and a controller pair - service
+// provider was the one pack generating neither.
 func TestServiceProviderRingsItsPOPAndKeepsTheSpine(t *testing.T) {
 	cfg := generatePack(t, "service-provider")
+	nodes := packRequest(t, "service-provider").Counts.AccessSwitches
 
-	for index := 1; index <= 4; index++ {
-		next := index%4 + 1
+	for index := 1; index <= nodes; index++ {
+		next := index%nodes + 1
 		if !adjacent(cfg, numbered("NYC-ACC-SW", index), numbered("NYC-ACC-SW", next)) {
 			t.Errorf("NYC-ACC-SW%02d is not linked to its ring neighbour", index)
 		}

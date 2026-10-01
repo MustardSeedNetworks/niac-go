@@ -18,10 +18,9 @@ func TestScenarioPackMetadata(t *testing.T) {
 			t.Errorf("invalid scenario pack metadata: %+v", pack)
 		}
 		seen[pack.ID] = true
-		want := "1.3.0"
-		if pack.ID == "hospital" || pack.ID == "warehouse" || pack.ID == "manufacturing" ||
-			pack.ID == "retail" {
-			want = "1.4.0"
+		want := "1.4.0"
+		if pack.ID == "campus" || pack.ID == "enterprise-scale" {
+			want = "1.3.0"
 		}
 		if pack.ManifestVersion != 4 || pack.Version != want {
 			t.Errorf("%s versions = %q/%d", pack.ID, pack.Version, pack.ManifestVersion)

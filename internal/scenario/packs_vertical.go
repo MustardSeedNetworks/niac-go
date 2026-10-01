@@ -64,6 +64,7 @@ func serviceProviderScenarioPack() Pack {
 	)
 	// A metro POP hands its access nodes off a ring.
 	pack.Request.AccessLayer = AccessLayerRing
+	pack.Version = resizedPackVersion
 
 	return pack
 }
