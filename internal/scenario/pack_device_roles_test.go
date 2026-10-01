@@ -123,14 +123,14 @@ func TestPackDeviceRoleMix(t *testing.T) {
 			"voip-phone":    4,
 		},
 		"manufacturing": {
-			"access-point":  30,
+			"access-point":  54,
 			"firewall":      2,
-			"iot":           12,
+			"iot":           162,
 			"layer3-switch": 2,
 			"printer":       1,
 			"router":        5,
 			"server":        8,
-			"switch":        10,
+			"switch":        22,
 			"voip-phone":    2,
 		},
 		"retail": {

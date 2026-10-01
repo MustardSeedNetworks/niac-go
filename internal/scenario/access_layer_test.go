@@ -13,12 +13,13 @@ import (
 // to a distribution pair, and Link-Live draws that ring as a ring: a hand-closed
 // six-node ring was discovered intact on analysis 6a774b2f9dc61ad4327b182a,
 // closing edge included. Manufacturing is the pack that reads as a plant, so it
-// is the one that gets the shape.
+// is the one that gets the shape, and every one of its closets sits on it.
 func TestManufacturingAccessLayerIsARing(t *testing.T) {
 	cfg := generatePack(t, "manufacturing")
-	access := []string{
-		"PLT-ACC-SW01", "PLT-ACC-SW02", "PLT-ACC-SW03",
-		"PLT-ACC-SW04", "PLT-ACC-SW05", "PLT-ACC-SW06",
+	nodes := packRequest(t, "manufacturing").Counts.AccessSwitches
+	access := make([]string, nodes)
+	for index := range access {
+		access[index] = fmt.Sprintf("PLT-ACC-SW%02d", index+1)
 	}
 
 	for index, name := range access {

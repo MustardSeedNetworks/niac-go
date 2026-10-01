@@ -17,9 +17,9 @@ const (
 	retailAccessSwitches               = 4
 	retailAccessPointsPerAccess        = 3
 	retailWorkstationsPerAccess        = 3
-	manufacturingAccessSwitches        = 6
-	manufacturingAccessPointsPerAccess = 5
-	manufacturingWorkstationsPerAccess = 2
+	manufacturingAccessSwitches        = 18
+	manufacturingAccessPointsPerAccess = 3
+	manufacturingWorkstationsPerAccess = 9
 	providerAccessSwitches             = 4
 	providerAccessPointsPerAccess      = 2
 	providerWorkstationsPerAccess      = 2

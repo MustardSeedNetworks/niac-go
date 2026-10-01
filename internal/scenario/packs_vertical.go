@@ -42,6 +42,7 @@ func manufacturingScenarioPack() Pack {
 	)
 	// A plant runs its cells off a fiber ring, not a home run per closet.
 	pack.Request.AccessLayer = AccessLayerRing
+	pack.Version = resizedPackVersion
 
 	return pack
 }
