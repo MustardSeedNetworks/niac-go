@@ -20,9 +20,9 @@ const (
 	manufacturingAccessSwitches        = 18
 	manufacturingAccessPointsPerAccess = 3
 	manufacturingWorkstationsPerAccess = 9
-	providerAccessSwitches             = 4
-	providerAccessPointsPerAccess      = 2
-	providerWorkstationsPerAccess      = 2
+	providerAccessSwitches             = 5
+	providerAccessPointsPerAccess      = 3
+	providerWorkstationsPerAccess      = 9
 )
 
 func packCounts(access, accessPoints, workstations int) Counts {
