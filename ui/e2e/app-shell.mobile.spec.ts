@@ -57,6 +57,36 @@ test.describe('app shell on small screens', () => {
     await expect(drawer).toBeHidden();
   });
 
+  test('the closed drawer holds no control and the screen one product mark', async ({ page }) => {
+    const drawer = sidebar(page, 'mobile');
+    await expect(page.getByTestId('page-header-title')).toBeVisible();
+
+    // #2284: parked in the tree, the closed drawer kept the whole rail —
+    // nav links, Help, Settings and a second product mark — in a menu nobody
+    // could see. It mounts on open now, so there is nothing to hide.
+    // A CSS locator, not getByRole: role queries skip `visibility: hidden`, so
+    // they cannot see controls inside an invisible drawer at all.
+    await expect(drawer.locator('button')).toHaveCount(0);
+    await expect(drawer.getByTestId('product-mark')).toHaveCount(0);
+    await expect(page.getByTestId('product-mark').filter({ visible: true })).toHaveCount(1);
+
+    // Walk the whole tab order once: focus wraps to the body after the last
+    // control, and nothing on the way may sit inside the drawer.
+    const focused: string[] = [];
+    for (let step = 0; step < 80; step += 1) {
+      await page.keyboard.press('Tab');
+      const where = await page.evaluate(() => {
+        const node = document.activeElement;
+        if (!node || node === document.body) return null;
+        return node.closest('[data-testid="sidebar-mobile"]') ? 'drawer' : 'page';
+      });
+      if (where === null && focused.length > 0) break;
+      if (where) focused.push(where);
+    }
+    expect(focused.length).toBeGreaterThan(0);
+    expect(focused).not.toContain('drawer');
+  });
+
   test('primary navigation is reachable and operable', async ({ page }) => {
     const isPhone = (page.viewportSize()?.width ?? 0) < 1024;
 

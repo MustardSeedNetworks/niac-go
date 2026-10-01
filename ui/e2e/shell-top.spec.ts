@@ -118,6 +118,6 @@ test('phone drawer retains controls after desktop collapse and shares the theme'
   await switcher.selectOption('warehouse');
   await expect(switcher).toHaveValue('warehouse');
   await page.getByTestId('mobile-menu-toggle').click();
-  await expect(rail).toHaveAttribute('inert', '');
+  await expect(rail.locator('button')).toHaveCount(0);
   await expect(page.getByRole('main').getByTestId('connection-status')).toHaveCount(0);
 });

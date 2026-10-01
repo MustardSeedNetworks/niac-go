@@ -162,7 +162,10 @@ const SidebarHeader: FC<SidebarHeaderProps> = ({ collapsed, onCollapse }) => {
     >
       <div className={`flex items-center gap-compact ${collapsed ? 'justify-center' : ''}`}>
         <div className="relative flex-shrink-0">
-          <div className="h-9 w-9 rounded-[11px] bg-brand-primary flex-center">
+          <div
+            data-testid="product-mark"
+            className="h-9 w-9 rounded-[11px] bg-brand-primary flex-center"
+          >
             <span className="figure text-sm font-extrabold tracking-tight text-on-brand">NI</span>
           </div>
           <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-status-success border-2 border-surface-raised" />
@@ -347,7 +350,10 @@ const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex-between px-4 py-row-lg bg-surface-raised/95 backdrop-blur-xl border-b border-surface-border">
       <div className="flex items-center gap-compact">
-        <div className="h-8 w-8 rounded-[11px] bg-brand-primary flex-center">
+        <div
+          data-testid="product-mark"
+          className="h-8 w-8 rounded-[11px] bg-brand-primary flex-center"
+        >
           <span className="figure text-xs font-extrabold tracking-tight text-on-brand">NI</span>
         </div>
         <span className="font-display font-bold text-text-primary">{t('app.title')}</span>
@@ -403,9 +409,10 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
   const isActive = (path: string) =>
     location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
 
-  // Both asides below stay in the DOM regardless of viewport: the responsive
-  // classes toggle display, not mount. So every sidebar testid exists twice,
-  // and a test has to say which surface it means — each aside carries
+  // The desktop rail stays in the DOM at every viewport (the responsive
+  // classes toggle display, not mount), and the open drawer renders the same
+  // body, so while it is open every sidebar testid exists twice. A test has to
+  // say which surface it means — each aside carries
   // data-testid="sidebar-mobile" / "sidebar-desktop" and specs scope through
   // it (see e2e/support/sidebar.ts).
   //
@@ -456,18 +463,18 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
         />
       ) : null}
 
-      {/* Closed, it is `invisible` as well as off-canvas and inert: parked at
-          x -288..0 it still painted a box the fleet's 390px gate reads as
-          content leaving the viewport. Visibility transitions with the slide,
-          so it only hides once the drawer is out of view. */}
+      {/* The drawer mounts its rail on open, as seed's does: parked in the tree
+          it kept every control and a second product mark in a menu nobody
+          could see (#2284). The empty panel stays for the slide, `invisible`
+          when closed: parked at x -288..0 it still painted a box the fleet's
+          390px gate reads as content leaving the viewport. */}
       <aside
         data-testid="sidebar-mobile"
-        inert={!mobileOpen}
         className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-surface-raised/95 backdrop-blur-xl border-r border-surface-border transform transition-[transform,visibility] duration-300 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full invisible'
         }`}
       >
-        <div className="flex flex-col h-full">{body(false)}</div>
+        {mobileOpen ? <div className="flex flex-col h-full">{body(false)}</div> : null}
       </aside>
 
       <aside
