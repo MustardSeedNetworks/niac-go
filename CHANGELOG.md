@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.98.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.97.0...v0.98.0) (2026-10-01)
+
+
+### Features
+
+* **attachment:** move a re-pinned client on the running session (AP-6) ([#2407](https://github.com/MustardSeedNetworks/niac-go/issues/2407)) ([5ff0aea](https://github.com/MustardSeedNetworks/niac-go/commit/5ff0aea8c1f968644d6af8c5a633325163b9a7d3)), closes [#2406](https://github.com/MustardSeedNetworks/niac-go/issues/2406)
+* **protocols:** send unsolicited router advertisements at the authored period (P5-9) ([#2409](https://github.com/MustardSeedNetworks/niac-go/issues/2409)) ([31808ba](https://github.com/MustardSeedNetworks/niac-go/commit/31808ba81c2ff6edd316a362f40d6739bd498979))
+
+
+### Miscellaneous
+
+* **deps:** update github/codeql-action action to v4.38.1 ([#2356](https://github.com/MustardSeedNetworks/niac-go/issues/2356)) ([6d6e604](https://github.com/MustardSeedNetworks/niac-go/commit/6d6e604527326b881e0813bc69aa237b08dee55b))
+
 ## [0.97.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.96.4...v0.97.0) (2026-09-30)
 
 
