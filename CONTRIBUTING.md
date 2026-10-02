@@ -63,8 +63,7 @@ you've discussed it.
 Between edits, `make validate-touched` lints the Go packages the branch
 changed, tests them and every package that depends on them, runs Vitest on the
 UI files it changed, and runs each `scripts/check-*` gate whose inputs changed.
-It prints every command it runs. `BASE=<ref>` compares against something other
-than `origin/main`.
+It compares against `origin/main` and prints every command it runs.
 
 Before pushing:
 

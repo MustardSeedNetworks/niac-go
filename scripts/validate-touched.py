@@ -7,9 +7,8 @@ package, everything in the module that imports it (directly or through another
 package, and through tests), and the gates that read the files it changed.
 `make test` still runs once before the PR; this is what runs between edits.
 
-The touched set is every path that differs between the merge base with $BASE
-(default origin/main) and the working tree, committed or not, plus untracked
-files. Renames count as a delete and an add, so the package a file left is
+The touched set is every path that differs between the merge base with
+origin/main and the working tree, committed or not, plus untracked files. Renames count as a delete and an add, so the package a file left is
 validated too.
 
 Every command is printed before it runs, and a failing step does not stop the
@@ -30,6 +29,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# Fixed, not a flag: whatever a caller passes reaches the commands this runs.
+BASE = "origin/main"
 
 # A change to any of these can alter how every package builds or lints.
 WHOLE_MODULE = ("go.mod", "go.sum", ".golangci.yml")
@@ -157,8 +159,8 @@ def run_capture(cmd: list[str]) -> str:
     ).stdout
 
 
-def touched_files(base: str) -> list[str]:
-    merge_base = run_capture(["git", "merge-base", base, "HEAD"]).strip()
+def touched_files() -> list[str]:
+    merge_base = run_capture(["git", "merge-base", BASE, "HEAD"]).strip()
     diff = run_capture(["git", "diff", "--name-only", "--no-renames", merge_base])
     untracked = run_capture(["git", "ls-files", "--others", "--exclude-standard"])
     return sorted(set(diff.split()) | set(untracked.split()))
@@ -357,14 +359,13 @@ def golangci_binary() -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--base", default=os.environ.get("BASE", "origin/main"))
     parser.add_argument(
         "--dry-run", action="store_true", help="print the plan, run nothing"
     )
     args = parser.parse_args()
 
-    touched = touched_files(args.base)
-    print(f"validate-touched: {len(touched)} path(s) differ from {args.base}")
+    touched = touched_files()
+    print(f"validate-touched: {len(touched)} path(s) differ from {BASE}")
     if not touched:
         return 0
     golangci = "golangci-lint" if args.dry_run else golangci_binary()

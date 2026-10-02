@@ -57,8 +57,8 @@ test-all: check-stale-tests ## Run ALL tests (unit + E2E)
 	$(call timer-end,test-e2e,E2E tests)
 	@printf "$(CYAN)└──────────────────────────────────────────────────────────────────────────────┘$(RESET)\n"
 
-# The inner loop: only what differs from $(BASE) (default origin/main). `make
-# test` still runs once before the PR; see the script for the selection rules.
+# The inner loop: only what differs from origin/main. `make test` still runs
+# once before the PR; see the script for the selection rules.
 validate-touched: check-stale-tests ## Lint and test only what this branch changed
 	@./scripts/validate-touched.py
 
