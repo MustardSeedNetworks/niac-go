@@ -49,6 +49,17 @@ const mocks = {
   userConfigs: vi.mocked(fetchLibraryNetworks),
 };
 
+/**
+ * The picker stays disabled until the interfaces resource settles, so its
+ * enabled state is the ready signal. Waiting on it with a test-id lookup keeps
+ * role queries out of the timed wait: the first `*ByRole` call in a worker
+ * spends ~135 ms initialising its accessibility tree, and under full-suite load
+ * that cold start alone used to exhaust `findByRole`'s 1 s default (#2439).
+ */
+async function interfacesLoaded(): Promise<void> {
+  await waitFor(() => expect(screen.getByTestId('simulation-interface')).toBeEnabled());
+}
+
 function resolveAll(): void {
   mocks.interfaces.mockResolvedValue(interfaces);
   mocks.builtins.mockResolvedValue(builtins);
@@ -67,7 +78,8 @@ describe('SimulationSection', () => {
   it('lists what each fetch returned when all three succeed', async () => {
     renderWithResources(<SimulationSection />);
 
-    expect(await screen.findByRole('option', { name: /eth0/ })).toBeInTheDocument();
+    await interfacesLoaded();
+    expect(screen.getByRole('option', { name: /eth0/ })).toBeInTheDocument();
     expect(await screen.findByText('hospital')).toBeInTheDocument();
     expect(screen.queryByText('No built-in scenarios available')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -75,7 +87,7 @@ describe('SimulationSection', () => {
 
   it('selects and clears the interface with the shared picker', async () => {
     renderWithResources(<SimulationSection />);
-    await screen.findByRole('option', { name: /eth0/ });
+    await interfacesLoaded();
     const picker = screen.getByRole('combobox', { name: 'Network Interface' });
     fireEvent.change(picker, { target: { value: 'eth0' } });
     expect(useUIStore.getState().simulationSettings.selectedInterface).toBe('eth0');
@@ -101,7 +113,8 @@ describe('SimulationSection', () => {
     const alert = await screen.findByTestId('simulation-builtins-error');
     expect(alert).toHaveTextContent(/500 internal error/);
     expect(screen.queryByText('No built-in scenarios available')).not.toBeInTheDocument();
-    expect(await screen.findByRole('option', { name: /eth0/ })).toBeInTheDocument();
+    await interfacesLoaded();
+    expect(screen.getByRole('option', { name: /eth0/ })).toBeInTheDocument();
   });
 
   it('shows a load failure for the saved configs, not "none uploaded yet"', async () => {
