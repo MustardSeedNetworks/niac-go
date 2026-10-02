@@ -118,8 +118,10 @@ func TestProfileCatalogUsesUniqueRoles(t *testing.T) {
 		if seen[profile.Role] {
 			t.Errorf("duplicate role profile %q", profile.Role)
 		}
+		// Cisco's video codecs answer under TANDBERG's arc, as real ones do.
 		if profile.Vendor == "cisco" &&
-			!strings.HasPrefix(profile.SysObjectID, "1.3.6.1.4.1.9.1.") {
+			!strings.HasPrefix(profile.SysObjectID, "1.3.6.1.4.1.9.1.") &&
+			!strings.HasPrefix(profile.SysObjectID, "1.3.6.1.4.1.5596.") {
 			t.Errorf(
 				"%s Cisco profile has non-Cisco sysObjectID %q",
 				profile.Role,

@@ -32,6 +32,7 @@ func TestEveryProfileVendorAllocatesItsOwnOUI(t *testing.T) {
 		"samsung":             "Samsung Electronics Co.,Ltd",
 		"seiko epson":         "Seiko Epson Corporation",
 		"siemens":             "Siemens AG",
+		"synology":            "Synology Incorporated",
 		"zebra":               "Zebra Technologies Inc",
 	}
 	registry, err := oui.LoadEmbedded()

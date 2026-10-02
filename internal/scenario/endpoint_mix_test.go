@@ -1,6 +1,7 @@
 package scenario_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestHospitalMixKeepsSignatureDevicesRareAtScale(t *testing.T) {
 func isWiredEndpoint(role string) bool {
 	switch role {
 	case "nurse-station", "philips-patient-monitor", "ge-patient-monitor", "label-printer", "mr-system", "ups",
-		"pdu", "badge-controller":
+		"nas", "pdu", "badge-controller", "conference-room":
 		return true
 	default:
 		return false
@@ -102,5 +103,52 @@ func checkPackUPS(t *testing.T, pack string, device *config.Device) {
 	next, _, err := snmp.NewAgent(device, 0).HandleGetNext(upsMIB)
 	if err != nil || !strings.HasPrefix(next, upsMIB+".") {
 		t.Errorf("%s %s: GETNEXT %s = %q, %v; want a UPS-MIB object", pack, device.Name, upsMIB, next, err)
+	}
+}
+
+// The common tier's storage and meeting-room devices answer SNMP as
+// themselves: each site's one NAS reports a Synology DiskStation, and a room
+// system reports the Cisco codec arc a discovery tool files as a
+// collaboration endpoint. Without their profiles they would be hosts named
+// like a NAS or a room.
+func TestEveryPackSiteCarriesItsNASAndRoomSystems(t *testing.T) {
+	for _, pack := range scenario.Packs() {
+		counts, cfg := endpointRoleCounts(t, pack.Request)
+		for _, site := range pack.Request.Sites {
+			if got := counts[site.Code]["nas"]; got != 1 {
+				t.Errorf("%s %s: NAS = %d, want 1", pack.ID, site.Code, got)
+			}
+			if counts[site.Code]["conference-room"] == 0 {
+				t.Errorf("%s %s: no conference room", pack.ID, site.Code)
+			}
+		}
+		for index := range cfg.Devices {
+			device := &cfg.Devices[index]
+			switch device.Properties["role"] {
+			case "nas":
+				checkAnswersAs(t, pack.ID, device, sysDescrOID, "Synology DiskStation")
+			case "conference-room":
+				checkAnswersAs(t, pack.ID, device, sysObjectIDOID, ciscoCodec)
+			}
+		}
+	}
+}
+
+const (
+	sysDescrOID    = "1.3.6.1.2.1.1.1.0"
+	sysObjectIDOID = "1.3.6.1.2.1.1.2.0"
+	ciscoCodec     = "1.3.6.1.4.1.5596.150.6.4.1"
+)
+
+func checkAnswersAs(t *testing.T, pack string, device *config.Device, oid, want string) {
+	t.Helper()
+
+	value, err := snmp.NewAgent(device, 0).HandleGet(oid)
+	if err != nil || value == nil {
+		t.Errorf("%s %s: GET %s = %v, %v", pack, device.Name, oid, value, err)
+		return
+	}
+	if got := strings.TrimPrefix(fmt.Sprint(value.Value), "."); !strings.Contains(got, want) {
+		t.Errorf("%s %s: GET %s = %q, want it to carry %q", pack, device.Name, oid, got, want)
 	}
 }
