@@ -285,12 +285,18 @@ func addSiteEndpoints(links linkMap, site Site, request Request) {
 		}
 	}
 
-	services := make([]string, 0, len(serviceRoles())+counts.WirelessControllers)
+	systems := workloadSystems(request.EndpointProfile)
+	services := make([]string, 0, len(serviceRoles())+counts.WirelessControllers+len(systems))
 	for _, role := range serviceRoles() {
 		services = append(services, serviceName(request.EndpointProfile, role)+"01")
 	}
 	for index := 1; index <= counts.WirelessControllers; index++ {
 		services = append(services, fmt.Sprintf("WLC%02d", index))
+	}
+	// After the controllers, so adding a vertical's system moves no port that
+	// an existing server or controller already holds.
+	for _, system := range systems {
+		services = append(services, system.name+"01")
 	}
 	for index, service := range services {
 		switchIndex := index%counts.ServerSwitches + 1
