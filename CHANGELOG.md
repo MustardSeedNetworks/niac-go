@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.102.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.101.0...v0.102.0) (2026-10-02)
+
+
+### Features
+
+* **make:** add validate-touched, the targeted inner loop ([#2433](https://github.com/MustardSeedNetworks/niac-go/issues/2433)) ([ae9bd3b](https://github.com/MustardSeedNetworks/niac-go/commit/ae9bd3b4f481d7d59b8c9064daa9bdd1ca571c51))
+* **scenario:** resize the service-provider pack to the presentation design ([#2429](https://github.com/MustardSeedNetworks/niac-go/issues/2429)) ([6d0f852](https://github.com/MustardSeedNetworks/niac-go/commit/6d0f852ce04562294f83414fec29cf2e0cdefb92))
+
 ## [0.101.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.100.0...v0.101.0) (2026-10-01)
 
 
