@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.103.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.102.1...v0.103.0) (2026-10-02)
+
+
+### Features
+
+* **scenario:** resize the campus pack to the presentation design ([#2440](https://github.com/MustardSeedNetworks/niac-go/issues/2440)) ([6d78548](https://github.com/MustardSeedNetworks/niac-go/commit/6d78548fd5359c206a7a01c7ba2ed64a0950c7b3))
+
 ## [0.102.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.102.0...v0.102.1) (2026-10-02)
 
 
