@@ -173,9 +173,26 @@ Each site's application service slot carries its vertical's workload system
 office) in retail and `PROV01` (subscriber provisioning) at a service provider.
 Campus and enterprise-scale keep `APP01`. The slot's address, port and device
 count are unchanged; the device name, its DNS record and its `sysDescr` say what
-it runs. The rest of this tier (EMR, LIS, MES, storage and virtualisation hosts)
-would add devices beyond the pinned counts, so it is not built by renaming the
-infrastructure floor.
+it runs.
+
+The vertical's other systems are servers of their own, after the wireless
+controllers on the servers VLAN and the server leaf, so adding one moves no
+existing device's address or port:
+
+| Pack | Per site | Pack devices |
+| --- | --- | --- |
+| Hospital | `EMR01` medical record system, `LIS01` laboratory information system | 253 → 257 |
+| Manufacturing | `MES01` manufacturing execution system | 258 → 259 |
+| Warehouse | `LBL01` label and print server | 264 → 265 |
+| Retail | `INV01` inventory and pricing server | 253 → 255 |
+| Service provider | `AAA01` RADIUS and AAA server | 261 → 264 |
+
+Each answers SNMP with its role in `sysDescr` and serves HTTP; none speaks its
+application protocol (no HL7, no RADIUS), which is the Phase 5c boundary.
+Campus and enterprise-scale share a profile, run none of these and keep their
+counts; enterprise-scale is pinned at 543. The pharmacy system, the OPC UA
+server and the shared storage, virtualisation and backup tier are not built
+yet.
 
 ## Client tier
 

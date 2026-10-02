@@ -37,6 +37,55 @@ func TestEachVerticalRunsItsWorkloadServer(t *testing.T) {
 	}
 }
 
+// The rest of each vertical's workload tier, beyond the slot. Campus runs none,
+// and neither may enterprise-scale, which shares its profile and is pinned.
+func TestEachVerticalRunsItsOtherWorkloadSystems(t *testing.T) {
+	want := map[string]map[string]string{
+		"hospital": {
+			"EMR01": "electronic medical record system",
+			"LIS01": "laboratory information system",
+		},
+		"manufacturing":    {"MES01": "manufacturing execution system"},
+		"warehouse":        {"LBL01": "label and print server"},
+		"retail":           {"INV01": "inventory and pricing server"},
+		"service-provider": {"AAA01": "RADIUS and AAA server"},
+		"campus":           {},
+	}
+	all := []string{"EMR01", "LIS01", "MES01", "LBL01", "INV01", "AAA01"}
+
+	for _, pack := range scenario.Packs() {
+		systems, ok := want[pack.ID]
+		if !ok {
+			continue
+		}
+		cfg := packConfig(t, pack)
+		for _, site := range pack.Request.Sites {
+			for _, suffix := range all {
+				assertWorkloadSystem(t, cfg, pack, site.Code, suffix, systems)
+			}
+		}
+	}
+}
+
+func assertWorkloadSystem(
+	t *testing.T, cfg *config.Config, pack scenario.Pack, siteCode, suffix string, systems map[string]string,
+) {
+	t.Helper()
+
+	sysDescr, expected := systems[suffix]
+	if !expected {
+		if findDevice(cfg, siteCode+"-"+suffix) != nil {
+			t.Errorf("%s: unexpected %s-%s", pack.ID, siteCode, suffix)
+		}
+		return
+	}
+	assertWorkloadServer(t, cfg, pack, siteCode, suffix, sysDescr)
+	if device := findDevice(cfg, siteCode+"-"+suffix); device != nil &&
+		(device.HTTPConfig == nil || !device.HTTPConfig.Enabled) {
+		t.Errorf("%s-%s serves no HTTP", siteCode, suffix)
+	}
+}
+
 func assertWorkloadServer(t *testing.T, cfg *config.Config, pack scenario.Pack, siteCode, suffix, sysDescr string) {
 	t.Helper()
 

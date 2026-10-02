@@ -45,10 +45,46 @@ func serviceName(profile, role string) string {
 	return name
 }
 
+// workloadSystem is one of a vertical's systems beyond the one its workload
+// slot carries. The realism doc lists what each vertical runs; campus and
+// enterprise-scale share a profile, are deliberately ordinary and run none, which
+// also keeps enterprise-scale at its pinned size.
+type workloadSystem struct {
+	name, description, httpServer string
+}
+
+func workloadSystems(profile string) []workloadSystem {
+	switch profile {
+	case "hospital":
+		return []workloadSystem{
+			{"EMR", "electronic medical record system", "Microsoft-IIS/10.0"},
+			{"LIS", "laboratory information system", "Microsoft-IIS/10.0"},
+		}
+	case "manufacturing":
+		return []workloadSystem{{"MES", "manufacturing execution system", "Microsoft-IIS/10.0"}}
+	case "warehouse":
+		return []workloadSystem{{"LBL", "label and print server", "Microsoft-IIS/10.0"}}
+	case "retail":
+		return []workloadSystem{{"INV", "inventory and pricing server", "nginx"}}
+	case "service-provider":
+		return []workloadSystem{{"AAA", "RADIUS and AAA server", "nginx"}}
+	default:
+		return nil
+	}
+}
+
+// workloadSystemHost places the systems straight after the service servers on
+// the servers VLAN, below the wireless controllers at controllerHostOffset. A
+// vertical with more systems than that gap holds collides with a controller,
+// and the config validator rejects the pack for the duplicate address.
+func workloadSystemHost(index int) int {
+	return serviceHostOffset + len(serviceRoles()) + index
+}
+
 func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.Device {
 	workstationCount := request.Counts.AccessSwitches * request.Counts.WorkstationsPerAccess
-	devices := make([]converter.Device, 0,
-		workstationCount+len(serviceRoles())+request.Counts.WirelessControllers)
+	devices := make([]converter.Device, 0, workstationCount+len(serviceRoles())+
+		request.Counts.WirelessControllers+len(workloadSystems(request.EndpointProfile)))
 	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {
 		for slot := 1; slot <= request.Counts.WorkstationsPerAccess; slot++ {
 			index := (accessIndex-1)*request.Counts.WorkstationsPerAccess + slot
@@ -65,7 +101,24 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 	for index := 1; index <= request.Counts.WirelessControllers; index++ {
 		devices = append(devices, wirelessController(request, site, index, links))
 	}
+	for index, system := range workloadSystems(request.EndpointProfile) {
+		devices = append(devices, workloadServer(request, site, system, index+1, links))
+	}
 	return devices
+}
+
+func workloadServer(request Request, site Site, system workloadSystem, index int, links linkMap) converter.Device {
+	address := siteIP(site, vlanServers, workloadSystemHost(index))
+	return managedDevice(request, deviceSpec{
+		name: site.Code + "-" + system.name + "01", role: "server", index: len(serviceRoles()) + index,
+		ips: []string{address}, site: &site,
+		sysDescr: fmt.Sprintf("Dell PowerEdge R660 %s %s", site.Code, system.description),
+		interfaces: []converter.Interface{newInterface(
+			"eth0", siteNetworkName(site, "servers"), address+"/24", speedTenGigabit,
+			system.name+" service uplink",
+		)},
+		vlan: vlanServers, http: &converter.HTTPConfig{Enabled: true, ServerName: system.httpServer},
+	}, links)
 }
 
 func serviceServer(request Request, site Site, role string, index int, links linkMap) converter.Device {
@@ -132,13 +185,21 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 	roles := serviceRoles()
 	workstationCount := request.Counts.AccessSwitches * request.Counts.WorkstationsPerAccess
-	records := make([]converter.DNSRecord, 0, len(roles)+workstationCount)
+	records := make([]converter.DNSRecord, 0,
+		len(roles)+len(workloadSystems(request.EndpointProfile))+workstationCount)
 	for index, role := range roles {
 		vlan, _ := servicePlacement(role)
 		records = append(records, converter.DNSRecord{
 			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code),
 				strings.ToLower(serviceName(request.EndpointProfile, role)), request.Domain),
 			IP: siteIP(site, vlan, serviceHostOffset+index+1), TTL: dnsRecordTTL,
+		})
+	}
+	for index, system := range workloadSystems(request.EndpointProfile) {
+		records = append(records, converter.DNSRecord{
+			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code), strings.ToLower(system.name),
+				request.Domain),
+			IP: siteIP(site, vlanServers, workloadSystemHost(index+1)), TTL: dnsRecordTTL,
 		})
 	}
 	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {
