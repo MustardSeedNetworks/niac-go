@@ -320,7 +320,6 @@ LogEntryRow.displayName = 'LogEntryRow';
 
 export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScroll }) => {
   const { t } = useTranslation('pages');
-  const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when new logs arrive and auto-scroll is enabled
@@ -349,29 +348,12 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
     [logs],
   );
 
-  if (logs.length === 0) {
-    return (
-      <div
-        ref={containerRef}
-        className="flex h-96 items-center justify-center rounded-lg border border-surface-border bg-bg-base/50"
-      >
-        <div className="text-center stack">
-          <div className={`mx-auto ${iconSizes['3xl']} rounded-full bg-bg-elevated/50 flex-center`}>
-            <Terminal className={`${iconSizes.xl} text-text-disabled`} />
-          </div>
-          <div>
-            <p className="text-text-muted font-medium">{t('debug.noLogsToDisplay')}</p>
-            <p className="mt-tight text-sm text-text-muted">{t('debug.noLogsHint')}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // The empty state keeps the list's footprint: the first streamed line must
+  // not push the debug-level controls below it out from under the pointer.
   return (
     <div className="stack-sm">
       {/* Log Level Stats Bar */}
-      <div className="flex items-center gap-comfortable text-xs">
+      <div className="flex h-6 items-center gap-comfortable text-xs">
         {Object.entries(stats).map(([level, count]) => {
           const colors = LEVEL_COLORS[toLogLevelKey(level as LogLevel)];
           const isError = level === 'ERROR';
@@ -391,17 +373,31 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
         })}
       </div>
 
-      {/* Log Container */}
-      <div
-        ref={containerRef}
-        className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-surface-base scrollbar-thumb-surface-border"
-        role="log"
-        aria-label={t('debug.logOutputAriaLabel')}
-        aria-live="polite"
-      >
-        {renderedLogs}
-        <div ref={endRef} />
-      </div>
+      {logs.length === 0 ? (
+        <div className="flex h-[500px] items-center justify-center rounded-lg border border-surface-border bg-bg-base/50">
+          <div className="text-center stack">
+            <div
+              className={`mx-auto ${iconSizes['3xl']} rounded-full bg-bg-elevated/50 flex-center`}
+            >
+              <Terminal className={`${iconSizes.xl} text-text-disabled`} />
+            </div>
+            <div>
+              <p className="text-text-muted font-medium">{t('debug.noLogsToDisplay')}</p>
+              <p className="mt-tight text-sm text-text-muted">{t('debug.noLogsHint')}</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="h-[500px] overflow-y-auto rounded-lg border border-surface-border bg-bg-base/70 scrollbar-thin scrollbar-track-surface-base scrollbar-thumb-surface-border"
+          role="log"
+          aria-label={t('debug.logOutputAriaLabel')}
+          aria-live="polite"
+        >
+          {renderedLogs}
+          <div ref={endRef} />
+        </div>
+      )}
     </div>
   );
 });
