@@ -12,8 +12,8 @@ const (
 	warehouseAccessPointsPerAccess     = 5
 	warehouseWorkstationsPerAccess     = 10
 	campusAccessSwitches               = 4
-	campusAccessPointsPerAccess        = 2
-	campusWorkstationsPerAccess        = 2
+	campusAccessPointsPerAccess        = 3
+	campusWorkstationsPerAccess        = 7
 	retailAccessSwitches               = 8
 	retailAccessPointsPerAccess        = 3
 	retailWorkstationsPerAccess        = 9

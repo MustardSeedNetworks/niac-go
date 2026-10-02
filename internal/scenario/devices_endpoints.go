@@ -195,9 +195,6 @@ const (
 	// medPhonesPerSite and medCamerasPerSite are deliberately small: they exist
 	// so a discovery tool has something to classify by MED, not to model a real
 	// handset count. Growing them re-signs every pack manifest.
-	// Two and one, not three and two: the presentation packs are capped at 160
-	// devices for the Link-Live map, and campus has four sites, so five per
-	// site would put it at 167 and over the budget.
 	medPhonesPerSite  = 2
 	medCamerasPerSite = 1
 )

@@ -26,7 +26,6 @@ func retailScenarioPack() Pack {
 	)
 	// A store runs its lanes off one another rather than home-running each till.
 	pack.Request.AccessLayer = AccessLayerChain
-	pack.Version = resizedPackVersion
 
 	return pack
 }
@@ -43,7 +42,6 @@ func manufacturingScenarioPack() Pack {
 	)
 	// A plant runs its cells off a fiber ring, not a home run per closet.
 	pack.Request.AccessLayer = AccessLayerRing
-	pack.Version = resizedPackVersion
 
 	return pack
 }
@@ -64,7 +62,6 @@ func serviceProviderScenarioPack() Pack {
 	)
 	// A metro POP hands its access nodes off a ring.
 	pack.Request.AccessLayer = AccessLayerRing
-	pack.Version = resizedPackVersion
 
 	return pack
 }

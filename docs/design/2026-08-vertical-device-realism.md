@@ -84,8 +84,8 @@ has neither, so a small site keeps its own devices. Today each of the
 hospital's two buildings, each retail site and each enterprise-scale site
 carries four PDUs and two controllers, each service-provider POP two PDUs and
 one controller, the warehouse nine PDUs and four controllers, and the
-manufacturing plant ten PDUs and five controllers. The rest of P-PACK-1's
-resized packs will give every vertical both.
+manufacturing plant ten PDUs and five controllers. Each campus site has 28
+wired endpoints, so it carries one PDU and no door controller.
 
 `TestPackDeviceRoleMix` pins the resulting per-pack role counts.
 
