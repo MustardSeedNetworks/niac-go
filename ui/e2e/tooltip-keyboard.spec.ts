@@ -46,6 +46,10 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/debug/level', (route) =>
     route.fulfill({ json: { level: 'info', defaultLevel: 'basic' } }),
   );
+  // Hold the daemon's live log stream (niac-go#2298): Shift+Tab from a debug
+  // radio lands on the last log row's copy button, and a row appended before
+  // Tab becomes the next tab stop instead of the radio.
+  await page.route('**/api/v1/stream/logs', () => {});
 });
 
 test('walk controls keep their labels and expose instructions by keyboard', async ({ page }) => {
