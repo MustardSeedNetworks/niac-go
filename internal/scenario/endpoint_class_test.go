@@ -14,7 +14,7 @@ import (
 // to appear that way.
 func personalComputerRoles() map[string]bool {
 	return map[string]bool{
-		"nurse-station": true, "point-of-sale": true, "noc-workstation": true,
+		"nurse-station": true, "thin-client": true, "point-of-sale": true, "noc-workstation": true,
 		"workstation": true, "windows-laptop": true, "macbook": true,
 	}
 }

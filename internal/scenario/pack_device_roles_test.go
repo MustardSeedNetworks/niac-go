@@ -113,8 +113,8 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"hospital": {
 			"access-point":  48,
 			"firewall":      4,
-			"host":          26,
-			"iot":           110,
+			"host":          36,
+			"iot":           100,
 			"layer3-switch": 4,
 			"printer":       10,
 			"router":        7,
@@ -136,10 +136,10 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"retail": {
 			"access-point":  48,
 			"firewall":      4,
-			"host":          50,
+			"host":          52,
 			"iot":           48,
 			"layer3-switch": 4,
-			"printer":       48,
+			"printer":       46,
 			"router":        7,
 			"server":        16,
 			"switch":        24,

@@ -13,10 +13,10 @@ func packParity() map[string]Parity {
 	return map[string]Parity{
 		"hospital": {
 			DeviceCount: 253, NetworkCount: 21, LinkCount: 278,
-			DeviceNamesSHA256: "3dbe7e6d0ce87b9ce7c16ed393b204c2db36cc07a8e223692a0d951b54e0877b",
+			DeviceNamesSHA256: "f507376680a8c8e38dc38d9120431eea0f4b02dfca9c647a8f6f7b1b6c27add8",
 			NetworksSHA256:    "6ea6e41e8bbd4c0ff83c09975f1bdee646231ecb89b8dc57fd15516ce5debb57",
-			LinksSHA256:       "26c37e108037c5fd47a9e4646933d63f635be47d27b8cdb454da5bbd76acdcca",
-			InterfacesSHA256:  "8ffd15b73b622fa0be4273f3b49fc8560c74c99153262095a78a2c8af243ac45",
+			LinksSHA256:       "990276a77f8ac0556de55a064acd29773e4d23ffcdd0402382a1f6717a516bfd",
+			InterfacesSHA256:  "64263dafa48a2a118d958cf9bf17605221467bc9b0a4391af77adf50b8be2575",
 		},
 		"warehouse": {
 			DeviceCount: 264, NetworkCount: 12, LinkCount: 283,
@@ -41,10 +41,10 @@ func packParity() map[string]Parity {
 		},
 		"retail": {
 			DeviceCount: 253, NetworkCount: 21, LinkCount: 264,
-			DeviceNamesSHA256: "4a7ae094c19b6ce5021a6c9f60b912e23aa456fae9151399274e698cb08349d9",
+			DeviceNamesSHA256: "e5ed3fc8a7883d92df91d6da33e024f2907e168eeded922df01006dd18b9dc7d",
 			NetworksSHA256:    "88cdfbd6e21a58552873afe83c93dac96b7fae0a28166ecb319475dbcc38d25b",
-			LinksSHA256:       "0399bcff0461ce2fe06f7421813a0cfe6d60c5a1bcb7d3acffeb05bf06acb27b",
-			InterfacesSHA256:  "fe3f0f4f28834a6589361977eb57b847fd55d4e53dfabf04949d17830d1a1912",
+			LinksSHA256:       "abd4def84ae9c91f8c08428af421a4c5adaa292c5816fee772573b1729419d0d",
+			InterfacesSHA256:  "87caa5af536ca5a13371a5cc32098578677a7ccf67ac8c23605f1d41c6029879",
 		},
 		"manufacturing": {
 			DeviceCount: 258, NetworkCount: 12, LinkCount: 264,
@@ -55,10 +55,10 @@ func packParity() map[string]Parity {
 		},
 		"service-provider": {
 			DeviceCount: 261, NetworkCount: 30, LinkCount: 281,
-			DeviceNamesSHA256: "a1dc637aff902f629c26f64939e5ac56438d328ea3cbae5cebd48a7eb553aaad",
+			DeviceNamesSHA256: "f3938f27fa788d9744698fdd6941236038571249a9a4d185c20346fc2ada0c24",
 			NetworksSHA256:    "79fcb26f2a9f506a24540a583ae570b5c25e1dcf8a63ccfa21946b4912fc7720",
-			LinksSHA256:       "f8e25f3cbf8e573aea59b25963988b49cee1e7f93b3b9dbef6a460c0c301c684",
-			InterfacesSHA256:  "f6c533ce6e79836af0d55117ef3844d8bcb5c382b276e2998fd46ef2f325b864",
+			LinksSHA256:       "3bd9510a40c5d768f331a0e3aa90558a906c0ec42f54066bcf889419e3004ea8",
+			InterfacesSHA256:  "bbe5cc97ceb9bf089cb8e31c34833e69f8f7d9865ef63ed83f78e6ac3331e59c",
 		},
 	}
 }

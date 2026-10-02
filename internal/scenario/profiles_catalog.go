@@ -69,7 +69,9 @@ func commonProfiles() []DeviceProfile {
 	}
 }
 
-func endpointProfiles() []DeviceProfile {
+// clientProfiles are the client tier, the machines people sit in front of
+// across the verticals.
+func clientProfiles() []DeviceProfile {
 	return []DeviceProfile{
 		newProfile("workstation", "host", "dell", "OptiPlex 7020", "Dell OptiPlex 7020",
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
@@ -77,6 +79,16 @@ func endpointProfiles() []DeviceProfile {
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("macbook", "host", "apple", "MacBook Pro", "Apple MacBook Pro",
 			"macOS", synth.VendorGeneric, synth.TypeHost),
+		// Clinicians move between rooms and log in wherever they stand, so a
+		// hospital runs its shared terminals as thin clients onto a virtual
+		// desktop rather than as full PCs.
+		newProfile("thin-client", "host", "dell", "Wyse 5070", "Dell Wyse 5070 thin client",
+			"ThinOS 10", synth.VendorGeneric, synth.TypeHost),
+	}
+}
+
+func endpointProfiles() []DeviceProfile {
+	return []DeviceProfile{
 		newProfile("nurse-station", "host", "dell", "OptiPlex 7020 Micro", "Clinical nurse station",
 			"Windows 11 Enterprise", synth.VendorGeneric, synth.TypeHost),
 		newProfile("infusion-pump", "iot", "baxter", "Sigma Spectrum", "Baxter infusion pump",

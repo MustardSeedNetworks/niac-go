@@ -70,11 +70,11 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 
 | Vertical | One per site | Floor 1, then weighted | Weighted only |
 | --- | --- | --- | --- |
-| Hospital | MRI, UPS | label printer 1 | infusion pump 5, Philips monitor 3, nurse station 3, GE monitor 2 |
+| Hospital | MRI, UPS | label printer 1 | infusion pump 5, Philips monitor 3, nurse station 3, thin client 2, GE monitor 2 |
 | Warehouse | UPS | label printer 1 | rugged handheld 3 |
 | Manufacturing | UPS, label printer | robot controller 1 | PLC 4, HMI 2 |
-| Retail | UPS | — | POS 2, receipt printer 2, signage 1 |
-| Service provider | UPS, office printer, OLT, ONT, CPE router | — | NOC workstation 1 |
+| Retail | UPS, two back-office desktops | — | POS 2, receipt printer 2, signage 1 |
+| Service provider | UPS, office printer, OLT, ONT, CPE router | — | NOC workstation 3, laptop 2, desktop 1 |
 | Campus, enterprise-scale | UPS | office printer 1 | workstation 5, laptop 3, Mac 2 |
 
 Every vertical also carries the rest of the common tier, taken after the
@@ -189,6 +189,15 @@ Shared across campus, retail, hospital and service-provider packs.
 | Mac | MacBook Pro, iMac, Mac mini |
 | Mobile | iPad, iPhone, Android handset |
 | Chromebook | campus and education |
+
+The wired slots carry the desktop, laptop, Mac and thin-client classes. A
+hospital's shared clinical terminals are Dell Wyse thin clients running ThinOS
+beside its nurse stations; a store keeps two back-office desktops whatever its
+till count; a POP's staff work at NOC consoles, laptops and office desktops, so
+the NOC console is about half of a POP's personal computers rather than its
+only one. Like every personal computer they answer no SNMP. Mobile handsets,
+tablets and Chromebooks are wireless-only, so they belong with the wireless
+clients behind each access point, not in a wired slot.
 
 ## Vertical device tiers
 
