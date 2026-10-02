@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.104.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.103.0...v0.104.0) (2026-10-02)
+
+
+### Features
+
+* **scenario:** add the NAS and conference room to every vertical's common tier ([#2442](https://github.com/MustardSeedNetworks/niac-go/issues/2442)) ([35e3ea5](https://github.com/MustardSeedNetworks/niac-go/commit/35e3ea567bd7aacc0d534fcab110b1846ed4a6f3))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @xyflow/react to v12.12.0 ([#2425](https://github.com/MustardSeedNetworks/niac-go/issues/2425)) ([95964b9](https://github.com/MustardSeedNetworks/niac-go/commit/95964b9d9613d607622868fba77c2e20817be610))
+
 ## [0.103.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.102.1...v0.103.0) (2026-10-02)
 
 
