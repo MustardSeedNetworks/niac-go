@@ -247,21 +247,10 @@ linters:
           deny:
             - pkg: log$
               desc: Use log/slog instead, see https://go.dev/blog/slog
-        # Architectural direction: the simulation/domain core (protocols,
-        # converter, device, mibdb) is inward — it must not depend on the
-        # web/API layer. This codifies the existing clean direction so a future
-        # upward import fails CI instead of silently coupling core to transport.
-        "domain-core-inward-only":
-          files:
-            - "**/internal/protocols/**"
-            - "**/internal/converter/**"
-            - "**/internal/device/**"
-            - "**/internal/mibdb/**"
-            - "**/internal/topology/**"
-            - "**/internal/fabric/**"
-          deny:
-            - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
-              desc: "the simulation/domain core must not import the web/API layer — dependencies point inward; wire transport at internal/api or internal/daemon. topology is derived domain (config→graph) consumed by api and ipc, so it stays inward too"
+        # The domain-to-outer-layer direction (protocols, scenario, replay, …
+        # never import internal/api, the daemon or the CLI) is
+        # scripts/check-layering.py, not depguard: it reads every platform's
+        # files, and depguard here never sees a darwin-tagged one.
         # Sub-API leaf packages extracted from the internal/api monolith must
         # not import back into the api transport layer — they are self-contained
         # building blocks that the Server (and daemon) compose inward. See ADR-0006.
@@ -289,12 +278,12 @@ linters:
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
               desc: "capture is a leaf — the PCAP analysis engine + structure validation over stdlib+gopacket only; the Server composes it inward (s.pcapCache, capture.Analyze/ValidateStructure), never the reverse"
-        "api-templates-isolated":
+        "api-builtins-isolated":
           files:
-            - "**/internal/api/templates/**"
+            - "**/internal/api/builtins/**"
           deny:
             - pkg: github.com/MustardSeedNetworks/niac-go/internal/api
-              desc: "templates is a leaf — the on-disk template discovery/parse/load engine over stdlib only; the Server composes it inward (templates.Dirs/Scan/Find/Load/SaveConfig), never the reverse"
+              desc: "builtins is a leaf — the on-disk built-in scenario discovery/parse/load engine over stdlib only; the Server composes it inward, never the reverse"
         # internal/api/auth has NO isolation rule by design. Unlike the five
         # leaves above, auth COMPOSES siblings (internal/api/tokenstore +
         # ratelimit), and a deny on "internal/api" prefix-matches those sibling

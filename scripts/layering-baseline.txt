@@ -1,0 +1,2 @@
+internal/replay/controller.go       internal/api  # #2434 replay state/request DTOs live in the API package
+internal/replay/controller_test.go  internal/api  # #2434 same DTOs

@@ -123,6 +123,7 @@ GATES = (
         ),
     ),
     Gate("scripts/check-json-casing.sh", ("internal/api/*",)),
+    Gate("scripts/check-layering.py", ("internal/*.go",)),
     Gate("scripts/check-library-stdout.sh", ("internal/*.go",)),
     Gate("scripts/check-output-escaping.sh", ("internal/api/*", "ui/src/*")),
     Gate("scripts/check-package-reachability.sh", ("*.go", "go.mod")),
