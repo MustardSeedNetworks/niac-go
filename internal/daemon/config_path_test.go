@@ -55,7 +55,7 @@ func TestLoadSimulationConfigRestrictsPathsToManagedRoots(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, resolved, loadErr := loadSimulationConfig(api.SimulationRequest{ConfigPath: tt.path}, false)
+			_, resolved, loadErr := loadSimulationConfig(api.SimulationRequest{ConfigPath: tt.path})
 			if tt.ok {
 				if loadErr != nil {
 					t.Fatalf("loadSimulationConfig() error = %v", loadErr)
@@ -102,7 +102,7 @@ func TestLoadSimulationConfigRestrictsInlineSegmentPathsToManagedRoots(t *testin
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configData := "segments:\n  - tag: 200\n    config: " + tt.childPath + "\n"
-			_, _, err := loadSimulationConfig(api.SimulationRequest{ConfigData: configData}, false)
+			_, _, err := loadSimulationConfig(api.SimulationRequest{ConfigData: configData})
 			if tt.ok {
 				if err != nil {
 					t.Fatalf("loadSimulationConfig() error = %v", err)

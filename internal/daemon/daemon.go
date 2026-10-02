@@ -377,16 +377,9 @@ func (d *Daemon) Shutdown(ctx context.Context) error {
 const maxSimulationConfigSize = 10 * 1024 * 1024 // 10MB limit
 
 // loadSimulationConfig resolves either inline ConfigData or a cleaned ConfigPath into a Config.
-//
-// Inline data is written to a unique file under the user-configs
-// directory so the rest of the daemon — GET /api/v1/config, the running-
-// config YAML editor, "Download YAML" — has a real path to read from.
-// Without this, those surfaces returned config_read_failed because they
-// did a file Stat on the literal string "<inline>".
-func loadSimulationConfig(
-	req api.SimulationRequest,
-	persistInline bool,
-) (*config.Config, string, error) {
+// Inline data loads without a path; startGenerationLocked writes it to the
+// session's own file only once the start is admitted.
+func loadSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
 	switch {
 	case req.ScenarioName != "":
 		// Loading built-in scenarios by name preserves the scenario's own
@@ -445,18 +438,7 @@ func loadSimulationConfig(
 		if err != nil {
 			return nil, "", fmt.Errorf("load configuration: %w", err)
 		}
-		if !persistInline {
-			return cfg, "", nil
-		}
-		path, err := persistInlineConfig(req.ConfigData)
-		if err != nil {
-			// Persistence failure isn't fatal — the sim can still run on
-			// the parsed Config — but the downstream "view running YAML"
-			// flows will fail. Log via the returned error chain so the
-			// API surface sees it.
-			return cfg, "", fmt.Errorf("persist inline config: %w", err)
-		}
-		return cfg, path, nil
+		return cfg, "", nil
 	case req.ConfigPath != "":
 		roots := simulationConfigRoots()
 		cfg, managedPath, err := config.LoadYAMLManaged(req.ConfigPath, roots)
@@ -489,11 +471,8 @@ func simulationConfigRoots() []string {
 	return append(roots, builtins.Dirs()...)
 }
 
-func loadValidSimulationConfig(
-	req api.SimulationRequest,
-	persistInline bool,
-) (*config.Config, string, error) {
-	cfg, path, err := loadSimulationConfig(req, persistInline)
+func loadValidSimulationConfig(req api.SimulationRequest) (*config.Config, string, error) {
+	cfg, path, err := loadSimulationConfig(req)
 	if err != nil {
 		return nil, "", err
 	}
@@ -635,7 +614,7 @@ func (d *Daemon) startGenerationLocked(req api.SimulationRequest, generation str
 	committed := false
 	if req.ConfigData != "" {
 		var finish func(bool)
-		configPath, finish, err = stageInlineSessionConfig(req.ConfigData, sessionID)
+		configPath, finish, err = stageInlineSessionConfig(req.ConfigData, sessionID, generation)
 		if err != nil {
 			resources.abort()
 			return fmt.Errorf("persist inline config: %w", err)
@@ -656,6 +635,7 @@ func (d *Daemon) startGenerationLocked(req api.SimulationRequest, generation str
 	if active != nil {
 		d.stopSimulation(active)
 		d.clearRuntimeState(active.SessionID, active.runtimeGeneration)
+		d.removeInlineConfig(active.SessionID, active.runtimeGeneration)
 	}
 
 	d.startRuntimeStateWriter(replacement)
@@ -741,7 +721,7 @@ func (d *Daemon) startConfiguredReplay(
 func loadAuthorizedSimulationConfig(
 	req api.SimulationRequest,
 ) (*config.Config, string, error) {
-	cfg, configPath, err := loadValidSimulationConfig(req, false)
+	cfg, configPath, err := loadValidSimulationConfig(req)
 	if err != nil {
 		return nil, "", err
 	}
@@ -806,6 +786,9 @@ func (d *Daemon) stopSimulationLocked(clearIntent bool) error {
 	}
 	d.stopSimulation(sim)
 	d.settleRuntimeState(sim, clearIntent)
+	if clearIntent {
+		d.removeInlineConfig(sim.SessionID, sim.runtimeGeneration)
+	}
 
 	logging.Infof("Simulation stopped")
 
