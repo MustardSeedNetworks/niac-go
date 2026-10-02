@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.102.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.102.0...v0.102.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **ui:** keep the debug log viewer's footprint when the first line arrives ([#2437](https://github.com/MustardSeedNetworks/niac-go/issues/2437)) ([197ca4c](https://github.com/MustardSeedNetworks/niac-go/commit/197ca4c059686bfb30f64882af7387ce8a395a76)), closes [#2298](https://github.com/MustardSeedNetworks/niac-go/issues/2298)
+
+
+### Continuous Integration
+
+* **layering:** gate domain packages against outer-layer imports ([#2436](https://github.com/MustardSeedNetworks/niac-go/issues/2436)) ([273e1ba](https://github.com/MustardSeedNetworks/niac-go/commit/273e1bafd1d16beb52a5a106537d75bc4b52fea6)), closes [#2435](https://github.com/MustardSeedNetworks/niac-go/issues/2435)
+
 ## [0.102.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.101.0...v0.102.0) (2026-10-02)
 
 
