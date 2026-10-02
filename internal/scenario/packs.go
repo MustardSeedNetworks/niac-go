@@ -9,10 +9,11 @@ const (
 	industrialSiteOctet         = 91
 	serviceProviderSiteOctet    = 101
 
-	// P-PACK-1 resizes the presentation packs one per PR, so a resized pack
-	// carries the new version and the rest keep the old one until theirs lands.
-	packVersion        = "1.3.0"
-	resizedPackVersion = "1.4.0"
+	packVersion = "1.4.0"
+	// enterprise-scale is the stress case; P-PACK-1 resized every
+	// presentation pack around it and left it at 543 devices, so it keeps
+	// the version its manifest was signed at.
+	enterpriseScalePackVersion = "1.3.0"
 )
 
 type packSite struct {
@@ -65,16 +66,23 @@ func customerScenarioPacks() []Pack {
 		hospitalScenarioPack(),
 		warehouseScenarioPack(),
 		campusScenarioPack(),
-		newScenarioPack(
-			"enterprise-scale",
-			"Enterprise scale reference",
-			"Multi-site stress workload for discovery and scale testing; not intended as a presentation map.",
-			MapPurposeStress,
-			defaultDomain,
-			EnterpriseReferenceRequest().Sites,
-			EnterpriseReferenceRequest().Counts,
-		),
+		enterpriseScaleScenarioPack(),
 	}
+}
+
+func enterpriseScaleScenarioPack() Pack {
+	pack := newScenarioPack(
+		"enterprise-scale",
+		"Enterprise scale reference",
+		"Multi-site stress workload for discovery and scale testing; not intended as a presentation map.",
+		MapPurposeStress,
+		defaultDomain,
+		EnterpriseReferenceRequest().Sites,
+		EnterpriseReferenceRequest().Counts,
+	)
+	pack.Version = enterpriseScalePackVersion
+
+	return pack
 }
 
 func packSites(firstOctet int, definitions ...packSite) []Site {
@@ -111,7 +119,6 @@ func hospitalScenarioPack() Pack {
 			hospitalWorkstationsPerAccess,
 		),
 	)
-	pack.Version = resizedPackVersion
 	pack.Request.Faults = imagingSaturation()
 
 	return pack
@@ -135,7 +142,6 @@ func warehouseScenarioPack() Pack {
 		),
 		dockAccessPointPoELoss()...,
 	)
-	pack.Version = resizedPackVersion
 
 	return pack
 }

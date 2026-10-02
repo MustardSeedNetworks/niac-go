@@ -87,12 +87,12 @@ func interfaceAddress(authored string) (string, bool) {
 func TestPackDeviceRoleMix(t *testing.T) {
 	want := map[string]map[string]int{
 		"campus": {
-			"access-point":  32,
+			"access-point":  48,
 			"firewall":      8,
-			"host":          24,
-			"iot":           8,
+			"host":          92,
+			"iot":           12,
 			"layer3-switch": 8,
-			"printer":       4,
+			"printer":       12,
 			"router":        11,
 			"server":        32,
 			"switch":        24,
