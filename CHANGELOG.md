@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.105.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.104.0...v0.105.0) (2026-10-02)
+
+
+### Features
+
+* **scenario:** widen the wired client tier past one model per vertical ([#2447](https://github.com/MustardSeedNetworks/niac-go/issues/2447)) ([8ea27ae](https://github.com/MustardSeedNetworks/niac-go/commit/8ea27ae9e7e9d125ddb63d1af2d5299a9a82e4de))
+
+
+### Tests
+
+* **ui:** wait on SimulationSection's ready state, not a cold role query ([#2445](https://github.com/MustardSeedNetworks/niac-go/issues/2445)) ([eea3233](https://github.com/MustardSeedNetworks/niac-go/commit/eea323334b05635b86979999afdd3e0891ef5a71)), closes [#2439](https://github.com/MustardSeedNetworks/niac-go/issues/2439)
+
 ## [0.104.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.103.0...v0.104.0) (2026-10-02)
 
 
