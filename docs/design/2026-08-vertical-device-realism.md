@@ -77,15 +77,26 @@ are ratios within one vertical, not counts, so resizing a pack re-scales them.
 | Service provider | UPS, office printer, OLT, ONT, CPE router | — | NOC workstation 1 |
 | Campus, enterprise-scale | UPS | office printer 1 | workstation 5, laptop 3, Mac 2 |
 
-Every vertical also carries the closet tier, sized by site rather than by
-weight: one metered rack PDU per 16 wired endpoints and one door controller per
-32, taken after the vertical's own floors. A site with fewer than 16 endpoints
-has neither, so a small site keeps its own devices. Today each of the
-hospital's two buildings, each retail site and each enterprise-scale site
-carries four PDUs and two controllers, each service-provider POP two PDUs and
-one controller, the warehouse nine PDUs and four controllers, and the
-manufacturing plant ten PDUs and five controllers. Each campus site has 28
-wired endpoints, so it carries one PDU and no door controller.
+Every vertical also carries the rest of the common tier, taken after the
+vertical's own floors. Each site keeps one NAS, as it keeps one UPS. The closet
+devices are sized by site rather than by weight: one metered rack PDU per 16
+wired endpoints, one conference-room video system per 24 and one door
+controller per 32. A site with fewer than 16 endpoints has none of them, so a
+small site keeps its own devices; the NAS still takes a slot, so a six-slot
+warehouse has two handhelds rather than three. Today each of the hospital's two
+buildings and each retail site carries four PDUs, three room systems and two
+controllers; each enterprise-scale site four PDUs and two of each; each
+service-provider POP two PDUs, one room system and one controller; the
+warehouse nine PDUs, six room systems and four controllers; and the
+manufacturing plant ten PDUs, six room systems and five controllers. Each
+campus site has 28 wired endpoints, so it carries one PDU, one room system and
+no door controller.
+
+The NAS answers as a Synology DiskStation under Net-SNMP's Linux
+`sysObjectID`, as the real one does. The room system answers with
+`1.3.6.1.4.1.5596.150.6.4.1`: Cisco's codecs kept TANDBERG's enterprise arc,
+and that is the OID a discovery tool matches to file them as collaboration
+endpoints. Their SIP and CDP identity is Phase 5c's, not this tier's.
 
 `TestPackDeviceRoleMix` pins the resulting per-pack role counts.
 

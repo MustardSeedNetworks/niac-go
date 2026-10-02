@@ -68,24 +68,30 @@ func siteUPS() endpointShare {
 	return endpointShare{kind: appliance("ups", "UPS"), atLeast: 1}
 }
 
-// closetTier is the rest of the common tier every vertical carries: a metered
-// rack PDU per wiring closet's worth of endpoints and a door controller per two.
-// It sits last in each mix, so on a site too small for its own devices the
-// vertical's signature kinds keep their floors first.
-func closetTier() []endpointShare {
+// commonTier is the rest of the common tier every vertical carries. A site
+// keeps one NAS, as it keeps one UPS, for its local file shares and camera
+// recordings. The closet devices grow with the site: a metered rack PDU per
+// wiring closet's worth of endpoints, a door controller per two, and a
+// conference-room video system per room's worth of the people those endpoints
+// serve. It sits last in each mix, so on a site too small for its own devices
+// the vertical's signature kinds keep their floors first.
+func commonTier() []endpointShare {
 	return []endpointShare{
+		{kind: appliance("nas", "NAS"), atLeast: 1},
 		{kind: appliance("pdu", "PDU"), every: endpointsPerPDU},
 		{kind: appliance("badge-controller", "DOOR"), every: endpointsPerBadgeController},
+		{kind: appliance("conference-room", "ROOM"), every: endpointsPerConferenceRoom},
 	}
 }
 
 const (
 	endpointsPerPDU             = 16
+	endpointsPerConferenceRoom  = 24
 	endpointsPerBadgeController = 32
 )
 
 func endpointMix(profile string) []endpointShare {
-	return append(verticalMix(profile), closetTier()...)
+	return append(verticalMix(profile), commonTier()...)
 }
 
 func verticalMix(profile string) []endpointShare {

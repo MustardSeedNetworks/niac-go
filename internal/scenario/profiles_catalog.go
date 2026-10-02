@@ -38,16 +38,26 @@ func campusProfiles() []DeviceProfile {
 	}
 }
 
-// closetProfiles are the common tier's power and door devices, which every
-// vertical carries whatever else it runs.
-func closetProfiles() []DeviceProfile {
+const ciscoCodecSysObjectID = "1.3.6.1.4.1.5596.150.6.4.1"
+
+// commonProfiles are the common tier's power, storage, door and meeting-room
+// devices, which every vertical carries whatever else it runs.
+func commonProfiles() []DeviceProfile {
 	// The Network Management Card's sysObjectID is what the SNMP agent keys
 	// UPS-MIB on; a generic one would leave the pack's UPS answering as a host.
 	ups := newProfile("ups", "iot", "apc", "Smart-UPS SRT 3000", "APC Web/SNMP Management Card",
 		"AOS 2.6.1.8", synth.VendorGeneric, synth.TypeHost)
 	ups.SysObjectID = "1.3.6.1.4.1.318.1.3.27"
+	// Cisco's video codecs kept TANDBERG's enterprise arc after the
+	// acquisition, and that OID is what a discovery tool matches to file a
+	// room system as a collaboration endpoint rather than a host.
+	room := newProfile("conference-room", "iot", "cisco", "Room Kit Pro", "Cisco Webex Room Kit Pro",
+		"RoomOS 11", synth.VendorGeneric, synth.TypeHost)
+	room.SysObjectID = ciscoCodecSysObjectID
 	return []DeviceProfile{
 		ups,
+		newProfile("nas", "iot", "synology", "DS1823xs+", "Synology DiskStation DS1823xs+",
+			"DSM 7.2.2", synth.VendorGeneric, synth.TypeHost),
 		newProfile("pdu", "iot", "apc", "AP8841", "APC Metered Rack PDU 2G",
 			"Rack PDU firmware", synth.VendorGeneric, synth.TypeHost),
 		// The networked half of a badge system is the door controller; the
@@ -55,6 +65,7 @@ func closetProfiles() []DeviceProfile {
 		newProfile("badge-controller", "iot", "hid global", "Aero X1100A",
 			"HID Aero intelligent door controller", "Embedded controller firmware",
 			synth.VendorGeneric, synth.TypeHost),
+		room,
 	}
 }
 

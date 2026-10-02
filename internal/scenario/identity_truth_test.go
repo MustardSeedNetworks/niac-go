@@ -151,12 +151,12 @@ func countNamed(cfg *config.Config, prefix string) int {
 }
 
 // countWiredClients counts a site's enterprise wired endpoint slots. A printer,
-// UPS, PDU or door controller fills a slot like any other wired client, so it
+// UPS, NAS, PDU, door controller or room system fills a slot like any other wired client, so it
 // counts here — otherwise adding one to the mix reads as the site having lost
 // clients rather than gained a device.
 func countWiredClients(cfg *config.Config, site string) int {
 	count := 0
-	for _, kind := range []string{"WS", "LAP", "MBP", "PRN", "UPS", "PDU", "DOOR"} {
+	for _, kind := range []string{"WS", "LAP", "MBP", "PRN", "UPS", "NAS", "PDU", "DOOR", "ROOM"} {
 		count += countNamed(cfg, site+"-"+kind+"-")
 	}
 	return count

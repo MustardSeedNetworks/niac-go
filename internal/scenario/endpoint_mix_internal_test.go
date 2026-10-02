@@ -75,19 +75,26 @@ func roles(kinds []endpointKind) []string {
 	return out
 }
 
-// The closet tier grows with the site: a rack PDU per 16 wired endpoints and a
-// door controller per 32. A site too small for one keeps its own devices, so
-// a six-slot warehouse still has three handhelds, while a 64-slot enterprise
-// site carries four PDUs and two controllers.
-func TestClosetTierScalesWithTheSite(t *testing.T) {
+// The common tier keeps one NAS per site and grows the rest with it: a rack
+// PDU per 16 wired endpoints, a conference room per 24 and a door controller
+// per 32. A site too small for the closet devices keeps its own, so a six-slot
+// warehouse gives one handheld's slot to its NAS and nothing else, while a
+// 64-slot enterprise site carries four PDUs, two rooms and two controllers.
+func TestCommonTierScalesWithTheSite(t *testing.T) {
 	for _, tc := range []struct {
 		profile string
 		slots   int
 		want    map[string]int
 	}{
-		{profile: "warehouse", slots: 6, want: map[string]int{"pdu": 0, "badge-controller": 0, "rugged-handheld": 3}},
-		{profile: "hospital", slots: 18, want: map[string]int{"pdu": 1, "badge-controller": 0, "mr-system": 1}},
-		{profile: "enterprise", slots: 64, want: map[string]int{"pdu": 4, "badge-controller": 2, "ups": 1}},
+		{profile: "warehouse", slots: 6, want: map[string]int{
+			"nas": 1, "pdu": 0, "conference-room": 0, "badge-controller": 0, "rugged-handheld": 2,
+		}},
+		{profile: "hospital", slots: 18, want: map[string]int{
+			"nas": 1, "pdu": 1, "conference-room": 0, "badge-controller": 0, "mr-system": 1,
+		}},
+		{profile: "enterprise", slots: 64, want: map[string]int{
+			"nas": 1, "pdu": 4, "conference-room": 2, "badge-controller": 2, "ups": 1,
+		}},
 	} {
 		got := map[string]int{}
 		for _, kind := range siteEndpointKinds(tc.profile, tc.slots) {
