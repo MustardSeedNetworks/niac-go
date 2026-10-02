@@ -97,15 +97,7 @@ func endpointMix(profile string) []endpointShare {
 func verticalMix(profile string) []endpointShare {
 	switch profile {
 	case "hospital":
-		return []endpointShare{
-			{kind: appliance("mr-system", "MRI"), atLeast: 1},
-			siteUPS(),
-			{kind: appliance("label-printer", "LABEL"), atLeast: 1, weight: weightRare},
-			{kind: appliance("infusion-pump", "PUMP"), weight: weightDominant},
-			{kind: appliance("philips-patient-monitor", "PHMX850"), weight: weightMany},
-			{kind: personalComputer("nurse-station", "NURSE", "windows"), weight: weightMany},
-			{kind: appliance("ge-patient-monitor", "GEB850"), weight: weightSome},
-		}
+		return hospitalMix()
 	case "warehouse":
 		return []endpointShare{
 			siteUPS(),
@@ -123,19 +115,13 @@ func verticalMix(profile string) []endpointShare {
 	case "retail":
 		return []endpointShare{
 			siteUPS(),
+			{kind: personalComputer("workstation", "WS", "windows"), atLeast: backOfficeDesktops},
 			{kind: personalComputer("point-of-sale", "POS", "windows"), weight: weightSome},
 			{kind: appliance("receipt-printer", "RCPT"), weight: weightSome},
 			{kind: appliance("digital-signage", "SIGN"), weight: weightRare},
 		}
 	case "service-provider":
-		return []endpointShare{
-			siteUPS(),
-			{kind: appliance("office-printer", "PRN"), atLeast: 1},
-			{kind: appliance("olt", "OLT"), atLeast: 1},
-			{kind: appliance("ont", "ONT"), atLeast: 1},
-			{kind: appliance("cpe-router", "CPE"), atLeast: 1},
-			{kind: personalComputer("noc-workstation", "NOC", "windows"), weight: weightRare},
-		}
+		return serviceProviderMix()
 	case "enterprise":
 		return []endpointShare{
 			siteUPS(),
@@ -152,6 +138,38 @@ func verticalMix(profile string) []endpointShare {
 		}
 	}
 }
+
+func hospitalMix() []endpointShare {
+	return []endpointShare{
+		{kind: appliance("mr-system", "MRI"), atLeast: 1},
+		siteUPS(),
+		{kind: appliance("label-printer", "LABEL"), atLeast: 1, weight: weightRare},
+		{kind: appliance("infusion-pump", "PUMP"), weight: weightDominant},
+		{kind: appliance("philips-patient-monitor", "PHMX850"), weight: weightMany},
+		{kind: personalComputer("nurse-station", "NURSE", "windows"), weight: weightMany},
+		{kind: personalComputer("thin-client", "THIN", "linux"), weight: weightSome},
+		{kind: appliance("ge-patient-monitor", "GEB850"), weight: weightSome},
+	}
+}
+
+// serviceProviderMix is a POP: its access tier as one of each, and the people
+// who run it at NOC consoles, laptops and office desktops.
+func serviceProviderMix() []endpointShare {
+	return []endpointShare{
+		siteUPS(),
+		{kind: appliance("office-printer", "PRN"), atLeast: 1},
+		{kind: appliance("olt", "OLT"), atLeast: 1},
+		{kind: appliance("ont", "ONT"), atLeast: 1},
+		{kind: appliance("cpe-router", "CPE"), atLeast: 1},
+		{kind: personalComputer("noc-workstation", "NOC", "windows"), weight: weightMany},
+		{kind: personalComputer("windows-laptop", "LAP", "windows"), weight: weightSome},
+		{kind: personalComputer("workstation", "WS", "windows"), weight: weightRare},
+	}
+}
+
+// backOfficeDesktops is a store's manager's office and cash office, however
+// many tills it runs.
+const backOfficeDesktops = 2
 
 // siteEndpointKinds lays out one site's wired endpoint slots, in slot order.
 func siteEndpointKinds(profile string, slots int) []endpointKind {

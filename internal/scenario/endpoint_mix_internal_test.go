@@ -114,11 +114,12 @@ func TestCommonTierScalesWithTheSite(t *testing.T) {
 // itself, and each is a signature device, so a POP carries one of each
 // however many NOC workstations it has.
 func TestServiceProviderPOPCarriesItsAccessTier(t *testing.T) {
+	accessTier := map[string]bool{"olt": true, "ont": true, "cpe-router": true}
 	for _, slots := range []int{8, 64} {
 		got := map[string]int{}
 		for _, kind := range siteEndpointKinds("service-provider", slots) {
 			got[kind.role]++
-			if kind.personalComputer && kind.role != "noc-workstation" {
+			if kind.personalComputer && accessTier[kind.role] {
 				t.Errorf("%d slots: %s is laid out as a personal computer, so it answers no SNMP", slots, kind.role)
 			}
 		}
@@ -127,8 +128,39 @@ func TestServiceProviderPOPCarriesItsAccessTier(t *testing.T) {
 				t.Errorf("%d slots: %s = %d, want 1", slots, role, got[role])
 			}
 		}
-		if got["noc-workstation"] <= got["olt"] {
-			t.Errorf("%d slots: noc-workstation = %d, want more than one per OLT", slots, got["noc-workstation"])
+		if got["noc-workstation"] == 0 {
+			t.Errorf("%d slots: no NOC workstation", slots)
+		}
+	}
+}
+
+// The client tier is more than one model per vertical. A hospital's shared
+// terminals are thin clients beside its nurse stations, a store's back office
+// has a desktop beside its tills, and a POP's staff carry laptops and sit at
+// office desktops as well as NOC consoles. With the NOC console the only
+// weighted kind, a 64-slot POP was nine parts NOC workstation to every other
+// device put together.
+func TestClientTierCarriesMoreThanOneModel(t *testing.T) {
+	for _, tc := range []struct {
+		profile string
+		slots   int
+		want    []string
+	}{
+		{profile: "hospital", slots: 64, want: []string{"nurse-station", "thin-client"}},
+		{profile: "retail", slots: 64, want: []string{"point-of-sale", "workstation"}},
+		{profile: "service-provider", slots: 64, want: []string{"noc-workstation", "windows-laptop", "workstation"}},
+	} {
+		got := map[string]int{}
+		for _, kind := range siteEndpointKinds(tc.profile, tc.slots) {
+			got[kind.role]++
+		}
+		for _, role := range tc.want {
+			if got[role] == 0 {
+				t.Errorf("%s at %d slots: no %s; mix %v", tc.profile, tc.slots, role, got)
+			}
+		}
+		if noc := got["noc-workstation"]; noc*2 > tc.slots {
+			t.Errorf("%s at %d slots: %d NOC workstations, more than half the site", tc.profile, tc.slots, noc)
 		}
 	}
 }
