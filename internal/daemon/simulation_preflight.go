@@ -16,7 +16,7 @@ func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, 
 		report.Diagnostics = []fabric.Diagnostic{*diagnostic}
 		return report, nil
 	}
-	cfg, _, err := loadValidSimulationConfig(req, false)
+	cfg, _, err := loadValidSimulationConfig(req)
 	if err != nil {
 		return fabric.NewReport(), err
 	}
@@ -53,7 +53,7 @@ func (d *Daemon) AttachmentPolicies() []fabric.PhysicalAttachmentPolicy {
 func (d *Daemon) SimulationAttachments(
 	req api.SimulationRequest,
 ) (api.SimulationAttachments, error) {
-	cfg, _, err := loadValidSimulationConfig(req, false)
+	cfg, _, err := loadValidSimulationConfig(req)
 	if err != nil {
 		return api.SimulationAttachments{}, err
 	}

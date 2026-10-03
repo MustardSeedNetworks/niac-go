@@ -64,7 +64,7 @@ func checkInlineFinishCapability(t *testing.T, committed bool) {
 	moved := filepath.Join(parent, "moved")
 	outside := t.TempDir()
 	t.Setenv("NIAC_CONFIGS_DIR", directory)
-	path, finish, err := stageInlineSessionConfig("devices: []\n", defaultSessionID)
+	path, finish, err := stageInlineSessionConfig("devices: []\n", defaultSessionID, testInlineGeneration)
 	if err != nil {
 		t.Fatal(err)
 	}

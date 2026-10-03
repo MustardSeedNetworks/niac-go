@@ -32,7 +32,7 @@ func TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary(t *testing.T
 	}
 
 	_, resolved, loadErr := loadSimulationConfig(
-		api.SimulationRequest{ScenarioName: "home-network"}, false)
+		api.SimulationRequest{ScenarioName: "home-network"})
 	if loadErr != nil {
 		t.Fatalf("loadSimulationConfig() error = %v", loadErr)
 	}
@@ -58,7 +58,7 @@ func TestLoadSimulationConfigRejectsAnUnknownScenario(t *testing.T) {
 	t.Chdir(cwd)
 
 	if _, _, err := loadSimulationConfig(
-		api.SimulationRequest{ScenarioName: "sneaky"}, false); err == nil {
+		api.SimulationRequest{ScenarioName: "sneaky"}); err == nil {
 		t.Fatal("loadSimulationConfig() resolved a scenario outside every root")
 	}
 }
