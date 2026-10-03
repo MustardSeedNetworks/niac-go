@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.106.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.105.0...v0.106.0) (2026-10-03)
+
+
+### Features
+
+* **scenario:** add each vertical's other workload systems to the server block ([#2448](https://github.com/MustardSeedNetworks/niac-go/issues/2448)) ([f2afc7d](https://github.com/MustardSeedNetworks/niac-go/commit/f2afc7d6409ec1389709eebdafc7b6dc755516e1))
+
+
+### Bug Fixes
+
+* **ci:** baseline internal/authstate and drop ts-prune's unpatched braces advisory ([#2455](https://github.com/MustardSeedNetworks/niac-go/issues/2455)) ([af10fe6](https://github.com/MustardSeedNetworks/niac-go/commit/af10fe6f90953318d93d9e5b2299799c6da8ab5e))
+
 ## [0.105.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.104.0...v0.105.0) (2026-10-02)
 
 
