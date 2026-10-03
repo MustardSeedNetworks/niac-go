@@ -246,9 +246,10 @@ type InterfaceTruth struct {
 
 // Observation is what one SEED collector should find against this scenario.
 //
-// An absent collector key means the scenario authors nothing that collector
-// reads. That is a different claim from a count of zero: zero says "poll this
-// and expect an empty table", absent says "this scenario makes no promise".
+// An absent collector key means no agent in the scenario serves a row of the
+// table that collector reads. That is a different claim from a count of zero:
+// zero says "poll this and expect an empty table", absent says "this scenario
+// makes no promise".
 // A consumer that conflates them will assert an emptiness never promised.
 type Observation struct {
 	Devices int `json:"devices"`

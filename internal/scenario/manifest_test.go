@@ -84,14 +84,14 @@ func TestManifestExpectedObservationsFollowTheAuthoredConfig(t *testing.T) {
 	}
 }
 
-// An absent collector means the scenario authors nothing that collector reads.
-// That is not the same claim as a count of zero, and a consumer that treats
+// An absent collector means no agent serves a row of the table it reads. That
+// is not the same claim as a count of zero, and a consumer that treats
 // them alike will assert emptiness the scenario never promised.
-func TestManifestOmitsObservationsNothingAuthors(t *testing.T) {
+func TestManifestOmitsObservationsNothingServes(t *testing.T) {
 	observations := generateHospital(t).Observations
 	for _, collector := range []string{"bgp4_mib", "host_resources", "fdp"} {
 		if _, ok := observations[collector]; ok {
-			t.Errorf("%s expectation exists but the hospital pack authors none", collector)
+			t.Errorf("%s expectation exists but the hospital pack serves none", collector)
 		}
 	}
 }

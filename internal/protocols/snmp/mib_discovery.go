@@ -3,6 +3,7 @@ package snmp
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 
 	"github.com/gosnmp/gosnmp"
@@ -25,6 +26,12 @@ type discoveryPort struct {
 
 func (port discoveryPort) hasNeighbour() bool {
 	return port.trunk.RemoteDevice != "" && !port.trunk.FDBOnly
+}
+
+// HasDiscoveryNeighbour reports whether a device's LLDP and CDP remote tables
+// hold a row, which they do for each trunk port that names a neighbour.
+func HasDiscoveryNeighbour(device *config.Device) bool {
+	return slices.ContainsFunc(discoveryPorts(device), discoveryPort.hasNeighbour)
 }
 
 func discoveryPorts(device *config.Device) []discoveryPort {

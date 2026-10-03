@@ -158,6 +158,13 @@ func TestFDBOnlyAttachmentLearnsMACWithoutInventingNeighbor(t *testing.T) {
 			}
 		}
 	}
+	if HasDiscoveryNeighbour(dev) {
+		t.Error("HasDiscoveryNeighbour = true for a device whose only port is FDB-only")
+	}
+	dev.TrunkPorts[0].FDBOnly = false
+	if !HasDiscoveryNeighbour(dev) {
+		t.Error("HasDiscoveryNeighbour = false for a trunk port naming a neighbour")
+	}
 }
 
 func TestQBridgeUsesDefaultNativeVLAN(t *testing.T) {

@@ -130,7 +130,14 @@ func (a *Agent) synthesizePeerDiscovery(resolve PeerResolver) bool {
 }
 
 func (a *Agent) supportsSynthesizedBridgeMIB() bool {
-	return a != nil && a.device != nil && systemProfile(a.device).IncludeBridge
+	return a != nil && a.device != nil && SynthesizesBridgeMIB(a.device)
+}
+
+// SynthesizesBridgeMIB reports whether the agent for a device without a
+// capture walk builds BRIDGE-MIB, and so serves a learned peer MAC on each of
+// its switched trunk ports.
+func SynthesizesBridgeMIB(device *config.Device) bool {
+	return systemProfile(device).IncludeBridge
 }
 
 func (a *Agent) supportsBridgeTopology() bool {
