@@ -28,7 +28,7 @@
     "@commitlint/config-conventional": "21.2.3",
     "typescript": "7.0.2",
     "husky": "9.1.7",
-    "lint-staged": "17.5.1"
+    "lint-staged": "17.6.0"
   },
   "lint-staged": {
     "ui/src/**/*.{ts,tsx}": "cd ui && npx biome check --write",
