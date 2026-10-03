@@ -59,9 +59,13 @@ func workloadSystems(profile string) []workloadSystem {
 		return []workloadSystem{
 			{"EMR", "electronic medical record system", "Microsoft-IIS/10.0"},
 			{"LIS", "laboratory information system", "Microsoft-IIS/10.0"},
+			{"RX", "pharmacy system", "Microsoft-IIS/10.0"},
 		}
 	case "manufacturing":
-		return []workloadSystem{{"MES", "manufacturing execution system", "Microsoft-IIS/10.0"}}
+		return []workloadSystem{
+			{"MES", "manufacturing execution system", "Microsoft-IIS/10.0"},
+			{"OPC", "OPC UA server", "Microsoft-IIS/10.0"},
+		}
 	case "warehouse":
 		return []workloadSystem{{"LBL", "label and print server", "Microsoft-IIS/10.0"}}
 	case "retail":
