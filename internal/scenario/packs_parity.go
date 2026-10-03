@@ -12,11 +12,11 @@ package scenario
 func packParity() map[string]Parity {
 	return map[string]Parity{
 		"hospital": {
-			DeviceCount: 257, NetworkCount: 21, LinkCount: 282,
-			DeviceNamesSHA256: "010248a6e8b440cde5e99414b9ce9196c2078a7d9d264457eff3082a4b5a5a96",
+			DeviceCount: 259, NetworkCount: 21, LinkCount: 284,
+			DeviceNamesSHA256: "5695ddedf39cf7843e68adbed71335b6c56c914ecffeb5c5c8a92ace444dc3d0",
 			NetworksSHA256:    "6ea6e41e8bbd4c0ff83c09975f1bdee646231ecb89b8dc57fd15516ce5debb57",
-			LinksSHA256:       "7f475a3fb5f8e2ba5a038d996f69543c50a1b2a8282fdf0006180cd278b639af",
-			InterfacesSHA256:  "64814644e5adc51497beb2a58b8f92a9ece62ea7a5dc2ab4238f93d54206f896",
+			LinksSHA256:       "fc8f42d709934eb75b71db1dd7f332f1be609af5e9019e3b6b7afe9590dde658",
+			InterfacesSHA256:  "31088b0ce7a004f107b0a11eaf0dbc00015985e88d4d017d70fb2c84cd3590a3",
 		},
 		"warehouse": {
 			DeviceCount: 265, NetworkCount: 12, LinkCount: 284,
@@ -47,11 +47,11 @@ func packParity() map[string]Parity {
 			InterfacesSHA256:  "1ed82a04e32f08ddf5927eb885d135771c2a953258fa7c897821480210b68e8a",
 		},
 		"manufacturing": {
-			DeviceCount: 259, NetworkCount: 12, LinkCount: 265,
-			DeviceNamesSHA256: "20d3541360841205b8f9e76f45bcdd85e494bb939efba1b0bc07206c9c6201bd",
+			DeviceCount: 260, NetworkCount: 12, LinkCount: 266,
+			DeviceNamesSHA256: "c02047abe4763bd81bc28fdfafb93a35fda74199ab1f671adf206af0e38ba267",
 			NetworksSHA256:    "cc9ba550031f67fef5933891d5ff0dbd2aada452ba380493a2b52c830f25d0f8",
-			LinksSHA256:       "1d23827bda6917f4703277322d61f74faddec8762d0fe1ec24fc960122283d23",
-			InterfacesSHA256:  "31d7baf43420581a4050b44a4dd57f2aebe9205819c947e740025be5ed3e7bcd",
+			LinksSHA256:       "f597a6174cfc750970764eb80acd0ba5afb257c5076f12f6a87907711cb16fa2",
+			InterfacesSHA256:  "6af6f6ae90168eff6abb3bcb33d147c0a0d5af898c7a5a824b89142b39f67d5b",
 		},
 		"service-provider": {
 			DeviceCount: 264, NetworkCount: 30, LinkCount: 284,

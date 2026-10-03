@@ -44,14 +44,18 @@ func TestEachVerticalRunsItsOtherWorkloadSystems(t *testing.T) {
 		"hospital": {
 			"EMR01": "electronic medical record system",
 			"LIS01": "laboratory information system",
+			"RX01":  "pharmacy system",
 		},
-		"manufacturing":    {"MES01": "manufacturing execution system"},
+		"manufacturing": {
+			"MES01": "manufacturing execution system",
+			"OPC01": "OPC UA server",
+		},
 		"warehouse":        {"LBL01": "label and print server"},
 		"retail":           {"INV01": "inventory and pricing server"},
 		"service-provider": {"AAA01": "RADIUS and AAA server"},
 		"campus":           {},
 	}
-	all := []string{"EMR01", "LIS01", "MES01", "LBL01", "INV01", "AAA01"}
+	all := []string{"EMR01", "LIS01", "RX01", "MES01", "OPC01", "LBL01", "INV01", "AAA01"}
 
 	for _, pack := range scenario.Packs() {
 		systems, ok := want[pack.ID]

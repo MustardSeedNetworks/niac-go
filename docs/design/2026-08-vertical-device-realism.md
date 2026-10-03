@@ -181,18 +181,17 @@ existing device's address or port:
 
 | Pack | Per site | Pack devices |
 | --- | --- | --- |
-| Hospital | `EMR01` medical record system, `LIS01` laboratory information system | 253 → 257 |
-| Manufacturing | `MES01` manufacturing execution system | 258 → 259 |
+| Hospital | `EMR01` medical record system, `LIS01` laboratory information system, `RX01` pharmacy system | 253 → 259 |
+| Manufacturing | `MES01` manufacturing execution system, `OPC01` OPC UA server | 258 → 260 |
 | Warehouse | `LBL01` label and print server | 264 → 265 |
 | Retail | `INV01` inventory and pricing server | 253 → 255 |
 | Service provider | `AAA01` RADIUS and AAA server | 261 → 264 |
 
 Each answers SNMP with its role in `sysDescr` and serves HTTP; none speaks its
-application protocol (no HL7, no RADIUS), which is the Phase 5c boundary.
-Campus and enterprise-scale share a profile, run none of these and keep their
-counts; enterprise-scale is pinned at 543. The pharmacy system, the OPC UA
-server and the shared storage, virtualisation and backup tier are not built
-yet.
+application protocol (no HL7, no OPC UA, no RADIUS), which is the Phase 5c
+boundary. Campus and enterprise-scale share a profile, run none of these and
+keep their counts; enterprise-scale is pinned at 543. The shared storage,
+virtualisation and backup tier is not built yet.
 
 ## Client tier
 
