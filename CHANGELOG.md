@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.106.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.1...v0.106.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.6.3 ([#2453](https://github.com/MustardSeedNetworks/niac-go/issues/2453)) ([5e61081](https://github.com/MustardSeedNetworks/niac-go/commit/5e61081f60568db411dc1e078ae2ce23c569bad8))
+* **snmp:** report SNMPv3 refusals per RFC 3414 instead of dropping them ([#2462](https://github.com/MustardSeedNetworks/niac-go/issues/2462)) ([439ddcf](https://github.com/MustardSeedNetworks/niac-go/commit/439ddcf14409ca97299606436890d1b6e86118b8)), closes [#2370](https://github.com/MustardSeedNetworks/niac-go/issues/2370) [#2461](https://github.com/MustardSeedNetworks/niac-go/issues/2461)
+
 ## [0.106.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.0...v0.106.1) (2026-10-03)
 
 
