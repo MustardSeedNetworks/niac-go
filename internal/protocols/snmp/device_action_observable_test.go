@@ -118,22 +118,12 @@ func TestDeviceActionDoesNotChangeUSMEngineLifetime(t *testing.T) {
 
 func actionV3Response(t *testing.T, engine *V3Engine, agent *Agent) *gosnmp.SnmpPacket {
 	t.Helper()
-	request := &gosnmp.SnmpPacket{
-		Version:            gosnmp.Version3,
-		MsgID:              1,
-		RequestID:          1,
-		PDUType:            gosnmp.GetRequest,
-		SecurityModel:      gosnmp.UserSecurityModel,
-		SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: "observer"},
-		Variables:          []gosnmp.SnmpPDU{{Name: deviceUptimeOID, Type: gosnmp.Null}},
-	}
-	wire, err := engine.respondToRequest(request, agent.ProcessPDU)
+	request := v3Request(t, engine, gosnmp.NoAuthNoPriv, &gosnmp.UsmSecurityParameters{UserName: "observer"},
+		gosnmp.SnmpPDU{Name: deviceUptimeOID, Type: gosnmp.Null})
+	wire, err := engine.Respond(request, agent.ProcessPDU)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response, err := parseV3Header(wire)
-	if err != nil {
-		t.Fatal(err)
-	}
+	response := decodeV3NoAuth(t, wire)
 	return response
 }

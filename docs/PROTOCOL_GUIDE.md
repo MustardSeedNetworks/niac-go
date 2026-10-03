@@ -1114,8 +1114,17 @@ The scenario packs author one v3 user on every switch, router, firewall,
 access point, controller and server, alongside the v2c community: `netops`,
 authPriv, SHA-256 with passphrase `NetAllyDemoAuth` and AES-128 with
 `NetAllyDemoPriv`. Endpoint appliances (printers, UPSes, clinical and
-industrial devices) stay v2c-only. A wrong passphrase gets no answer rather
-than a `usmStatsWrongDigests` report (#2370).
+industrial devices) stay v2c-only.
+
+A request the engine refuses gets the RFC 3414 Report a real agent sends, so
+a manager shows the cause instead of a timeout: an unknown engine ID
+(`usmStatsUnknownEngineIDs`, which is also how engine discovery works), an
+unknown user (`usmStatsUnknownUserNames`), a security level other than the
+user's (`usmStatsUnsupportedSecLevels`), a wrong authentication passphrase
+(`usmStatsWrongDigests`), a wrong privacy passphrase
+(`usmStatsDecryptionErrors`) or a stale engine time
+(`usmStatsNotInTimeWindows`). A user answers only at its configured level: a
+`noAuthNoPriv` request naming an authPriv user is refused, not served.
 
 #### Testing
 

@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"bytes"
+	"crypto/hmac"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -31,14 +33,18 @@ const (
 
 // usmStats report OIDs (RFC 3414 §5).
 const (
-	oidUsmStatsUnknownEngineIDs = ".1.3.6.1.6.3.15.1.1.4.0"
-	oidUsmStatsNotInTimeWindows = ".1.3.6.1.6.3.15.1.1.2.0"
-	oidUsmStatsUnknownUserNames = ".1.3.6.1.6.3.15.1.1.3.0"
+	oidUsmStatsUnsupportedSecLevels = ".1.3.6.1.6.3.15.1.1.1.0"
+	oidUsmStatsNotInTimeWindows     = ".1.3.6.1.6.3.15.1.1.2.0"
+	oidUsmStatsUnknownUserNames     = ".1.3.6.1.6.3.15.1.1.3.0"
+	oidUsmStatsUnknownEngineIDs     = ".1.3.6.1.6.3.15.1.1.4.0"
+	oidUsmStatsWrongDigests         = ".1.3.6.1.6.3.15.1.1.5.0"
+	oidUsmStatsDecryptionErrors     = ".1.3.6.1.6.3.15.1.1.6.0"
 )
 
-// ErrV3NotDiscovery indicates a v3 datagram that is neither a decodable
-// authenticated request nor an engine-discovery probe (e.g. bad credentials).
-var ErrV3NotDiscovery = errors.New("snmpv3: undecodable non-discovery datagram")
+// ErrV3Dropped indicates a v3 datagram the engine refuses without a Report:
+// the sender did not set the reportable flag (RFC 3412 §7.1), or no usmStats
+// counter describes the failure.
+var ErrV3Dropped = errors.New("snmpv3: datagram dropped")
 
 // ProcessFunc processes a decoded PDU and returns the response variables. It is
 // the same contract as (*Agent).ProcessPDU, letting the v3 engine reuse the
@@ -52,7 +58,8 @@ type v3User struct {
 	authPass  string
 	privProto gosnmp.SnmpV3PrivProtocol
 	privPass  string
-	msgFlags  gosnmp.SnmpV3MsgFlags // security level this user answers at
+	msgFlags  gosnmp.SnmpV3MsgFlags // the one security level this user answers at
+	authKey   []byte                // authentication key localized to the engine
 }
 
 // V3Engine is a per-device SNMPv3 authoritative engine implementing the
@@ -65,9 +72,12 @@ type V3Engine struct {
 	bootTime time.Time
 	users    map[string]v3User
 
-	unknownEngineIDs atomic.Uint32
-	notInTimeWindows atomic.Uint32
-	unknownUsers     atomic.Uint32
+	unknownEngineIDs     atomic.Uint32
+	unknownUsers         atomic.Uint32
+	unsupportedSecLevels atomic.Uint32
+	wrongDigests         atomic.Uint32
+	notInTimeWindows     atomic.Uint32
+	decryptionErrors     atomic.Uint32
 }
 
 // NewV3Engine builds an authoritative engine from a device's SNMPv3 config.
@@ -83,21 +93,28 @@ func NewV3Engine(cfg *config.SNMPv3Config, mac net.HardwareAddr) (*V3Engine, err
 		return nil, err
 	}
 
-	users := make(map[string]v3User, len(cfg.Users))
+	e := &V3Engine{
+		engineID: string(engineID),
+		boots:    1,
+		bootTime: time.Now(),
+		users:    make(map[string]v3User, len(cfg.Users)),
+	}
 	for i := range cfg.Users {
 		u, uerr := resolveUser(&cfg.Users[i])
 		if uerr != nil {
 			return nil, uerr
 		}
-		users[u.name] = u
+		if u.authProto != gosnmp.NoAuth {
+			usm := e.decodeUSM(u)
+			if kerr := usm.InitSecurityKeys(); kerr != nil {
+				return nil, fmt.Errorf("snmpv3 user %q: localize keys: %w", u.name, kerr)
+			}
+			u.authKey = usm.SecretKey
+		}
+		e.users[u.name] = u
 	}
 
-	return &V3Engine{
-		engineID: string(engineID),
-		boots:    1,
-		bootTime: time.Now(),
-		users:    users,
-	}, nil
+	return e, nil
 }
 
 // engineTime returns seconds since engine boot, wrapped per RFC 3411.
@@ -106,62 +123,113 @@ func (e *V3Engine) engineTime() uint32 {
 	return uint32(secs % engineTimeWrap) //nolint:gosec // wrapped into [0,2^31)
 }
 
-// Respond decodes an inbound SNMPv3 datagram and returns the marshalled
-// response bytes (a Report PDU for discovery/time-sync, or an authenticated
-// GetResponse otherwise). A nil response with nil error means "silently drop".
+// Respond processes an inbound SNMPv3 datagram in RFC 3414 §3.2 order and
+// returns the marshalled response bytes: a usmStats Report when the request
+// fails a USM check (engine discovery is the first of these), or an
+// authenticated GetResponse. A nil response with an error means "drop".
 func (e *V3Engine) Respond(req []byte, process ProcessFunc) ([]byte, error) {
+	msg, err := parseV3Message(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Engine discovery (RFC 3414 §4) and a stale engine ID get the same
+	// answer: a Report carrying this engine's ID.
+	if msg.engineID == "" || msg.userName == "" || msg.engineID != e.engineID {
+		return e.report(msg, oidUsmStatsUnknownEngineIDs, &e.unknownEngineIDs)
+	}
+
+	user, ok := e.users[msg.userName]
+	if !ok {
+		return e.report(msg, oidUsmStatsUnknownUserNames, &e.unknownUsers)
+	}
+	// A user answers at exactly its configured level. Below it, a request
+	// would be served without the authentication the user demands; above
+	// it, the engine holds no key to verify or decrypt with.
+	if msg.flags&gosnmp.AuthPriv != user.msgFlags {
+		return e.report(msg, oidUsmStatsUnsupportedSecLevels, &e.unsupportedSecLevels)
+	}
+	if user.authKey != nil && !authentic(msg, &user) {
+		return e.report(msg, oidUsmStatsWrongDigests, &e.wrongDigests)
+	}
+
 	decoded, err := e.decode(req)
-	if err == nil {
-		return e.respondToRequest(decoded, process)
+	if err != nil {
+		if user.privProto != gosnmp.NoPriv {
+			// The digest verified, so the privacy key or the ciphertext is wrong.
+			return e.report(msg, oidUsmStatsDecryptionErrors, &e.decryptionErrors)
+		}
+		return nil, err
 	}
 
-	// Not an authenticated request we could decode — is it an engine-discovery
-	// probe? Parse the (unauthenticated) header to find out.
-	hdr, herr := parseV3Header(req)
-	if herr != nil {
-		return nil, fmt.Errorf("snmpv3: decode failed (%w) and header parse failed: %w", err, herr)
-	}
-
-	usm := usmOf(hdr)
-	if usm == nil {
-		return nil, ErrV3NotDiscovery
-	}
-
-	switch {
-	case usm.AuthoritativeEngineID == "" || usm.UserName == "":
-		// RFC 3414 §4: engine discovery — reply with our engine ID.
-		e.unknownEngineIDs.Add(1)
-		return e.buildReport(hdr, oidUsmStatsUnknownEngineIDs, e.unknownEngineIDs.Load(), gosnmp.NoAuthNoPriv, nil)
-	default:
-		// Known-shaped but undecodable (bad password / wrong engine ID).
-		return nil, ErrV3NotDiscovery
-	}
+	return e.respondToRequest(decoded, &user, process)
 }
 
-// respondToRequest handles a fully-decoded, authenticated request: it enforces
-// the time window, then builds an authenticated (and, for authPriv, encrypted)
-// GetResponse.
-func (e *V3Engine) respondToRequest(req *gosnmp.SnmpPacket, process ProcessFunc) ([]byte, error) {
-	usm := usmOf(req)
-	if usm == nil {
-		return nil, ErrV3NotDiscovery
-	}
-
-	user, ok := e.users[usm.UserName]
-	if !ok {
-		e.unknownUsers.Add(1)
-		return e.buildReport(req, oidUsmStatsUnknownUserNames, e.unknownUsers.Load(), gosnmp.NoAuthNoPriv, &user)
-	}
-
-	// Time-window check for authenticated messages (RFC 3414 §3.2).
-	if user.msgFlags&gosnmp.AuthNoPriv > 0 && !e.inTimeWindow(usm) {
-		e.notInTimeWindows.Add(1)
-		return e.buildReport(req, oidUsmStatsNotInTimeWindows, e.notInTimeWindows.Load(), user.msgFlags, &user)
+// respondToRequest handles a fully-decoded request from a known user at its
+// configured level: it enforces the time window, then builds an authenticated
+// (and, for authPriv, encrypted) GetResponse.
+func (e *V3Engine) respondToRequest(req *gosnmp.SnmpPacket, user *v3User, process ProcessFunc) ([]byte, error) {
+	if user.msgFlags&gosnmp.AuthNoPriv > 0 && !e.inTimeWindow(usmOf(req)) {
+		count := e.notInTimeWindows.Add(1)
+		return e.buildReport(req, oidUsmStatsNotInTimeWindows, count, user.msgFlags, user)
 	}
 
 	respVars := process(req.PDUType, req.Variables, int(req.NonRepeaters), req.MaxRepetitions)
 
-	return e.marshalResponse(req, &user, gosnmp.GetResponse, respVars)
+	return e.marshalResponse(req, user, gosnmp.GetResponse, respVars)
+}
+
+// report counts a usmStats event and, when the request asked for a report
+// (RFC 3412 §7.1), returns the unauthenticated Report carrying the counter.
+func (e *V3Engine) report(msg *v3Message, statOID string, counter *atomic.Uint32) ([]byte, error) {
+	count := counter.Add(1)
+	if msg.flags&gosnmp.Reportable == 0 {
+		return nil, fmt.Errorf("%w: unreportable request (%s)", ErrV3Dropped, statOID)
+	}
+	return e.buildReport(msg.reportTo(), statOID, count, gosnmp.NoAuthNoPriv, nil)
+}
+
+// authentic reports whether msg's digest verifies under user's localized key
+// (HMAC-MD5/SHA-96 per RFC 3414 §6.3.2 and §7.3.2, HMAC-SHA-2 per RFC 7860
+// §4.2.2): the MAC over the whole message with the digest field zeroed.
+func authentic(msg *v3Message, user *v3User) bool {
+	if len(msg.authParams) != macLen(user.authProto) {
+		return false
+	}
+	received := bytes.Clone(msg.authParams)
+	clear(msg.authParams)
+	mac := hmac.New(user.authProto.HashType().New, user.authKey)
+	mac.Write(msg.raw)
+	return hmac.Equal(mac.Sum(nil)[:len(received)], received)
+}
+
+// Truncated digest lengths on the wire (RFC 3414 §6.3.1 and §7.3.1, RFC 7860
+// §4.1).
+const (
+	macLenHMAC96 = 12
+	macLenSHA224 = 16
+	macLenSHA256 = 24
+	macLenSHA384 = 32
+	macLenSHA512 = 48
+)
+
+// macLen is the truncated digest length each protocol puts on the wire.
+func macLen(proto gosnmp.SnmpV3AuthProtocol) int {
+	switch proto {
+	case gosnmp.MD5, gosnmp.SHA:
+		return macLenHMAC96
+	case gosnmp.SHA224:
+		return macLenSHA224
+	case gosnmp.SHA256:
+		return macLenSHA256
+	case gosnmp.SHA384:
+		return macLenSHA384
+	case gosnmp.SHA512:
+		return macLenSHA512
+	case gosnmp.NoAuth:
+		return 0
+	}
+	return 0
 }
 
 // inTimeWindow reports whether an authenticated message's engine boots/time are
@@ -309,24 +377,6 @@ func (e *V3Engine) decodeUSM(u v3User) *gosnmp.UsmSecurityParameters {
 		PrivacyProtocol:          u.privProto,
 		PrivacyPassphrase:        u.privPass,
 	}
-}
-
-// parseV3Header parses just the version/header/security-parameters of a v3
-// datagram without needing keys — used to detect engine-discovery probes.
-func parseV3Header(req []byte) (*gosnmp.SnmpPacket, error) {
-	// gosnmp validates the decoder's own SecurityParameters before parsing and
-	// requires a non-empty UserName; the wire values overwrite this placeholder
-	// during header parsing, so it only needs to satisfy that gate.
-	decoder := &gosnmp.GoSNMP{
-		Version:            gosnmp.Version3,
-		SecurityModel:      gosnmp.UserSecurityModel,
-		SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: "niac-discovery"},
-	}
-	pkt, err := decoder.SnmpDecodePacket(req)
-	if err != nil {
-		return nil, fmt.Errorf("snmpv3: parse header: %w", err)
-	}
-	return pkt, nil
 }
 
 // usmOf extracts the USM security parameters from a decoded packet, or nil.

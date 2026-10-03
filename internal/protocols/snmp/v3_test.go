@@ -1,6 +1,8 @@
 package snmp
 
 import (
+	"bytes"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -32,6 +34,11 @@ func echoProcess(_ gosnmp.PDUType, vars []gosnmp.SnmpPDU, _ int, _ uint32) []gos
 // for the CT304 agent socket.
 func serveEngine(t *testing.T, e *V3Engine) (int, func()) {
 	t.Helper()
+	return serveEngineWith(t, e, echoProcess)
+}
+
+func serveEngineWith(t *testing.T, e *V3Engine, process ProcessFunc) (int, func()) {
+	t.Helper()
 
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 	if err != nil {
@@ -54,7 +61,7 @@ func serveEngine(t *testing.T, e *V3Engine) (int, func()) {
 			}
 			req := make([]byte, n)
 			copy(req, buf[:n])
-			resp, aerr := e.Respond(req, echoProcess)
+			resp, aerr := e.Respond(req, process)
 			if aerr != nil || resp == nil {
 				continue
 			}
@@ -80,6 +87,71 @@ func newClient(port int, flags gosnmp.SnmpV3MsgFlags, sp *gosnmp.UsmSecurityPara
 		Timeout:            2 * time.Second,
 		Retries:            2,
 	}
+}
+
+// v3Request marshals a reportable GetRequest from the manager side, addressed
+// to e's engine ID and inside its time window, as sp's user at flags.
+func v3Request(
+	t *testing.T,
+	e *V3Engine,
+	flags gosnmp.SnmpV3MsgFlags,
+	sp *gosnmp.UsmSecurityParameters,
+	vars ...gosnmp.SnmpPDU,
+) []byte {
+	t.Helper()
+	if sp.AuthoritativeEngineID == "" {
+		sp.AuthoritativeEngineID = e.engineID
+	}
+	sp.AuthoritativeEngineBoots = e.boots
+	sp.AuthoritativeEngineTime = e.engineTime()
+	if sp.AuthenticationProtocol == 0 {
+		sp.AuthenticationProtocol = gosnmp.NoAuth
+	}
+	if sp.PrivacyProtocol == 0 {
+		sp.PrivacyProtocol = gosnmp.NoPriv
+	}
+	if err := sp.InitSecurityKeys(); err != nil {
+		t.Fatalf("manager keys: %v", err)
+	}
+	pkt := &gosnmp.SnmpPacket{
+		Version:            gosnmp.Version3,
+		MsgFlags:           flags | gosnmp.Reportable,
+		SecurityModel:      gosnmp.UserSecurityModel,
+		SecurityParameters: sp,
+		ContextEngineID:    e.engineID,
+		PDUType:            gosnmp.GetRequest,
+		MsgID:              4242,
+		RequestID:          777,
+		MsgMaxSize:         65507,
+		Variables:          vars,
+	}
+	if flags&gosnmp.AuthPriv == gosnmp.AuthPriv {
+		if err := sp.InitPacket(pkt); err != nil {
+			t.Fatalf("manager salt: %v", err)
+		}
+	}
+	wire, err := pkt.MarshalMsg()
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	return wire
+}
+
+// decodeV3NoAuth decodes an unauthenticated v3 message such as a Report.
+func decodeV3NoAuth(t *testing.T, wire []byte) *gosnmp.SnmpPacket {
+	t.Helper()
+	// gosnmp requires a non-empty UserName before it parses; the wire value
+	// replaces it.
+	decoder := &gosnmp.GoSNMP{
+		Version:            gosnmp.Version3,
+		SecurityModel:      gosnmp.UserSecurityModel,
+		SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: "decoder"},
+	}
+	pkt, err := decoder.SnmpDecodePacket(wire)
+	if err != nil {
+		t.Fatalf("decode unauthenticated v3 message: %v", err)
+	}
+	return pkt
 }
 
 func engineFor(t *testing.T, users []config.SNMPv3User) *V3Engine {
@@ -199,7 +271,10 @@ func TestV3RoundTripLevels(t *testing.T) {
 }
 
 // TestV3WrongPasswordRejected proves the engine authenticates: a manager with
-// the right username but wrong auth passphrase cannot read a value.
+// the right username but the wrong auth passphrase cannot read a value, and the
+// engine counts it as a wrong digest (RFC 3414 §3.2 step 6, #2370). gosnmp's
+// manager discards the unauthenticated Report it gets back, so the Report
+// itself is pinned by TestV3WrongDigestReport.
 func TestV3WrongPasswordRejected(t *testing.T) {
 	e := engineFor(t, []config.SNMPv3User{{
 		Username: "admin", AuthProtocol: "sha", AuthPassword: "correct-pass",
@@ -219,6 +294,215 @@ func TestV3WrongPasswordRejected(t *testing.T) {
 
 	if _, err := client.Get([]string{sysDescrOID}); err == nil {
 		t.Fatal("expected auth failure for wrong passphrase, got success")
+	}
+	if e.wrongDigests.Load() == 0 {
+		t.Error("usmStatsWrongDigests did not count the wrong passphrase")
+	}
+}
+
+// TestV3WrongDigestReport pins the Report itself for every digest length: it
+// carries usmStatsWrongDigests.0, the counter counts each refusal, the agent
+// never sees the request, and the Report answers the request's identifiers.
+func TestV3WrongDigestReport(t *testing.T) {
+	cases := []struct {
+		name      string
+		user      config.SNMPv3User
+		authProto gosnmp.SnmpV3AuthProtocol
+		privProto gosnmp.SnmpV3PrivProtocol
+	}{
+		{
+			name:      "md5",
+			user:      config.SNMPv3User{Username: "u", AuthProtocol: "md5", AuthPassword: "correct-pass"},
+			authProto: gosnmp.MD5,
+		},
+		{
+			name:      "sha",
+			user:      config.SNMPv3User{Username: "u", AuthProtocol: "sha", AuthPassword: "correct-pass"},
+			authProto: gosnmp.SHA,
+		},
+		{
+			name:      "sha256",
+			user:      config.SNMPv3User{Username: "u", AuthProtocol: "sha256", AuthPassword: "correct-pass"},
+			authProto: gosnmp.SHA256,
+		},
+		{
+			name:      "sha512",
+			user:      config.SNMPv3User{Username: "u", AuthProtocol: "sha512", AuthPassword: "correct-pass"},
+			authProto: gosnmp.SHA512,
+		},
+		{
+			name: "sha256-aes",
+			user: config.SNMPv3User{
+				Username: "u", AuthProtocol: "sha256", AuthPassword: "correct-pass",
+				PrivProtocol: "aes", PrivPassword: "privpass123",
+			},
+			authProto: gosnmp.SHA256,
+			privProto: gosnmp.AES,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := engineFor(t, []config.SNMPv3User{tc.user})
+			processed := 0
+			process := func(p gosnmp.PDUType, v []gosnmp.SnmpPDU, n int, m uint32) []gosnmp.SnmpPDU {
+				processed++
+				return echoProcess(p, v, n, m)
+			}
+			flags, wantRequestID := gosnmp.AuthNoPriv, uint32(777)
+			if tc.privProto != 0 {
+				flags, wantRequestID = gosnmp.AuthPriv, 0 // encrypted: not extractable (RFC 3412 §7.1)
+			}
+
+			for want := uint32(1); want <= 2; want++ {
+				req := v3Request(t, e, flags, &gosnmp.UsmSecurityParameters{
+					UserName:                 "u",
+					AuthenticationProtocol:   tc.authProto,
+					AuthenticationPassphrase: "wrong-pass",
+					PrivacyProtocol:          tc.privProto,
+					PrivacyPassphrase:        "privpass123",
+				}, gosnmp.SnmpPDU{Name: sysDescrOID, Type: gosnmp.Null})
+
+				wire, err := e.Respond(req, process)
+				if err != nil {
+					t.Fatalf("Respond: %v", err)
+				}
+				report := decodeV3NoAuth(t, wire)
+				assertReport(t, report, oidUsmStatsWrongDigests, want)
+				if report.MsgID != 4242 || report.RequestID != wantRequestID {
+					t.Errorf("Report msgID/request-id = %d/%d, want 4242/%d",
+						report.MsgID, report.RequestID, wantRequestID)
+				}
+			}
+			if processed != 0 {
+				t.Errorf("agent processed %d unauthenticated requests", processed)
+			}
+		})
+	}
+}
+
+// TestV3RefusalReports covers the other RFC 3414 §3.2 refusals. Before #2370
+// each was a silent drop, and a request below the user's level was served.
+func TestV3RefusalReports(t *testing.T) {
+	authUser := config.SNMPv3User{Username: "auth", AuthProtocol: "sha", AuthPassword: "correct-pass"}
+	privUser := config.SNMPv3User{
+		Username: "priv", AuthProtocol: "sha", AuthPassword: "correct-pass",
+		PrivProtocol: "aes", PrivPassword: "privpass123",
+	}
+	authSP := func(name string) *gosnmp.UsmSecurityParameters {
+		return &gosnmp.UsmSecurityParameters{
+			UserName: name, AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "correct-pass",
+		}
+	}
+
+	cases := []struct {
+		name  string
+		flags gosnmp.SnmpV3MsgFlags
+		sp    *gosnmp.UsmSecurityParameters
+		oid   string
+	}{
+		{
+			name:  "unknown engine ID",
+			flags: gosnmp.AuthNoPriv,
+			sp: &gosnmp.UsmSecurityParameters{
+				AuthoritativeEngineID: "\x80\x00\x00\x00\x09other", UserName: "auth",
+				AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "correct-pass",
+			},
+			oid: oidUsmStatsUnknownEngineIDs,
+		},
+		{
+			name:  "unknown user",
+			flags: gosnmp.AuthNoPriv,
+			sp:    authSP("nobody"),
+			oid:   oidUsmStatsUnknownUserNames,
+		},
+		{
+			name:  "noAuthNoPriv for an auth user",
+			flags: gosnmp.NoAuthNoPriv,
+			sp:    &gosnmp.UsmSecurityParameters{UserName: "auth"},
+			oid:   oidUsmStatsUnsupportedSecLevels,
+		},
+		{
+			name:  "authNoPriv for a priv user",
+			flags: gosnmp.AuthNoPriv,
+			sp:    authSP("priv"),
+			oid:   oidUsmStatsUnsupportedSecLevels,
+		},
+		{
+			name:  "authPriv for an auth-only user",
+			flags: gosnmp.AuthPriv,
+			sp: &gosnmp.UsmSecurityParameters{
+				UserName: "auth", AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "correct-pass",
+				PrivacyProtocol: gosnmp.AES, PrivacyPassphrase: "privpass123",
+			},
+			oid: oidUsmStatsUnsupportedSecLevels,
+		},
+		{
+			name:  "right digest, wrong privacy passphrase",
+			flags: gosnmp.AuthPriv,
+			sp: &gosnmp.UsmSecurityParameters{
+				UserName: "priv", AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "correct-pass",
+				PrivacyProtocol: gosnmp.AES, PrivacyPassphrase: "wrong-priv-pass",
+			},
+			oid: oidUsmStatsDecryptionErrors,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := engineFor(t, []config.SNMPv3User{authUser, privUser})
+			processed := 0
+			process := func(p gosnmp.PDUType, v []gosnmp.SnmpPDU, n int, m uint32) []gosnmp.SnmpPDU {
+				processed++
+				return echoProcess(p, v, n, m)
+			}
+			req := v3Request(t, e, tc.flags, tc.sp, gosnmp.SnmpPDU{Name: sysDescrOID, Type: gosnmp.Null})
+
+			wire, err := e.Respond(req, process)
+			if err != nil {
+				t.Fatalf("Respond: %v", err)
+			}
+			assertReport(t, decodeV3NoAuth(t, wire), tc.oid, 1)
+			if processed != 0 {
+				t.Errorf("agent processed a refused request")
+			}
+		})
+	}
+}
+
+// TestV3UnreportableRefusalDropped: without the reportable flag the engine
+// counts the failure and sends nothing (RFC 3412 §7.1).
+func TestV3UnreportableRefusalDropped(t *testing.T) {
+	e := engineFor(t, []config.SNMPv3User{{Username: "admin", AuthProtocol: "sha", AuthPassword: "correct-pass"}})
+	req := v3Request(t, e, gosnmp.AuthNoPriv, &gosnmp.UsmSecurityParameters{
+		UserName: "admin", AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "wrong-pass",
+	})
+	msg, err := parseV3Message(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flagsAt := bytes.Index(req, []byte{byte(gosnmp.OctetString), 1, byte(msg.flags)})
+	if flagsAt < 0 {
+		t.Fatal("msgFlags not found in the request")
+	}
+	req[flagsAt+2] &^= byte(gosnmp.Reportable)
+
+	wire, err := e.Respond(req, echoProcess)
+	if wire != nil || !errors.Is(err, ErrV3Dropped) {
+		t.Fatalf("unreportable wrong digest: wire=%d bytes err=%v, want a drop", len(wire), err)
+	}
+	if got := e.wrongDigests.Load(); got != 1 {
+		t.Errorf("usmStatsWrongDigests = %d, want 1", got)
+	}
+}
+
+func assertReport(t *testing.T, report *gosnmp.SnmpPacket, oid string, count uint32) {
+	t.Helper()
+	if report.PDUType != gosnmp.Report || len(report.Variables) != 1 {
+		t.Fatalf("got %v with %d varbinds, want a one-varbind Report", report.PDUType, len(report.Variables))
+	}
+	if v := report.Variables[0]; v.Name != oid || gosnmp.ToBigInt(v.Value).Uint64() != uint64(count) {
+		t.Errorf("Report varbind = %s %v, want %s %d", v.Name, v.Value, oid, count)
 	}
 }
 
@@ -251,5 +535,28 @@ func TestEngineIDFromConfigHex(t *testing.T) {
 	}
 	if _, badErr := resolveEngineID("zz", nil); badErr == nil {
 		t.Error("expected error for invalid hex engine ID")
+	}
+}
+
+// TestParseV3MessageTruncated: the header reader runs on unauthenticated input,
+// so every truncation of a valid request must fail cleanly, never panic or
+// read past the datagram.
+func TestParseV3MessageTruncated(t *testing.T) {
+	e := engineFor(t, []config.SNMPv3User{{Username: "admin", AuthProtocol: "sha", AuthPassword: "correct-pass"}})
+	req := v3Request(t, e, gosnmp.AuthNoPriv, &gosnmp.UsmSecurityParameters{
+		UserName: "admin", AuthenticationProtocol: gosnmp.SHA, AuthenticationPassphrase: "correct-pass",
+	}, gosnmp.SnmpPDU{Name: sysDescrOID, Type: gosnmp.Null})
+
+	msg, err := parseV3Message(req)
+	if err != nil {
+		t.Fatalf("full request: %v", err)
+	}
+	if msg.userName != "admin" || msg.engineID != e.engineID || msg.requestID != 777 || len(msg.authParams) != 12 {
+		t.Fatalf("parsed %+v", msg)
+	}
+	for n := range len(req) - 1 {
+		if _, perr := parseV3Message(req[:n]); perr == nil {
+			t.Errorf("a %d-octet prefix of a %d-octet request parsed", n, len(req))
+		}
 	}
 }
