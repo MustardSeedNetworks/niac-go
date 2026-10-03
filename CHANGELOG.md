@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.106.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.0...v0.106.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **daemon:** remove a session's inline config when it is replaced or stopped ([#2450](https://github.com/MustardSeedNetworks/niac-go/issues/2450)) ([922267e](https://github.com/MustardSeedNetworks/niac-go/commit/922267e89ad467145120f89a9ca38212207a68ed)), closes [#2444](https://github.com/MustardSeedNetworks/niac-go/issues/2444)
+* **scenario:** count manifest observations from what the agents serve ([#2460](https://github.com/MustardSeedNetworks/niac-go/issues/2460)) ([6cabcba](https://github.com/MustardSeedNetworks/niac-go/commit/6cabcbaaa7b24ddba84b30c50252a53344089e2a)), closes [#2353](https://github.com/MustardSeedNetworks/niac-go/issues/2353)
+
+
+### Miscellaneous
+
+* **deps:** update dependency lint-staged to v17.6.0 ([#2457](https://github.com/MustardSeedNetworks/niac-go/issues/2457)) ([94c8929](https://github.com/MustardSeedNetworks/niac-go/commit/94c8929b3a9dfb58be18ab7ce427a1bb2d752236))
+
 ## [0.106.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.105.0...v0.106.0) (2026-10-03)
 
 
