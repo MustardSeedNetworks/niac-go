@@ -1,2 +1,3 @@
 internal/acceptance/harness          # test-only — drives the built binary as a subprocess (make test-acceptance)
+internal/authstate                   # unwired — AUTH-NIAC (niac-go#2309) adapter increment imports it and deletes this line
 internal/device                      # unwired — nothing imports it
