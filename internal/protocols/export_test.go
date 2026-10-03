@@ -6,6 +6,7 @@ package protocols
 import (
 	"net"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
@@ -513,6 +514,24 @@ func (h *NetBIOSHandler) DecodeNetBIOSName(data []byte) (string, byte, int) {
 // SNMPGet reads oid from device's base SNMP agent.
 func (s *Stack) SNMPGet(device *config.Device, oid string) (*snmp.OIDValue, error) {
 	return s.snmpAgents[device].baseAgent.HandleGet(oid)
+}
+
+// SNMPWalk returns every OID device's base SNMP agent serves under prefix, in
+// walk order. The bool is false when the device runs no agent.
+func (s *Stack) SNMPWalk(device *config.Device, prefix string) ([]string, bool) {
+	group := s.snmpAgents[device]
+	if group == nil || group.baseAgent == nil {
+		return nil, false
+	}
+	var oids []string
+	for oid := prefix; ; {
+		next, _, err := group.baseAgent.HandleGetNext(oid)
+		if err != nil || !strings.HasPrefix(next, prefix+".") {
+			return oids, true
+		}
+		oids = append(oids, next)
+		oid = next
+	}
 }
 
 // MakeBridgeID exposes makeBridgeID for testing.

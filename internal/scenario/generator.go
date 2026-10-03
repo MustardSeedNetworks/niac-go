@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/converter"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 const (
@@ -29,6 +31,9 @@ const (
 	transitSubnet    = "10.254.200.0/24"
 	transitGateway   = "10.254.200.1"
 	internetLoopback = "8.8.8.8"
+
+	// unspecifiedNextHop is the next hop an agent serves for a connected route.
+	unspecifiedNextHop = "0.0.0.0"
 )
 
 // ErrInvalidRequest identifies authoring input that cannot produce a valid scenario.
@@ -88,7 +93,7 @@ func Generate(request Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	manifest := buildManifest(&authored)
+	manifest := buildManifest(&authored, runtimeConfig)
 	manifest.Identity = identity
 
 	return Result{YAML: data, Manifest: manifest, Config: runtimeConfig}, nil
@@ -155,7 +160,7 @@ func buildNetworks(request Request) []converter.Network {
 	return networks
 }
 
-func buildManifest(authored *converter.Config) Manifest {
+func buildManifest(authored *converter.Config, runtime *config.Config) Manifest {
 	names := make([]string, 0, len(authored.Devices))
 	for _, device := range authored.Devices {
 		names = append(names, device.Name)
@@ -195,7 +200,7 @@ func buildManifest(authored *converter.Config) Manifest {
 		DeviceCount:   len(authored.Devices), NetworkCount: len(authored.Networks), LinkCount: len(edges),
 		DeviceNamesSHA256: hashLines(names), NetworksSHA256: hashLines(networks), LinksSHA256: hashLines(edges),
 		Interfaces:   buildInterfaceTruth(authored),
-		Observations: buildObservations(authored),
+		Observations: buildObservations(runtime),
 		Timing:       buildTiming(authored),
 	}
 }
@@ -256,59 +261,55 @@ func buildInterfaceTruth(authored *converter.Config) InterfaceTruth {
 	return InterfaceTruth{Count: len(lines), SHA256: hashLines(lines), Faults: faults}
 }
 
-// buildObservations records what each SEED collector should find. A collector
-// the scenario authors nothing for is omitted rather than recorded as zero —
-// see the Observation doc comment for why those are different claims.
-func buildObservations(authored *converter.Config) map[string]Observation {
+// buildObservations records what each SEED collector finds when it polls the
+// running scenario: SEED walks every SNMP agent, so a device counts toward a
+// collector only when its agent serves at least one row of that table. Each
+// count follows how the agent builds the table, not what the scenario authors
+// around it (#2353): a device with no agent serves nothing, every addressed
+// interface serves a connected route, a switch learns its peer's MAC on every
+// switched trunk port, and a neighbour table holds a row only for a port with
+// a neighbour. A collector no agent serves a row for is omitted rather than
+// recorded as zero -- see the Observation doc comment for why those differ.
+// TestPackManifestObservationsMatchTheServedTables walks the served tables of
+// every pack and holds this to them.
+func buildObservations(runtime *config.Config) map[string]Observation {
 	observations := make(map[string]Observation)
-
-	// Collectors whose answer is one row per device report only a device count;
-	// table collectors also report how many rows those devices contribute.
-	perDevice := func(collector string, rows deviceCounter) {
-		if devices, _ := countDevices(authored, rows); devices > 0 {
-			observations[collector] = Observation{Devices: devices}
-		}
-	}
-	tabular := func(collector string, rows deviceCounter) {
-		if devices, total := countDevices(authored, rows); devices > 0 {
-			observations[collector] = Observation{Devices: devices, Rows: total}
-		}
+	roster := make(map[string]bool, len(runtime.Devices))
+	for i := range runtime.Devices {
+		roster[runtime.Devices[i].Name] = true
 	}
 
-	perDevice(CollectorSysInfo, func(d converter.Device) int { return present(d.SnmpAgent != nil) })
-	perDevice(CollectorLLDP, func(d converter.Device) int {
-		return present(d.Lldp != nil && d.Lldp.Enabled)
-	})
-	perDevice(CollectorCDP, func(d converter.Device) int {
-		return present(d.Cdp != nil && d.Cdp.Enabled)
-	})
-	perDevice(CollectorFDP, func(d converter.Device) int {
-		return present(d.Fdp != nil && d.Fdp.Enabled)
-	})
-	tabular(CollectorIfTable, func(d converter.Device) int { return len(d.Interfaces) })
-	tabular(CollectorRouting, func(d converter.Device) int { return len(d.Routes) })
-	tabular(CollectorFDB, countFDBPorts)
+	for i := range runtime.Devices {
+		device := &runtime.Devices[i]
+		if !config.SNMPv2Enabled(device.SNMPConfig) && !config.SNMPv3Enabled(device.SNMPv3Config) {
+			continue
+		}
+		observe(observations, CollectorSysInfo, 1, false)
+		observe(observations, CollectorIfTable, len(device.Interfaces), true)
+		observe(observations, CollectorRouting, servedRoutes(device), true)
+		observe(observations, CollectorFDB, learnedFDBPorts(device, roster), true)
+		hasNeighbour := snmp.HasDiscoveryNeighbour(device)
+		observe(observations, CollectorLLDP, present(hasNeighbour && device.LLDPConfig != nil &&
+			device.LLDPConfig.Enabled), false)
+		observe(observations, CollectorCDP, present(hasNeighbour && device.CDPConfig != nil &&
+			device.CDPConfig.Enabled), false)
+	}
 
 	return observations
 }
 
-// deviceCounter reports how many rows one device contributes to a collector.
-type deviceCounter func(converter.Device) int
-
-// countDevices returns how many devices contribute at least one row, and the
-// total row count across them.
-func countDevices(authored *converter.Config, rows deviceCounter) (int, int) {
-	devices, total := 0, 0
-	for _, device := range authored.Devices {
-		count := rows(device)
-		if count == 0 {
-			continue
-		}
-		devices++
-		total += count
+// observe adds one device's rows to a collector's observation. Collectors whose
+// answer is one row per device report only a device count.
+func observe(observations map[string]Observation, collector string, rows int, tabular bool) {
+	if rows == 0 {
+		return
 	}
-
-	return devices, total
+	observation := observations[collector]
+	observation.Devices++
+	if tabular {
+		observation.Rows += rows
+	}
+	observations[collector] = observation
 }
 
 func present(enabled bool) int {
@@ -319,15 +320,48 @@ func present(enabled bool) int {
 	return 0
 }
 
-func countFDBPorts(device converter.Device) int {
-	ports := 0
+// servedRoutes counts the ipCidrRouteTable rows an agent serves: a connected
+// route for each addressed interface and each authored route that leaves
+// through one, keyed as the table indexes them, so two interfaces on one
+// subnet serve one row.
+func servedRoutes(device *config.Device) int {
+	interfaces := make(map[string]bool, len(device.Interfaces))
+	rows := make(map[string]bool)
+	for _, iface := range device.Interfaces {
+		interfaces[iface.Name] = true
+		if _, network, err := net.ParseCIDR(iface.Address); err == nil && network.IP.To4() != nil {
+			rows[network.String()+"|"+unspecifiedNextHop] = true
+		}
+	}
+	for _, route := range device.Routes {
+		_, network, err := net.ParseCIDR(route.Destination)
+		if err != nil || network.IP.To4() == nil || !interfaces[route.Via] {
+			continue
+		}
+		nextHop := route.NextHop
+		if nextHop == "" {
+			nextHop = unspecifiedNextHop
+		}
+		rows[network.String()+"|"+nextHop] = true
+	}
+
+	return len(rows)
+}
+
+// learnedFDBPorts counts the bridge ports a switch serves a learned MAC on:
+// every switched trunk port whose peer is in the scenario, fdb_only or not.
+func learnedFDBPorts(device *config.Device, roster map[string]bool) int {
+	if !snmp.SynthesizesBridgeMIB(device) {
+		return 0
+	}
+	ports := make(map[string]bool)
 	for _, port := range device.TrunkPorts {
-		if port.FDBOnly {
-			ports++
+		if roster[port.RemoteDevice] && !config.IsRoutedTopologyLink(device.Type, port) {
+			ports[port.Interface] = true
 		}
 	}
 
-	return ports
+	return len(ports)
 }
 
 // buildTiming derives the wait tolerance from the advertisement intervals of

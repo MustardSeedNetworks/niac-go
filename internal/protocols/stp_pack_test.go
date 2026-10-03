@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 const (
@@ -18,23 +16,15 @@ const (
 // Every switch of a pack site must agree on one root, its primary core. A
 // switch the site's trunks do not reach would name itself instead, and a
 // consumer polling the site would see two trees.
-func TestPackSitesElectTheirPrimaryCore(t *testing.T) {
-	for _, pack := range scenario.Packs() {
-		t.Run(pack.ID, func(t *testing.T) {
-			result, err := scenario.Generate(pack.Request)
-			if err != nil {
-				t.Fatal(err)
-			}
-			stack := protocols.NewStack(nil, result.Config, logging.NewDebugConfig(0))
-			bridges := stpBridges(result.Config)
-			if len(bridges) == 0 {
-				t.Fatal("no switch authors spanning tree")
-			}
-			roots := primaryRoots(bridges)
-			for _, bridge := range bridges {
-				assertNamesRoot(t, stack, bridge, roots[bridge.Properties["site"]])
-			}
-		})
+func checkPackSitesElectTheirPrimaryCore(t *testing.T, pack shippedPack) {
+	t.Helper()
+	bridges := stpBridges(pack.cfg)
+	if len(bridges) == 0 {
+		t.Fatal("no switch authors spanning tree")
+	}
+	roots := primaryRoots(bridges)
+	for _, bridge := range bridges {
+		assertNamesRoot(t, pack.stack, bridge, roots[bridge.Properties["site"]])
 	}
 }
 
