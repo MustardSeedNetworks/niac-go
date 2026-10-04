@@ -30,24 +30,26 @@ func (w *wireReplay) Start(req replay.Request) (replay.State, error) {
 
 func (w *wireReplay) Stop() (replay.State, error) { return w.state, nil }
 
-var fullReplayState = replay.State{
-	Running:         true,
-	File:            "/srv/pcaps/demo.pcap",
-	LoopMs:          250,
-	Scale:           1.5,
-	RateMode:        "pps",
-	Pps:             1000,
-	MbpsCap:         50,
-	LoopCount:       3,
-	BPFFilter:       "udp port 53",
-	StartedAt:       time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC),
-	PacketsSent:     40,
-	BytesSent:       4096,
-	PacketsTotal:    100,
-	BytesTotal:      10240,
-	PercentComplete: 40,
-	Passes:          2,
-	PacketsFiltered: 7,
+func fullReplayState() replay.State {
+	return replay.State{
+		Running:         true,
+		File:            "/srv/pcaps/demo.pcap",
+		LoopMs:          250,
+		Scale:           1.5,
+		RateMode:        "pps",
+		Pps:             1000,
+		MbpsCap:         50,
+		LoopCount:       3,
+		BPFFilter:       "udp port 53",
+		StartedAt:       time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC),
+		PacketsSent:     40,
+		BytesSent:       4096,
+		PacketsTotal:    100,
+		BytesTotal:      10240,
+		PercentComplete: 40,
+		Passes:          2,
+		PacketsFiltered: 7,
+	}
 }
 
 const fullReplayStateJSON = `{
@@ -92,9 +94,9 @@ func TestReplayEndpointsWireShape(t *testing.T) {
 		state  replay.State
 		want   string
 	}{
-		{"status full", http.MethodGet, fullReplayState, fullReplayStateJSON},
+		{"status full", http.MethodGet, fullReplayState(), fullReplayStateJSON},
 		{"status zero", http.MethodGet, replay.State{}, zeroReplayStateJSON},
-		{"stop full", http.MethodDelete, fullReplayState, fullReplayStateJSON},
+		{"stop full", http.MethodDelete, fullReplayState(), fullReplayStateJSON},
 		{"stop zero", http.MethodDelete, replay.State{}, zeroReplayStateJSON},
 	}
 	for _, tc := range tests {
@@ -122,7 +124,7 @@ func TestReplayStartWireShape(t *testing.T) {
 	if err := os.WriteFile(pcapPath, []byte("pcap"), 0o600); err != nil {
 		t.Fatalf("write pcap: %v", err)
 	}
-	manager := &wireReplay{state: fullReplayState}
+	manager := &wireReplay{state: fullReplayState()}
 	server.cfg.Replay = manager
 
 	body := `{"file":` + strconvJSON(pcapPath) + `,"loopMs":250,"scale":1.5,"rateMode":"pps",` +
