@@ -72,9 +72,13 @@ func TestRestoreDeviceStatesWithholdsRestoredHistoryFromNotifications(t *testing
 		t.Fatal(err)
 	}
 	fresh.notifications.dispatchPending()
-	if len(sender.datagrams) != 1 ||
-		!strings.Contains(string(sender.datagrams[0].payload), `kind=fault.cleared target="eth0:link_down"`) {
-		t.Fatalf("expected only the new clearing notification, got %+v", sender.datagrams)
+	// Only what the clear produced: the fault clearing and the link it brings
+	// back up (#2472).
+	if len(sender.datagrams) != 2 ||
+		!strings.Contains(string(sender.datagrams[0].payload), `kind=fault.cleared target="eth0:link_down"`) ||
+		!strings.Contains(string(sender.datagrams[1].payload), " LINK_UP - ") ||
+		!strings.Contains(string(sender.datagrams[1].payload), `kind=interface.updated target="eth0"`) {
+		t.Fatalf("expected only the clearing and link-up notifications, got %+v", sender.datagrams)
 	}
 }
 

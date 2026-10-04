@@ -67,6 +67,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		SnmpAgent: &converter.SnmpAgent{
 			Community: request.SNMPCommunity, SysName: spec.name, SysDescr: spec.sysDescr,
 			SysLocation: location, SysContact: "netops@" + request.Domain,
+			Traps: siteTraps(spec, request.SNMPCommunity),
 		},
 		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: managedDeviceTTL},
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,

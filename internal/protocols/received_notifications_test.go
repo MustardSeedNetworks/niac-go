@@ -2,11 +2,15 @@ package protocols
 
 import (
 	"errors"
+	"slices"
 	"testing"
+
+	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // collectorFabricStack is a sender on a management network reporting through
@@ -150,5 +154,51 @@ func TestNotificationProtocolFollowsTheSendingPort(t *testing.T) {
 	}
 	if got := notificationProtocol(162); got != notificationProtocolSNMP {
 		t.Errorf("port 162 = %q", got)
+	}
+}
+
+// A simulated collector reads an SNMPv2c notification as a manager does: the
+// trap OID and its varbinds are recorded, and an inform is answered so the
+// sender does not resend it.
+func TestSimulatedCollectorDecodesAndAcknowledgesSNMP(t *testing.T) {
+	for _, tc := range []struct {
+		pdu    string
+		inform bool
+	}{{"trap", false}, {"inform", true}} {
+		t.Run(tc.pdu, func(t *testing.T) {
+			stack := collectorFabricStack(t, true)
+			sender := &stack.config.Devices[1]
+			sender.SNMPConfig.Traps = &config.TrapConfig{
+				Enabled: true, Inform: tc.inform, Receivers: []string{"10.30.0.14"}, InformTimeoutSeconds: 30,
+			}
+			stack.notifications.Register(sender, stack.deviceStates[sender], nil, config.UntaggedTag)
+			t.Cleanup(stack.notifications.stopInforms)
+
+			stack.notifications.sendTrap(sender, snmp.OIDLinkDown, []gosnmp.SnmpPDU{
+				{Name: ".1.3.6.1.2.1.2.2.1.2.3", Type: gosnmp.OctetString, Value: "Gi1/0/3"},
+			}, 7)
+
+			received := stack.GetReceivedNotifications("collector")
+			if len(received) != 1 {
+				t.Fatalf("collector received %d notifications, want 1: %+v", len(received), received)
+			}
+			got := received[0]
+			if got.Protocol != notificationProtocolSNMP || got.PDU != tc.pdu || got.TrapOID != snmp.OIDLinkDown {
+				t.Errorf("received = %+v, want an SNMP %s of linkDown", got, tc.pdu)
+			}
+			ifDescr := NotificationVariable{OID: ".1.3.6.1.2.1.2.2.1.2.3", Type: "OctetString", Value: "Gi1/0/3"}
+			if !slices.Contains(got.Variables, ifDescr) {
+				t.Errorf("variables = %+v, want %+v", got.Variables, ifDescr)
+			}
+			if queued := len(stack.sendQueue); queued != 0 {
+				t.Errorf("%d frames queued for the wire, want none", queued)
+			}
+			stack.notifications.informs.mu.Lock()
+			pending := len(stack.notifications.informs.pending)
+			stack.notifications.informs.mu.Unlock()
+			if pending != 0 {
+				t.Errorf("%d informs still awaiting acknowledgement, want 0", pending)
+			}
+		})
 	}
 }

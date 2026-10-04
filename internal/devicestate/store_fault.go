@@ -3,6 +3,7 @@ package devicestate
 import (
 	"cmp"
 	"errors"
+	"maps"
 	"slices"
 )
 
@@ -104,6 +105,7 @@ func (s *Store) SetInterfaceFault(interfaceName string, faultType FaultType, val
 	}
 	key := interfaceFaultKey{interfaceName: interfaceName, faultType: faultType}
 	current, exists := s.faults[key]
+	previous := maps.Clone(s.faults)
 	if value == 0 {
 		if !exists {
 			return nil
@@ -111,6 +113,7 @@ func (s *Store) SetInterfaceFault(interfaceName string, faultType FaultType, val
 		delete(s.faults, key)
 		s.version++
 		s.recordEvent(EventFaultCleared, interfaceName+":"+string(faultType))
+		s.recordCarrierTransitions(previous)
 		return nil
 	}
 	if exists && current.Value == value {
@@ -119,6 +122,7 @@ func (s *Store) SetInterfaceFault(interfaceName string, faultType FaultType, val
 	s.faults[key] = InterfaceFault{Interface: interfaceName, Type: faultType, Value: value}
 	s.version++
 	s.recordEvent(EventFaultUpdated, interfaceName+":"+string(faultType))
+	s.recordCarrierTransitions(previous)
 	return nil
 }
 
@@ -130,6 +134,7 @@ func (s *Store) ClearInterfaceFaults(interfaceName string) error {
 		return ErrInterfaceNotFound
 	}
 	changed := false
+	previous := maps.Clone(s.faults)
 	for key := range s.prefixFaults {
 		if key.interfaceName == interfaceName {
 			delete(s.prefixFaults, key)
@@ -151,6 +156,7 @@ func (s *Store) ClearInterfaceFaults(interfaceName string) error {
 	if changed {
 		s.version++
 		s.recordEvent(EventFaultCleared, interfaceName)
+		s.recordCarrierTransitions(previous)
 	}
 	return nil
 }
@@ -162,11 +168,30 @@ func (s *Store) ClearAllFaults() {
 	if len(s.faults) == 0 && len(s.addressFaults) == 0 && len(s.prefixFaults) == 0 {
 		return
 	}
+	previous := maps.Clone(s.faults)
 	clear(s.faults)
 	clear(s.addressFaults)
 	clear(s.prefixFaults)
 	s.version++
 	s.recordEvent(EventFaultCleared, "*")
+	s.recordCarrierTransitions(previous)
+}
+
+// recordCarrierTransitions records an interface event for every interface a
+// fault change took down or brought back. A cut cable is a link change, and
+// what follows link changes (linkDown/linkUp traps, #2472) must see it as one;
+// the fault event alone names the fault, not the interface state it moved.
+func (s *Store) recordCarrierTransitions(previous map[interfaceFaultKey]InterfaceFault) {
+	before := slices.Clone(s.running.network.Interfaces)
+	applyCarrierFaults(before, previous)
+	after := slices.Clone(s.running.network.Interfaces)
+	applyCarrierFaults(after, s.faults)
+	for index := range after {
+		if before[index].OperUp != after[index].OperUp {
+			s.version++
+			s.recordInterfaceEvent(index+1, before[index], after[index])
+		}
+	}
 }
 
 func validFaultType(faultType FaultType) bool {

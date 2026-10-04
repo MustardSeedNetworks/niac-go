@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"slices"
 	"strconv"
 	"sync"
@@ -148,7 +149,9 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 		// The only thing NIAC expects on 162 is the acknowledgement of an
 		// inform it sent. Without somewhere to notice that reply, an inform is
 		// a trap that retries blindly.
-		h.handleInformResponse(udp.Payload, ipLayer.SrcIP.String())
+		if source, valid := netip.AddrFromSlice(ipLayer.SrcIP); valid {
+			h.handleInformResponse(udp.Payload, netip.AddrPortFrom(source.Unmap(), uint16(udp.SrcPort)))
+		}
 	case MDNSPort:
 		// Multicast DNS (Bonjour/Avahi)
 		h.stack.mdnsHandler.HandleQuery(pkt, ipLayer, udp, devices, packet)

@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"log/slog"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -31,6 +32,8 @@ type pendingInform struct {
 
 // informTracker holds the informs this stack is waiting on, keyed by request
 // ID and receiver so two receivers of the same notification are tracked apart.
+// The receiver is the address and port the inform went to, which is where its
+// Response comes from.
 type informTracker struct {
 	mu      sync.Mutex
 	pending map[informKey]*pendingInform
@@ -38,7 +41,7 @@ type informTracker struct {
 
 type informKey struct {
 	requestID uint32
-	receiver  string
+	receiver  netip.AddrPort
 }
 
 func newInformTracker() *informTracker {
@@ -64,6 +67,13 @@ func (m *stateNotificationManager) trackInform(
 	if m.informs == nil {
 		return
 	}
+	address, port, err := parseNotificationReceiver(receiver)
+	if err != nil {
+		slog.Warn("SNMP inform receiver cannot be acknowledged", "device", device.Name,
+			"receiver", receiver, "error", err)
+
+		return
+	}
 
 	retries := traps.InformRetries
 	if retries == 0 {
@@ -74,7 +84,7 @@ func (m *stateNotificationManager) trackInform(
 		timeout = defaultInformTimeout
 	}
 
-	key := informKey{requestID: requestID, receiver: receiver}
+	key := informKey{requestID: requestID, receiver: netip.AddrPortFrom(address, port)}
 	entry := &pendingInform{
 		device: device, receiver: receiver, payload: payload, remaining: retries,
 	}
@@ -120,7 +130,7 @@ func (m *stateNotificationManager) retryInform(key informKey, timeout time.Durat
 }
 
 // AcknowledgeInform stops the retry for the inform this response answers.
-func (m *stateNotificationManager) AcknowledgeInform(requestID uint32, receiver string) bool {
+func (m *stateNotificationManager) AcknowledgeInform(requestID uint32, receiver netip.AddrPort) bool {
 	if m == nil || m.informs == nil {
 		return false
 	}
@@ -159,7 +169,7 @@ func (m *stateNotificationManager) stopInforms() {
 // The response arrives on the port the inform was sent from (162), which is
 // also where a device receiving traps would listen — so this is dispatched on
 // the PDU type rather than the port.
-func (h *UDPHandler) handleInformResponse(payload []byte, source string) bool {
+func (h *UDPHandler) handleInformResponse(payload []byte, source netip.AddrPort) bool {
 	decoder := &gosnmp.GoSNMP{Version: gosnmp.Version2c}
 	packet, err := decoder.SnmpDecodePacket(payload)
 	if err != nil || packet.PDUType != gosnmp.GetResponse {
