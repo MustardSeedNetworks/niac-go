@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.107.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.2...v0.107.0) (2026-10-04)
+
+
+### Features
+
+* **scenario:** add the hospital pharmacy system and the plant OPC UA server ([#2464](https://github.com/MustardSeedNetworks/niac-go/issues/2464)) ([bfb6a3f](https://github.com/MustardSeedNetworks/niac-go/commit/bfb6a3ff59832da69d3a12d78065aaa32551090d))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/gopacket/gopacket to v1.7.3 ([#2466](https://github.com/MustardSeedNetworks/niac-go/issues/2466)) ([3f69a21](https://github.com/MustardSeedNetworks/niac-go/commit/3f69a211e6a75d40bc3d8851c0800821eb4733f1))
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.7.0 ([#2468](https://github.com/MustardSeedNetworks/niac-go/issues/2468)) ([4086734](https://github.com/MustardSeedNetworks/niac-go/commit/40867347f3857495c4a62cffa6f97bbf812b137b))
+* **scenario:** pack notifications reach the site collector and stay off the wire ([#2467](https://github.com/MustardSeedNetworks/niac-go/issues/2467)) ([c4a4593](https://github.com/MustardSeedNetworks/niac-go/commit/c4a4593f75f27dc7af53f8cc9352dc063bd84228)), closes [#2410](https://github.com/MustardSeedNetworks/niac-go/issues/2410)
+
 ## [0.106.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.1...v0.106.2) (2026-10-03)
 
 
