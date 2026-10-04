@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.108.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.1...v0.108.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* **api:** list starter networks from the library alone and drop the empty built-in listing ([#2492](https://github.com/MustardSeedNetworks/niac-go/issues/2492)) ([1898715](https://github.com/MustardSeedNetworks/niac-go/commit/1898715b9a2b766b069b9917f84451248ea415ce)), closes [#2131](https://github.com/MustardSeedNetworks/niac-go/issues/2131)
+
+
+### Code Refactoring
+
+* **replay:** own the replay request and state types ([#2493](https://github.com/MustardSeedNetworks/niac-go/issues/2493)) ([ae74e93](https://github.com/MustardSeedNetworks/niac-go/commit/ae74e933d832d5a5bcbdf1e63f2689bc8466fb82))
+
 ## [0.108.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.0...v0.108.1) (2026-10-04)
 
 
