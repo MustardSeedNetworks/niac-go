@@ -54,9 +54,8 @@ Dependencies point inward. The outer layers are `cmd/`, `tools/`,
 `internal/api` and its subpackages, `internal/daemon`, `internal/cliclient`,
 and the harnesses `internal/acceptance` and `internal/wiretest`. They compose
 the domain packages, and no other package under `internal/` may import them.
-`scripts/check-layering.py` enforces this in CI on every platform's files.
-Violations that predate the gate are listed, with their tracking issue, in
-`scripts/layering-baseline.txt`, and that list may only shrink.
+`scripts/check-layering.py` enforces this in CI on every platform's files,
+with no baseline of exceptions.
 
 Before adding a helper or subsystem, check [`CODE_INDEX.md`](../CODE_INDEX.md).
 It identifies the canonical implementation for shared capabilities.

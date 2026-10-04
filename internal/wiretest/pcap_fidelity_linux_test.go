@@ -18,7 +18,6 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/pcapgo"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
@@ -102,7 +101,7 @@ func TestPcapFidelityReplaysEveryFrameByteIdenticalInOrder(t *testing.T) {
 	source := fidelityFixtureFrames(t)
 	dir, file := writeFidelityPCAP(t, source, fidelitySourceGap)
 	engine, handle := openFidelityWire(t)
-	controller := startFidelityReplay(t, engine, api.ReplayRequest{
+	controller := startFidelityReplay(t, engine, replay.Request{
 		File:      file,
 		RootDir:   dir,
 		RateMode:  "topspeed",
@@ -152,7 +151,7 @@ func TestPcapFidelityHonoursSourceInterArrivalTiming(t *testing.T) {
 	source := fidelityFixtureFrames(t)
 	dir, file := writeFidelityPCAP(t, source, fidelitySourceGap)
 	engine, handle := openFidelityWire(t)
-	startFidelityReplay(t, engine, api.ReplayRequest{
+	startFidelityReplay(t, engine, replay.Request{
 		File:     file,
 		RootDir:  dir,
 		RateMode: "timing",
@@ -240,7 +239,7 @@ func writeFidelityPCAP(t *testing.T, frames [][]byte, gap time.Duration) (string
 func startFidelityReplay(
 	t *testing.T,
 	engine *capture.Engine,
-	req api.ReplayRequest,
+	req replay.Request,
 ) *replay.Controller {
 	t.Helper()
 

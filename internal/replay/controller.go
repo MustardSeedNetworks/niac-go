@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
@@ -31,6 +30,61 @@ var (
 	ErrFileRequired = errors.New("pcap file path is required")
 )
 
+// Request describes one replay run.
+type Request struct {
+	File   string
+	LoopMs int
+	Scale  float64
+	// RateMode paces the replay: "" / "timing" honors original inter-packet
+	// timing (× Scale); "topspeed" sends back-to-back; "pps" holds Pps
+	// packets/sec; "mbps" caps average throughput at MbpsCap. Pps/MbpsCap are
+	// only read in their matching mode.
+	RateMode string
+	Pps      float64
+	MbpsCap  float64
+	// LoopCount bounds the number of replay passes (0 = unbounded when
+	// LoopMs>0, single-shot otherwise; N>0 stops after N passes,
+	// back-to-back when LoopMs==0).
+	LoopCount int
+	// BPFFilter replays only packets matching this tcpdump-style filter
+	// (e.g. "udp port 53"); empty replays every packet.
+	BPFFilter string
+	// RootDir is the validated allow-listed directory File was resolved
+	// under; playback opens File through an os.Root anchored here so no path
+	// component can escape it.
+	RootDir string
+	// Uploaded marks File as a temp copy of uploaded data, deleted when the
+	// replay is replaced or stopped.
+	Uploaded bool
+}
+
+// State reports the current replay status.
+type State struct {
+	Running   bool
+	File      string
+	LoopMs    int
+	Scale     float64
+	RateMode  string
+	Pps       float64
+	MbpsCap   float64
+	LoopCount int
+	BPFFilter string
+	StartedAt time.Time
+
+	// Progress counters for the current (or most recent) replay iteration.
+	// PacketsTotal/BytesTotal are 0 until the PCAP has been read;
+	// PercentComplete is 0 whenever PacketsTotal is unknown.
+	PacketsSent     uint64
+	BytesSent       uint64
+	PacketsTotal    uint64
+	BytesTotal      uint64
+	PercentComplete float64
+	// Passes counts completed replay iterations across the run.
+	Passes uint64
+	// PacketsFiltered counts packets skipped by BPFFilter in the current pass.
+	PacketsFiltered uint64
+}
+
 // Controller drives capture.PlaybackEngine for the API's ReplayManager
 // interface. Concurrent-safe; methods serialise on a single internal mutex.
 type Controller struct {
@@ -39,7 +93,7 @@ type Controller struct {
 
 	mu      sync.Mutex
 	current *capture.PlaybackEngine
-	state   api.ReplayState
+	state   State
 	cleanup string // path to delete when the next Start/Stop runs (uploaded files only)
 }
 
@@ -51,7 +105,7 @@ func New(engine capture.PacketSender, debugLevel int) *Controller {
 
 // Status returns the current replay state, including live progress counters
 // read from the running capture.PlaybackEngine (if any).
-func (c *Controller) Status() api.ReplayState {
+func (c *Controller) Status() State {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -78,8 +132,8 @@ const (
 )
 
 // percentComplete returns sent/total as a percentage in [0, 100], rounded to
-// two decimal places. It returns 0 (which ReplayState omits from its JSON
-// via omitempty) when total is unknown rather than fabricating a value.
+// two decimal places. It returns 0 (which the API omits from its JSON) when
+// total is unknown rather than fabricating a value.
 func percentComplete(sent, total uint64) float64 {
 	if total == 0 {
 		return 0
@@ -94,7 +148,7 @@ func percentComplete(sent, total uint64) float64 {
 // Start begins PCAP replay with the given request. If a replay is already
 // running it is stopped first. On error from the underlying engine, an
 // uploaded temp file (req.Uploaded == true) is removed before returning.
-func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
+func (c *Controller) Start(req Request) (State, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -137,7 +191,7 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 	}
 
 	c.current = player
-	c.state = api.ReplayState{
+	c.state = State{
 		Running:   true,
 		File:      req.File,
 		LoopMs:    req.LoopMs,
@@ -159,7 +213,7 @@ func (c *Controller) Start(req api.ReplayRequest) (api.ReplayState, error) {
 
 // Stop halts the current PCAP replay (if any) and cleans up any uploaded
 // temp file. Idempotent.
-func (c *Controller) Stop() (api.ReplayState, error) {
+func (c *Controller) Stop() (State, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

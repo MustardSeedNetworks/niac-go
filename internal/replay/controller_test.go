@@ -13,7 +13,6 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcapgo"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
@@ -97,7 +96,7 @@ func TestStatus_ReportsProgress(t *testing.T) {
 	pcapFile := writeTestPCAP(t, packetCount)
 
 	c := replay.New(sender, 0)
-	req := api.ReplayRequest{File: pcapFile, RateMode: string(config.RateTopspeed)}
+	req := replay.Request{File: pcapFile, RateMode: string(config.RateTopspeed)}
 
 	if _, startErr := c.Start(req); startErr != nil {
 		t.Fatalf("Start failed: %v", startErr)
@@ -107,7 +106,7 @@ func TestStatus_ReportsProgress(t *testing.T) {
 	// immediately; poll on the observable counter rather than sleeping.
 	deadline := time.Now().Add(5 * time.Second)
 
-	var state api.ReplayState
+	var state replay.State
 
 	for time.Now().Before(deadline) {
 		state = c.Status()
@@ -145,7 +144,7 @@ func TestStatus_ReportsProgress(t *testing.T) {
 func TestStart_NoEngine(t *testing.T) {
 	c := replay.New(nil, 0)
 
-	state, err := c.Start(api.ReplayRequest{File: "/tmp/example.pcap"})
+	state, err := c.Start(replay.Request{File: "/tmp/example.pcap"})
 	if !errors.Is(err, replay.ErrEngineUnavailable) {
 		t.Fatalf("got %v, want ErrEngineUnavailable", err)
 	}

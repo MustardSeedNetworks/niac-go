@@ -969,12 +969,42 @@ func expandPath(path string) string {
 	return filepath.Clean(path)
 }
 
-// newReplayController returns a replay controller. The implementation lives
-// in internal/replay so the daemon and the legacy CLI's runtime services
-// share one canonical copy — until #494 this was a duplicated stub here and
-// a working version in cmd/niac/runtime_services.go.
-func newReplayController(engine capture.PacketSender, debugLevel int) *replay.Controller {
-	return replay.New(engine, debugLevel)
+// newReplayController returns the API's replay manager over a
+// replay.Controller bound to engine.
+func newReplayController(engine capture.PacketSender, debugLevel int) api.ReplayManager {
+	return replayManager{controller: replay.New(engine, debugLevel)}
+}
+
+// replayManager serves a replay.Controller as api.ReplayManager. The replay
+// package owns its request and state types and the API owns the wire DTOs;
+// the daemon maps between them so neither imports the other (#2434).
+type replayManager struct {
+	controller *replay.Controller
+}
+
+func (m replayManager) Status() api.ReplayState {
+	return api.ReplayState(m.controller.Status())
+}
+
+func (m replayManager) Start(req api.ReplayRequest) (api.ReplayState, error) {
+	state, err := m.controller.Start(replay.Request{
+		File:      req.File,
+		LoopMs:    req.LoopMs,
+		Scale:     req.Scale,
+		RateMode:  req.RateMode,
+		Pps:       req.Pps,
+		MbpsCap:   req.MbpsCap,
+		LoopCount: req.LoopCount,
+		BPFFilter: req.BPFFilter,
+		RootDir:   req.RootDir,
+		Uploaded:  req.Uploaded,
+	})
+	return api.ReplayState(state), err
+}
+
+func (m replayManager) Stop() (api.ReplayState, error) {
+	state, err := m.controller.Stop()
+	return api.ReplayState(state), err
 }
 
 // compiledFabricFromReport turns a compiler report into the daemon's internal
