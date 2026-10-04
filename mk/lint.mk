@@ -66,13 +66,13 @@ lint-backend-quiet:
 
 lint-frontend: ## Run frontend linter (Biome)
 	@printf "$(BOLD)🔍 Running frontend linter (Biome)...$(RESET)\n"
-	@cd $(UI_DIR) && npx @biomejs/biome check src/
+	@cd $(UI_DIR) && npx @biomejs/biome check src/ scripts/
 	@printf "$(GREEN)✓ Frontend lint complete$(RESET)\n"
 
 lint-frontend-quiet:
 	@FILE_COUNT=$$(find $(UI_DIR)/src -name "*.ts" -o -name "*.tsx" 2>/dev/null | wc -l | tr -d ' '); \
 	printf "   Checking $$FILE_COUNT files...\n"; \
-	OUTPUT=$$(cd $(UI_DIR) && npx @biomejs/biome check src/ 2>&1); \
+	OUTPUT=$$(cd $(UI_DIR) && npx @biomejs/biome check src/ scripts/ 2>&1); \
 	STATUS=$$?; \
 	echo "$$OUTPUT" | tail -20; \
 	exit $$STATUS
@@ -167,7 +167,7 @@ fmt-check: ## Check all formatting (Go + frontend + markdown) without fixing
 		echo "✅ Go formatting OK"; \
 	fi; \
 	echo "Checking frontend formatting (Biome)..."; \
-	if ! (cd $(UI_DIR) && npx @biomejs/biome check --formatter-enabled=true src/ 2>/dev/null); then \
+	if ! (cd $(UI_DIR) && npx @biomejs/biome check --formatter-enabled=true src/ scripts/ 2>/dev/null); then \
 		echo "❌ Frontend files need formatting"; \
 		FAILED=1; \
 	else \
