@@ -167,23 +167,21 @@ func TestStandaloneCaptureUnexpectedExitClearsSessionAndAllowsRestart(t *testing
 	}
 }
 
-func TestStandaloneCaptureOldRunnerCannotClearReplacement(t *testing.T) {
+// TestStandaloneCaptureStaleCompletionCannotClearReplacement pins the
+// d.capture == session guard in completeStandaloneCapture: a stopped session
+// whose loop reports late must not clear the session that replaced it. The
+// stale completion is called on the test goroutine because nothing observable
+// marks the end of the old loop's goroutine; driving it through a released
+// runner left the assertion racing that goroutine, and telling the two runners
+// apart by call order failed whenever the replacement's goroutine ran first
+// (#2458).
+func TestStandaloneCaptureStaleCompletionCannotClearReplacement(t *testing.T) {
 	d := newTestDaemon(t)
 	d.captureInterfaceExists = func(string) bool { return true }
 	d.newCaptureEngine = func(string, int) (captureEngine, error) {
 		return &fakeCaptureEngine{}, nil
 	}
-	oldRelease := make(chan struct{})
-	var runs atomic.Int32
-	d.captureRunner = func(
-		ctx context.Context,
-		_ captureEngine,
-		_ func(gopacket.Packet),
-	) error {
-		if runs.Add(1) == 1 {
-			<-oldRelease
-			return errors.New("old capture failed")
-		}
+	d.captureRunner = func(ctx context.Context, _ captureEngine, _ func(gopacket.Packet)) error {
 		<-ctx.Done()
 		return ctx.Err()
 	}
@@ -191,17 +189,20 @@ func TestStandaloneCaptureOldRunnerCannotClearReplacement(t *testing.T) {
 	if err := d.StartCapture(api.CaptureRequest{Interface: "old0"}); err != nil {
 		t.Fatalf("first StartCapture() error = %v", err)
 	}
+	d.mu.RLock()
+	old := d.capture
+	d.mu.RUnlock()
 	if err := d.StopCapture(); err != nil {
 		t.Fatalf("StopCapture() error = %v", err)
 	}
 	if err := d.StartCapture(api.CaptureRequest{Interface: "new0"}); err != nil {
 		t.Fatalf("replacement StartCapture() error = %v", err)
 	}
-	close(oldRelease)
-	waitForCaptureStatus(t, d, true)
+
+	d.completeStandaloneCapture(old, errors.New("old capture failed"))
 
 	status := d.GetCaptureStatus()
-	if status.Interface != "new0" || status.LastError != "" {
+	if !status.Running || status.Interface != "new0" || status.LastError != "" {
 		t.Fatalf("replacement status = %#v", status)
 	}
 	if err := d.StopCapture(); err != nil {
