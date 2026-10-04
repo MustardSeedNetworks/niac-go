@@ -83,6 +83,16 @@ describe('serializeNetworks', () => {
     );
   });
 
+  it('keeps an IPv6 subnet through a wizard edit', () => {
+    const dualStack =
+      'networks:\n  - name: lab\n    subnet: 10.0.0.0/24\n    subnet_v6: 2001:db8:10::/64\n';
+    const { networks } = parseNetworkModel(dualStack);
+    expect(networks).toEqual([
+      { name: 'lab', subnet: '10.0.0.0/24', subnetV6: '2001:db8:10::/64' },
+    ]);
+    expect(serializeNetworks(networks)).toBe(dualStack);
+  });
+
   it('returns empty string for no networks, which the splice reads as removal', () => {
     expect(serializeNetworks([])).toBe('');
     expect(serializeAttachments([])).toBe('');

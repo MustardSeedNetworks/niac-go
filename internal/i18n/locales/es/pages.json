@@ -376,6 +376,7 @@
       "pickNetwork": "Elige una red",
       "remove": "Eliminar",
       "subnet": "Subred",
+      "subnetV6": "Subred IPv6",
       "title": "Redes",
       "unaddressed": "sin dirección",
       "virtualVlan": "VLAN",

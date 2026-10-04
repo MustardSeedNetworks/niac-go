@@ -59,7 +59,8 @@ func networksToYAML(networks []Network) []converter.Network {
 	out := make([]converter.Network, len(networks))
 	for i, network := range networks {
 		out[i] = converter.Network{
-			Name: network.Name, Subnet: network.Subnet, VirtualVLAN: network.VirtualVLAN,
+			Name: network.Name, Subnet: network.Subnet, SubnetV6: network.SubnetV6,
+			VirtualVLAN: network.VirtualVLAN,
 		}
 	}
 	return out
@@ -192,7 +193,7 @@ func interfacesToYAML(interfaces []Interface) []converter.Interface {
 	for i, iface := range interfaces {
 		out[i] = converter.Interface{
 			Name: iface.Name, Type: iface.Type, Network: iface.Network, Address: iface.Address,
-			MTU: iface.MTU, Speed: iface.Speed, Duplex: iface.Duplex,
+			AddressV6: iface.AddressV6, MTU: iface.MTU, Speed: iface.Speed, Duplex: iface.Duplex,
 			AdminStatus: iface.AdminStatus, OperStatus: iface.OperStatus,
 			Description: iface.Description, InUtilization: iface.InUtilization,
 			OutUtilization: iface.OutUtilization, VLANs: iface.VLANs,

@@ -15,6 +15,7 @@ import (
 const (
 	bitsPerByte                     = 8
 	maxUsableEndpointPrefixLen      = 30
+	maxAnycastPrefixLenV6           = 127
 	ethernetMACBytes                = 6
 	fullByteMask               byte = 0xff
 )
@@ -29,7 +30,7 @@ func (c *scenarioCompiler) compileInterfaces(device *config.Device) map[string]I
 	compiled := make(map[string]Interface)
 	names := make(map[string]struct{})
 	for i, source := range device.Interfaces {
-		if source.Network == "" && source.Address == "" {
+		if source.Network == "" && source.Address == "" && source.AddressV6 == "" {
 			continue
 		}
 		field := fmt.Sprintf("devices[%s].interfaces[%d]", device.Name, i)
@@ -97,13 +98,67 @@ func (c *scenarioCompiler) compileInterface(
 		)
 		return Interface{}, false
 	}
+	addressV6, ok := c.compileInterfaceV6(network, source.AddressV6, field+".address_v6")
+	if !ok {
+		return Interface{}, false
+	}
 	c.addresses[address.Addr()] = device
+	if addressV6.IsValid() {
+		c.addresses[addressV6.Addr()] = device
+	}
 	return Interface{
-		Device:  device,
-		Name:    source.Name,
-		Network: source.Network,
-		Address: address,
+		Device:    device,
+		Name:      source.Name,
+		Network:   source.Network,
+		Address:   address,
+		AddressV6: addressV6,
 	}, true
+}
+
+func (c *scenarioCompiler) compileInterfaceV6(
+	network Network,
+	value string,
+	field string,
+) (netip.Prefix, bool) {
+	if value == "" {
+		return netip.Prefix{}, true
+	}
+	if !network.PrefixV6.IsValid() {
+		c.add(CodeAddressOutsideNetwork, field, "network has no subnet_v6")
+		return netip.Prefix{}, false
+	}
+	address, err := netip.ParsePrefix(value)
+	if err != nil || !address.Addr().Is6() || address.Addr().Is4In6() {
+		c.add(CodeInvalidInterfaceAddress, field, "address must be an IPv6 prefix")
+		return netip.Prefix{}, false
+	}
+	if !network.PrefixV6.Contains(address.Addr()) {
+		c.add(CodeAddressOutsideNetwork, field, "address is outside its network")
+		return netip.Prefix{}, false
+	}
+	if address.Bits() != network.PrefixV6.Bits() {
+		c.add(CodeInterfacePrefixMismatch, field, "address prefix length must match its network")
+		return netip.Prefix{}, false
+	}
+	// RFC 4291 2.6.1 reserves the all-zero interface identifier as the
+	// subnet-router anycast address; RFC 6164 exempts /127 links.
+	if network.PrefixV6.Bits() < maxAnycastPrefixLenV6 && address.Addr() == network.PrefixV6.Addr() {
+		c.add(
+			CodeReservedInterfaceAddr,
+			field,
+			"interface cannot use the subnet-router anycast address",
+		)
+		return netip.Prefix{}, false
+	}
+	if owner, assigned := c.addresses[address.Addr()]; assigned {
+		c.add(
+			CodeDuplicateInterfaceAddr,
+			field,
+			fmt.Sprintf("interface address is already assigned to device %s", owner),
+		)
+		return netip.Prefix{}, false
+	}
+	return address, true
 }
 
 func (c *scenarioCompiler) compileRoutes(device *config.Device, interfaces map[string]Interface) {

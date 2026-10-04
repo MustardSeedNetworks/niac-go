@@ -111,6 +111,7 @@ type Config struct {
 type Network struct {
 	Name        string
 	Subnet      string
+	SubnetV6    string
 	VirtualVLAN int
 }
 
@@ -409,6 +410,7 @@ type Interface struct {
 	Type           string
 	Network        string
 	Address        string
+	AddressV6      string
 	MTU            int
 	Speed          int // Mbps
 	Duplex         string

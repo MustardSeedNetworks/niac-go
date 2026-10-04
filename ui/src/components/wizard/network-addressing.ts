@@ -12,6 +12,8 @@ import { deviceAddressInterface } from './device-addressing';
 export interface AuthoredNetwork {
   name: string;
   subnet: string;
+  /** Optional IPv6 prefix beside the IPv4 subnet, e.g. 2001:db8:10::/64. */
+  subnetV6?: string;
   virtualVlan?: number;
 }
 
@@ -75,9 +77,11 @@ function readNetworks(node: unknown): AuthoredNetwork[] {
     const name = scalar(item.get('name'));
     if (!name) continue;
     const vlan = scalar(item.get('virtual_vlan'));
+    const subnetV6 = scalar(item.get('subnet_v6'));
     networks.push({
       name,
       subnet: scalar(item.get('subnet')) ?? '',
+      ...(subnetV6 ? { subnetV6 } : {}),
       ...(vlan ? { virtualVlan: Number(vlan) } : {}),
     });
   }
@@ -218,6 +222,7 @@ export function serializeNetworks(networks: AuthoredNetwork[]): string {
   for (const network of networks) {
     lines.push(`  - name: ${network.name}`);
     lines.push(`    subnet: ${network.subnet}`);
+    if (network.subnetV6) lines.push(`    subnet_v6: ${network.subnetV6}`);
     if (network.virtualVlan) lines.push(`    virtual_vlan: ${network.virtualVlan}`);
   }
   return `${lines.join('\n')}\n`;

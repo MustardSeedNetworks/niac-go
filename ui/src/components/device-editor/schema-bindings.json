@@ -127,6 +127,7 @@
   "devices[].icmpv6.router_advertisement.reachable_time": "components/device-editor/generated/sections.generated.ts",
   "devices[].icmpv6.router_advertisement.retrans_timer": "components/device-editor/generated/sections.generated.ts",
   "devices[].interfaces[].address": "components/device-editor/generated/sections.generated.ts",
+  "devices[].interfaces[].address_v6": "components/device-editor/generated/sections.generated.ts",
   "devices[].interfaces[].admin_status": "components/device-editor/generated/sections.generated.ts",
   "devices[].interfaces[].description": "components/device-editor/generated/sections.generated.ts",
   "devices[].interfaces[].duplex": "components/device-editor/generated/sections.generated.ts",
@@ -300,5 +301,6 @@
   "discovery_protocols.lldp.interval": "components/wizard/FleetDefaultsEditor.tsx",
   "networks[].name": "components/wizard/NetworksStep.tsx",
   "networks[].subnet": "components/wizard/NetworksStep.tsx",
+  "networks[].subnet_v6": "components/wizard/NetworksStep.tsx",
   "networks[].virtual_vlan": "components/wizard/NetworksStep.tsx"
 }

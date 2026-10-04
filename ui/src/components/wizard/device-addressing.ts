@@ -45,6 +45,8 @@ export function setDeviceAddress(
   const interfaces = doc.get('interfaces');
   const target = deviceAddressInterface(interfaces);
   if (target) {
+    // An IPv6 address belongs to the network it was numbered from.
+    if (target.get('network') !== networkName) target.delete('address_v6');
     target.set('network', networkName);
     target.set('address', address);
   } else {

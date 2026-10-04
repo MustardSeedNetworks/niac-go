@@ -142,7 +142,7 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
               {model.networks.map((network, index) => (
                 <div
                   key={`${network.name}-${index}`}
-                  className="grid gap-comfortable md:grid-cols-4 items-end"
+                  className="grid gap-comfortable md:grid-cols-5 items-end"
                 >
                   <FormField
                     label={t('newSimWizard.networks.name')}
@@ -164,6 +164,19 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
                       className={inputClassName}
                       value={network.subnet}
                       onChange={(event) => updateNetwork(index, { subnet: event.target.value })}
+                    />
+                  </FormField>
+                  <FormField
+                    label={t('newSimWizard.networks.subnetV6')}
+                    htmlFor={`network-subnet-v6-${index}`}
+                  >
+                    <input
+                      id={`network-subnet-v6-${index}`}
+                      className={inputClassName}
+                      value={network.subnetV6 ?? ''}
+                      onChange={(event) =>
+                        updateNetwork(index, { subnetV6: event.target.value || undefined })
+                      }
                     />
                   </FormField>
                   <FormField

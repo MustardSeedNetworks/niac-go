@@ -75,6 +75,7 @@ CONFIG_BOUND = {
     "behavior_timelines[].phases[].faults[].address": "components/wizard/BehaviorFaultAction.tsx",
     "networks[].name": NETWORKS_STEP,
     "networks[].subnet": NETWORKS_STEP,
+    "networks[].subnet_v6": NETWORKS_STEP,
     "networks[].virtual_vlan": NETWORKS_STEP,
     "attachments[].name": NETWORKS_STEP,
     "attachments[].connect": NETWORKS_STEP,

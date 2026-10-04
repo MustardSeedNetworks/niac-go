@@ -233,6 +233,28 @@ names a `network`, the address must fall inside that network's subnet **and
 carry the same prefix length**: a `/32` host address on a `/24` network is
 refused.
 
+A network can also carry an IPv6 prefix in `subnet_v6`, and an interface on it
+an `address_v6` beside its IPv4 `address`. The same rules apply: a prefix, inside
+the network's `subnet_v6`, with the same prefix length. The prefix must be
+global or unique-local unicast, and an interface cannot take the all-zero
+subnet-router anycast address (a `/127` link may). The fabric validates these
+and reports them in the session topology. Devices do not yet answer neighbour
+discovery or route IPv6 on them; that follows in issue #2411.
+
+```yaml
+networks:
+  - name: clinic-lan
+    subnet: 10.20.0.0/24
+    subnet_v6: 2001:db8:20::/64
+devices:
+  - name: clinic-rtr-01
+    interfaces:
+      - name: GigabitEthernet0/0/1
+        network: clinic-lan
+        address: 10.20.0.1/24
+        address_v6: 2001:db8:20::1/64
+```
+
 Attachments bind a network to the host. Preflight decides whether the host
 interface may actually carry it, and reports `attachment_policy_denied` or
 `host_interface_unavailable`. `niac validate` has no host binding and cannot

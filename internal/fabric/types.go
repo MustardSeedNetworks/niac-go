@@ -138,15 +138,17 @@ type CompiledBinding struct {
 type Network struct {
 	Name        string       `json:"name"`
 	Prefix      netip.Prefix `json:"prefix"`
+	PrefixV6    netip.Prefix `json:"prefixV6,omitzero"`
 	VirtualVLAN uint16       `json:"virtualVlan,omitempty"`
 }
 
 // Interface is one device attachment to a virtual network.
 type Interface struct {
-	Device  string       `json:"device"`
-	Name    string       `json:"name"`
-	Network string       `json:"network"`
-	Address netip.Prefix `json:"address"`
+	Device    string       `json:"device"`
+	Name      string       `json:"name"`
+	Network   string       `json:"network"`
+	Address   netip.Prefix `json:"address"`
+	AddressV6 netip.Prefix `json:"addressV6,omitzero"`
 }
 
 // Route is one connected or authored static IPv4 route.

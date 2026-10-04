@@ -47,6 +47,7 @@ export interface FabricBinding {
 export interface FabricNetwork {
   name: string;
   prefix: string;
+  prefixV6?: string;
   virtualVlan?: number;
 }
 
@@ -55,6 +56,7 @@ export interface FabricInterface {
   name: string;
   network: string;
   address: string;
+  addressV6?: string;
 }
 
 export interface FabricRoute {
