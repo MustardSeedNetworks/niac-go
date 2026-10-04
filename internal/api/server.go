@@ -51,6 +51,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
+	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
 
@@ -214,13 +215,12 @@ type AlertConfig struct {
 	WebhookURL       string `json:"webhookUrl"`
 }
 
-// ReplayRequest represents a packet replay request.
+// ReplayRequest is the wire form of a packet replay request.
 type ReplayRequest struct {
 	File       string  `json:"file"`
 	LoopMs     int     `json:"loopMs"`
 	Scale      float64 `json:"scale"`
 	InlineData string  `json:"data,omitempty"`
-	Uploaded   bool    `json:"-"`
 	// RateMode paces the replay: "" / "timing" honors original inter-packet
 	// timing (× Scale); "topspeed" sends back-to-back; "pps" holds Pps
 	// packets/sec; "mbps" caps average throughput at MbpsCap. Pps/MbpsCap are
@@ -235,13 +235,10 @@ type ReplayRequest struct {
 	// BPFFilter replays only packets matching this tcpdump-style filter
 	// (e.g. "udp port 53"); empty replays every packet.
 	BPFFilter string `json:"bpfFilter,omitempty"`
-	// RootDir is the validated allow-listed directory File was resolved
-	// under; playback opens File through an os.Root anchored here so no path
-	// component can escape it. Server-set, never client-supplied.
-	RootDir string `json:"-"`
 }
 
-// ReplayState reports the current replay status.
+// ReplayState is the wire form of replay.State; the handler converts
+// between the two, so their fields must stay in step.
 type ReplayState struct {
 	Running   bool      `json:"running"`
 	File      string    `json:"file"`
@@ -270,9 +267,9 @@ type ReplayState struct {
 
 // ReplayManager controls PCAP playback from the API server.
 type ReplayManager interface {
-	Status() ReplayState
-	Start(ReplayRequest) (ReplayState, error)
-	Stop() (ReplayState, error)
+	Status() replay.State
+	Start(replay.Request) (replay.State, error)
+	Stop() (replay.State, error)
 }
 
 // ServerConfig defines API server options.

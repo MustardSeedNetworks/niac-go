@@ -8,27 +8,29 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
 // wireReplay answers every call with one fixed state and records the request
 // the handler hands it, so the tests below pin the replay endpoints' wire
 // shape in both directions (#2434).
 type wireReplay struct {
-	state ReplayState
-	got   ReplayRequest
+	state replay.State
+	got   replay.Request
 }
 
-func (w *wireReplay) Status() ReplayState { return w.state }
+func (w *wireReplay) Status() replay.State { return w.state }
 
-func (w *wireReplay) Start(req ReplayRequest) (ReplayState, error) {
+func (w *wireReplay) Start(req replay.Request) (replay.State, error) {
 	w.got = req
 
 	return w.state, nil
 }
 
-func (w *wireReplay) Stop() (ReplayState, error) { return w.state, nil }
+func (w *wireReplay) Stop() (replay.State, error) { return w.state, nil }
 
-var fullReplayState = ReplayState{
+var fullReplayState = replay.State{
 	Running:         true,
 	File:            "/srv/pcaps/demo.pcap",
 	LoopMs:          250,
@@ -87,13 +89,13 @@ func TestReplayEndpointsWireShape(t *testing.T) {
 	tests := []struct {
 		name   string
 		method string
-		state  ReplayState
+		state  replay.State
 		want   string
 	}{
 		{"status full", http.MethodGet, fullReplayState, fullReplayStateJSON},
-		{"status zero", http.MethodGet, ReplayState{}, zeroReplayStateJSON},
+		{"status zero", http.MethodGet, replay.State{}, zeroReplayStateJSON},
 		{"stop full", http.MethodDelete, fullReplayState, fullReplayStateJSON},
-		{"stop zero", http.MethodDelete, ReplayState{}, zeroReplayStateJSON},
+		{"stop zero", http.MethodDelete, replay.State{}, zeroReplayStateJSON},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,7 +137,7 @@ func TestReplayStartWireShape(t *testing.T) {
 		t.Fatalf("POST /replay body:\n%s\nwant:\n%s", got, fullReplayStateJSON)
 	}
 
-	want := ReplayRequest{
+	want := replay.Request{
 		File:      pcapPath,
 		RootDir:   configDir,
 		LoopMs:    250,

@@ -3,7 +3,7 @@ package replay
 import "testing"
 
 // TestPercentComplete is a white-box test (same package) for the percent
-// helper Status() uses to compute ReplayState.PercentComplete. Covers the
+// helper Status() uses to compute State.PercentComplete. Covers the
 // unknown-total case (must not fabricate a percentage), normal progress,
 // and the completed/over-100 clamp.
 func TestPercentComplete(t *testing.T) {

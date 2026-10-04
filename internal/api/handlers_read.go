@@ -322,7 +322,7 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		s.writeJSON(w, s.cfg.Replay.Status())
+		s.writeJSON(w, ReplayState(s.cfg.Replay.Status()))
 	case http.MethodPost:
 		// SECURITY FIX #97: Enforce request body size limit for PCAP uploads.
 		// Bug #1e: use MaxPCAPUploadBodySize (accounts for base64 + JSON
@@ -357,7 +357,7 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.writeJSON(w, state)
+		s.writeJSON(w, ReplayState(state))
 	case http.MethodDelete:
 		state, err := s.cfg.Replay.Stop()
 		if err != nil {
@@ -369,7 +369,7 @@ func (s *Server) handleReplay(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.writeJSON(w, state)
+		s.writeJSON(w, ReplayState(state))
 	default:
 		w.Header().Set("Allow", "GET, POST, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

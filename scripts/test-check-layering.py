@@ -94,16 +94,5 @@ class LayeringTest(unittest.TestCase):
         result = self.run_checker()
         self.assertEqual(result.returncode, 0, result.stdout)
 
-    def test_baseline_admits_and_must_shrink(self) -> None:
-        self.write("internal/replay/controller.go", go_file("internal/api"))
-        self.write("scripts/layering-baseline.txt", "internal/replay/controller.go  internal/api  # #1\n")
-        self.assertEqual(self.run_checker().returncode, 0)
-
-        self.write("internal/replay/controller.go", go_file("internal/config"))
-        result = self.run_checker()
-        self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertIn("lists internal/replay/controller.go -> internal/api, which is gone", result.stdout)
-
-
 if __name__ == "__main__":
     unittest.main()

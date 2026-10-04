@@ -712,7 +712,7 @@ func (d *Daemon) startConfiguredReplay(
 		cfg.CapturePlayback != nil &&
 		strings.TrimSpace(cfg.CapturePlayback.FileName) != "" {
 		fileName := resolvePlaybackPath(cfg.CapturePlayback.FileName, configPath)
-		_, replayErr := manager.Start(api.ReplayRequest{
+		_, replayErr := manager.Start(replay.Request{
 			File:   fileName,
 			LoopMs: cfg.CapturePlayback.LoopTime,
 			Scale:  cfg.CapturePlayback.ScaleTime,

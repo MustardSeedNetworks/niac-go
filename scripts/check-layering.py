@@ -13,10 +13,6 @@ Every .go file under internal/ outside those layers is checked, tests
 included. Imports are read from the source text rather than `go list`, so
 platform-tagged files are checked on every host. CI lints only linux and
 windows, so depguard never sees a darwin file.
-
-Violations that predate the gate sit in scripts/layering-baseline.txt, one
-`file import  # issue` per line. That list is debt, not permission: an entry
-the file no longer has fails too, so it can only shrink.
 """
 
 from __future__ import annotations
@@ -36,7 +32,6 @@ OUTER = (
     "internal/acceptance",
     "internal/wiretest",
 )
-BASELINE = "scripts/layering-baseline.txt"
 
 # Comments and string literals, in one alternation so a `//` inside a string
 # is not taken for a comment. Only comments are dropped.
@@ -77,38 +72,19 @@ def violations(root: Path) -> set[tuple[str, str]]:
     return found
 
 
-def baseline(root: Path) -> set[tuple[str, str]]:
-    entries: set[tuple[str, str]] = set()
-    file = root / BASELINE
-    if not file.is_file():
-        return entries
-    for line in file.read_text(encoding="utf-8").splitlines():
-        fields = line.split("#", 1)[0].split()
-        if fields:
-            entries.add((fields[0], fields[1]))
-    return entries
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
     root = parser.parse_args().root
 
-    found = violations(root)
-    known = baseline(root)
-    new = sorted(found - known)
-    stale = sorted(known - found)
-
-    for rel, path in new:
+    found = sorted(violations(root))
+    for rel, path in found:
         print(f"FAIL: {rel} imports {path}, an outer layer (see docs/ARCHITECTURE.md)")
-    for rel, path in stale:
-        print(f"FAIL: {BASELINE} lists {rel} -> {path}, which is gone; delete the line")
-    if new or stale:
-        if new:
-            print("\nMove the dependency inward: the outer layer maps domain types, not the reverse.")
+    if found:
+        print("\nMove the dependency inward: the outer layer maps domain types, not the reverse.")
         return 1
 
-    print(f"OK: no domain package imports an outer layer ({len(known)} baselined)")
+    print("OK: no domain package imports an outer layer")
     return 0
 
 
