@@ -67,7 +67,41 @@ func TestEffectiveMemory(t *testing.T) {
 
 func TestMaxDevicesReadsThisHost(t *testing.T) {
 	t.Parallel()
-	if got := MaxDevices(); got < minDevices {
+	got := MaxDevices()
+	if got < minDevices {
 		t.Fatalf("MaxDevices() = %d, want at least %d", got, minDevices)
+	}
+	t.Logf("this host's device budget: %d", got)
+}
+
+func TestParseMemTotal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		meminfo string
+		want    uint64
+		wantOK  bool
+	}{
+		{
+			// CT304 under lxcfs: the container's 6 GiB limit, while sysinfo(2)
+			// in the same container reports the host's 62 GiB.
+			name:    "lxcfs container limit",
+			meminfo: "MemTotal:        6291456 kB\nMemFree:         5442560 kB\n",
+			want:    6 << 30, wantOK: true,
+		},
+		{name: "not the first line", meminfo: "Foo: 1 kB\nMemTotal: 1024 kB\n", want: 1 << 20, wantOK: true},
+		{name: "missing", meminfo: "MemFree: 1 kB\n", wantOK: false},
+		{name: "garbage value", meminfo: "MemTotal: lots kB\n", wantOK: false},
+		{name: "empty", meminfo: "", wantOK: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := parseMemTotal(tc.meminfo)
+			if ok != tc.wantOK || got != tc.want {
+				t.Fatalf("parseMemTotal() = (%d, %v), want (%d, %v)", got, ok, tc.want, tc.wantOK)
+			}
+		})
 	}
 }

@@ -13,7 +13,14 @@ func totalMemory() (uint64, error) {
 	}
 	physical := info.Totalram * uint64(info.Unit)
 
-	// A container's memory limit: cgroup v2 first, then v1.
+	// sysinfo(2) reports the host even inside a container. /proc/meminfo is
+	// rewritten by lxcfs in an LXC container, and the cgroup files carry a
+	// Docker- or systemd-style limit; the tightest of them wins.
+	if raw, err := os.ReadFile("/proc/meminfo"); err == nil {
+		if total, ok := parseMemTotal(string(raw)); ok && total < physical {
+			physical = total
+		}
+	}
 	limitFiles := []string{
 		"/sys/fs/cgroup/memory.max",
 		"/sys/fs/cgroup/memory/memory.limit_in_bytes",
