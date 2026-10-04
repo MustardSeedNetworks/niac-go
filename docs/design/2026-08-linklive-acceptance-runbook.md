@@ -307,7 +307,7 @@ failures seen in the lab:
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `preflight` returns `safe: false` with `unknown_attachment` | The generated config declares a logical attachment (`cyberscope` connected to `lab-transit`) and the start request did not name one. A config that declares attachments requires the binding to pick one. | Pass `attachment` in the start request; `acceptance.sh` reads it from the pack's `attachmentName`. |
+| `preflight` returns `safe: false` with `unknown_attachment` | The generated config declares a logical attachment (`cyberscope`, a spare-port pool on the first access switch; see [Where testers attach](../ATTACHMENTS.md)) and the start request did not name one. A config that declares attachments requires the binding to pick one. | Pass `attachment` in the start request; `acceptance.sh` reads it from the pack's `attachmentName`. |
 | `POST /api/v1/simulation` returns a bare `500 simulation_start_failed` | Deliberate: the error may contain config-derived secrets, so neither the response nor the log carries detail. | Run `preflight` with the same payload — it reports the real diagnostic. |
 
 `niac-demo-lab.service` requests attachment mode `access` on the same interface

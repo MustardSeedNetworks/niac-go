@@ -246,6 +246,8 @@ and gateway the client gets. The pool's switch is the only device that sends
 LLDP, CDP, EDP, FDP or STP at the clients, and it names the port of the first
 client placed, or the port the next client will get. All clients share one
 wire, so they all hear that one advertisement.
+[Where testers attach](ATTACHMENTS.md) covers the model, moving a tester, and
+a lab runbook.
 
 ```yaml
 attachments:
