@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { BuiltinScenario, LibraryNetwork } from '../src/api/builtin-scenario-types';
+import type { LibraryNetwork } from '../src/api/library-network-types';
 import type { ScenarioDraft, ScenarioPack } from '../src/api/scenario-client';
 import { parseNetworkModel } from '../src/components/wizard/network-addressing';
 
@@ -166,7 +166,7 @@ test('Spanish page help and shared glossary render from the active locale', asyn
   await expect(drawer.getByText('Draft', { exact: true })).toHaveCount(0);
 });
 
-test('the starting point stays compact and the library supports keyboard, search and family selection', async ({
+test('the starting point stays compact and the library supports keyboard and search', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -189,35 +189,16 @@ test('the starting point stays compact and the library supports keyboard, search
   await page.keyboard.press('ArrowRight');
   await expect(library).toBeFocused();
   await expect(library).toHaveAttribute('aria-selected', 'true');
-  const builtinsResponse = await page.request.get('/api/v1/scenario/builtins');
-  expect(builtinsResponse.ok()).toBe(true);
-  const builtins: BuiltinScenario[] = await builtinsResponse.json();
   const networksResponse = await page.request.get('/api/v1/library/networks');
   expect(networksResponse.ok()).toBe(true);
   const networks: LibraryNetwork[] = await networksResponse.json();
-  // Derived, not pinned: this asserted a literal 32 and broke the moment the
-  // shipped built-in scenario set grew to 33. The claim is that the picker renders every
-  // built-in scenario and saved network the API returns — which the testid comparison
-  // below states exactly — so the count follows the API. The lower bound keeps
-  // an empty library from making both assertions vacuous.
-  const expectedCards = builtins.length + networks.length;
-  expect(expectedCards).toBeGreaterThan(0);
-  const allCards = page.getByTestId(/^config-item-/);
-  await expect(allCards).toHaveCount(expectedCards);
-  expect(
-    (
-      await allCards.evaluateAll((elements) =>
-        elements.map((element) => element.getAttribute('data-testid') ?? ''),
-      )
-    ).sort((a, b) => a.localeCompare(b)),
-  ).toEqual(
-    [
-      ...builtins.map((builtin) => `config-item-builtin:${builtin.name}`),
-      ...networks.map((network) => `config-item-saved:${network.name}`),
-    ].sort((a, b) => a.localeCompare(b)),
-  );
-  const cards = page.getByTestId(/^config-item-builtin:/);
-  await expect(cards).toHaveCount(builtins.length);
+  // Derived, not pinned: the picker renders every library network the API
+  // returns (first run seeds the shipped starters), which the testid
+  // comparison below states exactly. The lower bound keeps an empty library
+  // from making it vacuous. There is no second, built-in listing (#2131).
+  expect(networks.length).toBeGreaterThan(1);
+  const cards = page.getByTestId(/^config-item-/);
+  await expect(cards).toHaveCount(networks.length);
   expect(
     (
       await cards.evaluateAll((elements) =>
@@ -225,8 +206,8 @@ test('the starting point stays compact and the library supports keyboard, search
       )
     ).sort((a, b) => a.localeCompare(b)),
   ).toEqual(
-    builtins
-      .map((builtin) => `config-item-builtin:${builtin.name}`)
+    networks
+      .map((network) => `config-item-saved:${network.name}`)
       .sort((a, b) => a.localeCompare(b)),
   );
   await page.keyboard.press('Tab');
@@ -234,24 +215,13 @@ test('the starting point stays compact and the library supports keyboard, search
   await page.keyboard.press('Tab');
   const search = page.getByTestId('config-picker-search');
   await expect(search).toBeFocused();
-  await page.keyboard.press('Tab');
-  const family = page.getByTestId('config-picker-family');
-  await expect(family).toBeFocused();
 
-  const selected = builtins.find((builtin) => builtin.vendor);
-  expect(selected?.vendor).toBeTruthy();
-  if (!selected?.vendor) throw new Error('No vendor scenario in the library');
-  await search.fill(selected.vendor);
+  const selected = networks.find((network) => network.name === 'small-office') ?? networks[0];
+  if (!selected) throw new Error('The library has no networks');
+  await search.fill(selected.name.toUpperCase());
   await expect(cards).not.toHaveCount(0);
-  expect(await cards.count()).toBeLessThan(builtins.length);
-  await expect(page.getByTestId(`config-item-builtin:${selected.name}`)).toBeVisible();
-  await search.fill('');
-  await family.selectOption(selected.type);
-  await expect(cards).toHaveCount(
-    builtins.filter((builtin) => builtin.type === selected.type).length,
-  );
-  await search.fill(selected.name);
-  const card = page.getByTestId(`config-item-builtin:${selected.name}`);
+  expect(await cards.count()).toBeLessThan(networks.length);
+  const card = page.getByTestId(`config-item-saved:${selected.name}`);
   await card.getByRole('button', { name: 'Select', exact: true }).click();
   await expect(start).toHaveAttribute('aria-selected', 'true');
   await expect(start).toBeFocused();
@@ -268,8 +238,7 @@ test('wizard starting points and library fit a 390px viewport', async ({ page })
   await page.screenshot({ path: test.info().outputPath('wizard-start-390.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByTestId('wizard-source-tab-library').click();
-  await expect(page.getByTestId('config-item-builtin:router')).toBeVisible();
+  await expect(page.getByTestId('config-item-saved:small-office')).toBeVisible();
   await expect(page.getByTestId('config-picker-search')).toBeInViewport();
-  await expect(page.getByTestId('config-picker-family')).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

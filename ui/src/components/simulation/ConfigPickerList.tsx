@@ -1,16 +1,11 @@
-import { Check, Eye, FileCode, FolderOpen, HardDrive, Star } from 'lucide-react';
+import { Check, FolderOpen, HardDrive, Star } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
 import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
-import {
-  type ConfigItem,
-  SCENARIO_TYPE_ICON,
-  SCENARIO_TYPE_TINT,
-  type ViewMode,
-} from './ConfigPicker.types';
+import type { ConfigItem, ViewMode } from './ConfigPicker.types';
 
 interface SharedItemProps {
   item: ConfigItem;
@@ -18,7 +13,6 @@ interface SharedItemProps {
   favorited: boolean;
   onSelect: (item: ConfigItem) => void;
   onToggleFavorite: (key: string) => void;
-  onView: (item: ConfigItem) => void;
   onClearLocal: () => void;
 }
 
@@ -45,7 +39,6 @@ export const ConfigsList: FC<{
   isFavorite: (key: string) => boolean;
   onSelect: (item: ConfigItem) => void;
   onToggleFavorite: (key: string) => void;
-  onView: (item: ConfigItem) => void;
   onClearLocal: () => void;
   searching: boolean;
 }> = ({
@@ -56,7 +49,6 @@ export const ConfigsList: FC<{
   isFavorite,
   onSelect,
   onToggleFavorite,
-  onView,
   onClearLocal,
   searching,
 }) => {
@@ -91,7 +83,6 @@ export const ConfigsList: FC<{
                 favorited={isFavorite(item.key)}
                 onSelect={onSelect}
                 onToggleFavorite={onToggleFavorite}
-                onView={onView}
                 onClearLocal={onClearLocal}
               />
             ))}
@@ -106,7 +97,6 @@ export const ConfigsList: FC<{
                 favorited={isFavorite(item.key)}
                 onSelect={onSelect}
                 onToggleFavorite={onToggleFavorite}
-                onView={onView}
                 onClearLocal={onClearLocal}
               />
             ))}
@@ -169,22 +159,14 @@ const ConfigCard: FC<SharedItemProps> = ({
   favorited,
   onSelect,
   onToggleFavorite,
-  onView,
   onClearLocal,
 }) => {
   const { t } = useTranslation('pages');
-  const Icon =
-    item.kind === 'builtin'
-      ? (SCENARIO_TYPE_ICON[item.builtin.type] ?? FileCode)
-      : item.kind === 'saved'
-        ? FolderOpen
-        : HardDrive;
+  const Icon = item.kind === 'saved' ? FolderOpen : HardDrive;
   const tint =
-    item.kind === 'builtin'
-      ? (SCENARIO_TYPE_TINT[item.builtin.type] ?? SCENARIO_TYPE_TINT.custom)
-      : item.kind === 'saved'
-        ? 'bg-status-success/15 text-status-success-strong border-status-success/30'
-        : 'bg-status-info/15 text-status-info-strong border-status-info/30';
+    item.kind === 'saved'
+      ? 'bg-status-success/15 text-status-success-strong border-status-success/30'
+      : 'bg-status-info/15 text-status-info-strong border-status-info/30';
 
   return (
     <div
@@ -215,12 +197,6 @@ const ConfigCard: FC<SharedItemProps> = ({
             {t('configPicker.deviceCount', { count: item.deviceCount })}
           </Tag>
         )}
-        {item.kind === 'builtin' &&
-          item.builtin.tags?.slice(0, 2).map((tag) => (
-            <Tag key={tag} colorScheme="gray" className="text-[10px]">
-              {tag}
-            </Tag>
-          ))}
       </div>
       <div className="flex gap-compact">
         {selected ? (
@@ -236,18 +212,6 @@ const ConfigCard: FC<SharedItemProps> = ({
               className="flex-1 rounded bg-brand-primary/10 px-cell py-compact-md text-xs font-medium text-brand-primary-strong ring-1 ring-brand-accent/40 hover:bg-brand-primary/20"
             >
               {t('configPicker.selectButton')}
-            </button>
-          </Tooltip>
-        )}
-        {item.kind === 'builtin' && (
-          <Tooltip text={t('configPicker.previewYamlTitle')}>
-            <button
-              type="button"
-              onClick={() => onView(item)}
-              className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover"
-              aria-label={t('configPicker.previewYamlTitle')}
-            >
-              <Eye className={iconSizes.sm} />
             </button>
           </Tooltip>
         )}
@@ -273,7 +237,6 @@ const ConfigRow: FC<SharedItemProps> = ({
   favorited,
   onSelect,
   onToggleFavorite,
-  onView,
   onClearLocal,
 }) => {
   const { t } = useTranslation('pages');
@@ -318,18 +281,6 @@ const ConfigRow: FC<SharedItemProps> = ({
           )}
         </button>
       </Tooltip>
-      {item.kind === 'builtin' && (
-        <Tooltip text={t('configPicker.previewBuiltinYamlTitle')}>
-          <button
-            type="button"
-            onClick={() => onView(item)}
-            className="rounded p-1.5 text-text-muted hover:bg-surface-hover hover:text-text-primary"
-            aria-label={t('configPicker.previewBuiltinYamlTitle')}
-          >
-            <Eye className={iconSizes.md} />
-          </button>
-        </Tooltip>
-      )}
       {item.kind === 'local' && (
         <Tooltip text={t('configPicker.dropLocalFileTitle')}>
           <button

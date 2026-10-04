@@ -3,7 +3,7 @@ import { type FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
-import type { BuiltinScenario, LibraryNetwork, NetworkInterface } from '../../api/types';
+import type { LibraryNetwork, NetworkInterface } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -13,7 +13,6 @@ import type { WizardState } from './wizard-types';
 
 interface StartingPointStepProps {
   state: WizardState;
-  onSelectBuiltin: (builtin: BuiltinScenario) => void;
   onSelectUserConfig: (config: LibraryNetwork) => void;
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
@@ -31,7 +30,6 @@ interface StartingPointStepProps {
  */
 export const StartingPointStep: FC<StartingPointStepProps> = ({
   state,
-  onSelectBuiltin,
   onSelectUserConfig,
   onUpload,
   onSelectEmpty,
@@ -77,12 +75,10 @@ export const StartingPointStep: FC<StartingPointStepProps> = ({
     source:
       state.uploadFile || state.source === 'upload'
         ? ('upload' as const)
-        : state.source === 'builtin' || state.source === 'userConfig'
+        : state.source === 'userConfig'
           ? state.source
           : null,
-    name: state.uploadFile
-      ? state.uploadFile.name
-      : (state.builtin?.name ?? state.userConfig?.name ?? ''),
+    name: state.uploadFile ? state.uploadFile.name : (state.userConfig?.name ?? ''),
   };
 
   return (
@@ -209,10 +205,6 @@ export const StartingPointStep: FC<StartingPointStepProps> = ({
         ) : (
           <ConfigPicker
             selection={selection}
-            onSelectBuiltin={(builtin) => {
-              onSelectBuiltin(builtin);
-              returnToStart();
-            }}
             onSelectUserConfig={(config) => {
               onSelectUserConfig(config);
               returnToStart();
@@ -222,7 +214,6 @@ export const StartingPointStep: FC<StartingPointStepProps> = ({
               if (file) returnToStart();
             }}
             uploadFile={state.uploadFile}
-            filterByDeviceFamily
           />
         )}
       </div>

@@ -480,7 +480,7 @@
     },
     "new_simulation": {
       "block0": {
-        "text": "Cree un borrador editable a partir de un paquete de escenario, un conjunto generado de dispositivos, un escenario integrado, un YAML cargado o un lienzo en blanco. Elija un punto de partida y después revise los dispositivos, las redes, los enlaces y los protocolos."
+        "text": "Cree un borrador editable a partir de un paquete de escenario, un conjunto generado de dispositivos, una red de la biblioteca, un YAML cargado o un lienzo en blanco. Elija un punto de partida y después revise los dispositivos, las redes, los enlaces y los protocolos."
       },
       "block1": {
         "text": "Revisar antes de iniciar"

@@ -8,7 +8,7 @@
  * - api-response-types.ts: General API responses (stack stats, history, etc.)
  * - device-config-types.ts: Device configuration (SNMP, LLDP, DHCP, etc.)
  * - debug-types.ts: Debug console and logging types
- * - builtin-scenario-types.ts: Built-in scenario types
+ * - library-network-types.ts: Library network types
  * - pcap-types.ts: PCAP analyzer types
  * - walk-analyze-types.ts: Walk analyzer types
  */
@@ -47,17 +47,6 @@ export type {
   WalkValidationResponse,
   WalkValidationResult,
 } from './api-response-types';
-// Built-in scenario types
-export type {
-  BuiltinScenario,
-  BuiltinScenarioContent,
-  CopyBuiltinScenarioRequest,
-  CopyBuiltinScenarioResponse,
-  LibraryNetwork,
-  LibraryNetworkContent,
-  UploadLibraryNetworkRequest,
-  UploadLibraryNetworkResponse,
-} from './builtin-scenario-types';
 // Debug Types
 export type {
   DebugLevel,
@@ -142,6 +131,13 @@ export type {
   SimulationPreflightReport,
   SimulationPreflightRequest,
 } from './fabric-types';
+// Library network types
+export type {
+  LibraryNetwork,
+  LibraryNetworkContent,
+  UploadLibraryNetworkRequest,
+  UploadLibraryNetworkResponse,
+} from './library-network-types';
 // PCAP Types
 export type {
   CaptureFilterResponse,

@@ -532,7 +532,7 @@
     },
     "new_simulation": {
       "block0": {
-        "text": "Build an editable draft from a scenario pack, generated fleet, built-in scenario, uploaded YAML, or blank canvas. Choose one starting point, then review devices, networks, links, and protocols."
+        "text": "Build an editable draft from a scenario pack, generated fleet, library network, uploaded YAML, or blank canvas. Choose one starting point, then review devices, networks, links, and protocols."
       },
       "block1": {
         "text": "Review before starting"

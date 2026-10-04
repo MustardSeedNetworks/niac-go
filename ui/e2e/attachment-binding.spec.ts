@@ -95,7 +95,6 @@ test('starts a generated pack without typing any part of the binding', async ({ 
       },
     }),
   );
-  await page.route('**/api/v1/scenario/builtins', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/library/networks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/scenario/packs', (route) =>
     route.fulfill({

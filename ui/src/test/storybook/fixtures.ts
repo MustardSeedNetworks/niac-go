@@ -13,7 +13,6 @@
 import type { LibraryFileEntry } from '../../api/library-client';
 import type {
   AlertConfig,
-  BuiltinScenario,
   ConfigDocument,
   DebugLevelResponse,
   DeviceSummary,
@@ -276,17 +275,6 @@ export const libraryNetworks: LibraryNetwork[] = [
     sizeBytes: 4_096,
     source: 'starter',
     valid: true,
-  },
-];
-
-export const builtins: BuiltinScenario[] = [
-  {
-    name: 'switch-basic',
-    displayName: 'Basic switch',
-    description: 'One switch with LLDP and SNMP',
-    deviceCount: 1,
-    type: 'switch',
-    vendor: 'Cisco',
   },
 ];
 

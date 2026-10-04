@@ -139,3 +139,36 @@ func enterpriseScalePack(t *testing.T) scenario.Pack {
 
 	return scenario.Pack{}
 }
+
+// TestBuiltinScenarioRoutesAreGone pins the removal of the built-in scenario
+// listing (#2131). It scanned on-disk directories that no package creates, so
+// every installed host listed nothing while the library, which first run seeds
+// with the shipped scenarios, listed them all. The library is the one place
+// starter networks are listed, and none of the old paths answers.
+func TestBuiltinScenarioRoutesAreGone(t *testing.T) {
+	server, _, token := newTestServerWithAuth(t)
+	mux := server.apiHandler()
+
+	cases := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/v1/scenario/builtins"},
+		{http.MethodGet, "/api/v1/scenario/builtins/small-office"},
+		{http.MethodPost, "/api/v1/scenario/builtins/copy"},
+		{http.MethodGet, "/api/v1/templates"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, bytes.NewReader([]byte(`{}`)))
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("%s %s: status = %d, want 404: %s", tc.method, tc.path, rec.Code, rec.Body.String())
+			}
+		})
+	}
+}

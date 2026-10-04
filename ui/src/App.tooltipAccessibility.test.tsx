@@ -22,9 +22,6 @@ const { mockClient } = vi.hoisted(() => {
     fetchUsableInterfaces: { interfaces: [{ name: 'eth0', addresses: ['10.0.0.9'] }] },
     fetchSegments: [],
     fetchDebugLevel: { level: 'info', defaultLevel: 'basic' },
-    fetchBuiltinScenarios: [
-      { name: 'basic-router', description: 'A basic router', deviceCount: 1, type: 'router' },
-    ],
     fetchLibraryNetworks: [],
     fetchLibraryWalks: [
       {

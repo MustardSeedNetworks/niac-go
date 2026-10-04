@@ -3,7 +3,7 @@ import {
   isScenarioRequestValid,
   type ScenarioGenerateRequest,
 } from '../../api/scenario-client';
-import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
+import type { LibraryNetwork } from '../../api/types';
 
 /**
  * NewSimulationWizard step identifiers, in stepper order. Kept as a
@@ -29,7 +29,7 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number];
  * equivalent — it's a one-line addition (a blank devices: [] skeleton)
  * so the wizard doesn't force a scenario pick.
  */
-export type WizardSource = 'builtin' | 'userConfig' | 'upload' | 'empty' | 'generated';
+export type WizardSource = 'userConfig' | 'upload' | 'empty' | 'generated';
 
 /**
  * WizardState is held locally in the container. Draft content and its
@@ -39,7 +39,6 @@ export type WizardSource = 'builtin' | 'userConfig' | 'upload' | 'empty' | 'gene
 export interface WizardState {
   step: number;
   source: WizardSource | null;
-  builtin: BuiltinScenario | null;
   userConfig: LibraryNetwork | null;
   uploadFile: File | null;
   fleetRequest: ScenarioGenerateRequest;
@@ -58,7 +57,6 @@ export interface WizardState {
 export const initialWizardState: WizardState = {
   step: 0,
   source: null,
-  builtin: null,
   userConfig: null,
   uploadFile: null,
   fleetRequest: defaultScenarioRequest(),
@@ -72,7 +70,6 @@ export const initialWizardState: WizardState = {
 export function isStartingPointStepComplete(state: WizardState): boolean {
   if (!state.selectedInterface) return false;
   if (state.source === 'empty') return true;
-  if (state.source === 'builtin') return state.builtin !== null;
   if (state.source === 'userConfig') return state.userConfig !== null;
   if (state.source === 'upload') return state.uploadFile !== null;
   if (state.source === 'generated') return isScenarioRequestValid(state.fleetRequest);

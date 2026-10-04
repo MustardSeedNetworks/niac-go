@@ -115,7 +115,6 @@
   },
   "configPicker": {
     "addToFavorites": "Add to favorites",
-    "allFamilies": "All families",
     "allNetworksSection": "All networks",
     "cardView": "Card view",
     "clearButton": "Clear",
@@ -124,17 +123,6 @@
     "deviceCount_one": "{{count}} device",
     "deviceCount_other": "{{count}} devices",
     "dropLocalFileTitle": "Drop the local file",
-    "families": {
-      "access-point": "Access point",
-      "basic": "Basic",
-      "complete": "Complete network",
-      "custom": "Custom",
-      "firewall": "Firewall",
-      "router": "Router",
-      "server": "Server",
-      "switch": "Switch"
-    },
-    "family": "Device family",
     "favoritesSection": "Favorites",
     "javaDslConvertFailed": "Couldn't auto-convert Java DSL",
     "javaDslConvertFailedWithReason": "Couldn't auto-convert Java DSL: {{reason}}",
@@ -145,8 +133,6 @@
     "noDescription": "No description",
     "noMatches": "Nothing matches. Try a different search or upload a local YAML with the button above.",
     "pickFromDiskTitle": "Pick a config from disk. YAML is used as-is; legacy Java-DSL (.cfg) is auto-converted.",
-    "previewBuiltinYamlTitle": "Preview the scenario YAML",
-    "previewYamlTitle": "Preview YAML",
     "removeFromFavorites": "Remove from favorites",
     "replaceLocalFile": "Replace local file",
     "resultsSection": "Results",
@@ -670,7 +656,7 @@
     },
     "start": {
       "browseLibrary": "Browse library",
-      "errorNoSource": "Pick a built-in scenario, saved config, upload, or Start empty first",
+      "errorNoSource": "Pick a library network, upload, or Start empty first",
       "help": "Pick a starting config below, or start empty and add devices in the next step.",
       "interfaceLabel": "Network interface",
       "librarySelection": "Selected: {{name}} — change selection",
@@ -880,7 +866,6 @@
       "port": "Port",
       "title": "Attached clients"
     },
-    "configSourceBuiltin": "built-in scenario",
     "configSourceConfig": "config",
     "configUploadSuffix": "(upload)",
     "configurationLabel": "Configuration:",
@@ -988,23 +973,6 @@
     "stopConfirmTitle": "Stop simulation?",
     "stopSuccess": "Simulation stopped",
     "title": "Simulation"
-  },
-  "scenarioPreview": {
-    "cloning": "Cloning…",
-    "closeButton": "Close",
-    "copyYaml": "Copy YAML",
-    "defaultDescription": "Built-in scenario preview",
-    "deviceCount_one": "{{count}} device",
-    "deviceCount_other": "{{count}} devices",
-    "download": "Download",
-    "editCopy": "Customize first",
-    "editCopyFailed": "Failed to create editable copy",
-    "editCopyTitle": "Copy this scenario to your saved configs and open the device editor",
-    "loadFailed": "Failed to load scenario",
-    "loading": "Loading scenario…",
-    "useAsIs": "Use as-is",
-    "useAsIsTitle": "Run this scenario unchanged as the active configuration",
-    "yamlEditorAria": "Scenario YAML preview, read only"
   },
   "segments": {
     "description": "Read-only view of the devices in each VLAN segment the active config describes.",

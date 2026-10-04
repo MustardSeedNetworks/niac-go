@@ -3,26 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
 import { SelectedNetworkPreview } from './SelectedNetworkPreview';
 
-const fetchBuiltinScenarioContent = vi.fn();
 const fetchLibraryNetworkContent = vi.fn();
 
-vi.mock('../../api/client', () => ({
-  fetchBuiltinScenarioContent: (name: string) => fetchBuiltinScenarioContent(name),
-}));
 vi.mock('../../api/library-client', () => ({
   fetchLibraryNetworkContent: (name: string) => fetchLibraryNetworkContent(name),
 }));
 
 describe('SelectedNetworkPreview', () => {
   beforeEach(() => {
-    fetchBuiltinScenarioContent.mockReset();
     fetchLibraryNetworkContent.mockReset();
   });
 
   it('shows the empty-devices message for a valid config with no devices', async () => {
-    fetchBuiltinScenarioContent.mockResolvedValue({ content: 'devices: []\n' });
+    fetchLibraryNetworkContent.mockResolvedValue({ content: 'devices: []\n' });
 
-    render(<SelectedNetworkPreview source="builtin" name="empty.yaml" />);
+    render(<SelectedNetworkPreview source="userConfig" name="empty.yaml" />);
 
     expect(
       await screen.findByText('Picked config has no devices — nothing will run.'),
@@ -30,11 +25,11 @@ describe('SelectedNetworkPreview', () => {
   });
 
   it('surfaces a distinct line-numbered parse-error message for malformed YAML instead of the empty-devices message', async () => {
-    fetchBuiltinScenarioContent.mockResolvedValue({
+    fetchLibraryNetworkContent.mockResolvedValue({
       content: 'devices: [\n  - broken: [unterminated',
     });
 
-    render(<SelectedNetworkPreview source="builtin" name="broken.yaml" />);
+    render(<SelectedNetworkPreview source="userConfig" name="broken.yaml" />);
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     // yaml's YAMLParseError reports the unterminated flow sequence on line 2
@@ -47,11 +42,11 @@ describe('SelectedNetworkPreview', () => {
   });
 
   it('lists devices from a valid config', async () => {
-    fetchBuiltinScenarioContent.mockResolvedValue({
+    fetchLibraryNetworkContent.mockResolvedValue({
       content: 'devices:\n  - name: router1\n    type: router\n    ip: 10.0.0.1\n',
     });
 
-    render(<SelectedNetworkPreview source="builtin" name="valid.yaml" />);
+    render(<SelectedNetworkPreview source="userConfig" name="valid.yaml" />);
 
     expect(await screen.findByText('router1')).toBeInTheDocument();
   });

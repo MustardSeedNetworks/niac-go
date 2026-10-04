@@ -3,14 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../api/client';
 import {
   createScenarioDraft,
-  createScenarioDraftFromBuiltin,
   deleteScenarioDraft,
   fetchLibraryNetworkContent,
   replaceScenarioDraft,
   type ScenarioDraft,
 } from '../api/library-client';
 import { generateScenario } from '../api/scenario-client';
-import type { BuiltinScenario, LibraryNetwork, SimulationRequest } from '../api/types';
+import type { LibraryNetwork, SimulationRequest } from '../api/types';
 import { UnsavedChangesModal } from '../components/device-editor/UnsavedChangesModal';
 import { useUnsavedChangesGuard } from '../components/device-editor/useUnsavedChangesGuard';
 import { DevicesStep } from '../components/wizard/DevicesStep';
@@ -50,7 +49,6 @@ const EMPTY_CONFIG_YAML = 'devices: []\n';
 const CONTENT_EDITING_STEPS = new Set(['devices', 'networks', 'protocols']);
 
 function selectedSourceKey(state: WizardState) {
-  if (state.source === 'builtin' && state.builtin) return `builtin:${state.builtin.name}`;
   if (state.source === 'userConfig' && state.userConfig) return `network:${state.userConfig.name}`;
   if (state.source === 'upload' && state.uploadFile) {
     return `upload:${state.uploadFile.name}:${state.uploadFile.size}:${state.uploadFile.lastModified}`;
@@ -62,7 +60,7 @@ function selectedSourceKey(state: WizardState) {
 /**
  * NewSimulationWizard sequences draft authoring and runtime activation:
  *
- *   1. Scenario — ConfigPicker (pick a built-in scenario / saved config / upload / empty)
+ *   1. Scenario — ConfigPicker (pick a library network / upload / empty)
  *   2. Devices   — edit and revision-save the isolated draft
  *   3. Protocols — inspect identities and configured services
  *   4. Review    — review the exact saved draft revision
@@ -118,9 +116,7 @@ export const NewSimulationWizardPage: FC = () => {
       const draftName = newDraftName();
       let created: ScenarioDraft;
 
-      if (state.source === 'builtin' && state.builtin) {
-        created = await createScenarioDraftFromBuiltin(draftName, state.builtin.name);
-      } else if (state.source === 'userConfig' && state.userConfig) {
+      if (state.source === 'userConfig' && state.userConfig) {
         const content = (await fetchLibraryNetworkContent(state.userConfig.name)).content;
         created = await createScenarioDraft(draftName, content);
       } else if (state.source === 'upload' && state.uploadFile) {
@@ -254,21 +250,11 @@ export const NewSimulationWizardPage: FC = () => {
         {state.step === 0 && (
           <StartingPointStep
             state={state}
-            onSelectBuiltin={(builtin: BuiltinScenario) =>
-              setState((s) => ({
-                ...s,
-                source: 'builtin',
-                builtin,
-                userConfig: null,
-                uploadFile: null,
-              }))
-            }
             onSelectUserConfig={(userConfig: LibraryNetwork) =>
               setState((s) => ({
                 ...s,
                 source: 'userConfig',
                 userConfig,
-                builtin: null,
                 uploadFile: null,
               }))
             }
@@ -277,7 +263,6 @@ export const NewSimulationWizardPage: FC = () => {
                 ...s,
                 source: file ? 'upload' : s.source,
                 uploadFile: file,
-                builtin: file ? null : s.builtin,
                 userConfig: file ? null : s.userConfig,
               }))
             }
@@ -285,7 +270,6 @@ export const NewSimulationWizardPage: FC = () => {
               setState((s) => ({
                 ...s,
                 source: 'empty',
-                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -295,7 +279,6 @@ export const NewSimulationWizardPage: FC = () => {
                 ...s,
                 source: 'generated',
                 fleetPackId: null,
-                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -306,7 +289,6 @@ export const NewSimulationWizardPage: FC = () => {
                 source: 'generated',
                 fleetPackId: pack.id,
                 fleetRequest: pack.request,
-                builtin: null,
                 userConfig: null,
                 uploadFile: null,
               }))

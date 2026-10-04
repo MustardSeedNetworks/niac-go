@@ -45,31 +45,37 @@ for (const width of [1280, 390]) {
         await interfacePicker.evaluate((element) => element.getBoundingClientRect().height),
       ).toBeGreaterThanOrEqual(44);
       const tabs = drawer.getByRole('tablist', { name: 'Configuration' });
-      const builtins = tabs.getByRole('tab', { name: 'Built-in', exact: true });
+      // The library is the one list of starter networks; the Built-in tab
+      // listed nothing on an installed host and is gone (#2131).
+      await expect(tabs.getByRole('tab')).toHaveText(['My Configs', 'Upload']);
       const configs = tabs.getByRole('tab', { name: 'My Configs', exact: true });
       const upload = tabs.getByRole('tab', { name: 'Upload', exact: true });
-      await expect(builtins).toHaveAttribute('aria-selected', 'true');
-      await expect(configs).toHaveAccessibleName('My Configs');
-      await expect(upload).toHaveAccessibleName('Upload');
-      await page.screenshot({ path: test.info().outputPath('simulation-tabs.png') });
-      await builtins.focus();
-      await builtins.press('ArrowRight');
-      await expect(configs).toBeFocused();
       await expect(configs).toHaveAttribute('aria-selected', 'true');
-      await expect(drawer.getByRole('tabpanel', { name: 'My Configs' })).toBeVisible();
-      await configs.press('Tab');
-      await expect(drawer.getByRole('tabpanel', { name: 'My Configs' })).toBeFocused();
+      await expect(upload).toHaveAccessibleName('Upload');
+      // First run seeds the library with the shipped starters, so the default
+      // tab is never empty.
+      const configsPanel = drawer.getByRole('tabpanel', { name: 'My Configs' });
+      await expect(configsPanel.getByRole('button', { name: /small-office/ })).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath('simulation-tabs.png') });
       await configs.focus();
-      await configs.press('End');
+      await configs.press('ArrowRight');
       await expect(upload).toBeFocused();
+      await expect(upload).toHaveAttribute('aria-selected', 'true');
+      await expect(drawer.getByRole('tabpanel', { name: 'Upload' })).toBeVisible();
+      await upload.press('Tab');
+      await expect(drawer.getByRole('tabpanel', { name: 'Upload' })).toBeFocused();
+      await upload.focus();
       await upload.press('ArrowRight');
-      await expect(builtins).toBeFocused();
-      await builtins.press('ArrowLeft');
+      await expect(configs).toBeFocused();
+      await configs.press('ArrowLeft');
       await expect(upload).toBeFocused();
       await upload.press('Home');
-      await expect(builtins).toBeFocused();
-      await builtins.press('Tab');
-      await expect(drawer.getByRole('tabpanel', { name: 'Built-in' })).toBeFocused();
+      await expect(configs).toBeFocused();
+      await configs.press('End');
+      await expect(upload).toBeFocused();
+      await upload.press('Home');
+      await configs.press('Tab');
+      await expect(configsPanel).toBeFocused();
     });
   });
 }

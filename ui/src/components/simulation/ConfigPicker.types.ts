@@ -1,14 +1,11 @@
-import { Building2, FileCode, Globe, Router, Server, Shield, Wifi } from 'lucide-react';
-import type { FC } from 'react';
-import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
+import type { LibraryNetwork } from '../../api/types';
 
 /**
  * Shared types + helpers for the ConfigPicker family of components.
  *
- * Keeping the union shape (ConfigItem), the persisted-pref helpers, and
- * the type→icon / type→tint tables in one .ts module means the list,
- * card, row, and chip subcomponents can all import from a single
- * declarative source.
+ * Keeping the union shape (ConfigItem) and the persisted-pref helpers in
+ * one .ts module means the list, card and row subcomponents can all
+ * import from a single declarative source.
  */
 
 export type ViewMode = 'grid' | 'list';
@@ -16,42 +13,11 @@ export type ViewMode = 'grid' | 'list';
 export const VIEW_PREF_KEY = 'niac.configs.viewMode';
 export const FAVORITES_STORAGE_KEY = 'niac.configs.favorites';
 
-export const SCENARIO_TYPE_ICON: Record<BuiltinScenario['type'], FC<{ className?: string }>> = {
-  basic: Globe,
-  router: Router,
-  switch: FileCode,
-  'access-point': Wifi,
-  server: Server,
-  firewall: Shield,
-  complete: Building2,
-  custom: FileCode,
-};
-
-export const SCENARIO_TYPE_TINT: Record<BuiltinScenario['type'], string> = {
-  basic: 'bg-status-info/15 text-status-info-strong border-status-info/30',
-  router: 'bg-status-warning/15 text-status-warning-strong border-status-warning/30',
-  switch: 'bg-status-success/15 text-status-success-strong border-status-success/30',
-  'access-point': 'bg-brand-primary/15 text-brand-primary-strong border-brand-accent/30',
-  server: 'bg-status-info/15 text-status-info-strong border-status-info/30',
-  firewall: 'bg-status-error/15 text-status-error-strong border-status-error/30',
-  complete: 'bg-status-warning/15 text-status-warning-strong border-status-warning/30',
-  custom: 'bg-chart-7/15 text-chart-7 border-chart-7/30',
-};
-
 /**
- * ConfigItem is one row in the unified Configs list, regardless of
- * whether the underlying source is a built-in scenario, a saved user
- * config, or a one-shot local upload.
+ * ConfigItem is one row in the unified Configs list: a library network
+ * or a one-shot local upload.
  */
 export type ConfigItem =
-  | {
-      kind: 'builtin';
-      key: string;
-      name: string;
-      description: string;
-      deviceCount: number;
-      builtin: BuiltinScenario;
-    }
   | {
       kind: 'saved';
       key: string;
@@ -78,17 +44,13 @@ export type ConfigItem =
  * fetchLibraryNetworkContent(name) and sends it inline.
  */
 export interface Selection {
-  source: 'builtin' | 'userConfig' | 'upload' | null;
+  source: 'userConfig' | 'upload' | null;
   name: string;
 }
 
 export interface ConfigPickerProps {
-  /** Show the wizard library's device-family filter. */
-  filterByDeviceFamily?: boolean;
   /** The currently selected config. */
   selection: Selection;
-  /** Called when the user picks a built-in scenario. */
-  onSelectBuiltin: (builtin: BuiltinScenario) => void;
   /** Called when the user picks a saved (user) network from the library. */
   onSelectUserConfig: (config: LibraryNetwork) => void;
   /** Called when the user uploads a file (or clears it). */
