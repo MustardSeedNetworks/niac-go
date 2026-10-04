@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// bytesPerKiB converts /proc/meminfo, which reports kB meaning KiB.
+const bytesPerKiB = 1024
+
 // parseCgroupLimit reads a cgroup memory limit file's contents: cgroup v2's
 // memory.max ("max" when unlimited) or cgroup v1's memory.limit_in_bytes (a
 // very large number when unlimited, which the caller's comparison against
@@ -33,7 +36,7 @@ func parseMemTotal(meminfo string) (uint64, bool) {
 			if err != nil || kib == 0 {
 				return 0, false
 			}
-			return kib * 1024, true
+			return kib * bytesPerKiB, true
 		}
 	}
 	return 0, false
