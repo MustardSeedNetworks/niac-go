@@ -343,6 +343,49 @@ configs on v0.95.9 — the M4-1 bar, on the EtherScope.
 Checkpoint: SEED can reproduce a failed diagnostic from a fixture identifier and
 seed, then assert the complete observation path without manual NIAC operation.
 
+### M5-4 outcome (2026-10-04, v0.107.1)
+
+seed's pack acceptance (`scripts/snmp-acceptance-niac.sh`, `make
+test-snmp-niac-packs`) at seed `5eaff469`, against the NIAC v0.107.1 release
+tarball (`0b5ca5ae`, checksum verified) on dev-srv-ubuntu. NIAC generates each
+pack itself, runs it in one network namespace with its attachment pool on the
+pool's VLAN, and seed polls from a second namespace through a spare access
+port, the way a probe would. The run took 11 minutes for all six packs.
+
+| Pack | SNMP agents | Collector findings | Links drawn / authored | Alerts raised | Findings |
+| --- | ---: | ---: | --- | ---: | ---: |
+| hospital | 223 | 0 | 248 / 248 | 1 | **zero** |
+| warehouse | 265 | 0 | 284 / 284 | 1 | **zero** |
+| campus | 171 | 0 | 198 / 198 | 1 | **zero** |
+| retail | 203 | 0 | 214 / 214 | 1 | **zero** |
+| manufacturing | 260 | 0 | 266 / 266 | 1 | **zero** |
+| service-provider | 159 | 0 | 179 / 179 | 1 | **zero** |
+
+What each column checks:
+
+- **Collectors.** All ten seed collectors run against every agent. Every
+  count must equal the manifest's `expectedObservations`, and no collector may
+  error (seed S4-2).
+- **Topology.** seed's sysinfo, ifTable, edge and ARP reconcilers run over what
+  the collectors stored. Every link between two agents must be one the pack
+  authors (cables and FDB-learned endpoints), and every authored pair must be
+  drawn (seed#3019).
+- **Alerts.** A behaviour timeline takes `WAN-R1 HundredGigabitEthernet0/0/2`
+  down a minute after the poll. Every agent's ifTable is polled again and must
+  still match the manifest. seed's observation pipeline must then raise exactly
+  one alert, `iface.down` on that interface (seed#3031).
+
+Mutants were killed for each consumer: no FDB pass leaves 130 links missing,
+one dropped pair draws 1 extra link, and the two alert-rule mutants raise 0 and
+836 alerts.
+
+Not covered, and why. Packs serve no HOST-RESOURCES storage or BGP4-MIB rows,
+so seed's `storage.*` and `bgp.flap` rules cannot fire against a pack;
+`iface.down` is the only seed alert a pack can drive. seed has no SNMP alert
+rule for any P2-4 outcome fault, so P2-4's consumer clause needs an owner
+reading before it can close. The first draft of the alert check faulted an
+unaddressed port and NIAC silently never applied it (`niac-go#2482`).
+
 ## Milestone 6 — standalone product hardening
 
 | ID | Work item | Hours | Depends on | Acceptance evidence |
