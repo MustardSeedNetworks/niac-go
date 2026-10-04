@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
 import type {
-  BuiltinScenario,
   LibraryNetwork,
   NetworkInterface,
   SimulationRequest,
@@ -111,18 +110,6 @@ export const RuntimeControlPage: FC = () => {
     [invalidatePreparedRequest, setSimulationSettings],
   );
 
-  const handleSelectTemplate = useCallback(
-    (builtin: BuiltinScenario) => {
-      setSimulationSettings({
-        configSource: 'builtin',
-        configName: builtin.name,
-      });
-      setQuickUploadFile(null);
-      invalidatePreparedRequest();
-    },
-    [invalidatePreparedRequest, setSimulationSettings],
-  );
-
   const handleSelectUserConfig = useCallback(
     (config: LibraryNetwork) => {
       setSimulationSettings({
@@ -174,21 +161,10 @@ export const RuntimeControlPage: FC = () => {
 
     try {
       let configData: string | undefined;
-      let scenarioName: string | undefined;
 
       // Handle quick upload file
       if (quickUploadFile) {
         configData = await fileToText(quickUploadFile);
-      }
-      // Built-in scenario — pass its name so the daemon loads
-      // the YAML directly from disk. This preserves the scenario's own
-      // directory as the include_path base, which matters for vendor
-      // scenarios that reference walk files via relative paths.
-      // Fetching the content and sending it inline used to trip the
-      // walk-file path-traversal guard for scenarios like
-      // vendors/paloalto-firewall.yaml.
-      else if (simulationSettings.configSource === 'builtin') {
-        scenarioName = simulationSettings.configName;
       }
       // Handle a saved library network — the library confines entries
       // behind an os.Root keyed by name (internal/library/list.go), so
@@ -204,7 +180,6 @@ export const RuntimeControlPage: FC = () => {
         payload: {
           interface: simulationSettings.selectedInterface,
           configData: configData,
-          scenarioName: scenarioName,
         },
         sequence,
       });
@@ -382,7 +357,7 @@ export const RuntimeControlPage: FC = () => {
                 <SmallText className="text-status-success">
                   {quickUploadFile
                     ? `${quickUploadFile.name} ${t('runtime.configUploadSuffix')}`
-                    : `${simulationSettings.configName} (${simulationSettings.configSource === 'builtin' ? t('runtime.configSourceBuiltin') : t('runtime.configSourceConfig')})`}
+                    : `${simulationSettings.configName} (${t('runtime.configSourceConfig')})`}
                 </SmallText>
               ) : (
                 <SmallText className="italic text-text-muted">
@@ -396,7 +371,6 @@ export const RuntimeControlPage: FC = () => {
                 source: quickUploadFile ? 'upload' : (simulationSettings.configSource ?? null),
                 name: quickUploadFile ? quickUploadFile.name : simulationSettings.configName,
               }}
-              onSelectBuiltin={handleSelectTemplate}
               onSelectUserConfig={handleSelectUserConfig}
               onUpload={handleUpload}
               uploadFile={quickUploadFile}

@@ -6,19 +6,17 @@
  *
  * Features:
  * - Interface selector (filtered to usable: eth, wifi, loopback)
- * - Config source tabs (Built-in / My Configs / Upload)
- * - Built-in scenario picker with search
- * - User config picker
+ * - Config source tabs (My Configs / Upload)
+ * - Library network picker
  * - File upload for quick config override
  */
 
-import { AlertCircle, FileUp, FolderOpen, LayoutTemplate, PlugZap } from 'lucide-react';
+import { AlertCircle, FileUp, FolderOpen, PlugZap } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchBuiltinScenarios } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { BuiltinScenario, LibraryNetwork } from '../../api/types';
+import type { LibraryNetwork } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { type ConfigSource, useUIStore } from '../../stores/ui-store';
@@ -26,25 +24,19 @@ import { cn } from '../../styles/theme';
 import { Select } from '../../ui/Input';
 import { getErrorMessage } from '../../utils/format';
 
-type ConfigTab = 'builtins' | 'configs' | 'upload';
+type ConfigTab = 'configs' | 'upload';
 
 const tabId = (tab: ConfigTab) => `sim-config-tab-${tab}`;
 const panelId = 'sim-config-panel';
 
 interface ConfigTabButton {
   id: ConfigTab;
-  labelKey: 'simulation.tabBuiltins' | 'simulation.tabMyConfigs' | 'simulation.tabUpload';
+  labelKey: 'simulation.tabMyConfigs' | 'simulation.tabUpload';
   icon: ReactElement;
   source: ConfigSource;
 }
 
 const CONFIG_TABS: ConfigTabButton[] = [
-  {
-    id: 'builtins',
-    labelKey: 'simulation.tabBuiltins',
-    icon: <LayoutTemplate className="w-4 h-4" />,
-    source: 'builtin',
-  },
   {
     id: 'configs',
     labelKey: 'simulation.tabMyConfigs',
@@ -62,8 +54,8 @@ const CONFIG_TABS: ConfigTabButton[] = [
 export function SimulationSection(): ReactElement {
   const { t } = useTranslation('settings');
   const { simulationSettings, setSimulationSettings } = useUIStore();
-  // Three independent resources, not one `Promise.all`: a failure of any one
-  // of them used to blank all three lists and read as "you have none" (#2177).
+  // Independent resources, not one `Promise.all`: a failure of either one
+  // used to blank both lists and read as "you have none" (#2177).
   const {
     data: interfacesData,
     loading: interfacesLoading,
@@ -71,31 +63,15 @@ export function SimulationSection(): ReactElement {
     refetch: refetchInterfaces,
   } = useUsableInterfacesResource();
   const {
-    data: builtins,
-    loading: builtinsLoading,
-    error: builtinsError,
-    refetch: refetchBuiltins,
-  } = useApiResource(fetchBuiltinScenarios, ['builtins']);
-  const {
     data: userConfigs,
     loading: userConfigsLoading,
     error: userConfigsError,
     refetch: refetchUserConfigs,
   } = useApiResource(fetchLibraryNetworks, ['library', 'networks']);
   const interfaces = interfacesData?.interfaces ?? [];
-  const [activeTab, setActiveTab] = useState<ConfigTab>(() => {
-    // Set initial tab based on current config source
-    switch (simulationSettings.configSource) {
-      case 'builtin':
-        return 'builtins';
-      case 'userConfig':
-        return 'configs';
-      case 'upload':
-        return 'upload';
-      default:
-        return 'builtins';
-    }
-  });
+  const [activeTab, setActiveTab] = useState<ConfigTab>(() =>
+    simulationSettings.configSource === 'upload' ? 'upload' : 'configs',
+  );
 
   const handleTabChange = useCallback(
     (tab: ConfigTab) => {
@@ -127,16 +103,6 @@ export function SimulationSection(): ReactElement {
       document.getElementById(tabId(target))?.focus();
     },
     [activeTab, handleTabChange],
-  );
-
-  const handleTemplateSelect = useCallback(
-    (builtin: BuiltinScenario) => {
-      setSimulationSettings({
-        configSource: 'builtin',
-        configName: builtin.name,
-      });
-    },
-    [setSimulationSettings],
   );
 
   const handleUserConfigSelect = useCallback(
@@ -235,27 +201,6 @@ export function SimulationSection(): ReactElement {
         id={panelId}
         aria-labelledby={tabId(activeTab)}
       >
-        {activeTab === 'builtins' &&
-          (builtinsLoading ? (
-            <Loading />
-          ) : builtinsError ? (
-            <LoadError
-              testId="simulation-builtins"
-              message={t('simulation.loadFailedBuiltins', {
-                error: getErrorMessage(builtinsError),
-              })}
-              onRetry={refetchBuiltins}
-            />
-          ) : (
-            <BuiltinList
-              builtins={builtins ?? []}
-              selectedName={
-                simulationSettings.configSource === 'builtin' ? simulationSettings.configName : ''
-              }
-              onSelect={handleTemplateSelect}
-            />
-          ))}
-
         {activeTab === 'configs' &&
           (userConfigsLoading ? (
             <Loading />
@@ -289,11 +234,7 @@ export function SimulationSection(): ReactElement {
           <p className="text-sm text-text-primary font-medium mt-tight">
             {simulationSettings.configName}
             <span className="text-text-muted ml-inline">
-              (
-              {simulationSettings.configSource === 'builtin'
-                ? t('simulation.selectedConfigSourceBuiltin')
-                : t('simulation.selectedConfigSourceUserConfig')}
-              )
+              ({t('simulation.selectedConfigSourceUserConfig')})
             </span>
           </p>
         </div>
@@ -337,66 +278,6 @@ function LoadError({ testId, message, onRetry }: LoadErrorProps): ReactElement {
         >
           {t('simulation.retry')}
         </button>
-      </div>
-    </div>
-  );
-}
-
-interface BuiltinListProps {
-  builtins: BuiltinScenario[];
-  selectedName: string;
-  onSelect: (builtin: BuiltinScenario) => void;
-}
-
-function BuiltinList({ builtins, selectedName, onSelect }: BuiltinListProps): ReactElement {
-  const { t } = useTranslation('settings');
-  const [search, setSearch] = useState('');
-
-  const filteredBuiltins = builtins.filter(
-    (tpl) =>
-      tpl.name.toLowerCase().includes(search.toLowerCase()) ||
-      tpl.description.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  return (
-    <div className="stack-sm">
-      <input
-        type="text"
-        placeholder={t('simulation.searchBuiltinsPlaceholder')}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className={cn(
-          'w-full px-3 py-row text-sm',
-          'bg-bg-elevated border border-surface-border rounded-lg',
-          'text-text-primary placeholder:text-text-muted',
-          'focus:outline-none focus:ring-2 focus:ring-brand-primary/50',
-        )}
-      />
-      <div className="max-h-[200px] overflow-y-auto stack-xs">
-        {filteredBuiltins.length === 0 && (
-          <p className="text-sm text-text-muted py-4 text-center">
-            {search ? t('simulation.noBuiltinsMatchSearch') : t('simulation.noBuiltinsAvailable')}
-          </p>
-        )}
-        {filteredBuiltins.map((builtin) => (
-          <button
-            key={builtin.name}
-            type="button"
-            onClick={() => onSelect(builtin)}
-            className={cn(
-              'w-full text-left px-3 py-row rounded-lg transition-colors',
-              selectedName === builtin.name
-                ? 'bg-brand-primary/30 border border-brand-primary/50'
-                : 'bg-surface-hover hover:bg-surface-hover border border-transparent',
-            )}
-          >
-            <div className="text-sm text-text-primary font-medium">{builtin.name}</div>
-            <div className="text-xs text-text-muted truncate">{builtin.description}</div>
-            <div className="text-xs text-text-muted mt-tight">
-              {t('simulation.deviceCount', { count: builtin.deviceCount })}
-            </div>
-          </button>
-        ))}
       </div>
     </div>
   );

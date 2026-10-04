@@ -1,16 +1,14 @@
 import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { type FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchBuiltinScenarioContent, fetchBuiltinScenarios, importConfig } from '../../api/client';
+import { importConfig } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
-import type { BuiltinScenario, BuiltinScenarioContent, LibraryNetwork } from '../../api/types';
+import type { LibraryNetwork } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { useFavorites } from '../../hooks/useFavorites';
 import { Tooltip } from '../../ui/Tooltip';
 import { SmallText } from '../../ui/Typography';
-import { copyToClipboard } from '../../utils/file';
-import { ScenarioPreviewModal } from '../ScenarioPreviewModal';
 import {
   type ConfigItem,
   type ConfigPickerProps,
@@ -27,9 +25,9 @@ export type { ConfigPickerProps } from './ConfigPicker.types';
 
 /**
  * ConfigPicker is the single network-picker for the Simulation page.
- * Built-in and user-saved configs are presented as one flat list; the
- * user only sees "favorites" vs "everything else", with a one-shot
- * local upload pinned above both when present. Subcomponents:
+ * Library networks (the shipped starters and the user's own) are one
+ * flat list; the user only sees "favorites" vs "everything else", with a
+ * one-shot local upload pinned above both when present. Subcomponents:
  *
  *   ConfigPicker.types.ts     — ConfigItem, props, persisted-pref helpers
  *   ConfigPickerControls.tsx  — grid/list view toggle
@@ -37,34 +35,22 @@ export type { ConfigPickerProps } from './ConfigPicker.types';
  */
 export const ConfigPicker: FC<ConfigPickerProps> = ({
   selection,
-  onSelectBuiltin,
   onSelectUserConfig,
   onUpload,
   uploadFile,
-  filterByDeviceFamily = false,
 }) => {
   const { t } = useTranslation('pages');
-  const [builtins, setBuiltins] = useState<BuiltinScenario[]>([]);
   const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [family, setFamily] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
   const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
 
-  // Preview modal state (built-in scenarios only)
-  const [previewScenario, setPreviewScenario] = useState<BuiltinScenario | null>(null);
-  const [previewContent, setPreviewContent] = useState<BuiltinScenarioContent | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<Error | null>(null);
-
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchBuiltinScenarios(), fetchLibraryNetworks()])
-      .then(([t, u]) => {
-        if (cancelled) return;
-        setBuiltins(t);
-        setUserConfigs(u);
+    fetchLibraryNetworks()
+      .then((networks) => {
+        if (!cancelled) setUserConfigs(networks);
       })
       .catch(() => {
         // Best-effort hydration; the empty state covers failure.
@@ -78,7 +64,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   }, []);
 
   // Build the unified list — local upload first (most recent action), then
-  // saved (user's stuff), then built-ins.
+  // the library networks.
   const items: ConfigItem[] = useMemo(() => {
     const list: ConfigItem[] = [];
     if (uploadFile) {
@@ -103,18 +89,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         config: c,
       });
     }
-    for (const t of builtins) {
-      list.push({
-        kind: 'builtin',
-        key: `builtin:${t.name}`,
-        name: t.name,
-        description: t.description,
-        deviceCount: t.deviceCount,
-        builtin: t,
-      });
-    }
     return list;
-  }, [builtins, userConfigs, uploadFile, t]);
+  }, [userConfigs, uploadFile, t]);
 
   /**
    * Searching narrows the list and keeps results alphabetical regardless
@@ -126,22 +102,8 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
    */
   const sections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const matchesQuery = (item: ConfigItem) => {
-      if (
-        filterByDeviceFamily &&
-        family &&
-        (item.kind !== 'builtin' || item.builtin.type !== family)
-      )
-        return false;
-      const searchable = [item.name, item.description];
-      if (item.kind === 'builtin')
-        searchable.push(
-          item.builtin.displayName ?? '',
-          item.builtin.vendor ?? '',
-          ...(item.builtin.tags ?? []),
-        );
-      return !q || searchable.some((value) => value.toLowerCase().includes(q));
-    };
+    const matchesQuery = (item: ConfigItem) =>
+      !q || [item.name, item.description].some((value) => value.toLowerCase().includes(q));
 
     const byName = (a: ConfigItem, b: ConfigItem) => a.name.localeCompare(b.name);
 
@@ -155,7 +117,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     const favorites = matched.filter((i) => isFavorite(i.key)).sort(byName);
     const all = matched.filter((i) => !isFavorite(i.key)).sort(byName);
     return { local, favorites, all };
-  }, [items, isFavorite, search, family, filterByDeviceFamily]);
+  }, [items, isFavorite, search]);
 
   const updateViewMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -163,8 +125,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
   };
 
   const handleSelectItem = (item: ConfigItem) => {
-    if (item.kind === 'builtin') onSelectBuiltin(item.builtin);
-    else if (item.kind === 'saved') onSelectUserConfig(item.config);
+    if (item.kind === 'saved') onSelectUserConfig(item.config);
     // local items are already "selected" — RuntimeControlPage tracks them as
     // the upload file. Selecting again is a no-op.
   };
@@ -173,31 +134,7 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
     onUpload(null);
   };
 
-  const handleViewItem = async (item: ConfigItem) => {
-    if (item.kind !== 'builtin') return; // Only built-ins have an inline preview today
-    setPreviewScenario(item.builtin);
-    setPreviewContent(null);
-    setPreviewError(null);
-    setPreviewLoading(true);
-    try {
-      const content = await fetchBuiltinScenarioContent(item.builtin.name);
-      setPreviewContent(content);
-    } catch (err) {
-      setPreviewError(err as Error);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const closePreview = () => {
-    setPreviewScenario(null);
-    setPreviewContent(null);
-    setPreviewError(null);
-  };
-
   const isItemSelected = (item: ConfigItem): boolean => {
-    if (item.kind === 'builtin')
-      return selection.source === 'builtin' && selection.name === item.name;
     if (item.kind === 'saved')
       return selection.source === 'userConfig' && selection.name === item.name;
     return selection.source === 'upload';
@@ -308,35 +245,6 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
             className="w-full rounded border border-surface-border bg-bg-surface/60 py-row pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
           />
         </div>
-        {filterByDeviceFamily && (
-          <label className="stack-xs text-xs text-text-muted">
-            {t('configPicker.family')}
-            <select
-              data-testid="config-picker-family"
-              value={family}
-              onChange={(event) => setFamily(event.target.value)}
-              className="min-h-11 rounded border border-surface-border bg-bg-surface px-3 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-brand-primary"
-            >
-              <option value="">{t('configPicker.allFamilies')}</option>
-              {(
-                [
-                  'basic',
-                  'router',
-                  'switch',
-                  'access-point',
-                  'server',
-                  'firewall',
-                  'complete',
-                  'custom',
-                ] as const
-              ).map((type) => (
-                <option key={type} value={type}>
-                  {t(`configPicker.families.${type}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <fieldset
           className="flex rounded border border-surface-border bg-bg-surface/60 p-0.5"
           aria-label={t('configPicker.viewDensityLabel')}
@@ -365,27 +273,9 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
         isFavorite={isFavorite}
         onSelect={handleSelectItem}
         onToggleFavorite={toggleFavorite}
-        onView={handleViewItem}
         onClearLocal={handleClearLocal}
-        searching={search.trim().length > 0 || family.length > 0}
+        searching={search.trim().length > 0}
       />
-
-      {previewScenario && (
-        <ScenarioPreviewModal
-          builtin={previewScenario}
-          content={previewContent}
-          loading={previewLoading}
-          error={previewError}
-          onClose={closePreview}
-          onUse={(t) => {
-            closePreview();
-            onSelectBuiltin(t);
-          }}
-          onCopy={async () => {
-            await copyToClipboard(previewContent?.content ?? '');
-          }}
-        />
-      )}
     </div>
   );
 };

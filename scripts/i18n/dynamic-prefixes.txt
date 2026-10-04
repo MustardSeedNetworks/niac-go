@@ -265,6 +265,3 @@ pages:dashboard.quickActions.viewTopologyDescription
 # enforces exact catalog membership and locale parity (no orphaned terms).
 help:glossary.
 help:glossaryCategories.
-
-# ConfigPicker maps the finite template family IDs to localized option labels.
-pages:configPicker.families.

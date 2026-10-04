@@ -16,14 +16,10 @@ import {
 import { requestJsonWithProgress } from './requestUpload';
 import type {
   AlertConfig,
-  BuiltinScenario,
-  BuiltinScenarioContent,
   CloneDeviceRequest,
   ConfigDocument,
   ConfigSchema,
   ConfigUpdateRequest,
-  CopyBuiltinScenarioRequest,
-  CopyBuiltinScenarioResponse,
   CreateDeviceRequest,
   DebugLevelResponse,
   DeviceBatchDeleteRequest,
@@ -341,21 +337,6 @@ export const startStandaloneCapture = (payload: StandaloneCaptureRequest) =>
 export const stopStandaloneCapture = () =>
   request<{ status: string }>('/api/v1/capture', {
     method: 'DELETE',
-  });
-
-// =====================================================================
-// Built-in scenarios
-// =====================================================================
-
-export const fetchBuiltinScenarios = () =>
-  deduplicatedGet<BuiltinScenario[]>('/api/v1/scenario/builtins');
-
-export const fetchBuiltinScenarioContent = (name: string) =>
-  request<BuiltinScenarioContent>(`/api/v1/scenario/builtins/${encodeURIComponent(name)}`);
-
-export const copyBuiltinScenario = (payload: CopyBuiltinScenarioRequest) =>
-  requestJson<CopyBuiltinScenarioResponse>('/api/v1/scenario/builtins/copy', payload, {
-    method: 'POST',
   });
 
 // =====================================================================

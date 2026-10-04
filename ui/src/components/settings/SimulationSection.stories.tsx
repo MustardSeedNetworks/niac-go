@@ -16,13 +16,14 @@ const meta: Meta<typeof SimulationSection> = {
 export default meta;
 type Story = StoryObj<typeof SimulationSection>;
 
-export const Builtins: Story = { play: settled() };
-
 export const SavedConfigurations: Story = {
   play: async ({ canvasElement }) => {
     await settled()();
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('tab', { name: 'My Configs' }));
+    await expect(canvas.getByRole('tab', { name: 'My Configs' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(canvas.getByRole('tabpanel', { name: 'My Configs' })).toBeVisible();
   },
 };

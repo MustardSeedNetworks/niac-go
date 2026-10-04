@@ -86,7 +86,7 @@ export interface Notification {
 }
 
 // Simulation settings for Settings-driven workflow
-export type ConfigSource = 'builtin' | 'userConfig' | 'upload';
+export type ConfigSource = 'userConfig' | 'upload';
 
 export interface SimulationSettings {
   selectedInterface: string;
@@ -98,7 +98,7 @@ const DEFAULT_DEBUG_CONSOLE_HEIGHT = 300;
 
 const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
   selectedInterface: '',
-  configSource: 'builtin',
+  configSource: 'userConfig',
   configName: '',
 };
 

@@ -19,7 +19,7 @@ import { fetchSimulationStatus } from '../api/client';
 import { ApiError, NetworkError } from '../api/errors';
 import type { ScenarioDraft } from '../api/library-client';
 import type { ScenarioGenerateRequest } from '../api/scenario-client';
-import type { BuiltinScenario, LibraryNetwork, SimulationStatus } from '../api/types';
+import type { LibraryNetwork, SimulationStatus } from '../api/types';
 import { POLL_INTERVALS } from '../constants/polling';
 import { AppProvider } from '../contexts/AppContext';
 import { MemoryDataRouter } from '../test/MemoryDataRouter';
@@ -50,11 +50,9 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 const startSimulation = vi.fn<(payload: unknown) => Promise<SimulationStatus>>();
 const preflightSimulation = vi.fn();
 const fetchUsableInterfaces = vi.fn();
-const fetchBuiltinScenarios = vi.fn<() => Promise<BuiltinScenario[]>>();
 const fetchLibraryNetworks = vi.fn<() => Promise<LibraryNetwork[]>>();
 const createScenarioDraft = vi.fn<(name: string, content: string) => Promise<ScenarioDraft>>();
-const createScenarioDraftFromBuiltin =
-  vi.fn<(name: string, scenarioName: string) => Promise<ScenarioDraft>>();
+const fetchLibraryNetworkContent = vi.fn<(name: string) => Promise<{ content: string }>>();
 const deleteScenarioDraft = vi.fn<(name: string, revision: string) => Promise<void>>();
 const replaceScenarioDraft =
   vi.fn<(name: string, revision: string, content: string) => Promise<ScenarioDraft>>();
@@ -81,7 +79,6 @@ vi.mock('../api/client', async (importOriginal) => {
     fetchInterfaces: vi.fn(),
     // Wizard-specific
     fetchUsableInterfaces: () => fetchUsableInterfaces(),
-    fetchBuiltinScenarios: () => fetchBuiltinScenarios(),
     startSimulation: (payload: unknown) => startSimulation(payload),
     preflightSimulation: (payload: unknown) => preflightSimulation(payload),
     // AP-0: the binding inputs read their choices from the daemon instead of
@@ -96,8 +93,7 @@ vi.mock('../api/client', async (importOriginal) => {
 vi.mock('../api/library-client', () => ({
   fetchLibraryNetworks: () => fetchLibraryNetworks(),
   createScenarioDraft: (name: string, content: string) => createScenarioDraft(name, content),
-  createScenarioDraftFromBuiltin: (name: string, scenarioName: string) =>
-    createScenarioDraftFromBuiltin(name, scenarioName),
+  fetchLibraryNetworkContent: (name: string) => fetchLibraryNetworkContent(name),
   replaceScenarioDraft: (name: string, revision: string, content: string) =>
     replaceScenarioDraft(name, revision, content),
   deleteScenarioDraft: (name: string, revision: string) => deleteScenarioDraft(name, revision),
@@ -182,17 +178,8 @@ beforeEach(() => {
   fetchUsableInterfaces.mockResolvedValue({
     interfaces: [{ name: 'lo0', addresses: ['127.0.0.1'], isUp: true, isLoopback: true }],
   });
-  fetchBuiltinScenarios.mockResolvedValue([]);
   fetchLibraryNetworks.mockResolvedValue([]);
   createScenarioDraft.mockResolvedValue({
-    name: 'scenario-20260728-120000',
-    content: emptyDraftContent,
-    format: 'yaml',
-    revision: 'revision-1',
-    modifiedAt: '2026-07-28T12:00:00Z',
-    sizeBytes: emptyDraftContent.length,
-  });
-  createScenarioDraftFromBuiltin.mockResolvedValue({
     name: 'scenario-20260728-120000',
     content: emptyDraftContent,
     format: 'yaml',
@@ -443,32 +430,35 @@ describe('NewSimulationWizardPage — step navigation', () => {
     expect(startSimulation).not.toHaveBeenCalled();
   });
 
-  it('keeps a selected built-in scenario while generated fleet fields are edited', async () => {
+  it('keeps a selected library network while generated fleet fields are edited', async () => {
     const user = userEvent.setup();
-    const builtin: BuiltinScenario = {
+    const network: LibraryNetwork = {
       name: 'branch-router',
       description: 'Branch router',
       deviceCount: 1,
-      type: 'router',
+      modifiedAt: '2026-10-04T00:00:00Z',
+      sizeBytes: 64,
+      source: 'starter',
+      valid: true,
     };
-    fetchBuiltinScenarios.mockResolvedValue([builtin]);
+    const content = 'devices:\n  - name: branch-1\n    type: router\n';
+    fetchLibraryNetworks.mockResolvedValue([network]);
+    fetchLibraryNetworkContent.mockResolvedValue({ content });
     renderWizard();
 
     await waitFor(() => expect(screen.getByTestId('wizard-interface-select')).not.toBeDisabled());
     await user.selectOptions(screen.getByTestId('wizard-interface-select'), 'lo0');
     await user.click(screen.getByTestId('wizard-source-tab-library'));
     await user.click(await screen.findByRole('button', { name: 'Select' }));
-    expect(screen.getByTestId('wizard-selected-library')).toHaveTextContent(builtin.name);
+    expect(screen.getByTestId('wizard-selected-library')).toHaveTextContent(network.name);
     await user.click(screen.getByTestId('fleet-customize'));
     await user.clear(screen.getByTestId('fleet-domain'));
     await user.type(screen.getByTestId('fleet-domain'), 'edited.example');
     await user.click(screen.getByTestId('wizard-next-button'));
 
-    await waitFor(() => expect(createScenarioDraftFromBuiltin).toHaveBeenCalledTimes(1));
-    expect(createScenarioDraftFromBuiltin).toHaveBeenCalledWith(
-      expect.stringMatching(/^scenario-/),
-      builtin.name,
-    );
+    await waitFor(() => expect(createScenarioDraft).toHaveBeenCalledTimes(1));
+    expect(fetchLibraryNetworkContent).toHaveBeenCalledWith(network.name);
+    expect(createScenarioDraft).toHaveBeenCalledWith(expect.stringMatching(/^scenario-/), content);
     expect(generateScenario).not.toHaveBeenCalled();
   });
 

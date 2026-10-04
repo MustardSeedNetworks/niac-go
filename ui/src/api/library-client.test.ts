@@ -89,38 +89,6 @@ describe('scenario draft client', () => {
     expect(deleteHeaders.get('If-Match')).toBe('"revision-2"');
   });
 
-  it('creates built-in scenario drafts without flattening resources in the browser', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ token: 'csrf-token' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 201,
-        json: () =>
-          Promise.resolve({
-            name: 'switch-draft',
-            content: 'devices:\n  - name: switch-1\n',
-            format: 'yaml',
-            revision: 'revision-1',
-            modifiedAt: '2026-07-28T12:00:00Z',
-            sizeBytes: 29,
-          }),
-      });
-
-    const { createScenarioDraftFromBuiltin } = await import('./library-client');
-    await createScenarioDraftFromBuiltin('switch-draft', 'catalyst-9300-48p');
-
-    expect(mockFetch.mock.calls[1]?.[1]).toMatchObject({
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'switch-draft',
-        scenarioName: 'catalyst-9300-48p',
-      }),
-    });
-  });
-
   it('applies topology mutations with the current draft revision', async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'csrf-token' }) })

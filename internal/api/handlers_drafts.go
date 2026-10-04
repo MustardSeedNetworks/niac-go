@@ -4,18 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"path/filepath"
 	"strings"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/api/builtins"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/library"
 )
 
 type draftCreateRequest struct {
-	Name         string `json:"name"`
-	Content      string `json:"content"`
-	ScenarioName string `json:"scenarioName"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
 }
 
 type draftReplaceRequest struct {
@@ -122,51 +119,16 @@ func (s *Server) handleLibraryDraftCreate(w http.ResponseWriter, r *http.Request
 func (s *Server) prepareDraftContent(
 	w http.ResponseWriter, r *http.Request, req draftCreateRequest,
 ) (string, bool) {
-	hasContent := strings.TrimSpace(req.Content) != ""
-	hasScenario := strings.TrimSpace(req.ScenarioName) != ""
-	if hasContent == hasScenario {
-		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			"Exactly one of content or scenarioName is required", nil)
+	if strings.TrimSpace(req.Content) == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "content is required", nil)
 		return "", false
 	}
-	if hasContent {
-		content, err := s.rebaseCapturedDraftContent(req.Content)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, "config_invalid", "Draft configuration is invalid", nil)
-			return "", false
-		}
-		return content, s.validateDraftContent(w, r, content)
-	}
-
-	_, scenarioPath, err := builtins.Load(req.ScenarioName)
+	content, err := s.rebaseCapturedDraftContent(req.Content)
 	if err != nil {
-		writeError(w, r, http.StatusNotFound, "not_found", "Scenario not found", nil)
+		writeError(w, r, http.StatusBadRequest, "config_invalid", "Draft configuration is invalid", nil)
 		return "", false
 	}
-	cfg, _, err := config.LoadYAMLManaged(scenarioPath, builtins.Dirs())
-	if err != nil {
-		s.logger.ErrorContext(r.Context(), "[API] Draft scenario validation failed", "error", err)
-		writeError(w, r, http.StatusBadRequest, "config_invalid", "Scenario configuration is invalid", nil)
-		return "", false
-	}
-	if !s.authorizeConfigEntitlements(w, r, cfg) {
-		return "", false
-	}
-
-	// Loading resolves include_path and every SNMP resource to absolute paths.
-	// Preserve that resolved base when moving the YAML into draft storage so
-	// inline preflight can enforce that each resource remains inside it.
-	if cfg.CapturePlayback != nil && !filepath.IsAbs(cfg.CapturePlayback.FileName) {
-		cfg.CapturePlayback.FileName = filepath.Join(filepath.Dir(scenarioPath), cfg.CapturePlayback.FileName)
-	}
-	materialized, err := config.MarshalConfigYAML(cfg)
-	if err != nil {
-		s.logger.ErrorContext(r.Context(), "[API] Draft scenario materialization failed", "error", err)
-		writeError(w, r, http.StatusInternalServerError, "draft_materialization_failed",
-			"Failed to prepare scenario draft", nil)
-		return "", false
-	}
-	return string(materialized), true
+	return content, s.validateDraftContent(w, r, content)
 }
 
 func (s *Server) handleLibraryDraftRead(w http.ResponseWriter, r *http.Request, name string) {

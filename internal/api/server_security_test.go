@@ -567,10 +567,6 @@ func generateTestToken() string {
 // middleware chain. A POST without the X-Csrf-Token header must be
 // rejected with 403 — if someone removes csrfProtect from routes.go, this
 // fails.
-//
-// The built-in scenario catalogue is not in this list: it ships with the
-// product and is read-only, so its paths expose no mutating method beyond
-// copy. See TestBuiltinScenarioRoutesRejectMutation.
 func TestCSRFWiring_LibraryNetworks(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	lib, err := library.Open(t.TempDir())
@@ -613,41 +609,6 @@ func TestCSRFWiring_LibraryNetworks(t *testing.T) {
 			// validation) — only that CSRF did not block it.
 			if rec.Code == http.StatusForbidden {
 				t.Errorf("%s with valid CSRF still 403: %s", path, rec.Body.String())
-			}
-		})
-	}
-}
-
-// TestBuiltinScenarioRoutesRejectMutation locks in that the built-in scenario
-// paths expose no mutating method besides copy. Upload and delete previously
-// existed as registered routes that only ever returned 501 — CSRF-protected,
-// rate-limited surface that could not succeed. They were removed rather than
-// implemented: built-in scenarios ship with the product and are read-only. If
-// someone re-adds a mutating method here it needs csrfProtect, so this test
-// fails loudly first.
-func TestBuiltinScenarioRoutesRejectMutation(t *testing.T) {
-	server, _, token := newTestServerWithAuth(t)
-	server.fileLimiter = ratelimit.NewRateLimiter(FileRateLimit, FileBurst)
-	mux := server.apiHandler()
-
-	cases := []struct {
-		method string
-		path   string
-	}{
-		{http.MethodPost, "/api/v1/scenario/builtins"},
-		{http.MethodDelete, "/api/v1/scenario/builtins/example.yaml"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
-			req := httptest.NewRequest(tc.method, tc.path, bytes.NewReader([]byte(`{}`)))
-			req.Header.Set("Authorization", "Bearer "+token)
-			req.Header.Set("Content-Type", "application/json")
-			rec := httptest.NewRecorder()
-			mux.ServeHTTP(rec, req)
-
-			if rec.Code != http.StatusMethodNotAllowed {
-				t.Errorf("%s %s: status = %d, want 405 (no mutating built-in scenario surface)",
-					tc.method, tc.path, rec.Code)
 			}
 		})
 	}

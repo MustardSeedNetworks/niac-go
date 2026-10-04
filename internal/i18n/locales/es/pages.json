@@ -81,7 +81,6 @@
     "startTitleReady": "Inicia la simulación en la interfaz seleccionada con la configuración elegida",
     "configurationLabel": "Configuración:",
     "configUploadSuffix": "(carga)",
-    "configSourceBuiltin": "escenario integrado",
     "configSourceConfig": "configuración",
     "pickConfigHint": "Elija una opción abajo — Iniciar se habilita en cuanto lo haga",
     "errorNoInterface": "Seleccione una interfaz arriba",
@@ -433,7 +432,7 @@
       "interfaceLabel": "Interfaz de red",
       "startEmpty": "Empezar vacío",
       "help": "Elige una configuración inicial abajo, o empieza vacío y agrega dispositivos en el siguiente paso.",
-      "errorNoSource": "Elige un escenario integrado, configuración guardada, archivo subido, o Empezar vacío primero",
+      "errorNoSource": "Elige una red de la biblioteca, un archivo subido, o Empezar vacío primero",
       "startingLabel": "Preparando borrador…",
       "startingPoint": "Punto de partida",
       "browseLibrary": "Explorar biblioteca",
@@ -1215,23 +1214,6 @@
       "maxSizeTag": "Máximo 100 MB"
     }
   },
-  "scenarioPreview": {
-    "editCopyFailed": "No se pudo crear una copia editable",
-    "defaultDescription": "Vista previa del escenario integrado",
-    "deviceCount_one": "{{count}} dispositivo",
-    "deviceCount_other": "{{count}} dispositivos",
-    "loading": "Cargando escenario…",
-    "loadFailed": "Error al cargar el escenario",
-    "copyYaml": "Copiar YAML",
-    "download": "Descargar",
-    "closeButton": "Cerrar",
-    "editCopyTitle": "Copie este escenario en sus configuraciones guardadas y abra el editor de dispositivos",
-    "cloning": "Clonando…",
-    "editCopy": "Personalizar primero",
-    "useAsIs": "Usar tal cual",
-    "useAsIsTitle": "Ejecute este escenario sin cambios como configuración activa",
-    "yamlEditorAria": "Vista previa YAML del escenario, solo lectura"
-  },
   "configPicker": {
     "localFileSize": "{{size}} KB archivo local",
     "javaDslConvertFailedWithReason": "No se pudo auto-convertir Java DSL: {{reason}}",
@@ -1259,23 +1241,9 @@
     "selectedLabel": "Seleccionado",
     "selectNetworkTitle": "Seleccione esta red — haga clic en Iniciar Simulación abajo para ejecutarla",
     "selectButton": "Seleccionar",
-    "previewYamlTitle": "Vista previa de YAML",
     "dropLocalFileTitle": "Descartar el archivo local",
     "selectItemTitle": "Seleccionar {{name}}",
-    "localTag": "Local",
-    "previewBuiltinYamlTitle": "Vista previa del YAML del escenario",
-    "family": "Tipo de dispositivo",
-    "allFamilies": "Todos los tipos",
-    "families": {
-      "basic": "Básico",
-      "router": "Router",
-      "switch": "Switch",
-      "access-point": "Punto de acceso",
-      "server": "Servidor",
-      "firewall": "Cortafuegos",
-      "complete": "Red completa",
-      "custom": "Personalizado"
-    }
+    "localTag": "Local"
   },
   "libraryFiles": {
     "actionsHeader": "Acciones",

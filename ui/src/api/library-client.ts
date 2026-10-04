@@ -141,13 +141,6 @@ export const fetchScenarioDraft = (name: string) =>
 export const createScenarioDraft = (name: string, content: string) =>
   requestJson<ScenarioDraft>('/api/v1/library/drafts', { name, content }, { method: 'POST' });
 
-export const createScenarioDraftFromBuiltin = (name: string, scenarioName: string) =>
-  request<ScenarioDraft>('/api/v1/library/drafts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, scenarioName }),
-  });
-
 export const replaceScenarioDraft = (name: string, revision: string, content: string) =>
   requestJson<ScenarioDraft>(
     `/api/v1/library/drafts/${encodeURIComponent(name)}`,

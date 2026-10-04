@@ -1,11 +1,12 @@
 /**
- * migrated-dialogs.a11y.test.tsx — the five overlays that were hand-rolled (#1863).
+ * migrated-dialogs.a11y.test.tsx — the overlays that were hand-rolled (#1863).
  *
- * StreamView, ColoringRulesPanel, MergePreviewModal, ScenarioPreviewModal and
- * CloneDeviceModal each drew their own `fixed inset-0` overlay beside `Modal`.
+ * StreamView, ColoringRulesPanel, MergePreviewModal and CloneDeviceModal each
+ * drew their own `fixed inset-0` overlay beside `Modal` (a fifth, the built-in
+ * scenario preview, went with the built-in listing in #2131).
  * Two of them had no `role="dialog"` at all, two named themselves with a
  * literal `id="modal-title"` (a duplicate the moment a second dialog mounts),
- * and none of the five trapped focus or closed on Escape — so a keyboard user
+ * and none of them trapped focus or closed on Escape — so a keyboard user
  * who opened one was left tabbing through the page behind it.
  *
  * These assert the three properties the shared `Modal` gives them, per
@@ -14,14 +15,12 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import '../i18n';
-import type { BuiltinScenario, PcapPacket } from '../api/types';
+import type { PcapPacket } from '../api/types';
 import { ColoringRulesPanel } from './ColoringRulesPanel';
 import { MergePreviewModal } from './config/MergeControls';
 import { CloneDeviceModal } from './device-list/CloneDeviceModal';
-import { ScenarioPreviewModal } from './ScenarioPreviewModal';
 import { StreamView } from './StreamView';
 
 const packet: PcapPacket = {
@@ -36,13 +35,6 @@ const packet: PcapPacket = {
   length: 64,
   info: 'packet',
   rawData: '68656c6c6f',
-};
-
-const builtin: BuiltinScenario = {
-  name: 'hospital',
-  description: 'Hospital pack',
-  type: 'switch',
-  deviceCount: 12,
 };
 
 /** [name the dialog announces, how to render it with this close handler] */
@@ -69,20 +61,6 @@ const dialogs: Array<[string, (onClose: () => void) => React.ReactElement]> = [
     ),
   ],
   [
-    'hospital',
-    (onClose) => (
-      <ScenarioPreviewModal
-        builtin={builtin}
-        content={null}
-        loading={false}
-        error={null}
-        onClose={onClose}
-        onUse={() => undefined}
-        onCopy={() => undefined}
-      />
-    ),
-  ],
-  [
     'Clone Device',
     (onClose) => (
       <CloneDeviceModal hostname="core-sw-1" onClone={() => undefined} onCancel={onClose} />
@@ -90,22 +68,16 @@ const dialogs: Array<[string, (onClose: () => void) => React.ReactElement]> = [
   ],
 ];
 
-// ScenarioPreviewModal navigates on "edit a copy", so every dialog is rendered
-// under a router rather than special-casing one of them.
-function renderInRouter(element: React.ReactElement) {
-  return render(<MemoryRouter>{element}</MemoryRouter>);
-}
-
 describe.each(dialogs)('%s', (name, renderDialog) => {
   it('is a dialog with an accessible name', () => {
-    renderInRouter(renderDialog(() => undefined));
+    render(renderDialog(() => undefined));
     expect(screen.getByRole('dialog', { name: new RegExp(name, 'i') })).toBeInTheDocument();
   });
 
   it('closes on Escape pressed inside it', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderInRouter(renderDialog(onClose));
+    render(renderDialog(onClose));
 
     // The trap auto-focuses inside the dialog, which is where a real keypress
     // originates; pressing at the document would not exercise the same path.
@@ -115,7 +87,7 @@ describe.each(dialogs)('%s', (name, renderDialog) => {
   });
 
   it('keeps every focusable control inside the dialog', () => {
-    renderInRouter(renderDialog(() => undefined));
+    render(renderDialog(() => undefined));
     const dialog = screen.getByRole('dialog');
 
     for (const button of screen.getAllByRole('button')) {
@@ -145,7 +117,7 @@ describe('scrollable dialog body', () => {
   }
 
   it('is focusable when its content is not', () => {
-    renderInRouter(
+    render(
       <StreamView packets={[packet]} clientEndpoint="10.0.0.1:1234" onClose={() => undefined} />,
     );
     expect(body()).toHaveAttribute('tabindex', '0');
@@ -154,7 +126,7 @@ describe('scrollable dialog body', () => {
   it('is not an extra tab stop when its content is focusable', () => {
     // With no rules the panel renders an empty message and its inputs live in
     // the footer, so it needs one rule to have focusable body content at all.
-    renderInRouter(
+    render(
       <ColoringRulesPanel
         rules={[
           {
