@@ -17,7 +17,6 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
-	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
 const baseConfigYAML = `
@@ -160,25 +159,25 @@ func TestServerHandleAlertsLifecycle(t *testing.T) {
 }
 
 type stubReplay struct {
-	state        replay.State
-	startReq     replay.Request
+	state        ReplayState
+	startReq     ReplayRequest
 	stopCount    int
 	startErr     error
 	lastUploaded bool
 }
 
-func (s *stubReplay) Status() replay.State {
+func (s *stubReplay) Status() ReplayState {
 	return s.state
 }
 
-func (s *stubReplay) Start(req replay.Request) (replay.State, error) {
+func (s *stubReplay) Start(req ReplayRequest) (ReplayState, error) {
 	if s.startErr != nil {
-		return replay.State{}, s.startErr
+		return ReplayState{}, s.startErr
 	}
 
 	s.startReq = req
 	s.lastUploaded = req.Uploaded
-	s.state = replay.State{
+	s.state = ReplayState{
 		Running:   true,
 		File:      req.File,
 		LoopMs:    req.LoopMs,
@@ -189,7 +188,7 @@ func (s *stubReplay) Start(req replay.Request) (replay.State, error) {
 	return s.state, nil
 }
 
-func (s *stubReplay) Stop() (replay.State, error) {
+func (s *stubReplay) Stop() (ReplayState, error) {
 	s.stopCount++
 	s.state.Running = false
 
@@ -199,7 +198,7 @@ func (s *stubReplay) Stop() (replay.State, error) {
 func TestServerHandleReplayRoutes(t *testing.T) {
 	server, configPath := newTestServer(t)
 	stub := &stubReplay{
-		state: replay.State{
+		state: ReplayState{
 			Running: false,
 		},
 	}
@@ -256,7 +255,7 @@ func TestServerHandleReplayRoutes(t *testing.T) {
 
 func TestServerHandleReplayUpload(t *testing.T) {
 	server, _ := newTestServer(t)
-	stub := &stubReplay{state: replay.State{}}
+	stub := &stubReplay{state: ReplayState{}}
 	server.cfg.Replay = stub
 
 	// Create a minimal valid PCAP file with magic number (0xd4c3b2a1 = little-endian microsecond)

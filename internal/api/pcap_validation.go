@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/capture"
-	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
 // processInlineData decodes and validates inline PCAP data, writes it to a temp file.
@@ -41,45 +40,36 @@ func (s *Server) processInlineData(inlineData string) (string, error) {
 	return s.writeUploadedFile(data)
 }
 
-func (s *Server) prepareReplayRequest(req ReplayRequest) (replay.Request, error) {
-	prepared := replay.Request{
-		File:      req.File,
-		LoopMs:    req.LoopMs,
-		Scale:     req.Scale,
-		RateMode:  req.RateMode,
-		Pps:       req.Pps,
-		MbpsCap:   req.MbpsCap,
-		LoopCount: req.LoopCount,
-		BPFFilter: req.BPFFilter,
-	}
+func (s *Server) prepareReplayRequest(req ReplayRequest) (ReplayRequest, error) {
 	if strings.TrimSpace(req.File) == "" && req.InlineData == "" {
-		return prepared, ErrPcapFilePathOrDataRequired
+		return req, ErrPcapFilePathOrDataRequired
 	}
 
 	if req.InlineData == "" {
 		// SECURITY FIX #162: Validate PCAP file path to prevent arbitrary file access
 		validatedPath, allowedDir, err := s.validatePcapFilePath(req.File)
 		if err != nil {
-			return prepared, err
+			return req, err
 		}
 
-		prepared.File = validatedPath
+		req.File = validatedPath
 		// Anchor playback's os.Root at the allow-listed dir the file resolved
 		// under, so every path component is contained at open time (#986).
-		prepared.RootDir = allowedDir
+		req.RootDir = allowedDir
 
-		return prepared, nil
+		return req, nil
 	}
 
 	path, err := s.processInlineData(req.InlineData)
 	if err != nil {
-		return prepared, err
+		return req, err
 	}
 
-	prepared.File = path
-	prepared.Uploaded = true
+	req.File = path
+	req.Uploaded = true
+	req.InlineData = ""
 
-	return prepared, nil
+	return req, nil
 }
 
 // SECURITY FIX #162: validatePcapFilePath ensures the file path is safe.

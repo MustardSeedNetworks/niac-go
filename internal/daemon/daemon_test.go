@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
-	"github.com/MustardSeedNetworks/niac-go/internal/replay"
 )
 
 // loopbackInterface returns the loopback interface name for the current OS.
@@ -420,7 +419,7 @@ func TestReplayController_Status(t *testing.T) {
 func TestReplayController_Start_NoEngine(t *testing.T) {
 	rc := newReplayController(nil, 0)
 
-	req := replay.Request{
+	req := api.ReplayRequest{
 		File: "/tmp/test.pcap",
 	}
 
@@ -437,7 +436,7 @@ func TestReplayController_Start_NoEngine(t *testing.T) {
 func TestReplayController_Start_EmptyFile(t *testing.T) {
 	rc := newReplayController(nil, 0)
 
-	_, err := rc.Start(replay.Request{File: "   "})
+	_, err := rc.Start(api.ReplayRequest{File: "   "})
 	if err == nil {
 		t.Fatal("expected error for empty file path")
 	}
