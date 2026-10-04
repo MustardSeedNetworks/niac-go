@@ -11,6 +11,7 @@ NIAC is a source-available network device simulator distributed under the
 - [CLI reference](CLI_REFERENCE.md)
 - [REST API](REST_API.md)
 - [Web UI](WEBUI.md)
+- [Where testers attach](ATTACHMENTS.md)
 - [Monitoring](MONITORING.md)
 - [Configuration schema](schemas/niac.schema.json)
 - [Pre-1.0 roadmap](ROADMAP.md)
