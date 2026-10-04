@@ -356,6 +356,7 @@ export interface AuthoredDevice {
       readonly type?: 'ethernet' | 'ieee80211' | 'l2vlan' | 'l3ipvlan' | 'loopback' | 'tunnel' | 'other';
       readonly network?: string;
       readonly address?: string;
+      readonly address_v6?: string;
       readonly mtu?: number;
       readonly speed?: number;
       readonly duplex?: 'full' | 'half';

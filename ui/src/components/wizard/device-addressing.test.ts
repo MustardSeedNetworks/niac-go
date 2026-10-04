@@ -36,6 +36,20 @@ describe('setDeviceAddress', () => {
     expect(result).toContain('speed: 1000');
   });
 
+  it('keeps an IPv6 address on the same network and drops it on a move', () => {
+    const dualStack = config.replace(
+      '        speed: 1000\n',
+      '        speed: 1000\n        network: clinic-lan\n        address: 10.20.0.1/24\n        address_v6: 2001:db8:20::1/64\n',
+    );
+
+    expect(setDeviceAddress(dualStack, 'clinic-rtr-01', 'clinic-lan', '10.20.0.2/24')).toContain(
+      'address_v6: 2001:db8:20::1/64',
+    );
+    expect(
+      setDeviceAddress(dualStack, 'clinic-rtr-01', 'clinic-mgmt', '10.20.99.2/24'),
+    ).not.toContain('address_v6');
+  });
+
   it('creates an interface for a device that has none', () => {
     const result = setDeviceAddress(config, 'clinic-srv-01', 'clinic-lan', '10.20.0.10/24');
     const model = parseNetworkModel(result);

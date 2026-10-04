@@ -161,8 +161,13 @@ func (c *scenarioCompiler) compileNetworks() {
 			)
 			continue
 		}
+		prefixV6, ok := c.compileSubnetV6(field, source.SubnetV6)
+		if !ok {
+			continue
+		}
 		network := Network{
-			Name: source.Name, Prefix: prefix, VirtualVLAN: safeconv.Uint16(source.VirtualVLAN),
+			Name: source.Name, Prefix: prefix, PrefixV6: prefixV6,
+			VirtualVLAN: safeconv.Uint16(source.VirtualVLAN),
 		}
 		c.checkOverlap(field, network)
 		c.networks[source.Name] = network
@@ -171,10 +176,26 @@ func (c *scenarioCompiler) compileNetworks() {
 	c.validateAttachmentNetwork()
 }
 
+func (c *scenarioCompiler) compileSubnetV6(field, value string) (netip.Prefix, bool) {
+	if value == "" {
+		return netip.Prefix{}, true
+	}
+	prefix, err := parseCanonicalPrefixV6(value)
+	if err != nil {
+		c.add(CodeInvalidNetwork, field+".subnet_v6", err.Error())
+		return netip.Prefix{}, false
+	}
+	return prefix, true
+}
+
 func (c *scenarioCompiler) checkOverlap(field string, candidate Network) {
 	for _, network := range c.report.Topology.Networks {
 		if network.Prefix.Overlaps(candidate.Prefix) {
 			c.add(CodeOverlappingNetworks, field+".subnet", "network prefixes must not overlap")
+			return
+		}
+		if network.PrefixV6.IsValid() && network.PrefixV6.Overlaps(candidate.PrefixV6) {
+			c.add(CodeOverlappingNetworks, field+".subnet_v6", "network prefixes must not overlap")
 			return
 		}
 	}
@@ -246,6 +267,26 @@ func parseCanonicalPrefix(value string) (netip.Prefix, error) {
 	}
 	if prefix != prefix.Masked() {
 		return netip.Prefix{}, errors.New("prefix must use its network address")
+	}
+	return prefix, nil
+}
+
+// parseCanonicalPrefixV6 accepts the prefixes a fabric network can number
+// interfaces from: global or unique-local unicast, written at its network
+// address, with room for at least one interface.
+func parseCanonicalPrefixV6(value string) (netip.Prefix, error) {
+	prefix, err := netip.ParsePrefix(value)
+	if err != nil || !prefix.Addr().Is6() || prefix.Addr().Is4In6() {
+		return netip.Prefix{}, errors.New("must be an IPv6 prefix")
+	}
+	if prefix != prefix.Masked() {
+		return netip.Prefix{}, errors.New("prefix must use its network address")
+	}
+	if prefix.IsSingleIP() {
+		return netip.Prefix{}, errors.New("prefix must be shorter than /128")
+	}
+	if !prefix.Addr().IsGlobalUnicast() {
+		return netip.Prefix{}, errors.New("prefix must be global or unique-local unicast")
 	}
 	return prefix, nil
 }

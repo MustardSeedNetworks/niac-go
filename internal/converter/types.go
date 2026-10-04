@@ -104,6 +104,11 @@ type Network struct {
 	// served onto it must sit within the same subnet.
 	Subnet string `yaml:"subnet" validate:"required,cidr"`
 
+	// SubnetV6 is the network's optional IPv6 prefix, for example
+	// 2001:db8:10::/64, beside its IPv4 subnet. Interfaces on this network
+	// may then carry an `address_v6` inside it.
+	SubnetV6 string `yaml:"subnet_v6,omitempty" validate:"omitempty,cidrv6"`
+
 	// VirtualVLAN tags this network's frames with a VLAN id, 1..4094, when
 	// the network is served on a trunk. Omit for untagged.
 	VirtualVLAN int `yaml:"virtual_vlan,omitempty" validate:"omitempty,gte=1,lte=4094"`
@@ -414,6 +419,12 @@ type Interface struct {
 	// address must fall inside that network's subnet and carry the same
 	// prefix length; a /32 host address on a /24 network is refused.
 	Address string `yaml:"address,omitempty" validate:"omitempty,cidr"`
+
+	// AddressV6 is the port's optional IPv6 address, written as a prefix
+	// (2001:db8:10::5/64), beside its IPv4 `address`. It needs a `network`
+	// with a `subnet_v6`, must fall inside it and carry the same prefix
+	// length.
+	AddressV6 string `yaml:"address_v6,omitempty" validate:"omitempty,cidrv6"`
 
 	// MTU is the port's MTU in bytes, 576..1000000.
 	MTU int `yaml:"mtu,omitempty" validate:"omitempty,gte=576,lte=1000000"`

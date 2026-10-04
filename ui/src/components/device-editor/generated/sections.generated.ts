@@ -1899,6 +1899,12 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "kind": "string"
       },
       {
+        "name": "address_v6",
+        "title": "Address v6",
+        "description": "AddressV6 is the port's optional IPv6 address, written as a prefix\n(2001:db8:10::5/64), beside its IPv4 `address`. It needs a `network`\nwith a `subnet_v6`, must fall inside it and carry the same prefix\nlength.",
+        "kind": "string"
+      },
+      {
         "name": "mtu",
         "title": "Mtu",
         "description": "MTU is the port's MTU in bytes, 576..1000000.",

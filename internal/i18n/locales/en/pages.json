@@ -623,6 +623,7 @@
       "pickNetwork": "Pick a network",
       "remove": "Remove",
       "subnet": "Subnet",
+      "subnetV6": "IPv6 subnet",
       "title": "Networks",
       "unaddressed": "not addressed",
       "virtualVlan": "VLAN"

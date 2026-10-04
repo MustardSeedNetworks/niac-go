@@ -181,3 +181,49 @@ func TestValidateConfig_CapturePlayback_MissingFileName(t *testing.T) {
 		t.Errorf("expected ErrCapturePlaybackMissingFile, got %v", err)
 	}
 }
+
+func TestValidateConfig_IPv6Prefixes(t *testing.T) {
+	tests := []struct {
+		name     string
+		subnet   string
+		address  string
+		wantPath string
+	}{
+		{name: "dual-stack", subnet: "2001:db8:10::/64", address: "2001:db8:10::5/64"},
+		{name: "IPv4 subnet_v6", subnet: "10.10.0.0/24", wantPath: "networks[0].subnet_v6"},
+		{
+			name:     "IPv4 address_v6",
+			subnet:   "2001:db8:10::/64",
+			address:  "10.10.0.5/24",
+			wantPath: "interfaces[0].address_v6",
+		},
+		{
+			name:     "bare address_v6",
+			subnet:   "2001:db8:10::/64",
+			address:  "2001:db8:10::5",
+			wantPath: "interfaces[0].address_v6",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := validDevice()
+			d.Interfaces = []Interface{{
+				Name: "eth0", Network: "lab", Address: "10.10.0.5/24", AddressV6: tt.address,
+			}}
+			cfg := &Config{
+				Networks: []Network{{Name: "lab", Subnet: "10.10.0.0/24", SubnetV6: tt.subnet}},
+				Devices:  []Device{d},
+			}
+			err := ValidateConfig(cfg)
+			if tt.wantPath == "" {
+				if err != nil {
+					t.Fatalf("ValidateConfig() = %v, want nil", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantPath) {
+				t.Fatalf("ValidateConfig() = %v, want an error naming %s", err, tt.wantPath)
+			}
+		})
+	}
+}

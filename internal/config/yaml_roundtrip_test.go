@@ -22,7 +22,9 @@ func TestMarshalConfigYAMLRoundTripsCompleteRoutedDevice(t *testing.T) {
 		CapturePlayback: &CapturePlayback{
 			FileName: "traffic.pcap", LoopTime: 1000, ScaleTime: 2,
 		},
-		Networks:    []Network{{Name: "access", Subnet: "10.254.200.0/24", VirtualVLAN: 200}},
+		Networks: []Network{{
+			Name: "access", Subnet: "10.254.200.0/24", SubnetV6: "2001:db8:200::/64", VirtualVLAN: 200,
+		}},
 		Attachments: []LogicalAttachment{{Name: "tester", Network: "access"}},
 		DiscoveryProtocols: &DiscoveryProtocols{
 			LLDP: &ProtocolConfig{Enabled: true, Interval: 30},
@@ -49,6 +51,10 @@ func TestMarshalConfigYAMLRoundTripsCompleteRoutedDevice(t *testing.T) {
 		t.Fatalf("LoadYAMLBytes() error = %v\n%s", err, data)
 	}
 	assertCompleteRuntimeConfig(t, roundTrip, walk)
+	if roundTrip.Networks[0].SubnetV6 != "2001:db8:200::/64" ||
+		roundTrip.Devices[0].Interfaces[0].AddressV6 != "2001:db8:200::1/64" {
+		t.Fatalf("IPv6 prefixes lost: %#v %#v", roundTrip.Networks, roundTrip.Devices[0].Interfaces)
+	}
 }
 
 func TestMarshalConfigYAMLPreservesSegments(t *testing.T) {
@@ -88,7 +94,8 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		TTLConfig: &TTLConfig{TTL: 2, IP: net.ParseIP("10.240.0.1"), Mask: net.CIDRMask(24, 32)},
 		Interfaces: []Interface{{
 			Name: "Gi0/0", Type: "ethernet", Network: "access", Address: "10.254.200.1/24",
-			MTU: 9000, Speed: 1000, Duplex: "full", AdminStatus: "up", OperStatus: "up",
+			AddressV6: "2001:db8:200::1/64", MTU: 9000, Speed: 1000, Duplex: "full",
+			AdminStatus: "up", OperStatus: "up",
 			InUtilization: 12.5, OutUtilization: 7.25, VLANs: []int{200},
 		}},
 		Routes: []Route{{Destination: "10.240.0.0/16", Via: "Gi0/0", NextHop: "10.254.200.2"}},

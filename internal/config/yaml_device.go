@@ -101,6 +101,7 @@ func convertInterfaces(in []converter.Interface) []Interface {
 			Type:           iface.Type,
 			Network:        iface.Network,
 			Address:        iface.Address,
+			AddressV6:      iface.AddressV6,
 			MTU:            iface.MTU,
 			Speed:          iface.Speed,
 			Duplex:         iface.Duplex,

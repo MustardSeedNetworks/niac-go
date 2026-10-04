@@ -1303,6 +1303,10 @@
           "type": "string",
           "description": "Address is the port's IPv4 address, written as a prefix\n(10.10.0.5/24) — a bare address is rejected. When `network` is set the\naddress must fall inside that network's subnet and carry the same\nprefix length; a /32 host address on a /24 network is refused."
         },
+        "address_v6": {
+          "type": "string",
+          "description": "AddressV6 is the port's optional IPv6 address, written as a prefix\n(2001:db8:10::5/64), beside its IPv4 `address`. It needs a `network`\nwith a `subnet_v6`, must fall inside it and carry the same prefix\nlength."
+        },
         "mtu": {
           "type": "integer",
           "description": "MTU is the port's MTU in bytes, 576..1000000."
@@ -1757,6 +1761,10 @@
         "subnet": {
           "type": "string",
           "description": "Subnet is the network in CIDR form, for example 10.10.0.0/24. Every\ninterface address on this network must fall inside it, and a DHCP pool\nserved onto it must sit within the same subnet."
+        },
+        "subnet_v6": {
+          "type": "string",
+          "description": "SubnetV6 is the network's optional IPv6 prefix, for example\n2001:db8:10::/64, beside its IPv4 subnet. Interfaces on this network\nmay then carry an `address_v6` inside it."
         },
         "virtual_vlan": {
           "type": "integer",

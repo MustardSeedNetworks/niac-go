@@ -10,7 +10,8 @@ func convertNetworks(in []converter.Network) []Network {
 	out := make([]Network, len(in))
 	for i, network := range in {
 		out[i] = Network{
-			Name: network.Name, Subnet: network.Subnet, VirtualVLAN: network.VirtualVLAN,
+			Name: network.Name, Subnet: network.Subnet, SubnetV6: network.SubnetV6,
+			VirtualVLAN: network.VirtualVLAN,
 		}
 	}
 	return out
