@@ -1482,10 +1482,28 @@ jobs:
   # ===========================================================================
   # E2E Browser Tests (Playwright)
   # ===========================================================================
+  #
+  # TEMPORARY: runs on an Ubuntu 26.04 container (niac-go#2141, #2454). The
+  # WebKit that `playwright install` fetches for the runner's Ubuntu 24.04
+  # bundles libsoup 3.6.5, whose use-after-free (microsoft/playwright#42803)
+  # stalls every lazy chunk on the HTTP/2 connection, so a page never mounts
+  # (run 37078347420: 13.6 s on each chunk). On 26.04 the same WebKit build
+  # bundles no libsoup and loads the OS's 3.6.6. Seed and stem moved their
+  # WebKit jobs the same way (seed#2965, stem#1529).
+  #
+  # REVERT with the Playwright 1.64 bump: drop `container:`, the prerequisites
+  # step and the libsoup check (and scripts/check-webkit-libsoup.sh), and put
+  # the browser cache key back to the runner's.
   e2e:
     name: E2E Browser Tests
     runs-on: ubuntu-latest
     needs: [changes, backend, build-ui]
+    # Pinned by tag AND digest, the same image as seed's e2e-webkit job.
+    container:
+      image: ubuntu:26.04@sha256:3595d7fc4286a33fad0fd853a4063e654287a9c3787437d7937c94ca3f7a804e
+      options: --ipc=host
+    env:
+      DEBIAN_FRONTEND: noninteractive
     # NOT sized from p95. A job budget has to exceed its apt steps' worst case
     # plus the actual work, or a slow mirror becomes indistinguishable from a
     # hung test. This job has two apt steps at 10 min each; p95 (~5m8s) only
@@ -1505,9 +1523,27 @@ jobs:
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
 
     steps:
+      # The base image has no git (checkout would fall back to a tarball and
+      # the ldflags' git calls to dev/unknown), no CA bundle, no zstd (the
+      # cache actions' archive format, else every restore misses), no
+      # libatomic, which the Node binaries link, no C toolchain for the cgo
+      # build, and no curl for the readiness probe.
+      - name: Install container prerequisites
+        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
+        timeout-minutes: 20
+        with:
+          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
+          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
+          packages: ca-certificates curl gcc git libatomic1 libc6-dev zstd
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # The container's root does not own the runner's checkout; without this
+      # the ldflags' git calls fall through to dev/unknown.
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Set up Go
         uses: ./.github/actions/setup-go
@@ -1582,9 +1618,11 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          # Keyed to the container's OS, not runner.os: a cached 24.04 WebKit
+          # restored here would bring its bundled libsoup 3.6.5 back.
+          key: playwright-browsers-v2-ubuntu26.04-${{ hashFiles('ui/package-lock.json') }}
           restore-keys: |
-            playwright-browsers-v2-${{ runner.os }}-
+            playwright-browsers-v2-ubuntu26.04-
 
       # Retried, because the ~500MB browser download over a shared runner
       # network is exactly what a retry is for. Unretried, it failed three
@@ -1631,7 +1669,10 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-v2-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          key: playwright-browsers-v2-ubuntu26.04-${{ hashFiles('ui/package-lock.json') }}
+
+      - name: Assert WebKit loads the OS libsoup, not the bundled 3.6.5
+        run: ./scripts/check-webkit-libsoup.sh
 
       - name: Start backend server
         env:

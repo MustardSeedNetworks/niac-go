@@ -142,8 +142,14 @@ GATES = (
 
 # Gates with no file inputs to select on. check-stale-tests is a precondition
 # the make target runs first; check-release-notes compares CHANGELOG.md with
-# the commits since a tag, which only means something on the release branch.
-NOT_INPUT_DRIVEN = {"scripts/check-stale-tests.sh", "scripts/check-release-notes.py"}
+# the commits since a tag, which only means something on the release branch;
+# check-webkit-libsoup inspects the installed Playwright WebKit, and only the
+# e2e CI job runs it (temporary, #2141).
+NOT_INPUT_DRIVEN = {
+    "scripts/check-stale-tests.sh",
+    "scripts/check-release-notes.py",
+    "scripts/check-webkit-libsoup.sh",
+}
 
 
 @dataclass(frozen=True)
