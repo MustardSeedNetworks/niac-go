@@ -70,7 +70,11 @@
     "size": "Tamaño",
     "path": "Ruta",
     "devices": "Dispositivos",
-    "search": "Buscar..."
+    "search": "Buscar...",
+    "disabled": "Deshabilitado",
+    "enabled": "Habilitado",
+    "none": "Ninguno",
+    "required": "Obligatorio"
   },
   "accessibility": {
     "openHelp": "Abrir ayuda",
@@ -92,7 +96,9 @@
     "dismissAlert": "Descartar alerta",
     "dismissMessage": "Descartar mensaje",
     "dismissNotification": "Descartar notificación",
-    "home": "Inicio"
+    "home": "Inicio",
+    "sectionCollapsed": "Sección {{title}}, contraída",
+    "sectionExpanded": "Sección {{title}}, expandida"
   },
   "footer": {
     "version": "Versión",

@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, type LinkProps } from 'react-router';
 import { iconSizes } from '../constants/sizes';
 import type { Action } from '../contexts/permissions';
@@ -72,6 +73,7 @@ const variantStyles: Record<ButtonVariant, Record<ButtonTone, string>> = {
 
 // Loading spinner component
 const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
+  const { t } = useTranslation('common');
   const spinnerSize = size === 'xs' || size === 'sm' ? iconSizes.xs : iconSizes.md;
   return (
     <svg
@@ -80,7 +82,7 @@ const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
       fill="none"
       viewBox="0 0 24 24"
     >
-      <title>Loading</title>
+      <title>{t('status.loading')}</title>
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path
         className="opacity-75"

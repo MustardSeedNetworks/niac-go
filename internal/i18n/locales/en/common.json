@@ -17,6 +17,8 @@
     "openHelp": "Open help",
     "openMenu": "Open menu",
     "openSettings": "Open settings",
+    "sectionCollapsed": "{{title}} section, collapsed",
+    "sectionExpanded": "{{title}} section, expanded",
     "skipToMainContent": "Skip to main content",
     "switchToDarkMode": "Switch to dark mode",
     "switchToLightMode": "Switch to light mode"
@@ -151,9 +153,13 @@
   "labels": {
     "config": "Config",
     "devices": "Devices",
+    "disabled": "Disabled",
+    "enabled": "Enabled",
     "interface": "Interface",
     "interfaces": "Interfaces",
+    "none": "None",
     "path": "Path",
+    "required": "Required",
     "search": "Search...",
     "size": "Size",
     "status": "Status",
