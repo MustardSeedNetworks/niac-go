@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.108.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.0...v0.108.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **i18n:** move the copy the tightened gate finds into the locale files ([#2488](https://github.com/MustardSeedNetworks/niac-go/issues/2488)) ([282e664](https://github.com/MustardSeedNetworks/niac-go/commit/282e66488af611fddfaad0f580533233b7f59c39))
+* **protocols:** bring a pool port up when a client is placed on it ([#2490](https://github.com/MustardSeedNetworks/niac-go/issues/2490)) ([2c5f1d8](https://github.com/MustardSeedNetworks/niac-go/commit/2c5f1d8227652751987021946db9ab3978f0f1a2)), closes [#2363](https://github.com/MustardSeedNetworks/niac-go/issues/2363)
+
+
+### Documentation
+
+* **adr:** link the fleet API styles decision from the ADR index ([#2486](https://github.com/MustardSeedNetworks/niac-go/issues/2486)) ([12dce2b](https://github.com/MustardSeedNetworks/niac-go/commit/12dce2b2d038dc690b2a13fa24b8841b1a65a1c9))
+
 ## [0.108.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.107.1...v0.108.0) (2026-10-04)
 
 
