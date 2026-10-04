@@ -82,6 +82,11 @@ func TestSessionPinRefusals(t *testing.T) {
 			wantCode: http.StatusConflict, wantError: "attachment_port_occupied",
 		},
 		{
+			name: "the port is shut", method: http.MethodPost, path: "/api/v1/sessions/hospital/pins",
+			body: valid, daemonErr: fmt.Errorf("%w: MED-ACC-SW01 Gi1/0/20", ErrAttachmentPortShut),
+			wantCode: http.StatusConflict, wantError: "attachment_port_shut",
+		},
+		{
 			name: "compile refuses the pin", method: http.MethodPost, path: "/api/v1/sessions/hospital/pins",
 			body: valid, daemonErr: outside,
 			wantCode: http.StatusBadRequest, wantError: "preflight_failed",

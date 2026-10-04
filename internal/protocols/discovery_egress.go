@@ -45,10 +45,15 @@ func isDiscoveryAdvertisement(frame []byte) bool {
 // client's cable, the only place a link-local advertisement can come from. On
 // a port pool that is the pool's switch alone; every other device on the
 // attachment network is at least one hop further away. A network-scoped
-// attachment names no port, so any device on the network may be the one.
+// attachment names no port, so any device on the network may be the one. A
+// pool whose every free port is shut has no port to advertise on.
 func (r *fabricRuntime) advertisesAtClient(device *config.Device) bool {
 	if r.placement != nil {
-		return device.Name == r.placement.device
+		if device.Name != r.placement.device {
+			return false
+		}
+		_, ok := r.placement.advertisedPort(r.portAdminUp)
+		return ok
 	}
 	return r.deviceOnAttachment(device)
 }
@@ -59,7 +64,9 @@ func (r *fabricRuntime) advertisesAtClient(device *config.Device) bool {
 // device's first interface, then fallback.
 func (s *Stack) advertisedPortName(device *config.Device, authored, fallback string) string {
 	if s.fabric != nil && s.fabric.placement != nil && device.Name == s.fabric.placement.device {
-		return s.fabric.placement.advertisedPort().Interface
+		if port, ok := s.fabric.placement.advertisedPort(s.fabric.portAdminUp); ok {
+			return port.Interface
+		}
 	}
 	switch {
 	case authored != "":

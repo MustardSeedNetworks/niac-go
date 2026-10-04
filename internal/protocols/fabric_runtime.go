@@ -467,6 +467,24 @@ func (r *fabricRuntime) interfaceAvailable(device *config.Device, name string) b
 	return false
 }
 
+// portAdminUp reports whether a pool port is administratively enabled. Its
+// carrier is not asked: a spare port is down until a client is plugged in.
+func (r *fabricRuntime) portAdminUp(port fabric.AttachmentPort) bool {
+	if r.deviceStates == nil {
+		return true
+	}
+	state := r.deviceStates[r.devicesByName[port.Device]]
+	if state == nil {
+		return false
+	}
+	for _, iface := range state.Snapshot().Network.Interfaces {
+		if iface.Name == port.Interface {
+			return iface.AdminUp
+		}
+	}
+	return false
+}
+
 // interfaceMAC is the hardware address of the named host interface, or nil when
 // this host has no such interface; a session bound to one could not capture
 // on it anyway, so there is nothing of its own to tell apart.

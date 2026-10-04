@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -23,13 +25,22 @@ var errAttachmentPoolNotBound = errors.New("the session is not bound to an attac
 // for the client being moved.
 var errAttachmentPinMissing = errors.New("the attachment pool has no pin for this client")
 
+// ErrAttachmentPortShut refuses a re-pin onto an administratively shut port: a
+// cable plugged into it gets no link, so the client would be cut off.
+var ErrAttachmentPortShut = errors.New("that port is administratively shut")
+
+// portUsable reports whether a pool port can carry a client. A shut port
+// cannot, whatever is plugged into it.
+type portUsable func(fabric.AttachmentPort) bool
+
 // clientPlacement decides which pool port each client MAC is plugged into.
 //
 // A pinned MAC always lands on its pin, and a pinned port is never handed to
 // anyone else, so a pin holds even when its client is the last to arrive. Every
 // other MAC takes the first free unpinned port in the pool's authored order, in
-// the order the clients were first seen. A placement is sticky for the session:
-// a client that falls silent keeps its port, as a tester left plugged in does.
+// the order the clients were first seen. A shut port takes no one, pinned or
+// not. A placement is sticky for the session: a client that falls silent keeps
+// its port, as a tester left plugged in does.
 type clientPlacement struct {
 	mu sync.Mutex
 	// device carries the whole pool: an attachment names one switch.
@@ -86,7 +97,7 @@ type clientMove struct {
 // a new port, and moves mac there if it is already plugged in. Every other
 // client stays where it is: a port another client holds is refused rather
 // than taken from it, as a real port with a cable in it would be.
-func (p *clientPlacement) repin(pins []fabric.AttachmentPin, mac string) (clientMove, error) {
+func (p *clientPlacement) repin(pins []fabric.AttachmentPin, mac string, usable portUsable) (clientMove, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -99,6 +110,10 @@ func (p *clientPlacement) repin(pins []fabric.AttachmentPin, mac string) (client
 	if p.taken[target] && (!placed || current != target) {
 		return clientMove{}, fmt.Errorf("%w: %s %s",
 			ErrAttachmentPortOccupied, p.ports[target].Device, p.ports[target].Interface)
+	}
+	if !usable(p.ports[target]) {
+		return clientMove{}, fmt.Errorf("%w: %s %s",
+			ErrAttachmentPortShut, p.ports[target].Device, p.ports[target].Interface)
 	}
 
 	p.pins, p.reserved = indexes, reserved
@@ -116,9 +131,9 @@ func (p *clientPlacement) repin(pins []fabric.AttachmentPin, mac string) (client
 }
 
 // assign gives mac its port on first sight and returns it. It reports false
-// when mac already has a port, which is every frame after its first, or when
-// the pool has none left for it.
-func (p *clientPlacement) assign(mac string) (fabric.AttachmentPort, bool) {
+// when mac already has a port, which is every frame after its first, when its
+// pinned port is shut, or when the pool has no usable port left for it.
+func (p *clientPlacement) assign(mac string, usable portUsable) (fabric.AttachmentPort, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -127,8 +142,11 @@ func (p *clientPlacement) assign(mac string) (fabric.AttachmentPort, bool) {
 	}
 
 	index, ok := p.pins[mac]
+	if ok && !usable(p.ports[index]) {
+		return fabric.AttachmentPort{}, false
+	}
 	if !ok {
-		index = p.firstFreePort()
+		index = p.firstFreePort(usable)
 	}
 	if index < 0 {
 		if !p.exhausted {
@@ -147,9 +165,9 @@ func (p *clientPlacement) assign(mac string) (fabric.AttachmentPort, bool) {
 	return p.ports[index], true
 }
 
-func (p *clientPlacement) firstFreePort() int {
+func (p *clientPlacement) firstFreePort(usable portUsable) int {
 	for index := range p.ports {
-		if !p.reserved[index] && !p.taken[index] {
+		if !p.reserved[index] && !p.taken[index] && usable(p.ports[index]) {
 			return index
 		}
 	}
@@ -174,37 +192,52 @@ func (p *clientPlacement) lookup(mac string) (fabric.AttachmentPort, bool) {
 // one wire and hears every frame, so one advertisement has to serve them all:
 // it names the earliest-placed client's port and, before anyone is placed,
 // the port the next unpinned client will take, which is where a passive
-// listener lands once it transmits.
-func (p *clientPlacement) advertisedPort() fabric.AttachmentPort {
+// listener lands once it transmits. A shut port advertises nothing, so once
+// the earliest client's port is shut the next free port speaks instead, and
+// with no usable port left the switch is silent.
+func (p *clientPlacement) advertisedPort(usable portUsable) (fabric.AttachmentPort, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	index := p.earliest
+	if index < 0 || !usable(p.ports[index]) {
+		index = p.firstFreePort(usable)
+	}
 	if index < 0 {
-		index = max(p.firstFreePort(), 0)
+		return fabric.AttachmentPort{}, false
 	}
 
-	return p.ports[index]
+	return p.ports[index], true
 }
 
-func (p *clientPlacement) reset() {
+// reset unplugs every client and returns the ports they were plugged into.
+func (p *clientPlacement) reset() []fabric.AttachmentPort {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	var plugged []fabric.AttachmentPort
+	for index, taken := range p.taken {
+		if taken {
+			plugged = append(plugged, p.ports[index])
+		}
+	}
 	clear(p.taken)
 	clear(p.assigned)
 	p.earliest = -1
 	p.exhausted = false
+
+	return plugged
 }
 
 // placeObservedClient plugs a client into its pool port on first sight: the
-// port's device learns the MAC there, and no other device learns it at all.
+// port comes up, its device learns the MAC there, and no other device learns
+// it at all.
 func (s *Stack) placeObservedClient(mac net.HardwareAddr) {
 	if s.fabric == nil || s.fabric.placement == nil {
 		return
 	}
 
-	port, assigned := s.fabric.placement.assign(mac.String())
+	port, assigned := s.fabric.placement.assign(mac.String(), s.fabric.portAdminUp)
 	if !assigned {
 		return
 	}
@@ -213,6 +246,7 @@ func (s *Stack) placeObservedClient(mac net.HardwareAddr) {
 	if device == nil {
 		return
 	}
+	s.setPoolPortCable(device, port.Interface, true)
 	if !s.snmpAgents[device].placeLearnedClient(mac, port.Interface, int(port.VLAN)) {
 		logging.Debugf("Attachment: %s on %s %s has no bridge row to learn it on",
 			mac, port.Device, port.Interface)
@@ -240,7 +274,7 @@ func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareA
 	if index < 0 {
 		return errAttachmentPoolNotBound
 	}
-	move, err := s.fabric.placement.repin(topology.Attachments[index].Pins, mac.String())
+	move, err := s.fabric.placement.repin(topology.Attachments[index].Pins, mac.String(), s.fabric.portAdminUp)
 	if err != nil {
 		return err
 	}
@@ -251,7 +285,10 @@ func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareA
 
 	// Every pool port lands on one network, so the move keeps the client's
 	// VLAN and the entry keyed by it: placing it rewrites its port.
-	agents := s.snmpAgents[s.fabric.devicesByName[move.to.Device]]
+	device := s.fabric.devicesByName[move.to.Device]
+	s.setPoolPortCable(device, move.from.Interface, false)
+	s.setPoolPortCable(device, move.to.Interface, true)
+	agents := s.snmpAgents[device]
 	if !agents.placeLearnedClient(mac, move.to.Interface, int(move.to.VLAN)) {
 		logging.Debugf("Attachment: %s on %s %s has no bridge row to learn it on",
 			mac, move.to.Device, move.to.Interface)
@@ -260,4 +297,35 @@ func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareA
 		mac, move.from.Interface, move.to.Interface, move.to.Device)
 
 	return nil
+}
+
+// unplugPoolClients returns every pool port a client was placed on to the link
+// state it was authored with, "notconnect" for a spare port, as unplugging the
+// tester does on a real switch.
+func (s *Stack) unplugPoolClients() {
+	for _, port := range s.fabric.placement.reset() {
+		if device := s.fabric.devicesByName[port.Device]; device != nil {
+			s.setPoolPortCable(device, port.Interface, false)
+		}
+	}
+}
+
+// setPoolPortCable plugs a cable into a pool port or pulls it out. Carrier
+// follows the cable and operational state follows carrier and admin state, as
+// a "shutdown" on the port leaves it. Pulling the cable restores the carrier
+// the port was authored with, so a pool port authored connected stays up.
+func (s *Stack) setPoolPortCable(device *config.Device, name string, plugged bool) {
+	state := s.deviceStates[device]
+	if state == nil {
+		return
+	}
+	carrier := plugged || statusUp(findConfigInterface(device, name).OperStatus)
+	err := state.UpdateInterface(name, func(iface devicestate.Interface) (devicestate.Interface, error) {
+		iface.CarrierUp = carrier
+		iface.OperUp = iface.AdminUp && carrier
+		return iface, nil
+	})
+	if err != nil {
+		logging.Errorf("Attachment: %s %s link state not updated: %v", device.Name, name, err)
+	}
 }

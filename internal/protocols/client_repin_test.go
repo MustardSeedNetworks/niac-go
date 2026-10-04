@@ -38,8 +38,8 @@ func TestRepinMovesOnlyThatClient(t *testing.T) {
 			t.Errorf("%s FDB port = %q, want %q", mac, got, want)
 		}
 	}
-	if got := stack.fabric.placement.advertisedPort().Interface; got != placementPinnedPort {
-		t.Errorf("LLDP names %q, want the moved client's new port %q", got, placementPinnedPort)
+	if got, _ := stack.fabric.placement.advertisedPort(stack.fabric.portAdminUp); got.Interface != placementPinnedPort {
+		t.Errorf("LLDP names %q, want the moved client's new port %q", got.Interface, placementPinnedPort)
 	}
 	running, _ := stack.RuntimeFabricTopology()
 	if pins := running.Attachments[0].Pins; len(pins) != 1 || pins[0].Interface != placementPinnedPort {

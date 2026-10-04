@@ -77,6 +77,9 @@ func (d *Daemon) movePinnedClient(active *Simulation, mac string) (*fabric.Topol
 	if errors.Is(err, protocols.ErrAttachmentPortOccupied) {
 		return nil, fmt.Errorf("%w: %w", api.ErrAttachmentPortOccupied, err)
 	}
+	if errors.Is(err, protocols.ErrAttachmentPortShut) {
+		return nil, fmt.Errorf("%w: %w", api.ErrAttachmentPortShut, err)
+	}
 	if err != nil {
 		return nil, err
 	}
