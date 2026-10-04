@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.107.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.107.0...v0.107.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **daemon:** size the device budget to the host's memory ([#2471](https://github.com/MustardSeedNetworks/niac-go/issues/2471)) ([1190ce8](https://github.com/MustardSeedNetworks/niac-go/commit/1190ce8f17e41b67007c68a8cdc91f0cc3738928))
+
 ## [0.107.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.2...v0.107.0) (2026-10-04)
 
 
