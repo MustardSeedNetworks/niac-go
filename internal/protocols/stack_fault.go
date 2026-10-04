@@ -18,9 +18,13 @@ var (
 	// ErrFaultUnobservable means the target device exposes no SNMP interface
 	// counters a fault could visibly perturb.
 	ErrFaultUnobservable = errors.New("fault target has no observable SNMP interface counters")
-	// ErrFaultNoPSEPort means a PoE fault names a port that supplies no power,
-	// so cutting it would be indistinguishable from unplugging the cable.
-	ErrFaultNoPSEPort = errors.New("fault target port supplies no PoE")
+	// ErrFaultNoPSEPort means a PoE fault names a port without a synthesized PSE
+	// row: either it supplies no power, so cutting it would be indistinguishable
+	// from unplugging the cable, or its PSE table comes from a capture, whose
+	// rows a fault cannot change.
+	ErrFaultNoPSEPort = errors.New("fault target is not a synthesized PoE port: " +
+		"poe_loss arms only where NIAC serves the port's POWER-ETHERNET-MIB row, " +
+		"not on a port that supplies no power or one whose PSE table comes from a capture")
 )
 
 // InterfaceFaultTarget describes one device's current fault-injection surface.

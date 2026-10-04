@@ -1183,6 +1183,13 @@ A device backed by a capture walk that already carries POWER-ETHERNET-MIB keeps
 the captured table untouched — a real PSE is the authority on its own group
 count, port numbering and consumption.
 
+So `poe_loss` cannot be armed on such a device. A fault would have to override
+one port's captured row, and that needs the capture's `group.port` index
+mapped to an interface; a PSE port index is not a bridge port index, and no
+capture in the corpus states the relationship. PoE faults arm only on PSE
+ports NIAC synthesizes, and any other port is refused with
+`fault_no_pse_port`, naming why.
+
 #### Printers (Printer-MIB)
 
 A device with `type: printer` answers Printer-MIB (RFC 3805,

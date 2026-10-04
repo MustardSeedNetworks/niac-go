@@ -231,6 +231,8 @@ func writeInterfaceFaultError(w http.ResponseWriter, r *http.Request, err error)
 		status, code = http.StatusConflict, "device_ambiguous"
 	case errors.Is(err, protocols.ErrFaultUnobservable):
 		code = "fault_not_observable"
+	case errors.Is(err, protocols.ErrFaultNoPSEPort):
+		code = "fault_no_pse_port"
 	case errors.Is(err, protocols.ErrFaultServiceAbsent):
 		code = "fault_service_absent"
 	case errors.Is(err, devicestate.ErrDeviceFaultTypeInvalid):

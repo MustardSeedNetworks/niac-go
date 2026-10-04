@@ -126,6 +126,7 @@ func (a *Agent) refreshWalkedPoEMIB(walkOwnsPoE bool) {
 }
 
 func (a *Agent) registerPoEMIB() {
+	a.poeSynthesized = true
 	for _, index := range a.poePortIndexes() {
 		a.registerPoEPortEntry(index)
 	}
@@ -240,11 +241,14 @@ func (a *Agent) registerPoEMainEntry() {
 }
 
 // PoEFaultObservable reports whether a PoE fault on name would be visible: the
-// port must actually be a PSE port. Cutting power on a port that supplies none
-// would arm a fault indistinguishable from link_down, which is a success message
-// with nothing behind it.
+// port must be a PSE port whose row NIAC synthesized. Cutting power on a port
+// that supplies none would arm a fault indistinguishable from link_down, which
+// is a success message with nothing behind it. A captured PSE table is no
+// better: its rows are static, and no capture in the corpus says how its
+// vendor-numbered port index maps to an interface (niac-go#1972), so a port
+// index that happens to equal the ifIndex is not evidence of the same port.
 func (a *Agent) PoEFaultObservable(name string) bool {
-	if a.device == nil || a.device.PoEConfig == nil {
+	if a.device == nil || a.device.PoEConfig == nil || !a.poeSynthesized {
 		return false
 	}
 	index, ok := a.ifIndexForInterface(name)

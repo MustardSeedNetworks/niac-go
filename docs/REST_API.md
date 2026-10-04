@@ -438,6 +438,10 @@ does not run that service is refused with `fault_service_absent`. Device
 faults change no MIB object: a faulted server keeps its inventory, interfaces
 and counters, and only its answers change.
 
+`targets` offers `PoE Loss` only on a port whose POWER-ETHERNET-MIB row NIAC
+synthesizes; anywhere else, including a port of a capture that carries its own
+PSE table, it is refused with `fault_no_pse_port`.
+
 `POST /api/v1/errors` injects an error on a specific device interface:
 
 ```json
