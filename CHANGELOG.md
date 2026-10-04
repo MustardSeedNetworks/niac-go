@@ -5,6 +5,38 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.108.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.2...v0.108.3) (2026-10-04)
+
+
+### Bug Fixes
+
+* **behavior:** log a timeline that stops on a refused fault ([#2503](https://github.com/MustardSeedNetworks/niac-go/issues/2503)) ([8acb2e3](https://github.com/MustardSeedNetworks/niac-go/commit/8acb2e31ef5c97e53225db438ee33486f86891ee)), closes [#2482](https://github.com/MustardSeedNetworks/niac-go/issues/2482)
+* **fabric:** send router advertisements from routers on the attachment network ([#2508](https://github.com/MustardSeedNetworks/niac-go/issues/2508)) ([67720ad](https://github.com/MustardSeedNetworks/niac-go/commit/67720ad65925c571608c12775a61e8a5b2c160a1))
+* **snmp:** refuse poe_loss on a captured PSE table and say why ([#2497](https://github.com/MustardSeedNetworks/niac-go/issues/2497)) ([f653e8e](https://github.com/MustardSeedNetworks/niac-go/commit/f653e8eaa015721b6584bfd692b3ede7dfff3fd5)), closes [#1972](https://github.com/MustardSeedNetworks/niac-go/issues/1972)
+
+
+### Documentation
+
+* **design:** name the true source of the Nexus 7000 non-numeric OIDs ([#2502](https://github.com/MustardSeedNetworks/niac-go/issues/2502)) ([b86a46c](https://github.com/MustardSeedNetworks/niac-go/commit/b86a46caabcbe6bc08c8264e87ca469e021173db))
+* explain where testers attach and add a three-tester runbook ([#2506](https://github.com/MustardSeedNetworks/niac-go/issues/2506)) ([de64bf5](https://github.com/MustardSeedNetworks/niac-go/commit/de64bf5b62cfc35894eb495dbad42b1a8780da7d)), closes [#2504](https://github.com/MustardSeedNetworks/niac-go/issues/2504)
+
+
+### Tests
+
+* **daemon:** drive the stale capture completion directly instead of by call order ([#2507](https://github.com/MustardSeedNetworks/niac-go/issues/2507)) ([33ebaaf](https://github.com/MustardSeedNetworks/niac-go/commit/33ebaafbae78be8fc3550c2f9521679cf9fd0bf4)), closes [#2458](https://github.com/MustardSeedNetworks/niac-go/issues/2458)
+
+
+### Continuous Integration
+
+* **e2e:** run the browser suites on Ubuntu 26.04 to avoid bundled libsoup 3.6.5 ([#2500](https://github.com/MustardSeedNetworks/niac-go/issues/2500)) ([b3b3ffa](https://github.com/MustardSeedNetworks/niac-go/commit/b3b3ffa40890c0f25cbe21884e61b7818f51f2a3))
+* **release:** fail the merge queue on a commit release-please cannot parse ([#2495](https://github.com/MustardSeedNetworks/niac-go/issues/2495)) ([19f9e5e](https://github.com/MustardSeedNetworks/niac-go/commit/19f9e5eb5992361833b8ab3cb1e1c06d7eba333e)), closes [#2389](https://github.com/MustardSeedNetworks/niac-go/issues/2389)
+
+
+### Miscellaneous
+
+* **deps:** update msys2/setup-msys2 action to v2.33.0 ([#2496](https://github.com/MustardSeedNetworks/niac-go/issues/2496)) ([a401284](https://github.com/MustardSeedNetworks/niac-go/commit/a401284b4a89367ba9d564169c983630f1bb85cd))
+* **scenario:** record babble, map_to_ip and ttl as hand-authoring only ([#2498](https://github.com/MustardSeedNetworks/niac-go/issues/2498)) ([dc7ee93](https://github.com/MustardSeedNetworks/niac-go/commit/dc7ee933844dd86b6bcd62701f36c2a8c1c488d9)), closes [#2138](https://github.com/MustardSeedNetworks/niac-go/issues/2138)
+
 ## [0.108.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.1...v0.108.2) (2026-10-04)
 
 
