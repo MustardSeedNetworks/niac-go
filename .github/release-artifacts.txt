@@ -1,0 +1,21 @@
+# Primary artifacts every niac-go release publishes, checked by the fleet
+# release-conformance run (MustardSeedNetworks/.github,
+# scripts/check-release-artifacts.py). {version} is the tag without its "v".
+# Each line's .sbom.json and .cosign.bundle files, checksums.txt and the
+# provenance are required without being listed. Change this file in the same
+# PR that changes what .goreleaser.yml publishes.
+
+niac-{version}-darwin-arm64.tar.gz
+niac-{version}-linux-amd64.tar.gz
+niac-{version}-linux-arm64.tar.gz
+niac-{version}-windows-amd64.zip
+niac-{version}-windows-arm64.zip
+niac_{version}_amd64.deb
+niac_{version}_arm64.deb
+niac-{version}-1.x86_64.rpm
+niac-{version}-1.aarch64.rpm
+
+# The scenario and pack content ships as its own architecture-independent
+# package.
+niac-content_{version}_all.deb
+niac-content-{version}-1.noarch.rpm
