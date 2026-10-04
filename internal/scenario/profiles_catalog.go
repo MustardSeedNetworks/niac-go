@@ -69,6 +69,24 @@ func commonProfiles() []DeviceProfile {
 	}
 }
 
+// dataCentreProfiles are the shared storage, virtualisation and backup tier a
+// vertical's workload systems run on and are backed up by. Each answers with
+// the sysObjectID its platform reports, which is what a discovery tool matches
+// to file it as a hypervisor, a storage array or a Windows server rather than
+// as one more generic host.
+func dataCentreProfiles() []DeviceProfile {
+	hypervisor := newProfile("hypervisor", "server", "dell", "PowerEdge R760", "VMware ESXi",
+		"ESXi 8.0.3", synth.VendorGeneric, synth.TypeServer)
+	hypervisor.SysObjectID = "1.3.6.1.4.1.6876.4.1"
+	storage := newProfile("storage-array", "server", "netapp", "AFF A250", "NetApp AFF A250",
+		"ONTAP 9.15.1", synth.VendorGeneric, synth.TypeServer)
+	storage.SysObjectID = "1.3.6.1.4.1.789.2.5"
+	backup := newProfile("backup-server", "server", "dell", "PowerEdge R760xd2",
+		"Veeam Backup & Replication", "Windows Server 2022", synth.VendorGeneric, synth.TypeServer)
+	backup.SysObjectID = "1.3.6.1.4.1.311.1.1.3.1.2"
+	return []DeviceProfile{hypervisor, storage, backup}
+}
+
 // clientProfiles are the client tier, the machines people sit in front of
 // across the verticals.
 func clientProfiles() []DeviceProfile {

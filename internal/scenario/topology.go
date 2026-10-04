@@ -1,9 +1,6 @@
 package scenario
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 func allTrunkVLANs() []int {
 	return []int{vlanManagement, vlanData, vlanWiFiCorp, vlanWiFiGuest, vlanServers, vlanVoiceIoT}
@@ -286,30 +283,37 @@ func addSiteEndpoints(links linkMap, site Site, request Request) {
 	}
 
 	systems := workloadSystems(request.EndpointProfile)
-	services := make([]string, 0, len(serviceRoles())+counts.WirelessControllers+len(systems))
+	tier := dataCentreTier(request, site)
+	services := make([]serverLeafPort, 0,
+		len(serviceRoles())+counts.WirelessControllers+len(systems)+len(tier))
 	for _, role := range serviceRoles() {
-		services = append(services, serviceName(request.EndpointProfile, role)+"01")
+		vlan, _ := servicePlacement(role)
+		services = append(services, serverLeafPort{serviceName(request.EndpointProfile, role) + "01", "eth0", vlan})
 	}
 	for index := 1; index <= counts.WirelessControllers; index++ {
-		services = append(services, fmt.Sprintf("WLC%02d", index))
+		services = append(services,
+			serverLeafPort{fmt.Sprintf("WLC%02d", index), "TenGigabitEthernet0/0/0", vlanServers})
 	}
 	// After the controllers, so adding a vertical's system moves no port that
-	// an existing server or controller already holds.
+	// an existing server or controller already holds; the data centre tier
+	// follows for the same reason.
 	for _, system := range systems {
-		services = append(services, system.name+"01")
+		services = append(services, serverLeafPort{system.name + "01", "eth0", vlanServers})
+	}
+	for _, system := range tier {
+		services = append(services, serverLeafPort{system.name + "01", system.nic, vlanServers})
 	}
 	for index, service := range services {
 		switchIndex := index%counts.ServerSwitches + 1
-		vlan := vlanServers
-		if service == "DHCP01" {
-			vlan = vlanData
-		}
-		remoteInterface := "eth0"
-		if strings.HasPrefix(service, "WLC") {
-			remoteInterface = "TenGigabitEthernet0/0/0"
-		}
 		addFDB(links, numberedName(site.Code+"-SRV-SW", switchIndex),
-			fmt.Sprintf("TenGigabitEthernet1/0/%d", index+serverPortOffset), site.Code+"-"+service,
-			remoteInterface, vlan)
+			fmt.Sprintf("TenGigabitEthernet1/0/%d", index+serverPortOffset), site.Code+"-"+service.name,
+			service.nic, service.vlan)
 	}
+}
+
+// serverLeafPort is one device patched into a site's server leaf: its name
+// below the site code, the interface it uplinks on and the VLAN it lands in.
+type serverLeafPort struct {
+	name, nic string
+	vlan      int
 }
