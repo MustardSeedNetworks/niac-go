@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.107.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.107.0...v0.107.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **daemon:** size the device budget to the host's memory ([#2471](https://github.com/MustardSeedNetworks/niac-go/issues/2471)) ([1190ce8](https://github.com/MustardSeedNetworks/niac-go/commit/1190ce8f17e41b67007c68a8cdc91f0cc3738928))
+* **scenario:** pack devices trap link changes to the site collector, which decodes them ([#2475](https://github.com/MustardSeedNetworks/niac-go/issues/2475)) ([c0baf23](https://github.com/MustardSeedNetworks/niac-go/commit/c0baf231170ad775b8f39d8eceea414b9aba549d)), closes [#2472](https://github.com/MustardSeedNetworks/niac-go/issues/2472)
+* **ui:** lay a chain of switches out as one rank ([#2477](https://github.com/MustardSeedNetworks/niac-go/issues/2477)) ([2ac8c05](https://github.com/MustardSeedNetworks/niac-go/commit/2ac8c05f3d376f284f0863faf7bc291eeac4dd9e)), closes [#2106](https://github.com/MustardSeedNetworks/niac-go/issues/2106)
+
+
+### Continuous Integration
+
+* **release:** declare the artifacts each release publishes ([#2479](https://github.com/MustardSeedNetworks/niac-go/issues/2479)) ([d97bae5](https://github.com/MustardSeedNetworks/niac-go/commit/d97bae5eea05cbdc68c5f8c7f98f0d5848bbadc7)), closes [#2478](https://github.com/MustardSeedNetworks/niac-go/issues/2478)
+
 ## [0.107.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.106.2...v0.107.0) (2026-10-04)
 
 
