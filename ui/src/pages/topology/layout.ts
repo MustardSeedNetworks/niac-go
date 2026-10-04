@@ -5,6 +5,7 @@
 import { MarkerType } from '@xyflow/react';
 import dagre from 'dagre';
 import type { DeviceSummary, TopologyLink } from '../../api/types';
+import { foldChains } from './chains';
 import type { DeviceNode, DeviceNodeData, LinkEdge, LinkEdgeData } from './types';
 import { linkSpeedColors } from './types';
 
@@ -236,12 +237,15 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   // bidirectional trunks in BuildTopology, but neighbour-discovered
   // adjacencies can echo a trunk).
   const seenEdgePairs = new Set<string>();
+  const skeleton = new Map<string, string[]>();
   for (const link of links) {
     if (packed.has(link.source) || packed.has(link.target)) continue;
     const key = [link.source, link.target].sort().join('|');
     if (seenEdgePairs.has(key)) continue;
     seenEdgePairs.add(key);
     g.setEdge(link.source, link.target);
+    skeleton.set(link.source, [...(skeleton.get(link.source) ?? []), link.target]);
+    skeleton.set(link.target, [...(skeleton.get(link.target) ?? []), link.source]);
   }
 
   dagre.layout(g);
@@ -251,7 +255,7 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   // rank out as one row however wide it gets: enterprise-scale ranks 48
   // switches together, about 14,000 units across against a graph 2,500 tall,
   // which is a horizontal smear on any screen (#2106).
-  const ranks = rankOrder(devices, packed, g);
+  const ranks = foldChains(rankOrder(devices, packed, g), skeleton);
 
   // A rank wider than this wraps onto another row, the way a paragraph does.
   // The width comes from the device count rather than being picked: the same

@@ -372,3 +372,55 @@ describe('layoutNodes — packing leaves under their device', () => {
     expect(first?.position.y).not.toBe(second?.position.y);
   });
 });
+
+describe('layoutNodes — a chain of switches', () => {
+  // An industrial ring: eight switches daisy-chained in a loop, joined to the
+  // rest of the network at ring-01 and ring-05 only, each carrying three
+  // endpoints. Dagre ranks every hop one level deeper, so the two halves of
+  // the ring hung down as columns, and the manufacturing pack came out nine
+  // times taller than it was wide (#2106).
+  const ring = Array.from({ length: 8 }, (_, i) => `ring-0${i + 1}`);
+  const devices: DeviceSummary[] = [
+    { name: 'core', type: 'layer3-switch', ips: [], protocols: [] },
+    { name: 'dist-a', type: 'switch', ips: [], protocols: [] },
+    { name: 'dist-b', type: 'switch', ips: [], protocols: [] },
+    ...ring.flatMap((name) => [
+      { name, type: 'switch', ips: [], protocols: [] },
+      ...[0, 1, 2].map((i) => ({ name: `${name}-plc-${i}`, type: 'iot', ips: [], protocols: [] })),
+    ]),
+  ];
+  const links: TopologyLink[] = [
+    { source: 'core', target: 'dist-a', label: '' },
+    { source: 'core', target: 'dist-b', label: '' },
+    { source: 'dist-a', target: 'ring-01', label: '' },
+    { source: 'dist-b', target: 'ring-05', label: '' },
+    ...ring.map((name, i) => ({
+      source: name,
+      target: ring[(i + 1) % ring.length] ?? '',
+      label: '',
+    })),
+    ...ring.flatMap((name) =>
+      [0, 1, 2].map((i) => ({ source: name, target: `${name}-plc-${i}`, label: '' })),
+    ),
+  ];
+  const nodes = layoutNodes(devices, links, 'hierarchical');
+  const rankOf = (name: string) => nodes.find((node) => node.id === name)?.data.rank;
+
+  it('lays each pass-through run of the ring out on one rank', () => {
+    for (const run of [
+      ['ring-02', 'ring-03', 'ring-04'],
+      ['ring-06', 'ring-07', 'ring-08'],
+    ]) {
+      expect(run.map(rankOf)).toEqual(run.map(() => rankOf(run[0] ?? '')));
+    }
+  });
+
+  it('keeps a run in chain order, so each hop is between neighbours', () => {
+    const at = (name: string) => nodes.find((node) => node.id === name)?.position;
+    const xs = ['ring-02', 'ring-03', 'ring-04'].map((name) => at(name)?.x ?? Number.NaN);
+    const ascending = xs.every((x, i) => i === 0 || x > (xs[i - 1] ?? Number.NaN));
+    const descending = xs.every((x, i) => i === 0 || x < (xs[i - 1] ?? Number.NaN));
+
+    expect(ascending || descending).toBe(true);
+  });
+});
