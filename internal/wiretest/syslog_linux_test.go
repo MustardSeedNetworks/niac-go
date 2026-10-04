@@ -49,9 +49,13 @@ func TestAuthoredLinkFaultEmitsSyslogOnTheWire(t *testing.T) {
 		t.Fatal(err)
 	}
 	var previous uint64
+	// A link fault is a link change, so each fault message is followed by the
+	// link message it caused (#2472).
 	for _, expected := range []syslogExpectation{
-		{"<132>1", "FAULT_UPDATED", "fault.updated"},
-		{"<133>1", "FAULT_CLEARED", "fault.cleared"},
+		{"<132>1", "FAULT_UPDATED", "fault.updated", "Access1:link_down"},
+		{"<132>1", "LINK_DOWN", "interface.updated", "Access1"},
+		{"<133>1", "FAULT_CLEARED", "fault.cleared", "Access1:link_down"},
+		{"<133>1", "LINK_UP", "interface.updated", "Access1"},
 	} {
 		fields := receiveSyslog(t, collector, expected)
 		version, parseErr := strconv.ParseUint(strings.TrimPrefix(fields[7], "version="), 10, 64)
@@ -62,7 +66,7 @@ func TestAuthoredLinkFaultEmitsSyslogOnTheWire(t *testing.T) {
 	}
 }
 
-type syslogExpectation struct{ priority, messageID, kind string }
+type syslogExpectation struct{ priority, messageID, kind, target string }
 
 func receiveSyslog(t *testing.T, collector *net.UDPConn, expected syslogExpectation) []string {
 	t.Helper()
@@ -76,7 +80,7 @@ func receiveSyslog(t *testing.T, collector *net.UDPConn, expected syslogExpectat
 	if source.IP.String() != "10.254.200.1" || source.Port != 514 || len(fields) != 10 ||
 		fields[0] != expected.priority || fields[2] != "LAB-SYSLOG-R1" || fields[3] != "niac" ||
 		fields[4] != "-" || fields[5] != expected.messageID || fields[6] != "-" ||
-		fields[8] != "kind="+expected.kind || fields[9] != `target="Access1:link_down"` {
+		fields[8] != "kind="+expected.kind || fields[9] != "target="+strconv.Quote(expected.target) {
 		t.Fatalf("unexpected syslog from %s: %q", source, message)
 	}
 	if _, err = time.Parse(time.RFC3339Nano, fields[1]); err != nil {

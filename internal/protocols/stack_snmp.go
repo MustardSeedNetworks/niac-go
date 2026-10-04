@@ -3,6 +3,7 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 
@@ -387,7 +388,7 @@ func (s *Stack) deviceV3Engine(device *config.Device) *snmp.V3Engine {
 }
 
 // acknowledgeInform clears the retry for an inform a receiver just answered.
-func (s *Stack) acknowledgeInform(requestID uint32, receiver string) bool {
+func (s *Stack) acknowledgeInform(requestID uint32, receiver netip.AddrPort) bool {
 	if s == nil || s.notifications == nil {
 		return false
 	}

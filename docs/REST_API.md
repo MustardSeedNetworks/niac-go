@@ -166,7 +166,13 @@ itself simulated. Only the attachment network is physical, so a notification
 sent from any other network never appears on the wire; its receiver records it
 instead. Each entry names the `receiver`, the `sender`, the `source` address the
 sender used, the `protocol` (`syslog` or `snmp`), the syslog `message`, and
-`receivedAt`. `?device=<name>` returns one receiver's entries in arrival order;
+`receivedAt`. An SNMPv2c notification also carries its `pdu` (`trap` or
+`inform`), its `trapOid` and its `variables` (`oid`, `type`, `value` each); an
+SNMPv3 one carries none of the three, since the collector holds no credentials
+for the sender. The collector answers an inform, so the sender does not resend
+it. Pack devices trap linkDown and linkUp as an interface changes, a `link_down`
+or `poe_loss` fault included, and coldStart on a reboot.
+`?device=<name>` returns one receiver's entries in arrival order;
 a name the session does not run answers `404 device_not_found`. A collector
 keeps its newest 256 entries, and the list empties when the session stops.
 

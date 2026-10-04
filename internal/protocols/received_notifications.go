@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
@@ -34,8 +36,21 @@ type ReceivedNotification struct {
 	Source   string `json:"source"`
 	Protocol string `json:"protocol"`
 	// Message is the syslog text. It is empty for an SNMP notification.
-	Message    string    `json:"message,omitempty"`
-	ReceivedAt time.Time `json:"receivedAt"`
+	Message string `json:"message,omitempty"`
+	// PDU, TrapOID and Variables decode an SNMPv2c notification. An SNMPv3 one
+	// is recorded without them: the collector holds no USM credentials for the
+	// sender, so it cannot read the PDU.
+	PDU        string                 `json:"pdu,omitempty"`
+	TrapOID    string                 `json:"trapOid,omitempty"`
+	Variables  []NotificationVariable `json:"variables,omitempty"`
+	ReceivedAt time.Time              `json:"receivedAt"`
+}
+
+// NotificationVariable is one variable binding of a received SNMP notification.
+type NotificationVariable struct {
+	OID   string `json:"oid"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 type receivedNotificationLog struct {
@@ -130,9 +145,61 @@ func (s *stackDatagramSender) deliverInsideSimulation(
 	}
 	if received.Protocol == notificationProtocolSyslog {
 		received.Message = string(notification.payload)
+	} else if packet := decodeSNMPv2cNotification(notification.payload); packet != nil {
+		received.PDU, received.TrapOID, received.Variables = notificationPDUName(packet.PDUType),
+			notificationTrapOID(packet.Variables), notificationVariables(packet.Variables)
+		// The receiver answers an inform, as a manager does; without the
+		// Response the sender resends it for its whole retry budget.
+		if packet.PDUType == gosnmp.InformRequest {
+			s.stack.acknowledgeInform(packet.RequestID,
+				netip.AddrPortFrom(notification.destination, notification.destinationPort))
+		}
 	}
 	s.stack.receivedNotifications.record(received)
 	return true, nil
+}
+
+func decodeSNMPv2cNotification(payload []byte) *gosnmp.SnmpPacket {
+	decoder := &gosnmp.GoSNMP{Version: gosnmp.Version2c}
+	packet, err := decoder.SnmpDecodePacket(payload)
+	if err != nil || packet.Version != gosnmp.Version2c ||
+		(packet.PDUType != gosnmp.SNMPv2Trap && packet.PDUType != gosnmp.InformRequest) {
+		return nil
+	}
+	return packet
+}
+
+func notificationPDUName(pduType gosnmp.PDUType) string {
+	if pduType == gosnmp.InformRequest {
+		return "inform"
+	}
+	return "trap"
+}
+
+// snmpTrapOIDInstance is snmpTrapOID.0, the varbind naming the notification.
+const snmpTrapOIDInstance = ".1.3.6.1.6.3.1.1.4.1.0"
+
+func notificationTrapOID(variables []gosnmp.SnmpPDU) string {
+	for _, variable := range variables {
+		if variable.Name == snmpTrapOIDInstance {
+			if oid, ok := variable.Value.(string); ok {
+				return oid
+			}
+		}
+	}
+	return ""
+}
+
+func notificationVariables(variables []gosnmp.SnmpPDU) []NotificationVariable {
+	out := make([]NotificationVariable, 0, len(variables))
+	for _, variable := range variables {
+		value := fmt.Sprint(variable.Value)
+		if octets, ok := variable.Value.([]byte); ok {
+			value = string(octets)
+		}
+		out = append(out, NotificationVariable{OID: variable.Name, Type: variable.Type.String(), Value: value})
+	}
+	return out
 }
 
 func (s *stackDatagramSender) onAttachmentSegment(origin *config.Device, source netip.Addr) bool {

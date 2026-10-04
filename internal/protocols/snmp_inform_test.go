@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"net/netip"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
 
 // countingSender records how many times a payload was put on the wire.
@@ -25,6 +27,10 @@ func (s *countingSender) Send(
 
 	return nil
 }
+
+// collector is the receiver the inform tests send to, as the Response from it
+// arrives: its address and the port it listens on.
+func collector() netip.AddrPort { return netip.MustParseAddrPort("10.0.0.99:162") }
 
 // informManager wires a manager with a fake sender and one registered device.
 //
@@ -54,9 +60,9 @@ func TestAcknowledgedInformStopsRetrying(t *testing.T) {
 	traps := &config.TrapConfig{
 		Inform: true, InformRetries: 5, InformTimeoutSeconds: 1,
 	}
-	manager.trackInform(device, traps, "10.0.0.99", 4242, []byte("payload"))
+	manager.trackInform(device, traps, "10.0.0.99:162", 4242, []byte("payload"))
 
-	if !manager.AcknowledgeInform(4242, "10.0.0.99") {
+	if !manager.AcknowledgeInform(4242, collector()) {
 		t.Fatal("AcknowledgeInform did not find the inform it was answering")
 	}
 
@@ -73,15 +79,18 @@ func TestAcknowledgementIsMatchedToItsReceiver(t *testing.T) {
 	manager, _, device := informManager(t)
 
 	traps := &config.TrapConfig{Inform: true, InformRetries: 1, InformTimeoutSeconds: 30}
-	manager.trackInform(device, traps, "10.0.0.99", 7, []byte("payload"))
+	manager.trackInform(device, traps, "10.0.0.99:162", 7, []byte("payload"))
 
-	if manager.AcknowledgeInform(7, "10.0.0.100") {
+	if manager.AcknowledgeInform(7, netip.MustParseAddrPort("10.0.0.100:162")) {
 		t.Error("an acknowledgement from a different receiver cleared the inform")
 	}
-	if manager.AcknowledgeInform(8, "10.0.0.99") {
+	if manager.AcknowledgeInform(7, netip.MustParseAddrPort("10.0.0.99:1162")) {
+		t.Error("an acknowledgement from a different port cleared the inform")
+	}
+	if manager.AcknowledgeInform(8, collector()) {
 		t.Error("an acknowledgement for a different request ID cleared the inform")
 	}
-	if !manager.AcknowledgeInform(7, "10.0.0.99") {
+	if !manager.AcknowledgeInform(7, collector()) {
 		t.Error("the matching acknowledgement did not clear the inform")
 	}
 }
@@ -92,7 +101,7 @@ func TestUnacknowledgedInformRetriesThenGivesUp(t *testing.T) {
 	manager, sender, device := informManager(t)
 
 	traps := &config.TrapConfig{Inform: true, InformRetries: 2, InformTimeoutSeconds: 1}
-	manager.trackInform(device, traps, "10.0.0.99", 99, []byte("payload"))
+	manager.trackInform(device, traps, "10.0.0.99:162", 99, []byte("payload"))
 
 	for attempt := 1; attempt <= 2; attempt++ {
 		select {
@@ -122,7 +131,7 @@ func TestStopInformsCancelsOutstandingRetries(t *testing.T) {
 	manager, sender, device := informManager(t)
 
 	traps := &config.TrapConfig{Inform: true, InformRetries: 5, InformTimeoutSeconds: 1}
-	manager.trackInform(device, traps, "10.0.0.99", 1, []byte("payload"))
+	manager.trackInform(device, traps, "10.0.0.99:162", 1, []byte("payload"))
 	manager.stopInforms()
 
 	select {
@@ -181,12 +190,33 @@ func TestResetStopsOutstandingInforms(t *testing.T) {
 	manager, sender, device := informManager(t)
 
 	traps := &config.TrapConfig{Inform: true, InformRetries: 5, InformTimeoutSeconds: 1}
-	manager.trackInform(device, traps, "10.0.0.99", 55, []byte("payload"))
+	manager.trackInform(device, traps, "10.0.0.99:162", 55, []byte("payload"))
 	manager.Reset()
 
 	select {
 	case <-sender.sends:
 		t.Error("a retry fired after the manager was reset")
 	case <-time.After(1500 * time.Millisecond):
+	}
+}
+
+// A receiver answers from the port it listens on, and the send path names the
+// receiver with its port. Before #2472 the inform was tracked as "ip:162" and
+// the wire acknowledged it as "ip", so no inform was ever acknowledged and every
+// one was resent for its whole retry budget.
+func TestReceiverResponseAcknowledgesTheSentInform(t *testing.T) {
+	for _, receiver := range []string{"10.0.0.99", "10.0.0.99:162"} {
+		t.Run(receiver, func(t *testing.T) {
+			manager, _, device := informManager(t)
+			device.SNMPConfig.Traps = &config.TrapConfig{
+				Enabled: true, Inform: true, Receivers: []string{receiver}, InformTimeoutSeconds: 30,
+			}
+			manager.sendTrap(device, snmp.OIDColdStart, nil, 4242)
+			t.Cleanup(manager.stopInforms)
+
+			if !manager.AcknowledgeInform(4242, collector()) {
+				t.Fatal("the receiver's Response did not acknowledge the inform sendTrap sent")
+			}
+		})
 	}
 }

@@ -97,3 +97,86 @@ func faultStore() *devicestate.Store {
 	}})
 	return store
 }
+
+// A carrier fault is a link change: setting one records an interface event with
+// the effective state on both sides, which is what link traps follow (#2472). A
+// counter fault moves no link, and neither does a second carrier fault on a
+// link that is already down.
+func TestStoreCarrierFaultRecordsTheLinkChange(t *testing.T) {
+	store := faultStore()
+
+	cursor := store.Snapshot().Version
+	if err := store.SetInterfaceFault("Gi0/2", devicestate.FaultUtilization, 90); err != nil {
+		t.Fatal(err)
+	}
+	if events := linkEvents(store, cursor); len(events) != 0 {
+		t.Fatalf("a utilization fault recorded link changes %+v", events)
+	}
+
+	cursor = store.Snapshot().Version
+	if err := store.SetInterfaceFault("Gi0/2", devicestate.FaultLinkDown, 1); err != nil {
+		t.Fatal(err)
+	}
+	wantLinkChange(t, linkEvents(store, cursor), false)
+
+	cursor = store.Snapshot().Version
+	if err := store.SetInterfaceFault("Gi0/2", devicestate.FaultPoELoss, 1); err != nil {
+		t.Fatal(err)
+	}
+	if events := linkEvents(store, cursor); len(events) != 0 {
+		t.Fatalf("a second carrier fault on a down link recorded %+v", events)
+	}
+}
+
+// Every way of clearing the last carrier fault brings the link back up.
+func TestStoreCarrierFaultClearRecordsTheLinkChange(t *testing.T) {
+	for name, clearFaults := range map[string]func(*devicestate.Store) error{
+		"zero value": func(store *devicestate.Store) error {
+			if err := store.SetInterfaceFault("Gi0/2", devicestate.FaultPoELoss, 0); err != nil {
+				return err
+			}
+			return store.SetInterfaceFault("Gi0/2", devicestate.FaultLinkDown, 0)
+		},
+		"interface": func(store *devicestate.Store) error { return store.ClearInterfaceFaults("Gi0/2") },
+		"all":       func(store *devicestate.Store) error { store.ClearAllFaults(); return nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			store := faultStore()
+			for _, carrier := range []devicestate.FaultType{devicestate.FaultLinkDown, devicestate.FaultPoELoss} {
+				if err := store.SetInterfaceFault("Gi0/2", carrier, 1); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cursor := store.Snapshot().Version
+			if err := clearFaults(store); err != nil {
+				t.Fatal(err)
+			}
+			wantLinkChange(t, linkEvents(store, cursor), true)
+		})
+	}
+}
+
+func linkEvents(store *devicestate.Store, after uint64) []devicestate.Event {
+	events, _ := store.EventsAfter(after)
+	var links []devicestate.Event
+	for _, event := range events {
+		if event.Kind == devicestate.EventInterfaceUpdated {
+			links = append(links, event)
+		}
+	}
+	return links
+}
+
+// wantLinkChange asserts events is Gi0/2, IF-MIB index 2, going to up.
+func wantLinkChange(t *testing.T, events []devicestate.Event, up bool) {
+	t.Helper()
+	if len(events) != 1 {
+		t.Fatalf("interface events = %+v, want one", events)
+	}
+	event := events[0]
+	if event.Target != "Gi0/2" || event.InterfaceIndex != 2 ||
+		event.PreviousInterface.OperUp == up || event.Interface.OperUp != up || event.Interface.CarrierUp != up {
+		t.Fatalf("interface event = %+v (%+v -> %+v), want Gi0/2 operUp %v",
+			event, event.PreviousInterface, event.Interface, up)
+	}
+}

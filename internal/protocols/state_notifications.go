@@ -732,10 +732,13 @@ func (m *stateNotificationManager) sendTrap(
 
 	for _, receiver := range traps.Receivers {
 		target := normalizeReceiver(receiver, snmp.DefaultSNMPTrapPort)
-		m.send(device, target, snmp.DefaultSNMPTrapPort, payload)
+		// Tracked before it is sent: a simulated receiver acknowledges it
+		// during the send, and an acknowledgement for an inform nobody is
+		// waiting on is discarded.
 		if traps.Inform {
 			m.trackInform(device, traps, target, requestID, payload)
 		}
+		m.send(device, target, snmp.DefaultSNMPTrapPort, payload)
 	}
 }
 
