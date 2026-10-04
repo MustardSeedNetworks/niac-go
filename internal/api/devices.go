@@ -308,9 +308,9 @@ func (s *Server) handleDeviceBatchDelete(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if len(req.Hostnames) > MaxDeviceCount {
+	if len(req.Hostnames) > maxBatchItems {
 		writeError(w, r, http.StatusBadRequest, "validation_failed",
-			fmt.Sprintf("hostnames must not exceed %d entries", MaxDeviceCount), nil)
+			fmt.Sprintf("hostnames must not exceed %d entries", maxBatchItems), nil)
 
 		return
 	}

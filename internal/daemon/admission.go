@@ -4,19 +4,30 @@ import (
 	"fmt"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/capacity"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // Safety bounds for the whole daemon, not for one session. Per-config limits
-// multiply once several sessions run at once: a 1000-device ceiling checked
-// against each config in turn permits 1000 devices per session, which is not a
-// ceiling at all. These are technical capacity limits, never an entitlement.
+// multiply once several sessions run at once, so admission sums every running
+// session against deviceBudget, the host-derived device budget
+// (internal/capacity). These are technical capacity limits, never an
+// entitlement.
 const (
 	// maxActiveSessions bounds concurrent runtimes on one daemon. Each owns a
 	// protocol stack, goroutines and an ingress queue, so the count itself is a
 	// resource.
 	maxActiveSessions = 16
 )
+
+// deviceBudget is the daemon's device budget. A Daemon built without NewDaemon
+// reads the host's, so the zero value is usable.
+func (d *Daemon) deviceBudget() int {
+	if d.maxDevices > 0 {
+		return d.maxDevices
+	}
+	return capacity.MaxDevices()
+}
 
 // admitSessionLocked decides whether a session may start given everything
 // already running. sessionID names the session being started; if it is already
@@ -44,10 +55,10 @@ func (d *Daemon) admitSessionLocked(sessionID string, cfg *config.Config) error 
 		return fmt.Errorf("%w: %d sessions already running, limit is %d",
 			api.ErrSimulationSessionCapacity, active, maxActiveSessions)
 	}
-	if total := devices + incoming; total > api.MaxDeviceCount {
+	if total := devices + incoming; total > d.deviceBudget() {
 		return fmt.Errorf(
 			"%w: %d devices already running plus %d requested exceeds the %d-device daemon limit",
-			api.ErrSimulationDeviceCapacity, devices, incoming, api.MaxDeviceCount)
+			api.ErrSimulationDeviceCapacity, devices, incoming, d.deviceBudget())
 	}
 	return nil
 }
@@ -58,7 +69,7 @@ func (d *Daemon) admitSessionLocked(sessionID string, cfg *config.Config) error 
 func (d *Daemon) aggregateUsageLocked() api.DaemonCapacity {
 	capacity := api.DaemonCapacity{
 		MaxSessions: maxActiveSessions,
-		MaxDevices:  api.MaxDeviceCount,
+		MaxDevices:  d.deviceBudget(),
 	}
 	if d.sessions == nil {
 		return capacity

@@ -186,9 +186,11 @@ SLSA provenance to the GitHub release.
 ## Limits
 
 NIAC ships as one unrestricted binary — no runtime tier, no activation, no
-phone-home. One configuration may carry up to 1,000 devices, and the daemon
-bounds concurrent sessions and total devices across everything running at once.
-These are technical safety limits, not entitlements.
+phone-home. How many devices it simulates is sized to the memory NIAC may use
+(in a container, the container's limit): about 1,000 devices per GiB after a
+256 MiB reserve, so roughly 1,800 on a 2 GiB host and 16,000 on 16 GiB. Every
+running session shares that budget, and at most 16 sessions run at once. These
+are technical safety limits, not entitlements.
 
 ## License
 

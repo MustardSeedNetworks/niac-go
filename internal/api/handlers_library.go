@@ -410,9 +410,9 @@ func (s *Server) handleLibraryWalkRevert(w http.ResponseWriter, r *http.Request)
 	s.writeJSON(w, entry)
 }
 
-// maxSanitizeBatch caps a single sanitize-batch request, mirroring the
-// per-request bulk-operation cap devices batch-delete uses (MaxDeviceCount).
-const maxSanitizeBatch = MaxDeviceCount
+// maxSanitizeBatch caps a single sanitize-batch request, the same bulk-request
+// cap devices batch-delete uses.
+const maxSanitizeBatch = maxBatchItems
 
 // sanitizeWalkResult reports the outcome of sanitizing a single walk as
 // part of a single or batch sanitize request.

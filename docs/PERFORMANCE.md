@@ -14,10 +14,10 @@ from the target lab instead of fixed capacity claims.
 - Keep browser filters narrow when inspecting large packet or device sets.
 - Do not modify internal queue constants as an operator tuning mechanism.
 
-One configuration is capped at 1,000 devices, and the daemon bounds concurrent
-sessions and total devices on top of that. These are safety limits, not a
-promise that every 1,000-device scenario will meet the same latency target on
-every host.
+The device budget is sized to the host's memory (1 MiB per device after a
+256 MiB reserve; see the FAQ), shared by every running session, and the daemon
+runs at most 16 sessions at once. These are safety limits, not a promise that
+a scenario filling the budget meets the same latency target on every host.
 
 ## Measure the running daemon
 

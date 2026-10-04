@@ -60,7 +60,7 @@ func apiDomainImports() map[string][]string {
 		"handlers_session_capture.go":     {"internal/capture", "internal/capturering"},
 		"handlers_session_checkpoints.go": {"internal/devicestate", "internal/protocols"},
 		"handlers_session_read.go":        {"internal/protocols"},
-		"handlers_simulation.go":          {"internal/config", "internal/fabric"},
+		"handlers_simulation.go":          {"internal/capacity", "internal/config", "internal/fabric"},
 		"handlers_synthesize_walk.go":     {"internal/config", "internal/library", "internal/protocols/snmp/synth"},
 		"handlers_walk_profile.go": {
 			"internal/library",
@@ -79,6 +79,7 @@ func apiDomainImports() map[string][]string {
 		"interface_fault_types.go":        {"internal/devicestate", "internal/protocols"},
 		"library_install.go":              {"internal/content", "internal/library"},
 		"server.go": {
+			"internal/capacity",
 			"internal/config",
 			"internal/content",
 			"internal/fabric",
