@@ -743,7 +743,7 @@ jobs:
         run: npm ci
 
       - name: Run Biome lint
-        run: npx @biomejs/biome check src/
+        run: npx @biomejs/biome check src/ scripts/
 
       - name: Design token discipline (Phase 0 gate)
         run: ../scripts/check-token-discipline.sh
@@ -1200,6 +1200,25 @@ jobs:
       - name: An untagged release must list every commit it would ship
         if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: python3 scripts/check-release-notes.py --pending
+
+      # release-please drops a commit its parser rejects without failing, so
+      # the loss surfaces only as a short changelog (niac-go#2389). A queue
+      # group's commits are the messages main will carry: parse them the way
+      # release-please will, and eject the PR instead of losing the entry.
+      # The script needs Node alone, so no npm cache is restored.
+      - uses: ./.github/actions/setup-node
+        with:
+          cache: ''
+
+      - name: Commit parse gate self-test
+        run: node --test ui/scripts/check-commit-parse.test.ts
+
+      - name: Every queued commit parses as release-please parses it
+        if: github.event_name == 'merge_group'
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: node ui/scripts/check-commit-parse.ts "$BASE_SHA" "$HEAD_SHA"
 
   workflow-lint:
     name: Workflow Lint
