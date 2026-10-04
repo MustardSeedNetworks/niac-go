@@ -14,14 +14,14 @@ type InterfacePrefixAction struct {
 	Clear  bool
 }
 
-func (r *Runner) applyPrefixActions(ctx context.Context, actions []InterfacePrefixAction) bool {
-	for _, action := range actions {
+func (r *Runner) applyPrefixActions(ctx context.Context, transition Transition) bool {
+	for _, action := range transition.PrefixActions {
 		if ctx.Err() != nil {
 			r.finish("stopped", "")
 			return false
 		}
 		if err := r.applyInterfacePrefixFault(action); err != nil {
-			r.finish("failed", err.Error())
+			r.fail(transition, err)
 			return false
 		}
 	}
