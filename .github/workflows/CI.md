@@ -29,7 +29,7 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `i18n` | Internationalization | Catalog completeness, no translated standard terms |
 | `docs` | Documentation | Markdown lint (blocking, scoped to changed files) |
 | `build` | Build verification | Multi-arch binaries with full ldflags, UIBuildHash verified |
-| `e2e` | Browser tests | Playwright: chromium and webkit (fleet policy, `E2E_CONVENTIONS.md`) |
+| `e2e` | Browser tests | Playwright: chromium and webkit (fleet policy, `E2E_CONVENTIONS.md`), on an Ubuntu 26.04 container until Playwright 1.64 (#2141) |
 | `codeql-alert-gate` | CodeQL alert gate | Fails on open High/Critical CodeQL alerts; reusable from `.github` |
 | `ci-complete` | Aggregate gate | The required status check |
 
