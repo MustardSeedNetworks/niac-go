@@ -26,6 +26,7 @@ func TestEveryProfileVendorAllocatesItsOwnOUI(t *testing.T) {
 		"ge healthcare":       "GE Healthcare",
 		"hewlett packard":     "Hewlett Packard",
 		"hid global":          "Crossmatch Technologies/HID Global",
+		"netapp":              "NetApp",
 		"palo alto":           "Palo Alto Networks",
 		"philips healthcare":  "Philips Healthcare PCCI",
 		"rockwell automation": "Rockwell Automation",

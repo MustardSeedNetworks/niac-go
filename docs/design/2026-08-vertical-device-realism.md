@@ -190,8 +190,25 @@ existing device's address or port:
 Each answers SNMP with its role in `sysDescr` and serves HTTP; none speaks its
 application protocol (no HL7, no OPC UA, no RADIUS), which is the Phase 5c
 boundary. Campus and enterprise-scale share a profile, run none of these and
-keep their counts; enterprise-scale is pinned at 543. The shared storage,
-virtualisation and backup tier is not built yet.
+keep their counts; enterprise-scale is pinned at 543.
+
+Those systems run on a shared tier an organization keeps once, in its main
+building, so it sits at each vertical pack's first site, on the servers VLAN
+above the highest address a site's wireless controllers can take:
+
+| Device | Platform | sysObjectID | HTTP `Server` |
+| --- | --- | --- | --- |
+| `ESX01` virtualisation host | VMware ESXi 8.0.3 on a Dell PowerEdge R760 | `1.3.6.1.4.1.6876.4.1` | none |
+| `SAN01` storage array | NetApp AFF A250, ONTAP 9.15.1 | `1.3.6.1.4.1.789.2.5` | `libzapid-httpd` |
+| `BKP01` backup server | Veeam Backup & Replication on Windows Server 2022 | `1.3.6.1.4.1.311.1.1.3.1.2` | `Microsoft-IIS/10.0` |
+
+The sysObjectIDs and the shape of each `sysDescr` are what those platforms
+report in LibreNMS's recorded walks, and what a discovery tool keys on to file
+each as a hypervisor, a storage array or a Windows server. The ESXi host client
+sends no `Server` header, so `ESX01` serves no HTTP rather than the simulator's
+default. Each vertical pack grows by three devices: hospital 262, manufacturing
+263, warehouse 268, retail 258, service provider 267. Campus and
+enterprise-scale carry no workload systems and no tier, for the reason above.
 
 ## Client tier
 

@@ -33,7 +33,7 @@ func roleCode(role string) int {
 		return roleAccessPointCode
 	case "workstation":
 		return roleWorkstationCode
-	case "server":
+	case "server", "hypervisor", "storage-array", "backup-server":
 		return roleServerCode
 	case "controller":
 		return roleControllerCode

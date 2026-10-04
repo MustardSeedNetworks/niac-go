@@ -85,10 +85,49 @@ func workloadSystemHost(index int) int {
 	return serviceHostOffset + len(serviceRoles()) + index
 }
 
+// dataCentreSystem is one device of the shared storage, virtualisation and
+// backup tier: its name below the site code, its catalog role, the sysDescr
+// its platform reports, the interface it uplinks on and the Server header of
+// its management UI.
+type dataCentreSystem struct {
+	name, role, sysDescr, nic, httpServer string
+}
+
+// dataCentreTier is what a vertical's workload systems run on and are backed
+// up by. An organization keeps one in its main building rather than one per
+// site, so it sits at the pack's first site. Campus and enterprise-scale run no
+// workload systems and carry none, which also keeps enterprise-scale at its
+// pinned size.
+//
+// The ESXi host serves no HTTP: its host client sends no Server header, and the
+// simulator's default one would name the simulator.
+func dataCentreTier(request Request, site Site) []dataCentreSystem {
+	if len(workloadSystems(request.EndpointProfile)) == 0 || site.Code != request.Sites[0].Code {
+		return nil
+	}
+	return []dataCentreSystem{
+		{"ESX", "hypervisor", "VMware ESXi 8.0.3 build-24022510 VMware, Inc. x86_64", "vmnic0", ""},
+		{"SAN", "storage-array", "NetApp Release 9.15.1P7: Thu Jan 16 06:12:43 UTC 2025", "e0a", "libzapid-httpd"},
+		{
+			"BKP", "backup-server",
+			"Hardware: Intel64 Family 6 Model 143 Stepping 8 AT/AT COMPATIBLE - " +
+				"Software: Windows Version 6.3 (Build 20348 Multiprocessor Free)",
+			"Ethernet0", "Microsoft-IIS/10.0",
+		},
+	}
+}
+
+// dataCentreHost places the tier on the servers VLAN straight above the highest
+// address a site's wireless controllers can take, so neither moves the other.
+func dataCentreHost(index int) int {
+	return controllerHostOffset + maxWirelessControllers + index
+}
+
 func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.Device {
 	workstationCount := request.Counts.AccessSwitches * request.Counts.WorkstationsPerAccess
 	devices := make([]converter.Device, 0, workstationCount+len(serviceRoles())+
-		request.Counts.WirelessControllers+len(workloadSystems(request.EndpointProfile)))
+		request.Counts.WirelessControllers+len(workloadSystems(request.EndpointProfile))+
+		len(dataCentreTier(request, site)))
 	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {
 		for slot := 1; slot <= request.Counts.WorkstationsPerAccess; slot++ {
 			index := (accessIndex-1)*request.Counts.WorkstationsPerAccess + slot
@@ -108,7 +147,31 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 	for index, system := range workloadSystems(request.EndpointProfile) {
 		devices = append(devices, workloadServer(request, site, system, index+1, links))
 	}
+	for index, system := range dataCentreTier(request, site) {
+		devices = append(devices, dataCentreServer(request, site, system, index+1, links))
+	}
 	return devices
+}
+
+func dataCentreServer(request Request, site Site, system dataCentreSystem, index int, links linkMap) converter.Device {
+	host := dataCentreHost(index)
+	address := siteIP(site, vlanServers, host)
+	// The host number, not the tier position, keys the MAC: the tier shares
+	// the server identity code with the services and workload systems, whose
+	// positions it would otherwise repeat.
+	spec := deviceSpec{
+		name: site.Code + "-" + system.name + "01", role: system.role, index: host,
+		ips: []string{address}, site: &site, sysDescr: system.sysDescr,
+		interfaces: []converter.Interface{newInterface(
+			system.nic, siteNetworkName(site, "servers"), address+"/24", speedTenGigabit,
+			system.name+" service uplink",
+		)},
+		vlan: vlanServers,
+	}
+	if system.httpServer != "" {
+		spec.http = &converter.HTTPConfig{Enabled: true, ServerName: system.httpServer}
+	}
+	return managedDevice(request, spec, links)
 }
 
 func workloadServer(request Request, site Site, system workloadSystem, index int, links linkMap) converter.Device {
@@ -189,8 +252,8 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 	roles := serviceRoles()
 	workstationCount := request.Counts.AccessSwitches * request.Counts.WorkstationsPerAccess
-	records := make([]converter.DNSRecord, 0,
-		len(roles)+len(workloadSystems(request.EndpointProfile))+workstationCount)
+	records := make([]converter.DNSRecord, 0, len(roles)+len(workloadSystems(request.EndpointProfile))+
+		len(dataCentreTier(request, site))+workstationCount)
 	for index, role := range roles {
 		vlan, _ := servicePlacement(role)
 		records = append(records, converter.DNSRecord{
@@ -204,6 +267,13 @@ func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code), strings.ToLower(system.name),
 				request.Domain),
 			IP: siteIP(site, vlanServers, workloadSystemHost(index+1)), TTL: dnsRecordTTL,
+		})
+	}
+	for index, system := range dataCentreTier(request, site) {
+		records = append(records, converter.DNSRecord{
+			Name: fmt.Sprintf("%s-%s01.%s", strings.ToLower(site.Code), strings.ToLower(system.name),
+				request.Domain),
+			IP: siteIP(site, vlanServers, dataCentreHost(index+1)), TTL: dnsRecordTTL,
 		})
 	}
 	for accessIndex := 1; accessIndex <= request.Counts.AccessSwitches; accessIndex++ {
