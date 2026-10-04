@@ -1502,6 +1502,11 @@ jobs:
     container:
       image: ubuntu:26.04@sha256:3595d7fc4286a33fad0fd853a4063e654287a9c3787437d7937c94ca3f7a804e
       options: --ipc=host
+    # The container's default `run` shell is sh (dash); the readiness loop's
+    # `{1..30}` and other steps need bash.
+    defaults:
+      run:
+        shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
     # NOT sized from p95. A job budget has to exceed its apt steps' worst case
@@ -1534,7 +1539,7 @@ jobs:
         with:
           attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
           retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: ca-certificates curl gcc git libatomic1 libc6-dev zstd
+          packages: ca-certificates curl gcc git libatomic1 libc6-dev python3 zstd
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
