@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/netip"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // Target applies interface faults, device faults, and identified one-shot
@@ -171,6 +173,19 @@ func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{})
 		r.mu.Unlock()
 	}
 	r.finish("completed", "")
+}
+
+// fail ends the run at a transition the target refused. The status carries the
+// error for the API, but `daemon --once` has no API, so the failure is logged
+// as well: before niac-go#2482 a refused fault simply never happened.
+func (r *Runner) fail(transition Transition, err error) {
+	phases := make([]string, 0, len(transition.StartPhases)+len(transition.EndPhases))
+	for _, phase := range slices.Concat(transition.StartPhases, transition.EndPhases) {
+		phases = append(phases, phase.Label)
+	}
+	logging.ProtocolLogf(context.Background(), "BEHAVIOR", logging.LevelError,
+		"timeline stopped at %s (offset %s): %v", strings.Join(phases, ", "), transition.Offset, err)
+	r.finish("failed", err.Error())
 }
 
 func (r *Runner) finish(state, lastError string) {

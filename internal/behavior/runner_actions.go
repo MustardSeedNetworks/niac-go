@@ -9,13 +9,13 @@ import (
 func (r *Runner) applyTransition(ctx context.Context, transition Transition) bool {
 	for _, action := range transition.Actions {
 		if err := r.target.SetInterfaceFault(action.Device, action.Interface, action.Type, action.Value); err != nil {
-			r.finish("failed", err.Error())
+			r.fail(transition, err)
 			return false
 		}
 	}
 	for _, action := range transition.DeviceActions {
 		if err := r.applyDeviceFault(action); err != nil {
-			r.finish("failed", err.Error())
+			r.fail(transition, err)
 			return false
 		}
 	}
@@ -25,11 +25,11 @@ func (r *Runner) applyTransition(ctx context.Context, transition Transition) boo
 			return false
 		}
 		if err := r.applyInterfaceAddressFault(action); err != nil {
-			r.finish("failed", err.Error())
+			r.fail(transition, err)
 			return false
 		}
 	}
-	if !r.applyPrefixActions(ctx, transition.PrefixActions) {
+	if !r.applyPrefixActions(ctx, transition) {
 		return false
 	}
 	for _, action := range transition.OneShotActions {
@@ -38,7 +38,7 @@ func (r *Runner) applyTransition(ctx context.Context, transition Transition) boo
 			return false
 		}
 		if err := r.target.ExecuteDeviceAction(action.Device, action.Type, action.ID); err != nil {
-			r.finish("failed", err.Error())
+			r.fail(transition, err)
 			return false
 		}
 	}
