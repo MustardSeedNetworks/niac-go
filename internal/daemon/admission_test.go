@@ -16,9 +16,13 @@ func configWithDevices(count int) *config.Config {
 	return cfg
 }
 
+// testDeviceBudget stands in for the host-derived budget so admission is
+// tested the same on every machine.
+const testDeviceBudget = 1000
+
 func daemonWithSessions(t *testing.T, deviceCounts map[string]int) *Daemon {
 	t.Helper()
-	d := &Daemon{sessions: newSessionRegistry()}
+	d := &Daemon{maxDevices: testDeviceBudget, sessions: newSessionRegistry()}
 	for id, count := range deviceCounts {
 		d.sessions.sessions[id] = &Simulation{SessionID: id, cfg: configWithDevices(count)}
 	}
@@ -28,7 +32,7 @@ func daemonWithSessions(t *testing.T, deviceCounts map[string]int) *Daemon {
 func TestAdmissionSumsDevicesAcrossSessions(t *testing.T) {
 	// The absolute ceiling is a daemon budget. Checking it per config would let
 	// each session carry its own full allowance.
-	d := daemonWithSessions(t, map[string]int{"hospital": api.MaxDeviceCount - 10})
+	d := daemonWithSessions(t, map[string]int{"hospital": testDeviceBudget - 10})
 
 	if err := d.admitSessionLocked("warehouse", configWithDevices(10)); err != nil {
 		t.Errorf("start that exactly fills the budget was refused: %v", err)
@@ -42,9 +46,9 @@ func TestAdmissionSumsDevicesAcrossSessions(t *testing.T) {
 func TestAdmissionExcludesTheSessionBeingReplaced(t *testing.T) {
 	// Restarting a session swaps it rather than adding one, so its own devices
 	// must not be counted against it.
-	d := daemonWithSessions(t, map[string]int{"hospital": api.MaxDeviceCount})
+	d := daemonWithSessions(t, map[string]int{"hospital": testDeviceBudget})
 
-	if err := d.admitSessionLocked("hospital", configWithDevices(api.MaxDeviceCount)); err != nil {
+	if err := d.admitSessionLocked("hospital", configWithDevices(testDeviceBudget)); err != nil {
 		t.Errorf("replacing a session with the same size was refused: %v", err)
 	}
 	if err := d.admitSessionLocked("warehouse", configWithDevices(1)); !errors.Is(
@@ -81,8 +85,8 @@ func TestAggregateUsageReportsBudgets(t *testing.T) {
 	if usage.Devices != 132 {
 		t.Errorf("devices = %d, want 132", usage.Devices)
 	}
-	if usage.MaxSessions != maxActiveSessions || usage.MaxDevices != api.MaxDeviceCount {
+	if usage.MaxSessions != maxActiveSessions || usage.MaxDevices != testDeviceBudget {
 		t.Errorf("budgets = %d/%d, want %d/%d",
-			usage.MaxSessions, usage.MaxDevices, maxActiveSessions, api.MaxDeviceCount)
+			usage.MaxSessions, usage.MaxDevices, maxActiveSessions, testDeviceBudget)
 	}
 }

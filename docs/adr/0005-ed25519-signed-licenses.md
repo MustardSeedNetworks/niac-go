@@ -7,8 +7,8 @@
 > support, and custom modelling rather than a runtime unlock. `internal/license`,
 > the `/api/v1/license` endpoint, the `niac license` commands, and every feature
 > gate were removed (see #1203). Resource ceilings remain as technical safety
-> limits — 1,000 devices for one configuration, plus daemon-wide session and
-> device budgets — not as entitlements.
+> limits — a device budget sized to the host's memory (#2469) and a bound on
+> concurrent sessions — not as entitlements.
 >
 > The reasoning below is retained because it explains why the previous rotor
 > cipher was replaced, and it still applies to any signed-artifact work in the

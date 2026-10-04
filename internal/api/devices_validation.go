@@ -20,11 +20,10 @@ var (
 )
 
 const (
-	// MaxDeviceCount is the absolute device ceiling for one configuration,
-	// enforced as a resource-exhaustion guard (security fix #173). The
-	// daemon-wide budgets in internal/daemon/admission.go bound what runs
-	// across all sessions at once.
-	MaxDeviceCount = 1000
+	// maxBatchItems bounds how many entries one bulk request may name (device
+	// batch delete, walk sanitize batch). It caps request size; how many devices
+	// may run is the host-derived budget in internal/capacity.
+	maxBatchItems = 1000
 
 	// maxLabelLen is the max length of a hostname label (RFC 1123).
 	maxLabelLen = 63

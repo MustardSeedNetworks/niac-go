@@ -236,7 +236,7 @@ func (s *Server) authorizeConfigReplacement(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) authorizeConfigEntitlements(w http.ResponseWriter, r *http.Request, cfg *config.Config) bool {
-	switch err := ValidateConfigDeviceCount(cfg); {
+	switch err := ValidateConfigDeviceCount(cfg, s.deviceBudget()); {
 	case errors.Is(err, ErrSimulationDeviceLimitExceeded):
 		writeError(w, r, http.StatusBadRequest, "device_limit_reached",
 			"Configuration exceeds the maximum supported device count", nil)

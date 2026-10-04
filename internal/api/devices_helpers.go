@@ -36,9 +36,9 @@ func (s *Server) validateDeviceAddition(
 	w http.ResponseWriter, r *http.Request, cfg *config.Config, hostname string,
 ) error {
 	deviceCount := cfg.DeviceCount()
-	if deviceCount >= MaxDeviceCount {
+	if deviceCount >= s.deviceBudget() {
 		writeError(w, r, http.StatusTooManyRequests, "device_limit_reached",
-			fmt.Sprintf("Maximum device count of %d reached", MaxDeviceCount), nil)
+			fmt.Sprintf("Maximum device count of %d reached", s.deviceBudget()), nil)
 		return errValidationFailed
 	}
 

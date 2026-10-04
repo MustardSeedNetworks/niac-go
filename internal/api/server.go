@@ -45,6 +45,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/capacity"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/content"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
@@ -437,7 +438,10 @@ type DaemonController interface {
 
 // Server exposes the REST API, metrics endpoint, and Web UI.
 type Server struct {
-	cfg                ServerConfig
+	cfg ServerConfig
+	// maxDevices is the host's device budget, read once (internal/capacity).
+	// Read it through deviceBudget.
+	maxDevices         int
 	logger             *slog.Logger
 	httpServer         *http.Server
 	alertStop          chan struct{}
@@ -498,6 +502,7 @@ func NewServer(cfg ServerConfig) *Server {
 
 	srv := &Server{
 		cfg:           cfg,
+		maxDevices:    capacity.MaxDevices(),
 		logger:        slog.Default(),
 		startTime:     time.Now(),
 		rateLimiter:   ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),

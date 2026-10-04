@@ -256,19 +256,25 @@ devices:
       password_env: NIAC_MISSING_SSH_PASSWORD
 `}
 
-	_, _, err := loadAuthorizedSimulationConfig(req)
+	_, _, err := (&Daemon{maxDevices: 1}).loadAuthorizedSimulationConfig(req)
 
 	if !errors.Is(err, config.ErrSSHPasswordUnavailable) {
 		t.Fatalf("loadAuthorizedSimulationConfig() error = %v, want SSH password requirement", err)
 	}
 }
 
-func TestLoadAuthorizedSimulationConfigEnforcesAbsoluteDeviceCap(t *testing.T) {
-	req := api.SimulationRequest{Interface: "eth0", ConfigData: simulationConfigWithDevices(
-		api.MaxDeviceCount + 1,
-	)}
+func TestLoadAuthorizedSimulationConfigEnforcesTheDeviceBudget(t *testing.T) {
+	const budget = 10
+	d := &Daemon{maxDevices: budget}
 
-	_, _, err := loadAuthorizedSimulationConfig(req)
+	if _, _, err := d.loadAuthorizedSimulationConfig(api.SimulationRequest{
+		Interface: "eth0", ConfigData: simulationConfigWithDevices(budget),
+	}); err != nil {
+		t.Fatalf("a config that exactly fills the budget was refused: %v", err)
+	}
+
+	req := api.SimulationRequest{Interface: "eth0", ConfigData: simulationConfigWithDevices(budget + 1)}
+	_, _, err := d.loadAuthorizedSimulationConfig(req)
 
 	if !errors.Is(err, api.ErrSimulationDeviceLimitExceeded) {
 		t.Fatalf(

@@ -61,7 +61,7 @@ func (d *Daemon) PinAttachmentClient(sessionID string, pin api.AttachmentPin) er
 }
 
 func (d *Daemon) movePinnedClient(active *Simulation, mac string) (*fabric.Topology, error) {
-	cfg, _, err := loadAuthorizedSimulationConfig(active.Request)
+	cfg, _, err := d.loadAuthorizedSimulationConfig(active.Request)
 	if err != nil {
 		return nil, err
 	}

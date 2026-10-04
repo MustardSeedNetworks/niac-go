@@ -195,8 +195,8 @@ precommitted. The following are already scoped and deliberately held back:
 
 NIAC ships as one unrestricted binary. There is no runtime tier, no activation,
 and no phone-home. Resource ceilings are technical safety limits rather than
-entitlements: 1,000 devices for one configuration, plus daemon-wide budgets
-bounding concurrent sessions and total devices.
+entitlements: a device budget sized to the host's memory and shared by every
+running session, plus a bound on concurrent sessions.
 
 ## Release Process
 

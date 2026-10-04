@@ -18,6 +18,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/builtins"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/tokenstore"
+	"github.com/MustardSeedNetworks/niac-go/internal/capacity"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
@@ -111,6 +112,11 @@ type Daemon struct {
 	// packInstallMu serialises library-content installs; see InstallPack.
 	packInstallMu sync.Mutex
 
+	// maxDevices is the device budget for every session together, derived from
+	// the memory this process may use (internal/capacity) when it is built.
+	// Read it through deviceBudget.
+	maxDevices int
+
 	mu         sync.RWMutex
 	simulation *Simulation
 	sessions   *sessionRegistry
@@ -180,6 +186,7 @@ type simulationStarter func(
 func NewDaemon(cfg Config) (*Daemon, error) {
 	daemon := &Daemon{
 		cfg:                    cfg,
+		maxDevices:             capacity.MaxDevices(),
 		sessions:               newSessionRegistry(),
 		trunks:                 make(map[string]*managedTrunkCapture),
 		startSimulation:        startSimulationResources,
@@ -584,7 +591,7 @@ func (d *Daemon) startGenerationLocked(req api.SimulationRequest, generation str
 		return fmt.Errorf("%w: %s", ErrInterfaceNotExist, req.Interface)
 	}
 
-	cfg, configPath, err := loadAuthorizedSimulationConfig(req)
+	cfg, configPath, err := d.loadAuthorizedSimulationConfig(req)
 	if err != nil {
 		return err
 	}
@@ -718,14 +725,14 @@ func (d *Daemon) startConfiguredReplay(
 	}
 }
 
-func loadAuthorizedSimulationConfig(
+func (d *Daemon) loadAuthorizedSimulationConfig(
 	req api.SimulationRequest,
 ) (*config.Config, string, error) {
 	cfg, configPath, err := loadValidSimulationConfig(req)
 	if err != nil {
 		return nil, "", err
 	}
-	if countErr := api.ValidateConfigDeviceCount(cfg); countErr != nil {
+	if countErr := api.ValidateConfigDeviceCount(cfg, d.deviceBudget()); countErr != nil {
 		return nil, "", countErr
 	}
 	if runtimeErr := config.ValidateRuntimeRequirements(cfg); runtimeErr != nil {

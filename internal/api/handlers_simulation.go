@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/capacity"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
@@ -39,13 +40,22 @@ type DaemonCapacity struct {
 	MaxDevices  int `json:"maxDevices"`
 }
 
-// ValidateConfigDeviceCount enforces NIAC's absolute per-config device ceiling,
-// used by both simulation starts and whole-config replacement. It is a
-// technical limit on what one config may carry, not an entitlement; the
-// daemon-wide budgets in internal/daemon/admission.go bound everything running
-// at once.
-func ValidateConfigDeviceCount(cfg *config.Config) error {
-	if cfg.DeviceCount() > MaxDeviceCount {
+// deviceBudget is the server's device budget. A Server built without NewServer
+// reads the host's, so the zero value is usable.
+func (s *Server) deviceBudget() int {
+	if s.maxDevices > 0 {
+		return s.maxDevices
+	}
+	return capacity.MaxDevices()
+}
+
+// ValidateConfigDeviceCount refuses a config with more devices than maxDevices,
+// the host's device budget (internal/capacity), for both simulation starts and
+// whole-config replacement: a config larger than the daemon can carry can never
+// run. It is a technical limit, not an entitlement; admission in
+// internal/daemon/admission.go bounds everything running at once.
+func ValidateConfigDeviceCount(cfg *config.Config, maxDevices int) error {
+	if cfg.DeviceCount() > maxDevices {
 		return ErrSimulationDeviceLimitExceeded
 	}
 	return nil

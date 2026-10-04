@@ -67,10 +67,14 @@ simulators to the same production-facing interface.
 
 ## How many devices can I simulate?
 
-One configuration may carry up to 1,000 devices, enforced across CLI, API, UI,
-import, built-in scenario, configuration mutation, and runtime-start paths. The daemon
-additionally bounds concurrent sessions and total devices across everything
-running at once.
+As many as the host's memory allows. The daemon reads the memory it may use
+when it starts (in a container, the container's limit) and budgets 1 MiB per
+device after a 256 MiB reserve: roughly 1,800 devices on a 2 GiB host, 16,000
+on 16 GiB. Every running session shares that budget, one configuration may use
+all of it, and at most 16 sessions run at once. A start, import or edit that
+would exceed it is refused with `device_capacity_reached` or
+`device_limit_reached`; `/api/v1/simulation` reports the current usage against
+the budget.
 
 Practical capacity depends on enabled protocols, traffic rate, walk size,
 host resources, and the observer polling NIAC.
