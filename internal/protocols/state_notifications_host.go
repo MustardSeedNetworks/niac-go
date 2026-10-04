@@ -9,9 +9,13 @@ import (
 )
 
 func (s *stackDatagramSender) sendNotificationIntent(notification pendingNotification, reloadHeld bool) error {
+	origin := notification.originDevice
 	current, target, mac, err := s.prepareNotificationIntent(notification)
 	if err != nil {
 		return err
+	}
+	if handled, deliveryErr := s.deliverInsideSimulation(origin, current); handled {
+		return deliveryErr
 	}
 	return s.dispatchNotification(current, target, mac, reloadHeld)
 }

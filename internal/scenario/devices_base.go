@@ -63,7 +63,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 	device := converter.Device{
 		Name: spec.name, Type: profile.DeviceType, Vendor: profile.Vendor,
 		MACSuffix: macSuffix, IPs: spec.ips,
-		VLAN: spec.vlan, Interfaces: interfaces, Routes: spec.routes,
+		VLAN: spec.vlan, Interfaces: interfaces, Routes: siteDeviceRoutes(spec),
 		SnmpAgent: &converter.SnmpAgent{
 			Community: request.SNMPCommunity, SysName: spec.name, SysDescr: spec.sysDescr,
 			SysLocation: location, SysContact: "netops@" + request.Domain,
@@ -94,6 +94,26 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 	}
 
 	return device
+}
+
+// siteDeviceRoutes gives a site device that authors no routes of its own the
+// management default gateway a real one carries: `ip default-gateway` on a
+// switch or access point, the default route on a server. The gateway is the
+// primary core's SVI on the device's own VLAN. Without it every notification to
+// the site collector, which sits on the servers VLAN, failed for want of a
+// route (#2410).
+func siteDeviceRoutes(spec deviceSpec) []converter.Route {
+	if spec.site == nil || len(spec.routes) > 0 {
+		return spec.routes
+	}
+	for _, iface := range spec.interfaces {
+		if iface.Address != "" {
+			return []converter.Route{route(
+				"0.0.0.0/0", iface.Name, siteIP(*spec.site, spec.vlan, primaryCoreGatewayHost),
+			)}
+		}
+	}
+	return nil
 }
 
 func endpointDevice(

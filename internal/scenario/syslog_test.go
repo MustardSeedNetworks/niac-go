@@ -1,9 +1,12 @@
 package scenario_test
 
 import (
+	"net"
+	"net/netip"
 	"strings"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
@@ -80,4 +83,52 @@ func TestTheCollectorDoesNotReportToItself(t *testing.T) {
 			t.Errorf("%s reports syslog to itself", device.Name)
 		}
 	}
+}
+
+// A device with no route to its collector never sends: the emission path fails
+// with "no active local egress route" before a frame is built, so every fault
+// on a pack switch or access point was silent (#2410). Each receiver must sit
+// on one of the device's own subnets or behind a static route out of one.
+func TestEverySyslogSenderCanRouteToItsCollector(t *testing.T) {
+	t.Parallel()
+
+	for _, pack := range scenario.Packs() {
+		cfg := generatePack(t, pack.ID)
+		for index := range cfg.Devices {
+			device := &cfg.Devices[index]
+			if device.SyslogConfig == nil || !device.SyslogConfig.Enabled {
+				continue
+			}
+			for _, receiver := range device.SyslogConfig.Receivers {
+				host, _, err := net.SplitHostPort(receiver)
+				if err != nil {
+					t.Fatalf("%s/%s: receiver %q: %v", pack.ID, device.Name, receiver, err)
+				}
+				if !routesTo(device, netip.MustParseAddr(host)) {
+					t.Errorf("%s/%s has no route to its collector %s", pack.ID, device.Name, host)
+				}
+			}
+		}
+	}
+}
+
+func routesTo(device *config.Device, destination netip.Addr) bool {
+	addressed := map[string]bool{}
+	for _, iface := range device.Interfaces {
+		prefix, err := netip.ParsePrefix(iface.Address)
+		if err != nil {
+			continue
+		}
+		addressed[iface.Name] = true
+		if prefix.Masked().Contains(destination) {
+			return true
+		}
+	}
+	for _, route := range device.Routes {
+		prefix, err := netip.ParsePrefix(route.Destination)
+		if err == nil && prefix.Contains(destination) && addressed[route.Via] {
+			return true
+		}
+	}
+	return false
 }

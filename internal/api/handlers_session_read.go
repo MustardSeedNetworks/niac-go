@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -88,6 +89,28 @@ func (s *Server) handleSessionClients(w http.ResponseWriter, r *http.Request, se
 		return strings.Compare(a.MAC, b.MAC)
 	})
 	s.writeJSON(w, clients)
+}
+
+// handleSessionNotifications reports what this session's simulated devices
+// received from one another: syslog and SNMP notifications whose receiver is a
+// simulated collector, and which therefore never reach the wire (#2410).
+// ?device= narrows it to one receiver; a name the session does not run is a
+// 404 rather than an empty list, so a typo is not mistaken for silence.
+func (s *Server) handleSessionNotifications(w http.ResponseWriter, r *http.Request, session sessionRuntime) {
+	if !requireGet(w, r) {
+		return
+	}
+	device := r.URL.Query().Get("device")
+	if device != "" && findDeviceByName(session.config(), device) == nil {
+		writeError(w, r, http.StatusNotFound, "device_not_found",
+			fmt.Sprintf("Device not found: %s", device), nil)
+		return
+	}
+	notifications := session.stack().GetReceivedNotifications(device)
+	if notifications == nil {
+		notifications = []protocols.ReceivedNotification{}
+	}
+	s.writeJSON(w, notifications)
 }
 
 // sessionInterfaceResponse names the device an interface belongs to, which the
