@@ -221,12 +221,28 @@ func deviceNetworkState(topology *fabric.Topology, device *config.Device) device
 	}
 }
 
+// deviceInterfaceStates is every port the device authors. The compiler keeps
+// only the ports that carry a network, and those come first as compiled; a
+// layer-2 switch port carries none, but it still has a link that comes and
+// goes, so it follows as authored.
 func deviceInterfaceStates(compiled []fabric.Interface, device *config.Device) []devicestate.Interface {
 	result := make([]devicestate.Interface, 0, len(device.Interfaces))
+	seen := make(map[string]bool, len(device.Interfaces))
 	for _, iface := range compiled {
 		if iface.Device == device.Name {
+			seen[iface.Name] = true
 			result = append(result, deviceInterfaceState(iface, findConfigInterface(device, iface.Name)))
 		}
+	}
+	for _, authored := range device.Interfaces {
+		if seen[authored.Name] {
+			continue
+		}
+		seen[authored.Name] = true
+		result = append(
+			result,
+			deviceInterfaceState(fabric.Interface{Device: device.Name, Name: authored.Name}, authored),
+		)
 	}
 
 	return result

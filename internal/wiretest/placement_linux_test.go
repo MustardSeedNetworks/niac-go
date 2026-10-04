@@ -30,6 +30,7 @@ const (
 	oidDot1qTpFdbPort       = ".1.3.6.1.2.1.17.7.1.2.2.1.2"
 	oidDot1dBasePortIfIndex = ".1.3.6.1.2.1.17.1.4.1.2"
 	oidSysName              = ".1.3.6.1.2.1.1.5.0"
+	oidIfOperStatus         = ".1.3.6.1.2.1.2.2.1.8"
 )
 
 // secondClient is a MAC with no kernel behind it: it sends only what a test
@@ -319,4 +320,34 @@ func fdbRow(t *testing.T, client *gosnmp.GoSNMP, column string, mac net.Hardware
 		}
 	}
 	return ""
+}
+
+// Placing a client is plugging it in: its pool port comes up, and a spare port
+// nobody is plugged into stays "notconnect". A switch never reports a MAC
+// learned on a port whose link is down (niac-go#2363).
+func TestAPlacedPoolPortIsUp(t *testing.T) {
+	authored, _ := startPack(t, "hospital")
+	pool := authored.Attachments[0].At
+	access := dialDevice(t, authored, pool.Device)
+
+	if _, err := access.Get([]string{oidSysName}); err != nil {
+		t.Fatalf("GET sysName on %s: %v", pool.Device, err)
+	}
+	vlan := portVLAN(t, deviceNamed(t, authored, pool.Device), pool.Ports[0])
+	if got := awaitFDBPort(t, access, vlan, clientMAC(t)); got != pool.Ports[0] {
+		t.Fatalf("test end learned on %s, want %s", got, pool.Ports[0])
+	}
+
+	for port, want := range map[string]int{pool.Ports[0]: 1, pool.Ports[1]: 2} {
+		oid := oidIfOperStatus + "." + interfaceIndex(t, access, port)
+		result, err := access.Get([]string{oid})
+		if err != nil || result.Variables[0].Type != gosnmp.Integer {
+			t.Fatalf("GET ifOperStatus for %s on %s: %v", port, pool.Device, err)
+		}
+		got := gosnmp.ToBigInt(result.Variables[0].Value).Int64()
+		if got != int64(want) {
+			t.Errorf("%s %s ifOperStatus = %d, want %d", pool.Device, port, got, want)
+		}
+		t.Logf("%s %s ifOperStatus = %d", pool.Device, port, got)
+	}
 }

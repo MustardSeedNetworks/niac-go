@@ -15,6 +15,10 @@ var ErrAttachmentPoolRequired = errors.New("the session's attachment is not a po
 // re-pin names. A move never unplugs someone else.
 var ErrAttachmentPortOccupied = errors.New("another client is plugged into that port")
 
+// ErrAttachmentPortShut means the port a re-pin names is administratively shut,
+// so a client moved there would get no link.
+var ErrAttachmentPortShut = errors.New("that port is administratively shut")
+
 // AttachmentPin moves one observed client to one port of the session's
 // attachment pool.
 type AttachmentPin struct {
@@ -65,6 +69,11 @@ func (s *Server) handleSessionPins(w http.ResponseWriter, r *http.Request, sessi
 		if errors.Is(err, ErrAttachmentPortOccupied) {
 			writeError(w, r, http.StatusConflict, "attachment_port_occupied",
 				"Another client is plugged into that port", nil)
+			return
+		}
+		if errors.Is(err, ErrAttachmentPortShut) {
+			writeError(w, r, http.StatusConflict, "attachment_port_shut",
+				"That port is administratively shut", nil)
 			return
 		}
 		s.handleSimulationStartError(w, r, err)

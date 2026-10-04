@@ -46,8 +46,12 @@ func placementAccessSwitch() config.Device {
 		{Name: "Vlan200", Network: "med-mgmt", Address: "10.51.200.21/24"},
 		{Name: "HundredGigabitEthernet1/0/49", VLANs: []int{200, placementDataVLAN}},
 	}
+	// Pool ports are authored as the generator authors spare ports:
+	// "notconnect" until a client is plugged in.
 	for _, port := range placementPool() {
-		interfaces = append(interfaces, config.Interface{Name: port, VLANs: []int{placementDataVLAN}})
+		interfaces = append(interfaces, config.Interface{
+			Name: port, VLANs: []int{placementDataVLAN}, OperStatus: "down",
+		})
 	}
 	return config.Device{
 		Name:        placementAccess,

@@ -384,7 +384,7 @@ func (s *Stack) Stop() {
 	s.observedClients.reset()
 	s.receivedNotifications.reset()
 	if s.fabric != nil && s.fabric.placement != nil {
-		s.fabric.placement.reset()
+		s.unplugPoolClients()
 	}
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {
