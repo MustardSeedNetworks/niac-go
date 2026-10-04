@@ -129,6 +129,7 @@ GET /api/v1/sessions/{id}/interfaces        its simulated devices' interfaces
 GET /api/v1/sessions/{id}/segments          its VLAN segments
 GET /api/v1/sessions/{id}/neighbors         its LLDP/CDP neighbours
 GET /api/v1/sessions/{id}/clients           the client MACs seen on its wire
+GET /api/v1/sessions/{id}/notifications     what its simulated collectors received
 POST /api/v1/sessions/{id}/pins             pin a client to a pool port
 GET /api/v1/sessions/{id}/stats             its live counters
 GET /api/v1/sessions/{id}/runtime           its runtime summary
@@ -157,6 +158,17 @@ takes the first free port in the pool's order, in the order the clients were
 first seen, and keeps it until the session stops. Both fields are absent for a
 network-scoped attachment, and for a client that arrived after every port was
 taken.
+
+`GET /api/v1/sessions/{id}/notifications` lists the syslog and SNMP
+notifications the session's simulated devices sent to one another: in a pack,
+every managed device reports to its site collector (`<SITE>-NMS01`), which is
+itself simulated. Only the attachment network is physical, so a notification
+sent from any other network never appears on the wire; its receiver records it
+instead. Each entry names the `receiver`, the `sender`, the `source` address the
+sender used, the `protocol` (`syslog` or `snmp`), the syslog `message`, and
+`receivedAt`. `?device=<name>` returns one receiver's entries in arrival order;
+a name the session does not run answers `404 device_not_found`. A collector
+keeps its newest 256 entries, and the list empties when the session stops.
 
 `POST /api/v1/sessions/{id}/pins` moves one client to another port of the
 pool, with `{"mac": "...", "device": "...", "interface": "..."}`. The pin is

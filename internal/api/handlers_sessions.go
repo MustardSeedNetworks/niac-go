@@ -133,15 +133,16 @@ type sessionHandler func(http.ResponseWriter, *http.Request, sessionRuntime)
 // checks to confirm nothing still reads global state.
 func (s *Server) sessionResourceHandler(resource string) (sessionHandler, bool) {
 	handlers := map[string]sessionHandler{
-		"topology":   s.handleSessionTopology,
-		"devices":    s.handleSessionDevices,
-		"interfaces": s.handleSessionInterfaces,
-		"segments":   s.handleSessionSegments,
-		"neighbors":  s.handleSessionNeighbors,
-		"clients":    s.handleSessionClients,
-		"pins":       s.handleSessionPins,
-		"stats":      s.handleSessionStats,
-		"runtime":    s.handleSessionRuntime,
+		"topology":      s.handleSessionTopology,
+		"devices":       s.handleSessionDevices,
+		"interfaces":    s.handleSessionInterfaces,
+		"segments":      s.handleSessionSegments,
+		"neighbors":     s.handleSessionNeighbors,
+		"clients":       s.handleSessionClients,
+		"notifications": s.handleSessionNotifications,
+		"pins":          s.handleSessionPins,
+		"stats":         s.handleSessionStats,
+		"runtime":       s.handleSessionRuntime,
 		// Two segments deep: dispatchSessionSubpath cuts the session ID off
 		// the front and leaves the rest whole, so the key is the full
 		// resource path.

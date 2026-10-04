@@ -109,6 +109,9 @@ type Stack struct {
 	iperf3Handler      *IPerf3Handler
 	neighbors          *neighborTable
 	observedClients    *observedClientTable
+	// receivedNotifications is what the simulated collectors heard from the
+	// simulated devices that report to them.
+	receivedNotifications *receivedNotificationLog
 
 	// Statistics
 	stats *Statistics
@@ -238,18 +241,19 @@ func newStack(
 	bufferSize := DefaultQueueBufferSize
 
 	stack := &Stack{
-		capture:         captureEngine,
-		config:          cfg,
-		devices:         NewDeviceTable(),
-		sendQueue:       make(chan *Packet, bufferSize),
-		recvQueue:       make(chan *Packet, bufferSize),
-		stats:           &Statistics{},
-		stopChan:        make(chan struct{}),
-		debugConfig:     debugConfig,
-		snmpAgents:      make(map[*config.Device]*snmpAgentGroup),
-		neighbors:       newNeighborTable(),
-		observedClients: newObservedClientTable(),
-		vlanMode:        configUsesVLANs(cfg),
+		capture:               captureEngine,
+		config:                cfg,
+		devices:               NewDeviceTable(),
+		sendQueue:             make(chan *Packet, bufferSize),
+		recvQueue:             make(chan *Packet, bufferSize),
+		stats:                 &Statistics{},
+		stopChan:              make(chan struct{}),
+		debugConfig:           debugConfig,
+		snmpAgents:            make(map[*config.Device]*snmpAgentGroup),
+		neighbors:             newNeighborTable(),
+		observedClients:       newObservedClientTable(),
+		receivedNotifications: newReceivedNotificationLog(),
+		vlanMode:              configUsesVLANs(cfg),
 	}
 	stack.notifications = newStateNotificationManager(stack)
 
@@ -378,6 +382,7 @@ func (s *Stack) Stop() {
 	// over. Unlike the neighbour table it deliberately survives a config
 	// reload, which changes the scenario but not who is plugged into it.
 	s.observedClients.reset()
+	s.receivedNotifications.reset()
 	if s.fabric != nil && s.fabric.placement != nil {
 		s.fabric.placement.reset()
 	}
