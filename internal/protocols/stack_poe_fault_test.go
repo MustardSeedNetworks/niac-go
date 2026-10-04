@@ -3,6 +3,9 @@ package protocols
 import (
 	"errors"
 	"net"
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -45,6 +48,43 @@ func TestStackPoEFaultRefusesNonPSEPort(t *testing.T) {
 	}
 	if len(stack.ActiveInterfaceFaults()) != 0 {
 		t.Errorf("refused fault was stored: %v", stack.ActiveInterfaceFaults())
+	}
+}
+
+// A capture that carries its own PSE table keeps it, so a fault could change
+// none of its rows. The capture below numbers its PSE port 1 like ifIndex 1,
+// the coincidence that used to arm the fault; no capture says that is the
+// same port (niac-go#1972).
+func TestStackPoEFaultRefusesACapturedPSETable(t *testing.T) {
+	walk := filepath.Join(t.TempDir(), "pse.walk")
+	captured := "" +
+		".1.3.6.1.2.1.1.5.0 = STRING: closet-1\r\n" +
+		".1.3.6.1.2.1.2.2.1.1.1 = INTEGER: 1\r\n" +
+		".1.3.6.1.2.1.2.2.1.2.1 = STRING: Gi0/1\r\n" +
+		".1.3.6.1.2.1.2.2.1.3.1 = INTEGER: 6\r\n" +
+		".1.3.6.1.2.1.2.2.1.10.1 = Counter32: 5\r\n" +
+		".1.3.6.1.2.1.105.1.1.1.3.1.1 = INTEGER: 1\r\n" +
+		".1.3.6.1.2.1.105.1.1.1.6.1.1 = INTEGER: 3\r\n"
+	if err := os.WriteFile(walk, []byte(captured), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	device := faultTestDevice("closet-1")
+	device.Type = "switch"
+	device.PoEConfig = &config.PoEConfig{BudgetWatts: 370}
+	device.SNMPConfig.WalkFile = walk
+	stack := NewStack(nil, &config.Config{Devices: []config.Device{device}}, logging.NewDebugConfig(0))
+
+	err := stack.SetInterfaceFault("closet-1", "Gi0/1", devicestate.FaultPoELoss, 1)
+	if !errors.Is(err, ErrFaultNoPSEPort) {
+		t.Fatalf("error = %v, want %v", err, ErrFaultNoPSEPort)
+	}
+	if len(stack.ActiveInterfaceFaults()) != 0 {
+		t.Errorf("refused fault was stored: %v", stack.ActiveInterfaceFaults())
+	}
+	for _, target := range stack.InterfaceFaultTargets() {
+		if slices.Contains(target.ErrorTypes["Gi0/1"], devicestate.FaultPoELoss.Label()) {
+			t.Errorf("%s offers %s on a captured PSE table", target.Device, devicestate.FaultPoELoss.Label())
+		}
 	}
 }
 

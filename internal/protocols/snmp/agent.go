@@ -62,6 +62,10 @@ type Agent struct {
 	// which the MIB calls while holding its own lock; a mutex here would order
 	// the two locks against the way the rest of the agent takes them.
 	poe atomic.Pointer[poePower]
+	// poeSynthesized is set once NIAC registers the PSE table itself. A table
+	// loaded from a capture leaves it false: its rows are the capture's, and
+	// nothing a fault changes would show in them.
+	poeSynthesized bool
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.

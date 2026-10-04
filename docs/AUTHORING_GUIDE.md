@@ -502,6 +502,14 @@ devices:
 rates and take a `value` of 1 to 100. `link_down` and `poe_loss` take none: a
 dead link has no magnitude, and writing a number there would invent one.
 
+`poe_loss` arms only on a port whose POWER-ETHERNET-MIB row NIAC synthesizes:
+an Ethernet port of a device with `poe:` that has no capture, or whose capture
+carries no POWER-ETHERNET-MIB of its own. A port that supplies no power is
+refused, because cutting it would read as `link_down`. So is a port of a
+capture that carries its own PSE table: those rows are the capture's and do
+not change, and no capture states how its vendor-numbered PSE port maps to an
+interface. The refusal is `fault_no_pse_port`.
+
 A device carries the service outcomes, which have no interface to be keyed by:
 
 ```yaml
