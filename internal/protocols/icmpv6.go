@@ -435,7 +435,8 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 	}
 
 	for _, device := range h.stack.devicesFor(pkt.VLAN).GetAll() {
-		if !deviceCanAdvertiseIPv6(device) {
+		if !deviceCanAdvertiseIPv6(device) ||
+			(h.stack.fabric != nil && !h.stack.fabric.onClientLink(device)) {
 			continue
 		}
 

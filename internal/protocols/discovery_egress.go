@@ -78,6 +78,19 @@ func (s *Stack) advertisedPortName(device *config.Device, authored, fallback str
 	}
 }
 
+// onClientLink reports whether device is on the client's IP link, where a
+// router advertisement can come from: any device with a usable interface on
+// the attachment network, so the core SVI behind a pool's access switch too. A
+// pool whose every free port is shut has left the client no link at all.
+func (r *fabricRuntime) onClientLink(device *config.Device) bool {
+	if r.placement != nil {
+		if _, ok := r.placement.advertisedPort(r.portAdminUp); !ok {
+			return false
+		}
+	}
+	return r.deviceOnAttachment(device)
+}
+
 func (r *fabricRuntime) deviceOnAttachment(device *config.Device) bool {
 	for _, iface := range r.topology.Interfaces {
 		if iface.Device == device.Name &&

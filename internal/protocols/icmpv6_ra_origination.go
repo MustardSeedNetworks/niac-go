@@ -80,7 +80,7 @@ func (h *ICMPv6Handler) sendDueRouterAdvertisements(
 	next := make(map[*config.Device]time.Time, len(due))
 	for _, device := range h.stack.AllDevices() {
 		if !deviceCanAdvertiseIPv6(device) ||
-			(h.stack.fabric != nil && !h.stack.fabric.advertisesAtClient(device)) {
+			(h.stack.fabric != nil && !h.stack.fabric.onClientLink(device)) {
 			continue
 		}
 		at, scheduled := due[device]
