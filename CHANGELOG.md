@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.108.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.107.1...v0.108.0) (2026-10-04)
+
+
+### Features
+
+* **scenario:** give each vertical pack a storage, virtualisation and backup tier ([#2480](https://github.com/MustardSeedNetworks/niac-go/issues/2480)) ([c4611be](https://github.com/MustardSeedNetworks/niac-go/commit/c4611be857179c17fbbe0a6fc9049484761ae434))
+
+
+### Documentation
+
+* **ledger:** record the M5-4 seed consumer acceptance ([#2485](https://github.com/MustardSeedNetworks/niac-go/issues/2485)) ([fea44a6](https://github.com/MustardSeedNetworks/niac-go/commit/fea44a6bdbf3c96b2d75607435785e661f3d07fe)), closes [#2484](https://github.com/MustardSeedNetworks/niac-go/issues/2484)
+
 ## [0.107.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.107.0...v0.107.1) (2026-10-04)
 
 
