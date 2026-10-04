@@ -20,5 +20,8 @@ Status values: Proposed · Accepted · Amended · Superseded.
 
 Decisions recorded outside this directory: the replay-fidelity substitution
 contract (`docs/design/2026-09-replay-fidelity-contract.md`, owner-signed
-2026-09-05 and 2026-09-08) is an accepted decision record in everything but
-its path.
+2026-09-05 and 2026-09-08) is an accepted decision record in everything but its
+path. The fleet's API style is another: seed, stem and NIAC serve REST/JSON
+over foundation's shared route registrar, and trellis serves Connect-RPC over
+its proto contract (`msn-docs-internal/05-Engineering/API_STYLES.md`, owner
+decision 10, 2026-09-17; revisit at trellis v1).
