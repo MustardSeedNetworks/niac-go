@@ -53,7 +53,9 @@ export const DeviceTable = memo(({ devices, selectedName, onSelect }: DeviceTabl
               {proto}
             </Tag>
           ))}
-          {device.protocols.length === 0 && <SmallText className="text-text-muted">None</SmallText>}
+          {device.protocols.length === 0 && (
+            <SmallText className="text-text-muted">{tCommon('labels.none')}</SmallText>
+          )}
         </div>
       ),
     },

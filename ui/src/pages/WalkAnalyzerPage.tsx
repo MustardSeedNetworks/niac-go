@@ -44,6 +44,7 @@ function renderProtocolBadge(protocol: string): ReactNode {
 
 export const WalkAnalyzerPage: FC = () => {
   const { t } = useTranslation('pages');
+  const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [filesLoading, setFilesLoading] = useState(true);
@@ -203,7 +204,7 @@ export const WalkAnalyzerPage: FC = () => {
                   data-testid="walk-analyzer-picker"
                   className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
                 >
-                  {filesLoading && <option>Loading…</option>}
+                  {filesLoading && <option>{tCommon('status.loading')}</option>}
                   {!filesLoading && files.length === 0 && (
                     <option>{t('walkAnalyzer.noWalksFound')}</option>
                   )}

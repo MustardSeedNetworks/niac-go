@@ -242,7 +242,7 @@ export const WalkValidatorPage: FC = () => {
                   disabled={filesLoading || files.length === 0}
                   className="mt-tight w-full rounded border border-surface-border bg-bg-base/60 px-3 py-row text-sm text-text-primary focus:border-status-info focus:outline-none disabled:opacity-50"
                 >
-                  {filesLoading && <option>Loading…</option>}
+                  {filesLoading && <option>{tCommon('status.loading')}</option>}
                   {!filesLoading && files.length === 0 && (
                     <option>{t('walkValidator.noWalksFound')}</option>
                   )}
