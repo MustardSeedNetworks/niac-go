@@ -342,9 +342,12 @@ Measured over the four Nexus walks, before and after:
 | `cisco-nexus-4000-02` | 3,765 | 522 | 3,243 | fixed |
 | `cisco-nexus-7000-01` | 1,139 | 1,139 | 0 | fixed |
 
-(`cisco-nexus-7000-01`'s rows are not symbolic names but mangled arcs —
-`1.3.6.1.2.1.4v6RouterAdvertSpinLock.0` — which look like a sanitizer artifact
-rather than anything net-snmp emits.)
+(`cisco-nexus-7000-01`'s rows are not symbolic names but non-numeric arcs in
+a numeric OID: 101 object names spliced onto the prefix
+(`1.3.6.1.2.1.4v6RouterAdvertSpinLock.0`) and 1,038 enum-labelled indexes
+(`1.3.6.1.2.1.5.29.1.2.ipv4`). The sanitizer did not produce them: the raw walk
+was byte-identical to `niac-java`'s `Nexus_n7000.walk`. `niac-demo-catalog` #65
+translates them to numeric OIDs and gates the shape in that repo's CI (#1921).)
 
 The harness gained a `rejected` count read from the raw file, because a
 rejected row is absent from _both_ sides of the comparison: without it,
