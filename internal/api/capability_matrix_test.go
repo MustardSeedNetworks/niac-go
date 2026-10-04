@@ -33,10 +33,13 @@ func unauthoredProtocols() map[string]string {
 		"EDPConfig": "P5-9: vendor-specific, deliberately unauthored for v1",
 		"FDPConfig": "P5-9: vendor-specific, deliberately unauthored for v1",
 
-		// Authored by no shipped content at all, and owned by no row.
-		"Babble":    "#2138: authored nowhere; no row owns it",
-		"MapToIP":   "#2138: authored nowhere; no row owns it",
-		"TTLConfig": "#2138: authored nowhere; no row owns it",
+		// Hand-authoring only. Each is a knob an operator can set in a config by
+		// hand, and no consumer of a pack needs it: no collector or
+		// troubleshooting flow reads junk traffic, a UDP remap or a shaped
+		// traceroute TTL as evidence of anything.
+		"Babble":    "hand-authoring only: no consumer needs a pack to emit junk traffic",
+		"MapToIP":   "hand-authoring only: no consumer needs a pack to remap UDP traffic",
+		"TTLConfig": "hand-authoring only: no consumer needs a pack to shape traceroute TTLs",
 	}
 }
 
