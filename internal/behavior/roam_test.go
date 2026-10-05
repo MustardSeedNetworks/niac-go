@@ -65,7 +65,8 @@ func TestCompileRoamsBackOnReset(t *testing.T) {
 // return.
 func TestCompileCarriesTheCauseBothWays(t *testing.T) {
 	timelines := roamEvery30s()
-	timelines[0].Phases[1].Roams[0].Cause = devicestate.RoamCauseRadioDown
+	timelines[0].Phases[1].Roams[0].Cause = devicestate.RoamCauseTxPowerDrop
+	timelines[0].Phases[1].Roams[0].TxPowerDBM = 8
 
 	var got []behavior.RoamAction
 	for _, transition := range behavior.Compile(timelines)[:3] {
@@ -73,13 +74,13 @@ func TestCompileCarriesTheCauseBothWays(t *testing.T) {
 	}
 
 	want := []behavior.RoamAction{
-		{Station: roamingStation, From: "MED-AP-01", To: "MED-AP-02", Cause: devicestate.RoamCauseRadioDown},
 		{
-			Station: roamingStation,
-			From:    "MED-AP-02",
-			To:      "MED-AP-01",
-			Cause:   devicestate.RoamCauseRadioDown,
-			Return:  true,
+			Station: roamingStation, From: "MED-AP-01", To: "MED-AP-02",
+			Cause: devicestate.RoamCauseTxPowerDrop, TxPowerDBM: 8,
+		},
+		{
+			Station: roamingStation, From: "MED-AP-02", To: "MED-AP-01",
+			Cause: devicestate.RoamCauseTxPowerDrop, TxPowerDBM: 8, Return: true,
 		},
 	}
 	if !reflect.DeepEqual(got, want) {

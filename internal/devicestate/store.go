@@ -58,6 +58,7 @@ type Store struct {
 	telemetry            DeviceTelemetry
 	consumedActions      map[string]DeviceActionType
 	stations             map[string]Station
+	radioTxPower         map[string]int
 }
 
 // NewStore creates a store seeded with authored device identity.

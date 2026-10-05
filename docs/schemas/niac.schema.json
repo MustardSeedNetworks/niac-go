@@ -225,9 +225,14 @@
         "cause": {
           "type": "string",
           "enum": [
-            "radio_down"
+            "radio_down",
+            "tx_power_drop"
           ],
-          "description": "Cause is what happens to the radio the station is on before it leaves:\n`radio_down` takes that radio's carrier down. Reset restores the radio\nbefore the station roams back. Omitted, the roam has no cause."
+          "description": "Cause is what happens to the radio the station is on before it leaves:\n`radio_down` takes that radio's carrier down, and `tx_power_drop` lowers\nits transmit power to `tx_power_dbm`. Reset restores the radio before the\nstation roams back. Omitted, the roam has no cause."
+        },
+        "tx_power_dbm": {
+          "type": "integer",
+          "description": "TxPowerDBM is the power a `tx_power_drop` lowers the radio to, below\nevery power the old access point serves the station's SSID at."
         }
       },
       "additionalProperties": false,

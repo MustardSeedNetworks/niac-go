@@ -24,6 +24,7 @@ type Checkpoint struct {
 	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
 	Stations        []Station
+	RadioTxPowers   []RadioTxPower
 }
 
 // State is everything a store holds that the compiled configuration cannot
@@ -44,6 +45,7 @@ type State struct {
 	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
 	Stations        []Station
+	RadioTxPowers   []RadioTxPower
 	Checkpoints     []Checkpoint
 	Events          []Event
 	Version         uint64
@@ -79,6 +81,7 @@ func (s *Store) ExportState() State {
 		PrefixFaults:    sortedPrefixFaults(s.prefixFaults),
 		DeviceFaults:    sortedDeviceFaults(s.deviceFaults),
 		Stations:        sortedStations(s.stations),
+		RadioTxPowers:   sortedRadioTxPowers(s.radioTxPower),
 		Checkpoints:     exportCheckpoints(s.checkpoints),
 		Events:          cloneEvents(s.events),
 		Version:         s.version,
@@ -105,6 +108,7 @@ func (s *Store) RestoreState(state State) error {
 	s.prefixFaults = importPrefixFaults(state.PrefixFaults)
 	s.deviceFaults = importDeviceFaults(state.DeviceFaults)
 	s.stations = importStations(state.Stations)
+	s.radioTxPower = importRadioTxPowers(state.RadioTxPowers)
 	s.telemetry = state.Telemetry
 	s.consumedActions = importConsumedActions(state.ConsumedActions)
 	s.checkpoints = importCheckpoints(state.Checkpoints)
@@ -152,6 +156,7 @@ func exportCheckpoints(saved map[string]checkpoint) []Checkpoint {
 			PrefixFaults:    sortedPrefixFaults(point.prefixFaults),
 			DeviceFaults:    sortedDeviceFaults(point.deviceFaults),
 			Stations:        sortedStations(point.stations),
+			RadioTxPowers:   sortedRadioTxPowers(point.radioTxPower),
 		})
 	}
 	return result
@@ -168,6 +173,7 @@ func importCheckpoints(saved []Checkpoint) map[string]checkpoint {
 			prefixFaults:  importPrefixFaults(point.PrefixFaults),
 			deviceFaults:  importDeviceFaults(point.DeviceFaults),
 			stations:      importStations(point.Stations),
+			radioTxPower:  importRadioTxPowers(point.RadioTxPowers),
 		}
 	}
 	return result

@@ -11,6 +11,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 // The OIDs below are written as literals on purpose. They are read off the
@@ -122,6 +123,27 @@ func TestDot11TxPowerIsReportedInMilliwatts(t *testing.T) {
 	wantInt(t, agent.mib.Get(oracleCurrentTxPower+"."+first), 1, "dot11CurrentTxPowerLevel")
 	wantInt(t, agent.mib.Get(oracleTxPowerLevel1+"."+first), 50, "17 dBm in mW")
 	wantInt(t, agent.mib.Get(oracleTxPowerLevel1+"."+second), 100, "20 dBm in mW")
+}
+
+// TestDot11TxPowerFollowsTheRadioState: a radio moved off its authored power
+// reports the power it runs at, and returns to the authored one with it.
+func TestDot11TxPowerFollowsTheRadioState(t *testing.T) {
+	state := devicestate.NewStore(devicestate.Identity{Hostname: "MED-AP-01"})
+	state.ReplaceNetwork(devicestate.Network{Interfaces: []devicestate.Interface{
+		{Name: "Dot11Radio0"}, {Name: "Dot11Radio1"},
+	}})
+	agent := NewAgentWithState(wifiAP(), state, AgentOptions{Community: "public"})
+	first := radioIndex(t, agent, "Dot11Radio0")
+	second := radioIndex(t, agent, "Dot11Radio1")
+
+	if err := state.SetRadioTxPower("Dot11Radio0", 8); err != nil {
+		t.Fatal(err)
+	}
+	wantInt(t, agent.mib.Get(oracleTxPowerLevel1+"."+first), 6, "8 dBm in mW after the drop")
+	wantInt(t, agent.mib.Get(oracleTxPowerLevel1+"."+second), 100, "the other radio's 20 dBm in mW")
+
+	state.RestoreRadioTxPower("Dot11Radio0")
+	wantInt(t, agent.mib.Get(oracleTxPowerLevel1+"."+first), 50, "17 dBm in mW after the restore")
 }
 
 // TestDot11IsAbsentWithoutAnAuthoredRadio: a device with no wifi block is not

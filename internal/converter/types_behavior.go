@@ -62,9 +62,14 @@ type BehaviorRoam struct {
 	To string `yaml:"to" validate:"required"`
 
 	// Cause is what happens to the radio the station is on before it leaves:
-	// `radio_down` takes that radio's carrier down. Reset restores the radio
-	// before the station roams back. Omitted, the roam has no cause.
-	Cause string `yaml:"cause,omitempty" validate:"omitempty,oneof=radio_down"`
+	// `radio_down` takes that radio's carrier down, and `tx_power_drop` lowers
+	// its transmit power to `tx_power_dbm`. Reset restores the radio before the
+	// station roams back. Omitted, the roam has no cause.
+	Cause string `yaml:"cause,omitempty" validate:"omitempty,oneof=radio_down tx_power_drop"`
+
+	// TxPowerDBM is the power a `tx_power_drop` lowers the radio to, below
+	// every power the old access point serves the station's SSID at.
+	TxPowerDBM int `yaml:"tx_power_dbm,omitempty" validate:"omitempty,gte=1,lte=30"`
 }
 
 // BehaviorAction performs a device operation without arming a fault.

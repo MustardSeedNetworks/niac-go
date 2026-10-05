@@ -47,7 +47,9 @@ type RoamAction struct {
 	From    string
 	To      string
 	Cause   devicestate.RoamCause
-	Return  bool
+	// TxPowerDBM is what a tx_power_drop cause lowers the radio to.
+	TxPowerDBM int
+	Return     bool
 }
 
 // PhaseRef identifies one compiled phase while retaining its authored label.
@@ -229,7 +231,9 @@ func compileOneShotActions(actions []config.BehaviorAction, phaseID string) []On
 func roamActions(roams []config.BehaviorRoam, reset bool) []RoamAction {
 	result := make([]RoamAction, len(roams))
 	for index, roam := range roams {
-		result[index] = RoamAction{Station: roam.Station, From: roam.From, To: roam.To, Cause: roam.Cause}
+		result[index] = RoamAction{
+			Station: roam.Station, From: roam.From, To: roam.To, Cause: roam.Cause, TxPowerDBM: roam.TxPowerDBM,
+		}
 		if reset {
 			result[index].From, result[index].To = roam.To, roam.From
 			result[index].Return = true

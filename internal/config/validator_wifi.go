@@ -4,16 +4,11 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
-// Transmit-power bounds in dBm. The floor is one milliwatt, which is the
-// weakest level IEEE802dot11-MIB can report, and the ceiling is the strongest
-// any regulatory domain permits an indoor AP, so a mistyped power is caught
-// rather than replayed.
 const (
-	minWiFiTxPowerDBM = 1
-	maxWiFiTxPowerDBM = 30
-
 	// maxSSIDOctets is the size of dot11DesiredSSID.
 	maxSSIDOctets = 32
 
@@ -143,10 +138,10 @@ func (v *Validator) validateWiFiRadio(
 
 	v.validateWiFiRadioChannel(radio, prefix)
 
-	if radio.TxPowerDBM < minWiFiTxPowerDBM || radio.TxPowerDBM > maxWiFiTxPowerDBM {
+	if radio.TxPowerDBM < devicestate.MinRadioTxPowerDBM || radio.TxPowerDBM > devicestate.MaxRadioTxPowerDBM {
 		v.addError(prefix+".tx_power_dbm", fmt.Sprintf(
 			"transmit power must be between %d and %d dBm, got %d",
-			minWiFiTxPowerDBM, maxWiFiTxPowerDBM, radio.TxPowerDBM))
+			devicestate.MinRadioTxPowerDBM, devicestate.MaxRadioTxPowerDBM, radio.TxPowerDBM))
 	}
 
 	for index := range radio.Clients {

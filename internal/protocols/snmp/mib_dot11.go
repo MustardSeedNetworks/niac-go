@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // IEEE802dot11-MIB object prefixes. The tree hangs off the IEEE arc
@@ -120,22 +122,25 @@ func (a *Agent) registerDot11MIB() {
 		a.mib.Set(dot11DesiredSSID+suffix,
 			&OIDValue{Type: gosnmp.OctetString, Value: radio.SSID})
 
-		a.registerDot11Phy(radio.Band, radio.Channel, radio.TxPowerDBM, suffix)
+		a.registerDot11Phy(radio, suffix)
 	}
 }
 
-func (a *Agent) registerDot11Phy(band string, channel, txPowerDBM int, suffix string) {
-	phyType, channelOID := dot11PhyForBand(band)
+func (a *Agent) registerDot11Phy(radio config.WiFiRadio, suffix string) {
+	phyType, channelOID := dot11PhyForBand(radio.Band)
 	if channelOID == "" {
 		return
 	}
 	a.mib.Set(dot11PHYType+suffix, &OIDValue{Type: gosnmp.Integer, Value: phyType})
-	a.mib.Set(channelOID+suffix, &OIDValue{Type: gosnmp.Integer, Value: channel})
+	a.mib.Set(channelOID+suffix, &OIDValue{Type: gosnmp.Integer, Value: radio.Channel})
 
 	a.mib.Set(dot11NumberSupportedPowerLevels+suffix,
 		&OIDValue{Type: gosnmp.Integer, Value: dot11SingleTxPowerLevel})
-	a.mib.Set(dot11TxPowerLevel1+suffix,
-		&OIDValue{Type: gosnmp.Integer, Value: milliwattsFromDBM(txPowerDBM)})
+	// The one level is the power the radio runs at now, which a scenario can
+	// move away from the authored one (a roam's tx_power_drop).
+	a.mib.SetDynamic(dot11TxPowerLevel1+suffix, func() *OIDValue {
+		return &OIDValue{Type: gosnmp.Integer, Value: milliwattsFromDBM(a.radioTxPowerDBM(radio))}
+	})
 	a.mib.Set(dot11CurrentTxPowerLevel+suffix,
 		&OIDValue{Type: gosnmp.Integer, Value: dot11SingleTxPowerLevel})
 }
@@ -155,7 +160,16 @@ func dot11PhyForBand(band string) (int, string) {
 	}
 }
 
-// milliwattsFromDBM converts authored transmit power into the unit
+func (a *Agent) radioTxPowerDBM(radio config.WiFiRadio) int {
+	if a.deviceState != nil {
+		if dBm, moved := a.deviceState.RadioTxPowerDBM(radio.Interface); moved {
+			return dBm
+		}
+	}
+	return radio.TxPowerDBM
+}
+
+// milliwattsFromDBM converts transmit power into the unit
 // dot11TxPowerLevelN is defined in. The validator caps the input at 30 dBm, so
 // the result stays inside the MIB's 0..10000 mW range.
 func milliwattsFromDBM(dBm int) int {
