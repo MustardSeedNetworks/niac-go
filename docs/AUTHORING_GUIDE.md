@@ -741,6 +741,34 @@ restarted, and logs `STATION_ASSOCIATED`; the old AP drops it and logs
 `%DOT11-6-ASSOC` and `%DOT11-6-ROAMED`, with the station's MAC as the target.
 A controller both APs joined reports the station on the new AP.
 
+A roam can name its cause. `cause: radio_down` takes down the radio the
+station is on, before the station leaves it, so the old AP reports
+`FAULT_UPDATED` and `LINK_DOWN` for the radio ahead of `STATION_ROAMED`, and
+IF-MIB shows the radio down for the phase:
+
+```yaml
+behavior_timelines:
+  - name: ward-radio-failure
+    repeat_count: 1
+    phases:
+      - name: radio-down
+        duration_ms: 15000
+        reset: true
+        roams:
+          - station: "02:c0:17:a4:03:6b"
+            from: clinic-ap-01
+            to: clinic-ap-02
+            cause: radio_down
+```
+
+With `reset`, the radio comes back up before the station returns, and the
+station returns to that radio rather than to whichever of the AP's radios
+serves the SSID first. The old AP must serve SNMP, which is checked when the
+config loads: a radio that goes down where no poller can see it is not a
+cause anyone could find. Only the stations a phase roams move. Roam every
+station on the radio you take down, or the others stay listed on a radio that
+is down.
+
 Three things to know:
 
 - **Where the station is decides at run time.** Both APs must serve the

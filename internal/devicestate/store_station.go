@@ -28,7 +28,23 @@ type Station struct {
 	SignalDBM        int
 	SignalQualityPct int
 	AssociatedAt     time.Time
+	// ReturnRadio is the radio of the access point the station roamed from,
+	// which a reset roams it back onto. An AP may serve one SSID on several
+	// radios, and a cause degraded this one, so "any radio serving the SSID"
+	// is not where the station came from.
+	ReturnRadio string
 }
+
+// RoamCause is what made a station leave its access point. The cause happens
+// to the radio the station was on, before the station reassociates elsewhere.
+type RoamCause string
+
+// The roam causes a timeline can author. An empty cause is a roam with no
+// event behind it, the client's own choice.
+const (
+	// RoamCauseRadioDown takes the old radio's carrier down for the phase.
+	RoamCauseRadioDown RoamCause = "radio_down"
+)
 
 // InstallStations seeds the authored associations. It records no event: the
 // stations were associated before the simulation started, which is what the

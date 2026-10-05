@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/behavior"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
@@ -18,36 +19,60 @@ var ErrRoamTargetInvalid = errors.New("access point cannot take this station")
 // roamed, the order a real reassociation is seen in. Everything that can
 // refuse is checked before either side changes, so a refused roam leaves the
 // station where it was.
-func (s *Stack) RoamStation(station, from, to string) error {
+//
+// A cause happens first, to the radio the station is on, because it is why
+// the station left. A return roam undoes the cause on the radio the station
+// came from and lands it there.
+func (s *Stack) RoamStation(roam behavior.RoamAction) error {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
-	fromDevice, fromStore, err := s.interfaceFaultTarget(from)
+	fromDevice, fromStore, err := s.interfaceFaultTarget(roam.From)
 	if err != nil {
 		return err
 	}
-	toDevice, toStore, err := s.interfaceFaultTarget(to)
+	toDevice, toStore, err := s.interfaceFaultTarget(roam.To)
 	if err != nil {
 		return err
 	}
-	current, associated := fromStore.Station(station)
+	current, associated := fromStore.Station(roam.Station)
 	if !associated {
-		return fmt.Errorf("roam %s from %s: %w", station, fromDevice.Name, devicestate.ErrStationNotFound)
+		return fmt.Errorf("roam %s from %s: %w", roam.Station, fromDevice.Name, devicestate.ErrStationNotFound)
+	}
+	if _, already := toStore.Station(roam.Station); already {
+		return fmt.Errorf("roam %s to %s: %w", roam.Station, toDevice.Name, devicestate.ErrStationAssociated)
 	}
 	radio, found := roamRadio(fromDevice, toDevice, current.Radio)
+	if roam.Return {
+		radio, found = current.ReturnRadio, current.ReturnRadio != "" && servesRadio(toDevice, radio)
+	}
 	if !found {
-		return fmt.Errorf("roam %s to %s: %w", station, toDevice.Name, ErrRoamTargetInvalid)
+		return fmt.Errorf("roam %s to %s: %w", roam.Station, toDevice.Name, ErrRoamTargetInvalid)
+	}
+	now := time.Now()
+	if roam.Cause == devicestate.RoamCauseRadioDown {
+		down, downDevice, downRadio := carrierFaultValue, fromDevice.Name, current.Radio
+		if roam.Return {
+			down, downDevice, downRadio = 0, toDevice.Name, radio
+		}
+		if err = s.setInterfaceFaultNoLock(downDevice, downRadio, devicestate.FaultLinkDown, down, now); err != nil {
+			return fmt.Errorf("roam %s cause %s on %s: %w", roam.Station, roam.Cause, downDevice, err)
+		}
 	}
 	next := current
-	next.Radio = radio
-	next.AssociatedAt = time.Now()
+	next.Radio, next.ReturnRadio = radio, current.Radio
+	next.AssociatedAt = now
 	if err = toStore.AssociateStation(next); err != nil {
-		return fmt.Errorf("roam %s to %s: %w", station, toDevice.Name, err)
+		return fmt.Errorf("roam %s to %s: %w", roam.Station, toDevice.Name, err)
 	}
-	if _, err = fromStore.RoamStation(station); err != nil {
-		return fmt.Errorf("roam %s from %s: %w", station, fromDevice.Name, err)
+	if _, err = fromStore.RoamStation(roam.Station); err != nil {
+		return fmt.Errorf("roam %s from %s: %w", roam.Station, fromDevice.Name, err)
 	}
 	return nil
 }
+
+// carrierFaultValue is what arms link_down: the fault is an outcome, and any
+// non-zero value takes the carrier down.
+const carrierFaultValue = 1
 
 // roamRadio is the radio of the new AP that serves the SSID the station is
 // on, so a station on the corporate network does not land on the guest one.
@@ -68,4 +93,10 @@ func roamRadio(from, to *config.Device, fromRadio string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func servesRadio(device *config.Device, iface string) bool {
+	return device.WiFiConfig != nil && slices.ContainsFunc(device.WiFiConfig.Radios, func(radio config.WiFiRadio) bool {
+		return radio.Interface == iface
+	})
 }

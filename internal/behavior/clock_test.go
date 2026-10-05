@@ -99,7 +99,7 @@ func (*clockTestTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType
 	return nil
 }
 
-func (*clockTestTarget) RoamStation(string, string, string) error {
+func (*clockTestTarget) RoamStation(behavior.RoamAction) error {
 	return nil
 }
 

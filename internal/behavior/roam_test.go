@@ -9,6 +9,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/behavior"
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 const roamingStation = "02:c0:17:a4:03:6b"
@@ -35,7 +36,7 @@ func roamEvery30s() []config.BehaviorTimeline {
 // one-way trip that the second cycle would find already made.
 func TestCompileRoamsBackOnReset(t *testing.T) {
 	away := behavior.RoamAction{Station: roamingStation, From: "MED-AP-01", To: "MED-AP-02"}
-	back := behavior.RoamAction{Station: roamingStation, From: "MED-AP-02", To: "MED-AP-01"}
+	back := behavior.RoamAction{Station: roamingStation, From: "MED-AP-02", To: "MED-AP-01", Return: true}
 	type roamsAt struct {
 		offset time.Duration
 		roams  []behavior.RoamAction
@@ -59,9 +60,36 @@ func TestCompileRoamsBackOnReset(t *testing.T) {
 	}
 }
 
+// TestCompileCarriesTheCauseBothWays: the roam away applies the cause and the
+// roam back undoes it, so both directions carry it and only the second is a
+// return.
+func TestCompileCarriesTheCauseBothWays(t *testing.T) {
+	timelines := roamEvery30s()
+	timelines[0].Phases[1].Roams[0].Cause = devicestate.RoamCauseRadioDown
+
+	var got []behavior.RoamAction
+	for _, transition := range behavior.Compile(timelines)[:3] {
+		got = append(got, transition.RoamActions...)
+	}
+
+	want := []behavior.RoamAction{
+		{Station: roamingStation, From: "MED-AP-01", To: "MED-AP-02", Cause: devicestate.RoamCauseRadioDown},
+		{
+			Station: roamingStation,
+			From:    "MED-AP-02",
+			To:      "MED-AP-01",
+			Cause:   devicestate.RoamCauseRadioDown,
+			Return:  true,
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("first cycle roams = %+v, want %+v", got, want)
+	}
+}
+
 type refusingRoamTarget struct{ recordingTarget }
 
-func (*refusingRoamTarget) RoamStation(string, string, string) error {
+func (*refusingRoamTarget) RoamStation(behavior.RoamAction) error {
 	return errors.New("station is not associated to this device")
 }
 
@@ -77,7 +105,7 @@ func TestRunnerRoamsInOrderAndStopsOnARefusal(t *testing.T) {
 			t.Fatalf("state = %s, want completed", state)
 		}
 		away := behavior.RoamAction{Station: roamingStation, From: "MED-AP-01", To: "MED-AP-02"}
-		back := behavior.RoamAction{Station: roamingStation, From: "MED-AP-02", To: "MED-AP-01"}
+		back := behavior.RoamAction{Station: roamingStation, From: "MED-AP-02", To: "MED-AP-01", Return: true}
 		if want := []behavior.RoamAction{away, back, away, back}; !reflect.DeepEqual(target.roamActions, want) {
 			t.Fatalf("roams = %+v, want %+v", target.roamActions, want)
 		}

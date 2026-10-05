@@ -1,5 +1,6 @@
 # Schema fields the device editor cannot set yet (ratchet; see check-authoring-parity.py).
 # Bind a field in schema-bindings.json, or allow-list it with a reason, then remove it here.
+behavior_timelines[].phases[].roams[].cause
 behavior_timelines[].phases[].roams[].from
 behavior_timelines[].phases[].roams[].station
 behavior_timelines[].phases[].roams[].to

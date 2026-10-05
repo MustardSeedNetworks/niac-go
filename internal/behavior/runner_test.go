@@ -107,10 +107,10 @@ func (*recordingTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType
 	return nil
 }
 
-func (t *recordingTarget) RoamStation(station, from, to string) error {
+func (t *recordingTarget) RoamStation(roam behavior.RoamAction) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.roamActions = append(t.roamActions, behavior.RoamAction{Station: station, From: from, To: to})
+	t.roamActions = append(t.roamActions, roam)
 	return nil
 }
 
