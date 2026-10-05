@@ -5,6 +5,26 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.112.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.111.0...v0.112.0) (2026-10-05)
+
+
+### Features
+
+* **deploy:** build a Docker image from a release archive ([#2548](https://github.com/MustardSeedNetworks/niac-go/issues/2548)) ([51766a2](https://github.com/MustardSeedNetworks/niac-go/commit/51766a2d36dd8324b9dd9a9fb392ef6e71d3ad6b)), closes [#2547](https://github.com/MustardSeedNetworks/niac-go/issues/2547)
+* **wifi:** let a roam drop the old radio's transmit power (W1) ([#2542](https://github.com/MustardSeedNetworks/niac-go/issues/2542)) ([ed39590](https://github.com/MustardSeedNetworks/niac-go/commit/ed395905454bcdbbca99111274dd3d06e53d62ce)), closes [#2541](https://github.com/MustardSeedNetworks/niac-go/issues/2541)
+* **wifi:** let a roam name its cause, radio down ([#2540](https://github.com/MustardSeedNetworks/niac-go/issues/2540)) ([4b0a239](https://github.com/MustardSeedNetworks/niac-go/commit/4b0a239f873a58f4043e0d305601da234e9fd4cb)), closes [#2539](https://github.com/MustardSeedNetworks/niac-go/issues/2539)
+
+
+### Bug Fixes
+
+* **daemon:** keep a session's config path across a restart under a linked root ([#2545](https://github.com/MustardSeedNetworks/niac-go/issues/2545)) ([53fa4c4](https://github.com/MustardSeedNetworks/niac-go/commit/53fa4c4498f800554b3cde876532791ffeb6f9a6)), closes [#2385](https://github.com/MustardSeedNetworks/niac-go/issues/2385)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2543](https://github.com/MustardSeedNetworks/niac-go/issues/2543)) ([c1c68f1](https://github.com/MustardSeedNetworks/niac-go/commit/c1c68f1c3969bc060fb0531b0680145c4e1429ef))
+* **deps:** lock file maintenance ([#2546](https://github.com/MustardSeedNetworks/niac-go/issues/2546)) ([3d0f664](https://github.com/MustardSeedNetworks/niac-go/commit/3d0f66477fbf3b3d61fd3b883553db9b24332193))
+
 ## [0.111.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.110.0...v0.111.0) (2026-10-05)
 
 
