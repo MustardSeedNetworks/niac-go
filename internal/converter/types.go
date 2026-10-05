@@ -355,7 +355,8 @@ type Device struct {
 	// fingerprinting scanner identifies the intended operating system.
 	OSFingerprint *OSFingerprintConfig `yaml:"os_fingerprint,omitempty"`
 
-	// SSH serves an authenticated vendor-like CLI. The password is never
+	// SSH serves an authenticated vendor-like CLI. With no account it still
+	// answers key exchange and refuses every login. The password is never
 	// written in the config: `password_env` names an environment variable
 	// that must be set in the daemon's environment, or the device cannot
 	// start.

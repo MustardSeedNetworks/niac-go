@@ -263,12 +263,15 @@ func validateSSHConfig(config *SSHConfig) error {
 	if config == nil || !config.Enabled {
 		return nil
 	}
+	if config.Username == "" && config.PasswordEnv == "" {
+		return nil
+	}
 	if strings.TrimSpace(config.Username) == "" {
-		return errors.New("ssh.username is required when SSH is enabled")
+		return errors.New("ssh.username is required when ssh.password_env is set")
 	}
 	valid, _ := regexp.MatchString(`^[A-Za-z_][A-Za-z0-9_]*$`, config.PasswordEnv)
 	if !valid {
-		return errors.New("ssh.password_env must name an environment variable when SSH is enabled")
+		return errors.New("ssh.password_env must name an environment variable when ssh.username is set")
 	}
 	return nil
 }

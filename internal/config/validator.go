@@ -172,15 +172,42 @@ func (v *Validator) validateDevice(
 }
 
 func (v *Validator) validateSSH(device *Device, prefix string) {
-	if device.SSHConfig == nil || !device.SSHConfig.Enabled {
+	if device.OSFingerprintConfig != nil && device.OSFingerprintConfig.SSHBanner != "" &&
+		!validSSHVersion(device.OSFingerprintConfig.SSHBanner) {
+		v.addError(prefix+".os_fingerprint.ssh_banner",
+			"SSH banner must be an RFC 4253 version string such as SSH-2.0-Cisco-1.25")
+	}
+	ssh := device.SSHConfig
+	if ssh == nil || !ssh.Enabled || (ssh.Username == "" && ssh.PasswordEnv == "") {
 		return
 	}
-	if strings.TrimSpace(device.SSHConfig.Username) == "" {
-		v.addError(prefix+".ssh.username", "SSH requires an explicit username")
+	if strings.TrimSpace(ssh.Username) == "" {
+		v.addError(prefix+".ssh.username", "SSH password_env needs an explicit username")
 	}
-	if !validEnvironmentVariable(device.SSHConfig.PasswordEnv) {
-		v.addError(prefix+".ssh.password_env", "SSH requires a valid password environment variable")
+	if !validEnvironmentVariable(ssh.PasswordEnv) {
+		v.addError(prefix+".ssh.password_env", "SSH username needs a valid password environment variable")
 	}
+}
+
+// maxSSHVersionLength is RFC 4253 section 4.2's 255 bytes less the CR LF.
+const maxSSHVersionLength = 253
+
+// validSSHVersion accepts "SSH-2.0-softwareversion [comments]" in printable
+// US-ASCII within RFC 4253's length. The RFC also bars "-" in the software
+// version, but real servers send one ("SSH-2.0-Cisco-1.25") and clients accept
+// it, so that rule is not enforced.
+func validSSHVersion(version string) bool {
+	software, found := strings.CutPrefix(version, "SSH-2.0-")
+	if !found || len(version) > maxSSHVersionLength {
+		return false
+	}
+	for index := range len(version) {
+		if version[index] < ' ' || version[index] > '~' {
+			return false
+		}
+	}
+	software, _, _ = strings.Cut(software, " ")
+	return software != ""
 }
 
 func validEnvironmentVariable(name string) bool {

@@ -2,8 +2,10 @@ package protocols
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -60,6 +62,57 @@ func TestSSHAuthenticatesAndRunsCLIThroughVirtualPacketStack(t *testing.T) {
 		t.Fatalf("Write(enable) error = %v", err)
 	}
 	readThroughPrompt(t, reader, "edge-1#")
+}
+
+func TestSSHWithoutAccountRefusesLoginThroughVirtualPacketStack(t *testing.T) {
+	deviceMAC := mustForwardingMAC(t, "02:00:00:00:00:01")
+	clientMAC := mustForwardingMAC(t, "02:00:00:00:00:fe")
+	cfg := &config.Config{Devices: []config.Device{{
+		Name: "edge-1", Type: "router", MACAddress: deviceMAC,
+		IPAddresses:         []net.IP{net.ParseIP("10.0.0.1")},
+		SSHConfig:           &config.SSHConfig{Enabled: true},
+		OSFingerprintConfig: &config.OSFingerprintConfig{SSHBanner: "SSH-2.0-Cisco-1.25"},
+	}}}
+	if err := config.ValidateRuntimeRequirements(cfg); err != nil {
+		t.Fatalf("ValidateRuntimeRequirements() error = %v, want none without a secret", err)
+	}
+	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))
+	useTemporarySSHHostKeys(t, stack)
+	stream := &recordingConn{packetSSHClient: newPacketSSHClient(t, stack, clientMAC, deviceMAC)}
+	_, _, _, err := ssh.NewClientConn(stream, "10.0.0.1:22", &ssh.ClientConfig{
+		User: "admin", Auth: []ssh.AuthMethod{ssh.Password("admin")},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	})
+	if err == nil || !strings.Contains(err.Error(), "unable to authenticate") {
+		t.Fatalf("NewClientConn() error = %v, want an authentication refusal", err)
+	}
+	version, _, _ := strings.Cut(stream.String(), "\r\n")
+	if version != "SSH-2.0-Cisco-1.25" {
+		t.Fatalf("server version = %q, want the authored banner", version)
+	}
+}
+
+// recordingConn keeps every byte the device sent. The client's read loop
+// outlives a failed handshake, hence the lock.
+type recordingConn struct {
+	*packetSSHClient
+
+	recordMu sync.Mutex
+	received bytes.Buffer
+}
+
+func (c *recordingConn) Read(destination []byte) (int, error) {
+	count, err := c.packetSSHClient.Read(destination)
+	c.recordMu.Lock()
+	c.received.Write(destination[:count])
+	c.recordMu.Unlock()
+	return count, err
+}
+
+func (c *recordingConn) String() string {
+	c.recordMu.Lock()
+	defer c.recordMu.Unlock()
+	return c.received.String()
 }
 
 type packetSSHClient struct {

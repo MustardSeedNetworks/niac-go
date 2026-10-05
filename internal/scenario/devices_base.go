@@ -77,6 +77,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Snmpv3: packSNMPv3(),
 	}
 	device.PortChannels = authoredPortChannels(links[spec.name])
+	device.SSH, device.OSFingerprint = packSSH(spec.role, software)
 	if platform != "" {
 		device.Lldp = &converter.LldpConfig{
 			Enabled: true, SystemDescription: platform + " - " + spec.name,

@@ -425,18 +425,27 @@ func (h *sshTCPHandler) server(device *config.Device) (*devicecli.SSHServer, err
 	if server := h.servers[device]; server != nil {
 		return server, nil
 	}
-	password, found := os.LookupEnv(device.SSHConfig.PasswordEnv)
-	if !found || password == "" {
-		return nil, fmt.Errorf("SSH password environment variable %q is not set", device.SSHConfig.PasswordEnv)
+	var credentials *devicecli.Credentials
+	if device.SSHConfig.PasswordEnv != "" {
+		password, found := os.LookupEnv(device.SSHConfig.PasswordEnv)
+		if !found || password == "" {
+			return nil, fmt.Errorf("SSH password environment variable %q is not set", device.SSHConfig.PasswordEnv)
+		}
+		credentials = &devicecli.Credentials{Username: device.SSHConfig.Username, Password: password}
 	}
 	hostSigner, err := h.hostKey(device.Name)
 	if err != nil {
 		return nil, err
 	}
+	var version string
+	if device.OSFingerprintConfig != nil {
+		version = device.OSFingerprintConfig.SSHBanner
+	}
 	server, err := devicecli.NewSSHServer(
 		h.stack.deviceStates[device],
-		devicecli.Credentials{Username: device.SSHConfig.Username, Password: password},
+		credentials,
 		hostSigner,
+		version,
 		h.stack.staticRouteValidator(device),
 	)
 	if err != nil {

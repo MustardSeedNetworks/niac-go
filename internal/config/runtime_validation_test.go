@@ -15,6 +15,7 @@ func TestValidateRuntimeRequirementsSSHPassword(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "disabled", ssh: &SSHConfig{Enabled: false}},
+		{name: "no account needs no secret", ssh: &SSHConfig{Enabled: true}},
 		{name: "available", ssh: &SSHConfig{
 			Enabled: true, Username: "admin", PasswordEnv: "NIAC_PRESENT_SSH_PASSWORD",
 		}},
