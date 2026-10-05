@@ -52,6 +52,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 	}
 
 	s.resetDeviceState()
+	s.joinedAPs = joinedAccessPoints(cfg)
 
 	if len(cfg.Segments) > 0 {
 		s.initializeSegments(cfg)

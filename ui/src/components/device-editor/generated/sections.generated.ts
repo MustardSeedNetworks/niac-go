@@ -1049,6 +1049,12 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
             ]
           }
         ]
+      },
+      {
+        "name": "controller",
+        "title": "Controller",
+        "description": "Controller names the wireless controller this AP has joined. The\ncontroller then reports the AP and its clients in AIRESPACE-WIRELESS-MIB,\nthe way an NMS finds a lightweight AP's stations. Omit it for an\nautonomous AP.",
+        "kind": "string"
       }
     ],
     "kind": "object"

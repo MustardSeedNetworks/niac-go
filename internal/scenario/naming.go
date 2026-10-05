@@ -18,6 +18,10 @@ func numberedName(prefix string, index int) string {
 	return fmt.Sprintf("%s%02d", prefix, index)
 }
 
+func wirelessControllerName(site Site, index int) string {
+	return numberedName(site.Code+"-WLC", index)
+}
+
 func accessName(site Site, index int) string {
 	return numberedName(site.Code+"-ACC-SW", index)
 }

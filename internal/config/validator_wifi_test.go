@@ -311,3 +311,34 @@ func TestValidateWiFiClientsMayRepeatAcrossRadios(t *testing.T) {
 		t.Errorf("rejected one station on two radios: %s", message)
 	}
 }
+
+// TestValidateWiFiController: the controller is where a joined AP is reported,
+// so naming a device that is not there, or the AP itself, leaves it reported
+// nowhere.
+func TestValidateWiFiController(t *testing.T) {
+	controller := Device{
+		Name: "MED-WLC01", Type: "server",
+		MACAddress:  net.HardwareAddr{0x00, 0x1d, 0x45, 0x91, 0x11, 0xd0},
+		IPAddresses: []net.IP{net.ParseIP("10.20.30.21")},
+	}
+	for _, testCase := range []struct {
+		name, controller string
+		wantError        bool
+	}{
+		{"a controller of the scenario", "MED-WLC01", false},
+		{"an autonomous AP", "", false},
+		{"a device that does not exist", "MED-WLC09", true},
+		{"the AP itself", wifiAPName, true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			ap := wifiAP(validRadio())
+			ap.WiFiConfig.Controller = testCase.controller
+			cfg := &Config{Devices: []Device{ap, controller}}
+
+			message := errorFor(t, cfg, "wifi.controller")
+			if got := message != ""; got != testCase.wantError {
+				t.Errorf("controller %q: error = %q, want error %v", testCase.controller, message, testCase.wantError)
+			}
+		})
+	}
+}

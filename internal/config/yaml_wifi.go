@@ -8,7 +8,10 @@ func parseWiFiConfig(yamlWiFi *converter.WifiConfig) *WiFiConfig {
 		return nil
 	}
 
-	cfg := &WiFiConfig{Radios: make([]WiFiRadio, 0, len(yamlWiFi.Radios))}
+	cfg := &WiFiConfig{
+		Radios:     make([]WiFiRadio, 0, len(yamlWiFi.Radios)),
+		Controller: yamlWiFi.Controller,
+	}
 	for _, radio := range yamlWiFi.Radios {
 		cfg.Radios = append(cfg.Radios, WiFiRadio{
 			Interface:  radio.Interface,

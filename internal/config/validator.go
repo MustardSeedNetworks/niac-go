@@ -168,7 +168,7 @@ func (v *Validator) validateDevice(
 	v.validatePortChannels(device, prefix)
 	v.validateTrunkPorts(device, prefix, knownNames)
 	v.validatePoE(device, prefix)
-	v.validateWiFi(device, prefix)
+	v.validateWiFi(device, prefix, knownNames)
 }
 
 func (v *Validator) validateSSH(device *Device, prefix string) {

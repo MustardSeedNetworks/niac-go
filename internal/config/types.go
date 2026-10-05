@@ -615,7 +615,8 @@ type PoEConfig struct {
 // WiFiConfig holds the radios of an access point, served as IEEE802dot11-MIB
 // and indexed by the ifIndex of each radio's interface.
 type WiFiConfig struct {
-	Radios []WiFiRadio
+	Radios     []WiFiRadio
+	Controller string // the device name of the wireless controller this AP joined
 }
 
 // WiFiRadio is one authored radio: the interface it lives on, the network it

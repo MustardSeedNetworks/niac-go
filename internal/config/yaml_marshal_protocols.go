@@ -242,7 +242,10 @@ func wifiToYAML(cfg *WiFiConfig) *converter.WifiConfig {
 	if cfg == nil {
 		return nil
 	}
-	out := &converter.WifiConfig{Radios: make([]converter.WifiRadio, 0, len(cfg.Radios))}
+	out := &converter.WifiConfig{
+		Radios:     make([]converter.WifiRadio, 0, len(cfg.Radios)),
+		Controller: cfg.Controller,
+	}
 	for _, radio := range cfg.Radios {
 		out.Radios = append(out.Radios, converter.WifiRadio{
 			Interface:  radio.Interface,

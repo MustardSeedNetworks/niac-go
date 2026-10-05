@@ -2376,6 +2376,10 @@
           },
           "type": "array",
           "description": "Radios is one entry per radio interface. A device with the block and no\nradio is an authoring mistake rather than an AP with nothing to say."
+        },
+        "controller": {
+          "type": "string",
+          "description": "Controller names the wireless controller this AP has joined. The\ncontroller then reports the AP and its clients in AIRESPACE-WIRELESS-MIB,\nthe way an NMS finds a lightweight AP's stations. Omit it for an\nautonomous AP."
         }
       },
       "additionalProperties": false,

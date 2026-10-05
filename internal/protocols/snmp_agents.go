@@ -194,6 +194,16 @@ func (g *snmpAgentGroup) SynthesizeARPTableAll(bindings []snmp.ARPBinding) {
 	}
 }
 
+func (g *snmpAgentGroup) SynthesizeWirelessControllerAll(accessPoints []*config.Device) {
+	if g == nil {
+		return
+	}
+
+	for _, agent := range g.agents {
+		agent.SynthesizeWirelessController(accessPoints)
+	}
+}
+
 func (g *snmpAgentGroup) Communities() []string {
 	if g == nil {
 		return nil

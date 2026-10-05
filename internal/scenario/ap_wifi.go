@@ -29,7 +29,10 @@ const (
 // each radio interface's ifIndex. Nothing else may state those objects: a
 // generated AP that also carried them as `add_mibs` rows would answer two
 // sources for one object, which is what #2163 found.
-func accessPointWiFi(site string, macSuffix uint32) *converter.WifiConfig {
+//
+// Each AP joins its site's first controller, which then reports it; a site
+// with no controller has autonomous APs.
+func accessPointWiFi(site string, macSuffix uint32, controller string) *converter.WifiConfig {
 	plan := apRadioPlan()
 	radios := make([]converter.WifiRadio, 0, len(plan))
 	for index, radio := range plan {
@@ -42,7 +45,17 @@ func accessPointWiFi(site string, macSuffix uint32) *converter.WifiConfig {
 			TxPowerDBM: apTxPowerDBM(radio.band),
 		})
 	}
-	return &converter.WifiConfig{Radios: radios}
+	return &converter.WifiConfig{Radios: radios, Controller: controller}
+}
+
+// siteWirelessController names the controller a site's APs join: the first of
+// its redundant pair, or none when the site has no controller.
+func siteWirelessController(request Request, site Site) string {
+	if request.Counts.WirelessControllers == 0 {
+		return ""
+	}
+
+	return wirelessControllerName(site, 1)
 }
 
 // apSSID is the corporate network every radio of a site serves. The guest

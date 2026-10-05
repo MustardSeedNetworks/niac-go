@@ -202,6 +202,7 @@ export interface AuthoredDevice {
               readonly signal_quality_pct?: number;
             }[];
         }[];
+      readonly controller?: string;
     };
   readonly http?: {
       readonly enabled?: boolean;
