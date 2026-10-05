@@ -109,8 +109,8 @@ func startActionWireStack(
 	t.Cleanup(engine.Close)
 	stack := protocols.NewStack(engine, cfg, logging.NewDebugConfig(0))
 	if states != nil {
-		if err = stack.RestoreDeviceStates(states); err != nil {
-			t.Fatal(err)
+		if discarded, restoreErr := stack.RestoreDeviceStates(states); restoreErr != nil || len(discarded) != 0 {
+			t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 		}
 	}
 	if err = stack.Start(); err != nil {

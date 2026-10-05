@@ -169,6 +169,11 @@ func readRuntimeStateRecord(directory, name string) (runtimeStateRecord, error) 
 			record.SchemaVersion,
 		)
 	}
+	// The writer records every device. Restore discards a stale device record
+	// on its own, but a record with none is broken rather than stale.
+	if len(record.Devices) == 0 {
+		return runtimeStateRecord{}, errors.New("runtime state records no devices")
+	}
 	return record, nil
 }
 
@@ -184,6 +189,13 @@ func (d *Daemon) runtimeStateRestorer(sessionID, generation string) restoreRunti
 		}
 	}
 	return func(stack *protocols.Stack) error {
-		return stack.RestoreDeviceStates(states)
+		discarded, restoreErr := stack.RestoreDeviceStates(states)
+		for _, record := range discarded {
+			logging.Warningf(
+				"session %q: discarded runtime state for %s, which starts from the scenario: %v",
+				sessionID, record.Device, record.Err,
+			)
+		}
+		return restoreErr
 	}
 }

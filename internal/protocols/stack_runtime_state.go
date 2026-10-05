@@ -8,7 +8,7 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
-// ErrDeviceStateNotFound indicates that no simulated device carries a name.
+// ErrDeviceStateNotFound indicates that the scenario has no device by a name.
 var ErrDeviceStateNotFound = errors.New("device state not found")
 
 // ExportDeviceStates returns durable runtime state for every simulated device,
@@ -28,39 +28,53 @@ func (s *Stack) ExportDeviceStates() map[string]devicestate.State {
 	return result
 }
 
-// RestoreDeviceStates validates the complete record before restoring any store.
-// Every authored device must be present, and no unknown device is accepted.
-func (s *Stack) RestoreDeviceStates(states map[string]devicestate.State) error {
+// DiscardedDeviceState is one durable record recovery could not use.
+type DiscardedDeviceState struct {
+	Err    error
+	Device string
+}
+
+// RestoreDeviceStates restores every record that still fits its device and
+// returns the ones it discarded. Records are per device, and an upgrade can
+// change what a scenario authors: a record that names a device the scenario no
+// longer has, or no longer validates against its device, is discarded and that
+// device starts from the scenario, so one stale record does not cost the whole
+// session (#2481). A device with no record starts from the scenario too; it
+// has no runtime state to lose. Every record is validated before any store
+// changes.
+func (s *Stack) RestoreDeviceStates(states map[string]devicestate.State) ([]DiscardedDeviceState, error) {
 	s.reloadMu.RLock()
 	defer s.reloadMu.RUnlock()
 	byName := make(map[string]*devicestate.Store, len(s.deviceStates))
 	for device, store := range s.deviceStates {
 		byName[device.Name] = store
 	}
-	if len(states) != len(byName) {
-		return fmt.Errorf("%w: runtime record does not match scenario devices", ErrDeviceStateNotFound)
-	}
 	names := make([]string, 0, len(states))
 	for name := range states {
 		names = append(names, name)
 	}
 	slices.Sort(names)
+	var discarded []DiscardedDeviceState
+	restorable := names[:0]
 	for _, name := range names {
 		store := byName[name]
 		if store == nil {
-			return fmt.Errorf("%w: %s", ErrDeviceStateNotFound, name)
+			discarded = append(discarded, DiscardedDeviceState{Device: name, Err: ErrDeviceStateNotFound})
+			continue
 		}
 		if err := store.ValidateState(states[name]); err != nil {
-			return fmt.Errorf("validate %s: %w", name, err)
+			discarded = append(discarded, DiscardedDeviceState{Device: name, Err: err})
+			continue
 		}
+		restorable = append(restorable, name)
 	}
-	for _, name := range names {
+	for _, name := range restorable {
 		if err := byName[name].RestoreState(states[name]); err != nil {
-			return fmt.Errorf("restore %s: %w", name, err)
+			return discarded, fmt.Errorf("restore %s: %w", name, err)
 		}
 	}
 	s.notifications.skipRestoredHistory()
-	return nil
+	return discarded, nil
 }
 
 // RuntimeStateVersion sums every device's transaction counter. A durable

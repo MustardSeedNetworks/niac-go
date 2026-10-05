@@ -45,22 +45,22 @@ func TestHostMaskGatewayOnWire(t *testing.T) {
 		Interface: "eth0", Type: devicestate.FaultBadMask, PrefixBits: 30,
 	}}
 	states[host.Name] = state
-	if err = stack.RestoreDeviceStates(states); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := stack.RestoreDeviceStates(states); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	probe.echo(t, 2, true, true)
 	routes := state.Running.Network.Routes
 	state.Running.Network.Routes = nil
 	states[host.Name] = state
-	if err = stack.RestoreDeviceStates(states); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := stack.RestoreDeviceStates(states); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	probe.echo(t, 3, true, false)
 	state.Running.Network.Routes = routes
 	state.PrefixFaults = nil
 	states[host.Name] = state
-	if err = stack.RestoreDeviceStates(states); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := stack.RestoreDeviceStates(states); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	probe.echo(t, 4, false, true)
 }

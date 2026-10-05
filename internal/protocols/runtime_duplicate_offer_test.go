@@ -27,8 +27,8 @@ func TestRestoredDuplicateOfferPreservesCanonicalOwnership(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, cfg := isolationPair(t)
-	if err = recovered.RestoreDeviceStates(persisted); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := recovered.RestoreDeviceStates(persisted); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	client := net.HardwareAddr{2, 0, 0, 0, 1, 1}
 	sendIsolationDHCP(t, recovered, dhcpDiscover(client))
