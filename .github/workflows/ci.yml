@@ -82,6 +82,7 @@ jobs:
       schema: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.schema }}
       https: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.https }}
       hooks: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.hooks }}
+      docker: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.docker }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -161,6 +162,12 @@ jobs:
               - 'scripts/tests/release-content-integrity-test.sh'
               - 'scripts/tests/file-size-gate-test.sh'
               - 'scripts/check-file-size.sh'
+            # The image installs a release archive by the name goreleaser
+            # gives it, so a rename there breaks the image too.
+            docker:
+              - 'deploy/docker/**'
+              - 'scripts/lab/docker-validate.sh'
+              - '.goreleaser.yml'
 
   # ===========================================================================
   # Backend (Go)
@@ -1838,6 +1845,26 @@ jobs:
     permissions:
       security-events: read
 
+  docker-image:
+    name: Docker image (deploy/docker)
+    runs-on: ubuntu-latest
+    # Two image builds, two daemon starts and the 30 s restart-loop watch.
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.docker == 'true' || needs.changes.outputs.ci_infra == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The image installs a published release, so this checks the Dockerfile
+      # and the documented run line against the latest release and the upgrade
+      # from the one before it, not the code in this PR.
+      - name: Validate the image against the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/lab/docker-validate.sh
+
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
@@ -1851,6 +1878,7 @@ jobs:
       - lint-windows
       - race
       - capture-rawsocket
+      - docker-image
       - build-ui
       - frontend
       - security
