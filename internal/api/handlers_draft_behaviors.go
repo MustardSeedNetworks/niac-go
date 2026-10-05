@@ -29,6 +29,15 @@ type draftBehaviorPhase struct {
 	Traffic       []draftBehaviorTraffic `json:"traffic"`
 	Faults        []draftBehaviorFault   `json:"faults"`
 	Actions       []draftBehaviorAction  `json:"actions"`
+	Roams         []draftBehaviorRoam    `json:"roams"`
+}
+
+type draftBehaviorRoam struct {
+	Station    string                `json:"station"`
+	From       string                `json:"from"`
+	To         string                `json:"to"`
+	Cause      devicestate.RoamCause `json:"cause"`
+	TxPowerDBM int                   `json:"txPowerDbm"`
 }
 
 type draftBehaviorAction struct {
@@ -114,6 +123,7 @@ func behaviorTimelinesFromRequest(authored []draftBehaviorTimeline) []config.Beh
 				Traffic: behaviorTrafficFromRequest(phase.Traffic),
 				Faults:  behaviorFaultsFromRequest(phase.Faults),
 				Actions: behaviorActionsFromRequest(phase.Actions),
+				Roams:   behaviorRoamsFromRequest(phase.Roams),
 			}
 		}
 	}
@@ -124,6 +134,16 @@ func behaviorActionsFromRequest(authored []draftBehaviorAction) []config.Behavio
 	result := make([]config.BehaviorAction, len(authored))
 	for index, action := range authored {
 		result[index] = config.BehaviorAction{Device: action.Device, Type: action.Type}
+	}
+	return result
+}
+
+func behaviorRoamsFromRequest(authored []draftBehaviorRoam) []config.BehaviorRoam {
+	result := make([]config.BehaviorRoam, len(authored))
+	for index, roam := range authored {
+		result[index] = config.BehaviorRoam{
+			Station: roam.Station, From: roam.From, To: roam.To, Cause: roam.Cause, TxPowerDBM: roam.TxPowerDBM,
+		}
 	}
 	return result
 }
