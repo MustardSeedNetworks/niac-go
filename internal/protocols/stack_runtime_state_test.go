@@ -12,17 +12,21 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
-func TestRestoreDeviceStatesRejectsAnUnknownDevice(t *testing.T) {
+func TestRestoreDeviceStatesDiscardsARecordForAnUnknownDevice(t *testing.T) {
 	stack := runtimeStateTestStack(t)
 	states := stack.ExportDeviceStates()
 	if len(states) != 1 {
 		t.Fatalf("exported states = %#v", states)
 	}
-	err := stack.RestoreDeviceStates(map[string]devicestate.State{
+	discarded, err := stack.RestoreDeviceStates(map[string]devicestate.State{
 		"a-device-the-scenario-no-longer-has": states["state-router"],
 	})
-	if !errors.Is(err, ErrDeviceStateNotFound) {
-		t.Fatalf("RestoreDeviceStates() error = %v, want ErrDeviceStateNotFound", err)
+	if err != nil {
+		t.Fatalf("RestoreDeviceStates() error = %v", err)
+	}
+	if len(discarded) != 1 || discarded[0].Device != "a-device-the-scenario-no-longer-has" ||
+		!errors.Is(discarded[0].Err, ErrDeviceStateNotFound) {
+		t.Fatalf("discarded = %v, want the unknown device with ErrDeviceStateNotFound", discarded)
 	}
 }
 
@@ -47,10 +51,11 @@ func TestRestoreDeviceStatesWithholdsRestoredHistoryFromNotifications(t *testing
 		freshDevice, fresh.deviceStates[freshDevice],
 		func(string) (int, bool) { return 1, true }, 0,
 	)
-	if err := fresh.RestoreDeviceStates(
+	discarded, restoreErr := fresh.RestoreDeviceStates(
 		map[string]devicestate.State{"state-router": state},
-	); err != nil {
-		t.Fatalf("RestoreDeviceStates() error = %v", err)
+	)
+	if restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	registration := fresh.notifications.registrations[freshDevice]
 	if registration == nil {

@@ -80,8 +80,11 @@ func TestDuplicateOfferRecoveryAllowsTemporarilyUnavailablePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 	restored := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	if err := restored.RestoreDeviceStates(stack.ExportDeviceStates()); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := restored.RestoreDeviceStates(
+		stack.ExportDeviceStates(),
+	); restoreErr != nil ||
+		len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	if err := restored.ValidateBehaviorTargets(); err != nil {
 		t.Fatalf("recovered temporary peer outage blocks session startup: %v", err)

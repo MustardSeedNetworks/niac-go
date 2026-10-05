@@ -27,8 +27,8 @@ func TestResourceFaultsRecoverWithoutChangingPeer(t *testing.T) {
 	}
 	saved := original.ExportDeviceStates()
 	restored := NewStack(nil, cfg, logging.NewDebugConfig(0))
-	if err := restored.RestoreDeviceStates(saved); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := restored.RestoreDeviceStates(saved); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	if !reflect.DeepEqual(saved, restored.ExportDeviceStates()) {
 		t.Fatal("recovery changed durable state or replayed fault events")

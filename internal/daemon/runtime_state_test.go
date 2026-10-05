@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -217,6 +218,90 @@ func TestRecoveryFailsOnCorruptRuntimeState(t *testing.T) {
 		t.Fatalf("recovery status = %#v", status.Recovery)
 	}
 }
+
+// One device's record that no longer validates, as when an upgrade changes
+// what a pack authors, costs that device its runtime state and nothing else:
+// the session recovers with every device, and the rest keep their faults
+// (#2481).
+func TestRecoveryDiscardsOnlyAnInvalidDeviceRecord(t *testing.T) {
+	t.Setenv(e2eDryRunEnv, "true")
+	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
+	stateDir := t.TempDir()
+	recoveryPath := filepath.Join(stateDir, activeSimulationFileName)
+
+	first := recoveryTestDaemon(t, recoveryPath)
+	if err := first.StartSimulation(api.SimulationRequest{
+		Interface: "recovery0", ConfigData: twoDeviceRuntimeStateConfig,
+	}); err != nil {
+		t.Fatalf("StartSimulation() error = %v", err)
+	}
+	stack := runtimeTestStack(t, first)
+	for _, device := range []string{"runtime-switch", "stale-switch"} {
+		if err := stack.SetDeviceFault(device, devicestate.FaultLatency, 250); err != nil {
+			t.Fatalf("SetDeviceFault(%s) error = %v", device, err)
+		}
+	}
+	before := runtimeTestState(t, stack)
+	first.mu.Lock()
+	generation := first.simulation.runtimeGeneration
+	if err := first.stopSimulationLocked(false); err != nil {
+		first.mu.Unlock()
+		t.Fatalf("shutdown stop error = %v", err)
+	}
+	first.mu.Unlock()
+
+	runtimePath := first.runtimeStateFile(defaultSessionID, generation)
+	data, err := os.ReadFile(runtimePath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	var record runtimeStateRecord
+	if err = json.Unmarshal(data, &record); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	stale := record.Devices["stale-switch"]
+	stale.InterfaceFaults = []devicestate.InterfaceFault{{
+		Interface: "GigabitEthernet9/0/9", Type: devicestate.FaultUtilization, Value: 80,
+	}}
+	record.Devices["stale-switch"] = stale
+	if data, err = json.Marshal(record); err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if err = os.WriteFile(runtimePath, data, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	second := recoveryTestDaemon(t, recoveryPath)
+	second.recoverActiveSimulation()
+	status := second.GetStatus()
+	if status.Recovery == nil || status.Recovery.State != recoveryStateRecovered {
+		t.Fatalf("recovery status = %#v", status.Recovery)
+	}
+	restored := runtimeTestStack(t, second)
+	states := restored.ExportDeviceStates()
+	if len(states) != 2 {
+		t.Fatalf("recovered devices = %d, want 2", len(states))
+	}
+	assertSameFaults(t, before, states["runtime-switch"])
+	if faults := states["stale-switch"].DeviceFaults; len(faults) != 0 {
+		t.Fatalf("discarded device kept faults %#v, want the scenario's none", faults)
+	}
+	if stopErr := second.StopSimulation(""); stopErr != nil {
+		t.Fatalf("StopSimulation() error = %v", stopErr)
+	}
+}
+
+const twoDeviceRuntimeStateConfig = runtimeStateConfig + `  - name: stale-switch
+    type: switch
+    mac: "02:00:00:00:00:12"
+    ips: ["192.0.2.12"]
+    interfaces:
+      - name: "GigabitEthernet1/0/1"
+        type: ethernet
+        speed: 1000
+        admin_status: up
+        oper_status: up
+`
 
 func drainWrites(writes <-chan error, window time.Duration) int {
 	deadline := time.After(window)

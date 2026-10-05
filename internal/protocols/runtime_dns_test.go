@@ -23,8 +23,8 @@ func TestRestoredFaultChangesFirstDNSResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, handler, restoredDevice := newFaultedDNSHandler(t)
-	if err = recovered.RestoreDeviceStates(persisted); err != nil {
-		t.Fatal(err)
+	if discarded, restoreErr := recovered.RestoreDeviceStates(persisted); restoreErr != nil || len(discarded) != 0 {
+		t.Fatalf("RestoreDeviceStates() = %v, %v", discarded, restoreErr)
 	}
 	query := &layers.DNS{ID: 42, Questions: []layers.DNSQuestion{{
 		Name: []byte("host.example."), Type: layers.DNSTypeA, Class: layers.DNSClassIN,
