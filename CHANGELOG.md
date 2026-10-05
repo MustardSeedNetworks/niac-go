@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.110.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.109.0...v0.110.0) (2026-10-05)
+
+
+### Features
+
+* **wifi:** report joined APs and their stations from the wireless controller ([#2531](https://github.com/MustardSeedNetworks/niac-go/issues/2531)) ([5ce3093](https://github.com/MustardSeedNetworks/niac-go/commit/5ce3093e90bd690d2f1f2b8cf515c94c5782dc98)), closes [#2530](https://github.com/MustardSeedNetworks/niac-go/issues/2530)
+
+
+### Code Refactoring
+
+* **ui:** drop FC&lt;&gt; component typing and guard against its return ([#2528](https://github.com/MustardSeedNetworks/niac-go/issues/2528)) ([732679c](https://github.com/MustardSeedNetworks/niac-go/commit/732679ce14fe68c6c73b171e0bc6a9a33ae92b0d)), closes [#2527](https://github.com/MustardSeedNetworks/niac-go/issues/2527)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2529](https://github.com/MustardSeedNetworks/niac-go/issues/2529)) ([53a8ec0](https://github.com/MustardSeedNetworks/niac-go/commit/53a8ec013dfb042ee87b62226c97f2f978d3817a))
+
 ## [0.109.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.3...v0.109.0) (2026-10-05)
 
 
