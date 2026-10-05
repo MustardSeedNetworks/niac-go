@@ -5,6 +5,39 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.109.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.3...v0.109.0) (2026-10-05)
+
+
+### Features
+
+* **fabric:** accept an optional IPv6 prefix on networks and interfaces ([#2510](https://github.com/MustardSeedNetworks/niac-go/issues/2510)) ([f91080f](https://github.com/MustardSeedNetworks/niac-go/commit/f91080f821356fd1be0cf8d5c5f4e25b37bb95f0))
+* **fabric:** let one attachment pool span several switches ([#2514](https://github.com/MustardSeedNetworks/niac-go/issues/2514)) ([85263c8](https://github.com/MustardSeedNetworks/niac-go/commit/85263c80673992cc0a1e131e015694b572bb2797))
+* **ssh:** serve SSH on pack devices without a daemon secret ([#2525](https://github.com/MustardSeedNetworks/niac-go/issues/2525)) ([d704bfd](https://github.com/MustardSeedNetworks/niac-go/commit/d704bfd8b5cf8bcb978d805144ca461feda6111d)), closes [#2522](https://github.com/MustardSeedNetworks/niac-go/issues/2522)
+
+
+### Bug Fixes
+
+* **daemon:** recover a session when one saved device state record no longer validates ([#2513](https://github.com/MustardSeedNetworks/niac-go/issues/2513)) ([e8f710e](https://github.com/MustardSeedNetworks/niac-go/commit/e8f710e984e2946c56c017c31f07f823bdfc22c4)), closes [#2481](https://github.com/MustardSeedNetworks/niac-go/issues/2481)
+* **deps:** update dependency @lezer/highlight to v1.2.5 ([#2523](https://github.com/MustardSeedNetworks/niac-go/issues/2523)) ([bc64c3e](https://github.com/MustardSeedNetworks/niac-go/commit/bc64c3e8da4f3f0b2f81b2ed2a827bc7acba94fc))
+* **deps:** update dependency @tanstack/react-query to v5.104.0 ([#2452](https://github.com/MustardSeedNetworks/niac-go/issues/2452)) ([b0bbf17](https://github.com/MustardSeedNetworks/niac-go/commit/b0bbf178f4fd34d45dc2d231e0df92f9e5e0bdec))
+* **deps:** update dependency react-hook-form to v7.89.0 ([#2456](https://github.com/MustardSeedNetworks/niac-go/issues/2456)) ([958d302](https://github.com/MustardSeedNetworks/niac-go/commit/958d30247d82a944a73dc67135b02b488fb940e4))
+* **windows:** clear the Windows cross-lint findings in the service commands ([#2519](https://github.com/MustardSeedNetworks/niac-go/issues/2519)) ([03ccd97](https://github.com/MustardSeedNetworks/niac-go/commit/03ccd977357c56f72ec8866e4dc8030279ce7d58))
+
+
+### Continuous Integration
+
+* **release:** parse each queued commit with its PR's override block ([#2518](https://github.com/MustardSeedNetworks/niac-go/issues/2518)) ([3dd5f37](https://github.com/MustardSeedNetworks/niac-go/commit/3dd5f37da3cd0f197442ba66fd9c585a1fdf7526)), closes [#2509](https://github.com/MustardSeedNetworks/niac-go/issues/2509)
+* **release:** skip release-please while the release PR is queued ([#2521](https://github.com/MustardSeedNetworks/niac-go/issues/2521)) ([f044c82](https://github.com/MustardSeedNetworks/niac-go/commit/f044c82cb1c40a66dfbded02537dd78a8ac6614b))
+* run the macOS and Windows backend jobs only in the merge queue and on main ([#2516](https://github.com/MustardSeedNetworks/niac-go/issues/2516)) ([abbead9](https://github.com/MustardSeedNetworks/niac-go/commit/abbead98af39693a0ab23e2ea602275800a09158)), closes [#2515](https://github.com/MustardSeedNetworks/niac-go/issues/2515)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2301](https://github.com/MustardSeedNetworks/niac-go/issues/2301)) ([f05e0f8](https://github.com/MustardSeedNetworks/niac-go/commit/f05e0f8cf49b1c63bf7ca85e71424dda9d453bff))
+* **deps:** lock file maintenance ([#2512](https://github.com/MustardSeedNetworks/niac-go/issues/2512)) ([b35a8af](https://github.com/MustardSeedNetworks/niac-go/commit/b35a8af0e50cbc4972ea25aeae1876224dc2191c))
+* **deps:** update dependency @types/node to v26.6.3 ([#2451](https://github.com/MustardSeedNetworks/niac-go/issues/2451)) ([d8edea1](https://github.com/MustardSeedNetworks/niac-go/commit/d8edea1c00bc4f8d163e0ff30465c5bf8767d6ec))
+* **deps:** update dependency i18next-cli to v1.74.2 ([#2526](https://github.com/MustardSeedNetworks/niac-go/issues/2526)) ([2a06cb3](https://github.com/MustardSeedNetworks/niac-go/commit/2a06cb37a11f865fc890812fe1981921018ba30f))
+
 ## [0.108.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.108.2...v0.108.3) (2026-10-04)
 
 
