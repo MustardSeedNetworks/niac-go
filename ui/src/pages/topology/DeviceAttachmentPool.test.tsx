@@ -38,7 +38,6 @@ const port = (device: string, iface: string) => ({
 // session has not seen.
 const pool = (pins: AttachmentPin[] = []): CompiledAttachment => ({
   name: 'cyberscope',
-  device: 'MED-ACC-SW01',
   network: 'clinical',
   ports: [
     port('MED-ACC-SW01', 'GigabitEthernet1/0/45'),

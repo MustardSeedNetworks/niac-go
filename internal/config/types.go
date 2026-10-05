@@ -117,15 +117,15 @@ type Network struct {
 
 // LogicalAttachment identifies where a session's binding lands inside the
 // scenario. Exactly one of Network (the whole network) and At (a pool of free
-// ports on one device) is set.
+// ports on one or more devices) is set.
 type LogicalAttachment struct {
 	Name    string
 	Network string
-	At      *AttachmentPort
+	At      []AttachmentPort
 	Pins    []AttachmentPin
 }
 
-// AttachmentPort is a pool of free ports on one device.
+// AttachmentPort is the part of an attachment's pool that one device carries.
 type AttachmentPort struct {
 	Device string
 	Ports  []string

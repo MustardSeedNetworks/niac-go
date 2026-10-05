@@ -12,14 +12,17 @@ const poolScenario = `networks:
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports:
-        - GigabitEthernet1/0/20
-        - GigabitEthernet1/0/21
+      - device: MED-ACC-SW01
+        ports:
+          - GigabitEthernet1/0/20
+          - GigabitEthernet1/0/21
+      - device: MED-ACC-SW02
+        ports:
+          - GigabitEthernet1/0/43
     pins:
       - mac: "00:c0:17:aa:bb:cc"
-        device: MED-ACC-SW01
-        interface: GigabitEthernet1/0/21
+        device: MED-ACC-SW02
+        interface: GigabitEthernet1/0/43
 devices:
   - name: MED-ACC-SW01
     type: switch
@@ -31,6 +34,12 @@ devices:
       - name: GigabitEthernet1/0/20
         vlans: [210]
       - name: GigabitEthernet1/0/21
+        vlans: [210]
+  - name: MED-ACC-SW02
+    type: switch
+    mac: 02:00:00:00:00:02
+    interfaces:
+      - name: GigabitEthernet1/0/43
         vlans: [210]
 `
 
@@ -46,11 +55,12 @@ func TestLoadYAMLReadsAnAttachmentPool(t *testing.T) {
 	if attachment.Network != "" {
 		t.Errorf("network = %q, want empty for a port-scoped attachment", attachment.Network)
 	}
-	if attachment.At == nil || attachment.At.Device != "MED-ACC-SW01" ||
-		len(attachment.At.Ports) != 2 {
+	if len(attachment.At) != 2 ||
+		attachment.At[0].Device != "MED-ACC-SW01" || len(attachment.At[0].Ports) != 2 ||
+		attachment.At[1].Device != "MED-ACC-SW02" || len(attachment.At[1].Ports) != 1 {
 		t.Fatalf("at = %#v", attachment.At)
 	}
-	if len(attachment.Pins) != 1 || attachment.Pins[0].Interface != "GigabitEthernet1/0/21" {
+	if len(attachment.Pins) != 1 || attachment.Pins[0].Device != "MED-ACC-SW02" {
 		t.Fatalf("pins = %#v", attachment.Pins)
 	}
 }
@@ -69,6 +79,7 @@ func TestAttachmentPoolSurvivesAYAMLRoundTrip(t *testing.T) {
 	}
 	for _, want := range []string{
 		"device: MED-ACC-SW01",
+		"device: MED-ACC-SW02",
 		"GigabitEthernet1/0/20",
 		"00:c0:17:aa:bb:cc",
 	} {
@@ -80,8 +91,8 @@ func TestAttachmentPoolSurvivesAYAMLRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reloaded.Attachments[0].At == nil ||
-		len(reloaded.Attachments[0].At.Ports) != 2 ||
+	if len(reloaded.Attachments[0].At) != 2 ||
+		len(reloaded.Attachments[0].At[0].Ports) != 2 ||
 		len(reloaded.Attachments[0].Pins) != 1 {
 		t.Fatalf("reloaded attachment = %#v", reloaded.Attachments[0])
 	}

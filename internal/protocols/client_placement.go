@@ -42,9 +42,7 @@ type portUsable func(fabric.AttachmentPort) bool
 // not. A placement is sticky for the session: a client that falls silent keeps
 // its port, as a tester left plugged in does.
 type clientPlacement struct {
-	mu sync.Mutex
-	// device carries the whole pool: an attachment names one switch.
-	device   string
+	mu       sync.Mutex
 	ports    []fabric.AttachmentPort
 	pins     map[string]int
 	reserved []bool
@@ -59,7 +57,6 @@ type clientPlacement struct {
 
 func newClientPlacement(attachment fabric.CompiledAttachment) *clientPlacement {
 	placement := &clientPlacement{
-		device:   attachment.Device,
 		earliest: -1,
 		ports:    append([]fabric.AttachmentPort(nil), attachment.Ports...),
 		taken:    make([]bool, len(attachment.Ports)),
@@ -187,12 +184,12 @@ func (p *clientPlacement) lookup(mac string) (fabric.AttachmentPort, bool) {
 	return p.ports[index], true
 }
 
-// advertisedPort is the port the pool's switch names in its discovery
-// advertisements. A switch sends one per port, but every client here shares
-// one wire and hears every frame, so one advertisement has to serve them all:
-// it names the earliest-placed client's port and, before anyone is placed,
-// the port the next unpinned client will take, which is where a passive
-// listener lands once it transmits. A shut port advertises nothing, so once
+// advertisedPort is the pool port named in discovery advertisements, by the
+// switch that carries it. A switch sends one per port, but every client here
+// shares one wire and hears every frame, so one advertisement has to serve
+// them all: it names the earliest-placed client's port and, before anyone is
+// placed, the port the next unpinned client will take, which is where a
+// passive listener lands once it transmits. A shut port advertises nothing, so once
 // the earliest client's port is shut the next free port speaks instead, and
 // with no usable port left the switch is silent.
 func (p *clientPlacement) advertisedPort(usable portUsable) (fabric.AttachmentPort, bool) {
@@ -259,8 +256,8 @@ func (s *Stack) placeObservedClient(mac net.HardwareAddr) {
 //
 // Nothing is rebuilt: a reload would reset every DHCP handler, SNMP agent and
 // placement, and so unplug every other client along with this one. Only the
-// pool's pins and the pool switch's forwarding entry for mac change, and the
-// client keeps its lease.
+// pool's pins and the forwarding entries for mac change, and the client keeps
+// its lease.
 func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareAddr) error {
 	s.reloadMu.Lock()
 	defer s.reloadMu.Unlock()
@@ -283,18 +280,23 @@ func (s *Stack) RepinAttachedClient(topology *fabric.Topology, mac net.HardwareA
 		return nil
 	}
 
-	// Every pool port lands on one network, so the move keeps the client's
-	// VLAN and the entry keyed by it: placing it rewrites its port.
-	device := s.fabric.devicesByName[move.to.Device]
-	s.setPoolPortCable(device, move.from.Interface, false)
-	s.setPoolPortCable(device, move.to.Interface, true)
-	agents := s.snmpAgents[device]
-	if !agents.placeLearnedClient(mac, move.to.Interface, int(move.to.VLAN)) {
+	// Every pool port lands on one network, so the client keeps its lease. On
+	// the same switch placing it rewrites its port in the entry keyed by its
+	// VLAN; a move to another switch also takes it out of the old switch's
+	// forwarding table, as unplugging the cable ages it out there.
+	from := s.fabric.devicesByName[move.from.Device]
+	to := s.fabric.devicesByName[move.to.Device]
+	s.setPoolPortCable(from, move.from.Interface, false)
+	s.setPoolPortCable(to, move.to.Interface, true)
+	if from != to {
+		s.snmpAgents[from].forgetLearnedClient(mac, int(move.from.VLAN))
+	}
+	if !s.snmpAgents[to].placeLearnedClient(mac, move.to.Interface, int(move.to.VLAN)) {
 		logging.Debugf("Attachment: %s on %s %s has no bridge row to learn it on",
 			mac, move.to.Device, move.to.Interface)
 	}
-	logging.Infof("Attachment: moved %s from %s to %s on %s",
-		mac, move.from.Interface, move.to.Interface, move.to.Device)
+	logging.Infof("Attachment: moved %s from %s %s to %s %s",
+		mac, move.from.Device, move.from.Interface, move.to.Device, move.to.Interface)
 
 	return nil
 }

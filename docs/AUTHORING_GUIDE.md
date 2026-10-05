@@ -260,14 +260,16 @@ interface may actually carry it, and reports `attachment_policy_denied` or
 `host_interface_unavailable`. `niac validate` has no host binding and cannot
 check those, which is why a file can validate and still fail preflight.
 
-An attachment can instead name a pool of free ports on one switch with `at`,
-which is where a tester really plugs in. Each client MAC seen on the wire takes
-a port of its own, in first-seen order, and keeps it until the session stops;
-`pins` fix a MAC to one port. The port's VLAN decides which network, DHCP scope
-and gateway the client gets. The pool's switch is the only device that sends
-LLDP, CDP, EDP, FDP or STP at the clients, and it names the port of the first
-client placed, or the port the next client will get. All clients share one
-wire, so they all hear that one advertisement.
+An attachment can instead name a pool of free ports with `at`, which is where
+a tester really plugs in. Each entry is one device and its free ports; list
+several access switches of one site and a pin can move a tester between them
+on the running session. Every port must land on the same network. Each client
+MAC seen on the wire takes a port of its own, in first-seen order, and keeps it
+until the session stops; `pins` fix a MAC to one port. The port's VLAN decides
+which network, DHCP scope and gateway the client gets. Only the switch carrying
+the first placed client's port, or the port the next client will get, sends
+LLDP, CDP, EDP, FDP or STP at the clients, and it names that port. All clients
+share one wire, so they all hear that one advertisement.
 [Where testers attach](ATTACHMENTS.md) covers the model, moving a tester, and
 a lab runbook.
 
@@ -275,11 +277,13 @@ a lab runbook.
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports: [GigabitEthernet1/0/43, GigabitEthernet1/0/44]
+      - device: MED-ACC-SW01
+        ports: [GigabitEthernet1/0/43, GigabitEthernet1/0/44]
+      - device: MED-ACC-SW02
+        ports: [GigabitEthernet1/0/43, GigabitEthernet1/0/44]
     pins:
       - mac: "00:c0:17:00:00:01"
-        device: MED-ACC-SW01
+        device: MED-ACC-SW02
         interface: GigabitEthernet1/0/44
 ```
 

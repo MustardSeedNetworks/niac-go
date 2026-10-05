@@ -29,6 +29,12 @@ devices:
         vlans: [210]
       - name: GigabitEthernet1/0/21
         vlans: [210]
+  - name: MED-ACC-SW02
+    type: switch
+    mac: "00:1A:2B:20:00:21"
+    interfaces:
+      - name: GigabitEthernet1/0/43
+        vlans: [210]
 `;
 
 const Harness = () => {
@@ -49,8 +55,8 @@ describe('NetworksStep attachment pools', () => {
     render(<Harness />);
 
     await user.selectOptions(screen.getByTestId('attachment-form-0'), 'ports');
-    await user.selectOptions(screen.getByTestId('attachment-device-0'), 'MED-ACC-SW01');
-    await user.click(screen.getByTestId('attachment-port-0-GigabitEthernet1/0/20'));
+    await user.selectOptions(screen.getByTestId('attachment-device-0-0'), 'MED-ACC-SW01');
+    await user.click(screen.getByTestId('attachment-port-0-0-GigabitEthernet1/0/20'));
 
     expect(currentContent()).toContain('at:');
     expect(currentContent()).toContain('device: MED-ACC-SW01');
@@ -63,8 +69,8 @@ describe('NetworksStep attachment pools', () => {
     render(<Harness />);
 
     await user.selectOptions(screen.getByTestId('attachment-form-0'), 'ports');
-    await user.selectOptions(screen.getByTestId('attachment-device-0'), 'MED-ACC-SW01');
-    await user.click(screen.getByTestId('attachment-port-0-GigabitEthernet1/0/21'));
+    await user.selectOptions(screen.getByTestId('attachment-device-0-0'), 'MED-ACC-SW01');
+    await user.click(screen.getByTestId('attachment-port-0-0-GigabitEthernet1/0/21'));
     await user.click(screen.getByTestId('attachment-pin-add-0'));
     await user.type(screen.getByTestId('attachment-pin-mac-0-0'), '00:c0:17:aa:bb:cc');
 
@@ -82,11 +88,45 @@ describe('NetworksStep attachment pools', () => {
     render(<Harness />);
 
     await user.selectOptions(screen.getByTestId('attachment-form-0'), 'ports');
-    await user.selectOptions(screen.getByTestId('attachment-device-0'), 'MED-ACC-SW01');
+    await user.selectOptions(screen.getByTestId('attachment-device-0-0'), 'MED-ACC-SW01');
 
-    const port = screen.getByTestId('attachment-port-row-0-GigabitEthernet1/0/20');
+    const port = screen.getByTestId('attachment-port-row-0-0-GigabitEthernet1/0/20');
     expect(port).toHaveTextContent('210');
     expect(port.querySelector('input[type="number"]')).toBeNull();
+  });
+
+  // niac-go#2505: one pool may span switches, so a pin can carry a tester to
+  // another switch on the running session.
+  it('adds a second switch to the pool and pins a client there', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.selectOptions(screen.getByTestId('attachment-form-0'), 'ports');
+    await user.selectOptions(screen.getByTestId('attachment-device-0-0'), 'MED-ACC-SW01');
+    await user.click(screen.getByTestId('attachment-port-0-0-GigabitEthernet1/0/20'));
+    await user.click(screen.getByTestId('attachment-group-add-0'));
+    expect(
+      screen.getByTestId('attachment-device-0-1').querySelector('option[value="MED-ACC-SW01"]'),
+    ).toBeNull();
+    await user.selectOptions(screen.getByTestId('attachment-device-0-1'), 'MED-ACC-SW02');
+    await user.click(screen.getByTestId('attachment-port-0-1-GigabitEthernet1/0/43'));
+    await user.click(screen.getByTestId('attachment-pin-add-0'));
+    await user.selectOptions(
+      screen.getByTestId('attachment-pin-port-0-0'),
+      'MED-ACC-SW02|GigabitEthernet1/0/43',
+    );
+    await user.type(screen.getByTestId('attachment-pin-mac-0-0'), '00:c0:17:aa:bb:cc');
+
+    const content = currentContent();
+    expect(content).toContain('- device: MED-ACC-SW01');
+    expect(content).toContain('- device: MED-ACC-SW02');
+    expect(content).toMatch(/device: MED-ACC-SW02\n\s+interface: GigabitEthernet1\/0\/43/);
+
+    // Removing the switch drops the pin on its port, which the daemon would
+    // otherwise refuse as outside the pool.
+    await user.click(screen.getByTestId('attachment-group-remove-0-1'));
+    expect(currentContent()).not.toContain('- device: MED-ACC-SW02');
+    expect(currentContent()).not.toContain('pins:');
   });
 
   it('keeps the network form working', async () => {

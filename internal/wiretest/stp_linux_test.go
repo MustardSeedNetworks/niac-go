@@ -29,7 +29,7 @@ const (
 
 func TestPoolSwitchSendsBPDUsNamingTheSiteCore(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
-	access := deviceNamed(t, authored, authored.Attachments[0].At.Device)
+	access := deviceNamed(t, authored, authored.Attachments[0].At[0].Device)
 	core := siteRoot(t, authored, access.Properties["site"])
 
 	window := 4*stpHelloTime + time.Second

@@ -27,7 +27,7 @@ const (
 
 func TestPackDeviceAnswersSNMPv3OnTheWire(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
-	switchName := authored.Attachments[0].At.Device
+	switchName := authored.Attachments[0].At[0].Device
 
 	client := dialDeviceV3(t, authored, switchName, packV3AuthPass, 4)
 	var sysName string

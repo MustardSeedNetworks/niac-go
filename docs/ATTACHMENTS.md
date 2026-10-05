@@ -34,7 +34,9 @@ run on wire VLANs 200 through 205.
 ## The attachment pool
 
 An attachment names either a whole network (`connect`) or a pool of free ports
-on one device (`at`). Use the pool. A network-scoped attachment makes every
+(`at`). Use the pool. Each `at` entry is one device and its free ports, and a
+pool may list several devices, so a tester can move from one access switch to
+another without a restart. A network-scoped attachment makes every
 device with an interface on that network a neighbour of the tester, so its
 LLDP neighbour is whichever device owns the network's gateway, usually a core
 switch several tiers from the cable.
@@ -43,52 +45,64 @@ switch several tiers from the cable.
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports:
-        - GigabitEthernet1/0/43
-        - GigabitEthernet1/0/44
-        - GigabitEthernet1/0/45
-        - GigabitEthernet1/0/46
+      - device: MED-ACC-SW01
+        ports:
+          - GigabitEthernet1/0/43
+          - GigabitEthernet1/0/44
+          - GigabitEthernet1/0/45
+          - GigabitEthernet1/0/46
+      - device: MED-ACC-SW02
+        ports:
+          - GigabitEthernet1/0/43
+          - GigabitEthernet1/0/44
     pins:
       - mac: "00:c0:17:00:00:01"
-        device: MED-ACC-SW01
+        device: MED-ACC-SW02
         interface: GigabitEthernet1/0/44
 ```
 
 How a session uses it:
 
 - **Every client gets its own port.** Each distinct source MAC seen on the
-  wire takes the first free pool port, in the order clients are first seen,
+  wire takes the first free pool port, in the order the pool lists them
+  (first device first) and the order clients are first seen,
   and keeps it until the session stops. A client silent for five minutes ages
   out of the client list.
 - **Pins come first.** A pinned MAC always gets its pin, and no other client
   takes a pinned port.
 - **The port decides the network.** A pool port's VLAN, followed through the
   switch's uplinks to the device that routes that VLAN, picks the DHCP scope
-  and gateway. Every port of one pool must land on the same network.
+  and gateway. Every port of one pool must land on the same network: the
+  access switches of one site do, so one pool can span them, but two sites
+  are two networks, and the compile refuses such a pool with
+  `attachment_pool_networks_differ`. A tester moved to another site would keep
+  the lease from the first, and the clients share the host's NIC, so there is
+  no per-client link to drop that would make it ask for a new one.
 - **The switch reports what is plugged in.** A spare port reads `notconnect`
   (up administratively, down operationally) until a client is placed on it.
-  The pool switch's forwarding table then reports that client's MAC on that
-  port, and no other device reports it.
-- **Only the pool switch speaks discovery at the clients.** It is the one
-  device that sends LLDP, CDP, EDP, FDP or STP at the wire. All clients share
-  that one wire, so they all hear the same advertisement, which names the port
-  of the first client placed.
+  The forwarding table of the switch carrying that port then reports the
+  client's MAC on it, and no other device reports it.
+- **Only one switch speaks discovery at the clients**: the one carrying the
+  port of the first client placed. It is the one device that sends LLDP, CDP,
+  EDP, FDP or STP at the wire. All clients share that one wire, so they all
+  hear the same advertisement, which names that port.
 - **When the pool is full**, a further client gets no port: the client list
   shows it without one, and the daemon logs `Attachment pool full`.
 
 Every generated pack offers a four-port pool (`GigabitEthernet1/0/43` to
 `1/0/46`, data VLAN 210) on every access switch, and `TenGigabitEthernet1/0/43`
 to `1/0/46` on the servers VLAN on every server switch. Its attachment, named
-`cyberscope`, uses the pool on the first site's first access switch.
+`cyberscope`, lists the pools of every access switch at the first site, first
+access switch first, so an unpinned tester lands there and a pin can move it to
+any other access switch of that site.
 
-Author the pool in the wizard's **Networks** step (**Spare ports on one
-device**) or in YAML; see the [authoring guide](AUTHORING_GUIDE.md#addressing-networks-interfaces-and-attachments).
+Author the pool in the wizard's **Networks** step (**Spare ports on one or more
+devices**, then **Add a device** for each further switch) or in YAML; see the [authoring guide](AUTHORING_GUIDE.md#addressing-networks-interfaces-and-attachments).
 
 ## Moving a tester
 
-Moving a client to another port of its pool is a pin, and it happens on the
-running session:
+Moving a client to another port of its pool, on the same switch or another
+one, is a pin, and it happens on the running session:
 
 - **Web UI:** **Attached clients** on the Simulation page, or **Tester ports**
   in a pool switch's details on the Topology page. Pick the client and a free
@@ -101,13 +115,9 @@ The pin is written into the scenario file the session runs, so the client stays
 on its new port across restarts. The session is not restarted: every other
 client keeps its port and lease, the session keeps its binding and wire tag,
 and other sessions on the same NIC are not touched. The port the client left
-returns to `notconnect`.
-
-A pool covers one switch, so a pin cannot cross to another switch. To put
-testers on a different switch, point the attachment's `at` at that switch's
-spare ports and restart the session; every tester moves together. A live move
-between switches is tracked in
-[#2505](https://github.com/MustardSeedNetworks/niac-go/issues/2505).
+returns to `notconnect`. A move to another switch also takes the client out of
+the old switch's forwarding table, and LLDP then names the new switch if the
+moved client was the first one placed.
 
 ## Deployment shapes
 
@@ -125,13 +135,14 @@ Two limits follow from the wire tag being how a frame finds its session:
 two testers on the same tag always see the same scenario, and one tester
 cannot see two scenarios at once.
 
-## Runbook: three testers on one pack, move one
+## Runbook: three testers on one pack, move one to another switch
 
 Runs on the lab: the hospital pack on CT304's wire VLAN 200, testers on pvm01.
 It uses only the API and web UI and changes nothing on CT304 itself.
 
-**Status: written 2026-10-04, not yet executed on CT304.** Correct this section
-from the first run's evidence.
+**Status: written 2026-10-04, step 4 moved across switches 2026-10-05
+(#2505); not yet executed on CT304.** Correct this section from the first
+run's evidence.
 
 ### 1. Start the pack
 
@@ -143,8 +154,9 @@ export NIAC_API_TOKEN=...
 scripts/lab/acceptance.sh hospital
 ```
 
-The session id is `hospital`. Its pool is `MED-ACC-SW01`
-`GigabitEthernet1/0/43` to `1/0/46`, on `med-data` (`10.51.210.0/24`).
+The session id is `hospital`. Its pool is `GigabitEthernet1/0/43` to `1/0/46`
+on each of `MED-ACC-SW01` to `MED-ACC-SW08`, all on `med-data`
+(`10.51.210.0/24`). Unpinned testers fill `MED-ACC-SW01` first.
 
 ### 2. Attach three testers
 
@@ -182,24 +194,35 @@ ip netns exec tester2 snmpwalk -v2c -c NetAllyDemo 10.51.200.21 \
 Each tester MAC appears exactly once, on its own port's bridge port number. On
 the CyberScope, the LLDP neighbour is `MED-ACC-SW01`.
 
-### 4. Move one
+### 4. Move one to another switch
 
-Move tester three to `GigabitEthernet1/0/46`, from **Attached clients** or:
+Move tester three to `MED-ACC-SW02` `GigabitEthernet1/0/43`, from **Attached
+clients** or:
 
 ```bash
 csrf=$(curl -sk -H "Authorization: Bearer $NIAC_API_TOKEN" \
   "$NIAC_URL/api/v1/csrf-token" | jq -r .token)
 curl -sk -X POST -H "Authorization: Bearer $NIAC_API_TOKEN" \
   -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
-  -d '{"mac":"02:00:00:5a:00:03","device":"MED-ACC-SW01","interface":"GigabitEthernet1/0/46"}' \
+  -d '{"mac":"02:00:00:5a:00:03","device":"MED-ACC-SW02","interface":"GigabitEthernet1/0/43"}' \
   "$NIAC_URL/api/v1/sessions/hospital/pins"
 ```
 
-Then repeat step 3. Pass criteria:
+Then repeat step 3, and walk the second switch too:
 
-- tester three is on `GigabitEthernet1/0/46`, and the forwarding table reports
-  its MAC there and nowhere else;
-- the port it left reads `notconnect` (`ifOperStatus` down);
+```bash
+ip netns exec tester2 snmpwalk -v2c -c NetAllyDemo 10.51.200.22 \
+  1.3.6.1.2.1.17.7.1.2.2.1.2
+```
+
+Pass criteria:
+
+- tester three is on `MED-ACC-SW02` `GigabitEthernet1/0/43`: that switch's
+  forwarding table reports its MAC there, and `MED-ACC-SW01` no longer reports
+  it at all;
+- the `MED-ACC-SW01` port it left reads `notconnect` (`ifOperStatus` down);
+- tester three kept its `10.51.210.x` address: both switches sit on
+  `med-data`, so its lease is still valid;
 - testers one and two kept their ports and addresses;
 - the session was not restarted: `packets_sent` in
   `GET /api/v1/sessions/hospital/runtime` kept counting up rather than starting

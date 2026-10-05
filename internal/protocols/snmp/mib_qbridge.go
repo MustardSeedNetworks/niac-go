@@ -121,6 +121,23 @@ func configuredVLANs(device *config.Device) []int {
 	return vlans
 }
 
+func (a *Agent) removeLearnedQBridgeFDBEntry(vlan int, mac []byte) {
+	index := strconv.Itoa(vlan) + "." + macBytesToOIDIndex(mac)
+	portOID := dot1qTpFDBPort + "." + index
+	if a.mib.Get(portOID) == nil {
+		return
+	}
+	countOID := dot1qFDBDynamicCount + "." + strconv.Itoa(vlan)
+	if count := oidCounterValue(a.mib.Get(countOID)); count > 0 {
+		a.mib.Set(countOID, &OIDValue{
+			Type: gosnmp.Counter32, Value: safeconv.Uint32FromUint64(count - 1),
+		})
+	}
+	a.mib.Delete(dot1qTpFDBAddress + "." + index)
+	a.mib.Delete(portOID)
+	a.mib.Delete(dot1qTpFDBStatus + "." + index)
+}
+
 func (a *Agent) addLearnedQBridgeFDBEntry(vlan int, mac []byte, bridgePort int) {
 	index := strconv.Itoa(vlan) + "." + macBytesToOIDIndex(mac)
 	portOID := dot1qTpFDBPort + "." + index

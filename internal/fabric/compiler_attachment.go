@@ -26,7 +26,7 @@ func (c *scenarioCompiler) compileAttachments() {
 		if !c.validateAttachmentForm(attachment, field) {
 			continue
 		}
-		if attachment.At == nil {
+		if len(attachment.At) == 0 {
 			continue
 		}
 		if compiled, ok := c.compileAttachmentPool(attachment, field); ok {
@@ -43,11 +43,11 @@ func (c *scenarioCompiler) validateAttachmentForm(
 	field string,
 ) bool {
 	switch {
-	case attachment.Network != "" && attachment.At != nil:
+	case attachment.Network != "" && len(attachment.At) > 0:
 		c.add(CodeAttachmentFormAmbiguous, field,
 			"attachment declares both connect and at; set exactly one")
 		return false
-	case attachment.Network == "" && attachment.At == nil:
+	case attachment.Network == "" && len(attachment.At) == 0:
 		c.add(CodeAttachmentFormAmbiguous, field,
 			"attachment declares neither connect nor at; set exactly one")
 		return false
@@ -56,42 +56,48 @@ func (c *scenarioCompiler) validateAttachmentForm(
 	}
 }
 
+// compileAttachmentPool resolves every port of the pool, whichever switch
+// carries it. A port is keyed by device and name: two switches may well both
+// have a GigabitEthernet1/0/43.
 func (c *scenarioCompiler) compileAttachmentPool(
 	attachment *config.LogicalAttachment,
 	field string,
 ) (CompiledAttachment, bool) {
-	device := c.deviceByName(attachment.At.Device)
-	if device == nil {
-		c.add(CodeUnknownAttachmentDevice, field+".at.device",
-			"attachment names a device the scenario does not declare")
-		return CompiledAttachment{}, false
-	}
-	if len(attachment.At.Ports) == 0 {
-		c.add(CodeAttachmentPoolEmpty, field+".at.ports",
-			"attachment pool lists no ports")
-		return CompiledAttachment{}, false
-	}
-	compiled := CompiledAttachment{
-		Name:   attachment.Name,
-		Device: device.Name,
-		Ports:  make([]AttachmentPort, 0, len(attachment.At.Ports)),
-	}
-	seen := make(map[string]struct{}, len(attachment.At.Ports))
+	compiled := CompiledAttachment{Name: attachment.Name}
+	seen := make(map[string]struct{})
 	ok := true
-	for j, name := range attachment.At.Ports {
-		portField := fmt.Sprintf("%s.at.ports[%d]", field, j)
-		if _, duplicate := seen[name]; duplicate {
-			c.add(CodeDuplicateAttachmentPort, portField, "port is listed twice in the pool")
+	for k := range attachment.At {
+		group := &attachment.At[k]
+		groupField := fmt.Sprintf("%s.at[%d]", field, k)
+		device := c.deviceByName(group.Device)
+		if device == nil {
+			c.add(CodeUnknownAttachmentDevice, groupField+".device",
+				"attachment names a device the scenario does not declare")
 			ok = false
 			continue
 		}
-		seen[name] = struct{}{}
-		port, resolved := c.compileAttachmentPoolPort(device, name, portField)
-		if !resolved {
+		if len(group.Ports) == 0 {
+			c.add(CodeAttachmentPoolEmpty, groupField+".ports",
+				"attachment pool lists no ports on "+device.Name)
 			ok = false
 			continue
 		}
-		compiled.Ports = append(compiled.Ports, port)
+		for j, name := range group.Ports {
+			portField := fmt.Sprintf("%s.ports[%d]", groupField, j)
+			key := device.Name + "\x00" + name
+			if _, duplicate := seen[key]; duplicate {
+				c.add(CodeDuplicateAttachmentPort, portField, "port is listed twice in the pool")
+				ok = false
+				continue
+			}
+			seen[key] = struct{}{}
+			port, resolved := c.compileAttachmentPoolPort(device, name, portField)
+			if !resolved {
+				ok = false
+				continue
+			}
+			compiled.Ports = append(compiled.Ports, port)
+		}
 	}
 	if !ok {
 		return CompiledAttachment{}, false
@@ -106,8 +112,11 @@ func (c *scenarioCompiler) compileAttachmentPool(
 // resolvePoolNetwork collapses the pool's ports onto the one network the
 // binding reports. A pool spanning two networks has no single answer, and the
 // runtime derives one DHCP server and one gateway from the binding -- so it is
-// refused here rather than resolved arbitrarily. Per-client placement (AP-2)
-// is what lifts this.
+// refused here rather than resolved arbitrarily. Switches are no boundary: the
+// access switches of one site all land their spare ports on the site network
+// through the core SVI. A site boundary is one, because a tester moved onto
+// another site's network would need a new lease, and clients sharing the
+// host's NIC have no per-client link to drop that would make it ask.
 func (c *scenarioCompiler) resolvePoolNetwork(compiled *CompiledAttachment, field string) bool {
 	networks := make([]string, 0, len(compiled.Ports))
 	for _, port := range compiled.Ports {
@@ -117,7 +126,7 @@ func (c *scenarioCompiler) resolvePoolNetwork(compiled *CompiledAttachment, fiel
 	}
 	if len(networks) > 1 {
 		sort.Strings(networks)
-		c.add(CodeAttachmentPoolNetworksDiffer, field+".at.ports",
+		c.add(CodeAttachmentPoolNetworksDiffer, field+".at",
 			fmt.Sprintf("pool ports land on different networks (%v)", networks))
 		return false
 	}

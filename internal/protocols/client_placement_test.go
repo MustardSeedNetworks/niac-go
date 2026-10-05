@@ -146,7 +146,7 @@ func placementConfig(pins ...config.AttachmentPin) *config.Config {
 		},
 		Attachments: []config.LogicalAttachment{{
 			Name: "cyberscope",
-			At:   &config.AttachmentPort{Device: placementAccess, Ports: placementPool()},
+			At:   []config.AttachmentPort{{Device: placementAccess, Ports: placementPool()}},
 			Pins: pins,
 		}},
 		Devices: []config.Device{placementAccessSwitch(), placementCoreSwitch(), placementNeighbourSwitch()},

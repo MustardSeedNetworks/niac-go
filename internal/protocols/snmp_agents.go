@@ -145,6 +145,21 @@ func (g *snmpAgentGroup) placeLearnedClient(mac net.HardwareAddr, interfaceName 
 	return placed
 }
 
+func (g *snmpAgentGroup) forgetLearnedClient(mac net.HardwareAddr, vlan int) {
+	if g == nil {
+		return
+	}
+
+	baseListed := false
+	for _, agent := range g.agents {
+		agent.ForgetLearnedClient(mac, vlan)
+		baseListed = baseListed || agent == g.baseAgent
+	}
+	if !baseListed {
+		g.baseAgent.ForgetLearnedClient(mac, vlan)
+	}
+}
+
 // SynthesizePeerTopologyAll fills each agent's CDP peer addresses and downstream
 // bridge FDB from the resolved fleet identities (see Agent.SynthesizePeerTopology).
 // Every community agent shares the device's topology, so all get the entries.

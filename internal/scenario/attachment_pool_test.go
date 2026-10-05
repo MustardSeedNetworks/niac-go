@@ -76,17 +76,21 @@ func TestTesterAttachesToAnAccessPortPool(t *testing.T) {
 				pack.ID, attachment.Network)
 			continue
 		}
-		if attachment.At == nil {
-			t.Errorf("%s: attachment declares no pool", pack.ID)
-			continue
+		// One group per access switch of the first site, so a pin can move a
+		// tester to any of them on the running session (niac-go#2505).
+		if want := pack.Request.Counts.AccessSwitches; len(attachment.At) != want {
+			t.Errorf("%s: pool spans %d switches, want the site's %d access switches",
+				pack.ID, len(attachment.At), want)
 		}
-		if !strings.Contains(attachment.At.Device, "-ACC-SW") {
-			t.Errorf("%s: pool sits on %s, want an access switch",
-				pack.ID, attachment.At.Device)
-		}
-		if len(attachment.At.Ports) < 4 {
-			t.Errorf("%s: pool has %d ports, want at least 4",
-				pack.ID, len(attachment.At.Ports))
+		for _, group := range attachment.At {
+			if !strings.HasPrefix(group.Device, pack.Request.Sites[0].Code+"-ACC-SW") {
+				t.Errorf("%s: pool sits on %s, want an access switch of the first site",
+					pack.ID, group.Device)
+			}
+			if len(group.Ports) < 4 {
+				t.Errorf("%s: %s offers %d pool ports, want at least 4",
+					pack.ID, group.Device, len(group.Ports))
+			}
 		}
 	}
 }

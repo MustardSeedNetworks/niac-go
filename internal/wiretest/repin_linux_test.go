@@ -28,7 +28,7 @@ import (
 // every client back through placement and DHCP from nothing.
 func TestRepinMovesOneClientOnTheRunningSession(t *testing.T) {
 	authored, attachment, d := startPackDaemon(t, "hospital")
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 	if len(pool.Ports) < 3 {
 		t.Fatalf("hospital pool has %d ports; the move needs a free third", len(pool.Ports))
 	}
@@ -96,6 +96,60 @@ func TestRepinMovesOneClientOnTheRunningSession(t *testing.T) {
 		staying, pool.Ports[1], leases)
 }
 
+// niac-go#2505: one pool spans the access switches of a site, so a re-pin can
+// carry a tester to another switch on the running session. The new switch
+// learns it, the old one forgets it, LLDP names the new switch, and the
+// tester keeps its lease because both switches land on the same network.
+func TestRepinMovesAClientToAnotherSwitch(t *testing.T) {
+	authored, attachment, d := startPackDaemon(t, "hospital")
+	pool := authored.Attachments[0].At
+	if len(pool) < 2 {
+		t.Fatalf("hospital pool spans %d switches; the move needs two", len(pool))
+	}
+	from, to := pool[0], pool[1]
+	oldSwitch, newSwitch := dialDevice(t, authored, from.Device), dialDevice(t, authored, to.Device)
+	vlan := portVLAN(t, deviceNamed(t, authored, to.Device), to.Ports[0])
+	handle := openClient(t)
+
+	if _, err := oldSwitch.Get([]string{oidSysName}); err != nil {
+		t.Fatalf("GET sysName on %s: %v", from.Device, err)
+	}
+	moving, staying := clientMAC(t), secondClient()
+	announce(t, staying, attachment)
+	awaitFDBPort(t, oldSwitch, vlan, staying)
+	kept := lease(t, handle, moving, 0x6e730000).String()
+	startedAt := d.GetStatus().StartedAt
+
+	pin := api.AttachmentPin{MAC: moving.String(), Device: to.Device, Interface: to.Ports[0]}
+	if err := d.PinAttachmentClient(packSession("hospital"), pin); err != nil {
+		t.Fatalf("PinAttachmentClient(%s -> %s %s): %v", moving, to.Device, to.Ports[0], err)
+	}
+
+	if got := d.GetStatus().StartedAt; !got.Equal(startedAt) {
+		t.Errorf("session started at %s, then %s: the move restarted it", startedAt, got)
+	}
+	if got := awaitFDBPort(t, newSwitch, vlan, moving); got != to.Ports[0] {
+		t.Errorf("%s dot1qTpFdbPort on %s resolves to %q, want %q", moving, to.Device, got, to.Ports[0])
+	}
+	for _, column := range []string{oidDot1dTpFdbPort, oidDot1qTpFdbPort} {
+		if row := fdbRow(t, oldSwitch, column, moving); row != "" {
+			t.Errorf("%s still reports %s at %s after it moved to %s", from.Device, moving, row, to.Device)
+		}
+	}
+	if got := awaitFDBPort(t, oldSwitch, vlan, staying); got != from.Ports[1] {
+		t.Errorf("%s left behind on %s resolves to %q, want %q", staying, from.Device, got, from.Ports[1])
+	}
+
+	want := advertisedName(deviceNamed(t, authored, to.Device)) + " " + to.Ports[0]
+	if neighbours := lldpNeighbours(t); len(neighbours) != 1 || neighbours[want] == 0 {
+		t.Errorf("LLDP neighbours after the move = %v, want exactly one: %q", neighbours, want)
+	}
+	if got := lease(t, handle, moving, 0x6e740000).String(); got != kept {
+		t.Errorf("%s leased %s after the move, want its lease %s", moving, got, kept)
+	}
+	t.Logf("%s moved %s %s -> %s %s; lease %s kept", moving, from.Device, from.Ports[0], to.Device, to.Ports[0], kept)
+}
+
 // A re-pin in one trunk session leaves a sibling on another tag of the same
 // NIC alone: the sibling is not restarted and keeps answering on its tag.
 func TestRepinLeavesASiblingTrunkSessionUndisturbed(t *testing.T) {
@@ -107,7 +161,7 @@ func TestRepinLeavesASiblingTrunkSessionUndisturbed(t *testing.T) {
 		t.Fatalf("loading the generated hospital YAML: %v", err)
 	}
 	attachment := resolveAttachment(t, authored, attachmentName)
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 
 	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
 	d, err := daemon.NewDaemon(daemon.Config{

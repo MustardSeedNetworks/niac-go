@@ -41,7 +41,7 @@ func secondClient() net.HardwareAddr {
 
 func TestTwoClientsAreLearnedOnTheirOwnPoolPorts(t *testing.T) {
 	authored, attachment := startPack(t, "hospital")
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 	access := dialDevice(t, authored, pool.Device)
 
 	// The test end's first frames place it, so it takes the pool's first port.
@@ -91,7 +91,7 @@ func TestTwoClientsAreLearnedOnTheirOwnPoolPorts(t *testing.T) {
 // must be one, their switch, naming the first-placed client's port.
 func TestPoolClientsHearOnlyTheirOwnSwitch(t *testing.T) {
 	authored, attachment := startPack(t, "hospital")
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 	access := deviceNamed(t, authored, pool.Device)
 
 	handle := openClient(t)
@@ -136,7 +136,7 @@ func TestPoolClientsHearOnlyTheirOwnSwitch(t *testing.T) {
 // with that network's gateway as its first hop.
 func TestPoolClientsLeaseFromTheirPortsScope(t *testing.T) {
 	authored, attachment := startPack(t, "hospital")
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 	handle := openClient(t)
 
 	clients := []net.HardwareAddr{clientMAC(t), secondClient()}
@@ -196,9 +196,10 @@ func TestAPinnedClientLandsOnItsPin(t *testing.T) {
 	}
 }
 
-// packPool is the tester attachment's pool a pack generates, read before the
-// pack is started so a pin can name one of its ports.
-func packPool(t *testing.T, id string) *config.AttachmentPort {
+// packPool is the first switch of the tester attachment's pool a pack
+// generates, read before the pack is started so a pin can name one of its
+// ports.
+func packPool(t *testing.T, id string) config.AttachmentPort {
 	t.Helper()
 	for _, pack := range scenario.Packs() {
 		if pack.ID == id {
@@ -206,11 +207,11 @@ func packPool(t *testing.T, id string) *config.AttachmentPort {
 			if err != nil {
 				t.Fatalf("scenario.Generate(%s): %v", id, err)
 			}
-			return result.Config.Attachments[0].At
+			return result.Config.Attachments[0].At[0]
 		}
 	}
 	t.Fatalf("no pack with id %q", id)
-	return nil
+	return config.AttachmentPort{}
 }
 
 func discoveryDestination(mac net.HardwareAddr) bool {
@@ -327,7 +328,7 @@ func fdbRow(t *testing.T, client *gosnmp.GoSNMP, column string, mac net.Hardware
 // learned on a port whose link is down (niac-go#2363).
 func TestAPlacedPoolPortIsUp(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
-	pool := authored.Attachments[0].At
+	pool := authored.Attachments[0].At[0]
 	access := dialDevice(t, authored, pool.Device)
 
 	if _, err := access.Get([]string{oidSysName}); err != nil {

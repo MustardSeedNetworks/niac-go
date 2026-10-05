@@ -17,7 +17,7 @@ export interface AuthoredNetwork {
   virtualVlan?: number;
 }
 
-/** A pool of free ports on one device — where a tester actually appears. */
+/** The free ports one device offers to an attachment's pool. */
 export interface AuthoredAttachmentPool {
   device: string;
   ports: string[];
@@ -34,7 +34,8 @@ export interface AuthoredAttachment {
   name: string;
   /** The network form. Empty when the attachment uses a port pool instead. */
   connect: string;
-  at?: AuthoredAttachmentPool;
+  /** The pool form: free ports on one or more devices, where a tester appears. */
+  at?: AuthoredAttachmentPool[];
   pins?: AuthoredAttachmentPin[];
 }
 
@@ -107,7 +108,17 @@ function readAttachments(node: unknown): AuthoredAttachment[] {
   return attachments;
 }
 
-function readAttachmentPool(node: unknown): AuthoredAttachmentPool | null {
+function readAttachmentPool(node: unknown): AuthoredAttachmentPool[] | null {
+  if (!isSeq(node)) return null;
+  const groups: AuthoredAttachmentPool[] = [];
+  for (const item of node.items) {
+    const group = readAttachmentPoolGroup(item);
+    if (group) groups.push(group);
+  }
+  return groups.length > 0 ? groups : null;
+}
+
+function readAttachmentPoolGroup(node: unknown): AuthoredAttachmentPool | null {
   if (!isMap(node)) return null;
   const device = scalar(node.get('device'));
   if (!device) return null;
@@ -228,6 +239,13 @@ export function serializeNetworks(networks: AuthoredNetwork[]): string {
   return `${lines.join('\n')}\n`;
 }
 
+/** The groups of a pool that reach the file: a device with at least one port. */
+export function writtenPoolGroups(groups: AuthoredAttachmentPool[]): AuthoredAttachmentPool[] {
+  return groups
+    .map((group) => ({ device: group.device, ports: group.ports.filter((port) => port !== '') }))
+    .filter((group) => group.device !== '' && group.ports.length > 0);
+}
+
 /** Serializes the attachments section, or '' when there are none. */
 export function serializeAttachments(attachments: AuthoredAttachment[]): string {
   if (attachments.length === 0) return '';
@@ -237,21 +255,23 @@ export function serializeAttachments(attachments: AuthoredAttachment[]): string 
     // Exactly one form reaches the file. An attachment carrying both, or a
     // pool with no ports, is one the daemon refuses -- so the half-written
     // state stays in the editor rather than in the scenario.
-    const ports = attachment.at?.ports.filter((port) => port !== '') ?? [];
-    if (attachment.at && ports.length > 0) {
+    const groups = writtenPoolGroups(attachment.at ?? []);
+    if (groups.length > 0) {
       lines.push('    at:');
-      lines.push(`      device: ${attachment.at.device}`);
-      lines.push('      ports:');
-      for (const port of ports) lines.push(`        - ${port}`);
+      for (const group of groups) {
+        lines.push(`      - device: ${group.device}`);
+        lines.push('        ports:');
+        for (const port of group.ports) lines.push(`          - ${port}`);
+      }
       let pinned = false;
       for (const pin of attachment.pins ?? []) {
-        if (!pin.mac || !pin.interface) continue;
+        if (!pin.mac || !pin.device || !pin.interface) continue;
         if (!pinned) lines.push('    pins:');
         pinned = true;
         // Quoted: a MAC still being typed can look like a number to YAML
         // ("00" reads back as 0), which silently rewrites the author's input.
         lines.push(`      - mac: "${pin.mac}"`);
-        lines.push(`        device: ${pin.device || attachment.at.device}`);
+        lines.push(`        device: ${pin.device}`);
         lines.push(`        interface: ${pin.interface}`);
       }
       continue;

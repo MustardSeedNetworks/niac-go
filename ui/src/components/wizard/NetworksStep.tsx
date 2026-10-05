@@ -17,6 +17,7 @@ import {
   serializeAttachments,
   serializeNetworks,
   takenAddresses,
+  writtenPoolGroups,
 } from './network-addressing';
 
 interface NetworksStepProps {
@@ -57,8 +58,16 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
   const updateAttachment = (index: number, patch: Partial<AuthoredAttachment>) =>
     writeAttachments(model.attachments.map((a, i) => (i === index ? { ...a, ...patch } : a)));
 
-  const poolOf = (index: number, attachment: AuthoredAttachment) =>
-    attachment.at ?? drafts[index]?.at;
+  // A device still being chosen is not written, so the draft keeps it for as
+  // long as the document agrees with the rest of the draft.
+  const poolOf = (index: number, attachment: AuthoredAttachment) => {
+    const draft = drafts[index]?.at;
+    if (!attachment.at) return draft;
+    const agrees =
+      draft !== undefined &&
+      JSON.stringify(writtenPoolGroups(draft)) === JSON.stringify(attachment.at);
+    return agrees ? draft : attachment.at;
+  };
 
   // The document keeps what it can express; the draft keeps the rest, so a pin
   // still being typed is not lost on the next re-parse.
@@ -70,7 +79,7 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
 
   const selectAttachmentForm = (index: number, form: string) => {
     if (form === 'ports') {
-      setDrafts({ ...drafts, [index]: { at: { device: '', ports: [] } } });
+      setDrafts({ ...drafts, [index]: { at: [{ device: '', ports: [] }] } });
       return;
     }
     const { [index]: _removed, ...rest } = drafts;

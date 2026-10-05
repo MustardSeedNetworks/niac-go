@@ -138,15 +138,18 @@ type LogicalAttachment struct {
 	// network. LLDP is link-local, so the neighbour a tester reports is the
 	// device at the other end of its cable -- a network-scoped attachment gets
 	// that adjacency wrong by construction.
-	At *AttachmentPort `yaml:"at,omitempty"`
+	//
+	// Each entry is one switch and its spare ports. A pool may span several
+	// switches, so a pin can move a tester from one access switch to another
+	// on the running session.
+	At []AttachmentPort `yaml:"at,omitempty" validate:"omitempty,max=64,dive"`
 
 	// Pins fix one client MAC to one port in the pool. Without a pin a client
 	// takes whichever free port the runtime assigns it.
 	Pins []AttachmentPin `yaml:"pins,omitempty" validate:"omitempty,max=64,dive"`
 }
 
-// AttachmentPort is the pool of free ports an attachment offers, all on one
-// device.
+// AttachmentPort is the part of an attachment's pool that one device carries.
 type AttachmentPort struct {
 	// Device is the `devices[].name` carrying the pool.
 	Device string `yaml:"device" validate:"required"`
@@ -163,8 +166,8 @@ type AttachmentPin struct {
 	// MAC is the client's hardware address.
 	MAC string `yaml:"mac" validate:"required,mac"`
 
-	// Device is the `devices[].name` carrying the pinned port. It must be the
-	// pool's own device.
+	// Device is the `devices[].name` carrying the pinned port. It must be one
+	// of the pool's devices.
 	Device string `yaml:"device" validate:"required"`
 
 	// Interface is the `interfaces[].name` this client always appears on. It
