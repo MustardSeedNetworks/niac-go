@@ -91,7 +91,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 	if spec.role == "ap" {
 		radios := apRadioIndexes(device.TrunkPorts, device.Interfaces)
 		device.SnmpAgent.AddMibs = apDiscoveryMIBs(spec.name, spec.site.Code, radios)
-		device.Wifi = accessPointWiFi(spec.site.Code, macSuffix)
+		device.Wifi = accessPointWiFi(spec.site.Code, macSuffix, siteWirelessController(request, *spec.site))
 		device.Lldp = withAccessPointMED(device.Lldp, profile, macSuffix)
 	}
 

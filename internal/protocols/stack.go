@@ -100,6 +100,7 @@ type Stack struct {
 	mdnsHandler        *MDNSHandler
 	stpHandler         *STPHandler
 	spanningTree       map[*config.Device]stpPosition
+	joinedAPs          map[string][]*config.Device // wireless controller name -> the APs that joined it
 	lldpHandler        *LLDPHandler
 	cdpHandler         *CDPHandler
 	edpHandler         *EDPHandler

@@ -97,12 +97,14 @@ func (s *Stack) synthesizeFleetTopology(device *config.Device, group *snmpAgentG
 		if elected {
 			group.baseAgent.SynthesizeSpanningTree(position.snmp())
 		}
+		group.baseAgent.SynthesizeWirelessController(s.joinedAPs[device.Name])
 	}
 	group.SynthesizePeerTopologyAll(s.peerResolver())
 	group.SynthesizeARPTableAll(arpBindings)
 	if elected {
 		group.SynthesizeSpanningTreeAll(position.snmp())
 	}
+	group.SynthesizeWirelessControllerAll(s.joinedAPs[device.Name])
 
 	// Every MIB is now fully loaded (walk files, AddMib, topology, peer FDB).
 	// Build the sorted OID indexes eagerly so the first GetNext of a discovery
@@ -113,6 +115,24 @@ func (s *Stack) synthesizeFleetTopology(device *config.Device, group *snmpAgentG
 		group.baseAgent.Reindex()
 	}
 	group.ReindexAll()
+}
+
+// joinedAccessPoints groups every AP that names a controller under that
+// controller's name, across segments: a controller reaches its APs over the
+// routed network, so a VLAN boundary does not separate them.
+func joinedAccessPoints(cfg *config.Config) map[string][]*config.Device {
+	joined := make(map[string][]*config.Device)
+	segments := cfg.NormalizedSegments()
+	for segment := range segments {
+		for index := range segments[segment].Devices {
+			device := &segments[segment].Devices[index]
+			if device.WiFiConfig != nil && device.WiFiConfig.Controller != "" {
+				joined[device.WiFiConfig.Controller] = append(joined[device.WiFiConfig.Controller], device)
+			}
+		}
+	}
+
+	return joined
 }
 
 func configuredWalkFiles(cfg config.SNMPConfig) []string {

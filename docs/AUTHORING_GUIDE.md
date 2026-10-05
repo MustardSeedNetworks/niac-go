@@ -476,8 +476,56 @@ Two things to know:
   columns too. Nothing authors them, and a plausible default in a discovery
   tool's report is worse than a gap.
 
-Not authored here yet: association and roam events, and the controller's
-aggregated view of its APs.
+### The controller an AP joined
+
+A lightweight AP is reported by the controller it joined, not by itself. Name
+the controller on the AP:
+
+```yaml
+devices:
+  - name: clinic-wlc-01
+    type: server
+    vendor: cisco
+    mac_suffix: 21
+  - name: clinic-ap-01
+    type: ap
+    vendor: cisco
+    mac_suffix: 30
+    interfaces:
+      - name: Dot11Radio0
+        type: ieee80211
+    wifi:
+      controller: clinic-wlc-01   # a device of this scenario
+      radios:
+        - interface: Dot11Radio0
+          ssid: clinic-corp
+          bssid: "00:0c:ce:88:23:c7"
+          band: 2.4GHz
+          channel: 6
+          tx_power_dbm: 17
+```
+
+The controller then answers AIRESPACE-WIRELESS-MIB (`1.3.6.1.4.1.14179`), the
+tables an NMS walks on a Cisco controller: `bsnAPTable` holds one row per
+joined AP, keyed by the AP's MAC, with its name, location, model, address,
+radio count and associated status. `bsnMobileStationTable` holds one row per
+client of those APs, keyed by the station's MAC, with its address, SSID, the
+AP's MAC and the radio's slot. The slot is the radio's position in `radios`,
+counted from 0. A controller nobody names answers none of this, and a
+controller whose walk captures the tree keeps the captured rows.
+
+Three things to know:
+
+- **APs on other VLANs still count.** A controller reaches its APs over the
+  routed network, so the AP and the controller may sit in different segments.
+- **One row per station.** The station table is keyed by the station's MAC
+  alone. A station authored on two radios (a roam mid-flight) is reported on
+  the first one, in the order the APs and radios are authored.
+- **Only what the capture proves is served.** The controller captures in the
+  corpus also answer the AP's serial number, boot version and forty more
+  columns. Nothing authors them, so they are not served.
+
+Not authored here yet: association and roam events.
 
 ## Services
 

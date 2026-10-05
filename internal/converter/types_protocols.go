@@ -499,12 +499,17 @@ type Dhcpv6Pool struct {
 // a single dot11DesiredSSID per interface and has no BSS table. The associated
 // clients of a radio are here too, but they are reported from a vendor family
 // (CISCO-DOT11-ASSOCIATION-MIB) for the same reason: the standard MIB has no
-// client table. Multi-BSS, roams and controller aggregation are the later W1
-// slices.
+// client table. Multi-BSS and roams are the later W1 slices.
 type WifiConfig struct {
 	// Radios is one entry per radio interface. A device with the block and no
 	// radio is an authoring mistake rather than an AP with nothing to say.
 	Radios []WifiRadio `yaml:"radios,omitempty" validate:"required,dive"`
+
+	// Controller names the wireless controller this AP has joined. The
+	// controller then reports the AP and its clients in AIRESPACE-WIRELESS-MIB,
+	// the way an NMS finds a lightweight AP's stations. Omit it for an
+	// autonomous AP.
+	Controller string `yaml:"controller,omitempty"`
 }
 
 // WifiRadio is one radio of an access point.

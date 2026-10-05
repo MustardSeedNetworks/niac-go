@@ -291,7 +291,7 @@ func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 func wirelessController(request Request, site Site, index int, links linkMap) converter.Device {
 	address := siteIP(site, vlanServers, controllerHostOffset+index)
 	return managedDevice(request, deviceSpec{
-		name: numberedName(site.Code+"-WLC", index), role: "controller", index: index,
+		name: wirelessControllerName(site, index), role: "controller", index: index,
 		ips: []string{address}, site: &site,
 		sysDescr: fmt.Sprintf("Cisco Catalyst 9800-L %s wireless controller %d", site.Code, index),
 		interfaces: []converter.Interface{newInterface(

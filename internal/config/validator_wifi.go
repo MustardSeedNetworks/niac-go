@@ -76,13 +76,14 @@ func WiFiBands() []string {
 // validateWiFi checks one device's radios. BSSID uniqueness is not here: it
 // spans the whole scenario, so validateWiFiBSSIDs does it once the roster is
 // known.
-func (v *Validator) validateWiFi(device *Device, prefix string) {
+func (v *Validator) validateWiFi(device *Device, prefix string, knownNames map[string]bool) {
 	wifi := device.WiFiConfig
 	if wifi == nil {
 		return
 	}
 
 	prefix += ".wifi"
+	v.validateWiFiController(device, prefix, knownNames)
 	if len(wifi.Radios) == 0 {
 		v.addError(prefix+".radios",
 			"a wifi block declares an access point, so it needs at least one radio")
@@ -99,6 +100,22 @@ func (v *Validator) validateWiFi(device *Device, prefix string) {
 			radioInterfaces,
 			claimed,
 		)
+	}
+}
+
+// validateWiFiController checks the controller an AP names. It has to be
+// another device of the scenario: the controller is where the AP's row is
+// reported, so naming a device that does not exist leaves the AP unreported
+// rather than merely unjoined.
+func (v *Validator) validateWiFiController(device *Device, prefix string, knownNames map[string]bool) {
+	controller := device.WiFiConfig.Controller
+	switch {
+	case controller == "":
+	case controller == device.Name:
+		v.addError(prefix+".controller", "an access point cannot be its own controller")
+	case !knownNames[controller]:
+		v.addError(prefix+".controller",
+			fmt.Sprintf("controller %q is not a device of this scenario", controller))
 	}
 }
 

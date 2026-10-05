@@ -234,3 +234,51 @@ func wantMACValue(t *testing.T, agent *snmp.Agent, oid, want string) {
 		t.Errorf("%s = %s, want MAC %s", oid, joined, want)
 	}
 }
+
+// TestGeneratedAccessPointsJoinTheirSiteController is the controller half of
+// W1: every pack AP joins its own site's first controller, and that controller
+// reports each one in bsnAPTable -- the OID is the corpus controller capture's
+// (walks/raw/cisco/cisco-controller-03.walk), not the constant under test.
+func TestGeneratedAccessPointsJoinTheirSiteController(t *testing.T) {
+	const captureAPName = "1.3.6.1.4.1.14179.2.2.1.1.3"
+	for _, pack := range scenario.Packs() {
+		t.Run(pack.ID, func(t *testing.T) {
+			devices, joined := accessPointsByController(generatePack(t, pack.ID))
+			for controller, aps := range joined {
+				agent := snmp.NewAgent(devices[controller], 0)
+				agent.SynthesizeWirelessController(aps)
+				for _, ap := range aps {
+					if want := ap.Properties["site"] + "-WLC01"; controller != want {
+						t.Fatalf("%s joined %q, want its site's controller %s", ap.Name, controller, want)
+					}
+					wantValue(t, agent, captureAPName+"."+macArcs(ap), ap.Name)
+				}
+			}
+		})
+	}
+}
+
+// accessPointsByController indexes a pack's devices by name, and its APs by
+// the controller they joined -- the grouping the stack hands each controller.
+func accessPointsByController(cfg *config.Config) (map[string]*config.Device, map[string][]*config.Device) {
+	devices := make(map[string]*config.Device, len(cfg.Devices))
+	joined := make(map[string][]*config.Device)
+	for index := range cfg.Devices {
+		device := &cfg.Devices[index]
+		devices[device.Name] = device
+		if device.WiFiConfig != nil {
+			joined[device.WiFiConfig.Controller] = append(joined[device.WiFiConfig.Controller], device)
+		}
+	}
+
+	return devices, joined
+}
+
+func macArcs(device *config.Device) string {
+	arcs := make([]string, 0, len(device.MACAddress))
+	for _, octet := range device.MACAddress {
+		arcs = append(arcs, strconv.Itoa(int(octet)))
+	}
+
+	return strings.Join(arcs, ".")
+}
