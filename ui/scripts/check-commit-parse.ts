@@ -5,11 +5,18 @@
 // fact; this runs release-please's own parsing over the commits a merge-queue
 // group would land, so the commit is caught before it reaches main.
 //
+// release-please also replaces a commit's message with the text after
+// BEGIN_COMMIT_OVERRIDE in its merged PR's body, paired or not (niac-go#2509:
+// #2495 named the marker in prose and its commit was dropped from 0.108.3).
+// Each commit is therefore parsed together with its PR's body, and a marker
+// with no END_COMMIT_OVERRIDE after it is refused outright.
+//
 // The release-please and parser versions come from the lockfile of the
 // release-please-action commit that release-please.yml pins, so a bump there
 // moves this check with it.
 //
-// Usage: node ui/scripts/check-commit-parse.ts <base-sha> <head-sha>
+// Usage: GITHUB_REPOSITORY=owner/name GITHUB_TOKEN=… \
+//          node ui/scripts/check-commit-parse.ts <base-sha> <head-sha>
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -27,10 +34,17 @@ interface Logger {
   trace: (message: string) => void;
 }
 
-interface RawCommit {
+// The fields of release-please's PullRequest that its commit parsing reads.
+export interface PullRequest {
+  number: number;
+  body: string;
+}
+
+export interface RawCommit {
   sha: string;
   message: string;
   files: string[];
+  pullRequest?: PullRequest;
 }
 
 export interface ReleasePlease {
@@ -71,6 +85,42 @@ export function versionsFromLock(lockText: string): Versions {
     releasePlease: version('release-please'),
     parser: version('@conventional-commits/parser'),
   };
+}
+
+// A squash commit's subject ends with its PR number; that PR's body is what
+// release-please will read the override from.
+export function pullRequestNumber(message: string): number | undefined {
+  const found = /\(#(\d+)\)$/.exec(message.split('\n')[0]);
+  return found ? Number(found[1]) : undefined;
+}
+
+export async function fetchPullRequest(
+  repository: string,
+  number: number,
+  token: string,
+): Promise<PullRequest> {
+  const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${number}`, {
+    headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`fetching ${repository}#${number}: HTTP ${response.status}`);
+  }
+  const pull = (await response.json()) as { body: string | null };
+  return { number, body: pull.body ?? '' };
+}
+
+// The message release-please parses for a commit: release-please's own
+// preprocessCommitMessage, restated only to quote the rejected line.
+export function effectiveMessage(commit: RawCommit): string {
+  const override = (commit.pullRequest?.body.split('BEGIN_COMMIT_OVERRIDE')[1] ?? '')
+    .split('END_COMMIT_OVERRIDE')[0]
+    .trim();
+  return override || commit.message;
+}
+
+export function unpairedOverride(body: string): boolean {
+  const after = body.split('BEGIN_COMMIT_OVERRIDE');
+  return after.length > 1 && !after[1].includes('END_COMMIT_OVERRIDE');
 }
 
 export async function pinnedVersions(): Promise<Versions> {
@@ -139,6 +189,13 @@ export function rejections(commits: RawCommit[], releasePlease: ReleasePlease): 
   const found: Rejection[] = [];
   for (const commit of commits) {
     const errors: string[] = [];
+    if (commit.pullRequest && unpairedOverride(commit.pullRequest.body)) {
+      errors.push(
+        `#${commit.pullRequest.number}'s body has BEGIN_COMMIT_OVERRIDE with no ` +
+          'END_COMMIT_OVERRIDE after it, so release-please replaces this message with ' +
+          'the rest of the body',
+      );
+    }
     const quiet = (): void => {};
     const logger: Logger = {
       error: quiet,
@@ -160,13 +217,14 @@ export function rejections(commits: RawCommit[], releasePlease: ReleasePlease): 
       subject: commit.message.split('\n')[0],
       errors,
     };
+    const message = effectiveMessage(commit);
     try {
-      releasePlease.parser(commit.message);
+      releasePlease.parser(message);
     } catch (error) {
       const at = / at (\d+):\d+/.exec(String(error));
       if (at) {
         const number = Number(at[1]);
-        rejection.line = { number, text: commit.message.split('\n')[number - 1] ?? '' };
+        rejection.line = { number, text: message.split('\n')[number - 1] ?? '' };
       }
     }
     found.push(rejection);
@@ -195,10 +253,22 @@ async function main(): Promise<number> {
     process.stderr.write('usage: check-commit-parse.ts <base-sha> <head-sha>\n');
     return 2;
   }
+  const repository = process.env.GITHUB_REPOSITORY;
+  const token = process.env.GITHUB_TOKEN;
+  if (!repository || !token) {
+    process.stderr.write('GITHUB_REPOSITORY and GITHUB_TOKEN must be set\n');
+    return 2;
+  }
   const versions = await pinnedVersions();
   const prefix = mkdtempSync(join(tmpdir(), 'niac-commit-parse-'));
   try {
     const commits = commitsBetween(base, head, process.cwd());
+    for (const commit of commits) {
+      const number = pullRequestNumber(commit.message);
+      if (number !== undefined) {
+        commit.pullRequest = await fetchPullRequest(repository, number, token);
+      }
+    }
     const found = rejections(commits, installReleasePlease(versions, prefix));
     process.stdout.write(
       `release-please ${versions.releasePlease}, parser ${versions.parser}: ` +
@@ -208,8 +278,9 @@ async function main(): Promise<number> {
       return 0;
     }
     process.stderr.write(
-      `${report(found)}\n\nThe squash message is built from the PR's commit messages. ` +
-        'Reword the rejected line in those commits, push, and queue the PR again.\n',
+      `${report(found)}\n\nThe squash message is built from the PR's commit messages, ` +
+        'or from its BEGIN_COMMIT_OVERRIDE block when the body has one. Reword the ' +
+        'rejected line there, or pair the marker, and queue the PR again.\n',
     );
     return 1;
   } finally {

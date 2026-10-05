@@ -1197,6 +1197,11 @@ jobs:
     name: Release Notes
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The parse gate reads each queued PR's body: release-please takes a
+    # commit's message from its BEGIN_COMMIT_OVERRIDE block (niac-go#2509).
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1218,8 +1223,9 @@ jobs:
 
       # release-please drops a commit its parser rejects without failing, so
       # the loss surfaces only as a short changelog (niac-go#2389). A queue
-      # group's commits are the messages main will carry: parse them the way
-      # release-please will, and eject the PR instead of losing the entry.
+      # group's commits are the messages main will carry: parse them, with
+      # each PR's body, the way release-please will, and eject the PR instead
+      # of losing the entry.
       # The script needs Node alone, so no npm cache is restored.
       - uses: ./.github/actions/setup-node
         with:
@@ -1233,6 +1239,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.merge_group.base_sha }}
           HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node ui/scripts/check-commit-parse.ts "$BASE_SHA" "$HEAD_SHA"
 
   workflow-lint:

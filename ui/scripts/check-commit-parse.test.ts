@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -9,6 +9,7 @@ import {
   commitsBetween,
   installReleasePlease,
   pinnedVersions,
+  pullRequestNumber,
   type ReleasePlease,
   rejections,
   versionsFromLock,
@@ -92,6 +93,61 @@ test('a normal message passes', () => {
   const base = git('rev-parse', 'HEAD');
   const head = commit('fix(api): keep the session (and its lease) alive (#1)\n\nFixes #1\n');
   assert.deepEqual(rejections(commitsBetween(base, head, repo), releasePlease), []);
+});
+
+// #2495's body as merged, less its attribution footer: it named the marker in
+// prose, unpaired, and release-please dropped its commit from 0.108.3
+// (niac-go#2509).
+const unpairedBody = readFileSync(join(import.meta.dirname, 'testdata/pr-2495-body.txt'), 'utf8');
+const unpairedSubject =
+  'ci(release): fail the merge queue on a commit release-please cannot parse (#2495)';
+
+test('an unpaired override marker in the PR body fails', () => {
+  const base = git('rev-parse', 'HEAD');
+  const head = commit(`${unpairedSubject}\n\nFixes #2389\n`);
+  const [only] = commitsBetween(base, head, repo);
+  const found = rejections(
+    [{ ...only, pullRequest: { number: 2495, body: unpairedBody } }],
+    releasePlease,
+  );
+
+  assert.equal(found.length, 1);
+  assert.match(
+    found[0].errors[0],
+    /#2495's body has BEGIN_COMMIT_OVERRIDE with no END_COMMIT_OVERRIDE/,
+  );
+  assert.ok(found[0].errors.length > 1, 'release-please itself rejects the rest of the body');
+});
+
+test('a paired override replaces the message release-please parses', () => {
+  const base = git('rev-parse', 'HEAD');
+  const head = commit(droppedMessage);
+  const [only] = commitsBetween(base, head, repo);
+  const body =
+    'Prose.\n\nBEGIN_COMMIT_OVERRIDE\nfix(security): confine paths with os.Root (#2384)\nEND_COMMIT_OVERRIDE\n';
+  assert.deepEqual(
+    rejections([{ ...only, pullRequest: { number: 2384, body } }], releasePlease),
+    [],
+  );
+});
+
+test('a paired override that does not parse fails, naming its line', () => {
+  const base = git('rev-parse', 'HEAD');
+  const head = commit('fix(api): keep the session alive (#1)\n');
+  const [only] = commitsBetween(base, head, repo);
+  const body = `Prose.\n\nBEGIN_COMMIT_OVERRIDE\n${droppedMessage}END_COMMIT_OVERRIDE\n`;
+  const found = rejections([{ ...only, pullRequest: { number: 1, body } }], releasePlease);
+
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].line, {
+    number: 17,
+    text: 'os.OpenRoot(filepath.Dir(p))+filepath.Base(p) shape into Open/Lstat/Stat/',
+  });
+});
+
+test('reads the PR number from a squash subject', () => {
+  assert.equal(pullRequestNumber(`${unpairedSubject}\n\nbody (#7)`), 2495);
+  assert.equal(pullRequestNumber('chore: base\n'), undefined);
 });
 
 test('reads the action pin from the workflow', () => {

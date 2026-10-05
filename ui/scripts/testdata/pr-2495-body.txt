@@ -1,0 +1,88 @@
+## Summary
+
+release-please drops any merged commit its conventional-commit parser rejects, logging it only at debug level. b13b73e0 lost its changelog entry to a body line with nested parentheses, and v0.96.0 stalled until a `BEGIN_COMMIT_OVERRIDE`.
+
+- `ui/scripts/check-commit-parse.ts` runs release-please's own `parseConventionalCommits` (not a reimplementation) over the commits between a merge group's base and head, and fails naming the parser error and the rejected line.
+- The release-please and `@conventional-commits/parser` versions are read from the `package-lock.json` of the `release-please-action` SHA that `release-please.yml` pins (today 17.6.0 / 0.4.1). Bumping the action moves the check with it; nothing is restated.
+- `release-notes` job (already ungated, `fetch-depth: 0`): sets up Node with no npm cache, runs the gate's `node --test` self-test every time, and applies the check on `merge_group`.
+- The frontend Biome check (`ci.yml`, `mk/lint.mk`, `ui/package.json` lint scripts) now covers `ui/scripts/` as well as `ui/src/`; before this, no CI lint step reached `ui/scripts/*.ts`. The existing `start-scoped-daemon.ts` and i18n scripts were already clean.
+- Pattern follows `ui/scripts/check-i18n-extraction.ts`: TypeScript run by Node directly, tested with `node --test`.
+
+## Linked Issue
+
+Fixes #2389
+
+## Testing Evidence
+
+Acceptance: the real b13b73e0 fails, naming line 17; a normal range passes.
+
+```text
+$ node ui/scripts/check-commit-parse.ts b13b73e0^ b13b73e0
+release-please 17.6.0, parser 0.4.1: 1 commit(s) checked
+b13b73e0 fix(security): replace G703 nosec suppressions with os.Root confinement (#2384)
+  release-please drops it: Error: unexpected token '(' at 17:25, valid tokens [)]
+  line 17: os.OpenRoot(filepath.Dir(p))+filepath.Base(p) shape into Open/Lstat/Stat/
+
+The squash message is built from the PR's commit messages. Reword the rejected line in those commits, push, and queue the PR again.
+rc=1
+
+$ node ui/scripts/check-commit-parse.ts origin/main~20 origin/main
+release-please 17.6.0, parser 0.4.1: 20 commit(s) checked
+rc=0
+```
+
+No false positives on history: the last 600 commits on main produce exactly one rejection, b13b73e0.
+
+```text
+$ node ui/scripts/check-commit-parse.ts HEAD~600 HEAD
+release-please 17.6.0, parser 0.4.1: 600 commit(s) checked
+b13b73e0 fix(security): replace G703 nosec suppressions with os.Root confinement (#2384)
+  release-please drops it: Error: unexpected token '(' at 17:25, valid tokens [)]
+  line 17: os.OpenRoot(filepath.Dir(p))+filepath.Base(p) shape into Open/Lstat/Stat/
+```
+
+Self-test (scratch git repo carrying b13b73e0's message verbatim), plus a mutant: making `rejections` skip every commit turns the first test red.
+
+```text
+$ node --test ui/scripts/check-commit-parse.test.ts
+✔ a message the parser rejects fails, naming its line
+✔ a normal message passes
+✔ reads the action pin from the workflow
+✔ refuses a lockfile without the parser
+ℹ pass 4
+ℹ fail 0
+
+# mutant: `if (errors.length >= 0) continue`
+ℹ pass 3
+ℹ fail 1
+```
+
+Gates:
+
+```text
+$ python3 scripts/validate-touched.py
+validate-touched: 5 path(s) differ from origin/main
+  Go: no package touched, no Go lint or tests
+ Test Files  178 passed (178)
+      Tests  1438 passed (1438)
+  [vitest: exit 0, 133.2 s]
+  [gate banned-vocabulary: exit 0, 0.6 s]
+banned-vocabulary check passed
+validate-touched: 3 step(s) passed
+
+$ make lint-frontend
+Checked 534 files in 1252ms. No fixes applied.
+
+$ actionlint -ignore 'SC2129' .github/workflows/ci.yml   # exit 0
+$ zizmor --min-severity high .github/workflows/ci.yml
+No findings to report. Good job! (12 suppressed)
+```
+
+This PR's own commit passes the gate (`HEAD~1..HEAD`: 1 commit checked, rc 0).
+
+## Security and Release Checklist
+
+- [x] No secrets, credentials or tokens added; the check fetches a public lockfile from raw.githubusercontent.com and installs with `--ignore-scripts`.
+- [x] `release.yml` and `release-please.yml` are untouched; the pin is only read.
+- [x] No new runtime dependency: release-please is installed into a temp prefix at check time, at the version the pinned action ships.
+- [x] No suppression comments added.
