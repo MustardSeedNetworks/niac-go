@@ -28,7 +28,7 @@ func uninstallPlatform(ctx context.Context, certPath string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	serial := cert.SerialNumber.Text(16)
+	serial := fmt.Sprintf("%x", cert.SerialNumber)
 	cmd := exec.CommandContext(ctx, "certutil.exe", "-delstore", "Root", serial)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -153,8 +154,8 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 		Use:   "install",
 		Short: "Install as Windows service",
 		Long:  `Install NiAC as a Windows service that starts automatically on boot.`,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return installWindowsService()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return installWindowsService(cmd.OutOrStdout())
 		},
 	}
 
@@ -163,8 +164,8 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 		Use:   "uninstall",
 		Short: "Uninstall Windows service",
 		Long:  `Remove the NiAC Windows service.`,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return uninstallWindowsService()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return uninstallWindowsService(cmd.OutOrStdout())
 		},
 	}
 
@@ -172,8 +173,8 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 	startCmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start Windows service",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return controlWindowsService("start")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return controlWindowsService(cmd.OutOrStdout(), "start")
 		},
 	}
 
@@ -181,8 +182,8 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 	stopCmd := &cobra.Command{
 		Use:   "stop",
 		Short: "Stop Windows service",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return controlWindowsService("stop")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return controlWindowsService(cmd.OutOrStdout(), "stop")
 		},
 	}
 
@@ -190,8 +191,8 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 	statusCmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show Windows service status",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return showWindowsServiceStatus()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return showWindowsServiceStatus(cmd.OutOrStdout())
 		},
 	}
 
@@ -250,28 +251,29 @@ func runWindowsService(info versionInfo) error {
 	return svc.Run()
 }
 
-func installWindowsService() error {
+func installWindowsService(out io.Writer) error {
 	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
 		return err
 	}
 
-	if err := svc.Install(); err != nil {
-		return fmt.Errorf("failed to install service: %w", err)
+	if installErr := svc.Install(); installErr != nil {
+		return fmt.Errorf("failed to install service: %w", installErr)
 	}
 
-	fmt.Println("Service installed successfully.")
-	fmt.Println("")
-	fmt.Println("To start the service:")
-	fmt.Println("  niac service start")
-	fmt.Println("  or: sc start NiACSimulator")
-	fmt.Println("")
-	fmt.Println("To configure automatic startup:")
-	fmt.Println("  sc config NiACSimulator start= auto")
-	return nil
+	_, err = fmt.Fprint(out, `Service installed successfully.
+
+To start the service:
+  niac service start
+  or: sc start NiACSimulator
+
+To configure automatic startup:
+  sc config NiACSimulator start= auto
+`)
+	return err
 }
 
-func uninstallWindowsService() error {
+func uninstallWindowsService(out io.Writer) error {
 	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
 		return err
@@ -280,15 +282,15 @@ func uninstallWindowsService() error {
 	// Stop service first if running
 	_ = svc.Stop()
 
-	if err := svc.Uninstall(); err != nil {
-		return fmt.Errorf("failed to uninstall service: %w", err)
+	if uninstallErr := svc.Uninstall(); uninstallErr != nil {
+		return fmt.Errorf("failed to uninstall service: %w", uninstallErr)
 	}
 
-	fmt.Println("Service uninstalled successfully.")
-	return nil
+	_, err = fmt.Fprintln(out, "Service uninstalled successfully.")
+	return err
 }
 
-func controlWindowsService(action string) error {
+func controlWindowsService(out io.Writer, action string) error {
 	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
 		return err
@@ -296,20 +298,20 @@ func controlWindowsService(action string) error {
 
 	switch action {
 	case "start":
-		if err := svc.Start(); err != nil {
-			return fmt.Errorf("failed to start service: %w", err)
+		if startErr := svc.Start(); startErr != nil {
+			return fmt.Errorf("failed to start service: %w", startErr)
 		}
-		fmt.Println("Service started.")
+		_, err = fmt.Fprintln(out, "Service started.")
 	case "stop":
-		if err := svc.Stop(); err != nil {
-			return fmt.Errorf("failed to stop service: %w", err)
+		if stopErr := svc.Stop(); stopErr != nil {
+			return fmt.Errorf("failed to stop service: %w", stopErr)
 		}
-		fmt.Println("Service stopped.")
+		_, err = fmt.Fprintln(out, "Service stopped.")
 	}
-	return nil
+	return err
 }
 
-func showWindowsServiceStatus() error {
+func showWindowsServiceStatus(out io.Writer) error {
 	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
 		return err
@@ -330,7 +332,6 @@ func showWindowsServiceStatus() error {
 		statusStr = "Unknown (service may not be installed)"
 	}
 
-	fmt.Printf("Service: %s\n", windowsDisplayName)
-	fmt.Printf("Status:  %s\n", statusStr)
-	return nil
+	_, err = fmt.Fprintf(out, "Service: %s\nStatus:  %s\n", windowsDisplayName, statusStr)
+	return err
 }
