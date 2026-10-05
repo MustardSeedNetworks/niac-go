@@ -67,6 +67,10 @@ func syslogEvent(event devicestate.Event) (int, string) {
 		devicestate.EventVLANUpdated, devicestate.EventRouterUpdated, devicestate.EventRouteUpdated,
 		devicestate.EventDeviceRebooted, devicestate.EventSTPTopologyChanged:
 		return 0, ""
+	// No captured AP logs its own transmit power changing, so a message for it
+	// would be invented; a poller sees the change in IEEE802dot11-MIB instead.
+	case devicestate.EventRadioUpdated:
+		return 0, ""
 	default:
 		return 0, ""
 	}

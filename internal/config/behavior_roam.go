@@ -44,9 +44,6 @@ func validateBehaviorRoam(targets map[string]behaviorTarget, roam BehaviorRoam, 
 			return err
 		}
 	}
-	if err := validateRoamCause(targets[roam.From].device, roam.Cause); err != nil {
-		return fmt.Errorf("%w: station %s: %w", ErrBehaviorRoamInvalid, station, err)
-	}
 	ssid, authored := authoredStationSSID(targets, station)
 	if !authored {
 		return fmt.Errorf("%w: station %s is not an authored wireless client", ErrBehaviorRoamInvalid, station)
@@ -57,6 +54,9 @@ func validateBehaviorRoam(targets map[string]behaviorTarget, roam BehaviorRoam, 
 				ErrBehaviorRoamInvalid, name, ssid, station)
 		}
 	}
+	if err := validateRoamCause(targets[roam.From].device, roam, ssid); err != nil {
+		return fmt.Errorf("%w: station %s: %w", ErrBehaviorRoamInvalid, station, err)
+	}
 	return nil
 }
 
@@ -65,18 +65,40 @@ func validateBehaviorRoam(targets map[string]behaviorTarget, roam BehaviorRoam, 
 // path refuses it, so the timeline would stop at its first roam.
 var errRoamCauseUnobservable = errors.New("the old access point serves no SNMP to report its radio")
 
-func validateRoamCause(from Device, cause devicestate.RoamCause) error {
-	switch cause {
+func validateRoamCause(from Device, roam BehaviorRoam, ssid string) error {
+	if roam.Cause != devicestate.RoamCauseTxPowerDrop && roam.TxPowerDBM != 0 {
+		return fmt.Errorf("tx_power_dbm %d needs cause %s", roam.TxPowerDBM, devicestate.RoamCauseTxPowerDrop)
+	}
+	switch roam.Cause {
 	case "":
 		return nil
-	case devicestate.RoamCauseRadioDown:
+	case devicestate.RoamCauseRadioDown, devicestate.RoamCauseTxPowerDrop:
 		if !SNMPv2Enabled(from.SNMPConfig) && !SNMPv3Enabled(from.SNMPv3Config) {
-			return fmt.Errorf("cause %s on %s: %w", cause, from.Name, errRoamCauseUnobservable)
+			return fmt.Errorf("cause %s on %s: %w", roam.Cause, from.Name, errRoamCauseUnobservable)
 		}
-		return nil
 	default:
-		return fmt.Errorf("unknown cause %q", cause)
+		return fmt.Errorf("unknown cause %q", roam.Cause)
 	}
+	if roam.Cause == devicestate.RoamCauseTxPowerDrop {
+		return validateTxPowerDrop(from, roam.TxPowerDBM, ssid)
+	}
+	return nil
+}
+
+// validateTxPowerDrop requires the power to be a drop on whichever of the old
+// AP's radios the station is on. Which one that is decides at run time, so the
+// power must be below every radio serving the station's SSID.
+func validateTxPowerDrop(from Device, dBm int, ssid string) error {
+	if dBm == 0 {
+		return fmt.Errorf("cause %s needs tx_power_dbm", devicestate.RoamCauseTxPowerDrop)
+	}
+	for _, radio := range from.WiFiConfig.Radios {
+		if radio.SSID == ssid && dBm >= radio.TxPowerDBM {
+			return fmt.Errorf("tx_power_dbm %d is no drop from %s %s at %d dBm",
+				dBm, from.Name, radio.Interface, radio.TxPowerDBM)
+		}
+	}
+	return nil
 }
 
 func authoredStationSSID(targets map[string]behaviorTarget, station net.HardwareAddr) (string, bool) {

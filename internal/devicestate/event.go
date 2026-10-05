@@ -35,6 +35,9 @@ const (
 	// the old one lost it to a reassociation elsewhere.
 	EventStationAssociated EventKind = "station.associated"
 	EventStationRoamed     EventKind = "station.roamed"
+	// EventRadioUpdated is a radio leaving or returning to its authored
+	// transmit power.
+	EventRadioUpdated EventKind = "radio.updated"
 )
 
 // Event records one committed state transition.

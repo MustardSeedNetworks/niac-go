@@ -4,3 +4,4 @@ behavior_timelines[].phases[].roams[].cause
 behavior_timelines[].phases[].roams[].from
 behavior_timelines[].phases[].roams[].station
 behavior_timelines[].phases[].roams[].to
+behavior_timelines[].phases[].roams[].tx_power_dbm

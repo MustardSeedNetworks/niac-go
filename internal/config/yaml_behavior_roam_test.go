@@ -90,24 +90,36 @@ func roamPhase(roams string) string {
 }
 
 func TestRoamTimelineRoundTrip(t *testing.T) {
-	cfg, err := config.LoadYAMLBytes(roamScenario(roamPhase(
-		"{station: \"" + roamStation + "\", from: MED-AP-01, to: MED-AP-02, cause: radio_down}")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []config.BehaviorRoam{{
-		Station: roamStation, From: "MED-AP-01", To: "MED-AP-02", Cause: devicestate.RoamCauseRadioDown,
-	}}
-	if got := cfg.BehaviorTimelines[0].Phases[0].Roams; !reflect.DeepEqual(got, want) {
-		t.Fatalf("roams = %#v, want %#v", got, want)
-	}
-	data, err := config.MarshalConfigYAML(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	reloaded, err := config.LoadYAMLBytes(data)
-	if err != nil || !reflect.DeepEqual(cfg.BehaviorTimelines, reloaded.BehaviorTimelines) {
-		t.Fatalf("round trip: %v", err)
+	for _, testCase := range []struct {
+		name, cause string
+		want        config.BehaviorRoam
+	}{
+		{"radio down", "cause: radio_down", config.BehaviorRoam{
+			Station: roamStation, From: "MED-AP-01", To: "MED-AP-02", Cause: devicestate.RoamCauseRadioDown,
+		}},
+		{"tx power drop", "cause: tx_power_drop, tx_power_dbm: 8", config.BehaviorRoam{
+			Station: roamStation, From: "MED-AP-01", To: "MED-AP-02",
+			Cause: devicestate.RoamCauseTxPowerDrop, TxPowerDBM: 8,
+		}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			cfg, err := config.LoadYAMLBytes(roamScenario(roamPhase(
+				"{station: \"" + roamStation + "\", from: MED-AP-01, to: MED-AP-02, " + testCase.cause + "}")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := cfg.BehaviorTimelines[0].Phases[0].Roams; len(got) != 1 || got[0] != testCase.want {
+				t.Fatalf("roams = %#v, want %#v", got, testCase.want)
+			}
+			data, err := config.MarshalConfigYAML(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reloaded, err := config.LoadYAMLBytes(data)
+			if err != nil || !reflect.DeepEqual(cfg.BehaviorTimelines, reloaded.BehaviorTimelines) {
+				t.Fatalf("round trip: %v", err)
+			}
+		})
 	}
 }
 
@@ -123,7 +135,27 @@ func TestRoamTimelineRejectsWhatNoAPPairCanServe(t *testing.T) {
 		{"unknown AP", `{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-09}`, "behavior target not found"},
 		{"AP without the SSID", `{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-03}`, `MED-AP-03 has no radio serving "clinic-corp"`},
 		{"not a MAC", `{station: "station-1", from: MED-AP-01, to: MED-AP-02}`, "is not a valid MAC address"},
-		{"unknown cause", `{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-02, cause: rain}`, `"rain" is not one of [radio_down]`},
+		{"unknown cause", `{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-02, cause: rain}`, `"rain" is not one of [radio_down tx_power_drop]`},
+		{
+			"power without its cause",
+			`{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-02, cause: radio_down, tx_power_dbm: 8}`,
+			"tx_power_dbm 8 needs cause tx_power_drop",
+		},
+		{
+			"power drop with no power",
+			`{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-02, cause: tx_power_drop}`,
+			"cause tx_power_drop needs tx_power_dbm",
+		},
+		{
+			"power that is no drop",
+			`{station: "` + roamStation + `", from: MED-AP-01, to: MED-AP-02, cause: tx_power_drop, tx_power_dbm: 17}`,
+			"tx_power_dbm 17 is no drop from MED-AP-01 Dot11Radio0 at 17 dBm",
+		},
+		{
+			"power drop on an AP without SNMP",
+			`{station: "` + roamStation + `", from: MED-AP-02, to: MED-AP-01, cause: tx_power_drop, tx_power_dbm: 8}`,
+			"cause tx_power_drop on MED-AP-02: the old access point serves no SNMP",
+		},
 		{
 			"cause on an AP without SNMP",
 			`{station: "` + roamStation + `", from: MED-AP-02, to: MED-AP-01, cause: radio_down}`,

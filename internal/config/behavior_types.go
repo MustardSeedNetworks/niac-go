@@ -34,6 +34,8 @@ type BehaviorRoam struct {
 	From    string
 	To      string
 	Cause   devicestate.RoamCause
+	// TxPowerDBM is what a tx_power_drop cause lowers the radio to.
+	TxPowerDBM int
 }
 
 // BehaviorAction executes one device operation at phase entry.

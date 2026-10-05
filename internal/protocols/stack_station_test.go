@@ -198,28 +198,38 @@ func TestRoamCauseTakesTheOldRadioDownUntilTheStationReturns(t *testing.T) {
 
 // TestReturnLandsOnTheRadioTheStationLeft: an AP serves the SSID on two radios
 // and the station was on the second. The roam back goes to that one, not to
-// the first radio that serves the SSID, or the cause would be undone on one
-// radio and the station put on another.
+// the first radio that serves the SSID, and the cause is undone there, or it
+// would be undone on one radio and the station put on another.
 func TestReturnLandsOnTheRadioTheStationLeft(t *testing.T) {
-	stack, cfg := roamTestStack(t, func(first *config.Device) {
-		first.Interfaces = append(first.Interfaces, config.Interface{Name: "Dot11Radio1", Type: "ieee80211"})
-		second := first.WiFiConfig.Radios[0]
-		second.Interface, second.BSSID, second.Band, second.Channel = "Dot11Radio1", "00:11:22:33:44:57", "2.4GHz", 6
-		first.WiFiConfig.Radios[0].Clients = nil
-		first.WiFiConfig.Radios = append(first.WiFiConfig.Radios, second)
-	})
-	from := stack.deviceStates[&cfg.Devices[1]]
-	away := behavior.RoamAction{Station: roamTestStation, From: "MED-AP-01", To: "MED-AP-02"}
-	back := behavior.RoamAction{Station: roamTestStation, From: "MED-AP-02", To: "MED-AP-01", Return: true}
+	for _, cause := range []devicestate.RoamCause{devicestate.RoamCauseRadioDown, devicestate.RoamCauseTxPowerDrop} {
+		t.Run(string(cause), func(t *testing.T) {
+			stack, cfg := roamTestStack(t, func(first *config.Device) {
+				first.Interfaces = append(first.Interfaces, config.Interface{Name: "Dot11Radio1", Type: "ieee80211"})
+				second := first.WiFiConfig.Radios[0]
+				second.Interface, second.BSSID, second.Band, second.Channel = "Dot11Radio1", "00:11:22:33:44:57", "2.4GHz", 6
+				first.WiFiConfig.Radios[0].Clients = nil
+				first.WiFiConfig.Radios = append(first.WiFiConfig.Radios, second)
+			})
+			from := stack.deviceStates[&cfg.Devices[1]]
+			away := behavior.RoamAction{
+				Station: roamTestStation, From: "MED-AP-01", To: "MED-AP-02", Cause: cause, TxPowerDBM: 8,
+			}
+			back := away
+			back.From, back.To, back.Return = away.To, away.From, true
 
-	for _, roam := range []behavior.RoamAction{away, back} {
-		if err := stack.RoamStation(roam); err != nil {
-			t.Fatalf("RoamStation(%+v) error = %v", roam, err)
-		}
-	}
+			for _, roam := range []behavior.RoamAction{away, back} {
+				if err := stack.RoamStation(roam); err != nil {
+					t.Fatalf("RoamStation(%+v) error = %v", roam, err)
+				}
+			}
 
-	if station, _ := from.Station(roamTestStation); station.Radio != "Dot11Radio1" {
-		t.Errorf("the station returned to %q, want Dot11Radio1", station.Radio)
+			if station, _ := from.Station(roamTestStation); station.Radio != "Dot11Radio1" {
+				t.Errorf("the station returned to %q, want Dot11Radio1", station.Radio)
+			}
+			if _, moved := from.RadioTxPowerDBM("Dot11Radio1"); moved || !radioOperUp(t, from, "Dot11Radio1") {
+				t.Error("the return did not undo the cause on the radio the station left")
+			}
+		})
 	}
 }
 
@@ -247,16 +257,59 @@ func TestRefusedCauseLeavesTheStationWhereItWas(t *testing.T) {
 			}
 			before := [2]uint64{from.Version(), to.Version()}
 
-			err := stack.RoamStation(behavior.RoamAction{
-				Station: roamTestStation, From: "MED-AP-01", To: "MED-AP-02", Cause: devicestate.RoamCauseRadioDown,
-			})
+			for _, cause := range []devicestate.RoamCause{devicestate.RoamCauseRadioDown, devicestate.RoamCauseTxPowerDrop} {
+				err := stack.RoamStation(behavior.RoamAction{
+					Station: roamTestStation, From: "MED-AP-01", To: "MED-AP-02", Cause: cause, TxPowerDBM: 8,
+				})
 
-			if !errors.Is(err, testCase.want) {
-				t.Fatalf("RoamStation() error = %v, want %v", err, testCase.want)
-			}
-			if after := [2]uint64{from.Version(), to.Version()}; after != before {
-				t.Errorf("a refused cause changed state: versions %v -> %v", before, after)
+				if !errors.Is(err, testCase.want) {
+					t.Fatalf("RoamStation(%s) error = %v, want %v", cause, err, testCase.want)
+				}
+				if after := [2]uint64{from.Version(), to.Version()}; after != before {
+					t.Errorf("a refused %s changed state: versions %v -> %v", cause, before, after)
+				}
 			}
 		})
+	}
+}
+
+// TestTxPowerDropLowersTheOldRadioUntilTheStationReturns: the power drops
+// before the station leaves, as a weakened radio's clients do, and comes back
+// before the station returns to it.
+func TestTxPowerDropLowersTheOldRadioUntilTheStationReturns(t *testing.T) {
+	stack, cfg := roamTestStack(t)
+	from := stack.deviceStates[&cfg.Devices[1]]
+	away := behavior.RoamAction{
+		Station: roamTestStation, From: "MED-AP-01", To: "MED-AP-02",
+		Cause: devicestate.RoamCauseTxPowerDrop, TxPowerDBM: 8,
+	}
+
+	if err := stack.RoamStation(away); err != nil {
+		t.Fatalf("RoamStation(away) error = %v", err)
+	}
+
+	if dBm, moved := from.RadioTxPowerDBM("Dot11Radio0"); !moved || dBm != 8 {
+		t.Errorf("old radio power = %d, %v; want 8, true", dBm, moved)
+	}
+	if !radioOperUp(t, from, "Dot11Radio0") {
+		t.Error("a power drop took the radio down")
+	}
+	wantAway := []devicestate.EventKind{devicestate.EventRadioUpdated, devicestate.EventStationRoamed}
+	if got := lastEventKinds(from, 2); !slices.Equal(got, wantAway) {
+		t.Errorf("old AP events = %v, want %v", got, wantAway)
+	}
+
+	back := away
+	back.From, back.To, back.Return = away.To, away.From, true
+	if err := stack.RoamStation(back); err != nil {
+		t.Fatalf("RoamStation(back) error = %v", err)
+	}
+
+	if _, moved := from.RadioTxPowerDBM("Dot11Radio0"); moved {
+		t.Error("the return left the radio at the dropped power")
+	}
+	wantBack := []devicestate.EventKind{devicestate.EventRadioUpdated, devicestate.EventStationAssociated}
+	if got := lastEventKinds(from, 2); !slices.Equal(got, wantBack) {
+		t.Errorf("old AP events on the return = %v, want %v", got, wantBack)
 	}
 }

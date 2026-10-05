@@ -23,6 +23,7 @@ func validateState(state State, authored []Interface) error {
 		PrefixFaults:    state.PrefixFaults,
 		DeviceFaults:    state.DeviceFaults,
 		Stations:        state.Stations,
+		RadioTxPowers:   state.RadioTxPowers,
 	}
 	if !validStateCheckpoint(current, authored) {
 		return ErrStateInvalid
@@ -73,7 +74,8 @@ func validStateCheckpoint(point Checkpoint, authored []Interface) bool {
 		validStateAddressFaults(point.AddressFaults, authored) &&
 		validStatePrefixFaults(point.PrefixFaults, authored) &&
 		validStateDeviceFaults(point.DeviceFaults) &&
-		validStateStations(point.Stations, authored)
+		validStateStations(point.Stations, authored) &&
+		validStateRadioTxPowers(point.RadioTxPowers, authored)
 }
 
 func validStateInterfaceFaults(faults []InterfaceFault, interfaces []Interface) bool {

@@ -44,6 +44,9 @@ type RoamCause string
 const (
 	// RoamCauseRadioDown takes the old radio's carrier down for the phase.
 	RoamCauseRadioDown RoamCause = "radio_down"
+	// RoamCauseTxPowerDrop lowers the old radio's transmit power for the
+	// phase, so its clients hear it weaker and leave.
+	RoamCauseTxPowerDrop RoamCause = "tx_power_drop"
 )
 
 // InstallStations seeds the authored associations. It records no event: the

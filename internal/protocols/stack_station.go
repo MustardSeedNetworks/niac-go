@@ -49,14 +49,12 @@ func (s *Stack) RoamStation(roam behavior.RoamAction) error {
 		return fmt.Errorf("roam %s to %s: %w", roam.Station, toDevice.Name, ErrRoamTargetInvalid)
 	}
 	now := time.Now()
-	if roam.Cause == devicestate.RoamCauseRadioDown {
-		down, downDevice, downRadio := carrierFaultValue, fromDevice.Name, current.Radio
-		if roam.Return {
-			down, downDevice, downRadio = 0, toDevice.Name, radio
-		}
-		if err = s.setInterfaceFaultNoLock(downDevice, downRadio, devicestate.FaultLinkDown, down, now); err != nil {
-			return fmt.Errorf("roam %s cause %s on %s: %w", roam.Station, roam.Cause, downDevice, err)
-		}
+	causeDevice, causeStore, causeRadio := fromDevice, fromStore, current.Radio
+	if roam.Return {
+		causeDevice, causeStore, causeRadio = toDevice, toStore, radio
+	}
+	if err = s.applyRoamCause(roam, causeDevice, causeStore, causeRadio, now); err != nil {
+		return fmt.Errorf("roam %s cause %s on %s: %w", roam.Station, roam.Cause, causeDevice.Name, err)
 	}
 	next := current
 	next.Radio, next.ReturnRadio = radio, current.Radio
@@ -68,6 +66,37 @@ func (s *Stack) RoamStation(roam behavior.RoamAction) error {
 		return fmt.Errorf("roam %s from %s: %w", roam.Station, fromDevice.Name, err)
 	}
 	return nil
+}
+
+// applyRoamCause does to the radio what the cause names, or undoes it when the
+// station returns to that radio.
+func (s *Stack) applyRoamCause(
+	roam behavior.RoamAction,
+	device *config.Device,
+	store *devicestate.Store,
+	radio string,
+	now time.Time,
+) error {
+	switch roam.Cause {
+	case "":
+		return nil
+	case devicestate.RoamCauseRadioDown:
+		down := carrierFaultValue
+		if roam.Return {
+			down = 0
+		}
+		return s.setInterfaceFaultNoLock(device.Name, radio, devicestate.FaultLinkDown, down, now)
+	case devicestate.RoamCauseTxPowerDrop:
+		if !s.snmpAgents[device].interfaceFaultObservable(radio) {
+			return ErrFaultUnobservable
+		}
+		if roam.Return {
+			store.RestoreRadioTxPower(radio)
+			return nil
+		}
+		return store.SetRadioTxPower(radio, roam.TxPowerDBM)
+	}
+	return fmt.Errorf("unknown cause %q", roam.Cause)
 }
 
 // carrierFaultValue is what arms link_down: the fault is an outcome, and any

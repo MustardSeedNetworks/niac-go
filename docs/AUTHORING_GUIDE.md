@@ -769,6 +769,31 @@ cause anyone could find. Only the stations a phase roams move. Roam every
 station on the radio you take down, or the others stay listed on a radio that
 is down.
 
+`cause: tx_power_drop` keeps the radio up and lowers its transmit power to
+`tx_power_dbm` before the station leaves, which is how a radio whose clients
+drift away looks to a poller: IEEE802dot11-MIB's `dot11TxPowerLevel1` reports
+the lower power, in milliwatts, for the phase. The power must be below every
+radio on the old AP that serves the station's SSID, since which of them the
+station is on decides at run time. `reset` restores the authored power before
+the station returns. No syslog message is sent for the change, because no
+captured AP logs one.
+
+```yaml
+behavior_timelines:
+  - name: ward-radio-fade
+    repeat_count: 1
+    phases:
+      - name: power-drop
+        duration_ms: 15000
+        reset: true
+        roams:
+          - station: "02:c0:17:a4:03:6b"
+            from: clinic-ap-01
+            to: clinic-ap-02
+            cause: tx_power_drop
+            tx_power_dbm: 8
+```
+
 Three things to know:
 
 - **Where the station is decides at run time.** Both APs must serve the

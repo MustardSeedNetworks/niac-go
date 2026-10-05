@@ -120,6 +120,7 @@ func behaviorRoamsToYAML(roams []BehaviorRoam) []converter.BehaviorRoam {
 	for index, roam := range roams {
 		result[index] = converter.BehaviorRoam{
 			Station: roam.Station, From: roam.From, To: roam.To, Cause: string(roam.Cause),
+			TxPowerDBM: roam.TxPowerDBM,
 		}
 	}
 	return result
@@ -130,6 +131,7 @@ func convertBehaviorRoams(roams []converter.BehaviorRoam) []BehaviorRoam {
 	for index, roam := range roams {
 		result[index] = BehaviorRoam{
 			Station: roam.Station, From: roam.From, To: roam.To, Cause: devicestate.RoamCause(roam.Cause),
+			TxPowerDBM: roam.TxPowerDBM,
 		}
 	}
 	return result
