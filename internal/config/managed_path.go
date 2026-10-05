@@ -25,7 +25,11 @@ func ResolveManagedConfigPath(path string, roots []string) (string, error) {
 	if bare, ok := resolveBareNameInRoots(path, roots); ok {
 		absPath = bare
 	}
-	if !pathWithinAnyRoot(absPath, roots, false) {
+	// The roots are operator-trusted, so resolving them here touches nothing
+	// the caller named. Accepting the resolved root as well lets this
+	// function's own result (a real path) pass again when a root is reached
+	// through a symlink, which is how the daemon reloads a recovered session.
+	if !pathWithinAnyRoot(absPath, roots, false) && !pathWithinAnyRoot(absPath, roots, true) {
 		return "", ErrPathOutsideManagedRoots
 	}
 	realPath, err := filepath.EvalSymlinks(absPath)
