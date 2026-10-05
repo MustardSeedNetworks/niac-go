@@ -109,6 +109,12 @@ func dhcpToYAML(cfg *DHCPConfig) *converter.DhcpServer {
 			MacAddrMask: hardwareAddrString(lease.MACMask),
 		})
 	}
+	for _, scope := range cfg.Scopes {
+		out.Scopes = append(out.Scopes, converter.DhcpScope{
+			PoolStart: ipString(scope.PoolStart), PoolEnd: ipString(scope.PoolEnd),
+			Router: ipString(scope.Router),
+		})
+	}
 	return out
 }
 

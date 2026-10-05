@@ -30,6 +30,7 @@ func newConfigValidator() *validator.Validate {
 	v.RegisterStructValidation(validateBehaviorFaultPayload, BehaviorFault{})
 	v.RegisterStructValidation(validateAuthoredInterfaceFault, InterfaceFault{})
 	v.RegisterStructValidation(validateDHCPv4Options, DhcpServer{})
+	v.RegisterStructValidation(validateDHCPScope, DhcpScope{})
 
 	return v
 }

@@ -81,6 +81,7 @@ type scenarioCompiler struct {
 	addresses          map[netip.Addr]string
 	dhcpLeaseAddresses map[netip.Addr]string
 	dhcpLeaseMACs      []dhcpLeaseMAC
+	dhcpRelays         []dhcpRelaySource
 	report             Report
 }
 
@@ -252,6 +253,7 @@ func (c *scenarioCompiler) compileDevices() {
 		c.compileRoutes(device, interfacesByDevice[i])
 		c.compileDHCP(device, interfacesByDevice[i])
 	}
+	c.compileRelayedDHCP(interfacesByDevice)
 }
 
 func (c *scenarioCompiler) add(code DiagnosticCode, field, message string) {

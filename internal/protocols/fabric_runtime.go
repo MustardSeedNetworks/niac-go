@@ -20,7 +20,10 @@ type fabricRuntime struct {
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
 	attachmentRouters []fabricRouter
 	attachmentDHCP    []*config.Device
-	deviceStates      map[*config.Device]*devicestate.Store
+	// dhcpRelays holds the relayed scope of each attachment DHCP server
+	// that has no interface on the attachment network.
+	dhcpRelays   map[*config.Device]fabricDHCPRelay
+	deviceStates map[*config.Device]*devicestate.Store
 	// placement is set when the bound attachment is a port pool; a
 	// network-scoped attachment names no port to place a client on.
 	placement *clientPlacement
@@ -35,6 +38,12 @@ type fabricEndpoint struct {
 	interfaceName string
 	network       string
 	mac           net.HardwareAddr
+}
+
+type fabricDHCPRelay struct {
+	scope fabric.DHCPScope
+	mask  net.IPMask
+	mac   net.HardwareAddr
 }
 
 type fabricRouter struct {
@@ -147,11 +156,43 @@ func (r *fabricRuntime) acceptsIPv4Source(sourceIP, destinationIP net.IP, protoc
 }
 
 func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {
+	r.dhcpRelays = make(map[*config.Device]fabricDHCPRelay)
 	for _, scope := range scopes {
-		if scope.Network == r.attachmentNetwork {
-			r.attachmentDHCP = append(r.attachmentDHCP, r.devicesByName[scope.Device])
+		if scope.Network != r.attachmentNetwork {
+			continue
+		}
+		server := r.devicesByName[scope.Device]
+		r.attachmentDHCP = append(r.attachmentDHCP, server)
+		if scope.Relay.Device == "" {
+			continue
+		}
+		r.dhcpRelays[server] = fabricDHCPRelay{
+			scope: scope,
+			mask:  r.attachmentMask(),
+			mac:   cloneMAC(r.devicesByName[scope.Relay.Device].MACAddress),
 		}
 	}
+}
+
+func (r *fabricRuntime) attachmentMask() net.IPMask {
+	for _, network := range r.topology.Networks {
+		if network.Name == r.attachmentNetwork {
+			return net.CIDRMask(network.Prefix.Bits(), network.Prefix.Addr().BitLen())
+		}
+	}
+	return nil
+}
+
+// dhcpServerReachable reports whether an attachment DHCP server can answer
+// right now: through its own attachment interface, or because its relay can
+// still route a request to it.
+func (r *fabricRuntime) dhcpServerReachable(server *config.Device) bool {
+	relay, relayed := r.dhcpRelays[server]
+	if !relayed {
+		return r.deviceOnAttachment(server)
+	}
+	resolution, routed := r.resolveIPv4(relay.scope.Relay.Server, relay.mac)
+	return routed && resolution.device == server
 }
 
 func (r *fabricRuntime) indexInterfaces(interfaces []fabric.Interface) {

@@ -536,7 +536,7 @@ serve any combination.
 | --- | --- | --- |
 | `snmp_agent` | SNMP v1/v2c | `walk_file` supplies every OID not overridden here |
 | `snmpv3` | SNMP v3 USM | Independent of `snmp_agent` |
-| `dhcp` | DHCP | Pool must sit inside a declared routed network |
+| `dhcp` | DHCP | Pool must sit inside a declared routed network; `scopes` serve relayed networks |
 | `dns` | DNS A and PTR records | Records key the address as `ip` |
 | `http`, `ftp`, `ssh` | Application listeners | Banners are what a scanner identifies |
 | `lldp`, `cdp`, `edp`, `fdp` | Discovery advertisement | Overrides the fleet-wide default |
@@ -556,6 +556,50 @@ discovery_protocols:
     enabled: true
     interval: 30
 ```
+
+### One DHCP server for several networks
+
+A site usually runs one DHCP server and has each router interface relay its
+network to it (`ip helper-address`). Author the relay on the router interface
+as `dhcp_relay`, and the pool on the server as a `dhcp.scopes` entry:
+
+```yaml
+devices:
+  - name: CORE-SW01
+    type: router
+    interfaces:
+      - name: Vlan10
+        network: data
+        address: 10.1.10.1/24
+      - name: Vlan220
+        network: wifi-corp
+        address: 10.1.220.1/24
+        dhcp_relay: 10.1.10.5
+  - name: DHCP01
+    type: server
+    interfaces:
+      - name: eth0
+        network: data
+        address: 10.1.10.5/24
+    dhcp:
+      server_identifier: 10.1.10.5
+      pool_start: 10.1.10.100
+      pool_end: 10.1.10.199
+      router: 10.1.10.1
+      scopes:
+        - pool_start: 10.1.220.100
+          pool_end: 10.1.220.199
+          router: 10.1.220.1
+```
+
+The top-level pool serves the server's own network, and each scope serves a
+network the server has no interface on. A tester on `wifi-corp` gets an offer
+from the `wifi-corp` scope with that network's mask. The offer arrives from
+the relay's interface, carries the relay's address as `giaddr` and names
+the server in option 54. The relay must be on a routing device, and the
+scenario is refused when a scope has no relay or a relay names a server with no
+scope on that network. When the relay's link, the route to the server or the
+server's own link is down, the client gets no answer.
 
 ## Faults the scenario starts in
 

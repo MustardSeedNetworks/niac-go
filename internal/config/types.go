@@ -381,6 +381,16 @@ type DHCPConfig struct {
 
 	// Static leases
 	ClientLeases []DHCPLease
+
+	// Scopes are pools served to other networks through a DHCP relay.
+	Scopes []DHCPScope
+}
+
+// DHCPScope is one relayed DHCPv4 pool.
+type DHCPScope struct {
+	PoolStart net.IP
+	PoolEnd   net.IP
+	Router    net.IP
 }
 
 // DHCPLease represents a static DHCP lease assignment.
@@ -411,6 +421,7 @@ type Interface struct {
 	Network        string
 	Address        string
 	AddressV6      string
+	DHCPRelay      string
 	MTU            int
 	Speed          int // Mbps
 	Duplex         string

@@ -27,6 +27,17 @@ func validateDHCPv4Options(validation validator.StructLevel) {
 	}
 }
 
+func validateDHCPScope(validation validator.StructLevel) {
+	scope, ok := reflect.TypeAssert[DhcpScope](validation.Current())
+	if !ok {
+		return
+	}
+	start, end := net.ParseIP(scope.PoolStart), net.ParseIP(scope.PoolEnd)
+	if start.To4() != nil && end.To4() != nil && !ValidDHCPv4Pool(start, end) {
+		validation.ReportError(scope.PoolEnd, "pool_end", "PoolEnd", "dhcp_pool", "")
+	}
+}
+
 // ValidDHCPv4Mask accepts contiguous IPv4 masks, including an omitted mask.
 func ValidDHCPv4Mask(mask net.IPMask) bool {
 	if len(mask) == 0 {

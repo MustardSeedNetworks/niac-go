@@ -482,6 +482,32 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "description": "SIPDomainsV6 is DHCPv6 option 21, the SIP domain list offered.",
         "kind": "scalarList",
         "itemKind": "string"
+      },
+      {
+        "name": "scopes",
+        "title": "Scopes",
+        "description": "Scopes are the pools this server leases to networks it has no\ninterface on. A client there reaches the server only through a router\ninterface whose `dhcp_relay` names one of this server's addresses, and\nthe subnet mask offered is that network's own.",
+        "kind": "objectList",
+        "fields": [
+          {
+            "name": "pool_start",
+            "title": "Pool start",
+            "description": "PoolStart is the first address of the pool. The pool must sit inside one\nrouted network.",
+            "kind": "string"
+          },
+          {
+            "name": "pool_end",
+            "title": "Pool end",
+            "description": "PoolEnd is the last address of the pool, no lower than PoolStart.",
+            "kind": "string"
+          },
+          {
+            "name": "router",
+            "title": "Router",
+            "description": "Router is option 3 for this pool, the default gateway on its network.",
+            "kind": "string"
+          }
+        ]
       }
     ],
     "kind": "object"
@@ -1908,6 +1934,12 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "name": "address_v6",
         "title": "Address v6",
         "description": "AddressV6 is the port's optional IPv6 address, written as a prefix\n(2001:db8:10::5/64), beside its IPv4 `address`. It needs a `network`\nwith a `subnet_v6`, must fall inside it and carry the same prefix\nlength.",
+        "kind": "string"
+      },
+      {
+        "name": "dhcp_relay",
+        "title": "DHCP relay",
+        "description": "DHCPRelay is the DHCP server this routed port relays its network's\nclient broadcasts to (`ip helper-address`). The server must hold a\n`dhcp.scopes` pool inside this port's network.",
         "kind": "string"
       },
       {

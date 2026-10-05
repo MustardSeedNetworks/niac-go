@@ -120,6 +120,7 @@ TITLES = {
     "cdp": "CDP",
     "dhcp": "DHCP",
     "dhcpv6": "DHCPv6",
+    "dhcp_relay": "DHCP relay",
     "dns": "DNS",
     "edp": "EDP",
     "fdp": "FDP",

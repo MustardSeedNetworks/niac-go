@@ -45,6 +45,11 @@ func (c *scenarioCompiler) compileInterfaces(device *config.Device) map[string]I
 		}
 		compiled[iface.Name] = iface
 		c.report.Topology.Interfaces = append(c.report.Topology.Interfaces, iface)
+		if source.DHCPRelay != "" {
+			c.dhcpRelays = append(c.dhcpRelays, dhcpRelaySource{
+				device: device, iface: iface, target: source.DHCPRelay, field: field + ".dhcp_relay",
+			})
+		}
 		if deviceclass.RoutesIP(deviceclass.Parse(device.Type)) {
 			c.report.Topology.Routes = append(c.report.Topology.Routes, Route{
 				Device: device.Name, Destination: c.networks[iface.Network].Prefix,

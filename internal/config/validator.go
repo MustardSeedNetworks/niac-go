@@ -47,6 +47,10 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		return v.errors
 	}
 
+	if len(cfg.Networks) == 0 && len(cfg.Attachments) == 0 {
+		v.validateDHCPRelayNeedsNetworks(cfg)
+	}
+
 	// Validate devices (counting devices inside segments)
 	if cfg.DeviceCount() == 0 {
 		v.addWarning("devices", "no devices defined in configuration")

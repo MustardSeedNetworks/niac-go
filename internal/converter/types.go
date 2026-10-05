@@ -430,6 +430,11 @@ type Interface struct {
 	// length.
 	AddressV6 string `yaml:"address_v6,omitempty" validate:"omitempty,cidrv6"`
 
+	// DHCPRelay is the DHCP server this routed port relays its network's
+	// client broadcasts to (`ip helper-address`). The server must hold a
+	// `dhcp.scopes` pool inside this port's network.
+	DHCPRelay string `yaml:"dhcp_relay,omitempty" validate:"omitempty,ipv4" jsonschema:"format=ipv4"`
+
 	// MTU is the port's MTU in bytes, 576..1000000.
 	MTU int `yaml:"mtu,omitempty" validate:"omitempty,gte=576,lte=1000000"`
 

@@ -66,12 +66,20 @@ export interface FabricRoute {
   connected: boolean;
 }
 
+export interface FabricDhcpRelay {
+  device: string;
+  interface: string;
+  address: string;
+  server: string;
+}
+
 export interface FabricDhcpScope {
   device: string;
   network: string;
   start: string;
   end: string;
   router?: string;
+  relay?: FabricDhcpRelay;
 }
 
 export interface AttachmentPort {

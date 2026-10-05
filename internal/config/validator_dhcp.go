@@ -49,3 +49,30 @@ func (v *Validator) validateDHCPv4Addresses(cfg *DHCPConfig, prefix string) {
 		}
 	}
 }
+
+// validateDHCPRelayNeedsNetworks refuses relayed DHCP in a scenario with no
+// routed networks: nothing there can carry a request to another network, so
+// the scope or relay would load and never answer.
+func (v *Validator) validateDHCPRelayNeedsNetworks(cfg *Config) {
+	check := func(device *Device, prefix string) {
+		if device.DHCPConfig != nil && len(device.DHCPConfig.Scopes) > 0 {
+			v.addError(prefix+".dhcp.scopes", "relayed DHCP scopes need routed networks")
+		}
+		for i, iface := range device.Interfaces {
+			if iface.DHCPRelay != "" {
+				v.addError(
+					fmt.Sprintf("%s.interfaces[%d].dhcp_relay", prefix, i),
+					"a DHCP relay needs routed networks",
+				)
+			}
+		}
+	}
+	for i := range cfg.Devices {
+		check(&cfg.Devices[i], fmt.Sprintf("devices[%d]", i))
+	}
+	for i := range cfg.Segments {
+		for j := range cfg.Segments[i].Devices {
+			check(&cfg.Segments[i].Devices[j], fmt.Sprintf("segments[%d].devices[%d]", i, j))
+		}
+	}
+}
