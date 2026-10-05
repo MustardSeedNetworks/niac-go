@@ -22,7 +22,7 @@
 # same-version reinstall.
 # =============================================================================
 
-.PHONY: deploy-validate
+.PHONY: deploy-validate docker-validate
 
 deploy-validate: ## Install a released package on HOST and validate /__version + upgrade
 ifndef HOST
@@ -33,3 +33,16 @@ endif
 		$(if $(FROM_RELEASE),--from-version $(FROM_RELEASE)) \
 		$(if $(PORT),--port $(PORT)) \
 		$(if $(PACKAGE),--package $(PACKAGE))
+
+# The container install path (deploy/docker) on THIS host: builds the image
+# from the release archive, runs it as docs/DEPLOYMENT.md documents, and makes
+# the same assertions, the upgrade included, against a volume instead of a
+# package. Needs docker and passwordless sudo for the dummy interfaces.
+#
+#   make docker-validate
+#   make docker-validate RELEASE=v0.111.0 FROM_RELEASE=v0.110.0 PORT=8449
+docker-validate: ## Build the Docker image from a release and validate /__version + upgrade
+	@scripts/lab/docker-validate.sh \
+		$(if $(RELEASE),--version $(RELEASE)) \
+		$(if $(FROM_RELEASE),--from-version $(FROM_RELEASE)) \
+		$(if $(PORT),--port $(PORT))

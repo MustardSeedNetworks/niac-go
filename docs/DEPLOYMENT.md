@@ -1,8 +1,9 @@
 # Deployment Guide
 
-NIAC is distributed as native binaries. Container deployment is not the primary
-deployment model because packet capture and network simulation need direct host
-interface access.
+NIAC is distributed as native binaries and packages, and as a Docker image
+built from the same release archive. The image runs on the host network,
+because packet capture and network simulation need direct host interface
+access.
 
 ## Linux
 
@@ -126,6 +127,36 @@ https://npcap.com/
 Install Npcap in WinPcap-compatible mode when using tools or workflows that
 expect the WinPcap API.
 
+## Docker
+
+`deploy/docker/Dockerfile` builds an image from a published release: it
+downloads that release's Linux archive, checks it against the release's
+`checksums.txt`, and installs the same binary the `.deb` and `.rpm` carry.
+There is no published image; build it for the release you want:
+
+```bash
+docker build --build-arg NIAC_VERSION=0.111.0 -t niac:0.111.0 deploy/docker
+docker run -d --name niac --network host \
+  --cap-add NET_RAW --cap-add NET_ADMIN \
+  -v niac-data:/var/lib/niac niac:0.111.0
+curl -sk https://127.0.0.1:8445/__version
+```
+
+- **Host network.** A simulation attaches to a host interface by name, which
+  a bridged container cannot see. The listener therefore binds the host's
+  loopback on 8445, as the packages do; set `NIAC_LISTEN_ADDR` to expose it,
+  and `NIAC_API_TOKEN` or `NIAC_API_TOKEN_FILE` before you do.
+- **`NET_RAW` and `NET_ADMIN`.** The daemon runs as the unprivileged user
+  `niac` (uid 10001) and reaches raw sockets through file capabilities on the
+  binary, which need both capabilities granted. Without them every `niac`
+  command in the container fails with `Operation not permitted`, and
+  `--security-opt no-new-privileges` has the same effect.
+- **One volume.** Configs, recovery records, tokens and the self-signed
+  certificate all live under `/var/lib/niac`. Keep the volume when you
+  replace the container with a newer image and the running simulation is
+  recovered, exactly as a package upgrade recovers it. A bind mount must be
+  owned by uid 10001.
+
 ## Validation
 
 After installation:
@@ -173,3 +204,18 @@ installed first and defaults to the release immediately before `RELEASE`. The as
 against the loopback listener, so a closed firewall does not read as a broken
 deployment. Packages themselves are built by goreleaser in CI — there is no
 local packaging target, and `deploy-validate` deliberately does not add one.
+
+`make docker-validate` makes the same assertions for the Docker image on the
+host it runs on: it builds the image for `RELEASE` and the release before it,
+runs the older one with a simulation on a `dummy` link, replaces it with the
+newer one on the same volume, and checks the version, the restart count, the
+recovered simulation and a fresh start. CI runs it whenever `deploy/docker`
+changes.
+
+```bash
+make docker-validate
+make docker-validate RELEASE=v0.111.0 FROM_RELEASE=v0.110.0 PORT=8449
+```
+
+`PORT` must be free: with host networking the daemon would otherwise walk to
+the next port, and the checks would read whatever already answers there.

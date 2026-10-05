@@ -18,7 +18,7 @@ build. A cell with no recorded output is not a cell that passed; it says
 | Ubuntu 24.04 (x86_64) | `linux-amd64.tar.gz`, `.deb` | yes | yes | yes | yes |
 | Fedora 44 (x86_64) | `x86_64.rpm` | **no — see below** | — | — | — |
 | Windows 11 (x86_64) | `windows-amd64.zip` | yes | yes | yes | not taken — no Npcap |
-| Docker | image | not taken | — | — | — |
+| Docker (`v0.111.0`) | `deploy/docker` image | yes | yes | yes | simulation on a dummy link |
 
 "Embedded UI" is a non-empty `uiBuildHash` in `/__version`, which is what
 proves the artifact came through the make pipeline rather than a bare
@@ -162,14 +162,28 @@ one. Until that happens this cell covers install, start and serve only.
 
 `dev-win11` (10.44.30.70) did not answer SSH when this was taken.
 
-## Docker — not taken
+## Docker
 
-`deploy/docker` exists and the image needs `NET_RAW` + `NET_ADMIN`, but neither
-dev server has a usable container runtime:
+Taken 2026-10-05 on `dev-srv-ubuntu` (Docker 29.1.3) against `v0.111.0`,
+upgrading from `v0.110.0` on the same volume. Each image installs its
+release's `linux-amd64.tar.gz` after checking it against that release's
+`checksums.txt`. This host also runs a package install on 8445, hence the
+port:
 
 ```text
-$ ssh dev-srv-ubuntu 'docker info'
-docker not usable
+$ scripts/lab/docker-validate.sh --port 8449
+==> Validating the NIAC image for v0.111.0 (first run: v0.110.0)
+PASS built niac:0.110.0 and niac:0.111.0 from their release archives
+==> Run 1 of 2: v0.110.0 on a new volume
+PASS /__version reports 0.110.0 with a non-empty uiBuildHash
+PASS basic-network runs as docker-validate-pre on niac-dk-pre
+==> Run 2 of 2: v0.111.0 over the volume run 1 left
+PASS /__version reports 0.111.0 over the existing volume
+==> Watching for a restart loop for 30s
+PASS container running, RestartCount 0
+PASS docker-validate-pre recovered across the upgrade
+PASS a new simulation starts after the upgrade
+==> Docker deployment validation PASSED for v0.111.0
 ```
 
 ## Browsers
@@ -182,5 +196,4 @@ separately in the v1 plan and is an owner-run check, not an automated one.
 
 1. Retake the Fedora cell against the `v0.95.54` RPM.
 2. Npcap on a Windows host, then capture there.
-3. A container runtime, then the Docker cell.
-4. The `.pkg` cell, once the pipeline produces one.
+3. The `.pkg` cell, once the pipeline produces one.
