@@ -70,6 +70,25 @@ type DhcpServer struct {
 
 	// SIPDomainsV6 is DHCPv6 option 21, the SIP domain list offered.
 	SIPDomainsV6 []string `yaml:"sip_domains_v6,omitempty"`
+
+	// Scopes are the pools this server leases to networks it has no
+	// interface on. A client there reaches the server only through a router
+	// interface whose `dhcp_relay` names one of this server's addresses, and
+	// the subnet mask offered is that network's own.
+	Scopes []DhcpScope `yaml:"scopes,omitempty" validate:"omitempty,max=64,dive"`
+}
+
+// DhcpScope is one relayed pool of a DHCP server.
+type DhcpScope struct {
+	// PoolStart is the first address of the pool. The pool must sit inside one
+	// routed network.
+	PoolStart string `yaml:"pool_start" validate:"required,ipv4" jsonschema:"format=ipv4"`
+
+	// PoolEnd is the last address of the pool, no lower than PoolStart.
+	PoolEnd string `yaml:"pool_end" validate:"required,ipv4" jsonschema:"format=ipv4"`
+
+	// Router is option 3 for this pool, the default gateway on its network.
+	Router string `yaml:"router" validate:"required,ipv4" jsonschema:"format=ipv4"`
 }
 
 // DhcpLease represents a DHCP client lease.

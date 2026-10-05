@@ -1,0 +1,42 @@
+# W1: one central DHCP server leasing to a network it has no interface on,
+# through the gateway's relay (`ip helper-address`), the way a site's Wi-Fi
+# VLANs lease from the server on its data VLAN.
+#
+# .7 keeps clear of brocade-wire.yaml (.2), router-wire.yaml (.3),
+# lag-wire.yaml (.4, .5), ra-wire.yaml (.6) and the transit pool the hospital
+# suite uses.
+networks:
+  - name: wire-clients
+    subnet: 10.254.200.0/24
+  - name: wire-data
+    subnet: 10.77.10.0/24
+
+attachments:
+  - name: tester
+    connect: wire-clients
+
+devices:
+  - name: wire-relay-gw-01
+    type: router
+    mac: "02:00:00:00:6c:01"
+    interfaces:
+      - name: Vlan200
+        network: wire-clients
+        address: 10.254.200.7/24
+        dhcp_relay: 10.77.10.5
+      - name: Vlan10
+        network: wire-data
+        address: 10.77.10.1/24
+  - name: wire-dhcp-01
+    type: server
+    mac: "02:00:00:00:6c:05"
+    interfaces:
+      - name: eth0
+        network: wire-data
+        address: 10.77.10.5/24
+    dhcp:
+      server_identifier: 10.77.10.5
+      scopes:
+        - pool_start: 10.254.200.150
+          pool_end: 10.254.200.159
+          router: 10.254.200.7

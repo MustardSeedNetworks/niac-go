@@ -720,6 +720,33 @@
       ],
       "description": "DhcpLease represents a DHCP client lease."
     },
+    "DhcpScope": {
+      "properties": {
+        "pool_start": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "PoolStart is the first address of the pool. The pool must sit inside one\nrouted network."
+        },
+        "pool_end": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "PoolEnd is the last address of the pool, no lower than PoolStart."
+        },
+        "router": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "Router is option 3 for this pool, the default gateway on its network."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "pool_start",
+        "pool_end",
+        "router"
+      ],
+      "description": "DhcpScope is one relayed pool of a DHCP server."
+    },
     "DhcpServer": {
       "properties": {
         "client_leases": {
@@ -817,6 +844,13 @@
           },
           "type": "array",
           "description": "SIPDomainsV6 is DHCPv6 option 21, the SIP domain list offered."
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/DhcpScope"
+          },
+          "type": "array",
+          "description": "Scopes are the pools this server leases to networks it has no\ninterface on. A client there reaches the server only through a router\ninterface whose `dhcp_relay` names one of this server's addresses, and\nthe subnet mask offered is that network's own."
         }
       },
       "additionalProperties": false,
@@ -1337,6 +1371,11 @@
         "address_v6": {
           "type": "string",
           "description": "AddressV6 is the port's optional IPv6 address, written as a prefix\n(2001:db8:10::5/64), beside its IPv4 `address`. It needs a `network`\nwith a `subnet_v6`, must fall inside it and carry the same prefix\nlength."
+        },
+        "dhcp_relay": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "DHCPRelay is the DHCP server this routed port relays its network's\nclient broadcasts to (`ip helper-address`). The server must hold a\n`dhcp.scopes` pool inside this port's network."
         },
         "mtu": {
           "type": "integer",

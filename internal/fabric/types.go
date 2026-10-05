@@ -55,6 +55,7 @@ const (
 	CodeInvalidDHCPOption        DiagnosticCode = "invalid_dhcp_option"
 	CodeReservedDHCPAddress      DiagnosticCode = "reserved_dhcp_address"
 	CodeDHCPAddressCollision     DiagnosticCode = "dhcp_address_collision"
+	CodeInvalidDHCPRelay         DiagnosticCode = "invalid_dhcp_relay"
 
 	// CodeAttachmentFormAmbiguous and the codes below it are the
 	// attachment-pool findings. All of them describe the scenario file, so none
@@ -167,6 +168,19 @@ type DHCPScope struct {
 	Start   netip.Addr `json:"start"`
 	End     netip.Addr `json:"end"`
 	Router  netip.Addr `json:"router,omitzero"`
+	// Relay is set when the server has no interface on Network and its
+	// clients reach it through a router's `dhcp_relay`.
+	Relay DHCPRelay `json:"relay,omitzero"`
+}
+
+// DHCPRelay is the router interface that relays one scope's clients: its
+// address is the giaddr, and replies reach the client from it. Server is the
+// helper address it relays to.
+type DHCPRelay struct {
+	Device    string     `json:"device"`
+	Interface string     `json:"interface"`
+	Address   netip.Addr `json:"address"`
+	Server    netip.Addr `json:"server"`
 }
 
 // AttachmentPort is one free port a tester can appear on, with the network

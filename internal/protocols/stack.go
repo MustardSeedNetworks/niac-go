@@ -304,6 +304,7 @@ func (s *Stack) ConfigureFabric(topology *fabric.Topology) {
 		return
 	}
 	s.fabric.bindDeviceStates(s.deviceStates)
+	s.configureRelayedDHCP()
 }
 
 func (s *Stack) replySourceMAC(pkt *Packet, device *config.Device) net.HardwareAddr {
@@ -561,6 +562,7 @@ func (s *Stack) ReloadConfig(cfg *config.Config) error {
 		s.configureDeviceStates(replacementTopology)
 		s.fabric = newFabricRuntime(replacementTopology, cfg)
 		s.fabric.bindDeviceStates(s.deviceStates)
+		s.configureRelayedDHCP()
 	} else {
 		s.configureDeviceStates(nil)
 	}

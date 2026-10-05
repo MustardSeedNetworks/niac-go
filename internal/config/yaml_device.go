@@ -102,6 +102,7 @@ func convertInterfaces(in []converter.Interface) []Interface {
 			Network:        iface.Network,
 			Address:        iface.Address,
 			AddressV6:      iface.AddressV6,
+			DHCPRelay:      iface.DHCPRelay,
 			MTU:            iface.MTU,
 			Speed:          iface.Speed,
 			Duplex:         iface.Duplex,

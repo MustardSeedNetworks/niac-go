@@ -102,6 +102,11 @@ export interface AuthoredDevice {
       readonly ntp_servers_v6?: readonly string[];
       readonly sip_servers_v6?: readonly string[];
       readonly sip_domains_v6?: readonly string[];
+      readonly scopes?: readonly {
+          readonly pool_start?: string;
+          readonly pool_end?: string;
+          readonly router?: string;
+        }[];
     };
   readonly dns?: {
       readonly forward_records?: readonly {
@@ -358,6 +363,7 @@ export interface AuthoredDevice {
       readonly network?: string;
       readonly address?: string;
       readonly address_v6?: string;
+      readonly dhcp_relay?: string;
       readonly mtu?: number;
       readonly speed?: number;
       readonly duplex?: 'full' | 'half';

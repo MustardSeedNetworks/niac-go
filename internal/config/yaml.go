@@ -197,10 +197,10 @@ func interfacesToYAML(interfaces []Interface) []converter.Interface {
 	for i, iface := range interfaces {
 		out[i] = converter.Interface{
 			Name: iface.Name, Type: iface.Type, Network: iface.Network, Address: iface.Address,
-			AddressV6: iface.AddressV6, MTU: iface.MTU, Speed: iface.Speed, Duplex: iface.Duplex,
-			AdminStatus: iface.AdminStatus, OperStatus: iface.OperStatus,
-			Description: iface.Description, InUtilization: iface.InUtilization,
-			OutUtilization: iface.OutUtilization, VLANs: iface.VLANs,
+			AddressV6: iface.AddressV6, DHCPRelay: iface.DHCPRelay, MTU: iface.MTU,
+			Speed: iface.Speed, Duplex: iface.Duplex, AdminStatus: iface.AdminStatus,
+			OperStatus: iface.OperStatus, Description: iface.Description,
+			InUtilization: iface.InUtilization, OutUtilization: iface.OutUtilization, VLANs: iface.VLANs,
 		}
 	}
 	return out
