@@ -60,6 +60,11 @@ type BehaviorRoam struct {
 
 	// To is the `name` of the access point it reassociates to.
 	To string `yaml:"to" validate:"required"`
+
+	// Cause is what happens to the radio the station is on before it leaves:
+	// `radio_down` takes that radio's carrier down. Reset restores the radio
+	// before the station roams back. Omitted, the roam has no cause.
+	Cause string `yaml:"cause,omitempty" validate:"omitempty,oneof=radio_down"`
 }
 
 // BehaviorAction performs a device operation without arming a fault.

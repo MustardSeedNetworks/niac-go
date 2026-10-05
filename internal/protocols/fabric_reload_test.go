@@ -83,7 +83,7 @@ func (t *reloadBlockingTarget) ExecuteDeviceAction(
 	return errors.New("unexpected device action in reload fixture")
 }
 
-func (t *reloadBlockingTarget) RoamStation(string, string, string) error {
+func (t *reloadBlockingTarget) RoamStation(behavior.RoamAction) error {
 	return errors.New("unexpected roam in reload fixture")
 }
 

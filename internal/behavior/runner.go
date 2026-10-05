@@ -24,7 +24,7 @@ type Target interface {
 	SetInterfacePrefixFault(string, devicestate.InterfacePrefixFault) error
 	ClearInterfacePrefixFault(string, string, devicestate.InterfacePrefixFaultType) error
 	ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error
-	RoamStation(station, from, to string) error
+	RoamStation(RoamAction) error
 }
 
 // Clock is the single time seam for timeline replay: both the timestamps a run

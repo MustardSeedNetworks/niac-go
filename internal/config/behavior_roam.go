@@ -6,6 +6,8 @@ import (
 	"maps"
 	"net"
 	"slices"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 // ErrBehaviorRoamInvalid indicates a roam that no access point pair can serve.
@@ -26,26 +28,55 @@ func validateBehaviorRoams(targets map[string]behaviorTarget, roams []BehaviorRo
 			return fmt.Errorf("%w: station %s roams twice in one phase", ErrBehaviorRoamInvalid, station)
 		}
 		seen[station.String()] = struct{}{}
-		if roam.From == roam.To {
-			return fmt.Errorf("%w: station %s roams from %s to itself", ErrBehaviorRoamInvalid, station, roam.From)
-		}
-		for _, name := range []string{roam.From, roam.To} {
-			if deviceErr := validateBehaviorDevice(targets, name); deviceErr != nil {
-				return deviceErr
-			}
-		}
-		ssid, authored := authoredStationSSID(targets, station)
-		if !authored {
-			return fmt.Errorf("%w: station %s is not an authored wireless client", ErrBehaviorRoamInvalid, station)
-		}
-		for _, name := range []string{roam.From, roam.To} {
-			if !servesSSID(targets[name].device, ssid) {
-				return fmt.Errorf("%w: %s has no radio serving %q for station %s",
-					ErrBehaviorRoamInvalid, name, ssid, station)
-			}
+		if err = validateBehaviorRoam(targets, roam, station); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func validateBehaviorRoam(targets map[string]behaviorTarget, roam BehaviorRoam, station net.HardwareAddr) error {
+	if roam.From == roam.To {
+		return fmt.Errorf("%w: station %s roams from %s to itself", ErrBehaviorRoamInvalid, station, roam.From)
+	}
+	for _, name := range []string{roam.From, roam.To} {
+		if err := validateBehaviorDevice(targets, name); err != nil {
+			return err
+		}
+	}
+	if err := validateRoamCause(targets[roam.From].device, roam.Cause); err != nil {
+		return fmt.Errorf("%w: station %s: %w", ErrBehaviorRoamInvalid, station, err)
+	}
+	ssid, authored := authoredStationSSID(targets, station)
+	if !authored {
+		return fmt.Errorf("%w: station %s is not an authored wireless client", ErrBehaviorRoamInvalid, station)
+	}
+	for _, name := range []string{roam.From, roam.To} {
+		if !servesSSID(targets[name].device, ssid) {
+			return fmt.Errorf("%w: %s has no radio serving %q for station %s",
+				ErrBehaviorRoamInvalid, name, ssid, station)
+		}
+	}
+	return nil
+}
+
+// errRoamCauseUnobservable is a cause on an access point that serves no SNMP:
+// a radio taken down there changes nothing a poller can see, and the fault
+// path refuses it, so the timeline would stop at its first roam.
+var errRoamCauseUnobservable = errors.New("the old access point serves no SNMP to report its radio")
+
+func validateRoamCause(from Device, cause devicestate.RoamCause) error {
+	switch cause {
+	case "":
+		return nil
+	case devicestate.RoamCauseRadioDown:
+		if !SNMPv2Enabled(from.SNMPConfig) && !SNMPv3Enabled(from.SNMPv3Config) {
+			return fmt.Errorf("cause %s on %s: %w", cause, from.Name, errRoamCauseUnobservable)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown cause %q", cause)
+	}
 }
 
 func authoredStationSSID(targets map[string]behaviorTarget, station net.HardwareAddr) (string, bool) {

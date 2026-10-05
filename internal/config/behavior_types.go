@@ -33,6 +33,7 @@ type BehaviorRoam struct {
 	Station string
 	From    string
 	To      string
+	Cause   devicestate.RoamCause
 }
 
 // BehaviorAction executes one device operation at phase entry.

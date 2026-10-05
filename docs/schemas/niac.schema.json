@@ -221,6 +221,13 @@
         "to": {
           "type": "string",
           "description": "To is the `name` of the access point it reassociates to."
+        },
+        "cause": {
+          "type": "string",
+          "enum": [
+            "radio_down"
+          ],
+          "description": "Cause is what happens to the radio the station is on before it leaves:\n`radio_down` takes that radio's carrier down. Reset restores the radio\nbefore the station roams back. Omitted, the roam has no cause."
         }
       },
       "additionalProperties": false,

@@ -118,7 +118,9 @@ func convertBehaviorActions(actions []converter.BehaviorAction) []BehaviorAction
 func behaviorRoamsToYAML(roams []BehaviorRoam) []converter.BehaviorRoam {
 	result := make([]converter.BehaviorRoam, len(roams))
 	for index, roam := range roams {
-		result[index] = converter.BehaviorRoam(roam)
+		result[index] = converter.BehaviorRoam{
+			Station: roam.Station, From: roam.From, To: roam.To, Cause: string(roam.Cause),
+		}
 	}
 	return result
 }
@@ -126,7 +128,9 @@ func behaviorRoamsToYAML(roams []BehaviorRoam) []converter.BehaviorRoam {
 func convertBehaviorRoams(roams []converter.BehaviorRoam) []BehaviorRoam {
 	result := make([]BehaviorRoam, len(roams))
 	for index, roam := range roams {
-		result[index] = BehaviorRoam(roam)
+		result[index] = BehaviorRoam{
+			Station: roam.Station, From: roam.From, To: roam.To, Cause: devicestate.RoamCause(roam.Cause),
+		}
 	}
 	return result
 }
