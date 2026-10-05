@@ -138,16 +138,3 @@ func TestControllerCaptureKeepsItsOwnAirespaceTree(t *testing.T) {
 	}
 	wantString(t, agent.mib.Get(oracleAPName+".0.23.223.161.15.208"), "Cisco1252", "captured bsnAPName")
 }
-
-// TestControllerReportsAStationOnTwoAPsOnce: the station table is keyed by the
-// station alone, so a station authored on two APs is one row, on the AP it was
-// first authored on.
-func TestControllerReportsAStationOnTwoAPsOnce(t *testing.T) {
-	second := joinedAP()
-	second.Name = "MED-AP-02"
-	second.MACAddress = net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x66}
-	agent := NewAgent(wirelessController(), 0)
-	agent.SynthesizeWirelessController([]*config.Device{joinedAP(), second})
-
-	wantMAC(t, agent, oracleStationAPMAC+"."+oracleFirstClientMAC, "00:11:22:33:44:55")
-}

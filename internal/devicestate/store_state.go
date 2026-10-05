@@ -23,6 +23,7 @@ type Checkpoint struct {
 	AddressFaults   []InterfaceAddressFault
 	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
+	Stations        []Station
 }
 
 // State is everything a store holds that the compiled configuration cannot
@@ -42,6 +43,7 @@ type State struct {
 	AddressFaults   []InterfaceAddressFault
 	PrefixFaults    []InterfacePrefixFault
 	DeviceFaults    []DeviceFault
+	Stations        []Station
 	Checkpoints     []Checkpoint
 	Events          []Event
 	Version         uint64
@@ -76,6 +78,7 @@ func (s *Store) ExportState() State {
 		AddressFaults:   sortedAddressFaults(s.addressFaults),
 		PrefixFaults:    sortedPrefixFaults(s.prefixFaults),
 		DeviceFaults:    sortedDeviceFaults(s.deviceFaults),
+		Stations:        sortedStations(s.stations),
 		Checkpoints:     exportCheckpoints(s.checkpoints),
 		Events:          cloneEvents(s.events),
 		Version:         s.version,
@@ -101,6 +104,7 @@ func (s *Store) RestoreState(state State) error {
 	s.addressFaults = importAddressFaults(state.AddressFaults)
 	s.prefixFaults = importPrefixFaults(state.PrefixFaults)
 	s.deviceFaults = importDeviceFaults(state.DeviceFaults)
+	s.stations = importStations(state.Stations)
 	s.telemetry = state.Telemetry
 	s.consumedActions = importConsumedActions(state.ConsumedActions)
 	s.checkpoints = importCheckpoints(state.Checkpoints)
@@ -147,6 +151,7 @@ func exportCheckpoints(saved map[string]checkpoint) []Checkpoint {
 			AddressFaults:   sortedAddressFaults(point.addressFaults),
 			PrefixFaults:    sortedPrefixFaults(point.prefixFaults),
 			DeviceFaults:    sortedDeviceFaults(point.deviceFaults),
+			Stations:        sortedStations(point.stations),
 		})
 	}
 	return result
@@ -162,6 +167,7 @@ func importCheckpoints(saved []Checkpoint) map[string]checkpoint {
 			addressFaults: importAddressFaults(point.AddressFaults),
 			prefixFaults:  importPrefixFaults(point.PrefixFaults),
 			deviceFaults:  importDeviceFaults(point.DeviceFaults),
+			stations:      importStations(point.Stations),
 		}
 	}
 	return result

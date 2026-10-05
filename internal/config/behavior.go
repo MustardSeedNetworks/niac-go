@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"net"
 	"slices"
 	"time"
 
@@ -19,8 +20,8 @@ var (
 	// ErrBehaviorTargetAmbiguous means a timeline's target string matches more
 	// than one device/interface.
 	ErrBehaviorTargetAmbiguous = errors.New("behavior target is ambiguous")
-	// ErrBehaviorPhaseEmpty means a phase declares no traffic, faults or actions.
-	ErrBehaviorPhaseEmpty = errors.New("behavior phase has no traffic, faults or actions")
+	// ErrBehaviorPhaseEmpty means a phase declares no traffic, faults, actions or roams.
+	ErrBehaviorPhaseEmpty = errors.New("behavior phase has no traffic, faults, actions or roams")
 	// ErrBehaviorPhaseOverlap means two phases for the same target overlap in time.
 	ErrBehaviorPhaseOverlap = errors.New("behavior phases overlap")
 	// ErrBehaviorScheduleTooLarge means the timeline would exceed
@@ -74,7 +75,7 @@ func validateBehaviorScheduleSize(timelines []BehaviorTimeline) error {
 	var scheduledActions int64
 	for _, timeline := range timelines {
 		for _, phase := range timeline.Phases {
-			applications := int64(len(phase.Traffic) + len(phase.Faults))
+			applications := int64(len(phase.Traffic) + len(phase.Faults) + len(phase.Roams))
 			if phase.Reset {
 				applications *= 2
 			}
@@ -129,12 +130,19 @@ func behaviorIntervalsByTarget(timelines []BehaviorTimeline) map[string][]behavi
 }
 
 func behaviorPhaseTargetKeys(phase BehaviorPhase) map[string]struct{} {
-	keys := make(map[string]struct{}, len(phase.Traffic)+len(phase.Faults))
+	keys := make(map[string]struct{}, len(phase.Traffic)+len(phase.Faults)+len(phase.Roams))
 	for _, traffic := range phase.Traffic {
 		keys[behaviorConflictKey(traffic.Device, traffic.Interface, "high_utilization")] = struct{}{}
 	}
 	for _, fault := range phase.Faults {
 		keys[behaviorConflictKey(fault.Device, fault.Interface, fault.Type)] = struct{}{}
+	}
+	// A station is one thing wherever it is: two timelines moving it at once
+	// conflict even when they name different access points.
+	for _, roam := range phase.Roams {
+		if station, err := net.ParseMAC(roam.Station); err == nil {
+			keys[behaviorConflictKey(station.String(), "", "roam")] = struct{}{}
+		}
 	}
 	return keys
 }

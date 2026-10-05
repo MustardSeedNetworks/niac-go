@@ -27,7 +27,9 @@ type Snapshot struct {
 	// DeviceFaults are service outcomes armed on the device as a whole,
 	// independent of any interface.
 	DeviceFaults []DeviceFault
-	Version      uint64
+	// Stations are the wireless clients associated to this device's radios.
+	Stations []Station
+	Version  uint64
 }
 
 type configuration struct {
@@ -55,6 +57,7 @@ type Store struct {
 	interfaceTransitions map[string]interfaceTransition
 	telemetry            DeviceTelemetry
 	consumedActions      map[string]DeviceActionType
+	stations             map[string]Station
 }
 
 // NewStore creates a store seeded with authored device identity.
@@ -119,6 +122,7 @@ func (s *Store) snapshot(source configuration) Snapshot {
 		AddressFaults: sortedAddressFaults(s.addressFaults),
 		PrefixFaults:  sortedPrefixFaults(s.prefixFaults),
 		DeviceFaults:  sortedDeviceFaults(s.deviceFaults),
+		Stations:      sortedStations(s.stations),
 		Version:       s.version,
 	}
 }

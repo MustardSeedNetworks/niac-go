@@ -42,6 +42,12 @@ func (r *Runner) applyTransition(ctx context.Context, transition Transition) boo
 			return false
 		}
 	}
+	for _, roam := range transition.RoamActions {
+		if err := r.target.RoamStation(roam.Station, roam.From, roam.To); err != nil {
+			r.fail(transition, err)
+			return false
+		}
+	}
 	return true
 }
 

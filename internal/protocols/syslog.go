@@ -11,6 +11,7 @@ import (
 const (
 	syslogWarning       = 132 // local0.warning
 	syslogNotice        = 133 // local0.notice
+	syslogInformational = 134 // local0.info
 	syslogTimestamp     = "2006-01-02T15:04:05.999999Z07:00"
 	syslogHostnameLimit = 255
 )
@@ -54,6 +55,12 @@ func syslogEvent(event devicestate.Event) (int, string) {
 			return syslogNotice, "LINK_UP"
 		}
 		return syslogWarning, "LINK_DOWN"
+	// A station coming and going is routine, which is why Cisco logs its
+	// association and roam at informational (%DOT11-6-ASSOC, %DOT11-6-ROAMED).
+	case devicestate.EventStationAssociated:
+		return syslogInformational, "STATION_ASSOCIATED"
+	case devicestate.EventStationRoamed:
+		return syslogInformational, "STATION_ROAMED"
 	case devicestate.EventNetworkInstalled, devicestate.EventIdentityUpdated,
 		devicestate.EventStartupSaved, devicestate.EventStartupReloaded, devicestate.EventStartupErased,
 		devicestate.EventAuthoredReset, devicestate.EventCheckpointSaved, devicestate.EventCheckpointRestored,

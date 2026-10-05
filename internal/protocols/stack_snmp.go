@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols/snmp"
 )
@@ -120,6 +121,18 @@ func (s *Stack) synthesizeFleetTopology(device *config.Device, group *snmpAgentG
 // joinedAccessPoints groups every AP that names a controller under that
 // controller's name, across segments: a controller reaches its APs over the
 // routed network, so a VLAN boundary does not separate them.
+// bindWirelessControllers hands each controller the state of the APs that
+// joined it. It runs once every device has state, because a controller can be
+// registered before the APs that join it.
+func (s *Stack) bindWirelessControllers() {
+	state := func(device *config.Device) *devicestate.Store { return s.deviceStates[device] }
+	for device, group := range s.snmpAgents {
+		if len(s.joinedAPs[device.Name]) > 0 {
+			group.BindJoinedAccessPointStatesAll(state)
+		}
+	}
+}
+
 func joinedAccessPoints(cfg *config.Config) map[string][]*config.Device {
 	joined := make(map[string][]*config.Device)
 	segments := cfg.NormalizedSegments()

@@ -4,10 +4,12 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 // CISCO-DOT11-ASSOCIATION-MIB object prefixes. IEEE802dot11-MIB has no client
@@ -46,7 +48,8 @@ func (a *Agent) initializeDot11ClientMIB() {
 		return
 	}
 
-	a.registerDot11ClientMIB()
+	a.servesDot11Clients = true
+	a.replaceDot11Clients(a.associatedStations())
 }
 
 // refreshWalkedDot11ClientMIB serves the authored stations of a device whose
@@ -62,7 +65,8 @@ func (a *Agent) refreshWalkedDot11ClientMIB(walkOwnsClients bool) {
 		return
 	}
 
-	a.registerDot11ClientMIB()
+	a.servesDot11Clients = true
+	a.replaceDot11Clients(a.associatedStations())
 }
 
 // walkOwnsDot11Clients reports whether a parsed capture carries an association
@@ -79,51 +83,80 @@ func walkOwnsDot11Clients(entries []WalkEntry) bool {
 	return false
 }
 
-func (a *Agent) registerDot11ClientMIB() {
-	for _, radio := range a.device.WiFiConfig.Radios {
-		index, ok := a.ifIndexForInterface(radio.Interface)
-		if !ok {
-			continue
-		}
-		bssid, err := net.ParseMAC(radio.BSSID)
-		if err != nil {
-			continue
-		}
-		for _, client := range radio.Clients {
-			a.registerDot11Client(client, index, radio.SSID, bssid)
-		}
+// associatedStations is who is on this AP now: the device state once one is
+// bound, and the authored clients before that.
+func (a *Agent) associatedStations() []devicestate.Station {
+	if a.deviceState != nil {
+		return a.deviceState.Snapshot().Stations
 	}
+
+	return config.AuthoredStations(a.device, a.startTime)
 }
 
-func (a *Agent) registerDot11Client(
-	client config.WiFiClient,
-	ifIndex, ssid string,
-	bssid net.HardwareAddr,
+// replaceDot11Clients rebuilds both association tables from the stations
+// associated now. A roam adds and removes rows, which a value that is merely
+// computed on read cannot do, so the tables are replaced whole.
+func (a *Agent) replaceDot11Clients(stations []devicestate.Station) {
+	if !a.servesDot11Clients {
+		return
+	}
+	configEntries := make(map[string]*OIDValue)
+	statisticEntries := make(map[string]*OIDValue)
+	for _, station := range stations {
+		a.addDot11Client(station, configEntries, statisticEntries)
+	}
+	a.mib.ReplacePrefix(cDot11ClientConfigEntry, configEntries)
+	a.mib.ReplacePrefix(cDot11ClientStatisticEntry, statisticEntries)
+}
+
+func (a *Agent) addDot11Client(
+	station devicestate.Station,
+	configEntries, statisticEntries map[string]*OIDValue,
 ) {
-	station, err := net.ParseMAC(client.MAC)
+	radio, found := a.wifiRadio(station.Radio)
+	if !found {
+		return
+	}
+	index, ok := a.ifIndexForInterface(radio.Interface)
+	if !ok {
+		return
+	}
+	bssid, err := net.ParseMAC(radio.BSSID)
 	if err != nil {
 		return
 	}
-	address := net.ParseIP(client.IPAddress).To4()
-	if address == nil {
+	mac, err := net.ParseMAC(station.MAC)
+	if err != nil {
 		return
 	}
-	suffix := "." + dot11ClientIndex(ifIndex, ssid, station)
+	suffix := "." + dot11ClientIndex(index, radio.SSID, mac)
 
 	// The AP a station is on is its radio's BSSID -- the same address
 	// dot11MACAddress reports for that radio, so an NMS reading both tables
 	// sees one AP rather than two.
-	a.mib.Set(cDot11ClientParentAddress+suffix, macValue(bssid))
-	a.mib.Set(cDot11ClientIPAddressType+suffix,
-		&OIDValue{Type: gosnmp.Integer, Value: inetAddressTypeIPv4})
-	a.mib.Set(cDot11ClientIPAddress+suffix,
-		&OIDValue{Type: gosnmp.OctetString, Value: []byte(address)})
-	a.mib.Set(cDot11ClientUpTime+suffix,
-		&OIDValue{Type: gosnmp.Gauge32, Value: client.AssociatedSeconds})
-	a.mib.Set(cDot11ClientSignalStrength+suffix,
-		&OIDValue{Type: gosnmp.Integer, Value: client.SignalDBM})
-	a.mib.Set(cDot11ClientSigQuality+suffix,
-		&OIDValue{Type: gosnmp.Gauge32, Value: client.SignalQualityPct})
+	configEntries[cDot11ClientParentAddress+suffix] = macValue(bssid)
+	configEntries[cDot11ClientIPAddressType+suffix] = &OIDValue{Type: gosnmp.Integer, Value: inetAddressTypeIPv4}
+	configEntries[cDot11ClientIPAddress+suffix] = &OIDValue{
+		Type: gosnmp.OctetString, Value: station.IPAddress.AsSlice(),
+	}
+	associatedAt := station.AssociatedAt
+	statisticEntries[cDot11ClientUpTime+suffix] = &OIDValue{Dynamic: func() *OIDValue {
+		return &OIDValue{Type: gosnmp.Gauge32, Value: int(time.Since(associatedAt) / time.Second)}
+	}}
+	statisticEntries[cDot11ClientSignalStrength+suffix] = &OIDValue{Type: gosnmp.Integer, Value: station.SignalDBM}
+	statisticEntries[cDot11ClientSigQuality+suffix] = &OIDValue{
+		Type: gosnmp.Gauge32, Value: station.SignalQualityPct,
+	}
+}
+
+func (a *Agent) wifiRadio(name string) (config.WiFiRadio, bool) {
+	for _, radio := range a.device.WiFiConfig.Radios {
+		if radio.Interface == name {
+			return radio, true
+		}
+	}
+
+	return config.WiFiRadio{}, false
 }
 
 // dot11ClientIndex builds the index both association tables are keyed by: the

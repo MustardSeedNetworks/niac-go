@@ -492,8 +492,8 @@ interface octet counters. All counters remain monotonic after a fault clears.
 
 ### Link and Fault Syslog
 
-A device's enabled `syslog` configuration sends link transitions and fault
-updates/clears to its configured UDP collectors. These are
+A device's enabled `syslog` configuration sends link transitions, fault
+updates/clears and wireless roams to its configured UDP collectors. These are
 [RFC 5424](https://www.rfc-editor.org/rfc/rfc5424.html) messages using the
 `local0` facility and the device's authored hostname, not the daemon host name.
 
@@ -503,6 +503,8 @@ updates/clears to its configured UDP collectors. These are
 | Operational link up | Notice | `LINK_UP` |
 | Interface or device fault set/changed | Warning | `FAULT_UPDATED` |
 | Interface or device fault cleared | Notice | `FAULT_CLEARED` |
+| Wireless station associated (the AP a roam moved it to) | Informational | `STATION_ASSOCIATED` |
+| Wireless station roamed away (the AP it left) | Informational | `STATION_ROAMED` |
 
 Description-only edits and other configuration events do not emit syslog.
 The message includes the authoritative event version, kind and quoted target;

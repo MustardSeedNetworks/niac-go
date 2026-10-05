@@ -204,6 +204,20 @@ func (g *snmpAgentGroup) SynthesizeWirelessControllerAll(accessPoints []*config.
 	}
 }
 
+// BindJoinedAccessPointStatesAll binds the joined APs' state on every agent
+// of the group, the base agent included: a v3-only controller answers from it.
+func (g *snmpAgentGroup) BindJoinedAccessPointStatesAll(state func(*config.Device) *devicestate.Store) {
+	if g == nil {
+		return
+	}
+	g.baseAgent.BindJoinedAccessPointStates(state)
+	for _, agent := range g.agents {
+		if agent != g.baseAgent {
+			agent.BindJoinedAccessPointStates(state)
+		}
+	}
+}
+
 func (g *snmpAgentGroup) Communities() []string {
 	if g == nil {
 		return nil

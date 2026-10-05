@@ -66,6 +66,13 @@ type Agent struct {
 	// loaded from a capture leaves it false: its rows are the capture's, and
 	// nothing a fault changes would show in them.
 	poeSynthesized bool
+	// servesDot11Clients is set once NIAC owns the association tables, so a
+	// change in who is associated rebuilds them. A capture that carried its own
+	// leaves it false.
+	servesDot11Clients bool
+	// joined are the APs that joined this device as their wireless
+	// controller; empty on anything that is not one.
+	joined []joinedAccessPoint
 }
 
 // NewAgent creates a new SNMP agent for a device using the device's community.

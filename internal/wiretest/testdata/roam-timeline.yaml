@@ -1,0 +1,65 @@
+networks:
+  - name: wire-transit
+    subnet: 10.254.200.0/24
+attachments:
+  - name: tester
+    connect: wire-transit
+devices:
+  - name: roam-ap-01
+    type: ap
+    mac: "02:00:00:00:fc:01"
+    syslog:
+      enabled: true
+      receivers: ["10.254.200.50:514"]
+    interfaces:
+      - name: Management0
+        network: wire-transit
+        address: 10.254.200.11/24
+      - name: Dot11Radio0
+        type: ieee80211
+    wifi:
+      radios:
+        - interface: Dot11Radio0
+          ssid: ward-corp
+          bssid: "02:00:00:00:fc:11"
+          band: 5GHz
+          channel: 36
+          tx_power_dbm: 17
+          clients:
+            - mac: "02:c0:17:a4:03:6b"
+              ip_address: 10.254.200.101
+              associated_seconds: 600
+              signal_dbm: -55
+              signal_quality_pct: 83
+  - name: roam-ap-02
+    type: ap
+    mac: "02:00:00:00:fc:02"
+    syslog:
+      enabled: true
+      receivers: ["10.254.200.50:514"]
+    interfaces:
+      - name: Management0
+        network: wire-transit
+        address: 10.254.200.12/24
+      - name: Dot11Radio0
+        type: ieee80211
+    wifi:
+      radios:
+        - interface: Dot11Radio0
+          ssid: ward-corp
+          bssid: "02:00:00:00:fc:12"
+          band: 5GHz
+          channel: 44
+          tx_power_dbm: 17
+behavior_timelines:
+  - name: ward-roaming
+    start_offset_ms: 1000
+    repeat_count: 1
+    phases:
+      - name: on-ap-02
+        duration_ms: 1500
+        reset: true
+        roams:
+          - station: "02:c0:17:a4:03:6b"
+            from: roam-ap-01
+            to: roam-ap-02

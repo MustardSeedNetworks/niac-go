@@ -461,9 +461,9 @@ These are read from CISCO-DOT11-ASSOCIATION-MIB (`1.3.6.1.4.1.9.9.273`), not
 from IEEE802dot11-MIB: the standard MIB says what a radio _is_ and has no
 client table at all, so a vendor family is the only surface that can report a
 station. Each row is keyed by the radio's ifIndex, the SSID the station
-associated on, and the station's own MAC — which is why one station may be
-authored on two radios (that is what a roam looks like mid-flight) and not
-twice on one.
+associated on, and the station's own MAC. A station is authored on one radio
+of the whole scenario: it is associated to one at a time, and moving it is what
+a [roam](#roaming-a-station) does.
 
 Two things to know:
 
@@ -519,13 +519,11 @@ Three things to know:
 - **APs on other VLANs still count.** A controller reaches its APs over the
   routed network, so the AP and the controller may sit in different segments.
 - **One row per station.** The station table is keyed by the station's MAC
-  alone. A station authored on two radios (a roam mid-flight) is reported on
-  the first one, in the order the APs and radios are authored.
+  alone, so a roam moves its row's AP and slot columns rather than adding a
+  row.
 - **Only what the capture proves is served.** The controller captures in the
   corpus also answer the AP's serial number, boot version and forty more
   columns. Nothing authors them, so they are not served.
-
-Not authored here yet: association and roam events.
 
 ## Services
 
@@ -663,6 +661,54 @@ Naming an interface on a device-scoped fault, or omitting one on an
 interface-scoped fault, is refused when the config loads. A device fault
 needs a device that runs the service it suppresses — a `dns_nxdomain` on a
 device with no DNS records has nothing to make fail.
+
+### Roaming a station
+
+A roam moves an authored station from one access point to another that serves
+the same SSID. With `reset`, the station roams back when the phase ends, so a
+repeating timeline is a station going back and forth — here, 15 s of every
+30 s on the second AP:
+
+```yaml
+behavior_timelines:
+  - name: ward-roaming
+    repeat_count: 10
+    phases:
+      - name: on-ap-01
+        duration_ms: 15000
+        traffic:
+          - device: clinic-sw-01
+            interface: GigabitEthernet1/0/24
+            utilization: 20
+      - name: on-ap-02
+        start_offset_ms: 15000
+        duration_ms: 15000
+        reset: true
+        roams:
+          - station: "02:c0:17:a4:03:6b"   # a client authored under a radio
+            from: clinic-ap-01
+            to: clinic-ap-02
+```
+
+Each half is reported where it happened. The new AP adds the station to its
+association table under the radio serving that SSID, with its association time
+restarted, and logs `STATION_ASSOCIATED`; the old AP drops it and logs
+`STATION_ROAMED`. Both are syslog at informational, as Cisco logs
+`%DOT11-6-ASSOC` and `%DOT11-6-ROAMED`, with the station's MAC as the target.
+A controller both APs joined reports the station on the new AP.
+
+Three things to know:
+
+- **Where the station is decides at run time.** Both APs must serve the
+  station's SSID, which is checked when the config loads. Whether the station
+  is on `from` when the phase starts depends on the phases before it, so a
+  roam from an AP the station has already left stops the timeline instead.
+- **A station is one thing wherever it is.** Two timelines moving the same
+  station at the same time are refused when the config loads, even when they
+  name different APs.
+- **No trap yet.** The corpus has no captured roam trap to read the
+  notification's objects off, so roams are reported through syslog and the
+  tables only.
 
 ## Rules that cost people a round trip
 

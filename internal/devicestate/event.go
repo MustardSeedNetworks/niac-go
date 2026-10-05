@@ -30,6 +30,11 @@ const (
 	EventDeviceFaultCleared EventKind = "device_fault.cleared"
 	EventDeviceRebooted     EventKind = "device.rebooted"
 	EventSTPTopologyChanged EventKind = "stp.topology_changed"
+	// EventStationAssociated and EventStationRoamed are a roam's two halves,
+	// each on the access point it happened to: the new AP gained the station,
+	// the old one lost it to a reassociation elsewhere.
+	EventStationAssociated EventKind = "station.associated"
+	EventStationRoamed     EventKind = "station.roamed"
 )
 
 // Event records one committed state transition.

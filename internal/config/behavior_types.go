@@ -24,6 +24,15 @@ type BehaviorPhase struct {
 	Traffic     []BehaviorTraffic
 	Faults      []BehaviorFault
 	Actions     []BehaviorAction
+	Roams       []BehaviorRoam
+}
+
+// BehaviorRoam reassociates one wireless station from one access point to
+// another.
+type BehaviorRoam struct {
+	Station string
+	From    string
+	To      string
 }
 
 // BehaviorAction executes one device operation at phase entry.

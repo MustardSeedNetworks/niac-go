@@ -65,6 +65,7 @@ func (s *Stack) initializeDevices(cfg *config.Config) {
 
 		s.applySNMPAddrMappings(cfg.Devices, s.devices)
 	}
+	s.bindWirelessControllers()
 
 	s.configMu.Lock()
 	s.config = cfg

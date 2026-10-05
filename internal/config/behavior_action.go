@@ -20,22 +20,32 @@ func validateBehaviorTimeline(timeline BehaviorTimeline, targets map[string]beha
 			return fmt.Errorf("%w: phase %q", ErrBehaviorPhaseOverlap, phase.Name)
 		}
 		previousEnd = (phase.StartOffset + phase.Duration).Nanoseconds()
-		if len(phase.Traffic) == 0 && len(phase.Faults) == 0 && len(phase.Actions) == 0 {
-			return fmt.Errorf("%w: %q", ErrBehaviorPhaseEmpty, phase.Name)
+		if err := validateBehaviorPhase(phase, targets); err != nil {
+			return err
 		}
-		for _, traffic := range phase.Traffic {
-			if err := validateBehaviorTarget(targets, traffic.Device, traffic.Interface); err != nil {
-				return fmt.Errorf("phase %q traffic: %w", phase.Name, err)
-			}
+	}
+	return nil
+}
+
+func validateBehaviorPhase(phase BehaviorPhase, targets map[string]behaviorTarget) error {
+	if len(phase.Traffic) == 0 && len(phase.Faults) == 0 && len(phase.Actions) == 0 && len(phase.Roams) == 0 {
+		return fmt.Errorf("%w: %q", ErrBehaviorPhaseEmpty, phase.Name)
+	}
+	for _, traffic := range phase.Traffic {
+		if err := validateBehaviorTarget(targets, traffic.Device, traffic.Interface); err != nil {
+			return fmt.Errorf("phase %q traffic: %w", phase.Name, err)
 		}
-		for _, fault := range phase.Faults {
-			if err := validateBehaviorFault(targets, fault); err != nil {
-				return fmt.Errorf("phase %q fault: %w", phase.Name, err)
-			}
+	}
+	for _, fault := range phase.Faults {
+		if err := validateBehaviorFault(targets, fault); err != nil {
+			return fmt.Errorf("phase %q fault: %w", phase.Name, err)
 		}
-		if err := validateBehaviorActions(targets, phase.Actions); err != nil {
-			return fmt.Errorf("phase %q action: %w", phase.Name, err)
-		}
+	}
+	if err := validateBehaviorActions(targets, phase.Actions); err != nil {
+		return fmt.Errorf("phase %q action: %w", phase.Name, err)
+	}
+	if err := validateBehaviorRoams(targets, phase.Roams); err != nil {
+		return fmt.Errorf("phase %q roam: %w", phase.Name, err)
 	}
 	return nil
 }
