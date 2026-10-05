@@ -2159,6 +2159,7 @@ niac daemon --listen 0.0.0.0:8445
 When a device enables `ssh`, connect to any of its simulated IPv4 addresses
 with the configured username. The password is read from the environment
 variable named by `password_env`; passwords are never stored in the scenario.
+A device with no `username` and `password_env` refuses every login.
 
 The IOS-like profile supports `enable`, `configure terminal`, `show ip interface
 brief`, `show ip route`, running/startup configuration display and save,

@@ -4,22 +4,28 @@ import "github.com/invopop/jsonschema"
 
 // SSHConfig enables authenticated vendor-like command sessions.
 type SSHConfig struct {
-	// Enabled serves the SSH listener. When true, username and password_env
-	// are both required.
+	// Enabled serves the SSH listener. Without username and password_env the
+	// device still answers key exchange with its banner and host key, and
+	// refuses every login: there is no default account.
 	Enabled bool `yaml:"enabled"`
 
-	// Username is the account the simulated CLI accepts.
+	// Username is the account the simulated CLI accepts. Set it together
+	// with password_env.
 	Username string `yaml:"username,omitempty"`
 
 	// PasswordEnv names the environment variable holding the password — the
-	// password itself is never written in the config. That variable must be
-	// set in the daemon's environment or the device fails to start.
+	// password itself is never written in the config. When set, that
+	// variable must be set in the daemon's environment or the device fails
+	// to start.
 	PasswordEnv string `yaml:"password_env,omitempty" jsonschema:"pattern=^[A-Za-z_][A-Za-z0-9_]*$"`
 }
 
-// JSONSchemaExtend requires SSH credentials only when the service is enabled.
+// JSONSchemaExtend makes username and password_env a pair: a login needs both.
 func (SSHConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
-	addEnabledRequirements(schema, "username", "password_env")
+	schema.DependentRequired = map[string][]string{
+		"username":     {"password_env"},
+		"password_env": {"username"},
+	}
 	username, found := schema.Properties.Get("username")
 	if found {
 		username.Pattern = `.*\S.*`

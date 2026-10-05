@@ -1741,20 +1741,20 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "enabled",
         "title": "Enabled",
-        "description": "Enabled serves the SSH listener. When true, username and password_env\nare both required.",
+        "description": "Enabled serves the SSH listener. Without username and password_env the\ndevice still answers key exchange with its banner and host key, and\nrefuses every login: there is no default account.",
         "kind": "boolean"
       },
       {
         "name": "username",
         "title": "Username",
-        "description": "Username is the account the simulated CLI accepts.",
+        "description": "Username is the account the simulated CLI accepts. Set it together\nwith password_env.",
         "pattern": ".*\\S.*",
         "kind": "string"
       },
       {
         "name": "password_env",
         "title": "Password env",
-        "description": "PasswordEnv names the environment variable holding the password \u2014 the\npassword itself is never written in the config. That variable must be\nset in the daemon's environment or the device fails to start.",
+        "description": "PasswordEnv names the environment variable holding the password \u2014 the\npassword itself is never written in the config. When set, that\nvariable must be set in the daemon's environment or the device fails\nto start.",
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
         "kind": "string"
       }

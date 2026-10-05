@@ -14,7 +14,7 @@ func ValidateRuntimeRequirements(cfg *Config) error {
 	for _, segment := range cfg.NormalizedSegments() {
 		for index := range segment.Devices {
 			device := &segment.Devices[index]
-			if device.SSHConfig == nil || !device.SSHConfig.Enabled {
+			if device.SSHConfig == nil || !device.SSHConfig.Enabled || device.SSHConfig.PasswordEnv == "" {
 				continue
 			}
 			if password, found := os.LookupEnv(device.SSHConfig.PasswordEnv); !found || password == "" {

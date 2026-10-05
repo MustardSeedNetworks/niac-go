@@ -32,11 +32,15 @@ type SSHServer struct {
 	config        *ssh.ServerConfig
 }
 
-// NewSSHServer creates an SSH transport with no default credentials.
+// NewSSHServer creates an SSH transport with no default credentials. Nil
+// credentials still serve the version exchange and key exchange, so a scanner
+// sees the device's banner and host key, but every login is refused. An empty
+// version keeps the library's own.
 func NewSSHServer(
 	state *devicestate.Store,
-	credentials Credentials,
+	credentials *Credentials,
 	hostSigner ssh.Signer,
+	version string,
 	validateRoute RouteValidator,
 ) (*SSHServer, error) {
 	if state == nil {
@@ -45,8 +49,8 @@ func NewSSHServer(
 	if validateRoute == nil {
 		return nil, errors.New("route validator is required")
 	}
-	if credentials.Username == "" || credentials.Password == "" {
-		return nil, errors.New("SSH credentials are required")
+	if credentials != nil && (credentials.Username == "" || credentials.Password == "") {
+		return nil, errors.New("SSH credentials need both a username and a password")
 	}
 	if hostSigner == nil {
 		return nil, errors.New("SSH host signer is required")
@@ -54,12 +58,18 @@ func NewSSHServer(
 	config := &ssh.ServerConfig{
 		PasswordCallback: passwordCallback(credentials),
 		MaxAuthTries:     maxSSHAuthAttempts,
+		ServerVersion:    version,
 	}
 	config.AddHostKey(hostSigner)
 	return &SSHServer{state: state, validateRoute: validateRoute, config: config}, nil
 }
 
-func passwordCallback(credentials Credentials) func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
+func passwordCallback(credentials *Credentials) func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
+	if credentials == nil {
+		return func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
+			return nil, errors.New("authentication failed")
+		}
+	}
 	expectedPassword := []byte(credentials.Password)
 	return func(metadata ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
 		usernameMatch := subtle.ConstantTimeCompare([]byte(metadata.User()), []byte(credentials.Username))

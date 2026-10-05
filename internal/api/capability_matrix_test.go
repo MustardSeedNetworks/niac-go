@@ -24,7 +24,6 @@ func unauthoredProtocols() map[string]string {
 		// built-in scenario, so it is reachable from the shipped library but not
 		// from a pack; the rest are reachable from nothing.
 		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in scenario does)",
-		"SSHConfig":    "P5-9: no pack authors the SSH command service",
 		"ICMPv6Config": "P5-9: no pack authors dual-stack ICMPv6",
 
 		// Extreme and Foundry discovery. Vendor-specific, and vendor diversity is

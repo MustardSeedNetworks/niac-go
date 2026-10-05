@@ -1275,6 +1275,16 @@ forwarding and SNMP, and enabled SYSLOG receives every state transition. An
 operational interface transition also emits an enabled linkUp or linkDown SNMP
 notification. The command profile does not execute a vendor image.
 
+`os_fingerprint.ssh_banner` sets the version string the device announces, for
+example `SSH-2.0-Cisco-1.25`. Without it the device announces `SSH-2.0-Go`.
+
+`ssh: {enabled: true}` with no `username` and `password_env` serves SSH with no
+account. A client completes key exchange and sees the banner and host key, and
+every login is refused, so the device needs no secret in the daemon's
+environment. The scenario packs serve SSH this way on their IOS XE routers,
+switches and wireless controllers. Add `username` and `password_env` to a pack
+device to open its command session.
+
 ## Protocol Combinations
 
 Different network scenarios require specific protocol combinations.

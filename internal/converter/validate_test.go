@@ -227,3 +227,29 @@ func TestValidateConfig_IPv6Prefixes(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateConfig_SSHCredentialsArePaired(t *testing.T) {
+	tests := []struct {
+		name    string
+		ssh     *SSHConfig
+		wantErr bool
+	}{
+		{name: "no account", ssh: &SSHConfig{Enabled: true}},
+		{name: "account", ssh: &SSHConfig{Enabled: true, Username: "admin", PasswordEnv: "NIAC_SSH_PASSWORD"}},
+		{name: "username only", ssh: &SSHConfig{Enabled: true, Username: "admin"}, wantErr: true},
+		{name: "password only", ssh: &SSHConfig{Enabled: true, PasswordEnv: "NIAC_SSH_PASSWORD"}, wantErr: true},
+		{name: "blank username", ssh: &SSHConfig{
+			Enabled: true, Username: " ", PasswordEnv: "NIAC_SSH_PASSWORD",
+		}, wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			device := validDevice()
+			device.SSH = test.ssh
+			err := ValidateConfig(&Config{Devices: []Device{device}})
+			if (err != nil) != test.wantErr {
+				t.Fatalf("ValidateConfig() error = %v, wantErr %v", err, test.wantErr)
+			}
+		})
+	}
+}

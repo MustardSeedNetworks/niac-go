@@ -174,7 +174,12 @@ devices:
 
 The SSH password is never written in the config. `password_env` names an
 environment variable, which must be set in the daemon's environment or the
-device will not start.
+device will not start. `username` and `password_env` come as a pair.
+
+`ssh: {enabled: true}` with neither serves SSH with no account: a client
+completes key exchange, sees the host key and the `os_fingerprint.ssh_banner`
+version string, and every login is refused. The scenario packs serve SSH this
+way on their IOS XE devices, so a pack starts with no secret set.
 
 ```yaml
 devices:
@@ -625,7 +630,7 @@ These are the ones that are not guessable from the field name.
 | Prefix length must match the network | `/32` on a `/24` network | `/24` |
 | Access-point type is hyphenated | `type: access_point` | `type: ap` |
 | Attachment `name` is a label | `name: clinic-lan` | `name: tester`, `connect: clinic-lan` |
-| SSH needs a username and an env var | `enabled: true` alone | add `username` and `password_env` |
+| An SSH login needs a username and an env var | `username` alone | add `password_env`, or drop both to refuse every login |
 | An empty block is a configured service | `dhcpv6: {}` | omit the block |
 | NetBIOS names are short | a 20-character name | 15 characters or fewer |
 | Only one capture playback | two entries | one |

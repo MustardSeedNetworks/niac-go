@@ -118,8 +118,9 @@ export interface Device {
   iperf3?: IPerf3Config;
 }
 
+// Enabled with no account answers key exchange and refuses every login.
 export type SSHConfig =
-  | { enabled: false; username?: never; passwordEnv?: never }
+  | { enabled: boolean; username?: never; passwordEnv?: never }
   | { enabled: true; username: string; passwordEnv: string };
 
 export type SyslogConfig =

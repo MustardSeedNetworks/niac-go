@@ -2,6 +2,7 @@ package config
 
 import (
 	"net"
+	"strings"
 	"testing"
 )
 
@@ -378,7 +379,7 @@ func TestValidate_SNMPRequiresExplicitCommunity(t *testing.T) {
 	}
 }
 
-func TestValidate_SSHRequiresExplicitCredentials(t *testing.T) {
+func TestValidate_SSHCredentialsArePaired(t *testing.T) {
 	tests := []struct {
 		name  string
 		ssh   *SSHConfig
@@ -386,6 +387,7 @@ func TestValidate_SSHRequiresExplicitCredentials(t *testing.T) {
 	}{
 		{name: "absent", valid: true},
 		{name: "disabled", ssh: &SSHConfig{}, valid: true},
+		{name: "no account refuses every login", ssh: &SSHConfig{Enabled: true}, valid: true},
 		{
 			name: "explicit credentials",
 			ssh: &SSHConfig{
@@ -404,6 +406,41 @@ func TestValidate_SSHRequiresExplicitCredentials(t *testing.T) {
 				Name: "switch-1", Type: "switch",
 				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
 				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, SSHConfig: tt.ssh,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
+func TestValidate_SSHBanner(t *testing.T) {
+	tests := []struct {
+		name   string
+		banner string
+		valid  bool
+	}{
+		{name: "unset", valid: true},
+		{name: "cisco", banner: "SSH-2.0-Cisco-1.25", valid: true},
+		{name: "comments", banner: "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13", valid: true},
+		{name: "protocol 1", banner: "SSH-1.99-Cisco-1.25"},
+		{name: "no software version", banner: "SSH-2.0-"},
+		{name: "comment only", banner: "SSH-2.0- comment"},
+		{name: "no prefix", banner: "Cisco-1.25"},
+		{name: "line break", banner: "SSH-2.0-Cisco\r\nSSH-2.0-x"},
+		{name: "non ASCII", banner: "SSH-2.0-Cisco\u00e9"},
+		{name: "over RFC 4253 length", banner: "SSH-2.0-" + strings.Repeat("x", 246)},
+		{name: "at RFC 4253 length", banner: "SSH-2.0-" + strings.Repeat("x", 245), valid: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "switch-1", Type: "switch",
+				MACAddress:          net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses:         []net.IP{net.ParseIP("192.0.2.1")},
+				SSHConfig:           &SSHConfig{Enabled: true},
+				OSFingerprintConfig: &OSFingerprintConfig{SSHBanner: tt.banner},
 			}}}
 			result := NewValidator("test.yaml").Validate(cfg)
 			if result.Valid != tt.valid {

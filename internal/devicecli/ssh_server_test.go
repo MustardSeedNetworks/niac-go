@@ -118,6 +118,25 @@ func TestSSHServerBoundsChannelsPerConnection(t *testing.T) {
 
 func newSSHServer(t *testing.T, state *devicestate.Store) *devicecli.SSHServer {
 	t.Helper()
+	return newSSHServerWith(t, state, &devicecli.Credentials{Username: "admin", Password: "test-password"}, "")
+}
+
+func newSSHServerWith(
+	t *testing.T,
+	state *devicestate.Store,
+	credentials *devicecli.Credentials,
+	version string,
+) *devicecli.SSHServer {
+	t.Helper()
+	server, err := devicecli.NewSSHServer(state, credentials, newHostSigner(t), version, allowStaticRoute)
+	if err != nil {
+		t.Fatalf("NewSSHServer() error = %v", err)
+	}
+	return server
+}
+
+func newHostSigner(t *testing.T) ssh.Signer {
+	t.Helper()
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("GenerateKey() error = %v", err)
@@ -126,13 +145,7 @@ func newSSHServer(t *testing.T, state *devicestate.Store) *devicecli.SSHServer {
 	if err != nil {
 		t.Fatalf("NewSignerFromKey() error = %v", err)
 	}
-	server, err := devicecli.NewSSHServer(state, devicecli.Credentials{
-		Username: "admin", Password: "test-password",
-	}, hostSigner, allowStaticRoute)
-	if err != nil {
-		t.Fatalf("NewSSHServer() error = %v", err)
-	}
-	return server
+	return hostSigner
 }
 
 func connectSSH(t *testing.T, server *devicecli.SSHServer) *ssh.Client {
@@ -198,5 +211,63 @@ func readThrough(t *testing.T, reader *bufio.Reader, suffix string) {
 			t.Fatalf("ReadByte() error = %v; output = %q", err, output.String())
 		}
 		output.WriteByte(value)
+	}
+}
+
+func TestSSHServerWithoutCredentialsCompletesKeyExchangeAndRefusesLogin(t *testing.T) {
+	_, state := newSession()
+	server := newSSHServerWith(t, state, nil, "SSH-2.0-Cisco-1.25")
+
+	connection, err := net.Dial("tcp", serveSSH(t, server))
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	defer connection.Close()
+	var hostKeyOffered bool
+	_, _, _, err = ssh.NewClientConn(connection, "edge-1:22", &ssh.ClientConfig{
+		User: "admin", Auth: []ssh.AuthMethod{ssh.Password("")},
+		HostKeyCallback: func(string, net.Addr, ssh.PublicKey) error {
+			hostKeyOffered = true
+			return nil
+		},
+		BannerCallback: func(string) error { return nil },
+	})
+	if err == nil || !strings.Contains(err.Error(), "unable to authenticate") {
+		t.Fatalf("NewClientConn() error = %v, want an authentication refusal", err)
+	}
+	if !hostKeyOffered {
+		t.Fatal("login was refused before key exchange presented the host key")
+	}
+}
+
+func TestSSHServerAnnouncesConfiguredVersion(t *testing.T) {
+	for _, test := range []struct{ version, want string }{
+		{version: "SSH-2.0-Cisco-1.25", want: "SSH-2.0-Cisco-1.25"},
+		{version: "", want: "SSH-2.0-Go"},
+	} {
+		_, state := newSession()
+		connection, err := net.Dial("tcp", serveSSH(t, newSSHServerWith(t, state, nil, test.version)))
+		if err != nil {
+			t.Fatalf("Dial() error = %v", err)
+		}
+		line, err := bufio.NewReader(connection).ReadString('\n')
+		_ = connection.Close()
+		if err != nil {
+			t.Fatalf("ReadString() error = %v", err)
+		}
+		if got := strings.TrimRight(line, "\r\n"); got != test.want {
+			t.Fatalf("version line = %q, want %q", got, test.want)
+		}
+	}
+}
+
+func TestNewSSHServerRejectsHalfCredentials(t *testing.T) {
+	_, state := newSession()
+	for _, credentials := range []devicecli.Credentials{{Username: "admin"}, {Password: "secret"}} {
+		if _, err := devicecli.NewSSHServer(
+			state, &credentials, newHostSigner(t), "", allowStaticRoute,
+		); err == nil {
+			t.Fatalf("NewSSHServer(%+v) accepted half credentials", credentials)
+		}
 	}
 }
