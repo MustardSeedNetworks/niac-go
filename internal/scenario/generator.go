@@ -110,7 +110,7 @@ func Generate(request Request) (Result, error) {
 // a pool, and an operator or AP-4 can name another one.
 func testerAttachment(request Request) converter.LogicalAttachment {
 	site := request.Sites[0]
-	pool := make([]converter.AttachmentPort, 0, request.Counts.AccessSwitches)
+	var pool []converter.AttachmentPort
 	for index := 1; index <= request.Counts.AccessSwitches; index++ {
 		pool = append(pool, converter.AttachmentPort{
 			Device: accessName(site, index),
