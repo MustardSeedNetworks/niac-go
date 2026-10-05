@@ -17,6 +17,7 @@ type recordingTarget struct {
 	deviceActions  []behavior.DeviceAction
 	addressActions []behavior.InterfaceAddressAction
 	prefixActions  []behavior.InterfacePrefixAction
+	roamActions    []behavior.RoamAction
 }
 
 func (t *recordingTarget) SetInterfacePrefixFault(
@@ -103,6 +104,13 @@ func (t *recordingTarget) ClearDeviceFault(device string, kind devicestate.Devic
 }
 
 func (*recordingTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType, string) error {
+	return nil
+}
+
+func (t *recordingTarget) RoamStation(station, from, to string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.roamActions = append(t.roamActions, behavior.RoamAction{Station: station, From: from, To: to})
 	return nil
 }
 

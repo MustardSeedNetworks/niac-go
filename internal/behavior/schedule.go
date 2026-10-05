@@ -39,6 +39,14 @@ type OneShotAction struct {
 	ID     string
 }
 
+// RoamAction reassociates one wireless station from one access point to
+// another.
+type RoamAction struct {
+	Station string
+	From    string
+	To      string
+}
+
 // PhaseRef identifies one compiled phase while retaining its authored label.
 type PhaseRef struct {
 	ID    string
@@ -55,6 +63,7 @@ type Transition struct {
 	AddressActions []InterfaceAddressAction
 	PrefixActions  []InterfacePrefixAction
 	OneShotActions []OneShotAction
+	RoamActions    []RoamAction
 }
 
 type scheduledTransition struct {
@@ -66,6 +75,7 @@ type scheduledTransition struct {
 	addressActions []InterfaceAddressAction
 	prefixActions  []InterfacePrefixAction
 	oneShotActions []OneShotAction
+	roamActions    []RoamAction
 }
 
 // Compile produces a stable transition sequence for every finite repetition.
@@ -87,6 +97,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 					oneShotActions: compileOneShotActions(phase.Actions, phaseRef.ID),
 					addressActions: interfaceAddressActions(phase, false),
 					prefixActions:  interfacePrefixActions(phase, false),
+					roamActions:    roamActions(phase.Roams, false),
 				})
 				end := scheduledTransition{
 					offset: cycleStart + phase.StartOffset + phase.Duration,
@@ -97,6 +108,7 @@ func Compile(timelines []config.BehaviorTimeline) []Transition {
 					end.deviceActions = resetDeviceActions(deviceActions)
 					end.addressActions = interfaceAddressActions(phase, true)
 					end.prefixActions = interfacePrefixActions(phase, true)
+					end.roamActions = roamActions(phase.Roams, true)
 				}
 				scheduled = append(scheduled, end)
 			}
@@ -193,6 +205,7 @@ func groupTransitions(scheduled []scheduledTransition) []Transition {
 		transition.AddressActions = append(transition.AddressActions, current.addressActions...)
 		transition.PrefixActions = append(transition.PrefixActions, current.prefixActions...)
 		transition.OneShotActions = append(transition.OneShotActions, current.oneShotActions...)
+		transition.RoamActions = append(transition.RoamActions, current.roamActions...)
 	}
 	return result
 }
@@ -202,6 +215,20 @@ func compileOneShotActions(actions []config.BehaviorAction, phaseID string) []On
 	for index, action := range actions {
 		result[index] = OneShotAction{
 			Device: action.Device, Type: action.Type, ID: fmt.Sprintf("%s:%d", phaseID, index),
+		}
+	}
+	return result
+}
+
+// roamActions compiles a phase's roams. Reset sends each station back to the
+// access point it came from, which is what makes "roam every 30 s" a
+// repeating phase rather than a one-way trip.
+func roamActions(roams []config.BehaviorRoam, reset bool) []RoamAction {
+	result := make([]RoamAction, len(roams))
+	for index, roam := range roams {
+		result[index] = RoamAction{Station: roam.Station, From: roam.From, To: roam.To}
+		if reset {
+			result[index].From, result[index].To = roam.To, roam.From
 		}
 	}
 	return result

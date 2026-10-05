@@ -149,29 +149,13 @@ func (v *Validator) validateWiFiRadio(
 			minWiFiTxPowerDBM, maxWiFiTxPowerDBM, radio.TxPowerDBM))
 	}
 
-	v.validateWiFiClients(radio, prefix)
-}
-
-// validateWiFiClients checks the stations associated to one radio. Their MACs
-// have to differ: the MAC is part of the row index, so two clients sharing one
-// makes a single row that reports whichever was authored last.
-func (v *Validator) validateWiFiClients(radio *WiFiRadio, prefix string) {
-	associated := make(map[string]int, len(radio.Clients))
 	for index := range radio.Clients {
-		v.validateWiFiClient(
-			&radio.Clients[index],
-			fmt.Sprintf("%s.clients[%d]", prefix, index),
-			associated,
-		)
+		v.validateWiFiClient(&radio.Clients[index], fmt.Sprintf("%s.clients[%d]", prefix, index))
 	}
 }
 
-func (v *Validator) validateWiFiClient(
-	client *WiFiClient,
-	prefix string,
-	associated map[string]int,
-) {
-	v.validateWiFiClientAddress(client, prefix, associated)
+func (v *Validator) validateWiFiClient(client *WiFiClient, prefix string) {
+	v.validateWiFiClientAddress(client, prefix)
 
 	if client.AssociatedSeconds < 1 {
 		v.addError(prefix+".associated_seconds", fmt.Sprintf(
@@ -192,11 +176,7 @@ func (v *Validator) validateWiFiClient(
 	}
 }
 
-func (v *Validator) validateWiFiClientAddress(
-	client *WiFiClient,
-	prefix string,
-	associated map[string]int,
-) {
+func (v *Validator) validateWiFiClientAddress(client *WiFiClient, prefix string) {
 	address, err := net.ParseMAC(client.MAC)
 	switch {
 	case err != nil:
@@ -206,14 +186,6 @@ func (v *Validator) validateWiFiClientAddress(
 		v.addError(prefix+".mac", fmt.Sprintf(
 			"MAC %s is a group address; a station associates from its own unicast MAC",
 			client.MAC))
-	default:
-		key := address.String()
-		if first, taken := associated[key]; taken {
-			v.addError(prefix+".mac", fmt.Sprintf(
-				"MAC %s is already the station at index %d of this radio", key, first))
-		} else {
-			associated[key] = len(associated)
-		}
 	}
 
 	if ip := net.ParseIP(client.IPAddress); ip == nil || ip.To4() == nil {
@@ -298,6 +270,43 @@ func (v *Validator) claimBSSID(device *Device, radio int, owners map[string]stri
 		return
 	}
 	owners[key] = device.Name
+}
+
+// validateWiFiStations reports a station authored on more than one radio,
+// anywhere in the scenario. A station is associated to one radio at a time;
+// moving it is what a roam does, so authoring it twice would leave a roam
+// unable to say which of the two it moved.
+func (v *Validator) validateWiFiStations(cfg *Config) {
+	owners := make(map[string]string)
+	for _, segment := range cfg.NormalizedSegments() {
+		for index := range segment.Devices {
+			device := &segment.Devices[index]
+			if device.WiFiConfig == nil {
+				continue
+			}
+			for radio := range device.WiFiConfig.Radios {
+				v.claimStations(device, radio, owners)
+			}
+		}
+	}
+}
+
+func (v *Validator) claimStations(device *Device, radio int, owners map[string]string) {
+	for index, client := range device.WiFiConfig.Radios[radio].Clients {
+		address, err := net.ParseMAC(client.MAC)
+		if err != nil {
+			continue
+		}
+		key := address.String()
+		field := fmt.Sprintf("%s.wifi.radios[%d].clients[%d]", device.Name, radio, index)
+		if owner, taken := owners[key]; taken {
+			v.addError(field+".mac", fmt.Sprintf(
+				"station %s is already associated at %s; a station is on one radio at a time", key, owner))
+
+			continue
+		}
+		owners[key] = field
+	}
 }
 
 // radioInterfacesByName maps every interface of the device to whether it is a

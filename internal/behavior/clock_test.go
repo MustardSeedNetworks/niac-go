@@ -99,6 +99,10 @@ func (*clockTestTarget) ExecuteDeviceAction(string, devicestate.DeviceActionType
 	return nil
 }
 
+func (*clockTestTarget) RoamStation(string, string, string) error {
+	return nil
+}
+
 func (r *clockTestTarget) SetInterfaceFault(
 	_, _ string, faultType devicestate.FaultType, _ int,
 ) error {

@@ -73,6 +73,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 		}
 		v.validatePoEBudgets(cfg)
 		v.validateWiFiBSSIDs(cfg)
+		v.validateWiFiStations(cfg)
 
 		return v.errors
 	}
@@ -103,6 +104,7 @@ func (v *Validator) Validate(cfg *Config) *ListError {
 	}
 	v.validatePoEBudgets(cfg)
 	v.validateWiFiBSSIDs(cfg)
+	v.validateWiFiStations(cfg)
 
 	return v.errors
 }

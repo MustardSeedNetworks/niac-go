@@ -55,12 +55,14 @@ func (a *Agent) bindDeviceState(state *devicestate.Store) {
 	snapshot := state.Snapshot()
 	a.refreshDeviceStateIPMIBs(snapshot)
 	a.replaceTransportListeners(deviceStateIPv4Addresses(snapshot))
+	a.replaceDot11Clients(snapshot.Stations)
 	a.stateMIBVersion.Store(snapshot.Version)
 	a.registerDeviceActions()
 	a.registerUnmappedRebootTimestamps()
 }
 
 func (a *Agent) syncDeviceStateMIBs() {
+	a.syncJoinedStations()
 	if a.deviceState == nil {
 		return
 	}
@@ -81,6 +83,7 @@ func (a *Agent) syncDeviceStateMIBs() {
 	a.refreshDeviceStateInterfaceMIBs()
 	a.refreshDeviceStateIPMIBs(snapshot)
 	a.replaceTransportListeners(deviceStateIPv4Addresses(snapshot))
+	a.replaceDot11Clients(snapshot.Stations)
 	a.stateMIBVersion.Store(snapshot.Version)
 }
 

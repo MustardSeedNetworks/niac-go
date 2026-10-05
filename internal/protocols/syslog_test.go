@@ -22,6 +22,8 @@ func TestSyslogClassifiesLinkAndFaultTransitions(t *testing.T) {
 		{devicestate.EventDeviceFaultUpdated, false, 132, "FAULT_UPDATED"},
 		{devicestate.EventFaultCleared, false, 133, "FAULT_CLEARED"},
 		{devicestate.EventDeviceFaultCleared, false, 133, "FAULT_CLEARED"},
+		{devicestate.EventStationAssociated, false, 134, "STATION_ASSOCIATED"},
+		{devicestate.EventStationRoamed, false, 134, "STATION_ROAMED"},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.kind)+tt.messageID, func(t *testing.T) {

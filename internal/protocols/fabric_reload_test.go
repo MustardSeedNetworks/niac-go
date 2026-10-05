@@ -83,6 +83,10 @@ func (t *reloadBlockingTarget) ExecuteDeviceAction(
 	return errors.New("unexpected device action in reload fixture")
 }
 
+func (t *reloadBlockingTarget) RoamStation(string, string, string) error {
+	return errors.New("unexpected roam in reload fixture")
+}
+
 func TestSafeReloadDoesNotWaitForBehaviorWhileHoldingReloadLock(t *testing.T) {
 	cfg, topology, _ := forwardingFixture(t)
 	stack := NewStack(nil, cfg, logging.NewDebugConfig(0))

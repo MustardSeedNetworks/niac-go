@@ -2,10 +2,12 @@ package protocols
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/netip"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -19,6 +21,9 @@ type deviceIPv4Index struct {
 
 func (s *Stack) registerDeviceState(device *config.Device, table *DeviceTable) {
 	store := devicestate.NewStore(deviceIdentity(device))
+	if err := store.InstallStations(config.AuthoredStations(device, time.Now())); err != nil {
+		slog.Warn("skip authored wireless clients", "device", device.Name, "error", err)
+	}
 	s.deviceStates[device] = store
 	dhcp := s.dhcpHandlers[device]
 	store.SetChangeObserver(func(snapshot devicestate.Snapshot) {

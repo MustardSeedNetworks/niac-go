@@ -21,6 +21,7 @@ func behaviorTimelinesToYAML(timelines []BehaviorTimeline) []converter.BehaviorT
 				DurationMS: int(phase.Duration / time.Millisecond), Reset: phase.Reset,
 				Traffic: behaviorTrafficToYAML(phase.Traffic), Faults: behaviorFaultsToYAML(phase.Faults),
 				Actions: behaviorActionsToYAML(phase.Actions),
+				Roams:   behaviorRoamsToYAML(phase.Roams),
 			}
 		}
 	}
@@ -65,6 +66,7 @@ func convertBehaviorTimelines(authored []converter.BehaviorTimeline) []BehaviorT
 				Duration: time.Duration(phase.DurationMS) * time.Millisecond, Reset: phase.Reset,
 				Traffic: convertBehaviorTraffic(phase.Traffic), Faults: convertBehaviorFaults(phase.Faults),
 				Actions: convertBehaviorActions(phase.Actions),
+				Roams:   convertBehaviorRoams(phase.Roams),
 			}
 		}
 	}
@@ -109,6 +111,22 @@ func convertBehaviorActions(actions []converter.BehaviorAction) []BehaviorAction
 	result := make([]BehaviorAction, len(actions))
 	for i, action := range actions {
 		result[i] = BehaviorAction{Device: action.Device, Type: devicestate.DeviceActionType(action.Type)}
+	}
+	return result
+}
+
+func behaviorRoamsToYAML(roams []BehaviorRoam) []converter.BehaviorRoam {
+	result := make([]converter.BehaviorRoam, len(roams))
+	for index, roam := range roams {
+		result[index] = converter.BehaviorRoam(roam)
+	}
+	return result
+}
+
+func convertBehaviorRoams(roams []converter.BehaviorRoam) []BehaviorRoam {
+	result := make([]BehaviorRoam, len(roams))
+	for index, roam := range roams {
+		result[index] = BehaviorRoam(roam)
 	}
 	return result
 }

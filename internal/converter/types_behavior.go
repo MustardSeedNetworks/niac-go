@@ -42,6 +42,24 @@ type BehaviorPhase struct {
 
 	// Actions execute once on phase entry; reset does not undo them.
 	Actions []BehaviorAction `yaml:"actions,omitempty" validate:"omitempty,max=1024,dive"`
+
+	// Roams move wireless stations between access points on phase entry.
+	// Reset roams each one back when the phase ends.
+	Roams []BehaviorRoam `yaml:"roams,omitempty" validate:"omitempty,max=1024,dive"`
+}
+
+// BehaviorRoam reassociates one authored station from one access point to
+// another that serves the same SSID.
+type BehaviorRoam struct {
+	// Station is the MAC of a client authored under some radio's `clients`.
+	Station string `yaml:"station" validate:"required,mac"`
+
+	// From is the `name` of the access point the station is on when the
+	// phase starts.
+	From string `yaml:"from" validate:"required"`
+
+	// To is the `name` of the access point it reassociates to.
+	To string `yaml:"to" validate:"required"`
 }
 
 // BehaviorAction performs a device operation without arming a fault.

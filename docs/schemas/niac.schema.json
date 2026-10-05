@@ -191,6 +191,13 @@
           },
           "type": "array",
           "description": "Actions execute once on phase entry; reset does not undo them."
+        },
+        "roams": {
+          "items": {
+            "$ref": "#/$defs/BehaviorRoam"
+          },
+          "type": "array",
+          "description": "Roams move wireless stations between access points on phase entry.\nReset roams each one back when the phase ends."
         }
       },
       "additionalProperties": false,
@@ -200,6 +207,30 @@
         "duration_ms"
       ],
       "description": "BehaviorPhase applies traffic, faults and one-shot operations at a deterministic offset."
+    },
+    "BehaviorRoam": {
+      "properties": {
+        "station": {
+          "type": "string",
+          "description": "Station is the MAC of a client authored under some radio's `clients`."
+        },
+        "from": {
+          "type": "string",
+          "description": "From is the `name` of the access point the station is on when the\nphase starts."
+        },
+        "to": {
+          "type": "string",
+          "description": "To is the `name` of the access point it reassociates to."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "station",
+        "from",
+        "to"
+      ],
+      "description": "BehaviorRoam reassociates one authored station from one access point to another that serves the same SSID."
     },
     "BehaviorTimeline": {
       "properties": {

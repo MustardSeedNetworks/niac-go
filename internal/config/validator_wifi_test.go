@@ -293,10 +293,11 @@ func TestValidateWiFiClientsShareAMAC(t *testing.T) {
 	}
 }
 
-// TestValidateWiFiClientsMayRepeatAcrossRadios is the other side of that: the
-// index carries the radio's ifIndex too, so the same station associated to two
-// radios is two rows. It is what a roam looks like mid-flight.
-func TestValidateWiFiClientsMayRepeatAcrossRadios(t *testing.T) {
+// TestValidateWiFiStationIsOnOneRadio: a station is associated to one radio at
+// a time, and moving it is what a roam does, so the same station authored on a
+// second radio -- of the same AP or of another one -- is refused where it
+// repeats.
+func TestValidateWiFiStationIsOnOneRadio(t *testing.T) {
 	first := validRadio()
 	first.Clients = []WiFiClient{validClient()}
 	second := validRadio()
@@ -305,10 +306,31 @@ func TestValidateWiFiClientsMayRepeatAcrossRadios(t *testing.T) {
 	second.Band = "5GHz"
 	second.Channel = 149
 	second.Clients = []WiFiClient{validClient()}
-	cfg := &Config{Devices: []Device{wifiAP(first, second)}}
 
-	if message := anyWiFiError(t, cfg); message != "" {
-		t.Errorf("rejected one station on two radios: %s", message)
+	otherAP := wifiAP(second)
+	otherAP.Name = "MED-AP-02"
+	otherAP.MACAddress = net.HardwareAddr{0x00, 0x0c, 0xce, 0x88, 0x24, 0xc0}
+	otherAP.IPAddresses = []net.IP{net.ParseIP("10.20.220.12")}
+
+	for _, testCase := range []struct {
+		name  string
+		cfg   *Config
+		field string
+	}{
+		{
+			"two radios of one AP", &Config{Devices: []Device{wifiAP(first, second)}},
+			wifiAPName + ".wifi.radios[1].clients[0].mac",
+		},
+		{
+			"two APs", &Config{Devices: []Device{wifiAP(first), otherAP}},
+			"MED-AP-02.wifi.radios[0].clients[0].mac",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if message := errorFor(t, testCase.cfg, testCase.field); message == "" {
+				t.Errorf("accepted one station on %s, want an error on %s", testCase.name, testCase.field)
+			}
+		})
 	}
 }
 
