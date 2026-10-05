@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { SelectedNetworkPreview } from '../../pages/runtime/SelectedNetworkPreview';
 
 interface ReviewStepProps {
@@ -9,6 +8,6 @@ interface ReviewStepProps {
 /**
  * Step 4 reviews the exact revisioned draft that will be sent to preflight.
  */
-export const ReviewStep: FC<ReviewStepProps> = ({ name, content }) => (
-  <SelectedNetworkPreview source="upload" name={name} content={content} />
-);
+export function ReviewStep({ name, content }: ReviewStepProps) {
+  return <SelectedNetworkPreview source="upload" name={name} content={content} />;
+}

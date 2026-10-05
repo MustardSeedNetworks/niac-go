@@ -1,12 +1,8 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/errors';
 import { Card, CardContent } from '../../ui/Card';
 
-export const WizardStatusNotice: FC<{ loading: boolean; error: Error | null }> = ({
-  loading,
-  error,
-}) => {
+export function WizardStatusNotice({ loading, error }: { loading: boolean; error: Error | null }) {
   const { t } = useTranslation('pages');
   const wrongMode = error instanceof ApiError && error.status === 501;
   const unavailable = !error || (error instanceof ApiError && error.status === 0);
@@ -33,4 +29,4 @@ export const WizardStatusNotice: FC<{ loading: boolean; error: Error | null }> =
       </CardContent>
     </Card>
   );
-};
+}

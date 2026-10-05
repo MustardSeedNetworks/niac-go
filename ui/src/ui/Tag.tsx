@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 type TagColorScheme = 'gray' | 'red' | 'green' | 'blue' | 'yellow' | 'purple' | 'violet' | 'cyan';
 
@@ -19,10 +19,12 @@ const colorStyles: Record<TagColorScheme, string> = {
   cyan: 'bg-status-info/20 text-status-info-strong border-status-info/30',
 };
 
-export const Tag: FC<TagProps> = ({ children, colorScheme = 'gray', className = '' }) => (
-  <span
-    className={`inline-flex items-center px-cell py-0.5 rounded-md text-xs font-medium border ${colorStyles[colorScheme]} ${className}`}
-  >
-    {children}
-  </span>
-);
+export function Tag({ children, colorScheme = 'gray', className = '' }: TagProps) {
+  return (
+    <span
+      className={`inline-flex items-center px-cell py-0.5 rounded-md text-xs font-medium border ${colorStyles[colorScheme]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}

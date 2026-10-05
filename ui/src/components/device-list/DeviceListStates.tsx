@@ -1,5 +1,4 @@
 import { AlertCircle, Plus, Search, Server } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
@@ -12,7 +11,7 @@ interface LoadingStateProps {
   viewMode: 'cards' | 'table';
 }
 
-export const DeviceListLoadingState: FC<LoadingStateProps> = ({ viewMode }) => {
+export function DeviceListLoadingState({ viewMode }: LoadingStateProps) {
   const { t } = useTranslation('devices');
 
   if (viewMode === 'table') {
@@ -37,14 +36,14 @@ export const DeviceListLoadingState: FC<LoadingStateProps> = ({ viewMode }) => {
   }
 
   return <DeviceCardGridSkeleton count={8} />;
-};
+}
 
 interface ErrorStateProps {
   error: Error;
   onRetry: () => void;
 }
 
-export const DeviceListErrorState: FC<ErrorStateProps> = ({ error, onRetry }) => {
+export function DeviceListErrorState({ error, onRetry }: ErrorStateProps) {
   const { t } = useTranslation('devices');
   return (
     <Card className="border-status-error/30 bg-status-error/20" role="alert" aria-live="assertive">
@@ -64,9 +63,9 @@ export const DeviceListErrorState: FC<ErrorStateProps> = ({ error, onRetry }) =>
       </CardContent>
     </Card>
   );
-};
+}
 
-export const DeviceListEmptyState: FC = () => {
+export function DeviceListEmptyState() {
   const { t } = useTranslation('devices');
   const navigate = useNavigate();
 
@@ -87,13 +86,13 @@ export const DeviceListEmptyState: FC = () => {
       </CardContent>
     </Card>
   );
-};
+}
 
 interface NoResultsStateProps {
   onClearFilters: () => void;
 }
 
-export const DeviceListNoResultsState: FC<NoResultsStateProps> = ({ onClearFilters }) => {
+export function DeviceListNoResultsState({ onClearFilters }: NoResultsStateProps) {
   const { t } = useTranslation('devices');
   return (
     <Card className="border-surface-border bg-bg-surface/70">
@@ -107,4 +106,4 @@ export const DeviceListNoResultsState: FC<NoResultsStateProps> = ({ onClearFilte
       </CardContent>
     </Card>
   );
-};
+}

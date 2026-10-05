@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Filter, X } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
 import { isApiError } from '../api/errors';
@@ -42,7 +42,7 @@ const BPF_PRESETS = [
  * Allows setting a BPF filter on the live capture engine.
  * Shows the active filter and provides presets for common filters.
  */
-export const BpfFilterBar: FC = memo(() => {
+export const BpfFilterBar = memo(function BpfFilterBar() {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('common');
   const { t: tPages } = useTranslation('pages');
@@ -224,7 +224,5 @@ export const BpfFilterBar: FC = memo(() => {
     </div>
   );
 });
-
-BpfFilterBar.displayName = 'BpfFilterBar';
 
 import { useActionPermission } from '../contexts/ScopeContext';

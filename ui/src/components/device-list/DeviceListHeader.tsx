@@ -1,5 +1,5 @@
 import { ChevronDown, Download, FileCode, Plus, RefreshCw, Server } from 'lucide-react';
-import { type FC, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { Device } from '../../api/types';
@@ -15,12 +15,12 @@ interface DeviceListHeaderProps {
   onRefresh: () => void;
 }
 
-export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
+export function DeviceListHeader({
   deviceCount,
   filteredDevices,
   loading,
   onRefresh,
-}) => {
+}: DeviceListHeaderProps) {
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
@@ -133,4 +133,4 @@ export const DeviceListHeader: FC<DeviceListHeaderProps> = ({
       </div>
     </div>
   );
-};
+}

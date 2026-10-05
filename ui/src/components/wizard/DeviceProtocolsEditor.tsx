@@ -1,4 +1,4 @@
-import { type FC, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -36,11 +36,7 @@ interface DeviceProtocolsEditorProps {
  * Edits go back through the device's byte range, so the rest of the config --
  * other devices, the networks section, operator comments -- is untouched.
  */
-export const DeviceProtocolsEditor: FC<DeviceProtocolsEditorProps> = ({
-  content,
-  onChange,
-  devices,
-}) => {
+export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProtocolsEditorProps) {
   const { t } = useTranslation('pages');
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -107,4 +103,4 @@ export const DeviceProtocolsEditor: FC<DeviceProtocolsEditorProps> = ({
       })}
     </div>
   );
-};
+}

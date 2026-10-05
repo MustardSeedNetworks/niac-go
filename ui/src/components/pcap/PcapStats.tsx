@@ -1,5 +1,5 @@
 import { ArrowRightLeft, BarChart3, Clock, FileText, Network, Server } from 'lucide-react';
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapStats as PcapStatsType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
@@ -46,10 +46,13 @@ StatBlock.displayName = 'StatBlock';
 /**
  * Protocol Breakdown Component
  */
-const ProtocolBreakdown: FC<{
+const ProtocolBreakdown = memo(function ProtocolBreakdown({
+  protocols,
+  total,
+}: {
   protocols: Record<string, number>;
   total: number;
-}> = memo(({ protocols, total }) => {
+}) {
   const { t } = useTranslation('pages');
   // Sort protocols by count (descending)
   const sortedProtocols = Object.entries(protocols)
@@ -89,15 +92,16 @@ const ProtocolBreakdown: FC<{
   );
 });
 
-ProtocolBreakdown.displayName = 'ProtocolBreakdown';
-
 /**
  * Top Endpoints Component
  */
-const TopEndpoints: FC<{
+const TopEndpoints = memo(function TopEndpoints({
+  sources,
+  destinations,
+}: {
   sources: Array<{ ip: string; count: number }>;
   destinations: Array<{ ip: string; count: number }>;
-}> = memo(({ sources, destinations }) => {
+}) {
   const { t } = useTranslation('pages');
   return (
     <div className="grid gap-comfortable md:grid-cols-2">
@@ -158,8 +162,6 @@ const TopEndpoints: FC<{
   );
 });
 
-TopEndpoints.displayName = 'TopEndpoints';
-
 /**
  * PCAP Statistics Component
  *
@@ -169,7 +171,7 @@ TopEndpoints.displayName = 'TopEndpoints';
  * - Protocol breakdown with percentages
  * - Top source and destination endpoints
  */
-export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }) => {
+export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: PcapStatsProps) {
   const { t } = useTranslation('pages');
   const formatTimestamp = useFormatTime();
 
@@ -296,7 +298,5 @@ export const PcapStats: FC<PcapStatsProps> = memo(({ stats, filename, fileSize }
     </div>
   );
 });
-
-PcapStats.displayName = 'PcapStats';
 
 export default PcapStats;

@@ -1,4 +1,4 @@
-import { type FC, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { analyzeWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
@@ -42,7 +42,7 @@ function renderProtocolBadge(protocol: string): ReactNode {
   );
 }
 
-export const WalkAnalyzerPage: FC = () => {
+export function WalkAnalyzerPage() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
@@ -345,4 +345,4 @@ export const WalkAnalyzerPage: FC = () => {
       )}
     </div>
   );
-};
+}

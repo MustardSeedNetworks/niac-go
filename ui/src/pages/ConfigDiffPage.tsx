@@ -1,5 +1,5 @@
 import { AlertCircle, FileCheck, GitCompare, Layers, X } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { mergeConfigs as apiMergeConfigs } from '../api/client';
 import {
@@ -26,7 +26,7 @@ import { FileUploadZone, type UploadedFile } from './config-diff/FileUploadZone'
  * - Make merge decisions for each change
  * - Export the merged result
  */
-export const ConfigDiffPage: FC = () => {
+export function ConfigDiffPage() {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   // File state
@@ -395,6 +395,6 @@ export const ConfigDiffPage: FC = () => {
       )}
     </div>
   );
-};
+}
 
 import { useActionPermission } from '../contexts/ScopeContext';

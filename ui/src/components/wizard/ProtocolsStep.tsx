@@ -1,4 +1,4 @@
-import { type FC, useMemo } from 'react';
+import { useMemo } from 'react';
 import { DeviceProtocolsEditor } from './DeviceProtocolsEditor';
 import { FleetDefaultsEditor } from './FleetDefaultsEditor';
 import { parseNetworkModel } from './network-addressing';
@@ -16,7 +16,7 @@ interface ProtocolsStepProps {
  * can author everything the daemon can run, so it edits the same generated
  * sections the device editor renders instead of describing them.
  */
-export const ProtocolsStep: FC<ProtocolsStepProps> = ({ content, onChange }) => {
+export function ProtocolsStep({ content, onChange }: ProtocolsStepProps) {
   const devices = useMemo(
     () => parseNetworkModel(content).devices.map((entry) => entry.device),
     [content],
@@ -28,4 +28,4 @@ export const ProtocolsStep: FC<ProtocolsStepProps> = ({ content, onChange }) => 
       <DeviceProtocolsEditor content={content} onChange={onChange} devices={devices} />
     </div>
   );
-};
+}

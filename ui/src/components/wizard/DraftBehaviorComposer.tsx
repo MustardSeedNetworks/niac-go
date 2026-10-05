@@ -1,5 +1,5 @@
 import { Activity, Plus, Save, Trash2 } from 'lucide-react';
-import { type FC, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   type DraftBehaviorPhase,
@@ -31,11 +31,11 @@ function seconds(value: number) {
   return String(value / 1000);
 }
 
-export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
+export function DraftBehaviorComposer({
   draft,
   onDraftUpdate,
   onBusyChange,
-}) => {
+}: DraftBehaviorComposerProps) {
   const { t } = useTranslation('pages');
   const showError = useErrorToast();
   const topology = useMemo(() => parseDraftTopology(draft.content), [draft.content]);
@@ -342,4 +342,4 @@ export const DraftBehaviorComposer: FC<DraftBehaviorComposerProps> = ({
       </div>
     </div>
   );
-};
+}

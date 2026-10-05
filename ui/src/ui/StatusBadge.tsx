@@ -17,7 +17,6 @@
  * ```
  */
 
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getSizeConfig, getStatusConfig, type SizeKey, type Status } from './StatusConfig';
 
@@ -41,12 +40,12 @@ interface StatusBadgeProps {
  * - icon: Shows checkmark/triangle/X icon (default)
  * - dot: Shows small colored dot
  */
-export const StatusBadge: FC<StatusBadgeProps> = ({
+export function StatusBadge({
   status,
   variant = 'icon',
   size = 'md',
   className = '',
-}) => {
+}: StatusBadgeProps) {
   const { t } = useTranslation('common');
   const config = getStatusConfig(status);
   const labels: Record<Status, string> = {
@@ -83,4 +82,4 @@ export const StatusBadge: FC<StatusBadgeProps> = ({
       </span>
     </span>
   );
-};
+}

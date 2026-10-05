@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { type FC, type ReactNode, useEffect, useId, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -57,7 +57,7 @@ const sizeClasses: Record<ModalSize, string> = {
   full: 'max-w-4xl',
 };
 
-export const Modal: FC<ModalProps> = ({
+export function Modal({
   isOpen,
   onClose,
   title,
@@ -71,7 +71,7 @@ export const Modal: FC<ModalProps> = ({
   closeOnBackdropClick = true,
   closeOnEscape = true,
   className = '',
-}) => {
+}: ModalProps) {
   const { t } = useTranslation('common');
   // Was the literal id "modal-title", which is a duplicate the moment two
   // modals are mounted at once — and aria-labelledby then resolves to whichever
@@ -175,4 +175,4 @@ export const Modal: FC<ModalProps> = ({
       </div>
     </div>
   );
-};
+}

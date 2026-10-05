@@ -14,7 +14,7 @@
  * exhaustiveness is checked.
  */
 
-import type { FC } from 'react';
+import type { ComponentType } from 'react';
 import type { AuthoredDeviceType, DeviceType } from '../api/device-config-types';
 import { DEVICE_TYPES } from '../components/device-editor/generated/sections.generated';
 import {
@@ -33,7 +33,7 @@ import {
 } from '../ui/icons/deviceSymbols';
 
 /** Shape shared by the vendored device symbols and by lucide-react icons. */
-type IconComponent = FC<{ className?: string }>;
+type IconComponent = ComponentType<{ className?: string }>;
 
 /**
  * Device type icons, one per type, shared by every surface.

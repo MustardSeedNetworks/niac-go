@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WalkProfileReview } from '../../api/walk-profile-client';
 import { Button } from '../../ui/Button';
@@ -22,12 +21,7 @@ const deviceTypes = [
   'printer',
 ];
 
-export const WalkProfileReviewForm: FC<Props> = ({
-  review,
-  setReview,
-  creating,
-  createProfile,
-}) => {
+export function WalkProfileReviewForm({ review, setReview, creating, createProfile }: Props) {
   const { t } = useTranslation('pages');
   const update = (field: keyof WalkProfileReview['profile'], value: string) =>
     setReview({ ...review, profile: { ...review.profile, [field]: value } });
@@ -100,4 +94,4 @@ export const WalkProfileReviewForm: FC<Props> = ({
       </Button>
     </section>
   );
-};
+}

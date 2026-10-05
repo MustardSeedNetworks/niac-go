@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import { type FC, type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { iconSizes } from '../constants/sizes';
 
 export interface InfoPopoverProps {
@@ -27,7 +27,7 @@ export interface InfoPopoverProps {
  * `role="dialog"` with `aria-labelledby`/`aria-describedby`. Escape closes
  * and returns focus to the trigger; a mousedown outside the panel closes it.
  */
-export const InfoPopover: FC<InfoPopoverProps> = ({ label, title, children, className = '' }) => {
+export function InfoPopover({ label, title, children, className = '' }: InfoPopoverProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -87,4 +87,4 @@ export const InfoPopover: FC<InfoPopoverProps> = ({ label, title, children, clas
       )}
     </span>
   );
-};
+}

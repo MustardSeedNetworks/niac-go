@@ -1,5 +1,4 @@
 import { Copy, Edit3, Trash2 } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   deviceTypeColors,
@@ -12,7 +11,7 @@ import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
-export const DeviceTableView: FC = () => {
+export function DeviceTableView() {
   const { t } = useTranslation('devices');
   const {
     devices,
@@ -158,4 +157,4 @@ export const DeviceTableView: FC = () => {
       </CardContent>
     </Card>
   );
-};
+}

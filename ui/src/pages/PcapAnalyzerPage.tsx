@@ -1,5 +1,5 @@
 import { Download, FileSearch, Info, Palette, Share2, Trash2 } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchPcapAnalysis, uploadPcapWithProgress } from '../api/client';
 import { isApiError } from '../api/errors';
@@ -58,7 +58,7 @@ function pcapPacketToPacket(pcapPacket: PcapPacket): Packet {
  * - Packet details and hex dump viewer
  * - Summary statistics and protocol breakdown
  */
-export const PcapAnalyzerPage: FC = () => {
+export function PcapAnalyzerPage() {
   const { t } = useTranslation('common');
   const { t: tPages } = useTranslation('pages');
 
@@ -482,6 +482,6 @@ export const PcapAnalyzerPage: FC = () => {
       )}
     </div>
   );
-};
+}
 
 export default PcapAnalyzerPage;

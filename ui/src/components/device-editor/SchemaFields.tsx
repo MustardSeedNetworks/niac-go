@@ -1,5 +1,4 @@
 import { Plus, X } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -45,13 +44,7 @@ const asList = (value: AuthoredValue): AuthoredValue[] => (Array.isArray(value) 
 const blankEntry = (field: FieldDescriptor): AuthoredValue =>
   field.kind === 'objectList' ? {} : field.itemKind === 'integer' ? 0 : '';
 
-export const SchemaField: FC<SchemaFieldProps> = ({
-  field,
-  path,
-  value,
-  onChange,
-  suggestions,
-}) => {
+export function SchemaField({ field, path, value, onChange, suggestions }: SchemaFieldProps) {
   const { t } = useTranslation('devices');
   const label = t(`editor.fields.${path}`, { defaultValue: field.title });
   const help = field.description;
@@ -215,14 +208,18 @@ export const SchemaField: FC<SchemaFieldProps> = ({
   }
 
   return <MapField label={label} value={value} onChange={onChange} />;
-};
+}
 
 /** The free-form `properties` map: author-defined keys, string values. */
-const MapField: FC<{
+function MapField({
+  label,
+  value,
+  onChange,
+}: {
   label: string;
   value: AuthoredValue;
   onChange: (value: AuthoredValue) => void;
-}> = ({ label, value, onChange }) => {
+}) {
   const { t } = useTranslation('devices');
   const entries = Object.entries(isRecord(value) ? value : {});
 
@@ -279,7 +276,7 @@ const MapField: FC<{
       </Button>
     </fieldset>
   );
-};
+}
 
 export interface SchemaFieldListProps {
   fields: readonly FieldDescriptor[];
@@ -289,34 +286,36 @@ export interface SchemaFieldListProps {
   suggestions?: Readonly<Record<string, readonly string[]>>;
 }
 
-export const SchemaFieldList: FC<SchemaFieldListProps> = ({
+export function SchemaFieldList({
   fields,
   path,
   value,
   onChange,
   suggestions,
-}) => (
-  <div className="grid gap-comfortable md:grid-cols-2">
-    {fields.map((field) => (
-      <div
-        key={field.name}
-        className={
-          field.kind === 'object' || field.kind === 'objectList' || field.kind === 'scalarList'
-            ? 'md:col-span-2'
-            : undefined
-        }
-      >
-        <SchemaField
-          field={field}
-          path={`${path}.${field.name}`}
-          value={value[field.name]}
-          onChange={(next) => onChange(field.name, next)}
-          suggestions={suggestions}
-        />
-      </div>
-    ))}
-  </div>
-);
+}: SchemaFieldListProps) {
+  return (
+    <div className="grid gap-comfortable md:grid-cols-2">
+      {fields.map((field) => (
+        <div
+          key={field.name}
+          className={
+            field.kind === 'object' || field.kind === 'objectList' || field.kind === 'scalarList'
+              ? 'md:col-span-2'
+              : undefined
+          }
+        >
+          <SchemaField
+            field={field}
+            path={`${path}.${field.name}`}
+            value={value[field.name]}
+            onChange={(next) => onChange(field.name, next)}
+            suggestions={suggestions}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export interface SchemaSectionBodyProps {
   section: SectionDescriptor;
@@ -333,12 +332,12 @@ export interface SchemaSectionBodyProps {
  * `port_channels` are lists of objects and `properties` is a free-form map, so
  * their own descriptor is the field to render rather than a list of children.
  */
-export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({
+export function SchemaSectionBody({
   section,
   value,
   onChange,
   suggestions,
-}) => {
+}: SchemaSectionBodyProps) {
   if (section.kind === 'object') {
     const nested = isRecord(value) ? value : {};
     return (
@@ -366,4 +365,4 @@ export const SchemaSectionBody: FC<SchemaSectionBodyProps> = ({
       suggestions={suggestions}
     />
   );
-};
+}

@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
 import { Button } from '../../ui/Button';
@@ -17,13 +16,13 @@ interface ConcurrentSessionsPanelProps {
   onStop: (session: SimulationStatus) => void;
 }
 
-export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
+export function ConcurrentSessionsPanel({
   sessions,
   selectedSessionId,
   stoppingSessionId,
   onSelect,
   onStop,
-}) => {
+}: ConcurrentSessionsPanelProps) {
   const { t } = useTranslation('pages');
 
   const columns: DataTableColumn<SimulationStatus>[] = [
@@ -124,4 +123,4 @@ export const ConcurrentSessionsPanel: FC<ConcurrentSessionsPanelProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

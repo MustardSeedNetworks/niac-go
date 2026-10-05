@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -78,7 +78,10 @@ HeadersSection.displayName = 'HeadersSection';
  * - Source and destination addresses with ports
  * - Protocol-specific headers when available
  */
-export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSelect }) => {
+export const PacketDetails = memo(function PacketDetails({
+  packet,
+  onFieldSelect,
+}: PacketDetailsProps) {
   const { t } = useTranslation('pages');
   if (!packet) {
     return (
@@ -127,5 +130,3 @@ export const PacketDetails: FC<PacketDetailsProps> = memo(({ packet, onFieldSele
     </div>
   );
 });
-
-PacketDetails.displayName = 'PacketDetails';

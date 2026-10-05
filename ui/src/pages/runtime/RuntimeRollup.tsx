@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
 import { type RollupState, StatusRollup } from '../../ui/StatusRollup';
@@ -30,7 +29,7 @@ export interface RuntimeRollupProps {
  * calm rather than green: with a daemon up and nothing running, nothing is
  * wrong.
  */
-export const RuntimeRollup: FC<RuntimeRollupProps> = ({ simStatus, loading }) => {
+export function RuntimeRollup({ simStatus, loading }: RuntimeRollupProps) {
   const { t } = useTranslation('pages');
 
   const state: RollupState =
@@ -83,4 +82,4 @@ export const RuntimeRollup: FC<RuntimeRollupProps> = ({ simStatus, loading }) =>
       ]}
     />
   );
-};
+}

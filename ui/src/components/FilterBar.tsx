@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SmallText } from '../ui/Typography';
 import {
@@ -75,7 +75,7 @@ function buildFilter(rest: string, protocols: string[]): string {
  * Expression-based filter bar with validation, autocomplete, and quick-insert buttons.
  * Shows green border when valid, red when invalid.
  */
-export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholder }) => {
+export const FilterBar = memo(function FilterBar({ value, onChange, placeholder }: FilterBarProps) {
   const { t } = useTranslation('common');
   const { t: tPages } = useTranslation('pages');
   const [isFocused, setIsFocused] = useState(false);
@@ -236,5 +236,3 @@ export const FilterBar: FC<FilterBarProps> = memo(({ value, onChange, placeholde
     </div>
   );
 });
-
-FilterBar.displayName = 'FilterBar';

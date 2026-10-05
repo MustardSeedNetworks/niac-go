@@ -1,4 +1,4 @@
-import { type FC, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDeviceProfile } from '../../api/scenario-client';
 import { Button } from '../../ui/Button';
@@ -32,14 +32,14 @@ interface DeviceEditorModalProps {
   onSave: () => void;
 }
 
-export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
+export function DeviceEditorModal({
   state,
   profiles,
   valid,
   busy,
   onChange,
   onSave,
-}) => {
+}: DeviceEditorModalProps) {
   const { t } = useTranslation('pages');
   const close = useCallback(() => onChange(null), [onChange]);
   const selectedProfile = state
@@ -113,7 +113,7 @@ export const DeviceEditorModal: FC<DeviceEditorModalProps> = ({
       )}
     </Modal>
   );
-};
+}
 
 interface LinkEditorModalProps {
   state: LinkEditorState | null;
@@ -125,7 +125,7 @@ interface LinkEditorModalProps {
   onDisconnect: () => void;
 }
 
-export const LinkEditorModal: FC<LinkEditorModalProps> = ({
+export function LinkEditorModal({
   state,
   valid,
   busy,
@@ -133,7 +133,7 @@ export const LinkEditorModal: FC<LinkEditorModalProps> = ({
   onChange,
   onSave,
   onDisconnect,
-}) => {
+}: LinkEditorModalProps) {
   const { t } = useTranslation('pages');
   const close = useCallback(() => onChange(null), [onChange]);
   return (
@@ -208,4 +208,4 @@ export const LinkEditorModal: FC<LinkEditorModalProps> = ({
       )}
     </Modal>
   );
-};
+}

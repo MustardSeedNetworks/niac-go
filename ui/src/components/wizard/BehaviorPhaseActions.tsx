@@ -1,5 +1,4 @@
 import { Trash2 } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DraftBehaviorPhase, DraftBehaviorTraffic } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
@@ -25,7 +24,7 @@ interface BehaviorPhaseActionsProps {
   onChange: (phase: DraftBehaviorPhase) => void;
 }
 
-export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
+export function BehaviorPhaseActions({
   dhcpDevices,
   phase,
   deviceOptions,
@@ -34,7 +33,7 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
   firstDevice,
   firstInterface,
   onChange,
-}) => {
+}: BehaviorPhaseActionsProps) {
   const { t } = useTranslation('pages');
   const updateTraffic = (
     index: number,
@@ -182,4 +181,4 @@ export const BehaviorPhaseActions: FC<BehaviorPhaseActionsProps> = ({
       </div>
     </>
   );
-};
+}

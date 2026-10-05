@@ -1,5 +1,4 @@
 import { Plus, X } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -24,13 +23,13 @@ export interface AdditionalIPsSectionProps {
  * address, and the editor's old "Primary IP" field wrote a camelCase `ip` the
  * daemon's YAML has no key for.
  */
-export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
+export function AdditionalIPsSection({
   device,
   isExpanded,
   onToggle,
   onUpdate,
   errors,
-}) => {
+}: AdditionalIPsSectionProps) {
   const { t } = useTranslation('devices');
   const ips = device.ips ?? [];
   const replace = (next: readonly string[]) => onUpdate('ips', next.length > 0 ? next : undefined);
@@ -82,4 +81,4 @@ export const AdditionalIPsSection: FC<AdditionalIPsSectionProps> = ({
       </div>
     </CollapsibleSection>
   );
-};
+}

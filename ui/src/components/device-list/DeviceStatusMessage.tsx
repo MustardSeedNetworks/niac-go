@@ -1,5 +1,4 @@
 import { AlertCircle, X } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 
@@ -13,7 +12,7 @@ interface DeviceStatusMessageProps {
   onDismiss: () => void;
 }
 
-export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onDismiss }) => {
+export function DeviceStatusMessage({ message, onDismiss }: DeviceStatusMessageProps) {
   const { t } = useTranslation('common');
   if (!message) {
     return null;
@@ -40,4 +39,4 @@ export const DeviceStatusMessage: FC<DeviceStatusMessageProps> = ({ message, onD
       </button>
     </div>
   );
-};
+}

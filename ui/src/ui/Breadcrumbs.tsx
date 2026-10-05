@@ -1,5 +1,4 @@
 import { ChevronRight, Home } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router';
 import { iconSizes } from '../constants/sizes';
@@ -36,7 +35,7 @@ function isGroupPath(path: string): path is GroupPath {
  * (#2189). Everything routable now comes from the page registry, which is
  * already the one place a route's name is declared.
  */
-export const Breadcrumbs: FC = () => {
+export function Breadcrumbs() {
   const location = useLocation();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
@@ -100,4 +99,4 @@ export const Breadcrumbs: FC = () => {
       ))}
     </nav>
   );
-};
+}

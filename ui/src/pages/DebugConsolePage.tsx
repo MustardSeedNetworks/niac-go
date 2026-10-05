@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel, Protocol } from '../api/types';
 import { DebugLevelControl } from '../components/debug/DebugLevelControl';
@@ -45,7 +45,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
   };
 }
 
-export const DebugConsolePage: FC = () => {
+export function DebugConsolePage() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const addNotification = useUIStore((s) => s.addNotification);
@@ -327,4 +327,4 @@ export const DebugConsolePage: FC = () => {
       />
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import { createContext, type FC, type ReactNode, useContext, useMemo } from 'react';
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import type { Device } from '../api/types';
 
 interface DeviceListContextValue {
@@ -34,7 +34,7 @@ interface DeviceListProviderProps {
   children: ReactNode;
 }
 
-export const DeviceListProvider: FC<DeviceListProviderProps> = ({
+export function DeviceListProvider({
   devices,
   selectedDevices,
   onSelectDevice,
@@ -44,7 +44,7 @@ export const DeviceListProvider: FC<DeviceListProviderProps> = ({
   onDelete,
   getDeviceProtocols,
   children,
-}) => {
+}: DeviceListProviderProps) {
   const value = useMemo<DeviceListContextValue>(
     () => ({
       devices,
@@ -69,4 +69,4 @@ export const DeviceListProvider: FC<DeviceListProviderProps> = ({
   );
 
   return <DeviceListContext.Provider value={value}>{children}</DeviceListContext.Provider>;
-};
+}

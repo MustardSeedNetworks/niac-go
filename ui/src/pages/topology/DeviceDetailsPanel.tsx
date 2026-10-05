@@ -6,7 +6,6 @@ import { Tooltip } from '../../ui/Tooltip';
  * in the topology visualization.
  */
 
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
@@ -26,7 +25,7 @@ interface DeviceDetailsPanelProps {
  * DeviceDetailsPanel shows device name, type, IPs, protocols,
  * and provides actions to edit or close.
  */
-export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClose, onEdit }) => {
+export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPanelProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const { sessionId, selectedSession } = useAppContext();
@@ -113,4 +112,4 @@ export const DeviceDetailsPanel: FC<DeviceDetailsPanelProps> = ({ device, onClos
       </div>
     </div>
   );
-};
+}

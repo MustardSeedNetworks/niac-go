@@ -1,5 +1,4 @@
 import { Trash2 } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 
@@ -9,11 +8,11 @@ interface DeviceBulkActionsProps {
   onClearSelection: () => void;
 }
 
-export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
+export function DeviceBulkActions({
   selectedCount,
   onDeleteSelected,
   onClearSelection,
-}) => {
+}: DeviceBulkActionsProps) {
   const { t: tCommon } = useTranslation('common');
   const { t: tDevices } = useTranslation('devices');
   if (selectedCount === 0) {
@@ -40,4 +39,4 @@ export const DeviceBulkActions: FC<DeviceBulkActionsProps> = ({
       </Button>
     </div>
   );
-};
+}

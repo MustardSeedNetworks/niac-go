@@ -19,7 +19,7 @@ import {
   Settings,
   X,
 } from 'lucide-react';
-import { createElement, type FC, type ReactNode, useEffect, useState } from 'react';
+import { createElement, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 import { iconSizes } from '../constants/sizes';
@@ -69,50 +69,54 @@ function badgeClass(badge: string): string {
   return 'bg-brand-primary/20 text-brand-primary-strong';
 }
 
-const NavItemButton: FC<NavItemButtonProps> = ({ item, active, collapsed, onNavigate }) => (
-  <Tooltip text={collapsed ? item.label : undefined} className="w-full">
-    <button
-      type="button"
-      onClick={() => onNavigate(item.path)}
-      onMouseEnter={() => prefetchRoute(item.path)}
-      // Keyed by route so a spec names the destination rather than the label,
-      // which is translated copy and changes without the navigation changing.
-      data-testid={`nav-item-${item.path === '/' ? 'root' : item.path.replace(/^\//, '')}`}
-      aria-current={active ? 'page' : undefined}
-      aria-label={item.label}
-      /* 44px minimum target, 11px radius, and a 3px left bar for the active
+function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonProps) {
+  return (
+    <Tooltip text={collapsed ? item.label : undefined} className="w-full">
+      <button
+        type="button"
+        onClick={() => onNavigate(item.path)}
+        onMouseEnter={() => prefetchRoute(item.path)}
+        // Keyed by route so a spec names the destination rather than the label,
+        // which is translated copy and changes without the navigation changing.
+        data-testid={`nav-item-${item.path === '/' ? 'root' : item.path.replace(/^\//, '')}`}
+        aria-current={active ? 'page' : undefined}
+        aria-label={item.label}
+        /* 44px minimum target, 11px radius, and a 3px left bar for the active
        route. The bar carries the state rather than a gradient fill: a filled
        row competes with status colour, and the rail is chrome. */
-      className={`group relative flex items-center gap-default w-full min-h-11 px-3 py-2.5 rounded-[11px] text-sm font-medium transition-all duration-200 ${
-        active
-          ? 'bg-[color-mix(in_oklab,var(--color-brand-primary)_16%,transparent)] text-text-primary'
-          : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-      }`}
-    >
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-brand-primary"
-        />
-      ) : null}
-      {createElement(item.icon, {
-        className: `${iconSizes.lg} flex-shrink-0 ${
-          active ? 'text-brand-primary' : 'text-text-muted group-hover:text-text-secondary'
-        }`,
-      })}
-      {!collapsed ? (
-        <>
-          <span className="flex-1 text-left truncate">{item.label}</span>
-          {item.badge ? (
-            <span className={`px-1.5 py-0.5 text-xs rounded font-medium ${badgeClass(item.badge)}`}>
-              {item.badge}
-            </span>
-          ) : null}
-        </>
-      ) : null}
-    </button>
-  </Tooltip>
-);
+        className={`group relative flex items-center gap-default w-full min-h-11 px-3 py-2.5 rounded-[11px] text-sm font-medium transition-all duration-200 ${
+          active
+            ? 'bg-[color-mix(in_oklab,var(--color-brand-primary)_16%,transparent)] text-text-primary'
+            : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+        }`}
+      >
+        {active ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-brand-primary"
+          />
+        ) : null}
+        {createElement(item.icon, {
+          className: `${iconSizes.lg} flex-shrink-0 ${
+            active ? 'text-brand-primary' : 'text-text-muted group-hover:text-text-secondary'
+          }`,
+        })}
+        {!collapsed ? (
+          <>
+            <span className="flex-1 text-left truncate">{item.label}</span>
+            {item.badge ? (
+              <span
+                className={`px-1.5 py-0.5 text-xs rounded font-medium ${badgeClass(item.badge)}`}
+              >
+                {item.badge}
+              </span>
+            ) : null}
+          </>
+        ) : null}
+      </button>
+    </Tooltip>
+  );
+}
 
 interface FooterIconButtonProps {
   collapsed: boolean;
@@ -123,36 +127,38 @@ interface FooterIconButtonProps {
   'data-testid'?: string;
 }
 
-const FooterIconButton: FC<FooterIconButtonProps> = ({
+function FooterIconButton({
   collapsed,
   onClick,
   icon,
   label,
   title,
   'data-testid': dataTestId,
-}) => (
-  <Tooltip text={title} className="w-full flex-1">
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid={dataTestId}
-      className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center ${
-        collapsed ? 'justify-center' : 'gap-compact'
-      } px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium`}
-      aria-label={title}
-    >
-      {createElement(icon, { className: `${iconSizes.md} flex-shrink-0` })}
-      {!collapsed ? <span>{label}</span> : null}
-    </button>
-  </Tooltip>
-);
+}: FooterIconButtonProps) {
+  return (
+    <Tooltip text={title} className="w-full flex-1">
+      <button
+        type="button"
+        onClick={onClick}
+        data-testid={dataTestId}
+        className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center ${
+          collapsed ? 'justify-center' : 'gap-compact'
+        } px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium`}
+        aria-label={title}
+      >
+        {createElement(icon, { className: `${iconSizes.md} flex-shrink-0` })}
+        {!collapsed ? <span>{label}</span> : null}
+      </button>
+    </Tooltip>
+  );
+}
 
 interface SidebarHeaderProps {
   collapsed: boolean;
   onCollapse: () => void;
 }
 
-const SidebarHeader: FC<SidebarHeaderProps> = ({ collapsed, onCollapse }) => {
+function SidebarHeader({ collapsed, onCollapse }: SidebarHeaderProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -190,7 +196,7 @@ const SidebarHeader: FC<SidebarHeaderProps> = ({ collapsed, onCollapse }) => {
       ) : null}
     </div>
   );
-};
+}
 
 interface SidebarFooterProps {
   collapsed: boolean;
@@ -201,14 +207,14 @@ interface SidebarFooterProps {
   railControls?: (collapsed: boolean) => ReactNode;
 }
 
-const SidebarFooter: FC<SidebarFooterProps> = ({
+function SidebarFooter({
   collapsed,
   version,
   onOpenHelp,
   onOpenSettings,
   onExpand,
   railControls,
-}) => {
+}: SidebarFooterProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -269,7 +275,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
       ) : null}
     </div>
   );
-};
+}
 
 interface SidebarBodyProps {
   railControls?: (collapsed: boolean) => ReactNode;
@@ -284,7 +290,7 @@ interface SidebarBodyProps {
   onOpenSettings?: () => void;
 }
 
-const SidebarBody: FC<SidebarBodyProps> = ({
+function SidebarBody({
   railControls,
   groups,
   collapsed,
@@ -295,7 +301,7 @@ const SidebarBody: FC<SidebarBodyProps> = ({
   isActive,
   onOpenHelp,
   onOpenSettings,
-}) => {
+}: SidebarBodyProps) {
   const { t } = useTranslation();
   // group.label is either a plain display string ("Account") or an
   // i18n key ("common:sections.modules"). t() returns the translation
@@ -338,14 +344,14 @@ const SidebarBody: FC<SidebarBodyProps> = ({
       />
     </>
   );
-};
+}
 
 interface MobileTopBarProps {
   mobileOpen: boolean;
   toggleMobile: () => void;
 }
 
-const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
+function MobileTopBar({ mobileOpen, toggleMobile }: MobileTopBarProps) {
   const { t } = useTranslation();
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex-between px-4 py-row-lg bg-surface-raised/95 backdrop-blur-xl border-b border-surface-border">
@@ -371,16 +377,16 @@ const MobileTopBar: FC<MobileTopBarProps> = ({ mobileOpen, toggleMobile }) => {
       </Tooltip>
     </header>
   );
-};
+}
 
-export const SidebarLayout: FC<SidebarLayoutProps> = ({
+export function SidebarLayout({
   groups,
   version,
   children,
   onOpenHelp,
   onOpenSettings,
   railControls,
-}) => {
+}: SidebarLayoutProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -499,4 +505,4 @@ export const SidebarLayout: FC<SidebarLayoutProps> = ({
       </main>
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import { type FC, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
@@ -17,12 +17,17 @@ const PERCENT_MAX = 100;
  * "unknown total" copy instead of a fake 0% bar when the backend hasn't
  * reported a packet total yet (percentComplete omitted from the JSON).
  */
-const ReplayProgress: FC<{
+function ReplayProgress({
+  packetsSent,
+  bytesSent,
+  packetsTotal,
+  percentComplete,
+}: {
   packetsSent: number;
   bytesSent: number;
   packetsTotal: number;
   percentComplete?: number;
-}> = ({ packetsSent, bytesSent, packetsTotal, percentComplete }) => {
+}) {
   const { t } = useTranslation('pages');
   const hasTotal = packetsTotal > 0 && percentComplete !== undefined;
   const percent = hasTotal ? Math.min(PERCENT_MAX, Math.max(0, percentComplete)) : 0;
@@ -59,9 +64,9 @@ const ReplayProgress: FC<{
       </SmallText>
     </div>
   );
-};
+}
 
-export const ReplayControlPanel: FC = () => {
+export function ReplayControlPanel() {
   const { t } = useTranslation('pages');
   // Hydrates from /api/v1/library/pcaps. The daemon's
   // validatePcapFilePath falls back to ~/.niac/library/pcaps/ when
@@ -397,4 +402,4 @@ export const ReplayControlPanel: FC = () => {
       </Card>
     </div>
   );
-};
+}

@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { Tooltip } from './Tooltip';
@@ -9,10 +8,13 @@ const STATUS_STYLES: Record<ConnectionState, string> = {
   checking: 'bg-status-warning animate-pulse',
 };
 
-export const ConnectionStatus: FC<{ status: ConnectionState; compact?: boolean }> = ({
+export function ConnectionStatus({
   status,
   compact = false,
-}) => {
+}: {
+  status: ConnectionState;
+  compact?: boolean;
+}) {
   const { t } = useTranslation('common');
   const labels: Record<ConnectionState, string> = {
     connected: t('connection.connected'),
@@ -41,4 +43,4 @@ export const ConnectionStatus: FC<{ status: ConnectionState; compact?: boolean }
       </button>
     </Tooltip>
   );
-};
+}

@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WalkCaptureCredentials } from '../../api/walk-profile-client';
 import { Button } from '../../ui/Button';
@@ -14,7 +13,7 @@ interface Props {
   cancel: () => void;
 }
 
-export const WalkProfileCaptureForm: FC<Props> = ({
+export function WalkProfileCaptureForm({
   capture,
   setCapture,
   captureName,
@@ -22,7 +21,7 @@ export const WalkProfileCaptureForm: FC<Props> = ({
   capturing,
   runCapture,
   cancel,
-}) => {
+}: Props) {
   const { t } = useTranslation('pages');
   const update = (field: keyof WalkCaptureCredentials, value: string | number) =>
     setCapture({ ...capture, [field]: value });
@@ -132,4 +131,4 @@ export const WalkProfileCaptureForm: FC<Props> = ({
       </div>
     </div>
   );
-};
+}

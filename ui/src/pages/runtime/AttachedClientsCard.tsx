@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSessionClients } from '../../api/client';
 import type { ObservedClient, SimulationStatus } from '../../api/types';
@@ -21,7 +20,7 @@ interface AttachedClientsCardProps {
  * session saw on the wire, placed on the pool port the runtime assigned it,
  * so two testers on one scenario read as two cables into two ports.
  */
-export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId, fabric }) => {
+export function AttachedClientsCard({ sessionId, fabric }: AttachedClientsCardProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const formatRelative = useFormatRelativeTime();
@@ -109,4 +108,4 @@ export const AttachedClientsCard: FC<AttachedClientsCardProps> = ({ sessionId, f
       </CardContent>
     </Card>
   );
-};
+}

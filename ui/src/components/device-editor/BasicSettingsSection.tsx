@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollapsibleSection } from '../form/CollapsibleSection';
 import { FormField } from '../form/FormField';
@@ -25,14 +24,14 @@ export interface BasicSettingsSectionProps {
  * the illegal states unrepresentable instead of reporting them after a save.
  * Everything else on a device is generated from the schema.
  */
-export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
+export function BasicSettingsSection({
   device,
   isNewDevice,
   isExpanded,
   onToggle,
   onUpdate,
   errors,
-}) => {
+}: BasicSettingsSectionProps) {
   const { t } = useTranslation('devices');
   const identity = device.vendor === undefined ? 'mac' : 'vendor';
 
@@ -191,4 +190,4 @@ export const BasicSettingsSection: FC<BasicSettingsSectionProps> = ({
       </div>
     </CollapsibleSection>
   );
-};
+}

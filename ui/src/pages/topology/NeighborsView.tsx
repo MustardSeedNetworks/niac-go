@@ -1,4 +1,4 @@
-import { type FC, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { POLL_INTERVALS } from '../../constants/polling';
 import { useAppState } from '../../contexts/AppContext';
@@ -35,7 +35,7 @@ const formatRelative = (iso: string, tCommon: TFunction<'common'>): string => {
   return tCommon('format.relativeMinAgo', { value: minutes });
 };
 
-export const NeighborsView: FC = () => {
+export function NeighborsView() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const { data: neighbors, loading, error } = useAppState('neighbors');
@@ -261,4 +261,4 @@ export const NeighborsView: FC = () => {
       </Card>
     </div>
   );
-};
+}

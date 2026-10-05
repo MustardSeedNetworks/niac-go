@@ -1,5 +1,4 @@
 import { AlertCircle } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
@@ -13,13 +12,13 @@ export interface DeviceEditorStatusViewProps {
   onNavigateBack: () => void;
 }
 
-export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
+export function DeviceEditorStatusView({
   isNewDevice,
   loading,
   error,
   onRetry,
   onNavigateBack,
-}) => {
+}: DeviceEditorStatusViewProps) {
   const { t } = useTranslation('devices');
   if (!isNewDevice && loading) {
     return (
@@ -65,4 +64,4 @@ export const DeviceEditorStatusView: FC<DeviceEditorStatusViewProps> = ({
   }
 
   return null;
-};
+}

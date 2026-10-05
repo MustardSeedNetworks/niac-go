@@ -1,12 +1,12 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
-import { type FC, useEffect } from 'react';
+import { type ComponentType, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { type Notification, useUIStore } from '../stores/ui-store';
 
 const DEFAULT_DURATION_MS = 5_000;
 
-const TOAST_ICONS: Record<Notification['type'], FC<{ className?: string }>> = {
+const TOAST_ICONS: Record<Notification['type'], ComponentType<{ className?: string }>> = {
   success: CheckCircle,
   error: AlertCircle,
   warning: AlertTriangle,
@@ -20,7 +20,7 @@ const TOAST_STYLES: Record<Notification['type'], string> = {
   info: 'border-status-info/30 bg-status-info/90 text-status-info',
 };
 
-const Toast: FC<{ notification: Notification }> = ({ notification }) => {
+function Toast({ notification }: { notification: Notification }) {
   const { t } = useTranslation('common');
   const removeNotification = useUIStore((s) => s.removeNotification);
   const Icon = TOAST_ICONS[notification.type];
@@ -61,9 +61,9 @@ const Toast: FC<{ notification: Notification }> = ({ notification }) => {
       </button>
     </div>
   );
-};
+}
 
-export const ToastContainer: FC = () => {
+export function ToastContainer() {
   const notifications = useUIStore((s) => s.notifications);
 
   if (notifications.length === 0) return null;
@@ -79,4 +79,4 @@ export const ToastContainer: FC = () => {
       ))}
     </div>
   );
-};
+}

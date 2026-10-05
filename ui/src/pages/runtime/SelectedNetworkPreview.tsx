@@ -1,5 +1,5 @@
 import { Eye, Router, Server, Wifi } from 'lucide-react';
-import { type FC, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { fetchLibraryNetworkContent } from '../../api/library-client';
@@ -126,13 +126,13 @@ function summariseDevice(d: ParsedDevice): DevicePreview {
   };
 }
 
-export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
+export function SelectedNetworkPreview({
   source,
   name,
   uploadFile,
   content,
   view = 'identity',
-}) => {
+}: SelectedNetworkPreviewProps) {
   const { t } = useTranslation('pages');
   const [yamlText, setYamlText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -310,4 +310,4 @@ export const SelectedNetworkPreview: FC<SelectedNetworkPreviewProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

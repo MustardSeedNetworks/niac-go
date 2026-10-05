@@ -1,4 +1,4 @@
-import { type FC, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../api/client';
 import {
@@ -67,7 +67,7 @@ function selectedSourceKey(state: WizardState) {
  *   5. Connection — preflight and start only after authoring is complete
  *   6. Finish    — hand off to runtime monitoring
  */
-export const NewSimulationWizardPage: FC = () => {
+export function NewSimulationWizardPage() {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   const { data: simStatus, loading, error } = useSimulationStatus();
@@ -398,7 +398,7 @@ export const NewSimulationWizardPage: FC = () => {
       )}
     </div>
   );
-};
+}
 
 export default NewSimulationWizardPage;
 

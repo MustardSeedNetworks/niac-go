@@ -1,4 +1,4 @@
-import { type FC, memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface HexDumpViewerProps {
@@ -164,91 +164,87 @@ HexRow.displayName = 'HexRow';
  *
  * Header bytes are color-coded in cyan for easy identification.
  */
-export const HexDumpViewer: FC<HexDumpViewerProps> = memo(
-  ({
-    rawData,
-    bytesPerRow = 16,
-    headerLength = 14, // Default Ethernet header length
-    highlightRange,
-  }) => {
-    const { t } = useTranslation('pages');
-    const highlightStart = highlightRange?.[0] ?? -1;
-    const highlightEnd = highlightRange?.[1] ?? -1;
-    // Parse hex data into rows
-    const rows = useMemo(() => {
-      if (!rawData) {
-        return [];
-      }
-
-      const bytes = hexToBytes(rawData);
-      const result: { offset: number; bytes: number[]; startIndex: number }[] = [];
-
-      for (let i = 0; i < bytes.length; i += bytesPerRow) {
-        result.push({
-          offset: i,
-          bytes: bytes.slice(i, i + bytesPerRow),
-          startIndex: i,
-        });
-      }
-
-      return result;
-    }, [rawData, bytesPerRow]);
-
+export const HexDumpViewer = memo(function HexDumpViewer({
+  rawData,
+  bytesPerRow = 16,
+  headerLength = 14, // Default Ethernet header length
+  highlightRange,
+}: HexDumpViewerProps) {
+  const { t } = useTranslation('pages');
+  const highlightStart = highlightRange?.[0] ?? -1;
+  const highlightEnd = highlightRange?.[1] ?? -1;
+  // Parse hex data into rows
+  const rows = useMemo(() => {
     if (!rawData) {
-      return (
-        <div className="h-full flex-center text-text-muted">
-          <p className="text-sm">{t('packets.hexDump.selectPacketPlaceholder')}</p>
-        </div>
-      );
+      return [];
     }
 
-    const totalBytes = hexToBytes(rawData).length;
+    const bytes = hexToBytes(rawData);
+    const result: { offset: number; bytes: number[]; startIndex: number }[] = [];
 
+    for (let i = 0; i < bytes.length; i += bytesPerRow) {
+      result.push({
+        offset: i,
+        bytes: bytes.slice(i, i + bytesPerRow),
+        startIndex: i,
+      });
+    }
+
+    return result;
+  }, [rawData, bytesPerRow]);
+
+  if (!rawData) {
     return (
-      <div className="h-full flex flex-col">
-        {/* Header with legend */}
-        <div className="flex-between mb-2 pb-inline border-b border-surface-border">
-          <div className="flex items-center gap-comfortable text-xs">
-            <span className="text-text-muted">
-              {t('packets.stats.totalBytesHelper', { value: totalBytes })}
-            </span>
-            <div className="flex items-center gap-compact">
-              <span className="w-3 h-3 bg-status-info/30 rounded" />
-              <span className="text-text-muted">{t('packets.hexDump.headerLegend')}</span>
-            </div>
-            <div className="flex items-center gap-compact">
-              <span className="w-3 h-3 bg-bg-muted/30 rounded" />
-              <span className="text-text-muted">{t('packets.hexDump.payloadLegend')}</span>
-            </div>
-            {highlightStart >= 0 && (
-              <div className="flex items-center gap-compact">
-                <span className="w-3 h-3 bg-status-warning/40 rounded" />
-                <span className="text-text-muted">{t('packets.hexDump.selectedLegend')}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Hex dump content */}
-        <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 pad-sm border border-surface-border">
-          <div className="space-y-0.5">
-            {rows.map((row) => (
-              <HexRow
-                key={row.offset}
-                offset={row.offset}
-                bytes={row.bytes}
-                bytesPerRow={bytesPerRow}
-                headerLength={headerLength}
-                startIndex={row.startIndex}
-                highlightStart={highlightStart}
-                highlightEnd={highlightEnd}
-              />
-            ))}
-          </div>
-        </div>
+      <div className="h-full flex-center text-text-muted">
+        <p className="text-sm">{t('packets.hexDump.selectPacketPlaceholder')}</p>
       </div>
     );
-  },
-);
+  }
 
-HexDumpViewer.displayName = 'HexDumpViewer';
+  const totalBytes = hexToBytes(rawData).length;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header with legend */}
+      <div className="flex-between mb-2 pb-inline border-b border-surface-border">
+        <div className="flex items-center gap-comfortable text-xs">
+          <span className="text-text-muted">
+            {t('packets.stats.totalBytesHelper', { value: totalBytes })}
+          </span>
+          <div className="flex items-center gap-compact">
+            <span className="w-3 h-3 bg-status-info/30 rounded" />
+            <span className="text-text-muted">{t('packets.hexDump.headerLegend')}</span>
+          </div>
+          <div className="flex items-center gap-compact">
+            <span className="w-3 h-3 bg-bg-muted/30 rounded" />
+            <span className="text-text-muted">{t('packets.hexDump.payloadLegend')}</span>
+          </div>
+          {highlightStart >= 0 && (
+            <div className="flex items-center gap-compact">
+              <span className="w-3 h-3 bg-status-warning/40 rounded" />
+              <span className="text-text-muted">{t('packets.hexDump.selectedLegend')}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Hex dump content */}
+      <div className="flex-1 overflow-y-auto rounded-lg bg-bg-base/70 pad-sm border border-surface-border">
+        <div className="space-y-0.5">
+          {rows.map((row) => (
+            <HexRow
+              key={row.offset}
+              offset={row.offset}
+              bytes={row.bytes}
+              bytesPerRow={bytesPerRow}
+              headerLength={headerLength}
+              startIndex={row.startIndex}
+              highlightStart={highlightStart}
+              highlightEnd={highlightEnd}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});

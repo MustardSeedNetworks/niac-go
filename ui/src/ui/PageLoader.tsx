@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -6,7 +5,7 @@ import { useTranslation } from 'react-i18next';
  * Sized to roughly match a typical page header so the layout doesn't
  * jump when a chunk finishes loading.
  */
-export const PageLoader: FC = () => {
+export function PageLoader() {
   const { t } = useTranslation('common');
 
   return (
@@ -17,4 +16,4 @@ export const PageLoader: FC = () => {
       </div>
     </div>
   );
-};
+}

@@ -1,5 +1,5 @@
 import { Activity } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchDebugLevel, updateDebugLevel } from '../../api/client';
 import type { DebugLevel } from '../../api/types';
@@ -37,7 +37,7 @@ function useLevels(): LevelOption[] {
  * GET /api/v1/debug/level and writes PUT /api/v1/debug/level; the running
  * stack honors the new level live.
  */
-export const DebugLevelControl: FC = () => {
+export function DebugLevelControl() {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   const LEVELS = useLevels();
@@ -167,4 +167,4 @@ export const DebugLevelControl: FC = () => {
       )}
     </div>
   );
-};
+}

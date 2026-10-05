@@ -10,7 +10,7 @@ import {
   Terminal,
   Zap,
 } from 'lucide-react';
-import { type FC, memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ErrorType } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -64,7 +64,7 @@ const quickActions = [
  *
  * Live counters, run snapshots, and quick actions for the active NIAC stack.
  */
-export const DashboardPage: FC = () => {
+export function DashboardPage() {
   const { t } = useTranslation('pages');
   const { data: stats } = useAppState('stats');
   const { data: history } = useAppState('history');
@@ -312,7 +312,7 @@ export const DashboardPage: FC = () => {
       </div>
     </div>
   );
-};
+}
 
 /**
  * Error Type Catalog - Each entry deep-links to the real fault-injection

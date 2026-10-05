@@ -1,5 +1,5 @@
 import { BellRing } from 'lucide-react';
-import { type FC, type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
@@ -18,7 +18,7 @@ import { H2, P, SmallText } from '../ui/Typography';
  * running daemon. Wires GET/PUT /api/v1/alerts. Updates take effect
  * immediately; no daemon restart required.
  */
-export const AlertsPage: FC = () => {
+export function AlertsPage() {
   const { t } = useTranslation('pages');
   // The error count only decorates the alert card's helper text, so a failed
   // stats poll is a toast rather than a blocked page -- but it is not nothing:
@@ -32,12 +32,12 @@ export const AlertsPage: FC = () => {
       <AlertConfigCard recentErrors={errorCount} />
     </div>
   );
-};
+}
 
 /**
  * Alert Config Card - Configure alert thresholds and webhooks
  */
-const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
+function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
   const { t } = useTranslation('pages');
   const { data, loading, error, refetch } = useAlertsResource();
   const [threshold, setThreshold] = useState('');
@@ -181,16 +181,18 @@ const AlertConfigCard: FC<{ recentErrors: number }> = ({ recentErrors }) => {
       </CardContent>
     </Card>
   );
-};
+}
 
 // Trans fills the link text from the locale string.
-const SecurityPolicyLink: FC<{ children?: ReactNode }> = ({ children }) => (
-  <a
-    href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
-    className="text-brand-accent underline"
-  >
-    {children}
-  </a>
-);
+function SecurityPolicyLink({ children }: { children?: ReactNode }) {
+  return (
+    <a
+      href="https://github.com/krisarmstrong/niac-go/blob/main/SECURITY.md"
+      className="text-brand-accent underline"
+    >
+      {children}
+    </a>
+  );
+}
 
 export default AlertsPage;

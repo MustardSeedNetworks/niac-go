@@ -1,5 +1,5 @@
 import { Network, Plus, Trash2, Wand2 } from 'lucide-react';
-import { type FC, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -36,7 +36,7 @@ const inputClassName =
  * own state and re-serializing the document, so a config the author uploaded
  * or generated keeps its comments and its spacing.
  */
-export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
+export function NetworksStep({ content, onChange }: NetworksStepProps) {
   const { t } = useTranslation('pages');
   const model = useMemo(() => parseNetworkModel(content), [content]);
 
@@ -371,4 +371,4 @@ export const NetworksStep: FC<NetworksStepProps> = ({ content, onChange }) => {
       </Card>
     </div>
   );
-};
+}

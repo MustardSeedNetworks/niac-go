@@ -1,4 +1,4 @@
-import { type FC, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -30,7 +30,7 @@ const DISCOVERY_PROTOCOLS = ['lldp', 'cdp', 'edp', 'fdp'] as const;
  * Neither is a derived field, so the parity gate could not honestly allow-list
  * them; they were simply unreachable except by editing YAML by hand.
  */
-export const FleetDefaultsEditor: FC<FleetDefaultsEditorProps> = ({ content, onChange }) => {
+export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorProps) {
   const { t } = useTranslation('pages');
   const model = useMemo(() => parseFleetDefaults(content), [content]);
 
@@ -175,4 +175,4 @@ export const FleetDefaultsEditor: FC<FleetDefaultsEditorProps> = ({ content, onC
       </Card>
     </div>
   );
-};
+}

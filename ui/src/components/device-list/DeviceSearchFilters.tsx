@@ -1,5 +1,4 @@
 import { Filter, LayoutGrid, LayoutList, Search, X } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DeviceType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
@@ -18,7 +17,7 @@ interface DeviceSearchFiltersProps {
   protocols: string[];
 }
 
-export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
+export function DeviceSearchFilters({
   searchQuery,
   onSearchChange,
   typeFilter,
@@ -29,7 +28,7 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
   onViewModeChange,
   deviceTypes,
   protocols,
-}) => {
+}: DeviceSearchFiltersProps) {
   const { t } = useTranslation('devices');
   return (
     <div className="flex flex-wrap gap-comfortable">
@@ -121,4 +120,4 @@ export const DeviceSearchFilters: FC<DeviceSearchFiltersProps> = ({
       </div>
     </div>
   );
-};
+}

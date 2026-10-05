@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -9,7 +8,7 @@ export interface YamlPreviewSectionProps {
   yamlContent: string;
 }
 
-export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent }) => {
+export function YamlPreviewSection({ yamlContent }: YamlPreviewSectionProps) {
   const { t } = useTranslation('devices');
   return (
     <Card className="border-surface-border bg-bg-surface/70">
@@ -29,4 +28,4 @@ export const YamlPreviewSection: FC<YamlPreviewSectionProps> = ({ yamlContent })
       </CardContent>
     </Card>
   );
-};
+}

@@ -1,5 +1,5 @@
 import { AlertCircle, Check, ChevronDown, ChevronRight, Copy, Terminal } from 'lucide-react';
-import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry, LogLevel } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -142,7 +142,13 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 // Individual log entry component
-const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, searchQuery }) => {
+const LogEntryRow = memo(function LogEntryRow({
+  log,
+  searchQuery,
+}: {
+  log: LogEntry;
+  searchQuery: string;
+}) {
   const { t } = useTranslation('pages');
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -316,9 +322,11 @@ const LogEntryRow: FC<{ log: LogEntry; searchQuery: string }> = memo(({ log, sea
   );
 });
 
-LogEntryRow.displayName = 'LogEntryRow';
-
-export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScroll }) => {
+export const LogViewer = memo(function LogViewer({
+  logs,
+  searchQuery,
+  autoScroll,
+}: LogViewerProps) {
   const { t } = useTranslation('pages');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -401,5 +409,3 @@ export const LogViewer: FC<LogViewerProps> = memo(({ logs, searchQuery, autoScro
     </div>
   );
 });
-
-LogViewer.displayName = 'LogViewer';

@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { type FC, memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../constants/sizes';
 import { RULE_SWATCHES } from '../theme/coloringRuleSwatches';
@@ -21,7 +21,15 @@ interface ColoringRulesPanelProps {
 /**
  * Rule editor row
  */
-const RuleRow: FC<{
+const RuleRow = memo(function RuleRow({
+  rule,
+  onChange,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}: {
   rule: ColoringRule;
   onChange: (rule: ColoringRule) => void;
   onDelete: () => void;
@@ -29,7 +37,7 @@ const RuleRow: FC<{
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
-}> = memo(({ rule, onChange, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) => {
+}) {
   const { t } = useTranslation();
   const filterError = rule.filter ? validate(rule.filter) : null;
 
@@ -134,149 +142,148 @@ const RuleRow: FC<{
   );
 });
 
-RuleRow.displayName = 'RuleRow';
-
 /**
  * Coloring Rules Panel
  *
  * Modal/panel for managing packet coloring rules.
  * Rules are evaluated top-to-bottom; first match wins.
  */
-export const ColoringRulesPanel: FC<ColoringRulesPanelProps> = memo(
-  ({ rules, onRulesChange, onReset, onClose }) => {
-    const { t } = useTranslation('common');
-    const [localRules, setLocalRules] = useState<ColoringRule[]>([...rules]);
+export const ColoringRulesPanel = memo(function ColoringRulesPanel({
+  rules,
+  onRulesChange,
+  onReset,
+  onClose,
+}: ColoringRulesPanelProps) {
+  const { t } = useTranslation('common');
+  const [localRules, setLocalRules] = useState<ColoringRule[]>([...rules]);
 
-    const handleRuleChange = useCallback((index: number, updated: ColoringRule) => {
-      setLocalRules((prev) => {
-        const next = [...prev];
-        next[index] = updated;
-        return next;
-      });
-    }, []);
+  const handleRuleChange = useCallback((index: number, updated: ColoringRule) => {
+    setLocalRules((prev) => {
+      const next = [...prev];
+      next[index] = updated;
+      return next;
+    });
+  }, []);
 
-    const handleDelete = useCallback((index: number) => {
-      setLocalRules((prev) => prev.filter((_, i) => i !== index));
-    }, []);
+  const handleDelete = useCallback((index: number) => {
+    setLocalRules((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
-    const handleMoveUp = useCallback((index: number) => {
-      if (index <= 0) return;
-      setLocalRules((prev) => {
-        const next = [...prev];
-        const above = next[index - 1];
-        const current = next[index];
-        if (!above || !current) {
-          return prev;
-        }
-        next[index - 1] = current;
-        next[index] = above;
-        return next;
-      });
-    }, []);
+  const handleMoveUp = useCallback((index: number) => {
+    if (index <= 0) return;
+    setLocalRules((prev) => {
+      const next = [...prev];
+      const above = next[index - 1];
+      const current = next[index];
+      if (!above || !current) {
+        return prev;
+      }
+      next[index - 1] = current;
+      next[index] = above;
+      return next;
+    });
+  }, []);
 
-    const handleMoveDown = useCallback((index: number) => {
-      setLocalRules((prev) => {
-        if (index >= prev.length - 1) return prev;
-        const next = [...prev];
-        const current = next[index];
-        const below = next[index + 1];
-        if (!current || !below) {
-          return prev;
-        }
-        next[index] = below;
-        next[index + 1] = current;
-        return next;
-      });
-    }, []);
+  const handleMoveDown = useCallback((index: number) => {
+    setLocalRules((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const next = [...prev];
+      const current = next[index];
+      const below = next[index + 1];
+      if (!current || !below) {
+        return prev;
+      }
+      next[index] = below;
+      next[index + 1] = current;
+      return next;
+    });
+  }, []);
 
-    const handleAdd = useCallback(() => {
-      setLocalRules((prev) => [
-        ...prev,
-        {
-          id: generateRuleId(),
-          name: t('coloringRules.newRuleName'),
-          filter: '',
-          ...RULE_SWATCHES.newRule,
-          enabled: true,
-        },
-      ]);
-    }, [t]);
+  const handleAdd = useCallback(() => {
+    setLocalRules((prev) => [
+      ...prev,
+      {
+        id: generateRuleId(),
+        name: t('coloringRules.newRuleName'),
+        filter: '',
+        ...RULE_SWATCHES.newRule,
+        enabled: true,
+      },
+    ]);
+  }, [t]);
 
-    const handleApply = useCallback(() => {
-      onRulesChange(localRules);
-      onClose();
-    }, [localRules, onRulesChange, onClose]);
+  const handleApply = useCallback(() => {
+    onRulesChange(localRules);
+    onClose();
+  }, [localRules, onRulesChange, onClose]);
 
-    const handleReset = useCallback(() => {
-      onReset();
-      onClose();
-    }, [onReset, onClose]);
+  const handleReset = useCallback(() => {
+    onReset();
+    onClose();
+  }, [onReset, onClose]);
 
-    return (
-      <Modal
-        isOpen
-        onClose={onClose}
-        size="3xl"
-        title={t('coloringRules.title')}
-        footer={
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-compact">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAdd}
-                leftIcon={<Plus className={iconSizes.md} />}
-              >
-                {t('coloringRules.addRule')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                leftIcon={<RotateCcw className={iconSizes.md} />}
-              >
-                {t('coloringRules.resetDefaults')}
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-compact">
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                {t('buttons.cancel')}
-              </Button>
-              <Button tone="violet" size="sm" onClick={handleApply}>
-                {t('buttons.apply')}
-              </Button>
-            </div>
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="3xl"
+      title={t('coloringRules.title')}
+      footer={
+        <div className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-compact">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAdd}
+              leftIcon={<Plus className={iconSizes.md} />}
+            >
+              {t('coloringRules.addRule')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              leftIcon={<RotateCcw className={iconSizes.md} />}
+            >
+              {t('coloringRules.resetDefaults')}
+            </Button>
           </div>
-        }
-      >
-        <div className="stack-sm">
-          <SmallText className="text-text-muted mb-heading block">
-            {t('coloringRules.help')}
-          </SmallText>
 
-          {localRules.map((rule, index) => (
-            <RuleRow
-              key={rule.id}
-              rule={rule}
-              onChange={(updated) => handleRuleChange(index, updated)}
-              onDelete={() => handleDelete(index)}
-              onMoveUp={() => handleMoveUp(index)}
-              onMoveDown={() => handleMoveDown(index)}
-              isFirst={index === 0}
-              isLast={index === localRules.length - 1}
-            />
-          ))}
-
-          {localRules.length === 0 && (
-            <div className="text-center py-8 text-text-muted">
-              <p>{t('coloringRules.empty')}</p>
-            </div>
-          )}
+          <div className="flex items-center gap-compact">
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              {t('buttons.cancel')}
+            </Button>
+            <Button tone="violet" size="sm" onClick={handleApply}>
+              {t('buttons.apply')}
+            </Button>
+          </div>
         </div>
-      </Modal>
-    );
-  },
-);
+      }
+    >
+      <div className="stack-sm">
+        <SmallText className="text-text-muted mb-heading block">
+          {t('coloringRules.help')}
+        </SmallText>
 
-ColoringRulesPanel.displayName = 'ColoringRulesPanel';
+        {localRules.map((rule, index) => (
+          <RuleRow
+            key={rule.id}
+            rule={rule}
+            onChange={(updated) => handleRuleChange(index, updated)}
+            onDelete={() => handleDelete(index)}
+            onMoveUp={() => handleMoveUp(index)}
+            onMoveDown={() => handleMoveDown(index)}
+            isFirst={index === 0}
+            isLast={index === localRules.length - 1}
+          />
+        ))}
+
+        {localRules.length === 0 && (
+          <div className="text-center py-8 text-text-muted">
+            <p>{t('coloringRules.empty')}</p>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+});

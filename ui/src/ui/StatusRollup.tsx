@@ -23,7 +23,7 @@
  *     figures={[{ label: 'Frames', value: '1.2M' }, { label: 'Loss', value: '2.1%' }]}
  *   />
  */
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export type RollupState = 'ok' | 'warn' | 'crit' | 'unknown' | 'idle';
@@ -87,14 +87,14 @@ const STATE_STYLES: Record<
   },
 };
 
-export const StatusRollup: FC<StatusRollupProps> = ({
+export function StatusRollup({
   state,
   headline,
   body,
   figures = [],
   actions,
   className = '',
-}) => {
+}: StatusRollupProps) {
   const { t } = useTranslation('common');
   const labels: Record<RollupState, string> = {
     idle: t('rollup.idle'),
@@ -149,4 +149,4 @@ export const StatusRollup: FC<StatusRollupProps> = ({
       </div>
     </section>
   );
-};
+}

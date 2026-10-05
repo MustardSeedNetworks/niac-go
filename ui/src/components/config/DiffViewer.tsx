@@ -1,5 +1,5 @@
 import { AlignJustify, Columns2 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
@@ -20,21 +20,21 @@ export type { DiffBlock, DiffLine, DiffType, MergeDecision } from './diff-viewer
 /**
  * Statistics bar showing additions, deletions, and modifications
  */
-const DiffStatsBar: FC<{
-  additions: number;
-  deletions: number;
-  modifications: number;
-  decisionsCount: number;
-  changedBlocksCount: number;
-  showMergeControls: boolean;
-}> = ({
+function DiffStatsBar({
   additions,
   deletions,
   modifications,
   decisionsCount,
   changedBlocksCount,
   showMergeControls,
-}) => {
+}: {
+  additions: number;
+  deletions: number;
+  modifications: number;
+  decisionsCount: number;
+  changedBlocksCount: number;
+  showMergeControls: boolean;
+}) {
   const { t } = useTranslation('pages');
   return (
     <div className="flex items-center gap-comfortable flex-wrap">
@@ -58,34 +58,36 @@ const DiffStatsBar: FC<{
       )}
     </div>
   );
-};
+}
 
 /**
  * Column headers for left and right panels
  */
-const ColumnHeaders: FC<{
-  leftLabel: string;
-  rightLabel: string;
-}> = ({ leftLabel, rightLabel }) => (
-  <div className="grid grid-cols-2 gap-px bg-bg-elevated rounded-t-lg overflow-hidden">
-    <div className="bg-bg-surface/90 px-4 py-row">
-      <SmallText className="text-text-secondary font-semibold">{leftLabel}</SmallText>
+function ColumnHeaders({ leftLabel, rightLabel }: { leftLabel: string; rightLabel: string }) {
+  return (
+    <div className="grid grid-cols-2 gap-px bg-bg-elevated rounded-t-lg overflow-hidden">
+      <div className="bg-bg-surface/90 px-4 py-row">
+        <SmallText className="text-text-secondary font-semibold">{leftLabel}</SmallText>
+      </div>
+      <div className="bg-bg-surface/90 px-4 py-row">
+        <SmallText className="text-text-secondary font-semibold">{rightLabel}</SmallText>
+      </div>
     </div>
-    <div className="bg-bg-surface/90 px-4 py-row">
-      <SmallText className="text-text-secondary font-semibold">{rightLabel}</SmallText>
-    </div>
-  </div>
-);
+  );
+}
 
 /**
  * Block/Overlay merge-view toggle. "Block" keeps the two files in
  * separate side-by-side columns; "Overlay" shows a single unified
  * column with removed/added lines inlined.
  */
-const ViewModeToggle: FC<{
+function ViewModeToggle({
+  viewMode,
+  onChange,
+}: {
   viewMode: ViewMode;
   onChange: (mode: ViewMode) => void;
-}> = ({ viewMode, onChange }) => {
+}) {
   const { t } = useTranslation('pages');
   return (
     <fieldset
@@ -126,24 +128,24 @@ const ViewModeToggle: FC<{
       </Tooltip>
     </fieldset>
   );
-};
+}
 
 /**
  * Empty state when no content is provided
  */
-const EmptyState: FC = () => {
+function EmptyState() {
   const { t } = useTranslation('pages');
   return (
     <div className="flex-center h-64 text-text-muted">
       <SmallText>{t('configDiff.uploadFilesToCompare')}</SmallText>
     </div>
   );
-};
+}
 
 /**
  * Side-by-side diff viewer component
  */
-export const DiffViewer: FC<DiffViewerProps> = ({
+export function DiffViewer({
   leftContent,
   rightContent,
   leftLabel = 'Original',
@@ -151,7 +153,7 @@ export const DiffViewer: FC<DiffViewerProps> = ({
   mergeDecisions,
   onMergeDecision,
   showMergeControls = true,
-}) => {
+}: DiffViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('block');
 
   // Compute diff blocks
@@ -237,4 +239,4 @@ export const DiffViewer: FC<DiffViewerProps> = ({
       </div>
     </div>
   );
-};
+}

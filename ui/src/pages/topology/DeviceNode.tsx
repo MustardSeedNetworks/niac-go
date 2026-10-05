@@ -4,7 +4,7 @@ import { Tooltip } from '../../ui/Tooltip';
  */
 
 import { Handle, Position } from '@xyflow/react';
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import type { DeviceNodeData } from './types';
@@ -24,7 +24,7 @@ interface DeviceNodeProps {
  * everything that left the canvas is still on the node's own tooltip and
  * accessible name, one hover away rather than one click.
  */
-export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
+export const DeviceNode = memo(function DeviceNode({ data, selected }: DeviceNodeProps) {
   const { t } = useTranslation('pages');
   const deviceType = data.type ?? 'unknown';
   const Symbol = getTopologyDeviceIcon(deviceType);
@@ -107,5 +107,3 @@ export const DeviceNode: FC<DeviceNodeProps> = memo(({ data, selected }) => {
     </Tooltip>
   );
 });
-
-DeviceNode.displayName = 'DeviceNode';

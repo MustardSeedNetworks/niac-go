@@ -1,4 +1,4 @@
-import { type FC, memo, useId, useMemo, useState } from 'react';
+import { memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { Button } from '../ui/Button';
@@ -67,7 +67,11 @@ interface StreamSegment {
  * - ASCII / Hex display toggle
  * - Packet-by-packet segmentation
  */
-export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, onClose }) => {
+export const StreamView = memo(function StreamView({
+  packets,
+  clientEndpoint,
+  onClose,
+}: StreamViewProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('ascii');
@@ -187,7 +191,5 @@ export const StreamView: FC<StreamViewProps> = memo(({ packets, clientEndpoint, 
     </Modal>
   );
 });
-
-StreamView.displayName = 'StreamView';
 
 export default StreamView;

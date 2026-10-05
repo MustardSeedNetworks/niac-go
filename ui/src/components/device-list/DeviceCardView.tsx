@@ -1,5 +1,4 @@
 import { Copy, Edit3, Network, Trash2 } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   deviceTypeColors,
@@ -13,7 +12,7 @@ import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
-export const DeviceCardView: FC = () => {
+export function DeviceCardView() {
   const { t } = useTranslation('devices');
   const {
     devices,
@@ -142,4 +141,4 @@ export const DeviceCardView: FC = () => {
       })}
     </div>
   );
-};
+}

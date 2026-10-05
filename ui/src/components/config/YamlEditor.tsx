@@ -19,7 +19,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { type FC, useEffect, useEffectEvent, useMemo, useRef } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 
@@ -190,7 +190,7 @@ interface YamlEditorProps {
  * - Optional line wrapping
  * - Validation callbacks
  */
-export const YamlEditor: FC<YamlEditorProps> = ({
+export function YamlEditor({
   value,
   onChange,
   readOnly = false,
@@ -205,7 +205,7 @@ export const YamlEditor: FC<YamlEditorProps> = ({
   className = '',
   onValidationError,
   errorLine,
-}) => {
+}: YamlEditorProps) {
   const { t } = useTranslation('pages');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -356,14 +356,14 @@ export const YamlEditor: FC<YamlEditorProps> = ({
       aria-label={t('configDiff.yamlEditorLabel')}
     />
   );
-};
+}
 
 /**
  * Read-only YAML viewer component (convenience wrapper)
  */
-export const YamlViewer: FC<Omit<YamlEditorProps, 'readOnly' | 'onChange'>> = (props) => (
-  <YamlEditor {...props} readOnly={true} />
-);
+export function YamlViewer(props: Omit<YamlEditorProps, 'readOnly' | 'onChange'>) {
+  return <YamlEditor {...props} readOnly={true} />;
+}
 
 /**
  * Basic YAML validation

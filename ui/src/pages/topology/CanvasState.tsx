@@ -1,5 +1,4 @@
 import { AlertTriangle, Network, RefreshCw } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
@@ -13,11 +12,15 @@ import { SmallText } from '../../ui/Typography';
  * failed load was indistinguishable from a network with nothing in it. Keeping
  * them together is what makes that omission visible next time.
  */
-export const CanvasState: FC<{
+export function CanvasState({
+  loading,
+  error,
+  onRetry,
+}: {
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
-}> = ({ loading, error, onRetry }) => {
+}) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
 
@@ -60,10 +63,12 @@ export const CanvasState: FC<{
       </div>
     </Centered>
   );
-};
+}
 
-const Centered: FC<{ children: React.ReactNode; testId?: string }> = ({ children, testId }) => (
-  <div className="absolute inset-0 flex-center" data-testid={testId}>
-    {children}
-  </div>
-);
+function Centered({ children, testId }: { children: React.ReactNode; testId?: string }) {
+  return (
+    <div className="absolute inset-0 flex-center" data-testid={testId}>
+      {children}
+    </div>
+  );
+}
