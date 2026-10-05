@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.111.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.110.0...v0.111.0) (2026-10-05)
+
+
+### Features
+
+* **dhcp:** lease to other networks through a DHCP relay (W1) ([#2538](https://github.com/MustardSeedNetworks/niac-go/issues/2538)) ([f509d96](https://github.com/MustardSeedNetworks/niac-go/commit/f509d96adc1107894f23bc4fb566fac40bd25451)), closes [#2536](https://github.com/MustardSeedNetworks/niac-go/issues/2536)
+* **wifi:** roam authored stations between access points ([#2535](https://github.com/MustardSeedNetworks/niac-go/issues/2535)) ([6cd972c](https://github.com/MustardSeedNetworks/niac-go/commit/6cd972c773d7219266fbaa60e501a4a9b9cf135c)), closes [#2533](https://github.com/MustardSeedNetworks/niac-go/issues/2533)
+
 ## [0.110.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.109.0...v0.110.0) (2026-10-05)
 
 
