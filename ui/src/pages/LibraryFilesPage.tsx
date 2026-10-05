@@ -1,5 +1,5 @@
 import { Database, FileBox, RefreshCw, RotateCcw, Search, Sparkles } from 'lucide-react';
-import { type FC, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type LibraryFileEntry, revertWalk, type WalkProvenance } from '../api/library-client';
 import { GlossaryPopover } from '../components/GlossaryPopover';
@@ -347,7 +347,7 @@ function LibraryFilesView({ kind }: Props) {
   );
 }
 
-const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => {
+function SourceBadge({ source }: { source: LibraryFileEntry['source'] }) {
   const { t } = useTranslation('pages');
   const styles: Record<LibraryFileEntry['source'], string> = {
     starter: 'border-brand-primary/40 bg-brand-primary/10 text-brand-primary-strong',
@@ -366,14 +366,14 @@ const SourceBadge: FC<{ source: LibraryFileEntry['source'] }> = ({ source }) => 
       {labels[source]}
     </span>
   );
-};
+}
 
 /**
  * Half the shipped walks are generated rather than captured, and the catalog
  * gave no way to tell — someone picking a vendor walk had no way to know
  * nothing had ever measured a device of that model.
  */
-const ProvenanceBadge: FC<{ provenance: LibraryFileEntry['provenance'] }> = ({ provenance }) => {
+function ProvenanceBadge({ provenance }: { provenance: LibraryFileEntry['provenance'] }) {
   const { t } = useTranslation('pages');
   if (!provenance) {
     return <span className="text-xs text-text-muted">{t('libraryFiles.contentUnknown')}</span>;
@@ -393,7 +393,7 @@ const ProvenanceBadge: FC<{ provenance: LibraryFileEntry['provenance'] }> = ({ p
       {labels[provenance]}
     </span>
   );
-};
+}
 
 function humanBytes(n: number): string {
   if (n >= 1 << 30) return `${(n / (1 << 30)).toFixed(1)} GB`;
@@ -402,5 +402,9 @@ function humanBytes(n: number): string {
   return `${n} B`;
 }
 
-export const LibraryWalksPage: FC = () => <LibraryFilesView kind="walks" />;
-export const LibraryPcapsPage: FC = () => <LibraryFilesView kind="pcaps" />;
+export function LibraryWalksPage() {
+  return <LibraryFilesView kind="walks" />;
+}
+export function LibraryPcapsPage() {
+  return <LibraryFilesView kind="pcaps" />;
+}

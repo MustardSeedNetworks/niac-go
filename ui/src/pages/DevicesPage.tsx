@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { FileCog, Server } from 'lucide-react';
-import { type FC, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { parseDocument } from 'yaml';
@@ -38,7 +38,7 @@ import { formatBytes, formatTime, getErrorMessage } from '../utils/format';
  * returns the pane to whole-config editing, which is the only way to reach
  * anything that is not a device.
  */
-export const DevicesPage: FC = () => {
+export function DevicesPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const guard = useUnsavedChangesGuard(dirty);
@@ -58,15 +58,18 @@ export const DevicesPage: FC = () => {
       />
     </div>
   );
-};
+}
 
 /**
  * Device List Card - Shows devices from current config
  */
-const DeviceListCard: FC<{
+function DeviceListCard({
+  selected,
+  onSelect,
+}: {
   selected: string | null;
   onSelect: (name: string) => void;
-}> = ({ selected, onSelect }) => {
+}) {
   const { t } = useTranslation('pages');
   const { data: devices, loading, error } = useAppState('devices');
 
@@ -96,7 +99,7 @@ const DeviceListCard: FC<{
       )}
     </BaseCard>
   );
-};
+}
 
 /**
  * fragmentProblem names why a device fragment cannot be saved, as an i18n key
@@ -121,13 +124,19 @@ function fragmentProblem(
 /**
  * Config Editor Card - YAML configuration editor
  */
-const ConfigEditorCard: FC<{
+function ConfigEditorCard({
+  selected,
+  onClearSelection,
+  dirty,
+  setDirty,
+  guard,
+}: {
   selected: string | null;
   onClearSelection: () => void;
   dirty: boolean;
   setDirty: (dirty: boolean) => void;
   guard: UnsavedChangesGuard;
-}> = ({ selected, onClearSelection, dirty, setDirty, guard }) => {
+}) {
   const queryClient = useQueryClient();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
@@ -382,15 +391,18 @@ const ConfigEditorCard: FC<{
       </BaseCard>
     </>
   );
-};
+}
 
 /**
  * Walk File Browser - Browse available SNMP walks
  */
-const WalkFileBrowser: FC<{
+function WalkFileBrowser({
+  files,
+  onCopy,
+}: {
   files: LibraryFileEntry[];
   onCopy: (path: string) => void;
-}> = ({ files, onCopy }) => {
+}) {
   const { t } = useTranslation('pages');
   if (files.length === 0) {
     return null;
@@ -424,6 +436,6 @@ const WalkFileBrowser: FC<{
       </div>
     </div>
   );
-};
+}
 
 export default DevicesPage;

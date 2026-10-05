@@ -1,5 +1,4 @@
 import {
-  type FC,
   type InputHTMLAttributes,
   type ReactNode,
   type Ref,
@@ -25,7 +24,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   ref?: Ref<HTMLInputElement>;
 }
 
-export const Input: FC<InputProps> = ({
+export function Input({
   label,
   error,
   hint,
@@ -36,7 +35,7 @@ export const Input: FC<InputProps> = ({
   id,
   ref,
   ...props
-}) => {
+}: InputProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const hasError = !!error;
@@ -78,7 +77,7 @@ export const Input: FC<InputProps> = ({
       )}
     </div>
   );
-};
+}
 
 // Textarea - React 19 ref as prop
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -89,7 +88,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   ref?: Ref<HTMLTextAreaElement>;
 }
 
-export const Textarea: FC<TextareaProps> = ({
+export function Textarea({
   label,
   error,
   hint,
@@ -98,7 +97,7 @@ export const Textarea: FC<TextareaProps> = ({
   id,
   ref,
   ...props
-}) => {
+}: TextareaProps) {
   const generatedId = useId();
   const textareaId = id ?? generatedId;
   const hasError = !!error;
@@ -128,7 +127,7 @@ export const Textarea: FC<TextareaProps> = ({
       )}
     </div>
   );
-};
+}
 
 // Select - React 19 ref as prop
 interface SelectOption {
@@ -148,7 +147,7 @@ interface SelectProps extends Omit<InputHTMLAttributes<HTMLSelectElement>, 'onCh
   ref?: Ref<HTMLSelectElement>;
 }
 
-export const Select: FC<SelectProps> = ({
+export function Select({
   label,
   error,
   hint,
@@ -160,7 +159,7 @@ export const Select: FC<SelectProps> = ({
   onChange,
   ref,
   ...props
-}) => {
+}: SelectProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
   const hasError = !!error;
@@ -204,7 +203,7 @@ export const Select: FC<SelectProps> = ({
       )}
     </div>
   );
-};
+}
 
 // Checkbox - React 19 ref as prop
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -214,7 +213,7 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
   ref?: Ref<HTMLInputElement>;
 }
 
-export const Checkbox: FC<CheckboxProps> = ({
+export function Checkbox({
   label,
   description,
   className = '',
@@ -222,7 +221,7 @@ export const Checkbox: FC<CheckboxProps> = ({
   id,
   ref,
   ...props
-}) => {
+}: CheckboxProps) {
   const generatedId = useId();
   const checkboxId = id ?? generatedId;
 
@@ -248,7 +247,7 @@ export const Checkbox: FC<CheckboxProps> = ({
       </div>
     </div>
   );
-};
+}
 
 // Toggle/Switch - React 19 ref as prop
 interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -258,7 +257,7 @@ interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'
   ref?: Ref<HTMLInputElement>;
 }
 
-export const Toggle: FC<ToggleProps> = ({
+export function Toggle({
   label,
   description,
   className = '',
@@ -267,7 +266,7 @@ export const Toggle: FC<ToggleProps> = ({
   checked,
   ref,
   ...props
-}) => {
+}: ToggleProps) {
   const generatedId = useId();
   const toggleId = id ?? generatedId;
 
@@ -313,7 +312,7 @@ export const Toggle: FC<ToggleProps> = ({
       />
     </div>
   );
-};
+}
 
 // Search Input with clear button - React 19 ref as prop
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -323,7 +322,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
   ref?: Ref<HTMLInputElement>;
 }
 
-export const SearchInput: FC<SearchInputProps> = ({
+export function SearchInput({
   label,
   onClear,
   className = '',
@@ -333,7 +332,7 @@ export const SearchInput: FC<SearchInputProps> = ({
   onChange,
   ref,
   ...props
-}) => {
+}: SearchInputProps) {
   const { t } = useTranslation('common');
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -420,7 +419,7 @@ export const SearchInput: FC<SearchInputProps> = ({
       </div>
     </div>
   );
-};
+}
 
 // Form group wrapper
 interface FormGroupProps {
@@ -428,9 +427,9 @@ interface FormGroupProps {
   className?: string;
 }
 
-export const FormGroup: FC<FormGroupProps> = ({ children, className = '' }) => (
-  <div className={`stack-lg ${className}`}>{children}</div>
-);
+export function FormGroup({ children, className = '' }: FormGroupProps) {
+  return <div className={`stack-lg ${className}`}>{children}</div>;
+}
 
 // Form section with title
 interface FormSectionProps {
@@ -440,17 +439,14 @@ interface FormSectionProps {
   className?: string;
 }
 
-export const FormSection: FC<FormSectionProps> = ({
-  title,
-  description,
-  children,
-  className = '',
-}) => (
-  <div className={`stack-lg ${className}`}>
-    <div>
-      <h3 className="heading-3 text-text-primary">{title}</h3>
-      {description && <p className="text-sm text-text-muted mt-tight">{description}</p>}
+export function FormSection({ title, description, children, className = '' }: FormSectionProps) {
+  return (
+    <div className={`stack-lg ${className}`}>
+      <div>
+        <h3 className="heading-3 text-text-primary">{title}</h3>
+        {description && <p className="text-sm text-text-muted mt-tight">{description}</p>}
+      </div>
+      <div className="stack-lg">{children}</div>
     </div>
-    <div className="stack-lg">{children}</div>
-  </div>
-);
+  );
+}

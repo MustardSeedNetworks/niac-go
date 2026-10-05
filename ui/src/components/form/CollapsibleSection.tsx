@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
@@ -17,7 +17,7 @@ export interface CollapsibleSectionProps {
   id?: string;
 }
 
-export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
+export function CollapsibleSection({
   title,
   children,
   isExpanded,
@@ -26,7 +26,7 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
   enabled,
   onEnableChange,
   id,
-}) => {
+}: CollapsibleSectionProps) {
   const { t } = useTranslation('common');
   return (
     <Card id={id} className="border-surface-border bg-bg-surface/70 overflow-hidden">
@@ -81,4 +81,4 @@ export const CollapsibleSection: FC<CollapsibleSectionProps> = ({
       {isExpanded && <CardContent className="pt-0 pb-6 px-6">{children}</CardContent>}
     </Card>
   );
-};
+}

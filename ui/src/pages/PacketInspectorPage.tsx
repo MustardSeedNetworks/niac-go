@@ -11,7 +11,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { type FC, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { stopStandaloneCapture } from '../api/client';
@@ -56,9 +56,7 @@ function generatePacketId(): string {
  * Connection Status Indicator Component
  * SSE auto-reconnects, so we just show connected/connecting states
  */
-const ConnectionStatus: FC<{
-  connected: boolean;
-}> = ({ connected }) => {
+function ConnectionStatus({ connected }: { connected: boolean }) {
   const { t } = useTranslation('pages');
   if (connected) {
     return (
@@ -76,7 +74,7 @@ const ConnectionStatus: FC<{
       <Tag colorScheme="yellow">{t('packets.inspector.connectingStatus')}</Tag>
     </div>
   );
-};
+}
 
 /**
  * Packet Inspector Page
@@ -89,7 +87,7 @@ const ConnectionStatus: FC<{
  * - Auto-scroll toggle
  * - Protocol and search filtering
  */
-export const PacketInspectorPage: FC = () => {
+export function PacketInspectorPage() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
@@ -541,7 +539,7 @@ export const PacketInspectorPage: FC = () => {
       />
     </div>
   );
-};
+}
 
 // Keep the import live even if the type is only used implicitly via
 // the API client return types.

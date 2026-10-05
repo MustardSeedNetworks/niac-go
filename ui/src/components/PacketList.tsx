@@ -1,4 +1,4 @@
-import { type FC, memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTimeDisplay } from '../hooks/useTimeDisplay';
 import { Tag } from '../ui/Tag';
@@ -93,70 +93,72 @@ PacketRow.displayName = 'PacketRow';
  * Displays a scrollable list of captured packets with filtering support.
  * Clicking a packet selects it for detailed viewing.
  */
-export const PacketList: FC<PacketListProps> = memo(
-  ({ packets, selectedPacketId, onSelectPacket, autoScroll, getRowStyle }) => {
-    const { t } = useTranslation('pages');
-    const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+export const PacketList = memo(function PacketList({
+  packets,
+  selectedPacketId,
+  onSelectPacket,
+  autoScroll,
+  getRowStyle,
+}: PacketListProps) {
+  const { t } = useTranslation('pages');
+  const { mode: timeMode, cycleMode: cycleTimeMode } = useTimeDisplay();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // When auto-scroll is enabled, follow the newest packet as it arrives.
-    useEffect(() => {
-      if (!autoScroll) {
-        return;
-      }
-      const container = scrollContainerRef.current;
-      if (!container) {
-        return;
-      }
-      container.scrollTop = container.scrollHeight;
-    }, [autoScroll, packets.length]);
-
-    if (packets.length === 0) {
-      return (
-        <div className="h-full flex-center text-text-muted">
-          <div className="text-center">
-            <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
-            <SmallText>{t('packets.list.waitingForStream')}</SmallText>
-          </div>
-        </div>
-      );
+  // When auto-scroll is enabled, follow the newest packet as it arrives.
+  useEffect(() => {
+    if (!autoScroll) {
+      return;
     }
+    const container = scrollContainerRef.current;
+    if (!container) {
+      return;
+    }
+    container.scrollTop = container.scrollHeight;
+  }, [autoScroll, packets.length]);
 
+  if (packets.length === 0) {
     return (
-      <div className="h-full flex flex-col">
-        <Tooltip text={t('packets.list.cycleTimeModeTitle')}>
-          <button
-            type="button"
-            onClick={cycleTimeMode}
-            className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
-          >
-            {t('packets.list.modeLabel')} {getTimeDisplayLabel(timeMode)}
-          </button>
-        </Tooltip>
-        <div
-          ref={scrollContainerRef}
-          className={`flex-1 overflow-y-auto stack-xs pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
-          style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
-        >
-          {packets.map((packet, idx) => (
-            <PacketRow
-              key={packet.id}
-              packet={packet}
-              isSelected={selectedPacketId === packet.id}
-              onClick={() => onSelectPacket(packet)}
-              formattedTime={formatTimeByMode(
-                packet.timestamp,
-                timeMode,
-                packets[0]?.timestamp ?? null,
-                packets[idx - 1]?.timestamp ?? null,
-              )}
-              rowStyle={getRowStyle?.(packet)}
-            />
-          ))}
+      <div className="h-full flex-center text-text-muted">
+        <div className="text-center">
+          <p className="text-sm">{t('packets.list.noPacketsTitle')}</p>
+          <SmallText>{t('packets.list.waitingForStream')}</SmallText>
         </div>
       </div>
     );
-  },
-);
+  }
 
-PacketList.displayName = 'PacketList';
+  return (
+    <div className="h-full flex flex-col">
+      <Tooltip text={t('packets.list.cycleTimeModeTitle')}>
+        <button
+          type="button"
+          onClick={cycleTimeMode}
+          className="text-xs text-text-muted hover:text-brand-accent mb-tight text-left select-none"
+        >
+          {t('packets.list.modeLabel')} {getTimeDisplayLabel(timeMode)}
+        </button>
+      </Tooltip>
+      <div
+        ref={scrollContainerRef}
+        className={`flex-1 overflow-y-auto stack-xs pr-2 ${autoScroll ? 'scroll-smooth' : ''}`}
+        style={{ scrollBehavior: autoScroll ? 'smooth' : 'auto' }}
+      >
+        {packets.map((packet, idx) => (
+          <PacketRow
+            key={packet.id}
+            packet={packet}
+            isSelected={selectedPacketId === packet.id}
+            onClick={() => onSelectPacket(packet)}
+            formattedTime={formatTimeByMode(
+              packet.timestamp,
+              timeMode,
+              packets[0]?.timestamp ?? null,
+              packets[idx - 1]?.timestamp ?? null,
+            )}
+            rowStyle={getRowStyle?.(packet)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});

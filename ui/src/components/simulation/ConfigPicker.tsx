@@ -1,5 +1,5 @@
 import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
-import { type FC, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { importConfig } from '../../api/client';
 import { fetchLibraryNetworks } from '../../api/library-client';
@@ -33,12 +33,12 @@ export type { ConfigPickerProps } from './ConfigPicker.types';
  *   ConfigPickerControls.tsx  — grid/list view toggle
  *   ConfigPickerList.tsx      — card grid + compact list presenters
  */
-export const ConfigPicker: FC<ConfigPickerProps> = ({
+export function ConfigPicker({
   selection,
   onSelectUserConfig,
   onUpload,
   uploadFile,
-}) => {
+}: ConfigPickerProps) {
   const { t } = useTranslation('pages');
   const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,4 +278,4 @@ export const ConfigPicker: FC<ConfigPickerProps> = ({
       />
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import { type FC, type MouseEvent as ReactMouseEvent, useCallback, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useCallback, useState } from 'react';
 
 /**
  * ContextMenu is the small popover shown on right-click of a node,
@@ -51,7 +51,7 @@ interface Props {
 const INITIAL_MENU_WIDTH = 200;
 const INITIAL_MENU_HEIGHT = 32; // approx one item — favours opening downward on first render
 
-export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
+export function ContextMenu({ x, y, items, onClose }: Props) {
   // Measured dimensions seed from conservative defaults so the first
   // render has values to clamp with; the ref callback below
   // overwrites them once React commits the menu div. Replaces the
@@ -133,4 +133,4 @@ export const ContextMenu: FC<Props> = ({ x, y, items, onClose }) => {
       ))}
     </div>
   );
-};
+}

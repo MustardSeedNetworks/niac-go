@@ -1,5 +1,5 @@
 import { History } from 'lucide-react';
-import { type FC, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
@@ -15,7 +15,7 @@ import { formatDuration, formatNumber, formatTime } from '../../utils/format';
  * The TUI's history viewer was the only other place this existed; the web UI is
  * now the single home for it.
  */
-export const RunHistoryCard: FC = () => {
+export function RunHistoryCard() {
   const { t } = useTranslation(['pages', 'common']);
   const { records: history, error, loading, hasOlder, hasNewer, older, newer } = useRunHistory();
   const location = useLocation();
@@ -100,4 +100,4 @@ export const RunHistoryCard: FC = () => {
       </CardContent>
     </Card>
   );
-};
+}

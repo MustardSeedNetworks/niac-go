@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle, FileUp, Upload, X } from 'lucide-react';
-import { type FC, useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import type { TFunction } from '../../i18n';
@@ -80,7 +80,7 @@ function validateFile(file: File, t: TFunction<'pages'>): { valid: boolean; erro
  * Provides drag-and-drop and click-to-select file upload for PCAP files.
  * Validates file type and size before allowing analysis.
  */
-export const PcapUploader: FC<PcapUploaderProps> = ({
+export function PcapUploader({
   onFileSelect,
   onAnalyze,
   onValidationError,
@@ -90,7 +90,7 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
   success,
   uploadProgress,
   onCancelUpload,
-}) => {
+}: PcapUploaderProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -321,6 +321,6 @@ export const PcapUploader: FC<PcapUploaderProps> = ({
       </CardContent>
     </Card>
   );
-};
+}
 
 export default PcapUploader;

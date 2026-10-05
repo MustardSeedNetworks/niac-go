@@ -1,5 +1,4 @@
 import { Check, FolderOpen, HardDrive, Star } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Tag } from '../../ui/Tag';
@@ -31,17 +30,7 @@ export interface ConfigSections {
  * Each zone gets a small heading with a count so the list stays scannable
  * even when there are dozens of saved networks.
  */
-export const ConfigsList: FC<{
-  sections: ConfigSections;
-  loading: boolean;
-  viewMode: ViewMode;
-  isSelected: (item: ConfigItem) => boolean;
-  isFavorite: (key: string) => boolean;
-  onSelect: (item: ConfigItem) => void;
-  onToggleFavorite: (key: string) => void;
-  onClearLocal: () => void;
-  searching: boolean;
-}> = ({
+export function ConfigsList({
   sections,
   loading,
   viewMode,
@@ -51,7 +40,17 @@ export const ConfigsList: FC<{
   onToggleFavorite,
   onClearLocal,
   searching,
-}) => {
+}: {
+  sections: ConfigSections;
+  loading: boolean;
+  viewMode: ViewMode;
+  isSelected: (item: ConfigItem) => boolean;
+  isFavorite: (key: string) => boolean;
+  onSelect: (item: ConfigItem) => void;
+  onToggleFavorite: (key: string) => void;
+  onClearLocal: () => void;
+  searching: boolean;
+}) {
   const { t } = useTranslation('pages');
 
   if (loading) {
@@ -116,14 +115,19 @@ export const ConfigsList: FC<{
       )}
     </div>
   );
-};
+}
 
-const FavoriteStar: FC<{
+function FavoriteStar({
+  itemKey,
+  favorited,
+  onToggle,
+  compact,
+}: {
   itemKey: string;
   favorited: boolean;
   onToggle: (key: string) => void;
   compact?: boolean;
-}> = ({ itemKey, favorited, onToggle, compact }) => {
+}) {
   const { t } = useTranslation('pages');
   const label = favorited
     ? t('configPicker.removeFromFavorites')
@@ -151,16 +155,16 @@ const FavoriteStar: FC<{
       </button>
     </Tooltip>
   );
-};
+}
 
-const ConfigCard: FC<SharedItemProps> = ({
+function ConfigCard({
   item,
   selected,
   favorited,
   onSelect,
   onToggleFavorite,
   onClearLocal,
-}) => {
+}: SharedItemProps) {
   const { t } = useTranslation('pages');
   const Icon = item.kind === 'saved' ? FolderOpen : HardDrive;
   const tint =
@@ -229,16 +233,16 @@ const ConfigCard: FC<SharedItemProps> = ({
       </div>
     </div>
   );
-};
+}
 
-const ConfigRow: FC<SharedItemProps> = ({
+function ConfigRow({
   item,
   selected,
   favorited,
   onSelect,
   onToggleFavorite,
   onClearLocal,
-}) => {
+}: SharedItemProps) {
   const { t } = useTranslation('pages');
   return (
     <li
@@ -294,4 +298,4 @@ const ConfigRow: FC<SharedItemProps> = ({
       )}
     </li>
   );
-};
+}

@@ -1,5 +1,5 @@
 import { valibotResolver } from '@hookform/resolvers/valibot';
-import { type FC, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -17,7 +17,7 @@ import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
-export const ErrorInjectionPanel: FC = () => {
+export function ErrorInjectionPanel() {
   const permission = useActionPermission('inject');
   const { t } = useTranslation('errors');
   const { data: errorInfo, error, refetch: refetchErrors } = useAppState('errorTypes');
@@ -435,6 +435,6 @@ export const ErrorInjectionPanel: FC = () => {
       />
     </div>
   );
-};
+}
 
 import { useActionPermission } from '../contexts/ScopeContext';

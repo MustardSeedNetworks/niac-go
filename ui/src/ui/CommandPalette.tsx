@@ -8,7 +8,7 @@
  */
 import { Command } from 'cmdk';
 import { HelpCircle, Moon, Search, Settings as SettingsIcon, Sun } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { SidebarNavGroup } from './Sidebar';
@@ -32,7 +32,7 @@ export interface CommandPaletteProps {
   isDark?: boolean;
 }
 
-export const CommandPalette: FC<CommandPaletteProps> = ({
+export function CommandPalette({
   groups,
   open,
   onOpenChange,
@@ -41,7 +41,7 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
   onOpenHelp,
   onToggleTheme,
   isDark,
-}) => {
+}: CommandPaletteProps) {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const [value, setValue] = useState('');
@@ -191,4 +191,4 @@ export const CommandPalette: FC<CommandPaletteProps> = ({
       </div>
     </Command.Dialog>
   );
-};
+}

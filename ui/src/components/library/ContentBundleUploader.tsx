@@ -1,5 +1,5 @@
 import { AlertCircle, FileArchive, PackageCheck, Upload, X } from 'lucide-react';
-import { type FC, useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApiError } from '../../api/errors';
 import { installContentBundleWithProgress } from '../../api/library-client';
@@ -46,7 +46,7 @@ function validateFile(file: File, invalidTypeMsg: string, tooLargeMsg: string, e
   return null;
 }
 
-export const ContentBundleUploader: FC = () => {
+export function ContentBundleUploader() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const showError = useErrorToast();
@@ -233,6 +233,6 @@ export const ContentBundleUploader: FC = () => {
       </CardContent>
     </Card>
   );
-};
+}
 
 export default ContentBundleUploader;

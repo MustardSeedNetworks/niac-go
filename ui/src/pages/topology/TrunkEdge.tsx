@@ -1,5 +1,4 @@
 import { BaseEdge, EdgeLabelRenderer, type EdgeProps, getSmoothStepPath } from '@xyflow/react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LinkEdgeData } from './types';
 
@@ -49,7 +48,7 @@ import type { LinkEdgeData } from './types';
  * the width, and estimating from the character count alone let an interface
  * label be placed on top of the line's own speed label.
  */
-export const TrunkEdge: FC<EdgeProps> = ({
+export function TrunkEdge({
   id,
   sourceX,
   sourceY,
@@ -61,7 +60,7 @@ export const TrunkEdge: FC<EdgeProps> = ({
   markerEnd,
   markerStart,
   data,
-}) => {
+}: EdgeProps) {
   const linkData = (data ?? {}) as LinkEdgeData;
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -148,41 +147,55 @@ export const TrunkEdge: FC<EdgeProps> = ({
       )}
     </>
   );
-};
+}
 
 const labelBoxStyle =
   'absolute pointer-events-none px-1.5 py-0.5 rounded text-[10px] font-medium ' +
   'border border-surface-border bg-bg-base/90 text-text-primary shadow-sm whitespace-nowrap';
 
-const EndLabel: FC<{ x: number; y: number; text: string; opacity: number }> = ({
+function EndLabel({
   x,
   y,
   text,
   opacity,
-}) => (
-  <div
-    className={labelBoxStyle}
-    style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, opacity }}
-  >
-    {text}
-  </div>
-);
+}: {
+  x: number;
+  y: number;
+  text: string;
+  opacity: number;
+}) {
+  return (
+    <div
+      className={labelBoxStyle}
+      style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, opacity }}
+    >
+      {text}
+    </div>
+  );
+}
 
-const MiddleLabel: FC<{ x: number; y: number; text: string; opacity: number }> = ({
+function MiddleLabel({
   x,
   y,
   text,
   opacity,
-}) => (
-  <div
-    className={`${labelBoxStyle} text-brand-accent`}
-    style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, opacity }}
-  >
-    {text}
-  </div>
-);
+}: {
+  x: number;
+  y: number;
+  text: string;
+  opacity: number;
+}) {
+  return (
+    <div
+      className={`${labelBoxStyle} text-brand-accent`}
+      style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, opacity }}
+    >
+      {text}
+    </div>
+  );
+}
 
-const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, data }) => {
+function EdgeTooltip({ x, y, data }: { x: number; y: number; data: LinkEdgeData }) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const rows: [string, string][] = [];
@@ -233,7 +246,7 @@ const EdgeTooltip: FC<{ x: number; y: number; data: LinkEdgeData }> = ({ x, y, d
       </div>
     </div>
   );
-};
+}
 
 function formatVlans(vlans: number[]): string {
   const [firstVlan, ...restVlans] = [...vlans].sort((a, b) => a - b);

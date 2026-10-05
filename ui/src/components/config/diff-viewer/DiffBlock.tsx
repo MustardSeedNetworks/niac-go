@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../../constants/sizes';
 import { Button } from '../../../ui/Button';
@@ -35,10 +35,13 @@ function padLines(lines: DiffLine[], targetLength: number): DiffLine[] {
  * side-by-side (DiffBlock) and unified (DiffBlockOverlay) renderers
  * share one implementation.
  */
-export const DiffBlockMergeControls: FC<{
+export function DiffBlockMergeControls({
+  decision,
+  onDecision,
+}: {
   decision?: MergeDecision;
   onDecision: (choice: MergeDecision['choice']) => void;
-}> = ({ decision, onDecision }) => {
+}) {
   const { t } = useTranslation('pages');
   const choiceLabels: Record<MergeDecision['choice'], string> = {
     left: t('configDiff.leftChoiceLabel'),
@@ -84,47 +87,48 @@ export const DiffBlockMergeControls: FC<{
       )}
     </div>
   );
-};
+}
 
 /**
  * Diff block with merge controls
  */
-export const DiffBlockComponent: FC<DiffBlockComponentProps> = memo(
-  ({ block, decision, onDecision, showMergeControls }) => {
-    const isChanged = block.type !== 'unchanged';
-    const maxLines = Math.max(block.leftLines.length, block.rightLines.length);
+export const DiffBlockComponent = memo(function DiffBlockComponent({
+  block,
+  decision,
+  onDecision,
+  showMergeControls,
+}: DiffBlockComponentProps) {
+  const isChanged = block.type !== 'unchanged';
+  const maxLines = Math.max(block.leftLines.length, block.rightLines.length);
 
-    const paddedLeftLines = padLines(block.leftLines, maxLines);
-    const paddedRightLines = padLines(block.rightLines, maxLines);
+  const paddedLeftLines = padLines(block.leftLines, maxLines);
+  const paddedRightLines = padLines(block.rightLines, maxLines);
 
-    return (
-      <div
-        className={`${isChanged ? 'border border-surface-border rounded-lg overflow-hidden mb-2' : ''}`}
-      >
-        {/* Merge controls for changed blocks */}
-        {isChanged && showMergeControls && (
-          <DiffBlockMergeControls decision={decision} onDecision={onDecision} />
-        )}
+  return (
+    <div
+      className={`${isChanged ? 'border border-surface-border rounded-lg overflow-hidden mb-2' : ''}`}
+    >
+      {/* Merge controls for changed blocks */}
+      {isChanged && showMergeControls && (
+        <DiffBlockMergeControls decision={decision} onDecision={onDecision} />
+      )}
 
-        {/* Side-by-side diff display */}
-        <div className="grid grid-cols-2 divide-x divide-knob/10">
-          {/* Left panel */}
-          <div className="overflow-x-auto">
-            {paddedLeftLines.map((line, idx) => (
-              <DiffLineComponent key={`left-${block.id}-${idx}`} line={line} side="left" />
-            ))}
-          </div>
+      {/* Side-by-side diff display */}
+      <div className="grid grid-cols-2 divide-x divide-knob/10">
+        {/* Left panel */}
+        <div className="overflow-x-auto">
+          {paddedLeftLines.map((line, idx) => (
+            <DiffLineComponent key={`left-${block.id}-${idx}`} line={line} side="left" />
+          ))}
+        </div>
 
-          {/* Right panel */}
-          <div className="overflow-x-auto">
-            {paddedRightLines.map((line, idx) => (
-              <DiffLineComponent key={`right-${block.id}-${idx}`} line={line} side="right" />
-            ))}
-          </div>
+        {/* Right panel */}
+        <div className="overflow-x-auto">
+          {paddedRightLines.map((line, idx) => (
+            <DiffLineComponent key={`right-${block.id}-${idx}`} line={line} side="right" />
+          ))}
         </div>
       </div>
-    );
-  },
-);
-
-DiffBlockComponent.displayName = 'DiffBlockComponent';
+    </div>
+  );
+});

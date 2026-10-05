@@ -1,4 +1,4 @@
-import { type FC, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSynthesizeWalkModels, synthesizeWalk } from '../../api/client';
 import { isApiError } from '../../api/errors';
@@ -60,11 +60,11 @@ function groupByVendor(models: ModelDescriptor[]): VendorGroup[] {
  * than an encoded "vendor model" string, so lookup on generate never has
  * to split/parse a label that may itself contain spaces.
  */
-export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
+export function SynthesizeWalkControl({
   hostname,
   disabled,
   onSynthesized,
-}) => {
+}: SynthesizeWalkControlProps) {
   const { t } = useTranslation('devices');
   const { data: models, error: modelsError } = useApiResource(fetchSynthesizeWalkModels, [
     'synthesize-models',
@@ -172,4 +172,4 @@ export const SynthesizeWalkControl: FC<SynthesizeWalkControlProps> = ({
       </div>
     </FormField>
   );
-};
+}

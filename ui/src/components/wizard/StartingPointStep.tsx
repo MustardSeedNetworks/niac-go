@@ -1,5 +1,5 @@
 import { Network } from 'lucide-react';
-import { type FC, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
@@ -28,7 +28,7 @@ interface StartingPointStepProps {
  * authoring and preflight. The selected content is copied into a revisioned
  * draft; this step never changes the daemon's active configuration.
  */
-export const StartingPointStep: FC<StartingPointStepProps> = ({
+export function StartingPointStep({
   state,
   onSelectUserConfig,
   onUpload,
@@ -37,7 +37,7 @@ export const StartingPointStep: FC<StartingPointStepProps> = ({
   onSelectPack,
   onFleetChange,
   onInterfaceChange,
-}) => {
+}: StartingPointStepProps) {
   const { t } = useTranslation('pages');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,4 +219,4 @@ export const StartingPointStep: FC<StartingPointStepProps> = ({
       </div>
     </div>
   );
-};
+}

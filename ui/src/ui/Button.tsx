@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, type LinkProps } from 'react-router';
 import { iconSizes } from '../constants/sizes';
@@ -72,7 +72,7 @@ const variantStyles: Record<ButtonVariant, Record<ButtonTone, string>> = {
 };
 
 // Loading spinner component
-const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
+function LoadingSpinner({ size }: { size: ButtonSize }) {
   const { t } = useTranslation('common');
   const spinnerSize = size === 'xs' || size === 'sm' ? iconSizes.xs : iconSizes.md;
   return (
@@ -91,7 +91,7 @@ const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
       />
     </svg>
   );
-};
+}
 
 /**
  * Button renders data-variant / data-tone alongside the classes so "one
@@ -101,7 +101,7 @@ const LoadingSpinner: FC<{ size: ButtonSize }> = ({ size }) => {
  *
  * React 19: ref as a regular prop instead of forwardRef.
  */
-export const Button: FC<ButtonProps> = ({
+export function Button({
   children,
   variant = 'solid',
   tone = 'violet',
@@ -115,7 +115,7 @@ export const Button: FC<ButtonProps> = ({
   action,
   ref,
   ...props
-}) => {
+}: ButtonProps) {
   const permission = useActionPermission(action);
   const hint = permission.title ?? title;
   const unavailable = disabled || loading || permission.disabled;
@@ -135,7 +135,7 @@ export const Button: FC<ButtonProps> = ({
     </button>
   );
   return <Tooltip text={hint}>{button}</Tooltip>;
-};
+}
 
 // Icon button for compact actions
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -148,7 +148,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
 }
 
-export const IconButton: FC<IconButtonProps> = ({
+export function IconButton({
   icon,
   variant = 'ghost',
   tone = 'gray',
@@ -157,7 +157,7 @@ export const IconButton: FC<IconButtonProps> = ({
   action,
   title,
   ...props
-}) => {
+}: IconButtonProps) {
   const permission = useActionPermission(action);
   const hint = permission.title ?? title;
   const unavailable = props.disabled || permission.disabled;
@@ -192,7 +192,7 @@ export const IconButton: FC<IconButtonProps> = ({
     </button>
   );
   return <Tooltip text={hint}>{button}</Tooltip>;
-};
+}
 
 interface LinkButtonProps extends Omit<LinkProps, 'className'> {
   children: ReactNode;
@@ -211,7 +211,7 @@ interface LinkButtonProps extends Omit<LinkProps, 'className'> {
  * navigate() — which loses all of that. Carries the same data-variant /
  * data-tone as Button so one query finds every primary.
  */
-export const LinkButton: FC<LinkButtonProps> = ({
+export function LinkButton({
   children,
   variant = 'solid',
   tone = 'violet',
@@ -219,14 +219,16 @@ export const LinkButton: FC<LinkButtonProps> = ({
   leftIcon,
   className = '',
   ...props
-}) => (
-  <Link
-    className={`${baseStyles} no-underline ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
-    data-variant={variant}
-    data-tone={tone}
-    {...props}
-  >
-    {leftIcon}
-    {children}
-  </Link>
-);
+}: LinkButtonProps) {
+  return (
+    <Link
+      className={`${baseStyles} no-underline ${sizeStyles[size]} ${variantStyles[variant][tone]} ${className}`}
+      data-variant={variant}
+      data-tone={tone}
+      {...props}
+    >
+      {leftIcon}
+      {children}
+    </Link>
+  );
+}

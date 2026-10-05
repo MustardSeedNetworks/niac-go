@@ -1,5 +1,4 @@
 import { Network } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   isScenarioRequestValid,
@@ -50,14 +49,14 @@ const countLimits: Record<keyof ScenarioCounts, { min: number; max: number; step
   wirelessControllers: { min: 0, max: 8 },
 };
 
-export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
+export function FleetGeneratorCard({
   request,
   selected,
   selectedPackId,
   onChange,
   onSelect,
   onSelectPack,
-}) => {
+}: FleetGeneratorCardProps) {
   const { t } = useTranslation('pages');
   const updateCount = (field: keyof ScenarioCounts, value: number) => {
     const counts = { ...request.counts, [field]: value };
@@ -245,4 +244,4 @@ export const FleetGeneratorCard: FC<FleetGeneratorCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

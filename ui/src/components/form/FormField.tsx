@@ -1,5 +1,5 @@
 import { HelpCircle } from 'lucide-react';
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { iconSizes } from '../../constants/sizes';
 
 export interface FormFieldProps {
@@ -32,16 +32,18 @@ const rowClassName = 'flex items-center gap-compact text-sm font-medium text-tex
  * simulated CLI accepts" -- the name and the description run together. Keeping
  * it a sibling leaves the accessible name as the label alone.
  */
-const HelpTip: FC<{ text: string }> = ({ text }) => (
-  <span className="relative group">
-    <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} aria-hidden="true" />
-    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-compact-md bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-      {text}
+function HelpTip({ text }: { text: string }) {
+  return (
+    <span className="relative group">
+      <HelpCircle className={`${iconSizes.sm} text-text-muted cursor-help`} aria-hidden="true" />
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-compact-md bg-bg-elevated text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+        {text}
+      </span>
     </span>
-  </span>
-);
+  );
+}
 
-export const FormField: FC<FormFieldProps> = ({
+export function FormField({
   label,
   children,
   helpText,
@@ -49,20 +51,22 @@ export const FormField: FC<FormFieldProps> = ({
   className = '',
   htmlFor,
   error,
-}) => (
-  <div className={className}>
-    <div className={rowClassName}>
-      <label htmlFor={htmlFor} className="flex items-center gap-compact">
-        {label}
-        {required && <span className="text-status-error">*</span>}
-      </label>
-      {helpText && <HelpTip text={helpText} />}
+}: FormFieldProps) {
+  return (
+    <div className={className}>
+      <div className={rowClassName}>
+        <label htmlFor={htmlFor} className="flex items-center gap-compact">
+          {label}
+          {required && <span className="text-status-error">*</span>}
+        </label>
+        {helpText && <HelpTip text={helpText} />}
+      </div>
+      {children}
+      {error && (
+        <p className="mt-1 text-xs text-status-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
-    {children}
-    {error && (
-      <p className="mt-1 text-xs text-status-error" role="alert">
-        {error}
-      </p>
-    )}
-  </div>
-);
+  );
+}

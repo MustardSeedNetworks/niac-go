@@ -1,5 +1,4 @@
 import { Boxes } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchScenarioPacks, type ScenarioPack } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
@@ -20,10 +19,7 @@ interface ScenarioPackPickerProps {
   onSelectPack: (pack: ScenarioPack) => void;
 }
 
-const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({
-  selectedPackId,
-  onSelectPack,
-}) => {
+function ScenarioPackPickerContent({ selectedPackId, onSelectPack }: ScenarioPackPickerProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const {
@@ -119,8 +115,8 @@ const ScenarioPackPickerContent: FC<ScenarioPackPickerProps> = ({
       )}
     </div>
   );
-};
+}
 
-export const ScenarioPackPicker: FC<ScenarioPackPickerProps> = (props) => (
-  <ScenarioPackPickerContent {...props} />
-);
+export function ScenarioPackPicker(props: ScenarioPackPickerProps) {
+  return <ScenarioPackPickerContent {...props} />;
+}

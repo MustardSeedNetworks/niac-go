@@ -1,5 +1,5 @@
 import { AlertCircle, FileCode, Upload, X } from 'lucide-react';
-import { type FC, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { SmallText } from '../../ui/Typography';
@@ -32,13 +32,13 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1 MB
  * is already loaded it switches into a compact "file loaded" tile with
  * a clear button instead.
  */
-export const FileUploadZone: FC<FileUploadZoneProps> = ({
+export function FileUploadZone({
   label,
   file,
   onFileUpload,
   onClear,
   disabled,
-}) => {
+}: FileUploadZoneProps) {
   const { t } = useTranslation('pages');
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,4 +169,4 @@ export const FileUploadZone: FC<FileUploadZoneProps> = ({
       )}
     </div>
   );
-};
+}

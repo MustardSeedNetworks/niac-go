@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSessionClients } from '../../api/client';
 import type { AttachmentPort, CompiledAttachment } from '../../api/types';
@@ -18,11 +17,7 @@ interface DeviceAttachmentPoolProps {
  * reads as the client on it, the MAC it is held for, or free; a client here can
  * be moved to any free port of the pool, on this device or another.
  */
-export const DeviceAttachmentPool: FC<DeviceAttachmentPoolProps> = ({
-  sessionId,
-  pool,
-  device,
-}) => {
+export function DeviceAttachmentPool({ sessionId, pool, device }: DeviceAttachmentPoolProps) {
   const { t } = useTranslation('pages');
   const {
     data: clients,
@@ -95,4 +90,4 @@ export const DeviceAttachmentPool: FC<DeviceAttachmentPoolProps> = ({
       )}
     </section>
   );
-};
+}

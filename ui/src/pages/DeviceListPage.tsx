@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { CloneDeviceModal } from '../components/device-list/CloneDeviceModal';
@@ -20,7 +19,7 @@ import { DeviceListProvider } from '../contexts/DeviceListContext';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
-export const DeviceListPage: FC = () => {
+export function DeviceListPage() {
   const { t } = useTranslation('devices');
   const navigate = useNavigate();
 
@@ -164,4 +163,4 @@ export const DeviceListPage: FC = () => {
       />
     </div>
   );
-};
+}

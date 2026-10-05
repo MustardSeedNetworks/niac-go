@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
 import { buildProtocolLayers } from '../utils/protocol-layers';
@@ -14,7 +14,10 @@ interface ProtocolTreeProps {
  * Protocol dissection tree view. Replaces the flat PacketDetails for Wireshark-like
  * layered protocol inspection. Clicking fields with byte offsets highlights the hex dump.
  */
-export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect }) => {
+export const ProtocolTree = memo(function ProtocolTree({
+  packet,
+  onFieldSelect,
+}: ProtocolTreeProps) {
   const { t } = useTranslation('pages');
   const layers = useMemo(() => {
     if (!packet) return [];
@@ -111,5 +114,3 @@ export const ProtocolTree: FC<ProtocolTreeProps> = memo(({ packet, onFieldSelect
     </div>
   );
 });
-
-ProtocolTree.displayName = 'ProtocolTree';

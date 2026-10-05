@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type FC, useRef } from 'react';
+import { useRef } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { useFocusOnRouteChange } from './useFocusOnRouteChange';
@@ -11,7 +11,7 @@ import { useFocusOnRouteChange } from './useFocusOnRouteChange';
  * old <h1> and mounts a new one. A hook that captured the node once would
  * pass a naive test and focus a detached element here.
  */
-const Shell: FC = () => {
+function Shell() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const Shell: FC = () => {
       </div>
     </>
   );
-};
+}
 
 const renderShell = () =>
   render(

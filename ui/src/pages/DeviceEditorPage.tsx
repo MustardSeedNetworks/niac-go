@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchConfigDevices } from '../api/client';
@@ -22,7 +21,7 @@ import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import { useApiResource } from '../hooks/useApiResource';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
-export const DeviceEditorPage: FC = () => {
+export function DeviceEditorPage() {
   const {
     hostname,
     isNewDevice,
@@ -191,6 +190,6 @@ export const DeviceEditorPage: FC = () => {
       />
     </div>
   );
-};
+}
 
 export default DeviceEditorPage;

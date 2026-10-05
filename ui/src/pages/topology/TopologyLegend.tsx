@@ -11,7 +11,6 @@
  */
 
 import { Eye, EyeOff } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEVICE_TYPES as SCHEMA_DEVICE_TYPES } from '../../components/device-editor/generated/sections.generated';
 import {
@@ -56,7 +55,7 @@ const UTILIZATION_TIERS = [
  * and the discovered/declared + utilization + direction edge
  * encodings. Can be collapsed to save space on the canvas.
  */
-export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
+export function TopologyLegend({ show, onToggle }: TopologyLegendProps) {
   const { t } = useTranslation('pages');
   const deviceTypeLabels = useDeviceTypeLabels();
   if (!show) {
@@ -230,4 +229,4 @@ export const TopologyLegend: FC<TopologyLegendProps> = ({ show, onToggle }) => {
       </div>
     </div>
   );
-};
+}

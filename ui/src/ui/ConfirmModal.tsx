@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { type FC, type ReactNode, useId } from 'react';
+import { type ReactNode, useId } from 'react';
 import { iconSizes } from '../constants/sizes';
 import type { Action } from '../contexts/permissions';
 import { Button } from './Button';
@@ -25,7 +25,7 @@ export interface ConfirmModalProps {
   confirmingLabel?: string;
 }
 
-export const ConfirmModal: FC<ConfirmModalProps> = ({
+export function ConfirmModal({
   action,
   isOpen,
   onConfirm,
@@ -38,7 +38,7 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
   icon,
   confirming = false,
   confirmingLabel,
-}) => {
+}: ConfirmModalProps) {
   // The heading lives in the body because it sits beside an icon, which Modal's
   // own header cannot express. Passing its id is what gives the dialog an
   // accessible name — without it a screen reader announces "dialog" and stops
@@ -84,4 +84,4 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
       </div>
     </Modal>
   );
-};
+}

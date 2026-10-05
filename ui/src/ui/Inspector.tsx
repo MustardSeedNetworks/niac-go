@@ -30,7 +30,7 @@
  *     </InspectorPanes>
  *   </Inspector>
  */
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '../styles/theme';
 import { Card, CardContent } from './Card';
 
@@ -41,32 +41,35 @@ import { Card, CardContent } from './Card';
  */
 const COLUMN_HEIGHT = 'h-[600px]';
 
-export const Inspector: FC<{ filter?: ReactNode; children: ReactNode }> = ({
-  filter,
-  children,
-}) => (
-  <div className="stack-xl">
-    {filter ? <div>{filter}</div> : null}
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">{children}</div>
-  </div>
-);
+export function Inspector({ filter, children }: { filter?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="stack-xl">
+      {filter ? <div>{filter}</div> : null}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacious">{children}</div>
+    </div>
+  );
+}
 
 /**
  * The record list column. Deliberately the wider half: the list is what the
  * operator reads and scans, while the panes answer a question about the one
  * row already chosen.
  */
-export const InspectorRecords: FC<{ children: ReactNode }> = ({ children }) => (
-  <div className="lg:col-span-7 xl:col-span-8">
-    <div className={COLUMN_HEIGHT}>{children}</div>
-  </div>
-);
+export function InspectorRecords({ children }: { children: ReactNode }) {
+  return (
+    <div className="lg:col-span-7 xl:col-span-8">
+      <div className={COLUMN_HEIGHT}>{children}</div>
+    </div>
+  );
+}
 
-export const InspectorPanes: FC<{ children: ReactNode }> = ({ children }) => (
-  <div className={cn('lg:col-span-5 xl:col-span-4 flex flex-col gap-spacious', COLUMN_HEIGHT)}>
-    {children}
-  </div>
-);
+export function InspectorPanes({ children }: { children: ReactNode }) {
+  return (
+    <div className={cn('lg:col-span-5 xl:col-span-4 flex flex-col gap-spacious', COLUMN_HEIGHT)}>
+      {children}
+    </div>
+  );
+}
 
 interface InspectorPaneProps {
   /** Kicker above the pane. Prose, so it is not monospaced. */
@@ -81,13 +84,15 @@ interface InspectorPaneProps {
  * hand-set pixel heights, which is what let the two implementations drift to
  * 350/220 and 280/280 for the same two panes.
  */
-export const InspectorPane: FC<InspectorPaneProps> = ({ label, scroll = false, children }) => (
-  <Card className="border-surface-border bg-bg-surface/70 flex-1 min-h-0">
-    <CardContent className="h-full flex flex-col">
-      <p className="text-xs uppercase tracking-wide font-semibold text-text-muted mb-heading">
-        {label}
-      </p>
-      <div className={cn('flex-1 min-h-0', scroll && 'overflow-y-auto')}>{children}</div>
-    </CardContent>
-  </Card>
-);
+export function InspectorPane({ label, scroll = false, children }: InspectorPaneProps) {
+  return (
+    <Card className="border-surface-border bg-bg-surface/70 flex-1 min-h-0">
+      <CardContent className="h-full flex flex-col">
+        <p className="text-xs uppercase tracking-wide font-semibold text-text-muted mb-heading">
+          {label}
+        </p>
+        <div className={cn('flex-1 min-h-0', scroll && 'overflow-y-auto')}>{children}</div>
+      </CardContent>
+    </Card>
+  );
+}

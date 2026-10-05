@@ -12,7 +12,7 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { normalizeDeviceType } from '../constants/device-types';
@@ -74,7 +74,7 @@ const edgeTypes: EdgeTypes = {
  * data fetching (topology + devices + neighbors), state for the
  * legend / minimap / selected device, and the export action.
  */
-export const TopologyPage: FC = () => {
+export function TopologyPage() {
   const { t } = useTranslation('pages');
   const deviceTypeLabels = useDeviceTypeLabels();
   const { t: tCommon } = useTranslation('common');
@@ -851,6 +851,6 @@ export const TopologyPage: FC = () => {
       {view === 'neighbors' && <NeighborsView />}
     </div>
   );
-};
+}
 
 export default TopologyPage;

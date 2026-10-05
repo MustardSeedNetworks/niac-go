@@ -1,5 +1,5 @@
 import { FileCog, Save } from 'lucide-react';
-import { type FC, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDraft } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
@@ -24,7 +24,7 @@ interface DevicesStepProps {
 }
 
 /** Step 2 edits the saved draft without touching the active runtime. */
-export const DevicesStep: FC<DevicesStepProps> = ({
+export function DevicesStep({
   draftName,
   draft,
   content,
@@ -34,7 +34,7 @@ export const DevicesStep: FC<DevicesStepProps> = ({
   onSave,
   onDraftUpdate,
   onBusyChange,
-}) => {
+}: DevicesStepProps) {
   const { t } = useTranslation('pages');
   const visualSupported = useMemo(
     () => !parseDraftTopology(draft.content).configBacked,
@@ -135,4 +135,4 @@ export const DevicesStep: FC<DevicesStepProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

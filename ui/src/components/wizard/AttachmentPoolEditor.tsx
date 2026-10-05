@@ -1,4 +1,3 @@
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 import { SmallText } from '../../ui/Typography';
@@ -29,13 +28,13 @@ const portKey = (device: string, port: string) => `${device}|${port}`;
  * NIAC host is cabled on. Offering to change it would invite the two to be
  * confused.
  */
-export const AttachmentPoolEditor: FC<AttachmentPoolEditorProps> = ({
+export function AttachmentPoolEditor({
   index,
   attachment,
   devices,
   onChange,
   inputClassName,
-}) => {
+}: AttachmentPoolEditorProps) {
   const { t } = useTranslation('pages');
   const groups = attachment.at ?? [{ device: '', ports: [] }];
   const pins = attachment.pins ?? [];
@@ -256,4 +255,4 @@ export const AttachmentPoolEditor: FC<AttachmentPoolEditorProps> = ({
       )}
     </div>
   );
-};
+}

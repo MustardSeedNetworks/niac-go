@@ -1,5 +1,4 @@
 import { AlertCircle, ArrowLeft, Check, RefreshCw, Save, Trash2 } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deviceTypeIcons, normalizeDeviceType } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
@@ -30,7 +29,7 @@ export interface DeviceEditorHeaderProps {
   onNavigateBack: () => void;
 }
 
-export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
+export function DeviceEditorHeader({
   device,
   isNewDevice,
   isDirty,
@@ -43,7 +42,7 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
   onDiscard,
   onSave,
   onNavigateBack,
-}) => {
+}: DeviceEditorHeaderProps) {
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
   const deviceType = normalizeDeviceType(device.type);
@@ -142,4 +141,4 @@ export const DeviceEditorHeader: FC<DeviceEditorHeaderProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

@@ -8,7 +8,7 @@ import {
   RotateCcw,
   Trash2,
 } from 'lucide-react';
-import { type FC, useCallback, useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
@@ -38,7 +38,7 @@ interface MergeControlsProps {
 /**
  * Merge action controls for the config diff page
  */
-export const MergeControls: FC<MergeControlsProps> = ({
+export function MergeControls({
   diffBlocks,
   mergeDecisions,
   onAcceptAllLeft,
@@ -50,7 +50,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
   disabled = false,
   leftLabel = 'Original',
   rightLabel = 'Modified',
-}) => {
+}: MergeControlsProps) {
   const { t } = useTranslation('pages');
   // Confirm modal states
   const [showAcceptLeftConfirm, setShowAcceptLeftConfirm] = useState(false);
@@ -326,7 +326,7 @@ export const MergeControls: FC<MergeControlsProps> = ({
       />
     </Card>
   );
-};
+}
 
 /**
  * Preview modal for merged content
@@ -337,7 +337,7 @@ interface MergePreviewModalProps {
   onExport: () => void;
 }
 
-export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose, onExport }) => {
+export function MergePreviewModal({ content, onClose, onExport }: MergePreviewModalProps) {
   const { t } = useTranslation('pages');
   const titleId = useId();
   const lineCount = useMemo(() => content.split('\n').length, [content]);
@@ -392,4 +392,4 @@ export const MergePreviewModal: FC<MergePreviewModalProps> = ({ content, onClose
       />
     </Modal>
   );
-};
+}

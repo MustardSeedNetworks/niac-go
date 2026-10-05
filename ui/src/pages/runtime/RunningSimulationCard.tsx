@@ -1,5 +1,4 @@
 import { Activity, Download, FileCog } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { fetchConfig } from '../../api/client';
@@ -36,12 +35,12 @@ export interface RunningSimulationCardProps {
  * file reads as a clean Start/Stop flow without 100+ lines of
  * Stat-block markup.
  */
-export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
+export function RunningSimulationCard({
   simStatus,
   stopping,
   onStop,
   message,
-}) => {
+}: RunningSimulationCardProps) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
@@ -191,4 +190,4 @@ export const RunningSimulationCard: FC<RunningSimulationCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

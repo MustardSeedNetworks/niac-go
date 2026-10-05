@@ -1,4 +1,4 @@
-import type { ChangeEvent, FC, MutableRefObject } from 'react';
+import type { ChangeEvent, MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WalkCaptureCredentials } from '../../api/walk-profile-client';
 import { Button } from '../../ui/Button';
@@ -21,7 +21,7 @@ interface Props {
   cancel: () => void;
 }
 
-export const WalkProfileSource: FC<Props> = (props) => {
+export function WalkProfileSource(props: Props) {
   const { t } = useTranslation('pages');
   const chooseFile = (event: ChangeEvent<HTMLInputElement>) => {
     props.setFile(event.target.files?.[0] ?? null);
@@ -95,4 +95,4 @@ export const WalkProfileSource: FC<Props> = (props) => {
       )}
     </>
   );
-};
+}

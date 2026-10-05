@@ -34,7 +34,7 @@
  */
 
 import type React from 'react';
-import type { FC, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CardValue, type Status, StatusCard } from './Card';
 import { Skeleton } from './Skeleton';
@@ -76,25 +76,27 @@ interface BaseCardProps<T> {
  * Default loading skeleton for cards.
  * Can be overridden with loadingContent prop.
  */
-const DefaultLoadingSkeleton: FC = () => (
-  <div className="stack">
-    <Skeleton width="50%" height={24} />
-    <div className="stack-sm">
-      <div className="flex justify-between">
-        <Skeleton width="30%" />
-        <Skeleton width="40%" />
-      </div>
-      <div className="flex justify-between">
-        <Skeleton width="25%" />
-        <Skeleton width="35%" />
-      </div>
-      <div className="flex justify-between">
-        <Skeleton width="35%" />
-        <Skeleton width="30%" />
+function DefaultLoadingSkeleton() {
+  return (
+    <div className="stack">
+      <Skeleton width="50%" height={24} />
+      <div className="stack-sm">
+        <div className="flex justify-between">
+          <Skeleton width="30%" />
+          <Skeleton width="40%" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton width="25%" />
+          <Skeleton width="35%" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton width="35%" />
+          <Skeleton width="30%" />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+}
 
 /**
  * BaseCard - Generic data-driven card with state handling.
@@ -223,7 +225,7 @@ interface SimpleBaseCardProps {
  * Use this when you have a pre-determined status and don't need the
  * render prop pattern of BaseCard.
  */
-export const SimpleBaseCard: FC<SimpleBaseCardProps> = ({
+export function SimpleBaseCard({
   title,
   subtitle,
   icon,
@@ -234,7 +236,7 @@ export const SimpleBaseCard: FC<SimpleBaseCardProps> = ({
   loadingContent,
   className,
   onClick,
-}) => {
+}: SimpleBaseCardProps) {
   // Loading state
   if (loading) {
     return (
@@ -282,4 +284,4 @@ export const SimpleBaseCard: FC<SimpleBaseCardProps> = ({
       {children}
     </StatusCard>
   );
-};
+}

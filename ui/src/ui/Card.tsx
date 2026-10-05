@@ -25,7 +25,7 @@
  * ```
  */
 
-import type { FC, HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
+import type { HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
 import { type Status, StatusBadge } from './StatusBadge';
 import { getStatusConfig } from './StatusConfig';
 
@@ -73,14 +73,14 @@ interface BaseCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'>
  * Basic Card container - use for simple layouts without status/title.
  * Preserves original API for backwards compatibility.
  */
-export const Card: FC<BaseCardProps> = ({
+export function Card({
   children,
   className = '',
   variant = 'default',
   hover = false,
   padding,
   ...rest
-}) => {
+}: BaseCardProps) {
   const paddingClass = padding ? (paddingClasses[padding] ?? '') : '';
 
   return (
@@ -91,7 +91,7 @@ export const Card: FC<BaseCardProps> = ({
       {children}
     </div>
   );
-};
+}
 
 // ============================================================================
 // Enhanced Card with Status (new - matches Seed pattern)
@@ -127,7 +127,7 @@ interface StatusCardProps {
  *
  * Use this for data-driven cards that need status indication.
  */
-export const StatusCard: FC<StatusCardProps> = ({
+export function StatusCard({
   title,
   subtitle,
   status,
@@ -139,7 +139,7 @@ export const StatusCard: FC<StatusCardProps> = ({
   enableLiveRegion = false,
   ariaLabel,
   variant = 'default',
-}) => {
+}: StatusCardProps) {
   const isInteractive = typeof onClick === 'function';
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
@@ -201,7 +201,7 @@ export const StatusCard: FC<StatusCardProps> = ({
       </div>
     </div>
   );
-};
+}
 
 // ============================================================================
 // Card Sub-components
@@ -212,9 +212,9 @@ interface CardContentProps {
   className?: string;
 }
 
-export const CardContent: FC<CardContentProps> = ({ children, className = '' }) => (
-  <div className={`pad-lg ${className}`}>{children}</div>
-);
+export function CardContent({ children, className = '' }: CardContentProps) {
+  return <div className={`pad-lg ${className}`}>{children}</div>;
+}
 
 interface CardHeaderProps {
   children: ReactNode;
@@ -222,23 +222,29 @@ interface CardHeaderProps {
   actions?: ReactNode;
 }
 
-export const CardHeader: FC<CardHeaderProps> = ({ children, className = '', actions }) => (
-  <div className={`flex-between px-6 py-4 border-b border-surface-border ${className}`}>
-    <div className="flex items-center gap-default">{children}</div>
-    {actions && <div className="flex items-center gap-compact">{actions}</div>}
-  </div>
-);
+export function CardHeader({ children, className = '', actions }: CardHeaderProps) {
+  return (
+    <div className={`flex-between px-6 py-4 border-b border-surface-border ${className}`}>
+      <div className="flex items-center gap-default">{children}</div>
+      {actions && <div className="flex items-center gap-compact">{actions}</div>}
+    </div>
+  );
+}
 
 interface CardFooterProps {
   children: ReactNode;
   className?: string;
 }
 
-export const CardFooter: FC<CardFooterProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-t border-surface-border bg-scrim/20 rounded-b-xl ${className}`}>
-    {children}
-  </div>
-);
+export function CardFooter({ children, className = '' }: CardFooterProps) {
+  return (
+    <div
+      className={`px-6 py-4 border-t border-surface-border bg-scrim/20 rounded-b-xl ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 // ============================================================================
 // Card Value & Row Components (matches Seed pattern)
@@ -268,14 +274,14 @@ const valueSizeClasses = {
 /**
  * CardValue - Displays a prominent value with optional label and status.
  */
-export const CardValue: FC<CardValueProps> = ({
+export function CardValue({
   label,
   value,
   unit,
   size = 'md',
   status,
   mono = false,
-}) => {
+}: CardValueProps) {
   const statusColor = status ? getStatusConfig(status).color : 'text-text-primary';
 
   return (
@@ -290,7 +296,7 @@ export const CardValue: FC<CardValueProps> = ({
       </p>
     </div>
   );
-};
+}
 
 interface CardRowProps {
   /** Row label */
@@ -304,7 +310,7 @@ interface CardRowProps {
 /**
  * CardRow - Displays a label-value pair in a horizontal row.
  */
-export const CardRow: FC<CardRowProps> = ({ label, value, mono = false }) => {
+export function CardRow({ label, value, mono = false }: CardRowProps) {
   return (
     <div className="flex justify-between items-center py-compact">
       <span className="text-sm text-text-muted shrink-0">{label}</span>
@@ -317,14 +323,14 @@ export const CardRow: FC<CardRowProps> = ({ label, value, mono = false }) => {
       </span>
     </div>
   );
-};
+}
 
 /**
  * CardDivider - Horizontal divider for separating card sections.
  */
-export const CardDivider: FC<{ className?: string }> = ({ className = '' }) => (
-  <hr className={`border-surface-border my-3 ${className}`} />
-);
+export function CardDivider({ className = '' }: { className?: string }) {
+  return <hr className={`border-surface-border my-3 ${className}`} />;
+}
 
 // ============================================================================
 // Stat Card (preserved from original)
@@ -341,7 +347,7 @@ interface StatCardProps {
   className?: string;
 }
 
-export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, className = '' }) => {
+export function StatCard({ label, value, icon, trend, className = '' }: StatCardProps) {
   const trendColor = trend
     ? trend.value > 0
       ? 'text-status-success'
@@ -371,4 +377,4 @@ export const StatCard: FC<StatCardProps> = ({ label, value, icon, trend, classNa
       </CardContent>
     </Card>
   );
-};
+}

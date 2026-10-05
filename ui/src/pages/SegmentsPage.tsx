@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react';
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SegmentSummary } from '../api/types';
 import { DeviceTable } from '../components/DeviceTable';
@@ -20,16 +20,18 @@ import { H3, SmallText } from '../ui/Typography';
  * every device, so this page always has something to show once a
  * simulation is loaded.
  */
-export const SegmentsPage: FC = () => (
-  <div className="grid grid-cols-1 gap-spacious">
-    <SegmentsListCard />
-  </div>
-);
+export function SegmentsPage() {
+  return (
+    <div className="grid grid-cols-1 gap-spacious">
+      <SegmentsListCard />
+    </div>
+  );
+}
 
 /**
  * Segments List Card - Shows VLAN segments from current config
  */
-const SegmentsListCard: FC = () => {
+function SegmentsListCard() {
   const { t } = useTranslation('pages');
   const { sessionId } = useAppContext();
   const { data: segments, loading, error } = useSegmentsResource(sessionId);
@@ -63,7 +65,7 @@ const SegmentsListCard: FC = () => {
       }
     </BaseCard>
   );
-};
+}
 
 /**
  * One VLAN segment: header (VLAN tag or "Untagged") + device count, then

@@ -1,4 +1,4 @@
-import { type FC, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SmallText } from '../../ui/Typography';
 import { GlobalDebugLevelCard } from './GlobalDebugLevelCard';
@@ -8,7 +8,7 @@ import { GlobalDebugLevelCard } from './GlobalDebugLevelCard';
  * the global debug-level card) behind a collapsed <details>. Hidden by
  * default so the page reads as a clean Start/Stop flow for the 90% case.
  */
-export const AdvancedSection: FC = () => {
+export function AdvancedSection() {
   const { t } = useTranslation('pages');
   const [open, setOpen] = useState(false);
   return (
@@ -27,4 +27,4 @@ export const AdvancedSection: FC = () => {
       </div>
     </details>
   );
-};
+}

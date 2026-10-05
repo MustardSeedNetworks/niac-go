@@ -11,7 +11,6 @@
  */
 
 import { ViewportPortal } from '@xyflow/react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tier } from './tiers';
 
@@ -42,7 +41,7 @@ interface TierBandProps {
  * asserted directly — ViewportPortal resolves its target from ReactFlow's
  * store, which a unit test has no reason to stand up.
  */
-export const TierBand: FC<TierBandProps> = ({ tier, left, width }) => {
+export function TierBand({ tier, left, width }: TierBandProps) {
   const { t } = useTranslation('pages');
 
   return (
@@ -69,7 +68,7 @@ export const TierBand: FC<TierBandProps> = ({ tier, left, width }) => {
       </span>
     </div>
   );
-};
+}
 
 interface TierBandsProps {
   tiers: Tier[];
@@ -79,7 +78,7 @@ interface TierBandsProps {
   width: number;
 }
 
-export const TierBands: FC<TierBandsProps> = ({ tiers, left, width }) => {
+export function TierBands({ tiers, left, width }: TierBandsProps) {
   if (tiers.length === 0) {
     return null;
   }
@@ -92,4 +91,4 @@ export const TierBands: FC<TierBandsProps> = ({ tiers, left, width }) => {
       ))}
     </ViewportPortal>
   );
-};
+}

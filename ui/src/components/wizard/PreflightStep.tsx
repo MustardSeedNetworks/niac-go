@@ -1,4 +1,4 @@
-import { type FC, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   fetchAttachmentPolicies,
@@ -30,7 +30,7 @@ const ACCESS_VLAN_DEFAULT = 200;
 const inputClass =
   'rounded border border-surface-border bg-bg-elevated px-3 py-row text-sm text-text-primary';
 
-export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starting = false }) => {
+export function PreflightStep({ request, onStart, starting = false }: PreflightStepProps) {
   const { t } = useTranslation('pages');
   const [attachment, setAttachment] = useState('');
   const [mode, setMode] = useState<AttachmentMode>('access');
@@ -381,4 +381,4 @@ export const PreflightStep: FC<PreflightStepProps> = ({ request, onStart, starti
       </CardContent>
     </Card>
   );
-};
+}

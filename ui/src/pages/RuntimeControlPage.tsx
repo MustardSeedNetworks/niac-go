@@ -1,5 +1,5 @@
 import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
-import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
 import { fetchLibraryNetworkContent } from '../api/library-client';
@@ -42,7 +42,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  * - Quick override with file upload
  * - Link to Settings for configuration management
  */
-export const RuntimeControlPage: FC = () => {
+export function RuntimeControlPage() {
   const { t } = useTranslation('pages');
   const { data: simStatus, loading: simLoading, refetch: refetchSimStatus } = useSimulationStatus();
 
@@ -443,4 +443,4 @@ export const RuntimeControlPage: FC = () => {
       />
     </div>
   );
-};
+}

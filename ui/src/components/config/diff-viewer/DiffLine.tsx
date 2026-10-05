@@ -1,4 +1,4 @@
-import { type FC, memo } from 'react';
+import { memo } from 'react';
 import { getDiffStyles } from './diff-styles';
 import type { DiffLine } from './types';
 
@@ -10,7 +10,10 @@ interface DiffLineComponentProps {
 /**
  * Individual diff line component
  */
-export const DiffLineComponent: FC<DiffLineComponentProps> = memo(({ line, side }) => {
+export const DiffLineComponent = memo(function DiffLineComponent({
+  line,
+  side,
+}: DiffLineComponentProps) {
   const styles = getDiffStyles(line.type);
   const lineNum = side === 'left' ? line.leftLineNumber : line.rightLineNumber;
 
@@ -30,5 +33,3 @@ export const DiffLineComponent: FC<DiffLineComponentProps> = memo(({ line, side 
     </div>
   );
 });
-
-DiffLineComponent.displayName = 'DiffLineComponent';

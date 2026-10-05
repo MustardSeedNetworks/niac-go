@@ -1,6 +1,6 @@
 import { valibotResolver } from '@hookform/resolvers/valibot';
 import { Copy } from 'lucide-react';
-import { type FC, useId } from 'react';
+import { useId } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
@@ -15,7 +15,7 @@ interface CloneDeviceModalProps {
   onCancel: () => void;
 }
 
-export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone, onCancel }) => {
+export function CloneDeviceModal({ hostname, onClone, onCancel }: CloneDeviceModalProps) {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('devices');
   const { t: tCommon } = useTranslation('common');
@@ -87,4 +87,4 @@ export const CloneDeviceModal: FC<CloneDeviceModalProps> = ({ hostname, onClone,
       </form>
     </Modal>
   );
-};
+}

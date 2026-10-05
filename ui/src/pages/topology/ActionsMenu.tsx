@@ -1,5 +1,5 @@
 import { ChevronDown, Download } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 
@@ -18,13 +18,19 @@ import { Button } from '../../ui/Button';
  * Lives in its own file so TopologyPage.tsx stays under the
  * file-size red-flag threshold (800 lines).
  */
-export const ActionsMenu: FC<{
+export function ActionsMenu({
+  disabled,
+  onExportPNG,
+  onExportJSON,
+  onExportDOT,
+  onExportGraphML,
+}: {
   disabled?: boolean;
   onExportPNG: () => void;
   onExportJSON: () => void;
   onExportDOT: () => void;
   onExportGraphML: () => void;
-}> = ({ disabled, onExportPNG, onExportJSON, onExportDOT, onExportGraphML }) => {
+}) {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [open, setOpen] = useState(false);
@@ -115,4 +121,4 @@ export const ActionsMenu: FC<{
       )}
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { fixWalk, validateAllWalks, validateWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
@@ -36,7 +36,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
   return out;
 };
 
-export const WalkValidatorPage: FC = () => {
+export function WalkValidatorPage() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
@@ -448,4 +448,4 @@ export const WalkValidatorPage: FC = () => {
       />
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import { type FC, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ApiErrorDetail, isApiError } from '../../api/errors';
 import {
@@ -33,7 +33,7 @@ const walkFilename = (name: string) => {
   return `${stem}.walk`;
 };
 
-export const WalkProfileCreator: FC = () => {
+export function WalkProfileCreator() {
   const { t } = useTranslation('pages');
   const [mode, setMode] = useState<'import' | 'capture'>('import');
   const [file, setFile] = useState<File | null>(null);
@@ -184,4 +184,4 @@ export const WalkProfileCreator: FC = () => {
       </CardContent>
     </Card>
   );
-};
+}

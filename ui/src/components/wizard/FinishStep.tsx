@@ -1,5 +1,4 @@
 import { PartyPopper } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
@@ -7,10 +6,13 @@ import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 
-export const FinishStep: FC<{ draftName: string; sessionId?: string | null }> = ({
+export function FinishStep({
   draftName,
   sessionId,
-}) => {
+}: {
+  draftName: string;
+  sessionId?: string | null;
+}) {
   const { t } = useTranslation('pages');
 
   return (
@@ -43,4 +45,4 @@ export const FinishStep: FC<{ draftName: string; sessionId?: string | null }> = 
       </CardContent>
     </Card>
   );
-};
+}

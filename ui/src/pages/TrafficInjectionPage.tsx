@@ -1,5 +1,4 @@
 import { Play } from 'lucide-react';
-import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeviceActionPanel } from '../components/DeviceActionPanel';
 import { DeviceFaultPanel } from '../components/DeviceFaultPanel';
@@ -11,7 +10,7 @@ import { LinkButton } from '../ui/Button';
 import { StatusRollup } from '../ui/StatusRollup';
 import { H2, P } from '../ui/Typography';
 
-export const TrafficInjectionPage: FC = () => {
+export function TrafficInjectionPage() {
   const { t } = useTranslation('pages');
   const { data: simStatus, loading } = useSimulationStatus();
 
@@ -63,4 +62,4 @@ export const TrafficInjectionPage: FC = () => {
       </div>
     </div>
   );
-};
+}

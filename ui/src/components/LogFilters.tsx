@@ -1,5 +1,5 @@
 import { Download, Pause, Play, Search, Trash2 } from 'lucide-react';
-import { type ChangeEvent, type FC, memo } from 'react';
+import { type ChangeEvent, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogLevel, Protocol } from '../api/types';
 import { iconSizes } from '../constants/sizes';
@@ -41,171 +41,167 @@ export interface LogFiltersProps {
   onClear: () => void;
 }
 
-export const LogFilters: FC<LogFiltersProps> = memo(
-  ({
-    levelFilter,
-    protocolFilter,
-    searchQuery,
-    autoScroll,
-    logCount,
-    paused = false,
-    onLevelChange,
-    onProtocolChange,
-    onSearchChange,
-    onAutoScrollChange,
-    onPauseToggle,
-    onExport,
-    onClear,
-  }) => {
-    const { t } = useTranslation('common');
-    const { t: tPages } = useTranslation('pages');
-    const handleLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
-      onLevelChange(e.target.value as LogLevel | 'All');
-    };
+export const LogFilters = memo(function LogFilters({
+  levelFilter,
+  protocolFilter,
+  searchQuery,
+  autoScroll,
+  logCount,
+  paused = false,
+  onLevelChange,
+  onProtocolChange,
+  onSearchChange,
+  onAutoScrollChange,
+  onPauseToggle,
+  onExport,
+  onClear,
+}: LogFiltersProps) {
+  const { t } = useTranslation('common');
+  const { t: tPages } = useTranslation('pages');
+  const handleLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    onLevelChange(e.target.value as LogLevel | 'All');
+  };
 
-    const handleProtocolChange = (e: ChangeEvent<HTMLSelectElement>) => {
-      onProtocolChange(e.target.value as Protocol | 'All');
-    };
+  const handleProtocolChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    onProtocolChange(e.target.value as Protocol | 'All');
+  };
 
-    const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-      onSearchChange(e.target.value);
-    };
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onSearchChange(e.target.value);
+  };
 
-    const handleAutoScrollChange = (e: ChangeEvent<HTMLInputElement>) => {
-      onAutoScrollChange(e.target.checked);
-    };
+  const handleAutoScrollChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onAutoScrollChange(e.target.checked);
+  };
 
-    return (
-      <div className="stack">
-        {/* Filter Controls Row */}
-        <div className="flex flex-wrap items-center gap-comfortable">
-          {/* Level Filter */}
-          <div className="flex items-center gap-compact">
-            <label htmlFor="level-filter" className="text-sm text-text-muted">
-              {tPages('debug.levelFilterLabel')}
-            </label>
-            <select
-              id="level-filter"
-              value={levelFilter}
-              onChange={handleLevelChange}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-              aria-label={tPages('debug.filterByLevelAriaLabel')}
-            >
-              {LOG_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Protocol Filter */}
-          <div className="flex items-center gap-compact">
-            <label htmlFor="protocol-filter" className="text-sm text-text-muted">
-              {tPages('debug.protocolFilterLabel')}
-            </label>
-            <select
-              id="protocol-filter"
-              value={protocolFilter}
-              onChange={handleProtocolChange}
-              className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-              aria-label={tPages('debug.filterByProtocolAriaLabel')}
-            >
-              {PROTOCOLS.map((protocol) => (
-                <option key={protocol} value={protocol}>
-                  {protocol}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Search Input */}
-          <div className="flex flex-1 items-center gap-compact">
-            <label htmlFor="log-search" className="text-sm text-text-muted">
-              {tPages('debug.searchFilterLabel')}
-            </label>
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-              <input
-                id="log-search"
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder={tPages('debug.filterLogsPlaceholder')}
-                className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
-                aria-label={tPages('debug.searchLogsAriaLabel')}
-              />
-            </div>
-          </div>
+  return (
+    <div className="stack">
+      {/* Filter Controls Row */}
+      <div className="flex flex-wrap items-center gap-comfortable">
+        {/* Level Filter */}
+        <div className="flex items-center gap-compact">
+          <label htmlFor="level-filter" className="text-sm text-text-muted">
+            {tPages('debug.levelFilterLabel')}
+          </label>
+          <select
+            id="level-filter"
+            value={levelFilter}
+            onChange={handleLevelChange}
+            className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+            aria-label={tPages('debug.filterByLevelAriaLabel')}
+          >
+            {LOG_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Action Controls Row */}
-        <div className="flex flex-wrap items-center justify-between gap-comfortable">
-          <div className="flex items-center gap-comfortable">
-            {/* Auto-scroll Toggle */}
-            <label className="flex cursor-pointer items-center gap-compact">
-              <input
-                type="checkbox"
-                checked={autoScroll}
-                onChange={handleAutoScrollChange}
-                className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-surface-base"
-              />
-              <span className="text-sm text-text-secondary">{tPages('debug.autoScrollLabel')}</span>
-            </label>
+        {/* Protocol Filter */}
+        <div className="flex items-center gap-compact">
+          <label htmlFor="protocol-filter" className="text-sm text-text-muted">
+            {tPages('debug.protocolFilterLabel')}
+          </label>
+          <select
+            id="protocol-filter"
+            value={protocolFilter}
+            onChange={handleProtocolChange}
+            className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-compact-md text-sm text-text-primary focus:border-brand-accent focus:outline-none"
+            aria-label={tPages('debug.filterByProtocolAriaLabel')}
+          >
+            {PROTOCOLS.map((protocol) => (
+              <option key={protocol} value={protocol}>
+                {protocol}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            {/* Log Count */}
-            <SmallText className="text-text-muted">
-              {t('plurals.logCount', { count: logCount })}
-            </SmallText>
+        {/* Search Input */}
+        <div className="flex flex-1 items-center gap-compact">
+          <label htmlFor="log-search" className="text-sm text-text-muted">
+            {tPages('debug.searchFilterLabel')}
+          </label>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <input
+              id="log-search"
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder={tPages('debug.filterLogsPlaceholder')}
+              className="w-full rounded-lg border border-surface-border bg-bg-base/60 py-compact-md pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-accent focus:outline-none"
+              aria-label={tPages('debug.searchLogsAriaLabel')}
+            />
           </div>
+        </div>
+      </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-compact">
-            {/* The log stream's pause/resume is this page's primary action:
+      {/* Action Controls Row */}
+      <div className="flex flex-wrap items-center justify-between gap-comfortable">
+        <div className="flex items-center gap-comfortable">
+          {/* Auto-scroll Toggle */}
+          <label className="flex cursor-pointer items-center gap-compact">
+            <input
+              type="checkbox"
+              checked={autoScroll}
+              onChange={handleAutoScrollChange}
+              className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary focus:ring-offset-surface-base"
+            />
+            <span className="text-sm text-text-secondary">{tPages('debug.autoScrollLabel')}</span>
+          </label>
+
+          {/* Log Count */}
+          <SmallText className="text-text-muted">
+            {t('plurals.logCount', { count: logCount })}
+          </SmallText>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-compact">
+          {/* The log stream's pause/resume is this page's primary action:
                 always the primary, in both states. It used to be primary
                 only while paused, and repainted green by an ad-hoc class
                 override — so the console had no primary at all while
                 running. */}
-            {onPauseToggle && (
-              <Button
-                variant="solid"
-                size="sm"
-                onClick={onPauseToggle}
-                leftIcon={
-                  paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
-                }
-                aria-label={
-                  paused
-                    ? tPages('debug.resumeLogStreamAriaLabel')
-                    : tPages('debug.pauseLogStreamAriaLabel')
-                }
-              >
-                {paused ? tPages('debug.resumeButton') : tPages('debug.pauseButton')}
-              </Button>
-            )}
+          {onPauseToggle && (
             <Button
-              variant="outline"
+              variant="solid"
               size="sm"
-              onClick={onExport}
-              leftIcon={<Download className={iconSizes.md} />}
-              aria-label={tPages('debug.exportLogsAriaLabel')}
+              onClick={onPauseToggle}
+              leftIcon={
+                paused ? <Play className={iconSizes.md} /> : <Pause className={iconSizes.md} />
+              }
+              aria-label={
+                paused
+                  ? tPages('debug.resumeLogStreamAriaLabel')
+                  : tPages('debug.pauseLogStreamAriaLabel')
+              }
             >
-              {tPages('debug.exportButton')}
+              {paused ? tPages('debug.resumeButton') : tPages('debug.pauseButton')}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClear}
-              leftIcon={<Trash2 className="h-4 w-4" />}
-              aria-label={tPages('debug.clearAllLogsAriaLabel')}
-            >
-              {tPages('debug.clearButton')}
-            </Button>
-          </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExport}
+            leftIcon={<Download className={iconSizes.md} />}
+            aria-label={tPages('debug.exportLogsAriaLabel')}
+          >
+            {tPages('debug.exportButton')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            leftIcon={<Trash2 className="h-4 w-4" />}
+            aria-label={tPages('debug.clearAllLogsAriaLabel')}
+          >
+            {tPages('debug.clearButton')}
+          </Button>
         </div>
       </div>
-    );
-  },
-);
-
-LogFilters.displayName = 'LogFilters';
+    </div>
+  );
+});

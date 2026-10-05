@@ -10,7 +10,7 @@ import {
   useNodesState,
 } from '@xyflow/react';
 import { Cable, Plus } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   type DraftTopologyEndpoint,
@@ -98,11 +98,11 @@ function linkState(link: TopologyLink): LinkEditorState {
   };
 }
 
-export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
+export function DraftTopologyComposer({
   draft,
   onDraftUpdate,
   onBusyChange,
-}) => {
+}: DraftTopologyComposerProps) {
   const { t } = useTranslation('pages');
   const showError = useErrorToast();
   const permission = useActionPermission('edit');
@@ -438,6 +438,6 @@ export const DraftTopologyComposer: FC<DraftTopologyComposerProps> = ({
       />
     </div>
   );
-};
+}
 
 import { useActionPermission } from '../../contexts/ScopeContext';

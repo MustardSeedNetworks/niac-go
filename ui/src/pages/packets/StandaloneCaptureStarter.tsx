@@ -1,5 +1,5 @@
 import { Activity } from 'lucide-react';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { startStandaloneCapture } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
@@ -21,10 +21,13 @@ import { SmallText } from '../../ui/Typography';
  * UI on the next tick. Calling onStarted forces an immediate refetch
  * so the transition doesn't wait on the poll interval.
  */
-export const StandaloneCaptureStarter: FC<{
+export function StandaloneCaptureStarter({
+  onStarted,
+  navigateToSim,
+}: {
   onStarted: () => void;
   navigateToSim: () => void;
-}> = ({ onStarted, navigateToSim }) => {
+}) {
   const { t } = useTranslation('pages');
   // An empty picker and an unreachable daemon looked identical here.
   const { data: interfacesResp, error } = useUsableInterfacesResource();
@@ -129,4 +132,4 @@ export const StandaloneCaptureStarter: FC<{
       </CardContent>
     </Card>
   );
-};
+}

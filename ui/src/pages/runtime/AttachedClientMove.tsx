@@ -1,4 +1,4 @@
-import { type FC, type FormEvent, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { pinSessionClient } from '../../api/client';
 import { type ApiErrorDetail, isApiError } from '../../api/errors';
@@ -40,13 +40,13 @@ const freePorts = (
 };
 
 /** Pins one attached client to another port of the session's pool. */
-export const AttachedClientMove: FC<AttachedClientMoveProps> = ({
+export function AttachedClientMove({
   sessionId,
   pool,
   clients,
   device,
   onMoved,
-}) => {
+}: AttachedClientMoveProps) {
   const { t } = useTranslation('pages');
   const movable = device ? clients.filter((client) => client.device === device) : clients;
   const [mac, setMac] = useState(movable[0]?.mac ?? '');
@@ -165,4 +165,4 @@ export const AttachedClientMove: FC<AttachedClientMoveProps> = ({
       {failure && <ApiErrorMessage message={failure.message} details={failure.details} />}
     </form>
   );
-};
+}

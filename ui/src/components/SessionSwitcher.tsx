@@ -1,4 +1,4 @@
-import type { FC, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppContext } from '../contexts/AppContext';
 import { Select } from '../ui/Input';
@@ -15,7 +15,7 @@ import { Select } from '../ui/Input';
  * Selection is this browser's, held in AppContext: switching here repoints
  * Devices, Topology and Packets without touching what any other tab reads.
  */
-export const SessionSwitcher: FC = (): ReactElement => {
+export function SessionSwitcher(): ReactElement {
   const { t } = useTranslation('common');
   const { sessionId, setSessionId, sessions } = useAppContext();
 
@@ -40,4 +40,4 @@ export const SessionSwitcher: FC = (): ReactElement => {
       )}
     </div>
   );
-};
+}
