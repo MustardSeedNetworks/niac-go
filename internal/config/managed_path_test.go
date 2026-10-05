@@ -147,6 +147,32 @@ func TestResolveManagedConfigPath_SymlinkInsideRootStillResolves(t *testing.T) {
 	}
 }
 
+// TestResolveManagedConfigPath_AcceptsItsOwnResultUnderALinkedRoot pins that
+// the resolved path is itself accepted when the root is reached through a
+// symlink, as every macOS temp and home path under /var is. The daemon records
+// the resolved path and hands it back on recovery, so refusing it there failed
+// the restart (niac-go#2385).
+func TestResolveManagedConfigPath_AcceptsItsOwnResultUnderALinkedRoot(t *testing.T) {
+	realRoot := t.TempDir()
+	root := filepath.Join(t.TempDir(), "configs")
+	if err := os.Symlink(realRoot, root); err != nil {
+		t.Skipf("symlinks unsupported on this platform: %v", err)
+	}
+	writeFile(t, filepath.Join(realRoot, "sim.yaml"))
+
+	resolved, err := config.ResolveManagedConfigPath(filepath.Join(root, "sim.yaml"), []string{root})
+	if err != nil {
+		t.Fatalf("ResolveManagedConfigPath on the literal path: %v", err)
+	}
+	again, err := config.ResolveManagedConfigPath(resolved, []string{root})
+	if err != nil {
+		t.Fatalf("ResolveManagedConfigPath on its own result %q: %v", resolved, err)
+	}
+	if again != resolved {
+		t.Errorf("second resolution = %q, want %q", again, resolved)
+	}
+}
+
 // TestResolveManagedConfigPath_ResolvesBareNameFromRoots is the operator case
 // the roots list has always claimed to serve. `simulationConfigRoots` calls
 // them "the directories a simulation config may be named out of", but the

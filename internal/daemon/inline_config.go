@@ -33,10 +33,6 @@ func stageInlineSessionConfig(content, sessionID, generation string) (string, fu
 		return "", nil, err
 	}
 	name := inlineConfigName(sessionID, generation)
-	path, err := filepath.Abs(filepath.Join(directory, name))
-	if err != nil {
-		return "", nil, err
-	}
 	root, err := openStateRoot(directory)
 	if err != nil {
 		return "", nil, err
@@ -45,14 +41,27 @@ func stageInlineSessionConfig(content, sessionID, generation string) (string, fu
 		_ = root.Close()
 		return "", nil, err
 	}
-	return path, func(committed bool) {
+	finish := func(committed bool) {
 		defer func() { _ = root.Close() }()
 		if !committed {
 			if removeErr := root.Remove(name); removeErr != nil {
 				logging.Warningf("Could not remove uncommitted inline configuration: %v", removeErr)
 			}
 		}
-	}, nil
+	}
+	// Recovery reloads the file by path, and config.ResolveManagedConfigPath
+	// hands back its real path. Recording the real path here keeps the
+	// session's ConfigPath the same across a restart when the configs
+	// directory is reached through a symlink (macOS: /var is /private/var).
+	path, err := filepath.Abs(filepath.Join(directory, name))
+	if err == nil {
+		path, err = filepath.EvalSymlinks(path)
+	}
+	if err != nil {
+		finish(false)
+		return "", nil, err
+	}
+	return path, finish, nil
 }
 
 // removeInlineConfig deletes the inline file a session generation wrote, once

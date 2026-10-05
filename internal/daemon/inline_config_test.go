@@ -182,11 +182,17 @@ func TestFailedReplacementKeepsOnlyActiveInlineConfig(t *testing.T) {
 }
 
 // A shutdown keeps the file; the restarted daemon recovers from it and its
-// explicit stop is what removes it.
+// explicit stop is what removes it. The configs directory is reached through a
+// symlink, as every macOS temp directory is (/var is /private/var), and the
+// session reports the same path before and after the restart.
 func TestRecoveredSessionFindsAndThenRemovesItsInlineConfig(t *testing.T) {
 	t.Setenv(e2eDryRunEnv, "true")
 	configs := t.TempDir()
-	t.Setenv("NIAC_CONFIGS_DIR", configs)
+	link := filepath.Join(t.TempDir(), "configs")
+	if err := os.Symlink(configs, link); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("NIAC_CONFIGS_DIR", link)
 	recoveryPath := filepath.Join(t.TempDir(), activeSimulationFileName)
 	first := recoveryTestDaemon(t, recoveryPath)
 	if err := first.StartSimulation(api.SimulationRequest{
@@ -279,8 +285,9 @@ func sessionInlineConfigs(t *testing.T, directory, sessionID string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The daemon records an inline file by its real path.
 	for i, match := range matches {
-		if matches[i], err = filepath.Abs(match); err != nil {
+		if matches[i], err = filepath.EvalSymlinks(match); err != nil {
 			t.Fatal(err)
 		}
 	}
