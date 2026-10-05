@@ -102,7 +102,6 @@ const pooled = {
       attachments: [
         {
           name: 'cyberscope',
-          device: 'MED-ACC-SW01',
           network: 'clinical',
           ports: [
             { device: 'MED-ACC-SW01', interface: 'GigabitEthernet1/0/45', network: 'clinical' },

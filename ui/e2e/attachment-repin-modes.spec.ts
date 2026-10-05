@@ -18,11 +18,11 @@ const scenario = `networks:
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports:
-        - GigabitEthernet1/0/20
-        - GigabitEthernet1/0/21
-        - GigabitEthernet1/0/22
+      - device: MED-ACC-SW01
+        ports:
+          - GigabitEthernet1/0/20
+          - GigabitEthernet1/0/21
+          - GigabitEthernet1/0/22
     pins:
       - mac: "00:c0:17:00:00:02"
         device: MED-ACC-SW01

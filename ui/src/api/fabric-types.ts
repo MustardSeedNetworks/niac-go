@@ -87,10 +87,12 @@ export interface AttachmentPin {
   interface: string;
 }
 
-/** A port-pool attachment with every free port resolved (internal/fabric). */
+/**
+ * A port-pool attachment with every free port resolved (internal/fabric). Each
+ * port names its own device: a pool may span several switches.
+ */
 export interface CompiledAttachment {
   name: string;
-  device: string;
   network: string;
   ports: AttachmentPort[] | null;
   pins?: AttachmentPin[];

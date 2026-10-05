@@ -27,7 +27,7 @@ const (
 func TestPackPrinterAnswersThePrinterProbeOnTheWire(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
 	printerName := firstDeviceOfType(t, authored, "printer")
-	switchName := authored.Attachments[0].At.Device
+	switchName := authored.Attachments[0].At[0].Device
 
 	printer := dialDevice(t, authored, printerName)
 	probe, err := printer.GetNext([]string{printerMIBRootOID})

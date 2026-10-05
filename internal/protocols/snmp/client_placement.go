@@ -27,3 +27,20 @@ func (a *Agent) PlaceLearnedClient(mac []byte, interfaceName string, vlan int) b
 
 	return true
 }
+
+// ForgetLearnedClient removes the entries PlaceLearnedClient recorded for mac:
+// the client was unplugged from this bridge, so its entry ages out at once.
+func (a *Agent) ForgetLearnedClient(mac []byte, vlan int) {
+	if a == nil || a.device == nil || !a.supportsBridgeTopology() {
+		return
+	}
+
+	index := macBytesToOIDIndex(mac)
+	a.mib.Delete(dot1dTpFdbAddress + "." + index)
+	a.mib.Delete(dot1dTpFdbPort + "." + index)
+	a.mib.Delete(dot1dTpFdbStatus + "." + index)
+	if vlan > 0 {
+		a.removeLearnedQBridgeFDBEntry(vlan, mac)
+	}
+	a.mib.Reindex()
+}

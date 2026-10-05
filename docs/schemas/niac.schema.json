@@ -35,7 +35,7 @@
         },
         "device": {
           "type": "string",
-          "description": "Device is the `devices[].name` carrying the pinned port. It must be the\npool's own device."
+          "description": "Device is the `devices[].name` carrying the pinned port. It must be one\nof the pool's devices."
         },
         "interface": {
           "type": "string",
@@ -71,7 +71,7 @@
         "device",
         "ports"
       ],
-      "description": "AttachmentPort is the pool of free ports an attachment offers, all on one device."
+      "description": "AttachmentPort is the part of an attachment's pool that one device carries."
     },
     "BehaviorAction": {
       "properties": {
@@ -1618,8 +1618,11 @@
           "description": "Connect is the `networks[].name` this attachment exposes to the host.\nWhether the host interface may actually carry it is decided at start\nagainst the daemon's attachment policy, which reports\n`attachment_policy_denied` or `host_interface_unavailable`;\n`niac validate` has no host binding and cannot check those.\n\nExactly one of `connect` and `at` is set. A network-scoped attachment\ncannot say where on that network the tester appears, which is what `at`\nexists for."
         },
         "at": {
-          "$ref": "#/$defs/AttachmentPort",
-          "description": "At places the attachment on a pool of free switch ports instead of on a\nnetwork. LLDP is link-local, so the neighbour a tester reports is the\ndevice at the other end of its cable -- a network-scoped attachment gets\nthat adjacency wrong by construction."
+          "items": {
+            "$ref": "#/$defs/AttachmentPort"
+          },
+          "type": "array",
+          "description": "At places the attachment on a pool of free switch ports instead of on a\nnetwork. LLDP is link-local, so the neighbour a tester reports is the\ndevice at the other end of its cable -- a network-scoped attachment gets\nthat adjacency wrong by construction.\n\nEach entry is one switch and its spare ports. A pool may span several\nswitches, so a pin can move a tester from one access switch to another\non the running session."
         },
         "pins": {
           "items": {

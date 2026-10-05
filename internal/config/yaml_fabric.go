@@ -23,18 +23,22 @@ func convertLogicalAttachments(in []converter.LogicalAttachment) []LogicalAttach
 		out[i] = LogicalAttachment{
 			Name:    attachment.Name,
 			Network: attachment.Connect,
-			At:      convertAttachmentPort(attachment.At),
+			At:      convertAttachmentPool(attachment.At),
 			Pins:    convertAttachmentPins(attachment.Pins),
 		}
 	}
 	return out
 }
 
-func convertAttachmentPort(in *converter.AttachmentPort) *AttachmentPort {
-	if in == nil {
+func convertAttachmentPool(in []converter.AttachmentPort) []AttachmentPort {
+	if len(in) == 0 {
 		return nil
 	}
-	return &AttachmentPort{Device: in.Device, Ports: slices.Clone(in.Ports)}
+	out := make([]AttachmentPort, len(in))
+	for i, group := range in {
+		out[i] = AttachmentPort{Device: group.Device, Ports: slices.Clone(group.Ports)}
+	}
+	return out
 }
 
 func convertAttachmentPins(in []converter.AttachmentPin) []AttachmentPin {

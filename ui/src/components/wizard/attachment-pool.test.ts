@@ -8,19 +8,22 @@ const poolYaml = `networks:
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports:
-        - GigabitEthernet1/0/20
-        - GigabitEthernet1/0/21
+      - device: MED-ACC-SW01
+        ports:
+          - GigabitEthernet1/0/20
+          - GigabitEthernet1/0/21
+      - device: MED-ACC-SW02
+        ports:
+          - GigabitEthernet1/0/43
     pins:
       - mac: 00:c0:17:aa:bb:cc
-        device: MED-ACC-SW01
-        interface: GigabitEthernet1/0/21
+        device: MED-ACC-SW02
+        interface: GigabitEthernet1/0/43
 `;
 
 /**
  * AP-1. An attachment now says where in the scenario a tester appears — a pool
- * of free ports on one switch — instead of naming a whole network. The wizard
+ * of free ports on one or more switches — instead of naming a whole network. The wizard
  * has to read and write both forms, or authoring one in YAML loses it on the
  * next edit.
  */
@@ -31,15 +34,15 @@ describe('attachment pools in the network model', () => {
     expect(model.attachments).toHaveLength(1);
     const attachment = model.attachments[0];
     expect(attachment?.connect).toBe('');
-    expect(attachment?.at).toEqual({
-      device: 'MED-ACC-SW01',
-      ports: ['GigabitEthernet1/0/20', 'GigabitEthernet1/0/21'],
-    });
+    expect(attachment?.at).toEqual([
+      { device: 'MED-ACC-SW01', ports: ['GigabitEthernet1/0/20', 'GigabitEthernet1/0/21'] },
+      { device: 'MED-ACC-SW02', ports: ['GigabitEthernet1/0/43'] },
+    ]);
     expect(attachment?.pins).toEqual([
       {
         mac: '00:c0:17:aa:bb:cc',
-        device: 'MED-ACC-SW01',
-        interface: 'GigabitEthernet1/0/21',
+        device: 'MED-ACC-SW02',
+        interface: 'GigabitEthernet1/0/43',
       },
     ]);
   });
@@ -48,11 +51,14 @@ describe('attachment pools in the network model', () => {
     const written = serializeAttachments(parseNetworkModel(poolYaml).attachments);
 
     expect(written).toContain('at:');
-    expect(written).toContain('device: MED-ACC-SW01');
+    expect(written).toContain('- device: MED-ACC-SW01');
+    expect(written).toContain('- device: MED-ACC-SW02');
     expect(written).toContain('- GigabitEthernet1/0/20');
     expect(written).toContain('mac: "00:c0:17:aa:bb:cc"');
     expect(written).not.toContain('connect:');
-    expect(parseNetworkModel(`${written}`).attachments[0]?.at?.ports).toHaveLength(2);
+    expect(parseNetworkModel(written).attachments[0]?.at).toEqual(
+      parseNetworkModel(poolYaml).attachments[0]?.at,
+    );
   });
 
   it('keeps writing the network form for a network attachment', () => {
@@ -67,7 +73,7 @@ describe('attachment pools in the network model', () => {
   // would make the daemon refuse the file the wizard just produced.
   it('omits an empty pool rather than writing an empty port list', () => {
     const written = serializeAttachments([
-      { name: 'cyberscope', connect: '', at: { device: 'SW1', ports: [] } },
+      { name: 'cyberscope', connect: '', at: [{ device: 'SW1', ports: [] }] },
     ]);
 
     expect(written).not.toContain('ports:');

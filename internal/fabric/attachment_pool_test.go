@@ -23,10 +23,10 @@ func poolConfig() *config.Config {
 		},
 		Attachments: []config.LogicalAttachment{{
 			Name: "cyberscope",
-			At: &config.AttachmentPort{
+			At: []config.AttachmentPort{{
 				Device: "MED-ACC-SW01",
 				Ports:  []string{"GigabitEthernet1/0/20", "GigabitEthernet1/0/21"},
-			},
+			}},
 		}},
 		Devices: []config.Device{accessSwitch(), coreSwitch()},
 	}
@@ -99,7 +99,7 @@ func TestCompilePoolAttachmentResolvesEveryPortToItsNetwork(t *testing.T) {
 		t.Fatalf("attachments = %#v", report.Topology.Attachments)
 	}
 	attachment := report.Topology.Attachments[0]
-	if attachment.Name != "cyberscope" || attachment.Device != "MED-ACC-SW01" {
+	if attachment.Name != "cyberscope" {
 		t.Fatalf("attachment = %#v", attachment)
 	}
 	want := []fabric.AttachmentPort{
@@ -140,27 +140,27 @@ func TestCompilePoolAttachmentDiagnostics(t *testing.T) {
 		{
 			name: "unknown device",
 			want: fabric.CodeUnknownAttachmentDevice,
-			edit: func(cfg *config.Config) { cfg.Attachments[0].At.Device = "NOPE-SW01" },
+			edit: func(cfg *config.Config) { cfg.Attachments[0].At[0].Device = "NOPE-SW01" },
 		},
 		{
 			name: "unknown interface",
 			want: fabric.CodeUnknownAttachmentPort,
 			edit: func(cfg *config.Config) {
-				cfg.Attachments[0].At.Ports = []string{"GigabitEthernet1/0/99"}
+				cfg.Attachments[0].At[0].Ports = []string{"GigabitEthernet1/0/99"}
 			},
 		},
 		{
 			name: "port already carries a topology edge",
 			want: fabric.CodeAttachmentPortOccupied,
 			edit: func(cfg *config.Config) {
-				cfg.Attachments[0].At.Ports = []string{"HundredGigabitEthernet1/0/49"}
+				cfg.Attachments[0].At[0].Ports = []string{"HundredGigabitEthernet1/0/49"}
 			},
 		},
 		{
 			name: "port learns a client through the forwarding database",
 			want: fabric.CodeAttachmentPortOccupied,
 			edit: func(cfg *config.Config) {
-				cfg.Attachments[0].At.Ports = []string{"GigabitEthernet1/0/10"}
+				cfg.Attachments[0].At[0].Ports = []string{"GigabitEthernet1/0/10"}
 			},
 		},
 		{
@@ -201,7 +201,7 @@ func TestCompilePoolAttachmentDiagnostics(t *testing.T) {
 			name: "one port listed twice",
 			want: fabric.CodeDuplicateAttachmentPort,
 			edit: func(cfg *config.Config) {
-				cfg.Attachments[0].At.Ports = []string{
+				cfg.Attachments[0].At[0].Ports = []string{
 					"GigabitEthernet1/0/20", "GigabitEthernet1/0/20",
 				}
 			},
@@ -209,7 +209,7 @@ func TestCompilePoolAttachmentDiagnostics(t *testing.T) {
 		{
 			name: "empty pool",
 			want: fabric.CodeAttachmentPoolEmpty,
-			edit: func(cfg *config.Config) { cfg.Attachments[0].At.Ports = nil },
+			edit: func(cfg *config.Config) { cfg.Attachments[0].At[0].Ports = nil },
 		},
 		{
 			name: "both attachment forms",
@@ -338,5 +338,102 @@ func TestCompileNetworkAttachmentStillCompiles(t *testing.T) {
 	}
 	if len(report.Topology.Attachments) != 0 {
 		t.Fatalf("a network attachment declared ports: %#v", report.Topology.Attachments)
+	}
+}
+
+// twoSwitchPoolConfig adds a second access switch behind the same core: its
+// spare ports land on the same network through the core SVI, so one pool can
+// list ports on both (niac-go#2505).
+func twoSwitchPoolConfig() *config.Config {
+	cfg := poolConfig()
+	second := accessSwitch()
+	second.Name = "MED-ACC-SW02"
+	second.Interfaces[0].Address = "10.51.200.22/24"
+	second.TrunkPorts = second.TrunkPorts[:1]
+	cfg.Devices = append(cfg.Devices, second)
+	core := &cfg.Devices[1]
+	core.Interfaces = append(core.Interfaces, config.Interface{
+		Name: "HundredGigabitEthernet1/0/2", VLANs: []int{200, 210},
+	})
+	core.TrunkPorts = append(core.TrunkPorts, config.TrunkPort{
+		Interface: "HundredGigabitEthernet1/0/2", VLANs: []int{200, 210},
+		NativeVLAN: 200, RemoteDevice: "MED-ACC-SW02",
+	})
+	cfg.Attachments[0].At = append(cfg.Attachments[0].At, config.AttachmentPort{
+		Device: "MED-ACC-SW02", Ports: []string{"GigabitEthernet1/0/20"},
+	})
+	return cfg
+}
+
+func TestCompilePoolAttachmentSpansSwitches(t *testing.T) {
+	cfg := twoSwitchPoolConfig()
+	cfg.Attachments[0].Pins = []config.AttachmentPin{{
+		MAC: "00:c0:17:aa:bb:cc", Device: "MED-ACC-SW02", Interface: "GigabitEthernet1/0/20",
+	}}
+
+	report := fabric.Compile(cfg, poolBinding())
+
+	if !report.Safe {
+		t.Fatalf("diagnostics = %#v", report.Diagnostics)
+	}
+	attachment := report.Topology.Attachments[0]
+	// The same port name on two switches is two ports, not a duplicate.
+	want := []fabric.AttachmentPort{
+		{Device: "MED-ACC-SW01", Interface: "GigabitEthernet1/0/20", VLAN: 210, Network: "med-data"},
+		{Device: "MED-ACC-SW01", Interface: "GigabitEthernet1/0/21", VLAN: 210, Network: "med-data"},
+		{Device: "MED-ACC-SW02", Interface: "GigabitEthernet1/0/20", VLAN: 210, Network: "med-data"},
+	}
+	if !slices.Equal(attachment.Ports, want) {
+		t.Fatalf("ports = %#v, want %#v", attachment.Ports, want)
+	}
+	if len(attachment.Pins) != 1 || attachment.Pins[0].Device != "MED-ACC-SW02" {
+		t.Fatalf("pins = %#v, want the pin on MED-ACC-SW02", attachment.Pins)
+	}
+}
+
+func TestCompilePoolAttachmentSpanningSwitchesDiagnostics(t *testing.T) {
+	tests := []struct {
+		name string
+		want fabric.DiagnosticCode
+		edit func(cfg *config.Config)
+	}{
+		{
+			name: "unknown second device",
+			want: fabric.CodeUnknownAttachmentDevice,
+			edit: func(cfg *config.Config) { cfg.Attachments[0].At[1].Device = "NOPE-SW01" },
+		},
+		{
+			name: "second switch lists no ports",
+			want: fabric.CodeAttachmentPoolEmpty,
+			edit: func(cfg *config.Config) { cfg.Attachments[0].At[1].Ports = nil },
+		},
+		{
+			name: "one switch's port listed in two groups",
+			want: fabric.CodeDuplicateAttachmentPort,
+			edit: func(cfg *config.Config) { cfg.Attachments[0].At[1].Device = "MED-ACC-SW01" },
+		},
+		{
+			name: "second switch lands on another network",
+			want: fabric.CodeAttachmentPoolNetworksDiffer,
+			edit: func(cfg *config.Config) { cfg.Devices[2].Interfaces[3].VLANs = []int{200} },
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := twoSwitchPoolConfig()
+			test.edit(cfg)
+
+			report := fabric.Compile(cfg, poolBinding())
+
+			if report.Safe {
+				t.Fatalf("compile accepted %s", test.name)
+			}
+			if !slices.ContainsFunc(report.Diagnostics, func(d fabric.Diagnostic) bool {
+				return d.Code == test.want
+			}) {
+				t.Fatalf("diagnostics = %#v, want %s", report.Diagnostics, test.want)
+			}
+		})
 	}
 }

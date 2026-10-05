@@ -100,7 +100,9 @@ func Generate(request Request) (Result, error) {
 }
 
 // testerAttachment puts the tester where a technician actually plugs one in:
-// the spare-port pool on the first site's first access switch.
+// the spare ports of the first site's access switches. A client without a pin
+// lands on the first access switch; a pin moves it to any other access switch
+// of that site on the running session.
 //
 // It was the lab edge router's transit link, which nobody patches into, and
 // which put every tester on one pack in the same place. The access tier is the
@@ -108,13 +110,14 @@ func Generate(request Request) (Result, error) {
 // a pool, and an operator or AP-4 can name another one.
 func testerAttachment(request Request) converter.LogicalAttachment {
 	site := request.Sites[0]
-	return converter.LogicalAttachment{
-		Name: request.AttachmentName,
-		At: &converter.AttachmentPort{
-			Device: accessName(site, 1),
+	var pool []converter.AttachmentPort
+	for index := 1; index <= request.Counts.AccessSwitches; index++ {
+		pool = append(pool, converter.AttachmentPort{
+			Device: accessName(site, index),
 			Ports:  sparePortNames("GigabitEthernet1/0/"),
-		},
+		})
 	}
+	return converter.LogicalAttachment{Name: request.AttachmentName, At: pool}
 }
 
 func buildDevices(request Request, links linkMap) []converter.Device {

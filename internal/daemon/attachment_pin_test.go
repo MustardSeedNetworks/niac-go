@@ -20,11 +20,11 @@ const pinPoolScenario = `networks:
 attachments:
   - name: cyberscope
     at:
-      device: MED-ACC-SW01
-      ports:
-        - GigabitEthernet1/0/20
-        - GigabitEthernet1/0/21
-        - GigabitEthernet1/0/22
+      - device: MED-ACC-SW01
+        ports:
+          - GigabitEthernet1/0/20
+          - GigabitEthernet1/0/21
+          - GigabitEthernet1/0/22
     pins:
       - mac: "00:c0:17:00:00:02"
         device: MED-ACC-SW01
@@ -202,7 +202,7 @@ func TestSetAttachmentPinChangesAGeneratedPackByThePinAlone(t *testing.T) {
 	}
 	attachment := generated.Config.Attachments[0]
 	pin := config.AttachmentPin{
-		MAC: pinnedClient, Device: attachment.At.Device, Interface: attachment.At.Ports[0],
+		MAC: pinnedClient, Device: attachment.At[0].Device, Interface: attachment.At[0].Ports[0],
 	}
 
 	amended, err := setAttachmentPin(generated.YAML, attachment.Name, pin)

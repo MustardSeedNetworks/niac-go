@@ -28,7 +28,7 @@ const (
 func TestPackUPSAnswersTheUPSMIBOnTheWire(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
 	upsName := firstDeviceWithRole(t, authored, "ups")
-	switchName := authored.Attachments[0].At.Device
+	switchName := authored.Attachments[0].At[0].Device
 
 	ups := dialDevice(t, authored, upsName)
 	probe, err := ups.GetNext([]string{upsMIBRootOID})

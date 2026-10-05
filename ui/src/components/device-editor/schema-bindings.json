@@ -1,6 +1,6 @@
 {
-  "attachments[].at.device": "components/wizard/AttachmentPoolEditor.tsx",
-  "attachments[].at.ports[]": "components/wizard/AttachmentPoolEditor.tsx",
+  "attachments[].at[].device": "components/wizard/AttachmentPoolEditor.tsx",
+  "attachments[].at[].ports[]": "components/wizard/AttachmentPoolEditor.tsx",
   "attachments[].connect": "components/wizard/NetworksStep.tsx",
   "attachments[].name": "components/wizard/NetworksStep.tsx",
   "attachments[].pins[].device": "components/wizard/AttachmentPoolEditor.tsx",

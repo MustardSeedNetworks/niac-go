@@ -72,18 +72,22 @@ func attachmentsToYAML(attachments []LogicalAttachment) []converter.LogicalAttac
 		out[i] = converter.LogicalAttachment{
 			Name:    attachment.Name,
 			Connect: attachment.Network,
-			At:      attachmentPortToYAML(attachment.At),
+			At:      attachmentPoolToYAML(attachment.At),
 			Pins:    attachmentPinsToYAML(attachment.Pins),
 		}
 	}
 	return out
 }
 
-func attachmentPortToYAML(at *AttachmentPort) *converter.AttachmentPort {
-	if at == nil {
+func attachmentPoolToYAML(at []AttachmentPort) []converter.AttachmentPort {
+	if len(at) == 0 {
 		return nil
 	}
-	return &converter.AttachmentPort{Device: at.Device, Ports: slices.Clone(at.Ports)}
+	out := make([]converter.AttachmentPort, len(at))
+	for i, group := range at {
+		out[i] = converter.AttachmentPort{Device: group.Device, Ports: slices.Clone(group.Ports)}
+	}
+	return out
 }
 
 func attachmentPinsToYAML(pins []AttachmentPin) []converter.AttachmentPin {

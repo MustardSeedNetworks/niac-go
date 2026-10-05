@@ -191,9 +191,9 @@ type AttachmentPin struct {
 }
 
 // CompiledAttachment is a port-scoped attachment with every port resolved.
+// Each port names the device carrying it; a pool may span several switches.
 type CompiledAttachment struct {
 	Name    string           `json:"name"`
-	Device  string           `json:"device"`
 	Network string           `json:"network"`
 	Ports   []AttachmentPort `json:"ports"`
 	Pins    []AttachmentPin  `json:"pins,omitempty"`

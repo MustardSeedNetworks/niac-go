@@ -42,7 +42,6 @@ const session = (attachment: string): SimulationStatus => ({
       attachments: [
         {
           name: 'cyberscope',
-          device: 'MED-ACC-SW01',
           network: 'clinical',
           ports: [
             {

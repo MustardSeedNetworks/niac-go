@@ -53,7 +53,6 @@ const poolFabric = (pins: AttachmentPin[] = []): SimulationStatus['fabric'] => (
     attachments: [
       {
         name: 'cyberscope',
-        device: 'MED-ACC-SW01',
         network: 'clinical',
         ports: [
           port('MED-ACC-SW01', 'GigabitEthernet1/0/45'),

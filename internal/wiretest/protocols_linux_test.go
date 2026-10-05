@@ -175,7 +175,7 @@ func dhcpExchange(
 // so it is the only one that may be heard here.
 func TestLLDPAdvertisesTheAuthoredSystemName(t *testing.T) {
 	authored, _ := startPack(t, "hospital")
-	want := advertisedName(deviceNamed(t, authored, authored.Attachments[0].At.Device))
+	want := advertisedName(deviceNamed(t, authored, authored.Attachments[0].At[0].Device))
 
 	handle := openClient(t)
 	packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()

@@ -98,10 +98,10 @@ func twoSitePoolConfig() *config.Config {
 		},
 		Attachments: []config.LogicalAttachment{{
 			Name: "cyberscope",
-			At: &config.AttachmentPort{
+			At: []config.AttachmentPort{{
 				Device: "aaa-ACC-SW01",
 				Ports:  []string{"GigabitEthernet1/0/45"},
-			},
+			}},
 		}},
 		Devices: devices,
 	}
@@ -161,4 +161,24 @@ func TestCompilePoolAttachmentRequiresTheTrunkToCarryThePortVLAN(t *testing.T) {
 	if !found {
 		t.Fatalf("a VLAN the uplink does not carry resolved anyway: %#v", report.Diagnostics)
 	}
+}
+
+// A pool spanning two sites spans two networks. A tester moved onto the other
+// site would keep a lease from the first, and clients sharing the host's NIC
+// have no link of their own to drop that would make it ask for a new one, so
+// the compile refuses the pool rather than strand the tester.
+func TestCompilePoolAttachmentRefusesAPoolAcrossSites(t *testing.T) {
+	cfg := twoSitePoolConfig()
+	cfg.Attachments[0].At = append(cfg.Attachments[0].At, config.AttachmentPort{
+		Device: "bbb-ACC-SW01", Ports: []string{"GigabitEthernet1/0/45"},
+	})
+
+	report := fabric.CompileConfig(cfg)
+
+	for _, diagnostic := range report.Diagnostics {
+		if diagnostic.Code == fabric.CodeAttachmentPoolNetworksDiffer {
+			return
+		}
+	}
+	t.Fatalf("a pool spanning two sites compiled: %#v", report.Diagnostics)
 }
