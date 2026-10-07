@@ -77,11 +77,15 @@ operator-approved attachment policy.
 ### Draft behavior timelines
 
 `PUT /api/v1/library/drafts/{name}/behaviors` replaces the named draft's saved
-traffic and fault phases. Send the current quoted draft revision in `If-Match`.
+behavior timelines. Send the current quoted draft revision in `If-Match`.
 Each timeline supplies a name, `startOffsetMs`, `repeatCount`, and bounded
-phases with `startOffsetMs`, `durationMs`, and reset behavior. The server
-validates every device/interface target and rejects overlapping phases before
-persisting a new revision.
+phases with `startOffsetMs`, `durationMs`, and reset behavior. A phase carries
+`traffic`, `faults`, one-shot `actions`, and `roams`; a roam names a `station`
+MAC, the `from` and `to` access points, and optionally a `cause`
+(`radio_down`, or `tx_power_drop` with `txPowerDbm`). The request replaces
+every phase, so a field it omits is removed from the draft. The server
+validates every device/interface target, every roam, and rejects overlapping
+phases before persisting a new revision.
 
 When that draft starts, NIAC replays the same transitions through authoritative
 device state on every simulation restart. `GET /api/v1/behaviors` reports the
