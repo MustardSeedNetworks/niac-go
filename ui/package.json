@@ -5,7 +5,7 @@
   "type": "module",
   "engines": {
     "node": "26.10.0",
-    "npm": "12.1.0"
+    "npm": "12.2.0"
   },
   "scripts": {
     "dev": "node --disable-warning=DEP0205 ./node_modules/vite/bin/vite.js",
@@ -100,7 +100,7 @@
     "vite": "8.3.1",
     "vitest": "4.1.11"
   },
-  "packageManager": "npm@12.1.0",
+  "packageManager": "npm@12.2.0",
   "overrides": {
     "@codemirror/state": "6.7.6",
     "nanoid": "6.0.1",
