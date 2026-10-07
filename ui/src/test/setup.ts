@@ -5,7 +5,7 @@
  * Universal polyfill baseline shared across seed/stem/niac.
  */
 
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import i18next from 'i18next';
 import { afterEach, vi } from 'vitest';
 
