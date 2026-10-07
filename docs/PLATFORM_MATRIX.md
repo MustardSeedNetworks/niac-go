@@ -16,7 +16,7 @@ build. A cell with no recorded output is not a cell that passed; it says
 | --- | --- | --- | --- | --- | --- |
 | macOS 26 (Apple Silicon) | `darwin-arm64.tar.gz` | yes | yes | yes | not taken |
 | Ubuntu 24.04 (x86_64) | `linux-amd64.tar.gz`, `.deb` | yes | yes | yes | yes |
-| Fedora 44 (x86_64) | `x86_64.rpm` | **no — see below** | — | — | — |
+| Fedora 44 (`v0.112.1`) | `x86_64.rpm` | yes | yes | yes | simulation on a dummy link |
 | Windows 11 (x86_64) | `windows-amd64.zip` | yes | yes | yes | not taken — no Npcap |
 | Docker (`v0.111.0`) | `deploy/docker` image | yes | yes | yes | simulation on a dummy link |
 
@@ -100,34 +100,69 @@ PASS niac.service active, NRestarts unchanged at 0
 That covers the "install must not crash-loop an existing config" clause
 directly — the failure seed#377 taught us to check for.
 
-## Fedora 44, x86_64 (`dev-srv-fedora`) — FAILS on this release
+## Fedora 44, x86_64 (`dev-srv-fedora`)
 
-`v0.95.53` cannot start on Fedora. The binary carries Debian's libpcap SONAME,
-which no Fedora libpcap provides (#1999):
+`v0.95.53` could not start here: the binary carried Debian's libpcap SONAME
+(#1999), fixed at `cbaad8d3` after that tag. The cell was retaken on
+2026-10-07 against `v0.112.1`. The RPM matches the signed manifest, and the
+package installed on the host has the same header digest as the verified file:
 
 ```text
-$ ldd ./niac | grep -i pcap
-	libpcap.so.0.8 => /usr/lib/x86_64-linux-gnu/libpcap.so.0.8
+$ cosign verify-blob --bundle checksums.txt.cosign.bundle \
+    --certificate-identity-regexp '^https://github.com/MustardSeedNetworks/niac-go/\.github/workflows/release\.yml@' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+Verified OK
+$ sha256sum niac-0.112.1-1.x86_64.rpm
+b0b12cfdd4b56ea29a5b9f56296f6e494afe0520758247bef20fcf2fd9c6e7b4  niac-0.112.1-1.x86_64.rpm
+$ grep 'x86_64.rpm$' checksums.txt
+b0b12cfdd4b56ea29a5b9f56296f6e494afe0520758247bef20fcf2fd9c6e7b4  niac-0.112.1-1.x86_64.rpm
+$ rpm -qp --qf '%{SHA256HEADER}\n' niac-0.112.1-1.x86_64.rpm
+d5adcbf75a328dad01194de097251d32e98129cf5ea101769d158b36fcfaba54
+dev-srv-fedora$ rpm -q --qf '%{SHA256HEADER}\n' niac
+d5adcbf75a328dad01194de097251d32e98129cf5ea101769d158b36fcfaba54
 ```
 
-The fix merged at `cbaad8d3`, **after** this tag, so `v0.95.54` is the first
-release that can run here. The approach was proven before the pipeline changed:
-a statically linked build depends on libc alone, runs on Fedora 44, enumerates
-interfaces, and served a scenario over a veth pair in a throwaway namespace:
+The binary links libc alone, so no distribution libpcap is involved:
 
 ```text
-$ ldd /tmp/niac-static
+dev-srv-fedora$ ldd /usr/bin/niac
 	linux-vdso.so.1
 	libc.so.6 => /lib64/libc.so.6
 	/lib64/ld-linux-x86-64.so.2
-
-$ sudo ip netns exec pcaptest ping -c 3 -W 2 10.253.9.1
-3 packets transmitted, 3 received, 0% packet loss
+dev-srv-fedora$ niac version
+niac 0.112.1 (commit: 9838004238814f59bfb753c76380b6db533cecf9, built: 2026-10-05T23:50:28Z)
 ```
 
-**This cell is not closed.** It must be retaken against the `v0.95.54` RPM
-through `make deploy-validate HOST=dev-srv-fedora`, which is also the check
-that found the defect.
+`make deploy-validate` installed `v0.112.0` over the host's existing `0.109.0`
+configuration, started a simulation on a dummy link, then upgraded to
+`v0.112.1` with that simulation running:
+
+```text
+$ make deploy-validate HOST=dev-srv-fedora RELEASE=v0.112.1
+==> Install 1 of 2: v0.112.0 (this host may or may not already carry a configuration)
+PASS /__version reports 0.112.0 with a non-empty uiBuildHash
+==> Start a simulation on v0.112.0, so the upgrade runs against recovery state
+PASS basic-network runs as deploy-validate-pre on niac-dv-pre
+==> Install 2 of 2: v0.112.1, over the configuration the first one created
+{
+  "buildTime": "2026-10-05T23:50:28Z",
+  "commit": "9838004",
+  "platform": "linux/amd64",
+  "uiBuildHash": "f1d267a8a4102d89b122a382451f8b57",
+  "version": "0.112.1"
+}
+PASS /__version reports 0.112.1 after installing over an existing configuration
+==> Watching for a restart loop for 30s
+PASS niac.service active, NRestarts unchanged at 0
+PASS a simulation is running after the upgrade
+PASS deploy-validate-pre recovered across the upgrade
+PASS basic-network started as deploy-validate-post after the upgrade
+deploy-validate: v0.112.1 on dev-srv-fedora
+```
+
+The RPM upgrade runs the new `%post` before the old `%preun`; the
+scriptlet-ordering defect that stopped the service there (#2085) does not
+recur: the service stays active with no restarts.
 
 ## Windows 11, x86_64 (`dev-win11-02`)
 
@@ -194,6 +229,5 @@ separately in the v1 plan and is an owner-run check, not an automated one.
 
 ## What closing this row still needs
 
-1. Retake the Fedora cell against the `v0.95.54` RPM.
-2. Npcap on a Windows host, then capture there.
-3. The `.pkg` cell, once the pipeline produces one.
+1. Npcap on a Windows host, then capture there.
+2. The `.pkg` cell, once the pipeline produces one.
