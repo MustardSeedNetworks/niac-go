@@ -5,6 +5,41 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.112.1...v0.113.0) (2026-10-07)
+
+
+### Features
+
+* **api:** carry roams in the draft behaviours request ([#2556](https://github.com/MustardSeedNetworks/niac-go/issues/2556)) ([4fbd32e](https://github.com/MustardSeedNetworks/niac-go/commit/4fbd32e4b3bb39cf712d6e32c0c40e5375053abd))
+
+
+### Bug Fixes
+
+* **deps:** bump source-map-js to 1.2.2 for GHSA-68fv-2mgg-jv7q ([#2558](https://github.com/MustardSeedNetworks/niac-go/issues/2558)) ([afe205e](https://github.com/MustardSeedNetworks/niac-go/commit/afe205eb3be6e37e95ab17f2e7d2c4b9e3ae6f4b)), closes [#2557](https://github.com/MustardSeedNetworks/niac-go/issues/2557)
+* **deps:** update dependency lucide-react to v1.49.0 ([#2555](https://github.com/MustardSeedNetworks/niac-go/issues/2555)) ([628cc25](https://github.com/MustardSeedNetworks/niac-go/commit/628cc25be099f474e8da915953ec2268ffe1dd62))
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.7.1 ([#2566](https://github.com/MustardSeedNetworks/niac-go/issues/2566)) ([faa172e](https://github.com/MustardSeedNetworks/niac-go/commit/faa172ed860720c020a71f4a8722968918530997))
+
+
+### Documentation
+
+* **platform:** retake the Fedora cell against the v0.112.1 RPM ([#2561](https://github.com/MustardSeedNetworks/niac-go/issues/2561)) ([ac1786a](https://github.com/MustardSeedNetworks/niac-go/commit/ac1786a062c10bf2882e2027bb5019dc0260c323))
+
+
+### Tests
+
+* **ui:** wait for the device action result before asserting it ([#2563](https://github.com/MustardSeedNetworks/niac-go/issues/2563)) ([57449b9](https://github.com/MustardSeedNetworks/niac-go/commit/57449b934b544c04662b3470f5b17fd1cb83e8b0)), closes [#2562](https://github.com/MustardSeedNetworks/niac-go/issues/2562)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2553](https://github.com/MustardSeedNetworks/niac-go/issues/2553)) ([a7a88f3](https://github.com/MustardSeedNetworks/niac-go/commit/a7a88f31dedd244072b6ba938951407d6eb29727))
+* **deps:** lock file maintenance ([#2571](https://github.com/MustardSeedNetworks/niac-go/issues/2571)) ([250964e](https://github.com/MustardSeedNetworks/niac-go/commit/250964ed3f3de166c3691648572300abca135142))
+* **deps:** migrate the UI test stack to vitest 5 ([#2570](https://github.com/MustardSeedNetworks/niac-go/issues/2570)) ([274806e](https://github.com/MustardSeedNetworks/niac-go/commit/274806e074763fcfec89d38f17b4a15136e53b99)), closes [#2569](https://github.com/MustardSeedNetworks/niac-go/issues/2569)
+* **deps:** pin docker/dockerfile docker tag to 4edf897 ([#2568](https://github.com/MustardSeedNetworks/niac-go/issues/2568)) ([55486d0](https://github.com/MustardSeedNetworks/niac-go/commit/55486d06c4e8263ebb60be7c91eeca5f47f50788))
+* **deps:** update dependency i18next-cli to v1.74.3 ([#2565](https://github.com/MustardSeedNetworks/niac-go/issues/2565)) ([7881f2f](https://github.com/MustardSeedNetworks/niac-go/commit/7881f2f0c76dcf686bce18f5cda78642a22e03bb))
+* **deps:** update npm to v12.2.0 ([#2567](https://github.com/MustardSeedNetworks/niac-go/issues/2567)) ([52ad6ea](https://github.com/MustardSeedNetworks/niac-go/commit/52ad6ea27f25c36394adc86b6d2c16db0b3cf699))
+* **deps:** update storybook monorepo to v10.6.1 ([#2554](https://github.com/MustardSeedNetworks/niac-go/issues/2554)) ([1664aae](https://github.com/MustardSeedNetworks/niac-go/commit/1664aae33aa8e705c21d3412a6ab3fdcd8dc3cab))
+
 ## [0.112.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.112.0...v0.112.1) (2026-10-05)
 
 
