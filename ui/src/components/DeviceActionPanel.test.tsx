@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, expect, it, vi } from 'vitest';
 import '../i18n';
@@ -52,8 +52,8 @@ it('runs a reboot against the selected device', async () => {
   fireEvent.change(screen.getByLabelText('Device action'), { target: { value: 'reboot' } });
   fireEvent.click(screen.getByTestId('run-device-action'));
 
-  await waitFor(() => expect(state.execute).toHaveBeenCalledWith('core-sw-01', 'reboot'));
-  expect(screen.getByText('Ran reboot on core-sw-01')).toBeVisible();
+  expect(await screen.findByText('Ran reboot on core-sw-01')).toBeVisible();
+  expect(state.execute).toHaveBeenCalledWith('core-sw-01', 'reboot');
 });
 
 it('offers only the actions the daemon says the device can publish', () => {
