@@ -56,9 +56,12 @@ test('appearance settings and the rail toggle share the visible theme', async ({
   await drawer.getByRole('button', { name: 'Light', exact: true }).click();
   await page.getByTestId('settings-drawer-close').click();
   await expect(page.locator('html')).not.toHaveClass(/dark/);
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
   await expect(rail.getByTestId('theme-toggle')).toHaveAccessibleName('Switch to dark mode');
   await rail.getByTestId('theme-toggle').click();
   await expect(page.locator('html')).toHaveClass(/dark/);
+  // Native controls (select, scrollbars) follow color-scheme, not the tokens.
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
 });
 
 for (const collapsed of [false, true]) {
