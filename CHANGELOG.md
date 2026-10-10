@@ -5,6 +5,24 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.2...v0.113.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **deps:** move to Go 1.27.2 and x/net v0.61.0 for GO-2026-6617 ([#2587](https://github.com/MustardSeedNetworks/niac-go/issues/2587)) ([cf2b638](https://github.com/MustardSeedNetworks/niac-go/commit/cf2b6385bbb4f5ad93dfb86a68bcea51ea9d48ae)), closes [#2586](https://github.com/MustardSeedNetworks/niac-go/issues/2586)
+* **deps:** update dependency @tanstack/react-query to v5.104.1 ([#2579](https://github.com/MustardSeedNetworks/niac-go/issues/2579)) ([3ad1605](https://github.com/MustardSeedNetworks/niac-go/commit/3ad16059ad17c5882cc4d26c9d1ef27df5931fb0))
+* **deps:** update dependency immer to v11.1.21 ([#2584](https://github.com/MustardSeedNetworks/niac-go/issues/2584)) ([4516487](https://github.com/MustardSeedNetworks/niac-go/commit/451648731197b56b6f13d8d22144861d471f41ee))
+* **deps:** update dependency lucide-react to v1.50.0 ([#2581](https://github.com/MustardSeedNetworks/niac-go/issues/2581)) ([1943407](https://github.com/MustardSeedNetworks/niac-go/commit/1943407d1188203562ea6930927b96780b7afb1a))
+* **deps:** update go dependencies ([#2580](https://github.com/MustardSeedNetworks/niac-go/issues/2580)) ([5c1d788](https://github.com/MustardSeedNetworks/niac-go/commit/5c1d788c6457f9e5d5e518da069430b6402b22da))
+* **deps:** update gopacket to v1.7.4 to drop the duplicate darwin -lpcap ([#2585](https://github.com/MustardSeedNetworks/niac-go/issues/2585)) ([57e5a4d](https://github.com/MustardSeedNetworks/niac-go/commit/57e5a4d04158cc2262685e6734a95d64ad27c9a8)), closes [#1597](https://github.com/MustardSeedNetworks/niac-go/issues/1597)
+* **ui:** set color-scheme so native controls follow the dark theme ([#2583](https://github.com/MustardSeedNetworks/niac-go/issues/2583)) ([ac1bb91](https://github.com/MustardSeedNetworks/niac-go/commit/ac1bb91d0f9515e63e0409916e18114c792599f2)), closes [#2582](https://github.com/MustardSeedNetworks/niac-go/issues/2582)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2578](https://github.com/MustardSeedNetworks/niac-go/issues/2578)) ([3cc3367](https://github.com/MustardSeedNetworks/niac-go/commit/3cc33671fe5d3f7b29f277a921c6d180ea53a61d))
+
 ## [0.113.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.1...v0.113.2) (2026-10-08)
 
 
