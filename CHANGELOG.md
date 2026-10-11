@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.4...v0.113.5) (2026-10-11)
+
+
+### Miscellaneous
+
+* **deps:** update ubuntu:26.04 docker digest to f144425 ([#2592](https://github.com/MustardSeedNetworks/niac-go/issues/2592)) ([60556b7](https://github.com/MustardSeedNetworks/niac-go/commit/60556b7b754a924e64c356c455521efb6d6f0260))
+
 ## [0.113.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.3...v0.113.4) (2026-10-10)
 
 
