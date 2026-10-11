@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.4...v0.113.5) (2026-10-11)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.52.0 ([#2596](https://github.com/MustardSeedNetworks/niac-go/issues/2596)) ([eb900ea](https://github.com/MustardSeedNetworks/niac-go/commit/eb900ea51ecea003dbf46db423da86bc1ee6259a))
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.7.4 ([#2595](https://github.com/MustardSeedNetworks/niac-go/issues/2595)) ([945e729](https://github.com/MustardSeedNetworks/niac-go/commit/945e729fcc5a15914a01c8964e52dcbfabd42efb))
+
+
+### Miscellaneous
+
+* **deps:** update dependency jsdom to v30.1.2 ([#2594](https://github.com/MustardSeedNetworks/niac-go/issues/2594)) ([673e83d](https://github.com/MustardSeedNetworks/niac-go/commit/673e83d29132a47974fa712a576787c2d36f635c))
+* **deps:** update ubuntu:26.04 docker digest to f144425 ([#2592](https://github.com/MustardSeedNetworks/niac-go/issues/2592)) ([60556b7](https://github.com/MustardSeedNetworks/niac-go/commit/60556b7b754a924e64c356c455521efb6d6f0260))
+
 ## [0.113.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.3...v0.113.4) (2026-10-10)
 
 
