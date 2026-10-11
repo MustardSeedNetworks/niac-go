@@ -1529,7 +1529,7 @@ jobs:
     needs: [changes, backend, build-ui]
     # Pinned by tag AND digest, the same image as seed's e2e-webkit job.
     container:
-      image: ubuntu:26.04@sha256:3595d7fc4286a33fad0fd853a4063e654287a9c3787437d7937c94ca3f7a804e
+      image: ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
       options: --ipc=host
     # The container's default `run` shell is sh (dash); the readiness loop's
     # `{1..30}` and other steps need bash.
