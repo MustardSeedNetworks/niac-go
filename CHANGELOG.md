@@ -5,6 +5,22 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.7...v0.113.8) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update dependency nanoid to v6.0.2 ([#2607](https://github.com/MustardSeedNetworks/niac-go/issues/2607)) ([a73cc10](https://github.com/MustardSeedNetworks/niac-go/commit/a73cc106bd4ba8f670015dd9f88955a599b73231))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2606](https://github.com/MustardSeedNetworks/niac-go/issues/2606)) ([6a7212b](https://github.com/MustardSeedNetworks/niac-go/commit/6a7212bdfd8b94072850b8dabb4f69ea5b72ee37))
+* **deps:** lock file maintenance ([#2609](https://github.com/MustardSeedNetworks/niac-go/issues/2609)) ([bcda21e](https://github.com/MustardSeedNetworks/niac-go/commit/bcda21e9db8607feddb7eddc532547df547967e5))
+* **deps:** update dependency @vitejs/plugin-react to v6.1.2 ([#2602](https://github.com/MustardSeedNetworks/niac-go/issues/2602)) ([2657241](https://github.com/MustardSeedNetworks/niac-go/commit/2657241a677ae440cb4e8309ca2212f3fb8bfeaf))
+* **deps:** update dependency i18next-cli to v1.74.6 ([#2603](https://github.com/MustardSeedNetworks/niac-go/issues/2603)) ([54a0d8b](https://github.com/MustardSeedNetworks/niac-go/commit/54a0d8b316fb4a9917551204b2c22476a3556eb2))
+* **deps:** update dependency postcss to v8.5.29 ([#2604](https://github.com/MustardSeedNetworks/niac-go/issues/2604)) ([44e7c69](https://github.com/MustardSeedNetworks/niac-go/commit/44e7c696cf1434f5db1b1de9fc66e5468a994942))
+
 ## [0.113.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.6...v0.113.7) (2026-10-12)
 
 
