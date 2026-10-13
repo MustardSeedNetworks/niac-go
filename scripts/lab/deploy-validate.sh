@@ -27,8 +27,9 @@
 # The simulations run on throwaway dummy interfaces created for the run and
 # deleted afterwards, so nothing this script starts reaches the host's network.
 #
-# The assertions are made ON the host over ssh, against the loopback listener,
-# so a closed firewall is not mistaken for a broken deployment.
+# The assertions are made ON the host over ssh, against whatever address the
+# daemon bound (loopback by default; CT304 binds its LAN address), so a closed
+# firewall is not mistaken for a broken deployment.
 #
 # Usage:
 #   scripts/lab/deploy-validate.sh --host <ssh-target> [--version vX.Y.Z]
@@ -44,7 +45,8 @@
 #               --version then names the version it is expected to report
 #
 # Requires: ssh access with passwordless sudo on the host, and `gh` locally
-# unless --package is given.
+# unless --package is given. A daemon bound off loopback refuses API calls
+# without a token: export NIAC_API_TOKEN (read-write scope) before running.
 set -euo pipefail
 
 PORT=8445
@@ -84,6 +86,29 @@ done
 [[ -n "$HOST" ]] || die "--host is required (an ssh target, e.g. dev-srv-ubuntu)"
 
 on_host() { ssh -o BatchMode=yes "$HOST" "$@"; }
+
+# Where the daemon answers, set by wait_healthy after every install.
+API_URL=""
+
+# Run a command on the host with NIAC_API_URL and NIAC_API_TOKEN set, for the
+# CLI and api_get. The token travels on ssh's stdin, never in a command line
+# the host's ps can read.
+on_host_api() {
+	printf '%s\n' "${NIAC_API_TOKEN:-}" |
+		on_host "read -r NIAC_API_TOKEN; export NIAC_API_TOKEN NIAC_API_URL='$API_URL'; $1"
+}
+
+# curl reads the header from stdin (-H @-), so the token stays out of argv here
+# too; with no token the header list is empty, as loopback expects.
+api_get() {
+	on_host_api "if [ -n \"\$NIAC_API_TOKEN\" ]; then printf 'Authorization: Bearer %s\\n' \"\$NIAC_API_TOKEN\"; fi |
+		curl -sk --max-time 10 -H @- '${API_URL}$1'"
+}
+
+# The daemon's listener, read from the host's kernel (#2613).
+listen_url() {
+	on_host "ss -ltnH 'sport = :${PORT}'" | "$(dirname "$0")/listen-url.py" "$PORT"
+}
 
 # The version string the daemon reports carries no leading "v"; the release tag
 # does. Compare the same shape at both ends.
@@ -192,7 +217,7 @@ cleanup() {
 release_probes() {
 	local session iface
 	for session in ${PROBE_SESSIONS+"${PROBE_SESSIONS[@]}"}; do
-		on_host "niac simulation stop '$session' --insecure" >/dev/null 2>&1 || true
+		on_host_api "niac simulation stop '$session' --insecure" >/dev/null 2>&1 || true
 	done
 	for iface in ${PROBE_INTERFACES+"${PROBE_INTERFACES[@]}"}; do
 		on_host "sudo ip link delete '$iface'" >/dev/null 2>&1 || true
@@ -212,7 +237,7 @@ probe_interface() {
 # The first scenario the daemon itself offers, so this script never needs to
 # know where the library lives.
 library_scenario() {
-	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/library/networks" |
+	api_get /api/v1/library/networks |
 		python3 -c '
 import json, sys
 
@@ -233,7 +258,7 @@ print(entries[0]["name"])
 # scenario an operator can name is not shippable.
 start_simulation() {
 	local iface="$1" session="$2" scenario="$3" out
-	if out="$(on_host "niac simulation start -i '$iface' --config '$scenario.yaml' --session '$session' --insecure" 2>&1)"; then
+	if out="$(on_host_api "niac simulation start -i '$iface' --config '$scenario.yaml' --session '$session' --insecure" 2>&1)"; then
 		PROBE_SESSIONS+=("$session")
 		return 0
 	fi
@@ -245,7 +270,7 @@ start_simulation() {
 }
 
 assert_sessions_running() {
-	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/sessions" |
+	api_get /api/v1/sessions |
 		python3 -c '
 import json, sys
 
@@ -257,14 +282,12 @@ if missing:
 ' "$@"
 }
 
-fetch_version_json() {
-	on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/__version"
-}
+fetch_version_json() { api_get /__version; }
 
 wait_healthy() {
 	local deadline=$((SECONDS + HEALTH_TIMEOUT))
 	while ((SECONDS < deadline)); do
-		if fetch_version_json | grep -q '"version"'; then
+		if API_URL="$(listen_url)" && fetch_version_json | grep -q '"version"'; then
 			return 0
 		fi
 		sleep 3
@@ -379,7 +402,7 @@ pass "niac.service active, NRestarts unchanged at $AFTER_RESTARTS"
 
 step "Checking recovery left nothing that blocks a simulation start"
 # recovery is a field on the simulation status, not its own route.
-SIM_STATE="$(on_host "curl -sk --max-time 10 https://127.0.0.1:${PORT}/api/v1/simulation" 2>/dev/null || true)"
+SIM_STATE="$(api_get /api/v1/simulation 2>/dev/null || true)"
 RECOVERY_VERDICT="$(printf '%s' "$SIM_STATE" | python3 -c '
 import json, sys
 
