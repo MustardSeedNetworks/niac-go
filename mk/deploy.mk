@@ -10,6 +10,7 @@
 #   make deploy-validate HOST=dev-srv-fedora RELEASE=v0.95.38
 #   make deploy-validate HOST=... PACKAGE=./dist/niac_0.95.38_amd64.deb
 #   make deploy-validate HOST=... FROM_RELEASE=v0.95.57   # or FROM_RELEASE=none
+#   NIAC_API_TOKEN=... make deploy-validate HOST=niac-sim   # daemon bound off loopback
 #
 # HOST is an ssh target and is required; the deployment hosts are supplied by
 # variable rather than baked in, because the last set of hardcoded names went

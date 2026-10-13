@@ -329,6 +329,9 @@ jobs:
       - name: Wire nightly runner — reject stale or dirty checkouts
         run: python3 scripts/test-wire-nightly.py
 
+      - name: deploy-validate — probe the address the daemon bound
+        run: python3 scripts/test-listen-url.py
+
       - name: validate-touched — selection and gate table
         run: python3 scripts/test-validate-touched.py
 
