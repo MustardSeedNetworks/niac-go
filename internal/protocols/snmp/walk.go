@@ -216,7 +216,7 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	scanner.Buffer(make([]byte, 0, walkScanBufInitial), walkScanBufMax)
 
 	lineNum := 0
-	symbolic := 0       // rows refused because their object name is unresolvable
+	var drops walkDrops
 	lastWasHex := false // previous entry came from a Hex-STRING (may continue)
 
 	for scanner.Scan() {
@@ -243,11 +243,7 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 
 		entry, parseErr := parseWalkLine(line)
 		if parseErr != nil {
-			if errors.Is(parseErr, ErrSymbolicOID) {
-				symbolic++
-			}
-			// Log error but continue parsing
-			logging.Debugf("Warning: line %d: %v", lineNum, parseErr)
+			drops.add(lineNum, parseErr)
 
 			continue
 		}
@@ -261,17 +257,47 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 		return nil, fmt.Errorf("error reading walk file: %w", scanErr)
 	}
 
-	// One line per walk, not per row: a walk taken without -On can carry tens of
-	// thousands of these and a per-line debug message is invisible.
-	if symbolic > 0 {
+	drops.warn(lineNum)
+
+	return entries, nil
+}
+
+// walkDrops counts the rows a walk parse refuses. They are reported once per
+// walk rather than per row: a walk taken without -On can carry tens of
+// thousands of them, and a per-line debug message is invisible.
+type walkDrops struct {
+	symbolic      int // object name cannot be resolved to a numeric OID
+	unparsed      int // any other refusal
+	firstUnparsed int // line number of the first unparsed row
+}
+
+func (d *walkDrops) add(lineNum int, err error) {
+	logging.Debugf("Warning: line %d: %v", lineNum, err)
+	if errors.Is(err, ErrSymbolicOID) {
+		d.symbolic++
+
+		return
+	}
+	d.unparsed++
+	if d.firstUnparsed == 0 {
+		d.firstUnparsed = lineNum
+	}
+}
+
+func (d *walkDrops) warn(total int) {
+	if d.symbolic > 0 {
 		logging.Warningf(
 			"walk file: %d of %d rows dropped, object names cannot be resolved "+
 				"to numeric OIDs; re-take the capture with `snmpwalk -On`",
-			symbolic, lineNum,
+			d.symbolic, total,
 		)
 	}
-
-	return entries, nil
+	if d.unparsed > 0 {
+		logging.Warningf(
+			"walk file: %d of %d rows dropped, values cannot be parsed (first at line %d)",
+			d.unparsed, total, d.firstUnparsed,
+		)
+	}
 }
 
 // extractLineOID extracts the OID portion of a raw walk-file line (everything
@@ -388,8 +414,17 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	}
 }
 
+// walkNumber returns the number of an integer-family value. With the MIB
+// loaded, net-snmp appends the object's UNITS clause after a space
+// ("3 seconds", "500 0.1 Hertz"); the number before it is the wire value.
+func walkNumber(valueStr string) string {
+	number, _, _ := strings.Cut(valueStr, " ")
+
+	return number
+}
+
 func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseInt(valueStr, 10, 64)
+	value, err := strconv.ParseInt(walkNumber(valueStr), 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
 	}
@@ -399,7 +434,7 @@ func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
 	}
@@ -409,7 +444,7 @@ func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseUnsignedValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse unsigned integer: %w", err)
 	}
@@ -417,7 +452,7 @@ func parseUnsignedValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
 	}
@@ -427,7 +462,7 @@ func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(valueStr, 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse counter64: %w", err)
 	}

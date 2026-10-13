@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 // TestParseWalkFile_PathTraversal verifies path traversal attacks are rejected.
@@ -492,5 +494,77 @@ func TestParseWalkFileEndOfMIBMarker(t *testing.T) {
 	}
 	if !validation.Valid || len(validation.Issues) != 0 {
 		t.Fatalf("validation = %+v, want valid walk without issues", validation)
+	}
+}
+
+// net-snmp appends an object's UNITS clause to integer values when the MIB is
+// loaded; the number before it is the wire value (#2501).
+func TestParseWalkLineIntegerUnits(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		wantType gosnmp.Asn1BER
+		want     any
+	}{
+		{name: "integer", line: ".1 = INTEGER: 3", wantType: gosnmp.Integer, want: 3},
+		{name: "integer seconds", line: ".1 = INTEGER: 3 seconds", wantType: gosnmp.Integer, want: 3},
+		{name: "negative integer", line: ".1 = INTEGER: -40 degrees", wantType: gosnmp.Integer, want: -40},
+		{name: "integer multi-word", line: ".1 = INTEGER: 500 0.1 Hertz", wantType: gosnmp.Integer, want: 500},
+		{name: "gauge", line: ".1 = Gauge32: 7", wantType: gosnmp.Gauge32, want: uint(7)},
+		{name: "gauge milli-seconds", line: ".1 = Gauge32: 0 milli-seconds", wantType: gosnmp.Gauge32, want: uint(0)},
+		{name: "unsigned", line: ".1 = Unsigned32: 9 octets", wantType: gosnmp.Uinteger32, want: uint(9)},
+		{name: "counter32", line: ".1 = Counter32: 12 packets", wantType: gosnmp.Counter32, want: uint(12)},
+		{name: "counter64", line: ".1 = Counter64: 42 octets", wantType: gosnmp.Counter64, want: uint64(42)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, err := parseWalkLine(tt.line)
+			if err != nil {
+				t.Fatalf("parseWalkLine(%q) error = %v", tt.line, err)
+			}
+			if entry.Type != tt.wantType || entry.Value != tt.want {
+				t.Fatalf("parseWalkLine(%q) = %v %v (%T), want %v %v (%T)",
+					tt.line, entry.Type, entry.Value, entry.Value, tt.wantType, tt.want, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseWalkLineRejectsMalformedIntegers(t *testing.T) {
+	for _, line := range []string{
+		".1 = INTEGER: seconds",
+		".1 = INTEGER: three seconds",
+		".1 = Gauge32: -1 seconds",
+		".1 = Counter32: 1.5 seconds",
+		".1 = Counter64: 0x10 octets",
+	} {
+		t.Run(line, func(t *testing.T) {
+			if entry, err := parseWalkLine(line); err == nil {
+				t.Fatalf("parseWalkLine(%q) = %+v, want an error", line, entry)
+			}
+		})
+	}
+}
+
+// A row the parser refuses must be counted where an operator sees it, not
+// only on a debug line.
+func TestParseWalkContentWarnsOnUnparsedRows(t *testing.T) {
+	var out strings.Builder
+	logging.SetOutput(&out)
+	t.Cleanup(func() { logging.SetOutput(nil) })
+
+	entries, err := ParseWalkContent([]byte(
+		".1.3.6.1.2.1.4.13.0 = INTEGER: 3 seconds\n" +
+			".1.3.6.1.2.1.6.2.0 = INTEGER: lots\n" +
+			".1.3.6.1.2.1.6.3.0 = Gauge32: -5\n",
+	))
+	if err != nil {
+		t.Fatalf("ParseWalkContent() error = %v", err)
+	}
+	if len(entries) != 1 || entries[0].Value != 3 {
+		t.Fatalf("ParseWalkContent() = %+v, want the one seconds row", entries)
+	}
+	if want := "2 of 3 rows dropped, values cannot be parsed (first at line 2)"; !strings.Contains(out.String(), want) {
+		t.Fatalf("warning = %q, want it to contain %q", out.String(), want)
 	}
 }
