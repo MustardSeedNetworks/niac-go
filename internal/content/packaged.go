@@ -74,10 +74,11 @@ func AdoptPackagedBundle(lib *library.Library, bundlePath string) (Manifest, boo
 	if err != nil {
 		return Manifest{}, false, fmt.Errorf("read packaged bundle %s: %w", bundlePath, err)
 	}
-	index, err := library.ReadBundleIndex(lib.Root())
-	if err != nil {
-		return Manifest{}, false, fmt.Errorf("read bundle index: %w", err)
-	}
+	// An unreadable index reads as empty, as it does for Extract and
+	// RecordBundleInstall: the bundle adopts with every file on disk
+	// preserved as the operator's, and the index is rewritten. Failing here
+	// instead skipped the bundle on every start, for good (niac-go#2470).
+	index, _ := library.ReadBundleIndex(lib.Root())
 	if index.Version == version {
 		return Manifest{}, false, nil
 	}

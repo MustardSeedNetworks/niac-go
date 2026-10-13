@@ -122,6 +122,53 @@ func TestAdoptPackagedBundleIgnoresUnrelatedUserContent(t *testing.T) {
 	}
 }
 
+// TestAdoptPackagedBundleOverUnreadableIndex pins niac-go#2470: an index
+// written in an older line-per-path format failed to parse, and adoption
+// returned that error on every daemon start, so the packaged bundle never
+// landed. An unreadable index is read as empty instead: the bundle adopts,
+// the operator's walk is preserved, and the index is rewritten so the next
+// start is a no-op.
+func TestAdoptPackagedBundleOverUnreadableIndex(t *testing.T) {
+	lib, err := library.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open library: %v", err)
+	}
+	userWalk := filepath.Join(lib.SubDir(library.KindWalks), "user-supplied-01.walk")
+	const userBody = "1.3.6.1 = STRING: \"u\"\n"
+	if writeErr := os.WriteFile(userWalk, []byte(userBody), 0o644); writeErr != nil {
+		t.Fatalf("plant user walk: %v", writeErr)
+	}
+	legacy := "walks/user-supplied-01.walk\npcaps/uitest-capture.pcap\n"
+	if writeErr := os.WriteFile(
+		filepath.Join(lib.Root(), library.BundleIndexName),
+		[]byte(legacy),
+		0o600,
+	); writeErr != nil {
+		t.Fatalf("plant legacy index: %v", writeErr)
+	}
+
+	bundle := writePackagedBundle(t)
+	_, installed, err := content.AdoptPackagedBundle(lib, bundle)
+	if err != nil {
+		t.Fatalf("adopt over an unreadable index: %v", err)
+	}
+	if !installed {
+		t.Fatal("an unreadable index blocked the packaged bundle")
+	}
+	if _, statErr := os.Stat(filepath.Join(lib.SubDir(library.KindWalks), newDeviceWalk)); statErr != nil {
+		t.Errorf("bundle walk not on disk: %v", statErr)
+	}
+	if got, _ := os.ReadFile(userWalk); string(got) != userBody {
+		t.Errorf("operator's walk disturbed: got %q want %q", got, userBody)
+	}
+	if _, readErr := library.ReadBundleIndex(lib.Root()); readErr != nil {
+		t.Errorf("index not rewritten as JSON: %v", readErr)
+	}
+	if _, again, adoptErr := content.AdoptPackagedBundle(lib, bundle); adoptErr != nil || again {
+		t.Errorf("second start re-adopted: installed=%v err=%v", again, adoptErr)
+	}
+}
+
 // TestAdoptPackagedBundleEmptyWalks confirms adoption still runs when
 // walks/ is empty (no starters, no user files).
 func TestAdoptPackagedBundleEmptyWalks(t *testing.T) {
