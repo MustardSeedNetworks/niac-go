@@ -261,14 +261,11 @@ func installWindowsService(out io.Writer) error {
 		return fmt.Errorf("failed to install service: %w", installErr)
 	}
 
-	_, err = fmt.Fprint(out, `Service installed successfully.
+	_, err = fmt.Fprint(out, `Service installed successfully. It starts automatically on boot.
 
-To start the service:
+To start it now:
   niac service start
   or: sc start NiACSimulator
-
-To configure automatic startup:
-  sc config NiACSimulator start= auto
 `)
 	return err
 }
