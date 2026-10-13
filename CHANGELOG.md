@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.9...v0.113.10) (2026-10-13)
+
+
+### Bug Fixes
+
+* **service:** stop telling Windows users to enable automatic startup ([#2615](https://github.com/MustardSeedNetworks/niac-go/issues/2615)) ([56cbab2](https://github.com/MustardSeedNetworks/niac-go/commit/56cbab287718b99bea553d3e9d9f52d605935e91)), closes [#2300](https://github.com/MustardSeedNetworks/niac-go/issues/2300)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2614](https://github.com/MustardSeedNetworks/niac-go/issues/2614)) ([4c7d3f3](https://github.com/MustardSeedNetworks/niac-go/commit/4c7d3f320fc14ade4a17c812fd738d12c2661ece))
+* **deps:** lock file maintenance ([#2617](https://github.com/MustardSeedNetworks/niac-go/issues/2617)) ([4501562](https://github.com/MustardSeedNetworks/niac-go/commit/4501562d6b36d10c03d08e90c999215810220ec9))
+
 ## [0.113.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.8...v0.113.9) (2026-10-13)
 
 
