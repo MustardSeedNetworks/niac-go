@@ -138,3 +138,25 @@ func TestWriteValidatedFile(t *testing.T) {
 		}
 	})
 }
+
+// The validator must accept what the parser serves: integer values carrying a
+// net-snmp UNITS suffix (#2501).
+func TestValidateWalkContentAcceptsIntegerUnits(t *testing.T) {
+	result, err := ValidateWalkContent("units.walk", []byte(
+		".1.3.6.1.2.1.4.13.0 = INTEGER: 3 seconds\n"+
+			".1.3.6.1.2.1.4.31.1.1.47.1 = Gauge32: 0 milli-seconds\n"+
+			".1.3.6.1.2.1.31.1.1.1.6.1 = Counter64: 42 octets\n"+
+			".1.3.6.1.2.1.6.2.0 = INTEGER: lots\n",
+	))
+	if err != nil {
+		t.Fatalf("ValidateWalkContent() error = %v", err)
+	}
+	for _, issue := range result.Issues {
+		if issue.Severity == "error" && issue.Line != 4 {
+			t.Errorf("unexpected error on line %d: %s", issue.Line, issue.Message)
+		}
+	}
+	if result.Valid {
+		t.Errorf("Valid = true, want false for the malformed INTEGER on line 4")
+	}
+}

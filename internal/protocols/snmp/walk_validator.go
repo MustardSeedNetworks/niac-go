@@ -511,7 +511,7 @@ func validateIntegerValue(lineNum int, valueStr, originalLine string) []Validati
 		}}
 	}
 
-	if _, err := strconv.ParseInt(valueStr, 10, 32); err != nil {
+	if _, err := strconv.ParseInt(walkNumber(valueStr), 10, 32); err != nil {
 		return []ValidationIssue{{
 			Line:     lineNum,
 			Severity: "error",
@@ -539,7 +539,7 @@ func validateUnsigned32Value(
 		}}
 	}
 
-	if _, err := strconv.ParseUint(valueStr, 10, 32); err != nil {
+	if _, err := strconv.ParseUint(walkNumber(valueStr), 10, 32); err != nil {
 		return []ValidationIssue{{
 			Line:     lineNum,
 			Severity: "error",
@@ -564,7 +564,7 @@ func validateCounter64Value(lineNum int, valueStr, originalLine string) []Valida
 		}}
 	}
 
-	if _, err := strconv.ParseUint(valueStr, 10, 64); err != nil {
+	if _, err := strconv.ParseUint(walkNumber(valueStr), 10, 64); err != nil {
 		return []ValidationIssue{{
 			Line:     lineNum,
 			Severity: "error",
