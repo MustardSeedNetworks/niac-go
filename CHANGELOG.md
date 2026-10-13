@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.8...v0.113.9) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-i18next to v17.0.16 ([#2611](https://github.com/MustardSeedNetworks/niac-go/issues/2611)) ([794b54a](https://github.com/MustardSeedNetworks/niac-go/commit/794b54a51b267d86d85242ff63fb15f7abd55c97))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.74.8 ([#2610](https://github.com/MustardSeedNetworks/niac-go/issues/2610)) ([6ed4250](https://github.com/MustardSeedNetworks/niac-go/commit/6ed42501264992677fbbaa3c47349d5606c0d177))
+
 ## [0.113.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.7...v0.113.8) (2026-10-13)
 
 
