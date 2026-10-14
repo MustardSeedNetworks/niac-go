@@ -118,8 +118,9 @@ func (a *Agent) registerConfiguredRoutes(device *config.Device) {
 		a.registerRoute(destination, network.Mask, iface.Name, "0.0.0.0", IPRouteTypeDirect, IPRouteProtoLocal)
 	}
 	for _, route := range device.Routes {
+		// The MIB-II table is IPv4; an IPv6 static route has no row in it.
 		_, network, err := net.ParseCIDR(route.Destination)
-		if err != nil {
+		if err != nil || network.IP.To4() == nil {
 			continue
 		}
 		a.registerRoute(

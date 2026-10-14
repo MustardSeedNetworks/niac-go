@@ -138,7 +138,7 @@ type AttachmentPin struct {
 	Interface string
 }
 
-// Route declares an IPv4 static route through a named device interface.
+// Route declares a static route through a named device interface.
 type Route struct {
 	Destination string
 	Via         string

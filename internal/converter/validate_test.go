@@ -228,6 +228,31 @@ func TestValidateConfig_IPv6Prefixes(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_RouteNextHop(t *testing.T) {
+	tests := []struct {
+		name        string
+		destination string
+		nextHop     string
+		wantErr     bool
+	}{
+		{name: "IPv4", destination: "10.20.0.0/16", nextHop: "10.10.0.1"},
+		{name: "IPv6", destination: "2001:db8:30::/48", nextHop: "2001:db8:10::1"},
+		{name: "prefix next hop", destination: "2001:db8:30::/48", nextHop: "2001:db8:10::1/64", wantErr: true},
+		{name: "not an address", destination: "10.20.0.0/16", nextHop: "gateway", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := validDevice()
+			d.Interfaces = []Interface{{Name: "eth0", Address: "10.10.0.5/24"}}
+			d.Routes = []Route{{Destination: tt.destination, Via: "eth0", NextHop: tt.nextHop}}
+			err := ValidateConfig(&Config{Devices: []Device{d}})
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateConfig() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateConfig_SSHCredentialsArePaired(t *testing.T) {
 	tests := []struct {
 		name    string

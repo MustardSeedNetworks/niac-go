@@ -2078,7 +2078,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "destination",
         "title": "Destination",
-        "description": "Destination is the target network in CIDR form, for example\n10.20.0.0/24. Use 0.0.0.0/0 for a default route.",
+        "description": "Destination is the target network in CIDR form, for example\n10.20.0.0/24 or 2001:db8:30::/48. Use 0.0.0.0/0 or ::/0 for a default\nroute.",
         "kind": "string"
       },
       {
@@ -2090,7 +2090,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "next_hop",
         "title": "Next hop",
-        "description": "NextHop is the gateway's bare IPv4 address \u2014 an address, not a prefix.",
+        "description": "NextHop is the gateway's bare address, of the destination's family \u2014 an\naddress, not a prefix. An IPv6 next hop is a peer's address_v6.",
         "kind": "string"
       }
     ],
