@@ -253,3 +253,93 @@ func TestObservedClientsReportNoVLANForAnUntaggedFrame(t *testing.T) {
 		t.Errorf("VLAN = %d, want 0 for a frame that carried no tag", clients[0].VLAN)
 	}
 }
+
+func ipv6Frame(src, dst net.HardwareAddr, srcIP, dstIP string) *Packet {
+	frame := make([]byte, etherHeaderSize+40)
+	copy(frame[0:6], dst)
+	copy(frame[6:12], src)
+	frame[12], frame[13] = 0x86, 0xdd // IPv6
+	ip := frame[etherHeaderSize:]
+	ip[0] = 0x60
+	ip[6] = 58 // ICMPv6
+	ip[7] = 255
+	copy(ip[8:24], net.ParseIP(srcIP).To16())
+	copy(ip[24:40], net.ParseIP(dstIP).To16())
+
+	pkt, _ := ParsePacket(frame, 4)
+	return pkt
+}
+
+// A dual-stack tester keeps sourcing neighbour discovery from its link-local
+// address after it has a lease. On CT304 every client read fe80::… while the
+// testers held 10.51.210.x leases from the pack (#2651).
+func TestObservedClientsPreferTheLeaseOverAnIPv6Address(t *testing.T) {
+	const (
+		linkLocal = "fe80::200:ff:fe00:11"
+		global    = "2001:db8:51:210::11"
+	)
+	allNodes := net.HardwareAddr{0x33, 0x33, 0x00, 0x00, 0x00, 0x01}
+	ipv4 := func(s *Stack) { s.decodePacket(arpRequestFrame(clientMAC())) }
+	v6 := func(addr string) func(*Stack) {
+		return func(s *Stack) { s.decodePacket(ipv6Frame(clientMAC(), allNodes, addr, "ff02::1")) }
+	}
+
+	tests := []struct {
+		name   string
+		frames []func(*Stack)
+		want   string
+	}{
+		{"link-local after the lease", []func(*Stack){ipv4, v6(linkLocal)}, testClientIP},
+		{"link-local before the lease", []func(*Stack){v6(linkLocal), ipv4}, testClientIP},
+		{"global after the lease", []func(*Stack){ipv4, v6(global)}, testClientIP},
+		{"global after link-local", []func(*Stack){v6(linkLocal), v6(global)}, global},
+		{"link-local after global", []func(*Stack){v6(global), v6(linkLocal)}, global},
+		{"link-local only", []func(*Stack){v6(linkLocal)}, linkLocal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stack := observedClientStack(t)
+			for _, frame := range tt.frames {
+				frame(stack)
+			}
+
+			clients := stack.GetObservedClients()
+			if len(clients) != 1 {
+				t.Fatalf("GetObservedClients() = %d entries, want 1", len(clients))
+			}
+			if clients[0].IP != tt.want {
+				t.Errorf("IP = %q, want %q", clients[0].IP, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsLinkControlDestination(t *testing.T) {
+	tests := []struct {
+		dst  string
+		want bool
+	}{
+		{"01:80:c2:00:00:00", true},  // STP
+		{"01:80:c2:00:00:02", true},  // LACP
+		{"01:80:c2:00:00:03", true},  // 802.1X
+		{"01:80:c2:00:00:0e", true},  // LLDP
+		{"01:00:0c:cc:cc:cc", true},  // CDP
+		{"01:00:0c:cc:cc:cd", true},  // PVST+
+		{"00:e0:2b:00:00:00", true},  // EDP
+		{"01:e0:52:cc:cc:cc", true},  // FDP
+		{"01:80:c2:00:00:10", false}, // all bridges, relayed
+		{"01:80:c2:00:00:21", false}, // GVRP, relayed by a bridge that does not run it
+		{"ff:ff:ff:ff:ff:ff", false},
+		{"33:33:00:00:00:02", false},
+		{"00:11:22:33:44:55", false},
+	}
+	for _, tt := range tests {
+		dst, err := net.ParseMAC(tt.dst)
+		if err != nil {
+			t.Fatalf("ParseMAC(%q) = %v", tt.dst, err)
+		}
+		if got := isLinkControlDestination(dst); got != tt.want {
+			t.Errorf("isLinkControlDestination(%s) = %v, want %v", tt.dst, got, tt.want)
+		}
+	}
+}

@@ -350,3 +350,61 @@ func TestFabricRuntimeKnowsTheBoundNIC(t *testing.T) {
 	}
 	t.Skip("this host has no Ethernet interface to bind")
 }
+
+// linkControlFrame is an 802.3 LLC frame to a link control group, such as a
+// configuration BPDU: no layer-3 header, nothing a client sends to a network.
+func linkControlFrame(src, dst net.HardwareAddr) *Packet {
+	frame := make([]byte, etherHeaderSize+3+35)
+	copy(frame[0:6], dst)
+	copy(frame[6:12], src)
+	frame[12], frame[13] = 0x00, 0x26 // 802.3 length
+	frame[14], frame[15], frame[16] = 0x42, 0x42, 0x03
+
+	pkt, _ := ParsePacket(frame, 5)
+	return pkt
+}
+
+// On CT304 the Ruckus ICX carrying the wire VLAN sent only STP BPDUs, yet it
+// took the pool's first port and the testers spilled to the next switch
+// (#2651). A switch consumes link control in its control plane and never
+// learns the sender, so neither may the simulated one.
+func TestLinkControlFromAnUplinkTakesNoPoolPort(t *testing.T) {
+	uplink := net.HardwareAddr{0xd4, 0xc1, 0x9e, 0x23, 0x58, 0x45}
+	for _, dst := range []string{"01:80:c2:00:00:00", "01:80:c2:00:00:0e", "01:00:0c:cc:cc:cc", "01:00:0c:cc:cc:cd"} {
+		t.Run(dst, func(t *testing.T) {
+			group, err := net.ParseMAC(dst)
+			if err != nil {
+				t.Fatalf("ParseMAC(%q) = %v", dst, err)
+			}
+			stack := placementStack(t)
+			stack.decodePacket(linkControlFrame(uplink, group))
+			tester := placementClient(1)
+			sendFrom(stack, tester, "10.51.210.101")
+
+			if got, _ := stack.fabric.placement.lookup(tester.String()); got.Interface != "GigabitEthernet1/0/43" {
+				t.Errorf("tester landed on %q, want the pool's first port", got.Interface)
+			}
+			for _, observed := range stack.GetObservedClients() {
+				if observed.MAC == uplink.String() {
+					t.Errorf("uplink %s recorded as a client on %s %s", uplink, observed.Device, observed.Interface)
+				}
+			}
+		})
+	}
+}
+
+// Any other station on the wire tag is plugged in as far as the scenario can
+// tell. pvm01's vmbr0.200 and the testers the runbook builds on it are the same
+// kind of Linux interface, and both open with a router solicitation from a
+// link-local address, so no frame tells them apart. The runbook keeps the
+// wire tag to testers instead (#2651).
+func TestAStationOnTheWireTagTakesAPoolPort(t *testing.T) {
+	stack := placementStack(t)
+	station := placementClient(4)
+	allRouters := net.HardwareAddr{0x33, 0x33, 0x00, 0x00, 0x00, 0x02}
+	stack.decodePacket(ipv6Frame(station, allRouters, "fe80::200:ff:fe00:204", "ff02::2"))
+
+	if got, _ := stack.fabric.placement.lookup(station.String()); got.Interface != "GigabitEthernet1/0/43" {
+		t.Errorf("station landed on %q, want the pool's first port", got.Interface)
+	}
+}

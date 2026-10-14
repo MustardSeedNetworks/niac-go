@@ -141,8 +141,8 @@ Runs on the lab: the hospital pack on CT304's wire VLAN 200, testers on pvm01.
 It uses only the API and web UI and changes nothing on CT304 itself.
 
 **Status: executed on CT304 2026-10-14 against NIAC 0.113.18; every step 4
-pass criterion held.** Two open defects (#2651) change what step 3 shows, and
-the steps below say how.
+pass criterion held.** That run found the two step 3 defects in #2651, both
+fixed since.
 
 ### 1. Start the pack
 
@@ -182,17 +182,18 @@ curl -sk -H "Authorization: Bearer $NIAC_API_TOKEN" \
   "$NIAC_URL/api/v1/sessions/hospital/clients" | jq '.[] | {mac, ip, device, interface}'
 ```
 
-Expect each tester on its own pool port. Until #2651 is fixed, two things
-differ from a clean wire:
+Expect each tester on its own pool port, `MED-ACC-SW01` first, and `ip`
+holding its `10.51.210.x` lease.
 
-- Other MACs on wire VLAN 200 take pool ports too, before any tester arrives.
-  On CT304 the Ruckus ICX uplink (STP only), a Ubiquiti device and pvm01's
-  `vmbr0` took three ports, so the CyberScope landed on `MED-ACC-SW01` and the
-  two namespace testers on `MED-ACC-SW02`. Read `device` and `interface` from
-  this list rather than assuming `MED-ACC-SW01`.
-- `ip` shows the client's IPv6 link-local address, not its DHCP lease. Read
-  the lease on the tester: `ip -n tester2 -4 addr show t2` and the CyberScope's
-  DHCP result, each a `10.51.210.x` address.
+Every station that sends on wire VLAN 200 is a client as far as the pack can
+tell, so keep the tag to testers. Spanning tree, LLDP and CDP from the uplink
+take no port, but an IP interface on the tag does: in the 2026-10-14 run
+pvm01's `vmbr0.200` and a Ubiquiti device each took a port ahead of the
+testers. When step 2 creates `vmbr0.200`, run
+`sysctl -w net.ipv6.conf.vmbr0/200.disable_ipv6=1` before bringing it up so it
+stays silent, and give nothing else an address on the tag. A station that
+does arrive first pushes the testers along the pool, so read `device` and
+`interface` from this list rather than assuming `MED-ACC-SW01`.
 
 Confirm each switch agrees, from a tester. `MED-ACC-SW01` is `10.51.200.21`,
 `MED-ACC-SW02` is `10.51.200.22`:
