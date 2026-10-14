@@ -132,16 +132,35 @@ class PendingRelease(unittest.TestCase):
         self.repo = Repo()
         self.addCleanup(self.repo.close)
 
-    def test_untagged_release_missing_a_swept_in_commit_is_red(self) -> None:
+    def test_untagged_release_missing_a_commit_beside_it_is_red(self) -> None:
+        """A pull_request run on the release PR: main moved on while the PR
+        sat open, and the merge ref joins the two."""
+        self.repo.commit("fix: correct a real defect (#2)")
+        self.repo.git("switch", "--quiet", "-c", "release-please--branches--main")
+        self.repo.changelog(
+            "## [0.2.0] (2026-01-01)\n\n### Bug Fixes\n\n* correct a real defect (#2)\n",
+            tag=None,
+        )
+        self.repo.git("switch", "--quiet", "main")
+        self.repo.commit("feat: land while the release PR was open (#4)")
+        release = "release-please--branches--main"
+        self.repo.git("merge", "--quiet", "--no-ff", "-m", "Merge the release PR", release)
+        code, output = self.repo.run("--pending")
+        self.assertEqual(code, 1, output)
+        self.assertIn("#4", output)
+
+    def test_commit_merged_after_an_untagged_release_is_green(self) -> None:
+        """niac-go#2628: the release PR merged and the next PR's merge-group run
+        started before release-please tagged it. That commit is not in the
+        release; it belongs to the next one."""
         self.repo.commit("fix: correct a real defect (#2)")
         self.repo.changelog(
             "## [0.2.0] (2026-01-01)\n\n### Bug Fixes\n\n* correct a real defect (#2)\n",
             tag=None,
         )
-        self.repo.merge("feat: land while the release PR was open (#4)")
+        self.repo.merge("feat: queued behind the release PR (#4)")
         code, output = self.repo.run("--pending")
-        self.assertEqual(code, 1, output)
-        self.assertIn("#4", output)
+        self.assertEqual(code, 0, output)
 
     def test_untagged_release_that_describes_the_tree_is_green(self) -> None:
         self.repo.commit("fix: correct a real defect (#2)")
