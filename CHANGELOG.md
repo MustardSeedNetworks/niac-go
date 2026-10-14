@@ -5,6 +5,21 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.12](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.11...v0.113.12) (2026-10-14)
+
+
+### Bug Fixes
+
+* **content:** adopt the packaged bundle over an unreadable index ([#2623](https://github.com/MustardSeedNetworks/niac-go/issues/2623)) ([8f8de46](https://github.com/MustardSeedNetworks/niac-go/commit/8f8de46ec336616b20dd966f1ace55747f83f53b)), closes [#2470](https://github.com/MustardSeedNetworks/niac-go/issues/2470)
+* **devicecli:** answer SSH exec requests like a network device ([#2625](https://github.com/MustardSeedNetworks/niac-go/issues/2625)) ([4574fd2](https://github.com/MustardSeedNetworks/niac-go/commit/4574fd29be8c4b60a33be38b4d5a5d604cee66d7)), closes [#2517](https://github.com/MustardSeedNetworks/niac-go/issues/2517)
+* **snmp:** parse walk integers that carry a net-snmp UNITS suffix ([#2621](https://github.com/MustardSeedNetworks/niac-go/issues/2621)) ([bb0436a](https://github.com/MustardSeedNetworks/niac-go/commit/bb0436a3f8c8cd6b71995909cc5ad9bf688f7498)), closes [#2501](https://github.com/MustardSeedNetworks/niac-go/issues/2501)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2622](https://github.com/MustardSeedNetworks/niac-go/issues/2622)) ([f50de9b](https://github.com/MustardSeedNetworks/niac-go/commit/f50de9bfc52e242996338a954b49874c13275c7f))
+* **deps:** update node.js to v26.11.1 ([#2626](https://github.com/MustardSeedNetworks/niac-go/issues/2626)) ([2ff97ee](https://github.com/MustardSeedNetworks/niac-go/commit/2ff97eeceba5bea05d951ac4523bdd81c95f3485))
+
 ## [0.113.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.10...v0.113.11) (2026-10-13)
 
 
