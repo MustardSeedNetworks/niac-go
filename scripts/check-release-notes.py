@@ -62,12 +62,15 @@ def tags() -> list[str]:
     return run("git", "tag", "--sort=-v:refname").splitlines()
 
 
-def commits_in(previous: str, tag: str, rendered: set[str]) -> list[tuple[str, str]]:
+def commits_in(
+    previous: str, tag: str, rendered: set[str], skip: frozenset[str] = frozenset()
+) -> list[tuple[str, str]]:
     """Return (pr_number, subject) for each content commit in the range."""
     span = f"{previous}..{tag}" if previous else tag
     found = []
-    for line in run("git", "log", "--format=%s", span).splitlines():
-        if RELEASE_COMMIT.match(line):
+    for entry in run("git", "log", "--format=%H %s", span).splitlines():
+        sha, _, line = entry.partition(" ")
+        if sha in skip or RELEASE_COMMIT.match(line):
             continue
         conventional = CONVENTIONAL.match(line)
         if not conventional:
@@ -98,6 +101,25 @@ def newest_version(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+def shipped_after(version: str, previous: str) -> frozenset[str]:
+    """Commits that descend from this version's release commit.
+
+    Once the release PR has merged, main holds its commit before
+    release-please has created the tag. A commit merged on top of it is not
+    in that tag; it belongs to the next release (niac-go#2628). A commit the
+    queue built the release commit on top of is its ancestor, so it stays in
+    the check (niac#1817).
+    """
+    span = f"{previous}..HEAD" if previous else "HEAD"
+    subject = re.compile(rf"^chore\(main\): release {re.escape(version)}(?:\s|$)")
+    for entry in run("git", "log", "--format=%H %s", span).splitlines():
+        sha, _, line = entry.partition(" ")
+        if subject.match(line):
+            later = run("git", "rev-list", "--ancestry-path", f"{sha}..HEAD")
+            return frozenset(later.splitlines())
+    return frozenset()
+
+
 def check_pending(known: list[str]) -> int:
     """Check a release the tree describes but no tag names yet."""
     text = CHANGELOG.read_text(encoding="utf-8")
@@ -111,10 +133,12 @@ def check_pending(known: list[str]) -> int:
 
     section = section_for(version, text)
     assert section is not None
+    previous = known[0] if known else ""
     rendered = rendered_types()
+    later = shipped_after(version, previous)
     missing = [
         subject
-        for number, subject in commits_in(known[0] if known else "", "HEAD", rendered)
+        for number, subject in commits_in(previous, "HEAD", rendered, later)
         if not number or f"#{number}" not in section
     ]
     if missing:
