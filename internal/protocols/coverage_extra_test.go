@@ -2609,22 +2609,6 @@ func TestTCPDeviceHasIP(t *testing.T) {
 	}
 }
 
-func TestTCPLookupDestinationMAC(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewTCPHandler(stack)
-
-	// Non-IP type
-	if h.lookupDestinationMAC("not-an-ip", 0, 0) != nil {
-		t.Error("expected nil for non-IP type")
-	}
-
-	// Unknown IP
-	mac := h.lookupDestinationMAC(net.ParseIP("10.0.0.1"), 0, 0)
-	if mac != nil {
-		t.Error("expected nil for unknown IP")
-	}
-}
-
 // ---------- DHCPv6 serialization tests ----------
 
 func TestDHCPv6SerializeMessage(t *testing.T) {
@@ -3477,19 +3461,6 @@ func TestDHCPv6HandleInfoRequest(t *testing.T) {
 
 	// Should not panic
 	h.handleInfoRequest(msg, net.ParseIP("fd00::100"), net.ParseIP("fd00::1"), serverMAC, 1)
-}
-
-// ---------- TCP lookupDestinationMACV6 ----------
-
-func TestTCPLookupDestinationMACV6(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewTCPHandler(stack)
-
-	// Unknown IP
-	mac := h.lookupDestinationMACV6(net.ParseIP("fd00::1"), 0, 0)
-	if mac != nil {
-		t.Error("expected nil for unknown IP")
-	}
 }
 
 func TestDNSExtractSourceMACWithValidation(t *testing.T) {

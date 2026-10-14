@@ -294,8 +294,13 @@ func (h *DNSHandler) selectServerDevice(
 }
 
 func (h *DNSHandler) pickServerIP(device *config.Device, wantIPv6 bool, targetIP net.IP) net.IP {
-	if !wantIPv6 && targetIP != nil && h.stack.deviceOwnsIPv4(device, targetIP) {
-		return targetIP.To4()
+	if targetIP != nil {
+		if !wantIPv6 && h.stack.deviceOwnsIPv4(device, targetIP) {
+			return targetIP.To4()
+		}
+		if wantIPv6 && h.stack.deviceOwnsIPv6(device, targetIP) {
+			return targetIP
+		}
 	}
 	return pickIPAddressForDNS(device, wantIPv6)
 }

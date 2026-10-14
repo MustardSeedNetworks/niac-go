@@ -3,7 +3,6 @@ package protocols
 import (
 	"fmt"
 	"net"
-	"slices"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -283,32 +282,10 @@ func (h *TCPHandler) deviceHasIP(device *config.Device, targetIP any) bool {
 		return false
 	}
 	if ip.To4() == nil {
-		return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
-			return deviceIP.Equal(ip)
-		})
+		return h.stack.deviceOwnsIPv6(device, ip)
 	}
 
 	return h.stack.deviceOwnsIPv4(device, ip)
-}
-
-// lookupDestinationMAC looks up the MAC address for a destination IP, scoped
-// to the VLAN segment the original request arrived on.
-func (h *TCPHandler) lookupDestinationMAC(srcIP any, debugLevel int, vlan int) []byte {
-	ip, ok := srcIP.(net.IP)
-	if !ok {
-		return nil
-	}
-
-	srcDevice := h.stack.devicesForStateIPv4(vlan, ip)
-	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
-		return srcDevice[0].MACAddress
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("Cannot send RST: no MAC for %s", srcIP)
-	}
-
-	return nil
 }
 
 // sendRSTPacket builds and sends a TCP RST packet.
@@ -552,54 +529,36 @@ func (h *TCPHandler) routeToHandlerV6(
 		}
 	default:
 		if isSYNOnly {
-			h.sendRSTV6(ipv6, tcp, devices, pkt.VLAN)
+			h.sendRSTV6(pkt, ipv6, tcp, devices)
 		}
 	}
 }
 
 // sendRSTV6 sends a TCP RST packet over IPv6.
-func (h *TCPHandler) sendRSTV6(ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device, vlan int) {
-	debugLevel := h.stack.GetDebugLevel()
-
+func (h *TCPHandler) sendRSTV6(pkt *Packet, ipv6 *layers.IPv6, tcp *layers.TCP, devices []*config.Device) {
 	device := h.findDeviceWithIP(devices, ipv6.DstIP)
 	if device == nil {
 		return
 	}
-
-	dstMAC := h.lookupDestinationMACV6(ipv6.SrcIP, debugLevel, vlan)
-	if dstMAC == nil {
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
 		return
 	}
 
-	h.sendRSTPacketV6(device, dstMAC, ipv6, tcp, debugLevel)
-}
-
-// lookupDestinationMACV6 looks up the MAC address for an IPv6 destination,
-// scoped to the VLAN segment the original request arrived on.
-func (h *TCPHandler) lookupDestinationMACV6(srcIP net.IP, debugLevel int, vlan int) []byte {
-	srcDevice := h.stack.devicesFor(vlan).GetByIP(srcIP)
-	if len(srcDevice) > 0 && len(srcDevice[0].MACAddress) > 0 {
-		return srcDevice[0].MACAddress
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("Cannot send RST: no MAC for [%s]", srcIP)
-	}
-
-	return nil
+	h.sendRSTPacketV6(device, identity, ipv6, tcp, h.stack.GetDebugLevel())
 }
 
 // sendRSTPacketV6 builds and sends a TCP RST packet over IPv6.
 func (h *TCPHandler) sendRSTPacketV6(
 	device *config.Device,
-	dstMAC []byte,
+	identity replyEthernetIdentity,
 	ipv6 *layers.IPv6,
 	tcp *layers.TCP,
 	debugLevel int,
 ) {
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       dstMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv6,
 	}
 
@@ -633,7 +592,7 @@ func (h *TCPHandler) sendRSTPacketV6(
 		return
 	}
 
-	h.sendSerializedPacketV6(buffer.Bytes(), device, ipv6Reply, tcpReply, debugLevel)
+	h.sendSerializedPacketV6(buffer.Bytes(), device, ipv6Reply, tcpReply, debugLevel, identity.vlan)
 }
 
 // sendSerializedPacketV6 sends a serialized IPv6 packet and logs the result.
@@ -643,6 +602,7 @@ func (h *TCPHandler) sendSerializedPacketV6(
 	ipv6Reply *layers.IPv6,
 	tcpReply *layers.TCP,
 	debugLevel int,
+	vlan int,
 ) {
 	h.stack.mu.Lock()
 	h.stack.serialNumber++
@@ -654,6 +614,7 @@ func (h *TCPHandler) sendSerializedPacketV6(
 		Length:       len(data),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         vlan, // reply on the VLAN the request arrived on (tagged or untagged)
 	}
 
 	h.stack.Send(pkt)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"net"
 	"strings"
 	"time"
 
@@ -495,7 +494,7 @@ func (h *HTTPHandler) HandleRequestV6(
 	response := h.generateResponse(request, devices)
 
 	// Send response over IPv6
-	h.sendResponseV6(ipv6, tcpLayer, response, devices, pkt.GetSourceMAC())
+	h.sendResponseV6(ipv6, tcpLayer, response, devices, pkt)
 }
 
 // sendResponseV6 sends HTTP response over IPv6.
@@ -504,7 +503,7 @@ func (h *HTTPHandler) sendResponseV6(
 	tcpLayer *layers.TCP,
 	response []byte,
 	devices []*config.Device,
-	dstMAC net.HardwareAddr,
+	reqPkt *Packet,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -513,7 +512,8 @@ func (h *HTTPHandler) sendResponseV6(
 	}
 
 	device := devices[0]
-	if len(device.MACAddress) == 0 || dstMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		if debugLevel >= DebugLevelInfo {
 			logging.Debugf("HTTP/IPv6: Cannot send response, missing MAC info")
 		}
@@ -552,8 +552,8 @@ func (h *HTTPHandler) sendResponseV6(
 	}
 
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       dstMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv6,
 	}
 
@@ -576,6 +576,7 @@ func (h *HTTPHandler) sendResponseV6(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(respPkt)
