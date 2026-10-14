@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -234,11 +233,8 @@ func (h *ICMPv6Handler) sendEchoReply(
 	icmpv6 *layers.ICMPv6,
 	eth *layers.Ethernet,
 ) {
-	if len(device.MACAddress) == 0 {
-		return
-	}
-
-	if !h.deviceHasIP(device, ipv6.DstIP) {
+	srcMAC := h.stack.replySourceMAC(pkt, device)
+	if len(srcMAC) == 0 || !h.stack.deviceOwnsIPv6(device, ipv6.DstIP) {
 		return
 	}
 
@@ -250,7 +246,7 @@ func (h *ICMPv6Handler) sendEchoReply(
 		pkt.VLAN,
 		ipv6.DstIP,
 		ipv6.SrcIP,
-		device.MACAddress,
+		srcMAC,
 		eth.SrcMAC,
 		reply,
 		icmpv6.Payload,
@@ -266,13 +262,6 @@ func (h *ICMPv6Handler) sendEchoReply(
 
 	h.stack.IncrementStat("icmp_replies")
 	h.logEchoReplySent(ipv6, pkt)
-}
-
-// deviceHasIP checks if a device has a specific IP address.
-func (h *ICMPv6Handler) deviceHasIP(device *config.Device, ip net.IP) bool {
-	return slices.ContainsFunc(device.IPAddresses, func(deviceIP net.IP) bool {
-		return deviceIP.Equal(ip)
-	})
 }
 
 // logEchoReplySent logs when an echo reply is sent.
@@ -316,12 +305,7 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 		logging.Debugf("ICMPv6: NS for %s from %s sn=%d", targetIP, ipv6.SrcIP, pkt.SerialNumber)
 	}
 
-	// Find device with target IPv6
-	table := h.stack.devicesFor(pkt.VLAN)
-	devices := table.GetByIPv6(targetIP)
-	if len(devices) == 0 {
-		devices = devicesAtLinkLocal(table, targetIP)
-	}
+	devices := h.neighborsFor(pkt.VLAN, targetIP)
 	if len(devices) == 0 {
 		if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 			logging.Debugf("ICMPv6: No device for target %s sn=%d", targetIP, pkt.SerialNumber)
@@ -350,6 +334,24 @@ func (h *ICMPv6Handler) handleNeighborSolicitation(pkt *Packet, packet gopacket.
 			)
 		}
 	}
+}
+
+// neighborsFor is who answers a solicitation for target. On a fabric that is
+// only the owner of an attachment-network address; an address anywhere else
+// is off-link, reached through a router, and resolving it would put the whole
+// topology on the tester's link.
+func (h *ICMPv6Handler) neighborsFor(vlan int, target net.IP) []*config.Device {
+	if h.stack.fabric != nil {
+		if device, found := h.stack.fabric.resolveNeighbor(target); found {
+			return []*config.Device{device}
+		}
+		return nil
+	}
+	table := h.stack.devicesFor(vlan)
+	if devices := table.GetByIPv6(target); len(devices) > 0 {
+		return devices
+	}
+	return devicesAtLinkLocal(table, target)
 }
 
 // sendNeighborAdvertisement sends a Neighbor Advertisement response.

@@ -2005,22 +2005,18 @@ func TestICMPv6GetTypeName(t *testing.T) {
 	}
 }
 
-func TestICMPv6DeviceHasIP(t *testing.T) {
+func TestStackDeviceOwnsIPv6WithoutFabric(t *testing.T) {
 	stack := newTestStackInternal(t)
-	h := NewICMPv6Handler(stack, 0)
 
 	dev := &config.Device{
 		IPAddresses: []net.IP{net.ParseIP("10.0.0.1"), net.ParseIP("fd00::1")},
 	}
 
-	if !h.deviceHasIP(dev, net.ParseIP("10.0.0.1")) {
-		t.Error("expected device to have 10.0.0.1")
+	if !stack.deviceOwnsIPv6(dev, net.ParseIP("fd00::1")) {
+		t.Error("expected device to own fd00::1")
 	}
-	if !h.deviceHasIP(dev, net.ParseIP("fd00::1")) {
-		t.Error("expected device to have fd00::1")
-	}
-	if h.deviceHasIP(dev, net.ParseIP("192.168.1.1")) {
-		t.Error("expected device NOT to have 192.168.1.1")
+	if stack.deviceOwnsIPv6(dev, net.ParseIP("fd00::2")) {
+		t.Error("expected device NOT to own fd00::2")
 	}
 }
 

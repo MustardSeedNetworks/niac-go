@@ -243,8 +243,12 @@ an `address_v6` beside its IPv4 `address`. The same rules apply: a prefix, insid
 the network's `subnet_v6`, with the same prefix length. The prefix must be
 global or unique-local unicast, and an interface cannot take the all-zero
 subnet-router anycast address (a `/127` link may). The fabric validates these
-and reports them in the session topology. Devices do not yet answer neighbour
-discovery or route IPv6 on them; that follows in issue #2411.
+and reports them in the session topology. In a session, neighbour discovery
+answers only for addresses on the attachment network (and the link-local
+address of a device there). Any other `address_v6` is off-link: it answers
+only through a router on the attachment network, over a network that one of
+that router's interfaces numbers. There are no IPv6 static routes yet, so a
+network further away does not answer (issue #2411).
 
 ```yaml
 networks:

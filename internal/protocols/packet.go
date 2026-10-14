@@ -48,6 +48,7 @@ const (
 	fabricRejectionTTLExpired          = "ttl_expired"
 	fabricRejectionInvalidIPv4Checksum = "invalid_ipv4_checksum"
 	fabricRejectionAttachmentSource    = "attachment_source_rejected"
+	fabricRejectionNoRoute             = "no_route"
 )
 
 // Constants for packet parsing.
