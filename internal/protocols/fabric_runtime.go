@@ -31,6 +31,9 @@ type fabricRuntime struct {
 	// cable. Its kernel talks on that link too, and libpcap reports those
 	// frames like any client's.
 	hostMAC net.HardwareAddr
+	// interfacesByAddrV6 is kept apart from interfacesByAddr, whose readers
+	// all mean an IPv4 address that device state can renumber.
+	interfacesByAddrV6 map[netip.Addr]fabricEndpoint
 }
 
 type fabricEndpoint struct {
@@ -103,6 +106,7 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 		runtime.devicesByName[device.Name] = device
 	}
 	runtime.indexInterfaces(topology.Interfaces)
+	runtime.indexInterfacesV6(topology.Interfaces)
 	runtime.indexAttachmentRouters(topology)
 	runtime.indexAttachmentDHCP(topology.DHCPScopes)
 	for _, attachment := range topology.Attachments {

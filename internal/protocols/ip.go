@@ -55,7 +55,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 		return
 	}
 	if h.stack.fabric != nil && !h.stack.fabric.acceptsIPv4Source(ip.SrcIP, ip.DstIP, uint8(ip.Protocol)) {
-		h.rejectFabricIngress(pkt, fabricRejectionAttachmentSource)
+		h.stack.rejectFabricIngress(pkt, fabricRejectionAttachmentSource)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (h *IPHandler) HandlePacket(pkt *Packet) {
 	if h.handleFabricTTLTimeout(pkt, ip) {
 		return
 	}
-	h.recordFabricForwarded(pkt)
+	h.stack.recordFabricForwarded(pkt)
 
 	if len(pkt.fabricFirstHopIP) == 0 && h.shouldProcessTTL(ip, devices) && h.handleTTLTimeout(pkt, ip) {
 		return
@@ -108,22 +108,22 @@ func (h *IPHandler) parseIPv4Layer(pkt *Packet, debugLevel int) *layers.IPv4 {
 	headerLength := int(ip.IHL) * ipv4IHLBytes
 	if ip.IHL < ipIPv4IHL || len(ip.Contents) < headerLength ||
 		CalculateIPChecksum(ip.Contents[:headerLength]) != 0 {
-		h.rejectFabricIngress(pkt, fabricRejectionInvalidIPv4Checksum)
+		h.stack.rejectFabricIngress(pkt, fabricRejectionInvalidIPv4Checksum)
 		return nil
 	}
 
 	return ip
 }
 
-func (h *IPHandler) rejectFabricIngress(pkt *Packet, reason string) {
-	if h.stack.fabric == nil {
+func (s *Stack) rejectFabricIngress(pkt *Packet, reason string) {
+	if s.fabric == nil {
 		return
 	}
 	pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
 	pkt.fabricTrace.RejectionReason = reason
-	h.stack.stats.mu.Lock()
-	h.stack.stats.FabricDrops++
-	h.stack.stats.mu.Unlock()
+	s.stats.mu.Lock()
+	s.stats.FabricDrops++
+	s.stats.mu.Unlock()
 }
 
 // getTargetDevices returns devices that should receive this packet, scoped to
@@ -165,12 +165,14 @@ func (h *IPHandler) getFabricTarget(ip *layers.IPv4, pkt *Packet) []*config.Devi
 		return nil
 	}
 	resolution, resolved := h.stack.fabric.resolveIPv4(dst.Unmap(), pkt.GetDestMAC())
+	return h.stack.fabricTarget(pkt, resolution, resolved)
+}
+
+// fabricTarget records how the fabric resolved pkt's destination and returns
+// the one device that answers it, or nil when nothing on the fabric does.
+func (s *Stack) fabricTarget(pkt *Packet, resolution fabricResolution, resolved bool) []*config.Device {
 	if !resolved {
-		pkt.fabricTrace.RouteDecision = fabricRouteDecisionDropped
-		pkt.fabricTrace.RejectionReason = "no_route"
-		h.stack.stats.mu.Lock()
-		h.stack.stats.FabricDrops++
-		h.stack.stats.mu.Unlock()
+		s.rejectFabricIngress(pkt, fabricRejectionNoRoute)
 		return nil
 	}
 	pkt.fabricReplySourceMAC = cloneMAC(resolution.replySourceMAC)
@@ -211,14 +213,14 @@ func (h *IPHandler) handleFabricTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bo
 	return true
 }
 
-func (h *IPHandler) recordFabricForwarded(pkt *Packet) {
-	if h.stack.fabric == nil || len(pkt.fabricFirstHopIP) == 0 {
+func (s *Stack) recordFabricForwarded(pkt *Packet) {
+	if s.fabric == nil || len(pkt.fabricFirstHopIP) == 0 {
 		return
 	}
 	pkt.fabricTrace.RouteDecision = fabricRouteDecisionForwarded
-	h.stack.stats.mu.Lock()
-	h.stack.stats.FabricForwarded++
-	h.stack.stats.mu.Unlock()
+	s.stats.mu.Lock()
+	s.stats.FabricForwarded++
+	s.stats.mu.Unlock()
 }
 
 // shouldProcessTTL determines if TTL handling should be applied.

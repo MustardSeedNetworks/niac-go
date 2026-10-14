@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"net/netip"
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
@@ -101,15 +102,21 @@ func (h *IPv6Handler) HandlePacket(pkt *Packet) {
 		return
 	}
 
+	if h.stack.fabric != nil && !h.stack.fabric.acceptsIPv6Source(ipv6.SrcIP, ipv6.DstIP) {
+		h.stack.rejectFabricIngress(pkt, fabricRejectionAttachmentSource)
+		return
+	}
+
 	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
 		logging.Debugf("IPv6: %s -> %s, Next Header: %d, Hop Limit: %d sn=%d",
 			ipv6.SrcIP, ipv6.DstIP, ipv6.NextHeader, ipv6.HopLimit, pkt.SerialNumber)
 	}
 
-	devices := h.getIPv6TargetDevices(ipv6, pkt.SerialNumber, pkt.VLAN)
+	devices := h.getIPv6TargetDevices(ipv6, pkt)
 	if devices == nil && !IsIPv6Multicast(ipv6.DstIP) {
 		return
 	}
+	h.stack.recordFabricForwarded(pkt)
 
 	nextHeader, offset := h.walkExtensionHeaders(packet, ipv6)
 
@@ -140,15 +147,25 @@ func (h *IPv6Handler) parseIPv6Layer(packet gopacket.Packet, serialNum int) *lay
 	return ipv6
 }
 
-// getIPv6TargetDevices returns devices that should receive this packet, or nil if not for us.
-func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, serialNum int, vlan int) []*config.Device {
-	devices := h.stack.devicesFor(vlan).GetByIP(ipv6.DstIP)
+// getIPv6TargetDevices returns devices that should receive this packet, or nil
+// if not for us. A multicast destination is link-scoped: the handler of each
+// message decides who on the link answers it.
+func (h *IPv6Handler) getIPv6TargetDevices(ipv6 *layers.IPv6, pkt *Packet) []*config.Device {
+	if h.stack.fabric != nil {
+		if IsIPv6Multicast(ipv6.DstIP) {
+			return nil
+		}
+		dst, _ := netip.AddrFromSlice(ipv6.DstIP)
+		resolution, resolved := h.stack.fabric.resolveIPv6(dst, pkt.GetDestMAC())
+		return h.stack.fabricTarget(pkt, resolution, resolved)
+	}
+	devices := h.stack.devicesFor(pkt.VLAN).GetByIP(ipv6.DstIP)
 	if len(devices) > 0 {
 		return devices
 	}
 
 	if h.debugLevel.Load() >= int32(DebugLevelVerbose) {
-		logging.Debugf("IPv6 packet not for our devices: %s sn=%d", ipv6.DstIP, serialNum)
+		logging.Debugf("IPv6 packet not for our devices: %s sn=%d", ipv6.DstIP, pkt.SerialNumber)
 	}
 
 	return nil

@@ -351,6 +351,13 @@ func (s *Stack) deviceOwnsIPv4(device *config.Device, ip net.IP) bool {
 	})
 }
 
+func (s *Stack) deviceOwnsIPv6(device *config.Device, ip net.IP) bool {
+	if s.fabric != nil {
+		return s.fabric.deviceOwnsIPv6(device, ip)
+	}
+	return slices.ContainsFunc(device.IPAddresses, ip.Equal)
+}
+
 func (s *Stack) allowDHCP() bool {
 	return s.fabric == nil || len(s.fabric.attachmentDHCP) > 0
 }
