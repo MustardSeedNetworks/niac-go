@@ -140,9 +140,9 @@ cannot see two scenarios at once.
 Runs on the lab: the hospital pack on CT304's wire VLAN 200, testers on pvm01.
 It uses only the API and web UI and changes nothing on CT304 itself.
 
-**Status: written 2026-10-04, step 4 moved across switches 2026-10-05
-(#2505); not yet executed on CT304.** Correct this section from the first
-run's evidence.
+**Status: executed on CT304 2026-10-14 against NIAC 0.113.18; every step 4
+pass criterion held.** Two open defects (#2651) change what step 3 shows, and
+the steps below say how.
 
 ### 1. Start the pack
 
@@ -156,12 +156,12 @@ scripts/lab/acceptance.sh hospital
 
 The session id is `hospital`. Its pool is `GigabitEthernet1/0/43` to `1/0/46`
 on each of `MED-ACC-SW01` to `MED-ACC-SW08`, all on `med-data`
-(`10.51.210.0/24`). Unpinned testers fill `MED-ACC-SW01` first.
+(`10.51.210.0/24`). Unpinned clients fill `MED-ACC-SW01` first.
 
 ### 2. Attach three testers
 
-Tester one is the CyberScope on **Wired Profile VLAN 200**; run an AutoTest so
-it DHCPs. Testers two and three are network namespaces on pvm01, each with its
+Tester one is the CyberScope or the EtherScope on a wired profile for VLAN
+200; run an AutoTest so it DHCPs. Testers two and three are network namespaces on pvm01, each with its
 own MAC on wire VLAN 200. `vmbr0.200` is a VLAN 200 sub-interface of `vmbr0`;
 create it as in the Link-Live runbook's tester rig if it does not exist.
 
@@ -182,47 +182,59 @@ curl -sk -H "Authorization: Bearer $NIAC_API_TOKEN" \
   "$NIAC_URL/api/v1/sessions/hospital/clients" | jq '.[] | {mac, ip, device, interface}'
 ```
 
-Expect three entries on `MED-ACC-SW01`, on three different ports of
-`1/0/43`..`1/0/45`, each with a `10.51.210.x` address. Confirm the switch agrees,
-from a tester:
+Expect each tester on its own pool port. Until #2651 is fixed, two things
+differ from a clean wire:
+
+- Other MACs on wire VLAN 200 take pool ports too, before any tester arrives.
+  On CT304 the Ruckus ICX uplink (STP only), a Ubiquiti device and pvm01's
+  `vmbr0` took three ports, so the CyberScope landed on `MED-ACC-SW01` and the
+  two namespace testers on `MED-ACC-SW02`. Read `device` and `interface` from
+  this list rather than assuming `MED-ACC-SW01`.
+- `ip` shows the client's IPv6 link-local address, not its DHCP lease. Read
+  the lease on the tester: `ip -n tester2 -4 addr show t2` and the CyberScope's
+  DHCP result, each a `10.51.210.x` address.
+
+Confirm each switch agrees, from a tester. `MED-ACC-SW01` is `10.51.200.21`,
+`MED-ACC-SW02` is `10.51.200.22`:
 
 ```bash
 ip netns exec tester2 snmpwalk -v2c -c NetAllyDemo 10.51.200.21 \
   1.3.6.1.2.1.17.7.1.2.2.1.2
 ```
 
-Each tester MAC appears exactly once, on its own port's bridge port number. On
-the CyberScope, the LLDP neighbour is `MED-ACC-SW01`.
+Each tester MAC appears exactly once, on the switch and port the list names. On
+the CyberScope, the LLDP neighbour is the switch it landed on.
 
 ### 4. Move one to another switch
 
-Move tester three to `MED-ACC-SW02` `GigabitEthernet1/0/43`, from **Attached
-clients** or:
+Move tester three to a switch it is not on. On CT304 that was `MED-ACC-SW03`
+`GigabitEthernet1/0/43`, which no client had reached. Use **Attached clients**
+or:
 
 ```bash
 csrf=$(curl -sk -H "Authorization: Bearer $NIAC_API_TOKEN" \
   "$NIAC_URL/api/v1/csrf-token" | jq -r .token)
 curl -sk -X POST -H "Authorization: Bearer $NIAC_API_TOKEN" \
   -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
-  -d '{"mac":"02:00:00:5a:00:03","device":"MED-ACC-SW02","interface":"GigabitEthernet1/0/43"}' \
+  -d '{"mac":"02:00:00:5a:00:03","device":"MED-ACC-SW03","interface":"GigabitEthernet1/0/43"}' \
   "$NIAC_URL/api/v1/sessions/hospital/pins"
 ```
 
-Then repeat step 3, and walk the second switch too:
+Then repeat step 3, and walk `MED-ACC-SW03` too:
 
 ```bash
-ip netns exec tester2 snmpwalk -v2c -c NetAllyDemo 10.51.200.22 \
+ip netns exec tester2 snmpwalk -v2c -c NetAllyDemo 10.51.200.23 \
   1.3.6.1.2.1.17.7.1.2.2.1.2
 ```
 
 Pass criteria:
 
-- tester three is on `MED-ACC-SW02` `GigabitEthernet1/0/43`: that switch's
-  forwarding table reports its MAC there, and `MED-ACC-SW01` no longer reports
-  it at all;
-- the `MED-ACC-SW01` port it left reads `notconnect` (`ifOperStatus` down);
-- tester three kept its `10.51.210.x` address: both switches sit on
-  `med-data`, so its lease is still valid;
+- tester three is on `MED-ACC-SW03` `GigabitEthernet1/0/43`: that switch's
+  forwarding table reports its MAC there, and the switch it left no longer
+  reports it at all;
+- the port it left reads `notconnect` (`ifOperStatus` down);
+- tester three kept its `10.51.210.x` lease: both switches sit on `med-data`,
+  so the lease is still valid;
 - testers one and two kept their ports and addresses;
 - the session was not restarted: `packets_sent` in
   `GET /api/v1/sessions/hospital/runtime` kept counting up rather than starting
