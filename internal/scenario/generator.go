@@ -150,12 +150,14 @@ func buildNetworks(request Request) []converter.Network {
 	for siteIndex, site := range request.Sites {
 		for _, kind := range []string{"wan", "security", "core"} {
 			name, subnet, _ := transit(site, kind, siteIndex)
-			networks = append(networks, converter.Network{Name: name, Subnet: subnet})
+			subnetV6, _ := transitV6(site, kind)
+			networks = append(networks, converter.Network{Name: name, Subnet: subnet, SubnetV6: subnetV6})
 		}
 		for _, vlan := range vlanDefinitions() {
 			networks = append(networks, converter.Network{
 				Name:        siteNetworkName(site, vlan.slug),
 				Subnet:      fmt.Sprintf("10.%d.%d.0/24", site.Octet, vlan.thirdOctet),
+				SubnetV6:    siteSubnetV6(site, vlan.thirdOctet),
 				VirtualVLAN: vlan.id,
 			})
 		}
@@ -172,7 +174,8 @@ func buildManifest(authored *converter.Config, runtime *config.Config) Manifest 
 
 	networks := make([]string, 0, len(authored.Networks))
 	for _, network := range authored.Networks {
-		networks = append(networks, fmt.Sprintf("%s|%s|%d", network.Name, network.Subnet, network.VirtualVLAN))
+		networks = append(networks, fmt.Sprintf("%s|%s|%s|%d",
+			network.Name, network.Subnet, network.SubnetV6, network.VirtualVLAN))
 	}
 	sort.Strings(networks)
 

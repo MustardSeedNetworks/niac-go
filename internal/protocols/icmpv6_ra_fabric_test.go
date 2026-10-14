@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -133,4 +134,68 @@ func TestFabricRouterAdvertisementStopsWithEveryPoolPortShut(t *testing.T) {
 	if got := queuedRouterAdvertisers(stack); len(got) != 0 {
 		t.Errorf("unsolicited RAs from %v with no pool port left for the client", got)
 	}
+}
+
+// A core with an SVI per VLAN advertises the prefix of the client's VLAN,
+// taken from its address_v6 there, whatever its ips list holds: a pack authors
+// IPv6 on interfaces only (niac-go#2411).
+func TestFabricRouterAdvertisementCarriesTheAttachmentPrefix(t *testing.T) {
+	cases := []struct {
+		name string
+		ips  []string
+	}{
+		{"address_v6 only", nil},
+		{"another VLAN first in ips", []string{v6CoreMgmt}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := dualStackPlacementConfig()
+			for index := range cfg.Devices {
+				device := &cfg.Devices[index]
+				if device.Name != placementCore {
+					continue
+				}
+				device.ICMPv6Config = &config.ICMPv6Config{
+					Enabled:             true,
+					RouterAdvertisement: &config.Icmpv6RouterAdvertisement{Period: 4},
+				}
+				for _, ip := range tc.ips {
+					device.IPAddresses = append(device.IPAddresses, net.ParseIP(ip))
+				}
+			}
+			stack := NewStackWithTransport(idleTransport{}, cfg, logging.NewDebugConfig(0))
+			stack.ConfigureFabric(compilePlacement(t, cfg))
+
+			stack.icmpv6Handler.sendDueRouterAdvertisements(time.Now(), nil)
+
+			got := advertisedPrefixes(t, stack)
+			if want := []string{"fd00:51:d2::/64"}; !sameNames(got, want) {
+				t.Errorf("advertised prefixes %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func advertisedPrefixes(t *testing.T, stack *Stack) []string {
+	t.Helper()
+	var prefixes []string
+	for len(stack.sendQueue) > 0 {
+		pkt := <-stack.sendQueue
+		frame := gopacket.NewPacket(pkt.Buffer[:pkt.Length], layers.LayerTypeEthernet, gopacket.Default)
+		ra, ok := frame.Layer(layers.LayerTypeICMPv6RouterAdvertisement).(*layers.ICMPv6RouterAdvertisement)
+		if !ok {
+			continue
+		}
+		for _, option := range ra.Options {
+			if option.Type != layers.ICMPv6OptPrefixInfo {
+				continue
+			}
+			const prefixInfoLen = 30
+			if len(option.Data) != prefixInfoLen {
+				t.Fatalf("prefix information option is %d bytes", len(option.Data))
+			}
+			prefixes = append(prefixes, fmt.Sprintf("%s/%d", net.IP(option.Data[14:30]), option.Data[0]))
+		}
+	}
+	return prefixes
 }

@@ -135,6 +135,18 @@ func (r *fabricRuntime) staticRouteV6Available(device *config.Device, route fabr
 		r.interfaceAvailable(nextHop.device, nextHop.interfaceName)
 }
 
+// attachmentAddressV6 is device's address_v6 on the attachment network, the
+// prefix a router there advertises to the client.
+func (r *fabricRuntime) attachmentAddressV6(device *config.Device) net.IP {
+	for _, iface := range r.topology.Interfaces {
+		if iface.Device == device.Name && iface.Network == r.attachmentNetwork &&
+			iface.AddressV6.IsValid() && r.interfaceAvailable(device, iface.Name) {
+			return net.IP(iface.AddressV6.Addr().AsSlice())
+		}
+	}
+	return nil
+}
+
 // resolveNeighbor is the device that answers a Neighbor Solicitation: only an
 // address on the attachment network is on the tester's link.
 func (r *fabricRuntime) resolveNeighbor(target net.IP) (*config.Device, bool) {

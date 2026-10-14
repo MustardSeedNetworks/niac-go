@@ -23,8 +23,7 @@ func unauthoredProtocols() map[string]string {
 		// P5-9 owns the protocol surface no pack authors. FTP is authored by one
 		// built-in scenario, so it is reachable from the shipped library but not
 		// from a pack; the rest are reachable from nothing.
-		"FTPConfig":    "P5-9: no pack authors FTP (1 built-in scenario does)",
-		"ICMPv6Config": "P5-9: no pack authors dual-stack ICMPv6",
+		"FTPConfig": "P5-9: no pack authors FTP (1 built-in scenario does)",
 
 		// Extreme and Foundry discovery. Vendor-specific, and vendor diversity is
 		// out of scope for v1 while the newer models have no walks -- P5-9 records

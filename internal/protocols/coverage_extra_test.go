@@ -2398,26 +2398,27 @@ func TestICMPv6AppendPrefixOptions(t *testing.T) {
 	}
 }
 
-func TestICMPv6DeviceCanAdvertiseIPv6(t *testing.T) {
-	if deviceCanAdvertiseIPv6(nil) {
-		t.Error("expected false for nil device")
+func TestICMPv6RAPrefixAddressWithoutFabric(t *testing.T) {
+	handler := NewStackWithTransport(idleTransport{}, &config.Config{}, logging.NewDebugConfig(0)).icmpv6Handler
+	if handler.raPrefixAddress(nil) != nil {
+		t.Error("expected nil for nil device")
 	}
 
 	dev := &config.Device{Name: "d1"}
-	if deviceCanAdvertiseIPv6(dev) {
-		t.Error("expected false without ICMPv6Config")
+	if handler.raPrefixAddress(dev) != nil {
+		t.Error("expected nil without ICMPv6Config")
 	}
 
 	dev.ICMPv6Config = &config.ICMPv6Config{
 		RouterAdvertisement: &config.Icmpv6RouterAdvertisement{},
 	}
-	if deviceCanAdvertiseIPv6(dev) {
-		t.Error("expected false without IPv6 address")
+	if handler.raPrefixAddress(dev) != nil {
+		t.Error("expected nil without IPv6 address")
 	}
 
 	dev.IPAddresses = []net.IP{net.ParseIP("fd00::1")}
-	if !deviceCanAdvertiseIPv6(dev) {
-		t.Error("expected true for device with RA config and IPv6 address")
+	if got := handler.raPrefixAddress(dev); !got.Equal(net.ParseIP("fd00::1")) {
+		t.Errorf("raPrefixAddress = %v, want fd00::1", got)
 	}
 }
 

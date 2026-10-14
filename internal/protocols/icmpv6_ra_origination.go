@@ -79,8 +79,8 @@ func (h *ICMPv6Handler) sendDueRouterAdvertisements(
 	dstMAC, _ := net.ParseMAC(allNodesMAC)
 	next := make(map[*config.Device]time.Time, len(due))
 	for _, device := range h.stack.AllDevices() {
-		if !deviceCanAdvertiseIPv6(device) ||
-			(h.stack.fabric != nil && !h.stack.fabric.onClientLink(device)) {
+		prefixIP := h.raPrefixAddress(device)
+		if prefixIP == nil {
 			continue
 		}
 		at, scheduled := due[device]
@@ -88,7 +88,7 @@ func (h *ICMPv6Handler) sendDueRouterAdvertisements(
 			next[device] = at
 			continue
 		}
-		err := h.sendRouterAdvertisement(h.stack.discoveryVLAN(device), device, dstIP, dstMAC)
+		err := h.sendRouterAdvertisement(h.stack.discoveryVLAN(device), device, prefixIP, dstIP, dstMAC)
 		if err != nil && h.debugLevel.Load() >= int32(DebugLevelInfo) {
 			logging.Debugf("ICMPv6: unsolicited RA from %s not sent: %v", device.Name, err)
 		}
