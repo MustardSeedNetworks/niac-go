@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.114.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.114.0...v0.114.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **protocols:** answer DNS and TCP over IPv6 like the IPv4 paths do ([#2653](https://github.com/MustardSeedNetworks/niac-go/issues/2653)) ([d63ff0b](https://github.com/MustardSeedNetworks/niac-go/commit/d63ff0bba6cb18877500b1ce523f3f218ea90169))
+
+
+### Documentation
+
+* **attachments:** correct the three-tester runbook from the CT304 run ([#2656](https://github.com/MustardSeedNetworks/niac-go/issues/2656)) ([f6b1e60](https://github.com/MustardSeedNetworks/niac-go/commit/f6b1e60296ea9456cb8b10c404096fcefcb25be1))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2658](https://github.com/MustardSeedNetworks/niac-go/issues/2658)) ([113b559](https://github.com/MustardSeedNetworks/niac-go/commit/113b559fb1a0ac3267bd9f4358e93e684c434932))
+
 ## [0.114.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.18...v0.114.0) (2026-10-14)
 
 
