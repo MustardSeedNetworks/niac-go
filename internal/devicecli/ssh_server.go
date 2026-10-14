@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 
@@ -127,6 +128,15 @@ func (s *SSHServer) serveChannel(channel ssh.Channel, requests <-chan *ssh.Reque
 			_ = request.Reply(true, nil)
 			s.serveShell(channel)
 			return
+		case "exec":
+			var payload struct{ Command string }
+			if err := ssh.Unmarshal(request.Payload, &payload); err != nil {
+				_ = request.Reply(false, nil)
+				continue
+			}
+			_ = request.Reply(true, nil)
+			s.serveExec(channel, payload.Command)
+			return
 		default:
 			_ = request.Reply(false, nil)
 		}
@@ -142,13 +152,36 @@ func (s *SSHServer) serveShell(channel ssh.Channel) {
 	for scanner.Scan() {
 		response := session.Execute(scanner.Text())
 		if response.Output != "" {
-			_, _ = channel.Write([]byte(strings.ReplaceAll(response.Output, "\n", "\r\n") + "\r\n"))
+			_, _ = channel.Write([]byte(crlf(response.Output) + "\r\n"))
 		}
 		if response.Close {
 			return
 		}
 		_, _ = channel.Write([]byte(session.Prompt()))
 	}
+}
+
+// serveExec answers `ssh device "command"` the way network devices do: the
+// command runs at privileged level with no prompt, a `%` error goes to
+// stderr, and the exit status tells the client whether it was accepted.
+func (s *SSHServer) serveExec(channel ssh.Channel, command string) {
+	session := NewSession(s.state, s.validateRoute)
+	session.mode = ModePrivileged
+	output := session.Execute(command).Output
+	var status struct{ Code uint32 }
+	destination := io.Writer(channel)
+	if strings.HasPrefix(output, "%") {
+		status.Code = 1
+		destination = channel.Stderr()
+	}
+	if output != "" {
+		_, _ = destination.Write([]byte(crlf(output) + "\r\n"))
+	}
+	_, _ = channel.SendRequest("exit-status", false, ssh.Marshal(&status))
+}
+
+func crlf(output string) string {
+	return strings.ReplaceAll(output, "\n", "\r\n")
 }
 
 func scanCLICommands(data []byte, atEOF bool) (int, []byte, error) {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/ed25519"
 	"crypto/rand"
+	"errors"
 	"io"
 	"net"
 	"strings"
@@ -76,6 +77,48 @@ func TestSSHServerAcceptsBareCarriageReturn(t *testing.T) {
 		t.Fatalf("Write(enable) error = %v", err)
 	}
 	readThrough(t, output, "edge-1#")
+}
+
+func TestSSHServerAnswersExecAtPrivilegedLevel(t *testing.T) {
+	_, state := newSession()
+	client := connectSSH(t, newSSHServer(t, state))
+	defer client.Close()
+	session, err := client.NewSession()
+	if err != nil {
+		t.Fatalf("NewSession() error = %v", err)
+	}
+	defer session.Close()
+
+	output, err := session.Output("show running-config")
+	if err != nil {
+		t.Fatalf("Output(show running-config) error = %v", err)
+	}
+	got := string(output)
+	if !strings.Contains(got, "hostname edge-1\r\n") || strings.Contains(got, "edge-1#") {
+		t.Fatalf("exec output = %q, want the CRLF running config with no prompt", got)
+	}
+}
+
+func TestSSHServerExecReportsInvalidCommand(t *testing.T) {
+	_, state := newSession()
+	client := connectSSH(t, newSSHServer(t, state))
+	defer client.Close()
+	session, err := client.NewSession()
+	if err != nil {
+		t.Fatalf("NewSession() error = %v", err)
+	}
+	defer session.Close()
+	var stdout, stderr strings.Builder
+	session.Stdout, session.Stderr = &stdout, &stderr
+
+	err = session.Run("show bogus")
+	var exitErr *ssh.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitStatus() != 1 {
+		t.Fatalf("Run(show bogus) error = %v, want exit status 1", err)
+	}
+	if stdout.Len() != 0 || stderr.String() != "% Invalid input detected\r\n" {
+		t.Fatalf("stdout = %q, stderr = %q", stdout.String(), stderr.String())
+	}
 }
 
 func TestSSHServerRejectsPTYWithoutTerminalLineDiscipline(t *testing.T) {
