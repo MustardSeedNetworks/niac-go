@@ -5,6 +5,30 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.114.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.18...v0.114.0) (2026-10-14)
+
+
+### Features
+
+* **fabric:** answer IPv6 neighbour discovery and off-link traffic through the fabric ([#2647](https://github.com/MustardSeedNetworks/niac-go/issues/2647)) ([b0abbfa](https://github.com/MustardSeedNetworks/niac-go/commit/b0abbfafcb43716b7e3645d19088015c0fc79fb7))
+
+
+### Bug Fixes
+
+* **deps:** update codemirror ([#2644](https://github.com/MustardSeedNetworks/niac-go/issues/2644)) ([0ffb0bc](https://github.com/MustardSeedNetworks/niac-go/commit/0ffb0bccb4ed07131da82ce0c49a0100c44ebf8f))
+
+
+### Tests
+
+* **ui:** remove the cold-start cost from the DevicesPage link tests ([#2648](https://github.com/MustardSeedNetworks/niac-go/issues/2648)) ([8f2ea03](https://github.com/MustardSeedNetworks/niac-go/commit/8f2ea031e43167b98064171507b52de08ee3a221)), closes [#2524](https://github.com/MustardSeedNetworks/niac-go/issues/2524)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2646](https://github.com/MustardSeedNetworks/niac-go/issues/2646)) ([5a5b95f](https://github.com/MustardSeedNetworks/niac-go/commit/5a5b95fd3fadef62485d73cc62ea43c7d116e8ca))
+* **deps:** lock file maintenance ([#2650](https://github.com/MustardSeedNetworks/niac-go/issues/2650)) ([104159b](https://github.com/MustardSeedNetworks/niac-go/commit/104159b2acd16e3c15032591196c04274e0dd759))
+* **deps:** update dependency i18next-cli to v1.75.0 ([#2645](https://github.com/MustardSeedNetworks/niac-go/issues/2645)) ([db20d89](https://github.com/MustardSeedNetworks/niac-go/commit/db20d89b02b70b1bc83f5b5f25c3ba726802975d))
+
 ## [0.113.18](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.17...v0.113.18) (2026-10-14)
 
 
