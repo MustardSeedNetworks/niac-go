@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.113.14](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.13...v0.113.14) (2026-10-14)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2631](https://github.com/MustardSeedNetworks/niac-go/issues/2631)) ([50aed4b](https://github.com/MustardSeedNetworks/niac-go/commit/50aed4bcb32a1b072768ee0d09664a6edbb8ed3d))
+
 ## [0.113.13](https://github.com/MustardSeedNetworks/niac-go/compare/v0.113.12...v0.113.13) (2026-10-14)
 
 
