@@ -52,7 +52,11 @@ func newObservedClientTable() *observedClientTable {
 
 // observe records one frame from mac. ip is the address the frame claimed, or
 // nil when it claimed none; a client that has not been given an address yet
-// keeps an empty IP rather than the 0.0.0.0 its DHCP DISCOVER sourced.
+// keeps an empty IP rather than the 0.0.0.0 its DHCP DISCOVER sourced. A
+// dual-stack client sources neighbour discovery from its IPv6 link-local
+// address between the frames it sends from its lease, so a claim never
+// replaces a better one: an IPv4 address beats a routable IPv6 address, which
+// beats a link-local one (#2651).
 func (t *observedClientTable) observe(mac net.HardwareAddr, ip net.IP, vlan int) {
 	key := mac.String()
 	now := t.now()
@@ -71,8 +75,32 @@ func (t *observedClientTable) observe(mac net.HardwareAddr, ip net.IP, vlan int)
 	entry.Frames++
 	entry.VLAN = vlan
 
-	if len(ip) > 0 {
+	if len(ip) > 0 && rankOf(ip) >= rankOf(net.ParseIP(entry.IP)) {
 		entry.IP = ip.String()
+	}
+}
+
+// addressRank orders the addresses a client can claim by how well each
+// identifies it on the scenario's networks.
+type addressRank int
+
+const (
+	rankNone addressRank = iota
+	rankIPv6LinkLocal
+	rankIPv6Routable
+	rankIPv4
+)
+
+func rankOf(ip net.IP) addressRank {
+	switch {
+	case ip == nil:
+		return rankNone
+	case ip.To4() != nil:
+		return rankIPv4
+	case ip.IsLinkLocalUnicast():
+		return rankIPv6LinkLocal
+	default:
+		return rankIPv6Routable
 	}
 }
 
@@ -143,7 +171,7 @@ func (s *Stack) recordObservedClient(pkt *Packet) {
 	}
 
 	src := pkt.GetSourceMAC()
-	if !isUnicastMAC(src) {
+	if !isUnicastMAC(src) || isLinkControlDestination(pkt.GetDestMAC()) {
 		return
 	}
 
@@ -166,6 +194,32 @@ func (s *Stack) recordObservedClient(pkt *Packet) {
 
 	s.observedClients.observe(src, sourceAddressClaimedBy(pkt), vlan)
 	s.placeObservedClient(src)
+}
+
+// isLinkControlDestination reports whether a frame to dst is control traffic
+// for the link itself: STP, LLDP, LACP and 802.1X to the IEEE reserved group
+// 01-80-C2-00-00-00..0F, and the vendor discovery and per-VLAN spanning tree
+// groups (CDP, PVST+, EDP, FDP). A switch consumes these in its control plane
+// and never learns their source in its forwarding table, so a sender of only
+// these is the neighbour on the far end of a trunk, such as the uplink switch
+// whose BPDUs took a tester port in #2651, not a client plugged into a port.
+func isLinkControlDestination(dst net.HardwareAddr) bool {
+	if len(dst) != macAddrLen {
+		return false
+	}
+	if bytes.Equal(dst[:5], []byte{0x01, 0x80, 0xc2, 0x00, 0x00}) && dst[5] <= 0x0f {
+		return true
+	}
+
+	switch dst.String() {
+	case "01:00:0c:cc:cc:cc", // CDP, VTP, DTP, PAgP, UDLD
+		"01:00:0c:cc:cc:cd", // PVST+
+		"00:e0:2b:00:00:00", // EDP
+		"01:e0:52:cc:cc:cc": // FDP
+		return true
+	default:
+		return false
+	}
 }
 
 // isUnicastMAC rejects the all-zero address and any group address: neither can
