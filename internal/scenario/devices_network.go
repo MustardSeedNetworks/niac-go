@@ -62,15 +62,19 @@ func providerWANRouter(request Request, index int, links linkMap) converter.Devi
 			continue
 		}
 		network, _, base := transit(site, "wan", siteIndex)
+		_, wanV6 := transitV6(site, "wan")
 		address := fmt.Sprintf("203.0.113.%d", base+index)
 		interfaceName := fmt.Sprintf("HundredGigabitEthernet0/0/%d", siteIndex+firstSiteInterfaceIndex)
-		interfaces = append(interfaces, newInterface(
+		interfaces = append(interfaces, withAddressV6(newInterface(
 			interfaceName, network, address+"/29", speedHundredGigabit, "Site WAN transit",
-		))
-		routes = append(routes, route(
-			fmt.Sprintf("10.%d.0.0/16", site.Octet), interfaceName,
-			fmt.Sprintf("203.0.113.%d", base+index+transitPeerOffset),
-		))
+		), wanV6(index)))
+		routes = append(routes,
+			route(
+				fmt.Sprintf("10.%d.0.0/16", site.Octet), interfaceName,
+				fmt.Sprintf("203.0.113.%d", base+index+transitPeerOffset),
+			),
+			route(siteIPv6Prefix(site), interfaceName, wanV6(index+transitPeerOffset)),
+		)
 		ips = append(ips, address)
 	}
 
@@ -98,6 +102,8 @@ func providerWANRouter(request Request, index int, links linkMap) converter.Devi
 func siteWANRouter(site Site, siteIndex, index int) deviceSpec {
 	wanNetwork, _, wanBase := transit(site, "wan", siteIndex)
 	securityNetwork, _, securityBase := transit(site, "security", siteIndex)
+	_, wanV6 := transitV6(site, "wan")
+	_, securityV6 := transitV6(site, "security")
 	management := siteIP(site, vlanManagement, wanManagementHostOffset+index)
 	return deviceSpec{
 		name: numberedName(site.Code+"-WAN-R", index), role: "wan",
@@ -116,20 +122,20 @@ func siteWANRouter(site Site, siteIndex, index int) deviceSpec {
 				speedTenGigabit,
 				"Network management",
 			),
-			newInterface(
+			withAddressV6(newInterface(
 				"HundredGigabitEthernet0/0/1",
 				wanNetwork,
 				fmt.Sprintf("203.0.113.%d/29", wanBase+index+transitPeerOffset),
 				speedHundredGigabit,
 				"Provider WAN",
-			),
-			newInterface(
+			), wanV6(index+transitPeerOffset)),
+			withAddressV6(newInterface(
 				"HundredGigabitEthernet0/0/2",
 				securityNetwork,
 				fmt.Sprintf("203.0.113.%d/29", securityBase+index),
 				speedHundredGigabit,
 				"Firewall transit",
-			),
+			), securityV6(index)),
 		},
 		routes: []converter.Route{
 			route(
@@ -138,6 +144,8 @@ func siteWANRouter(site Site, siteIndex, index int) deviceSpec {
 				fmt.Sprintf("203.0.113.%d", securityBase+index+transitPeerOffset),
 			),
 			route("0.0.0.0/0", "HundredGigabitEthernet0/0/1", fmt.Sprintf("203.0.113.%d", wanBase+index)),
+			route(siteIPv6Prefix(site), "HundredGigabitEthernet0/0/2", securityV6(index+transitPeerOffset)),
+			route("::/0", "HundredGigabitEthernet0/0/1", wanV6(index)),
 		},
 		vlan: vlanManagement,
 	}
@@ -146,6 +154,8 @@ func siteWANRouter(site Site, siteIndex, index int) deviceSpec {
 func siteFirewall(site Site, siteIndex, index int) deviceSpec {
 	securityNetwork, _, securityBase := transit(site, "security", siteIndex)
 	coreNetwork, _, coreBase := transit(site, "core", siteIndex)
+	_, securityV6 := transitV6(site, "security")
+	_, coreV6 := transitV6(site, "core")
 	management := siteIP(site, vlanManagement, firewallManagementHostOffset+index)
 	return deviceSpec{
 		name: numberedName(site.Code+"-FW", index), role: "firewall", index: siteIndex*2 + index,
@@ -163,20 +173,20 @@ func siteFirewall(site Site, siteIndex, index int) deviceSpec {
 				speedOneGigabit,
 				"Network management",
 			),
-			newInterface(
+			withAddressV6(newInterface(
 				"ethernet1/1",
 				securityNetwork,
 				fmt.Sprintf("203.0.113.%d/29", securityBase+index+transitPeerOffset),
 				speedHundredGigabit,
 				"WAN security zone",
-			),
-			newInterface(
+			), securityV6(index+transitPeerOffset)),
+			withAddressV6(newInterface(
 				"ethernet1/2",
 				coreNetwork,
 				fmt.Sprintf("203.0.113.%d/29", coreBase+index),
 				speedHundredGigabit,
 				"Trusted core zone",
-			),
+			), coreV6(index)),
 		},
 		routes: []converter.Route{
 			route(
@@ -185,6 +195,8 @@ func siteFirewall(site Site, siteIndex, index int) deviceSpec {
 				fmt.Sprintf("203.0.113.%d", coreBase+index+transitPeerOffset),
 			),
 			route("0.0.0.0/0", "ethernet1/1", fmt.Sprintf("203.0.113.%d", securityBase+index)),
+			route(siteIPv6Prefix(site), "ethernet1/2", coreV6(index+transitPeerOffset)),
+			route("::/0", "ethernet1/1", securityV6(index)),
 		},
 		vlan: vlanManagement,
 	}

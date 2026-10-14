@@ -28,6 +28,7 @@ type deviceSpec struct {
 	reflector  *converter.ReflectorConfig
 	poe        *converter.PoeConfig
 	stp        *converter.StpConfig
+	icmpv6     *converter.Icmpv6Config
 }
 
 func managedDevice(request Request, spec deviceSpec, links linkMap) converter.Device {
@@ -70,6 +71,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 			Traps: siteTraps(spec, request.SNMPCommunity),
 		},
 		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: managedDeviceTTL},
+		Icmpv6:     spec.icmpv6,
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
 		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp,

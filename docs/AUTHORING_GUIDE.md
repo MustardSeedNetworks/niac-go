@@ -254,6 +254,14 @@ interface's IPv6 network. Link-local next hops are not supported. IPv6 routes
 are reported in the session topology but are not in the device's route table,
 its `show ip route` or its SNMP route tables, which are IPv4.
 
+A router that authors `icmpv6.router_advertisement` without `prefix_info`
+advertises the prefix of its `address_v6` on the attachment network, so a core
+with an SVI per VLAN advertises the tester's VLAN and not its first one. The
+scenario packs are dual-stack this way: each site has a `2001:db8:<octet>::/48`
+(the site's IPv4 second octet), a `/64` per VLAN and transit, IPv6 host IDs
+that repeat the IPv4 ones, router advertisements from the core SVIs, and `::/0`
+and site routes from the cores out to the WAN edge.
+
 ```yaml
 networks:
   - name: clinic-lan

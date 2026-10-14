@@ -46,27 +46,29 @@ func coreSwitch(site Site, siteIndex, index int) deviceSpec {
 	for _, vlan := range vlanDefinitions() {
 		address := siteIP(site, vlan.thirdOctet, index+1)
 		addresses = append(addresses, address)
-		interfaces = append(interfaces, newInterface(
+		interfaces = append(interfaces, withAddressV6(newInterface(
 			fmt.Sprintf("Vlan%d", vlan.id), siteNetworkName(site, vlan.slug), address+"/24",
 			speedHundredGigabit, "Gateway for "+vlan.slug,
-		))
+		), siteIPv6(site, vlan.thirdOctet, index+1)))
 	}
 	transitAddress := fmt.Sprintf("203.0.113.%d", coreBase+index+transitPeerOffset)
-	interfaces = append(interfaces, newInterface(
+	_, coreV6 := transitV6(site, "core")
+	interfaces = append(interfaces, withAddressV6(newInterface(
 		"HundredGigabitEthernet0/0/1", coreNetwork, transitAddress+"/29", speedHundredGigabit,
 		"Firewall transit",
-	))
+	), coreV6(index+transitPeerOffset)))
 	return deviceSpec{
 		name: numberedName(site.Code+"-CORE-SW", index), role: "core", index: index,
 		ips: append(addresses, transitAddress), site: &site,
 		sysDescr:   fmt.Sprintf("Cisco Nexus 9508 %s modular core %d", site.Code, index),
 		interfaces: interfaces,
-		routes: []converter.Route{route(
-			"0.0.0.0/0", "HundredGigabitEthernet0/0/1",
-			fmt.Sprintf("203.0.113.%d", coreBase+index),
-		)},
-		vlan: vlanManagement,
-		stp:  coreSpanningTree(index),
+		routes: []converter.Route{
+			route("0.0.0.0/0", "HundredGigabitEthernet0/0/1", fmt.Sprintf("203.0.113.%d", coreBase+index)),
+			route("::/0", "HundredGigabitEthernet0/0/1", coreV6(index)),
+		},
+		vlan:   vlanManagement,
+		stp:    coreSpanningTree(index),
+		icmpv6: coreICMPv6(),
 	}
 }
 

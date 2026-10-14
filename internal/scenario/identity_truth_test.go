@@ -2,6 +2,7 @@ package scenario_test
 
 import (
 	"fmt"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -20,8 +21,17 @@ func collectUniqueAddresses(t *testing.T, cfg *config.Config) map[string]string 
 	addresses := make(map[string]string)
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
+		keys := make([]string, 0, len(device.IPAddresses)+len(device.Interfaces))
 		for _, address := range device.IPAddresses {
-			key := address.String()
+			keys = append(keys, address.String())
+		}
+		// Packs author IPv6 on interfaces only, as address_v6.
+		for _, iface := range device.Interfaces {
+			if prefix, err := netip.ParsePrefix(iface.AddressV6); err == nil {
+				keys = append(keys, prefix.Addr().String())
+			}
+		}
+		for _, key := range keys {
 			if owner, exists := addresses[key]; exists {
 				t.Errorf("IP %s belongs to both %s and %s", key, owner, device.Name)
 			}

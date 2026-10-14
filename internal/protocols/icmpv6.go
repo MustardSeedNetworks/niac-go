@@ -437,12 +437,12 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 	}
 
 	for _, device := range h.stack.devicesFor(pkt.VLAN).GetAll() {
-		if !deviceCanAdvertiseIPv6(device) ||
-			(h.stack.fabric != nil && !h.stack.fabric.onClientLink(device)) {
+		prefixIP := h.raPrefixAddress(device)
+		if prefixIP == nil {
 			continue
 		}
 
-		err := h.sendRouterAdvertisement(pkt.VLAN, device, ipv6.SrcIP, dstMAC)
+		err := h.sendRouterAdvertisement(pkt.VLAN, device, prefixIP, ipv6.SrcIP, dstMAC)
 		if err != nil {
 			if h.debugLevel.Load() >= int32(DebugLevelInfo) {
 				logging.Debugf(
@@ -470,14 +470,14 @@ func (h *ICMPv6Handler) handleRouterSolicitation(pkt *Packet, packet gopacket.Pa
 func (h *ICMPv6Handler) sendRouterAdvertisement(
 	vlan int,
 	device *config.Device,
-	dstIP net.IP,
+	prefixIP, dstIP net.IP,
 	dstMAC net.HardwareAddr,
 ) error {
 	srcIP := linkLocalAddress(device)
 	if srcIP == nil {
 		return errors.New("no link-local source address")
 	}
-	body := h.buildRouterAdvertisementBody(device, firstIPv6Address(device))
+	body := h.buildRouterAdvertisementBody(device, prefixIP)
 	icmpv6 := &layers.ICMPv6{
 		TypeCode: layers.CreateICMPv6TypeCode(ICMPv6TypeRouterAdvertisement, 0),
 	}
@@ -788,16 +788,25 @@ func (h *ICMPv6Handler) SetDebugLevel(level int) {
 	h.debugLevel.Store(safeconv.Int32(level))
 }
 
-func deviceCanAdvertiseIPv6(device *config.Device) bool {
-	if device == nil {
-		return false
+// raPrefixAddress is the address a device's router advertisement takes its
+// default prefix from, or nil when the device does not advertise. On a fabric
+// it is the device's address_v6 on the attachment network, so a core with an
+// SVI per VLAN advertises the client's /64 rather than its first VLAN's.
+func (h *ICMPv6Handler) raPrefixAddress(device *config.Device) net.IP {
+	if getRAConfig(device) == nil {
+		return nil
 	}
-
-	if device.ICMPv6Config == nil || device.ICMPv6Config.RouterAdvertisement == nil {
-		return false
+	fabric := h.stack.fabric
+	if fabric == nil {
+		return firstIPv6Address(device)
 	}
-
-	return firstIPv6Address(device) != nil
+	if !fabric.onClientLink(device) {
+		return nil
+	}
+	if address := fabric.attachmentAddressV6(device); address != nil {
+		return address
+	}
+	return firstIPv6Address(device)
 }
 
 func firstIPv6Address(device *config.Device) net.IP {
