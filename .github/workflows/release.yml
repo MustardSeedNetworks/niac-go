@@ -151,7 +151,7 @@ jobs:
           echo "hash=$UI_BUILD_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Upload UI dist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-dist
           path: internal/api/ui/
@@ -260,7 +260,7 @@ jobs:
       - uses: ./.github/actions/setup-go
 
       - name: Download UI dist
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ui-dist
           path: internal/api/ui/
@@ -329,7 +329,7 @@ jobs:
           go version -m niac.exe | grep -q 'CGO_ENABLED=1'
 
       - name: Upload niac.exe
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: niac-windows-${{ matrix.goarch }}
           path: niac.exe
@@ -450,7 +450,7 @@ jobs:
           done
 
       - name: Download UI dist
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ui-dist
           path: internal/api/ui/
@@ -460,7 +460,7 @@ jobs:
         # the Npcap SDK — goreleaser-cross can't produce them (see
         # .goreleaser.yml), so they're packaged by hand below instead of
         # through a goreleaser build/archive pipe.
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: niac-windows-*
           path: windows-raw/
@@ -470,7 +470,7 @@ jobs:
         # partial public release, but keep the files outside the checkout so
         # GoReleaser's clean-worktree validation remains authoritative.
         if: needs.niac-content.outputs.has_content == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: niac-content-packages
           path: ${{ runner.temp }}/niac-content-packages/
@@ -666,7 +666,7 @@ jobs:
 
       - name: Upload dry-run artifact bundle for inspection
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: goreleaser-dryrun-${{ github.run_id }}
           path: dist/
@@ -773,7 +773,7 @@ jobs:
 
       - name: Upload niac-content packages for the core release
         if: env.HAS_CONTENT_KEY == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: niac-content-packages
           path: |
