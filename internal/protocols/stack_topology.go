@@ -110,6 +110,11 @@ func (s *Stack) RuntimeFabricTopology() (fabric.Topology, bool) {
 				Via: current.Via, NextHop: current.NextHop, Connected: current.Connected,
 			})
 		}
+		for _, compiled := range s.fabric.topology.Routes {
+			if compiled.Device == device.Name && compiled.Destination.Addr().Is6() {
+				result.Routes = append(result.Routes, compiled)
+			}
+		}
 	}
 	return result, true
 }

@@ -11,9 +11,9 @@ import (
 
 // IPv6 on the fabric follows the IPv4 rules, keyed by each interface's
 // address_v6: a neighbour answers only on the attachment network, and an
-// off-link destination is reached through a router there (niac-go#2411). The
-// fabric authors no IPv6 static routes, so that router reaches only the
-// networks its own interfaces number.
+// off-link destination is reached through a router there (niac-go#2411), over
+// a network its interfaces number or a compiled IPv6 static route. Those routes
+// are not in the device's mutable route table, which is IPv4.
 
 func (r *fabricRuntime) indexInterfacesV6(interfaces []fabric.Interface) {
 	r.interfacesByAddrV6 = make(map[netip.Addr]fabricEndpoint)
@@ -89,9 +89,9 @@ func (r *fabricRuntime) resolveIPv6(
 	}, true
 }
 
-// routeForV6 is the attachment router the frame was addressed to, when one of
-// its usable interfaces numbers the destination's network: its connected
-// IPv6 route, longest prefix first.
+// routeForV6 is the attachment router the frame was addressed to and the
+// interface it forwards dst through: its connected IPv6 networks and IPv6
+// static routes, longest prefix first.
 func (r *fabricRuntime) routeForV6(dst netip.Addr, ingressMAC net.HardwareAddr) (*fabricRouter, string) {
 	bestBits := -1
 	var best *fabricRouter
@@ -112,8 +112,27 @@ func (r *fabricRuntime) routeForV6(dst netip.Addr, ingressMAC net.HardwareAddr) 
 			best = router
 			bestVia = iface.Name
 		}
+		for _, route := range r.topology.Routes {
+			if route.Device != router.device.Name || !route.Destination.Addr().Is6() ||
+				!route.Destination.Contains(dst) || route.Destination.Bits() <= bestBits ||
+				!r.staticRouteV6Available(router.device, route) {
+				continue
+			}
+			bestBits = route.Destination.Bits()
+			best = router
+			bestVia = route.Via
+		}
 	}
 	return best, bestVia
+}
+
+// staticRouteV6Available holds while the route's egress interface and its next
+// hop's interface are both up.
+func (r *fabricRuntime) staticRouteV6Available(device *config.Device, route fabric.Route) bool {
+	nextHop, exists := r.interfacesByAddrV6[route.NextHop]
+	return exists && nextHop.device != device &&
+		r.interfaceAvailable(device, route.Via) &&
+		r.interfaceAvailable(nextHop.device, nextHop.interfaceName)
 }
 
 // resolveNeighbor is the device that answers a Neighbor Solicitation: only an

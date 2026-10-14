@@ -247,8 +247,12 @@ and reports them in the session topology. In a session, neighbour discovery
 answers only for addresses on the attachment network (and the link-local
 address of a device there). Any other `address_v6` is off-link: it answers
 only through a router on the attachment network, over a network that one of
-that router's interfaces numbers. There are no IPv6 static routes yet, so a
-network further away does not answer (issue #2411).
+that router's interfaces numbers or an IPv6 static route it carries. An IPv6
+route is written like an IPv4 one: an IPv6 `destination` (`::/0` for a
+default), and a `next_hop` that is a peer's `address_v6` on the `via`
+interface's IPv6 network. Link-local next hops are not supported. IPv6 routes
+are reported in the session topology but are not in the device's route table,
+its `show ip route` or its SNMP route tables, which are IPv4.
 
 ```yaml
 networks:
@@ -262,6 +266,10 @@ devices:
         network: clinic-lan
         address: 10.20.0.1/24
         address_v6: 2001:db8:20::1/64
+    routes:
+      - destination: 2001:db8:30::/48
+        via: GigabitEthernet0/0/1
+        next_hop: 2001:db8:20::2
 ```
 
 Attachments bind a network to the host. Preflight decides whether the host

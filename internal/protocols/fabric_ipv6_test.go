@@ -28,6 +28,13 @@ const (
 
 func dualStackPlacementStack(t *testing.T) *Stack {
 	t.Helper()
+	cfg := dualStackPlacementConfig()
+	stack := NewStackWithTransport(idleTransport{}, cfg, logging.NewDebugConfig(0))
+	stack.ConfigureFabric(compilePlacement(t, cfg))
+	return stack
+}
+
+func dualStackPlacementConfig() *config.Config {
 	cfg := placementConfig()
 	cfg.Networks[0].SubnetV6 = "fd00:51:c8::/64"
 	cfg.Networks[1].SubnetV6 = "fd00:51:d2::/64"
@@ -42,9 +49,7 @@ func dualStackPlacementStack(t *testing.T) *Stack {
 			device.IPAddresses = append(device.IPAddresses, net.ParseIP(v6AccessMgmt))
 		}
 	}
-	stack := NewStackWithTransport(idleTransport{}, cfg, logging.NewDebugConfig(0))
-	stack.ConfigureFabric(compilePlacement(t, cfg))
-	return stack
+	return cfg
 }
 
 func setAddressV6(device *config.Device, name, address string) {

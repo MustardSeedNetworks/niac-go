@@ -40,3 +40,28 @@ func TestConfiguredRouteUsesWalkInterfaceIndex(t *testing.T) {
 		t.Fatalf("ipRouteNextHop = %#v, want 10.254.200.2", nextHop)
 	}
 }
+
+// ipRouteTable is IPv4: an IPv6 static route writes no row under its address.
+func TestConfiguredIPv6RouteHasNoIPRouteTableRow(t *testing.T) {
+	device := createTestDevice()
+	device.Type = "router"
+	device.Interfaces = []config.Interface{{
+		Name: "GigabitEthernet1/0/48", Network: "transit", Address: "10.254.200.1/24",
+		AddressV6: "fd00:254:200::1/64",
+	}}
+	device.Routes = []config.Route{{
+		Destination: "fd00:240::/48", Via: "GigabitEthernet1/0/48", NextHop: "fd00:254:200::2",
+	}}
+	agent := NewAgent(device, 0)
+	if err := agent.SetOID(ifName+".48", &OIDValue{
+		Type: gosnmp.OctetString, Value: "GigabitEthernet1/0/48",
+	}); err != nil {
+		t.Fatalf("SetOID(): %v", err)
+	}
+
+	agent.registerConfiguredRoutes(device)
+
+	if entry := agent.mib.Get(ipRouteDest + ".fd00:240::"); entry != nil {
+		t.Fatalf("ipRouteDest.fd00:240:: = %#v, want no row", entry)
+	}
+}

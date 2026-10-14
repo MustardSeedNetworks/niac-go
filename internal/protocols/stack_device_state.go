@@ -277,10 +277,12 @@ func statusUp(status string) bool {
 	return !strings.EqualFold(strings.TrimSpace(status), "down")
 }
 
+// deviceRouteStates seeds a device's mutable route table. Its interfaces carry
+// only IPv4 addresses, so IPv6 routes stay in the compiled topology.
 func deviceRouteStates(compiled []fabric.Route, device string) []devicestate.Route {
 	result := make([]devicestate.Route, 0)
 	for _, route := range compiled {
-		if route.Device == device {
+		if route.Device == device && route.Destination.Addr().Is4() {
 			result = append(result, devicestate.Route{
 				Destination: route.Destination, Via: route.Via,
 				NextHop: route.NextHop, Connected: route.Connected,
