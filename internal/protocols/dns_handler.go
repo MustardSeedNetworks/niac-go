@@ -333,7 +333,7 @@ func (h *DNSHandler) HandleQueryV6(
 
 	h.stack.IncrementStat("dns_queries")
 
-	serverDevice, serverIP := h.selectServerDevice(devices, true, nil)
+	serverDevice, serverIP := h.selectServerDevice(devices, true, ipv6.DstIP)
 	if !h.validateServerDevice(serverDevice, serverIP, debugLevel, pkt.SerialNumber, "DNS/IPv6") {
 		return
 	}
@@ -353,7 +353,7 @@ func (h *DNSHandler) HandleQueryV6(
 		return
 	}
 
-	h.sendAndLogResponseV6(response, serverIP, ipv6.SrcIP, serverDevice.MACAddress, dstMAC,
+	h.sendAndLogResponseV6(response, serverIP, ipv6.SrcIP, h.stack.replySourceMAC(pkt, serverDevice), dstMAC,
 		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
 }
 

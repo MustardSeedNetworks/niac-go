@@ -198,7 +198,7 @@ func (h *FTPHandler) sendResponseV6(
 	tcpLayer *layers.TCP,
 	response []byte,
 	devices []*config.Device,
-	dstMAC net.HardwareAddr,
+	reqPkt *Packet,
 ) {
 	debugLevel := h.stack.GetDebugLevel()
 
@@ -207,7 +207,8 @@ func (h *FTPHandler) sendResponseV6(
 	}
 
 	device := devices[0]
-	if len(device.MACAddress) == 0 || dstMAC == nil {
+	identity, ok := h.stack.replyEthernet(reqPkt, device)
+	if !ok {
 		if debugLevel >= DebugLevelInfo {
 			logging.Debugf("Cannot send FTP/IPv6 response: missing MAC info")
 		}
@@ -216,8 +217,8 @@ func (h *FTPHandler) sendResponseV6(
 	}
 
 	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       dstMAC,
+		SrcMAC:       identity.source,
+		DstMAC:       identity.destination,
 		EthernetType: layers.EthernetTypeIPv6,
 	}
 
@@ -270,6 +271,7 @@ func (h *FTPHandler) sendResponseV6(
 		Length:       len(buffer.Bytes()),
 		SerialNumber: serialNum,
 		Device:       device,
+		VLAN:         identity.vlan,
 	}
 
 	h.stack.Send(respPkt)
@@ -524,7 +526,7 @@ func (h *FTPHandler) HandleRequestV6(
 		return
 	}
 
-	h.sendResponseV6(ipv6, tcpLayer, []byte(response), devices, pkt.GetSourceMAC())
+	h.sendResponseV6(ipv6, tcpLayer, []byte(response), devices, pkt)
 }
 
 // sanitizeForLogging removes control characters and newlines to prevent log injection
