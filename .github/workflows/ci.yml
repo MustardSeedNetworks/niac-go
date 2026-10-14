@@ -1223,12 +1223,15 @@ jobs:
       - name: Gate self-test
         run: python3 scripts/test-check-release-notes.py
 
-      # Only judge a release that can still be stopped. On a push to main the
+      # Only judge the tree that is about to land. On a push to main the
       # release commit is already history, so failing there would wedge the
       # tag rather than prevent a bad one; release-please.yml's post-tag check
-      # reports that case instead.
+      # reports that case instead. A pull_request run judges a merge ref that
+      # never lands: while a release is pending it fails on the PR's own
+      # unsquashed commits, and nothing reruns it once the release ships, so
+      # the PR stays red with a stale failure (#2635).
       - name: An untagged release must list every commit it would ship
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group'
         run: python3 scripts/check-release-notes.py --pending
 
       # release-please drops a commit its parser rejects without failing, so
