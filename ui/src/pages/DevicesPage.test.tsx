@@ -40,6 +40,15 @@ vi.mock('../api/library-client', () => ({
     Promise.resolve([{ name: 'cisco/cisco-c3900-01.walk', source: 'bundled' }]),
 }));
 
+// Both links are plain anchors, so this file asserts on text and the enclosing
+// <a> rather than paying for CodeMirror and for the first *ByRole query. On a
+// cold worker those cost about 200 ms and 150 ms (jsdom's getComputedStyle walk
+// for the accessibility check), which is what pushed the first test past
+// Vitest's 5 s budget on a loaded host (#2524).
+vi.mock('../components/config/YamlEditor', () => ({
+  YamlEditor: () => null,
+}));
+
 describe('DevicesPage', () => {
   it('links to the Device Library for editing', async () => {
     render(
@@ -48,8 +57,8 @@ describe('DevicesPage', () => {
       </MemoryDataRouter>,
     );
 
-    const link = await screen.findByRole('link', { name: /edit in device library/i });
-    expect(link).toHaveAttribute('href', '/device-config');
+    const label = await screen.findByText(/edit in device library/i);
+    expect(label.closest('a')).toHaveAttribute('href', '/device-config');
   });
 
   it('links each walk file to the device editor SNMP section', async () => {
@@ -59,7 +68,7 @@ describe('DevicesPage', () => {
       </MemoryDataRouter>,
     );
 
-    const link = await screen.findByRole('link', { name: /use in device editor/i });
-    expect(link).toHaveAttribute('href', '/device-config/new#snmp');
+    const label = await screen.findByText(/use in device editor/i);
+    expect(label.closest('a')).toHaveAttribute('href', '/device-config/new#snmp');
   });
 });
