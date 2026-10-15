@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.119.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.118.0...v0.119.0) (2026-10-15)
+
+
+### Features
+
+* **dicom:** answer C-ECHO on pack modalities and the PACS (AI-4) ([#2676](https://github.com/MustardSeedNetworks/niac-go/issues/2676)) ([23602a1](https://github.com/MustardSeedNetworks/niac-go/commit/23602a122d71694b8d3cced5fc185a0af33fa4aa)), closes [#2674](https://github.com/MustardSeedNetworks/niac-go/issues/2674)
+* **hl7:** acknowledge MLLP messages on the hospital clinical systems (AI-5) ([#2678](https://github.com/MustardSeedNetworks/niac-go/issues/2678)) ([e6f0b94](https://github.com/MustardSeedNetworks/niac-go/commit/e6f0b9414bbaa726ddf483bac883631d00e4eeb2)), closes [#2677](https://github.com/MustardSeedNetworks/niac-go/issues/2677)
+* **modbus:** answer register reads on the plant PLCs (AI-6) ([#2682](https://github.com/MustardSeedNetworks/niac-go/issues/2682)) ([eaac053](https://github.com/MustardSeedNetworks/niac-go/commit/eaac053e20d26d20754a378ca666b7e15eb17b53)), closes [#2681](https://github.com/MustardSeedNetworks/niac-go/issues/2681)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.53.0 ([#2680](https://github.com/MustardSeedNetworks/niac-go/issues/2680)) ([4f96362](https://github.com/MustardSeedNetworks/niac-go/commit/4f9636267f2d2b2e6b2f4b34e8550c265df8ea52))
+
+
+### Miscellaneous
+
+* **deps:** update dependency i18next-cli to v1.75.1 ([#2683](https://github.com/MustardSeedNetworks/niac-go/issues/2683)) ([e04d2f8](https://github.com/MustardSeedNetworks/niac-go/commit/e04d2f89b57372862a2a150489d1e21f1990c5d4))
+
 ## [0.118.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.117.0...v0.118.0) (2026-10-15)
 
 
