@@ -232,6 +232,29 @@ only one. Like every personal computer they answer no SNMP. Mobile handsets,
 tablets and Chromebooks are wireless-only, so they belong with the wireless
 clients behind each access point, not in a wired slot.
 
+### Wireless clients
+
+Every presentation pack associates one station to each access point
+(`Counts.WirelessClientsPerAP`), on top of the wired slots rather than in place
+of them (owner, 2026-10-14). A station is a full simulated host on its site's
+`wifi-corp` network: it answers ARP, ping and its name service, the site DNS
+holds its record, and the site's DHCP server leases the rest of that network
+through a relay on each core's `Vlan220` gateway. The AP reports it in its
+client table at the radio it is associated to, and the controller aggregates
+it. No switch learns its MAC: the packs' APs are controller-joined, so client
+traffic is tunnelled to the controller rather than bridged onto the access
+port.
+
+Each vertical carries a kind its wired mix already has, so a station reads as a
+product a tester has met: Wi-Fi infusion pumps in a hospital, rugged handhelds
+on the warehouse, plant and shop floors, laptops on campus and in a POP. Phones,
+tablets and Chromebooks wait for catalog profiles of their own. Guest stations
+wait for the multi-BSS radio: a radio serves one SSID today, and a guest
+station associated to the corporate SSID would contradict the AP reporting it.
+The packs grow to hospital 310, warehouse 343, campus 303, retail 306,
+manufacturing 317 and service provider 312; enterprise-scale stays at 543 with
+no stations.
+
 ## Vertical device tiers
 
 Signature devices per pack, on top of the common and client tiers.

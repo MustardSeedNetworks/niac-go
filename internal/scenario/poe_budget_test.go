@@ -42,8 +42,8 @@ func TestHospitalPackAccessSwitchesAuthorAPoEBudget(t *testing.T) {
 // pack ships an authoring error: the validator reports over-subscription, and a
 // tester would see ports that never come up.
 func TestHospitalPackPoEBudgetCoversItsPoweredDevices(t *testing.T) {
-	devices := hospitalDevices(t)
-	cfg := &config.Config{Devices: devices}
+	cfg := packConfig(t, hospitalPack(t))
+	devices := cfg.Devices
 
 	result := config.NewValidator("hospital.yaml").Validate(cfg)
 	for _, err := range result.Errors {

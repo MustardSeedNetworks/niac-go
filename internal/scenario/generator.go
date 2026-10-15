@@ -69,6 +69,9 @@ func Generate(request Request) (Result, error) {
 		Attachments: []converter.LogicalAttachment{testerAttachment(request)},
 		Devices:     buildDevices(request, links),
 	}
+	if err := associateWirelessStations(request, authored.Devices); err != nil {
+		return Result{}, err
+	}
 	if err := applyFaults(&authored, request.Faults); err != nil {
 		return Result{}, fmt.Errorf("%w: %w", ErrInvalidRequest, err)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // CISCO-DOT11-ASSOCIATION-MIB object prefixes. IEEE802dot11-MIB has no client
@@ -141,11 +142,11 @@ func (a *Agent) addDot11Client(
 	}
 	associatedAt := station.AssociatedAt
 	statisticEntries[cDot11ClientUpTime+suffix] = &OIDValue{Dynamic: func() *OIDValue {
-		return &OIDValue{Type: gosnmp.Gauge32, Value: int(time.Since(associatedAt) / time.Second)}
+		return &OIDValue{Type: gosnmp.Gauge32, Value: safeconv.Uint32(int(time.Since(associatedAt) / time.Second))}
 	}}
 	statisticEntries[cDot11ClientSignalStrength+suffix] = &OIDValue{Type: gosnmp.Integer, Value: station.SignalDBM}
 	statisticEntries[cDot11ClientSigQuality+suffix] = &OIDValue{
-		Type: gosnmp.Gauge32, Value: station.SignalQualityPct,
+		Type: gosnmp.Gauge32, Value: safeconv.Uint32(station.SignalQualityPct),
 	}
 }
 

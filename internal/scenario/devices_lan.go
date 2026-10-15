@@ -16,7 +16,7 @@ func buildSiteLAN(request Request, site Site, siteIndex int, links linkMap) []co
 			request.Counts.AccessSwitches+request.Counts.ServerSwitches+
 			request.Counts.AccessSwitches*request.Counts.AccessPointsPerAccess)
 	for index := 1; index <= request.Counts.CoreSwitches; index++ {
-		specs = append(specs, coreSwitch(site, siteIndex, index))
+		specs = append(specs, coreSwitch(site, siteIndex, index, request.Counts.WirelessClientsPerAP > 0))
 	}
 	for index := 1; index <= request.Counts.DistributionSwitches; index++ {
 		specs = append(specs, distributionSwitch(site, index))
@@ -39,17 +39,24 @@ func buildSiteLAN(request Request, site Site, siteIndex int, links linkMap) []co
 	return devices
 }
 
-func coreSwitch(site Site, siteIndex, index int) deviceSpec {
+// coreSwitch builds one core of a site. With wireless stations on the site,
+// its wifi-corp gateway relays DHCP to the site's server, which holds a scope
+// for that network (see applyServiceCapabilities).
+func coreSwitch(site Site, siteIndex, index int, relayWirelessDHCP bool) deviceSpec {
 	coreNetwork, _, coreBase := transit(site, "core", siteIndex)
 	addresses := make([]string, 0, len(vlanDefinitions()))
 	interfaces := make([]converter.Interface, 0, len(vlanDefinitions())+1)
 	for _, vlan := range vlanDefinitions() {
 		address := siteIP(site, vlan.thirdOctet, index+1)
 		addresses = append(addresses, address)
-		interfaces = append(interfaces, withAddressV6(newInterface(
+		gateway := newInterface(
 			fmt.Sprintf("Vlan%d", vlan.id), siteNetworkName(site, vlan.slug), address+"/24",
 			speedHundredGigabit, "Gateway for "+vlan.slug,
-		), siteIPv6(site, vlan.thirdOctet, index+1)))
+		)
+		if relayWirelessDHCP && vlan.id == vlanWiFiCorp {
+			gateway.DHCPRelay = siteIP(site, vlanData, dhcpServerHost)
+		}
+		interfaces = append(interfaces, withAddressV6(gateway, siteIPv6(site, vlan.thirdOctet, index+1)))
 	}
 	transitAddress := fmt.Sprintf("203.0.113.%d", coreBase+index+transitPeerOffset)
 	_, coreV6 := transitV6(site, "core")

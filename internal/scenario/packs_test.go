@@ -28,10 +28,13 @@ func TestScenarioPackMetadata(t *testing.T) {
 	}
 }
 
-// The 2026-09-12 sizing puts a presentation pack at about 250 devices, which
-// Link-Live renders in about 5.5 s at its measured 19 ms per host.
+// The 2026-09-12 sizing put a presentation pack at about 250 devices, which
+// Link-Live renders in about 5.5 s at its measured 19 ms per host. The owner
+// raised the budget to 300-350 on 2026-10-14 to add a wireless station per
+// access point on top of the wired endpoints rather than in place of them;
+// the densest pack, warehouse, lands at 343, about 6.5 s.
 func TestPresentationScenarioPacksFitLinkLiveMapBudget(t *testing.T) {
-	const maximumPresentationDevices = 270
+	const maximumPresentationDevices = 350
 
 	for _, pack := range scenario.Packs() {
 		if pack.MapPurpose == scenario.MapPurposeStress {

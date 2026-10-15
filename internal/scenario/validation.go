@@ -157,6 +157,16 @@ func validateCounts(c Counts, accessLayer AccessLayer) error {
 	if c.AccessSwitches*c.WorkstationsPerAccess > maxSiteWorkstations {
 		return fmt.Errorf("site workstation count must not exceed %d", maxSiteWorkstations)
 	}
+	return validateWirelessClients(c)
+}
+
+func validateWirelessClients(c Counts) error {
+	if c.WirelessClientsPerAP < 0 || c.WirelessClientsPerAP > maxWirelessClientsPerAP {
+		return fmt.Errorf("wireless clients per access point must be between 0 and %d", maxWirelessClientsPerAP)
+	}
+	if c.AccessSwitches*c.AccessPointsPerAccess*c.WirelessClientsPerAP > maxSiteWirelessClients {
+		return fmt.Errorf("site wireless client count must not exceed %d", maxSiteWirelessClients)
+	}
 	return nil
 }
 

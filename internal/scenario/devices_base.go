@@ -129,8 +129,6 @@ func endpointDevice(
 	address string,
 ) converter.Device {
 	kind := wiredEndpointKind(request, accessIndex, slot)
-	profile := profileByRole(kind.role)
-	name := wiredEndpointName(request, site, accessIndex, slot)
 	access := newInterface(
 		"eth0",
 		siteNetworkName(site, "data"),
@@ -138,13 +136,35 @@ func endpointDevice(
 		speedOneGigabit,
 		"Wired client access",
 	)
-	// Every endpoint's port is eth0, so seeding load off the interface name
-	// alone hands the whole fleet one identical number. Switch and router ports
-	// vary because their names do.
-	access.InUtilization, access.OutUtilization = utilization(name + "/eth0")
+	return hostDevice(request, site, kind, hostPlacement{
+		name: wiredEndpointName(request, site, accessIndex, slot), macSuffix: identitySuffix(&site, kind.role, index),
+		address: address, vlan: vlanData, nic: access,
+	})
+}
+
+// hostPlacement is where one end host sits: its name, identity, address and
+// the one interface it reaches the network on.
+type hostPlacement struct {
+	name      string
+	macSuffix uint32
+	address   string
+	vlan      int
+	nic       converter.Interface
+}
+
+// hostDevice builds an end host of one kind, wired or wireless; only its
+// placement differs.
+func hostDevice(request Request, site Site, kind endpointKind, placement hostPlacement) converter.Device {
+	profile := profileByRole(kind.role)
+	name := placement.name
+	access := placement.nic
+	// Every endpoint of a kind has the same interface name, so seeding load off
+	// the interface name alone hands the whole fleet one identical number.
+	// Switch and router ports vary because their names do.
+	access.InUtilization, access.OutUtilization = utilization(name + "/" + access.Name)
 	device := converter.Device{
 		Name: name, Type: profile.DeviceType, Vendor: profile.Vendor,
-		MACSuffix: identitySuffix(&site, kind.role, index), IPs: []string{address}, VLAN: vlanData,
+		MACSuffix: placement.macSuffix, IPs: []string{placement.address}, VLAN: placement.vlan,
 		Interfaces: []converter.Interface{access},
 		Icmp:       &converter.IcmpConfig{Enabled: true, TTL: kind.ttl},
 		OSFingerprint: &converter.OSFingerprintConfig{

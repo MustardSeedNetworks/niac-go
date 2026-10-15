@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
@@ -241,5 +243,33 @@ func TestDot11ClientTableWalksInOneSweep(t *testing.T) {
 	sort.Strings(reached)
 	if want := dot11ClientOIDs(agent); !equalStrings(reached, want) {
 		t.Errorf("GETNEXT reached:\n got %v\nwant %v", reached, want)
+	}
+}
+
+// TestDot11ClientResponsesMarshal: every association object goes out in a
+// response. cDot11ClientUpTime and cDot11ClientSigQuality are Gauge32, which
+// gosnmp encodes only from an unsigned value; holding them as int made the
+// agent drop the whole response, so an NMS walking the table timed out at the
+// statistics table (W1, found when the packs gained stations).
+func TestDot11ClientResponsesMarshal(t *testing.T) {
+	agent := NewAgent(wifiAPWithClients(), 0)
+	index := clientIndex(t, agent, "Dot11Radio0", oracleFirstClientMAC)
+
+	for _, column := range []string{
+		oracleClientParentAddress, oracleClientIPAddressType, oracleClientIPAddress,
+		oracleClientUpTime, oracleClientSignal, oracleClientSigQuality,
+	} {
+		oid := column + "." + index
+		value, err := agent.HandleGet(oid)
+		if err != nil {
+			t.Fatalf("GET %s: %v", oid, err)
+		}
+		packet := &gosnmp.SnmpPacket{
+			Version: gosnmp.Version2c, Community: "test", PDUType: gosnmp.GetResponse,
+			Variables: []gosnmp.SnmpPDU{{Name: oid, Type: value.Type, Value: value.Value}},
+		}
+		if _, marshalErr := packet.MarshalMsg(); marshalErr != nil {
+			t.Errorf("%s does not marshal: %v", column, marshalErr)
+		}
 	}
 }

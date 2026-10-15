@@ -138,6 +138,7 @@ func buildSiteEndpoints(request Request, site Site, links linkMap) []converter.D
 		}
 	}
 	devices = append(devices, medEndpoints(request, site, workstationCount)...)
+	devices = append(devices, buildWirelessStations(request, site)...)
 	for index, role := range serviceRoles() {
 		devices = append(devices, serviceServer(request, site, role, index+1, links))
 	}
@@ -227,6 +228,13 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 			PoolStart:        siteIP(site, vlanData, dhcpPoolStartHost),
 			PoolEnd:          siteIP(site, vlanData, dhcpPoolEndHost),
 		}
+		if request.Counts.WirelessClientsPerAP > 0 {
+			spec.dhcp.Scopes = []converter.DhcpScope{{
+				PoolStart: siteIP(site, vlanWiFiCorp, dhcpPoolStartHost),
+				PoolEnd:   siteIP(site, vlanWiFiCorp, dhcpPoolEndHost),
+				Router:    siteIP(site, vlanWiFiCorp, primaryCoreGatewayHost),
+			}}
+		}
 	case workloadServiceRole:
 		spec.http = &converter.HTTPConfig{Enabled: true, ServerName: "Microsoft-IIS/10.0"}
 		if request.EndpointProfile == "hospital" {
@@ -290,7 +298,7 @@ func siteDNSRecords(request Request, site Site) []converter.DNSRecord {
 			})
 		}
 	}
-	return records
+	return append(records, wirelessStationDNSRecords(request, site)...)
 }
 
 func wirelessController(request Request, site Site, index int, links linkMap) converter.Device {

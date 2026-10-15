@@ -37,6 +37,8 @@ func roleCode(role string) int {
 		return roleServerCode
 	case "controller":
 		return roleControllerCode
+	case wirelessClientRole:
+		return roleWirelessClientCode
 	default:
 		if isWiredEndpointRole(role) || isMEDEndpointRole(role) {
 			return roleWorkstationCode
