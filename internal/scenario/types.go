@@ -114,6 +114,7 @@ const (
 	roleWorkstationCode
 	roleServerCode
 	roleControllerCode
+	roleWirelessClientCode
 )
 
 // Site identifies one generated location and its second IPv4 octet.
@@ -134,6 +135,11 @@ type Counts struct {
 	AccessPointsPerAccess int `json:"accessPointsPerAccess"`
 	WorkstationsPerAccess int `json:"workstationsPerAccess"`
 	WirelessControllers   int `json:"wirelessControllers"`
+	// WirelessClientsPerAP is how many stations each access point has
+	// associated. It is a count rather than a VLAN or port knob: stations
+	// always land on the corporate Wi-Fi network, so a pack cannot use it to
+	// place a device anywhere a tester could attach.
+	WirelessClientsPerAP int `json:"wirelessClientsPerAP,omitempty"`
 }
 
 // AccessLayer is how a site organizes its access tier. It is shape rather than

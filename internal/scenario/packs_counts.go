@@ -33,6 +33,7 @@ func packCounts(access, accessPoints, workstations int) Counts {
 	}
 	if accessPoints > 0 {
 		counts.WirelessControllers = maxRedundantPeers
+		counts.WirelessClientsPerAP = packWirelessClientsPerAP
 	}
 	return counts
 }

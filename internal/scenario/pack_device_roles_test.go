@@ -89,7 +89,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"campus": {
 			"access-point":  48,
 			"firewall":      8,
-			"host":          84,
+			"host":          132,
 			"iot":           20,
 			"layer3-switch": 8,
 			"printer":       12,
@@ -114,7 +114,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 			"access-point":  48,
 			"firewall":      4,
 			"host":          36,
-			"iot":           100,
+			"iot":           148,
 			"layer3-switch": 4,
 			"printer":       10,
 			"router":        7,
@@ -125,6 +125,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"manufacturing": {
 			"access-point":  54,
 			"firewall":      2,
+			"host":          54,
 			"iot":           162,
 			"layer3-switch": 2,
 			"printer":       1,
@@ -136,7 +137,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"retail": {
 			"access-point":  48,
 			"firewall":      4,
-			"host":          52,
+			"host":          100,
 			"iot":           48,
 			"layer3-switch": 4,
 			"printer":       46,
@@ -148,7 +149,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"service-provider": {
 			"access-point":  45,
 			"firewall":      6,
-			"host":          105,
+			"host":          150,
 			"iot":           30,
 			"layer3-switch": 6,
 			"printer":       3,
@@ -160,7 +161,7 @@ func TestPackDeviceRoleMix(t *testing.T) {
 		"warehouse": {
 			"access-point":  75,
 			"firewall":      2,
-			"host":          96,
+			"host":          171,
 			"iot":           22,
 			"layer3-switch": 2,
 			"printer":       33,
