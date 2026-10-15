@@ -175,7 +175,8 @@ func compareInterfaceState(
 	actual ObservedInterfaceDetails,
 ) []Finding {
 	var findings []Finding
-	if expected.Status != "" && !strings.EqualFold(expected.Status, actual.Status) {
+	if expected.Status != "" && !strings.EqualFold(expected.Status, actual.Status) &&
+		!testerOnPoolPort(expected, actual) {
 		findings = append(findings, interfaceFinding(
 			FindingInterfaceStatusConflict, device, expected.Name, expected.Status, actual.Status,
 		))
@@ -183,6 +184,13 @@ func compareInterfaceState(
 	findings = append(findings, compareInterfaceSpeed(device, expected, actual)...)
 	findings = append(findings, compareInterfaceMTU(device, expected, actual)...)
 	return findings
+}
+
+// testerOnPoolPort reports a pool port that is up because a session placed a
+// tester on it. Which pool ports carry testers is runtime state the authored
+// configuration cannot know, so an up pool port is not a mismatch.
+func testerOnPoolPort(expected AuthoredInterface, actual ObservedInterfaceDetails) bool {
+	return expected.AttachmentPool && strings.EqualFold(actual.Status, "up")
 }
 
 func compareInterfaceSpeed(

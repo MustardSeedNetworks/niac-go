@@ -27,11 +27,12 @@ const (
 func FromConfig(cfg *config.Config) AuthoredSnapshot {
 	devices := allDevices(cfg)
 	faults := authoredFaults(cfg.BehaviorTimelines)
+	pool := attachmentPoolPorts(cfg.Attachments)
 	snapshot := AuthoredSnapshot{Devices: make([]AuthoredDevice, 0, len(devices))}
 	byName := make(map[string]config.Device, len(devices))
 	for _, device := range devices {
 		byName[device.Name] = device
-		snapshot.Devices = append(snapshot.Devices, authoredDevice(device, faults))
+		snapshot.Devices = append(snapshot.Devices, authoredDevice(device, faults, pool))
 	}
 	snapshot.Links = authoredLinks(devices, byName)
 	return snapshot
@@ -66,7 +67,11 @@ func allDevices(cfg *config.Config) []config.Device {
 	return devices
 }
 
-func authoredDevice(device config.Device, faults map[string]authoredFaultExpectation) AuthoredDevice {
+func authoredDevice(
+	device config.Device,
+	faults map[string]authoredFaultExpectation,
+	pool map[string]bool,
+) AuthoredDevice {
 	addresses := make([]string, 0, len(device.IPAddresses))
 	for _, address := range device.IPAddresses {
 		if address.To4() != nil {
@@ -84,10 +89,11 @@ func authoredDevice(device config.Device, faults map[string]authoredFaultExpecta
 		authored.InterfaceInventoryComplete = !hasCapturedInterfaceInventory(device.SNMPConfig)
 		authored.Interfaces = authoredInterfaces(device, authored.InterfaceInventoryComplete)
 		for index := range authored.Interfaces {
-			fault := faults[authoredFaultKey(device.Name, authored.Interfaces[index].Name)]
+			fault := faults[interfaceKey(device.Name, authored.Interfaces[index].Name)]
 			authored.Interfaces[index].UtilizationDynamic = fault.utilization
 			authored.Interfaces[index].ExpectZeroErrors = authored.InterfaceInventoryComplete && !fault.errors
 			authored.Interfaces[index].ExpectZeroDiscards = authored.InterfaceInventoryComplete && !fault.discards
+			authored.Interfaces[index].AttachmentPool = pool[interfaceKey(device.Name, authored.Interfaces[index].Name)]
 		}
 	}
 	return authored
@@ -104,13 +110,13 @@ func authoredFaults(timelines []config.BehaviorTimeline) map[string]authoredFaul
 	for _, timeline := range timelines {
 		for _, phase := range timeline.Phases {
 			for _, traffic := range phase.Traffic {
-				key := authoredFaultKey(traffic.Device, traffic.Interface)
+				key := interfaceKey(traffic.Device, traffic.Interface)
 				expectation := result[key]
 				expectation.utilization = true
 				result[key] = expectation
 			}
 			for _, fault := range phase.Faults {
-				key := authoredFaultKey(fault.Device, fault.Interface)
+				key := interfaceKey(fault.Device, fault.Interface)
 				expectation := result[key]
 				switch fault.Type {
 				case "high_utilization":
@@ -127,7 +133,19 @@ func authoredFaults(timelines []config.BehaviorTimeline) map[string]authoredFaul
 	return result
 }
 
-func authoredFaultKey(device, iface string) string {
+func attachmentPoolPorts(attachments []config.LogicalAttachment) map[string]bool {
+	result := make(map[string]bool)
+	for _, attachment := range attachments {
+		for _, at := range attachment.At {
+			for _, port := range at.Ports {
+				result[interfaceKey(at.Device, port)] = true
+			}
+		}
+	}
+	return result
+}
+
+func interfaceKey(device, iface string) string {
 	return strings.ToLower(strings.TrimSpace(device)) + "\x00" +
 		strings.ToLower(strings.TrimSpace(iface))
 }
