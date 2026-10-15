@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.118.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.117.0...v0.118.0) (2026-10-15)
+
+
+### Features
+
+* **jetdirect:** answer PJL on pack printers (AI-3) ([#2673](https://github.com/MustardSeedNetworks/niac-go/issues/2673)) ([23502d9](https://github.com/MustardSeedNetworks/niac-go/commit/23502d96e2eef75b8ab395e3188ab66ce4707369)), closes [#2672](https://github.com/MustardSeedNetworks/niac-go/issues/2672)
+
+
+### Miscellaneous
+
+* **deps:** update actions/setup-node action to v7.1.0 ([#2671](https://github.com/MustardSeedNetworks/niac-go/issues/2671)) ([e7e79dd](https://github.com/MustardSeedNetworks/niac-go/commit/e7e79dd691176892f8709265f48efb6d620f14d8))
+
 ## [0.117.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.116.0...v0.117.0) (2026-10-15)
 
 
