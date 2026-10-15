@@ -357,6 +357,11 @@ export interface AuthoredDevice {
   readonly hl7?: {
       readonly enabled?: boolean;
     };
+  readonly modbus?: {
+      readonly enabled?: boolean;
+      readonly holding_registers?: number;
+      readonly input_registers?: number;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

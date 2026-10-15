@@ -382,6 +382,10 @@ type Device struct {
 	// interface engine runs against the clinical systems it feeds.
 	HL7 *HL7Config `yaml:"hl7,omitempty"`
 
+	// Modbus answers register reads on TCP 502, the polling a SCADA master,
+	// historian or HMI runs against a controller on the plant floor.
+	Modbus *ModbusConfig `yaml:"modbus,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

@@ -42,3 +42,18 @@ type DICOMConfig struct {
 type HL7Config struct {
 	Enabled bool
 }
+
+// ModbusConfig answers Modbus/TCP on TCP 502: Read Holding Registers and Read
+// Input Registers over the first HoldingRegisters and InputRegisters
+// addresses, with the exception codes a server returns for anything else.
+// Every register reads zero: the process values are the control program and
+// are not simulated.
+type ModbusConfig struct {
+	Enabled          bool
+	HoldingRegisters int
+	InputRegisters   int
+}
+
+// MaxModbusRegisters is the whole Modbus address space of one register type,
+// addresses 0 through 65535.
+const MaxModbusRegisters = 1 << 16

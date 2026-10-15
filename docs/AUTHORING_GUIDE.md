@@ -564,6 +564,7 @@ serve any combination.
 | `jetdirect` | Raw printing on TCP 9100 | `pjl_id` is how a scanner identifies a PJL printer |
 | `dicom` | DICOM association and `C-ECHO` on TCP 104 and 11112 | How a PACS and its modalities verify each other |
 | `hl7` | HL7 MLLP acknowledgement on TCP 2575 | How an interface engine checks a clinical system is listening |
+| `modbus` | Modbus/TCP register reads on TCP 502 | How a SCADA master or historian polls a controller; registers read zero |
 | `icmp`, `icmpv6` | Ping, neighbour and router discovery | `icmp.enabled` is what makes a device pingable; `icmpv6.router_advertisement` advertises every `period` seconds from the device's link-local address |
 | `stp` | Spanning tree | Bridge priority drives the root election |
 | `iperf3`, `reflector` | Throughput testing | `reflector` has no enable flag — presence enables it |

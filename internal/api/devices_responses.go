@@ -90,6 +90,10 @@ func appendIdentityServices(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "HL7")
 	}
 
+	if dev.ModbusConfig != nil && dev.ModbusConfig.Enabled {
+		protocols = append(protocols, "Modbus")
+	}
+
 	return protocols
 }
 

@@ -1648,27 +1648,6 @@ func TestHealthCheckGenerateMSSQLResponse(t *testing.T) {
 	}
 }
 
-func TestHealthCheckGenerateModbusResponse(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewHealthCheckHandler(stack)
-
-	// Modbus read holding registers request
-	request := []byte{
-		0x00, 0x01, // Transaction ID
-		0x00, 0x00, // Protocol ID
-		0x00, 0x06, // Length
-		0x01,       // Unit ID
-		0x03,       // Function code (read holding registers)
-		0x00, 0x00, // Start address
-		0x00, 0x01, // Quantity
-	}
-
-	resp := h.generateModbusResponse(request, nil)
-	if len(resp) == 0 {
-		t.Fatal("expected non-empty Modbus response")
-	}
-}
-
 func TestHealthCheckGenerateOPCUAResponse(t *testing.T) {
 	stack := newTestStackInternal(t)
 	h := NewHealthCheckHandler(stack)

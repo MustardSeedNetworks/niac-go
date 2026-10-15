@@ -127,6 +127,7 @@ TITLES = {
     "ftp": "FTP",
     "http": "HTTP",
     "hl7": "HL7",
+    "modbus": "Modbus",
     "dicom": "DICOM",
     "icmp": "ICMP",
     "icmpv6": "ICMPv6",

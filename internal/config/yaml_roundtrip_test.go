@@ -219,6 +219,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		JetDirectConfig: &JetDirectConfig{Enabled: true, PJLID: "HP LaserJet MFP M634"},
 		DICOMConfig:     &DICOMConfig{Enabled: true},
 		HL7Config:       &HL7Config{Enabled: true},
+		ModbusConfig:    &ModbusConfig{Enabled: true, HoldingRegisters: 100, InputRegisters: 10},
 		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
@@ -304,6 +305,7 @@ func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 	assertJetDirectRoundTrip(t, device.JetDirectConfig)
 	assertDICOMRoundTrip(t, device.DICOMConfig)
 	assertHL7RoundTrip(t, device.HL7Config)
+	assertModbusRoundTrip(t, device.ModbusConfig)
 	if cfg.Networks[0].Subnet != "10.254.200.0/24" || cfg.Attachments[0].Network != "access" {
 		t.Fatalf("routed config lost: %#v %#v", cfg.Networks, cfg.Attachments)
 	}
@@ -432,5 +434,12 @@ func assertHL7RoundTrip(t *testing.T, hl7 *HL7Config) {
 	t.Helper()
 	if hl7 == nil || !hl7.Enabled {
 		t.Fatalf("HL7 round trip lost: %#v", hl7)
+	}
+}
+
+func assertModbusRoundTrip(t *testing.T, modbus *ModbusConfig) {
+	t.Helper()
+	if modbus == nil || !modbus.Enabled || modbus.HoldingRegisters != 100 || modbus.InputRegisters != 10 {
+		t.Fatalf("Modbus round trip lost: %#v", modbus)
 	}
 }

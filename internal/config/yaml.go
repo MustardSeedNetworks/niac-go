@@ -162,6 +162,7 @@ func deviceToYAML(device *Device) converter.Device {
 		JetDirect:     jetDirectToYAML(device.JetDirectConfig),
 		DICOM:         dicomToYAML(device.DICOMConfig),
 		HL7:           hl7ToYAML(device.HL7Config),
+		Modbus:        modbusToYAML(device.ModbusConfig),
 		Syslog:        syslogToYAML(device.SyslogConfig),
 		IPerf3:        iperf3ToYAML(device.IPerf3),
 		Reflector:     reflectorToYAML(device.ReflectorConfig),

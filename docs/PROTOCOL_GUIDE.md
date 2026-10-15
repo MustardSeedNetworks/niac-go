@@ -38,6 +38,7 @@ which ships holding only its README.
   - [JetDirect](#jetdirect)
   - [DICOM](#dicom)
   - [HL7](#hl7)
+  - [Modbus/TCP](#modbustcp)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
@@ -54,7 +55,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM, HL7 |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM, HL7, Modbus/TCP |
 
 ## Layer 2 Protocols
 
@@ -1524,6 +1525,58 @@ The hospital pack enables HL7 on its EMR, laboratory and pharmacy systems.
 # Send a message the way an interface engine does (python-hl7)
 printf 'MSH|^~\\&|EPIC|MAIN|LAB|MAIN|20261015||ADT^A01|MSG1|P|2.5\r' > adt.hl7
 mllp_send --port 2575 --file adt.hl7 10.0.50.16
+```
+
+### Modbus/TCP
+
+**Modbus/TCP on TCP 502** - the device answers register reads, the polling a
+SCADA master, a historian or an HMI runs against a controller.
+
+Read Holding Registers (function 3) and Read Input Registers (function 4) are
+served over addresses 0 up to `holding_registers` and `input_registers`, at
+most 125 registers a request, and every register reads zero: the process
+values are the control program and are not simulated. Anything else is
+answered with the exception a server returns: 01 (illegal function) for every
+other function code, including writes and device identification; 03 (illegal
+data value) for a quantity of 0 or over 125, or a malformed read; and 02
+(illegal data address) for a read past the last register. The answer echoes
+the transaction and unit IDs, so any unit ID is served. Requests are
+reassembled across TCP segments, a request whose protocol ID is not 0 is
+discarded, and a stream whose length field no request can carry is not
+answered further. There is no IPv6. A device without Modbus resets a
+connection to 502.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: PLT-PLC01
+    type: iot
+    ips:
+      - "10.0.60.20"
+    modbus:
+      enabled: true
+      holding_registers: 100
+      input_registers: 100
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Answer Modbus/TCP on TCP 502 |
+| `holding_registers` | integer | Yes | - | Holding registers at addresses 0 up to this count, 0-65536 |
+| `input_registers` | integer | Yes | - | Input registers at addresses 0 up to this count, 0-65536 |
+
+The manufacturing pack enables Modbus on its PLCs, with 100 registers of each
+type.
+
+#### Testing
+
+```bash
+# Read two holding registers from unit 1, then one past the last
+mbpoll -m tcp -a 1 -t 4 -r 1 -c 2 -1 10.0.60.20
+mbpoll -m tcp -a 1 -t 4 -r 101 -c 1 -1 10.0.60.20   # exception 02
 ```
 
 ## Protocol Combinations

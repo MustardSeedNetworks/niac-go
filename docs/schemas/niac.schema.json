@@ -656,6 +656,10 @@
           "$ref": "#/$defs/HL7Config",
           "description": "HL7 acknowledges messages framed in MLLP on TCP 2575, the check an\ninterface engine runs against the clinical systems it feeds."
         },
+        "modbus": {
+          "$ref": "#/$defs/ModbusConfig",
+          "description": "Modbus answers register reads on TCP 502, the polling a SCADA master,\nhistorian or HMI runs against a controller on the plant floor."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -1840,6 +1844,34 @@
         "port"
       ],
       "description": "MdnsService is one advertised DNS-SD service, such as _ipp._tcp."
+    },
+    "ModbusConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled opens the port. Every register reads zero: the process values\nare the control program and are not simulated."
+        },
+        "holding_registers": {
+          "type": "integer",
+          "maximum": 65536,
+          "minimum": 0,
+          "description": "HoldingRegisters is how many holding registers the server has, at\naddresses 0 up to it. A read past the last one is answered with\nexception 02, illegal data address."
+        },
+        "input_registers": {
+          "type": "integer",
+          "maximum": 65536,
+          "minimum": 0,
+          "description": "InputRegisters is how many input registers the server has, at\naddresses 0 up to it."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled",
+        "holding_registers",
+        "input_registers"
+      ],
+      "description": "ModbusConfig is a Modbus/TCP server on TCP 502 answering Read Holding Registers and Read Input Registers."
     },
     "NetbiosConfig": {
       "properties": {
