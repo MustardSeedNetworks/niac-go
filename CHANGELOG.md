@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.120.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.120.0...v0.120.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ftp:** greet FTP clients on the pack HP printers (D-NIAC-45) ([#2694](https://github.com/MustardSeedNetworks/niac-go/issues/2694)) ([033adfa](https://github.com/MustardSeedNetworks/niac-go/commit/033adfaafcb27d6b31dc57228e652da4d14eee29)), closes [#2692](https://github.com/MustardSeedNetworks/niac-go/issues/2692)
+* **linklive:** accept an address for mDNS-only hosts off the tester network ([#2695](https://github.com/MustardSeedNetworks/niac-go/issues/2695)) ([fa08fda](https://github.com/MustardSeedNetworks/niac-go/commit/fa08fda8589a27d9e29c92b4882b4bd45f3a861a))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2697](https://github.com/MustardSeedNetworks/niac-go/issues/2697)) ([5c32462](https://github.com/MustardSeedNetworks/niac-go/commit/5c32462ba5d0ef7504b054189d21fd54aaff2578))
+* **deps:** update github/codeql-action action to v4.38.3 ([#2696](https://github.com/MustardSeedNetworks/niac-go/issues/2696)) ([22df239](https://github.com/MustardSeedNetworks/niac-go/commit/22df2390482159f17247a51d0c8f07f696239ac7))
+
 ## [0.120.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.119.0...v0.120.0) (2026-10-15)
 
 
