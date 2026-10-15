@@ -57,6 +57,11 @@ type AuthoredDevice struct {
 	// ServesSNMP marks a device that answers SNMP for itself. Link-Live may
 	// file such a device as an SNMP Agent rather than by its role.
 	ServesSNMP bool
+	// NameOffLink marks a device that announces its name only over multicast
+	// DNS from a network no tester attaches to. Multicast DNS is link-local, so
+	// a tester on another network never hears the name and Link-Live renders
+	// the host by its address.
+	NameOffLink bool
 }
 
 // AuthoredInterface contains deterministic interface state exposed through SNMP.
