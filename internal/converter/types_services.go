@@ -110,6 +110,37 @@ type ModbusConfig struct {
 	InputRegisters int `yaml:"input_registers" jsonschema:"minimum=0,maximum=65536"`
 }
 
+// EtherNetIPConfig is an EtherNet/IP adapter on TCP and UDP 44818 answering
+// List Identity with its CIP Identity object.
+type EtherNetIPConfig struct {
+	// Enabled opens TCP and UDP 44818. Sessions, explicit messaging and
+	// implicit I/O are the control system and are not simulated.
+	Enabled bool `yaml:"enabled"`
+
+	// VendorID is the ODVA vendor ID, for example 1 for Rockwell Automation.
+	VendorID uint16 `yaml:"vendor_id" jsonschema:"minimum=0,maximum=65535"`
+
+	// DeviceType is the CIP device profile, for example 14 for a
+	// programmable logic controller.
+	DeviceType uint16 `yaml:"device_type" jsonschema:"minimum=0,maximum=65535"`
+
+	// ProductCode is the vendor's code for the product.
+	ProductCode uint16 `yaml:"product_code" jsonschema:"minimum=0,maximum=65535"`
+
+	// RevisionMajor is the firmware's major revision, 33 for 33.011.
+	RevisionMajor uint8 `yaml:"revision_major" jsonschema:"minimum=0,maximum=255"`
+
+	// RevisionMinor is the firmware's minor revision, 11 for 33.011.
+	RevisionMinor uint8 `yaml:"revision_minor" jsonschema:"minimum=0,maximum=255"`
+
+	// SerialNumber is the device's 32-bit serial number.
+	SerialNumber uint32 `yaml:"serial_number" jsonschema:"minimum=0,maximum=4294967295"`
+
+	// ProductName is the name the device reports, at most 32 printable
+	// ASCII characters, for example "1756-L83E/B".
+	ProductName string `yaml:"product_name" jsonschema:"minLength=1,maxLength=32"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

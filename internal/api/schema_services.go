@@ -1,5 +1,7 @@
 package api
 
+import "math"
+
 // Network services schema builders (DHCP, DNS, HTTP, FTP, NetBIOS).
 
 func buildDHCPSchema() *SchemaProperty {
@@ -423,6 +425,37 @@ func buildModbusSchema() *SchemaProperty {
 			},
 		},
 		Required: []string{"enabled", "holding_registers", "input_registers"},
+	}
+}
+
+// etherNetIPProductName is the longest product name the CIP Identity object
+// carries.
+const etherNetIPProductName = 32
+
+func buildEtherNetIPSchema() *SchemaProperty {
+	identityField := func(title string, maximum float64) *SchemaProperty {
+		return &SchemaProperty{Type: "integer", Title: title, Minimum: floatPtr(0), Maximum: floatPtr(maximum)}
+	}
+	return &SchemaProperty{
+		Type: "object", Title: "EtherNet/IP",
+		Description: "Answers EtherNet/IP List Identity on TCP and UDP 44818",
+		Properties: map[string]*SchemaProperty{
+			"enabled":        {Type: "boolean", Title: "Enable EtherNet/IP", Default: false},
+			"vendor_id":      identityField("Vendor ID", math.MaxUint16),
+			"device_type":    identityField("Device type", math.MaxUint16),
+			"product_code":   identityField("Product code", math.MaxUint16),
+			"revision_major": identityField("Major revision", math.MaxUint8),
+			"revision_minor": identityField("Minor revision", math.MaxUint8),
+			"serial_number":  identityField("Serial number", math.MaxUint32),
+			"product_name": {
+				Type: "string", Title: "Product name",
+				MinLength: intPtr(1), MaxLength: intPtr(etherNetIPProductName),
+			},
+		},
+		Required: []string{
+			"enabled", "vendor_id", "device_type", "product_code",
+			"revision_major", "revision_minor", "serial_number", "product_name",
+		},
 	}
 }
 

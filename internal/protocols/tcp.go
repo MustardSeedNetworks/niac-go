@@ -48,6 +48,7 @@ type TCPHandler struct {
 	dicom  *serviceStreams
 	hl7    *serviceStreams
 	modbus *serviceStreams
+	enip   *serviceStreams
 
 	// hl7Messages numbers the ACKs, each of which needs its own control ID.
 	hl7Messages atomic.Uint64
@@ -57,6 +58,7 @@ type TCPHandler struct {
 func NewTCPHandler(stack *Stack) *TCPHandler {
 	handler := &TCPHandler{
 		stack: stack, dicom: newServiceStreams(), hl7: newServiceStreams(), modbus: newServiceStreams(),
+		enip: newServiceStreams(),
 	}
 	handler.ssh = newSSHTCPHandler(stack)
 	return handler
@@ -186,7 +188,8 @@ func (h *TCPHandler) routeToHandler(
 
 // handleUnlistedPort serves the ports a device opens only by configuration,
 // 9100 on a JetDirect printer, 104 and 11112 on a DICOM node, 2575 on an HL7
-// interface and 502 on a Modbus server, and resets a SYN to any other port.
+// interface, 502 on a Modbus server and 44818 on an EtherNet/IP adapter, and
+// resets a SYN to any other port.
 func (h *TCPHandler) handleUnlistedPort(
 	pkt *Packet,
 	ipLayer *layers.IPv4,
@@ -202,6 +205,8 @@ func (h *TCPHandler) handleUnlistedPort(
 		h.handleHL7(pkt, ipLayer, tcp, devices)
 	case tcp.DstPort == TCPPortModbus:
 		h.handleModbus(pkt, ipLayer, tcp, devices)
+	case tcp.DstPort == PortEtherNetIP:
+		h.handleEtherNetIP(pkt, ipLayer, tcp, devices)
 	case tcp.SYN && !tcp.ACK:
 		h.sendRST(pkt, ipLayer, tcp, devices)
 	}

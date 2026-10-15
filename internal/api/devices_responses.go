@@ -94,6 +94,10 @@ func appendIdentityServices(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "Modbus")
 	}
 
+	if dev.EtherNetIPConfig != nil && dev.EtherNetIPConfig.Enabled {
+		protocols = append(protocols, "EtherNet/IP")
+	}
+
 	return protocols
 }
 

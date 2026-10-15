@@ -35,7 +35,7 @@ func TestPackPLCsAnswerModbus(t *testing.T) {
 	}
 	t.Logf("Modbus PLC %s:502", plc)
 
-	conn := dialModbus(t, net.JoinHostPort(plc, "502"))
+	conn := dialTCPRetrying(t, net.JoinHostPort(plc, "502"))
 	defer conn.Close()
 	exchanges := []struct {
 		name          string
@@ -95,8 +95,9 @@ func TestPackPLCsAnswerModbus(t *testing.T) {
 	}
 }
 
-// dialModbus connects to address, retrying while the pack settles.
-func dialModbus(t *testing.T, address string) net.Conn {
+// dialTCPRetrying connects to address over TCP, retrying while the pack
+// settles.
+func dialTCPRetrying(t *testing.T, address string) net.Conn {
 	t.Helper()
 	var conn net.Conn
 	var err error

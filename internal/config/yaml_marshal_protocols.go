@@ -404,6 +404,14 @@ func modbusToYAML(cfg *ModbusConfig) *converter.ModbusConfig {
 	}
 }
 
+func etherNetIPToYAML(cfg *EtherNetIPConfig) *converter.EtherNetIPConfig {
+	if cfg == nil {
+		return nil
+	}
+	yamlConfig := converter.EtherNetIPConfig(*cfg)
+	return &yamlConfig
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

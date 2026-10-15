@@ -128,6 +128,7 @@ TITLES = {
     "http": "HTTP",
     "hl7": "HL7",
     "modbus": "Modbus",
+    "ethernet_ip": "EtherNet/IP",
     "dicom": "DICOM",
     "icmp": "ICMP",
     "icmpv6": "ICMPv6",
@@ -148,6 +149,7 @@ TITLES = {
     "stp": "STP",
     "trunk_ports": "Trunk ports",
     "ttl": "TTL",
+    "vendor_id": "Vendor ID",
 }
 
 

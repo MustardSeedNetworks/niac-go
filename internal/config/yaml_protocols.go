@@ -110,6 +110,14 @@ func parseModbusConfig(source *converter.ModbusConfig) *ModbusConfig {
 	}
 }
 
+func parseEtherNetIPConfig(source *converter.EtherNetIPConfig) *EtherNetIPConfig {
+	if source == nil {
+		return nil
+	}
+	cfg := EtherNetIPConfig(*source)
+	return &cfg
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

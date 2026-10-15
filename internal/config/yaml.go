@@ -163,6 +163,7 @@ func deviceToYAML(device *Device) converter.Device {
 		DICOM:         dicomToYAML(device.DICOMConfig),
 		HL7:           hl7ToYAML(device.HL7Config),
 		Modbus:        modbusToYAML(device.ModbusConfig),
+		EtherNetIP:    etherNetIPToYAML(device.EtherNetIPConfig),
 		Syslog:        syslogToYAML(device.SyslogConfig),
 		IPerf3:        iperf3ToYAML(device.IPerf3),
 		Reflector:     reflectorToYAML(device.ReflectorConfig),

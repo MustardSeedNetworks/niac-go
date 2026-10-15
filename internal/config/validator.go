@@ -168,6 +168,7 @@ func (v *Validator) validateDevice(
 	v.validateONVIF(device, prefix)
 	v.validateJetDirect(device, prefix)
 	v.validateModbus(device, prefix)
+	v.validateEtherNetIP(device, prefix)
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
@@ -223,111 +224,6 @@ func validSSHVersion(version string) bool {
 func validEnvironmentVariable(name string) bool {
 	matched, _ := regexp.MatchString(`^[A-Za-z_][A-Za-z0-9_]*$`, name)
 	return matched
-}
-
-// maxSIPUserAgentLength bounds the header a response carries; real handsets
-// send a few dozen bytes.
-const maxSIPUserAgentLength = 128
-
-// validateSIP requires an enabled listener to name itself. The User-Agent is
-// the whole point of the service, and it is written into a response header,
-// so it must be one line of printable US-ASCII.
-func (v *Validator) validateSIP(device *Device, prefix string) {
-	sip := device.SIPConfig
-	if sip == nil || !sip.Enabled {
-		return
-	}
-	if !validSIPUserAgent(sip.UserAgent) {
-		v.addError(prefix+".sip.user_agent",
-			"SIP user_agent must be printable US-ASCII of at most 128 characters, such as Cisco-CP8841/12.8.1")
-	}
-}
-
-func validSIPUserAgent(agent string) bool {
-	if agent == "" || agent[0] == ' ' || len(agent) > maxSIPUserAgentLength {
-		return false
-	}
-	for index := range len(agent) {
-		if agent[index] < ' ' || agent[index] > '~' {
-			return false
-		}
-	}
-	return true
-}
-
-// maxONVIFScopeLength bounds an authored scope value; a camera's name and
-// model are a few dozen bytes.
-const maxONVIFScopeLength = 64
-
-// validateONVIF requires an enabled camera to name itself: the name and
-// hardware scopes are what a discovery tool lists it by.
-func (v *Validator) validateONVIF(device *Device, prefix string) {
-	onvif := device.ONVIFConfig
-	if onvif == nil || !onvif.Enabled {
-		return
-	}
-	if !validONVIFScope(onvif.Name) {
-		v.addError(prefix+".onvif.name",
-			"ONVIF name must be printable US-ASCII of at most 64 characters, such as AXIS P3265-LVE")
-	}
-	if !validONVIFScope(onvif.Hardware) {
-		v.addError(prefix+".onvif.hardware",
-			"ONVIF hardware must be printable US-ASCII of at most 64 characters, such as P3265-LVE")
-	}
-}
-
-func validONVIFScope(value string) bool {
-	return len(value) <= maxONVIFScopeLength && validSIPUserAgent(value)
-}
-
-// maxPJLIDLength bounds the model string; real ones run to about thirty
-// characters ("HP LaserJet MFP M634").
-const maxPJLIDLength = 64
-
-// validateJetDirect keeps the PJL ID inside the quoted string the INFO ID
-// answer carries: one line of printable US-ASCII with no double quote.
-func (v *Validator) validateJetDirect(device *Device, prefix string) {
-	jetDirect := device.JetDirectConfig
-	if jetDirect == nil || jetDirect.PJLID == "" {
-		return
-	}
-	if !validPJLID(jetDirect.PJLID) {
-		v.addError(
-			prefix+".jetdirect.pjl_id",
-			"PJL pjl_id must be printable US-ASCII without double quotes, at most 64 characters, such as HP LaserJet MFP M634",
-		)
-	}
-}
-
-func validPJLID(id string) bool {
-	if id[0] == ' ' || len(id) > maxPJLIDLength {
-		return false
-	}
-	for index := range len(id) {
-		if id[index] < ' ' || id[index] > '~' || id[index] == '"' {
-			return false
-		}
-	}
-	return true
-}
-
-// validateModbus keeps each register count inside the Modbus address space.
-func (v *Validator) validateModbus(device *Device, prefix string) {
-	modbus := device.ModbusConfig
-	if modbus == nil {
-		return
-	}
-	for _, registers := range []struct {
-		field string
-		count int
-	}{
-		{"holding_registers", modbus.HoldingRegisters},
-		{"input_registers", modbus.InputRegisters},
-	} {
-		if registers.count < 0 || registers.count > MaxModbusRegisters {
-			v.addError(prefix+".modbus."+registers.field, "Modbus "+registers.field+" must be between 0 and 65536")
-		}
-	}
 }
 
 func (v *Validator) validateSyslog(device *Device, prefix string) {

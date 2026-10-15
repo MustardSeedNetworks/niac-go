@@ -1916,6 +1916,73 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "ethernet_ip",
+    "title": "EtherNet/IP",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled opens TCP and UDP 44818. Sessions, explicit messaging and\nimplicit I/O are the control system and are not simulated.",
+        "kind": "boolean"
+      },
+      {
+        "name": "vendor_id",
+        "title": "Vendor ID",
+        "description": "VendorID is the ODVA vendor ID, for example 1 for Rockwell Automation.",
+        "minimum": 0,
+        "maximum": 65535,
+        "kind": "integer"
+      },
+      {
+        "name": "device_type",
+        "title": "Device type",
+        "description": "DeviceType is the CIP device profile, for example 14 for a\nprogrammable logic controller.",
+        "minimum": 0,
+        "maximum": 65535,
+        "kind": "integer"
+      },
+      {
+        "name": "product_code",
+        "title": "Product code",
+        "description": "ProductCode is the vendor's code for the product.",
+        "minimum": 0,
+        "maximum": 65535,
+        "kind": "integer"
+      },
+      {
+        "name": "revision_major",
+        "title": "Revision major",
+        "description": "RevisionMajor is the firmware's major revision, 33 for 33.011.",
+        "minimum": 0,
+        "maximum": 255,
+        "kind": "integer"
+      },
+      {
+        "name": "revision_minor",
+        "title": "Revision minor",
+        "description": "RevisionMinor is the firmware's minor revision, 11 for 33.011.",
+        "minimum": 0,
+        "maximum": 255,
+        "kind": "integer"
+      },
+      {
+        "name": "serial_number",
+        "title": "Serial number",
+        "description": "SerialNumber is the device's 32-bit serial number.",
+        "minimum": 0,
+        "maximum": 4294967295,
+        "kind": "integer"
+      },
+      {
+        "name": "product_name",
+        "title": "Product name",
+        "description": "ProductName is the name the device reports, at most 32 printable\nASCII characters, for example \"1756-L83E/B\".",
+        "kind": "string"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [

@@ -220,6 +220,10 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		DICOMConfig:     &DICOMConfig{Enabled: true},
 		HL7Config:       &HL7Config{Enabled: true},
 		ModbusConfig:    &ModbusConfig{Enabled: true, HoldingRegisters: 100, InputRegisters: 10},
+		EtherNetIPConfig: &EtherNetIPConfig{
+			Enabled: true, VendorID: 1, DeviceType: 14, ProductCode: 166,
+			RevisionMajor: 33, RevisionMinor: 11, SerialNumber: 0xc0ffee01, ProductName: "1756-L83E/B",
+		},
 		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
@@ -306,6 +310,7 @@ func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 	assertDICOMRoundTrip(t, device.DICOMConfig)
 	assertHL7RoundTrip(t, device.HL7Config)
 	assertModbusRoundTrip(t, device.ModbusConfig)
+	assertEtherNetIPRoundTrip(t, device.EtherNetIPConfig)
 	if cfg.Networks[0].Subnet != "10.254.200.0/24" || cfg.Attachments[0].Network != "access" {
 		t.Fatalf("routed config lost: %#v %#v", cfg.Networks, cfg.Attachments)
 	}
@@ -441,5 +446,16 @@ func assertModbusRoundTrip(t *testing.T, modbus *ModbusConfig) {
 	t.Helper()
 	if modbus == nil || !modbus.Enabled || modbus.HoldingRegisters != 100 || modbus.InputRegisters != 10 {
 		t.Fatalf("Modbus round trip lost: %#v", modbus)
+	}
+}
+
+func assertEtherNetIPRoundTrip(t *testing.T, enip *EtherNetIPConfig) {
+	t.Helper()
+	want := EtherNetIPConfig{
+		Enabled: true, VendorID: 1, DeviceType: 14, ProductCode: 166,
+		RevisionMajor: 33, RevisionMinor: 11, SerialNumber: 0xc0ffee01, ProductName: "1756-L83E/B",
+	}
+	if enip == nil || *enip != want {
+		t.Fatalf("EtherNet/IP round trip lost: %#v", enip)
 	}
 }

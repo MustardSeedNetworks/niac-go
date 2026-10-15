@@ -39,6 +39,7 @@ which ships holding only its README.
   - [DICOM](#dicom)
   - [HL7](#hl7)
   - [Modbus/TCP](#modbustcp)
+  - [EtherNet/IP](#ethernetip)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
@@ -55,7 +56,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM, HL7, Modbus/TCP |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM, HL7, Modbus/TCP, EtherNet/IP |
 
 ## Layer 2 Protocols
 
@@ -1577,6 +1578,70 @@ type.
 # Read two holding registers from unit 1, then one past the last
 mbpoll -m tcp -a 1 -t 4 -r 1 -c 2 -1 10.0.60.20
 mbpoll -m tcp -a 1 -t 4 -r 101 -c 1 -1 10.0.60.20   # exception 02
+```
+
+### EtherNet/IP
+
+**EtherNet/IP List Identity on TCP and UDP 44818** - the device answers with
+its CIP Identity object, the query a commissioning tool or an asset inventory
+names a controller by.
+
+The List Identity reply carries one CIP Identity item: encapsulation version
+1, the device's own address and port 44818, then the authored vendor ID,
+device type, product code, revision, serial number and product name, with
+status 0 and state 3 (operational). The sender context and session handle are
+echoed. A NOP is never answered. Over TCP every other command, including
+Register Session, is answered with status 0x0001 (invalid or unsupported
+command); over UDP it is dropped. Requests are reassembled across TCP
+segments, and a stream whose length field no message can carry is not
+answered further. Sessions, explicit messaging and the implicit I/O a
+connection opens on UDP 2222 are the control system and are not simulated.
+List Identity sent to a broadcast address and IPv6 are not served. A device
+without EtherNet/IP resets a connection to TCP 44818 and answers UDP 44818
+with port unreachable.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: PLT-PLC01
+    type: iot
+    ips:
+      - "10.0.60.20"
+    ethernet_ip:
+      enabled: true
+      vendor_id: 1
+      device_type: 14
+      product_code: 166
+      revision_major: 33
+      revision_minor: 11
+      serial_number: 3237998081
+      product_name: "1756-L83E/B"
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Answer List Identity on TCP and UDP 44818 |
+| `vendor_id` | integer | Yes | - | ODVA vendor ID, 0-65535 (1 is Rockwell Automation) |
+| `device_type` | integer | Yes | - | CIP device type, 0-65535 (14 is a programmable logic controller) |
+| `product_code` | integer | Yes | - | Vendor product code, 0-65535 |
+| `revision_major` | integer | Yes | - | Firmware major revision, 0-255 |
+| `revision_minor` | integer | Yes | - | Firmware minor revision, 0-255 |
+| `serial_number` | integer | Yes | - | 32-bit serial number |
+| `product_name` | string | Yes | - | 1 to 32 printable ASCII characters |
+
+The manufacturing pack enables EtherNet/IP on its PLCs as ControlLogix 1756-L83E/B
+controllers on firmware 33.011, each with a serial number derived from its
+name.
+
+#### Testing
+
+```bash
+# List Identity over UDP, then over TCP
+nmap -sU -p 44818 --script enip-info 10.0.60.20
+nmap -sT -p 44818 --script enip-info 10.0.60.20
 ```
 
 ## Protocol Combinations
