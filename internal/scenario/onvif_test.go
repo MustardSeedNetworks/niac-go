@@ -10,11 +10,11 @@ import (
 // Every pack camera answers WS-Discovery as the camera it models (AI-2), and
 // nothing else in a pack does: a video management system that adopts a phone
 // or a switch as a camera has been told something false.
-func TestPacksServeONVIFOnTheCameras(t *testing.T) {
+func testPacksServeONVIFOnTheCameras(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		if result := config.NewValidator(pack.ID).Validate(cfg); !result.Valid {
 			t.Errorf("%s: %#v", pack.ID, result.Errors)
 		}

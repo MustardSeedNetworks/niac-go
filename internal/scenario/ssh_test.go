@@ -12,11 +12,11 @@ import (
 // account, so a pack starts with no daemon secret and every login is refused
 // (D-NIAC-43). An authored username or password_env would either need a secret
 // or invite a default credential.
-func TestPacksServeSSHWithoutAnAccount(t *testing.T) {
+func testPacksServeSSHWithoutAnAccount(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		if err := config.ValidateRuntimeRequirements(cfg); err != nil {
 			t.Errorf("%s: %v, want a pack to start with no secret set", pack.ID, err)
 		}

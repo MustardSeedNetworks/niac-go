@@ -13,9 +13,9 @@ import (
 // D-NIAC-42: every pack is dual-stack where a tester lands. Each core SVI
 // numbers its VLAN's /64, the core advertises itself as the IPv6 router, and it
 // carries a default route out of the site.
-func TestPackCoresRouteIPv6OnEveryVLAN(t *testing.T) {
+func testPackCoresRouteIPv6OnEveryVLAN(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		cfg := packConfig(t, pack)
+		cfg := fixture.config(t, pack)
 		prefixes := make(map[string]netip.Prefix)
 		for _, network := range cfg.Networks {
 			if prefix, err := netip.ParsePrefix(network.SubnetV6); err == nil {

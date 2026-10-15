@@ -8,11 +8,11 @@ import (
 
 // The manufacturing plant's PLCs answer Modbus/TCP (AI-6), and nothing else in
 // any pack opens the port.
-func TestPacksServeModbusOnPLCs(t *testing.T) {
+func testPacksServeModbusOnPLCs(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		controllers := 0
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]

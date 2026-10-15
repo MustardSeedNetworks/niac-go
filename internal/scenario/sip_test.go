@@ -10,11 +10,11 @@ import (
 // Every pack phone answers SIP OPTIONS as the handset it models (AI-1), and
 // nothing else in a pack does: a scanner that files a camera or a switch as a
 // SIP endpoint has been told something false.
-func TestPacksServeSIPOnThePhones(t *testing.T) {
+func testPacksServeSIPOnThePhones(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		if result := config.NewValidator(pack.ID).Validate(cfg); !result.Valid {
 			t.Errorf("%s: %#v", pack.ID, result.Errors)
 		}

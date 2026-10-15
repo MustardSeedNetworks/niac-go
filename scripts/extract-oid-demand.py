@@ -21,7 +21,7 @@ Usage:
   python3 extract-oid-demand.py --pcap <file> --roles <role map> --out <tsv>
 
 The role map comes from the scenario generator, not by hand:
-  NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestWritePackDeviceRoles
+  NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestShippedPacks/WritePackDeviceRoles
 """
 
 import argparse
@@ -178,7 +178,7 @@ def utc(seconds):
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pcap", required=True)
-    parser.add_argument("--roles", required=True, help="pack/address/role map from TestWritePackDeviceRoles")
+    parser.add_argument("--roles", required=True, help="pack/address/role map from TestShippedPacks/WritePackDeviceRoles")
     parser.add_argument("--consumer", default="etherscope-nxg", help="the instrument that produced the capture")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args(argv)
@@ -223,7 +223,7 @@ def main(argv):
                   f" across {len(unmapped_addresses)} addresses\n")
         out.write(f"# ... undecodable as an SNMP request: {undecodable}\n")
         out.write("# Regenerate:\n")
-        out.write("#   NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestWritePackDeviceRoles\n")
+        out.write("#   NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestShippedPacks/WritePackDeviceRoles\n")
         out.write("#   python3 scripts/extract-oid-demand.py --pcap <capture> --roles roles.tsv --out <this file>\n")
         out.write("pack\trole\tpdu\toid\trequests\n")
         for (pack, role, name, oid), count in sorted(demand.items()):

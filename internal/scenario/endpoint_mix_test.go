@@ -16,10 +16,14 @@ const (
 	upsMIB                   = "1.3.6.1.2.1.33"
 )
 
-func endpointRoleCounts(t *testing.T, request scenario.Request) (map[string]map[string]int, *config.Config) {
+func endpointRoleCounts(
+	t *testing.T,
+	fixture *packFixture,
+	request scenario.Request,
+) (map[string]map[string]int, *config.Config) {
 	t.Helper()
 
-	cfg := generatedRequest(t, "endpoint mix", request).Config
+	cfg := fixture.request(t, "endpoint mix", request).Config
 	counts := map[string]map[string]int{}
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
@@ -37,14 +41,14 @@ func endpointRoleCounts(t *testing.T, request scenario.Request) (map[string]map[
 // A per-site rotation repeats its signature devices with the endpoint count,
 // so the ~160-endpoint hospital P-PACK-1 builds would have had eighteen MRIs.
 // 64 is as large as a site goes before that resize lifts the per-site cap.
-func TestHospitalMixKeepsSignatureDevicesRareAtScale(t *testing.T) {
+func testHospitalMixKeepsSignatureDevicesRareAtScale(t *testing.T, fixture *packFixture) {
 	request := scenario.EnterpriseReferenceRequest()
 	request.Sites = request.Sites[:1]
 	request.EndpointProfile = "hospital"
 	request.Counts.AccessSwitches = 16
 	request.Counts.WorkstationsPerAccess = 4
 
-	counts, _ := endpointRoleCounts(t, request)
+	counts, _ := endpointRoleCounts(t, fixture, request)
 	site := counts[request.Sites[0].Code]
 	if got := site["mr-system"]; got != 1 {
 		t.Errorf("MRI systems = %d, want 1", got)
@@ -74,9 +78,9 @@ func isWiredEndpoint(role string) bool {
 // agent answers UPS-MIB for it. Without that property the pack's UPS would be
 // a generic host that happens to be named like one, answering nothing under
 // UPS-MIB.
-func TestEveryPackSiteCarriesAUPSThatAnswersUPSMIB(t *testing.T) {
+func testEveryPackSiteCarriesAUPSThatAnswersUPSMIB(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		counts, cfg := endpointRoleCounts(t, pack.Request)
+		counts, cfg := endpointRoleCounts(t, fixture, pack.Request)
 		for _, site := range pack.Request.Sites {
 			if got := counts[site.Code]["ups"]; got != 1 {
 				t.Errorf("%s %s: UPS = %d, want 1", pack.ID, site.Code, got)
@@ -111,9 +115,9 @@ func checkPackUPS(t *testing.T, pack string, device *config.Device) {
 // system reports the Cisco codec arc a discovery tool files as a
 // collaboration endpoint. Without their profiles they would be hosts named
 // like a NAS or a room.
-func TestEveryPackSiteCarriesItsNASAndRoomSystems(t *testing.T) {
+func testEveryPackSiteCarriesItsNASAndRoomSystems(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		counts, cfg := endpointRoleCounts(t, pack.Request)
+		counts, cfg := endpointRoleCounts(t, fixture, pack.Request)
 		for _, site := range pack.Request.Sites {
 			if got := counts[site.Code]["nas"]; got != 1 {
 				t.Errorf("%s %s: NAS = %d, want 1", pack.ID, site.Code, got)

@@ -15,7 +15,7 @@ import (
 // ARP for it alongside the device. The pool has to sit clear of every static
 // address the generator places, at the per-site endpoint ceiling as well as in
 // the shipped packs.
-func TestNoStaticAddressFallsInADHCPPool(t *testing.T) {
+func testNoStaticAddressFallsInADHCPPool(t *testing.T, fixture *packFixture) {
 	requests := map[string]scenario.Request{}
 	for _, pack := range scenario.Packs() {
 		requests[pack.ID] = pack.Request
@@ -23,7 +23,7 @@ func TestNoStaticAddressFallsInADHCPPool(t *testing.T) {
 	requests["site endpoint ceiling"] = siteEndpointCeilingRequest()
 
 	for label, request := range requests {
-		cfg := generatedRequest(t, label, request).Config
+		cfg := fixture.request(t, label, request).Config
 		pools := dhcpPools(cfg)
 		if len(pools) == 0 {
 			t.Errorf("%s: no DHCP pool, so this test asserts nothing", label)

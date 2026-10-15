@@ -10,11 +10,11 @@ import (
 // The hospital's MRIs and its PACS archive answer DICOM (AI-4), so both ends
 // of the modality-to-archive conversation verify, and nothing else in any
 // pack opens the ports.
-func TestPacksServeDICOMOnModalitiesAndPACS(t *testing.T) {
+func testPacksServeDICOMOnModalitiesAndPACS(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		modalities, archives := 0, 0
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]

@@ -16,12 +16,12 @@ const (
 // Every pack printer accepts raw jobs on 9100 (AI-3), the HP answers PJL as
 // the model it is, and nothing else in a pack opens the port: a scanner that
 // files a camera or a workstation as a printer has been told something false.
-func TestPacksServeJetDirectOnThePrinters(t *testing.T) {
+func testPacksServeJetDirectOnThePrinters(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	pjlPrinters := 0
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		if result := config.NewValidator(pack.ID).Validate(cfg); !result.Valid {
 			t.Errorf("%s: %#v", pack.ID, result.Errors)
 		}

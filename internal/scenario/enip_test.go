@@ -9,11 +9,11 @@ import (
 // The manufacturing plant's PLCs answer EtherNet/IP List Identity (AI-7) as
 // ControlLogix controllers, each with its own serial number, and nothing else
 // in any pack opens the port.
-func TestPacksServeEtherNetIPOnPLCs(t *testing.T) {
+func testPacksServeEtherNetIPOnPLCs(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		serials := map[uint32]string{}
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]

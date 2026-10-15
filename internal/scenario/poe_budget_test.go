@@ -9,8 +9,8 @@ import (
 // The access layer is the pack's PSE. Assert on the generated pack rather than
 // on the spec helper: what a tester walks is the loaded config, and the budget
 // has to survive generation, YAML and the loader to get there.
-func TestHospitalPackAccessSwitchesAuthorAPoEBudget(t *testing.T) {
-	devices := hospitalDevices(t)
+func testHospitalPackAccessSwitchesAuthorAPoEBudget(t *testing.T, fixture *packFixture) {
+	devices := hospitalDevices(t, fixture)
 
 	powered := 0
 	for index := range devices {
@@ -41,8 +41,8 @@ func TestHospitalPackAccessSwitchesAuthorAPoEBudget(t *testing.T) {
 // The budget has to cover what the pack actually hangs off each switch, or the
 // pack ships an authoring error: the validator reports over-subscription, and a
 // tester would see ports that never come up.
-func TestHospitalPackPoEBudgetCoversItsPoweredDevices(t *testing.T) {
-	cfg := packConfig(t, hospitalPack(t))
+func testHospitalPackPoEBudgetCoversItsPoweredDevices(t *testing.T, fixture *packFixture) {
+	cfg := fixture.config(t, hospitalPack(t))
 	devices := cfg.Devices
 
 	result := config.NewValidator("hospital.yaml").Validate(cfg)
