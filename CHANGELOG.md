@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.116.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.115.0...v0.116.0) (2026-10-15)
+
+
+### Features
+
+* **scenario:** author dual-stack IPv6 on every pack ([#2663](https://github.com/MustardSeedNetworks/niac-go/issues/2663)) ([272096f](https://github.com/MustardSeedNetworks/niac-go/commit/272096f2461ee667ae267c1426ae7bcd326c4964))
+
+
+### Bug Fixes
+
+* **attachment:** keep link control and link-local claims off the client list ([#2664](https://github.com/MustardSeedNetworks/niac-go/issues/2664)) ([720dd32](https://github.com/MustardSeedNetworks/niac-go/commit/720dd322203fdc92edd28870f6e366da1564ad39)), closes [#2651](https://github.com/MustardSeedNetworks/niac-go/issues/2651)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2662](https://github.com/MustardSeedNetworks/niac-go/issues/2662)) ([64b7dc0](https://github.com/MustardSeedNetworks/niac-go/commit/64b7dc0e588c71a6160b2eab773d642b212aea0f))
+
 ## [0.115.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.114.1...v0.115.0) (2026-10-14)
 
 
