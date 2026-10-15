@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.121.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.120.1...v0.121.0) (2026-10-15)
+
+
+### Features
+
+* **scenario:** author wireless client stations on pack access points ([#2707](https://github.com/MustardSeedNetworks/niac-go/issues/2707)) ([7a69f47](https://github.com/MustardSeedNetworks/niac-go/commit/7a69f478d964bf91bb065949269d437f601bc986)), closes [#2705](https://github.com/MustardSeedNetworks/niac-go/issues/2705)
+
+
+### Bug Fixes
+
+* **windows:** keep the service running when install.ps1 runs over an existing install ([#2702](https://github.com/MustardSeedNetworks/niac-go/issues/2702)) ([94300f1](https://github.com/MustardSeedNetworks/niac-go/commit/94300f1afed1cb778a01355a46a59e11c8119267)), closes [#2699](https://github.com/MustardSeedNetworks/niac-go/issues/2699)
+
+
+### Documentation
+
+* **attachments:** keep tester dhclient out of the host resolver ([#2704](https://github.com/MustardSeedNetworks/niac-go/issues/2704)) ([c88dc5a](https://github.com/MustardSeedNetworks/niac-go/commit/c88dc5a4bc7afd82646de2a37bf150d721b296ac)), closes [#2703](https://github.com/MustardSeedNetworks/niac-go/issues/2703)
+
 ## [0.120.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.120.0...v0.120.1) (2026-10-15)
 
 
