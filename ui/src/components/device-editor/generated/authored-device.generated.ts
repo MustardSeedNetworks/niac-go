@@ -347,6 +347,10 @@ export interface AuthoredDevice {
       readonly name?: string;
       readonly hardware?: string;
     };
+  readonly jetdirect?: {
+      readonly enabled?: boolean;
+      readonly pjl_id?: string;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

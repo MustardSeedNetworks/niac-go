@@ -180,9 +180,23 @@ func (h *TCPHandler) routeToHandler(
 	case TCPPortIPerf3:
 		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
 	default:
-		if isSYNOnly {
-			h.sendRST(pkt, ipLayer, tcp, devices)
-		}
+		h.handleUnlistedPort(pkt, ipLayer, tcp, devices)
+	}
+}
+
+// handleUnlistedPort serves the ports a device opens only by configuration,
+// today 9100 on a JetDirect printer, and resets a SYN to any other port.
+func (h *TCPHandler) handleUnlistedPort(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+) {
+	switch {
+	case tcp.DstPort == TCPPortJetDirect:
+		h.handleJetDirect(pkt, ipLayer, tcp, devices)
+	case tcp.SYN && !tcp.ACK:
+		h.sendRST(pkt, ipLayer, tcp, devices)
 	}
 }
 

@@ -66,6 +66,10 @@ func appendEnabledProtocols(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "ONVIF")
 	}
 
+	if dev.JetDirectConfig != nil && dev.JetDirectConfig.Enabled {
+		protocols = append(protocols, "JETDIRECT")
+	}
+
 	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {
 		protocols = append(protocols, "SYSLOG")
 	}

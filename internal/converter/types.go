@@ -370,6 +370,10 @@ type Device struct {
 	// camera, so a video management system or scanner finds it as one.
 	ONVIF *ONVIFConfig `yaml:"onvif,omitempty"`
 
+	// JetDirect accepts raw print jobs on TCP 9100 and, with a PJL ID,
+	// answers the PJL status queries a scanner identifies a printer by.
+	JetDirect *JetDirectConfig `yaml:"jetdirect,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

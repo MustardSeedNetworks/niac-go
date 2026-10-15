@@ -61,6 +61,21 @@ type ONVIFConfig struct {
 	Hardware string `yaml:"hardware,omitempty" jsonschema:"pattern=^[!-~][ -~]*$,maxLength=64"`
 }
 
+// JetDirectConfig is the raw print port, TCP 9100. Every network printer
+// accepts jobs there; a PJL printer also answers status queries on it, which
+// is how a scanner names the model.
+type JetDirectConfig struct {
+	// Enabled accepts connections and print data on 9100. Jobs are
+	// acknowledged and discarded: printing is the application workflow and is
+	// not simulated.
+	Enabled bool `yaml:"enabled"`
+
+	// PJLID answers "@PJL INFO ID" with this model string, for example
+	// "HP LaserJet MFP M634", and enables "@PJL INFO STATUS". Leave it empty
+	// for a printer that speaks no PJL, such as a ZPL label printer.
+	PJLID string `yaml:"pjl_id,omitempty" jsonschema:"pattern=^([!#-~][ !#-~]*)?$,maxLength=64"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

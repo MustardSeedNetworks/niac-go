@@ -561,6 +561,7 @@ serve any combination.
 | `mdns`, `netbios` | Name advertisement | How a host gets named without SNMP |
 | `sip` | SIP `OPTIONS` on UDP 5060 | `user_agent` is how a scanner identifies a phone |
 | `onvif` | WS-Discovery `Probe` on UDP 3702 | `name` and `hardware` are how a video system lists a camera |
+| `jetdirect` | Raw printing on TCP 9100 | `pjl_id` is how a scanner identifies a PJL printer |
 | `icmp`, `icmpv6` | Ping, neighbour and router discovery | `icmp.enabled` is what makes a device pingable; `icmpv6.router_advertisement` advertises every `period` seconds from the device's link-local address |
 | `stp` | Spanning tree | Bridge priority drives the root election |
 | `iperf3`, `reflector` | Throughput testing | `reflector` has no enable flag — presence enables it |

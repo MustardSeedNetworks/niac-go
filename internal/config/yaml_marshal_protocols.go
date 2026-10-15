@@ -374,6 +374,13 @@ func onvifToYAML(cfg *ONVIFConfig) *converter.ONVIFConfig {
 	return &converter.ONVIFConfig{Enabled: cfg.Enabled, Name: cfg.Name, Hardware: cfg.Hardware}
 }
 
+func jetDirectToYAML(cfg *JetDirectConfig) *converter.JetDirectConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.JetDirectConfig{Enabled: cfg.Enabled, PJLID: cfg.PJLID}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

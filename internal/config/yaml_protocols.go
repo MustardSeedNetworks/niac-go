@@ -80,6 +80,13 @@ func parseONVIFConfig(source *converter.ONVIFConfig) *ONVIFConfig {
 	return &ONVIFConfig{Enabled: source.Enabled, Name: source.Name, Hardware: source.Hardware}
 }
 
+func parseJetDirectConfig(source *converter.JetDirectConfig) *JetDirectConfig {
+	if source == nil {
+		return nil
+	}
+	return &JetDirectConfig{Enabled: source.Enabled, PJLID: source.PJLID}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

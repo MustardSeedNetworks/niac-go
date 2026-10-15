@@ -363,6 +363,21 @@ func buildONVIFSchema() *SchemaProperty {
 	}
 }
 
+func buildJetDirectSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "JetDirect",
+		Description: "Accepts raw print jobs on TCP 9100; a PJL ID also answers PJL status queries",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable JetDirect", Default: false},
+			"pjl_id": {
+				Type: "string", Title: "PJL ID",
+				Pattern: `^([!#-~][ !#-~]*)?$`, MaxLength: intPtr(pjlIDMaxLen),
+			},
+		},
+		Required: []string{"enabled"},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +
