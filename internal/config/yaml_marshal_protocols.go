@@ -381,6 +381,13 @@ func jetDirectToYAML(cfg *JetDirectConfig) *converter.JetDirectConfig {
 	return &converter.JetDirectConfig{Enabled: cfg.Enabled, PJLID: cfg.PJLID}
 }
 
+func dicomToYAML(cfg *DICOMConfig) *converter.DICOMConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.DICOMConfig{Enabled: cfg.Enabled}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

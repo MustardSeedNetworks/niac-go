@@ -228,6 +228,10 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 		}
 	case workloadServiceRole:
 		spec.http = &converter.HTTPConfig{Enabled: true, ServerName: "Microsoft-IIS/10.0"}
+		if request.EndpointProfile == "hospital" {
+			// The PACS archive is the DICOM peer of every modality.
+			spec.dicom = &converter.DICOMConfig{Enabled: true}
+		}
 	case "FILE":
 		spec.netbios = &converter.NetbiosConfig{
 			Enabled: true, Name: site.Code + "-FILE01", Workgroup: "DEMO", NodeType: "H",

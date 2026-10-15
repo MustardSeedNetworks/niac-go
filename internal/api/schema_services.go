@@ -378,6 +378,17 @@ func buildJetDirectSchema() *SchemaProperty {
 	}
 }
 
+func buildDICOMSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "DICOM",
+		Description: "Accepts DICOM associations and answers C-ECHO on TCP 104 and 11112",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable DICOM", Default: false},
+		},
+		Required: []string{"enabled"},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +

@@ -218,6 +218,7 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"sip":            buildSIPSchema(),
 		"onvif":          buildONVIFSchema(),
 		"jetdirect":      buildJetDirectSchema(),
+		"dicom":          buildDICOMSchema(),
 		"syslog":         buildSyslogSchema(),
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),

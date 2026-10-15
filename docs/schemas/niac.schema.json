@@ -435,6 +435,20 @@
       ],
       "description": "Config represents the YAML configuration structure."
     },
+    "DICOMConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled opens both ports. Storage, worklist and query are refused at\nassociation: they are the clinical application and are not simulated."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "description": "DICOMConfig is DICOM verification on TCP 104 and 11112: an association for the Verification SOP class is accepted and C-ECHO answered with Success."
+    },
     "DNSRecord": {
       "properties": {
         "name": {
@@ -633,6 +647,10 @@
         "jetdirect": {
           "$ref": "#/$defs/JetDirectConfig",
           "description": "JetDirect accepts raw print jobs on TCP 9100 and, with a PJL ID,\nanswers the PJL status queries a scanner identifies a printer by."
+        },
+        "dicom": {
+          "$ref": "#/$defs/DICOMConfig",
+          "description": "DICOM answers association and C-ECHO on TCP 104 and 11112, the check\na PACS and the imaging modalities sending to it run against each other."
         },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",

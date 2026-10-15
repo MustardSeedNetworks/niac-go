@@ -1669,19 +1669,6 @@ func TestHealthCheckGenerateModbusResponse(t *testing.T) {
 	}
 }
 
-func TestHealthCheckGenerateDICOMResponse(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewHealthCheckHandler(stack)
-
-	request := make([]byte, 80)
-	request[0] = 0x01 // A-ASSOCIATE-RQ
-
-	resp := h.generateDICOMResponse(request, nil)
-	if len(resp) == 0 {
-		t.Fatal("expected non-empty DICOM response")
-	}
-}
-
 func TestHealthCheckGenerateHL7Response(t *testing.T) {
 	stack := newTestStackInternal(t)
 	h := NewHealthCheckHandler(stack)

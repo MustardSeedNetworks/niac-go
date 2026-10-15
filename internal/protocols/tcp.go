@@ -44,11 +44,12 @@ const (
 type TCPHandler struct {
 	stack *Stack
 	ssh   *sshTCPHandler
+	dicom *dicomStreams
 }
 
 // NewTCPHandler creates a new TCP handler.
 func NewTCPHandler(stack *Stack) *TCPHandler {
-	handler := &TCPHandler{stack: stack}
+	handler := &TCPHandler{stack: stack, dicom: newDICOMStreams()}
 	handler.ssh = newSSHTCPHandler(stack)
 	return handler
 }
@@ -165,9 +166,6 @@ func (h *TCPHandler) routeToHandler(
 	case TCPPortModbus:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortModbus, isSYNOnly,
 			func() { h.stack.healthCheckHandler.HandleModbusRequest(pkt, ipLayer, tcp, devices) })
-	case TCPPortDICOM:
-		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortDICOM, isSYNOnly,
-			func() { h.stack.healthCheckHandler.HandleDICOMRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortHL7:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHL7, isSYNOnly,
 			func() { h.stack.healthCheckHandler.HandleHL7Request(pkt, ipLayer, tcp, devices) })
@@ -185,7 +183,8 @@ func (h *TCPHandler) routeToHandler(
 }
 
 // handleUnlistedPort serves the ports a device opens only by configuration,
-// today 9100 on a JetDirect printer, and resets a SYN to any other port.
+// 9100 on a JetDirect printer and 104 and 11112 on a DICOM node, and resets
+// a SYN to any other port.
 func (h *TCPHandler) handleUnlistedPort(
 	pkt *Packet,
 	ipLayer *layers.IPv4,
@@ -195,6 +194,8 @@ func (h *TCPHandler) handleUnlistedPort(
 	switch {
 	case tcp.DstPort == TCPPortJetDirect:
 		h.handleJetDirect(pkt, ipLayer, tcp, devices)
+	case tcp.DstPort == TCPPortDICOM || tcp.DstPort == TCPPortDICOMAlt:
+		h.handleDICOM(pkt, ipLayer, tcp, devices)
 	case tcp.SYN && !tcp.ACK:
 		h.sendRST(pkt, ipLayer, tcp, devices)
 	}

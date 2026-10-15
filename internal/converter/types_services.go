@@ -76,6 +76,14 @@ type JetDirectConfig struct {
 	PJLID string `yaml:"pjl_id,omitempty" jsonschema:"pattern=^([!#-~][ !#-~]*)?$,maxLength=64"`
 }
 
+// DICOMConfig is DICOM verification on TCP 104 and 11112: an association for
+// the Verification SOP class is accepted and C-ECHO answered with Success.
+type DICOMConfig struct {
+	// Enabled opens both ports. Storage, worklist and query are refused at
+	// association: they are the clinical application and are not simulated.
+	Enabled bool `yaml:"enabled"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

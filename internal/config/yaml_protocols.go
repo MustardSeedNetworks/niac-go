@@ -87,6 +87,13 @@ func parseJetDirectConfig(source *converter.JetDirectConfig) *JetDirectConfig {
 	return &JetDirectConfig{Enabled: source.Enabled, PJLID: source.PJLID}
 }
 
+func parseDICOMConfig(source *converter.DICOMConfig) *DICOMConfig {
+	if source == nil {
+		return nil
+	}
+	return &DICOMConfig{Enabled: source.Enabled}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

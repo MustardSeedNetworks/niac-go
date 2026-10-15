@@ -70,6 +70,7 @@
   "devices[].dhcpv6.sip_servers[]": "components/device-editor/generated/sections.generated.ts",
   "devices[].dhcpv6.sntp_servers[]": "components/device-editor/generated/sections.generated.ts",
   "devices[].dhcpv6.valid_lifetime": "components/device-editor/generated/sections.generated.ts",
+  "devices[].dicom.enabled": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.forward_records[].ip": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.forward_records[].name": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.forward_records[].rcode": "components/device-editor/generated/sections.generated.ts",
