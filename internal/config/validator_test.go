@@ -447,6 +447,53 @@ func TestValidate_SIPUserAgent(t *testing.T) {
 	}
 }
 
+func TestValidate_ONVIFScopes(t *testing.T) {
+	axis := func() *ONVIFConfig { return &ONVIFConfig{Enabled: true, Name: "AXIS P3265-LVE", Hardware: "P3265-LVE"} }
+	tests := []struct {
+		name  string
+		edit  func(*ONVIFConfig)
+		onvif *ONVIFConfig
+		valid bool
+	}{
+		{name: "absent", valid: true},
+		{name: "disabled needs nothing", onvif: &ONVIFConfig{}, valid: true},
+		{name: "axis camera", onvif: axis(), valid: true},
+		{
+			name:  "64-character name",
+			onvif: axis(),
+			edit:  func(c *ONVIFConfig) { c.Name = strings.Repeat("a", 64) },
+			valid: true,
+		},
+		{name: "no name", onvif: axis(), edit: func(c *ONVIFConfig) { c.Name = "" }},
+		{name: "no hardware", onvif: axis(), edit: func(c *ONVIFConfig) { c.Hardware = "" }},
+		{name: "65-character name", onvif: axis(), edit: func(c *ONVIFConfig) { c.Name = strings.Repeat("a", 65) }},
+		{
+			name:  "markup in hardware",
+			onvif: axis(),
+			edit:  func(c *ONVIFConfig) { c.Hardware = "P3265 <x/>&" },
+			valid: true,
+		},
+		{name: "line break in name", onvif: axis(), edit: func(c *ONVIFConfig) { c.Name = "AXIS\r\nP3265" }},
+		{name: "non-ASCII hardware", onvif: axis(), edit: func(c *ONVIFConfig) { c.Hardware = "P3265\u00e9" }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.edit != nil {
+				tt.edit(tt.onvif)
+			}
+			cfg := &Config{Devices: []Device{{
+				Name: "cam-1", Type: "iot",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, ONVIFConfig: tt.onvif,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
 func TestValidate_SSHBanner(t *testing.T) {
 	tests := []struct {
 		name   string

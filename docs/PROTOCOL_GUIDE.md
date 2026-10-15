@@ -34,12 +34,13 @@ which ships holding only its README.
   - [SNMP](#snmp)
   - [SSH Device Management](#ssh-device-management)
   - [SIP](#sip)
+  - [ONVIF Discovery](#onvif-discovery)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-NIAC-Go supports 22 network protocols across all layers of the OSI model.
+NIAC-Go supports 23 network protocols across all layers of the OSI model.
 Each protocol can be independently configured per device via YAML
 configuration.
 
@@ -50,7 +51,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery |
 
 ## Layer 2 Protocols
 
@@ -1329,6 +1330,56 @@ sipvicious_svmap 10.0.40.21
 
 # Monitor SIP traffic
 sudo tcpdump -i eth0 -A udp port 5060
+```
+
+### ONVIF Discovery
+
+**WS-Discovery** - the device answers a WS-Discovery `Probe` on UDP 3702 with
+a `ProbeMatch` naming the ONVIF camera it models.
+
+A video management system or a scanner finds a camera by probing for ONVIF's
+`NetworkVideoTransmitter` type. NIAC answers a `Probe` sent to the camera's
+address with the camera's types, scopes and device service address, and
+answers nothing else. The device service behind that address is not
+simulated, so a client that goes on to read the stream profiles or the device
+information fails; on the modelled camera those calls need credentials
+anyway. Multicast probes, IPv6 and WS-Discovery 1.1 are not served.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: lobby-camera
+    type: iot
+    ips:
+      - "10.0.40.31"
+    onvif:
+      enabled: true
+      name: "AXIS P3265-LVE"
+      hardware: "P3265-LVE"
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Answer WS-Discovery `Probe` on UDP 3702 |
+| `name` | string | When enabled | - | The `onvif://www.onvif.org/name/` scope; printable ASCII, at most 64 characters |
+| `hardware` | string | When enabled | - | The `onvif://www.onvif.org/hardware/` scope, the model; same limits |
+
+The `ProbeMatch` advertises `dn:NetworkVideoTransmitter tds:Device`, the
+`type/video_encoder` and `Profile/Streaming` scopes plus the two authored
+ones, and `http://<address>/onvif/device_service`. Its endpoint reference is
+a UUID derived from the device name and MAC, so it is the same on every
+probe. A `Probe` asking for another type, or for a scope the camera lacks
+(RFC 3986 or `strcmp0` matching), gets no reply. The scenario packs enable
+ONVIF discovery on their Axis P3265-LVE cameras.
+
+#### Testing
+
+```bash
+# Monitor WS-Discovery traffic
+sudo tcpdump -i eth0 -A udp port 3702
 ```
 
 ## Protocol Combinations

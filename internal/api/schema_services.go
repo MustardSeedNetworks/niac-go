@@ -338,6 +338,31 @@ func buildSIPSchema() *SchemaProperty {
 	}
 }
 
+func buildONVIFSchema() *SchemaProperty {
+	scope := func(title string) *SchemaProperty {
+		return &SchemaProperty{
+			Type: "string", Title: title,
+			Pattern: `^[!-~][ -~]*$`, MaxLength: intPtr(onvifScopeMaxLen),
+		}
+	}
+	return &SchemaProperty{
+		Type: "object", Title: "ONVIF Discovery",
+		Description: "Answers WS-Discovery probes on UDP 3702 as an ONVIF camera",
+		Properties: map[string]*SchemaProperty{
+			"enabled":  {Type: "boolean", Title: "Enable ONVIF discovery", Default: false},
+			"name":     scope("Name scope"),
+			"hardware": scope("Hardware scope"),
+		},
+		Required: []string{"enabled"},
+		AllOf: []*SchemaProperty{{
+			If: &SchemaProperty{Properties: map[string]*SchemaProperty{
+				"enabled": {Const: true},
+			}},
+			Then: &SchemaProperty{Required: []string{"name", "hardware"}},
+		}},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +

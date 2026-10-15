@@ -44,6 +44,23 @@ type SIPConfig struct {
 	UserAgent string `yaml:"user_agent,omitempty" jsonschema:"pattern=^[!-~][ -~]*$,maxLength=128"`
 }
 
+// ONVIFConfig answers WS-Discovery on UDP 3702 the way an ONVIF camera does:
+// a Probe sent to the camera gets a ProbeMatch carrying its name and model.
+type ONVIFConfig struct {
+	// Enabled serves the WS-Discovery listener. The device service the
+	// ProbeMatch advertises is not simulated: discovery is the identity
+	// surface, streaming and configuration are the application workflow.
+	Enabled bool `yaml:"enabled"`
+
+	// Name is the onvif://www.onvif.org/name/ scope, for example
+	// "AXIS P3265-LVE".
+	Name string `yaml:"name,omitempty" jsonschema:"pattern=^[!-~][ -~]*$,maxLength=64"`
+
+	// Hardware is the onvif://www.onvif.org/hardware/ scope, the model, for
+	// example "P3265-LVE".
+	Hardware string `yaml:"hardware,omitempty" jsonschema:"pattern=^[!-~][ -~]*$,maxLength=64"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

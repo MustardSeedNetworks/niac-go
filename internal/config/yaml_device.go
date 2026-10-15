@@ -473,6 +473,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.OSFingerprintConfig = parseOSFingerprintConfig(yamlDevice.OSFingerprint)
 	device.SSHConfig = parseSSHConfig(yamlDevice.SSH)
 	device.SIPConfig = parseSIPConfig(yamlDevice.SIP)
+	device.ONVIFConfig = parseONVIFConfig(yamlDevice.ONVIF)
 	device.SyslogConfig = parseSyslogConfig(yamlDevice.Syslog)
 
 	// Handle iPerf3 configuration

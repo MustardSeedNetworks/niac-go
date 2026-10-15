@@ -133,6 +133,7 @@ TITLES = {
     "mac_suffix": "MAC suffix",
     "map_to_ip": "Map to IP",
     "netbios": "NetBIOS",
+    "onvif": "ONVIF",
     "os_fingerprint": "OS fingerprint",
     "poe": "PoE",
     "port_channels": "Port channels",

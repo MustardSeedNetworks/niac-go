@@ -366,6 +366,10 @@ type Device struct {
 	// identifies a phone as a phone.
 	SIP *SIPConfig `yaml:"sip,omitempty"`
 
+	// ONVIF answers a WS-Discovery Probe with a ProbeMatch naming the
+	// camera, so a video management system or scanner finds it as one.
+	ONVIF *ONVIFConfig `yaml:"onvif,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`
