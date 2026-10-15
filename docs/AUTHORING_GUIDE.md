@@ -556,7 +556,7 @@ serve any combination.
 | `snmpv3` | SNMP v3 USM | Independent of `snmp_agent` |
 | `dhcp` | DHCP | Pool must sit inside a declared routed network; `scopes` serve relayed networks |
 | `dns` | DNS A and PTR records | Records key the address as `ip` |
-| `http`, `ftp`, `ssh` | Application listeners | Banners are what a scanner identifies |
+| `http`, `ftp`, `ssh` | Application listeners | Banners are what a scanner identifies; author one only from a capture or vendor documentation |
 | `lldp`, `cdp`, `edp`, `fdp` | Discovery advertisement | Overrides the fleet-wide default |
 | `mdns`, `netbios` | Name advertisement | How a host gets named without SNMP |
 | `sip` | SIP `OPTIONS` on UDP 5060 | `user_agent` is how a scanner identifies a phone |

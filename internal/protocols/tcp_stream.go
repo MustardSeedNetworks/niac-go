@@ -37,6 +37,7 @@ type streamKey struct {
 
 type serviceStream struct {
 	next     uint32 // sequence number of the next in-order byte
+	greeted  bool   // a service that speaks first has sent its greeting
 	pending  []byte
 	lastSeen time.Time
 }
@@ -66,6 +67,20 @@ func (s *serviceStreams) open(key streamKey, next uint32) {
 	s.streams[key] = &serviceStream{next: next, lastSeen: time.Now()}
 }
 
+// greet reports, once per connection, that the service owes a connection it
+// saw open its greeting. A connection it never saw open is already past it.
+func (s *serviceStreams) greet(key streamKey) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	stream := s.streams[key]
+	if stream == nil || stream.greeted {
+		return false
+	}
+	stream.greeted = true
+
+	return true
+}
+
 func (s *serviceStreams) close(key streamKey) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,7 +101,7 @@ func (s *serviceStreams) receive(key streamKey, seq uint32, payload []byte, answ
 		if len(s.streams) >= streamMaxConnections {
 			s.evictOldestLocked()
 		}
-		stream = &serviceStream{next: seq}
+		stream = &serviceStream{next: seq, greeted: true}
 		s.streams[key] = stream
 	}
 	switch end := seq + safeconv.Uint32(len(payload)); {

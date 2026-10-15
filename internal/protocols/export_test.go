@@ -388,16 +388,6 @@ func (h *FDPHandler) BuildFDPFrame(device *config.Device) []byte { return h.buil
 // FDPSendAdvertisements exposes sendAdvertisements for testing.
 func (h *FDPHandler) FDPSendAdvertisements() { h.sendAdvertisements() }
 
-// ---- FTPHandler exports ----
-
-// FTPHandlerStack returns the handler's stack for testing.
-func (h *FTPHandler) FTPHandlerStack() *Stack { return h.stack }
-
-// BuildFTPResponse exposes buildFTPResponse for testing.
-func (h *FTPHandler) BuildFTPResponse(command string, passive bool, devices []*config.Device) string {
-	return h.buildFTPResponse(command, passive, devices)
-}
-
 // ---- HTTPHandler exports ----
 
 // HTTPHandlerStack returns the handler's stack for testing.

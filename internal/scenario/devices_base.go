@@ -157,6 +157,7 @@ func endpointDevice(
 		},
 	}
 	device.JetDirect = packJetDirect(profile)
+	device.Ftp = packFTP(profile)
 	device.DICOM = packDICOM(kind.role)
 	device.Modbus = packModbus(kind.role)
 	device.EtherNetIP = packEtherNetIP(kind.role, name)

@@ -62,6 +62,10 @@ func (h *TCPHandler) serveStream(
 	}
 }
 
+// maxUint32Payload is the most of a segment's payload its acknowledgement
+// can count.
+const maxUint32Payload = 0xFFFFFFFF
+
 // statelessMaxSegment is the most answer one segment carries: the IPv4 MSS
 // of a 1500-byte Ethernet MTU, the default every SYN the services answer
 // advertises or exceeds.

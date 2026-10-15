@@ -53,7 +53,6 @@ func v6Requests() []v6Request {
 			return &layers.UDP{SrcPort: v6ReplyClientPort, DstPort: layers.UDPPort(UDPPortDNS)}, buf.Bytes()
 		}, layers.LayerTypeDNS},
 		{"HTTP", tcp(layers.TCPPort(TCPPortHTTP), false, "GET / HTTP/1.1\r\nHost: x\r\n\r\n"), layers.LayerTypeTCP},
-		{"FTP", tcp(layers.TCPPort(TCPPortFTP), false, "USER anonymous\r\n"), layers.LayerTypeTCP},
 		{"RST", tcp(9999, true, ""), layers.LayerTypeTCP},
 	}
 }
