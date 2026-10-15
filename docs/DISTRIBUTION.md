@@ -12,13 +12,14 @@ Windows binaries are built on native GitHub Windows runners with CGO and the
 Npcap SDK, then added to the same release. The workflow publishes:
 
 - Linux amd64 and arm64 archives and packages
-- macOS arm64 archive (Apple Silicon only)
+- macOS arm64 archive and `.pkg` installer (Apple Silicon only)
 - Windows amd64 and arm64 archives
 - checksums, SBOMs, signatures, and build provenance
 
-The workflow does not produce an Intel macOS build or a macOS installer
-package. `deploy/macos/build-pkg.sh` is a development-validation helper only;
-its output is never a release artifact.
+The `.pkg` is built on a GitHub macOS runner by `deploy/macos/build-pkg.sh`
+from the release's darwin archive, so it installs the same binary. It is not
+signed with an Apple Developer ID, so Gatekeeper asks before installing it.
+The workflow does not produce an Intel macOS build.
 
 ## Release Flow
 

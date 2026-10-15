@@ -24,15 +24,16 @@
 #     then archived/checksummed/SBOM'd/signed and appended to the release
 #     by a sidecar step in the goreleaser job (see the builds section below
 #     for why goreleaser itself can't produce them)
-#   - SLSA L3 provenance — actions/attest-build-provenance@v2 reads
-#     goreleaser's outputs.hashes (base64 list of artifact SHA-256s,
-#     sourced from the final checksums.txt after the Windows sidecar step
-#     appends its entries) and produces a signed in-toto attestation
-#     uploaded as niac-slsa-provenance.intoto.jsonl
+#   - macOS .pkg installer — no pkgbuild on Linux, so the macos-pkg job
+#     builds it on a macOS runner from this config's darwin archive with
+#     deploy/macos/build-pkg.sh, then appends it to checksums.txt
+#   - SLSA L3 provenance — actions/attest-build-provenance reads the
+#     macos-pkg job's outputs.hashes (base64 of the final checksums.txt,
+#     after the Windows, content-package and .pkg entries are appended)
+#     and produces a signed in-toto attestation uploaded as
+#     niac-slsa-provenance.intoto.jsonl
 #
 # Not produced from this config:
-#   - macOS .pkg installer (no native pkgbuild from Linux). macOS users get
-#     the .tar.gz; deploy/macos/build-pkg.sh stays in-tree for local builds.
 #   - launchd install scripts are bundled into the darwin archive instead of
 #     a native package (nfpm only produces deb/rpm).
 #
