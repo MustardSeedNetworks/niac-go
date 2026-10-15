@@ -7,8 +7,12 @@ import (
 )
 
 func collectDeviceProtocols(dev *config.Device) []string {
-	protocols := make([]string, 0, deviceProtocolCapacity)
+	return appendEnabledProtocols(dev, appendConfiguredProtocols(dev, make([]string, 0, deviceProtocolCapacity)))
+}
 
+// appendConfiguredProtocols adds the services a device runs by having a
+// config block at all.
+func appendConfiguredProtocols(dev *config.Device, protocols []string) []string {
 	if dev.SNMPConfig.Community != "" || dev.SNMPConfig.WalkFile != "" {
 		protocols = append(protocols, "SNMP")
 	}
@@ -29,6 +33,11 @@ func collectDeviceProtocols(dev *config.Device) []string {
 		protocols = append(protocols, "FTP")
 	}
 
+	return protocols
+}
+
+// appendEnabledProtocols adds the services whose block carries an enable flag.
+func appendEnabledProtocols(dev *config.Device, protocols []string) []string {
 	if dev.LLDPConfig != nil && dev.LLDPConfig.Enabled {
 		protocols = append(protocols, "LLDP")
 	}
@@ -47,6 +56,10 @@ func collectDeviceProtocols(dev *config.Device) []string {
 
 	if dev.SSHConfig != nil && dev.SSHConfig.Enabled {
 		protocols = append(protocols, "SSH")
+	}
+
+	if dev.SIPConfig != nil && dev.SIPConfig.Enabled {
+		protocols = append(protocols, "SIP")
 	}
 
 	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {

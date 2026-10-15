@@ -222,6 +222,8 @@
   "devices[].routes[].destination": "components/device-editor/generated/sections.generated.ts",
   "devices[].routes[].next_hop": "components/device-editor/generated/sections.generated.ts",
   "devices[].routes[].via": "components/device-editor/generated/sections.generated.ts",
+  "devices[].sip.enabled": "components/device-editor/generated/sections.generated.ts",
+  "devices[].sip.user_agent": "components/device-editor/generated/sections.generated.ts",
   "devices[].snmp_agent.access_list[]": "components/device-editor/generated/sections.generated.ts",
   "devices[].snmp_agent.add_mibs[].oid": "components/device-editor/generated/sections.generated.ts",
   "devices[].snmp_agent.add_mibs[].type": "components/device-editor/generated/sections.generated.ts",

@@ -362,6 +362,10 @@ type Device struct {
 	// start.
 	SSH *SSHConfig `yaml:"ssh,omitempty"`
 
+	// SIP answers SIP OPTIONS with the authored User-Agent, so a scanner
+	// identifies a phone as a phone.
+	SIP *SIPConfig `yaml:"sip,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

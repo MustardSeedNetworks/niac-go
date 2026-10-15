@@ -360,6 +360,13 @@ func sshToYAML(cfg *SSHConfig) *converter.SSHConfig {
 	return &converter.SSHConfig{Enabled: cfg.Enabled, Username: cfg.Username, PasswordEnv: cfg.PasswordEnv}
 }
 
+func sipToYAML(cfg *SIPConfig) *converter.SIPConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.SIPConfig{Enabled: cfg.Enabled, UserAgent: cfg.UserAgent}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

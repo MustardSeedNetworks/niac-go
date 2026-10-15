@@ -32,6 +32,18 @@ func (SSHConfig) JSONSchemaExtend(schema *jsonschema.Schema) {
 	}
 }
 
+// SIPConfig answers SIP OPTIONS on UDP 5060, which is how a scanner tells a
+// desk phone from a host that merely carries a phone vendor's MAC prefix.
+type SIPConfig struct {
+	// Enabled serves the SIP listener. It answers OPTIONS only: calls and
+	// registrations are the application workflow and are not simulated.
+	Enabled bool `yaml:"enabled"`
+
+	// UserAgent identifies the endpoint in every response, the way a real
+	// handset does, for example "Cisco-CP8841/12.8.1".
+	UserAgent string `yaml:"user_agent,omitempty" jsonschema:"pattern=^[!-~][ -~]*$,maxLength=128"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

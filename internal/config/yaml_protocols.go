@@ -66,6 +66,13 @@ func parseSSHConfig(source *converter.SSHConfig) *SSHConfig {
 	return &SSHConfig{Enabled: source.Enabled, Username: source.Username, PasswordEnv: source.PasswordEnv}
 }
 
+func parseSIPConfig(source *converter.SIPConfig) *SIPConfig {
+	if source == nil {
+		return nil
+	}
+	return &SIPConfig{Enabled: source.Enabled, UserAgent: source.UserAgent}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

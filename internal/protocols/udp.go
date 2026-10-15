@@ -161,20 +161,29 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	case NetBIOSDatagramServicePort:
 		// NetBIOS Datagram Service
 		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
+	case UDPPortSIP:
+		if !h.handleSIP(pkt, ipLayer, udp, devices) {
+			h.handleUnservedPort(pkt, ipLayer, udp, devices)
+		}
 	default:
-		// A NetAlly reflector probe arrives on an arbitrary UDP port and is
-		// identified by its payload signature, not the port — so reflection
-		// is attempted here rather than via a fixed case.
-		if h.tryReflect(pkt, ipLayer, udp, devices) {
-			return
-		}
-
-		if debugLevel >= DebugLevelVerbose {
-			logging.Debugf("UDP packet to unhandled port %d sn=%d", udp.DstPort, pkt.SerialNumber)
-		}
-
-		h.sendPortUnreachable(pkt, ipLayer, udp, devices)
+		h.handleUnservedPort(pkt, ipLayer, udp, devices)
 	}
+}
+
+// handleUnservedPort handles a datagram no service on the device claimed.
+func (h *UDPHandler) handleUnservedPort(pkt *Packet, ipLayer *layers.IPv4, udp *layers.UDP, devices []*config.Device) {
+	// A NetAlly reflector probe arrives on an arbitrary UDP port and is
+	// identified by its payload signature, not the port — so reflection
+	// is attempted here rather than via a fixed case.
+	if h.tryReflect(pkt, ipLayer, udp, devices) {
+		return
+	}
+
+	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
+		logging.Debugf("UDP packet to unhandled port %d sn=%d", udp.DstPort, pkt.SerialNumber)
+	}
+
+	h.sendPortUnreachable(pkt, ipLayer, udp, devices)
 }
 
 // sendPortUnreachable replies ICMP Destination Unreachable / port unreachable

@@ -164,6 +164,7 @@ func (v *Validator) validateDevice(
 
 	v.validateSNMPCommunity(device, prefix)
 	v.validateSSH(device, prefix)
+	v.validateSIP(device, prefix)
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
@@ -219,6 +220,36 @@ func validSSHVersion(version string) bool {
 func validEnvironmentVariable(name string) bool {
 	matched, _ := regexp.MatchString(`^[A-Za-z_][A-Za-z0-9_]*$`, name)
 	return matched
+}
+
+// maxSIPUserAgentLength bounds the header a response carries; real handsets
+// send a few dozen bytes.
+const maxSIPUserAgentLength = 128
+
+// validateSIP requires an enabled listener to name itself. The User-Agent is
+// the whole point of the service, and it is written into a response header,
+// so it must be one line of printable US-ASCII.
+func (v *Validator) validateSIP(device *Device, prefix string) {
+	sip := device.SIPConfig
+	if sip == nil || !sip.Enabled {
+		return
+	}
+	if !validSIPUserAgent(sip.UserAgent) {
+		v.addError(prefix+".sip.user_agent",
+			"SIP user_agent must be printable US-ASCII of at most 128 characters, such as Cisco-CP8841/12.8.1")
+	}
+}
+
+func validSIPUserAgent(agent string) bool {
+	if agent == "" || agent[0] == ' ' || len(agent) > maxSIPUserAgentLength {
+		return false
+	}
+	for index := range len(agent) {
+		if agent[index] < ' ' || agent[index] > '~' {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *Validator) validateSyslog(device *Device, prefix string) {

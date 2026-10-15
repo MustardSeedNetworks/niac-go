@@ -373,6 +373,7 @@ func medEndpoint(request Request, site Site, role string, index, hostOffset int)
 			"role": role, "site": site.Code, "model": profile.Model,
 			"platform": profile.Platform, "software": profile.Software,
 		},
+		SIP: packSIP(role, profile),
 		Lldp: &converter.LldpConfig{
 			Enabled:           true,
 			SystemDescription: profile.Platform + " - " + name,

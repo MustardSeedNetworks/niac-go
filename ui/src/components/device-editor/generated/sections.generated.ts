@@ -1794,6 +1794,26 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "sip",
+    "title": "SIP",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled serves the SIP listener. It answers OPTIONS only: calls and\nregistrations are the application workflow and are not simulated.",
+        "kind": "boolean"
+      },
+      {
+        "name": "user_agent",
+        "title": "User agent",
+        "description": "UserAgent identifies the endpoint in every response, the way a real\nhandset does, for example \"Cisco-CP8841/12.8.1\".",
+        "pattern": "^[!-~][ -~]*$",
+        "kind": "string"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [
