@@ -622,6 +622,10 @@
           "$ref": "#/$defs/SSHConfig",
           "description": "SSH serves an authenticated vendor-like CLI. With no account it still\nanswers key exchange and refuses every login. The password is never\nwritten in the config: `password_env` names an environment variable\nthat must be set in the daemon's environment, or the device cannot\nstart."
         },
+        "sip": {
+          "$ref": "#/$defs/SIPConfig",
+          "description": "SIP answers SIP OPTIONS with the authored User-Agent, so a scanner\nidentifies a phone as a phone."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -2015,6 +2019,26 @@
         "next_hop"
       ],
       "description": "Route declares a static route through a named device interface."
+    },
+    "SIPConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled serves the SIP listener. It answers OPTIONS only: calls and\nregistrations are the application workflow and are not simulated."
+        },
+        "user_agent": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[!-~][ -~]*$",
+          "description": "UserAgent identifies the endpoint in every response, the way a real\nhandset does, for example \"Cisco-CP8841/12.8.1\"."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "description": "SIPConfig answers SIP OPTIONS on UDP 5060, which is how a scanner tells a desk phone from a host that merely carries a phone vendor's MAC prefix."
     },
     "SSHConfig": {
       "properties": {

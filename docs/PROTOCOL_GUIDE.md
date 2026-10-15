@@ -33,12 +33,13 @@ which ships holding only its README.
   - [mDNS](#mdns)
   - [SNMP](#snmp)
   - [SSH Device Management](#ssh-device-management)
+  - [SIP](#sip)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-NIAC-Go supports 21 network protocols across all layers of the OSI model.
+NIAC-Go supports 22 network protocols across all layers of the OSI model.
 Each protocol can be independently configured per device via YAML
 configuration.
 
@@ -49,7 +50,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP |
 
 ## Layer 2 Protocols
 
@@ -1284,6 +1285,51 @@ every login is refused, so the device needs no secret in the daemon's
 environment. The scenario packs serve SSH this way on their IOS XE routers,
 switches and wireless controllers. Add `username` and `password_env` to a pack
 device to open its command session.
+
+### SIP
+
+**Session Initiation Protocol** - the device answers SIP `OPTIONS` on UDP 5060
+with the User-Agent of the handset it models.
+
+A scanner tells a desk phone from a host that merely carries a phone vendor's
+MAC prefix by asking it over SIP. NIAC answers `OPTIONS` and nothing else:
+calls, registrations and every other method get no reply, and a deep probe
+that places a call fails. SIP over IPv6 and TCP is not served.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: lobby-phone
+    type: voip-phone
+    ips:
+      - "10.0.40.21"
+    sip:
+      enabled: true
+      user_agent: "Cisco-CP8841/12.8.1"
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Answer SIP `OPTIONS` on UDP 5060 |
+| `user_agent` | string | When enabled | - | Sent as `User-Agent` and `Server`; printable ASCII, at most 128 characters |
+
+The response echoes the request's `Via`, `From`, `To`, `Call-ID` and `CSeq`.
+It adds `received` to the top `Via`, fills in `rport` when the request asked
+for it, and goes back to the source port in that case. The scenario packs
+enable SIP on their Cisco CP-8841 phones.
+
+#### Testing
+
+```bash
+# Identify SIP devices (SIPVicious)
+sipvicious_svmap 10.0.40.21
+
+# Monitor SIP traffic
+sudo tcpdump -i eth0 -A udp port 5060
+```
 
 ## Protocol Combinations
 

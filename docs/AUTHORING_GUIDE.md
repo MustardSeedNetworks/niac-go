@@ -559,6 +559,7 @@ serve any combination.
 | `http`, `ftp`, `ssh` | Application listeners | Banners are what a scanner identifies |
 | `lldp`, `cdp`, `edp`, `fdp` | Discovery advertisement | Overrides the fleet-wide default |
 | `mdns`, `netbios` | Name advertisement | How a host gets named without SNMP |
+| `sip` | SIP `OPTIONS` on UDP 5060 | `user_agent` is how a scanner identifies a phone |
 | `icmp`, `icmpv6` | Ping, neighbour and router discovery | `icmp.enabled` is what makes a device pingable; `icmpv6.router_advertisement` advertises every `period` seconds from the device's link-local address |
 | `stp` | Spanning tree | Bridge priority drives the root election |
 | `iperf3`, `reflector` | Throughput testing | `reflector` has no enable flag — presence enables it |

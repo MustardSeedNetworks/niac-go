@@ -415,6 +415,38 @@ func TestValidate_SSHCredentialsArePaired(t *testing.T) {
 	}
 }
 
+func TestValidate_SIPUserAgent(t *testing.T) {
+	tests := []struct {
+		name  string
+		sip   *SIPConfig
+		valid bool
+	}{
+		{name: "absent", valid: true},
+		{name: "disabled needs nothing", sip: &SIPConfig{}, valid: true},
+		{name: "cisco handset", sip: &SIPConfig{Enabled: true, UserAgent: "Cisco-CP8841/12.8.1"}, valid: true},
+		{name: "spaces inside", sip: &SIPConfig{Enabled: true, UserAgent: "Yealink SIP-T54W 96.86.0.70"}, valid: true},
+		{name: "128 characters", sip: &SIPConfig{Enabled: true, UserAgent: strings.Repeat("a", 128)}, valid: true},
+		{name: "enabled without a name", sip: &SIPConfig{Enabled: true}},
+		{name: "leading space", sip: &SIPConfig{Enabled: true, UserAgent: " Cisco"}},
+		{name: "header injection", sip: &SIPConfig{Enabled: true, UserAgent: "Cisco\r\nVia: x"}},
+		{name: "non-ASCII", sip: &SIPConfig{Enabled: true, UserAgent: "Cisco-CP8841/12.8.1\u00e9"}},
+		{name: "129 characters", sip: &SIPConfig{Enabled: true, UserAgent: strings.Repeat("a", 129)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "phone-1", Type: "voip-phone",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, SIPConfig: tt.sip,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
 func TestValidate_SSHBanner(t *testing.T) {
 	tests := []struct {
 		name   string

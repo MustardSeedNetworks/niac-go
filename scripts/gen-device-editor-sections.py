@@ -136,6 +136,7 @@ TITLES = {
     "os_fingerprint": "OS fingerprint",
     "poe": "PoE",
     "port_channels": "Port channels",
+    "sip": "SIP",
     "snmpv3": "SNMPv3",
     "ssh": "SSH",
     "stp": "STP",

@@ -214,6 +214,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		SSHConfig: &SSHConfig{
 			Enabled: true, Username: "admin", PasswordEnv: "NIAC_TEST_SSH_PASSWORD",
 		},
+		SIPConfig:       &SIPConfig{Enabled: true, UserAgent: "Cisco-CP8841/12.8.1"},
 		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
@@ -294,6 +295,7 @@ func assertAuthoredProtocols(t *testing.T, device *converter.Device) {
 func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 	t.Helper()
 	device := cfg.Devices[0]
+	assertSIPRoundTrip(t, device.SIPConfig)
 	if cfg.Networks[0].Subnet != "10.254.200.0/24" || cfg.Attachments[0].Network != "access" {
 		t.Fatalf("routed config lost: %#v %#v", cfg.Networks, cfg.Attachments)
 	}
@@ -387,5 +389,12 @@ func assertRuntimePoE(t *testing.T, device *Device) {
 	if device.PoEConfig == nil || device.PoEConfig.BudgetWatts != 370 ||
 		device.PoEConfig.UsageThreshold() != 65 {
 		t.Fatalf("PoE budget lost on load: %#v", device.PoEConfig)
+	}
+}
+
+func assertSIPRoundTrip(t *testing.T, sip *SIPConfig) {
+	t.Helper()
+	if sip == nil || !sip.Enabled || sip.UserAgent != "Cisco-CP8841/12.8.1" {
+		t.Fatalf("SIP round trip lost: %#v", sip)
 	}
 }

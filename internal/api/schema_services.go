@@ -317,6 +317,27 @@ func buildSSHSchema() *SchemaProperty {
 	}
 }
 
+func buildSIPSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "SIP Identity",
+		Description: "Answers SIP OPTIONS on UDP 5060 with the endpoint's User-Agent",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable SIP", Default: false},
+			"user_agent": {
+				Type: "string", Title: "User-Agent",
+				Pattern: `^[!-~][ -~]*$`, MaxLength: intPtr(sipUserAgentMaxLen),
+			},
+		},
+		Required: []string{"enabled"},
+		AllOf: []*SchemaProperty{{
+			If: &SchemaProperty{Properties: map[string]*SchemaProperty{
+				"enabled": {Const: true},
+			}},
+			Then: &SchemaProperty{Required: []string{"user_agent"}},
+		}},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +

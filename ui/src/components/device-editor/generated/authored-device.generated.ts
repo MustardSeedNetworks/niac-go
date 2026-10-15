@@ -338,6 +338,10 @@ export interface AuthoredDevice {
       readonly username?: string;
       readonly password_env?: string;
     };
+  readonly sip?: {
+      readonly enabled?: boolean;
+      readonly user_agent?: string;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

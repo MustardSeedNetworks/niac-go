@@ -295,6 +295,7 @@ type Device struct {
 	DHCPv6Config        *DHCPv6Config        // DHCPv6 server configuration
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
 	SSHConfig           *SSHConfig           // authenticated vendor-like command service
+	SIPConfig           *SIPConfig           // SIP OPTIONS identity on UDP 5060
 	SyslogConfig        *SyslogConfig        // configuration-state event output
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
 	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)
@@ -308,6 +309,13 @@ type SSHConfig struct {
 	Enabled     bool
 	Username    string
 	PasswordEnv string
+}
+
+// SIPConfig answers SIP OPTIONS with UserAgent, identifying a phone to a
+// scanner. Calls and registrations are not simulated.
+type SIPConfig struct {
+	Enabled   bool
+	UserAgent string
 }
 
 // SyslogConfig sends configuration-state messages to RFC 5424 collectors.
