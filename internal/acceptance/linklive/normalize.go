@@ -186,9 +186,14 @@ func authoredInterface(iface config.Interface, applyDefaults bool) AuthoredInter
 	if applyDefaults && mtu == 0 {
 		mtu = defaultInterfaceMTU
 	}
-	duplex := iface.Duplex
-	if applyDefaults && duplex == "" && interfaceType == "ethernet" {
-		duplex = "Full"
+	// The agent serves dot3StatsDuplexStatus on ethernet interfaces only, so an
+	// authored duplex anywhere else never reaches Link-Live.
+	duplex := ""
+	if interfaceType == "ethernet" {
+		duplex = iface.Duplex
+		if applyDefaults && duplex == "" {
+			duplex = "Full"
+		}
 	}
 	return AuthoredInterface{
 		Name: iface.Name, Type: interfaceType, Status: status,
@@ -209,6 +214,10 @@ func effectiveInterfaceType(name, configured string) string {
 		return "loopback"
 	case strings.HasPrefix(lowerName, "tunnel"):
 		return "tunnel"
+	case strings.HasPrefix(lowerName, "port-channel"):
+		// The agent types a bundle ieee8023adLag and, like IOS, serves it no
+		// dot3StatsDuplexStatus, so Link-Live reads its duplex as Unknown.
+		return "ieee8023adlag"
 	default:
 		return "ethernet"
 	}
@@ -280,7 +289,28 @@ func makeAuthoredLink(source, target config.Device, trunk config.TrunkPort) Auth
 			break
 		}
 	}
+	link.SourceMembers = bundleMembers(&source, trunk.Interface)
+	link.TargetMembers = bundleMembers(&target, trunk.RemoteInterface)
 	return link
+}
+
+func bundleMembers(device *config.Device, interfaceName string) []AuthoredMember {
+	channel, found := config.PortChannelFor(device, interfaceName)
+	if !found {
+		return nil
+	}
+	members := make([]AuthoredMember, 0, len(channel.Members))
+	for _, name := range channel.Members {
+		speed := effectiveInterfaceSpeed(name)
+		for _, iface := range device.Interfaces {
+			if iface.Name == name && iface.Speed > 0 {
+				speed = iface.Speed
+				break
+			}
+		}
+		members = append(members, AuthoredMember{Name: name, SpeedMbps: speed})
+	}
+	return members
 }
 
 func linkKey(left, right string) string {

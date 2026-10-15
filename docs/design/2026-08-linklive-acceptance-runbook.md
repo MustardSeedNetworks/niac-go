@@ -337,7 +337,7 @@ Every finding kind the comparator can emit, and where to look first.
 | --- | --- | --- |
 | `missing-link` | neighbour tables not synthesized, or the peer never discovered | `trunk_ports` on both ends; the comparator matches by MAC pair in either direction |
 | `unexpected-link` | CDP/LLDP synthesis produced a placeholder peer identity | the affected interface's neighbour and bridge data — this is the classic false-triangle |
-| `port-conflict` | one-sided rendered port, or a `left / right` pair being read as one side | already normalized; a surviving finding is usually a genuinely wrong `remote_interface` |
+| `port-conflict` / `speed-conflict` | one-sided rendered port, or a `left / right` pair being read as one side | already normalized; a surviving finding is usually a genuinely wrong `remote_interface`. Link-Live draws a `Port-channel` link as one **member** link (port and speed are a member's, not the bundle's), so a bundled link matches when each rendered port is a member of its end's bundle and the speed is that member's |
 | `vlan-conflict` | routed link authored with an access VLAN | routed firewall/L3 links should carry LLDP/CDP but no bridge or FDB state |
 
 ### Interface telemetry
@@ -348,7 +348,7 @@ Every finding kind the comparator can emit, and where to look first.
 | `unexpected-interface` | tester saw an interface the pack did not author | only reported for explicitly authored inventories; a hit here means the walk and the YAML disagree |
 | `interface-status-conflict` | admin/oper status drift, or a behavior timeline mid-transition | whether a fault phase was active during the scan |
 | `interface-speed-conflict` | authored speed disagrees with the walk's `ifSpeed` | walk-backed speed wins on the wire; fix the authored value |
-| `interface-duplex-conflict` | duplex compared on an interface that has no duplex | logical and `ieee80211` interfaces are exempt; a hit means an ethernet interface really differs |
+| `interface-duplex-conflict` | duplex compared on an interface that has no duplex | logical, `ieee80211` and `Port-channel` interfaces are exempt (a bundle is `ieee8023adLag` and, like IOS, serves no `dot3StatsDuplexStatus`, so Link-Live reads `Unknown`); a hit means an ethernet interface really differs |
 | `interface-mtu-conflict` | authored MTU differs from IF-MIB | jumbo-frame mismatch on uplinks is the common one |
 | `interface-utilization-conflict` | first poll, or behavior-driven traffic | utilization is only compared once the device has produced a sample; behavior-driven interfaces are expected to move. Only **switch and router** ports are compared: Link-Live takes no utilization sample from a leaf node — endpoint, server, wireless controller, **access point** — even though ours all serve `ifHCInOctets` (measured: `MED-DNS01`, `MED-WLC01`, `MED-PUMP-B01-F01-02` all return Counter64 and Link-Live still reports none; on the 2026-08-08 hospital capture all five interfaces of all 30 APs came back `util 0`, wired uplink included, while the switch port facing that uplink read 71.57%). |
 | `interface-error-conflict` / `interface-discard-conflict` | fault injection running during the scan, or counters not authored | whether a behavior timeline was mid-phase |

@@ -80,7 +80,10 @@ func compareLink(expected AuthoredLink, hosts map[string]ObservedHost) []Finding
 		return []Finding{{Kind: FindingMissingLink, Device: expected.Source, Peer: expected.Target}}
 	}
 	var findings []Finding
-	if !portsMatch(connection.Edge.Port, expected.SourcePort, expected.TargetPort) {
+	expectedSpeed := expected.SpeedMbps
+	if member, rendered := renderedBundleMember(connection.Edge.Port, expected); rendered {
+		expectedSpeed = member.SpeedMbps
+	} else if !portsMatch(connection.Edge.Port, expected.SourcePort, expected.TargetPort) {
 		findings = append(
 			findings,
 			linkConflict(
@@ -97,13 +100,13 @@ func compareLink(expected AuthoredLink, hosts map[string]ObservedHost) []Finding
 			linkConflict(FindingDuplexConflict, expected, expected.Duplex, connection.Edge.Duplex),
 		)
 	}
-	if expected.SpeedMbps > 0 && parseSpeedMbps(connection.Edge.Speed) != expected.SpeedMbps {
+	if expectedSpeed > 0 && parseSpeedMbps(connection.Edge.Speed) != expectedSpeed {
 		findings = append(
 			findings,
 			linkConflict(
 				FindingSpeedConflict,
 				expected,
-				strconv.Itoa(expected.SpeedMbps),
+				strconv.Itoa(expectedSpeed),
 				connection.Edge.Speed,
 			),
 		)
