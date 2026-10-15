@@ -126,6 +126,7 @@ TITLES = {
     "fdp": "FDP",
     "ftp": "FTP",
     "http": "HTTP",
+    "hl7": "HL7",
     "dicom": "DICOM",
     "icmp": "ICMP",
     "icmpv6": "ICMPv6",

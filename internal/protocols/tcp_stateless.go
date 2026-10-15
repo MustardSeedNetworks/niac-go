@@ -27,6 +27,41 @@ func (h *TCPHandler) serviceDevice(
 	return nil
 }
 
+// serveStream answers one segment of a connection to a service that reads a
+// byte stream, served by device, or resets a SYN when device is nil.
+func (h *TCPHandler) serveStream(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	tcp *layers.TCP,
+	devices []*config.Device,
+	device *config.Device,
+	streams *serviceStreams,
+	answer streamAnswer,
+	service string,
+) {
+	key := newStreamKey(ipLayer, tcp)
+	switch {
+	case device == nil:
+		if tcp.SYN && !tcp.ACK {
+			h.sendRST(pkt, ipLayer, tcp, devices)
+		}
+	case tcp.RST:
+		streams.close(key)
+	case tcp.SYN && !tcp.ACK:
+		streams.open(key, tcp.Seq+1)
+		h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, []*config.Device{device}, uint16(tcp.DstPort))
+	case len(tcp.Payload) > 0 || tcp.FIN:
+		reply, inOrder := streams.receive(key, tcp.Seq, tcp.Payload, answer)
+		if !inOrder {
+			return // the client retransmits what is missing
+		}
+		if tcp.FIN {
+			streams.close(key)
+		}
+		h.sendStatelessSegment(pkt, ipLayer, tcp, device, reply, service)
+	}
+}
+
 // statelessMaxSegment is the most answer one segment carries: the IPv4 MSS
 // of a 1500-byte Ethernet MTU, the default every SYN the services answer
 // advertises or exceeds.

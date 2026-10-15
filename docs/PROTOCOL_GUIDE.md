@@ -37,6 +37,7 @@ which ships holding only its README.
   - [ONVIF Discovery](#onvif-discovery)
   - [JetDirect](#jetdirect)
   - [DICOM](#dicom)
+  - [HL7](#hl7)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
@@ -53,7 +54,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM, HL7 |
 
 ## Layer 2 Protocols
 
@@ -1477,6 +1478,52 @@ echoscu -v -aec PACS 10.0.50.20 11112
 
 # Or with nmap
 nmap -p 104,11112 --script dicom-ping 10.0.50.20
+```
+
+### HL7
+
+**HL7 v2 over MLLP on TCP 2575** - the device acknowledges every message
+framed in MLLP, the check an interface engine runs against the clinical
+systems it feeds.
+
+Each `<VT> message <FS><CR>` block is answered with an original-mode `ACK` in
+the same framing. The `ACK` turns the inbound header round (its sending
+application and facility become the receiving ones), keeps the sender's
+separators, processing ID and version, names the trigger event as
+`ACK^<event>^ACK`, and carries its own control ID. `MSA-1` is `AA` and `MSA-2`
+the inbound `MSH-10`; a block that does not start with an `MSH` segment, or
+whose header has no control ID, gets `AR`. Messages are reassembled across TCP
+segments, bytes outside a block are ignored, and a block over 64 KiB is
+dropped unanswered. The message is not interpreted: there is no patient,
+order or result logic, no enhanced-mode acknowledgement and no IPv6. A device
+without HL7 resets a connection to 2575.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: MED-EMR01
+    type: server
+    ips:
+      - "10.0.50.16"
+    hl7:
+      enabled: true
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Acknowledge MLLP-framed messages on TCP 2575 |
+
+The hospital pack enables HL7 on its EMR, laboratory and pharmacy systems.
+
+#### Testing
+
+```bash
+# Send a message the way an interface engine does (python-hl7)
+printf 'MSH|^~\\&|EPIC|MAIN|LAB|MAIN|20261015||ADT^A01|MSG1|P|2.5\r' > adt.hl7
+mllp_send --port 2575 --file adt.hl7 10.0.50.16
 ```
 
 ## Protocol Combinations

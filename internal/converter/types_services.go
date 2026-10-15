@@ -84,6 +84,15 @@ type DICOMConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+// HL7Config is HL7 over MLLP on TCP 2575: every framed message is answered
+// with an original-mode ACK.
+type HL7Config struct {
+	// Enabled opens the port. Messages are acknowledged, not interpreted:
+	// patient, order and result logic are the clinical application and are
+	// not simulated.
+	Enabled bool `yaml:"enabled"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

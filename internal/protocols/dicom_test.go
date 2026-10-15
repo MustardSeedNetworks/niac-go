@@ -263,26 +263,26 @@ func TestTCPHandlerDICOMClosedWithoutDICOM(t *testing.T) {
 func TestDICOMStreamsReassembleSplitPDUs(t *testing.T) {
 	t.Parallel()
 
-	streams := newDICOMStreams()
-	key := dicomStreamKey{}
+	streams := newServiceStreams()
+	key := streamKey{}
 	streams.open(key, 101)
 	echo := dicomEchoRequest(9)
 	whole, _, _ := dicomAnswer(echo)
 
-	if answer, inOrder := streams.receive(key, 101, echo[:12]); !inOrder || answer != nil {
+	if answer, inOrder := streams.receive(key, 101, echo[:12], dicomAnswer); !inOrder || answer != nil {
 		t.Fatalf("headers alone answered %x (in order %v), want nothing yet", answer, inOrder)
 	}
-	if answer, inOrder := streams.receive(key, 113, echo[12:]); !inOrder || !bytes.Equal(answer, whole) {
+	if answer, inOrder := streams.receive(key, 113, echo[12:], dicomAnswer); !inOrder || !bytes.Equal(answer, whole) {
 		t.Fatalf("completed PDU answered % x, want % x", answer, whole)
 	}
-	if answer, inOrder := streams.receive(key, 113, echo[12:]); !inOrder || answer != nil {
+	if answer, inOrder := streams.receive(key, 113, echo[12:], dicomAnswer); !inOrder || answer != nil {
 		t.Errorf("a repeated segment answered % x (in order %v), want a bare acknowledgement", answer, inOrder)
 	}
-	if _, inOrder := streams.receive(key, 500, echo); inOrder {
+	if _, inOrder := streams.receive(key, 500, echo, dicomAnswer); inOrder {
 		t.Error("a segment past a gap was taken in order")
 	}
 	release := dicomPDU(dicomReleaseRQ, make([]byte, 4))
-	if answer, _ := streams.receive(key, 101+uint32(len(echo)), release); answer[0] != dicomReleaseRP {
+	if answer, _ := streams.receive(key, 101+uint32(len(echo)), release, dicomAnswer); answer[0] != dicomReleaseRP {
 		t.Errorf("release after the gap answered % x", answer)
 	}
 }
@@ -290,12 +290,12 @@ func TestDICOMStreamsReassembleSplitPDUs(t *testing.T) {
 func TestDICOMStreamsBounds(t *testing.T) {
 	t.Parallel()
 
-	streams := newDICOMStreams()
-	for port := range uint16(dicomMaxStreams + 1) {
-		streams.open(dicomStreamKey{client: netip.AddrPortFrom(netip.IPv4Unspecified(), port)}, 0)
+	streams := newServiceStreams()
+	for port := range uint16(streamMaxConnections + 1) {
+		streams.open(streamKey{client: netip.AddrPortFrom(netip.IPv4Unspecified(), port)}, 0)
 	}
-	if len(streams.streams) != dicomMaxStreams {
-		t.Errorf("%d streams held, want at most %d", len(streams.streams), dicomMaxStreams)
+	if len(streams.streams) != streamMaxConnections {
+		t.Errorf("%d streams held, want at most %d", len(streams.streams), streamMaxConnections)
 	}
 }
 

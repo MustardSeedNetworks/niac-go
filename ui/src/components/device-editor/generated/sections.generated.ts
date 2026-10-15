@@ -1874,6 +1874,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "hl7",
+    "title": "HL7",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled opens the port. Messages are acknowledged, not interpreted:\npatient, order and result logic are the clinical application and are\nnot simulated.",
+        "kind": "boolean"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [

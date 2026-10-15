@@ -30,6 +30,7 @@ type deviceSpec struct {
 	stp        *converter.StpConfig
 	icmpv6     *converter.Icmpv6Config
 	dicom      *converter.DICOMConfig
+	hl7        *converter.HL7Config
 }
 
 func managedDevice(request Request, spec deviceSpec, links linkMap) converter.Device {
@@ -75,7 +76,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Icmpv6:     spec.icmpv6,
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
-		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp, DICOM: spec.dicom,
+		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp, DICOM: spec.dicom, HL7: spec.hl7,
 		Syslog: siteSyslog(spec),
 		Snmpv3: packSNMPv3(),
 	}

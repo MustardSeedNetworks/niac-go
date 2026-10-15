@@ -652,6 +652,10 @@
           "$ref": "#/$defs/DICOMConfig",
           "description": "DICOM answers association and C-ECHO on TCP 104 and 11112, the check\na PACS and the imaging modalities sending to it run against each other."
         },
+        "hl7": {
+          "$ref": "#/$defs/HL7Config",
+          "description": "HL7 acknowledges messages framed in MLLP on TCP 2575, the check an\ninterface engine runs against the clinical systems it feeds."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -1130,6 +1134,20 @@
       "additionalProperties": false,
       "type": "object",
       "description": "FtpUser represents an FTP user account."
+    },
+    "HL7Config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled opens the port. Messages are acknowledged, not interpreted:\npatient, order and result logic are the clinical application and are\nnot simulated."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "description": "HL7Config is HL7 over MLLP on TCP 2575: every framed message is answered with an original-mode ACK."
     },
     "HTTPConfig": {
       "properties": {

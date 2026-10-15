@@ -299,6 +299,7 @@ type Device struct {
 	ONVIFConfig         *ONVIFConfig         // WS-Discovery identity on UDP 3702
 	JetDirectConfig     *JetDirectConfig     // raw printing and PJL identity on TCP 9100
 	DICOMConfig         *DICOMConfig         // DICOM verification on TCP 104 and 11112
+	HL7Config           *HL7Config           // HL7 MLLP acknowledgement on TCP 2575
 	SyslogConfig        *SyslogConfig        // configuration-state event output
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
 	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)

@@ -476,6 +476,7 @@ func parseDeviceProtocolConfigs(device *Device, yamlDevice *converter.Device) er
 	device.ONVIFConfig = parseONVIFConfig(yamlDevice.ONVIF)
 	device.JetDirectConfig = parseJetDirectConfig(yamlDevice.JetDirect)
 	device.DICOMConfig = parseDICOMConfig(yamlDevice.DICOM)
+	device.HL7Config = parseHL7Config(yamlDevice.HL7)
 	device.SyslogConfig = parseSyslogConfig(yamlDevice.Syslog)
 
 	// Handle iPerf3 configuration
