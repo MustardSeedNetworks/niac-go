@@ -37,7 +37,8 @@ func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
 		}
 	}
 	var findings []Finding
-	if !namesMatch(actual.Name, expected.Name) {
+	if !namesMatch(actual.Name, expected.Name) &&
+		(!expected.NameOffLink || !contains(expected.IPv4, actual.Name)) {
 		findings = append(
 			findings,
 			conflict(FindingNameConflict, expected.Name, expected.Name, actual.Name),

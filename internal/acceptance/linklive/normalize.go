@@ -9,6 +9,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
+	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 )
 
 const (
@@ -29,11 +30,15 @@ func FromConfig(cfg *config.Config) AuthoredSnapshot {
 	devices := allDevices(cfg)
 	faults := authoredFaults(cfg.BehaviorTimelines)
 	pool := attachmentPoolPorts(cfg.Attachments)
+	testerNetworks := attachmentNetworks(cfg)
 	snapshot := AuthoredSnapshot{Devices: make([]AuthoredDevice, 0, len(devices))}
 	byName := make(map[string]config.Device, len(devices))
 	for _, device := range devices {
 		byName[device.Name] = device
-		snapshot.Devices = append(snapshot.Devices, authoredDevice(device, faults, pool))
+		authored := authoredDevice(device, faults, pool)
+		authored.NameOffLink = announcesOnlyOverMDNS(device) && len(testerNetworks) > 0 &&
+			!onAnyNetwork(device, testerNetworks)
+		snapshot.Devices = append(snapshot.Devices, authored)
 	}
 	snapshot.Links = authoredLinks(devices, byName)
 	return snapshot
@@ -146,6 +151,39 @@ func attachmentPoolPorts(attachments []config.LogicalAttachment) map[string]bool
 		}
 	}
 	return result
+}
+
+// attachmentNetworks lists the networks testers land on, as the fabric
+// compiler resolves each attachment's pool.
+func attachmentNetworks(cfg *config.Config) []string {
+	if !fabric.IsRouted(cfg) {
+		return nil
+	}
+	var networks []string
+	for _, attachment := range fabric.CompileConfig(cfg).Topology.Attachments {
+		if attachment.Network != "" && !slices.Contains(networks, attachment.Network) {
+			networks = append(networks, attachment.Network)
+		}
+	}
+	return networks
+}
+
+// announcesOnlyOverMDNS reports a device whose only name source is multicast
+// DNS. A discovery tool reads sysName first and asks NetBIOS next, and both of
+// those cross a router.
+func announcesOnlyOverMDNS(device config.Device) bool {
+	return device.SNMPConfig.SysName == "" &&
+		(device.NetBIOSConfig == nil || !device.NetBIOSConfig.Enabled) &&
+		device.MDNSConfig != nil && device.MDNSConfig.Enabled
+}
+
+func onAnyNetwork(device config.Device, networks []string) bool {
+	for _, iface := range device.Interfaces {
+		if slices.Contains(networks, iface.Network) {
+			return true
+		}
+	}
+	return false
 }
 
 func interfaceKey(device, iface string) string {
