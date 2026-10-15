@@ -378,6 +378,10 @@ type Device struct {
 	// a PACS and the imaging modalities sending to it run against each other.
 	DICOM *DICOMConfig `yaml:"dicom,omitempty"`
 
+	// HL7 acknowledges messages framed in MLLP on TCP 2575, the check an
+	// interface engine runs against the clinical systems it feeds.
+	HL7 *HL7Config `yaml:"hl7,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

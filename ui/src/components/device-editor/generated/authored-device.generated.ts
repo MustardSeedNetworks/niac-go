@@ -354,6 +354,9 @@ export interface AuthoredDevice {
   readonly dicom?: {
       readonly enabled?: boolean;
     };
+  readonly hl7?: {
+      readonly enabled?: boolean;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

@@ -94,6 +94,13 @@ func parseDICOMConfig(source *converter.DICOMConfig) *DICOMConfig {
 	return &DICOMConfig{Enabled: source.Enabled}
 }
 
+func parseHL7Config(source *converter.HL7Config) *HL7Config {
+	if source == nil {
+		return nil
+	}
+	return &HL7Config{Enabled: source.Enabled}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

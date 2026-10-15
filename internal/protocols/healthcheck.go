@@ -23,7 +23,6 @@ const (
 	TCPPortPostgres = 5432
 	TCPPortMSSQL    = 1433
 	TCPPortModbus   = 502
-	TCPPortHL7      = 2575
 	TCPPortOPCUA    = 4840
 	TCPPortSMB      = 445
 )
@@ -83,15 +82,8 @@ const (
 	smbHeaderLen    = 64 // SMB2 header/structure size
 	smb1ResponseLen = 39 // SMB1 response length
 
-	// HL7 MLLP constants.
-	hl7MLLPEnvelopeExtra = 3    // Extra bytes for MLLP envelope (start + end + CR)
-	hl7StartBlock        = 0x0B // MLLP start block character
-	hl7EndBlock          = 0x1C // MLLP end block character
-	hl7CarriageReturn    = 0x0D // Carriage return character
-
 	// Protocol minimum header sizes.
 	modbusMinHeader      = 8    // Modbus TCP header + function code
-	mllpMinEnvelope      = 3    // MLLP envelope minimum (start + end + CR)
 	opcuaMinHeader       = 8    // OPC UA header minimum
 	netbiosSessionHeader = 4    // NetBIOS session header minimum
 	ldapMinRequest       = 5    // LDAP minimum request size
@@ -107,7 +99,6 @@ const (
 	rtspMinHeader        = 9  // RTSP minimum request size ("OPTIONS ")
 	modbusMinResponse    = 4  // Modbus minimum response header
 	macAddrSizeHC        = 6  // MAC address size for healthcheck
-	hl7MSHControlIDIndex = 9  // HL7 MSH Control ID field index (MSH-10)
 	smbMinWithNetbiosHdr = 36 // SMB minimum size with NetBIOS header
 )
 
@@ -290,30 +281,6 @@ func (h *HealthCheckHandler) HandleModbusRequest(
 	}
 
 	response := h.generateModbusResponse(tcpLayer.Payload, devices)
-	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
-	}
-}
-
-// HandleHL7Request handles HL7 MLLP messages.
-func (h *HealthCheckHandler) HandleHL7Request(
-	reqPkt *Packet,
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(tcpLayer.Payload) < mllpMinEnvelope { // Minimum MLLP envelope
-		return
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("HL7 MLLP request from %s (devices: %v)",
-			ipLayer.SrcIP, getDeviceNames(devices))
-	}
-
-	response := h.generateHL7Response(tcpLayer.Payload, devices)
 	if response != nil {
 		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
@@ -653,44 +620,6 @@ func (h *HealthCheckHandler) generateModbusResponse(request []byte, _ []*config.
 	response[6] = unitID
 	response[7] = functionCode
 	response[8] = 0x00 // Success (no exception)
-
-	return response
-}
-
-// generateHL7Response creates an HL7 ACK message wrapped in MLLP.
-func (h *HealthCheckHandler) generateHL7Response(request []byte, devices []*config.Device) []byte {
-	// MLLP envelope: <VT>(0x0B) message <FS>(0x1C) <CR>(0x0D)
-	if len(request) < 3 || request[0] != 0x0B {
-		return nil
-	}
-
-	// Find message ID from MSH segment
-	msgID := "NIAC001"
-
-	msgStr := string(request)
-	if idx := strings.Index(msgStr, "MSH|"); idx >= 0 {
-		// Extract control ID from MSH-10
-		segments := strings.Split(msgStr[idx:], "|")
-		if len(segments) > hl7MSHControlIDIndex {
-			msgID = segments[9]
-		}
-	}
-
-	sendingApp := "NIAC"
-	if len(devices) > 0 {
-		sendingApp = devices[0].Name
-	}
-
-	// Build ACK message
-	timestamp := time.Now().Format("20060102150405")
-	ack := fmt.Sprintf("MSH|^~\\&|%s|FACILITY|SENDER|FACILITY|%s||ACK|%s|P|2.5\rMSA|AA|%s\r",
-		sendingApp, timestamp, msgID, msgID)
-
-	// Wrap in MLLP envelope
-	response := make([]byte, 0, len(ack)+hl7MLLPEnvelopeExtra)
-	response = append(response, hl7StartBlock) // Start block
-	response = append(response, []byte(ack)...)
-	response = append(response, hl7EndBlock, hl7CarriageReturn) // End block + CR
 
 	return response
 }

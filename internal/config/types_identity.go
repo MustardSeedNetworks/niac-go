@@ -34,3 +34,11 @@ type JetDirectConfig struct {
 type DICOMConfig struct {
 	Enabled bool
 }
+
+// HL7Config acknowledges every message framed in MLLP on TCP 2575, which is
+// how an interface engine checks that a clinical system is listening. The
+// message is not interpreted: patient, order and result logic are the clinical
+// application and are not simulated.
+type HL7Config struct {
+	Enabled bool
+}

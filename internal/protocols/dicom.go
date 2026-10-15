@@ -51,6 +51,12 @@ const (
 	// registered root. The association answer must carry one.
 	dicomImplementationUID = "2.25.329800735698586629295641978511506172918"
 	dicomMaxPDULength      = 16384
+
+	// dicomMaxPDU bounds a PDU the service reads. A verification
+	// association's PDUs are a few hundred bytes; an SCU proposing every
+	// storage class sends an A-ASSOCIATE-RQ of a few kilobytes. A longer PDU
+	// is aborted from its header.
+	dicomMaxPDU = 64 << 10
 )
 
 // Presentation context results (PS3.8 table 9-18).
@@ -105,27 +111,7 @@ func (h *TCPHandler) handleDICOM(
 	device := h.serviceDevice(devices, ipLayer.DstIP, func(device *config.Device) bool {
 		return device.DICOMConfig != nil && device.DICOMConfig.Enabled
 	})
-	key := newDICOMStreamKey(ipLayer, tcp)
-	switch {
-	case device == nil:
-		if tcp.SYN && !tcp.ACK {
-			h.sendRST(pkt, ipLayer, tcp, devices)
-		}
-	case tcp.RST:
-		h.dicom.close(key)
-	case tcp.SYN && !tcp.ACK:
-		h.dicom.open(key, tcp.Seq+1)
-		h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, []*config.Device{device}, uint16(tcp.DstPort))
-	case len(tcp.Payload) > 0 || tcp.FIN:
-		answer, inOrder := h.dicom.receive(key, tcp.Seq, tcp.Payload)
-		if !inOrder {
-			return // the client retransmits what is missing
-		}
-		if tcp.FIN {
-			h.dicom.close(key)
-		}
-		h.sendStatelessSegment(pkt, ipLayer, tcp, device, answer, "DICOM")
-	}
+	h.serveStream(pkt, ipLayer, tcp, devices, device, h.dicom, dicomAnswer, "DICOM")
 }
 
 // dicomAnswer is the reply to the complete PDUs at the front of stream, in

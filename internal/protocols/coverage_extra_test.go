@@ -1669,19 +1669,6 @@ func TestHealthCheckGenerateModbusResponse(t *testing.T) {
 	}
 }
 
-func TestHealthCheckGenerateHL7Response(t *testing.T) {
-	stack := newTestStackInternal(t)
-	h := NewHealthCheckHandler(stack)
-
-	request := []byte(
-		"\x0BMSH|^~\\&|SendApp|SendFac|RecApp|RecFac|202604150000||ADT^A01|MSG001|P|2.3\rEVN|A01|202604150000\r\x1C\x0D",
-	)
-	resp := h.generateHL7Response(request, nil)
-	if len(resp) == 0 {
-		t.Fatal("expected non-empty HL7 response")
-	}
-}
-
 func TestHealthCheckGenerateOPCUAResponse(t *testing.T) {
 	stack := newTestStackInternal(t)
 	h := NewHealthCheckHandler(stack)

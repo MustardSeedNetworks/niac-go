@@ -98,6 +98,7 @@
   "devices[].ftp.users[].password": "components/device-editor/generated/sections.generated.ts",
   "devices[].ftp.users[].username": "components/device-editor/generated/sections.generated.ts",
   "devices[].ftp.welcome_banner": "components/device-editor/generated/sections.generated.ts",
+  "devices[].hl7.enabled": "components/device-editor/generated/sections.generated.ts",
   "devices[].http.enabled": "components/device-editor/generated/sections.generated.ts",
   "devices[].http.endpoints[].body": "components/device-editor/generated/sections.generated.ts",
   "devices[].http.endpoints[].content_type": "components/device-editor/generated/sections.generated.ts",

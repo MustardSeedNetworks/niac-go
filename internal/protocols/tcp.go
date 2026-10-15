@@ -3,6 +3,7 @@ package protocols
 import (
 	"fmt"
 	"net"
+	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -44,12 +45,16 @@ const (
 type TCPHandler struct {
 	stack *Stack
 	ssh   *sshTCPHandler
-	dicom *dicomStreams
+	dicom *serviceStreams
+	hl7   *serviceStreams
+
+	// hl7Messages numbers the ACKs, each of which needs its own control ID.
+	hl7Messages atomic.Uint64
 }
 
 // NewTCPHandler creates a new TCP handler.
 func NewTCPHandler(stack *Stack) *TCPHandler {
-	handler := &TCPHandler{stack: stack, dicom: newDICOMStreams()}
+	handler := &TCPHandler{stack: stack, dicom: newServiceStreams(), hl7: newServiceStreams()}
 	handler.ssh = newSSHTCPHandler(stack)
 	return handler
 }
@@ -166,9 +171,6 @@ func (h *TCPHandler) routeToHandler(
 	case TCPPortModbus:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortModbus, isSYNOnly,
 			func() { h.stack.healthCheckHandler.HandleModbusRequest(pkt, ipLayer, tcp, devices) })
-	case TCPPortHL7:
-		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortHL7, isSYNOnly,
-			func() { h.stack.healthCheckHandler.HandleHL7Request(pkt, ipLayer, tcp, devices) })
 	case TCPPortOPCUA:
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortOPCUA, isSYNOnly,
 			func() { h.stack.healthCheckHandler.HandleOPCUARequest(pkt, ipLayer, tcp, devices) })
@@ -183,8 +185,8 @@ func (h *TCPHandler) routeToHandler(
 }
 
 // handleUnlistedPort serves the ports a device opens only by configuration,
-// 9100 on a JetDirect printer and 104 and 11112 on a DICOM node, and resets
-// a SYN to any other port.
+// 9100 on a JetDirect printer, 104 and 11112 on a DICOM node and 2575 on an
+// HL7 interface, and resets a SYN to any other port.
 func (h *TCPHandler) handleUnlistedPort(
 	pkt *Packet,
 	ipLayer *layers.IPv4,
@@ -196,6 +198,8 @@ func (h *TCPHandler) handleUnlistedPort(
 		h.handleJetDirect(pkt, ipLayer, tcp, devices)
 	case tcp.DstPort == TCPPortDICOM || tcp.DstPort == TCPPortDICOMAlt:
 		h.handleDICOM(pkt, ipLayer, tcp, devices)
+	case tcp.DstPort == TCPPortHL7:
+		h.handleHL7(pkt, ipLayer, tcp, devices)
 	case tcp.SYN && !tcp.ACK:
 		h.sendRST(pkt, ipLayer, tcp, devices)
 	}

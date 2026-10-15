@@ -86,6 +86,10 @@ func appendIdentityServices(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "DICOM")
 	}
 
+	if dev.HL7Config != nil && dev.HL7Config.Enabled {
+		protocols = append(protocols, "HL7")
+	}
+
 	return protocols
 }
 

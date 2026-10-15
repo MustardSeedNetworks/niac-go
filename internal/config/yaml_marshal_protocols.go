@@ -388,6 +388,13 @@ func dicomToYAML(cfg *DICOMConfig) *converter.DICOMConfig {
 	return &converter.DICOMConfig{Enabled: cfg.Enabled}
 }
 
+func hl7ToYAML(cfg *HL7Config) *converter.HL7Config {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.HL7Config{Enabled: cfg.Enabled}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

@@ -185,6 +185,7 @@ func workloadServer(request Request, site Site, system workloadSystem, index int
 			system.name+" service uplink",
 		)},
 		vlan: vlanServers, http: &converter.HTTPConfig{Enabled: true, ServerName: system.httpServer},
+		hl7: packHL7(request.EndpointProfile),
 	}, links)
 }
 

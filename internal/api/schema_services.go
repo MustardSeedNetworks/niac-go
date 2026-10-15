@@ -389,6 +389,17 @@ func buildDICOMSchema() *SchemaProperty {
 	}
 }
 
+func buildHL7Schema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "HL7",
+		Description: "Acknowledges HL7 messages framed in MLLP on TCP 2575",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable HL7", Default: false},
+		},
+		Required: []string{"enabled"},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +
