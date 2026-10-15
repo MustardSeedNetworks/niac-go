@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.117.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.116.0...v0.117.0) (2026-10-15)
+
+
+### Features
+
+* **onvif:** answer WS-Discovery probes on pack cameras (AI-2) ([#2669](https://github.com/MustardSeedNetworks/niac-go/issues/2669)) ([104fb84](https://github.com/MustardSeedNetworks/niac-go/commit/104fb843c63a726c615b5da7b909b5ff6018a6eb)), closes [#2668](https://github.com/MustardSeedNetworks/niac-go/issues/2668)
+* **sip:** answer SIP OPTIONS on pack phones (AI-1) ([#2667](https://github.com/MustardSeedNetworks/niac-go/issues/2667)) ([457d500](https://github.com/MustardSeedNetworks/niac-go/commit/457d50018d3857ebf3086f003c6fc1cd738a3954)), closes [#2666](https://github.com/MustardSeedNetworks/niac-go/issues/2666)
+
 ## [0.116.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.115.0...v0.116.0) (2026-10-15)
 
 
