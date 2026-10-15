@@ -26,3 +26,11 @@ type JetDirectConfig struct {
 	Enabled bool
 	PJLID   string
 }
+
+// DICOMConfig accepts associations for the Verification SOP class on TCP 104
+// and 11112 and answers C-ECHO, which is how a PACS and the modalities that
+// send to it check each other. Storage, worklist and query are refused at
+// association: they are the clinical application and are not simulated.
+type DICOMConfig struct {
+	Enabled bool
+}

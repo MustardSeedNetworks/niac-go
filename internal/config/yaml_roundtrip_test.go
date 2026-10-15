@@ -217,6 +217,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 		SIPConfig:       &SIPConfig{Enabled: true, UserAgent: "Cisco-CP8841/12.8.1"},
 		ONVIFConfig:     &ONVIFConfig{Enabled: true, Name: "AXIS P3265-LVE", Hardware: "P3265-LVE"},
 		JetDirectConfig: &JetDirectConfig{Enabled: true, PJLID: "HP LaserJet MFP M634"},
+		DICOMConfig:     &DICOMConfig{Enabled: true},
 		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
 		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
@@ -300,6 +301,7 @@ func assertCompleteRuntimeConfig(t *testing.T, cfg *Config, walk string) {
 	assertSIPRoundTrip(t, device.SIPConfig)
 	assertONVIFRoundTrip(t, device.ONVIFConfig)
 	assertJetDirectRoundTrip(t, device.JetDirectConfig)
+	assertDICOMRoundTrip(t, device.DICOMConfig)
 	if cfg.Networks[0].Subnet != "10.254.200.0/24" || cfg.Attachments[0].Network != "access" {
 		t.Fatalf("routed config lost: %#v %#v", cfg.Networks, cfg.Attachments)
 	}
@@ -414,5 +416,12 @@ func assertJetDirectRoundTrip(t *testing.T, jetDirect *JetDirectConfig) {
 	t.Helper()
 	if jetDirect == nil || !jetDirect.Enabled || jetDirect.PJLID != "HP LaserJet MFP M634" {
 		t.Fatalf("JetDirect round trip lost: %#v", jetDirect)
+	}
+}
+
+func assertDICOMRoundTrip(t *testing.T, dicom *DICOMConfig) {
+	t.Helper()
+	if dicom == nil || !dicom.Enabled {
+		t.Fatalf("DICOM round trip lost: %#v", dicom)
 	}
 }

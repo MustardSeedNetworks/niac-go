@@ -36,6 +36,7 @@ which ships holding only its README.
   - [SIP](#sip)
   - [ONVIF Discovery](#onvif-discovery)
   - [JetDirect](#jetdirect)
+  - [DICOM](#dicom)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
@@ -52,7 +53,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect, DICOM |
 
 ## Layer 2 Protocols
 
@@ -1428,6 +1429,54 @@ nmap -sV --allports --version-all -p 9100 --script pjl-ready-message 10.0.40.30
 
 # Ask for the model by hand
 printf '@PJL INFO ID\r\n' | nc 10.0.40.30 9100
+```
+
+### DICOM
+
+**DICOM verification on TCP 104 and 11112** - the device accepts an
+association for the Verification SOP class and answers `C-ECHO`, the check a
+PACS archive and the imaging modalities that send to it run against each
+other.
+
+NIAC answers `A-ASSOCIATE-RQ` with `A-ASSOCIATE-AC`, echoing both AE titles
+and accepting any called AE title. A Verification presentation context is
+accepted in Implicit or Explicit VR Little Endian; every other abstract
+syntax is refused, so storage, worklist and query fail at association. A
+`C-ECHO-RQ` gets a `C-ECHO-RSP` with status Success, and `A-RELEASE-RQ` gets
+`A-RELEASE-RP`. PDUs are reassembled across TCP segments, as SCUs such as
+dcmtk write them in pieces; a PDU over 64 KiB, or bytes that cannot start a
+PDU (a port scanner's HTTP or TLS probe), are answered with `A-ABORT`. DICOM
+over IPv6 is not served. A device without DICOM resets a connection to either
+port.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: MED-PACS01
+    type: server
+    ips:
+      - "10.0.50.20"
+    dicom:
+      enabled: true
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Accept associations and answer `C-ECHO` on TCP 104 and 11112 |
+
+The hospital pack enables DICOM on its MRI systems and on its PACS archive.
+
+#### Testing
+
+```bash
+# Verify the archive the way a modality does (dcmtk)
+echoscu -v -aec PACS 10.0.50.20 11112
+
+# Or with nmap
+nmap -p 104,11112 --script dicom-ping 10.0.50.20
 ```
 
 ## Protocol Combinations

@@ -1,15 +1,11 @@
 package protocols
 
 import (
-	"net"
 	"strings"
 
-	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
-	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
 // TCPPortJetDirect is the raw print port, also called AppSocket or port 9100.
@@ -32,7 +28,9 @@ func (h *TCPHandler) handleJetDirect(
 	tcp *layers.TCP,
 	devices []*config.Device,
 ) {
-	device := h.jetDirectDevice(devices, ipLayer.DstIP)
+	device := h.serviceDevice(devices, ipLayer.DstIP, func(device *config.Device) bool {
+		return device.JetDirectConfig != nil && device.JetDirectConfig.Enabled
+	})
 	switch {
 	case device == nil:
 		if tcp.SYN && !tcp.ACK {
@@ -43,18 +41,8 @@ func (h *TCPHandler) handleJetDirect(
 		h.stack.healthCheckHandler.HandleTCPConnect(pkt, ipLayer, tcp, []*config.Device{device}, TCPPortJetDirect)
 	case len(tcp.Payload) > 0 || tcp.FIN:
 		answer := pjlAnswer(tcp.Payload, device.JetDirectConfig.PJLID)
-		h.sendJetDirectSegment(pkt, ipLayer, tcp, device, answer)
+		h.sendStatelessSegment(pkt, ipLayer, tcp, device, []byte(answer), "JetDirect")
 	}
-}
-
-func (h *TCPHandler) jetDirectDevice(devices []*config.Device, ip net.IP) *config.Device {
-	for _, device := range devices {
-		if device.JetDirectConfig != nil && device.JetDirectConfig.Enabled && h.stack.deviceOwnsIPv4(device, ip) {
-			return device
-		}
-	}
-
-	return nil
 }
 
 // pjlAnswer is the reply to the PJL INFO ID and INFO STATUS commands in
@@ -82,54 +70,4 @@ func pjlAnswer(payload []byte, pjlID string) string {
 	}
 
 	return answer.String()
-}
-
-// sendJetDirectSegment acknowledges the client's segment, carrying answer
-// when there is one and closing our side when the client closed its own.
-func (h *TCPHandler) sendJetDirectSegment(
-	pkt *Packet,
-	ipLayer *layers.IPv4,
-	tcp *layers.TCP,
-	device *config.Device,
-	answer string,
-) {
-	identity, ok := h.stack.replyEthernet(pkt, device)
-	if !ok {
-		return
-	}
-	consumed := safeconv.Uint32(min(len(tcp.Payload), maxUint32Payload))
-	if tcp.FIN {
-		consumed++ // a FIN occupies one sequence number
-	}
-	ipReply := &layers.IPv4{
-		Version: tcpIPv4Version, IHL: tcpIPv4IHL, TTL: tcpIPv4TTL,
-		Protocol: layers.IPProtocolTCP, SrcIP: ipLayer.DstIP, DstIP: ipLayer.SrcIP,
-	}
-	tcpReply := &layers.TCP{
-		SrcPort: tcp.DstPort, DstPort: tcp.SrcPort,
-		Seq: tcp.Ack, Ack: tcp.Seq + consumed,
-		ACK: true, PSH: answer != "", FIN: tcp.FIN, Window: tcpWindowSize,
-	}
-	_ = tcpReply.SetNetworkLayerForChecksum(ipReply)
-
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	eth := &layers.Ethernet{
-		SrcMAC: identity.source, DstMAC: identity.destination, EthernetType: layers.EthernetTypeIPv4,
-	}
-	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(answer)); err != nil {
-		if h.stack.GetDebugLevel() >= DebugLevelInfo {
-			logging.Debugf("JetDirect: reply from %s failed sn=%d err=%v", device.Name, pkt.SerialNumber, err)
-		}
-		return
-	}
-
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-	h.stack.Send(&Packet{
-		Buffer: buffer.Bytes(), Length: len(buffer.Bytes()), SerialNumber: serialNum,
-		Device: device, VLAN: identity.vlan, generatedHost: device,
-	})
 }

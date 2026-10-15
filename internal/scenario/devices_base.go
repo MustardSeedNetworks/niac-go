@@ -29,6 +29,7 @@ type deviceSpec struct {
 	poe        *converter.PoeConfig
 	stp        *converter.StpConfig
 	icmpv6     *converter.Icmpv6Config
+	dicom      *converter.DICOMConfig
 }
 
 func managedDevice(request Request, spec deviceSpec, links linkMap) converter.Device {
@@ -74,7 +75,7 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 		Icmpv6:     spec.icmpv6,
 		TrunkPorts: authoredTrunkPorts(links[spec.name]), Properties: properties,
 		Dhcp: spec.dhcp, DNS: spec.dns, HTTP: spec.http, Netbios: spec.netbios,
-		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp,
+		IPerf3: spec.iperf3, Reflector: spec.reflector, Poe: spec.poe, Stp: spec.stp, DICOM: spec.dicom,
 		Syslog: siteSyslog(spec),
 		Snmpv3: packSNMPv3(),
 	}
@@ -155,6 +156,7 @@ func endpointDevice(
 		},
 	}
 	device.JetDirect = packJetDirect(profile)
+	device.DICOM = packDICOM(kind.role)
 	if !kind.personalComputer {
 		// Appliances answer SNMP for their own identity. A discovery tool names
 		// a host from sysName first and only falls back to a reverse lookup,

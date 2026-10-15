@@ -562,6 +562,7 @@ serve any combination.
 | `sip` | SIP `OPTIONS` on UDP 5060 | `user_agent` is how a scanner identifies a phone |
 | `onvif` | WS-Discovery `Probe` on UDP 3702 | `name` and `hardware` are how a video system lists a camera |
 | `jetdirect` | Raw printing on TCP 9100 | `pjl_id` is how a scanner identifies a PJL printer |
+| `dicom` | DICOM association and `C-ECHO` on TCP 104 and 11112 | How a PACS and its modalities verify each other |
 | `icmp`, `icmpv6` | Ping, neighbour and router discovery | `icmp.enabled` is what makes a device pingable; `icmpv6.router_advertisement` advertises every `period` seconds from the device's link-local address |
 | `stp` | Spanning tree | Bridge priority drives the root election |
 | `iperf3`, `reflector` | Throughput testing | `reflector` has no enable flag — presence enables it |

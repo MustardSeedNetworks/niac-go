@@ -1861,6 +1861,19 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "dicom",
+    "title": "DICOM",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled opens both ports. Storage, worklist and query are refused at\nassociation: they are the clinical application and are not simulated.",
+        "kind": "boolean"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [

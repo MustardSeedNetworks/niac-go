@@ -351,6 +351,9 @@ export interface AuthoredDevice {
       readonly enabled?: boolean;
       readonly pjl_id?: string;
     };
+  readonly dicom?: {
+      readonly enabled?: boolean;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

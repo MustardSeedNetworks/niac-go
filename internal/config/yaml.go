@@ -160,6 +160,7 @@ func deviceToYAML(device *Device) converter.Device {
 		SIP:           sipToYAML(device.SIPConfig),
 		ONVIF:         onvifToYAML(device.ONVIFConfig),
 		JetDirect:     jetDirectToYAML(device.JetDirectConfig),
+		DICOM:         dicomToYAML(device.DICOMConfig),
 		Syslog:        syslogToYAML(device.SyslogConfig),
 		IPerf3:        iperf3ToYAML(device.IPerf3),
 		Reflector:     reflectorToYAML(device.ReflectorConfig),

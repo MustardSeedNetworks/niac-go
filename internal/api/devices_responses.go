@@ -58,6 +58,18 @@ func appendEnabledProtocols(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "SSH")
 	}
 
+	protocols = appendIdentityServices(dev, protocols)
+
+	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {
+		protocols = append(protocols, "SYSLOG")
+	}
+
+	return protocols
+}
+
+// appendIdentityServices names the services a device answers so a scanner
+// or management system can classify it.
+func appendIdentityServices(dev *config.Device, protocols []string) []string {
 	if dev.SIPConfig != nil && dev.SIPConfig.Enabled {
 		protocols = append(protocols, "SIP")
 	}
@@ -70,8 +82,8 @@ func appendEnabledProtocols(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "JETDIRECT")
 	}
 
-	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {
-		protocols = append(protocols, "SYSLOG")
+	if dev.DICOMConfig != nil && dev.DICOMConfig.Enabled {
+		protocols = append(protocols, "DICOM")
 	}
 
 	return protocols

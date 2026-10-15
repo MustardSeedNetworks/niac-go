@@ -23,7 +23,6 @@ const (
 	TCPPortPostgres = 5432
 	TCPPortMSSQL    = 1433
 	TCPPortModbus   = 502
-	TCPPortDICOM    = 104
 	TCPPortHL7      = 2575
 	TCPPortOPCUA    = 4840
 	TCPPortSMB      = 445
@@ -73,10 +72,6 @@ const (
 	modbusResponseLen = 9 // Basic response length
 	modbusDataLen     = 3 // Data length field value
 
-	// DICOM protocol constants.
-	dicomResponseLen = 74 // A-ASSOCIATE-AC response length
-	dicomPDUDataLen  = 68 // PDU data length
-
 	// OPC-UA protocol constants.
 	opcuaAckLen = 28 // OPC-UA ACK length
 
@@ -96,7 +91,6 @@ const (
 
 	// Protocol minimum header sizes.
 	modbusMinHeader      = 8    // Modbus TCP header + function code
-	dicomMinHeader       = 6    // DICOM PDU header minimum
 	mllpMinEnvelope      = 3    // MLLP envelope minimum (start + end + CR)
 	opcuaMinHeader       = 8    // OPC UA header minimum
 	netbiosSessionHeader = 4    // NetBIOS session header minimum
@@ -105,19 +99,16 @@ const (
 	ldapIntegerTag       = 0x02 // LDAP INTEGER tag for message ID
 
 	// Protocol response/parsing sizes.
-	mysqlMinHeader       = 8    // MySQL handshake minimum header
-	postgresMinHeader    = 8    // PostgreSQL minimum header
-	smbMinHeader         = 8    // SMB minimum header
-	smbSignature         = 16   // SMB signature size
-	mssqlMinHeader       = 8    // TDS minimum header
-	rtspMinHeader        = 9    // RTSP minimum request size ("OPTIONS ")
-	modbusMinResponse    = 4    // Modbus minimum response header
-	dicomAssocItemLen    = 36   // DICOM Association Context Item length
-	macAddrSizeHC        = 6    // MAC address size for healthcheck
-	dicomAssocRQ         = 0x01 // DICOM A-ASSOCIATE-RQ PDU type
-	dicomAETitleLen      = 16   // DICOM AE title max length
-	hl7MSHControlIDIndex = 9    // HL7 MSH Control ID field index (MSH-10)
-	smbMinWithNetbiosHdr = 36   // SMB minimum size with NetBIOS header
+	mysqlMinHeader       = 8  // MySQL handshake minimum header
+	postgresMinHeader    = 8  // PostgreSQL minimum header
+	smbMinHeader         = 8  // SMB minimum header
+	smbSignature         = 16 // SMB signature size
+	mssqlMinHeader       = 8  // TDS minimum header
+	rtspMinHeader        = 9  // RTSP minimum request size ("OPTIONS ")
+	modbusMinResponse    = 4  // Modbus minimum response header
+	macAddrSizeHC        = 6  // MAC address size for healthcheck
+	hl7MSHControlIDIndex = 9  // HL7 MSH Control ID field index (MSH-10)
+	smbMinWithNetbiosHdr = 36 // SMB minimum size with NetBIOS header
 )
 
 // HealthCheckHandler handles various health check protocol requests.
@@ -299,30 +290,6 @@ func (h *HealthCheckHandler) HandleModbusRequest(
 	}
 
 	response := h.generateModbusResponse(tcpLayer.Payload, devices)
-	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
-	}
-}
-
-// HandleDICOMRequest handles DICOM association requests.
-func (h *HealthCheckHandler) HandleDICOMRequest(
-	reqPkt *Packet,
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(tcpLayer.Payload) < dicomMinHeader { // Minimum DICOM PDU header
-		return
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("DICOM request from %s (devices: %v)",
-			ipLayer.SrcIP, getDeviceNames(devices))
-	}
-
-	response := h.generateDICOMResponse(tcpLayer.Payload, devices)
 	if response != nil {
 		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
@@ -686,62 +653,6 @@ func (h *HealthCheckHandler) generateModbusResponse(request []byte, _ []*config.
 	response[6] = unitID
 	response[7] = functionCode
 	response[8] = 0x00 // Success (no exception)
-
-	return response
-}
-
-// generateDICOMResponse creates a DICOM A-ASSOCIATE-AC response.
-func (h *HealthCheckHandler) generateDICOMResponse(request []byte, devices []*config.Device) []byte {
-	if len(request) < dicomMinHeader {
-		return nil
-	}
-
-	// DICOM PDU format:
-	// 1 byte: PDU type (0x01 = A-ASSOCIATE-RQ, 0x02 = A-ASSOCIATE-AC)
-	// 1 byte: reserved
-	// 4 bytes: PDU length (big endian)
-
-	pduType := request[0]
-	if pduType != dicomAssocRQ { // Only respond to A-ASSOCIATE-RQ
-		return nil
-	}
-
-	// Build A-ASSOCIATE-AC response (simplified)
-	calledAE := "NIAC-DICOM       " // 16 chars, space padded
-	callingAE := "ANY-SCU          "
-
-	if len(devices) > 0 {
-		name := devices[0].Name
-		if len(name) > dicomAETitleLen {
-			name = name[:16]
-		}
-
-		calledAE = fmt.Sprintf("%-16s", name)
-	}
-
-	// Minimal A-ASSOCIATE-AC
-	response := make([]byte, dicomResponseLen)
-	response[0] = 0x02 // A-ASSOCIATE-AC
-	response[1] = 0x00 // reserved
-
-	// PDU length (68 bytes for minimal response)
-	binary.BigEndian.PutUint32(response[2:], dicomPDUDataLen)
-
-	// Protocol version
-	binary.BigEndian.PutUint16(response[6:], 1)
-
-	// Reserved
-	response[8] = 0x00
-	response[9] = 0x00
-
-	// Called AE Title (16 bytes)
-	copy(response[10:26], []byte(calledAE))
-
-	// Calling AE Title (16 bytes)
-	copy(response[26:42], []byte(callingAE))
-
-	// Reserved (32 bytes)
-	// Leave as zeros
 
 	return response
 }

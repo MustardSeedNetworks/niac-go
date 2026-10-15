@@ -374,6 +374,10 @@ type Device struct {
 	// answers the PJL status queries a scanner identifies a printer by.
 	JetDirect *JetDirectConfig `yaml:"jetdirect,omitempty"`
 
+	// DICOM answers association and C-ECHO on TCP 104 and 11112, the check
+	// a PACS and the imaging modalities sending to it run against each other.
+	DICOM *DICOMConfig `yaml:"dicom,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

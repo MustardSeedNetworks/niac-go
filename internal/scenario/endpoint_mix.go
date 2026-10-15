@@ -141,7 +141,7 @@ func verticalMix(profile string) []endpointShare {
 
 func hospitalMix() []endpointShare {
 	return []endpointShare{
-		{kind: appliance("mr-system", "MRI"), atLeast: 1},
+		{kind: appliance(imagingModalityRole, "MRI"), atLeast: 1},
 		siteUPS(),
 		{kind: appliance("label-printer", "LABEL"), atLeast: 1, weight: weightRare},
 		{kind: appliance("infusion-pump", "PUMP"), weight: weightDominant},
