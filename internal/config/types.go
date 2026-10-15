@@ -296,6 +296,7 @@ type Device struct {
 	OSFingerprintConfig *OSFingerprintConfig // OS fingerprinting configuration (v1.24.0)
 	SSHConfig           *SSHConfig           // authenticated vendor-like command service
 	SIPConfig           *SIPConfig           // SIP OPTIONS identity on UDP 5060
+	ONVIFConfig         *ONVIFConfig         // WS-Discovery identity on UDP 3702
 	SyslogConfig        *SyslogConfig        // configuration-state event output
 	IPerf3              *IPerf3Config        // iPerf3 server emulation configuration (v1.25.0)
 	ReflectorConfig     *ReflectorConfig     // NetAlly UDP reflector endpoint (v0.94.0)
@@ -316,6 +317,15 @@ type SSHConfig struct {
 type SIPConfig struct {
 	Enabled   bool
 	UserAgent string
+}
+
+// ONVIFConfig answers a WS-Discovery Probe as an ONVIF network video
+// transmitter named by Name and Hardware. The camera's SOAP services behind
+// the advertised address are not simulated.
+type ONVIFConfig struct {
+	Enabled  bool
+	Name     string
+	Hardware string
 }
 
 // SyslogConfig sends configuration-state messages to RFC 5424 collectors.

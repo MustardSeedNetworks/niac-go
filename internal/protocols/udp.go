@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -78,6 +79,9 @@ type UDPHandler struct {
 	proxyConns  map[net.Conn]struct{}
 	stopped     bool
 	dial        func(context.Context, string) (net.Conn, error)
+	// wsdMessages numbers the ProbeMatches sent, as WS-Discovery's
+	// AppSequence header requires.
+	wsdMessages atomic.Uint64
 }
 
 // NewUDPHandler creates a new UDP handler.
@@ -161,13 +165,28 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	case NetBIOSDatagramServicePort:
 		// NetBIOS Datagram Service
 		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
-	case UDPPortSIP:
-		if !h.handleSIP(pkt, ipLayer, udp, devices) {
+	case UDPPortSIP, UDPPortWSDiscovery:
+		if !h.handleIdentityProbe(pkt, ipLayer, udp, devices) {
 			h.handleUnservedPort(pkt, ipLayer, udp, devices)
 		}
 	default:
 		h.handleUnservedPort(pkt, ipLayer, udp, devices)
 	}
+}
+
+// handleIdentityProbe answers the probes a scanner identifies an endpoint by,
+// and reports whether a device serving that probe owned the destination.
+func (h *UDPHandler) handleIdentityProbe(
+	pkt *Packet,
+	ipLayer *layers.IPv4,
+	udp *layers.UDP,
+	devices []*config.Device,
+) bool {
+	if udp.DstPort == UDPPortSIP {
+		return h.handleSIP(pkt, ipLayer, udp, devices)
+	}
+
+	return h.handleONVIF(pkt, ipLayer, udp, devices)
 }
 
 // handleUnservedPort handles a datagram no service on the device claimed.

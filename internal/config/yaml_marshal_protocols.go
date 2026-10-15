@@ -367,6 +367,13 @@ func sipToYAML(cfg *SIPConfig) *converter.SIPConfig {
 	return &converter.SIPConfig{Enabled: cfg.Enabled, UserAgent: cfg.UserAgent}
 }
 
+func onvifToYAML(cfg *ONVIFConfig) *converter.ONVIFConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.ONVIFConfig{Enabled: cfg.Enabled, Name: cfg.Name, Hardware: cfg.Hardware}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

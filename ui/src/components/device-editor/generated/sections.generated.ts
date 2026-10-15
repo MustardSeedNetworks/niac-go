@@ -1814,6 +1814,33 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "onvif",
+    "title": "ONVIF",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled serves the WS-Discovery listener. The device service the\nProbeMatch advertises is not simulated: discovery is the identity\nsurface, streaming and configuration are the application workflow.",
+        "kind": "boolean"
+      },
+      {
+        "name": "name",
+        "title": "Name",
+        "description": "Name is the onvif://www.onvif.org/name/ scope, for example\n\"AXIS P3265-LVE\".",
+        "pattern": "^[!-~][ -~]*$",
+        "kind": "string"
+      },
+      {
+        "name": "hardware",
+        "title": "Hardware",
+        "description": "Hardware is the onvif://www.onvif.org/hardware/ scope, the model, for\nexample \"P3265-LVE\".",
+        "pattern": "^[!-~][ -~]*$",
+        "kind": "string"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [

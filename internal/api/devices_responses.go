@@ -62,6 +62,10 @@ func appendEnabledProtocols(dev *config.Device, protocols []string) []string {
 		protocols = append(protocols, "SIP")
 	}
 
+	if dev.ONVIFConfig != nil && dev.ONVIFConfig.Enabled {
+		protocols = append(protocols, "ONVIF")
+	}
+
 	if dev.SyslogConfig != nil && dev.SyslogConfig.Enabled {
 		protocols = append(protocols, "SYSLOG")
 	}

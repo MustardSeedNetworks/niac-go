@@ -626,6 +626,10 @@
           "$ref": "#/$defs/SIPConfig",
           "description": "SIP answers SIP OPTIONS with the authored User-Agent, so a scanner\nidentifies a phone as a phone."
         },
+        "onvif": {
+          "$ref": "#/$defs/ONVIFConfig",
+          "description": "ONVIF answers a WS-Discovery Probe with a ProbeMatch naming the\ncamera, so a video management system or scanner finds it as one."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -1867,6 +1871,32 @@
         "subnet"
       ],
       "description": "Network declares one internal routed IPv4 network."
+    },
+    "ONVIFConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled serves the WS-Discovery listener. The device service the\nProbeMatch advertises is not simulated: discovery is the identity\nsurface, streaming and configuration are the application workflow."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[!-~][ -~]*$",
+          "description": "Name is the onvif://www.onvif.org/name/ scope, for example\n\"AXIS P3265-LVE\"."
+        },
+        "hardware": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[!-~][ -~]*$",
+          "description": "Hardware is the onvif://www.onvif.org/hardware/ scope, the model, for\nexample \"P3265-LVE\"."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "description": "ONVIFConfig answers WS-Discovery on UDP 3702 the way an ONVIF camera does: a Probe sent to the camera gets a ProbeMatch carrying its name and model."
     },
     "OSFingerprintConfig": {
       "properties": {

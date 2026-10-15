@@ -31,6 +31,7 @@ const (
 	httpMaxStatusCode       = 599     // HTTP max status code
 	netbiosMaxNameLen       = 15      // NetBIOS name max length
 	sipUserAgentMaxLen      = 128     // matches the config validator
+	onvifScopeMaxLen        = 64      // matches the config validator
 	netbiosDefaultTTL       = 300     // NetBIOS default TTL seconds
 	maxServerPreference     = 255     // max DHCPv6 server preference
 	maxIPTTL                = 255     // max IP TTL value
@@ -214,6 +215,7 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"netbios":        buildNetBIOSSchema(&maxTTL),
 		"ssh":            buildSSHSchema(),
 		"sip":            buildSIPSchema(),
+		"onvif":          buildONVIFSchema(),
 		"syslog":         buildSyslogSchema(),
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),

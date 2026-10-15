@@ -342,6 +342,11 @@ export interface AuthoredDevice {
       readonly enabled?: boolean;
       readonly user_agent?: string;
     };
+  readonly onvif?: {
+      readonly enabled?: boolean;
+      readonly name?: string;
+      readonly hardware?: string;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];

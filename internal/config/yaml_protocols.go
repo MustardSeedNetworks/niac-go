@@ -73,6 +73,13 @@ func parseSIPConfig(source *converter.SIPConfig) *SIPConfig {
 	return &SIPConfig{Enabled: source.Enabled, UserAgent: source.UserAgent}
 }
 
+func parseONVIFConfig(source *converter.ONVIFConfig) *ONVIFConfig {
+	if source == nil {
+		return nil
+	}
+	return &ONVIFConfig{Enabled: source.Enabled, Name: source.Name, Hardware: source.Hardware}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

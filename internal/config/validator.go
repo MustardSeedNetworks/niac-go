@@ -165,6 +165,7 @@ func (v *Validator) validateDevice(
 	v.validateSNMPCommunity(device, prefix)
 	v.validateSSH(device, prefix)
 	v.validateSIP(device, prefix)
+	v.validateONVIF(device, prefix)
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
@@ -250,6 +251,31 @@ func validSIPUserAgent(agent string) bool {
 		}
 	}
 	return true
+}
+
+// maxONVIFScopeLength bounds an authored scope value; a camera's name and
+// model are a few dozen bytes.
+const maxONVIFScopeLength = 64
+
+// validateONVIF requires an enabled camera to name itself: the name and
+// hardware scopes are what a discovery tool lists it by.
+func (v *Validator) validateONVIF(device *Device, prefix string) {
+	onvif := device.ONVIFConfig
+	if onvif == nil || !onvif.Enabled {
+		return
+	}
+	if !validONVIFScope(onvif.Name) {
+		v.addError(prefix+".onvif.name",
+			"ONVIF name must be printable US-ASCII of at most 64 characters, such as AXIS P3265-LVE")
+	}
+	if !validONVIFScope(onvif.Hardware) {
+		v.addError(prefix+".onvif.hardware",
+			"ONVIF hardware must be printable US-ASCII of at most 64 characters, such as P3265-LVE")
+	}
+}
+
+func validONVIFScope(value string) bool {
+	return len(value) <= maxONVIFScopeLength && validSIPUserAgent(value)
 }
 
 func (v *Validator) validateSyslog(device *Device, prefix string) {
