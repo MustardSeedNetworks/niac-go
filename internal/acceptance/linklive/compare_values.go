@@ -131,6 +131,39 @@ func portsMatch(actual, left, right string) bool {
 				strings.EqualFold(actual, right+" / "+left))
 }
 
+// renderedBundleMember reports whether Link-Live rendered a port-channel link
+// as its member link: every port it shows, one per end at most, is a member
+// of that end's bundle. The member is what decides the rendered speed.
+func renderedBundleMember(actual string, link AuthoredLink) (AuthoredMember, bool) {
+	near, far, paired := strings.Cut(normalizePortDisplay(actual), " / ")
+	if !paired {
+		if member, found := findMember(link.SourceMembers, near); found {
+			return member, true
+		}
+		return findMember(link.TargetMembers, near)
+	}
+	if member, found := findMember(link.SourceMembers, near); found {
+		if _, peer := findMember(link.TargetMembers, far); peer {
+			return member, true
+		}
+	}
+	if member, found := findMember(link.TargetMembers, near); found {
+		if _, peer := findMember(link.SourceMembers, far); peer {
+			return member, true
+		}
+	}
+	return AuthoredMember{}, false
+}
+
+func findMember(members []AuthoredMember, port string) (AuthoredMember, bool) {
+	for _, member := range members {
+		if strings.EqualFold(member.Name, port) {
+			return member, true
+		}
+	}
+	return AuthoredMember{}, false
+}
+
 func normalizePortDisplay(value string) string {
 	return strings.Join(strings.Fields(value), " ")
 }

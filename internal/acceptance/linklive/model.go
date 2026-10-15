@@ -84,6 +84,17 @@ type AuthoredLink struct {
 	SpeedMbps  int
 	Duplex     string
 	NativeVLAN int
+	// SourceMembers and TargetMembers list each end's bundle members when the
+	// link is a port-channel. Link-Live draws a bundle as one member link, so
+	// the rendered port and speed are a member's, not the aggregate's.
+	SourceMembers []AuthoredMember
+	TargetMembers []AuthoredMember
+}
+
+// AuthoredMember is one physical member of a port-channel.
+type AuthoredMember struct {
+	Name      string
+	SpeedMbps int
 }
 
 // ObservedSnapshot is a sanitized Link-Live topology response.
