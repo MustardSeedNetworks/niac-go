@@ -61,7 +61,7 @@ class Repo:
     def changelog(self, body: str, tag: str | None = "v0.2.0") -> None:
         (self.root / "CHANGELOG.md").write_text(HEADER + body)
         self.git("add", "-A")
-        self.git("commit", "--quiet", "-m", "chore(main): release 0.2.0")
+        self.git("commit", "--quiet", "-m", f"chore(main): release {gate.newest_version(body)}")
         if tag:
             self.git("tag", tag)
 
@@ -132,22 +132,40 @@ class PendingRelease(unittest.TestCase):
         self.repo = Repo()
         self.addCleanup(self.repo.close)
 
-    def test_untagged_release_missing_a_commit_beside_it_is_red(self) -> None:
-        """A pull_request run on the release PR: main moved on while the PR
-        sat open, and the merge ref joins the two."""
+    def test_untagged_release_missing_a_pr_queued_ahead_is_red(self) -> None:
+        """The release PR's own merge group: a PR queued ahead of it landed a
+        commit its entry never lists, and the release commit sits on top."""
         self.repo.commit("fix: correct a real defect (#2)")
-        self.repo.git("switch", "--quiet", "-c", "release-please--branches--main")
+        self.repo.commit("feat: queued ahead of the release PR (#4)")
         self.repo.changelog(
             "## [0.2.0] (2026-01-01)\n\n### Bug Fixes\n\n* correct a real defect (#2)\n",
             tag=None,
         )
-        self.repo.git("switch", "--quiet", "main")
-        self.repo.commit("feat: land while the release PR was open (#4)")
-        release = "release-please--branches--main"
-        self.repo.git("merge", "--quiet", "--no-ff", "-m", "Merge the release PR", release)
         code, output = self.repo.run("--pending")
         self.assertEqual(code, 1, output)
         self.assertIn("#4", output)
+
+    def test_pr_queued_behind_a_short_release_is_green(self) -> None:
+        """G-18: the release PR's group fails on #4; the PR queued behind it
+        must not be ejected for the same entry."""
+        self.repo.commit("fix: correct a real defect (#2)")
+        self.repo.commit("feat: queued ahead of the release PR (#4)")
+        self.repo.changelog(
+            "## [0.2.0] (2026-01-01)\n\n### Bug Fixes\n\n* correct a real defect (#2)\n",
+            tag=None,
+        )
+        self.repo.merge("feat: queued behind the release PR (#5)")
+        code, output = self.repo.run("--pending")
+        self.assertEqual(code, 0, output)
+        self.assertIn("is not the v0.2.0 release commit", output)
+
+    def test_untagged_section_without_its_release_commit_is_red(self) -> None:
+        (self.repo.root / "CHANGELOG.md").write_text(
+            HEADER + "## [0.2.0] (2026-01-01)\n\n### Bug Fixes\n\n* correct a real defect (#2)\n"
+        )
+        self.repo.commit("fix: correct a real defect (#2)")
+        code, output = self.repo.run("--pending")
+        self.assertEqual(code, 1, output)
 
     def test_commit_merged_after_an_untagged_release_is_green(self) -> None:
         """niac-go#2628: the release PR merged and the next PR's merge-group run
@@ -179,6 +197,30 @@ class PendingRelease(unittest.TestCase):
         self.repo.merge("feat: ordinary work after the release (#4)")
         code, output = self.repo.run("--pending")
         self.assertEqual(code, 0, output)
+
+
+class ReleasePrEnqueue(unittest.TestCase):
+    """The guard ejects a release PR whose merge group holds a commit its entry
+    omits; it stays live only if nothing can queue ahead of the release PR.
+    Auto-merge enqueued it at the back, and PRs ahead of it ejected it on
+    every regeneration (seed#3484, G-18)."""
+
+    WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "release-please.yml"
+
+    def setUp(self) -> None:
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        start = text.index("- name: Enqueue the release PR at the front of the merge queue")
+        end = text.find("\n      - name:", start + 1)
+        self.text = text
+        self.step = text[start : end if end != -1 else len(text)]
+
+    def test_release_pr_jumps_to_the_front_of_the_queue(self) -> None:
+        self.assertIn("enqueuePullRequest(input: {pullRequestId: $id, jump: true})", self.step)
+        self.assertNotIn("gh pr merge", self.step)
+
+    def test_release_pr_ci_triggers_the_enqueue(self) -> None:
+        self.assertIn("branches: [main, release-please--branches--main]", self.text)
+        self.assertIn("gh pr checks", self.step)
 
 
 if __name__ == "__main__":
