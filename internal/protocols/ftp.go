@@ -1,318 +1,120 @@
 package protocols
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
-	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
-	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
-// FTP response constants.
 const (
 	ftpSyntaxErrorResponse = "501 Syntax error in parameters or arguments.\r\n"
+	ftpHelpResponse        = "214-The following commands are recognized:\r\n" +
+		" USER PASS SYST PWD TYPE PASV EPSV LIST RETR STOR\r\n" +
+		" CWD CDUP DELE MKD RMD NOOP QUIT HELP\r\n214 Help OK.\r\n"
+
+	// ftpMaxCommandLine bounds what a client can make the server hold while
+	// it waits for the end of a command line.
+	ftpMaxCommandLine = 4096
+
+	// ftpPassivePort is the data port PASV and EPSV name.
+	ftpPassivePort      = 20000
+	ftpPortByteMultiply = 256
 )
 
-// FTP encoding constants.
-const (
-	maxUint32Payload     = 0xFFFFFFFF // max uint32 for TCP payload length
-	ftpConnectionDelayMs = 100        // delay in milliseconds for connection setup
-	asciiDEL             = 127        // ASCII DEL character code
-	ftpLogMessageMaxLen  = 60         // max length for FTP response logging
-
-	// IP protocol constants.
-	ftpIPv4Version      = 4     // IPv4 version field
-	ftpIPv4IHL          = 5     // IPv4 header length (5 = 20 bytes)
-	ftpIPv4TTL          = 64    // IPv4 default TTL
-	ftpIPv6Version      = 6     // IPv6 version field
-	ftpIPv6HopLimit     = 64    // IPv6 default hop limit
-	ftpTCPWindowSize    = 65535 // Default TCP window size
-	ftpPortByteMultiply = 256   // Multiplier for FTP port byte encoding
-)
-
-// FTPHandler handles FTP control and data connections.
-type FTPHandler struct {
-	stack *Stack
-}
-
-// NewFTPHandler creates a new FTP handler.
-func NewFTPHandler(stack *Stack) *FTPHandler {
-	return &FTPHandler{
-		stack: stack,
-	}
-}
-
-// HandleRequest processes an FTP request.
-func (h *FTPHandler) HandleRequest(
-	reqPkt *Packet,
+// handleFTP serves TCP 21 on a device with FTP enabled. Every other device
+// keeps the closed-port RST. FTP speaks first: the greeting goes out on the
+// ACK that completes the handshake, and every command line after it is
+// answered in order.
+func (h *TCPHandler) handleFTP(
+	pkt *Packet,
 	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
+	tcp *layers.TCP,
 	devices []*config.Device,
 ) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	// Parse FTP command
-	if len(tcpLayer.Payload) == 0 {
+	device := h.serviceDevice(devices, ipLayer.DstIP, servesFTP)
+	if device != nil && tcp.ACK && !tcp.SYN && !tcp.FIN && !tcp.RST && len(tcp.Payload) == 0 {
+		if h.ftp.greet(newStreamKey(ipLayer, tcp)) {
+			h.sendStatelessSegment(
+				pkt,
+				ipLayer,
+				tcp,
+				device,
+				[]byte(ftpGreeting(device.FTPConfig.WelcomeBanner)),
+				"FTP",
+			)
+		}
 		return
 	}
-
-	command := strings.TrimSpace(string(tcpLayer.Payload))
-	if command == "" {
-		return
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		// SECURITY FIX MEDIUM-4: Sanitize command for logging to prevent log injection
-		sanitizedCmd := sanitizeForLogging(command)
-		logging.Debugf("FTP command from %s: %s (device: %v)",
-			ipLayer.SrcIP, sanitizedCmd, getDeviceNames(devices))
-	}
-
-	response := h.buildFTPResponse(command, false, devices)
-	if response == "" {
-		return
-	}
-
-	// Send response
-	h.sendResponse(ipLayer, tcpLayer, []byte(response), devices, reqPkt)
+	address := ipLayer.DstIP.To4()
+	h.serveStream(pkt, ipLayer, tcp, devices, device, h.ftp, func(stream []byte) ([]byte, int, bool) {
+		return ftpAnswer(stream, device.FTPConfig, address)
+	}, "FTP")
 }
 
-// sendResponse sends an FTP response.
-func (h *FTPHandler) sendResponse(
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	response []byte,
-	devices []*config.Device,
-	reqPkt *Packet,
-) {
-	debugLevel := h.stack.GetDebugLevel()
+func servesFTP(device *config.Device) bool {
+	return device.FTPConfig != nil && device.FTPConfig.Enabled
+}
 
-	if len(devices) == 0 {
-		return
+// ftpGreeting is the authored 220 reply, ended with the CRLF every FTP reply
+// line carries.
+func ftpGreeting(banner string) string {
+	if strings.HasSuffix(banner, "\r\n") {
+		return banner
 	}
 
-	device := devices[0]
-	if len(device.MACAddress) == 0 {
-		return
-	}
+	return banner + "\r\n"
+}
 
-	identity, ok := h.stack.replyEthernet(reqPkt, device)
-	if !ok {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("Cannot send FTP response: no source MAC for %s", ipLayer.SrcIP)
+// ftpAnswer answers the complete command lines at the front of stream. QUIT
+// ends the conversation, and so does a line longer than ftpMaxCommandLine.
+func ftpAnswer(stream []byte, cfg *config.FTPConfig, address net.IP) ([]byte, int, bool) {
+	var answer []byte
+	consumed := 0
+	for {
+		end := bytes.IndexByte(stream[consumed:], '\n')
+		if end < 0 {
+			if len(stream)-consumed > ftpMaxCommandLine {
+				return append(answer, "500 Command line too long.\r\n"...), len(stream), true
+			}
+			return answer, consumed, false
 		}
-
-		return
-	}
-
-	// Build Ethernet header
-	eth := &layers.Ethernet{
-		SrcMAC:       identity.source,
-		DstMAC:       identity.destination,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-
-	// Build IP header
-	ipReply := &layers.IPv4{
-		Version:  ftpIPv4Version,
-		IHL:      ftpIPv4IHL,
-		TTL:      ftpIPv4TTL,
-		Protocol: layers.IPProtocolTCP,
-		SrcIP:    ipLayer.DstIP,
-		DstIP:    ipLayer.SrcIP,
-	}
-
-	// Build TCP header
-	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
-	payloadLen := min(len(tcpLayer.Payload), maxUint32Payload)
-
-	tcpReply := &layers.TCP{
-		SrcPort: tcpLayer.DstPort,
-		DstPort: tcpLayer.SrcPort,
-		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
-		PSH:     true,
-		ACK:     true,
-		Window:  ftpTCPWindowSize,
-	}
-	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
-
-	// Serialize
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts,
-		eth,
-		ipReply,
-		tcpReply,
-		gopacket.Payload(response),
-	)
-	if err != nil {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("Error serializing FTP response: %v", err)
+		line := strings.TrimSpace(string(stream[consumed : consumed+end]))
+		consumed += end + 1
+		if line == "" {
+			continue
 		}
-
-		return
-	}
-
-	// Get serial number
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	// Create and send packet
-	responsePkt := &Packet{
-		Buffer:        buffer.Bytes(),
-		Length:        len(buffer.Bytes()),
-		SerialNumber:  serialNum,
-		Device:        device,
-		VLAN:          identity.vlan,
-		generatedHost: device,
-	}
-
-	h.stack.Send(responsePkt)
-
-	if debugLevel >= DebugLevelInfo {
-		responseStr := strings.TrimSpace(string(response))
-		if len(responseStr) > ftpLogMessageMaxLen {
-			responseStr = responseStr[:ftpLogMessageMaxLen] + "..."
+		command, arg, _ := strings.Cut(line, " ")
+		command = strings.ToUpper(command)
+		answer = append(answer, ftpReply(command, strings.TrimSpace(arg), cfg, address)...)
+		if command == "QUIT" {
+			return answer, consumed, true
 		}
-
-		logging.Debugf("Sent FTP response: %s from %s to %s (device: %s)",
-			responseStr, ipReply.SrcIP, ipReply.DstIP, device.Name)
 	}
 }
 
-func (h *FTPHandler) sendResponseV6(
-	ipv6 *layers.IPv6,
-	tcpLayer *layers.TCP,
-	response []byte,
-	devices []*config.Device,
-	reqPkt *Packet,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(devices) == 0 {
-		return
-	}
-
-	device := devices[0]
-	identity, ok := h.stack.replyEthernet(reqPkt, device)
-	if !ok {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("Cannot send FTP/IPv6 response: missing MAC info")
-		}
-
-		return
-	}
-
-	eth := &layers.Ethernet{
-		SrcMAC:       identity.source,
-		DstMAC:       identity.destination,
-		EthernetType: layers.EthernetTypeIPv6,
-	}
-
-	ipReply := &layers.IPv6{
-		Version:      ftpIPv6Version,
-		TrafficClass: 0,
-		FlowLabel:    0,
-		NextHeader:   layers.IPProtocolTCP,
-		HopLimit:     ftpIPv6HopLimit,
-		SrcIP:        ipv6.DstIP,
-		DstIP:        ipv6.SrcIP,
-	}
-
-	// Safe conversion: min() bounds payloadLen2 to 0xFFFFFFFF which fits in uint32
-	payloadLen2 := min(len(tcpLayer.Payload), maxUint32Payload)
-
-	tcpReply := &layers.TCP{
-		SrcPort: tcpLayer.DstPort,
-		DstPort: tcpLayer.SrcPort,
-		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen2),
-		PSH:     true,
-		ACK:     true,
-		Window:  ftpTCPWindowSize,
-	}
-	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
-
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(response))
-	if err != nil {
-		if debugLevel >= 1 {
-			logging.Debugf("FTP/IPv6: Failed to serialize response: %v", err)
-		}
-
-		return
-	}
-
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	respPkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		Device:       device,
-		VLAN:         identity.vlan,
-	}
-
-	h.stack.Send(respPkt)
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("Sent FTP/IPv6 response %d bytes to [%s]", len(response), ipv6.SrcIP)
-	}
-}
-
-func (h *FTPHandler) buildFTPResponse(command string, ipv6 bool, devices []*config.Device) string {
-	parts := strings.Fields(command)
-	if len(parts) == 0 {
-		return ""
-	}
-
-	cmd := strings.ToUpper(parts[0])
-	arg := ""
-	if len(parts) > 1 {
-		arg = parts[1]
-	}
-
-	return h.dispatchFTPCommand(cmd, arg, ipv6, devices)
-}
-
-// dispatchFTPCommand routes FTP commands to appropriate handlers.
-func (h *FTPHandler) dispatchFTPCommand(cmd, arg string, ipv6 bool, devices []*config.Device) string {
-	switch cmd {
+// ftpReply is the reply to one command. Nothing is stored and no data
+// connection is served.
+func ftpReply(command, arg string, cfg *config.FTPConfig, address net.IP) string {
+	switch command {
 	case "USER":
 		return handleFTPUser(arg)
 	case "PASS":
 		return "230 User logged in, proceed.\r\n"
 	case "SYST":
-		return handleFTPSyst(devices)
+		return fmt.Sprintf("215 %s\r\n", cfg.SystemType)
 	case "PWD":
 		return "257 \"/\" is current directory.\r\n"
 	case "TYPE":
 		return handleFTPType(arg)
 	case "PASV":
-		return handleFTPPasv(ipv6, devices)
+		return handleFTPPasv(address)
 	case "EPSV":
-		return "229 Entering Extended Passive Mode (|||20000|).\r\n"
+		return fmt.Sprintf("229 Entering Extended Passive Mode (|||%d|).\r\n", ftpPassivePort)
 	case "LIST":
 		return "150 Here comes the directory listing.\r\n226 Directory send OK.\r\n"
 	case "RETR":
@@ -336,11 +138,9 @@ func (h *FTPHandler) dispatchFTPCommand(cmd, arg string, ipv6 bool, devices []*c
 	case "HELP":
 		return ftpHelpResponse
 	default:
-		return handleFTPUnknown(cmd)
+		return "502 Command not implemented.\r\n"
 	}
 }
-
-const ftpHelpResponse = "214-The following commands are recognized:\r\n USER PASS SYST PWD TYPE PASV EPSV LIST RETR STOR\r\n CWD CDUP DELE MKD RMD NOOP QUIT HELP\r\n214 Help OK.\r\n"
 
 func handleFTPUser(arg string) string {
 	if arg != "" {
@@ -348,15 +148,6 @@ func handleFTPUser(arg string) string {
 	}
 
 	return ftpSyntaxErrorResponse
-}
-
-func handleFTPSyst(devices []*config.Device) string {
-	systemType := "UNIX Type: L8"
-	if len(devices) > 0 && devices[0].FTPConfig != nil && devices[0].FTPConfig.SystemType != "" {
-		systemType = devices[0].FTPConfig.SystemType
-	}
-
-	return fmt.Sprintf("215 %s\r\n", systemType)
 }
 
 func handleFTPType(arg string) string {
@@ -367,23 +158,10 @@ func handleFTPType(arg string) string {
 	return ftpSyntaxErrorResponse
 }
 
-func handleFTPPasv(ipv6 bool, devices []*config.Device) string {
-	if ipv6 {
-		return "522 Network protocol not supported, use EPSV.\r\n"
-	}
-
-	ip := selectIPv4Address(devices)
-	if ip == nil {
-		return "500 Passive mode failed.\r\n"
-	}
-
-	port := 20000
-	p1 := port / ftpPortByteMultiply
-	p2 := port % ftpPortByteMultiply
-	ip4 := ip.To4()
-
+func handleFTPPasv(address net.IP) string {
 	return fmt.Sprintf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).\r\n",
-		ip4[0], ip4[1], ip4[2], ip4[3], p1, p2)
+		address[0], address[1], address[2], address[3],
+		ftpPassivePort/ftpPortByteMultiply, ftpPassivePort%ftpPortByteMultiply)
 }
 
 func handleFTPRetr(arg string) string {
@@ -432,121 +210,4 @@ func handleFTPRmd(arg string) string {
 	}
 
 	return ftpSyntaxErrorResponse
-}
-
-func handleFTPUnknown(cmd string) string {
-	if len(cmd) <= 4 && cmd == strings.ToUpper(cmd) {
-		return "502 Command not implemented.\r\n"
-	}
-
-	return ""
-}
-
-func selectIPv4Address(devices []*config.Device) net.IP {
-	if len(devices) == 0 {
-		return nil
-	}
-
-	for _, ip := range devices[0].IPAddresses {
-		if v4 := ip.To4(); v4 != nil {
-			return v4
-		}
-	}
-
-	return nil
-}
-
-// SendWelcome sends FTP welcome banner when connection is established.
-func (h *FTPHandler) SendWelcome(reqPkt *Packet, ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	// Only send welcome on new connections (SYN+ACK)
-	if !tcpLayer.SYN || !tcpLayer.ACK {
-		return
-	}
-
-	if len(devices) == 0 {
-		return
-	}
-
-	device := devices[0]
-	deviceName := device.Name
-
-	// Use configured welcome banner if available
-	var welcome string
-	if device.FTPConfig != nil && device.FTPConfig.WelcomeBanner != "" {
-		welcome = device.FTPConfig.WelcomeBanner
-		// Ensure it ends with \r\n
-		if !strings.HasSuffix(welcome, "\r\n") {
-			welcome += "\r\n"
-		}
-	} else {
-		welcome = fmt.Sprintf("220 %s FTP Server (NIAC-Go) ready.\r\n", deviceName)
-	}
-
-	// Small delay to let connection establish
-	go func() {
-		time.Sleep(ftpConnectionDelayMs * time.Millisecond)
-		h.sendResponse(ipLayer, tcpLayer, []byte(welcome), devices, reqPkt)
-	}()
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("Scheduled FTP welcome banner for %s", deviceName)
-	}
-}
-
-// HandleRequestV6 processes an FTP request over IPv6.
-func (h *FTPHandler) HandleRequestV6(
-	pkt *Packet,
-	_ gopacket.Packet,
-	ipv6 *layers.IPv6,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(tcpLayer.Payload) == 0 {
-		return
-	}
-
-	command := strings.TrimSpace(string(tcpLayer.Payload))
-	if command == "" {
-		return
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		// SECURITY FIX: Sanitize command for logging to prevent log injection (same as IPv4 handler)
-		sanitizedCmd := sanitizeForLogging(command)
-		logging.Debugf("FTP/IPv6 command from [%s]: %s (device: %v)",
-			ipv6.SrcIP, sanitizedCmd, getDeviceNames(devices))
-	}
-
-	response := h.buildFTPResponse(command, true, devices)
-	if response == "" {
-		return
-	}
-
-	h.sendResponseV6(ipv6, tcpLayer, []byte(response), devices, pkt)
-}
-
-// sanitizeForLogging removes control characters and newlines to prevent log injection
-// SECURITY FIX MEDIUM-4: Prevents malicious payloads from corrupting logs.
-func sanitizeForLogging(s string) string {
-	// Replace control characters (ASCII 0-31 except space) with '?'
-	var result strings.Builder
-
-	result.Grow(len(s))
-
-	for _, r := range s {
-		switch {
-		case r < 32 && r != ' ':
-			result.WriteRune('?') // Replace control chars
-		case r == asciiDEL:
-			result.WriteRune('?') // Replace DEL
-		default:
-			result.WriteRune(r)
-		}
-	}
-
-	return result.String()
 }

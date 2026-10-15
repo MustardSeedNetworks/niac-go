@@ -49,6 +49,7 @@ type TCPHandler struct {
 	hl7    *serviceStreams
 	modbus *serviceStreams
 	enip   *serviceStreams
+	ftp    *serviceStreams
 
 	// hl7Messages numbers the ACKs, each of which needs its own control ID.
 	hl7Messages atomic.Uint64
@@ -58,7 +59,7 @@ type TCPHandler struct {
 func NewTCPHandler(stack *Stack) *TCPHandler {
 	handler := &TCPHandler{
 		stack: stack, dicom: newServiceStreams(), hl7: newServiceStreams(), modbus: newServiceStreams(),
-		enip: newServiceStreams(),
+		enip: newServiceStreams(), ftp: newServiceStreams(),
 	}
 	handler.ssh = newSSHTCPHandler(stack)
 	return handler
@@ -158,7 +159,7 @@ func (h *TCPHandler) routeToHandler(
 	case TCPPortSSH:
 		h.ssh.HandlePacket(pkt, ipLayer, tcp, devices)
 	case TCPPortFTP:
-		h.handleFTP(pkt, ipLayer, tcp, devices, hasPayload)
+		h.handleFTP(pkt, ipLayer, tcp, devices)
 	case TCPPortLDAP, TCPPortLDAPS:
 		h.handleLDAP(pkt, ipLayer, tcp, devices, isSYNOnly, hasPayload)
 	case TCPPortRTSP:
@@ -222,19 +223,6 @@ func (h *TCPHandler) handleHTTP(
 ) {
 	if hasPayload {
 		h.stack.httpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
-	}
-}
-
-// handleFTP routes FTP control connection traffic.
-func (h *TCPHandler) handleFTP(
-	pkt *Packet,
-	ipLayer *layers.IPv4,
-	tcp *layers.TCP,
-	devices []*config.Device,
-	hasPayload bool,
-) {
-	if hasPayload {
-		h.stack.ftpHandler.HandleRequest(pkt, ipLayer, tcp, devices)
 	}
 }
 
@@ -548,10 +536,6 @@ func (h *TCPHandler) routeToHandlerV6(
 	case TCPPortHTTP:
 		if hasPayload {
 			h.stack.httpHandler.HandleRequestV6(pkt, packet, ipv6, tcp, devices)
-		}
-	case TCPPortFTP:
-		if hasPayload {
-			h.stack.ftpHandler.HandleRequestV6(pkt, packet, ipv6, tcp, devices)
 		}
 	default:
 		if isSYNOnly {

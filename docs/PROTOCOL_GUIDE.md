@@ -829,34 +829,36 @@ devices:
       - "10.0.0.1"
     ftp:
       enabled: true
-      port: 21
-      users:
-        - username: "admin"
-          password: "admin123"
-        - username: "readonly"
-          password: "guest"
+      welcome_banner: "220 JD FTP Server Ready"
+      system_type: "UNIX Type: L8"
 ```
 
 #### Fields
 
 | Field | Type | Required | Default | Description |
 | ------- | ------ | ---------- | --------- | ------------- |
-| `enabled` | boolean | Yes | false | Enable FTP server |
-| `port` | integer | No | 21 | TCP port |
-| `users` | array | No | [] | FTP user accounts |
+| `enabled` | boolean | Yes | false | Serve FTP on TCP 21 |
+| `welcome_banner` | string | No | `220 <name> FTP Server (NIAC-Go) ready.` | The 220 greeting sent when a client connects |
+| `system_type` | string | No | `UNIX Type: L8` | The `SYST` reply |
+| `allow_anonymous`, `users` | | No | | Parsed but not enforced: every login is accepted (#2693) |
 
-**User Fields:**
+#### Behaviour
 
-| Field | Type | Required | Default | Description |
-| ------- | ------ | ---------- | --------- | ------------- |
-| `username` | string | Yes | - | FTP username |
-| `password` | string | Yes | - | FTP password |
+The server speaks first. After the TCP handshake it sends `welcome_banner`,
+then answers each command line in order. Only the control channel is served:
+`PASV` and `EPSV` name port 20000, which accepts no connection (#2693). A device
+without `ftp.enabled` resets TCP 21. IPv6 is not served.
+
+The HP printers in the scenario packs greet with `220 JD FTP Server Ready`.
+That greeting comes from HP's Jetdirect administrator's guide. It is
+documented, not captured. No other pack device serves FTP, because no other
+vendor in the packs publishes its greeting.
 
 #### Testing
 
 ```bash
-# Connect to FTP server
-ftp 10.0.0.1
+# The greeting, the login and the failed listing
+curl -v ftp://10.0.0.1/
 
 # Monitor FTP traffic
 sudo tcpdump -i en0 port 21
