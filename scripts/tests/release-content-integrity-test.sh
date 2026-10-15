@@ -148,8 +148,12 @@ require_text "$(<"$WINDOWS_INSTALLER")" \
 require_text "$(<"$WINDOWS_INSTALLER")" \
   'Stop-Service -Name $ServiceName' \
   "the Windows installer must stop an existing service before replacing the binary"
+if grep -Fq 'sc.exe config' "$WINDOWS_INSTALLER"; then
+  echo "the Windows installer must not reconfigure the service through sc.exe: PowerShell 5.1 breaks the quoted binPath (niac-go#2699)"
+  exit 1
+fi
 require_text "$(<"$WINDOWS_INSTALLER")" \
-  '& sc.exe config $ServiceName "binPath=" "`"$InstalledBinary`" service run"' \
+  '-Arguments @{ PathName = "`"$InstalledBinary`" service run" }' \
   "the Windows installer must rebind an existing service to the installed binary"
 require_text "$(<"$WINDOWS_INSTALLER")" \
   'Get-NetFirewallRule -DisplayName "NiAC Simulator"' \
