@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.121.0...v0.122.0) (2026-10-15)
+
+
+### Features
+
+* **release:** attach the macOS .pkg installer to every release ([#2701](https://github.com/MustardSeedNetworks/niac-go/issues/2701)) ([6ff209e](https://github.com/MustardSeedNetworks/niac-go/commit/6ff209e71b3a0cdc3a8fb07934ef5b09b43b0a86)), closes [#2700](https://github.com/MustardSeedNetworks/niac-go/issues/2700) [#2652](https://github.com/MustardSeedNetworks/niac-go/issues/2652)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2708](https://github.com/MustardSeedNetworks/niac-go/issues/2708)) ([37d9915](https://github.com/MustardSeedNetworks/niac-go/commit/37d9915ca25275186672a6cf7b99c4e860f7a969))
+
 ## [0.121.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.120.1...v0.121.0) (2026-10-15)
 
 
