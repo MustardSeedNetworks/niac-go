@@ -660,6 +660,10 @@
           "$ref": "#/$defs/ModbusConfig",
           "description": "Modbus answers register reads on TCP 502, the polling a SCADA master,\nhistorian or HMI runs against a controller on the plant floor."
         },
+        "ethernet_ip": {
+          "$ref": "#/$defs/EtherNetIPConfig",
+          "description": "EtherNetIP answers List Identity on TCP and UDP 44818, the query a\ncommissioning tool or an asset inventory names a controller by."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -1043,6 +1047,69 @@
       "additionalProperties": false,
       "type": "object",
       "description": "EdpConfig represents EDP discovery protocol configuration."
+    },
+    "EtherNetIPConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled opens TCP and UDP 44818. Sessions, explicit messaging and\nimplicit I/O are the control system and are not simulated."
+        },
+        "vendor_id": {
+          "type": "integer",
+          "maximum": 65535,
+          "minimum": 0,
+          "description": "VendorID is the ODVA vendor ID, for example 1 for Rockwell Automation."
+        },
+        "device_type": {
+          "type": "integer",
+          "maximum": 65535,
+          "minimum": 0,
+          "description": "DeviceType is the CIP device profile, for example 14 for a\nprogrammable logic controller."
+        },
+        "product_code": {
+          "type": "integer",
+          "maximum": 65535,
+          "minimum": 0,
+          "description": "ProductCode is the vendor's code for the product."
+        },
+        "revision_major": {
+          "type": "integer",
+          "maximum": 255,
+          "minimum": 0,
+          "description": "RevisionMajor is the firmware's major revision, 33 for 33.011."
+        },
+        "revision_minor": {
+          "type": "integer",
+          "maximum": 255,
+          "minimum": 0,
+          "description": "RevisionMinor is the firmware's minor revision, 11 for 33.011."
+        },
+        "serial_number": {
+          "type": "integer",
+          "maximum": 4294967295,
+          "minimum": 0,
+          "description": "SerialNumber is the device's 32-bit serial number."
+        },
+        "product_name": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 1,
+          "description": "ProductName is the name the device reports, at most 32 printable\nASCII characters, for example \"1756-L83E/B\"."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled",
+        "vendor_id",
+        "device_type",
+        "product_code",
+        "revision_major",
+        "revision_minor",
+        "serial_number",
+        "product_name"
+      ],
+      "description": "EtherNetIPConfig is an EtherNet/IP adapter on TCP and UDP 44818 answering List Identity with its CIP Identity object."
     },
     "FdbTableConfig": {
       "properties": {

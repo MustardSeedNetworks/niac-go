@@ -386,6 +386,10 @@ type Device struct {
 	// historian or HMI runs against a controller on the plant floor.
 	Modbus *ModbusConfig `yaml:"modbus,omitempty"`
 
+	// EtherNetIP answers List Identity on TCP and UDP 44818, the query a
+	// commissioning tool or an asset inventory names a controller by.
+	EtherNetIP *EtherNetIPConfig `yaml:"ethernet_ip,omitempty"`
+
 	// Syslog sends this device's link and fault events to RFC 5424
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`

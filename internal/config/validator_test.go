@@ -529,6 +529,35 @@ func TestValidate_JetDirectPJLID(t *testing.T) {
 	}
 }
 
+func TestValidate_EtherNetIPProductName(t *testing.T) {
+	tests := []struct {
+		name  string
+		enip  *EtherNetIPConfig
+		valid bool
+	}{
+		{name: "absent", valid: true},
+		{name: "named", enip: &EtherNetIPConfig{Enabled: true, ProductName: "1756-L83E/B"}, valid: true},
+		{name: "disabled without a name", enip: &EtherNetIPConfig{}, valid: true},
+		{name: "enabled without a name", enip: &EtherNetIPConfig{Enabled: true}},
+		{name: "longer than 32", enip: &EtherNetIPConfig{Enabled: true, ProductName: strings.Repeat("L", 33)}},
+		{name: "not ASCII", enip: &EtherNetIPConfig{Enabled: true, ProductName: "1756-L83E\u00e9"}},
+		{name: "control character", enip: &EtherNetIPConfig{Enabled: true, ProductName: "1756\nL83E"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "plc-1", Type: "iot",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, EtherNetIPConfig: tt.enip,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
 func TestValidate_ModbusRegisters(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -159,6 +159,7 @@ func endpointDevice(
 	device.JetDirect = packJetDirect(profile)
 	device.DICOM = packDICOM(kind.role)
 	device.Modbus = packModbus(kind.role)
+	device.EtherNetIP = packEtherNetIP(kind.role, name)
 	if !kind.personalComputer {
 		// Appliances answer SNMP for their own identity. A discovery tool names
 		// a host from sysName first and only falls back to a reverse lookup,

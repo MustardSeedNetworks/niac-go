@@ -165,7 +165,7 @@ func (h *UDPHandler) HandlePacket(pkt *Packet, ipLayer *layers.IPv4, devices []*
 	case NetBIOSDatagramServicePort:
 		// NetBIOS Datagram Service
 		h.stack.netbiosHandler.HandleDatagramService(pkt, packet, udp, devices)
-	case UDPPortSIP, UDPPortWSDiscovery:
+	case UDPPortSIP, UDPPortWSDiscovery, PortEtherNetIP:
 		if !h.handleIdentityProbe(pkt, ipLayer, udp, devices) {
 			h.handleUnservedPort(pkt, ipLayer, udp, devices)
 		}
@@ -182,11 +182,14 @@ func (h *UDPHandler) handleIdentityProbe(
 	udp *layers.UDP,
 	devices []*config.Device,
 ) bool {
-	if udp.DstPort == UDPPortSIP {
+	switch udp.DstPort {
+	case UDPPortSIP:
 		return h.handleSIP(pkt, ipLayer, udp, devices)
+	case PortEtherNetIP:
+		return h.handleEtherNetIP(pkt, ipLayer, udp, devices)
+	default:
+		return h.handleONVIF(pkt, ipLayer, udp, devices)
 	}
-
-	return h.handleONVIF(pkt, ipLayer, udp, devices)
 }
 
 // handleUnservedPort handles a datagram no service on the device claimed.

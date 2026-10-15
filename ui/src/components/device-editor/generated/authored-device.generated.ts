@@ -362,6 +362,16 @@ export interface AuthoredDevice {
       readonly holding_registers?: number;
       readonly input_registers?: number;
     };
+  readonly ethernet_ip?: {
+      readonly enabled?: boolean;
+      readonly vendor_id?: number;
+      readonly device_type?: number;
+      readonly product_code?: number;
+      readonly revision_major?: number;
+      readonly revision_minor?: number;
+      readonly serial_number?: number;
+      readonly product_name?: string;
+    };
   readonly syslog?: {
       readonly enabled?: boolean;
       readonly receivers?: readonly string[];
