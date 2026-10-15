@@ -17,6 +17,11 @@
 
 set -e
 
+# cp and pkgbuild otherwise carry extended attributes into the payload as
+# AppleDouble ._ files, which the install then drops into /usr/local/niac
+# (#2652).
+export COPYFILE_DISABLE=1
+
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -57,8 +62,9 @@ if [[ -z "$VERSION" ]]; then
     VERSION="${VERSION#v}"
 fi
 
-# Architecture
-ARCH=$(uname -m)
+# Architecture of the binary, not of the build host: the release builds the
+# arm64 package from the darwin archive on whatever runner it gets.
+ARCH=$(lipo -archs "$BINARY_PATH")
 [[ "$ARCH" == "x86_64" ]] && ARCH="amd64"
 
 log_info "Building macOS .pkg installer for NiAC"
@@ -113,7 +119,7 @@ chmod 755 "$BUILD_DIR/scripts/preinstall"
 
 # Build package
 log_step "5/5 Building package..."
-PKG_OUTPUT="$REPO_ROOT/dist/niac-${VERSION}-${ARCH}.pkg"
+PKG_OUTPUT="$REPO_ROOT/dist/niac-${VERSION}-darwin-${ARCH}.pkg"
 mkdir -p "$(dirname "$PKG_OUTPUT")"
 
 pkgbuild \
@@ -126,6 +132,11 @@ pkgbuild \
 
 # Clean up intermediate files
 rm -rf "$BUILD_DIR"
+
+if pkgutil --payload-files "$PKG_OUTPUT" | grep '/\._'; then
+    log_error "Payload contains AppleDouble ._ files (listed above)"
+    exit 1
+fi
 
 echo
 log_info "Package built successfully!"
