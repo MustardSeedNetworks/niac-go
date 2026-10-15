@@ -71,6 +71,9 @@ type AuthoredInterface struct {
 	UtilizationDynamic bool
 	ExpectZeroErrors   bool
 	ExpectZeroDiscards bool
+	// AttachmentPool marks a port in an attachment's pool. It is authored
+	// down, and the runtime brings it up while a tester is placed on it.
+	AttachmentPool bool
 }
 
 // AuthoredLink contains the fields Link-Live renders for an inferred edge.

@@ -346,7 +346,7 @@ Every finding kind the comparator can emit, and where to look first.
 | --- | --- | --- |
 | `missing-interface` | authored interface absent from the walk-backed inventory | if the device has a walk or mapped agent, the walk owns the inventory and defaults are not synthesized |
 | `unexpected-interface` | tester saw an interface the pack did not author | only reported for explicitly authored inventories; a hit here means the walk and the YAML disagree |
-| `interface-status-conflict` | admin/oper status drift, or a behavior timeline mid-transition | whether a fault phase was active during the scan |
+| `interface-status-conflict` | admin/oper status drift, or a behavior timeline mid-transition | whether a fault phase was active during the scan. An attachment-pool port that is up is not a finding: placing a tester brings its pool port up, and which ports hold testers is runtime state. |
 | `interface-speed-conflict` | authored speed disagrees with the walk's `ifSpeed` | walk-backed speed wins on the wire; fix the authored value |
 | `interface-duplex-conflict` | duplex compared on an interface that has no duplex | logical, `ieee80211` and `Port-channel` interfaces are exempt (a bundle is `ieee8023adLag` and, like IOS, serves no `dot3StatsDuplexStatus`, so Link-Live reads `Unknown`); a hit means an ethernet interface really differs |
 | `interface-mtu-conflict` | authored MTU differs from IF-MIB | jumbo-frame mismatch on uplinks is the common one |
