@@ -155,6 +155,8 @@
   "devices[].iperf3.typical_latency_ms": "components/device-editor/generated/sections.generated.ts",
   "devices[].iperf3.upload_mbps": "components/device-editor/generated/sections.generated.ts",
   "devices[].ips[]": "components/device-editor/AdditionalIPsSection.tsx",
+  "devices[].jetdirect.enabled": "components/device-editor/generated/sections.generated.ts",
+  "devices[].jetdirect.pjl_id": "components/device-editor/generated/sections.generated.ts",
   "devices[].lldp.advertise_interval": "components/device-editor/generated/sections.generated.ts",
   "devices[].lldp.chassis_id_type": "components/device-editor/generated/sections.generated.ts",
   "devices[].lldp.enabled": "components/device-editor/generated/sections.generated.ts",

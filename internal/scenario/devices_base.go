@@ -154,6 +154,7 @@ func endpointDevice(
 			"platform": profile.Platform, "software": profile.Software,
 		},
 	}
+	device.JetDirect = packJetDirect(profile)
 	if !kind.personalComputer {
 		// Appliances answer SNMP for their own identity. A discovery tool names
 		// a host from sysName first and only falls back to a reverse lookup,

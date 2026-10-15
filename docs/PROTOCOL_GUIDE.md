@@ -35,12 +35,13 @@ which ships holding only its README.
   - [SSH Device Management](#ssh-device-management)
   - [SIP](#sip)
   - [ONVIF Discovery](#onvif-discovery)
+  - [JetDirect](#jetdirect)
 - [Protocol Combinations](#protocol-combinations)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-NIAC-Go supports 23 network protocols across all layers of the OSI model.
+NIAC-Go supports 24 network protocols across all layers of the OSI model.
 Each protocol can be independently configured per device via YAML
 configuration.
 
@@ -51,7 +52,7 @@ configuration.
 | Layer 2 (Data Link) | LLDP, CDP, EDP, FDP, STP |
 | Layer 3 (Network) | IPv4, IPv6, ARP, ICMP, ICMPv6 |
 | Layer 4 (Transport) | TCP, UDP |
-| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery |
+| Layer 7 (Application) | DHCP, DHCPv6, DNS, HTTP, FTP, NetBIOS, mDNS, SNMP, SSH, SIP, WS-Discovery, JetDirect |
 
 ## Layer 2 Protocols
 
@@ -1380,6 +1381,53 @@ ONVIF discovery on their Axis P3265-LVE cameras.
 ```bash
 # Monitor WS-Discovery traffic
 sudo tcpdump -i eth0 -A udp port 3702
+```
+
+### JetDirect
+
+**Raw printing on TCP 9100** - the device accepts print jobs on the raw port
+and, with a PJL ID, answers the Printer Job Language status queries a scanner
+identifies a printer by.
+
+Every network printer takes raw jobs on 9100; HP printers and other PJL
+printers also answer `@PJL INFO` queries there. NIAC accepts the connection,
+acknowledges and discards print data, and answers `@PJL INFO ID` and
+`@PJL INFO STATUS`. Other PJL commands, other `INFO` categories and job
+rendering are not simulated. JetDirect over IPv6 is not served. A device
+without JetDirect resets a connection to 9100.
+
+#### Configuration
+
+```yaml
+devices:
+  - name: office-printer
+    type: printer
+    ips:
+      - "10.0.40.30"
+    jetdirect:
+      enabled: true
+      pjl_id: "HP LaserJet MFP M634"
+```
+
+#### Fields
+
+| Field | Type | Required | Default | Description |
+| ------- | ------ | ---------- | --------- | ------------- |
+| `enabled` | boolean | Yes | false | Accept connections and print data on TCP 9100 |
+| `pjl_id` | string | No | - | Answer `@PJL INFO ID` with this model and `@PJL INFO STATUS` with ready; printable ASCII without `"`, at most 64 characters. Leave empty for a printer that speaks no PJL |
+
+The scenario packs open 9100 on every printer, which they already advertise as
+`_pdl-datastream._tcp`. Only the HP multifunction printers carry a PJL ID; the
+Zebra label and Epson receipt printers take raw jobs and answer no PJL query.
+
+#### Testing
+
+```bash
+# Identify the printer (port 9100 is excluded from -sV unless --allports)
+nmap -sV --allports --version-all -p 9100 --script pjl-ready-message 10.0.40.30
+
+# Ask for the model by hand
+printf '@PJL INFO ID\r\n' | nc 10.0.40.30 9100
 ```
 
 ## Protocol Combinations

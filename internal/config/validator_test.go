@@ -494,6 +494,41 @@ func TestValidate_ONVIFScopes(t *testing.T) {
 	}
 }
 
+func TestValidate_JetDirectPJLID(t *testing.T) {
+	tests := []struct {
+		name      string
+		jetDirect *JetDirectConfig
+		valid     bool
+	}{
+		{name: "absent", valid: true},
+		{name: "raw printing without PJL", jetDirect: &JetDirectConfig{Enabled: true}, valid: true},
+		{name: "hp model", jetDirect: &JetDirectConfig{Enabled: true, PJLID: "HP LaserJet MFP M634"}, valid: true},
+		{
+			name:      "64 characters",
+			jetDirect: &JetDirectConfig{Enabled: true, PJLID: strings.Repeat("a", 64)},
+			valid:     true,
+		},
+		{name: "leading space", jetDirect: &JetDirectConfig{Enabled: true, PJLID: " HP"}},
+		{name: "double quote", jetDirect: &JetDirectConfig{Enabled: true, PJLID: `HP "LaserJet"`}},
+		{name: "line injection", jetDirect: &JetDirectConfig{Enabled: true, PJLID: "HP\r\n@PJL"}},
+		{name: "non-ASCII", jetDirect: &JetDirectConfig{Enabled: true, PJLID: "HP LaserJet\u00e9"}},
+		{name: "65 characters", jetDirect: &JetDirectConfig{Enabled: true, PJLID: strings.Repeat("a", 65)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Devices: []Device{{
+				Name: "printer-1", Type: "printer",
+				MACAddress:  net.HardwareAddr{0x02, 0, 0, 0, 0, 1},
+				IPAddresses: []net.IP{net.ParseIP("192.0.2.1")}, JetDirectConfig: tt.jetDirect,
+			}}}
+			result := NewValidator("test.yaml").Validate(cfg)
+			if result.Valid != tt.valid {
+				t.Fatalf("Valid = %v, want %v; errors = %#v", result.Valid, tt.valid, result.Errors)
+			}
+		})
+	}
+}
+
 func TestValidate_SSHBanner(t *testing.T) {
 	tests := []struct {
 		name   string

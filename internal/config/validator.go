@@ -166,6 +166,7 @@ func (v *Validator) validateDevice(
 	v.validateSSH(device, prefix)
 	v.validateSIP(device, prefix)
 	v.validateONVIF(device, prefix)
+	v.validateJetDirect(device, prefix)
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
@@ -276,6 +277,37 @@ func (v *Validator) validateONVIF(device *Device, prefix string) {
 
 func validONVIFScope(value string) bool {
 	return len(value) <= maxONVIFScopeLength && validSIPUserAgent(value)
+}
+
+// maxPJLIDLength bounds the model string; real ones run to about thirty
+// characters ("HP LaserJet MFP M634").
+const maxPJLIDLength = 64
+
+// validateJetDirect keeps the PJL ID inside the quoted string the INFO ID
+// answer carries: one line of printable US-ASCII with no double quote.
+func (v *Validator) validateJetDirect(device *Device, prefix string) {
+	jetDirect := device.JetDirectConfig
+	if jetDirect == nil || jetDirect.PJLID == "" {
+		return
+	}
+	if !validPJLID(jetDirect.PJLID) {
+		v.addError(
+			prefix+".jetdirect.pjl_id",
+			"PJL pjl_id must be printable US-ASCII without double quotes, at most 64 characters, such as HP LaserJet MFP M634",
+		)
+	}
+}
+
+func validPJLID(id string) bool {
+	if id[0] == ' ' || len(id) > maxPJLIDLength {
+		return false
+	}
+	for index := range len(id) {
+		if id[index] < ' ' || id[index] > '~' || id[index] == '"' {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *Validator) validateSyslog(device *Device, prefix string) {

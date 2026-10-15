@@ -630,6 +630,10 @@
           "$ref": "#/$defs/ONVIFConfig",
           "description": "ONVIF answers a WS-Discovery Probe with a ProbeMatch naming the\ncamera, so a video management system or scanner finds it as one."
         },
+        "jetdirect": {
+          "$ref": "#/$defs/JetDirectConfig",
+          "description": "JetDirect accepts raw print jobs on TCP 9100 and, with a PJL ID,\nanswers the PJL status queries a scanner identifies a printer by."
+        },
         "syslog": {
           "$ref": "#/$defs/SyslogConfig",
           "description": "Syslog sends this device's link and fault events to RFC 5424\ncollectors."
@@ -1490,6 +1494,26 @@
         "type"
       ],
       "description": "InterfaceFault is one authored interface condition."
+    },
+    "JetDirectConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enabled accepts connections and print data on 9100. Jobs are\nacknowledged and discarded: printing is the application workflow and is\nnot simulated."
+        },
+        "pjl_id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^([!#-~][ !#-~]*)?$",
+          "description": "PJLID answers \"@PJL INFO ID\" with this model string, for example\n\"HP LaserJet MFP M634\", and enables \"@PJL INFO STATUS\". Leave it empty\nfor a printer that speaks no PJL, such as a ZPL label printer."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "description": "JetDirectConfig is the raw print port, TCP 9100."
     },
     "LinkStateTrapConfig": {
       "properties": {

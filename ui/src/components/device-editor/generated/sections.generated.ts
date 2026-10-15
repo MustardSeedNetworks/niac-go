@@ -1841,6 +1841,26 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "jetdirect",
+    "title": "JetDirect",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled accepts connections and print data on 9100. Jobs are\nacknowledged and discarded: printing is the application workflow and is\nnot simulated.",
+        "kind": "boolean"
+      },
+      {
+        "name": "pjl_id",
+        "title": "PJL ID",
+        "description": "PJLID answers \"@PJL INFO ID\" with this model string, for example\n\"HP LaserJet MFP M634\", and enables \"@PJL INFO STATUS\". Leave it empty\nfor a printer that speaks no PJL, such as a ZPL label printer.",
+        "pattern": "^([!#-~][ !#-~]*)?$",
+        "kind": "string"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [
