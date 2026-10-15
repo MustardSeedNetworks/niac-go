@@ -50,10 +50,14 @@ if ($null -eq $ExistingService) {
         exit $ExitCode
     }
 } else {
-    & sc.exe config $ServiceName "binPath=" "`"$InstalledBinary`" service run"
-    if ($LASTEXITCODE -ne 0) {
-        $ExitCode = $LASTEXITCODE
-        Write-Error "NiAC service reconfiguration failed with exit code $ExitCode."
+    # Not sc.exe: Windows PowerShell 5.1 drops the embedded quotes around a
+    # path with spaces when it builds a native command line (niac-go#2699).
+    $Service = Get-CimInstance Win32_Service -Filter "Name='$ServiceName'"
+    $Result = Invoke-CimMethod -InputObject $Service -MethodName Change `
+        -Arguments @{ PathName = "`"$InstalledBinary`" service run" }
+    if ($Result.ReturnValue -ne 0) {
+        $ExitCode = $Result.ReturnValue
+        Write-Error "NiAC service reconfiguration failed with Win32_Service.Change result $ExitCode."
         exit $ExitCode
     }
 }
