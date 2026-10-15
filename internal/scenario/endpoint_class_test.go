@@ -21,10 +21,10 @@ func personalComputerRoles() map[string]bool {
 
 // Getting this split backwards files every laptop as managed infrastructure,
 // or leaves the clinical and industrial gear looking like ordinary desktops.
-func TestPersonalComputersAnswerNoSNMP(t *testing.T) {
+func testPersonalComputersAnswerNoSNMP(t *testing.T, fixture *packFixture) {
 	personal := personalComputerRoles()
 
-	forEachPackDevice(t, func(pack string, device *config.Device) {
+	forEachPackDevice(t, fixture, func(pack string, device *config.Device) {
 		role := device.Properties["role"]
 		if role == "" {
 			return
@@ -40,11 +40,11 @@ func TestPersonalComputersAnswerNoSNMP(t *testing.T) {
 
 // Every endpoint's port is eth0, so seeding interface load off the interface
 // name alone handed the whole fleet one identical number.
-func TestEndpointUtilizationVariesAcrossDevices(t *testing.T) {
+func testEndpointUtilizationVariesAcrossDevices(t *testing.T, fixture *packFixture) {
 	values := map[float64]bool{}
 	count := 0
 
-	cfg := generatePack(t, "hospital")
+	cfg := fixture.configByID(t, "hospital")
 	for _, device := range cfg.Devices {
 		if device.Properties["role"] != "nurse-station" {
 			continue
@@ -66,9 +66,9 @@ func TestEndpointUtilizationVariesAcrossDevices(t *testing.T) {
 // Names have to stay unique fleet-wide. The compact personal computer form
 // drops separators to fit inside the NetBIOS cap, so it is worth proving it did
 // not also drop the distinction between two machines.
-func TestGeneratedDeviceNamesAreUnique(t *testing.T) {
+func testGeneratedDeviceNamesAreUnique(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		cfg := packDevices(t, pack)
+		cfg := fixture.config(t, pack)
 		seen := map[string]bool{}
 		for index := range cfg.Devices {
 			name := cfg.Devices[index].Name
@@ -82,9 +82,9 @@ func TestGeneratedDeviceNamesAreUnique(t *testing.T) {
 
 // The compact form still has to lead with site and role so an engineer can find
 // the machine; only the building/floor/slot tail is packed.
-func TestCompactNameShape(t *testing.T) {
+func testCompactNameShape(t *testing.T, fixture *packFixture) {
 	var found string
-	cfg := generatePack(t, "enterprise-scale")
+	cfg := fixture.configByID(t, "enterprise-scale")
 	for _, device := range cfg.Devices {
 		if device.Properties["role"] == "workstation" && found == "" {
 			found = device.Name
@@ -103,15 +103,10 @@ func TestCompactNameShape(t *testing.T) {
 	}
 }
 
-func packDevices(t *testing.T, pack scenario.Pack) *config.Config {
-	t.Helper()
-	return packConfig(t, pack)
-}
-
-func forEachPackDevice(t *testing.T, visit func(pack string, device *config.Device)) {
+func forEachPackDevice(t *testing.T, fixture *packFixture, visit func(pack string, device *config.Device)) {
 	t.Helper()
 	for _, pack := range scenario.Packs() {
-		cfg := packDevices(t, pack)
+		cfg := fixture.config(t, pack)
 		for index := range cfg.Devices {
 			visit(pack.ID, &cfg.Devices[index])
 		}

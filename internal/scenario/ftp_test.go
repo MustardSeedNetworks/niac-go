@@ -9,12 +9,12 @@ import (
 // The HP printers serve FTP printing with the greeting HP documents for
 // Jetdirect (D-NIAC-45), and nothing else in any pack opens the port: no
 // other pack printer or server has a documented greeting to send.
-func TestPacksServeFTPOnTheHPPrinters(t *testing.T) {
+func testPacksServeFTPOnTheHPPrinters(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	servers := 0
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]
 			hp := device.Type == "printer" && device.Properties["model"] == hpPrinterModel

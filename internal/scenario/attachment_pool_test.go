@@ -41,10 +41,10 @@ func freePorts(device *config.Device) []string {
 	return free
 }
 
-func TestEveryAccessSwitchOffersASparePortPool(t *testing.T) {
+func testEveryAccessSwitchOffersASparePortPool(t *testing.T, fixture *packFixture) {
 	const wantFree = 4
 	for _, pack := range scenario.Packs() {
-		cfg := generatedPack(t, pack).Config
+		cfg := fixture.result(t, pack).Config
 		switches := 0
 		for i := range cfg.Devices {
 			device := &cfg.Devices[i]
@@ -64,9 +64,9 @@ func TestEveryAccessSwitchOffersASparePortPool(t *testing.T) {
 	}
 }
 
-func TestTesterAttachesToAnAccessPortPool(t *testing.T) {
+func testTesterAttachesToAnAccessPortPool(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		cfg := generatedPack(t, pack).Config
+		cfg := fixture.result(t, pack).Config
 		if len(cfg.Attachments) != 1 {
 			t.Fatalf("%s: attachments = %#v", pack.ID, cfg.Attachments)
 		}
@@ -98,9 +98,9 @@ func TestTesterAttachesToAnAccessPortPool(t *testing.T) {
 // The pool has to compile, not merely parse: each port must resolve to the one
 // network a client on it lands on. This is the clause the fabric compiler
 // could not satisfy before the VLAN-scoped broadcast domain landed with it.
-func TestGeneratedPoolCompilesToOneNetwork(t *testing.T) {
+func testGeneratedPoolCompilesToOneNetwork(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		cfg := generatedPack(t, pack).Config
+		cfg := fixture.result(t, pack).Config
 		report := fabric.CompileConfig(cfg)
 		for _, diagnostic := range report.Diagnostics {
 			if strings.Contains(string(diagnostic.Code), "attachment") {
@@ -131,9 +131,9 @@ func TestGeneratedPoolCompilesToOneNetwork(t *testing.T) {
 // The tester's old home. The row deletes the connect and the description that
 // named the instrument; the transit network and the port stay, because the lab
 // edge still has an uplink.
-func TestNoPackNamesTheTesterInAnInterfaceDescription(t *testing.T) {
+func testNoPackNamesTheTesterInAnInterfaceDescription(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		yaml := string(generatedPack(t, pack).YAML)
+		yaml := string(fixture.result(t, pack).YAML)
 		if strings.Contains(yaml, "CyberScope VLAN 200 attachment") {
 			t.Errorf("%s: an interface description still names the tester", pack.ID)
 		}

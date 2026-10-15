@@ -17,7 +17,7 @@ type dataCentreDevice struct {
 // a backup server. An organization keeps that tier in its main building, so it
 // appears once per pack, at the first site, and each device answers with the
 // sysObjectID and sysDescr a discovery tool files its platform by.
-func TestEachVerticalRunsADataCentreTierAtItsFirstSite(t *testing.T) {
+func testEachVerticalRunsADataCentreTierAtItsFirstSite(t *testing.T, fixture *packFixture) {
 	tier := map[string]dataCentreDevice{
 		"ESX01": {"hypervisor", "1.3.6.1.4.1.6876.4.1", "VMware ESXi ", ""},
 		"SAN01": {"storage-array", "1.3.6.1.4.1.789.2.5", "NetApp Release ", "libzapid-httpd"},
@@ -30,7 +30,7 @@ func TestEachVerticalRunsADataCentreTierAtItsFirstSite(t *testing.T) {
 		if pack.ID == "enterprise-scale" {
 			continue
 		}
-		cfg := packConfig(t, pack)
+		cfg := fixture.config(t, pack)
 		for index, site := range pack.Request.Sites {
 			for suffix, want := range tier {
 				name := site.Code + "-" + suffix

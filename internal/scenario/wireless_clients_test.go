@@ -15,10 +15,10 @@ import (
 // at the address and MAC that device answers on. A client table that named a
 // station nobody simulates would be scenery again, which is what W1 set out to
 // end (owner, 2026-10-14).
-func TestPackWirelessStationsAreTheDevicesTheirAPsReport(t *testing.T) {
+func testPackWirelessStationsAreTheDevicesTheirAPsReport(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
 		t.Run(pack.ID, func(t *testing.T) {
-			cfg := packConfig(t, pack)
+			cfg := fixture.config(t, pack)
 			counts := pack.Request.Counts
 			want := len(pack.Request.Sites) * counts.AccessSwitches *
 				counts.AccessPointsPerAccess * counts.WirelessClientsPerAP
@@ -96,9 +96,9 @@ func assertStationIsSimulated(
 // A station's network is leased by the site's DHCP server, through a relay on
 // each core's wifi-corp gateway, and the pool stays clear of every station's
 // static address.
-func TestPackWirelessNetworkIsRelayedToTheSiteDHCPServer(t *testing.T) {
+func testPackWirelessNetworkIsRelayedToTheSiteDHCPServer(t *testing.T, fixture *packFixture) {
 	pack := hospitalPack(t)
-	plan := wirelessDHCPPlan(packConfig(t, pack))
+	plan := wirelessDHCPPlan(fixture.config(t, pack))
 
 	for _, relay := range plan.relays {
 		if !strings.HasSuffix(relay, "/Vlan220") {

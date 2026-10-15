@@ -151,7 +151,7 @@ func TestProfileCatalogUsesUniqueRoles(t *testing.T) {
 	}
 }
 
-func TestVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T) {
+func testVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T, fixture *packFixture) {
 	expected := map[string][]string{
 		"hospital":      {"nurse-station", "infusion-pump", "mr-system"},
 		"warehouse":     {"rugged-handheld", "barcode-printer"},
@@ -162,7 +162,7 @@ func TestVerticalPacksGenerateDistinctEndpointProfiles(t *testing.T) {
 		if !found {
 			continue
 		}
-		cfg := packConfig(t, pack)
+		cfg := fixture.config(t, pack)
 		seen := make(map[string]bool)
 		for _, device := range cfg.Devices {
 			seen[device.Properties["role"]] = true

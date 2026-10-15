@@ -48,9 +48,9 @@ func authoredDot11Columns() []string {
 	}
 }
 
-func generatedAccessPoints(t *testing.T, packID string) []*config.Device {
+func generatedAccessPoints(t *testing.T, fixture *packFixture, packID string) []*config.Device {
 	t.Helper()
-	cfg := generatePack(t, packID)
+	cfg := fixture.configByID(t, packID)
 	var aps []*config.Device
 	for index := range cfg.Devices {
 		if strings.Contains(cfg.Devices[index].Name, "-WAP-") {
@@ -64,13 +64,13 @@ func generatedAccessPoints(t *testing.T, packID string) []*config.Device {
 	return aps
 }
 
-// TestGeneratedAccessPointsAuthorTheirRadios is the pack half of W1: every
+// testGeneratedAccessPointsAuthorTheirRadios is the pack half of W1: every
 // access point in every built-in pack states its own radios, so the Wi-Fi
 // tier stops being scenery.
-func TestGeneratedAccessPointsAuthorTheirRadios(t *testing.T) {
+func testGeneratedAccessPointsAuthorTheirRadios(t *testing.T, fixture *packFixture) {
 	bssids := make(map[string]string)
 	for _, pack := range scenario.Packs() {
-		for _, device := range generatedAccessPoints(t, pack.ID) {
+		for _, device := range generatedAccessPoints(t, fixture, pack.ID) {
 			if device.WiFiConfig == nil {
 				t.Fatalf("%s authors no radios", device.Name)
 			}
@@ -109,12 +109,12 @@ func assertAuthoredRadio(
 	bssids[radio.BSSID] = device.Name
 }
 
-// TestGeneratedAccessPointsServeOneSourcePerDot11Object is #2163's acceptance
+// testGeneratedAccessPointsServeOneSourcePerDot11Object is #2163's acceptance
 // stated as a test: no add_mibs row may restate an object the authored radio
 // already answers.
-func TestGeneratedAccessPointsServeOneSourcePerDot11Object(t *testing.T) {
+func testGeneratedAccessPointsServeOneSourcePerDot11Object(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		for _, device := range generatedAccessPoints(t, pack.ID) {
+		for _, device := range generatedAccessPoints(t, fixture, pack.ID) {
 			for _, mib := range device.SNMPConfig.AddMibs {
 				oid := strings.TrimPrefix(mib.OID, ".")
 				for _, column := range authoredDot11Columns() {
@@ -128,12 +128,12 @@ func TestGeneratedAccessPointsServeOneSourcePerDot11Object(t *testing.T) {
 	}
 }
 
-// TestGeneratedAccessPointRadiosAnswerTheCaptureShape walks a real agent built
+// testGeneratedAccessPointRadiosAnswerTheCaptureShape walks a real agent built
 // from a generated access point. The add_mibs rows and the authored radios are
 // merged by the agent, so this is the only place that proves which one a
 // consumer actually reads.
-func TestGeneratedAccessPointRadiosAnswerTheCaptureShape(t *testing.T) {
-	device := generatedAccessPoints(t, "hospital")[0]
+func testGeneratedAccessPointRadiosAnswerTheCaptureShape(t *testing.T, fixture *packFixture) {
+	device := generatedAccessPoints(t, fixture, "hospital")[0]
 	agent := agentAsTheStackBuildsIt(t, device)
 	radios := device.WiFiConfig.Radios
 
@@ -235,15 +235,15 @@ func wantMACValue(t *testing.T, agent *snmp.Agent, oid, want string) {
 	}
 }
 
-// TestGeneratedAccessPointsJoinTheirSiteController is the controller half of
+// testGeneratedAccessPointsJoinTheirSiteController is the controller half of
 // W1: every pack AP joins its own site's first controller, and that controller
 // reports each one in bsnAPTable -- the OID is the corpus controller capture's
 // (walks/raw/cisco/cisco-controller-03.walk), not the constant under test.
-func TestGeneratedAccessPointsJoinTheirSiteController(t *testing.T) {
+func testGeneratedAccessPointsJoinTheirSiteController(t *testing.T, fixture *packFixture) {
 	const captureAPName = "1.3.6.1.4.1.14179.2.2.1.1.3"
 	for _, pack := range scenario.Packs() {
 		t.Run(pack.ID, func(t *testing.T) {
-			devices, joined := accessPointsByController(generatePack(t, pack.ID))
+			devices, joined := accessPointsByController(fixture.configByID(t, pack.ID))
 			for controller, aps := range joined {
 				agent := snmp.NewAgent(devices[controller], 0)
 				agent.SynthesizeWirelessController(aps)

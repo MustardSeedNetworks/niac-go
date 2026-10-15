@@ -14,8 +14,8 @@ import (
 // six-node ring was discovered intact on analysis 6a774b2f9dc61ad4327b182a,
 // closing edge included. Manufacturing is the pack that reads as a plant, so it
 // is the one that gets the shape, and every one of its closets sits on it.
-func TestManufacturingAccessLayerIsARing(t *testing.T) {
-	cfg := generatePack(t, "manufacturing")
+func testManufacturingAccessLayerIsARing(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "manufacturing")
 	nodes := packRequest(t, "manufacturing").Counts.AccessSwitches
 	access := make([]string, nodes)
 	for index := range access {
@@ -32,8 +32,8 @@ func TestManufacturingAccessLayerIsARing(t *testing.T) {
 
 // The ring is only a ring if it hangs off the distribution tier at a couple of
 // points. Dual-homing every node as well would leave the same star underneath.
-func TestManufacturingRingJoinsDistributionTwice(t *testing.T) {
-	cfg := generatePack(t, "manufacturing")
+func testManufacturingRingJoinsDistributionTwice(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "manufacturing")
 
 	if uplinks := countUplinks(cfg, "PLT-ACC-SW", "PLT-DIST-SW"); uplinks != 2 {
 		t.Errorf("access-to-distribution uplinks = %d, want 2", uplinks)
@@ -43,8 +43,8 @@ func TestManufacturingRingJoinsDistributionTwice(t *testing.T) {
 // Hospital's shape is the one already validated against Link-Live, so every
 // access switch in both buildings still dual-homes into its own building's
 // distribution pair.
-func TestHospitalAccessLayerStaysDualHomed(t *testing.T) {
-	cfg := generatePack(t, "hospital")
+func testHospitalAccessLayerStaysDualHomed(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "hospital")
 
 	for _, building := range []string{"MED", "MEDB"} {
 		if uplinks := countUplinks(cfg, building+"-ACC-SW", building+"-DIST-SW"); uplinks != 16 {
@@ -54,18 +54,6 @@ func TestHospitalAccessLayerStaysDualHomed(t *testing.T) {
 			t.Errorf("%s access switches are linked to each other", building)
 		}
 	}
-}
-
-func generatePack(t *testing.T, id string) *config.Config {
-	t.Helper()
-	for _, pack := range scenario.Packs() {
-		if pack.ID == id {
-			return packDevices(t, pack)
-		}
-	}
-	t.Fatalf("no pack %q", id)
-
-	return nil
 }
 
 func adjacent(cfg *config.Config, name, peer string) bool {
@@ -134,8 +122,8 @@ func packRequest(t *testing.T, id string) scenario.Request {
 // A campus is wide and shallow: closets land straight on a collapsed core, with
 // no distribution tier between them. That is what makes its map read as a campus
 // rather than a smaller copy of the hospital.
-func TestCampusCollapsesTheCore(t *testing.T) {
-	cfg := generatePack(t, "campus")
+func testCampusCollapsesTheCore(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "campus")
 
 	if findDevice(cfg, "NTH-DIST-SW01") != nil {
 		t.Error("campus still generates a distribution tier")
@@ -148,8 +136,8 @@ func TestCampusCollapsesTheCore(t *testing.T) {
 // A store runs its lanes off one another rather than home-running each till to
 // the back office, so the access tier is a chain with a single uplink, and
 // every lane switch the pack generates sits on it.
-func TestRetailStoreChainsItsLanes(t *testing.T) {
-	cfg := generatePack(t, "retail")
+func testRetailStoreChainsItsLanes(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "retail")
 	nodes := packRequest(t, "retail").Counts.AccessSwitches
 
 	for index := 1; index < nodes; index++ {
@@ -170,8 +158,8 @@ func TestRetailStoreChainsItsLanes(t *testing.T) {
 // A metro POP hands every access node the pack generates off a ring, and every
 // pack keeps the full spine including radios and a controller pair - service
 // provider was the one pack generating neither.
-func TestServiceProviderRingsItsPOPAndKeepsTheSpine(t *testing.T) {
-	cfg := generatePack(t, "service-provider")
+func testServiceProviderRingsItsPOPAndKeepsTheSpine(t *testing.T, fixture *packFixture) {
+	cfg := fixture.configByID(t, "service-provider")
 	nodes := packRequest(t, "service-provider").Counts.AccessSwitches
 
 	for index := 1; index <= nodes; index++ {

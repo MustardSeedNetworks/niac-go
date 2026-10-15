@@ -7,7 +7,7 @@
 # ... on a pack VLAN but an unmapped address: 10771 across 515 addresses
 # ... undecodable as an SNMP request: 0
 # Regenerate:
-#   NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestWritePackDeviceRoles
+#   NIAC_ROLE_MAP_OUT=roles.tsv go test ./internal/scenario -run TestShippedPacks/WritePackDeviceRoles
 #   python3 scripts/extract-oid-demand.py --pcap <capture> --roles roles.tsv --out <this file>
 pack	role	pdu	oid	requests
 campus	access-point	get	.1.3.6.1.2.1.1.1.0	362

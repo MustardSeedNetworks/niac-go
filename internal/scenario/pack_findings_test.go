@@ -53,14 +53,14 @@ func TestEveryPackShipsItsOneFinding(t *testing.T) {
 // The finding has to survive generation, not merely sit in the request: it is
 // armed from the authored config, so a fault that never reaches the config is
 // a fault the simulation never serves.
-func TestEachFindingReachesTheAuthoredConfig(t *testing.T) {
+func testEachFindingReachesTheAuthoredConfig(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
 		if len(pack.Request.Faults) == 0 {
 			continue
 		}
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		armed := 0
 		for index := range cfg.Devices {
 			armed += len(cfg.Devices[index].Faults)
@@ -78,11 +78,11 @@ func TestEachFindingReachesTheAuthoredConfig(t *testing.T) {
 // The manifest is the expected truth a consumer checks itself against, so a
 // pack's finding belongs in it rather than being left for the consumer to
 // infer from counters.
-func TestManifestCarriesTheAuthoredFindings(t *testing.T) {
+func testManifestCarriesTheAuthoredFindings(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		result := generatedPack(t, pack)
+		result := fixture.result(t, pack)
 		got := len(result.Manifest.Interfaces.Faults)
 		if got != len(pack.Request.Faults) {
 			t.Errorf("%s: manifest carries %d faults, authored %d",

@@ -10,12 +10,12 @@ import (
 
 // The hospital's EMR, laboratory and pharmacy systems answer HL7 (AI-5), and
 // nothing else in any pack opens the port.
-func TestPacksServeHL7OnClinicalSystems(t *testing.T) {
+func testPacksServeHL7OnClinicalSystems(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	clinical := []string{"EMR01", "LIS01", "RX01"}
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		serving := map[string]bool{}
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]

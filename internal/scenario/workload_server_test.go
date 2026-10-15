@@ -13,7 +13,7 @@ import (
 // floor, and a real facility also runs the system its vertical depends on. The
 // generic APP server is that slot, so each vertical names it for what it runs;
 // campus stays deliberately ordinary.
-func TestEachVerticalRunsItsWorkloadServer(t *testing.T) {
+func testEachVerticalRunsItsWorkloadServer(t *testing.T, fixture *packFixture) {
 	want := map[string]struct{ name, sysDescr string }{
 		"hospital":         {"PACS01", "PACS archive"},
 		"manufacturing":    {"HIST01", "SCADA historian"},
@@ -30,7 +30,7 @@ func TestEachVerticalRunsItsWorkloadServer(t *testing.T) {
 		if !ok {
 			continue
 		}
-		cfg := packConfig(t, pack)
+		cfg := fixture.config(t, pack)
 		for _, site := range pack.Request.Sites {
 			assertWorkloadServer(t, cfg, pack, site.Code, expected.name, expected.sysDescr)
 		}
@@ -39,7 +39,7 @@ func TestEachVerticalRunsItsWorkloadServer(t *testing.T) {
 
 // The rest of each vertical's workload tier, beyond the slot. Campus runs none,
 // and neither may enterprise-scale, which shares its profile and is pinned.
-func TestEachVerticalRunsItsOtherWorkloadSystems(t *testing.T) {
+func testEachVerticalRunsItsOtherWorkloadSystems(t *testing.T, fixture *packFixture) {
 	want := map[string]map[string]string{
 		"hospital": {
 			"EMR01": "electronic medical record system",
@@ -62,7 +62,7 @@ func TestEachVerticalRunsItsOtherWorkloadSystems(t *testing.T) {
 		if !ok {
 			continue
 		}
-		cfg := packConfig(t, pack)
+		cfg := fixture.config(t, pack)
 		for _, site := range pack.Request.Sites {
 			for _, suffix := range all {
 				assertWorkloadSystem(t, cfg, pack, site.Code, suffix, systems)

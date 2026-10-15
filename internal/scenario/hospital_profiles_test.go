@@ -32,9 +32,9 @@ func TestHospitalCatalogIncludesPhilipsAndGEPatientMonitors(t *testing.T) {
 	}
 }
 
-func TestHospitalPackGeneratesPhilipsAndGEPatientMonitors(t *testing.T) {
+func testHospitalPackGeneratesPhilipsAndGEPatientMonitors(t *testing.T, fixture *packFixture) {
 	pack := hospitalPack(t)
-	cfg := packConfig(t, pack)
+	cfg := fixture.config(t, pack)
 
 	want := map[string]struct {
 		namePrefix string

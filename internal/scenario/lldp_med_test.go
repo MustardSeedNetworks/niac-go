@@ -13,8 +13,8 @@ import (
 // An access point that advertises no MED is indistinguishable from any other
 // endpoint, which is exactly the gap: a pack meant to look like a hospital
 // showed a rack of unidentified MAC addresses.
-func TestHospitalPackAccessPointsAdvertiseMED(t *testing.T) {
-	devices := hospitalDevices(t)
+func testHospitalPackAccessPointsAdvertiseMED(t *testing.T, fixture *packFixture) {
+	devices := hospitalDevices(t, fixture)
 
 	accessPoints := 0
 	for i := range devices {
@@ -67,8 +67,8 @@ func checkAccessPointMED(t *testing.T, name string, med *config.LLDPMEDConfig) {
 
 // Two access points sharing a serial number is the kind of contradiction a
 // tester spots immediately.
-func TestAccessPointSerialsAreUnique(t *testing.T) {
-	devices := hospitalDevices(t)
+func testAccessPointSerialsAreUnique(t *testing.T, fixture *packFixture) {
+	devices := hospitalDevices(t, fixture)
 
 	seen := make(map[string]string)
 	for i := range devices {
@@ -91,10 +91,10 @@ func TestAccessPointSerialsAreUnique(t *testing.T) {
 // Going through the YAML rather than the generator's structs is deliberate: it
 // proves the MED block survives serialization and parsing, which is where an
 // authored field is most often silently dropped.
-func hospitalDevices(t *testing.T) []config.Device {
+func hospitalDevices(t *testing.T, fixture *packFixture) []config.Device {
 	t.Helper()
 
-	cfg := packConfig(t, hospitalPack(t))
+	cfg := fixture.config(t, hospitalPack(t))
 
 	return cfg.Devices
 }
@@ -102,8 +102,8 @@ func hospitalDevices(t *testing.T) []config.Device {
 // Phones and cameras are what LLDP-MED exists to classify. The packs had
 // neither, so nothing in a generated network advertised an endpoint class and
 // the feature could only be seen working on an access point.
-func TestHospitalPackHasMEDEndpoints(t *testing.T) {
-	devices := hospitalDevices(t)
+func testHospitalPackHasMEDEndpoints(t *testing.T, fixture *packFixture) {
+	devices := hospitalDevices(t, fixture)
 
 	byRole := map[string]int{}
 	for i := range devices {
@@ -155,8 +155,8 @@ func checkEndpointMED(t *testing.T, name, role string, med *config.LLDPMEDConfig
 // Two devices sharing a MAC is a broken network, not a cosmetic clash. The
 // appended endpoints number from where the wired ones stop for exactly that
 // reason: continuing the index is what keeps a phone off a workstation's MAC.
-func TestMEDEndpointsDoNotCollideWithWiredEndpoints(t *testing.T) {
-	devices := hospitalDevices(t)
+func testMEDEndpointsDoNotCollideWithWiredEndpoints(t *testing.T, fixture *packFixture) {
+	devices := hospitalDevices(t, fixture)
 
 	seen := make(map[string]string, len(devices))
 	for i := range devices {

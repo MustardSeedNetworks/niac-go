@@ -36,7 +36,7 @@ type discoveryPort struct {
 	FDBOnly      bool   `yaml:"fdb_only"`
 }
 
-// TestDeclaredLinksAreDiscoverable is the parity gate, in the cheapest form
+// testDeclaredLinksAreDiscoverable is the parity gate, in the cheapest form
 // that needs no capture.
 //
 // A scenario declares its topology in trunk_ports, and an analyzer only ever
@@ -48,9 +48,9 @@ type discoveryPort struct {
 //
 // This is the static half of the check. The runtime half — that the link is
 // actually discovered when the scenario runs — needs the wire harness.
-func TestDeclaredLinksAreDiscoverable(t *testing.T) {
+func testDeclaredLinksAreDiscoverable(t *testing.T, fixture *packFixture) {
 	for _, pack := range scenario.Packs() {
-		assertDiscoverable(t, "pack:"+pack.ID, parseDoc(t, generatedPack(t, pack).YAML))
+		assertDiscoverable(t, "pack:"+pack.ID, parseDoc(t, fixture.result(t, pack).YAML))
 	}
 
 	for _, meta := range tmpl.List() {

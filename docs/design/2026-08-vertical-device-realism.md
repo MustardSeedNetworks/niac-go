@@ -98,7 +98,7 @@ The NAS answers as a Synology DiskStation under Net-SNMP's Linux
 and that is the OID a discovery tool matches to file them as collaboration
 endpoints. Their SIP and CDP identity is Phase 5c's, not this tier's.
 
-`TestPackDeviceRoleMix` pins the resulting per-pack role counts.
+`TestShippedPacks/PackDeviceRoleMix` pins the resulting per-pack role counts.
 
 Device counts per pack are unchanged by the mix; the pinned counts live in
 `internal/scenario/packs_parity.go`. More

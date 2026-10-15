@@ -14,11 +14,11 @@ const uplinkBundleMembers = 2
 // bundle, and both ends describe the same bundle. One end naming a
 // port-channel the other lacks would publish a LAG whose neighbour rows point
 // at a port that does not exist.
-func TestPackCoreDistributionUplinksAreBundles(t *testing.T) {
+func testPackCoreDistributionUplinksAreBundles(t *testing.T, fixture *packFixture) {
 	total := 0
 	for _, pack := range scenario.Packs() {
 		t.Run(pack.ID, func(t *testing.T) {
-			total += assertUplinkBundles(t, packConfig(t, pack))
+			total += assertUplinkBundles(t, fixture.config(t, pack))
 		})
 	}
 	if total == 0 {

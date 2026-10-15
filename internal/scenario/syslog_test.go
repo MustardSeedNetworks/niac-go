@@ -14,11 +14,11 @@ import (
 // was unreachable from every pack (#2105). Every pack must now point its
 // managed devices at a collector, or an operator who injects a fault sees
 // nothing.
-func TestEveryPackPointsItsDevicesAtACollector(t *testing.T) {
+func testEveryPackPointsItsDevicesAtACollector(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		emitting := 0
 		for index := range cfg.Devices {
 			if cfg.Devices[index].SyslogConfig != nil &&
@@ -35,10 +35,10 @@ func TestEveryPackPointsItsDevicesAtACollector(t *testing.T) {
 // A receiver that is not the site's own collector sends every event to the
 // wrong place, which is worse than sending none: the operator sees a healthy
 // collector and a broken network.
-func TestDevicesReportToTheirOwnSiteCollector(t *testing.T) {
+func testDevicesReportToTheirOwnSiteCollector(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
-	cfg := generatePack(t, "campus")
+	cfg := fixture.configByID(t, "campus")
 	nms := map[string]string{}
 	for index := range cfg.Devices {
 		if site, found := strings.CutSuffix(cfg.Devices[index].Name, "-NMS01"); found {
@@ -73,10 +73,10 @@ func TestDevicesReportToTheirOwnSiteCollector(t *testing.T) {
 
 // The collector does not report to itself: an NMS logging its own faults to
 // itself tells an operator nothing they cannot already see.
-func TestTheCollectorDoesNotReportToItself(t *testing.T) {
+func testTheCollectorDoesNotReportToItself(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
-	cfg := generatePack(t, "hospital")
+	cfg := fixture.configByID(t, "hospital")
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
 		if strings.HasSuffix(device.Name, "-NMS01") && device.SyslogConfig != nil {
@@ -89,11 +89,11 @@ func TestTheCollectorDoesNotReportToItself(t *testing.T) {
 // with "no active local egress route" before a frame is built, so every fault
 // on a pack switch or access point was silent (#2410). Each receiver must sit
 // on one of the device's own subnets or behind a static route out of one.
-func TestEverySyslogSenderCanRouteToItsCollector(t *testing.T) {
+func testEverySyslogSenderCanRouteToItsCollector(t *testing.T, fixture *packFixture) {
 	t.Parallel()
 
 	for _, pack := range scenario.Packs() {
-		cfg := generatePack(t, pack.ID)
+		cfg := fixture.configByID(t, pack.ID)
 		for index := range cfg.Devices {
 			device := &cfg.Devices[index]
 			if device.SyslogConfig == nil || !device.SyslogConfig.Enabled {
