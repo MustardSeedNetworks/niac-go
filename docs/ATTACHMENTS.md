@@ -165,9 +165,17 @@ Tester one is the CyberScope or the EtherScope on a wired profile for VLAN
 own MAC on wire VLAN 200. `vmbr0.200` is a VLAN 200 sub-interface of `vmbr0`;
 create it as in the Link-Live runbook's tester rig if it does not exist.
 
+Give each namespace its own `resolv.conf` before `dhclient` runs. A namespace
+shares the host's `/etc`, so without one `dhclient` writes the pack's DNS
+server into pvm01's own `/etc/resolv.conf`. On 2026-10-14 that cut pvm01 off
+from every `msn.lab` name, Proxmox single sign-on included, until it was
+restored by hand.
+
 ```bash
 for n in 2 3; do
   ip netns add tester$n
+  mkdir -p /etc/netns/tester$n
+  touch /etc/netns/tester$n/resolv.conf
   ip link add link vmbr0.200 name t$n type macvlan mode bridge
   ip link set t$n address 02:00:00:5a:00:0$n netns tester$n
   ip -n tester$n link set t$n up
@@ -244,7 +252,11 @@ Pass criteria:
 ### 5. Clean up
 
 ```bash
-for n in 2 3; do ip netns del tester$n; done
+for n in 2 3; do
+  ip netns pids tester$n | xargs -r kill
+  ip netns del tester$n
+  rm -r /etc/netns/tester$n
+done
 scripts/lab/acceptance.sh hospital
 ```
 
