@@ -101,6 +101,15 @@ func parseHL7Config(source *converter.HL7Config) *HL7Config {
 	return &HL7Config{Enabled: source.Enabled}
 }
 
+func parseModbusConfig(source *converter.ModbusConfig) *ModbusConfig {
+	if source == nil {
+		return nil
+	}
+	return &ModbusConfig{
+		Enabled: source.Enabled, HoldingRegisters: source.HoldingRegisters, InputRegisters: source.InputRegisters,
+	}
+}
+
 func parseSyslogConfig(source *converter.SyslogConfig) *SyslogConfig {
 	if source == nil {
 		return nil

@@ -93,6 +93,23 @@ type HL7Config struct {
 	Enabled bool `yaml:"enabled"`
 }
 
+// ModbusConfig is a Modbus/TCP server on TCP 502 answering Read Holding
+// Registers and Read Input Registers.
+type ModbusConfig struct {
+	// Enabled opens the port. Every register reads zero: the process values
+	// are the control program and are not simulated.
+	Enabled bool `yaml:"enabled"`
+
+	// HoldingRegisters is how many holding registers the server has, at
+	// addresses 0 up to it. A read past the last one is answered with
+	// exception 02, illegal data address.
+	HoldingRegisters int `yaml:"holding_registers" jsonschema:"minimum=0,maximum=65536"`
+
+	// InputRegisters is how many input registers the server has, at
+	// addresses 0 up to it.
+	InputRegisters int `yaml:"input_registers" jsonschema:"minimum=0,maximum=65536"`
+}
+
 // SyslogConfig sends link and fault events to RFC 5424 collectors.
 type SyslogConfig struct {
 	// Enabled turns on syslog emission for this device. When true, at least

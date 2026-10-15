@@ -167,6 +167,7 @@ func (v *Validator) validateDevice(
 	v.validateSIP(device, prefix)
 	v.validateONVIF(device, prefix)
 	v.validateJetDirect(device, prefix)
+	v.validateModbus(device, prefix)
 	v.validateSyslog(device, prefix)
 	v.validateSNMPTraps(device, prefix)
 	v.validateDNSRecords(device, prefix)
@@ -308,6 +309,25 @@ func validPJLID(id string) bool {
 		}
 	}
 	return true
+}
+
+// validateModbus keeps each register count inside the Modbus address space.
+func (v *Validator) validateModbus(device *Device, prefix string) {
+	modbus := device.ModbusConfig
+	if modbus == nil {
+		return
+	}
+	for _, registers := range []struct {
+		field string
+		count int
+	}{
+		{"holding_registers", modbus.HoldingRegisters},
+		{"input_registers", modbus.InputRegisters},
+	} {
+		if registers.count < 0 || registers.count > MaxModbusRegisters {
+			v.addError(prefix+".modbus."+registers.field, "Modbus "+registers.field+" must be between 0 and 65536")
+		}
+	}
 }
 
 func (v *Validator) validateSyslog(device *Device, prefix string) {

@@ -400,6 +400,32 @@ func buildHL7Schema() *SchemaProperty {
 	}
 }
 
+// modbusAddressSpace is how many registers of one type Modbus can address.
+const modbusAddressSpace = 1 << 16
+
+func buildModbusSchema() *SchemaProperty {
+	return &SchemaProperty{
+		Type: "object", Title: "Modbus",
+		Description: "Answers Modbus/TCP register reads on TCP 502",
+		Properties: map[string]*SchemaProperty{
+			"enabled": {Type: "boolean", Title: "Enable Modbus", Default: false},
+			"holding_registers": {
+				Type:    "integer",
+				Title:   "Holding registers",
+				Minimum: floatPtr(0),
+				Maximum: floatPtr(modbusAddressSpace),
+			},
+			"input_registers": {
+				Type:    "integer",
+				Title:   "Input registers",
+				Minimum: floatPtr(0),
+				Maximum: floatPtr(modbusAddressSpace),
+			},
+		},
+		Required: []string{"enabled", "holding_registers", "input_registers"},
+	}
+}
+
 func buildSyslogSchema() *SchemaProperty {
 	receiverPattern := `^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}` +
 		`(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]):` +

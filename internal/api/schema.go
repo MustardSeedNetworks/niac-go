@@ -220,6 +220,7 @@ func buildProtocolSchemaProperties() map[string]*SchemaProperty {
 		"jetdirect":      buildJetDirectSchema(),
 		"dicom":          buildDICOMSchema(),
 		"hl7":            buildHL7Schema(),
+		"modbus":         buildModbusSchema(),
 		"syslog":         buildSyslogSchema(),
 		"icmp":           buildICMPSchema(&maxTTL),
 		"icmpv6":         buildICMPv6Schema(&maxTTL),

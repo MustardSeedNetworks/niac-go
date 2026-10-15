@@ -22,7 +22,6 @@ const (
 	TCPPortMySQL    = 3306
 	TCPPortPostgres = 5432
 	TCPPortMSSQL    = 1433
-	TCPPortModbus   = 502
 	TCPPortOPCUA    = 4840
 	TCPPortSMB      = 445
 )
@@ -67,10 +66,6 @@ const (
 	mssqlTDSVersion1    = 0x74 // TDS version byte 1
 	mssqlProgramVersion = 0x00 // Program version (zero)
 
-	// Modbus protocol constants.
-	modbusResponseLen = 9 // Basic response length
-	modbusDataLen     = 3 // Data length field value
-
 	// OPC-UA protocol constants.
 	opcuaAckLen = 28 // OPC-UA ACK length
 
@@ -83,7 +78,6 @@ const (
 	smb1ResponseLen = 39 // SMB1 response length
 
 	// Protocol minimum header sizes.
-	modbusMinHeader      = 8    // Modbus TCP header + function code
 	opcuaMinHeader       = 8    // OPC UA header minimum
 	netbiosSessionHeader = 4    // NetBIOS session header minimum
 	ldapMinRequest       = 5    // LDAP minimum request size
@@ -97,7 +91,6 @@ const (
 	smbSignature         = 16 // SMB signature size
 	mssqlMinHeader       = 8  // TDS minimum header
 	rtspMinHeader        = 9  // RTSP minimum request size ("OPTIONS ")
-	modbusMinResponse    = 4  // Modbus minimum response header
 	macAddrSizeHC        = 6  // MAC address size for healthcheck
 	smbMinWithNetbiosHdr = 36 // SMB minimum size with NetBIOS header
 )
@@ -257,30 +250,6 @@ func (h *HealthCheckHandler) HandleMSSQLRequest(
 	}
 
 	response := h.generateMSSQLResponse(tcpLayer.Payload, devices)
-	if response != nil {
-		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
-	}
-}
-
-// HandleModbusRequest handles Modbus TCP requests.
-func (h *HealthCheckHandler) HandleModbusRequest(
-	reqPkt *Packet,
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(tcpLayer.Payload) < modbusMinHeader { // Modbus TCP header is 7 bytes + function code
-		return
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("Modbus TCP request from %s (devices: %v)",
-			ipLayer.SrcIP, getDeviceNames(devices))
-	}
-
-	response := h.generateModbusResponse(tcpLayer.Payload, devices)
 	if response != nil {
 		h.sendTCPResponse(ipLayer, tcpLayer, response, devices, reqPkt)
 	}
@@ -589,37 +558,6 @@ func (h *HealthCheckHandler) generateMSSQLResponse(request []byte, devices []*co
 	response[6] = 0x01 // packet ID
 	response[7] = 0x00 // window
 	copy(response[8:], tokenData)
-
-	return response
-}
-
-// generateModbusResponse creates a Modbus TCP response.
-func (h *HealthCheckHandler) generateModbusResponse(request []byte, _ []*config.Device) []byte {
-	if len(request) < postgresMinHeader {
-		return nil
-	}
-
-	// Modbus TCP format:
-	// 2 bytes: Transaction ID
-	// 2 bytes: Protocol ID (0x0000)
-	// 2 bytes: Length
-	// 1 byte: Unit ID
-	// 1 byte: Function code
-	// n bytes: Data
-
-	transactionID := binary.BigEndian.Uint16(request[0:2])
-	protocolID := binary.BigEndian.Uint16(request[2:4])
-	unitID := request[6]
-	functionCode := request[7]
-
-	// Build response
-	response := make([]byte, modbusResponseLen)
-	binary.BigEndian.PutUint16(response[0:], transactionID)
-	binary.BigEndian.PutUint16(response[2:], protocolID)
-	binary.BigEndian.PutUint16(response[4:], modbusDataLen) // length
-	response[6] = unitID
-	response[7] = functionCode
-	response[8] = 0x00 // Success (no exception)
 
 	return response
 }

@@ -395,6 +395,15 @@ func hl7ToYAML(cfg *HL7Config) *converter.HL7Config {
 	return &converter.HL7Config{Enabled: cfg.Enabled}
 }
 
+func modbusToYAML(cfg *ModbusConfig) *converter.ModbusConfig {
+	if cfg == nil {
+		return nil
+	}
+	return &converter.ModbusConfig{
+		Enabled: cfg.Enabled, HoldingRegisters: cfg.HoldingRegisters, InputRegisters: cfg.InputRegisters,
+	}
+}
+
 func syslogToYAML(cfg *SyslogConfig) *converter.SyslogConfig {
 	if cfg == nil {
 		return nil

@@ -1887,6 +1887,35 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
     "kind": "object"
   },
   {
+    "key": "modbus",
+    "title": "Modbus",
+    "fields": [
+      {
+        "name": "enabled",
+        "title": "Enabled",
+        "description": "Enabled opens the port. Every register reads zero: the process values\nare the control program and are not simulated.",
+        "kind": "boolean"
+      },
+      {
+        "name": "holding_registers",
+        "title": "Holding registers",
+        "description": "HoldingRegisters is how many holding registers the server has, at\naddresses 0 up to it. A read past the last one is answered with\nexception 02, illegal data address.",
+        "minimum": 0,
+        "maximum": 65536,
+        "kind": "integer"
+      },
+      {
+        "name": "input_registers",
+        "title": "Input registers",
+        "description": "InputRegisters is how many input registers the server has, at\naddresses 0 up to it.",
+        "minimum": 0,
+        "maximum": 65536,
+        "kind": "integer"
+      }
+    ],
+    "kind": "object"
+  },
+  {
     "key": "syslog",
     "title": "Syslog",
     "fields": [
