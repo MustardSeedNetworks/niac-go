@@ -140,11 +140,12 @@ func problemMatchesAuthoredState(expected AuthoredInterface, problem string) boo
 		return true
 	}
 
-	// A pack that authors an interface above the warning line is asking for the
-	// warning - that is the story a guided demo walks an engineer through, and
+	// A pack that authors an interface above the warning line, or starts it
+	// with an error or discard fault, is asking for the warning - that is the
+	// story a guided demo walks an engineer through, and
 	// reporting the amber icon as a mismatch would fail the run for the one
 	// thing the pack got right. A warning anywhere else is still a finding.
-	return expected.UtilizationPercent >= utilizationWarningPercent &&
+	return (expected.CounterFault || expected.UtilizationPercent >= utilizationWarningPercent) &&
 		strings.Contains(strings.ToLower(problem), "warning")
 }
 

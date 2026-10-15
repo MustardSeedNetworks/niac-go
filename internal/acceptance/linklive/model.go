@@ -71,6 +71,10 @@ type AuthoredInterface struct {
 	UtilizationDynamic bool
 	ExpectZeroErrors   bool
 	ExpectZeroDiscards bool
+	// CounterFault marks an interface the pack starts with an error or discard
+	// fault on. Link-Live flags the moving counter as a Warning, which is the
+	// finding the pack exists to show.
+	CounterFault bool
 	// AttachmentPool marks a port in an attachment's pool. It is authored
 	// down, and the runtime brings it up while a tester is placed on it.
 	AttachmentPool bool

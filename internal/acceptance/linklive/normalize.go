@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
+	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 )
 
 const (
@@ -89,11 +90,13 @@ func authoredDevice(
 		authored.InterfaceInventoryComplete = !hasCapturedInterfaceInventory(device.SNMPConfig)
 		authored.Interfaces = authoredInterfaces(device, authored.InterfaceInventoryComplete)
 		for index := range authored.Interfaces {
-			fault := faults[interfaceKey(device.Name, authored.Interfaces[index].Name)]
-			authored.Interfaces[index].UtilizationDynamic = fault.utilization
-			authored.Interfaces[index].ExpectZeroErrors = authored.InterfaceInventoryComplete && !fault.errors
-			authored.Interfaces[index].ExpectZeroDiscards = authored.InterfaceInventoryComplete && !fault.discards
-			authored.Interfaces[index].AttachmentPool = pool[interfaceKey(device.Name, authored.Interfaces[index].Name)]
+			iface := &authored.Interfaces[index]
+			key := interfaceKey(device.Name, iface.Name)
+			fault := faults[key]
+			iface.UtilizationDynamic = fault.utilization
+			iface.ExpectZeroErrors = iface.ExpectZeroErrors && !fault.errors
+			iface.ExpectZeroDiscards = iface.ExpectZeroDiscards && !fault.discards
+			iface.AttachmentPool = pool[key]
 		}
 	}
 	return authored
@@ -213,10 +216,38 @@ func authoredInterface(iface config.Interface, applyDefaults bool) AuthoredInter
 			duplex = "Full"
 		}
 	}
-	return AuthoredInterface{
+	authored := AuthoredInterface{
 		Name: iface.Name, Type: interfaceType, Status: status,
 		SpeedMbps: speed, Duplex: duplex, MTU: mtu,
 		UtilizationPercent: max(iface.InUtilization, iface.OutUtilization),
+		ExpectZeroErrors:   applyDefaults, ExpectZeroDiscards: applyDefaults,
+	}
+	applyInterfaceFaults(&authored, iface.Faults)
+	return authored
+}
+
+// applyInterfaceFaults carries the conditions a pack starts in onto the
+// expectation. The runtime serves them from the first poll: a utilization
+// fault adds its rate to the authored band, a carrier fault takes the port
+// down, and an error or discard fault moves its counters, which Link-Live
+// flags.
+func applyInterfaceFaults(authored *AuthoredInterface, faults []config.InterfaceFault) {
+	for _, fault := range faults {
+		if fault.Value <= 0 {
+			continue
+		}
+		switch devicestate.FaultType(fault.Type) {
+		case devicestate.FaultUtilization:
+			authored.UtilizationPercent += float64(fault.Value)
+		case devicestate.FaultLinkDown, devicestate.FaultPoELoss:
+			authored.Status = "Down"
+		case devicestate.FaultFCS, devicestate.FaultInterface:
+			authored.CounterFault = true
+			authored.ExpectZeroErrors = false
+		case devicestate.FaultDiscards:
+			authored.CounterFault = true
+			authored.ExpectZeroDiscards = false
+		}
 	}
 }
 
