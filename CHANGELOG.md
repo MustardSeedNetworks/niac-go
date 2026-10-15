@@ -5,6 +5,25 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.120.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.119.0...v0.120.0) (2026-10-15)
+
+
+### Features
+
+* **enip:** answer List Identity on the plant PLCs (AI-7) ([#2686](https://github.com/MustardSeedNetworks/niac-go/issues/2686)) ([fafb1e0](https://github.com/MustardSeedNetworks/niac-go/commit/fafb1e0e7a51f65c08342eca8746f90659bcc1a0)), closes [#2685](https://github.com/MustardSeedNetworks/niac-go/issues/2685)
+
+
+### Bug Fixes
+
+* **linklive:** accept an attachment-pool port that a tester brought up ([#2688](https://github.com/MustardSeedNetworks/niac-go/issues/2688)) ([70e0931](https://github.com/MustardSeedNetworks/niac-go/commit/70e0931eb502bed9e587899edbe54b57125ed7d5))
+* **linklive:** compare port-channel links the way Link-Live draws them ([#2687](https://github.com/MustardSeedNetworks/niac-go/issues/2687)) ([57fecf3](https://github.com/MustardSeedNetworks/niac-go/commit/57fecf3b4e433b385cdd6b485a36a45158f3c583))
+* **linklive:** expect the faults a pack starts its interfaces with ([#2691](https://github.com/MustardSeedNetworks/niac-go/issues/2691)) ([3978c4c](https://github.com/MustardSeedNetworks/niac-go/commit/3978c4cb2da538f42c6ea4d27a4e6b142dd93833))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2690](https://github.com/MustardSeedNetworks/niac-go/issues/2690)) ([d64c64a](https://github.com/MustardSeedNetworks/niac-go/commit/d64c64a1cd422a7b33665729f1d1b20a1377e0a8))
+
 ## [0.119.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.118.0...v0.119.0) (2026-10-15)
 
 
