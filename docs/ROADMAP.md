@@ -160,7 +160,7 @@ Tests` job green.
       fails the build.
 - [x] An authoring guide carries one complete annotated scenario, and the
       schema descriptions carry the rules an author needs.
-- [ ] Routing MIB content is generated from the authored routes and networks,
+- [x] Routing MIB content is generated from the authored routes and networks,
       so path analysis in the consuming NMS resolves hops through a replayed
       multi-site pack.
 
