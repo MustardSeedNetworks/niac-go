@@ -5,6 +5,23 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.1...v0.122.2) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** enqueue the release PR at the front of the merge queue ([#2716](https://github.com/MustardSeedNetworks/niac-go/issues/2716)) ([b64d055](https://github.com/MustardSeedNetworks/niac-go/commit/b64d0550673c50a9cca9d19b7caa0ffaaaa3e614))
+
+
+### Documentation
+
+* **roadmap:** tick the routing MIB criterion after the seed path run ([#2718](https://github.com/MustardSeedNetworks/niac-go/issues/2718)) ([24998d6](https://github.com/MustardSeedNetworks/niac-go/commit/24998d6fdb65576a43e3421efb62da46fefe0029))
+
+
+### Tests
+
+* **scenario:** run the pack checks as subtests of one fixture ([#2717](https://github.com/MustardSeedNetworks/niac-go/issues/2717)) ([32274c9](https://github.com/MustardSeedNetworks/niac-go/commit/32274c9cde85223bb28ba2280e3322a4fa7e204a))
+
 ## [0.122.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.0...v0.122.1) (2026-10-15)
 
 
