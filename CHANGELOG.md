@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.7...v0.122.8) (2026-10-16)
+
+
+### Bug Fixes
+
+* **linklive:** accept an address for a NetBIOS host with a named sibling ([#2740](https://github.com/MustardSeedNetworks/niac-go/issues/2740)) ([39764ad](https://github.com/MustardSeedNetworks/niac-go/commit/39764adfeaa619dfa2b623a981e33dd74b6fe688))
+
 ## [0.122.7](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.6...v0.122.7) (2026-10-16)
 
 
