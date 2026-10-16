@@ -10,7 +10,6 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   workers: 1,
   retries: 0,
-  timeout: 120000,
   reporter: [['list'], ['json', { outputFile: 'playwright-report/results-history.json' }]],
   use: { ...base.use, baseURL, storageState: undefined, ignoreHTTPSErrors: true },
   webServer: {

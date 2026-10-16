@@ -3,15 +3,16 @@
 # =============================================================================
 # Network Infrastructure Analysis & Capture - Mustard Seed Networks
 #
-# Runs on: push to main, pull requests to main
+# Runs on: pull requests to main, the merge queue, and manual dispatch.
+# A push to main does not re-run this suite. The merge group already tested
+# that commit. release-please and release.yml still need a green result on
+# the main SHA; .github/workflows/ci-smoke.yml is that signal.
 # Jobs: backend, frontend, security, quality, build
 # =============================================================================
 
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   # Required for the merge queue: `CI Complete` is a required status check, so
@@ -24,23 +25,14 @@ concurrency:
   # PR runs are keyed by PR number, not by commit: cancel-in-progress cancels
   # the older run, it never blocks the newer one, so a per-commit key on a PR
   # meant cancel-in-progress could never fire and superseded runs burned
-  # runners to completion. The SHA below is scoped to main, where
-  # cancel-in-progress is off anyway, so it does not reintroduce that.
+  # runners to completion.
   #
-  # Main gets a concurrency group per commit.
-  #
-  # cancel-in-progress off on main protects a *running* main build. It does
-  # not protect a pending one: GitHub keeps at most one pending run per
-  # concurrency group and cancels the older pending run as soon as a newer one
-  # arrives. A merge-queue burst pushes several commits to main within
-  # minutes, so intermediate main runs were cancelled while still queued —
-  # zero jobs, no red check, nothing to retry. release-please is gated on
-  # `workflow_run.conclusion == 'success'`, so it was skipped for every one of
-  # those commits and they released nothing. That is how stem's v0.24.47 went
-  # missing while its three siblings released from the same batch.
-  #
-  # Keying main by SHA gives every commit its own group, so no main run is
-  # ever pending behind another and none can be cancelled.
+  # The SHA suffix stays on main. Fleet ci-conformance requires the group to
+  # contain github.sha, and a workflow_dispatch on main must not cancel a
+  # sibling dispatch of a different commit. Pushes to main are not this
+  # workflow; ci-smoke.yml carries that signal and keys the same way, because
+  # a merge burst used to cancel the pending main run and release-please,
+  # gated on workflow_run success, skipped the commit.
   #
   # Superseded PR runs are still waste and still get cancelled.
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
@@ -73,7 +65,8 @@ jobs:
     outputs:
       # merge_group has no PR base to diff against, and the queue exists to test
       # the merged result — so every filter reports true there and the full
-      # suite runs. Path filtering stays in effect for pull_request/push.
+      # suite runs. Path filtering stays in effect for pull_request and
+      # workflow_dispatch.
       backend: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.backend }}
       frontend: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.frontend }}
       c: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.c }}
@@ -419,6 +412,10 @@ jobs:
       # that was empty because nothing had compiled yet; several default-branch
       # jobs also raced the same key, which is the cache-reservation contention
       # in the logs. One writer, after the work.
+      #
+      # This workflow no longer runs on push to main, so the save happens when
+      # someone dispatches it on the default branch. A merge-queue ref cannot
+      # fill the default-branch cache; PRs keep restoring the last one.
       - name: Save Go cache (default branch only)
         if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -439,11 +436,12 @@ jobs:
   # fails on the pure-Go builder. macOS ships libpcap, so this needs no apt step.
   #
   # Not on `pull_request`: this ran on the PR AND again on the merge group for
-  # the same commit, and macOS runners carry a 10x minute multiplier. `push:`
-  # is `branches: [main]`, so it still runs in the queue, on main and on
-  # dispatch -- and the `changes` job forces every filter true on merge_group,
-  # so nothing merges without it. A darwin-only break now ejects the PR from the
-  # queue instead of reddening it; that is the trade.
+  # the same commit, and macOS runners carry a 10x minute multiplier. It still
+  # runs on merge_group and on workflow_dispatch. The `changes` job forces
+  # every filter true on merge_group, so nothing merges without it. A
+  # darwin-only break ejects the PR from the queue instead of reddening the
+  # PR run; that is the trade. Push to main does not re-run it: the merge
+  # group already did.
   backend-darwin:
     name: Backend (macOS)
     runs-on: macos-latest
@@ -1652,7 +1650,9 @@ jobs:
 
       # Restore always; save only from the default branch. Caches are scoped
       # per ref, so a PR that saves writes its own copy that dies on merge —
-      # see the comment in .github/actions/setup-go for the incident.
+      # see the comment in .github/actions/setup-go for the incident. This
+      # workflow no longer runs on push to main, so the save happens on a
+      # default-branch dispatch. A merge-queue ref cannot fill that cache.
       - name: Restore Playwright browsers
         id: playwright-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1901,7 +1901,11 @@ jobs:
       - i18n
       - storybook
       - codeql-alert-gate
-    if: always()
+    # always() also runs after a cancellation and then fails this aggregator,
+    # which turns a superseded run into a red CI Complete. !cancelled() still
+    # runs when an upstream job failed, and stays quiet when the run was
+    # cancelled.
+    if: ${{ !cancelled() }}
     steps:
       - name: Verify upstream results
         env:
