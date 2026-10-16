@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.4...v0.122.5) (2026-10-16)
+
+
+### Bug Fixes
+
+* **linklive:** read a bundle member edge's VLAN from its Port-channel ([#2729](https://github.com/MustardSeedNetworks/niac-go/issues/2729)) ([6a91430](https://github.com/MustardSeedNetworks/niac-go/commit/6a91430257ccc034505cea6d4a3f4e58be345d20))
+* **protocols:** stamp the device's authored TTL on every IPv4 reply ([#2734](https://github.com/MustardSeedNetworks/niac-go/issues/2734)) ([03fd947](https://github.com/MustardSeedNetworks/niac-go/commit/03fd9475343536e6733825f60259ea8749f7d39c)), closes [#2731](https://github.com/MustardSeedNetworks/niac-go/issues/2731)
+
 ## [0.122.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.3...v0.122.4) (2026-10-16)
 
 
