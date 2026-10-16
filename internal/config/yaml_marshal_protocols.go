@@ -132,6 +132,7 @@ func dnsToYAML(cfg *DNSConfig) *converter.DNSServer {
 	return &converter.DNSServer{
 		ForwardRecords: dnsRecordsToYAML(cfg.ForwardRecords),
 		ReverseRecords: dnsRecordsToYAML(cfg.ReverseRecords),
+		Forwarders:     ipStrings(cfg.Forwarders),
 	}
 }
 

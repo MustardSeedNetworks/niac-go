@@ -579,6 +579,13 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
             "kind": "integer"
           }
         ]
+      },
+      {
+        "name": "forwarders",
+        "title": "Forwarders",
+        "description": "Forwarders are the resolvers this server asks, in order, for a name it\nholds no record for. A forwarder that is a simulated DNS server answers\nfrom its own records inside the simulation; any other address is a real\nupstream resolver, queried over the host's network.",
+        "kind": "scalarList",
+        "itemKind": "string"
       }
     ],
     "kind": "object"

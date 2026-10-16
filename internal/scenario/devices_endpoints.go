@@ -218,7 +218,11 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 	switch role {
 	case "DNS":
 		records := siteDNSRecords(request, site)
-		spec.dns = &converter.DNSServer{ForwardRecords: records, ReverseRecords: records}
+		// A site resolver holds the site's names and forwards the rest to the
+		// lab edge, which answers for every scenario host and the internet.
+		spec.dns = &converter.DNSServer{
+			ForwardRecords: records, ReverseRecords: records, Forwarders: []string{transitGateway},
+		}
 	case "DHCP":
 		spec.dhcp = &converter.DhcpServer{
 			ServerIdentifier: siteIP(site, vlanData, dhcpServerHost),

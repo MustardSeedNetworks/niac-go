@@ -540,6 +540,8 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 		}
 	}
 
+	v.validateDNSForwarders(device, dnsPrefix)
+
 	// Validate reverse records
 	for i, record := range dns.ReverseRecords {
 		recordPrefix := fmt.Sprintf("%s.reverse_records[%d]", dnsPrefix, i)
@@ -557,6 +559,17 @@ func (v *Validator) validateDNSRecords(device *Device, prefix string) {
 				recordPrefix+".rcode",
 				fmt.Sprintf("DNS RCode must be 0-15, got %d", record.RCode),
 			)
+		}
+	}
+}
+
+// validateDNSForwarders rejects a server that forwards to itself, which would
+// answer every unknown name by asking itself again.
+func (v *Validator) validateDNSForwarders(device *Device, dnsPrefix string) {
+	for i, forwarder := range device.DNSConfig.Forwarders {
+		if slices.ContainsFunc(device.IPAddresses, forwarder.Equal) {
+			v.addError(fmt.Sprintf("%s.forwarders[%d]", dnsPrefix, i),
+				"DNS forwarder is this server's own address: "+forwarder.String())
 		}
 	}
 }

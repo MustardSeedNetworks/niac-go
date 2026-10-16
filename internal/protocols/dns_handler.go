@@ -43,13 +43,15 @@ func (h *DNSHandler) HandleQuery(
 		return
 	}
 
-	response := h.buildDNSResponse(dns, serverDevice, debugLevel, pkt.SerialNumber)
 	identity, ok := h.stack.replyEthernet(pkt, serverDevice)
 	if !ok {
 		return
 	}
-	h.sendAndLogResponse(serverDevice, response, serverIP, ipLayer.SrcIP, identity.source, identity.destination,
-		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
+	clientIP, clientPort, vlan, serial := ipLayer.SrcIP, udpLayer.SrcPort, pkt.VLAN, pkt.SerialNumber
+	h.answerQuery(dns, serverDevice, debugLevel, serial, func(response *layers.DNS) {
+		h.sendAndLogResponse(serverDevice, response, serverIP, clientIP, identity.source, identity.destination,
+			clientPort, vlan, debugLevel, serial)
+	})
 }
 
 // parseDNSLayer extracts and validates the DNS layer from a packet.
@@ -143,38 +145,6 @@ func (h *DNSHandler) handleNBSTATIfPresent(
 	}
 
 	return false
-}
-
-// buildDNSResponse constructs a DNS response for the given query.
-func (h *DNSHandler) buildDNSResponse(
-	dns *layers.DNS,
-	serverDevice *config.Device,
-	debugLevel int,
-	serial int,
-) *layers.DNS {
-	response := &layers.DNS{
-		ID:           dns.ID,
-		QR:           true,
-		OpCode:       dns.OpCode,
-		AA:           true,
-		TC:           false,
-		RD:           dns.RD,
-		RA:           true,
-		ResponseCode: layers.DNSResponseCodeNoErr,
-		Questions:    dns.Questions,
-		Answers:      []layers.DNSResourceRecord{},
-	}
-
-	recordSet := h.getRecordSetForDevice(serverDevice)
-	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, serial)
-
-	if len(response.Answers) == 0 && debugLevel >= DebugLevelInfo {
-		logging.Debugf("DNS: NXDOMAIN for queries sn=%d", serial)
-	} else if len(response.Answers) > 0 && response.ResponseCode == 0 {
-		response.ResponseCode = layers.DNSResponseCodeNoErr
-	}
-
-	return h.applyNXDomainFault(response, serverDevice)
 }
 
 // extractSourceMAC extracts the source MAC address from the Ethernet layer.
@@ -346,15 +316,16 @@ func (h *DNSHandler) HandleQueryV6(
 		return
 	}
 
-	response := h.buildDNSResponseV6(dns, serverDevice, debugLevel, pkt.SerialNumber)
-
 	dstMAC, ok := h.extractSourceMACWithValidation(packet, debugLevel, pkt.SerialNumber)
 	if !ok {
 		return
 	}
 
-	h.sendAndLogResponseV6(response, serverIP, ipv6.SrcIP, h.stack.replySourceMAC(pkt, serverDevice), dstMAC,
-		udpLayer.SrcPort, pkt.VLAN, debugLevel, pkt.SerialNumber)
+	srcMAC := h.stack.replySourceMAC(pkt, serverDevice)
+	clientIP, clientPort, vlan, serial := ipv6.SrcIP, udpLayer.SrcPort, pkt.VLAN, pkt.SerialNumber
+	h.answerQuery(dns, serverDevice, debugLevel, serial, func(response *layers.DNS) {
+		h.sendAndLogResponseV6(response, serverIP, clientIP, srcMAC, dstMAC, clientPort, vlan, debugLevel, serial)
+	})
 }
 
 // handleNBSTATIfPresentV6 checks for and handles NBSTAT queries over IPv6.
@@ -383,37 +354,6 @@ func (h *DNSHandler) handleNBSTATIfPresentV6(
 	}
 
 	return false
-}
-
-// buildDNSResponseV6 constructs a DNS response for IPv6 queries.
-func (h *DNSHandler) buildDNSResponseV6(
-	dns *layers.DNS,
-	serverDevice *config.Device,
-	debugLevel int,
-	serial int,
-) *layers.DNS {
-	response := &layers.DNS{
-		ID:           dns.ID,
-		QR:           true,
-		OpCode:       dns.OpCode,
-		AA:           true,
-		TC:           false,
-		RD:           dns.RD,
-		RA:           true,
-		ResponseCode: layers.DNSResponseCodeNoErr,
-		Questions:    dns.Questions,
-	}
-
-	recordSet := h.getRecordSetForDevice(serverDevice)
-	response.Answers, response.ResponseCode = h.resolveQuestions(dns.Questions, recordSet, debugLevel, serial)
-
-	if len(response.Answers) == 0 && debugLevel >= DebugLevelInfo {
-		logging.Debugf("DNS/IPv6: NXDOMAIN for queries sn=%d", serial)
-	} else if len(response.Answers) > 0 && response.ResponseCode == 0 {
-		response.ResponseCode = layers.DNSResponseCodeNoErr
-	}
-
-	return h.applyNXDomainFault(response, serverDevice)
 }
 
 // extractSourceMACWithValidation extracts the source MAC and validates the Ethernet layer.

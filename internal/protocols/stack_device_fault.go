@@ -161,7 +161,8 @@ func (s *Stack) deviceServesFault(device *config.Device, faultType devicestate.D
 		// NXDOMAIN must change an otherwise successful lookup; an empty
 		// authored DNS service already returns NXDOMAIN for every name.
 		return device.DNSConfig != nil &&
-			(len(device.DNSConfig.ForwardRecords) > 0 || len(device.DNSConfig.ReverseRecords) > 0)
+			(len(device.DNSConfig.ForwardRecords) > 0 || len(device.DNSConfig.ReverseRecords) > 0 ||
+				len(device.DNSConfig.Forwarders) > 0)
 	}
 
 	return false

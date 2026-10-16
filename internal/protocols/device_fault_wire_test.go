@@ -61,7 +61,7 @@ func TestDNSFaultsChangeTheAnswer(t *testing.T) {
 		}},
 	}
 
-	healthy := handler.buildDNSResponse(query, device, 0, 1)
+	healthy := answerNow(handler, query, device, 1)
 	if healthy.ResponseCode != layers.DNSResponseCodeNoErr || len(healthy.Answers) != 1 {
 		t.Fatalf("healthy response = rcode %v, %d answers",
 			healthy.ResponseCode, len(healthy.Answers))
@@ -73,7 +73,7 @@ func TestDNSFaultsChangeTheAnswer(t *testing.T) {
 		t.Fatalf("SetDeviceFault(nxdomain) error = %v", err)
 	}
 
-	faulted := handler.buildDNSResponse(query, device, 0, 2)
+	faulted := answerNow(handler, query, device, 2)
 	if faulted.ResponseCode != layers.DNSResponseCodeNXDomain {
 		t.Fatalf("faulted rcode = %v, want NXDomain", faulted.ResponseCode)
 	}

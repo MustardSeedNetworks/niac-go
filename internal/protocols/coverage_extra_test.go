@@ -2711,7 +2711,7 @@ func TestDNSBuildDNSResponse(t *testing.T) {
 		},
 	}
 
-	response := h.buildDNSResponse(dns, dev, 0, 1)
+	response := answerNow(h, dns, dev, 1)
 	if response == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -3127,7 +3127,7 @@ func TestDNSBuildDNSResponseV6(t *testing.T) {
 		},
 	}
 
-	response := h.buildDNSResponseV6(dns, dev, 0, 1)
+	response := answerNow(h, dns, dev, 1)
 	if response == nil {
 		t.Fatal("expected non-nil response")
 	}

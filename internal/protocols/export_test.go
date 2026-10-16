@@ -661,3 +661,14 @@ func GetAllDHCPServersExported() net.IP {
 // TIAOUI exposes the LLDP-MED organizationally unique identifier as the
 // integer gopacket reports on a decoded TLV.
 const TIAOUI = uint32(0x0012BB)
+
+// SentPacketForTest returns the next packet the stack queued for transmission,
+// or nil when nothing is queued.
+func (s *Stack) SentPacketForTest() *Packet {
+	select {
+	case packet := <-s.sendQueue:
+		return packet
+	default:
+		return nil
+	}
+}
