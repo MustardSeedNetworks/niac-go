@@ -507,6 +507,24 @@ body {
   border-color: var(--color-surface-border);
 }
 
+/*
+ * WebKit 27 (the engine in Playwright 1.64) stops delivering
+ * requestAnimationFrame while any backdrop-filter is painted. The page stays
+ * visible and a person can still click, but the frame clock never ticks, so
+ * Playwright's actionability check waits until the test times out. A large
+ * wizard, with hundreds of blurred cards, loses the WebKit process entirely.
+ * -webkit-hyphens matches this WebKit build. Chrome does not implement it, so
+ * the blur stays there.
+ */
+@supports (-webkit-hyphens: auto) {
+  *,
+  *::before,
+  *::after {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* Skeleton loading animation */
 .skeleton {
   background: linear-gradient(

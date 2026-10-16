@@ -101,7 +101,11 @@ describe('exportDevicesAsYAML', () => {
     };
     expect(doc.devices).toHaveLength(1);
     // name and mac are the only populated fields; nothing optional leaks through.
-    expect(Object.keys(at(doc.devices, 0)).sort()).toEqual(['mac', 'name']);
+    expect(
+      Object.keys(at(doc.devices, 0)).sort((left, right) =>
+        left < right ? -1 : left > right ? 1 : 0,
+      ),
+    ).toEqual(['mac', 'name']);
   });
 
   it('maps every protocol blob onto the key the daemon expects', async () => {
