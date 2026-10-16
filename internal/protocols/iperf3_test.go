@@ -649,7 +649,10 @@ func TestIPerf3ReverseSender(t *testing.T) {
 				case event.ack != nil:
 					wire.send(iperf3TestDataPort, event.ack)
 				case event.end != 0:
-					wire.send(event.end, &layers.TCP{RST: true, ACK: true, Seq: paramsEnd, Ack: 1005})
+					// A reset at the next byte the server expects on that
+					// connection, as the client's own would be.
+					seq := map[layers.TCPPort]uint32{iperf3TestControlPort: paramsEnd, iperf3TestDataPort: 538}[event.end]
+					wire.send(event.end, &layers.TCP{RST: true, ACK: true, Seq: seq, Ack: 1005})
 				default:
 					checkIPerf3Data(t, fmt.Sprintf("event %d", i), wire.tick(start.Add(event.at)), event.want...)
 				}
@@ -715,4 +718,33 @@ func TestIPerf3AuthoredPort(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestIPerf3BlindClient covers a client that cannot see the server's
+// segments, as a spoofed source cannot: it never learns the server's ISN, so
+// nothing it sends after its SYN starts a test, and its resets do not end
+// someone else's.
+func TestIPerf3BlindClient(t *testing.T) {
+	t.Run("a cookie that does not acknowledge the ISN is ignored", func(t *testing.T) {
+		wire := newIPerf3Wire(t, iperf3TestServer(&config.IPerf3Config{Enabled: true, Port: TCPPortIPerf3}))
+		wire.send(iperf3TestControlPort, &layers.TCP{SYN: true, Seq: 100})
+		for _, ack := range []uint32{0, 1000, 1002, 0xdead} {
+			reply := wire.send(iperf3TestControlPort, &layers.TCP{
+				ACK: ack != 0, Seq: 101, Ack: ack, Payload: iperf3TestCookie(),
+			})
+			if len(reply) != 0 || len(wire.handler.iperf3.tests) != 0 {
+				t.Fatalf("cookie acknowledging %d answered with %+v and %d tests, want nothing",
+					ack, reply, len(wire.handler.iperf3.tests))
+			}
+		}
+	})
+	t.Run("a reset off the expected sequence does not end a test", func(t *testing.T) {
+		wire := newIPerf3Wire(t, iperf3TestServer(&config.IPerf3Config{
+			Enabled: true, Port: TCPPortIPerf3, DownloadMbps: iperf3TestRate,
+		}))
+		paramsEnd, start := startReverse(t, wire, 7, 65535)
+		wire.send(iperf3TestControlPort, &layers.TCP{RST: true, Seq: paramsEnd + 5000})
+		wire.send(iperf3TestDataPort, &layers.TCP{RST: true, Seq: 9})
+		checkIPerf3Data(t, "after forged resets", wire.tick(start.Add(2*time.Millisecond)), iperf3Seqs(1001, 2)...)
+	})
 }

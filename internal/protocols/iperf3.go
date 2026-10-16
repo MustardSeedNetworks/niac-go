@@ -115,6 +115,9 @@ type iperf3Conn struct {
 	data       bool
 	received   uint64 // data-stream bytes after the cookie
 	lastSeen   time.Time
+	// established is set once the client acknowledges our ISN, which a
+	// spoofed source never sees.
+	established bool
 
 	mss    uint32 // the largest segment the client accepts
 	shift  uint8  // the client's window scale, when both offered one
@@ -333,10 +336,16 @@ func (s *iperf3Server) receive(
 			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(length),
 		}}}, false
 	case tcp.RST:
-		s.drop(key, conn)
+		// Only a reset at the next expected byte is the client's (RFC 5961).
+		if tcp.Seq == conn.clientNext {
+			s.drop(key, conn)
+		}
+		return nil, false
+	case !conn.established && (!tcp.ACK || tcp.Ack != conn.serverNext):
 		return nil, false
 	default:
 		running := conn.test != nil && conn.test.state == iperf3TestRunning
+		conn.established = true
 		segments := s.segment(key, conn, tcp, length, route, now)
 		test := conn.test
 
@@ -765,7 +774,8 @@ func (c *iperf3Conn) next(key streamKey, filler []byte, now time.Time) iperf3Seg
 // the first byte the client lacks.
 func (c *iperf3Conn) acknowledged(tcp *layers.TCP, length int, now time.Time) {
 	switch {
-	case !tcp.ACK || seqBefore(c.sent, tcp.Ack):
+	case !tcp.ACK || seqBefore(c.sent, tcp.Ack) || seqBefore(tcp.Ack, c.unacked):
+		return // not an acknowledgement of anything in flight
 	case seqBefore(c.unacked, tcp.Ack):
 		c.unacked, c.duplicates, c.lastProgress = tcp.Ack, 0, now
 		if seqBefore(c.serverNext, c.unacked) {
