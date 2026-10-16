@@ -1654,12 +1654,13 @@ const protocolItems: HelpItem[] = [
     name: 'iperf3',
     standard: 'iperf3 protocol',
     category: 'protocols',
-    summary: 'iperf3 server emulation for throughput probes.',
+    summary: 'iperf3 server for TCP throughput tests.',
     techDesc:
-      'Listens on TCP/5201 (configurable) and speaks enough iperf3 control-channel JSON to accept connections, run a timed transfer, and return summary stats. Useful for tools that probe bandwidth as part of inventory.',
-    laymanDesc: 'Makes the device respond to iperf3 throughput tests.',
-    whenToUse: 'Tools that auto-probe iperf3 servers for capacity reporting.',
-    whenNotToUse: 'Real throughput measurement — NIAC’s iperf3 emulation reports synthetic values.',
+      'Listens on TCP/5201 or the authored port and speaks the iperf3 control protocol. A forward (upstream) test is received and acknowledged; a reverse (downstream) test is sent, paced at the device’s download rate. UDP and bidirectional tests are refused. Results are what actually crossed the wire.',
+    laymanDesc: 'Lets a tester run its iPerf test, up and down, against the device.',
+    whenToUse: 'A tester’s iPerf test (Upstream/Downstream, TCP) against a simulated server.',
+    whenNotToUse:
+      'Measuring the real network’s capacity: the simulator’s own packet handling limits throughput to tens of Mbit/s.',
     parameters: [],
     configFields: [
       {
@@ -1670,6 +1671,14 @@ const protocolItems: HelpItem[] = [
         description: 'Enable iperf3 server.',
         example: 'iperf3:\n  enabled: true',
       },
+      {
+        path: 'devices[].iperf3.download_mbps',
+        type: 'number',
+        defaultValue: '100',
+        required: false,
+        description: 'Rate the device sends a reverse (downstream) test at, in Mbit/s.',
+        example: 'iperf3:\n  enabled: true\n  download_mbps: 50',
+      },
     ],
     metrics: [],
     examples: [
@@ -1678,7 +1687,9 @@ const protocolItems: HelpItem[] = [
         command: 'iperf3 -c 10.0.0.10',
       },
     ],
-    tips: ['NIAC’s reported throughput is configurable per device but isn’t a real measurement.'],
+    tips: [
+      'download_mbps caps the downstream rate; upstream runs as fast as the simulator receives.',
+    ],
     seeAlso: ['proto-tcp'],
   },
   {
@@ -2781,7 +2792,7 @@ const errorItems: HelpItem[] = [
         command: 'Fault Injection > Error Injection > switch-2 > Packet discards > 25',
       },
     ],
-    tips: ['Combine with iperf3 throughput claims to simulate realistic load + loss.'],
+    tips: ['Pair with an iperf3 test to watch the interface counters move under load.'],
     seeAlso: ['err-fcs'],
   },
   {

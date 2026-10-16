@@ -41,6 +41,11 @@ type TCPHandler struct {
 	ftp    *serviceStreams
 	iperf3 *iperf3Server
 
+	// startIPerf3Sender starts the sender of reverse iperf3 tests;
+	// iperf3Sending is set while it runs.
+	startIPerf3Sender func()
+	iperf3Sending     atomic.Bool
+
 	// hl7Messages numbers the ACKs, each of which needs its own control ID.
 	hl7Messages atomic.Uint64
 }
@@ -52,6 +57,7 @@ func NewTCPHandler(stack *Stack) *TCPHandler {
 		enip: newServiceStreams(), ftp: newServiceStreams(), iperf3: newIPerf3Server(),
 	}
 	handler.ssh = newSSHTCPHandler(stack)
+	handler.startIPerf3Sender = handler.runIPerf3Sender
 	return handler
 }
 
@@ -179,8 +185,8 @@ func (h *TCPHandler) routeToHandler(
 
 // handleUnlistedPort serves the ports a device opens only by configuration,
 // 9100 on a JetDirect printer, 104 and 11112 on a DICOM node, 2575 on an HL7
-// interface, 502 on a Modbus server and 44818 on an EtherNet/IP adapter, and
-// resets a SYN to any other port.
+// interface, 502 on a Modbus server, 44818 on an EtherNet/IP adapter and an
+// authored iperf3 port, and resets a SYN to any other port.
 func (h *TCPHandler) handleUnlistedPort(
 	pkt *Packet,
 	ipLayer *layers.IPv4,
@@ -198,6 +204,8 @@ func (h *TCPHandler) handleUnlistedPort(
 		h.handleModbus(pkt, ipLayer, tcp, devices)
 	case tcp.DstPort == PortEtherNetIP:
 		h.handleEtherNetIP(pkt, ipLayer, tcp, devices)
+	case h.iperf3Device(devices, ipLayer.DstIP, tcp.DstPort) != nil:
+		h.handleIPerf3(pkt, ipLayer, tcp, devices)
 	case tcp.SYN && !tcp.ACK:
 		h.sendRST(pkt, ipLayer, tcp, devices)
 	}

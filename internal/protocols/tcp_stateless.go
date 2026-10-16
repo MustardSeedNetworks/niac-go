@@ -101,7 +101,8 @@ func (h *TCPHandler) sendStatelessSegment(
 			Seq: seq, Ack: tcp.Seq + consumed,
 			ACK: true, PSH: len(chunk) > 0, FIN: tcp.FIN && len(answer) == 0, Window: tcpWindowSize,
 		}
-		if !h.sendStatelessFrame(pkt, ipLayer, tcpReply, chunk, device, identity, service) || len(answer) == 0 {
+		if !h.sendStatelessFrame(pkt.SerialNumber, ipLayer, tcpReply, chunk, device, identity, service) ||
+			len(answer) == 0 {
 			return
 		}
 		seq += safeconv.Uint32(len(chunk))
@@ -109,7 +110,7 @@ func (h *TCPHandler) sendStatelessSegment(
 }
 
 func (h *TCPHandler) sendStatelessFrame(
-	pkt *Packet,
+	serial int,
 	ipLayer *layers.IPv4,
 	tcpReply *layers.TCP,
 	payload []byte,
@@ -130,7 +131,7 @@ func (h *TCPHandler) sendStatelessFrame(
 	}
 	if err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload)); err != nil {
 		if h.stack.GetDebugLevel() >= DebugLevelInfo {
-			logging.Debugf("%s: reply from %s failed sn=%d err=%v", service, device.Name, pkt.SerialNumber, err)
+			logging.Debugf("%s: reply from %s failed sn=%d err=%v", service, device.Name, serial, err)
 		}
 		return false
 	}

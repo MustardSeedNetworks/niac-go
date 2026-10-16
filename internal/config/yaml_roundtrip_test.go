@@ -225,7 +225,7 @@ func completeRoundTripDevice(walk string, enabled *bool) Device {
 			RevisionMajor: 33, RevisionMinor: 11, SerialNumber: 0xc0ffee01, ProductName: "1756-L83E/B",
 		},
 		SyslogConfig:    &SyslogConfig{Enabled: true, Receivers: []string{"192.0.2.50:514"}},
-		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, MaxBandwidthMbps: 1000},
+		IPerf3:          &IPerf3Config{Enabled: true, Port: 5201, DownloadMbps: 250},
 		ReflectorConfig: &ReflectorConfig{LatencyMs: 5, JitterMs: 1, DSCP: true},
 		TrunkPorts: []TrunkPort{{
 			Interface: "Gi0/1", VLANs: []int{200, 210}, NativeVLAN: 200,

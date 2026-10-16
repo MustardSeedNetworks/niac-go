@@ -177,10 +177,5 @@ export type OSType =
 export interface IPerf3Config {
   enabled: boolean;
   port?: number;
-  maxBandwidthMbps?: number;
-  typicalLatencyMs?: number;
-  jitterMs?: number;
-  packetLossPercent?: number;
-  uploadMbps?: number;
   downloadMbps?: number;
 }

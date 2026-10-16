@@ -83,10 +83,8 @@ const (
 	windowsMSS                  = 1460
 	dnsRecordTTL                = 300
 	performanceTestPort         = 5201
-	performanceBandwidthMbps    = 10000
 	performanceLatencyMillis    = 2
 	performanceJitterMillis     = 1
-	performancePacketLoss       = 0.01
 	wanIdentityOffset           = 10
 	transitBlockSize            = 8
 	firstDistributionAccessPort = 3

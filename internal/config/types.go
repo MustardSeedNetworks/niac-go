@@ -353,18 +353,6 @@ func (d *Device) IPv4TTL() uint8 {
 	return DefaultIPv4TTL
 }
 
-// IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation.
-type IPerf3Config struct {
-	Enabled           bool    // Whether iPerf3 server is enabled
-	Port              uint16  // Listen port (default 5201)
-	MaxBandwidthMbps  float64 // Maximum simulated bandwidth
-	TypicalLatencyMs  float64 // Simulated network latency
-	JitterMs          float64 // Simulated jitter (UDP tests)
-	PacketLossPercent float64 // Simulated packet loss percentage
-	UploadMbps        float64 // Simulated upload bandwidth
-	DownloadMbps      float64 // Simulated download bandwidth
-}
-
 // ReflectorConfig holds NetAlly UDP reflector settings for a device. A device
 // with this set echoes signed reflector probes back to the sender (see
 // UDPHandler reflect path). Presence enables the reflector.

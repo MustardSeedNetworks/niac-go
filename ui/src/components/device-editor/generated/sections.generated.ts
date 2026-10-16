@@ -2019,39 +2019,9 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
         "kind": "integer"
       },
       {
-        "name": "max_bandwidth_mbps",
-        "title": "Max bandwidth mbps",
-        "description": "MaxBandwidthMbps caps the throughput the device will report.",
-        "kind": "number"
-      },
-      {
-        "name": "typical_latency_ms",
-        "title": "Typical latency ms",
-        "description": "TypicalLatencyMs is the round-trip latency reported to the tester.",
-        "kind": "number"
-      },
-      {
-        "name": "jitter_ms",
-        "title": "Jitter ms",
-        "description": "JitterMs is the variation reported around the typical latency.",
-        "kind": "number"
-      },
-      {
-        "name": "packet_loss_percent",
-        "title": "Packet loss percent",
-        "description": "PacketLossPercent is the loss rate reported to the tester, 0..100.",
-        "kind": "number"
-      },
-      {
-        "name": "upload_mbps",
-        "title": "Upload mbps",
-        "description": "UploadMbps is the reported client-to-server rate.",
-        "kind": "number"
-      },
-      {
         "name": "download_mbps",
         "title": "Download mbps",
-        "description": "DownloadMbps is the reported server-to-client rate.",
+        "description": "DownloadMbps paces the data the device sends in a reverse test, the\ndownstream leg of a tester's iPerf test. Omit for 100 Mbit/s.",
         "kind": "number"
       }
     ],

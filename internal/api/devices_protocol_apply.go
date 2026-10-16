@@ -476,11 +476,15 @@ func applyIPerf3Request(dev *config.Device, req *IPerf3Request) {
 		return
 	}
 
-	dev.IPerf3 = &config.IPerf3Config{
-		Enabled: true, Port: req.Port, MaxBandwidthMbps: req.MaxBandwidthMbps,
-		TypicalLatencyMs: req.TypicalLatencyMs, JitterMs: req.JitterMs,
-		PacketLossPercent: req.PacketLossPercent, UploadMbps: req.UploadMbps, DownloadMbps: req.DownloadMbps,
+	port := req.Port
+	if port == 0 {
+		port = config.DefaultIPerf3Port
 	}
+	download := req.DownloadMbps
+	if download == 0 {
+		download = config.DefaultIPerf3DownloadMbps
+	}
+	dev.IPerf3 = &config.IPerf3Config{Enabled: true, Port: port, DownloadMbps: download}
 }
 
 // applyHostProtocolRequests applies the remaining per-device blocks

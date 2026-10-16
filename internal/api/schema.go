@@ -37,7 +37,6 @@ const (
 	maxServerPreference     = 255     // max DHCPv6 server preference
 	maxIPTTL                = 255     // max IP TTL value
 	maxTCPWindowScale       = 14      // max TCP window scale option
-	maxPacketLossPercent    = 100     // max packet loss percentage
 	cdpDefaultVersion       = 2       // CDP default version
 	edpDefaultAdvertise     = 30      // EDP default advertise interval
 	fdpDefaultAdvertise     = 60      // FDP default advertise interval
@@ -47,7 +46,6 @@ const (
 	dhcpv6PreferredLifetime = 604800  // DHCPv6 preferred lifetime (7 days)
 	dhcpv6ValidLifetime     = 2592000 // DHCPv6 valid lifetime (30 days)
 	defaultIperfPort        = 5201    // default iperf port
-	defaultIperfDuration    = 1000    // default iperf duration ms
 	defaultBandwidthMbps    = 100     // default bandwidth in Mbps
 	maxReflectorDelayMs     = 60000   // max reflector latency/jitter (60s)
 )
