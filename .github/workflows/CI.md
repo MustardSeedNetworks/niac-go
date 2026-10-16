@@ -45,6 +45,7 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `labeler.yml` | Auto-label PRs and issues |
 | `license-check.yml` | Verify dependency licenses |
 | `main-retry.yml` | Retry a failed main run once (see the file header) |
+| `merge-queue-ejection.yml` | Stop a PR the merge queue keeps ejecting |
 | `pr-body-lint.yml` | Enforce the PR body template |
 | `release-please.yml` | Automated version management and release PRs |
 | `release.yml` | goreleaser release builds, signing, SLSA provenance |
