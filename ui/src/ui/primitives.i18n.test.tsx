@@ -66,7 +66,10 @@ describe('shared primitives in es', () => {
   it('describes the connection in Spanish', () => {
     render(<ConnectionStatus status="disconnected" />);
 
-    expect(screen.getByTestId('connection-status')).toHaveAccessibleName('Servidor inaccesible');
+    // Visible word is "Sin conexión", which the longer cue does not contain.
+    expect(screen.getByTestId('connection-status')).toHaveAccessibleName(
+      'Servidor inaccesible Sin conexión',
+    );
     expect(screen.getByText('Sin conexión')).toBeInTheDocument();
   });
 
@@ -94,7 +97,10 @@ describe('shared primitives in es', () => {
       </CollapsibleSection>,
     );
 
-    expect(screen.getByRole('button', { name: 'Sección SNMP, contraída' })).toBeInTheDocument();
+    // "Obligatorio" is drawn on the button and is not in the state phrase.
+    expect(
+      screen.getByRole('button', { name: 'Sección SNMP, contraída SNMP Obligatorio' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Obligatorio')).toBeInTheDocument();
     expect(screen.getByText('Habilitado')).toBeInTheDocument();
 

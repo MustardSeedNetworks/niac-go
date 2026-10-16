@@ -77,7 +77,9 @@ for (const collapsed of [false, true]) {
     const status = rail.getByTestId('connection-status');
     await tabTo(page, status);
     await expectControlFits(status);
-    await expect(status).toHaveAccessibleName('Connected to backend');
+    await expect(status).toHaveAccessibleName(
+      collapsed ? 'Connected to backend' : 'Connected to backend Online',
+    );
     const theme = rail.getByTestId('theme-toggle');
     await tabTo(page, theme);
     await expectControlFits(theme);

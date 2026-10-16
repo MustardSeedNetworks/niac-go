@@ -23,6 +23,7 @@ import { createElement, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 import { iconSizes } from '../constants/sizes';
+import { accessibleNameIncluding } from '../lib/accessibleName';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { MsnMark } from './MsnMark';
@@ -80,7 +81,10 @@ function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonPro
         // which is translated copy and changes without the navigation changing.
         data-testid={`nav-item-${item.path === '/' ? 'root' : item.path.replace(/^\//, '')}`}
         aria-current={active ? 'page' : undefined}
-        aria-label={item.label}
+        aria-label={accessibleNameIncluding(
+          item.label,
+          [item.label, !collapsed ? item.badge : undefined].filter(Boolean).join(' '),
+        )}
         /* 44px minimum target, 11px radius, and a 3px left bar for the active
        route. The bar carries the state rather than a gradient fill: a filled
        row competes with status colour, and the rail is chrome. */
@@ -103,7 +107,13 @@ function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonPro
         })}
         {!collapsed ? (
           <>
-            <span className="flex-1 text-left truncate">{item.label}</span>
+            <span className="flex-1 text-left truncate">
+              {item.label}
+              {/* A flex gap is not a word boundary. axe reads text nodes, so
+                  "DNS" + "new" would glue into one token the name cannot
+                  contain. */}
+              {item.badge ? ' ' : null}
+            </span>
             {item.badge ? (
               <span
                 className={`px-1.5 py-0.5 text-xs rounded font-medium ${badgeClass(item.badge)}`}
@@ -144,7 +154,7 @@ function FooterIconButton({
         className={`${collapsed ? 'w-full' : 'flex-1'} flex items-center ${
           collapsed ? 'justify-center' : 'gap-compact'
         } px-3 py-row rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors text-sm font-medium`}
-        aria-label={title}
+        aria-label={accessibleNameIncluding(title, collapsed ? '' : label)}
       >
         {createElement(icon, { className: `${iconSizes.md} flex-shrink-0` })}
         {!collapsed ? <span>{label}</span> : null}
