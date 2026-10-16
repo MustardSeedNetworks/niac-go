@@ -1,6 +1,11 @@
 package snmp
 
-import "strings"
+import (
+	"slices"
+	"strings"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
+)
 
 // Bucket names why an OID the agent serves is not byte-identical to the walk
 // it was loaded from. It is the shared vocabulary of the replay-fidelity
@@ -100,6 +105,18 @@ func isLiveProtocolOID(oid string) bool {
 		underRoot(oid, snmpGroup)
 }
 
+// isIPTableOID reports whether oid falls in one of the IP-MIB tables
+// registerConfiguredRoutes writes from the scenario: addresses, routes, ARP
+// and IP-FORWARD-MIB. They sit inside substitution 3's ip subtree but hold
+// state, not counters, so nothing live can replace a capture's rows: a walk
+// keeps them unless the scenario authors its own (substitution 9, #2684).
+func isIPTableOID(oid string) bool {
+	return underRoot(oid, ipAddrTable) ||
+		underRoot(oid, ipRouteTable) ||
+		underRoot(oid, ipNetToMediaTable) ||
+		underRoot(oid, ipForwardMIB)
+}
+
 // isSynthesizedTopologyOID reports whether oid falls in a neighbour or
 // forwarding table that trunk_ports synthesis owns.
 func isSynthesizedTopologyOID(oid string) bool {
@@ -129,6 +146,9 @@ type WalkContract struct {
 	authoredSysLocation bool
 	// ownsTopology is trunk_ports: without it the walk's own neighbours stand.
 	ownsTopology bool
+	// authoredIPTables is an authored interface address or route: the agent
+	// then writes the IP tables, otherwise the walk's own rows stand.
+	authoredIPTables bool
 	// Signed substitution 6 has two conditions, because the code does: any
 	// authored MAC seeds the derived serial numbers, but only an Ethernet one
 	// can stand in for a link-layer address, so a device carrying a longer
@@ -165,6 +185,10 @@ func (a *Agent) WalkContract() WalkContract {
 	contract.authoredSysContact = a.device.SNMPConfig.SysContact != ""
 	contract.authoredSysLocation = a.device.SNMPConfig.SysLocation != ""
 	contract.ownsTopology = len(a.device.TrunkPorts) > 0
+	contract.authoredIPTables = len(a.device.Routes) > 0 ||
+		slices.ContainsFunc(a.device.Interfaces, func(iface config.Interface) bool {
+			return iface.Address != "" || iface.AddressV6 != ""
+		})
 	contract.authoredMAC = len(a.device.MACAddress) > 0
 	contract.authoredEthernetMAC = len(a.device.MACAddress) == MACAddressOctets
 	for _, iface := range a.device.Interfaces {
@@ -214,6 +238,11 @@ func (c WalkContract) Classify(oid string) Bucket {
 	switch {
 	case c.isAuthoredIdentity(oid):
 		return BucketAuthored
+	case isIPTableOID(oid):
+		if c.authoredIPTables {
+			return BucketAuthored
+		}
+		return BucketKept
 	case isLiveProtocolOID(oid):
 		return BucketLive
 	case c.ownsTopology && isSynthesizedTopologyOID(oid):
@@ -261,7 +290,8 @@ func (c WalkContract) substitutesBridgePort(port string) bool {
 func (c WalkContract) DropsFromWalk(oid string) bool {
 	switch c.Classify(oid) {
 	case BucketAuthored:
-		return c.isAuthoredIdentity(strings.TrimPrefix(oid, "."))
+		oid = strings.TrimPrefix(oid, ".")
+		return c.isAuthoredIdentity(oid) || isIPTableOID(oid)
 	case BucketLive:
 		return isLiveProtocolOID(strings.TrimPrefix(oid, "."))
 	case BucketTopology:

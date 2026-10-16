@@ -46,7 +46,8 @@ means.
 ### The signed substitutions
 
 Owner sign-off 2026-09-05, all five accepted; 6, 7 and 8 were added by the
-2026-09-08 ruling recorded below:
+2026-09-08 ruling recorded below. 9 narrows 3 to fix defect #2684 (2026-10-16)
+and awaits the owner's review on that PR:
 
 > sysName from config; sysDescr/Contact/Location only when authored;
 > snmp group + ip/icmp/tcp/udp/egp live; LLDP/CDP/FDB neighbours dropped
@@ -57,12 +58,13 @@ Owner sign-off 2026-09-05, all five accepted; 6, 7 and 8 were added by the
 | --- | --- | --- | --- | --- |
 | 1 | `sysName.0` (`1.3.6.1.2.1.1.5.0`) | `authored` | always | skipped at load |
 | 2 | `sysDescr.0`, `sysContact.0`, `sysLocation.0` | `authored` | only when the scenario sets that field | skipped at load |
-| 3 | `1.3.6.1.2.1.11` (snmp group) and the `ip`/`icmp`/`tcp`/`udp`/`egp` subtrees | `live` | always | skipped at load, then re-registered live |
+| 3 | `1.3.6.1.2.1.11` (snmp group) and the `ip`/`icmp`/`tcp`/`udp`/`egp` subtrees, except the IP tables substitution 9 decides | `live` | always | skipped at load, then re-registered live |
 | 4 | LLDP remote systems, CDP cache, `dot1dTpFdbTable`, `dot1qFdbTable`, `dot1qTpFdbTable` | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 5 | `ifTable`/`ifXTable` rows for interfaces the scenario authored | `authored` (configuration columns) or `live` (counters) | only at an authored `ifIndex` | **loaded, then overwritten** after the load |
 | 6 | `ifPhysAddress.*`, `dot1dBaseBridgeAddress`, `lldpLocChassisId`, `lldpLocChassisIdSubtype`, `entPhysicalSerialNumber.*` | `authored` | an authored MAC; the three addresses need an Ethernet one | **loaded, then overwritten** after the load |
 | 7 | `lldpLocPortTable` (`1.0.8802.1.1.2.1.3.7`) | `topology` | only when the device declares `trunk_ports` | skipped at load |
 | 8 | `dot1dTpPortTable` (`1.3.6.1.2.1.17.4.4`) | `authored` (port number, max info) or `live` (frame counters, discards) | only at a bridge port an authored interface sits behind, or any port under `trunk_ports` | **loaded, then overwritten** after the load |
+| 9 | `ipAddrTable`, `ipRouteTable`, `ipNetToMediaTable` and IP-FORWARD-MIB (`1.3.6.1.2.1.4.20`/`.21`/`.22`/`.24`) | `authored` | only when the scenario authors an interface address or a route; otherwise `kept` | skipped at load |
 
 ### P2-4 resource-fault substitutions
 
@@ -214,8 +216,13 @@ left without a `dot1dTpPortTable` row at all.
 
 `initializeBridgeMIB` was audited and is clean: it returns early when the walk
 supplied `dot1dBaseNumPorts`, so it only ever adds BRIDGE-MIB to a device that
-had none (`agent_added`). `registerConfiguredRoutes` writes `ipRoute*`, which is
-already inside substitution 3's `ip` subtree.
+had none (`agent_added`). `registerConfiguredRoutes` writes the IP address,
+route and forwarding tables, which sit inside substitution 3's `ip` subtree but
+hold state rather than counters. Until #2684 substitution 3 dropped them from
+every walk, so a captured router that authored no routes answered with an empty
+routing table. Substitution 9 keeps the capture's rows byte-identical unless the
+scenario authors its own; it narrows substitution 3 toward the contract's
+default and adds no new rewrite.
 
 ## What the harness measures (row F1a)
 
