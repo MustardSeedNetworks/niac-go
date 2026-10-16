@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.9...v0.122.10) (2026-10-16)
+
+
+### Bug Fixes
+
+* **iperf3:** serve the real iperf3 protocol to testers behind the sim router ([#2750](https://github.com/MustardSeedNetworks/niac-go/issues/2750)) ([ca9b02a](https://github.com/MustardSeedNetworks/niac-go/commit/ca9b02a67a29a9c6a931689922d823c824325b5e))
+* **snmp:** keep a walk's IP tables unless the scenario authors its own ([#2738](https://github.com/MustardSeedNetworks/niac-go/issues/2738)) ([b29d19c](https://github.com/MustardSeedNetworks/niac-go/commit/b29d19c13b2025c276524cc0e1117a5b38781412)), closes [#2684](https://github.com/MustardSeedNetworks/niac-go/issues/2684)
+
+
+### Continuous Integration
+
+* call shared product workflows for the common jobs ([#2745](https://github.com/MustardSeedNetworks/niac-go/issues/2745)) ([38e4757](https://github.com/MustardSeedNetworks/niac-go/commit/38e475745fab2bc11d5f7b00e0cf1ff407904ca3))
+
 ## [0.122.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.8...v0.122.9) (2026-10-16)
 
 
