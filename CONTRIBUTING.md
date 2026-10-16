@@ -44,7 +44,7 @@ underlying issue rather than `--no-verify`-ing past it.
   ```
 
 - PR titles follow the same Conventional Commits format. The
-  `Title Lint` workflow comments on PRs that don't match.
+  `Lint PR Title` check (`pr-hygiene.yml`) fails PRs that don't match.
 
 ## Pre-commit checks
 
