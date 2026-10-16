@@ -348,7 +348,7 @@ func TestStackDatagramSenderRoutesThroughFabricToPhysicalCollector(t *testing.T)
 	stack.arpHandler.HandlePacket(&Packet{Buffer: reply, Length: len(reply), VLAN: config.UntaggedTag})
 
 	notification := <-stack.sendQueue
-	assertPhysicalCollectorNotification(t, notification, routerMAC, collectorMAC)
+	assertPhysicalCollectorNotification(t, stack, notification, routerMAC, collectorMAC)
 	if got := stack.GetStats().FabricForwarded; got != 1 {
 		t.Fatalf("FabricForwarded = %d, want 1", got)
 	}
@@ -369,12 +369,17 @@ func assertPhysicalCollectorProbe(t *testing.T, probe *Packet, routerMAC net.Har
 
 func assertPhysicalCollectorNotification(
 	t *testing.T,
+	stack *Stack,
 	notification *Packet,
 	routerMAC net.HardwareAddr,
 	collectorMAC net.HardwareAddr,
 ) {
 	t.Helper()
-	decoded := gopacket.NewPacket(notification.Buffer, layers.LayerTypeEthernet, gopacket.Default)
+	frame, _, err := stack.finalizeEgressFrame(notification)
+	if err != nil {
+		t.Fatalf("finalizeEgressFrame() error = %v", err)
+	}
+	decoded := gopacket.NewPacket(frame, layers.LayerTypeEthernet, gopacket.Default)
 	ethernet, _ := decoded.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
 	ipv4, _ := decoded.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
 	udp, _ := decoded.Layer(layers.LayerTypeUDP).(*layers.UDP)

@@ -412,6 +412,9 @@ func (s *Stack) finalizeEgressFrame(pkt *Packet) ([]byte, int, error) {
 		if err != nil {
 			return nil, -1, err
 		}
+		if untagged, err = s.fabric.forwardIPv4(untagged); err != nil {
+			return nil, -1, err
+		}
 		if !s.fabric.binding.WireTagged {
 			return untagged, -1, nil
 		}

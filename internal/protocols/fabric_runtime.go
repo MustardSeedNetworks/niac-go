@@ -19,7 +19,10 @@ type fabricRuntime struct {
 	devicesByName     map[string]*config.Device
 	interfacesByAddr  map[netip.Addr]fabricEndpoint
 	attachmentRouters []fabricRouter
-	attachmentDHCP    []*config.Device
+	// routesByDevice is every device's compiled IPv4 routes, read when no
+	// device state holds the live table.
+	routesByDevice map[*config.Device][]fabricRoute
+	attachmentDHCP []*config.Device
 	// dhcpRelays holds the relayed scope of each attachment DHCP server
 	// that has no interface on the attachment network.
 	dhcpRelays   map[*config.Device]fabricDHCPRelay
@@ -54,7 +57,6 @@ type fabricRouter struct {
 	attachmentIP        netip.Addr
 	attachmentInterface string
 	mac                 net.HardwareAddr
-	routes              []fabricRoute
 }
 
 type fabricRoute struct {
@@ -108,6 +110,7 @@ func newFabricRuntime(topology *fabric.Topology, cfg *config.Config) *fabricRunt
 	runtime.indexInterfaces(topology.Interfaces)
 	runtime.indexInterfacesV6(topology.Interfaces)
 	runtime.indexAttachmentRouters(topology)
+	runtime.indexRoutes(topology.Routes)
 	runtime.indexAttachmentDHCP(topology.DHCPScopes)
 	for _, attachment := range topology.Attachments {
 		if attachment.Name == topology.Binding.Attachment {
@@ -213,35 +216,32 @@ func (r *fabricRuntime) indexInterfaces(interfaces []fabric.Interface) {
 }
 
 func (r *fabricRuntime) indexAttachmentRouters(topology *fabric.Topology) {
-	routers := make(map[string]*fabricRouter)
 	for _, iface := range topology.Interfaces {
 		device := r.devicesByName[iface.Device]
 		if iface.Network != r.attachmentNetwork || device == nil ||
 			!deviceclass.RoutesIP(deviceclass.Parse(device.Type)) {
 			continue
 		}
-		router := &fabricRouter{
+		r.attachmentRouters = append(r.attachmentRouters, fabricRouter{
 			device: device, attachmentIP: iface.Address.Addr(), attachmentInterface: iface.Name,
 			mac: cloneMAC(device.MACAddress),
-		}
-		routers[iface.Device] = router
-		r.attachmentRouters = append(r.attachmentRouters, *router)
+		})
 	}
-	for _, route := range topology.Routes {
-		router := routers[route.Device]
-		if router != nil {
-			router.routes = append(router.routes, fabricRoute{
-				destination: route.Destination,
-				via:         route.Via,
-				nextHop:     route.NextHop,
-				connected:   route.Connected,
-			})
+}
+
+func (r *fabricRuntime) indexRoutes(routes []fabric.Route) {
+	r.routesByDevice = make(map[*config.Device][]fabricRoute)
+	for _, route := range routes {
+		device := r.devicesByName[route.Device]
+		if device == nil {
+			continue
 		}
-	}
-	for i := range r.attachmentRouters {
-		if router := routers[r.attachmentRouters[i].device.Name]; router != nil {
-			r.attachmentRouters[i].routes = append([]fabricRoute(nil), router.routes...)
-		}
+		r.routesByDevice[device] = append(r.routesByDevice[device], fabricRoute{
+			destination: route.Destination,
+			via:         route.Via,
+			nextHop:     route.NextHop,
+			connected:   route.Connected,
+		})
 	}
 }
 
@@ -298,7 +298,7 @@ func (r *fabricRuntime) notificationEgress(
 			!r.interfaceAvailable(router.device, router.attachmentInterface) {
 			continue
 		}
-		for _, route := range r.routesFor(router) {
+		for _, route := range r.routesFor(router.device) {
 			if !route.connected || route.via != router.attachmentInterface ||
 				!route.destination.Contains(destination) {
 				continue
@@ -392,8 +392,8 @@ func (r *fabricRuntime) routeFor(
 			!r.interfaceAvailable(router.device, router.attachmentInterface) {
 			continue
 		}
-		for _, route := range r.routesFor(router) {
-			if r.routeAvailable(router, route) &&
+		for _, route := range r.routesFor(router.device) {
+			if r.routeAvailable(router.device, route) &&
 				route.destination.Contains(dst) && route.destination.Bits() > bestBits {
 				bestBits = route.destination.Bits()
 				best = router
@@ -404,12 +404,12 @@ func (r *fabricRuntime) routeFor(
 	return best, bestRoute
 }
 
-func (r *fabricRuntime) routeAvailable(router *fabricRouter, route fabricRoute) bool {
-	if !r.interfaceAvailable(router.device, route.via) {
+func (r *fabricRuntime) routeAvailable(device *config.Device, route fabricRoute) bool {
+	if !r.interfaceAvailable(device, route.via) {
 		return false
 	}
 	if r.deviceStates != nil && !route.connected &&
-		!validateStaticRoute(r.deviceStates, router.device, devicestate.Route{
+		!validateStaticRoute(r.deviceStates, device, devicestate.Route{
 			Destination: route.destination,
 			Via:         route.via,
 			NextHop:     route.nextHop,
@@ -420,15 +420,15 @@ func (r *fabricRuntime) routeAvailable(router *fabricRouter, route fabricRoute) 
 		return true
 	}
 	nextHop, exists := r.endpointForAddress(route.nextHop)
-	return exists && nextHop.device != router.device &&
+	return exists && nextHop.device != device &&
 		r.interfaceAvailable(nextHop.device, nextHop.interfaceName)
 }
 
-func (r *fabricRuntime) routesFor(router *fabricRouter) []fabricRoute {
+func (r *fabricRuntime) routesFor(device *config.Device) []fabricRoute {
 	if r.deviceStates == nil {
-		return router.routes
+		return r.routesByDevice[device]
 	}
-	state := r.deviceStates[router.device]
+	state := r.deviceStates[device]
 	if state == nil {
 		return nil
 	}
