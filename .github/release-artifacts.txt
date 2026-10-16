@@ -6,6 +6,7 @@
 # PR that changes what .goreleaser.yml publishes.
 
 niac-{version}-darwin-arm64.tar.gz
+niac-{version}-darwin-arm64.pkg
 niac-{version}-linux-amd64.tar.gz
 niac-{version}-linux-arm64.tar.gz
 niac-{version}-windows-amd64.zip
