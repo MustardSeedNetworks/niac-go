@@ -80,7 +80,11 @@ function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonPro
         // which is translated copy and changes without the navigation changing.
         data-testid={`nav-item-${item.path === '/' ? 'root' : item.path.replace(/^\//, '')}`}
         aria-current={active ? 'page' : undefined}
-        aria-label={item.label}
+        // The badge is visible text inside the control. An aria-label of only
+        // the route name drops it, which is label-content-name-mismatch. The
+        // collapsed rail hides both the label and the badge, so the same
+        // string is still a valid name there.
+        aria-label={item.badge ? `${item.label} ${item.badge}` : item.label}
         /* 44px minimum target, 11px radius, and a 3px left bar for the active
        route. The bar carries the state rather than a gradient fill: a filled
        row competes with status colour, and the rail is chrome. */
@@ -103,7 +107,13 @@ function NavItemButton({ item, active, collapsed, onNavigate }: NavItemButtonPro
         })}
         {!collapsed ? (
           <>
-            <span className="flex-1 text-left truncate">{item.label}</span>
+            <span className="flex-1 text-left truncate">
+              {item.label}
+              {/* A flex gap is not a word boundary. Without this space the
+                  badge's text is glued to the label ("DNSnew") and no longer
+                  matches an accessible name of "DNS new". */}
+              {item.badge ? ' ' : null}
+            </span>
             {item.badge ? (
               <span
                 className={`px-1.5 py-0.5 text-xs rounded font-medium ${badgeClass(item.badge)}`}

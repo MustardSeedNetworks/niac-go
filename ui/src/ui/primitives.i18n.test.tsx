@@ -66,7 +66,9 @@ describe('shared primitives in es', () => {
   it('describes the connection in Spanish', () => {
     render(<ConnectionStatus status="disconnected" />);
 
-    expect(screen.getByTestId('connection-status')).toHaveAccessibleName('Servidor inaccesible');
+    expect(screen.getByTestId('connection-status')).toHaveAccessibleName(
+      'Sin conexión, Servidor inaccesible',
+    );
     expect(screen.getByText('Sin conexión')).toBeInTheDocument();
   });
 

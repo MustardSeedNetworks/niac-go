@@ -48,12 +48,15 @@ export function CollapsibleSection({
               <ChevronRight className={`${iconSizes.md} text-text-muted`} />
             )}
             <h3 className="font-semibold text-text-primary">{title}</h3>
-            {required && (
-              <Tag colorScheme="red" className="text-xs">
-                {t('labels.required')}
-              </Tag>
-            )}
           </button>
+          {/* Outside the named button. The accessible name is
+              "{{title}} section, expanded", and a Required chip inside the
+              button is visible text that name does not contain. */}
+          {required && (
+            <Tag colorScheme="red" className="text-xs">
+              {t('labels.required')}
+            </Tag>
+          )}
           {onEnableChange && (
             <div className="ml-inline">
               <label className="relative inline-flex items-center cursor-pointer">

@@ -65,7 +65,7 @@ describe('RailControls scenario indicator', () => {
     );
     await waitFor(() =>
       expect(screen.getAllByTestId('connection-status')[0]).toHaveAccessibleName(
-        'Connected to backend',
+        'Online, Connected to backend',
       ),
     );
     expect(screen.getAllByTestId('connection-status')).toHaveLength(2);
