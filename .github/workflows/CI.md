@@ -1,11 +1,37 @@
 # CI/CD Pipeline
 
-The CI pipeline runs on every push and PR. **All checks must pass.**
+The CI pipeline runs on every pull request and merge-queue group. A push to main
+runs `ci-smoke.yml` instead of this suite. **All checks must pass.**
 
 Every job except `changes` is gated on the `changes` job's path filters, so a
 docs-only PR does not pay for a Go build. `ci-complete` is the single required
 status check — it depends on every other job, so adding a job to `ci.yml`
 without adding it to `ci-complete`'s `needs:` list makes that job advisory.
+
+`changes`, `backend`, `race`, `frontend`, `storybook`, and `e2e` call the
+reusable workflows in `MustardSeedNetworks/.github`, pinned to commit
+`e092081a97245d29978e229be7425179cc1dcde1`. Caller jobs grant the permissions
+those workflows declare (`id-token: write` for path filters, `actions: read`
+to download an artifact, `actions: write` for the Playwright reports). That
+commit pins `apt-install` and `flake-budget` to the called repository, so this
+repo does not vendor them. Jobs that already call `apt-install` keep the remote
+`v1.13.0` ref.
+
+`ci-complete` stays in this file. The shared aggregator would publish the
+check as `ci-complete / CI Complete`, and branch protection plus `release.yml`
+require the plain name `CI Complete`. The local job still runs on
+`if: ${{ !cancelled() }}` and fails unless every needed job succeeded or was
+skipped. macOS and Windows builds are inside the `backend` caller, so they are
+not separate `needs` entries.
+
+These jobs stay in this file because the shared workflows have no input for
+them: `build-ui` (the shared frontend workflow does not produce the production
+bundle), `lint-windows` (`only-new-issues`, pull requests only), the raw-socket
+boundary, security scanning, quality, release notes, workflow lint, i18n, docs,
+the release-shaped build, the Docker image check, and `ci-complete`.
+`phone-width`, `semgrep`, `dependency-review`, `ci-conformance`, and
+`codeql-alert-gate` were already callers of other shared workflows and are
+unchanged.
 
 ## GitHub Actions Workflows
 
@@ -13,14 +39,14 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 
 | Job | Description | Checks |
 | ------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `changes` | Path filtering | Decides which downstream jobs run |
-| `backend` | Go checks | lint, vet, staticcheck, fmt, tests, coverage floor |
-| `backend-darwin` | Go checks (macOS) | Builds, vets and tests on `macos-latest`; the only compiler for `*_darwin.go`. Merge queue and main only |
-| `backend-windows` | Go checks (Windows) | Builds, vets and starts the API listener on `windows-latest`. Merge queue and main only |
-| `race` | Go race detector | `go test -race`, split from `backend` so it fails distinctly |
-| `capture-rawsocket` | Raw-socket boundary (Linux) | Runs the `rawsocket`-tagged capture tests, which need CAP_NET_RAW |
-| `build-ui` | Build UI (shared artifact) | Builds the frontend once; `backend` and `race` consume the artifact |
-| `frontend` | React/TS checks | tsc typecheck, Biome, Vite build, Vitest, Storybook build |
+| `changes` | Path filtering | Shared `ci-changes.yml`. Decides which downstream jobs run |
+| `backend` | Go checks | Shared `ci-backend.yml`: Linux gates, plus macOS and Windows off pull requests |
+| `lint-windows` | Windows lint | Local. `only-new-issues` on pull requests; the shared job cannot express that |
+| `race` | Go race detector | Shared `ci-race.yml`. `go test -race` |
+| `capture-rawsocket` | Raw-socket boundary (Linux) | Local. `rawsocket`-tagged capture tests, which need CAP_NET_RAW |
+| `build-ui` | Build UI (shared artifact) | Local. Builds the frontend once; `build` and `e2e` consume the artifact |
+| `frontend` | React/TS checks | Shared `ci-frontend.yml`: tsc, Biome, Vitest coverage, token discipline, Storybook build |
+| `storybook` | Storybook | Shared `ci-storybook.yml`: interactions, accessibility, injected-defect contract |
 | `security` | Security scans | govulncheck (hard gate), gosec, npm audit, gitleaks, Trivy |
 | `semgrep` | SAST | Semgrep rules |
 | `ci-conformance` | Fleet CI conformance | Reusable workflow from `MustardSeedNetworks/.github` |
@@ -29,9 +55,9 @@ without adding it to `ci-complete`'s `needs:` list makes that job advisory.
 | `i18n` | Internationalization | Catalog completeness, no translated standard terms |
 | `docs` | Documentation | Markdown lint (blocking, scoped to changed files) |
 | `build` | Build verification | Multi-arch binaries with full ldflags, UIBuildHash verified |
-| `e2e` | Browser tests | Playwright: chromium and webkit (fleet policy, `E2E_CONVENTIONS.md`), on an Ubuntu 26.04 container until Playwright 1.64 (#2141) |
+| `e2e` | Browser tests | Shared `ci-e2e.yml`: sharded chromium and webkit, plus `@smoke` and the auth, history, query, permissions, and unsaved suites, in the Playwright 1.64 image |
 | `codeql-alert-gate` | CodeQL alert gate | Fails on open High/Critical CodeQL alerts; reusable from `.github` |
-| `ci-complete` | Aggregate gate | The required status check |
+| `ci-complete` | Aggregate gate | Local job named `CI Complete`. The required status check |
 
 ### Other Workflows
 
@@ -58,7 +84,7 @@ succeeds: every binary embeds `Version`, `Commit`, `BuildTime` and
 `UIBuildHash`. The "Verify UIBuildHash embedded" step (added in #1251)
 recomputes the expected 32-character md5 hash from `internal/api/ui/`,
 confirms `internal/api/ui/` is not empty (the frontend-dist artifact from the
-`frontend` job actually landed), and greps the built binary's strings for
+`build-ui` job actually landed), and greps the built binary's strings for
 that hash — catching a build that ships without the `-X ...UIBuildHash=...`
 ldflag actually taking effect. A raw `go build` in CI would otherwise produce
 a binary whose `/__version` reports `"unknown"`, the silent failure this
