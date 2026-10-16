@@ -48,7 +48,8 @@ type pendingNotification struct {
 	originInterface, originNetwork string
 	egressDevice                   *config.Device
 	// ttl is the origin device's IPv4 TTL, kept because a routed
-	// notification forgets its origin before it is emitted.
+	// notification forgets its origin before it is emitted. Fabric egress
+	// decrements it per router crossed.
 	ttl                         uint8
 	vlan                        int
 	source, destination         netip.Addr
@@ -496,12 +497,8 @@ func (s *stackDatagramSender) emitNotification(
 	var network serializableNetworkLayer
 	etherType := layers.EthernetTypeIPv4
 	if source.Is4() {
-		ttl := notification.ttl
-		if notification.routed {
-			ttl--
-		}
 		network = &layers.IPv4{
-			Version: ipIPv4Version, IHL: ipIPv4IHL, TTL: ttl, Protocol: layers.IPProtocolUDP,
+			Version: ipIPv4Version, IHL: ipIPv4IHL, TTL: notification.ttl, Protocol: layers.IPProtocolUDP,
 			SrcIP: source.AsSlice(), DstIP: destination.AsSlice(),
 		}
 	} else {
