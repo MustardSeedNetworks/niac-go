@@ -39,6 +39,7 @@ type TCPHandler struct {
 	modbus *serviceStreams
 	enip   *serviceStreams
 	ftp    *serviceStreams
+	iperf3 *iperf3Server
 
 	// hl7Messages numbers the ACKs, each of which needs its own control ID.
 	hl7Messages atomic.Uint64
@@ -48,7 +49,7 @@ type TCPHandler struct {
 func NewTCPHandler(stack *Stack) *TCPHandler {
 	handler := &TCPHandler{
 		stack: stack, dicom: newServiceStreams(), hl7: newServiceStreams(), modbus: newServiceStreams(),
-		enip: newServiceStreams(), ftp: newServiceStreams(),
+		enip: newServiceStreams(), ftp: newServiceStreams(), iperf3: newIPerf3Server(),
 	}
 	handler.ssh = newSSHTCPHandler(stack)
 	return handler
@@ -170,7 +171,7 @@ func (h *TCPHandler) routeToHandler(
 		h.handleHealthCheckPort(pkt, ipLayer, tcp, devices, TCPPortSMB, isSYNOnly,
 			func() { h.stack.healthCheckHandler.HandleSMBRequest(pkt, ipLayer, tcp, devices) })
 	case TCPPortIPerf3:
-		h.stack.iperf3Handler.HandleIPerf3Request(pkt, ipLayer, tcp, devices)
+		h.handleIPerf3(pkt, ipLayer, tcp, devices)
 	default:
 		h.handleUnlistedPort(pkt, ipLayer, tcp, devices)
 	}

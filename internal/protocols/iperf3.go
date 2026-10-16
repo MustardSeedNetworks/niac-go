@@ -3,748 +3,548 @@ package protocols
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
-	"strings"
+	"sync"
 	"time"
 
-	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
-	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
-// iPerf3 default port.
+// TCPPortIPerf3 is the port an iperf3 server listens on.
+const TCPPortIPerf3 = 5201
+
+// Control-channel states, one byte each (iperf_api.h). SERVER_ERROR is -2
+// and is followed by the iperf3 error number and errno, four bytes each.
 const (
-	TCPPortIPerf3 = 5201
+	iperf3TestStart       byte = 1
+	iperf3TestRunning     byte = 2
+	iperf3TestEnd         byte = 4
+	iperf3ParamExchange   byte = 9
+	iperf3CreateStreams   byte = 10
+	iperf3ClientTerminate byte = 12
+	iperf3ExchangeResults byte = 13
+	iperf3DisplayResults  byte = 14
+	iperf3Done            byte = 16
+	iperf3ServerError     byte = 0xfe
 )
 
-// iperf3Disabled is the status string returned when iPerf3 is not enabled for a device.
-const iperf3Disabled = "disabled"
+// iperf3ErrUnimplemented is IEUNIMP, which the client reports as an option
+// that is not implemented.
+const iperf3ErrUnimplemented = 13
 
-// iPerf3 protocol states.
 const (
-	iperf3StateInit       = 0
-	iperf3StateParamExch  = 1
-	iperf3StateCreateFlow = 2
-	iperf3StateTestStart  = 3
-	iperf3StateTestRun    = 4
-	iperf3StateTestEnd    = 5
-	iperf3StateExchResult = 6
-	iperf3StateDisplayRes = 7
-	iperf3StateIPerf3Done = 8
-	iperf3StateAccessDeny = -1
-	iperf3StateServerErr  = -2
+	// iperf3CookieLen is the cookie that opens every connection of a test:
+	// 36 characters and a NUL. The control connection is the first to send
+	// it; the data streams send the same one.
+	iperf3CookieLen = 37
+	// iperf3MaxMessage bounds a length-prefixed JSON message: real
+	// parameters and results are a few hundred bytes.
+	iperf3MaxMessage = 64 << 10
+	// iperf3MaxStreams is iperf3's own MAX_STREAMS.
+	iperf3MaxStreams = 128
+	// iperf3MaxConnections bounds the connections held at once.
+	iperf3MaxConnections = 256
+	// iperf3IdleTimeout forgets a test, or a connection that never joined
+	// one, after this long without a segment.
+	iperf3IdleTimeout = time.Minute
+	// iperf3MSS is the segment size the SYN-ACK advertises, the IPv4 MSS of
+	// a 1500-byte Ethernet MTU. Without it the client falls back to 536.
+	iperf3MSS = 1460
+	// iperf3LengthPrefix is the big-endian length before a JSON message.
+	iperf3LengthPrefix = 4
+	// tcpOptionMSSLen is the length of an MSS option: kind, length, value.
+	tcpOptionMSSLen = 4
 )
 
-// iPerf3 message types (state cookies sent to client).
-const (
-	iperf3MsgTestStart    = 1
-	iperf3MsgTestRunning  = 2
-	iperf3MsgResultOK     = 3
-	iperf3MsgResultBad    = 4
-	iperf3MsgAccessDenied = -1
-	iperf3MsgServerBusy   = -2
-)
+// iperf3Server serves iperf3 forward TCP tests: the client sends, the
+// simulated server receives and counts. It speaks the control channel and
+// acknowledges the data streams; it never sends test data, so a reverse,
+// bidirectional or UDP test is refused with SERVER_ERROR.
+type iperf3Server struct {
+	mu    sync.Mutex
+	conns map[streamKey]*iperf3Conn
+	tests map[string]*iperf3Test // by cookie
+}
 
-// iPerf3 protocol constants.
-const (
-	iperf3SessionCleanupMin = 5          // Session cleanup interval in minutes
-	iperf3RetransmitMult    = 100        // Retransmit percentage multiplier
-	iperf3RTTMicrosPerMilli = 1000       // Microseconds per millisecond for RTT
-	iperf3MinRTTPercent     = 800        // Min RTT as percentage (80% = 800/1000)
-	iperf3MeanRTTPercent    = 900        // Mean RTT as percentage (90% = 900/1000)
-	iperf3SenderRetransMult = 10         // Sender retransmit factor
-	iperf3LengthPrefixSize  = 4          // Length prefix size (uint32)
-	iperf3MaxUint32         = 0xFFFFFFFF // Max uint32 value
-	iperf3MinJSONCheckSize  = 4          // Minimum size to check for JSON start
-	iperf3CookieSize        = 32         // iPerf3 cookie size in bytes
-	iperf3BitsPerMbps       = 1_000_000  // Bits per Mbps for bandwidth conversion
-	iperf3VarianceRange     = 0.1        // Bandwidth variance range (±5%)
-)
+type iperf3Conn struct {
+	clientNext uint32 // next in-order byte from the client
+	serverNext uint32 // sequence number of our next byte
+	pending    []byte // control bytes not yet consumed
+	test       *iperf3Test
+	data       bool
+	received   uint64 // data-stream bytes after the cookie
+	lastSeen   time.Time
+}
 
-// iPerf3 default configuration values.
-const (
-	iperf3DefaultMaxBandwidth  = 1000.0 // 1 Gbps default max bandwidth
-	iperf3DefaultLatencyMs     = 1.0    // 1ms default latency
-	iperf3DefaultJitterMs      = 0.1    // 0.1ms default jitter
-	iperf3DefaultUploadMbps    = 100.0  // 100 Mbps upload
-	iperf3DefaultDownloadMbps  = 100.0  // 100 Mbps download
-	iperf3BandwidthThreshold   = 0.95   // 95% of configured bandwidth
-	iperf3LowBandwidthUpload   = 2.5    // Low bandwidth upload range max
-	iperf3LowBandwidthDownload = 1.5    // Low bandwidth download range max
-	iperf3MedBandwidthUpload   = 0.5    // Medium bandwidth upload range min
-	iperf3MedBandwidthJitter   = 3.0    // Medium bandwidth jitter
-	iperf3HighBandwidthLatency = 2.0    // High bandwidth latency
-	iperf3HighBandwidthJitter  = 0.5    // High bandwidth jitter
-)
+type iperf3Test struct {
+	control  streamKey
+	state    byte // the last state sent on the control connection
+	streams  int
+	data     []*iperf3Conn
+	dataKeys []streamKey
+	started  time.Time
+	ended    time.Time
+	lastSeen time.Time
+}
 
-// IP protocol constants for iPerf3.
-const (
-	iperf3IPv4Version   = 4     // IPv4 version field
-	iperf3IPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
-	iperf3TCPWindowSize = 65535 // Default TCP window size
-	iperf3TCPInitialSeq = 1000  // Initial TCP sequence number
-)
+// iperf3Params are the parameters the server acts on.
+type iperf3Params struct {
+	UDP           bool `json:"udp"`
+	Reverse       bool `json:"reverse"`
+	Bidirectional bool `json:"bidirectional"`
+	Parallel      int  `json:"parallel"`
+}
 
-// DefaultIPerf3Config returns default iPerf3 emulation configuration.
-func DefaultIPerf3Config() *config.IPerf3Config {
-	return &config.IPerf3Config{
-		Enabled:           false,
-		Port:              TCPPortIPerf3,
-		MaxBandwidthMbps:  iperf3DefaultMaxBandwidth, // 1 Gbps
-		TypicalLatencyMs:  iperf3DefaultLatencyMs,    // 1ms
-		JitterMs:          iperf3DefaultJitterMs,     // 0.1ms
-		PacketLossPercent: 0.0,                       // No loss
-		UploadMbps:        iperf3DefaultUploadMbps,   // 100 Mbps
-		DownloadMbps:      iperf3DefaultDownloadMbps, // 100 Mbps
+// iperf3Results is the results message, with every field the client
+// requires of it.
+type iperf3Results struct {
+	CPUUtilTotal         float64              `json:"cpu_util_total"`
+	CPUUtilUser          float64              `json:"cpu_util_user"`
+	CPUUtilSystem        float64              `json:"cpu_util_system"`
+	SenderHasRetransmits int                  `json:"sender_has_retransmits"`
+	CongestionUsed       string               `json:"congestion_used,omitempty"`
+	Streams              []iperf3StreamResult `json:"streams"`
+}
+
+type iperf3StreamResult struct {
+	ID             int     `json:"id"`
+	Bytes          uint64  `json:"bytes"`
+	Retransmits    int     `json:"retransmits"`
+	Jitter         float64 `json:"jitter"`
+	Errors         int     `json:"errors"`
+	OmittedErrors  int     `json:"omitted_errors"`
+	Packets        int     `json:"packets"`
+	OmittedPackets int     `json:"omitted_packets"`
+	StartTime      float64 `json:"start_time"`
+	EndTime        float64 `json:"end_time"`
+}
+
+// iperf3Segment is one segment to send once the server's lock is released.
+type iperf3Segment struct {
+	tcp     *layers.TCP
+	payload []byte
+}
+
+func newIPerf3Server() *iperf3Server {
+	return &iperf3Server{conns: make(map[streamKey]*iperf3Conn), tests: make(map[string]*iperf3Test)}
+}
+
+// handleIPerf3 serves port 5201 on a device with iperf3 enabled and resets
+// a SYN to any other.
+func (h *TCPHandler) handleIPerf3(pkt *Packet, ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
+	device := h.serviceDevice(devices, ipLayer.DstIP, func(device *config.Device) bool {
+		return device.IPerf3 != nil && device.IPerf3.Enabled
+	})
+	if device == nil {
+		if tcp.SYN && !tcp.ACK {
+			h.sendRST(pkt, ipLayer, tcp, devices)
+		}
+		return
 	}
-}
-
-// IPerf3Session tracks state for an active iPerf3 test session.
-type IPerf3Session struct {
-	ClientIP     string
-	ClientPort   uint16
-	State        int
-	StartTime    time.Time
-	TestParams   *iperf3TestParams
-	BytesSent    uint64
-	BytesRecv    uint64
-	Config       *config.IPerf3Config
-	LastActivity time.Time
-}
-
-// iperf3TestParams represents the test parameters exchanged in JSON.
-type iperf3TestParams struct {
-	TCP        bool   `json:"tcp,omitempty"`
-	UDP        bool   `json:"udp,omitempty"`
-	Omit       int    `json:"omit,omitempty"`
-	Time       int    `json:"time,omitempty"`
-	Parallel   int    `json:"parallel,omitempty"`
-	Length     int    `json:"len,omitempty"`
-	Bandwidth  int64  `json:"bandwidth,omitempty"`
-	Pacing     int64  `json:"pacing_timer,omitempty"`
-	Client     string `json:"client,omitempty"`
-	Reverse    bool   `json:"reverse,omitempty"`
-	Bidirect   bool   `json:"bidirectional,omitempty"`
-	Window     int    `json:"window,omitempty"`
-	MSS        int    `json:"MSS,omitempty"`
-	NoDelay    bool   `json:"nodelay,omitempty"`
-	Version    string `json:"version,omitempty"`
-	BlockCount int64  `json:"blockcount,omitempty"`
-	TOS        int    `json:"TOS,omitempty"`
-	FlowLabel  int    `json:"flowlabel,omitempty"`
-	Title      string `json:"title,omitempty"`
-	Extra      string `json:"extra_data,omitempty"`
-	Cookie     string `json:"cookie,omitempty"`
-	NumStreams int    `json:"num_streams,omitempty"`
-}
-
-// iperf3ServerResult represents the results sent back to client.
-type iperf3ServerResult struct {
-	CPU         *iperf3CPUUtil `json:"cpu_util_total,omitempty"`
-	SenderTCP   *iperf3TCPInfo `json:"sender_tcp_congestion,omitempty"`
-	ReceiverTCP *iperf3TCPInfo `json:"receiver_tcp_congestion,omitempty"`
-	Streams     []iperf3Stream `json:"streams,omitempty"`
-	SumSent     *iperf3Sum     `json:"sum_sent,omitempty"`
-	SumReceived *iperf3Sum     `json:"sum_received,omitempty"`
-}
-
-type iperf3CPUUtil struct {
-	HostTotal    float64 `json:"host_total"`
-	HostUser     float64 `json:"host_user"`
-	HostSystem   float64 `json:"host_system"`
-	RemoteTotal  float64 `json:"remote_total"`
-	RemoteUser   float64 `json:"remote_user"`
-	RemoteSystem float64 `json:"remote_system"`
-}
-
-type iperf3TCPInfo struct {
-	Congestion string `json:"congestion"`
-}
-
-type iperf3Stream struct {
-	ID          int     `json:"id"`
-	Bytes       uint64  `json:"bytes"`
-	BPS         float64 `json:"bits_per_second"`
-	Retransmits int     `json:"retransmits,omitempty"`
-	MaxSndCwnd  int     `json:"max_snd_cwnd,omitempty"`
-	MaxSndWnd   int     `json:"max_snd_wnd,omitempty"`
-	MaxRtt      int     `json:"max_rtt,omitempty"`
-	MinRtt      int     `json:"min_rtt,omitempty"`
-	MeanRtt     int     `json:"mean_rtt,omitempty"`
-	JitterMs    float64 `json:"jitter_ms,omitempty"`
-	LostPackets int     `json:"lost_packets,omitempty"`
-	Packets     int     `json:"packets,omitempty"`
-	LostPercent float64 `json:"lost_percent,omitempty"`
-	Sender      bool    `json:"sender"`
-}
-
-type iperf3Sum struct {
-	Start       float64 `json:"start"`
-	End         float64 `json:"end"`
-	Seconds     float64 `json:"seconds"`
-	Bytes       uint64  `json:"bytes"`
-	BPS         float64 `json:"bits_per_second"`
-	Retransmits int     `json:"retransmits,omitempty"`
-	Sender      bool    `json:"sender"`
-}
-
-// IPerf3Handler handles iPerf3 protocol emulation.
-type IPerf3Handler struct {
-	stack       *Stack
-	sessions    map[string]*IPerf3Session // keyed by "ip:port"
-	lastCleanup time.Time                 // throttles the stale-session sweep
-}
-
-// NewIPerf3Handler creates a new iPerf3 handler.
-func NewIPerf3Handler(stack *Stack) *IPerf3Handler {
-	return &IPerf3Handler{
-		stack:    stack,
-		sessions: make(map[string]*IPerf3Session),
+	segments := h.iperf3.receive(newStreamKey(ipLayer, tcp), tcp, iperf3SegmentLength(ipLayer, tcp), time.Now())
+	identity, ok := h.stack.replyEthernet(pkt, device)
+	if !ok {
+		return
 	}
-}
-
-// getOrCreateSession gets or creates an iPerf3 session.
-func (h *IPerf3Handler) getOrCreateSession(
-	clientIP string,
-	clientPort uint16,
-	cfg *config.IPerf3Config,
-) *IPerf3Session {
-	key := fmt.Sprintf("%s:%d", clientIP, clientPort)
-
-	if session, exists := h.sessions[key]; exists {
-		session.LastActivity = time.Now()
-
-		return session
-	}
-
-	session := &IPerf3Session{
-		ClientIP:     clientIP,
-		ClientPort:   clientPort,
-		State:        iperf3StateInit,
-		StartTime:    time.Now(),
-		Config:       cfg,
-		LastActivity: time.Now(),
-	}
-	h.sessions[key] = session
-
-	return session
-}
-
-// cleanupStaleSessions removes sessions that haven't had activity.
-func (h *IPerf3Handler) cleanupStaleSessions(maxAge time.Duration) {
-	now := time.Now()
-	for key, session := range h.sessions {
-		if now.Sub(session.LastActivity) > maxAge {
-			delete(h.sessions, key)
+	for _, segment := range segments {
+		if !h.sendStatelessFrame(pkt, ipLayer, segment.tcp, segment.payload, device, identity, "iPerf3") {
+			return
 		}
 	}
 }
 
-// HandleIPerf3Request handles incoming iPerf3 traffic.
-func (h *IPerf3Handler) HandleIPerf3Request(
-	pkt *Packet,
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-) {
-	debugLevel := h.stack.GetDebugLevel()
+// iperf3SegmentLength is how much data a segment carries by its IP header.
+// The capture keeps 1,600 bytes of a frame, and a GRO or TSO superframe
+// handed up a veth is longer: a data stream is a sink, so what arrived is
+// what the header says, not what was kept.
+func iperf3SegmentLength(ipLayer *layers.IPv4, tcp *layers.TCP) int {
+	length := int(ipLayer.Length) - int(ipLayer.IHL)*ipv4IHLBytes - int(tcp.DataOffset)*ipv4IHLBytes
 
-	// Get iPerf3 config from device (use defaults if not configured)
-	var cfg *config.IPerf3Config
-	if len(devices) > 0 && devices[0].IPerf3 != nil {
-		cfg = devices[0].IPerf3
-	} else {
-		cfg = DefaultIPerf3Config()
-		cfg.Enabled = true // Enable by default for testing
-	}
+	return max(length, len(tcp.Payload))
+}
 
-	if !cfg.Enabled {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3 disabled for device, ignoring request")
+// receive takes one client segment carrying length bytes and returns what
+// the server sends in answer, which may be on another connection of the
+// same test.
+func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, length int, now time.Time) []iperf3Segment {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	switch conn := s.conns[key]; {
+	case tcp.SYN && !tcp.ACK:
+		return s.open(key, tcp, now)
+	case conn == nil:
+		// A connection the server does not know: closed, forgotten, or from
+		// before a restart. Only what would expect an answer is reset.
+		if tcp.RST || (length == 0 && !tcp.FIN) {
+			return nil
 		}
-
-		return
-	}
-
-	// Handle TCP SYN - initial connection
-	if tcpLayer.SYN && !tcpLayer.ACK {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: New connection from %s:%d", ipLayer.SrcIP, tcpLayer.SrcPort)
-		}
-
-		h.sendSYNACK(ipLayer, tcpLayer, devices, pkt.VLAN)
-		h.getOrCreateSession(ipLayer.SrcIP.String(), uint16(tcpLayer.SrcPort), cfg)
-
-		return
-	}
-
-	// Handle data
-	if len(tcpLayer.Payload) > 0 {
-		session := h.getOrCreateSession(ipLayer.SrcIP.String(), uint16(tcpLayer.SrcPort), cfg)
-		h.handleIPerf3Data(pkt, ipLayer, tcpLayer, devices, session)
-	}
-
-	// Periodic cleanup — throttled so an iperf3 test (thousands of data-phase
-	// packets) doesn't rescan the whole session map on every packet.
-	maxAge := iperf3SessionCleanupMin * time.Minute
-	if now := time.Now(); now.Sub(h.lastCleanup) >= maxAge {
-		h.lastCleanup = now
-		h.cleanupStaleSessions(maxAge)
+		return []iperf3Segment{{tcp: &layers.TCP{
+			SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
+			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(length),
+		}}}
+	case tcp.RST:
+		s.drop(key, conn)
+		return nil
+	default:
+		return s.segment(key, conn, tcp, length, now)
 	}
 }
 
-// handleIPerf3Data processes iPerf3 protocol messages.
-func (h *IPerf3Handler) handleIPerf3Data(
-	pkt *Packet,
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-	session *IPerf3Session,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-	payload := tcpLayer.Payload
-
-	if debugLevel >= DebugLevelVerbose {
-		logging.Debugf("iPerf3: Received %d bytes from %s:%d in state %d",
-			len(payload), ipLayer.SrcIP, tcpLayer.SrcPort, session.State)
+// open answers a SYN, replacing any earlier connection on the same ports.
+func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []iperf3Segment {
+	s.expire(now)
+	if old := s.conns[key]; old != nil {
+		s.drop(key, old)
 	}
-
-	// iPerf3 control channel uses a simple protocol:
-	// - First 4 bytes: message length (big endian)
-	// - Followed by JSON payload
-	// - Or single byte state codes
-
-	switch session.State {
-	case iperf3StateInit:
-		// Expecting cookie (32 bytes) or parameters
-		if len(payload) >= iperf3MinJSONCheckSize {
-			// Check if this looks like JSON parameters
-			if payload[0] == '{' || (len(payload) > iperf3MinJSONCheckSize && payload[iperf3MinJSONCheckSize] == '{') {
-				h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload, pkt.VLAN)
-			} else if len(payload) >= iperf3CookieSize {
-				// Cookie received, acknowledge and move to param exchange
-				session.State = iperf3StateParamExch
-
-				h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, pkt.VLAN)
-			}
-		}
-
-	case iperf3StateParamExch:
-		// Parse test parameters JSON
-		h.handleParamExchange(ipLayer, tcpLayer, devices, session, payload, pkt.VLAN)
-
-	case iperf3StateCreateFlow:
-		// Data streams being created
-		session.State = iperf3StateTestStart
-
-		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestRunning, pkt.VLAN)
-
-	case iperf3StateTestStart, iperf3StateTestRun:
-		// Test is running - count bytes received
-		session.BytesRecv += uint64(len(payload))
-		session.State = iperf3StateTestRun
-
-		// If test duration elapsed, move to results
-		if session.TestParams != nil && session.TestParams.Time > 0 {
-			elapsed := time.Since(session.StartTime).Seconds()
-			if elapsed >= float64(session.TestParams.Time) {
-				session.State = iperf3StateExchResult
-				h.sendResults(ipLayer, tcpLayer, devices, session, pkt.VLAN)
-			}
-		}
-
-	case iperf3StateExchResult:
-		// Exchange results phase
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: Test complete, sending results")
-		}
-
-		h.sendResults(ipLayer, tcpLayer, devices, session, pkt.VLAN)
-		session.State = iperf3StateIPerf3Done
-
-	case iperf3StateIPerf3Done:
-		// Test complete, clean up session
-		key := fmt.Sprintf("%s:%d", session.ClientIP, session.ClientPort)
-		delete(h.sessions, key)
+	if len(s.conns) >= iperf3MaxConnections {
+		return []iperf3Segment{{tcp: &layers.TCP{
+			SrcPort: layers.TCPPort(
+				key.server.Port(),
+			),
+			DstPort: layers.TCPPort(key.client.Port()),
+			RST:     true,
+			ACK:     true,
+			Ack:     tcp.Seq + 1,
+		}}}
 	}
-}
+	s.conns[key] = &iperf3Conn{clientNext: tcp.Seq + 1, serverNext: tcpInitialSeq + 1, lastSeen: now}
 
-// handleParamExchange parses and acknowledges test parameters.
-func (h *IPerf3Handler) handleParamExchange(
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-	session *IPerf3Session,
-	payload []byte,
-	vlan int,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	// Try to parse as JSON
-	var jsonData []byte
-
-	// Check for length prefix
-	if len(payload) > 4 && payload[0] != '{' {
-		msgLen := binary.BigEndian.Uint32(payload[:4])
-		if int(msgLen) <= len(payload)-4 {
-			jsonData = payload[4 : 4+msgLen]
-		}
-	} else {
-		// Try without length prefix
-		jsonData = payload
-	}
-
-	// Handle single-byte state messages
-	if len(payload) == 1 && safeconv.Int8FromByte(payload[0]) == iperf3MsgTestStart {
-		session.State = iperf3StateTestStart
-		session.StartTime = time.Now()
-
-		return
-	}
-
-	var params iperf3TestParams
-	err := json.Unmarshal(jsonData, &params)
-	if err != nil {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: Failed to parse params: %v (data: %s)", err, string(jsonData))
-		}
-		// Send acknowledgment anyway
-		h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, vlan)
-
-		session.State = iperf3StateCreateFlow
-
-		return
-	}
-
-	session.TestParams = &params
-
-	if params.Time == 0 {
-		params.Time = 10 // Default 10 second test
-	}
-
-	if debugLevel >= DebugLevelInfo {
-		logging.Debugf("iPerf3: Test params - Duration: %ds, Parallel: %d, TCP: %v, Reverse: %v",
-			params.Time, params.Parallel, params.TCP, params.Reverse)
-	}
-
-	session.State = iperf3StateCreateFlow
-	session.StartTime = time.Now()
-
-	// Send test start acknowledgment
-	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgTestStart, vlan)
-}
-
-// sendStateCode sends a single-byte state code to the client.
-func (h *IPerf3Handler) sendStateCode(
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-	stateCode int8,
-	vlan int,
-) {
-	response := []byte{safeconv.ByteFromInt8(stateCode)}
-	h.sendTCPResponse(ipLayer, tcpLayer, response, devices, vlan)
-}
-
-// sendResults sends simulated test results to the client.
-func (h *IPerf3Handler) sendResults(
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	devices []*config.Device,
-	session *IPerf3Session,
-	vlan int,
-) {
-	cfg := session.Config
-
-	// Calculate simulated results based on device config
-	duration := time.Since(session.StartTime).Seconds()
-	duration = max(duration, 1)
-
-	// Use configured bandwidth or calculate from bytes received
-	downloadBps := cfg.DownloadMbps * iperf3BitsPerMbps
-	uploadBps := cfg.UploadMbps * iperf3BitsPerMbps
-
-	// Add some realistic variance (±5%)
-	variance := iperf3BandwidthThreshold + getSimRand().Float64()*iperf3VarianceRange
-	downloadBps *= variance
-	uploadBps *= variance
-
-	downloadBytes := uint64(downloadBps / 8 * duration)
-	uploadBytes := uint64(uploadBps / 8 * duration)
-
-	// Build result JSON
-	result := &iperf3ServerResult{
-		CPU: &iperf3CPUUtil{
-			HostTotal:    iperf3LowBandwidthUpload + getSimRand().Float64()*iperf3HighBandwidthLatency,
-			HostUser:     iperf3LowBandwidthDownload + getSimRand().Float64()*iperf3DefaultLatencyMs,
-			HostSystem:   iperf3MedBandwidthUpload + getSimRand().Float64()*iperf3HighBandwidthJitter,
-			RemoteTotal:  iperf3MedBandwidthJitter + getSimRand().Float64()*iperf3HighBandwidthLatency,
-			RemoteUser:   iperf3HighBandwidthLatency + getSimRand().Float64()*iperf3DefaultLatencyMs,
-			RemoteSystem: iperf3HighBandwidthJitter + getSimRand().Float64()*iperf3HighBandwidthJitter,
-		},
-		SenderTCP: &iperf3TCPInfo{
-			Congestion: "cubic",
-		},
-		ReceiverTCP: &iperf3TCPInfo{
-			Congestion: "cubic",
-		},
-		Streams: []iperf3Stream{
-			{
-				ID:          1,
-				Bytes:       downloadBytes,
-				BPS:         downloadBps,
-				Retransmits: int(cfg.PacketLossPercent * iperf3RetransmitMult),
-				MaxRtt:      int(cfg.TypicalLatencyMs * iperf3RTTMicrosPerMilli),
-				MinRtt:      int(cfg.TypicalLatencyMs * iperf3MinRTTPercent),
-				MeanRtt:     int(cfg.TypicalLatencyMs * iperf3MeanRTTPercent),
-				Sender:      false,
-			},
-		},
-		SumReceived: &iperf3Sum{
-			Start:   0,
-			End:     duration,
-			Seconds: duration,
-			Bytes:   downloadBytes,
-			BPS:     downloadBps,
-			Sender:  false,
-		},
-		SumSent: &iperf3Sum{
-			Start:       0,
-			End:         duration,
-			Seconds:     duration,
-			Bytes:       uploadBytes,
-			BPS:         uploadBps,
-			Retransmits: int(cfg.PacketLossPercent * iperf3SenderRetransMult),
-			Sender:      true,
-		},
-	}
-
-	jsonData, err := json.Marshal(result)
-	if err != nil {
-		return
-	}
-
-	// Bound the response payload so the length prefix can't be coerced into
-	// an oversized allocation; iperf3 results are small in practice.
-	const maxIperf3JSONLen = 1 << 20 // 1 MiB
-	if len(jsonData) > maxIperf3JSONLen {
-		return
-	}
-
-	// Send with length prefix
-	// Safe conversion: JSON data length is bounded by maxIperf3JSONLen above.
-	response := make([]byte, iperf3LengthPrefixSize+len(jsonData))
-	binary.BigEndian.PutUint32(
-		response[:4],
-		safeconv.Uint32(len(jsonData)),
-	)
-	copy(response[4:], jsonData)
-
-	h.sendTCPResponse(ipLayer, tcpLayer, response, devices, vlan)
-
-	// Send result OK state
-	h.sendStateCode(ipLayer, tcpLayer, devices, iperf3MsgResultOK, vlan)
-}
-
-// sendSYNACK sends a TCP SYN-ACK response.
-func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, devices []*config.Device, vlan int) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(devices) == 0 {
-		return
-	}
-
-	device := devices[0]
-	if len(device.MACAddress) == 0 {
-		return
-	}
-
-	// Get source MAC (scoped to the request's VLAN segment)
-	srcDevices := h.stack.devicesForStateIPv4(vlan, ipLayer.SrcIP)
-
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
-	} else {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: Cannot send SYN-ACK: no MAC for %s", ipLayer.SrcIP)
-		}
-
-		return
-	}
-
-	// Build Ethernet header
-	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-
-	// Build IP header
-	ipReply := &layers.IPv4{
-		Version:  iperf3IPv4Version,
-		IHL:      iperf3IPv4IHL,
-		TTL:      device.IPv4TTL(),
-		Protocol: layers.IPProtocolTCP,
-		SrcIP:    ipLayer.DstIP,
-		DstIP:    ipLayer.SrcIP,
-	}
-
-	// Build TCP SYN-ACK
-	tcpReply := &layers.TCP{
-		SrcPort: tcpLayer.DstPort,
-		DstPort: tcpLayer.SrcPort,
-		Seq:     iperf3TCPInitialSeq,
-		Ack:     tcpLayer.Seq + 1,
+	return []iperf3Segment{{tcp: &layers.TCP{
+		SrcPort: layers.TCPPort(
+			key.server.Port(),
+		),
+		DstPort: layers.TCPPort(key.client.Port()),
+		Seq:     tcpInitialSeq,
+		Ack:     tcp.Seq + 1,
 		SYN:     true,
 		ACK:     true,
-		Window:  iperf3TCPWindowSize,
-	}
-	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
-
-	// Serialize
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply)
-	if err != nil {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: Error serializing SYN-ACK: %v", err)
-		}
-
-		return
-	}
-
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	pktOut := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		Device:       device,
-	}
-
-	h.stack.Send(pktOut)
-
-	if debugLevel >= DebugLevelVerbose {
-		logging.Debugf("iPerf3: Sent TCP SYN-ACK from %s:%d to %s:%d",
-			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort)
-	}
+		Window:  tcpWindowSize,
+		Options: []layers.TCPOption{{
+			OptionType: layers.TCPOptionKindMSS, OptionLength: tcpOptionMSSLen,
+			OptionData: binary.BigEndian.AppendUint16(nil, iperf3MSS),
+		}},
+	}}}
 }
 
-// sendTCPResponse sends a TCP response with payload.
-func (h *IPerf3Handler) sendTCPResponse(
-	ipLayer *layers.IPv4,
-	tcpLayer *layers.TCP,
-	payload []byte,
-	devices []*config.Device,
-	vlan int,
-) {
-	debugLevel := h.stack.GetDebugLevel()
-
-	if len(devices) == 0 || len(payload) == 0 {
-		return
+// segment takes a segment carrying length bytes on an open connection. Data
+// in order is consumed and acknowledged; anything else gets a duplicate ACK
+// so the client sends the gap again.
+func (s *iperf3Server) segment(
+	key streamKey,
+	conn *iperf3Conn,
+	tcp *layers.TCP,
+	length int,
+	now time.Time,
+) []iperf3Segment {
+	if length == 0 && !tcp.FIN {
+		return nil // an ACK of ours
 	}
-
-	device := devices[0]
-	if len(device.MACAddress) == 0 {
-		return
+	conn.lastSeen = now
+	if conn.test != nil {
+		conn.test.lastSeen = now
 	}
-
-	srcDevices := h.stack.devicesForStateIPv4(vlan, ipLayer.SrcIP)
-
-	var srcMAC []byte
-
-	if len(srcDevices) > 0 && len(srcDevices[0].MACAddress) > 0 {
-		srcMAC = srcDevices[0].MACAddress
+	if tcp.Seq != conn.clientNext {
+		return []iperf3Segment{s.ack(key, conn, nil, false)}
+	}
+	conn.clientNext += safeconv.Uint32(len(tcp.Payload))
+	var out []iperf3Segment
+	if conn.data {
+		conn.received += uint64(len(tcp.Payload))
 	} else {
-		return
+		conn.pending = append(conn.pending, tcp.Payload...)
+		out = s.advance(key, conn)
 	}
-
-	eth := &layers.Ethernet{
-		SrcMAC:       device.MACAddress,
-		DstMAC:       srcMAC,
-		EthernetType: layers.EthernetTypeIPv4,
+	if s.conns[key] != conn {
+		return out // the conversation ended and the connection was reset
 	}
-
-	ipReply := &layers.IPv4{
-		Version:  iperf3IPv4Version,
-		IHL:      iperf3IPv4IHL,
-		TTL:      device.IPv4TTL(),
-		Protocol: layers.IPProtocolTCP,
-		SrcIP:    ipLayer.DstIP,
-		DstIP:    ipLayer.SrcIP,
-	}
-
-	// Safe conversion: min() bounds payloadLen to 0xFFFFFFFF which fits in uint32
-	payloadLen := min(len(tcpLayer.Payload), iperf3MaxUint32)
-
-	tcpReply := &layers.TCP{
-		SrcPort: tcpLayer.DstPort,
-		DstPort: tcpLayer.SrcPort,
-		Seq:     tcpLayer.Ack,
-		Ack:     tcpLayer.Seq + safeconv.Uint32(payloadLen),
-		PSH:     true,
-		ACK:     true,
-		Window:  iperf3TCPWindowSize,
-	}
-	_ = tcpReply.SetNetworkLayerForChecksum(ipReply) // error is non-critical for simulation
-
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts, eth, ipReply, tcpReply, gopacket.Payload(payload))
-	if err != nil {
-		if debugLevel >= DebugLevelInfo {
-			logging.Debugf("iPerf3: Error serializing TCP response: %v", err)
+	// Bytes the capture cut off a superframe can only be test data: a data
+	// stream counts them, and anything else cannot be read without them.
+	if uncaptured := length - len(tcp.Payload); uncaptured > 0 {
+		if !conn.data {
+			return append(out, s.refuse(key, conn, false)...)
 		}
+		conn.clientNext += safeconv.Uint32(uncaptured)
+		conn.received += uint64(uncaptured)
+	}
+	if tcp.FIN {
+		conn.clientNext++
+		s.drop(key, conn)
+		return append(out, s.ack(key, conn, nil, true))
+	}
+	if len(out) == 0 || out[0].tcp.DstPort != layers.TCPPort(key.client.Port()) {
+		out = append([]iperf3Segment{s.ack(key, conn, nil, false)}, out...)
+	}
 
+	return out
+}
+
+// advance consumes what a control connection, or a connection that has not
+// sent its cookie yet, has received, and returns the server's answer.
+func (s *iperf3Server) advance(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	if conn.test == nil {
+		return s.cookie(key, conn)
+	}
+	switch conn.test.state {
+	case iperf3ParamExchange:
+		return s.params(key, conn)
+	case iperf3TestRunning, iperf3DisplayResults:
+		return s.clientState(key, conn)
+	case iperf3ExchangeResults:
+		return s.exchangeResults(key, conn)
+	default:
+		// The client sends nothing on the control connection while the
+		// server waits for its streams.
+		return s.refuse(key, conn, false)
+	}
+}
+
+// cookie reads the cookie that opens a connection: the first connection to
+// send it is a test's control connection, the later ones its data streams.
+func (s *iperf3Server) cookie(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	if len(conn.pending) < iperf3CookieLen {
+		return nil
+	}
+	cookie := string(conn.pending[:iperf3CookieLen])
+	rest := conn.pending[iperf3CookieLen:]
+	conn.pending = nil
+	if test := s.tests[cookie]; test != nil {
+		return s.join(key, conn, test, rest)
+	}
+	test := &iperf3Test{control: key, state: iperf3ParamExchange, lastSeen: conn.lastSeen}
+	s.tests[cookie] = test
+	conn.test = test
+	conn.pending = append(conn.pending, rest...)
+
+	return []iperf3Segment{s.ack(key, conn, []byte{iperf3ParamExchange}, false)}
+}
+
+// params reads the test parameters and asks for the data streams.
+func (s *iperf3Server) params(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	message, ok := s.message(conn)
+	switch {
+	case !ok:
+		return s.refuse(key, conn, false)
+	case message == nil:
+		return nil
+	}
+	var params iperf3Params
+	if err := json.Unmarshal(message, &params); err != nil {
+		return s.refuse(key, conn, false)
+	}
+	if params.UDP || params.Reverse || params.Bidirectional {
+		return s.refuse(key, conn, true)
+	}
+	conn.test.streams = min(max(params.Parallel, 1), iperf3MaxStreams)
+	conn.test.state = iperf3CreateStreams
+
+	return []iperf3Segment{s.ack(key, conn, []byte{iperf3CreateStreams}, false)}
+}
+
+// clientState reads the one-byte state the client sends to end the test or,
+// after the results, to finish.
+func (s *iperf3Server) clientState(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	if len(conn.pending) == 0 {
+		return nil
+	}
+	test, state := conn.test, conn.pending[0]
+	conn.pending = conn.pending[1:]
+	switch {
+	case state == iperf3TestEnd && test.state == iperf3TestRunning:
+		test.ended = conn.lastSeen
+		test.state = iperf3ExchangeResults
+
+		return []iperf3Segment{s.ack(key, conn, []byte{iperf3ExchangeResults}, false)}
+	case state == iperf3Done && test.state == iperf3DisplayResults, state == iperf3ClientTerminate:
+		s.finish(test)
+		return nil
+	default:
+		return s.refuse(key, conn, false)
+	}
+}
+
+// exchangeResults reads the client's results and answers with the server's
+// and DISPLAY_RESULTS.
+func (s *iperf3Server) exchangeResults(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	message, ok := s.message(conn)
+	switch {
+	case !ok:
+		return s.refuse(key, conn, false)
+	case message == nil:
+		return nil
+	}
+	var client iperf3Results
+	if err := json.Unmarshal(message, &client); err != nil {
+		return s.refuse(key, conn, false)
+	}
+	results, err := json.Marshal(conn.test.results(client))
+	if err != nil {
+		return s.refuse(key, conn, false)
+	}
+	conn.test.state = iperf3DisplayResults
+	answer := binary.BigEndian.AppendUint32(nil, safeconv.Uint32(len(results)))
+	answer = append(append(answer, results...), iperf3DisplayResults)
+
+	return []iperf3Segment{s.ack(key, conn, answer, false)}
+}
+
+// join adds a data stream to its test, and starts the test once every
+// stream the parameters asked for has arrived.
+func (s *iperf3Server) join(key streamKey, conn *iperf3Conn, test *iperf3Test, rest []byte) []iperf3Segment {
+	if test.state != iperf3CreateStreams || key == test.control {
+		s.close(key, conn)
+		return []iperf3Segment{s.reset(key, conn)}
+	}
+	conn.test, conn.data, conn.received = test, true, uint64(len(rest))
+	test.data = append(test.data, conn)
+	test.dataKeys = append(test.dataKeys, key)
+	if len(test.data) < test.streams {
+		return nil
+	}
+	control := s.conns[test.control]
+	if control == nil || control.test != test {
+		s.finish(test)
+		s.close(key, conn)
+		return []iperf3Segment{s.reset(key, conn)}
+	}
+	test.state = iperf3TestRunning
+	test.started = conn.lastSeen
+
+	return []iperf3Segment{
+		s.ack(key, conn, nil, false),
+		s.ack(test.control, control, []byte{iperf3TestStart, iperf3TestRunning}, false),
+	}
+}
+
+// message takes one length-prefixed JSON message off conn's pending bytes.
+// It returns nil, true while the message is incomplete and nil, false for a
+// length no message can have.
+func (s *iperf3Server) message(conn *iperf3Conn) ([]byte, bool) {
+	if len(conn.pending) < iperf3LengthPrefix {
+		return nil, true
+	}
+	length := binary.BigEndian.Uint32(conn.pending)
+	if length == 0 || length > iperf3MaxMessage {
+		return nil, false
+	}
+	end := iperf3LengthPrefix + int(length)
+	if len(conn.pending) < end {
+		return nil, true
+	}
+	message := conn.pending[iperf3LengthPrefix:end]
+	conn.pending = conn.pending[end:]
+
+	return message, true
+}
+
+// refuse ends a test the server cannot serve. A test it understood but does
+// not implement gets SERVER_ERROR with IEUNIMP, which the client reports;
+// anything else is reset.
+func (s *iperf3Server) refuse(key streamKey, conn *iperf3Conn, unimplemented bool) []iperf3Segment {
+	s.finish(conn.test)
+	s.close(key, conn)
+	if !unimplemented {
+		return []iperf3Segment{s.reset(key, conn)}
+	}
+	answer := []byte{iperf3ServerError}
+	answer = binary.BigEndian.AppendUint32(answer, iperf3ErrUnimplemented)
+	answer = binary.BigEndian.AppendUint32(answer, 0)
+
+	return []iperf3Segment{s.ack(key, conn, answer, true)}
+}
+
+// results are the server's results: what each stream received, under the
+// stream ids the client numbered them with.
+func (t *iperf3Test) results(client iperf3Results) iperf3Results {
+	seconds := t.ended.Sub(t.started).Seconds()
+	results := iperf3Results{SenderHasRetransmits: -1, Streams: make([]iperf3StreamResult, 0, len(t.data))}
+	for i, conn := range t.data {
+		id := i + 1
+		if i < len(client.Streams) {
+			id = client.Streams[i].ID
+		}
+		results.Streams = append(results.Streams, iperf3StreamResult{
+			ID: id, Bytes: conn.received, Retransmits: -1, EndTime: seconds,
+		})
+	}
+
+	return results
+}
+
+// finish forgets a test and every data stream it opened. The control
+// connection stays open for the client to close, outside any test.
+func (s *iperf3Server) finish(test *iperf3Test) {
+	if test == nil {
 		return
 	}
-
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	pktOut := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-		Device:       device,
+	if control := s.conns[test.control]; control != nil && control.test == test {
+		control.test = nil
 	}
-
-	h.stack.Send(pktOut)
-
-	if debugLevel >= DebugLevelVerbose {
-		logging.Debugf("iPerf3: Sent %d bytes to %s:%d", len(payload), ipLayer.DstIP, tcpLayer.SrcPort)
+	for cookie, candidate := range s.tests {
+		if candidate == test {
+			delete(s.tests, cookie)
+		}
+	}
+	for i, key := range test.dataKeys {
+		if s.conns[key] == test.data[i] {
+			delete(s.conns, key)
+		}
 	}
 }
 
-// GetDeviceIPerf3Config extracts iPerf3 config from device name for display.
-func GetDeviceIPerf3Config(device *config.Device) string {
-	if device.IPerf3 == nil || !device.IPerf3.Enabled {
-		return iperf3Disabled
+// drop forgets a connection the client closed or reset. A test whose control
+// connection goes is over.
+func (s *iperf3Server) drop(key streamKey, conn *iperf3Conn) {
+	if conn.test != nil && conn.test.control == key {
+		s.finish(conn.test)
 	}
-
-	cfg := device.IPerf3
-
-	return fmt.Sprintf("Up: %.0f Mbps, Down: %.0f Mbps, Latency: %.1fms",
-		cfg.UploadMbps, cfg.DownloadMbps, cfg.TypicalLatencyMs)
+	s.close(key, conn)
 }
 
-// Helper to avoid unused import warning.
-var _ = strings.TrimSpace
+func (s *iperf3Server) close(key streamKey, conn *iperf3Conn) {
+	if s.conns[key] == conn {
+		delete(s.conns, key)
+	}
+}
+
+// expire forgets tests, and connections outside a test, that have been
+// silent for iperf3IdleTimeout. A test's control connection is quiet while
+// its streams run, so a test is as fresh as its newest segment.
+func (s *iperf3Server) expire(now time.Time) {
+	for _, test := range s.tests {
+		if now.Sub(test.lastSeen) > iperf3IdleTimeout {
+			s.close(test.control, s.conns[test.control])
+			s.finish(test)
+		}
+	}
+	for key, conn := range s.conns {
+		if conn.test == nil && now.Sub(conn.lastSeen) > iperf3IdleTimeout {
+			delete(s.conns, key)
+		}
+	}
+}
+
+// ack is our next segment on conn: an acknowledgement of everything the
+// client has sent, carrying payload when there is one and closing our side
+// when fin is set.
+func (s *iperf3Server) ack(key streamKey, conn *iperf3Conn, payload []byte, fin bool) iperf3Segment {
+	segment := iperf3Segment{tcp: &layers.TCP{
+		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
+		Seq: conn.serverNext, Ack: conn.clientNext, ACK: true, PSH: len(payload) > 0, FIN: fin,
+		Window: tcpWindowSize,
+	}, payload: payload}
+	conn.serverNext += safeconv.Uint32(len(payload))
+	if fin {
+		conn.serverNext++
+	}
+
+	return segment
+}
+
+func (s *iperf3Server) reset(key streamKey, conn *iperf3Conn) iperf3Segment {
+	return iperf3Segment{tcp: &layers.TCP{
+		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
+		Seq: conn.serverNext, Ack: conn.clientNext, RST: true, ACK: true,
+	}}
+}

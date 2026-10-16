@@ -28,7 +28,10 @@ func buildServiceSegment(
 		Version: 4, IHL: 5, TTL: 64, Protocol: layers.IPProtocolTCP,
 		SrcIP: net.ParseIP(serviceClientAddress).To4(), DstIP: device.IPAddresses[0].To4(),
 	}
-	segment.SrcPort, segment.DstPort = 40000, port
+	if segment.SrcPort == 0 {
+		segment.SrcPort = 40000
+	}
+	segment.DstPort = port
 	if err := segment.SetNetworkLayerForChecksum(ip); err != nil {
 		t.Fatal(err)
 	}
