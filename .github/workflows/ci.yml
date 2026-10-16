@@ -7,6 +7,10 @@
 # A push to main does not re-run this suite. The merge group already tested
 # that commit. release-please and release.yml still need a green result on
 # the main SHA; .github/workflows/ci-smoke.yml is that signal.
+# Shared callers (changes, backend, race, frontend, storybook, e2e) pin
+# MustardSeedNetworks/.github at e092081a97245d29978e229be7425179cc1dcde1.
+# That commit pins apt-install and flake-budget inside the called workflows,
+# so this repo does not vendor them.
 # Jobs: backend, frontend, security, quality, build
 # =============================================================================
 
@@ -38,11 +42,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-# Least-privilege default: read-only for every job. No job in this workflow
-# comments on PRs or annotates checks via the API (grepped for github-script /
-# octokit / gh pr / gh api — none found), so pull-requests/checks write scopes
-# aren't granted anywhere. The security job below grants its own narrower
-# elevated set (actions: read + security-events: write) for SARIF upload.
+# Least-privilege default: read-only contents. The changes caller adds
+# pull-requests: read and id-token: write so the shared path filter can list
+# PR files and read its own commit. The security job grants actions: read and
+# security-events: write for SARIF upload. dependency-review keeps
+# pull-requests: write so it can post findings.
 permissions:
   contents: read
 
@@ -50,490 +54,285 @@ jobs:
   # ===========================================================================
   # Path filter — classifies which areas changed so downstream jobs can skip
   # ===========================================================================
-  # Adds ~5s to every run; saves several minutes when a PR only touches one
-  # area (docs-only / c-only / frontend-only). The CI Complete aggregator at
-  # the bottom of this file enforces that all required jobs either passed or
-  # were intentionally skipped, so branch protection can require just CI
-  # Complete (plus "Lint PR Title" / "Lint PR Body" from their own
-  # workflows) instead of every individual job. CodeQL and License
-  # Compliance are advisory, not required contexts — the `semgrep` job in
-  # this file is the required SAST gate.
+  # The matcher is scripts/ci-changes.py in the pinned .github commit. On
+  # merge_group every declared filter is true: the queue has no PR base to
+  # diff against. pull_request still filters. id-token: write is how that
+  # workflow reads its own commit; without it the job fails closed.
+  # workflow_dispatch diffs the parent commit. A missing parent lists every
+  # tracked file, so a manual run does not silently skip the suite.
   changes:
-    name: Changed paths
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      # merge_group has no PR base to diff against, and the queue exists to test
-      # the merged result — so every filter reports true there and the full
-      # suite runs. Path filtering stays in effect for pull_request and
-      # workflow_dispatch.
-      backend: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.backend }}
-      frontend: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.frontend }}
-      c: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.c }}
-      docs: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.docs }}
-      ci_infra: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.ci_infra }}
-      schema: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.schema }}
-      https: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.https }}
-      hooks: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.hooks }}
-      docker: ${{ github.event_name == 'merge_group' && 'true' || steps.filter.outputs.docker }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        id: filter
-        if: github.event_name != 'merge_group'
-        with:
-          filters: |
-            backend:
-              - '**/*.go'
-              - 'go.mod'
-              - 'go.sum'
-              - 'Makefile'
-              - 'mk/**'
-            frontend:
-              - 'ui/**'
-              - 'internal/i18n/locales/**'
-              - 'scripts/i18n/**'
-            c:
-              - 'src/**'
-              - 'include/**'
-              - 'tests/c/**'
-              - '.clang-tidy'
-              - '.clang-format'
-            docs:
-              - '**/*.md'
-            # Everything that *implements* a CI gate, not just the workflow
-            # that calls it. niac carries 39 scripts under scripts/, most of
-            # them gate implementations, and the filters enumerated only a
-            # handful by name — so a PR could rewrite a gate and run no job
-            # that used it, and stay green: CI Complete accepts `skipped`.
-            # Enumerating scripts one at a time IS the failure mode; this is
-            # the directory class that replaces it. Every job that OR'd
-            # `workflows` now ORs this.
-            ci_infra:
-              - '.github/workflows/**'
-              - '.github/actions/**'
-              - 'scripts/**'
-              - '.golangci.yml'
-              - 'biome.json'
-              - 'ui/biome.json'
-            schema:
-              - 'docs/schemas/**'
-              - 'cmd/niac-schema/**'
-              - 'cmd/niac-openapi/**'
-              - 'docs/openapi-source.yaml'
-              - 'docs/openapi.yaml'
-              - 'docs/CLI_REFERENCE.md'
-              - 'README.md'
-            https:
-              - 'cmd/niac/**'
-              - 'internal/api/**'
-              - 'internal/daemon/**'
-              - 'deploy/macos/build-pkg.sh'
-              - 'deploy/windows/build.ps1'
-              - 'docs/API_EXAMPLES.md'
-              - 'docs/CI_CD.md'
-              - 'docs/FAQ.md'
-              - 'docs/MONITORING.md'
-              - 'docs/PERFORMANCE.md'
-              - 'docs/README.md'
-              - 'docs/WEBUI.md'
-              - 'docs/openapi.yaml'
-              - 'scripts/check-https-only.sh'
-              - 'tests/smoke/run_smoke_tests.sh'
-              - 'ui/vite.config.ts'
-            hooks:
-              - '.husky/**'
-              - '.github/release-please-config.json'
-              - '.goreleaser.yml'
-              - '.goreleaser.content.yml'
-              - 'deploy/nfpm/**'
-              - 'deploy/windows/install.ps1'
-              - 'scripts/tests/pre-commit-hook-test.sh'
-              - 'scripts/tests/package-firewall-ownership-test.sh'
-              - 'scripts/tests/release-content-integrity-test.sh'
-              - 'scripts/tests/file-size-gate-test.sh'
-              - 'scripts/check-file-size.sh'
-            # The image installs a release archive by the name goreleaser
-            # gives it, so a rename there breaks the image too.
-            docker:
-              - 'deploy/docker/**'
-              - 'scripts/lab/docker-validate.sh'
-              - '.goreleaser.yml'
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-changes.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      filters: |
+        backend:
+          - '**/*.go'
+          - 'go.mod'
+          - 'go.sum'
+          - 'Makefile'
+          - 'mk/**'
+        frontend:
+          - 'ui/**'
+          - 'internal/i18n/locales/**'
+          - 'scripts/i18n/**'
+        c:
+          - 'src/**'
+          - 'include/**'
+          - 'tests/c/**'
+          - '.clang-tidy'
+          - '.clang-format'
+        docs:
+          - '**/*.md'
+        # Everything that *implements* a CI gate, not just the workflow
+        # that calls it. niac carries 39 scripts under scripts/, most of
+        # them gate implementations, and the filters enumerated only a
+        # handful by name — so a PR could rewrite a gate and run no job
+        # that used it, and stay green: CI Complete accepts `skipped`.
+        # Enumerating scripts one at a time IS the failure mode; this is
+        # the directory class that replaces it. Every job that OR'd
+        # `workflows` now ORs this.
+        ci_infra:
+          - '.github/workflows/**'
+          - '.github/actions/**'
+          - 'scripts/**'
+          - '.golangci.yml'
+          - 'biome.json'
+          - 'ui/biome.json'
+        schema:
+          - 'docs/schemas/**'
+          - 'cmd/niac-schema/**'
+          - 'cmd/niac-openapi/**'
+          - 'docs/openapi-source.yaml'
+          - 'docs/openapi.yaml'
+          - 'docs/CLI_REFERENCE.md'
+          - 'README.md'
+        https:
+          - 'cmd/niac/**'
+          - 'internal/api/**'
+          - 'internal/daemon/**'
+          - 'deploy/macos/build-pkg.sh'
+          - 'deploy/windows/build.ps1'
+          - 'docs/API_EXAMPLES.md'
+          - 'docs/CI_CD.md'
+          - 'docs/FAQ.md'
+          - 'docs/MONITORING.md'
+          - 'docs/PERFORMANCE.md'
+          - 'docs/README.md'
+          - 'docs/WEBUI.md'
+          - 'docs/openapi.yaml'
+          - 'scripts/check-https-only.sh'
+          - 'tests/smoke/run_smoke_tests.sh'
+          - 'ui/vite.config.ts'
+        hooks:
+          - '.husky/**'
+          - '.github/release-please-config.json'
+          - '.goreleaser.yml'
+          - '.goreleaser.content.yml'
+          - 'deploy/nfpm/**'
+          - 'deploy/windows/install.ps1'
+          - 'scripts/tests/pre-commit-hook-test.sh'
+          - 'scripts/tests/package-firewall-ownership-test.sh'
+          - 'scripts/tests/release-content-integrity-test.sh'
+          - 'scripts/tests/file-size-gate-test.sh'
+          - 'scripts/check-file-size.sh'
+        # The image installs a release archive by the name goreleaser
+        # gives it, so a rename there breaks the image too.
+        docker:
+          - 'deploy/docker/**'
+          - 'scripts/lab/docker-validate.sh'
+          - '.goreleaser.yml'
+
 
   # ===========================================================================
-  # Backend (Go)
+  # Backend (Go, macOS, Windows) — fleet-shared ci-backend.yml
   # ===========================================================================
+  # One caller. The Linux job is the product gate: golangci-lint, the drift
+  # and policy scripts, the windows cross-build, tests, and the coverage
+  # floor. macOS builds, vets, and race-tests internal/truststore. Windows
+  # builds with CGO_ENABLED=0 and runs the listener, packet-decode, and
+  # recovery tests that do not need Npcap. A full `go test` on that runner
+  # fails on a missing wpcap.dll. Both native jobs stay off pull_request
+  # (skip-native-on-pull-request defaults true). The merge queue still runs
+  # them, because changes forces every filter true there.
+  #
+  # vet-command is a no-op. Linux does not run a separate `go vet`;
+  # golangci-lint is that gate. The value is quoted because the input type
+  # is string. lint-windows is false: the shared job cannot pass
+  # only-new-issues and would lint pre-existing Windows findings on every
+  # event, including the merge queue. That job stays below.
+  #
+  # Go comes from go.mod with the action cache off, which is what the shared
+  # workflow pins. The default-branch cache save that used to live at the end
+  # of this job has nowhere to go: a called workflow cannot take a trailing
+  # step from the caller. ripgrep is not in the shared libpcap install, and
+  # the library-stdout gate needs it.
   backend:
-    name: Backend (Go)
-    runs-on: ubuntu-latest
-    # p95 ~2m15s (5 recent main/PR runs, 2026-08-15) describes runs where apt
-    # was fast. The budget is sized instead so the 10-min libpcap step can go
-    # to its worst case and still leave room for the work — see the e2e job.
-    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+    permissions:
+      contents: read
+      actions: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-backend.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      install-libpcap: true
+      lint-windows: false
+      golangci-lint-version: v2.14.0
+      golangci-lint-args: --timeout=5m
+      fetch-depth: 1
+      native-fetch-depth: 1
+      timeout-minutes: 20
+      vet-command: "true"
+      darwin-test-command: go test -race ./internal/truststore/...
+      windows-build-command: go build ./internal/api/...
+      windows-vet-only-command: go vet ./internal/api/...
+      windows-test-command: |
+        go test ./internal/api/ -run '^TestStartServesHTTP2AndRedirectsPlaintext$' -v
+        go test ./internal/packetdecode/ -v
+        go test ./internal/daemon/ -run 'Test(StateWriteCannotTraverseOutsideRoot|InlineFinishRetainsOriginalDirectoryCapability|RuntimeCleanupCannotFollowEscapedDirectory)$' -count=1 -v
+      pre-command: |
+        if ! command -v rg >/dev/null 2>&1; then
+          attempt=1
+          while [ "$attempt" -le 2 ]; do
+            if sudo apt-get update && sudo apt-get install -y ripgrep; then
+              break
+            fi
+            if [ "$attempt" -eq 2 ]; then
+              echo "::error::ripgrep failed to install"
+              exit 1
+            fi
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+        fi
+        go mod download
+        go mod verify
+      build-command: |
+        # CGO_ENABLED=0: gopacket/pcap loads its DLL at runtime on windows, so
+        # this cross-build needs no Npcap SDK. It does not reproduce the
+        # release link, which is CGO_ENABLED=1 against that SDK.
+        CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ./...
+        CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build ./...
+      extra-command: |
+        # Verify niac.schema.json is up to date
+        # Regenerate from the current converter.Config and fail if the
+        # committed schema drifts. Forces struct changes to bring the
+        # schema along; refresh locally with `make schema`.
+        go run ./cmd/niac-schema -o /tmp/niac.schema.json
+        if ! diff -u docs/schemas/niac.schema.json /tmp/niac.schema.json; then
+          echo "::error::docs/schemas/niac.schema.json is stale. Run 'make schema' and commit the result."
+          exit 1
+        fi
+        echo "Schema is up to date."
 
-      - name: Set up Go
-        id: go
-        uses: ./.github/actions/setup-go
+        # Verify docs/openapi.yaml is up to date
+        # The API description is generated from the capability registry, so
+        # a new or changed route brings its documentation along or fails
+        # here. Refresh locally with `make openapi`.
+        go run ./cmd/niac-openapi -o /tmp/openapi.yaml
+        if ! diff -u docs/openapi.yaml /tmp/openapi.yaml; then
+          echo "::error::docs/openapi.yaml is stale. Run 'make openapi' and commit the result."
+          exit 1
+        fi
+        echo "OpenAPI description is up to date."
 
-      - name: Install backend test dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        # 20 rather than 10: the release path may now take three attempts with
-        # 90s then 180s between them. A backstop, not a wait -- raising it
-        # costs an ordinary run nothing.
-        timeout-minutes: 20
-        # packages.microsoft.com intermittently serves an unsigned/invalid
-        # InRelease that aborts `apt-get update` for the whole runner, even
-        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
-        # /#928 + Security Scanning/#932). A stalled Ubuntu mirror can also
-        # hang apt itself for the whole job budget without running a test
-        # (job 95072124340 hung 25 minutes on this exact step). The composite
-        # drops the unused Microsoft source, bounds apt's own network waits,
-        # and retries transient hiccups with backoff.
-        with:
-          # A mirror outage lasting minutes is not a transient error, and
-          # two attempts ten seconds apart cannot span one -- that is what
-          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
-          # fast: there a quick red is worth more than riding out an outage.
-          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: libpcap-dev ripgrep
+        # Verify the generated CLI documentation is up to date
+        # README.md's command table and the Commands section of
+        # docs/CLI_REFERENCE.md are generated from the cobra tree, so a new
+        # command or a changed help string brings its documentation along or
+        # fails here. Refresh locally with `make cli-docs`.
+        go run ./cmd/niac docs --check
+        echo "CLI documentation is up to date."
 
-      - name: Verify dependencies
-        # ./.github/actions/setup-go already runs `go mod download`; this
-        # step only needs the extra verification setup-go doesn't do.
-        run: go mod verify
+        # Output-escaping / XSS gate (#742)
+        ./scripts/check-output-escaping.sh
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          version: v2.14.0
-          args: --timeout=5m
-          # skip-cache, because a restored analysis cache can report findings
-          # that are not in the tree: seed#2509 failed twice on two
-          # `nolintlint` findings in files it did not touch, survived a plain
-          # re-run, and went green the moment the two
-          # `golangci-lint.cache-Linux-*` entries were deleted -- with a real
-          # Linux host at the same Go and linter versions saying `0 issues` on
-          # both main and the branch throughout. The key
-          # (`golangci-lint.cache-<OS>-<week>-<hash>`) carries neither GOOS nor
-          # the linter config, so the GOOS=windows job below writes into the
-          # same entry. A lint gate whose result can disagree with the tree is
-          # worse than a slower one; the rebuild costs about a minute. #1942.
-          skip-cache: true
+        # HTTPS-only listener gate (#1037)
+        ./scripts/check-https-only.sh
 
-      - name: Verify niac.schema.json is up to date
-        run: |
-          # Regenerate from the current converter.Config and fail if the
-          # committed schema drifts. Forces struct changes to bring the
-          # schema along; refresh locally with `make schema`.
-          go run ./cmd/niac-schema -o /tmp/niac.schema.json
-          if ! diff -u docs/schemas/niac.schema.json /tmp/niac.schema.json; then
-            echo "::error::docs/schemas/niac.schema.json is stale. Run 'make schema' and commit the result."
-            exit 1
-          fi
-          echo "Schema is up to date."
+        # Library-stdout gate (#1805)
+        ./scripts/check-library-stdout.sh
 
-      - name: Verify docs/openapi.yaml is up to date
-        run: |
-          # The API description is generated from the capability registry, so
-          # a new or changed route brings its documentation along or fails
-          # here. Refresh locally with `make openapi`.
-          go run ./cmd/niac-openapi -o /tmp/openapi.yaml
-          if ! diff -u docs/openapi.yaml /tmp/openapi.yaml; then
-            echo "::error::docs/openapi.yaml is stale. Run 'make openapi' and commit the result."
-            exit 1
-          fi
-          echo "OpenAPI description is up to date."
+        # Fetch-error-state gate (U1)
+        python3 scripts/test-check-fetch-error-states.py
+        python3 scripts/check-fetch-error-states.py
 
-      - name: Verify the generated CLI documentation is up to date
-        run: |
-          # README.md's command table and the Commands section of
-          # docs/CLI_REFERENCE.md are generated from the cobra tree, so a new
-          # command or a changed help string brings its documentation along or
-          # fails here. Refresh locally with `make cli-docs`.
-          go run ./cmd/niac docs --check
-          echo "CLI documentation is up to date."
+        # Page-story gate (U6) — every route has Empty/Loaded/Error stories
+        python3 scripts/test-check-page-stories.py
+        python3 scripts/check-page-stories.py
 
-      - name: Output-escaping / XSS gate (#742)
-        run: ./scripts/check-output-escaping.sh
+        # Route-policy gate (capability registry)
+        bash "$(go list -f '{{.Dir}}' github.com/MustardSeedNetworks/foundation/pkg/httpserver/route)/check-route-policy.sh" internal/api
 
-      - name: HTTPS-only listener gate (#1037)
-        run: ./scripts/check-https-only.sh
+        # JSON wire-casing gate — camelCase ratchet (ADR-0007)
+        ./scripts/check-json-casing.sh
 
-      - name: Library-stdout gate (#1805)
-        run: ./scripts/check-library-stdout.sh
+        # Filename-policy gate — no monolith naming outside internal/api
+        ./scripts/check-filename-policy.sh
 
-      - name: Fetch-error-state gate (U1)
-        run: |
-          python3 scripts/test-check-fetch-error-states.py
-          python3 scripts/check-fetch-error-states.py
+        # Layering gate — domain packages never import an outer layer (#2435)
+        python3 scripts/test-check-layering.py
+        python3 scripts/check-layering.py
 
-      - name: Page-story gate (U6) — every route has Empty/Loaded/Error stories
-        run: |
-          python3 scripts/test-check-page-stories.py
-          python3 scripts/check-page-stories.py
+        # Route-consumer gate — every route has a caller, every call has a route
+        python3 scripts/test-check-route-consumers.py
+        python3 scripts/check-route-consumers.py
 
-      - name: Route-policy gate (capability registry)
-        # foundation's rule, run from the pinned module copy so the gate and
-        # the registrar it enforces move on one version. The module cache
-        # drops the executable bit, hence `bash`.
-        run: bash "$(go list -f '{{.Dir}}' github.com/MustardSeedNetworks/foundation/pkg/httpserver/route)/check-route-policy.sh" internal/api
+        # Authoring-parity gate — every schema field is editable (owner decision 2026-09-02)
+        python3 scripts/test-check-authoring-parity.py
+        python3 scripts/check-authoring-parity.py
 
-      - name: JSON wire-casing gate — camelCase ratchet (ADR-0007)
-        run: ./scripts/check-json-casing.sh
+        # Variants on @layer components classes
+        python3 scripts/test-check-component-variants.py
+        python3 scripts/check-component-variants.py
 
-      - name: Filename-policy gate — no monolith naming outside internal/api
-        run: ./scripts/check-filename-policy.sh
+        # Consumer demand extractor — SNMP request decoding
+        python3 scripts/test-extract-oid-demand.py
 
-      - name: Layering gate — domain packages never import an outer layer (#2435)
-        run: |
-          python3 scripts/test-check-layering.py
-          python3 scripts/check-layering.py
+        # Wire nightly runner — reject stale or dirty checkouts
+        python3 scripts/test-wire-nightly.py
 
-      - name: Route-consumer gate — every route has a caller, every call has a route
-        run: |
-          python3 scripts/test-check-route-consumers.py
-          python3 scripts/check-route-consumers.py
+        # deploy-validate — probe the address the daemon bound
+        python3 scripts/test-listen-url.py
 
-      - name: Authoring-parity gate — every schema field is editable (owner decision 2026-09-02)
-        run: |
-          python3 scripts/test-check-authoring-parity.py
-          python3 scripts/check-authoring-parity.py
+        # validate-touched — selection and gate table
+        python3 scripts/test-validate-touched.py
 
-      - name: Variants on @layer components classes
-        run: |
-          python3 scripts/test-check-component-variants.py
-          python3 scripts/check-component-variants.py
+        # Device-editor manifest drift — generated forms match the schema
+        python3 scripts/test-gen-device-editor-sections.py
+        python3 scripts/gen-device-editor-sections.py --check
 
-      # The consumer demand matrix (plan row F3) is cut from a capture that is
-      # not in the repo, so only this self-test can say the BER decoder still
-      # decodes what it decoded then.
-      - name: Consumer demand extractor — SNMP request decoding
-        run: python3 scripts/test-extract-oid-demand.py
+        # TypeScript strictness contract
+        python3 scripts/check-tsconfig-flags.py
 
-      - name: Wire nightly runner — reject stale or dirty checkouts
-        run: python3 scripts/test-wire-nightly.py
-
-      - name: deploy-validate — probe the address the daemon bound
-        run: python3 scripts/test-listen-url.py
-
-      - name: validate-touched — selection and gate table
-        run: python3 scripts/test-validate-touched.py
-
-      # The device editor's forms are generated from the schema, so a struct
-      # change that nobody regenerates for would silently stop being editable.
-      - name: Device-editor manifest drift — generated forms match the schema
-        run: |
-          python3 scripts/test-gen-device-editor-sections.py
-          python3 scripts/gen-device-editor-sections.py --check
-
-      # The four products each own their tsconfig, so the strictness flags
-      # drift silently — a missing one never announces itself, it just checks
-      # less than its sibling does.
-      - name: TypeScript strictness contract
-        run: python3 scripts/check-tsconfig-flags.py
-
-      - name: Banned-vocabulary gate (strategy reset)
-        # Ported from seed, which was the only repo enforcing it. "magic" in
-        # the capture/pcap/snoop parsers is file-format terminology, not
-        # marketing copy, and the IEEE OUI registry carries vendor names the
-        # policy would otherwise flag; both are exact, reviewable exceptions
-        # in scripts/banned-vocabulary-exclusions.txt.
-        run: |
-          python3 scripts/test-check-banned-vocabulary.py
-          python3 scripts/check-banned-vocabulary.py
-
-      # niac ships windows binaries, but every other job here runs on ubuntu or
-      # macOS, so the windows-tagged files below were compiled by nothing and a
-      # break in them surfaced at release time rather than in CI:
-      #   cmd/niac/cmd_service_windows.go
-      #   internal/truststore/truststore_windows.go
-      #   internal/library/draft_lock_windows.go
-      #   internal/library/draft_sync_windows.go
-      #
-      # The Backend (Windows) job added for #1537 does not cover them — it is
-      # scoped to ./internal/api/... because a full build there needs Npcap.
-      # Cross-compiling does cover them, and costs seconds: gopacket/pcap loads
-      # its DLL at runtime on windows rather than through cgo, so no native
-      # runner is involved. Both targets pass today, so this is a regression
-      # guard rather than a repair.
-      #
-      # What it does NOT reproduce: the release links windows with
-      # CGO_ENABLED=1 against the Npcap SDK. That path is still only exercised
-      # at release time (#1523).
-      - name: Cross-build windows
-        env:
-          CGO_ENABLED: "0"
-        run: |
-          GOOS=windows GOARCH=amd64 go build ./...
-          GOOS=windows GOARCH=arm64 go build ./...
-
-      - name: Run tests
-        # Plain run: fast feedback plus the coverage profile. The race
-        # detector runs in its own `race` job so a race-detector crash (see
-        # the Go GC segfault flake seen on stem) cannot take out the entire
-        # test signal, and so a non-race failure is distinguishable at a
-        # glance. This matches seed and stem.
-        run: go test -v -coverprofile=coverage.out ./...
-
-      - name: Check coverage threshold
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Current coverage: ${COVERAGE}%"
-
-          # Minimum coverage threshold. Acts as an anti-regression floor,
-          # set a few points under the measured total so ordinary churn does
-          # not fail the build. Project target is 90% (CLAUDE.md).
-          #
-          # Ratchet plan (raise after each release exceeds the next tier
-          # by 3+ points):
-          #   2026-Q2: 50
-          #   2026-Q3: 68 (current; measured 71.3% on main at b86fc10c)
-          #   2026-Q4: 75
-          #   2027-Q2: 82
-          #   long-term: 90
-          MIN_COVERAGE=68
-
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+        # Banned-vocabulary gate (strategy reset)
+        python3 scripts/test-check-banned-vocabulary.py
+        python3 scripts/check-banned-vocabulary.py
+      test-command: go test -v -coverprofile=coverage.out ./...
+      coverage-command: |
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        echo "Current coverage: ${COVERAGE}%"
+        # Anti-regression floor, a few points under the measured total so
+        # ordinary churn does not fail the build. Project target is 90%.
+        # Ratchet: 50 (2026-Q2), 68 (2026-Q3; measured 71.3% at b86fc10c),
+        # 75 (2026-Q4), 82 (2027-Q2), 90 long-term.
+        # bc -l may print 1 or 1.0. The shared step runs this with sh, which
+        # has no (( )).
+        MIN_COVERAGE=68
+        below=$(echo "$COVERAGE < $MIN_COVERAGE" | bc -l)
+        case "$below" in
+          1*)
             echo "ERROR: Coverage ${COVERAGE}% is below minimum threshold of ${MIN_COVERAGE}%"
             exit 1
-          fi
+            ;;
+        esac
 
-      # The one designated writer for the Go cache, and the last step of the
-      # job that filled it. Saving from inside setup-go stored a build cache
-      # that was empty because nothing had compiled yet; several default-branch
-      # jobs also raced the same key, which is the cache-reservation contention
-      # in the logs. One writer, after the work.
-      #
-      # This workflow no longer runs on push to main, so the save happens when
-      # someone dispatches it on the default branch. A merge-queue ref cannot
-      # fill the default-branch cache; PRs keep restoring the last one.
-      - name: Save Go cache (default branch only)
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.go.outputs.cache-build }}
-            ${{ steps.go.outputs.cache-mod }}
-          key: ${{ steps.go.outputs.cache-key }}
-
-  # ===========================================================================
-  # Backend (macOS)
-  # ===========================================================================
-  # niac ships a darwin build (goreleaser `niac-darwin`, CGO_ENABLED=1), but
-  # every CI job runs on ubuntu, so `internal/truststore/truststore_darwin.go`
-  # and the darwin half of the library lock/sync pair were never compiled — a
-  # break in them would surface at release time, not here. Cross-compiling from
-  # ubuntu cannot stand in: gopacket/pcap needs cgo, so `GOOS=darwin go build`
-  # fails on the pure-Go builder. macOS ships libpcap, so this needs no apt step.
-  #
-  # Not on `pull_request`: this ran on the PR AND again on the merge group for
-  # the same commit, and macOS runners carry a 10x minute multiplier. It still
-  # runs on merge_group and on workflow_dispatch. The `changes` job forces
-  # every filter true on merge_group, so nothing merges without it. A
-  # darwin-only break ejects the PR from the queue instead of reddening the
-  # PR run; that is the trade. Push to main does not re-run it: the merge
-  # group already did.
-  backend-darwin:
-    name: Backend (macOS)
-    runs-on: macos-latest
-    timeout-minutes: 20
-    needs: changes
-    if: >-
-      github.event_name != 'pull_request' &&
-      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true')
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: ./.github/actions/setup-go
-
-      - name: Build
-        run: go build ./...
-
-      - name: Vet
-        run: go vet ./...
-
-      # truststore is the only package with darwin-specific logic and it has
-      # tests, so this both links the darwin build and exercises it.
-      - name: Test
-        run: go test -race ./internal/truststore/...
-
-  # ===========================================================================
-  # Backend (Windows)
-  # ===========================================================================
-  # niac ships a windows.exe (release.yml's build-windows, CGO+Npcap on real
-  # Windows runners), but ubuntu CI never compiles internal/api's
-  # _windows.go half — a break in it would surface at release time, not
-  # here. Running on windows-latest links and executes the real Winsock errno
-  # path (#1537: syscall.EADDRINUSE is not WSAEADDRINUSE).
-  #
-  # CGO_ENABLED=0 because this runner has no Npcap. That is also why the test
-  # step is scoped rather than running the package: parts of internal/api do
-  # reach libpcap at runtime, so a full `go test` here fails on a missing
-  # wpcap.dll for reasons that have nothing to do with the code under review.
-  #
-  # Off `pull_request` for the same reason as Backend (macOS) above. The
-  # Windows tree is still cross-built in Backend (Go) and linted by
-  # `Lint (GOOS=windows)` on every PR.
-  backend-windows:
-    name: Backend (Windows)
-    runs-on: windows-latest
-    timeout-minutes: 20
-    needs: changes
-    if: >-
-      github.event_name != 'pull_request' &&
-      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true')
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: ./.github/actions/setup-go
-
-      - name: Build
-        env:
-          CGO_ENABLED: "0"
-        run: go build ./internal/api/...
-
-      - name: Vet
-        env:
-          CGO_ENABLED: "0"
-        run: go vet ./internal/api/...
-
-      # The listener's Windows-specific logic (the WinNAT-reserved port walk) is
-      # foundation's httpserver; this starts the daemon's API on it for real.
-      #
-      # Scoped to that test rather than the whole package: validateReplayRequest
-      # compiles a BPF filter, which reaches libpcap and needs wpcap.dll, and
-      # windows-latest has no Npcap. Build and Vet above already cover the rest of
-      # the package compiling on Windows.
-      - name: Test
-        env:
-          CGO_ENABLED: "0"
-        run: go test ./internal/api/ -run '^TestStartServesHTTP2AndRedirectsPlaintext$' -v
-
-      - name: Test decoded packet metadata
-        env:
-          CGO_ENABLED: "0"
-        run: go test ./internal/packetdecode/ -v
-
-      - name: Test recovery filesystem confinement
-        env:
-          CGO_ENABLED: "0"
-        run: go test ./internal/daemon/ -run 'Test(StateWriteCannotTraverseOutsideRoot|InlineFinishRetainsOriginalDirectoryCapability|RuntimeCleanupCannotFollowEscapedDirectory)$' -count=1 -v
-
+  # Stays in this file. ci-backend.yml's lint-windows job cannot pass
+  # only-new-issues and runs on every event. This repo has pre-existing
+  # Windows findings (seed#2408); linting all of them would redden every
+  # merge. The backend caller sets lint-windows: false.
   # Windows-tagged Go has never been linted: golangci-lint runs on ubuntu and
   # skips *_windows.go, and the Windows job runs build/vet/tests but no linter.
   # GOOS=windows makes golangci-lint compile and lint the whole Windows tree on
@@ -572,47 +371,25 @@ jobs:
           # different trees. #1942.
           skip-cache: true
 
+  # ===========================================================================
+  # Go race detector — fleet-shared ci-race.yml
+  # ===========================================================================
+  # Same path filter as Backend (Go). skip-network-tests is false: the shared
+  # default exports SKIP_NETWORK_TESTS=1, and this suite does not use that
+  # variable. The UI artifact is not downloaded; this job never embedded the
+  # built UI.
   race:
-    name: Backend (race detector)
-    runs-on: ubuntu-latest
-    # p95 ~6m20s (5 recent main/PR runs, 2026-08-15), plus headroom for the
-    # 10-min libpcap step's worst case — see the e2e job.
-    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: ./.github/actions/setup-go
-
-      - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        # 20 rather than 10: the release path may now take three attempts with
-        # 90s then 180s between them. A backstop, not a wait -- raising it
-        # costs an ordinary run nothing.
-        timeout-minutes: 20
-        # packages.microsoft.com intermittently serves an unsigned/invalid
-        # InRelease that aborts `apt-get update` for the whole runner, even
-        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
-        # /#928 + Security Scanning/#932). A stalled Ubuntu mirror can also
-        # hang apt itself for the whole job budget without running a test
-        # (job 95072124340 hung 25 minutes on this exact step). The composite
-        # drops the unused Microsoft source, bounds apt's own network waits,
-        # and retries transient hiccups with backoff.
-        with:
-          # A mirror outage lasting minutes is not a transient error, and
-          # two attempts ten seconds apart cannot span one -- that is what
-          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
-          # fast: there a quick red is worth more than riding out an outage.
-          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: libpcap-dev
-
-      - name: Run tests with race detector
-        run: go test -race ./...
+    permissions:
+      contents: read
+      actions: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-race.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      install-libpcap: true
+      skip-network-tests: false
+      timeout-minutes: 20
+      test-command: go test -race ./...
 
   # ===========================================================================
   # Raw-socket boundary (Linux, explicit capabilities)
@@ -715,6 +492,8 @@ jobs:
   #
   # Building the UI is the cheap part; the frontend job's lint, typecheck,
   # coverage and Storybook stay gated on frontend changes.
+  # The shared frontend workflow typechecks and tests. It does not build
+  # the production bundle, so this job stays here.
   build-ui:
     name: Build UI (shared artifact)
     runs-on: ubuntu-latest
@@ -745,132 +524,43 @@ jobs:
           path: internal/api/ui/
           retention-days: 1
 
+  # ===========================================================================
+  # Frontend (TypeScript) — fleet-shared ci-frontend.yml
+  # ===========================================================================
+  # Defaults cover `npm run typecheck` (tsc --build --noEmit) and `npm run lint`
+  # (biome check src/ scripts/). Token discipline runs before the tests. The
+  # production bundle is build-ui; this workflow does not build it again.
+  # Storybook interactions run in their own caller. `build-storybook` stays
+  # here so a broken static build still fails this job. Nothing downloads the
+  # storybook-static artifact, so the upload is not repeated.
   frontend:
-    name: Frontend (TypeScript)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.ci_infra == 'true'
-    defaults:
-      run:
-        working-directory: ui
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: ./.github/actions/setup-node
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Biome lint
-        run: npx @biomejs/biome check src/ scripts/
-
-      - name: Design token discipline (Phase 0 gate)
-        run: ../scripts/check-token-discipline.sh
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Run unit tests with coverage thresholds
-        # vitest gates the frontend job so a red or missing-provider test can
-        # never reach main invisibly (regression: #930 landed a red test while
-        # this job only ran lint/typecheck/build).
-        #
-        # test:coverage, not test: the anti-regression thresholds in
-        # vitest.config.ts were never evaluated because required CI ran the
-        # plain `test` script, and coverage fell 6-13pp *through* the floor
-        # they exist to hold (#1595). A threshold nothing runs is not a gate.
-        run: npm run test:coverage
-
-      # The production build and its artifact moved to the shared build-ui job
-      # above, so `build` and `e2e` no longer depend on this job running.
-      - name: Build Storybook
-        run: npm run build-storybook -- --output-dir storybook-static --quiet
-
-      - name: Upload Storybook static
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: storybook-static
-          path: ui/storybook-static/
-          retention-days: 7
+    permissions:
+      contents: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-frontend.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      timeout-minutes: 15
+      extra-command: ../scripts/check-token-discipline.sh
+      test-command: |
+        npm run test:coverage
+        npm run build-storybook -- --output-dir storybook-static --quiet
 
   # ===========================================================================
-  # Storybook interaction and accessibility checks
+  # Storybook interactions and accessibility — fleet-shared ci-storybook.yml
   # ===========================================================================
-  # The 20 story files shipped with no runner and no CI job, so nothing ever
-  # executed them — carried as maintenance weight and a Renovate surface while
-  # enforcing nothing (#1321). The a11y addon was set to 'todo' as well, which
-  # reports in the Storybook UI and cannot fail a build, so an accessibility
-  # regression in any component passed (#1668).
+  # Chromium's apt half goes through the shared apt-install action, pinned
+  # inside that workflow. The download retries three times. The contract
+  # script still plants an interaction defect and an a11y defect and asserts
+  # each one fails the gate.
   storybook:
-    name: Storybook interactions and accessibility
-    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.ci_infra == 'true'
-    timeout-minutes: 25
-    defaults:
-      run:
-        working-directory: ui
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: ./.github/actions/setup-node
-
-      - name: Install dependencies
-        run: npm ci
-
-      # Split from the browser download because `--with-deps` runs apt, and
-      # bundling them leaves the apt half with no step budget, no
-      # Acquire::*::Timeout and no dpkg lock bound. On seed that consumed the
-      # job's whole budget and ejected a release PR from the merge queue.
-      - name: Install Chromium OS dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        timeout-minutes: 10
-        with:
-          # cd ui explicitly: the job's defaults.run.working-directory does not
-          # reach inside a composite action's own steps.
-          command: cd ui && node ./node_modules/playwright/cli.js install-deps chromium
-
-      # Retried for the same reason as the E2E job's browser install (#1341):
-      # the download is large, the runner network is shared, and an unretried
-      # failure here fails CI on main, which silently skips the release.
-      - name: Install Chromium
-        timeout-minutes: 10
-        run: |
-          set -uo pipefail
-          attempt=1
-          while [ "$attempt" -le 2 ]; do
-            if node ./node_modules/playwright/cli.js install chromium; then
-              exit 0
-            fi
-            if [ "$attempt" -eq 2 ]; then
-              echo "chromium install failed after 2 attempts" >&2
-              exit 1
-            fi
-            echo "attempt ${attempt} failed; retrying in 10s" >&2
-            sleep 10
-            attempt=$((attempt + 1))
-          done
-
-      - name: Run interaction and accessibility tests
-        env:
-          STORYBOOK_DISABLE_TELEMETRY: "1"
-        run: npm run test:storybook
-
-      # A gate nobody has watched go red is indistinguishable from one that
-      # stopped running. This plants a real interaction defect and a real a11y
-      # defect and asserts the suite fails for each, by name.
-      - name: Verify injected defects fail the gate
-        env:
-          STORYBOOK_DISABLE_TELEMETRY: "1"
-        run: npm run test:storybook:contract
+    permissions:
+      contents: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-storybook.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      timeout-minutes: 25
 
   # ===========================================================================
   # Security Scanning
@@ -1513,297 +1203,98 @@ jobs:
           retention-days: 7
 
   # ===========================================================================
-  # E2E Browser Tests (Playwright)
+  # E2E Browser Tests (Playwright) — fleet-shared ci-e2e.yml
   # ===========================================================================
+  # Sharded chromium and webkit, plus a separate @smoke job, inside the
+  # pinned Playwright 1.64 image. That image is the revert the Ubuntu 26.04
+  # container was holding: Playwright 1.64 is installed, and the image ships
+  # the browsers, so this job no longer calls apt. The libsoup check still
+  # runs in prepare-command and fails if WebKit loads 3.6.5.
   #
-  # TEMPORARY: runs on an Ubuntu 26.04 container (niac-go#2141, #2454). The
-  # WebKit that `playwright install` fetches for the runner's Ubuntu 24.04
-  # bundles libsoup 3.6.5, whose use-after-free (microsoft/playwright#42803)
-  # stalls every lazy chunk on the HTTP/2 connection, so a page never mounts
-  # (run 37078347420: 13.6 s on each chunk). On 26.04 the same WebKit build
-  # bundles no libsoup and loads the OS's 3.6.6. Seed and stem moved their
-  # WebKit jobs the same way (seed#2965, stem#1529).
+  # The daemon cannot be built inside the image (no toolchain, no libpcap,
+  # and apt sources there are not reachable). ci-e2e builds it on ubuntu-24.04,
+  # the image's glibc, against a static libpcap, and the shards download
+  # ./niac. build-backend-e2e.sh apt-installs libpcap-dev when
+  # /usr/include/pcap/pcap.h is missing; the symlink makes that check pass so
+  # the link stays static. require-static-libpcap fails the job otherwise.
   #
-  # REVERT with the Playwright 1.64 bump: drop `container:`, the prerequisites
-  # step and the libsoup check (and scripts/check-webkit-libsoup.sh), and put
-  # the browser cache key back to the runner's.
+  # The auth, history, query, permissions, and unsaved configs start their own
+  # daemons. They run once, on the smoke job, not on every shard. The history
+  # fixture is `go run`, and the image has no Go, so that job installs the
+  # toolchain from go.mod before those suites. Drafts skip the caller.
+  # !cancelled() keeps a cancelled run from launching shards. build-ui has to
+  # have succeeded because the daemon embeds that artifact. A failed frontend
+  # does not skip this job: it never needed frontend.
   e2e:
-    name: E2E Browser Tests
-    runs-on: ubuntu-latest
     needs: [changes, backend, build-ui]
-    # Pinned by tag AND digest, the same image as seed's e2e-webkit job.
-    container:
-      image: ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
-      options: --ipc=host
-    # The container's default `run` shell is sh (dash); the readiness loop's
-    # `{1..30}` and other steps need bash.
-    defaults:
-      run:
-        shell: bash
-    env:
-      DEBIAN_FRONTEND: noninteractive
-    # NOT sized from p95. A job budget has to exceed its apt steps' worst case
-    # plus the actual work, or a slow mirror becomes indistinguishable from a
-    # hung test. This job has two apt steps at 10 min each; p95 (~5m8s) only
-    # describes runs where apt was fast, so budgeting to it guarantees the
-    # pathological run dies. Sized to 12 that way, it did: on 2026-08-18 a slow
-    # libpcap install took 5.5 min, the job hit its budget mid-test, and the
-    # merge queue ejected release PR #1349 for what looked like a test failure
-    # (run 32161326698). That is the mechanism behind stem#664's "PRs silently
-    # leave the merge queue after successful runs".
-    timeout-minutes: 25
-    # Skipped on draft PRs (slow); also skipped if no frontend/backend changed.
-    # always() lets the if: evaluate when backend was skipped upstream.
     if: |
-      always() &&
+      !cancelled() &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
       needs.build-ui.result == 'success' &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
-
-    steps:
-      # The base image has no git (checkout would fall back to a tarball and
-      # the ldflags' git calls to dev/unknown), no CA bundle, no zstd (the
-      # cache actions' archive format, else every restore misses), no
-      # libatomic, which the Node binaries link, no C toolchain for the cgo
-      # build, and no curl for the readiness probe.
-      - name: Install container prerequisites
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        timeout-minutes: 20
-        with:
-          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: ca-certificates curl gcc git libatomic1 libc6-dev python3 zstd
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # The container's root does not own the runner's checkout; without this
-      # the ldflags' git calls fall through to dev/unknown.
-      - name: Trust the workspace for git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Set up Go
-        uses: ./.github/actions/setup-go
-
-      - name: Set up Node.js
-        uses: ./.github/actions/setup-node
-
-      - name: Install libpcap-dev
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        # 20 rather than 10: the release path may now take three attempts with
-        # 90s then 180s between them. A backstop, not a wait -- raising it
-        # costs an ordinary run nothing.
-        timeout-minutes: 20
-        # packages.microsoft.com intermittently serves an unsigned/invalid
-        # InRelease that aborts `apt-get update` for the whole runner, even
-        # though libpcap-dev comes from the Ubuntu archive (killed Lighthouse
-        # /#928 + Security Scanning/#932). A stalled Ubuntu mirror can also
-        # hang apt itself for the whole job budget without running a test
-        # (job 95072124340 hung 25 minutes on this exact step). The composite
-        # drops the unused Microsoft source, bounds apt's own network waits,
-        # and retries transient hiccups with backoff.
-        with:
-          # A mirror outage lasting minutes is not a transient error, and
-          # two attempts ten seconds apart cannot span one -- that is what
-          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
-          # fast: there a quick red is worth more than riding out an outage.
-          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          packages: libpcap-dev
-
-      - name: Download frontend build
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: frontend-dist
-          path: internal/api/ui/
-
-      - name: Install frontend dependencies (for Playwright)
-        working-directory: ui
-        run: npm ci
-
-      # Shared with the phone-width job below, so both run one binary recipe.
-      - name: Build backend
-        run: ./scripts/build-backend-e2e.sh
-
-      - name: Install Playwright OS dependencies
-        uses: MustardSeedNetworks/.github/.github/actions/apt-install@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        # 20 rather than 10: the release path may now take three attempts with
-        # 90s then 180s between them. A backstop, not a wait -- raising it
-        # costs an ordinary run nothing.
-        timeout-minutes: 20
-        # Not removable: the runner image ships none of webkit's GStreamer/font
-        # stack. A stalled Ubuntu mirror can hang apt for the whole job budget
-        # without running a test (stem job 95068053052), because apt waits
-        # forever on a dead connection by default. The composite bounds apt's
-        # own network waits (via playwright's internal apt calls) and retries
-        # the transient case.
-        with:
-          # A mirror outage lasting minutes is not a transient error, and
-          # two attempts ten seconds apart cannot span one -- that is what
-          # turned v0.94.46's release red (#1364). Ordinary CI keeps failing
-          # fast: there a quick red is worth more than riding out an outage.
-          attempts: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          retry-delay-seconds: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-          command: cd ui && npx playwright install-deps chromium webkit
-          command-timeout: '270'
-
-      # Restore always; save only from the default branch. Caches are scoped
-      # per ref, so a PR that saves writes its own copy that dies on merge —
-      # see the comment in .github/actions/setup-go for the incident. This
-      # workflow no longer runs on push to main, so the save happens on a
-      # default-branch dispatch. A merge-queue ref cannot fill that cache.
-      - name: Restore Playwright browsers
-        id: playwright-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          # Keyed to the container's OS, not runner.os: a cached 24.04 WebKit
-          # restored here would bring its bundled libsoup 3.6.5 back.
-          key: playwright-browsers-v2-ubuntu26.04-${{ hashFiles('ui/package-lock.json') }}
-          restore-keys: |
-            playwright-browsers-v2-ubuntu26.04-
-
-      # Retried, because the ~500MB browser download over a shared runner
-      # network is exactly what a retry is for. Unretried, it failed three
-      # times in one night across the fleet with `Installation process exited
-      # with code: 100` (#1341) — and what it took down was worse than a red
-      # job: a seed merge-queue run was ejected and needed manual re-enqueue,
-      # and a stem CI run on main failed, which silently skipped the release
-      # because release-please.yml is workflow_run-gated on CI success.
-      #
-      # Not the apt-install composite next to it: that one writes apt config
-      # and recovers the dpkg lock, none of which applies to a plain download.
-      # What is copied is its POLICY — the release path rides out a longer
-      # outage, ordinary CI still fails fast, because there a quick red is
-      # worth more than waiting.
-      - name: Install Playwright browsers
-        # Chromium and WebKit only, per E2E_CONVENTIONS.md (#2247). A cache
-        # hit makes this a no-op; a miss downloads both engines.
-        working-directory: ui
-        timeout-minutes: 20
-        env:
-          ATTEMPTS: ${{ startsWith(github.head_ref, 'release-please') && '3' || '2' }}
-          RETRY_DELAY: ${{ startsWith(github.head_ref, 'release-please') && '90' || '10' }}
-        run: |
-          set -uo pipefail
-
-          attempt=1
-          while [ "$attempt" -le "$ATTEMPTS" ]; do
-            if npx playwright install chromium webkit; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq "$ATTEMPTS" ]; then
-              echo "playwright browser install failed after ${ATTEMPTS} attempt(s)" >&2
-              exit 1
-            fi
-
-            echo "attempt ${attempt} failed; retrying in ${RETRY_DELAY}s" >&2
-            sleep "$RETRY_DELAY"
-            attempt=$((attempt + 1))
-          done
-
-      - name: Save Playwright browsers (default branch only)
-        if: steps.playwright-cache.outputs.cache-hit != 'true' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-v2-ubuntu26.04-${{ hashFiles('ui/package-lock.json') }}
-
-      - name: Assert WebKit loads the OS libsoup, not the bundled 3.6.5
-        run: ./scripts/check-webkit-libsoup.sh
-
-      - name: Start backend server
-        env:
-          # The gui-daemon.spec.ts simulation test targets a synthetic
-          # interface (e2e-dry-run0) that does not exist on the runner. The
-          # daemon honours this env var to run simulations in dry-run mode,
-          # skipping the real capture-engine bind. Without it the daemon
-          # returns "interface does not exist" (500), which is exactly the
-          # regression that slipped onto main when 4ebb685 added the test and
-          # daemon support but never wired the env var into CI.
-          NIAC_E2E_DRY_RUN_SIMULATION: "1"
-        run: |
-          # Backend is HTTPS-only since #663 (the --http flag was removed and
-          # the legacy HTTP listener deleted). Self-signed cert auto-generated
-          # on first start. Use canonical TLS port 8445 per CLAUDE.md.
-          # e2e-daemon.sh carries the attachment policy and says why; the
-          # phone-width job below starts the same daemon.
-          nohup ./scripts/e2e-daemon.sh 8445 > server.log 2>&1 &
-          echo "Waiting for server to start..."
-          for i in {1..30}; do
-            if curl -skf https://localhost:8445/__version 2>/dev/null; then
-              echo "Server ready after $i attempts"
-              exit 0
-            fi
-            echo "Attempt $i: Server not ready, waiting..."
-            sleep $((i < 5 ? 1 : 2))
-          done
-          echo "Server failed to start after 30 attempts"
-          cat server.log
-          exit 1
-
-      - name: Run Playwright E2E tests
-        working-directory: ui
-        env:
-          E2E_BASE_URL: https://localhost:8445
-          PLAYWRIGHT_IGNORE_HTTPS_ERRORS: "true"
-        # No --reporter here on purpose: passing one REPLACES the config's
-        # reporter array, and the config is what writes the JSON report the
-        # flake budget reads. `--reporter=html` silently produced no
-        # results.json at all.
-        run: npx playwright test
-
-      - name: Run authenticated browser E2E tests
-        working-directory: ui
-        run: npm run test:e2e:auth
-
-      - name: Run persisted history browser acceptance
-        working-directory: ui
-        run: npm run test:e2e:history
-
-      - name: Run shared-resource browser E2E tests
-        working-directory: ui
-        run: npm run test:e2e:query
-
-      - name: Verify scoped-token UI permissions against the daemon
-        working-directory: ui
-        run: npm run test:e2e:permissions
-
-      - name: Run unsaved-edit browser acceptance
-        working-directory: ui
-        run: npm run test:e2e:unsaved
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: playwright-report
-          path: ui/playwright-report/
-          retention-days: 7
-
-      # A test that fails then passes on retry reports `flaky` and the job exits
-      # 0, so a retry-pass looks exactly like a pass. Budget 0: niac's suite is
-      # flake-free on the most recent green main run, so anything that starts
-      # leaning on retries is a regression to fix, not a number to raise.
-      #
-      # Include every suite's distinct results*.json so none hides another's flakes.
-      #
-      # Runs after the upload so the report is retained even when this is what
-      # fails.
-      - name: Enforce flake budget
-        if: always()
-        uses: MustardSeedNetworks/.github/.github/actions/flake-budget@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
-        with:
-          report: ui/playwright-report/results*.json
-          budget: "0"
-
-      - name: Upload server logs on failure
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
-        with:
-          name: e2e-server-logs
-          path: server.log
+    permissions:
+      contents: read
+      actions: write
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-e2e.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      backend-result: ${{ needs.backend.result }}
+      playwright-image: mcr.microsoft.com/playwright:v1.64.0-noble@sha256:06a9939e57531807f8d5fd76ce44b53165ffb7d7501d87ab10e285c20b1e971f
+      ui-artifact: frontend-dist
+      fetch-depth: 0
+      build-daemon: true
+      static-libpcap: true
+      require-static-libpcap: true
+      daemon-build-command: |
+        header="$RUNNER_TEMP/libpcap-static/include/pcap/pcap.h"
+        if [ ! -f "$header" ]; then
+          header="$RUNNER_TEMP/libpcap-static/include/pcap.h"
+        fi
+        sudo mkdir -p /usr/include/pcap
+        sudo ln -sfn "$header" /usr/include/pcap/pcap.h
+        ./scripts/build-backend-e2e.sh
+      daemon-binary: niac
+      daemon-artifact: niac-e2e-daemon
+      timeout-minutes: 25
+      flake-report: 'ui/playwright-report/results*.json'
+      prepare-command: |
+        ./scripts/check-webkit-libsoup.sh
+        nohup ./scripts/e2e-daemon.sh 8445 > server.log 2>&1 &
+        echo "Waiting for server to start..."
+        i=1
+        while [ "$i" -le 30 ]; do
+          if curl -skf https://localhost:8445/__version >/dev/null 2>&1; then
+            echo "Server ready after $i attempts"
+            exit 0
+          fi
+          echo "Attempt $i: Server not ready, waiting..."
+          if [ "$i" -lt 5 ]; then
+            sleep 1
+          else
+            sleep 2
+          fi
+          i=$((i + 1))
+        done
+        echo "Server failed to start after 30 attempts"
+        cat server.log
+        exit 1
+      test-command: cd ui && E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --project="$BROWSER" --grep-invert @smoke --shard="$SHARD/$SHARD_COUNT"
+      smoke-command: |
+        cd ui
+        E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --grep @smoke
+        if ! command -v go >/dev/null 2>&1; then
+          curl -fsSL -o /tmp/go.tgz https://go.dev/dl/go1.27.2.linux-amd64.tar.gz
+          echo "ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5  /tmp/go.tgz" | sha256sum -c -
+          rm -rf /usr/local/go
+          tar -C /usr/local -xzf /tmp/go.tgz
+        fi
+        export PATH="/usr/local/go/bin:$PATH"
+        export CGO_ENABLED=0
+        export GOTOOLCHAIN=local
+        npm run test:e2e:auth
+        npm run test:e2e:history
+        npm run test:e2e:query
+        npm run test:e2e:permissions
+        npm run test:e2e:unsaved
 
   # ===========================================================================
   # CI Complete — dispatcher / branch-protection aggregator
@@ -1824,6 +1315,10 @@ jobs:
   # High alerts with every check green. Scoped to CodeQL rather than "any High
   # alert": the code-scanning tab also carries Scorecard *scores* at High
   # severity, several of which encode deliberate decisions.
+  # Not the shared ci-complete.yml. GitHub would report that check as
+  # `ci-complete / CI Complete`. Branch protection and release.yml require
+  # the plain name `CI Complete`, so the aggregator stays in this file.
+  # The macOS and Windows jobs are inside the backend caller.
   # Phone width (owner 2026-09-15: everything works at 390x844). The fleet's one
   # definition of "works" lives in MustardSeedNetworks/.github; this job points
   # it at niac's own daemon, started by the same script as the E2E job. niac
@@ -1879,8 +1374,6 @@ jobs:
     needs:
       - changes
       - backend
-      - backend-darwin
-      - backend-windows
       - lint-windows
       - race
       - capture-rawsocket
