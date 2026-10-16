@@ -115,7 +115,7 @@ func (h *DNSHandler) askUpstream(
 			}
 			response.ResponseCode = layers.DNSResponseCodeServFail
 		} else {
-			response.Answers = answer.Answers
+			response.Answers = encodableAnswers(answer.Answers)
 			response.ResponseCode = answer.ResponseCode
 		}
 		reply(response)
@@ -231,6 +231,20 @@ func (h *DNSHandler) answerQuery(
 	}
 
 	h.askUpstream(response, upstreams, debugLevel, serial, reply)
+}
+
+// encodableAnswers keeps the upstream records the reply can carry. The
+// serializer rejects record types it has no encoder for, and one such record
+// would fail the whole reply, leaving the client to time out.
+func encodableAnswers(answers []layers.DNSResourceRecord) []layers.DNSResourceRecord {
+	kept := make([]layers.DNSResourceRecord, 0, len(answers))
+	for _, answer := range answers {
+		probe := &layers.DNS{Answers: []layers.DNSResourceRecord{answer}}
+		if probe.SerializeTo(gopacket.NewSerializeBuffer(), gopacket.SerializeOptions{FixLengths: true}) == nil {
+			kept = append(kept, answer)
+		}
+	}
+	return kept
 }
 
 func cloneDNSQuestions(questions []layers.DNSQuestion) []layers.DNSQuestion {

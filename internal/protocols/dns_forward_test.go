@@ -206,3 +206,16 @@ func TestDNSForwardersAnswerServFailWhenNoUpstreamReplies(t *testing.T) {
 		t.Fatalf("unreachable upstream = %+v, want SERVFAIL", response)
 	}
 }
+
+func TestDNSUpstreamAnswersTheReplyCannotCarryAreDropped(t *testing.T) {
+	carried := layers.DNSResourceRecord{
+		Name: []byte("example.org"), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("203.0.113.80"),
+	}
+	caa := layers.DNSResourceRecord{
+		Name: []byte("example.org"), Type: layers.DNSType(257), Class: layers.DNSClassIN, Data: []byte{0, 5, 'i'},
+	}
+	kept := encodableAnswers([]layers.DNSResourceRecord{caa, carried})
+	if len(kept) != 1 || kept[0].Type != layers.DNSTypeA {
+		t.Fatalf("kept = %v, want only the A record", kept)
+	}
+}
