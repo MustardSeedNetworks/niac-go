@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import authConfig from '../../playwright.auth.config';
 import criticalConfig from '../../playwright.config';
+import fullstackConfig from '../../playwright.fullstack.config';
+import historyConfig from '../../playwright.history.config';
+import permissionsConfig from '../../playwright.permissions.config';
 import queryConfig from '../../playwright.query.config';
 import unsavedConfig from '../../playwright.unsaved.config';
 
@@ -49,5 +52,28 @@ describe('browser support matrix', () => {
     expect(projectNames(authConfig)).toEqual(['chromium', 'webkit']);
     expect(projectNames(queryConfig)).toEqual(['chromium', 'webkit']);
     expect(projectNames(unsavedConfig)).toEqual(['chromium', 'webkit']);
+  });
+});
+
+describe('playwright timeouts', () => {
+  // The e2e job in ci.yml is timeout-minutes: 25. A 60s per-test cap stops one
+  // hung spec from consuming the job, and globalTimeout fires inside Playwright
+  // so the report upload and flake budget still run.
+  const e2eJobTimeoutMs = 25 * 60 * 1000;
+
+  it('caps every suite at 60s per test and under the e2e job budget', () => {
+    for (const config of [
+      criticalConfig,
+      authConfig,
+      queryConfig,
+      unsavedConfig,
+      historyConfig,
+      permissionsConfig,
+      fullstackConfig,
+    ]) {
+      expect(config.timeout).toBe(60_000);
+      expect(config.globalTimeout).toBeLessThan(e2eJobTimeoutMs);
+      expect(config.globalTimeout).toBeGreaterThan(60_000);
+    }
   });
 });

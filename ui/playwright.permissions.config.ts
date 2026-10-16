@@ -5,6 +5,10 @@ export default defineConfig({
   testMatch: 'permissions.auth.ts',
   workers: 1,
   retries: 0,
+  // Same caps as playwright.config.ts, which this file does not spread.
+  // globalTimeout is under the e2e job's timeout-minutes: 25.
+  timeout: 60_000,
+  globalTimeout: 20 * 60 * 1000,
   reporter: [['list'], ['json', { outputFile: 'playwright-report/results-permissions.json' }]],
   use: { baseURL: 'https://127.0.0.1:18447', ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],

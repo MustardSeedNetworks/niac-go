@@ -1,0 +1,42 @@
+# =============================================================================
+# CI smoke — the main-branch signal, not a second test run
+# =============================================================================
+# The merge queue already ran the full suite on this commit before it landed.
+# Re-running ci.yml on push duplicated that work and, in a merge burst,
+# cancelled the pending main run. release-please is workflow_run-gated on a
+# successful CI result on main, and release.yml's verify-tag refuses a tag
+# whose commit has no successful check named "CI Complete".
+#
+# Those two look up different things (a workflow conclusion, and a check-run
+# name on the main SHA). The merge-group SHA is not the commit that lands, so
+# the queue's CI Complete does not satisfy either lookup. This job is that
+# result: one green check, no build.
+#
+# The check is named CI Complete because verify-tag matches that string. It
+# does not re-test. A commit reaches main only after the queue's required
+# checks passed.
+# =============================================================================
+
+name: CI smoke
+
+on:
+  push:
+    branches: [main]
+
+# One group per commit. GitHub keeps a single pending run per group and
+# cancels the older one, which is how a merge burst used to skip
+# release-please. A smoke run is too cheap to share a group.
+concurrency:
+  group: ci-smoke-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  smoke:
+    name: CI Complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record the merge-queue result
+        run: echo "merge_group already tested ${GITHUB_SHA}"

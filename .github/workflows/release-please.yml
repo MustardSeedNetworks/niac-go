@@ -6,7 +6,10 @@
 # release.yml for building packages (via version tag).
 #
 # Trigger pattern (shared with seed, stem, niac):
-#   - workflow_run on CI completion: real trigger; gated on success
+#   - workflow_run on CI completion: real trigger; gated on success.
+#     Pushes to main run the "CI smoke" workflow, not the full suite — the
+#     merge group already tested the commit. The release PR's own CI is
+#     still the "CI" workflow.
 #   - schedule: reconciles a release that a flaky CI run skipped
 #   - workflow_dispatch: manual debug / force trigger
 #
@@ -53,7 +56,10 @@ on:
   # the enqueue step: the PR can only enter the queue once its checks are
   # green, and nothing else fires at that moment (G-18).
   workflow_run:
-    workflows: ["CI"]
+    # "CI" is the full suite (pull requests, the merge queue, dispatch).
+    # "CI smoke" is the push-to-main signal. workflow_run matches the
+    # workflow name, not the file name.
+    workflows: ["CI", "CI smoke"]
     branches: [main, release-please--branches--main]
     types: [completed]
   # Offset from the hour so the fleet's four repos do not all fire at :00.

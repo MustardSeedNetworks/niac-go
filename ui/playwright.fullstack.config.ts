@@ -20,7 +20,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  timeout: 30000,
+  // Same caps as playwright.config.ts. This tier is not the ci.yml e2e job;
+  // the suite cap is still under that job's 25 minute budget.
+  timeout: 60_000,
+  globalTimeout: 20 * 60 * 1000,
   expect: {
     timeout: 10000,
   },

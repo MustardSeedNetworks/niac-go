@@ -45,7 +45,11 @@ export default defineConfig({
   // journey's deadline even while its API requests remained responsive.
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  timeout: 30000,
+  // 60s per test. A few journeys raise this with test.setTimeout. The suite
+  // cap is under the e2e job's timeout-minutes: 25, so a hung run fails inside
+  // Playwright and the report upload and flake budget still run.
+  timeout: 60_000,
+  globalTimeout: 20 * 60 * 1000,
   expect: {
     timeout: 10000,
   },
