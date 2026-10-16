@@ -3,6 +3,7 @@ package protocols
 import (
 	"encoding/binary"
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
-// TCPPortIPerf3 is the port an iperf3 server listens on.
-const TCPPortIPerf3 = 5201
+// TCPPortIPerf3 is the port an iperf3 server listens on unless authored.
+const TCPPortIPerf3 = config.DefaultIPerf3Port
 
 // Control-channel states, one byte each (iperf_api.h). SERVER_ERROR is -2
 // and is followed by the iperf3 error number and errno, four bytes each.
@@ -56,16 +57,46 @@ const (
 	iperf3LengthPrefix = 4
 	// tcpOptionMSSLen is the length of an MSS option: kind, length, value.
 	tcpOptionMSSLen = 4
+	// tcpOptionWindowScaleLen is the length of a window scale option.
+	tcpOptionWindowScaleLen = 3
+	// tcpMaxWindowShift is the largest window scale RFC 7323 allows.
+	tcpMaxWindowShift = 14
+	// tcpDefaultMSS is the MSS of a client that announces none (RFC 9293).
+	tcpDefaultMSS = 536
+	// iperf3WindowShift is the window scale the server offers a client that
+	// offers one: its 65,535-byte window then stands for 8 MiB, so a forward
+	// stream is not bounded by the window at lab round-trip times.
+	iperf3WindowShift = 7
 )
 
-// iperf3Server serves iperf3 forward TCP tests: the client sends, the
-// simulated server receives and counts. It speaks the control channel and
-// acknowledges the data streams; it never sends test data, so a reverse,
-// bidirectional or UDP test is refused with SERVER_ERROR.
+// The reverse sender. It paces each test at the device's download rate,
+// keeps no more in flight than the client's window, and on three duplicate
+// ACKs or a retransmission timeout sends again from the first byte the
+// client has not acknowledged.
+const (
+	// iperf3DefaultDownloadMbps paces a device that authors no download rate.
+	iperf3DefaultDownloadMbps = 100
+	// iperf3SendInterval is how often the sender runs.
+	iperf3SendInterval = time.Millisecond
+	// iperf3SendBurst bounds the bytes a late run may send at once.
+	iperf3SendBurst = 64 << 10
+	// iperf3RetransmitTimeout is Linux's minimum RTO, ample on a lab LAN.
+	iperf3RetransmitTimeout = 200 * time.Millisecond
+	// iperf3DuplicateACKs is the fast-retransmit threshold.
+	iperf3DuplicateACKs = 3
+	// bytesPerMbps converts the authored rate in megabits to bytes.
+	bytesPerMbps = 1e6 / 8
+)
+
+// iperf3Server serves iperf3 TCP tests. In a forward test the client sends
+// and the server receives and counts; in a reverse test, the downstream leg
+// of a NetAlly tester's default test, the server sends. It refuses a
+// bidirectional or UDP test with SERVER_ERROR.
 type iperf3Server struct {
-	mu    sync.Mutex
-	conns map[streamKey]*iperf3Conn
-	tests map[string]*iperf3Test // by cookie
+	mu     sync.Mutex
+	conns  map[streamKey]*iperf3Conn
+	tests  map[string]*iperf3Test // by cookie
+	filler []byte                 // the payload of the data the server sends
 }
 
 type iperf3Conn struct {
@@ -76,17 +107,49 @@ type iperf3Conn struct {
 	data       bool
 	received   uint64 // data-stream bytes after the cookie
 	lastSeen   time.Time
+
+	mss    uint32 // the largest segment the client accepts
+	shift  uint8  // the client's window scale, when both offered one
+	window uint32 // the client's receive window in bytes
+
+	// A reverse test's data stream sends from serverNext.
+	first        uint32 // our first data byte
+	unacked      uint32 // the first byte the client has not acknowledged
+	sent         uint32 // one past the highest byte sent
+	duplicates   int    // duplicate ACKs in a row
+	retransmits  int    // segments sent again
+	lastProgress time.Time
 }
 
 type iperf3Test struct {
 	control  streamKey
 	state    byte // the last state sent on the control connection
 	streams  int
+	reverse  bool
 	data     []*iperf3Conn
 	dataKeys []streamKey
 	started  time.Time
 	ended    time.Time
 	lastSeen time.Time
+
+	route    iperf3Route // where a reverse test's data goes
+	rate     float64     // bytes a second a reverse test sends
+	budget   float64     // bytes the rate allows now
+	lastSend time.Time
+}
+
+// iperf3Route is how the server reaches a test's client: the device that
+// serves it and the frame identity of the client's segments.
+type iperf3Route struct {
+	device         *config.Device
+	identity       replyEthernetIdentity
+	client, server net.IP
+}
+
+// iperf3Burst is what the sender sends to one test's client.
+type iperf3Burst struct {
+	route    iperf3Route
+	segments []iperf3Segment
 }
 
 // iperf3Params are the parameters the server acts on.
@@ -128,31 +191,92 @@ type iperf3Segment struct {
 }
 
 func newIPerf3Server() *iperf3Server {
-	return &iperf3Server{conns: make(map[streamKey]*iperf3Conn), tests: make(map[string]*iperf3Test)}
+	return &iperf3Server{
+		conns: make(map[streamKey]*iperf3Conn), tests: make(map[string]*iperf3Test), filler: make([]byte, iperf3MSS),
+	}
 }
 
-// handleIPerf3 serves port 5201 on a device with iperf3 enabled and resets
-// a SYN to any other.
-func (h *TCPHandler) handleIPerf3(pkt *Packet, ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
-	device := h.serviceDevice(devices, ipLayer.DstIP, func(device *config.Device) bool {
-		return device.IPerf3 != nil && device.IPerf3.Enabled
+// iperf3Device is the device that serves iperf3 on port at ip, if any.
+func (h *TCPHandler) iperf3Device(devices []*config.Device, ip net.IP, port layers.TCPPort) *config.Device {
+	return h.serviceDevice(devices, ip, func(device *config.Device) bool {
+		return device.IPerf3 != nil && device.IPerf3.Enabled && layers.TCPPort(device.IPerf3.Port) == port
 	})
+}
+
+// handleIPerf3 serves the iperf3 port of a device with iperf3 enabled and
+// resets a SYN to any other.
+func (h *TCPHandler) handleIPerf3(pkt *Packet, ipLayer *layers.IPv4, tcp *layers.TCP, devices []*config.Device) {
+	device := h.iperf3Device(devices, ipLayer.DstIP, tcp.DstPort)
 	if device == nil {
 		if tcp.SYN && !tcp.ACK {
 			h.sendRST(pkt, ipLayer, tcp, devices)
 		}
 		return
 	}
-	segments := h.iperf3.receive(newStreamKey(ipLayer, tcp), tcp, iperf3SegmentLength(ipLayer, tcp), time.Now())
 	identity, ok := h.stack.replyEthernet(pkt, device)
 	if !ok {
 		return
 	}
-	for _, segment := range segments {
-		if !h.sendStatelessFrame(pkt, ipLayer, segment.tcp, segment.payload, device, identity, "iPerf3") {
+	route := iperf3Route{device: device, identity: identity, client: ipLayer.SrcIP, server: ipLayer.DstIP}
+	segments, started := h.iperf3.receive(
+		newStreamKey(ipLayer, tcp), tcp, iperf3SegmentLength(ipLayer, tcp), route, time.Now(),
+	)
+	h.sendIPerf3(pkt.SerialNumber, iperf3Burst{route: route, segments: segments})
+	if started {
+		h.startIPerf3Sender()
+	}
+}
+
+// sendIPerf3 sends a burst of segments to a test's client.
+func (h *TCPHandler) sendIPerf3(serial int, burst iperf3Burst) {
+	ipLayer := &layers.IPv4{SrcIP: burst.route.client, DstIP: burst.route.server}
+	for _, segment := range burst.segments {
+		if !h.sendStatelessFrame(
+			serial, ipLayer, segment.tcp, segment.payload, burst.route.device, burst.route.identity, "iPerf3",
+		) {
 			return
 		}
 	}
+}
+
+// runIPerf3Sender sends reverse tests' data until none is running or the
+// stack stops. One sender serves every test of the handler.
+func (h *TCPHandler) runIPerf3Sender() {
+	if !h.iperf3Sending.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(iperf3SendInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-h.stack.stopChan:
+				h.iperf3Sending.Store(false)
+				return
+			case now := <-ticker.C:
+				if h.pumpIPerf3(now) {
+					continue
+				}
+				// A test may start between the last run and giving up the
+				// sender: it found the flag set and left the work to us.
+				h.iperf3Sending.Store(false)
+				if !h.iperf3.sending() || !h.iperf3Sending.CompareAndSwap(false, true) {
+					return
+				}
+			}
+		}
+	}()
+}
+
+// pumpIPerf3 sends what the reverse tests have due at now and reports
+// whether any is still running.
+func (h *TCPHandler) pumpIPerf3(now time.Time) bool {
+	bursts, running := h.iperf3.tick(now)
+	for _, burst := range bursts {
+		h.sendIPerf3(0, burst)
+	}
+
+	return running
 }
 
 // iperf3SegmentLength is how much data a segment carries by its IP header.
@@ -165,31 +289,55 @@ func iperf3SegmentLength(ipLayer *layers.IPv4, tcp *layers.TCP) int {
 	return max(length, len(tcp.Payload))
 }
 
-// receive takes one client segment carrying length bytes and returns what
-// the server sends in answer, which may be on another connection of the
-// same test.
-func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, length int, now time.Time) []iperf3Segment {
+// receive takes one client segment carrying length bytes, which reached
+// the server by route, and returns what the server sends in answer, which
+// may be on another connection of the same test. It reports whether the
+// segment started a reverse test, which the sender must now serve.
+func (s *iperf3Server) receive(
+	key streamKey,
+	tcp *layers.TCP,
+	length int,
+	route iperf3Route,
+	now time.Time,
+) ([]iperf3Segment, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch conn := s.conns[key]; {
 	case tcp.SYN && !tcp.ACK:
-		return s.open(key, tcp, now)
+		return s.open(key, tcp, now), false
 	case conn == nil:
 		// A connection the server does not know: closed, forgotten, or from
 		// before a restart. Only what would expect an answer is reset.
 		if tcp.RST || (length == 0 && !tcp.FIN) {
-			return nil
+			return nil, false
 		}
 		return []iperf3Segment{{tcp: &layers.TCP{
 			SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
 			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(length),
-		}}}
+		}}}, false
 	case tcp.RST:
 		s.drop(key, conn)
-		return nil
+		return nil, false
 	default:
-		return s.segment(key, conn, tcp, length, now)
+		running := conn.test != nil && conn.test.state == iperf3TestRunning
+		segments := s.segment(key, conn, tcp, length, route, now)
+		test := conn.test
+
+		return segments, !running && test != nil && test.reverse && test.state == iperf3TestRunning
 	}
+}
+
+// sending reports whether a reverse test is running.
+func (s *iperf3Server) sending() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, test := range s.tests {
+		if test.reverse && test.state == iperf3TestRunning {
+			return true
+		}
+	}
+
+	return false
 }
 
 // open answers a SYN, replacing any earlier connection on the same ports.
@@ -209,7 +357,29 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 			Ack:     tcp.Seq + 1,
 		}}}
 	}
-	s.conns[key] = &iperf3Conn{clientNext: tcp.Seq + 1, serverNext: tcpInitialSeq + 1, lastSeen: now}
+	conn := &iperf3Conn{
+		clientNext: tcp.Seq + 1, serverNext: tcpInitialSeq + 1, lastSeen: now,
+		mss: tcpDefaultMSS, window: uint32(tcp.Window),
+	}
+	options := []layers.TCPOption{{
+		OptionType: layers.TCPOptionKindMSS, OptionLength: tcpOptionMSSLen,
+		OptionData: binary.BigEndian.AppendUint16(nil, iperf3MSS),
+	}}
+	for _, option := range tcp.Options {
+		switch {
+		case option.OptionType == layers.TCPOptionKindMSS && len(option.OptionData) == 2:
+			conn.mss = uint32(binary.BigEndian.Uint16(option.OptionData))
+		case option.OptionType == layers.TCPOptionKindWindowScale && len(option.OptionData) == 1:
+			conn.shift = min(option.OptionData[0], tcpMaxWindowShift)
+			options = append(options, layers.TCPOption{OptionType: layers.TCPOptionKindNop},
+				layers.TCPOption{
+					OptionType: layers.TCPOptionKindWindowScale, OptionLength: tcpOptionWindowScaleLen,
+					OptionData: []byte{iperf3WindowShift},
+				})
+		}
+	}
+	conn.mss = min(max(conn.mss, 1), iperf3MSS)
+	s.conns[key] = conn
 
 	return []iperf3Segment{{tcp: &layers.TCP{
 		SrcPort: layers.TCPPort(
@@ -221,10 +391,7 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 		SYN:     true,
 		ACK:     true,
 		Window:  tcpWindowSize,
-		Options: []layers.TCPOption{{
-			OptionType: layers.TCPOptionKindMSS, OptionLength: tcpOptionMSSLen,
-			OptionData: binary.BigEndian.AppendUint16(nil, iperf3MSS),
-		}},
+		Options: options,
 	}}}
 }
 
@@ -236,8 +403,13 @@ func (s *iperf3Server) segment(
 	conn *iperf3Conn,
 	tcp *layers.TCP,
 	length int,
+	route iperf3Route,
 	now time.Time,
 ) []iperf3Segment {
+	conn.window = uint32(tcp.Window) << conn.shift
+	if conn.sent != conn.first {
+		conn.acknowledged(tcp, length, now)
+	}
 	if length == 0 && !tcp.FIN {
 		return nil // an ACK of ours
 	}
@@ -254,7 +426,7 @@ func (s *iperf3Server) segment(
 		conn.received += uint64(len(tcp.Payload))
 	} else {
 		conn.pending = append(conn.pending, tcp.Payload...)
-		out = s.advance(key, conn)
+		out = s.advance(key, conn, route)
 	}
 	if s.conns[key] != conn {
 		return out // the conversation ended and the connection was reset
@@ -282,9 +454,9 @@ func (s *iperf3Server) segment(
 
 // advance consumes what a control connection, or a connection that has not
 // sent its cookie yet, has received, and returns the server's answer.
-func (s *iperf3Server) advance(key streamKey, conn *iperf3Conn) []iperf3Segment {
+func (s *iperf3Server) advance(key streamKey, conn *iperf3Conn, route iperf3Route) []iperf3Segment {
 	if conn.test == nil {
-		return s.cookie(key, conn)
+		return s.cookie(key, conn, route)
 	}
 	switch conn.test.state {
 	case iperf3ParamExchange:
@@ -302,7 +474,7 @@ func (s *iperf3Server) advance(key streamKey, conn *iperf3Conn) []iperf3Segment 
 
 // cookie reads the cookie that opens a connection: the first connection to
 // send it is a test's control connection, the later ones its data streams.
-func (s *iperf3Server) cookie(key streamKey, conn *iperf3Conn) []iperf3Segment {
+func (s *iperf3Server) cookie(key streamKey, conn *iperf3Conn, route iperf3Route) []iperf3Segment {
 	if len(conn.pending) < iperf3CookieLen {
 		return nil
 	}
@@ -310,7 +482,7 @@ func (s *iperf3Server) cookie(key streamKey, conn *iperf3Conn) []iperf3Segment {
 	rest := conn.pending[iperf3CookieLen:]
 	conn.pending = nil
 	if test := s.tests[cookie]; test != nil {
-		return s.join(key, conn, test, rest)
+		return s.join(key, conn, test, rest, route)
 	}
 	test := &iperf3Test{control: key, state: iperf3ParamExchange, lastSeen: conn.lastSeen}
 	s.tests[cookie] = test
@@ -333,9 +505,10 @@ func (s *iperf3Server) params(key streamKey, conn *iperf3Conn) []iperf3Segment {
 	if err := json.Unmarshal(message, &params); err != nil {
 		return s.refuse(key, conn, false)
 	}
-	if params.UDP || params.Reverse || params.Bidirectional {
+	if params.UDP || params.Bidirectional {
 		return s.refuse(key, conn, true)
 	}
+	conn.test.reverse = params.Reverse
 	conn.test.streams = min(max(params.Parallel, 1), iperf3MaxStreams)
 	conn.test.state = iperf3CreateStreams
 
@@ -390,8 +563,15 @@ func (s *iperf3Server) exchangeResults(key streamKey, conn *iperf3Conn) []iperf3
 }
 
 // join adds a data stream to its test, and starts the test once every
-// stream the parameters asked for has arrived.
-func (s *iperf3Server) join(key streamKey, conn *iperf3Conn, test *iperf3Test, rest []byte) []iperf3Segment {
+// stream the parameters asked for has arrived. A reverse test's data goes
+// back the way the last stream came.
+func (s *iperf3Server) join(
+	key streamKey,
+	conn *iperf3Conn,
+	test *iperf3Test,
+	rest []byte,
+	route iperf3Route,
+) []iperf3Segment {
 	if test.state != iperf3CreateStreams || key == test.control {
 		s.close(key, conn)
 		return []iperf3Segment{s.reset(key, conn)}
@@ -410,6 +590,18 @@ func (s *iperf3Server) join(key streamKey, conn *iperf3Conn, test *iperf3Test, r
 	}
 	test.state = iperf3TestRunning
 	test.started = conn.lastSeen
+	if test.reverse {
+		test.route, test.lastSend = route, test.started
+		test.rate = iperf3DefaultDownloadMbps
+		if rate := route.device.IPerf3.DownloadMbps; rate > 0 {
+			test.rate = rate
+		}
+		test.rate *= bytesPerMbps
+		for _, stream := range test.data {
+			stream.first, stream.unacked, stream.sent = stream.serverNext, stream.serverNext, stream.serverNext
+			stream.lastProgress = test.started
+		}
+	}
 
 	return []iperf3Segment{
 		s.ack(key, conn, nil, false),
@@ -454,22 +646,122 @@ func (s *iperf3Server) refuse(key streamKey, conn *iperf3Conn, unimplemented boo
 	return []iperf3Segment{s.ack(key, conn, answer, true)}
 }
 
-// results are the server's results: what each stream received, under the
-// stream ids the client numbered them with.
+// results are the server's results, under the stream ids the client
+// numbered them with: what each stream received or, in a reverse test, what
+// it sent and how many segments it sent again.
 func (t *iperf3Test) results(client iperf3Results) iperf3Results {
 	seconds := t.ended.Sub(t.started).Seconds()
 	results := iperf3Results{SenderHasRetransmits: -1, Streams: make([]iperf3StreamResult, 0, len(t.data))}
+	if t.reverse {
+		results.SenderHasRetransmits = 1
+	}
 	for i, conn := range t.data {
 		id := i + 1
 		if i < len(client.Streams) {
 			id = client.Streams[i].ID
 		}
-		results.Streams = append(results.Streams, iperf3StreamResult{
-			ID: id, Bytes: conn.received, Retransmits: -1, EndTime: seconds,
-		})
+		stream := iperf3StreamResult{ID: id, Bytes: conn.received, Retransmits: -1, EndTime: seconds}
+		if t.reverse {
+			stream.Bytes, stream.Retransmits = uint64(conn.sent-conn.first), conn.retransmits
+		}
+		results.Streams = append(results.Streams, stream)
 	}
 
 	return results
+}
+
+// tick returns the data each running reverse test has due at now and
+// reports whether any is still running.
+func (s *iperf3Server) tick(now time.Time) ([]iperf3Burst, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var bursts []iperf3Burst
+	running := false
+	for _, test := range s.tests {
+		if !test.reverse || test.state != iperf3TestRunning {
+			continue
+		}
+		running = true
+		if segments := test.send(now, s.filler); len(segments) > 0 {
+			bursts = append(bursts, iperf3Burst{route: test.route, segments: segments})
+		}
+	}
+
+	return bursts, running
+}
+
+// send returns the segments the rate and the client's windows allow at now,
+// one stream after another so parallel streams share the rate.
+func (t *iperf3Test) send(now time.Time, filler []byte) []iperf3Segment {
+	t.budget = min(t.budget+t.rate*now.Sub(t.lastSend).Seconds(), iperf3SendBurst)
+	t.lastSend = now
+	for _, conn := range t.data {
+		if conn.sent != conn.unacked && now.Sub(conn.lastProgress) > iperf3RetransmitTimeout {
+			conn.serverNext, conn.lastProgress = conn.unacked, now
+		}
+	}
+	var out []iperf3Segment
+	for more := true; more; {
+		more = false
+		for i, conn := range t.data {
+			if float64(conn.mss) > t.budget || conn.serverNext-conn.unacked+conn.mss > conn.window {
+				continue
+			}
+			out = append(out, conn.next(t.dataKeys[i], filler, now))
+			t.budget -= float64(conn.mss)
+			more = true
+		}
+	}
+
+	return out
+}
+
+// next is the data segment at serverNext.
+func (c *iperf3Conn) next(key streamKey, filler []byte, now time.Time) iperf3Segment {
+	if c.serverNext == c.unacked && c.sent == c.unacked {
+		c.lastProgress = now // the first byte in flight starts the timer
+	}
+	if seqBefore(c.serverNext, c.sent) {
+		c.retransmits++
+	}
+	segment := iperf3Segment{tcp: &layers.TCP{
+		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
+		Seq: c.serverNext, Ack: c.clientNext, ACK: true, Window: tcpWindowSize,
+	}, payload: filler[:c.mss]}
+	c.serverNext += c.mss
+	if seqBefore(c.sent, c.serverNext) {
+		c.sent = c.serverNext
+	}
+
+	return segment
+}
+
+// acknowledged takes the client's ACK of a stream the server sends on. New
+// data acknowledged restarts the timer; the third duplicate sends again from
+// the first byte the client lacks.
+func (c *iperf3Conn) acknowledged(tcp *layers.TCP, length int, now time.Time) {
+	switch {
+	case !tcp.ACK || seqBefore(c.sent, tcp.Ack):
+	case seqBefore(c.unacked, tcp.Ack):
+		c.unacked, c.duplicates, c.lastProgress = tcp.Ack, 0, now
+		if seqBefore(c.serverNext, c.unacked) {
+			c.serverNext = c.unacked
+		}
+	case tcp.Ack == c.unacked && length == 0 && c.sent != c.unacked:
+		c.duplicates++
+		if c.duplicates == iperf3DuplicateACKs {
+			c.serverNext = c.unacked
+		}
+	}
+	c.lastSeen = now
+	if c.test != nil {
+		c.test.lastSeen = now
+	}
+}
+
+// seqBefore reports whether sequence number a comes before b, modulo 2^32.
+func seqBefore(a, b uint32) bool {
+	return a != b && b-a < 1<<31
 }
 
 // finish forgets a test and every data stream it opened. The control

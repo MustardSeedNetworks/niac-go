@@ -158,7 +158,7 @@ func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 
 	// Set defaults for unspecified values
 	if cfg.Port == 0 {
-		cfg.Port = 5201 // Default iPerf3 port
+		cfg.Port = DefaultIPerf3Port
 	}
 
 	if cfg.UploadMbps == 0 {

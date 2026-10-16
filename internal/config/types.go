@@ -353,6 +353,9 @@ func (d *Device) IPv4TTL() uint8 {
 	return DefaultIPv4TTL
 }
 
+// DefaultIPerf3Port is the port an iperf3 server listens on unless authored.
+const DefaultIPerf3Port = 5201
+
 // IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation.
 type IPerf3Config struct {
 	Enabled           bool    // Whether iPerf3 server is enabled

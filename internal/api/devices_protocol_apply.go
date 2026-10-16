@@ -476,8 +476,12 @@ func applyIPerf3Request(dev *config.Device, req *IPerf3Request) {
 		return
 	}
 
+	port := req.Port
+	if port == 0 {
+		port = config.DefaultIPerf3Port
+	}
 	dev.IPerf3 = &config.IPerf3Config{
-		Enabled: true, Port: req.Port, MaxBandwidthMbps: req.MaxBandwidthMbps,
+		Enabled: true, Port: port, MaxBandwidthMbps: req.MaxBandwidthMbps,
 		TypicalLatencyMs: req.TypicalLatencyMs, JitterMs: req.JitterMs,
 		PacketLossPercent: req.PacketLossPercent, UploadMbps: req.UploadMbps, DownloadMbps: req.DownloadMbps,
 	}
