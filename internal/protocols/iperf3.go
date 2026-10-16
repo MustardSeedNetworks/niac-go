@@ -70,9 +70,11 @@ const (
 	iperf3WindowShift = 7
 )
 
-// The reverse sender. It paces each test at the device's download rate,
-// keeps no more in flight than the client's window, and on three duplicate
-// ACKs or a retransmission timeout sends again from the first byte the
+// The reverse sender. It paces each test at the device's download rate and
+// keeps no more in flight than the client's window. Three duplicate ACKs
+// resend the segment the client lacks and, until everything sent before
+// them is acknowledged, the next one on each partial ACK (NewReno, RFC
+// 6582); a retransmission timeout sends again from the first byte the
 // client has not acknowledged.
 const (
 	// iperf3DefaultDownloadMbps paces a device that authors no download rate.
@@ -81,8 +83,10 @@ const (
 	iperf3SendInterval = time.Millisecond
 	// iperf3SendBurst bounds the bytes a late run may send at once.
 	iperf3SendBurst = 64 << 10
-	// iperf3RetransmitTimeout is Linux's minimum RTO, ample on a lab LAN.
-	iperf3RetransmitTimeout = 200 * time.Millisecond
+	// iperf3RetransmitTimeout is RFC 6298's RTO for a sender with no round-
+	// trip estimate. The simulator's own receive path can hold an ACK back
+	// for well over Linux's 200 ms minimum, which would fire spuriously.
+	iperf3RetransmitTimeout = time.Second
 	// iperf3DuplicateACKs is the fast-retransmit threshold.
 	iperf3DuplicateACKs = 3
 	// iperf3SenderStall ends a reverse test whose client has sent nothing,
@@ -130,6 +134,9 @@ type iperf3Conn struct {
 	duplicates   int    // duplicate ACKs in a row
 	retransmits  int    // segments sent again
 	lastProgress time.Time
+	recovering   bool   // resending what three duplicate ACKs reported lost
+	recover      uint32 // recovery ends once the client acknowledges this
+	resend       bool   // the segment at unacked is due again
 }
 
 type iperf3Test struct {
@@ -731,16 +738,24 @@ func (t *iperf3Test) send(now time.Time, filler []byte) []iperf3Segment {
 	for _, conn := range t.data {
 		if conn.sent != conn.unacked && now.Sub(conn.lastProgress) > iperf3RetransmitTimeout {
 			conn.serverNext, conn.lastProgress = conn.unacked, now
+			conn.recovering, conn.resend = false, false
 		}
 	}
 	var out []iperf3Segment
 	for more := true; more; {
 		more = false
 		for i, conn := range t.data {
-			if float64(conn.mss) > t.budget || conn.serverNext-conn.unacked+conn.mss > conn.window {
+			switch {
+			case float64(conn.mss) > t.budget:
 				continue
+			case conn.resend:
+				conn.resend = false
+				out = append(out, conn.segmentAt(t.dataKeys[i], conn.unacked, filler))
+			case conn.serverNext-conn.unacked+conn.mss > conn.window:
+				continue
+			default:
+				out = append(out, conn.next(t.dataKeys[i], filler, now))
 			}
-			out = append(out, conn.next(t.dataKeys[i], filler, now))
 			t.budget -= float64(conn.mss)
 			more = true
 		}
@@ -754,13 +769,7 @@ func (c *iperf3Conn) next(key streamKey, filler []byte, now time.Time) iperf3Seg
 	if c.serverNext == c.unacked && c.sent == c.unacked {
 		c.lastProgress = now // the first byte in flight starts the timer
 	}
-	if seqBefore(c.serverNext, c.sent) {
-		c.retransmits++
-	}
-	segment := iperf3Segment{tcp: &layers.TCP{
-		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
-		Seq: c.serverNext, Ack: c.clientNext, ACK: true, Window: tcpWindowSize,
-	}, payload: filler[:c.mss]}
+	segment := c.segmentAt(key, c.serverNext, filler)
 	c.serverNext += c.mss
 	if seqBefore(c.sent, c.serverNext) {
 		c.sent = c.serverNext
@@ -769,9 +778,22 @@ func (c *iperf3Conn) next(key streamKey, filler []byte, now time.Time) iperf3Seg
 	return segment
 }
 
+// segmentAt is the data segment at seq, counted as a retransmission when
+// that data has been sent before.
+func (c *iperf3Conn) segmentAt(key streamKey, seq uint32, filler []byte) iperf3Segment {
+	if seqBefore(seq, c.sent) {
+		c.retransmits++
+	}
+
+	return iperf3Segment{tcp: &layers.TCP{
+		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
+		Seq: seq, Ack: c.clientNext, ACK: true, Window: tcpWindowSize,
+	}, payload: filler[:c.mss]}
+}
+
 // acknowledged takes the client's ACK of a stream the server sends on. New
-// data acknowledged restarts the timer; the third duplicate sends again from
-// the first byte the client lacks.
+// data acknowledged restarts the timer and, in recovery, a partial ACK marks
+// the next missing segment due; the third duplicate starts recovery.
 func (c *iperf3Conn) acknowledged(tcp *layers.TCP, length int, now time.Time) {
 	switch {
 	case !tcp.ACK || seqBefore(c.sent, tcp.Ack) || seqBefore(tcp.Ack, c.unacked):
@@ -781,10 +803,14 @@ func (c *iperf3Conn) acknowledged(tcp *layers.TCP, length int, now time.Time) {
 		if seqBefore(c.serverNext, c.unacked) {
 			c.serverNext = c.unacked
 		}
+		if c.recovering {
+			c.recovering = seqBefore(c.unacked, c.recover)
+			c.resend = c.recovering
+		}
 	case tcp.Ack == c.unacked && length == 0 && c.sent != c.unacked:
 		c.duplicates++
-		if c.duplicates == iperf3DuplicateACKs {
-			c.serverNext = c.unacked
+		if c.duplicates == iperf3DuplicateACKs && !c.recovering {
+			c.recovering, c.recover, c.resend = true, c.sent, true
 		}
 	}
 	c.lastSeen = now

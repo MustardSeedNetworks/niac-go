@@ -595,14 +595,19 @@ func TestIPerf3ReverseSender(t *testing.T) {
 			},
 		},
 		{
-			name: "three duplicate ACKs send again from the first unacknowledged byte", shift: 7, window: 65535,
+			name: "three duplicate ACKs resend the missing segment, then each partial ACK the next", shift: 7,
+			window: 65535,
 			events: []event{
 				{at: 4 * time.Millisecond, want: iperf3Seqs(1001, 4)},
 				{ack: ack(2001, 65535)},
 				{ack: ack(2001, 65535)},
 				{ack: ack(2001, 65535)},
 				{ack: ack(2001, 65535)},
-				{at: 6 * time.Millisecond, want: iperf3Seqs(2001, 2)},
+				{at: 6 * time.Millisecond, want: []uint32{2001, 5001}},
+				{ack: ack(3001, 65535)},
+				{at: 7 * time.Millisecond, want: []uint32{3001}},
+				{ack: ack(6001, 65535)},
+				{at: 8 * time.Millisecond, want: []uint32{6001}},
 			},
 		},
 		{
