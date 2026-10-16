@@ -394,7 +394,8 @@ type Device struct {
 	// collectors.
 	Syslog *SyslogConfig `yaml:"syslog,omitempty"`
 
-	// IPerf3 answers iperf3 throughput tests with the authored rates.
+	// IPerf3 serves iperf3 TCP throughput tests: forward, and reverse paced
+	// at the authored download rate.
 	IPerf3 *IPerf3Config `yaml:"iperf3,omitempty"`
 
 	// Reflector makes the device a NetAlly-style UDP reflector endpoint for

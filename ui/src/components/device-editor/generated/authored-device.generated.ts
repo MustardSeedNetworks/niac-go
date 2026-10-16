@@ -379,11 +379,6 @@ export interface AuthoredDevice {
   readonly iperf3?: {
       readonly enabled?: boolean;
       readonly port?: number;
-      readonly max_bandwidth_mbps?: number;
-      readonly typical_latency_ms?: number;
-      readonly jitter_ms?: number;
-      readonly packet_loss_percent?: number;
-      readonly upload_mbps?: number;
       readonly download_mbps?: number;
     };
   readonly reflector?: {

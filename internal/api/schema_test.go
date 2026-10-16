@@ -388,8 +388,8 @@ func TestBuildIPerf3Schema(t *testing.T) {
 	if _, ok := schema.Properties["port"]; !ok {
 		t.Error("missing port property")
 	}
-	if _, ok := schema.Properties["max_bandwidth_mbps"]; !ok {
-		t.Error("missing max_bandwidth_mbps property")
+	if _, ok := schema.Properties["download_mbps"]; !ok {
+		t.Error("missing download_mbps property")
 	}
 }
 

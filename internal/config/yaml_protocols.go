@@ -146,35 +146,13 @@ func parseIPerf3Config(yamlIPerf3 *converter.IPerf3Config) *IPerf3Config {
 	}
 
 	cfg := &IPerf3Config{
-		Enabled:           yamlIPerf3.Enabled,
-		Port:              yamlIPerf3.Port,
-		MaxBandwidthMbps:  yamlIPerf3.MaxBandwidthMbps,
-		TypicalLatencyMs:  yamlIPerf3.TypicalLatencyMs,
-		JitterMs:          yamlIPerf3.JitterMs,
-		PacketLossPercent: yamlIPerf3.PacketLossPercent,
-		UploadMbps:        yamlIPerf3.UploadMbps,
-		DownloadMbps:      yamlIPerf3.DownloadMbps,
+		Enabled: yamlIPerf3.Enabled, Port: yamlIPerf3.Port, DownloadMbps: yamlIPerf3.DownloadMbps,
 	}
-
-	// Set defaults for unspecified values
 	if cfg.Port == 0 {
 		cfg.Port = DefaultIPerf3Port
 	}
-
-	if cfg.UploadMbps == 0 {
-		cfg.UploadMbps = 100.0 // Default 100 Mbps
-	}
-
 	if cfg.DownloadMbps == 0 {
-		cfg.DownloadMbps = 100.0 // Default 100 Mbps
-	}
-
-	if cfg.MaxBandwidthMbps == 0 {
-		cfg.MaxBandwidthMbps = 1000.0 // Default 1 Gbps max
-	}
-
-	if cfg.TypicalLatencyMs == 0 {
-		cfg.TypicalLatencyMs = 1.0 // Default 1ms
+		cfg.DownloadMbps = DefaultIPerf3DownloadMbps
 	}
 
 	return cfg

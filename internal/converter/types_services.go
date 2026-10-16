@@ -182,23 +182,9 @@ type IPerf3Config struct {
 	// Port is the TCP port iperf3 listens on. Omit for the default, 5201.
 	Port uint16 `yaml:"port,omitempty" validate:"omitempty,gte=1"`
 
-	// MaxBandwidthMbps caps the throughput the device will report.
-	MaxBandwidthMbps float64 `yaml:"max_bandwidth_mbps,omitempty"`
-
-	// TypicalLatencyMs is the round-trip latency reported to the tester.
-	TypicalLatencyMs float64 `yaml:"typical_latency_ms,omitempty"`
-
-	// JitterMs is the variation reported around the typical latency.
-	JitterMs float64 `yaml:"jitter_ms,omitempty"`
-
-	// PacketLossPercent is the loss rate reported to the tester, 0..100.
-	PacketLossPercent float64 `yaml:"packet_loss_percent,omitempty"`
-
-	// UploadMbps is the reported client-to-server rate.
-	UploadMbps float64 `yaml:"upload_mbps,omitempty"`
-
-	// DownloadMbps is the reported server-to-client rate.
-	DownloadMbps float64 `yaml:"download_mbps,omitempty"`
+	// DownloadMbps paces the data the device sends in a reverse test, the
+	// downstream leg of a tester's iPerf test. Omit for 100 Mbit/s.
+	DownloadMbps float64 `yaml:"download_mbps,omitempty" validate:"omitempty,gt=0"`
 }
 
 // ReflectorConfig represents a NetAlly-style UDP reflector endpoint. When

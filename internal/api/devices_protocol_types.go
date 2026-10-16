@@ -219,12 +219,7 @@ type OSFingerprintRequest struct {
 
 // IPerf3Request is the editable iPerf3 server subset accepted by device CRUD.
 type IPerf3Request struct {
-	Enabled           bool    `json:"enabled"`
-	Port              uint16  `json:"port,omitempty"`
-	MaxBandwidthMbps  float64 `json:"maxBandwidthMbps,omitempty"`
-	TypicalLatencyMs  float64 `json:"typicalLatencyMs,omitempty"`
-	JitterMs          float64 `json:"jitterMs,omitempty"`
-	PacketLossPercent float64 `json:"packetLossPercent,omitempty"`
-	UploadMbps        float64 `json:"uploadMbps,omitempty"`
-	DownloadMbps      float64 `json:"downloadMbps,omitempty"`
+	Enabled      bool    `json:"enabled"`
+	Port         uint16  `json:"port,omitempty"`
+	DownloadMbps float64 `json:"downloadMbps,omitempty"`
 }

@@ -77,8 +77,6 @@ const (
 // 6582); a retransmission timeout sends again from the first byte the
 // client has not acknowledged.
 const (
-	// iperf3DefaultDownloadMbps paces a device that authors no download rate.
-	iperf3DefaultDownloadMbps = 100
 	// iperf3SendInterval is how often the sender runs.
 	iperf3SendInterval = time.Millisecond
 	// iperf3SendBurst bounds the bytes a late run may send at once.
@@ -628,7 +626,7 @@ func (s *iperf3Server) join(
 	test.started = conn.lastSeen
 	if test.reverse {
 		test.route, test.lastSend = route, test.started
-		test.rate = iperf3DefaultDownloadMbps
+		test.rate = config.DefaultIPerf3DownloadMbps
 		if rate := route.device.IPerf3.DownloadMbps; rate > 0 {
 			test.rate = rate
 		}

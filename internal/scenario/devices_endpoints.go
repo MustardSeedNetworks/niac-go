@@ -249,11 +249,7 @@ func applyServiceCapabilities(request Request, site Site, role string, spec *dev
 	case "NMS":
 		spec.http = &converter.HTTPConfig{Enabled: true, ServerName: "Grafana"}
 	case "PERF":
-		spec.iperf3 = &converter.IPerf3Config{
-			Enabled: true, Port: performanceTestPort, MaxBandwidthMbps: performanceBandwidthMbps,
-			TypicalLatencyMs: performanceLatencyMillis, JitterMs: performanceJitterMillis,
-			PacketLossPercent: performancePacketLoss,
-		}
+		spec.iperf3 = &converter.IPerf3Config{Enabled: true, Port: performanceTestPort}
 		spec.reflector = &converter.ReflectorConfig{
 			LatencyMs: performanceLatencyMillis, JitterMs: performanceJitterMillis, DSCP: true,
 		}
