@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.10...v0.123.0) (2026-10-16)
+
+
+### Features
+
+* **iperf3:** serve the downstream leg of a tester's iPerf test ([#2751](https://github.com/MustardSeedNetworks/niac-go/issues/2751)) ([9630d16](https://github.com/MustardSeedNetworks/niac-go/commit/9630d162942cba79552821b04cde560bc0a25d49)), closes [#2748](https://github.com/MustardSeedNetworks/niac-go/issues/2748)
+
+
+### Bug Fixes
+
+* **dns:** forward names a simulated resolver does not hold ([#2754](https://github.com/MustardSeedNetworks/niac-go/issues/2754)) ([b5350cb](https://github.com/MustardSeedNetworks/niac-go/commit/b5350cbd98634b0bb3b9cb169f1cc49c045def31)), closes [#2753](https://github.com/MustardSeedNetworks/niac-go/issues/2753)
+
 ## [0.122.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.9...v0.122.10) (2026-10-16)
 
 
