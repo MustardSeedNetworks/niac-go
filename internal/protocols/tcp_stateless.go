@@ -118,7 +118,7 @@ func (h *TCPHandler) sendStatelessFrame(
 	service string,
 ) bool {
 	ipReply := &layers.IPv4{
-		Version: tcpIPv4Version, IHL: tcpIPv4IHL, TTL: tcpIPv4TTL,
+		Version: tcpIPv4Version, IHL: tcpIPv4IHL, TTL: device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP, SrcIP: ipLayer.DstIP, DstIP: ipLayer.SrcIP,
 	}
 	_ = tcpReply.SetNetworkLayerForChecksum(ipReply)

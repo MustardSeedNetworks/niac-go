@@ -229,8 +229,9 @@ type OSFingerprintConfig struct {
 	// "windows", "cisco-ios" or "juniper-junos".
 	OSType string `yaml:"os_type,omitempty"`
 
-	// TTL is the default IP TTL stamped on outbound packets, which is a
-	// primary fingerprinting signal (Linux 64, Windows 128, Cisco 255).
+	// TTL is the IP TTL stamped on every IPv4 packet the device sends, a
+	// primary fingerprinting signal (Linux 64, Windows 128, Cisco 255). It
+	// wins over `icmp.ttl`.
 	TTL uint8 `yaml:"ttl,omitempty"`
 
 	// WindowSize is the advertised TCP window size.

@@ -67,8 +67,8 @@ const (
 	// DefaultNetBIOSTTL is the default NetBIOS TTL in seconds.
 	DefaultNetBIOSTTL = 300
 
-	// DefaultICMPTTL is the default ICMP time-to-live.
-	DefaultICMPTTL = 64
+	// DefaultIPv4TTL is the IPv4 time-to-live of a device that authors none.
+	DefaultIPv4TTL = 64
 	// DefaultICMPv6HopLimit is the default ICMPv6 hop limit.
 	DefaultICMPv6HopLimit = 64
 
@@ -336,6 +336,21 @@ type OSFingerprintConfig struct {
 	SMTPBanner   string // SMTP banner
 	TelnetBanner string // Telnet banner
 	DontFragment bool   // IP DF bit (Linux=true, Windows=false usually)
+}
+
+// IPv4TTL is the TTL of every IPv4 packet the device originates, whatever
+// the protocol: a tester that fingerprints the OS from the TTL must see one
+// host. The OS fingerprint wins over the ICMP config.
+func (d *Device) IPv4TTL() uint8 {
+	switch {
+	case d == nil:
+		return DefaultIPv4TTL
+	case d.OSFingerprintConfig != nil && d.OSFingerprintConfig.TTL > 0:
+		return d.OSFingerprintConfig.TTL
+	case d.ICMPConfig != nil && d.ICMPConfig.TTL > 0:
+		return d.ICMPConfig.TTL
+	}
+	return DefaultIPv4TTL
 }
 
 // IPerf3Config holds iPerf3 server emulation configuration for bandwidth testing simulation.

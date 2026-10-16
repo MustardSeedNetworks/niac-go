@@ -226,28 +226,6 @@ func TestHandleIPPacket_UnknownProtocol(t *testing.T) {
 	// No specific assertion - just verify it doesn't panic
 }
 
-// TestSendIPPacket verifies IP packet sending.
-func TestSendIPPacket(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewIPHandler(stack)
-
-	srcIP := net.ParseIP("192.168.1.1")
-	dstIP := net.ParseIP("192.168.1.100")
-	protocol := layers.IPProtocolICMPv4
-	payload := []byte("test payload")
-	srcMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
-	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
-
-	err := handler.SendIPPacket(srcIP, dstIP, protocol, payload, srcMAC, dstMAC)
-	if err != nil {
-		t.Errorf("SendIPPacket failed: %v", err)
-	}
-
-	// If we got here without error, the packet was created successfully
-	// Further verification would require checking actual sent packets
-}
-
 // TestHandleIPPacket_MissingIPLayer verifies handling when IP layer is missing.
 func TestHandleIPPacket_MissingIPLayer(t *testing.T) {
 	cfg := &config.Config{}
@@ -335,23 +313,5 @@ func BenchmarkHandleIPPacket(b *testing.B) {
 
 	for b.Loop() {
 		handler.HandlePacket(pkt)
-	}
-}
-
-// BenchmarkSendIPPacket benchmarks IP packet sending.
-func BenchmarkSendIPPacket(b *testing.B) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewIPHandler(stack)
-
-	srcIP := net.ParseIP("192.168.1.1")
-	dstIP := net.ParseIP("192.168.1.100")
-	protocol := layers.IPProtocolICMPv4
-	payload := []byte("test payload")
-	srcMAC := net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
-	dstMAC := net.HardwareAddr{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF}
-
-	for b.Loop() {
-		_ = handler.SendIPPacket(srcIP, dstIP, protocol, payload, srcMAC, dstMAC)
 	}
 }

@@ -14,17 +14,10 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
-// ICMP default TTL values.
-const (
-	defaultTTLIPv4 uint8 = 64  // default TTL for IPv4 ICMP responses
-	defaultTTLIPv6 uint8 = 128 // default hop limit for IPv6 ICMPv6 responses
-)
-
 // IPv4 header field constants.
 const (
-	icmpIPv4Version = 4  // IPv4 version field
-	icmpIPv4IHL     = 5  // IPv4 header length (5 = 20 bytes)
-	icmpIPv4TTL     = 64 // IPv4 default TTL
+	icmpIPv4Version = 4 // IPv4 version field
+	icmpIPv4IHL     = 5 // IPv4 header length (5 = 20 bytes)
 )
 
 // ICMP Router Advertisement constants.
@@ -246,11 +239,6 @@ func (h *ICMPHandler) sendICMPWithPayload(
 	device *config.Device,
 	vlan int,
 ) error {
-	ttl := defaultTTLIPv4
-	if device != nil && device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
-		ttl = device.ICMPConfig.TTL
-	}
-
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
 		DstMAC:       dstMAC,
@@ -260,7 +248,7 @@ func (h *ICMPHandler) sendICMPWithPayload(
 	ip := &layers.IPv4{
 		Version:  icmpIPv4Version,
 		IHL:      icmpIPv4IHL,
-		TTL:      ttl,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolICMPv4,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
@@ -328,11 +316,6 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 	}
 
 	// A router hop replies with its own IP TTL, not the IPv6 default.
-	ttl := defaultTTLIPv4
-	if device != nil && device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
-		ttl = device.ICMPConfig.TTL
-	}
-
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
 		DstMAC:       dstMAC,
@@ -341,7 +324,7 @@ func (h *ICMPHandler) SendICMPTimeExceeded(
 	ipLayer := &layers.IPv4{
 		Version:  icmpIPv4Version,
 		IHL:      icmpIPv4IHL,
-		TTL:      ttl,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolICMPv4,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
@@ -459,12 +442,6 @@ func (h *ICMPHandler) sendEchoReply(
 	device *config.Device,
 	vlan int,
 ) error {
-	// Get TTL from config, or use default
-	ttl := defaultTTLIPv4
-	if device.ICMPConfig != nil && device.ICMPConfig.TTL > 0 {
-		ttl = device.ICMPConfig.TTL
-	}
-
 	// Build Ethernet header
 	eth := &layers.Ethernet{
 		SrcMAC:       srcMAC,
@@ -476,7 +453,7 @@ func (h *ICMPHandler) sendEchoReply(
 	ipLayer := &layers.IPv4{
 		Version:  icmpIPv4Version,
 		IHL:      icmpIPv4IHL,
-		TTL:      ttl,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolICMPv4,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
@@ -547,7 +524,7 @@ func (h *ICMPHandler) SendICMPUnreachable(
 	ipLayer := &layers.IPv4{
 		Version:  icmpIPv4Version,
 		IHL:      icmpIPv4IHL,
-		TTL:      icmpIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolICMPv4,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,

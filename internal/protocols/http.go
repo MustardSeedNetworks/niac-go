@@ -27,7 +27,6 @@ const (
 	// IP protocol constants.
 	httpIPv4Version   = 4     // IPv4 version field
 	httpIPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
-	httpIPv4TTL       = 64    // IPv4 default TTL
 	httpIPv6Version   = 6     // IPv6 version field
 	httpIPv6HopLimit  = 64    // IPv6 default hop limit
 	httpTCPWindowSize = 65535 // Default TCP window size
@@ -381,7 +380,7 @@ func (h *HTTPHandler) sendResponse(
 	ipReply := &layers.IPv4{
 		Version:  httpIPv4Version,
 		IHL:      httpIPv4IHL,
-		TTL:      httpIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,

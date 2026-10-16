@@ -26,8 +26,7 @@ func (s *stackDatagramSender) dispatchNotification(
 	if mac == nil {
 		return s.queueNotificationNeighbor(current, target, reloadHeld)
 	}
-	return s.emitNotification(current.egressDevice, current.vlan, current.source, current.destination,
-		current.sourcePort, current.destinationPort, mac, current.payload, current.routed)
+	return s.emitNotification(current, mac)
 }
 
 func (s *stackDatagramSender) prepareNotificationIntent(
@@ -63,7 +62,7 @@ func (s *stackDatagramSender) prepareNotificationIntent(
 	} else {
 		notification.originDevice = nil
 	}
-	notification.source = source
+	notification.source, notification.ttl = source, device.IPv4TTL()
 	notification.egressDevice, notification.neighborSource, notification.routed = device, source, false
 	if local && notificationFaultedInterface(snapshot, iface.Name) {
 		return notification, target, s.hostNeighborMAC(notification.vlan, target), nil

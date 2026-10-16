@@ -47,7 +47,7 @@ func (h *HealthCheckHandler) sendSYNACK(
 	ipReply := &layers.IPv4{
 		Version:  hcIPv4Version,
 		IHL:      hcIPv4IHL,
-		TTL:      hcIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -136,7 +136,7 @@ func (h *HealthCheckHandler) sendTCPResponse(
 	ipReply := &layers.IPv4{
 		Version:  hcIPv4Version,
 		IHL:      hcIPv4IHL,
-		TTL:      hcIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,

@@ -1,7 +1,6 @@
 package protocols
 
 import (
-	"fmt"
 	"net"
 	"net/netip"
 	"slices"
@@ -25,9 +24,8 @@ const (
 
 // IPv4 header field constants.
 const (
-	ipIPv4Version = 4  // IPv4 version field
-	ipIPv4IHL     = 5  // IPv4 header length (5 = 20 bytes)
-	ipIPv4TTL     = 64 // IPv4 default TTL
+	ipIPv4Version = 4 // IPv4 version field
+	ipIPv4IHL     = 5 // IPv4 header length (5 = 20 bytes)
 	ipv4IHLBytes  = 4
 )
 
@@ -325,67 +323,4 @@ func (h *IPHandler) handleTTLTimeout(pkt *Packet, ipLayer *layers.IPv4) bool {
 	h.stack.devicesFor(pkt.VLAN).IncrementTTLCount(device)
 
 	return true
-}
-
-// SendIPPacket sends an IP packet.
-func (h *IPHandler) SendIPPacket(
-	srcIP, dstIP net.IP,
-	protocol layers.IPProtocol,
-	payload []byte,
-	srcMAC, dstMAC net.HardwareAddr,
-) error {
-	// Build Ethernet header
-	eth := &layers.Ethernet{
-		SrcMAC:       srcMAC,
-		DstMAC:       dstMAC,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-
-	// Build IP header
-	ipLayer := &layers.IPv4{
-		Version:  ipIPv4Version,
-		IHL:      ipIPv4IHL,
-		TTL:      ipIPv4TTL,
-		Protocol: protocol,
-		SrcIP:    srcIP,
-		DstIP:    dstIP,
-	}
-
-	// Serialize
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts,
-		eth,
-		ipLayer,
-		gopacket.Payload(payload),
-	)
-	if err != nil {
-		return fmt.Errorf("error serializing IP packet: %w", err)
-	}
-
-	// Get serial number
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	// Create and send packet
-	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-	}
-
-	h.stack.Send(pkt)
-
-	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		logging.Debugf("Sent IP packet: %s -> %s protocol=%d length=%d sn=%d",
-			srcIP, dstIP, protocol, len(payload), serialNum)
-	}
-
-	return nil
 }

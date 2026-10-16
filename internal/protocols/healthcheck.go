@@ -41,7 +41,6 @@ const (
 	// IP protocol constants for healthcheck responses.
 	hcIPv4Version   = 4     // IPv4 version field
 	hcIPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
-	hcIPv4TTL       = 64    // IPv4 default TTL
 	hcTCPWindowSize = 65535 // Default TCP window size
 	hcTCPInitialSeq = 1000  // Initial TCP sequence number for SYN-ACK
 

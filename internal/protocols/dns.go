@@ -55,7 +55,6 @@ const (
 
 	// IP protocol constants for DNS responses.
 	dnsIPv4Version       = 4  // IPv4 version field
-	dnsIPv4TTL           = 64 // IPv4 default TTL
 	dnsIPv6Version       = 6  // IPv6 version field
 	dnsIPv6HopLimit      = 64 // IPv6 default hop limit
 	dnsDotASCII          = 46 // ASCII value for '.'

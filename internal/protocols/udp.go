@@ -42,9 +42,8 @@ const (
 
 // IP protocol constants for UDP handler.
 const (
-	udpIPv4Version = 4  // IPv4 version field
-	udpIPv4IHL     = 5  // IPv4 header length (5 = 20 bytes)
-	udpIPv4TTL     = 64 // IPv4 default TTL
+	udpIPv4Version = 4 // IPv4 version field
+	udpIPv4IHL     = 5 // IPv4 header length (5 = 20 bytes)
 )
 
 // NetAlly UDP reflector constants. The reflector echoes probes whose payload
@@ -438,7 +437,7 @@ func (h *UDPHandler) sendUDPWithTOS(
 		Version:  udpIPv4Version,
 		IHL:      udpIPv4IHL,
 		TOS:      tos,
-		TTL:      udpIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolUDP,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,

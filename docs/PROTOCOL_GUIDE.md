@@ -436,7 +436,7 @@ devices:
 | Field | Type | Required | Default | Description |
 | ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable ICMP responses |
-| `ttl` | integer | No | 64 | Time to live (1-255) |
+| `ttl` | integer | No | 64 | IP TTL (1-255) of every IPv4 packet the device sends, unless `os_fingerprint.ttl` sets one |
 
 #### Testing
 

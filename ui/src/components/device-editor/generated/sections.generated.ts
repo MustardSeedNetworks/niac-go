@@ -1411,7 +1411,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "ttl",
         "title": "TTL",
-        "description": "TTL is the TTL stamped on ICMP replies.",
+        "description": "TTL is the IP TTL of every IPv4 packet the device sends when\n`os_fingerprint.ttl` is unset.",
         "kind": "integer"
       },
       {
@@ -1706,7 +1706,7 @@ export const DEVICE_SECTIONS: readonly SectionDescriptor[] = [
       {
         "name": "ttl",
         "title": "TTL",
-        "description": "TTL is the default IP TTL stamped on outbound packets, which is a\nprimary fingerprinting signal (Linux 64, Windows 128, Cisco 255).",
+        "description": "TTL is the IP TTL stamped on every IPv4 packet the device sends, a\nprimary fingerprinting signal (Linux 64, Windows 128, Cisco 255). It\nwins over `icmp.ttl`.",
         "kind": "integer"
       },
       {

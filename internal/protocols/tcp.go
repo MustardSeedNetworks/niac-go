@@ -1,7 +1,6 @@
 package protocols
 
 import (
-	"fmt"
 	"net"
 	"sync/atomic"
 
@@ -21,20 +20,10 @@ const (
 	TCPPortHTTPS  = 443
 )
 
-// TCP flag masks.
-const (
-	tcpFlagSYN = 0x02 // SYN flag mask
-	tcpFlagACK = 0x10 // ACK flag mask
-	tcpFlagFIN = 0x01 // FIN flag mask
-	tcpFlagRST = 0x04 // RST flag mask
-	tcpFlagPSH = 0x08 // PSH flag mask
-)
-
 // IP protocol constants for TCP handler.
 const (
 	tcpIPv4Version  = 4     // IPv4 version field
 	tcpIPv4IHL      = 5     // IPv4 header length (5 = 20 bytes)
-	tcpIPv4TTL      = 64    // IPv4 default TTL
 	tcpIPv6Version  = 6     // IPv6 version field
 	tcpIPv6HopLimit = 64    // IPv6 default hop limit
 	tcpWindowSize   = 65535 // Default TCP window size
@@ -319,7 +308,7 @@ func (h *TCPHandler) sendRSTPacket(
 	ipReply := &layers.IPv4{
 		Version:  tcpIPv4Version,
 		IHL:      tcpIPv4IHL,
-		TTL:      tcpIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -380,90 +369,6 @@ func (h *TCPHandler) sendSerializedPacket(
 			ipReply.SrcIP, tcpReply.SrcPort, ipReply.DstIP, tcpReply.DstPort,
 			device.Name, serialNum)
 	}
-}
-
-// SendTCP sends a TCP packet.
-func (h *TCPHandler) SendTCP(
-	srcIP, dstIP []byte,
-	srcPort, dstPort uint16,
-	seq, ack uint32,
-	flags byte,
-	payload []byte,
-	srcMAC, dstMAC []byte,
-) error {
-	// Build Ethernet header
-	eth := &layers.Ethernet{
-		SrcMAC:       srcMAC,
-		DstMAC:       dstMAC,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-
-	// Build IP header
-	ipLayer := &layers.IPv4{
-		Version:  tcpIPv4Version,
-		IHL:      tcpIPv4IHL,
-		TTL:      tcpIPv4TTL,
-		Protocol: layers.IPProtocolTCP,
-		SrcIP:    srcIP,
-		DstIP:    dstIP,
-	}
-
-	// Build TCP header
-	tcpLayer := &layers.TCP{
-		SrcPort: layers.TCPPort(srcPort),
-		DstPort: layers.TCPPort(dstPort),
-		Seq:     seq,
-		Ack:     ack,
-		Window:  tcpWindowSize,
-	}
-
-	// Set flags
-	tcpLayer.SYN = (flags & tcpFlagSYN) != 0
-	tcpLayer.ACK = (flags & tcpFlagACK) != 0
-	tcpLayer.FIN = (flags & tcpFlagFIN) != 0
-	tcpLayer.RST = (flags & tcpFlagRST) != 0
-	tcpLayer.PSH = (flags & tcpFlagPSH) != 0
-
-	_ = tcpLayer.SetNetworkLayerForChecksum(ipLayer) // error is non-critical for simulation
-
-	// Serialize
-	buffer := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
-	err := gopacket.SerializeLayers(buffer, opts,
-		eth,
-		ipLayer,
-		tcpLayer,
-		gopacket.Payload(payload),
-	)
-	if err != nil {
-		return fmt.Errorf("error serializing TCP packet: %w", err)
-	}
-
-	// Get serial number
-	h.stack.mu.Lock()
-	h.stack.serialNumber++
-	serialNum := h.stack.serialNumber
-	h.stack.mu.Unlock()
-
-	// Create and send packet
-	pkt := &Packet{
-		Buffer:       buffer.Bytes(),
-		Length:       len(buffer.Bytes()),
-		SerialNumber: serialNum,
-	}
-
-	h.stack.Send(pkt)
-
-	if h.stack.GetDebugLevel() >= DebugLevelVerbose {
-		logging.Debugf("Sent TCP packet: %s:%d -> %s:%d length=%d sn=%d",
-			srcIP, srcPort, dstIP, dstPort, len(payload), serialNum)
-	}
-
-	return nil
 }
 
 // HandlePacketV6 processes a TCP packet over IPv6.

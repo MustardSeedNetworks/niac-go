@@ -314,7 +314,7 @@ func (h *sshTCPHandler) sendSegment(
 	session.mu.Unlock()
 
 	ip := &layers.IPv4{
-		Version: tcpIPv4Version, IHL: tcpIPv4IHL, TTL: tcpIPv4TTL, Protocol: layers.IPProtocolTCP,
+		Version: tcpIPv4Version, IHL: tcpIPv4IHL, TTL: session.device.IPv4TTL(), Protocol: layers.IPProtocolTCP,
 		SrcIP: session.sourceIP, DstIP: session.destinationIP,
 	}
 	tcp := &layers.TCP{

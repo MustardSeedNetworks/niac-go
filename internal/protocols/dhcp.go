@@ -63,7 +63,6 @@ const (
 	dhcpServerPort       = 67     // DHCP server port
 	dhcpClientPort       = 68     // DHCP client port
 	ipv4Version          = 4      // IPv4 version field
-	ipv4DefaultTTL       = 64     // IPv4 default time to live
 )
 
 // getDefaultSubnetMask returns the default /24 subnet mask.
@@ -102,12 +101,12 @@ type DHCPHandler struct {
 	bootfileName       string   // Option 67: Bootfile name (for PXE)
 	vendorSpecificInfo []byte   // Option 43: Vendor-specific information
 	staticLeases       []config.DHCPLease
-	// relayIP and relayMAC are the relaying router interface while the server
-	// answers a relayed scope: the giaddr, and the hop a reply reaches the
-	// client from.
-	relayIP  net.IP
-	relayMAC net.HardwareAddr
-	mu       sync.RWMutex
+	// relayIP and relayDevice are the relaying router interface while the
+	// server answers a relayed scope: the giaddr, and the hop a reply reaches
+	// the client from.
+	relayIP     net.IP
+	relayDevice *config.Device
+	mu          sync.RWMutex
 }
 
 // NewDHCPHandler creates a new DHCP handler.
@@ -210,7 +209,7 @@ func (h *DHCPHandler) Reset() {
 	h.vendorSpecificInfo = nil
 	h.staticLeases = nil
 	h.relayIP = nil
-	h.relayMAC = nil
+	h.relayDevice = nil
 }
 
 // SetStaticLeases configures static DHCP leases.
@@ -490,7 +489,7 @@ func (h *DHCPHandler) handleDHCPDiscover(
 		info.dhcp.ClientHWAddr,
 		address,
 		h.configuredServerIP(),
-		serverDevice.MACAddress,
+		serverDevice,
 		info.vlan,
 	)
 	if offerErr != nil {
@@ -585,7 +584,7 @@ func (h *DHCPHandler) handleDHCPRequest(
 		info.dhcp.ClientHWAddr,
 		lease.IP,
 		h.configuredServerIP(),
-		serverDevice.MACAddress,
+		serverDevice,
 		info.vlan,
 	)
 	if ackErr != nil {
@@ -652,7 +651,7 @@ func (h *DHCPHandler) handleDHCPInform(
 	serialNum, debugLevel int,
 ) {
 	err := h.SendDHCPInformAck(info.dhcp.Xid, info.dhcp.ClientHWAddr,
-		h.configuredServerIP(), serverDevice.MACAddress, info.vlan)
+		h.configuredServerIP(), serverDevice, info.vlan)
 	if err != nil {
 		if debugLevel >= 1 {
 			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Inform Ack: %v sn=%d", err, serialNum)
@@ -772,10 +771,10 @@ func (h *DHCPHandler) SendDHCPOffer(
 	xid uint32,
 	clientMAC net.HardwareAddr,
 	offeredIP, serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	server *config.Device,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, serverMAC, DHCPOffer, vlan, true)
+	return h.sendDHCPResponse(xid, clientMAC, offeredIP, serverIP, server, DHCPOffer, vlan, true)
 }
 
 // SendDHCPAck sends a DHCP Ack message.
@@ -783,10 +782,10 @@ func (h *DHCPHandler) SendDHCPAck(
 	xid uint32,
 	clientMAC net.HardwareAddr,
 	assignedIP, serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	server *config.Device,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, serverMAC, DHCPAck, vlan, true)
+	return h.sendDHCPResponse(xid, clientMAC, assignedIP, serverIP, server, DHCPAck, vlan, true)
 }
 
 // SendDHCPInformAck answers a DHCPINFORM: a DHCPACK carrying configuration
@@ -796,10 +795,10 @@ func (h *DHCPHandler) SendDHCPInformAck(
 	xid uint32,
 	clientMAC net.HardwareAddr,
 	serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	server *config.Device,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPAck, vlan, false)
+	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, server, DHCPAck, vlan, false)
 }
 
 // SendDHCPNak sends a DHCPNAK rejecting a REQUEST the server cannot satisfy
@@ -811,10 +810,10 @@ func (h *DHCPHandler) SendDHCPNak(
 	xid uint32,
 	clientMAC net.HardwareAddr,
 	serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	server *config.Device,
 	vlan int,
 ) error {
-	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, serverMAC, DHCPNak, vlan, false)
+	return h.sendDHCPResponse(xid, clientMAC, net.IPv4zero, serverIP, server, DHCPNak, vlan, false)
 }
 
 // sendDHCPNakForRequest emits a DHCPNAK for a REQUEST the server cannot satisfy,
@@ -826,7 +825,7 @@ func (h *DHCPHandler) sendDHCPNakForRequest(
 	serialNum, debugLevel int,
 ) {
 	nakErr := h.SendDHCPNak(info.dhcp.Xid, info.dhcp.ClientHWAddr,
-		h.configuredServerIP(), serverDevice.MACAddress, info.vlan)
+		h.configuredServerIP(), serverDevice, info.vlan)
 	if nakErr != nil {
 		if debugLevel >= 1 {
 			logging.ProtocolDebugf("DHCP", debugLevel, 1, "Failed to send Nak: %v sn=%d", nakErr, serialNum)
@@ -1015,7 +1014,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 	xid uint32,
 	clientMAC net.HardwareAddr,
 	assignedIP, serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	server *config.Device,
 	msgType uint8,
 	vlan int,
 	withLease bool,
@@ -1030,7 +1029,7 @@ func (h *DHCPHandler) sendDHCPResponse(
 		yourIP = net.IPv4zero
 		nextServer = net.IPv4zero
 	}
-	relayAgent, sourceIP, sourceMAC := h.replySource(serverIP, serverMAC)
+	relayAgent, sourceIP, source := h.replySource(serverIP, server)
 
 	dhcp := &layers.DHCPv4{
 		Operation:    layers.DHCPOpReply,
@@ -1049,23 +1048,23 @@ func (h *DHCPHandler) sendDHCPResponse(
 	}
 	dhcp.Options = h.buildDHCPOptions(msgType, serverIP, clientMAC, withLease)
 
-	return h.serializeAndSendDHCP(dhcp, sourceIP, sourceMAC, vlan)
+	return h.serializeAndSendDHCP(dhcp, sourceIP, source, vlan)
 }
 
 // serializeAndSendDHCP serializes and sends a DHCP packet.
 func (h *DHCPHandler) serializeAndSendDHCP(
 	dhcp *layers.DHCPv4,
-	serverIP net.IP,
-	serverMAC net.HardwareAddr,
+	sourceIP net.IP,
+	source *config.Device,
 	vlan int,
 ) error {
 	udp := &layers.UDP{SrcPort: dhcpServerPort, DstPort: dhcpClientPort}
 	ip := &layers.IPv4{
-		Version: ipv4Version, TTL: ipv4DefaultTTL, Protocol: layers.IPProtocolUDP,
-		SrcIP: serverIP, DstIP: net.IPv4bcast,
+		Version: ipv4Version, TTL: source.IPv4TTL(), Protocol: layers.IPProtocolUDP,
+		SrcIP: sourceIP, DstIP: net.IPv4bcast,
 	}
 	eth := &layers.Ethernet{
-		SrcMAC: serverMAC, DstMAC: net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		SrcMAC: source.MACAddress, DstMAC: net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 

@@ -298,7 +298,7 @@ func parseICMPConfig(yamlIcmp *converter.IcmpConfig) *ICMPConfig {
 	}
 
 	if icmpCfg.TTL == 0 {
-		icmpCfg.TTL = DefaultICMPTTL
+		icmpCfg.TTL = DefaultIPv4TTL
 	}
 
 	if yamlIcmp.AddressMaskReply != "" {
