@@ -129,7 +129,9 @@ export const useDeviceListState = (): UseDeviceListStateReturn => {
         protos.add(protocol);
       }
     }
-    return Array.from(protos).sort();
+    // Code-unit order, the same order Array#sort() used before the compare
+    // function was required. Protocol names are short ASCII labels.
+    return Array.from(protos).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   }, [devices]);
 
   // Filter devices
