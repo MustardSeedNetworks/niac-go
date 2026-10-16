@@ -19,7 +19,7 @@ func TestIPMIBMandatoryScalars(t *testing.T) {
 		want any
 	}{
 		{ipForwarding, ipForwardingEnabled},
-		{ipDefaultTTL, defaultIPTTL},
+		{ipDefaultTTL, int(config.DefaultIPv4TTL)},
 		{ipInReceives, uint32(0)},
 		{ipInHdrErrors, uint32(0)},
 		{ipInAddrErrors, uint32(0)},

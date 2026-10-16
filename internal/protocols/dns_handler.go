@@ -233,7 +233,7 @@ func (h *DNSHandler) SendDNSResponse(
 	// Build IP layer
 	ip := &layers.IPv4{
 		Version:  dnsIPv4Version,
-		TTL:      dnsIPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolUDP,
 		SrcIP:    srcIP,
 		DstIP:    dstIP,

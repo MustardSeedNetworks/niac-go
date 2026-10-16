@@ -3,6 +3,8 @@ package protocols
 import (
 	"net"
 	"slices"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 )
 
 // serveRelayedScope makes the handler answer from a relayed scope: its pool,
@@ -19,15 +21,15 @@ func (h *DHCPHandler) serveRelayedScope(relay fabricDHCPRelay) {
 	h.gateway = net.IP(relay.scope.Router.AsSlice())
 	h.staticLeases = nil
 	h.relayIP = net.IP(relay.scope.Relay.Address.AsSlice())
-	h.relayMAC = slices.Clone(relay.mac)
+	h.relayDevice = relay.device
 }
 
 // replySource is the giaddr, source address and source MAC of a reply. A
 // relayed reply keeps the giaddr the request carried and reaches the client
 // from the relay's interface (RFC 2131 §4.1). Caller must hold h.mu.
-func (h *DHCPHandler) replySource(serverIP net.IP, serverMAC net.HardwareAddr) (net.IP, net.IP, net.HardwareAddr) {
+func (h *DHCPHandler) replySource(serverIP net.IP, server *config.Device) (net.IP, net.IP, *config.Device) {
 	if h.relayIP == nil {
-		return net.IPv4zero, serverIP, serverMAC
+		return net.IPv4zero, serverIP, server
 	}
-	return h.relayIP, h.relayIP, h.relayMAC
+	return h.relayIP, h.relayIP, h.relayDevice
 }

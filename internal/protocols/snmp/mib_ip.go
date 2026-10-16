@@ -39,7 +39,6 @@ const (
 
 	ipForwardingEnabled  = 1
 	ipForwardingDisabled = 2
-	defaultIPTTL         = 64
 	defaultReasmTimeout  = 60
 	unusedRouteMetric    = -1
 )
@@ -66,12 +65,8 @@ func (a *Agent) registerIPScalars(device *config.Device) {
 	if isForwardingDevice(device.Type) {
 		forwarding = ipForwardingEnabled
 	}
-	ttl := defaultIPTTL
-	if device.OSFingerprintConfig != nil && device.OSFingerprintConfig.TTL > 0 {
-		ttl = int(device.OSFingerprintConfig.TTL)
-	}
 	a.mib.Set(ipForwarding, &OIDValue{Type: gosnmp.Integer, Value: forwarding})
-	a.mib.Set(ipDefaultTTL, &OIDValue{Type: gosnmp.Integer, Value: ttl})
+	a.mib.Set(ipDefaultTTL, &OIDValue{Type: gosnmp.Integer, Value: int(device.IPv4TTL())})
 	for _, oid := range []string{
 		ipInReceives, ipInHdrErrors, ipInAddrErrors, ipForwDatagrams, ipInUnknownProtos,
 		ipInDiscards, ipInDelivers, ipOutRequests, ipOutDiscards, ipOutNoRoutes,

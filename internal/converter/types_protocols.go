@@ -355,7 +355,8 @@ type IcmpConfig struct {
 	// pingable.
 	Enabled bool `yaml:"enabled,omitempty"`
 
-	// TTL is the TTL stamped on ICMP replies.
+	// TTL is the IP TTL of every IPv4 packet the device sends when
+	// `os_fingerprint.ttl` is unset.
 	TTL uint8 `yaml:"ttl,omitempty"`
 
 	// RateLimit caps replies per second; further requests are dropped.

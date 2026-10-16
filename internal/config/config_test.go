@@ -162,3 +162,29 @@ func BenchmarkParseSimpleConfig(b *testing.B) {
 		_, _ = ParseSimpleConfig(lines)
 	}
 }
+
+func TestDeviceIPv4TTL(t *testing.T) {
+	tests := []struct {
+		name   string
+		device *Device
+		want   uint8
+	}{
+		{"nil device", nil, DefaultIPv4TTL},
+		{"nothing authored", &Device{}, DefaultIPv4TTL},
+		{"icmp only", &Device{ICMPConfig: &ICMPConfig{TTL: 255}}, 255},
+		{"fingerprint only", &Device{OSFingerprintConfig: &OSFingerprintConfig{TTL: 128}}, 128},
+		{"fingerprint over icmp", &Device{
+			ICMPConfig: &ICMPConfig{TTL: 64}, OSFingerprintConfig: &OSFingerprintConfig{TTL: 128},
+		}, 128},
+		{"zero fingerprint falls through", &Device{
+			ICMPConfig: &ICMPConfig{TTL: 255}, OSFingerprintConfig: &OSFingerprintConfig{OSType: "linux"},
+		}, 255},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.device.IPv4TTL(); got != tt.want {
+				t.Errorf("IPv4TTL() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}

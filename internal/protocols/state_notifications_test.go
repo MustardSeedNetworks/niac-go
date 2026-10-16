@@ -383,7 +383,7 @@ func assertPhysicalCollectorNotification(
 		!bytes.Equal(ethernet.DstMAC, collectorMAC) ||
 		!ipv4.SrcIP.Equal(net.ParseIP("10.20.0.10")) ||
 		!ipv4.DstIP.Equal(net.ParseIP("10.10.200.100")) ||
-		ipv4.TTL != ipIPv4TTL-1 ||
+		ipv4.TTL != config.DefaultIPv4TTL-1 ||
 		string(udp.Payload) != "event" {
 		t.Fatalf("physical collector notification = ethernet %#v IPv4 %#v UDP %#v", ethernet, ipv4, udp)
 	}

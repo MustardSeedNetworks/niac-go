@@ -280,11 +280,12 @@ func BenchmarkDHCPOfferGeneration(b *testing.B) {
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 	offeredIP := net.ParseIP("192.168.1.100")
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
+	server := &config.Device{MACAddress: serverMAC}
 
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.SendDHCPOffer(0x12345678, clientMAC, offeredIP, serverIP, serverMAC, 0)
+		_ = handler.SendDHCPOffer(0x12345678, clientMAC, offeredIP, serverIP, server, 0)
 	}
 }
 
@@ -303,11 +304,12 @@ func BenchmarkDHCPAckGeneration(b *testing.B) {
 	clientMAC, _ := net.ParseMAC("aa:bb:cc:dd:ee:ff")
 	assignedIP := net.ParseIP("192.168.1.100")
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
+	server := &config.Device{MACAddress: serverMAC}
 
 	b.ReportAllocs()
 
 	for b.Loop() {
-		_ = handler.SendDHCPAck(0x12345678, clientMAC, assignedIP, serverIP, serverMAC, 0)
+		_ = handler.SendDHCPAck(0x12345678, clientMAC, assignedIP, serverIP, server, 0)
 	}
 }
 
@@ -342,6 +344,7 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 	handler.SetPool(net.ParseIP("192.168.1.100"), net.ParseIP("192.168.1.200"))
 
 	serverMAC, _ := net.ParseMAC("00:11:22:33:44:55")
+	server := &config.Device{MACAddress: serverMAC}
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -355,9 +358,9 @@ func BenchmarkDHCPFullCycle(b *testing.B) {
 		lease, _ := handler.AllocateLease(clientMAC, nil, "test-host")
 		if lease != nil {
 			// Send OFFER
-			_ = handler.SendDHCPOffer(uint32(i), clientMAC, lease.IP, serverIP, serverMAC, 0)
+			_ = handler.SendDHCPOffer(uint32(i), clientMAC, lease.IP, serverIP, server, 0)
 			// Send ACK (REQUEST/ACK)
-			_ = handler.SendDHCPAck(uint32(i), clientMAC, lease.IP, serverIP, serverMAC, 0)
+			_ = handler.SendDHCPAck(uint32(i), clientMAC, lease.IP, serverIP, server, 0)
 		}
 	}
 }

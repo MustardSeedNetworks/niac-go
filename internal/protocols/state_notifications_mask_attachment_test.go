@@ -63,7 +63,10 @@ func TestNotificationMaskRetainsAttachmentHostFirstHop(t *testing.T) {
 		ethernet, _ := decoded.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
 		ip, _ := decoded.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
 		if ethernet == nil || ip == nil || !bytes.Equal(ethernet.SrcMAC, host.MACAddress) ||
-			!bytes.Equal(ethernet.DstMAC, routerMAC) || ip.TTL != ipIPv4TTL || packet.fabricTrace.RouteDecision != "" {
+			!bytes.Equal(
+				ethernet.DstMAC,
+				routerMAC,
+			) || ip.TTL != config.DefaultIPv4TTL || packet.fabricTrace.RouteDecision != "" {
 			t.Fatalf(
 				"faulted host was pre-forwarded: Ethernet=%+v IPv4=%+v trace=%+v",
 				ethernet,

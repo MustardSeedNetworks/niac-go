@@ -112,15 +112,19 @@ func TestBuildDHCPOptionsNak(t *testing.T) {
 }
 
 // TestSendDHCPNakWireShape verifies the NAK is broadcast on the request VLAN
-// with a zero yiaddr and message-type NAK.
+// with a zero yiaddr, message-type NAK and the server's authored TTL.
 func TestSendDHCPNakWireShape(t *testing.T) {
 	stack := newTestStackInternal(t)
 	h := NewDHCPHandler(stack)
+	server := &config.Device{
+		MACAddress:          net.HardwareAddr{0x02, 0x00, 0x14, 0x03, 0x00, 0x01},
+		OSFingerprintConfig: &config.OSFingerprintConfig{TTL: 128},
+	}
 
 	err := h.SendDHCPNak(0x12345678,
 		net.HardwareAddr{0xaa, 0xaa, 0xaa, 0x00, 0x00, 0x01},
 		net.ParseIP("10.20.200.2"),
-		net.HardwareAddr{0x02, 0x00, 0x14, 0x03, 0x00, 0x01},
+		server,
 		200)
 	if err != nil {
 		t.Fatalf("SendDHCPNak: %v", err)
@@ -138,6 +142,11 @@ func TestSendDHCPNakWireShape(t *testing.T) {
 
 	if !d.YourClientIP.Equal(net.IPv4zero) {
 		t.Errorf("NAK yiaddr = %s, want 0.0.0.0", d.YourClientIP)
+	}
+
+	ip := gopacket.NewPacket(pkt.Buffer, layers.LayerTypeEthernet, gopacket.Default).Layer(layers.LayerTypeIPv4)
+	if ip == nil || ip.(*layers.IPv4).TTL != 128 {
+		t.Errorf("NAK IPv4 layer = %v, want TTL 128", ip)
 	}
 }
 

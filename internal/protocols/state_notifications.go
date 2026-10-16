@@ -47,12 +47,15 @@ type pendingNotification struct {
 	originDevice                   *config.Device
 	originInterface, originNetwork string
 	egressDevice                   *config.Device
-	vlan                           int
-	source, destination            netip.Addr
-	neighborSource                 netip.Addr
-	routed                         bool
-	sourcePort, destinationPort    uint16
-	payload                        []byte
+	// ttl is the origin device's IPv4 TTL, kept because a routed
+	// notification forgets its origin before it is emitted.
+	ttl                         uint8
+	vlan                        int
+	source, destination         netip.Addr
+	neighborSource              netip.Addr
+	routed                      bool
+	sourcePort, destinationPort uint16
+	payload                     []byte
 }
 
 type notificationNeighborResolution struct {
@@ -442,17 +445,7 @@ func (s *stackDatagramSender) observeNeighbor(vlan int, address netip.Addr, mac 
 			}
 			continue
 		}
-		if err := s.emitNotification(
-			notification.egressDevice,
-			notification.vlan,
-			notification.source,
-			notification.destination,
-			notification.sourcePort,
-			notification.destinationPort,
-			mac,
-			notification.payload,
-			notification.routed,
-		); err != nil {
+		if err := s.emitNotification(notification, mac); err != nil {
 			slog.Warn("send resolved management notification", "receiver", notification.destination, "error", err)
 		}
 	}
@@ -491,21 +484,20 @@ func (s *stackDatagramSender) notificationTargetDevice(vlan int, target netip.Ad
 }
 
 func (s *stackDatagramSender) emitNotification(
-	egressDevice *config.Device,
-	vlan int,
-	source, destination netip.Addr,
-	sourcePort, destinationPort uint16,
+	notification pendingNotification,
 	destinationMAC net.HardwareAddr,
-	payload []byte,
-	routed bool,
 ) error {
+	egressDevice, vlan := notification.egressDevice, notification.vlan
+	source, destination := notification.source, notification.destination
 	buffer := gopacket.NewSerializeBuffer()
-	udp := &layers.UDP{SrcPort: layers.UDPPort(sourcePort), DstPort: layers.UDPPort(destinationPort)}
+	udp := &layers.UDP{
+		SrcPort: layers.UDPPort(notification.sourcePort), DstPort: layers.UDPPort(notification.destinationPort),
+	}
 	var network serializableNetworkLayer
 	etherType := layers.EthernetTypeIPv4
 	if source.Is4() {
-		ttl := uint8(ipIPv4TTL)
-		if routed {
+		ttl := notification.ttl
+		if notification.routed {
 			ttl--
 		}
 		network = &layers.IPv4{
@@ -524,12 +516,12 @@ func (s *stackDatagramSender) emitNotification(
 	}
 	err := gopacket.SerializeLayers(buffer, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
 		&layers.Ethernet{SrcMAC: egressDevice.MACAddress, DstMAC: destinationMAC, EthernetType: etherType},
-		network, udp, gopacket.Payload(payload))
+		network, udp, gopacket.Payload(notification.payload))
 	if err != nil {
 		return fmt.Errorf("serialize management notification: %w", err)
 	}
 	packet := s.framePacket(egressDevice, vlan, buffer.Bytes())
-	if routed {
+	if notification.routed {
 		packet.fabricTrace.PhysicalVLAN = s.stack.fabric.binding.AccessVLAN
 		packet.fabricTrace.RouteDecision = fabricRouteDecisionForwarded
 		packet.fabricTrace.EgressNetwork = s.stack.fabric.attachmentNetwork

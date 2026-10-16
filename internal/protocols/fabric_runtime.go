@@ -44,9 +44,9 @@ type fabricEndpoint struct {
 }
 
 type fabricDHCPRelay struct {
-	scope fabric.DHCPScope
-	mask  net.IPMask
-	mac   net.HardwareAddr
+	scope  fabric.DHCPScope
+	mask   net.IPMask
+	device *config.Device
 }
 
 type fabricRouter struct {
@@ -171,9 +171,9 @@ func (r *fabricRuntime) indexAttachmentDHCP(scopes []fabric.DHCPScope) {
 			continue
 		}
 		r.dhcpRelays[server] = fabricDHCPRelay{
-			scope: scope,
-			mask:  r.attachmentMask(),
-			mac:   cloneMAC(r.devicesByName[scope.Relay.Device].MACAddress),
+			scope:  scope,
+			mask:   r.attachmentMask(),
+			device: r.devicesByName[scope.Relay.Device],
 		}
 	}
 }
@@ -195,7 +195,7 @@ func (r *fabricRuntime) dhcpServerReachable(server *config.Device) bool {
 	if !relayed {
 		return r.deviceOnAttachment(server)
 	}
-	resolution, routed := r.resolveIPv4(relay.scope.Relay.Server, relay.mac)
+	resolution, routed := r.resolveIPv4(relay.scope.Relay.Server, relay.device.MACAddress)
 	return routed && resolution.device == server
 }
 

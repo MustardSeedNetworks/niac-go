@@ -84,7 +84,6 @@ const (
 const (
 	iperf3IPv4Version   = 4     // IPv4 version field
 	iperf3IPv4IHL       = 5     // IPv4 header length (5 = 20 bytes)
-	iperf3IPv4TTL       = 64    // IPv4 default TTL
 	iperf3TCPWindowSize = 65535 // Default TCP window size
 	iperf3TCPInitialSeq = 1000  // Initial TCP sequence number
 )
@@ -589,7 +588,7 @@ func (h *IPerf3Handler) sendSYNACK(ipLayer *layers.IPv4, tcpLayer *layers.TCP, d
 	ipReply := &layers.IPv4{
 		Version:  iperf3IPv4Version,
 		IHL:      iperf3IPv4IHL,
-		TTL:      iperf3IPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
@@ -681,7 +680,7 @@ func (h *IPerf3Handler) sendTCPResponse(
 	ipReply := &layers.IPv4{
 		Version:  iperf3IPv4Version,
 		IHL:      iperf3IPv4IHL,
-		TTL:      iperf3IPv4TTL,
+		TTL:      device.IPv4TTL(),
 		Protocol: layers.IPProtocolTCP,
 		SrcIP:    ipLayer.DstIP,
 		DstIP:    ipLayer.SrcIP,
