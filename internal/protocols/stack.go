@@ -106,7 +106,6 @@ type Stack struct {
 	fdpHandler         *FDPHandler
 	snmpHandler        *SNMPHandler
 	healthCheckHandler *HealthCheckHandler
-	iperf3Handler      *IPerf3Handler
 	neighbors          *neighborTable
 	observedClients    *observedClientTable
 	// receivedNotifications is what the simulated collectors heard from the
@@ -283,7 +282,6 @@ func newStack(
 	stack.fdpHandler = NewFDPHandler(stack)
 	stack.snmpHandler = NewSNMPHandler(stack)
 	stack.healthCheckHandler = NewHealthCheckHandler(stack)
-	stack.iperf3Handler = NewIPerf3Handler(stack)
 
 	// Initialize device table from config (requires handlers for DHCP/SNMP setup)
 	stack.initializeDevices(cfg)
