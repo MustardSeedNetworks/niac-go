@@ -414,6 +414,7 @@ type DHCPLease struct {
 type DNSConfig struct {
 	ForwardRecords []DNSRecord
 	ReverseRecords []DNSRecord
+	Forwarders     []net.IP
 }
 
 // DNSRecord represents a DNS A or PTR record.

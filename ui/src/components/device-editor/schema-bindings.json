@@ -75,6 +75,7 @@
   "devices[].dns.forward_records[].name": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.forward_records[].rcode": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.forward_records[].ttl": "components/device-editor/generated/sections.generated.ts",
+  "devices[].dns.forwarders[]": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.reverse_records[].ip": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.reverse_records[].name": "components/device-editor/generated/sections.generated.ts",
   "devices[].dns.reverse_records[].rcode": "components/device-editor/generated/sections.generated.ts",

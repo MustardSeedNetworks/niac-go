@@ -460,6 +460,7 @@ func parseDNSConfig(yamlDNS converter.DNSServer, deviceName string) (*DNSConfig,
 	}
 
 	dnsCfg.ReverseRecords = reverseRecords
+	dnsCfg.Forwarders = parseIPList(yamlDNS.Forwarders)
 
 	return dnsCfg, nil
 }

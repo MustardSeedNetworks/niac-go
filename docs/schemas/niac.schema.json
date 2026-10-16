@@ -491,6 +491,13 @@
           },
           "type": "array",
           "description": "ReverseRecords are address-to-name (PTR) records this server answers."
+        },
+        "forwarders": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Forwarders are the resolvers this server asks, in order, for a name it\nholds no record for. A forwarder that is a simulated DNS server answers\nfrom its own records inside the simulation; any other address is a real\nupstream resolver, queried over the host's network."
         }
       },
       "additionalProperties": false,

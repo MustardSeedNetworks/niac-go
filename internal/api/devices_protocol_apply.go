@@ -275,6 +275,9 @@ func applyDNSRequest(dev *config.Device, req *DNSRequest) error {
 	if cfg.ReverseRecords, err = dnsRecordsToConfig(req.ReverseRecords); err != nil {
 		return err
 	}
+	if cfg.Forwarders, err = parseIPList(req.Forwarders); err != nil {
+		return err
+	}
 
 	dev.DNSConfig = cfg
 

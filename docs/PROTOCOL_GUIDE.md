@@ -713,6 +713,7 @@ devices:
 | ------- | ------ | ---------- | --------- | ------------- |
 | `enabled` | boolean | Yes | false | Enable DNS server |
 | `forward_records` | array | No | [] | A records (hostname -> IP) |
+| `forwarders` | array of IP | No | [] | Resolvers asked, in order, for a name this server holds no record for |
 
 **Forward Record Fields:**
 
@@ -721,6 +722,43 @@ devices:
 | `name` | string | Yes | - | Fully qualified domain name |
 | `ip` | string | Yes | - | IPv4 or IPv6 address |
 | `ttl` | integer | No | 3600 | Time to live (seconds) |
+
+#### Forwarding
+
+A server answers from its own records first. For any other name it asks its
+`forwarders` in order, the way a site resolver forwards to its upstream:
+
+- A forwarder that is another simulated DNS server answers from its own
+  records, and its own forwarders, inside the simulation. This is how a site
+  resolver resolves internet names: generated scenario packs point every site
+  resolver at the lab edge (`10.254.200.1`), which holds the simulated internet
+  (`www.google.com` and friends resolve to `8.8.8.8`, which the scenario
+  answers ping and HTTP on) plus every scenario host.
+- Any other address is a real resolver, asked over the host's network only
+  when the simulated chain has no answer. This is opt-in: NIAC makes no
+  outbound DNS query unless a forwarder you author points outside the
+  simulation. A real answer is passed through non-authoritatively; when no
+  real resolver replies within two seconds the client gets SERVFAIL.
+
+```yaml
+devices:
+  - name: site-dns
+    ips: ["10.51.240.10"]
+    dns:
+      forwarders: ["10.254.200.1"]   # the lab edge, simulated
+  - name: lab-edge
+    ips: ["10.254.200.1"]
+    dns:
+      forwarders: ["1.1.1.1"]        # optional: real upstream for everything else
+      forward_records:
+        - name: "www.google.com"
+          ip: "8.8.8.8"
+```
+
+A forwarder may not be the server's own address. Real upstream answers point
+at real internet addresses the simulation does not route to, so a tester's
+follow-on ping or HTTP test to such a name fails; names the scenario models
+belong in the edge's records.
 
 #### Testing
 

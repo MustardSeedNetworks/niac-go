@@ -121,6 +121,7 @@ export interface AuthoredDevice {
           readonly ttl?: number;
           readonly rcode?: number;
         }[];
+      readonly forwarders?: readonly string[];
     };
   readonly lldp?: {
       readonly enabled?: boolean;

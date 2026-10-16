@@ -29,14 +29,14 @@ func TestRestoredFaultChangesFirstDNSResponse(t *testing.T) {
 	query := &layers.DNS{ID: 42, Questions: []layers.DNSQuestion{{
 		Name: []byte("host.example."), Type: layers.DNSTypeA, Class: layers.DNSClassIN,
 	}}}
-	response := handler.buildDNSResponse(query, restoredDevice, 0, 1)
+	response := answerNow(handler, query, restoredDevice, 1)
 	if response.ResponseCode != layers.DNSResponseCodeNXDomain || len(response.Answers) != 0 {
 		t.Fatalf("first response ignored restored fault: %+v", response)
 	}
 	if err = recovered.SetDeviceFault(restoredDevice.Name, devicestate.FaultDNSNXDomain, 0); err != nil {
 		t.Fatal(err)
 	}
-	response = handler.buildDNSResponse(query, restoredDevice, 0, 2)
+	response = answerNow(handler, query, restoredDevice, 2)
 	if response.ResponseCode != layers.DNSResponseCodeNoErr || len(response.Answers) != 1 {
 		t.Fatalf("clearing restored fault did not restore healthy answer: %+v", response)
 	}

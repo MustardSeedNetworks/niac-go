@@ -123,6 +123,7 @@ type DNSRequest struct {
 	Enabled        bool               `json:"enabled"`
 	ForwardRecords []DNSRecordRequest `json:"forwardRecords,omitempty"`
 	ReverseRecords []DNSRecordRequest `json:"reverseRecords,omitempty"`
+	Forwarders     []string           `json:"forwarders,omitempty"`
 }
 
 // HTTPEndpointRequest is one custom HTTP endpoint definition.

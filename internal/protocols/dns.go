@@ -94,6 +94,10 @@ type DNSHandler struct {
 	deviceRecords map[*config.Device]*dnsRecordSet
 	mu            sync.RWMutex
 	domain        string // Default domain
+	// upstreamPort is where real upstream forwarders listen; tests point it
+	// at a local stand-in resolver.
+	upstreamPort  int
+	upstreamSlots chan struct{}
 }
 
 type dnsRecord struct {
@@ -109,8 +113,9 @@ type dnsPTR struct {
 }
 
 type dnsRecordSet struct {
-	forward map[string][]dnsRecord
-	reverse map[string]dnsPTR
+	forward    map[string][]dnsRecord
+	reverse    map[string]dnsPTR
+	forwarders []net.IP
 }
 
 // NewDNSHandler creates a new DNS handler.
@@ -121,6 +126,8 @@ func NewDNSHandler(stack *Stack) *DNSHandler {
 		ptrRecords:    make(map[string]dnsPTR),
 		deviceRecords: make(map[*config.Device]*dnsRecordSet),
 		domain:        "local",
+		upstreamPort:  dnsPort,
+		upstreamSlots: make(chan struct{}, dnsUpstreamMaxInFlight),
 	}
 }
 
@@ -215,8 +222,9 @@ func (h *DNSHandler) LoadDeviceDNSConfig(device *config.Device) {
 	}
 
 	set := &dnsRecordSet{
-		forward: make(map[string][]dnsRecord),
-		reverse: make(map[string]dnsPTR),
+		forward:    make(map[string][]dnsRecord),
+		reverse:    make(map[string]dnsPTR),
+		forwarders: device.DNSConfig.Forwarders,
 	}
 
 	for _, rec := range device.DNSConfig.ForwardRecords {

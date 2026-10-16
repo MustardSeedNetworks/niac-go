@@ -111,6 +111,12 @@ type DNSServer struct {
 
 	// ReverseRecords are address-to-name (PTR) records this server answers.
 	ReverseRecords []DNSRecord `yaml:"reverse_records,omitempty" validate:"omitempty,dive"`
+
+	// Forwarders are the resolvers this server asks, in order, for a name it
+	// holds no record for. A forwarder that is a simulated DNS server answers
+	// from its own records inside the simulation; any other address is a real
+	// upstream resolver, queried over the host's network.
+	Forwarders []string `yaml:"forwarders,omitempty" validate:"omitempty,dive,ip"`
 }
 
 // DNSRecord represents a DNS A or PTR record.
