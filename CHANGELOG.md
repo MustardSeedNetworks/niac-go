@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.3...v0.122.4) (2026-10-16)
+
+
+### Continuous Integration
+
+* **workflows:** fold title, body and label rules into one workflow (G-19) ([#2727](https://github.com/MustardSeedNetworks/niac-go/issues/2727)) ([cf6a1e2](https://github.com/MustardSeedNetworks/niac-go/commit/cf6a1e261753426fcbb201006f013e2e9ff91305)), closes [#2725](https://github.com/MustardSeedNetworks/niac-go/issues/2725)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2728](https://github.com/MustardSeedNetworks/niac-go/issues/2728)) ([4be95f4](https://github.com/MustardSeedNetworks/niac-go/commit/4be95f4dde3877989ab9b0e2da2e329854a1048d))
+
 ## [0.122.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.2...v0.122.3) (2026-10-16)
 
 
