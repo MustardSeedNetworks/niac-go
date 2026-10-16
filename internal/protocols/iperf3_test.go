@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/gopacket/gopacket"
@@ -16,7 +17,9 @@ import (
 
 // iperf3TestCookie is a client cookie: 36 characters and a NUL, as iperf3
 // 3.21 sends it.
-var iperf3TestCookie = append([]byte("dgdterct3nbes4n5754y4tagwvdovv57p5lg"), 0)
+func iperf3TestCookie() []byte {
+	return append([]byte("dgdterct3nbes4n5754y4tagwvdovv57p5lg"), 0)
+}
 
 const (
 	iperf3TestControlPort layers.TCPPort = 40001
@@ -103,17 +106,17 @@ type iperf3Want struct {
 }
 
 func tcpFlags(segment *layers.TCP) string {
-	flags := ""
+	var flags strings.Builder
 	for _, flag := range []struct {
 		set  bool
 		name string
 	}{{segment.SYN, "S"}, {segment.FIN, "F"}, {segment.RST, "R"}, {segment.PSH, "P"}} {
 		if flag.set {
-			flags += flag.name
+			flags.WriteString(flag.name)
 		}
 	}
 
-	return flags
+	return flags.String()
 }
 
 // TestIPerf3Conversation plays a complete forward TCP test as the iperf3 3.21
@@ -152,7 +155,7 @@ func TestIPerf3Conversation(t *testing.T) {
 		},
 		{
 			name: "cookie asks for parameters", from: iperf3TestControlPort,
-			segment: &layers.TCP{ACK: true, PSH: true, Seq: 101, Ack: 1001, Payload: iperf3TestCookie},
+			segment: &layers.TCP{ACK: true, PSH: true, Seq: 101, Ack: 1001, Payload: iperf3TestCookie()},
 			want: []iperf3Want{{
 				to: iperf3TestControlPort, flags: "P", seq: 1001, ack: 138, payload: []byte{iperf3ParamExchange},
 			}},
@@ -170,7 +173,7 @@ func TestIPerf3Conversation(t *testing.T) {
 		},
 		{
 			name: "data cookie starts the test on the control connection", from: iperf3TestDataPort,
-			segment: &layers.TCP{ACK: true, PSH: true, Seq: 501, Ack: 1001, Payload: iperf3TestCookie},
+			segment: &layers.TCP{ACK: true, PSH: true, Seq: 501, Ack: 1001, Payload: iperf3TestCookie()},
 			want: []iperf3Want{
 				{to: iperf3TestDataPort, seq: 1001, ack: 538},
 				{
@@ -210,25 +213,9 @@ func TestIPerf3Conversation(t *testing.T) {
 	}
 	for _, step := range steps {
 		replies := wire.send(step.from, step.segment)
-		if len(replies) != len(step.want) {
-			t.Fatalf("%s: %d replies %+v, want %d", step.name, len(replies), replies, len(step.want))
-		}
-		for i, want := range step.want {
-			reply := replies[i]
-			if reply.DstPort != want.to || tcpFlags(reply) != want.flags || !reply.ACK ||
-				reply.Seq != want.seq || reply.Ack != want.ack {
-				t.Fatalf("%s: reply %d to %d flags %q seq %d ack %d, want to %d flags %q seq %d ack %d",
-					step.name, i, reply.DstPort, tcpFlags(reply), reply.Seq, reply.Ack,
-					want.to, want.flags, want.seq, want.ack)
-			}
-			if want.results {
-				checkIPerf3Results(t, reply.Payload, 1, 1100)
-				serverResultsLen = safeconv.Uint32(len(reply.Payload))
-				continue
-			}
-			if !bytes.Equal(reply.Payload, want.payload) {
-				t.Fatalf("%s: reply %d payload % x, want % x", step.name, i, reply.Payload, want.payload)
-			}
+		checkIPerf3Replies(t, step.name, replies, step.want)
+		if len(step.want) > 0 && step.want[len(step.want)-1].results {
+			serverResultsLen = safeconv.Uint32(len(replies[len(replies)-1].Payload))
 		}
 	}
 
@@ -243,8 +230,36 @@ func TestIPerf3Conversation(t *testing.T) {
 		t.Errorf("after IPERF_DONE %d connections and %d tests remain, want none", conns, tests)
 	}
 	// The test is over: what the client still sends on its data stream is reset.
-	if reset := wire.send(iperf3TestDataPort, &layers.TCP{ACK: true, FIN: true, Seq: 1638, Ack: 1001}); len(reset) != 1 || !reset[0].RST {
+	if reset := wire.send(
+		iperf3TestDataPort,
+		&layers.TCP{ACK: true, FIN: true, Seq: 1638, Ack: 1001},
+	); len(reset) != 1 ||
+		!reset[0].RST {
 		t.Errorf("data FIN after the test answered with %+v, want RST", reset)
+	}
+}
+
+// checkIPerf3Replies checks the segments the server answered one step with.
+// A results reply carries the 1,100 bytes the stream received after its
+// cookie, under the client's stream id 1.
+func checkIPerf3Replies(t *testing.T, step string, replies []*layers.TCP, wants []iperf3Want) {
+	t.Helper()
+	if len(replies) != len(wants) {
+		t.Fatalf("%s: %d replies %+v, want %d", step, len(replies), replies, len(wants))
+	}
+	for i, want := range wants {
+		reply := replies[i]
+		if reply.DstPort != want.to || tcpFlags(reply) != want.flags || !reply.ACK ||
+			reply.Seq != want.seq || reply.Ack != want.ack {
+			t.Fatalf("%s: reply %d to %d flags %q seq %d ack %d, want to %d flags %q seq %d ack %d",
+				step, i, reply.DstPort, tcpFlags(reply), reply.Seq, reply.Ack,
+				want.to, want.flags, want.seq, want.ack)
+		}
+		if want.results {
+			checkIPerf3Results(t, reply.Payload, 1, 1100)
+		} else if !bytes.Equal(reply.Payload, want.payload) {
+			t.Fatalf("%s: reply %d payload % x, want % x", step, i, reply.Payload, want.payload)
+		}
 	}
 }
 
@@ -328,12 +343,49 @@ func TestIPerf3RefusesWhatItCannotServe(t *testing.T) {
 				}
 				return
 			}
-			wire.send(iperf3TestControlPort, &layers.TCP{ACK: true, Seq: 101, Ack: 1001, Payload: iperf3TestCookie})
+			wire.send(iperf3TestControlPort, &layers.TCP{ACK: true, Seq: 101, Ack: 1001, Payload: iperf3TestCookie()})
 			reply := wire.send(iperf3TestControlPort, &layers.TCP{
 				ACK: true, Seq: 138, Ack: 1002, Payload: iperf3Message(t, test.params),
 			})
 			if len(reply) != 1 || !bytes.Equal(reply[0].Payload, test.want) {
 				t.Fatalf("parameters answered with %+v, want % x", reply, test.want)
+			}
+		})
+	}
+}
+
+// TestIPerf3ControlLossEndsTheTest covers a control connection that goes
+// before its streams arrive: the test ends with it, and a stream that still
+// sends its cookie is reset rather than started.
+func TestIPerf3ControlLossEndsTheTest(t *testing.T) {
+	tests := []struct {
+		name string
+		lose *layers.TCP
+	}{
+		{name: "reset", lose: &layers.TCP{RST: true, ACK: true, Seq: 0, Ack: 1003}},
+		{name: "new SYN on the same ports", lose: &layers.TCP{SYN: true, Seq: 9000}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			wire := newIPerf3Wire(t, iperf3TestServer(&config.IPerf3Config{Enabled: true, Port: TCPPortIPerf3}))
+			params := iperf3Message(t, map[string]any{"tcp": true, "parallel": 1})
+			wire.send(iperf3TestControlPort, &layers.TCP{SYN: true, Seq: 100})
+			wire.send(iperf3TestControlPort, &layers.TCP{
+				ACK: true, Seq: 101, Ack: 1001, Payload: iperf3TestCookie(),
+			})
+			wire.send(iperf3TestControlPort, &layers.TCP{ACK: true, Seq: 138, Ack: 1002, Payload: params})
+			test.lose.Seq = max(test.lose.Seq, 138+safeconv.Uint32(len(params)))
+			wire.send(iperf3TestControlPort, test.lose)
+			if tests := len(wire.handler.iperf3.tests); tests != 0 {
+				t.Fatalf("%d tests outlive their control connection", tests)
+			}
+			wire.send(iperf3TestDataPort, &layers.TCP{SYN: true, Seq: 500})
+			reply := wire.send(iperf3TestDataPort, &layers.TCP{
+				ACK: true, Seq: 501, Ack: 1001, Payload: iperf3TestCookie(),
+			})
+			if len(reply) != 1 || reply[0].RST || len(reply[0].Payload) != 1 ||
+				reply[0].Payload[0] != iperf3ParamExchange {
+				t.Errorf("cookie of a finished test answered with %+v, want a new test's PARAM_EXCHANGE", reply)
 			}
 		})
 	}

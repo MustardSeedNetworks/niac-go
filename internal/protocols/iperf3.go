@@ -52,6 +52,10 @@ const (
 	// iperf3MSS is the segment size the SYN-ACK advertises, the IPv4 MSS of
 	// a 1500-byte Ethernet MTU. Without it the client falls back to 536.
 	iperf3MSS = 1460
+	// iperf3LengthPrefix is the big-endian length before a JSON message.
+	iperf3LengthPrefix = 4
+	// tcpOptionMSSLen is the length of an MSS option: kind, length, value.
+	tcpOptionMSSLen = 4
 )
 
 // iperf3Server serves iperf3 forward TCP tests: the client sends, the
@@ -75,15 +79,14 @@ type iperf3Conn struct {
 }
 
 type iperf3Test struct {
-	control      streamKey
-	state        byte // the last state sent on the control connection
-	streams      int
-	data         []*iperf3Conn
-	dataKeys     []streamKey
-	started      time.Time
-	ended        time.Time
-	lastSeen     time.Time
-	clientStream []int // stream ids from the client's results
+	control  streamKey
+	state    byte // the last state sent on the control connection
+	streams  int
+	data     []*iperf3Conn
+	dataKeys []streamKey
+	started  time.Time
+	ended    time.Time
+	lastSeen time.Time
 }
 
 // iperf3Params are the parameters the server acts on.
@@ -171,7 +174,7 @@ func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, now time.Time) []
 			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(len(tcp.Payload)),
 		}}}
 	case tcp.RST:
-		s.close(key, conn)
+		s.drop(key, conn)
 		return nil
 	default:
 		return s.segment(key, conn, tcp, now)
@@ -182,20 +185,33 @@ func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, now time.Time) []
 func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []iperf3Segment {
 	s.expire(now)
 	if old := s.conns[key]; old != nil {
-		s.close(key, old)
+		s.drop(key, old)
 	}
 	if len(s.conns) >= iperf3MaxConnections {
 		return []iperf3Segment{{tcp: &layers.TCP{
-			SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()), RST: true, ACK: true, Ack: tcp.Seq + 1,
+			SrcPort: layers.TCPPort(
+				key.server.Port(),
+			),
+			DstPort: layers.TCPPort(key.client.Port()),
+			RST:     true,
+			ACK:     true,
+			Ack:     tcp.Seq + 1,
 		}}}
 	}
 	s.conns[key] = &iperf3Conn{clientNext: tcp.Seq + 1, serverNext: tcpInitialSeq + 1, lastSeen: now}
 
 	return []iperf3Segment{{tcp: &layers.TCP{
-		SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()), Seq: tcpInitialSeq, Ack: tcp.Seq + 1,
-		SYN: true, ACK: true, Window: tcpWindowSize,
+		SrcPort: layers.TCPPort(
+			key.server.Port(),
+		),
+		DstPort: layers.TCPPort(key.client.Port()),
+		Seq:     tcpInitialSeq,
+		Ack:     tcp.Seq + 1,
+		SYN:     true,
+		ACK:     true,
+		Window:  tcpWindowSize,
 		Options: []layers.TCPOption{{
-			OptionType: layers.TCPOptionKindMSS, OptionLength: 4,
+			OptionType: layers.TCPOptionKindMSS, OptionLength: tcpOptionMSSLen,
 			OptionData: binary.BigEndian.AppendUint16(nil, iperf3MSS),
 		}},
 	}}}
@@ -229,10 +245,7 @@ func (s *iperf3Server) segment(key streamKey, conn *iperf3Conn, tcp *layers.TCP,
 	}
 	if tcp.FIN {
 		conn.clientNext++
-		if !conn.data {
-			s.finish(conn.test) // the control connection closed: the test is over
-		}
-		s.close(key, conn)
+		s.drop(key, conn)
 		return append(out, s.ack(key, conn, nil, true))
 	}
 	if len(out) == 0 || out[0].tcp.DstPort != layers.TCPPort(key.client.Port()) {
@@ -246,90 +259,109 @@ func (s *iperf3Server) segment(key streamKey, conn *iperf3Conn, tcp *layers.TCP,
 // sent its cookie yet, has received, and returns the server's answer.
 func (s *iperf3Server) advance(key streamKey, conn *iperf3Conn) []iperf3Segment {
 	if conn.test == nil {
-		if len(conn.pending) < iperf3CookieLen {
-			return nil
-		}
-		cookie := string(conn.pending[:iperf3CookieLen])
-		rest := conn.pending[iperf3CookieLen:]
-		conn.pending = nil
-		if test := s.tests[cookie]; test != nil {
-			return s.join(key, conn, test, rest)
-		}
-		test := &iperf3Test{control: key, state: iperf3ParamExchange, lastSeen: conn.lastSeen}
-		s.tests[cookie] = test
-		conn.test = test
-		conn.pending = append(conn.pending, rest...)
-
-		return []iperf3Segment{s.ack(key, conn, []byte{iperf3ParamExchange}, false)}
+		return s.cookie(key, conn)
 	}
-
-	test := conn.test
-	switch test.state {
+	switch conn.test.state {
 	case iperf3ParamExchange:
-		message, ok := s.message(conn)
-		if !ok {
-			return s.refuse(key, conn, message == nil)
-		}
-		if message == nil {
-			return nil
-		}
-		var params iperf3Params
-		if err := json.Unmarshal(message, &params); err != nil {
-			return s.refuse(key, conn, false)
-		}
-		if params.UDP || params.Reverse || params.Bidirectional {
-			return s.refuse(key, conn, true)
-		}
-		test.streams = min(max(params.Parallel, 1), iperf3MaxStreams)
-		test.state = iperf3CreateStreams
-
-		return []iperf3Segment{s.ack(key, conn, []byte{iperf3CreateStreams}, false)}
+		return s.params(key, conn)
 	case iperf3TestRunning, iperf3DisplayResults:
-		if len(conn.pending) == 0 {
-			return nil
-		}
-		state := conn.pending[0]
-		conn.pending = conn.pending[1:]
-		switch {
-		case state == iperf3TestEnd && test.state == iperf3TestRunning:
-			test.ended = conn.lastSeen
-			test.state = iperf3ExchangeResults
-
-			return []iperf3Segment{s.ack(key, conn, []byte{iperf3ExchangeResults}, false)}
-		case state == iperf3Done && test.state == iperf3DisplayResults:
-			s.finish(test)
-			return nil
-		case state == iperf3ClientTerminate:
-			s.finish(test)
-			return nil
-		}
-		return s.refuse(key, conn, false)
+		return s.clientState(key, conn)
 	case iperf3ExchangeResults:
-		message, ok := s.message(conn)
-		if !ok {
-			return s.refuse(key, conn, false)
-		}
-		if message == nil {
-			return nil
-		}
-		var client iperf3Results
-		if err := json.Unmarshal(message, &client); err != nil {
-			return s.refuse(key, conn, false)
-		}
-		results, err := json.Marshal(test.results(client))
-		if err != nil {
-			return s.refuse(key, conn, false)
-		}
-		test.state = iperf3DisplayResults
-		answer := binary.BigEndian.AppendUint32(nil, safeconv.Uint32(len(results)))
-		answer = append(append(answer, results...), iperf3DisplayResults)
-
-		return []iperf3Segment{s.ack(key, conn, answer, false)}
+		return s.exchangeResults(key, conn)
 	default:
 		// The client sends nothing on the control connection while the
 		// server waits for its streams.
 		return s.refuse(key, conn, false)
 	}
+}
+
+// cookie reads the cookie that opens a connection: the first connection to
+// send it is a test's control connection, the later ones its data streams.
+func (s *iperf3Server) cookie(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	if len(conn.pending) < iperf3CookieLen {
+		return nil
+	}
+	cookie := string(conn.pending[:iperf3CookieLen])
+	rest := conn.pending[iperf3CookieLen:]
+	conn.pending = nil
+	if test := s.tests[cookie]; test != nil {
+		return s.join(key, conn, test, rest)
+	}
+	test := &iperf3Test{control: key, state: iperf3ParamExchange, lastSeen: conn.lastSeen}
+	s.tests[cookie] = test
+	conn.test = test
+	conn.pending = append(conn.pending, rest...)
+
+	return []iperf3Segment{s.ack(key, conn, []byte{iperf3ParamExchange}, false)}
+}
+
+// params reads the test parameters and asks for the data streams.
+func (s *iperf3Server) params(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	message, ok := s.message(conn)
+	switch {
+	case !ok:
+		return s.refuse(key, conn, false)
+	case message == nil:
+		return nil
+	}
+	var params iperf3Params
+	if err := json.Unmarshal(message, &params); err != nil {
+		return s.refuse(key, conn, false)
+	}
+	if params.UDP || params.Reverse || params.Bidirectional {
+		return s.refuse(key, conn, true)
+	}
+	conn.test.streams = min(max(params.Parallel, 1), iperf3MaxStreams)
+	conn.test.state = iperf3CreateStreams
+
+	return []iperf3Segment{s.ack(key, conn, []byte{iperf3CreateStreams}, false)}
+}
+
+// clientState reads the one-byte state the client sends to end the test or,
+// after the results, to finish.
+func (s *iperf3Server) clientState(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	if len(conn.pending) == 0 {
+		return nil
+	}
+	test, state := conn.test, conn.pending[0]
+	conn.pending = conn.pending[1:]
+	switch {
+	case state == iperf3TestEnd && test.state == iperf3TestRunning:
+		test.ended = conn.lastSeen
+		test.state = iperf3ExchangeResults
+
+		return []iperf3Segment{s.ack(key, conn, []byte{iperf3ExchangeResults}, false)}
+	case state == iperf3Done && test.state == iperf3DisplayResults, state == iperf3ClientTerminate:
+		s.finish(test)
+		return nil
+	default:
+		return s.refuse(key, conn, false)
+	}
+}
+
+// exchangeResults reads the client's results and answers with the server's
+// and DISPLAY_RESULTS.
+func (s *iperf3Server) exchangeResults(key streamKey, conn *iperf3Conn) []iperf3Segment {
+	message, ok := s.message(conn)
+	switch {
+	case !ok:
+		return s.refuse(key, conn, false)
+	case message == nil:
+		return nil
+	}
+	var client iperf3Results
+	if err := json.Unmarshal(message, &client); err != nil {
+		return s.refuse(key, conn, false)
+	}
+	results, err := json.Marshal(conn.test.results(client))
+	if err != nil {
+		return s.refuse(key, conn, false)
+	}
+	conn.test.state = iperf3DisplayResults
+	answer := binary.BigEndian.AppendUint32(nil, safeconv.Uint32(len(results)))
+	answer = append(append(answer, results...), iperf3DisplayResults)
+
+	return []iperf3Segment{s.ack(key, conn, answer, false)}
 }
 
 // join adds a data stream to its test, and starts the test once every
@@ -345,9 +377,14 @@ func (s *iperf3Server) join(key streamKey, conn *iperf3Conn, test *iperf3Test, r
 	if len(test.data) < test.streams {
 		return nil
 	}
+	control := s.conns[test.control]
+	if control == nil || control.test != test {
+		s.finish(test)
+		s.close(key, conn)
+		return []iperf3Segment{s.reset(key, conn)}
+	}
 	test.state = iperf3TestRunning
 	test.started = conn.lastSeen
-	control := s.conns[test.control]
 
 	return []iperf3Segment{
 		s.ack(key, conn, nil, false),
@@ -359,18 +396,18 @@ func (s *iperf3Server) join(key streamKey, conn *iperf3Conn, test *iperf3Test, r
 // It returns nil, true while the message is incomplete and nil, false for a
 // length no message can have.
 func (s *iperf3Server) message(conn *iperf3Conn) ([]byte, bool) {
-	if len(conn.pending) < 4 {
+	if len(conn.pending) < iperf3LengthPrefix {
 		return nil, true
 	}
 	length := binary.BigEndian.Uint32(conn.pending)
 	if length == 0 || length > iperf3MaxMessage {
 		return nil, false
 	}
-	end := 4 + int(length)
+	end := iperf3LengthPrefix + int(length)
 	if len(conn.pending) < end {
 		return nil, true
 	}
-	message := conn.pending[4:end]
+	message := conn.pending[iperf3LengthPrefix:end]
 	conn.pending = conn.pending[end:]
 
 	return message, true
@@ -429,6 +466,15 @@ func (s *iperf3Server) finish(test *iperf3Test) {
 			delete(s.conns, key)
 		}
 	}
+}
+
+// drop forgets a connection the client closed or reset. A test whose control
+// connection goes is over.
+func (s *iperf3Server) drop(key streamKey, conn *iperf3Conn) {
+	if conn.test != nil && conn.test.control == key {
+		s.finish(conn.test)
+	}
+	s.close(key, conn)
 }
 
 func (s *iperf3Server) close(key streamKey, conn *iperf3Conn) {
