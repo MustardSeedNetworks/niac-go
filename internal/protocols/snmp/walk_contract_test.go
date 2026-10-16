@@ -24,6 +24,7 @@ func TestWalkContractClassify(t *testing.T) {
 		authoredIfIndexes:   map[string]struct{}{},
 	}
 	longMAC := WalkContract{authoredMAC: true, authoredIfIndexes: map[string]struct{}{}}
+	routed := WalkContract{authoredIPTables: true, authoredIfIndexes: map[string]struct{}{}}
 
 	cases := []struct {
 		name     string
@@ -48,6 +49,19 @@ func TestWalkContractClassify(t *testing.T) {
 		{"egp group is live", bare, ".1.3.6.1.2.1.8.1.0", BucketLive},
 		{"snmp group is the agent's own", bare, ".1.3.6.1.2.1.11.1.0", BucketLive},
 		{"a sibling of the ip root is not live", bare, ".1.3.6.1.2.1.44.1.0", BucketKept},
+
+		{"a captured route table stands", bare, ".1.3.6.1.2.1.4.21.1.1.10.0.38.0", BucketKept},
+		{"a captured address table stands", bare, ".1.3.6.1.2.1.4.20.1.1.10.0.38.1", BucketKept},
+		{"a captured ARP table stands", bare, ".1.3.6.1.2.1.4.22.1.2.1.10.0.38.2", BucketKept},
+		{
+			"a captured CIDR route table stands",
+			bare,
+			".1.3.6.1.2.1.4.24.4.1.1.10.0.38.0.255.255.255.0.0.0.0.0.0",
+			BucketKept,
+		},
+		{"authored routes replace the route table", routed, ".1.3.6.1.2.1.4.21.1.1.10.0.38.0", BucketAuthored},
+		{"authored addresses replace the address table", routed, ".1.3.6.1.2.1.4.20.1.1.10.0.38.1", BucketAuthored},
+		{"the ip counters stay live beside them", routed, ".1.3.6.1.2.1.4.3.0", BucketLive},
 
 		{"LLDP neighbours drop under trunk_ports", trunked, ".1.0.8802.1.1.2.1.4.1.1.9.1.1", BucketTopology},
 		{"LLDP neighbour root", trunked, "1.0.8802.1.1.2.1.4", BucketTopology},
