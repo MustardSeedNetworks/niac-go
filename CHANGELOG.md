@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.122.6](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.5...v0.122.6) (2026-10-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.54.0 ([#2735](https://github.com/MustardSeedNetworks/niac-go/issues/2735)) ([bdf4bac](https://github.com/MustardSeedNetworks/niac-go/commit/bdf4bac55fdf92cf1a80d5c8b941358834af26f4))
+* **fabric:** decrement a routed reply's TTL once per simulated router ([#2737](https://github.com/MustardSeedNetworks/niac-go/issues/2737)) ([1a08f4d](https://github.com/MustardSeedNetworks/niac-go/commit/1a08f4dbdc0d101768277d2869c8c46b50c3eb40)), closes [#2733](https://github.com/MustardSeedNetworks/niac-go/issues/2733)
+
 ## [0.122.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.122.4...v0.122.5) (2026-10-16)
 
 
