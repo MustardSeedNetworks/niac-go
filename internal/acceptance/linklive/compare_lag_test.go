@@ -64,6 +64,42 @@ func TestCompareRejectsBundleRenderedOffItsMembers(t *testing.T) {
 	}
 }
 
+// R-A2: on the 2026-10-16 captures all 36 remaining vlan-conflicts were
+// bundle member edges. Link-Live takes an edge's VLAN from the FDB entries on
+// its port. The peer's MAC is learned on the bundle, the bridge port, as on
+// real gear, so a member edge has no VLAN and the Port-channel interface
+// carries it.
+func TestCompareReadsMemberEdgeVLANFromBundleInterface(t *testing.T) {
+	cases := []struct {
+		name       string
+		bundleVLAN string
+		want       bool
+	}{
+		{"bundle carries the native VLAN", "200", false},
+		{"bundle carries another VLAN", "999", true},
+		{"bundle carries no VLAN", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			observed := observedBundle("HundredGigabitEthernet1/0/1", "100 Gb")
+			observed.Hosts[0].Connections[0].Edge.VLAN = ""
+			observed.Hosts[0].Interfaces = []linklive.ObservedInterface{{
+				Interface: linklive.ObservedInterfaceDetails{Name: "Port-channel1"},
+				VLAN:      tc.bundleVLAN,
+			}}
+
+			findings := linkFindings(linklive.Compare(authoredBundle(t), observed))
+			if !tc.want {
+				if len(findings) != 0 {
+					t.Fatalf("findings = %+v", findings)
+				}
+				return
+			}
+			assertFinding(t, findings, linklive.FindingVLANConflict)
+		})
+	}
+}
+
 func TestCompareAcceptsUnknownDuplexOnBundle(t *testing.T) {
 	observed := observedBundle("HundredGigabitEthernet1/0/1", "100 Gb")
 	observed.Hosts[0].Interfaces = []linklive.ObservedInterface{{
@@ -183,7 +219,11 @@ func observedBundle(port, speed string) linklive.ObservedSnapshot {
 			HostID: 1, Name: "MED-CORE-SW01", Type: "Switch", MAC: "00000cf00401",
 			Connections: []linklive.ObservedConnection{{
 				HostID: 2, Name: "MED-DIST-SW01", MAC: "00000cf00501",
-				Edge: linklive.ObservedEdge{Port: port, Speed: speed, Duplex: "Full", VLAN: "200"},
+				Edge: linklive.ObservedEdge{Port: port, Speed: speed, Duplex: "Full"},
+			}},
+			Interfaces: []linklive.ObservedInterface{{
+				Interface: linklive.ObservedInterfaceDetails{Name: "Port-channel1"},
+				VLAN:      "200",
 			}},
 		},
 		{HostID: 2, Name: "MED-DIST-SW01", Type: "Switch", MAC: "00000cf00501"},
