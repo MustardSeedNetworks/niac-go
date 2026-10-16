@@ -68,9 +68,21 @@ func newIPerf3Wire(t *testing.T, device *config.Device) *iperf3Wire {
 // segment it queued in answer.
 func (w *iperf3Wire) send(from layers.TCPPort, segment *layers.TCP) []*layers.TCP {
 	w.t.Helper()
+
+	return w.sendCaptured(from, segment, 0)
+}
+
+// sendCaptured sends a segment of which the capture kept only the first
+// captured payload bytes, as a 1,600-byte snapshot keeps of a GRO or TSO
+// superframe; 0 keeps it all.
+func (w *iperf3Wire) sendCaptured(from layers.TCPPort, segment *layers.TCP, captured int) []*layers.TCP {
+	w.t.Helper()
 	segment.SrcPort = from
 	pkt, ip := buildServiceSegment(w.t, w.device, TCPPortIPerf3, segment)
 	pkt.VLAN = iperf3TestVLAN
+	if captured > 0 {
+		segment.Payload = segment.Payload[:captured]
+	}
 	w.handler.routeToHandler(pkt, ip, segment, []*config.Device{w.device})
 
 	var replies []*layers.TCP
@@ -141,10 +153,11 @@ func TestIPerf3Conversation(t *testing.T) {
 	var serverResultsLen uint32
 
 	steps := []struct {
-		name    string
-		from    layers.TCPPort
-		segment *layers.TCP
-		want    []iperf3Want
+		name     string
+		from     layers.TCPPort
+		segment  *layers.TCP
+		captured int
+		want     []iperf3Want
 	}{
 		{
 			name: "control SYN", from: iperf3TestControlPort, segment: &layers.TCP{SYN: true, Seq: 100},
@@ -188,14 +201,20 @@ func TestIPerf3Conversation(t *testing.T) {
 			want:    []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 1538}},
 		},
 		{
+			name: "a superframe the capture truncated is acknowledged whole", from: iperf3TestDataPort,
+			segment:  &layers.TCP{ACK: true, Seq: 1538, Ack: 1001, Payload: bytes.Repeat([]byte{0x5a}, 2920)},
+			captured: 1546,
+			want:     []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 4458}},
+		},
+		{
 			name: "data past a gap gets a duplicate ACK", from: iperf3TestDataPort,
-			segment: &layers.TCP{ACK: true, Seq: 3000, Ack: 1001, Payload: bulk[:100]},
-			want:    []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 1538}},
+			segment: &layers.TCP{ACK: true, Seq: 6000, Ack: 1001, Payload: bulk[:100]},
+			want:    []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 4458}},
 		},
 		{
 			name: "data fills the gap", from: iperf3TestDataPort,
-			segment: &layers.TCP{ACK: true, Seq: 1538, Ack: 1001, Payload: bulk[:100]},
-			want:    []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 1638}},
+			segment: &layers.TCP{ACK: true, Seq: 4458, Ack: 1001, Payload: bulk[:100]},
+			want:    []iperf3Want{{to: iperf3TestDataPort, seq: 1001, ack: 4558}},
 		},
 		{
 			name: "TEST_END asks for results", from: iperf3TestControlPort,
@@ -212,7 +231,7 @@ func TestIPerf3Conversation(t *testing.T) {
 		},
 	}
 	for _, step := range steps {
-		replies := wire.send(step.from, step.segment)
+		replies := wire.sendCaptured(step.from, step.segment, step.captured)
 		checkIPerf3Replies(t, step.name, replies, step.want)
 		if len(step.want) > 0 && step.want[len(step.want)-1].results {
 			serverResultsLen = safeconv.Uint32(len(replies[len(replies)-1].Payload))
@@ -240,7 +259,7 @@ func TestIPerf3Conversation(t *testing.T) {
 }
 
 // checkIPerf3Replies checks the segments the server answered one step with.
-// A results reply carries the 1,100 bytes the stream received after its
+// A results reply carries the 4,020 bytes the stream received after its
 // cookie, under the client's stream id 1.
 func checkIPerf3Replies(t *testing.T, step string, replies []*layers.TCP, wants []iperf3Want) {
 	t.Helper()
@@ -256,7 +275,7 @@ func checkIPerf3Replies(t *testing.T, step string, replies []*layers.TCP, wants 
 				want.to, want.flags, want.seq, want.ack)
 		}
 		if want.results {
-			checkIPerf3Results(t, reply.Payload, 1, 1100)
+			checkIPerf3Results(t, reply.Payload, 1, 4020)
 		} else if !bytes.Equal(reply.Payload, want.payload) {
 			t.Fatalf("%s: reply %d payload % x, want % x", step, i, reply.Payload, want.payload)
 		}

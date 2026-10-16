@@ -143,7 +143,7 @@ func (h *TCPHandler) handleIPerf3(pkt *Packet, ipLayer *layers.IPv4, tcp *layers
 		}
 		return
 	}
-	segments := h.iperf3.receive(newStreamKey(ipLayer, tcp), tcp, time.Now())
+	segments := h.iperf3.receive(newStreamKey(ipLayer, tcp), tcp, iperf3SegmentLength(ipLayer, tcp), time.Now())
 	identity, ok := h.stack.replyEthernet(pkt, device)
 	if !ok {
 		return
@@ -155,9 +155,20 @@ func (h *TCPHandler) handleIPerf3(pkt *Packet, ipLayer *layers.IPv4, tcp *layers
 	}
 }
 
-// receive takes one client segment and returns what the server sends in
-// answer, which may be on another connection of the same test.
-func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, now time.Time) []iperf3Segment {
+// iperf3SegmentLength is how much data a segment carries by its IP header.
+// The capture keeps 1,600 bytes of a frame, and a GRO or TSO superframe
+// handed up a veth is longer: a data stream is a sink, so what arrived is
+// what the header says, not what was kept.
+func iperf3SegmentLength(ipLayer *layers.IPv4, tcp *layers.TCP) int {
+	length := int(ipLayer.Length) - int(ipLayer.IHL)*ipv4IHLBytes - int(tcp.DataOffset)*ipv4IHLBytes
+
+	return max(length, len(tcp.Payload))
+}
+
+// receive takes one client segment carrying length bytes and returns what
+// the server sends in answer, which may be on another connection of the
+// same test.
+func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, length int, now time.Time) []iperf3Segment {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch conn := s.conns[key]; {
@@ -166,18 +177,18 @@ func (s *iperf3Server) receive(key streamKey, tcp *layers.TCP, now time.Time) []
 	case conn == nil:
 		// A connection the server does not know: closed, forgotten, or from
 		// before a restart. Only what would expect an answer is reset.
-		if tcp.RST || (len(tcp.Payload) == 0 && !tcp.FIN) {
+		if tcp.RST || (length == 0 && !tcp.FIN) {
 			return nil
 		}
 		return []iperf3Segment{{tcp: &layers.TCP{
 			SrcPort: layers.TCPPort(key.server.Port()), DstPort: layers.TCPPort(key.client.Port()),
-			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(len(tcp.Payload)),
+			Seq: tcp.Ack, RST: true, ACK: true, Ack: tcp.Seq + safeconv.Uint32(length),
 		}}}
 	case tcp.RST:
 		s.drop(key, conn)
 		return nil
 	default:
-		return s.segment(key, conn, tcp, now)
+		return s.segment(key, conn, tcp, length, now)
 	}
 }
 
@@ -217,11 +228,17 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 	}}}
 }
 
-// segment takes a segment on an open connection. Data in order is consumed
-// and acknowledged; anything else gets a duplicate ACK so the client sends
-// the gap again.
-func (s *iperf3Server) segment(key streamKey, conn *iperf3Conn, tcp *layers.TCP, now time.Time) []iperf3Segment {
-	if len(tcp.Payload) == 0 && !tcp.FIN {
+// segment takes a segment carrying length bytes on an open connection. Data
+// in order is consumed and acknowledged; anything else gets a duplicate ACK
+// so the client sends the gap again.
+func (s *iperf3Server) segment(
+	key streamKey,
+	conn *iperf3Conn,
+	tcp *layers.TCP,
+	length int,
+	now time.Time,
+) []iperf3Segment {
+	if length == 0 && !tcp.FIN {
 		return nil // an ACK of ours
 	}
 	conn.lastSeen = now
@@ -233,15 +250,23 @@ func (s *iperf3Server) segment(key streamKey, conn *iperf3Conn, tcp *layers.TCP,
 	}
 	conn.clientNext += safeconv.Uint32(len(tcp.Payload))
 	var out []iperf3Segment
-	switch {
-	case conn.data:
+	if conn.data {
 		conn.received += uint64(len(tcp.Payload))
-	default:
+	} else {
 		conn.pending = append(conn.pending, tcp.Payload...)
 		out = s.advance(key, conn)
 	}
 	if s.conns[key] != conn {
 		return out // the conversation ended and the connection was reset
+	}
+	// Bytes the capture cut off a superframe can only be test data: a data
+	// stream counts them, and anything else cannot be read without them.
+	if uncaptured := length - len(tcp.Payload); uncaptured > 0 {
+		if !conn.data {
+			return append(out, s.refuse(key, conn, false)...)
+		}
+		conn.clientNext += safeconv.Uint32(uncaptured)
+		conn.received += uint64(uncaptured)
 	}
 	if tcp.FIN {
 		conn.clientNext++
