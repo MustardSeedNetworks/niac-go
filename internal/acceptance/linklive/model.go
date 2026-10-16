@@ -153,6 +153,8 @@ type ObservedEdge struct {
 type ObservedInterface struct {
 	Interface    ObservedInterfaceDetails `json:"iface"`
 	WorstProblem string                   `json:"worstProblem"`
+	// VLAN is the VLAN of the FDB entries Link-Live found on the port.
+	VLAN string `json:"compiledVlan"`
 }
 
 // ObservedInterfaceDetails contains the interface telemetry Link-Live renders.

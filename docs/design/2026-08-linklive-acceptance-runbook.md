@@ -338,7 +338,7 @@ Every finding kind the comparator can emit, and where to look first.
 | `missing-link` | neighbour tables not synthesized, or the peer never discovered | `trunk_ports` on both ends; the comparator matches by MAC pair in either direction |
 | `unexpected-link` | CDP/LLDP synthesis produced a placeholder peer identity | the affected interface's neighbour and bridge data — this is the classic false-triangle |
 | `port-conflict` / `speed-conflict` | one-sided rendered port, or a `left / right` pair being read as one side | already normalized; a surviving finding is usually a genuinely wrong `remote_interface`. Link-Live draws a `Port-channel` link as one **member** link (port and speed are a member's, not the bundle's), so a bundled link matches when each rendered port is a member of its end's bundle and the speed is that member's |
-| `vlan-conflict` | routed link authored with an access VLAN | routed firewall/L3 links should carry LLDP/CDP but no bridge or FDB state |
+| `vlan-conflict` | routed link authored with an access VLAN | routed firewall/L3 links should carry LLDP/CDP but no bridge or FDB state. Link-Live takes an edge's VLAN from the FDB entries on its port; a peer is learned on the `Port-channel`, never on a member, so a bundle drawn as a member link is checked against the `Port-channel` interface's VLAN |
 
 ### Interface telemetry
 

@@ -82,8 +82,12 @@ func compareLink(expected AuthoredLink, hosts map[string]ObservedHost) []Finding
 	}
 	var findings []Finding
 	expectedSpeed := expected.SpeedMbps
+	observedVLAN := connection.Edge.VLAN
 	if member, rendered := renderedBundleMember(connection.Edge.Port, expected); rendered {
 		expectedSpeed = member.SpeedMbps
+		// The peer's MAC is learned on the bundle, not on a member, so
+		// Link-Live shows the VLAN on the Port-channel interface instead.
+		observedVLAN = bundleVLAN(expected, hosts)
 	} else if !portsMatch(connection.Edge.Port, expected.SourcePort, expected.TargetPort) {
 		findings = append(
 			findings,
@@ -112,18 +116,34 @@ func compareLink(expected AuthoredLink, hosts map[string]ObservedHost) []Finding
 			),
 		)
 	}
-	if expected.NativeVLAN > 0 && parseVLAN(connection.Edge.VLAN) != expected.NativeVLAN {
+	if expected.NativeVLAN > 0 && parseVLAN(observedVLAN) != expected.NativeVLAN {
 		findings = append(
 			findings,
 			linkConflict(
 				FindingVLANConflict,
 				expected,
 				strconv.Itoa(expected.NativeVLAN),
-				connection.Edge.VLAN,
+				observedVLAN,
 			),
 		)
 	}
 	return findings
+}
+
+// bundleVLAN returns the VLAN Link-Live shows on the link's Port-channel
+// interface, preferring the source end.
+func bundleVLAN(link AuthoredLink, hosts map[string]ObservedHost) string {
+	for _, end := range []struct{ mac, port string }{
+		{link.SourceMAC, link.SourcePort},
+		{link.TargetMAC, link.TargetPort},
+	} {
+		for _, iface := range hosts[end.mac].Interfaces {
+			if strings.EqualFold(iface.Interface.Name, end.port) && iface.VLAN != "" {
+				return iface.VLAN
+			}
+		}
+	}
+	return ""
 }
 
 func compareUnexpectedDevices(authored []AuthoredDevice, observed []ObservedHost) []Finding {
