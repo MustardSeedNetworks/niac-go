@@ -68,6 +68,7 @@ func newIPerf3Wire(t *testing.T, device *config.Device) *iperf3Wire {
 	stack.healthCheckHandler = NewHealthCheckHandler(stack)
 	handler := NewTCPHandler(stack)
 	handler.startIPerf3Sender = func() {}
+	handler.iperf3.isn = func() uint32 { return tcpInitialSeq }
 
 	return &iperf3Wire{t: t, stack: stack, handler: handler, device: device, port: TCPPortIPerf3}
 }
@@ -618,6 +619,22 @@ func TestIPerf3ReverseSender(t *testing.T) {
 				{at: time.Millisecond, want: iperf3Seqs(1001, 1)},
 				{end: iperf3TestControlPort},
 				{at: 5 * time.Millisecond},
+			},
+		},
+		{
+			name: "a reset data stream ends the test", shift: 7, window: 65535,
+			events: []event{
+				{at: time.Millisecond, want: iperf3Seqs(1001, 1)},
+				{end: iperf3TestDataPort},
+				{at: 5 * time.Millisecond},
+			},
+		},
+		{
+			name: "a client silent for the stall timeout ends the test", shift: 0, window: 65535,
+			events: []event{
+				{at: time.Millisecond, want: iperf3Seqs(1001, 1)},
+				{at: iperf3SenderStall + time.Second},
+				{at: iperf3SenderStall + 2*time.Second},
 			},
 		},
 	}

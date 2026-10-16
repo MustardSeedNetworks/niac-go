@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"net"
@@ -84,6 +85,9 @@ const (
 	iperf3RetransmitTimeout = 200 * time.Millisecond
 	// iperf3DuplicateACKs is the fast-retransmit threshold.
 	iperf3DuplicateACKs = 3
+	// iperf3SenderStall ends a reverse test whose client has sent nothing,
+	// not even an ACK, for this long: it is gone, or was never there.
+	iperf3SenderStall = 3 * time.Second
 	// bytesPerMbps converts the authored rate in megabits to bytes.
 	bytesPerMbps = 1e6 / 8
 )
@@ -97,6 +101,10 @@ type iperf3Server struct {
 	conns  map[streamKey]*iperf3Conn
 	tests  map[string]*iperf3Test // by cookie
 	filler []byte                 // the payload of the data the server sends
+	// isn picks a connection's initial sequence number. It is random so a
+	// spoofed client cannot complete a handshake blind and aim a reverse
+	// test at the address it spoofed.
+	isn func() uint32
 }
 
 type iperf3Conn struct {
@@ -193,7 +201,16 @@ type iperf3Segment struct {
 func newIPerf3Server() *iperf3Server {
 	return &iperf3Server{
 		conns: make(map[streamKey]*iperf3Conn), tests: make(map[string]*iperf3Test), filler: make([]byte, iperf3MSS),
+		isn: iperf3RandomISN,
 	}
+}
+
+// iperf3RandomISN is an unpredictable initial sequence number.
+func iperf3RandomISN() uint32 {
+	var isn [4]byte
+	_, _ = rand.Read(isn[:]) // crypto/rand.Read never fails
+
+	return binary.BigEndian.Uint32(isn[:])
 }
 
 // iperf3Device is the device that serves iperf3 on port at ip, if any.
@@ -357,8 +374,9 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 			Ack:     tcp.Seq + 1,
 		}}}
 	}
+	isn := s.isn()
 	conn := &iperf3Conn{
-		clientNext: tcp.Seq + 1, serverNext: tcpInitialSeq + 1, lastSeen: now,
+		clientNext: tcp.Seq + 1, serverNext: isn + 1, lastSeen: now,
 		mss: tcpDefaultMSS, window: uint32(tcp.Window),
 	}
 	options := []layers.TCPOption{{
@@ -378,7 +396,9 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 				})
 		}
 	}
-	conn.mss = min(max(conn.mss, 1), iperf3MSS)
+	// Every host accepts a 536-byte segment, so a smaller MSS buys the client
+	// nothing but more packets for the same rate.
+	conn.mss = min(max(conn.mss, tcpDefaultMSS), iperf3MSS)
 	s.conns[key] = conn
 
 	return []iperf3Segment{{tcp: &layers.TCP{
@@ -386,7 +406,7 @@ func (s *iperf3Server) open(key streamKey, tcp *layers.TCP, now time.Time) []ipe
 			key.server.Port(),
 		),
 		DstPort: layers.TCPPort(key.client.Port()),
-		Seq:     tcpInitialSeq,
+		Seq:     isn,
 		Ack:     tcp.Seq + 1,
 		SYN:     true,
 		ACK:     true,
@@ -681,6 +701,10 @@ func (s *iperf3Server) tick(now time.Time) ([]iperf3Burst, bool) {
 		if !test.reverse || test.state != iperf3TestRunning {
 			continue
 		}
+		if now.Sub(test.lastSeen) > iperf3SenderStall {
+			s.finish(test)
+			continue
+		}
 		running = true
 		if segments := test.send(now, s.filler); len(segments) > 0 {
 			bursts = append(bursts, iperf3Burst{route: test.route, segments: segments})
@@ -786,10 +810,12 @@ func (s *iperf3Server) finish(test *iperf3Test) {
 }
 
 // drop forgets a connection the client closed or reset. A test whose control
-// connection goes is over.
+// connection goes is over, and so is a running reverse test that loses a
+// stream the server sends on.
 func (s *iperf3Server) drop(key streamKey, conn *iperf3Conn) {
-	if conn.test != nil && conn.test.control == key {
-		s.finish(conn.test)
+	if test := conn.test; test != nil &&
+		(test.control == key || test.reverse && conn.data && test.state == iperf3TestRunning) {
+		s.finish(test)
 	}
 	s.close(key, conn)
 }
