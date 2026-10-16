@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
+import { accessibleNameIncluding } from '../../lib/accessibleName';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 
@@ -28,6 +29,15 @@ export function CollapsibleSection({
   id,
 }: CollapsibleSectionProps) {
   const { t } = useTranslation('common');
+  const stateName = t(
+    isExpanded ? 'accessibility.sectionExpanded' : 'accessibility.sectionCollapsed',
+    { title },
+  );
+  const requiredLabel = required ? t('labels.required') : '';
+  // The heading and the Required chip are both drawn on the button. The state
+  // phrase ("Basic Settings section, expanded") does not contain "Required",
+  // so the name has to keep that word rather than replace the visible label.
+  const visibleLabel = [title, requiredLabel].filter(Boolean).join(' ');
   return (
     <Card id={id} className="border-surface-border bg-bg-surface/70 overflow-hidden">
       <div className="flex-between px-6 py-4 hover:bg-surface-hover transition-colors">
@@ -36,10 +46,7 @@ export function CollapsibleSection({
             type="button"
             onClick={onToggle}
             aria-expanded={isExpanded}
-            aria-label={t(
-              isExpanded ? 'accessibility.sectionExpanded' : 'accessibility.sectionCollapsed',
-              { title },
-            )}
+            aria-label={accessibleNameIncluding(stateName, visibleLabel)}
             className="flex items-center gap-default text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-primary rounded-lg px-1 -ml-1"
           >
             {isExpanded ? (
@@ -47,16 +54,18 @@ export function CollapsibleSection({
             ) : (
               <ChevronRight className={`${iconSizes.md} text-text-muted`} />
             )}
-            <h3 className="font-semibold text-text-primary">{title}</h3>
+            <h3 className="font-semibold text-text-primary">
+              {title}
+              {/* Same reason as a nav badge: the flex gap is not a word
+                  boundary, so the chip would glue onto the title. */}
+              {required ? ' ' : null}
+            </h3>
+            {required && (
+              <Tag colorScheme="red" className="text-xs">
+                {requiredLabel}
+              </Tag>
+            )}
           </button>
-          {/* Outside the named button. The accessible name is
-              "{{title}} section, expanded", and a Required chip inside the
-              button is visible text that name does not contain. */}
-          {required && (
-            <Tag colorScheme="red" className="text-xs">
-              {t('labels.required')}
-            </Tag>
-          )}
           {onEnableChange && (
             <div className="ml-inline">
               <label className="relative inline-flex items-center cursor-pointer">

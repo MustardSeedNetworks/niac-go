@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
+import { accessibleNameIncluding } from '../lib/accessibleName';
 import { Tooltip } from './Tooltip';
 
 const STATUS_STYLES: Record<ConnectionState, string> = {
@@ -28,13 +29,11 @@ export function ConnectionStatus({
       : status === 'disconnected'
         ? t('connection.offline')
         : '...';
-  // The rail prints the short word ("Online") and keeps the longer phrase
-  // ("Connected to backend") as the description. WCAG 2.5.3 requires every
-  // visible word to occur, in order, inside the accessible name — an
-  // aria-label of only the longer phrase fails label-content-name-mismatch.
-  // Compact mode hides the word (sr-only), and "..." has no words a speech
-  // command could match, so those keep the description as the name.
-  const name = !compact && visible !== '...' ? `${visible}, ${description}` : description;
+  // The rail draws the short word ("Online") and the longer phrase is what a
+  // screen reader should hear. The name has to keep that word (WCAG 2.5.3);
+  // a description that replaces it fails label-content-name-mismatch.
+  // Compact mode hides the word, so the description alone is the name.
+  const name = accessibleNameIncluding(description, compact ? '' : visible);
   return (
     <Tooltip text={description}>
       <button

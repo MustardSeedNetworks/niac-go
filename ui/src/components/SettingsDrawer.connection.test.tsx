@@ -32,6 +32,6 @@ it('uses the shell connection state without starting another health poll', async
   await screen.findByText('No interfaces found');
   expect(request).not.toHaveBeenCalled();
   expect(screen.getByTestId('connection-status')).toHaveAccessibleName(
-    'Offline, Backend unreachable',
+    'Backend unreachable Offline',
   );
 });
