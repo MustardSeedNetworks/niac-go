@@ -38,6 +38,9 @@ func FromConfig(cfg *config.Config) AuthoredSnapshot {
 		authored := authoredDevice(device, faults, pool)
 		authored.NameOffLink = announcesOnlyOverMDNS(device) && len(testerNetworks) > 0 &&
 			!onAnyNetwork(device, testerNetworks)
+		if announcesOverNetBIOS(device) {
+			authored.NetBIOSNetworks = deviceNetworks(device)
+		}
 		snapshot.Devices = append(snapshot.Devices, authored)
 	}
 	snapshot.Links = authoredLinks(devices, byName)
@@ -175,6 +178,23 @@ func announcesOnlyOverMDNS(device config.Device) bool {
 	return device.SNMPConfig.SysName == "" &&
 		(device.NetBIOSConfig == nil || !device.NetBIOSConfig.Enabled) &&
 		device.MDNSConfig != nil && device.MDNSConfig.Enabled
+}
+
+// announcesOverNetBIOS reports a device whose name a discovery tool learns
+// from NetBIOS, because it has no sysName to read first.
+func announcesOverNetBIOS(device config.Device) bool {
+	return device.SNMPConfig.SysName == "" &&
+		device.NetBIOSConfig != nil && device.NetBIOSConfig.Enabled
+}
+
+func deviceNetworks(device config.Device) []string {
+	var networks []string
+	for _, iface := range device.Interfaces {
+		if iface.Network != "" && !slices.Contains(networks, iface.Network) {
+			networks = append(networks, iface.Network)
+		}
+	}
+	return networks
 }
 
 func onAnyNetwork(device config.Device, networks []string) bool {
