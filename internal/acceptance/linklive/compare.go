@@ -1,6 +1,7 @@
 package linklive
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -10,9 +11,10 @@ const namePrefixParts = 2
 // Compare reports every deterministic mismatch in NIAC-authored topology.
 func Compare(authored AuthoredSnapshot, observed ObservedSnapshot) []Finding {
 	byMAC := observedByMAC(observed.Hosts)
+	named := namedNetBIOSNetworks(authored.Devices, byMAC)
 	var findings []Finding
 	for _, device := range authored.Devices {
-		findings = append(findings, compareDevice(device, byMAC[device.MAC])...)
+		findings = append(findings, compareDevice(device, byMAC[device.MAC], named)...)
 	}
 	for _, link := range authored.Links {
 		findings = append(findings, compareLink(link, byMAC)...)
@@ -30,15 +32,39 @@ func observedByMAC(hosts []ObservedHost) map[string]ObservedHost {
 	return byMAC
 }
 
-func compareDevice(expected AuthoredDevice, actual ObservedHost) []Finding {
+// namedNetBIOSNetworks lists the networks on which the tester rendered at
+// least one NetBIOS host by its authored name.
+func namedNetBIOSNetworks(devices []AuthoredDevice, hosts map[string]ObservedHost) map[string]bool {
+	named := make(map[string]bool)
+	for _, device := range devices {
+		if namesMatch(hosts[device.MAC].Name, device.Name) {
+			for _, network := range device.NetBIOSNetworks {
+				named[network] = true
+			}
+		}
+	}
+	return named
+}
+
+// addressNameAccepted reports a host rendered by its own address for a reason
+// outside NIAC: its name is link-local and the tester is elsewhere, or a NetBIOS
+// sibling on its network was named in the same analysis.
+func addressNameAccepted(expected AuthoredDevice, observed string, named map[string]bool) bool {
+	if !contains(expected.IPv4, observed) {
+		return false
+	}
+	return expected.NameOffLink ||
+		slices.ContainsFunc(expected.NetBIOSNetworks, func(network string) bool { return named[network] })
+}
+
+func compareDevice(expected AuthoredDevice, actual ObservedHost, named map[string]bool) []Finding {
 	if actual.MAC == "" {
 		return []Finding{
 			{Kind: FindingMissingDevice, Device: expected.Name, Expected: expected.MAC},
 		}
 	}
 	var findings []Finding
-	if !namesMatch(actual.Name, expected.Name) &&
-		(!expected.NameOffLink || !contains(expected.IPv4, actual.Name)) {
+	if !namesMatch(actual.Name, expected.Name) && !addressNameAccepted(expected, actual.Name, named) {
 		findings = append(
 			findings,
 			conflict(FindingNameConflict, expected.Name, expected.Name, actual.Name),

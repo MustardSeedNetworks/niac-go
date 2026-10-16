@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/acceptance/linklive"
+	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
@@ -78,6 +79,15 @@ func TestFromConfigMarksOffLinkMDNSHosts(t *testing.T) {
 // offLinkDevices maps every device of a pack to whether it is marked off-link.
 func offLinkDevices(t *testing.T, packID string) map[string]bool {
 	t.Helper()
+	marked := make(map[string]bool)
+	for _, device := range linklive.FromConfig(packConfig(t, packID)).Devices {
+		marked[device.Name] = device.NameOffLink
+	}
+	return marked
+}
+
+func packConfig(t *testing.T, packID string) *config.Config {
+	t.Helper()
 	for _, pack := range scenario.Packs() {
 		if pack.ID != packID {
 			continue
@@ -86,11 +96,7 @@ func offLinkDevices(t *testing.T, packID string) map[string]bool {
 		if err != nil {
 			t.Fatal(err)
 		}
-		marked := make(map[string]bool)
-		for _, device := range linklive.FromConfig(result.Config).Devices {
-			marked[device.Name] = device.NameOffLink
-		}
-		return marked
+		return result.Config
 	}
 	t.Fatalf("no pack %q", packID)
 	return nil

@@ -62,6 +62,12 @@ type AuthoredDevice struct {
 	// a tester on another network never hears the name and Link-Live renders
 	// the host by its address.
 	NameOffLink bool
+	// NetBIOSNetworks lists the authored networks of a device whose name
+	// comes from NetBIOS. A tester can render such a host by its address for
+	// its own reasons; a sibling on the same network that it did name proves
+	// the tester reaches that network and NIAC answers there (owner decision
+	// 2026-10-16).
+	NetBIOSNetworks []string
 }
 
 // AuthoredInterface contains deterministic interface state exposed through SNMP.
