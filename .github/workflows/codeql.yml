@@ -46,3 +46,8 @@ jobs:
         uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           category: "/language:${{ matrix.language }}"
+          # Analysis still runs. The SARIF upload is what fails once a merge
+          # queue has deleted refs/heads/gh-readonly-queue/... (CI run
+          # 38978937411). This workflow does not trigger on merge_group; the
+          # input keeps a future trigger from failing the job on the upload.
+          upload: ${{ github.event_name == 'merge_group' && 'never' || 'always' }}

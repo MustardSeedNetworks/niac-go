@@ -49,6 +49,11 @@ jobs:
           publish_results: true
 
       - name: Upload SARIF to GitHub Code Scanning
+        # Skip on merge_group. upload-sarif fails the job once the queue has
+        # deleted refs/heads/gh-readonly-queue/... (CI run 38978937411). The
+        # analysis step above still runs. This workflow does not trigger on
+        # merge_group today; the guard covers a future trigger.
+        if: github.event_name != 'merge_group'
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: results.sarif
