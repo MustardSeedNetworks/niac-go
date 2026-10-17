@@ -216,12 +216,108 @@ class ReleasePrEnqueue(unittest.TestCase):
 
     def test_release_pr_jumps_to_the_front_of_the_queue(self) -> None:
         self.assertIn("enqueuePullRequest(input: {pullRequestId: $id, jump: $jump})", self.step)
-        self.assertIn("-F jump=true", self.step)
+        # The first enqueue asks for the front. jump is a parameter so the
+        # same retry loop can fall back to the back of an empty queue.
+        self.assertIn("enqueue_pr true", self.step)
+        self.assertIn('-F jump="${jump}"', self.step)
         self.assertNotIn("gh pr merge", self.step)
 
     def test_release_pr_ci_triggers_the_enqueue(self) -> None:
         self.assertIn("branches: [main, release-please--branches--main]", self.text)
         self.assertIn("gh pr checks", self.step)
+
+    def test_enqueue_waits_for_ci_complete_and_does_not_fail_when_unreported(self) -> None:
+        """gh pr checks --required exits 0 before CI Complete exists. The
+        queue then rejects with 'is expected', and that must not fail the
+        run (five red release-please runs on 2026-10-16)."""
+        self.assertIn('select(.name == "CI Complete")', self.step)
+        self.assertIn('!= "pass"', self.step)
+        self.assertIn("not enqueuing yet.", self.step)
+        self.assertIn("is expected", self.step)
+        self.assertIn("return 2", self.step)
+        # The unreported-check path leaves the job green. A hard refusal
+        # still exits 1 after both attempts.
+        self.assertIn("Required status check CI Complete has not reported; not enqueuing yet.", self.step)
+        self.assertLess(
+            self.step.index("is expected"),
+            self.step.rindex("exit 1"),
+        )
+
+    def test_unreported_ci_complete_does_not_fail_the_enqueue(self) -> None:
+        """Run the gate and the enqueue loop with a fake gh.
+
+        The real failure was an exit 1 from the no-jump fallback while CI
+        Complete had not reported. Both of those shapes must exit 0.
+        """
+        start = self.step.index('ci_complete="pending"')
+        script = self.step[start:]
+        # The workflow sleeps 5+10+15+20s across the retries. The test only
+        # cares about the exit status.
+        script = script.replace('sleep "${delay}"', ":")
+        cases = {
+            "missing": ("pending", "is expected", 0),
+            "passing-but-queue-lags": ("pass", "is expected", 0),
+            "queued": ("pass", "", 0),
+            # A refusal that is not "check has not reported" still fails the
+            # job once the empty-queue fallback has also been refused.
+            "hard-refusal": ("pass", "App may not jump the queue", 1),
+        }
+        for name, (bucket, refusal, expect) in cases.items():
+            with self.subTest(name=name):
+                code, output = _run_enqueue_fragment(script, bucket, refusal)
+                self.assertEqual(code, expect, output)
+                if bucket != "pass":
+                    self.assertNotIn("Enqueuing", output)
+                if refusal == "is expected":
+                    self.assertNotIn("Process completed", output)
+                    self.assertIn("not enqueuing yet", output)
+
+
+def _run_enqueue_fragment(script: str, bucket: str, refusal: str) -> tuple[int, str]:
+    checks = "[]" if bucket == "pending" else f'[{{"name":"CI Complete","bucket":"{bucket}"}}]'
+    with tempfile.TemporaryDirectory() as tmp:
+        fake = Path(tmp) / "gh"
+        fake.write_text(
+            "\n".join(
+                [
+                    "#!/bin/bash",
+                    'if [[ "$*" == *"--required"* ]]; then exit 0; fi',
+                    'if [[ "$*" == *"pr checks"* ]]; then printf "%s\\n" "$CHECKS_JSON"; exit 0; fi',
+                    'if [[ "$*" == *"pr view"* ]]; then echo PR_NODE_ID; exit 0; fi',
+                    'if [[ "$*" == *"totalCount"* ]]; then echo 0; exit 0; fi',
+                    'if [[ "$*" == *graphql* ]]; then',
+                    '  if [[ -n "$ENQUEUE_REFUSAL" ]]; then',
+                    '    echo "Pull request Required status check \\"CI Complete\\" $ENQUEUE_REFUSAL." >&2',
+                    "    exit 1",
+                    "  fi",
+                    '  echo "queued at position 1"',
+                    "  exit 0",
+                    "fi",
+                    'echo "unexpected gh: $*" >&2',
+                    "exit 99",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        fake.chmod(0o755)
+        env = os.environ.copy()
+        env["PATH"] = f"{tmp}:{env['PATH']}"
+        env["CHECKS_JSON"] = checks
+        env["ENQUEUE_REFUSAL"] = refusal
+        env["GITHUB_REPOSITORY"] = "acme/niac"
+        env["GITHUB_REPOSITORY_OWNER"] = "acme"
+        env["pr"] = "2744"
+        env["ENQUEUE"] = "mutation { enqueuePullRequest }"
+        env["QUEUE_DEPTH"] = "query { mergeQueue }"
+        completed = subprocess.run(
+            ["bash", "-euo", "pipefail", "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return completed.returncode, completed.stdout + completed.stderr
 
 
 if __name__ == "__main__":

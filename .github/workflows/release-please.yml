@@ -294,15 +294,70 @@ jobs:
 
           # Pending or failed checks wait: the release PR's own CI completing
           # runs this workflow again (see the workflow_run trigger).
+          #
+          # `gh pr checks --required` is not sufficient by itself. It exits 0
+          # when every check that has *reported* is green, and CI Complete is
+          # created only after the rest of the suite. Lint PR Title and Lint
+          # PR Body can therefore be green while the check the queue requires
+          # does not exist yet. GitHub then rejects the enqueue with
+          # `Required status check "CI Complete" is expected`, and the no-jump
+          # fallback used to exit 1 under `set -e` (runs 38829059085,
+          # 38835253494, 38852526513, 38852756821, and 38927442588 on
+          # 2026-10-16). On PR #2744 that refusal landed at 15:52Z; CI
+          # Complete did not start until 15:53:44Z.
+          #
+          # A missing or unfinished CI Complete is the same "not yet" as a
+          # pending check: leave the PR unarmed. Do not block this job until
+          # the suite finishes. The freshness check above is only true for
+          # this tick, and holding the runner would enqueue a PR whose parent
+          # is no longer main. The release PR's own CI completion fires this
+          # workflow again.
           if ! gh pr checks --repo "${GITHUB_REPOSITORY}" "${pr}" --required; then
             echo "Release PR #${pr}'s required checks have not all passed; not enqueuing yet."
+            exit 0
+          fi
+          # `--json` exits 0 even when a check failed, and exits non-zero when
+          # nothing has reported yet. Read the bucket; only "pass" is success.
+          ci_complete="pending"
+          if checks_json="$(gh pr checks --repo "${GITHUB_REPOSITORY}" "${pr}" --json name,bucket 2>/dev/null)"; then
+            if [ -n "${checks_json}" ]; then
+              ci_complete="$(jq -r '[.[] | select(.name == "CI Complete") | .bucket] | first // "pending"' <<<"${checks_json}")"
+            fi
+          fi
+          if [ "${ci_complete}" != "pass" ]; then
+            echo "Release PR #${pr} has no passing CI Complete check yet (${ci_complete}); not enqueuing yet."
             exit 0
           fi
           echo "Enqueuing #${pr} at the front of the merge queue"
           id="$(gh pr view --repo "${GITHUB_REPOSITORY}" "${pr}" --json id --jq .id)"
           position='"queued at position \(.data.enqueuePullRequest.mergeQueueEntry.position)"'
-          if gh api graphql -f id="${id}" -F jump=true -f query="${ENQUEUE}" --jq "${position}" >/tmp/enqueue.log 2>&1; then
-            cat /tmp/enqueue.log
+          # 0: queued. 1: refused for some other reason (for example, the app
+          # may not jump the queue). 2: the queue still says a required check
+          # has not reported. That last case must not fail the run.
+          enqueue_pr() {
+            local jump="$1"
+            local attempt delay
+            for attempt in 1 2 3 4 5; do
+              if gh api graphql -f id="${id}" -F jump="${jump}" -f query="${ENQUEUE}" --jq "${position}" >/tmp/enqueue.log 2>&1; then
+                cat /tmp/enqueue.log
+                return 0
+              fi
+              if ! grep -q 'is expected' /tmp/enqueue.log; then
+                return 1
+              fi
+              if [ "${attempt}" -eq 5 ]; then
+                return 2
+              fi
+              delay=$((attempt * 5))
+              echo "Merge queue has not observed CI Complete yet (attempt ${attempt}); retrying in ${delay}s."
+              sleep "${delay}"
+            done
+            return 2
+          }
+          if enqueue_pr true; then
+            exit 0
+          elif [ "$?" -eq 2 ]; then
+            echo "Required status check CI Complete has not reported; not enqueuing yet."
             exit 0
           fi
           # Probe, to be settled by its first run (#2715): whether the msn-ci-bot
@@ -316,7 +371,14 @@ jobs:
             echo "::notice::${depth} PR(s) queued; enqueuing #${pr} behind them would eject it. Waiting."
             exit 0
           fi
-          gh api graphql -f id="${id}" -F jump=false -f query="${ENQUEUE}" --jq "${position}"
+          if enqueue_pr false; then
+            exit 0
+          elif [ "$?" -eq 2 ]; then
+            echo "Required status check CI Complete has not reported; not enqueuing yet."
+            exit 0
+          fi
+          cat /tmp/enqueue.log
+          exit 1
 
       # Belt and braces: the guard above is a heuristic about branch
       # parentage evaluated when auto-merge is armed, so it cannot see a

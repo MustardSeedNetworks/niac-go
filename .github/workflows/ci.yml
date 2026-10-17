@@ -635,7 +635,14 @@ jobs:
         # Code scanning requires a public repo or Advanced Security (same
         # gate as codeql.yml); gosec enforcement stays blocking via the
         # golangci-lint gosec linter in the backend job.
-        if: always() && github.event.repository.visibility == 'public'
+        #
+        # Skip the upload on merge_group. The queue deletes
+        # refs/heads/gh-readonly-queue/... while this job is still running,
+        # and upload-sarif then fails the job with "ref ... not found"
+        # (CI run 38978937411, PR #2756, 2026-10-16: gosec uploaded, the
+        # later Trivy upload did not). The scan above still runs. The pull
+        # request's own CI is what publishes the SARIF.
+        if: always() && github.event.repository.visibility == 'public' && github.event_name != 'merge_group'
         with:
           sarif_file: gosec-results.sarif
 
@@ -696,15 +703,20 @@ jobs:
         # Code scanning requires a public repo or Advanced Security (same
         # gate as codeql.yml); the "Fail on CRITICAL/HIGH findings" step
         # below still blocks on the SARIF content regardless of visibility.
-        if: always() && hashFiles('trivy-results.sarif') != '' && github.event.repository.visibility == 'public'
+        #
+        # Skip the upload on merge_group. Same deleted-ref failure as the
+        # gosec upload above: this is the step that actually reddened run
+        # 38978937411. The findings gate below still runs.
+        if: always() && hashFiles('trivy-results.sarif') != '' && github.event.repository.visibility == 'public' && github.event_name != 'merge_group'
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: trivy-results.sarif
 
       - name: Fail on CRITICAL/HIGH findings
         # Reads the SARIF Trivy just produced and fails CI if any CRITICAL or
-        # HIGH-severity result is present. We do this in a separate step so
-        # the SARIF is always uploaded for security tab visibility.
+        # HIGH-severity result is present. On a pull request the upload step
+        # publishes that SARIF first; on a merge group the upload is skipped
+        # because the queue ref is already gone, and this step is the gate.
         if: always() && hashFiles('trivy-results.sarif') != ''
         run: |
           if jq -e '.runs[].results[] | select(.level=="error" or .properties.security_severity == "high" or .properties.security_severity == "critical")' trivy-results.sarif >/dev/null; then
@@ -728,8 +740,12 @@ jobs:
   # isn't worth the added complexity.
   # Defined once in MustardSeedNetworks/.github (fleet-shared); ci-complete
   # still needs: [semgrep]. Edit the pinned version / config policy there.
+  # .github#174 skips the SARIF upload on merge_group (the queue ref is
+  # deleted before upload-sarif can attach it). The scan and the ERROR
+  # gate still run. security-events: write stays required: pull_request
+  # uploads are still not continue-on-error.
   semgrep:
-    uses: MustardSeedNetworks/.github/.github/workflows/semgrep.yml@048d173dd72ca0f9e5fa832fb5b9fd2a6447e5e9 # v1.13.0
+    uses: MustardSeedNetworks/.github/.github/workflows/semgrep.yml@8f012be52b47d0be45104b0ed8d3eb72f20840f5 # .github#174
     permissions:
       contents: read
       # v1.8.0 publishes the all-severity SARIF to code scanning. The
