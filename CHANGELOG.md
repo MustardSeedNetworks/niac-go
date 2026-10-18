@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.6](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.5...v0.123.6) (2026-10-18)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2772](https://github.com/MustardSeedNetworks/niac-go/issues/2772)) ([bdeeb59](https://github.com/MustardSeedNetworks/niac-go/commit/bdeeb59efb7ead8c3b50938f8ebdde40044c4d27))
+* **deps:** update module golang.org/x/vuln to v1.9.0 ([#2769](https://github.com/MustardSeedNetworks/niac-go/issues/2769)) ([7655ffb](https://github.com/MustardSeedNetworks/niac-go/commit/7655ffbc82228cdaa579f6d691517e6f197485af))
+
 ## [0.123.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.4...v0.123.5) (2026-10-18)
 
 
