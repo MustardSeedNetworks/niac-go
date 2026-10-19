@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.9...v0.123.10) (2026-10-19)
+
+
+### Bug Fixes
+
+* **deps:** update dependency i18next to v26.4.4 ([#2781](https://github.com/MustardSeedNetworks/niac-go/issues/2781)) ([d3a4aa1](https://github.com/MustardSeedNetworks/niac-go/commit/d3a4aa1b03af555e1962ff7e9a71d842e9959929))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @chromatic-com/storybook to v5.5.0 ([#2782](https://github.com/MustardSeedNetworks/niac-go/issues/2782)) ([d066afd](https://github.com/MustardSeedNetworks/niac-go/commit/d066afd12c4a2a5fe2e7f9f011f1f5749f47c253))
+
 ## [0.123.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.8...v0.123.9) (2026-10-19)
 
 
