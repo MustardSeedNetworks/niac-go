@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.8...v0.123.9) (2026-10-19)
+
+
+### Miscellaneous
+
+* **deps:** update frontend toolchain to v5.0.4 ([#2780](https://github.com/MustardSeedNetworks/niac-go/issues/2780)) ([f94d923](https://github.com/MustardSeedNetworks/niac-go/commit/f94d923618d6cdb3445d0faa8fd6196a25f63d98))
+* **deps:** update ossf/scorecard-action action to v2.5.0 ([#2777](https://github.com/MustardSeedNetworks/niac-go/issues/2777)) ([9647ced](https://github.com/MustardSeedNetworks/niac-go/commit/9647ced5999922a44cf583153a9097e4d65b5d64))
+
 ## [0.123.8](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.7...v0.123.8) (2026-10-19)
 
 
