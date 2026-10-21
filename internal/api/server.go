@@ -40,6 +40,7 @@ import (
 
 	"github.com/MustardSeedNetworks/foundation/pkg/csrf"
 	"github.com/MustardSeedNetworks/foundation/pkg/httpserver"
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/ratelimit"
 
@@ -445,7 +446,6 @@ type Server struct {
 	maxDevices         int
 	logger             *slog.Logger
 	httpServer         *http.Server
-	alertStop          chan struct{}
 	lastAlert          uint64
 	alertFiring        bool
 	lastAlertAt        time.Time
@@ -461,14 +461,14 @@ type Server struct {
 	// csrf manages per-session CSRF tokens (#1257). Pre-port niac
 	// shared one global token across all clients; the manager keys
 	// tokens by sha256(bearer) so each session has its own.
-	csrf           *csrf.Manager
-	sseHub         *sse.Hub
-	uploadLimiter  *ratelimit.RateLimiter
-	writeLimiter   *ratelimit.RateLimiter
-	walkLimiter    *ratelimit.RateLimiter
-	fileLimiter    *ratelimit.RateLimiter
-	bgStop         chan struct{}
-	bgStopOnce     sync.Once
+	csrf          *csrf.Manager
+	sseHub        *sse.Hub
+	uploadLimiter *ratelimit.RateLimiter
+	writeLimiter  *ratelimit.RateLimiter
+	walkLimiter   *ratelimit.RateLimiter
+	fileLimiter   *ratelimit.RateLimiter
+	// workers supervises the long-lived background loops (startWorkers).
+	workers        *supervise.Group
 	library        *library.Library
 	tlsFingerprint tlsFingerprintCache
 	// tokens is the active bearer-token store. Seeded from
@@ -509,7 +509,6 @@ func NewServer(cfg ServerConfig) *Server {
 		rateLimiter:   ratelimit.NewRateLimiter(DefaultRateLimit, DefaultBurst),
 		csrf:          csrf.NewManager(),
 		sseHub:        sse.NewHub(sse.Config{}),
-		bgStop:        make(chan struct{}),
 		uploadLimiter: ratelimit.NewRateLimiter(UploadRateLimit, UploadBurst),
 		writeLimiter:  ratelimit.NewRateLimiter(WriteRateLimit, WriteBurst),
 		walkLimiter:   ratelimit.NewRateLimiter(WalkRateLimit, WalkBurst),
@@ -689,33 +688,19 @@ func (s *Server) Start() error {
 
 // Shutdown gracefully shuts down the API server.
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.alertMu.Lock()
+	var errs []error
 
-	if s.alertStop != nil {
-		close(s.alertStop)
-		s.alertStop = nil
-	}
-
-	s.alertMu.Unlock()
-
-	// Stop background goroutines (rate limiter cleanup).
-	s.bgStopOnce.Do(func() {
-		if s.bgStop != nil {
-			close(s.bgStop)
+	if s.workers != nil {
+		if err := s.workers.Stop(ctx); err != nil {
+			s.logger.ErrorContext(ctx, "Error stopping API workers", "error", err)
+			errs = append(errs, err)
 		}
-	})
-
-	// Stop SSE hub to release its goroutine and clients.
-	if s.sseHub != nil {
-		s.sseHub.Stop()
 	}
 
 	// #1257: stop the CSRF manager's cleanup goroutine.
 	if s.csrf != nil {
 		s.csrf.Stop()
 	}
-
-	var errs []error
 
 	if s.httpServer != nil {
 		if err := s.httpServer.Shutdown(ctx); err != nil {

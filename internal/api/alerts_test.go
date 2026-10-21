@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
@@ -131,22 +132,18 @@ func TestGetAlertConfigThreadSafe(t *testing.T) {
 	}
 }
 
-func TestUpdateAlertConfigStartsAndStops(t *testing.T) {
-	server := &Server{
-		cfg:    ServerConfig{},
-		logger: slog.Default(),
-	}
-
-	// Set threshold to start alert loop
+func TestUpdateAlertConfigRearmsTheAlert(t *testing.T) {
+	server, _ := newTestServer(t)
 	server.updateAlertConfig(AlertConfig{PacketsThreshold: 100})
-	if server.alertStop == nil {
-		t.Error("alertStop should be non-nil after setting threshold")
-	}
+	server.evaluateAlertThreshold(150, 100, time.Now())
 
-	// Clear threshold to stop alert loop
-	server.updateAlertConfig(AlertConfig{PacketsThreshold: 0})
-	if server.alertStop != nil {
-		t.Error("alertStop should be nil after clearing threshold")
+	server.updateAlertConfig(AlertConfig{PacketsThreshold: 200})
+
+	server.alertMu.RLock()
+	defer server.alertMu.RUnlock()
+	if server.alertFiring || !server.lastAlertAt.IsZero() || server.lastAlert != 0 {
+		t.Errorf("firing=%v lastAlertAt=%v lastAlert=%d after a new threshold, want a fresh alert",
+			server.alertFiring, server.lastAlertAt, server.lastAlert)
 	}
 }
 

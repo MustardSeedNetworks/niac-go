@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/MustardSeedNetworks/foundation/pkg/httpserver/route"
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api/sse"
 )
@@ -593,25 +595,16 @@ func newSecureHTTPServer(addr string, handler http.Handler) *http.Server {
 	}
 }
 
-// startBackgroundTasks starts the rate limiter cleanup and SSE hub goroutines.
+// apiWorkerRestarts is how many times a faulted API worker is restarted before
+// the supervisor stops the group. Each worker is a loop that carries no state
+// between iterations, so one fault must not cost the daemon its event stream,
+// its rate-limiter cleanup or its alerts for the rest of its life.
+const apiWorkerRestarts = 3
+
+// startBackgroundTasks starts the API's long-lived workers and tees slog into
+// the SSE hub.
 func (s *Server) startBackgroundTasks() {
-	// FEATURE #104: Start periodic cleanup of stale rate limiters
-	go func() {
-		ticker := time.NewTicker(rateLimiterCleanupMins * time.Minute)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-s.bgStop:
-				return
-			case <-ticker.C:
-				s.rateLimiter.CleanupStale()
-			}
-		}
-	}()
-
-	// Start SSE hub for real-time streaming
-	go s.sseHub.Run()
+	s.startWorkers(rateLimiterCleanupMins*time.Minute, alertTickerSecs*time.Second)
 	s.logger.Info("[SSE] Server-Sent Events hub started")
 
 	// Tee slog into the SSE hub so the Protocol Debug Console gets
@@ -623,4 +616,46 @@ func (s *Server) startBackgroundTasks() {
 	// The wrapper filters out "[SSE]"-prefixed records so the hub's
 	// own log lines don't recurse.
 	sse.InstallLogTee(s.sseHub)
+}
+
+// startWorkers runs the SSE hub, the rate-limiter cleanup and the alert check
+// under one supervisor, so a panic in any of them is logged and the worker
+// restarted instead of killing the daemon. Registration order is dependency
+// order: the hub that serves every stream stops last.
+func (s *Server) startWorkers(rateLimiterCleanupEvery, alertEvery time.Duration) {
+	restart := supervise.RestartN(apiWorkerRestarts)
+	s.workers = supervise.New(s.logger)
+	s.workers.Add("api-sse-hub", restart, s.runSSEHub)
+	s.workers.Add("api-rate-limiter-cleanup", restart, func(ctx context.Context) error {
+		return s.rateLimiterCleanupLoop(ctx, rateLimiterCleanupEvery)
+	})
+	s.workers.Add("api-alerts", restart, func(ctx context.Context) error {
+		return s.alertLoop(ctx, alertEvery)
+	})
+	s.workers.Start(context.Background())
+}
+
+// runSSEHub runs the hub until the supervisor cancels ctx. The hub is stopped
+// from ctx rather than when Run returns: a panic that exhausts the restarts
+// still cancels ctx, and a stopped hub releases the stream handlers waiting
+// to register instead of leaving them blocked on a loop that is gone.
+func (s *Server) runSSEHub(ctx context.Context) error {
+	context.AfterFunc(ctx, s.sseHub.Stop)
+	s.sseHub.Run()
+	return nil
+}
+
+// rateLimiterCleanupLoop drops stale per-IP limiters (FEATURE #104).
+func (s *Server) rateLimiterCleanupLoop(ctx context.Context, every time.Duration) error {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			s.rateLimiter.CleanupStale()
+		}
+	}
 }

@@ -37,8 +37,11 @@ func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) alertLoop(stop <-chan struct{}) {
-	ticker := time.NewTicker(alertTickerSecs * time.Second)
+// alertLoop checks the packet threshold every tick for as long as the server
+// runs. With no threshold set a tick does nothing, so a configuration change
+// only has to swap the config, not start or stop a goroutine.
+func (s *Server) alertLoop(ctx context.Context, every time.Duration) error {
+	ticker := time.NewTicker(every)
 	defer ticker.Stop()
 
 	for {
@@ -64,8 +67,8 @@ func (s *Server) alertLoop(stop <-chan struct{}) {
 				cfg.PacketsThreshold,
 				time.Now(),
 			)
-		case <-stop:
-			return
+		case <-ctx.Done():
+			return nil
 		}
 	}
 }
@@ -251,34 +254,11 @@ func (s *Server) getAlertConfig() AlertConfig {
 }
 
 func (s *Server) updateAlertConfig(cfg AlertConfig) {
-	// SECURITY FIX #2.8.1: Prevent race condition on alertStop channel
 	s.alertMu.Lock()
 	defer s.alertMu.Unlock()
-
-	// Stop existing alert loop if running
-	if s.alertStop != nil {
-		// Check if channel is already closed to prevent panic
-		select {
-		case <-s.alertStop:
-			// Already closed
-		default:
-			// Safe to close
-			close(s.alertStop)
-		}
-
-		s.alertStop = nil
-	}
 
 	s.cfg.Alert = cfg
 	s.lastAlert = 0
 	s.alertFiring = false
 	s.lastAlertAt = time.Time{}
-
-	// Start new alert loop if threshold is set
-	if cfg.PacketsThreshold > 0 {
-		stopChan := make(chan struct{})
-		s.alertStop = stopChan
-		// Start goroutine while still holding lock to prevent race
-		go s.alertLoop(stopChan)
-	}
 }
