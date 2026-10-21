@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.15](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.14...v0.123.15) (2026-10-21)
+
+
+### Code Refactoring
+
+* **protocols:** run the stack's workers under foundation supervise ([#2801](https://github.com/MustardSeedNetworks/niac-go/issues/2801)) ([d603011](https://github.com/MustardSeedNetworks/niac-go/commit/d6030118eb0c331d3f963c665f43c2a59dceb3a0))
+
+
+### Miscellaneous
+
+* **deps:** update actions/create-github-app-token action to v3.3.0 ([#2790](https://github.com/MustardSeedNetworks/niac-go/issues/2790)) ([f31f8e2](https://github.com/MustardSeedNetworks/niac-go/commit/f31f8e24e197a8f25f875986fa423d16ed17dcac))
+* **deps:** update node.js to v26.12.0 ([#2796](https://github.com/MustardSeedNetworks/niac-go/issues/2796)) ([cac02ca](https://github.com/MustardSeedNetworks/niac-go/commit/cac02ca9f374be04698194a36755a964a56473b9))
+
 ## [0.123.14](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.13...v0.123.14) (2026-10-21)
 
 
