@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -85,40 +84,22 @@ const (
 
 // EDPHandler handles EDP advertisements.
 type EDPHandler struct {
-	stack           *Stack
-	mu              sync.Mutex
-	stopChan        chan struct{}
-	advertiseTicker *time.Ticker
-	running         bool
+	stack *Stack
 }
 
 // NewEDPHandler creates a new EDP handler.
 func NewEDPHandler(stack *Stack) *EDPHandler {
 	return &EDPHandler{
-		stack:    stack,
-		stopChan: make(chan struct{}),
+		stack: stack,
 	}
 }
 
-// Start begins periodic EDP advertisements. Safe to call again after Stop.
-func (h *EDPHandler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.running {
-		return
-	}
-
-	h.stopChan = make(chan struct{})
-	h.advertiseTicker = time.NewTicker(EDPAdvertiseInterval)
-	h.running = true
-
-	stopChan := h.stopChan
-	ticker := h.advertiseTicker
-
+// advertise sends EDP advertisements for every device now and then every
+// EDPAdvertiseInterval until ctx ends. The stack runs it as a supervised worker.
+func (h *EDPHandler) advertise(ctx context.Context) error {
 	if h.stack.GetDebugLevel() >= 1 {
 		logging.ProtocolLogf(
-			context.Background(),
+			ctx,
 			"EDP",
 			logging.LevelInfo,
 			"Starting periodic advertisements (interval: %v)",
@@ -126,33 +107,17 @@ func (h *EDPHandler) Start() {
 		)
 	}
 
-	go func() {
-		h.sendAdvertisements()
-
-		for {
-			select {
-			case <-ticker.C:
-				h.sendAdvertisements()
-			case <-stopChan:
-				ticker.Stop()
-
-				return
-			}
+	h.sendAdvertisements()
+	ticker := time.NewTicker(EDPAdvertiseInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.sendAdvertisements()
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts EDP advertisements. Safe to call multiple times.
-func (h *EDPHandler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.running {
-		return
 	}
-
-	close(h.stopChan)
-	h.running = false
 }
 
 // sendAdvertisements sends EDP advertisements for all devices.

@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"net"
 	"time"
 
@@ -26,41 +27,20 @@ const (
 	allNodesMAC  = "33:33:00:00:00:01"
 )
 
-// Start begins sending unsolicited router advertisements from every device
-// that authors one, each at its own period. Safe to call again after Stop.
-func (h *ICMPv6Handler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.stopChan != nil {
-		return
-	}
-	stop := make(chan struct{})
-	h.stopChan = stop
-
-	go func() {
-		due := h.sendDueRouterAdvertisements(time.Now(), nil)
-		ticker := time.NewTicker(raOriginationTick)
-		defer ticker.Stop()
-		for {
-			select {
-			case now := <-ticker.C:
-				due = h.sendDueRouterAdvertisements(now, due)
-			case <-stop:
-				return
-			}
+// originateRouterAdvertisements sends unsolicited router advertisements from
+// every device that authors one, each at its own period, until ctx ends. The
+// stack runs it as a supervised worker.
+func (h *ICMPv6Handler) originateRouterAdvertisements(ctx context.Context) error {
+	due := h.sendDueRouterAdvertisements(time.Now(), nil)
+	ticker := time.NewTicker(raOriginationTick)
+	defer ticker.Stop()
+	for {
+		select {
+		case now := <-ticker.C:
+			due = h.sendDueRouterAdvertisements(now, due)
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts router advertisement origination. Safe to call multiple times.
-func (h *ICMPv6Handler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.stopChan != nil {
-		close(h.stopChan)
-		h.stopChan = nil
 	}
 }
 
