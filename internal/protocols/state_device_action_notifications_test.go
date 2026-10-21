@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -69,6 +70,28 @@ func TestRecoveredActionsDoNotEmitNotificationsOrStartup(t *testing.T) {
 	manager.dispatchPending()
 	if len(sender.datagrams) != 1 {
 		t.Fatal("recovery suppressed a fresh reboot")
+	}
+}
+
+func TestRestartedDispatcherDoesNotRepeatStartupColdStart(t *testing.T) {
+	device := notificationTestDevice()
+	device.SyslogConfig = nil
+	device.SNMPConfig.Traps.ColdStart = &config.TrapTriggerConfig{Enabled: true, OnStartup: true}
+	manager := newStateNotificationManager(nil)
+	sender := &recordingDatagramSender{}
+	manager.sender = sender
+	manager.Register(device, devicestate.NewStore(devicestate.Identity{Hostname: device.Name}), nil, 200)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	// The supervisor reruns Run after a fault; the device did not reboot.
+	for range 2 {
+		if err := manager.Run(ctx); err != nil {
+			t.Fatalf("Run() = %v", err)
+		}
+	}
+	if len(sender.datagrams) != 1 {
+		t.Fatalf("sent %d datagrams over two runs, want one startup coldStart", len(sender.datagrams))
 	}
 }
 

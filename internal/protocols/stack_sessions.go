@@ -1,23 +1,20 @@
 package protocols
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
-func (s *Stack) startSessionCleanupLoop() {
-	if s.tcpHandler == nil || s.tcpHandler.ssh == nil {
-		return
-	}
+func (s *Stack) sessionCleanupLoop(ctx context.Context) error {
+	ticker := time.NewTicker(sshSessionCleanup)
+	defer ticker.Stop()
 
-	s.wg.Go(func() {
-		ticker := time.NewTicker(sshSessionCleanup)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				s.tcpHandler.ssh.cleanupExpired()
-			case <-s.stopChan:
-				return
-			}
+	for {
+		select {
+		case <-ticker.C:
+			s.tcpHandler.ssh.cleanupExpired()
+		case <-ctx.Done():
+			return nil
 		}
-	})
+	}
 }

@@ -366,8 +366,9 @@ type SimulationStatus struct {
 	Recovery       *SimulationRecovery     `json:"recovery,omitempty"`
 	Sessions       []SimulationStatus      `json:"sessions,omitempty"`
 	// Degraded marks a session that is still running but cannot exchange
-	// frames, today only because the shared trunk capture it rides on has
-	// stopped. Running alone would read as healthy.
+	// frames: its protocol stack's workers exhausted their restarts, or the
+	// shared trunk capture it rides on has stopped. Running alone would read
+	// as healthy.
 	Degraded       bool                `json:"degraded,omitempty"`
 	DegradedReason string              `json:"degradedReason,omitempty"`
 	Capture        *TrunkCaptureHealth `json:"capture,omitempty"`

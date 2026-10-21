@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/deviceclass"
@@ -16,25 +17,19 @@ func (s *Stack) recordNeighbor(entry NeighborRecord) {
 	s.neighbors.upsert(entry)
 }
 
-func (s *Stack) startNeighborCleanupLoop() {
-	if s.neighbors == nil {
-		return
-	}
+func (s *Stack) neighborCleanupLoop(ctx context.Context) error {
+	ticker := time.NewTicker(stackNeighborCleanupSec * time.Second)
+	defer ticker.Stop()
 
-	s.wg.Go(func() {
-		ticker := time.NewTicker(stackNeighborCleanupSec * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				s.neighbors.cleanupExpired()
-				s.observedClients.cleanupExpired()
-			case <-s.stopChan:
-				return
-			}
+	for {
+		select {
+		case <-ticker.C:
+			s.neighbors.cleanupExpired()
+			s.observedClients.cleanupExpired()
+		case <-ctx.Done():
+			return nil
 		}
-	})
+	}
 }
 
 func (s *Stack) selectDiscoveryDevice(proto string) *config.Device {
