@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -18,19 +19,15 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/safeconv"
 )
 
-func (s *Stack) receiveThread() {
-	defer s.wg.Done()
-
+// receiveLoop reads frames off the transport until ctx ends. It checks ctx
+// between reads, so the transport's read timeout bounds how long Stop waits.
+func (s *Stack) receiveLoop(ctx context.Context) error {
 	buffer := make([]byte, stackReceiveBufferSize)
 
-	for s.running.Load() {
-		select {
-		case <-s.stopChan:
-			return
-		default:
-			s.receiveAndQueuePacket(buffer)
-		}
+	for ctx.Err() == nil {
+		s.receiveAndQueuePacket(buffer)
 	}
+	return nil
 }
 
 // receiveAndQueuePacket reads a single packet and queues it for processing.
@@ -108,18 +105,14 @@ func (s *Stack) queuePacket(pkt *Packet) {
 	}
 }
 
-// decodeThread decodes and routes packets to protocol handlers.
-func (s *Stack) decodeThread() {
-	defer s.wg.Done()
-
-	for s.running.Load() {
+// decodeLoop decodes and routes packets to protocol handlers until ctx ends.
+func (s *Stack) decodeLoop(ctx context.Context) error {
+	for {
 		select {
-		case <-s.stopChan:
-			return
+		case <-ctx.Done():
+			return nil
 		case pkt := <-s.recvQueue:
 			s.decodePacket(pkt)
-		case <-time.After(stackSelectTimeoutMs * time.Millisecond):
-			// Periodic check
 		}
 	}
 }
@@ -322,18 +315,14 @@ func (s *Stack) routeByEtherType(pkt *Packet) {
 	}
 }
 
-// sendThread sends packets to the network.
-func (s *Stack) sendThread() {
-	defer s.wg.Done()
-
-	for s.running.Load() {
+// sendLoop sends queued packets to the network until ctx ends.
+func (s *Stack) sendLoop(ctx context.Context) error {
+	for {
 		select {
-		case <-s.stopChan:
-			return
+		case <-ctx.Done():
+			return nil
 		case pkt := <-s.sendQueue:
 			s.sendPacket(pkt)
-		case <-time.After(stackSelectTimeoutMs * time.Millisecond):
-			// Periodic check
 		}
 	}
 }
@@ -452,17 +441,15 @@ func (s *Stack) recordSendError(pkt *Packet, err error) {
 	}
 }
 
-// babbleThread generates periodic network traffic.
-func (s *Stack) babbleThread() {
-	defer s.wg.Done()
-
+// babbleLoop generates periodic network traffic until ctx ends.
+func (s *Stack) babbleLoop(ctx context.Context) error {
 	ticker := time.NewTicker(stackBabbleIntervalSec * time.Second)
 	defer ticker.Stop()
 
-	for s.running.Load() {
+	for {
 		select {
-		case <-s.stopChan:
-			return
+		case <-ctx.Done():
+			return nil
 		case <-ticker.C:
 			for _, device := range s.devices.GetAll() {
 				if device == nil || !device.Babble {

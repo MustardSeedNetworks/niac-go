@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -561,6 +562,7 @@ type stateNotificationManager struct {
 	registrations map[*config.Device]*stateNotificationRegistration
 	sender        datagramSender
 	started       time.Time
+	coldStarts    sync.Once
 	// informs tracks notifications awaiting acknowledgement. Nil disables
 	// inform retry, which is what a manager built without a stack gets.
 	informs *informTracker
@@ -640,15 +642,18 @@ func (m *stateNotificationManager) observeNeighbor(vlan int, address netip.Addr,
 	}
 }
 
-func (m *stateNotificationManager) Run(stop <-chan struct{}) {
-	m.sendColdStarts()
+// Run dispatches device events as notifications until ctx ends. Cold-start
+// traps go out on the first run only: a supervised restart of this loop is
+// not a reboot of the simulated devices.
+func (m *stateNotificationManager) Run(ctx context.Context) error {
+	m.coldStarts.Do(m.sendColdStarts)
 	m.dispatchPending()
 	for {
 		select {
 		case <-m.wake:
 			m.dispatchPending()
-		case <-stop:
-			return
+		case <-ctx.Done():
+			return nil
 		}
 	}
 }

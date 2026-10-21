@@ -901,12 +901,16 @@ func (d *Daemon) GetStatus() api.SimulationStatus {
 	return status
 }
 
-// simulationStatusLocked builds one session's status and attaches the health of
-// the shared trunk it rides on. A session whose trunk capture has died is still
-// "running" as a process but cannot exchange a single frame, so its status has
-// to carry that or an operator reads it as healthy. Caller holds d.mu.
+// simulationStatusLocked builds one session's status with the health of its stack
+// workers and shared trunk. A session whose workers or trunk capture died still
+// "runs" but cannot exchange a frame, so its status has to carry that or an
+// operator reads it as healthy. Caller holds d.mu.
 func (d *Daemon) simulationStatusLocked(sim *Simulation, selected bool) api.SimulationStatus {
 	status := simulationStatus(sim, selected)
+	if failure := sim.stack.WorkerFailure(); failure != "" {
+		status.Degraded = true
+		status.DegradedReason = failure
+	}
 	if sim.Binding.Mode != fabric.ModeTrunk {
 		return status
 	}

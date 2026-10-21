@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -8,6 +9,8 @@ import (
 	"slices"
 	"sync"
 	"sync/atomic"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/behavior"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
@@ -33,7 +36,6 @@ const (
 // Stack internal constants.
 const (
 	stackReceiveBufferSize    = 65536 // Receive buffer size
-	stackSelectTimeoutMs      = 100   // Select timeout in milliseconds
 	stackBabbleIntervalSec    = 15    // Babble traffic interval in seconds
 	stackBabbleDelayMs        = 10    // Delay between babble packets
 	stackNeighborCleanupSec   = 30    // Neighbor cleanup interval in seconds
@@ -121,7 +123,13 @@ type Stack struct {
 	running     atomic.Bool
 	stopped     bool
 	stopChan    chan struct{}
-	wg          sync.WaitGroup
+	// workers runs the stack's long-lived loops; workerFailure holds the
+	// error that stopped them early, if one did.
+	workers       *supervise.Group
+	workerFailure atomic.Pointer[string]
+	// wg tracks short-lived per-request goroutines (upstream DNS queries)
+	// that Stop waits for; they are not workers and are never restarted.
+	wg sync.WaitGroup
 
 	debugConfig     *logging.DebugConfig
 	snmpAgents      map[*config.Device]*snmpAgentGroup
@@ -247,6 +255,7 @@ func newStack(
 		recvQueue:             make(chan *Packet, bufferSize),
 		stats:                 &Statistics{},
 		stopChan:              make(chan struct{}),
+		workers:               supervise.New(nil),
 		debugConfig:           debugConfig,
 		snmpAgents:            make(map[*config.Device]*snmpAgentGroup),
 		neighbors:             newNeighborTable(),
@@ -381,6 +390,9 @@ func (s *Stack) Stop() {
 
 	close(s.stopChan)
 	s.notifications.Reset()
+	// Unbounded, like the wait below: every worker returns on cancellation,
+	// and a session stop that left one running would leak it.
+	_ = s.workers.Stop(context.Background())
 	s.wg.Wait()
 
 	// The table describes who was attached to this session; the session is
