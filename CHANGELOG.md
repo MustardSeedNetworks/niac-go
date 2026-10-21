@@ -5,6 +5,20 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.14](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.13...v0.123.14) (2026-10-21)
+
+
+### Bug Fixes
+
+* **deps:** move to Go 1.27.3 for GO-2026-6809 ([#2803](https://github.com/MustardSeedNetworks/niac-go/issues/2803)) ([9e4ce44](https://github.com/MustardSeedNetworks/niac-go/commit/9e4ce449eb5d85d431a912d5526e42d0838cc34e))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2792](https://github.com/MustardSeedNetworks/niac-go/issues/2792)) ([0521e96](https://github.com/MustardSeedNetworks/niac-go/commit/0521e9663b07f71e16fc4cb1379d294b1975bd7c))
+* **deps:** update module honnef.co/go/tools to v0.8.2 ([#2788](https://github.com/MustardSeedNetworks/niac-go/issues/2788)) ([93ff876](https://github.com/MustardSeedNetworks/niac-go/commit/93ff876be2003931dd920f376b2a1d4e9eac6364))
+* **deps:** update storybook monorepo to v10.6.2 ([#2789](https://github.com/MustardSeedNetworks/niac-go/issues/2789)) ([cd18b06](https://github.com/MustardSeedNetworks/niac-go/commit/cd18b0666dd93bcb11402f12363c328b6dbf23ae))
+
 ## [0.123.13](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.12...v0.123.13) (2026-10-21)
 
 
