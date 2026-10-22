@@ -6,7 +6,7 @@
   "type": "module",
   "engines": {
     "node": "26.12.0",
-    "npm": "12.2.0"
+    "npm": "12.2.1"
   },
   "scripts": {
     "prepare": "husky",
@@ -39,5 +39,5 @@
       "@commitlint/config-conventional"
     ]
   },
-  "packageManager": "npm@12.2.0"
+  "packageManager": "npm@12.2.1"
 }
