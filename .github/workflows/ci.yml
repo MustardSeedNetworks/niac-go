@@ -291,6 +291,9 @@ jobs:
         # Consumer demand extractor — SNMP request decoding
         python3 scripts/test-extract-oid-demand.py
 
+        # Generated SNMP walks — representable speeds and memory pools
+        python3 scripts/test_generate_modern_walk.py
+
         # Wire nightly runner — reject stale or dirty checkouts
         python3 scripts/test-wire-nightly.py
 

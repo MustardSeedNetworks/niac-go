@@ -2,12 +2,8 @@ package snmp
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
-
-	"github.com/gosnmp/gosnmp"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -22,31 +18,22 @@ const snmprecFieldSeparator = "|"
 // snmprecFieldCount is the OID, tag and value a recording row carries.
 const snmprecFieldCount = 3
 
-// bitsPerOctet is declared in mib_if.go; decimalBase names the base
-// strconv.FormatUint renders the recovered number in.
-const decimalBase = 10
-
 // snmprecSniffWindow is how far into a file the format check reads. It needs
 // only the first line that is neither blank nor a comment, and only that
 // line's leading fields, so a few KiB is ample even where the first value is
 // enormous.
 const snmprecSniffWindow = 8192
 
-// snmprecOctetStringTag and snmprecOpaqueTag are the tags whose `x` form
-// carries raw bytes; every other tag's hex form is the big-endian encoding of
-// a number. snmprecIPAddressTag is the exception to both: four bytes that must
-// read back as a dotted quad.
+// OctetString and Opaque encodings preserve raw bytes. IpAddress encodes
+// four octets, while numeric tags carry big-endian integers.
 const (
 	snmprecOctetStringTag = "4"
 	snmprecIPAddressTag   = "64"
 	snmprecOpaqueTag      = "68"
 )
 
-// snmprecTypeName maps a recorded ASN.1 tag onto the token parseTypeAndValue
-// takes, so both readers share one set of value parsers instead of growing a
-// second. It switches on the recorded string rather than gosnmp.Asn1BER
-// because parseTypeAndValue does the same, and because the tag reaches us as
-// text anyway.
+// Numeric tags use the text reader's value types after recording-specific
+// range validation; octet encodings are decoded directly to preserve bytes.
 func snmprecTypeName(tag string) (string, bool) {
 	switch tag {
 	case "2":
@@ -84,11 +71,11 @@ func looksLikeSnmprec(line string) bool {
 	if len(fields) != snmprecFieldCount {
 		return false
 	}
-	if _, known := snmprecTypeName(strings.TrimSuffix(fields[1], "x")); !known {
+	if fields[1] == "" {
 		return false
 	}
 
-	return isNumericOIDCandidate(fields[0])
+	return isNumericOIDCandidate(strings.TrimSpace(fields[0]))
 }
 
 func isNumericOIDCandidate(oid string) bool {
@@ -137,8 +124,9 @@ func parseSnmprec(reader *bufio.Reader) ([]WalkEntry, error) {
 	for scanner.Scan() {
 		lineNum++
 
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		line := scanner.Text()
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
 
@@ -165,6 +153,11 @@ func parseSnmprecLine(line string) (*WalkEntry, error) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSnmprecLine, line)
 	}
 
+	fields[0] = strings.TrimSpace(fields[0])
+	if !validWireOID(fields[0]) {
+		return nil, fmt.Errorf("%w: invalid numeric OID %q", ErrInvalidSnmprecLine, fields[0])
+	}
+
 	asn1Type, value, err := snmprecTypeAndValue(fields[1], fields[2])
 	if err != nil {
 		return nil, err
@@ -175,75 +168,4 @@ func parseSnmprecLine(line string) (*WalkEntry, error) {
 		Type:  asn1Type,
 		Value: value,
 	}, nil
-}
-
-// snmprecTypeAndValue resolves a recorded tag and value through the same
-// parsers the net-snmp path uses, so both readers produce identical Go types
-// for a given ASN.1 type and everything downstream stays single-path.
-func snmprecTypeAndValue(tag, value string) (gosnmp.Asn1BER, any, error) {
-	base := strings.TrimSuffix(tag, "x")
-
-	name, known := snmprecTypeName(base)
-	if !known {
-		return 0, nil, fmt.Errorf("%w: unknown type tag %q", ErrInvalidSnmprecLine, tag)
-	}
-
-	if !strings.HasSuffix(tag, "x") {
-		return parseTypeAndValue(name, value)
-	}
-
-	// decodeHexOctets, reached through the HEX-STRING branch, already accepts
-	// the contiguous form a recording writes.
-	if base == snmprecOctetStringTag || base == snmprecOpaqueTag {
-		return parseTypeAndValue("HEX-STRING", value)
-	}
-
-	if base == snmprecIPAddressTag {
-		dotted, err := snmprecHexToDotted(value)
-		if err != nil {
-			return 0, nil, err
-		}
-
-		return parseTypeAndValue(name, dotted)
-	}
-
-	decimal, err := snmprecHexToDecimal(value)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return parseTypeAndValue(name, decimal)
-}
-
-// snmprecHexToDotted renders a hex-encoded IpAddress as the dotted quad the
-// shared parser stores, rather than the integer the generic numeric path
-// would produce.
-func snmprecHexToDotted(value string) (string, error) {
-	raw, err := hex.DecodeString(strings.TrimSpace(value))
-	if err != nil {
-		return "", fmt.Errorf("invalid hex address: %w", err)
-	}
-
-	octets := make([]string, len(raw))
-	for i, octet := range raw {
-		octets[i] = strconv.Itoa(int(octet))
-	}
-
-	return strings.Join(octets, "."), nil
-}
-
-// snmprecHexToDecimal renders a hex-encoded numeric value as the decimal
-// string the shared value parsers expect.
-func snmprecHexToDecimal(value string) (string, error) {
-	raw, err := hex.DecodeString(strings.TrimSpace(value))
-	if err != nil {
-		return "", fmt.Errorf("invalid hex value: %w", err)
-	}
-
-	var number uint64
-	for _, octet := range raw {
-		number = number<<bitsPerOctet | uint64(octet)
-	}
-
-	return strconv.FormatUint(number, decimalBase), nil
 }
