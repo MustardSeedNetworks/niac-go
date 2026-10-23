@@ -1,7 +1,6 @@
 package snmp
 
 import (
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,25 +39,19 @@ func TestParseWalkFile_PathTraversal(t *testing.T) {
 	}
 }
 
-func TestParseWalkLineBoundsOutOfRange32BitValues(t *testing.T) {
-	tests := []struct {
-		name string
-		line string
-		want any
-	}{
-		{name: "positive integer", line: ".1 = INTEGER: 12582912000", want: int(math.MaxInt32)},
-		{name: "negative integer", line: ".1 = INTEGER: -12582912000", want: int(math.MinInt32)},
-		{name: "gauge", line: ".1 = Gauge32: 10000000000", want: uint(math.MaxUint32)},
-		{name: "counter", line: ".1 = Counter32: 10000000000", want: uint(math.MaxUint32)},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			entry, err := parseWalkLine(tt.line)
-			if err != nil {
-				t.Fatalf("parseWalkLine() error = %v", err)
-			}
-			if entry.Value != tt.want {
-				t.Fatalf("parseWalkLine() value = %v (%T), want %v (%T)", entry.Value, entry.Value, tt.want, tt.want)
+func TestParseWalkLineRejectsOutOfRange32BitValues(t *testing.T) {
+	t.Parallel()
+	for _, line := range []string{
+		".1.3 = INTEGER: 12582912000",
+		".1.3 = INTEGER: -12582912000",
+		".1.3 = Gauge32: 10000000000",
+		".1.3 = Counter32: 10000000000",
+		".1.3 = Unsigned32: 10000000000",
+	} {
+		t.Run(line, func(t *testing.T) {
+			t.Parallel()
+			if entry, err := parseWalkLine(line); err == nil {
+				t.Fatalf("accepted out-of-range value: %#v", entry)
 			}
 		})
 	}
@@ -69,8 +62,8 @@ func TestParseWalkLineHexValuesAreBinaryOctets(t *testing.T) {
 		name string
 		line string
 	}{
-		{name: "hex string", line: ".1 = Hex-STRING: 00 11 aa ff"},
-		{name: "bits", line: ".1 = BITS: 0x00 11 aa ff"},
+		{name: "hex string", line: ".1.3 = Hex-STRING: 00 11 aa ff"},
+		{name: "bits", line: ".1.3 = BITS: 0x00 11 aa ff"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -91,7 +84,7 @@ func TestParseWalkLineHexValuesAreBinaryOctets(t *testing.T) {
 }
 
 func TestParseWalkLineHexContinuationAppendsBinaryOctets(t *testing.T) {
-	entry, err := parseWalkLine(".1 = Hex-STRING: 00 11")
+	entry, err := parseWalkLine(".1.3 = Hex-STRING: 00 11")
 	if err != nil {
 		t.Fatalf("parseWalkLine() error = %v", err)
 	}
@@ -506,15 +499,15 @@ func TestParseWalkLineIntegerUnits(t *testing.T) {
 		wantType gosnmp.Asn1BER
 		want     any
 	}{
-		{name: "integer", line: ".1 = INTEGER: 3", wantType: gosnmp.Integer, want: 3},
-		{name: "integer seconds", line: ".1 = INTEGER: 3 seconds", wantType: gosnmp.Integer, want: 3},
-		{name: "negative integer", line: ".1 = INTEGER: -40 degrees", wantType: gosnmp.Integer, want: -40},
-		{name: "integer multi-word", line: ".1 = INTEGER: 500 0.1 Hertz", wantType: gosnmp.Integer, want: 500},
-		{name: "gauge", line: ".1 = Gauge32: 7", wantType: gosnmp.Gauge32, want: uint(7)},
-		{name: "gauge milli-seconds", line: ".1 = Gauge32: 0 milli-seconds", wantType: gosnmp.Gauge32, want: uint(0)},
-		{name: "unsigned", line: ".1 = Unsigned32: 9 octets", wantType: gosnmp.Uinteger32, want: uint(9)},
-		{name: "counter32", line: ".1 = Counter32: 12 packets", wantType: gosnmp.Counter32, want: uint(12)},
-		{name: "counter64", line: ".1 = Counter64: 42 octets", wantType: gosnmp.Counter64, want: uint64(42)},
+		{name: "integer", line: ".1.3 = INTEGER: 3", wantType: gosnmp.Integer, want: 3},
+		{name: "integer seconds", line: ".1.3 = INTEGER: 3 seconds", wantType: gosnmp.Integer, want: 3},
+		{name: "negative integer", line: ".1.3 = INTEGER: -40 degrees", wantType: gosnmp.Integer, want: -40},
+		{name: "integer multi-word", line: ".1.3 = INTEGER: 500 0.1 Hertz", wantType: gosnmp.Integer, want: 500},
+		{name: "gauge", line: ".1.3 = Gauge32: 7", wantType: gosnmp.Gauge32, want: uint(7)},
+		{name: "gauge milli-seconds", line: ".1.3 = Gauge32: 0 milli-seconds", wantType: gosnmp.Gauge32, want: uint(0)},
+		{name: "unsigned", line: ".1.3 = Unsigned32: 9 octets", wantType: gosnmp.Uinteger32, want: uint(9)},
+		{name: "counter32", line: ".1.3 = Counter32: 12 packets", wantType: gosnmp.Counter32, want: uint(12)},
+		{name: "counter64", line: ".1.3 = Counter64: 42 octets", wantType: gosnmp.Counter64, want: uint64(42)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -532,11 +525,11 @@ func TestParseWalkLineIntegerUnits(t *testing.T) {
 
 func TestParseWalkLineRejectsMalformedIntegers(t *testing.T) {
 	for _, line := range []string{
-		".1 = INTEGER: seconds",
-		".1 = INTEGER: three seconds",
-		".1 = Gauge32: -1 seconds",
-		".1 = Counter32: 1.5 seconds",
-		".1 = Counter64: 0x10 octets",
+		".1.3 = INTEGER: seconds",
+		".1.3 = INTEGER: three seconds",
+		".1.3 = Gauge32: -1 seconds",
+		".1.3 = Counter32: 1.5 seconds",
+		".1.3 = Counter64: 0x10 octets",
 	} {
 		t.Run(line, func(t *testing.T) {
 			if entry, err := parseWalkLine(line); err == nil {
