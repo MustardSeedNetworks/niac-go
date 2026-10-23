@@ -24,10 +24,6 @@ func TestNewFDPHandler(t *testing.T) {
 	if handler.FDPHandlerStack() != stack {
 		t.Error("Stack not set correctly")
 	}
-
-	if handler.FDPHandlerStopChan() == nil {
-		t.Error("Stop channel not initialized")
-	}
 }
 
 // TestFDPConstants verifies FDP protocol constants.
@@ -637,56 +633,6 @@ func TestBuildFDPFrame_TLVChainIsWellFormed(t *testing.T) {
 	if tlvCount != 6 {
 		t.Errorf("expected 6 TLVs in the chain, walked %d", tlvCount)
 	}
-}
-
-// TestFDPLifecycle verifies Start/Stop functionality.
-func TestFDPLifecycle(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewFDPHandler(stack)
-
-	// Start FDP
-	handler.Start()
-
-	if handler.FDPHandlerAdvertiseTicker() == nil {
-		t.Error("Advertisement ticker not initialized after Start()")
-	}
-
-	// Wait briefly to allow goroutine to start
-	time.Sleep(10 * time.Millisecond)
-
-	// Stop FDP
-	handler.Stop()
-
-	// Verify stop channel is closed
-	select {
-	case <-handler.FDPHandlerStopChan():
-		// Expected - channel is closed
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Stop channel not closed after Stop()")
-	}
-}
-
-// TestFDPHandler_RestartAfterStop verifies Start can be called again after
-// Stop without panicking on a closed channel. Regression for #462.
-func TestFDPHandler_RestartAfterStop(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewFDPHandler(stack)
-
-	for i := range 3 {
-		handler.Start()
-		time.Sleep(20 * time.Millisecond)
-
-		if handler.FDPHandlerAdvertiseTicker() == nil {
-			t.Fatalf("iter %d: ticker nil after Start()", i)
-		}
-
-		handler.Stop()
-		time.Sleep(20 * time.Millisecond)
-	}
-
-	handler.Stop() // double-stop is a no-op
 }
 
 // TestSendAdvertisementsFDP verifies advertisement sending logic for FDP.

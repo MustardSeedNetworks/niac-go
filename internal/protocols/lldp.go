@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -104,11 +103,7 @@ const (
 
 // LLDPHandler handles LLDP advertisements.
 type LLDPHandler struct {
-	stack           *Stack
-	mu              sync.Mutex
-	stopChan        chan struct{}
-	advertiseTicker *time.Ticker
-	running         bool
+	stack *Stack
 }
 
 // lldpDefaultEnabledForType reports whether LLDP advertisements should be
@@ -124,30 +119,16 @@ func lldpDefaultEnabledForType(deviceType string) bool {
 // NewLLDPHandler creates a new LLDP handler.
 func NewLLDPHandler(stack *Stack) *LLDPHandler {
 	return &LLDPHandler{
-		stack:    stack,
-		stopChan: make(chan struct{}),
+		stack: stack,
 	}
 }
 
-// Start begins periodic LLDP advertisements. Safe to call again after Stop.
-func (h *LLDPHandler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.running {
-		return
-	}
-
-	h.stopChan = make(chan struct{})
-	h.advertiseTicker = time.NewTicker(LLDPAdvertiseInterval)
-	h.running = true
-
-	stopChan := h.stopChan
-	ticker := h.advertiseTicker
-
+// advertise sends LLDP advertisements for every device now and then every
+// LLDPAdvertiseInterval until ctx ends. The stack runs it as a supervised worker.
+func (h *LLDPHandler) advertise(ctx context.Context) error {
 	if h.stack.GetDebugLevel() >= 1 {
 		logging.ProtocolLogf(
-			context.Background(),
+			ctx,
 			"LLDP",
 			logging.LevelInfo,
 			"Starting periodic advertisements (interval: %v)",
@@ -155,33 +136,17 @@ func (h *LLDPHandler) Start() {
 		)
 	}
 
-	go func() {
-		h.sendAdvertisements()
-
-		for {
-			select {
-			case <-ticker.C:
-				h.sendAdvertisements()
-			case <-stopChan:
-				ticker.Stop()
-
-				return
-			}
+	h.sendAdvertisements()
+	ticker := time.NewTicker(LLDPAdvertiseInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.sendAdvertisements()
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts LLDP advertisements. Safe to call multiple times.
-func (h *LLDPHandler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.running {
-		return
 	}
-
-	close(h.stopChan)
-	h.running = false
 }
 
 // sendAdvertisements sends LLDP advertisements for all devices.

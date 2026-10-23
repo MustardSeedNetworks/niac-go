@@ -48,16 +48,15 @@ func (s *Stack) Start() error {
 	if s.tcpHandler != nil && s.tcpHandler.ssh != nil {
 		workers.Add("stack-ssh-session-cleanup", restart, s.sessionCleanupLoop)
 	}
+	workers.Add("stack-stp", restart, s.stpHandler.originate)
+	workers.Add("stack-icmpv6-ra", restart, s.icmpv6Handler.originateRouterAdvertisements)
+	workers.Add("stack-lldp", restart, s.lldpHandler.advertise)
+	workers.Add("stack-cdp", restart, s.cdpHandler.advertise)
+	workers.Add("stack-edp", restart, s.edpHandler.advertise)
+	workers.Add("stack-fdp", restart, s.fdpHandler.advertise)
 	workers.Start(context.Background())
 	go s.recordWorkerFailure()
 
-	// Start discovery protocol periodic advertisements
-	s.stpHandler.Start()
-	s.icmpv6Handler.Start()
-	s.lldpHandler.Start()
-	s.cdpHandler.Start()
-	s.edpHandler.Start()
-	s.fdpHandler.Start()
 	s.startBehaviorTimelines()
 
 	if s.debugConfig.GetGlobal() >= DebugLevelBasic {

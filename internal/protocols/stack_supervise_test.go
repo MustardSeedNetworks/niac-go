@@ -2,6 +2,7 @@ package protocols
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"net"
 	"runtime"
@@ -149,10 +150,41 @@ func TestStackStopLeavesNoGoroutines(t *testing.T) {
 	stack := supervisedStack(t, idleTransport{})
 	stack.Stop()
 
-	// The discovery handlers' advertisement loops exit asynchronously once
-	// Stop closes their channels, so allow them a moment.
+	// Stop waits for every worker, the advertisers included; only the
+	// goroutine recording the group's result may still be returning.
 	waitFor(t, "every stack goroutine to exit", func() bool { return runtime.NumGoroutine() <= before })
 	if failure := stack.WorkerFailure(); failure != "" {
 		t.Errorf("WorkerFailure() = %q after a clean stop, want none", failure)
+	}
+}
+
+// The advertisers are supervised workers, so each must return nil when its
+// context ends: an error would read as a fault and restart it on shutdown.
+func TestAdvertisersReturnWhenCancelled(t *testing.T) {
+	stack := supervisedStack(t, idleTransport{})
+	defer stack.Stop()
+
+	for name, advertise := range map[string]func(context.Context) error{
+		"stp":       stack.stpHandler.originate,
+		"icmpv6-ra": stack.icmpv6Handler.originateRouterAdvertisements,
+		"lldp":      stack.lldpHandler.advertise,
+		"cdp":       stack.cdpHandler.advertise,
+		"edp":       stack.edpHandler.advertise,
+		"fdp":       stack.fdpHandler.advertise,
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			done := make(chan error, 1)
+			go func() { done <- advertise(ctx) }()
+			cancel()
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Errorf("returned %v on cancellation, want nil", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("did not return after its context was cancelled")
+			}
+		})
 	}
 }
