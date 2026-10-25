@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,6 +40,9 @@ const (
 // isEndOfMIBLine reports whether net-snmp emitted its terminal walk marker.
 // The marker is traversal metadata, not an SNMP variable binding.
 func isEndOfMIBLine(line string) bool {
+	if line == "End of MIB" {
+		return true
+	}
 	_, value, ok := strings.Cut(line, "=")
 
 	return ok && strings.HasPrefix(strings.TrimSpace(value), endOfMIBMarker)
@@ -219,9 +223,10 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 	var drops walkDrops
 	lastWasHex := false // previous entry came from a Hex-STRING (may continue)
 
-	for scanner.Scan() {
-		lineNum++
-		line := strings.TrimSpace(scanner.Text())
+	records := walkRecordScanner{scanner: scanner}
+	for records.Scan() {
+		lineNum = records.line
+		line := records.text
 
 		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -252,12 +257,12 @@ func parseWalk(reader io.Reader) ([]WalkEntry, error) {
 		entries = append(entries, *entry)
 	}
 
-	scanErr := scanner.Err()
+	scanErr := records.Err()
 	if scanErr != nil {
 		return nil, fmt.Errorf("error reading walk file: %w", scanErr)
 	}
 
-	drops.warn(lineNum)
+	drops.warn(records.physicalLine)
 
 	return entries, nil
 }
@@ -330,6 +335,9 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 	if !resolved {
 		return nil, fmt.Errorf("%w: %s", ErrSymbolicOID, extractLineOID(line))
 	}
+	if !validWireOID(oid) {
+		return nil, fmt.Errorf("%w: invalid numeric OID %q", ErrInvalidOIDComponent, oid)
+	}
 	rest := strings.TrimSpace(parts[1])
 
 	// net-snmp emits zero-length octet strings with no type prefix, as
@@ -338,6 +346,10 @@ func parseWalkLine(line string) (*WalkEntry, error) {
 	// (empty ifAlias, LLDP remote fields, etc.).
 	if rest == "" || rest == `""` {
 		return &WalkEntry{OID: oid, Type: gosnmp.OctetString, Value: ""}, nil
+	}
+
+	if rest == "NULL" {
+		return &WalkEntry{OID: oid, Type: gosnmp.Null, Value: nil}, nil
 	}
 
 	// Parse TYPE: VALUE
@@ -372,15 +384,32 @@ func parseOIDValue(valueStr string) (gosnmp.Asn1BER, any, error) {
 	if !resolved {
 		return 0, nil, fmt.Errorf("%w: %s", ErrSymbolicOID, valueStr)
 	}
+	if !validWireOID(numeric) {
+		return 0, nil, fmt.Errorf("%w: invalid numeric OID value %q", ErrInvalidOIDComponent, numeric)
+	}
 
 	return gosnmp.ObjectIdentifier, strings.TrimPrefix(numeric, "."), nil
+}
+
+func parseIPAddressValue(value string) (gosnmp.Asn1BER, any, error) {
+	address, err := netip.ParseAddr(value)
+	if err != nil || !address.Is4() {
+		return 0, nil, fmt.Errorf("%w: invalid IPv4 address", ErrFailedToParseValue)
+	}
+	return gosnmp.IPAddress, address.String(), nil
 }
 
 // parseTypeAndValue parses the type and value from a walk file entry.
 func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	switch typeStr {
 	case snmpTypeSTRING, "OCTET STRING":
-		return gosnmp.OctetString, strings.Trim(valueStr, "\""), nil
+		if strings.HasPrefix(valueStr, "\"") {
+			if len(valueStr) < 2 || !hasClosingWalkQuote(valueStr) {
+				return 0, nil, ErrInvalidWalkFormat
+			}
+			valueStr = valueStr[1 : len(valueStr)-1]
+		}
+		return gosnmp.OctetString, valueStr, nil
 	case snmpTypeINTEGER, "INT":
 		return parseIntegerValue(valueStr)
 	case "GAUGE", "GAUGE32":
@@ -396,7 +425,7 @@ func parseTypeAndValue(typeStr, valueStr string) (gosnmp.Asn1BER, any, error) {
 	case snmpTypeOID, "OBJECT IDENTIFIER":
 		return parseOIDValue(valueStr)
 	case "IPADDRESS", "IP ADDRESS", "IPADDR":
-		return gosnmp.IPAddress, valueStr, nil
+		return parseIPAddressValue(valueStr)
 	case "BITS", "BIT STRING":
 		return parseBitStringValue(valueStr)
 	case "HEX-STRING", "HEX":
@@ -424,41 +453,44 @@ func walkNumber(valueStr string) string {
 }
 
 func parseIntegerValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseInt(walkNumber(valueStr), 10, 64)
+	number := walkNumber(valueStr)
+	if label, closed := strings.CutSuffix(number, ")"); closed {
+		if _, numeric, named := strings.Cut(label, "("); named {
+			number = numeric
+		}
+	}
+	value, err := strconv.ParseInt(number, 10, 32)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse integer: %w", err)
 	}
-	bounded := safeInt32(value)
 
-	return gosnmp.Integer, int(bounded), nil
+	return gosnmp.Integer, int(value), nil
 }
 
 func parseGaugeValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 32)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse gauge: %w", err)
 	}
-	bounded := safeUint32FromUint64(value)
 
-	return gosnmp.Gauge32, uint(bounded), nil
+	return gosnmp.Gauge32, uint(value), nil
 }
 
 func parseUnsignedValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 32)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse unsigned integer: %w", err)
 	}
-	return gosnmp.Uinteger32, uint(safeUint32FromUint64(value)), nil
+	return gosnmp.Uinteger32, uint(value), nil
 }
 
 func parseCounter32Value(valueStr string) (gosnmp.Asn1BER, any, error) {
-	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 64)
+	value, err := strconv.ParseUint(walkNumber(valueStr), 10, 32)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to parse counter32: %w", err)
 	}
-	bounded := safeUint32FromUint64(value)
 
-	return gosnmp.Counter32, uint(bounded), nil
+	return gosnmp.Counter32, uint(value), nil
 }
 
 func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {
@@ -471,8 +503,9 @@ func parseCounter64Value(valueStr string) (gosnmp.Asn1BER, any, error) {
 }
 
 func parseTimeticksValue(valueStr string) (gosnmp.Asn1BER, any, error) {
-	// Parse format: (12345) or just 12345
-	re := regexp.MustCompile(`\((\d+)\)|(\d+)`)
+	// The parenthesized wire value may carry net-snmp's human uptime display.
+	re := regexp.MustCompile(`^(?:\(([0-9]+)\)(?:[ \t]+` +
+		`(?:[0-9]+ days?,[ \t]+)?[0-9]+:[0-5][0-9]:[0-5][0-9]\.[0-9]{2})?|([0-9]+))$`)
 
 	matches := re.FindStringSubmatch(valueStr)
 	if len(matches) == 0 {
