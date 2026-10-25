@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.35](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.34...v0.123.35) (2026-10-25)
+
+
+### Bug Fixes
+
+* **capture:** stop Darwin BPF compile crash and decode raw snmprec IpAddress ([#2864](https://github.com/MustardSeedNetworks/niac-go/issues/2864)) ([52d7bef](https://github.com/MustardSeedNetworks/niac-go/commit/52d7bef7bb068447ebbc53e71fc885c14a8cbebd)), closes [#2749](https://github.com/MustardSeedNetworks/niac-go/issues/2749)
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2862](https://github.com/MustardSeedNetworks/niac-go/issues/2862)) ([176065e](https://github.com/MustardSeedNetworks/niac-go/commit/176065e030ac05f1a652686bfd3cd4b56af3dacc))
+
 ## [0.123.34](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.33...v0.123.34) (2026-10-24)
 
 
