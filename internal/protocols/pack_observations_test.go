@@ -41,6 +41,9 @@ func TestShippedPacks(t *testing.T) {
 			t.Run("manifest observations match the served tables", func(t *testing.T) {
 				checkManifestObservationsMatchTheServedTables(t, shipped)
 			})
+			t.Run("site resolvers answer internet names", func(t *testing.T) {
+				checkPackSiteResolversAnswerInternetNames(t, shipped)
+			})
 		})
 	}
 }

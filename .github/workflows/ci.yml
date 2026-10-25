@@ -151,9 +151,10 @@ jobs:
   # ===========================================================================
   # One caller. The Linux job is the product gate: golangci-lint, the drift
   # and policy scripts, the windows cross-build, tests, and the coverage
-  # floor. macOS builds, vets, and race-tests internal/truststore. Windows
-  # builds with CGO_ENABLED=0 and runs the listener, packet-decode, and
-  # recovery tests that do not need Npcap. A full `go test` on that runner
+  # floor. macOS builds, vets, and race-tests truststore, native BPF compilation,
+  # the affected replay callers, and recording readers. Windows
+  # builds with CGO_ENABLED=0 and runs listener, packet-decode, recording-reader,
+  # and recovery tests that do not need Npcap. A full `go test` on that runner
   # fails on a missing wpcap.dll. Both native jobs stay off pull_request
   # (skip-native-on-pull-request defaults true). The merge queue still runs
   # them, because changes forces every filter true there.
@@ -185,12 +186,16 @@ jobs:
       native-fetch-depth: 1
       timeout-minutes: 20
       vet-command: "true"
-      darwin-test-command: go test -race ./internal/truststore/...
+      darwin-test-command: |
+        go test -race ./internal/truststore/... ./internal/capture/...
+        go test -race ./internal/api ./internal/daemon -run '^(TestValidateReplayRequest_BPFFilter|TestReplayManagerMapsEveryField)$'
+        go test -race ./internal/protocols/snmp -run '^TestRecording'
       windows-build-command: go build ./internal/api/...
       windows-vet-only-command: go vet ./internal/api/...
       windows-test-command: |
         go test ./internal/api/ -run '^TestStartServesHTTP2AndRedirectsPlaintext$' -v
         go test ./internal/packetdecode/ -v
+        go test ./internal/protocols/snmp -run '^TestRecording' -v
         go test ./internal/daemon/ -run 'Test(StateWriteCannotTraverseOutsideRoot|InlineFinishRetainsOriginalDirectoryCapability|RuntimeCleanupCannotFollowEscapedDirectory)$' -count=1 -v
       pre-command: |
         if ! command -v rg >/dev/null 2>&1; then

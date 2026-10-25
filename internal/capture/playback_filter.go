@@ -1,7 +1,9 @@
 package capture
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcap"
@@ -13,12 +15,19 @@ import (
 // jumbo) fit within it.
 const bpfSnaplen = 262144
 
+func compileBPFInstructions(linkType layers.LinkType, expr string) ([]pcap.BPFInstruction, error) {
+	if strings.IndexByte(expr, 0) >= 0 {
+		return nil, errors.New("BPF filter contains a NUL byte")
+	}
+	return compileNativeBPFInstructions(linkType, expr)
+}
+
 // ValidateBPFExpr reports whether expr is a compilable BPF filter. It compiles
 // against Ethernet — the common replay link type — purely as a syntax gate so
 // the API can reject a bad expression up front; playback recompiles against the
 // capture's actual link type at Start.
 func ValidateBPFExpr(expr string) error {
-	if _, err := pcap.CompileBPFFilter(layers.LinkTypeEthernet, bpfSnaplen, expr); err != nil {
+	if _, err := compileBPFInstructions(layers.LinkTypeEthernet, expr); err != nil {
 		return fmt.Errorf("invalid BPF filter: %w", err)
 	}
 
@@ -29,7 +38,7 @@ func ValidateBPFExpr(expr string) error {
 // bytes. Compilation uses libpcap (already linked for live capture) but no live
 // handle — so the replay read path stays CGO-free and the VM runs in Go.
 func compileBPFVM(linkType layers.LinkType, expr string) (*bpf.VM, error) {
-	insns, err := pcap.CompileBPFFilter(linkType, bpfSnaplen, expr)
+	insns, err := compileBPFInstructions(linkType, expr)
 	if err != nil {
 		return nil, fmt.Errorf("compile BPF filter: %w", err)
 	}
