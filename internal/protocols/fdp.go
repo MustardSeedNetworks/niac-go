@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
@@ -93,40 +92,22 @@ const deviceTypeHost = "host"
 
 // FDPHandler handles FDP advertisements.
 type FDPHandler struct {
-	stack           *Stack
-	mu              sync.Mutex
-	stopChan        chan struct{}
-	advertiseTicker *time.Ticker
-	running         bool
+	stack *Stack
 }
 
 // NewFDPHandler creates a new FDP handler.
 func NewFDPHandler(stack *Stack) *FDPHandler {
 	return &FDPHandler{
-		stack:    stack,
-		stopChan: make(chan struct{}),
+		stack: stack,
 	}
 }
 
-// Start begins periodic FDP advertisements. Safe to call again after Stop.
-func (h *FDPHandler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.running {
-		return
-	}
-
-	h.stopChan = make(chan struct{})
-	h.advertiseTicker = time.NewTicker(FDPAdvertiseInterval)
-	h.running = true
-
-	stopChan := h.stopChan
-	ticker := h.advertiseTicker
-
+// advertise sends FDP advertisements for every device now and then every
+// FDPAdvertiseInterval until ctx ends. The stack runs it as a supervised worker.
+func (h *FDPHandler) advertise(ctx context.Context) error {
 	if h.stack.GetDebugLevel() >= 1 {
 		logging.ProtocolLogf(
-			context.Background(),
+			ctx,
 			"FDP",
 			logging.LevelInfo,
 			"Starting periodic advertisements (interval: %v)",
@@ -134,33 +115,17 @@ func (h *FDPHandler) Start() {
 		)
 	}
 
-	go func() {
-		h.sendAdvertisements()
-
-		for {
-			select {
-			case <-ticker.C:
-				h.sendAdvertisements()
-			case <-stopChan:
-				ticker.Stop()
-
-				return
-			}
+	h.sendAdvertisements()
+	ticker := time.NewTicker(FDPAdvertiseInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.sendAdvertisements()
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts FDP advertisements. Safe to call multiple times.
-func (h *FDPHandler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.running {
-		return
 	}
-
-	close(h.stopChan)
-	h.running = false
 }
 
 // sendAdvertisements sends FDP advertisements for all devices.

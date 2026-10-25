@@ -1,6 +1,7 @@
 package protocols
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -102,9 +103,6 @@ type STPHandler struct {
 	helloTime      uint16
 	maxAge         uint16
 	forwardDelay   uint16
-
-	running  bool
-	stopChan chan struct{}
 }
 
 // NewSTPHandler creates a new STP handler.
@@ -119,44 +117,20 @@ func NewSTPHandler(stack *Stack, debugLevel int) *STPHandler {
 	}
 }
 
-// Start begins originating Configuration BPDUs from every STP-enabled device,
-// each at its own hello time. Safe to call again after Stop.
-func (h *STPHandler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.running {
-		return
-	}
-	h.stopChan = make(chan struct{})
-	h.running = true
-	stop := h.stopChan
-
-	go func() {
-		due := h.sendDueBPDUs(time.Now(), nil)
-		ticker := time.NewTicker(stpOriginationTick)
-		defer ticker.Stop()
-		for {
-			select {
-			case now := <-ticker.C:
-				due = h.sendDueBPDUs(now, due)
-			case <-stop:
-				return
-			}
+// originate sends Configuration BPDUs from every STP-enabled device, each at
+// its own hello time, until ctx ends. The stack runs it as a supervised worker.
+func (h *STPHandler) originate(ctx context.Context) error {
+	due := h.sendDueBPDUs(time.Now(), nil)
+	ticker := time.NewTicker(stpOriginationTick)
+	defer ticker.Stop()
+	for {
+		select {
+		case now := <-ticker.C:
+			due = h.sendDueBPDUs(now, due)
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts BPDU origination. Safe to call multiple times.
-func (h *STPHandler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.running {
-		return
 	}
-	close(h.stopChan)
-	h.running = false
 }
 
 // sendDueBPDUs sends a BPDU from each STP-enabled device that is due by now and

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -27,10 +26,6 @@ func TestNewCDPHandler(t *testing.T) {
 
 	if handler.CDPHandlerStack() != stack {
 		t.Error("Stack not set correctly")
-	}
-
-	if handler.CDPHandlerStopChan() == nil {
-		t.Error("Stop channel not initialized")
 	}
 }
 
@@ -750,56 +745,6 @@ func TestBuildCDPFrame_CustomConfig(t *testing.T) {
 	if holdtime != 120 {
 		t.Errorf("Expected holdtime 120, got %d", holdtime)
 	}
-}
-
-// TestCDPLifecycle verifies Start/Stop functionality.
-func TestCDPLifecycle(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewCDPHandler(stack)
-
-	// Start CDP
-	handler.Start()
-
-	if handler.CDPHandlerAdvertiseTicker() == nil {
-		t.Error("Advertisement ticker not initialized after Start()")
-	}
-
-	// Wait briefly to allow goroutine to start
-	time.Sleep(10 * time.Millisecond)
-
-	// Stop CDP
-	handler.Stop()
-
-	// Verify stop channel is closed (reading from closed channel returns immediately)
-	select {
-	case <-handler.CDPHandlerStopChan():
-		// Expected - channel is closed
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Stop channel not closed after Stop()")
-	}
-}
-
-// TestCDPHandler_RestartAfterStop verifies Start can be called again after
-// Stop without panicking on a closed channel. Regression for #462.
-func TestCDPHandler_RestartAfterStop(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewCDPHandler(stack)
-
-	for i := range 3 {
-		handler.Start()
-		time.Sleep(20 * time.Millisecond)
-
-		if handler.CDPHandlerAdvertiseTicker() == nil {
-			t.Fatalf("iter %d: ticker nil after Start()", i)
-		}
-
-		handler.Stop()
-		time.Sleep(20 * time.Millisecond)
-	}
-
-	handler.Stop() // double-stop is a no-op
 }
 
 // TestSendAdvertisements verifies advertisement sending logic.

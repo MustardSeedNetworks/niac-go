@@ -1,10 +1,10 @@
 package protocols
 
 import (
+	"context"
 	"encoding/binary"
 	"log/slog"
 	"math"
-	"sync"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -112,69 +112,34 @@ const (
 
 // CDPHandler handles CDP advertisements.
 type CDPHandler struct {
-	stack           *Stack
-	mu              sync.Mutex
-	stopChan        chan struct{}
-	advertiseTicker *time.Ticker
-	running         bool
+	stack *Stack
 }
 
 // NewCDPHandler creates a new CDP handler.
 func NewCDPHandler(stack *Stack) *CDPHandler {
 	return &CDPHandler{
-		stack:    stack,
-		stopChan: make(chan struct{}),
+		stack: stack,
 	}
 }
 
-// Start begins periodic CDP advertisements. Safe to call again after Stop.
-func (h *CDPHandler) Start() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.running {
-		return
-	}
-
-	h.stopChan = make(chan struct{})
-	h.advertiseTicker = time.NewTicker(CDPAdvertiseInterval)
-	h.running = true
-
-	stopChan := h.stopChan
-	ticker := h.advertiseTicker
-
+// advertise sends CDP advertisements for every device now and then every
+// CDPAdvertiseInterval until ctx ends. The stack runs it as a supervised worker.
+func (h *CDPHandler) advertise(ctx context.Context) error {
 	if h.stack.GetDebugLevel() >= 1 {
-		slog.Default().
-			Info("CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
+		slog.InfoContext(ctx, "CDP: Starting periodic advertisements", "interval", CDPAdvertiseInterval)
 	}
 
-	go func() {
-		h.sendAdvertisements()
-
-		for {
-			select {
-			case <-ticker.C:
-				h.sendAdvertisements()
-			case <-stopChan:
-				ticker.Stop()
-
-				return
-			}
+	h.sendAdvertisements()
+	ticker := time.NewTicker(CDPAdvertiseInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.sendAdvertisements()
+		case <-ctx.Done():
+			return nil
 		}
-	}()
-}
-
-// Stop halts CDP advertisements. Safe to call multiple times.
-func (h *CDPHandler) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.running {
-		return
 	}
-
-	close(h.stopChan)
-	h.running = false
 }
 
 // sendAdvertisements sends CDP advertisements for all devices.

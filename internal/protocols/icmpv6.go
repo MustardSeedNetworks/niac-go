@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"sync"
 	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
@@ -91,9 +90,6 @@ const (
 type ICMPv6Handler struct {
 	stack      *Stack
 	debugLevel atomic.Int32
-
-	mu       sync.Mutex
-	stopChan chan struct{} // non-nil while RA origination runs
 }
 
 // NewICMPv6Handler creates a new ICMPv6 handler.

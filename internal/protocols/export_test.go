@@ -66,12 +66,6 @@ func (h *ARPHandler) BuildARPReply(
 // CDPHandlerStack returns the handler's stack for testing.
 func (h *CDPHandler) CDPHandlerStack() *Stack { return h.stack }
 
-// CDPHandlerStopChan returns the stop channel for testing.
-func (h *CDPHandler) CDPHandlerStopChan() chan struct{} { return h.stopChan }
-
-// CDPHandlerAdvertiseTicker returns the ticker for testing.
-func (h *CDPHandler) CDPHandlerAdvertiseTicker() *time.Ticker { return h.advertiseTicker }
-
 // BuildLLCSNAPHeader exposes buildLLCSNAPHeader for testing.
 func (h *CDPHandler) BuildLLCSNAPHeader() []byte { return h.buildLLCSNAPHeader() }
 
@@ -307,12 +301,6 @@ func (h *DNSHandler) ResolveQuestions(
 // EDPHandlerStack returns the handler's stack for testing.
 func (h *EDPHandler) EDPHandlerStack() *Stack { return h.stack }
 
-// EDPHandlerStopChan returns the stop channel for testing.
-func (h *EDPHandler) EDPHandlerStopChan() chan struct{} { return h.stopChan }
-
-// EDPHandlerAdvertiseTicker returns the ticker for testing.
-func (h *EDPHandler) EDPHandlerAdvertiseTicker() *time.Ticker { return h.advertiseTicker }
-
 // BuildDisplayTLV exposes buildDisplayTLV for testing.
 func (h *EDPHandler) BuildDisplayTLV(device *config.Device) []byte { return h.buildDisplayTLV(device) }
 
@@ -338,12 +326,6 @@ func (h *EDPHandler) EDPSendAdvertisements() { h.sendAdvertisements() }
 
 // FDPHandlerStack returns the handler's stack for testing.
 func (h *FDPHandler) FDPHandlerStack() *Stack { return h.stack }
-
-// FDPHandlerStopChan returns the stop channel for testing.
-func (h *FDPHandler) FDPHandlerStopChan() chan struct{} { return h.stopChan }
-
-// FDPHandlerAdvertiseTicker returns the ticker for testing.
-func (h *FDPHandler) FDPHandlerAdvertiseTicker() *time.Ticker { return h.advertiseTicker }
 
 // FDPBuildLLCSNAPHeader exposes buildLLCSNAPHeader for testing.
 func (h *FDPHandler) FDPBuildLLCSNAPHeader() []byte { return h.buildLLCSNAPHeader() }
@@ -428,12 +410,6 @@ func (h *IPHandler) IPHandlerStack() *Stack { return h.stack }
 
 // LLDPHandlerStack returns the handler's stack for testing.
 func (h *LLDPHandler) LLDPHandlerStack() *Stack { return h.stack }
-
-// LLDPHandlerStopChan returns the stop channel for testing.
-func (h *LLDPHandler) LLDPHandlerStopChan() chan struct{} { return h.stopChan }
-
-// LLDPHandlerAdvertiseTicker returns the ticker for testing.
-func (h *LLDPHandler) LLDPHandlerAdvertiseTicker() *time.Ticker { return h.advertiseTicker }
 
 // BuildChassisIDTLV exposes buildChassisIDTLV for testing.
 func (h *LLDPHandler) BuildChassisIDTLV(device *config.Device) []byte {

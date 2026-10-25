@@ -378,13 +378,6 @@ func (s *Stack) Stop() {
 	s.stopped = true
 	s.lifecycleMu.Unlock()
 
-	// Stop discovery protocol handlers
-	s.stpHandler.Stop()
-	s.icmpv6Handler.Stop()
-	s.lldpHandler.Stop()
-	s.cdpHandler.Stop()
-	s.edpHandler.Stop()
-	s.fdpHandler.Stop()
 	s.udpHandler.Stop()
 	s.stopBehaviorTimelines()
 

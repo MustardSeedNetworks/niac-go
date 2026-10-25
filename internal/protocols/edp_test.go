@@ -24,10 +24,6 @@ func TestNewEDPHandler(t *testing.T) {
 	if handler.EDPHandlerStack() != stack {
 		t.Error("Stack not set correctly")
 	}
-
-	if handler.EDPHandlerStopChan() == nil {
-		t.Error("Stop channel not initialized")
-	}
 }
 
 // TestEDPConstants verifies EDP protocol constants.
@@ -405,56 +401,6 @@ func TestBuildEDPFrame_CustomConfig(t *testing.T) {
 	if len(frame) < 24 {
 		t.Errorf("Frame too short: %d bytes", len(frame))
 	}
-}
-
-// TestEDPLifecycle verifies Start/Stop functionality.
-func TestEDPLifecycle(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewEDPHandler(stack)
-
-	// Start EDP
-	handler.Start()
-
-	if handler.EDPHandlerAdvertiseTicker() == nil {
-		t.Error("Advertisement ticker not initialized after Start()")
-	}
-
-	// Wait briefly to allow goroutine to start
-	time.Sleep(10 * time.Millisecond)
-
-	// Stop EDP
-	handler.Stop()
-
-	// Verify stop channel is closed
-	select {
-	case <-handler.EDPHandlerStopChan():
-		// Expected - channel is closed
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Stop channel not closed after Stop()")
-	}
-}
-
-// TestEDPHandler_RestartAfterStop verifies Start can be called again after
-// Stop without panicking on a closed channel. Regression for #462.
-func TestEDPHandler_RestartAfterStop(t *testing.T) {
-	cfg := &config.Config{}
-	stack := protocols.NewStack(nil, cfg, logging.NewDebugConfig(0))
-	handler := protocols.NewEDPHandler(stack)
-
-	for i := range 3 {
-		handler.Start()
-		time.Sleep(20 * time.Millisecond)
-
-		if handler.EDPHandlerAdvertiseTicker() == nil {
-			t.Fatalf("iter %d: ticker nil after Start()", i)
-		}
-
-		handler.Stop()
-		time.Sleep(20 * time.Millisecond)
-	}
-
-	handler.Stop() // double-stop is a no-op
 }
 
 // TestSendAdvertisementsEDP verifies advertisement sending logic for EDP.
