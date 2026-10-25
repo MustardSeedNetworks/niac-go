@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -57,8 +58,8 @@ func TestScenarioPacksStartInRuntime(t *testing.T) {
 	}
 }
 
-// preflightAndStartPack sends one pack through preflight and then start with
-// the same request, which is the order the wizard and the CLI both follow.
+// Generate each pack once for discovery, preflight, and start while keeping
+// their real parsing boundaries; duplicate generation dominates race-test cost.
 func preflightAndStartPack(t *testing.T, pack scenario.Pack) {
 	t.Helper()
 	const interfaceName = "missing-e2e-interface"
@@ -83,6 +84,16 @@ func preflightAndStartPack(t *testing.T, pack scenario.Pack) {
 		AttachmentMode: fabric.ModeAccess,
 		AccessVLAN:     200,
 		ConfigData:     string(result.YAML),
+	}
+	attachments, err := d.SimulationAttachments(req)
+	if err != nil {
+		t.Fatalf("SimulationAttachments(): %v", err)
+	}
+	if !attachments.Routed {
+		t.Error("generated pack reported as flat")
+	}
+	if !slices.Equal(attachments.Attachments, []string{"cyberscope"}) {
+		t.Errorf("attachments = %v, want [cyberscope]", attachments.Attachments)
 	}
 	report, err := d.PreflightSimulation(req)
 	if err != nil {

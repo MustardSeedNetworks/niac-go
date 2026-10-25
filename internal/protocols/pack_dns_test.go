@@ -9,7 +9,6 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
 // A tester plugged into any pack VLAN takes the resolver DHCP hands it and runs
@@ -17,27 +16,23 @@ import (
 // the site's own names, so it must forward the miss up the chain to the lab
 // edge, which answers with the simulated internet (niac-go: CT304 CyberScope
 // returned "name not found" for www.google.com on every pack VLAN).
-func TestShippedPackSiteResolversAnswerInternetNames(t *testing.T) {
-	for _, pack := range scenario.Packs() {
-		t.Run(pack.ID, func(t *testing.T) {
-			shipped := loadShippedPack(t, pack)
-			resolvers := dhcpAdvertisedResolvers(shipped.cfg)
-			if len(resolvers) == 0 {
-				t.Fatal("no DHCP server advertises a resolver")
-			}
-			for address, server := range resolvers {
-				answer := queryPackResolver(t, shipped, server, address, "www.google.com")
-				if answer == nil {
-					t.Errorf("%s (%s) did not answer", server.Name, address)
-					continue
-				}
-				if answer.ResponseCode != layers.DNSResponseCodeNoErr || len(answer.Answers) == 0 ||
-					!answer.Answers[0].IP.Equal(net.ParseIP("8.8.8.8")) {
-					t.Errorf("%s (%s) www.google.com = %v %v, want 8.8.8.8",
-						server.Name, address, answer.ResponseCode, answer.Answers)
-				}
-			}
-		})
+func checkPackSiteResolversAnswerInternetNames(t *testing.T, shipped shippedPack) {
+	t.Helper()
+	resolvers := dhcpAdvertisedResolvers(shipped.cfg)
+	if len(resolvers) == 0 {
+		t.Fatal("no DHCP server advertises a resolver")
+	}
+	for address, server := range resolvers {
+		answer := queryPackResolver(t, shipped, server, address, "www.google.com")
+		if answer == nil {
+			t.Errorf("%s (%s) did not answer", server.Name, address)
+			continue
+		}
+		if answer.ResponseCode != layers.DNSResponseCodeNoErr || len(answer.Answers) == 0 ||
+			!answer.Answers[0].IP.Equal(net.ParseIP("8.8.8.8")) {
+			t.Errorf("%s (%s) www.google.com = %v %v, want 8.8.8.8",
+				server.Name, address, answer.ResponseCode, answer.Answers)
+		}
 	}
 }
 

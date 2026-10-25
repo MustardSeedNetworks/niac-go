@@ -80,6 +80,10 @@ func snmprecPlainValue(base, name, value string) (gosnmp.Asn1BER, any, error) {
 	case snmprecOpaqueTag:
 		return gosnmp.Opaque, []byte(value), nil
 	case snmprecIPAddressTag:
+		// Four literal octets take precedence over dotted address parsing.
+		if len(value) == net.IPv4len {
+			return gosnmp.IPAddress, netip.AddrFrom4([4]byte([]byte(value))).String(), nil
+		}
 		return parseIPAddressValue(value)
 	case "5":
 		if value != "" {

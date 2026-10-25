@@ -6,38 +6,7 @@ import (
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
-	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
-
-// Preflight defaulted its attachment to the literal "tester" while every
-// generated pack names its attachment "cyberscope", so the out-of-box path
-// failed with unknown_attachment and no surface named the valid choice (D1).
-// Whatever the packs are called, the daemon has to be able to say.
-func TestSimulationAttachmentsNamesEveryGeneratedPacksAttachment(t *testing.T) {
-	t.Setenv(e2eDryRunEnv, "true")
-	d := routedPolicyDaemon()
-
-	for _, pack := range scenario.Packs() {
-		t.Run(pack.ID, func(t *testing.T) {
-			result, err := scenario.Generate(pack.Request)
-			if err != nil {
-				t.Fatal(err)
-			}
-			attachments, err := d.SimulationAttachments(api.SimulationRequest{
-				Interface: "eth0", ConfigData: string(result.YAML),
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !attachments.Routed {
-				t.Error("generated pack reported as flat")
-			}
-			if !slices.Equal(attachments.Attachments, []string{"cyberscope"}) {
-				t.Errorf("attachments = %v, want [cyberscope]", attachments.Attachments)
-			}
-		})
-	}
-}
 
 // A flat scenario binds no attachment at all, and in direct or access mode it
 // needs no policy either. Reporting it as routed would have the UI demand a

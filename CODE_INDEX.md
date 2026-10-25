@@ -82,6 +82,13 @@ primitive does not yet enable human authentication or define its stored schema.
 | Device operation eligibility | `internal/config/snmp_availability.go` + `internal/protocols/behavior_validation.go` | Shared served-protocol checks and actual scalar inventory validation before capture, startup and reload |
 | Segmented discovery advertisements | `internal/protocols/discovery_helpers.go` | Shared explicit-segment VLAN identity for discovery frames and STP operations |
 
+## Packet filtering
+
+| Capability | Canonical location | Notes |
+| --- | --- | --- |
+| Offline BPF compilation | `internal/capture/bpf_compile_darwin.go` + `bpf_compile_other.go` | Shared validation and replay compiler; macOS releases compiler handles directly without interrupting a nonexistent reader |
+| Filtered frame matching | `internal/capture/playback_filter.go` | Link-type-aware pure Go VM for replay and Ethernet capture export |
+
 ## Simulation lifecycle API
 
 | Capability | Canonical location | Notes |
