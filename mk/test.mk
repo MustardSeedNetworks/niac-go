@@ -12,7 +12,7 @@
 
 .PHONY: test test-all test-backend test-backend-quiet test-frontend test-frontend-quiet \
         test-hooks test-e2e test-e2e-ui test-e2e-install test-coverage check-stale-tests \
-        validate-touched
+        validate-touched corpus-replay
 
 # =============================================================================
 # Main Test Targets
@@ -127,6 +127,22 @@ test-hooks: ## Run repository script regression tests
 	@./scripts/tests/release-content-integrity-test.sh
 	@./scripts/tests/package-firewall-ownership-test.sh
 	@./scripts/tests/file-size-gate-test.sh
+
+# =============================================================================
+# Recording corpus replay
+# =============================================================================
+
+# Replays niac-demo-catalog's qualified SNMP recordings through the walk
+# readers and agent and fails on any recording that no longer reproduces the
+# receipt it qualified with. The recordings are not in this repo, so the
+# target skips cleanly without a catalog checkout. See docs/CORPUS_REPLAY.md.
+CORPUS_REPLAY_CATALOG ?= $(or $(NIAC_DEMO_CATALOG_DIR),.catalog/niac-demo-catalog)
+CORPUS_REPLAY_OUT ?= build/corpus-replay
+
+corpus-replay: ## Replay the qualified SNMP recording corpus (skips without a catalog)
+	@mkdir -p "$(CORPUS_REPLAY_OUT)"
+	@go run ./cmd/niac-corpus-replay -catalog "$(CORPUS_REPLAY_CATALOG)" -skip-missing -smoke \
+		-out "$(CORPUS_REPLAY_OUT)/results.jsonl" -summary "$(CORPUS_REPLAY_OUT)/summary.json"
 
 # =============================================================================
 # Acceptance (shipped binary)

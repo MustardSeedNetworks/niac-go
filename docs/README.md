@@ -38,6 +38,7 @@ CSRF token returned by `/api/v1/csrf-token`.
 - [Contributing](../CONTRIBUTING.md)
 - [Performance](PERFORMANCE.md)
 - [SNMP walk files](SNMP_WALKS.md)
+- [Recording corpus replay](CORPUS_REPLAY.md)
 
 Run `niac <command> --help` for the command surface shipped by the current
 binary. Generated help is authoritative when an older example disagrees.
