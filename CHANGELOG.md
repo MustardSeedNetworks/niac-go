@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.123.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.36...v0.123.37) (2026-10-25)
+
+
+### Code Refactoring
+
+* **protocols:** run the discovery advertisers under foundation supervise ([#2807](https://github.com/MustardSeedNetworks/niac-go/issues/2807)) ([6a3b0df](https://github.com/MustardSeedNetworks/niac-go/commit/6a3b0df32ab7822ad3ead7d7197185fc5901f9a9))
+
+
+### Miscellaneous
+
+* **deps:** update dependency postcss to v8.5.31 ([#2868](https://github.com/MustardSeedNetworks/niac-go/issues/2868)) ([9f8a06f](https://github.com/MustardSeedNetworks/niac-go/commit/9f8a06ff2be4703d8c0e0381dcd5d750b9d67949))
+
 ## [0.123.36](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.35...v0.123.36) (2026-10-25)
 
 
