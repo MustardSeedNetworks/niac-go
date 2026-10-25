@@ -65,5 +65,8 @@ checks.
 - `NIAC_GO_EXAMPLES_DIR`: generated output path. Defaults to `examples`.
 - `NIAC_DEMO_CATALOG_OFFLINE=1`: require a clean local Git checkout and skip `git fetch`.
 
+To check the reader against the catalog's qualified SNMP recordings, see
+[Recording corpus replay](CORPUS_REPLAY.md).
+
 Do not add shared demo assets directly to this repo. Add or update them in
 `niac-demo-catalog`, then regenerate `examples/`.
