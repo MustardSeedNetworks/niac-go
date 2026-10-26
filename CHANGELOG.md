@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.37...v0.124.0) (2026-10-26)
+
+
+### Features
+
+* **snmp:** add niac-corpus-replay for the qualified recording corpus ([#2870](https://github.com/MustardSeedNetworks/niac-go/issues/2870)) ([c6c10fb](https://github.com/MustardSeedNetworks/niac-go/commit/c6c10fb2f59bd0aae9f9d78acb8f8c26e245b2a6))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2874](https://github.com/MustardSeedNetworks/niac-go/issues/2874)) ([3c71f36](https://github.com/MustardSeedNetworks/niac-go/commit/3c71f36c67aeda148bd78abe3a9d488ff8bc34e1))
+
 ## [0.123.37](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.36...v0.123.37) (2026-10-25)
 
 
