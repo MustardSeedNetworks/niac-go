@@ -5,6 +5,13 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.0...v0.124.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/mustardseednetworks/foundation to v0.13.6 ([#2872](https://github.com/MustardSeedNetworks/niac-go/issues/2872)) ([654f4b2](https://github.com/MustardSeedNetworks/niac-go/commit/654f4b28e1b04e7934e1078358787f5715bd1755))
+
 ## [0.124.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.123.37...v0.124.0) (2026-10-26)
 
 
