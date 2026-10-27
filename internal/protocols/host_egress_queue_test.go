@@ -21,7 +21,7 @@ func armHostMask(t *testing.T, stack *Stack, packet *Packet) {
 }
 
 func TestHostEgressPendingNeighborAndClear(t *testing.T) {
-	for _, clear := range []bool{false, true} {
+	for _, clearFault := range []bool{false, true} {
 		stack, packet := hostEgressFixture(t, "192.0.3.20")
 		capture := &recordingCapture{}
 		stack.capture = capture
@@ -36,7 +36,7 @@ func TestHostEgressPendingNeighborAndClear(t *testing.T) {
 		if arp == nil || !bytes.Equal(arp.DstProtAddress, []byte{192, 0, 3, 20}) || probe.VLAN != 200 {
 			t.Fatalf("wrong ARP probe: %+v", arp)
 		}
-		if clear {
+		if clearFault {
 			if err := stack.deviceStates[packet.generatedHost].ClearInterfacePrefixFault(
 				"eth0",
 				devicestate.FaultBadMask,
@@ -54,7 +54,7 @@ func TestHostEgressPendingNeighborAndClear(t *testing.T) {
 		stack.notifications.observeNeighbor(200, netip.MustParseAddr("192.0.3.20"), mac)
 		resolved := receiveRoutedReply(t, stack)
 		stack.sendPacket(resolved)
-		if clear {
+		if clearFault {
 			mac = packet.GetDestMAC()
 		}
 		decoded = gopacket.NewPacket(capture.frame, layers.LayerTypeEthernet, gopacket.Default)

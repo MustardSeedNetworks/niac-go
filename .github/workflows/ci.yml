@@ -180,7 +180,7 @@ jobs:
     with:
       install-libpcap: true
       lint-windows: false
-      golangci-lint-version: v2.14.0
+      golangci-lint-version: v2.15.0
       golangci-lint-args: --timeout=5m
       fetch-depth: 1
       native-fetch-depth: 1
@@ -372,7 +372,7 @@ jobs:
         env:
           GOOS: windows
         with:
-          version: v2.14.0
+          version: v2.15.0
           only-new-issues: true
           # See the Backend (Go) step above: the action's cache key carries no
           # GOOS, so this job and that one share one entry while analysing two
