@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.3...v0.124.4) (2026-10-27)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-router to v8.5.0 ([#2879](https://github.com/MustardSeedNetworks/niac-go/issues/2879)) ([6e420de](https://github.com/MustardSeedNetworks/niac-go/commit/6e420de3f76275b83f24126df36c46e17b2cb98a))
+
+
+### Miscellaneous
+
+* **deps:** update storybook monorepo to v10.6.3 ([#2884](https://github.com/MustardSeedNetworks/niac-go/issues/2884)) ([abbc75d](https://github.com/MustardSeedNetworks/niac-go/commit/abbc75d636df795cdb5040611a454443833368ac))
+
 ## [0.124.3](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.2...v0.124.3) (2026-10-27)
 
 
