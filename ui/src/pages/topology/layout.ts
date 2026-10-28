@@ -240,7 +240,7 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   const skeleton = new Map<string, string[]>();
   for (const link of links) {
     if (packed.has(link.source) || packed.has(link.target)) continue;
-    const key = [link.source, link.target].sort().join('|');
+    const key = [link.source, link.target].sort((a, b) => a.localeCompare(b)).join('|');
     if (seenEdgePairs.has(key)) continue;
     seenEdgePairs.add(key);
     g.setEdge(link.source, link.target);

@@ -87,7 +87,9 @@ function deviceRecords(document: UnknownRecord): {
 }
 
 function endpointKey(device: string, iface: string, remoteDevice: string, remoteInterface: string) {
-  return [`${device}|${iface}`, `${remoteDevice}|${remoteInterface}`].sort().join('|');
+  return [`${device}|${iface}`, `${remoteDevice}|${remoteInterface}`]
+    .sort((a, b) => a.localeCompare(b))
+    .join('|');
 }
 
 function directedEndpointKey(

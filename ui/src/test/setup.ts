@@ -50,7 +50,7 @@ afterEach(() => {
   if (missingI18nKeys.size === 0) {
     return;
   }
-  const keys = [...missingI18nKeys].sort();
+  const keys = [...missingI18nKeys].sort((a, b) => a.localeCompare(b));
   missingI18nKeys.clear(); // do not blame the next test for this one's misses
   throw new Error(
     `Unresolved i18n key(s) rendered during this test:\n  ${keys.join('\n  ')}\n` +

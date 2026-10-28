@@ -112,6 +112,13 @@ const draft: ScenarioDraft = {
   sizeBytes: 12,
 };
 
+const Harness = ({ initial }: { initial: ScenarioDraft }) => {
+  const [current, setCurrent] = useState(initial);
+  return (
+    <DraftTopologyComposer draft={current} onDraftUpdate={setCurrent} onBusyChange={vi.fn()} />
+  );
+};
+
 describe('DraftTopologyComposer', () => {
   beforeEach(() => {
     mutateScenarioDraftTopology.mockReset();
@@ -341,13 +348,7 @@ devices:
       content: 'devices:\n  - name: COS-ACCESS-SW01\n    type: switch\n',
     };
     mutateScenarioDraftTopology.mockResolvedValue(added);
-    const Harness = () => {
-      const [current, setCurrent] = useState(draft);
-      return (
-        <DraftTopologyComposer draft={current} onDraftUpdate={setCurrent} onBusyChange={vi.fn()} />
-      );
-    };
-    render(<Harness />);
+    render(<Harness initial={draft} />);
 
     await user.click(await screen.findByRole('button', { name: 'Add device' }));
     const dialog = screen.getByRole('dialog');
