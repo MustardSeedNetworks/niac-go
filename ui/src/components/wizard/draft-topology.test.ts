@@ -32,6 +32,23 @@ describe('parseDraftTopology', () => {
 `);
     expect(model.deviceActions.duplicate).toEqual([]);
   });
+  it('dedups a reciprocal link between names that localeCompare ranks equal', () => {
+    // NFC and NFD spellings of the same word: distinct device names that
+    // collation treats as equal.
+    const nfc = 'caf\u00e9';
+    const nfd = 'cafe\u0301';
+    expect(nfc).not.toBe(nfd);
+    expect(nfc.localeCompare(nfd)).toBe(0);
+    const model = parseDraftTopology(`devices:
+  - name: "${nfc}"
+    interfaces: [{ name: g0 }]
+    trunk_ports: [{ interface: g0, remote_device: "${nfd}", remote_interface: g0 }]
+  - name: "${nfd}"
+    interfaces: [{ name: g0 }]
+    trunk_ports: [{ interface: g0, remote_device: "${nfc}", remote_interface: g0 }]
+`);
+    expect(model.links).toHaveLength(1);
+  });
   it('projects devices, reciprocal parallel links, interfaces, and saved positions', () => {
     const model = parseDraftTopology(`
 devices:

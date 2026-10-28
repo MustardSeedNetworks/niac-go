@@ -86,10 +86,13 @@ function deviceRecords(document: UnknownRecord): {
   return { records: [], segmentByDevice: {}, segmented: false, configBacked: false };
 }
 
+// Code-unit ordering, not localeCompare: collation ranks distinct strings such
+// as NFC and NFD "café" as equal, and an equal rank leaves the pair in input
+// order, so each end of one link would produce a different key.
 function endpointKey(device: string, iface: string, remoteDevice: string, remoteInterface: string) {
-  return [`${device}|${iface}`, `${remoteDevice}|${remoteInterface}`]
-    .sort((a, b) => a.localeCompare(b))
-    .join('|');
+  const local = `${device}|${iface}`;
+  const remote = `${remoteDevice}|${remoteInterface}`;
+  return local < remote ? `${local}|${remote}` : `${remote}|${local}`;
 }
 
 function directedEndpointKey(
