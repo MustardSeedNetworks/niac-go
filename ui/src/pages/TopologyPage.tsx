@@ -41,6 +41,7 @@ import {
   type LinkEdge,
   layoutNodes,
   NeighborsView,
+  pairKey,
   readSavedLayoutMode,
   TierBands,
   TopologyLegend,
@@ -203,14 +204,10 @@ export function TopologyPage() {
 
     // Merge neighbor-discovered edges that aren't already represented by trunk ports
     if (neighbors && neighbors.length > 0) {
-      const existingEdges = new Set(
-        topologyLinks.map((l) => [l.source, l.target].sort((a, b) => a.localeCompare(b)).join('|')),
-      );
+      const existingEdges = new Set(topologyLinks.map((l) => pairKey(l.source, l.target)));
 
       for (const neighbor of neighbors) {
-        const key = [neighbor.localDevice, neighbor.remoteDevice]
-          .sort((a, b) => a.localeCompare(b))
-          .join('|');
+        const key = pairKey(neighbor.localDevice, neighbor.remoteDevice);
         if (!existingEdges.has(key)) {
           existingEdges.add(key);
           allLinks.push({
