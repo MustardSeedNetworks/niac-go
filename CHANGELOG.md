@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.15...v0.124.16) (2026-10-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @hookform/resolvers to v6 ([#2873](https://github.com/MustardSeedNetworks/niac-go/issues/2873)) ([d8ce670](https://github.com/MustardSeedNetworks/niac-go/commit/d8ce670e08c7579c3a73bb7a502262b9e6837256))
+
+
+### Miscellaneous
+
+* **deps:** update dependency @biomejs/biome to v2.6.2 ([#2916](https://github.com/MustardSeedNetworks/niac-go/issues/2916)) ([04939b9](https://github.com/MustardSeedNetworks/niac-go/commit/04939b9a73eea7d1b8b80c508cc841a2f66bf17d))
+
 ## [0.124.15](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.14...v0.124.15) (2026-10-28)
 
 
