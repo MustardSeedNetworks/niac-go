@@ -78,6 +78,11 @@ it('keeps viewer filters and exports usable while disabling writes with a reason
   expect(filter).toHaveBeenCalledOnce();
 });
 
+function Page({ onMount }: { onMount: () => void }) {
+  useEffect(() => onMount(), [onMount]);
+  return <Button action="start">Start</Button>;
+}
+
 it('fails closed until scope arrives without remounting the page', async () => {
   let resolve: (value: { scope: string }) => void = () => {};
   getScope.mockReturnValue(
@@ -86,13 +91,9 @@ it('fails closed until scope arrives without remounting the page', async () => {
     }),
   );
   const mounted = vi.fn();
-  function Page() {
-    useEffect(mounted, []);
-    return <Button action="start">Start</Button>;
-  }
   render(
     <ScopeProvider>
-      <Page />
+      <Page onMount={mounted} />
     </ScopeProvider>,
   );
   expect(screen.getByText('Start')).toHaveAttribute('aria-disabled', 'true');

@@ -41,6 +41,7 @@ import {
   type LinkEdge,
   layoutNodes,
   NeighborsView,
+  pairKey,
   readSavedLayoutMode,
   TierBands,
   TopologyLegend,
@@ -203,12 +204,10 @@ export function TopologyPage() {
 
     // Merge neighbor-discovered edges that aren't already represented by trunk ports
     if (neighbors && neighbors.length > 0) {
-      const existingEdges = new Set(
-        topologyLinks.map((l) => [l.source, l.target].sort().join('|')),
-      );
+      const existingEdges = new Set(topologyLinks.map((l) => pairKey(l.source, l.target)));
 
       for (const neighbor of neighbors) {
-        const key = [neighbor.localDevice, neighbor.remoteDevice].sort().join('|');
+        const key = pairKey(neighbor.localDevice, neighbor.remoteDevice);
         if (!existingEdges.has(key)) {
           existingEdges.add(key);
           allLinks.push({
@@ -364,7 +363,7 @@ export function TopologyPage() {
     // Normalised, so `ap` and `access-point` — the same device, two spellings
     // the schema both accepts — produce one chip rather than two identical ones.
     for (const d of devices) set.add(normalizeDeviceType(d.type));
-    return [...set].sort();
+    return [...set].sort((a, b) => a.localeCompare(b));
   }, [devices]);
 
   const toggleType = useCallback((type: string) => {
@@ -449,7 +448,7 @@ export function TopologyPage() {
     if (!devices || devices.length === 0) return;
     const sig = devices
       .map((d) => d.name)
-      .sort()
+      .sort((a, b) => a.localeCompare(b))
       .join('|');
     if (sig === lastDeviceSetSig.current) return;
     lastDeviceSetSig.current = sig;

@@ -14,6 +14,15 @@ function ThrowingComponent({ shouldThrow = true }: { shouldThrow?: boolean }) {
 // Suppress React error boundary console errors in tests
 const originalConsoleError = console.error;
 
+// Mutable from the test so the same component can throw, then recover.
+const conditional = { shouldThrow: true };
+function ConditionalThrow() {
+  if (conditional.shouldThrow) {
+    throw new Error('First render error');
+  }
+  return <div>Recovered content</div>;
+}
+
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     console.error = (...args: unknown[]) => {
@@ -81,14 +90,7 @@ describe('ErrorBoundary', () => {
   it('shows retry button that resets error state', async () => {
     const user = userEvent.setup();
 
-    // We need a component that can toggle whether it throws
-    let shouldThrow = true;
-    function ConditionalThrow() {
-      if (shouldThrow) {
-        throw new Error('First render error');
-      }
-      return <div>Recovered content</div>;
-    }
+    conditional.shouldThrow = true;
 
     const { rerender } = render(
       <ErrorBoundary>
@@ -99,7 +101,7 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
     // Fix the throwing condition
-    shouldThrow = false;
+    conditional.shouldThrow = false;
 
     // Click Try Again
     await user.click(screen.getByText('Try Again'));

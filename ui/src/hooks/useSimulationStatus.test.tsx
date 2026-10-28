@@ -45,6 +45,19 @@ const running: SimulationStatus = {
 
 const wrapper = ({ children }: { children: ReactNode }) => <AppProvider>{children}</AppProvider>;
 
+function ConsumerA() {
+  const { data } = useSimulationStatus();
+  return <span data-testid="a">{data?.running ? 'running' : 'stopped'}</span>;
+}
+function ConsumerB() {
+  const { data } = useSimulationStatus();
+  return <span data-testid="b">{data?.deviceCount ?? '—'}</span>;
+}
+function ConsumerC() {
+  const { data } = useSimulationStatus();
+  return <span data-testid="c">{data?.interface ?? '—'}</span>;
+}
+
 describe('useSimulationStatus', () => {
   beforeEach(() => {
     fetchSimulationStatus.mockReset().mockResolvedValue(running);
@@ -63,19 +76,6 @@ describe('useSimulationStatus', () => {
   });
 
   it('one AppProvider serves multiple useSimulationStatus() consumers with a single fetch', async () => {
-    function ConsumerA() {
-      const { data } = useSimulationStatus();
-      return <span data-testid="a">{data?.running ? 'running' : 'stopped'}</span>;
-    }
-    function ConsumerB() {
-      const { data } = useSimulationStatus();
-      return <span data-testid="b">{data?.deviceCount ?? '—'}</span>;
-    }
-    function ConsumerC() {
-      const { data } = useSimulationStatus();
-      return <span data-testid="c">{data?.interface ?? '—'}</span>;
-    }
-
     render(
       <AppProvider>
         <ConsumerA />

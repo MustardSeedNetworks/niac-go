@@ -18,17 +18,21 @@ const sectionNamed = (key: string) => {
   return section;
 };
 
+type FormProps = {
+  section: ReturnType<typeof sectionNamed>;
+  initial: AuthoredValue;
+  state: { current: AuthoredValue };
+};
+
+const Form = ({ section, initial, state }: FormProps) => {
+  const [value, setValue] = useState<AuthoredValue>(initial);
+  state.current = value;
+  return <SchemaSectionBody section={section} value={value} onChange={setValue} />;
+};
+
 const renderSection = (key: string, initial: AuthoredValue = {}) => {
-  const section = sectionNamed(key);
   const state: { current: AuthoredValue } = { current: initial };
-
-  const Form = () => {
-    const [value, setValue] = useState<AuthoredValue>(initial);
-    state.current = value;
-    return <SchemaSectionBody section={section} value={value} onChange={setValue} />;
-  };
-
-  render(<Form />);
+  render(<Form section={sectionNamed(key)} initial={initial} state={state} />);
   return state;
 };
 

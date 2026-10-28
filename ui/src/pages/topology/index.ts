@@ -13,6 +13,7 @@ export {
   LAYOUT_MODES,
   type LayoutMode,
   layoutNodes,
+  pairKey,
 } from './layout';
 export { NeighborsView } from './NeighborsView';
 export {

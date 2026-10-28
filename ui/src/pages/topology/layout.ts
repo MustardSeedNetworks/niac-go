@@ -42,6 +42,11 @@ export const LAYOUT_MODES: { mode: LayoutMode; label: string; description: strin
 // The node's own footprint: DeviceNode is a 64 px symbol plate over a label
 // allowed two lines, inside a fixed 112 px width, so every node occupies this
 // box whatever its name is.
+/** One key per unordered device pair, so A-B and B-A name the same edge. */
+export function pairKey(a: string, b: string): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
 export const NODE_WIDTH = 112;
 export const NODE_HEIGHT = 96;
 
@@ -240,7 +245,7 @@ function hierarchicalLayout(devices: DeviceSummary[], links: TopologyLink[]): De
   const skeleton = new Map<string, string[]>();
   for (const link of links) {
     if (packed.has(link.source) || packed.has(link.target)) continue;
-    const key = [link.source, link.target].sort().join('|');
+    const key = pairKey(link.source, link.target);
     if (seenEdgePairs.has(key)) continue;
     seenEdgePairs.add(key);
     g.setEdge(link.source, link.target);

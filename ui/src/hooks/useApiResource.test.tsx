@@ -31,6 +31,15 @@ function renderHook<Result, Props>(
   return renderRawHook(callback, { ...options, wrapper: ResourceProvider });
 }
 
+function RefreshProbe({ fetcher }: { fetcher: () => Promise<unknown> }) {
+  const { refetch } = useApiResource(fetcher, ['test-resource'], { errorToast: true });
+  return (
+    <button type="button" onClick={refetch}>
+      Refresh
+    </button>
+  );
+}
+
 describe('useApiResource errorToast option', () => {
   beforeEach(() => {
     useUIStore.getState().clearNotifications();
@@ -72,15 +81,7 @@ describe('useApiResource errorToast option', () => {
   it('does not re-toast an identical error on repeated requests', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('daemon unreachable'));
 
-    function Probe() {
-      const { refetch } = useApiResource(fetcher, ['test-resource'], { errorToast: true });
-      return (
-        <button type="button" onClick={refetch}>
-          Refresh
-        </button>
-      );
-    }
-    renderWithResources(<Probe />);
+    renderWithResources(<RefreshProbe fetcher={fetcher} />);
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(useUIStore.getState().notifications).toHaveLength(1));
