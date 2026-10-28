@@ -20,12 +20,14 @@ Component   index.css @layer components + the TS class-token
 ```
 
 **Two invariants (enforced by `scripts/check-token-discipline.sh`):**
+
 1. **Values flow one direction** — defined once in `theme/`, everything else
    references them. Never hand-copy a hex sideways into a `.ts`/`.tsx` file.
 2. **App code names only semantic / component tokens** — never a primitive
    palette utility (`bg-gray-500`, `text-pink-400`) and never a raw hex.
 
 **Picking the right token:**
+
 - Neutral chrome (backgrounds, borders, muted text) → `surface-*` / `border-*` / `text-*`.
 - Meaning (ok / warn / error / info) → `status-*`.
 - Filled-surface foreground → `on-brand` / `on-danger` / `on-info`; black/white → `scrim` / `knob`.

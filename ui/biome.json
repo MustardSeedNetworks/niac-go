@@ -215,5 +215,10 @@
         }
       }
     }
-  ]
+  ],
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  }
 }
