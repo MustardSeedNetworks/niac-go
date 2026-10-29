@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.17](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.16...v0.124.17) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** update dependency immer to v11.2.7 ([#2924](https://github.com/MustardSeedNetworks/niac-go/issues/2924)) ([f5f3048](https://github.com/MustardSeedNetworks/niac-go/commit/f5f3048bbbc02ceff6adad30c588822d5c1de113))
+* **ui:** order draft-topology endpoint keys by code unit, not locale ([#2921](https://github.com/MustardSeedNetworks/niac-go/issues/2921)) ([0570683](https://github.com/MustardSeedNetworks/niac-go/commit/057068347be56333e8057ea77c950d99e3524d76))
+
 ## [0.124.16](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.15...v0.124.16) (2026-10-28)
 
 
