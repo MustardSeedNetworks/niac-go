@@ -3,11 +3,11 @@ module github.com/MustardSeedNetworks/niac-go
 go 1.27.3
 
 require (
-	github.com/MustardSeedNetworks/foundation v0.13.11
+	github.com/MustardSeedNetworks/foundation v0.13.16
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/gopacket/gopacket v1.7.4
-	github.com/gosnmp/gosnmp v1.45.0
+	github.com/gosnmp/gosnmp v1.47.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kardianos/service v1.3.0
 	github.com/spf13/cobra v1.10.2
