@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.27...v0.124.28) (2026-10-30)
+
+
+### Bug Fixes
+
+* **deps:** update dependency i18next-browser-languagedetector to v8.2.2 ([#2951](https://github.com/MustardSeedNetworks/niac-go/issues/2951)) ([9c90186](https://github.com/MustardSeedNetworks/niac-go/commit/9c901866bb114304b258c35c0688a928ed9b1677))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2953](https://github.com/MustardSeedNetworks/niac-go/issues/2953)) ([d1c3124](https://github.com/MustardSeedNetworks/niac-go/commit/d1c3124bdac2ed989d573faf0fc8d3b83eb5845c))
+
 ## [0.124.27](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.26...v0.124.27) (2026-10-30)
 
 
