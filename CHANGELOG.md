@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.26](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.25...v0.124.26) (2026-10-30)
+
+
+### Miscellaneous
+
+* **deps:** update module github.com/securego/gosec/v2/cmd/gosec to v2.30.0 ([#2946](https://github.com/MustardSeedNetworks/niac-go/issues/2946)) ([daa8eb9](https://github.com/MustardSeedNetworks/niac-go/commit/daa8eb954c4c1af3dd02506bac1930ca0dbf4e51))
+* **deps:** update securego/gosec action to v2.30.0 ([#2947](https://github.com/MustardSeedNetworks/niac-go/issues/2947)) ([4b4be1f](https://github.com/MustardSeedNetworks/niac-go/commit/4b4be1f57fdee8d99b565fd12b86bd2b2f7af7e6))
+
 ## [0.124.25](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.24...v0.124.25) (2026-10-30)
 
 
