@@ -42,7 +42,7 @@ tools-go: ## Install Go development tools
 	@echo "Installing golangci-lint..."
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 	@echo "Installing gosec..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+	@go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0
 	@echo "Installing gofumpt..."
 	@go install mvdan.cc/gofumpt@v0.12.0
 	@echo "Installing goimports..."
