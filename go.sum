@@ -1,7 +1,7 @@
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/MustardSeedNetworks/foundation v0.13.11 h1:I3YTWsLObKpz3jI36LZOIJse3iRR2f7UGkhPgio8Exw=
-github.com/MustardSeedNetworks/foundation v0.13.11/go.mod h1:AgFjJku5XnbrIiISwWMe6hbgJLN91YKHwMJYleDC6tk=
+github.com/MustardSeedNetworks/foundation v0.13.16 h1:lwHHZE6E1YAizOUtVDvDdb4kyhSAON3i+sQIy/N8acs=
+github.com/MustardSeedNetworks/foundation v0.13.16/go.mod h1:AgFjJku5XnbrIiISwWMe6hbgJLN91YKHwMJYleDC6tk=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
 github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
 github.com/buger/jsonparser v1.6.1 h1:I0phFv0PlbLHnM7TZAVjZ2MJ2/eWRTDyuO7GLR98IEs=
@@ -30,8 +30,8 @@ github.com/google/renameio v0.1.0 h1:GOZbcHa3HfsPKPlmyPyN2KEohoMXOhdMbHrvbpl2QaA
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/gopacket/gopacket v1.7.4 h1:3bi6ZOOyxZe5iGhPz2xkQg/qoEBa3ODsrxZ9LbnYuRw=
 github.com/gopacket/gopacket v1.7.4/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
-github.com/gosnmp/gosnmp v1.45.0 h1:dc3Y/F7qhY8v+Eeb+3Hq+AnSBxQ8mGbwoHEPgWZRkxI=
-github.com/gosnmp/gosnmp v1.45.0/go.mod h1:LWPVcDKeRsiioQGeITGTQha4mdlx9lgmRmXz6zGINQ4=
+github.com/gosnmp/gosnmp v1.47.0 h1:nQ0H9erruu03QP0lviAJ6vB6iiIGE0R5u73MKFr6QPs=
+github.com/gosnmp/gosnmp v1.47.0/go.mod h1:LWPVcDKeRsiioQGeITGTQha4mdlx9lgmRmXz6zGINQ4=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/invopop/jsonschema v0.14.0 h1:MHQqLhvpNUZfw+hM3AZDYK7jxO8FZoQeQM77g8iyZjg=
