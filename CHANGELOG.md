@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.29](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.28...v0.124.29) (2026-10-31)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-hook-form to v7.91.0 ([#2954](https://github.com/MustardSeedNetworks/niac-go/issues/2954)) ([cac8e22](https://github.com/MustardSeedNetworks/niac-go/commit/cac8e22a75a0de439892992054b0cb4ed69798cf))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2957](https://github.com/MustardSeedNetworks/niac-go/issues/2957)) ([da964b7](https://github.com/MustardSeedNetworks/niac-go/commit/da964b77c3fde27fe68652af52374af7a1ac70ea))
+
 ## [0.124.28](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.27...v0.124.28) (2026-10-30)
 
 
