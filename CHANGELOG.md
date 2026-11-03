@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.39](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.38...v0.124.39) (2026-11-03)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.105.0 ([#2987](https://github.com/MustardSeedNetworks/niac-go/issues/2987)) ([c966ac5](https://github.com/MustardSeedNetworks/niac-go/commit/c966ac5465bd8c266e0fbed1d2adc2fd0eadfc05))
+
+
+### Miscellaneous
+
+* **deps:** update storybook monorepo to v10.6.4 ([#2986](https://github.com/MustardSeedNetworks/niac-go/issues/2986)) ([68dd4fe](https://github.com/MustardSeedNetworks/niac-go/commit/68dd4fe83aefd1ca9d3918a4c5b5ff68f9f00032))
+
 ## [0.124.38](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.37...v0.124.38) (2026-11-03)
 
 
