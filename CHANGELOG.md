@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.42](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.41...v0.124.42) (2026-11-03)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.62.0 ([#2993](https://github.com/MustardSeedNetworks/niac-go/issues/2993)) ([657d7bd](https://github.com/MustardSeedNetworks/niac-go/commit/657d7bd016ef1e7e005444b46a998e8158c89e50))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2994](https://github.com/MustardSeedNetworks/niac-go/issues/2994)) ([9e36ef5](https://github.com/MustardSeedNetworks/niac-go/commit/9e36ef5be6c7ce721af0ea5ed74d8da1a2ec7c3d))
+
 ## [0.124.41](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.40...v0.124.41) (2026-11-03)
 
 
