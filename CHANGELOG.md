@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.44](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.43...v0.124.44) (2026-11-04)
+
+
+### Miscellaneous
+
+* **deps:** update node.js to v26.13.0 ([#3001](https://github.com/MustardSeedNetworks/niac-go/issues/3001)) ([70a7b6a](https://github.com/MustardSeedNetworks/niac-go/commit/70a7b6a7171abe76dc18bf979027edc002b15a52))
+* **deps:** update storybook monorepo to v10.6.5 ([#2997](https://github.com/MustardSeedNetworks/niac-go/issues/2997)) ([076e192](https://github.com/MustardSeedNetworks/niac-go/commit/076e1925d766857873c779f9a33435ef732b34f9))
+
 ## [0.124.43](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.42...v0.124.43) (2026-11-04)
 
 
