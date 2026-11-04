@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.124.43](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.42...v0.124.43) (2026-11-04)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-router to v8.5.1 ([#2998](https://github.com/MustardSeedNetworks/niac-go/issues/2998)) ([1165fad](https://github.com/MustardSeedNetworks/niac-go/commit/1165fad547ce099a9b747f838e1a4b51c44424e7))
+
+
+### Miscellaneous
+
+* **deps:** lock file maintenance ([#2999](https://github.com/MustardSeedNetworks/niac-go/issues/2999)) ([1178d86](https://github.com/MustardSeedNetworks/niac-go/commit/1178d864bbb8a37b3f23e771be6f4b1d676e5b86))
+
 ## [0.124.42](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.41...v0.124.42) (2026-11-03)
 
 
