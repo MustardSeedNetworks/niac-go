@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.126.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.125.0...v0.126.0) (2026-11-20)
+
+
+### Features
+
+* **cli:** play scenario packs from the CLI; name the interface in attachment-policy denials ([#3038](https://github.com/MustardSeedNetworks/niac-go/issues/3038)) ([a3602cc](https://github.com/MustardSeedNetworks/niac-go/commit/a3602ccd0fb7056d712dc8b8f0969c5b4f374a95)), closes [#3037](https://github.com/MustardSeedNetworks/niac-go/issues/3037)
+* **scenario:** author chassis ENTITY-MIB for pack network devices ([#3041](https://github.com/MustardSeedNetworks/niac-go/issues/3041)) ([7089ffe](https://github.com/MustardSeedNetworks/niac-go/commit/7089ffe5bee5eac3d0de29c714a0c45c3ccc87c4)), closes [#3039](https://github.com/MustardSeedNetworks/niac-go/issues/3039)
+
 ## [0.125.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.51...v0.125.0) (2026-11-20)
 
 
