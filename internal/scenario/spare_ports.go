@@ -42,7 +42,8 @@ func sparePortNames(prefix string) []string {
 // up for the client it places there.
 //
 // It builds on newInterface so the MTU and interface type stay decided in one
-// place, then overrides what a patched port has and a spare one does not.
+// place, then overrides what a patched port has and a spare one does not. It carries
+// no load either: the baseline pass skips a port that is not up.
 //
 // It carries no network and no address, which is not an omission: a layer-2
 // access port on a switch that owns only its management SVI has no address of
@@ -55,8 +56,6 @@ func sparePorts(prefix string, vlan, speed int) []converter.Interface {
 	for _, name := range sparePortNames(prefix) {
 		port := newInterface(name, "", "", speed, "Spare access port")
 		port.OperStatus = "down"
-		port.InUtilization = 0
-		port.OutUtilization = 0
 		port.VLANs = []int{vlan}
 		ports = append(ports, port)
 	}
