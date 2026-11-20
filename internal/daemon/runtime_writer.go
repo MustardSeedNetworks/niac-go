@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/protocols"
 )
@@ -43,33 +45,45 @@ func runRuntimeStateWriter(
 	}
 }
 
+// runtimeWriterRestarts is how many times a faulted writer is restarted. A
+// restart is safe: the writer rewrites the current state on its next tick.
+const runtimeWriterRestarts = 3
+
+// superviseRuntimeStateWriter starts the writer as a supervised worker and
+// returns the group that stops it.
+func superviseRuntimeStateWriter(
+	sessionID string,
+	stack *protocols.Stack,
+	write func(string, *protocols.Stack) error,
+	interval time.Duration,
+) *supervise.Group {
+	workers := supervise.New(nil)
+	workers.Add("runtime-state-writer", supervise.RestartN(runtimeWriterRestarts), func(ctx context.Context) error {
+		runRuntimeStateWriter(ctx, sessionID, stack, write, interval)
+		return nil
+	})
+	workers.Start(context.Background())
+	return workers
+}
+
 func (d *Daemon) startRuntimeStateWriter(sim *Simulation) {
 	if sim == nil || sim.stack == nil || d.runtimeStateDir() == "" {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	sim.runtimeCancel = cancel
-	sim.runtimeDone = done
-	go func() {
-		defer close(done)
-		write := func(sessionID string, stack *protocols.Stack) error {
-			return d.writeRuntimeState(sessionID, sim.runtimeGeneration, stack)
-		}
-		runRuntimeStateWriter(ctx, sim.SessionID, sim.stack, write, runtimeStateInterval)
-	}()
+	write := func(sessionID string, stack *protocols.Stack) error {
+		return d.writeRuntimeState(sessionID, sim.runtimeGeneration, stack)
+	}
+	sim.runtimeWriter = superviseRuntimeStateWriter(sim.SessionID, sim.stack, write, runtimeStateInterval)
 }
 
+// stopRuntimeStateWriter waits for an in-flight write: the settle that follows
+// must be the only owner of the record.
 func stopRuntimeStateWriter(sim *Simulation) {
-	if sim == nil || sim.runtimeCancel == nil {
+	if sim == nil || sim.runtimeWriter == nil {
 		return
 	}
-	sim.runtimeCancel()
-	if sim.runtimeDone != nil {
-		<-sim.runtimeDone
-	}
-	sim.runtimeCancel = nil
-	sim.runtimeDone = nil
+	_ = sim.runtimeWriter.Stop(context.Background())
+	sim.runtimeWriter = nil
 }
 
 // settleRuntimeState runs after the writer and protocol producers have stopped.

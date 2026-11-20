@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
+
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -14,15 +17,15 @@ import (
 
 func TestRuntimeStopJoinsInflightWriter(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		ctx, cancel := context.WithCancel(t.Context())
 		release := make(chan struct{})
-		done := make(chan struct{})
-		sim := &Simulation{runtimeCancel: cancel, runtimeDone: done}
-		go func() {
+		writer := supervise.New(nil)
+		writer.Add("writer", supervise.Fatal, func(ctx context.Context) error {
 			<-ctx.Done()
 			<-release
-			close(done)
-		}()
+			return nil
+		})
+		writer.Start(context.Background())
+		sim := &Simulation{runtimeWriter: writer}
 		settled := make(chan struct{})
 		go func() {
 			(&Daemon{}).settleRuntimeState(sim, true)
@@ -44,12 +47,19 @@ func TestReplacementCancelsRuntimeWriter(t *testing.T) {
 	t.Setenv("NIAC_CONFIGS_DIR", t.TempDir())
 	d := replacementTestDaemon(t)
 	startReplacementTestSimulation(t, d, "active-router")
-	canceled := false
-	d.simulation.runtimeCancel = func() { canceled = true }
+	var canceled atomic.Bool
+	probe := supervise.New(nil)
+	probe.Add("probe", supervise.Fatal, func(ctx context.Context) error {
+		<-ctx.Done()
+		canceled.Store(true)
+		return nil
+	})
+	probe.Start(context.Background())
+	d.simulation.runtimeWriter = probe
 	if err := d.StartSimulation(replacementRequest("replacement-router")); err != nil {
 		t.Fatal(err)
 	}
-	if !canceled {
+	if !canceled.Load() {
 		t.Fatal("replacement left the old runtime writer alive")
 	}
 }

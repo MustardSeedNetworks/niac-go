@@ -10,12 +10,31 @@ import (
 
 	"github.com/gopacket/gopacket"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
-var errCaptureLoopExited = errors.New("capture loop exited unexpectedly")
+var (
+	errCaptureLoopExited   = errors.New("capture loop exited unexpectedly")
+	errCaptureLoopPanicked = errors.New("capture loop panicked")
+)
+
+// captureStopTimeout bounds the wait for a capture loop to return once its
+// engine is closed, so a wedged packet source cannot hang StopCapture or
+// daemon shutdown.
+const captureStopTimeout = 5 * time.Second
+
+// stopWorkers stops a capture worker group within captureStopTimeout.
+func stopWorkers(workers *supervise.Group, what string) {
+	ctx, cancel := context.WithTimeout(context.Background(), captureStopTimeout)
+	defer cancel()
+	if err := workers.Stop(ctx); err != nil {
+		logging.Warningf("%s did not stop: %v", what, err)
+	}
+}
 
 type captureEngine interface {
 	SetFilter(string) error
@@ -38,6 +57,7 @@ type standaloneCapture struct {
 	cancel    context.CancelFunc
 	packets   atomic.Uint64
 	stopOnce  sync.Once
+	workers   *supervise.Group
 }
 
 // StartCapture spins up a capture session on req.Interface, optionally
@@ -84,21 +104,30 @@ func (d *Daemon) StartCapture(req api.CaptureRequest) error {
 	d.capture = session
 	d.captureLastError = ""
 
-	// Drive the capture in its own goroutine so the API call returns
+	// Drive the capture on a supervised worker so the API call returns
 	// promptly. StartCaptureContext blocks until ctx is cancelled or
 	// the engine errors out, and invokes our handler synchronously
 	// for every packet — which is fine because the handler is just a
-	// counter bump + non-blocking SSE broadcast.
-	go d.runStandaloneCapture(ctx, session)
+	// counter bump + non-blocking SSE broadcast. Fatal, not a restart: a
+	// loop that returned has lost its packet source, and restarting it
+	// would spin on a closed handle. The loop follows the session context
+	// rather than the worker's, because only closing the engine ends it.
+	session.workers = supervise.New(nil)
+	session.workers.Add("standalone-capture", supervise.Fatal, func(context.Context) error {
+		d.runStandaloneCapture(ctx, session)
+		return nil
+	})
+	session.workers.Start(context.Background())
 
 	logging.Successf("✓ Standalone capture started on %s", req.Interface)
 	return nil
 }
 
 // runStandaloneCapture is the engine.StartCaptureContext driver loop.
-// Lives on its own goroutine; exits when ctx is cancelled (StopCapture
+// Runs as a supervised worker; exits when ctx is cancelled (StopCapture
 // or daemon shutdown) or when the engine surfaces an unrecoverable
-// error.
+// error. A panic in the engine or handler ends the session as a failure
+// before the supervisor logs it, so status stops claiming it is running.
 func (d *Daemon) runStandaloneCapture(ctx context.Context, c *standaloneCapture) {
 	handler := func(pkt gopacket.Packet) {
 		c.packets.Add(1)
@@ -108,7 +137,14 @@ func (d *Daemon) runStandaloneCapture(ctx context.Context, c *standaloneCapture)
 		}
 	}
 
+	panicked := true
+	defer func() {
+		if panicked {
+			d.completeStandaloneCapture(c, errCaptureLoopPanicked)
+		}
+	}()
 	err := d.captureRunner(ctx, c.engine, handler)
+	panicked = false
 	if ctx.Err() != nil {
 		d.completeStandaloneCapture(c, nil)
 		return
@@ -153,6 +189,8 @@ func (d *Daemon) StopCapture() error {
 	session.stop()
 	d.capture = nil
 	d.mu.Unlock()
+	// Outside d.mu: the loop's completion takes it.
+	stopWorkers(session.workers, "standalone capture")
 	logging.Successf("✓ Standalone capture stopped on %s", session.iface)
 	return nil
 }
