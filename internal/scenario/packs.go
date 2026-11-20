@@ -9,7 +9,7 @@ const (
 	industrialSiteOctet         = 91
 	serviceProviderSiteOctet    = 101
 
-	packVersion = "1.4.0"
+	packVersion = "1.5.0"
 	// enterprise-scale is the stress case; P-PACK-1 resized every
 	// presentation pack around it and left it at 543 devices, so it keeps
 	// the version its manifest was signed at.

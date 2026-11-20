@@ -62,6 +62,8 @@ func TestShippedPacks(t *testing.T) {
 		{"EveryPackSiteCarriesAUPSThatAnswersUPSMIB", testEveryPackSiteCarriesAUPSThatAnswersUPSMIB},
 		{"EveryPackSiteCarriesItsNASAndRoomSystems", testEveryPackSiteCarriesItsNASAndRoomSystems},
 		{"EverySyslogSenderCanRouteToItsCollector", testEverySyslogSenderCanRouteToItsCollector},
+		{"ManufacturedNetworkDevicesAnswerEntityAndIfTable", testManufacturedNetworkDevicesAnswerEntityAndIfTable},
+		{"PackWalksShipWithTheContent", testPackWalksShipWithTheContent},
 		{"GeneratedAccessPointRadiosAnswerTheCaptureShape", testGeneratedAccessPointRadiosAnswerTheCaptureShape},
 		{"GeneratedAccessPointsAuthorTheirRadios", testGeneratedAccessPointsAuthorTheirRadios},
 		{"GeneratedAccessPointsJoinTheirSiteController", testGeneratedAccessPointsJoinTheirSiteController},
