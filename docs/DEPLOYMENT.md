@@ -47,6 +47,11 @@ brew install libpcap
 The archive includes launchd helper files under `launchd/` for users who want
 NIAC to run as a service.
 
+A service started this way approves no host interface, so a simulation start on
+an interface fails with `attachment_policy_denied` until the plist carries
+`--attachment-policy INTERFACE=direct`. See "Approving an interface" in
+[ATTACHMENTS.md](ATTACHMENTS.md).
+
 ## Daemon Simulation Recovery
 
 Daemon mode records the active simulation launch intent in
