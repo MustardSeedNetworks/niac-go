@@ -3,7 +3,12 @@ import {
   isScenarioRequestValid,
   type ScenarioGenerateRequest,
 } from '../../api/scenario-client';
-import type { LibraryNetwork } from '../../api/types';
+import type {
+  HistoryRecord,
+  LibraryNetwork,
+  NetworkInterface,
+  SimulationStatus,
+} from '../../api/types';
 
 /**
  * NewSimulationWizard step identifiers, in stepper order. Kept as a
@@ -49,6 +54,12 @@ export interface WizardState {
    * selection; editing any generator field drops the pack (#2185).
    */
   fleetPackId: string | null;
+  /**
+   * The pack the generator was tuned away from, so the UI can say the fleet is
+   * now custom rather than silently dropping the choice. Cleared by any other
+   * choice of starting point.
+   */
+  customizedFromPackId: string | null;
   selectedInterface: string;
   starting: boolean;
   saving: boolean;
@@ -61,6 +72,7 @@ export const initialWizardState: WizardState = {
   uploadFile: null,
   fleetRequest: defaultScenarioRequest(),
   fleetPackId: null,
+  customizedFromPackId: null,
   selectedInterface: '',
   starting: false,
   saving: false,
@@ -74,4 +86,55 @@ export function isStartingPointStepComplete(state: WizardState): boolean {
   if (state.source === 'upload') return state.uploadFile !== null;
   if (state.source === 'generated') return isScenarioRequestValid(state.fleetRequest);
   return false;
+}
+
+/**
+ * Start as-is runs an unmodified pack or library network, so it needs one of
+ * those chosen. A hand-tuned fleet, an upload and a blank start are authored
+ * content and go through the editing steps.
+ */
+export function canStartAsIs(state: WizardState): boolean {
+  if (!isStartingPointStepComplete(state)) return false;
+  if (state.source === 'userConfig') return true;
+  return state.source === 'generated' && state.fleetPackId !== null;
+}
+
+const loopbackAddress = /^(127\.|::1$)/;
+
+function isLoopbackInterface(iface: NetworkInterface): boolean {
+  if (/^lo\d*$/.test(iface.name)) return true;
+  return iface.addresses.length > 0 && iface.addresses.every((a) => loopbackAddress.test(a));
+}
+
+/**
+ * Loopback carries no traffic an operator can observe from another host, so it
+ * is hidden whenever a real interface exists. A host that offers nothing else
+ * keeps it, so the wizard cannot dead-end.
+ */
+export function selectableInterfaces(interfaces: NetworkInterface[]): NetworkInterface[] {
+  const real = interfaces.filter((iface) => !isLoopbackInterface(iface));
+  return real.length > 0 ? real : interfaces;
+}
+
+/** The interface of the most recent run that is still on offer, or ''. */
+export function lastUsedInterface(history: HistoryRecord[], offered: NetworkInterface[]): string {
+  const names = new Set(offered.map((iface) => iface.name));
+  let best = '';
+  let bestAt = Number.NEGATIVE_INFINITY;
+  for (const record of history) {
+    const at = Date.parse(record.startedAt);
+    if (!names.has(record.interface) || Number.isNaN(at) || at <= bestAt) continue;
+    best = record.interface;
+    bestAt = at;
+  }
+  return best;
+}
+
+/** Names of the running sessions already bound to `iface`. */
+export function sessionsOnInterface(status: SimulationStatus | null, iface: string): string[] {
+  if (!status || !iface) return [];
+  const sessions = status.sessions?.length ? status.sessions : [status];
+  return sessions
+    .filter((session) => session.running && session.interface === iface)
+    .map((session) => session.sessionId ?? session.configName ?? iface);
 }

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const request = {
   sites: [
@@ -29,7 +29,11 @@ const content = `devices:
 `;
 const generatedFleetContent = `${content}${'# generated fleet device metadata\n'.repeat(40_000)}`;
 
-test('selects a versioned scenario pack and creates an editable draft', async ({ page }) => {
+interface PackRoutes {
+  generated: () => boolean;
+}
+
+async function mockPackRoutes(page: Page): Promise<PackRoutes> {
   let generated = false;
   await page.route('**/api/v1/license', (route) =>
     route.fulfill({
@@ -122,7 +126,11 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
       },
     });
   });
+  return { generated: () => generated };
+}
 
+test('selects a versioned scenario pack and creates an editable draft', async ({ page }) => {
+  const routes = await mockPackRoutes(page);
   await page.goto('/new-simulation');
   await page.getByTestId('wizard-interface-select').selectOption('lo0');
   await page.getByTestId('scenario-pack-hospital').click();
@@ -155,6 +163,38 @@ test('selects a versioned scenario pack and creates an editable draft', async ({
   await expect(page.getByTestId('fleet-domain')).toHaveValue('care.example');
   await page.getByTestId('wizard-next-button').click();
 
-  await expect.poll(() => generated).toBe(true);
+  await expect.poll(routes.generated).toBe(true);
   await expect(page.getByRole('tab', { name: 'Visual topology', exact: true })).toBeVisible();
+});
+
+test('starts a scenario pack as-is on the connection step', async ({ page }) => {
+  const routes = await mockPackRoutes(page);
+  await page.route('**/api/v1/attachment-policies', (route) =>
+    route.fulfill({ json: { policies: [{ interface: 'lo0', mode: 'access', accessVlan: 200 }] } }),
+  );
+  await page.route('**/api/v1/simulation/attachments', (route) =>
+    route.fulfill({ json: { routed: true, attachments: ['cyberscope'] } }),
+  );
+
+  await page.goto('/new-simulation');
+  await page.getByTestId('wizard-interface-select').selectOption('lo0');
+  await expect(page.getByTestId('wizard-start-as-is-button')).toHaveCount(0);
+  await page.getByTestId('scenario-pack-hospital').click();
+  await page.getByTestId('wizard-start-as-is-button').click();
+
+  await expect.poll(routes.generated).toBe(true);
+  await expect(page.getByTestId('wizard-step-preflight')).toHaveAttribute('data-status', 'active');
+  await expect(page.getByTestId('wizard-preflight-check')).toBeVisible();
+});
+
+test('says so when editing the generator drops the chosen pack', async ({ page }) => {
+  await mockPackRoutes(page);
+
+  await page.goto('/new-simulation');
+  await page.getByTestId('scenario-pack-hospital').click();
+  await page.getByTestId('fleet-customize').click();
+  await page.getByTestId('fleet-domain').fill('custom.example');
+
+  await expect(page.getByTestId('fleet-customized-notice')).toBeVisible();
+  await expect(page.getByTestId('wizard-start-as-is-button')).toHaveCount(0);
 });

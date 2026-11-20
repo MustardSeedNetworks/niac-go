@@ -1,18 +1,26 @@
 import { Network } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchUsableInterfaces } from '../../api/client';
+import { fetchHistory, fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
-import type { LibraryNetwork, NetworkInterface } from '../../api/types';
+import type { LibraryNetwork, NetworkInterface, SimulationStatus } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { ConfigPicker } from '../simulation/ConfigPicker';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
-import type { WizardState } from './wizard-types';
+import { ScenarioPackPicker } from './ScenarioPackPicker';
+import {
+  lastUsedInterface,
+  selectableInterfaces,
+  sessionsOnInterface,
+  type WizardState,
+} from './wizard-types';
 
 interface StartingPointStepProps {
   state: WizardState;
+  /** The daemon's current status, to warn when the chosen interface is taken. */
+  activeSimulation: SimulationStatus | null;
   onSelectUserConfig: (config: LibraryNetwork) => void;
   onUpload: (file: File | null) => void;
   onSelectEmpty: () => void;
@@ -30,6 +38,7 @@ interface StartingPointStepProps {
  */
 export function StartingPointStep({
   state,
+  activeSimulation,
   onSelectUserConfig,
   onUpload,
   onSelectEmpty,
@@ -41,6 +50,8 @@ export function StartingPointStep({
   const { t } = useTranslation('pages');
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [loading, setLoading] = useState(true);
+  const [defaultInterface, setDefaultInterface] = useState('');
+  const defaulted = useRef(false);
   const [tab, setTab] = useState<'start' | 'library'>('start');
   const startTab = useRef<HTMLButtonElement>(null);
   const libraryTab = useRef<HTMLButtonElement>(null);
@@ -55,21 +66,32 @@ export function StartingPointStep({
 
   useEffect(() => {
     let cancelled = false;
-    fetchUsableInterfaces()
-      .then((resp) => {
-        if (!cancelled) setInterfaces(resp.interfaces);
-      })
-      .catch(() => {
-        // Best-effort — an empty list still lets the daemon-mode warning
-        // upstream explain what's missing.
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    // History only seeds the default, so its failure must not hide the
+    // interfaces; an empty list still lets the daemon-mode warning upstream
+    // explain what's missing.
+    Promise.allSettled([fetchUsableInterfaces(), fetchHistory()]).then(([usable, history]) => {
+      if (cancelled) return;
+      const offered =
+        usable.status === 'fulfilled' ? selectableInterfaces(usable.value.interfaces) : [];
+      setInterfaces(offered);
+      if (history.status === 'fulfilled' && Array.isArray(history.value)) {
+        setDefaultInterface(lastUsedInterface(history.value, offered));
+      }
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // One-shot, so an operator who clears the choice is not overruled.
+  useEffect(() => {
+    if (!defaultInterface || defaulted.current) return;
+    defaulted.current = true;
+    if (!state.selectedInterface) onInterfaceChange(defaultInterface);
+  }, [defaultInterface, state.selectedInterface, onInterfaceChange]);
+
+  const holders = sessionsOnInterface(activeSimulation, state.selectedInterface);
 
   const selection = {
     source:
@@ -129,6 +151,19 @@ export function StartingPointStep({
               {t('newSimWizard.start.startEmpty')}
             </button>
           </div>
+          {holders.length > 0 && (
+            <SmallText
+              data-testid="wizard-interface-in-use"
+              role="status"
+              className="text-status-warning"
+            >
+              {t('newSimWizard.start.interfaceInUse', {
+                interface: state.selectedInterface,
+                sessions: holders.join(', '),
+                count: holders.length,
+              })}
+            </SmallText>
+          )}
           <SmallText className="text-text-muted">{t('newSimWizard.start.help')}</SmallText>
         </CardContent>
       </Card>
@@ -181,6 +216,10 @@ export function StartingPointStep({
       >
         {tab === 'start' ? (
           <>
+            <ScenarioPackPicker
+              selectedPackId={state.source === 'generated' ? state.fleetPackId : null}
+              onSelectPack={onSelectPack}
+            />
             {selection.source && (
               <button
                 type="button"
@@ -196,10 +235,13 @@ export function StartingPointStep({
             <FleetGeneratorCard
               request={state.fleetRequest}
               selected={state.source === 'generated' && state.fleetPackId === null}
-              selectedPackId={state.source === 'generated' ? state.fleetPackId : null}
+              customizedFromPackId={
+                state.source === 'generated' && state.fleetPackId === null
+                  ? state.customizedFromPackId
+                  : null
+              }
               onChange={onFleetChange}
               onSelect={onSelectFleet}
-              onSelectPack={onSelectPack}
             />
           </>
         ) : (

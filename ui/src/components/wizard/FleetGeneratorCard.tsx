@@ -6,22 +6,20 @@ import {
   maxSiteWorkstations,
   type ScenarioCounts,
   type ScenarioGenerateRequest,
-  type ScenarioPack,
 } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
-import { ScenarioPackPicker } from './ScenarioPackPicker';
 
 interface FleetGeneratorCardProps {
   request: ScenarioGenerateRequest;
   /** True only for the hand-tuned fleet; a pack selection highlights its own card. */
   selected: boolean;
-  selectedPackId: string | null;
+  /** Set when the fleet was tuned away from a scenario pack. */
+  customizedFromPackId: string | null;
   onChange: (request: ScenarioGenerateRequest) => void;
   onSelect: () => void;
-  onSelectPack: (pack: ScenarioPack) => void;
 }
 
 const countFields: Array<keyof ScenarioCounts> = [
@@ -52,10 +50,9 @@ const countLimits: Record<keyof ScenarioCounts, { min: number; max: number; step
 export function FleetGeneratorCard({
   request,
   selected,
-  selectedPackId,
+  customizedFromPackId,
   onChange,
   onSelect,
-  onSelectPack,
 }: FleetGeneratorCardProps) {
   const { t } = useTranslation('pages');
   const updateCount = (field: keyof ScenarioCounts, value: number) => {
@@ -113,7 +110,19 @@ export function FleetGeneratorCard({
           </Button>
         </div>
 
-        <ScenarioPackPicker selectedPackId={selectedPackId} onSelectPack={onSelectPack} />
+        {customizedFromPackId && (
+          <SmallText
+            data-testid="fleet-customized-notice"
+            role="status"
+            className="text-status-warning"
+          >
+            {t('newSimWizard.fleet.customizedFromPack', {
+              pack: t(`newSimWizard.fleet.packMetadata.${customizedFromPackId}.name`, {
+                defaultValue: customizedFromPackId,
+              }),
+            })}
+          </SmallText>
+        )}
 
         <details className="stack-default">
           <summary

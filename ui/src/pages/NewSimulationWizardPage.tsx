@@ -22,6 +22,7 @@ import { StartingPointStep } from '../components/wizard/StartingPointStep';
 import { WizardStatusNotice } from '../components/wizard/WizardStatusNotice';
 import { WizardStepper } from '../components/wizard/WizardStepper';
 import {
+  canStartAsIs,
   initialWizardState,
   isStartingPointStepComplete,
   WIZARD_STEPS,
@@ -47,6 +48,9 @@ const EMPTY_CONFIG_YAML = 'devices: []\n';
  * and silently drop it on Next or Back.
  */
 const CONTENT_EDITING_STEPS = new Set(['devices', 'networks', 'protocols']);
+
+const DEVICES_STEP = WIZARD_STEPS.indexOf('devices');
+const PREFLIGHT_STEP = WIZARD_STEPS.indexOf('preflight');
 
 function selectedSourceKey(state: WizardState) {
   if (state.source === 'userConfig' && state.userConfig) return `network:${state.userConfig.name}`;
@@ -101,49 +105,52 @@ export function NewSimulationWizardPage() {
     label: t(`newSimWizard.steps.${id}`),
   }));
 
-  const prepareConfig = useCallback(async () => {
-    if (permission.disabled) return;
-    setState((s) => ({ ...s, starting: true }));
-    try {
-      const sourceKey = selectedSourceKey(state);
-      if (draft && sourceKey === draftSourceKey) {
-        setDraftContent(draft.content);
+  const prepareConfig = useCallback(
+    async (targetStep: number) => {
+      if (permission.disabled) return;
+      setState((s) => ({ ...s, starting: true }));
+      try {
+        const sourceKey = selectedSourceKey(state);
+        if (draft && sourceKey === draftSourceKey) {
+          setDraftContent(draft.content);
+          setDraftDirty(false);
+          setState((s) => ({ ...s, step: targetStep, starting: false }));
+          return;
+        }
+
+        const draftName = newDraftName();
+        let created: ScenarioDraft;
+
+        if (state.source === 'userConfig' && state.userConfig) {
+          const content = (await fetchLibraryNetworkContent(state.userConfig.name)).content;
+          created = await createScenarioDraft(draftName, content);
+        } else if (state.source === 'upload' && state.uploadFile) {
+          created = await createScenarioDraft(draftName, await fileToText(state.uploadFile));
+        } else if (state.source === 'empty') {
+          created = await createScenarioDraft(draftName, EMPTY_CONFIG_YAML);
+        } else if (state.source === 'generated') {
+          const generated = await generateScenario(state.fleetRequest);
+          created = await createScenarioDraft(draftName, generated.content);
+        } else {
+          throw new Error(t('newSimWizard.start.errorNoSource'));
+        }
+
+        // Changing the source mid-wizard used to leave the previous draft behind
+        // in the library, one per change of mind.
+        if (draft) await discardDraft(draft);
+
+        setDraft(created);
+        setDraftContent(created.content);
         setDraftDirty(false);
-        setState((s) => ({ ...s, step: 1, starting: false }));
-        return;
+        setDraftSourceKey(sourceKey);
+        setState((s) => ({ ...s, step: targetStep, starting: false }));
+      } catch (err) {
+        showError(err);
+        setState((s) => ({ ...s, starting: false }));
       }
-
-      const draftName = newDraftName();
-      let created: ScenarioDraft;
-
-      if (state.source === 'userConfig' && state.userConfig) {
-        const content = (await fetchLibraryNetworkContent(state.userConfig.name)).content;
-        created = await createScenarioDraft(draftName, content);
-      } else if (state.source === 'upload' && state.uploadFile) {
-        created = await createScenarioDraft(draftName, await fileToText(state.uploadFile));
-      } else if (state.source === 'empty') {
-        created = await createScenarioDraft(draftName, EMPTY_CONFIG_YAML);
-      } else if (state.source === 'generated') {
-        const generated = await generateScenario(state.fleetRequest);
-        created = await createScenarioDraft(draftName, generated.content);
-      } else {
-        throw new Error(t('newSimWizard.start.errorNoSource'));
-      }
-
-      // Changing the source mid-wizard used to leave the previous draft behind
-      // in the library, one per change of mind.
-      if (draft) await discardDraft(draft);
-
-      setDraft(created);
-      setDraftContent(created.content);
-      setDraftDirty(false);
-      setDraftSourceKey(sourceKey);
-      setState((s) => ({ ...s, step: 1, starting: false }));
-    } catch (err) {
-      showError(err);
-      setState((s) => ({ ...s, starting: false }));
-    }
-  }, [draft, draftSourceKey, discardDraft, state, showError, t, permission.disabled]);
+    },
+    [draft, draftSourceKey, discardDraft, state, showError, t, permission.disabled],
+  );
 
   const saveDraft = useCallback(async () => {
     if (!draft || !draftDirty) return true;
@@ -195,12 +202,16 @@ export function NewSimulationWizardPage() {
 
   const goNext = useCallback(async () => {
     if (state.step === 0) {
-      await prepareConfig();
+      await prepareConfig(DEVICES_STEP);
       return;
     }
     if (CONTENT_EDITING_STEPS.has(WIZARD_STEPS[state.step] ?? '') && !(await saveDraft())) return;
     setState((s) => ({ ...s, step: Math.min(WIZARD_STEPS.length - 1, s.step + 1) }));
   }, [state.step, prepareConfig, saveDraft]);
+
+  // The draft is created exactly as Next creates it; only the content-editing
+  // steps are skipped, and Back from Connection still lands on Review.
+  const startAsIs = useCallback(() => prepareConfig(PREFLIGHT_STEP), [prepareConfig]);
 
   // Only offered once a draft exists: before that there is nothing to abandon
   // and the author can simply navigate away.
@@ -250,12 +261,15 @@ export function NewSimulationWizardPage() {
         {state.step === 0 && (
           <StartingPointStep
             state={state}
+            activeSimulation={simStatus}
             onSelectUserConfig={(userConfig: LibraryNetwork) =>
               setState((s) => ({
                 ...s,
                 source: 'userConfig',
                 userConfig,
                 uploadFile: null,
+                fleetPackId: null,
+                customizedFromPackId: null,
               }))
             }
             onUpload={(file: File | null) =>
@@ -264,6 +278,8 @@ export function NewSimulationWizardPage() {
                 source: file ? 'upload' : s.source,
                 uploadFile: file,
                 userConfig: file ? null : s.userConfig,
+                fleetPackId: file ? null : s.fleetPackId,
+                customizedFromPackId: file ? null : s.customizedFromPackId,
               }))
             }
             onSelectEmpty={() =>
@@ -272,6 +288,8 @@ export function NewSimulationWizardPage() {
                 source: 'empty',
                 userConfig: null,
                 uploadFile: null,
+                fleetPackId: null,
+                customizedFromPackId: null,
               }))
             }
             onSelectFleet={() =>
@@ -279,6 +297,7 @@ export function NewSimulationWizardPage() {
                 ...s,
                 source: 'generated',
                 fleetPackId: null,
+                customizedFromPackId: s.fleetPackId ?? s.customizedFromPackId,
                 userConfig: null,
                 uploadFile: null,
               }))
@@ -288,6 +307,7 @@ export function NewSimulationWizardPage() {
                 ...s,
                 source: 'generated',
                 fleetPackId: pack.id,
+                customizedFromPackId: null,
                 fleetRequest: pack.request,
                 userConfig: null,
                 uploadFile: null,
@@ -295,7 +315,12 @@ export function NewSimulationWizardPage() {
             }
             // Tuning any generator field means this is no longer that pack.
             onFleetChange={(fleetRequest) =>
-              setState((s) => ({ ...s, fleetRequest, fleetPackId: null }))
+              setState((s) => ({
+                ...s,
+                fleetRequest,
+                fleetPackId: null,
+                customizedFromPackId: s.fleetPackId ?? s.customizedFromPackId,
+              }))
             }
             onInterfaceChange={(iface: string) =>
               setState((s) => ({ ...s, selectedInterface: iface }))
@@ -381,19 +406,33 @@ export function NewSimulationWizardPage() {
             </Button>
             {cancelButton}
           </div>
-          <Button
-            tone="violet"
-            data-testid="wizard-next-button"
-            disabled={!canProceed}
-            onClick={() => void goNext()}
-            action={state.step === 0 ? 'edit' : undefined}
-          >
-            {state.step === 0 && state.starting
-              ? t('newSimWizard.start.startingLabel')
-              : currentStep === 'devices' && state.saving
-                ? t('newSimWizard.devices.savingLabel')
-                : t('newSimWizard.nextLabel')}
-          </Button>
+          <div className="flex gap-default">
+            {state.step === 0 && canStartAsIs(state) && (
+              <Button
+                tone="violet"
+                data-testid="wizard-start-as-is-button"
+                disabled={!canProceed}
+                onClick={() => void startAsIs()}
+                action="edit"
+              >
+                {t('newSimWizard.start.startAsIs')}
+              </Button>
+            )}
+            <Button
+              tone="violet"
+              variant={state.step === 0 && canStartAsIs(state) ? 'outline' : 'solid'}
+              data-testid="wizard-next-button"
+              disabled={!canProceed}
+              onClick={() => void goNext()}
+              action={state.step === 0 ? 'edit' : undefined}
+            >
+              {state.step === 0 && state.starting
+                ? t('newSimWizard.start.startingLabel')
+                : currentStep === 'devices' && state.saving
+                  ? t('newSimWizard.devices.savingLabel')
+                  : t('newSimWizard.nextLabel')}
+            </Button>
+          </div>
         </div>
       )}
     </div>

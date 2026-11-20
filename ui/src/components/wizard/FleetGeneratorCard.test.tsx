@@ -5,8 +5,6 @@ import { defaultScenarioRequest } from '../../api/scenario-client';
 import '../../i18n';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
 
-vi.mock('./ScenarioPackPicker', () => ({ ScenarioPackPicker: () => null }));
-
 describe('FleetGeneratorCard', () => {
   it('exposes bounded repeat controls and reports edits', () => {
     const onChange = vi.fn();
@@ -14,10 +12,9 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={defaultScenarioRequest()}
         selected={false}
-        selectedPackId={null}
+        customizedFromPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
-        onSelectPack={vi.fn()}
       />,
     );
 
@@ -40,10 +37,9 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={defaultScenarioRequest()}
         selected
-        selectedPackId={null}
+        customizedFromPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
-        onSelectPack={vi.fn()}
       />,
     );
 
@@ -66,10 +62,9 @@ describe('FleetGeneratorCard', () => {
       <FleetGeneratorCard
         request={request}
         selected
-        selectedPackId={null}
+        customizedFromPackId={null}
         onChange={onChange}
         onSelect={vi.fn()}
-        onSelectPack={vi.fn()}
       />,
     );
 
@@ -97,5 +92,21 @@ describe('FleetGeneratorCard', () => {
     expect(
       screen.getByRole('spinbutton', { name: 'Wired workstations per access switch' }),
     ).toHaveAttribute('max', '11');
+  });
+
+  it('says so when the fleet was tuned away from a pack', () => {
+    render(
+      <FleetGeneratorCard
+        request={defaultScenarioRequest()}
+        selected
+        customizedFromPackId="hospital"
+        onChange={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('fleet-customized-notice')).toHaveTextContent(
+      'Customized from Hospital network. This is now a custom fleet.',
+    );
   });
 });
