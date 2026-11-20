@@ -348,7 +348,8 @@
       "sites": "Sitios",
       "snmpCommunity": "Comunidad SNMP",
       "title": "Generar una flota multisitio",
-      "customize": "Personalizar el conjunto generado"
+      "customize": "Personalizar el conjunto generado",
+      "customizedFromPack": "Personalizado a partir de {{pack}}. Ahora es una flota personalizada."
     },
     "fleetDefaults": {
       "captureHelp": "Reproduce una captura grabada junto a los dispositivos simulados. Solo una captura: el runtime reproduce exactamente una y el cargador rechaza más.",
@@ -438,7 +439,10 @@
       "startingLabel": "Preparando borrador…",
       "startingPoint": "Punto de partida",
       "browseLibrary": "Explorar biblioteca",
-      "librarySelection": "Seleccionado: {{name}} — cambiar selección"
+      "librarySelection": "Seleccionado: {{name}} — cambiar selección",
+      "startAsIs": "Iniciar tal cual",
+      "interfaceInUse_one": "{{sessions}} ya se está ejecutando en {{interface}}.",
+      "interfaceInUse_other": "{{sessions}} ya se están ejecutando en {{interface}}."
     },
     "title": "Nueva simulación",
     "topology": {

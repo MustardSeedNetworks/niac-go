@@ -534,6 +534,7 @@
         "workstationsPerAccess": "Wired workstations per access switch"
       },
       "customize": "Customize the generated fleet",
+      "customizedFromPack": "Customized from {{pack}}. This is now a custom fleet.",
       "domain": "DNS domain",
       "help": "Start with the validated enterprise design, then adjust sites and device counts. NIAC assigns identities, addressing, ports, VLANs, services, and links consistently.",
       "invalid": "Resolve the fleet values before continuing.",
@@ -660,8 +661,11 @@
       "browseLibrary": "Browse library",
       "errorNoSource": "Pick a library network, upload, or Start empty first",
       "help": "Pick a starting config below, or start empty and add devices in the next step.",
+      "interfaceInUse_one": "{{sessions}} is already running on {{interface}}.",
+      "interfaceInUse_other": "{{sessions}} are already running on {{interface}}.",
       "interfaceLabel": "Network interface",
       "librarySelection": "Selected: {{name}} — change selection",
+      "startAsIs": "Start as-is",
       "startEmpty": "Start empty",
       "startingLabel": "Preparing draft…",
       "startingPoint": "Starting point"
