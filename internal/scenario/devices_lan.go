@@ -155,12 +155,10 @@ func accessPointInterfaces(site Site, address string) []converter.Interface {
 	interfaces := make([]converter.Interface, 0, len(radios)+1)
 	for index, radio := range radios {
 		name := fmt.Sprintf("Dot11Radio%d", index)
-		inUtilization, outUtilization := utilization(name)
 		interfaces = append(interfaces, converter.Interface{
 			Name: name, Type: "ieee80211", MTU: standardMTU, Speed: radio.speedMbps,
 			AdminStatus: "up", OperStatus: "up",
-			Description:   name + " " + radio.label,
-			InUtilization: inUtilization, OutUtilization: outUtilization,
+			Description: name + " " + radio.label,
 		})
 	}
 	return append(interfaces, newInterface(

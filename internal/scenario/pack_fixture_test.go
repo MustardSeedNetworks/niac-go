@@ -48,6 +48,7 @@ func TestShippedPacks(t *testing.T) {
 		run  func(*testing.T, *packFixture)
 	}{
 		{"AccessPointSerialsAreUnique", testAccessPointSerialsAreUnique},
+		{"BaselineUtilizationIsRoleBased", testBaselineUtilizationIsRoleBased},
 		{"CampusCollapsesTheCore", testCampusCollapsesTheCore},
 		{"CompactNameShape", testCompactNameShape},
 		{"DeclaredLinksAreDiscoverable", testDeclaredLinksAreDiscoverable},

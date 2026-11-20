@@ -8,44 +8,22 @@ import (
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
 
-const (
-	steadyFloor       = 50
-	peakFloor         = 70
-	wantSteadyPercent = 50
+// Link-Live raises an interface Warning above 80% utilization. Measured
+// against a live discovery: interfaces up to 78.7% stayed clean, 81.8% and
+// above were flagged. A healthy baseline sits far below that line (see
+// TestShippedPacks/BaselineUtilizationIsRoleBased); the only interfaces at or
+// above it are the ones a pack deliberately calls out as its story.
+const utilizationWarningFloor = 80
 
-	// Link-Live raises an interface Warning above 80% utilization. Measured
-	// against a live discovery: interfaces up to 78.7% stayed clean, 81.8% and
-	// above were flagged. The generated band must stay below that line so a demo
-	// map reads healthy instead of amber; the only interfaces above it are the
-	// ones a pack deliberately calls out as its story.
-	utilizationWarningFloor = 80
-)
-
-// A demo network has to look busy. Authored utilization sits mostly in the
-// 50-70% band, peaks higher on a minority of interfaces, and leaves a few quiet
-// — always below the Link-Live warning threshold.
 func assertAuthoredUtilization(t *testing.T, pack scenario.Pack, cfg *config.Config) {
 	t.Helper()
-	steady, total := packUtilizationBands(t, pack, cfg)
-	if total == 0 {
-		t.Fatalf("%s authored no interface utilization", pack.ID)
-	}
-	if got := steady * 100 / total; got < wantSteadyPercent {
-		t.Errorf("%s steady-band utilization = %d%%, want at least %d%%",
-			pack.ID, got, wantSteadyPercent)
-	}
-}
-
-func packUtilizationBands(t *testing.T, pack scenario.Pack, cfg *config.Config) (int, int) {
-	t.Helper()
-	var steady, total int
-	// A pack's finding is armed at runtime now, so the authored band under it
-	// stays in the steady range; the map on disk is healthy and the fault is
-	// what a consumer sees.
+	// A pack's finding is armed at runtime, so the authored value under it is
+	// zero and the fault is what a consumer sees.
 	authored := make(map[string]bool, len(pack.Request.Faults))
 	for _, fault := range pack.Request.Faults {
 		authored[fault.Device+"|"+fault.Interface] = true
 	}
+	total := 0
 	for index := range cfg.Devices {
 		device := &cfg.Devices[index]
 		for _, iface := range device.Interfaces {
@@ -56,13 +34,12 @@ func packUtilizationBands(t *testing.T, pack scenario.Pack, cfg *config.Config) 
 					t.Errorf("%s %s %s utilization %.0f%% would trip the Link-Live warning at %d%%",
 						pack.ID, device.Name, iface.Name, value, utilizationWarningFloor)
 				}
-				if value >= steadyFloor && value < peakFloor {
-					steady++
-				}
 			}
 		}
 	}
-	return steady, total
+	if total == 0 {
+		t.Fatalf("%s authored no interface utilization", pack.ID)
+	}
 }
 
 // Every device must announce its own name by some means, or it renders as a

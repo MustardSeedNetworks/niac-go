@@ -215,7 +215,7 @@ const (
 //
 // InterfacesSHA256 joined the pinned set once the packs began authoring faults:
 // it covers the operational facts a collector reads -- speed, duplex, both
-// statuses and the utilization band -- so an edit that moves an interface a
+// statuses and MTU, but not utilization -- so an edit that moves an interface a
 // consumer polls trips the contract. Without it the ifTable was the one piece of
 // authored truth a change could move silently, since the manifest test asserted
 // only that the digest was non-empty.

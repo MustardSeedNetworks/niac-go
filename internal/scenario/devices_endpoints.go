@@ -363,7 +363,7 @@ func medEndpoint(request Request, site Site, role string, index, hostOffset int)
 		speedOneGigabit,
 		profile.Platform+" access",
 	)
-	access.InUtilization, access.OutUtilization = utilization(name + "/eth0")
+	access.InUtilization, access.OutUtilization = baselineLoad(name+"/eth0", loadEndpoint)
 
 	device := converter.Device{
 		Name: name, Type: profile.DeviceType, Vendor: profile.Vendor,
