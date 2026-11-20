@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.125.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.51...v0.125.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** start a scenario pack as-is from the wizard ([#3040](https://github.com/MustardSeedNetworks/niac-go/issues/3040)) ([641527c](https://github.com/MustardSeedNetworks/niac-go/commit/641527caace88e1e68caafba710fa0bf5f19a7f1)), closes [#3035](https://github.com/MustardSeedNetworks/niac-go/issues/3035)
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/crypto to v0.59.0 [security] ([#3034](https://github.com/MustardSeedNetworks/niac-go/issues/3034)) ([16fe66c](https://github.com/MustardSeedNetworks/niac-go/commit/16fe66cca8957df0529bbd0897bebc1a848c17f1))
+
 ## [0.124.51](https://github.com/MustardSeedNetworks/niac-go/compare/v0.124.50...v0.124.51) (2026-11-20)
 
 
