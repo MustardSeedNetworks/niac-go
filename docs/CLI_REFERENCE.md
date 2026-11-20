@@ -23,6 +23,10 @@ Complete command-line reference for NIAC-Go.
 
 - [`niac analyze-pcap`](#niac-analyze-pcap) — summarise a packet capture by protocol
 - [`niac analyze-walk`](#niac-analyze-walk) — analyze an SNMP walk file: device, interfaces, and LLDP/CDP neighbors
+- [`niac attachment-policy`](#niac-attachment-policy) — approve the host interfaces simulations may bind
+- [`niac attachment-policy add`](#niac-attachment-policy-add) — approve an interface in the policy file
+- [`niac attachment-policy list`](#niac-attachment-policy-list) — list the policies in the policy file
+- [`niac attachment-policy remove`](#niac-attachment-policy-remove) — withdraw an approval from the policy file
 - [`niac backup`](#niac-backup) — archive the content library
 - [`niac completion`](#niac-completion) — generate completion script
 - [`niac config`](#niac-config) — configuration management tools
@@ -153,6 +157,107 @@ niac analyze-walk --show-neighbors device.walk
 
 # Write a Graphviz (DOT) neighbor graph
 niac analyze-walk --graphviz topology.dot device.walk
+```
+
+### `niac attachment-policy`
+
+Approve the host interfaces simulations may bind.
+
+```text
+niac attachment-policy
+```
+
+```text
+Manage the root-owned policy file listing the physical attachments the daemon
+approves: which host interface a simulation may bind, in which mode, on which
+VLANs. A scenario that routes through a host interface fails preflight with
+attachment_policy_denied until its interface is approved here or with a
+--attachment-policy flag.
+
+The file is attachment-policy.conf in the daemon's configuration directory:
+/usr/local/niac on macOS, /etc/niac on Linux, %ProgramData%\NiAC on Windows.
+It holds one policy per line in the --attachment-policy syntax
+(INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...); blank lines and lines starting with # are ignored.
+The daemon reads it at start, so a change needs a daemon restart, and any
+running simulation stops with it. It merges with --attachment-policy flags:
+the same policy in both counts once, a contradiction stops the daemon. A file
+anyone but root (SYSTEM or Administrators on Windows) could have written is
+ignored. There is no API to change it: an API client must not approve its own
+NIC.
+```
+
+Examples:
+
+```bash
+# Approve a directly connected tester on en16, then restart the daemon
+sudo niac attachment-policy add en16=direct
+
+# See what the file approves
+niac attachment-policy list
+```
+
+### `niac attachment-policy add`
+
+Approve an interface in the policy file.
+
+```text
+niac attachment-policy add <POLICY>
+```
+
+```text
+Add one policy to the policy file, creating the file if needed. Run as root
+(an elevated shell on Windows). Adding a policy the file already holds changes
+nothing.
+```
+
+Examples:
+
+```bash
+sudo niac attachment-policy add en16=direct
+sudo niac attachment-policy add eth0=access:200
+sudo niac attachment-policy add eth0=trunk:200,201,202
+```
+
+### `niac attachment-policy list`
+
+List the policies in the policy file.
+
+```text
+niac attachment-policy list
+```
+
+```text
+List the policies in the policy file. Policies passed to the daemon as flags
+are not in the file; 'GET /api/v1/attachment-policies' lists what the running
+daemon actually approved. On Linux the package makes /etc/niac readable only
+by root and the niac service account, so run it with sudo there.
+```
+
+Examples:
+
+```bash
+niac attachment-policy list
+```
+
+### `niac attachment-policy remove`
+
+Withdraw an approval from the policy file.
+
+```text
+niac attachment-policy remove <POLICY>
+```
+
+```text
+Remove one policy from the policy file. Run as root (an elevated shell on
+Windows). The argument must match a line of the file exactly as 'list' prints it;
+a policy the daemon was given as a flag is not in the file and is removed by
+dropping the flag.
+```
+
+Examples:
+
+```bash
+sudo niac attachment-policy remove en16=direct
 ```
 
 ### `niac backup`
@@ -609,6 +714,12 @@ engine, allowing you to:
 The daemon serves HTTPS on 127.0.0.1:8445 by default. Binding to a
 non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
 NIAC_API_TOKEN or --api-token.
+
+Physical attachments a simulation may bind come from --attachment-policy flags
+and from the root-owned policy file 'niac attachment-policy' manages; the
+daemon merges both at start and refuses to start if they contradict. A policy
+file that anyone but root could have written is ignored with an error in the
+log.
 ```
 
 Flags:
@@ -618,7 +729,7 @@ Flags:
       --api-token string                Bearer token (preferred: NIAC_API_TOKEN). Required when --listen is non-loopback.
       --attachment string               With --once, the logical attachment to bind
       --attachment-mode string          With --once, the physical binding mode: direct, access or trunk (default "direct")
-      --attachment-policy stringArray   Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...
+      --attachment-policy stringArray   Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,.... Merged with the policy file (see 'niac attachment-policy').
       --cert-dir string                 Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)
   -d, --debug int                       Simulation log verbosity: 0 quiet, 1 normal, 2 verbose, 3 trace (default 1)
       --duration duration               With --once, how long to run before stopping (0 runs until interrupted)
@@ -652,6 +763,9 @@ niac daemon --attachment-policy eth0=trunk:200,201,202,203,204,205,299
 
 # Permit a directly connected untagged tester
 niac daemon --attachment-policy eth1=direct
+
+# Approve an interface permanently instead (root-owned policy file, read at start)
+sudo niac attachment-policy add eth1=direct
 
 # Disable run-history persistence
 niac daemon --storage disabled
@@ -1496,7 +1610,7 @@ Generate the YAML for one scenario pack (see 'niac scenario list').
 
 With no flags the YAML goes to stdout. -o writes it to a file. --save stores it
 in the running daemon's library instead and prints the command that starts it;
-the daemon must approve the host interface with --attachment-policy before that
+the daemon must approve the host interface (niac attachment-policy) before that
 start will pass preflight.
 ```
 

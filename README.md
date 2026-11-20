@@ -62,6 +62,7 @@ sudo ./niac daemon
 | --- | --- |
 | `niac analyze-pcap <pcap-file>` | Summarise a packet capture by protocol |
 | `niac analyze-walk <walk-file>` | Analyze an SNMP walk file: device, interfaces, and LLDP/CDP neighbors |
+| `niac attachment-policy` | Approve the host interfaces simulations may bind |
 | `niac backup <archive.tar.gz>` | Archive the content library |
 | `niac completion [bash\|zsh\|fish\|powershell]` | Generate completion script |
 | `niac config` | Configuration management tools |

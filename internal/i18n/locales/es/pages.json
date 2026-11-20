@@ -407,7 +407,7 @@
       "sessionIdLabel": "ID del escenario",
       "vlanLabel": "VLAN física (1–4094)",
       "approvedVlanLabel": "VLAN física (aprobada por el operador)",
-      "noPolicyNotice": "Ninguna política de conexión aprobada por el operador menciona {{interface}}. Un escenario enrutado no puede iniciarse hasta que el daemon se inicie con --attachment-policy para esta interfaz.",
+      "noPolicyNotice": "Ninguna política de conexión aprobada por el operador menciona {{interface}}. Un escenario enrutado no puede iniciarse hasta que un operador apruebe esta interfaz con niac attachment-policy y reinicie el daemon.",
       "resolvingBinding": "Leyendo las opciones de conexión aprobadas…",
       "requestError": "Falló la comprobación previa",
       "safe_one": "La topología y la conexión pasaron la comprobación para {{count}} red virtual. Verifique el aislamiento del host antes de conectar el probador.",

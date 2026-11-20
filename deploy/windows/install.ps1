@@ -41,6 +41,25 @@ if ($MachinePath -notlike "*$InstallDir*") {
     Write-Host "  Added $InstallDir to system PATH"
 }
 
+# The operator's attachment policy file: created once and never overwritten, so
+# a reinstall keeps what the operator approved. Only SYSTEM and Administrators
+# may write it (everyone may read it); the daemon ignores it otherwise.
+$PolicyDir = Join-Path $env:ProgramData "NiAC"
+$PolicyFile = Join-Path $PolicyDir "attachment-policy.conf"
+if (-not (Test-Path $PolicyFile)) {
+    New-Item -ItemType Directory -Force -Path $PolicyDir | Out-Null
+    Set-Content -Path $PolicyFile -Encoding ascii -Value @(
+        "# Physical attachments the NIAC daemon approves, one INTERFACE=MODE per line",
+        "# (direct, access:VLAN or trunk:VLAN,...). Manage it with: niac attachment-policy"
+    )
+    & icacls.exe $PolicyFile /inheritance:r /grant:r "*S-1-5-18:(F)" "*S-1-5-32-544:(F)" "*S-1-5-32-545:(R)" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Remove-Item -Force $PolicyFile
+        Write-Error "Could not restrict $PolicyFile to SYSTEM and Administrators (icacls exit code $LASTEXITCODE)."
+        exit $LASTEXITCODE
+    }
+}
+
 Write-Host "  Installing Windows service..."
 if ($null -eq $ExistingService) {
     & $InstalledBinary service install

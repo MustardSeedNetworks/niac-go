@@ -70,7 +70,7 @@ func runDaemonOnce(options *daemonOptions, info versionInfo, args []string) erro
 		return withExitCode(onceExitConfig, err)
 	}
 
-	policies, err := parseAttachmentPolicies(options.attachmentPolicies)
+	policies, err := resolveAttachmentPolicies(options.attachmentPolicies)
 	if err != nil {
 		return withExitCode(onceExitConfig, err)
 	}

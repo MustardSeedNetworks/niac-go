@@ -87,6 +87,12 @@ func (p *niacProgram) run() {
 	}
 	defer func() { _ = lock.Release() }()
 
+	policies, policyErr := resolveAttachmentPolicies(nil)
+	if policyErr != nil {
+		logging.Errorf("Refusing to start: %v", policyErr)
+		return
+	}
+
 	d, err := daemon.NewDaemon(daemon.Config{
 		ListenAddr:   listen,
 		Token:        resolveAPIToken(""),
@@ -98,6 +104,8 @@ func (p *niacProgram) run() {
 		UIBuildHash:  p.info.uiBuildHash,
 		CertDir:      defaultCertDir(),
 		DebugLevel:   daemon.DefaultDebugLevel,
+
+		AttachmentPolicies: policies,
 	})
 	if err != nil {
 		logging.Errorf("Failed to create daemon: %v", err)

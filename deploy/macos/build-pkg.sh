@@ -101,6 +101,22 @@ set -e
 mkdir -p /usr/local/niac/logs
 mkdir -p /usr/local/niac/data
 
+# The operator's attachment policy file: created once, root-owned, and never
+# touched again so an upgrade keeps what the operator approved. The daemon
+# ignores it unless only root can write it.
+POLICY_FILE=/usr/local/niac/attachment-policy.conf
+if [ ! -e "$POLICY_FILE" ]; then
+    (
+        umask 022
+        cat > "$POLICY_FILE" << 'POLICY'
+# Physical attachments the NIAC daemon approves, one INTERFACE=MODE per line
+# (direct, access:VLAN or trunk:VLAN,...). Manage it with: sudo niac attachment-policy
+POLICY
+    )
+    chown root:wheel "$POLICY_FILE"
+    chmod 644 "$POLICY_FILE"
+fi
+
 # Load the launchd service
 launchctl load -w /Library/LaunchDaemons/com.niac.plist 2>/dev/null || true
 

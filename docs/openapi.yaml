@@ -237,7 +237,7 @@ paths:
     /api/v1/attachment-policies:
         get:
             description: |
-                The daemon's --attachment-policy set: which host interface may be bound, in which mode, and on which VLANs. A start outside this set is refused with attachment_policy_denied, so a client offers a binding from here rather than guessing one.
+                The daemon's approved attachment policy set (its --attachment-policy flags merged with the root-owned policy file): which host interface may be bound, in which mode, and on which VLANs. A start outside this set is refused with attachment_policy_denied, so a client offers a binding from here rather than guessing one.
             operationId: getApiV1AttachmentPolicies
             responses:
                 "401":

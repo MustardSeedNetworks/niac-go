@@ -13,6 +13,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/MustardSeedNetworks/niac-go/internal/attachpolicy"
 	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/scenario"
 )
@@ -256,12 +257,12 @@ func TestPolicyDeniedMessageNamesAnApprovingFlag(t *testing.T) {
 			if !strings.Contains(message, `interface "`+tt.binding.Interface+`"`) {
 				t.Fatalf("message does not name the interface: %q", message)
 			}
-			_, after, found := strings.Cut(message, "--attachment-policy ")
+			_, after, found := strings.Cut(message, "niac attachment-policy add ")
 			if !found {
-				t.Fatalf("message names no flag: %q", message)
+				t.Fatalf("message names no command: %q", message)
 			}
-			value, _, _ := strings.Cut(after, " ")
-			policy, err := parseAttachmentPolicy(value)
+			value, _, _ := strings.Cut(after, "`")
+			policy, err := attachpolicy.Parse(value)
 			if err != nil {
 				t.Fatalf("suggested value %q does not parse: %v", value, err)
 			}
@@ -278,7 +279,7 @@ func assertSaved(t *testing.T, daemon *fakeLibraryDaemon, output, attachment str
 		t.Fatalf("daemon did not receive the YAML under clinic: %d networks saved", len(daemon.saved))
 	}
 	want := "--config clinic.yaml --attachment " + attachment + " --attachment-mode direct"
-	if !strings.Contains(output, want) || !strings.Contains(output, "--attachment-policy <interface>=direct") {
+	if !strings.Contains(output, want) || !strings.Contains(output, "niac attachment-policy add <interface>=direct") {
 		t.Errorf("follow-up lacks %q:\n%s", want, output)
 	}
 }
