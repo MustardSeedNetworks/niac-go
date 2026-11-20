@@ -59,7 +59,8 @@ Complete command-line reference for NIAC-Go.
 - [`niac sanitize`](#niac-sanitize) — sanitize SNMP walk files with NIAC branding
 - [`niac scenario`](#niac-scenario) — manage built-in scenarios
 - [`niac scenario apply`](#niac-scenario-apply) — validate and display scenario information
-- [`niac scenario list`](#niac-scenario-list) — list available scenarios
+- [`niac scenario generate`](#niac-scenario-generate) — generate a scenario pack
+- [`niac scenario list`](#niac-scenario-list) — list available scenarios and scenario packs
 - [`niac scenario show`](#niac-scenario-show) — show scenario contents
 - [`niac scenario use`](#niac-scenario-use) — copy scenario to a new file
 - [`niac simulation`](#niac-simulation) — control scenarios through the running NIAC daemon
@@ -911,8 +912,8 @@ niac list scenarios
 ```
 
 ```text
-List runnable scenario sources. Built-in scenarios are always
-available. Installed library networks are shown when the content library can
+List runnable scenario sources. Built-in scenarios and scenario packs
+are always available (generate a pack with "niac scenario generate"). Installed library networks are shown when the content library can
 be opened.
 
 Each library network's status is what "niac validate" reports for it; an
@@ -1482,9 +1483,48 @@ niac scenario apply data-center
 niac scenario apply iot-network
 ```
 
+### `niac scenario generate`
+
+Generate a scenario pack.
+
+```text
+niac scenario generate <pack-id> [flags]
+```
+
+```text
+Generate the YAML for one scenario pack (see 'niac scenario list').
+
+With no flags the YAML goes to stdout. -o writes it to a file. --save stores it
+in the running daemon's library instead and prints the command that starts it;
+the daemon must approve the host interface with --attachment-policy before that
+start will pass preflight.
+```
+
+Flags:
+
+```text
+      --api string      Daemon API address (default: https://127.0.0.1:8445, or NIAC_API_URL)
+      --cacert string   Daemon certificate to trust (default: the local daemon's own, when visible)
+      --force           With --save, replace a library network of the same name
+      --insecure        Skip TLS verification, for a daemon whose certificate this host cannot see
+  -o, --output string   Write the YAML to this file instead of stdout
+      --save string     Save into the running daemon's library under this name
+```
+
+Examples:
+
+```bash
+# Write the hospital pack to a file
+niac scenario generate hospital -o hospital.yaml
+
+# Store it in the running daemon's library, then start it
+niac scenario generate hospital --save hospital
+niac simulation start -i en0 --config hospital.yaml --attachment cyberscope --attachment-mode direct
+```
+
 ### `niac scenario list`
 
-List available scenarios.
+List available scenarios and scenario packs.
 
 ```text
 niac scenario list
@@ -1494,6 +1534,8 @@ niac scenario list
 Print every bundled scenario name with a one-line description.
 They cover common small networks (basic-network, small-office, data-center,
 iot-network, etc.) and are the fastest path to a runnable YAML config.
+Scenario packs (hospital, warehouse, campus, ...) are listed after them; they
+are generated with 'niac scenario generate'.
 ```
 
 Examples:

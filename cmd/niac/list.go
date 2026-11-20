@@ -113,8 +113,8 @@ func newListScenariosCmd(options *listOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "scenarios",
 		Short: "List runnable scenarios",
-		Long: `List runnable scenario sources. Built-in scenarios are always
-available. Installed library networks are shown when the content library can
+		Long: `List runnable scenario sources. Built-in scenarios and scenario packs
+are always available (generate a pack with "niac scenario generate"). Installed library networks are shown when the content library can
 be opened.
 
 Each library network's status is what "niac validate" reports for it; an
@@ -138,6 +138,8 @@ func runListScenarios(options *listOptions) error {
 	for _, tmpl := range templates.List() {
 		fmt.Fprintf(os.Stdout, "  %-24s %s\n", tmpl.Name, tmpl.Description)
 	}
+	fmt.Fprintln(os.Stdout)
+	printScenarioPacks(os.Stdout)
 
 	lib, err := openListLibrary(options.root)
 	if err != nil {

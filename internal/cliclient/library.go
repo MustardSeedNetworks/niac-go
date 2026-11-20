@@ -52,3 +52,35 @@ func (c *Client) InstallPack(
 
 	return &result, nil
 }
+
+type libraryNetworkSave struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// NetworkExists reports whether the daemon's library already holds a network
+// by this name. A save replaces silently, so a caller that would clobber
+// someone's scenario asks first.
+func (c *Client) NetworkExists(ctx context.Context, name string) (bool, error) {
+	var entries []struct {
+		Name string `json:"name"`
+	}
+	if err := c.get(ctx, "/api/v1/library/networks", &entries); err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if entry.Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// SaveNetwork stores scenario YAML in the daemon's library under name. The
+// daemon validates the document before keeping it, so a scenario it would
+// refuse to start never lands in the library.
+func (c *Client) SaveNetwork(ctx context.Context, name, content string) error {
+	return c.mutate(ctx, http.MethodPost, "/api/v1/library/networks",
+		libraryNetworkSave{Name: name, Content: content}, nil)
+}

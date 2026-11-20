@@ -119,6 +119,29 @@ returns to `notconnect`. A move to another switch also takes the client out of
 the old switch's forwarding table, and LLDP then names the new switch if the
 moved client was the first one placed.
 
+## Approving an interface
+
+The daemon takes its approved bindings from `--attachment-policy` flags only.
+There is no config file or settings route for them: a policy is the operator's
+decision about which NIC a client may drive, so an API client cannot grant it
+to itself. A start on an interface with no matching policy fails preflight with
+`attachment_policy_denied`, and the message names the interface and the flag
+value that would approve it, for example `--attachment-policy en16=direct`.
+
+Add the flag where the daemon is launched, then restart it. A change takes
+effect only on restart, and any running simulation stops with the daemon.
+
+| Install | Where the flag goes | Apply |
+| --- | --- | --- |
+| macOS package or `deploy/launchd` | `ProgramArguments` in `/Library/LaunchDaemons/com.niac.plist`: add `<string>--attachment-policy</string>` and `<string>en16=direct</string>` after `<string>daemon</string>` (the plist is root-owned) | `sudo launchctl unload /Library/LaunchDaemons/com.niac.plist && sudo launchctl load -w /Library/LaunchDaemons/com.niac.plist` |
+| Linux package (systemd) | a drop-in: `sudo systemctl edit niac`, then `[Service]`, an empty `ExecStart=`, and `ExecStart=/usr/bin/niac daemon --attachment-policy eth0=direct` | `sudo systemctl restart niac` |
+| Foreground | `niac daemon --attachment-policy eth0=direct` | restart the process |
+
+The flag repeats for several interfaces. Its value is `INTERFACE=direct`,
+`INTERFACE=access:VLAN` or `INTERFACE=trunk:VLAN,...`, and a start must match
+the interface, the mode and the VLAN exactly. `GET /api/v1/attachment-policies`
+lists what the running daemon approved.
+
 ## Deployment shapes
 
 The pool works the same in all three, because the scenario never sees the wire

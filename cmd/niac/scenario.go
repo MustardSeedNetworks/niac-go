@@ -32,10 +32,12 @@ func addScenarioCommand(root *cobra.Command, _ *serviceOptions) {
 
 	scenarioListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List available scenarios",
+		Short: "List available scenarios and scenario packs",
 		Long: `Print every bundled scenario name with a one-line description.
 They cover common small networks (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.`,
+iot-network, etc.) and are the fastest path to a runnable YAML config.
+Scenario packs (hospital, warehouse, campus, ...) are listed after them; they
+are generated with 'niac scenario generate'.`,
 		Example: `  # List all scenarios with descriptions
   niac scenario list`,
 		Run: func(_ *cobra.Command, _ []string) {
@@ -106,10 +108,9 @@ and protocols it contains without creating a file.`,
 		},
 	}
 
-	scenarioCmd.AddCommand(scenarioListCmd)
-	scenarioCmd.AddCommand(scenarioShowCmd)
-	scenarioCmd.AddCommand(scenarioUseCmd)
-	scenarioCmd.AddCommand(scenarioApplyCmd)
+	scenarioCmd.AddCommand(
+		scenarioListCmd, scenarioShowCmd, scenarioUseCmd, scenarioApplyCmd, newScenarioGenerateCommand(),
+	)
 	root.AddCommand(scenarioCmd)
 }
 
@@ -136,7 +137,11 @@ func runScenarioList() {
 	}
 
 	fmt.Fprintln(os.Stdout)
+	printScenarioPacks(os.Stdout)
+
+	fmt.Fprintln(os.Stdout)
 	fmt.Fprintln(os.Stdout, "Usage:")
+	fmt.Fprintln(os.Stdout, "  niac scenario generate <pack-id> [-o file | --save name]  # Generate a scenario pack")
 	fmt.Fprintln(os.Stdout, "  niac scenario show <scenario-name>         # View scenario content")
 	fmt.Fprintln(os.Stdout, "  niac scenario use <scenario-name> <file>   # Create config from scenario")
 	fmt.Fprintln(os.Stdout, "  niac scenario apply <scenario-name>        # Validate and show scenario info")

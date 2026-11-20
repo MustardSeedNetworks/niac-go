@@ -115,11 +115,7 @@ func (c *scenarioCompiler) validateBindingMode() {
 		return
 	}
 	if !c.binding.PolicyApproved {
-		c.add(
-			CodeAttachmentPolicyDenied,
-			"interface",
-			"physical attachment is not approved by operator policy",
-		)
+		c.add(CodeAttachmentPolicyDenied, "interface", policyDeniedMessage(c.binding))
 	}
 	switch c.binding.Mode {
 	case ModeDirect:
@@ -137,6 +133,30 @@ func (c *scenarioCompiler) validateBindingMode() {
 	default:
 		c.add(CodeInvalidAttachmentMode, "mode", "mode must be direct, access, or trunk")
 	}
+}
+
+// policyDeniedMessage names the interface and the exact --attachment-policy
+// value that would approve the binding, because the daemon takes its policy
+// only from that flag. Where the flag goes depends on how the daemon was
+// installed (docs/ATTACHMENTS.md), which the compiler cannot know.
+func policyDeniedMessage(binding Binding) string {
+	const base = "physical attachment is not approved by operator policy"
+	if binding.Interface == "" {
+		return base
+	}
+	var value string
+	switch binding.Mode {
+	case ModeDirect:
+		value = "direct"
+	case ModeAccess, ModeTrunk:
+		value = fmt.Sprintf("%s:%d", binding.Mode, binding.AccessVLAN)
+	default:
+		return base
+	}
+
+	return fmt.Sprintf("%s: interface %q has no approved %s binding; start the daemon with "+
+		"--attachment-policy %s=%s (see docs/ATTACHMENTS.md, \"Approving an interface\")",
+		base, binding.Interface, binding.Mode, binding.Interface, value)
 }
 
 func (c *scenarioCompiler) compileNetworks() {
