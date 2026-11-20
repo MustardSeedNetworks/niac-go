@@ -369,16 +369,30 @@ func (s *Stack) sendPacket(pkt *Packet) {
 		logging.Debugf("Sent packet sn=%d length=%d", pkt.SerialNumber, pkt.Length)
 	}
 
-	// Reschedule if looping
 	if pkt.LoopTime > 0 {
-		go func() {
-			time.Sleep(pkt.LoopTime)
-
-			if s.running.Load() {
-				s.Send(pkt)
-			}
-		}()
+		s.scheduleResend(pkt)
 	}
+}
+
+// scheduleResend queues pkt again after its LoopTime. The wait is tracked by
+// s.wg and ends on stopChan, so Stop returns with no resend pending and none
+// can fire afterwards. Registering under lifecycleMu keeps wg.Add from racing
+// Stop's wg.Wait: Stop sets stopped under the write lock before it waits.
+func (s *Stack) scheduleResend(pkt *Packet) {
+	s.lifecycleMu.RLock()
+	defer s.lifecycleMu.RUnlock()
+	if s.stopped {
+		return
+	}
+	s.wg.Go(func() {
+		timer := time.NewTimer(pkt.LoopTime)
+		defer timer.Stop()
+		select {
+		case <-s.stopChan:
+		case <-timer.C:
+			s.Send(pkt)
+		}
+	})
 }
 
 func (s *Stack) finalizeEgressFrame(pkt *Packet) ([]byte, int, error) {
@@ -457,7 +471,9 @@ func (s *Stack) babbleLoop(ctx context.Context) error {
 				}
 
 				s.sendBabble(device)
-				time.Sleep(stackBabbleDelayMs * time.Millisecond)
+				if !sleepOrDone(ctx, stackBabbleDelayMs*time.Millisecond) {
+					return nil
+				}
 			}
 		}
 	}
@@ -520,4 +536,16 @@ func (s *Stack) sendBabble(device *config.Device) {
 	}
 
 	_ = s.SendRawPacket(buf.Bytes())
+}
+
+// sleepOrDone waits d and reports whether it elapsed; false means ctx ended first.
+func sleepOrDone(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }

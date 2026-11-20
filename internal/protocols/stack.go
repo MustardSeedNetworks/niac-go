@@ -127,8 +127,10 @@ type Stack struct {
 	// error that stopped them early, if one did.
 	workers       *supervise.Group
 	workerFailure atomic.Pointer[string]
-	// wg tracks short-lived per-request goroutines (upstream DNS queries)
-	// that Stop waits for; they are not workers and are never restarted.
+	// wg tracks short-lived goroutines (upstream DNS queries, looped-packet
+	// resends) that Stop waits for; they are not workers and are never
+	// restarted. Add only while holding lifecycleMu with the stack not
+	// stopped, so Stop's Wait never races an Add.
 	wg sync.WaitGroup
 
 	debugConfig     *logging.DebugConfig
@@ -143,10 +145,11 @@ type Stack struct {
 
 	// observers receive every packet the stack sees (rx) or sends (tx).
 	// The API server registers one to feed its SSE hub. Observers are
-	// expected to be cheap; the stack drops to the floor on observer
-	// panic via the recover in notifyObservers.
+	// expected to be cheap; notifyObservers logs and removes an observer
+	// that panics. Entries are pointers so removal never compares the
+	// observers themselves, which may not be comparable.
 	observerMu sync.RWMutex
-	observers  []PacketObserver
+	observers  []*registeredObserver
 }
 
 // PacketTransport is the packet I/O boundary used by one protocol stack.
@@ -173,6 +176,11 @@ type TransportStats interface {
 // side if any heavier processing is needed.
 type PacketObserver interface {
 	OnPacket(direction string, pkt *Packet)
+}
+
+// registeredObserver is one AddPacketObserver registration.
+type registeredObserver struct {
+	PacketObserver
 }
 
 // Statistics holds protocol statistics.
