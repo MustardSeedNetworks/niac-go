@@ -92,6 +92,10 @@ func managedDevice(request Request, spec deviceSpec, links linkMap) converter.De
 			}
 		}
 	}
+	if answersEntityMIB(profile.DeviceType) {
+		device.SnmpAgent.AddMibs = chassisEntityMIBs(
+			spec.name, profile.Vendor, model, platform, software, macSuffix)
+	}
 	if spec.role == "ap" {
 		radios := apRadioIndexes(device.TrunkPorts, device.Interfaces)
 		device.SnmpAgent.AddMibs = apDiscoveryMIBs(spec.name, spec.site.Code, radios)
