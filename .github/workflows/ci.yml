@@ -1306,8 +1306,8 @@ jobs:
         cd ui
         E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --grep @smoke
         if ! command -v go >/dev/null 2>&1; then
-          curl -fsSL -o /tmp/go.tgz https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
-          echo "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40  /tmp/go.tgz" | sha256sum -c -
+          curl -fsSL -o /tmp/go.tgz https://go.dev/dl/go1.27.4.linux-amd64.tar.gz
+          echo "7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840  /tmp/go.tgz" | sha256sum -c -
           rm -rf /usr/local/go
           tar -C /usr/local -xzf /tmp/go.tgz
         fi
