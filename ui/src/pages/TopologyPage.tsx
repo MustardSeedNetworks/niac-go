@@ -32,16 +32,13 @@ import {
   ActionsMenu,
   ContextMenu,
   contextMenuItems,
-  createEdges,
   DeviceDetailsPanel,
   DeviceNode,
   type DeviceNodeType,
   LAYOUT_MODES,
   type LayoutMode,
   type LinkEdge,
-  layoutNodes,
   NeighborsView,
-  pairKey,
   readSavedLayoutMode,
   TierBands,
   TopologyLegend,
@@ -50,9 +47,11 @@ import {
   writeSavedLayoutMode,
 } from './topology';
 import { CanvasState } from './topology/CanvasState';
-import { placedEdges } from './topology/labelPlacement';
+import { neighbourhood, sitesOf, type TopologyFilter } from './topology/graph';
+import { decorateEdges } from './topology/labelPlacement';
 import { reframeAfterPaint } from './topology/reframe';
 import { TrunkEdge } from './topology/TrunkEdge';
+import { useTopologyLayout } from './topology/useTopologyLayout';
 
 /**
  * nodeTypes is the ReactFlow lookup that maps a node.type string onto
@@ -156,8 +155,11 @@ export function TopologyPage() {
   // page reload — we don't persist it because hiding is meant to be a
   // temporary "clean up this view to screenshot" gesture, not a
   // permanent change. Edges referencing a hidden node disappear with
-  // it (they get filtered alongside in the build-graph effect).
+  // it (filterGraph drops them with the device).
   const [hiddenDevices, setHiddenDevices] = useState<Set<string>>(new Set());
+  // A pack stamps each device with its site. One layout of every site at once
+  // is unreadably wide at enterprise scale, so the canvas can show one site.
+  const [activeSite, setActiveSite] = useState<string | null>(null);
   // Context-menu state. Discriminated union so render-time exhaustive
   // checks catch missing handlers. Coordinates are in the canvas
   // parent's local space (already adjusted from clientX/Y).
@@ -184,98 +186,39 @@ export function TopologyPage() {
   // force a fitView so the new map fills the canvas cleanly.
   const lastDeviceSetSig = useRef<string>('');
 
-  // Build graph from API data, merging trunk port links with neighbor-discovered links.
-  // resetCounter is intentionally read but not branched on — Reset
-  // bumps it to force this effect to re-run with the same upstream
-  // data, restoring the fresh-layout positions after Reset clears
-  // the cached positions in localStorage.
+  // The filter is one memoised object so its identity changes only when a
+  // filter does, which is what lets useTopologyLayout skip dagre otherwise.
+  const filter = useMemo<TopologyFilter>(
+    () => ({ hidden: hiddenDevices, types: activeTypes, search, site: activeSite }),
+    [hiddenDevices, activeTypes, search, activeSite],
+  );
+  // resetCounter is the layout revision: Reset and Refresh bump it to force a
+  // fresh layout over data that has not changed.
+  const layout = useTopologyLayout({
+    devices,
+    topology,
+    neighbors,
+    filter,
+    layoutMode,
+    revision: resetCounter,
+  });
+
+  // Carry position, selection and measured size across the 15s data poll:
+  // keyboard moves act on the selection, and React Flow hides a node with no
+  // size, blanking the canvas and dropping focus. New devices get the fresh
+  // layout slot; saved positions come from localStorage so drags survive a
+  // page reload.
   useEffect(() => {
-    void resetCounter;
-    if (!(devices && topology)) {
+    if (!layout) {
       return;
     }
-
-    // The daemon returns null arrays when no simulation is loaded; coerce
-    // so spread / map / Set initialization don't crash with TypeError.
-    const topologyLinks = topology.links ?? [];
-
-    // Start with trunk port links from config
-    const allLinks = [...topologyLinks];
-
-    // Merge neighbor-discovered edges that aren't already represented by trunk ports
-    if (neighbors && neighbors.length > 0) {
-      const existingEdges = new Set(topologyLinks.map((l) => pairKey(l.source, l.target)));
-
-      for (const neighbor of neighbors) {
-        const key = pairKey(neighbor.localDevice, neighbor.remoteDevice);
-        if (!existingEdges.has(key)) {
-          existingEdges.add(key);
-          allLinks.push({
-            source: neighbor.localDevice,
-            target: neighbor.remoteDevice,
-            label: `${neighbor.protocol} discovery`,
-            discovered: true,
-          });
-        }
-      }
-    }
-
-    // Build a set of node IDs adjacent to the focused node so we can
-    // dim everything else when neighbourhood highlight is active.
-    const focused = focusedNodeId;
-    const adjacent = new Set<string>();
-    if (focused) {
-      adjacent.add(focused);
-      for (const link of allLinks) {
-        if (link.source === focused) adjacent.add(link.target);
-        else if (link.target === focused) adjacent.add(link.source);
-      }
-    }
-    const nodeOpacity = (id: string): number => {
-      if (!focused) return 1;
-      return adjacent.has(id) ? 1 : 0.15;
-    };
-    const edgeOpacity = (source: string, target: string): number => {
-      if (!focused) return 1;
-      return adjacent.has(source) && adjacent.has(target) ? 1 : 0.1;
-    };
-
-    // Type-filter + search: hide devices that don't match.
-    const q = search.trim().toLowerCase();
-    const isVisible = (device: DeviceSummary): boolean => {
-      if (hiddenDevices.has(device.name)) {
-        return false;
-      }
-      if (activeTypes.size > 0 && !activeTypes.has(normalizeDeviceType(device.type))) {
-        return false;
-      }
-      if (q && !device.name.toLowerCase().includes(q)) {
-        return false;
-      }
-      return true;
-    };
-    const visibleDevices = devices.filter(isVisible);
-    const visibleNames = new Set(visibleDevices.map((d) => d.name));
-    const visibleLinks = allLinks.filter(
-      (l) => visibleNames.has(l.source) && visibleNames.has(l.target),
-    );
-
-    const layoutedNodes = layoutNodes(visibleDevices, visibleLinks, layoutMode);
-    const layoutedEdges = placedEdges(layoutedNodes, createEdges(visibleLinks), {
-      showLabels,
-      focusOpacity: edgeOpacity,
-      hoveredEdgeId,
-    });
-
-    // Carry position, selection and measured size across the 15s data poll:
-    // keyboard moves act on the selection, and React Flow hides a node with no
-    // size, blanking the canvas and dropping focus. New devices get the fresh
-    // layout slot; saved positions come from localStorage so drags survive a
-    // page reload.
+    // Everything outside the focused node's neighbourhood fades, nodes and
+    // edges alike.
+    const adjacent = focusedNodeId ? neighbourhood(layout.links, focusedNodeId) : null;
     setNodes((current) => {
       const currentByName = new Map(current.map((node) => [node.id, node]));
       const stored = layoutPersistence.loadPositions();
-      return layoutedNodes.map((node) => {
+      return layout.nodes.map((node) => {
         const existing = currentByName.get(node.id);
         const saved = stored[node.id];
         const position = existing?.position ?? saved ?? node.position;
@@ -284,7 +227,7 @@ export function TopologyPage() {
           position,
           selected: existing?.selected,
           measured: existing?.measured,
-          style: { ...node.style, opacity: nodeOpacity(node.id) },
+          style: { ...node.style, opacity: !adjacent || adjacent.has(node.id) ? 1 : 0.15 },
           // DeviceNode's button is the named tab stop. The wrapper leaves the
           // tab order but stays focusable, so its select-and-move key handler
           // still hears keys bubbling up from the button.
@@ -292,23 +235,23 @@ export function TopologyPage() {
         };
       });
     });
-    setEdges(layoutedEdges);
-  }, [
-    devices,
-    topology,
-    neighbors,
-    showLabels,
-    search,
-    activeTypes,
-    focusedNodeId,
-    hoveredEdgeId,
-    layoutMode,
-    hiddenDevices,
-    resetCounter,
-    setNodes,
-    setEdges,
-    layoutPersistence,
-  ]);
+  }, [layout, focusedNodeId, setNodes, layoutPersistence]);
+
+  // Edges re-decorate on hover and focus without re-placing a label.
+  useEffect(() => {
+    if (!layout) {
+      return;
+    }
+    const adjacent = focusedNodeId ? neighbourhood(layout.links, focusedNodeId) : null;
+    setEdges(
+      decorateEdges(layout.edges, layout.placements, {
+        showLabels,
+        focusOpacity: (source, target) =>
+          !adjacent || (adjacent.has(source) && adjacent.has(target)) ? 1 : 0.1,
+        hoveredEdgeId,
+      }),
+    );
+  }, [layout, focusedNodeId, showLabels, hoveredEdgeId, setEdges]);
 
   // Persist node positions when the user stops dragging so layouts
   // survive page reloads. Keyed by device name; stored (debounced) as
@@ -349,6 +292,7 @@ export function TopologyPage() {
     setSearch('');
     setActiveTypes(new Set());
     setHiddenDevices(new Set());
+    setActiveSite(null);
     setNodes([]);
     setEdges([]);
     setResetCounter((n) => n + 1);
@@ -365,6 +309,19 @@ export function TopologyPage() {
     for (const d of devices) set.add(normalizeDeviceType(d.type));
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [devices]);
+
+  const availableSites = useMemo(() => sitesOf(devices ?? []), [devices]);
+
+  // A different site is a different graph, so the nodes already on canvas must
+  // not carry their old positions into it.
+  const handleSiteChange = useCallback(
+    (site: string | null) => {
+      setActiveSite(site);
+      setNodes([]);
+      reframeAfterPaint(() => rfInstance.current?.fitView({ padding: 0.2, duration: 300 }));
+    },
+    [setNodes],
+  );
 
   const toggleType = useCallback((type: string) => {
     setActiveTypes((curr) => {
@@ -676,6 +633,22 @@ export function TopologyPage() {
                 aria-label={t('topology.header.searchAriaLabel')}
                 className="w-full sm:w-64 rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary placeholder:text-text-muted focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
               />
+              {availableSites.length > 1 && (
+                <select
+                  value={activeSite ?? ''}
+                  onChange={(e) => handleSiteChange(e.target.value || null)}
+                  aria-label={t('topology.header.siteFilterAriaLabel')}
+                  data-testid="topology-site-filter"
+                  className="w-full sm:w-auto rounded-md border border-surface-border bg-bg-base/40 px-3 py-compact-md text-xs text-text-primary focus:border-status-info/40 focus:outline-none focus:ring-1 focus:ring-status-info/30"
+                >
+                  <option value="">{t('topology.header.allSites')}</option>
+                  {availableSites.map((site) => (
+                    <option key={site} value={site}>
+                      {site}
+                    </option>
+                  ))}
+                </select>
+              )}
               {availableTypes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
                   <SmallText className="text-text-muted">
@@ -778,6 +751,7 @@ export function TopologyPage() {
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   fitView={true}
+                  onlyRenderVisibleElements
                   fitViewOptions={{ padding: 0.2 }}
                   minZoom={0.2}
                   maxZoom={2}

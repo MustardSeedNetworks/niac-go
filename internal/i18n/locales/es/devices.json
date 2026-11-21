@@ -74,6 +74,7 @@
     "allProtocols": "Todos los protocolos",
     "tableViewTitle": "Vista de tabla",
     "cardViewTitle": "Vista de tarjetas",
+    "listAria": "Lista de dispositivos",
     "selectAllAria": "Seleccionar todos los dispositivos",
     "selectDeviceAria": "Seleccionar {{hostname}}",
     "deviceDeletedMessage": "Dispositivo \"{{hostname}}\" eliminado correctamente",
