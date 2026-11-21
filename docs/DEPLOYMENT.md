@@ -144,7 +144,7 @@ Keep tokens in a token file under `%ProgramData%\NiAC`, whose ACL admits
 only SYSTEM and Administrators, and set only its path, `NIAC_API_TOKEN_FILE`,
 for the service. The service refuses a non-loopback bind without a token. On
 Windows the token file loader still rejects every file, because it judges Unix
-permission bits that Windows does not have (niac-go#3092 tracks the fix), so
+permission bits that Windows does not have (issue #3092 tracks the fix), so
 keep the default loopback bind until that lands.
 
 Npcap is required for packet capture and injection features:
