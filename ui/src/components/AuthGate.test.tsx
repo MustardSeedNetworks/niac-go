@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/errors';
@@ -14,6 +14,7 @@ const { mockValidate, mockSetRuntimeAPIToken, mockClearRuntimeAPIToken, mockT } 
 
 vi.mock('../api/requestCore', () => ({
   AUTH_FAILURE_EVENT: 'niac:authentication-required',
+  AUTH_DISCONNECT_EVENT: 'niac:disconnect',
   clearRuntimeAPIToken: mockClearRuntimeAPIToken,
   setRuntimeAPIToken: mockSetRuntimeAPIToken,
   validateRuntimeAuthentication: mockValidate,
@@ -94,5 +95,19 @@ describe('AuthGate', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('auth.connectionFailed');
     expect(mockClearRuntimeAPIToken).not.toHaveBeenCalled();
     expect(input).toHaveValue('valid-token');
+  });
+
+  it('returns to the connect prompt, with no error, when the operator disconnects', async () => {
+    mockValidate.mockResolvedValueOnce(undefined);
+    renderGate();
+    expect(await screen.findByText('protected content')).toBeVisible();
+
+    act(() => {
+      window.dispatchEvent(new Event('niac:disconnect'));
+    });
+
+    expect(await screen.findByLabelText('auth.tokenLabel')).toBeVisible();
+    expect(screen.queryByText('protected content')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

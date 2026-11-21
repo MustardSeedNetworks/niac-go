@@ -23,7 +23,7 @@ import { fetchScenarioProfiles } from '../../api/scenario-client';
 import type { TopologyLink } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useApiResource } from '../../hooks/useApiResource';
-import { useErrorToast } from '../../hooks/useErrorToast';
+import { useToast } from '../../hooks/useToast';
 import {
   createEdges,
   DeviceNode,
@@ -104,7 +104,7 @@ export function DraftTopologyComposer({
   onBusyChange,
 }: DraftTopologyComposerProps) {
   const { t } = useTranslation('pages');
-  const showError = useErrorToast();
+  const { showError } = useToast();
   const permission = useActionPermission('edit');
   const {
     data: profiles,

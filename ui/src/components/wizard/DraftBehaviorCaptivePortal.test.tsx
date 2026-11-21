@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { DraftBehaviorTimeline, ScenarioDraft } from '../../api/library-client';
 import '../../i18n';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { DraftBehaviorComposer } from './DraftBehaviorComposer';
 
 vi.mock('../../contexts/ScopeContext', () => ({
@@ -27,7 +28,7 @@ beforeEach(() => {
 });
 
 function renderDraft(content = draft.content) {
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content }}
       onDraftUpdate={vi.fn()}

@@ -29,11 +29,8 @@ vi.mock('../hooks/useEventSource', () => ({
   },
 }));
 
-const addNotification = vi.fn();
-vi.mock('../stores/ui-store', () => ({
-  useUIStore: (selector: (s: { addNotification: typeof addNotification }) => unknown) =>
-    selector({ addNotification }),
-}));
+const addToast = vi.fn();
+vi.mock('../hooks/useToast', () => ({ useToast: () => ({ addToast }) }));
 
 /** Pushes one SSE payload into the page. */
 function emit(payload: unknown): void {
@@ -46,7 +43,7 @@ beforeEach(() => {
   streamHandlers = {};
   connected = true;
   reconnect.mockReset();
-  addNotification.mockReset();
+  addToast.mockReset();
 });
 
 afterEach(() => {
@@ -221,7 +218,7 @@ describe('connection notifications', () => {
     });
 
     // The initial "still connecting" window is not a dropped connection.
-    expect(addNotification).not.toHaveBeenCalled();
+    expect(addToast).not.toHaveBeenCalled();
   });
 
   it('warns when an established connection drops', () => {
@@ -234,6 +231,6 @@ describe('connection notifications', () => {
       streamHandlers.onDisconnect?.();
     });
 
-    expect(addNotification).toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalled();
   });
 });

@@ -13,12 +13,11 @@ vi.mock('../contexts/ScopeContext', () => ({
  * confirms — never on the click itself.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../i18n';
-import { useUIStore } from '../stores/ui-store';
+import { renderWithToasts } from '../test/renderWithToasts';
 import { required } from '../test/required';
-import { ToastContainer } from '../ui/ToastContainer';
 import { WalkValidatorPage } from './WalkValidatorPage';
 
 const fetchLibraryWalks = vi.fn();
@@ -41,13 +40,12 @@ const files = [
 
 afterEach(() => {
   vi.clearAllMocks();
-  useUIStore.getState().clearNotifications();
 });
 
 describe('WalkValidatorPage — Auto-fix confirmation', () => {
   it('does not rewrite the file on the Auto-fix click alone', async () => {
     fetchLibraryWalks.mockResolvedValue(files);
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -64,7 +62,7 @@ describe('WalkValidatorPage — Auto-fix confirmation', () => {
       message: 'Fixed',
       result: { totalLines: 1, validLines: 1, valid: true, issues: [], fixedCount: 1 },
     });
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -78,7 +76,7 @@ describe('WalkValidatorPage — Auto-fix confirmation', () => {
 
   it('cancels without calling fixWalk', async () => {
     fetchLibraryWalks.mockResolvedValue(files);
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -125,7 +123,7 @@ describe('WalkValidatorPage — Validate all', () => {
       },
     });
 
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -143,12 +141,7 @@ describe('WalkValidatorPage — Validate all', () => {
     fetchLibraryWalks.mockResolvedValue(files);
     validateAllWalks.mockRejectedValueOnce(new Error('daemon unavailable'));
 
-    render(
-      <>
-        <WalkValidatorPage />
-        <ToastContainer />
-      </>,
-    );
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -189,7 +182,7 @@ describe('WalkValidatorPage — OID column and filter', () => {
   it('renders the OID for each issue in the results table', async () => {
     fetchLibraryWalks.mockResolvedValue(files);
     validateWalk.mockResolvedValueOnce(validateResult);
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
 
@@ -202,7 +195,7 @@ describe('WalkValidatorPage — OID column and filter', () => {
   it('narrows the displayed issues by OID substring', async () => {
     fetchLibraryWalks.mockResolvedValue(files);
     validateWalk.mockResolvedValueOnce(validateResult);
-    render(<WalkValidatorPage />);
+    renderWithToasts(<WalkValidatorPage />);
 
     await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /^validate$/i }));
@@ -222,7 +215,7 @@ describe('WalkValidatorPage — OID column and filter', () => {
     try {
       fetchLibraryWalks.mockResolvedValue(files);
       validateWalk.mockResolvedValueOnce(validateResult);
-      render(<WalkValidatorPage />);
+      renderWithToasts(<WalkValidatorPage />);
 
       await waitFor(() => expect(screen.getByText(/cisco\/c3900\.walk/)).toBeInTheDocument());
       expect(screen.getByRole('button', { name: 'Corregir automáticamente' })).toBeInTheDocument();

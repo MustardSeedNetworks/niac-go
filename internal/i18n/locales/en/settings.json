@@ -14,6 +14,8 @@
   },
   "appearance": {
     "dark": "Dark",
+    "language": "Language",
+    "languageDescription": "Language of the NIAC interface. Saved in this browser.",
     "light": "Light",
     "persistenceNote": "Dark mode is the default. Your preference is saved across sessions.",
     "quickToggle": "Quick toggle",

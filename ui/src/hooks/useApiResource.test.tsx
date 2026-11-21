@@ -7,21 +7,20 @@
  * background poller that expects the daemon to be offline sometimes),
  * so toasting is opt-in via `errorToast: true`. When enabled:
  *   - a fetch failure pushes exactly one error notification into the
- *     shared ui-store (the seam ToastContainer renders from)
+ *     toast queue (the seam ToastProvider renders)
  *   - repeated ticks with the *same* error message don't re-toast
  *   - a new/changed error message (or a recovery-then-refail) toasts again
  * When not enabled, failures still populate `error` for the caller's own
- * UI, but never touch the notification store.
+ * UI, but never raise a toast.
  */
 
 import type { RenderHookOptions } from '@testing-library/react';
 import { renderHook as renderRawHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ResourceProvider } from '../contexts/ResourceProvider';
 import { renderWithResources } from '../test/renderWithResources';
 import '../i18n';
-import { useUIStore } from '../stores/ui-store';
 import { useApiResource } from './useApiResource';
 
 function renderHook<Result, Props>(
@@ -41,10 +40,6 @@ function RefreshProbe({ fetcher }: { fetcher: () => Promise<unknown> }) {
 }
 
 describe('useApiResource errorToast option', () => {
-  beforeEach(() => {
-    useUIStore.getState().clearNotifications();
-  });
-
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -55,7 +50,7 @@ describe('useApiResource errorToast option', () => {
     const { result } = renderHook(() => useApiResource(fetcher, ['test-resource']));
 
     await waitFor(() => expect(result.current.error).not.toBeNull());
-    expect(useUIStore.getState().notifications).toHaveLength(0);
+    expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
   it('pushes exactly one error toast into the shared store on failure', async () => {
@@ -69,13 +64,10 @@ describe('useApiResource errorToast option', () => {
 
     await waitFor(() => expect(result.current.error).not.toBeNull());
 
-    const notifications = useUIStore.getState().notifications;
-    expect(notifications).toHaveLength(1);
-    expect(notifications[0]).toMatchObject({
-      type: 'error',
-      title: 'Could not load devices',
-      message: 'daemon unreachable',
-    });
+    const toast = await screen.findByRole('alert');
+    expect(screen.queryAllByRole('alert')).toHaveLength(1);
+    expect(toast).toHaveTextContent('Could not load devices');
+    expect(toast).toHaveTextContent('daemon unreachable');
   });
 
   it('does not re-toast an identical error on repeated requests', async () => {
@@ -84,7 +76,7 @@ describe('useApiResource errorToast option', () => {
     renderWithResources(<RefreshProbe fetcher={fetcher} />);
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(useUIStore.getState().notifications).toHaveLength(1));
+    await waitFor(() => expect(screen.queryAllByRole('alert')).toHaveLength(1));
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -93,7 +85,7 @@ describe('useApiResource errorToast option', () => {
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
     // Same error message on every tick — still just the one toast.
-    expect(useUIStore.getState().notifications).toHaveLength(1);
+    expect(screen.queryAllByRole('alert')).toHaveLength(1);
   });
 
   it('re-toasts after recovering and failing again with a new message', async () => {
@@ -109,7 +101,7 @@ describe('useApiResource errorToast option', () => {
     );
 
     await waitFor(() => expect(result.current.error?.message).toBe('first failure'));
-    expect(useUIStore.getState().notifications).toHaveLength(1);
+    expect(screen.queryAllByRole('alert')).toHaveLength(1);
 
     rerender({ n: 1 });
     await waitFor(() => expect(result.current.data).toBe('ok'));
@@ -117,7 +109,7 @@ describe('useApiResource errorToast option', () => {
     rerender({ n: 2 });
     await waitFor(() => expect(result.current.error?.message).toBe('second failure'));
 
-    expect(useUIStore.getState().notifications).toHaveLength(2);
+    expect(screen.queryAllByRole('alert')).toHaveLength(2);
   });
 });
 

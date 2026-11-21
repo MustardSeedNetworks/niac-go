@@ -28,7 +28,7 @@ vi.mock('../api/client', () => ({
 }));
 
 const showError = vi.fn();
-vi.mock('../hooks/useErrorToast', () => ({ useErrorToast: () => showError }));
+vi.mock('../hooks/useToast', () => ({ useToast: () => ({ showError }) }));
 
 vi.mock('../utils/file', () => ({
   fileToBase64: () => Promise.resolve('AAAA'),

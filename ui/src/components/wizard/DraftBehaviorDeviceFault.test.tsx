@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { DraftBehaviorTimeline, ScenarioDraft } from '../../api/library-client';
 import '../../i18n';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { DraftBehaviorComposer } from './DraftBehaviorComposer';
 
 vi.mock('../../contexts/ScopeContext', () => ({
@@ -37,7 +38,9 @@ it.each([
   'disk_percent',
 ])('saves %s without an interface and preserves the selected value', async (type) => {
   const user = userEvent.setup();
-  render(<DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+  renderWithToasts(
+    <DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />,
+  );
   await user.click(screen.getByTestId('add-timeline'));
   await user.click(screen.getByTestId('add-device-fault'));
   await user.selectOptions(screen.getByLabelText('Fault'), type);
@@ -74,7 +77,7 @@ behavior_timelines:
             type: latency
             value: 60000
 `;
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content }}
       onDraftUpdate={vi.fn()}
@@ -92,7 +95,7 @@ behavior_timelines:
 
 it('saves link down as an interface outcome without a percentage control', async () => {
   const user = userEvent.setup();
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content: `${draft.content}    interfaces: [{name: eth0}]\n` }}
       onDraftUpdate={vi.fn()}
@@ -126,7 +129,7 @@ behavior_timelines:
             type: link_down
             value: 100
 `;
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content }}
       onDraftUpdate={vi.fn()}

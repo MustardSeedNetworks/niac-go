@@ -16,9 +16,6 @@ export interface UIStoreState {
   activeModal: ModalType | null;
   modalData: Record<string, unknown>;
 
-  // Notifications
-  notifications: Notification[];
-
   // Debug Console
   debugConsoleOpen: boolean;
   debugConsoleHeight: number;
@@ -37,10 +34,6 @@ export interface UIStoreState {
 
   openModal: (modal: ModalType, data?: Record<string, unknown>) => void;
   closeModal: () => void;
-
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
-  removeNotification: (id: string) => void;
-  clearNotifications: () => void;
 
   setDebugConsoleOpen: (open: boolean) => void;
   toggleDebugConsole: () => void;
@@ -69,22 +62,6 @@ export type ModalType =
   | 'settings'
   | 'about';
 
-export interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message?: string;
-  /**
-   * Structured detail lines from the API's `details[]`. The server already
-   * says things like "line 65: field enabled not found in type
-   * converter.DhcpServer"; before D3 the toast showed only the generic
-   * `message` and threw these away, which made the wizard a dead end.
-   */
-  details?: string[];
-  timestamp: number;
-  duration?: number;
-}
-
 // Simulation settings for Settings-driven workflow
 export type ConfigSource = 'userConfig' | 'upload';
 
@@ -111,7 +88,6 @@ export const useUIStore = create<UIStoreState>()(
         sidebarCollapsed: false,
         activeModal: null,
         modalData: {},
-        notifications: [],
         debugConsoleOpen: false,
         debugConsoleHeight: DEFAULT_DEBUG_CONSOLE_HEIGHT,
         compactMode: false,
@@ -149,27 +125,6 @@ export const useUIStore = create<UIStoreState>()(
           set((state) => {
             state.activeModal = null;
             state.modalData = {};
-          }),
-
-        // Notification actions
-        addNotification: (notification) =>
-          set((state) => {
-            const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-            state.notifications.push({
-              ...notification,
-              id,
-              timestamp: Date.now(),
-            });
-          }),
-
-        removeNotification: (id) =>
-          set((state) => {
-            state.notifications = state.notifications.filter((n) => n.id !== id);
-          }),
-
-        clearNotifications: () =>
-          set((state) => {
-            state.notifications = [];
           }),
 
         // Debug console actions
@@ -210,7 +165,6 @@ export const useUIStore = create<UIStoreState>()(
           set((state) => {
             state.activeModal = null;
             state.modalData = {};
-            state.notifications = [];
             state.debugConsoleOpen = false;
           }),
       })),

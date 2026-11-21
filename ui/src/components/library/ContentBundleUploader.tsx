@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { isApiError } from '../../api/errors';
 import { installContentBundleWithProgress } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
-import { useErrorToast } from '../../hooks/useErrorToast';
-import { useUIStore } from '../../stores/ui-store';
+import { useToast } from '../../hooks/useToast';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -49,8 +48,7 @@ function validateFile(file: File, invalidTypeMsg: string, tooLargeMsg: string, e
 export function ContentBundleUploader() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const showError = useErrorToast();
-  const addNotification = useUIStore((s) => s.addNotification);
+  const { addToast, showError } = useToast();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -107,7 +105,7 @@ export function ContentBundleUploader() {
         { filename: selectedFile.name, data },
         setUploadProgress,
       );
-      addNotification({
+      addToast({
         type: 'success',
         title: t('libraryFiles.installBundle.installSuccessTitle'),
         message: t('libraryFiles.installBundle.installSuccessMessage', {
@@ -130,7 +128,7 @@ export function ContentBundleUploader() {
       setInstalling(false);
       setUploadProgress(null);
     }
-  }, [selectedFile, addNotification, showError, t, handleClear]);
+  }, [selectedFile, addToast, showError, t, handleClear]);
 
   return (
     <Card className="border-surface-border bg-bg-surface/70" data-testid="content-bundle-uploader">
