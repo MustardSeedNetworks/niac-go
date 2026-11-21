@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.128.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.9...v0.128.10) (2026-11-21)
+
+
+### Bug Fixes
+
+* add health endpoints and drop pre-1.0 compat shims ([#3061](https://github.com/MustardSeedNetworks/niac-go/issues/3061)) ([c471a1f](https://github.com/MustardSeedNetworks/niac-go/commit/c471a1f798a0eb494e7187c3de5a2fd25c29b274)), closes [#3060](https://github.com/MustardSeedNetworks/niac-go/issues/3060)
+* **ui:** bring niac web UI to fleet parity ([#3063](https://github.com/MustardSeedNetworks/niac-go/issues/3063)) ([9a78226](https://github.com/MustardSeedNetworks/niac-go/commit/9a782265cc34245413250dc374d9d1ac8fdd8dd1)), closes [#3062](https://github.com/MustardSeedNetworks/niac-go/issues/3062)
+
 ## [0.128.9](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.8...v0.128.9) (2026-11-21)
 
 
