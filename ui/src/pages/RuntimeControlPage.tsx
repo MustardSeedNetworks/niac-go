@@ -13,8 +13,8 @@ import { ConfigPicker } from '../components/simulation/ConfigPicker';
 import { PreflightStep } from '../components/wizard/PreflightStep';
 import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
+import { useToast } from '../hooks/useToast';
 import { useUIStore } from '../stores/ui-store';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -62,7 +62,7 @@ export function RuntimeControlPage() {
   // Success-only: failures are surfaced as toasts (see showError below), not
   // a page-level banner.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const showError = useErrorToast();
+  const { showError } = useToast();
   const { sessionId, setSessionId, selectedSession, sessions } = useAppContext();
   // Everything that describes "the running scenario" on this page describes
   // the one this browser selected. Falling back to the daemon's top-level

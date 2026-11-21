@@ -8,7 +8,7 @@ import {
   type ScenarioDraft,
 } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
-import { useErrorToast } from '../../hooks/useErrorToast';
+import { useToast } from '../../hooks/useToast';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { SmallText } from '../../ui/Typography';
@@ -37,7 +37,7 @@ export function DraftBehaviorComposer({
   onBusyChange,
 }: DraftBehaviorComposerProps) {
   const { t } = useTranslation('pages');
-  const showError = useErrorToast();
+  const { showError } = useToast();
   const topology = useMemo(() => parseDraftTopology(draft.content), [draft.content]);
   const dhcpDevices = topology.devices
     .filter((device) => device.protocols.includes('DHCP'))

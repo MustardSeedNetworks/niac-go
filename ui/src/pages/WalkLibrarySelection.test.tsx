@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryFileEntry } from '../api/library-client';
+import { renderWithToasts } from '../test/renderWithToasts';
 import { WalkAnalyzerPage } from './WalkAnalyzerPage';
 import { WalkValidatorPage } from './WalkValidatorPage';
 
@@ -20,7 +21,7 @@ describe.each([WalkAnalyzerPage, WalkValidatorPage])('walk library selection', (
   beforeEach(() => fetchLibraryWalks.mockReset().mockResolvedValue(entries));
 
   it('loads once when adopting the initial selection and changing files', async () => {
-    render(<Page />);
+    renderWithToasts(<Page />);
     const picker = screen.getByRole('combobox');
     await waitFor(() => expect(picker).toHaveValue('first.walk'));
     expect(fetchLibraryWalks).toHaveBeenCalledTimes(1);
@@ -31,7 +32,7 @@ describe.each([WalkAnalyzerPage, WalkValidatorPage])('walk library selection', (
 
   it('settles an empty library without refetching', async () => {
     fetchLibraryWalks.mockResolvedValue([]);
-    render(<Page />);
+    renderWithToasts(<Page />);
     await screen.findByRole('option', { name: 'No walks found' });
     expect(fetchLibraryWalks).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('combobox')).toHaveTextContent('No walks found');

@@ -27,10 +27,10 @@ import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { useCaptureResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -143,7 +143,7 @@ export function PacketInspectorPage() {
   // it asks first.
   const [showStopCaptureConfirm, setShowStopCaptureConfirm] = useState(false);
   const [stoppingCapture, setStoppingCapture] = useState(false);
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   const handleStopCaptureConfirmed = useCallback(async () => {
     setStoppingCapture(true);

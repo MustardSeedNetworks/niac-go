@@ -7,7 +7,7 @@ import { LogFilters } from '../components/LogFilters';
 import { LogViewer } from '../components/LogViewer';
 import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
-import { useUIStore } from '../stores/ui-store';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -48,7 +48,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 export function DebugConsolePage() {
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
-  const addNotification = useUIStore((s) => s.addNotification);
+  const { addToast } = useToast();
   // Only toast on a drop after a real connection was established — the
   // initial "still connecting" window on mount isn't a disconnect.
   const hasConnectedRef = useRef(false);
@@ -96,12 +96,12 @@ export function DebugConsolePage() {
     if (!hasConnectedRef.current) {
       return;
     }
-    addNotification({
+    addToast({
       type: 'warning',
       title: tCommon('toast.streamDisconnectedTitle'),
       message: tCommon('toast.streamDisconnectedMessage'),
     });
-  }, [addNotification, tCommon]);
+  }, [addToast, tCommon]);
 
   const handleConnect = useCallback(() => {
     hasConnectedRef.current = true;

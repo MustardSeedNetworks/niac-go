@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { startStandaloneCapture } from '../../api/client';
 import { iconSizes } from '../../constants/sizes';
-import { useErrorToast } from '../../hooks/useErrorToast';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { useResourceError } from '../../hooks/useResourceError';
+import { useToast } from '../../hooks/useToast';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
@@ -36,7 +36,7 @@ export function StandaloneCaptureStarter({
   const [selectedIface, setSelectedIface] = useState('');
   const [bpfFilter, setBpfFilter] = useState('');
   const [busy, setBusy] = useState(false);
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   // Default to the first usable interface once the list arrives.
   useEffect(() => {

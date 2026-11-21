@@ -5,7 +5,7 @@ import { fetchConfig } from '../../api/client';
 import type { SimulationStatus } from '../../api/types';
 import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
-import { useErrorToast } from '../../hooks/useErrorToast';
+import { useToast } from '../../hooks/useToast';
 import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
@@ -44,7 +44,7 @@ export function RunningSimulationCard({
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   const handleDownload = async () => {
     try {

@@ -1,10 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
-import { useUIStore } from '../../stores/ui-store';
-import { ToastContainer } from '../../ui/ToastContainer';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { RunningSimulationCard } from './RunningSimulationCard';
 
 const fetchConfig = vi.fn();
@@ -23,14 +22,13 @@ const simStatus = {
 describe('RunningSimulationCard', () => {
   beforeEach(() => {
     fetchConfig.mockReset();
-    useUIStore.getState().clearNotifications();
   });
 
   it('surfaces a download failure as a toast, not a bespoke inline banner', async () => {
     const user = userEvent.setup();
     fetchConfig.mockRejectedValue(new Error('daemon unreachable'));
 
-    render(
+    renderWithToasts(
       <MemoryRouter>
         <RunningSimulationCard
           simStatus={simStatus}
@@ -38,7 +36,6 @@ describe('RunningSimulationCard', () => {
           onStop={vi.fn()}
           message={null}
         />
-        <ToastContainer />
       </MemoryRouter>,
     );
 
@@ -55,7 +52,7 @@ describe('RunningSimulationCard', () => {
     URL.createObjectURL = vi.fn(() => 'blob:mock');
     URL.revokeObjectURL = vi.fn();
 
-    render(
+    renderWithToasts(
       <MemoryRouter>
         <RunningSimulationCard
           simStatus={simStatus}
@@ -73,7 +70,7 @@ describe('RunningSimulationCard', () => {
   });
 
   it('shows the physical attachment, virtual networks, routes, and counters', () => {
-    render(
+    renderWithToasts(
       <MemoryRouter>
         <RunningSimulationCard
           simStatus={{

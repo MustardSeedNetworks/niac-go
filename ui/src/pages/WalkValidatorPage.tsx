@@ -9,7 +9,7 @@ import type {
   WalkValidationResult,
 } from '../api/types';
 import { GlossaryPopover } from '../components/GlossaryPopover';
-import { useErrorToast } from '../hooks/useErrorToast';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -53,7 +53,7 @@ export function WalkValidatorPage() {
   const [showAutoFixConfirm, setShowAutoFixConfirm] = useState(false);
   const [batchResponse, setBatchResponse] = useState<WalkBatchValidationResponse | null>(null);
   const [batchBusy, setBatchBusy] = useState(false);
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   // Hydrate the file dropdown from /api/v1/library/walks. The daemon's
   // walk validator (validateWalkFilePath) falls back to the library
