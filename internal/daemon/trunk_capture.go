@@ -12,8 +12,11 @@ import (
 
 	"github.com/gopacket/gopacket"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/capture"
+	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
 
 const (
@@ -41,6 +44,8 @@ var (
 	// ErrTrunkCaptureFailed means the shared trunk capture goroutine has
 	// stopped and can no longer deliver or send frames.
 	ErrTrunkCaptureFailed = errors.New("shared trunk capture has stopped")
+
+	errTrunkCapturePanicked = errors.New("trunk capture panicked")
 )
 
 // nativeVLANKey is the demux slot for the native (untagged) session.
@@ -92,6 +97,36 @@ type trunkCapture struct {
 type managedTrunkCapture struct {
 	capture *trunkCapture
 	cancel  context.CancelFunc
+	workers *supervise.Group
+}
+
+// startManagedTrunkCapture runs the physical capture as a supervised worker.
+// Fatal, not a restart: a capture that stopped has lost its packet source, and
+// restarting it would spin on a closed handle. Every session on the interface
+// is deaf and mute once it stops, so a failure, including a panic, is recorded
+// on the trunk for their status.
+func startManagedTrunkCapture(iface string, engine trunkPhysicalCapture) *managedTrunkCapture {
+	ctx, cancel := context.WithCancel(context.Background())
+	managed := &managedTrunkCapture{capture: newTrunkCapture(engine), cancel: cancel}
+	managed.workers = supervise.New(nil)
+	managed.workers.Add("trunk-capture", supervise.Fatal, func(context.Context) error {
+		finished := false
+		defer func() {
+			if !finished {
+				managed.capture.fail(errTrunkCapturePanicked)
+			}
+		}()
+		captureErr := managed.capture.run(ctx)
+		finished = true
+		if captureErr == nil || errors.Is(captureErr, context.Canceled) {
+			return nil
+		}
+		logging.Errorf("Trunk capture on %s stopped: %v", iface, captureErr)
+		managed.capture.fail(captureErr)
+		return nil
+	})
+	managed.workers.Start(context.Background())
+	return managed
 }
 
 func newTrunkCapture(physical trunkPhysicalCapture) *trunkCapture {

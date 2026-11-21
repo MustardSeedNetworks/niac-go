@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
+
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -77,8 +79,7 @@ type Runner struct {
 	target      Target
 	transitions []Transition
 	status      Status
-	cancel      context.CancelFunc
-	done        chan struct{}
+	worker      *supervise.Group
 	clock       Clock
 }
 
@@ -114,27 +115,30 @@ func (r *Runner) Start() {
 		r.mu.Unlock()
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	r.cancel = cancel
-	r.done = make(chan struct{})
 	r.status.State = "running"
 	started := r.clock.Now()
 	r.status.StartedAt = started.UTC()
-	done := r.done
+	// Fatal, not a restart: replaying from the first transition would apply
+	// every fault a second time. A panic ends the run as failed instead.
+	r.worker = supervise.New(nil)
+	r.worker.Add("behavior-timeline", supervise.Fatal, func(ctx context.Context) error {
+		return r.runSupervised(ctx, started)
+	})
+	r.worker.Start(context.Background())
 	r.mu.Unlock()
-	go r.run(ctx, started, done)
 }
 
 // Stop cancels an active replay and waits for its worker to exit.
 func (r *Runner) Stop() {
 	r.mu.RLock()
-	cancel, done := r.cancel, r.done
+	worker := r.worker
 	r.mu.RUnlock()
-	if cancel == nil || done == nil {
+	if worker == nil {
 		return
 	}
-	cancel()
-	<-done
+	// Unbounded: the run only ends at a clock wait or a target call, and
+	// returning earlier would let it keep applying faults after Stop.
+	_ = worker.Stop(context.Background())
 }
 
 // Status returns a concurrency-safe snapshot.
@@ -146,8 +150,22 @@ func (r *Runner) Status() Status {
 	return status
 }
 
-func (r *Runner) run(ctx context.Context, started time.Time, done chan struct{}) {
-	defer close(done)
+// runSupervised runs the replay under the supervisor, which recovers a panic
+// and logs it. The run is recorded as failed here, because the supervisor's
+// error never reaches the runner's status.
+func (r *Runner) runSupervised(ctx context.Context, started time.Time) error {
+	finished := false
+	defer func() {
+		if !finished {
+			r.finish("failed", "timeline worker panicked")
+		}
+	}()
+	r.run(ctx, started)
+	finished = true
+	return nil
+}
+
+func (r *Runner) run(ctx context.Context, started time.Time) {
 	activePhases := make(map[string]string)
 	for _, transition := range r.transitions {
 		if !r.clock.Wait(ctx, transition.Offset-r.clock.Now().Sub(started)) {
@@ -206,5 +224,5 @@ func (r *Runner) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.status = Status{State: "idle", TotalTransitions: len(r.transitions)}
-	r.cancel, r.done = nil, nil
+	r.worker = nil
 }

@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
 	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -152,9 +153,8 @@ type Simulation struct {
 	replay api.ReplayManager
 	cancel context.CancelFunc
 	close  func()
-	// runtimeCancel stops the durable runtime-state writer for this session.
-	runtimeCancel     context.CancelFunc
-	runtimeDone       <-chan struct{}
+	// runtimeWriter supervises the durable runtime-state writer for this session.
+	runtimeWriter     *supervise.Group
 	runtimeGeneration string
 }
 

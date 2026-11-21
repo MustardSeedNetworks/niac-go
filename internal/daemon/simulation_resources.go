@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
@@ -86,20 +85,8 @@ func (d *Daemon) startTrunkSimulationResources(
 		if err != nil {
 			return simulationResources{}, fmt.Errorf("create trunk capture engine: %w", err)
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		managed = &managedTrunkCapture{capture: newTrunkCapture(engine), cancel: cancel}
+		managed = startManagedTrunkCapture(iface, engine)
 		d.trunks[iface] = managed
-		go func() {
-			captureErr := managed.capture.run(ctx)
-			if captureErr == nil || errors.Is(captureErr, context.Canceled) {
-				return
-			}
-			// Every session on this interface is now deaf and mute. Record it
-			// so their status says so, instead of reporting running while no
-			// frame can reach them.
-			logging.Errorf("Trunk capture on %s stopped: %v", iface, captureErr)
-			managed.capture.fail(captureErr)
-		}()
 	}
 
 	transport, previous, err := acquireTrunkTransport(managed.capture, vlan, replacing)
@@ -172,6 +159,7 @@ func (d *Daemon) closeUnusedTrunk(iface string) {
 	delete(d.trunks, iface)
 	managed.cancel()
 	managed.capture.close()
+	stopWorkers(managed.workers, "trunk capture on "+iface)
 }
 
 func (resources simulationResources) stop() {
