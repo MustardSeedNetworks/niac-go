@@ -41,6 +41,16 @@ describe('AuthGate', () => {
     expect(await screen.findByText('protected content')).toBeVisible();
   });
 
+  it('identifies the product on the sign-in screen', async () => {
+    mockValidate.mockRejectedValueOnce(new ApiError('Unauthorized', 401));
+    renderGate();
+
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('app.title');
+    expect(screen.getByTestId('product-mark')).toBeVisible();
+    expect(screen.getByText('app.tagline')).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('auth.title');
+  });
+
   it('prompts on 401 and validates a bearer token before rendering the app', async () => {
     mockValidate
       .mockRejectedValueOnce(new ApiError('Unauthorized', 401))

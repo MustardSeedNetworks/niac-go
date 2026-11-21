@@ -27,6 +27,7 @@ import { accessibleNameIncluding } from '../lib/accessibleName';
 import { prefetchRoute } from '../utils/prefetch';
 import { safeGetItem, safeSetItem } from '../utils/storage';
 import { MsnMark } from './MsnMark';
+import { ProductMark } from './ProductMark';
 import { Tooltip } from './Tooltip';
 
 export interface SidebarNavItem {
@@ -178,12 +179,7 @@ function SidebarHeader({ collapsed, onCollapse }: SidebarHeaderProps) {
     >
       <div className={`flex items-center gap-compact ${collapsed ? 'justify-center' : ''}`}>
         <div className="relative flex-shrink-0">
-          <div
-            data-testid="product-mark"
-            className="h-9 w-9 rounded-[11px] bg-brand-primary flex-center"
-          >
-            <span className="figure text-sm font-extrabold tracking-tight text-on-brand">NI</span>
-          </div>
+          <ProductMark />
           <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-status-success border-2 border-surface-raised" />
         </div>
         {!collapsed ? (
@@ -366,12 +362,7 @@ function MobileTopBar({ mobileOpen, toggleMobile }: MobileTopBarProps) {
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex-between px-4 py-row-lg bg-surface-raised/95 backdrop-blur-xl border-b border-surface-border">
       <div className="flex items-center gap-compact">
-        <div
-          data-testid="product-mark"
-          className="h-8 w-8 rounded-[11px] bg-brand-primary flex-center"
-        >
-          <span className="figure text-xs font-extrabold tracking-tight text-on-brand">NI</span>
-        </div>
+        <ProductMark size="sm" />
         <span className="font-display font-bold text-text-primary">{t('app.title')}</span>
       </div>
       <Tooltip text={mobileOpen ? t('accessibility.closeMenu') : t('accessibility.openMenu')}>

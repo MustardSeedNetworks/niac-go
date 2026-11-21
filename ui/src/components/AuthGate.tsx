@@ -7,6 +7,7 @@ import {
   setRuntimeAPIToken,
   validateRuntimeAuthentication,
 } from '../api/requestCore';
+import { ProductMark } from '../ui/ProductMark';
 
 interface AuthGateProps {
   children: ReactNode;
@@ -79,11 +80,16 @@ export function AuthGate({ children }: AuthGateProps): ReactElement {
     <main className="grid min-h-screen place-items-center bg-surface-base px-4 text-text-primary">
       <form
         onSubmit={connect}
-        className="w-full max-w-md rounded-xl border border-surface-border bg-surface-raised p-8 shadow-xl"
+        className="w-full max-w-md rounded-xl border border-surface-border bg-surface-raised p-6 sm:p-8 shadow-xl"
       >
-        <h1 className="font-display text-2xl font-semibold">{t('auth.title')}</h1>
-        <p className="mt-2 text-sm text-text-secondary">{t('auth.description')}</p>
-        <label htmlFor="api-token" className="mt-6 block text-sm font-medium">
+        <div className="flex flex-col items-center text-center">
+          <ProductMark size="lg" />
+          <h1 className="mt-3 font-display text-2xl font-bold tracking-tight">{t('app.title')}</h1>
+          <p className="mt-1 text-sm text-text-secondary">{t('app.tagline')}</p>
+        </div>
+        <h2 className="mt-6 font-display text-lg font-semibold">{t('auth.title')}</h2>
+        <p className="mt-1 text-sm text-text-secondary">{t('auth.description')}</p>
+        <label htmlFor="api-token" className="mt-5 block text-sm font-medium">
           {t('auth.tokenLabel')}
         </label>
         <input
