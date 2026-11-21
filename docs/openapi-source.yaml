@@ -30,8 +30,9 @@ preamble:
 
       ## Authentication
       Every route below `/api/v1` and `/metrics` requires a bearer token
-      (`NIAC_API_TOKEN` or a token file). `/__version` and `/__capabilities`
-      are deliberately unauthenticated deployment introspection. The installed
+      (`NIAC_API_TOKEN` or a token file). `/__version`, `/__capabilities`,
+      `/health/live` and `/health/ready` are deliberately unauthenticated
+      deployment introspection. The installed
       loopback-only daemon additionally permits tokenless local access, which
       OpenAPI 3.0 cannot express per server and so is documented here rather
       than in a security requirement.

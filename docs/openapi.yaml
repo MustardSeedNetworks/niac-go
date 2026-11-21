@@ -67,8 +67,9 @@ info:
 
         ## Authentication
         Every route below `/api/v1` and `/metrics` requires a bearer token
-        (`NIAC_API_TOKEN` or a token file). `/__version` and `/__capabilities`
-        are deliberately unauthenticated deployment introspection. The installed
+        (`NIAC_API_TOKEN` or a token file). `/__version`, `/__capabilities`,
+        `/health/live` and `/health/ready` are deliberately unauthenticated
+        deployment introspection. The installed
         loopback-only daemon additionally permits tokenless local access, which
         OpenAPI 3.0 cannot express per server and so is documented here rather
         than in a security requirement.
@@ -3676,6 +3677,40 @@ paths:
             security:
                 - BearerAuth: []
                   CsrfToken: []
+    /health/live:
+        get:
+            operationId: getHealthLive
+            responses:
+                "405":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Method not allowed; the Allow header lists the accepted set.
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Internal error.
+            security: []
+    /health/ready:
+        get:
+            operationId: getHealthReady
+            responses:
+                "405":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Method not allowed; the Allow header lists the accepted set.
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                    description: Internal error.
+            security: []
     /metrics:
         get:
             operationId: getMetrics
