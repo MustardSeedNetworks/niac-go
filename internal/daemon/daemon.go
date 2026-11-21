@@ -13,9 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gopacket/gopacket"
-
 	"github.com/MustardSeedNetworks/foundation/pkg/supervise"
+	"github.com/gopacket/gopacket"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
 	"github.com/MustardSeedNetworks/niac-go/internal/api/builtins"
