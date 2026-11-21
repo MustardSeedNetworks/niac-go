@@ -1051,6 +1051,7 @@
       "workstation": "Workstation"
     },
     "header": {
+      "allSites": "All sites",
       "clearTypeFiltersTitle": "Remove all device-type filters and show every device in the topology",
       "graphTabLabel": "Graph",
       "graphTabTitle": "Show devices and links as an interactive graph (drag to reposition, scroll to zoom)",
@@ -1062,9 +1063,10 @@
       "neighborsTabLabel": "Neighbors",
       "neighborsTabTitle": "Show LLDP/CDP neighbor relationships as a sortable table grouped by device",
       "resetButtonLabel": "Reset",
-      "resetButtonTitle": "Clear hand-dragged positions, search, and type filters",
+      "resetButtonTitle": "Clear hand-dragged positions, search, and filters",
       "searchAriaLabel": "Filter devices by name",
       "searchPlaceholder": "Search devices by name…",
+      "siteFilterAriaLabel": "Show one site",
       "typeFilterHideTitle": "Hide {{type}} devices from the graph",
       "typeFilterShowTitle": "Show only {{type}} devices (toggles a filter chip)",
       "typesLabel": "Types:",

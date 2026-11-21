@@ -10,6 +10,9 @@ import { useDeviceList } from '../../contexts/DeviceListContext';
 import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
+import { VirtualList } from './VirtualList';
+
+const ROW_HEIGHT_PX = 60;
 
 export function DeviceTableView() {
   const { t } = useTranslation('devices');
@@ -36,7 +39,7 @@ export function DeviceTableView() {
               className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
               aria-label={t('list.selectAllAria')}
             />
-            <div className="flex-1 grid grid-cols-12 gap-comfortable text-sm font-medium text-text-muted">
+            <div className="hidden flex-1 grid-cols-12 gap-comfortable text-sm font-medium text-text-muted sm:grid">
               <div className="col-span-3">{t('list.tableHeaderHostname')}</div>
               <div className="col-span-2">{t('list.tableHeaderType')}</div>
               <div className="col-span-2">{t('list.tableHeaderIpAddress')}</div>
@@ -47,8 +50,13 @@ export function DeviceTableView() {
         </div>
 
         {/* Device rows */}
-        <div className="divide-y divide-knob/5">
-          {devices.map((device) => {
+        <VirtualList
+          items={devices}
+          itemHeight={ROW_HEIGHT_PX}
+          getKey={(device) => device.hostname}
+          ariaLabel={t('list.listAria')}
+          data-testid="device-list-rows"
+          renderItem={(device) => {
             const safeType = normalizeDeviceType(device.type);
             const DeviceIcon = deviceTypeIcons[safeType];
             const typeColor = deviceTypeColors[safeType];
@@ -56,8 +64,8 @@ export function DeviceTableView() {
 
             return (
               <div
-                key={device.hostname}
-                className={`flex items-center gap-comfortable px-4 py-row-lg hover:bg-surface-hover transition-colors ${
+                data-testid="device-list-row"
+                className={`flex h-full items-center gap-comfortable border-b border-knob/5 px-4 hover:bg-surface-hover transition-colors ${
                   selectedDevices.has(device.hostname) ? 'bg-brand-primary/10' : ''
                 }`}
               >
@@ -68,9 +76,9 @@ export function DeviceTableView() {
                   className="h-4 w-4 rounded border-border-muted bg-bg-elevated text-brand-primary focus:ring-brand-primary"
                   aria-label={t('list.selectDeviceAria', { hostname: device.hostname })}
                 />
-                <div className="flex-1 grid grid-cols-12 gap-comfortable items-center">
+                <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-comfortable gap-y-tight sm:grid-cols-12">
                   {/* Hostname */}
-                  <div className="col-span-3 flex items-center gap-compact">
+                  <div className="flex min-w-0 items-center gap-compact sm:col-span-3">
                     <DeviceIcon className={`${iconSizes.md} text-text-muted`} />
                     <ActionButton
                       action="edit"
@@ -82,27 +90,31 @@ export function DeviceTableView() {
                     </ActionButton>
                   </div>
 
-                  {/* Type */}
-                  <div className="col-span-2">
-                    <Tag colorScheme={typeColor} className="text-xs capitalize">
-                      {device.type?.replace('_', ' ') || t('list.unknownType')}
-                    </Tag>
-                  </div>
+                  {/* Type and IP share the second line on a phone, and are
+                      separate columns from `sm` up (`contents` hands their
+                      children to the 12-column grid). */}
+                  <div className="col-span-2 row-start-2 flex min-w-0 items-center gap-compact sm:contents">
+                    <div className="sm:col-span-2">
+                      <Tag colorScheme={typeColor} className="text-xs capitalize">
+                        {device.type?.replace('_', ' ') || t('list.unknownType')}
+                      </Tag>
+                    </div>
 
-                  {/* IP */}
-                  <div className="col-span-2">
-                    <span className="text-text-secondary text-sm font-mono">
-                      {device.ip || device.ips?.[0] || '—'}
-                    </span>
-                    {device.ips && device.ips.length > 1 && (
-                      <span className="ml-tight text-text-muted text-xs">
-                        +{device.ips.length - 1}
+                    {/* IP */}
+                    <div className="min-w-0 truncate sm:col-span-2">
+                      <span className="text-text-secondary text-sm font-mono">
+                        {device.ip || device.ips?.[0] || '—'}
                       </span>
-                    )}
+                      {device.ips && device.ips.length > 1 && (
+                        <span className="ml-tight text-text-muted text-xs">
+                          +{device.ips.length - 1}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Protocols */}
-                  <div className="col-span-3 flex flex-wrap gap-tight">
+                  <div className="hidden flex-nowrap gap-tight overflow-hidden sm:col-span-3 sm:flex">
                     {deviceProtocols.length > 0 ? (
                       deviceProtocols.slice(0, 4).map((proto) => (
                         <Tag key={proto} colorScheme="gray" className="text-xs">
@@ -120,7 +132,7 @@ export function DeviceTableView() {
                   </div>
 
                   {/* Actions */}
-                  <div className="col-span-2 flex justify-end gap-tight">
+                  <div className="row-start-1 col-start-2 flex justify-end gap-tight sm:col-span-2 sm:col-start-auto sm:row-start-auto">
                     <ActionButton
                       action="edit"
                       onClick={() => onEdit(device.hostname)}
@@ -152,8 +164,8 @@ export function DeviceTableView() {
                 </div>
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       </CardContent>
     </Card>
   );

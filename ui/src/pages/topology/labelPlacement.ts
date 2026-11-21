@@ -183,19 +183,19 @@ interface EdgePresentation {
 }
 
 /**
- * placedEdges runs the placement pass over the laid-out graph and hands each
- * edge its own result, alongside the presentation state the page owns.
+ * decorateEdges hands each edge its placement result alongside the
+ * presentation state the page owns.
  *
- * Assembling this on the page meant the page had to know that placement is a
- * whole-graph pass and that an edge reads its result out of `data`. It only
- * needs to know that labels are placed.
+ * Placement is a whole-graph pass over the layout, so it is expensive and only
+ * changes when the layout does. Presentation changes on every hover and every
+ * focus click, so it is kept apart: the page re-decorates on a hover without
+ * placing a single label again.
  */
-export function placedEdges(
-  nodes: DeviceNode[],
+export function decorateEdges(
   edges: LinkEdge[],
+  placements: Map<string, EdgeLabelPlacement>,
   presentation: EdgePresentation,
 ): LinkEdge[] {
-  const placements = placeLabels(nodes, edges);
   return edges.map((edge) => ({
     ...edge,
     data: {

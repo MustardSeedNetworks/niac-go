@@ -220,6 +220,7 @@
     "editDeviceTitle": "Open the device editor for {{hostname}} to modify protocols, interfaces, and credentials",
     "exportCsv": "CSV (data only)",
     "exportJson": "JSON (data only)",
+    "listAria": "Device list",
     "noDevices": "No devices in the library yet",
     "noIp": "No IP",
     "noProtocols": "No protocols",
