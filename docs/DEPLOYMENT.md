@@ -123,6 +123,30 @@ The installer validates that the archive-local `niac.exe` is present, copies it
 under Program Files, adds NIAC to the machine `PATH`, installs the service, and
 starts it. You can instead run `niac.exe` directly from the extracted folder.
 
+The service keeps its certificates and the attachment policy in
+`%ProgramData%\NiAC`. The installer creates that directory with a protected
+ACL that admits only SYSTEM and Administrators, and refuses to install when it
+already exists but is owned by anyone else or contains a junction or symbolic
+link; remove or review the directory and run the installer again. The service
+registers only a `niac.exe` that sits under `%ProgramFiles%\NiAC`, so run
+`service install` from the installed copy, not from the archive. Because
+only Administrators can read the certificate directory, run `niac` commands
+that talk to the service from an elevated shell.
+
+The service listens on loopback (`127.0.0.1:8445`) unless the machine-level
+`NIAC_LISTEN_ADDR` says otherwise. The installer opens the firewall for the
+Domain and Private profiles only when that address is not loopback, and removes
+a rule left by an earlier install when it is.
+
+Never put the API token in a machine-level `NIAC_API_TOKEN` variable: machine
+environment variables live under `HKLM` and every local user can read them.
+Keep tokens in a token file under `%ProgramData%\NiAC`, whose ACL admits
+only SYSTEM and Administrators, and set only its path, `NIAC_API_TOKEN_FILE`,
+for the service. The service refuses a non-loopback bind without a token. On
+Windows the token file loader still rejects every file, because it judges Unix
+permission bits that Windows does not have (niac-go#3092 tracks the fix), so
+keep the default loopback bind until that lands.
+
 Npcap is required for packet capture and injection features:
 
 ```text
@@ -171,8 +195,9 @@ niac version
 niac --help
 ```
 
-For API deployments, set `NIAC_API_TOKEN` and validate the health endpoint from
-the same host or trusted management network.
+For API deployments on Linux and macOS, set `NIAC_API_TOKEN` (or
+`NIAC_API_TOKEN_FILE`) and validate the health endpoint from the same host or
+trusted management network. On Windows, see the token guidance above.
 
 ### Automated deployment validation
 
