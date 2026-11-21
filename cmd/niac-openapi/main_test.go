@@ -107,8 +107,8 @@ func TestPolicyIsDocumented(t *testing.T) {
 		t.Error("GET /api/v1/simulation should inherit the global bearer requirement, not declare CSRF")
 	}
 
-	// The two unauthenticated introspection routes opt out of security.
-	for _, p := range []string{"/__version", "/__capabilities"} {
+	// The unauthenticated introspection routes opt out of security.
+	for _, p := range []string{"/__version", "/__capabilities", "/health/live", "/health/ready"} {
 		public, isList := paths[p]["get"].(map[string]any)["security"].([]any)
 		if !isList || len(public) != 0 {
 			t.Errorf("%s should declare an empty security requirement, got %v", p, public)

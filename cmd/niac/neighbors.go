@@ -44,7 +44,7 @@ func addNeighborsCommand(root *cobra.Command, _ *serviceOptions) {
 	options := new(neighborsOptions)
 
 	neighborsCmd := &cobra.Command{
-		Use:   "neighbors [watch]",
+		Use:   "neighbors",
 		Short: "Display neighbor discovery table from LLDP/CDP protocols",
 		Long: `Display the neighbor discovery table from a running NIAC simulation.
 
@@ -80,9 +80,9 @@ Use the 'watch' subcommand for continuous live updates.`,
 
   # Read from a daemon on another address
   niac neighbors --api https://10.0.0.5:8445`,
-		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNeighbors(cmd, args, options)
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runNeighbors(cmd, options)
 		},
 	}
 
@@ -133,16 +133,7 @@ Press Ctrl+C to stop watching.`,
 	root.AddCommand(neighborsCmd)
 }
 
-func runNeighbors(cmd *cobra.Command, args []string, options *neighborsOptions) error {
-	// Check if 'watch' was provided as an argument (backward compatibility)
-	if len(args) == 1 && strings.ToLower(args[0]) == "watch" {
-		return runNeighborsWatch(cmd, []string{}, options)
-	}
-
-	if len(args) > 0 {
-		return fmt.Errorf("unknown argument: %s (use 'niac neighbors watch' for live updates)", args[0])
-	}
-
+func runNeighbors(cmd *cobra.Command, options *neighborsOptions) error {
 	// Validate protocol flag
 	if err := validateProtocolFlag(options.protocol); err != nil {
 		return err

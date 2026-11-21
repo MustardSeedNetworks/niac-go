@@ -1349,7 +1349,7 @@ niac monitor --interval 500ms
 Display neighbor discovery table from LLDP/CDP protocols.
 
 ```text
-niac neighbors [watch]
+niac neighbors
 ```
 
 ```text

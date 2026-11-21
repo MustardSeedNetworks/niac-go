@@ -17,14 +17,16 @@ import (
 // installed through the capability registry, which composes its policy (rate
 // limiting, auth, method gate, CSRF, admin scope, body cap) in one canonical
 // order so a route cannot ship without it. foundation's check-route-policy.sh
-// enforces this. /__version and /__capabilities are deliberately
-// unauthenticated deployment introspection. The SPA shell is also public so it
-// can collect a bearer token in browser memory before calling the protected
-// API.
+// enforces this. /__version, /__capabilities and the /health probes are
+// deliberately unauthenticated deployment introspection. The SPA shell is also
+// public so it can collect a bearer token in browser memory before calling the
+// protected API.
 func (s *Server) registerAPIRoutes(reg *route.Registrar) {
 	reg.RegisterAll([]route.Route{
 		{Path: "/__version", Handler: s.handleBuildVersion, Methods: []string{http.MethodGet}},
 		{Path: "/__capabilities", Handler: reg.ServeManifest, Methods: []string{http.MethodGet}},
+		{Path: "/health/live", Handler: s.handleHealthLive, Methods: []string{http.MethodGet}},
+		{Path: "/health/ready", Handler: s.handleHealthReady, Methods: []string{http.MethodGet}},
 	})
 
 	// Top-level authenticated reads + the CSRF-token endpoint.
