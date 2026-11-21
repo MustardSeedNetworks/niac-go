@@ -12,6 +12,7 @@ touch "$TEST_ROOT/niac"
 sed \
   -e "s|BINARY=/usr/bin/niac|BINARY=$TEST_ROOT/niac|" \
   -e "s|PACKAGE_STATE_DIR=/var/lib/niac-package|PACKAGE_STATE_DIR=$TEST_ROOT/package-state|" \
+  -e "s|POLICY_FILE=/etc/niac/attachment-policy.conf|POLICY_FILE=$TEST_ROOT/etc/attachment-policy.conf|" \
   "$REPO_ROOT/deploy/nfpm/postinstall.sh" >"$TEST_ROOT/postinstall.sh"
 sed \
   -e "s|PACKAGE_STATE_DIR=/var/lib/niac-package|PACKAGE_STATE_DIR=$TEST_ROOT/package-state|" \
@@ -135,5 +136,16 @@ mkdir -p "$TEST_ROOT/state"
 run_script none 1 "$TEST_ROOT/postinstall.sh"
 test ! -e "$TEST_ROOT/package-state/firewall-ufw-owned"
 test ! -e "$TEST_ROOT/package-state/firewall-firewalld-owned"
+
+# The attachment policy file is created on first install with the permissions
+# the daemon's trust check requires, and an upgrade never overwrites it.
+policy="$TEST_ROOT/etc/attachment-policy.conf"
+rm -f "$policy"
+run_script none 0 "$TEST_ROOT/postinstall.sh"
+test -f "$policy"
+test "$(stat -c %a "$policy" 2>/dev/null || stat -f %Lp "$policy")" = "644"
+echo "eth0=direct" >>"$policy"
+run_script none 0 "$TEST_ROOT/postinstall.sh"
+grep -qx "eth0=direct" "$policy"
 
 echo "package firewall ownership regression tests passed"

@@ -3,7 +3,7 @@ package api
 import "net/http"
 
 // AttachmentPolicy is one operator-approved physical binding, as the daemon
-// was started with it (--attachment-policy).
+// was started with it (--attachment-policy flags merged with the policy file).
 //
 // The wire shape is named for the request it approves, not for the compiled
 // binding it produces: a caller reads a policy to fill in SimulationRequest's

@@ -16,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/api"
+	"github.com/MustardSeedNetworks/niac-go/internal/attachpolicy"
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
-	"github.com/MustardSeedNetworks/niac-go/internal/fabric"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 	"github.com/MustardSeedNetworks/niac-go/internal/storage"
 )
@@ -71,7 +71,13 @@ engine, allowing you to:
 
 The daemon serves HTTPS on 127.0.0.1:8445 by default. Binding to a
 non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
-NIAC_API_TOKEN or --api-token.`,
+NIAC_API_TOKEN or --api-token.
+
+Physical attachments a simulation may bind come from --attachment-policy flags
+and from the root-owned policy file 'niac attachment-policy' manages; the
+daemon merges both at start and refuses to start if they contradict. A policy
+file that anyone but root could have written is ignored with an error in the
+log.`,
 		Example: `  # Default: HTTPS on 127.0.0.1:8445 (loopback only, no token needed)
   niac daemon
 
@@ -90,6 +96,9 @@ NIAC_API_TOKEN or --api-token.`,
 
   # Permit a directly connected untagged tester
   niac daemon --attachment-policy eth1=direct
+
+  # Approve an interface permanently instead (root-owned policy file, read at start)
+  sudo niac attachment-policy add eth1=direct
 
   # Disable run-history persistence
   niac daemon --storage disabled`,
@@ -137,7 +146,8 @@ NIAC_API_TOKEN or --api-token.`,
 			"Hostname allowed as alert webhook destination (repeatable; if any are set, all webhook URLs must match exactly). When unset, the existing private-IP/blocked-hostname filter is used.")
 	daemonCmd.Flags().
 		StringArrayVar(&options.attachmentPolicies, "attachment-policy", nil,
-			"Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...")
+			"Operator-approved routed attachment (repeatable): "+attachpolicy.Syntax+
+				". Merged with the policy file (see 'niac attachment-policy').")
 
 	daemonCmd.Flags().
 		StringVar(&options.certDir, "cert-dir", "", "Directory holding the self-signed cert and key (default: certs/ relative to CWD; override with NIAC_CERT_DIR)")
@@ -248,141 +258,6 @@ func resolveDaemonAPIToken(o *daemonOptions) string {
 	return resolveAPIToken(o.token)
 }
 
-func parseAttachmentPolicies(values []string) ([]fabric.PhysicalAttachmentPolicy, error) {
-	policies := make([]fabric.PhysicalAttachmentPolicy, 0, len(values))
-	// One interface carries N tagged sessions plus at most one native session,
-	// exactly as the session registry models a trunk port with a native VLAN
-	// (#1426), so it needs one policy per mode rather than one policy outright
-	// (#1463). Direct is the exception: it is unisolated ownership of the whole
-	// interface, so it cannot share one.
-	seenModes := make(map[string]map[fabric.AttachmentMode]struct{}, len(values))
-	for _, value := range values {
-		policy, err := parseAttachmentPolicy(value)
-		if err != nil {
-			return nil, err
-		}
-		modes := seenModes[policy.Interface]
-		if modes == nil {
-			modes = make(map[fabric.AttachmentMode]struct{}, attachmentModesPerInterface)
-			seenModes[policy.Interface] = modes
-		}
-		if _, duplicate := modes[policy.Mode]; duplicate {
-			return nil, fmt.Errorf(
-				"duplicate %s policy for interface %q in attachment policy %q",
-				policy.Mode, policy.Interface, value,
-			)
-		}
-		if exclusiveErr := checkDirectExclusive(policy, modes, value); exclusiveErr != nil {
-			return nil, exclusiveErr
-		}
-		modes[policy.Mode] = struct{}{}
-		policies = append(policies, policy)
-	}
-	return policies, nil
-}
-
-// checkDirectExclusive rejects a direct policy sharing an interface with any
-// other mode, in either order.
-func checkDirectExclusive(
-	policy fabric.PhysicalAttachmentPolicy,
-	modes map[fabric.AttachmentMode]struct{},
-	value string,
-) error {
-	_, hasDirect := modes[fabric.ModeDirect]
-	if !hasDirect && policy.Mode != fabric.ModeDirect {
-		return nil
-	}
-	if hasDirect || len(modes) > 0 {
-		return fmt.Errorf(
-			"interface %q cannot combine direct with another attachment mode (%q)",
-			policy.Interface, value,
-		)
-	}
-	return nil
-}
-
-// attachmentModesPerInterface is the most modes one interface can hold: a
-// trunk policy for the tagged sessions plus an access policy for the native one.
-const attachmentModesPerInterface = 2
-
-const attachmentPolicySyntax = "expected INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,..."
-
-func parseAttachmentPolicy(value string) (fabric.PhysicalAttachmentPolicy, error) {
-	interfaceName, modeValue, ok := strings.Cut(value, "=")
-	if !ok || strings.TrimSpace(interfaceName) != interfaceName || interfaceName == "" {
-		return fabric.PhysicalAttachmentPolicy{}, fmt.Errorf(
-			"invalid attachment policy %q: %s", value, attachmentPolicySyntax,
-		)
-	}
-	policy := fabric.PhysicalAttachmentPolicy{Interface: interfaceName}
-	switch {
-	case modeValue == string(fabric.ModeDirect):
-		policy.Mode = fabric.ModeDirect
-	case strings.HasPrefix(modeValue, string(fabric.ModeAccess)+":"):
-		vlan, err := parseAttachmentVLAN(
-			value,
-			strings.TrimPrefix(modeValue, "access:"),
-			"access VLAN",
-		)
-		if err != nil {
-			return fabric.PhysicalAttachmentPolicy{}, err
-		}
-		policy.Mode, policy.AccessVLAN = fabric.ModeAccess, vlan
-	case strings.HasPrefix(modeValue, string(fabric.ModeTrunk)+":"):
-		vlans, err := parseTrunkVLANs(value, strings.TrimPrefix(modeValue, "trunk:"))
-		if err != nil {
-			return fabric.PhysicalAttachmentPolicy{}, err
-		}
-		policy.Mode, policy.AllowedVLANs = fabric.ModeTrunk, vlans
-	default:
-		return fabric.PhysicalAttachmentPolicy{}, fmt.Errorf(
-			"invalid attachment policy %q: %s", value, attachmentPolicySyntax,
-		)
-	}
-	return policy, nil
-}
-
-func parseAttachmentVLAN(value, text, label string) (uint16, error) {
-	vlan, err := strconv.ParseUint(text, 10, 16)
-	if err != nil || vlan == 0 || vlan > 4094 {
-		return 0, fmt.Errorf(
-			"invalid attachment policy %q: %s must be between 1 and 4094",
-			value,
-			label,
-		)
-	}
-	return uint16(vlan), nil
-}
-
-func parseTrunkVLANs(value, text string) ([]uint16, error) {
-	if text == "" {
-		return nil, fmt.Errorf(
-			"invalid attachment policy %q: trunk requires at least one VLAN",
-			value,
-		)
-	}
-	vlans := make([]uint16, 0, strings.Count(text, ",")+1)
-	var previous uint16
-	for item := range strings.SplitSeq(text, ",") {
-		vlan, err := parseAttachmentVLAN(value, item, "trunk VLANs")
-		if err != nil {
-			return nil, err
-		}
-		if vlan == previous {
-			return nil, fmt.Errorf("invalid attachment policy %q: duplicate VLAN %d", value, vlan)
-		}
-		if vlan < previous {
-			return nil, fmt.Errorf(
-				"invalid attachment policy %q: trunk VLANs must be in ascending order",
-				value,
-			)
-		}
-		vlans = append(vlans, vlan)
-		previous = vlan
-	}
-	return vlans, nil
-}
-
 // logDaemonAuthMode announces which token source is in force and reports
 // whether any is, so the non-loopback gate below reads one name instead of
 // re-deriving it.
@@ -420,7 +295,7 @@ func runDaemon(options *daemonOptions, info versionInfo) error {
 	token := resolveDaemonAPIToken(options)
 	tokenFile := resolveDaemonTokenFile(options)
 	certDir := resolveDaemonCertDir(options)
-	attachmentPolicies, policyErr := parseAttachmentPolicies(options.attachmentPolicies)
+	attachmentPolicies, policyErr := resolveAttachmentPolicies(options.attachmentPolicies)
 	if policyErr != nil {
 		return policyErr
 	}

@@ -11,6 +11,7 @@ else
 fi
 
 PORT=8445
+POLICY_FILE=/etc/niac/attachment-policy.conf
 PACKAGE_STATE_DIR=/var/lib/niac-package
 UFW_MARKER="$PACKAGE_STATE_DIR/firewall-ufw-owned"
 FIREWALLD_MARKER="$PACKAGE_STATE_DIR/firewall-firewalld-owned"
@@ -57,6 +58,25 @@ firewall_hint() {
 case "${NIAC_OPEN_FIREWALL:-0}" in
     1 | true | yes | TRUE | YES) open_firewall ;;
 esac
+
+# The operator's attachment policy file: created once (by root, so root-owned) and
+# readable by the niac service account, and never touched again so an upgrade keeps what
+# the operator approved. The daemon ignores it unless only root can write it.
+create_attachment_policy() {
+    if [ -e "$POLICY_FILE" ]; then
+        return 0
+    fi
+    mkdir -p "$(dirname "$POLICY_FILE")"
+    (
+        umask 022
+        cat >"$POLICY_FILE" <<'POLICY'
+# Physical attachments the NIAC daemon approves, one INTERFACE=MODE per line
+# (direct, access:VLAN or trunk:VLAN,...). Manage it with: niac attachment-policy
+POLICY
+    )
+    chmod 0644 "$POLICY_FILE"
+}
+create_attachment_policy
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload || true

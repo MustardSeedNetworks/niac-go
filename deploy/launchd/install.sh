@@ -27,6 +27,22 @@ if [ -n "$1" ] && [ -f "$1" ]; then
     chmod 755 "${INSTALL_DIR}/niac"
 fi
 
+# The operator's attachment policy file: created once, never overwritten, so a
+# reinstall keeps what the operator approved. The daemon ignores it unless only
+# root can write it.
+POLICY_FILE="${INSTALL_DIR}/attachment-policy.conf"
+if [ ! -e "${POLICY_FILE}" ]; then
+    (
+        umask 022
+        cat > "${POLICY_FILE}" << 'POLICY'
+# Physical attachments the NIAC daemon approves, one INTERFACE=MODE per line
+# (direct, access:VLAN or trunk:VLAN,...). Manage it with: sudo niac attachment-policy
+POLICY
+    )
+    chown root:wheel "${POLICY_FILE}"
+    chmod 644 "${POLICY_FILE}"
+fi
+
 # Install plist
 echo "Installing launchd plist..."
 cp "${PLIST_SRC}" "${PLIST_DST}"

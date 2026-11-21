@@ -27,6 +27,13 @@ The daemon serves HTTPS on 127.0.0.1:8445 by default. Binding to a
 non-loopback address (e.g. --listen 0.0.0.0) requires an API token via
 NIAC_API_TOKEN or --api-token.
 
+.PP
+Physical attachments a simulation may bind come from --attachment-policy flags
+and from the root-owned policy file 'niac attachment-policy' manages; the
+daemon merges both at start and refuses to start if they contradict. A policy
+file that anyone but root could have written is ignored with an error in the
+log.
+
 
 .SH OPTIONS
 \fB--access-vlan\fP=0
@@ -46,7 +53,7 @@ NIAC_API_TOKEN or --api-token.
 
 .PP
 \fB--attachment-policy\fP=[]
-	Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,...
+	Operator-approved routed attachment (repeatable): INTERFACE=direct, INTERFACE=access:VLAN, or INTERFACE=trunk:VLAN,.... Merged with the policy file (see 'niac attachment-policy').
 
 .PP
 \fB--cert-dir\fP=""
@@ -118,6 +125,9 @@ NIAC_API_TOKEN or --api-token.
 
   # Permit a directly connected untagged tester
   niac daemon --attachment-policy eth1=direct
+
+  # Approve an interface permanently instead (root-owned policy file, read at start)
+  sudo niac attachment-policy add eth1=direct
 
   # Disable run-history persistence
   niac daemon --storage disabled

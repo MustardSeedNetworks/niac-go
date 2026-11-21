@@ -646,7 +646,7 @@
       "directMode": "Direct cable (untagged)",
       "help": "Startup requires an administrator-approved attachment policy for the selected interface, mode, and physical VLAN.",
       "modeLabel": "Physical connection",
-      "noPolicyNotice": "No operator-approved attachment policy names {{interface}}. A routed scenario cannot start until the daemon is started with an --attachment-policy for this interface.",
+      "noPolicyNotice": "No operator-approved attachment policy names {{interface}}. A routed scenario cannot start until an operator approves this interface with niac attachment-policy and restarts the daemon.",
       "physicalVlanSummary": "Physical VLAN: {{vlan}}. Virtual VLANs remain isolated inside NIAC.",
       "requestError": "Preflight failed",
       "resolvingBinding": "Reading the approved attachment options…",

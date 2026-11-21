@@ -12,7 +12,8 @@ Every session has two cables, and only one of them moves.
 
 **The real cable** runs from the NIAC host's NIC to a real switch port, or
 straight into a tester. The operator approves how it is used with
-`niac daemon --attachment-policy` (`direct`, `access:VLAN` or `trunk:VLANS`),
+`niac attachment-policy` or `niac daemon --attachment-policy` (`direct`,
+`access:VLAN` or `trunk:VLANS`),
 and a session's binding picks one approved policy at start. It is fixed for the
 life of the session. A scenario cannot choose a host interface or a wire VLAN.
 
@@ -121,26 +122,72 @@ moved client was the first one placed.
 
 ## Approving an interface
 
-The daemon takes its approved bindings from `--attachment-policy` flags only.
-There is no config file or settings route for them: a policy is the operator's
-decision about which NIC a client may drive, so an API client cannot grant it
-to itself. A start on an interface with no matching policy fails preflight with
-`attachment_policy_denied`, and the message names the interface and the flag
-value that would approve it, for example `--attachment-policy en16=direct`.
+A policy is the operator's decision about which NIC a client may drive, so it
+has two sources, both outside the API: a root-owned policy file and
+`--attachment-policy` flags. There is no settings route that writes either, so
+an API client cannot grant itself an interface. A start on an interface with no
+matching policy fails preflight with `attachment_policy_denied`, and the
+message names the interface and the command that approves it, for example
+`niac attachment-policy add en16=direct`.
 
-Add the flag where the daemon is launched, then restart it. A change takes
-effect only on restart, and any running simulation stops with the daemon.
+Approve an interface with the CLI, then restart the daemon:
 
-| Install | Where the flag goes | Apply |
+```bash
+sudo niac attachment-policy add en16=direct          # or eth0=access:200, eth0=trunk:200,201
+sudo niac attachment-policy list
+sudo niac attachment-policy remove en16=direct
+```
+
+`add` and `remove` edit the file in place (keeping your comments) and must run
+as root, or from an elevated shell on Windows; run as anyone else they print
+the `sudo` command to use. `list` reads the file, so it needs whatever access
+the directory gives: any user on macOS, root or the `niac` account on Linux,
+where the package makes `/etc/niac` private. The daemon reads the
+file only at start, so a change takes effect on restart, and any running
+simulation stops with the daemon.
+
+| Install | Policy file | Restart |
 | --- | --- | --- |
-| macOS package or `deploy/launchd` | `ProgramArguments` in `/Library/LaunchDaemons/com.niac.plist`: add `<string>--attachment-policy</string>` and `<string>en16=direct</string>` after `<string>daemon</string>` (the plist is root-owned) | `sudo launchctl unload /Library/LaunchDaemons/com.niac.plist && sudo launchctl load -w /Library/LaunchDaemons/com.niac.plist` |
-| Linux package (systemd) | a drop-in: `sudo systemctl edit niac`, then `[Service]`, an empty `ExecStart=`, and `ExecStart=/usr/bin/niac daemon --attachment-policy eth0=direct` | `sudo systemctl restart niac` |
-| Foreground | `niac daemon --attachment-policy eth0=direct` | restart the process |
+| macOS package or `deploy/launchd` | `/usr/local/niac/attachment-policy.conf` | `sudo launchctl unload /Library/LaunchDaemons/com.niac.plist && sudo launchctl load -w /Library/LaunchDaemons/com.niac.plist` |
+| Linux package (systemd) | `/etc/niac/attachment-policy.conf` | `sudo systemctl restart niac` |
+| Windows service | `%ProgramData%\NiAC\attachment-policy.conf` | `Restart-Service NiACSimulator` |
+| Foreground | the path for your OS above | restart the process |
 
-The flag repeats for several interfaces. Its value is `INTERFACE=direct`,
-`INTERFACE=access:VLAN` or `INTERFACE=trunk:VLAN,...`, and a start must match
-the interface, the mode and the VLAN exactly. `GET /api/v1/attachment-policies`
-lists what the running daemon approved.
+The installers create the file if it is missing and never overwrite it, so an
+upgrade keeps what you approved. The location is fixed per OS and does not
+follow `HOME`, `XDG_DATA_HOME` or `NIAC_LIBRARY_ROOT`.
+
+The file holds one policy per line in the flag syntax; blank lines and lines
+starting with `#` are ignored:
+
+```text
+# lab NICs
+en16=direct
+eth0=trunk:200,201,202
+eth0=access:210
+```
+
+**Trust.** The daemon uses the file only if no one but the operator account
+could have written it: owned by root, a regular file, and not writable by group
+or others (on Windows, owned by SYSTEM or Administrators with no write access
+granted to anyone else). Anything else is ignored, with the reason and the fix
+in the daemon log, and the daemon starts on its flags alone. A file the daemon
+ignores can only approve less, never more.
+
+**Flags and the file merge.** The daemon approves the union of its
+`--attachment-policy` flags and the file. The same policy in both counts once.
+A contradiction, such as `direct` on an interface the other source gives an
+access policy, stops the daemon from starting, with the same message two
+contradictory flags give. A file that is itself inconsistent or has a syntax
+error is ignored whole rather than half-applied.
+
+The value is `INTERFACE=direct`, `INTERFACE=access:VLAN` or
+`INTERFACE=trunk:VLAN,...`, and a start must match the interface, the mode and
+the VLAN exactly. One interface may hold a trunk policy plus an access policy
+(the native VLAN), never `direct` together with anything else. Flags still work
+where the file is awkward, for instance a foreground run:
+`niac daemon --attachment-policy eth0=direct`. `GET /api/v1/attachment-policies`
+lists what the running daemon approved from both sources.
 
 ## Deployment shapes
 

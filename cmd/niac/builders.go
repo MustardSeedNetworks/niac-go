@@ -11,6 +11,7 @@ func commandBuilders(info versionInfo) []func(*cobra.Command, *serviceOptions) {
 		func(root *cobra.Command, _ *serviceOptions) { addCompletionCommand(root) },
 		addAnalyzeCommand,
 		addAnalyzePcapCommand,
+		func(root *cobra.Command, _ *serviceOptions) { addAttachmentPolicyCommand(root) },
 		addBackupCommand,
 		addConfigCommand,
 		addContentCommand,

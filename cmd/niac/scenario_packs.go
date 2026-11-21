@@ -69,7 +69,7 @@ func newScenarioGenerateCommand() *cobra.Command {
 
 With no flags the YAML goes to stdout. -o writes it to a file. --save stores it
 in the running daemon's library instead and prints the command that starts it;
-the daemon must approve the host interface with --attachment-policy before that
+the daemon must approve the host interface (niac attachment-policy) before that
 start will pass preflight.`,
 		Example: `  # Write the hospital pack to a file
   niac scenario generate hospital -o hospital.yaml
@@ -165,7 +165,8 @@ func packStartHint(name, attachment string) string {
 Start it (replace <interface> with the host NIC):
   niac simulation start -i <interface> --config %s.yaml --attachment %s --attachment-mode direct
 
-The daemon must approve that NIC first: start it with --attachment-policy <interface>=direct
+The daemon must approve that NIC first, then restart:
+  sudo niac attachment-policy add <interface>=direct
 (see docs/ATTACHMENTS.md).
 `, name, name, attachment)
 }

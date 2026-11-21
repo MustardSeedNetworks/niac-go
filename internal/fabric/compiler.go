@@ -135,10 +135,10 @@ func (c *scenarioCompiler) validateBindingMode() {
 	}
 }
 
-// policyDeniedMessage names the interface and the exact --attachment-policy
-// value that would approve the binding, because the daemon takes its policy
-// only from that flag. Where the flag goes depends on how the daemon was
-// installed (docs/ATTACHMENTS.md), which the compiler cannot know.
+// policyDeniedMessage names the interface and the exact policy that would
+// approve the binding. The daemon takes its policy only from the operator, via
+// the root-owned policy file or its flags, so the remedy is the command that
+// edits the file; docs/ATTACHMENTS.md covers the rest.
 func policyDeniedMessage(binding Binding) string {
 	const base = "physical attachment is not approved by operator policy"
 	if binding.Interface == "" {
@@ -154,8 +154,9 @@ func policyDeniedMessage(binding Binding) string {
 		return base
 	}
 
-	return fmt.Sprintf("%s: interface %q has no approved %s binding; start the daemon with "+
-		"--attachment-policy %s=%s (see docs/ATTACHMENTS.md, \"Approving an interface\")",
+	return fmt.Sprintf("%s: interface %q has no approved %s binding; as root run "+
+		"`niac attachment-policy add %s=%s`, then restart the daemon "+
+		"(see docs/ATTACHMENTS.md, \"Approving an interface\")",
 		base, binding.Interface, binding.Mode, binding.Interface, value)
 }
 
