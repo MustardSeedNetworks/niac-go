@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.126.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.126.0...v0.126.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **protocols:** bind looped resends to Stop, log dropped observers ([#3052](https://github.com/MustardSeedNetworks/niac-go/issues/3052)) ([35d2a67](https://github.com/MustardSeedNetworks/niac-go/commit/35d2a67b12c473a8c65e1752a2f43aa5875830e4)), closes [#3046](https://github.com/MustardSeedNetworks/niac-go/issues/3046)
+* **scenario:** derive pack baseline utilization from device and peer role ([#3044](https://github.com/MustardSeedNetworks/niac-go/issues/3044)) ([7f0853e](https://github.com/MustardSeedNetworks/niac-go/commit/7f0853ecd7f669c705525bd5d0249b3964a3a232)), closes [#3043](https://github.com/MustardSeedNetworks/niac-go/issues/3043)
+
 ## [0.126.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.125.0...v0.126.0) (2026-11-20)
 
 
