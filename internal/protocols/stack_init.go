@@ -1,9 +1,12 @@
 package protocols
 
 import (
+	"fmt"
 	"maps"
 	"net"
 	"net/netip"
+	"runtime/debug"
+	"slices"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/config"
 	"github.com/MustardSeedNetworks/niac-go/internal/devicestate"
@@ -17,25 +20,46 @@ func (s *Stack) AddPacketObserver(obs PacketObserver) {
 		return
 	}
 	s.observerMu.Lock()
-	s.observers = append(s.observers, obs)
+	s.observers = append(s.observers, &registeredObserver{obs})
 	s.observerMu.Unlock()
 }
 
 // notifyObservers fans a packet event out to every registered observer.
-// A panicking observer is dropped — the stack's job is to forward
-// packets, not to keep buggy observers safe.
+// A panicking observer is logged once, with its type and stack, and removed:
+// the stack's job is to forward packets, not to keep buggy observers safe.
 func (s *Stack) notifyObservers(direction string, pkt *Packet) {
 	s.observerMu.RLock()
-	obs := s.observers
+	observers := s.observers
 	s.observerMu.RUnlock()
-	for _, o := range obs {
-		func() {
-			defer func() {
-				_ = recover()
-			}()
-			o.OnPacket(direction, pkt)
-		}()
+	for _, o := range observers {
+		s.deliverToObserver(o, direction, pkt)
 	}
+}
+
+func (s *Stack) deliverToObserver(o *registeredObserver, direction string, pkt *Packet) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.dropObserver(o, r, debug.Stack())
+		}
+	}()
+	o.OnPacket(direction, pkt)
+}
+
+// dropObserver removes o and logs why. Concurrent deliveries can panic the
+// same observer, so only the call that actually removes it logs.
+func (s *Stack) dropObserver(o *registeredObserver, panicValue any, stack []byte) {
+	s.observerMu.Lock()
+	idx := slices.Index(s.observers, o)
+	if idx >= 0 {
+		// A fresh slice: notifyObservers iterates snapshots of the old one.
+		s.observers = slices.Concat(s.observers[:idx], s.observers[idx+1:])
+	}
+	s.observerMu.Unlock()
+	if idx < 0 {
+		return
+	}
+	logging.Errorf("packet observer %T panicked and was removed: %s\n%s",
+		o.PacketObserver, fmt.Sprint(panicValue), stack)
 }
 
 // initializeDevices repopulates device-dependent state from the provided config.
