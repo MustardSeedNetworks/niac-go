@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -29,9 +30,8 @@ const writeMask = windows.FILE_WRITE_DATA | windows.FILE_APPEND_DATA | windows.F
 
 // operatorSIDs are the accounts allowed to own or write the file: SYSTEM, which
 // the service runs as, and Administrators, who install it.
-var operatorSIDs = []windows.WELL_KNOWN_SID_TYPE{
-	windows.WinLocalSystemSid,
-	windows.WinBuiltinAdministratorsSid,
+func operatorSIDs() []windows.WELL_KNOWN_SID_TYPE {
+	return []windows.WELL_KNOWN_SID_TYPE{windows.WinLocalSystemSid, windows.WinBuiltinAdministratorsSid}
 }
 
 // checkTrusted is the Windows form of "owned by root and not writable by
@@ -90,8 +90,9 @@ func checkACL(acl *windows.ACL, trusted []*windows.SID) error {
 }
 
 func operatorSIDSet() ([]*windows.SID, error) {
-	sids := make([]*windows.SID, 0, len(operatorSIDs))
-	for _, kind := range operatorSIDs {
+	kinds := operatorSIDs()
+	sids := make([]*windows.SID, 0, len(kinds))
+	for _, kind := range kinds {
 		sid, err := windows.CreateWellKnownSid(kind)
 		if err != nil {
 			return nil, fmt.Errorf("resolve well-known account: %w", err)
@@ -102,12 +103,7 @@ func operatorSIDSet() ([]*windows.SID, error) {
 }
 
 func inSet(sid *windows.SID, set []*windows.SID) bool {
-	for _, member := range set {
-		if sid.Equals(member) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(set, sid.Equals)
 }
 
 // createPrivateTemp attaches a protected DACL at creation: SYSTEM and
