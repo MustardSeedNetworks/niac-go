@@ -18,7 +18,7 @@ import { StreamView } from '../components/StreamView';
 import { iconSizes } from '../constants/sizes';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
-import { useErrorToast } from '../hooks/useErrorToast';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
@@ -72,7 +72,7 @@ export function PcapAnalyzerPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   // Held for the life of one upload so the operator — or a navigation away
   // from the page — can abort a capture that is still on the wire. The

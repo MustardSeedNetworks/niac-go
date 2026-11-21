@@ -3,11 +3,12 @@ vi.mock('../../contexts/ScopeContext', () => ({
   useActionPermission: () => ({ disabled: false }),
 }));
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScenarioDraft } from '../../api/library-client';
 import '../../i18n';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { DraftBehaviorComposer } from './DraftBehaviorComposer';
 
 const replaceScenarioDraftBehaviors = vi.hoisted(() => vi.fn());
@@ -44,7 +45,7 @@ describe('DraftBehaviorComposer', () => {
     const onBusyChange = vi.fn();
     replaceScenarioDraftBehaviors.mockResolvedValue(updated);
 
-    render(
+    renderWithToasts(
       <DraftBehaviorComposer
         draft={draft}
         onDraftUpdate={onDraftUpdate}
@@ -111,7 +112,7 @@ describe('DraftBehaviorComposer with an interfaceless first device', () => {
   beforeEach(() => replaceScenarioDraftBehaviors.mockReset());
 
   it('enables the step using a later device that has interfaces', async () => {
-    render(
+    renderWithToasts(
       <DraftBehaviorComposer
         draft={draftWithInterfacelessFirstDevice}
         onDraftUpdate={vi.fn()}
@@ -129,7 +130,7 @@ describe('DraftBehaviorComposer with an interfaceless first device', () => {
       revision: 'revision-2',
     });
 
-    render(
+    renderWithToasts(
       <DraftBehaviorComposer
         draft={draftWithInterfacelessFirstDevice}
         onDraftUpdate={vi.fn()}
@@ -148,7 +149,7 @@ describe('DraftBehaviorComposer with an interfaceless first device', () => {
   });
 
   it('allows a device-only timeline when no device has an interface', async () => {
-    render(
+    renderWithToasts(
       <DraftBehaviorComposer
         draft={{ ...draft, content: 'devices:\n  - name: new-device\n    type: host\n' }}
         onDraftUpdate={vi.fn()}

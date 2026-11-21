@@ -5,8 +5,8 @@ import { type LibraryFileEntry, revertWalk, type WalkProvenance } from '../api/l
 import { GlossaryPopover } from '../components/GlossaryPopover';
 import { ContentBundleUploader } from '../components/library/ContentBundleUploader';
 import { RequireScope } from '../components/ui/RequireScope';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { useLibraryResource } from '../hooks/usePageResources';
+import { useToast } from '../hooks/useToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
@@ -45,7 +45,7 @@ function LibraryFilesView({ kind }: Props) {
   const [search, setSearch] = useState('');
   const [revertTarget, setRevertTarget] = useState<string | null>(null);
   const [reverting, setReverting] = useState(false);
-  const showError = useErrorToast();
+  const { showError } = useToast();
   const sanitizeState = useWalkSanitize(refetch);
 
   const entries = data ?? [];

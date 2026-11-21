@@ -5,9 +5,9 @@ import { updateAlerts } from '../api/client';
 import type { AlertConfig } from '../api/types';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { useAlertsResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tooltip } from '../ui/Tooltip';
@@ -46,7 +46,7 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
   const [saving, setSaving] = useState(false);
   // Success-only: save failures are surfaced as toasts, not a page banner.
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   useEffect(() => {
     if (data && !dirty) {

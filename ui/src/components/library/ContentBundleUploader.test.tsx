@@ -3,12 +3,12 @@ vi.mock('../../contexts/ScopeContext', () => ({
   useActionPermission: () => ({ disabled: false }),
 }));
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
 import { ApiError } from '../../api/errors';
 import { installContentBundleWithProgress } from '../../api/library-client';
-import { useUIStore } from '../../stores/ui-store';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { ContentBundleUploader } from './ContentBundleUploader';
 
 vi.mock('../../api/library-client', () => ({
@@ -22,11 +22,10 @@ function makeFile(name: string, size: number): File {
 describe('ContentBundleUploader', () => {
   beforeEach(() => {
     vi.mocked(installContentBundleWithProgress).mockReset();
-    useUIStore.setState({ notifications: [] });
   });
 
   it('rejects a file with the wrong extension', () => {
-    render(<ContentBundleUploader />);
+    renderWithToasts(<ContentBundleUploader />);
     const input = screen.getByTestId('content-bundle-file-input') as HTMLInputElement;
 
     fireEvent.change(input, { target: { files: [makeFile('bundle.zip', 100)] } });
@@ -49,7 +48,7 @@ describe('ContentBundleUploader', () => {
       };
     });
 
-    render(<ContentBundleUploader />);
+    renderWithToasts(<ContentBundleUploader />);
     const input = screen.getByTestId('content-bundle-file-input') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile('bundle.tar.gz', 1024)] } });
 
@@ -59,15 +58,9 @@ describe('ContentBundleUploader', () => {
 
     await waitFor(() => expect(installContentBundleWithProgress).toHaveBeenCalledTimes(1));
 
-    await waitFor(() => {
-      const notifications = useUIStore.getState().notifications;
-      expect(notifications).toHaveLength(1);
-      expect(notifications[0]).toMatchObject({
-        type: 'success',
-        title: 'Content bundle installed',
-      });
-      expect(notifications[0]?.message).toContain('1 networks, 1 walks, 1 pcaps');
-    });
+    const toast = await screen.findByRole('alert');
+    expect(toast).toHaveTextContent('Content bundle installed');
+    expect(toast).toHaveTextContent('1 networks, 1 walks, 1 pcaps');
 
     // Selection resets after a successful install.
     expect(screen.queryByText('bundle.tar.gz', { exact: false })).not.toBeInTheDocument();
@@ -78,16 +71,11 @@ describe('ContentBundleUploader', () => {
       new ApiError('bundle is corrupt', 400, 'bundle_invalid'),
     );
 
-    render(<ContentBundleUploader />);
+    renderWithToasts(<ContentBundleUploader />);
     const input = screen.getByTestId('content-bundle-file-input') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile('bundle.tar.gz', 1024)] } });
     fireEvent.click(screen.getByTestId('content-bundle-install'));
 
-    await waitFor(() => {
-      const notifications = useUIStore.getState().notifications;
-      expect(notifications).toHaveLength(1);
-      expect(notifications[0]?.type).toBe('error');
-      expect(notifications[0]?.message).toContain('bundle is corrupt');
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('bundle is corrupt');
   });
 });

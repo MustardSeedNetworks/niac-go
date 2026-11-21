@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeWalk, sanitizeWalksBatch } from '../api/library-client';
-import { useUIStore } from '../stores/ui-store';
-import { useErrorToast } from './useErrorToast';
+import { useToast } from './useToast';
 
 /**
  * useWalkSanitize — sanitize state + handlers for the library walks view
@@ -18,8 +17,7 @@ import { useErrorToast } from './useErrorToast';
  */
 export function useWalkSanitize(refetch: () => void | Promise<void>) {
   const { t } = useTranslation('pages');
-  const addNotification = useUIStore((s) => s.addNotification);
-  const showError = useErrorToast();
+  const { addToast, showError } = useToast();
 
   const [sanitizeTarget, setSanitizeTarget] = useState<string | null>(null);
   const [sanitizing, setSanitizing] = useState(false);
@@ -52,7 +50,7 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
     try {
       const name = sanitizeTarget;
       await sanitizeWalk(name);
-      addNotification({
+      addToast({
         type: 'success',
         title: t('libraryFiles.sanitizeSuccessTitle'),
         message: t('libraryFiles.sanitizeSuccessMessage', { name }),
@@ -64,7 +62,7 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
     } finally {
       setSanitizing(false);
     }
-  }, [sanitizeTarget, sanitizing, addNotification, t, refetch, showError]);
+  }, [sanitizeTarget, sanitizing, addToast, t, refetch, showError]);
 
   const confirmBatchSanitize = useCallback(async () => {
     if (selected.size === 0 || batchSanitizing) return;
@@ -72,7 +70,7 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
     try {
       const names = Array.from(selected);
       const resp = await sanitizeWalksBatch(names);
-      addNotification({
+      addToast({
         type: resp.failed > 0 ? 'warning' : 'success',
         title:
           resp.failed > 0
@@ -91,7 +89,7 @@ export function useWalkSanitize(refetch: () => void | Promise<void>) {
     } finally {
       setBatchSanitizing(false);
     }
-  }, [selected, batchSanitizing, addNotification, t, refetch, showError, clearSelection]);
+  }, [selected, batchSanitizing, addToast, t, refetch, showError, clearSelection]);
 
   return {
     sanitizeTarget,

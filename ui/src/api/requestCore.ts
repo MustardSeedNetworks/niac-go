@@ -18,6 +18,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 // API_TOKEN is only used in development mode to avoid embedding secrets in production bundles.
 const API_TOKEN = import.meta.env.DEV ? (import.meta.env.VITE_API_TOKEN ?? '') : '';
 export const AUTH_FAILURE_EVENT = 'niac:authentication-required';
+export const AUTH_DISCONNECT_EVENT = 'niac:disconnect';
 
 let runtimeAPIToken = '';
 let authenticationGeneration = 0;
@@ -81,6 +82,18 @@ export function clearRuntimeAPIToken() {
   authenticationGeneration += 1;
   runtimeAPIToken = '';
   csrfTokenPromise = null;
+}
+
+/**
+ * Operator-initiated sign out: forgets this tab's token and tells the
+ * AuthGate to return to the connect prompt. Distinct from
+ * notifyAuthenticationRequired, which reports a rejected session.
+ */
+export function disconnectRuntimeAPI() {
+  clearRuntimeAPIToken();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_DISCONNECT_EVENT));
+  }
 }
 
 function activeAPIToken() {

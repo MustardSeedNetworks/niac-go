@@ -19,6 +19,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceProvider } from '../../contexts/ResourceProvider';
 import { useApiResource } from '../../hooks/useApiResource';
 import { MemoryDataRouter } from '../../test/MemoryDataRouter';
+import { ToastProvider } from '../../ui/Toast';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <ResourceProvider>
@@ -91,7 +92,9 @@ describe('useDeviceEditor — loading an existing device', () => {
       {
         wrapper: ({ children }) => (
           <QueryClientProvider client={client}>
-            <MemoryDataRouter>{children}</MemoryDataRouter>
+            <ToastProvider>
+              <MemoryDataRouter>{children}</MemoryDataRouter>
+            </ToastProvider>
           </QueryClientProvider>
         ),
       },

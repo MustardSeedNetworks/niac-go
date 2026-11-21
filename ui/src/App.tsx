@@ -1,13 +1,15 @@
 import { Wrench } from 'lucide-react';
 import { memo, type ReactNode, type RefObject, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes, useLocation } from 'react-router';
+import { Route, Routes, useLocation } from 'react-router';
 import { ErrorBoundary, PageErrorBoundary } from './components/ErrorBoundary';
 import { HelpDrawer } from './components/HelpDrawer';
+import { NotFound } from './components/NotFound';
 import { RailControls } from './components/RailControls';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { AppProvider, useAppState } from './contexts/AppContext';
+import { AppProvider } from './contexts/AppContext';
 import { pageHelpRoutes } from './data/page-help';
+import { useBuildVersion } from './hooks/useBuildVersion';
 import { useConnectionStatus } from './hooks/useConnectionStatus';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useFocusOnRouteChange } from './hooks/useFocusOnRouteChange';
@@ -19,7 +21,6 @@ import { Breadcrumbs } from './ui/Breadcrumbs';
 import { PageHeader } from './ui/PageHeader';
 import { PageLoader } from './ui/PageLoader';
 import { SidebarLayout } from './ui/Sidebar';
-import { ToastContainer } from './ui/ToastContainer';
 import './App.css';
 
 /**
@@ -47,7 +48,7 @@ function AppShell() {
   const themeState = useTheme();
   const { isDark, toggleTheme } = themeState;
   const { t } = useTranslation('pages');
-  const { data: version } = useAppState('version');
+  const { version } = useBuildVersion();
   const navGroups = useNavGroups();
   const pages = usePages();
   // Drawers used to live inside Sidebar.tsx; moved here as part of Phase 1
@@ -69,7 +70,7 @@ function AppShell() {
   return (
     <SidebarLayout
       groups={navGroups}
-      version={version?.version}
+      version={version}
       railControls={(collapsed) => (
         <RailControls
           collapsed={collapsed}
@@ -81,7 +82,6 @@ function AppShell() {
       onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
     >
-      <ToastContainer />
       {/* Keyed on the route so a suspending navigation mounts a NEW boundary.
           Every page is lazy(), and React Router updates in a transition: a
           transition that suspends against an EXISTING boundary keeps the whole
@@ -146,7 +146,7 @@ function AppShell() {
               </PageWithErrorBoundary>
             }
           />
-          <Route path="*" element={<Navigate to="/" replace={true} />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <SettingsDrawer
@@ -154,7 +154,7 @@ function AppShell() {
         themeState={themeState}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        version={version?.version}
+        version={version}
       />
       <HelpDrawer
         isOpen={helpOpen || helpPath !== undefined}
