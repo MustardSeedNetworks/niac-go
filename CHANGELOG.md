@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.127.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.126.1...v0.127.0) (2026-11-21)
+
+
+### Features
+
+* **library:** shipped scenarios as read-only Examples; drop 7 toy built-ins ([#3053](https://github.com/MustardSeedNetworks/niac-go/issues/3053)) ([b3c1e7f](https://github.com/MustardSeedNetworks/niac-go/commit/b3c1e7fcb57a7eb76ca331d33b028cc4f4d157d7)), closes [#3050](https://github.com/MustardSeedNetworks/niac-go/issues/3050)
+
+
+### Code Refactoring
+
+* **daemon:** supervise the behavior runner, runtime-state writer and capture loops ([#3051](https://github.com/MustardSeedNetworks/niac-go/issues/3051)) ([e877769](https://github.com/MustardSeedNetworks/niac-go/commit/e87776993a867da81791ccb1d151acc9dd31e3f6))
+
 ## [0.126.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.126.0...v0.126.1) (2026-11-21)
 
 
