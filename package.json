@@ -5,8 +5,8 @@
   "description": "NIAC - Network In A Can device simulator - Mustard Seed Networks",
   "type": "module",
   "engines": {
-    "node": "26.13.0",
-    "npm": "12.2.1"
+    "node": "26.13.1",
+    "npm": "12.2.2"
   },
   "scripts": {
     "prepare": "husky",
@@ -39,5 +39,5 @@
       "@commitlint/config-conventional"
     ]
   },
-  "packageManager": "npm@12.2.1"
+  "packageManager": "npm@12.2.2"
 }
