@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/windows"
 
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
@@ -87,6 +90,11 @@ func (p *niacProgram) run() {
 	}
 	defer func() { _ = lock.Release() }()
 
+	if dirErr := prepareServiceDirs(); dirErr != nil {
+		logging.Errorf("Refusing to start: %v", dirErr)
+		return
+	}
+
 	policies, policyErr := resolveAttachmentPolicies(nil)
 	if policyErr != nil {
 		logging.Errorf("Refusing to start: %v", policyErr)
@@ -96,6 +104,7 @@ func (p *niacProgram) run() {
 	d, err := daemon.NewDaemon(daemon.Config{
 		ListenAddr:   listen,
 		Token:        resolveAPIToken(""),
+		TokenFile:    os.Getenv("NIAC_API_TOKEN_FILE"),
 		StoragePath:  storagePath,
 		Version:      p.info.version,
 		Commit:       p.info.commit,
@@ -208,10 +217,55 @@ func addServiceCommand(root *cobra.Command, _ *serviceOptions) {
 	root.AddCommand(serviceCmd)
 }
 
-func getServiceConfig() (*service.Config, error) {
+// resolvedExecutable is the running binary's real path, with symlinks and
+// junctions followed, so what is judged and registered is the file that runs.
+func resolvedExecutable() (string, error) {
 	execPath, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("resolve executable path: %w", err)
+		return "", fmt.Errorf("resolve executable path: %w", err)
+	}
+	resolved, err := filepath.EvalSymlinks(execPath)
+	if err != nil {
+		return "", fmt.Errorf("resolve symlinks in %s: %w", execPath, err)
+	}
+	return resolved, nil
+}
+
+// requireInstalledLocation refuses a binary that is not under
+// %ProgramFiles%\NiAC. The service runs as SYSTEM, so registering a binary a
+// user can replace would hand them SYSTEM.
+func requireInstalledLocation(execPath string) error {
+	programFiles, err := windows.KnownFolderPath(windows.FOLDERID_ProgramFiles, 0)
+	if err != nil {
+		return fmt.Errorf("locate Program Files: %w", err)
+	}
+	installDir, err := filepath.EvalSymlinks(filepath.Join(programFiles, "NiAC"))
+	if err != nil {
+		return fmt.Errorf("locate the install directory: %w", err)
+	}
+	return requireWithin(installDir, execPath)
+}
+
+// requireWithin accepts path only when it is inside root. Rel compares
+// case-insensitively on Windows and, unlike a prefix test, does not accept a
+// sibling such as NiACevil.
+func requireWithin(root, path string) error {
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == "." || filepath.IsAbs(rel) ||
+		rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf(
+			"refusing to register %s: it is not inside %s; run install.ps1 from the release archive",
+			path,
+			root,
+		)
+	}
+	return nil
+}
+
+func getServiceConfig() (*service.Config, error) {
+	execPath, err := resolvedExecutable()
+	if err != nil {
+		return nil, err
 	}
 	return &service.Config{
 		Name:        windowsServiceName,
@@ -260,6 +314,14 @@ func runWindowsService(info versionInfo) error {
 }
 
 func installWindowsService(out io.Writer) error {
+	execPath, err := resolvedExecutable()
+	if err != nil {
+		return err
+	}
+	if locationErr := requireInstalledLocation(execPath); locationErr != nil {
+		return locationErr
+	}
+
 	svc, err := newServiceFor(&niacProgram{})
 	if err != nil {
 		return err

@@ -138,6 +138,17 @@ jobs:
           - 'scripts/tests/release-content-integrity-test.sh'
           - 'scripts/tests/file-size-gate-test.sh'
           - 'scripts/check-file-size.sh'
+        # What the Windows install job exercises: the installer, the service
+        # registration and the trust check on the policy file. Read through
+        # the `filters` output, which carries names the shared workflow does
+        # not declare an output for.
+        windows_install:
+          - 'deploy/windows/**'
+          - 'cmd/niac/cmd_service*'
+          - 'cmd/niac/datadir*'
+          - 'cmd/niac/cert_dir.go'
+          - 'internal/attachpolicy/**'
+          - '.github/workflows/ci.yml'
         # The image installs a release archive by the name goreleaser
         # gives it, so a rename there breaks the image too.
         docker:
@@ -378,6 +389,97 @@ jobs:
           # GOOS, so this job and that one share one entry while analysing two
           # different trees. #1942.
           skip-cache: true
+
+  # ===========================================================================
+  # Windows installer
+  # ===========================================================================
+  # Nothing else runs install.ps1: the backend job's Windows leg builds and
+  # runs a handful of unit tests. This one lays out the release archive, runs
+  # the installer elevated under Windows PowerShell 5.1, and checks what the
+  # audit cared about: the data directory's ACL, the refusals, the policy
+  # file's protected ACL, and that the service answers. On merge_group every
+  # filter is true, so the queue runs it.
+  #
+  # CGO_ENABLED=0 with no Npcap SDK: the release link is CGO against that SDK
+  # (release.yml build-windows), which this job does not need to prove the
+  # installer. The ldflags are the ones `make build` and the release use.
+  windows-install:
+    name: Windows installer
+    needs: changes
+    if: fromJSON(needs.changes.outputs.filters).windows_install == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-go
+
+      - name: PSScriptAnalyzer on install.ps1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          # Write-Host is the installer's console output, not data for a pipeline.
+          $findings = @(Invoke-ScriptAnalyzer -Path deploy/windows/install.ps1 -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost)
+          $findings | Format-List RuleName, Severity, Line, Message
+          if ($findings.Count -gt 0) { throw "PSScriptAnalyzer reported $($findings.Count) finding(s)" }
+
+      - name: Windows-only unit tests
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go test -count=1 -v ./internal/attachpolicy
+          go test -count=1 -v ./cmd/niac -run '^(TestRequireWithin|TestVerifyDataDir.*|TestEnsureDataDir.*|TestPrepareServiceDirs)$'
+
+      - name: Build niac.exe and lay out the release archive
+        id: archive
+        shell: powershell
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (git describe --tags --always --dirty).Trim()
+          $commit = (git rev-parse --short HEAD).Trim()
+          $buildTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          # Same shape as the Makefile's UI_BUILD_HASH: md5 of the sorted
+          # per-file md5 lines for the embedded UI directory.
+          $lines = Get-ChildItem -Path internal/api/ui -Recurse -File -Force | ForEach-Object {
+              $sum = (Get-FileHash -Algorithm MD5 -LiteralPath $_.FullName).Hash.ToLower()
+              $relative = $_.FullName.Substring((Get-Location).Path.Length + 1).Replace("\", "/")
+              "$sum  $relative"
+          }
+          $joined = (($lines | Sort-Object -CaseSensitive) -join "`n") + "`n"
+          $md5 = [Security.Cryptography.MD5]::Create()
+          $uiHash = -join ($md5.ComputeHash([Text.Encoding]::UTF8.GetBytes($joined)) | ForEach-Object { $_.ToString("x2") })
+          $pkg = "github.com/MustardSeedNetworks/niac-go/internal/version"
+          $ldflags = "-s -w -X $pkg.Version=$version -X $pkg.Commit=$commit -X $pkg.BuildTime=$buildTime -X $pkg.UIBuildHash=$uiHash"
+
+          $stage = Join-Path $env:RUNNER_TEMP "niac-archive-src"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          go build -trimpath -buildvcs=false -ldflags $ldflags -o (Join-Path $stage "niac.exe") ./cmd/niac
+          if ($LASTEXITCODE -ne 0) { throw "go build failed" }
+
+          # The release zip's file set: binary, installer, README, LICENSE, templates.
+          Copy-Item deploy/windows/install.ps1, README.md, LICENSE -Destination $stage
+          Copy-Item cmd/niac/templates -Destination (Join-Path $stage "templates") -Recurse
+          $zip = Join-Path $env:RUNNER_TEMP "niac-windows-amd64.zip"
+          Compress-Archive -Path "$stage\*" -DestinationPath $zip -Force
+          $extracted = Join-Path $env:RUNNER_TEMP "niac-archive"
+          Expand-Archive -Path $zip -DestinationPath $extracted -Force
+          "archive=$extracted" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Install, assert, uninstall
+        shell: powershell
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.archive }}
+          EXPECTED_VERSION: ${{ steps.archive.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          & deploy/windows/ci-install-test.ps1 -Archive $env:ARCHIVE -ExpectedVersion $env:EXPECTED_VERSION
 
   # ===========================================================================
   # Go race detector — fleet-shared ci-race.yml
@@ -1399,6 +1501,7 @@ jobs:
       - changes
       - backend
       - lint-windows
+      - windows-install
       - race
       - capture-rawsocket
       - docker-image

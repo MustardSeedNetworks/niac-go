@@ -13,10 +13,5 @@ func defaultCertDir() string {
 	if runtime.GOOS != "windows" {
 		return ""
 	}
-
-	programData := os.Getenv("ProgramData")
-	if programData == "" {
-		programData = `C:\ProgramData`
-	}
-	return filepath.Join(programData, "NiAC", "certs")
+	return filepath.Join(windowsDataDir(), "certs")
 }
