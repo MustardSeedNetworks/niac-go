@@ -104,19 +104,17 @@ func promptNetworkType(reader *bufio.Reader) (string, error) {
 		color.CyanString("1. What type of network are you simulating?"),
 	)
 	fmt.Fprintln(os.Stdout, "   a) Basic network (router + switch)")
-	fmt.Fprintln(os.Stdout, "   b) Small office network")
-	fmt.Fprintln(os.Stdout, "   c) Data center / enterprise core")
-	fmt.Fprintln(os.Stdout, "   d) IoT / sensor network")
-	fmt.Fprintln(os.Stdout, "   e) Enterprise campus (multi-building)")
-	fmt.Fprintln(os.Stdout, "   f) Service provider / ISP")
-	fmt.Fprintln(os.Stdout, "   g) Home network")
-	fmt.Fprintln(os.Stdout, "   h) Test lab / protocol testing")
+	fmt.Fprintln(os.Stdout, "   b) One switch replaying a real SNMP capture")
+	fmt.Fprintln(os.Stdout, "   c) Two switches replaying the same capture")
+	fmt.Fprintln(os.Stdout, "   d) Resource pressure (CPU, memory and disk alerts)")
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(os.Stdout, "   Larger, vertical networks are scenario packs: niac scenario generate <pack-id>")
 	fmt.Fprintln(os.Stdout)
 
 	return mustPromptChoice(
 		reader,
-		"Enter your choice (a-h): ",
-		[]string{"a", "b", "c", "d", "e", "f", "g", "h"},
+		"Enter your choice (a-d): ",
+		[]string{"a", "b", "c", "d"},
 	)
 }
 
@@ -124,13 +122,9 @@ func promptNetworkType(reader *bufio.Reader) (string, error) {
 func mapNetworkTypeToScenario(networkType string) (string, string) {
 	scenarioMap := map[string][2]string{
 		"a": {"basic-network", "Basic Network - Simple router and switch setup"},
-		"b": {"small-office", "Small Office - Router, switch, AP, and services"},
-		"c": {"data-center", "Data Center - Multiple routers, switches, and servers"},
-		"d": {"iot-network", "IoT Network - Sensor devices with lightweight protocols"},
-		"e": {"enterprise-campus", "Enterprise Campus - Multi-building network"},
-		"f": {"service-provider", "Service Provider - ISP-style topology"},
-		"g": {"home-network", "Home Network - Residential gateway and devices"},
-		"h": {"test-lab", "Test Lab - Comprehensive protocol testing"},
+		"b": {"captured-switch", "Captured Switch - One switch replaying a real SNMP capture"},
+		"c": {"captured-pair", "Captured Pair - Two switches replaying the same capture"},
+		"d": {"resource-pressure", "Resource Pressure - Servers with CPU, memory and disk faults"},
 	}
 
 	if entry, ok := scenarioMap[networkType]; ok {

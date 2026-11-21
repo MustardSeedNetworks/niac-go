@@ -2,7 +2,7 @@ import { Activity, BellRing, Network, PlugZap } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchUsableInterfaces, startSimulation, stopSimulation } from '../api/client';
-import { fetchLibraryNetworkContent } from '../api/library-client';
+import { fetchLibraryNetworkContent, fetchLibraryNetworks } from '../api/library-client';
 import type {
   LibraryNetwork,
   NetworkInterface,
@@ -161,6 +161,7 @@ export function RuntimeControlPage() {
 
     try {
       let configData: string | undefined;
+      let scenarioName: string | undefined;
 
       // Handle quick upload file
       if (quickUploadFile) {
@@ -169,10 +170,19 @@ export function RuntimeControlPage() {
       // Handle a saved library network — the library confines entries
       // behind an os.Root keyed by name (internal/library/list.go), so
       // there's no filesystem path to hand the daemon; fetch the content
-      // and send it inline instead.
+      // and send it inline instead. A shipped example has no file at all and
+      // is started by name: the daemon resolves it the way it resolves any
+      // bare library name, and a pack's multi-megabyte document never crosses
+      // the browser.
       else if (simulationSettings.configSource === 'userConfig') {
-        const userConfigContent = await fetchLibraryNetworkContent(simulationSettings.configName);
-        configData = userConfigContent.content;
+        const networks = await fetchLibraryNetworks();
+        const selected = networks.find((network) => network.name === simulationSettings.configName);
+        if (selected?.source === 'example') {
+          scenarioName = selected.name;
+        } else {
+          const userConfigContent = await fetchLibraryNetworkContent(simulationSettings.configName);
+          configData = userConfigContent.content;
+        }
       }
 
       if (requestSequence.current !== sequence) return;
@@ -180,6 +190,7 @@ export function RuntimeControlPage() {
         payload: {
           interface: simulationSettings.selectedInterface,
           configData: configData,
+          scenarioName: scenarioName,
         },
         sequence,
       });

@@ -31,14 +31,14 @@ with 'niac daemon --once'; the scenario itself is unchanged.
 
 .SH EXAMPLE
 .EX
-  # Create small office config
-  niac scenario use small-office office.yaml
+  # Create a basic config
+  niac scenario use basic-network office.yaml
 
-  # Create IoT network config
-  niac scenario use iot-network sensors.yaml
+  # Create a two-switch capture fleet
+  niac scenario use captured-pair fleet.yaml
 
-  # Create data center config
-  niac scenario use data-center dc.yaml
+  # Create a resource-fault config
+  niac scenario use resource-pressure alerts.yaml
 
   # Quick workflow
   niac scenario use basic-network config.yaml && niac validate config.yaml

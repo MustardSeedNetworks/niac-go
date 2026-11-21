@@ -24,18 +24,18 @@ func addScenarioCommand(root *cobra.Command, _ *serviceOptions) {
   niac scenario show basic-network
 
   # Create config from scenario
-  niac scenario use small-office office.yaml
+  niac scenario use basic-network office.yaml
 
   # Apply scenario directly (validate and display info)
-  niac scenario apply data-center`,
+  niac scenario apply captured-switch`,
 	}
 
 	scenarioListCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available scenarios and scenario packs",
 		Long: `Print every bundled scenario name with a one-line description.
-They cover common small networks (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+They are small, hand-written starting points (basic-network, captured-switch,
+captured-pair, resource-pressure) and the fastest path to a runnable YAML config.
 Scenario packs (hospital, warehouse, campus, ...) are listed after them; they
 are generated with 'niac scenario generate'.`,
 		Example: `  # List all scenarios with descriptions
@@ -54,11 +54,11 @@ without writing to disk.`,
 		Example: `  # Show basic network scenario
   niac scenario show basic-network
 
-  # Show small office scenario
-  niac scenario show small-office
+  # Show the captured switch scenario
+  niac scenario show captured-switch
 
   # Pipe to file
-  niac scenario show data-center > my-config.yaml`,
+  niac scenario show resource-pressure > my-config.yaml`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runScenarioShow(args)
@@ -71,14 +71,14 @@ without writing to disk.`,
 		Long: `Copy a named scenario's body into a new YAML file at the given
 output path. The output file becomes the starting point you edit and run
 with 'niac daemon --once'; the scenario itself is unchanged.`,
-		Example: `  # Create small office config
-  niac scenario use small-office office.yaml
+		Example: `  # Create a basic config
+  niac scenario use basic-network office.yaml
 
-  # Create IoT network config
-  niac scenario use iot-network sensors.yaml
+  # Create a two-switch capture fleet
+  niac scenario use captured-pair fleet.yaml
 
-  # Create data center config
-  niac scenario use data-center dc.yaml
+  # Create a resource-fault config
+  niac scenario use resource-pressure alerts.yaml
 
   # Quick workflow
   niac scenario use basic-network config.yaml && niac validate config.yaml`,
@@ -97,11 +97,11 @@ and protocols it contains without creating a file.`,
 		Example: `  # Validate basic network scenario
   niac scenario apply basic-network
 
-  # Check data center scenario
-  niac scenario apply data-center
+  # Check the captured switch scenario
+  niac scenario apply captured-switch
 
-  # Verify IoT network configuration
-  niac scenario apply iot-network`,
+  # Verify the captured pair scenario
+  niac scenario apply captured-pair`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runScenarioApply(args)

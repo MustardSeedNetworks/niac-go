@@ -45,17 +45,17 @@ for (const width of [1280, 390]) {
         await interfacePicker.evaluate((element) => element.getBoundingClientRect().height),
       ).toBeGreaterThanOrEqual(44);
       const tabs = drawer.getByRole('tablist', { name: 'Configuration' });
-      // The library is the one list of starter networks; the Built-in tab
+      // The library is the one list of networks, shipped examples included; the Built-in tab
       // listed nothing on an installed host and is gone (#2131).
       await expect(tabs.getByRole('tab')).toHaveText(['My Configs', 'Upload']);
       const configs = tabs.getByRole('tab', { name: 'My Configs', exact: true });
       const upload = tabs.getByRole('tab', { name: 'Upload', exact: true });
       await expect(configs).toHaveAttribute('aria-selected', 'true');
       await expect(upload).toHaveAccessibleName('Upload');
-      // First run seeds the library with the shipped starters, so the default
-      // tab is never empty.
+      // The shipped examples are served from the binary, so the default tab is
+      // never empty.
       const configsPanel = drawer.getByRole('tabpanel', { name: 'My Configs' });
-      await expect(configsPanel.getByRole('button', { name: /small-office/ })).toBeVisible();
+      await expect(configsPanel.getByRole('button', { name: /basic-network/ })).toBeVisible();
       await page.screenshot({ path: test.info().outputPath('simulation-tabs.png') });
       await configs.focus();
       await configs.press('ArrowRight');

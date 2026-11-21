@@ -83,13 +83,10 @@ func TestMapNetworkTypeToScenario(t *testing.T) {
 		expectDesc   bool
 	}{
 		{"basic network", "a", "basic-network", true},
-		{"small office", "b", "small-office", true},
-		{"data center", "c", "data-center", true},
-		{"iot network", "d", "iot-network", true},
-		{"enterprise campus", "e", "enterprise-campus", true},
-		{"service provider", "f", "service-provider", true},
-		{"home network", "g", "home-network", true},
-		{"test lab", "h", "test-lab", true},
+		{"captured switch", "b", "captured-switch", true},
+		{"captured pair", "c", "captured-pair", true},
+		{"resource pressure", "d", "resource-pressure", true},
+		{"removed option falls back to basic", "e", "basic-network", true},
 		{"invalid defaults to basic", "z", "basic-network", true},
 		{"empty defaults to basic", "", "basic-network", true},
 		{"uppercase invalid", "A", "basic-network", true},

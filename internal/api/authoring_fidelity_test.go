@@ -261,19 +261,27 @@ const precedenceWalkLine = ".1.3.6.1.2.1.1.1.0 = STRING: \"outside\"\n"
 // broke when the editor was first given a base at all.
 func TestABuiltinScenarioDeviceSurvivesAnEditorRoundTrip(t *testing.T) {
 	root := t.TempDir()
-	if _, err := library.Open(root); err != nil {
+	lib, err := library.Open(root)
+	if err != nil {
 		t.Fatalf("bootstrap library: %v", err)
 	}
 	networks := filepath.Join(root, string(library.KindNetworks))
 
 	for _, name := range []string{"captured-switch", "captured-pair"} {
 		t.Run(name, func(t *testing.T) {
-			cfg, err := config.LoadYAML(filepath.Join(networks, name+".yaml"))
-			if err != nil {
-				t.Fatalf("load scenario: %v", err)
+			// The shipped scenario is an example served from the binary; the
+			// editor works on the copy an operator saves into the library.
+			saved, dupErr := lib.DuplicateExample(name, "")
+			if dupErr != nil {
+				t.Fatalf("duplicate example: %v", dupErr)
+			}
+			path := filepath.Join(networks, saved+".yaml")
+			cfg, loadErr := config.LoadYAML(path)
+			if loadErr != nil {
+				t.Fatalf("load scenario: %v", loadErr)
 			}
 			server := &Server{cfg: ServerConfig{
-				ConfigPath: filepath.Join(networks, name+".yaml"),
+				ConfigPath: path,
 				Config:     cfg,
 			}}
 

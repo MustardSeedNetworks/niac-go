@@ -75,6 +75,10 @@ func packPostRaw(
 	return rec
 }
 
+// savedPackSuffix keeps a saved pack off its own name: a pack id is a shipped
+// example, and the library refuses to save over one.
+const savedPackSuffix = "-saved"
+
 // TestEveryScenarioPackSavesThroughTheRegisteredNamedNetworkRoute is the
 // regression for #2203. Five of the seven shipped packs generate a YAML larger
 // than 1 MiB, so saving one as a named network answered 413 and the flagship
@@ -114,7 +118,7 @@ func TestEveryScenarioPackSavesThroughTheRegisteredNamedNetworkRoute(t *testing.
 			}
 
 			saved := packPost(t, server, mux, token, "/api/v1/library/networks",
-				libraryNetworkUploadRequest{Name: pack.ID, Content: response.Content})
+				libraryNetworkUploadRequest{Name: pack.ID + savedPackSuffix, Content: response.Content})
 			if saved.Code != http.StatusCreated {
 				t.Fatalf("save %s (%d bytes): status = %d, want 201; body=%s",
 					pack.ID, len(response.Content), saved.Code, saved.Body.String())
@@ -122,7 +126,7 @@ func TestEveryScenarioPackSavesThroughTheRegisteredNamedNetworkRoute(t *testing.
 
 			// The artifact on disk is what a later start loads, so prove it
 			// parses rather than trusting the 201.
-			onDisk, err := os.ReadFile(filepath.Join(root, "networks", pack.ID+".yaml"))
+			onDisk, err := os.ReadFile(filepath.Join(root, "networks", pack.ID+savedPackSuffix+".yaml"))
 			if err != nil {
 				t.Fatalf("read saved %s: %v", pack.ID, err)
 			}

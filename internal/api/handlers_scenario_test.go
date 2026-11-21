@@ -142,9 +142,9 @@ func enterpriseScalePack(t *testing.T) scenario.Pack {
 
 // TestBuiltinScenarioRoutesAreGone pins the removal of the built-in scenario
 // listing (#2131). It scanned on-disk directories that no package creates, so
-// every installed host listed nothing while the library, which first run seeds
-// with the shipped scenarios, listed them all. The library is the one place
-// starter networks are listed, and none of the old paths answers.
+// every installed host listed nothing while the library, which lists the
+// shipped scenarios as examples, listed them all. The library is the one place
+// they are listed, and none of the old paths answers.
 func TestBuiltinScenarioRoutesAreGone(t *testing.T) {
 	server, _, token := newTestServerWithAuth(t)
 	mux := server.apiHandler()
@@ -154,7 +154,7 @@ func TestBuiltinScenarioRoutesAreGone(t *testing.T) {
 		path   string
 	}{
 		{http.MethodGet, "/api/v1/scenario/builtins"},
-		{http.MethodGet, "/api/v1/scenario/builtins/small-office"},
+		{http.MethodGet, "/api/v1/scenario/builtins/basic-network"},
 		{http.MethodPost, "/api/v1/scenario/builtins/copy"},
 		{http.MethodGet, "/api/v1/templates"},
 	}

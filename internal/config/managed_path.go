@@ -125,6 +125,23 @@ func isPlainFileName(name string) bool {
 	return true
 }
 
+// PlainConfigName returns the bare name a configuration reference spells, with
+// any .yaml or .yml extension removed, when the reference is a plain filename
+// (see isPlainFileName). It is how a caller recognises "name the scenario", as
+// opposed to "open this path", before consulting a source that is not a
+// directory of files.
+func PlainConfigName(reference string) (string, bool) {
+	if !isPlainFileName(reference) {
+		return "", false
+	}
+	for _, ext := range []string{".yaml", ".yml"} {
+		if name, ok := strings.CutSuffix(reference, ext); ok {
+			return name, name != ""
+		}
+	}
+	return reference, true
+}
+
 func hasParentTraversal(path string) bool {
 	components := strings.FieldsFunc(path, func(r rune) bool {
 		return r == '/' || r == '\\'

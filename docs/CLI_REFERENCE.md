@@ -913,14 +913,11 @@ niac list scenarios
 
 ```text
 List runnable scenario sources. Built-in scenarios and scenario packs
-are always available (generate a pack with "niac scenario generate"). Installed library networks are shown when the content library can
-be opened.
+are always available (generate a pack with "niac scenario generate"). Installed
+library networks are shown when the content library can be opened.
 
 Each library network's status is what "niac validate" reports for it; an
-invalid one carries its first error. Opening the library replaces a starter
-network an earlier release wrote that this one can no longer load, keeping the
-replaced file once beside it with an .orig suffix. User networks are never
-rewritten.
+invalid one carries its first error. Networks are never rewritten.
 ```
 
 Examples:
@@ -1450,10 +1447,10 @@ niac scenario list
 niac scenario show basic-network
 
 # Create config from scenario
-niac scenario use small-office office.yaml
+niac scenario use basic-network office.yaml
 
 # Apply scenario directly (validate and display info)
-niac scenario apply data-center
+niac scenario apply captured-switch
 ```
 
 ### `niac scenario apply`
@@ -1476,11 +1473,11 @@ Examples:
 # Validate basic network scenario
 niac scenario apply basic-network
 
-# Check data center scenario
-niac scenario apply data-center
+# Check the captured switch scenario
+niac scenario apply captured-switch
 
-# Verify IoT network configuration
-niac scenario apply iot-network
+# Verify the captured pair scenario
+niac scenario apply captured-pair
 ```
 
 ### `niac scenario generate`
@@ -1532,8 +1529,8 @@ niac scenario list
 
 ```text
 Print every bundled scenario name with a one-line description.
-They cover common small networks (basic-network, small-office, data-center,
-iot-network, etc.) and are the fastest path to a runnable YAML config.
+They are small, hand-written starting points (basic-network, captured-switch,
+captured-pair, resource-pressure) and the fastest path to a runnable YAML config.
 Scenario packs (hospital, warehouse, campus, ...) are listed after them; they
 are generated with 'niac scenario generate'.
 ```
@@ -1565,11 +1562,11 @@ Examples:
 # Show basic network scenario
 niac scenario show basic-network
 
-# Show small office scenario
-niac scenario show small-office
+# Show the captured switch scenario
+niac scenario show captured-switch
 
 # Pipe to file
-niac scenario show data-center > my-config.yaml
+niac scenario show resource-pressure > my-config.yaml
 ```
 
 ### `niac scenario use`
@@ -1589,14 +1586,14 @@ with 'niac daemon --once'; the scenario itself is unchanged.
 Examples:
 
 ```bash
-# Create small office config
-niac scenario use small-office office.yaml
+# Create a basic config
+niac scenario use basic-network office.yaml
 
-# Create IoT network config
-niac scenario use iot-network sensors.yaml
+# Create a two-switch capture fleet
+niac scenario use captured-pair fleet.yaml
 
-# Create data center config
-niac scenario use data-center dc.yaml
+# Create a resource-fault config
+niac scenario use resource-pressure alerts.yaml
 
 # Quick workflow
 niac scenario use basic-network config.yaml && niac validate config.yaml

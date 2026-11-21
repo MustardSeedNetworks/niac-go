@@ -14,7 +14,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 	"github.com/MustardSeedNetworks/niac-go/internal/walkmeta"
 )
 
@@ -60,9 +59,10 @@ type FileEntry struct {
 }
 
 // ListNetworks enumerates every YAML in networks/, parses metadata
-// from each file's header comment block, and returns the rows sorted
-// by name. A file `niac validate` would refuse gets Valid=false with
-// its first error instead of crashing the whole list.
+// from each file's header comment block, adds the shipped examples no file
+// shadows, and returns the rows sorted by name. A file `niac validate` would
+// refuse gets Valid=false with its first error instead of crashing the whole
+// list.
 func (l *Library) ListNetworks() ([]NetworkEntry, error) {
 	dir := l.SubDir(KindNetworks)
 	entries, err := os.ReadDir(dir)
@@ -71,10 +71,12 @@ func (l *Library) ListNetworks() ([]NetworkEntry, error) {
 	}
 
 	out := make([]NetworkEntry, 0, len(entries))
+	onDisk := make(map[string]bool, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() || !isYAMLFilename(entry.Name()) {
 			continue
 		}
+		onDisk[trimYAMLExt(entry.Name())] = true
 		row, rowErr := l.networkEntryFor(entry.Name())
 		if rowErr != nil {
 			// Surface as a row-level error so the UI can show a badge
@@ -84,6 +86,7 @@ func (l *Library) ListNetworks() ([]NetworkEntry, error) {
 		out = append(out, row)
 	}
 
+	out = append(out, exampleEntries(onDisk)...)
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
 }
@@ -177,7 +180,7 @@ func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
 	f, err := root.Open(leaf)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("%w: %s", ErrNotFound, trimmed)
+			return readExample(trimmed)
 		}
 		return nil, err
 	}
@@ -195,13 +198,26 @@ func (l *Library) ReadNetwork(name string) (*NetworkContent, error) {
 	}, nil
 }
 
+// readExample serves a shipped example by name, or reports it missing.
+func readExample(name string) (*NetworkContent, error) {
+	data, err := ExampleContent(name)
+	if err != nil {
+		return nil, err
+	}
+	return &NetworkContent{Name: name, Content: string(data), Format: "yaml", Source: SourceExample}, nil
+}
+
 // WriteNetwork creates or overwrites a network YAML. Used by upload
-// endpoints. Marks user-created entries by NOT being part of the
-// starter pack — detectSource picks that up on next list.
+// endpoints. A name that belongs to a shipped example is refused unless a
+// file of that name already exists: the file would silently shadow the
+// example, and Duplicate is the way to start from one.
 func (l *Library) WriteNetwork(name, content string) error {
-	_, leaf, err := networkFilename(name)
+	trimmed, leaf, err := networkFilename(name)
 	if err != nil {
 		return err
+	}
+	if l.exampleOnly(trimmed) {
+		return fmt.Errorf("%w: %s", ErrReadOnlyExample, trimmed)
 	}
 	if content == "" {
 		return ErrEmptyContent
@@ -226,16 +242,16 @@ func (l *Library) WriteNetwork(name, content string) error {
 	return f.Close()
 }
 
-// DeleteNetwork removes a single network. Refuses to delete entries
-// whose source is "starter" because they'd just come back on next
-// bootstrap.
+// DeleteNetwork removes a single network. A shipped example has no file to
+// remove and is refused; deleting a file that shadows one simply lets the
+// example show through again.
 func (l *Library) DeleteNetwork(name string) error {
 	trimmed, leaf, err := networkFilename(name)
 	if err != nil {
 		return err
 	}
-	if l.detectSource(leaf) == SourceStarter {
-		return fmt.Errorf("starter networks cannot be deleted: %s", trimmed)
+	if l.exampleOnly(trimmed) {
+		return fmt.Errorf("%w: %s", ErrReadOnlyExample, trimmed)
 	}
 	root, err := l.openNetworksRoot()
 	if err != nil {
@@ -441,18 +457,11 @@ func (l *Library) FileEntryByName(kind Kind, relPath string) (FileEntry, error) 
 	return l.fileEntry(kind, leaf, info), nil
 }
 
-// detectSource decides whether a given filename came from the starter pack, a
-// content bundle, or the operator. Starter networks are the templates embedded
-// in the binary, so consulting internal/templates is the source of truth for
-// those; a bundle records what it installed, because afterwards its files are
-// indistinguishable from anything else on disk.
+// detectSource decides whether a network file came from a content bundle or the
+// operator. A bundle records what it installed, because afterwards its files
+// are indistinguishable from anything else on disk. Shipped scenarios are never
+// files here: they are Examples, served from the binary.
 func (l *Library) detectSource(filename string) Source {
-	if templates.Exists(strings.TrimSuffix(filename, filepath.Ext(filename))) {
-		return SourceStarter
-	}
-	if _, err := starterWalks.Open(path.Join("starter", "walks", filename)); err == nil {
-		return SourceStarter
-	}
 	if l.bundles.contains(l.root, filepath.Join(string(KindNetworks), filename)) {
 		return SourceBundle
 	}

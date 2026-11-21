@@ -438,7 +438,7 @@ describe('NewSimulationWizardPage — step navigation', () => {
       deviceCount: 1,
       modifiedAt: '2026-10-04T00:00:00Z',
       sizeBytes: 64,
-      source: 'starter',
+      source: 'user',
       valid: true,
     };
     const content = 'devices:\n  - name: branch-1\n    type: router\n';

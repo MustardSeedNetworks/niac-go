@@ -285,7 +285,7 @@ func TestDraftCreateTakesContentOnly(t *testing.T) {
 	attachDraftLibrary(t, server)
 
 	for _, body := range []string{
-		`{"name":"from-builtin","scenarioName":"small-office"}`,
+		`{"name":"from-builtin","scenarioName":"basic-network"}`,
 		`{"name":"empty","content":"  "}`,
 	} {
 		rec := httptest.NewRecorder()

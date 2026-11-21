@@ -193,7 +193,7 @@ test('the starting point stays compact and the library supports keyboard and sea
   expect(networksResponse.ok()).toBe(true);
   const networks: LibraryNetwork[] = await networksResponse.json();
   // Derived, not pinned: the picker renders every library network the API
-  // returns (first run seeds the shipped starters), which the testid
+  // returns (the shipped examples plus any saved network), which the testid
   // comparison below states exactly. The lower bound keeps an empty library
   // from making it vacuous. There is no second, built-in listing (#2131).
   expect(networks.length).toBeGreaterThan(1);
@@ -216,7 +216,7 @@ test('the starting point stays compact and the library supports keyboard and sea
   const search = page.getByTestId('config-picker-search');
   await expect(search).toBeFocused();
 
-  const selected = networks.find((network) => network.name === 'small-office') ?? networks[0];
+  const selected = networks.find((network) => network.name === 'basic-network') ?? networks[0];
   if (!selected) throw new Error('The library has no networks');
   await search.fill(selected.name.toUpperCase());
   await expect(cards).not.toHaveCount(0);
@@ -238,7 +238,7 @@ test('wizard starting points and library fit a 390px viewport', async ({ page })
   await page.screenshot({ path: test.info().outputPath('wizard-start-390.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByTestId('wizard-source-tab-library').click();
-  await expect(page.getByTestId('config-item-saved:small-office')).toBeVisible();
+  await expect(page.getByTestId('config-item-saved:basic-network')).toBeVisible();
   await expect(page.getByTestId('config-picker-search')).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

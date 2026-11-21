@@ -13,7 +13,8 @@ import (
 type configSource struct {
 	data []byte
 	// label names the source for the run summary: a file path, or
-	// "builtin:<name>" / "library:<name>" for a resolved scenario.
+	// "builtin:<name>" / "example:<name>" / "library:<name>" for a resolved
+	// scenario.
 	label string
 	// path is the file the document was read from, empty for a resolved
 	// scenario. The daemon resolves relative capture-playback paths against
@@ -54,5 +55,10 @@ func resolveConfigSource(ref string) (configSource, error) {
 		return configSource{}, fmt.Errorf("config file or scenario not found: %s", ref)
 	}
 
-	return configSource{data: []byte(network.Content), label: "library:" + network.Name}, nil
+	label := "library:" + network.Name
+	if network.Source == library.SourceExample {
+		label = "example:" + network.Name
+	}
+
+	return configSource{data: []byte(network.Content), label: label}, nil
 }
