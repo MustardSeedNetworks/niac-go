@@ -1,8 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { DraftBehaviorTimeline, ScenarioDraft } from '../../api/library-client';
 import '../../i18n';
+import { renderWithToasts } from '../../test/renderWithToasts';
 import { DraftBehaviorComposer } from './DraftBehaviorComposer';
 
 vi.mock('../../contexts/ScopeContext', () => ({
@@ -40,7 +41,7 @@ behavior_timelines:
         duration_ms: 1000
         actions: [{device: reboot-only, type: stp_topology_change}]
 `;
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content }}
       onDraftUpdate={vi.fn()}
@@ -57,7 +58,7 @@ behavior_timelines:
 });
 
 it('disables adding an operation when SNMP is disabled on every device', async () => {
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content: 'devices: [{name: offline, snmp_agent: {enabled: false}}]' }}
       onDraftUpdate={vi.fn()}
@@ -73,7 +74,9 @@ it.each(['reboot', 'stp_topology_change'])(
   'authors %s without an interface or value',
   async (type) => {
     const user = userEvent.setup();
-    render(<DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+    renderWithToasts(
+      <DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />,
+    );
     await user.click(screen.getByTestId('add-timeline'));
     await user.click(screen.getByTestId('add-device-action'));
     const row = within(screen.getByTestId('behavior-device-action'));
@@ -96,7 +99,9 @@ it.each(['reboot', 'stp_topology_change'])(
 
 it('blocks duplicate operations and permits a different kind or device', async () => {
   const user = userEvent.setup();
-  render(<DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />);
+  renderWithToasts(
+    <DraftBehaviorComposer draft={draft} onDraftUpdate={vi.fn()} onBusyChange={vi.fn()} />,
+  );
   await user.click(screen.getByTestId('add-timeline'));
   await user.click(screen.getByTestId('add-device-action'));
   await user.click(screen.getByTestId('add-device-action'));
@@ -115,7 +120,7 @@ it('blocks duplicate operations and permits a different kind or device', async (
 
 it('keeps imported action order when saving an action-only phase', async () => {
   const content = `${draft.content}\nbehavior_timelines:\n  - name: Maintenance\n    repeat_count: 2\n    phases:\n      - name: Changes\n        duration_ms: 1000\n        reset: true\n        actions:\n          - {device: switch-2, type: stp_topology_change}\n          - {device: switch-1, type: reboot}\n`;
-  render(
+  renderWithToasts(
     <DraftBehaviorComposer
       draft={{ ...draft, content }}
       onDraftUpdate={vi.fn()}

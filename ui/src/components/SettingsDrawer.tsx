@@ -38,6 +38,7 @@ import { iconSizes } from '../constants/sizes';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { Theme, useTheme } from '../hooks/useTheme';
+import { languages } from '../i18n';
 import { cn, drawer, layout, spacing } from '../styles/theme';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { SimulationSection } from './settings/SimulationSection';
@@ -209,7 +210,11 @@ const SettingRow = ({ label, description, children }: SettingRowProps): ReactEle
 // =============================================================================
 
 function AppearanceSection({ themeState }: Pick<SettingsDrawerProps, 'themeState'>): ReactElement {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
+  // 'en-US' from the browser detector resolves to the supported 'en'.
+  const activeLanguage = languages.find(
+    (language) => language.code === i18n.language.split('-')[0],
+  )?.code;
   const { theme, setTheme, isDark, toggleTheme } = themeState;
 
   const options: Array<{
@@ -303,6 +308,24 @@ function AppearanceSection({ themeState }: Pick<SettingsDrawerProps, 'themeState
         </button>
       </Tooltip>
       <p className="text-xs text-text-muted mt-inline">{t('appearance.persistenceNote')}</p>
+      <SettingRow
+        label={t('appearance.language')}
+        description={t('appearance.languageDescription')}
+      >
+        <select
+          value={activeLanguage ?? 'en'}
+          onChange={(event) => void i18n.changeLanguage(event.target.value)}
+          data-testid="language-select"
+          aria-label={t('appearance.language')}
+          className="rounded-lg border border-surface-border bg-surface-base px-2 py-1 text-sm text-text-primary"
+        >
+          {languages.map((language) => (
+            <option key={language.code} value={language.code}>
+              {language.nativeLabel}
+            </option>
+          ))}
+        </select>
+      </SettingRow>
     </Section>
   );
 }

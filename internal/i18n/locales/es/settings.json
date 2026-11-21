@@ -44,7 +44,9 @@
     "quickToggle": "Cambio rápido",
     "switchToLight": "Cambiar al modo claro",
     "switchToDark": "Cambiar al modo oscuro",
-    "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones."
+    "persistenceNote": "El modo oscuro es el predeterminado. Su preferencia se guarda entre sesiones.",
+    "language": "Idioma",
+    "languageDescription": "Idioma de la interfaz de NIAC. Se guarda en este navegador."
   },
   "network": {
     "interfacesTitle": "Interfaces de red",

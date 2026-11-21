@@ -28,8 +28,8 @@ import {
   WIZARD_STEPS,
   type WizardState,
 } from '../components/wizard/wizard-types';
-import { useErrorToast } from '../hooks/useErrorToast';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
+import { useToast } from '../hooks/useToast';
 import { Button } from '../ui/Button';
 import { reportError } from '../utils/error-reporter';
 import { fileToText } from '../utils/file';
@@ -75,7 +75,7 @@ export function NewSimulationWizardPage() {
   const permission = useActionPermission('edit');
   const { t } = useTranslation('pages');
   const { data: simStatus, loading, error } = useSimulationStatus();
-  const showError = useErrorToast();
+  const { showError } = useToast();
   const [state, setState] = useState<WizardState>(initialWizardState);
   const [draft, setDraft] = useState<ScenarioDraft | null>(null);
   const [draftContent, setDraftContent] = useState('');

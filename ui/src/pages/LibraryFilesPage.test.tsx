@@ -23,8 +23,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryFileEntry } from '../api/library-client';
 import { renderWithResources as render } from '../test/renderWithResources';
 import '../i18n';
-import { useUIStore } from '../stores/ui-store';
-import { ToastContainer } from '../ui/ToastContainer';
+import { ToastProvider } from '../ui/Toast';
 import { LibraryPcapsPage, LibraryWalksPage } from './LibraryFilesPage';
 
 // This page's own concern is the walks/pcaps listing (revert/sanitize),
@@ -73,7 +72,6 @@ describe('LibraryFilesPage (walks)', () => {
     revertWalk.mockReset();
     sanitizeWalk.mockReset();
     sanitizeWalksBatch.mockReset();
-    useUIStore.getState().clearNotifications();
   });
 
   it('shows a loading state instead of the empty state while the initial fetch is pending', async () => {
@@ -138,10 +136,9 @@ describe('LibraryFilesPage (walks)', () => {
     revertWalk.mockRejectedValue(new Error('daemon unavailable'));
 
     render(
-      <>
+      <ToastProvider>
         <LibraryWalksPage />
-        <ToastContainer />
-      </>,
+      </ToastProvider>,
     );
 
     fireEvent.click(await screen.findByTestId(`revert-walk-${editedWalk.name}`));
@@ -159,10 +156,9 @@ describe('LibraryFilesPage (walks)', () => {
     sanitizeWalk.mockResolvedValue({ ...cleanWalk, edited: true });
 
     render(
-      <>
+      <ToastProvider>
         <LibraryWalksPage />
-        <ToastContainer />
-      </>,
+      </ToastProvider>,
     );
 
     fireEvent.click(await screen.findByTestId(`sanitize-walk-${cleanWalk.name}`));
@@ -193,10 +189,9 @@ describe('LibraryFilesPage (walks)', () => {
     sanitizeWalk.mockRejectedValue(new Error('daemon unavailable'));
 
     render(
-      <>
+      <ToastProvider>
         <LibraryWalksPage />
-        <ToastContainer />
-      </>,
+      </ToastProvider>,
     );
 
     fireEvent.click(await screen.findByTestId(`sanitize-walk-${cleanWalk.name}`));
@@ -230,10 +225,9 @@ describe('LibraryFilesPage (walks)', () => {
     });
 
     render(
-      <>
+      <ToastProvider>
         <LibraryWalksPage />
-        <ToastContainer />
-      </>,
+      </ToastProvider>,
     );
 
     fireEvent.click(await screen.findByLabelText(`Select ${cleanWalk.name}`));
@@ -269,10 +263,9 @@ describe('LibraryFilesPage (walks)', () => {
     });
 
     render(
-      <>
+      <ToastProvider>
         <LibraryWalksPage />
-        <ToastContainer />
-      </>,
+      </ToastProvider>,
     );
 
     fireEvent.click(await screen.findByLabelText(`Select ${cleanWalk.name}`));
@@ -293,7 +286,6 @@ describe('LibraryFilesPage (pcaps)', () => {
     revertWalk.mockReset();
     sanitizeWalk.mockReset();
     sanitizeWalksBatch.mockReset();
-    useUIStore.getState().clearNotifications();
   });
 
   it('never renders an Actions column or edited badge for pcaps', async () => {

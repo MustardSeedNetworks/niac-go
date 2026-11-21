@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { exportSessionCapture } from '../../api/client';
 import type { Packet } from '../../components/PacketList';
-import { useErrorToast } from '../../hooks/useErrorToast';
+import { useToast } from '../../hooks/useToast';
 
 /**
  * downloadBlob hands the viewer a file. Both inspector exports need it, and
@@ -53,7 +53,7 @@ export function useFilteredJsonExport(filteredPackets: Packet[]) {
  */
 export function useCaptureExport(sessionId: string | undefined) {
   const { t } = useTranslation('pages');
-  const showError = useErrorToast();
+  const { showError } = useToast();
 
   return useCallback(async () => {
     if (!sessionId) {

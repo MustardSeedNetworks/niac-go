@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { useErrorToast } from './useErrorToast';
+import { useToast } from './useToast';
 
 export function useResourceError(error: Error | null, title?: string) {
   const lastMessage = useRef<string | null>(null);
-  const showError = useErrorToast();
+  const { showError } = useToast();
   useEffect(() => {
     if (!error) {
       lastMessage.current = null;

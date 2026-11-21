@@ -1,5 +1,6 @@
-import { Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { disconnectRuntimeAPI } from '../api/requestCore';
 import type { ConnectionState } from '../hooks/useConnectionStatus';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
 import { Tooltip } from '../ui/Tooltip';
@@ -36,6 +37,17 @@ export function RailControls({ collapsed, status, isDark, toggleTheme }: RailCon
             ) : (
               <Moon className="h-5 w-5" aria-hidden="true" />
             )}
+          </button>
+        </Tooltip>
+        <Tooltip text={t('auth.disconnectHint')}>
+          <button
+            type="button"
+            onClick={disconnectRuntimeAPI}
+            data-testid="disconnect"
+            className="flex-center min-h-11 w-full max-w-11 rounded-lg border border-surface-border text-text-secondary hover:text-text-primary hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand-accent"
+            aria-label={t('auth.disconnect')}
+          >
+            <LogOut className="h-5 w-5" aria-hidden="true" />
           </button>
         </Tooltip>
       </div>

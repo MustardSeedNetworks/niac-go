@@ -2,6 +2,7 @@ import { type FormEvent, type ReactElement, type ReactNode, useEffect, useState 
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/errors';
 import {
+  AUTH_DISCONNECT_EVENT,
   AUTH_FAILURE_EVENT,
   clearRuntimeAPIToken,
   setRuntimeAPIToken,
@@ -30,6 +31,15 @@ export function AuthGate({ children }: AuthGateProps): ReactElement {
     window.addEventListener(AUTH_FAILURE_EVENT, requireAuthentication);
     return () => window.removeEventListener(AUTH_FAILURE_EVENT, requireAuthentication);
   }, [t]);
+
+  useEffect(() => {
+    const returnToPrompt = () => {
+      setError('');
+      setState('prompt');
+    };
+    window.addEventListener(AUTH_DISCONNECT_EVENT, returnToPrompt);
+    return () => window.removeEventListener(AUTH_DISCONNECT_EVENT, returnToPrompt);
+  }, []);
 
   useEffect(() => {
     validateRuntimeAuthentication()

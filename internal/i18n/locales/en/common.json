@@ -13,6 +13,7 @@
     "dismissNotification": "Dismiss notification",
     "expandSidebar": "Expand sidebar",
     "home": "Home",
+    "notifications": "Notifications",
     "openDrawer": "Open drawer",
     "openHelp": "Open help",
     "openMenu": "Open menu",
@@ -34,6 +35,8 @@
     "connect": "Connect",
     "connectionFailed": "NIAC could not be reached. Check the daemon and try again.",
     "description": "Enter the API token configured for this NIAC daemon.",
+    "disconnect": "Disconnect",
+    "disconnectHint": "Forget this tab's API token and return to the connect prompt. A daemon on loopback with no token requirement lets you straight back in.",
     "invalidToken": "That API token was rejected.",
     "memoryOnly": "The token is kept only in this tab's memory and is cleared when the page closes.",
     "sessionExpired": "Your session is no longer authorized. Enter the API token again.",
@@ -97,7 +100,10 @@
     "noItems": "No items to display",
     "noLogs": "No logs yet",
     "noPackets": "No packets captured yet",
-    "noResults": "No results match the current filters"
+    "noResults": "No results match the current filters",
+    "notFoundBody": "NIAC has no page at this address. It may have moved, or the link may be mistyped.",
+    "notFoundHome": "Back to the dashboard",
+    "notFoundTitle": "Page not found"
   },
   "errorBoundary": {
     "componentStack": "Component Stack:",
