@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.128.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.127.0...v0.128.0) (2026-11-21)
+
+
+### Features
+
+* **daemon:** persistent attachment policy file (AUD-7) ([#3049](https://github.com/MustardSeedNetworks/niac-go/issues/3049)) ([dc4fc7d](https://github.com/MustardSeedNetworks/niac-go/commit/dc4fc7d98bc434eadfd4cf5c445894693110c344))
+
+
+### Bug Fixes
+
+* **ui:** show product name on the login screen ([#3059](https://github.com/MustardSeedNetworks/niac-go/issues/3059)) ([3851f42](https://github.com/MustardSeedNetworks/niac-go/commit/3851f426f6fae7acd3ca4eec09d7826c5c4a2420))
+
 ## [0.127.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.126.1...v0.127.0) (2026-11-21)
 
 
