@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.128.2](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.1...v0.128.2) (2026-11-21)
+
+
+### Miscellaneous
+
+* **deps:** update dependency postcss to v8.5.33 ([#3066](https://github.com/MustardSeedNetworks/niac-go/issues/3066)) ([72c521c](https://github.com/MustardSeedNetworks/niac-go/commit/72c521ca2f7ac12fd6298254b4d671e529645afb))
+* **deps:** update dependency rollup-plugin-visualizer to v7.1.3 ([#3068](https://github.com/MustardSeedNetworks/niac-go/issues/3068)) ([ba8def7](https://github.com/MustardSeedNetworks/niac-go/commit/ba8def76b27241f6b703ded3f421e107f7c69ea5))
+
 ## [0.128.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.0...v0.128.1) (2026-11-21)
 
 
