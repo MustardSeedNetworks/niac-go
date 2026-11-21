@@ -10,7 +10,7 @@ import (
 
 // PreflightSimulation compiles a routed request without opening capture or changing runtime state.
 func (d *Daemon) PreflightSimulation(req api.SimulationRequest) (fabric.Report, error) {
-	req = d.withDefaultBinding(req)
+	req = resolveExampleRequest(d.withDefaultBinding(req))
 	if diagnostic := simulationInterfaceDiagnostic(req.Interface, e2eDryRunSimulation()); diagnostic != nil {
 		report := fabric.NewReport()
 		report.Diagnostics = []fabric.Diagnostic{*diagnostic}
@@ -53,7 +53,7 @@ func (d *Daemon) AttachmentPolicies() []fabric.PhysicalAttachmentPolicy {
 func (d *Daemon) SimulationAttachments(
 	req api.SimulationRequest,
 ) (api.SimulationAttachments, error) {
-	cfg, _, err := loadValidSimulationConfig(req)
+	cfg, _, err := loadValidSimulationConfig(resolveExampleRequest(req))
 	if err != nil {
 		return api.SimulationAttachments{}, err
 	}

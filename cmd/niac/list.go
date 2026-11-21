@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -114,14 +115,11 @@ func newListScenariosCmd(options *listOptions) *cobra.Command {
 		Use:   "scenarios",
 		Short: "List runnable scenarios",
 		Long: `List runnable scenario sources. Built-in scenarios and scenario packs
-are always available (generate a pack with "niac scenario generate"). Installed library networks are shown when the content library can
-be opened.
+are always available (generate a pack with "niac scenario generate"). Installed
+library networks are shown when the content library can be opened.
 
 Each library network's status is what "niac validate" reports for it; an
-invalid one carries its first error. Opening the library replaces a starter
-network an earlier release wrote that this one can no longer load, keeping the
-replaced file once beside it with an .orig suffix. User networks are never
-rewritten.`,
+invalid one carries its first error. Networks are never rewritten.`,
 		Example: `  # List built-in and installed scenarios
   niac list scenarios
 
@@ -147,10 +145,15 @@ func runListScenarios(options *listOptions) error {
 		return nil
 	}
 
-	networks, err := lib.ListNetworks()
+	listed, err := lib.ListNetworks()
 	if err != nil {
 		return err
 	}
+	// The built-ins and packs above are the shipped examples the library also
+	// lists; repeating them here would show every one twice.
+	networks := slices.DeleteFunc(listed, func(n library.NetworkEntry) bool {
+		return n.Source == library.SourceExample
+	})
 	fmt.Fprintf(os.Stdout, "\nLibrary networks: %s\n", lib.Root())
 	if len(networks) == 0 {
 		fmt.Fprintln(os.Stdout, "  none")

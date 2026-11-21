@@ -1249,7 +1249,14 @@
     "selectButton": "Seleccionar",
     "dropLocalFileTitle": "Descartar el archivo local",
     "selectItemTitle": "Seleccionar {{name}}",
-    "localTag": "Local"
+    "localTag": "Local",
+    "duplicateButton": "Duplicar",
+    "duplicateFailed": "No se pudo duplicar el ejemplo: {{reason}}",
+    "duplicateSaved": "Se guardó una copia editable como {{name}}.",
+    "duplicateTitle": "Guardar una copia editable de {{name}} en su biblioteca",
+    "duplicating": "Duplicando…",
+    "exampleTag": "Ejemplo",
+    "exampleTitle": "Se incluye con NIAC y es de solo lectura. Duplíquelo para editarlo."
   },
   "libraryFiles": {
     "actionsHeader": "Acciones",

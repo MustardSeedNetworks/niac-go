@@ -22,10 +22,9 @@ devices:
     type: router
 `
 
-// openTempLibrary returns a fresh Library rooted at t.TempDir(). The
-// starter pack auto-unpacks into networks/ on first Open. Tests that
-// want a fully empty library should call ListNetworks → DeleteNetwork
-// for every entry, or simply work around the starter content.
+// openTempLibrary returns a fresh Library rooted at t.TempDir(). networks/
+// starts empty; ListNetworks still reports the shipped Examples beside
+// whatever a test writes.
 //
 // walks/ is pre-seeded with a placeholder before Open so the starter
 // walks bootstrap sees a non-empty dir and skips — most callers plant
@@ -73,23 +72,32 @@ func TestOpenCreatesLayout(t *testing.T) {
 	}
 }
 
-func TestOpenBootstrapsStarterPack(t *testing.T) {
-	lib := openTempLibrary(t)
+// A new library copies nothing into networks/: the shipped scenarios are
+// served from the binary as read-only Examples, so an upgrade refreshes them.
+func TestOpenSeedsNoNetworkFilesAndListsExamples(t *testing.T) {
+	root := t.TempDir()
+	lib, err := library.Open(root)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	files, err := os.ReadDir(filepath.Join(root, "networks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("networks/ should start empty, found %d entries", len(files))
+	}
 	entries, err := lib.ListNetworks()
 	if err != nil {
 		t.Fatalf("list networks: %v", err)
 	}
 	if len(entries) == 0 {
-		t.Fatal("expected starter pack to unpack into networks/, got 0 entries")
+		t.Fatal("expected shipped examples in the listing, got 0 entries")
 	}
-	starterCount := 0
 	for _, e := range entries {
-		if e.Source == library.SourceStarter {
-			starterCount++
+		if e.Source != library.SourceExample {
+			t.Errorf("%s: source = %q, want %q", e.Name, e.Source, library.SourceExample)
 		}
-	}
-	if starterCount == 0 {
-		t.Errorf("expected at least one SourceStarter entry, got %d entries with no starter source", len(entries))
 	}
 }
 
@@ -114,16 +122,26 @@ func TestOpenSkipsBootstrapWhenNetworksHasContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Only the user file should be present; the starter pack should
-	// have been skipped.
-	if len(entries) != 1 {
-		t.Fatalf("expected exactly 1 entry (the pre-existing user file), got %d: %v", len(entries), entries)
+	// The user file is listed as the operator's own, and nothing is written
+	// beside it.
+	var user *library.NetworkEntry
+	for i := range entries {
+		if entries[i].Name == "user" {
+			user = &entries[i]
+		}
 	}
-	if entries[0].Name != "user" {
-		t.Errorf("expected name=user, got %s", entries[0].Name)
+	if user == nil {
+		t.Fatalf("pre-existing user file missing from the listing: %v", entries)
 	}
-	if entries[0].Source != library.SourceUser {
-		t.Errorf("expected source=user, got %s", entries[0].Source)
+	if user.Source != library.SourceUser {
+		t.Errorf("expected source=user, got %s", user.Source)
+	}
+	files, err := os.ReadDir(filepath.Join(root, "networks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("networks/ should hold only the user file, found %d entries", len(files))
 	}
 }
 
@@ -355,31 +373,6 @@ func TestNetworkPathNoEscapeOntoDisk(t *testing.T) {
 	}
 	if _, statErr := os.Stat(outsideMarker); !os.IsNotExist(statErr) {
 		t.Errorf("traversal write leaked a file outside the library root: %v", statErr)
-	}
-}
-
-func TestDeleteNetworkRefusesStarter(t *testing.T) {
-	lib := openTempLibrary(t)
-	entries, err := lib.ListNetworks()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var starter string
-	for _, e := range entries {
-		if e.Source == library.SourceStarter {
-			starter = e.Name
-			break
-		}
-	}
-	if starter == "" {
-		t.Skip("no starter networks present; nothing to test")
-	}
-	err = lib.DeleteNetwork(starter)
-	if err == nil {
-		t.Fatalf("expected starter delete to be refused, got nil")
-	}
-	if !strings.Contains(err.Error(), "starter") {
-		t.Errorf("error should mention starter, got %v", err)
 	}
 }
 

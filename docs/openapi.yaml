@@ -2001,6 +2001,8 @@ paths:
                   CsrfToken: []
     /api/v1/library/networks:
         get:
+            description: |
+                Every network in the library plus the scenarios shipped in the binary. A row's `source` is `user`, `bundle` or `example`. An example is served read-only and is generated on demand for the scenario packs; a library file with the same name shadows it, so a name is never listed twice. A start accepts an example by bare name, the way it accepts a library name.
             operationId: getApiV1LibraryNetworks
             responses:
                 "401":
@@ -2027,7 +2029,12 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Error'
                     description: Internal error.
+            summary: List library networks and shipped examples
+            tags:
+                - Library
         post:
+            description: |
+                With `content`, saves that YAML as `name`. With `copyFrom`, saves a copy of the named shipped example instead (`content` must then be empty and `name` defaults to `<example>-copy`); the copy is created exclusively and answers 409 when the name is taken. An example's own name is reserved: saving over it answers 409 `read_only_example`.
             operationId: postApiV1LibraryNetworks
             responses:
                 "401":
@@ -2069,8 +2076,13 @@ paths:
             security:
                 - BearerAuth: []
                   CsrfToken: []
+            summary: Save a network, or duplicate an example
+            tags:
+                - Library
     /api/v1/library/networks/{name}:
         delete:
+            description: |
+                An example has no file to delete and answers 409 `read_only_example`. Deleting a library file that shadows an example lets the example show through again.
             operationId: deleteApiV1LibraryNetworksName
             responses:
                 "401":
@@ -2112,6 +2124,7 @@ paths:
             security:
                 - BearerAuth: []
                   CsrfToken: []
+            summary: Delete one network
             tags:
                 - Library
         get:
@@ -2141,6 +2154,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Error'
                     description: Internal error.
+            summary: Read one network or example
             tags:
                 - Library
         parameters:

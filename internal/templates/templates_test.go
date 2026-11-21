@@ -38,13 +38,16 @@ func TestList(t *testing.T) {
 	// Verify expected template names exist
 	expectedNames := []string{
 		"basic-network",
-		"small-office",
-		"data-center",
-		"iot-network",
-		"enterprise-campus",
-		"service-provider",
-		"home-network",
-		"test-lab",
+		"captured-switch",
+		"captured-pair",
+		"resource-pressure",
+	}
+
+	// The shipped set is a deliberate four: the rest of the shipped scenarios
+	// are scenario packs, generated on demand. A fifth hand-written template
+	// should be a decision, not drift.
+	if len(templates) != len(expectedNames) {
+		t.Errorf("embedded templates = %d, want exactly %v", len(templates), expectedNames)
 	}
 
 	for _, expected := range expectedNames {
@@ -91,13 +94,6 @@ func TestListNames(t *testing.T) {
 func TestGet(t *testing.T) {
 	testCases := []string{
 		"basic-network",
-		"small-office",
-		"data-center",
-		"iot-network",
-		"enterprise-campus",
-		"service-provider",
-		"home-network",
-		"test-lab",
 	}
 
 	for _, name := range testCases {
@@ -166,13 +162,10 @@ func TestExists(t *testing.T) {
 		exists bool
 	}{
 		{"basic-network", true},
-		{"small-office", true},
-		{"data-center", true},
-		{"iot-network", true},
-		{"enterprise-campus", true},
-		{"service-provider", true},
-		{"home-network", true},
-		{"test-lab", true},
+		{"captured-switch", true},
+		{"captured-pair", true},
+		{"resource-pressure", true},
+		{"small-office", false},
 		{"non-existent", false},
 		{"invalid-name", false},
 	}
@@ -370,225 +363,6 @@ func TestBasicNetworkTemplate(t *testing.T) {
 
 	if lldpCount < 2 {
 		t.Errorf("Expected at least 2 devices with LLDP, got %d", lldpCount)
-	}
-}
-
-// TestSmallOfficeTemplate verifies small-office template specifics.
-func TestSmallOfficeTemplate(t *testing.T) {
-	template, err := tmpl.Get("small-office")
-	if err != nil {
-		t.Fatalf("Failed to get small-office template: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-	defer func() { _ = tmpFile.Close() }()
-
-	_, _ = tmpFile.WriteString(template.Content)
-	_ = tmpFile.Close()
-
-	cfg, err := config.Load(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Small office should have router, switch, AP, server (4 devices minimum)
-	if len(cfg.Devices) < 4 {
-		t.Errorf("Expected at least 4 devices, got %d", len(cfg.Devices))
-	}
-
-	// Check for DHCP and DNS servers
-	foundDHCP := false
-	foundDNS := false
-
-	for _, device := range cfg.Devices {
-		if device.DHCPConfig != nil {
-			foundDHCP = true
-		}
-
-		if device.DNSConfig != nil {
-			foundDNS = true
-		}
-	}
-
-	if !foundDHCP {
-		t.Error("Small office should have DHCP server")
-	}
-
-	if !foundDNS {
-		t.Error("Small office should have DNS server")
-	}
-}
-
-// TestDataCenterTemplate verifies data-center template specifics.
-func TestDataCenterTemplate(t *testing.T) {
-	template, err := tmpl.Get("data-center")
-	if err != nil {
-		t.Fatalf("Failed to get data-center template: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-	defer func() { _ = tmpFile.Close() }()
-
-	_, _ = tmpFile.WriteString(template.Content)
-	_ = tmpFile.Close()
-
-	cfg, err := config.Load(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Data center should have multiple devices (at least 6)
-	if len(cfg.Devices) < 6 {
-		t.Errorf("Expected at least 6 devices in data center, got %d", len(cfg.Devices))
-	}
-
-	// Count devices with various capabilities
-	lldpDevices := 0
-	stpDevices := 0
-	dhcpServers := 0
-
-	for _, device := range cfg.Devices {
-		if device.LLDPConfig != nil && device.LLDPConfig.Enabled {
-			lldpDevices++
-		}
-
-		if device.STPConfig != nil && device.STPConfig.Enabled {
-			stpDevices++
-		}
-
-		if device.DHCPConfig != nil {
-			dhcpServers++
-		}
-	}
-
-	// Data center should have redundancy
-	if lldpDevices < 4 {
-		t.Errorf("Expected at least 4 devices with LLDP (routers+switches), got %d", lldpDevices)
-	}
-
-	if stpDevices < 2 {
-		t.Errorf("Expected at least 2 switches with STP, got %d", stpDevices)
-	}
-
-	if dhcpServers < 1 {
-		t.Errorf("Expected at least 1 DHCP server, got %d", dhcpServers)
-	}
-}
-
-// TestIoTNetworkTemplate verifies iot-network template specifics.
-func TestIoTNetworkTemplate(t *testing.T) {
-	template, err := tmpl.Get("iot-network")
-	if err != nil {
-		t.Fatalf("Failed to get iot-network template: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-	defer func() { _ = tmpFile.Close() }()
-
-	_, _ = tmpFile.WriteString(template.Content)
-	_ = tmpFile.Close()
-
-	cfg, err := config.Load(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// IoT network should have gateway + multiple IoT devices
-	if len(cfg.Devices) < 4 {
-		t.Errorf("Expected at least 4 devices in IoT network, got %d", len(cfg.Devices))
-	}
-
-	// Check for gateway with DHCP
-	foundGateway := false
-
-	for _, device := range cfg.Devices {
-		if device.DHCPConfig != nil {
-			foundGateway = true
-
-			break
-		}
-	}
-
-	if !foundGateway {
-		t.Error("IoT network should have gateway with DHCP")
-	}
-}
-
-// TestTestLabTemplate verifies test-lab template specifics.
-func TestTestLabTemplate(t *testing.T) {
-	template, err := tmpl.Get("test-lab")
-	if err != nil {
-		t.Fatalf("Failed to get test-lab template: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(t.TempDir(), "niac-test-*.yaml")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-	defer func() { _ = tmpFile.Close() }()
-
-	_, _ = tmpFile.WriteString(template.Content)
-	_ = tmpFile.Close()
-
-	cfg, err := config.Load(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Test lab should have comprehensive protocol support
-	// Check for device with multiple discovery protocols
-	foundMultiProtocol := false
-
-	for _, device := range cfg.Devices {
-		hasLLDP := device.LLDPConfig != nil && device.LLDPConfig.Enabled
-		hasCDP := device.CDPConfig != nil && device.CDPConfig.Enabled
-		hasEDP := device.EDPConfig != nil && device.EDPConfig.Enabled
-
-		if hasLLDP && hasCDP && hasEDP {
-			foundMultiProtocol = true
-
-			break
-		}
-	}
-
-	if !foundMultiProtocol {
-		t.Error("Test lab should have device with multiple discovery protocols (LLDP, CDP, EDP)")
-	}
-
-	// Check for server with DHCP, DNS, HTTP
-	foundFullServer := false
-
-	for _, device := range cfg.Devices {
-		hasDHCP := device.DHCPConfig != nil
-		hasDNS := device.DNSConfig != nil
-		hasHTTP := device.HTTPConfig != nil && device.HTTPConfig.Enabled
-
-		if hasDHCP && hasDNS && hasHTTP {
-			foundFullServer = true
-
-			break
-		}
-	}
-
-	if !foundFullServer {
-		t.Error("Test lab should have server with DHCP, DNS, and HTTP")
 	}
 }
 

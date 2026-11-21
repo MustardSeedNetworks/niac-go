@@ -243,7 +243,7 @@ export const walkFiles: LibraryFileEntry[] = [
     name: 'cisco-c9300.walk',
     sizeBytes: 84_213,
     modifiedAt: '2026-09-01T10:00:00Z',
-    source: 'starter',
+    source: 'user',
     edited: false,
   },
   {
@@ -273,7 +273,7 @@ export const libraryNetworks: LibraryNetwork[] = [
     deviceCount: 3,
     modifiedAt: '2026-09-01T10:00:00Z',
     sizeBytes: 4_096,
-    source: 'starter',
+    source: 'user',
     valid: true,
   },
 ];

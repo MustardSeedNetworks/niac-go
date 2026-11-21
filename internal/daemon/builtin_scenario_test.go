@@ -9,12 +9,11 @@ import (
 )
 
 // TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary is the installed-host
-// case. `niac scenario list` advertises ten built-in scenarios, and every one of
-// them answered "template not found" through the daemon: the loader walked
-// on-disk scenario directories (cmd/niac/templates, examples,
-// /usr/share/niac/templates) and the deb and rpm ship none of them —
-// `dpkg -L niac | grep templ` is empty. What does ship is the library, which
-// first run seeds with exactly those scenarios.
+// case. A scenario named by the CLI answered "template not found" through the
+// daemon: the loader walked on-disk scenario directories (cmd/niac/templates,
+// examples, /usr/share/niac/templates) and the deb and rpm ship none of them —
+// `dpkg -L niac | grep templ` is empty. What an installed host has is the
+// library, and a network file in it resolves by bare name.
 func TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary(t *testing.T) {
 	root := t.TempDir()
 	networks := filepath.Join(root, "networks")
@@ -25,14 +24,14 @@ func TestLoadSimulationConfigResolvesABuiltinScenarioFromTheLibrary(t *testing.T
 	t.Setenv("NIAC_CONFIGS_DIR", filepath.Join(root, "configs"))
 	t.Setenv("NIAC_TEMPLATES_DIR", filepath.Join(root, "no-templates-here"))
 
-	starter := writeManagedPathTestConfig(t, networks, "home-network.yaml")
+	starter := writeManagedPathTestConfig(t, networks, "basic-network.yaml")
 	want, err := filepath.EvalSymlinks(starter)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_, resolved, loadErr := loadSimulationConfig(
-		api.SimulationRequest{ScenarioName: "home-network"})
+		api.SimulationRequest{ScenarioName: "basic-network"})
 	if loadErr != nil {
 		t.Fatalf("loadSimulationConfig() error = %v", loadErr)
 	}

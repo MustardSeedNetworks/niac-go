@@ -9,9 +9,11 @@
 // the picker / browser sees comes from here. Content arrives via three
 // optional ingress paths:
 //
-//  1. Embedded starter packs — unpacked into networks/ and walks/ on
-//     first run if each dir is empty, so the daemon works out of the
-//     box.
+//  1. Embedded content — the starter walks are unpacked into walks/ on
+//     first run if it is empty, and the shipped scenarios (templates and
+//     scenario packs) are served read-only from the binary as Examples
+//     beside whatever networks/ holds, so the daemon works out of the box
+//     and an upgrade refreshes them.
 //  2. CLI: `niac content install` downloads a versioned tarball from
 //     the GitHub release and extracts it here (PR 2).
 //  3. UI upload: POST /api/v1/library/install accepts a tarball via
@@ -53,15 +55,17 @@ func AllKinds() []Kind { return []Kind{KindNetworks, KindWalks, KindPcaps} }
 
 // Source describes where a given entry came from. Stamped onto every
 // returned record so the UI can render small "Starter" / "User" /
-// "Bundle" badges and so the delete handler can refuse to remove
-// starter-pack entries (which would just reappear on next bootstrap).
+// "Bundle" / "Example" badges. An Example is served from the binary and is
+// read-only; a starter is a walk unpacked on first run.
 type Source string
 
-// The three entry sources tracked by Source.
+// The entry sources tracked by Source. SourceStarter applies to walks only.
 const (
 	SourceStarter Source = "starter"
 	SourceBundle  Source = "bundle"
 	SourceUser    Source = "user"
+	// SourceExample marks a shipped scenario served from the binary.
+	SourceExample Source = "example"
 )
 
 // Library is the runtime handle for the on-disk store. Create one per
@@ -106,11 +110,9 @@ func DefaultRoot() string {
 }
 
 // Open resolves the library root, ensures the three subdirectories
-// exist, unpacks the embedded starter packs into networks/ and walks/
-// if those directories are brand new, and replaces any starter network
-// an earlier release wrote that this one can no longer load. The returned Library is
-// ready for List/Read calls; callers MUST handle the returned error
-// before using it.
+// exist, and unpacks the starter walks into walks/ if that directory is
+// brand new. The returned Library is ready for List/Read calls; callers
+// MUST handle the returned error before using it.
 func Open(root string) (*Library, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
@@ -123,21 +125,9 @@ func Open(root string) (*Library, error) {
 		return nil, layoutErr
 	}
 
-	if bootstrapErr := lib.bootstrapStarterPack(); bootstrapErr != nil {
-		_ = lib.draftRoot.Close()
-		return nil, fmt.Errorf("bootstrap starter pack: %w", bootstrapErr)
-	}
-
 	if bootstrapErr := lib.bootstrapWalks(); bootstrapErr != nil {
 		_ = lib.draftRoot.Close()
 		return nil, fmt.Errorf("bootstrap starter walks: %w", bootstrapErr)
-	}
-
-	// After the walks, because a starter that names a captured walk resolves
-	// it beside networks/ and would otherwise read as unloadable.
-	if refreshErr := lib.refreshStaleStarters(); refreshErr != nil {
-		_ = lib.draftRoot.Close()
-		return nil, fmt.Errorf("refresh starter networks: %w", refreshErr)
 	}
 
 	return lib, nil

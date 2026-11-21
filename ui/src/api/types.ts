@@ -133,8 +133,10 @@ export type {
 } from './fabric-types';
 // Library network types
 export type {
+  DuplicateLibraryNetworkRequest,
   LibraryNetwork,
   LibraryNetworkContent,
+  LibraryNetworkSource,
   UploadLibraryNetworkRequest,
   UploadLibraryNetworkResponse,
 } from './library-network-types';

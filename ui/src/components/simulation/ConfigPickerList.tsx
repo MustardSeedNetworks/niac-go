@@ -13,7 +13,13 @@ interface SharedItemProps {
   onSelect: (item: ConfigItem) => void;
   onToggleFavorite: (key: string) => void;
   onClearLocal: () => void;
+  onDuplicate: (name: string) => void;
+  duplicating: boolean;
+  canDuplicate: boolean;
 }
+
+const isExample = (item: ConfigItem): boolean =>
+  item.kind === 'saved' && item.config.source === 'example';
 
 export interface ConfigSections {
   local: ConfigItem[];
@@ -39,6 +45,9 @@ export function ConfigsList({
   onSelect,
   onToggleFavorite,
   onClearLocal,
+  onDuplicate,
+  duplicating,
+  canDuplicate,
   searching,
 }: {
   sections: ConfigSections;
@@ -49,6 +58,10 @@ export function ConfigsList({
   onSelect: (item: ConfigItem) => void;
   onToggleFavorite: (key: string) => void;
   onClearLocal: () => void;
+  onDuplicate: (name: string) => void;
+  /** Name of the example being copied right now, if any. */
+  duplicating: string | null;
+  canDuplicate: boolean;
   searching: boolean;
 }) {
   const { t } = useTranslation('pages');
@@ -83,6 +96,9 @@ export function ConfigsList({
                 onSelect={onSelect}
                 onToggleFavorite={onToggleFavorite}
                 onClearLocal={onClearLocal}
+                onDuplicate={onDuplicate}
+                duplicating={duplicating === item.name}
+                canDuplicate={canDuplicate && duplicating === null}
               />
             ))}
           </div>
@@ -97,6 +113,9 @@ export function ConfigsList({
                 onSelect={onSelect}
                 onToggleFavorite={onToggleFavorite}
                 onClearLocal={onClearLocal}
+                onDuplicate={onDuplicate}
+                duplicating={duplicating === item.name}
+                canDuplicate={canDuplicate && duplicating === null}
               />
             ))}
           </ul>
@@ -157,6 +176,51 @@ function FavoriteStar({
   );
 }
 
+function ExampleBadge({ name }: { name: string }) {
+  const { t } = useTranslation('pages');
+  return (
+    <Tooltip text={t('configPicker.exampleTitle')}>
+      {(description) => (
+        <span {...description} data-testid={`config-example-badge-${name}`}>
+          <Tag colorScheme="cyan" className="text-[10px]">
+            {t('configPicker.exampleTag')}
+          </Tag>
+        </span>
+      )}
+    </Tooltip>
+  );
+}
+
+function DuplicateButton({
+  name,
+  busy,
+  disabled,
+  onDuplicate,
+}: {
+  name: string;
+  busy: boolean;
+  disabled: boolean;
+  onDuplicate: (name: string) => void;
+}) {
+  const { t } = useTranslation('pages');
+  return (
+    <Tooltip text={t('configPicker.duplicateTitle', { name })}>
+      <button
+        type="button"
+        data-testid={`config-duplicate-${name}`}
+        disabled={disabled}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDuplicate(name);
+        }}
+        className="rounded border border-surface-border bg-bg-surface/60 px-cell py-compact-md text-xs font-medium text-text-primary hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? t('configPicker.duplicating') : t('configPicker.duplicateButton')}
+      </button>
+    </Tooltip>
+  );
+}
+
 function ConfigCard({
   item,
   selected,
@@ -164,6 +228,9 @@ function ConfigCard({
   onSelect,
   onToggleFavorite,
   onClearLocal,
+  onDuplicate,
+  duplicating,
+  canDuplicate,
 }: SharedItemProps) {
   const { t } = useTranslation('pages');
   const Icon = item.kind === 'saved' ? FolderOpen : HardDrive;
@@ -201,6 +268,7 @@ function ConfigCard({
             {t('configPicker.deviceCount', { count: item.deviceCount })}
           </Tag>
         )}
+        {isExample(item) && <ExampleBadge name={item.name} />}
       </div>
       <div className="flex gap-compact">
         {selected ? (
@@ -218,6 +286,14 @@ function ConfigCard({
               {t('configPicker.selectButton')}
             </button>
           </Tooltip>
+        )}
+        {isExample(item) && (
+          <DuplicateButton
+            name={item.name}
+            busy={duplicating}
+            disabled={!canDuplicate}
+            onDuplicate={onDuplicate}
+          />
         )}
         {item.kind === 'local' && (
           <Tooltip text={t('configPicker.dropLocalFileTitle')}>
@@ -242,6 +318,9 @@ function ConfigRow({
   onSelect,
   onToggleFavorite,
   onClearLocal,
+  onDuplicate,
+  duplicating,
+  canDuplicate,
 }: SharedItemProps) {
   const { t } = useTranslation('pages');
   return (
@@ -273,6 +352,7 @@ function ConfigRow({
                 {t('configPicker.localTag')}
               </Tag>
             )}
+            {isExample(item) && <ExampleBadge name={item.name} />}
           </div>
           {item.description && (
             <SmallText
@@ -285,6 +365,14 @@ function ConfigRow({
           )}
         </button>
       </Tooltip>
+      {isExample(item) && (
+        <DuplicateButton
+          name={item.name}
+          busy={duplicating}
+          disabled={!canDuplicate}
+          onDuplicate={onDuplicate}
+        />
+      )}
       {item.kind === 'local' && (
         <Tooltip text={t('configPicker.dropLocalFileTitle')}>
           <button

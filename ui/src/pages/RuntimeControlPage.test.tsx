@@ -238,7 +238,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
         deviceCount: 3,
         modifiedAt: '2026-10-04T00:00:00Z',
         sizeBytes: 64,
-        source: 'starter',
+        source: 'user',
         valid: true,
       },
     ]);
@@ -246,7 +246,7 @@ describe('RuntimeControlPage — routed start preflight', () => {
       name: 'routed-lab',
       content: ROUTED_YAML,
       format: 'yaml',
-      source: 'starter',
+      source: 'user',
     });
     preflightSimulation.mockResolvedValue({
       safe: true,
@@ -306,5 +306,41 @@ describe('RuntimeControlPage — routed start preflight', () => {
         accessVlan: 200,
       }),
     );
+  });
+
+  // A shipped example has no file in the library: it is started by name, so the
+  // request never carries a document that, for a pack, is megabytes.
+  it('starts a shipped example by name instead of sending its content', async () => {
+    const user = userEvent.setup();
+    const library = await import('../api/library-client');
+    vi.mocked(library.fetchLibraryNetworks).mockResolvedValue([
+      {
+        name: 'routed-lab',
+        description: 'Shipped example',
+        deviceCount: 3,
+        modifiedAt: '2026-10-04T00:00:00Z',
+        sizeBytes: 0,
+        source: 'example',
+        valid: true,
+      },
+    ]);
+    renderPage();
+
+    await screen.findByText('routed-lab');
+    await user.click(screen.getByRole('button', { name: /^select$/i }));
+    await user.click(await screen.findByRole('button', { name: /review connection/i }));
+    await user.click(await screen.findByTestId('wizard-preflight-check'));
+
+    await waitFor(() =>
+      expect(preflightSimulation).toHaveBeenCalledWith({
+        interface: 'eth0',
+        scenarioName: 'routed-lab',
+        attachment: 'cyberscope',
+        attachmentMode: 'access',
+        accessVlan: 200,
+      }),
+    );
+    // The preview may still read the document to show it; the request must not carry it.
+    expect(preflightSimulation.mock.calls[0]?.[0].configData).toBeUndefined();
   });
 });

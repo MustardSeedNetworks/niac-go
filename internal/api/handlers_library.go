@@ -98,11 +98,20 @@ func (s *Server) handleLibraryNetworkRead(w http.ResponseWriter, r *http.Request
 type libraryNetworkUploadRequest struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
+	// CopyFrom names a shipped example to save into the library instead of
+	// uploading Content. The copy is made here because a pack's document is
+	// megabytes: sending it through the browser and back would only risk the
+	// body cap. Name is optional with CopyFrom and defaults to "<example>-copy".
+	CopyFrom string `json:"copyFrom,omitempty"`
 }
 
 func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Request) {
 	var req libraryNetworkUploadRequest
 	if !decodeJSONStrict(w, r, &req, MaxScenarioRequestBodySize) {
+		return
+	}
+	if req.CopyFrom != "" {
+		s.handleLibraryExampleDuplicate(w, r, req)
 		return
 	}
 	// The body cap covers worst-case JSON escaping; the YAML itself is bounded
@@ -129,6 +138,10 @@ func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Reque
 			writeError(w, r, http.StatusBadRequest, "invalid_content", err.Error(), nil)
 			return
 		}
+		if errors.Is(err, library.ErrReadOnlyExample) {
+			writeError(w, r, http.StatusConflict, "read_only_example", err.Error(), nil)
+			return
+		}
 		s.logger.ErrorContext(r.Context(), "[API] library: write network", "name", req.Name, "error", err)
 		writeError(w, r, http.StatusInternalServerError, "library_write_failed",
 			"Failed to save network", nil)
@@ -141,6 +154,36 @@ func (s *Server) handleLibraryNetworkUpload(w http.ResponseWriter, r *http.Reque
 	})
 }
 
+// handleLibraryExampleDuplicate saves a shipped example into the library as an
+// editable network. It runs behind the networks POST route, so it carries that
+// route's CSRF, write limit and authenticated-session policy.
+func (s *Server) handleLibraryExampleDuplicate(
+	w http.ResponseWriter, r *http.Request, req libraryNetworkUploadRequest,
+) {
+	if req.Content != "" {
+		writeError(w, r, http.StatusBadRequest, "validation_failed", "Validation failed",
+			[]ErrorDetail{{Field: "content", Issue: "must_be_empty_with_copyFrom"}})
+		return
+	}
+	name, err := s.library.DuplicateExample(req.CopyFrom, req.Name)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusCreated)
+		s.writeJSON(w, map[string]any{"success": true, "name": name})
+	case errors.Is(err, library.ErrNotFound):
+		writeError(w, r, http.StatusNotFound, "not_found", "Example not found", nil)
+	case errors.Is(err, library.ErrInvalidName):
+		writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)
+	case errors.Is(err, library.ErrAlreadyExists), errors.Is(err, library.ErrReadOnlyExample):
+		writeError(w, r, http.StatusConflict, "already_exists", err.Error(), nil)
+	default:
+		s.logger.ErrorContext(r.Context(), "[API] library: duplicate example",
+			"example", req.CopyFrom, "error", err)
+		writeError(w, r, http.StatusInternalServerError, "library_write_failed",
+			"Failed to save network", nil)
+	}
+}
+
 func (s *Server) handleLibraryNetworkDelete(w http.ResponseWriter, r *http.Request, name string) {
 	if err := s.library.DeleteNetwork(name); err != nil {
 		if errors.Is(err, library.ErrNotFound) {
@@ -151,9 +194,12 @@ func (s *Server) handleLibraryNetworkDelete(w http.ResponseWriter, r *http.Reque
 			writeError(w, r, http.StatusBadRequest, "invalid_name", err.Error(), nil)
 			return
 		}
-		// "starter networks cannot be deleted" — surface as 400 with a
-		// human-readable message rather than a 500, since it's the
-		// caller asking us to do something we're not going to do.
+		if errors.Is(err, library.ErrReadOnlyExample) {
+			writeError(w, r, http.StatusConflict, "read_only_example", err.Error(), nil)
+			return
+		}
+		// Anything else refused is the caller asking for something we are not
+		// going to do, so it is a 400 rather than a 500.
 		writeError(w, r, http.StatusBadRequest, "delete_refused", err.Error(), nil)
 		return
 	}
@@ -223,9 +269,9 @@ func fallbackDirsForKind(kind library.Kind) []string {
 	case library.KindWalks:
 		return []string{"examples/walks", "examples/device_walks_sanitized", "examples/device_walks"}
 	case library.KindNetworks:
-		// networks have their own bootstrap path (starter pack copies
-		// into the library on first run) and the live editor / picker
-		// flow doesn't need a cold-start fallback. Return nil so the
+		// networks list their shipped examples from the binary (see
+		// library.ListNetworks) and the live editor / picker flow doesn't
+		// need a cold-start fallback. Return nil so the
 		// caller treats it as "no candidates" rather than panicking.
 		return nil
 	default:

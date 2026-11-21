@@ -39,6 +39,8 @@ Prometheus metrics share the daemon's HTTPS listener at `/metrics`; there is no 
 | `GET` | `/api/v1/sessions/{id}/{resource}` | One session's runtime state — see below |
 | `DELETE` | `/api/v1/sessions/{id}` | Stop that session |
 | `GET` | `/api/v1/scenario/packs` | Versioned presentation presets (hospital, warehouse, manufacturing, campus, retail, service-provider) plus the `enterprise-scale` stress preset |
+| `GET` | `/api/v1/library/networks` | Library networks plus the scenarios shipped in the binary, listed with `source: example` (read-only; packs are generated on demand) |
+| `POST` | `/api/v1/library/networks` | Save a network, or `{"copyFrom": "<example>", "name": "<optional>"}` to save an editable copy of a shipped example |
 | `GET` | `/api/v1/scenario/profiles` | Reusable vendor, model, role, and discovery profiles |
 | `POST` | `/api/v1/scenario/generate` | Generate deterministic validated YAML from sites and repeat controls |
 | `PATCH` | `/api/v1/library/drafts/{name}/topology` | Apply one revision-safe topology edit to an isolated draft |

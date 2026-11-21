@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/MustardSeedNetworks/niac-go/internal/templates"
 )
 
 // A bundle's files land in the same directories as the operator's own and look
@@ -43,17 +41,26 @@ func TestBundleInstalledWalksReportTheirSource(t *testing.T) {
 	}
 }
 
-// The starter pack ships inside the binary and outranks the index: a bundle
+// The starter walks ship inside the binary and outrank the index: a bundle
 // cannot claim a file that reappears on every bootstrap.
-func TestStarterContentOutranksTheIndex(t *testing.T) {
-	lib := newLibraryWithFile(t, KindNetworks, "enterprise.yaml")
-	if err := RecordBundleInstall(lib.root, "v1", map[string]string{"networks/enterprise.yaml": "abc"}); err != nil {
+func TestStarterWalksOutrankTheIndex(t *testing.T) {
+	starter := firstStarterWalk(t)
+	lib := newLibraryWithFile(t, KindWalks, starter)
+	if err := RecordBundleInstall(lib.root, "v1", map[string]string{"walks/" + starter: "abc"}); err != nil {
 		t.Fatalf("RecordBundleInstall: %v", err)
 	}
-	starterName := firstStarterNetwork(t)
 
-	if got := lib.detectSource(starterName); got != SourceStarter {
-		t.Errorf("starter %s reported as %q", starterName, got)
+	if got := lib.detectFileSource(KindWalks, starter); got != SourceStarter {
+		t.Errorf("starter walk %s reported as %q", starter, got)
+	}
+}
+
+// A shipped scenario is an Example served from the binary, never a file, so a
+// network file named like one is the operator's even when a bundle also wrote it.
+func TestNetworkFileNamedLikeAnExampleIsNotStarter(t *testing.T) {
+	lib := newLibraryWithFile(t, KindNetworks, "basic-network.yaml")
+	if got := lib.detectSource("basic-network.yaml"); got != SourceUser {
+		t.Errorf("source = %q, want %q", got, SourceUser)
 	}
 }
 
@@ -71,12 +78,12 @@ func newLibraryWithFile(t *testing.T, kind Kind, name string) *Library {
 	return &Library{root: root}
 }
 
-func firstStarterNetwork(t *testing.T) string {
+func firstStarterWalk(t *testing.T) string {
 	t.Helper()
-	names := templates.ListNames()
-	if len(names) == 0 {
-		t.Fatal("the starter pack ships no network")
+	entries, err := starterWalks.ReadDir("starter/walks")
+	if err != nil || len(entries) == 0 {
+		t.Fatalf("the starter pack ships no walk (err=%v)", err)
 	}
 
-	return names[0] + ".yaml"
+	return entries[0].Name()
 }

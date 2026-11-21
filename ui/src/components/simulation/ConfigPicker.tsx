@@ -2,7 +2,7 @@ import { FileUp, LayoutGrid, List, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { importConfig } from '../../api/client';
-import { fetchLibraryNetworks } from '../../api/library-client';
+import { duplicateLibraryNetwork, fetchLibraryNetworks } from '../../api/library-client';
 import type { LibraryNetwork } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
@@ -25,7 +25,7 @@ export type { ConfigPickerProps } from './ConfigPicker.types';
 
 /**
  * ConfigPicker is the single network-picker for the Simulation page.
- * Library networks (the shipped starters and the user's own) are one
+ * Library networks (the shipped examples and the user's own) are one
  * flat list; the user only sees "favorites" vs "everything else", with a
  * one-shot local upload pinned above both when present. Subcomponents:
  *
@@ -42,6 +42,11 @@ export function ConfigPicker({
   const { t } = useTranslation('pages');
   const [userConfigs, setUserConfigs] = useState<LibraryNetwork[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [duplicateNotice, setDuplicateNotice] = useState<
+    { kind: 'saved'; name: string } | { kind: 'failed'; reason: string } | null
+  >(null);
+  const duplicatePermission = useActionPermission('edit');
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPref(VIEW_PREF_KEY, 'grid'));
   const { isFavorite, toggleFavorite } = useFavorites(FAVORITES_STORAGE_KEY);
@@ -128,6 +133,26 @@ export function ConfigPicker({
     if (item.kind === 'saved') onSelectUserConfig(item.config);
     // local items are already "selected" — RuntimeControlPage tracks them as
     // the upload file. Selecting again is a no-op.
+  };
+
+  // The daemon makes the copy, so a multi-megabyte pack never crosses the
+  // browser. The list is read again afterwards so the copy appears, as the
+  // operator's own network, beside the example it came from.
+  const handleDuplicate = async (name: string) => {
+    setDuplicating(name);
+    setDuplicateNotice(null);
+    try {
+      const saved = await duplicateLibraryNetwork({ copyFrom: name });
+      setUserConfigs(await fetchLibraryNetworks());
+      setDuplicateNotice({ kind: 'saved', name: saved.name });
+    } catch (err) {
+      setDuplicateNotice({
+        kind: 'failed',
+        reason: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setDuplicating(null);
+    }
   };
 
   const handleClearLocal = () => {
@@ -232,6 +257,21 @@ export function ConfigPicker({
         </SmallText>
       )}
 
+      {duplicateNotice?.kind === 'saved' && (
+        <SmallText
+          className="text-status-success"
+          role="status"
+          data-testid="config-duplicate-saved"
+        >
+          {t('configPicker.duplicateSaved', { name: duplicateNotice.name })}
+        </SmallText>
+      )}
+      {duplicateNotice?.kind === 'failed' && (
+        <SmallText className="text-status-error" role="alert" data-testid="config-duplicate-failed">
+          {t('configPicker.duplicateFailed', { reason: duplicateNotice.reason })}
+        </SmallText>
+      )}
+
       {/* Search + view toggle */}
       <div className="flex flex-wrap items-center gap-compact">
         <div className="relative min-w-48 flex-1">
@@ -274,6 +314,9 @@ export function ConfigPicker({
         onSelect={handleSelectItem}
         onToggleFavorite={toggleFavorite}
         onClearLocal={handleClearLocal}
+        onDuplicate={(name) => void handleDuplicate(name)}
+        duplicating={duplicating}
+        canDuplicate={!duplicatePermission.disabled}
         searching={search.trim().length > 0}
       />
     </div>

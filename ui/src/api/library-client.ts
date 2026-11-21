@@ -2,6 +2,7 @@ import type { DraftBehaviorTimeline } from './behavior-timeline-types';
 import { deduplicatedGet, request, requestJson, requestJsonCamelCase } from './requestCore';
 import { requestJsonWithProgress } from './requestUpload';
 import type {
+  DuplicateLibraryNetworkRequest,
   LibraryNetwork,
   LibraryNetworkContent,
   UploadLibraryNetworkRequest,
@@ -56,6 +57,15 @@ export const fetchLibraryNetworkContent = (name: string) =>
   request<LibraryNetworkContent>(`/api/v1/library/networks/${encodeURIComponent(name)}`);
 
 export const uploadLibraryNetwork = (payload: UploadLibraryNetworkRequest) =>
+  requestJson<UploadLibraryNetworkResponse>('/api/v1/library/networks', payload, {
+    method: 'POST',
+  });
+
+/**
+ * Saves an editable copy of a shipped example. The daemon makes the copy: a
+ * scenario pack is megabytes of YAML, which should not round-trip the browser.
+ */
+export const duplicateLibraryNetwork = (payload: DuplicateLibraryNetworkRequest) =>
   requestJson<UploadLibraryNetworkResponse>('/api/v1/library/networks', payload, {
     method: 'POST',
   });
