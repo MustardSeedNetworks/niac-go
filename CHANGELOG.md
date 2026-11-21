@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.128.5](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.4...v0.128.5) (2026-11-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tailwindcss/postcss to v4.3.5 ([#3075](https://github.com/MustardSeedNetworks/niac-go/issues/3075)) ([559f9c8](https://github.com/MustardSeedNetworks/niac-go/commit/559f9c8ad8b3713a36edd83bb5c2399f2497e1a4))
+* **deps:** update dependency @xyflow/react to v12.12.1 ([#3077](https://github.com/MustardSeedNetworks/niac-go/issues/3077)) ([3706ac8](https://github.com/MustardSeedNetworks/niac-go/commit/3706ac8e59067eefb51ac2dfd046f11977255337))
+
 ## [0.128.4](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.3...v0.128.4) (2026-11-21)
 
 
