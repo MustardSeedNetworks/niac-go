@@ -29,7 +29,6 @@ const (
 
 type daemonOptions struct {
 	listen              string
-	token               string
 	storagePath         string
 	storageKeep         int
 	once                bool
@@ -121,12 +120,6 @@ log.`,
 
 	daemonCmd.Flags().
 		StringVar(&options.listen, "listen", "", "Address to listen on for the HTTPS API and web UI (default: 127.0.0.1:8445)")
-	daemonCmd.Flags().
-		StringVar(&options.token, "token", "", "Bearer token for API authentication (DEPRECATED: use NIAC_API_TOKEN env var)")
-	if err := daemonCmd.Flags().MarkDeprecated("token",
-		"the value lands in /proc/<pid>/cmdline and `ps`. Set NIAC_API_TOKEN in the environment instead."); err != nil {
-		panic(fmt.Errorf("mark --token deprecated: %w", err))
-	}
 	daemonCmd.Flags().
 		StringVar(&options.storagePath, "storage", "~/.niac/niac.db", "Path to run history database (use 'disabled' to disable)")
 	// A long-lived daemon can change verbosity later through
@@ -244,18 +237,9 @@ func resolveDaemonCertDir(o *daemonOptions) string {
 	return defaultCertDir()
 }
 
-// resolveDaemonAPIToken layers --api-token / NIAC_API_TOKEN / --token in
-// the documented precedence order. Returns the resolved token. The
-// legacy --token path still works but emits a deprecation warning via
-// resolveAPIToken.
+// resolveDaemonAPIToken layers NIAC_API_TOKEN over --api-token.
 func resolveDaemonAPIToken(o *daemonOptions) string {
-	if envToken := os.Getenv("NIAC_API_TOKEN"); envToken != "" {
-		return envToken
-	}
-	if o.apiToken != "" {
-		return o.apiToken
-	}
-	return resolveAPIToken(o.token)
+	return resolveAPIToken(o.apiToken)
 }
 
 // logDaemonAuthMode announces which token source is in force and reports
@@ -448,18 +432,11 @@ func isNonLoopbackListen(addr string) (bool, error) {
 	return true, nil
 }
 
-// resolveAPIToken returns the API token, preferring environment variable over CLI flag.
-// SECURITY FIX #101: Prefer NIAC_API_TOKEN environment variable over CLI flag.
-func resolveAPIToken(cliToken string) string {
+// resolveAPIToken returns the API token, preferring the NIAC_API_TOKEN
+// environment variable over the flag value: a flag lands in the process list.
+func resolveAPIToken(flagToken string) string {
 	if envToken := os.Getenv("NIAC_API_TOKEN"); envToken != "" {
 		return envToken
 	}
-
-	// Warn if using deprecated CLI flag
-	if cliToken != "" {
-		fmt.Fprintln(os.Stderr, "WARNING: --api-token flag is deprecated and exposes token in process list")
-		fmt.Fprintln(os.Stderr, "    Please use NIAC_API_TOKEN environment variable instead")
-	}
-
-	return cliToken
+	return flagToken
 }

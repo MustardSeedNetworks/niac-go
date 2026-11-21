@@ -34,8 +34,19 @@ the lab.
 
 ## Quick Start
 
+### Install
+
+Each [GitHub release](https://github.com/MustardSeedNetworks/niac-go/releases)
+ships:
+
+- **macOS** (Apple Silicon): `niac-<version>-darwin-arm64.pkg`, or the `.tar.gz`
+- **Linux**: `niac_<version>_<arch>.deb` and `niac-<version>-1.<arch>.rpm`
+  (amd64/arm64), or the `.tar.gz`
+- **Windows**: `niac-<version>-windows-<arch>.zip` (amd64/arm64)
+
+Or build from source (requires Go 1.27+):
+
 ```bash
-# Install (Linux/macOS, requires Go 1.27+)
 git clone https://github.com/MustardSeedNetworks/niac-go
 cd niac-go
 make build
@@ -76,7 +87,7 @@ sudo ./niac daemon
 | `niac man` | Generate man pages |
 | `niac mibzip` | Convert SNMP walk files to and from MibZip format |
 | `niac monitor` | Stream real-time statistics from a running NIAC simulation |
-| `niac neighbors [watch]` | Display neighbor discovery table from LLDP/CDP protocols |
+| `niac neighbors` | Display neighbor discovery table from LLDP/CDP protocols |
 | `niac restore <archive.tar.gz>` | Restore a content library from a backup |
 | `niac sanitize <input-walk> <output-walk>` | Sanitize SNMP walk files with NIAC branding |
 | `niac scenario` | Manage built-in scenarios |
@@ -170,7 +181,7 @@ See [`docs/SHARED_DEMO_CATALOG.md`](docs/SHARED_DEMO_CATALOG.md).
 | `make fmt-all` | Auto-format everything |
 | `make schema` | Regenerate JSON schema from `Config` struct |
 
-Verified versions: **Go 1.27.4**, Node.js 26.10.0, golangci-lint v2.14.0.
+Verified versions: **Go 1.27.4**, Node.js 26.13.0, golangci-lint v2.15.0.
 All release artifacts are built in GitHub Actions by the pinned `release.yml`
 pipeline after release-please creates a `v*` tag. Linux and Apple Silicon macOS
 use GoReleaser Cross; Windows uses native GitHub runners with CGO and the Npcap
