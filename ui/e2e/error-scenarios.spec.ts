@@ -64,13 +64,15 @@ test.describe('Error Scenarios', () => {
     await expectShellSurvives(page);
   });
 
-  test('redirects an unknown route back to the dashboard', async ({ page }) => {
+  test('shows a not-found panel for an unknown route and links home', async ({ page }) => {
     await page.goto('/nonexistent-page-12345');
 
-    // App.tsx: <Route path="*" element={<Navigate to="/" replace />} />.
-    // The old test only checked #root, so a broken catch-all would have passed.
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/nonexistent-page-12345$/);
+    await expect(page.getByTestId('not-found')).toContainText('NIAC has no page');
     await expectShellSurvives(page);
+
+    await page.getByRole('link', { name: 'Back to the dashboard' }).click();
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test('shows the connect gate with an error on HTTP 500', async ({ page }) => {
