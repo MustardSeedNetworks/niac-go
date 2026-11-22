@@ -5,6 +5,19 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.128.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.10...v0.128.11) (2026-11-22)
+
+
+### Bug Fixes
+
+* **windows:** adopt foundation securedir for data, token and policy files ([#3095](https://github.com/MustardSeedNetworks/niac-go/issues/3095)) ([3c54a09](https://github.com/MustardSeedNetworks/niac-go/commit/3c54a090b44f425c87381e30452db6df56fbccc1))
+* **windows:** harden the installer and service registration ([#3093](https://github.com/MustardSeedNetworks/niac-go/issues/3093)) ([6c365c5](https://github.com/MustardSeedNetworks/niac-go/commit/6c365c5706e9b73d49089054f70430cad87790f4))
+
+
+### Performance Improvements
+
+* **ui:** device list and topology at scenario-pack scale (AUD-10) ([#3055](https://github.com/MustardSeedNetworks/niac-go/issues/3055)) ([9b59a2a](https://github.com/MustardSeedNetworks/niac-go/commit/9b59a2aa047678cdc749b3ae75bcb220c4544635)), closes [#3054](https://github.com/MustardSeedNetworks/niac-go/issues/3054)
+
 ## [0.128.10](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.9...v0.128.10) (2026-11-21)
 
 
