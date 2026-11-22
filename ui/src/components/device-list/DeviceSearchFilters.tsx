@@ -37,6 +37,7 @@ export function DeviceSearchFilters({
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
         <input
           type="text"
+          data-testid="device-search-input"
           placeholder={t('list.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -99,6 +100,7 @@ export function DeviceSearchFilters({
                 : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
             }`}
             aria-label={t('list.tableViewTitle')}
+            data-testid="device-view-table"
           >
             <LayoutList className={iconSizes.md} />
           </button>
@@ -113,6 +115,7 @@ export function DeviceSearchFilters({
                 : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
             }`}
             aria-label={t('list.cardViewTitle')}
+            data-testid="device-view-cards"
           >
             <LayoutGrid className={iconSizes.md} />
           </button>
