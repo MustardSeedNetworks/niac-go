@@ -5,6 +5,18 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.129.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.11...v0.129.0) (2026-11-22)
+
+
+### Features
+
+* **release:** sign and notarize the macos pkg ([#3097](https://github.com/MustardSeedNetworks/niac-go/issues/3097)) ([d4c8329](https://github.com/MustardSeedNetworks/niac-go/commit/d4c8329240d5e5bbff654ed510fe4fd3f3437e54))
+
+
+### Bug Fixes
+
+* publish the trunk failure message before the failed flag ([#3102](https://github.com/MustardSeedNetworks/niac-go/issues/3102)) ([04e6850](https://github.com/MustardSeedNetworks/niac-go/commit/04e6850ca088a13a88f4e8598d85cced739cca90)), closes [#3101](https://github.com/MustardSeedNetworks/niac-go/issues/3101)
+
 ## [0.128.11](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.10...v0.128.11) (2026-11-22)
 
 
