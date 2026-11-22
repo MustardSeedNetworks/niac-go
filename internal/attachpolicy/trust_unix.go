@@ -10,6 +10,8 @@ import (
 	"io/fs"
 	"os"
 	"syscall"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 )
 
 // Trust says whose files count as the operator's.
@@ -22,6 +24,20 @@ func OperatorTrust() Trust { return Trust{} }
 // TrustUID accepts files owned by uid in place of root, so tests can use files
 // they own. Nothing in the daemon or the CLI calls it.
 func TrustUID(uid uint32) Trust { return Trust{uid: uid} }
+
+// openTrusted opens the file and judges it, returning ErrUntrusted for a file
+// the operator did not write.
+func openTrusted(path string, trust Trust) (*os.File, error) {
+	file, err := pathconfine.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if trustErr := checkTrusted(file, trust); trustErr != nil {
+		_ = file.Close()
+		return nil, untrusted(path, trustErr)
+	}
+	return file, nil
+}
 
 // checkTrusted judges the opened file, not its path, so nothing can be swapped
 // between the check and the read.

@@ -140,12 +140,33 @@ a rule left by an earlier install when it is.
 
 Never put the API token in a machine-level `NIAC_API_TOKEN` variable: machine
 environment variables live under `HKLM` and every local user can read them.
-Keep tokens in a token file under `%ProgramData%\NiAC`, whose ACL admits
-only SYSTEM and Administrators, and set only its path, `NIAC_API_TOKEN_FILE`,
-for the service. The service refuses a non-loopback bind without a token. On
-Windows the token file loader still rejects every file, because it judges Unix
-permission bits that Windows does not have (issue #3092 tracks the fix), so
-keep the default loopback bind until that lands.
+Keep tokens in a token file under `%ProgramData%\NiAC` and set only its path,
+`NIAC_API_TOKEN_FILE`, for the service. The service refuses a non-loopback bind
+without a token.
+
+The service loads the token file only if SYSTEM or Administrators own it and
+every directory above it, no other account can write, delete or re-ACL it, and
+nothing on the path is a symbolic link or junction. Windows has no permission
+bits, so that ACL check replaces the mode check Linux and macOS use. Create the
+file inside the installer's directory, as UTF-8 without a byte-order mark (the
+default encoding of Windows PowerShell 5.1's `Out-File` and `Set-Content` is
+not), so it inherits that directory's ACL. From an elevated shell:
+
+```powershell
+$dir = "$env:ProgramData\NiAC"
+$json = '{"tokens":[{"value":"<random token>","scope":"read-write"}]}'
+[IO.File]::WriteAllText("$dir\tokens.json", $json, (New-Object Text.UTF8Encoding $false))
+[Environment]::SetEnvironmentVariable("NIAC_API_TOKEN_FILE", "$dir\tokens.json", "Machine")
+[Environment]::SetEnvironmentVariable("NIAC_LISTEN_ADDR", "0.0.0.0:8445", "Machine")
+.\install.ps1
+```
+
+Rerunning `install.ps1` opens the firewall for the new address and restarts the
+service. A token file another account can write, such as one granted to Users or
+copied from a user's profile, is refused: the service logs why and serves
+nothing. The check judges who can change the file, not who can read it, so keep
+the file in `%ProgramData%\NiAC`, whose ACL admits only SYSTEM and
+Administrators.
 
 Npcap is required for packet capture and injection features:
 
@@ -197,7 +218,7 @@ niac --help
 
 For API deployments on Linux and macOS, set `NIAC_API_TOKEN` (or
 `NIAC_API_TOKEN_FILE`) and validate the health endpoint from the same host or
-trusted management network. On Windows, see the token guidance above.
+trusted management network. On Windows, use the token file described above.
 
 ### Automated deployment validation
 

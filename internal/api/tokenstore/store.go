@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -228,37 +227,30 @@ type tokenFileEntry struct {
 
 // LoadTokenFile reads and validates a token JSON file from disk.
 //
-// File permissions must be exactly 0o600 or narrower. A wider mode
-// (0o644, 0o666, ...) is treated as a configuration error and the
-// function returns ErrTokenFileWorldReadable so the caller can keep
-// the previous tokens active rather than swapping in a possibly-
-// exposed file. Symlinks are followed by os.Stat — operators who want
-// to lock that down can chmod the symlink target.
+// On Unix the file mode must be exactly 0o600 or narrower. A wider mode
+// (0o644, 0o666, ...) is a configuration error and the function returns
+// ErrTokenFileWorldReadable so the caller can keep the previous tokens active
+// rather than swapping in a possibly-exposed file. Symlinks are followed by
+// os.Stat, so operators who want to lock that down can chmod the target.
+//
+// Windows reports a mode of 0o666 for every file, so there the file is judged
+// by its owner and ACL instead; see readTokenFile.
 //
 // The path is filepath.Clean()'d before any filesystem call so static
 // analysers can see the input is sanitised. Operators choose the
 // path via --token-file or NIAC_API_TOKEN_FILE, so a traversal-style
 // argument is operator self-harm rather than an attack vector.
 func LoadTokenFile(path string) ([]ScopedToken, error) {
+	return loadTokenFile(path, readTokenFile)
+}
+
+// loadTokenFile is LoadTokenFile with the file read injected, so the Windows
+// tests can trust the account that owns their temporary directory.
+func loadTokenFile(path string, read func(path string) ([]byte, error)) ([]ScopedToken, error) {
 	cleanPath := filepath.Clean(path)
-	info, err := os.Stat(cleanPath)
+	raw, err := read(cleanPath)
 	if err != nil {
-		return nil, fmt.Errorf("stat token file %q: %w", cleanPath, err)
-	}
-	// 0o077 = "any bits set for group or other". The check tolerates
-	// the owner-execute bit (0o100) since that would be unusual but
-	// harmless on a regular file.
-	if info.Mode().Perm()&0o077 != 0 {
-		return nil, fmt.Errorf(
-			"%w: %q has mode %o",
-			ErrTokenFileWorldReadable,
-			cleanPath,
-			info.Mode().Perm(),
-		)
-	}
-	raw, err := os.ReadFile(cleanPath)
-	if err != nil {
-		return nil, fmt.Errorf("read token file %q: %w", cleanPath, err)
+		return nil, err
 	}
 	var decoded tokenFileSchema
 	if jsonErr := json.Unmarshal(raw, &decoded); jsonErr != nil {

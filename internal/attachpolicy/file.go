@@ -12,8 +12,6 @@ import (
 	"runtime"
 	"slices"
 	"strings"
-
-	"github.com/MustardSeedNetworks/niac-go/internal/pathconfine"
 )
 
 // FileName is the policy file's name inside its directory.
@@ -69,21 +67,25 @@ func Load(path string, trust Trust) ([]Policy, error) {
 	return parseLines(lines)
 }
 
+func untrusted(path string, reason error) error {
+	return fmt.Errorf("%w: %s: %w", ErrUntrusted, path, reason)
+}
+
 // readLines returns the file's raw lines after the trust check, or nil for a
 // file that does not exist.
 func readLines(path string, trust Trust) ([]string, error) {
-	file, err := pathconfine.Open(path)
+	file, err := openTrusted(path, trust)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
+	}
+	if errors.Is(err, ErrUntrusted) {
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
 	defer func() { _ = file.Close() }()
 
-	if trustErr := checkTrusted(file, trust); trustErr != nil {
-		return nil, fmt.Errorf("%w: %s: %w", ErrUntrusted, path, trustErr)
-	}
 	data, err := io.ReadAll(io.LimitReader(file, maxFileBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
