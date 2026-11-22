@@ -785,7 +785,7 @@ jobs:
           daemon="$(find "${expanded}" -type f -path '*/usr/local/niac/niac')"
           test "$(echo "${daemon}" | wc -l)" -eq 1
           codesign --verify --strict "${daemon}"
-          codesign -dv "${daemon}" 2>&1 | grep -F "Authority=Developer ID Application"
+          codesign -dvv "${daemon}" 2>&1 | grep -F "Authority=Developer ID Application"
           codesign -dv "${daemon}" 2>&1 | grep -F "flags=0x10000(runtime)"
           lipo -archs "${daemon}" | grep -Fx arm64
 
