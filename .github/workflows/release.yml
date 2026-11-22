@@ -40,7 +40,7 @@
 #   The daemon is signed with the Developer ID Application identity, the package with the Developer ID Installer identity, and the
 #   package is notarized and stapled, so it installs by double-click. A pushed
 #   tag without the signing secrets fails there rather than ship an installer
-#   Gatekeeper refuses; a manual dispatch without them (a fork) builds unsigned
+#   Gatekeeper refuses; a dispatch with sign_macos=false builds unsigned
 #   and says so. Secrets: MACOS_SIGNING_P12_BASE64, MACOS_SIGNING_P12_PASSWORD
 #   (one .p12 holding both identities), APPLE_NOTARY_KEY_P8_BASE64,
 #   APPLE_NOTARY_KEY_ID, APPLE_NOTARY_ISSUER_ID. A dispatch signs and notarizes
@@ -55,6 +55,10 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
+      sign_macos:
+        description: "Sign and notarize the macOS .pkg for real (needs the signing secrets), which is how a dispatch proves the whole chain. Still publishes nothing. A pushed tag always signs."
+        type: boolean
+        default: true
       provenance_only:
         description: "Backfill: skip build, recompute subjects from the existing release's checksums.txt, attest + upload bundle"
         type: boolean
@@ -707,6 +711,7 @@ jobs:
         shell: bash
         env:
           EVENT: ${{ github.event_name }}
+          SIGN_MACOS: ${{ inputs.sign_macos }}
           P12_BASE64: ${{ secrets.MACOS_SIGNING_P12_BASE64 }}
           P12_PASSWORD: ${{ secrets.MACOS_SIGNING_P12_PASSWORD }}
           NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 }}
@@ -716,11 +721,11 @@ jobs:
           set -euo pipefail
           if [ -n "${P12_BASE64}" ] && [ -n "${P12_PASSWORD}" ] && [ -n "${NOTARY_KEY_BASE64}" ] && [ -n "${NOTARY_KEY_ID}" ] && [ -n "${NOTARY_ISSUER_ID}" ]; then
             echo "SIGN=true" >> "$GITHUB_ENV"
-          elif [ "${EVENT}" = "push" ]; then
+          elif [ "${EVENT}" = "push" ] || [ "${SIGN_MACOS}" = "true" ]; then
             echo "::error::The macOS signing secrets (MACOS_SIGNING_P12_BASE64, MACOS_SIGNING_P12_PASSWORD, APPLE_NOTARY_KEY_P8_BASE64, APPLE_NOTARY_KEY_ID, APPLE_NOTARY_ISSUER_ID) are not all set. A release without them would ship a package Gatekeeper refuses, so it is refused."
             exit 1
           else
-            echo "::warning::The macOS signing secrets are not available to this run, so the .pkg is built UNSIGNED and UN-NOTARIZED. It proves nothing about signing and must not be distributed."
+            echo "::warning::sign_macos is false, so the .pkg is built UNSIGNED and UN-NOTARIZED. It proves nothing about signing and must not be distributed."
             echo "SIGN=false" >> "$GITHUB_ENV"
           fi
 
