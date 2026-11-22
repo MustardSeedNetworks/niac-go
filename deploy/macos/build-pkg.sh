@@ -33,12 +33,12 @@ BUILD_DIR="$REPO_ROOT/dist/macos-pkg"
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-# shellcheck disable=SC2034  # reserved for future warnings
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
@@ -86,6 +86,21 @@ mkdir -p "$BUILD_DIR/scripts"
 log_step "2/5 Copying binary..."
 cp "$BINARY_PATH" "$BUILD_DIR/payload$INSTALL_LOCATION/$PKG_NAME"
 chmod 755 "$BUILD_DIR/payload$INSTALL_LOCATION/$PKG_NAME"
+
+# Sign the daemon. Notarization rejects a package containing an unsigned
+# executable, and the three things it checks are all set here: a Developer ID
+# signature, the hardened runtime, and a secure timestamp. Skipped only when no
+# identity is present, so a local dev build still works; such a package cannot
+# be notarized, which is stated rather than discovered at submission.
+SIGN_IDENTITY="${NIAC_SIGN_IDENTITY:-Developer ID Application}"
+if security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
+    codesign --force --timestamp --options runtime \
+        --sign "$SIGN_IDENTITY" \
+        "$BUILD_DIR/payload$INSTALL_LOCATION/$PKG_NAME"
+    codesign --verify --strict "$BUILD_DIR/payload$INSTALL_LOCATION/$PKG_NAME"
+else
+    log_warn "No '$SIGN_IDENTITY' identity: shipping an unsigned daemon; this package cannot be notarized."
+fi
 
 # Copy launchd plist to standard location
 log_step "3/5 Copying launchd configuration..."
@@ -138,12 +153,21 @@ log_step "5/5 Building package..."
 PKG_OUTPUT="$REPO_ROOT/dist/niac-${VERSION}-darwin-${ARCH}.pkg"
 mkdir -p "$(dirname "$PKG_OUTPUT")"
 
+# A Developer ID *Installer* certificate is a different certificate from the
+# Application one used on the binary. Signing here, rather than with a later
+# productsign, keeps the package signed from the moment it exists.
+SIGN_PKG=()
+if [[ -n "${NIAC_INSTALLER_IDENTITY:-}" ]]; then
+    SIGN_PKG=(--sign "${NIAC_INSTALLER_IDENTITY}" --timestamp)
+fi
+
 pkgbuild \
     --root "$BUILD_DIR/payload" \
     --identifier "$PKG_ID.pkg" \
     --version "$VERSION" \
     --scripts "$BUILD_DIR/scripts" \
     --install-location "/" \
+    "${SIGN_PKG[@]}" \
     "$PKG_OUTPUT"
 
 # Clean up intermediate files
@@ -158,8 +182,6 @@ echo
 log_info "Package built successfully!"
 echo "  Output: $PKG_OUTPUT"
 echo ""
-echo "  To install:"
+echo "  To install, double-click the .pkg file in Finder, or:"
 echo "    sudo installer -pkg $PKG_OUTPUT -target /"
-echo ""
-echo "  Or double-click the .pkg file in Finder"
 echo

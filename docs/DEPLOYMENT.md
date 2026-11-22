@@ -30,7 +30,11 @@ package-created rule but preserves any matching rule that existed beforehand.
 
 ## macOS
 
-Download the macOS archive for your architecture from the GitHub release:
+Apple silicon: download `niac-<version>-darwin-arm64.pkg` from the GitHub
+release and double-click it. The package is signed and notarized. It installs
+`/usr/local/niac/niac` and the `com.niac` launchd service.
+
+The `.tar.gz` is the alternative. Download the macOS archive for your architecture from the GitHub release:
 
 ```bash
 tar -xzf niac-darwin-arm64.tar.gz

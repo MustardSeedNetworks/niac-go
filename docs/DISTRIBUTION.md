@@ -17,8 +17,9 @@ Npcap SDK, then added to the same release. The workflow publishes:
 - checksums, SBOMs, signatures, and build provenance
 
 The `.pkg` is built on a GitHub macOS runner by `deploy/macos/build-pkg.sh`
-from the release's darwin archive, so it installs the same binary. It is not
-signed with an Apple Developer ID, so Gatekeeper asks before installing it.
+from the release's darwin archive, so it installs the same binary. It is signed
+with an Apple Developer ID Installer certificate, notarized by Apple and
+stapled, so a double-click install passes Gatekeeper without a prompt.
 The workflow does not produce an Intel macOS build.
 
 ## Release Flow
