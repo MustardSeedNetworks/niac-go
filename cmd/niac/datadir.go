@@ -1,16 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
-)
 
-// serviceDirPerm is the mode the service creates its directories with when
-// install.ps1 has not already made them.
-const serviceDirPerm = 0o750
+	"github.com/MustardSeedNetworks/foundation/pkg/securedir"
+)
 
 // windowsDataDir is where the Windows service keeps its certificates and the
 // operator's attachment policy. install.ps1 creates it with a protected DACL
@@ -23,46 +19,64 @@ func windowsDataDir() string {
 	return filepath.Join(programData, "NiAC")
 }
 
-// prepareServiceDirs makes sure the service's data and certificate directories
-// exist and are plain directories, so a symlink or junction planted where one
-// belongs stops the service instead of redirecting where it writes its key.
-func prepareServiceDirs() error {
-	for _, dir := range []string{windowsDataDir(), defaultCertDir()} {
-		if err := ensureDataDir(dir); err != nil {
-			return err
-		}
-		if err := verifyDataDir(dir); err != nil {
-			return err
-		}
-	}
-	return nil
+// serviceDirs are the service's data and certificate directories, resolved
+// once with every link in them followed by securedir.Canonical. securedir
+// refuses a link anywhere in the paths it is given, so everything downstream
+// uses these and not the raw environment values.
+type serviceDirs struct {
+	data string
+	cert string
 }
 
-// ensureDataDir and verifyDataDir are the seam for foundation's pkg/securedir,
-// which will create the directory with a fail-closed protected DACL and judge
-// owner and DACL on an opened handle. Until it ships they keep the daemon's
-// existing behaviour and refuse anything that is not a plain directory.
-//
-// TODO(#3092): adopt foundation securedir.Ensure and securedir.Verify here.
-func ensureDataDir(path string) error {
-	if err := os.MkdirAll(path, serviceDirPerm); err != nil {
-		return fmt.Errorf("create %s: %w", path, err)
-	}
-	return nil
-}
-
-func verifyDataDir(path string) error {
-	info, err := os.Lstat(path)
+// resolveServiceDirs canonicalises the directories without touching them.
+func resolveServiceDirs(opts securedir.Options) (serviceDirs, error) {
+	data, err := securedir.Canonical(windowsDataDir(), opts)
 	if err != nil {
-		return fmt.Errorf("inspect %s: %w", path, err)
+		return serviceDirs{}, fmt.Errorf("resolve data directory: %w", err)
 	}
-	if info.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-		return fmt.Errorf("%s is a link or reparse point, not a directory: %w", path, errUnsafeDir)
+	cert, err := securedir.Canonical(defaultCertDir(), opts)
+	if err != nil {
+		return serviceDirs{}, fmt.Errorf("resolve certificate directory: %w", err)
 	}
-	if !info.IsDir() {
-		return fmt.Errorf("%s is not a directory: %w", path, errUnsafeDir)
+	return serviceDirs{data: data, cert: cert}, nil
+}
+
+func (d serviceDirs) all() []string { return []string{d.data, d.cert} }
+
+// ensure creates the directories as private, or takes over an existing one
+// that securedir can show was never untrusted. It is for service install and
+// start, which run as SYSTEM or an Administrator.
+func (d serviceDirs) ensure(opts securedir.Options) error {
+	for _, dir := range d.all() {
+		if err := securedir.Ensure(dir, opts); err != nil {
+			return fmt.Errorf("secure %s: %w", dir, err)
+		}
 	}
 	return nil
 }
 
-var errUnsafeDir = errors.New("unsafe data directory")
+// verify refuses to start on a directory that is no longer private: a swapped
+// owner, a planted link, or anything under it an unprivileged user can write.
+func (d serviceDirs) verify(opts securedir.Options) error {
+	for _, dir := range d.all() {
+		if err := securedir.Verify(dir, opts); err != nil {
+			return fmt.Errorf("verify %s: %w", dir, err)
+		}
+	}
+	return nil
+}
+
+// prepareServiceDirs is the service's start-up check: resolve, ensure, verify.
+func prepareServiceDirs(opts securedir.Options) (serviceDirs, error) {
+	dirs, err := resolveServiceDirs(opts)
+	if err != nil {
+		return serviceDirs{}, err
+	}
+	if err = dirs.ensure(opts); err != nil {
+		return serviceDirs{}, err
+	}
+	if err = dirs.verify(opts); err != nil {
+		return serviceDirs{}, err
+	}
+	return dirs, nil
+}

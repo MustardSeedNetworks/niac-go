@@ -16,6 +16,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/windows"
 
+	"github.com/MustardSeedNetworks/foundation/pkg/securedir"
+
+	"github.com/MustardSeedNetworks/niac-go/internal/attachpolicy"
 	"github.com/MustardSeedNetworks/niac-go/internal/daemon"
 	"github.com/MustardSeedNetworks/niac-go/internal/logging"
 )
@@ -90,12 +93,15 @@ func (p *niacProgram) run() {
 	}
 	defer func() { _ = lock.Release() }()
 
-	if dirErr := prepareServiceDirs(); dirErr != nil {
+	dirs, dirErr := prepareServiceDirs(securedir.Options{})
+	if dirErr != nil {
 		logging.Errorf("Refusing to start: %v", dirErr)
 		return
 	}
 
-	policies, policyErr := resolveAttachmentPolicies(nil)
+	policies, policyErr := mergeAttachmentPolicies(
+		filepath.Join(dirs.data, attachpolicy.FileName), attachpolicy.OperatorTrust(), nil,
+	)
 	if policyErr != nil {
 		logging.Errorf("Refusing to start: %v", policyErr)
 		return
@@ -111,7 +117,7 @@ func (p *niacProgram) run() {
 		BuildTime:    p.info.date,
 		ReleaseTrain: p.info.releaseTrain,
 		UIBuildHash:  p.info.uiBuildHash,
-		CertDir:      defaultCertDir(),
+		CertDir:      dirs.cert,
 		DebugLevel:   daemon.DefaultDebugLevel,
 
 		AttachmentPolicies: policies,
@@ -320,6 +326,14 @@ func installWindowsService(out io.Writer) error {
 	}
 	if locationErr := requireInstalledLocation(execPath); locationErr != nil {
 		return locationErr
+	}
+
+	dirs, err := resolveServiceDirs(securedir.Options{})
+	if err != nil {
+		return err
+	}
+	if ensureErr := dirs.ensure(securedir.Options{}); ensureErr != nil {
+		return ensureErr
 	}
 
 	svc, err := newServiceFor(&niacProgram{})

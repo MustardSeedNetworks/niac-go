@@ -148,6 +148,9 @@ jobs:
           - 'cmd/niac/datadir*'
           - 'cmd/niac/cert_dir.go'
           - 'internal/attachpolicy/**'
+          - 'internal/api/tokenstore/**'
+          - 'go.mod'
+          - 'go.sum'
           - '.github/workflows/ci.yml'
         # The image installs a release archive by the name goreleaser
         # gives it, so a rename there breaks the image too.
@@ -432,7 +435,8 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go test -count=1 -v ./internal/attachpolicy
-          go test -count=1 -v ./cmd/niac -run '^(TestRequireWithin|TestVerifyDataDir.*|TestEnsureDataDir.*|TestPrepareServiceDirs)$'
+          go test -count=1 -v ./internal/api/tokenstore -run 'OnWindows$'
+          go test -count=1 -v ./cmd/niac -run '^(TestRequireWithin|TestPrepareServiceDirs.*|TestResolveServiceDirs.*)$'
 
       - name: Build niac.exe and lay out the release archive
         id: archive
@@ -1405,6 +1409,11 @@ jobs:
         exit 1
       test-command: cd ui && E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --project="$BROWSER" --grep-invert @smoke --shard="$SHARD/$SHARD_COUNT"
       smoke-command: |
+        # The suites below start their own daemons. Their default ./certs sits
+        # under a workspace this container's user does not own, which the
+        # daemon refuses, so every one of them gets a private directory.
+        NIAC_CERT_DIR=$(mktemp -d)
+        export NIAC_CERT_DIR
         cd ui
         E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --grep @smoke
         if ! command -v go >/dev/null 2>&1; then

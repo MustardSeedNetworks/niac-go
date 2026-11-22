@@ -16,6 +16,9 @@ $ServiceName = "NiACSimulator"
 $DataDir = Join-Path ([Environment]::GetFolderPath("CommonApplicationData")) "NiAC"
 $InstalledBinary = Join-Path ([Environment]::GetFolderPath("ProgramFiles")) "NiAC\niac.exe"
 $Scratch = Join-Path ([IO.Path]::GetTempPath()) "niac-install-test"
+$TokenFile = Join-Path $DataDir "tokens.json"
+$ApiToken = "ci-" + [guid]::NewGuid().ToString("N")
+$FirewallRule = "NiAC Simulator"
 $Sid = @{ System = "S-1-5-18"; Admins = "S-1-5-32-544"; Users = "S-1-5-32-545" }
 
 function Invoke-Installer {
@@ -118,14 +121,63 @@ function Assert-Installed {
     Assert-Acl -Path $DataDir -ExpectedSids $operators -Protected $true -AllowedOwners @($Sid.Admins)
     Assert-Acl -Path (Join-Path $DataDir "attachment-policy.conf") `
         -ExpectedSids @($Sid.System, $Sid.Admins, $Sid.Users) -Protected $true -AllowedOwners @($Sid.Admins)
-    # The service creates certs/ itself; it must have inherited the data dir's ACL.
-    Assert-Acl -Path (Join-Path $DataDir "certs") -ExpectedSids $operators -Protected $false `
+    # The service secures certs/ itself, with its own protected descriptor, so
+    # it grants the same two accounts and no more.
+    Assert-Acl -Path (Join-Path $DataDir "certs") -ExpectedSids $operators -Protected $true `
         -AllowedOwners @($Sid.System, $Sid.Admins)
 
     if ($null -ne (Get-NetFirewallRule -DisplayName "NiAC Simulator" -ErrorAction SilentlyContinue)) {
         throw "a loopback-only install must not open the firewall"
     }
     Write-Host "ok: no firewall rule for a loopback listener"
+}
+
+# The first address on this machine that is not loopback or link-local: the
+# one a client on the network would use.
+function Get-OffLoopbackAddress {
+    $address = Get-NetIPAddress -AddressFamily IPv4 |
+        Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
+        Select-Object -First 1
+    if ($null -eq $address) { throw "this machine has no non-loopback IPv4 address" }
+    return $address.IPAddress
+}
+
+# The HTTP status of an authenticated route, or 000 when nothing answers.
+function Get-ApiStatus {
+    param([string]$Address, [string]$Token)
+    $arguments = @("--silent", "--insecure", "--max-time", "5", "--output", "NUL", "--write-out", "%{http_code}")
+    if ($Token) { $arguments += @("--header", "Authorization: Bearer $Token") }
+    $arguments += "https://${Address}:8445/api/v1/csrf-token"
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $status = & curl.exe @arguments 2>$null | Out-String
+    $ErrorActionPreference = $previous
+    return $status.Trim()
+}
+
+function Wait-ApiStatus {
+    param([string]$Address, [string]$Token, [string]$Want, [string]$Case)
+    $status = ""
+    for ($attempt = 0; $attempt -lt 60; $attempt++) {
+        $status = Get-ApiStatus -Address $Address -Token $Token
+        if ($status -eq $Want) { return }
+        Start-Sleep -Seconds 1
+    }
+    throw "${Case}: https://${Address}:8445 answered $status for 60 seconds, want $Want"
+}
+
+# The token file as docs/DEPLOYMENT.md sets it up: written inside the data
+# directory, as UTF-8 without a byte-order mark, so it inherits the directory's
+# ACL and the service can parse it.
+function New-TokenFile {
+    $json = '{"tokens":[{"value":"' + $ApiToken + '","scope":"read-write"}]}'
+    [IO.File]::WriteAllText($TokenFile, $json, (New-Object Text.UTF8Encoding $false))
+}
+
+function Clear-OffLoopbackSetup {
+    [Environment]::SetEnvironmentVariable("NIAC_LISTEN_ADDR", $null, "Machine")
+    [Environment]::SetEnvironmentVariable("NIAC_API_TOKEN_FILE", $null, "Machine")
+    Get-NetFirewallRule -DisplayName $FirewallRule -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 }
 
 New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
@@ -177,7 +229,38 @@ try {
     if ($second.ExitCode -ne 0) { throw "a second install.ps1 exited $($second.ExitCode)" }
     Assert-Installed
     Write-Host "::endgroup::"
+
+    Write-Host "::group::off-loopback bind with a token file"
+    $address = Get-OffLoopbackAddress
+    New-TokenFile
+    Assert-Acl -Path $TokenFile -ExpectedSids @($Sid.System, $Sid.Admins) -Protected $false `
+        -AllowedOwners @($Sid.System, $Sid.Admins)
+    [Environment]::SetEnvironmentVariable("NIAC_LISTEN_ADDR", "0.0.0.0:8445", "Machine")
+    [Environment]::SetEnvironmentVariable("NIAC_API_TOKEN_FILE", $TokenFile, "Machine")
+    $third = Invoke-Installer
+    Write-Host $third.Output
+    if ($third.ExitCode -ne 0) { throw "install.ps1 with an off-loopback bind exited $($third.ExitCode)" }
+    Wait-ApiStatus -Address $address -Token $ApiToken -Want "200" -Case "a token file the docs set up"
+    $anonymous = Get-ApiStatus -Address $address -Token ""
+    if ($anonymous -ne "401") { throw "an anonymous request to $address answered $anonymous, want 401" }
+    Write-Host "ok: the service listens on $address and accepts the token from the token file"
+    if ($null -eq (Get-NetFirewallRule -DisplayName $FirewallRule -ErrorAction SilentlyContinue)) {
+        throw "an off-loopback install must open the firewall"
+    }
+
+    # The service logs the refusal and serves nothing; it does not fall back to
+    # an unauthenticated bind, so the port stops answering.
+    Invoke-Native -File "icacls.exe" -Arguments @($TokenFile, "/grant", "*$($Sid.Users):(W)")
+    Restart-Service -Name $ServiceName
+    for ($tick = 0; $tick -lt 20; $tick++) {
+        $status = Get-ApiStatus -Address $address -Token $ApiToken
+        if ($status -ne "000") { throw "a token file Users can write was accepted: $address answered $status" }
+        Start-Sleep -Seconds 1
+    }
+    Write-Host "ok: a token file Users can write is refused; nothing answers on $address"
+    Write-Host "::endgroup::"
 } finally {
+    Clear-OffLoopbackSetup
     Write-Host "::group::uninstall"
     $ErrorActionPreference = "Continue"
     if (Test-Path -LiteralPath $InstalledBinary) {
