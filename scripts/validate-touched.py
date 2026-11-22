@@ -127,6 +127,7 @@ GATES = (
     Gate("scripts/check-library-stdout.sh", ("internal/*.go",)),
     Gate("scripts/check-output-escaping.sh", ("internal/api/*", "ui/src/*")),
     Gate("scripts/check-package-reachability.sh", ("*.go", "go.mod")),
+    Gate("scripts/check-race-shards.sh", ("*.go", "go.mod", "scripts/race-shard.sh")),
     Gate(
         "scripts/check-page-stories.py",
         ("ui/src/pageRegistry.ts", "ui/src/pages/*", "ui/src/test/storybook/*"),

@@ -35,10 +35,10 @@ unchanged.
 
 ## Light PR runs, full suite in the queue
 
-A pull request runs lint, typecheck, unit tests, the required security scans,
-build verification and the PR title/body lint. `race-1`, `race-2` and `race-3` (the race detector, sharded by `scripts/race-shard.sh`) and `e2e`
-(browser tests and smoke) run only in the merge queue, so a PR gets feedback
-sooner and the full suite still runs once, on the exact commit that lands.
+A pull request runs lint, typecheck, unit tests, the required security scans, build verification and
+the PR title/body lint. `race-1`, `race-2` and `race-3` (the race detector, sharded by
+`scripts/race-shard.sh`) and `e2e` (browser tests and smoke) run only in the merge queue, so a PR
+gets feedback sooner and the full suite still runs once, on the exact commit that lands.
 
 - On a PR those jobs show as skipped, and `CI Complete` treats a skip as success.
 - In the merge queue `CI Complete` requires them to have succeeded. A skip there
