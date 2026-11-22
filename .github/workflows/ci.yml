@@ -1409,6 +1409,11 @@ jobs:
         exit 1
       test-command: cd ui && E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --project="$BROWSER" --grep-invert @smoke --shard="$SHARD/$SHARD_COUNT"
       smoke-command: |
+        # The suites below start their own daemons. Their default ./certs sits
+        # under a workspace this container's user does not own, which the
+        # daemon refuses, so every one of them gets a private directory.
+        NIAC_CERT_DIR=$(mktemp -d)
+        export NIAC_CERT_DIR
         cd ui
         E2E_BASE_URL=https://localhost:8445 PLAYWRIGHT_IGNORE_HTTPS_ERRORS=true npx playwright test --grep @smoke
         if ! command -v go >/dev/null 2>&1; then
