@@ -90,6 +90,22 @@ local scripts to create release tags, GitHub releases, or server deployments.
 4. Push and open a PR. The PR template walks you through the rest.
 5. CI must be green and at least one CODEOWNERS approval before merge.
 
+## Check the PR title and body first
+
+CI fails a PR whose title or body breaks the PR Hygiene rules, and that only
+shows after `gh pr create`. Write the body to a file from the PR template and
+run the check locally before opening the PR:
+
+```sh
+make pr-check TITLE='fix(api): handle empty body' BODY=body.md
+```
+
+It runs `scripts/check-pr-body.py` from `MustardSeedNetworks/.github`, which
+reads the rules out of this repo's own `.github/workflows/pr-hygiene.yml`
+instead of keeping a copy, so it cannot disagree with CI. It needs `gh` signed
+in. Exit 0 means the title and body pass; the failures it prints are the ones
+CI would print.
+
 ## Releasing
 
 Release Please tags releases from `main`. By default, a manual release-workflow
