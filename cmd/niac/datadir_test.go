@@ -46,6 +46,9 @@ func TestPrepareServiceDirsCreatesPrivateDirs(t *testing.T) {
 }
 
 func TestPrepareServiceDirsRefusesLinkedDataDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("securedir follows a link an Administrator owns; the install job's junction cases cover Windows")
+	}
 	programData := serviceTree(t)
 	elsewhere := t.TempDir()
 	if err := os.Symlink(elsewhere, filepath.Join(programData, "NiAC")); err != nil {
