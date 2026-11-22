@@ -33,7 +33,7 @@ export async function withIsolatedDaemon(
         '--storage',
         'disabled',
         '--cert-dir',
-        resolve('../certs'),
+        resolve(root, 'certs'),
         '--attachment-policy',
         attachmentPolicy,
       ],
