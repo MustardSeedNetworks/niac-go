@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -136,6 +137,31 @@ func TestTrunkCapturePanicFailsTheTrunkAndIsReported(t *testing.T) {
 	eventually(t, "the supervisor to report the panic", func() bool {
 		return logs.contains("supervised worker failed, stopping") && logs.contains("worker=trunk-capture")
 	})
+}
+
+// A reader that sees the trunk failed has to see why. fail used to flip the
+// flag first and store the message second, so a reader landing between the two
+// got a failed trunk with no cause (CI run 45020642683).
+func TestTrunkCaptureFailureCauseIsVisibleOnceFailed(t *testing.T) {
+	for range 2000 {
+		c := &trunkCapture{}
+		go c.fail(errTrunkCapturePanicked)
+		for !c.failed.Load() {
+			runtime.Gosched()
+		}
+		if c.failure.Load() == nil {
+			t.Fatal("trunk marked failed before its failure message was stored")
+		}
+	}
+}
+
+func TestTrunkCaptureKeepsTheFirstFailure(t *testing.T) {
+	c := &trunkCapture{}
+	c.fail(errTrunkCapturePanicked)
+	c.fail(errors.New("later failure"))
+	if got := c.health("trunk0"); got.Healthy || got.Error != errTrunkCapturePanicked.Error() {
+		t.Fatalf("health = %+v, want unhealthy with the first failure", got)
+	}
 }
 
 func TestCloseUnusedTrunkWaitsForTheCaptureLoop(t *testing.T) {

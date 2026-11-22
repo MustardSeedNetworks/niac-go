@@ -277,12 +277,19 @@ func (d *trunkDrops) snapshot() api.TrunkDropStats {
 // fail marks the trunk dead and wakes every session reading from it, so a
 // blocked ReadPacket returns instead of hanging on a capture that will never
 // deliver another frame.
+//
+// The message is published before the flag: whoever observes failed also
+// observes why. The first caller to store a message wins, so a later failure
+// cannot overwrite the cause that actually killed the trunk.
 func (c *trunkCapture) fail(err error) {
-	if err == nil || !c.failed.CompareAndSwap(false, true) {
+	if err == nil {
 		return
 	}
 	message := err.Error()
-	c.failure.Store(&message)
+	if !c.failure.CompareAndSwap(nil, &message) {
+		return
+	}
+	c.failed.Store(true)
 	c.mu.RLock()
 	transports := make([]*trunkSessionTransport, 0, len(c.sessions))
 	for _, transport := range c.sessions {
@@ -297,10 +304,11 @@ func (c *trunkCapture) fail(err error) {
 func (c *trunkCapture) health(iface string) api.TrunkCaptureHealth {
 	health := api.TrunkCaptureHealth{
 		Interface: iface,
-		Healthy:   !c.failed.Load(),
+		Healthy:   true,
 		Drops:     c.drops.snapshot(),
 	}
 	if message := c.failure.Load(); message != nil {
+		health.Healthy = false
 		health.Error = *message
 	}
 	c.mu.RLock()
