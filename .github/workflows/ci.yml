@@ -492,9 +492,11 @@ jobs:
   # default exports SKIP_NETWORK_TESTS=1, and this suite does not use that
   # variable. The UI artifact is not downloaded; this job never embedded the
   # built UI.
-  race:
+  race-1:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true'
+    if: |
+      (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')) &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true')
     permissions:
       contents: read
       actions: read
@@ -503,7 +505,37 @@ jobs:
       install-libpcap: true
       skip-network-tests: false
       timeout-minutes: 20
-      test-command: go test -race ./...
+      test-command: scripts/race-shard.sh 1
+
+  race-2:
+    needs: changes
+    if: |
+      (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')) &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true')
+    permissions:
+      contents: read
+      actions: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-race.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      install-libpcap: true
+      skip-network-tests: false
+      timeout-minutes: 20
+      test-command: scripts/race-shard.sh 2
+
+  race-3:
+    needs: changes
+    if: |
+      (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')) &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.schema == 'true' || needs.changes.outputs.ci_infra == 'true' || needs.changes.outputs.https == 'true')
+    permissions:
+      contents: read
+      actions: read
+    uses: MustardSeedNetworks/.github/.github/workflows/ci-race.yml@e092081a97245d29978e229be7425179cc1dcde1 # .github#163
+    with:
+      install-libpcap: true
+      skip-network-tests: false
+      timeout-minutes: 20
+      test-command: scripts/race-shard.sh 3
 
   # ===========================================================================
   # Raw-socket boundary (Linux, explicit capabilities)
@@ -929,6 +961,12 @@ jobs:
         run: |
           chmod +x scripts/check-file-size.sh
           ./scripts/check-file-size.sh
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go
+
+      - name: Race shards cover every package exactly once
+        run: ./scripts/check-race-shards.sh
 
       # The `docs` path filter had no consumer before this: no job ran on a
       # docs-only change, so the gate this step calls would never have fired
@@ -1359,6 +1397,7 @@ jobs:
     needs: [changes, backend, build-ui]
     if: |
       !cancelled() &&
+      (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')) &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
       needs.build-ui.result == 'success' &&
       (needs.backend.result == 'success' || needs.backend.result == 'skipped')
@@ -1511,7 +1550,9 @@ jobs:
       - backend
       - lint-windows
       - windows-install
-      - race
+      - race-1
+      - race-2
+      - race-3
       - capture-rawsocket
       - docker-image
       - build-ui
@@ -1539,9 +1580,23 @@ jobs:
       - name: Verify upstream results
         env:
           RESULTS: ${{ toJSON(needs) }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           echo "Upstream job results:"
           echo "$RESULTS" | jq '.'
+          # The race detector and browser E2E run only in the merge queue (a PR
+          # opts in with the full-ci label). A skip is fine on a PR, but in the
+          # queue every path filter is true, so a skip there means a broken `if`
+          # and would let code land untested.
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            for job in race-1 race-2 race-3 e2e; do
+              result=$(echo "$RESULTS" | jq -r --arg job "$job" '.[$job].result // "missing"')
+              if [ "$result" != "success" ]; then
+                echo "::error::$job must succeed in the merge queue, got $result."
+                exit 1
+              fi
+            done
+          fi
           if ! echo "$RESULTS" | jq -e 'to_entries | map(.value.result) | all(. == "success" or . == "skipped")' >/dev/null; then
             echo "::error::One or more required CI jobs failed or were cancelled."
             exit 1
