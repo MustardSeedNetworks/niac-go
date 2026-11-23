@@ -5,6 +5,14 @@ All notable changes to NIAC will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.129.1](https://github.com/MustardSeedNetworks/niac-go/compare/v0.129.0...v0.129.1) (2026-11-23)
+
+
+### Miscellaneous
+
+* **deps:** update dependency @testing-library/user-event to v14.6.11 ([#3107](https://github.com/MustardSeedNetworks/niac-go/issues/3107)) ([37ea444](https://github.com/MustardSeedNetworks/niac-go/commit/37ea4442ef55f0b1ecacd15e01dfe739a386b27a))
+* **deps:** update dependency lint-staged to v17.6.1 ([#3105](https://github.com/MustardSeedNetworks/niac-go/issues/3105)) ([099e80a](https://github.com/MustardSeedNetworks/niac-go/commit/099e80a908cdc1534744dd6197856f0bff9d6a24))
+
 ## [0.129.0](https://github.com/MustardSeedNetworks/niac-go/compare/v0.128.11...v0.129.0) (2026-11-22)
 
 
