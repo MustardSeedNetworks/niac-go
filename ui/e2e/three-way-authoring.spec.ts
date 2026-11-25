@@ -119,7 +119,7 @@ test.describe('the same network authored three ways', () => {
 
     // The generated sections start collapsed, as they do for an author.
     await page.getByText('Snmp agent').first().click();
-    const community = page.getByLabel('Community').first();
+    const community = page.getByRole('textbox', { name: 'Community' }).first();
     await expect(community).toBeVisible();
     await expect(community).toHaveValue(EXPECTED_DEVICES[0]?.snmpCommunity ?? '');
 
@@ -200,7 +200,7 @@ async function authorInWizard(page: Page): Promise<string> {
   const protocols = page.getByTestId('wizard-protocols-editor');
   await protocols.getByText('Snmp agent').first().click();
   await page
-    .getByLabel('Community')
+    .getByRole('textbox', { name: 'Community' })
     .first()
     .fill(EXPECTED_DEVICES[0]?.snmpCommunity ?? '');
   await page.getByTestId('wizard-next-button').click();

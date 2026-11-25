@@ -101,7 +101,7 @@ test.describe('wizard authoring from empty', () => {
       await expect(card).toBeVisible();
     }
     await protocols.getByText('Snmp agent').first().click();
-    await page.getByLabel('Community').first().fill('e2e_public');
+    await page.getByRole('textbox', { name: 'Community' }).first().fill('e2e_public');
     await page.getByTestId('wizard-next-button').click();
 
     // Step 5 - assert the saved draft, not the rendered preview. The draft is

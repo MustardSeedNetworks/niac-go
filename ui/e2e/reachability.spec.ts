@@ -58,8 +58,8 @@ test.describe('Help drawer tabs (D1)', () => {
 test.describe('Topology export menu (D14)', () => {
   /**
    * The export dropdown lives in the header Card; the graph lives in a sibling
-   * Card below it. Card's default variant sets `backdrop-blur-xl`, which makes
-   * each Card its own stacking context — so the dropdown's own `z-50` could not
+   * Card below it. a positioned Card with a z-index is its own stacking
+   * context — so the dropdown's own `z-50` could not
    * be compared against the graph Card at all, and the graph Card (later in the
    * DOM) painted its whole layer over the menu's last item.
    *
@@ -74,7 +74,7 @@ test.describe('Topology export menu (D14)', () => {
     await expect(page.getByTestId('page-header-title')).toBeVisible({ timeout: 10000 });
 
     const order = await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('main [class*="backdrop-blur"]')];
+      const cards = [...document.querySelectorAll('main section.panel')];
       if (cards.length < 2) return null;
       const z = (el: Element) => {
         const raw = getComputedStyle(el).zIndex;
