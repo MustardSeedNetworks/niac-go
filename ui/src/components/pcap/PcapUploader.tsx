@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import type { TFunction } from '../../i18n';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { formatBytes } from '../../utils/format';
 
@@ -169,8 +169,8 @@ export function PcapUploader({
   }, [onFileSelect]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         {/* Drag and Drop Zone */}
         <input
           ref={fileInputRef}
@@ -316,7 +316,7 @@ export function PcapUploader({
             ? t('libraryPcaps.uploader.analyzing')
             : t('libraryPcaps.uploader.analyzeButton')}
         </ActionButton>
-      </CardContent>
+      </div>
     </Card>
   );
 }

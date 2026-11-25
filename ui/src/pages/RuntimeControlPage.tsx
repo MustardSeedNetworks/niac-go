@@ -15,11 +15,11 @@ import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useToast } from '../hooks/useToast';
+import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { Tooltip } from '../shared/Tooltip';
 import { useUIStore } from '../stores/ui-store';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
@@ -265,8 +265,8 @@ export function RuntimeControlPage() {
 
       {/* Daemon Mode Warning */}
       {!isDaemonMode && (
-        <Card className="border-status-warning/30 bg-status-warning/20">
-          <CardContent className="stack">
+        <Card>
+          <div className="stack">
             <div className="flex items-start gap-default">
               <BellRing className={`mt-tight ${iconSizes.lg} text-status-warning`} />
               <div>
@@ -281,14 +281,14 @@ export function RuntimeControlPage() {
                 </code>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* Start Simulation Card */}
       {isDaemonMode && !simStatus?.running && (
-        <Card className="border-surface-border bg-gradient-to-br from-brand-primary/30 to-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             {/* Single-row action bar: interface + start. The interface
                 dropdown takes the natural width of its content; Start sits
                 immediately next to it so the action is obvious. */}
@@ -410,7 +410,7 @@ export function RuntimeControlPage() {
                 {successMessage}
               </SmallText>
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 

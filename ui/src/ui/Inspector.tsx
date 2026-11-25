@@ -31,8 +31,8 @@
  *   </Inspector>
  */
 import type { ReactNode } from 'react';
+import { Card } from '../shared/Card';
 import { cn } from '../styles/theme';
-import { Card, CardContent } from './Card';
 
 /**
  * Height of the record list and of the pane column beside it. They match so
@@ -86,13 +86,13 @@ interface InspectorPaneProps {
  */
 export function InspectorPane({ label, scroll = false, children }: InspectorPaneProps) {
   return (
-    <Card className="border-surface-border bg-bg-surface/70 flex-1 min-h-0">
-      <CardContent className="h-full flex flex-col">
+    <Card className="flex-1 min-h-0">
+      <div className="h-full flex flex-col">
         <p className="text-xs uppercase tracking-wide font-semibold text-text-muted mb-heading">
           {label}
         </p>
         <div className={cn('flex-1 min-h-0', scroll && 'overflow-y-auto')}>{children}</div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

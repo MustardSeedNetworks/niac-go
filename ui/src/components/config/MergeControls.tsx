@@ -11,10 +11,10 @@ import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import { StatusPill } from '../../shared/StatusPill';
-import { Card, CardContent } from '../../ui/Card';
 import { useDialogLabels } from '../../ui/dialogLabels';
 import { Modal } from '../../ui/Modal';
 import { H2, SmallText } from '../../ui/Typography';
@@ -115,8 +115,8 @@ export function MergeControls({
   }, [onClearAll]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         {/* Header */}
         <div className="flex-between">
           <H2 className="flex items-center gap-compact">
@@ -276,7 +276,7 @@ export function MergeControls({
               ? t('configDiff.helpTextComplete')
               : t('configDiff.resolveAllBeforePreview')}
         </SmallText>
-      </CardContent>
+      </div>
 
       {/* Accept All Left Confirmation */}
       <ConfirmDialog

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
 import { FormField } from '../form/FormField';
@@ -55,8 +55,8 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
 
   return (
     <div className="stack">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <SmallText className="font-medium text-text-primary">
             {t('newSimWizard.fleetDefaults.discoveryTitle')}
           </SmallText>
@@ -112,11 +112,11 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
               </div>
             );
           })}
-        </CardContent>
+        </div>
       </Card>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <SmallText className="font-medium text-text-primary">
             {t('newSimWizard.fleetDefaults.captureTitle')}
           </SmallText>
@@ -171,7 +171,7 @@ export function FleetDefaultsEditor({ content, onChange }: FleetDefaultsEditorPr
               />
             </FormField>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

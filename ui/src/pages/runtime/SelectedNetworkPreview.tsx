@@ -6,9 +6,9 @@ import { fetchLibraryNetworkContent } from '../../api/library-client';
 import type { DeviceSummary } from '../../api/types';
 import { DeviceTable } from '../../components/DeviceTable';
 import { iconSizes } from '../../constants/sizes';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import type { ConfigSource } from '../../stores/ui-store';
-import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 
 /**
@@ -214,8 +214,8 @@ export function SelectedNetworkPreview({
   const displayName = uploadFile?.name ?? name;
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card>
+      <div className="stack">
         <div className="flex items-baseline justify-between gap-default">
           <H2 className="flex items-center gap-compact text-lg">
             <Eye className={`${iconSizes.lg} text-brand-accent`} />
@@ -303,7 +303,7 @@ export function SelectedNetworkPreview({
             {t('runtime.preview.deviceCount', { count: devices.length })}
           </SmallText>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

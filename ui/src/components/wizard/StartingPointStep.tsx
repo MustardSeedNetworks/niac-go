@@ -5,7 +5,7 @@ import { fetchHistory, fetchUsableInterfaces } from '../../api/client';
 import type { ScenarioPack } from '../../api/scenario-client';
 import type { LibraryNetwork, NetworkInterface, SimulationStatus } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 import { ConfigPicker } from '../simulation/ConfigPicker';
 import { FleetGeneratorCard } from './FleetGeneratorCard';
@@ -105,8 +105,8 @@ export function StartingPointStep({
 
   return (
     <div className="stack-lg">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <div className="flex items-center gap-default">
             <Network className={`${iconSizes.lg} text-brand-accent`} />
             <div className="min-w-[14rem] flex-1">
@@ -165,7 +165,7 @@ export function StartingPointStep({
             </SmallText>
           )}
           <SmallText className="text-text-muted">{t('newSimWizard.start.help')}</SmallText>
-        </CardContent>
+        </div>
       </Card>
 
       <div

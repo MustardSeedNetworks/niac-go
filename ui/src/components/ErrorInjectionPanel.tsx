@@ -8,10 +8,10 @@ import { clearAllErrors, clearError, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useAppState } from '../contexts/AppContext';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
+import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Input } from '../ui/Input';
 import { SmallText } from '../ui/Typography';
@@ -221,7 +221,7 @@ export function ErrorInjectionPanel() {
     <div className="stack-lg" data-testid="interface-fault-panel">
       {/* Injection Form */}
       <Card>
-        <CardContent>
+        <div>
           <form onSubmit={handleSubmit(onInject)} className="stack-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
               {/* Device Selector */}
@@ -411,7 +411,7 @@ export function ErrorInjectionPanel() {
               </ActionButton>
             </div>
           </form>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Active Errors Table */}

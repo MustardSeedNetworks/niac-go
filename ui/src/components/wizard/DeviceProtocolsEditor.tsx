@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 import { parseAuthoredDevice, serializeAuthoredDevice } from '../../utils/authored-device-yaml';
 import {
@@ -63,10 +63,10 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
 
   if (devices.length === 0) {
     return (
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent>
+      <Card>
+        <div>
           <SmallText className="text-text-muted">{t('newSimWizard.networks.noDevices')}</SmallText>
-        </CardContent>
+        </div>
       </Card>
     );
   }
@@ -77,8 +77,8 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
         const device = authored.get(name)?.device;
         if (!device) return null;
         return (
-          <Card key={name} className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card key={name}>
+            <div className="stack">
               <SmallText className="font-mono font-medium text-text-primary">{name}</SmallText>
               {DEVICE_SECTIONS.map((section) => {
                 const key = `${name}:${section.key}`;
@@ -97,7 +97,7 @@ export function DeviceProtocolsEditor({ content, onChange, devices }: DeviceProt
                   </CollapsibleSection>
                 );
               })}
-            </CardContent>
+            </div>
           </Card>
         );
       })}

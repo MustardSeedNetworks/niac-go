@@ -17,8 +17,8 @@ import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { ButtonLink } from '../shared/Button';
+import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
-import { Card, CardContent } from '../ui/Card';
 import { linkTo } from '../ui/linkTo';
 import { type RollupState, StatusRollup } from '../ui/StatusRollup';
 import { AccentLink, H2 } from '../ui/Typography';
@@ -148,8 +148,8 @@ export function DashboardPage() {
 
       {/* Stat cards row */}
       <div className="grid gap-comfortable sm:grid-cols-2 lg:grid-cols-4">
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.devicesOnline')}
@@ -160,13 +160,13 @@ export function DashboardPage() {
             </div>
             <p className="text-3xl font-bold text-text-primary">{stats?.deviceCount ?? '—'}</p>
             <p className="text-xs text-text-muted">{t('dashboard.stats.devicesOnlineHelper')}</p>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Honest pair: RX and TX are both real, labeled counters — neither
             is smuggled into the other's helper text. */}
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.packetsTitle')}
@@ -189,12 +189,12 @@ export function DashboardPage() {
                 <p className="text-xs text-text-muted">{t('dashboard.stats.txLabel')}</p>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Honest pair: DNS and DHCP are both real, labeled counters. */}
-        <Card hover={true} className="group">
-          <CardContent className="stack-xs">
+        <Card className="group">
+          <div className="stack-xs">
             <div className="flex-between">
               <span className="text-sm font-medium text-text-muted">
                 {t('dashboard.stats.queriesTitle')}
@@ -217,7 +217,7 @@ export function DashboardPage() {
                 <p className="text-xs text-text-muted">{t('dashboard.stats.dhcpLabel')}</p>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
@@ -225,7 +225,7 @@ export function DashboardPage() {
       <div className="grid gap-spacious lg:grid-cols-3">
         {/* Quick Actions */}
         <Card className="lg:col-span-2">
-          <CardContent className="stack-lg">
+          <div className="stack-lg">
             <H2 className="flex items-center gap-compact">
               <Zap className={`${iconSizes.lg} text-brand-accent`} />
               {t('dashboard.quickActions.title')}
@@ -259,12 +259,12 @@ export function DashboardPage() {
                 onToggle={() => setShowErrorCatalog(!showErrorCatalog)}
               />
             )}
-          </CardContent>
+          </div>
         </Card>
 
         {/* Recent Runs */}
         <Card>
-          <CardContent className="stack-lg">
+          <div className="stack-lg">
             <div className="flex-between">
               <H2>{t('dashboard.recentRuns.title')}</H2>
               <CategoryChip label={t('dashboard.recentRuns.tag')} />
@@ -314,7 +314,7 @@ export function DashboardPage() {
                 {t('dashboard.recentRuns.viewAll')}
               </AccentLink>
             )}
-          </CardContent>
+          </div>
         </Card>
       </div>
     </div>

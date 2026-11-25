@@ -25,9 +25,9 @@ import { useTopologyResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
 import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { H2, SmallText } from '../ui/Typography';
 import {
   ActionsMenu,
@@ -465,8 +465,8 @@ export function TopologyPage() {
   return (
     <div className="stack-xl">
       {/* Header Card */}
-      <Card className="relative z-20 border-surface-border bg-bg-surface/70">
-        <CardContent>
+      <Card className="relative z-20">
+        <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-comfortable">
             <div className="flex items-center gap-default">
               <div className="pad-xs rounded-lg bg-status-info/20">
@@ -697,7 +697,7 @@ export function TopologyPage() {
               )}
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
       {/* Topology Visualization — sized to fill the available viewport
@@ -705,7 +705,7 @@ export function TopologyPage() {
           ≈ 240 px on this layout). Gives much more room for the graph
           on standard 1080p+ displays. */}
       {view === 'graph' && (
-        <Card className="relative z-0 border-surface-border bg-bg-surface/70 overflow-hidden">
+        <Card className="relative z-0 overflow-hidden">
           <div className="h-[calc(100vh-260px)] min-h-[520px] relative">
             {loading || loadError || nodes.length === 0 ? (
               <CanvasState loading={loading} error={loadError} onRetry={handleRefresh} />

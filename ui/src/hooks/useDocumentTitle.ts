@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
-import { documentTitle } from '../shared/documentTitle';
 import { usePages } from '../pageRegistry';
+import { documentTitle } from '../shared/documentTitle';
 
 /**
  * useDocumentTitle keeps the browser tab naming the route you are on.

@@ -10,12 +10,12 @@ import type {
 } from '../api/types';
 import { GlossaryPopover } from '../components/GlossaryPopover';
 import { useToast } from '../hooks/useToast';
+import { Card } from '../shared/Card';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { StatusPill } from '../shared/StatusPill';
 import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { useTableLabels } from '../ui/tableLabels';
 
@@ -206,8 +206,8 @@ export function WalkValidatorPage() {
 
   return (
     <div className="stack-xl">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <header>
             <h2 className="flex items-center gap-compact text-2xl font-semibold text-text-primary">
               {t('walkValidator.pageTitle')}
@@ -309,12 +309,12 @@ export function WalkValidatorPage() {
               </span>
             )}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {response?.result && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <header className="flex flex-wrap items-baseline gap-comfortable">
               <h2 className="heading-3 text-text-primary">
                 {response.message ?? t('walkValidator.resultHeading')}
@@ -382,13 +382,13 @@ export function WalkValidatorPage() {
                 })}
               </p>
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {batchResponse && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent className="stack-lg">
+        <Card>
+          <div className="stack-lg">
             <header className="flex flex-wrap items-baseline gap-comfortable">
               <h2 className="heading-3 text-text-primary">{t('walkValidator.batchHeading')}</h2>
               <span className="text-sm text-text-muted">{batchResponse.message}</span>
@@ -414,7 +414,7 @@ export function WalkValidatorPage() {
                 empty={null}
               />
             )}
-          </CardContent>
+          </div>
         </Card>
       )}
 

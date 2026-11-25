@@ -5,13 +5,13 @@ import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client'
 import type { WalkAnalyzeResponse } from '../api/types';
 import { TableSection } from '../components/TableSection';
 import { WalkProfileCreator } from '../components/walk/WalkProfileCreator';
+import { Card, CardRow, CardValue } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
 import { DataTable, type DataTableColumn } from '../shared/DataTable';
 import { EmptyState } from '../shared/EmptyState';
 import { StatusPill } from '../shared/StatusPill';
 import { Tooltip } from '../shared/Tooltip';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
 import { useTableLabels } from '../ui/tableLabels';
 import { formatBitsPerSecond } from '../utils/format';
 
@@ -172,8 +172,8 @@ export function WalkAnalyzerPage() {
   return (
     <div className="stack-xl">
       <WalkProfileCreator />
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <header>
             <h2 className="text-2xl font-semibold text-text-primary">
               {t('walkAnalyzer.pageTitle')}
@@ -245,13 +245,13 @@ export function WalkAnalyzerPage() {
               </span>
             )}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {result && (
         <div className="stack-xl" data-testid="walk-analyzer-results">
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card>
+            <div className="stack">
               <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.deviceHeading')}</h2>
               <CardRow label="sysName" value={result.device.sysname || '—'} mono />
               <CardRow label="sysDescr" value={result.device.sysdescr || '—'} />
@@ -262,11 +262,11 @@ export function WalkAnalyzerPage() {
               {result.device.syslocation && (
                 <CardRow label="sysLocation" value={result.device.syslocation} />
               )}
-            </CardContent>
+            </div>
           </Card>
 
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack">
+          <Card>
+            <div className="stack">
               <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.statisticsHeading')}</h2>
               <div className="grid grid-cols-2 gap-comfortable sm:grid-cols-4">
                 <CardValue
@@ -286,7 +286,7 @@ export function WalkAnalyzerPage() {
                   value={result.statistics.totalNeighbors}
                 />
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           <TableSection

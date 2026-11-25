@@ -13,9 +13,9 @@ import type {
   SimulationPreflightRequest,
 } from '../../api/fabric-types';
 import type { SimulationRequest } from '../../api/types';
+import { Card } from '../../shared/Card';
 import { ActionButton } from '../../ui/ActionButton';
 import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
-import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 import { bindingOptions } from './attachment-options';
 
@@ -192,8 +192,8 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
   const vlanIsApproved = approvedVlans.length > 0;
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         <div>
           <H2>{t('newSimWizard.preflight.title')}</H2>
           <SmallText>{t('newSimWizard.preflight.help')}</SmallText>
@@ -378,7 +378,7 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
             {t('newSimWizard.preflight.startLabel')}
           </ActionButton>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

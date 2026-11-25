@@ -5,8 +5,8 @@ import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { useRunHistory } from '../../hooks/useRunHistory';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
-import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatDuration, formatNumber, formatTime } from '../../utils/format';
 
@@ -29,8 +29,8 @@ export function RunHistoryCard() {
   }, [location.hash]);
 
   return (
-    <Card id="recent-runs" className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card id="recent-runs">
+      <div className="stack">
         <div className="flex-between">
           <H2 className="flex items-center gap-compact text-lg">
             <History className={`${iconSizes.lg} text-text-muted`} />
@@ -97,7 +97,7 @@ export function RunHistoryCard() {
             {t('runtime.olderRuns')}
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

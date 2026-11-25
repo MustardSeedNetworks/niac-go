@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { executeDeviceAction } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
+import { Card } from '../shared/Card';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { Select } from '../ui/Input';
 import { H3, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
@@ -49,7 +49,7 @@ export function DeviceActionPanel() {
 
   return (
     <Card data-testid="device-action-panel">
-      <CardContent className="stack">
+      <div className="stack">
         <H3>{t('deviceAction.title')}</H3>
         <Select
           label={t('deviceAction.target')}
@@ -91,7 +91,7 @@ export function DeviceActionPanel() {
         >
           {t('deviceAction.run')}
         </ActionButton>
-      </CardContent>
+      </div>
     </Card>
   );
 }

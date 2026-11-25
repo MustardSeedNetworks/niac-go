@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
 import { FormField } from '../form/FormField';
@@ -121,8 +121,8 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
 
   return (
     <div className="stack">
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <div className="flex items-center justify-between gap-default">
             <div className="flex items-center gap-default">
               <Network className={`${iconSizes.lg} text-brand-accent`} />
@@ -215,11 +215,11 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               ))}
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <div className="flex items-center justify-between gap-default">
             <SmallText className="font-medium text-text-primary">
               {t('newSimWizard.networks.attachmentsTitle')}
@@ -315,11 +315,11 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               )}
             </div>
           ))}
-        </CardContent>
+        </div>
       </Card>
 
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack">
+      <Card>
+        <div className="stack">
           <div className="flex items-center justify-between gap-default">
             <SmallText className="font-medium text-text-primary">
               {t('newSimWizard.networks.addressingTitle')}
@@ -367,7 +367,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               ))}
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

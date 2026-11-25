@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { accessibleNameIncluding } from '../../lib/accessibleName';
+import { Card } from '../../shared/Card';
 import { StatusPill } from '../../shared/StatusPill';
-import { Card, CardContent } from '../../ui/Card';
 
 export interface CollapsibleSectionProps {
   title: string;
@@ -39,7 +39,7 @@ export function CollapsibleSection({
   // so the name has to keep that word rather than replace the visible label.
   const visibleLabel = [title, requiredLabel].filter(Boolean).join(' ');
   return (
-    <Card id={id} className="border-surface-border bg-bg-surface/70 overflow-hidden">
+    <Card id={id} className="overflow-hidden">
       <div className="flex-between px-6 py-4 hover:bg-surface-hover transition-colors">
         <div className="flex items-center gap-default">
           <button
@@ -87,7 +87,7 @@ export function CollapsibleSection({
           />
         )}
       </div>
-      {isExpanded && <CardContent className="pt-0 pb-6 px-6">{children}</CardContent>}
+      {isExpanded && <div>{children}</div>}
     </Card>
   );
 }

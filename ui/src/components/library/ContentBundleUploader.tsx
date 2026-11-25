@@ -6,8 +6,8 @@ import { installContentBundleWithProgress } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { fileToBase64 } from '../../utils/file';
 import { formatBytes } from '../../utils/format';
@@ -132,8 +132,8 @@ export function ContentBundleUploader() {
   }, [selectedFile, addToast, showError, t, handleClear]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70" data-testid="content-bundle-uploader">
-      <CardContent className="stack-lg">
+    <Card data-testid="content-bundle-uploader">
+      <div className="stack-lg">
         <div>
           <h3 className="text-sm font-medium text-text-primary">
             {t('libraryFiles.installBundle.title')}
@@ -229,7 +229,7 @@ export function ContentBundleUploader() {
             <SmallText className="text-status-error-strong">{validationError}</SmallText>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { deviceTypeIcons, normalizeDeviceType } from '../../constants/device-types';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
+import { Card } from '../../shared/Card';
 import { StatusPill } from '../../shared/StatusPill';
 import { Tooltip } from '../../shared/Tooltip';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 import type { AuthoredDevice } from './generated/authored-device.generated';
 
@@ -50,8 +50,8 @@ export function DeviceEditorHeader({
   const DeviceIcon = deviceTypeIcons[deviceType];
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         <div className="flex flex-wrap items-center justify-between gap-comfortable">
           <div className="flex items-center gap-default">
             <Tooltip text={t('editor.header.backTitle')}>
@@ -135,7 +135,7 @@ export function DeviceEditorHeader({
             <span>{message.text}</span>
           </div>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

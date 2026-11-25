@@ -9,7 +9,7 @@ import {
 } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { SmallText } from '../../ui/Typography';
 
 interface FleetGeneratorCardProps {
@@ -87,7 +87,7 @@ export function FleetGeneratorCard({
 
   return (
     <Card className={selected ? 'border-brand-accent bg-brand-primary/10' : undefined}>
-      <CardContent className="stack-lg">
+      <div className="stack-lg">
         <div className="flex flex-wrap items-start justify-between gap-default">
           <div className="flex items-start gap-default">
             <Network className={`${iconSizes.lg} text-brand-accent`} />
@@ -250,7 +250,7 @@ export function FleetGeneratorCard({
             </SmallText>
           )}
         </details>
-      </CardContent>
+      </div>
     </Card>
   );
 }

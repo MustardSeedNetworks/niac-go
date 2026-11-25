@@ -4,9 +4,9 @@ import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
+import { Card } from '../shared/Card';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { SmallText } from '../ui/Typography';
 import { formatBytes, getErrorMessage } from '../utils/format';
 
@@ -149,7 +149,7 @@ export function ReplayControlPanel() {
       {/* Status Card */}
       {replayStatus?.running && (
         <Card>
-          <CardContent>
+          <div>
             <div className="flex-between">
               <div>
                 <div className="flex items-center gap-compact mb-tight">
@@ -194,13 +194,13 @@ export function ReplayControlPanel() {
                 {t('traffic.page.replayStopButton')}
               </ActionButton>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* Control Card */}
       <Card>
-        <CardContent className="stack-lg">
+        <div className="stack-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-comfortable">
             {/* File Selector */}
             <div className="col-span-full">
@@ -398,7 +398,7 @@ export function ReplayControlPanel() {
                 : t('traffic.page.replayStartButton')}
             </ActionButton>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

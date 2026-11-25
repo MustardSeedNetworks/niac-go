@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/errors';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 
 export function WizardStatusNotice({ loading, error }: { loading: boolean; error: Error | null }) {
   const { t } = useTranslation('pages');
@@ -8,7 +8,7 @@ export function WizardStatusNotice({ loading, error }: { loading: boolean; error
   const unavailable = !error || (error instanceof ApiError && error.status === 0);
   return (
     <Card>
-      <CardContent>
+      <div>
         <div
           data-testid="wizard-status-notice"
           role={loading ? 'status' : 'alert'}
@@ -26,7 +26,7 @@ export function WizardStatusNotice({ loading, error }: { loading: boolean; error
           {wrongMode && <code>niac daemon</code>}
           {!loading && error && !wrongMode && <p>{error.message}</p>}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

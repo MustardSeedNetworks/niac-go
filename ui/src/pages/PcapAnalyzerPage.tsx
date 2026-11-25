@@ -20,10 +20,10 @@ import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
 import { StatusPill } from '../shared/StatusPill';
 import { Tooltip } from '../shared/Tooltip';
-import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { H2, SmallText } from '../ui/Typography';
 import { canFollowStream, getStreamFilter } from '../utils/conversations';
@@ -274,8 +274,8 @@ export function PcapAnalyzerPage() {
       {analysisResult && (
         <>
           {/* Controls Header */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and file info */}
                 <div className="flex items-center gap-comfortable">
@@ -383,7 +383,7 @@ export function PcapAnalyzerPage() {
                   </Button>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           {/* Packets View */}
@@ -443,8 +443,8 @@ export function PcapAnalyzerPage() {
 
       {/* Info Banner when no file is loaded */}
       {!(analysisResult || selectedFile) && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent>
+        <Card>
+          <div>
             <div className="flex items-start gap-default">
               <Info className={`${iconSizes.lg} text-status-info flex-shrink-0 mt-0.5`} />
               <div>
@@ -461,7 +461,7 @@ export function PcapAnalyzerPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 

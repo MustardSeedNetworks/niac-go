@@ -5,8 +5,8 @@ import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearError, injectError } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
+import { Card } from '../shared/Card';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { Input, Select } from '../ui/Input';
 import { H3, SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
@@ -84,7 +84,7 @@ export function DeviceFaultPanel() {
 
   return (
     <Card data-testid="device-fault-panel">
-      <CardContent className="stack">
+      <div className="stack">
         <H3>{t('deviceFault.title')}</H3>
         <Select
           label={t('deviceFault.target')}
@@ -170,7 +170,7 @@ export function DeviceFaultPanel() {
             </li>
           ))}
         </ul>
-      </CardContent>
+      </div>
     </Card>
   );
 }

@@ -6,8 +6,8 @@ import { iconSizes } from '../../constants/sizes';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { useResourceError } from '../../hooks/useResourceError';
 import { useToast } from '../../hooks/useToast';
+import { Card } from '../../shared/Card';
 import { ActionButton } from '../../ui/ActionButton';
-import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 
 /**
@@ -63,8 +63,8 @@ export function StandaloneCaptureStarter({
   }, [bpfFilter, busy, onStarted, selectedIface, showError]);
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack-lg">
+    <Card>
+      <div className="stack-lg">
         <div className="flex items-start gap-default">
           <Activity className={`mt-tight ${iconSizes.lg} text-brand-accent`} />
           <div className="flex-1">
@@ -129,7 +129,7 @@ export function StandaloneCaptureStarter({
               : t('packets.inspector.startCaptureButton')}
           </ActionButton>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

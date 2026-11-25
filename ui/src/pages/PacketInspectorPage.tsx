@@ -32,11 +32,11 @@ import { useCaptureResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { StatusPill } from '../shared/StatusPill';
 import { ActionButton } from '../ui/ActionButton';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { H2, SmallText } from '../ui/Typography';
@@ -309,8 +309,8 @@ export function PacketInspectorPage() {
       {view === 'live' && streamActive && (
         <>
           {/* Header with controls */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <div className="flex flex-col gap-comfortable sm:flex-row sm:items-center sm:justify-between">
                 {/* Title and connection status */}
                 <div className="flex items-center gap-comfortable">
@@ -454,20 +454,20 @@ export function PacketInspectorPage() {
                   </span>
                 )}
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           {/* BPF Capture Filter */}
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent>
+          <Card>
+            <div>
               <BpfFilterBar />
-            </CardContent>
+            </div>
           </Card>
 
           <Inspector>
             <InspectorRecords>
-              <Card className="border-surface-border bg-bg-surface/70 h-full">
-                <CardContent className="h-full flex flex-col">
+              <Card className="h-full">
+                <div className="h-full flex flex-col">
                   <div className="flex-between mb-heading">
                     <SmallText className="text-text-muted uppercase tracking-wide font-semibold">
                       {t('packets.inspector.packetListLabel')}
@@ -485,7 +485,7 @@ export function PacketInspectorPage() {
                       getRowStyle={getRowStyle}
                     />
                   </div>
-                </CardContent>
+                </div>
               </Card>
             </InspectorRecords>
 

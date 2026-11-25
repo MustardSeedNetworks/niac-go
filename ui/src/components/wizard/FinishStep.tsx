@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { Button } from '../../shared/Button';
-import { Card, CardContent } from '../../ui/Card';
+import { Card } from '../../shared/Card';
 import { H2, SmallText } from '../../ui/Typography';
 
 export function FinishStep({
@@ -16,8 +16,8 @@ export function FinishStep({
   const { t } = useTranslation('pages');
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70">
-      <CardContent className="stack">
+    <Card>
+      <div className="stack">
         <div className="flex items-center gap-default">
           <PartyPopper className={`${iconSizes.lg} text-brand-accent`} />
           <H2>{t('newSimWizard.finish.title')}</H2>
@@ -42,7 +42,7 @@ export function FinishStep({
             </Button>
           </Link>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

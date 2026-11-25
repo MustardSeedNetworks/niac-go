@@ -8,8 +8,8 @@ import {
   type WalkCaptureCredentials,
   type WalkProfileReview,
 } from '../../api/walk-profile-client';
+import { Card } from '../../shared/Card';
 import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
-import { Card, CardContent } from '../../ui/Card';
 import { WalkProfileReviewForm } from './WalkProfileReviewForm';
 import { WalkProfileSource } from './WalkProfileSource';
 
@@ -141,8 +141,8 @@ export function WalkProfileCreator() {
   };
 
   return (
-    <Card className="border-surface-border bg-bg-surface/70" data-testid="walk-profile-creator">
-      <CardContent className="stack-lg">
+    <Card data-testid="walk-profile-creator">
+      <div className="stack-lg">
         <header>
           <h2 className="heading-3 text-text-primary">{t('walkAnalyzer.profile.title')}</h2>
           <p className="text-sm text-text-muted">{t('walkAnalyzer.profile.description')}</p>
@@ -181,7 +181,7 @@ export function WalkProfileCreator() {
             createProfile={createProfile}
           />
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

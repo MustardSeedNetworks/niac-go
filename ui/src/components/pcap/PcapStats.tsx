@@ -3,9 +3,9 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapStats as PcapStatsType } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
+import { Card } from '../../shared/Card';
 import { CategoryChip } from '../../shared/CategoryChip';
 import { StatusPill } from '../../shared/StatusPill';
-import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 import { formatBytes, formatDurationMs, useFormatTime } from '../../utils/format';
 
@@ -171,12 +171,12 @@ export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: 
 
   if (!stats) {
     return (
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="py-centered text-center">
+      <Card>
+        <div className="text-center">
           <BarChart3 className={`${iconSizes['3xl']} text-text-disabled mx-auto mb-content`} />
           <p className="text-text-muted">{t('packets.stats.emptyTitle')}</p>
           <SmallText className="text-text-muted">{t('packets.stats.emptyDescription')}</SmallText>
-        </CardContent>
+        </div>
       </Card>
     );
   }
@@ -185,8 +185,8 @@ export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: 
     <div className="stack-xl">
       {/* File Info */}
       {filename && (
-        <Card className="border-surface-border bg-bg-surface/70">
-          <CardContent>
+        <Card>
+          <div>
             <div className="flex items-center gap-default">
               <FileText className={`${iconSizes.lg} text-brand-accent`} />
               <div>
@@ -196,13 +196,13 @@ export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: 
                 )}
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* Summary Statistics */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <H2 className="flex items-center gap-compact mb-0">
             <BarChart3 className={`${iconSizes.lg} text-status-info`} />
             {t('packets.stats.summaryTitle')}
@@ -234,12 +234,12 @@ export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: 
               helper={t('packets.stats.protocolsHelper')}
             />
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Time Range */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <div className="flex items-center gap-compact">
             <Clock className={`${iconSizes.lg} text-status-success`} />
             <H2>{t('packets.stats.timeRangeTitle')}</H2>
@@ -263,31 +263,31 @@ export const PcapStats = memo(function PcapStats({ stats, filename, fileSize }: 
               </p>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Protocol Breakdown */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <div className="flex items-center gap-compact">
             <BarChart3 className={`${iconSizes.lg} text-brand-accent`} />
             <H2>{t('packets.stats.protocolBreakdownTitle')}</H2>
           </div>
 
           <ProtocolBreakdown protocols={stats.protocols} total={stats.totalPackets} />
-        </CardContent>
+        </div>
       </Card>
 
       {/* Top Endpoints */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           <div className="flex items-center gap-compact">
             <Network className={`${iconSizes.lg} text-status-info`} />
             <H2>{t('packets.stats.topEndpointsTitle')}</H2>
           </div>
 
           <TopEndpoints sources={stats.topSources} destinations={stats.topDestinations} />
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

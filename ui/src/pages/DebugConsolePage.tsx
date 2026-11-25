@@ -9,11 +9,11 @@ import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../shared/Button';
+import { Card } from '../shared/Card';
 import { CategoryChip } from '../shared/CategoryChip';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { StatusPill } from '../shared/StatusPill';
 import { Tooltip } from '../shared/Tooltip';
-import { Card, CardContent } from '../ui/Card';
 import { useDialogLabels } from '../ui/dialogLabels';
 
 // Maximum number of logs to buffer
@@ -200,8 +200,8 @@ export function DebugConsolePage() {
   return (
     <div className="stack-xl">
       {/* Main Console Card */}
-      <Card className="border-surface-border bg-bg-surface/70">
-        <CardContent className="stack-lg">
+      <Card>
+        <div className="stack-lg">
           {/* Header with Connection Status */}
           <div className="flex-between">
             <h2 className="heading-2 text-text-primary">{t('debug.title')}</h2>
@@ -297,16 +297,16 @@ export function DebugConsolePage() {
             </span>
             <span>{t('debug.sseEndpointLabel')}</span>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Global debug-level control */}
       {showDebugSettings && (
         <div id="debug-settings-panel">
-          <Card className="border-surface-border bg-bg-surface/70">
-            <CardContent className="stack-lg">
+          <Card>
+            <div className="stack-lg">
               <DebugLevelControl />
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
