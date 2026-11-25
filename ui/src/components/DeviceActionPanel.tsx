@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { executeDeviceAction } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Select } from '../ui/Input';
 import { H3, SmallText } from '../ui/Typography';
@@ -82,7 +82,7 @@ export function DeviceActionPanel() {
         {selected && <SmallText>{selected.description}</SmallText>}
         {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
         {done && <SmallText>{done}</SmallText>}
-        <Button
+        <ActionButton
           action="inject"
           variant="secondary"
           data-testid="run-device-action"
@@ -90,7 +90,7 @@ export function DeviceActionPanel() {
           onClick={() => void run()}
         >
           {t('deviceAction.run')}
-        </Button>
+        </ActionButton>
       </CardContent>
     </Card>
   );

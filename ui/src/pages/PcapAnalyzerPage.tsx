@@ -19,7 +19,7 @@ import { iconSizes } from '../constants/sizes';
 import { useColoringRules } from '../hooks/useColoringRules';
 import { useDisplayFilter } from '../hooks/useDisplayFilter';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
@@ -346,7 +346,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
-                    leftIcon={<Download className={iconSizes.md} />}
+                    icon={<Download className={iconSizes.md} />}
                   >
                     {t('buttons.export')}
                   </Button>
@@ -355,7 +355,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowColoringRules(true)}
-                    leftIcon={<Palette className={iconSizes.md} />}
+                    icon={<Palette className={iconSizes.md} />}
                   >
                     {tPages('libraryPcaps.analyzer.colorsButton')}
                   </Button>
@@ -364,7 +364,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
-                    leftIcon={<Share2 className={iconSizes.md} />}
+                    icon={<Share2 className={iconSizes.md} />}
                     disabled={!followable}
                   >
                     {tPages('libraryPcaps.analyzer.followStreamButton')}
@@ -374,7 +374,7 @@ export function PcapAnalyzerPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClear}
-                    leftIcon={<Trash2 className={iconSizes.md} />}
+                    icon={<Trash2 className={iconSizes.md} />}
                   >
                     {t('buttons.clear')}
                   </Button>

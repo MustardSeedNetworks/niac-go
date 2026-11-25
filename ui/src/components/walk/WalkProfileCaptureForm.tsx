@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { WalkCaptureCredentials } from '../../api/walk-profile-client';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Input, Select } from '../../ui/Input';
 
 interface Props {
@@ -112,19 +113,18 @@ export function WalkProfileCaptureForm({
       )}
       <p className="text-xs text-text-muted">{t('walkAnalyzer.profile.credentialsNotice')}</p>
       <div className="flex gap-default">
-        <Button
+        <ActionButton
+          action="start"
           type="button"
-          tone="blue"
           disabled={!capture.target || capturing}
           loading={capturing}
           onClick={() => void runCapture()}
-          action="start"
           data-testid="walk-profile-capture"
         >
           {t('walkAnalyzer.profile.captureAction')}
-        </Button>
+        </ActionButton>
         {capturing && (
-          <Button type="button" variant="outline" tone="gray" onClick={cancel}>
+          <Button variant="secondary" type="button" onClick={cancel}>
             {t('walkAnalyzer.profile.cancel')}
           </Button>
         )}

@@ -13,8 +13,8 @@ import type {
   SimulationPreflightRequest,
 } from '../../api/fabric-types';
 import type { SimulationRequest } from '../../api/types';
+import { ActionButton } from '../../ui/ActionButton';
 import { ApiErrorMessage } from '../../ui/ApiErrorMessage';
-import { Button } from '../../ui/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 import { bindingOptions } from './attachment-options';
@@ -351,11 +351,11 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
           </div>
         )}
         <div className="flex gap-default">
-          <Button
-            variant="outline"
+          <ActionButton
+            action="start"
+            variant="secondary"
             data-testid="wizard-preflight-check"
             onClick={() => void check()}
-            action="start"
             loading={checking}
             disabled={
               discovering ||
@@ -366,17 +366,16 @@ export function PreflightStep({ request, onStart, starting = false }: PreflightS
             }
           >
             {t('newSimWizard.preflight.checkLabel')}
-          </Button>
-          <Button
-            tone="violet"
+          </ActionButton>
+          <ActionButton
+            action="start"
             data-testid="wizard-preflight-start"
             onClick={() => approvedPayload && onStart(approvedPayload)}
-            action="start"
             loading={starting}
             disabled={!approvedPayload || starting}
           >
             {t('newSimWizard.preflight.startLabel')}
-          </Button>
+          </ActionButton>
         </div>
       </CardContent>
     </Card>

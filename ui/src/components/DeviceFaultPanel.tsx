@@ -5,7 +5,7 @@ import { validFaultAddress } from '../api/behavior-fault-types';
 import { clearError, injectError } from '../api/client';
 import { useAppState } from '../contexts/AppContext';
 import { useActionPermission } from '../contexts/ScopeContext';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Input, Select } from '../ui/Input';
 import { H3, SmallText } from '../ui/Typography';
@@ -140,7 +140,7 @@ export function DeviceFaultPanel() {
           />
         )}
         {(failure || error) && <p role="alert">{failure || getErrorMessage(error)}</p>}
-        <Button
+        <ActionButton
           action="inject"
           variant="secondary"
           data-testid="apply-device-fault"
@@ -148,7 +148,7 @@ export function DeviceFaultPanel() {
           onClick={() => void apply()}
         >
           {t('deviceFault.apply')}
-        </Button>
+        </ActionButton>
         <ul className="stack-sm">
           {active.map((entry) => (
             <li
@@ -158,7 +158,7 @@ export function DeviceFaultPanel() {
               <span>{entry.device}</span>
               <span>{entry.type}</span>
               <span>{displayValue(entry.type, entry.amount)}</span>
-              <Button
+              <ActionButton
                 action="inject"
                 variant="secondary"
                 disabled={disabled}
@@ -166,7 +166,7 @@ export function DeviceFaultPanel() {
                 aria-label={t('deviceFault.clearOne', { device: entry.device, type: entry.type })}
               >
                 {t('deviceFault.clear')}
-              </Button>
+              </ActionButton>
             </li>
           ))}
         </ul>

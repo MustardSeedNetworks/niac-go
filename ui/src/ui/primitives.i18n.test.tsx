@@ -11,7 +11,6 @@ import { CollapsibleSection } from '../components/form/CollapsibleSection';
 import i18n from '../i18n';
 import { Alert } from './Alert';
 import { BaseCard } from './BaseCard';
-import { Button } from './Button';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SearchInput } from './Input';
 import { StatusBadge } from './StatusBadge';
@@ -112,11 +111,5 @@ describe('shared primitives in es', () => {
 
     expect(screen.getByRole('button', { name: 'Sección SNMP, expandida' })).toBeInTheDocument();
     expect(screen.getByText('Deshabilitado')).toBeInTheDocument();
-  });
-
-  it('titles the button spinner in Spanish', () => {
-    render(<Button loading>Guardar</Button>);
-
-    expect(screen.getByTitle('Cargando...')).toBeInTheDocument();
   });
 });

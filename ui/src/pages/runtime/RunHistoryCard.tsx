@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
 import { useRunHistory } from '../../hooks/useRunHistory';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
@@ -79,18 +79,18 @@ export function RunHistoryCard() {
         </div>
         <div className="flex-between">
           <Button
-            data-testid="history-newer"
-            variant="outline"
+            variant="secondary"
             size="sm"
+            data-testid="history-newer"
             onClick={newer}
             disabled={loading || !hasNewer}
           >
             {t('runtime.newerRuns')}
           </Button>
           <Button
-            data-testid="history-older"
-            variant="outline"
+            variant="secondary"
             size="sm"
+            data-testid="history-older"
             onClick={older}
             disabled={loading || !hasOlder}
           >

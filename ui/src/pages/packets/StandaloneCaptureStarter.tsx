@@ -6,7 +6,7 @@ import { iconSizes } from '../../constants/sizes';
 import { useUsableInterfacesResource } from '../../hooks/usePageResources';
 import { useResourceError } from '../../hooks/useResourceError';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 
@@ -118,16 +118,11 @@ export function StandaloneCaptureStarter({
               className="rounded-lg border border-surface-border bg-bg-base/60 px-3 py-row font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
             />
           </label>
-          <Button
-            action="start"
-            tone="violet"
-            onClick={handleStart}
-            disabled={!selectedIface || busy}
-          >
+          <ActionButton action="start" onClick={handleStart} disabled={!selectedIface || busy}>
             {busy
               ? t('packets.inspector.startingLabel')
               : t('packets.inspector.startCaptureButton')}
-          </Button>
+          </ActionButton>
         </div>
       </CardContent>
     </Card>

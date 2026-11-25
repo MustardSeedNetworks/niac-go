@@ -1,7 +1,7 @@
 import { memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PcapPacket } from '../api/types';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
 import { Modal } from '../ui/Modal';
 import { SmallText } from '../ui/Typography';
 import type { Packet } from './PacketList';

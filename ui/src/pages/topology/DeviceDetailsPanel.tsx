@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceSummary } from '../../api/types';
 import { getTopologyDeviceColor, getTopologyDeviceIcon } from '../../constants/device-types';
 import { useAppContext } from '../../contexts/AppContext';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Tag } from '../../ui/Tag';
 import { sessionPool } from '../runtime/sessionPool';
 import { DeviceAttachmentPool } from './DeviceAttachmentPool';
@@ -103,10 +103,10 @@ export function DeviceDetailsPanel({ device, onClose, onEdit }: DeviceDetailsPan
       )}
 
       <div className="flex gap-compact">
-        <Button size="sm" tone="violet" onClick={() => onEdit?.(device)} className="flex-1">
+        <Button size="sm" onClick={() => onEdit?.(device)} className="flex-1">
           {t('deviceEditor.editLabel')}
         </Button>
-        <Button size="sm" variant="outline" onClick={onClose}>
+        <Button variant="secondary" size="sm" onClick={onClose}>
           {tCommon('buttons.close')}
         </Button>
       </div>

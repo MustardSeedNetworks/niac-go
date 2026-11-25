@@ -11,7 +11,7 @@ import {
 } from '../components/config/DiffViewer';
 import { MergeControls, MergePreviewModal } from '../components/config/MergeControls';
 import { iconSizes } from '../constants/sizes';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { H2, P, SmallText } from '../ui/Typography';
@@ -311,8 +311,7 @@ export function ConfigDiffPage() {
                     />
                   </P>
                 </div>
-                <Button
-                  tone="violet"
+                <ActionButton
                   action="edit"
                   onClick={async () => {
                     if (permission.disabled) return;
@@ -349,7 +348,7 @@ export function ConfigDiffPage() {
                   }}
                 >
                   {t('configDiff.runServerMergeButton')}
-                </Button>
+                </ActionButton>
               </div>
             </CardContent>
           </Card>

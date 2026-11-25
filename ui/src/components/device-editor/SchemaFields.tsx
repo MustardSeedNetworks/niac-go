@@ -1,7 +1,7 @@
 import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { FormField } from '../form';
 import type { AuthoredValue } from './generated/authored-device.generated';
 import type { FieldDescriptor, SectionDescriptor } from './generated/sections.generated';

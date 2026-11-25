@@ -1,17 +1,20 @@
-import type { ButtonHTMLAttributes } from 'react';
 import type { Action } from '../contexts/permissions';
 import { useActionPermission } from '../contexts/ScopeContext';
-import { Tooltip } from './Tooltip';
+import { Button, type ButtonProps } from '../shared/Button';
+import { Tooltip } from '../shared/Tooltip';
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  action: Action;
-}
+type ActionButtonProps = ButtonProps & { action?: Action | undefined };
 
-export function ActionButton({ action, disabled, title, ...props }: Props) {
+/**
+ * The shared Button, gated on the token's scope. The shared Button has no
+ * permission hook by design: a product decides at the call site. This is that
+ * call site, once: a denied scope disables the button and the tooltip says why
+ * (a disabled button still explains itself), so a read-only token never sees a
+ * control that would 403. With no `action` the button is not gated.
+ */
+export function ActionButton({ action, title, disabled, ...rest }: ActionButtonProps) {
   const permission = useActionPermission(action);
-  return (
-    <Tooltip text={permission.title ?? title}>
-      <button type="button" {...props} disabled={disabled || permission.disabled} />
-    </Tooltip>
-  );
+  const hint = permission.title ?? title;
+  const button = <Button {...rest} disabled={disabled || permission.disabled} />;
+  return hint ? <Tooltip text={hint}>{button}</Tooltip> : button;
 }

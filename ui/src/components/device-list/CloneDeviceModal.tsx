@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import { useActionPermission } from '../../contexts/ScopeContext';
 import { type CloneDeviceFormFields, CloneDeviceSchema } from '../../schemas/forms';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Modal } from '../../ui/Modal';
 
 interface CloneDeviceModalProps {
@@ -47,12 +48,12 @@ export function CloneDeviceModal({ hostname, onClone, onCancel }: CloneDeviceMod
       labelledBy={titleId}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button variant="secondary" type="button" onClick={onCancel}>
             {tCommon('buttons.cancel')}
           </Button>
-          <Button action="edit" tone="violet" type="submit" form={formId} disabled={!isValid}>
+          <ActionButton action="edit" type="submit" form={formId} disabled={!isValid}>
             {tCommon('buttons.clone')}
-          </Button>
+          </ActionButton>
         </>
       }
     >

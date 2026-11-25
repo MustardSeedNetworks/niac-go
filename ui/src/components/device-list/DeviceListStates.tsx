@@ -2,7 +2,7 @@ import { AlertCircle, Plus, Search, Server } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { DeviceCardGridSkeleton, DeviceTableSkeleton } from '../../ui/Skeleton';
 import { H2, P, SmallText } from '../../ui/Typography';
@@ -55,7 +55,7 @@ export function DeviceListErrorState({ error, onRetry }: ErrorStateProps) {
               {t('list.states.loadErrorTitle')}
             </p>
             <SmallText className="text-status-error-strong">{error.message}</SmallText>
-            <Button variant="outline" size="sm" className="mt-heading" onClick={onRetry}>
+            <Button variant="secondary" size="sm" className="mt-heading" onClick={onRetry}>
               {t('list.states.retry')}
             </Button>
           </div>
@@ -76,9 +76,8 @@ export function DeviceListEmptyState() {
         <H2 className="mt-content mb-2">{t('list.states.emptyTitle')}</H2>
         <P className="text-text-muted">{t('list.states.emptyDescription')}</P>
         <Button
-          tone="violet"
           className="mt-content"
-          leftIcon={<Plus className={iconSizes.md} />}
+          icon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
         >
           {t('list.states.addDevice')}
@@ -100,7 +99,7 @@ export function DeviceListNoResultsState({ onClearFilters }: NoResultsStateProps
         <Search className="mx-auto h-12 w-12 text-text-disabled" />
         <H2 className="mt-content mb-2">{t('list.states.noMatchTitle')}</H2>
         <P className="text-text-muted">{t('list.states.noMatchDescription')}</P>
-        <Button variant="outline" className="mt-content" onClick={onClearFilters}>
+        <Button variant="secondary" className="mt-content" onClick={onClearFilters}>
           {t('list.states.clearFilters')}
         </Button>
       </CardContent>

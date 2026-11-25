@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { SimulationStatus } from '../../api/types';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { Tag } from '../../ui/Tag';
@@ -82,25 +83,24 @@ export function ConcurrentSessionsPanel({
         <>
           {session.sessionId !== selectedSessionId && (
             <Button
-              size="xs"
-              variant="outline"
+              variant="secondary"
+              size="sm"
               data-testid={`session-select-${session.sessionId}`}
               onClick={() => onSelect(session)}
             >
               {t('runtime.sessions.select')}
             </Button>
           )}
-          <Button
-            size="xs"
-            variant="outline"
-            tone="red"
+          <ActionButton
+            action="stop"
+            variant="destructive"
+            size="sm"
             data-testid={`session-stop-${session.sessionId}`}
             loading={stoppingSessionId === session.sessionId}
             onClick={() => onStop(session)}
-            action="stop"
           >
             {t('runtime.running.stopButton')}
-          </Button>
+          </ActionButton>
         </>
       ),
     },

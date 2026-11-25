@@ -5,7 +5,8 @@ import { isApiError } from '../../api/errors';
 import { installContentBundleWithProgress } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { fileToBase64 } from '../../utils/file';
@@ -157,7 +158,7 @@ export function ContentBundleUploader() {
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={installing}
-            leftIcon={<Upload className={iconSizes.md} />}
+            icon={<Upload className={iconSizes.md} />}
             data-testid="content-bundle-browse"
           >
             {t('libraryFiles.installBundle.browseButton')}
@@ -169,7 +170,7 @@ export function ContentBundleUploader() {
               {selectedFile.name} ({formatBytes(selectedFile.size)})
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={handleClear}
                 disabled={installing}
                 aria-label={tCommon('buttons.clear')}
@@ -179,19 +180,18 @@ export function ContentBundleUploader() {
             </span>
           )}
 
-          <Button
-            tone="violet"
+          <ActionButton
+            action="admin"
             size="sm"
             onClick={() => void handleInstall()}
-            action="admin"
             disabled={!selectedFile || installing}
-            leftIcon={<PackageCheck className={iconSizes.md} />}
+            icon={<PackageCheck className={iconSizes.md} />}
             data-testid="content-bundle-install"
           >
             {installing
               ? t('libraryFiles.installBundle.installingButton')
               : t('libraryFiles.installBundle.installButton')}
-          </Button>
+          </ActionButton>
         </div>
 
         <SmallText className="text-text-muted">

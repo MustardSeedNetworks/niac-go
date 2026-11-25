@@ -4,7 +4,7 @@ import { fetchSynthesizeWalkModels, synthesizeWalk } from '../../api/client';
 import { isApiError } from '../../api/errors';
 import type { ModelDescriptor } from '../../api/types';
 import { useApiResource } from '../../hooks/useApiResource';
-import { Button } from '../../ui/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { getErrorMessage } from '../../utils/format';
 import { FormField } from '../form';
 import { selectClassName } from './types';
@@ -140,16 +140,16 @@ export function SynthesizeWalkControl({
               </optgroup>
             ))}
           </select>
-          <Button
+          <ActionButton
+            action="edit"
             disabled={disabled || generating || selected === ''}
             onClick={() => void handleGenerate()}
-            action="edit"
             data-testid="synthesize-walk-generate"
           >
             {generating
               ? t('editor.sections.synthesizeWalk.generatingButton')
               : t('editor.sections.synthesizeWalk.generateButton')}
-          </Button>
+          </ActionButton>
         </div>
         {disabled && (
           <p className="text-xs text-text-muted">

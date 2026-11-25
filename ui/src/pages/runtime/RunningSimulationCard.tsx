@@ -6,7 +6,8 @@ import type { SimulationStatus } from '../../api/types';
 import { StatBlock } from '../../components/StatBlock';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
@@ -160,26 +161,26 @@ export function RunningSimulationCard({
               action — it was drawn as an outline beside two ghosts, so the
               running card had no primary at all. Red because it ends the
               run; it is confirmed before it fires. */}
-          <Button
-            tone="red"
+          <ActionButton
+            action="stop"
+            variant="destructive"
             disabled={stopping}
             onClick={onStop}
             data-testid="runtime-stop"
-            action="stop"
-            leftIcon={<Activity className={iconSizes.md} />}
+            icon={<Activity className={iconSizes.md} />}
           >
             {stopping ? t('runtime.running.stoppingLabel') : t('runtime.running.stopButton')}
-          </Button>
+          </ActionButton>
           <Button
             variant="ghost"
-            leftIcon={<FileCog className={iconSizes.md} />}
+            icon={<FileCog className={iconSizes.md} />}
             onClick={() => navigate('/devices')}
           >
             {t('runtime.running.viewDevices')}
           </Button>
           <Button
             variant="ghost"
-            leftIcon={<Download className={iconSizes.md} />}
+            icon={<Download className={iconSizes.md} />}
             onClick={handleDownload}
             data-testid="runtime-download-yaml"
             title={t('runtime.running.downloadYamlTitle')}

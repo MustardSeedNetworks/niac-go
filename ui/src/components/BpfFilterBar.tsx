@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { clearCaptureFilter, getCaptureFilter, setCaptureFilter } from '../api/capture';
 import { isApiError } from '../api/errors';
 import { iconSizes } from '../constants/sizes';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 import { GlossaryPopover } from './GlossaryPopover';
@@ -165,28 +165,28 @@ export const BpfFilterBar = memo(function BpfFilterBar() {
         />
 
         {/* Apply button */}
-        <Button
+        <ActionButton
+          action="edit"
           variant="ghost"
           size="sm"
           onClick={handleApply}
-          action="edit"
           disabled={isLoading || !input.trim()}
         >
           {t('buttons.apply')}
-        </Button>
+        </ActionButton>
 
         {/* Clear button */}
         {isActive && (
-          <Button
+          <ActionButton
+            action="edit"
             variant="ghost"
             size="sm"
             onClick={handleClear}
-            action="edit"
             disabled={isLoading}
-            leftIcon={<X className="h-3.5 w-3.5" />}
+            icon={<X className="h-3.5 w-3.5" />}
           >
             {t('buttons.clear')}
-          </Button>
+          </ActionButton>
         )}
       </div>
 

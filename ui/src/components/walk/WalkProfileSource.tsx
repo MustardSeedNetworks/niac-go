@@ -1,7 +1,8 @@
 import type { ChangeEvent, MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WalkCaptureCredentials } from '../../api/walk-profile-client';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { WalkProfileCaptureForm } from './WalkProfileCaptureForm';
 
 interface Props {
@@ -38,7 +39,7 @@ export function WalkProfileSource(props: Props) {
             // A segmented control, not an action: the selected segment is
             // filled surface, not the page's primary. It used to render
             // solid, which made two primaries on this page.
-            variant={props.mode === mode ? 'outline' : 'ghost'}
+            variant={props.mode === mode ? 'secondary' : 'ghost'}
             aria-pressed={props.mode === mode}
             size="sm"
             onClick={() => props.setMode(mode)}
@@ -65,18 +66,18 @@ export function WalkProfileSource(props: Props) {
             className="block w-full rounded-lg border border-surface-border bg-bg-base/60 px-4 py-row text-sm text-text-primary"
           />
           <div className="flex gap-default">
-            <Button
+            <ActionButton
+              action="upload"
               type="button"
               disabled={!props.file || props.busy !== 'idle'}
               loading={props.busy === 'reading'}
               onClick={() => void props.runImport()}
-              action="upload"
               data-testid="walk-profile-import"
             >
               {t('walkAnalyzer.profile.importAction')}
-            </Button>
+            </ActionButton>
             {props.busy === 'reading' && (
-              <Button type="button" variant="outline" tone="gray" onClick={props.cancel}>
+              <Button variant="secondary" type="button" onClick={props.cancel}>
                 {t('walkAnalyzer.profile.cancel')}
               </Button>
             )}

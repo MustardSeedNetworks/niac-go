@@ -31,9 +31,11 @@ import { isPacketStreamEvent, usePacketStream } from '../hooks/useEventSource';
 import { useCaptureResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Inspector, InspectorPane, InspectorPanes, InspectorRecords } from '../ui/Inspector';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
@@ -88,6 +90,7 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
  * - Protocol and search filtering
  */
 export function PacketInspectorPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
@@ -326,7 +329,7 @@ export function PacketInspectorPage() {
                   <Button
                     size="sm"
                     onClick={handlePauseToggle}
-                    leftIcon={
+                    icon={
                       isPaused ? (
                         <Play className={iconSizes.md} />
                       ) : (
@@ -341,29 +344,28 @@ export function PacketInspectorPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClear}
-                    leftIcon={<Trash2 className={iconSizes.md} />}
+                    icon={<Trash2 className={iconSizes.md} />}
                     disabled={retained.length === 0 && packets.length === 0}
                   >
                     {tCommon('buttons.clear')}
                   </Button>
 
                   {captureRunning && !simRunning && (
-                    <Button
-                      variant="outline"
-                      tone="red"
+                    <ActionButton
+                      action="stop"
+                      variant="destructive"
                       size="sm"
                       onClick={() => setShowStopCaptureConfirm(true)}
-                      action="stop"
                     >
                       {t('packets.inspector.stopCaptureButton')}
-                    </Button>
+                    </ActionButton>
                   )}
 
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleExport}
-                    leftIcon={<Download className={iconSizes.md} />}
+                    icon={<Download className={iconSizes.md} />}
                     disabled={filteredPackets.length === 0}
                     title={t('packets.inspector.exportButtonTitle')}
                   >
@@ -374,7 +376,7 @@ export function PacketInspectorPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleExportPcap}
-                    leftIcon={<FileDown className={iconSizes.md} />}
+                    icon={<FileDown className={iconSizes.md} />}
                     disabled={!exportSessionId}
                     title={t('packets.inspector.exportPcapButtonTitle')}
                   >
@@ -385,7 +387,7 @@ export function PacketInspectorPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowColoringRules(true)}
-                    leftIcon={<Palette className={iconSizes.md} />}
+                    icon={<Palette className={iconSizes.md} />}
                   >
                     {t('packets.inspector.colorsButton')}
                   </Button>
@@ -394,7 +396,7 @@ export function PacketInspectorPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleFollowStream}
-                    leftIcon={<Share2 className={iconSizes.md} />}
+                    icon={<Share2 className={iconSizes.md} />}
                     disabled={!followable}
                     title={
                       followable ? undefined : t('packets.inspector.followStreamDisabledTitle')
@@ -405,7 +407,7 @@ export function PacketInspectorPage() {
 
                   {/* SSE auto-reconnects, but manual reconnect is available */}
                   {!connected && (
-                    <Button variant="outline" size="sm" onClick={reconnect}>
+                    <Button variant="secondary" size="sm" onClick={reconnect}>
                       {t('packets.inspector.reconnectButton')}
                     </Button>
                   )}
@@ -525,15 +527,14 @@ export function PacketInspectorPage() {
         </>
       )}
 
-      <ConfirmModal
-        isOpen={showStopCaptureConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showStopCaptureConfirm}
         onConfirm={handleStopCaptureConfirmed}
-        action="stop"
         onCancel={() => setShowStopCaptureConfirm(false)}
         title={t('packets.inspector.stopCaptureConfirmTitle')}
         message={t('packets.inspector.stopCaptureConfirmMessage')}
         confirmLabel={t('packets.inspector.stopCaptureButton')}
-        confirmingLabel={t('packets.inspector.stopCaptureStopping')}
         cancelLabel={tCommon('buttons.cancel')}
         confirming={stoppingCapture}
       />

@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 
 interface DeviceBulkActionsProps {
   selectedCount: number;
@@ -24,16 +25,16 @@ export function DeviceBulkActions({
       <span className="text-sm text-brand-primary-strong">
         {tCommon('plurals.deviceCountSelected', { count: selectedCount })}
       </span>
-      <Button
+      <ActionButton
+        action="delete"
         variant="ghost"
         size="sm"
-        leftIcon={<Trash2 className="h-4 w-4" />}
+        icon={<Trash2 className="h-4 w-4" />}
         onClick={onDeleteSelected}
-        action="delete"
         className="text-status-error-strong hover:text-status-error-strong hover:bg-status-error/20"
       >
         {tDevices('list.bulkActions.deleteSelectedButton')}
-      </Button>
+      </ActionButton>
       <Button variant="ghost" size="sm" onClick={onClearSelection}>
         {tDevices('list.bulkActions.clearSelectionButton')}
       </Button>

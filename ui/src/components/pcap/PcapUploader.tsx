@@ -3,7 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
 import type { TFunction } from '../../i18n';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { Tag } from '../../ui/Tag';
 import { SmallText } from '../../ui/Typography';
@@ -243,7 +244,7 @@ export function PcapUploader({
                 size="sm"
                 onClick={handleClear}
                 disabled={isAnalyzing}
-                leftIcon={<X className={iconSizes.md} />}
+                icon={<X className={iconSizes.md} />}
               >
                 {tCommon('buttons.clear')}
               </Button>
@@ -262,7 +263,7 @@ export function PcapUploader({
                 variant="ghost"
                 size="sm"
                 onClick={onCancelUpload}
-                leftIcon={<X className={iconSizes.md} />}
+                icon={<X className={iconSizes.md} />}
               >
                 {t('libraryPcaps.uploader.cancelUpload')}
               </Button>
@@ -299,14 +300,12 @@ export function PcapUploader({
         )}
 
         {/* Analyze Button */}
-        <Button
-          tone="violet"
-          size="lg"
+        <ActionButton
+          action="upload"
           className="w-full"
           onClick={onAnalyze}
-          action="upload"
           disabled={!selectedFile || isAnalyzing}
-          leftIcon={
+          icon={
             isAnalyzing ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-surface-border border-t-white" />
             ) : (
@@ -317,7 +316,7 @@ export function PcapUploader({
           {isAnalyzing
             ? t('libraryPcaps.uploader.analyzing')
             : t('libraryPcaps.uploader.analyzeButton')}
-        </Button>
+        </ActionButton>
       </CardContent>
     </Card>
   );

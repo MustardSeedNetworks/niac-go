@@ -24,7 +24,7 @@ import { useAppContext, useAppState } from '../contexts/AppContext';
 import { useTopologyResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useTopologyLayoutPersistence } from '../hooks/useTopologyLayoutPersistence';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
@@ -522,7 +522,7 @@ export function TopologyPage() {
               <Button
                 size="sm"
                 onClick={handleRefresh}
-                leftIcon={<RefreshCw className="w-4 h-4" />}
+                icon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
               >
                 {tCommon('buttons.refresh')}
@@ -544,7 +544,7 @@ export function TopologyPage() {
                     {t('topology.header.resetButtonLabel')}
                   </Button>
                   <Button
-                    variant={showLabels ? 'outline' : 'ghost'}
+                    variant={showLabels ? 'secondary' : 'ghost'}
                     size="sm"
                     onClick={() => setShowLabels(!showLabels)}
                     title={t('topology.header.labelsButtonTitle')}

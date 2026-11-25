@@ -11,7 +11,7 @@ import { FileCode } from 'lucide-react';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 import { iconSizes } from '../constants/sizes';
-import { Button } from './Button';
+import { Button } from '../shared/Button';
 import { Modal } from './Modal';
 import { SmallText } from './Typography';
 
@@ -133,8 +133,8 @@ export const HeaderAndFooterRegions: Story = {
     ),
     footer: (
       <>
-        <Button variant="outline">Close</Button>
-        <Button tone="violet">Use scenario</Button>
+        <Button>Close</Button>
+        <Button variant="primary">Use scenario</Button>
       </>
     ),
     children: (
@@ -166,8 +166,8 @@ export const FocusTrapKeepsTabInside: Story = {
     onClose: () => undefined,
     footer: (
       <>
-        <Button variant="outline">Cancel</Button>
-        <Button tone="violet">Confirm</Button>
+        <Button>Cancel</Button>
+        <Button variant="primary">Confirm</Button>
       </>
     ),
     children: (

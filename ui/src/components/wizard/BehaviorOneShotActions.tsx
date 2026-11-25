@@ -6,7 +6,7 @@ import {
   validBehaviorActions,
 } from '../../api/behavior-timeline-types';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Select } from '../../ui/Input';
 import { SmallText } from '../../ui/Typography';
 import type { DraftTopologyModel } from './draft-topology';
@@ -78,8 +78,7 @@ export function BehaviorOneShotActions({
             }}
           />
           <Button
-            variant="outline"
-            tone="red"
+            variant="destructive"
             aria-label={t('newSimWizard.behaviors.removeDeviceAction')}
             data-testid="remove-device-action"
             onClick={() => onChange(actions.filter((_, item) => item !== index))}
@@ -97,7 +96,7 @@ export function BehaviorOneShotActions({
       )}
       <div>
         <Button
-          variant="outline"
+          variant="secondary"
           disabled={!firstDevice}
           data-testid="add-device-action"
           onClick={() => onChange([...actions, { device: firstDevice, type: 'reboot' }])}

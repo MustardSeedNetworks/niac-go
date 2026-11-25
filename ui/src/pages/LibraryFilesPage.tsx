@@ -8,10 +8,12 @@ import { RequireScope } from '../components/ui/RequireScope';
 import { useLibraryResource } from '../hooks/usePageResources';
 import { useToast } from '../hooks/useToast';
 import { useWalkSanitize } from '../hooks/useWalkSanitize';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn, type DataTableSelection } from '../ui/DataTable';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Tag } from '../ui/Tag';
 import { H2, SmallText } from '../ui/Typography';
 
@@ -37,6 +39,7 @@ interface Props {
 }
 
 function LibraryFilesView({ kind }: Props) {
+  const dialogLabels = useDialogLabels();
   const { t: tPages } = useTranslation('pages');
   const { data, loading, refetch, error } = useLibraryResource(kind, {
     intervalMs: 30000,
@@ -140,29 +143,29 @@ function LibraryFilesView({ kind }: Props) {
             align: 'right' as const,
             cell: (entry: LibraryFileEntry) => (
               <span className="inline-flex items-center gap-compact">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  leftIcon={<Sparkles className="w-3.5 h-3.5" />}
-                  onClick={() => sanitizeState.setSanitizeTarget(entry.name)}
+                <ActionButton
                   action="edit"
+                  variant="ghost"
+                  size="sm"
+                  icon={<Sparkles className="w-3.5 h-3.5" />}
+                  onClick={() => sanitizeState.setSanitizeTarget(entry.name)}
                   aria-label={tPages('libraryFiles.sanitizeLabel', { name: entry.name })}
                   data-testid={`sanitize-walk-${entry.name}`}
                 >
                   {tPages('libraryFiles.sanitizeButton')}
-                </Button>
+                </ActionButton>
                 {entry.edited && (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                    onClick={() => setRevertTarget(entry.name)}
+                  <ActionButton
                     action="edit"
+                    variant="ghost"
+                    size="sm"
+                    icon={<RotateCcw className="w-3.5 h-3.5" />}
+                    onClick={() => setRevertTarget(entry.name)}
                     aria-label={tPages('libraryFiles.revertLabel', { name: entry.name })}
                     data-testid={`revert-walk-${entry.name}`}
                   >
                     {tPages('libraryFiles.revertButton')}
-                  </Button>
+                  </ActionButton>
                 )}
               </span>
             ),
@@ -211,16 +214,16 @@ function LibraryFilesView({ kind }: Props) {
                   <SmallText className="text-text-muted">
                     {tPages('libraryFiles.selectedCount', { count: sanitizeState.selected.size })}
                   </SmallText>
-                  <Button
+                  <ActionButton
+                    action="edit"
                     variant="ghost"
                     size="sm"
-                    leftIcon={<Sparkles className="w-4 h-4" />}
+                    icon={<Sparkles className="w-4 h-4" />}
                     onClick={() => sanitizeState.setBatchConfirmOpen(true)}
-                    action="edit"
                     data-testid="sanitize-selected-walks"
                   >
                     {tPages('libraryFiles.sanitizeSelectedButton')}
-                  </Button>
+                  </ActionButton>
                 </>
               )}
               <div className="relative min-w-0 flex-1 sm:flex-none">
@@ -238,7 +241,7 @@ function LibraryFilesView({ kind }: Props) {
                 variant="ghost"
                 size="sm"
                 onClick={refetch}
-                leftIcon={<RefreshCw className="w-4 h-4" />}
+                icon={<RefreshCw className="w-4 h-4" />}
                 disabled={loading}
                 title={tPages('libraryFiles.refreshTitle')}
               >
@@ -287,10 +290,10 @@ function LibraryFilesView({ kind }: Props) {
       </Card>
 
       {kind === 'walks' && (
-        <ConfirmModal
-          isOpen={revertTarget !== null}
+        <ConfirmDialog
+          {...dialogLabels}
+          open={revertTarget !== null}
           onConfirm={() => void handleConfirmRevert()}
-          action="edit"
           onCancel={() => setRevertTarget(null)}
           title={tPages('libraryFiles.revertModalTitle')}
           message={
@@ -307,13 +310,13 @@ function LibraryFilesView({ kind }: Props) {
       )}
 
       {kind === 'walks' && (
-        <ConfirmModal
-          isOpen={sanitizeState.sanitizeTarget !== null}
+        <ConfirmDialog
+          {...dialogLabels}
+          open={sanitizeState.sanitizeTarget !== null}
           onConfirm={() => void sanitizeState.confirmSanitize()}
-          action="edit"
           onCancel={() => sanitizeState.setSanitizeTarget(null)}
           title={tPages('libraryFiles.sanitizeModalTitle')}
-          confirmTone="blue"
+          variant="primary"
           message={
             <p>
               {tPages('libraryFiles.sanitizeModalMessagePrefix')}{' '}
@@ -323,24 +326,22 @@ function LibraryFilesView({ kind }: Props) {
           }
           confirming={sanitizeState.sanitizing}
           confirmLabel={tPages('libraryFiles.sanitizeButton')}
-          confirmingLabel={tPages('libraryFiles.sanitizingButton')}
         />
       )}
 
       {kind === 'walks' && (
-        <ConfirmModal
-          isOpen={sanitizeState.batchConfirmOpen}
+        <ConfirmDialog
+          {...dialogLabels}
+          open={sanitizeState.batchConfirmOpen}
           onConfirm={() => void sanitizeState.confirmBatchSanitize()}
-          action="edit"
           onCancel={() => sanitizeState.setBatchConfirmOpen(false)}
           title={tPages('libraryFiles.sanitizeBatchModalTitle')}
-          confirmTone="blue"
+          variant="primary"
           message={tPages('libraryFiles.sanitizeBatchModalMessage', {
             count: sanitizeState.selected.size,
           })}
           confirming={sanitizeState.batchSanitizing}
           confirmLabel={tPages('libraryFiles.sanitizeSelectedButton')}
-          confirmingLabel={tPages('libraryFiles.sanitizingButton')}
         />
       )}
     </div>

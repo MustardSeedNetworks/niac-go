@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { Device } from '../../api/types';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { H2, P } from '../../ui/Typography';
 import { exportDevicesAsCSV, exportDevicesAsJSON, exportDevicesAsYAML } from '../../utils/export';
 
@@ -58,24 +59,24 @@ export function DeviceListHeader({
       </div>
       <div className="flex gap-compact">
         <Button
-          variant="outline"
-          leftIcon={<Server className={iconSizes.md} />}
+          variant="secondary"
+          icon={<Server className={iconSizes.md} />}
           onClick={() => navigate('/devices')}
           data-testid="view-running-state"
         >
           {t('list.viewRunningState')}
         </Button>
         <Button
-          variant="outline"
-          leftIcon={<RefreshCw className={iconSizes.md} />}
+          variant="secondary"
+          icon={<RefreshCw className={iconSizes.md} />}
           onClick={onRefresh}
           disabled={loading}
         >
           {tCommon('buttons.refresh')}
         </Button>
         <Button
-          variant="outline"
-          leftIcon={<FileCode className={iconSizes.md} />}
+          variant="secondary"
+          icon={<FileCode className={iconSizes.md} />}
           onClick={() => exportDevicesAsYAML(filteredDevices)}
           disabled={noDevices}
           title={t('list.downloadYamlTitle')}
@@ -88,13 +89,13 @@ export function DeviceListHeader({
         <div ref={menuRef} className="relative">
           <Button
             variant="ghost"
-            leftIcon={<Download className={iconSizes.md} />}
-            rightIcon={<ChevronDown className={iconSizes.sm} />}
+            icon={<Download className={iconSizes.md} />}
             onClick={() => setExportMenuOpen((v) => !v)}
             disabled={noDevices}
             title={t('list.dataExportTitle')}
           >
             {t('list.dataExportButton')}
+            <ChevronDown className={iconSizes.sm} aria-hidden="true" />
           </Button>
           {exportMenuOpen && (
             <div className="absolute right-0 z-10 mt-tight w-44 rounded-lg border border-surface-border bg-bg-surface shadow-lg">
@@ -121,15 +122,14 @@ export function DeviceListHeader({
             </div>
           )}
         </div>
-        <Button
-          tone="violet"
-          leftIcon={<Plus className={iconSizes.md} />}
+        <ActionButton
+          action="edit"
+          icon={<Plus className={iconSizes.md} />}
           onClick={() => navigate('/device-config/new')}
           data-testid="device-add"
-          action="edit"
         >
           {t('list.states.addDevice')}
-        </Button>
+        </ActionButton>
       </div>
     </div>
   );

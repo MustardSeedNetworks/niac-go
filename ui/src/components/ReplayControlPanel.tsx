@@ -4,7 +4,7 @@ import type { ReplayRateMode } from '../api/api-response-types';
 import { fetchReplayStatus, startReplay, stopReplay } from '../api/client';
 import { fetchLibraryPcaps } from '../api/library-client';
 import { useApiResource } from '../hooks/useApiResource';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
@@ -185,14 +185,14 @@ export function ReplayControlPanel() {
                   percentComplete={replayStatus.percentComplete}
                 />
               </div>
-              <Button
+              <ActionButton
                 action="stop"
+                variant="secondary"
                 onClick={handleStop}
                 disabled={isSubmitting}
-                variant="secondary"
               >
                 {t('traffic.page.replayStopButton')}
-              </Button>
+              </ActionButton>
             </div>
           </CardContent>
         </Card>
@@ -386,17 +386,17 @@ export function ReplayControlPanel() {
 
           {/* Action Button */}
           {!replayStatus?.running && (
-            <Button
-              variant="outline"
-              onClick={handleStart}
+            <ActionButton
               action="start"
+              variant="secondary"
+              onClick={handleStart}
               disabled={isSubmitting}
               className="w-full"
             >
               {isSubmitting
                 ? t('traffic.page.replayStarting')
                 : t('traffic.page.replayStartButton')}
-            </Button>
+            </ActionButton>
           )}
         </CardContent>
       </Card>

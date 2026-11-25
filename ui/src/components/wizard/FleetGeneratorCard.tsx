@@ -8,7 +8,7 @@ import {
   type ScenarioGenerateRequest,
 } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 
@@ -97,8 +97,8 @@ export function FleetGeneratorCard({
             </div>
           </div>
           <Button
+            variant="secondary"
             type="button"
-            variant="outline"
             className="min-h-11"
             data-testid="wizard-select-fleet"
             data-wizard-source="generated"
@@ -153,8 +153,8 @@ export function FleetGeneratorCard({
               </span>
               <div className="flex gap-sm">
                 <Button
+                  variant="secondary"
                   type="button"
-                  variant="outline"
                   className="min-h-11"
                   disabled={request.sites.length === 1}
                   onClick={() => onChange({ ...request, sites: request.sites.slice(0, -1) })}
@@ -162,8 +162,8 @@ export function FleetGeneratorCard({
                   {t('newSimWizard.fleet.removeSite')}
                 </Button>
                 <Button
+                  variant="secondary"
                   type="button"
-                  variant="outline"
                   className="min-h-11"
                   disabled={request.sites.length === 4}
                   onClick={() => {

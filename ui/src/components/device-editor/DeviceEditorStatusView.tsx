@@ -1,6 +1,6 @@
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 
@@ -48,10 +48,10 @@ export function DeviceEditorStatusView({
                 </p>
                 <SmallText className="text-status-error-strong">{error.message}</SmallText>
                 <div className="flex gap-compact mt-heading">
-                  <Button variant="outline" size="sm" onClick={onRetry}>
+                  <Button variant="secondary" size="sm" onClick={onRetry}>
                     {t('list.states.retry')}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={onNavigateBack}>
+                  <Button variant="secondary" size="sm" onClick={onNavigateBack}>
                     {t('editor.statusView.backToList')}
                   </Button>
                 </div>

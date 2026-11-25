@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Modal } from '../../ui/Modal';
 import { SmallText } from '../../ui/Typography';
 
@@ -31,21 +32,26 @@ export function UnsavedChangesModal({ open, saving, onSave, onDiscard, onCancel,
         </SmallText>
       )}
       <div className="flex justify-end gap-default mt-heading">
-        <Button data-testid="unsaved-cancel" variant="outline" disabled={saving} onClick={onCancel}>
+        <Button
+          variant="secondary"
+          data-testid="unsaved-cancel"
+          disabled={saving}
+          onClick={onCancel}
+        >
           {t('buttons.cancel')}
         </Button>
         <Button
+          variant="secondary"
           data-testid="unsaved-discard"
-          variant="outline"
           disabled={saving}
           onClick={onDiscard}
         >
           {t('buttons.discard')}
         </Button>
         {onSave && (
-          <Button data-testid="unsaved-save" action="edit" disabled={saving} onClick={onSave}>
+          <ActionButton action="edit" data-testid="unsaved-save" disabled={saving} onClick={onSave}>
             {t('buttons.save')}
-          </Button>
+          </ActionButton>
         )}
       </div>
     </Modal>

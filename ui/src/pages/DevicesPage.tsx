@@ -19,9 +19,11 @@ import { POLL_INTERVALS } from '../constants/polling';
 import { iconSizes } from '../constants/sizes';
 import { useAppState } from '../contexts/AppContext';
 import { useConfigResource, useLibraryResource } from '../hooks/usePageResources';
+import { Button } from '../shared/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { BaseCard } from '../ui/BaseCard';
-import { Button, LinkButton } from '../ui/Button';
 import { CardRow } from '../ui/Card';
+import { LinkButton } from '../ui/LinkButton';
 import { SmallText } from '../ui/Typography';
 import { findDeviceFragment } from '../utils/device-fragment';
 import { copyToClipboard } from '../utils/file';
@@ -92,7 +94,7 @@ function DeviceListCard({
             selectedName={selected}
             onSelect={(device) => onSelect(device.name)}
           />
-          <LinkButton to="/device-config" size="sm" className="mt-heading">
+          <LinkButton to="/device-config" className="mt-heading">
             {t('devices.editInLibrary')}
           </LinkButton>
         </>
@@ -356,24 +358,23 @@ function ConfigEditorCard({
               </SmallText>
             )}
             <div className="flex flex-wrap gap-default mt-heading">
-              <Button
-                tone="violet"
+              <ActionButton
+                action={fragment ? 'edit' : 'admin'}
                 disabled={!dirty || saving}
                 onClick={handleSave}
                 // #2173: the same control saves either one device or the whole
                 // document. A whole-document save is a topology replacement and
                 // needs admin; a per-device save stays a routine operator edit.
-                action={fragment ? 'edit' : 'admin'}
                 title={t('devices.saveReloadTitle')}
               >
                 {saving ? t('devices.savingLabel') : t('devices.saveReloadButton')}
-              </Button>
-              <Button variant="outline" disabled={!dirty || saving} onClick={handleReset}>
+              </ActionButton>
+              <Button variant="secondary" disabled={!dirty || saving} onClick={handleReset}>
                 {t('devices.discardChangesButton')}
               </Button>
               {selected !== null && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={onClearSelection}
                   data-testid="edit-whole-config"
                 >
@@ -421,9 +422,14 @@ function WalkFileBrowser({
               <SmallText className="text-text-muted capitalize">{file.source}</SmallText>
             </div>
             <div className="flex items-center gap-tight">
-              <Button action="edit" size="sm" variant="outline" onClick={() => onCopy(file.name)}>
+              <ActionButton
+                action="edit"
+                variant="secondary"
+                size="sm"
+                onClick={() => onCopy(file.name)}
+              >
                 {t('devices.copyNameButton')}
-              </Button>
+              </ActionButton>
               <Link
                 to="/device-config/new#snmp"
                 className="text-sm text-brand-accent hover:underline whitespace-nowrap"

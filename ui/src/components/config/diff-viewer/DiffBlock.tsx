@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeftRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../../constants/sizes';
-import { Button } from '../../../ui/Button';
+import { Button } from '../../../shared/Button';
 import { Tag } from '../../../ui/Tag';
 import { SmallText } from '../../../ui/Typography';
 import { DiffLineComponent } from './DiffLine';
@@ -55,28 +55,25 @@ export function DiffBlockMergeControls({
       <SmallText className="text-text-muted mr-2">{t('configDiff.acceptLabel')}</SmallText>
       <Button
         size="sm"
-        variant={decision?.choice === 'left' ? undefined : 'outline'}
-        tone={decision?.choice === 'left' ? 'violet' : undefined}
+        variant={decision?.choice === 'left' ? 'primary' : 'secondary'}
         onClick={() => onDecision('left')}
-        leftIcon={<ChevronLeft className={iconSizes.xs} />}
+        icon={<ChevronLeft className={iconSizes.xs} />}
       >
         {choiceLabels.left}
       </Button>
       <Button
         size="sm"
-        variant={decision?.choice === 'both' ? undefined : 'outline'}
-        tone={decision?.choice === 'both' ? 'violet' : undefined}
+        variant={decision?.choice === 'both' ? 'primary' : 'secondary'}
         onClick={() => onDecision('both')}
-        leftIcon={<ChevronsLeftRight className={iconSizes.xs} />}
+        icon={<ChevronsLeftRight className={iconSizes.xs} />}
       >
         {choiceLabels.both}
       </Button>
       <Button
         size="sm"
-        variant={decision?.choice === 'right' ? undefined : 'outline'}
-        tone={decision?.choice === 'right' ? 'violet' : undefined}
+        variant={decision?.choice === 'right' ? 'primary' : 'secondary'}
         onClick={() => onDecision('right')}
-        leftIcon={<ChevronRight className={iconSizes.xs} />}
+        icon={<ChevronRight className={iconSizes.xs} />}
       >
         {choiceLabels.right}
       </Button>

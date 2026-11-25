@@ -15,10 +15,11 @@ import { iconSizes } from '../constants/sizes';
 import { useAppContext } from '../contexts/AppContext';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useToast } from '../hooks/useToast';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useUIStore } from '../stores/ui-store';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Tooltip } from '../ui/Tooltip';
 import { H2, SmallText } from '../ui/Typography';
 import { fileToText } from '../utils/file';
@@ -43,6 +44,7 @@ import { SelectedNetworkPreview } from './runtime/SelectedNetworkPreview';
  * - Link to Settings for configuration management
  */
 export function RuntimeControlPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { data: simStatus, loading: simLoading, refetch: refetchSimStatus } = useSimulationStatus();
 
@@ -332,14 +334,12 @@ export function RuntimeControlPage() {
                     </Tooltip>
                   </div>
                 </div>
-                <Button
-                  tone="violet"
-                  size="md"
+                <ActionButton
+                  action="edit"
                   disabled={!hasValidConfig || preparing || starting}
                   onClick={handlePrepare}
                   data-testid="runtime-prepare"
-                  action="edit"
-                  leftIcon={<Activity className={iconSizes.md} />}
+                  icon={<Activity className={iconSizes.md} />}
                   // Pulse the button when everything's picked so it's the obvious next click.
                   className={
                     hasValidConfig && !preparing && !starting
@@ -357,7 +357,7 @@ export function RuntimeControlPage() {
                   {preparing
                     ? t('runtime.preparingConnectionLabel')
                     : t('runtime.reviewConnectionLabel')}
-                </Button>
+                </ActionButton>
               </div>
             </div>
 
@@ -440,10 +440,10 @@ export function RuntimeControlPage() {
 
       <AdvancedSection />
 
-      <ConfirmModal
-        isOpen={showStopConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showStopConfirm}
         onConfirm={handleStopConfirmed}
-        action="stop"
         onCancel={() => {
           setShowStopConfirm(false);
           setStopTarget(null);

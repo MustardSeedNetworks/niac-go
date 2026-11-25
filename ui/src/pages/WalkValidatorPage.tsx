@@ -10,10 +10,11 @@ import type {
 } from '../api/types';
 import { GlossaryPopover } from '../components/GlossaryPopover';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Tooltip } from '../ui/Tooltip';
 
 type Severity = 'error' | 'warning' | 'info';
@@ -37,6 +38,7 @@ const severityCounts = (issues: WalkValidationIssue[]): Record<Severity, number>
 };
 
 export function WalkValidatorPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const [files, setFiles] = useState<LibraryFileEntry[]>([]);
@@ -273,42 +275,41 @@ export function WalkValidatorPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <Button
+            <ActionButton
+              action="edit"
               type="button"
               onClick={() => void run('validating')}
-              action="edit"
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkValidator.validateHelp')}
             >
               {busy === 'validating'
                 ? t('walkValidator.validatingButton')
                 : t('walkValidator.validateButton')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              tone="red"
-              onClick={() => setShowAutoFixConfirm(true)}
+            </ActionButton>
+            <ActionButton
               action="edit"
+              variant="destructive"
+              type="button"
+              onClick={() => setShowAutoFixConfirm(true)}
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkValidator.autoFixHelp')}
             >
               {busy === 'fixing'
                 ? t('walkValidator.fixingButton')
                 : t('walkValidator.autoFixButton')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void runBatch()}
+            </ActionButton>
+            <ActionButton
               action="edit"
+              variant="secondary"
+              type="button"
+              onClick={() => void runBatch()}
               disabled={batchBusy}
               title={t('walkValidator.validateAllHelp')}
             >
               {batchBusy
                 ? t('walkValidator.validatingAllButton')
                 : t('walkValidator.validateAllButton')}
-            </Button>
+            </ActionButton>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
@@ -432,9 +433,9 @@ export function WalkValidatorPage() {
         </Card>
       )}
 
-      <ConfirmModal
-        action="edit"
-        isOpen={showAutoFixConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showAutoFixConfirm}
         onConfirm={() => {
           setShowAutoFixConfirm(false);
           void run('fixing');
@@ -444,7 +445,7 @@ export function WalkValidatorPage() {
         message={t('walkValidator.autoFixConfirmMessage', { file: targetPath })}
         confirmLabel={tCommon('buttons.autoFix')}
         cancelLabel={tCommon('buttons.cancel')}
-        confirmTone="blue"
+        variant="primary"
       />
     </div>
   );

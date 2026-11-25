@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent, within } from 'storybook/test';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 
 /**
  * A gate that has not been proven able to fail is not worth trusting.

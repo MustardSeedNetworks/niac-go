@@ -30,7 +30,8 @@ import {
 } from '../components/wizard/wizard-types';
 import { useSimulationStatus } from '../hooks/useSimulationStatus';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { reportError } from '../utils/error-reporter';
 import { fileToText } from '../utils/file';
 import { newDraftName } from './wizard-draft-name';
@@ -217,7 +218,7 @@ export function NewSimulationWizardPage() {
   // and the author can simply navigate away.
   const cancelButton = draft ? (
     <Button
-      variant="outline"
+      variant="secondary"
       data-testid="wizard-cancel-button"
       disabled={state.saving || state.starting}
       onClick={() => guard.requestAction(() => void cancelWizard())}
@@ -383,7 +384,7 @@ export function NewSimulationWizardPage() {
       {currentStep === 'preflight' && (
         <div className="flex justify-start gap-default">
           <Button
-            variant="outline"
+            variant="secondary"
             data-testid="wizard-back-button"
             disabled={state.saving}
             onClick={() => void goBack()}
@@ -397,7 +398,7 @@ export function NewSimulationWizardPage() {
         <div className="flex justify-between gap-default">
           <div className="flex gap-default">
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid="wizard-back-button"
               disabled={state.step === 0 || state.saving}
               onClick={() => void goBack()}
@@ -408,19 +409,17 @@ export function NewSimulationWizardPage() {
           </div>
           <div className="flex gap-default">
             {state.step === 0 && canStartAsIs(state) && (
-              <Button
-                tone="violet"
+              <ActionButton
+                action="edit"
                 data-testid="wizard-start-as-is-button"
                 disabled={!canProceed}
                 onClick={() => void startAsIs()}
-                action="edit"
               >
                 {t('newSimWizard.start.startAsIs')}
-              </Button>
+              </ActionButton>
             )}
-            <Button
-              tone="violet"
-              variant={state.step === 0 && canStartAsIs(state) ? 'outline' : 'solid'}
+            <ActionButton
+              variant={state.step === 0 && canStartAsIs(state) ? 'secondary' : 'primary'}
               data-testid="wizard-next-button"
               disabled={!canProceed}
               onClick={() => void goNext()}
@@ -431,7 +430,7 @@ export function NewSimulationWizardPage() {
                 : currentStep === 'devices' && state.saving
                   ? t('newSimWizard.devices.savingLabel')
                   : t('newSimWizard.nextLabel')}
-            </Button>
+            </ActionButton>
           </div>
         </div>
       )}

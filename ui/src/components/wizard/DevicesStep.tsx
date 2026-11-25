@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDraft } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { YamlEditor } from '../config/YamlEditor';
@@ -117,18 +117,17 @@ export function DevicesStep({
               className="mt-heading"
             />
             <div>
-              <Button
-                tone="violet"
-                leftIcon={<Save className={iconSizes.md} />}
+              <ActionButton
+                action="edit"
+                icon={<Save className={iconSizes.md} />}
                 disabled={!dirty || saving}
                 loading={saving}
                 onClick={() => void onSave()}
-                action="edit"
               >
                 {saving
                   ? t('newSimWizard.devices.savingLabel')
                   : t('newSimWizard.devices.saveLabel')}
-              </Button>
+              </ActionButton>
             </div>
           </>
         )}

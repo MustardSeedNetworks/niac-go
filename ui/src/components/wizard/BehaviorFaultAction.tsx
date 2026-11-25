@@ -10,7 +10,7 @@ import {
   isResourceBehaviorFaultType,
 } from '../../api/behavior-fault-types';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Input, Select } from '../../ui/Input';
 import { SmallText } from '../../ui/Typography';
 
@@ -191,8 +191,7 @@ export function BehaviorFaultAction({
         />
       )}
       <Button
-        variant="outline"
-        tone="red"
+        variant="destructive"
         aria-label={t('newSimWizard.behaviors.removeFault')}
         onClick={onRemove}
       >

@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Cog, Layers, Network } from 'lucide-react';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router';
-import { Button } from './Button';
+import { Button } from '../shared/Button';
 import { CommandPalette } from './CommandPalette';
 import type { SidebarNavGroup } from './Sidebar';
 

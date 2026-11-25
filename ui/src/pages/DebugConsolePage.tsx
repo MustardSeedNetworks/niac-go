@@ -8,9 +8,10 @@ import { LogViewer } from '../components/LogViewer';
 import { iconSizes } from '../constants/sizes';
 import { useLogStream } from '../hooks/useEventSource';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Tag } from '../ui/Tag';
 import { Tooltip } from '../ui/Tooltip';
 
@@ -46,6 +47,7 @@ function mapToLogEntry(data: unknown): LogEntry | null {
 }
 
 export function DebugConsolePage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   const { t: tCommon } = useTranslation('common');
   const { addToast } = useToast();
@@ -208,22 +210,20 @@ export function DebugConsolePage() {
             <div className="flex items-center gap-default">
               {/* Debug Settings Toggle */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setShowDebugSettings(!showDebugSettings)}
-                leftIcon={<Settings2 className={iconSizes.md} />}
-                rightIcon={
-                  showDebugSettings ? (
-                    <ChevronUp className={iconSizes.md} />
-                  ) : (
-                    <ChevronDown className={iconSizes.md} />
-                  )
-                }
+                icon={<Settings2 className={iconSizes.md} />}
                 aria-expanded={showDebugSettings}
                 aria-controls="debug-settings-panel"
                 data-testid="debug-level-toggle"
               >
                 {t('debug.debugLevelButton')}
+                {showDebugSettings ? (
+                  <ChevronUp className={iconSizes.md} aria-hidden="true" />
+                ) : (
+                  <ChevronDown className={iconSizes.md} aria-hidden="true" />
+                )}
               </Button>
               {/* Connection Status */}
               <Tooltip
@@ -317,8 +317,9 @@ export function DebugConsolePage() {
       )}
 
       {/* Clear logs confirmation modal */}
-      <ConfirmModal
-        isOpen={showClearConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showClearConfirm}
         onConfirm={confirmClear}
         onCancel={() => setShowClearConfirm(false)}
         title={t('debug.clearAllLogsTitle')}

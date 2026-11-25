@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { ConfirmModal } from './ConfirmModal';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { Modal } from './Modal';
 
 /**
@@ -54,19 +54,21 @@ describe('Modal Escape handling', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('cancels a ConfirmModal on Escape, the real CT304 case', async () => {
+  it('cancels a ConfirmDialog on Escape, the real CT304 case', async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
 
     render(
-      <ConfirmModal
-        isOpen
+      <ConfirmDialog
+        open
         onConfirm={onConfirm}
         onCancel={onCancel}
         title="Stop simulation?"
         message="Are you sure?"
         confirmLabel="Stop"
+        cancelLabel="Cancel"
+        closeLabel="Close"
       />,
     );
 

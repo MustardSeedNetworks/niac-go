@@ -1,6 +1,6 @@
 import { AlertTriangle, Network, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { SmallText } from '../../ui/Typography';
 
 /**

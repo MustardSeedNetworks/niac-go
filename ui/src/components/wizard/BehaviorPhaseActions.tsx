@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DraftBehaviorPhase, DraftBehaviorTraffic } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Input, Select } from '../../ui/Input';
 import { BehaviorFaultAction } from './BehaviorFaultAction';
 import { BehaviorOneShotActions } from './BehaviorOneShotActions';
@@ -91,8 +91,7 @@ export function BehaviorPhaseActions({
             }
           />
           <Button
-            variant="outline"
-            tone="red"
+            variant="destructive"
             aria-label={t('newSimWizard.behaviors.removeTraffic')}
             onClick={() =>
               onChange({
@@ -127,8 +126,8 @@ export function BehaviorPhaseActions({
 
       <div className="flex flex-wrap gap-tight">
         <Button
+          variant="secondary"
           size="sm"
-          variant="outline"
           disabled={!firstDevice}
           data-testid="add-device-fault"
           onClick={() =>
@@ -141,8 +140,8 @@ export function BehaviorPhaseActions({
           {t('newSimWizard.behaviors.addDeviceFault')}
         </Button>
         <Button
+          variant="secondary"
           size="sm"
-          variant="outline"
           disabled={!firstDevice || !firstInterface}
           onClick={() =>
             onChange({
@@ -157,8 +156,8 @@ export function BehaviorPhaseActions({
           {t('newSimWizard.behaviors.addTraffic')}
         </Button>
         <Button
+          variant="secondary"
           size="sm"
-          variant="outline"
           disabled={!firstDevice || !firstInterface}
           onClick={() =>
             onChange({

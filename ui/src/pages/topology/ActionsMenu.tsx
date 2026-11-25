@@ -1,7 +1,7 @@
 import { ChevronDown, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 
 /**
  * ActionsMenu is the small "Export ▾" dropdown in the topology
@@ -69,12 +69,12 @@ export function ActionsMenu({
         size="sm"
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
-        leftIcon={<Download className="w-4 h-4" />}
-        rightIcon={<ChevronDown className="w-3.5 h-3.5" />}
+        icon={<Download className="w-4 h-4" />}
         aria-haspopup="menu"
         aria-expanded={open}
       >
         {tCommon('buttons.export')}
+        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
       </Button>
       {open && (
         <div

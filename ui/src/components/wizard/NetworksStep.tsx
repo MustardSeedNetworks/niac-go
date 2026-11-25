@@ -2,7 +2,7 @@ import { Network, Plus, Trash2, Wand2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { SmallText } from '../../ui/Typography';
 import { spliceConfigSection } from '../../utils/config-section';
@@ -131,7 +131,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               </SmallText>
             </div>
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid="networks-add"
               onClick={() =>
                 writeNetworks([
@@ -205,7 +205,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                     />
                   </FormField>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     data-testid={`networks-remove-${index}`}
                     onClick={() => writeNetworks(model.networks.filter((_, i) => i !== index))}
                   >
@@ -225,7 +225,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               {t('newSimWizard.networks.attachmentsTitle')}
             </SmallText>
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid="attachments-add"
               disabled={model.networks.length === 0}
               onClick={() =>
@@ -298,7 +298,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
                 </FormField>
               )}
               <Button
-                variant="outline"
+                variant="secondary"
                 data-testid={`attachments-remove-${index}`}
                 onClick={() => writeAttachments(model.attachments.filter((_, i) => i !== index))}
               >
@@ -325,7 +325,7 @@ export function NetworksStep({ content, onChange }: NetworksStepProps) {
               {t('newSimWizard.networks.addressingTitle')}
             </SmallText>
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid="addressing-assign-all"
               disabled={model.networks.length === 0 || unaddressed === 0}
               onClick={assignAll}

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchScenarioPacks, type ScenarioPack } from '../../api/scenario-client';
 import { iconSizes } from '../../constants/sizes';
 import { useApiResource } from '../../hooks/useApiResource';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { SmallText } from '../../ui/Typography';
 
 // packAccessPoints counts the radios a pack generates. It is derived here
@@ -83,7 +83,7 @@ function ScenarioPackPickerContent({ selectedPackId, onSelectPack }: ScenarioPac
       {error && (
         <div className="flex items-center gap-default" role="alert">
           <SmallText className="text-status-error">{t('newSimWizard.fleet.packsError')}</SmallText>
-          <Button size="sm" variant="outline" onClick={() => void refetch()}>
+          <Button variant="secondary" size="sm" onClick={() => void refetch()}>
             {tCommon('buttons.retry')}
           </Button>
         </div>

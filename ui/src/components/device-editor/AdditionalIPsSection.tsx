@@ -1,7 +1,7 @@
 import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { SmallText } from '../../ui/Typography';
 import { CollapsibleSection } from '../form/CollapsibleSection';
 import type { AuthoredDevice, AuthoredValue } from './generated/authored-device.generated';
@@ -60,8 +60,7 @@ export function AdditionalIPsSection({
               className={smallInputClassName}
             />
             <Button
-              variant="ghost"
-              tone="red"
+              variant="destructive"
               size="sm"
               aria-label={t('editor.sections.additionalIps.removeLabel', { index: index + 1 })}
               onClick={() => replace(ips.filter((_, i) => i !== index))}
@@ -71,9 +70,9 @@ export function AdditionalIPsSection({
           </div>
         ))}
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
-          leftIcon={<Plus className={iconSizes.md} />}
+          icon={<Plus className={iconSizes.md} />}
           onClick={() => replace([...ips, ''])}
         >
           {t('editor.sections.additionalIps.addButton')}

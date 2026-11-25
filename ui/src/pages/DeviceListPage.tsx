@@ -16,10 +16,12 @@ import { DeviceStatusMessage } from '../components/device-list/DeviceStatusMessa
 import { DeviceTableView } from '../components/device-list/DeviceTableView';
 import { useDeviceListState } from '../components/device-list/useDeviceListState';
 import { DeviceListProvider } from '../contexts/DeviceListContext';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
+import { useDialogLabels } from '../ui/dialogLabels';
 
 export function DeviceListPage() {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('devices');
   const navigate = useNavigate();
 
@@ -130,15 +132,14 @@ export function DeviceListPage() {
       )}
 
       {/* Delete confirmation modal */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm !== null}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showDeleteConfirm !== null}
         onConfirm={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
-        action="delete"
         onCancel={() => setShowDeleteConfirm(null)}
         title={t('list.deleteConfirmTitle')}
         message={t('list.deleteConfirmMessage', { hostname: showDeleteConfirm ?? '' })}
         confirmLabel={t('list.deleteConfirmLabel')}
-        confirmTone="red"
       />
 
       {/* Clone device modal */}
@@ -151,15 +152,14 @@ export function DeviceListPage() {
       )}
 
       {/* Bulk delete confirmation modal */}
-      <ConfirmModal
-        isOpen={showBulkDeleteConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showBulkDeleteConfirm}
         onConfirm={handleBulkDeleteConfirm}
-        action="delete"
         onCancel={() => setShowBulkDeleteConfirm(false)}
         title={t('list.bulkActions.confirmDeleteTitle')}
         message={t('list.bulkActions.confirmDeleteMessage', { count: selectedDevices.size })}
         confirmLabel={t('list.bulkActions.confirmDeleteLabel')}
-        confirmTone="red"
       />
     </div>
   );

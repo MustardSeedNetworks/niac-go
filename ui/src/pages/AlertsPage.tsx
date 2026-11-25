@@ -8,7 +8,8 @@ import { useAppState } from '../contexts/AppContext';
 import { useAlertsResource } from '../hooks/usePageResources';
 import { useResourceError } from '../hooks/useResourceError';
 import { useToast } from '../hooks/useToast';
-import { Button } from '../ui/Button';
+import { Button } from '../shared/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
 import { Tooltip } from '../ui/Tooltip';
 import { H2, P, SmallText } from '../ui/Typography';
@@ -158,17 +159,16 @@ function AlertConfigCard({ recentErrors }: { recentErrors: number }) {
             </div>
             {savedMessage && <SmallText className="text-status-success">{savedMessage}</SmallText>}
             <div className="flex flex-wrap gap-default">
-              <Button
-                tone="violet"
+              <ActionButton
+                action="edit"
                 disabled={!dirty || saving}
                 onClick={commit}
-                action="edit"
                 title={t('alerts.page.saveHelp')}
               >
                 {saving ? t('alerts.page.savingButton') : t('alerts.page.saveButton')}
-              </Button>
+              </ActionButton>
               <Button
-                variant="outline"
+                variant="secondary"
                 disabled={!dirty || saving}
                 onClick={reset}
                 title={t('alerts.page.resetHelp')}

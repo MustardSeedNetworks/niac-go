@@ -9,7 +9,8 @@ import {
 } from '../../api/library-client';
 import { iconSizes } from '../../constants/sizes';
 import { useToast } from '../../hooks/useToast';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Input } from '../../ui/Input';
 import { SmallText } from '../../ui/Typography';
 import { BehaviorPhaseActions } from './BehaviorPhaseActions';
@@ -157,8 +158,8 @@ export function DraftBehaviorComposer({
       <div className="flex flex-wrap items-center justify-between gap-default">
         <SmallText className="text-text-muted">{t('newSimWizard.behaviors.help')}</SmallText>
         <Button
-          variant="outline"
-          leftIcon={<Plus className={iconSizes.md} />}
+          variant="secondary"
+          icon={<Plus className={iconSizes.md} />}
           disabled={busy || !firstDevice}
           title={!firstDevice ? t('newSimWizard.behaviors.needsDevice') : undefined}
           onClick={addTimeline}
@@ -225,8 +226,7 @@ export function DraftBehaviorComposer({
               }
             />
             <Button
-              variant="outline"
-              tone="red"
+              variant="destructive"
               aria-label={t('newSimWizard.behaviors.removeTimeline')}
               onClick={() =>
                 setTimelines((current) => current.filter((_, item) => item !== timelineIndex))
@@ -293,8 +293,7 @@ export function DraftBehaviorComposer({
                     {t('newSimWizard.behaviors.reset')}
                   </label>
                   <Button
-                    variant="outline"
-                    tone="red"
+                    variant="destructive"
                     aria-label={t('newSimWizard.behaviors.removePhase')}
                     onClick={() =>
                       updateTimeline(timelineIndex, (current) => ({
@@ -321,24 +320,23 @@ export function DraftBehaviorComposer({
             </div>
           ))}
 
-          <Button size="sm" variant="outline" onClick={() => addPhase(timelineIndex)}>
+          <Button variant="secondary" size="sm" onClick={() => addPhase(timelineIndex)}>
             {t('newSimWizard.behaviors.addPhase')}
           </Button>
         </section>
       ))}
 
       <div>
-        <Button
-          tone="violet"
-          leftIcon={<Save className={iconSizes.md} />}
+        <ActionButton
+          action="edit"
+          icon={<Save className={iconSizes.md} />}
           disabled={busy || !valid || timelines.length === 0}
           loading={busy}
           data-testid="save-behaviors"
           onClick={() => void save()}
-          action="edit"
         >
           {t('newSimWizard.behaviors.save')}
-        </Button>
+        </ActionButton>
       </div>
     </div>
   );

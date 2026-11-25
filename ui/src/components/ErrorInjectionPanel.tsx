@@ -8,16 +8,18 @@ import { clearAllErrors, clearError, injectError } from '../api/client';
 import type { ErrorType } from '../api/types';
 import { useAppState } from '../contexts/AppContext';
 import { type ErrorInjectionFormFields, ErrorInjectionSchema } from '../schemas/forms';
-import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent } from '../ui/Card';
-import { ConfirmModal } from '../ui/ConfirmModal';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { useDialogLabels } from '../ui/dialogLabels';
 import { Input } from '../ui/Input';
 import { Tag } from '../ui/Tag';
 import { SmallText } from '../ui/Typography';
 import { getErrorMessage } from '../utils/format';
 
 export function ErrorInjectionPanel() {
+  const dialogLabels = useDialogLabels();
   const permission = useActionPermission('inject');
   const { t } = useTranslation('errors');
   const { data: errorInfo, error, refetch: refetchErrors } = useAppState('errorTypes');
@@ -192,13 +194,12 @@ export function ErrorInjectionPanel() {
       key: 'actions',
       header: t('injection.tableHeaderActions'),
       cell: (row) => (
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          tone="blue"
-          onClick={() => handleClearSpecific(row.deviceIp, row.iface, row.errorType)}
+        <ActionButton
           action="inject"
+          variant="ghost"
+          size="sm"
+          type="button"
+          onClick={() => handleClearSpecific(row.deviceIp, row.iface, row.errorType)}
           disabled={busy}
           aria-label={t('injection.clearOneAriaLabel', {
             deviceIp: row.deviceIp,
@@ -206,7 +207,7 @@ export function ErrorInjectionPanel() {
           })}
         >
           {t('injection.clearOneButton')}
-        </Button>
+        </ActionButton>
       ),
     },
   ];
@@ -380,7 +381,7 @@ export function ErrorInjectionPanel() {
 
             {/* Action Buttons */}
             <div className="flex gap-default">
-              <Button
+              <ActionButton
                 action="inject"
                 type="submit"
                 data-testid="apply-interface-fault"
@@ -392,16 +393,16 @@ export function ErrorInjectionPanel() {
                 }
               >
                 {isSubmitting ? t('injection.injectingButton') : t('injection.injectButton')}
-              </Button>
-              <Button
+              </ActionButton>
+              <ActionButton
+                action="inject"
+                variant="secondary"
                 type="button"
                 onClick={() => setShowClearAllConfirm(true)}
-                action="inject"
                 disabled={busy}
-                variant="secondary"
               >
                 {t('injection.clearAllButton')}
-              </Button>
+              </ActionButton>
             </div>
           </form>
         </CardContent>
@@ -423,15 +424,14 @@ export function ErrorInjectionPanel() {
       )}
 
       {/* Clear All Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showClearAllConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showClearAllConfirm}
         onConfirm={handleClearAllConfirm}
-        action="inject"
         onCancel={() => setShowClearAllConfirm(false)}
         title={t('injection.clearAllConfirmTitle')}
         message={t('injection.clearAllConfirmMessage')}
         confirmLabel={t('injection.clearAllConfirmLabel')}
-        confirmTone="red"
       />
     </div>
   );

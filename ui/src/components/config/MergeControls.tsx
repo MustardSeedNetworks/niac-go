@@ -11,9 +11,10 @@ import {
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ConfirmDialog } from '../../shared/ConfirmDialog';
 import { Card, CardContent } from '../../ui/Card';
-import { ConfirmModal } from '../../ui/ConfirmModal';
+import { useDialogLabels } from '../../ui/dialogLabels';
 import { Modal } from '../../ui/Modal';
 import { Tag } from '../../ui/Tag';
 import { H2, SmallText } from '../../ui/Typography';
@@ -51,6 +52,7 @@ export function MergeControls({
   leftLabel = 'Original',
   rightLabel = 'Modified',
 }: MergeControlsProps) {
+  const dialogLabels = useDialogLabels();
   const { t } = useTranslation('pages');
   // Confirm modal states
   const [showAcceptLeftConfirm, setShowAcceptLeftConfirm] = useState(false);
@@ -211,20 +213,20 @@ export function MergeControls({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-default">
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={disabled || stats.totalChanges === 0}
               onClick={() => setShowAcceptLeftConfirm(true)}
-              leftIcon={<ChevronLeft className={iconSizes.md} />}
+              icon={<ChevronLeft className={iconSizes.md} />}
               className="justify-start"
             >
               {t('configDiff.acceptAllFrom', { label: leftLabel })}
             </Button>
 
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={disabled || stats.totalChanges === 0}
               onClick={() => setShowAcceptRightConfirm(true)}
-              leftIcon={<ChevronRight className={iconSizes.md} />}
+              icon={<ChevronRight className={iconSizes.md} />}
               className="justify-start"
             >
               {t('configDiff.acceptAllFrom', { label: rightLabel })}
@@ -235,28 +237,26 @@ export function MergeControls({
         {/* Main actions */}
         <div className="flex flex-wrap gap-default pt-2 border-t border-surface-border">
           <Button
-            tone="violet"
             disabled={disabled || stats.totalChanges === 0 || !stats.isComplete}
             onClick={onPreview}
-            leftIcon={<FileCheck className={iconSizes.md} />}
+            icon={<FileCheck className={iconSizes.md} />}
           >
             {t('configDiff.previewMergedButton')}
           </Button>
 
           <Button
-            tone="violet"
             disabled={disabled || !stats.isComplete}
             onClick={onExport}
-            leftIcon={<Download className={iconSizes.md} />}
+            icon={<Download className={iconSizes.md} />}
           >
             {t('configDiff.exportResultButton')}
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
             disabled={disabled || stats.decisionsCount === 0}
             onClick={() => setShowResetConfirm(true)}
-            leftIcon={<RotateCcw className={iconSizes.md} />}
+            icon={<RotateCcw className={iconSizes.md} />}
           >
             {t('configDiff.resetDecisionsButton')}
           </Button>
@@ -265,7 +265,7 @@ export function MergeControls({
             variant="ghost"
             disabled={disabled}
             onClick={() => setShowClearAllConfirm(true)}
-            leftIcon={<Trash2 className={iconSizes.md} />}
+            icon={<Trash2 className={iconSizes.md} />}
           >
             {t('configDiff.clearAllButton')}
           </Button>
@@ -282,47 +282,49 @@ export function MergeControls({
       </CardContent>
 
       {/* Accept All Left Confirmation */}
-      <ConfirmModal
-        isOpen={showAcceptLeftConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showAcceptLeftConfirm}
         onConfirm={handleAcceptAllLeft}
         onCancel={() => setShowAcceptLeftConfirm(false)}
         title={t('configDiff.acceptAllFromTitle', { label: leftLabel })}
         message={t('configDiff.acceptAllFromMessage', { label: leftLabel })}
         confirmLabel={t('configDiff.acceptAllConfirmLabel')}
-        confirmTone="blue"
+        variant="primary"
       />
 
       {/* Accept All Right Confirmation */}
-      <ConfirmModal
-        isOpen={showAcceptRightConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showAcceptRightConfirm}
         onConfirm={handleAcceptAllRight}
         onCancel={() => setShowAcceptRightConfirm(false)}
         title={t('configDiff.acceptAllFromTitle', { label: rightLabel })}
         message={t('configDiff.acceptAllFromMessage', { label: rightLabel })}
         confirmLabel={t('configDiff.acceptAllConfirmLabel')}
-        confirmTone="green"
+        variant="primary"
       />
 
       {/* Reset Confirmation */}
-      <ConfirmModal
-        isOpen={showResetConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showResetConfirm}
         onConfirm={handleReset}
         onCancel={() => setShowResetConfirm(false)}
         title={t('configDiff.resetDecisionsButton')}
         message={t('configDiff.resetConfirmMessage')}
         confirmLabel={t('configDiff.resetConfirmLabel')}
-        confirmTone="red"
       />
 
       {/* Clear All Confirmation */}
-      <ConfirmModal
-        isOpen={showClearAllConfirm}
+      <ConfirmDialog
+        {...dialogLabels}
+        open={showClearAllConfirm}
         onConfirm={handleClearAll}
         onCancel={() => setShowClearAllConfirm(false)}
         title={t('configDiff.clearAllButton')}
         message={t('configDiff.clearAllConfirmMessage')}
         confirmLabel={t('configDiff.clearAllButton')}
-        confirmTone="red"
       />
     </Card>
   );
@@ -369,13 +371,13 @@ export function MergePreviewModal({ content, onClose, onExport }: MergePreviewMo
       }
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             {t('configDiff.closeButton')}
           </Button>
-          <Button variant="outline" onClick={handleCopy}>
+          <Button variant="secondary" onClick={handleCopy}>
             {t('configDiff.copyToClipboardButton')}
           </Button>
-          <Button tone="violet" onClick={onExport} leftIcon={<Download className={iconSizes.md} />}>
+          <Button onClick={onExport} icon={<Download className={iconSizes.md} />}>
             {t('configDiff.downloadYamlButton')}
           </Button>
         </>

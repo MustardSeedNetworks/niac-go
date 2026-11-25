@@ -2,7 +2,7 @@ import { PartyPopper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { iconSizes } from '../../constants/sizes';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { Card, CardContent } from '../../ui/Card';
 import { H2, SmallText } from '../../ui/Typography';
 
@@ -37,7 +37,7 @@ export function FinishStep({
 
         <div>
           <Link to="/runtime">
-            <Button tone="violet" data-testid="wizard-goto-runtime">
+            <Button data-testid="wizard-goto-runtime">
               {t('newSimWizard.finish.gotoRuntime')}
             </Button>
           </Link>

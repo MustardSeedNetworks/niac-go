@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
 import { SmallText } from '../../ui/Typography';
 import { FormField } from '../form/FormField';
 import type {
@@ -103,7 +103,7 @@ export function AttachmentPoolEditor({
               </FormField>
               {groups.length > 1 && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   data-testid={`attachment-group-remove-${id}`}
                   onClick={() => commit(groups.filter((_, i) => i !== groupIndex))}
                 >
@@ -150,7 +150,7 @@ export function AttachmentPoolEditor({
       {lastGroup !== undefined && lastGroup.ports.length > 0 && (
         <div>
           <Button
-            variant="outline"
+            variant="secondary"
             data-testid={`attachment-group-add-${index}`}
             onClick={() => commit([...groups, { device: '', ports: [] }])}
           >
@@ -166,7 +166,7 @@ export function AttachmentPoolEditor({
               {t('newSimWizard.networks.attachmentPinsHelp')}
             </SmallText>
             <Button
-              variant="outline"
+              variant="secondary"
               data-testid={`attachment-pin-add-${index}`}
               onClick={() =>
                 onChange({
@@ -239,7 +239,7 @@ export function AttachmentPoolEditor({
                 </select>
               </FormField>
               <Button
-                variant="outline"
+                variant="secondary"
                 data-testid={`attachment-pin-remove-${index}-${pinIndex}`}
                 onClick={() =>
                   onChange({

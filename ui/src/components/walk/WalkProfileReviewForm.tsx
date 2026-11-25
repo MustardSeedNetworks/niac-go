@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { WalkProfileReview } from '../../api/walk-profile-client';
-import { Button } from '../../ui/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Input, Select } from '../../ui/Input';
 
 interface Props {
@@ -81,17 +81,16 @@ export function WalkProfileReviewForm({ review, setReview, creating, createProfi
           onChange={(event) => update('software', event.target.value)}
         />
       </div>
-      <Button
+      <ActionButton
+        action="edit"
         type="button"
-        tone="green"
         disabled={!valid || creating}
         loading={creating}
         onClick={() => void createProfile()}
-        action="edit"
         data-testid="walk-profile-create"
       >
         {t('walkAnalyzer.profile.createAction')}
-      </Button>
+      </ActionButton>
     </section>
   );
 }

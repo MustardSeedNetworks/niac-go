@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScenarioDeviceProfile } from '../../api/scenario-client';
-import { Button } from '../../ui/Button';
+import { Button } from '../../shared/Button';
+import { ActionButton } from '../../ui/ActionButton';
 import { Input, Select } from '../../ui/Input';
 import { Modal } from '../../ui/Modal';
 
@@ -54,12 +55,12 @@ export function DeviceEditorModal({
       footer={
         state && (
           <>
-            <Button variant="outline" onClick={close}>
+            <Button variant="secondary" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <Button action="edit" tone="violet" disabled={!valid || busy} onClick={onSave}>
+            <ActionButton action="edit" disabled={!valid || busy} onClick={onSave}>
               {t('newSimWizard.topology.addDevice')}
-            </Button>
+            </ActionButton>
           </>
         )
       }
@@ -146,16 +147,21 @@ export function LinkEditorModal({
         state && (
           <>
             {state.existing && (
-              <Button action="edit" tone="red" disabled={busy} onClick={onDisconnect}>
+              <ActionButton
+                action="edit"
+                variant="destructive"
+                disabled={busy}
+                onClick={onDisconnect}
+              >
                 {t('newSimWizard.topology.disconnect')}
-              </Button>
+              </ActionButton>
             )}
-            <Button variant="outline" onClick={close}>
+            <Button variant="secondary" onClick={close}>
               {t('newSimWizard.topology.cancel')}
             </Button>
-            <Button action="edit" tone="violet" disabled={!valid || busy} onClick={onSave}>
+            <ActionButton action="edit" disabled={!valid || busy} onClick={onSave}>
               {t('newSimWizard.topology.saveLink')}
-            </Button>
+            </ActionButton>
           </>
         )
       }

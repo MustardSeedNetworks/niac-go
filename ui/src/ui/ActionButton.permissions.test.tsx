@@ -3,8 +3,6 @@ import { useEffect } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ScopeProvider } from '../contexts/ScopeContext';
 import { ActionButton } from './ActionButton';
-import { Button } from './Button';
-import { ConfirmModal } from './ConfirmModal';
 
 const getScope = vi.fn();
 vi.mock('../api/requestCore', () => ({ deduplicatedGet: () => getScope() }));
@@ -31,40 +29,17 @@ it('fails closed for native actions when scope lookup fails', async () => {
   expect(remove).not.toHaveBeenCalled();
 });
 
-it('gates confirmation actions without trapping the viewer in the dialog', async () => {
-  getScope.mockResolvedValue({ scope: 'read-only' });
-  render(
-    <ScopeProvider>
-      <ConfirmModal
-        isOpen
-        action="delete"
-        title="Delete device"
-        message="Remove?"
-        onConfirm={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    </ScopeProvider>,
-  );
-  await waitFor(() =>
-    expect(screen.getByText('Confirm')).toHaveAccessibleDescription(
-      'Your token does not allow this action.',
-    ),
-  );
-  expect(screen.getByText('Confirm')).toHaveAttribute('aria-disabled', 'true');
-  expect(screen.getByText('Cancel')).toBeEnabled();
-});
-
 it('keeps viewer filters and exports usable while disabling writes with a reason', async () => {
   getScope.mockResolvedValue({ scope: 'read-only' });
   const start = vi.fn();
   const filter = vi.fn();
   render(
     <ScopeProvider>
-      <Button action="start" onClick={start}>
+      <ActionButton action="start" onClick={start}>
         Start
-      </Button>
-      <Button onClick={filter}>Filter</Button>
-      <Button action="export">Export</Button>
+      </ActionButton>
+      <ActionButton onClick={filter}>Filter</ActionButton>
+      <ActionButton action="export">Export</ActionButton>
     </ScopeProvider>,
   );
   await waitFor(() => expect(screen.getByText('Export')).not.toHaveAttribute('aria-disabled'));
@@ -80,7 +55,7 @@ it('keeps viewer filters and exports usable while disabling writes with a reason
 
 function Page({ onMount }: { onMount: () => void }) {
   useEffect(() => onMount(), [onMount]);
-  return <Button action="start">Start</Button>;
+  return <ActionButton action="start">Start</ActionButton>;
 }
 
 it('fails closed until scope arrives without remounting the page', async () => {

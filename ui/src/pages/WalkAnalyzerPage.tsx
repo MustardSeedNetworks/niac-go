@@ -4,7 +4,7 @@ import { analyzeWalk } from '../api/client';
 import { fetchLibraryWalks, type LibraryFileEntry } from '../api/library-client';
 import type { WalkAnalyzeResponse } from '../api/types';
 import { WalkProfileCreator } from '../components/walk/WalkProfileCreator';
-import { Button } from '../ui/Button';
+import { ActionButton } from '../ui/ActionButton';
 import { Card, CardContent, CardRow, CardValue } from '../ui/Card';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { Tooltip } from '../ui/Tooltip';
@@ -236,12 +236,11 @@ export function WalkAnalyzerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-default">
-            <Button
-              type="button"
-              variant="outline"
-              tone="blue"
-              onClick={() => void run()}
+            <ActionButton
               action="edit"
+              variant="secondary"
+              type="button"
+              onClick={() => void run()}
               disabled={busy !== 'idle' || !targetPath}
               title={t('walkAnalyzer.analyzeHelp')}
               data-testid="walk-analyzer-analyze-button"
@@ -249,7 +248,7 @@ export function WalkAnalyzerPage() {
               {busy === 'analyzing'
                 ? t('walkAnalyzer.analyzingButton')
                 : t('walkAnalyzer.analyzeButton')}
-            </Button>
+            </ActionButton>
             {error && (
               <span className="text-sm text-status-error" role="alert">
                 {error}
