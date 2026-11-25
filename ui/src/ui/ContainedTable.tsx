@@ -10,7 +10,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
  * 2. Its scroll frame scrolls sideways but is not focusable, so a table with no
  *    interactive cell (walk issues, neighbors) cannot be scrolled from the
  *    keyboard (axe `scrollable-region-focusable`, WCAG 2.1.1). The frame is made
- *    a labelled, focusable region after every render, since the frame only
+ *    a labelled, focusable group after every render, since the frame only
  *    exists while there are rows.
  *
  * Wrap every DataTable. Goes when the shared DataTable positions its header
@@ -23,7 +23,7 @@ export function ContainedTable({ label, children }: { label: string; children: R
       '[data-phone-width-exempt="table-scroll"]',
     );
     scroller?.setAttribute('tabindex', '0');
-    scroller?.setAttribute('role', 'region');
+    scroller?.setAttribute('role', 'group');
     scroller?.setAttribute('aria-label', label);
   });
   return (
